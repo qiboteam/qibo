@@ -1,13 +1,16 @@
 import numpy as np
-from qibo import gates
-from qibo.config import log, raise_error
-from qibo.models.circuit import Circuit
+import tensorflow as tf
+from numpy.random import randn
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.optimizers import Adadelta
+from tensorflow.keras.layers import Dense, Conv2D, Dropout, Reshape, LeakyReLU, Flatten
+from qibo import gates, hamiltonians, models, set_backend
 
 
 class qGAN(object):
-    """Model that implements and trains a style-based quantum generative adversal network.
+    """Model that implements and trains a style-based quantum generative adversarial network.
 
-    For original manuscript: `arXiv:quant-ph/9605043 <https://arxiv.org/abs/quant-ph/9605043>`_
+    For original manuscript: `arXiv:2110.06933 <https://arxiv.org/abs/2110.06933>`_
 
     Args:
         oracle (:class:`qibo.core.circuit.Circuit`): quantum circuit that flips
@@ -37,146 +40,172 @@ class qGAN(object):
         .. testcode::
 
             import numpy as np
-            from qibo import gates
-            from qibo.models import Circuit
-            from qibo.models.grover import Grover
-            # Create an oracle. Ex: Oracle that detects state |11111>
-            oracle = Circuit(5 + 1)
-            oracle.add(gates.X(5).controlled_by(*range(5)))
-            # Create superoposition circuit. Ex: Full superposition over 5 qubits.
-            superposition = Circuit(5)
-            superposition.add([gates.H(i) for i in range(5)])
-            # Generate and execute Grover class
-            grover = Grover(oracle, superposition_circuit=superposition, number_solutions=1)
-            solution, iterations = grover()
+            from qibo.models.qgan import qGAN
+            # Create reference distribution. Ex: 3D correlated Gaussian distribution normalized between [-1,1]
+            reference_distribution = []
+            samples = 10000
+            mean = [0, 0, 0]
+            cov = [[0.5, 0.1, 0.25], [0.1, 0.5, 0.1], [0.25, 0.1, 0.5]]
+            x, y, z = np.random.multivariate_normal(mean, cov, samples).T/4
+            s1 = np.reshape(x, (samples,1))
+            s2 = np.reshape(y, (samples,1))
+            s3 = np.reshape(z, (samples,1))
+            reference_distribution = np.hstack((s1,s2,s3))
+            # Train qGAN with your particular setup
+            train_qGAN = qGAN(s, 1, 3)
+            train_qGAN()
     """
 
-    def __init__(self, reference, nqubits, layers, latent_dim, training_samples=10000,
-                 batch_samples=128, n_epochs=20000, lr=0.5):
+    def __init__(self, reference, layers, latent_dim, batch_samples=128, n_epochs=20000, lr=0.5):
 
         self.reference = reference
-        self.nqubits = dim(reference)
+        self.nqubits = reference.shape[1]
         self.layers = layers
         self.latent_dim = latent_dim
-        self.training_samples = training_samples
+        self.training_samples = reference.shape[0]
         self.batch_samples = batch_samples
         self.n_epochs = n_epochs
         self.lr = lr
 
-        if superposition_circuit:
-            self.superposition = superposition_circuit
-        else:
-            if not superposition_qubits:
-                raise_error(ValueError, "Cannot create Grover model if the "
-                                        "superposition circuit or number of "
-                                        "qubits is not specified.")
-            self.superposition = Circuit(superposition_qubits)
-            self.superposition.add([gates.H(i) for i in range(superposition_qubits)])
+    def define_discriminator(self, alpha=0.2, dropout=0.2):
+        """define the standalone discriminator model"""
+        model = Sequential()           
+        model.add(Dense(200, use_bias=False, input_dim=self.nqubits))
+        model.add(Reshape((10,10,2)))       
+        model.add(Conv2D(64, kernel_size=3, strides=1, padding='same', kernel_initializer='glorot_normal'))
+        model.add(LeakyReLU(alpha=alpha))       
+        model.add(Conv2D(32, kernel_size=3, strides=1, padding='same', kernel_initializer='glorot_normal'))
+        model.add(LeakyReLU(alpha=alpha))    
+        model.add(Conv2D(16, kernel_size=3, strides=1, padding='same', kernel_initializer='glorot_normal'))
+        model.add(LeakyReLU(alpha=alpha))    
+        model.add(Conv2D(8, kernel_size=3, strides=1, padding='same', kernel_initializer='glorot_normal'))    
+        model.add(Flatten())
+        model.add(LeakyReLU(alpha=alpha))
+        model.add(Dropout(dropout))     
+        model.add(Dense(1, activation='sigmoid'))
+        
+        # compile model
+        opt = Adadelta(learning_rate=0.1)
+        model.compile(loss='binary_crossentropy', optimizer=opt, metrics=['accuracy'])
+        return model
 
-        if superposition_qubits:
-            self.sup_qubits = superposition_qubits
-        else:
-            self.sup_qubits = self.superposition.nqubits
+    def set_params(self, circuit, params, x_input, i):
+        p = []
+        index = 0
+        noise = 0
+        for l in range(self.layers):
+            for q in range(self.nqubits):
+                p.append(params[index]*x_input[noise][i] + params[index+1])
+                index+=2
+                noise=(noise+1)%self.latent_dim
+                p.append(params[index]*x_input[noise][i] + params[index+1])
+                index+=2
+                p.append(params[index]*x_input[noise][i] + params[index+1])
+                index+=2
+                noise=(noise+1)%self.latent_dim
+                p.append(params[index]*x_input[noise][i] + params[index+1])
+                index+=2
+                noise=(noise+1)%self.latent_dim
+            for i in range(0, self.nqubits-1):
+                p.append(params[index]*x_input[noise][i] + params[index+1])
+                index+=2
+                noise=(noise+1)%self.latent_dim
+            p.append(params[index]*x_input[noise][i] + params[index+1])
+            index+=2
+            noise=(noise+1)%self.latent_dim
+        for q in range(self.nqubits):
+            p.append(params[index]*x_input[noise][i] + params[index+1])
+            index+=2
+            noise=(noise+1)%self.latent_dim
+        circuit.set_parameters(p)
 
-        if superposition_size:
-            self.sup_size = superposition_size
-        else:
-            self.sup_size = int(2 ** self.sup_qubits)
+    def generate_latent_points(self, samples):
+        """generate points in latent space as input for the generator"""
+        # generate points in the latent space
+        x_input = randn(self.latent_dim * samples)
+        # reshape into a batch of inputs for the network
+        x_input = x_input.reshape(samples, self.latent_dim)
+        return x_input
+    
+    def generate_fake_samples(self, params, samples, circuit, hamiltonians_list):
+        """use the generator to generate fake examples, with class labels"""
+        # generate points in latent space
+        x_input = self.generate_latent_points(samples)
+        x_input = np.transpose(x_input)
+        # generator outputs
+        X = []
+        for i in range(self.nqubits):
+            X.append([])
+        # quantum generator circuit
+        for i in range(samples):
+            self.set_params(circuit, params, x_input, i)
+            circuit_execute = circuit.execute()
+            for ii in range(self.nqubits):
+                X[ii].append(hamiltonians_list[ii].expectation(circuit_execute))
+        # shape array
+        X = tf.stack([X[i] for i in range(len(X))], axis=1)
+        # create class labels
+        y = np.zeros((samples, 1))
+        return X, y
+    
+    def define_cost_gan(self, params, discriminator, samples, circuit, hamiltonians_list):
+        """define the combined generator and discriminator model, for updating the generator"""
+        # generate fake samples
+        x_fake, y_fake = self.generate_fake_samples(params, samples, circuit, hamiltonians_list)
+        # create inverted labels for the fake samples
+        y_fake = np.ones((samples, 1))
+        # evaluate discriminator on fake examples
+        disc_output = discriminator(x_fake)
+        loss = tf.keras.losses.binary_crossentropy(y_fake, disc_output)
+        loss = tf.reduce_mean(loss)
+        return loss
+    
+    def train(self, d_model, circuit, hamiltonians_list):
+        """train the generator and discriminator"""
+        
+        def generate_real_samples(samples, distribution, real_samples):
+            """generate real samples with class labels"""
+            # generate samples from the distribution
+            idx = np.random.randint(real_samples, size=samples)
+            X = distribution[idx,:]
+            # generate class labels
+            y = np.ones((samples, 1))
+            return X, y
+        
+        d_loss = []
+        g_loss = []
+        # determine half the size of one batch, for updating the discriminator
+        half_samples = int(self.batch_samples / 2)
+        initial_params = tf.Variable(np.random.uniform(-0.15, 0.15, 10*self.layers*self.nqubits + 2*self.nqubits))
+        optimizer = tf.optimizers.Adadelta(learning_rate=self.lr)
+        # prepare real samples
+        s = self.reference
+        # manually enumerate epochs
+        for i in range(self.n_epochs):
+            # prepare real samples
+            x_real, y_real = generate_real_samples(half_samples, s, self.training_samples)
+            # prepare fake examples
+            x_fake, y_fake = self.generate_fake_samples(initial_params, half_samples, circuit, hamiltonians_list)
+            # update discriminator
+            d_loss_real, _ = d_model.train_on_batch(x_real, y_real)
+            d_loss_fake, _ = d_model.train_on_batch(x_fake, y_fake)
+            d_loss.append((d_loss_real + d_loss_fake)/2)
+            # update generator
+            with tf.GradientTape() as tape:
+                loss = self.define_cost_gan(initial_params, d_model, self.batch_samples, circuit, hamiltonians_list)
+            grads = tape.gradient(loss, initial_params)
+            optimizer.apply_gradients([(grads, initial_params)])
+            g_loss.append(loss)
+            np.savetxt(f"PARAMS_3Dgaussian_{self.nqubits}_{self.latent_dim}_{self.layers}_{self.training_samples}_{self.batch_samples}_{self.lr}", [initial_params.numpy()], newline='')
+            np.savetxt(f"dloss_3Dgaussian_{self.nqubits}_{self.latent_dim}_{self.layers}_{self.training_samples}_{self.batch_samples}_{self.lr}", [d_loss], newline='')
+            np.savetxt(f"gloss_3Dgaussian_{self.nqubits}_{self.latent_dim}_{self.layers}_{self.training_samples}_{self.batch_samples}_{self.lr}", [g_loss], newline='')
+            # serialize weights to HDF5
+            d_model.save_weights(f"discriminator_3Dgaussian_{self.nqubits}_{self.latent_dim}_{self.layers}_{self.training_samples}_{self.batch_samples}_{self.lr}.h5")
 
-        assert oracle.nqubits > self.sup_qubits
 
-        self.anc_qubits_sup = self.superposition.nqubits - self.sup_qubits
-        self.anc_qubits_ora = self.oracle.nqubits - self.sup_qubits - 1
 
-        self.nqubits = self.sup_qubits + max(self.anc_qubits_sup, self.anc_qubits_ora) + 1
-
-        self.check = check
-        self.check_args = check_args
-        self.num_sol = number_solutions
-        self.targ_a = target_amplitude
-        self.iterative = iterative
-
-        self.space_sup = list(range(self.sup_qubits + self.anc_qubits_sup))
-        self.space_ora = list(range(self.sup_qubits + self.anc_qubits_ora)) + [self.nqubits-1]
-
-    def initialize(self):
-        """Initialize the Grover algorithm with the superposition and Grover ancilla."""
-        c = Circuit(self.nqubits)
-        c.add(gates.X(self.nqubits-1))
-        c.add(gates.H(self.nqubits-1))
-        if self.initial_state_circuit:
-            c.add(self.initial_state_circuit.invert().on_qubits(*range(self.initial_state_circuit.nqubits)))
-        c.add(self.superposition.on_qubits(*self.space_sup))
-        return c
-
-    def diffusion(self):
-        """Construct the diffusion operator out of the superposition circuit."""
-        nqubits = self.superposition.nqubits + 1
-        c = Circuit(nqubits)
-        c.add(self.superposition.invert().on_qubits(*range(nqubits-1)))
-        if self.initial_state_circuit:
-            c.add(self.initial_state_circuit.invert().on_qubits(*range(self.initial_state_circuit.nqubits)))
-        c.add([gates.X(i) for i in range(self.sup_qubits)])
-        c.add(gates.X(nqubits-1).controlled_by(*range(self.sup_qubits)))
-        c.add([gates.X(i) for i in range(self.sup_qubits)])
-        if self.initial_state_circuit:
-            c.add(self.initial_state_circuit.on_qubits(*range(self.initial_state_circuit.nqubits)))
-        c.add(self.superposition.on_qubits(*range(nqubits-1)))
-        return c
-
-    def step(self):
-        """Combine oracle and diffusion for a Grover step."""
-        c = Circuit(self.nqubits)
-        c.add(self.oracle.on_qubits(*self.space_ora))
-        c.add(self.diffusion().on_qubits(*(self.space_sup+[self.nqubits-1])))
-        return c
-
-    def circuit(self, iterations):
-        """Creates circuit that performs Grover's algorithm with a set amount of iterations.
-
-        Args:
-            iterations (int): number of times to repeat the Grover step.
-
-        Returns:
-            :class:`qibo.core.circuit.Circuit` that performs Grover's algorithm.
-        """
-        c = Circuit(self.nqubits)
-        c += self.initialize()
-        for _ in range(iterations):
-            c += self.step()
-        c.add(gates.M(*range(self.sup_qubits)))
-        return c
-
-    def iterative_grover(self, lamda_value=6/5):
-        """Iterative approach of Grover for when the number of solutions is not known.
-
-        Args:
-            lamda_value (real): parameter that controls the evolution of the iterative method.
-                                Must be between 1 and 4/3.
-
-        Returns:
-            measured (str): bitstring measured and checked as a valid solution.
-            total_iterations (int): number of times the oracle has been called.
-        """
-        k = 1
-        lamda = lamda_value
-        total_iterations = 0
-        while True:
-            it = np.random.randint(k + 1)
-            if it != 0:
-                total_iterations += it
-                circuit = self.circuit(it)
-                result = circuit(nshots=1)
-                measured = result.frequencies(binary=True).most_common(1)[0][0]
-                if self.check(measured, *self.check_args):
-                    return measured, total_iterations
-            k = min(lamda * k, np.sqrt(self.sup_size))
-            if total_iterations > (9/4) * np.sqrt(self.sup_size):
-                log.warning("Too many total iterations, output might not be solution.")
-                return measured, total_iterations
-
-    def execute(self, nshots=100, freq=False, logs=False):
-        """Execute Grover's algorithm.
+    def execute(self):
+        """Execute qGAN training.
 
         If the number of solutions is given, calculates iterations,
         otherwise it uses an iterative approach.
@@ -189,49 +218,51 @@ class qGAN(object):
             solution (str): bitstring (or list of bitstrings) measured as solution of the search.
             iterations (int): number of oracle calls done to reach a solution.
         """
-        if (self.num_sol or self.targ_a) and not self.iterative:
-            if self.targ_a:
-                it = int(np.pi * (1/self.targ_a) / 4)
-            else:
-                it = int(np.pi * np.sqrt(self.sup_size / self.num_sol) / 4)
-            circuit = self.circuit(it)
-            result = circuit(nshots=nshots).frequencies(binary=True)
-            if freq:
-                if logs:
-                    log.info("Result of sampling Grover's algorihm")
-                    log.info(result)
-                self.frequencies = result
-            if logs:
-                log.info(f"Most common states found using Grover's algorithm with {it} iterations:")
-            if self.targ_a:
-                most_common = result.most_common(1)
-            else:
-                most_common = result.most_common(self.num_sol)
-            self.solution = []
-            self.iterations = it
-            for i in most_common:
-                if logs:
-                    log.info(i[0])
-                self.solution.append(i[0])
-                if logs:
-                    if self.check:
-                        if self.check(i[0], *self.check_args):
-                            log.info('Solution checked and successful.')
-                        else:
-                            log.info('Not a solution of the problem. Something went wrong.')
-        else:
-            if not self.check:
-                raise_error(ValueError, "Check function needed for iterative approach.")
-            measured, total_iterations = self.iterative_grover()
-            if logs:
-                log.info('Solution found in an iterative process.')
-                log.info(f'Solution: {measured}')
-                log.info(f'Total Grover iterations taken: {total_iterations}')
-            self.solution = measured
-            self.iterations = total_iterations
-        return self.solution, self.iterations
+        # set qibo backend
+        set_backend('tensorflow')
+        
+        # create classical discriminator
+        discriminator = self.define_discriminator()
+        
+        # define hamiltonian to generate fake samples
+        def hamiltonian(nqubits, position):
+            identity = [[1, 0], [0, 1]]
+            m0 = hamiltonians.Z(1).matrix
+            kron = []
+            for i in range(nqubits):
+                if i == position:
+                    kron.append(m0)
+                else:
+                    kron.append(identity)
+            for i in range(nqubits - 1):
+                if i==0:
+                    ham = np.kron(kron[i+1], kron[i])
+                else:
+                    ham = np.kron(kron[i+1], ham)
+            ham = hamiltonians.Hamiltonian(nqubits, ham)
+            return ham
+        
+        hamiltonians_list = []
+        for i in range(self.nqubits):
+            hamiltonians_list.append(hamiltonian(self.nqubits, i))
+        
+        # create quantum generator
+        circuit = models.Circuit(self.nqubits)
+        for l in range(self.layers):
+            for q in range(self.nqubits):
+                circuit.add(gates.RY(q, 0))
+                circuit.add(gates.RZ(q, 0))
+                circuit.add(gates.RY(q, 0))
+                circuit.add(gates.RZ(q, 0))
+            for i in range(0, self.nqubits-1):
+                circuit.add(gates.CRY(i, i+1, 0))
+            circuit.add(gates.CRY(self.nqubits-1, 0, 0))
+        for q in range(self.nqubits):
+            circuit.add(gates.RY(q, 0))
+        
+        # train model
+        self.train(discriminator, circuit, hamiltonians_list)
 
-
-    def __call__(self, nshots=100, freq=False, logs=False):
-        """Equivalent to :meth:`qibo.models.grover.Grover.execute`."""
-        return self.execute(nshots=nshots, freq=freq, logs=logs)
+    def __call__(self):
+        """Equivalent to :meth:`qibo.models.qgan.qGAN.execute`."""
+        return self.execute()
