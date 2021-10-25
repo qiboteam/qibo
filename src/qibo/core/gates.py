@@ -19,12 +19,12 @@ class BackendGate(BaseBackendGate):
         return super().__new__(cls)
 
     def __init__(self):
-        if K.op is not None:
+        if K.is_custom:
             if not K.executing_eagerly(): # pragma: no cover
                 raise_error(NotImplementedError,
                             "Custom operator gates should not be used in "
                             "compiled mode.")
-            self.gate_op = K.op.apply_gate
+            self.gate_op = K.apply_gate
         else:
             self.gate_op = None
         super().__init__()
@@ -113,8 +113,8 @@ class X(BackendGate, abstract_gates.X):
     def __init__(self, q):
         BackendGate.__init__(self)
         abstract_gates.X.__init__(self, q)
-        if self.gate_op:
-            self.gate_op = K.op.apply_x
+        if K.is_custom:
+            self.gate_op = K.apply_x
 
     def _construct_unitary(self):
         return K.matrices.X
@@ -125,8 +125,8 @@ class Y(BackendGate, abstract_gates.Y):
     def __init__(self, q):
         BackendGate.__init__(self)
         abstract_gates.Y.__init__(self, q)
-        if self.gate_op:
-            self.gate_op = K.op.apply_y
+        if K.is_custom:
+            self.gate_op = K.apply_y
             self._density_matrix_call = lambda state: self._custom_density_matrix_call(state)
 
     def _construct_unitary(self):
@@ -140,11 +140,11 @@ class Y(BackendGate, abstract_gates.Y):
         original_targets = tuple(self.target_qubits)
         self._target_qubits = self.cache.target_qubits_dm
         self._nqubits *= 2
-        self.gate_op = K.op.apply_gate
+        self.gate_op = K.apply_gate
         self._custom_op_matrix = K.conj(K.matrices.Y)
         state = K.state_vector_matrix_call(self, state)
         self._custom_op_matrix = K.matrices.Y
-        self.gate_op = K.op.apply_y
+        self.gate_op = K.apply_y
         self._nqubits //= 2
         self._target_qubits = original_targets
         return K.reshape(state, shape)
@@ -155,8 +155,8 @@ class Z(BackendGate, abstract_gates.Z):
     def __init__(self, q):
         BackendGate.__init__(self)
         abstract_gates.Z.__init__(self, q)
-        if self.gate_op:
-            self.gate_op = K.op.apply_z
+        if K.is_custom:
+            self.gate_op = K.apply_z
 
     def _construct_unitary(self):
         return K.matrices.Z
@@ -208,8 +208,8 @@ class M(BackendGate, abstract_gates.M):
         self._result_list = None
         if collapse:
             self.result = self.measurements.MeasurementResult(self.qubits)
-        if self.gate_op:
-            self.gate_op = K.op.collapse_state
+        if K.is_custom:
+            self.gate_op = K.collapse_state
         self.order = None
 
     @property
@@ -228,7 +228,7 @@ class M(BackendGate, abstract_gates.M):
             cache.reduced_target_qubits = list(
                 reduced_target_qubits[i] for i in self.target_qubits)
 
-            if K.op is None:
+            if not K.is_custom:
                 sorted_qubits = sorted(self.target_qubits)
                 cache.order = list(sorted_qubits)
                 s = 1 + self.density_matrix
@@ -368,8 +368,8 @@ class U1(MatrixGate, abstract_gates.U1):
     def __init__(self, q, theta, trainable=True):
         MatrixGate.__init__(self)
         abstract_gates.U1.__init__(self, q, theta, trainable)
-        if self.gate_op:
-            self.gate_op = K.op.apply_z_pow
+        if K.is_custom:
+            self.gate_op = K.apply_z_pow
 
     @property
     def custom_op_matrix(self):
@@ -428,8 +428,8 @@ class CNOT(BackendGate, abstract_gates.CNOT):
     def __init__(self, q0, q1):
         BackendGate.__init__(self)
         abstract_gates.CNOT.__init__(self, q0, q1)
-        if self.gate_op:
-            self.gate_op = K.op.apply_x
+        if K.is_custom:
+            self.gate_op = K.apply_x
 
     def _construct_unitary(self):
         return K.matrices.CNOT
@@ -440,8 +440,8 @@ class CZ(BackendGate, abstract_gates.CZ):
     def __init__(self, q0, q1):
         BackendGate.__init__(self)
         abstract_gates.CZ.__init__(self, q0, q1)
-        if self.gate_op:
-            self.gate_op = K.op.apply_z
+        if K.is_custom:
+            self.gate_op = K.apply_z
 
     def _construct_unitary(self):
         return K.matrices.CZ
@@ -491,8 +491,8 @@ class CU1(_CUn_, abstract_gates.CU1):
 
     def __init__(self, q0, q1, theta, trainable=True):
         _CUn_.__init__(self, q0, q1, theta=theta, trainable=trainable)
-        if self.gate_op:
-            self.gate_op = K.op.apply_z_pow
+        if K.is_custom:
+            self.gate_op = K.apply_z_pow
 
     @property
     def custom_op_matrix(self):
@@ -521,8 +521,8 @@ class SWAP(BackendGate, abstract_gates.SWAP):
     def __init__(self, q0, q1):
         BackendGate.__init__(self)
         abstract_gates.SWAP.__init__(self, q0, q1)
-        if self.gate_op:
-            self.gate_op = K.op.apply_swap
+        if K.is_custom:
+            self.gate_op = K.apply_swap
 
     def _construct_unitary(self):
         return K.matrices.SWAP
@@ -533,8 +533,8 @@ class fSim(MatrixGate, abstract_gates.fSim):
     def __init__(self, q0, q1, theta, phi, trainable=True):
         MatrixGate.__init__(self)
         abstract_gates.fSim.__init__(self, q0, q1, theta, phi, trainable)
-        if self.gate_op:
-            self.gate_op = K.op.apply_fsim
+        if K.is_custom:
+            self.gate_op = K.apply_fsim
 
     @property
     def custom_op_matrix(self):
@@ -564,8 +564,8 @@ class GeneralizedfSim(MatrixGate, abstract_gates.GeneralizedfSim):
     def __init__(self, q0, q1, unitary, phi, trainable=True):
         BackendGate.__init__(self)
         abstract_gates.GeneralizedfSim.__init__(self, q0, q1, unitary, phi, trainable)
-        if self.gate_op:
-            self.gate_op = K.op.apply_fsim
+        if K.is_custom:
+            self.gate_op = K.apply_fsim
 
     @property
     def custom_op_matrix(self):
@@ -603,8 +603,8 @@ class TOFFOLI(BackendGate, abstract_gates.TOFFOLI):
     def __init__(self, q0, q1, q2):
         BackendGate.__init__(self)
         abstract_gates.TOFFOLI.__init__(self, q0, q1, q2)
-        if self.gate_op:
-            self.gate_op = K.op.apply_x
+        if K.is_custom:
+            self.gate_op = K.apply_x
 
     def _construct_unitary(self):
         return K.matrices.TOFFOLI
@@ -625,18 +625,18 @@ class Unitary(MatrixGate, abstract_gates.Unitary):
         MatrixGate.__init__(self)
         abstract_gates.Unitary.__init__(self, unitary, *q, trainable=trainable, name=name)
         n = len(self.target_qubits)
-        if self.gate_op:
+        if K.is_custom:
             if n == 1:
-                self.gate_op = K.op.apply_gate
+                self.gate_op = K.apply_gate
             elif n == 2:
-                self.gate_op = K.op.apply_two_qubit_gate
+                self.gate_op = K.apply_two_qubit_gate
             else:
                 if K.name == "qibotf":
                     raise_error(NotImplementedError,
                                 "qibotf supports up to two-qubit gates but {} "
                                 "targets were given. Please switch to another "
                                 "backend to execute this operation.".format(n))
-                self.gate_op = K.op.apply_multiqubit_gate
+                self.gate_op = K.apply_multiqubit_gate
 
 
     def _construct_unitary(self):
@@ -1035,8 +1035,8 @@ class _ThermalRelaxationChannelB(MatrixGate, abstract_gates._ThermalRelaxationCh
             self, q, t1, t2, time, excited_population=excited_population,
             seed=seed)
         self._qubits_tensor = None
-        if self.gate_op:
-            self.gate_op = K.op.apply_two_qubit_gate
+        if K.is_custom:
+            self.gate_op = K.apply_two_qubit_gate
 
     @property
     def cache(self):
@@ -1047,7 +1047,7 @@ class _ThermalRelaxationChannelB(MatrixGate, abstract_gates._ThermalRelaxationCh
             cache.qubits_tensor = qubits + [q + self.nqubits for q in qubits]
             cache.target_qubits_dm = self.qubits + tuple(q + self.nqubits for q in self.qubits)
 
-            if K.op is None:
+            if not K.is_custom:
                 cache.calculation_cache = K.create_einsum_cache(
                     cache.target_qubits_dm, 2 * self.nqubits)
 
@@ -1067,7 +1067,7 @@ class _ThermalRelaxationChannelB(MatrixGate, abstract_gates._ThermalRelaxationCh
                                 "state vectors when T1 < T2.")
 
     def _density_matrix_call(self, state):
-        if K.op is not None:
+        if K.is_custom:
             shape = state.shape
             state = K.reshape(state, (K.np.prod(shape),))
             original_targets = tuple(self.target_qubits)
@@ -1085,12 +1085,12 @@ class FusedGate(MatrixGate, abstract_gates.FusedGate):
     def __init__(self, *q):
         BackendGate.__init__(self)
         abstract_gates.FusedGate.__init__(self, *q)
-        if self.gate_op:
+        if K.is_custom:
             # Custom kernels currently support up to two target qubits
             if len(self.target_qubits) == 1:
-                self.gate_op = K.op.apply_gate
+                self.gate_op = K.apply_gate
             elif len(self.target_qubits) == 2:
-                self.gate_op = K.op.apply_two_qubit_gate
+                self.gate_op = K.apply_two_qubit_gate
             else:
                 raise_error(NotImplementedError, "Fused gates can target up to two qubits.")
 

@@ -90,7 +90,7 @@ def test_measurementresult_apply_bitflips(backend, i, p0, p1):
     result.decimal = K.zeros(10, dtype='DTYPEINT')
     K.set_seed(123)
     noisy_result = result.apply_bitflips(p0, p1)
-    if K.name == "qibojit" and K.op.get_backend() == "cupy": # pragma: no cover
+    if K.name == "qibojit" and K.engine.name == "cupy": # pragma: no cover
         # cupy is not tested by CI!
         targets = [
             [0, 0, 0, 6, 4, 1, 1, 4, 0, 2],

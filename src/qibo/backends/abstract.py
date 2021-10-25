@@ -21,7 +21,7 @@ class AbstractBackend(ABC):
         # using physical cores by default
         self.nthreads = psutil.cpu_count(logical=False)
 
-        self.op = None
+        self.is_custom = False
         self._matrices = None
         self.numeric_types = None
         self.tensor_types = None

@@ -25,7 +25,7 @@ def test_probabilistic_measurement(backend, accelerators, use_samples):
         _ = result.samples()
 
     # update reference values based on backend and device
-    if K.name == "qibojit" and K.op.get_backend() == "cupy": # pragma: no cover
+    if K.name == "qibojit" and K.engine.name == "cupy": # pragma: no cover
         # cupy is not tested by CI!
         decimal_frequencies = {0: 264, 1: 235, 2: 269, 3: 232}
     elif K.name == "numpy" or K.name == "qibojit":
@@ -58,7 +58,7 @@ def test_unbalanced_probabilistic_measurement(backend, use_samples):
         # otherwise it uses the frequency-only calculation
         _ = result.samples()
     # update reference values based on backend and device
-    if K.name == "qibojit" and K.op.get_backend() == "cupy": # pragma: no cover
+    if K.name == "qibojit" and K.engine.name == "cupy": # pragma: no cover
         # cupy is not tested by CI!
         decimal_frequencies = {0: 170, 1: 154, 2: 167, 3: 509}
     elif K.name == "numpy" or K.name == "qibojit":
@@ -113,7 +113,7 @@ def test_post_measurement_bitflips_on_circuit(backend, accelerators, i, probs):
     c.add(gates.M(0, 1, p0={0: probs[0], 1: probs[1]}))
     c.add(gates.M(3, p0=probs[2]))
     result = c(nshots=30).frequencies(binary=False)
-    if K.name == "qibojit" and K.op.get_backend() == "cupy": # pragma: no cover
+    if K.name == "qibojit" and K.engine.name == "cupy": # pragma: no cover
         # cupy is not tested by CI!
         targets = [{5: 30}, {5: 12, 7: 7, 6: 5, 4: 3, 1: 2, 2: 1},
                    {2: 10, 6: 5, 5: 4, 0: 3, 7: 3, 1: 2, 3: 2, 4: 1}]

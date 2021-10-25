@@ -2,7 +2,7 @@ backends:
   # simulation backends - numpy is available by default
   - name: qibojit
     class: JITCustomBackend
-    from: qibo.backends.jit
+    from: qibojit
 
   - name: qibotf
     class: TensorflowCustomBackend
