@@ -1,5 +1,6 @@
 import os
-from qibo.backends import abstract, numpy
+from qibo.backends.abstract import AbstractBackend, AbstractCustomOperators
+from qibo.backends.numpy import NumpyBackend
 from qibo.config import raise_error, log, TF_LOG_LEVEL, TF_MIN_VERSION
 
 
@@ -12,7 +13,7 @@ class Optimization:
         self.optimizers = tf.optimizers
 
 
-class TensorflowBackend(numpy.NumpyBackend):
+class TensorflowBackend(NumpyBackend):
 
     description = "Uses `tf.einsum` to apply gates to states via matrix " \
                   "multiplication."
@@ -54,7 +55,7 @@ class TensorflowBackend(numpy.NumpyBackend):
         self.supports_gradients = True
 
     def set_device(self, name):
-        abstract.AbstractBackend.set_device(self, name)
+        AbstractBackend.set_device(self, name)
 
     def set_threads(self, nthreads):
         log.warning("`set_threads` is not supported by the tensorflow "
@@ -62,7 +63,7 @@ class TensorflowBackend(numpy.NumpyBackend):
                     "`tf.config.threading.set_inter_op_parallelism_threads` "
                     "or `tf.config.threading.set_intra_op_parallelism_threads` "
                     "to switch the number of threads.")
-        abstract.AbstractBackend.set_threads(self, nthreads)
+        AbstractBackend.set_threads(self, nthreads)
 
     def to_numpy(self, x):
         if isinstance(x, self.np.ndarray):
@@ -225,13 +226,15 @@ class TensorflowBackend(numpy.NumpyBackend):
         self.backend.random.set_seed(seed)
 
 
-class TensorflowCustomBackend(TensorflowBackend):
+class TensorflowCustomBackend(TensorflowBackend, AbstractCustomOperators):
+    # TODO: Move this to qibotf repo
 
     description = "Uses precompiled primitives to apply gates to states. " \
                   "This is the fastest simulation engine."
 
     def __init__(self):
-        super().__init__()
+        TensorflowBackend.__init__(self)
+        AbstractCustomOperators.__init__(self)
         from qibotf import custom_operators as op  # pylint: disable=E0401
         self.name = "qibotf"
         self.op = op
@@ -247,7 +250,7 @@ class TensorflowCustomBackend(TensorflowBackend):
         self.supports_gradients = False
 
     def set_threads(self, nthreads):
-        abstract.AbstractBackend.set_threads(self, nthreads)
+        AbstractBackend.set_threads(self, nthreads)
 
     def initial_state(self, nqubits, is_matrix=False):
         return self.op.initial_state(nqubits, self.dtypes('DTYPECPX'),
@@ -285,41 +288,37 @@ class TensorflowCustomBackend(TensorflowBackend):
         return cache
 
     def _state_vector_call(self, gate, state):
-        return gate.gate_op(state, gate.cache.qubits_tensor, gate.nqubits,
-                            *gate.target_qubits, self.nthreads)
+        gate_op = self.get_gate_op(gate)
+        return gate_op(state, gate.cache.qubits_tensor, gate.nqubits, gate.target_qubits)
 
     def state_vector_matrix_call(self, gate, state):
-        return gate.gate_op(state, gate.custom_op_matrix, gate.cache.qubits_tensor, # pylint: disable=E1121
-                            gate.nqubits, *gate.target_qubits,
-                            self.nthreads)
+        gate_op = self.get_gate_op(gate)
+        return gate_op(state, gate.custom_op_matrix, gate.cache.qubits_tensor, # pylint: disable=E1121
+                       gate.nqubits, gate.target_qubits)
 
     def _density_matrix_call(self, gate, state):
-        state = gate.gate_op(state, gate.cache.qubits_tensor + gate.nqubits,
-                             2 * gate.nqubits, *gate.target_qubits,
-                             self.nthreads)
-        state = gate.gate_op(state, gate.cache.qubits_tensor, 2 * gate.nqubits,
-                             *gate.cache.target_qubits_dm, self.nthreads)
+        gate_op = self.get_gate_op(gate)
+        state = gate_op(state, gate.cache.qubits_tensor + gate.nqubits, 2 * gate.nqubits, gate.target_qubits)
+        state = gate_op(state, gate.cache.qubits_tensor, 2 * gate.nqubits, gate.cache.target_qubits_dm)
         return state
 
     def density_matrix_matrix_call(self, gate, state):
-        state = gate.gate_op(state, gate.custom_op_matrix, gate.cache.qubits_tensor + gate.nqubits, # pylint: disable=E1121
-                             2 * gate.nqubits, *gate.target_qubits,
-                             self.nthreads)
+        gate_op = self.get_gate_op(gate)
+        state = gate_op(state, gate.custom_op_matrix, gate.cache.qubits_tensor + gate.nqubits, # pylint: disable=E1121
+                        2 * gate.nqubits, gate.target_qubits)
         adjmatrix = self.conj(gate.custom_op_matrix)
-        state = gate.gate_op(state, adjmatrix, gate.cache.qubits_tensor,
-                             2 * gate.nqubits, *gate.cache.target_qubits_dm,
-                             self.nthreads)
+        state = gate_op(state, adjmatrix, gate.cache.qubits_tensor,
+                        2 * gate.nqubits, gate.cache.target_qubits_dm)
         return state
 
     def _density_matrix_half_call(self, gate, state):
-        return gate.gate_op(state, gate.cache.qubits_tensor + gate.nqubits,
-                            2 * gate.nqubits, *gate.target_qubits,
-                            self.nthreads)
+        gate_op = self.get_gate_op(gate)
+        return gate_op(state, gate.cache.qubits_tensor + gate.nqubits, 2 * gate.nqubits, gate.target_qubits)
 
     def density_matrix_half_matrix_call(self, gate, state):
-        return gate.gate_op(state, gate.custom_op_matrix, gate.cache.qubits_tensor + gate.nqubits, # pylint: disable=E1121
-                            2 * gate.nqubits, *gate.target_qubits,
-                            self.nthreads)
+        gate_op = self.get_gate_op(gate)
+        return gate_op(state, gate.custom_op_matrix, gate.cache.qubits_tensor + gate.nqubits, # pylint: disable=E1121
+                       2 * gate.nqubits, gate.target_qubits)
 
     def _result_tensor(self, result):
         n = len(result)
@@ -328,15 +327,12 @@ class TensorflowCustomBackend(TensorflowBackend):
 
     def state_vector_collapse(self, gate, state, result):
         result = self._result_tensor(result)
-        return gate.gate_op(state, gate.cache.qubits_tensor, result,
-                            gate.nqubits, True, self.nthreads)
+        return self.op.collapse_state(state, gate.cache.qubits_tensor, result, gate.nqubits, True)
 
     def density_matrix_collapse(self, gate, state, result):
         result = self._result_tensor(result)
-        state = gate.gate_op(state, gate.cache.qubits_tensor + gate.nqubits, result,
-                             2 * gate.nqubits, False, self.nthreads)
-        state = gate.gate_op(state, gate.cache.qubits_tensor, result,
-                             2 * gate.nqubits, False, self.nthreads)
+        state = self.op.collapse_state(state, gate.cache.qubits_tensor + gate.nqubits, result, 2 * gate.nqubits, False)
+        state = self.op.collapse_state(state, gate.cache.qubits_tensor, result, 2 * gate.nqubits, False)
         return state / self.trace(state)
 
     def compile(self, func):
@@ -344,6 +340,40 @@ class TensorflowCustomBackend(TensorflowBackend):
 
     def transpose_state(self, pieces, state, nqubits, order):
         return self.op.transpose_state(pieces, state, nqubits, order, self.nthreads)
+
+    def apply_gate(self, state, gate, qubits, nqubits, targets):
+        return self.op.apply_gate(state, gate, qubits, nqubits, *targets, self.nthreads)
+
+    def apply_x(self, state, qubits, nqubits, targets):
+        return self.op.apply_x(state, qubits, nqubits, *targets, self.nthreads)
+
+    def apply_y(self, state, qubits, nqubits, targets):
+        return self.op.apply_y(state, qubits, nqubits, *targets, self.nthreads)
+
+    def apply_z(self, state, qubits, nqubits, targets):
+        return self.op.apply_z(state, qubits, nqubits, *targets, self.nthreads)
+
+    def apply_z_pow(self, state, gate, qubits, nqubits, targets):
+        return self.op.apply_z_pow(state, gate, qubits, nqubits, *targets, self.nthreads)
+
+    def apply_two_qubit_gate(self, state, gate, qubits, nqubits, targets):
+        return self.op.apply_two_qubit_gate(state, gate, qubits, nqubits, *targets, self.nthreads)
+
+    def apply_swap(self, state, qubits, nqubits, targets):
+        return self.op.apply_swap(state, qubits, nqubits, *targets, self.nthreads)
+
+    def apply_fsim(self, state, gate, qubits, nqubits, targets):
+        return self.op.apply_fsim(state, gate, qubits, nqubits, *targets, self.nthreads)
+
+    def apply_multiqubit_gate(self, state, gate, qubits, nqubits, targets):
+        n = len(targets)
+        raise_error(NotImplementedError,
+                    "qibotf supports up to two-qubit gates but {} "
+                    "targets were given. Please switch to another "
+                    "backend to execute this operation.".format(n))
+
+    def collapse_state(self, state, qubits, result, nqubits, normalize=True):
+        return self.op.collapse_state(state, qubits, result, nqubits, normalize, self.nthreads)
 
     def swap_pieces(self, piece0, piece1, new_global, nlocal):
         with self.on_cpu():

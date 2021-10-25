@@ -597,13 +597,6 @@ class Unitary(MatrixGate, abstract_gates.Unitary):
         MatrixGate.__init__(self)
         abstract_gates.Unitary.__init__(self, unitary, *q, trainable=trainable, name=name)
         n = len(self.target_qubits)
-        if K.is_custom:
-            # TODO: Move this check to qibotf repo
-            if K.name == "qibotf":
-                raise_error(NotImplementedError,
-                            "qibotf supports up to two-qubit gates but {} "
-                            "targets were given. Please switch to another "
-                            "backend to execute this operation.".format(n))
 
     def _construct_unitary(self):
         return self.parameters
