@@ -559,14 +559,87 @@ class AbstractBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def assert_allclose(self, value, target, rtol=1e-7, atol=0.0): # pragma: no cover
+        """Check that two arrays are equal. Useful for testing."""
+        raise_error(NotImplementedError)
+
+
+class AbstractCustomOperators:  # pragma: no cover
+    # TODO: Add docstring pointing to qibojit and qibotf
+
+    def __init__(self):
+        self._gate_ops = {
+            "x": self.apply_x,
+            "y": self.apply_y,
+            "z": self.apply_z,
+            "m": self.collapse_state,
+            "u1": self.apply_z_pow,
+            "cx": self.apply_x,
+            "cz": self.apply_z,
+            "cu1": self.apply_z_pow,
+            "swap": self.apply_swap,
+            "fsim": self.apply_fsim,
+            "generalizedfsim": self.apply_fsim,
+            "ccx": self.apply_x
+            }
+
+    def get_gate_op(self, gate):
+        if gate.name in self._gate_ops:
+            return self._gate_ops.get(gate.name)
+        elif gate.__class__.__name__ == "_ThermalRelaxationChannelB":
+            return self.apply_two_qubit_gate
+        n = len(gate.target_qubits)
+        if n == 1:
+            return self.apply_gate
+        elif n == 2:
+            return self.apply_two_qubit_gate
+        else:
+            return self.apply_multiqubit_gate
+
+    @abstractmethod
+    def apply_gate(self, state, gate, nqubits, targets, qubits=None):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def apply_x(self, state, nqubits, targets, qubits=None):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def apply_y(self, state, nqubits, targets, qubits=None):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def apply_z(self, state, nqubits, targets, qubits=None):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def apply_z_pow(self, state, gate, nqubits, targets, qubits=None):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def apply_two_qubit_gate(self, state, gate, nqubits, targets, qubits=None):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def apply_swap(self, state, nqubits, targets, qubits=None):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def apply_fsim(self, state, gate, nqubits, targets, qubits=None):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def apply_multiqubit_gate(self, state, gate, nqubits, targets, qubits=None):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def collapse_state(self, state, qubits, result, nqubits, normalize=True):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def swap_pieces(self, piece0, piece1, new_global, nlocal): # pragma: no cover
         """Swaps two distributed state pieces in order to change the global qubits.
 
         Useful to apply SWAP gates on distributed states.
         """
-        raise_error(NotImplementedError)
-
-    @abstractmethod
-    def assert_allclose(self, value, target, rtol=1e-7, atol=0.0): # pragma: no cover
-        """Check that two arrays are equal. Useful for testing."""
         raise_error(NotImplementedError)
