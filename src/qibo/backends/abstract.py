@@ -594,7 +594,7 @@ class AbstractCustomOperators:  # pragma: no cover
         elif n == 2:
             return self.apply_two_qubit_gate
         else:
-            return self.apply_multiqubit_gate
+            return self.apply_multi_qubit_gate
 
     @abstractmethod
     def apply_gate(self, state, gate, nqubits, targets, qubits=None):
@@ -629,7 +629,7 @@ class AbstractCustomOperators:  # pragma: no cover
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def apply_multiqubit_gate(self, state, gate, nqubits, targets, qubits=None):
+    def apply_multi_qubit_gate(self, state, gate, nqubits, targets, qubits=None):
         raise_error(NotImplementedError)
 
     @abstractmethod
