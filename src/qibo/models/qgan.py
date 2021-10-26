@@ -7,7 +7,7 @@ from tensorflow.keras.layers import Dense, Conv2D, Dropout, Reshape, LeakyReLU, 
 from qibo import gates, hamiltonians, models, set_backend
 
 
-class qGAN(object):
+class StyleQGAN(object):
     """Model that implements and trains a style-based quantum generative adversarial network.
 
     For original manuscript: `arXiv:2110.06933 <https://arxiv.org/abs/2110.06933>`_
@@ -40,7 +40,7 @@ class qGAN(object):
         .. testcode::
 
             import numpy as np
-            from qibo.models.qgan import qGAN
+            from qibo.models.qgan import StyleQGAN
             # Create reference distribution. Ex: 3D correlated Gaussian distribution normalized between [-1,1]
             reference_distribution = []
             samples = 10000
