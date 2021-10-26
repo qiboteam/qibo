@@ -6,7 +6,7 @@ backends:
 
   - name: qibotf
     class: TensorflowCustomBackend
-    from: qibo.backends.tensorflow
+    from: qibotf.custom_operators
 
   - name: tensorflow
     class: TensorflowBackend
