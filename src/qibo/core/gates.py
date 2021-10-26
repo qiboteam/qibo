@@ -125,6 +125,7 @@ class Y(BackendGate, abstract_gates.Y):
         return K.matrices.Y
 
     def _custom_density_matrix_call(self, state):
+        print(K.get_gate_op(self))
         state = K._density_matrix_half_call(self, state)
         matrix = K.conj(K.matrices.Y)
         shape = state.shape
@@ -134,6 +135,7 @@ class Y(BackendGate, abstract_gates.Y):
         self._nqubits *= 2
         self.name = "Unitary" # change name temporarily so that ``apply_gate`` op is used
         self._custom_op_matrix = K.conj(K.matrices.Y)
+        print(K.get_gate_op(self))
         state = K.state_vector_matrix_call(self, state)
         self._custom_op_matrix = K.matrices.Y
         self.name = "y"

@@ -237,6 +237,7 @@ class TensorflowCustomBackend(TensorflowBackend, AbstractCustomOperators):
         AbstractCustomOperators.__init__(self)
         from qibotf import custom_operators as op  # pylint: disable=E0401
         self.name = "qibotf"
+        self.is_custom = True
         self.op = op
         if "OMP_NUM_THREADS" in os.environ: # pragma: no cover
             self.set_threads(int(os.environ.get("OMP_NUM_THREADS")))
@@ -327,12 +328,16 @@ class TensorflowCustomBackend(TensorflowBackend, AbstractCustomOperators):
 
     def state_vector_collapse(self, gate, state, result):
         result = self._result_tensor(result)
-        return self.op.collapse_state(state, gate.cache.qubits_tensor, result, gate.nqubits, True)
+        return self.op.collapse_state(state, gate.cache.qubits_tensor, result,
+                                      gate.nqubits, True, self.nthreads)
 
     def density_matrix_collapse(self, gate, state, result):
         result = self._result_tensor(result)
-        state = self.op.collapse_state(state, gate.cache.qubits_tensor + gate.nqubits, result, 2 * gate.nqubits, False)
-        state = self.op.collapse_state(state, gate.cache.qubits_tensor, result, 2 * gate.nqubits, False)
+        qubits = gate.cache.qubits_tensor
+        state = self.op.collapse_state(state, qubits + gate.nqubits, result,
+                                       2 * gate.nqubits, False, self.nthreads)
+        state = self.op.collapse_state(state, qubits, result, 2 * gate.nqubits,
+                                       False, self.nthreads)
         return state / self.trace(state)
 
     def compile(self, func):
