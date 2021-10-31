@@ -20,7 +20,7 @@ class Backend:
         # dictionary to cache if backends are available
         # used by ``self.check_availability``
         self._availability = {}
-        
+
         # create numpy backend (is always available as numpy is a requirement)
         if self.check_availability("numpy"):
             from qibo.backends.numpy import NumpyBackend
@@ -109,8 +109,9 @@ class Backend:
                 available = []
                 for backend in self.profile.get('backends'):
                     n = backend.get('name')
-                    d = self._get_backend_class(backend).description
-                    available.append(f" - {n}: {d}")
+                    if self.check_availability(n):
+                        d = self._get_backend_class(backend).description
+                        available.append(f" - {n}: {d}")
                 available.append(f" - numpy: {self.qnp.description}")
                 available = "\n".join(available)
                 raise_error(ValueError, "Unknown backend {}. Please select one "
