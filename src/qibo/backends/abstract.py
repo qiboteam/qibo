@@ -574,7 +574,11 @@ class AbstractBackend(ABC):
 
 
 class AbstractCustomOperators:  # pragma: no cover
-    # TODO: Add docstring pointing to qibojit and qibotf
+    """Abstraction for backends that are based on custom operators.
+
+    Such backends are `qibojit <https://github.com/qiboteam/qibojit>`_ and
+    `qibotf <https://github.com/qiboteam/qibotf>`_.
+    """
 
     def __init__(self):
         self._gate_ops = {
@@ -593,6 +597,15 @@ class AbstractCustomOperators:  # pragma: no cover
             }
 
     def get_gate_op(self, gate):
+        """Finds the custom operator function that corresponds to the given gate.
+
+        Args:
+            gate (qibo.abstractions.abstract_gates.Gate): Gate object to apply.
+
+        Returns:
+            A callable that applies the custom operator corresponding to the
+            given gate.
+        """
         if gate.name in self._gate_ops:
             return self._gate_ops.get(gate.name)
         elif gate.__class__.__name__ == "_ThermalRelaxationChannelB":
@@ -607,42 +620,116 @@ class AbstractCustomOperators:  # pragma: no cover
 
     @abstractmethod
     def apply_gate(self, state, gate, nqubits, targets, qubits=None):
+        """Applies one-qubit gate using matrix multiplication.
+
+        The gate may be controlled on arbitrary number of qubits.
+
+        Args:
+            state: State vector as a backend supported tensor.
+            gate: Gate matrix as a backend supported tensor.
+            nqubits (int): Total number of qubits in the system.
+            targets (tuple): Target qubit ids that the gate acts on.
+            qubits: Sorted list of target and control qubit ids sorted as a
+                backend supported tensor.
+
+        Returns:
+            The state vector after the gate is applied as a backend supported
+            tensor.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
     def apply_x(self, state, nqubits, targets, qubits=None):
+        """Applies Pauli-X gate.
+
+        See :meth:`qibo.backends.abstract.AbstractCustomOperators.apply_gate`
+        for information on arguments.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
     def apply_y(self, state, nqubits, targets, qubits=None):
+        """Applies Pauli-Y gate.
+
+        See :meth:`qibo.backends.abstract.AbstractCustomOperators.apply_gate`
+        for information on arguments.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
     def apply_z(self, state, nqubits, targets, qubits=None):
+        """Applies Pauli-Z gate.
+
+        See :meth:`qibo.backends.abstract.AbstractCustomOperators.apply_gate`
+        for information on arguments.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
     def apply_z_pow(self, state, gate, nqubits, targets, qubits=None):
+        """Applies U1 gate.
+
+        See :meth:`qibo.backends.abstract.AbstractCustomOperators.apply_gate`
+        for information on arguments.
+        The ``gate`` argument here corresponds to the phase to be applied, not
+        the full matrix.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
     def apply_two_qubit_gate(self, state, gate, nqubits, targets, qubits=None):
+        """Applies two-qubit gate using matrix multiplication.
+
+        See :meth:`qibo.backends.abstract.AbstractCustomOperators.apply_gate`
+        for information on arguments.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
     def apply_swap(self, state, nqubits, targets, qubits=None):
+        """Applies SWAP gate.
+
+        See :meth:`qibo.backends.abstract.AbstractCustomOperators.apply_gate`
+        for information on arguments.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
     def apply_fsim(self, state, gate, nqubits, targets, qubits=None):
+        """Applies fSim gate.
+
+        See :meth:`qibo.backends.abstract.AbstractCustomOperators.apply_gate`
+        for information on arguments.
+        The ``gate`` argument here is a tensor of length 5 corresponding to the
+        non-zero elements of :class:`qibo.abstractions.gates.GeneralizedfSim`.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
     def apply_multi_qubit_gate(self, state, gate, nqubits, targets, qubits=None):
+        """Applies multi-qubit gate with three or more targets using matrix multiplication.
+
+        See :meth:`qibo.backends.abstract.AbstractCustomOperators.apply_gate`
+        for information on arguments.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
     def collapse_state(self, state, qubits, result, nqubits, normalize=True):
+        """Collapses state according to the given measurement result.
+
+        Args:
+            state: State vector as a backend supported tensor.
+            qubits: Sorted list of target qubit ids sorted as a backend
+                supported tensor.
+            result (int): Measurement result on the target qubits converted
+                from binary to decimal.
+            nqubits (int): Total number of qubits in the system.
+            normalize (bool): If ``True`` the collapsed state is normalized.
+
+        Returns:
+            State after collapse as a backend supported tensor.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
