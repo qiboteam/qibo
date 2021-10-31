@@ -29,16 +29,17 @@ class NumpyBackend(abstract.AbstractBackend):
         self.gpu_devices = []
         self.default_device = self.cpu_devices[0]
 
-    @property
-    def test_regressions(self):
-        return {
+    def test_regressions(self, name):
+        regressions = {
             "test_measurementresult_apply_bitflips": [
                 [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
                 [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
                 [0, 0, 0, 0, 2, 0, 0, 0, 0, 0]
-            ]
+            ],
+            "test_probabilistic_measurement": {0: 249, 1: 231, 2: 253, 3: 267},
         }
+        return regressions.get(name)
 
     def set_device(self, name):
         log.warning("Numpy does not support device placement. "

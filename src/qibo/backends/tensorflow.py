@@ -54,16 +54,19 @@ class TensorflowBackend(NumpyBackend):
 
         self.supports_gradients = True
 
-    @property
-    def test_regressions(self):
-        return {
+    def test_regressions(self, name):
+        regressions = {
             "test_measurementresult_apply_bitflips": [
                 [4, 0, 0, 1, 0, 2, 2, 4, 4, 0],
                 [4, 0, 0, 1, 0, 2, 2, 4, 4, 0],
                 [4, 0, 0, 1, 0, 0, 0, 4, 4, 0],
                 [4, 0, 0, 0, 0, 0, 0, 4, 4, 0]
-            ]
+            ],
+            "test_probabilistic_measurement": {0: 271, 1: 239, 2: 242, 3: 248}
         }
+        if "GPU" in self.default_device:
+            regressions["test_probabilistic_measurement"] = {0: 273, 1: 233, 2: 242, 3: 252}
+        return regressions.get(name)
 
     def set_device(self, name):
         AbstractBackend.set_device(self, name)

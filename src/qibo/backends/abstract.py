@@ -39,8 +39,7 @@ class AbstractBackend(ABC):
         self.hardware_circuit = None
         self.hardware_gates = None
 
-    @property
-    def test_regressions(self):
+    def test_regressions(self, name):  # pragma: no cover
         """Correct outcomes for tests that involve random numbers.
 
         The outcomes of such tests depend on the backend.

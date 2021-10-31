@@ -25,17 +25,7 @@ def test_probabilistic_measurement(backend, accelerators, use_samples):
         _ = result.samples()
 
     # update reference values based on backend and device
-    if K.name == "qibojit" and K.engine.name == "cupy": # pragma: no cover
-        # cupy is not tested by CI!
-        decimal_frequencies = {0: 264, 1: 235, 2: 269, 3: 232}
-    elif K.name == "numpy" or K.name == "qibojit":
-        decimal_frequencies = {0: 249, 1: 231, 2: 253, 3: 267}
-    else:
-        if K.gpu_devices: # pragma: no cover
-            # CI does not use GPU
-            decimal_frequencies = {0: 273, 1: 233, 2: 242, 3: 252}
-        else:
-            decimal_frequencies = {0: 271, 1: 239, 2: 242, 3: 248}
+    decimal_frequencies = K.test_regressions("test_probabilistic_measurement")
     assert sum(result.frequencies().values()) == 1000
     assert_result(result, decimal_frequencies=decimal_frequencies)
     qibo.set_threads(original_threads)
