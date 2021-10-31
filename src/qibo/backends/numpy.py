@@ -8,6 +8,21 @@ class NumpyBackend(abstract.AbstractBackend):
     description = "Uses `np.einsum` to apply gates to states via matrix " \
                   "multiplication."
 
+    TEST_REGRESSIONS = {
+        "test_measurementresult_apply_bitflips": [
+                [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
+                [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 0, 2, 0, 0, 0, 0, 0]
+            ],
+        "test_probabilistic_measurement": {0: 249, 1: 231, 2: 253, 3: 267},
+        "test_unbalanced_probabilistic_measurement": {0: 171, 1: 148, 2: 161, 3: 520},
+        "test_post_measurement_bitflips_on_circuit": [
+                {5: 30}, {5: 18, 4: 5, 7: 4, 1: 2, 6: 1},
+                {4: 8, 2: 6, 5: 5, 1: 3, 3: 3, 6: 2, 7: 2, 0: 1}
+            ],
+    }
+
     def __init__(self):
         super().__init__()
         import numpy as np
@@ -28,18 +43,6 @@ class NumpyBackend(abstract.AbstractBackend):
         self.cpu_devices = ["/CPU:0"]
         self.gpu_devices = []
         self.default_device = self.cpu_devices[0]
-
-    def test_regressions(self, name):
-        regressions = {
-            "test_measurementresult_apply_bitflips": [
-                [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
-                [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-                [0, 0, 0, 0, 2, 0, 0, 0, 0, 0]
-            ],
-            "test_probabilistic_measurement": {0: 249, 1: 231, 2: 253, 3: 267},
-        }
-        return regressions.get(name)
 
     def set_device(self, name):
         log.warning("Numpy does not support device placement. "

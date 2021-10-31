@@ -48,17 +48,7 @@ def test_unbalanced_probabilistic_measurement(backend, use_samples):
         # otherwise it uses the frequency-only calculation
         _ = result.samples()
     # update reference values based on backend and device
-    if K.name == "qibojit" and K.engine.name == "cupy": # pragma: no cover
-        # cupy is not tested by CI!
-        decimal_frequencies = {0: 170, 1: 154, 2: 167, 3: 509}
-    elif K.name == "numpy" or K.name == "qibojit":
-        decimal_frequencies = {0: 171, 1: 148, 2: 161, 3: 520}
-    else:
-        if K.gpu_devices: # pragma: no cover
-            # CI does not use GPU
-            decimal_frequencies = {0: 196, 1: 153, 2: 156, 3: 495}
-        else:
-            decimal_frequencies = {0: 168, 1: 188, 2: 154, 3: 490}
+    decimal_frequencies = K.test_regressions("test_unbalanced_probabilistic_measurement")
     assert sum(result.frequencies().values()) == 1000
     assert_result(result, decimal_frequencies=decimal_frequencies)
     qibo.set_threads(original_threads)
@@ -103,16 +93,7 @@ def test_post_measurement_bitflips_on_circuit(backend, accelerators, i, probs):
     c.add(gates.M(0, 1, p0={0: probs[0], 1: probs[1]}))
     c.add(gates.M(3, p0=probs[2]))
     result = c(nshots=30).frequencies(binary=False)
-    if K.name == "qibojit" and K.engine.name == "cupy": # pragma: no cover
-        # cupy is not tested by CI!
-        targets = [{5: 30}, {5: 12, 7: 7, 6: 5, 4: 3, 1: 2, 2: 1},
-                   {2: 10, 6: 5, 5: 4, 0: 3, 7: 3, 1: 2, 3: 2, 4: 1}]
-    elif K.name == "numpy" or K.name == "qibojit":
-        targets = [{5: 30}, {5: 18, 4: 5, 7: 4, 1: 2, 6: 1},
-                   {4: 8, 2: 6, 5: 5, 1: 3, 3: 3, 6: 2, 7: 2, 0: 1}]
-    else:
-        targets = [{5: 30}, {5: 16, 7: 10, 6: 2, 3: 1, 4: 1},
-                   {3: 6, 5: 6, 7: 5, 2: 4, 4: 3, 0: 2, 1: 2, 6: 2}]
+    targets = K.test_regressions("test_post_measurement_bitflips_on_circuit")
     assert result == targets[i]
 
 

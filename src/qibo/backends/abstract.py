@@ -5,6 +5,8 @@ from qibo.config import raise_error, log
 
 class AbstractBackend(ABC):
 
+    TEST_REGRESSIONS = {}
+
     def __init__(self):
         self.backend = None
         self.name = "base"
@@ -39,12 +41,12 @@ class AbstractBackend(ABC):
         self.hardware_circuit = None
         self.hardware_gates = None
 
-    def test_regressions(self, name):  # pragma: no cover
+    def test_regressions(self, name):
         """Correct outcomes for tests that involve random numbers.
 
         The outcomes of such tests depend on the backend.
         """
-        raise_error(NotImplementedError)
+        return self.TEST_REGRESSIONS.get(name)
 
     def dtypes(self, name):
         if name in self._dtypes:

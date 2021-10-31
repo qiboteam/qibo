@@ -18,6 +18,35 @@ class TensorflowBackend(NumpyBackend):
     description = "Uses `tf.einsum` to apply gates to states via matrix " \
                   "multiplication."
 
+    TEST_REGRESSIONS_CPU = {
+        "test_measurementresult_apply_bitflips": [
+            [4, 0, 0, 1, 0, 2, 2, 4, 4, 0],
+            [4, 0, 0, 1, 0, 2, 2, 4, 4, 0],
+            [4, 0, 0, 1, 0, 0, 0, 4, 4, 0],
+            [4, 0, 0, 0, 0, 0, 0, 4, 4, 0]
+        ],
+        "test_probabilistic_measurement": {0: 271, 1: 239, 2: 242, 3: 248},
+        "test_unbalanced_probabilistic_measurement": {0: 168, 1: 188, 2: 154, 3: 490},
+        "test_post_measurement_bitflips_on_circuit": [
+                {5: 30}, {5: 16, 7: 10, 6: 2, 3: 1, 4: 1},
+                {3: 6, 5: 6, 7: 5, 2: 4, 4: 3, 0: 2, 1: 2, 6: 2}
+            ],
+    }
+    TEST_REGRESSIONS_GPU = {
+        "test_measurementresult_apply_bitflips": [
+            [4, 0, 0, 1, 0, 2, 2, 4, 4, 0],
+            [4, 0, 0, 1, 0, 2, 2, 4, 4, 0],
+            [4, 0, 0, 1, 0, 0, 0, 4, 4, 0],
+            [4, 0, 0, 0, 0, 0, 0, 4, 4, 0]
+        ],
+        "test_probabilistic_measurement": {0: 273, 1: 233, 2: 242, 3: 252},
+        "test_unbalanced_probabilistic_measurement": {0: 196, 1: 153, 2: 156, 3: 495},
+        "test_post_measurement_bitflips_on_circuit": [
+                {5: 30}, {5: 16, 7: 10, 6: 2, 3: 1, 4: 1},
+                {3: 6, 5: 6, 7: 5, 2: 4, 4: 3, 0: 2, 1: 2, 6: 2}
+            ],
+    }
+
     def __init__(self):
         super().__init__()
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(TF_LOG_LEVEL)
@@ -55,18 +84,10 @@ class TensorflowBackend(NumpyBackend):
         self.supports_gradients = True
 
     def test_regressions(self, name):
-        regressions = {
-            "test_measurementresult_apply_bitflips": [
-                [4, 0, 0, 1, 0, 2, 2, 4, 4, 0],
-                [4, 0, 0, 1, 0, 2, 2, 4, 4, 0],
-                [4, 0, 0, 1, 0, 0, 0, 4, 4, 0],
-                [4, 0, 0, 0, 0, 0, 0, 4, 4, 0]
-            ],
-            "test_probabilistic_measurement": {0: 271, 1: 239, 2: 242, 3: 248}
-        }
         if "GPU" in self.default_device:
-            regressions["test_probabilistic_measurement"] = {0: 273, 1: 233, 2: 242, 3: 252}
-        return regressions.get(name)
+            return self.TEST_REGRESSIONS_GPU.get(name)
+        else:
+            return self.TEST_REGRESSIONS_CPU.get(name)
 
     def set_device(self, name):
         AbstractBackend.set_device(self, name)
