@@ -323,7 +323,7 @@ def test_gap(backend, dense, check_degenerate):
     ham = lambda t: (1 - t) * h0.matrix + t * h1.matrix
     targets = {"ground": [], "excited": [], "gap": []}
     for t in np.linspace(0, 1, 11):
-        eigvals = np.linalg.eigvalsh(ham(t)).real
+        eigvals = K.eigvalsh(ham(t)).real
         targets["ground"].append(eigvals[0])
         targets["excited"].append(eigvals[1])
         targets["gap"].append(eigvals[1] - eigvals[0])
