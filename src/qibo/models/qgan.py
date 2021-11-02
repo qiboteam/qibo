@@ -13,28 +13,13 @@ class StyleQGAN(object):
     For original manuscript: `arXiv:2110.06933 <https://arxiv.org/abs/2110.06933>`_
 
     Args:
-        oracle (:class:`qibo.core.circuit.Circuit`): quantum circuit that flips
-            the sign using a Grover ancilla initialized with -X-H-. Grover ancilla
-            expected to be last qubit of oracle circuit.
-        superposition_circuit (:class:`qibo.core.circuit.Circuit`): quantum circuit that
-            takes an initial state to a superposition. Expected to use the first
-            set of qubits to store the relevant superposition.
-        initial_state_circuit (:class:`qibo.core.circuit.Circuit`): quantum circuit
-            that initializes the state. If empty defaults to ``|000..00>``
-        superposition_qubits (int): number of qubits that store the relevant superposition.
-            Leave empty if superposition does not use ancillas.
-        superposition_size (int): how many states are in a superposition.
-            Leave empty if its an equal superposition of quantum states.
-        number_solutions (int): number of expected solutions. Needed for normal Grover.
-            Leave empty for iterative version.
-        target_amplitude (float): absolute value of the amplitude of the target state. Only for
-            advanced use and known systems.
-        check (function): function that returns True if the solution has been
-            found. Required of iterative approach.
-            First argument should be the bitstring to check.
-        check_args (tuple): arguments needed for the check function.
-            The found bitstring not included.
-        iterative (bool): force the use of the iterative Grover
+        reference (array): samples from the reference input distribution.
+        layers (int): number of layers for the quantum generator.
+        latent_dim (int): number of latent dimensions.
+        batch_samples (int): number of training examples utilized in one iteration.
+        n_epochs (int): number of training iterations.
+        lr (float): initial learning rate for the quantum generator.
+            It controls how much to change the model each time the weights are updated.
 
     Example:
         .. testcode::
@@ -68,7 +53,7 @@ class StyleQGAN(object):
         self.lr = lr
 
     def define_discriminator(self, alpha=0.2, dropout=0.2):
-        """define the standalone discriminator model"""
+        """Define the standalone discriminator model."""
         model = Sequential()           
         model.add(Dense(200, use_bias=False, input_dim=self.nqubits))
         model.add(Reshape((10,10,2)))       
@@ -90,6 +75,7 @@ class StyleQGAN(object):
         return model
 
     def set_params(self, circuit, params, x_input, i):
+        """Set the parameters for the quantum generator circuit."""
         p = []
         index = 0
         noise = 0
@@ -120,7 +106,7 @@ class StyleQGAN(object):
         circuit.set_parameters(p)
 
     def generate_latent_points(self, samples):
-        """generate points in latent space as input for the generator"""
+        """Generate points in latent space as input for the quantum generator."""
         # generate points in the latent space
         x_input = randn(self.latent_dim * samples)
         # reshape into a batch of inputs for the network
@@ -128,7 +114,7 @@ class StyleQGAN(object):
         return x_input
     
     def generate_fake_samples(self, params, samples, circuit, hamiltonians_list):
-        """use the generator to generate fake examples, with class labels"""
+        """Use the generator to generate fake examples, with class labels."""
         # generate points in latent space
         x_input = self.generate_latent_points(samples)
         x_input = np.transpose(x_input)
@@ -149,7 +135,7 @@ class StyleQGAN(object):
         return X, y
     
     def define_cost_gan(self, params, discriminator, samples, circuit, hamiltonians_list):
-        """define the combined generator and discriminator model, for updating the generator"""
+        """Define the combined generator and discriminator model, for updating the generator."""
         # generate fake samples
         x_fake, y_fake = self.generate_fake_samples(params, samples, circuit, hamiltonians_list)
         # create inverted labels for the fake samples
@@ -161,10 +147,10 @@ class StyleQGAN(object):
         return loss
     
     def train(self, d_model, circuit, hamiltonians_list):
-        """train the generator and discriminator"""
+        """Train the quantum generator and classical discriminator."""
         
         def generate_real_samples(samples, distribution, real_samples):
-            """generate real samples with class labels"""
+            """Generate real samples with class labels."""
             # generate samples from the distribution
             idx = np.random.randint(real_samples, size=samples)
             X = distribution[idx,:]
@@ -205,19 +191,7 @@ class StyleQGAN(object):
 
 
     def execute(self):
-        """Execute qGAN training.
-
-        If the number of solutions is given, calculates iterations,
-        otherwise it uses an iterative approach.
-
-        Args:
-            nshots (int): number of shots in order to get the frequencies.
-            freq (bool): print the full frequencies after the exact Grover algorithm.
-
-        Returns:
-            solution (str): bitstring (or list of bitstrings) measured as solution of the search.
-            iterations (int): number of oracle calls done to reach a solution.
-        """
+        """Execute qGAN training."""
         # set qibo backend
         set_backend('tensorflow')
         
@@ -264,5 +238,5 @@ class StyleQGAN(object):
         self.train(discriminator, circuit, hamiltonians_list)
 
     def __call__(self):
-        """Equivalent to :meth:`qibo.models.qgan.qGAN.execute`."""
+        """Equivalent to :meth:`qibo.models.qgan.StyleQGAN.execute`."""
         return self.execute()
