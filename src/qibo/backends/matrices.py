@@ -92,7 +92,8 @@ class Matrices:
         self._CNOT = self.backend.cast(m)
 
     def _setCZ(self):
-        m = np.diag([1, 1, 1, -1], dtype=self.dtype)
+        m = np.eye(4, dtype=self.dtype)
+        m[3, 3] = -1
         self._CZ = self.backend.cast(m)
 
     def _setSWAP(self):
