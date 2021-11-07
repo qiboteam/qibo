@@ -84,7 +84,7 @@ class TensorflowBackend(NumpyBackend):
         self.supports_gradients = True
 
     def test_regressions(self, name):
-        if "GPU" in self.default_device:
+        if "GPU" in self.default_device:  # pragma: no cover
             return self.TEST_REGRESSIONS_GPU.get(name)
         else:
             return self.TEST_REGRESSIONS_CPU.get(name)
