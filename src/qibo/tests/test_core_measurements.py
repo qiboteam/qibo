@@ -90,28 +90,7 @@ def test_measurementresult_apply_bitflips(backend, i, p0, p1):
     result.decimal = K.zeros(10, dtype='DTYPEINT')
     K.set_seed(123)
     noisy_result = result.apply_bitflips(p0, p1)
-    if K.name == "qibojit" and K.op.get_backend() == "cupy": # pragma: no cover
-        # cupy is not tested by CI!
-        targets = [
-            [0, 0, 0, 6, 4, 1, 1, 4, 0, 2],
-            [0, 0, 0, 6, 4, 1, 1, 4, 0, 2],
-            [0, 0, 0, 0, 4, 1, 1, 4, 0, 0],
-            [0, 0, 0, 6, 4, 0, 0, 4, 0, 2]
-        ]
-    elif K.name == "numpy" or K.name == "qibojit":
-        targets = [
-            [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
-            [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-            [0, 0, 0, 0, 2, 0, 0, 0, 0, 0]
-        ]
-    else:
-        targets = [
-            [4, 0, 0, 1, 0, 2, 2, 4, 4, 0],
-            [4, 0, 0, 1, 0, 2, 2, 4, 4, 0],
-            [4, 0, 0, 1, 0, 0, 0, 4, 4, 0],
-            [4, 0, 0, 0, 0, 0, 0, 4, 4, 0]
-        ]
+    targets = K.test_regressions("test_measurementresult_apply_bitflips")
     K.assert_allclose(noisy_result.samples(binary=False), targets[i])
 
 
