@@ -197,7 +197,7 @@ def test_circuit_copy_with_measurements(backend, accelerators):
 
 def test_measurement_compiled_circuit(backend):
     from qibo import K
-    if K.op is not None:
+    if K.is_custom:
         # use native gates because custom gates do not support compilation
         pytest.skip("Custom backend does not support compilation.")
     c = models.Circuit(2)
