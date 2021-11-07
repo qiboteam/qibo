@@ -129,12 +129,12 @@ def test_unitary_gate(backend, nqubits):
     matrix = np.random.random(shape) + 1j * np.random.random(shape)
     initial_rho = random_density_matrix(nqubits)
     from qibo import K
+    gate = gates.Unitary(matrix, *range(nqubits))
+    gate.density_matrix = True
     if K.name == "qibotf" and nqubits > 2:
         with pytest.raises(NotImplementedError):
-            gate = gates.Unitary(matrix, *range(nqubits))
+            final_rho = gate(np.copy(initial_rho))
     else:
-        gate = gates.Unitary(matrix, *range(nqubits))
-        gate.density_matrix = True
         final_rho = gate(np.copy(initial_rho))
         target_rho = np.einsum("ab,bc,cd->ad", matrix, initial_rho, matrix.conj().T)
         K.assert_allclose(final_rho, target_rho)
