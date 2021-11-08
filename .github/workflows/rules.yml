@@ -27,8 +27,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install pytest-cov
         pip install .[tests,docs]
-        pip install qibotf --pre
         pip install qibojit --pre
+    - name: Install qibotf
+      if: startsWith(matrix.os, 'windows') == 0 && matrix.python-version != '3.6'
+      run: |
+        pip install qibotf --pre
     - name: Install package on Windows
       if: startsWith(matrix.os, 'windows')
       run: |
