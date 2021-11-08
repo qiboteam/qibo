@@ -27,8 +27,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install pytest-cov
         pip install .[tests,docs]
-        pip install qibotf --pre
         pip install qibojit --pre
+    - name: Install qibotf
+      if: startsWith(matrix.os, 'windows') == 0 && matrix.python-version != '3.6'
+      run: |
+        pip install qibotf --pre
     - name: Install package on Windows
       if: startsWith(matrix.os, 'windows')
       run: |
@@ -44,7 +47,7 @@ jobs:
       run: |
         pytest --cov=qibo --cov-report=xml --pyargs qibo
     - name: Test documentation examples
-      if: startsWith(matrix.os, 'ubuntu')
+      if: startsWith(matrix.os, 'ubuntu') && matrix.python-version != '3.6'
       run: |
         sudo apt install pandoc
         make -C doc doctest
