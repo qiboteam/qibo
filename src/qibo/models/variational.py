@@ -71,7 +71,7 @@ class VQE(object):
             return hamiltonian.expectation(final_state)
 
         if compile:
-            if K.op is not None:
+            if K.is_custom:
                 raise_error(RuntimeError, "Cannot compile VQE that uses custom operators. "
                                           "Set the compile flag to False.")
             for gate in self.circuit.queue:

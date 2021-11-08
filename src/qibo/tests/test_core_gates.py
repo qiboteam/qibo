@@ -291,9 +291,6 @@ def test_unitary_initialization(backend):
         gate = gates.Unitary(matrix, 0, 1)
     with pytest.raises(TypeError):
         gate = gates.Unitary("abc", 0, 1)
-    if K.op is not None:
-        with pytest.raises(NotImplementedError):
-            gate = gates.Unitary(matrix, 0, 1, 2)
 
 
 def test_unitary_common_gates(backend):
@@ -318,6 +315,28 @@ def test_unitary_common_gates(backend):
                 gates.Unitary(cnot, 0, 1)]
     final_state = apply_gates(gatelist, nqubits=2)
     K.assert_allclose(final_state, target_state)
+
+
+def test_unitary_multiqubit(backend):
+    gatelist = [gates.H(i) for i in range(4)]
+    gatelist.append(gates.CNOT(0, 1))
+    gatelist.append(gates.CNOT(2, 3))
+    gatelist.extend(gates.X(i) for i in range(4))
+
+    h = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
+    x = np.array([[0, 1], [1, 0]])
+    cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
+    matrix = np.kron(np.kron(x, x), np.kron(x, x))
+    matrix = matrix @ np.kron(cnot, cnot)
+    matrix = matrix @ np.kron(np.kron(h, h), np.kron(h, h))
+    unitary = gates.Unitary(matrix, 0, 1, 2, 3)
+    if K.name == "qibotf":
+        with pytest.raises(NotImplementedError):
+            final_state = apply_gates([unitary], nqubits=4)
+    else:
+        final_state = apply_gates([unitary], nqubits=4)
+        target_state = apply_gates(gatelist, nqubits=4)
+        K.assert_allclose(final_state, target_state)
 
 
 @pytest.mark.parametrize("nqubits", [5, 6])
@@ -527,7 +546,7 @@ def test_thermal_relaxation_channel_errors(backend, t1, t2, time, excpop):
 def test_fused_gate_init(backend):
     gate = gates.FusedGate(0)
     gate = gates.FusedGate(0, 1)
-    if K.op is not None:
+    if K.is_custom:
         with pytest.raises(NotImplementedError):
             gate = gates.FusedGate(0, 1, 2)
 

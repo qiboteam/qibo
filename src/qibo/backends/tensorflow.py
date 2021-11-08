@@ -1,5 +1,7 @@
-from qibo.backends import abstract, numpy
-from qibo.config import raise_error, log
+import os
+from qibo.backends.abstract import AbstractBackend, AbstractCustomOperators
+from qibo.backends.numpy import NumpyBackend
+from qibo.config import raise_error, log, TF_LOG_LEVEL, TF_MIN_VERSION
 
 
 class Optimization:
@@ -11,14 +13,47 @@ class Optimization:
         self.optimizers = tf.optimizers
 
 
-class TensorflowBackend(numpy.NumpyBackend):
+class TensorflowBackend(NumpyBackend):
 
     description = "Uses `tf.einsum` to apply gates to states via matrix " \
                   "multiplication."
 
+    TEST_REGRESSIONS_CPU = {
+        "test_measurementresult_apply_bitflips": [
+            [4, 0, 0, 1, 0, 2, 2, 4, 4, 0],
+            [4, 0, 0, 1, 0, 2, 2, 4, 4, 0],
+            [4, 0, 0, 1, 0, 0, 0, 4, 4, 0],
+            [4, 0, 0, 0, 0, 0, 0, 4, 4, 0]
+        ],
+        "test_probabilistic_measurement": {0: 271, 1: 239, 2: 242, 3: 248},
+        "test_unbalanced_probabilistic_measurement": {0: 168, 1: 188, 2: 154, 3: 490},
+        "test_post_measurement_bitflips_on_circuit": [
+                {5: 30}, {5: 16, 7: 10, 6: 2, 3: 1, 4: 1},
+                {3: 6, 5: 6, 7: 5, 2: 4, 4: 3, 0: 2, 1: 2, 6: 2}
+            ],
+    }
+    TEST_REGRESSIONS_GPU = {
+        "test_measurementresult_apply_bitflips": [
+            [4, 0, 0, 1, 0, 2, 2, 4, 4, 0],
+            [4, 0, 0, 1, 0, 2, 2, 4, 4, 0],
+            [4, 0, 0, 1, 0, 0, 0, 4, 4, 0],
+            [4, 0, 0, 0, 0, 0, 0, 4, 4, 0]
+        ],
+        "test_probabilistic_measurement": {0: 273, 1: 233, 2: 242, 3: 252},
+        "test_unbalanced_probabilistic_measurement": {0: 196, 1: 153, 2: 156, 3: 495},
+        "test_post_measurement_bitflips_on_circuit": [
+                {5: 30}, {5: 16, 7: 10, 6: 2, 3: 1, 4: 1},
+                {3: 6, 5: 6, 7: 5, 2: 4, 4: 3, 0: 2, 1: 2, 6: 2}
+            ],
+    }
+
     def __init__(self):
         super().__init__()
+        os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(TF_LOG_LEVEL)
         import tensorflow as tf  # pylint: disable=E0401
+        if tf.__version__ < TF_MIN_VERSION:  # pragma: no cover
+            raise_error(RuntimeError, "TensorFlow version not supported, "
+                                      f"minimum is {TF_MIN_VERSION}.")
         self.backend = tf
         self.name = "tensorflow"
 
@@ -48,8 +83,15 @@ class TensorflowBackend(numpy.NumpyBackend):
 
         self.supports_gradients = True
 
+    def test_regressions(self, name):
+        if "GPU" in self.default_device:  # pragma: no cover
+            # Ci does not use GPUs
+            return self.TEST_REGRESSIONS_GPU.get(name)
+        else:
+            return self.TEST_REGRESSIONS_CPU.get(name)
+
     def set_device(self, name):
-        abstract.AbstractBackend.set_device(self, name)
+        AbstractBackend.set_device(self, name)
 
     def set_threads(self, nthreads):
         log.warning("`set_threads` is not supported by the tensorflow "
@@ -57,7 +99,7 @@ class TensorflowBackend(numpy.NumpyBackend):
                     "`tf.config.threading.set_inter_op_parallelism_threads` "
                     "or `tf.config.threading.set_intra_op_parallelism_threads` "
                     "to switch the number of threads.")
-        abstract.AbstractBackend.set_threads(self, nthreads)
+        AbstractBackend.set_threads(self, nthreads)
 
     def to_numpy(self, x):
         if isinstance(x, self.np.ndarray):
@@ -218,135 +260,3 @@ class TensorflowBackend(numpy.NumpyBackend):
     def set_seed(self, seed):
         self._seed = seed
         self.backend.random.set_seed(seed)
-
-
-class TensorflowCustomBackend(TensorflowBackend):
-
-    description = "Uses precompiled primitives to apply gates to states. " \
-                  "This is the fastest simulation engine."
-
-    def __init__(self):
-        from qibo.backends import Backend
-        if not Backend.check_availability("qibotf"): # pragma: no cover
-            # CI can compile custom operators so this case is not tested
-            raise_error(RuntimeError, "Cannot initialize Tensorflow custom "
-                                      "backend if custom operators are not "
-                                      "compiled.")
-        from qibotf import custom_operators as op  # pylint: disable=E0401
-        super().__init__()
-        self.name = "qibotf"
-        self.op = op
-        import os
-        if "OMP_NUM_THREADS" in os.environ: # pragma: no cover
-            self.set_threads(int(os.environ.get("OMP_NUM_THREADS")))
-
-        # enable multi-GPU if no macos
-        import sys
-        if sys.platform != "darwin":
-            self.supports_multigpu = True
-
-        # no gradient support for custom operators
-        self.supports_gradients = False
-
-    def set_threads(self, nthreads):
-        abstract.AbstractBackend.set_threads(self, nthreads)
-
-    def initial_state(self, nqubits, is_matrix=False):
-        return self.op.initial_state(nqubits, self.dtypes('DTYPECPX'),
-                                    is_matrix=is_matrix,
-                                    omp_num_threads=self.nthreads)
-
-    def sample_frequencies(self, probs, nshots):
-        from qibo.config import SHOT_METROPOLIS_THRESHOLD
-        if nshots < SHOT_METROPOLIS_THRESHOLD:
-            return super().sample_frequencies(probs, nshots)
-        # Generate random seed using tf
-        dtype = self.dtypes('DTYPEINT')
-        seed = self.backend.random.uniform(
-            shape=tuple(), maxval=int(1e8), dtype=dtype)
-        nqubits = int(self.np.log2(tuple(probs.shape)[0]))
-        shape = self.cast(2 ** nqubits, dtype='DTYPEINT')
-        frequencies = self.zeros(shape, dtype='DTYPEINT')
-        frequencies = self.op.measure_frequencies(
-            frequencies, probs, nshots, nqubits, seed, self.nthreads)
-        return frequencies
-
-    def create_einsum_cache(self, qubits, nqubits, ncontrol=None): # pragma: no cover
-        raise_error(NotImplementedError)
-
-    def einsum_call(self, cache, state, matrix): # pragma: no cover
-        raise_error(NotImplementedError)
-
-    def create_gate_cache(self, gate):
-        cache = self.GateCache()
-        qubits = [gate.nqubits - q - 1 for q in gate.control_qubits]
-        qubits.extend(gate.nqubits - q - 1 for q in gate.target_qubits)
-        cache.qubits_tensor = self.cast(sorted(qubits), "int32")
-        if gate.density_matrix:
-            cache.target_qubits_dm = [q + gate.nqubits for q in gate.target_qubits]
-        return cache
-
-    def _state_vector_call(self, gate, state):
-        return gate.gate_op(state, gate.cache.qubits_tensor, gate.nqubits,
-                            *gate.target_qubits, self.nthreads)
-
-    def state_vector_matrix_call(self, gate, state):
-        return gate.gate_op(state, gate.custom_op_matrix, gate.cache.qubits_tensor, # pylint: disable=E1121
-                            gate.nqubits, *gate.target_qubits,
-                            self.nthreads)
-
-    def _density_matrix_call(self, gate, state):
-        state = gate.gate_op(state, gate.cache.qubits_tensor + gate.nqubits,
-                             2 * gate.nqubits, *gate.target_qubits,
-                             self.nthreads)
-        state = gate.gate_op(state, gate.cache.qubits_tensor, 2 * gate.nqubits,
-                             *gate.cache.target_qubits_dm, self.nthreads)
-        return state
-
-    def density_matrix_matrix_call(self, gate, state):
-        state = gate.gate_op(state, gate.custom_op_matrix, gate.cache.qubits_tensor + gate.nqubits, # pylint: disable=E1121
-                             2 * gate.nqubits, *gate.target_qubits,
-                             self.nthreads)
-        adjmatrix = self.conj(gate.custom_op_matrix)
-        state = gate.gate_op(state, adjmatrix, gate.cache.qubits_tensor,
-                             2 * gate.nqubits, *gate.cache.target_qubits_dm,
-                             self.nthreads)
-        return state
-
-    def _density_matrix_half_call(self, gate, state):
-        return gate.gate_op(state, gate.cache.qubits_tensor + gate.nqubits,
-                            2 * gate.nqubits, *gate.target_qubits,
-                            self.nthreads)
-
-    def density_matrix_half_matrix_call(self, gate, state):
-        return gate.gate_op(state, gate.custom_op_matrix, gate.cache.qubits_tensor + gate.nqubits, # pylint: disable=E1121
-                            2 * gate.nqubits, *gate.target_qubits,
-                            self.nthreads)
-
-    def _result_tensor(self, result):
-        n = len(result)
-        result = sum(2 ** (n - i - 1) * r for i, r in enumerate(result))
-        return self.cast(result, dtype="DTYPEINT")
-
-    def state_vector_collapse(self, gate, state, result):
-        result = self._result_tensor(result)
-        return gate.gate_op(state, gate.cache.qubits_tensor, result,
-                            gate.nqubits, True, self.nthreads)
-
-    def density_matrix_collapse(self, gate, state, result):
-        result = self._result_tensor(result)
-        state = gate.gate_op(state, gate.cache.qubits_tensor + gate.nqubits, result,
-                             2 * gate.nqubits, False, self.nthreads)
-        state = gate.gate_op(state, gate.cache.qubits_tensor, result,
-                             2 * gate.nqubits, False, self.nthreads)
-        return state / self.trace(state)
-
-    def compile(self, func):
-        return func
-
-    def transpose_state(self, pieces, state, nqubits, order):
-        return self.op.transpose_state(pieces, state, nqubits, order, self.nthreads)
-
-    def swap_pieces(self, piece0, piece1, new_global, nlocal):
-        with self.on_cpu():
-            return self.op.swap_pieces(piece0, piece1, new_global, nlocal, self.nthreads)
