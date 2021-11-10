@@ -38,7 +38,6 @@ class AbstractBackend(ABC):
 
         self.is_hardware = False
         self.hardware_module = None
-        self.hardware_circuit = None
         self.hardware_gates = None
 
     def test_regressions(self, name):
@@ -121,6 +120,34 @@ class AbstractBackend(ABC):
             from qibo.backends.matrices import Matrices
             self._matrices = Matrices(self)
         return self._matrices
+
+    def circuit_class(self, accelerators=None, density_matrix=False):
+        """Returns class used to create circuit model.
+
+        Useful for hardware backends which use different circuit models.
+
+        Args:
+            accelerators (dict): Dictionary that maps device names to the number of
+                times each device will be used.
+                See :class:`qibo.core.distcircuit.DistributedCircuit` for more
+                details.
+            density_matrix (bool): If ``True`` it creates a circuit for density
+                matrix simulation. Default is ``False`` which corresponds to
+                state vector simulation.
+        """
+        if density_matrix:
+            if accelerators is not None:
+                raise_error(NotImplementedError, "Distributed circuits are not "
+                                                 "implemented for density "
+                                                 "matrices.")
+            from qibo.core.circuit import DensityMatrixCircuit
+            return DensityMatrixCircuit
+        elif accelerators is not None:
+            from qibo.core.distcircuit import DistributedCircuit
+            return DistributedCircuit
+        else:
+            from qibo.core.circuit import Circuit
+            return Circuit
 
     @abstractmethod
     def to_numpy(self, x): # pragma: no cover
