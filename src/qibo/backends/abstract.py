@@ -10,6 +10,7 @@ class AbstractBackend(ABC):
     def __init__(self):
         self.backend = None
         self.name = "base"
+        self.is_hardware = False
 
         self.precision = 'double'
         self._dtypes = {'DTYPEINT': 'int64', 'DTYPE': 'float64',
@@ -35,10 +36,6 @@ class AbstractBackend(ABC):
         self.optimization = None
         self.supports_multigpu = False
         self.supports_gradients = False
-
-        self.is_hardware = False
-        self.hardware_module = None
-        self.hardware_gates = None
 
     def test_regressions(self, name):
         """Correct outcomes for tests that involve random numbers.
@@ -148,6 +145,14 @@ class AbstractBackend(ABC):
         else:
             from qibo.core.circuit import Circuit
             return Circuit
+
+    def create_gate(self, cls, *args, **kwargs):
+        """Create gate objects supported by the backend.
+
+        Useful for hardware backends which use different gate objects.
+        """
+        from qibo.abstractions.abstract_gates import BaseBackendGate
+        return BaseBackendGate.__new__(cls)
 
     @abstractmethod
     def to_numpy(self, x): # pragma: no cover
