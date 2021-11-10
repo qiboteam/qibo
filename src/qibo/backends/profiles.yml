@@ -15,7 +15,7 @@ backends:
   # hardware backends
   - name: qibolab
     class: QibolabBackend
-    from: qibo.backend
+    from: qibolab.backend
     is_hardware: True
 
 # default active backend after importing all modules

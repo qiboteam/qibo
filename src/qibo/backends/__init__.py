@@ -36,7 +36,8 @@ class Backend:
         if not self.check_availability(default_backend):  # pragma: no cover
             for backend in self.profile.get('backends'):
                 name = backend.get('name')
-                if self.check_availability(name):
+                if self.check_availability(name) and not backend.get('is_hardware'):
+                    # hardware backends cannot be default
                     default_backend = name
                     break
                 # make numpy default if no other backend is available
