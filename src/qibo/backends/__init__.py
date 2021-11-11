@@ -156,7 +156,7 @@ class Backend:
         """
         if module_name not in self._availability:
             from pkgutil import iter_modules
-            from importlib_metadata import version
+            from importlib.metadata import version
             is_available = module_name in (name for _, name, _ in iter_modules())
             if check_version:
                 minimum_version = self._backends_min_version.get(module_name)
