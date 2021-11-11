@@ -41,7 +41,7 @@ class Backend:
         # check if default backend is described in the profile file
         if default_backend != "numpy":
 
-            if default_backend not in (backend.get("name") for backend in self.profile.get("backends")):
+            if default_backend not in (backend.get("name") for backend in self.profile.get("backends")): # pragma: no cover
                 raise_error(ModuleNotFoundError, f"Default backend {default_backend} not set in {profile_path}.")
 
             # change the default backend if it is not available
@@ -160,7 +160,7 @@ class Backend:
             is_available = module_name in (name for _, name, _ in iter_modules())
             if is_available and check_version:
                 minimum_version = self._backends_min_version.get(module_name)
-                if version(module_name) < minimum_version:
+                if version(module_name) < minimum_version: # pragma: no cover
                     raise_error(ModuleNotFoundError, f"Please upgrade {module_name}. "
                                                      f"Minimum supported version {minimum_version}.")
             self._availability[module_name] = is_available
