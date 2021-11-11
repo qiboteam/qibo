@@ -66,7 +66,7 @@ setup(
         # Backends dependencies
         "qibotf": ["qibotf"],
         "qibojit": ["qibojit"],
-        "tensorflow": [f"tensorflow>={TF_MIN_VERSION}"],
+        "tensorflow": [f"tensorflow>=2.2.0"],
     },
     python_requires=">=3.6.0",
     long_description=long_description,
