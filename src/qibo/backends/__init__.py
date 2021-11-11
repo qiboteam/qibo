@@ -22,7 +22,7 @@ class Backend:
         self._availability = {}
 
         # create numpy backend (is always available as numpy is a requirement)
-        if self.check_availability("numpy"):
+        if self.check_availability("numpy", check_version=False):
             from qibo.backends.numpy import NumpyBackend
             self.qnp = NumpyBackend()
         else:  # pragma: no cover
@@ -30,17 +30,29 @@ class Backend:
                                              "Please install it using "
                                              "`pip install numpy`.")
 
+        # loading backend names and version
+        self._backends_min_version = {}
+        for backend in self.profile.get("backends"):
+            self._backends_min_version[backend.get("name")] = backend.get("minimum_version")
+
         # find the default backend name
         default_backend = os.environ.get('QIBO_BACKEND', self.profile.get('default'))
-        # change the default backend if it is not available
-        if not self.check_availability(default_backend):  # pragma: no cover
-            for backend in self.profile.get('backends'):
-                name = backend.get('name')
-                if self.check_availability(name):
-                    default_backend = name
-                    break
-                # make numpy default if no other backend is available
-                default_backend = "numpy"
+
+        # check if default backend is described in the profile file
+        if default_backend != "numpy":
+
+            if default_backend not in (backend.get("name") for backend in self.profile.get("backends")):
+                raise_error(ModuleNotFoundError, f"Default backend {default_backend} not set in {profile_path}.")
+
+            # change the default backend if it is not available
+            if not self.check_availability(default_backend):  # pragma: no cover
+                for backend in self.profile.get('backends'):
+                    name = backend.get('name')
+                    if self.check_availability(name):
+                        default_backend = name
+                        break
+                    # make numpy default if no other backend is available
+                    default_backend = "numpy"
 
         self.active_backend = None
         self.constructed_backends = {"numpy": self.qnp}
@@ -132,18 +144,25 @@ class Backend:
     def show_config(self):
         log.info(f"Using {self} backend on {self.active_backend.default_device}")
 
-    def check_availability(self, module_name):
+    def check_availability(self, module_name, check_version=True):
         """Check if module is installed.
 
         Args:
             module_name (str): module name.
+            check_version (str): check if minimum version.
 
         Returns:
             ``True`` if the module is installed, ``False`` otherwise.
         """
         if module_name not in self._availability:
             from pkgutil import iter_modules
+            from importlib_metadata import version
             is_available = module_name in (name for _, name, _ in iter_modules())
+            if check_version:
+                minimum_version = self._backends_min_version.get(module_name)
+                if version(module_name) < minimum_version:
+                    raise_error(ModuleNotFoundError, f"Please upgrade {module_name}. "
+                                                     f"Minimum supported version {minimum_version}.")
             self._availability[module_name] = is_available
         return self._availability.get(module_name)
 
