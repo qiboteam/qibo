@@ -6,7 +6,7 @@ def test_construct_backend(backend_name):
     bk = K.construct_backend(backend_name)
     assert bk.name == backend_name
     with pytest.raises(ValueError):
-        bk = K.construct_backend("test")
+        bk = K.construct_backend("nonexistent")
 
 
 def test_set_backend(backend_name):
@@ -24,7 +24,7 @@ def test_set_backend(backend_name):
 def test_set_backend_errors(caplog):
     original_backend = backends.get_backend()
     with pytest.raises(ValueError):
-        backends.set_backend("test")
+        backends.set_backend("nonexistent")
     if original_backend != "numpy":
         h = gates.H(0)
         backends.set_backend("numpy")
