@@ -158,7 +158,7 @@ class Backend:
             from pkgutil import iter_modules
             from importlib_metadata import version
             is_available = module_name in (name for _, name, _ in iter_modules())
-            if check_version:
+            if is_available and check_version:
                 minimum_version = self._backends_min_version.get(module_name)
                 if version(module_name) < minimum_version:
                     raise_error(ModuleNotFoundError, f"Please upgrade {module_name}. "
