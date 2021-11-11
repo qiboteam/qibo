@@ -161,8 +161,8 @@ class Backend:
             if is_available and check_version:
                 minimum_version = self._backends_min_version.get(module_name)
                 if version(module_name) < minimum_version:
-                    raise_error(ValueError, f"Please upgrade {module_name}. "
-                                            f"Minimum supported version {minimum_version}.")
+                    raise_error(ModuleNotFoundError, f"Please upgrade {module_name}. "
+                                                     f"Minimum supported version {minimum_version}.")
             self._availability[module_name] = is_available
         return self._availability.get(module_name)
 
