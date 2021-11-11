@@ -58,8 +58,8 @@ setup(
         "joblib",
         "matplotlib",
         "psutil",
-        "pyyaml"
-        "importlib_metadata"
+        "pyyaml",
+        "importlib_metadata",
     ],
     extras_require={
         "docs": ["sphinx", "sphinx_rtd_theme", "recommonmark", "sphinxcontrib-bibtex", "sphinx_markdown_tables", "nbsphinx", "IPython"],
