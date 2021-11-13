@@ -132,6 +132,10 @@ class AbstractBackend(ABC):
                 matrix simulation. Default is ``False`` which corresponds to
                 state vector simulation.
         """
+        # this method returns circuit objects defined in ``qibo.core`` which
+        # are used for classical simulation.
+        # Hardware backends should redefine this method to return the
+        # corresponding hardware circuit objects.
         if density_matrix:
             if accelerators is not None:
                 raise_error(NotImplementedError, "Distributed circuits are not "
@@ -151,6 +155,10 @@ class AbstractBackend(ABC):
 
         Useful for hardware backends which use different gate objects.
         """
+        # this method returns gate objects defined in ``qibo.core.gates`` which
+        # are used for classical simulation.
+        # Hardware backends should redefine this method to return the
+        # corresponding hardware gate objects (with pulse represenntation etc).
         from qibo.abstractions.abstract_gates import BaseBackendGate
         return BaseBackendGate.__new__(cls)
 

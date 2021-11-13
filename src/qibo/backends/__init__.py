@@ -37,7 +37,8 @@ class Backend:
             for backend in self.profile.get('backends'):
                 name = backend.get('name')
                 if self.check_availability(name) and not backend.get('is_hardware'):
-                    # hardware backends cannot be default
+                    # excluding hardware backends from default for development
+                    # convenience until proper hardware testing is implemented
                     default_backend = name
                     break
                 # make numpy default if no other backend is available
