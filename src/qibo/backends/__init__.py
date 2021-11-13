@@ -31,9 +31,7 @@ class Backend:
                                              "`pip install numpy`.")
 
         # loading backend names and version
-        self._backends_min_version = {}
-        for backend in self.profile.get("backends"):
-            self._backends_min_version[backend.get("name")] = backend.get("minimum_version")
+        self._backends_min_version = {backend.get("name"): backend.get("minimum_version") for backend in self.profile.get("backends")}
 
         # find the default backend name
         default_backend = os.environ.get('QIBO_BACKEND', self.profile.get('default'))
@@ -46,6 +44,8 @@ class Backend:
 
             # change the default backend if it is not available
             if not self.check_availability(default_backend):  # pragma: no cover
+                # set the default backend to the first available declared backend in the profile file
+                # if none is available it falls back to numpy
                 for backend in self.profile.get('backends'):
                     name = backend.get('name')
                     if self.check_availability(name):
@@ -149,18 +149,20 @@ class Backend:
 
         Args:
             module_name (str): module name.
-            check_version (str): check if minimum version.
+            check_version (str): check if module has the required minimum version.
+                A `ModuleNotFoundError` is raised if version is lower than minimum.
 
         Returns:
             ``True`` if the module is installed, ``False`` otherwise.
         """
         if module_name not in self._availability:
             from pkgutil import iter_modules
-            from importlib_metadata import version
             is_available = module_name in (name for _, name, _ in iter_modules())
             if is_available and check_version:
-                minimum_version = self._backends_min_version.get(module_name)
-                if version(module_name) < minimum_version: # pragma: no cover
+                from importlib_metadata import version
+                from packaging.version import parse
+                minimum_version = self._backends_min_version.get(module_name, None)
+                if minimum_version is not None and (parse(version(module_name)) < parse(minimum_version)): # pragma: no cover
                     raise_error(ModuleNotFoundError, f"Please upgrade {module_name}. "
                                                      f"Minimum supported version {minimum_version}.")
             self._availability[module_name] = is_available

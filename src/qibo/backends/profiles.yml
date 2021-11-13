@@ -3,12 +3,12 @@ backends:
   - name: qibojit
     class: JITCustomBackend
     from: qibojit.custom_operators
-    minimum_version: 0.0.4.dev0
+    minimum_version: 0.0.4rc0
 
   - name: qibotf
     class: TensorflowCustomBackend
     from: qibotf.custom_operators
-    minimum_version: 0.0.4.dev0
+    minimum_version: 0.0.4rc0
 
   - name: tensorflow
     class: TensorflowBackend
