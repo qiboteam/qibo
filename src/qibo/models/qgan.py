@@ -1,10 +1,7 @@
 import numpy as np
-import tensorflow as tf
 from numpy.random import randn
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.optimizers import Adadelta
-from tensorflow.keras.layers import Dense, Conv2D, Dropout, Reshape, LeakyReLU, Flatten
-from qibo import gates, hamiltonians, models, set_backend
+from qibo import gates, hamiltonians, models, get_backend, K
+from qibo.config import raise_error
 
 
 class StyleQGAN(object):
@@ -14,8 +11,17 @@ class StyleQGAN(object):
 
     Args:
         reference (array): samples from the reference input distribution.
-        layers (int): number of layers for the quantum generator.
+        layers (int): number of layers for the quantum generator. Provide this value only if not using
+            a custom quantum generator.
         latent_dim (int): number of latent dimensions.
+        circuit (:class:`qibo.core.circuit.Circuit`): custom quantum generator circuit. If not provided,
+            the default quantum circuit will be used.
+        set_parameters (function): function that creates the array of parameters for the quantum generator.
+            If not provided, the default function will be used.
+        initial_parameters (array): initial parameters for the quantum generator. If not provided,
+            the default initial parameters will be used.
+        discriminator (:class:`tensorflow.keras.models`): custom classical discriminator. If not provided,
+            the default classical discriminator will be used.
         batch_samples (int): number of training examples utilized in one iteration.
         n_epochs (int): number of training iterations.
         lr (float): initial learning rate for the quantum generator.
@@ -37,23 +43,47 @@ class StyleQGAN(object):
             s3 = np.reshape(z, (samples,1))
             reference_distribution = np.hstack((s1,s2,s3))
             # Train qGAN with your particular setup
-            train_qGAN = qGAN(reference_distribution, 1, 3)
-            train_qGAN()
+            train_qGAN = StyleQGAN(latent_dim=1, layers=3)
+            train_qGAN.fit(reference_distribution)
     """
 
-    def __init__(self, reference, layers, latent_dim, batch_samples=128, n_epochs=20000, lr=0.5):
-
-        self.reference = reference
-        self.nqubits = reference.shape[1]
-        self.layers = layers
+    def __init__(self, latent_dim, layers=None, circuit=None, set_parameters=None, initial_params=None, 
+                 discriminator=None, batch_samples=128, n_epochs=20000, lr=0.5):
+        
+        if get_backend() != 'tensorflow':
+                raise_error(ValueError, "StyleQGAN model requieres tensorflow backend.")
+                
+        if layers is not None and circuit is not None:
+            raise_error(ValueError, "Set the number of layers for the default quantum generator "
+                        "or use a custom quantum generator, do not define both.")
+        elif layers is None and circuit is None:
+            raise_error(ValueError, "Set the number of layers for the default quantum generator "
+                        "or use a custom quantum generator.")
+        
+        if initial_params is None and circuit is not None:
+            raise_error(ValueError, "Set the initial parameters for your custom quantum generator.")
+        elif initial_params is not None and circuit is None:
+            raise_error(ValueError, "Define the custom quantum generator to use custom initial parameters.")
+       
+        self.discriminator = discriminator
+        self.circuit = circuit
+        self.layers = layers           
+        self.initial_params = initial_params
         self.latent_dim = latent_dim
-        self.training_samples = reference.shape[0]
         self.batch_samples = batch_samples
         self.n_epochs = n_epochs
         self.lr = lr
+        if set_parameters is not None:
+            self.set_parameters = set_parameters
+        else:
+            self.set_parameters = self.set_params
 
     def define_discriminator(self, alpha=0.2, dropout=0.2):
         """Define the standalone discriminator model."""
+        from tensorflow.keras.models import Sequential
+        from tensorflow.keras.optimizers import Adadelta
+        from tensorflow.keras.layers import Dense, Conv2D, Dropout, Reshape, LeakyReLU, Flatten
+        
         model = Sequential()           
         model.add(Dense(200, use_bias=False, input_dim=self.nqubits))
         model.add(Reshape((10,10,2)))       
@@ -114,6 +144,7 @@ class StyleQGAN(object):
         return x_input
     
     def generate_fake_samples(self, params, samples, circuit, hamiltonians_list):
+        import tensorflow as tf
         """Use the generator to generate fake examples, with class labels."""
         # generate points in latent space
         x_input = self.generate_latent_points(samples)
@@ -124,7 +155,7 @@ class StyleQGAN(object):
             X.append([])
         # quantum generator circuit
         for i in range(samples):
-            self.set_params(circuit, params, x_input, i)
+            self.set_parameters(circuit, params, x_input, i)
             circuit_execute = circuit.execute()
             for ii in range(self.nqubits):
                 X[ii].append(hamiltonians_list[ii].expectation(circuit_execute))
@@ -135,6 +166,7 @@ class StyleQGAN(object):
         return X, y
     
     def define_cost_gan(self, params, discriminator, samples, circuit, hamiltonians_list):
+        import tensorflow as tf
         """Define the combined generator and discriminator model, for updating the generator."""
         # generate fake samples
         x_fake, y_fake = self.generate_fake_samples(params, samples, circuit, hamiltonians_list)
@@ -148,6 +180,7 @@ class StyleQGAN(object):
     
     def train(self, d_model, circuit, hamiltonians_list):
         """Train the quantum generator and classical discriminator."""
+        import tensorflow as tf
         
         def generate_real_samples(samples, distribution, real_samples):
             """Generate real samples with class labels."""
@@ -162,7 +195,10 @@ class StyleQGAN(object):
         g_loss = []
         # determine half the size of one batch, for updating the discriminator
         half_samples = int(self.batch_samples / 2)
-        initial_params = tf.Variable(np.random.uniform(-0.15, 0.15, 10*self.layers*self.nqubits + 2*self.nqubits))
+        if self.initial_params is not None:
+            initial_params = self.initial_params
+        else:
+            initial_params = tf.Variable(np.random.uniform(-0.15, 0.15, 10*self.layers*self.nqubits + 2*self.nqubits))
         optimizer = tf.optimizers.Adadelta(learning_rate=self.lr)
         # prepare real samples
         s = self.reference
@@ -182,21 +218,50 @@ class StyleQGAN(object):
             grads = tape.gradient(loss, initial_params)
             optimizer.apply_gradients([(grads, initial_params)])
             g_loss.append(loss)
-            np.savetxt(f"PARAMS_3Dgaussian_{self.nqubits}_{self.latent_dim}_{self.layers}_{self.training_samples}_{self.batch_samples}_{self.lr}", [initial_params.numpy()], newline='')
-            np.savetxt(f"dloss_3Dgaussian_{self.nqubits}_{self.latent_dim}_{self.layers}_{self.training_samples}_{self.batch_samples}_{self.lr}", [d_loss], newline='')
-            np.savetxt(f"gloss_3Dgaussian_{self.nqubits}_{self.latent_dim}_{self.layers}_{self.training_samples}_{self.batch_samples}_{self.lr}", [g_loss], newline='')
+            np.savetxt(f"PARAMS_{self.nqubits}_{self.latent_dim}_{self.layers}_{self.training_samples}_{self.batch_samples}_{self.lr}", [initial_params.numpy()], newline='')
+            np.savetxt(f"dloss_{self.nqubits}_{self.latent_dim}_{self.layers}_{self.training_samples}_{self.batch_samples}_{self.lr}", [d_loss], newline='')
+            np.savetxt(f"gloss_{self.nqubits}_{self.latent_dim}_{self.layers}_{self.training_samples}_{self.batch_samples}_{self.lr}", [g_loss], newline='')
             # serialize weights to HDF5
             d_model.save_weights(f"discriminator_3Dgaussian_{self.nqubits}_{self.latent_dim}_{self.layers}_{self.training_samples}_{self.batch_samples}_{self.lr}.h5")
 
 
-
-    def execute(self):
+    def fit(self, reference):
         """Execute qGAN training."""
-        # set qibo backend
-        set_backend('tensorflow')
         
+        self.reference = reference
+        self.nqubits = reference.shape[1]
+        self.training_samples = reference.shape[0]
+               
         # create classical discriminator
-        discriminator = self.define_discriminator()
+        if self.discriminator is None:
+            discriminator = self.define_discriminator()
+        else:
+            discriminator = self.discriminator
+
+        if discriminator.input_shape[1] is not self.nqubits:
+                raise_error(ValueError, "The number of input neurons in the discriminator has to be equal to "
+                            "the number of qubits in the circuit (dimension of the input reference distribution).")
+            
+        # create quantum generator
+        if self.circuit is None:
+            circuit = models.Circuit(self.nqubits)
+            for l in range(self.layers):
+                for q in range(self.nqubits):
+                    circuit.add(gates.RY(q, 0))
+                    circuit.add(gates.RZ(q, 0))
+                    circuit.add(gates.RY(q, 0))
+                    circuit.add(gates.RZ(q, 0))
+                for i in range(0, self.nqubits-1):
+                    circuit.add(gates.CRY(i, i+1, 0))
+                circuit.add(gates.CRY(self.nqubits-1, 0, 0))
+            for q in range(self.nqubits):
+                circuit.add(gates.RY(q, 0))
+        else:
+            circuit = self.circuit
+            
+        if circuit.nqubits != self.nqubits:
+                raise_error(ValueError, "The number of qubits in the circuit has to be equal to "
+                            "the number of dimension in the reference distribution.")
         
         # define hamiltonian to generate fake samples
         def hamiltonian(nqubits, position):
@@ -220,23 +285,5 @@ class StyleQGAN(object):
         for i in range(self.nqubits):
             hamiltonians_list.append(hamiltonian(self.nqubits, i))
         
-        # create quantum generator
-        circuit = models.Circuit(self.nqubits)
-        for l in range(self.layers):
-            for q in range(self.nqubits):
-                circuit.add(gates.RY(q, 0))
-                circuit.add(gates.RZ(q, 0))
-                circuit.add(gates.RY(q, 0))
-                circuit.add(gates.RZ(q, 0))
-            for i in range(0, self.nqubits-1):
-                circuit.add(gates.CRY(i, i+1, 0))
-            circuit.add(gates.CRY(self.nqubits-1, 0, 0))
-        for q in range(self.nqubits):
-            circuit.add(gates.RY(q, 0))
-        
         # train model
         self.train(discriminator, circuit, hamiltonians_list)
-
-    def __call__(self):
-        """Equivalent to :meth:`qibo.models.qgan.StyleQGAN.execute`."""
-        return self.execute()
