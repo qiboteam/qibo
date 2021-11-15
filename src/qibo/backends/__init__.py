@@ -89,8 +89,10 @@ class Backend:
             Class that is used to initialize the given backend.
         """
         import importlib
-        backend_module = importlib.import_module(backend.get('from'))
-        return getattr(backend_module, backend.get('class'))
+        components = backend.get('driver').split('.')
+        module, clsname = '.'.join(components[:-1]), components[-1]
+        backend_module = importlib.import_module(module)
+        return getattr(backend_module, clsname)
 
     def construct_backend(self, name):
         """Constructs and returns a backend.
