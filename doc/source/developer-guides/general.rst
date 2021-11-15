@@ -35,22 +35,26 @@ Here you have an example for the structure of the  ``profile.yml`` file:
 
     backends:
     # simulation backends - numpy is available by default
-    - name: tensorflow
-        class: TensorflowBackend
-        from: qibo.backends.tensorflow
+    - name: qibojit
+        class: JITCustomBackend
+        from: qibojit.custom_operators
+        minimum_version: 0.0.4
 
     - name: qibotf
         class: TensorflowCustomBackend
-        from: qibo.backends.tensorflow
+        from: qibotf.custom_operators
+        minimum_version: 0.0.4
 
-    - name: qibojit
-        class: JITCustomBackend
-        from: qibo.backends.jit
+    - name: tensorflow
+        class: TensorflowBackend
+        from: qibo.backends.tensorflow
+        minimum_version: 2.2.0
 
     # hardware backends
     - name: qiboicarusq
         class: IcarusQBackend
         from: qibo.backends.hardware
+        minimum_version: 0.0.1
         is_hardware: True
 
     # default active backend after importing all modules

@@ -3,19 +3,23 @@ backends:
   - name: qibojit
     class: JITCustomBackend
     from: qibojit.custom_operators
+    minimum_version: 0.0.4rc0
 
   - name: qibotf
     class: TensorflowCustomBackend
     from: qibotf.custom_operators
+    minimum_version: 0.0.4rc0
 
   - name: tensorflow
     class: TensorflowBackend
     from: qibo.backends.tensorflow
+    minimum_version: 2.2.0
 
   # hardware backends
   - name: qibolab
     class: QibolabBackend
     from: qibolab.backend
+    minimum_version: 0.0.1.dev0
     is_hardware: True
 
 # default active backend after importing all modules

@@ -22,7 +22,7 @@ class Backend:
         self._availability = {}
 
         # create numpy backend (is always available as numpy is a requirement)
-        if self.check_availability("numpy"):
+        if self.check_availability("numpy", check_version=False):
             from qibo.backends.numpy import NumpyBackend
             self.qnp = NumpyBackend()
         else:  # pragma: no cover
@@ -30,19 +30,31 @@ class Backend:
                                              "Please install it using "
                                              "`pip install numpy`.")
 
+        # loading backend names and version
+        self._backends_min_version = {backend.get("name"): backend.get("minimum_version") for backend in self.profile.get("backends")}
+
         # find the default backend name
         default_backend = os.environ.get('QIBO_BACKEND', self.profile.get('default'))
-        # change the default backend if it is not available
-        if not self.check_availability(default_backend):  # pragma: no cover
-            for backend in self.profile.get('backends'):
-                name = backend.get('name')
-                if self.check_availability(name) and not backend.get('is_hardware'):
-                    # excluding hardware backends from default for development
-                    # convenience until proper hardware testing is implemented
-                    default_backend = name
-                    break
-                # make numpy default if no other backend is available
-                default_backend = "numpy"
+
+        # check if default backend is described in the profile file
+        if default_backend != "numpy":
+
+            if default_backend not in (backend.get("name") for backend in self.profile.get("backends")): # pragma: no cover
+                raise_error(ModuleNotFoundError, f"Default backend {default_backend} not set in {profile_path}.")
+
+            # change the default backend if it is not available
+            if not self.check_availability(default_backend):  # pragma: no cover
+                # set the default backend to the first available declared backend in the profile file
+                # if none is available it falls back to numpy
+                for backend in self.profile.get('backends'):
+                    name = backend.get('name')
+                    if self.check_availability(name) and not backend.get('is_hardware'):
+                        # excluding hardware backends from default for development
+                        # convenience until proper hardware testing is implemented
+                        default_backend = name
+                        break
+                    # make numpy default if no other backend is available
+                    default_backend = "numpy"
 
         self.active_backend = None
         self.constructed_backends = {"numpy": self.qnp}
@@ -134,11 +146,13 @@ class Backend:
     def show_config(self):
         log.info(f"Using {self} backend on {self.active_backend.default_device}")
 
-    def check_availability(self, module_name):
+    def check_availability(self, module_name, check_version=True):
         """Check if module is installed.
 
         Args:
             module_name (str): module name.
+            check_version (str): check if module has the required minimum version.
+                A `ModuleNotFoundError` is raised if version is lower than minimum.
 
         Returns:
             ``True`` if the module is installed, ``False`` otherwise.
@@ -146,6 +160,13 @@ class Backend:
         if module_name not in self._availability:
             from pkgutil import iter_modules
             is_available = module_name in (name for _, name, _ in iter_modules())
+            if is_available and check_version:
+                from importlib_metadata import version
+                from packaging.version import parse
+                minimum_version = self._backends_min_version.get(module_name, None)
+                if minimum_version is not None and (parse(version(module_name)) < parse(minimum_version)): # pragma: no cover
+                    raise_error(ModuleNotFoundError, f"Please upgrade {module_name}. "
+                                                     f"Minimum supported version {minimum_version}.")
             self._availability[module_name] = is_available
         return self._availability.get(module_name)
 
