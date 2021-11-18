@@ -17,23 +17,16 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install package
-      if: startsWith(matrix.os, 'windows') == 0
       run: |
         python -m pip install --upgrade pip
         pip install pytest-cov
         pip install .[tests,docs]
         pip install qibojit --pre
+        pip install tensorflow
     - name: Install qibotf
       if: startsWith(matrix.os, 'windows') == 0
       run: |
         pip install qibotf --pre
-    - name: Install package on Windows
-      if: startsWith(matrix.os, 'windows')
-      run: |
-        python -m pip install --upgrade pip
-        pip install pytest-cov
-        pip install qibojit --pre
-        pip install .[tests,docs]
     - name: Test with pylint
       run: |
         pip install pylint
