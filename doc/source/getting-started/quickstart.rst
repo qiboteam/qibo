@@ -2,11 +2,11 @@ Quick start
 -----------
 
 To quickly install Qibo and a high performance simulator for CPU, open a
-terminal with python > 3.6 and type:
+terminal with python >= 3.7 and type:
 
 .. code-block:: bash
 
-      pip install qibo[qibojit]
+      pip install qibo qibojit
 
 This will install the basic primitives to start coding quantum applications.
 
