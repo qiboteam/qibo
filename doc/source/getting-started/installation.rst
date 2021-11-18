@@ -50,14 +50,14 @@ dependencies for Qibo.
 Installing with conda
 """""""""""""""""""""
 
-We provide conda packages for ``qibo`` through the `conda-forge
+We provide conda packages for ``qibo`` and ``qibojit`` through the `conda-forge
 <https://anaconda.org/conda-forge>`_ channel.
 
-To install both packages ``qibo`` package with conda run:
+To install both packages with conda run:
 
 .. code-block:: bash
 
-      conda install -c conda-forge qibo
+      conda install -c conda-forge qibo qibojit
 
 
 Installing from source
