@@ -21,8 +21,6 @@ h q[2];
 h q[3];
 h q[4];"""
     import qibo
-
-
     c = Circuit.from_qasm(target, accelerators)
     assert c.nqubits == 5
     assert c.depth == 1

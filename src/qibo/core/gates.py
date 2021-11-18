@@ -13,10 +13,11 @@ class BackendGate(BaseBackendGate):
     module = sys.modules[__name__]
 
     def __new__(cls, *args, **kwargs):
-        if K.hardware_module and cls.module == sys.modules[__name__]: # pragma: no cover
-            # hardware backend is not tested until `qiboicarusq` is available
-            return getattr(K.hardware_gates, cls.__name__)(*args, **kwargs)
-        return super().__new__(cls)
+        if cls.module == sys.modules[__name__]:
+            # avoids reaching maximum recursion depth for hardware backends
+            return K.create_gate(cls, *args, **kwargs)
+        else:  # pragma: no cover
+            return super().__new__(cls)
 
     def __init__(self):
         if K.is_custom and not K.executing_eagerly(): # pragma: no cover

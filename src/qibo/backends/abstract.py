@@ -10,6 +10,7 @@ class AbstractBackend(ABC):
     def __init__(self):
         self.backend = None
         self.name = "base"
+        self.is_hardware = False
 
         self.precision = 'double'
         self._dtypes = {'DTYPEINT': 'int64', 'DTYPE': 'float64',
@@ -35,11 +36,6 @@ class AbstractBackend(ABC):
         self.optimization = None
         self.supports_multigpu = False
         self.supports_gradients = False
-
-        self.is_hardware = False
-        self.hardware_module = None
-        self.hardware_circuit = None
-        self.hardware_gates = None
 
     def test_regressions(self, name):
         """Correct outcomes for tests that involve random numbers.
@@ -121,6 +117,50 @@ class AbstractBackend(ABC):
             from qibo.backends.matrices import Matrices
             self._matrices = Matrices(self)
         return self._matrices
+
+    def circuit_class(self, accelerators=None, density_matrix=False):
+        """Returns class used to create circuit model.
+
+        Useful for hardware backends which use different circuit models.
+
+        Args:
+            accelerators (dict): Dictionary that maps device names to the number of
+                times each device will be used.
+                See :class:`qibo.core.distcircuit.DistributedCircuit` for more
+                details.
+            density_matrix (bool): If ``True`` it creates a circuit for density
+                matrix simulation. Default is ``False`` which corresponds to
+                state vector simulation.
+        """
+        # this method returns circuit objects defined in ``qibo.core`` which
+        # are used for classical simulation.
+        # Hardware backends should redefine this method to return the
+        # corresponding hardware circuit objects.
+        if density_matrix:
+            if accelerators is not None:
+                raise_error(NotImplementedError, "Distributed circuits are not "
+                                                 "implemented for density "
+                                                 "matrices.")
+            from qibo.core.circuit import DensityMatrixCircuit
+            return DensityMatrixCircuit
+        elif accelerators is not None:
+            from qibo.core.distcircuit import DistributedCircuit
+            return DistributedCircuit
+        else:
+            from qibo.core.circuit import Circuit
+            return Circuit
+
+    def create_gate(self, cls, *args, **kwargs):
+        """Create gate objects supported by the backend.
+
+        Useful for hardware backends which use different gate objects.
+        """
+        # this method returns gate objects defined in ``qibo.core.gates`` which
+        # are used for classical simulation.
+        # Hardware backends should redefine this method to return the
+        # corresponding hardware gate objects (with pulse represenntation etc).
+        from qibo.abstractions.abstract_gates import BaseBackendGate
+        return BaseBackendGate.__new__(cls)
 
     @abstractmethod
     def to_numpy(self, x): # pragma: no cover

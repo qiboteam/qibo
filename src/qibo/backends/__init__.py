@@ -48,7 +48,9 @@ class Backend:
                 # if none is available it falls back to numpy
                 for backend in self.profile.get('backends'):
                     name = backend.get('name')
-                    if self.check_availability(name):
+                    if self.check_availability(name) and not backend.get('is_hardware'):
+                        # excluding hardware backends from default for development
+                        # convenience until proper hardware testing is implemented
                         default_backend = name
                         break
                     # make numpy default if no other backend is available
@@ -87,8 +89,10 @@ class Backend:
             Class that is used to initialize the given backend.
         """
         import importlib
-        backend_module = importlib.import_module(backend.get('from'))
-        return getattr(backend_module, backend.get('class'))
+        components = backend.get('driver').split('.')
+        module, clsname = '.'.join(components[:-1]), components[-1]
+        backend_module = importlib.import_module(module)
+        return getattr(backend_module, clsname)
 
     def construct_backend(self, name):
         """Constructs and returns a backend.
