@@ -378,8 +378,9 @@ def test_special_gate():
 
 
 def test_fused_gate():
-    gate = gates.FusedGate(0, 1)
-    gate.add(gates.H(0))
-    gate.add(gates.CNOT(0, 1))
-    with pytest.raises(ValueError):
-        gate.add(gates.CZ(1, 2))
+    gate = gates.FusedGate(gates.H(0))
+    assert gate.target_qubits == (0,)
+    gate.add(gates.CNOT(0, 2))
+    assert gate.target_qubits == (0, 2)
+    gate.add(gates.CZ(1, 3))
+    assert gate.target_qubits == (0, 1, 2, 3)

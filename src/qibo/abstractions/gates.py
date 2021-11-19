@@ -1566,9 +1566,6 @@ class FusedGate(Gate):
         self.init_args = [gate]
         self.qubit_set = set(gate.qubits)
         self.gates = [gate]
-        # set with gates belonging to this ``FusedGate`` so that we do not
-        # add the same gate more than once
-        #self.gates_set = set()
 
     @property
     def target_qubits(self):
@@ -1578,19 +1575,8 @@ class FusedGate(Gate):
         return isinstance(self.gates[0], SpecialGate)
 
     def add(self, gate):
-        if isinstance(gate, self.__class__):
-            # add all gates belonging to the given ``FusedGate`` if they
-            # do not already exist in the set
-            #self.gates.extend(g for g in gate.gates if g not in self.gates_set)
-            #self.gates_set |= gate.gates_set
-            raise TypeError
-
-        #elif gate not in self.gates_set:
-        else:
-            # add gate if it does not already exist in the set
-            self.gates.append(gate)
-            self.qubit_set |= set(gate.qubits)
-            #self.gates_set.add(gate)
+        self.gates.append(gate)
+        self.qubit_set |= set(gate.qubits)
 
     def __iter__(self):
         return iter(self.gates)
@@ -1602,7 +1588,7 @@ class FusedGate(Gate):
         return self.gates[i]
 
     def _dagger(self):
-        dagger = self.__class__(*self.init_args)
-        for gate in self.gates[::-1]:
+        dagger = self.__class__(self.gates[-1].dagger())
+        for gate in self.gates[::-1][1:]:
             dagger.add(gate.dagger())
         return dagger

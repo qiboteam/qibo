@@ -543,14 +543,8 @@ def test_thermal_relaxation_channel_errors(backend, t1, t2, time, excpop):
             0, t1, t2, time, excited_population=excpop)
 
 
-def test_fused_gate_init(backend):
-    gate = gates.FusedGate(0)
-    gate = gates.FusedGate(0, 1)
-
-
 def test_fused_gate_construct_unitary(backend):
-    gate = gates.FusedGate(0, 1)
-    gate.add(gates.H(0))
+    gate = gates.FusedGate(gates.H(0))
     gate.add(gates.H(1))
     gate.add(gates.CZ(0, 1))
     hmatrix = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
