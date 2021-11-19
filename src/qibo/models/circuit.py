@@ -8,61 +8,18 @@ from typing import Dict, Optional
 class Circuit(StateCircuit):
     """"""
 
-    @classmethod
-    def _constructor(cls, *args, **kwargs):
-        from qibo import K
-        if kwargs["density_matrix"]:
-            if kwargs["accelerators"] is not None:
-                raise_error(NotImplementedError,
-                            "Distributed circuits are not implemented for "
-                            "density matrices.")
-            if K.is_hardware:
-                raise_error(NotImplementedError,
-                            "Hardware backend does not support density matrix "
-                            "simulation.")
-            from qibo.core.circuit import DensityMatrixCircuit as circuit_cls
-            kwargs = {}
-        elif kwargs["accelerators"] is not None:
-            if K.is_hardware:
-                raise_error(NotImplementedError,
-                            "Hardware backend does not support multi-GPU "
-                            "configuration.")
-            try:
-                from qibo.core.distcircuit import DistributedCircuit
-            except ModuleNotFoundError: # pragma: no cover
-                # CI installs all required libraries by default
-                raise_error(ModuleNotFoundError,
-                            "Cannot create distributed circuit because some "
-                            "required libraries are missing.")
-            circuit_cls = DistributedCircuit
-            kwargs.pop("density_matrix")
-        else:
-            kwargs = {}
-            if K.is_hardware: # pragma: no cover
-                # hardware backend is not tested until `qiboicarusq` is available
-                circuit_cls = K.hardware_circuit
-            else:
-                circuit_cls = StateCircuit
-        return circuit_cls, args, kwargs
-
-    def __new__(cls, nqubits: int,
-                accelerators: Optional[Dict[str, int]] = None,
-                density_matrix: bool = False):
-        circuit_cls, args, kwargs = cls._constructor(
-                  nqubits, accelerators=accelerators,
-                  density_matrix=density_matrix
-                )
-        return circuit_cls(*args, **kwargs)
+    def __new__(cls, nqubits, accelerators=None, density_matrix=False):
+        circuit_cls = K.circuit_class(accelerators, density_matrix)
+        if accelerators is not None:
+            return circuit_cls(nqubits, accelerators=accelerators)
+        return circuit_cls(nqubits)
 
     @classmethod
-    def from_qasm(cls, qasm_code: str,
-                  accelerators: Optional[Dict[str, int]] = None,
-                  density_matrix: bool = False):
-      circuit_cls, args, kwargs = cls._constructor(
-                qasm_code, accelerators=accelerators,
-                density_matrix=density_matrix
-              )
-      return circuit_cls.from_qasm(*args, **kwargs)
+    def from_qasm(cls, qasm_code, accelerators=None, density_matrix=False):
+        circuit_cls = K.circuit_class(accelerators, density_matrix)
+        if accelerators is not None:
+            return circuit_cls.from_qasm(qasm_code, accelerators=accelerators)
+        return circuit_cls.from_qasm(qasm_code)
 
 
 def QFT(nqubits: int, with_swaps: bool = True,

@@ -1,7 +1,7 @@
 import os
 from qibo.backends.abstract import AbstractBackend, AbstractCustomOperators
 from qibo.backends.numpy import NumpyBackend
-from qibo.config import raise_error, log, TF_LOG_LEVEL, TF_MIN_VERSION
+from qibo.config import raise_error, log, TF_LOG_LEVEL
 
 
 class Optimization:
@@ -51,9 +51,6 @@ class TensorflowBackend(NumpyBackend):
         super().__init__()
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(TF_LOG_LEVEL)
         import tensorflow as tf  # pylint: disable=E0401
-        if tf.__version__ < TF_MIN_VERSION:  # pragma: no cover
-            raise_error(RuntimeError, "TensorFlow version not supported, "
-                                      f"minimum is {TF_MIN_VERSION}.")
         self.backend = tf
         self.name = "tensorflow"
 

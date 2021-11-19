@@ -173,17 +173,17 @@ def test_hamiltonian_eigenvalues(dtype, dense):
     H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense)
 
     H1_eigen = H1.eigenvalues()
-    hH1_eigen = np.linalg.eigvalsh(H1.matrix)
+    hH1_eigen = K.eigvalsh(H1.matrix)
     K.assert_allclose(H1_eigen, hH1_eigen)
 
     c1 = dtype(2.5)
     H2 = c1 * H1
-    hH2_eigen = np.linalg.eigvalsh(c1 * H1.matrix)
+    hH2_eigen = K.eigvalsh(c1 * H1.matrix)
     K.assert_allclose(H2._eigenvalues, hH2_eigen)
 
     c2 = dtype(-11.1)
     H3 = H1 * c2
-    hH3_eigen = np.linalg.eigvalsh(H1.matrix * c2)
+    hH3_eigen = K.eigvalsh(H1.matrix * c2)
     K.assert_allclose(H3._eigenvalues, hH3_eigen)
 
 

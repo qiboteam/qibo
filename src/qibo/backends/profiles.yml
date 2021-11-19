@@ -1,21 +1,21 @@
 backends:
   # simulation backends - numpy is available by default
   - name: qibojit
-    class: JITCustomBackend
-    from: qibojit.custom_operators
+    driver: qibojit.custom_operators.JITCustomBackend
+    minimum_version: 0.0.4rc0
 
   - name: qibotf
-    class: TensorflowCustomBackend
-    from: qibotf.custom_operators
+    driver: qibotf.custom_operators.TensorflowCustomBackend
+    minimum_version: 0.0.4rc0
 
   - name: tensorflow
-    class: TensorflowBackend
-    from: qibo.backends.tensorflow
+    driver: qibo.backends.tensorflow.TensorflowBackend
+    minimum_version: 2.2.0
 
   # hardware backends
-  - name: qiboicarusq
-    class: IcarusQBackend
-    from: qibo.backends.hardware
+  - name: qibolab
+    driver: qibolab.backend.QibolabBackend
+    minimum_version: 0.0.1.dev0
     is_hardware: True
 
 # default active backend after importing all modules

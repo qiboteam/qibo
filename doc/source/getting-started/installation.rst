@@ -18,7 +18,7 @@ distributed with pypi* for the packages listed above.
 +------------------+------+---------+--------+------------+
 
 .. note::
-      All packages are supported for Python >= 3.6.
+      All packages are supported for Python >= 3.7.
 
 
 Backend installation
@@ -38,7 +38,7 @@ Installing with pip
 """""""""""""""""""
 
 The installation using ``pip`` is the recommended approach to install Qibo.
-Make sure you have Python 3.6 or greater, then use ``pip`` to install ``qibo`` with:
+Make sure you have Python 3.7 or greater, then use ``pip`` to install ``qibo`` with:
 
 .. code-block:: bash
 
@@ -53,7 +53,7 @@ Installing with conda
 We provide conda packages for ``qibo`` through the `conda-forge
 <https://anaconda.org/conda-forge>`_ channel.
 
-To install both packages ``qibo`` package with conda run:
+To install the package with conda run:
 
 .. code-block:: bash
 
@@ -104,7 +104,7 @@ In order to install the package use the following command:
 
 .. code-block:: bash
 
-      pip install qibo[qibojit]
+      pip install qibojit
 
 .. note::
       The ``pip`` program will download and install all the required
@@ -116,10 +116,10 @@ In order to install the package use the following command:
 Installing with conda
 """""""""""""""""""""
 
-We provide conda packages for ``qibo`` through the `conda-forge
+We provide conda packages for ``qibo`` and ``qibojit`` through the `conda-forge
 <https://anaconda.org/conda-forge>`_ channel.
 
-To install both packages ``qibo`` package with conda run:
+To install both packages with conda run:
 
 .. code-block:: bash
 
@@ -174,13 +174,13 @@ Installing with pip
 
 The installation using ``pip`` is the recommended approach to install
 ``qibotf``. We provide precompiled packages for linux x86/64 and macosx 10.15 or
-greater for Python 3.6, 3.7, 3.8 and 3.9.
+greater for Python 3.7, 3.8 and 3.9.
 
 In order to install the package use the following command:
 
 .. code-block:: bash
 
-      pip install qibo[qibotf]
+      pip install qibo qibotf
 
 The ``pip`` program will download and install all the required
 dependencies.
@@ -285,7 +285,7 @@ In order to install the package, we recommend the installation using:
 
 .. code-block:: bash
 
-      pip install qibo[tensorflow]
+      pip install qibo tensorflow
 
 .. note::
       TensorFlow can be installed following its `documentation

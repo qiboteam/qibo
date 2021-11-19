@@ -2,7 +2,6 @@
 import collections
 import sympy
 from abc import ABC, abstractmethod
-from qibo import get_device, config
 from qibo.config import raise_error
 from collections.abc import Iterable
 from typing import List, Sequence, Tuple
@@ -33,7 +32,7 @@ class Gate:
             density_matrix (bool): Controls if the gate acts on state vectors or
                 density matrices.
         """
-
+        from qibo import config
         self.name = None
         self.is_controlled_by = False
         # args for creating gate
@@ -223,7 +222,7 @@ class Gate:
                 c.add(gates.CNOT(2, 3)._on_qubits(0, 3, 2, 1)) # equivalent to gates.CNOT(2, 1)
                 print(c.draw())
             .. testoutput::
-            
+
                 q0: ───X─────
                 q1: ───|─o─X─
                 q2: ─o─|─|─o─
@@ -470,7 +469,7 @@ class BaseBackendGate(Gate, ABC):
             density_matrix: ``True`` if the gate will act on density matrices,
                 ``False`` if the gate will act on state vectors.
         """
-
+        from qibo import get_device
         Gate.__init__(self)
         self._matrix = None
         self._cache = None

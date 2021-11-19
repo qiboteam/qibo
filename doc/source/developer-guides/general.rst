@@ -34,23 +34,23 @@ Here you have an example for the structure of the  ``profile.yml`` file:
 .. code-block:: yaml
 
     backends:
-    # simulation backends - numpy is available by default
-    - name: tensorflow
-        class: TensorflowBackend
-        from: qibo.backends.tensorflow
+      # simulation backends - numpy is available by default
+      - name: qibojit
+        driver: qibojit.custom_operators.JITCustomBackend
+        minimum_version: 0.0.4rc0
 
-    - name: qibotf
-        class: TensorflowCustomBackend
-        from: qibo.backends.tensorflow
+      - name: qibotf
+        driver: qibotf.custom_operators.TensorflowCustomBackend
+        minimum_version: 0.0.4rc0
 
-    - name: qibojit
-        class: JITCustomBackend
-        from: qibo.backends.jit
+      - name: tensorflow
+        driver: qibo.backends.tensorflow.TensorflowBackend
+        minimum_version: 2.2.0
 
-    # hardware backends
-    - name: qiboicarusq
-        class: IcarusQBackend
-        from: qibo.backends.hardware
+      # hardware backends
+      - name: qibolab
+        driver: qibolab.backend.QibolabBackend
+        minimum_version: 0.0.1.dev0
         is_hardware: True
 
     # default active backend after importing all modules
@@ -59,8 +59,9 @@ Here you have an example for the structure of the  ``profile.yml`` file:
 When including a new backend, you should include its:
 
 * **name:** The name of the new backend.
-* **class:** The class which performs the inheritance from ``AbstractBackend``.
-* **from:** The python module containing the value pointed by the ``class`` key.
+* **driver:** The class which performs the inheritance from ``AbstractBackend``, including the python module containing it.
+* **minimum_version:** (optional) Minimum backend version for it to be compatible with qibo.
+* **is_hardware:** (optional) Boolean that specifies if the backend targets a hardware device. If ``False`` the backend is used for classical simulation.
 
 Finally, the default backend which is loaded when importing Qibo can be updated
 by changing the value of the ``default:`` key.

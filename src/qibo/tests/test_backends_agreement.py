@@ -179,8 +179,3 @@ def test_backend_transpose_state(tested_backend, target_backend):
     target_result = target_backend.transpose_state(pieces, new_state, 5, order)
     tested_result = tested_backend.transpose_state(pieces, new_state, 5, order)
     tested_backend.assert_allclose(tested_result, target_result)
-
-
-def test_hardware_backend_import():
-    # TODO: Remove this test once the hardware backend is tested properly
-    from qibo.backends.hardware import IcarusQBackend

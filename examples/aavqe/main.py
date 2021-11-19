@@ -1,73 +1,40 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python
 import numpy as np
-from qibo import gates, models, hamiltonians
+from qibo import gates, models, hamiltonians, K
 import argparse
 
-
-def AAVQE(nqubits, layers, maxsteps, T_max, initial_parameters, easy_hamiltonian, problem_hamiltonian):
-    """Implements the Adiabatically Assisted Variational Quantum Eigensolver (AAVQE).
-
-    Args:
-        nqubits (int): number of quantum bits.
-        layers (int): number of ansatz layers.
-        maxsteps (int): number of maximum iterations on each adiabatic step.
-        T_max (int): number of maximum adiabatic steps.
-        initial_parameters (array or list): values of the initial parameters.
-        easy_hamiltonian (qibo.hamiltonians.Hamiltonian): initial Hamiltonian object.
-        problem_hamiltonian (qibo.hamiltonians.Hamiltonian): problem Hamiltonian object.
-
-    Returns:
-        Groundstate energy of the problem Hamiltonian and best set of parameters.
-    """
-    # Create variational circuit
-    pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
+def main(nqubits, layers, maxsteps, T_max):
     circuit = models.Circuit(nqubits)
     for l in range(layers):
-        circuit.add(gates.VariationalLayer(range(nqubits), pairs,
-                                           gates.RY, gates.CZ,
-                                           np.zeros(nqubits), np.zeros(nqubits)))
-        circuit.add((gates.CZ(i, i + 1) for i in range(1, nqubits - 2, 2)))
+        circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
+        circuit.add((gates.CZ(q, q + 1) for q in range(0, nqubits - 1, 2)))
+        circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
+        circuit.add((gates.CZ(q, q + 1) for q in range(1, nqubits - 2, 2)))
         circuit.add(gates.CZ(0, nqubits - 1))
-    circuit.add((gates.RY(i, theta=0) for i in range(nqubits)))
+    circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
+    problem_hamiltonian = hamiltonians.XXZ(nqubits)
+    easy_hamiltonian = hamiltonians.X(nqubits)
+    s = lambda t: t
+    aavqe = models.variational.AAVQE(circuit, easy_hamiltonian, problem_hamiltonian, s, nsteps=maxsteps, t_max=T_max)
 
-    for t in range(T_max+1):
-        s = t/T_max
-        print('s =',s)
-        hamiltonian =  (1-s)*easy_hamiltonian + s*problem_hamiltonian
-        vqe = models.VQE(circuit, hamiltonian)
-        energy, params, _ = vqe.minimize(initial_parameters, method='Nelder-Mead',
-                                         options={'maxfev': maxsteps},
-                                         compile=False)
-        initial_parameters = params
-    return energy, params
+    initial_parameters = np.random.uniform(0, 2 * np.pi*0.1,
+                                           2 * nqubits * layers + nqubits)
+    best, params = aavqe.minimize(initial_parameters)
 
-
-def main(nqubits, layers, maxsteps, T_max):
-    nparams = 2 * nqubits * layers + nqubits
-    initial_parameters = np.random.uniform(0, 0.01, nparams)
-
-    #Define the easy Hamiltonian and the problem Hamiltonian.
-    easy_hamiltonian = hamiltonians.Z(nqubits)
-    problem_hamiltonian = -1 * hamiltonians.TFIM(nqubits, h=1.0)
-
-    #Run the AAVQE
-    best, params = AAVQE(nqubits, layers, maxsteps, T_max, initial_parameters,
-                         easy_hamiltonian, problem_hamiltonian)
     print('Final parameters: ', params)
     print('Final energy: ', best)
 
     #We compute the difference from the exact value to check performance
     eigenvalue = problem_hamiltonian.eigenvalues()
-    print('Difference from exact value: ',best - eigenvalue[0].real)
-    print('Log difference: ',-np.log10(best - eigenvalue[0].real))
+    print('Difference from exact value: ',best - K.real(eigenvalue[0]))
+    print('Log difference: ',-np.log10(best - K.real(eigenvalue[0])))
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--nqubits", default=6, type=int)
-    parser.add_argument("--layers", default=2, type=int)
-    parser.add_argument("--maxsteps", default=5000, type=int)
+    parser.add_argument("--layers", default=5, type=int)
+    parser.add_argument("--maxsteps", default=10, type=int)
     parser.add_argument("--T_max", default=5, type=int)
     args = parser.parse_args()
     main(**vars(args))
