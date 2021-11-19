@@ -1560,34 +1560,46 @@ class FusedGate(Gate):
     :class:`qibo.core.gates.FusedGate` assumes two target qubits.
     """
 
-    def __init__(self, *q):
+    def __init__(self, gate):
         super().__init__()
         self.name = "fused"
-        self.target_qubits = tuple(q)
-        self.init_args = list(q)
-        self.qubit_set = set(q)
-        self.gates = []
+        self.init_args = [gate]
+        self.qubit_set = set(gate.qubits)
+        self.gates = [gate]
         # set with gates belonging to this ``FusedGate`` so that we do not
         # add the same gate more than once
-        self.gates_set = set()
+        #self.gates_set = set()
+
+    @property
+    def target_qubits(self):
+        return tuple(sorted(self.qubit_set))
+
+    def is_special(self):
+        return isinstance(self.gates[0], SpecialGate)
 
     def add(self, gate):
-        if not set(gate.qubits).issubset(self.qubit_set):
-            raise_error(ValueError, "Cannot add gate that targets {} "
-                                    "in fused gate acting on {}."
-                                    "".format(gate.qubits, self.qubits))
         if isinstance(gate, self.__class__):
             # add all gates belonging to the given ``FusedGate`` if they
             # do not already exist in the set
-            self.gates.extend(g for g in gate.gates if g not in self.gates_set)
-            self.gates_set |= gate.gates_set
-        elif gate not in self.gates_set:
+            #self.gates.extend(g for g in gate.gates if g not in self.gates_set)
+            #self.gates_set |= gate.gates_set
+            raise TypeError
+
+        #elif gate not in self.gates_set:
+        else:
             # add gate if it does not already exist in the set
             self.gates.append(gate)
-            self.gates_set.add(gate)
+            self.qubit_set |= set(gate.qubits)
+            #self.gates_set.add(gate)
 
     def __iter__(self):
         return iter(self.gates)
+
+    def __len__(self):
+        return len(self.gates)
+
+    def __getitem__(self, i):
+        return self.gates[i]
 
     def _dagger(self):
         dagger = self.__class__(*self.init_args)

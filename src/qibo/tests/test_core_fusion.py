@@ -28,11 +28,8 @@ def test_two_fusion_gate():
     c = c.fuse()
     assert len(c.queue) == 2
     gate1, gate2 = c.queue
-    if len(gate1.gates) > len(gate2.gates): # pragma: no cover
-        # disabling coverage as this may not always happen
-        gate1, gate2 = gate2, gate1
-    assert gate1.gates == [queue[0], queue[-1]]
-    assert gate2.gates == queue[1:-1]
+    assert gate1.gates == [queue[0], queue[1], queue[5]]
+    assert gate2.gates == [queue[2], queue[3], queue[4]]
 
 
 def test_fusedgate_matrix_calculation(backend):
@@ -143,6 +140,15 @@ def test_callbacks_fusion(backend):
     c.add(gates.CNOT(0, 1))
     c.add(gates.CallbackGate(entropy))
     fused_c = c.fuse()
+
+    for gate in fused_c.queue:
+        if isinstance(gate, gates.FusedGate):
+            for subgate in gate:
+                print(subgate.name, subgate.qubits)
+        else:
+            print(gate.name, gate.qubits)
+        print()
+
     K.assert_allclose(fused_c(), c())
     target_entropy = [0.0, 1.0, 0.0, 1.0]
     K.assert_allclose(entropy[:], target_entropy, atol=1e-7)

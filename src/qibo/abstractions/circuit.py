@@ -42,7 +42,7 @@ class _Queue(list):
         self.moments = [nqubits * [None]]
         self.moment_index = nqubits * [0]
 
-    def append(self, gate: gates.Gate):
+    def append(self, gate):
         super(_Queue, self).append(gate)
         # Calculate moment index for this gate
         if gate.qubits:
@@ -53,6 +53,10 @@ class _Queue(list):
                 self.moments.append(len(self.moments[-1]) * [None])
             self.moments[idx][q] = gate
             self.moment_index[q] = idx + 1
+
+    def extend(self, gates):
+        for gate in gates:
+            self.append(gate)
 
 
 class AbstractCircuit(ABC):
@@ -159,7 +163,7 @@ class AbstractCircuit(ABC):
             q (int): Qubit ids that the gates should act.
 
         Example:
-            
+
             .. testcode::
 
                 from qibo import gates, models
@@ -664,7 +668,7 @@ class AbstractCircuit(ABC):
                 cx: 2
                 ccx: 1
                 '''
-        
+
             .. testoutput::
                 :hide:
 
@@ -767,7 +771,7 @@ class AbstractCircuit(ABC):
             specified by the given QASM script.
 
         Example:
-         
+
             .. testcode::
 
                 from qibo import models, gates
