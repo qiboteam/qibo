@@ -101,37 +101,38 @@ class AAVQE(object):
     algorithm. See https://arxiv.org/abs/1806.02287.
 
     Args:
-        circuit (:class:`qibo.abstractions.circuit.AbstractCircuit`): variaional ansatz.
+        circuit (:class:`qibo.abstractions.circuit.AbstractCircuit`): variational ansatz.
         easy_hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): initial Hamiltonian object.
         problem_hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): problem Hamiltonian object.
         s (callable): scheduling function of time that defines the adiabatic
-            evolution. It must verify boundary contitions: s(0) = 0 and s(1) = 1.
+            evolution. It must verify boundary conditions: s(0) = 0 and s(1) = 1.
         nsteps (float): number of steps of the adiabatic evolution.
         t_max (float): total time evolution.
-        bounds_tolerance (float): tolerance for checking s(0) = 0 and s(T) = 1.
+        bounds_tolerance (float): tolerance for checking s(0) = 0 and s(1) = 1.
         time_tolerance (float): tolerance for checking if time is greater than t_max.
 
     Example:
-    ::
-        import numpy as np
-        from qibo import gates, models, hamiltonians
-        # create circuit ansatz for two qubits
-        circuit = models.Circuit(2)
-        circuit.add(gates.RY(0, theta=0))
-        circuit.add(gates.RY(1, theta=0))
-        # define the easy and the problem Hamiltonians.
-        easy_hamiltonian=hamiltonians.X(2)
-        problem_hamiltonian=hamiltonians.XXZ(2)
-        # define a scheduling function with only one parameter 
-        # and boundary conditions s(0) = 0, s(1) = 1
-        s = lambda t: t
-        # create AAVQE model 
-        aavqe = models.AAVQE(circuit, easy_hamiltonian, problem_hamiltonian, 
-                             s, nsteps=10, t_max=1)
-        # optimize using random initial variational parameters
-        np.random.seed(0)
-        initial_parameters = np.random.uniform(0, 2*np.pi, 2)
-        ground_energy, params = aavqe.minimize(initial_parameters)
+        .. testcode::
+
+            import numpy as np
+            from qibo import gates, models, hamiltonians
+            # create circuit ansatz for two qubits
+            circuit = models.Circuit(2)
+            circuit.add(gates.RY(0, theta=0))
+            circuit.add(gates.RY(1, theta=0))
+            # define the easy and the problem Hamiltonians.
+            easy_hamiltonian=hamiltonians.X(2)
+            problem_hamiltonian=hamiltonians.XXZ(2)
+            # define a scheduling function with only one parameter
+            # and boundary conditions s(0) = 0, s(1) = 1
+            s = lambda t: t
+            # create AAVQE model
+            aavqe = models.AAVQE(circuit, easy_hamiltonian, problem_hamiltonian,
+                                s, nsteps=10, t_max=1)
+            # optimize using random initial variational parameters
+            np.random.seed(0)
+            initial_parameters = np.random.uniform(0, 2*np.pi, 2)
+            ground_energy, params = aavqe.minimize(initial_parameters)
     """
 
     def __init__(self, circuit, easy_hamiltonian, problem_hamiltonian, s, nsteps=10, t_max = 1, bounds_tolerance = 1e-7, time_tolerance = 1e-7):
@@ -199,6 +200,7 @@ class AAVQE(object):
                  options=None, compile=False, processes=None):
         """
         Performs minimization to find the ground state of the problem Hamiltonian.
+
         Args:
             params (np.ndarray or list): initial guess for the parameters of the variational circuit.
             method (str): optimizer to employ. 
@@ -211,7 +213,7 @@ class AAVQE(object):
             tol (float): Tolerance of termination for scipy optimizers.
             options (dict): a dictionary with options for the different optimizers.
             compile (bool): whether the TensorFlow graph should be compiled.
-            processes (int): number of processes when using the paralle BFGS method.
+            processes (int): number of processes when using the parallel BFGS method.
         """
         from qibo import models
         t = 0.
