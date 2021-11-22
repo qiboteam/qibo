@@ -173,13 +173,6 @@ def test_callbacks_fusion(backend, max_qubits):
     c.add(gates.CNOT(0, 1))
     c.add(gates.CallbackGate(entropy))
     fused_c = c.fuse(max_qubits)
-    for gate in fused_c.queue:
-        if isinstance(gate, gates.FusedGate):
-            for subgate in gate:
-                print(subgate.name, subgate.qubits)
-        else:
-            print(gate.name, gate.qubits)
-        print()
     # here ``qibotf`` does not raise error because the gates act
     # on two qubits only
     K.assert_allclose(fused_c(), c())
