@@ -49,11 +49,13 @@ class Circuit(circuit.AbstractCircuit):
     @staticmethod
     def _fuse_queue(current_queue, max_qubits, min_targets):
         from qibo.gates import FusedGate
-        from qibo.abstractions.abstract_gates import SpecialGate
         queue = []
         for gate in current_queue:
-            if isinstance(gate, SpecialGate):
-                queue.append(FusedGate(gate))
+            if gate.is_special():
+                if isinstance(gate, FusedGate):
+                    queue.append(gate)
+                else:
+                    queue.append(FusedGate(gate))
             else:
                 available = True
                 for fgate in reversed(queue):
@@ -69,13 +71,13 @@ class Circuit(circuit.AbstractCircuit):
                     elif qubits & set(fgate.qubits):
                         break
                 if available:
-                    if len(gate.qubits) > min_targets:
+                    if not isinstance(gate, FusedGate) and len(gate.qubits) > min_targets:
                         queue.append(FusedGate(gate))
                     else:
                         queue.append(gate)
         return queue
 
-    def fuse(self, max_qubits=2):
+    def fuse(self, max_qubits=2, multiqubit_first=True):
         """Creates an equivalent circuit with the gates fused up to two-qubits.
 
         Returns:
@@ -99,7 +101,14 @@ class Circuit(circuit.AbstractCircuit):
                 # equivalent to applying the five original gates
         """
         from qibo.abstractions.circuit import _Queue
-        queue = self._fuse_queue(self.queue, max_qubits, 0)
+        if multiqubit_first:
+            ntargets = set(len(gate.qubits) - 1 for gate in self.queue)
+            queue = self.queue
+            for n in reversed(sorted(ntargets)):
+                if n >= 0:
+                    queue = self._fuse_queue(queue, max_qubits, n)
+        else:
+            queue = self._fuse_queue(self.queue, max_qubits, 0)
         # create a circuit and assign the new queue
         new_circuit = self._shallow_copy()
         new_circuit.queue = _Queue(self.nqubits)

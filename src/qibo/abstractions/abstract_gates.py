@@ -159,6 +159,9 @@ class Gate:
         self._nqubits = n
         self._nstates = 2**n
 
+    def is_special(self):
+        return False
+
     @property
     def density_matrix(self) -> bool:
         """Controls if the gate acts on state vectors or density matrices."""
@@ -311,6 +314,9 @@ class SpecialGate(Gate):
     Current special gates are :class:`qibo.abstractions.gates.CallbackGate` and
     :class:`qibo.abstractions.gates.Flatten`.
     """
+
+    def is_special(self):
+        return True
 
     def commutes(self, gate):
         return False

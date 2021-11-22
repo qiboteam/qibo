@@ -1575,8 +1575,12 @@ class FusedGate(Gate):
         return isinstance(self.gates[0], SpecialGate)
 
     def add(self, gate):
-        self.gates.append(gate)
-        self.qubit_set |= set(gate.qubits)
+        if isinstance(gate, self.__class__):
+            self.gates.extend(gate.gates)
+            self.qubit_set |= gate.qubit_set
+        else:
+            self.gates.append(gate)
+            self.qubit_set |= set(gate.qubits)
 
     def __iter__(self):
         return iter(self.gates)
