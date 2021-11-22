@@ -101,14 +101,14 @@ class AAVQE(object):
     algorithm. See https://arxiv.org/abs/1806.02287.
 
     Args:
-        circuit (:class:`qibo.abstractions.circuit.AbstractCircuit`): variaional ansatz.
+        circuit (:class:`qibo.abstractions.circuit.AbstractCircuit`): variational ansatz.
         easy_hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): initial Hamiltonian object.
         problem_hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): problem Hamiltonian object.
         s (callable): scheduling function of time that defines the adiabatic
-            evolution. It must verify boundary contitions: s(0) = 0 and s(1) = 1.
+            evolution. It must verify boundary conditions: s(0) = 0 and s(1) = 1.
         nsteps (float): number of steps of the adiabatic evolution.
         t_max (float): total time evolution.
-        bounds_tolerance (float): tolerance for checking s(0) = 0 and s(T) = 1.
+        bounds_tolerance (float): tolerance for checking s(0) = 0 and s(1) = 1.
         time_tolerance (float): tolerance for checking if time is greater than t_max.
 
     Example:
@@ -212,7 +212,7 @@ class AAVQE(object):
             tol (float): Tolerance of termination for scipy optimizers.
             options (dict): a dictionary with options for the different optimizers.
             compile (bool): whether the TensorFlow graph should be compiled.
-            processes (int): number of processes when using the paralle BFGS method.
+            processes (int): number of processes when using the parallel BFGS method.
         """
         from qibo import models
         t = 0.
