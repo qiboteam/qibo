@@ -112,26 +112,27 @@ class AAVQE(object):
         time_tolerance (float): tolerance for checking if time is greater than t_max.
 
     Example:
-    ::
-        import numpy as np
-        from qibo import gates, models, hamiltonians
-        # create circuit ansatz for two qubits
-        circuit = models.Circuit(2)
-        circuit.add(gates.RY(0, theta=0))
-        circuit.add(gates.RY(1, theta=0))
-        # define the easy and the problem Hamiltonians.
-        easy_hamiltonian=hamiltonians.X(2)
-        problem_hamiltonian=hamiltonians.XXZ(2)
-        # define a scheduling function with only one parameter 
-        # and boundary conditions s(0) = 0, s(1) = 1
-        s = lambda t: t
-        # create AAVQE model 
-        aavqe = models.AAVQE(circuit, easy_hamiltonian, problem_hamiltonian, 
-                             s, nsteps=10, t_max=1)
-        # optimize using random initial variational parameters
-        np.random.seed(0)
-        initial_parameters = np.random.uniform(0, 2*np.pi, 2)
-        ground_energy, params = aavqe.minimize(initial_parameters)
+        .. testcode::
+
+            import numpy as np
+            from qibo import gates, models, hamiltonians
+            # create circuit ansatz for two qubits
+            circuit = models.Circuit(2)
+            circuit.add(gates.RY(0, theta=0))
+            circuit.add(gates.RY(1, theta=0))
+            # define the easy and the problem Hamiltonians.
+            easy_hamiltonian=hamiltonians.X(2)
+            problem_hamiltonian=hamiltonians.XXZ(2)
+            # define a scheduling function with only one parameter
+            # and boundary conditions s(0) = 0, s(1) = 1
+            s = lambda t: t
+            # create AAVQE model
+            aavqe = models.AAVQE(circuit, easy_hamiltonian, problem_hamiltonian,
+                                s, nsteps=10, t_max=1)
+            # optimize using random initial variational parameters
+            np.random.seed(0)
+            initial_parameters = np.random.uniform(0, 2*np.pi, 2)
+            ground_energy, params = aavqe.minimize(initial_parameters)
     """
 
     def __init__(self, circuit, easy_hamiltonian, problem_hamiltonian, s, nsteps=10, t_max = 1, bounds_tolerance = 1e-7, time_tolerance = 1e-7):
