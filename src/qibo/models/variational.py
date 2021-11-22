@@ -200,6 +200,7 @@ class AAVQE(object):
                  options=None, compile=False, processes=None):
         """
         Performs minimization to find the ground state of the problem Hamiltonian.
+
         Args:
             params (np.ndarray or list): initial guess for the parameters of the variational circuit.
             method (str): optimizer to employ. 
