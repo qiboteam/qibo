@@ -64,7 +64,12 @@ class StyleQGAN(object):
             raise_error(ValueError, "Set the initial parameters for your custom quantum generator.")
         elif initial_params is not None and circuit is None:
             raise_error(ValueError, "Define the custom quantum generator to use custom initial parameters.")
-       
+            
+        if set_parameters is None and circuit is not None:
+            raise_error(ValueError, "Set parameters function has to be given for your custom quantum generator.")
+        elif set_parameters is not None and circuit is None:
+            raise_error(ValueError, "Define the custom quantum generator to use custom set parameters function.")
+        
         self.discriminator = discriminator
         self.circuit = circuit
         self.layers = layers           
