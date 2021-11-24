@@ -69,6 +69,14 @@ class AbstractState(ABC):
         self._tensor = x
 
     @abstractmethod
+    def symbolic(self, decimals=5):  # pragma: no cover
+        """Dirac notation representation of the state in the computational basis."""
+        raise_error(NotImplementedError)
+
+    def __repr__(self):
+        return self.symbolic()
+
+    @abstractmethod
     def __array__(self): # pragma: no cover
         """State's tensor representation as an array."""
         raise_error(NotImplementedError)
@@ -78,7 +86,7 @@ class AbstractState(ABC):
         """State's tensor representation as a numpy array."""
         raise_error(NotImplementedError)
 
-    def state(self, numpy=False):
+    def state(self, numpy=False, symbolic=False):
         """State's tensor representation as an backend tensor.
 
         Args:
@@ -86,6 +94,8 @@ class AbstractState(ABC):
                 otherwise it will follow the backend tensor type.
                 Default is ``False``.
         """
+        if symbolic:
+            return self.symbolic()
         if numpy:
             return self.numpy()
         return self.tensor

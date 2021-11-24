@@ -68,6 +68,20 @@ def test_vector_state_to_density_matrix(backend):
         state.to_density_matrix()
 
 
+@pytest.mark.parametrize("target", range(5))
+def test_state_vector_representation(target):
+    from qibo import models, gates
+    c = models.Circuit(5)
+    c.add(gates.H(target))
+    result = c()
+    bstring = target * "0" + "1" + (4 - target) * "0"
+    target_str = f"(0.70711+0j)|00000> + (0.70711+0j)|{bstring}>"
+    assert str(result) == target_str
+    assert result.state(symbolic=True) == target_str
+    assert result.symbolic(decimals=1) == f"(0.7+0j)|00000> + (0.7+0j)|{bstring}>"
+    assert result.symbolic(decimals=2) == f"(0.71+0j)|00000> + (0.71+0j)|{bstring}>"
+
+
 @pytest.mark.parametrize("state_type", ["VectorState", "MatrixState"])
 @pytest.mark.parametrize("use_gate", [False, True])
 def test_state_probabilities(backend, state_type, use_gate):

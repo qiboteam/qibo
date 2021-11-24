@@ -38,6 +38,12 @@ class VectorState(AbstractState):
     def numpy(self):
         return self.__array__()
 
+    def symbolic(self, decimals=5):
+        terms = (f"{round(x, decimals)}|{bin(i)[2:].zfill(self.nqubits)}>"
+                 for i, x in enumerate(self.numpy())
+                 if not K.np.isclose(x, 0.0))
+        return " + ".join(terms)
+
     @classmethod
     def zero_state(cls, nqubits):
         state = cls(nqubits)
