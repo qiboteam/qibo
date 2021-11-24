@@ -135,11 +135,11 @@ def test_vqe(backend, method, options, compile, filename):
 
 def test_vqe_custom_gates_errors():
     """Check that ``RuntimeError``s is raised when using custom gates."""
-    if "qibotf" not in qibo.K.available_backends: # pragma: no cover
-        pytest.skip("Custom backend not available.")
-
     original_backend = qibo.get_backend()
-    qibo.set_backend("qibotf")
+    try:
+        qibo.set_backend("qibotf")
+    except ValueError:  # pragma: no cover
+        pytest.skip("Custom backend not available.")
 
     nqubits = 6
     circuit = models.Circuit(nqubits)
@@ -305,3 +305,58 @@ def test_falqon_optimization_callback(backend):
     falqon = models.FALQON(h)
     best, params, extra = falqon.minimize(0.1, 5, callback=callback)
     assert len(extra["callbacks"]) == 5
+
+
+test_names = "method,options,compile,filename"
+test_values = [("Powell", {'maxiter': 1}, False, 'aavqe_powell.out'),
+               ("BFGS", {'maxiter': 1}, False, 'aavqe_bfgs.out'),
+               ("cma", {"maxfevals": 2}, False, None),
+               ("parallel_L-BFGS-B", {'maxiter': 1}, False, None)]
+@pytest.mark.parametrize(test_names, test_values)
+def test_aavqe(backend, method, options, compile, filename):
+    """Performs a AAVQE circuit minimization test."""
+    original_threads = qibo.get_threads()
+
+    if method == 'parallel_L-BFGS-B':
+        device = qibo.get_device()
+        backend = qibo.get_backend()
+        if backend == "tensorflow" or backend == "qibojit" or "GPU" in device:
+            pytest.skip("unsupported configuration")
+        import sys
+        if sys.platform == 'win32' or sys.platform == 'darwin': # pragma: no cover
+            pytest.skip("Parallel L-BFGS-B only supported on linux.")
+        qibo.set_threads(1)
+    nqubits = 6
+    layers  = 4
+    circuit = models.Circuit(nqubits)
+
+    for l in range(layers):
+        for q in range(nqubits):
+            circuit.add(gates.RY(q, theta=1.0))
+        for q in range(0, nqubits-1, 2):
+            circuit.add(gates.CZ(q, q+1))
+        for q in range(nqubits):
+            circuit.add(gates.RY(q, theta=1.0))
+        for q in range(1, nqubits-2, 2):
+            circuit.add(gates.CZ(q, q+1))
+        circuit.add(gates.CZ(0, nqubits-1))
+    for q in range(nqubits):
+        circuit.add(gates.RY(q, theta=1.0))
+
+    easy_hamiltonian=hamiltonians.X(nqubits)
+    problem_hamiltonian=hamiltonians.XXZ(nqubits)
+    s = lambda t: t
+    aavqe = models.AAVQE(circuit, easy_hamiltonian, problem_hamiltonian, 
+                        s, nsteps=10, t_max=1)
+    np.random.seed(0)
+    initial_parameters = np.random.uniform(0, 2*np.pi, 2*nqubits*layers + nqubits)
+    best, params = aavqe.minimize(params=initial_parameters, method=method,
+                                 options=options, compile=compile)
+    if method == "cma":
+        # remove `outcmaes` folder
+        import shutil
+        shutil.rmtree("outcmaes")
+    if filename is not None:
+        assert_regression_fixture(params, filename, rtol=1e-2)
+    qibo.set_threads(original_threads)
+    

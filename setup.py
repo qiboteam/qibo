@@ -25,8 +25,8 @@ with open(os.path.join(this_directory, "README.md"), encoding="utf-8") as f:
     long_description = f.read()
 
 
-# read backend versions
-BACKENDFILE = os.path.join("src", PACKAGE, "backends", "__init__.py")
+# read Tensorflow version requirement
+BACKENDFILE = os.path.join("src", PACKAGE, "config.py")
 with open(BACKENDFILE, 'r') as f:
     content = f.readlines()
     for line in content:
@@ -58,17 +58,14 @@ setup(
         "joblib",
         "matplotlib",
         "psutil",
-        "pyyaml"
+        "pyyaml",
+        "importlib_metadata",
     ],
     extras_require={
         "docs": ["sphinx", "sphinx_rtd_theme", "recommonmark", "sphinxcontrib-bibtex", "sphinx_markdown_tables", "nbsphinx", "IPython"],
         "tests": ["pytest", "cirq", "ply", "sklearn"],
-        # Backends dependencies
-        "qibotf": ["qibotf"],
-        "qibojit": ["qibojit"],
-        "tensorflow": [f"tensorflow>={TF_MIN_VERSION}"],
     },
-    python_requires=">=3.6.0",
+    python_requires=">=3.7.0",
     long_description=long_description,
     long_description_content_type='text/markdown',
 )

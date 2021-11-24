@@ -5,9 +5,12 @@ from qibo.config import raise_error, log
 
 class AbstractBackend(ABC):
 
+    TEST_REGRESSIONS = {}
+
     def __init__(self):
         self.backend = None
         self.name = "base"
+        self.is_hardware = False
 
         self.precision = 'double'
         self._dtypes = {'DTYPEINT': 'int64', 'DTYPE': 'float64',
@@ -21,7 +24,7 @@ class AbstractBackend(ABC):
         # using physical cores by default
         self.nthreads = psutil.cpu_count(logical=False)
 
-        self.op = None
+        self.is_custom = False
         self._matrices = None
         self.numeric_types = None
         self.tensor_types = None
@@ -34,10 +37,12 @@ class AbstractBackend(ABC):
         self.supports_multigpu = False
         self.supports_gradients = False
 
-        self.is_hardware = False
-        self.hardware_module = None
-        self.hardware_circuit = None
-        self.hardware_gates = None
+    def test_regressions(self, name):
+        """Correct outcomes for tests that involve random numbers.
+
+        The outcomes of such tests depend on the backend.
+        """
+        return self.TEST_REGRESSIONS.get(name)
 
     def dtypes(self, name):
         if name in self._dtypes:
@@ -112,6 +117,50 @@ class AbstractBackend(ABC):
             from qibo.backends.matrices import Matrices
             self._matrices = Matrices(self)
         return self._matrices
+
+    def circuit_class(self, accelerators=None, density_matrix=False):
+        """Returns class used to create circuit model.
+
+        Useful for hardware backends which use different circuit models.
+
+        Args:
+            accelerators (dict): Dictionary that maps device names to the number of
+                times each device will be used.
+                See :class:`qibo.core.distcircuit.DistributedCircuit` for more
+                details.
+            density_matrix (bool): If ``True`` it creates a circuit for density
+                matrix simulation. Default is ``False`` which corresponds to
+                state vector simulation.
+        """
+        # this method returns circuit objects defined in ``qibo.core`` which
+        # are used for classical simulation.
+        # Hardware backends should redefine this method to return the
+        # corresponding hardware circuit objects.
+        if density_matrix:
+            if accelerators is not None:
+                raise_error(NotImplementedError, "Distributed circuits are not "
+                                                 "implemented for density "
+                                                 "matrices.")
+            from qibo.core.circuit import DensityMatrixCircuit
+            return DensityMatrixCircuit
+        elif accelerators is not None:
+            from qibo.core.distcircuit import DistributedCircuit
+            return DistributedCircuit
+        else:
+            from qibo.core.circuit import Circuit
+            return Circuit
+
+    def create_gate(self, cls, *args, **kwargs):
+        """Create gate objects supported by the backend.
+
+        Useful for hardware backends which use different gate objects.
+        """
+        # this method returns gate objects defined in ``qibo.core.gates`` which
+        # are used for classical simulation.
+        # Hardware backends should redefine this method to return the
+        # corresponding hardware gate objects (with pulse represenntation etc).
+        from qibo.abstractions.abstract_gates import BaseBackendGate
+        return BaseBackendGate.__new__(cls)
 
     @abstractmethod
     def to_numpy(self, x): # pragma: no cover
@@ -559,14 +608,174 @@ class AbstractBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def assert_allclose(self, value, target, rtol=1e-7, atol=0.0): # pragma: no cover
+        """Check that two arrays are equal. Useful for testing."""
+        raise_error(NotImplementedError)
+
+
+class AbstractCustomOperators:  # pragma: no cover
+    """Abstraction for backends that are based on custom operators.
+
+    Such backends are `qibojit <https://github.com/qiboteam/qibojit>`_ and
+    `qibotf <https://github.com/qiboteam/qibotf>`_.
+    """
+
+    def __init__(self):
+        self._gate_ops = {
+            "x": self.apply_x,
+            "y": self.apply_y,
+            "z": self.apply_z,
+            "m": self.collapse_state,
+            "u1": self.apply_z_pow,
+            "cx": self.apply_x,
+            "cz": self.apply_z,
+            "cu1": self.apply_z_pow,
+            "swap": self.apply_swap,
+            "fsim": self.apply_fsim,
+            "generalizedfsim": self.apply_fsim,
+            "ccx": self.apply_x
+            }
+
+    def get_gate_op(self, gate):
+        """Finds the custom operator function that corresponds to the given gate.
+
+        Args:
+            gate (qibo.abstractions.abstract_gates.Gate): Gate object to apply.
+
+        Returns:
+            A callable that applies the custom operator corresponding to the
+            given gate.
+        """
+        if gate.name in self._gate_ops:
+            return self._gate_ops.get(gate.name)
+        elif gate.__class__.__name__ == "_ThermalRelaxationChannelB":
+            return self.apply_two_qubit_gate
+        n = len(gate.target_qubits)
+        if n == 1:
+            return self.apply_gate
+        elif n == 2:
+            return self.apply_two_qubit_gate
+        else:
+            return self.apply_multi_qubit_gate
+
+    @abstractmethod
+    def apply_gate(self, state, gate, nqubits, targets, qubits=None):
+        """Applies one-qubit gate using matrix multiplication.
+
+        The gate may be controlled on arbitrary number of qubits.
+
+        Args:
+            state: State vector as a backend supported tensor.
+            gate: Gate matrix as a backend supported tensor.
+            nqubits (int): Total number of qubits in the system.
+            targets (tuple): Target qubit ids that the gate acts on.
+            qubits: Sorted list of target and control qubit ids sorted as a
+                backend supported tensor.
+
+        Returns:
+            The state vector after the gate is applied as a backend supported
+            tensor.
+        """
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def apply_x(self, state, nqubits, targets, qubits=None):
+        """Applies Pauli-X gate.
+
+        See :meth:`qibo.backends.abstract.AbstractCustomOperators.apply_gate`
+        for information on arguments.
+        """
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def apply_y(self, state, nqubits, targets, qubits=None):
+        """Applies Pauli-Y gate.
+
+        See :meth:`qibo.backends.abstract.AbstractCustomOperators.apply_gate`
+        for information on arguments.
+        """
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def apply_z(self, state, nqubits, targets, qubits=None):
+        """Applies Pauli-Z gate.
+
+        See :meth:`qibo.backends.abstract.AbstractCustomOperators.apply_gate`
+        for information on arguments.
+        """
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def apply_z_pow(self, state, gate, nqubits, targets, qubits=None):
+        """Applies U1 gate.
+
+        See :meth:`qibo.backends.abstract.AbstractCustomOperators.apply_gate`
+        for information on arguments.
+        The ``gate`` argument here corresponds to the phase to be applied, not
+        the full matrix.
+        """
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def apply_two_qubit_gate(self, state, gate, nqubits, targets, qubits=None):
+        """Applies two-qubit gate using matrix multiplication.
+
+        See :meth:`qibo.backends.abstract.AbstractCustomOperators.apply_gate`
+        for information on arguments.
+        """
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def apply_swap(self, state, nqubits, targets, qubits=None):
+        """Applies SWAP gate.
+
+        See :meth:`qibo.backends.abstract.AbstractCustomOperators.apply_gate`
+        for information on arguments.
+        """
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def apply_fsim(self, state, gate, nqubits, targets, qubits=None):
+        """Applies fSim gate.
+
+        See :meth:`qibo.backends.abstract.AbstractCustomOperators.apply_gate`
+        for information on arguments.
+        The ``gate`` argument here is a tensor of length 5 corresponding to the
+        non-zero elements of :class:`qibo.abstractions.gates.GeneralizedfSim`.
+        """
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def apply_multi_qubit_gate(self, state, gate, nqubits, targets, qubits=None):
+        """Applies multi-qubit gate with three or more targets using matrix multiplication.
+
+        See :meth:`qibo.backends.abstract.AbstractCustomOperators.apply_gate`
+        for information on arguments.
+        """
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def collapse_state(self, state, qubits, result, nqubits, normalize=True):
+        """Collapses state according to the given measurement result.
+
+        Args:
+            state: State vector as a backend supported tensor.
+            qubits: Sorted list of target qubit ids sorted as a backend
+                supported tensor.
+            result (int): Measurement result on the target qubits converted
+                from binary to decimal.
+            nqubits (int): Total number of qubits in the system.
+            normalize (bool): If ``True`` the collapsed state is normalized.
+
+        Returns:
+            State after collapse as a backend supported tensor.
+        """
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def swap_pieces(self, piece0, piece1, new_global, nlocal): # pragma: no cover
         """Swaps two distributed state pieces in order to change the global qubits.
 
         Useful to apply SWAP gates on distributed states.
         """
-        raise_error(NotImplementedError)
-
-    @abstractmethod
-    def assert_allclose(self, value, target, rtol=1e-7, atol=0.0): # pragma: no cover
-        """Check that two arrays are equal. Useful for testing."""
         raise_error(NotImplementedError)

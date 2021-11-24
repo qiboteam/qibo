@@ -254,9 +254,11 @@ For example
 
     import numpy as np
     from qibo import callbacks
+    # import the backend to access math ops directly
+    from qibo import K
     # create a singlet state vector
-    state = np.zeros(4)
-    state[0], state[3] = 1 / np.sqrt(2), 1 / np.sqrt(2)
+    state = K.zeros(4)
+    state[0], state[3] = 1 / K.sqrt(2), 1 / K.sqrt(2)
 
     # create an `EntanglementEntropy` callback object
     entropy = callbacks.EntanglementEntropy([0])

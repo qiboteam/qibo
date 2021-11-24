@@ -175,6 +175,13 @@ Variational Quantum Eigensolver (VQE)
     :members:
     :member-order: bysource
 
+Adiabatically Assisted Variational Quantum Eigensolver (AAVQE)
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.models.variational.AAVQE
+    :members:
+    :member-order: bysource
+
 Quantum Approximate Optimization Algorithm (QAOA)
 """""""""""""""""""""""""""""""""""""""""""""""""
 

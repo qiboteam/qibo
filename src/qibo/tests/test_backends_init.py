@@ -6,7 +6,7 @@ def test_construct_backend(backend_name):
     bk = K.construct_backend(backend_name)
     assert bk.name == backend_name
     with pytest.raises(ValueError):
-        bk = K.construct_backend("test")
+        bk = K.construct_backend("nonexistent")
 
 
 def test_set_backend(backend_name):
@@ -18,17 +18,13 @@ def test_set_backend(backend_name):
     assert repr(K) == backend_name
     assert K.executing_eagerly()
     h = gates.H(0)
-    if backend_name == "qibotf" or backend_name == "qibojit":
-        assert h.gate_op
-    else:
-        assert h.gate_op is None
     backends.set_backend(original_backend)
 
 
 def test_set_backend_errors(caplog):
     original_backend = backends.get_backend()
     with pytest.raises(ValueError):
-        backends.set_backend("test")
+        backends.set_backend("nonexistent")
     if original_backend != "numpy":
         h = gates.H(0)
         backends.set_backend("numpy")
