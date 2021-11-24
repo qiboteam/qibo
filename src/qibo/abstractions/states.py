@@ -93,6 +93,9 @@ class AbstractState(ABC):
             numpy (bool): If ``True`` the returned tensor will be a numpy array,
                 otherwise it will follow the backend tensor type.
                 Default is ``False``.
+            symbolic (bool): If ``True`` it returns a string representing the
+                state in the computational basis.
+                Default is ``False``.
         """
         if symbolic:
             return self.symbolic()
