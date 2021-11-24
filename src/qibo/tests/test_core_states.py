@@ -82,6 +82,15 @@ def test_state_vector_representation(target):
     assert result.symbolic(decimals=2) == f"(0.71+0j)|00000> + (0.71+0j)|{bstring}>"
 
 
+def test_state_vector_representation_max_terms():
+    from qibo import models, gates
+    c = models.Circuit(5)
+    c.add(gates.H(i) for i in range(5))
+    result = c()
+    assert result.symbolic(max_terms=3) == "(0.17678+0j)|00000> + (0.17678+0j)|00001> + (0.17678+0j)|00010> + ..."
+    assert result.symbolic(max_terms=5) == "(0.17678+0j)|00000> + (0.17678+0j)|00001> + (0.17678+0j)|00010> + (0.17678+0j)|00011> + (0.17678+0j)|00100> + ..."
+
+
 @pytest.mark.parametrize("state_type", ["VectorState", "MatrixState"])
 @pytest.mark.parametrize("use_gate", [False, True])
 def test_state_probabilities(backend, state_type, use_gate):

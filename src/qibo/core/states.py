@@ -38,10 +38,15 @@ class VectorState(AbstractState):
     def numpy(self):
         return self.__array__()
 
-    def symbolic(self, decimals=5):
-        terms = (f"{round(x, decimals)}|{bin(i)[2:].zfill(self.nqubits)}>"
-                 for i, x in enumerate(self.numpy())
-                 if not K.np.isclose(x, 0.0))
+    def symbolic(self, decimals=5, max_terms=20):
+        terms = []
+        for i, x in enumerate(self.numpy()):
+            if not K.np.isclose(x, 0.0):
+                b = bin(i)[2:].zfill(self.nqubits)
+                terms.append(f"{round(x, decimals)}|{b}>")
+            if len(terms) >= max_terms:
+                terms.append("...")
+                break
         return " + ".join(terms)
 
     @classmethod

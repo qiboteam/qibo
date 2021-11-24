@@ -69,8 +69,19 @@ class AbstractState(ABC):
         self._tensor = x
 
     @abstractmethod
-    def symbolic(self, decimals=5):  # pragma: no cover
-        """Dirac notation representation of the state in the computational basis."""
+    def symbolic(self, decimals=5, max_terms=20):  # pragma: no cover
+        """Dirac notation representation of the state in the computational basis.
+
+        Args:
+            decimals (int): Number of decimals for the amplitudes.
+                Default is 5.
+            max_terms (int): Maximum number of terms to print. If the state
+                contains more terms they will be ignored.
+                Default is 20.
+
+        Returns:
+            A string representing the state in the computational basis.
+        """
         raise_error(NotImplementedError)
 
     def __repr__(self):
