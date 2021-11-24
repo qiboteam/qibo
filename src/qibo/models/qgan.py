@@ -47,32 +47,32 @@ class StyleQGAN(object):
             train_qGAN.fit(reference_distribution)
     """
 
-    def __init__(self, latent_dim, layers=None, circuit=None, set_parameters=None, initial_params=None, 
+    def __init__(self, latent_dim, layers=None, circuit=None, set_parameters=None, initial_params=None,
                  discriminator=None, batch_samples=128, n_epochs=20000, lr=0.5):
-        
+
         if get_backend() != 'tensorflow':
-                raise_error(ValueError, "StyleQGAN model requieres tensorflow backend.")
-                
+            raise_error(ValueError, "StyleQGAN model requires tensorflow backend.")
+
         if layers is not None and circuit is not None:
             raise_error(ValueError, "Set the number of layers for the default quantum generator "
                         "or use a custom quantum generator, do not define both.")
         elif layers is None and circuit is None:
             raise_error(ValueError, "Set the number of layers for the default quantum generator "
                         "or use a custom quantum generator.")
-        
+
         if initial_params is None and circuit is not None:
             raise_error(ValueError, "Set the initial parameters for your custom quantum generator.")
         elif initial_params is not None and circuit is None:
             raise_error(ValueError, "Define the custom quantum generator to use custom initial parameters.")
-            
+
         if set_parameters is None and circuit is not None:
             raise_error(ValueError, "Set parameters function has to be given for your custom quantum generator.")
         elif set_parameters is not None and circuit is None:
             raise_error(ValueError, "Define the custom quantum generator to use custom set parameters function.")
-        
+
         self.discriminator = discriminator
         self.circuit = circuit
-        self.layers = layers           
+        self.layers = layers
         self.initial_params = initial_params
         self.latent_dim = latent_dim
         self.batch_samples = batch_samples
@@ -88,22 +88,22 @@ class StyleQGAN(object):
         from tensorflow.keras.models import Sequential
         from tensorflow.keras.optimizers import Adadelta
         from tensorflow.keras.layers import Dense, Conv2D, Dropout, Reshape, LeakyReLU, Flatten
-        
-        model = Sequential()           
+
+        model = Sequential()
         model.add(Dense(200, use_bias=False, input_dim=self.nqubits))
-        model.add(Reshape((10,10,2)))       
+        model.add(Reshape((10,10,2)))
         model.add(Conv2D(64, kernel_size=3, strides=1, padding='same', kernel_initializer='glorot_normal'))
-        model.add(LeakyReLU(alpha=alpha))       
+        model.add(LeakyReLU(alpha=alpha))
         model.add(Conv2D(32, kernel_size=3, strides=1, padding='same', kernel_initializer='glorot_normal'))
-        model.add(LeakyReLU(alpha=alpha))    
+        model.add(LeakyReLU(alpha=alpha))
         model.add(Conv2D(16, kernel_size=3, strides=1, padding='same', kernel_initializer='glorot_normal'))
-        model.add(LeakyReLU(alpha=alpha))    
-        model.add(Conv2D(8, kernel_size=3, strides=1, padding='same', kernel_initializer='glorot_normal'))    
+        model.add(LeakyReLU(alpha=alpha))
+        model.add(Conv2D(8, kernel_size=3, strides=1, padding='same', kernel_initializer='glorot_normal'))
         model.add(Flatten())
         model.add(LeakyReLU(alpha=alpha))
-        model.add(Dropout(dropout))     
+        model.add(Dropout(dropout))
         model.add(Dense(1, activation='sigmoid'))
-        
+
         # compile model
         opt = Adadelta(learning_rate=0.1)
         model.compile(loss='binary_crossentropy', optimizer=opt, metrics=['accuracy'])
@@ -147,7 +147,7 @@ class StyleQGAN(object):
         # reshape into a batch of inputs for the network
         x_input = x_input.reshape(samples, self.latent_dim)
         return x_input
-    
+
     def generate_fake_samples(self, params, samples, circuit, hamiltonians_list):
         import tensorflow as tf
         """Use the generator to generate fake examples, with class labels."""
@@ -169,7 +169,7 @@ class StyleQGAN(object):
         # create class labels
         y = np.zeros((samples, 1))
         return X, y
-    
+
     def define_cost_gan(self, params, discriminator, samples, circuit, hamiltonians_list):
         import tensorflow as tf
         """Define the combined generator and discriminator model, for updating the generator."""
@@ -182,11 +182,11 @@ class StyleQGAN(object):
         loss = tf.keras.losses.binary_crossentropy(y_fake, disc_output)
         loss = tf.reduce_mean(loss)
         return loss
-    
+
     def train(self, d_model, circuit, hamiltonians_list):
         """Train the quantum generator and classical discriminator."""
         import tensorflow as tf
-        
+
         def generate_real_samples(samples, distribution, real_samples):
             """Generate real samples with class labels."""
             # generate samples from the distribution
@@ -195,7 +195,7 @@ class StyleQGAN(object):
             # generate class labels
             y = np.ones((samples, 1))
             return X, y
-        
+
         d_loss = []
         g_loss = []
         # determine half the size of one batch, for updating the discriminator
@@ -232,11 +232,11 @@ class StyleQGAN(object):
 
     def fit(self, reference):
         """Execute qGAN training."""
-        
+
         self.reference = reference
         self.nqubits = reference.shape[1]
         self.training_samples = reference.shape[0]
-               
+
         # create classical discriminator
         if self.discriminator is None:
             discriminator = self.define_discriminator()
@@ -246,7 +246,7 @@ class StyleQGAN(object):
         if discriminator.input_shape[1] is not self.nqubits:
                 raise_error(ValueError, "The number of input neurons in the discriminator has to be equal to "
                             "the number of qubits in the circuit (dimension of the input reference distribution).")
-            
+
         # create quantum generator
         if self.circuit is None:
             circuit = models.Circuit(self.nqubits)
@@ -263,11 +263,11 @@ class StyleQGAN(object):
                 circuit.add(gates.RY(q, 0))
         else:
             circuit = self.circuit
-            
+
         if circuit.nqubits != self.nqubits:
                 raise_error(ValueError, "The number of qubits in the circuit has to be equal to "
                             "the number of dimension in the reference distribution.")
-        
+
         # define hamiltonian to generate fake samples
         def hamiltonian(nqubits, position):
             identity = [[1, 0], [0, 1]]
@@ -285,10 +285,10 @@ class StyleQGAN(object):
                     ham = np.kron(kron[i+1], ham)
             ham = hamiltonians.Hamiltonian(nqubits, ham)
             return ham
-        
+
         hamiltonians_list = []
         for i in range(self.nqubits):
             hamiltonians_list.append(hamiltonian(self.nqubits, i))
-        
+
         # train model
         self.train(discriminator, circuit, hamiltonians_list)
