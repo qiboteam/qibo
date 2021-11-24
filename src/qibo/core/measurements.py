@@ -152,7 +152,7 @@ class MeasurementResult:
             measured shots.
         """
         if self._frequencies is None:
-            self._frequencies = K.cpu_fallback(self._calculate_frequencies)
+            self._frequencies = self._calculate_frequencies
         if binary:
             return collections.Counter(
                 {"{0:b}".format(k).zfill(self.nqubits): v
