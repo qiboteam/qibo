@@ -144,6 +144,20 @@ class VectorState(AbstractState):
 
 class MatrixState(VectorState):
 
+    def symbolic(self, decimals=5, max_terms=20):
+        state = self.numpy()
+        terms = []
+        indi, indj = K.np.nonzero(state)
+        for i, j in zip(indi, indj):
+            bi = bin(i)[2:].zfill(self.nqubits)
+            bj = bin(j)[2:].zfill(self.nqubits)
+            x = round(state[i, j], decimals)
+            terms.append(f"{x}|{bi}><{bj}|")
+            if len(terms) >= max_terms:
+                terms.append("...")
+                break
+        return " + ".join(terms)
+
     @property
     def shape(self):
         return (self.nstates, self.nstates)

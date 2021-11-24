@@ -69,26 +69,37 @@ def test_vector_state_to_density_matrix(backend):
 
 
 @pytest.mark.parametrize("target", range(5))
-def test_state_vector_representation(target):
+@pytest.mark.parametrize("density_matrix", [False, True])
+def test_state_vector_representation(target, density_matrix):
     from qibo import models, gates
-    c = models.Circuit(5)
+    c = models.Circuit(5, density_matrix=density_matrix)
     c.add(gates.H(target))
     result = c()
     bstring = target * "0" + "1" + (4 - target) * "0"
-    target_str = f"(0.70711+0j)|00000> + (0.70711+0j)|{bstring}>"
-    assert str(result) == target_str
-    assert result.state(symbolic=True) == target_str
-    assert result.symbolic(decimals=1) == f"(0.7+0j)|00000> + (0.7+0j)|{bstring}>"
-    assert result.symbolic(decimals=2) == f"(0.71+0j)|00000> + (0.71+0j)|{bstring}>"
+    if density_matrix:
+        target_str = 3 * [f"(0.5+0j)|00000><00000| + (0.5+0j)|00000><{bstring}| + (0.5+0j)|{bstring}><00000| + (0.5+0j)|{bstring}><{bstring}|"]
+    else:
+        target_str = [f"(0.70711+0j)|00000> + (0.70711+0j)|{bstring}>",
+                      f"(0.7+0j)|00000> + (0.7+0j)|{bstring}>",
+                      f"(0.71+0j)|00000> + (0.71+0j)|{bstring}>"]
+    assert str(result) == target_str[0]
+    assert result.state(symbolic=True) == target_str[0]
+    assert result.symbolic(decimals=1) == target_str[1]
+    assert result.symbolic(decimals=2) == target_str[2]
 
 
-def test_state_vector_representation_max_terms():
+@pytest.mark.parametrize("density_matrix", [False, True])
+def test_state_vector_representation_max_terms(density_matrix):
     from qibo import models, gates
-    c = models.Circuit(5)
+    c = models.Circuit(5, density_matrix=density_matrix)
     c.add(gates.H(i) for i in range(5))
     result = c()
-    assert result.symbolic(max_terms=3) == "(0.17678+0j)|00000> + (0.17678+0j)|00001> + (0.17678+0j)|00010> + ..."
-    assert result.symbolic(max_terms=5) == "(0.17678+0j)|00000> + (0.17678+0j)|00001> + (0.17678+0j)|00010> + (0.17678+0j)|00011> + (0.17678+0j)|00100> + ..."
+    if density_matrix:
+        assert result.symbolic(max_terms=3) == "(0.03125+0j)|00000><00000| + (0.03125+0j)|00000><00001| + (0.03125+0j)|00000><00010| + ..."
+        assert result.symbolic(max_terms=5) == "(0.03125+0j)|00000><00000| + (0.03125+0j)|00000><00001| + (0.03125+0j)|00000><00010| + (0.03125+0j)|00000><00011| + (0.03125+0j)|00000><00100| + ..."
+    else:
+        assert result.symbolic(max_terms=3) == "(0.17678+0j)|00000> + (0.17678+0j)|00001> + (0.17678+0j)|00010> + ..."
+        assert result.symbolic(max_terms=5) == "(0.17678+0j)|00000> + (0.17678+0j)|00001> + (0.17678+0j)|00010> + (0.17678+0j)|00011> + (0.17678+0j)|00100> + ..."
 
 
 @pytest.mark.parametrize("state_type", ["VectorState", "MatrixState"])
