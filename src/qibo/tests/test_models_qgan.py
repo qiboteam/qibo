@@ -25,7 +25,7 @@ def test_default_qgan(backend):
     assert train_qGAN.n_epochs == 10
     assert train_qGAN.lr == 0.5
  
-def test_custon_qgan(backend):
+def test_custom_qgan(backend):
     
     def set_params(circuit, params, x_input, i):
         """Set the parameters for the quantum generator circuit."""
