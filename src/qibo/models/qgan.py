@@ -232,7 +232,7 @@ class StyleQGAN(object):
                 np.savetxt(f"dloss_{filename}", [d_loss], newline='')
                 np.savetxt(f"gloss_{filename}", [g_loss], newline='')
                 # serialize weights to HDF5
-                d_model.save_weights(f"discriminator_3Dgaussian_{filename}.h5")
+                d_model.save_weights(f"discriminator_{filename}.h5")
 
     def fit(self, reference, save=True):
         """Execute qGAN training."""
