@@ -183,7 +183,7 @@ class StyleQGAN(object):
         loss = tf.reduce_mean(loss)
         return loss
 
-    def train(self, d_model, circuit, hamiltonians_list):
+    def train(self, d_model, circuit, hamiltonians_list, save=True):
         """Train the quantum generator and classical discriminator."""
         import tensorflow as tf
 
@@ -201,9 +201,10 @@ class StyleQGAN(object):
         # determine half the size of one batch, for updating the discriminator
         half_samples = int(self.batch_samples / 2)
         if self.initial_params is not None:
-            initial_params = self.initial_params
+            initial_params = tf.Variable(self.initial_params)
         else:
-            initial_params = tf.Variable(np.random.uniform(-0.15, 0.15, 10*self.layers*self.nqubits + 2*self.nqubits))
+            n = 10 * self.layers * self.nqubits + 2 * self.nqubits
+            initial_params = tf.Variable(np.random.uniform(-0.15, 0.15, n))
         optimizer = tf.optimizers.Adadelta(learning_rate=self.lr)
         # prepare real samples
         s = self.reference
@@ -223,14 +224,18 @@ class StyleQGAN(object):
             grads = tape.gradient(loss, initial_params)
             optimizer.apply_gradients([(grads, initial_params)])
             g_loss.append(loss)
-            np.savetxt(f"PARAMS_{self.nqubits}_{self.latent_dim}_{self.layers}_{self.training_samples}_{self.batch_samples}_{self.lr}", [initial_params.numpy()], newline='')
-            np.savetxt(f"dloss_{self.nqubits}_{self.latent_dim}_{self.layers}_{self.training_samples}_{self.batch_samples}_{self.lr}", [d_loss], newline='')
-            np.savetxt(f"gloss_{self.nqubits}_{self.latent_dim}_{self.layers}_{self.training_samples}_{self.batch_samples}_{self.lr}", [g_loss], newline='')
-            # serialize weights to HDF5
-            d_model.save_weights(f"discriminator_3Dgaussian_{self.nqubits}_{self.latent_dim}_{self.layers}_{self.training_samples}_{self.batch_samples}_{self.lr}.h5")
+            if save:  # pragma: no cover
+                # saving is skipped in tests to avoid creating files
+                params = (self.nqubits, self.latent_dim, self.layers,
+                          self.training_samples, self.batch_samples, self.lr)
+                filename = "_".join(str(p) for p in params)
+                np.savetxt(f"PARAMS_{filename}", [initial_params.numpy()], newline='')
+                np.savetxt(f"dloss_{filename}", [d_loss], newline='')
+                np.savetxt(f"gloss_{filename}", [g_loss], newline='')
+                # serialize weights to HDF5
+                d_model.save_weights(f"discriminator_3Dgaussian_{filename}.h5")
 
-
-    def fit(self, reference):
+    def fit(self, reference, save=True):
         """Execute qGAN training."""
 
         self.reference = reference
@@ -291,4 +296,4 @@ class StyleQGAN(object):
             hamiltonians_list.append(hamiltonian(self.nqubits, i))
 
         # train model
-        self.train(discriminator, circuit, hamiltonians_list)
+        self.train(discriminator, circuit, hamiltonians_list, save)
