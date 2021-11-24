@@ -49,9 +49,8 @@ class StyleQGAN(object):
 
     def __init__(self, latent_dim, layers=None, circuit=None, set_parameters=None, initial_params=None,
                  discriminator=None, batch_samples=128, n_epochs=20000, lr=0.5):
-
         if get_backend() != 'tensorflow':
-            raise_error(ValueError, "StyleQGAN model requires tensorflow backend.")
+            raise_error(RuntimeError, "StyleQGAN model requires tensorflow backend.")
 
         if layers is not None and circuit is not None:
             raise_error(ValueError, "Set the number of layers for the default quantum generator "

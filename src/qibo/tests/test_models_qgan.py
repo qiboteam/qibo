@@ -16,24 +16,27 @@ def generate_distribution(samples):
 
 
 def test_default_qgan():
-    if not K.check_availability("tensorflow"):
+    if not K.check_availability("tensorflow"):  # pragma: no cover
         pytest.skip("Skipping StyleQGAN test because tensorflow backend is not available.")
 
+    original_backend = qibo.get_backend()
     qibo.set_backend("tensorflow")
     reference_distribution = generate_distribution(10)
-    train_qGAN = models.StyleQGAN(latent_dim=2, layers=1, n_epochs=1)
-    train_qGAN.fit(reference_distribution, save=False)
-    assert train_qGAN.layers == 1
-    assert train_qGAN.latent_dim == 2
-    assert train_qGAN.batch_samples == 128
-    assert train_qGAN.n_epochs == 1
-    assert train_qGAN.lr == 0.5
+    qgan = models.StyleQGAN(latent_dim=2, layers=1, n_epochs=1)
+    qgan.fit(reference_distribution, save=False)
+    assert qgan.layers == 1
+    assert qgan.latent_dim == 2
+    assert qgan.batch_samples == 128
+    assert qgan.n_epochs == 1
+    assert qgan.lr == 0.5
+    qibo.set_backend(original_backend)
 
 
 def test_custom_qgan():
-    if not K.check_availability("tensorflow"):
+    if not K.check_availability("tensorflow"):  # pragma: no cover
         pytest.skip("Skipping StyleQGAN test because tensorflow backend is not available.")
 
+    original_backend = qibo.get_backend()
     qibo.set_backend("tensorflow")
     def set_params(circuit, params, x_input, i):
         """Set the parameters for the quantum generator circuit."""
@@ -69,15 +72,105 @@ def test_custom_qgan():
         circuit.add(gates.RY(q, 0))
 
     initial_params = np.random.uniform(-0.15, 0.15, 18)
-    train_qGAN = models.StyleQGAN(
+    qgan = models.StyleQGAN(
             latent_dim=2,
             circuit=circuit,
             set_parameters=set_params,
             initial_params=initial_params,
             n_epochs=1
         )
-    train_qGAN.fit(reference_distribution, save=False)
-    assert train_qGAN.latent_dim == 2
-    assert train_qGAN.batch_samples == 128
-    assert train_qGAN.n_epochs == 1
-    assert train_qGAN.lr == 0.5
+    qgan.fit(reference_distribution, save=False)
+    assert qgan.latent_dim == 2
+    assert qgan.batch_samples == 128
+    assert qgan.n_epochs == 1
+    assert qgan.lr == 0.5
+    qibo.set_backend(original_backend)
+
+
+def test_qgan_errors():
+    if not K.check_availability("tensorflow"):  # pragma: no cover
+        pytest.skip("Skipping StyleQGAN test because tensorflow backend is not available.")
+
+    original_backend = qibo.get_backend()
+    qibo.set_backend("qibojit")
+    with pytest.raises(RuntimeError):
+        qgan = models.StyleQGAN(latent_dim=2)
+
+    qibo.set_backend("tensorflow")
+    with pytest.raises(ValueError):
+        qgan = models.StyleQGAN(latent_dim=2)
+    circuit = models.Circuit(2)
+    with pytest.raises(ValueError):
+        qgan = models.StyleQGAN(latent_dim=2, layers=2, circuit=circuit)
+
+    with pytest.raises(ValueError):
+        qgan = models.StyleQGAN(latent_dim=2, circuit=circuit)
+    with pytest.raises(ValueError):
+        qgan = models.StyleQGAN(latent_dim=2, circuit=circuit)
+
+    initial_params = np.random.uniform(-0.15, 0.15, 18)
+    with pytest.raises(ValueError):
+        qgan = models.StyleQGAN(latent_dim=2, circuit=circuit)
+    with pytest.raises(ValueError):
+        qgan = models.StyleQGAN(latent_dim=2, initial_params=initial_params)
+
+    with pytest.raises(ValueError):
+        qgan = models.StyleQGAN(latent_dim=2, circuit=circuit, initial_params=initial_params)
+    with pytest.raises(ValueError):
+        qgan = models.StyleQGAN(latent_dim=2, set_parameters=lambda x: x)
+
+    qibo.set_backend(original_backend)
+
+
+def test_qgan_custom_discriminator():
+    if not K.check_availability("tensorflow"):  # pragma: no cover
+        pytest.skip("Skipping StyleQGAN test because tensorflow backend is not available.")
+
+    from tensorflow.keras.models import Sequential  # pylint: disable=E0611
+    from tensorflow.keras.layers import Dense  # pylint: disable=E0611
+    original_backend = qibo.get_backend()
+    qibo.set_backend("tensorflow")
+    reference_distribution = generate_distribution(10)
+    # use wrong number of qubits so that we capture the error
+    nqubits = reference_distribution.shape[1] + 1
+    discriminator = Sequential()
+    discriminator.add(Dense(200, use_bias=False, input_dim=nqubits))
+    discriminator.add(Dense(1, activation='sigmoid'))
+    qgan = models.StyleQGAN(latent_dim=2, layers=1, n_epochs=1, discriminator=discriminator)
+    with pytest.raises(ValueError):
+        qgan.fit(reference_distribution, save=False)
+    qibo.set_backend(original_backend)
+
+
+def test_qgan_circuit_error():
+    if not K.check_availability("tensorflow"):  # pragma: no cover
+        pytest.skip("Skipping StyleQGAN test because tensorflow backend is not available.")
+
+    original_backend = qibo.get_backend()
+    qibo.set_backend("tensorflow")
+    reference_distribution = generate_distribution(10)
+    # use wrong number of qubits so that we capture the error
+    nqubits = reference_distribution.shape[1] + 1
+    nlayers = 1
+    circuit = models.Circuit(nqubits)
+    for l in range(nlayers):
+        for q in range(nqubits):
+            circuit.add(gates.RY(q, 0))
+            circuit.add(gates.RZ(q, 0))
+        for i in range(0, nqubits - 1):
+            circuit.add(gates.CZ(i, i + 1))
+        circuit.add(gates.CZ(nqubits - 1, 0))
+    for q in range(nqubits):
+        circuit.add(gates.RY(q, 0))
+
+    initial_params = np.random.uniform(-0.15, 0.15, 18)
+    qgan = models.StyleQGAN(
+            latent_dim=2,
+            circuit=circuit,
+            set_parameters=lambda x: x,
+            initial_params=initial_params,
+            n_epochs=1
+        )
+    with pytest.raises(ValueError):
+        qgan.fit(reference_distribution, save=False)
+    qibo.set_backend(original_backend)
