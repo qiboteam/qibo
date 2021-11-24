@@ -103,21 +103,16 @@ def test_qgan_errors():
     with pytest.raises(ValueError):
         qgan = models.StyleQGAN(latent_dim=2, layers=2, circuit=circuit)
 
-    with pytest.raises(ValueError):
-        qgan = models.StyleQGAN(latent_dim=2, circuit=circuit)
-    with pytest.raises(ValueError):
-        qgan = models.StyleQGAN(latent_dim=2, circuit=circuit)
-
     initial_params = np.random.uniform(-0.15, 0.15, 18)
     with pytest.raises(ValueError):
         qgan = models.StyleQGAN(latent_dim=2, circuit=circuit)
     with pytest.raises(ValueError):
-        qgan = models.StyleQGAN(latent_dim=2, initial_params=initial_params)
+        qgan = models.StyleQGAN(latent_dim=2, layers=2, initial_params=initial_params)
 
     with pytest.raises(ValueError):
         qgan = models.StyleQGAN(latent_dim=2, circuit=circuit, initial_params=initial_params)
     with pytest.raises(ValueError):
-        qgan = models.StyleQGAN(latent_dim=2, set_parameters=lambda x: x)
+        qgan = models.StyleQGAN(latent_dim=2, layers=2, initial_params=initial_params, set_parameters=lambda x: x)
 
     qibo.set_backend(original_backend)
 
