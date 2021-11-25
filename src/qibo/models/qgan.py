@@ -47,8 +47,7 @@ class StyleQGAN(object):
             train_qGAN.fit(reference_distribution)
     """
 
-    def __init__(self, latent_dim, layers=None, circuit=None, set_parameters=None, initial_params=None,
-                 discriminator=None, batch_samples=128, n_epochs=20000, lr=0.5):
+    def __init__(self, latent_dim, layers=None, circuit=None, set_parameters=None, discriminator=None):
         if get_backend() != 'tensorflow':
             raise_error(RuntimeError, "StyleQGAN model requires tensorflow backend.")
 
@@ -59,11 +58,6 @@ class StyleQGAN(object):
             raise_error(ValueError, "Set the number of layers for the default quantum generator "
                         "or use a custom quantum generator.")
 
-        if initial_params is None and circuit is not None:
-            raise_error(ValueError, "Set the initial parameters for your custom quantum generator.")
-        elif initial_params is not None and circuit is None:
-            raise_error(ValueError, "Define the custom quantum generator to use custom initial parameters.")
-
         if set_parameters is None and circuit is not None:
             raise_error(ValueError, "Set parameters function has to be given for your custom quantum generator.")
         elif set_parameters is not None and circuit is None:
@@ -72,11 +66,7 @@ class StyleQGAN(object):
         self.discriminator = discriminator
         self.circuit = circuit
         self.layers = layers
-        self.initial_params = initial_params
         self.latent_dim = latent_dim
-        self.batch_samples = batch_samples
-        self.n_epochs = n_epochs
-        self.lr = lr
         if set_parameters is not None:
             self.set_parameters = set_parameters
         else:
@@ -234,12 +224,20 @@ class StyleQGAN(object):
                 # serialize weights to HDF5
                 d_model.save_weights(f"discriminator_{filename}.h5")
 
-    def fit(self, reference, save=True):
+    def fit(self, reference, initial_params=None, batch_samples=128, n_epochs=20000, lr=0.5, save=True):
         """Execute qGAN training."""
+        if initial_params is None and self.circuit is not None:
+            raise_error(ValueError, "Set the initial parameters for your custom quantum generator.")
+        elif initial_params is not None and self.circuit is None:
+            raise_error(ValueError, "Define the custom quantum generator to use custom initial parameters.")
 
         self.reference = reference
         self.nqubits = reference.shape[1]
         self.training_samples = reference.shape[0]
+        self.initial_params = initial_params
+        self.batch_samples = batch_samples
+        self.n_epochs = n_epochs
+        self.lr = lr
 
         # create classical discriminator
         if self.discriminator is None:
@@ -270,7 +268,7 @@ class StyleQGAN(object):
 
         if circuit.nqubits != self.nqubits:
                 raise_error(ValueError, "The number of qubits in the circuit has to be equal to "
-                            "the number of dimension in the reference distribution.")
+                            "the number of dimensions in the reference distribution.")
 
         # define hamiltonian to generate fake samples
         def hamiltonian(nqubits, position):

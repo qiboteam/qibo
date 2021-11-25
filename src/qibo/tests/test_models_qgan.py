@@ -22,8 +22,8 @@ def test_default_qgan():
     original_backend = qibo.get_backend()
     qibo.set_backend("tensorflow")
     reference_distribution = generate_distribution(10)
-    qgan = models.StyleQGAN(latent_dim=2, layers=1, n_epochs=1)
-    qgan.fit(reference_distribution, save=False)
+    qgan = models.StyleQGAN(latent_dim=2, layers=1)
+    qgan.fit(reference_distribution, n_epochs=1, save=False)
     assert qgan.layers == 1
     assert qgan.latent_dim == 2
     assert qgan.batch_samples == 128
@@ -75,11 +75,9 @@ def test_custom_qgan():
     qgan = models.StyleQGAN(
             latent_dim=2,
             circuit=circuit,
-            set_parameters=set_params,
-            initial_params=initial_params,
-            n_epochs=1
+            set_parameters=set_params
         )
-    qgan.fit(reference_distribution, save=False)
+    qgan.fit(reference_distribution, initial_params=initial_params, n_epochs=1, save=False)
     assert qgan.latent_dim == 2
     assert qgan.batch_samples == 128
     assert qgan.n_epochs == 1
@@ -104,15 +102,19 @@ def test_qgan_errors():
         qgan = models.StyleQGAN(latent_dim=2, layers=2, circuit=circuit)
 
     initial_params = np.random.uniform(-0.15, 0.15, 18)
+    reference_distribution = generate_distribution(10)
     with pytest.raises(ValueError):
         qgan = models.StyleQGAN(latent_dim=2, circuit=circuit)
     with pytest.raises(ValueError):
-        qgan = models.StyleQGAN(latent_dim=2, layers=2, initial_params=initial_params)
+        qgan = models.StyleQGAN(latent_dim=2, layers=2)
+        qgan.fit(reference_distribution, initial_params=initial_params, save=False)
 
     with pytest.raises(ValueError):
-        qgan = models.StyleQGAN(latent_dim=2, circuit=circuit, initial_params=initial_params)
+        qgan = models.StyleQGAN(latent_dim=2, circuit=circuit)
+        qgan.fit(reference_distribution, initial_params=initial_params, save=False)
     with pytest.raises(ValueError):
-        qgan = models.StyleQGAN(latent_dim=2, layers=2, initial_params=initial_params, set_parameters=lambda x: x)
+        qgan = models.StyleQGAN(latent_dim=2, layers=2, set_parameters=lambda x: x)
+        qgan.fit(reference_distribution, initial_params=initial_params, save=False)
 
     qibo.set_backend(original_backend)
 
@@ -131,9 +133,9 @@ def test_qgan_custom_discriminator():
     discriminator = Sequential()
     discriminator.add(Dense(200, use_bias=False, input_dim=nqubits))
     discriminator.add(Dense(1, activation='sigmoid'))
-    qgan = models.StyleQGAN(latent_dim=2, layers=1, n_epochs=1, discriminator=discriminator)
+    qgan = models.StyleQGAN(latent_dim=2, layers=1, discriminator=discriminator)
     with pytest.raises(ValueError):
-        qgan.fit(reference_distribution, save=False)
+        qgan.fit(reference_distribution, n_epochs=1, save=False)
     qibo.set_backend(original_backend)
 
 
@@ -162,10 +164,8 @@ def test_qgan_circuit_error():
     qgan = models.StyleQGAN(
             latent_dim=2,
             circuit=circuit,
-            set_parameters=lambda x: x,
-            initial_params=initial_params,
-            n_epochs=1
+            set_parameters=lambda x: x
         )
     with pytest.raises(ValueError):
-        qgan.fit(reference_distribution, save=False)
+        qgan.fit(reference_distribution, initial_params=initial_params, n_epochs=1, save=False)
     qibo.set_backend(original_backend)
