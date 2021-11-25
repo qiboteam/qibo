@@ -70,7 +70,7 @@ def test_vector_state_to_density_matrix(backend):
 
 @pytest.mark.parametrize("target", range(5))
 @pytest.mark.parametrize("density_matrix", [False, True])
-def test_state_vector_representation(target, density_matrix):
+def test_state_representation(target, density_matrix):
     from qibo import models, gates
     c = models.Circuit(5, density_matrix=density_matrix)
     c.add(gates.H(target))
@@ -89,7 +89,7 @@ def test_state_vector_representation(target, density_matrix):
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
-def test_state_vector_representation_max_terms(density_matrix):
+def test_state_representation_max_terms(density_matrix):
     from qibo import models, gates
     c = models.Circuit(5, density_matrix=density_matrix)
     c.add(gates.H(i) for i in range(5))
@@ -100,6 +100,15 @@ def test_state_vector_representation_max_terms(density_matrix):
     else:
         assert result.symbolic(max_terms=3) == "(0.17678+0j)|00000> + (0.17678+0j)|00001> + (0.17678+0j)|00010> + ..."
         assert result.symbolic(max_terms=5) == "(0.17678+0j)|00000> + (0.17678+0j)|00001> + (0.17678+0j)|00010> + (0.17678+0j)|00011> + (0.17678+0j)|00100> + ..."
+
+
+def test_state_representation_cutoff():
+    from qibo import models, gates
+    c = models.Circuit(2)
+    c.add(gates.RX(0, theta=0.1))
+    result = c()
+    assert result.symbolic() == "(0.99875+0j)|00> + -0.04998j|10>"
+    assert result.symbolic(cutoff=0.1) == "(0.99875+0j)|00>"
 
 
 @pytest.mark.parametrize("state_type", ["VectorState", "MatrixState"])

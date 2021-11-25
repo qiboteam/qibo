@@ -38,13 +38,14 @@ class VectorState(AbstractState):
     def numpy(self):
         return self.__array__()
 
-    def symbolic(self, decimals=5, max_terms=20):
+    def symbolic(self, decimals=5, cutoff=1e-10, max_terms=20):
         state = self.numpy()
         terms = []
         for i in K.np.nonzero(state)[0]:
             b = bin(i)[2:].zfill(self.nqubits)
-            x = round(state[i], decimals)
-            terms.append(f"{x}|{b}>")
+            if K.np.abs(state[i]) >= cutoff:
+                x = round(state[i], decimals)
+                terms.append(f"{x}|{b}>")
             if len(terms) >= max_terms:
                 terms.append("...")
                 break
@@ -144,15 +145,16 @@ class VectorState(AbstractState):
 
 class MatrixState(VectorState):
 
-    def symbolic(self, decimals=5, max_terms=20):
+    def symbolic(self, decimals=5, cutoff=1e-10, max_terms=20):
         state = self.numpy()
         terms = []
         indi, indj = K.np.nonzero(state)
         for i, j in zip(indi, indj):
             bi = bin(i)[2:].zfill(self.nqubits)
             bj = bin(j)[2:].zfill(self.nqubits)
-            x = round(state[i, j], decimals)
-            terms.append(f"{x}|{bi}><{bj}|")
+            if K.np.abs(state[i, j]) >= cutoff:
+                x = round(state[i, j], decimals)
+                terms.append(f"{x}|{bi}><{bj}|")
             if len(terms) >= max_terms:
                 terms.append("...")
                 break
