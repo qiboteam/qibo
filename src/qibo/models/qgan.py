@@ -39,7 +39,7 @@ class StyleQGAN(object):
             reference_distribution = np.hstack((s1,s2,s3))
             # Train qGAN with your particular setup
             train_qGAN = StyleQGAN(latent_dim=1, layers=2)
-            train_qGAN.fit(reference_distribution)
+            train_qGAN.fit(reference_distribution, n_epochs=1)
     """
 
     def __init__(self, latent_dim, layers=None, circuit=None, set_parameters=None, discriminator=None):
