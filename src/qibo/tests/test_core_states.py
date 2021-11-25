@@ -83,7 +83,7 @@ def test_state_representation(target, density_matrix):
                       f"(0.7+0j)|00000> + (0.7+0j)|{bstring}>",
                       f"(0.71+0j)|00000> + (0.71+0j)|{bstring}>"]
     assert str(result) == target_str[0]
-    assert result.state(symbolic=True) == target_str[0]
+    assert result.state(decimals=5) == target_str[0]
     assert result.symbolic(decimals=1) == target_str[1]
     assert result.symbolic(decimals=2) == target_str[2]
 
@@ -107,8 +107,8 @@ def test_state_representation_cutoff():
     c = models.Circuit(2)
     c.add(gates.RX(0, theta=0.1))
     result = c()
-    assert result.symbolic() == "(0.99875+0j)|00> + -0.04998j|10>"
-    assert result.symbolic(cutoff=0.1) == "(0.99875+0j)|00>"
+    assert result.state(decimals=5) == "(0.99875+0j)|00> + -0.04998j|10>"
+    assert result.state(decimals=5, cutoff=0.1) == "(0.99875+0j)|00>"
 
 
 @pytest.mark.parametrize("state_type", ["VectorState", "MatrixState"])
