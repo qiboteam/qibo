@@ -10,31 +10,26 @@ class StyleQGAN(object):
     For original manuscript: `arXiv:2110.06933 <https://arxiv.org/abs/2110.06933>`_
 
     Args:
-        reference (array): samples from the reference input distribution.
+        latent_dim (int): number of latent dimensions.
         layers (int): number of layers for the quantum generator. Provide this value only if not using
             a custom quantum generator.
-        latent_dim (int): number of latent dimensions.
         circuit (:class:`qibo.core.circuit.Circuit`): custom quantum generator circuit. If not provided,
             the default quantum circuit will be used.
         set_parameters (function): function that creates the array of parameters for the quantum generator.
             If not provided, the default function will be used.
-        initial_parameters (array): initial parameters for the quantum generator. If not provided,
-            the default initial parameters will be used.
-        discriminator (:class:`tensorflow.keras.models`): custom classical discriminator. If not provided,
-            the default classical discriminator will be used.
-        batch_samples (int): number of training examples utilized in one iteration.
-        n_epochs (int): number of training iterations.
-        lr (float): initial learning rate for the quantum generator.
-            It controls how much to change the model each time the weights are updated.
 
     Example:
         .. testcode::
 
             import numpy as np
+            import qibo
             from qibo.models.qgan import StyleQGAN
-            # Create reference distribution. Ex: 3D correlated Gaussian distribution normalized between [-1,1]
+            # set qibo backend to tensorflow which supports gradient descent training
+            qibo.set_backend("tensorflow")
+            # Create reference distribution.
+            # Example: 3D correlated Gaussian distribution normalized between [-1,1]
             reference_distribution = []
-            samples = 10000
+            samples = 10
             mean = [0, 0, 0]
             cov = [[0.5, 0.1, 0.25], [0.1, 0.5, 0.1], [0.25, 0.1, 0.5]]
             x, y, z = np.random.multivariate_normal(mean, cov, samples).T/4
@@ -43,7 +38,7 @@ class StyleQGAN(object):
             s3 = np.reshape(z, (samples,1))
             reference_distribution = np.hstack((s1,s2,s3))
             # Train qGAN with your particular setup
-            train_qGAN = StyleQGAN(latent_dim=1, layers=3)
+            train_qGAN = StyleQGAN(latent_dim=1, layers=2)
             train_qGAN.fit(reference_distribution)
     """
 
@@ -225,7 +220,21 @@ class StyleQGAN(object):
                 d_model.save_weights(f"discriminator_{filename}.h5")
 
     def fit(self, reference, initial_params=None, batch_samples=128, n_epochs=20000, lr=0.5, save=True):
-        """Execute qGAN training."""
+        """Execute qGAN training.
+
+        Args:
+            reference (array): samples from the reference input distribution.
+            initial_parameters (array): initial parameters for the quantum generator. If not provided,
+                the default initial parameters will be used.
+            discriminator (:class:`tensorflow.keras.models`): custom classical discriminator. If not provided,
+                the default classical discriminator will be used.
+            batch_samples (int): number of training examples utilized in one iteration.
+            n_epochs (int): number of training iterations.
+            lr (float): initial learning rate for the quantum generator.
+                It controls how much to change the model each time the weights are updated.
+            save (bool): If ``True`` the results of training (trained parameters and losses)
+                will be saved on disk. Default is ``True``.
+        """
         if initial_params is None and self.circuit is not None:
             raise_error(ValueError, "Set the initial parameters for your custom quantum generator.")
         elif initial_params is not None and self.circuit is None:
