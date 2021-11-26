@@ -69,6 +69,28 @@ class AbstractState(ABC):
         self._tensor = x
 
     @abstractmethod
+    def symbolic(self, decimals=5, cutoff=1e-10, max_terms=20):  # pragma: no cover
+        """Dirac notation representation of the state in the computational basis.
+
+        Args:
+            decimals (int): Number of decimals for the amplitudes.
+                Default is 5.
+            cutoff (float): Amplitudes with absolute value smaller than the
+                cutoff are ignored from the representation.
+                Default is 1e-10.
+            max_terms (int): Maximum number of terms to print. If the state
+                contains more terms they will be ignored.
+                Default is 20.
+
+        Returns:
+            A string representing the state in the computational basis.
+        """
+        raise_error(NotImplementedError)
+
+    def __repr__(self):
+        return self.symbolic()
+
+    @abstractmethod
     def __array__(self): # pragma: no cover
         """State's tensor representation as an array."""
         raise_error(NotImplementedError)
@@ -78,14 +100,31 @@ class AbstractState(ABC):
         """State's tensor representation as a numpy array."""
         raise_error(NotImplementedError)
 
-    def state(self, numpy=False):
+    def state(self, numpy=False, decimals=-1, cutoff=1e-10, max_terms=20):
         """State's tensor representation as an backend tensor.
 
         Args:
             numpy (bool): If ``True`` the returned tensor will be a numpy array,
                 otherwise it will follow the backend tensor type.
                 Default is ``False``.
+            decimals (int): If positive the Diract representation of the state
+                in the computational basis will be returned as a string.
+                ``decimals`` will be the number of decimals of each amplitude.
+                Default is -1.
+            cutoff (float): Amplitudes with absolute value smaller than the
+                cutoff are ignored from the Dirac representation.
+                Ignored if ``decimals < 0``. Default is 1e-10.
+            max_terms (int): Maximum number of terms in the Dirac representation.
+                If the state contains more terms they will be ignored.
+                Ignored if ``decimals < 0``. Default is 20.
+
+        Returns:
+            If ``decimals < 0`` a tensor representing the state in the computational
+            basis, otherwise a string with the Dirac representation of the state
+            in the computational basis.
         """
+        if decimals >= 0:
+            return self.symbolic(decimals, cutoff, max_terms)
         if numpy:
             return self.numpy()
         return self.tensor

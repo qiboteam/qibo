@@ -68,6 +68,49 @@ def test_vector_state_to_density_matrix(backend):
         state.to_density_matrix()
 
 
+@pytest.mark.parametrize("target", range(5))
+@pytest.mark.parametrize("density_matrix", [False, True])
+def test_state_representation(target, density_matrix):
+    from qibo import models, gates
+    c = models.Circuit(5, density_matrix=density_matrix)
+    c.add(gates.H(target))
+    result = c()
+    bstring = target * "0" + "1" + (4 - target) * "0"
+    if density_matrix:
+        target_str = 3 * [f"(0.5+0j)|00000><00000| + (0.5+0j)|00000><{bstring}| + (0.5+0j)|{bstring}><00000| + (0.5+0j)|{bstring}><{bstring}|"]
+    else:
+        target_str = [f"(0.70711+0j)|00000> + (0.70711+0j)|{bstring}>",
+                      f"(0.7+0j)|00000> + (0.7+0j)|{bstring}>",
+                      f"(0.71+0j)|00000> + (0.71+0j)|{bstring}>"]
+    assert str(result) == target_str[0]
+    assert result.state(decimals=5) == target_str[0]
+    assert result.symbolic(decimals=1) == target_str[1]
+    assert result.symbolic(decimals=2) == target_str[2]
+
+
+@pytest.mark.parametrize("density_matrix", [False, True])
+def test_state_representation_max_terms(density_matrix):
+    from qibo import models, gates
+    c = models.Circuit(5, density_matrix=density_matrix)
+    c.add(gates.H(i) for i in range(5))
+    result = c()
+    if density_matrix:
+        assert result.symbolic(max_terms=3) == "(0.03125+0j)|00000><00000| + (0.03125+0j)|00000><00001| + (0.03125+0j)|00000><00010| + ..."
+        assert result.symbolic(max_terms=5) == "(0.03125+0j)|00000><00000| + (0.03125+0j)|00000><00001| + (0.03125+0j)|00000><00010| + (0.03125+0j)|00000><00011| + (0.03125+0j)|00000><00100| + ..."
+    else:
+        assert result.symbolic(max_terms=3) == "(0.17678+0j)|00000> + (0.17678+0j)|00001> + (0.17678+0j)|00010> + ..."
+        assert result.symbolic(max_terms=5) == "(0.17678+0j)|00000> + (0.17678+0j)|00001> + (0.17678+0j)|00010> + (0.17678+0j)|00011> + (0.17678+0j)|00100> + ..."
+
+
+def test_state_representation_cutoff():
+    from qibo import models, gates
+    c = models.Circuit(2)
+    c.add(gates.RX(0, theta=0.1))
+    result = c()
+    assert result.state(decimals=5) == "(0.99875+0j)|00> + -0.04998j|10>"
+    assert result.state(decimals=5, cutoff=0.1) == "(0.99875+0j)|00>"
+
+
 @pytest.mark.parametrize("state_type", ["VectorState", "MatrixState"])
 @pytest.mark.parametrize("use_gate", [False, True])
 def test_state_probabilities(backend, state_type, use_gate):
