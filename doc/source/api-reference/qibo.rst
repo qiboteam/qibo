@@ -51,7 +51,7 @@ Circuit addition
 :class:`qibo.abstractions.circuit.AbstractCircuit` objects support addition. For example
 
 .. testsetup::
-    
+
     import qibo
     qibo.set_backend("qibojit")
 
@@ -195,6 +195,15 @@ Feedback-based Algorithm for Quantum Optimization (FALQON)
 .. autoclass:: qibo.models.variational.FALQON
     :members:
     :member-order: bysource
+
+
+Style-based Quantum Generative Adversarial Network (style-qGAN)
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.models.qgan.StyleQGAN
+    :members:
+    :member-order: bysource
+
 
 Grover's Algorithm
 """"""""""""""""""
