@@ -298,6 +298,20 @@ Pauli Z (Z)
     :members:
     :member-order: bysource
 
+S gate (S)
+"""""""""""
+
+.. autoclass:: qibo.abstractions.gates.S
+    :members:
+    :member-order: bysource
+
+T gate (T)
+"""""""""""
+
+.. autoclass:: qibo.abstractions.gates.T
+    :members:
+    :member-order: bysource
+
 Identity (I)
 """"""""""""
 

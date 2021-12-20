@@ -1041,6 +1041,14 @@ class TOFFOLI(Gate):
 class S(Gate):
     """The S gate.
 
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 \\\\
+        0 & i \\\\
+        \\end{pmatrix}
+
     Args:
         q (int): the qubit id number.
     """
@@ -1053,7 +1061,15 @@ class S(Gate):
 
 
 class SDG(Gate):
-    """The S^dagger gate.
+    """The conjugate transpose of the S gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 \\\\
+        0 & -i \\\\
+        \\end{pmatrix}
 
     Args:
         q (int): the qubit id number.
@@ -1069,6 +1085,14 @@ class SDG(Gate):
 class T(Gate):
     """The T gate.
 
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 \\\\
+        0 & e^{i \\pi / 4} \\\\
+        \\end{pmatrix}
+
     Args:
         q (int): the qubit id number.
     """
@@ -1081,7 +1105,15 @@ class T(Gate):
 
 
 class TDG(Gate):
-    """The T^dagger gate.
+    """The conjugate transpose of the T gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 \\\\
+        0 & e^{-i \\pi / 4} \\\\
+        \\end{pmatrix}
 
     Args:
         q (int): the qubit id number.
