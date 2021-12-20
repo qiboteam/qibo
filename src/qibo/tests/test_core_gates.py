@@ -65,6 +65,46 @@ def test_z(backend):
     K.assert_allclose(final_state, target_state)
 
 
+def test_s(backend):
+    final_state = apply_gates([gates.H(0), gates.H(1), gates.S(1)], nqubits=2)
+    target_state = np.zeros_like(final_state)
+    target_state[0] = 0.5
+    target_state[1] = 0.5j
+    target_state[2] = 0.5
+    target_state[3] = 0.5j
+    K.assert_allclose(final_state, target_state)
+
+
+def test_sdg(backend):
+    final_state = apply_gates([gates.H(0), gates.H(1), gates.SDG(1)], nqubits=2)
+    target_state = np.zeros_like(final_state)
+    target_state[0] = 0.5
+    target_state[1] = -0.5j
+    target_state[2] = 0.5
+    target_state[3] = -0.5j
+    K.assert_allclose(final_state, target_state)
+
+
+def test_t(backend):
+    final_state = apply_gates([gates.H(0), gates.H(1), gates.T(1)], nqubits=2)
+    target_state = np.zeros_like(final_state)
+    target_state[0] = 0.5
+    target_state[1] = (1 + 1j) / np.sqrt(8)
+    target_state[2] = 0.5
+    target_state[3] = (1 + 1j) / np.sqrt(8)
+    K.assert_allclose(final_state, target_state)
+
+
+def test_tdg(backend):
+    final_state = apply_gates([gates.H(0), gates.H(1), gates.TDG(1)], nqubits=2)
+    target_state = np.zeros_like(final_state)
+    target_state[0] = 0.5
+    target_state[1] = (1 - 1j) / np.sqrt(8)
+    target_state[2] = 0.5
+    target_state[3] = (1 - 1j) / np.sqrt(8)
+    K.assert_allclose(final_state, target_state)
+
+
 def test_identity(backend):
     gatelist = [gates.H(0), gates.H(1), gates.I(0), gates.I(1)]
     final_state = apply_gates(gatelist, nqubits=2)

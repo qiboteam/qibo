@@ -126,7 +126,8 @@ def test_x_decompose_with_cirq(target, controls, free):
 @pytest.mark.parametrize(("gate_name", "nqubits", "ndevices"),
                          [("H", 3, None), ("H", 3, 2),
                           ("X", 2, None), ("X", 2, 2),
-                          ("Y", 1, None), ("Z", 1, None)])
+                          ("Y", 1, None), ("Z", 1, None),
+                          ("S", 4, None), ("T", 4, None)])
 def test_one_qubit_gates(backend, gate_name, nqubits, ndevices):
     """Check simple one-qubit gates."""
     targets = random_active_qubits(nqubits, nactive=1)
@@ -211,7 +212,7 @@ def test_unitary_matrix_gate(backend, nqubits, ndevices):
 @pytest.mark.parametrize(("gate_name", "nqubits", "ndevices"),
                          [("H", 3, None), ("Z", 4, None), ("Y", 5, 4),
                           ("X", 6, None), ("H", 7, 2), ("Z", 8, 8),
-                          ("Y", 12, 16)])
+                          ("Y", 12, 16), ("S", 13, 4), ("T", 9, 2)])
 def test_one_qubit_gates_controlled_by(backend, gate_name, nqubits, ndevices):
     """Check one-qubit gates controlled on arbitrary number of qubits."""
     all_qubits = np.arange(nqubits)
