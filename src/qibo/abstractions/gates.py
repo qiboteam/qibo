@@ -163,6 +163,94 @@ class Z(Gate):
         return gate
 
 
+class S(Gate):
+    """The S gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 \\\\
+        0 & i \\\\
+        \\end{pmatrix}
+
+    Args:
+        q (int): the qubit id number.
+    """
+
+    def __init__(self, q):
+        super().__init__()
+        self.name = "s"
+        self.target_qubits = (q,)
+        self.init_args = [q]
+
+
+class SDG(Gate):
+    """The conjugate transpose of the S gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 \\\\
+        0 & -i \\\\
+        \\end{pmatrix}
+
+    Args:
+        q (int): the qubit id number.
+    """
+
+    def __init__(self, q):
+        super().__init__()
+        self.name = "sdg"
+        self.target_qubits = (q,)
+        self.init_args = [q]
+
+
+class T(Gate):
+    """The T gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 \\\\
+        0 & e^{i \\pi / 4} \\\\
+        \\end{pmatrix}
+
+    Args:
+        q (int): the qubit id number.
+    """
+
+    def __init__(self, q):
+        super().__init__()
+        self.name = "t"
+        self.target_qubits = (q,)
+        self.init_args = [q]
+
+
+class TDG(Gate):
+    """The conjugate transpose of the T gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 \\\\
+        0 & e^{-i \\pi / 4} \\\\
+        \\end{pmatrix}
+
+    Args:
+        q (int): the qubit id number.
+    """
+
+    def __init__(self, q):
+        super().__init__()
+        self.name = "tdg"
+        self.target_qubits = (q,)
+        self.init_args = [q]
+
+
 class I(Gate):
     """The identity gate.
 
@@ -1036,94 +1124,6 @@ class TOFFOLI(Gate):
                 RY(target, -math.pi / 4), CNOT(control0, target),
                 RY(target, math.pi / 4), CNOT(control1, target),
                 RY(target, math.pi / 4)]
-
-
-class S(Gate):
-    """The S gate.
-
-    Corresponds to the following unitary matrix
-
-    .. math::
-        \\begin{pmatrix}
-        1 & 0 \\\\
-        0 & i \\\\
-        \\end{pmatrix}
-
-    Args:
-        q (int): the qubit id number.
-    """
-
-    def __init__(self, q):
-        super().__init__()
-        self.name = "s"
-        self.target_qubits = (q,)
-        self.init_args = [q]
-
-
-class SDG(Gate):
-    """The conjugate transpose of the S gate.
-
-    Corresponds to the following unitary matrix
-
-    .. math::
-        \\begin{pmatrix}
-        1 & 0 \\\\
-        0 & -i \\\\
-        \\end{pmatrix}
-
-    Args:
-        q (int): the qubit id number.
-    """
-
-    def __init__(self, q):
-        super().__init__()
-        self.name = "sdg"
-        self.target_qubits = (q,)
-        self.init_args = [q]
-
-
-class T(Gate):
-    """The T gate.
-
-    Corresponds to the following unitary matrix
-
-    .. math::
-        \\begin{pmatrix}
-        1 & 0 \\\\
-        0 & e^{i \\pi / 4} \\\\
-        \\end{pmatrix}
-
-    Args:
-        q (int): the qubit id number.
-    """
-
-    def __init__(self, q):
-        super().__init__()
-        self.name = "t"
-        self.target_qubits = (q,)
-        self.init_args = [q]
-
-
-class TDG(Gate):
-    """The conjugate transpose of the T gate.
-
-    Corresponds to the following unitary matrix
-
-    .. math::
-        \\begin{pmatrix}
-        1 & 0 \\\\
-        0 & e^{-i \\pi / 4} \\\\
-        \\end{pmatrix}
-
-    Args:
-        q (int): the qubit id number.
-    """
-
-    def __init__(self, q):
-        super().__init__()
-        self.name = "tdg"
-        self.target_qubits = (q,)
-        self.init_args = [q]
 
 
 class Unitary(ParametrizedGate):
