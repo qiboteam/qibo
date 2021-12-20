@@ -12,7 +12,8 @@ QASM_GATES = {"h": "H", "x": "X", "y": "Y", "z": "Z",
               "cx": "CNOT", "swap": "SWAP", "cz": "CZ",
               "crx": "CRX", "cry": "CRY", "crz": "CRZ",
               "cu1": "CU1", "cu3": "CU3",
-              "ccx": "TOFFOLI", "id": "I"}
+              "ccx": "TOFFOLI", "id": "I", "s": "S",
+              "sdg": "SDG", "t": "T", "tdg": "TDG"}
 PARAMETRIZED_GATES = {"rx", "ry", "rz", "u1", "u2", "u3",
                       "crx", "cry", "crz", "cu1", "cu3"}
 
@@ -1035,6 +1036,62 @@ class TOFFOLI(Gate):
                 RY(target, -math.pi / 4), CNOT(control0, target),
                 RY(target, math.pi / 4), CNOT(control1, target),
                 RY(target, math.pi / 4)]
+
+
+class S(Gate):
+    """The S gate.
+
+    Args:
+        q (int): the qubit id number.
+    """
+
+    def __init__(self, q):
+        super().__init__()
+        self.name = "s"
+        self.target_qubits = (q,)
+        self.init_args = [q]
+
+
+class SDG(Gate):
+    """The S^dagger gate.
+
+    Args:
+        q (int): the qubit id number.
+    """
+
+    def __init__(self, q):
+        super().__init__()
+        self.name = "sdg"
+        self.target_qubits = (q,)
+        self.init_args = [q]
+
+
+class T(Gate):
+    """The T gate.
+
+    Args:
+        q (int): the qubit id number.
+    """
+
+    def __init__(self, q):
+        super().__init__()
+        self.name = "t"
+        self.target_qubits = (q,)
+        self.init_args = [q]
+
+
+class TDG(Gate):
+    """The T^dagger gate.
+
+    Args:
+        q (int): the qubit id number.
+    """
+
+    def __init__(self, q):
+        super().__init__()
+        self.name = "tdg"
+        self.target_qubits = (q,)
+        self.init_args = [q]
 
 
 class Unitary(ParametrizedGate):
