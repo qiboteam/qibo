@@ -3,7 +3,7 @@ import numpy as np
 
 class Matrices:
 
-    _NAMES = ["I", "H", "X", "Y", "Z", "CNOT", "CZ", "SWAP", "TOFFOLI", "S", "T"]
+    _NAMES = ["I", "H", "X", "Y", "Z", "S", "T", "CNOT", "CZ", "SWAP", "TOFFOLI"]
 
     def __init__(self, backend):
         self.backend = backend
