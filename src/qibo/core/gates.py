@@ -162,6 +162,9 @@ class S(MatrixGate, abstract_gates.S):
     def _construct_unitary(self):
         return K.matrices.S
 
+    def _dagger(self) -> "SDG":
+        return SDG(*self.init_args)
+
 
 class SDG(MatrixGate, abstract_gates.SDG):
 
@@ -171,6 +174,9 @@ class SDG(MatrixGate, abstract_gates.SDG):
 
     def _construct_unitary(self):
         return K.conj(K.matrices.S) # no need to transpose because it's diagonal
+
+    def _dagger(self) -> "S":
+        return S(*self.init_args)
 
 
 class T(MatrixGate, abstract_gates.T):
@@ -182,6 +188,9 @@ class T(MatrixGate, abstract_gates.T):
     def _construct_unitary(self):
         return K.matrices.T
 
+    def _dagger(self) -> "TDG":
+        return TDG(*self.init_args)
+
 
 class TDG(MatrixGate, abstract_gates.TDG):
 
@@ -191,6 +200,9 @@ class TDG(MatrixGate, abstract_gates.TDG):
 
     def _construct_unitary(self):
         return K.conj(K.matrices.T) # no need to transpose because it's diagonal
+
+    def _dagger(self) -> "T":
+        return T(*self.init_args)
 
 
 class I(BackendGate, abstract_gates.I):
@@ -603,7 +615,7 @@ class GeneralizedfSim(MatrixGate, abstract_gates.GeneralizedfSim):
         matrix[3, 3] = p.exp(-1j * phi)
         return K.cast(matrix)
 
-    def _dagger(self) -> "GenerelizedfSim":
+    def _dagger(self) -> "GeneralizedfSim":
         unitary, phi = self.parameters
         if isinstance(unitary, K.native_types):
             ud = K.conj(K.transpose(unitary))
