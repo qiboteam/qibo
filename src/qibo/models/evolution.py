@@ -48,7 +48,7 @@ class StateEvolution:
     """
 
     def __init__(self, hamiltonian, dt, solver="exp", callbacks=[],
-                 accelerators=None):
+                 density_matrix=False, accelerators=None):
         hamtypes = (hamiltonians.AbstractHamiltonian, adiabatic.BaseAdiabaticHamiltonian)
         if isinstance(hamiltonian, hamtypes):
             ham = hamiltonian
@@ -76,6 +76,7 @@ class StateEvolution:
         self.state_cls = states.VectorState
         self.normalize_state = self._create_normalize_state(solver)
         self.calculate_callbacks = self._create_calculate_callbacks(accelerators)
+        self.density_matrix = density_matrix
 
     def _create_normalize_state(self, solver):
         if "rk" in solver:
@@ -120,7 +121,7 @@ class StateEvolution:
         nsteps = int((final_time - start_time) / self.solver.dt)
         self.calculate_callbacks(state)
         for _ in range(nsteps):
-            state = self.solver(state)
+            state = self.solver(state, density_matrix=self.density_matrix)
             if self.callbacks:
                 state = self.normalize_state(state)
                 self.calculate_callbacks(state)

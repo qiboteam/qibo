@@ -80,10 +80,13 @@ class Exponential(BaseSolver):
         else:
             return super(Exponential, cls).__new__(cls)
 
-    def __call__(self, state):
+    def __call__(self, state, density_matrix=False):
         propagator = self.current_hamiltonian.exp(self.dt)
         self.t += self.dt
-        return K.matmul(propagator, state[:, K.newaxis])[:, 0]
+        if not density_matrix:
+            return K.matmul(propagator, state[:, K.newaxis])[:, 0]
+        else:
+            return 
 
 
 class RungeKutta4(BaseSolver):
