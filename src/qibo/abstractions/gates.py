@@ -12,7 +12,8 @@ QASM_GATES = {"h": "H", "x": "X", "y": "Y", "z": "Z",
               "cx": "CNOT", "swap": "SWAP", "cz": "CZ",
               "crx": "CRX", "cry": "CRY", "crz": "CRZ",
               "cu1": "CU1", "cu3": "CU3",
-              "ccx": "TOFFOLI", "id": "I"}
+              "ccx": "TOFFOLI", "id": "I", "s": "S",
+              "sdg": "SDG", "t": "T", "tdg": "TDG"}
 PARAMETRIZED_GATES = {"rx", "ry", "rz", "u1", "u2", "u3",
                       "crx", "cry", "crz", "cu1", "cu3"}
 
@@ -160,6 +161,94 @@ class Z(Gate):
         else:
             gate = super(Z, self).controlled_by(*q)
         return gate
+
+
+class S(Gate):
+    """The S gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 \\\\
+        0 & i \\\\
+        \\end{pmatrix}
+
+    Args:
+        q (int): the qubit id number.
+    """
+
+    def __init__(self, q):
+        super().__init__()
+        self.name = "s"
+        self.target_qubits = (q,)
+        self.init_args = [q]
+
+
+class SDG(Gate):
+    """The conjugate transpose of the S gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 \\\\
+        0 & -i \\\\
+        \\end{pmatrix}
+
+    Args:
+        q (int): the qubit id number.
+    """
+
+    def __init__(self, q):
+        super().__init__()
+        self.name = "sdg"
+        self.target_qubits = (q,)
+        self.init_args = [q]
+
+
+class T(Gate):
+    """The T gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 \\\\
+        0 & e^{i \\pi / 4} \\\\
+        \\end{pmatrix}
+
+    Args:
+        q (int): the qubit id number.
+    """
+
+    def __init__(self, q):
+        super().__init__()
+        self.name = "t"
+        self.target_qubits = (q,)
+        self.init_args = [q]
+
+
+class TDG(Gate):
+    """The conjugate transpose of the T gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 \\\\
+        0 & e^{-i \\pi / 4} \\\\
+        \\end{pmatrix}
+
+    Args:
+        q (int): the qubit id number.
+    """
+
+    def __init__(self, q):
+        super().__init__()
+        self.name = "tdg"
+        self.target_qubits = (q,)
+        self.init_args = [q]
 
 
 class I(Gate):

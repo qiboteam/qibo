@@ -3,7 +3,7 @@ import numpy as np
 
 class Matrices:
 
-    _NAMES = ["I", "H", "X", "Y", "Z", "CNOT", "CZ", "SWAP", "TOFFOLI"]
+    _NAMES = ["I", "H", "X", "Y", "Z", "S", "T", "CNOT", "CZ", "SWAP", "TOFFOLI"]
 
     def __init__(self, backend):
         self.backend = backend
@@ -12,6 +12,8 @@ class Matrices:
         self._X = None
         self._Y = None
         self._Z = None
+        self._S = None
+        self._T = None
         self._CNOT = None
         self._CZ = None
         self._SWAP = None
@@ -45,6 +47,14 @@ class Matrices:
     @property
     def Z(self):
         return self._Z
+
+    @property
+    def S(self):
+        return self._S
+
+    @property
+    def T(self):
+        return self._T
 
     @property
     def CNOT(self):
@@ -84,6 +94,16 @@ class Matrices:
         m = np.eye(2, dtype=self.dtype)
         m[1, 1] = -1
         self._Z = self.backend.cast(m)
+
+    def _setS(self):
+        m = np.eye(2, dtype=self.dtype)
+        m[1, 1] = 1j
+        self._S = self.backend.cast(m)
+
+    def _setT(self):
+        m = np.eye(2, dtype=self.dtype)
+        m[1, 1] = np.exp(1j * np.pi / 4.0)
+        self._T = self.backend.cast(m)
 
     def _setCNOT(self):
         m = np.eye(4, dtype=self.dtype)

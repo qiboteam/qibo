@@ -49,6 +49,31 @@ def test_simple_cirq(backend):
     np.testing.assert_allclose(final_state_c3, final_state_c2, atol=_atol)
 
 
+def test_singlequbit_gates_cirq(backend):
+    c1 = Circuit(2)
+    c1.add(gates.H(0))
+    c1.add(gates.X(1))
+    c1.add(gates.Y(0))
+    c1.add(gates.Z(1))
+    c1.add(gates.S(0))
+    c1.add(gates.SDG(1))
+    c1.add(gates.T(0))
+    c1.add(gates.TDG(1))
+    c1.add(gates.I(0))
+    final_state_c1 = c1()
+
+    c2 = circuit_from_qasm(c1.to_qasm())
+    c2depth = len(cirq.Circuit(c2.all_operations()))
+    assert c1.depth == c2depth
+    final_state_c2 = cirq.Simulator().simulate(c2).final_state_vector # pylint: disable=no-member
+    np.testing.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
+
+    c3 = Circuit.from_qasm(c2.to_qasm())
+    assert c3.depth == c2depth
+    final_state_c3 = c3()
+    np.testing.assert_allclose(final_state_c3, final_state_c2, atol=_atol)
+
+
 def test_multiqubit_gates_cirq(backend):
     c1 = Circuit(2)
     c1.add(gates.H(0))

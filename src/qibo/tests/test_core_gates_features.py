@@ -12,6 +12,8 @@ GATES = [
     ("X", (0,), np.array([[0, 1], [1, 0]])),
     ("Y", (0,), np.array([[0, -1j], [1j, 0]])),
     ("Z", (1,), np.array([[1, 0], [0, -1]])),
+    ("S", (2,), np.array([[1, 0], [0, 1j]])),
+    ("T", (2,), np.array([[1, 0], [0, np.exp(1j * np.pi / 4.0)]])),
     ("CNOT", (0, 1), np.array([[1, 0, 0, 0], [0, 1, 0, 0],
                                [0, 0, 0, 1], [0, 0, 1, 0]])),
     ("CZ", (1, 3), np.array([[1, 0, 0, 0], [0, 1, 0, 0],
@@ -204,6 +206,10 @@ GATES = [
     ("X", (0,)),
     ("Y", (0,)),
     ("Z", (0,)),
+    ("S", (0,)),
+    ("SDG", (0,)),
+    ("T", (0,)),
+    ("TDG", (0,)),
     ("RX", (0, 0.1)),
     ("RY", (0, 0.2)),
     ("RZ", (0, 0.3)),
@@ -233,6 +239,10 @@ GATES = [
     ("H", (3,)),
     ("X", (3,)),
     ("Y", (3,)),
+    ("S", (3,)),
+    ("SDG", (3,)),
+    ("T", (3,)),
+    ("TDG", (3,)),
     ("RX", (3, 0.1)),
     ("U1", (3, 0.1)),
     ("U3", (3, 0.1, 0.2, 0.3))
@@ -244,6 +254,18 @@ def test_controlled_dagger(backend, gate, args):
     c.add((gate, gate.dagger()))
     initial_state = random_state(4)
     final_state = c(np.copy(initial_state))
+    K.assert_allclose(final_state, initial_state)
+
+
+@pytest.mark.parametrize("gate_1,gate_2", [("S", "SDG"), ("T", "TDG")])
+@pytest.mark.parametrize("qubit", (0, 2, 4))
+def test_dagger_consistency(gate_1, gate_2, qubit):
+    gate_1 = getattr(gates, gate_1)(qubit)
+    gate_2 = getattr(gates, gate_2)(qubit)
+    c = Circuit(qubit+1)
+    c.add((gate_1, gate_2))
+    initial_state = random_state(qubit+1)
+    final_state   = c(np.copy(initial_state))
     K.assert_allclose(final_state, initial_state)
 
 
