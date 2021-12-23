@@ -64,7 +64,7 @@ class NumpyBackend(abstract.AbstractBackend):
             dtype = self.dtypes(dtype)
         if isinstance(x, self.backend.ndarray):
             return x.astype(dtype, copy=False)
-        return self.backend.array(x, dtype=dtype, copy=False)
+        return self.backend.array(x, dtype=dtype)
 
     def diag(self, x, dtype='DTYPECPX'):
         if isinstance(dtype, str):
