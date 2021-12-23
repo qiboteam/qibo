@@ -239,8 +239,6 @@ class NumpyBackend(abstract.AbstractBackend):
             frequencies[res] += counts
             return frequencies
 
-        print(self.backend.sum(probs))
-
         frequencies = self.zeros(int(probs.shape[0]), dtype=self.dtypes('DTYPEINT'))
         for _ in range(nshots // SHOT_BATCH_SIZE):
             frequencies = update_frequencies(SHOT_BATCH_SIZE, frequencies)
