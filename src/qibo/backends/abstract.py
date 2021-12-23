@@ -107,7 +107,7 @@ class AbstractBackend(ABC):
         except self.oom_error: # pragma: no cover
             # case not covered by GitHub workflows because it requires OOM
             # Force using CPU to perform sampling
-            log.warn("Falling back to CPU because the GPU is out-of-memory.")
+            log.warn(f"Falling back to CPU for '{func.__name__}' because the GPU is out-of-memory.")
             with self.device(self.get_cpu()):
                 return func(*args)
 
