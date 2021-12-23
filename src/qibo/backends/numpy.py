@@ -63,7 +63,7 @@ class NumpyBackend(abstract.AbstractBackend):
         if isinstance(dtype, str):
             dtype = self.dtypes(dtype)
         if isinstance(x, self.backend.ndarray):
-            return x.astype(dtype)
+            return x.astype(dtype, copy=False)
         return self.backend.array(x, dtype=dtype)
 
     def diag(self, x, dtype='DTYPECPX'):
@@ -238,6 +238,8 @@ class NumpyBackend(abstract.AbstractBackend):
             res, counts = self.backend.unique(samples, return_counts=True)
             frequencies[res] += counts
             return frequencies
+
+        print(self.backend.sum(probs))
 
         frequencies = self.zeros(int(probs.shape[0]), dtype=self.dtypes('DTYPEINT'))
         for _ in range(nshots // SHOT_BATCH_SIZE):
