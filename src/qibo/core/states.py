@@ -93,7 +93,7 @@ class VectorState(AbstractState):
         unmeasured_qubits = tuple(i for i in range(self.nqubits)
                                   if i not in qubits)
         state = K.reshape(K.square(K.abs(K.cast(self.tensor))), self.nqubits * (2,))
-        return K.sum(state, axis=unmeasured_qubits)
+        return K.sum(K.cast(state, dtype="float64"), axis=unmeasured_qubits)
 
     def measure(self, gate, nshots, registers=None):
         self.measurements = gate(self, nshots)
