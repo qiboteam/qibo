@@ -152,7 +152,7 @@ class MeasurementResult:
             measured shots.
         """
         if self._frequencies is None:
-            self._frequencies = K.cpu_fallback(self._calculate_frequencies)
+            self._frequencies = self._calculate_frequencies()
         if binary:
             return collections.Counter(
                 {"{0:b}".format(k).zfill(self.nqubits): v
@@ -192,7 +192,7 @@ class MeasurementResult:
                 raise_error(RuntimeError, "Cannot calculate measurement "
                                           "frequencies without a probability "
                                           "distribution or  samples.")
-            freqs = K.sample_frequencies(self.probabilities, self.nshots)
+            freqs = K.cpu_fallback(K.sample_frequencies, self.probabilities, self.nshots)
             freqs = K.to_numpy(freqs)
             return collections.Counter(
                 {k: v for k, v in enumerate(freqs) if v > 0})
