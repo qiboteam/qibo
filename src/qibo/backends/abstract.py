@@ -93,6 +93,15 @@ class AbstractBackend(ABC):
             raise_error(RuntimeError, "Number of threads must be positive.")
         self.nthreads = nthreads
 
+    def set_platform(self, platform):
+        """Sets the platform used by the backend.
+
+        Not all backends support different platforms.
+        'qibojit' GPU supports two platforms ('cupy', 'cuquantum').
+        'qibolab' supports multiple platforms depending on the quantum hardware.
+        """
+        pass
+
     def get_cpu(self): # pragma: no cover
         """Returns default CPU device to use for OOM fallback."""
         # case not covered by GitHub workflows because it requires OOM""
