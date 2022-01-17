@@ -48,9 +48,12 @@ def pytest_addoption(parser):
 @pytest.fixture
 def backend(backend_name):
     original_backend = qibo.get_backend()
+    original_platform = qibo.K.get_platform()
     qibo.set_backend(backend_name)
-    yield
-    qibo.set_backend(original_backend)
+    for platform in qibo.K.available_platforms:
+        qibo.set_backend(backend_name, platform=platform)
+        yield
+    qibo.set_backend(original_backend, platform=original_platform)
 
 
 def pytest_generate_tests(metafunc):

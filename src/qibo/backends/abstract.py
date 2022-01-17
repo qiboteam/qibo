@@ -11,6 +11,8 @@ class AbstractBackend(ABC):
         self.backend = None
         self.name = "base"
         self.is_hardware = False
+        self.platform = None
+        self.available_platforms = [None]
 
         self.precision = 'double'
         self._dtypes = {'DTYPEINT': 'int64', 'DTYPE': 'float64',
