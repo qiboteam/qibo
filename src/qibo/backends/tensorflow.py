@@ -107,6 +107,8 @@ class TensorflowBackend(NumpyBackend):
         return self.backend.complex(re, img)
 
     def cast(self, x, dtype='DTYPECPX'):
+        print(dtype)
+        print(str(dtype))
         if isinstance(dtype, str):
             dtype = self.dtypes(dtype)
         if isinstance(x, self.np.ndarray):

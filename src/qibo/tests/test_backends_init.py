@@ -21,6 +21,14 @@ def test_set_backend(backend_name):
     backends.set_backend(original_backend)
 
 
+def test_set_backend(backend_name):
+    """Check ``set_backend`` with ``platform`` argument."""
+    original_backend = backends.get_backend()
+    original_platform = K.get_platform()
+    backends.set_backend(backend_name, platform="test")
+    backends.set_backend(original_backend, platform=original_platform)
+
+
 def test_set_backend_errors(caplog):
     original_backend = backends.get_backend()
     with pytest.raises(ValueError):
