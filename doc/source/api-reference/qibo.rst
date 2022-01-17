@@ -887,6 +887,16 @@ The user can switch backends using
 before creating any circuits or gates. The default backend is the first available
 from ``qibojit``, ``qibotf``, ``tensorflow``, ``numpy``.
 
+Some backends support different platforms. For example, the qibojit backend
+provides two platforms (``cupy`` and ``cuquantum``) when used on GPU.
+The active platform can be switched using
+
+.. testcode::
+
+    import qibo
+    qibo.set_backend("qibojit", platform="cuquantum")
+    qibo.set_backend("qibojit", platform="cupy")
+
 For developers, we provide a configuration file in
 ``qibo/backends/profiles.yml`` containing the technical specifications for all
 backends supported by the Qibo team. If you are planning to introduce a new
