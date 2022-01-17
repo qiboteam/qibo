@@ -17,7 +17,7 @@ class CodeText:
     @classmethod
     def from_file(cls, filedir):
         assert filedir[-3:] == ".py"
-        with open(filedir, "r") as file:
+        with open(filedir, "r", encoding="utf-8") as file:
             code = file.read()
         return cls(code, filedir)
 
