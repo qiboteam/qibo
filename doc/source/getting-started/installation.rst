@@ -112,7 +112,9 @@ In order to install the package use the following command:
       The ``pip`` program will download and install all the required
       dependencies except `cupy <https://cupy.dev/>`_ and
       `cuQuantum <https://developer.nvidia.com/cuquantum-sdk>`_
-      which are required for GPU acceleration. Please install `cupy <https://cupy.dev/>`_ by following the
+      which are required for GPU acceleration.
+      The cuQuantum dependency is optional, as it is required only for
+      the ``cuquantum`` platform. Please install `cupy <https://cupy.dev/>`_ by following the
       instructions from the `official website
       <https://docs.cupy.dev/en/stable/install.html>`_ for your GPU hardware.
       The installation instructions for `cuQuantum <https://developer.nvidia.com/cuquantum-sdk>`_
@@ -134,7 +136,9 @@ To install both packages with conda run:
       The ``conda`` program will download and install all the required
       dependencies except `cupy <https://cupy.dev/>`_ and
       `cuQuantum <https://developer.nvidia.com/cuquantum-sdk>`_
-      which are required for GPU acceleration. Please install `cupy <https://cupy.dev/>`_ by following the
+      which are required for GPU acceleration.
+      The cuQuantum dependency is optional, as it is required only for
+      the ``cuquantum`` platform. Please install `cupy <https://cupy.dev/>`_ by following the
       instructions from the `official website
       <https://docs.cupy.dev/en/stable/install.html>`_ for your GPU hardware.
       The installation instructions for `cuQuantum <https://developer.nvidia.com/cuquantum-sdk>`_
