@@ -9,7 +9,7 @@ from qibo.abstractions.abstract_gates import Gate, Channel, SpecialGate, Paramet
 QASM_GATES = {"h": "H", "x": "X", "y": "Y", "z": "Z",
               "rx": "RX", "ry": "RY", "rz": "RZ",
               "u1": "U1", "u2": "U2", "u3": "U3",
-              "cx": "CNOT", "swap": "SWAP", "cz": "CZ",
+              "cx": "CNOT", "swap": "SWAP", "fswap": "FSWAP", "cz": "CZ",
               "crx": "CRX", "cry": "CRY", "crz": "CRZ",
               "cu1": "CU1", "cu3": "CU3",
               "ccx": "TOFFOLI", "id": "I", "s": "S",
@@ -978,6 +978,31 @@ class SWAP(Gate):
     def __init__(self, q0, q1):
         super(SWAP, self).__init__()
         self.name = "swap"
+        self.target_qubits = (q0, q1)
+        self.init_args = [q0, q1]
+
+
+class FSWAP(Gate):
+    """The fermionic swap gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 & 0 & 0 \\\\
+        0 & 0 & 1 & 0 \\\\
+        0 & 1 & 0 & 0 \\\\
+        0 & 0 & 0 & -1 \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the first qubit to be f-swapped id number.
+        q1 (int): the second qubit to be f-swapped id number.
+    """
+
+    def __init__(self, q0, q1):
+        super(FSWAP, self).__init__()
+        self.name = "fswap"
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
 

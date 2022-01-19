@@ -3,7 +3,7 @@ import numpy as np
 
 class Matrices:
 
-    _NAMES = ["I", "H", "X", "Y", "Z", "S", "T", "CNOT", "CZ", "SWAP", "TOFFOLI"]
+    _NAMES = ["I", "H", "X", "Y", "Z", "S", "T", "CNOT", "CZ", "SWAP", "FSWAP", "TOFFOLI"]
 
     def __init__(self, backend):
         self.backend = backend
@@ -17,6 +17,7 @@ class Matrices:
         self._CNOT = None
         self._CZ = None
         self._SWAP = None
+        self._FSWAP = None
         self._TOFFOLI = None
         self.allocate_matrices()
 
@@ -67,6 +68,10 @@ class Matrices:
     @property
     def SWAP(self):
         return self._SWAP
+
+    @property
+    def FSWAP(self):
+        return self._FSWAP
 
     @property
     def TOFFOLI(self):
@@ -121,6 +126,13 @@ class Matrices:
         m[1, 1], m[1, 2] = 0, 1
         m[2, 1], m[2, 2] = 1, 0
         self._SWAP = self.backend.cast(m)
+
+    def _setFSWAP(self):
+        m = np.eye(4, dtype=self.dtype)
+        m[1, 1], m[1, 2] = 0, 1
+        m[2, 1], m[2, 2] = 1, 0
+        m[3, 3] = -1
+        self._FSWAP = self.backend.cast(m)
 
     def _setTOFFOLI(self):
         m = np.eye(8, dtype=self.dtype)
