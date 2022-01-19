@@ -96,10 +96,10 @@ This backend is used by default, however, if needed, in order to switch to the
       import qibo
       qibo.set_backend("qibojit")
 
-The custom cupy kernels will be used by default if a GPU is available in the
-system and the custom numba kernels if a GPU is not available. If a GPU is
-available, it is possible to switch to the cuQuantum implementation using the
-platform argument, for example:
+Custom cupy kernels will be used by default if a GPU is available and
+custom numba kernels if a GPU is not available.
+If a GPU is available it is possible to switch to the cuQuantum implementation
+using the ``platform`` argument, for example:
 
 .. testcode::
 
