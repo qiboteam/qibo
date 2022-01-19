@@ -140,7 +140,12 @@ class Backend:
         return getattr(self.active_backend, x)
 
     def __str__(self):
-        return self.active_backend.name
+        backend = self.active_backend.name
+        if self.active_backend.platform is None:
+            return backend
+        else:  # pragma: no cover
+            # not covered by CI until the latest ``qibojit`` is released
+            return f"{backend} ({self.active_backend.platform.name})"
 
     def __repr__(self):
         return str(self)
@@ -177,7 +182,7 @@ K = Backend()
 numpy_matrices = K.qnp.matrices
 
 
-def set_backend(backend="qibojit"):
+def set_backend(backend="qibojit", platform=None):
     """Sets backend used for mathematical operations and applying gates.
 
     The following backends are available:
@@ -188,10 +193,15 @@ def set_backend(backend="qibojit"):
 
     Args:
         backend (str): A backend from the above options.
+        platform (str): Optional platform specification for backends that
+            support this. For example, the 'qibojit' backend supports two
+            platforms ('cupy', 'cuquantum') when used with GPU.
     """
     if not config.ALLOW_SWITCHERS and backend != K.name:
         log.warning("Backend should not be changed after allocating gates.")
     K.active_backend = K.construct_backend(backend)
+    if platform is not None:
+        K.set_platform(platform)
     K.show_config()
 
 
