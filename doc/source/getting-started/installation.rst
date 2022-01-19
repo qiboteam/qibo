@@ -96,6 +96,20 @@ This backend is used by default, however, if needed, in order to switch to the
       import qibo
       qibo.set_backend("qibojit")
 
+The custom cupy kernels will be used by default if a GPU is available in the
+system and the custom numba kernels if a GPU is not available. If a GPU is
+available, it is possible to switch to the cuQuantum implementation using the
+platform argument, for example:
+
+.. testcode::
+
+      import qibo
+      # switch to the cuquantum implementation
+      qibo.set_backend("qibojit", platform="cuquantum")
+      # switch to custom numba kernels (even if a GPU is available)
+      qibo.set_backend("qibojit", platform="numba")
+
+
 Installing with pip
 """""""""""""""""""
 
@@ -350,4 +364,3 @@ all binaries and scripts from the Qibo framework.
 .. note::
       The docker image contains the basic ``qibo`` package with the lightweight
       ``numpy`` backend for simulation.
-
