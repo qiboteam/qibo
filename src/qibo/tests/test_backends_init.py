@@ -14,8 +14,13 @@ def test_set_backend(backend_name):
     original_backend = backends.get_backend()
     backends.set_backend(backend_name)
     assert K.name == backend_name
-    assert str(K) == backend_name
-    assert repr(K) == backend_name
+    if K.platform is None:
+        assert str(K) == backend_name
+        assert repr(K) == backend_name
+    else:  # pragma: no cover
+        # not covered by CI until the latest ``qibojit`` is released
+        assert str(K) == f"{backend_name} ({K.platform.name})"
+        assert repr(K) == f"{backend_name} ({K.platform.name})"
     assert K.executing_eagerly()
     h = gates.H(0)
     backends.set_backend(original_backend)

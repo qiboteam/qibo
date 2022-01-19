@@ -140,7 +140,12 @@ class Backend:
         return getattr(self.active_backend, x)
 
     def __str__(self):
-        return self.active_backend.name
+        backend = self.active_backend.name
+        if self.active_backend.platform is None:
+            return backend
+        else:  # pragma: no cover
+            # not covered by CI until the latest ``qibojit`` is released
+            return f"{backend} ({self.active_backend.platform.name})"
 
     def __repr__(self):
         return str(self)
