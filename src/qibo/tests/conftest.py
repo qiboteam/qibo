@@ -79,8 +79,8 @@ def pytest_generate_tests(metafunc):
     backends = metafunc.config.option.backends.split(",")
     # construct backend instances to find what platforms each backend supports
     # and if it supports multi-GPU
-    backend_platforms = []
-    distributed_backends = [] # list
+    backend_platforms = [] # list of all available backend-platform pairs
+    distributed_backends = [] # list of backends that support multi-GPU
     for name in backends:
         instance = K.construct_backend(name)
         platforms = [f"{name}-{p}" if p is not None else name
