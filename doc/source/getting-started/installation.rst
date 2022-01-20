@@ -84,7 +84,9 @@ qibojit
 
 The ``qibojit`` package contains a simulator implementation based on
 just-in-time (JIT) custom kernels using `numba <https://numba.pydata.org/>`_
-and `cupy <https://cupy.dev/>`_.
+and `cupy <https://cupy.dev/>`_. We also provide another implementation based
+on `cuQuantum <https://developer.nvidia.com/cuquantum-sdk>`_ primitives available
+when running Qibo on GPU.
 
 This backend is used by default, however, if needed, in order to switch to the
 ``qibojit`` backend please do:
@@ -93,6 +95,20 @@ This backend is used by default, however, if needed, in order to switch to the
 
       import qibo
       qibo.set_backend("qibojit")
+
+Custom cupy kernels will be used by default if a GPU is available and
+custom numba kernels if a GPU is not available.
+If a GPU is available it is possible to switch to the cuQuantum implementation
+using the ``platform`` argument, for example:
+
+.. testcode::
+
+      import qibo
+      # switch to the cuquantum implementation
+      qibo.set_backend("qibojit", platform="cuquantum")
+      # switch to custom numba kernels (even if a GPU is available)
+      qibo.set_backend("qibojit", platform="numba")
+
 
 Installing with pip
 """""""""""""""""""
@@ -108,10 +124,15 @@ In order to install the package use the following command:
 
 .. note::
       The ``pip`` program will download and install all the required
-      dependencies except `cupy <https://cupy.dev/>`_ which is required for GPU
-      acceleration. Please install `cupy <https://cupy.dev/>`_ by following the
+      dependencies except `cupy <https://cupy.dev/>`_ and/or
+      `cuQuantum <https://developer.nvidia.com/cuquantum-sdk>`_
+      which are required for GPU acceleration.
+      The cuQuantum dependency is optional, as it is required only for
+      the ``cuquantum`` platform. Please install `cupy <https://cupy.dev/>`_ by following the
       instructions from the `official website
       <https://docs.cupy.dev/en/stable/install.html>`_ for your GPU hardware.
+      The installation instructions for `cuQuantum <https://developer.nvidia.com/cuquantum-sdk>`_
+      are available in the `official documentation <https://docs.nvidia.com/cuda/cuquantum/python/README.html>`__.
 
 Installing with conda
 """""""""""""""""""""
@@ -127,11 +148,15 @@ To install both packages with conda run:
 
 .. note::
       The ``conda`` program will download and install all the required
-      dependencies except `cupy <https://cupy.dev/>`_ which is required for GPU
-      acceleration. Please install `cupy <https://cupy.dev/>`_ by following the
+      dependencies except `cupy <https://cupy.dev/>`_ and/or
+      `cuQuantum <https://developer.nvidia.com/cuquantum-sdk>`_
+      which are required for GPU acceleration.
+      The cuQuantum dependency is optional, as it is required only for
+      the ``cuquantum`` platform. Please install `cupy <https://cupy.dev/>`_ by following the
       instructions from the `official website
-      <https://docs.cupy.dev/en/stable/install.html>`_ for your GPU hardware or
-      use the respective conda package.
+      <https://docs.cupy.dev/en/stable/install.html>`_ for your GPU hardware.
+      The installation instructions for `cuQuantum <https://developer.nvidia.com/cuquantum-sdk>`_
+      are available in the `official documentation <https://docs.nvidia.com/cuda/cuquantum/python/README.html>`__.
 
 Installing from source
 """"""""""""""""""""""
@@ -339,4 +364,3 @@ all binaries and scripts from the Qibo framework.
 .. note::
       The docker image contains the basic ``qibo`` package with the lightweight
       ``numpy`` backend for simulation.
-
