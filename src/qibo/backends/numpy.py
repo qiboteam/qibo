@@ -53,6 +53,12 @@ class NumpyBackend(abstract.AbstractBackend):
                     "Cannot change the number of threads.")
         abstract.AbstractBackend.set_threads(self, nthreads)
 
+    def set_platform(self, platform):
+        pass
+
+    def get_platform(self):
+        return None
+
     def to_numpy(self, x):
         return x
 

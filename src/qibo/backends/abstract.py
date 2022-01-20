@@ -11,6 +11,8 @@ class AbstractBackend(ABC):
         self.backend = None
         self.name = "base"
         self.is_hardware = False
+        self.platform = None
+        self.available_platforms = [None]
 
         self.precision = 'double'
         self._dtypes = {'DTYPEINT': 'int64', 'DTYPE': 'float64',
@@ -92,6 +94,25 @@ class AbstractBackend(ABC):
         if nthreads < 1: # pragma: no cover
             raise_error(RuntimeError, "Number of threads must be positive.")
         self.nthreads = nthreads
+
+    @abstractmethod
+    def set_platform(self, platform):  # pragma: no cover
+        """Sets the platform used by the backend.
+
+        Not all backends support different platforms.
+        'qibojit' GPU supports two platforms ('cupy', 'cuquantum').
+        'qibolab' supports multiple platforms depending on the quantum hardware.
+        """
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def get_platform(self):  # pragma: no cover
+        """Returns the name of the activated platform.
+
+        See :meth:`qibo.backends.abstract.AbstractBackend.set_platform` for
+        more details on platforms.
+        """
+        raise_error(NotImplementedError)
 
     def get_cpu(self): # pragma: no cover
         """Returns default CPU device to use for OOM fallback."""
