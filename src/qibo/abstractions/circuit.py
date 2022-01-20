@@ -159,7 +159,7 @@ class AbstractCircuit(ABC):
             q (int): Qubit ids that the gates should act.
 
         Example:
-            
+
             .. testcode::
 
                 from qibo import gates, models
@@ -664,7 +664,7 @@ class AbstractCircuit(ABC):
                 cx: 2
                 ccx: 1
                 '''
-        
+
             .. testoutput::
                 :hide:
 
@@ -767,7 +767,7 @@ class AbstractCircuit(ABC):
             specified by the given QASM script.
 
         Example:
-         
+
             .. testcode::
 
                 from qibo import models, gates
@@ -948,6 +948,7 @@ class AbstractCircuit(ABC):
             String containing text circuit diagram.
         """
         labels = {"h": "H", "x": "X", "y": "Y", "z": "Z",
+                  "s": "S", "sdg": "SDG", "t": "T", "tdg": "TDG",
                   "rx": "RX", "ry": "RY", "rz": "RZ",
                   "u1": "U1", "u2": "U2", "u3": "U3",
                   "cx": "X", "swap": "x", "cz": "Z",
