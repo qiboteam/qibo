@@ -90,9 +90,10 @@ def pytest_generate_tests(metafunc):
             distributed_backends.extend(platforms)
 
     # parse accelerator stings to dicts
-    accelerators = metafunc.config.option.accelerators.split(",")
+    accelerators = metafunc.config.option.accelerators
     if accelerators is not None:
-        accelerators = [{dev[1:]: int(dev[0]) for dev in x.split("+")} for x in accelerators]
+        accelerators = [{dev[1:]: int(dev[0]) for dev in x.split("+")}
+                        for x in accelerators.split(",")]
 
     distributed_tests = {
         "qibo.tests.test_core_states_distributed",
