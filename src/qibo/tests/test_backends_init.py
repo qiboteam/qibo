@@ -18,8 +18,9 @@ def test_set_backend(backend_name):
         assert str(K) == backend_name
         assert repr(K) == backend_name
     else:
-        assert str(K) == f"{backend_name} ({K.platform.name})"
-        assert repr(K) == f"{backend_name} ({K.platform.name})"
+        platform = K.get_platform()
+        assert str(K) == f"{backend_name} ({platform})"
+        assert repr(K) == f"{backend_name} ({platform})"
     assert K.executing_eagerly()
     h = gates.H(0)
     backends.set_backend(original_backend)
