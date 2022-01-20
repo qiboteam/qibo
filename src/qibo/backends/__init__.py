@@ -143,8 +143,7 @@ class Backend:
         backend = self.active_backend.name
         if self.active_backend.platform is None:
             return backend
-        else:  # pragma: no cover
-            # not covered by CI until the latest ``qibojit`` is released
+        else:
             return f"{backend} ({self.active_backend.platform.name})"
 
     def __repr__(self):
