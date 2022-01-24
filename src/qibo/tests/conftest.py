@@ -88,6 +88,12 @@ def pytest_generate_tests(metafunc):
         backend_platforms.extend(platforms)
         if instance.supports_multigpu:
             distributed_backends.extend(platforms)
+    # remove `qibojit-numba` from distributed circuit tests if a GPU platform
+    # is available to avoid issues with random tests
+    # If a GPU platform is not available, we execute distributed tests with
+    # `qibojit-numba` for coverage purposes
+    if {"qibojit-cupy", "qibojit-cuquantum"} & set(distributed_backends):
+        distributed_backends.remove("qibojit-numba")
 
     # parse accelerator stings to dicts
     accelerators = metafunc.config.option.accelerators
