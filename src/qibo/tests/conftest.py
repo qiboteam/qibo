@@ -92,7 +92,7 @@ def pytest_generate_tests(metafunc):
     # is available to avoid issues with random tests
     # If a GPU platform is not available, we execute distributed tests with
     # `qibojit-numba` for coverage purposes
-    if {"qibojit-cupy", "qibojit-cuquantum"} & set(distributed_backends):
+    if {"qibojit-cupy", "qibojit-cuquantum"} & set(distributed_backends):  # pragma: no cover
         distributed_backends.remove("qibojit-numba")
 
     # parse accelerator stings to dicts
