@@ -54,9 +54,12 @@ def assert_gates_equivalent(qibo_gate, cirq_gates, nqubits,
     if ndevices is not None:
         accelerators = {"/GPU:0": ndevices}
 
-    if accelerators and not K.supports_multigpu:
-        with pytest.raises(NotImplementedError):
-            c = models.Circuit(nqubits, accelerators)
+    if accelerators:
+        if not K.supports_multigpu:
+            with pytest.raises(NotImplementedError):
+                c = models.Circuit(nqubits, accelerators)
+        elif K.get_platform() == "numba" and len(K.available_platforms) > 1:
+            pytest.skip("Skipping distributed cirq test for numba platform.")
     else:
         c = models.Circuit(nqubits, accelerators)
         c.add(qibo_gate)
