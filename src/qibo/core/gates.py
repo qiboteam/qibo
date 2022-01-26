@@ -1054,7 +1054,7 @@ class _ThermalRelaxationChannelB(MatrixGate, abstract_gates._ThermalRelaxationCh
             cache = K.create_gate_cache(self)
 
             qubits = sorted(self.nqubits - q - 1 for q in self.target_qubits)
-            cache.qubits_tensor = qubits + [q + self.nqubits for q in qubits]
+            cache.qubits_tensor = K.cast(qubits + [q + self.nqubits for q in qubits], dtype="int32")
             cache.target_qubits_dm = self.qubits + tuple(q + self.nqubits for q in self.qubits)
 
             if not K.is_custom:
