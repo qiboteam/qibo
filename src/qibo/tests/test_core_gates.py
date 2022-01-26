@@ -233,6 +233,14 @@ def test_swap(backend):
     K.assert_allclose(final_state, target_state)
 
 
+def test_fswap(backend):
+    final_state = apply_gates([gates.H(0), gates.X(1), gates.FSWAP(0, 1)], nqubits=2)
+    target_state = np.zeros_like(final_state)
+    target_state[2] = 1.0 / np.sqrt(2)
+    target_state[3] = -1.0 / np.sqrt(2)
+    K.assert_allclose(final_state, target_state)
+
+
 def test_multiple_swap(backend):
     gatelist = [gates.X(0), gates.X(2), gates.SWAP(0, 1), gates.SWAP(2, 3)]
     final_state = apply_gates(gatelist, nqubits=4)
