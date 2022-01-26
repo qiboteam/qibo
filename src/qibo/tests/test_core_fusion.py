@@ -116,7 +116,7 @@ def test_random_circuit_fusion(backend, nqubits, ngates):
             q0, q1 = np.random.randint(0, nqubits, (2,))
         c.add(gate(q0, q1))
     fused_c = c.fuse()
-    K.assert_allclose(fused_c(), c())
+    K.assert_allclose(fused_c(), c(), atol=1e-7)
 
 
 def test_controlled_by_gates_fusion(backend):

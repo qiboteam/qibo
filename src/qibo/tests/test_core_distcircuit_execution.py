@@ -39,7 +39,7 @@ def test_distributed_circuit_execution_pretransformed(backend, accelerators):
     initial_state = random_state(c.nqubits)
     final_state = dist_c(np.copy(initial_state))
     target_state = c(np.copy(initial_state))
-    K.assert_allclose(target_state, final_state)
+    K.assert_allclose(target_state, final_state, atol=1e-7)
 
 
 def test_distributed_circuit_execution_with_swap(backend, accelerators):
@@ -55,7 +55,7 @@ def test_distributed_circuit_execution_with_swap(backend, accelerators):
     initial_state = random_state(c.nqubits)
     final_state = dist_c(np.copy(initial_state))
     target_state = c(np.copy(initial_state))
-    K.assert_allclose(target_state, final_state)
+    K.assert_allclose(target_state, final_state, atol=1e-7)
 
 
 def test_distributed_circuit_execution_special_gate(backend, accelerators):
@@ -102,7 +102,7 @@ def test_distributed_circuit_execution_controlled_by_gates(backend, accelerators
     initial_state = random_state(c.nqubits)
     final_state = dist_c(np.copy(initial_state))
     target_state = c(np.copy(initial_state))
-    K.assert_allclose(target_state, final_state)
+    K.assert_allclose(target_state, final_state, atol=1e-7)
 
 
 def test_distributed_circuit_execution_addition(backend, accelerators):
