@@ -559,6 +559,16 @@ class SWAP(BackendGate, abstract_gates.SWAP):
         return K.matrices.SWAP
 
 
+class FSWAP(MatrixGate, abstract_gates.FSWAP):
+
+    def __init__(self, q0, q1):
+        BackendGate.__init__(self)
+        abstract_gates.FSWAP.__init__(self, q0, q1)
+
+    def _construct_unitary(self):
+        return K.matrices.FSWAP
+
+
 class fSim(MatrixGate, abstract_gates.fSim):
 
     def __init__(self, q0, q1, theta, phi, trainable=True):

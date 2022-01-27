@@ -434,6 +434,13 @@ Swap (SWAP)
     :members:
     :member-order: bysource
 
+f-Swap (FSWAP)
+""""""""""""""
+
+.. autoclass:: qibo.abstractions.gates.FSWAP
+    :members:
+    :member-order: bysource
+
 fSim
 """"
 
