@@ -93,13 +93,10 @@ def test_vqe(backend, method, options, compile, filename):
         pytest.skip("Skipping SGD test for unsupported backend.")
 
     if method == 'parallel_L-BFGS-B':
-        device = qibo.get_device()
-        backend = qibo.get_backend()
-        if backend == "tensorflow" or backend == "qibojit" or "GPU" in device:
+        from qibo.tests.test_parallel import is_parallel_supported
+        backend_name = qibo.get_backend()
+        if not is_parallel_supported(backend_name):
             pytest.skip("unsupported configuration")
-        import sys
-        if sys.platform == 'win32' or sys.platform == 'darwin': # pragma: no cover
-            pytest.skip("Parallel L-BFGS-B only supported on linux.")
         qibo.set_threads(1)
 
     nqubits = 6
@@ -318,13 +315,10 @@ def test_aavqe(backend, method, options, compile, filename):
     original_threads = qibo.get_threads()
 
     if method == 'parallel_L-BFGS-B':
-        device = qibo.get_device()
-        backend = qibo.get_backend()
-        if backend == "tensorflow" or backend == "qibojit" or "GPU" in device:
+        from qibo.tests.test_parallel import is_parallel_supported
+        backend_name = qibo.get_backend()
+        if not is_parallel_supported(backend_name):
             pytest.skip("unsupported configuration")
-        import sys
-        if sys.platform == 'win32' or sys.platform == 'darwin': # pragma: no cover
-            pytest.skip("Parallel L-BFGS-B only supported on linux.")
         qibo.set_threads(1)
     nqubits = 6
     layers  = 4
@@ -346,7 +340,7 @@ def test_aavqe(backend, method, options, compile, filename):
     easy_hamiltonian=hamiltonians.X(nqubits)
     problem_hamiltonian=hamiltonians.XXZ(nqubits)
     s = lambda t: t
-    aavqe = models.AAVQE(circuit, easy_hamiltonian, problem_hamiltonian, 
+    aavqe = models.AAVQE(circuit, easy_hamiltonian, problem_hamiltonian,
                         s, nsteps=10, t_max=1)
     np.random.seed(0)
     initial_parameters = np.random.uniform(0, 2*np.pi, 2*nqubits*layers + nqubits)
@@ -359,4 +353,3 @@ def test_aavqe(backend, method, options, compile, filename):
     if filename is not None:
         assert_regression_fixture(params, filename, rtol=1e-2)
     qibo.set_threads(original_threads)
-    

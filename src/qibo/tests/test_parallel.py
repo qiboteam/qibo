@@ -10,11 +10,20 @@ from qibo.models import Circuit, QFT
 from qibo.parallel import parallel_parametrized_execution, parallel_execution
 
 
+def is_parallel_supported(backend_name):
+    if "GPU" in qibo.get_device():  # pragma: no cover
+        return False
+    if backend_name in ("tensorflow", "qibojit"):
+        return False
+    if sys.platform in ("linux", "darwin", "win32"):
+        return False
+
+
 def test_parallel_circuit_evaluation(backend):
     """Evaluate circuit for multiple input states."""
     device = qibo.get_device()
-    backend = qibo.get_backend()
-    if 'GPU' in qibo.get_device() or sys.platform == "win32" or sys.platform == "darwin" or backend == "tensorflow" or backend == "qibojit": # pragma: no cover
+    backend_name = qibo.get_backend()
+    if not is_parallel_supported(backend_name):  # pragma: no cover
         pytest.skip("unsupported configuration")
     original_threads = qibo.get_threads()
     qibo.set_threads(1)
@@ -37,8 +46,8 @@ def test_parallel_circuit_evaluation(backend):
 def test_parallel_parametrized_circuit(backend):
     """Evaluate circuit for multiple parameters."""
     device = qibo.get_device()
-    backend = qibo.get_backend()
-    if 'GPU' in qibo.get_device() or sys.platform == "win32" or sys.platform == "darwin" or backend == "tensorflow" or backend == "qibojit": # pragma: no cover
+    backend_name = qibo.get_backend()
+    if not is_parallel_supported(backend_name):  # pragma: no cover
         pytest.skip("unsupported configuration")
     original_threads = qibo.get_threads()
     qibo.set_threads(1)
