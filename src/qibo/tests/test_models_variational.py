@@ -86,17 +86,19 @@ test_values = [("Powell", {'maxiter': 1}, True, 'vqe_powell.out'),
                ("sgd", {"nepochs": 5}, False, None),
                ("sgd", {"nepochs": 5}, True, None)]
 @pytest.mark.parametrize(test_names, test_values)
-def test_vqe(backend, method, options, compile, filename):
+def test_vqe(backend, method, options, compile, filename, skip_parallel):
     """Performs a VQE circuit minimization test."""
     original_threads = qibo.get_threads()
     if (method == "sgd" or compile) and qibo.get_backend() != "tensorflow":
         pytest.skip("Skipping SGD test for unsupported backend.")
 
-    if method == 'parallel_L-BFGS-B':
+    if method == 'parallel_L-BFGS-B':  # pragma: no cover
+        if skip_parallel:
+            pytest.skip("Skipping parallel test.")
         from qibo.tests.test_parallel import is_parallel_supported
         backend_name = qibo.get_backend()
         if not is_parallel_supported(backend_name):
-            pytest.skip("unsupported configuration")
+            pytest.skip("Skipping parallel test due to unsupported configuration.")
         qibo.set_threads(1)
 
     nqubits = 6
@@ -310,15 +312,17 @@ test_values = [("Powell", {'maxiter': 1}, False, 'aavqe_powell.out'),
                ("cma", {"maxfevals": 2}, False, None),
                ("parallel_L-BFGS-B", {'maxiter': 1}, False, None)]
 @pytest.mark.parametrize(test_names, test_values)
-def test_aavqe(backend, method, options, compile, filename):
+def test_aavqe(backend, method, options, compile, filename, skip_parallel):
     """Performs a AAVQE circuit minimization test."""
     original_threads = qibo.get_threads()
 
-    if method == 'parallel_L-BFGS-B':
+    if method == 'parallel_L-BFGS-B':  # pragma: no cover
+        if skip_parallel:
+            pytest.skip("Skipping parallel test.")
         from qibo.tests.test_parallel import is_parallel_supported
         backend_name = qibo.get_backend()
         if not is_parallel_supported(backend_name):
-            pytest.skip("unsupported configuration")
+            pytest.skip("Skipping parallel test due to unsupported configuration.")
         qibo.set_threads(1)
     nqubits = 6
     layers  = 4
