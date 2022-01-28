@@ -76,7 +76,7 @@ def _executor(params): # pragma: no cover
     return ParallelResources().run(params)
 
 
-def parallel_execution(circuit, states, processes=None):
+def parallel_execution(circuit, states, processes=None):  # pragma: no cover
     """Execute circuit for multiple states.
 
     Example:
@@ -128,12 +128,12 @@ def parallel_execution(circuit, states, processes=None):
     return results
 
 
-def parallel_parametrized_execution(circuit, parameters, initial_state=None, processes=None):
+def parallel_parametrized_execution(circuit, parameters, initial_state=None, processes=None):  # pragma: no cover
     """Execute circuit for multiple parameters and fixed initial_state.
 
     Example:
         .. testcode::
-            
+
             import qibo
             original_backend = qibo.get_backend()
             qibo.set_backend("qibotf")
@@ -191,7 +191,7 @@ def parallel_parametrized_execution(circuit, parameters, initial_state=None, pro
     return results
 
 
-def _check_parallel_configuration(processes):
+def _check_parallel_configuration(processes):  # pragma: no cover
     """Check if configuration is suitable for efficient parallel execution."""
     import sys, psutil
     from qibo import get_device, get_backend, get_threads

@@ -129,7 +129,7 @@ def newtonian(loss, initial_parameters, args=(), method='Powell',
             ``scipy.optimize.minimize``.
         processes (int): number of processes when using the parallel BFGS method.
     """
-    if method == 'parallel_L-BFGS-B':
+    if method == 'parallel_L-BFGS-B':  # pragma: no cover
         from qibo.parallel import _check_parallel_configuration
         _check_parallel_configuration(processes)
         o = ParallelBFGS(loss, args=args, processes=processes,
