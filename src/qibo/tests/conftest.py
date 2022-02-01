@@ -12,10 +12,7 @@ _available_backends = set(b.get('name') for b in K.profile.get('backends')
                           if (not b.get('is_hardware', False) and
                           K.check_availability(b.get('name'))))
 _available_backends.add("numpy")
-_ACCELERATORS = None
-for bkd in _available_backends:
-    if K.construct_backend(bkd).supports_multigpu:
-        _ACCELERATORS = "2/GPU:0,1/GPU:0+1/GPU:1,2/GPU:0+1/GPU:1+1/GPU:2"
+_ACCELERATORS = "2/GPU:0,1/GPU:0+1/GPU:1,2/GPU:0+1/GPU:1+1/GPU:2"
 _BACKENDS = ",".join(_available_backends)
 
 
@@ -86,23 +83,25 @@ def pytest_generate_tests(metafunc):
     distributed_backends = [] # list of backends that support multi-GPU
     for name in backends:
         instance = K.construct_backend(name)
-        platforms = [f"{name}-{p}" if p is not None else name
-                     for p in instance.available_platforms]
-        backend_platforms.extend(platforms)
-        if instance.supports_multigpu:
-            distributed_backends.extend(platforms)
-    # remove `qibojit-numba` from distributed circuit tests if a GPU platform
-    # is available to avoid issues with random tests
+        for platform in instance.available_platforms:
+            if platform is not None:
+                total_name = f"{name}-{platform}"
+                instance.set_platform(platform)
+            else:
+                total_name = name
+            backend_platforms.append(total_name)
+            if instance.supports_multigpu:
+                distributed_backends.append(total_name)
+
     # If a GPU platform is not available, we execute distributed tests with
     # `qibojit-numba` for coverage purposes
-    if {"qibojit-cupy", "qibojit-cuquantum"} & set(distributed_backends):  # pragma: no cover
-        distributed_backends.remove("qibojit-numba")
+    #if not distributed_backends and "qibojit-numba" in backend_platforms:  # pragma: no cover
+    #    distributed_backends.append("qibojit-numba")
 
     # parse accelerator stings to dicts
     accelerators = metafunc.config.option.accelerators
-    if accelerators is not None:
-        accelerators = [{dev[1:]: int(dev[0]) for dev in x.split("+")}
-                        for x in accelerators.split(",")]
+    accelerators = [{dev[1:]: int(dev[0]) for dev in x.split("+")}
+                    for x in accelerators.split(",")]
 
     distributed_tests = {
         "qibo.tests.test_core_states_distributed",
@@ -117,9 +116,12 @@ def pytest_generate_tests(metafunc):
                     "the available backends.")
     # skip distributed tests on mac
     if sys.platform == "darwin":  # pragma: no cover
-        accelerators = None
-        if module_name in distributed_tests:
-            pytest.skip("macos does not support distributed circuits.")
+        # macos does not support distributed circuits
+        distributed_backends = []
+
+    if module_name in distributed_tests and not distributed_backends:
+        pytest.skip("Skipping distributed tests because are not supported by "
+                    "available backends.")
 
     # skip parallel tests if the ``--skip-parallel`` option is used
     skip_parallel = metafunc.config.option.skip_parallel
