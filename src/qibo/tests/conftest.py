@@ -111,7 +111,7 @@ def pytest_generate_tests(metafunc):
     }
     module_name = metafunc.module.__name__
     # skip distributed tests if qibojit or qibotf are not installed
-    if module_name in distributed_tests and not distributed_backends: # pragma: no cover
+    if module_name in distributed_tests and not distributed_backends:  # pragma: no cover
         pytest.skip("Skipping distributed tests because are not supported by "
                     "the available backends.")
     # skip distributed tests on mac
@@ -119,7 +119,7 @@ def pytest_generate_tests(metafunc):
         # macos does not support distributed circuits
         distributed_backends = []
 
-    if module_name in distributed_tests and not distributed_backends:
+    if module_name in distributed_tests and not distributed_backends:  # pragma: no cover
         pytest.skip("Skipping distributed tests because are not supported by "
                     "available backends.")
 
