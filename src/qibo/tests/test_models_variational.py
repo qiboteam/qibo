@@ -86,20 +86,19 @@ test_values = [("Powell", {'maxiter': 1}, True, 'vqe_powell.out'),
                ("sgd", {"nepochs": 5}, False, None),
                ("sgd", {"nepochs": 5}, True, None)]
 @pytest.mark.parametrize(test_names, test_values)
-def test_vqe(backend, method, options, compile, filename):
+def test_vqe(backend, method, options, compile, filename, skip_parallel):
     """Performs a VQE circuit minimization test."""
     original_threads = qibo.get_threads()
     if (method == "sgd" or compile) and qibo.get_backend() != "tensorflow":
         pytest.skip("Skipping SGD test for unsupported backend.")
 
-    if method == 'parallel_L-BFGS-B':
-        device = qibo.get_device()
-        backend = qibo.get_backend()
-        if backend == "tensorflow" or backend == "qibojit" or "GPU" in device:
-            pytest.skip("unsupported configuration")
-        import sys
-        if sys.platform == 'win32' or sys.platform == 'darwin': # pragma: no cover
-            pytest.skip("Parallel L-BFGS-B only supported on linux.")
+    if method == 'parallel_L-BFGS-B':  # pragma: no cover
+        if skip_parallel:
+            pytest.skip("Skipping parallel test.")
+        from qibo.tests.test_parallel import is_parallel_supported
+        backend_name = qibo.get_backend()
+        if not is_parallel_supported(backend_name):
+            pytest.skip("Skipping parallel test due to unsupported configuration.")
         qibo.set_threads(1)
 
     nqubits = 6
@@ -313,18 +312,17 @@ test_values = [("Powell", {'maxiter': 1}, False, 'aavqe_powell.out'),
                ("cma", {"maxfevals": 2}, False, None),
                ("parallel_L-BFGS-B", {'maxiter': 1}, False, None)]
 @pytest.mark.parametrize(test_names, test_values)
-def test_aavqe(backend, method, options, compile, filename):
+def test_aavqe(backend, method, options, compile, filename, skip_parallel):
     """Performs a AAVQE circuit minimization test."""
     original_threads = qibo.get_threads()
 
-    if method == 'parallel_L-BFGS-B':
-        device = qibo.get_device()
-        backend = qibo.get_backend()
-        if backend == "tensorflow" or backend == "qibojit" or "GPU" in device:
-            pytest.skip("unsupported configuration")
-        import sys
-        if sys.platform == 'win32' or sys.platform == 'darwin': # pragma: no cover
-            pytest.skip("Parallel L-BFGS-B only supported on linux.")
+    if method == 'parallel_L-BFGS-B':  # pragma: no cover
+        if skip_parallel:
+            pytest.skip("Skipping parallel test.")
+        from qibo.tests.test_parallel import is_parallel_supported
+        backend_name = qibo.get_backend()
+        if not is_parallel_supported(backend_name):
+            pytest.skip("Skipping parallel test due to unsupported configuration.")
         qibo.set_threads(1)
     nqubits = 6
     layers  = 4
@@ -346,7 +344,7 @@ def test_aavqe(backend, method, options, compile, filename):
     easy_hamiltonian=hamiltonians.X(nqubits)
     problem_hamiltonian=hamiltonians.XXZ(nqubits)
     s = lambda t: t
-    aavqe = models.AAVQE(circuit, easy_hamiltonian, problem_hamiltonian, 
+    aavqe = models.AAVQE(circuit, easy_hamiltonian, problem_hamiltonian,
                         s, nsteps=10, t_max=1)
     np.random.seed(0)
     initial_parameters = np.random.uniform(0, 2*np.pi, 2*nqubits*layers + nqubits)
@@ -359,4 +357,3 @@ def test_aavqe(backend, method, options, compile, filename):
     if filename is not None:
         assert_regression_fixture(params, filename, rtol=1e-2)
     qibo.set_threads(original_threads)
-    

@@ -85,14 +85,16 @@ def test_custom_qgan():
     qibo.set_backend(original_backend)
 
 
-def test_qgan_errors():
+def test_qgan_errors(backend_name):
     if not K.check_availability("tensorflow"):  # pragma: no cover
         pytest.skip("Skipping StyleQGAN test because tensorflow backend is not available.")
 
     original_backend = qibo.get_backend()
-    qibo.set_backend("qibojit")
-    with pytest.raises(RuntimeError):
-        qgan = models.StyleQGAN(latent_dim=2)
+
+    if backend_name != "tensorflow":
+        qibo.set_backend(backend_name)
+        with pytest.raises(RuntimeError):
+            qgan = models.StyleQGAN(latent_dim=2)
 
     qibo.set_backend("tensorflow")
     with pytest.raises(ValueError):
