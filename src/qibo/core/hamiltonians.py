@@ -15,7 +15,7 @@ class Hamiltonian(hamiltonians.MatrixHamiltonian):
     """
 
     def __init__(self, nqubits, matrix):
-        if not isinstance(matrix, K.tensor_types):
+        if not (isinstance(matrix, K.tensor_types) or K.sparse.issparse(matrix)):
             raise_error(TypeError, "Matrix of invalid type {} given during "
                                    "Hamiltonian initialization"
                                    "".format(type(matrix)))
@@ -157,20 +157,17 @@ class Hamiltonian(hamiltonians.MatrixHamiltonian):
 
     def __matmul__(self, o):
         if isinstance(o, self.__class__):
-            new_matrix = self.K.matmul(self.matrix, o.matrix)
+            new_matrix = self.K.dot(self.matrix, o.matrix)
             return self.__class__(self.nqubits, new_matrix)
 
         if isinstance(o, states.AbstractState):
             o = o.tensor
         if isinstance(o, K.tensor_types):
             rank = len(tuple(o.shape))
-            if rank == 1: # vector
-                return self.K.matmul(self.matrix, o[:, self.K.newaxis])[:, 0]
-            elif rank == 2: # matrix
-                return self.K.matmul(self.matrix, o)
-            else:
+            if rank > 2:
                 raise_error(ValueError, "Cannot multiply Hamiltonian with "
                                         "rank-{} tensor.".format(rank))
+            return self.K.dot(self.matrix, o)
 
         raise_error(NotImplementedError, "Hamiltonian matmul to {} not "
                                          "implemented.".format(type(o)))

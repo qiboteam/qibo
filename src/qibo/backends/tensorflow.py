@@ -166,6 +166,9 @@ class TensorflowBackend(NumpyBackend):
     def sum(self, x, axis=None):
         return self.backend.reduce_sum(x, axis=axis)
 
+    def dot(self, x, y):
+        return self.tensordot(x, y, axes=1)
+
     def outer(self, x, y):
         return self.tensordot(x, y, axes=0)
 
