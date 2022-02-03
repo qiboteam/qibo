@@ -76,6 +76,9 @@ class NumpyBackend(abstract.AbstractBackend):
             return x.__class__(x, dtype=dtype)
         return self.backend.array(x, dtype=dtype)
 
+    def issparse(self, x):
+        return self.sparse.issparse(x)
+
     def diag(self, x, dtype='DTYPECPX'):
         if isinstance(dtype, str):
             dtype = self.dtypes(dtype)

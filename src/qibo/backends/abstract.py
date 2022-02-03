@@ -200,6 +200,11 @@ class AbstractBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def issparse(self, x): # pragma: no cover
+        """Checks if the given tensor is sparse."""
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def diag(self, x, dtype='DTYPECPX'): # pragma: no cover
         raise_error(NotImplementedError)
 

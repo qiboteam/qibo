@@ -15,7 +15,7 @@ class Hamiltonian(hamiltonians.MatrixHamiltonian):
     """
 
     def __init__(self, nqubits, matrix):
-        if not (isinstance(matrix, K.tensor_types) or K.sparse.issparse(matrix)):
+        if not (isinstance(matrix, K.tensor_types) or K.issparse(matrix)):
             raise_error(TypeError, "Matrix of invalid type {} given during "
                                    "Hamiltonian initialization"
                                    "".format(type(matrix)))
