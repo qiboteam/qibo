@@ -38,6 +38,8 @@ class NumpyBackend(abstract.AbstractBackend):
         self.Tensor = np.ndarray
         self.random = np.random
         self.newaxis = np.newaxis
+        from scipy import sparse
+        self.sparse = sparse
         self.oom_error = MemoryError
         self.optimization = None
         self.cpu_devices = ["/CPU:0"]
@@ -70,6 +72,8 @@ class NumpyBackend(abstract.AbstractBackend):
             dtype = self.dtypes(dtype)
         if isinstance(x, self.backend.ndarray):
             return x.astype(dtype, copy=False)
+        elif self.sparse.issparse(x):
+            return x.__class__(x, dtype=dtype)
         return self.backend.array(x, dtype=dtype)
 
     def diag(self, x, dtype='DTYPECPX'):
@@ -166,6 +170,9 @@ class NumpyBackend(abstract.AbstractBackend):
 
     def sum(self, x, axis=None):
         return self.backend.sum(x, axis=axis)
+
+    def dot(self, x, y):
+        return x.dot(y)
 
     def matmul(self, x, y):
         return self.backend.matmul(x, y)

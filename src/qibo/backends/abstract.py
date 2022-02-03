@@ -34,6 +34,7 @@ class AbstractBackend(ABC):
         self.Tensor = None
         self.random = None
         self.newaxis = None
+        self.sparse = None
         self.oom_error = None
         self.optimization = None
         self.supports_multigpu = False
@@ -335,6 +336,11 @@ class AbstractBackend(ABC):
     @abstractmethod
     def sum(self, x, axis=None): # pragma: no cover
         """Sum of tensor elements."""
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def dot(self, x, y): # pragma: no cover
+        """Dot product of two tensors."""
         raise_error(NotImplementedError)
 
     @abstractmethod
