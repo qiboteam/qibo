@@ -73,7 +73,7 @@ class NumpyBackend(abstract.AbstractBackend):
         if isinstance(x, self.backend.ndarray):
             return x.astype(dtype, copy=False)
         elif self.sparse.issparse(x):
-            return x.__class__(x, dtype=dtype)
+            return x.astype(dtype=dtype, copy=False)
         return self.backend.array(x, dtype=dtype)
 
     def issparse(self, x):
