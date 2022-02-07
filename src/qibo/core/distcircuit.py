@@ -47,8 +47,12 @@ class DistributedCircuit(circuit.Circuit):
 
     def __init__(self, nqubits: int, accelerators: Dict[str, int]):
         if not K.supports_multigpu:  # pragma: no cover
-            raise_error(NotImplementedError, "Distributed circuit is not supported "
-                                            f"by the {K.name} backend.")
+            if K.platform is None:
+                raise_error(NotImplementedError, "Distributed circuit is not supported "
+                                                f"by the {K.name} backend.")
+            else:
+                raise_error(NotImplementedError, "Distributed circuit is not supported "
+                                                f"by the {K.name} ({K.get_platform()}) backend.")
         super().__init__(nqubits)
         self.init_kwargs["accelerators"] = accelerators
         self.ndevices = sum(accelerators.values())
