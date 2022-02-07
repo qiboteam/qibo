@@ -62,6 +62,8 @@ class NumpyBackend(abstract.AbstractBackend):
         return None
 
     def to_numpy(self, x):
+        if self.issparse(x):
+            return x.toarray()
         return x
 
     def to_complex(self, re, img): # pragma: no cover
@@ -438,4 +440,6 @@ class NumpyBackend(abstract.AbstractBackend):
         return self.reshape(self.transpose(pieces, order), state.shape)
 
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
+        value = self.to_numpy(value)
+        target = self.to_numpy(target)
         self.np.testing.assert_allclose(value, target, rtol=rtol, atol=atol)

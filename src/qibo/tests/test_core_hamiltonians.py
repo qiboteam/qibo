@@ -1,6 +1,7 @@
 """Test methods in `qibo/core/hamiltonians.py`."""
 import pytest
 import numpy as np
+from scipy import sparse
 from qibo import hamiltonians, K
 from qibo.tests.utils import random_complex
 
@@ -21,7 +22,8 @@ def test_hamiltonian_init():
 
 
 @pytest.mark.parametrize("dtype", K.numeric_types)
-def test_hamiltonian_algebraic_operations(dtype):
+@pytest.mark.parametrize("sparse_type", [None, "coo", "csr", "csc", "dia"])
+def test_hamiltonian_algebraic_operations(dtype, sparse_type):
     """Test basic hamiltonian overloading."""
 
     def transformation_a(a, b):
@@ -45,10 +47,16 @@ def test_hamiltonian_algebraic_operations(dtype):
         else:
             return c1 - a + c2 * b
 
-    H1 = hamiltonians.XXZ(nqubits=2, delta=0.5)
-    H2 = hamiltonians.XXZ(nqubits=2, delta=1)
+    if sparse_type is None:
+        H1 = hamiltonians.XXZ(nqubits=2, delta=0.5)
+        H2 = hamiltonians.XXZ(nqubits=2, delta=1)
+        mH1, mH2 = K.to_numpy(H1.matrix), K.to_numpy(H2.matrix)
+    else:
+        mH1 = sparse.rand(64, 64, format=sparse_type)
+        mH2 = sparse.rand(64, 64, format=sparse_type)
+        H1 = hamiltonians.Hamiltonian(6, mH1)
+        H2 = hamiltonians.Hamiltonian(6, mH2)
 
-    mH1, mH2 = K.to_numpy(H1.matrix), K.to_numpy(H2.matrix)
     hH1 = transformation_a(mH1, mH2)
     hH2 = transformation_b(mH1, mH2)
     hH3 = transformation_c(mH1, mH2, use_eye=True)
@@ -65,9 +73,15 @@ def test_hamiltonian_algebraic_operations(dtype):
     K.assert_allclose(hH4, HT4.matrix)
 
 
-def test_hamiltonian_addition():
-    H1 = hamiltonians.Y(nqubits=3)
-    H2 = hamiltonians.TFIM(nqubits=3, h=1.0)
+@pytest.mark.parametrize("sparse_type", [None, "coo", "csr", "csc", "dia"])
+def test_hamiltonian_addition(sparse_type):
+    if sparse_type is None:
+        H1 = hamiltonians.Y(nqubits=3)
+        H2 = hamiltonians.TFIM(nqubits=3, h=1.0)
+    else:
+        H1 = hamiltonians.Hamiltonian(6, sparse.rand(64, 64, format=sparse_type))
+        H2 = hamiltonians.Hamiltonian(6, sparse.rand(64, 64, format=sparse_type))
+
     H = H1 + H2
     matrix = H1.matrix + H2.matrix
     K.assert_allclose(H.matrix, matrix)
@@ -98,18 +112,26 @@ def test_hamiltonian_operation_errors():
         R = [3] - H1
 
 
-def test_hamiltonian_matmul():
+@pytest.mark.parametrize("sparse_type", [None, "coo", "csr", "csc", "dia"])
+def test_hamiltonian_matmul(sparse_type):
     """Test matrix multiplication between Hamiltonians and state vectors."""
-    H1 = hamiltonians.TFIM(nqubits=3, h=1.0)
-    H2 = hamiltonians.Y(nqubits=3)
+    if sparse_type is None:
+        nqubits = 3
+        H1 = hamiltonians.TFIM(nqubits, h=1.0)
+        H2 = hamiltonians.Y(nqubits)
+    else:
+        nqubits = 5
+        H1 = hamiltonians.Hamiltonian(5, sparse.rand(32, 32, format=sparse_type))
+        H2 = hamiltonians.Hamiltonian(5, sparse.rand(32, 32, format=sparse_type))
+
     m1 = K.to_numpy(H1.matrix)
     m2 = K.to_numpy(H2.matrix)
 
     K.assert_allclose((H1 @ H2).matrix, m1 @ m2)
     K.assert_allclose((H2 @ H1).matrix, m2 @ m1)
 
-    v = random_complex(8, dtype=m1.dtype)
-    m = random_complex((8, 8), dtype=m1.dtype)
+    v = random_complex(2 ** nqubits, dtype=m1.dtype)
+    m = random_complex((2 ** nqubits, 2 ** nqubits), dtype=m1.dtype)
     H1v = H1 @ K.cast(v)
     H1m = H1 @ K.cast(m)
     K.assert_allclose(H1v, m1.dot(v))
@@ -120,7 +142,7 @@ def test_hamiltonian_matmul():
     K.assert_allclose(H1state, m1.dot(v))
 
     with pytest.raises(ValueError):
-        H1 @ np.zeros((8, 8, 8), dtype=m1.dtype)
+        H1 @ np.zeros(3 * (2 ** nqubits,), dtype=m1.dtype)
     with pytest.raises(NotImplementedError):
         H1 @ 2
 
@@ -139,17 +161,21 @@ def test_hamiltonian_exponentiation(dense):
 
 @pytest.mark.parametrize("dense", [True, False])
 @pytest.mark.parametrize("density_matrix", [True, False])
-def test_hamiltonian_expectation(dense, density_matrix):
-    h = hamiltonians.XXZ(nqubits=3, delta=0.5, dense=dense)
-    matrix = K.to_numpy(h.matrix)
+@pytest.mark.parametrize("sparse_type", [None, "coo", "csr", "csc", "dia"])
+def test_hamiltonian_expectation(dense, density_matrix, sparse_type):
+    if sparse_type is None:
+        h = hamiltonians.XXZ(nqubits=3, delta=0.5, dense=dense)
+    else:
+        h = hamiltonians.Hamiltonian(6, sparse.rand(64, 64, format=sparse_type))
 
+    matrix = K.to_numpy(h.matrix)
     if density_matrix:
-        state = random_complex((8, 8))
+        state = random_complex((2 ** h.nqubits, 2 ** h.nqubits))
         state = state + state.T.conj()
         norm = np.trace(state)
         target_ev = np.trace(matrix.dot(state)).real
     else:
-        state = random_complex(8)
+        state = random_complex(2 ** h.nqubits)
         norm = np.sum(np.abs(state) ** 2)
         target_ev = np.sum(state.conj() * matrix.dot(state)).real
 
@@ -193,8 +219,8 @@ def test_hamiltonian_eigenvectors(dtype, dense):
     """Testing hamiltonian eigenvectors scaling."""
     H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense)
 
-    V1 = K.to_numpy(H1.eigenvectors())
-    U1 = K.to_numpy(H1.eigenvalues())
+    V1 = K.to_numpy(H1.eigenvectors(k=2 ** H1.nqubits))
+    U1 = K.to_numpy(H1.eigenvalues(k=2 ** H1.nqubits))
     K.assert_allclose(H1.matrix, V1 @ np.diag(U1) @ V1.T)
     # Check ground state
     K.assert_allclose(H1.ground_state(), V1[:, 0])
@@ -207,7 +233,7 @@ def test_hamiltonian_eigenvectors(dtype, dense):
 
     c2 = dtype(-11.1)
     H3 = H1 * c2
-    V3 = K.to_numpy(H3.eigenvectors())
+    V3 = K.to_numpy(H3.eigenvectors(k=2 ** H1.nqubits))
     U3 = K.to_numpy(H3._eigenvalues)
     K.assert_allclose(H3.matrix, V3 @ np.diag(U3) @ V3.T)
 
