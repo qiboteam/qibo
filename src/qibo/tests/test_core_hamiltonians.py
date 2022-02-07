@@ -219,8 +219,8 @@ def test_hamiltonian_eigenvectors(dtype, dense):
     """Testing hamiltonian eigenvectors scaling."""
     H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense)
 
-    V1 = K.to_numpy(H1.eigenvectors(k=2 ** H1.nqubits))
-    U1 = K.to_numpy(H1.eigenvalues(k=2 ** H1.nqubits))
+    V1 = K.to_numpy(H1.eigenvectors())
+    U1 = K.to_numpy(H1.eigenvalues())
     K.assert_allclose(H1.matrix, V1 @ np.diag(U1) @ V1.T)
     # Check ground state
     K.assert_allclose(H1.ground_state(), V1[:, 0])
@@ -233,7 +233,7 @@ def test_hamiltonian_eigenvectors(dtype, dense):
 
     c2 = dtype(-11.1)
     H3 = H1 * c2
-    V3 = K.to_numpy(H3.eigenvectors(k=2 ** H1.nqubits))
+    V3 = K.to_numpy(H3.eigenvectors())
     U3 = K.to_numpy(H3._eigenvalues)
     K.assert_allclose(H3.matrix, V3 @ np.diag(U3) @ V3.T)
 
