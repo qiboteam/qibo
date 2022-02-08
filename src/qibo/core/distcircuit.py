@@ -28,7 +28,7 @@ class DistributedCircuit(circuit.Circuit):
     compilation and callbacks.
 
     Example:
-        .. testcode::
+        .. code-block:: python
 
             from qibo.models import Circuit
             # The system has two GPUs and we would like to use each GPU twice
