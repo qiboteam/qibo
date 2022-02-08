@@ -124,8 +124,8 @@ def test_qgan_custom_discriminator():
     if not K.check_availability("tensorflow"):  # pragma: no cover
         pytest.skip("Skipping StyleQGAN test because tensorflow backend is not available.")
 
-    from tensorflow.keras.models import Sequential  # pylint: disable=E0611
-    from tensorflow.keras.layers import Dense  # pylint: disable=E0611
+    from tensorflow.keras.models import Sequential  # pylint: disable=E0611,E0401
+    from tensorflow.keras.layers import Dense  # pylint: disable=E0611,E0401
     original_backend = qibo.get_backend()
     qibo.set_backend("tensorflow")
     reference_distribution = generate_distribution(10)
