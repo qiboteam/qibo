@@ -411,16 +411,16 @@ class NumpyBackend(abstract.AbstractBackend):
     def on_cpu(self): # pragma: no cover
         return self.device()
 
-    def cpu_tensor(self, x, dtype=None):
+    def cpu_tensor(self, x, dtype=None): # pragma: no cover
         if dtype is None:
             dtype = x.dtype
         return self.np.asarray(x, dtype=dtype)
 
-    def cpu_cast(self, x, dtype='DTYPECPX'):
+    def cpu_cast(self, x, dtype='DTYPECPX'): # pragma: no cover
         dtype = self._dtypes.get(dtype)
         return self.np.array(x, dtype=dtype)
 
-    def cpu_assign(self, state, i, piece):
+    def cpu_assign(self, state, i, piece): # pragma: no cover
         state.pieces[i] = self.to_numpy(piece)
 
     def transpose_state(self, pieces, state, nqubits, order):

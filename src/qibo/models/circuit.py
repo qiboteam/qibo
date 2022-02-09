@@ -72,7 +72,7 @@ def QFT(nqubits: int, with_swaps: bool = True,
     return circuit
 
 
-def _DistributedQFT(nqubits, accelerators=None):
+def _DistributedQFT(nqubits, accelerators=None): # pragma: no cover
     """QFT with the order of gates optimized for reduced multi-device communication."""
     from qibo import gates
     circuit = Circuit(nqubits, accelerators)
