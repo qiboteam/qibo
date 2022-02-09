@@ -813,7 +813,7 @@ possible to use :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
 circuit needs to be defined inside the compiled ``tf.GradientTape()``.
 For example:
 
-.. testcode::
+.. code-block:: python
 
     import qibo
     qibo.set_backend("tensorflow")
@@ -834,7 +834,7 @@ For example:
             final_state = c().state()
             fidelity = tf.math.abs(tf.reduce_sum(tf.math.conj(target_state) * final_state))
             loss = 1 - fidelity
-            grads = tape.gradient(loss, params)
+        grads = tape.gradient(loss, params)
         optimizer.apply_gradients(zip([grads], [params]))
 
     for _ in range(nepochs):
