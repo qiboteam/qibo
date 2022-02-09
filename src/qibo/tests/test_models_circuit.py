@@ -16,7 +16,7 @@ def test_circuit_constructor():
     if not K.supports_multigpu:  # pragma: no cover
         with pytest.raises(NotImplementedError):
             c = models.Circuit(5, accelerators={"/GPU:0": 2})
-    else: # pragma: no cover
+    else:
         c = models.Circuit(5, accelerators={"/GPU:0": 2})
         assert isinstance(c, DistributedCircuit)
     with pytest.raises(NotImplementedError):
