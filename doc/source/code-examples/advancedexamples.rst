@@ -813,7 +813,7 @@ possible to use :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
 circuit needs to be defined inside the compiled ``tf.GradientTape()``.
 For example:
 
-.. code-block:: python
+.. testcode::
 
     import qibo
     qibo.set_backend("tensorflow")
