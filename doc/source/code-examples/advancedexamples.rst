@@ -108,7 +108,7 @@ Using multiple GPUs
 Qibo supports distributed circuit execution on multiple GPUs. This feature can
 be used as follows:
 
-.. testcode::
+.. code-block:: python
 
     from qibo.models import Circuit
     from qibo import gates
@@ -118,7 +118,7 @@ be used as follows:
     # this will use the first GPU three times and the second one time
     # leading to four total logical devices
     # construct the distributed circuit for 32 qubits
-    # c = Circuit(32, accelerators)
+    c = Circuit(32, accelerators)
 
 Gates can then be added normally using ``c.add`` and the circuit can be executed
 using ``c()``. Note that a ``memory_device`` is passed in the distributed circuit
@@ -757,7 +757,7 @@ When Trotter decomposition is used, it is possible to execute the QAOA circuit
 on multiple devices, by passing an ``accelerators`` dictionary when defining
 the model. For example the previous example would have to be modified as:
 
-.. testcode::
+.. code-block:: python
 
     from qibo import models, hamiltonians
 
@@ -801,7 +801,7 @@ function.
             final_state = c().state()
             fidelity = tf.math.abs(tf.reduce_sum(tf.math.conj(target_state) * final_state))
             loss = 1 - fidelity
-            grads = tape.gradient(loss, params)
+        grads = tape.gradient(loss, params)
         optimizer.apply_gradients(zip([grads], [params]))
 
 
@@ -834,7 +834,7 @@ For example:
             final_state = c().state()
             fidelity = tf.math.abs(tf.reduce_sum(tf.math.conj(target_state) * final_state))
             loss = 1 - fidelity
-            grads = tape.gradient(loss, params)
+        grads = tape.gradient(loss, params)
         optimizer.apply_gradients(zip([grads], [params]))
 
     for _ in range(nepochs):
