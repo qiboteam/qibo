@@ -27,16 +27,6 @@ Qibo key features:
 
 This documentation refers to Qibo |release|.
 
-Publications
-============
-
-*  *"Qibo: a framework for quantum simulation with hardware acceleration"*,
-   Stavros Efthymiou, Sergi Ramos-Calderer, Carlos Bravo-Prieto, Adrián
-   Pérez-Salinas, Diego García-Martín, Artur Garcia-Saez, José Ignacio Latorre,
-   Stefano Carrazza [`arXiv:2009.01845`_].
-
-.. _`arXiv:2009.01845`: https://arxiv.org/abs/2009.01845
-
 Contents
 ========
 
@@ -59,6 +49,7 @@ Contents
     :caption: Appendix
 
     appendix/benchmarks
+    appendix/citing-qibo
 
 
 Indices and tables
