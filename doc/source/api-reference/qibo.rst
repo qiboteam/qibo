@@ -727,6 +727,17 @@ To that end, :class:`qibo.abstractions.states.AbstractState` provides the
 :meth:`qibo.abstractions.states.AbstractState.samples` and
 :meth:`qibo.abstractions.states.AbstractState.frequencies` methods.
 
+The state vector (or density matrix) is saved in memory as a tensor supported
+by the currently active backend (see :ref:`Backends <Backends>` for more information).
+A copy of the state can be created using :meth:`qibo.abstractions.states.AbstractState.copy`.
+The new state will point to the same tensor in memory as the original one unless
+the ``deep=True`` option was used during the ``copy`` call.
+Note that some backends (qibojit, qibotf) perform in-place updates when the
+state is used as input to a circuit or time evolution. This will modify the
+state's tensor and the tensor of all shallow copies and the current state vector
+values will be lost. If you intend to keep the current state values,
+we recommend creating a deep copy before using it as input to a qibo model.
+
 In order to perform measurements the user has to add the measurement gate
 :class:`qibo.core.gates.M` to the circuit and then execute providing a number
 of shots. If this is done, the :class:`qibo.abstractions.states.AbstractState`

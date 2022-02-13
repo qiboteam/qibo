@@ -177,6 +177,10 @@ class AbstractState(ABC):
                 duplicating the tensor in memory, otherwise the copied state
                 references the same tensor object.
                 Default is ``False`` for memory efficiency.
+
+        Returns:
+            A :class:`qibo.abstractions.states.AbstractState` object that
+            represents the same state as the original.
         """
         raise_error(NotImplementedError)
 
