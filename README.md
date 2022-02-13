@@ -56,4 +56,4 @@ In both cases, the simulation will run in a single device CPU or GPU in double p
 
 ## Citation policy
 
-If you use the package please refer to [the documentation](https://qibo.readthedocs.io/en/stable/appendix/citing-qibo.html).
+If you use the package please refer to [the documentation](https://qibo.readthedocs.io/en/stable/appendix/citing-qibo.html) for citation instructions.
