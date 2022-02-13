@@ -51,11 +51,12 @@ def test_user_initialization(backend, accelerators, nqubits):
         K.assert_allclose(state.pieces[i], target_piece.ravel())
 
 
-def test_distributed_state_copy(backend, accelerators):
+@pytest.mark.parametrize("deep", [False, True])
+def test_distributed_state_copy(backend, deep, accelerators):
     c = Circuit(4, accelerators)
     c.queues.qubits = DistributedQubits(range(c.nglobal), c.nqubits) # pylint: disable=E1101
     state = states.DistributedState.zero_state(c)
-    cstate = state.copy()
+    cstate = state.copy(deep)
     K.assert_allclose(state.tensor, cstate.tensor)
 
 
