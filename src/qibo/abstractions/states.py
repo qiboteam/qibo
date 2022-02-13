@@ -169,7 +169,7 @@ class AbstractState(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def copy(self, deep=False):
+    def copy(self, deep=False): # pragma: no cover
         """Creates a copy of the state.
 
         Args:
