@@ -47,45 +47,10 @@ Software References in Zenodo
 * S. Efthymiou and S. Carrazza. (2021). qiboteam/qibojit: qibojit. Zenodo.
   `https://doi.org/10.5281/zenodo.5248470`_.
 
-  In *BibTeX* format:
-
-  .. code-block:: text
-
-    @software{qibojit_zenodo,
-        author    = {Stavros Efthymiou and Stefano Carrazza},
-        title     = {qiboteam/qibojit},
-        month     = aug,
-        year      = 2021,
-        publisher = {Zenodo},
-        doi       = {10.5281/zenodo.5248470},
-        url       = {https://doi.org/10.5281/zenodo.5248470}
-    }
-
 .. _`https://doi.org/10.5281/zenodo.5248470`: https://doi.org/10.5281/zenodo.5248470
 
 * S. Efthymiou, S. Ramos-Calderer, C. Bravo-Prieto, A.
   Pérez-Salinas, D. García-Martín, A. Garcia-Saez, J. I. Latorre, S. Carrazza.
   (2020). qiboteam/qibo: Qibo. Zenodo. `https://doi.org/10.5281/zenodo.3997194`_.
-
-  In *BibTeX* format:
-
-  .. code-block:: text
-
-    @software{qibo_zenodo,
-        author    = {Stavros Efthymiou and
-                     Sergi Ramos-Calderer and
-                     Carlos Bravo-Prieto and
-                     Adri{\'{a}}n P{\'{e}}rez-Salinas and
-                     Diego Garc{\'{\i}}a-Mart{\'{\i}}n and
-                     Artur Garcia-Saez and
-                     Jos{\'{e}} Ignacio Latorre and
-                     Stefano Carrazza},
-        title     = {qiboteam/qibo: Qibo},
-        month     = aug,
-        year      = 2020,
-        publisher = {Zenodo},
-        doi       = {10.5281/zenodo.3997194},
-        url       = {https://doi.org/10.5281/zenodo.3997194}
-    }
 
 .. _`https://doi.org/10.5281/zenodo.3997194`: https://doi.org/10.5281/zenodo.3997194
