@@ -1,3 +1,4 @@
+import copy
 from qibo import K
 from qibo.config import raise_error
 from qibo.core import measurements
@@ -65,6 +66,18 @@ class VectorState(AbstractState):
         state.tensor = K.ones(shape) / K.cast(K.qnp.sqrt(state.nstates))
         return state
 
+    def copy(self, deep=False):
+        new = self.__class__(self._nqubits)
+        if deep:
+            if self._tensor is not None:
+                new.tensor = K.copy(self.tensor)
+            new.measurements = copy.deepcopy(self.measurements)
+        else:
+            if self._tensor is not None:
+                new.tensor = self.tensor
+            new.measurements = self.measurements
+        return new
+
     def to_density_matrix(self):
         matrix = K.outer(self.tensor, K.conj(self.tensor))
         return MatrixState.from_tensor(matrix, nqubits=self.nqubits)
@@ -100,6 +113,7 @@ class VectorState(AbstractState):
         if registers is not None:
             self.measurements = measurements.MeasurementRegistersResult(
                 registers, self.measurements)
+        return self.measurements
 
     def set_measurements(self, qubits, samples, registers=None):
         self.measurements = measurements.MeasurementResult(qubits)
@@ -357,10 +371,15 @@ class DistributedState(VectorState):
                             for _ in range(state.ndevices)]
         return state
 
-    def copy(self):
+    def copy(self, deep=False):
         new = self.__class__(self.circuit)
-        new.pieces = self.pieces
-        new.measurements = self.measurements
+        if deep:
+            if self.pieces is not None:
+                new.pieces = [K.copy(piece) for piece in self.pieces]
+            new.measurements = copy.deepcopy(self.measurements)
+        else:
+            new.pieces = self.pieces
+            new.measurements = self.measurements
         return new
 
     @VectorState.check_measured_qubits

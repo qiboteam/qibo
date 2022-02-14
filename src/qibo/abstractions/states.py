@@ -168,17 +168,21 @@ class AbstractState(ABC):
         """
         raise_error(NotImplementedError)
 
-    def copy(self):
+    @abstractmethod
+    def copy(self, deep=False): # pragma: no cover
         """Creates a copy of the state.
 
-        Note that this does not create a deep copy. The new state references
-        to the same tensor representation for memory efficiency.
+        Args:
+            deep (bool): If ``True`` it creates a deep copy of the state by
+                duplicating the tensor in memory, otherwise the copied state
+                references the same tensor object.
+                Default is ``False`` for memory efficiency.
+
+        Returns:
+            A :class:`qibo.abstractions.states.AbstractState` object that
+            represents the same state as the original.
         """
-        new = self.__class__(self._nqubits)
-        if self._tensor is not None:
-            new.tensor = self.tensor
-        new.measurements = self.measurements
-        return new
+        raise_error(NotImplementedError)
 
     @abstractmethod
     def to_density_matrix(self): # pragma: no cover
