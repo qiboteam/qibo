@@ -21,7 +21,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install pytest-cov
         pip install .[tests,docs]
-        pip install git+https://github.com/qiboteam/qibojit
+        pip install git+https://github.com/qiboteam/qibojit/tree/sparse
         pip install tensorflow
     - name: Install qibotf
       if: startsWith(matrix.os, 'windows') == 0
