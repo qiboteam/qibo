@@ -99,9 +99,9 @@ class TensorflowBackend(NumpyBackend):
         AbstractBackend.set_threads(self, nthreads)
 
     def to_numpy(self, x):
-        if isinstance(x, self.np.ndarray):
+        if isinstance(x, self.numeric_types):
             return x
-        return x.numpy()
+        return self.np.array(x, copy=False)
 
     def to_complex(self, re, img):
         return self.backend.complex(re, img)
