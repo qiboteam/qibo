@@ -42,13 +42,3 @@ def test_abstract_state_getitem():
     assert state[2] == 0
     with pytest.raises(IndexError):
         state[5]
-
-
-def test_abstract_state_copy():
-    AbstractState.__abstractmethods__ = set()
-    state = AbstractState.from_tensor([0, 1])
-    cstate = state.copy()
-    assert cstate.nqubits == state.nqubits
-    assert len(cstate) == len(state)
-    assert cstate.tensor == state.tensor
-    assert cstate.measurements == state.measurements

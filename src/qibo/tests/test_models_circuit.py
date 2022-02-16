@@ -6,14 +6,14 @@ from qibo import gates, models, K
 from qibo.tests.utils import random_state
 
 
-def test_circuit_constructor():
+def test_circuit_constructor(backend):
     from qibo.core.circuit import Circuit, DensityMatrixCircuit
     from qibo.core.distcircuit import DistributedCircuit
     c = models.Circuit(5)
     assert isinstance(c, Circuit)
     c = models.Circuit(5, density_matrix=True)
     assert isinstance(c, DensityMatrixCircuit)
-    if not K.supports_multigpu:  # pragma: no cover
+    if not K.supports_multigpu:
         with pytest.raises(NotImplementedError):
             c = models.Circuit(5, accelerators={"/GPU:0": 2})
     else:
@@ -66,10 +66,11 @@ def test_qft_execution(backend, accelerators, nqubits, random):
     K.assert_allclose(final_state, target_state)
 
 
-def test_qft_errors():
+def test_qft_errors(backend):
     """Check that ``_DistributedQFT`` raises error if not sufficient qubits."""
     from qibo.models.circuit import _DistributedQFT
     with pytest.raises(NotImplementedError):
-        c = _DistributedQFT(2, accelerators={"/GPU:0": 4})
-    with pytest.raises(NotImplementedError):
         c = models.QFT(10, with_swaps=False, accelerators={"/GPU:0": 2})
+    if K.supports_multigpu:
+        with pytest.raises(NotImplementedError):
+            c = _DistributedQFT(2, accelerators={"/GPU:0": 4})

@@ -56,6 +56,54 @@ def test_plus_state_initialization(backend):
     K.assert_allclose(state.tensor, target_state)
 
 
+@pytest.mark.parametrize("deep", [False, True])
+def test_vector_state_state_copy(backend, deep):
+    vector = np.random.random(32) + 1j * np.random.random(32)
+    vector = vector / np.sqrt((np.abs(vector) ** 2).sum())
+    state = states.VectorState.from_tensor(vector)
+    cstate = state.copy(deep)
+    assert cstate.nqubits == state.nqubits
+    K.assert_allclose(cstate.tensor, state.tensor)
+
+
+@pytest.mark.parametrize("deep", [False, True])
+def test_vector_state_state_deepcopy(deep):
+    """Check if deep copy is really deep."""
+    # use numpy backend as tensorflow tensors are immutable and cannot
+    # change their value for testing
+    import qibo
+    original_backend = qibo.get_backend()
+    qibo.set_backend("numpy")
+    vector = np.random.random(32) + 1j * np.random.random(32)
+    vector = vector / np.sqrt((np.abs(vector) ** 2).sum())
+    state = states.VectorState.from_tensor(vector)
+    cstate = state.copy(deep)
+    current_value = state.tensor[0]
+    state.tensor[0] = 0
+    if deep:
+        K.assert_allclose(state.tensor[0], 0)
+        K.assert_allclose(cstate.tensor[0], current_value)
+        K.assert_allclose(cstate.tensor[1:], state.tensor[1:])
+    else:
+        K.assert_allclose(cstate.tensor, state.tensor)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("deep", [False, True])
+def test_vector_state_state_copy_with_measurements(backend, deep):
+    from qibo import gates
+    vector = np.random.random(32) + 1j * np.random.random(32)
+    vector = vector / np.sqrt((np.abs(vector) ** 2).sum())
+    state = states.VectorState.from_tensor(vector)
+    mgate = gates.M(0, 1, 3)
+    measurements = state.measure(mgate, nshots=50)
+    target_freqs = measurements.frequencies()
+    cstate = state.copy(deep)
+    assert cstate.nqubits == state.nqubits
+    assert state.measurements.__class__ == cstate.measurements.__class__
+    assert cstate.measurements.frequencies() == target_freqs
+
+
 def test_vector_state_to_density_matrix(backend):
     vector = np.random.random(32) + 1j * np.random.random(32)
     vector = vector / np.sqrt((np.abs(vector) ** 2).sum())
