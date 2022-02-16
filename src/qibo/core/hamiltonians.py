@@ -46,14 +46,14 @@ class Hamiltonian(hamiltonians.MatrixHamiltonian):
                     "to construct Hamiltonians using symbols.")
         return SymbolicHamiltonian(symbolic_hamiltonian, symbol_map)
 
-    def eigenvalues(self):
+    def eigenvalues(self, k=6):
         if self._eigenvalues is None:
-            self._eigenvalues = self.K.eigvalsh(self.matrix)
+            self._eigenvalues = self.K.eigvalsh(self.matrix, k)
         return self._eigenvalues
 
-    def eigenvectors(self):
+    def eigenvectors(self, k=6):
         if self._eigenvectors is None:
-            self._eigenvalues, self._eigenvectors = self.K.eigh(self.matrix)
+            self._eigenvalues, self._eigenvectors = self.K.eigh(self.matrix, k)
         return self._eigenvectors
 
     def exp(self, a):
@@ -146,7 +146,7 @@ class Hamiltonian(hamiltonians.MatrixHamiltonian):
         if self._eigenvalues is not None:
             if K.qnp.cast(o).real >= 0:
                 r._eigenvalues = o * self._eigenvalues
-            else:
+            elif not K.issparse(self.matrix):
                 r._eigenvalues = o * self._eigenvalues[::-1]
         if self._eigenvectors is not None:
             if K.qnp.cast(o).real > 0:

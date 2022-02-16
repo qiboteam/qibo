@@ -23,12 +23,12 @@ class AbstractHamiltonian(ABC):
         self._nqubits = n
 
     @abstractmethod
-    def eigenvalues(self): # pragma: no cover
+    def eigenvalues(self, k=6): # pragma: no cover
         """Computes the eigenvalues for the Hamiltonian."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def eigenvectors(self): # pragma: no cover
+    def eigenvectors(self, k=6): # pragma: no cover
         """Computes a tensor with the eigenvectors for the Hamiltonian."""
         raise_error(NotImplementedError)
 
@@ -174,11 +174,11 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         """Returns the full ``(2 ** nqubits, 2 ** nqubits)`` matrix representation."""
         return self.dense.matrix
 
-    def eigenvalues(self):
-        return self.dense.eigenvalues()
+    def eigenvalues(self, k=6):
+        return self.dense.eigenvalues(k)
 
-    def eigenvectors(self):
-        return self.dense.eigenvectors()
+    def eigenvectors(self, k=6):
+        return self.dense.eigenvectors(k)
 
     def ground_state(self):
         if self._ground_state is None:

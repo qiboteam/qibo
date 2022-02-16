@@ -193,24 +193,38 @@ def test_hamiltonian_expectation_errors():
 
 
 @pytest.mark.parametrize("dtype", K.numeric_types)
-@pytest.mark.parametrize("dense", [True, False])
-def test_hamiltonian_eigenvalues(dtype, dense):
+@pytest.mark.parametrize("sparse_type,dense",
+                         [(None, True), (None, False),
+                          ("coo", True), ("csr", True),
+                          ("csc", True), ("dia", True)])
+def test_hamiltonian_eigenvalues(dtype, sparse_type, dense):
     """Testing hamiltonian eigenvalues scaling."""
-    H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense)
+    if sparse_type is None:
+        H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense)
+    else:
+        from scipy import sparse
+        H1 = hamiltonians.XXZ(nqubits=5, delta=0.5)
+        m = getattr(sparse, f"{sparse_type}_matrix")(K.to_numpy(H1.matrix))
+        H1 = hamiltonians.Hamiltonian(5, m)
 
-    H1_eigen = H1.eigenvalues()
-    hH1_eigen = K.eigvalsh(H1.matrix)
-    K.assert_allclose(H1_eigen, hH1_eigen)
+    H1_eigen = sorted(K.to_numpy(H1.eigenvalues()))
+    hH1_eigen = sorted(K.to_numpy(K.eigvalsh(H1.matrix)))
+    K.assert_allclose(sorted(H1_eigen), hH1_eigen)
 
     c1 = dtype(2.5)
     H2 = c1 * H1
-    hH2_eigen = K.eigvalsh(c1 * H1.matrix)
-    K.assert_allclose(H2._eigenvalues, hH2_eigen)
+    H2_eigen = sorted(K.to_numpy(H2._eigenvalues))
+    hH2_eigen = sorted(K.to_numpy(K.eigvalsh(c1 * H1.matrix)))
+    K.assert_allclose(H2_eigen, hH2_eigen)
 
     c2 = dtype(-11.1)
     H3 = H1 * c2
-    hH3_eigen = K.eigvalsh(H1.matrix * c2)
-    K.assert_allclose(H3._eigenvalues, hH3_eigen)
+    if sparse_type is None:
+        H3_eigen = sorted(K.to_numpy(H3._eigenvalues))
+        hH3_eigen = sorted(K.to_numpy(K.eigvalsh(H1.matrix * c2)))
+        K.assert_allclose(H3_eigen, hH3_eigen)
+    else:
+        assert H3._eigenvalues is None
 
 
 @pytest.mark.parametrize("dtype", K.numeric_types)

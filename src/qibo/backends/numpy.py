@@ -204,7 +204,7 @@ class NumpyBackend(abstract.AbstractBackend):
         if self.issparse(x):
             if k < x.shape[0]:
                 from scipy.sparse.linalg import eigsh
-                return eigsh(x, k=k)
+                return eigsh(x, k=k, which='SA')
             x = self.to_numpy(x)
         return self.backend.linalg.eigh(x)
 
