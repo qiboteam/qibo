@@ -170,8 +170,11 @@ class NumpyBackend(abstract.AbstractBackend):
         return self.backend.trace(x)
 
     def expm(self, x):
-        from scipy import linalg
-        return linalg.expm(x)
+        if self.issparse(x):
+            from scipy.sparse.linalg import expm
+        else:
+            from scipy.linalg import expm
+        return expm(x)
 
     def sum(self, x, axis=None):
         return self.backend.sum(x, axis=axis)

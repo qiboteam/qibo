@@ -59,7 +59,7 @@ class Hamiltonian(hamiltonians.MatrixHamiltonian):
     def exp(self, a):
         if self._exp.get("a") != a:
             self._exp["a"] = a
-            if self._eigenvectors is None:
+            if self._eigenvectors is None or self.K.issparse(self.matrix):
                 self._exp["result"] = self.K.expm(-1j * a * self.matrix)
             else:
                 expd = self.K.diag(self.K.exp(-1j * a * self._eigenvalues))

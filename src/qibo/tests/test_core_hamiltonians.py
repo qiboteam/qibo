@@ -147,14 +147,25 @@ def test_hamiltonian_matmul(sparse_type):
         H1 @ 2
 
 
-@pytest.mark.parametrize("dense", [True, False])
-def test_hamiltonian_exponentiation(dense):
+@pytest.mark.parametrize("sparse_type,dense",
+                         [(None, True), (None, False),
+                          ("coo", True), ("csr", True),
+                          ("csc", True), ("dia", True)])
+def test_hamiltonian_exponentiation(sparse_type, dense):
     from scipy.linalg import expm
-    H = hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense)
+    def construct_hamiltonian():
+        if sparse_type is None:
+            return hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense)
+        else:
+            ham = hamiltonians.XXZ(nqubits=5, delta=0.5)
+            m = getattr(sparse, f"{sparse_type}_matrix")(K.to_numpy(ham.matrix))
+            return hamiltonians.Hamiltonian(5, m)
+
+    H = construct_hamiltonian()
     target_matrix = expm(-0.5j * K.to_numpy(H.matrix))
     K.assert_allclose(H.exp(0.5), target_matrix)
 
-    H = hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense)
+    H = construct_hamiltonian()
     _ = H.eigenvectors()
     K.assert_allclose(H.exp(0.5), target_matrix)
 
