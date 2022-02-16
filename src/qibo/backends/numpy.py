@@ -74,7 +74,7 @@ class NumpyBackend(abstract.AbstractBackend):
             dtype = self.dtypes(dtype)
         if isinstance(x, self.backend.ndarray):
             return x.astype(dtype, copy=False)
-        elif self.sparse.issparse(x):
+        elif self.issparse(x):
             return x.astype(dtype=dtype, copy=False)
         return self.backend.array(x, dtype=dtype)
 
@@ -200,10 +200,19 @@ class NumpyBackend(abstract.AbstractBackend):
     def inv(self, x):
         return self.backend.linalg.inv(x)
 
-    def eigh(self, x):
+    def eigh(self, x, k=6):
+        if self.issparse(x):
+            if k < x.shape[0]:
+                from scipy.sparse.linalg import eigsh
+                return eigsh(x, k=k)
+            x = self.to_numpy(x)
         return self.backend.linalg.eigh(x)
 
-    def eigvalsh(self, x):
+    def eigvalsh(self, x, k=6):
+        if self.issparse(x):
+            log.warning("Calculating sparse matrix eigenvectors because "
+                        "sparse modules do not provide ``eigvals`` method.")
+            return self.eigh(x, k=k)[0]
         return self.backend.linalg.eigvalsh(x)
 
     def less(self, x, y):

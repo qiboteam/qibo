@@ -384,12 +384,12 @@ class AbstractBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def eigh(self, x): # pragma: no cover
+    def eigh(self, x, k=6): # pragma: no cover
         """Hermitian matrix eigenvalues and eigenvectors."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def eigvalsh(self, x): # pragma: no cover
+    def eigvalsh(self, x, k=6): # pragma: no cover
         """Hermitian matrix eigenvalues."""
         raise_error(NotImplementedError)
 
