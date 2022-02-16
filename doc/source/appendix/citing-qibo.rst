@@ -54,3 +54,13 @@ Software References in Zenodo
   (2020). qiboteam/qibo: Qibo. Zenodo. `https://doi.org/10.5281/zenodo.3997194`_.
 
 .. _`https://doi.org/10.5281/zenodo.3997194`: https://doi.org/10.5281/zenodo.3997194
+
+Conference Proceedings
+----------------------
+
+* S. Carrazza, S. Efthymiou, M. Lazzarin, A. Pasquale. An open-source modular
+     framework for quantum computing. (2022) `ACAT2021`_,
+     `https://arxiv.org/abs/2202.07017`_.
+
+.. _`ACAT2021`: https://indico.cern.ch/event/855454/
+.. _`https://arxiv.org/abs/2202.07017`: https://arxiv.org/abs/2202.07017
