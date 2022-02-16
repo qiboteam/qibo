@@ -60,7 +60,7 @@ Conference Proceedings
 
 * S. Carrazza, S. Efthymiou, M. Lazzarin, A. Pasquale. An open-source modular
      framework for quantum computing. (2022) `ACAT2021`_,
-     `https://arxiv.org/abs/2202.07017`_.
+     (`arXiv:2202.07017`_).
 
 .. _`ACAT2021`: https://indico.cern.ch/event/855454/
-.. _`https://arxiv.org/abs/2202.07017`: https://arxiv.org/abs/2202.07017
+.. _`arXiv:2202.07017`: https://arxiv.org/abs/2202.07017
