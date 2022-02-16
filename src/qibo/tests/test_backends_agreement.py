@@ -107,8 +107,6 @@ def test_backend_eigh(tested_backend, target_backend, sparse_type):
         pytest.skip("Temporary skip.")
     tested_backend = K.construct_backend(tested_backend)
     target_backend = K.construct_backend(target_backend)
-    if "GPU" in tested_backend.default_device and sparse_type is not None:  # pragma: no cover
-        pytest.skip("Skipping sparse eigenvalue test on GPU.")
     if sparse_type is None:
         m = rand((5, 5))
     else:
@@ -126,20 +124,21 @@ def test_backend_sparse_eigh(tested_backend, target_backend, sparse_type):
         pytest.skip("Temporary skip.")
     tested_backend = K.construct_backend(tested_backend)
     target_backend = K.construct_backend(target_backend)
-    if "GPU" in tested_backend.default_device:  # pragma: no cover
-        pytest.skip("Skipping sparse eigenvalue test on GPU.")
-
     from scipy import sparse
     from qibo import hamiltonians
     ham = hamiltonians.TFIM(6, h=1.0)
     m = getattr(sparse, f"{sparse_type}_matrix")(K.to_numpy(ham.matrix))
     eigvals1, eigvecs1 = tested_backend.eigh(tested_backend.cast(m))
     eigvals2, eigvecs2 = target_backend.eigh(m)
-    tested_backend.assert_allclose(sorted(eigvals1), sorted(eigvals2))
+    eigvals1 = sorted(K.to_numpy(eigvals1))
+    eigvals2 = sorted(K.to_numpy(eigvals2))
+    tested_backend.assert_allclose(eigvals1, eigvals2)
 
     eigvals1 = tested_backend.eigvalsh(tested_backend.cast(m))
     eigvals2 = target_backend.eigvalsh(m)
-    tested_backend.assert_allclose(sorted(eigvals1), sorted(eigvals2))
+    eigvals1 = sorted(K.to_numpy(eigvals1))
+    eigvals2 = sorted(K.to_numpy(eigvals2))
+    tested_backend.assert_allclose(eigvals1, eigvals2)
 
 
 def test_backend_compile(tested_backend, target_backend):
