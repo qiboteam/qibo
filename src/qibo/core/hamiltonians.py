@@ -6,12 +6,15 @@ from qibo.abstractions import hamiltonians, states
 
 
 class Hamiltonian(hamiltonians.MatrixHamiltonian):
-    """Backend implementation of :class:`qibo.abstractions.hamiltonians.MatrixHamiltonian`.
+    """Hamiltonian based on a dense or sparse matrix representation.
 
     Args:
         nqubits (int): number of quantum bits.
         matrix (np.ndarray): Matrix representation of the Hamiltonian in the
             computational basis as an array of shape ``(2 ** nqubits, 2 ** nqubits)``.
+            Sparse matrices based on ``scipy.sparse`` for numpy/qibojit backends
+            or on ``tf.sparse`` for tensorflow/qibotf backends are also
+            supported.
     """
 
     def __init__(self, nqubits, matrix):

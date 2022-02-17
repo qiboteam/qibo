@@ -99,16 +99,7 @@ class AbstractHamiltonian(ABC):
 
 
 class MatrixHamiltonian(AbstractHamiltonian):
-    """Abstract Hamiltonian based on full matrix representation.
-
-    Args:
-        nqubits (int): number of quantum bits.
-        matrix (np.ndarray): Matrix representation of the Hamiltonian in the
-            computational basis as an array of shape ``(2 ** nqubits, 2 ** nqubits)``.
-        numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
-            calculation backend, otherwise the selected backend is used.
-            Default option is ``numpy = False``.
-    """
+    """Abstract Hamiltonian based on full matrix representation."""
 
     def __init__(self, nqubits, matrix=None):
         super().__init__()
@@ -120,7 +111,11 @@ class MatrixHamiltonian(AbstractHamiltonian):
 
     @property
     def matrix(self):
-        """Returns the full ``(2 ** nqubits, 2 ** nqubits)`` matrix representation."""
+        """Returns the full matrix representation.
+
+        Can be a dense ``(2 ** nqubits, 2 ** nqubits)`` array or a sparse
+        matrix, depending on how the Hamiltonian was created.
+        """
         return self._matrix
 
     @matrix.setter
