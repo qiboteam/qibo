@@ -958,7 +958,9 @@ class AbstractCircuit(ABC):
                   "generalizedfsim": "gf", "Unitary": "U", "fswap":"fx",
                   "PauliNoiseChannel": "Pc", "KrausChannel": "Kc",
                   "UnitaryChannel": "Uc", "ThermalRelaxationChannel": "Tc",
-                  "ResetChannel": "Rc", "PartialTrace": "Pt"}
+                  "ResetChannel": "Rc", "PartialTrace": "Pt",
+                  "EntanglementEntropy": "EE", "Norm": "N",
+                  "Overlap": "O", "Energy": "E", "Gap": "G"}
 
         # build string representation of gates
         matrix = [[] for _ in range(self.nqubits)]
@@ -968,7 +970,10 @@ class AbstractCircuit(ABC):
             if gate.name not in labels:
                 raise_error(NotImplementedError, f"{gate.name} gate is not supported by `circuit.draw`")
             gate_name = labels.get(gate.name)
-            targets = list(gate.target_qubits)
+            if isinstance(gate, gates.CallbackGate):
+                targets = list(range(self.nqubits))
+            else:
+                targets = list(gate.target_qubits)
             controls = list(gate.control_qubits)
 
             # identify boundaries
