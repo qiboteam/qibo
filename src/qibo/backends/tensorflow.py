@@ -102,11 +102,11 @@ class TensorflowBackend(NumpyBackend):
         if isinstance(x, self.numeric_types):
             return x
         elif self.issparse(x):
-            from scipy.sparse import coo_array  # pylint: disable=E0611
+            from scipy.sparse import coo_matrix  # pylint: disable=E0611
             idx = self.np.array(x.indices)
             values = self.np.array(x.values)
             shape = tuple(x.shape)
-            return coo_array((values, (idx[:, 0], idx[:, 1])), shape=shape)
+            return coo_matrix((values, (idx[:, 0], idx[:, 1])), shape=shape)
         return self.np.array(x, copy=False)
 
     def to_complex(self, re, img):
