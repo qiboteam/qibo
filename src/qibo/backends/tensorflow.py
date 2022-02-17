@@ -102,7 +102,7 @@ class TensorflowBackend(NumpyBackend):
         if isinstance(x, self.numeric_types):
             return x
         elif self.issparse(x):
-            from scipy.sparse import coo_array
+            from scipy.sparse import coo_array  # pylint: disable=E0611
             idx = self.np.array(x.indices)
             values = self.np.array(x.values)
             shape = tuple(x.shape)

@@ -257,8 +257,6 @@ def test_hamiltonian_eigenvectors(dtype, dense):
     V1 = K.to_numpy(H1.eigenvectors())
     U1 = K.to_numpy(H1.eigenvalues())
     K.assert_allclose(H1.matrix, V1 @ np.diag(U1) @ V1.T)
-    # Check ground state
-    K.assert_allclose(H1.ground_state(), V1[:, 0])
 
     c1 = dtype(2.5)
     H2 = c1 * H1
@@ -277,6 +275,23 @@ def test_hamiltonian_eigenvectors(dtype, dense):
     V4 = K.to_numpy(H4._eigenvectors)
     U4 = K.to_numpy(H4._eigenvalues)
     K.assert_allclose(H4.matrix, V4 @ np.diag(U4) @ V4.T)
+
+
+@pytest.mark.parametrize("sparse_type,dense",
+                         [(None, True), (None, False),
+                          ("coo", True), ("csr", True),
+                          ("csc", True), ("dia", True)])
+def test_hamiltonian_ground_state(sparse_type, dense):
+    """Test Hamiltonian ground state."""
+    if sparse_type is None:
+        H = hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense)
+    else:
+        from scipy import sparse
+        H = hamiltonians.XXZ(nqubits=5, delta=0.5)
+        m = getattr(sparse, f"{sparse_type}_matrix")(K.to_numpy(H.matrix))
+        H = hamiltonians.Hamiltonian(5, m)
+    V = K.to_numpy(H.eigenvectors())
+    K.assert_allclose(H.ground_state(), V[:, 0])
 
 
 @pytest.mark.parametrize("sparse_type,dense",
