@@ -70,6 +70,7 @@ class TensorflowBackend(NumpyBackend):
         self.Tensor = tf.Tensor
         self.random = tf.random
         self.newaxis = tf.newaxis
+        self.sparse = tf.sparse
         from tensorflow.python.framework import errors_impl  # pylint: disable=E0611,E0401
         self.oom_error = errors_impl.ResourceExhaustedError
         self.optimization = Optimization()
@@ -77,7 +78,6 @@ class TensorflowBackend(NumpyBackend):
         # seed to use in the measurement frequency custom op
         self._seed = None
         # seed can be modified using ``K.set_seed``
-
         self.supports_gradients = True
 
     def test_regressions(self, name):
@@ -101,6 +101,12 @@ class TensorflowBackend(NumpyBackend):
     def to_numpy(self, x):
         if isinstance(x, self.numeric_types):
             return x
+        elif self.issparse(x):
+            from scipy import sparse
+            idx = self.np.array(x.indices)
+            values = self.np.array(x.values)
+            shape = tuple(x.shape)
+            return sparse.coo_array((values, (idx[:, 0], idx[:, 1])), shape=shape)
         return self.np.array(x, copy=False)
 
     def to_complex(self, re, img):
@@ -112,7 +118,12 @@ class TensorflowBackend(NumpyBackend):
         if isinstance(x, self.np.ndarray):
             dtypestr = dtype.__repr__().split(".")[1]
             x = x.astype(getattr(self.np, dtypestr))
+        elif self.issparse(x):
+            return x
         return self.backend.cast(x, dtype=dtype)
+
+    def issparse(self, x):
+        return isinstance(x, self.sparse.SparseTensor)
 
     def diag(self, x, dtype='DTYPECPX'):
         if isinstance(dtype, str):
@@ -167,6 +178,12 @@ class TensorflowBackend(NumpyBackend):
         return self.backend.reduce_sum(x, axis=axis)
 
     def dot(self, x, y):
+        if self.issparse(x) or self.issparse(y):
+            if self.issparse(x) and self.issparse(y):
+                raise_error(NotImplementedError, "Tensorflow does not support "
+                                                 "multiplication of two sparse "
+                                                 "matrices.")
+            return self.sparse.sparse_dense_matmul(x, y)
         return self.tensordot(x, y, axes=1)
 
     def outer(self, x, y):

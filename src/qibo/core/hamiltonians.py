@@ -164,10 +164,13 @@ class Hamiltonian(hamiltonians.MatrixHamiltonian):
             o = o.tensor
         if isinstance(o, K.tensor_types):
             rank = len(tuple(o.shape))
-            if rank > 2:
+            if rank == 1: # vector
+                return self.K.dot(self.matrix, o[:, self.K.newaxis])[:, 0]
+            elif rank == 2: # matrix
+                return self.K.dot(self.matrix, o)
+            else:
                 raise_error(ValueError, "Cannot multiply Hamiltonian with "
                                         "rank-{} tensor.".format(rank))
-            return self.K.dot(self.matrix, o)
 
         raise_error(NotImplementedError, "Hamiltonian matmul to {} not "
                                          "implemented.".format(type(o)))

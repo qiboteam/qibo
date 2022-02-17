@@ -112,39 +112,67 @@ def test_hamiltonian_operation_errors():
         R = [3] - H1
 
 
+def random_sparse_matrix(n, sparse_type=None):
+    if K.name in ("qibotf", "tensorflow"):
+        nonzero = int(0.1 * n * n)
+        indices = np.random.randint(0, n, size=(nonzero, 2))
+        data = np.random.random(nonzero) + 1j * np.random.random(nonzero)
+        data = K.cast(data)
+        return K.sparse.SparseTensor(indices, data, (n, n))
+    else:
+        re = sparse.rand(n, n, format=sparse_type)
+        im = sparse.rand(n, n, format=sparse_type)
+        return re + 1j * im
+
+
 @pytest.mark.parametrize("sparse_type", [None, "coo", "csr", "csc", "dia"])
-def test_hamiltonian_matmul(sparse_type):
-    """Test matrix multiplication between Hamiltonians and state vectors."""
+def test_hamiltonian_matmul(backend, sparse_type):
+    """Test matrix multiplication between Hamiltonians."""
     if sparse_type is None:
         nqubits = 3
         H1 = hamiltonians.TFIM(nqubits, h=1.0)
         H2 = hamiltonians.Y(nqubits)
     else:
         nqubits = 5
-        H1 = hamiltonians.Hamiltonian(5, sparse.rand(32, 32, format=sparse_type))
-        H2 = hamiltonians.Hamiltonian(5, sparse.rand(32, 32, format=sparse_type))
+        H1 = hamiltonians.Hamiltonian(nqubits, random_sparse_matrix(2 ** nqubits))
+        H2 = hamiltonians.Hamiltonian(nqubits, random_sparse_matrix(2 ** nqubits))
 
     m1 = K.to_numpy(H1.matrix)
     m2 = K.to_numpy(H2.matrix)
-
-    K.assert_allclose((H1 @ H2).matrix, m1 @ m2)
-    K.assert_allclose((H2 @ H1).matrix, m2 @ m1)
-
-    v = random_complex(2 ** nqubits, dtype=m1.dtype)
-    m = random_complex((2 ** nqubits, 2 ** nqubits), dtype=m1.dtype)
-    H1v = H1 @ K.cast(v)
-    H1m = H1 @ K.cast(m)
-    K.assert_allclose(H1v, m1.dot(v))
-    K.assert_allclose(H1m, m1 @ m)
-
-    from qibo.core.states import VectorState
-    H1state = H1 @ VectorState.from_tensor(K.cast(v))
-    K.assert_allclose(H1state, m1.dot(v))
+    if K.name in ("qibotf", "tensorflow") and sparse_type is not None:
+        with pytest.raises(NotImplementedError):
+            _ = H1 @ H2
+    else:
+        K.assert_allclose((H1 @ H2).matrix, m1 @ m2)
+        K.assert_allclose((H2 @ H1).matrix, m2 @ m1)
 
     with pytest.raises(ValueError):
         H1 @ np.zeros(3 * (2 ** nqubits,), dtype=m1.dtype)
     with pytest.raises(NotImplementedError):
         H1 @ 2
+
+
+@pytest.mark.parametrize("sparse_type", [None, "coo", "csr", "csc", "dia"])
+def test_hamiltonian_matmul_states(backend, sparse_type):
+    """Test matrix multiplication between Hamiltonian and states."""
+    if sparse_type is None:
+        nqubits = 3
+        H = hamiltonians.TFIM(nqubits, h=1.0)
+    else:
+        nqubits = 5
+        H = hamiltonians.Hamiltonian(nqubits, random_sparse_matrix(2 ** nqubits))
+
+    hm = K.to_numpy(H.matrix)
+    v = random_complex(2 ** nqubits, dtype=hm.dtype)
+    m = random_complex((2 ** nqubits, 2 ** nqubits), dtype=hm.dtype)
+    Hv = H @ K.cast(v)
+    Hm = H @ K.cast(m)
+    K.assert_allclose(Hv, hm.dot(v))
+    K.assert_allclose(Hm, hm @ m)
+
+    from qibo.core.states import VectorState
+    Hstate = H @ VectorState.from_tensor(K.cast(v))
+    K.assert_allclose(Hstate, hm.dot(v))
 
 
 @pytest.mark.parametrize("sparse_type,dense",
