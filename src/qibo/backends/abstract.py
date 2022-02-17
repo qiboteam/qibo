@@ -385,12 +385,29 @@ class AbstractBackend(ABC):
 
     @abstractmethod
     def eigh(self, x, k=6): # pragma: no cover
-        """Hermitian matrix eigenvalues and eigenvectors."""
+        """Hermitian matrix eigenvalues and eigenvectors.
+
+        Args:
+            x: Tensor to calculate the eigenvectors of.
+            k (int): Number of eigenvectors to calculate if a sparse matrix is
+                given. The eigenvectors corresponding to the k-th algebraically
+                smallest eigenvalues are calculated.
+                This argument is ignored if the given tensor is not sparse and
+                all eigenvectors are calculated.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
     def eigvalsh(self, x, k=6): # pragma: no cover
-        """Hermitian matrix eigenvalues."""
+        """Hermitian matrix eigenvalues.
+
+        Args:
+            x: Tensor to calculate the eigenvalues.
+            k (int): Number of eigenvalues to calculate if a sparse matrix is
+                given. The k-th algebraically smallest eigenvalues are calculated.
+                This argument is ignored if the given tensor is not sparse and
+                all eigenvalues are calculated.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod

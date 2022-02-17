@@ -24,19 +24,35 @@ class AbstractHamiltonian(ABC):
 
     @abstractmethod
     def eigenvalues(self, k=6): # pragma: no cover
-        """Computes the eigenvalues for the Hamiltonian."""
+        """Computes the eigenvalues for the Hamiltonian.
+
+        Args:
+            k (int): Number of eigenvalues to calculate if the Hamiltonian
+                was created using a sparse matrix. This argument is ignored
+                if the Hamiltonian was created using a dense matrix.
+                See :meth:`qibo.backends.abstract.AbstractBackend.eigvalsh` for 
+                more details.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
     def eigenvectors(self, k=6): # pragma: no cover
-        """Computes a tensor with the eigenvectors for the Hamiltonian."""
+        """Computes a tensor with the eigenvectors for the Hamiltonian.
+
+        Args:
+            k (int): Number of eigenvalues to calculate if the Hamiltonian
+                was created using a sparse matrix. This argument is ignored
+                if the Hamiltonian was created using a dense matrix.
+                See :meth:`qibo.backends.abstract.AbstractBackend.eigh` for
+                more details.
+        """
         raise_error(NotImplementedError)
 
     def ground_state(self):
         """Computes the ground state of the Hamiltonian.
 
-        Uses the ``eigenvectors`` method and returns the lowest energy
-        eigenvector.
+        Uses :meth:`qibo.abstractions.hamiltonians.AbstractHamiltonian.eigenvectors`
+        and returns eigenvector corresponding to the lowest energy.
         """
         return self.eigenvectors()[:, 0]
 
