@@ -549,8 +549,8 @@ def test_circuit_draw_not_supported_gates():
     c.add(gates.Flatten(1))
     with pytest.raises(NotImplementedError):
         c.draw()
-
-def test_circuit_draw_channels():
+@pytest.mark.parametrize("legend", [True, False])
+def test_circuit_draw_channels(legend):
     """Check that channels are drawn correctly"""
     from qibo.models import Circuit as circuit
     c = circuit(2, density_matrix=True)
@@ -561,11 +561,20 @@ def test_circuit_draw_channels():
     c.add(gates.CNOT(0, 1))
     c.add(gates.PauliNoiseChannel(0, 0.1, 0.0, 0.2))
     c.add(gates.PauliNoiseChannel(1, 0.0, 0.2, 0.1))
-    ref = 'q0: ─H─PNCh─o─PNCh─\n' \
-          'q1: ─H─PNCh─X─PNCh─'
-    assert c.draw() == ref
 
-def test_circuit_draw_callbacks():
+    ref = 'q0: ─H─PN─o─PN─\n' \
+          'q1: ─H─PN─X─PN─'
+
+    if legend:
+        ref += '\n\n Legend: \n' \
+               '| Gate              | Symbol   |\n' \
+               '|-------------------+----------|\n' \
+               '| PauliNoiseChannel | PN       |'
+
+    assert c.draw(legend=legend) == ref
+
+@pytest.mark.parametrize("legend", [True, False])
+def test_circuit_draw_callbacks(legend):
     """Check that callbacks are drawn correcly"""
     from qibo.callbacks import EntanglementEntropy
     entropy = EntanglementEntropy([0])
@@ -575,6 +584,14 @@ def test_circuit_draw_callbacks():
     c.add(gates.CallbackGate(entropy))
     c.add(gates.CNOT(0, 1))
     c.add(gates.CallbackGate(entropy))
-    ref = 'q0: ─EECb─H─EECb─o─EECb─\n' \
-          'q1: ─EECb───EECb─X─EECb─'
-    assert c.draw() == ref
+
+    ref = 'q0: ─EE─H─EE─o─EE─\n' \
+          'q1: ─EE───EE─X─EE─'
+
+    if legend:
+        ref += '\n\n Legend: \n' \
+               '| Gate                | Symbol   |\n'\
+               '|---------------------+----------|\n'\
+               '| EntanglementEntropy | EE       |'
+
+    assert c.draw(legend=legend) == ref
