@@ -937,7 +937,7 @@ class AbstractCircuit(ABC):
 
         return len(qubits), gate_list
 
-    def draw(self, line_wrap=70) -> str:
+    def draw(self, line_wrap=70, legend=False) -> str:
         """Draw text circuit using unicode symbols.
 
         Args:
@@ -956,11 +956,11 @@ class AbstractCircuit(ABC):
                   "cu1": "U1", "cu3": "U3", "ccx": "X",
                   "id": "I", "measure": "M", "fsim": "f",
                   "generalizedfsim": "gf", "Unitary": "U", "fswap":"fx",
-                  "PauliNoiseChannel": "PNCh", "KrausChannel": "KCh",
-                  "UnitaryChannel": "UCh", "ThermalRelaxationChannel": "TRCh",
-                  "ResetChannel": "RCh", "PartialTrace": "PTCh",
-                  "EntanglementEntropy": "EECb", "Norm": "NCb",
-                  "Overlap": "OCb", "Energy": "ECb"}
+                  "PauliNoiseChannel": "PN", "KrausChannel": "K",
+                  "UnitaryChannel": "U", "ThermalRelaxationChannel": "TR",
+                  "ResetChannel": "R", "PartialTrace": "PT",
+                  "EntanglementEntropy": "EE", "Norm": "N",
+                  "Overlap": "O", "Energy": "E"}
 
         # build string representation of gates
         matrix = [[] for _ in range(self.nqubits)]
@@ -1021,6 +1021,17 @@ class AbstractCircuit(ABC):
             output += f'q{q}' + ' ' * (len(str(self.nqubits))-len(str(q))) + \
                        ': ─' + ''.join(matrix[q]) + '\n'
 
+        # legend
+        if legend:
+            from tabulate import tabulate
+            names = [i.name for i in self.queue \
+                     if isinstance(i,gates.CallbackGate) or "Channel" in i.name]
+            names = list(dict.fromkeys(names))
+            table = tabulate([[i, labels[i]] for i in names],
+                              headers=['Gate', 'Symbol'],
+                              tablefmt='orgtbl')
+            table = '\n Legend: \n' + table
+
         # line wrap
         if line_wrap:
             loutput = output.splitlines()
@@ -1047,5 +1058,8 @@ class AbstractCircuit(ABC):
                     loutput[row + i * self.nqubits] = prefix + c + suffix
             if loutput is not None:
                 output = ''.join(loutput)
+
+        if legend:
+            output += table
 
         return output.rstrip('\n')
