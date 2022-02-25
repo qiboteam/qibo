@@ -1030,7 +1030,7 @@ class AbstractCircuit(ABC):
             table = tabulate([[i, labels[i]] for i in names],
                               headers=['Gate', 'Symbol'],
                               tablefmt='orgtbl')
-            table = '\n Legend: \n' + table
+            table = '\n Legend for callbacks and channels: \n' + table
 
         # line wrap
         if line_wrap:
