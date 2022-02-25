@@ -943,6 +943,8 @@ class AbstractCircuit(ABC):
         Args:
             line_wrap (int): maximum number of characters per line. This option
                 split the circuit text diagram in chunks of line_wrap characters.
+            legend (bool): If ``True`` prints a legend below the circuit for
+                callbacks and channels. Default is ``False``.
 
         Return:
             String containing text circuit diagram.
