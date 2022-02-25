@@ -566,7 +566,7 @@ def test_circuit_draw_channels(legend):
           'q1: ─H─PN─X─PN─'
 
     if legend:
-        ref += '\n\n Legend: \n' \
+        ref += '\n\n Legend for callbacks and channels: \n' \
                '| Gate              | Symbol   |\n' \
                '|-------------------+----------|\n' \
                '| PauliNoiseChannel | PN       |'
@@ -589,7 +589,7 @@ def test_circuit_draw_callbacks(legend):
           'q1: ─EE───EE─X─EE─'
 
     if legend:
-        ref += '\n\n Legend: \n' \
+        ref += '\n\n Legend for callbacks and channels: \n' \
                '| Gate                | Symbol   |\n'\
                '|---------------------+----------|\n'\
                '| EntanglementEntropy | EE       |'
