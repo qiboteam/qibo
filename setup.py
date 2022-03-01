@@ -60,6 +60,7 @@ setup(
         "psutil",
         "pyyaml",
         "importlib_metadata",
+        "tabulate"
     ],
     extras_require={
         "docs": ["sphinx", "sphinx_rtd_theme", "recommonmark", "sphinxcontrib-bibtex", "sphinx_markdown_tables", "nbsphinx", "IPython"],
