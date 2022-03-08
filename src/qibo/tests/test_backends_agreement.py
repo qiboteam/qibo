@@ -113,7 +113,7 @@ def test_backend_eigh(tested_backend, target_backend, sparse_type):
         from scipy import sparse
         m = sparse.rand(16, 16, format=sparse_type)
     eigvals1, eigvecs1 = tested_backend.eigh(tested_backend.cast(m), k=m.shape[0])
-    eigvals2, eigvecs2 = target_backend.eigh(m, k=m.shape[0])
+    eigvals2, eigvecs2 = target_backend.eigh(target_backend.cast(m), k=m.shape[0])
     tested_backend.assert_allclose(eigvals1, eigvals2, atol=1e-10)
     tested_backend.assert_allclose(np.abs(eigvecs1), np.abs(eigvecs2), atol=1e-10)
 
