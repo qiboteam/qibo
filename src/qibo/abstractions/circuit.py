@@ -937,12 +937,14 @@ class AbstractCircuit(ABC):
 
         return len(qubits), gate_list
 
-    def draw(self, line_wrap=70) -> str:
+    def draw(self, line_wrap=70, legend=False) -> str:
         """Draw text circuit using unicode symbols.
 
         Args:
             line_wrap (int): maximum number of characters per line. This option
                 split the circuit text diagram in chunks of line_wrap characters.
+            legend (bool): If ``True`` prints a legend below the circuit for
+                callbacks and channels. Default is ``False``.
 
         Return:
             String containing text circuit diagram.
@@ -955,7 +957,12 @@ class AbstractCircuit(ABC):
                   "crx": "RX", "cry": "RY", "crz": "RZ",
                   "cu1": "U1", "cu3": "U3", "ccx": "X",
                   "id": "I", "measure": "M", "fsim": "f",
-                  "generalizedfsim": "gf", "Unitary": "U", "fswap":"fx"}
+                  "generalizedfsim": "gf", "Unitary": "U", "fswap":"fx",
+                  "PauliNoiseChannel": "PN", "KrausChannel": "K",
+                  "UnitaryChannel": "U", "ThermalRelaxationChannel": "TR",
+                  "ResetChannel": "R", "PartialTrace": "PT",
+                  "EntanglementEntropy": "EE", "Norm": "N",
+                  "Overlap": "O", "Energy": "E"}
 
         # build string representation of gates
         matrix = [[] for _ in range(self.nqubits)]
@@ -965,7 +972,10 @@ class AbstractCircuit(ABC):
             if gate.name not in labels:
                 raise_error(NotImplementedError, f"{gate.name} gate is not supported by `circuit.draw`")
             gate_name = labels.get(gate.name)
-            targets = list(gate.target_qubits)
+            if isinstance(gate, gates.CallbackGate):
+                targets = list(range(self.nqubits))
+            else:
+                targets = list(gate.target_qubits)
             controls = list(gate.control_qubits)
 
             # identify boundaries
@@ -1013,6 +1023,17 @@ class AbstractCircuit(ABC):
             output += f'q{q}' + ' ' * (len(str(self.nqubits))-len(str(q))) + \
                        ': ─' + ''.join(matrix[q]) + '\n'
 
+        # legend
+        if legend:
+            from tabulate import tabulate
+            names = [i.name for i in self.queue \
+                     if isinstance(i,gates.CallbackGate) or "Channel" in i.name]
+            names = list(dict.fromkeys(names))
+            table = tabulate([[i, labels[i]] for i in names],
+                              headers=['Gate', 'Symbol'],
+                              tablefmt='orgtbl')
+            table = '\n Legend for callbacks and channels: \n' + table
+
         # line wrap
         if line_wrap:
             loutput = output.splitlines()
@@ -1039,5 +1060,8 @@ class AbstractCircuit(ABC):
                     loutput[row + i * self.nqubits] = prefix + c + suffix
             if loutput is not None:
                 output = ''.join(loutput)
+
+        if legend:
+            output += table
 
         return output.rstrip('\n')
