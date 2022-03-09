@@ -91,6 +91,15 @@ class PauliSymbol(Symbol):
         return getattr(gates, name)(self.target_qubit)
 
 
+class I(PauliSymbol):
+    """Qibo symbol for the identity operator.
+
+    Args:
+        q (int): Target qubit id.
+    """
+    pass
+
+
 class X(PauliSymbol):
     """Qibo symbol for the Pauli-X operator.
 
