@@ -266,6 +266,29 @@ def test_entropy_density_matrix(backend):
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
+@pytest.mark.parametrize("copy", [False, True])
+def test_state_callback(backend, density_matrix, copy):
+    statec = callbacks.State(copy=copy)
+    c = Circuit(2, density_matrix=density_matrix)
+    c.add(gates.H(0))
+    c.add(gates.CallbackGate(statec))
+    c.add(gates.H(1))
+    c.add(gates.CallbackGate(statec))
+    final_state = c()
+    
+    target_state0 = np.array([1, 0, 1, 0]) / np.sqrt(2)
+    target_state1 = np.ones(4) / 2.0
+    if not copy and K.name in ("qibojit", "qibotf"):
+        # when copy is disabled in the callback and in-place updates are used
+        target_state0 = target_state1
+    if density_matrix:
+        target_state0 = np.tensordot(target_state0, target_state0, axes=0)
+        target_state1 = np.tensordot(target_state1, target_state1, axes=0)
+    K.assert_allclose(statec[0], target_state0)
+    K.assert_allclose(statec[1], target_state1)
+
+
+@pytest.mark.parametrize("density_matrix", [False, True])
 def test_norm(backend, density_matrix):
     norm = callbacks.Norm()
     if density_matrix:
