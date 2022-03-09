@@ -101,6 +101,9 @@ class EntanglementEntropy(Callback):
 
 class State(Callback):
     """Callback to keeps track of the full state during circuit execution.
+
+    Warning: Keeping many copies of states in memory requires a lot of memory
+    for circuits with many qubits.
     
     Args:
         copy (bool): If ``True`` the state vector or density matrix is 
