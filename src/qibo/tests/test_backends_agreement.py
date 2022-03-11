@@ -111,11 +111,13 @@ def test_backend_eigh(tested_backend, target_backend, sparse_type):
         m = rand((5, 5))
     else:
         from scipy import sparse
-        m = sparse.rand(16, 16, format=sparse_type)
+        m = sparse.rand(16, 16, format=sparse_type, density=0.1)
     eigvals1, eigvecs1 = tested_backend.eigh(tested_backend.cast(m), k=m.shape[0])
     eigvals2, eigvecs2 = target_backend.eigh(target_backend.cast(m), k=m.shape[0])
     tested_backend.assert_allclose(eigvals1, eigvals2, atol=1e-10)
-    tested_backend.assert_allclose(np.abs(eigvecs1), np.abs(eigvecs2), atol=1e-10)
+    m1 = eigvecs1 @ np.diag(eigvals1) @ tested_backend.transpose(eigvecs1)
+    m2 = eigvecs2 @ np.diag(eigvals2) @ target_backend.transpose(eigvecs2)
+    tested_backend.assert_allclose(m1, m2, atol=1e-10)
 
 
 @pytest.mark.parametrize("sparse_type", ["coo", "csr", "csc", "dia"])
