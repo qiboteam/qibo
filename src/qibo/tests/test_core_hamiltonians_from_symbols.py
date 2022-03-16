@@ -175,3 +175,22 @@ def test_three_qubit_term_hamiltonian_from_symbols(hamtype, calcterms):
                                    np.kron(matrices.I, matrices.I))
     target_matrix -= 2 * np.eye(2**4, dtype=target_matrix.dtype)
     K.assert_allclose(final_matrix, target_matrix)
+
+
+@pytest.mark.parametrize("calcterms", [False, True])
+def test_hamiltonian_with_identity_symbol(calcterms):
+    """Check creating Hamiltonian from expression which contains the identity symbol."""
+    from qibo.symbols import I, X, Y, Z
+    symham = X(0) * I(1) * Z(2) + 0.5 * Y(0) * Z(1) * I(3) + Z(0) * I(1) * X(2)
+    ham = hamiltonians.SymbolicHamiltonian(symham)
+    
+    if calcterms:
+        _ = ham.terms
+    final_matrix = ham.matrix
+    target_matrix = np.kron(np.kron(matrices.X, matrices.I),
+                            np.kron(matrices.Z, matrices.I))
+    target_matrix += 0.5 * np.kron(np.kron(matrices.Y, matrices.Z),
+                                   np.kron(matrices.I, matrices.I))
+    target_matrix += np.kron(np.kron(matrices.Z, matrices.I),
+                             np.kron(matrices.X, matrices.I))
+    K.assert_allclose(final_matrix, target_matrix)

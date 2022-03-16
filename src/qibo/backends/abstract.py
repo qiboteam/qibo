@@ -34,6 +34,7 @@ class AbstractBackend(ABC):
         self.Tensor = None
         self.random = None
         self.newaxis = None
+        self.sparse = None
         self.oom_error = None
         self.optimization = None
         self.supports_multigpu = False
@@ -199,6 +200,11 @@ class AbstractBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def issparse(self, x): # pragma: no cover
+        """Checks if the given tensor is sparse."""
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def diag(self, x, dtype='DTYPECPX'): # pragma: no cover
         raise_error(NotImplementedError)
 
@@ -338,6 +344,11 @@ class AbstractBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def dot(self, x, y): # pragma: no cover
+        """Dot product of two tensors."""
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def matmul(self, x, y): # pragma: no cover
         """Matrix multiplication of two tensors."""
         raise_error(NotImplementedError)
@@ -373,13 +384,30 @@ class AbstractBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def eigh(self, x): # pragma: no cover
-        """Hermitian matrix eigenvalues and eigenvectors."""
+    def eigh(self, x, k=6): # pragma: no cover
+        """Hermitian matrix eigenvalues and eigenvectors.
+
+        Args:
+            x: Tensor to calculate the eigenvectors of.
+            k (int): Number of eigenvectors to calculate if a sparse matrix is
+                given. The eigenvectors corresponding to the k-th algebraically
+                smallest eigenvalues are calculated.
+                This argument is ignored if the given tensor is not sparse and
+                all eigenvectors are calculated.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def eigvalsh(self, x): # pragma: no cover
-        """Hermitian matrix eigenvalues."""
+    def eigvalsh(self, x, k=6): # pragma: no cover
+        """Hermitian matrix eigenvalues.
+
+        Args:
+            x: Tensor to calculate the eigenvalues.
+            k (int): Number of eigenvalues to calculate if a sparse matrix is
+                given. The k-th algebraically smallest eigenvalues are calculated.
+                This argument is ignored if the given tensor is not sparse and
+                all eigenvalues are calculated.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod

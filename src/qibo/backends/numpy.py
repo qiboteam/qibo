@@ -38,6 +38,8 @@ class NumpyBackend(abstract.AbstractBackend):
         self.Tensor = np.ndarray
         self.random = np.random
         self.newaxis = np.newaxis
+        from scipy import sparse
+        self.sparse = sparse
         self.oom_error = MemoryError
         self.optimization = None
         self.cpu_devices = ["/CPU:0"]
@@ -60,6 +62,8 @@ class NumpyBackend(abstract.AbstractBackend):
         return None
 
     def to_numpy(self, x):
+        if self.issparse(x):
+            return x.toarray()
         return x
 
     def to_complex(self, re, img): # pragma: no cover
@@ -70,7 +74,12 @@ class NumpyBackend(abstract.AbstractBackend):
             dtype = self.dtypes(dtype)
         if isinstance(x, self.backend.ndarray):
             return x.astype(dtype, copy=False)
+        elif self.issparse(x):
+            return x.astype(dtype=dtype, copy=False)
         return self.backend.array(x, dtype=dtype)
+
+    def issparse(self, x):
+        return self.sparse.issparse(x)
 
     def diag(self, x, dtype='DTYPECPX'):
         if isinstance(dtype, str):
@@ -161,11 +170,17 @@ class NumpyBackend(abstract.AbstractBackend):
         return self.backend.trace(x)
 
     def expm(self, x):
-        from scipy import linalg
-        return linalg.expm(x)
+        if self.issparse(x):
+            from scipy.sparse.linalg import expm
+        else:
+            from scipy.linalg import expm
+        return expm(x)
 
     def sum(self, x, axis=None):
         return self.backend.sum(x, axis=axis)
+
+    def dot(self, x, y):
+        return x.dot(y)
 
     def matmul(self, x, y):
         return self.backend.matmul(x, y)
@@ -188,10 +203,19 @@ class NumpyBackend(abstract.AbstractBackend):
     def inv(self, x):
         return self.backend.linalg.inv(x)
 
-    def eigh(self, x):
+    def eigh(self, x, k=6):
+        if self.issparse(x):
+            if k < x.shape[0]:
+                from scipy.sparse.linalg import eigsh
+                return eigsh(x, k=k, which='SA')
+            x = self.to_numpy(x)
         return self.backend.linalg.eigh(x)
 
-    def eigvalsh(self, x):
+    def eigvalsh(self, x, k=6):
+        if self.issparse(x):
+            log.warning("Calculating sparse matrix eigenvectors because "
+                        "sparse modules do not provide ``eigvals`` method.")
+            return self.eigh(x, k=k)[0]
         return self.backend.linalg.eigvalsh(x)
 
     def less(self, x, y):
@@ -428,4 +452,6 @@ class NumpyBackend(abstract.AbstractBackend):
         return self.reshape(self.transpose(pieces, order), state.shape)
 
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
+        value = self.to_numpy(value)
+        target = self.to_numpy(target)
         self.np.testing.assert_allclose(value, target, rtol=rtol, atol=atol)

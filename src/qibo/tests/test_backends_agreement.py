@@ -101,14 +101,46 @@ def test_backend_stack(tested_backend, target_backend):
     tested_backend.assert_allclose(tested_result, target_result)
 
 
-def test_backend_eigh(tested_backend, target_backend):
+@pytest.mark.parametrize("sparse_type", [None, "coo", "csr", "csc", "dia"])
+def test_backend_eigh(tested_backend, target_backend, sparse_type):
+    if tested_backend in ("qibotf", "tensorflow") and sparse_type is not None:
+        pytest.skip("Temporary skip.")
     tested_backend = K.construct_backend(tested_backend)
     target_backend = K.construct_backend(target_backend)
-    m = rand((5, 5))
-    eigvals2, eigvecs2 = target_backend.eigh(m)
+    if sparse_type is None:
+        m = rand((5, 5))
+    else:
+        from scipy import sparse
+        m = sparse.rand(16, 16, format=sparse_type, density=0.1)
+    eigvals1, eigvecs1 = tested_backend.eigh(tested_backend.cast(m), k=m.shape[0])
+    eigvals2, eigvecs2 = target_backend.eigh(target_backend.cast(m), k=m.shape[0])
+    tested_backend.assert_allclose(eigvals1, eigvals2, atol=1e-10)
+    m1 = eigvecs1 @ np.diag(eigvals1) @ tested_backend.transpose(eigvecs1)
+    m2 = eigvecs2 @ np.diag(eigvals2) @ target_backend.transpose(eigvecs2)
+    tested_backend.assert_allclose(m1, m2, atol=1e-10)
+
+
+@pytest.mark.parametrize("sparse_type", ["coo", "csr", "csc", "dia"])
+def test_backend_sparse_eigh(tested_backend, target_backend, sparse_type):
+    if tested_backend in ("qibotf", "tensorflow"):
+        pytest.skip("Temporary skip.")
+    tested_backend = K.construct_backend(tested_backend)
+    target_backend = K.construct_backend(target_backend)
+    from scipy import sparse
+    from qibo import hamiltonians
+    ham = hamiltonians.TFIM(6, h=1.0)
+    m = getattr(sparse, f"{sparse_type}_matrix")(K.to_numpy(ham.matrix))
     eigvals1, eigvecs1 = tested_backend.eigh(tested_backend.cast(m))
+    eigvals2, eigvecs2 = target_backend.eigh(target_backend.cast(m))
+    eigvals1 = sorted(K.to_numpy(eigvals1))
+    eigvals2 = sorted(K.to_numpy(eigvals2))
     tested_backend.assert_allclose(eigvals1, eigvals2)
-    tested_backend.assert_allclose(np.abs(eigvecs1), np.abs(eigvecs2))
+
+    eigvals1 = tested_backend.eigvalsh(tested_backend.cast(m))
+    eigvals2 = target_backend.eigvalsh(target_backend.cast(m))
+    eigvals1 = sorted(K.to_numpy(eigvals1))
+    eigvals2 = sorted(K.to_numpy(eigvals2))
+    tested_backend.assert_allclose(eigvals1, eigvals2)
 
 
 def test_backend_compile(tested_backend, target_backend):

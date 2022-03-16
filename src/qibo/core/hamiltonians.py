@@ -6,16 +6,19 @@ from qibo.abstractions import hamiltonians, states
 
 
 class Hamiltonian(hamiltonians.MatrixHamiltonian):
-    """Backend implementation of :class:`qibo.abstractions.hamiltonians.MatrixHamiltonian`.
+    """Hamiltonian based on a dense or sparse matrix representation.
 
     Args:
         nqubits (int): number of quantum bits.
         matrix (np.ndarray): Matrix representation of the Hamiltonian in the
             computational basis as an array of shape ``(2 ** nqubits, 2 ** nqubits)``.
+            Sparse matrices based on ``scipy.sparse`` for numpy/qibojit backends
+            or on ``tf.sparse`` for tensorflow/qibotf backends are also
+            supported.
     """
 
     def __init__(self, nqubits, matrix):
-        if not isinstance(matrix, K.tensor_types):
+        if not (isinstance(matrix, K.tensor_types) or K.issparse(matrix)):
             raise_error(TypeError, "Matrix of invalid type {} given during "
                                    "Hamiltonian initialization"
                                    "".format(type(matrix)))
@@ -46,20 +49,20 @@ class Hamiltonian(hamiltonians.MatrixHamiltonian):
                     "to construct Hamiltonians using symbols.")
         return SymbolicHamiltonian(symbolic_hamiltonian, symbol_map)
 
-    def eigenvalues(self):
+    def eigenvalues(self, k=6):
         if self._eigenvalues is None:
-            self._eigenvalues = self.K.eigvalsh(self.matrix)
+            self._eigenvalues = self.K.eigvalsh(self.matrix, k)
         return self._eigenvalues
 
-    def eigenvectors(self):
+    def eigenvectors(self, k=6):
         if self._eigenvectors is None:
-            self._eigenvalues, self._eigenvectors = self.K.eigh(self.matrix)
+            self._eigenvalues, self._eigenvectors = self.K.eigh(self.matrix, k)
         return self._eigenvectors
 
     def exp(self, a):
         if self._exp.get("a") != a:
             self._exp["a"] = a
-            if self._eigenvectors is None:
+            if self._eigenvectors is None or self.K.issparse(self.matrix):
                 self._exp["result"] = self.K.expm(-1j * a * self.matrix)
             else:
                 expd = self.K.diag(self.K.exp(-1j * a * self._eigenvalues))
@@ -146,7 +149,7 @@ class Hamiltonian(hamiltonians.MatrixHamiltonian):
         if self._eigenvalues is not None:
             if K.qnp.cast(o).real >= 0:
                 r._eigenvalues = o * self._eigenvalues
-            else:
+            elif not K.issparse(self.matrix):
                 r._eigenvalues = o * self._eigenvalues[::-1]
         if self._eigenvectors is not None:
             if K.qnp.cast(o).real > 0:
@@ -157,7 +160,7 @@ class Hamiltonian(hamiltonians.MatrixHamiltonian):
 
     def __matmul__(self, o):
         if isinstance(o, self.__class__):
-            new_matrix = self.K.matmul(self.matrix, o.matrix)
+            new_matrix = self.K.dot(self.matrix, o.matrix)
             return self.__class__(self.nqubits, new_matrix)
 
         if isinstance(o, states.AbstractState):
@@ -165,9 +168,9 @@ class Hamiltonian(hamiltonians.MatrixHamiltonian):
         if isinstance(o, K.tensor_types):
             rank = len(tuple(o.shape))
             if rank == 1: # vector
-                return self.K.matmul(self.matrix, o[:, self.K.newaxis])[:, 0]
+                return self.K.dot(self.matrix, o[:, self.K.newaxis])[:, 0]
             elif rank == 2: # matrix
-                return self.K.matmul(self.matrix, o)
+                return self.K.dot(self.matrix, o)
             else:
                 raise_error(ValueError, "Cannot multiply Hamiltonian with "
                                         "rank-{} tensor.".format(rank))
