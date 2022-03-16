@@ -278,7 +278,7 @@ def test_state_callback(backend, density_matrix, copy):
     
     target_state0 = np.array([1, 0, 1, 0]) / np.sqrt(2)
     target_state1 = np.ones(4) / 2.0
-    if not copy and ((K.name == "qibojit" and not density_matrix) or K.name == "qibotf"):
+    if not copy and K.name in ("qibojit", "qibotf"):
         # when copy is disabled in the callback and in-place updates are used
         target_state0 = target_state1
     if density_matrix:
