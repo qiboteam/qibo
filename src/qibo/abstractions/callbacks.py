@@ -99,6 +99,27 @@ class EntanglementEntropy(Callback):
         self.spectrum = list()
 
 
+class State(Callback):
+    """Callback to keeps track of the full state during circuit execution.
+
+    Warning: Keeping many copies of states in memory requires a lot of memory
+    for circuits with many qubits.
+    
+    Args:
+        copy (bool): If ``True`` the state vector or density matrix is 
+            copied in memory. Otherwise a reference to the existing array
+            is stored in the callback. 
+            The callback will not work as expected if ``copy=False`` 
+            is used with a backend that performs in-place updates, 
+            such as qibojit or qibotf.
+            Default is True
+    """
+
+    def __init__(self, copy=True):
+        super().__init__()
+        self.copy = copy
+
+
 class Norm(Callback):
     """State norm callback.
 

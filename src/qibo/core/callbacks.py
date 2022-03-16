@@ -93,6 +93,18 @@ class EntanglementEntropy(BackendCallback, abstract_callbacks.EntanglementEntrop
         return self.entropy(rho)
 
 
+class State(BackendCallback, abstract_callbacks.State):
+
+    def _state_vector_call(self, state):
+        if self.copy:
+            return K.copy(state)
+        else:
+            return state
+
+    def _density_matrix_call(self, state):
+        return self._state_vector_call(state)
+
+
 class Norm(BackendCallback, abstract_callbacks.Norm):
 
     def _state_vector_call(self, state):
