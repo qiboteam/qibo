@@ -148,6 +148,10 @@ class AbstractCircuit(ABC):
                 newcircuit.check_measured(v)
                 newcircuit.measurement_tuples[k] = v
             newcircuit.measurement_gate.add(circuit.measurement_gate)
+
+        # Re-execute full circuit when sampling if one of the circuit has repeated_execution True
+        newcircuit.repeated_execution = self.repeated_execution or circuit.repeated_execution
+
         return newcircuit
 
     def on_qubits(self, *q):
