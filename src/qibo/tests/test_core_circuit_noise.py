@@ -189,4 +189,6 @@ def test_circuit_add_sampling(backend):
     for _ in range(10):
         target_samples.append(circ(nshots=1).samples())
 
-    K.assert_allclose(samples[:, 0], target_samples[:, 0, 0])
+    target_samples = np.stack(target_samples)
+
+    K.assert_allclose(samples, target_samples[:, 0])
