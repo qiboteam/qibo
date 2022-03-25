@@ -168,12 +168,14 @@ def test_circuit_add_sampling():
     gates_set = [gates.X, gates.Y, gates.Z, gates.H, gates.S, gates.SDG, gates.I]
     circ = Circuit(1)
     circ_no_noise = Circuit(1)
-    for _ in range(100):
+
+    for _ in range(10):
         new_gate = np.random.choice(gates_set)(0)
         circ.add(gates.PauliNoiseChannel(0, pz=0.01))
         circ.add(new_gate)
         circ_no_noise.add(new_gate)
-        circ.add(gates.PauliNoiseChannel(0, pz=0.01))
+
+    circ.add(gates.PauliNoiseChannel(0, pz=0.01))
     circ += circ_no_noise.invert()
     circ.add(gates.M(0))
 
