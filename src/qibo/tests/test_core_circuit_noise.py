@@ -180,12 +180,14 @@ def test_circuit_add_sampling(backend):
     circ.add(gates.M(0))
 
     # Sampling using 10 shots
+    np.random.seed(123)
     K.set_seed(123)
     samples = circ(nshots=10).samples()
 
     # Sampling using 1 shot in for loop
     target_samples = []
     K.set_seed(123)
+    np.random.seed(123)
     for _ in range(10):
         target_samples.append(circ(nshots=1).samples())
 
