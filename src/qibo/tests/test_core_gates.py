@@ -423,7 +423,7 @@ def test_general_channel(backend):
     initial_rho = random_density_matrix(2)
     gate = gates.KrausChannel([((1,), a1), ((0, 1), a2)])
     assert gate.target_qubits == (0, 1)
-    final_rho = gate(np.copy(initial_rho))
+    final_rho = gate(K.cast(np.copy(initial_rho)))
     m1 = np.kron(np.eye(2), K.to_numpy(a1))
     m2 = K.to_numpy(a2)
     target_rho = (m1.dot(initial_rho).dot(m1.conj().T) +
@@ -476,6 +476,24 @@ def test_unitary_channel(backend):
     K.assert_allclose(final_state, target_state)
 
 
+@pytest.mark.parametrize("precision", ["double", "single"])
+def test_unitary_channel_probability_tolerance(backend, precision):
+    """Create ``UnitaryChannel`` with probability sum within tolerance (see #562)."""
+    import qibo
+    original_precision = qibo.get_precision()
+    qibo.set_precision(precision)
+    nqubits = 2
+    param = 0.006
+    num_terms = 2 ** (2 * nqubits)
+    max_param = num_terms / (num_terms - 1)
+    prob_identity = 1 - param / max_param
+    prob_pauli = param / num_terms
+    probs = [prob_identity] + [prob_pauli] * (num_terms - 1)
+    matrices = len(probs) * [((0, 1), np.random.random((4, 4)))]
+    gate = gates.UnitaryChannel(probs, matrices)
+    qibo.set_precision(original_precision)
+
+
 def test_unitary_channel_errors():
     """Check errors raised by ``gates.UnitaryChannel``."""
     a1 = np.array([[0, 1], [1, 0]])
@@ -488,7 +506,7 @@ def test_unitary_channel_errors():
     # Probability > 1
     with pytest.raises(ValueError):
         gate = gates.UnitaryChannel([1.1, 0.2], matrices)
-    # Probability sum = 0
+    # Probability sum < 0
     with pytest.raises(ValueError):
         gate = gates.UnitaryChannel([0.0, 0.0], matrices)
 

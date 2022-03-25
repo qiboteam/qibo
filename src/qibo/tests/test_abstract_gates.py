@@ -247,8 +247,6 @@ def test_unitary_channel_init():
         gate = gates.UnitaryChannel(2 * [0.1], ops)
     with pytest.raises(ValueError):
         gate = gates.UnitaryChannel(4 * [-0.1], ops)
-    with pytest.raises(ValueError):
-        gate = gates.UnitaryChannel(4 * [0.5], ops)
 
 
 def test_pauli_noise_channel_init():
