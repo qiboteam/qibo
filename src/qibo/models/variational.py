@@ -284,6 +284,11 @@ class QAOA(object):
                                          "while mixer is of type {}."
                                          "".format(type(hamiltonian),
                                                    type(mixer)))
+            if mixer.nqubits != hamiltonian.nqubits:
+                  raise_error(ValueError, "Given Hamiltonian acts on {} qubits "
+                                          "while mixer acts on {}."
+                                          "".format(hamiltonian.nqubits,
+                                                    mixer.nqubits))
             self.mixer = mixer
 
         # create circuits for Trotter Hamiltonians

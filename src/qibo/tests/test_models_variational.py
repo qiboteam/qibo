@@ -250,6 +250,11 @@ def test_qaoa_errors():
     m = hamiltonians.X(4, dense=True)
     with pytest.raises(TypeError):
         qaoa = models.QAOA(h, mixer=m)
+    # Hamiltonians acting on different qubit numbers
+    h = hamiltonians.TFIM(6, h=1.0)
+    m = hamiltonians.X(4)
+    with pytest.raises(ValueError):
+        qaoa = models.QAOA(h, mixer=m)
     # distributed execution with RK solver
     with pytest.raises(NotImplementedError):
         qaoa = models.QAOA(h, solver="rk4", accelerators={"/GPU:0": 2})
