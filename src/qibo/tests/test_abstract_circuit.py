@@ -117,19 +117,6 @@ def test_circuit_add_nested_generator():
     assert isinstance(c.queue[5], gates.CNOT)
     assert isinstance(c.queue[7], gates.H)
 
-def test_circuit_add_repeated_execution():
-    c = Circuit(1)
-    c.add(gates.H(0))
-    c.add(gates.PauliNoiseChannel(0, px=0.2))
-
-    c1 = Circuit(1)
-    c1.add(gates.X(0))
-
-    c2 = c + c1
-
-    assert c.repeated_execution
-    assert not c1.repeated_execution
-    assert c2.repeated_execution
 
 def test_set_nqubits():
     c = Circuit(2)
