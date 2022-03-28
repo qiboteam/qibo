@@ -58,15 +58,15 @@ class AbstractBackend(ABC):
 
     def set_precision(self, dtype):
         if dtype == 'single':
-            from qibo.config import PRECISION_TOL_DOUBLE
+            from qibo.config import PRECISION_TOL_SINGLE
             self._dtypes['DTYPE'] = 'float32'
             self._dtypes['DTYPECPX'] = 'complex64'
-            self.precision_tol = PRECISION_TOL_DOUBLE
+            self.precision_tol = PRECISION_TOL_SINGLE
         elif dtype == 'double':
-            from qibo.config import PRECISION_TOL_SINGLE
+            from qibo.config import PRECISION_TOL_DOUBLE
             self._dtypes['DTYPE'] = 'float64'
             self._dtypes['DTYPECPX'] = 'complex128'
-            self.precision_tol = PRECISION_TOL_SINGLE
+            self.precision_tol = PRECISION_TOL_DOUBLE
         else:
             raise_error(ValueError, f'dtype {dtype} not supported.')
         self.precision = dtype
