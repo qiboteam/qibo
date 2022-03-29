@@ -9,8 +9,8 @@ def circuit_folding(circ, scaling_factor):
     performs circuit folding and outputs a circuit that is k=scaling_factor
     times as long as the original circuit
     '''
-    n = circ.nqubits
     repeat_count = int((scaling_factor - 1) / 2)
+    n = circ.nqubits
     circ_inv = circ.invert()
     c = models.Circuit(n)
     for i in range(repeat_count):
