@@ -5,7 +5,9 @@ this file is to collect various functions used in error mitigation
 from qibo import models
 
 def circuit_folding(circ, scaling_factor):
-    ''' folds a quantum circuit
+    '''
+    performs circuit folding and outputs a circuit that is k=scaling_factor
+    times as long as the original circuit
     '''
     n = circ.nqubits
     circ_inv = circ.invert()
