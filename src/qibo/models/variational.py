@@ -236,6 +236,7 @@ class QAOA(object):
         hamiltonian (:class:`qibo.abstractions.hamiltonians.Hamiltonian`): problem Hamiltonian
             whose ground state is sought.
         mixer (:class:`qibo.abstractions.hamiltonians.Hamiltonian`): mixer Hamiltonian.
+            Must be of the same type and act on the same number of qubits as ``hamiltonian``.
             If ``None``, :class:`qibo.hamiltonians.X` is used.
         solver (str): solver used to apply the exponential operators.
             Default solver is 'exp' (:class:`qibo.solvers.Exponential`).
@@ -284,6 +285,11 @@ class QAOA(object):
                                          "while mixer is of type {}."
                                          "".format(type(hamiltonian),
                                                    type(mixer)))
+            if mixer.nqubits != hamiltonian.nqubits:
+                  raise_error(ValueError, "Given Hamiltonian acts on {} qubits "
+                                          "while mixer acts on {}."
+                                          "".format(hamiltonian.nqubits,
+                                                    mixer.nqubits))
             self.mixer = mixer
 
         # create circuits for Trotter Hamiltonians
