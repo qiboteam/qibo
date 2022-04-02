@@ -927,6 +927,10 @@ class UnitaryChannel(KrausChannel, abstract_gates.UnitaryChannel):
                  seed: Optional[int] = None):
         BackendGate.__init__(self)
         abstract_gates.UnitaryChannel.__init__(self, p, ops, seed=seed)
+        if self.psum > 1 + K.precision_tol or self.psum <= 0:
+            raise_error(ValueError, "UnitaryChannel probability sum should be "
+                                    "between 0 and 1 but is {}."
+                                    "".format(self.psum))
         self.set_seed()
 
     def calculate_inverse_gates(self):
