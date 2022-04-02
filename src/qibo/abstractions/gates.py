@@ -1678,6 +1678,7 @@ class FusedGate(Gate):
         self.qubit_set = set(q)
         self.gates = []
         self.marked = False
+        self.fused = False
 
     @classmethod
     def from_gate(cls, gate):

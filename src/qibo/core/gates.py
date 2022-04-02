@@ -1109,9 +1109,6 @@ class FusedGate(MatrixGate, abstract_gates.FusedGate):
     def __init__(self, *q):
         BackendGate.__init__(self)
         abstract_gates.FusedGate.__init__(self, *q)
-        if K.is_custom and len(self.target_qubits) > 2:
-            # Custom kernels currently support up to two target qubits
-            raise_error(NotImplementedError, "Fused gates can target up to two qubits.")
 
     def _construct_unitary(self):
         """Constructs a single unitary by multiplying the matrices of the gates that are fused.

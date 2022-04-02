@@ -50,11 +50,13 @@ class Circuit(circuit.AbstractCircuit):
         from qibo import gates
         from qibo.abstractions.circuit import _Queue
 
+        # create a new circuit graph using ``FusedGate``s
         fqueue = _Queue(self.nqubits)
         # TODO: Implement ``extend`` in ``Queue``
         for gate in self.queue:
             fqueue.append(gates.FusedGate.from_gate(gate))
 
+        # FIXME: Handle special gates
         moments = fqueue.moments
         for i in range(len(moments)):
             for q in range(self.nqubits):
@@ -86,7 +88,7 @@ class Circuit(circuit.AbstractCircuit):
                     circuit.queue.append(gate)
         return circuit
 
-    def fuse(self):
+    def fuse(self, max_qubits=2):
         """Creates an equivalent circuit with the gates fused up to two-qubits.
 
         Returns:
@@ -112,6 +114,45 @@ class Circuit(circuit.AbstractCircuit):
         from qibo import gates
         from qibo.abstractions.circuit import _Queue
         from qibo.abstractions.abstract_gates import SpecialGate
+
+        ncircuit = self.fuse_neighbors()
+        queue = ncircuit.queue
+        max_targets = max(len(gate.qubits) for gate in queue)
+        max_targets = max(max_qubits, max_targets)
+
+        # FIXME: Handle special gates
+        moments = queue.moments
+        for i, moment in enumerate(moments):
+            for gate in moment:
+                if gate is not None and not gate.marked:
+                    gate.marked = True
+                    for q in gate.qubits:
+                        # fuse nearest neighbors forth and back in time
+                        for mode in ["next", "previous"]:
+                            k, neighbor = getattr(queue, f"{mode}_neighbor")(q, i)
+                            if ((neighbor is not None) and (not neighbor.marked) and 
+                                (len(gate.qubit_set | neighbor.qubit_set) <= max_targets)):
+                                fuse = True
+                                for p in neighbor.qubits:
+                                    _, next_neighbor = queue.previous_neighbor(p, k)
+                                    fuse = fuse and (next_neighbor is None or next_neighbor.marked)
+                                if fuse:
+                                    neighbor.marked = True
+                                    neighbor.fused = True
+                                    gate.append(neighbor)
+
+        # create a circuit and assign the new queue
+        circuit = self._shallow_copy()
+        circuit.queue = _Queue(self.nqubits)
+        for gate in queue:
+            if not gate.fused:
+                if len(gate.gates) == 1:
+                    # replace ``FusedGate``s that contain only one gate 
+                    # by this gate for efficiency
+                    circuit.queue.append(gate.gates[0])
+                else:
+                    circuit.queue.append(gate)
+        return circuit
 
         class FusedQueue(_Queue):
             """Helper queue implementation that checks if a gate already exists
