@@ -46,6 +46,46 @@ class Circuit(circuit.AbstractCircuit):
             self._set_nqubits(gate.additional_unitary)
             self.queue.append(gate.additional_unitary)
 
+    def fuse_neighbors(self):
+        from qibo import gates
+        from qibo.abstractions.circuit import _Queue
+
+        fqueue = _Queue(self.nqubits)
+        # TODO: Implement ``extend`` in ``Queue``
+        for gate in self.queue:
+            fqueue.append(gates.FusedGate.from_gate(gate))
+
+        moments = fqueue.moments
+        for i in range(len(moments)):
+            for q in range(self.nqubits):
+                gate = moments[i][q]
+                if gate is not None:
+                    j, neighbor = fqueue.next_neighbor(q, i)
+                    if neighbor is not None:
+                        if neighbor.qubit_set.issubset(gate.qubit_set):
+                            # merge neighbor to the gate
+                            gate.append(neighbor)
+                            # remove neighbor references from the circuit graph
+                            for p in neighbor.qubits:
+                                moments[j][p] = None
+                        elif gate.qubit_set.issubset(neighbor.qubit_set):
+                            # merge gate to its neighbor 
+                            # use ``prepend`` to preserve gate order
+                            neighbor.prepend(gate)
+                            # remove gate references from the circuit graph
+                            for p in gate.qubits:
+                                moments[i][p] = None
+
+        # TODO: Implement ``extend`` in ``Queue``
+        # create a circuit and assign the new queue
+        circuit = self._shallow_copy()
+        circuit.queue = _Queue(self.nqubits)
+        for moment in moments:
+            for gate in moment:
+                if gate is not None and gate not in circuit.queue:
+                    circuit.queue.append(gate)
+        return circuit
+
     def fuse(self):
         """Creates an equivalent circuit with the gates fused up to two-qubits.
 

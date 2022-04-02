@@ -1673,16 +1673,31 @@ class FusedGate(Gate):
     def __init__(self, *q):
         super().__init__()
         self.name = "fused"
-        self.target_qubits = tuple(q)
+        self.target_qubits = tuple(sorted(q))
         self.init_args = list(q)
         self.qubit_set = set(q)
         self.gates = []
+        self.marked = False
 
-    def add(self, gate):
-        if not set(gate.qubits).issubset(self.qubit_set):
-            raise_error(ValueError, "Cannot add gate that targets {} "
-                                    "in fused gate acting on {}."
-                                    "".format(gate.qubits, self.qubits))
+    @classmethod
+    def from_gate(cls, gate):
+        fgate = cls(*gate.qubits)
+        fgate.append(gate)
+        return fgate
+
+    def prepend(self, gate):
+        self.qubit_set = self.qubit_set | set(gate.qubits)
+        self.init_args = sorted(self.qubit_set)
+        self.target_qubits = tuple(self.init_args)
+        if isinstance(gate, self.__class__):
+            self.gates = gate.gates + self.gates
+        else:
+            self.gates = [gate] + self.gates
+
+    def append(self, gate):
+        self.qubit_set = self.qubit_set | set(gate.qubits)
+        self.init_args = sorted(self.qubit_set)
+        self.target_qubits = tuple(self.init_args)
         if isinstance(gate, self.__class__):
             self.gates.extend(gate.gates)
         else:

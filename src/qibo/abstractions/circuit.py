@@ -54,6 +54,14 @@ class _Queue(list):
             self.moments[idx][q] = gate
             self.moment_index[q] = idx + 1
 
+    def next_neighbor(self, qubit, imoment):
+        """Finds nearest neighbor gate forward in time."""
+        for i in range(imoment + 1, len(self.moments)):
+            gate = self.moments[i][qubit]
+            if gate is not None:
+                return i, gate
+        return None, None
+
 
 class AbstractCircuit(ABC):
     """Circuit object which holds a list of gates.
