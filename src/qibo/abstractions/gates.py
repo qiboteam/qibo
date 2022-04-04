@@ -1362,7 +1362,7 @@ class PartialTrace(Gate):
 
 
 class KrausChannel(Channel):
-    """General channel defined by arbitrary Krauss operators.
+    """General channel defined by arbitrary Kraus operators.
 
     Implements the following transformation:
 
