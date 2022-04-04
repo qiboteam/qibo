@@ -1419,7 +1419,7 @@ class KrausChannel(Channel):
             rank = 2 ** len(qubits)
             shape = tuple(matrix.shape)
             if shape != (rank, rank):
-                raise_error(ValueError, "Invalid Krauss operator shape {} for "
+                raise_error(ValueError, "Invalid Kraus operator shape {} for "
                                         "acting on {} qubits."
                                         "".format(shape, len(qubits)))
             qubitset.update(qubits)
