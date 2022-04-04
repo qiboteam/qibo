@@ -160,3 +160,37 @@ def test_density_matrix_circuit_errors():
     c = Circuit(5)
     with pytest.raises(ValueError):
         c.add(gates.KrausChannel([((0,), np.eye(2))]))
+
+
+def test_circuit_add_sampling(backend):
+    """Check measurements when simulating added circuits with noise"""
+    # Create random noisy circuit and add noiseless inverted circuit
+    gates_set = [gates.X, gates.Y, gates.Z, gates.H, gates.S, gates.SDG, gates.I]
+    circ = Circuit(1)
+    circ_no_noise = Circuit(1)
+
+    for _ in range(10):
+        new_gate = np.random.choice(gates_set)(0)
+        circ.add(gates.PauliNoiseChannel(0, pz=0.01))
+        circ.add(new_gate)
+        circ_no_noise.add(new_gate)
+
+    circ.add(gates.PauliNoiseChannel(0, pz=0.01))
+    circ += circ_no_noise.invert()
+    circ.add(gates.M(0))
+
+    # Sampling using 10 shots
+    np.random.seed(123)
+    K.set_seed(123)
+    samples = circ(nshots=10).samples()
+
+    # Sampling using 1 shot in for loop
+    target_samples = []
+    K.set_seed(123)
+    np.random.seed(123)
+    for _ in range(10):
+        target_samples.append(circ(nshots=1).samples())
+
+    target_samples = np.stack(target_samples)
+
+    K.assert_allclose(samples, target_samples[:, 0])

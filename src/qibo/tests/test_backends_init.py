@@ -52,10 +52,13 @@ def test_set_precision(backend, precision):
     backends.set_precision(precision)
     if precision == "single":
         expected_dtype = K.backend.complex64
+        expected_tol = 1e-8
     else:
         expected_dtype = K.backend.complex128
+        expected_tol = 1e-12
     assert backends.get_precision() == precision
     assert K.dtypes('DTYPECPX') == expected_dtype
+    assert K.precision_tol == expected_tol
     # Test that circuits use proper precision
     circuit = models.Circuit(2)
     circuit.add([gates.H(0), gates.H(1)])
