@@ -190,6 +190,24 @@ def MaxCut(nqubits, dense=True):
 
 
 class TSP:
+    """
+    This is a TSP class that enables us to implement TSP according to
+    https://arxiv.org/pdf/1709.03489.pdf by Hadfield (2017).
+    Here is an example of how the code can be run.
+
+
+    num_cities = 3
+    distance_matrix = np.random.rand(num_cities, num_cities)
+    distance_matrix = distance_matrix.round(1)
+    print(distance_matrix)
+
+    small_tsp = TSP(distance_matrix)
+    obj_hamil, mixer = small_tsp.TspHamiltonians(dense = False)
+    initial_parameters = np.random.uniform(0, 1, 2)
+    initial_state = small_tsp.PrepareInitialStateTsp([i for i in range(num_cities)])
+    qaoa = models.QAOA(obj_hamil, mixer = mixer)
+
+    """
     def __init__(self, distance_matrix):
         """
         Args:
@@ -248,7 +266,15 @@ class TSP:
         return X(self.two_to_one[u, i]) - 1j*Y(self.two_to_one[u,i])
 
 
-    def TspMixer(self, dense):
+    def TspMixer(self, dense=True):
+        """
+
+        Args:
+            dense: Indicate whether the Hamiltonian is dense
+
+        Returns: Hamiltonian describing the mixer.
+
+        """
         form = 0
         for i in range(self.num_cities):
             for u in range(self.num_cities):
@@ -262,11 +288,24 @@ class TSP:
 
 
     def TspHamiltonians(self, dense=True):
+        """
+
+        Args:
+            dense: Indicates if the Hamiltonian is dense.
+
+        Returns: Return a pair of Hamiltonian for the objective as well as the mixer.
+
+        """
         return self.PrepareObjTsp(dense), self.TspMixer(dense)
 
 
     def PrepareInitialStateTsp(self, ordering):
-        # construct initial state based on ordering
+        """
+        To run QAOA by Hadsfield, we need to start from a valid permutation function to ensure feasibility.
+        Args:
+            ordering is a list which is a permutation from 0 to n-1
+        Returns: return an initial state that can be used to start TSP QAOA.
+        """
         c = Circuit(len(ordering)**2)
         for i in range(len(ordering)):
             c.add(gates.X(self.two_to_one[ordering[i], i]))
