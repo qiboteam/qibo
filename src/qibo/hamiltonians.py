@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-from qibo import matrices, K
+from qibo import matrices, K, gates
 from qibo.config import raise_error
 from qibo.core.hamiltonians import Hamiltonian, SymbolicHamiltonian, TrotterHamiltonian
 from qibo.core.terms import HamiltonianTerm
+from qibo.models import Circuit
 
 
 def multikron(matrix_list):
@@ -186,3 +187,89 @@ def MaxCut(nqubits, dense=True):
     if dense:
         return ham.dense
     return ham
+
+
+class TSP:
+    def __init__(self, distance_matrix):
+        """
+        Args:
+            distance_matrix: a numpy matrix encoding the distance matrix.
+        """
+        self.distance_matrix = distance_matrix
+        self.two_to_one = dict()
+        self.num_cities = distance_matrix.shape[0]
+        counter = 0
+        for i in range(self.num_cities):
+            for j in range(self.num_cities):
+                self.two_to_one[(i, j)] = counter
+                counter += 1
+
+    def PrepareObjTsp(self, dense=True):
+        """ This function returns the objective Hamiltonian
+        Args:
+            dense: Whether the Hamiltonian should be dense.
+
+        Returns: objective Hamiltonian that we wish to minimize the tsp distance.
+
+        """
+        form = 0
+        for i in range(self.num_cities):
+            for u in range(self.num_cities):
+                for v in range(self.num_cities):
+                    if u != v:
+                        form += self.distance_matrix[u, v] * Z(self.two_to_one[u, i]) * Z(self.two_to_one[v, (i + 1) % self.num_cities])
+        ham = SymbolicHamiltonian(form)
+        if dense:
+            ham = ham.dense
+        return ham
+
+
+    def SPlusTsp(self, u, i):
+        """ This is a subroutine required for the mixer performing X+iY
+
+        Args:
+            u: this represents the index of the object.
+            i: this represents the location of the slot
+
+        Returns: the gate for the subroutine
+        """
+        return X(self.two_to_one[u, i]) + 1j*Y(self.two_to_one[u,i])
+
+
+    def SNegTsp(self, u, i):
+        """ This is a subroutine required for the mixer performing X-iY
+
+        Args:
+            u: this represents the index of the object.
+            i: this represents the location of the slot
+
+        Returns: the gate for the subroutine
+        """
+        return X(self.two_to_one[u, i]) - 1j*Y(self.two_to_one[u,i])
+
+
+    def TspMixer(self, dense):
+        form = 0
+        for i in range(self.num_cities):
+            for u in range(self.num_cities):
+                for v in range(self.num_cities):
+                    if u != v:
+                        form += self.SPlusTsp(u, i) * self.SPlusTsp(v, (i+1) % self.num_cities) * self.SNegTsp(u, (i+1)%self.num_cities) * self.SNegTsp(v, i) + self.SNegTsp(u, i) * self.SNegTsp(v, (i+1) % self.num_cities) * self.SPlusTsp(u, (i+1) % self.num_cities) * self.SPlusTsp(v, i)
+        ham = SymbolicHamiltonian(form)
+        if dense:
+            ham = ham.dense
+        return ham
+
+
+    def TspHamiltonians(self, dense=True):
+        return self.PrepareObjTsp(dense), self.TspMixer(dense)
+
+
+    def PrepareInitialStateTsp(self, ordering):
+        # construct initial state based on ordering
+        c = Circuit(len(ordering)**2)
+        for i in range(len(ordering)):
+            c.add(gates.X(self.two_to_one[ordering[i], i]))
+        result = c()
+        return result.state(numpy = True)
+
