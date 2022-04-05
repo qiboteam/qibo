@@ -6,12 +6,14 @@ from qibo import models
 import numpy as np
 
 def circuit_folding(circ, scaling_factor):
-    ''' folds a quantum circuit
     '''
+    performs circuit folding and outputs a circuit that is k=scaling_factor
+    times as long as the original circuit
+    '''
+    repeat_count = int((scaling_factor - 1) / 2)
     n = circ.nqubits
     circ_inv = circ.invert()
     c = models.Circuit(n)
-    repeat_count = int((scaling_factor-1)/2)
     for i in range(repeat_count):
         c += (circ + circ_inv)
     c += circ
