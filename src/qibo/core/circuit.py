@@ -122,30 +122,31 @@ class Circuit(circuit.AbstractCircuit):
 
         # FIXME: Handle special gates
         moments = queue.moments
-        for i, moment in enumerate(moments):
-            for gate in moment:
-                if gate is not None and not gate.marked:
-                    gate.marked = True
-                    for q in gate.qubits:
-                        # fuse nearest neighbors forth and back in time
-                        for mode in ["next", "previous"]:
-                            k, neighbor = getattr(queue, f"{mode}_neighbor")(q, i)
-                            if ((neighbor is not None) and (not neighbor.marked) and 
-                                (len(gate.qubit_set | neighbor.qubit_set) <= max_targets)):
-                                fuse = True
-                                for p in neighbor.qubits:
-                                    _, next_neighbor = queue.previous_neighbor(p, k)
-                                    fuse = fuse and (next_neighbor is None or next_neighbor.marked)
-                                if fuse:
-                                    neighbor.marked = True
-                                    neighbor.fused = True
-                                    gate.append(neighbor)
+        for gate in queue:
+            if not gate.marked:
+                for q in gate.qubits:
+                    # fuse nearest neighbors forth in time
+                    m = queue.find_moment(gate)
+                    k, neighbor = queue.next_neighbor(q, m)
+                    if neighbor is not None and not neighbor.marked:
+                        qubits = gate.qubit_set | neighbor.qubit_set
+                        fuse = len(qubits) <= max_targets
+                        for r in neighbor.qubits:
+                            _, pneighbor = queue.previous_neighbor(r, k)
+                            if pneighbor is not None and pneighbor != gate and pneighbor not in gate.gates:
+                                fuse = False
+                                break
+                        if fuse:
+                            neighbor.marked = True
+                            gate.append(neighbor)
+
+                    # Do we need to fuse neighbors back in time?
 
         # create a circuit and assign the new queue
         circuit = self._shallow_copy()
         circuit.queue = _Queue(self.nqubits)
         for gate in queue:
-            if not gate.fused:
+            if not gate.marked:
                 if len(gate.gates) == 1:
                     # replace ``FusedGate``s that contain only one gate 
                     # by this gate for efficiency

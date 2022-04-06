@@ -54,6 +54,13 @@ class _Queue(list):
             self.moments[idx][q] = gate
             self.moment_index[q] = idx + 1
 
+    def find_moment(self, gate):
+        """Finds index of the moment that the given gate belongs."""
+        for i, moment in enumerate(self.moments):
+            if gate in moment:
+                return i
+        raise_error(ValueError, "Gate is not part of queue.")
+
     def next_neighbor(self, qubit, imoment):
         """Finds nearest neighbor gate forward in time."""
         for i in range(imoment + 1, len(self.moments)):
