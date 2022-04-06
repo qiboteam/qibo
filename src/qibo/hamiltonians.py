@@ -3,7 +3,8 @@ from qibo import matrices, K, gates
 from qibo.config import raise_error
 from qibo.core.hamiltonians import Hamiltonian, SymbolicHamiltonian, TrotterHamiltonian
 from qibo.core.terms import HamiltonianTerm
-from qibo.models import Circuit
+from qibo.models import Circuit, QAOA
+import numpy as np
 
 
 def multikron(matrix_list):
@@ -188,24 +189,24 @@ def MaxCut(nqubits, dense=True):
         return ham.dense
     return ham
 
-
+from qibo.symbols import X as tspX
+from qibo.symbols import  Y as tspY
+from qibo.symbols import Z as tspZ
 class TSP:
     """
     This is a TSP class that enables us to implement TSP according to
     https://arxiv.org/pdf/1709.03489.pdf by Hadfield (2017).
     Here is an example of how the code can be run.
 
-
     num_cities = 3
     distance_matrix = np.random.rand(num_cities, num_cities)
     distance_matrix = distance_matrix.round(1)
     print(distance_matrix)
-
     small_tsp = TSP(distance_matrix)
-    obj_hamil, mixer = small_tsp.TspHamiltonians(dense = False)
+    obj_hamil, mixer = small_tsp.TspHamiltonians(dense=False)
     initial_parameters = np.random.uniform(0, 1, 2)
     initial_state = small_tsp.PrepareInitialStateTsp([i for i in range(num_cities)])
-    qaoa = models.QAOA(obj_hamil, mixer = mixer)
+    qaoa = QAOA(obj_hamil, mixer=mixer)
 
     """
     def __init__(self, distance_matrix):
@@ -222,6 +223,7 @@ class TSP:
                 self.two_to_one[(i, j)] = counter
                 counter += 1
 
+
     def PrepareObjTsp(self, dense=True):
         """ This function returns the objective Hamiltonian
         Args:
@@ -235,7 +237,7 @@ class TSP:
             for u in range(self.num_cities):
                 for v in range(self.num_cities):
                     if u != v:
-                        form += self.distance_matrix[u, v] * Z(self.two_to_one[u, i]) * Z(self.two_to_one[v, (i + 1) % self.num_cities])
+                        form += self.distance_matrix[u, v] * tspZ(self.two_to_one[u, i]) * tspZ(self.two_to_one[v, (i + 1) % self.num_cities])
         ham = SymbolicHamiltonian(form)
         if dense:
             ham = ham.dense
@@ -251,7 +253,7 @@ class TSP:
 
         Returns: the gate for the subroutine
         """
-        return X(self.two_to_one[u, i]) + 1j*Y(self.two_to_one[u,i])
+        return tspX(self.two_to_one[u, i]) + 1j*tspY(self.two_to_one[u,i])
 
 
     def SNegTsp(self, u, i):
@@ -263,7 +265,7 @@ class TSP:
 
         Returns: the gate for the subroutine
         """
-        return X(self.two_to_one[u, i]) - 1j*Y(self.two_to_one[u,i])
+        return tspX(self.two_to_one[u, i]) - 1j*tspY(self.two_to_one[u,i])
 
 
     def TspMixer(self, dense=True):
@@ -310,5 +312,4 @@ class TSP:
         for i in range(len(ordering)):
             c.add(gates.X(self.two_to_one[ordering[i], i]))
         result = c()
-        return result.state(numpy = True)
-
+        return result.state(numpy=True)
