@@ -189,8 +189,9 @@ def MaxCut(nqubits, dense=True):
         return ham.dense
     return ham
 
+
 from qibo.symbols import X as tspX
-from qibo.symbols import  Y as tspY
+from qibo.symbols import Y as tspY
 from qibo.symbols import Z as tspZ
 class TSP:
     """
