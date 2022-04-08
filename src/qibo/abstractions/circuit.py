@@ -54,6 +54,10 @@ class _Queue(list):
             self.moments[idx][q] = gate
             self.moment_index[q] = idx + 1
 
+    def extend(self, iterable):
+        for gate in iterable:
+            self.append(gate)
+
     def find_moment(self, gate):
         """Finds index of the moment that the given gate belongs."""
         for i, moment in enumerate(self.moments):
