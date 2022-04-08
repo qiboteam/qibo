@@ -70,16 +70,58 @@ class _Queue(list):
         for i in range(imoment + 1, len(self.moments)):
             gate = self.moments[i][qubit]
             if gate is not None:
-                return i, gate
-        return None, None
+                return gate
+        return None
 
     def previous_neighbor(self, qubit, imoment):
         """Finds nearest neighbor gate backward in time."""
         for i in range(imoment - 1, -1, -1):
             gate = self.moments[i][qubit]
             if gate is not None:
-                return i, gate
-        return None, None
+                return gate
+        return None
+
+    def fuse(self, gate1, gate2, max_qubits):
+        # the gate with more qubits will be the parent of fusion
+        if len(gate1.qubits) >= len(gate2.qubits):
+            parent, child = gate1, gate2
+        else:
+            parent, child = gate2, gate1
+        
+        mparent = self.find_moment(parent)
+        mchild = self.find_moment(child)
+
+        # check if gates can be fused
+        # this can be done when:
+        # 1. The combined qubits are less than ``max_qubits``
+        qubits = parent.qubit_set | child.qubit_set
+        fuse = len(qubits) <= max_qubits
+        if fuse:
+            # 2. There are no other gates between them
+            if mchild < mparent:
+                for q in child.qubits:
+                    between = self.next_neighbor(q, mchild)
+                    mbetween = self.find_moment(between)
+                    if between is not None and between != parent and mbetween > mchild:
+                        fuse = False
+                        break
+            else:
+                for q in child.qubits:
+                    between = self.previous_neighbor(q, mchild)
+                    mbetween = self.find_moment(between)
+                    if between is not None and between != parent and mbetween < mchild:
+                        fuse = False
+                        break
+
+        if fuse:
+            child.marked = True
+            if mchild < mparent:
+                parent.prepend(child)
+            else:
+                parent.append(child)
+            for q in child.qubits:
+                self.moments[mparent][q] = parent
+                self.moments[mchild][q] = None
 
 
 class AbstractCircuit(ABC):
