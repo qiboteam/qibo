@@ -115,32 +115,64 @@ class Circuit(circuit.AbstractCircuit):
         from qibo.abstractions.circuit import _Queue
         from qibo.abstractions.abstract_gates import SpecialGate
 
-        ncircuit = self.fuse_neighbors()
-        queue = ncircuit.queue
+        #ncircuit = self.fuse_neighbors()
+        #queue = ncircuit.queue
+
+        queue = _Queue(self.nqubits)
+        for gate in self.queue:
+            queue.append(gates.FusedGate.from_gate(gate))
         max_targets = max(len(gate.qubits) for gate in queue)
         max_targets = max(max_qubits, max_targets)
 
         # FIXME: Handle special gates
-        moments = queue.moments
         for gate in queue:
+            #print(gate.gates[0].name, gate.gates[0].qubits, gate.marked)
             if not gate.marked:
+                print(gate.gates[0].name, gate.qubits)
+                m = queue.find_moment(gate)
                 for q in gate.qubits:
                     # fuse nearest neighbors forth in time
-                    m = queue.find_moment(gate)
                     k, neighbor = queue.next_neighbor(q, m)
                     if neighbor is not None and not neighbor.marked:
                         qubits = gate.qubit_set | neighbor.qubit_set
                         fuse = len(qubits) <= max_targets
                         for r in neighbor.qubits:
-                            _, pneighbor = queue.previous_neighbor(r, k)
-                            if pneighbor is not None and pneighbor != gate and pneighbor not in gate.gates:
+                            pk, pneighbor = queue.previous_neighbor(r, k)
+                            if pneighbor is not None and pneighbor != gate and pk < k:
                                 fuse = False
                                 break
                         if fuse:
                             neighbor.marked = True
+                            n = queue.find_moment(neighbor)
                             gate.append(neighbor)
+                            for r in neighbor.qubits:
+                                queue.moments[n][r] = None
+                                queue.moments[m][r] = gate
 
-                    # Do we need to fuse neighbors back in time?
+                    # fuse nearest neighbors back in time
+                    k, neighbor = queue.previous_neighbor(q, m)
+                    
+                    #if gate.gates[0].name == "h" and q == 1 and neighbor is not None:
+                    #    print(neighbor)
+                    #   for ng in neighbor.gates:
+                    #        print(ng.name, ng.qubits)
+                    #    print("end")
+
+                    if neighbor is not None and not neighbor.marked:
+                        qubits = gate.qubit_set | neighbor.qubit_set
+                        fuse = len(qubits) <= max_targets
+                        for r in neighbor.qubits:
+                            _, pneighbor = queue.next_neighbor(r, k)
+                            if pneighbor is not None and pneighbor != gate and pk > k:
+                                fuse = False
+                                break
+                        if fuse:
+                            neighbor.marked = True
+                            n = queue.find_moment(neighbor)
+                            gate.prepend(neighbor)
+                            for r in neighbor.qubits:
+                                queue.moments[n][r] = None
+                                queue.moments[m][r] = gate
 
         # create a circuit and assign the new queue
         circuit = self._shallow_copy()
