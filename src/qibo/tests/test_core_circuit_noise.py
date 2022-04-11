@@ -4,6 +4,7 @@ import pytest
 import qibo
 from qibo import K, gates
 from qibo.models import Circuit
+from qibo.noise import *
 
 
 def test_pauli_noise_channel(backend):
@@ -194,3 +195,40 @@ def test_circuit_add_sampling(backend):
     target_samples = np.stack(target_samples)
 
     K.assert_allclose(samples, target_samples[:, 0])
+
+def test_circuit_with_noise_model(backend):
+    """Check that NoiseModel example."""
+
+    pauli = PauliError(0, 0.2, 0.3)
+    thermal = ThermalRelaxationError(1, 1, 0.3)
+
+    noise = NoiseModel()
+    noise.add(pauli, "x", 1)
+    noise.add(pauli, "cx")
+    noise.add(thermal, "z", (0,1))
+
+    circuit = Circuit(3)
+    circuit.add(gates.CNOT(0,1))
+    circuit.add(gates.Z(1))
+    circuit.add(gates.X(1))
+    circuit.add(gates.X(2))
+    circuit.add(gates.Z(2))
+
+    target_circuit = Circuit(3)
+    target_circuit.add(gates.PauliNoiseChannel(0, 0, 0.2, 0.3))
+    target_circuit.add(gates.PauliNoiseChannel(1, 0, 0.2, 0.3))
+    target_circuit.add(gates.CNOT(0,1))
+    target_circuit.add(gates.ThermalRelaxationChannel(1, 1, 0.1, 0.2, 0.3))
+    target_circuit.add(gates.Z(1))
+    target_circuit.add(gates.PauliNoiseChannel(1, 0, 0.2, 0.3))
+    target_circuit.add(gates.X(1))
+    target_circuit.add(gates.X(2))
+    target_circuit.add(gates.Z(2))
+
+    np.random.seed(123)
+    K.set_seed(123)
+
+    final_state = circuit()
+    target_final_state = target_circuit()
+
+    K.assert_allclose(final_state, target_final_state)
