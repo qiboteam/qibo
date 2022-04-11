@@ -15,10 +15,10 @@ class ResetError():
     self.options = p0, p1
     self.channel = gates.ResetChannel
 
-class KraussError():
+class KrausError():
   def __init__(self, ops):
     self.options = ops
-    self.channel = gates.KraussChannel
+    self.channel = gates.KrausChannel
 
 class UnitaryError():
   def __init__(self, p, ops, seed=None):
