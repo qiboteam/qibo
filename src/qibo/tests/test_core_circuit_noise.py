@@ -4,7 +4,6 @@ import pytest
 import qibo
 from qibo import K, gates
 from qibo.models import Circuit
-from qibo.noise import *
 
 
 def test_pauli_noise_channel(backend):
@@ -195,4 +194,3 @@ def test_circuit_add_sampling(backend):
     target_samples = np.stack(target_samples)
 
     K.assert_allclose(samples, target_samples[:, 0])
-
