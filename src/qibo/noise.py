@@ -11,20 +11,9 @@ class ThermalRelaxationError():
     self.channel = gates.ThermalRelaxationChannel
 
 class ResetError():
-  def __init__(self, p0=0.0, p1=0.0, seed=None):
+  def __init__(self, p0, p1, seed=None):
     self.options = p0, p1
     self.channel = gates.ResetChannel
-
-class KrausError():
-  def __init__(self, ops):
-    self.options = ops
-    self.channel = gates.KrausChannel
-
-class UnitaryError():
-  def __init__(self, p, ops, seed=None):
-    self.options = p, ops
-    self.channel = gates.UnitaryChannel
-
 
 class NoiseModel():
     """Generic noise model."""
