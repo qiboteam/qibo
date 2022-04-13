@@ -8,10 +8,7 @@ from qibo.tests.utils import random_density_matrix, random_state
 @pytest.mark.parametrize("density_matrix", [False, True])
 def test_pauli_error(backend, density_matrix):
 
-    np.random.seed(123)
-    K.set_seed(123)
     pauli = PauliError(0, 0.2, 0.3)
-
     noise = NoiseModel()
     noise.add(pauli, "x", 1)
     noise.add(pauli, "cx")
@@ -49,7 +46,6 @@ def test_pauli_error(backend, density_matrix):
 def test_thermal_error(backend, density_matrix):
 
     thermal = ThermalRelaxationError(1, 1, 0.3)
-
     noise = NoiseModel()
     noise.add(thermal, "x", 1)
     noise.add(thermal, "cx")
@@ -87,7 +83,6 @@ def test_thermal_error(backend, density_matrix):
 def test_reset_error(backend, density_matrix):
 
     reset = ResetError(0.8, 0.2)
-
     noise = NoiseModel()
     noise.add(reset, "x", 1)
     noise.add(reset, "cx")
