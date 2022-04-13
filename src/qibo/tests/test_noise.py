@@ -39,10 +39,10 @@ def test_pauli_error(backend, density_matrix):
     initial_psi = random_density_matrix(3) if density_matrix else random_state(3)
     np.random.seed(123)
     K.set_seed(123)
-    final_state = noise.apply(circuit)(initial_state=initial_psi)
+    final_state = noise.apply(circuit)(initial_state=np.copy(initial_psi))
     np.random.seed(123)
     K.set_seed(123)
-    target_final_state = target_circuit(initial_state=initial_psi)
+    target_final_state = target_circuit(initial_state=np.copy(initial_psi))
 
     K.assert_allclose(final_state, target_final_state)
 
@@ -77,10 +77,10 @@ def test_thermal_error(backend, density_matrix):
     initial_psi = random_density_matrix(3) if density_matrix else random_state(3)
     np.random.seed(123)
     K.set_seed(123)
-    final_state = noise.apply(circuit)(initial_state=initial_psi)
+    final_state = noise.apply(circuit)(initial_state=np.copy(initial_psi))
     np.random.seed(123)
     K.set_seed(123)
-    target_final_state = target_circuit(initial_state=initial_psi)
+    target_final_state = target_circuit(initial_state=np.copy(initial_psi))
 
     K.assert_allclose(final_state, target_final_state)
 
@@ -109,10 +109,10 @@ def test_reset_error(backend, density_matrix):
     initial_psi = random_density_matrix(3) if density_matrix else random_state(3)
     np.random.seed(123)
     K.set_seed(123)
-    final_state = noise.apply(circuit)(initial_state=initial_psi)
+    final_state = noise.apply(circuit)(initial_state=np.copy(initial_psi))
     np.random.seed(123)
     K.set_seed(123)
-    target_final_state = target_circuit(initial_state=initial_psi)
+    target_final_state = target_circuit(initial_state=np.copy(initial_psi))
 
     K.assert_allclose(final_state, target_final_state)
 
