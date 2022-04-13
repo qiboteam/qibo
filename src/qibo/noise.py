@@ -47,6 +47,7 @@ class NoiseModel():
         """
         circ = circuit.__class__(**circuit.init_kwargs)
         for gate in circuit.queue:
+            circ.add(gate)
             if gate.name in self.errors:
                 error, qubits = self.errors.get(gate.name)
                 if qubits is None:
@@ -55,5 +56,4 @@ class NoiseModel():
                     qubits = tuple(set(gate.qubits) & set(qubits))
                 for q in qubits:
                     circ.add(error.channel(q, *error.options))
-            circ.add(gate)
         return circ

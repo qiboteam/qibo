@@ -25,16 +25,15 @@ def test_pauli_error(backend, density_matrix):
     circuit.add(gates.Z(2))
 
     target_circuit = Circuit(3, density_matrix=density_matrix)
-    target_circuit.add(gates.PauliNoiseChannel(0, 0, 0.2, 0.3))
-    target_circuit.add(gates.PauliNoiseChannel(1, 0, 0.2, 0.3))
     target_circuit.add(gates.CNOT(0,1))
+    target_circuit.add(gates.PauliNoiseChannel(0, 0, 0.2, 0.3))
     target_circuit.add(gates.PauliNoiseChannel(1, 0, 0.2, 0.3))
     target_circuit.add(gates.Z(1))
     target_circuit.add(gates.PauliNoiseChannel(1, 0, 0.2, 0.3))
     target_circuit.add(gates.X(1))
+    target_circuit.add(gates.PauliNoiseChannel(1, 0, 0.2, 0.3))
     target_circuit.add(gates.X(2))
     target_circuit.add(gates.Z(2))
-
 
     initial_psi = random_density_matrix(3) if density_matrix else random_state(3)
     np.random.seed(123)
@@ -64,13 +63,13 @@ def test_thermal_error(backend, density_matrix):
     circuit.add(gates.Z(2))
 
     target_circuit = Circuit(3, density_matrix=density_matrix)
-    target_circuit.add(gates.ThermalRelaxationChannel(0, 1, 1, 0.3))
-    target_circuit.add(gates.ThermalRelaxationChannel(1, 1, 1, 0.3))
     target_circuit.add(gates.CNOT(0,1))
+    target_circuit.add(gates.ThermalRelaxationChannel(0, 1, 1, 0.3))
     target_circuit.add(gates.ThermalRelaxationChannel(1, 1, 1, 0.3))
     target_circuit.add(gates.Z(1))
     target_circuit.add(gates.ThermalRelaxationChannel(1, 1, 1, 0.3))
     target_circuit.add(gates.X(1))
+    target_circuit.add(gates.ThermalRelaxationChannel(1, 1, 1, 0.3))
     target_circuit.add(gates.X(2))
     target_circuit.add(gates.Z(2))
 
@@ -99,12 +98,11 @@ def test_reset_error(backend, density_matrix):
     circuit.add(gates.Z(1))
 
     target_circuit = Circuit(3, density_matrix=density_matrix)
+    target_circuit.add(gates.CNOT(0,1))
     target_circuit.add(gates.ResetChannel(0, 0.8, 0.2))
     target_circuit.add(gates.ResetChannel(1, 0.8, 0.2))
-    target_circuit.add(gates.CNOT(0,1))
-    target_circuit.add(gates.ResetChannel(1, 0.8, 0.2))
     target_circuit.add(gates.Z(1))
-
+    target_circuit.add(gates.ResetChannel(1, 0.8, 0.2))
 
     initial_psi = random_density_matrix(3) if density_matrix else random_state(3)
     np.random.seed(123)
