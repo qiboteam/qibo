@@ -10,9 +10,9 @@ def test_pauli_error(backend, density_matrix):
 
     pauli = PauliError(0, 0.2, 0.3)
     noise = NoiseModel()
-    noise.add(pauli, "x", 1)
-    noise.add(pauli, "cx")
-    noise.add(pauli, "z", (0,1))
+    noise.add(pauli, gates.X, 1)
+    noise.add(pauli, gates.CNOT)
+    noise.add(pauli, gates.Z, (0,1))
 
     circuit = Circuit(3, density_matrix=density_matrix)
     circuit.add(gates.CNOT(0,1))
@@ -47,9 +47,9 @@ def test_thermal_error(backend, density_matrix):
 
     thermal = ThermalRelaxationError(1, 1, 0.3)
     noise = NoiseModel()
-    noise.add(thermal, "x", 1)
-    noise.add(thermal, "cx")
-    noise.add(thermal, "z", (0,1))
+    noise.add(thermal, gates.X, 1)
+    noise.add(thermal, gates.CNOT)
+    noise.add(thermal, gates.Z, (0,1))
 
     circuit = Circuit(3, density_matrix=density_matrix)
     circuit.add(gates.CNOT(0,1))
@@ -84,9 +84,9 @@ def test_reset_error(backend, density_matrix):
 
     reset = ResetError(0.8, 0.2)
     noise = NoiseModel()
-    noise.add(reset, "x", 1)
-    noise.add(reset, "cx")
-    noise.add(reset, "z", (0,1))
+    noise.add(reset, gates.X, 1)
+    noise.add(reset, gates.CNOT)
+    noise.add(reset, gates.Z, (0,1))
 
     circuit = Circuit(3, density_matrix=density_matrix)
     circuit.add(gates.CNOT(0,1))

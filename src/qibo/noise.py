@@ -24,7 +24,7 @@ class NoiseModel():
     def __init__(self):
         self.errors = {}
 
-    def add(self, error, gatename, qubits=None):
+    def add(self, error, gate, qubits=None):
         """Add a quantum error for a specific gate to the noise model.
 
             Args:
@@ -34,7 +34,7 @@ class NoiseModel():
         if isinstance(qubits, int):
             qubits = (qubits, )
 
-        self.errors[gatename] = (error, qubits)
+        self.errors[gate] = (error, qubits)
 
     def apply(self, circuit):
         """"Generate a noisy quantum circuit according to the noise model built.
@@ -48,8 +48,8 @@ class NoiseModel():
         circ = circuit.__class__(**circuit.init_kwargs)
         for gate in circuit.queue:
             circ.add(gate)
-            if gate.name in self.errors:
-                error, qubits = self.errors.get(gate.name)
+            if gate.__class__ in self.errors:
+                error, qubits = self.errors.get(gate.__class__)
                 if qubits is None:
                     qubits = gate.qubits
                 else:
