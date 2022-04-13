@@ -48,14 +48,13 @@ class NoiseModel():
         circ = circuit.copy()
         count = 0
         for num, gate in enumerate(circuit.queue):
-            for noises in self.errors:
-                if gate.name == str(noises):
-                    if self.errors[gate.name][1] is None:
-                        qubits = gate.qubits
-                    else:
-                        qubits = tuple(set(gate.qubits) & set(self.errors[gate.name][1]))
-                    for q in qubits:
-                        circ.queue.insert(num+count, self.errors[gate.name][0].channel
-                                         (q, *self.errors[gate.name][0].options))
-                        count += 1
+            if gate.name in self.errors:
+                error, qubits = self.errors.get(gate.name)
+                if qubits is None:
+                    qubits = gate.qubits
+                else:
+                    qubits = tuple(set(gate.qubits) & set(qubits))
+                for q in qubits:
+                    circ.queue.insert(num+count, error.channel(q, *error.options))
+                    count += 1
         return circ
