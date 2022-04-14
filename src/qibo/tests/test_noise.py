@@ -42,6 +42,7 @@ def test_pauli_error(backend, density_matrix):
 
     K.assert_allclose(final_state, target_final_state)
 
+
 @pytest.mark.parametrize("density_matrix", [False, True])
 def test_thermal_error(backend, density_matrix):
 
@@ -78,6 +79,7 @@ def test_thermal_error(backend, density_matrix):
     target_final_state = target_circuit(initial_state=np.copy(initial_psi))
 
     K.assert_allclose(final_state, target_final_state)
+
 
 @pytest.mark.parametrize("density_matrix", [False, True])
 def test_reset_error(backend, density_matrix):

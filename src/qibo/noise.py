@@ -1,6 +1,5 @@
 from qibo import gates
 
-
 class PauliError():
     """Quantum error associated with the `qibo.core.gates.PauliNoiseChannel`.
 
