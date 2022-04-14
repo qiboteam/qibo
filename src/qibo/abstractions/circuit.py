@@ -102,14 +102,14 @@ class _Queue(list):
                 for q in child.qubits:
                     between = self.next_neighbor(q, mchild)
                     mbetween = self.find_moment(between)
-                    if between is not None and between != parent and mbetween > mchild:
+                    if between is not None and between != parent and mbetween > mchild and mbetween <= mparent:
                         fuse = False
                         break
             else:
                 for q in child.qubits:
                     between = self.previous_neighbor(q, mchild)
                     mbetween = self.find_moment(between)
-                    if between is not None and between != parent and mbetween < mchild:
+                    if between is not None and between != parent and mbetween < mchild and mbetween >= mparent:
                         fuse = False
                         break
 

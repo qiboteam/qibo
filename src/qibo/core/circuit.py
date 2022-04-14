@@ -111,8 +111,10 @@ class Circuit(circuit.AbstractCircuit):
         queue = _Queue(self.nqubits)
         queue.extend(gates.FusedGate.from_gate(gate) for gate in self.queue)
         
-        max_targets = max(len(gate.qubits) for gate in queue)
-        max_targets = max(max_qubits, max_targets)
+        #max_targets = max(len(gate.qubits) for gate in queue)
+        #max_targets = max(max_qubits, max_targets)
+
+        max_targets = max_qubits
 
         # FIXME: Handle special gates
         for gate in queue:
