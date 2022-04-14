@@ -110,11 +110,6 @@ class Circuit(circuit.AbstractCircuit):
         #queue = self.fuse_neighbors()
         queue = _Queue(self.nqubits)
         queue.extend(gates.FusedGate.from_gate(gate) for gate in self.queue)
-        
-        #max_targets = max(len(gate.qubits) for gate in queue)
-        #max_targets = max(max_qubits, max_targets)
-
-        max_targets = max_qubits
 
         # FIXME: Handle special gates
         for gate in queue:
@@ -125,13 +120,13 @@ class Circuit(circuit.AbstractCircuit):
                     if not gate.marked:
                         neighbor = queue.next_neighbor(q, m)
                         if neighbor is not None and not neighbor.marked:
-                            queue.fuse(gate, neighbor, max_targets)
+                            queue.fuse(gate, neighbor, max_qubits)
 
                     # fuse nearest neighbors back in time
                     if not gate.marked:
                         neighbor = queue.previous_neighbor(q, m)
                         if neighbor is not None and not neighbor.marked:
-                            queue.fuse(gate, neighbor, max_targets)
+                            queue.fuse(gate, neighbor, max_qubits)
 
         # create a circuit and assign the new queue
         circuit = self._shallow_copy()
