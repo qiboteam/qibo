@@ -41,6 +41,7 @@ class _Queue(list):
         self.nqubits = nqubits
         self.moments = [nqubits * [None]]
         self.moment_index = nqubits * [0]
+        self.gate_moment = {} # mapping from ``gate`` to its moment
 
     def append(self, gate: gates.Gate):
         super(_Queue, self).append(gate)
@@ -52,6 +53,7 @@ class _Queue(list):
                 # Add a moment
                 self.moments.append(len(self.moments[-1]) * [None])
             self.moments[idx][q] = gate
+            self.gate_moment[gate] = idx
             self.moment_index[q] = idx + 1
 
     def extend(self, iterable):
@@ -60,10 +62,9 @@ class _Queue(list):
 
     def find_moment(self, gate):
         """Finds index of the moment that the given gate belongs."""
-        for i, moment in enumerate(self.moments):
-            if gate in moment:
-                return i
-        raise_error(ValueError, "Gate is not part of queue.")
+        if gate not in self.gate_moment:
+            raise_error(ValueError, "Gate is not part of queue.")
+        return self.gate_moment.get(gate)
 
     def next_neighbor(self, qubit, imoment):
         """Finds nearest neighbor gate forward in time."""
@@ -122,6 +123,7 @@ class _Queue(list):
             for q in child.qubits:
                 self.moments[mparent][q] = parent
                 self.moments[mchild][q] = None
+            self.gate_moment.pop(child)
 
 
 class AbstractCircuit(ABC):
