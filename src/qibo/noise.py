@@ -6,6 +6,7 @@ class PauliError():
         Args:
             options (tuple): see :class:`qibo.abstractions.gates.PauliNoiseChannel`
     """
+
     def __init__(self, px=0, py=0, pz=0, seed=None):
         self.options = px, py, pz, seed
         self.channel = gates.PauliNoiseChannel
@@ -17,6 +18,7 @@ class ThermalRelaxationError():
         Args:
             options (tuple): see :class:`qibo.abstractions.gates.ThermalRelaxationChannel`
     """
+
     def __init__(self, t1, t2, time, excited_population=0, seed=None):
         self.options = t1, t2, time, excited_population, seed
         self.channel = gates.ThermalRelaxationChannel
@@ -28,13 +30,35 @@ class ResetError():
         Args:
             options (tuple): see :class:`qibo.abstractions.gates.ResetChannel`
     """
+
     def __init__(self, p0, p1, seed=None):
         self.options = p0, p1, seed
         self.channel = gates.ResetChannel
 
 
 class NoiseModel():
-    """Class for the implementation of a custom noise model."""
+    """Class for the implementation of a custom noise model.
+
+        Example:
+        .. testcode::
+
+            from qibo import models, gates
+            from qibo.noise import NoiseModel, PauliError
+
+            # Build specific noise model with 2 quantum errors:
+            # - Pauli error on H only for qubit 1.
+            # - Pauli error on CNOT for all the qubits.
+            noise = NoiseModel()
+            noise.add(PauliError(px = 0.5), gates.H, 1)
+            noise.add(PauliError(py = 0.5), gates.CNOT)
+
+            # Generate noiseless circuit.
+            c = models.Circuit(2)
+            c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
+
+            # Apply noise to the circuit according to the noise model.
+            noisy_c = noise.apply(c)
+    """
 
     def __init__(self):
         self.errors = {}
@@ -51,6 +75,7 @@ class NoiseModel():
                 qubits (tuple): qubits where the noise will be applied, if None the noise
                                 will be added after every instance of the gate.
         """
+
         if isinstance(qubits, int):
             qubits = (qubits, )
 
@@ -67,6 +92,7 @@ class NoiseModel():
                 to the initial circuit with noise gates added according
                 to the noise model.
         """
+
         circ = circuit.__class__(**circuit.init_kwargs)
         for gate in circuit.queue:
             circ.add(gate)
