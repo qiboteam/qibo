@@ -561,7 +561,7 @@ Thermal relaxation channel
 _______________________
 
 Noise
------------
+-----
 
 In Qibo it is possible to create a custom noise model using the
 class :class:`qibo.noise.NoiseModel`. This enables the user to create
@@ -573,6 +573,9 @@ For more information on the use of :class:`qibo.noise.NoiseModel` see
 .. autoclass:: qibo.noise.NoiseModel
     :members:
     :member-order: bysource
+
+Quantum errors
+^^^^^^^^^^^^^^
 
 The quantum errors available to build a noise model are the following:
 
