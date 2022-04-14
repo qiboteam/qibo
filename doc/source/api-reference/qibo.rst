@@ -560,6 +560,34 @@ Thermal relaxation channel
 
 _______________________
 
+Noise Model
+-----------
+
+In Qibo is possible to create a custom noise model using the
+class :class:`qibo.noise.NoiseModel`. This enables the user to create
+circuits where the noise is gate and qubit dependent.
+
+For more information on the use of :class:`qibo.noise.NoiseModel` see
+:ref:`How to perform noisy simulation? <noisemodel-example>`
+
+.. autoclass:: qibo.noise.NoiseModel
+    :members:
+    :member-order: bysource
+
+The quantum errors available to build a noise model are the following:
+
+.. autoclass:: qibo.noise.PauliError
+    :members:
+    :member-order: bysource
+
+.. autoclass:: qibo.noise.ThermalRelaxationError
+    :members:
+    :member-order: bysource
+
+.. autoclass:: qibo.noise.ResetError
+    :members:
+    :member-order: bysource
+
 
 .. _Hamiltonians:
 
