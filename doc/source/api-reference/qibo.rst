@@ -560,10 +560,10 @@ Thermal relaxation channel
 
 _______________________
 
-Noise Model
+Noise
 -----------
 
-In Qibo is possible to create a custom noise model using the
+In Qibo it is possible to create a custom noise model using the
 class :class:`qibo.noise.NoiseModel`. This enables the user to create
 circuits where the noise is gate and qubit dependent.
 
