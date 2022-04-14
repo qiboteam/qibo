@@ -40,6 +40,7 @@ class NoiseModel():
     """Class for the implementation of a custom noise model.
 
         Example:
+
         .. testcode::
 
             from qibo import models, gates
