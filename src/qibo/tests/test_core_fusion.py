@@ -63,7 +63,8 @@ def test_fuse_circuit_two_qubit_gates(backend):
     K.assert_allclose(fused_c(), c())
 
 
-def test_fuse_circuit_three_qubit_gate(backend):
+@pytest.mark.parametrize("max_qubits", [2, 3, 4])
+def test_fuse_circuit_three_qubit_gate(backend, max_qubits):
     """Check circuit fusion in circuit with three-qubit gate."""
     c = Circuit(4)
     c.add((gates.H(i) for i in range(4)))
@@ -74,7 +75,7 @@ def test_fuse_circuit_three_qubit_gate(backend):
     c.add((gates.H(i) for i in range(4)))
     c.add(gates.CNOT(0, 1))
     c.add(gates.CZ(2, 3))
-    fused_c = c.fuse()
+    fused_c = c.fuse(max_qubits=max_qubits)
     K.assert_allclose(fused_c(), c(), atol=1e-12)
 
 
@@ -99,7 +100,8 @@ def test_variational_layer_fusion(backend, nqubits, nlayers):
 
 @pytest.mark.parametrize("nqubits", [4, 5])
 @pytest.mark.parametrize("ngates", [10, 20])
-def test_random_circuit_fusion(backend, nqubits, ngates):
+@pytest.mark.parametrize("max_qubits", [2, 3])
+def test_random_circuit_fusion(backend, nqubits, ngates, max_qubits):
     """Check gate fusion in randomly generated circuits."""
     one_qubit_gates = [gates.RX, gates.RY, gates.RZ]
     two_qubit_gates = [gates.CNOT, gates.CZ, gates.SWAP]
@@ -114,7 +116,7 @@ def test_random_circuit_fusion(backend, nqubits, ngates):
         while q0 == q1:
             q0, q1 = np.random.randint(0, nqubits, (2,))
         c.add(gate(q0, q1))
-    fused_c = c.fuse()
+    fused_c = c.fuse(max_qubits=max_qubits)
     K.assert_allclose(fused_c(), c(), atol=1e-7)
 
 

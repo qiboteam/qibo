@@ -92,9 +92,10 @@ class _Queue(list):
             parent, child = gate1, gate2
         else:
             parent, child = gate2, gate1
-        
         mparent = self.find_moment(parent)
         mchild = self.find_moment(child)
+
+        to_print = gate2.gates[0].name == "cz" and gate2.gates[0].qubits == (3, 1)
 
         # check if gates can be fused
         # this can be done when:
@@ -106,17 +107,23 @@ class _Queue(list):
             if mchild < mparent:
                 for q in child.qubits:
                     between = self.next_neighbor(q, mchild)
-                    mbetween = self.find_moment(between)
-                    if between is not None and between != parent and mbetween > mchild and mbetween <= mparent:
-                        fuse = False
-                        break
+                    if between is not None and between != parent:
+                        mbetween = self.find_moment(between)
+                        if mbetween > mchild and mbetween <= mparent:
+                            fuse = False
+                            break
             else:
                 for q in child.qubits:
                     between = self.previous_neighbor(q, mchild)
-                    mbetween = self.find_moment(between)
-                    if between is not None and between != parent and mbetween < mchild and mbetween >= mparent:
-                        fuse = False
-                        break
+                    if between is not None and between != parent:
+                        mbetween = self.find_moment(between)
+                        if to_print:
+                            print(parent.gates, mparent)
+                            print(between.gates, mbetween)
+                            print(child.gates, mchild)
+                        if mbetween < mchild and mbetween >= mparent:
+                            fuse = False
+                            break
 
         if fuse:
             child.marked = True

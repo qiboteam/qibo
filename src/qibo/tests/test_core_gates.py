@@ -612,6 +612,5 @@ def test_fused_gate_construct_unitary(backend, nqubits):
         gate.append(gates.TOFFOLI(0, 1, 2))
         toffoli = np.eye(8)
         toffoli[-2:, -2:] = np.array([[0, 1], [1, 0]])
-        print(toffoli)
         target_matrix = toffoli @ np.kron(target_matrix, np.eye(2))
     K.assert_allclose(gate.matrix, target_matrix)

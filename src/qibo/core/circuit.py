@@ -49,6 +49,9 @@ class Circuit(circuit.AbstractCircuit):
     def fuse(self, max_qubits=2):
         """Creates an equivalent circuit with the gates fused up to two-qubits.
 
+        Args:
+            max_qubits (int): Maximum number of qubits in the fused gates.
+
         Returns:
             A :class:`qibo.core.circuit.Circuit` object containing
             :class:`qibo.abstractions.gates.FusedGate` gates, each of which
