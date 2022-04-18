@@ -1684,6 +1684,9 @@ class FusedGate(Gate):
     def from_gate(cls, gate):
         fgate = cls(*gate.qubits)
         fgate.append(gate)
+        if isinstance(gate, SpecialGate):
+            # special gates do not participate in fusion
+            fgate.marked = True
         return fgate
 
     def prepend(self, gate):

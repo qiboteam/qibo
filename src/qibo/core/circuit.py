@@ -104,6 +104,10 @@ class Circuit(circuit.AbstractCircuit):
                     circuit.queue.append(gate.gates[0])
                 else:
                     circuit.queue.append(gate)
+            elif not gate.qubits:
+                # special gates are marked by default so we need
+                # to add them manually
+                circuit.queue.append(gate.gates[0])
         return circuit
 
     def _eager_execute(self, state):

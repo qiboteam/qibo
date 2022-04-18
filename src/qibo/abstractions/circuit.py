@@ -45,10 +45,14 @@ class _Queue(list):
 
     def append(self, gate: gates.Gate):
         super(_Queue, self).append(gate)
-        # Calculate moment index for this gate
         if gate.qubits:
-            idx = max(self.moment_index[q] for q in gate.qubits)
-        for q in gate.qubits:
+            qubits = gate.qubits
+        else: # special gate acting on all qubits
+            qubits = tuple(range(self.nqubits))
+
+        # calculate moment index for this gate
+        idx = max(self.moment_index[q] for q in qubits)
+        for q in qubits:
             if idx >= len(self.moments):
                 # Add a moment
                 self.moments.append(len(self.moments[-1]) * [None])
