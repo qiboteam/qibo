@@ -1713,5 +1713,5 @@ class FusedGate(Gate):
     def _dagger(self):
         dagger = self.__class__(*self.init_args)
         for gate in self.gates[::-1]:
-            dagger.add(gate.dagger())
+            dagger.append(gate.dagger())
         return dagger

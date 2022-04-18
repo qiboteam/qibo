@@ -599,20 +599,19 @@ def test_thermal_relaxation_channel_errors(backend, t1, t2, time, excpop):
             0, t1, t2, time, excited_population=excpop)
 
 
-def test_fused_gate_init(backend):
-    gate = gates.FusedGate(0)
+@pytest.mark.parametrize("nqubits", [2, 3])
+def test_fused_gate_construct_unitary(backend, nqubits):
     gate = gates.FusedGate(0, 1)
-    if K.is_custom:
-        with pytest.raises(NotImplementedError):
-            gate = gates.FusedGate(0, 1, 2)
-
-
-def test_fused_gate_construct_unitary(backend):
-    gate = gates.FusedGate(0, 1)
-    gate.add(gates.H(0))
-    gate.add(gates.H(1))
-    gate.add(gates.CZ(0, 1))
+    gate.append(gates.H(0))
+    gate.append(gates.H(1))
+    gate.append(gates.CZ(0, 1))
     hmatrix = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
     czmatrix = np.diag([1, 1, 1, -1])
     target_matrix = czmatrix @ np.kron(hmatrix, hmatrix)
+    if nqubits > 2:
+        gate.append(gates.TOFFOLI(0, 1, 2))
+        toffoli = np.eye(8)
+        toffoli[-2:, -2:] = np.array([[0, 1], [1, 0]])
+        print(toffoli)
+        target_matrix = toffoli @ np.kron(target_matrix, np.eye(2))
     K.assert_allclose(gate.matrix, target_matrix)

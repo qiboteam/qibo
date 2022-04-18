@@ -482,14 +482,15 @@ class BaseBackendGate(Gate, ABC):
 
     @property
     def matrix(self):
-        """Unitary matrix representing the gate in the computational basis."""
-        if len(self.qubits) > 2:
-            raise_error(NotImplementedError, "Cannot calculate unitary matrix for "
-                                             "gates that target more than two qubits.")
+        """Unitary matrix representing the gate in the computational basis."""        
         if self._matrix is None:
             self._matrix = self._construct_unitary()
-        if self.is_controlled_by and tuple(self._matrix.shape) == (2, 2):
-            self._matrix = self._control_unitary(self._matrix)
+        if self.is_controlled_by:
+            if len(self.qubits) > 2:
+                raise_error(NotImplementedError, "Cannot calculate control matrix for "
+                                                 "gates that target more than two qubits.")
+            if tuple(self._matrix.shape) == (2, 2):
+                self._matrix = self._control_unitary(self._matrix)
         return self._matrix
 
     def __matmul__(self, other: "Gate") -> "Gate":
