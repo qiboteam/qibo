@@ -90,65 +90,6 @@ class _Queue(list):
             self.moments[idx][q] = gate
             self.moment_index[q] = idx + 1
 
-    @staticmethod
-    def can_fuse(left, right, max_qubits):
-        """Check if two gates can be fused."""
-        if left is None or right is None:
-            return False
-        if left.marked or right.marked:
-            # gates are already fused
-            return False
-        if len(left.qubit_set | right.qubit_set) > max_qubits:
-            # combined qubits are more than ``max_qubits``
-            return False
-        return True
-
-    @staticmethod
-    def fuse(left, right):
-        left_gates = set(left.right_neighbors.values()) - {right}
-        right_gates = set(right.left_neighbors.values()) - {left}
-        if len(left_gates) > 0 and len(right_gates) > 0:
-            # abort if there are blocking gates between
-            return
-
-        # determine which gate will be the parent
-        qubits = left.qubit_set & right.qubit_set
-        if len(left_gates) > len(right_gates):
-            parent, child = left, right
-            between_gates = set(parent.right_neighbors.get(q) for q in qubits)
-            if between_gates == {child}:
-                child.marked = True
-                parent.append(child)
-                for q in qubits:
-                    neighbor = child.right_neighbors.get(q)
-                    if neighbor is not None:
-                        parent.right_neighbors[q] = neighbor
-                        neighbor.left_neighbors[q] = parent
-                    else:
-                        parent.right_neighbors.pop(q)
-        else:
-            parent, child = right, left
-            between_gates = set(parent.left_neighbors.get(q) for q in qubits)
-            if between_gates == {child}:
-                child.marked = True
-                parent.prepend(child)
-                for q in qubits:
-                    neighbor = child.left_neighbors.get(q)
-                    if neighbor is not None:
-                        parent.left_neighbors[q] = neighbor
-                        neighbor.right_neighbors[q] = parent
-
-        if child.marked:
-            for q in child.qubit_set - qubits:
-                neighbor = child.right_neighbors.get(q)
-                if neighbor is not None:
-                    parent.right_neighbors[q] = neighbor
-                    neighbor.left_neighbors[q] = parent
-                neighbor = child.left_neighbors.get(q)
-                if neighbor is not None:
-                    parent.left_neighbors[q] = neighbor
-                    neighbor.right_neighbors[q] = parent
-
 
 class AbstractCircuit(ABC):
     """Circuit object which holds a list of gates.

@@ -1718,3 +1718,62 @@ class FusedGate(Gate):
         for gate in self.gates[::-1]:
             dagger.append(gate.dagger())
         return dagger
+
+    def can_fuse(self, gate, max_qubits):
+        """Check if two gates can be fused."""
+        if gate is None:
+            return False
+        if self.marked or gate.marked:
+            # gates are already fused
+            return False
+        if len(self.qubit_set | gate.qubit_set) > max_qubits:
+            # combined qubits are more than ``max_qubits``
+            return False
+        return True
+
+    def fuse(self, gate):
+        """Fuses two gates."""
+        left_gates = set(self.right_neighbors.values()) - {gate}
+        right_gates = set(gate.left_neighbors.values()) - {self}
+        if len(left_gates) > 0 and len(right_gates) > 0:
+            # abort if there are blocking gates between the two gates
+            # not in the shared qubits
+            return
+
+        # determine which gate will be the parent
+        qubits = self.qubit_set & gate.qubit_set
+        if len(left_gates) > len(right_gates):
+            parent, child = self, gate
+            between_gates = set(parent.right_neighbors.get(q) for q in qubits)
+            if between_gates == {child}:
+                child.marked = True
+                parent.append(child)
+                for q in qubits:
+                    neighbor = child.right_neighbors.get(q)
+                    if neighbor is not None:
+                        parent.right_neighbors[q] = neighbor
+                        neighbor.left_neighbors[q] = parent
+                    else:
+                        parent.right_neighbors.pop(q)
+        else:
+            parent, child = gate, self
+            between_gates = set(parent.left_neighbors.get(q) for q in qubits)
+            if between_gates == {child}:
+                child.marked = True
+                parent.prepend(child)
+                for q in qubits:
+                    neighbor = child.left_neighbors.get(q)
+                    if neighbor is not None:
+                        parent.left_neighbors[q] = neighbor
+                        neighbor.right_neighbors[q] = parent
+
+        if child.marked:
+            for q in child.qubit_set - qubits:
+                neighbor = child.right_neighbors.get(q)
+                if neighbor is not None:
+                    parent.right_neighbors[q] = neighbor
+                    neighbor.left_neighbors[q] = parent
+                neighbor = child.left_neighbors.get(q)
+                if neighbor is not None:
+                    parent.left_neighbors[q] = neighbor
+                    neighbor.right_neighbors[q] = parent

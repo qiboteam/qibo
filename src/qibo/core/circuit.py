@@ -78,12 +78,12 @@ class Circuit(circuit.AbstractCircuit):
                 for q in gate.qubits:
                     # fuse nearest neighbors forth in time
                     neighbor = gate.right_neighbors.get(q)
-                    if queue.can_fuse(gate, neighbor, max_qubits):
-                        queue.fuse(gate, neighbor)
+                    if gate.can_fuse(neighbor, max_qubits):
+                        gate.fuse(neighbor)
                     # fuse nearest neighbors back in time
                     neighbor = gate.left_neighbors.get(q)
-                    if queue.can_fuse(gate, neighbor, max_qubits):
-                        queue.fuse(neighbor, gate)
+                    if gate.can_fuse(neighbor, max_qubits):
+                        neighbor.fuse(gate)
         # create a circuit and assign the new queue
         circuit = self._shallow_copy()
         circuit.queue = queue.from_fused()
