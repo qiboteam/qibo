@@ -41,7 +41,6 @@ class _Queue(list):
         self.nqubits = nqubits
         self.moments = [nqubits * [None]]
         self.moment_index = nqubits * [0]
-        self.gate_moment = {} # mapping from ``gate`` to its moment
 
     def to_fused(self):
         """Transforms all gates in queue to :class:`qibo.abstractions.gates.FusedGate`."""
@@ -88,34 +87,7 @@ class _Queue(list):
                 # Add a moment
                 self.moments.append(len(self.moments[-1]) * [None])
             self.moments[idx][q] = gate
-            self.gate_moment[gate] = idx
             self.moment_index[q] = idx + 1
-
-    def extend(self, iterable):
-        for gate in iterable:
-            self.append(gate)
-
-    def find_moment(self, gate):
-        """Finds index of the moment that the given gate belongs."""
-        if gate not in self.gate_moment:
-            raise_error(ValueError, "Gate is not part of queue.")
-        return self.gate_moment.get(gate)
-
-    def next_neighbor(self, qubit, imoment):
-        """Finds nearest neighbor gate forward in time."""
-        for i in range(imoment + 1, len(self.moments)):
-            gate = self.moments[i][qubit]
-            if gate is not None:
-                return gate
-        return None
-
-    def previous_neighbor(self, qubit, imoment):
-        """Finds nearest neighbor gate backward in time."""
-        for i in range(imoment - 1, -1, -1):
-            gate = self.moments[i][qubit]
-            if gate is not None:
-                return gate
-        return None
 
     def fuse_to_left(self, parent, child):
         qubits = parent.qubit_set & child.qubit_set
@@ -184,17 +156,18 @@ class _Queue(list):
         # determine which gate will be the parent
         left_gates = set(left.right_neighbors.values()) - {right}
         right_gates = set(right.left_neighbors.values()) - {left}
+        # abort if there are blocking gates between
         if len(left_gates) > 0 and len(right_gates) > 0:
-            print("left")
-            for gate in left.gates:
-                print(gate.name, gate.qubits)
-            print("left gates")
-            for gate in left_gates.pop():
-                print(gate.name, gate.qubits)
-            print("right")
-            for gate in right.gates:
-                print(gate.name, gate.qubits)
-            print()
+            #print("left")
+            #for gate in left.gates:
+            #    print(gate.name, gate.qubits)
+            #print("left gates")
+            #for gate in left_gates.pop():
+            #    print(gate.name, gate.qubits)
+            #print("right")
+            #for gate in right.gates:
+            #    print(gate.name, gate.qubits)
+            #print()
             return
 
         if len(left_gates) > len(right_gates):
@@ -202,42 +175,6 @@ class _Queue(list):
         else:
             self.fuse_to_right(right, left)
         
-        #mparent = self.find_moment(parent)
-        #mchild = self.find_moment(child)
-            # 2. There are no other gates between them
-            
-            #if mchild < mparent:
-            #    for q in child.qubits:
-            #        between = self.next_neighbor(q, mchild)
-            #        if between is not None and between != parent:
-            #            mbetween = self.find_moment(between)
-            #            if mbetween > mchild and mbetween <= mparent:
-            #                fuse = False
-            #                break
-            #else:
-            #    for q in child.qubits:
-            #        between = self.previous_neighbor(q, mchild)
-            #        if between is not None and between != parent:
-            #            mbetween = self.find_moment(between)
-            #            if to_print:
-            #                print(parent.gates, mparent)
-            #                print(between.gates, mbetween)
-            #                print(child.gates, mchild)
-            #            if mbetween < mchild and mbetween >= mparent:
-            #                fuse = False
-            #                break
-
-        #if fuse:
-        #    child.marked = True
-        #    if mchild < mparent:
-        #        parent.prepend(child)
-        #    else:
-        #        parent.append(child)
-        #    for q in child.qubits:
-        #        self.moments[mparent][q] = parent
-        #        self.moments[mchild][q] = None
-        #    self.gate_moment.pop(child)
-
 
 class AbstractCircuit(ABC):
     """Circuit object which holds a list of gates.
