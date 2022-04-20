@@ -1740,8 +1740,9 @@ class FusedGate(Gate):
             # not in the shared qubits
             return
 
-        # determine which gate will be the parent
         qubits = self.qubit_set & gate.qubit_set
+        # the gate with most neighbors different than the two gates to
+        # fuse will be the parent
         if len(left_gates) > len(right_gates):
             parent, child = self, gate
             between_gates = set(parent.right_neighbors.get(q) for q in qubits)
@@ -1768,6 +1769,7 @@ class FusedGate(Gate):
                         neighbor.right_neighbors[q] = parent
 
         if child.marked:
+            # update the neighbors graph
             for q in child.qubit_set - qubits:
                 neighbor = child.right_neighbors.get(q)
                 if neighbor is not None:
