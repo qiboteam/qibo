@@ -1680,6 +1680,9 @@ class FusedGate(Gate):
         self.marked = False
         self.fused = False
 
+        self.left_neighbors = {}
+        self.right_neighbors = {}
+
     @classmethod
     def from_gate(cls, gate):
         fgate = cls(*gate.qubits)

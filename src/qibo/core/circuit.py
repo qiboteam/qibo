@@ -72,45 +72,24 @@ class Circuit(circuit.AbstractCircuit):
                 # now ``fused_c`` contains a single ``FusedGate`` that is
                 # equivalent to applying the five original gates
         """
-        from qibo import gates
-        from qibo.abstractions.circuit import _Queue
-        from qibo.abstractions.abstract_gates import SpecialGate
-
-        queue = _Queue(self.nqubits)
-        queue.extend(gates.FusedGate.from_gate(gate) for gate in self.queue)
-
-        # FIXME: Handle special gates
+        queue = self.queue.to_fused()
         for gate in queue:
             if not gate.marked:
-                m = queue.find_moment(gate)
                 for q in gate.qubits:
                     # fuse nearest neighbors forth in time
                     if not gate.marked:
-                        neighbor = queue.next_neighbor(q, m)
+                        neighbor = gate.right_neighbors.get(q)
                         if neighbor is not None and not neighbor.marked:
                             queue.fuse(gate, neighbor, max_qubits)
-
                     # fuse nearest neighbors back in time
                     if not gate.marked:
-                        neighbor = queue.previous_neighbor(q, m)
+                        neighbor = gate.left_neighbors.get(q)
                         if neighbor is not None and not neighbor.marked:
-                            queue.fuse(gate, neighbor, max_qubits)
+                            queue.fuse(neighbor, gate, max_qubits)
 
         # create a circuit and assign the new queue
         circuit = self._shallow_copy()
-        circuit.queue = _Queue(self.nqubits)
-        for gate in queue:
-            if not gate.marked:
-                if len(gate.gates) == 1:
-                    # replace ``FusedGate``s that contain only one gate 
-                    # by this gate for efficiency
-                    circuit.queue.append(gate.gates[0])
-                else:
-                    circuit.queue.append(gate)
-            elif not gate.qubits:
-                # special gates are marked by default so we need
-                # to add them manually
-                circuit.queue.append(gate.gates[0])
+        circuit.queue = queue.from_fused()
         return circuit
 
     def _eager_execute(self, state):

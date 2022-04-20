@@ -43,6 +43,37 @@ class _Queue(list):
         self.moment_index = nqubits * [0]
         self.gate_moment = {} # mapping from ``gate`` to its moment
 
+    def to_fused(self):
+        """Transforms all gates in queue to :class:`qibo.abstractions.gates.FusedGate`."""
+        last_gate = {}
+        queue = self.__class__(self.nqubits)
+        for gate in self:
+            fgate = gate_module.FusedGate.from_gate(gate)
+            for q in gate.qubits:
+                if q in last_gate:
+                    neighbor = last_gate.get(q)
+                    fgate.left_neighbors[q] = neighbor
+                    neighbor.right_neighbors[q] = fgate
+                last_gate[q] = fgate
+            queue.append(fgate)
+        return queue
+
+    def from_fused(self):
+        queue = self.__class__(self.nqubits)
+        for gate in self:
+            if not gate.marked:
+                if len(gate.gates) == 1:
+                    # replace ``FusedGate``s that contain only one gate 
+                    # by this gate for efficiency
+                    queue.append(gate.gates[0])
+                else:
+                    queue.append(gate)
+            elif not gate.qubits:
+                # special gates are marked by default so we need
+                # to add them manually
+                queue.append(gate.gates[0])
+        return queue
+
     def append(self, gate: gates.Gate):
         super(_Queue, self).append(gate)
         if gate.qubits:
@@ -86,55 +117,126 @@ class _Queue(list):
                 return gate
         return None
 
-    def fuse(self, gate1, gate2, max_qubits):
-        # the gate with more qubits will be the parent of fusion
-        if len(gate1.qubits) >= len(gate2.qubits):
-            parent, child = gate1, gate2
-        else:
-            parent, child = gate2, gate1
-        mparent = self.find_moment(parent)
-        mchild = self.find_moment(child)
+    def fuse_to_left(self, parent, child):
+        qubits = parent.qubit_set & child.qubit_set
+        between_gates = set(parent.right_neighbors.get(q) for q in qubits)
+        if between_gates == {child}:
+        #    print("parent")
+        #    for gate in parent.gates:
+        #        print(gate.name, gate.qubits)
+        #    print("child")
+        #    for gate in child.gates:
+        #        print(gate.name, gate.qubits)
+        #    print()
 
-        to_print = gate2.gates[0].name == "cz" and gate2.gates[0].qubits == (3, 1)
-
-        # check if gates can be fused
-        # this can be done when:
-        # 1. The combined qubits are less than ``max_qubits``
-        qubits = parent.qubit_set | child.qubit_set
-        fuse = len(qubits) <= max_qubits
-        if fuse:
-            # 2. There are no other gates between them
-            if mchild < mparent:
-                for q in child.qubits:
-                    between = self.next_neighbor(q, mchild)
-                    if between is not None and between != parent:
-                        mbetween = self.find_moment(between)
-                        if mbetween > mchild and mbetween <= mparent:
-                            fuse = False
-                            break
-            else:
-                for q in child.qubits:
-                    between = self.previous_neighbor(q, mchild)
-                    if between is not None and between != parent:
-                        mbetween = self.find_moment(between)
-                        if to_print:
-                            print(parent.gates, mparent)
-                            print(between.gates, mbetween)
-                            print(child.gates, mchild)
-                        if mbetween < mchild and mbetween >= mparent:
-                            fuse = False
-                            break
-
-        if fuse:
             child.marked = True
-            if mchild < mparent:
-                parent.prepend(child)
-            else:
-                parent.append(child)
-            for q in child.qubits:
-                self.moments[mparent][q] = parent
-                self.moments[mchild][q] = None
-            self.gate_moment.pop(child)
+            parent.append(child)
+            for q in qubits:
+                neighbor = child.right_neighbors.get(q)
+                if neighbor is not None:
+                    parent.right_neighbors[q] = neighbor
+                    neighbor.left_neighbors[q] = parent
+            for q in child.qubit_set - qubits:
+                neighbor = child.right_neighbors.get(q)
+                if neighbor is not None:
+                    parent.right_neighbors[q] = neighbor
+                    neighbor.left_neighbors[q] = parent
+                neighbor = child.left_neighbors.get(q)
+                if neighbor is not None:
+                    parent.left_neighbors[q] = neighbor
+                    neighbor.right_neighbors[q] = parent
+
+    def fuse_to_right(self, parent, child):
+        qubits = parent.qubit_set & child.qubit_set
+        between_gates = set(parent.left_neighbors.get(q) for q in qubits)
+        if between_gates == {child}:
+        #    print("parent")
+        #    for gate in parent.gates:
+        #        print(gate.name, gate.qubits)
+        #    print("child")
+        #    for gate in child.gates:
+        #        print(gate.name, gate.qubits)
+        #    print()
+
+            child.marked = True
+            parent.prepend(child)
+            for q in qubits:
+                neighbor = child.left_neighbors.get(q)
+                if neighbor is not None:
+                    parent.left_neighbors[q] = neighbor
+                    neighbor.right_neighbors[q] = parent
+            for q in child.qubit_set - qubits:
+                neighbor = child.right_neighbors.get(q)
+                if neighbor is not None:
+                    parent.right_neighbors[q] = neighbor
+                    neighbor.left_neighbors[q] = parent
+                neighbor = child.left_neighbors.get(q)
+                if neighbor is not None:
+                    parent.left_neighbors[q] = neighbor
+                    neighbor.right_neighbors[q] = parent
+
+
+    def fuse(self, left, right, max_qubits):
+        # abort if combined qubits are more than ``max_qubits``
+        if len(left.qubit_set | right.qubit_set) > max_qubits:
+            return
+        
+        # determine which gate will be the parent
+        left_gates = set(left.right_neighbors.values()) - {right}
+        right_gates = set(right.left_neighbors.values()) - {left}
+        if len(left_gates) > 0 and len(right_gates) > 0:
+            print("left")
+            for gate in left.gates:
+                print(gate.name, gate.qubits)
+            print("left gates")
+            for gate in left_gates.pop():
+                print(gate.name, gate.qubits)
+            print("right")
+            for gate in right.gates:
+                print(gate.name, gate.qubits)
+            print()
+            return
+
+        if len(left_gates) > len(right_gates):
+            self.fuse_to_left(left, right)
+        else:
+            self.fuse_to_right(right, left)
+        
+        #mparent = self.find_moment(parent)
+        #mchild = self.find_moment(child)
+            # 2. There are no other gates between them
+            
+            #if mchild < mparent:
+            #    for q in child.qubits:
+            #        between = self.next_neighbor(q, mchild)
+            #        if between is not None and between != parent:
+            #            mbetween = self.find_moment(between)
+            #            if mbetween > mchild and mbetween <= mparent:
+            #                fuse = False
+            #                break
+            #else:
+            #    for q in child.qubits:
+            #        between = self.previous_neighbor(q, mchild)
+            #        if between is not None and between != parent:
+            #            mbetween = self.find_moment(between)
+            #            if to_print:
+            #                print(parent.gates, mparent)
+            #                print(between.gates, mbetween)
+            #                print(child.gates, mchild)
+            #            if mbetween < mchild and mbetween >= mparent:
+            #                fuse = False
+            #                break
+
+        #if fuse:
+        #    child.marked = True
+        #    if mchild < mparent:
+        #        parent.prepend(child)
+        #    else:
+        #        parent.append(child)
+        #    for q in child.qubits:
+        #        self.moments[mparent][q] = parent
+        #        self.moments[mchild][q] = None
+        #    self.gate_moment.pop(child)
 
 
 class AbstractCircuit(ABC):
