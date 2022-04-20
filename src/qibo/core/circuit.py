@@ -77,16 +77,13 @@ class Circuit(circuit.AbstractCircuit):
             if not gate.marked:
                 for q in gate.qubits:
                     # fuse nearest neighbors forth in time
-                    if not gate.marked:
-                        neighbor = gate.right_neighbors.get(q)
-                        if neighbor is not None and not neighbor.marked:
-                            queue.fuse(gate, neighbor, max_qubits)
+                    neighbor = gate.right_neighbors.get(q)
+                    if queue.can_fuse(gate, neighbor, max_qubits):
+                        queue.fuse(gate, neighbor)
                     # fuse nearest neighbors back in time
-                    if not gate.marked:
-                        neighbor = gate.left_neighbors.get(q)
-                        if neighbor is not None and not neighbor.marked:
-                            queue.fuse(neighbor, gate, max_qubits)
-
+                    neighbor = gate.left_neighbors.get(q)
+                    if queue.can_fuse(gate, neighbor, max_qubits):
+                        queue.fuse(neighbor, gate)
         # create a circuit and assign the new queue
         circuit = self._shallow_copy()
         circuit.queue = queue.from_fused()

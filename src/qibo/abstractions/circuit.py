@@ -58,6 +58,7 @@ class _Queue(list):
         return queue
 
     def from_fused(self):
+        """Creates the fused circuit queue by removing gatest that have been fused to others."""
         queue = self.__class__(self.nqubits)
         for gate in self:
             if not gate.marked:
@@ -89,28 +90,28 @@ class _Queue(list):
             self.moments[idx][q] = gate
             self.moment_index[q] = idx + 1
 
-    def fuse(self, left, right, max_qubits):
-        # abort if combined qubits are more than ``max_qubits``
+    @staticmethod
+    def can_fuse(left, right, max_qubits):
+        """Check if two gates can be fused."""
+        if left is None or right is None:
+            return False
+        if left.marked or right.marked:
+            # gates are already fused
+            return False
         if len(left.qubit_set | right.qubit_set) > max_qubits:
-            return
-        
-        # determine which gate will be the parent
+            # combined qubits are more than ``max_qubits``
+            return False
+        return True
+
+    @staticmethod
+    def fuse(left, right):
         left_gates = set(left.right_neighbors.values()) - {right}
         right_gates = set(right.left_neighbors.values()) - {left}
-        # abort if there are blocking gates between
         if len(left_gates) > 0 and len(right_gates) > 0:
-            #print("left")
-            #for gate in left.gates:
-            #    print(gate.name, gate.qubits)
-            #print("left gates")
-            #for gate in left_gates.pop():
-            #    print(gate.name, gate.qubits)
-            #print("right")
-            #for gate in right.gates:
-            #    print(gate.name, gate.qubits)
-            #print()
+            # abort if there are blocking gates between
             return
 
+        # determine which gate will be the parent
         qubits = left.qubit_set & right.qubit_set
         if len(left_gates) > len(right_gates):
             parent, child = left, right
@@ -123,6 +124,8 @@ class _Queue(list):
                     if neighbor is not None:
                         parent.right_neighbors[q] = neighbor
                         neighbor.left_neighbors[q] = parent
+                    else:
+                        parent.right_neighbors.pop(q)
         else:
             parent, child = right, left
             between_gates = set(parent.left_neighbors.get(q) for q in qubits)
