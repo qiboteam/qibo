@@ -1041,6 +1041,62 @@ initializing a :class:`qibo.core.circuit.DensityMatrixCircuit`
 using the ``density_matrix=True`` flag during initialization and call
 ``.with_noise`` on this circuit.
 
+.. _noisemodel-example:
+
+Using a noise model
+^^^^^^^^^^^^^^^^^^^
+
+In a real quantum circuit some gates can be highly faulty and introduce errors.
+In order to simulate this behavior Qibo provides the :class:`qibo.noise.NoiseModel`
+class which can store errors that are gate-dependent using the
+:meth:`qibo.noise.NoiseModel.add` method and generate the corresponding noisy circuit
+with :meth:`qibo.noise.NoiseModel.apply`. The corresponding noise is applied after
+every instance of the gate in the circuit. It is also possible to specify on which qubits
+the noise will be added.
+
+The current quantum errors available to build a custom noise model are:
+:class:`qibo.noise.PauliError`, :class:`qibo.noise.ThermalRelaxationError` and
+:class:`qibo.noise.ResetError`.
+
+Here is an example on how to use a noise model:
+
+.. testcode::
+
+      from qibo import models, gates
+      from qibo.noise import NoiseModel, PauliError
+
+      # Build specific noise model with 2 quantum errors:
+      # - Pauli error on H only for qubit 1.
+      # - Pauli error on CNOT for all the qubits.
+      noise = NoiseModel()
+      noise.add(PauliError(px = 0.5), gates.H, 1)
+      noise.add(PauliError(py = 0.5), gates.CNOT)
+
+      # Generate noiseless circuit.
+      c = models.Circuit(2)
+      c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
+
+      # Apply noise to the circuit according to the noise model.
+      noisy_c = noise.apply(c)
+
+The noisy circuit defined above will be equivalent to the following circuit:
+
+.. testcode::
+
+      noisy_c2 = models.Circuit(2)
+      noisy_c2.add(gates.H(0))
+      noisy_c2.add(gates.H(1))
+      noisy_c2.add(gates.PauliNoiseChannel(1, px=0.5))
+      noisy_c2.add(gates.CNOT(0, 1))
+      noisy_c2.add(gates.PauliNoiseChannel(0, py=0.5))
+      noisy_c2.add(gates.PauliNoiseChannel(1, py=0.5))
+
+
+The :class:`qibo.noise.NoiseModel` class supports also density matrices,
+it is sufficient to pass a circuit which was initialized with ``density_matrix=True``
+to generate the correspoding :class:`qibo.core.circuit.DensityMatrixCircuit`.
+
+
 
 .. _measurementbitflips-example:
 
