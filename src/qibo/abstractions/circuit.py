@@ -89,65 +89,6 @@ class _Queue(list):
             self.moments[idx][q] = gate
             self.moment_index[q] = idx + 1
 
-    def fuse_to_left(self, parent, child):
-        qubits = parent.qubit_set & child.qubit_set
-        between_gates = set(parent.right_neighbors.get(q) for q in qubits)
-        if between_gates == {child}:
-        #    print("parent")
-        #    for gate in parent.gates:
-        #        print(gate.name, gate.qubits)
-        #    print("child")
-        #    for gate in child.gates:
-        #        print(gate.name, gate.qubits)
-        #    print()
-
-            child.marked = True
-            parent.append(child)
-            for q in qubits:
-                neighbor = child.right_neighbors.get(q)
-                if neighbor is not None:
-                    parent.right_neighbors[q] = neighbor
-                    neighbor.left_neighbors[q] = parent
-            for q in child.qubit_set - qubits:
-                neighbor = child.right_neighbors.get(q)
-                if neighbor is not None:
-                    parent.right_neighbors[q] = neighbor
-                    neighbor.left_neighbors[q] = parent
-                neighbor = child.left_neighbors.get(q)
-                if neighbor is not None:
-                    parent.left_neighbors[q] = neighbor
-                    neighbor.right_neighbors[q] = parent
-
-    def fuse_to_right(self, parent, child):
-        qubits = parent.qubit_set & child.qubit_set
-        between_gates = set(parent.left_neighbors.get(q) for q in qubits)
-        if between_gates == {child}:
-        #    print("parent")
-        #    for gate in parent.gates:
-        #        print(gate.name, gate.qubits)
-        #    print("child")
-        #    for gate in child.gates:
-        #        print(gate.name, gate.qubits)
-        #    print()
-
-            child.marked = True
-            parent.prepend(child)
-            for q in qubits:
-                neighbor = child.left_neighbors.get(q)
-                if neighbor is not None:
-                    parent.left_neighbors[q] = neighbor
-                    neighbor.right_neighbors[q] = parent
-            for q in child.qubit_set - qubits:
-                neighbor = child.right_neighbors.get(q)
-                if neighbor is not None:
-                    parent.right_neighbors[q] = neighbor
-                    neighbor.left_neighbors[q] = parent
-                neighbor = child.left_neighbors.get(q)
-                if neighbor is not None:
-                    parent.left_neighbors[q] = neighbor
-                    neighbor.right_neighbors[q] = parent
-
-
     def fuse(self, left, right, max_qubits):
         # abort if combined qubits are more than ``max_qubits``
         if len(left.qubit_set | right.qubit_set) > max_qubits:
@@ -170,11 +111,41 @@ class _Queue(list):
             #print()
             return
 
+        qubits = left.qubit_set & right.qubit_set
         if len(left_gates) > len(right_gates):
-            self.fuse_to_left(left, right)
+            parent, child = left, right
+            between_gates = set(parent.right_neighbors.get(q) for q in qubits)
+            if between_gates == {child}:
+                child.marked = True
+                parent.append(child)
+                for q in qubits:
+                    neighbor = child.right_neighbors.get(q)
+                    if neighbor is not None:
+                        parent.right_neighbors[q] = neighbor
+                        neighbor.left_neighbors[q] = parent
         else:
-            self.fuse_to_right(right, left)
-        
+            parent, child = right, left
+            between_gates = set(parent.left_neighbors.get(q) for q in qubits)
+            if between_gates == {child}:
+                child.marked = True
+                parent.prepend(child)
+                for q in qubits:
+                    neighbor = child.left_neighbors.get(q)
+                    if neighbor is not None:
+                        parent.left_neighbors[q] = neighbor
+                        neighbor.right_neighbors[q] = parent
+
+        if child.marked:
+            for q in child.qubit_set - qubits:
+                neighbor = child.right_neighbors.get(q)
+                if neighbor is not None:
+                    parent.right_neighbors[q] = neighbor
+                    neighbor.left_neighbors[q] = parent
+                neighbor = child.left_neighbors.get(q)
+                if neighbor is not None:
+                    parent.left_neighbors[q] = neighbor
+                    neighbor.right_neighbors[q] = parent
+
 
 class AbstractCircuit(ABC):
     """Circuit object which holds a list of gates.
