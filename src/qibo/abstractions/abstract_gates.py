@@ -195,15 +195,10 @@ class Gate:
         return a or b
 
     def on_qubits(self, qubit_map) -> "Gate":
-        """Helper method for :meth:`qibo.abstractions.circuit.AbstractCircuit.on_qubits`.
-
-        Creates the same gate targeting different qubits.
+        """Creates the same gate targeting different qubits.
 
         Args:
-            q (int): Qubit index (or indeces) that the new gate should act on.
-                Note that q is interpreted as a map from the original qubit ids
-                to the new ones. It is required for `len(q)` to be greater than
-                the max qubit id of the original gate.
+            qubit_map (int): Dictionary mapping original qubit indices to new ones.
 
         Returns:
             A :class:`qibo.abstractions.gates.Gate` object of the original gate
@@ -216,10 +211,10 @@ class Gate:
                 from qibo import models, gates
                 c = models.Circuit(4)
                 # Add some CNOT gates
-                c.add(gates.CNOT(2, 3).on_qubits(0, 1, 2, 3)) # equivalent to gates.CNOT(2, 3)
-                c.add(gates.CNOT(2, 3).on_qubits(1, 2, 3, 0)) # equivalent to gates.CNOT(3, 0)
-                c.add(gates.CNOT(2, 3).on_qubits(2, 0, 1, 3)) # equivalent to gates.CNOT(1, 3)
-                c.add(gates.CNOT(2, 3).on_qubits(0, 3, 2, 1)) # equivalent to gates.CNOT(2, 1)
+                c.add(gates.CNOT(2, 3).on_qubits({2: 2, 3: 3})) # equivalent to gates.CNOT(2, 3)
+                c.add(gates.CNOT(2, 3).on_qubits({2: 3, 3: 0})) # equivalent to gates.CNOT(3, 0)
+                c.add(gates.CNOT(2, 3).on_qubits({2: 1, 3: 3})) # equivalent to gates.CNOT(1, 3)
+                c.add(gates.CNOT(2, 3).on_qubits({2: 2, 3: 1})) # equivalent to gates.CNOT(2, 1)
                 print(c.draw())
             .. testoutput::
 

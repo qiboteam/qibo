@@ -187,7 +187,12 @@ class AbstractCircuit(ABC):
 
     def light_cone(self, *qubits):
         """Reduces circuit to the qubits relevant for an observable.
-        
+
+        Useful for calculating expectation values of local observables without 
+        requiring simulation of large circuits.
+        Uses the light cone construction described in 
+        `issue #571 <https://github.com/qiboteam/qibo/issues/571>`_.
+
         Args:
             qubits (int): Qubit ids that the observable has support on.
 
