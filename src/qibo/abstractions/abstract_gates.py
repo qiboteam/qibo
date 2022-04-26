@@ -194,7 +194,7 @@ class Gate:
         b = not (t1 & set(gate.qubits) or t2 & set(self.qubits))
         return a or b
 
-    def _on_qubits(self, *q) -> "Gate":
+    def on_qubits(self, qubit_map) -> "Gate":
         """Helper method for :meth:`qibo.abstractions.circuit.AbstractCircuit.on_qubits`.
 
         Creates the same gate targeting different qubits.
@@ -216,10 +216,10 @@ class Gate:
                 from qibo import models, gates
                 c = models.Circuit(4)
                 # Add some CNOT gates
-                c.add(gates.CNOT(2, 3)._on_qubits(0, 1, 2, 3)) # equivalent to gates.CNOT(2, 3)
-                c.add(gates.CNOT(2, 3)._on_qubits(1, 2, 3, 0)) # equivalent to gates.CNOT(3, 0)
-                c.add(gates.CNOT(2, 3)._on_qubits(2, 0, 1, 3)) # equivalent to gates.CNOT(1, 3)
-                c.add(gates.CNOT(2, 3)._on_qubits(0, 3, 2, 1)) # equivalent to gates.CNOT(2, 1)
+                c.add(gates.CNOT(2, 3).on_qubits(0, 1, 2, 3)) # equivalent to gates.CNOT(2, 3)
+                c.add(gates.CNOT(2, 3).on_qubits(1, 2, 3, 0)) # equivalent to gates.CNOT(3, 0)
+                c.add(gates.CNOT(2, 3).on_qubits(2, 0, 1, 3)) # equivalent to gates.CNOT(1, 3)
+                c.add(gates.CNOT(2, 3).on_qubits(0, 3, 2, 1)) # equivalent to gates.CNOT(2, 1)
                 print(c.draw())
             .. testoutput::
 
@@ -229,12 +229,12 @@ class Gate:
                 q3: ─X─o─X───
         """
         if self.is_controlled_by:
-            targets = (q[i] for i in self.target_qubits)
-            controls = (q[i] for i in self.control_qubits)
+            targets = (qubit_map.get(q) for q in self.target_qubits)
+            controls = (qubit_map.get(q) for q in self.control_qubits)
             gate = self.__class__(*targets, **self.init_kwargs)
             gate = gate.controlled_by(*controls)
         else:
-            qubits = (q[i] for i in self.qubits)
+            qubits = (qubit_map.get(q) for q in self.qubits)
             gate = self.__class__(*qubits, **self.init_kwargs)
         return gate
 
@@ -315,7 +315,7 @@ class SpecialGate(Gate):
     def commutes(self, gate):
         return False
 
-    def _on_qubits(self, *q):
+    def on_qubits(self, qubit_map):
         raise_error(NotImplementedError,
                     "Cannot use special gates on subroutines.")
 
@@ -369,9 +369,9 @@ class Channel(Gate):
         """"""
         raise_error(ValueError, "Noise channel cannot be controlled on qubits.")
 
-    def _on_qubits(self, *q): # pragma: no cover
+    def on_qubits(self, qubit_map): # pragma: no cover
         # future TODO
-        raise_error(NotImplementedError, "`_on_qubits` method is not available "
+        raise_error(NotImplementedError, "`on_qubits` method is not available "
                                          "for the `Channel` gate.")
 
 

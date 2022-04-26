@@ -1181,12 +1181,12 @@ class Unitary(ParametrizedGate):
     def rank(self) -> int:
         return len(self.target_qubits)
 
-    def _on_qubits(self, *q) -> "Gate":
+    def on_qubits(self, qubit_map) -> "Gate":
         args = [self.init_args[0]]
-        args.extend((q[i] for i in self.target_qubits))
+        args.extend((qubit_map.get(i) for i in self.target_qubits))
         gate = self.__class__(*args, **self.init_kwargs)
         if self.is_controlled_by:
-            controls = (q[i] for i in self.control_qubits)
+            controls = (qubit_map.get(i) for i in self.control_qubits)
             gate = gate.controlled_by(*controls)
         return gate
 
