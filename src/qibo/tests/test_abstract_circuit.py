@@ -289,6 +289,22 @@ cz q[3],q[4];"""
     assert sc.to_qasm() == target_qasm
 
 
+def test_circuit_light_cone_controlled_by():
+    c = Circuit(4)
+    c.add(gates.RY(2, theta=0).controlled_by(0, 1))
+    c.add(gates.RX(3, theta=0))
+    sc, qubit_map = c.light_cone(3)
+    assert qubit_map == {3: 0}
+    assert sc.nqubits == 1
+    assert len(sc.queue) == 1
+    assert isinstance(sc.queue[0], gates.RX)
+    sc, qubit_map = c.light_cone(2)
+    assert qubit_map == {0: 0, 1: 1, 2: 2}
+    assert sc.nqubits == 3
+    assert len(sc.queue) == 1
+    assert isinstance(sc.queue[0], gates.RY)
+
+
 @pytest.mark.parametrize("deep", [False, True])
 def test_circuit_copy(deep):
     c1 = Circuit(2)
