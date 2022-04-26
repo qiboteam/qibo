@@ -184,6 +184,49 @@ class AbstractCircuit(ABC):
         for gate in self.queue:
             yield gate._on_qubits(*q)
 
+    def light_cone(self, *q):
+        """Reduces circuit to the qubits relevant for an observable.
+        
+        Args:
+            q (int): Qubit ids that the observable has support on.
+
+        Returns:
+            circuit (qibo.models.Circuit): Circuit that contains only 
+                the qubits that are required for calculating expectation 
+                involving the given observable qubits.
+            qubit_map (dict): Dictionary mapping the qubit ids of the original
+                circuit to the ids in the new one.
+        """
+        # original qubits that are in the light cone
+        qubits = set(q)
+        # original gates that are in the light cone
+        gates = []
+        for gate in reversed(self.queue):
+            gate_qubits = set(gate.qubits)
+            if gate_qubits & qubits:
+                # if the gate involves any qubit included in the 
+                # light cone, add all its qubits in the light cone
+                qubits |= gate_qubits
+                gates.append(gate)
+        
+        # Create a new circuit ignoring gates that are not in the light cone
+        qubit_map = {q: i for i, q in enumerate(sorted(qubits))}
+        kwargs = dict(self.init_kwargs)
+        kwargs["nqubits"] = len(qubits)
+        circuit = self.__class__(**kwargs)
+        for gate in reversed(gates):
+            # This part can be probably be delegated to the existing ``gate._on_qubits``
+            if gate.is_controlled_by:
+                # map original qubit ids to the ids in the reduced circuit
+                targets = (qubit_map.get(q) for q in gate.target_qubits)
+                controls = (qubit_map.get(q) for q in gate.control_qubits)
+                new_gate = gate.__class__(*targets, **gate.init_kwargs)
+                circuit.add(new_gate.controlled_by(*controls))
+            else:
+                gatequbits = (qubit_map.get(q) for q in gate.qubits)
+                circuit.add(gate.__class__(*gatequbits, **gate.init_kwargs))
+        return circuit, qubit_map
+
     def _shallow_copy(self):
         """Helper method for :meth:`qibo.abstractions.circuit.AbstractCircuit.copy`
         and :meth:`qibo.core.circuit.Circuit.fuse`."""
