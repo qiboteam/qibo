@@ -109,9 +109,13 @@ class tsp:
 
 # ..testcode::
 num_cities = 3
-distance_matrix = np.random.rand(num_cities, num_cities)
+#distance_matrix = np.random.rand(3,3)
+#distance_matrix = distance_matrix.round(1)
+#print(distance_matrix)
+distance_matrix = np.array([[0, 0.9, 0.8],
+ [0.4, 0, 0.1],
+ [0,  0.7, 0]])
 distance_matrix = distance_matrix.round(1)
-print(distance_matrix)
 small_tsp = tsp(distance_matrix)
 obj_hamil, mixer = small_tsp.hamiltonians(dense=False)
 initial_parameters = np.random.uniform(0, 1, 2)
@@ -123,4 +127,5 @@ print(final_parameters)
 print(extra)
 quantum_state = qaoa.execute(initial_state)
 print(quantum_state)
+print(quantum_state.frequencies(binary=True))
 print("note all the quantum states has 3 active qubits")
