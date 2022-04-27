@@ -1,7 +1,9 @@
 from qibo.symbols import X, Y, Z
 from qibo.models import Circuit, QAOA
 from qibo.core.hamiltonians import Hamiltonian, SymbolicHamiltonian
+from qibo import gates
 import numpy as np
+
 
 def calculate_two_to_one(num_cities):
     """
@@ -82,7 +84,6 @@ class tsp:
         self.distance_matrix = distance_matrix
         self.num_cities = distance_matrix.shape[0]
         self.two_to_one = calculate_two_to_one(self.num_cities)
-        self.X = X
 
     def hamiltonians(self, dense=True):
         """
@@ -101,7 +102,7 @@ class tsp:
         """
         c = Circuit(len(ordering) ** 2)
         for i in range(len(ordering)):
-            c.add(self.X(int(self.two_to_one[ordering[i], i])))
+            c.add(gates.X(int(self.two_to_one[ordering[i], i])))
         result = c()
         return result.state(numpy=True)
 
@@ -116,5 +117,10 @@ obj_hamil, mixer = small_tsp.hamiltonians(dense=False)
 initial_parameters = np.random.uniform(0, 1, 2)
 initial_state = small_tsp.prepare_initial_state([i for i in range(num_cities)])
 qaoa = QAOA(obj_hamil, mixer=mixer)
-ans = qaoa.minimize(initial_p=[0.1] * 4, initial_state=initial_state)
-print(ans)
+best_energy, final_parameters, extra = qaoa.minimize(initial_p=[0.1] * 4, initial_state=initial_state)
+print(best_energy)
+print(final_parameters)
+print(extra)
+quantum_state = qaoa.execute(initial_state)
+print(quantum_state)
+print("note all the quantum states has 3 active qubits")
