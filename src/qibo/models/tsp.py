@@ -4,7 +4,6 @@ from qibo.core.hamiltonians import Hamiltonian, SymbolicHamiltonian
 from qibo import gates
 import numpy as np
 
-
 def calculate_two_to_one(num_cities):
     """
     Args:
@@ -106,26 +105,27 @@ class tsp:
         result = c()
         return result.state(numpy=True)
 
-
-# ..testcode::
-num_cities = 3
-#distance_matrix = np.random.rand(3,3)
-#distance_matrix = distance_matrix.round(1)
-#print(distance_matrix)
-distance_matrix = np.array([[0, 0.9, 0.8],
- [0.4, 0, 0.1],
- [0,  0.7, 0]])
-distance_matrix = distance_matrix.round(1)
-small_tsp = tsp(distance_matrix)
-obj_hamil, mixer = small_tsp.hamiltonians(dense=False)
-initial_parameters = np.random.uniform(0, 1, 2)
-initial_state = small_tsp.prepare_initial_state([i for i in range(num_cities)])
-qaoa = QAOA(obj_hamil, mixer=mixer)
-best_energy, final_parameters, extra = qaoa.minimize(initial_p=[0.1] * 4, initial_state=initial_state)
-print(best_energy)
-print(final_parameters)
-print(extra)
-quantum_state = qaoa.execute(initial_state)
-print(quantum_state)
-print(quantum_state.frequencies(binary=True))
-print("note all the quantum states has 3 active qubits")
+"""
+..testcode::
+    num_cities = 3
+    #distance_matrix = np.random.rand(3,3)
+    #distance_matrix = distance_matrix.round(1)
+    #print(distance_matrix)
+    distance_matrix = np.array([[0, 0.9, 0.8],
+     [0.4, 0, 0.1],
+     [0,  0.7, 0]])
+    distance_matrix = distance_matrix.round(1)
+    small_tsp = tsp(distance_matrix)
+    obj_hamil, mixer = small_tsp.hamiltonians(dense=False)
+    initial_parameters = np.random.uniform(0, 1, 2)
+    initial_state = small_tsp.prepare_initial_state([i for i in range(num_cities)])
+    qaoa = QAOA(obj_hamil, mixer=mixer)
+    best_energy, final_parameters, extra = qaoa.minimize(initial_p=[0.1] * 4, initial_state=initial_state)
+    print(best_energy)
+    print(final_parameters)
+    print(extra)
+    quantum_state = qaoa.execute(initial_state)
+    print(quantum_state)
+    #print(quantum_state.frequencies(binary=True))
+    #print("note all the quantum states has 3 active qubits")
+"""
