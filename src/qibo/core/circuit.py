@@ -47,7 +47,7 @@ class Circuit(circuit.AbstractCircuit):
             self.queue.append(gate.additional_unitary)
 
     def fuse(self, max_qubits=2):
-        """Creates an equivalent circuit with the gates fused up to two-qubits.
+        """Creates an equivalent circuit by fusing gates for increased simulation performance.
 
         Args:
             max_qubits (int): Maximum number of qubits in the fused gates.
