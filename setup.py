@@ -64,7 +64,7 @@ setup(
     ],
     extras_require={
         "docs": ["sphinx", "sphinx_rtd_theme", "recommonmark", "sphinxcontrib-bibtex", "sphinx_markdown_tables", "nbsphinx", "IPython"],
-        "tests": ["pytest", "cirq", "ply", "sklearn"],
+        "tests": ["pytest", "cirq", "ply", "sklearn", "dill"],
     },
     python_requires=">=3.7.0",
     long_description=long_description,
