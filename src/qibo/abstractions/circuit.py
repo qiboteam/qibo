@@ -42,12 +42,48 @@ class _Queue(list):
         self.moments = [nqubits * [None]]
         self.moment_index = nqubits * [0]
 
+    def to_fused(self):
+        """Transforms all gates in queue to :class:`qibo.abstractions.gates.FusedGate`."""
+        last_gate = {}
+        queue = self.__class__(self.nqubits)
+        for gate in self:
+            fgate = gate_module.FusedGate.from_gate(gate)
+            for q in gate.qubits:
+                if q in last_gate:
+                    neighbor = last_gate.get(q)
+                    fgate.left_neighbors[q] = neighbor
+                    neighbor.right_neighbors[q] = fgate
+                last_gate[q] = fgate
+            queue.append(fgate)
+        return queue
+
+    def from_fused(self):
+        """Creates the fused circuit queue by removing gatest that have been fused to others."""
+        queue = self.__class__(self.nqubits)
+        for gate in self:
+            if not gate.marked:
+                if len(gate.gates) == 1:
+                    # replace ``FusedGate``s that contain only one gate 
+                    # by this gate for efficiency
+                    queue.append(gate.gates[0])
+                else:
+                    queue.append(gate)
+            elif not gate.qubits:
+                # special gates are marked by default so we need
+                # to add them manually
+                queue.append(gate.gates[0])
+        return queue
+
     def append(self, gate: gates.Gate):
         super(_Queue, self).append(gate)
-        # Calculate moment index for this gate
         if gate.qubits:
-            idx = max(self.moment_index[q] for q in gate.qubits)
-        for q in gate.qubits:
+            qubits = gate.qubits
+        else: # special gate acting on all qubits
+            qubits = tuple(range(self.nqubits))
+
+        # calculate moment index for this gate
+        idx = max(self.moment_index[q] for q in qubits)
+        for q in qubits:
             if idx >= len(self.moments):
                 # Add a moment
                 self.moments.append(len(self.moments[-1]) * [None])
