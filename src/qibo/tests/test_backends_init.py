@@ -18,10 +18,8 @@ def test_pickle(backend_name):
     if backend_name in ("tensorflow", "qibotf"):
         pytest.skip("Tensorflow backend cannot be pickled.")
     serial = dill.dumps(backend)
-    print(type(backend))
     new_backend = dill.loads(serial)
     assert new_backend.name == backend.name
-    print(type(new_backend))
     original_backend = new_backend.active_backend.name
     new_backend.active_backend = new_backend.construct_backend("numpy")
 
