@@ -190,13 +190,13 @@ class AbstractCircuit(ABC):
 
         return newcircuit
 
-    def on_qubits(self, *q):
+    def on_qubits(self, *qubits):
         """Generator of gates contained in the circuit acting on specified qubits.
 
         Useful for adding a circuit as a subroutine in a larger circuit.
 
         Args:
-            q (int): Qubit ids that the gates should act.
+            qubits (int): Qubit ids that the gates should act.
 
         Example:
 
@@ -213,12 +213,51 @@ class AbstractCircuit(ABC):
                 # add the small circuit to the even qubits of the large one
                 largec.add(smallc.on_qubits(*range(0, 8, 2)))
         """
-        if len(q) != self.nqubits:
+        if len(qubits) != self.nqubits:
             raise_error(ValueError, "Cannot return gates on {} qubits because "
                                     "the circuit contains {} qubits."
-                                    "".format(len(q), self.nqubits))
+                                    "".format(len(qubits), self.nqubits))
+        qubit_map = {i: q for i, q in enumerate(qubits)}
         for gate in self.queue:
-            yield gate._on_qubits(*q)
+            yield gate.on_qubits(qubit_map)
+
+    def light_cone(self, *qubits):
+        """Reduces circuit to the qubits relevant for an observable.
+
+        Useful for calculating expectation values of local observables without 
+        requiring simulation of large circuits.
+        Uses the light cone construction described in 
+        `issue #571 <https://github.com/qiboteam/qibo/issues/571>`_.
+
+        Args:
+            qubits (int): Qubit ids that the observable has support on.
+
+        Returns:
+            circuit (qibo.models.Circuit): Circuit that contains only 
+                the qubits that are required for calculating expectation 
+                involving the given observable qubits.
+            qubit_map (dict): Dictionary mapping the qubit ids of the original
+                circuit to the ids in the new one.
+        """
+        # original qubits that are in the light cone
+        qubits = set(qubits)
+        # original gates that are in the light cone
+        gates = []
+        for gate in reversed(self.queue):
+            gate_qubits = set(gate.qubits)
+            if gate_qubits & qubits:
+                # if the gate involves any qubit included in the 
+                # light cone, add all its qubits in the light cone
+                qubits |= gate_qubits
+                gates.append(gate)
+        
+        # Create a new circuit ignoring gates that are not in the light cone
+        qubit_map = {q: i for i, q in enumerate(sorted(qubits))}
+        kwargs = dict(self.init_kwargs)
+        kwargs["nqubits"] = len(qubits)
+        circuit = self.__class__(**kwargs)
+        circuit.add(gate.on_qubits(qubit_map) for gate in reversed(gates))
+        return circuit, qubit_map
 
     def _shallow_copy(self):
         """Helper method for :meth:`qibo.abstractions.circuit.AbstractCircuit.copy`
