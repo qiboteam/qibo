@@ -136,6 +136,12 @@ class Backend:
 
         return self.constructed_backends.get(name)
 
+    def __getstate__(self):
+        return self.active_backend
+
+    def __setstate__(self, backend):
+        self.active_backend = backend
+
     def __getattr__(self, x):
         return getattr(self.active_backend, x)
 
