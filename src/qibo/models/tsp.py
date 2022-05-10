@@ -4,6 +4,7 @@ from qibo.core.hamiltonians import Hamiltonian, SymbolicHamiltonian
 from qibo import gates
 import numpy as np
 
+
 def calculate_two_to_one(num_cities):
     """
     Args:
@@ -73,6 +74,48 @@ class tsp:
     """
     This is a TSP (traveling salesman problem) class that enables us to implement TSP according to
     `arxiv:1709.03489<https://arxiv.org/abs/1709.03489>` by Hadfield (2017).
+    ..testcode::
+    num_cities = 3
+    distance_matrix = np.array([[0, 0.9, 0.8],
+     [0.4, 0, 0.1],
+     [0,  0.7, 0]])
+    # there are two possible cycles, one with distance 1, one with distance 1.9
+    distance_matrix = distance_matrix.round(1)
+    small_tsp = tsp(distance_matrix)
+    obj_hamil, mixer = small_tsp.hamiltonians(dense=False)
+    initial_parameters = np.random.uniform(0, 1, 2)
+    initial_state = small_tsp.prepare_initial_state([i for i in range(num_cities)])
+    qaoa = QAOA(obj_hamil, mixer=mixer)
+
+
+    def evaluate_dist(config):
+        m = int(np.sqrt(len(config)))
+        cauchy = [-1] * m  # Cauchy's notation for permutation
+        for i in range(m):
+            for j in range(m):
+                if config[m*i+j] == '1':
+                    cauchy[j] = i # citi i is in slot j
+        return sum(distance_matrix[cauchy[i]][cauchy[(i+1)%m]] for i in range(m))
+
+
+    def amplitude_config(long_config):
+        amplitude, config = long_config.split('|')
+        prob = np.linalg.norm(eval(amplitude))**2
+        dist = evaluate_dist(config)
+        return prob*dist
+
+
+    def qaoa_function_of_layer(layer):
+        best_energy, final_parameters, extra = qaoa.minimize(initial_p=[0.1] * 8,
+                                                             initial_state=initial_state)
+        qaoa.set_parameters(final_parameters)
+        quantum_state = qaoa.execute(initial_state)
+        quantum_state_symbolic = quantum_state.symbolic().split('>')[:-1]
+        return sum(amplitude_config(long_config) for long_config in quantum_state_symbolic)
+
+
+    print([qaoa_function_of_layer(i) for i in [2, 4, 6, 8]])
+    # example of output [1.12205683883, 1.7475528727300003, 1.26960151366, 1.4211151713499999]
     """
 
     def __init__(self, distance_matrix):
@@ -105,31 +148,8 @@ class tsp:
         result = c()
         return result.state(numpy=True)
 
-#"""
-#..testcode::
-num_cities = 3
-#distance_matrix = np.random.rand(3,3)
-#distance_matrix = distance_matrix.round(1)
-#print(distance_matrix)
-distance_matrix = np.array([[0, 0.9, 0.8],
- [0.4, 0, 0.1],
- [0,  0.7, 0]])
-distance_matrix = distance_matrix.round(1)
-small_tsp = tsp(distance_matrix)
-obj_hamil, mixer = small_tsp.hamiltonians(dense=False)
-initial_parameters = np.random.uniform(0, 1, 2)
-initial_state = small_tsp.prepare_initial_state([i for i in range(num_cities)])
-qaoa = QAOA(obj_hamil, mixer=mixer)
-best_energy, final_parameters, extra = qaoa.minimize(initial_p=[0.1] * 6, initial_state=initial_state)
 
-qaoa.set_parameters(final_parameters)
-quantum_state = qaoa.execute(initial_state)
-print(quantum_state)
-print(quantum_state.expectation(obj_hamil))
 
-best_energy, final_parameters, extra = qaoa.minimize(initial_p=[0.1] * 4, initial_state=initial_state)
 
-qaoa.set_parameters(final_parameters)
-quantum_state = qaoa.execute(initial_state)
-print(quantum_state)
-print(quantum_state.expectation(obj_hamil))
+
+
