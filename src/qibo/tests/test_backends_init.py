@@ -20,6 +20,8 @@ def test_pickle(backend_name):
     serial = dill.dumps(backend)
     new_backend = dill.loads(serial)
     assert new_backend.name == backend.name
+    original_backend = new_backend.active_backend.name
+    new_backend.active_backend = new_backend.construct_backend("numpy")
 
 
 def test_set_backend(backend_name):
