@@ -68,7 +68,7 @@ def test_qft_execution(backend, accelerators, nqubits, random):
 
 def test_qft_errors(backend):
     """Check that ``_DistributedQFT`` raises error if not sufficient qubits."""
-    from qibo.models.circuit import _DistributedQFT
+    from qibo.models.qft import _DistributedQFT
     with pytest.raises(NotImplementedError):
         c = models.QFT(10, with_swaps=False, accelerators={"/GPU:0": 2})
     if K.supports_multigpu:
