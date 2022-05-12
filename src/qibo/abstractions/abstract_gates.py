@@ -13,8 +13,6 @@ class Gate:
     All base gates should inherit this class.
     """
 
-    from qibo.abstractions import gates as module
-
     def __init__(self):
         """
         Attributes:
@@ -443,10 +441,7 @@ class ParametrizedGate(Gate):
 
 
 class BaseBackendGate(Gate, ABC):
-    """Abstract class for gate objects that can be used in calculations.
-    """
-
-    module = None
+    """Abstract class for gate objects that can be used in calculations."""
 
     def __init__(self):
         """
@@ -489,6 +484,7 @@ class BaseBackendGate(Gate, ABC):
         return self._matrix
 
     def __matmul__(self, other: "Gate") -> "Gate":
+        # TODO: Find a way to pass ``self.module`` that is required here
         """Gate multiplication."""
         if self.qubits != other.qubits:
             raise_error(NotImplementedError, "Cannot multiply gates that target "
