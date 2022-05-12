@@ -52,18 +52,11 @@ class Circuit(circuit.AbstractCircuit):
         This is a ``(2 ** nqubits, 2 ** nqubits)`` matrix obtained by 
         multiplying all circuit gates.
         """
-        unitary = K.eye(2 ** self.nqubits)
-        for moment in self.queue.moments:
-            matrix = K.cast(1)
-            gateset = set()
-            for gate in moment:
-                if gate is None:
-                    matrix = K.kron(matrix, K.eye(2))
-                elif gate not in gateset:
-                    matrix = K.kron(matrix, gate.matrix)
-                    gateset.add(gate)
-            unitary = matrix @ unitary
-        return unitary
+        from qibo import gates
+        fgate = gates.FusedGate(*range(self.nqubits))
+        for gate in self.queue:
+            fgate.append(gate)
+        return fgate.matrix
 
     def fuse(self, max_qubits=2):
         """Creates an equivalent circuit by fusing gates for increased simulation performance.

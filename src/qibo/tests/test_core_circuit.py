@@ -57,7 +57,7 @@ def test_circuit_unitary_bigger(backend):
     m1 = np.kron(matrices.CNOT, np.eye(4))
     m2 = np.kron(np.kron(np.eye(2), matrices.CZ), np.eye(2))
     m3 = np.kron(matrices.CNOT, np.eye(4)).reshape(8 * (2,))
-    m3 = np.transpose(m3, [0, 3, 1, 2, 4, 6, 7, 5]).reshape((16, 16))
+    m3 = np.transpose(m3, [0, 2, 3, 1, 4, 6, 7, 5]).reshape((16, 16))
     target_matrix = m3 @ m2 @ m1 @ h
     K.assert_allclose(c.unitary(), target_matrix)
 

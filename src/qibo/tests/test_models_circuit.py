@@ -52,6 +52,17 @@ def test_qft_circuit_size(backend, nqubits):
     assert c.ngates == nqubits ** 2 // 2 + nqubits
 
 
+@pytest.mark.parametrize("nqubits", [4, 5])
+def test_qft_matrix(backend, nqubits):
+    c = models.QFT(nqubits)
+    dim = 2 ** nqubits
+    target_matrix = qft_matrix(dim) / np.sqrt(dim) 
+    K.assert_allclose(c.unitary(), target_matrix)
+    c = c.invert()
+    target_matrix = qft_matrix(dim, inverse=True) / np.sqrt(dim) 
+    K.assert_allclose(c.unitary(), target_matrix)
+
+
 @pytest.mark.parametrize("nqubits", [5, 6, 12])
 @pytest.mark.parametrize("random", [False, True])
 def test_qft_execution(backend, accelerators, nqubits, random):
