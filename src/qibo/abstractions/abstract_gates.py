@@ -12,7 +12,7 @@ class Gate:
 
     All base gates should inherit this class.
     """
-
+    # TODO: Remove the ``nqubits`` parameter
     def __init__(self):
         """
         Attributes:
@@ -39,7 +39,7 @@ class Gate:
 
         self._target_qubits = tuple()
         self._control_qubits = set()
-
+        self._parameters = []
         self._nqubits = None
         self._nstates = None
         config.ALLOW_SWITCHERS = False
@@ -125,6 +125,11 @@ class Gate:
         if common:
             raise_error(ValueError, "{} qubits are both targets and controls for "
                                     "gate {}.".format(common, self.name))
+
+    @property
+    def parameters(self):
+        """Returns a tuple containing the current value of gate's parameters."""
+        return self._parameters
 
     @property
     def nqubits(self) -> int:
@@ -379,17 +384,9 @@ class ParametrizedGate(Gate):
         self.parameter_names = "theta"
         self.nparams = 1
         self.trainable = trainable
-        self._parameters = []
         self.symbolic_parameters = {}
 
-    @property
-    def parameters(self):
-        """Returns a tuple containing the current value of gate's parameters."""
-        if isinstance(self.parameter_names, str):
-            return self._parameters[0]
-        return tuple(self._parameters)
-
-    @parameters.setter
+    @Gate.parameters.setter
     def parameters(self, x):
         """Updates the values of gate's parameters."""
         if isinstance(self.parameter_names, str):
