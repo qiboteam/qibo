@@ -46,6 +46,25 @@ class Circuit(circuit.AbstractCircuit):
             self._set_nqubits(gate.additional_unitary)
             self.queue.append(gate.additional_unitary)
 
+    def unitary(self):
+        """Creates the unitary matrix corresponding to all circuit gates.
+        
+        This is a ``(2 ** nqubits, 2 ** nqubits)`` matrix obtained by 
+        multiplying all circuit gates.
+        """
+        unitary = K.eye(2 ** self.nqubits)
+        for moment in self.queue.moments:
+            matrix = K.cast(1)
+            gateset = set()
+            for gate in moment:
+                if gate is None:
+                    matrix = K.kron(matrix, K.eye(2))
+                elif gate not in gateset:
+                    matrix = K.kron(matrix, gate.matrix)
+                    gateset.add(gate)
+            unitary = matrix @ unitary
+        return unitary
+
     def fuse(self, max_qubits=2):
         """Creates an equivalent circuit by fusing gates for increased simulation performance.
 
