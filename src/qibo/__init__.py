@@ -9,4 +9,5 @@ __version__ = "0.1.8.dev1"
 #from qibo.backends import K
 #from qibo import callbacks, gates, hamiltonians, models
 #from qibo import parallel, optimizers, solvers
+from qibo.engines import engine
 from qibo import gates, models

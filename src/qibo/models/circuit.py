@@ -786,7 +786,8 @@ class Circuit:
         See :meth:`qibo.core.circuit.Circuit.execute` for more
         details.
         """
-        raise_error(NotImplementedError)
+        from qibo import engine
+        return engine.execute_circuit(self, initial_state, nshots)
 
     def __call__(self, initial_state=None, nshots=None):
         """Equivalent to ``circuit.execute``."""
