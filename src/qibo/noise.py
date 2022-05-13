@@ -104,8 +104,6 @@ class NoiseModel():
                     qubits = tuple(set(gate.qubits) & set(qubits))
                 for q in qubits:
                     noisy_circuit.add(error.channel(q, *error.options))
-        noisy_circuit.parametrized_gates = list(circuit.parametrized_gates)
-        noisy_circuit.trainable_gates = list(circuit.trainable_gates)
         noisy_circuit.measurement_tuples = dict(circuit.measurement_tuples)
         noisy_circuit.measurement_gate = circuit.measurement_gate
         return noisy_circuit
