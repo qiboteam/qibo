@@ -9,6 +9,21 @@ def test_construct_backend(backend_name):
         bk = K.construct_backend("nonexistent")
 
 
+def test_pickle(backend_name):
+    """Check ``K.__setstate__`` and ``K.__getstate__`` methods."""
+    import dill
+    from qibo.backends import Backend
+    backend = Backend()
+    backend.active_backend = backend.construct_backend(backend_name)
+    if backend_name in ("tensorflow", "qibotf"):
+        pytest.skip("Tensorflow backend cannot be pickled.")
+    serial = dill.dumps(backend)
+    new_backend = dill.loads(serial)
+    assert new_backend.name == backend.name
+    original_backend = new_backend.active_backend.name
+    new_backend.active_backend = new_backend.construct_backend("numpy")
+
+
 def test_set_backend(backend_name):
     """Check ``set_backend`` for switching gate backends."""
     original_backend = backends.get_backend()

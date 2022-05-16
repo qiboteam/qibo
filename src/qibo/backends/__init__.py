@@ -136,6 +136,26 @@ class Backend:
 
         return self.constructed_backends.get(name)
 
+    def __getstate__(self):
+        return {
+            "profile": self.profile,
+            "_availability": self._availability,
+            "qnp": self.qnp,
+            "_backends_min_version": self._backends_min_version,
+            "constructed_backends": self.constructed_backends,
+            "hardware_backends": self.hardware_backends,
+            "active_backend": self.active_backend
+        }
+
+    def __setstate__(self, data):
+        self.profile = data.get("profile")
+        self._availability = data.get("_availability")
+        self.qnp = data.get("qnp")
+        self._backends_min_version = data.get("_backends_min_version")
+        self.constructed_backends = data.get("constructed_backends")
+        self.hardware_backends = data.get("hardware_backends")
+        self.active_backend = data.get("active_backend")
+
     def __getattr__(self, x):
         return getattr(self.active_backend, x)
 

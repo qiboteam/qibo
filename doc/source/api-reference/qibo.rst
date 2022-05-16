@@ -87,12 +87,21 @@ circuit as groups of gates have been fused to a single
 is equivalent to simulating the original one but in most cases more efficient
 since less gates need to be applied to the state vector.
 
-All one-qubit gates acting on the same qubit in a row are fused together.
-Once a two-qubit gate acting on a specific pair ``(q0, q1)`` is found then it is
-fused together with the existing fused one-qubit gates on ``q0`` and ``q1``.
-If a new two-qubit gate is found which acts on either ``q0`` or ``q1`` but not
-both then the fusion round for the pair ``(q0, q1)`` stops and a new fusion
-round starts for the target qubits of the new two-qubit gate.
+The fusion algorithm works as follows: First all gates in the circuit are 
+transformed to unmarked :class:`qibo.abstractions.gates.FusedGate`. The gates
+are then processed in the order they were added in the circuit. For each gate
+we identify the neighbors forth and back in time and attempt to fuse them to 
+the gate. Two gates can be fused if their total number of target qubits is 
+smaller than the fusion maximum qubits (specified by the user) and there are 
+no other gates between acting on the same target qubits. Gates that are fused 
+to others are marked. The new circuit queue contains the gates that remain 
+unmarked after the above operations finish.
+
+Gates are processed in the original order given by user. There are no
+additional simplifications performed such as commuting gates acting on the same
+qubit or canceling gates even when such simplifications are mathematically possible. 
+The user can specify the maximum number of qubits in a fused gate using 
+the ``max_qubits`` flag in :meth:`qibo.core.circuit.Circuit.fuse`.
 
 For example the following:
 
@@ -133,16 +142,6 @@ and the second will act to ``(1, 2)`` corresponding to
 .. code-block::  python
 
     [Y(1), Z(2), CNOT(1, 2), H(1), H(2)]
-
-Currently the maximum number of qubits in a fused gate is two. If a gate acting
-on more qubits is found it is applied as it is without participating in the
-fusion and new fusion groups are created for the gates that follow and act on
-its target qubits.
-
-The fusion algorithm fuses gates in the original order given by user. There
-are no additional simplifications performed such as commuting gates acting
-on the same qubit or canceling gates even when such simplifications are
-mathematically possible.
 
 
 Density matrix circuit
