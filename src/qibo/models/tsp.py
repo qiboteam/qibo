@@ -49,7 +49,8 @@ def tsp_mixer(num_cities, dense=True):
         num_cities: number of cities in TSP
         dense: whether the hamiltonian is dense
 
-    Returns: a mixer hamiltonian representing the TSP(traveling salesman problem) phaser according to
+    Returns: a mixer hamiltonian representing the TSP(traveling salesman problem) phaser
+    according to
     `arxiv:1709.03489<https://arxiv.org/abs/1709.03489>` by Hadfield (2017).
 
     """
@@ -104,7 +105,6 @@ class tsp:
 
 
         def evaluate_dist(cauchy):
-            #m = int(np.sqrt(len(config)))
             m = len(cauchy)
             return sum(distance_matrix[cauchy[i]][cauchy[(i+1)%m]] for i in range(m))
 
@@ -114,7 +114,6 @@ class tsp:
                                                                  initial_state=initial_state)
             qaoa.set_parameters(final_parameters)
             quantum_state = qaoa.execute(initial_state)
-            # we have to measure the quantum_state here
             meas = quantum_state.measure(gates.M(*range(9)), nshots = 1000)
             freq_counter = meas.frequencies()
             # let's combine freq_counter here, first convert each key and sum up the frequency
