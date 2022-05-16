@@ -105,11 +105,19 @@ class tsp:
 
 
         def evaluate_dist(cauchy):
+           '''
+           Given a permutation of 0 to n-1, we compute the distance of the tour
+           '''
             m = len(cauchy)
             return sum(distance_matrix[cauchy[i]][cauchy[(i+1)%m]] for i in range(m))
 
 
         def qaoa_function_of_layer(layer):
+           '''
+           this is a function to study the impact of the number of layers on QAOA, it takes
+           in the number of layers and compute the distance of the mode of the histogram obtained
+           from QAOA
+           '''
             best_energy, final_parameters, extra = qaoa.minimize(initial_p=[0.1] * layer,
                                                                  initial_state=initial_state)
             qaoa.set_parameters(final_parameters)
