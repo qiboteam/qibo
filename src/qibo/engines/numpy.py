@@ -216,4 +216,6 @@ class NumpyEngine:
             state = self.zero_state(nqubits)
         for gate in circuit.queue:
             state = self.apply_gate(gate, state, nqubits)
+        # TODO: Consider implementing a final state setter in circuits?
+        circuit._final_state = state
         return state

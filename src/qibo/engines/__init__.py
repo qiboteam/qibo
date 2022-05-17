@@ -1,4 +1,6 @@
 from qibo.engines.numpy import NumpyEngine
+from qibo.engines.tensorflow import TensorflowEngine
+
 
 engine = NumpyEngine()
 
