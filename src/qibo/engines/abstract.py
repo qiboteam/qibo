@@ -3,13 +3,22 @@ import abc
 
 class Engine(abc.ABC):
 
+    def __init__(self):
+        self.name = "engine"
+
+    def __repr__(self):
+        return self.name
+
     @abc.abstractmethod
     def apply_gate(self, gate):
         pass
 
 
 class Simulator(Engine):
-    
+
+    def __init__(self):
+        self.name = "simulator"
+
     @abc.abstractmethod
     def zero_state(self, nqubits):
         """Generate |000...0> state as an array."""

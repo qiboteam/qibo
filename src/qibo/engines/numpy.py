@@ -7,6 +7,7 @@ from qibo.engines.matrices import Matrices
 class NumpyEngine(Simulator):
 
     def __init__(self, dtype="complex128"):
+        self.name = "numpy"
         self.dtype = dtype
         self.matrices = Matrices(dtype)
 
