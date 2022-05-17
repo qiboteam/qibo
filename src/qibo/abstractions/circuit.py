@@ -417,8 +417,6 @@ class AbstractCircuit(ABC):
         # Create new circuit with noise gates inside
         noisy_circuit = self.__class__(self.nqubits)
         for i, gate in enumerate(self.queue):
-            # Do not use `circuit.add` here because these gates are already
-            # added in the original circuit
             noisy_circuit.add(gate)
             for noise_gate in noise_gates[i]:
                 noisy_circuit.add(noise_gate)
