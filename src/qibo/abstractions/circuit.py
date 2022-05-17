@@ -419,11 +419,9 @@ class AbstractCircuit(ABC):
         for i, gate in enumerate(self.queue):
             # Do not use `circuit.add` here because these gates are already
             # added in the original circuit
-            noisy_circuit.queue.append(gate)
+            noisy_circuit.add(gate)
             for noise_gate in noise_gates[i]:
                 noisy_circuit.add(noise_gate)
-        noisy_circuit.parametrized_gates = list(self.parametrized_gates)
-        noisy_circuit.trainable_gates = list(self.trainable_gates)
         noisy_circuit.measurement_tuples = dict(self.measurement_tuples)
         noisy_circuit.measurement_gate = self.measurement_gate
         return noisy_circuit
