@@ -8,6 +8,7 @@ class NumpyEngine(Simulator):
 
     def __init__(self, dtype="complex128"):
         self.name = "numpy"
+        self.device = "/CPU:0"
         self.dtype = dtype
         self.matrices = Matrices(dtype)
 

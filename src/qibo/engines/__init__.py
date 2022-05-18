@@ -10,6 +10,7 @@ class GlobalSimulator:
     # TODO: Implement device setters
 
     _instance = NumpyEngine()
+    _dtypes = {"double": "complex128", "single": "complex64"}
 
     def __new__(cls):
         """Creates singleton instance."""
@@ -38,6 +39,12 @@ class GlobalSimulator:
             else:
                 raise_error(NotImplementedError)
 
+    @classmethod
+    def set_precision(cls, precision):
+        dtype = cls._dtypes.get(precision)
+        if dtype != cls._instance.dtype:
+            cls._instance = cls._instance.__class__(dtype)
+
 
 def set_backend(backend="qibojit", platform=None):
     GlobalSimulator.set_backend(backend, platform)
@@ -48,4 +55,18 @@ def set_backend(backend="qibojit", platform=None):
 def get_backend():
     return str(GlobalSimulator())
 
-# TODO: Implement engine setter, similar to ``qibo.set_backend()``
+
+def set_precision(precision):
+    GlobalSimulator.set_precision(precision)
+
+
+def get_precision():
+    dtype = GlobalSimulator().dtype
+    if dtype == "complex64":
+        return "single"
+    else:
+        return "double"
+
+
+def get_device():
+    return GlobalSimulator().device
