@@ -1,5 +1,6 @@
 """Test all methods defined in `qibo/abstractions/circuit.py`."""
 import pytest
+import qibo
 from qibo.abstractions import gates
 from qibo.config import raise_error
 from qibo.abstractions.circuit import AbstractCircuit
