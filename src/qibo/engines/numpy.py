@@ -10,6 +10,10 @@ class NumpyEngine(Simulator):
         super().__init__()
         self.matrices = Matrices(self.dtype)
 
+    def set_threads(self, nthreads):
+        if nthreads > 1:
+            raise_error(ValueError, "numpy does not support more than one thread.")
+
     def _einsum_string(self, gate, nqubits):
         inp = list(EINSUM_CHARS[:nqubits])
         out = inp[:]

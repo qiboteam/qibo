@@ -24,14 +24,13 @@ class Simulator(Engine):
     def __init__(self):
         super().__init__()
         self.name = "simulator"
-        self.device = "/CPU:0"
+        
         self.precision = "double"
         self.dtype = "complex128"
-        # object that contains gate matrices
         self.matrices = None
 
-    def get_precision(self):
-        return self.precision
+        self.device = "/CPU:0"
+        self.nthreads = 1
 
     def set_precision(self, precision):
         if precision != self.precision:
@@ -46,12 +45,13 @@ class Simulator(Engine):
             if self.matrices:
                 self.matrices = self.matrices.__class__(self.dtype)
 
-    def get_device(self):
-        return self.device
-
     def set_device(self, device):
         if device != "/CPU:0":
             raise_error(ValueError, f"Device {device} is not available for {self} backend.")
+
+    @abc.abstractmethod
+    def set_threads(self, nthreads):
+        raise_error(NotImplementedError)
 
     def asmatrix(self, gate):
         name = gate.__class__.__name__
@@ -63,7 +63,7 @@ class Simulator(Engine):
     @abc.abstractmethod
     def zero_state(self, nqubits):
         """Generate |000...0> state as an array."""
-        pass
+        raise_error(NotImplementedError)
 
     def execute_circuit(self, circuit, initial_state=None, nshots=None):
         # TODO: Implement shots

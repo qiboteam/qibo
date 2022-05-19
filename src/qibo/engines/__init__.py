@@ -80,7 +80,7 @@ def set_backend(backend, platform=None):
 
 
 def get_precision():
-    GlobalBackend().get_precision()
+    GlobalBackend().precision
 
 
 def set_precision(precision):
@@ -92,4 +92,20 @@ def get_device():
 
 
 def set_device(device):
+    parts = device[1:].split(":")
+    if device[0] != "/" or len(parts) < 2 or len(parts) > 3:
+        raise_error(ValueError, "Device name should follow the pattern: "
+                                "/{device type}:{device number}.")
     GlobalBackend().set_device(device)
+
+
+def get_threads():
+    return GlobalBackend().nthreads
+
+
+def set_threads(nthreads):
+    if not isinstance(nthreads, int): # pragma: no cover
+        raise_error(TypeError, "Number of threads must be integer.")
+    if nthreads < 1: # pragma: no cover
+        raise_error(ValueError, "Number of threads must be positive.")
+    GlobalBackend().set_threads(nthreads)
