@@ -226,7 +226,7 @@ def test_set_parameters_with_gate_fusion(backend, trainable):
 def test_variable_theta(backend):
     """Check that parametrized gates accept `tf.Variable` parameters."""
     backend = qibo.get_backend()
-    if backend != "tensorflow" and backend != "qibotf":
+    if backend != "tensorflow":
         pytest.skip("Numpy backends do not support variable parameters.")
     theta1 = K.optimization.Variable(0.1234, dtype=K.dtypes('DTYPE'))
     theta2 = K.optimization.Variable(0.4321, dtype=K.dtypes('DTYPE'))

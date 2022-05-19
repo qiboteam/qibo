@@ -671,8 +671,7 @@ class AbstractBackend(ABC):
 class AbstractCustomOperators:  # pragma: no cover
     """Abstraction for backends that are based on custom operators.
 
-    Such backends are `qibojit <https://github.com/qiboteam/qibojit>`_ and
-    `qibotf <https://github.com/qiboteam/qibotf>`_.
+    See `qibojit <https://github.com/qiboteam/qibojit>`_
     """
 
     def __init__(self):

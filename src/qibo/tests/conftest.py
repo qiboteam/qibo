@@ -32,7 +32,7 @@ def pytest_configure(config):
 
 def pytest_addoption(parser):
     parser.addoption("--backends", type=str, default=_BACKENDS,
-                     help="Calculation schemes (eg. qibojit, qibotf, tensorflow, numpy etc.) to test.")
+                     help="Calculation schemes (eg. qibojit, tensorflow, numpy etc.) to test.")
     parser.addoption("--accelerators", type=str, default=_ACCELERATORS,
                      help="Accelerator configurations for testing the distributed circuit.")
     # see `_ACCELERATORS` for the string format of the `--accelerators` flag
@@ -65,7 +65,7 @@ def pytest_generate_tests(metafunc):
 
     Test functions may have one or more of the following arguments:
         engine: Backend library (eg. numpy, tensorflow, etc.),
-        backend: Calculation backend (eg. qibojit, qibotf, tensorflow, numpy),
+        backend: Calculation backend (eg. qibojit, tensorflow, numpy),
         accelerators: Dictionary with the accelerator configuration for
             distributed circuits, for example: {'/GPU:0': 1, '/GPU:1': 1},
         tested_backend: The first backend when testing agreement between
@@ -110,7 +110,7 @@ def pytest_generate_tests(metafunc):
         "qibo.tests.test_core_distcircuit_execution"
     }
     module_name = metafunc.module.__name__
-    # skip distributed tests if qibojit or qibotf are not installed
+    # skip distributed tests if qibojit are not installed
     if module_name in distributed_tests and not distributed_backends:  # pragma: no cover
         pytest.skip("Skipping distributed tests because are not supported by "
                     "the available backends.")

@@ -364,13 +364,9 @@ def test_unitary_multiqubit(backend):
     matrix = matrix @ np.kron(cnot, cnot)
     matrix = matrix @ np.kron(np.kron(h, h), np.kron(h, h))
     unitary = gates.Unitary(matrix, 0, 1, 2, 3)
-    if K.name == "qibotf":
-        with pytest.raises(NotImplementedError):
-            final_state = apply_gates([unitary], nqubits=4)
-    else:
-        final_state = apply_gates([unitary], nqubits=4)
-        target_state = apply_gates(gatelist, nqubits=4)
-        K.assert_allclose(final_state, target_state)
+    final_state = apply_gates([unitary], nqubits=4)
+    target_state = apply_gates(gatelist, nqubits=4)
+    K.assert_allclose(final_state, target_state)
 
 
 @pytest.mark.parametrize("nqubits", [5, 6])

@@ -13,7 +13,7 @@ class Hamiltonian(hamiltonians.MatrixHamiltonian):
         matrix (np.ndarray): Matrix representation of the Hamiltonian in the
             computational basis as an array of shape ``(2 ** nqubits, 2 ** nqubits)``.
             Sparse matrices based on ``scipy.sparse`` for numpy/qibojit backends
-            or on ``tf.sparse`` for tensorflow/qibotf backends are also
+            or on ``tf.sparse`` for tensorflow backends are also
             supported.
     """
 

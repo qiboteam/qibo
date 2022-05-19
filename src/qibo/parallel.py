@@ -84,7 +84,6 @@ def parallel_execution(circuit, states, processes=None):  # pragma: no cover
 
             import qibo
             original_backend = qibo.get_backend()
-            qibo.set_backend("qibotf")
             from qibo import models, set_threads
             from qibo.parallel import parallel_execution
             import numpy as np
@@ -136,7 +135,6 @@ def parallel_parametrized_execution(circuit, parameters, initial_state=None, pro
 
             import qibo
             original_backend = qibo.get_backend()
-            qibo.set_backend("qibotf")
             from qibo import models, gates, set_threads
             from qibo.parallel import parallel_parametrized_execution
             import numpy as np

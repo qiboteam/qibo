@@ -104,14 +104,14 @@ class State(Callback):
 
     Warning: Keeping many copies of states in memory requires a lot of memory
     for circuits with many qubits.
-    
+
     Args:
-        copy (bool): If ``True`` the state vector or density matrix is 
+        copy (bool): If ``True`` the state vector or density matrix is
             copied in memory. Otherwise a reference to the existing array
-            is stored in the callback. 
-            The callback will not work as expected if ``copy=False`` 
-            is used with a backend that performs in-place updates, 
-            such as qibojit or qibotf.
+            is stored in the callback.
+            The callback will not work as expected if ``copy=False``
+            is used with a backend that performs in-place updates,
+            such as qibojit.
             Default is True
     """
 
@@ -189,7 +189,7 @@ class Gap(Callback):
             Default is ``True``.
 
     Example:
-        
+
         .. testcode::
 
             from qibo import callbacks, hamiltonians
