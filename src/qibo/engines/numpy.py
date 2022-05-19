@@ -12,13 +12,6 @@ class NumpyEngine(Simulator):
         self.dtype = dtype
         self.matrices = Matrices(dtype)
 
-    def asmatrix(self, gate):
-        name = gate.__class__.__name__
-        if gate.parameters:
-            return getattr(self.matrices, name)(*gate.parameters)
-        else:
-            return getattr(self.matrices, name)
-
     def _einsum_string(self, gate, nqubits):
         inp = list(EINSUM_CHARS[:nqubits])
         out = inp[:]

@@ -18,6 +18,15 @@ class Simulator(Engine):
 
     def __init__(self):
         self.name = "simulator"
+        # object that contains gate matrices
+        self.matrices = None
+
+    def asmatrix(self, gate):
+        name = gate.__class__.__name__
+        if gate.parameters:
+            return getattr(self.matrices, name)(*gate.parameters)
+        else:
+            return getattr(self.matrices, name)
 
     @abc.abstractmethod
     def zero_state(self, nqubits):
