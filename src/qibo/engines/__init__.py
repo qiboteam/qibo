@@ -64,7 +64,7 @@ class GlobalBackend:
 
     @classmethod
     def set_backend(cls, backend, platform=None):
-        if backend != cls._instance.name or platform != cls._instance.platform:
+        if cls._instance is None or cls._instance.name != name or cls._instance.platform != platform:
             if not config.ALLOW_SWITCHERS:
                 log.warning("Backend should not be changed after allocating gates.")
             cls._instance = construct_backend(backend, platform, show_error=True)
