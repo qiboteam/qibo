@@ -6,8 +6,8 @@ from qibo.config import TF_LOG_LEVEL
 
 class TensorflowEngine(NumpyEngine):
 
-    def __init__(self, dtype="complex128"):
-        super().__init__(dtype)
+    def __init__(self):
+        super().__init__()
         self.name = "tensorflow"
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(TF_LOG_LEVEL)
         import tensorflow as tf

@@ -69,12 +69,6 @@ class GlobalBackend:
                 log.warning("Backend should not be changed after allocating gates.")
             cls._instance = construct_backend(backend, platform, show_error=True)
         log.info(f"Using {cls._instance} backend on {cls._instance.device}")
-        
-    @classmethod
-    def set_precision(cls, precision):
-        dtype = cls._dtypes.get(precision)
-        if dtype != cls._instance.dtype:
-            cls._instance = cls._instance.__class__(dtype)
 
 
 def set_backend(backend="qibojit", platform=None):
@@ -86,15 +80,11 @@ def get_backend():
 
 
 def set_precision(precision):
-    GlobalBackend.set_precision(precision)
+    GlobalBackend().set_precision(precision)
 
 
 def get_precision():
-    dtype = GlobalBackend().dtype
-    if dtype == "complex64":
-        return "single"
-    else:
-        return "double"
+    GlobalBackend().get_precision()
 
 
 def get_device():

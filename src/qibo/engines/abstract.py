@@ -1,4 +1,5 @@
 import abc
+from qibo.config import raise_error
 
 
 class Engine(abc.ABC):
@@ -15,7 +16,7 @@ class Engine(abc.ABC):
 
     @abc.abstractmethod
     def apply_gate(self, gate):
-        pass
+        raise_error(NotImplementedError)
 
 
 class Simulator(Engine):
@@ -23,8 +24,27 @@ class Simulator(Engine):
     def __init__(self):
         super().__init__()
         self.name = "simulator"
+        self.device = "/CPU:0"
+        self.precision = "double"
+        self.dtype = "complex128"
         # object that contains gate matrices
         self.matrices = None
+        
+    def get_precision(self):
+        return self.precision
+
+    def set_precision(self, precision):
+        if precision != self.precision:
+            if precision == "single":
+                self.precision = precision
+                self.dtype = "complex64"
+            elif precision == "double":
+                self.precision = precision
+                self.dtype = "complex128"
+            else:
+                raise_error(ValueError, f"Unknown precision {precision}.")
+            if self.matrices:
+                self.matrices = self.matrices.__class__(self.dtype)
 
     def asmatrix(self, gate):
         name = gate.__class__.__name__

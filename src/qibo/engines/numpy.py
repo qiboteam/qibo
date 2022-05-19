@@ -6,12 +6,9 @@ from qibo.engines.matrices import Matrices
 
 class NumpyEngine(Simulator):
 
-    def __init__(self, dtype="complex128"):
+    def __init__(self):
         super().__init__()
-        self.name = "numpy"
-        self.device = "/CPU:0"
-        self.dtype = dtype
-        self.matrices = Matrices(dtype)
+        self.matrices = Matrices(self.dtype)
 
     def _einsum_string(self, gate, nqubits):
         inp = list(EINSUM_CHARS[:nqubits])
