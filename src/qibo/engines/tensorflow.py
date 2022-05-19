@@ -12,6 +12,7 @@ class TensorflowEngine(NumpyEngine):
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(TF_LOG_LEVEL)
         import tensorflow as tf
         self.tf = tf
+        # TODO: Implement device setter
 
     def asmatrix(self, gate):
         npmatrix = super().asmatrix(gate)

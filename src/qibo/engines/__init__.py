@@ -63,7 +63,7 @@ class GlobalBackend:
         raise_error(RuntimeError, "No backends available.")
 
     @classmethod
-    def set_backend(cls, backend, platform):
+    def set_backend(cls, backend, platform=None):
         if backend != cls._instance.name or platform != cls._instance.platform:
             if not config.ALLOW_SWITCHERS:
                 log.warning("Backend should not be changed after allocating gates.")
@@ -71,21 +71,25 @@ class GlobalBackend:
         log.info(f"Using {cls._instance} backend on {cls._instance.device}")
 
 
-def set_backend(backend="qibojit", platform=None):
-    GlobalBackend.set_backend(backend, platform)
-
-
 def get_backend():
     return GlobalBackend().name
 
 
-def set_precision(precision):
-    GlobalBackend().set_precision(precision)
+def set_backend(backend, platform=None):
+    GlobalBackend.set_backend(backend, platform)
 
 
 def get_precision():
     GlobalBackend().get_precision()
 
 
+def set_precision(precision):
+    GlobalBackend().set_precision(precision)
+
+
 def get_device():
     return GlobalBackend().device
+
+
+def set_device(device):
+    GlobalBackend().set_device(device)

@@ -29,7 +29,7 @@ class Simulator(Engine):
         self.dtype = "complex128"
         # object that contains gate matrices
         self.matrices = None
-        
+
     def get_precision(self):
         return self.precision
 
@@ -45,6 +45,13 @@ class Simulator(Engine):
                 raise_error(ValueError, f"Unknown precision {precision}.")
             if self.matrices:
                 self.matrices = self.matrices.__class__(self.dtype)
+
+    def get_device(self):
+        return self.device
+
+    def set_device(self, device):
+        if device != "/CPU:0":
+            raise_error(ValueError, f"Device {device} is not available for {self} backend.")
 
     def asmatrix(self, gate):
         name = gate.__class__.__name__
