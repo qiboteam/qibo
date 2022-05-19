@@ -14,7 +14,7 @@ class TensorflowEngine(NumpyEngine):
         self.tf = tf
 
     def asmatrix(self, gate):
-        npmatrix = getattr(self.matrices, gate.__class__.__name__)(*gate.parameters)
+        npmatrix = super().asmatrix(gate)
         return self.tf.cast(npmatrix, dtype=self.dtype)
 
     def apply_gate(self, gate, state, nqubits):

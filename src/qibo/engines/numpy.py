@@ -13,7 +13,11 @@ class NumpyEngine(Simulator):
         self.matrices = Matrices(dtype)
 
     def asmatrix(self, gate):
-        return getattr(self.matrices, gate.__class__.__name__)(*gate.parameters)
+        name = gate.__class__.__name__
+        if gate.parameters:
+            return getattr(self.matrices, name)(*gate.parameters)
+        else:
+            return getattr(self.matrices, name)
 
     def _einsum_string(self, gate, nqubits):
         inp = list(EINSUM_CHARS[:nqubits])

@@ -1,4 +1,5 @@
 import numpy as np
+from functools import cached_property
 from qibo.config import raise_error
 
 
@@ -8,48 +9,57 @@ class Matrices:
     def __init__(self, dtype):
         self.dtype = dtype
 
+    @cached_property
     def H(self):
         return np.array([
             [1, 1], 
             [1, -1]
         ], dtype=self.dtype) / np.sqrt(2)
 
+    @cached_property
     def X(self):
         return np.array([
             [0, 1], 
             [1, 0]
         ], dtype=self.dtype)
 
+    @cached_property
     def Y(self):
         return np.array([
             [0, -1j], 
             [1j, 0]
         ], dtype=self.dtype)
 
+    @cached_property
     def Z(self):
         return np.array([
             [0, -1j], 
             [1j, 0]
         ], dtype=self.dtype)
 
+    @cached_property
     def S(self):
         return np.array([
             [1, 0], 
             [0, 1j]
         ], dtype=self.dtype)
 
+    @cached_property
     def SDG(self):
-        return np.conj(self.S())
+        return np.conj(self.S)
 
+    @cached_property
     def T(self):
         return np.array([
             [1, 0],
             [0, np.exp(1j * np.pi / 4.0)]
         ], dtype=self.dtype)
 
+    @cached_property
     def TDG(self):
-        return np.conj(self.T())
+        return np.conj(self.T)
 
+    @cached_property
     def I(self):
         return np.eye(2, dtype=self.dtype)
 
@@ -107,6 +117,7 @@ class Matrices:
             [eminus * sint, eplus * cost]
         ], dtype=self.dtype)
 
+    @cached_property
     def CNOT(self):
         return np.array([
             [1, 0, 0, 0], 
@@ -115,6 +126,7 @@ class Matrices:
             [0, 0, 1, 0]
         ], dtype=self.dtype)
 
+    @cached_property
     def CZ(self):
         return np.array([
             [1, 0, 0, 0], 
@@ -153,6 +165,7 @@ class Matrices:
         m[2:, 2:] = self.U3(theta, phi, lam)
         return m
 
+    @cached_property
     def SWAP(self):
         return np.array([
             [1, 0, 0, 0], 
@@ -161,6 +174,7 @@ class Matrices:
             [0, 0, 0, 1]
         ], dtype=self.dtype)
 
+    @cached_property
     def FSWAP(self):
         return np.array([
             [1, 0, 0, 0], 
@@ -189,6 +203,7 @@ class Matrices:
             [0, 0, 0, phase],
         ], dtype=self.dtype)
 
+    @cached_property
     def TOFFOLI(self):
         m = np.eye(8, dtype=self.dtype)
         m[-2, -2], m[-2, -1] = 0, 1
