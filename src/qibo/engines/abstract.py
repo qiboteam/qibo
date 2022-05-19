@@ -5,9 +5,13 @@ class Engine(abc.ABC):
 
     def __init__(self):
         self.name = "engine"
+        self.platform = None
 
     def __repr__(self):
-        return self.name
+        if self.platform is None:
+            return self.name
+        else:
+            return f"{self.name} ({self.platform})"
 
     @abc.abstractmethod
     def apply_gate(self, gate):
@@ -17,6 +21,7 @@ class Engine(abc.ABC):
 class Simulator(Engine):
 
     def __init__(self):
+        super().__init__()
         self.name = "simulator"
         # object that contains gate matrices
         self.matrices = None
