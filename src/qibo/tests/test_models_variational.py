@@ -80,26 +80,15 @@ test_values = [("Powell", {'maxiter': 1}, True, 'vqe_powell.out'),
                ("Powell", {'maxiter': 1}, False, 'vqe_powell.out'),
                ("BFGS", {'maxiter': 1}, True, 'vqe_bfgs.out'),
                ("BFGS", {'maxiter': 1}, False, 'vqe_bfgs.out'),
-               ("parallel_L-BFGS-B", {'maxiter': 1}, True, None),
-               ("parallel_L-BFGS-B", {'maxiter': 1}, False, None),
                ("cma", {"maxfevals": 2}, False, None),
                ("sgd", {"nepochs": 5}, False, None),
                ("sgd", {"nepochs": 5}, True, None)]
 @pytest.mark.parametrize(test_names, test_values)
-def test_vqe(backend, method, options, compile, filename, skip_parallel):
+def test_vqe(backend, method, options, compile, filename):
     """Performs a VQE circuit minimization test."""
     original_threads = qibo.get_threads()
     if (method == "sgd" or compile) and qibo.get_backend() != "tensorflow":
         pytest.skip("Skipping SGD test for unsupported backend.")
-
-    if method == 'parallel_L-BFGS-B':  # pragma: no cover
-        if skip_parallel:
-            pytest.skip("Skipping parallel test.")
-        from qibo.tests.test_parallel import is_parallel_supported
-        backend_name = qibo.get_backend()
-        if not is_parallel_supported(backend_name):
-            pytest.skip("Skipping parallel test due to unsupported configuration.")
-        qibo.set_threads(1)
 
     nqubits = 6
     layers  = 4
@@ -314,21 +303,10 @@ def test_falqon_optimization_callback(backend):
 test_names = "method,options,compile,filename"
 test_values = [("Powell", {'maxiter': 1}, False, 'aavqe_powell.out'),
                ("BFGS", {'maxiter': 1}, False, 'aavqe_bfgs.out'),
-               ("cma", {"maxfevals": 2}, False, None),
-               ("parallel_L-BFGS-B", {'maxiter': 1}, False, None)]
+               ("cma", {"maxfevals": 2}, False, None)]
 @pytest.mark.parametrize(test_names, test_values)
-def test_aavqe(backend, method, options, compile, filename, skip_parallel):
+def test_aavqe(backend, method, options, compile, filename):
     """Performs a AAVQE circuit minimization test."""
-    original_threads = qibo.get_threads()
-
-    if method == 'parallel_L-BFGS-B':  # pragma: no cover
-        if skip_parallel:
-            pytest.skip("Skipping parallel test.")
-        from qibo.tests.test_parallel import is_parallel_supported
-        backend_name = qibo.get_backend()
-        if not is_parallel_supported(backend_name):
-            pytest.skip("Skipping parallel test due to unsupported configuration.")
-        qibo.set_threads(1)
     nqubits = 6
     layers  = 4
     circuit = models.Circuit(nqubits)
@@ -361,4 +339,3 @@ def test_aavqe(backend, method, options, compile, filename, skip_parallel):
         shutil.rmtree("outcmaes")
     if filename is not None:
         assert_regression_fixture(params, filename, rtol=1e-2)
-    qibo.set_threads(original_threads)

@@ -8,4 +8,4 @@ from qibo.backends import set_threads, get_threads
 from qibo.backends import numpy_matrices as matrices
 from qibo.backends import K
 from qibo import callbacks, gates, hamiltonians, models
-from qibo import parallel, optimizers, solvers
+from qibo import optimizers, solvers

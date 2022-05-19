@@ -41,10 +41,6 @@ def pytest_addoption(parser):
     # `test_backends_agreement.py` tests that backend methods agree between
     # different backends by testing each backend in `--backends` with the
     # `--target-backend`
-    parser.addoption("--skip-parallel", action="store_true",
-                     help="Skip tests that use the ``qibo.parallel`` module.")
-    # parallel tests make the CI hang
-
 
 @pytest.fixture
 def backend(backend_platform):
@@ -122,11 +118,6 @@ def pytest_generate_tests(metafunc):
     if module_name in distributed_tests and not distributed_backends:  # pragma: no cover
         pytest.skip("Skipping distributed tests because are not supported by "
                     "available backends.")
-
-    # skip parallel tests if the ``--skip-parallel`` option is used
-    skip_parallel = metafunc.config.option.skip_parallel
-    if "skip_parallel" in metafunc.fixturenames:
-        metafunc.parametrize("skip_parallel", [skip_parallel])
 
     # for `test_backends_agreement.py`
     if "tested_backend" in metafunc.fixturenames:
