@@ -29,7 +29,7 @@ jobs:
         pylint src -E -d E1123,E1120
     - name: Test with pytest core
       run: |
-        pytest src/qibo/tests/ --cov=qibo --cov-report=xml --pyargs qibo --durations=60
+        pytest src/qibo/tests/ --skip-parallel --cov=qibo --cov-report=xml --pyargs qibo --durations=60
     - name: Test documentation examples
       if: startsWith(matrix.os, 'ubuntu')
       run: |

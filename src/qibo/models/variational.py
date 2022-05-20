@@ -37,7 +37,7 @@ class VQE(object):
 
     def minimize(self, initial_state, method='Powell', jac=None, hess=None,
                  hessp=None, bounds=None, constraints=(), tol=None, callback=None,
-                 options=None, compile=False):
+                 options=None, compile=False, processes=None):
         """Search for parameters which minimizes the hamiltonian expectation.
 
         Args:
@@ -56,6 +56,7 @@ class VQE(object):
             callback (callable): Called after each iteration for scipy optimizers.
             options (dict): a dictionary with options for the different optimizers.
             compile (bool): whether the TensorFlow graph should be compiled.
+            processes (int): number of processes when using the paralle BFGS method.
 
         Return:
             The final expectation value.
@@ -90,7 +91,7 @@ class VQE(object):
                                                              method=method, jac=jac, hess=hess, hessp=hessp,
                                                              bounds=bounds, constraints=constraints,
                                                              tol=tol, callback=callback, options=options,
-                                                             compile=compile)
+                                                             compile=compile, processes=processes)
         self.circuit.set_parameters(parameters)
         return result, parameters, extra
 
@@ -146,8 +147,8 @@ class AAVQE(object):
             raise_error(ValueError, "The easy Hamiltonian has {} qubits while problem Hamiltonian has {}."
                                     "".format(easy_hamiltonian.nqubits, problem_hamiltonian.nqubits))
 
-        self.ATOL = bounds_tolerance
-        self.ATOL_TIME = time_tolerance
+        self.ATOL = bounds_tolerance 
+        self.ATOL_TIME = time_tolerance 
 
         self._circuit = circuit
         self._h0 = easy_hamiltonian
@@ -162,7 +163,7 @@ class AAVQE(object):
             raise_error(ValueError,"Scheduling function must take only one argument,"
                                    "but the function proposed takes {}.".format(nparams))
         self.set_schedule(s)
-
+    
     def set_schedule(self, func):
         """ Set scheduling function s(t) as func."""
         #check boundary conditions
@@ -196,13 +197,13 @@ class AAVQE(object):
 
     def minimize(self, params, method="BFGS", jac=None, hess=None,
                  hessp=None, bounds=None, constraints=(), tol=None,
-                 options=None, compile=False):
+                 options=None, compile=False, processes=None):
         """
         Performs minimization to find the ground state of the problem Hamiltonian.
 
         Args:
             params (np.ndarray or list): initial guess for the parameters of the variational circuit.
-            method (str): optimizer to employ.
+            method (str): optimizer to employ. 
             jac (dict): Method for computing the gradient vector for scipy optimizers.
             hess (dict): Method for computing the hessian matrix for scipy optimizers.
             hessp (callable): Hessian of objective function times an arbitrary
@@ -212,15 +213,16 @@ class AAVQE(object):
             tol (float): Tolerance of termination for scipy optimizers.
             options (dict): a dictionary with options for the different optimizers.
             compile (bool): whether the TensorFlow graph should be compiled.
+            processes (int): number of processes when using the parallel BFGS method.
         """
         from qibo import models
         t = 0.
         while (t-self._t_max)<=self.ATOL_TIME:
             H = self.hamiltonian(t)
             vqe = models.VQE(self._circuit, H)
-            best, params, _ = vqe.minimize(params, method=method, jac=jac, hess=hess, hessp=hessp,
-                                        bounds=bounds, constraints=constraints, tol=tol,
-                                        options=options, compile=compile)
+            best, params, _ = vqe.minimize(params, method=method, jac=jac, hess=hess, hessp=hessp, 
+                                        bounds=bounds, constraints=constraints, tol=tol, 
+                                        options=options, compile=compile, processes=processes)
             t += self._dt
         return best, params
 
@@ -369,7 +371,7 @@ class QAOA(object):
 
     def minimize(self, initial_p, initial_state=None, method='Powell',
                  jac=None, hess=None, hessp=None, bounds=None, constraints=(),
-                 tol=None, callback=None, options=None, compile=False):
+                 tol=None, callback=None, options=None, compile=False, processes=None):
         """Optimizes the variational parameters of the QAOA.
 
         Args:
@@ -417,7 +419,7 @@ class QAOA(object):
                                                              method=method, jac=jac, hess=hess, hessp=hessp,
                                                              bounds=bounds, constraints=constraints,
                                                              tol=tol, callback=callback, options=options,
-                                                             compile=compile)
+                                                             compile=compile, processes=processes)
         self.set_parameters(parameters)
         return result, parameters, extra
 

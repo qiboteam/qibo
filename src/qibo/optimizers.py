@@ -1,8 +1,9 @@
-# Optimizers
+from qibo.parallel import ParallelResources, _executor
+
 
 def optimize(loss, initial_parameters, args=(), method='Powell',
              jac=None, hess=None, hessp=None, bounds=None, constraints=(),
-             tol=None, callback=None, options=None, compile=False):
+             tol=None, callback=None, options=None, compile=False, processes=None):
     """Main optimization method. Selects one of the following optimizers:
         - :meth:`qibo.optimizers.cmaes`
         - :meth:`qibo.optimizers.newtonian`
@@ -17,7 +18,7 @@ def optimize(loss, initial_parameters, args=(), method='Powell',
         args (tuple): optional arguments for the loss function.
         method (str): Name of optimizer to use. Can be ``'cma'``, ``'sgd'`` or
             one of the Newtonian methods supported by
-            :meth:`qibo.optimizers.newtonian`. ``sgd`` is
+            :meth:`qibo.optimizers.newtonian` and ``'parallel_L-BFGS-B'``. ``sgd`` is
             only available for backends based on tensorflow.
         jac (dict): Method for computing the gradient vector for scipy optimizers.
         hess (dict): Method for computing the hessian matrix for scipy optimizers.
@@ -31,6 +32,7 @@ def optimize(loss, initial_parameters, args=(), method='Powell',
             bellow for a list of the supported options.
         compile (bool): If ``True`` the Tensorflow optimization graph is compiled.
             This is relevant only for the ``'sgd'`` optimizer.
+        processes (int): number of processes when using the parallel BFGS method.
 
     Returns:
         (float, float, custom): Final best loss value; best parameters obtained by the optimizer;         extra: optimizer-specific return object. For scipy methods it
@@ -69,7 +71,7 @@ def optimize(loss, initial_parameters, args=(), method='Powell',
     else:
         return newtonian(loss, initial_parameters, args, method,
                          jac, hess, hessp, bounds, constraints, tol,
-                         callback, options)
+                         callback, options, processes)
 
 
 def cmaes(loss, initial_parameters, args=(), options=None):
@@ -92,10 +94,20 @@ def cmaes(loss, initial_parameters, args=(), options=None):
 
 def newtonian(loss, initial_parameters, args=(), method='Powell',
               jac=None, hess=None, hessp=None, bounds=None, constraints=(),
-              tol=None, callback=None, options=None):
+              tol=None, callback=None, options=None, processes=None):
     """Newtonian optimization approaches based on ``scipy.optimize.minimize``.
 
     For more details check the `scipy documentation <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
+
+    .. note::
+        When using the method ``parallel_L-BFGS-B`` the ``processes`` option controls the
+        number of processes used by the parallel L-BFGS-B algorithm through the ``multiprocessing`` library.
+        By default ``processes=None``, in this case the total number of logical cores are used.
+        Make sure to select the appropriate number of processes for your computer specification,
+        taking in consideration memory and physical cores. In order to obtain optimal results
+        you can control the number of threads used by each process with the ``qibo.set_threads`` method.
+        For example, for small-medium size circuits you may benefit from single thread per process, thus set
+        ``qibo.set_threads(1)`` before running the optimization.
 
     Args:
         loss (callable): Loss as a function of variational parameters to be
@@ -103,7 +115,8 @@ def newtonian(loss, initial_parameters, args=(), method='Powell',
         initial_parameters (np.ndarray): Initial guess for the variational
             parameters.
         args (tuple): optional arguments for the loss function.
-        method (str): Name of method supported by ``scipy.optimize.minimize`.
+        method (str): Name of method supported by ``scipy.optimize.minimize`` and ``'parallel_L-BFGS-B'`` for
+            a parallel version of L-BFGS-B algorithm.
         jac (dict): Method for computing the gradient vector for scipy optimizers.
         hess (dict): Method for computing the hessian matrix for scipy optimizers.
         hessp (callable): Hessian of objective function times an arbitrary
@@ -114,11 +127,19 @@ def newtonian(loss, initial_parameters, args=(), method='Powell',
         callback (callable): Called after each iteration for scipy optimizers.
         options (dict): Dictionary with options accepted by
             ``scipy.optimize.minimize``.
+        processes (int): number of processes when using the parallel BFGS method.
     """
-    from scipy.optimize import minimize
-    m = minimize(loss, initial_parameters, args=args, method=method,
-                    jac=jac, hess=hess, hessp=hessp, bounds=bounds, constraints=constraints,
-                    tol=tol, callback=callback, options=options)
+    if method == 'parallel_L-BFGS-B':  # pragma: no cover
+        from qibo.parallel import _check_parallel_configuration
+        _check_parallel_configuration(processes)
+        o = ParallelBFGS(loss, args=args, processes=processes,
+                         bounds=bounds, callback=callback, options=options)
+        m = o.run(initial_parameters)
+    else:
+        from scipy.optimize import minimize
+        m = minimize(loss, initial_parameters, args=args, method=method,
+                     jac=jac, hess=hess, hessp=hessp, bounds=bounds, constraints=constraints,
+                     tol=tol, callback=callback, options=options)
     return m.fun, m.x, m
 
 
@@ -177,3 +198,83 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False):
             log.info('ite %d : loss %f', e, l.numpy())
 
     return loss(vparams, *args).numpy(), vparams.numpy(), sgd_options
+
+
+class ParallelBFGS:  # pragma: no cover
+    """Computes the L-BFGS-B using parallel evaluation using multiprocessing.
+    This implementation here is based on https://doi.org/10.32614/RJ-2019-030.
+
+    Args:
+        function (function): loss function which returns a numpy object.
+        args (tuple): optional arguments for the loss function.
+        bounds (list): list of bound values for ``scipy.optimize.minimize`` L-BFGS-B.
+        callback (function): function callback ``scipy.optimize.minimize`` L-BFGS-B.
+        options (dict): follows ``scipy.optimize.minimize`` syntax for L-BFGS-B.
+        processes (int): number of processes when using the paralle BFGS method.
+    """
+    import multiprocessing as mp
+    import functools
+    import itertools
+    from qibo import K
+
+    def __init__(self, function, args=(), bounds=None,
+                 callback=None, options=None, processes=None):
+        ParallelResources().arguments = args
+        ParallelResources().custom_function = function
+        self.xval = None
+        self.function_value = None
+        self.jacobian_value = None
+        self.precision = self.K.np.finfo(self.K.qnp.dtypes("DTYPE")).eps
+        self.bounds = bounds
+        self.callback = callback
+        self.options = options
+        self.processes = processes
+
+    def run(self, x0):
+        """Executes parallel L-BFGS-B minimization.
+        Args:
+            x0 (numpy.array): guess for initial solution.
+
+        Returns:
+            scipy.minimize result object
+        """
+        ParallelResources().lock = self.mp.Lock()
+        with self.mp.Pool(processes=self.processes) as self.pool:
+            from scipy.optimize import minimize
+            out = minimize(fun=self.fun, x0=x0, jac=self.jac, method='L-BFGS-B',
+                           bounds=self.bounds, callback=self.callback, options=self.options)
+        ParallelResources().reset()
+        out.hess_inv = out.hess_inv * self.K.np.identity(len(x0))
+        return out
+
+    @staticmethod
+    def _eval_approx(eps_at, fun, x, eps):
+        if eps_at == 0:
+            x_ = x
+        else:
+            x_ = x.copy()
+            if eps_at <= len(x):
+                x_[eps_at-1] += eps
+            else:
+                x_[eps_at-1-len(x)] -= eps
+        return fun(x_)
+
+    def evaluate(self, x, eps=1e-8):
+        if not (self.xval is not None and all(abs(self.xval - x) <= self.precision*2)):
+            eps_at = range(len(x)+1)
+            self.xval = x.copy()
+            ret = self.pool.starmap(self._eval_approx, zip(eps_at,
+                                    self.itertools.repeat(_executor),
+                                    self.itertools.repeat(x),
+                                    self.itertools.repeat(eps)))
+            self.function_value = ret[0]
+            self.jacobian_value = (
+                ret[1:(len(x)+1)] - self.function_value) / eps
+
+    def fun(self, x):
+        self.evaluate(x)
+        return self.function_value
+
+    def jac(self, x):
+        self.evaluate(x)
+        return self.jacobian_value
