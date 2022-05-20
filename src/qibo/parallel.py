@@ -197,7 +197,7 @@ def _check_parallel_configuration(processes):  # pragma: no cover
     device = get_device()
     if sys.platform == "win32" or sys.platform == 'darwin':  # pragma: no cover
         raise_error(RuntimeError, "Parallel evaluations supported only on linux.")
-    if get_backend() == "tensorflow" or get_backend() == "qibojit":  # pragma: no cover
+    if get_backend() == "tensorflow":  # pragma: no cover
         raise_error(RuntimeError, f"{get_backend()} backend does not support parallel evaluations.")
     if device is not None and "GPU" in device:  # pragma: no cover
         raise_error(RuntimeError, "Parallel evaluations cannot be used with GPU.")
