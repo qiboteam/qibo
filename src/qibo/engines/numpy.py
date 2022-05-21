@@ -14,6 +14,9 @@ class NumpyEngine(Simulator):
         if nthreads > 1:
             raise_error(ValueError, "numpy does not support more than one thread.")
 
+    def to_numpy(self, x):
+        return x
+
     def _einsum_string(self, gate, nqubits):
         inp = list(EINSUM_CHARS[:nqubits])
         out = inp[:]
@@ -71,3 +74,6 @@ class NumpyEngine(Simulator):
         state = np.zeros(2 ** nqubits, dtype=self.dtype)
         state[0] = 1
         return state
+
+    def assert_allclose(self, value, target, rtol=1e-7, atol=0.0): # pragma: no cover
+        np.testing.assert_allclose(value, target, rtol=rtol, atol=atol)

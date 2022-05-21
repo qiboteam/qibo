@@ -18,6 +18,10 @@ class Engine(abc.ABC):
     def apply_gate(self, gate):
         raise_error(NotImplementedError)
 
+    @abc.abstractmethod
+    def execute_circuit(self, circuit, nshots=None):
+        raise_error(NotImplementedError)
+
 
 class Simulator(Engine):
 
@@ -61,6 +65,10 @@ class Simulator(Engine):
             return getattr(self.matrices, name)
 
     @abc.abstractmethod
+    def to_numpy(self, x):
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
     def zero_state(self, nqubits):
         """Generate |000...0> state as an array."""
         raise_error(NotImplementedError)
@@ -78,3 +86,7 @@ class Simulator(Engine):
         # TODO: Consider implementing a final state setter in circuits?
         circuit._final_state = state
         return state
+
+    @abc.abstractmethod
+    def assert_allclose(self, value, target, rtol=1e-7, atol=0.0): # pragma: no cover
+        raise_error(NotImplementedError)

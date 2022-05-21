@@ -1,15 +1,14 @@
 """Test gates defined in `qibo/core/gates.py`."""
 import pytest
 import numpy as np
-#from qibo import gates, K
-#from qibo.config import raise_error
-#from qibo.tests.utils import random_state, random_density_matrix
+from qibo import gates
+from qibo.config import raise_error
+from qibo.tests.utils import random_state, random_density_matrix
 
 
-def apply_gates(gatelist, nqubits=None, initial_state=None):
+def apply_gates(backend, gatelist, nqubits=None, initial_state=None):
     if initial_state is None:
-        state = K.qnp.zeros(2 ** nqubits)
-        state[0] = 1
+        state = backend.zero_state(nqubits)
     elif isinstance(initial_state, np.ndarray):
         state = np.copy(initial_state)
         if nqubits is None:
@@ -20,17 +19,16 @@ def apply_gates(gatelist, nqubits=None, initial_state=None):
         raise_error(TypeError, "Invalid initial state type {}."
                                "".format(type(initial_state)))
 
-    state = K.cast(state)
     for gate in gatelist:
-        state = gate(state)
+        state = backend.apply_gate(gate, state, nqubits)
     return state
 
 
 def test__control_unitary(backend):
-    matrix = K.cast(np.random.random((2, 2)))
+    matrix = np.random.random((2, 2))
     gate = gates.Unitary(matrix, 0)
     unitary = gate._control_unitary(matrix)
-    target_unitary = np.eye(4, dtype=K._dtypes.get('DTYPECPX'))
+    target_unitary = np.eye(4, dtype=backend.dtype)
     target_unitary[2:, 2:] = K.to_numpy(matrix)
     K.assert_allclose(unitary, target_unitary)
     with pytest.raises(ValueError):
