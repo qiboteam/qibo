@@ -772,7 +772,7 @@ by the currently active backend (see :ref:`Backends <Backends>` for more informa
 A copy of the state can be created using :meth:`qibo.abstractions.states.AbstractState.copy`.
 The new state will point to the same tensor in memory as the original one unless
 the ``deep=True`` option was used during the ``copy`` call.
-Note that some backends (qibojit) perform in-place updates when the
+Note that the qibojit backend performs in-place updates
 state is used as input to a circuit or time evolution. This will modify the
 state's tensor and the tensor of all shallow copies and the current state vector
 values will be lost. If you intend to keep the current state values,
