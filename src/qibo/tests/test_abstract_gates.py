@@ -1,6 +1,6 @@
 """Tests methods defined in `qibo/abstractions/gates.py` and `qibo/abstractions/abstract_gates.py`."""
 import pytest
-#from qibo.abstractions import gates
+from qibo import gates
 
 
 @pytest.mark.parametrize("gatename", ["H", "X", "Y", "Z",
@@ -97,8 +97,6 @@ def test_measurement_errors():
 def test_one_qubit_rotations_init(gatename, params):
     gate = getattr(gates, gatename)(0, *params)
     assert gate.target_qubits == (0,)
-    if len(params) == 1:
-        params = params[0]
     assert gate.parameters == params
 
 
@@ -115,8 +113,6 @@ def test_one_qubit_rotations_controlled_by(gatename, params):
     gate = getattr(gates, gatename)(1, *params).controlled_by(0, 3)
     assert gate.target_qubits == (1,)
     assert gate.control_qubits == (0, 3)
-    if len(params) == 1:
-        params = params[0]
     assert gate.parameters == params
 
 

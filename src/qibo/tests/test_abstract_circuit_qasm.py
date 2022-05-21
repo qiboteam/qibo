@@ -1,9 +1,8 @@
 """Tests creating abstract Qibo circuits from OpenQASM code."""
 import pytest
 import qibo
-from qibo import __version__
-#from qibo.abstractions import gates
-#from qibo.tests.test_abstract_circuit import Circuit
+from qibo import __version__, gates
+from qibo.models import Circuit
 
 
 def assert_strings_equal(a, b):
@@ -336,7 +335,7 @@ cu3(0.3,0.4,0.5) q[0],q[1];"""
     assert isinstance(c.queue[0], gates.U1)
     assert isinstance(c.queue[1], gates.U2)
     assert isinstance(c.queue[2], gates.CU3)
-    assert c.queue[0].parameters == 0.1
+    assert c.queue[0].parameters == (0.1,)
     assert c.queue[1].parameters == (0.2, 0.6)
     assert c.queue[2].parameters == (0.3, 0.4, 0.5)
 
@@ -352,9 +351,9 @@ cry(0.2) q[0],q[1];"""
     assert isinstance(c.queue[0], gates.CRX)
     assert isinstance(c.queue[1], gates.CRZ)
     assert isinstance(c.queue[2], gates.CRY)
-    assert c.queue[0].parameters == 0.1
-    assert c.queue[1].parameters == 0.3
-    assert c.queue[2].parameters == 0.2
+    assert c.queue[0].parameters == (0.1,)
+    assert c.queue[1].parameters == (0.3,)
+    assert c.queue[2].parameters == (0.2,)
 
 
 def test_from_qasm_parametrized_gates():
@@ -368,9 +367,9 @@ cu1(0.567) q[0],q[1];"""
     assert isinstance(c.queue[0], gates.RX)
     assert isinstance(c.queue[1], gates.RZ)
     assert isinstance(c.queue[2], gates.CU1)
-    assert c.queue[0].parameters == 0.1234
-    assert c.queue[1].parameters == 0.4321
-    assert c.queue[2].parameters == 0.567
+    assert c.queue[0].parameters == (0.1234,)
+    assert c.queue[1].parameters == (0.4321,)
+    assert c.queue[2].parameters == (0.567,)
 
 
 def test_from_qasm_invalid_script():
@@ -411,7 +410,7 @@ test q[2];
         c = Circuit.from_qasm(target)
 
 
-def test_from_qasm_measurements(backend):
+def test_from_qasm_measurements():
     target = """OPENQASM 2.0;
 include "qelib1.inc";
 qreg q[5];
@@ -430,7 +429,7 @@ measure q[3] -> b[1];"""
     assert c.measurement_tuples == {"a": (0, 2, 4), "b": (1, 3)}
 
 
-def test_from_qasm_measurements_order(backend):
+def test_from_qasm_measurements_order():
     target = """OPENQASM 2.0;
 include "qelib1.inc";
 qreg q[5];
@@ -446,7 +445,7 @@ measure q[0] -> b[0];
     assert c.measurement_tuples == {"a": (4, 3, 1), "b": (0, 2)}
 
 
-def test_from_qasm_invalid_measurements(backend):
+def test_from_qasm_invalid_measurements():
     # Undefined qubit
     target = """OPENQASM 2.0;
 qreg q[2];
@@ -535,7 +534,7 @@ rx(0.123)(0.25)(0) q[0];
         c = Circuit.from_qasm(target)
 
 
-def test_from_qasm_empty_spaces(backend):
+def test_from_qasm_empty_spaces():
     target = """OPENQASM 2.0; qreg q[2];
 creg a[2]; h q[0];x q[1]; cx q[0], q[1];
 measure q[0] -> a[0];measure q[1]->a[1]"""

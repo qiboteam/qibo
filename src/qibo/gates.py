@@ -48,9 +48,9 @@ class X(Gate):
     def controlled_by(self, *q):
         """Fall back to CNOT and Toffoli if there is one or two controls."""
         if len(q) == 1:
-            gate = getattr(self.module, "CNOT")(q[0], self.target_qubits[0])
+            gate = CNOT(q[0], self.target_qubits[0])
         elif len(q) == 2:
-            gate = getattr(self.module, "TOFFOLI")(q[0], q[1], self.target_qubits[0])
+            gate = TOFFOLI(q[0], q[1], self.target_qubits[0])
         else:
             gate = super(X, self).controlled_by(*q)
         return gate
@@ -85,7 +85,6 @@ class X(Gate):
 
         decomp_gates = []
         n = m + 1 + len(free)
-        TOFFOLI = self.module.TOFFOLI
         if (n >= 2 * m - 1) and (m >= 3):
             gates1 = [TOFFOLI(controls[m - 2 - i],
                               free[m - 4 - i],
@@ -156,7 +155,7 @@ class Z(Gate):
     def controlled_by(self, *q):
         """Fall back to CZ if there is only one control."""
         if len(q) == 1:
-            gate = getattr(self.module, "CZ")(q[0], self.target_qubits[0])
+            gate = CZ(q[0], self.target_qubits[0])
         else:
             gate = super(Z, self).controlled_by(*q)
         return gate
@@ -431,11 +430,11 @@ class _Rn_(ParametrizedGate):
             :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
-    axis = "n"
-
+    
     def __init__(self, q, theta, trainable=True):
-        super(_Rn_, self).__init__(trainable)
-        self.name = "r{}".format(self.axis)
+        super().__init__(trainable)
+        self.name = None
+        self._controlled_gate = None
         self.target_qubits = (q,)
 
         self.parameters = theta
@@ -450,8 +449,8 @@ class _Rn_(ParametrizedGate):
     def controlled_by(self, *q):
         """Fall back to CRn if there is only one control."""
         if len(q) == 1:
-            gate = getattr(self.module, "CR{}".format(self.axis.capitalize()))(
-              q[0], self.target_qubits[0], **self.init_kwargs)
+            gate = self._controlled_gate(
+                q[0], self.target_qubits[0], **self.init_kwargs)
         else:
             gate = super(_Rn_, self).controlled_by(*q)
         return gate
@@ -477,7 +476,11 @@ class RX(_Rn_):
             :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
-    axis = "x"
+    
+    def __init__(self, q, theta, trainable=True):
+        super().__init__(q, theta, trainable)
+        self.name = "rx"
+        self._controlled_gate = CRX
 
 
 class RY(_Rn_):
@@ -500,7 +503,11 @@ class RY(_Rn_):
             :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
-    axis = "y"
+
+    def __init__(self, q, theta, trainable=True):
+        super().__init__(q, theta, trainable)
+        self.name = "ry"
+        self._controlled_gate = CRY
 
 
 class RZ(_Rn_):
@@ -521,7 +528,11 @@ class RZ(_Rn_):
             :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
-    axis = "z"
+    
+    def __init__(self, q, theta, trainable=True):
+        super().__init__(q, theta, trainable)
+        self.name = "rz"
+        self._controlled_gate = CRZ
 
 
 class _Un_(ParametrizedGate):
@@ -533,12 +544,12 @@ class _Un_(ParametrizedGate):
             :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
-    order = 0
 
     def __init__(self, q, trainable=True):
-        super(_Un_, self).__init__(trainable)
-        self.name = "u{}".format(self.order)
-        self.nparams = self.order
+        super().__init__(trainable)
+        self.name = None
+        self._controlled_gate = None
+        self.nparams = 0
         self.target_qubits = (q,)
         self.init_args = [q]
         self.init_kwargs = {"trainable": trainable}
@@ -547,10 +558,10 @@ class _Un_(ParametrizedGate):
     def controlled_by(self, *q):
         """Fall back to CUn if there is only one control."""
         if len(q) == 1:
-            gate = getattr(self.module, "CU{}".format(self.order))(
+            gate = self._controlled_gate(
               q[0], self.target_qubits[0], **self.init_kwargs)
         else:
-            gate = super(_Un_, self).controlled_by(*q)
+            gate = super().controlled_by(*q)
         return gate
 
 
@@ -572,10 +583,12 @@ class U1(_Un_):
             :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
-    order = 1
 
     def __init__(self, q, theta, trainable=True):
-        super(U1, self).__init__(q, trainable=trainable)
+        super().__init__(q, trainable=trainable)
+        self.name = "u1"
+        self._controlled_gate = CU1
+        self.nparams = 1
         self.parameters = theta
         self.init_kwargs = {"theta": theta, "trainable": trainable}
 
@@ -604,10 +617,12 @@ class U2(_Un_):
             :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
-    order = 2
 
     def __init__(self, q, phi, lam, trainable=True):
-        super(U2, self).__init__(q, trainable=trainable)
+        super().__init__(q, trainable=trainable)
+        self.name = "u2"
+        self._controlled_gate = CU2
+        self.nparams = 2
         self._phi, self._lam = None, None
         self.init_kwargs = {"phi": phi, "lam": lam, "trainable": trainable}
         self.parameter_names = ["phi", "lam"]
@@ -640,10 +655,12 @@ class U3(_Un_):
             :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
-    order = 3
 
     def __init__(self, q, theta, phi, lam, trainable=True):
-        super(U3, self).__init__(q, trainable=trainable)
+        super().__init__(q, trainable=trainable)
+        self.name = "u3"
+        self._controlled_gate = CU3
+        self.nparams = 3
         self._theta, self._phi, self._lam = None, None, None
         self.init_kwargs = {"theta": theta, "phi": phi, "lam": lam,
                             "trainable": trainable}
@@ -723,11 +740,10 @@ class _CRn_(ParametrizedGate):
             :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
-    axis = "n"
 
     def __init__(self, q0, q1, theta, trainable=True):
         super(_CRn_, self).__init__(trainable)
-        self.name = "cr{}".format(self.axis)
+        self.name = None
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.parameters = theta
@@ -763,7 +779,10 @@ class CRX(_CRn_):
             :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
-    axis = "x"
+    
+    def __init__(self, q0, q1, theta, trainable=True):
+        super().__init__(q0, q1, theta, trainable)
+        self.name = "crx"
 
 
 class CRY(_CRn_):
@@ -789,7 +808,10 @@ class CRY(_CRn_):
             :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
-    axis = "y"
+    
+    def __init__(self, q0, q1, theta, trainable=True):
+        super().__init__(q0, q1, theta, trainable)
+        self.name = "cry"
 
 
 class CRZ(_CRn_):
@@ -813,7 +835,10 @@ class CRZ(_CRn_):
             :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
-    axis = "z"
+    
+    def __init__(self, q0, q1, theta, trainable=True):
+        super().__init__(q0, q1, theta, trainable)
+        self.name = "crz"
 
 
 class _CUn_(ParametrizedGate):
@@ -826,12 +851,11 @@ class _CUn_(ParametrizedGate):
             :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
-    order = 0
 
     def __init__(self, q0, q1, trainable=True):
         super(_CUn_, self).__init__(trainable)
-        self.name = "cu{}".format(self.order)
-        self.nparams = self.order
+        self.name = None
+        self.nparams = 0
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
@@ -861,10 +885,11 @@ class CU1(_CUn_):
             :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
-    order = 1
 
     def __init__(self, q0, q1, theta, trainable=True):
-        super(CU1, self).__init__(q0, q1, trainable=trainable)
+        super().__init__(q0, q1, trainable=trainable)
+        self.name = "cu1"
+        self.nparams = 1
         self.parameters = theta
         self.init_kwargs = {"theta": theta, "trainable": trainable}
 
@@ -898,10 +923,11 @@ class CU2(_CUn_):
             :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
-    order = 2
 
     def __init__(self, q0, q1, phi, lam, trainable=True):
-        super(CU2, self).__init__(q0, q1, trainable=trainable)
+        super().__init__(q0, q1, trainable=trainable)
+        self.name = "cu2"
+        self.nparams = 2
         self.init_kwargs = {"phi": phi, "lam": lam, "trainable": trainable}
 
         self.parameter_names = ["phi", "lam"]
@@ -939,10 +965,11 @@ class CU3(_CUn_):
             :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
-    order = 3
 
     def __init__(self, q0, q1, theta, phi, lam, trainable=True):
         super(CU3, self).__init__(q0, q1, trainable=trainable)
+        self.name = "cu3"
+        self.nparams = 3
         self._theta, self._phi, self._lam = None, None, None
         self.init_kwargs = {"theta": theta, "phi": phi, "lam": lam,
                             "trainable": trainable}
@@ -1142,8 +1169,6 @@ class TOFFOLI(Gate):
         import importlib
         control0, control1 = self.control_qubits
         target = self.target_qubits[0]
-        RY = self.module.RY
-        CNOT = self.module.CNOT
         return [RY(target, -math.pi / 4), CNOT(control1, target),
                 RY(target, -math.pi / 4), CNOT(control0, target),
                 RY(target, math.pi / 4), CNOT(control1, target),
@@ -1421,7 +1446,7 @@ class KrausChannel(Channel):
                                         "acting on {} qubits."
                                         "".format(shape, len(qubits)))
             qubitset.update(qubits)
-            gatelist.append(self.module.Unitary(matrix, *list(qubits)))
+            gatelist.append(Unitary(matrix, *list(qubits)))
             gatelist[-1].density_matrix = True
         return tuple(gatelist), tuple(sorted(qubitset))
 
@@ -1496,10 +1521,10 @@ class PauliNoiseChannel(UnitaryChannel):
 
     def __init__(self, q, px=0, py=0, pz=0, seed=None):
         probs, gates = [], []
-        for p, gate in [(px, "X"), (py, "Y"), (pz, "Z")]:
+        for p, gate in [(px, X), (py, Y), (pz, Z)]:
             if p > 0:
                 probs.append(p)
-                gates.append(getattr(self.module, gate)(q))
+                gates.append(gate(q))
 
         super(PauliNoiseChannel, self).__init__(probs, gates, seed=seed)
         self.name = "PauliNoiseChannel"
@@ -1534,7 +1559,7 @@ class ResetChannel(UnitaryChannel):
 
     def __init__(self, q, p0=0.0, p1=0.0, seed=None):
         probs = [p0, p1]
-        gates = [self.module.M(q, collapse=True), self.module.X(q)]
+        gates = [M(q, collapse=True), X(q)]
         super(ResetChannel, self).__init__(probs, gates, seed=seed)
         self.name = "ResetChannel"
         assert self.target_qubits == (q,)
@@ -1627,8 +1652,7 @@ class _ThermalRelaxationChannelA(UnitaryChannel):
 
     def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
         probs = self.calculate_probabilities(t1, t2, time, excited_population)
-        gates = [self.module.Z(q), self.module.M(q, collapse=True),
-                 self.module.X(q)]
+        gates = [Z(q), M(q, collapse=True), X(q)]
         super(_ThermalRelaxationChannelA, self).__init__(
             probs, gates, seed=seed)
         ThermalRelaxationChannel.__init__(
