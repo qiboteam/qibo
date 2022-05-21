@@ -44,7 +44,7 @@ The user can switch to a different using the ``qibo.set_backend`` method
 
 The active default backend will be printed as an info message the first time
 Qibo is imported in the code. If qibojit is not installed, an additional warning
-will appear prompting the user to install one of the two for increased
+will appear prompting the user to install qibojit for increased
 performance and multi-threading and/or GPU capabilities. The logging level can
 be controlled using the ``QIBO_LOG_LEVEL`` environment variable. This can be set
 to 3 to hide info messages or 4 to hide both info and warning messages. The
