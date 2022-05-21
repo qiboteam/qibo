@@ -1,7 +1,7 @@
 """Tests methods from `qibo/src/hamiltonians.py`."""
 import pytest
 import numpy as np
-from qibo import hamiltonians, matrices, K
+#from qibo import hamiltonians, matrices, K
 
 
 models_config = [

@@ -2,8 +2,8 @@
 import numpy as np
 import pytest
 import qibo
-from qibo import K, gates
-from qibo.models import Circuit
+#from qibo import K, gates
+#from qibo.models import Circuit
 
 
 @pytest.mark.parametrize("trainable", [True, False])

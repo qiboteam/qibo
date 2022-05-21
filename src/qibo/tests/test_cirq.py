@@ -3,8 +3,8 @@ import sys
 import numpy as np
 import cirq
 import pytest
-from qibo import models, gates, K
-from qibo.tests.utils import random_state
+#from qibo import models, gates, K
+#from qibo.tests.utils import random_state
 
 
 def random_unitary_matrix(nqubits, dtype=np.complex128):

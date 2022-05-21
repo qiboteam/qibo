@@ -1,25 +1,8 @@
 """Test all methods defined in `qibo/abstractions/circuit.py`."""
 import pytest
-from qibo.abstractions import gates
+#from qibo.abstractions import gates
 from qibo.config import raise_error
-from qibo.abstractions.circuit import AbstractCircuit
-
-
-class Circuit(AbstractCircuit): # pragma: no cover
-    """``BaseCircuit`` implementation without abstract methods for testing."""
-
-    def _add_layer(self, gate):
-        raise_error(NotImplementedError)
-
-    def fuse(self):
-        raise_error(NotImplementedError)
-
-    def execute(self):
-        raise_error(NotImplementedError)
-
-    @property
-    def final_state(self):
-        raise_error(NotImplementedError)
+#from qibo.abstractions.circuit import AbstractCircuit
 
 
 def test_parametrizedgates_class():

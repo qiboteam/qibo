@@ -1,9 +1,9 @@
 """Test methods defined in `qibo/core/callbacks.py`."""
 import pytest
 import numpy as np
-from qibo.models import Circuit, AdiabaticEvolution
-from qibo import gates, callbacks, K
-from qibo.config import EIGVAL_CUTOFF
+#from qibo.models import Circuit, AdiabaticEvolution
+#from qibo import gates, callbacks, K
+#from qibo.config import EIGVAL_CUTOFF
 
 
 # Absolute testing tolerance for the cases of zero entanglement entropy

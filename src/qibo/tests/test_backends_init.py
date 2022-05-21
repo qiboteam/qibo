@@ -1,5 +1,5 @@
 import pytest
-from qibo import K, backends, models, gates
+#from qibo import K, backends, models, gates
 
 
 def test_construct_backend(backend_name):

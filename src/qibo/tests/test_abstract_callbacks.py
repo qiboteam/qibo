@@ -1,6 +1,6 @@
 """Test all methods defined in `qibo/abstractions/callbacks.py`."""
 import pytest
-from qibo.abstractions import callbacks
+#from qibo.abstractions import callbacks
 
 
 def test_abstract_callback_properties():

@@ -3,8 +3,8 @@ import pytest
 import numpy as np
 import sympy
 import qibo
-from qibo import hamiltonians, K
-from qibo.tests.utils import random_complex
+#from qibo import hamiltonians, K
+#from qibo.tests.utils import random_complex
 
 
 def symbolic_tfim(nqubits, h=1.0):

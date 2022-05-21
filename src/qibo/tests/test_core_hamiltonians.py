@@ -2,8 +2,8 @@
 import pytest
 import numpy as np
 from scipy import sparse
-from qibo import hamiltonians, K
-from qibo.tests.utils import random_complex
+#from qibo import hamiltonians, K
+#from qibo.tests.utils import random_complex
 
 
 def random_sparse_matrix(n, sparse_type=None):
@@ -34,7 +34,7 @@ def test_hamiltonian_init():
         H3 = hamiltonians.Hamiltonian(4, np.eye(10))
 
 
-@pytest.mark.parametrize("dtype", K.numeric_types)
+@pytest.mark.parametrize("dtype", ["complex128"])
 @pytest.mark.parametrize("sparse_type", [None, "coo", "csr", "csc", "dia"])
 def test_hamiltonian_algebraic_operations(dtype, sparse_type):
     """Test basic hamiltonian overloading."""
@@ -213,7 +213,7 @@ def test_hamiltonian_expectation_errors():
         h.expectation("test")
 
 
-@pytest.mark.parametrize("dtype", K.numeric_types)
+@pytest.mark.parametrize("dtype", ["complex128", "complex64"])
 @pytest.mark.parametrize("sparse_type,dense",
                          [(None, True), (None, False),
                           ("coo", True), ("csr", True),
@@ -248,7 +248,7 @@ def test_hamiltonian_eigenvalues(dtype, sparse_type, dense):
         assert H3._eigenvalues is None
 
 
-@pytest.mark.parametrize("dtype", K.numeric_types)
+@pytest.mark.parametrize("dtype", ["complex128", "complex64"])
 @pytest.mark.parametrize("dense", [True, False])
 def test_hamiltonian_eigenvectors(dtype, dense):
     """Testing hamiltonian eigenvectors scaling."""

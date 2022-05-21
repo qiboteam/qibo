@@ -2,8 +2,8 @@
 import pytest
 import numpy as np
 import qibo
-from qibo import hamiltonians, K
-from qibo.tests.utils import random_state, random_complex, random_hermitian
+#from qibo import hamiltonians, K
+#from qibo.tests.utils import random_state, random_complex, random_hermitian
 
 
 @pytest.mark.parametrize("nqubits", [3, 4])

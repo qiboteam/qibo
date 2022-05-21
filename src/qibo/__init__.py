@@ -10,3 +10,8 @@ from qibo.engines import set_precision, get_precision
 from qibo.engines import set_device, get_device
 from qibo.engines import set_threads, get_threads
 from qibo import gates, models
+
+# TODO: Remove this once tests are finalized
+from qibo.engines import GlobalBackend
+K = GlobalBackend()
+matrices = K.matrices

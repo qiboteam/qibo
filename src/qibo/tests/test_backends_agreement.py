@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from qibo import K
+#from qibo import K
 from numpy.random import random as rand
 
 

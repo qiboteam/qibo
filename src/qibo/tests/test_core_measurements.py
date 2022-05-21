@@ -1,8 +1,8 @@
 """Test measurement objects defined in `qibo/core/measurements.py`."""
 import pytest
 import numpy as np
-from qibo import K
-from qibo.core import measurements
+#from qibo import K
+#from qibo.core import measurements
 
 
 def test_measurementresult_init():

@@ -1,6 +1,6 @@
 """Tests methods defined in `qibo/abstractions/states.py`."""
 import pytest
-from qibo.abstractions.states import AbstractState
+#from qibo.abstractions.states import AbstractState
 
 
 def test_abstract_state_init():

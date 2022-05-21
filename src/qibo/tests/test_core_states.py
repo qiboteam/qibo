@@ -1,8 +1,8 @@
 """Tests methods defined in `qibo/core/states.py`."""
 import pytest
 import numpy as np
-from qibo import K
-from qibo.core import states
+#from qibo import K
+#from qibo.core import states
 
 
 def test_state_shape_and_dtype(backend):

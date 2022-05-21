@@ -1,9 +1,9 @@
 """Test gates defined in `qibo/core/gates.py`."""
 import pytest
 import numpy as np
-from qibo import gates, K
-from qibo.config import raise_error
-from qibo.tests.utils import random_state, random_density_matrix
+#from qibo import gates, K
+#from qibo.config import raise_error
+#from qibo.tests.utils import random_state, random_density_matrix
 
 
 def apply_gates(gatelist, nqubits=None, initial_state=None):

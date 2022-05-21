@@ -1,6 +1,6 @@
 """Tests methods defined in `qibo/abstractions/gates.py` and `qibo/abstractions/abstract_gates.py`."""
 import pytest
-from qibo.abstractions import gates
+#from qibo.abstractions import gates
 
 
 @pytest.mark.parametrize("gatename", ["H", "X", "Y", "Z",

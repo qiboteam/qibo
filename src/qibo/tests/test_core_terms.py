@@ -1,9 +1,9 @@
 """Tests methods defined in `qibo/core/terms.py`."""
 import pytest
 import numpy as np
-from qibo import K, matrices, models, gates
-from qibo.core import terms
-from qibo.tests.utils import random_state, random_density_matrix
+#from qibo import K, matrices, models, gates
+#from qibo.core import terms
+#from qibo.tests.utils import random_state, random_density_matrix
 
 
 def test_hamiltonian_term_initialization(backend):

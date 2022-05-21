@@ -1,10 +1,10 @@
 """Test functions defined in `qibo/core/distcircuit.py`."""
 import pytest
 import numpy as np
-from qibo import K, gates
-from qibo.models import Circuit
-from qibo.core.distcircuit import DistributedCircuit
-from qibo.tests.utils import random_state
+#from qibo import K, gates
+#from qibo.models import Circuit
+#from qibo.core.distcircuit import DistributedCircuit
+#from qibo.tests.utils import random_state
 
 
 @pytest.mark.parametrize("use_global_qubits", [False, True])

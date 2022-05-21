@@ -4,8 +4,8 @@ import numpy as np
 import qibo
 from qibo import gates
 from qibo.models import Circuit
-from qibo.core.distcircuit import DistributedCircuit
-from qibo.core.distutils import DistributedQubits
+#from qibo.core.distcircuit import DistributedCircuit
+#from qibo.core.distutils import DistributedQubits
 
 
 def check_device_queues(queues):
