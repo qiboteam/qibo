@@ -407,7 +407,9 @@ class ParametrizedGate(Gate):
             nparams = len(self.parameter_names)
 
         if not self._parameters:
-            self._parameters = nparams * [None]
+            params = nparams * [None]
+        else:
+            params = list(self._parameters)
         if len(x) != nparams:
             raise_error(ValueError, "Parametrized gate has {} parameters "
                                     "but {} update values were given."
@@ -416,7 +418,8 @@ class ParametrizedGate(Gate):
             if isinstance(v, sympy.Expr):
                 self.well_defined = False
                 self.symbolic_parameters[i] = v
-            self._parameters[i] = v
+            params[i] = v
+        self._parameters = tuple(params)
 
         # This part uses ``BackendGate`` attributes (see below), assuming
         # that the gate was initialized using a calculation backend.
@@ -434,7 +437,7 @@ class ParametrizedGate(Gate):
             for symbol in param.free_symbols:
                 param = symbol.evaluate(param)
             params[i] = float(param)
-        self.parameters = params
+        self.parameters = tuple(params)
 
 
 class BaseBackendGate(Gate, ABC):
