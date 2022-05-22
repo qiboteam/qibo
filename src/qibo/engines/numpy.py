@@ -66,9 +66,9 @@ class NumpyEngine(Simulator):
         # TODO: Implement density matrices
         # (most likely in another method or a different engine?)
         state = np.reshape(state, nqubits * (2,))
-        matrix = np.reshape(self.asmatrix(gate), 2  * len(gate.qubits) * (2,))
         opstring = self._einsum_string(gate, nqubits)
         if gate.is_controlled_by:
+            matrix = np.reshape(self.asmatrix(gate), 2  * len(gate.target_qubits) * (2,))
             ncontrol = len(gate.control_qubits)
             nactive = nqubits - ncontrol
             order, _ = self._control_order(gate, nqubits)
@@ -87,6 +87,7 @@ class NumpyEngine(Simulator):
                 reverse_order[r] = i
             state = np.transpose(state, reverse_order)
         else:
+            matrix = np.reshape(self.asmatrix(gate), 2  * len(gate.qubits) * (2,))
             state = np.einsum(opstring, state, matrix)
         return np.reshape(state, (2 ** nqubits,))
 

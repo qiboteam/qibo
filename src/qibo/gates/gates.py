@@ -1136,8 +1136,10 @@ class GeneralizedfSim(ParametrizedGate):
         import numpy as np
         q0, q1 = self.target_qubits
         u, phi = self.parameters
-        ud = np.conj(np.transpose(u))
-        return self.__class__(q0, q1, ud, -phi, **self.init_kwargs)
+        init_kwargs = dict(self.init_kwargs)
+        init_kwargs["unitary"] = np.conj(np.transpose(u))
+        init_kwargs["phi"] = -phi
+        return self.__class__(q0, q1, **init_kwargs)
 
     @ParametrizedGate.parameters.setter
     def parameters(self, x):

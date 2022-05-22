@@ -414,3 +414,118 @@ def test_fused_gate_construct_unitary(backend, nqubits):
         toffoli[-2:, -2:] = np.array([[0, 1], [1, 0]])
         target_matrix = toffoli @ np.kron(target_matrix, np.eye(2))
     backend.assert_allclose(backend.asmatrix(gate), target_matrix)
+
+
+################################# Test dagger #################################
+GATES = [
+    ("H", (0,)),
+    ("X", (0,)),
+    ("Y", (0,)),
+    ("Z", (0,)),
+    ("S", (0,)),
+    ("SDG", (0,)),
+    ("T", (0,)),
+    ("TDG", (0,)),
+    ("RX", (0, 0.1)),
+    ("RY", (0, 0.2)),
+    ("RZ", (0, 0.3)),
+    ("U1", (0, 0.1)),
+    ("U2", (0, 0.2, 0.3)),
+    ("U3", (0, 0.1, 0.2, 0.3)),
+    ("CNOT", (0, 1)),
+    ("CRX", (0, 1, 0.1)),
+    ("CRZ", (0, 1, 0.3)),
+    ("CU1", (0, 1, 0.1)),
+    ("CU2", (0, 1, 0.2, 0.3)),
+    ("CU3", (0, 1, 0.1, 0.2, 0.3)),
+    ("fSim", (0, 1, 0.1, 0.2))
+]
+@pytest.mark.parametrize("gate,args", GATES)
+def test_dagger(backend, gate, args):
+    gate = getattr(gates, gate)(*args)
+    nqubits = len(gate.qubits)
+    initial_state = random_state(nqubits)
+    final_state = apply_gates(backend, [gate, gate.dagger()], nqubits, initial_state)
+    backend.assert_allclose(final_state, initial_state)
+
+
+GATES = [
+    ("H", (3,)),
+    ("X", (3,)),
+    ("Y", (3,)),
+    ("S", (3,)),
+    ("SDG", (3,)),
+    ("T", (3,)),
+    ("TDG", (3,)),
+    ("RX", (3, 0.1)),
+    ("U1", (3, 0.1)),
+    ("U3", (3, 0.1, 0.2, 0.3))
+]
+@pytest.mark.skip
+@pytest.mark.parametrize("gate,args", GATES)
+def test_controlled_dagger(backend, gate, args):
+    gate = getattr(gates, gate)(*args).controlled_by(0, 1, 2)
+    initial_state = random_state(4)
+    final_state = apply_gates(backend, [gate, gate.dagger()], 4, initial_state)
+    # TODO: Fix issue with einsum and controlled gates
+    backend.assert_allclose(final_state, initial_state)
+
+
+@pytest.mark.parametrize("gate_1,gate_2", [("S", "SDG"), ("T", "TDG")])
+@pytest.mark.parametrize("qubit", (0, 2, 4))
+def test_dagger_consistency(backend, gate_1, gate_2, qubit):
+    gate_1 = getattr(gates, gate_1)(qubit)
+    gate_2 = getattr(gates, gate_2)(qubit)
+    initial_state = random_state(qubit + 1)
+    final_state = apply_gates(backend, [gate_1, gate_2], qubit + 1, initial_state)
+    backend.assert_allclose(final_state, initial_state)
+
+
+@pytest.mark.parametrize("nqubits", [1, 2])
+def test_unitary_dagger(backend, nqubits):
+    matrix = np.random.random((2 ** nqubits, 2 ** nqubits))
+    gate = gates.Unitary(matrix, *range(nqubits))
+    initial_state = random_state(nqubits)
+    final_state = apply_gates(backend, [gate, gate.dagger()], nqubits, initial_state)
+    target_state = np.dot(matrix, initial_state)
+    target_state = np.dot(np.conj(matrix).T, target_state)
+    backend.assert_allclose(final_state, target_state)
+
+
+@pytest.mark.skip
+def test_controlled_unitary_dagger(backend):
+    from scipy.linalg import expm
+    matrix = np.random.random((2, 2))
+    matrix = expm(1j * (matrix + matrix.T))
+    gate = gates.Unitary(matrix, 0).controlled_by(1, 2, 3, 4)
+    initial_state = random_state(5)
+    final_state = apply_gates(backend, [gate, gate.dagger()], 5, initial_state)
+    K.assert_allclose(final_state, initial_state)
+
+
+def test_generalizedfsim_dagger(backend):
+    from scipy.linalg import expm
+    phi = 0.2
+    matrix = np.random.random((2, 2))
+    matrix = expm(1j * (matrix + matrix.T))
+    gate = gates.GeneralizedfSim(0, 1, matrix, phi)
+    initial_state = random_state(2)
+    final_state = apply_gates(backend, [gate, gate.dagger()], 2, initial_state)
+    backend.assert_allclose(final_state, initial_state)
+
+
+@pytest.mark.skip
+@pytest.mark.parametrize("nqubits", [4, 5])
+def test_variational_layer_dagger(backend, nqubits):
+    theta = 2 * np.pi * np.random.random((2, nqubits))
+    pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
+    gate = gates.VariationalLayer(range(nqubits), pairs,
+                                  gates.RY, gates.CZ,
+                                  theta[0], theta[1])
+    c = Circuit(nqubits)
+    c.add((gate, gate.dagger()))
+    initial_state = random_state(nqubits)
+    final_state = c(np.copy(initial_state))
+    backend.assert_allclose(final_state, initial_state)
+
+###############################################################################
