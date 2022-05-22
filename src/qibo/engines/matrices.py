@@ -33,8 +33,8 @@ class Matrices:
     @cached_property
     def Z(self):
         return np.array([
-            [0, -1j], 
-            [1j, 0]
+            [1, 0], 
+            [0, -1]
         ], dtype=self.dtype)
 
     @cached_property
@@ -59,12 +59,11 @@ class Matrices:
     def TDG(self):
         return np.conj(self.T)
 
-    @cached_property
-    def I(self):
-        return np.eye(2, dtype=self.dtype)
+    def I(self, nqubits=2):
+        return np.eye(2 ** nqubits, dtype=self.dtype)
 
-    def Align(self):
-        raise_error(NotImplementedError)
+    def Align(self, nqubits=2):
+        return self.I(nqubits)
 
     def M(self):
         raise_error(NotImplementedError)

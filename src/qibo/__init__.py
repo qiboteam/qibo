@@ -10,3 +10,7 @@ from qibo.engines import set_precision, get_precision
 from qibo.engines import set_device, get_device
 from qibo.engines import set_threads, get_threads
 from qibo import gates, models
+
+# TODO: Remove these (temporary to make tests pass)
+K = None
+matrices = None

@@ -31,7 +31,8 @@ def pytest_generate_tests(metafunc):
     active_tests = {
         "qibo.tests.test_abstract_circuit",
         "qibo.tests.test_abstract_circuit_qasm",
-        "qibo.tests.test_abstract_gates"
+        "qibo.tests.test_abstract_gates",
+        "qibo.tests.test_core_gates",
     }
     module_name = metafunc.module.__name__
     if module_name not in active_tests:

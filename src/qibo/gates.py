@@ -249,7 +249,7 @@ class TDG(Gate):
         self.init_args = [q]
 
 
-class I(Gate):
+class I(ParametrizedGate):
     """The identity gate.
 
     Args:
@@ -261,15 +261,21 @@ class I(Gate):
         self.name = "id"
         self.target_qubits = tuple(q)
         self.init_args = q
+        # save the number of target qubits as parameter
+        # for proper identity matrix construction
+        self.parameters = len(self.target_qubits)
 
 
-class Align(Gate):
+class Align(ParametrizedGate):
 
     def __init__(self, *q):
         super(Align, self).__init__()
         self.name = "align"
         self.target_qubits = tuple(q)
         self.init_args = q
+        # save the number of target qubits as parameter
+        # for proper identity matrix construction
+        self.parameters = len(self.target_qubits)
 
 
 class M(Gate):
