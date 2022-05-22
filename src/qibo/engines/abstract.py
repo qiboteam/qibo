@@ -57,13 +57,6 @@ class Simulator(Engine):
     def set_threads(self, nthreads):
         raise_error(NotImplementedError)
 
-    def asmatrix(self, gate):
-        name = gate.__class__.__name__
-        if gate.parameters:
-            return getattr(self.matrices, name)(*gate.parameters)
-        else:
-            return getattr(self.matrices, name)
-
     @abc.abstractmethod
     def to_numpy(self, x):
         raise_error(NotImplementedError)
@@ -71,6 +64,19 @@ class Simulator(Engine):
     @abc.abstractmethod
     def zero_state(self, nqubits):
         """Generate |000...0> state as an array."""
+        raise_error(NotImplementedError)
+
+    def asmatrix(self, gate):
+        """Convert a gate to its matrix representation in the computational basis."""
+        name = gate.__class__.__name__
+        if gate.parameters:
+            return getattr(self.matrices, name)(*gate.parameters)
+        else:
+            return getattr(self.matrices, name)
+
+    @abc.abstractmethod
+    def control_matrix(self, gate):
+        """"Calculate full matrix representation of a controlled gate."""
         raise_error(NotImplementedError)
 
     def execute_circuit(self, circuit, initial_state=None, nshots=None):

@@ -26,6 +26,7 @@ def apply_gates(backend, gatelist, nqubits=None, initial_state=None):
 
 @pytest.mark.skip
 def test__control_unitary(backend):
+    # TODO: Move this to backend tests
     matrix = np.random.random((2, 2))
     gate = gates.Unitary(matrix, 0)
     unitary = gate._control_unitary(matrix)

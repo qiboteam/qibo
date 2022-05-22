@@ -17,6 +17,23 @@ class NumpyEngine(Simulator):
     def to_numpy(self, x):
         return x
 
+    def zero_state(self, nqubits):
+        """Generate |000...0> state as an array."""
+        state = np.zeros(2 ** nqubits, dtype=self.dtype)
+        state[0] = 1
+        return state
+
+    def control_matrix(self, gate):
+        matrix = self.asmatrix(gate)
+        shape = matrix.shape
+        if shape != (2, 2):
+            raise_error(ValueError, "Cannot use ``control_unitary`` method on "
+                                    "gate matrix of shape {}.".format(shape))
+        zeros = np.zeros((2, 2), dtype=self.dtype)
+        part1 = np.concat([K.eye(2, dtype=self.dtype), zeros], axis=0)
+        part2 = np.concat([zeros, unitary], axis=0)
+        return np.concat([part1, part2], axis=1)
+
     def _einsum_string(self, gate, nqubits):
         inp = list(EINSUM_CHARS[:nqubits])
         out = inp[:]
@@ -68,12 +85,6 @@ class NumpyEngine(Simulator):
         else:
             state = np.einsum(opstring, state, matrix)
         return np.reshape(state, (2 ** nqubits,))
-
-    def zero_state(self, nqubits):
-        """Generate |000...0> state as an array."""
-        state = np.zeros(2 ** nqubits, dtype=self.dtype)
-        state[0] = 1
-        return state
 
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0): # pragma: no cover
         np.testing.assert_allclose(value, target, rtol=rtol, atol=atol)
