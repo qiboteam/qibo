@@ -1,5 +1,5 @@
 import numpy as np
-from qibo.config import EINSUM_CHARS
+from qibo.config import raise_error, EINSUM_CHARS
 from qibo.engines.abstract import Simulator
 from qibo.engines.matrices import Matrices
 
@@ -24,15 +24,19 @@ class NumpyEngine(Simulator):
         return state
 
     def control_matrix(self, gate):
+        if len(gate.control_qubits) > 1:
+            raise_error(NotImplementedError, "Cannot calculate controlled "
+                                             "unitary for more than two "
+                                             "control qubits.")
         matrix = self.asmatrix(gate)
         shape = matrix.shape
         if shape != (2, 2):
             raise_error(ValueError, "Cannot use ``control_unitary`` method on "
                                     "gate matrix of shape {}.".format(shape))
         zeros = np.zeros((2, 2), dtype=self.dtype)
-        part1 = np.concat([K.eye(2, dtype=self.dtype), zeros], axis=0)
-        part2 = np.concat([zeros, unitary], axis=0)
-        return np.concat([part1, part2], axis=1)
+        part1 = np.concatenate([np.eye(2, dtype=self.dtype), zeros], axis=0)
+        part2 = np.concatenate([zeros, matrix], axis=0)
+        return np.concatenate([part1, part2], axis=1)
 
     def _einsum_string(self, gate, nqubits):
         inp = list(EINSUM_CHARS[:nqubits])

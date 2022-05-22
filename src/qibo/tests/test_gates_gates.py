@@ -24,19 +24,6 @@ def apply_gates(backend, gatelist, nqubits=None, initial_state=None):
     return state
 
 
-@pytest.mark.skip
-def test__control_unitary(backend):
-    # TODO: Move this to backend tests
-    matrix = np.random.random((2, 2))
-    gate = gates.Unitary(matrix, 0)
-    unitary = gate._control_unitary(matrix)
-    target_unitary = np.eye(4, dtype=backend.dtype)
-    target_unitary[2:, 2:] = backend.to_numpy(matrix)
-    backend.assert_allclose(unitary, target_unitary)
-    with pytest.raises(ValueError):
-        unitary = gate._control_unitary(np.random.random((16, 16)))
-
-
 def test_h(backend):
     final_state = apply_gates(backend, [gates.H(0), gates.H(1)], nqubits=2)
     target_state = np.ones_like(final_state) / 2
