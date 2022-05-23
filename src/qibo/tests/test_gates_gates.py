@@ -428,45 +428,32 @@ def test_controlled_u2(backend):
     assert gate.parameters == (phi, lam)
 
 
-@pytest.mark.skip
 def test_controlled_u3(backend):
     theta, phi, lam = 0.1, 0.1234, 0.4321
     initial_state = random_state(2)
-    c = Circuit(2)
-    c.add(gates.U3(1, theta, phi, lam).controlled_by(0))
-    final_state = c(np.copy(initial_state))
-    assert c.queue[0].__class__.__name__ == "CU3"
-
-    c = Circuit(2)
-    c.add(gates.CU3(0, 1, theta, phi, lam))
-    target_state = c(np.copy(initial_state))
-    K.assert_allclose(final_state, target_state)
-
+    final_state = apply_gates(backend, [gates.U3(1, theta, phi, lam).controlled_by(0)], 2, initial_state)
+    target_state = apply_gates(backend, [gates.CU3(0, 1, theta, phi, lam)], 2, initial_state)
+    backend.assert_allclose(final_state, target_state)
     # for coverage
     gate = gates.U3(0, theta, phi, lam)
     assert gate.parameters == (theta, phi, lam)
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("applyx", [False, True])
 @pytest.mark.parametrize("free_qubit", [False, True])
 def test_controlled_swap(backend, applyx, free_qubit):
     f = int(free_qubit)
-    c = Circuit(3 + f)
+    gatelist = []
     if applyx:
-        c.add(gates.X(0))
-    c.add(gates.RX(1 + f, theta=0.1234))
-    c.add(gates.RY(2 + f, theta=0.4321))
-    c.add(gates.SWAP(1 + f, 2 + f).controlled_by(0))
-    final_state = c.execute()
-    c = Circuit(3 + f)
-    c.add(gates.RX(1 + f, theta=0.1234))
-    c.add(gates.RY(2 + f, theta=0.4321))
+        gatelist.append(gates.X(0))
+    gatelist.extend([gates.RX(1 + f, theta=0.1234), gates.RY(2 + f, theta=0.4321),
+                     gates.SWAP(1 + f, 2 + f).controlled_by(0)])
+    final_state = apply_gates(backend, gatelist, 3 + f)
+    gatelist = [gates.RX(1 + f, theta=0.1234), gates.RY(2 + f, theta=0.4321)]
     if applyx:
-        c.add(gates.X(0))
-        c.add(gates.SWAP(1 + f, 2 + f))
-    target_state = c.execute()
-    K.assert_allclose(final_state, target_state)
+        gatelist.extend([gates.X(0), gates.SWAP(1 + f, 2 + f)])
+    target_state = apply_gates(backend, gatelist, 3 + f)
+    backend.assert_allclose(final_state, target_state)
 
 
 @pytest.mark.skip
