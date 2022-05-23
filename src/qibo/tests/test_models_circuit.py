@@ -388,7 +388,6 @@ def test_circuit_with_noise(measurements, noise_map):
         assert noisyc.measurement_tuples == {"register0": (0, 1)}
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("trainable", [True, False])
 @pytest.mark.parametrize("include_not_trainable", [True, False])
 @pytest.mark.parametrize("format", ["list", "dict", "flatlist"])
@@ -402,12 +401,11 @@ def test_get_parameters(trainable, include_not_trainable, format):
     c.add(gates.Unitary(matrix, 2))
     c.add(gates.fSim(0, 2, theta=0.789, phi=0.987, trainable=trainable))
     c.add(gates.H(2))
-    c.param_tensor_types = (np.ndarray,)
     params = c.get_parameters(format, include_not_trainable)
     if trainable or include_not_trainable:
         target_params = {
-            "list": [0.123, 0.456, (0.789, 0.987)],
-            "dict": {c.queue[0]: 0.123, c.queue[1]: 0.456,
+            "list": [(0.123,), (0.456,), (0.789, 0.987)],
+            "dict": {c.queue[0]: (0.123,), c.queue[1]: (0.456,),
                      c.queue[4]: (0.789, 0.987)},
             "flatlist": [0.123, 0.456]
             }
@@ -415,16 +413,18 @@ def test_get_parameters(trainable, include_not_trainable, format):
         target_params["flatlist"].extend([0.789, 0.987])
     else:
         target_params = {
-            "list": [0.123],
-            "dict": {c.queue[0]: 0.123},
+            "list": [(0.123,)],
+            "dict": {c.queue[0]: (0.123,)},
             "flatlist": [0.123]
             }
         target_params["flatlist"].extend(list(matrix.ravel()))
     if format == "list":
         i = len(target_params["list"]) // 2 + 1
-        np.testing.assert_allclose(params.pop(i), matrix)
+        np.testing.assert_allclose(params.pop(i)[0], matrix)
     elif format == "dict":
-        np.testing.assert_allclose(params.pop(c.queue[3]), matrix)
+        np.testing.assert_allclose(params.pop(c.queue[3])[0], matrix)
+    
+    print(params)
     assert params == target_params[format]
     with pytest.raises(ValueError):
         c.get_parameters("test")

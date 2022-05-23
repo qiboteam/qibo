@@ -681,7 +681,10 @@ class Circuit:
         elif format == "flatlist":
             params = []
             for gate in parametrized_gates:
-                if isinstance(gate.parameters, np.ndarray):
+                gparams = gate.parameters
+                if len(gparams) == 1:
+                    gparams = gparams[0]
+                if isinstance(gparams, np.ndarray):
                     def traverse(x):
                         if isinstance(x, np.ndarray):
                             for v1 in x:
@@ -689,11 +692,11 @@ class Circuit:
                                     yield v2
                         else:
                             yield x
-                    params.extend(traverse(gate.parameters))
-                elif isinstance(gate.parameters, collections.abc.Iterable):
-                    params.extend(gate.parameters)
+                    params.extend(traverse(gparams))
+                elif isinstance(gparams, collections.abc.Iterable):
+                    params.extend(gparams)
                 else:
-                    params.append(gate.parameters)
+                    params.append(gparams)
         else:
             raise_error(ValueError, "Unknown format {} given in "
                                     "``get_parameters``.".format(format))

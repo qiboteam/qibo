@@ -147,12 +147,11 @@ def test_callbacks_fusion(backend):
     c.add(gates.CNOT(0, 1))
     c.add(gates.CallbackGate(entropy))
     fused_c = c.fuse()
-    backend.assert_allclose(fused_c(), c())
+    backend.assert_circuitclose(fused_c, c)
     target_entropy = [0.0, 1.0, 0.0, 1.0]
     backend.assert_allclose(entropy[:], target_entropy, atol=1e-7)
 
 
-@pytest.mark.skip
 def test_set_parameters_fusion(backend):
     """Check gate fusion when ``circuit.set_parameters`` is used."""
     c = Circuit(2)
@@ -162,8 +161,8 @@ def test_set_parameters_fusion(backend):
     c.add(gates.RY(0, theta=0.1234))
     c.add(gates.RY(1, theta=0.1234))
     fused_c = c.fuse()
-    backend.assert_allclose(fused_c(), c())
+    backend.assert_circuitclose(fused_c, c)
 
     c.set_parameters(4 * [0.4321])
     fused_c.set_parameters(4 * [0.4321])
-    backend.assert_allclose(fused_c(), c())
+    backend.assert_circuitclose(fused_c, c)
