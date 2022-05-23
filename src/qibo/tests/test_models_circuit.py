@@ -123,6 +123,7 @@ def test_circuit_add_layer(backend, nqubits):
     c.add(gates.VariationalLayer(qubits, pairs, gates.RY, gates.CZ, params))
     assert len(c.queue) == nqubits // 2 + nqubits % 2
 
+# :meth:`qibo.core.circuit.Circuit.fuse` is tested in `test_core_fusion.py`
 
 def test_gate_types():
     import collections

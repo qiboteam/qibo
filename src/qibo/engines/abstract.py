@@ -36,6 +36,7 @@ class Simulator(Engine):
 
         self.device = "/CPU:0"
         self.nthreads = 1
+        self.oom_error = MemoryError
 
     def set_precision(self, precision):
         if precision != self.precision:
@@ -91,16 +92,21 @@ class Simulator(Engine):
         # TODO: Implement repeated execution
         # TODO: Implement callbacks
         # TODO: Implement density matrices
-        nqubits = circuit.nqubits
-        if initial_state is None:
-            state = self.zero_state(nqubits)
-        else:
-            state = initial_state
-        for gate in circuit.queue:
-            state = self.apply_gate(gate, state, nqubits)
-        # TODO: Consider implementing a final state setter in circuits?
-        circuit._final_state = state
-        return state
+        try:
+            nqubits = circuit.nqubits
+            if initial_state is None:
+                state = self.zero_state(nqubits)
+            else:
+                state = initial_state
+            for gate in circuit.queue:
+                state = self.apply_gate(gate, state, nqubits)
+            # TODO: Consider implementing a final state setter in circuits?
+            circuit._final_state = state
+            return state
+        except self.oom_error:
+            raise_error(RuntimeError, f"State does not fit in {self.device} memory."
+                                       "Please switch the execution device to a "
+                                       "different one using ``qibo.set_device``.")
 
     @abc.abstractmethod
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0): # pragma: no cover

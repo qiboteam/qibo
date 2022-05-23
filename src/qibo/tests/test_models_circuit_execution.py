@@ -3,7 +3,6 @@ import numpy as np
 from qibo import gates
 from qibo.models import Circuit
 
-# :meth:`qibo.core.circuit.Circuit.fuse` is tested in `test_core_fusion.py`
 
 def test_eager_execute(backend, accelerators):
     c = Circuit(4, accelerators)
@@ -68,7 +67,7 @@ def test_repeated_execute(backend, accelerators):
     c.repeated_execution = True
     target_state = np.array(20 * [c()])
     final_state = c(nshots=20)
-    K.assert_allclose(final_state, target_state)
+    backend.assert_allclose(final_state, target_state)
 
 
 def test_final_state_property(backend):
@@ -79,9 +78,9 @@ def test_final_state_property(backend):
     with pytest.raises(RuntimeError):
         final_state = c.final_state
 
-    _ = c()
+    backend.execute_circuit(c)
     target_state = np.ones(4) / 2
-    K.assert_allclose(c.final_state, target_state)
+    backend.assert_allclose(c.final_state, target_state)
 
 
 @pytest.mark.skip
@@ -118,4 +117,4 @@ def test_density_matrix_circuit_initial_state(backend):
     target_rho = np.outer(initial_psi, initial_psi.conj())
     backn.assert_allclose(final_rho, target_rho)
     final_rho = c(initial_psi)
-    K.assert_allclose(final_rho, target_rho)
+    backend.assert_allclose(final_rho, target_rho)
