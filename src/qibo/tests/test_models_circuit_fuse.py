@@ -80,7 +80,6 @@ def test_fuse_circuit_three_qubit_gate(backend, max_qubits):
     backend.assert_circuitclose(fused_c, c, atol=1e-12)
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("nqubits", [4, 5, 10, 11])
 @pytest.mark.parametrize("nlayers", [1, 2])
 @pytest.mark.parametrize("max_qubits", [2, 3, 4])
