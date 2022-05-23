@@ -1,7 +1,6 @@
-"""Test functions defined in `qibo/core/fusion.py`."""
 import numpy as np
 import pytest
-from qibo import gates, K
+from qibo import gates
 from qibo.models import Circuit
 
 
@@ -48,7 +47,7 @@ def test_fusedgate_matrix_calculation(backend):
     cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1],
                      [0, 0, 1, 0]])
     target_matrix = np.kron(x, x) @ cnot @ np.kron(h, h)
-    K.assert_allclose(fused_gate.matrix, target_matrix)
+    backend.assert_allclose(fused_gate.matrix, target_matrix)
 
 
 def test_fuse_circuit_two_qubit_gates(backend):
@@ -60,7 +59,7 @@ def test_fuse_circuit_two_qubit_gates(backend):
     c.add(gates.fSim(1, 0, theta=0.1234, phi=0.324))
     c.add(gates.RY(1, theta=0.1234).controlled_by(0))
     fused_c = c.fuse()
-    K.assert_allclose(fused_c(), c())
+    backend.assert_allclose(fused_c(), c())
 
 
 @pytest.mark.parametrize("max_qubits", [2, 3, 4])

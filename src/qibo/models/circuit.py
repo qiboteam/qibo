@@ -765,8 +765,48 @@ class Circuit:
         logs.extend("{}: {}".format(g, n) for g, n in common_gates)
         return "\n".join(logs)
 
-    def fuse(self): # pragma: no cover
-        raise_error(NotImplementedError)
+    def fuse(self, max_qubits=2):
+        """Creates an equivalent circuit by fusing gates for increased simulation performance.
+
+        Args:
+            max_qubits (int): Maximum number of qubits in the fused gates.
+
+        Returns:
+            A :class:`qibo.core.circuit.Circuit` object containing
+            :class:`qibo.abstractions.gates.FusedGate` gates, each of which
+            corresponds to a group of some original gates.
+            For more details on the fusion algorithm we refer to the
+            :ref:`Circuit fusion <circuit-fusion>` section.
+
+        Example:
+            .. testcode::
+
+                from qibo import models, gates
+                c = models.Circuit(2)
+                c.add([gates.H(0), gates.H(1)])
+                c.add(gates.CNOT(0, 1))
+                c.add([gates.Y(0), gates.Y(1)])
+                # create circuit with fused gates
+                fused_c = c.fuse()
+                # now ``fused_c`` contains a single ``FusedGate`` that is
+                # equivalent to applying the five original gates
+        """
+        queue = self.queue.to_fused()
+        for gate in queue:
+            if not gate.marked:
+                for q in gate.qubits:
+                    # fuse nearest neighbors forth in time
+                    neighbor = gate.right_neighbors.get(q)
+                    if gate.can_fuse(neighbor, max_qubits):
+                        gate.fuse(neighbor)
+                    # fuse nearest neighbors back in time
+                    neighbor = gate.left_neighbors.get(q)
+                    if gate.can_fuse(neighbor, max_qubits):
+                        neighbor.fuse(gate)
+        # create a circuit and assign the new queue
+        circuit = self._shallow_copy()
+        circuit.queue = queue.from_fused()
+        return circuit
 
     @property
     def final_state(self):
