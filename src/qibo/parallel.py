@@ -80,7 +80,7 @@ def parallel_execution(circuit, states, processes=None):  # pragma: no cover
     """Execute circuit for multiple states.
 
     Example:
-        .. testcode::
+        .. code-block:: python
 
             import qibo
             original_backend = qibo.get_backend()
@@ -132,7 +132,7 @@ def parallel_parametrized_execution(circuit, parameters, initial_state=None, pro
     """Execute circuit for multiple parameters and fixed initial_state.
 
     Example:
-        .. testcode::
+        .. code-block:: python
 
             import qibo
             original_backend = qibo.get_backend()
