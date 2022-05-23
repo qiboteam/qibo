@@ -275,10 +275,10 @@ def test_state_callback(backend, density_matrix, copy):
     c.add(gates.H(1))
     c.add(gates.CallbackGate(statec))
     final_state = c()
-    
+
     target_state0 = np.array([1, 0, 1, 0]) / np.sqrt(2)
     target_state1 = np.ones(4) / 2.0
-    if not copy and K.name in ("qibojit", "qibotf"):
+    if not copy and K.name == "qibojit":
         # when copy is disabled in the callback and in-place updates are used
         target_state0 = target_state1
     if density_matrix:

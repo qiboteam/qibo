@@ -118,15 +118,11 @@ def test_trotter_hamiltonian_three_qubit_term(backend):
     dt = 1e-2
     initial_state = random_state(4)
     circuit = ham.circuit(dt=dt)
-    if K.name == "qibotf":
-        with pytest.raises(NotImplementedError):
-            final_state = circuit(np.copy(initial_state))
-    else:
-        final_state = circuit(np.copy(initial_state))
-        u = [expm(-0.5j * dt * (mm1 + mm3)), expm(-0.5j * dt * mm2)]
-        target_state = u[1].dot(u[0].dot(initial_state))
-        target_state = u[0].dot(u[1].dot(target_state))
-        K.assert_allclose(final_state, target_state)
+    final_state = circuit(np.copy(initial_state))
+    u = [expm(-0.5j * dt * (mm1 + mm3)), expm(-0.5j * dt * mm2)]
+    target_state = u[1].dot(u[0].dot(initial_state))
+    target_state = u[0].dot(u[1].dot(target_state))
+    K.assert_allclose(final_state, target_state)
 
 
 def test_old_trotter_hamiltonian_errors():

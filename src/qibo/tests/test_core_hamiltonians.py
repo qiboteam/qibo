@@ -7,7 +7,7 @@ from scipy import sparse
 
 
 def random_sparse_matrix(n, sparse_type=None):
-    if K.name in ("qibotf", "tensorflow"):
+    if K.name == "tensorflow":
         nonzero = int(0.1 * n * n)
         indices = np.random.randint(0, n, size=(nonzero, 2))
         data = np.random.random(nonzero) + 1j * np.random.random(nonzero)
@@ -140,7 +140,7 @@ def test_hamiltonian_matmul(backend, sparse_type):
 
     m1 = K.to_numpy(H1.matrix)
     m2 = K.to_numpy(H2.matrix)
-    if K.name in ("qibotf", "tensorflow") and sparse_type is not None:
+    if K.name == "tensorflow" and sparse_type is not None:
         with pytest.raises(NotImplementedError):
             _ = H1 @ H2
     else:

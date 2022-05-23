@@ -15,7 +15,7 @@ def test_pickle(backend_name):
     from qibo.backends import Backend
     backend = Backend()
     backend.active_backend = backend.construct_backend(backend_name)
-    if backend_name in ("tensorflow", "qibotf"):
+    if backend_name == "tensorflow":
         pytest.skip("Tensorflow backend cannot be pickled.")
     serial = dill.dumps(backend)
     new_backend = dill.loads(serial)

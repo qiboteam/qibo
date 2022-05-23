@@ -103,7 +103,7 @@ def test_backend_stack(tested_backend, target_backend):
 
 @pytest.mark.parametrize("sparse_type", [None, "coo", "csr", "csc", "dia"])
 def test_backend_eigh(tested_backend, target_backend, sparse_type):
-    if tested_backend in ("qibotf", "tensorflow") and sparse_type is not None:
+    if tested_backend == "tensorflow" and sparse_type is not None:
         pytest.skip("Temporary skip.")
     tested_backend = K.construct_backend(tested_backend)
     target_backend = K.construct_backend(target_backend)
@@ -122,7 +122,7 @@ def test_backend_eigh(tested_backend, target_backend, sparse_type):
 
 @pytest.mark.parametrize("sparse_type", ["coo", "csr", "csc", "dia"])
 def test_backend_sparse_eigh(tested_backend, target_backend, sparse_type):
-    if tested_backend in ("qibotf", "tensorflow"):
+    if tested_backend == "tensorflow":
         pytest.skip("Temporary skip.")
     tested_backend = K.construct_backend(tested_backend)
     target_backend = K.construct_backend(target_backend)
@@ -194,9 +194,6 @@ def test_backend_unique(tested_backend, target_backend, return_counts):
 def test_backend_transpose_state(tested_backend, target_backend):
     tested_backend = K.construct_backend(tested_backend)
     target_backend = K.construct_backend(target_backend)
-    if ((tested_backend.name == "qibotf" or target_backend.name == "qibotf") and
-        ("GPU" in tested_backend.default_device or "GPU" in target_backend.default_device)): # pragma: no cover
-        pytest.skip("qibotf does not implement `transpose_state` for GPU.")
     nqubits = 5
     order = [0, 2, 3, 4, 1]
     shape = (2 ** nqubits,)
