@@ -461,13 +461,11 @@ GATES = [
     ("U1", (3, 0.1)),
     ("U3", (3, 0.1, 0.2, 0.3))
 ]
-@pytest.mark.skip
 @pytest.mark.parametrize("gate,args", GATES)
 def test_controlled_dagger(backend, gate, args):
     gate = getattr(gates, gate)(*args).controlled_by(0, 1, 2)
     initial_state = random_state(4)
     final_state = apply_gates(backend, [gate, gate.dagger()], 4, initial_state)
-    # TODO: Fix issue with einsum and controlled gates
     backend.assert_allclose(final_state, initial_state)
 
 
@@ -492,7 +490,6 @@ def test_unitary_dagger(backend, nqubits):
     backend.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.skip
 def test_controlled_unitary_dagger(backend):
     from scipy.linalg import expm
     matrix = np.random.random((2, 2))
@@ -500,7 +497,7 @@ def test_controlled_unitary_dagger(backend):
     gate = gates.Unitary(matrix, 0).controlled_by(1, 2, 3, 4)
     initial_state = random_state(5)
     final_state = apply_gates(backend, [gate, gate.dagger()], 5, initial_state)
-    K.assert_allclose(final_state, initial_state)
+    backend.assert_allclose(final_state, initial_state)
 
 
 def test_generalizedfsim_dagger(backend):

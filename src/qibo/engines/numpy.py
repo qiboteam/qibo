@@ -38,11 +38,11 @@ class NumpyEngine(Simulator):
         part2 = np.concatenate([zeros, matrix], axis=0)
         return np.concatenate([part1, part2], axis=1)
 
-    def _einsum_string(self, gate, nqubits):
+    def _einsum_string(self, qubits, nqubits):
         inp = list(EINSUM_CHARS[:nqubits])
         out = inp[:]
-        trans = list(EINSUM_CHARS[nqubits : nqubits + len(gate.qubits)])
-        for i, q in enumerate(gate.qubits):
+        trans = list(EINSUM_CHARS[nqubits : nqubits + len(qubits)])
+        for i, q in enumerate(qubits):
             trans.append(inp[q])
             out[q] = trans[i]
         return "{},{}->{}".format("".join(inp), "".join(trans), "".join(out))
@@ -66,16 +66,16 @@ class NumpyEngine(Simulator):
         # TODO: Implement density matrices
         # (most likely in another method or a different engine?)
         state = np.reshape(state, nqubits * (2,))
-        opstring = self._einsum_string(gate, nqubits)
         if gate.is_controlled_by:
             matrix = np.reshape(self.asmatrix(gate), 2  * len(gate.target_qubits) * (2,))
             ncontrol = len(gate.control_qubits)
             nactive = nqubits - ncontrol
-            order, _ = self._control_order(gate, nqubits)
+            order, targets = self._control_order(gate, nqubits)
             state = np.transpose(state, order)
             # Apply `einsum` only to the part of the state where all controls
             # are active. This should be `state[-1]`
             state = np.reshape(state, (2 ** ncontrol,) + nactive * (2,))
+            opstring = self._einsum_string(targets, nactive)
             updates = np.einsum(opstring, state[-1], matrix)
             # Concatenate the updated part of the state `updates` with the
             # part of of the state that remained unaffected `state[:-1]`.
@@ -88,6 +88,7 @@ class NumpyEngine(Simulator):
             state = np.transpose(state, reverse_order)
         else:
             matrix = np.reshape(self.asmatrix(gate), 2  * len(gate.qubits) * (2,))
+            opstring = self._einsum_string(gate.qubits, nqubits)
             state = np.einsum(opstring, state, matrix)
         return np.reshape(state, (2 ** nqubits,))
 
