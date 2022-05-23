@@ -29,12 +29,13 @@ def backend(backend_name):
 
 def pytest_generate_tests(metafunc):
     active_tests = {
-        "qibo.tests.test_abstract_circuit",
-        "qibo.tests.test_abstract_circuit_qasm",
         "qibo.tests.test_gates_abstract",
         "qibo.tests.test_gates_gates",
         "qibo.tests.test_gates_special",
-        "qibo.tests.test_circuit_fuse",
+        "qibo.tests.test_models_circuit_fuse",
+        "qibo.tests.test_models_circuit_qasm",
+        "qibo.tests.test_models_circuit",
+        "qibo.tests.test_models_qft",
         "qibo.tests.test_simulators"
     }
     module_name = metafunc.module.__name__
