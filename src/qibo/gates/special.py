@@ -32,11 +32,6 @@ class CallbackGate(SpecialGate):
         self.callback = callback
         self.init_args = [callback]
 
-    @Gate.nqubits.setter
-    def nqubits(self, n: int):
-        Gate.nqubits.fset(self, n) # pylint: disable=no-member
-        self.callback.nqubits = n
-
 
 class FusedGate(SpecialGate):
     """Collection of gates that will be fused and applied as single gate during simulation.

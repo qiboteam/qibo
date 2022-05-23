@@ -459,57 +459,47 @@ class Circuit:
         if isinstance(gate, collections.abc.Iterable):
             for g in gate:
                 self.add(g)
-        elif isinstance(gate, gates.Gate):
-            return self._add(gate)
+
         else:
-            raise_error(TypeError, "Unknown gate type {}.".format(type(gate)))
+            if not isinstance(gate, gates.Gate):
+                raise_error(TypeError, "Unknown gate type {}.".format(type(gate)))
 
-    def _add(self, gate: gates.Gate):
-        if gate.density_matrix and not self.density_matrix:
-            raise_error(ValueError, "Cannot add {} on circuits that uses state "
-                                    "vectors. Please switch to density matrix "
-                                    "circuit.".format(gate.name))
-        elif self.density_matrix:
-            gate.density_matrix = True
+            if gate.density_matrix and not self.density_matrix:
+                raise_error(ValueError, "Cannot add {} on circuits that uses state "
+                                        "vectors. Please switch to density matrix "
+                                        "circuit.".format(gate.name))
+            elif self.density_matrix:
+                gate.density_matrix = True
 
-        if self._final_state is not None:
-            raise_error(RuntimeError, "Cannot add gates to a circuit after it is "
-                                      "executed.")
+            if self._final_state is not None:
+                raise_error(RuntimeError, "Cannot add gates to a circuit after it is "
+                                        "executed.")
 
-        for q in gate.target_qubits:
-            if q >= self.nqubits:
-                raise_error(ValueError, "Attempting to add gate with target qubits {} "
-                                        "on a circuit of {} qubits."
-                                        "".format(gate.target_qubits, self.nqubits))
+            for q in gate.target_qubits:
+                if q >= self.nqubits:
+                    raise_error(ValueError, "Attempting to add gate with target qubits {} "
+                                            "on a circuit of {} qubits."
+                                            "".format(gate.target_qubits, self.nqubits))
+            
+            self.check_measured(gate.qubits)
+            if isinstance(gate, gates.M) and not gate.collapse:
+                return self._add_measurement(gate)
+            elif isinstance(gate, gates.VariationalLayer):
+                return self.add(gate.gates)
+            else:
+                return self._add_gate(gate)
 
-        self.check_measured(gate.qubits)
-        if isinstance(gate, gates.M) and not gate.collapse:
-            self._add_measurement(gate)
-        elif isinstance(gate, gates.VariationalLayer):
-            self.add(gate.gates)
-        else:
-            self._set_nqubits(gate)
-            self.queue.append(gate)
-            if isinstance(gate, gates.M):
-                self.repeated_execution = True
-                return gate.symbol()
-            if isinstance(gate, gates.UnitaryChannel):
-                self.repeated_execution = not self.density_matrix
+    def _add_gate(self, gate):
+        self.queue.append(gate)
+        if isinstance(gate, gates.M):
+            self.repeated_execution = True
+            return gate.symbol()
+        if isinstance(gate, gates.UnitaryChannel):
+            self.repeated_execution = not self.density_matrix
         if isinstance(gate, gates.ParametrizedGate):
             self.parametrized_gates.append(gate)
             if gate.trainable:
                 self.trainable_gates.append(gate)
-
-    def _set_nqubits(self, gate: gates.Gate):
-        """Sets the number of qubits and prepares all gates.
-
-        Helper method for ``circuit.add(gate)``.
-        """
-        if gate.is_prepared and gate.nqubits != self.nqubits:
-            raise_error(RuntimeError, "Cannot add gate {} that acts on {} "
-                                      "qubits to circuit that contains {}"
-                                      "qubits.".format(
-                                            gate, gate.nqubits, self.nqubits))
 
     def _add_measurement(self, gate: gates.Gate):
         """Called automatically by `add` when `gate` is measurement.

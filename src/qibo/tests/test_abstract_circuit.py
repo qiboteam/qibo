@@ -101,15 +101,6 @@ def test_circuit_add_nested_generator():
     assert isinstance(c.queue[7], gates.H)
 
 
-def test_set_nqubits():
-    c = Circuit(2)
-    gate = gates.H(0)
-    gate.nqubits = 3
-    gate.is_prepared = True
-    with pytest.raises(RuntimeError):
-        c.add(gate)
-
-
 def test_add_measurement():
     c = Circuit(5)
     g1 = gates.M(0, 2, register_name="a")

@@ -35,9 +35,6 @@ def test_x_decomposition_errors(use_toffolis):
     gate = gates.X(0).controlled_by(1, 2, 3, 4)
     with pytest.raises(ValueError):
         decomp = gate.decompose(2, 3, use_toffolis=use_toffolis)
-    gate.nqubits = 6
-    with pytest.raises(ValueError):
-        decomp = gate.decompose(5, 6, use_toffolis=use_toffolis)
 
 
 @pytest.mark.parametrize("controls,instance", [((1,), "CZ"), ((1, 2), "Z")])
@@ -279,41 +276,12 @@ def test_qubit_getter_and_setter():
         gate.control_qubits = (1,)
 
 
-def test_nqubits_getter_and_setter():
-    from qibo.gates.abstract import Gate
-    gate = Gate()
-    gate.target_qubits = (0, 1)
-    gate.control_qubits = (2,)
-    gate.nqubits = 10
-    assert gate.nqubits == 10
-    assert gate.nstates == 1024
-
-
-def test_nqubits_getter_and_setter_errors():
-    from qibo.gates.abstract import Gate
-    gate = Gate()
-    with pytest.raises(ValueError):
-        nqubits = gate.nqubits
-    with pytest.raises(ValueError):
-        nstates = gate.nstates
-    gate.nqubits = 4
-    with pytest.raises(ValueError):
-        gate.nqubits = 5
-
-
 def test_density_matrix_getter_and_setter():
     from qibo.gates.abstract import Gate
     gate = Gate()
     gate.target_qubits = (0, 1)
     gate.control_qubits = (2,)
-    assert gate._active_call == "_state_vector_call"
     gate.density_matrix = True
-    assert gate._active_call == "_density_matrix_call"
-
-    gate.nqubits = 4
-    gate.is_prepared = True
-    with pytest.raises(RuntimeError):
-        gate.density_matrix = False
 
 
 def test_gates_commute():
@@ -341,14 +309,8 @@ def test_controlled_by():
     assert gate.control_qubits == (1, 2, 3)
     assert gate.is_controlled_by
     assert isinstance(gate, gates.RX)
-
     with pytest.raises(RuntimeError):
         gate = gates.CNOT(0, 1).controlled_by(2)
-
-    gate = gates.RY(0, 0.1234)
-    gate.nqubits = 5
-    with pytest.raises(RuntimeError):
-        gate = gate.controlled_by(2)
 
 
 def test_on_qubits_controlled_by():

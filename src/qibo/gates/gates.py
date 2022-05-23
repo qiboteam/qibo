@@ -54,7 +54,7 @@ class X(Gate):
             gate = super(X, self).controlled_by(*q)
         return gate
 
-    def decompose(self, *free: int, use_toffolis: bool = True) -> List[Gate]:
+    def decompose(self, *free, use_toffolis=True):
         """Decomposes multi-control ``X`` gate to one-qubit, ``CNOT`` and ``TOFFOLI`` gates.
 
         Args:
@@ -70,11 +70,6 @@ class X(Gate):
         if set(free) & set(self.qubits):
             raise_error(ValueError, "Cannot decompose multi-control X gate if free "
                                     "qubits coincide with target or controls.")
-        if self._nqubits is not None:
-            for q in free:
-                if q >= self.nqubits:
-                    raise_error(ValueError, "Gate acts on {} qubits but {} was given "
-                                            "as free qubit.".format(self.nqubits, q))
 
         controls = self.control_qubits
         target = self.target_qubits[0]

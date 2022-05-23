@@ -12,7 +12,6 @@ class Gate:
 
     All base gates should inherit this class.
     """
-    # TODO: Remove the ``nqubits`` parameter
     def __init__(self):
         """
         Attributes:
@@ -25,8 +24,6 @@ class Gate:
             target_qubits (tuple): Tuple with ids of target qubits.
             control_qubits (tuple): Tuple with ids of control qubits sorted in
                 increasing order.
-            nqubits (int): Number of qubits that this gate acts on.
-            nstates (int): Size of state vectors that this gate acts on.
             density_matrix (bool): Controls if the gate acts on state vectors or
                 density matrices.
         """
@@ -40,11 +37,8 @@ class Gate:
         self._target_qubits = tuple()
         self._control_qubits = set()
         self._parameters = []
-        self._nqubits = None
-        self._nstates = None
         config.ALLOW_SWITCHERS = False
 
-        self.is_prepared = False
         self.well_defined = True
         # Keeps track of whether parametrized gates are well-defined
         # (parameter value is known during circuit creation) or if they are
@@ -53,7 +47,6 @@ class Gate:
 
         # Using density matrices or state vectors
         self._density_matrix = False
-        self._active_call = "_state_vector_call"
 
     @property
     def target_qubits(self) -> Tuple[int]:
@@ -132,37 +125,6 @@ class Gate:
         return self._parameters
 
     @property
-    def nqubits(self) -> int:
-        """Number of qubits that this gate acts on."""
-        if self._nqubits is None:
-            raise_error(ValueError, "Accessing number of qubits for gate {} but "
-                                    "this is not yet set.".format(self))
-        return self._nqubits
-
-    @property
-    def nstates(self) -> int:
-        """Size of the state vectors that this gate acts on."""
-        if self._nstates is None:
-            raise_error(ValueError, "Accessing number of qubits for gate {} but "
-                                    "this is not yet set.".format(self))
-        return self._nstates
-
-    @nqubits.setter
-    def nqubits(self, n: int):
-        """Sets the total number of qubits that this gate acts on.
-
-        This setter is used by `circuit.add` if the gate is added in a circuit
-        or during `__call__` if the gate is called directly on a state.
-        The user is not supposed to set `nqubits` by hand.
-        """
-        if self._nqubits is not None and n != self.nqubits:
-            raise_error(ValueError, "Cannot set gate number of qubits to {} "
-                                    "because it is already set to {}."
-                                    "".format(n, self.nqubits))
-        self._nqubits = n
-        self._nstates = 2**n
-
-    @property
     def density_matrix(self) -> bool:
         """Controls if the gate acts on state vectors or density matrices."""
         return self._density_matrix
@@ -170,10 +132,6 @@ class Gate:
     @density_matrix.setter
     def density_matrix(self, x: bool):
         """Density matrix flag switcher."""
-        if self.is_prepared:
-            raise_error(RuntimeError,
-                        "Density matrix mode cannot be switched after "
-                        "preparing the gate for execution.")
         self._density_matrix = x
         if x:
             self._active_call = "_density_matrix_call"
@@ -262,10 +220,6 @@ class Gate:
                                           "on gate {} because it is already "
                                           "controlled by {}."
                                           "".format(self, self.control_qubits))
-            if self._nqubits is not None:
-                raise_error(RuntimeError, "Cannot use controlled_by on a gate "
-                                          "for which the number of qubits is "
-                                          "set.")
             return func(self, *args) # pylint: disable=E1102
         return wrapper
 
@@ -334,24 +288,12 @@ class Channel(Gate):
             self._inverse_gates = self.calculate_inverse_gates()
             for gate in self._inverse_gates:
                 if gate is not None:
-                    if self._nqubits is not None:
-                        gate.nqubits = self._nqubits
                     gate.density_matrix = self.density_matrix
         return self._inverse_gates
 
     @abstractmethod
     def calculate_inverse_gates(self): # pragma: no cover
         raise_error(NotImplementedError)
-
-    @Gate.nqubits.setter
-    def nqubits(self, n: int):
-        Gate.nqubits.fset(self, n) # pylint: disable=no-member
-        for gate in self.gates:
-            gate.nqubits = n
-        if self._inverse_gates is not None:
-            for gate in self._inverse_gates:
-                if gate is not None:
-                    gate.nqubits = n
 
     @Gate.density_matrix.setter
     def density_matrix(self, x):
@@ -524,16 +466,6 @@ class BaseBackendGate(Gate, ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def _set_nqubits(self, state): # pragma: no cover
-        """Sets ``gate.nqubits`` and prepares gates for application to states.
-
-        This method is used only when gates are called directly on states
-        without being a part of circuit. If a gate is added in a circuit it
-        is automatically prepared and this method is not required.
-        """
-        raise_error(NotImplementedError)
-
-    @abstractmethod
     def _state_vector_call(self, state): # pragma: no cover
         """Applies the gate on a state vector."""
         raise_error(NotImplementedError)
@@ -571,8 +503,6 @@ class BaseBackendGate(Gate, ABC):
         current value of the ``gate.density_matrix`` flag.
         It automatically prepares the gate if it is not already prepared.
         """
-        if not self.is_prepared:
-            self._set_nqubits(state)
         if not self.well_defined:
             self.substitute_symbols() # pylint: disable=E1101
             # method available only for parametrized gates
