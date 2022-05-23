@@ -1,5 +1,6 @@
 import abc
 from qibo.config import raise_error
+from qibo.gates.abstract import ParametrizedGate, SpecialGate
 
 
 class Engine(abc.ABC):
@@ -69,10 +70,16 @@ class Simulator(Engine):
     def asmatrix(self, gate):
         """Convert a gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
-        if gate.parameters:
+        if isinstance(gate, ParametrizedGate):
             return getattr(self.matrices, name)(*gate.parameters)
+        elif isinstance(gate, SpecialGate):
+            return self.asmatrix_special(gate)
         else:
             return getattr(self.matrices, name)
+
+    @abc.abstractmethod
+    def asmatrix_special(self, gate):
+        raise_error(NotImplementedError)
 
     @abc.abstractmethod
     def control_matrix(self, gate):

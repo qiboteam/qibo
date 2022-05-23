@@ -398,7 +398,6 @@ def test_callback_gate_errors():
         gate._construct_unitary()
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("nqubits", [2, 3])
 def test_fused_gate_construct_unitary(backend, nqubits):
     gate = gates.FusedGate(0, 1)

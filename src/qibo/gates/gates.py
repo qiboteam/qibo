@@ -1411,7 +1411,7 @@ class PartialTrace(Gate):
         self.init_kwargs = {}
 
 
-class FusedGate(Gate):
+class FusedGate(SpecialGate):
     """Collection of gates that will be fused and applied as single gate during simulation.
 
     This gate is constructed automatically by :meth:`qibo.core.circuit.Circuit.fuse`

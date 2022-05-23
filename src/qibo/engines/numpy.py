@@ -1,5 +1,6 @@
 import numpy as np
 from qibo.config import raise_error, EINSUM_CHARS
+from qibo.gates import FusedGate
 from qibo.engines.abstract import Simulator
 from qibo.engines.matrices import Matrices
 
@@ -22,6 +23,38 @@ class NumpyEngine(Simulator):
         state = np.zeros(2 ** nqubits, dtype=self.dtype)
         state[0] = 1
         return state
+
+    def asmatrix_fused(self, fgate):
+        rank = len(fgate.target_qubits)
+        matrix = np.eye(2 ** rank, dtype=self.dtype)
+        for gate in fgate.gates:
+            # transfer gate matrix to numpy as it is more efficient for
+            # small tensor calculations
+            gmatrix = self.asmatrix(gate)
+            # Kronecker product with identity is needed to make the
+            # original matrix have shape (2**rank x 2**rank)
+            eye = np.eye(2 ** (rank - len(gate.qubits)), dtype=self.dtype)
+            gmatrix = np.kron(gmatrix, eye)
+            # Transpose the new matrix indices so that it targets the
+            # target qubits of the original gate
+            original_shape = gmatrix.shape
+            gmatrix = np.reshape(gmatrix, 2 * rank * (2,))
+            qubits = list(gate.qubits)
+            indices = qubits + [q for q in fgate.target_qubits if q not in qubits]
+            indices = np.argsort(indices)
+            transpose_indices = list(indices)
+            transpose_indices.extend(indices + rank)
+            gmatrix = np.transpose(gmatrix, transpose_indices)
+            gmatrix = np.reshape(gmatrix, original_shape)
+            # fuse the individual gate matrix to the total ``FusedGate`` matrix
+            matrix = gmatrix @ matrix
+        return matrix
+
+    def asmatrix_special(self, gate):
+        if isinstance(gate, FusedGate):
+            return self.asmatrix_fused(gate)
+        else:
+            raise_error(NotImplementedError)
 
     def control_matrix(self, gate):
         if len(gate.control_qubits) > 1:
