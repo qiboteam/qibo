@@ -101,6 +101,12 @@ class FusedGate(SpecialGate):
             return False
         return True
 
+    def on_qubits(self, qubit_map):
+        fgate = self.__class__()
+        for gate in self:
+            fgate.append(gate.on_qubits(qubit_map))
+        return fgate
+
     def fuse(self, gate):
         """Fuses two gates."""
         left_gates = set(self.right_neighbors.values()) - {gate}
