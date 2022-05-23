@@ -114,6 +114,16 @@ def test_add_measurement():
         c.add(gates.M(4, register_name="b"))
 
 
+@pytest.mark.parametrize("nqubits", [5, 6])
+def test_circuit_add_layer(backend, nqubits):
+    c = Circuit(nqubits)
+    qubits = list(range(nqubits))
+    pairs = [(2 * i, 2 * i + 1) for i in range(nqubits // 2)]
+    params = nqubits * [0.1]
+    c.add(gates.VariationalLayer(qubits, pairs, gates.RY, gates.CZ, params))
+    assert len(c.queue) == nqubits // 2 + nqubits % 2
+
+
 def test_gate_types():
     import collections
     c = Circuit(3)

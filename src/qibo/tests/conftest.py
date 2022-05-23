@@ -8,6 +8,19 @@ import pytest
 from qibo.engines import construct_backend
 
 
+ACTIVE_TESTS = {
+    "qibo.tests.test_gates_abstract",
+    "qibo.tests.test_gates_gates",
+    "qibo.tests.test_gates_special",
+    "qibo.tests.test_models_circuit_execution",
+    "qibo.tests.test_models_circuit_fuse",
+    "qibo.tests.test_models_circuit_qasm",
+    "qibo.tests.test_models_circuit",
+    "qibo.tests.test_models_qft",
+    "qibo.tests.test_simulators"
+}
+
+
 def pytest_runtest_setup(item):
     ALL = {"darwin", "linux"}
     supported_platforms = ALL.intersection(
@@ -28,19 +41,12 @@ def backend(backend_name):
     
 
 def pytest_generate_tests(metafunc):
-    active_tests = {
-        "qibo.tests.test_gates_abstract",
-        "qibo.tests.test_gates_gates",
-        "qibo.tests.test_gates_special",
-        "qibo.tests.test_models_circuit_fuse",
-        "qibo.tests.test_models_circuit_qasm",
-        "qibo.tests.test_models_circuit",
-        "qibo.tests.test_models_qft",
-        "qibo.tests.test_simulators"
-    }
     module_name = metafunc.module.__name__
-    if module_name not in active_tests:
+    if module_name not in ACTIVE_TESTS:
         pytest.skip()
 
     if "backend_name" in metafunc.fixturenames:
         metafunc.parametrize("backend_name", ["numpy"])
+
+    if "accelerators" in metafunc.fixturenames:
+        metafunc.parametrize("accelerators", [None])

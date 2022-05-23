@@ -178,14 +178,6 @@ class Circuit(circuit.AbstractCircuit):
                                       "circuit is executed.")
         return self._final_state
 
-    def get_initial_state(self, state=None):
-        """"""
-        if state is None:
-            state = self.state_cls.zero_state(self.nqubits)
-        elif not isinstance(state, self.state_cls):
-            state = self.state_cls.from_tensor(state, self.nqubits)
-        return state.tensor
-
 
 class DensityMatrixCircuit(Circuit):
     """Backend implementation of :class:`qibo.abstractions.circuit.AbstractCircuit`.

@@ -229,20 +229,20 @@ class VariationalLayer(SpecialGate, ParametrizedGate):
         self.gates = []
         for q1, q2 in self.pairs:
             fgate = FusedGate(q1, q2)
-            fgate.append(one_qubit_gate(q1, theta=self.params.get(q1)))
-            fgate.append(one_qubit_gate(q2, theta=self.params.get(q2)))
+            fgate.append(one_qubit_gate(q1, self.params.get(q1), trainable=trainable))
+            fgate.append(one_qubit_gate(q2, self.params.get(q2), trainable=trainable))
             fgate.append(two_qubit_gate(q1, q2))
             if self.params2:
-                fgate.append(one_qubit_gate(q1, theta=self.params2.get(q1)))
-                fgate.append(one_qubit_gate(q2, theta=self.params2.get(q2)))
+                fgate.append(one_qubit_gate(q1, self.params2.get(q1), trainable=trainable))
+                fgate.append(one_qubit_gate(q2, self.params2.get(q2), trainable=trainable))
             self.gates.append(fgate)
         
         q = self.additional_target
         if q is not None:
             fgate = FusedGate(q)
-            fgate.append(one_qubit_gate(q, theta=self.params.get(q)))
+            fgate.append(one_qubit_gate(q, self.params.get(q), trainable=trainable))
             if self.params2:
-                fgate.append(one_qubit_gate(q, theta=self.params2.get(q)))
+                fgate.append(one_qubit_gate(q, self.params2.get(q), trainable=trainable))
             self.gates.append(fgate)
 
     def _create_params_dict(self, params):
