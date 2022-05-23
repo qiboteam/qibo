@@ -125,5 +125,5 @@ class NumpyEngine(Simulator):
             state = np.einsum(opstring, state, matrix)
         return np.reshape(state, (2 ** nqubits,))
 
-    def assert_allclose(self, value, target, rtol=1e-7, atol=0.0): # pragma: no cover
+    def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
         np.testing.assert_allclose(value, target, rtol=rtol, atol=atol)

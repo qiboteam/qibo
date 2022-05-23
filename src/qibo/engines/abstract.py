@@ -103,3 +103,8 @@ class Simulator(Engine):
     @abc.abstractmethod
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0): # pragma: no cover
         raise_error(NotImplementedError)
+
+    def assert_circuitclose(self, circuit, target_circuit, rtol=1e-7, atol=0.0):
+        value = self.execute_circuit(circuit)
+        target = self.execute_circuit(target_circuit)
+        self.assert_allclose(value, target)
