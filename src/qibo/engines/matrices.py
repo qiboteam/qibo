@@ -210,7 +210,7 @@ class Matrices:
         return m
 
     def Unitary(self, u):
-        return u.astype(self.dtype)
+        return np.array(u, dtype=self.dtype, copy=False)
 
     def VariationalLayer(self, *args):
         raise_error(NotImplementedError)

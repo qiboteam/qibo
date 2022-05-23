@@ -1,4 +1,5 @@
 import collections
+import numpy as np
 from qibo import gates
 from qibo import gates as gate_module
 from qibo.config import raise_error
@@ -135,8 +136,6 @@ class Circuit:
 
         self.density_matrix = density_matrix
         self.accelerators = accelerators
-
-        self.param_tensor_types = (None.__class__,)
 
     def __add__(self, circuit):
         """Add circuits.
@@ -574,7 +573,7 @@ class Circuit:
                     if isinstance(g, gate)]
         raise_error(TypeError, "Gate identifier {} not recognized.".format(gate))
 
-    def _set_parameters_list(self, parameters: List, n: int):
+    def _set_parameters_list(self, parameters, n):
         """Helper method for ``set_parameters`` when a list is given.
 
         Also works if ``parameters`` is ``np.ndarray`` or ``tf.Tensor``.
@@ -640,10 +639,8 @@ class Circuit:
                 params = [0.123, 0.456, 0.789, 0.321]
                 c.set_parameters(params)
         """
-        if isinstance(parameters, (list, tuple)):
+        if isinstance(parameters, (list, tuple, np.ndarray)):
             self._set_parameters_list(parameters, len(parameters))
-        elif isinstance(parameters, self.param_tensor_types):
-            self._set_parameters_list(parameters, int(parameters.shape[0]))
         elif isinstance(parameters, dict):
             diff = set(parameters.keys()) - self.trainable_gates.set
             if diff:
@@ -655,11 +652,6 @@ class Circuit:
         else:
             raise_error(TypeError, "Invalid type of parameters {}."
                                    "".format(type(parameters)))
-        # Reset ``FusedGate`` matrices so that they are recalculated with the
-        # updated parameters.
-        for gate in self.queue:
-            if isinstance(gate, gates.FusedGate):
-                gate._reset_unitary()
 
     def get_parameters(self, format: str = "list",
                        include_not_trainable: bool = False
@@ -689,9 +681,9 @@ class Circuit:
         elif format == "flatlist":
             params = []
             for gate in parametrized_gates:
-                if isinstance(gate.parameters, self.param_tensor_types):
+                if isinstance(gate.parameters, np.ndarray):
                     def traverse(x):
-                        if isinstance(x, self.param_tensor_types):
+                        if isinstance(x, np.ndarray):
                             for v1 in x:
                                 for v2 in traverse(v1):
                                     yield v2

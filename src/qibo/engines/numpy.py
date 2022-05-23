@@ -9,6 +9,7 @@ class NumpyEngine(Simulator):
 
     def __init__(self):
         super().__init__()
+        self.name = "numpy"
         self.matrices = Matrices(self.dtype)
 
     def set_threads(self, nthreads):
