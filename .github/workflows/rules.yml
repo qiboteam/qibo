@@ -23,6 +23,9 @@ jobs:
         pip install .[tests,docs]
         pip install git+https://github.com/qiboteam/qibojit
         pip install tensorflow
+    - name: Install cupy
+      if: startsWith(matrix.os, 'ubuntu')
+      run: |
         pip install cupy-cuda116
     - name: Test with pylint
       run: |
