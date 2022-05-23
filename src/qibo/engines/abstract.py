@@ -94,6 +94,8 @@ class Simulator(Engine):
         nqubits = circuit.nqubits
         if initial_state is None:
             state = self.zero_state(nqubits)
+        else:
+            state = initial_state
         for gate in circuit.queue:
             state = self.apply_gate(gate, state, nqubits)
         # TODO: Consider implementing a final state setter in circuits?

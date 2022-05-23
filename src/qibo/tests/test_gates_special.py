@@ -20,16 +20,6 @@ def test_variational_layer(backend, nqubits):
     backend.assert_circuitclose(c, targetc)
 
 
-@pytest.mark.skip
-def test_variational_layer__construct_unitary(backend):
-    pairs = list((i, i + 1) for i in range(0, 5, 2))
-    theta = 2 * np.pi * np.random.random(6)
-    gate = gates.VariationalLayer(range(6), pairs, gates.RY, gates.CZ, theta)
-    with pytest.raises(ValueError):
-        gate._construct_unitary()
-
-
-@pytest.mark.skip
 @pytest.mark.parametrize("nqubits", [4, 5])
 def test_variational_layer_dagger(backend, nqubits):
     theta = 2 * np.pi * np.random.random((2, nqubits))
@@ -40,7 +30,7 @@ def test_variational_layer_dagger(backend, nqubits):
     c = Circuit(nqubits)
     c.add((gate, gate.dagger()))
     initial_state = random_state(nqubits)
-    final_state = c(np.copy(initial_state))
+    final_state = backend.execute_circuit(c, initial_state=np.copy(initial_state))
     backend.assert_allclose(final_state, initial_state)
 
 

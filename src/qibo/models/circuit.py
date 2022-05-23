@@ -90,8 +90,6 @@ class _Queue(list):
 
 class Circuit:
     # TODO: Update docstrings
-    # TODO: Implement or remove ``_add_layer``
-    # TODO: Implement ``fuse``
     # TODO: Implement accelerators and density matrix.
     """Circuit object which holds a list of gates.
 
@@ -488,7 +486,7 @@ class Circuit:
         if isinstance(gate, gates.M) and not gate.collapse:
             self._add_measurement(gate)
         elif isinstance(gate, gates.VariationalLayer):
-            self._add_layer(gate)
+            self.add(gate.gates)
         else:
             self._set_nqubits(gate)
             self.queue.append(gate)
@@ -536,26 +534,6 @@ class Circuit:
         else:
             self.measurement_gate.add(gate)
             self.measurement_tuples[name] = gate.target_qubits
-
-    def _add_layer(self, vlayer):
-        """Called automatically when added gate is :class:`qibo.gates.special.VariationalLayer`."""
-        for q1, q2 in vlayer.pairs:
-            fgate = gates.FusedGate(q1, q2)
-            fgate.append(vlayer.one_qubit_gate(q1, theta=vlayer.params.get(q1)))
-            fgate.append(vlayer.one_qubit_gate(q2, theta=vlayer.params.get(q2)))
-            fgate.append(vlayer.two_qubit_gate(q1, q2))
-            if vlayer.params2:
-                fgate.append(vlayer.one_qubit_gate(q1, theta=vlayer.params2.get(q1)))
-                fgate.append(vlayer.one_qubit_gate(q2, theta=vlayer.params2.get(q2)))
-            self.add(fgate)
-        
-        q = vlayer.additional_target
-        if q is not None:
-            fgate = gates.FusedGate(q)
-            fgate.append(vlayer.one_qubit_gate(q, theta=vlayer.params.get(q)))
-            if vlayer.params2:
-                fgate.append(vlayer.one_qubit_gate(q, theta=vlayer.params2.get(q)))
-            self.add(fgate)
 
     @property
     def ngates(self) -> int:
