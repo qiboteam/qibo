@@ -380,7 +380,7 @@ class ParametrizedGate(Gate):
     """
 
     def __init__(self, trainable=True):
-        super(ParametrizedGate, self).__init__()
+        super().__init__()
         self.parameter_names = "theta"
         self.nparams = 1
         self.trainable = trainable

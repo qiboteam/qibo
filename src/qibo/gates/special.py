@@ -1,4 +1,5 @@
-from qibo.gates.abstract import Gate, SpecialGate
+from qibo.config import raise_error
+from qibo.gates.abstract import Gate, ParametrizedGate, SpecialGate
 
 
 class Flatten(SpecialGate):
@@ -35,6 +36,95 @@ class CallbackGate(SpecialGate):
     def nqubits(self, n: int):
         Gate.nqubits.fset(self, n) # pylint: disable=no-member
         self.callback.nqubits = n
+
+
+class VariationalLayer(SpecialGate, ParametrizedGate):
+    """Layer of one-qubit parametrized gates followed by two-qubit entangling gates.
+
+    Performance is optimized by fusing the variational one-qubit gates with the
+    two-qubit entangling gates that follow them and applying a single layer of
+    two-qubit gates as 4x4 matrices.
+
+    Args:
+        qubits (list): List of one-qubit gate target qubit IDs.
+        pairs (list): List of pairs of qubit IDs on which the two qubit gate act.
+        one_qubit_gate: Type of one qubit gate to use as the variational gate.
+        two_qubit_gate: Type of two qubit gate to use as entangling gate.
+        params (list): Variational parameters of one-qubit gates as a list that
+            has the same length as ``qubits``. These gates act before the layer
+            of entangling gates.
+        params2 (list): Variational parameters of one-qubit gates as a list that
+            has the same length as ``qubits``. These gates act after the layer
+            of entangling gates.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
+            (default is ``True``).
+
+    Example:
+        .. testcode::
+
+            import numpy as np
+            from qibo.models import Circuit
+            from qibo import gates
+            # generate an array of variational parameters for 8 qubits
+            theta = 2 * np.pi * np.random.random(8)
+            # define qubit pairs that two qubit gates will act
+            pairs = [(i, i + 1) for i in range(0, 7, 2)]
+            # define a circuit of 8 qubits and add the variational layer
+            c = Circuit(8)
+            c.add(gates.VariationalLayer(range(8), pairs, gates.RY, gates.CZ, theta))
+            # this will create an optimized version of the following circuit
+            c2 = Circuit(8)
+            c.add((gates.RY(i, th) for i, th in enumerate(theta)))
+            c.add((gates.CZ(i, i + 1) for i in range(7)))
+    """
+
+    def __init__(self, qubits, pairs, one_qubit_gate, two_qubit_gate,
+                 params, params2=None, trainable=True):
+        ParametrizedGate.__init__(self, trainable)
+        self.init_args = [qubits, pairs, one_qubit_gate, two_qubit_gate]
+        self.init_kwargs = {"params": params, "params2": params2,
+                            "trainable": trainable}
+        self.name = "VariationalLayer"
+
+        self.unitaries = []
+        self.additional_unitary = None
+
+        self.target_qubits = tuple(qubits)
+        self.parameter_names = [f"theta{i}" for i, _ in enumerate(params)]
+        parameter_values = list(params)
+        self.params = self._create_params_dict(params)
+        self.params2 = {}
+        if params2 is not None:
+            self.params2 = self._create_params_dict(params2)
+            n = len(self.parameter_names)
+            self.parameter_names.extend([f"theta{i + n}" for i, _ in enumerate(params2)])
+            parameter_values.extend(params2)
+        self.parameters = parameter_values
+        self.nparams = len(parameter_values)
+
+        self.pairs = pairs
+        targets = set(self.target_qubits)
+        two_qubit_targets = set(q for p in pairs for q in p)
+        additional_targets = targets - two_qubit_targets
+        if not additional_targets:
+            self.additional_target = None
+        elif len(additional_targets) == 1:
+            self.additional_target = additional_targets.pop()
+        else:
+            raise_error(ValueError, "Variational layer can have at most one "
+                                    "additional target for one qubit gates but "
+                                    " has {}.".format(additional_targets))
+
+        self.one_qubit_gate = one_qubit_gate
+        self.two_qubit_gate = two_qubit_gate
+
+    def _create_params_dict(self, params):
+        if len(self.target_qubits) != len(params):
+            raise_error(ValueError, "VariationalLayer has {} target qubits but "
+                                    "{} parameters were given."
+                                    "".format(len(self.target_qubits), len(params)))
+        return {q: p for q, p in zip(self.target_qubits, params)}
 
 
 class FusedGate(SpecialGate):

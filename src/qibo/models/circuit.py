@@ -537,11 +537,25 @@ class Circuit:
             self.measurement_gate.add(gate)
             self.measurement_tuples[name] = gate.target_qubits
 
-    def _add_layer(self, gate: gates.Gate): # pragma: no cover
-        """Called automatically by `add` when `gate` is of
-        type `qibo.abstractions.gates.VariationalLayer`.
-        """
-        raise_error(NotImplementedError)
+    def _add_layer(self, vlayer):
+        """Called automatically when added gate is :class:`qibo.gates.special.VariationalLayer`."""
+        for q1, q2 in vlayer.pairs:
+            fgate = gates.FusedGate(q1, q2)
+            fgate.append(vlayer.one_qubit_gate(q1, theta=vlayer.params.get(q1)))
+            fgate.append(vlayer.one_qubit_gate(q2, theta=vlayer.params.get(q2)))
+            fgate.append(vlayer.two_qubit_gate(q1, q2))
+            if vlayer.params2:
+                fgate.append(vlayer.one_qubit_gate(q1, theta=vlayer.params2.get(q1)))
+                fgate.append(vlayer.one_qubit_gate(q2, theta=vlayer.params2.get(q2)))
+            self.add(fgate)
+        
+        q = vlayer.additional_target
+        if q is not None:
+            fgate = gates.FusedGate(q)
+            fgate.append(vlayer.one_qubit_gate(q, theta=vlayer.params.get(q)))
+            if vlayer.params2:
+                fgate.append(vlayer.one_qubit_gate(q, theta=vlayer.params2.get(q)))
+            self.add(fgate)
 
     @property
     def ngates(self) -> int:

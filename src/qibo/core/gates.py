@@ -147,33 +147,6 @@ class M(BackendGate, abstract_gates.M):
 
 class VariationalLayer(BackendGate, abstract_gates.VariationalLayer):
 
-    def _calculate_unitaries(self):
-        matrices = K.qnp.stack([K.qnp.kron(
-            self.one_qubit_gate(q1, theta=self.params[q1]).matrix,
-            self.one_qubit_gate(q2, theta=self.params[q2]).matrix)
-                             for q1, q2 in self.pairs], axis=0)
-        entangling_matrix = self.two_qubit_gate(0, 1).matrix
-        matrices = entangling_matrix @ matrices
-
-        additional_matrix = None
-        q = self.additional_target
-        if q is not None:
-            additional_matrix = self.one_qubit_gate(
-                q, theta=self.params[q]).matrix
-
-        if self.params2:
-            matrices2 = K.qnp.stack([K.qnp.kron(
-                self.one_qubit_gate(q1, theta=self.params2[q1]).matrix,
-                self.one_qubit_gate(q2, theta=self.params2[q2]).matrix)
-                                for q1, q2 in self.pairs], axis=0)
-            matrices = matrices2 @ matrices
-
-            q = self.additional_target
-            if q is not None:
-                _new = self.one_qubit_gate(q, theta=self.params2[q]).matrix
-                additional_matrix = _new @ additional_matrix
-        return matrices, additional_matrix
-
     def __init__(self, qubits: List[int], pairs: List[Tuple[int, int]],
                  one_qubit_gate, two_qubit_gate,
                  params: List[float], params2: Optional[List[float]] = None,
@@ -218,20 +191,6 @@ class VariationalLayer(BackendGate, abstract_gates.VariationalLayer):
         if self.additional_unitary is not None:
             varlayer.additional_unitary = self.additional_unitary.dagger()
         return varlayer
-
-    def _construct_unitary(self):
-        raise_error(ValueError, "VariationalLayer gate does not have unitary "
-                                "representation.")
-
-    def _state_vector_call(self, state):
-        for i, unitary in enumerate(self.unitaries):
-            state = unitary(state)
-        if self.additional_unitary is not None:
-            state = self.additional_unitary(state)
-        return state
-
-    def _density_matrix_call(self, state):
-        return self._state_vector_call(state)
 
 
 class Flatten(BackendGate, abstract_gates.Flatten):
