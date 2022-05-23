@@ -27,7 +27,7 @@ jobs:
       if: startsWith(matrix.os, 'ubuntu')
       run: |
         sudo apt install nvidia-cuda-toolkit
-        pip install cupy-cuda116
+        pip install cupy-cuda102
     - name: Test with pylint
       run: |
         pip install pylint
