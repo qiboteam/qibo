@@ -138,16 +138,6 @@ def test_cu1gate_application_twoqubit(backend):
     backend.assert_allclose(final_rho, target_rho)
 
 
-@pytest.mark.skip("Move this to special tests")
-def test_flatten_density_matrix(backend):
-    """Check ``Flatten`` gate works with density matrices."""
-    target_rho = random_density_matrix(3)
-    initial_rho = np.zeros(6 * (2,))
-    gate = gates.Flatten(target_rho)
-    final_rho = np.reshape(gate(initial_rho), (8, 8))
-    backend.assert_allclose(final_rho, target_rho)
-
-
 def test_controlled_by_no_effect(backend):
     """Check controlled_by SWAP that should not be applied."""
     from qibo.models import Circuit
@@ -205,56 +195,6 @@ def test_controlled_by_random(backend, nqubits):
     backend.assert_allclose(final_rho, target_rho)
 
 
-@pytest.mark.skip("Move this to channel tests")
-@pytest.mark.parametrize("qubit", [0, 1, 2])
-def test_partial_trace_gate(backend, qubit):
-    gate = gates.PartialTrace(qubit)
-    gate.density_matrix = True
-    initial_rho = random_density_matrix(3)
-    final_state = gate(np.copy(initial_rho))
-
-    zero_state = np.array([[1, 0], [0, 0]])
-    target_state = np.reshape(initial_rho, 6 * (2,))
-    if qubit == 0:
-        target_state = np.einsum("aBCabc,Dd->DBCdbc", target_state, zero_state)
-    elif qubit == 1:
-        target_state = np.einsum("AbCabc,Dd->ADCadc", target_state, zero_state)
-    elif qubit == 2:
-        target_state = np.einsum("ABcabc,Dd->ABDabd", target_state, zero_state)
-    target_state = np.reshape(target_state, (8, 8))
-    K.assert_allclose(final_state, target_state)
-
-
-@pytest.mark.skip("Move this to channel tests")
-def test_partial_trace_gate_errors(backend):
-    gate = gates.PartialTrace(0, 1)
-    # attempt to create unitary matrix
-    with pytest.raises(ValueError):
-        gate._construct_unitary()
-    # attempt to call on state vector
-    state = np.random.random(16) + 1j * np.random.random(16)
-    with pytest.raises(RuntimeError):
-        gate(state)
-
-
-@pytest.mark.skip("Move this to channel tests")
-def test_channel_gate_setters(backend):
-    a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
-    a2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0],
-                                  [0, 0, 0, 1], [0, 0, 1, 0]])
-    channel = gates.KrausChannel([((1,), a1), ((0, 1), a2)])
-    _ = channel.inverse_gates # create inverse gates
-    channel.nqubits = 5
-    channel.density_matrix = True
-    for gate in channel.gates:
-        assert gate.nqubits == 5
-        assert gate.density_matrix
-    for gate in channel.inverse_gates:
-        if gate is not None:
-            assert gate.nqubits == 5
-            assert gate.density_matrix
-
-
 @pytest.mark.skip("Move this to measurement tests")
 def test_measurement_density_matrix(backend):
     from qibo.tests.test_measurement_gate import assert_result
@@ -272,19 +212,3 @@ def test_measurement_density_matrix(backend):
                   binary_samples=target_binary_samples,
                   decimal_frequencies={2: 100},
                   binary_frequencies={"10": 100})
-
-
-@pytest.mark.parametrize("nqubits", [5, 6])
-def test_variational_layer_density_matrix(backend, nqubits):
-    from qibo.models import Circuit
-    theta = 2 * np.pi * np.random.random(nqubits)
-    c = Circuit(nqubits, density_matrix=True)
-    c.add((gates.RY(i, t) for i, t in enumerate(theta)))
-    c.add((gates.CZ(i, i + 1) for i in range(0, nqubits - 1, 2)))
-    target_state = backend.execute_circuit(c)
-    pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
-    c = Circuit(nqubits, density_matrix=True)
-    c.add(gates.VariationalLayer(range(nqubits), pairs,
-                                  gates.RY, gates.CZ, theta))
-    final_state = backend.execute_circuit(c)
-    backend.assert_allclose(target_state, final_state)

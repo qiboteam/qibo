@@ -1,6 +1,25 @@
-from qibo.gates.abstract import Gate, Channel
+from abc import abstractmethod
+from qibo.gates.abstract import Gate
 from qibo.gates.gates import X, Y, Z, M, Unitary
 from qibo.config import raise_error
+
+
+class Channel(Gate):
+    """Abstract class for channels."""
+
+    def __init__(self):
+        super().__init__()
+        self.coefficients = tuple()
+        self.gates = tuple()
+
+    def controlled_by(self, *q):
+        """"""
+        raise_error(ValueError, "Noise channel cannot be controlled on qubits.")
+
+    def on_qubits(self, qubit_map): # pragma: no cover
+        # future TODO
+        raise_error(NotImplementedError, "`on_qubits` method is not available "
+                                         "for the `Channel` gate.")
 
 
 class KrausChannel(Channel):
@@ -42,30 +61,28 @@ class KrausChannel(Channel):
     """
 
     def __init__(self, ops):
-        super(KrausChannel, self).__init__()
+        super().__init__()
         self.name = "KrausChannel"
         if isinstance(ops[0], Gate):
             self.gates = tuple(ops)
             self.target_qubits = tuple(sorted(set(
                 q for gate in ops for q in gate.target_qubits)))
         else:
-            self.gates, self.target_qubits = self._from_matrices(ops)
+            gates, qubitset = [], set()
+            for qubits, matrix in ops:
+                rank = 2 ** len(qubits)
+                shape = tuple(matrix.shape)
+                if shape != (rank, rank):
+                    raise_error(ValueError, "Invalid Krauss operator shape {} for "
+                                            "acting on {} qubits."
+                                            "".format(shape, len(qubits)))
+                qubitset.update(qubits)
+                gates.append(Unitary(matrix, *list(qubits)))
+            self.gates = tuple(gates)
+            self.target_qubits = tuple(sorted(qubitset))
         self.init_args = [self.gates]
-
-    def _from_matrices(self, matrices):
-        """Creates gates from qubits and matrices list."""
-        gatelist, qubitset = [], set()
-        for qubits, matrix in matrices:
-            # Check that given operators have the proper shape.
-            rank = 2 ** len(qubits)
-            shape = tuple(matrix.shape)
-            if shape != (rank, rank):
-                raise_error(ValueError, "Invalid Krauss operator shape {} for "
-                                        "acting on {} qubits."
-                                        "".format(shape, len(qubits)))
-            qubitset.update(qubits)
-            gatelist.append(Unitary(matrix, *list(qubits)))
-        return tuple(gatelist), tuple(sorted(qubitset))
+        self.coefficients = len(self.gates) * (1,)
+        self.coefficient_sum = 1
 
 
 class UnitaryChannel(KrausChannel):
@@ -84,8 +101,8 @@ class UnitaryChannel(KrausChannel):
     approach we refer to :ref:`Using repeated execution <repeatedexec-example>`.
 
     Args:
-        p (list): List of floats that correspond to the probability that each
-            unitary Uk is applied.
+        probabilities (list): List of floats that correspond to the probability 
+            that each unitary Uk is applied.
         ops (list): List of  operators as pairs ``(qubits, Uk)`` where
             ``qubits`` refers the qubit ids that ``Uk`` acts on and ``Uk`` is
             the corresponding matrix as a ``np.ndarray``/``tf.Tensor``.
@@ -94,21 +111,23 @@ class UnitaryChannel(KrausChannel):
             instead of density matrices is used to simulate this gate.
     """
 
-    def __init__(self, p, ops, seed=None):
-        if len(p) != len(ops):
+    def __init__(self, probabilities, ops, seed=None):
+        if len(probabilities) != len(ops):
             raise_error(ValueError, "Probabilities list has length {} while "
                                     "{} gates were given."
-                                    "".format(len(p), len(ops)))
-        for pp in p:
-            if pp < 0 or pp > 1:
+                                    "".format(len(probabilities), len(ops)))
+        for p in probabilities:
+            if p < 0 or p > 1:
                 raise_error(ValueError, "Probabilities should be between 0 "
-                                        "and 1 but {} was given.".format(pp))
-        super(UnitaryChannel, self).__init__(ops)
+                                        "and 1 but {} was given.".format(p))
+        super().__init__(ops)
         self.name = "UnitaryChannel"
-        self.probs = p
-        self.psum = sum(p)
+        self.coefficients = tuple(probabilities)
+        self.coefficient_sum = sum(probabilities)
+        # TODO: Check that sum <= 1 up to tolerance
         self.seed = seed
-        self.init_args = [p, self.gates]
+
+        self.init_args = [probabilities, self.gates]
         self.init_kwargs = {"seed": seed}
 
 
@@ -142,7 +161,7 @@ class PauliNoiseChannel(UnitaryChannel):
                 probs.append(p)
                 gates.append(gate(q))
 
-        super(PauliNoiseChannel, self).__init__(probs, gates, seed=seed)
+        super().__init__(probs, gates, seed=seed)
         self.name = "PauliNoiseChannel"
         assert self.target_qubits == (q,)
 

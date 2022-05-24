@@ -16,14 +16,6 @@ class Engine(abc.ABC):
             return f"{self.name} ({self.platform})"
 
     @abc.abstractmethod
-    def apply_gate(self, gate):
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def apply_gate_density_matrix(self, gate):
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
     def execute_circuit(self, circuit, nshots=None):
         raise_error(NotImplementedError)
 
@@ -93,6 +85,22 @@ class Simulator(Engine):
     @abc.abstractmethod
     def control_matrix(self, gate):
         """"Calculate full matrix representation of a controlled gate."""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def apply_gate(self, gate):
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def apply_gate_density_matrix(self, gate):
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def apply_channel(self, gate):
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def apply_channel_density_matrix(self, gate):
         raise_error(NotImplementedError)
 
     def execute_circuit(self, circuit, initial_state=None, nshots=None):

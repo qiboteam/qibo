@@ -53,7 +53,6 @@ def test_qft_circuit_size(backend, nqubits):
     assert c.ngates == nqubits ** 2 // 2 + nqubits
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("nqubits", [5, 6, 12])
 @pytest.mark.parametrize("random", [False, True])
 def test_qft_execution(backend, accelerators, nqubits, random):
@@ -62,7 +61,7 @@ def test_qft_execution(backend, accelerators, nqubits, random):
         initial_state = random_state(nqubits)
     else:
         initial_state = backend.zero_state(nqubits)
-    final_state = backend.execute_circuit(circuit)
+    final_state = backend.execute_circuit(c, np.copy(initial_state))
     target_state = exact_qft(backend.to_numpy(initial_state))
     backend.assert_allclose(final_state, target_state)
 

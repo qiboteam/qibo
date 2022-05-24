@@ -141,5 +141,20 @@ class NumpyEngine(Simulator):
             state = np.einsum(left, state, matrix)
         return np.reshape(state, 2 * (2 ** nqubits,))
 
+    def apply_channel(self, channel, state, nqubits):
+        # TODO: Think how to implement seed
+        for coeff, gate in zip(channel.coefficients, channel.gates):
+            if np.random.random() < coeff:
+                state = self.apply_gate(gate, state, nqubits)
+        return state
+
+    def apply_channel_density_matrix(self, channel, state, nqubits):
+        # TODO: Think how to implement seed
+        # TODO: Inverse gates may be needed for qibojit (in-place updates)
+        new_state = (1 - channel.coefficient_sum) * state
+        for coeff, gate in zip(channel.coefficients, channel.gates):
+            new_state += coeff * self.apply_gate_density_matrix(gate, state, nqubits)
+        return new_state
+
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
         np.testing.assert_allclose(value, target, rtol=rtol, atol=atol)

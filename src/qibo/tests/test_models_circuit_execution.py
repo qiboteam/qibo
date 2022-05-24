@@ -83,7 +83,6 @@ def test_final_state_property(backend):
     backend.assert_allclose(c.final_state, target_state)
 
 
-@pytest.mark.skip
 def test_density_matrix_circuit(backend):
     from qibo.tests.utils import random_density_matrix
     theta = 0.1234
@@ -94,7 +93,7 @@ def test_density_matrix_circuit(backend):
     c.add(gates.H(1))
     c.add(gates.CNOT(0, 1))
     c.add(gates.H(2))
-    final_rho = c(np.copy(initial_rho))
+    final_rho = backend.execute_circuit(c, np.copy(initial_rho))
 
     h = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
     cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0],
@@ -105,16 +104,4 @@ def test_density_matrix_circuit(backend):
     target_rho = m1.dot(initial_rho).dot(m1.T.conj())
     target_rho = m2.dot(target_rho).dot(m2.T.conj())
     target_rho = m3.dot(target_rho).dot(m3.T.conj())
-    backend.assert_allclose(final_rho, target_rho)
-
-
-@pytest.mark.skip
-def test_density_matrix_circuit_initial_state(backend):
-    from qibo.tests.utils import random_state
-    initial_psi = random_state(3)
-    c = Circuit(3, density_matrix=True)
-    final_rho = c(np.copy(initial_psi))
-    target_rho = np.outer(initial_psi, initial_psi.conj())
-    backn.assert_allclose(final_rho, target_rho)
-    final_rho = c(initial_psi)
     backend.assert_allclose(final_rho, target_rho)

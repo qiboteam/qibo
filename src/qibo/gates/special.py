@@ -2,6 +2,11 @@ from qibo.config import raise_error
 from qibo.gates.abstract import Gate, ParametrizedGate, SpecialGate
 
 
+class PartialTrace(SpecialGate):
+    # TODO: Implement this
+    pass
+
+
 class Flatten(SpecialGate):
     """Passes an arbitrary state vector in the circuit.
 

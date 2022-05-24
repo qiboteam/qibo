@@ -253,36 +253,6 @@ class SpecialGate(Gate):
                     "Cannot use special gates on subroutines.")
 
 
-class Channel(Gate):
-    """Abstract class for channels."""
-
-    def __init__(self):
-        super().__init__()
-        self.gates = tuple()
-        # create inversion gates to restore the original state vector
-        # because of the in-place updates used in custom operators
-        self._inverse_gates = None
-
-    @property
-    def inverse_gates(self):
-        if self._inverse_gates is None:
-            self._inverse_gates = self.calculate_inverse_gates()
-        return self._inverse_gates
-
-    @abstractmethod
-    def calculate_inverse_gates(self): # pragma: no cover
-        raise_error(NotImplementedError)
-
-    def controlled_by(self, *q):
-        """"""
-        raise_error(ValueError, "Noise channel cannot be controlled on qubits.")
-
-    def on_qubits(self, qubit_map): # pragma: no cover
-        # future TODO
-        raise_error(NotImplementedError, "`on_qubits` method is not available "
-                                         "for the `Channel` gate.")
-
-
 class ParametrizedGate(Gate):
     """Base class for parametrized gates.
 

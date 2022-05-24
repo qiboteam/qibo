@@ -88,14 +88,13 @@ def test_identity(backend):
     backend.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.skip
 def test_align(backend):
     gate = gates.Align(0, 1)
     gatelist = [gates.H(0), gates.H(1), gate]
     final_state = apply_gates(backend, gatelist, nqubits=2)
     target_state = np.ones_like(final_state) / 2.0
     backend.assert_allclose(final_state, target_state)
-    gate_matrix = gate._construct_unitary()
+    gate_matrix = backend.asmatrix(gate)
     backend.assert_allclose(gate_matrix, np.eye(4))
 
 
@@ -456,35 +455,29 @@ def test_controlled_swap(backend, applyx, free_qubit):
     backend.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("applyx", [False, True])
 def test_controlled_swap_double(backend, applyx):
-    c = Circuit(4)
-    c.add(gates.X(0))
+    gatelist = [gates.X(0)]
     if applyx:
-        c.add(gates.X(3))
-    c.add(gates.RX(1, theta=0.1234))
-    c.add(gates.RY(2, theta=0.4321))
-    c.add(gates.SWAP(1, 2).controlled_by(0, 3))
-    c.add(gates.X(0))
-    final_state = c.execute()
-    c = Circuit(4)
-    c.add(gates.RX(1, theta=0.1234))
-    c.add(gates.RY(2, theta=0.4321))
+        gatelist.append(gates.X(3))
+    gatelist.append(gates.RX(1, theta=0.1234))
+    gatelist.append(gates.RY(2, theta=0.4321))
+    gatelist.append(gates.SWAP(1, 2).controlled_by(0, 3))
+    gatelist.append(gates.X(0))
+    final_state = apply_gates(backend, gatelist, 4)
+    
+    gatelist = [gates.RX(1, theta=0.1234), gates.RY(2, theta=0.4321)]
     if applyx:
-        c.add(gates.X(3))
-        c.add(gates.SWAP(1, 2))
-    target_state = c.execute()
-    K.assert_allclose(final_state, target_state)
+        gatelist.extend([gates.X(3), gates.SWAP(1, 2)])
+    target_state = apply_gates(backend, gatelist, 4)
+    backend.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.skip
-def test_controlled_fsim(backend, accelerators):
+def test_controlled_fsim(backend):
     theta, phi = 0.1234, 0.4321
-    c = Circuit(6, accelerators)
-    c.add((gates.H(i) for i in range(6)))
-    c.add(gates.fSim(5, 3, theta, phi).controlled_by(0, 2, 1))
-    final_state = c.execute()
+    gatelist = [gates.H(i) for i in range(6)]
+    gatelist.append(gates.fSim(5, 3, theta, phi).controlled_by(0, 2, 1))
+    final_state = apply_gates(backend, gatelist, 6)
 
     target_state = np.ones_like(final_state) / np.sqrt(2 ** 6)
     rotation = np.array([[np.cos(theta), -1j * np.sin(theta)],
@@ -496,30 +489,26 @@ def test_controlled_fsim(backend, accelerators):
     target_state[ids] = matrix.dot(target_state[ids])
     ids = [58, 59, 62, 63]
     target_state[ids] = matrix.dot(target_state[ids])
-    K.assert_allclose(final_state, target_state)
+    backend.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.skip
-def test_controlled_unitary(backend, accelerators):
+def test_controlled_unitary(backend):
     matrix = np.random.random((2, 2))
-    c = Circuit(2)
-    c.add(gates.H(0))
-    c.add(gates.H(1))
-    c.add(gates.Unitary(matrix, 1).controlled_by(0))
-    final_state = c.execute()
+    gatelist = [gates.H(0), gates.H(1), 
+                gates.Unitary(matrix, 1).controlled_by(0)]
+    final_state = apply_gates(backend, gatelist, 2)
     target_state = np.ones_like(final_state) / 2.0
     target_state[2:] = matrix.dot(target_state[2:])
-    K.assert_allclose(final_state, target_state)
+    backend.assert_allclose(final_state, target_state)
 
     matrix = np.random.random((4, 4))
-    c = Circuit(4, accelerators)
-    c.add((gates.H(i) for i in range(4)))
-    c.add(gates.Unitary(matrix, 1, 3).controlled_by(0, 2))
-    final_state = c.execute()
+    gatelist = [gates.H(i) for i in range(4)]
+    gatelist.append(gates.Unitary(matrix, 1, 3).controlled_by(0, 2))
+    final_state = apply_gates(backend, gatelist, 4)
     target_state = np.ones_like(final_state) / 4.0
     ids = [10, 11, 14, 15]
     target_state[ids] = matrix.dot(target_state[ids])
-    K.assert_allclose(final_state, target_state)
+    backend.assert_allclose(final_state, target_state)
 
 
 def test_controlled_unitary_matrix(backend):

@@ -423,8 +423,6 @@ def test_get_parameters(trainable, include_not_trainable, format):
         np.testing.assert_allclose(params.pop(i)[0], matrix)
     elif format == "dict":
         np.testing.assert_allclose(params.pop(c.queue[3])[0], matrix)
-    
-    print(params)
     assert params == target_params[format]
     with pytest.raises(ValueError):
         c.get_parameters("test")
