@@ -15,12 +15,13 @@ ACTIVE_TESTS = {
     "qibo.tests.test_gates_gates",
     "qibo.tests.test_gates_density_matrix",
     "qibo.tests.test_gates_special",
+    "qibo.tests.test_models_circuit",
     "qibo.tests.test_models_circuit_execution",
     "qibo.tests.test_models_circuit_features",
     "qibo.tests.test_models_circuit_fuse",
     "qibo.tests.test_models_circuit_parametrized",
     "qibo.tests.test_models_circuit_qasm",
-    "qibo.tests.test_models_circuit",
+    "qibo.tests.test_models_circuit_qasm_cirq",
     "qibo.tests.test_models_qft",
     "qibo.tests.test_simulators"
 }

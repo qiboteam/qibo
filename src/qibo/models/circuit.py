@@ -857,7 +857,7 @@ class Circuit:
         return "\n".join(code)
 
     @classmethod
-    def from_qasm(cls, qasm_code: str, **kwargs):
+    def from_qasm(cls, qasm_code, accelerators=None, density_matrix=False):
         """Constructs a circuit from QASM code.
 
         Args:
@@ -885,8 +885,8 @@ class Circuit:
                 c2.add(gates.H(1))
                 c2.add(gates.CNOT(0, 1))
         """
-        kwargs["nqubits"], gate_list = cls._parse_qasm(qasm_code)
-        circuit = cls(**kwargs)
+        nqubits, gate_list = cls._parse_qasm(qasm_code)
+        circuit = cls(nqubits, accelerators, density_matrix)
         for gate_name, qubits, params in gate_list:
             gate = getattr(gate_module, gate_name)
             if gate_name == "M":

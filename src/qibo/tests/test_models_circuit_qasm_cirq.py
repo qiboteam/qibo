@@ -28,25 +28,26 @@ h q[4];"""
         assert gate.__class__.__name__ == "H"
         assert gate.qubits == (i,)
     target_state = np.ones(32) / np.sqrt(32)
-    np.testing.assert_allclose(c(), target_state)
+    final_state = backend.execute_circuit(c)
+    np.testing.assert_allclose(final_state, target_state)
 
 
 def test_simple_cirq(backend):
     c1 = Circuit(2)
     c1.add(gates.H(0))
     c1.add(gates.H(1))
-    final_state_c1 = c1()
+    final_state_c1 = backend.execute_circuit(c1)
 
     c2 = circuit_from_qasm(c1.to_qasm())
     c2depth = len(cirq.Circuit(c2.all_operations()))
     assert c1.depth == c2depth
     final_state_c2 = cirq.Simulator().simulate(c2).final_state_vector # pylint: disable=no-member
-    np.testing.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
+    backend.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
 
     c3 = Circuit.from_qasm(c2.to_qasm())
     assert c3.depth == c2depth
-    final_state_c3 = c3()
-    np.testing.assert_allclose(final_state_c3, final_state_c2, atol=_atol)
+    final_state_c3 = backend.execute_circuit(c3)
+    backend.assert_allclose(final_state_c3, final_state_c2, atol=_atol)
 
 
 def test_singlequbit_gates_cirq(backend):
@@ -60,18 +61,18 @@ def test_singlequbit_gates_cirq(backend):
     c1.add(gates.T(0))
     c1.add(gates.TDG(1))
     c1.add(gates.I(0))
-    final_state_c1 = c1()
+    final_state_c1 = backend.execute_circuit(c1)
 
     c2 = circuit_from_qasm(c1.to_qasm())
     c2depth = len(cirq.Circuit(c2.all_operations()))
     assert c1.depth == c2depth
     final_state_c2 = cirq.Simulator().simulate(c2).final_state_vector # pylint: disable=no-member
-    np.testing.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
+    backend.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
 
     c3 = Circuit.from_qasm(c2.to_qasm())
     assert c3.depth == c2depth
-    final_state_c3 = c3()
-    np.testing.assert_allclose(final_state_c3, final_state_c2, atol=_atol)
+    final_state_c3 = backend.execute_circuit(c3)
+    backend.assert_allclose(final_state_c3, final_state_c2, atol=_atol)
 
 
 def test_multiqubit_gates_cirq(backend):
@@ -81,18 +82,18 @@ def test_multiqubit_gates_cirq(backend):
     c1.add(gates.X(1))
     c1.add(gates.SWAP(0, 1))
     c1.add(gates.X(0).controlled_by(1))
-    final_state_c1 = c1()
+    final_state_c1 = backend.execute_circuit(c1)
 
     c2 = circuit_from_qasm(c1.to_qasm())
     c2depth = len(cirq.Circuit(c2.all_operations()))
     assert c1.depth == c2depth
     final_state_c2 = cirq.Simulator().simulate(c2).final_state_vector # pylint: disable=no-member
-    np.testing.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
+    backend.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
 
     c3 = Circuit.from_qasm(c2.to_qasm())
     assert c3.depth == c2depth
-    final_state_c3 = c3()
-    np.testing.assert_allclose(final_state_c3, final_state_c2, atol=_atol)
+    final_state_c3 = backend.execute_circuit(c3)
+    backend.assert_allclose(final_state_c3, final_state_c2, atol=_atol)
 
 
 def test_toffoli_cirq(backend):
@@ -103,35 +104,35 @@ def test_toffoli_cirq(backend):
     c1.add(gates.TOFFOLI(0, 2, 1))
     c1.add(gates.Z(2))
     c1.add(gates.TOFFOLI(1, 2, 0))
-    final_state_c1 = c1()
+    final_state_c1 = backend.execute_circuit(c1)
 
     c2 = circuit_from_qasm(c1.to_qasm())
     c2depth = len(cirq.Circuit(c2.all_operations()))
     assert c1.depth == c2depth
     final_state_c2 = cirq.Simulator().simulate(c2).final_state_vector # pylint: disable=no-member
-    np.testing.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
+    backend.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
 
     c3 = Circuit.from_qasm(c2.to_qasm())
     assert c3.depth == c2depth
-    final_state_c3 = c3()
-    np.testing.assert_allclose(final_state_c3, final_state_c2, atol=_atol)
+    final_state_c3 = backend.execute_circuit(c3)
+    backend.assert_allclose(final_state_c3, final_state_c2, atol=_atol)
 
 
 def test_parametrized_gate_cirq(backend):
     c1 = Circuit(2)
     c1.add(gates.Y(0))
     c1.add(gates.RY(1, 0.1234))
-    final_state_c1 = c1()
+    final_state_c1 = backend.execute_circuit(c1)
 
     c2 = circuit_from_qasm(c1.to_qasm())
     c2depth = len(cirq.Circuit(c2.all_operations()))
     assert c1.depth == c2depth
     final_state_c2 = cirq.Simulator().simulate(c2).final_state_vector # pylint: disable=no-member
-    np.testing.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
+    backend.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
 
     c3 = Circuit.from_qasm(c2.to_qasm())
-    final_state_c3 = c3()
-    np.testing.assert_allclose(final_state_c3, final_state_c2, atol=_atol)
+    final_state_c3 = backend.execute_circuit(c3)
+    backend.assert_allclose(final_state_c3, final_state_c2, atol=_atol)
 
 
 def test_cu1_cirq():
@@ -149,18 +150,18 @@ def test_ugates_cirq(backend):
     c1.add(gates.RX(0, 0.1))
     c1.add(gates.RZ(1, 0.4))
     c1.add(gates.U2(2, 0.5, 0.6))
-    final_state_c1 = c1()
+    final_state_c1 = backend.execute_circuit(c1)
 
     c2 = circuit_from_qasm(c1.to_qasm())
     c2depth = len(cirq.Circuit(c2.all_operations()))
     assert c1.depth == c2depth
     final_state_c2 = cirq.Simulator().simulate(c2).final_state_vector # pylint: disable=no-member
-    np.testing.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
+    backend.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
 
     c3 = Circuit.from_qasm(c2.to_qasm())
     assert c3.depth == c2depth
-    final_state_c3 = c3()
-    np.testing.assert_allclose(final_state_c3, final_state_c2, atol=_atol)
+    final_state_c3 = backend.execute_circuit(c3)
+    backend.assert_allclose(final_state_c3, final_state_c2, atol=_atol)
 
     c1 = Circuit(3)
     c1.add(gates.RX(0, 0.1))
@@ -192,4 +193,4 @@ h q[0];
 h q[1];"""
     c = Circuit.from_qasm(target)
     target_state = np.ones(4) / 2.0
-    np.testing.assert_allclose(c(), target_state)
+    backend.assert_allclose(backend.execute_circuit(c), target_state)
