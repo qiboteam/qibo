@@ -57,6 +57,10 @@ class Simulator(Engine):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
+    def cast(self, x):
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
     def to_numpy(self, x):
         raise_error(NotImplementedError)
 
@@ -117,7 +121,8 @@ class Simulator(Engine):
                 if initial_state is None:
                     state = self.zero_density_matrix(nqubits)
                 else:
-                    state = initial_state
+                    # cast to proper complex type
+                    state = self.cast(initial_state)
                 
                 for gate in circuit.queue:
                     state = self.apply_gate_density_matrix(gate, state, nqubits)
@@ -126,7 +131,8 @@ class Simulator(Engine):
                 if initial_state is None:
                     state = self.zero_state(nqubits)
                 else:
-                    state = initial_state
+                    # cast to proper complex type
+                    state = self.cast(initial_state)
                 
                 for gate in circuit.queue:
                     state = self.apply_gate(gate, state, nqubits)

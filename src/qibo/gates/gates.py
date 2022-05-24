@@ -1216,7 +1216,7 @@ class Unitary(ParametrizedGate):
 
         # TODO: Check that given ``unitary`` has proper shape?
         self.parameter_names = "u"
-        self.parameters = unitary
+        self._parameters = (unitary,)
         self.nparams = 4 ** len(self.target_qubits)
 
         self.init_args = [unitary] + list(q)
@@ -1225,6 +1225,12 @@ class Unitary(ParametrizedGate):
     @property
     def rank(self) -> int:
         return len(self.target_qubits)
+
+    @Gate.parameters.setter
+    def parameters(self, x):
+        import numpy as np
+        shape = self.parameters[0].shape
+        self._parameters = (np.reshape(x, shape),)
 
     def on_qubits(self, qubit_map) -> "Gate":
         args = [self.init_args[0]]

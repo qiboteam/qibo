@@ -34,7 +34,7 @@ class Gate:
 
         self._target_qubits = tuple()
         self._control_qubits = set()
-        self._parameters = []
+        self._parameters = tuple()
         config.ALLOW_SWITCHERS = False
 
         self.well_defined = True

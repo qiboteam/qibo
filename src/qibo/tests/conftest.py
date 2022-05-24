@@ -43,8 +43,12 @@ def pytest_configure(config):
 
 @pytest.fixture
 def backend(backend_name):
-    yield construct_backend(backend_name, show_error=True)
-    
+    if "-" in backend_name:
+        name, platform = backend_name.split("-")
+    else:
+        name, platform = backend_name, None
+    yield construct_backend(name, platform=platform, show_error=True)
+
 
 def pytest_generate_tests(metafunc):
     module_name = metafunc.module.__name__
@@ -52,7 +56,7 @@ def pytest_generate_tests(metafunc):
         pytest.skip()
 
     if "backend_name" in metafunc.fixturenames:
-        metafunc.parametrize("backend_name", ["numpy"])
+        metafunc.parametrize("backend_name", ["numpy", "qibojit-numba"])
 
     if "accelerators" in metafunc.fixturenames:
         metafunc.parametrize("accelerators", [None])

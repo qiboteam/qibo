@@ -17,6 +17,9 @@ class NumpyEngine(Simulator):
         if nthreads > 1:
             raise_error(ValueError, "numpy does not support more than one thread.")
 
+    def cast(self, x):
+        return np.array(x, dtype=self.dtype, copy=False)
+
     def to_numpy(self, x):
         return x
 
