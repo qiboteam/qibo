@@ -76,7 +76,7 @@ class tsp:
     """
     This is a TSP (traveling salesman problem) class that enables us to implement TSP according to
     `arxiv:1709.03489<https://arxiv.org/abs/1709.03489>` by Hadfield (2017).
-    #..testcode::
+    ..testcode::
         num_cities = 3
         distance_matrix = np.array([[0, 0.9, 0.8],
          [0.4, 0, 0.1],
