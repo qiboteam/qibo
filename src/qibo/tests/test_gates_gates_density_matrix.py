@@ -69,19 +69,17 @@ def test_one_qubit_gates(backend, gatename, gatekwargs):
     backend.assert_allclose(final_rho, target_rho)
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("gatename", ["H", "X", "Y", "Z", "S", "SDG", "T", "TDG"])
 def test_controlled_by_one_qubit_gates(backend, gatename):
     initial_rho = random_density_matrix(2)
     gate = getattr(gates, gatename)(1).controlled_by(0)
-    gate.density_matrix = True
-    final_rho = gate(np.copy(initial_rho))
+    final_rho = apply_gates(backend, [gate], 2, initial_rho)
 
-    matrix = K.to_numpy(getattr(gates, gatename)(1).matrix)
+    matrix = backend.asmatrix(getattr(gates, gatename)(1))
     cmatrix = np.eye(4, dtype=matrix.dtype)
     cmatrix[2:, 2:] = matrix
     target_rho = np.einsum("ab,bc,cd->ad", cmatrix, initial_rho, cmatrix.conj().T)
-    K.assert_allclose(final_rho, target_rho)
+    backend.assert_allclose(final_rho, target_rho)
 
 
 @pytest.mark.parametrize("gatename,gatekwargs",

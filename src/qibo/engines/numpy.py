@@ -91,10 +91,7 @@ class NumpyEngine(Simulator):
             state = np.concatenate([state[:-1], updates[np.newaxis]], axis=0)
             state = np.reshape(state, nqubits * (2,))
             # Put qubit indices back to their proper places
-            reverse_order = len(order) * [0]
-            for i, r in enumerate(order):
-                reverse_order[r] = i
-            state = np.transpose(state, reverse_order)
+            state = np.transpose(state, einsum_utils.reverse_order(order))
         else:
             matrix = np.reshape(self.asmatrix(gate), 2  * len(gate.qubits) * (2,))
             opstring = einsum_utils.apply_gate_string(gate.qubits, nqubits)
@@ -103,34 +100,35 @@ class NumpyEngine(Simulator):
 
     def apply_gate_density_matrix(self, gate, state, nqubits):
         state = np.reshape(state, 2 * nqubits * (2,))
-        #matrix = np.reshape(self.asmatrix(gate), 2 * len(gate.target_qubits) * (2,))
-        #matrixc = np.conj(matrix)
         if gate.is_controlled_by:
+            matrix = np.reshape(self.asmatrix(gate), 2  * len(gate.target_qubits) * (2,))
+            matrixc = np.conj(matrix)
             ncontrol = len(gate.control_qubits)
-            nactive = gate.nqubits - ncontrol
+            nactive = nqubits - ncontrol
             n = 2 ** ncontrol
-            state = self.transpose(state, gate.cache.control_cache.order(True))
-            state = self.reshape(state, 2 * (n,) + 2 * nactive * (2,))
-            state01 = self.gather(state, indices=range(n - 1), axis=0)
-            state01 = self.squeeze(self.gather(state01, indices=[n - 1], axis=1), axis=1)
-            state01 = self.einsum_call(gate.cache.calculation_cache.right0, state01, matrixc)
-            state10 = self.gather(state, indices=range(n - 1), axis=1)
-            state10 = self.squeeze(self.gather(state10, indices=[n - 1], axis=0), axis=0)
-            state10 = self.einsum_call(gate.cache.calculation_cache.left0,
-                                       state10, matrix)
 
-            state11 = self.squeeze(self.gather(state, indices=[n - 1], axis=0), axis=0)
-            state11 = self.squeeze(self.gather(state11, indices=[n - 1], axis=0), axis=0)
-            state11 = self.einsum_call(gate.cache.calculation_cache.right, state11, matrixc)
-            state11 = self.einsum_call(gate.cache.calculation_cache.left, state11, matrix)
+            order, targets = einsum_utils.control_order_density_matrix(gate, nqubits)
+            state = np.transpose(state, order)
+            state = np.reshape(state, 2 * (n,) + 2 * nactive * (2,))
 
-            state00 = self.gather(state, indices=range(n - 1), axis=0)
-            state00 = self.gather(state00, indices=range(n - 1), axis=1)
-            state01 = self.concatenate([state00, state01[:, self.newaxis]], axis=1)
-            state10 = self.concatenate([state10, state11[self.newaxis]], axis=0)
-            state = self.concatenate([state01, state10[self.newaxis]], axis=0)
-            state = self.reshape(state, 2 * gate.nqubits * (2,))
-            state = self.transpose(state, gate.cache.control_cache.reverse(True))
+            leftc, rightc = einsum_utils.apply_gate_density_matrix_controlled_string(targets, nactive)
+            state01 = state[:n - 1, n - 1]
+            state01 = np.einsum(rightc, state01, matrixc)
+            state10 = state[n - 1, :n - 1]
+            state10 = np.einsum(leftc, state10, matrix)
+
+            left, right = einsum_utils.apply_gate_density_matrix_string(targets, nactive)
+            state11 = state[n - 1, n - 1]
+            state11 = np.einsum(right, state11, matrixc)
+            state11 = np.einsum(left, state11, matrix)
+
+            state00 = state[range(n - 1)]
+            state00 = state00[:, range(n - 1)]
+            state01 = np.concatenate([state00, state01[:, np.newaxis]], axis=1)
+            state10 = np.concatenate([state10, state11[np.newaxis]], axis=0)
+            state = np.concatenate([state01, state10[np.newaxis]], axis=0)
+            state = np.reshape(state, 2 * nqubits * (2,))
+            state = np.transpose(state, einsum_utils.reverse_order(order))
         else:
             matrix = np.reshape(self.asmatrix(gate), 2 * len(gate.qubits) * (2,))
             matrixc = np.conj(matrix)
