@@ -11,6 +11,7 @@ from qibo.engines import construct_backend
 ACTIVE_TESTS = {
     "qibo.tests.test_gates_abstract",
     "qibo.tests.test_gates_gates",
+    "qibo.tests.test_gates_gates_density_matrix",
     "qibo.tests.test_gates_special",
     "qibo.tests.test_models_circuit_execution",
     "qibo.tests.test_models_circuit_features",

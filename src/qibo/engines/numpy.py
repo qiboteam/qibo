@@ -1,6 +1,7 @@
 import numpy as np
-from qibo.config import raise_error, EINSUM_CHARS
+from qibo.config import raise_error
 from qibo.gates import FusedGate
+from qibo.engines import einsum_utils
 from qibo.engines.abstract import Simulator
 from qibo.engines.matrices import Matrices
 
@@ -72,44 +73,18 @@ class NumpyEngine(Simulator):
         part2 = np.concatenate([zeros, matrix], axis=0)
         return np.concatenate([part1, part2], axis=1)
 
-    def _einsum_string(self, qubits, nqubits):
-        inp = list(EINSUM_CHARS[:nqubits])
-        out = inp[:]
-        trans = list(EINSUM_CHARS[nqubits : nqubits + len(qubits)])
-        for i, q in enumerate(qubits):
-            trans.append(inp[q])
-            out[q] = trans[i]
-        return "{},{}->{}".format("".join(inp), "".join(trans), "".join(out))
-
-    def _control_order(self, gate, nqubits):
-        loop_start = 0
-        order = list(gate.control_qubits)
-        targets = list(gate.target_qubits)
-        for control in gate.control_qubits:
-            for i in range(loop_start, control):
-                order.append(i)
-            loop_start = control + 1
-            for i, t in enumerate(gate.target_qubits):
-                if t > control:
-                    targets[i] -= 1
-        for i in range(loop_start, nqubits):
-            order.append(i)
-        return order, targets
-
     def apply_gate(self, gate, state, nqubits):
-        # TODO: Implement density matrices
-        # (most likely in another method or a different engine?)
         state = np.reshape(state, nqubits * (2,))
         if gate.is_controlled_by:
             matrix = np.reshape(self.asmatrix(gate), 2  * len(gate.target_qubits) * (2,))
             ncontrol = len(gate.control_qubits)
             nactive = nqubits - ncontrol
-            order, targets = self._control_order(gate, nqubits)
+            order, targets = einsum_utils.control_order(gate, nqubits)
             state = np.transpose(state, order)
             # Apply `einsum` only to the part of the state where all controls
             # are active. This should be `state[-1]`
             state = np.reshape(state, (2 ** ncontrol,) + nactive * (2,))
-            opstring = self._einsum_string(targets, nactive)
+            opstring = einsum_utils.apply_gate_string(targets, nactive)
             updates = np.einsum(opstring, state[-1], matrix)
             # Concatenate the updated part of the state `updates` with the
             # part of of the state that remained unaffected `state[:-1]`.
@@ -122,9 +97,47 @@ class NumpyEngine(Simulator):
             state = np.transpose(state, reverse_order)
         else:
             matrix = np.reshape(self.asmatrix(gate), 2  * len(gate.qubits) * (2,))
-            opstring = self._einsum_string(gate.qubits, nqubits)
+            opstring = einsum_utils.apply_gate_string(gate.qubits, nqubits)
             state = np.einsum(opstring, state, matrix)
         return np.reshape(state, (2 ** nqubits,))
+
+    def apply_gate_density_matrix(self, gate, state, nqubits):
+        state = np.reshape(state, 2 * nqubits * (2,))
+        #matrix = np.reshape(self.asmatrix(gate), 2 * len(gate.target_qubits) * (2,))
+        #matrixc = np.conj(matrix)
+        if gate.is_controlled_by:
+            ncontrol = len(gate.control_qubits)
+            nactive = gate.nqubits - ncontrol
+            n = 2 ** ncontrol
+            state = self.transpose(state, gate.cache.control_cache.order(True))
+            state = self.reshape(state, 2 * (n,) + 2 * nactive * (2,))
+            state01 = self.gather(state, indices=range(n - 1), axis=0)
+            state01 = self.squeeze(self.gather(state01, indices=[n - 1], axis=1), axis=1)
+            state01 = self.einsum_call(gate.cache.calculation_cache.right0, state01, matrixc)
+            state10 = self.gather(state, indices=range(n - 1), axis=1)
+            state10 = self.squeeze(self.gather(state10, indices=[n - 1], axis=0), axis=0)
+            state10 = self.einsum_call(gate.cache.calculation_cache.left0,
+                                       state10, matrix)
+
+            state11 = self.squeeze(self.gather(state, indices=[n - 1], axis=0), axis=0)
+            state11 = self.squeeze(self.gather(state11, indices=[n - 1], axis=0), axis=0)
+            state11 = self.einsum_call(gate.cache.calculation_cache.right, state11, matrixc)
+            state11 = self.einsum_call(gate.cache.calculation_cache.left, state11, matrix)
+
+            state00 = self.gather(state, indices=range(n - 1), axis=0)
+            state00 = self.gather(state00, indices=range(n - 1), axis=1)
+            state01 = self.concatenate([state00, state01[:, self.newaxis]], axis=1)
+            state10 = self.concatenate([state10, state11[self.newaxis]], axis=0)
+            state = self.concatenate([state01, state10[self.newaxis]], axis=0)
+            state = self.reshape(state, 2 * gate.nqubits * (2,))
+            state = self.transpose(state, gate.cache.control_cache.reverse(True))
+        else:
+            matrix = np.reshape(self.asmatrix(gate), 2 * len(gate.qubits) * (2,))
+            matrixc = np.conj(matrix)
+            left, right = einsum_utils.apply_gate_density_matrix_string(gate.qubits, nqubits)
+            state = np.einsum(right, state, matrixc)
+            state = np.einsum(left, state, matrix)
+        return np.reshape(state, 2 * (2 ** nqubits,))
 
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
         np.testing.assert_allclose(value, target, rtol=rtol, atol=atol)
