@@ -20,6 +20,10 @@ class Engine(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
+    def apply_gate_density_matrix(self, gate):
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
     def execute_circuit(self, circuit, nshots=None):
         raise_error(NotImplementedError)
 
@@ -68,6 +72,10 @@ class Simulator(Engine):
         """Generate |000...0> state as an array."""
         raise_error(NotImplementedError)
 
+    @abc.abstractmethod
+    def zero_density_matrix(self, nqubits):
+        raise_error(NotImplementedError)
+
     def asmatrix(self, gate):
         """Convert a gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
@@ -91,18 +99,30 @@ class Simulator(Engine):
         # TODO: Implement shots
         # TODO: Implement repeated execution
         # TODO: Implement callbacks
-        # TODO: Implement density matrices
         try:
             nqubits = circuit.nqubits
-            if initial_state is None:
-                state = self.zero_state(nqubits)
+            if circuit.density_matrix:
+                if initial_state is None:
+                    state = self.zero_density_matrix(nqubits)
+                else:
+                    state = initial_state
+                
+                for gate in circuit.queue:
+                    state = self.apply_gate_density_matrix(gate, state, nqubits)
+            
             else:
-                state = initial_state
-            for gate in circuit.queue:
-                state = self.apply_gate(gate, state, nqubits)
+                if initial_state is None:
+                    state = self.zero_state(nqubits)
+                else:
+                    state = initial_state
+                
+                for gate in circuit.queue:
+                    state = self.apply_gate(gate, state, nqubits)
+
             # TODO: Consider implementing a final state setter in circuits?
             circuit._final_state = state
             return state
+        
         except self.oom_error:
             raise_error(RuntimeError, f"State does not fit in {self.device} memory."
                                        "Please switch the execution device to a "

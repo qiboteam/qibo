@@ -21,9 +21,13 @@ class NumpyEngine(Simulator):
         return x
 
     def zero_state(self, nqubits):
-        """Generate |000...0> state as an array."""
         state = np.zeros(2 ** nqubits, dtype=self.dtype)
         state[0] = 1
+        return state
+
+    def zero_density_matrix(self, nqubits):
+        state = np.zeros(2 * (2 ** nqubits,), dtype=self.dtype)
+        state[0, 0] = 1
         return state
 
     def asmatrix_fused(self, fgate):

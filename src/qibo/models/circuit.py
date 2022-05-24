@@ -463,23 +463,16 @@ class Circuit:
             if not isinstance(gate, gates.Gate):
                 raise_error(TypeError, "Unknown gate type {}.".format(type(gate)))
 
-            if gate.density_matrix and not self.density_matrix:
-                raise_error(ValueError, "Cannot add {} on circuits that uses state "
-                                        "vectors. Please switch to density matrix "
-                                        "circuit.".format(gate.name))
-            elif self.density_matrix:
-                gate.density_matrix = True
-
             if self._final_state is not None:
                 raise_error(RuntimeError, "Cannot add gates to a circuit after it is "
-                                        "executed.")
+                                          "executed.")
 
             for q in gate.target_qubits:
                 if q >= self.nqubits:
                     raise_error(ValueError, "Attempting to add gate with target qubits {} "
                                             "on a circuit of {} qubits."
                                             "".format(gate.target_qubits, self.nqubits))
-            
+
             self.check_measured(gate.qubits)
             if isinstance(gate, gates.M) and not gate.collapse:
                 return self._add_measurement(gate)

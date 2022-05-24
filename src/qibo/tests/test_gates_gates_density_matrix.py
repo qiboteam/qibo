@@ -144,9 +144,8 @@ def test_flatten_density_matrix(backend):
     target_rho = random_density_matrix(3)
     initial_rho = np.zeros(6 * (2,))
     gate = gates.Flatten(target_rho)
-    gate.density_matrix = True
     final_rho = np.reshape(gate(initial_rho), (8, 8))
-    K.assert_allclose(final_rho, target_rho)
+    backend.assert_allclose(final_rho, target_rho)
 
 
 def test_controlled_by_no_effect(backend):
@@ -158,12 +157,12 @@ def test_controlled_by_no_effect(backend):
     c = Circuit(4, density_matrix=True)
     c.add(gates.X(0))
     c.add(gates.SWAP(1, 3).controlled_by(0, 2))
-    final_rho = c(np.copy(initial_rho))
+    final_rho = backend.execute_circuit(c, np.copy(initial_rho))
 
     c = Circuit(4, density_matrix=True)
     c.add(gates.X(0))
-    target_rho = c(np.copy(initial_rho))
-    K.assert_allclose(final_rho, target_rho)
+    target_rho = backend.execute_circuit(c, np.copy(initial_rho))
+    backend.assert_allclose(final_rho, target_rho)
 
 
 def test_controlled_with_effect(backend):
@@ -176,14 +175,14 @@ def test_controlled_with_effect(backend):
     c.add(gates.X(0))
     c.add(gates.X(2))
     c.add(gates.SWAP(1, 3).controlled_by(0, 2))
-    final_rho = c(np.copy(initial_rho)).numpy()
+    final_rho = backend.execute_circuit(c, np.copy(initial_rho))
 
     c = Circuit(4, density_matrix=True)
     c.add(gates.X(0))
     c.add(gates.X(2))
     c.add(gates.SWAP(1, 3))
-    target_rho = c(np.copy(initial_rho)).numpy()
-    K.assert_allclose(final_rho, target_rho)
+    target_rho = backend.execute_circuit(c, np.copy(initial_rho))
+    backend.assert_allclose(final_rho, target_rho)
 
 
 @pytest.mark.parametrize("nqubits", [4, 5])
@@ -196,16 +195,17 @@ def test_controlled_by_random(backend, nqubits):
     c = Circuit(nqubits, density_matrix=True)
     c.add(gates.RX(1, theta=0.789).controlled_by(2))
     c.add(gates.fSim(0, 2, theta=0.123, phi=0.321).controlled_by(1, 3))
-    final_rho = c(np.copy(initial_rho))
+    final_rho = backend.execute_circuit(c, np.copy(initial_rho))
 
     c = Circuit(nqubits)
     c.add(gates.RX(1, theta=0.789).controlled_by(2))
     c.add(gates.fSim(0, 2, theta=0.123, phi=0.321).controlled_by(1, 3))
-    target_psi = c(np.copy(initial_psi))
+    target_psi = backend.execute_circuit(c, np.copy(initial_psi))
     target_rho = np.outer(target_psi, np.conj(target_psi))
-    K.assert_allclose(final_rho, target_rho)
+    backend.assert_allclose(final_rho, target_rho)
 
 
+@pytest.mark.skip("Move this to channel tests")
 @pytest.mark.parametrize("qubit", [0, 1, 2])
 def test_partial_trace_gate(backend, qubit):
     gate = gates.PartialTrace(qubit)
@@ -281,15 +281,10 @@ def test_variational_layer_density_matrix(backend, nqubits):
     c = Circuit(nqubits, density_matrix=True)
     c.add((gates.RY(i, t) for i, t in enumerate(theta)))
     c.add((gates.CZ(i, i + 1) for i in range(0, nqubits - 1, 2)))
-    target_state = c()
+    target_state = backend.execute_circuit(c)
     pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
     c = Circuit(nqubits, density_matrix=True)
     c.add(gates.VariationalLayer(range(nqubits), pairs,
                                   gates.RY, gates.CZ, theta))
-    final_state = c()
-    K.assert_allclose(target_state, final_state)
-    gate = gates.VariationalLayer(range(nqubits), pairs,
-                                  gates.RY, gates.CZ, theta)
-    gate.density_matrix = True
-    final_state = gate(c.get_initial_state())
-    K.assert_allclose(target_state, final_state)
+    final_state = backend.execute_circuit(c)
+    backend.assert_allclose(target_state, final_state)

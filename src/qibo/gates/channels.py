@@ -44,7 +44,6 @@ class KrausChannel(Channel):
     def __init__(self, ops):
         super(KrausChannel, self).__init__()
         self.name = "KrausChannel"
-        self.density_matrix = True
         if isinstance(ops[0], Gate):
             self.gates = tuple(ops)
             self.target_qubits = tuple(sorted(set(
@@ -66,7 +65,6 @@ class KrausChannel(Channel):
                                         "".format(shape, len(qubits)))
             qubitset.update(qubits)
             gatelist.append(Unitary(matrix, *list(qubits)))
-            gatelist[-1].density_matrix = True
         return tuple(gatelist), tuple(sorted(qubitset))
 
 
@@ -110,7 +108,6 @@ class UnitaryChannel(KrausChannel):
         self.probs = p
         self.psum = sum(p)
         self.seed = seed
-        self.density_matrix = False
         self.init_args = [p, self.gates]
         self.init_kwargs = {"seed": seed}
 
@@ -298,4 +295,3 @@ class _ThermalRelaxationChannelB(Gate):
             self, q, t1, t2, time, excited_population=excited_population,
             seed=seed)
         # this case can only be applied to density matrices
-        self.density_matrix = True

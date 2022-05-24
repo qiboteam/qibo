@@ -24,8 +24,6 @@ class Gate:
             target_qubits (tuple): Tuple with ids of target qubits.
             control_qubits (tuple): Tuple with ids of control qubits sorted in
                 increasing order.
-            density_matrix (bool): Controls if the gate acts on state vectors or
-                density matrices.
         """
         from qibo import config
         self.name = None
@@ -44,9 +42,6 @@ class Gate:
         # (parameter value is known during circuit creation) or if they are
         # measurement dependent so the parameter value is determined during
         # execution
-
-        # Using density matrices or state vectors
-        self._density_matrix = False
 
     @property
     def target_qubits(self) -> Tuple[int]:
@@ -123,20 +118,6 @@ class Gate:
     def parameters(self):
         """Returns a tuple containing the current value of gate's parameters."""
         return self._parameters
-
-    @property
-    def density_matrix(self) -> bool:
-        """Controls if the gate acts on state vectors or density matrices."""
-        return self._density_matrix
-
-    @density_matrix.setter
-    def density_matrix(self, x: bool):
-        """Density matrix flag switcher."""
-        self._density_matrix = x
-        if x:
-            self._active_call = "_density_matrix_call"
-        else:
-            self._active_call = "_state_vector_call"
 
     def commutes(self, gate: "Gate") -> bool:
         """Checks if two gates commute.
@@ -286,24 +267,11 @@ class Channel(Gate):
     def inverse_gates(self):
         if self._inverse_gates is None:
             self._inverse_gates = self.calculate_inverse_gates()
-            for gate in self._inverse_gates:
-                if gate is not None:
-                    gate.density_matrix = self.density_matrix
         return self._inverse_gates
 
     @abstractmethod
     def calculate_inverse_gates(self): # pragma: no cover
         raise_error(NotImplementedError)
-
-    @Gate.density_matrix.setter
-    def density_matrix(self, x):
-        Gate.density_matrix.fset(self, x) # pylint: disable=no-member
-        for gate in self.gates:
-            gate.density_matrix = x
-        if self._inverse_gates is not None:
-            for gate in self._inverse_gates:
-                if gate is not None:
-                    gate.density_matrix = x
 
     def controlled_by(self, *q):
         """"""
@@ -398,8 +366,6 @@ class BaseBackendGate(Gate, ABC):
                 Note that gate preparation is triggered automatically when a gate
                 is added to a circuit or when it acts on a state.
             device: Hardware device to use in order to simulate this gate.
-            density_matrix: ``True`` if the gate will act on density matrices,
-                ``False`` if the gate will act on state vectors.
         """
         from qibo import get_device
         Gate.__init__(self)
