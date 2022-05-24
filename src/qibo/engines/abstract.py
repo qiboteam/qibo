@@ -32,6 +32,7 @@ class Simulator(Engine):
 
         self.device = "/CPU:0"
         self.nthreads = 1
+        self.supports_multigpu = False
         self.oom_error = MemoryError
 
     def set_precision(self, precision):
@@ -107,6 +108,9 @@ class Simulator(Engine):
         # TODO: Implement shots
         # TODO: Implement repeated execution
         # TODO: Implement callbacks
+        if circuit.accelerators and not self.supports_multigpu:
+            raise_error(NotImplementedError, f"{self} does not support distributed execution.")
+
         try:
             nqubits = circuit.nqubits
             if circuit.density_matrix:

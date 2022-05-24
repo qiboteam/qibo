@@ -9,6 +9,7 @@ from qibo.engines import construct_backend
 
 
 ACTIVE_TESTS = {
+    "qibo.tests.test_cirq",
     "qibo.tests.test_gates_abstract",
     "qibo.tests.test_gates_channels",
     "qibo.tests.test_gates_gates",
