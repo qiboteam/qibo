@@ -13,6 +13,10 @@ class NumpyEngine(Simulator):
         self.name = "numpy"
         self.matrices = Matrices(self.dtype)
 
+    def set_device(self, device):
+        if device != "/CPU:0":
+            raise_error(ValueError, f"Device {device} is not available for {self} backend.")
+
     def set_threads(self, nthreads):
         if nthreads > 1:
             raise_error(ValueError, "numpy does not support more than one thread.")
@@ -81,6 +85,7 @@ class NumpyEngine(Simulator):
         return np.concatenate([part1, part2], axis=1)
 
     def apply_gate(self, gate, state, nqubits):
+        state = self.cast(state)
         state = np.reshape(state, nqubits * (2,))
         if gate.is_controlled_by:
             matrix = np.reshape(self.asmatrix(gate), 2  * len(gate.target_qubits) * (2,))
@@ -106,6 +111,7 @@ class NumpyEngine(Simulator):
         return np.reshape(state, (2 ** nqubits,))
 
     def apply_gate_density_matrix(self, gate, state, nqubits):
+        state = self.cast(state)
         state = np.reshape(state, 2 * nqubits * (2,))
         if gate.is_controlled_by:
             matrix = np.reshape(self.asmatrix(gate), 2  * len(gate.target_qubits) * (2,))
@@ -154,10 +160,13 @@ class NumpyEngine(Simulator):
     def apply_channel_density_matrix(self, channel, state, nqubits):
         # TODO: Think how to implement seed
         # TODO: Inverse gates may be needed for qibojit (in-place updates)
+        state = self.cast(state)
         new_state = (1 - channel.coefficient_sum) * state
         for coeff, gate in zip(channel.coefficients, channel.gates):
             new_state += coeff * self.apply_gate_density_matrix(gate, state, nqubits)
         return new_state
 
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
+        value = self.to_numpy(value)
+        target = self.to_numpy(target)
         np.testing.assert_allclose(value, target, rtol=rtol, atol=atol)

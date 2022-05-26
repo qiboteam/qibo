@@ -29,7 +29,7 @@ h q[4];"""
         assert gate.qubits == (i,)
     target_state = np.ones(32) / np.sqrt(32)
     final_state = backend.execute_circuit(c)
-    np.testing.assert_allclose(final_state, target_state)
+    backend.assert_allclose(final_state, target_state)
 
 
 def test_simple_cirq(backend):

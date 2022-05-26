@@ -56,7 +56,7 @@ def pytest_generate_tests(metafunc):
         pytest.skip()
 
     if "backend_name" in metafunc.fixturenames:
-        metafunc.parametrize("backend_name", ["numpy", "qibojit-numba"])
+        metafunc.parametrize("backend_name", ["numpy", "qibojit-numba", "qibojit-cupy"])
 
     if "accelerators" in metafunc.fixturenames:
         metafunc.parametrize("accelerators", [None])

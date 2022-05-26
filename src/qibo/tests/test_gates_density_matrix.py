@@ -12,7 +12,7 @@ def apply_gates(backend, gatelist, nqubits=None, initial_state=None):
         # TODO: Update this for density matrices
         state = backend.zero_state(nqubits)
     elif isinstance(initial_state, np.ndarray):
-        state = np.copy(initial_state)
+        state = backend.cast(np.copy(initial_state))
         if nqubits is None:
             nqubits = int(np.log2(len(state)))
         else: # pragma: no cover
@@ -23,7 +23,7 @@ def apply_gates(backend, gatelist, nqubits=None, initial_state=None):
 
     for gate in gatelist:
         state = backend.apply_gate_density_matrix(gate, state, nqubits)
-    return state
+    return backend.to_numpy(state)
 
 
 def test_hgate_density_matrix(backend):

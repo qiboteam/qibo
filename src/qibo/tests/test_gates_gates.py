@@ -10,7 +10,7 @@ def apply_gates(backend, gatelist, nqubits=None, initial_state=None):
     if initial_state is None:
         state = backend.zero_state(nqubits)
     elif isinstance(initial_state, np.ndarray):
-        state = np.copy(initial_state)
+        state = backend.cast(np.copy(initial_state))
         if nqubits is None:
             nqubits = int(np.log2(len(state)))
         else: # pragma: no cover
@@ -21,7 +21,7 @@ def apply_gates(backend, gatelist, nqubits=None, initial_state=None):
 
     for gate in gatelist:
         state = backend.apply_gate(gate, state, nqubits)
-    return state
+    return backend.to_numpy(state)
 
 
 def test_h(backend):
@@ -241,7 +241,7 @@ def test_fsim(backend):
     phi = 0.4321
     gatelist = [gates.H(0), gates.H(1), gates.fSim(0, 1, theta, phi)]
     final_state = apply_gates(backend, gatelist, nqubits=2)
-    target_state = np.ones_like(backend.to_numpy(final_state)) / 2.0
+    target_state = np.ones_like(final_state) / 2.0
     rotation = np.array([[np.cos(theta), -1j * np.sin(theta)],
                          [-1j * np.sin(theta), np.cos(theta)]])
     matrix = np.eye(4, dtype=target_state.dtype)
@@ -257,7 +257,7 @@ def test_generalized_fsim(backend):
     gatelist = [gates.H(0), gates.H(1), gates.H(2)]
     gatelist.append(gates.GeneralizedfSim(1, 2, rotation, phi))
     final_state = apply_gates(backend, gatelist, nqubits=3)
-    target_state = np.ones_like(backend.to_numpy(final_state)) / np.sqrt(8)
+    target_state = np.ones_like(final_state) / np.sqrt(8)
     matrix = np.eye(4, dtype=target_state.dtype)
     matrix[1:3, 1:3] = rotation
     matrix[3, 3] = np.exp(-1j * phi)

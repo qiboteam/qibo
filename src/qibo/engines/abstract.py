@@ -48,9 +48,9 @@ class Simulator(Engine):
             if self.matrices:
                 self.matrices = self.matrices.__class__(self.dtype)
 
+    @abc.abstractmethod
     def set_device(self, device):
-        if device != "/CPU:0":
-            raise_error(ValueError, f"Device {device} is not available for {self} backend.")
+        raise_error(NotImplementedError)
 
     @abc.abstractmethod
     def set_threads(self, nthreads):

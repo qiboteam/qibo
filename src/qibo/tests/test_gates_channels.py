@@ -102,7 +102,8 @@ def test_pauli_noise_channel(backend):
     channel = gates.PauliNoiseChannel(1, px=0.3)
     final_rho = backend.apply_channel_density_matrix(channel, np.copy(initial_rho), 2)
     gate = gates.X(1)
-    target_rho = 0.3 * backend.apply_gate_density_matrix(gate, np.copy(initial_rho), 2)
+    target_rho = backend.apply_gate_density_matrix(gate, np.copy(initial_rho), 2)
+    target_rho = 0.3 * backend.to_numpy(target_rho)
     target_rho += 0.7 * initial_rho
     backend.assert_allclose(final_rho, target_rho)
 
