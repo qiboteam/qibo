@@ -15,6 +15,7 @@ ACTIVE_TESTS = {
     "qibo.tests.test_gates_gates",
     "qibo.tests.test_gates_density_matrix",
     "qibo.tests.test_gates_special",
+    "qibo.tests.test_measurements",
     "qibo.tests.test_models_circuit",
     "qibo.tests.test_models_circuit_execution",
     "qibo.tests.test_models_circuit_features",
@@ -23,11 +24,11 @@ ACTIVE_TESTS = {
     "qibo.tests.test_models_circuit_qasm",
     "qibo.tests.test_models_circuit_qasm_cirq",
     "qibo.tests.test_models_qft",
-    "qibo.tests.test_simulators"
+    "qibo.tests.test_simulators",
 }
 
 # backends to be tested
-BACKENDS = ["numpy", "qibojit-numba", "qibojit-cupy"]
+BACKENDS = ["numpy"]#, "qibojit-numba", "qibojit-cupy"]
 
 def get_backend(backend_name):
     if "-" in backend_name:

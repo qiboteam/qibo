@@ -1,38 +1,42 @@
-"""Test :class:`qibo.abstractions.gates.M` as standalone and as part of circuit."""
+"""Test circuit result measurements and measurement gate and as part of circuit."""
 import pytest
 import numpy as np
-from qibo import models, gates, K
+from qibo import models, gates
 
 
-def assert_result(result, decimal_samples=None, binary_samples=None,
+def assert_result(backend, result, 
+                  decimal_samples=None, binary_samples=None,
                   decimal_frequencies=None, binary_frequencies=None):
     if decimal_frequencies is not None:
         assert result.frequencies(False) == decimal_frequencies
     if binary_frequencies is not None:
         assert result.frequencies(True) == binary_frequencies
     if decimal_samples is not None:
-        K.assert_allclose(result.samples(False), decimal_samples)
+        backend.assert_allclose(result.samples(False), decimal_samples)
     if binary_samples is not None:
-        K.assert_allclose(result.samples(True), binary_samples)
+        backend.assert_allclose(result.samples(True), binary_samples)
 
 
 @pytest.mark.parametrize("n", [0, 1])
 @pytest.mark.parametrize("nshots", [100, 1000000])
 def test_measurement_gate(backend, n, nshots):
-    state = np.zeros(4)
-    state[-n] = 1
-    result = gates.M(0)(K.cast(state), nshots=nshots)
-    assert_result(result, n * np.ones(nshots), n * np.ones((nshots, 1)),
+    c = models.Circuit(2)
+    if n:
+        c.add(gates.X(1))
+    c.add(gates.M(1))
+    result = backend.execute_circuit(c, nshots=nshots)
+    assert_result(backend, result, n * np.ones(nshots), n * np.ones((nshots, 1)),
                   {n: nshots}, {str(n): nshots})
 
 
 def test_multiple_qubit_measurement_gate(backend):
-    state = np.zeros(4)
-    state[2] = 1
-    result = gates.M(0, 1)(K.cast(state), nshots=100)
+    c = models.Circuit(2)
+    c.add(gates.X(0))
+    c.add(gates.M(0, 1))
+    result = backend.execute_circuit(c, nshots=100)
     target_binary_samples = np.zeros((100, 2))
     target_binary_samples[:, 0] = 1
-    assert_result(result, 2 * np.ones((100,)), target_binary_samples,
+    assert_result(backend, result, 2 * np.ones((100,)), target_binary_samples,
                   {2: 100}, {"10": 100})
 
 
@@ -42,7 +46,7 @@ def test_measurement_gate_errors(backend):
     with pytest.raises(NotImplementedError):
         gate.controlled_by(1)
     # attempting to construct unitary
-    with pytest.raises(ValueError):
+    with pytest.raises(NotImplementedError):
         matrix = gate.matrix
     # calling on bad state
     with pytest.raises(TypeError):
@@ -53,8 +57,8 @@ def test_measurement_circuit(backend, accelerators):
     c = models.Circuit(4, accelerators)
     c.add(gates.X(0))
     c.add(gates.M(0))
-    result = c(nshots=100)
-    assert_result(result,
+    result = backend.execute_circuit(c, nshots=100)
+    assert_result(backend, result,
                   np.ones((100,)), np.ones((100, 1)),
                   {1: 100}, {"1": 100})
 
@@ -78,11 +82,12 @@ def test_measurement_qubit_order_simple(backend, registers):
     else:
         c.add(gates.M(1))
         c.add(gates.M(0))
-    result = c(nshots=100)
+    result = backend.execute_circuit(c, nshots=100)
 
     target_binary_samples = np.zeros((100, 2))
     target_binary_samples[:, 1] = 1
-    assert_result(result, np.ones(100), target_binary_samples,
+    assert_result(backend, result, 
+                  np.ones(100), target_binary_samples,
                   {1: 100}, {"01": 100})
 
 
@@ -92,12 +97,13 @@ def test_measurement_qubit_order(backend, accelerators, nshots):
     c.add(gates.X(0))
     c.add(gates.X(1))
     c.add(gates.M(1, 5, 2, 0))
-    result = c(nshots=nshots)
+    result = backend.execute_circuit(c, nshots=nshots)
 
     target_binary_samples = np.zeros((nshots, 4))
     target_binary_samples[:, 0] = 1
     target_binary_samples[:, 3] = 1
-    assert_result(result, 9 * np.ones(nshots), target_binary_samples,
+    assert_result(backend, result, 
+                  9 * np.ones(nshots), target_binary_samples,
                   {9: nshots}, {"1001": nshots})
 
 
@@ -108,11 +114,12 @@ def test_multiple_measurement_gates_circuit(backend):
     c.add(gates.M(0, 1))
     c.add(gates.M(2))
     c.add(gates.X(3))
-    result = c(nshots=100)
+    result = backend.execute_circuit(c, nshots=100)
 
     target_binary_samples = np.ones((100, 3))
     target_binary_samples[:, 0] = 0
-    assert_result(result, 3 * np.ones(100), target_binary_samples,
+    assert_result(backend, result, 
+                  3 * np.ones(100), target_binary_samples,
                   {3: 100}, {"011": 100})
 
 

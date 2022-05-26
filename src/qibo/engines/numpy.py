@@ -1,3 +1,4 @@
+import collections
 import numpy as np
 from qibo.config import raise_error
 from qibo.gates import FusedGate
@@ -165,6 +166,61 @@ class NumpyEngine(Simulator):
         for coeff, gate in zip(channel.coefficients, channel.gates):
             new_state += coeff * self.apply_gate_density_matrix(gate, state, nqubits)
         return new_state
+
+    def get_state_probabilities(self, result, qubits):
+        # TODO: Implement GPU fallback for relevant backends
+        # TODO: Fix this so that it respects order of given qubits
+        tensor = self.get_state_tensor(result)
+        rtype = tensor.real.dtype
+        if result.density_matrix:
+            order = tuple(sorted(qubits))
+            order += tuple(i for i in range(result.nqubits) if i not in qubits)
+            order = order + tuple(i + result.nqubits for i in order)
+            shape = 2 * (2 ** len(qubits), 2 ** (result.nqubits - len(qubits)))
+            tensor = np.reshape(tensor, 2 * result.nqubits * (2,))
+            tensor = np.reshape(np.transpose(tensor, order), shape)
+            probs = np.einsum("abab->a", tensor).astype(rtype)
+            probs = np.reshape(probs, len(qubits) * (2,))
+        else:
+            unmeasured_qubits = tuple(i for i in range(result.nqubits) if i not in qubits)
+            tensor = np.reshape(np.abs(tensor) ** 2, result.nqubits * (2,))
+            probs = np.sum(tensor.astype(rtype), axis=unmeasured_qubits)
+        return probs.ravel()
+
+    def sample_shots(self, probabilities, nshots):
+        # TODO: Implement GPU fallback for relevant backends
+        return np.random.choice(range(len(probabilities)), size=nshots, p=probabilities)
+
+    def samples_to_binary(self, samples, nqubits):
+        qrange = np.arange(nqubits - 1, -1, -1, dtype="int32")
+        return np.mod(np.right_shift(samples[:, np.newaxis], qrange), 2)
+
+    def samples_to_decimal(self, samples, nqubits):
+        qrange = np.arange(nqubits - 1, -1, -1, dtype="int32")
+        qrange = (2 ** qrange)[:, np.newaxis]
+        return np.matmul(samples, qrange)[:, 0]
+
+    def sample_frequencies(self, probabilities, nshots):
+        # TODO: Implement GPU fallback for relevant backends
+        from qibo.config import SHOT_BATCH_SIZE
+        nprobs = probabilities / np.sum(probabilities)
+        def update_frequencies(nsamples, frequencies):
+            samples = np.random.choice(range(len(nprobs)), size=nsamples, p=nprobs)
+            res, counts = np.unique(samples, return_counts=True)
+            frequencies[res[0]] += counts[0]
+            return frequencies
+
+        #frequencies = np.zeros(len(nprobs), dtype="int64")
+        frequencies = collections.Counter()
+        for _ in range(nshots // SHOT_BATCH_SIZE):
+            frequencies = update_frequencies(SHOT_BATCH_SIZE, frequencies)
+        frequencies = update_frequencies(nshots % SHOT_BATCH_SIZE, frequencies)
+        return frequencies
+
+    def calculate_frequencies(self, samples):
+        res, counts = np.unique(samples, return_counts=True)
+        res, counts = np.array(res), np.array(counts)
+        return collections.Counter({k: v for k, v in zip(res, counts)})
 
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
         value = self.to_numpy(value)

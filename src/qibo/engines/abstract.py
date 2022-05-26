@@ -1,5 +1,6 @@
 import abc
 from qibo.config import raise_error
+from qibo.states import CircuitResult
 from qibo.gates.abstract import ParametrizedGate, SpecialGate
 
 
@@ -16,7 +17,24 @@ class Engine(abc.ABC):
             return f"{self.name} ({self.platform})"
 
     @abc.abstractmethod
-    def execute_circuit(self, circuit, nshots=None):
+    def execute_circuit(self, circuit, nshots=None): # pragma: no cover
+        """Executes a circuit."""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def get_state_repr(self, result): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def get_state_tensor(self, result): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def get_state_probabilities(self, result): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def get_state_symbolic(self, result, decimals, cutoff, max_terms): # pragma: no cover
         raise_error(NotImplementedError)
 
 
@@ -133,18 +151,77 @@ class Simulator(Engine):
                 else:
                     # cast to proper complex type
                     state = self.cast(initial_state)
-                
+
                 for gate in circuit.queue:
                     state = self.apply_gate(gate, state, nqubits)
 
             # TODO: Consider implementing a final state setter in circuits?
-            circuit._final_state = state
-            return state
+            circuit._final_state = CircuitResult(self, circuit, state, nshots)
+            return circuit._final_state
         
         except self.oom_error:
             raise_error(RuntimeError, f"State does not fit in {self.device} memory."
                                        "Please switch the execution device to a "
                                        "different one using ``qibo.set_device``.")
+
+    def get_state_repr(self, result):
+        return self.circuit_result_symbolic(result)
+
+    def get_state_tensor(self, result):
+        return result.execution_result
+
+    @abc.abstractmethod
+    def get_state_probabilities(self, result): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def get_state_symbolic(self, result, decimals, cutoff, max_terms):
+        import numpy as np
+        state = self.to_numpy(self.state_tensor(result))
+        terms = []
+        if result.density_matrix:
+            indi, indj = K.np.nonzero(state)
+            for i, j in zip(indi, indj):
+                bi = bin(i)[2:].zfill(self.nqubits)
+                bj = bin(j)[2:].zfill(self.nqubits)
+                if K.np.abs(state[i, j]) >= cutoff:
+                    x = round(state[i, j], decimals)
+                    terms.append(f"{x}|{bi}><{bj}|")
+                if len(terms) >= max_terms:
+                    terms.append("...")
+                    break
+    
+        else:
+            terms = []
+            for i in np.nonzero(state)[0]:
+                b = bin(i)[2:].zfill(result.nqubits)
+                if np.abs(state[i]) >= cutoff:
+                    x = round(state[i], decimals)
+                    terms.append(f"{x}|{b}>")
+                if len(terms) >= max_terms:
+                    terms.append("...")
+                    break
+        
+        return " + ".join(terms)
+
+    @abc.abstractmethod
+    def sample_shots(self, probabilities, nshots):
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def samples_to_binary(self, samples, nqubits):
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def samples_to_decimal(self, samples, nqubits):
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def sample_frequencies(self, probabilities, nshots):
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def calculate_frequencies(self, samples):
+        raise_error(NotImplementedError)
 
     @abc.abstractmethod
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0): # pragma: no cover
