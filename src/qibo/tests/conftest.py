@@ -26,6 +26,23 @@ ACTIVE_TESTS = {
     "qibo.tests.test_simulators"
 }
 
+# backends to be tested
+BACKENDS = ["numpy", "qibojit-numba", "qibojit-cupy"]
+
+def get_backend(backend_name):
+    if "-" in backend_name:
+        name, platform = backend_name.split("-")
+    else:
+        name, platform = backend_name, None
+    return construct_backend(name, platform=platform)
+
+# remove backends that are not available in the current testing environment
+for backend_name in BACKENDS:
+    try:
+        get_backend(backend_name)
+    except (ModuleNotFoundError, ImportError):
+        BACKENDS.remove(backend_name)
+
 
 def pytest_runtest_setup(item):
     ALL = {"darwin", "linux"}
@@ -43,11 +60,7 @@ def pytest_configure(config):
 
 @pytest.fixture
 def backend(backend_name):
-    if "-" in backend_name:
-        name, platform = backend_name.split("-")
-    else:
-        name, platform = backend_name, None
-    yield construct_backend(name, platform=platform, show_error=True)
+    yield get_backend(backend_name)
 
 
 def pytest_generate_tests(metafunc):
@@ -56,7 +69,7 @@ def pytest_generate_tests(metafunc):
         pytest.skip()
 
     if "backend_name" in metafunc.fixturenames:
-        metafunc.parametrize("backend_name", ["numpy", "qibojit-numba", "qibojit-cupy"])
+        metafunc.parametrize("backend_name", BACKENDS)
 
     if "accelerators" in metafunc.fixturenames:
         metafunc.parametrize("accelerators", [None])

@@ -4,33 +4,24 @@ from qibo.engines.numpy import NumpyEngine
 from qibo.engines.tensorflow import TensorflowEngine
 
 
-def construct_backend(backend, platform=None, show_error=False):
-    def _initialize_backend(backend_cls, show_error=False):
-        try:
-            return backend_cls()
-        except (ModuleNotFoundError, ImportError):
-            if show_error:
-                name = backend_cls.__name__
-                raise_error(ModuleNotFoundError, f"{name} is not installed.")
-            return None
-
+def construct_backend(backend, platform=None):
     if backend == "qibojit":
         from qibojit.engines import CupyEngine, NumbaEngine
         if platform == "cupy":
-            return _initialize_backend(CupyEngine, show_error)
+            return CupyEngine()
         elif platform == "numba":
-            return _initialize_backend(NumbaEngine, show_error)
+            return NumbaEngine()
         else:
-            bk = _initialize_backend(CupyEngine)
-            if bk is None:
-                bk = _initialize_backend(NumbaEngine, show_error)
-            return bk
+            try:
+                return CupyEngine()
+            except (ModuleNotFoundError, ImportError):
+                return NumbaBackend()
         
     elif backend == "tensorflow":
-        return _initialize_backend(TensorflowEngine, show_error)
+        return TensorflowEngine()
 
     elif backend == "numpy":
-        return _initialize_backend(NumpyEngine, show_error)
+        return NumpyEngine()
 
     else:
         # TODO: Fix errors to their previous format
@@ -52,14 +43,17 @@ class GlobalBackend:
     def __new__(cls):
         if cls._instance is not None:
             return cls._instance
-        
+
         # Create default backend
         for kwargs in cls._default_order:
-            cls._instance = construct_backend(**kwargs)
+            try:
+                cls._instance = construct_backend(**kwargs)
+            except ModuleNotFoundError:
+                pass
             if cls._instance is not None:
                 log.info(f"Using {cls._instance} backend on {cls._instance.device}")
                 return cls._instance
-        
+
         raise_error(RuntimeError, "No backends available.")
 
     @classmethod
@@ -67,7 +61,7 @@ class GlobalBackend:
         if cls._instance is None or cls._instance.name != name or cls._instance.platform != platform:
             if not config.ALLOW_SWITCHERS:
                 log.warning("Backend should not be changed after allocating gates.")
-            cls._instance = construct_backend(backend, platform, show_error=True)
+            cls._instance = construct_backend(backend, platform)
         log.info(f"Using {cls._instance} backend on {cls._instance.device}")
 
 
