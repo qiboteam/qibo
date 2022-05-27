@@ -30,11 +30,11 @@ class Engine(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def get_state_probabilities(self, result): # pragma: no cover
+    def get_state_symbolic(self, result, decimals, cutoff, max_terms): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def get_state_symbolic(self, result, decimals, cutoff, max_terms): # pragma: no cover
+    def calculate_probabilities(self, result): # pragma: no cover
         raise_error(NotImplementedError)
 
 
@@ -170,10 +170,6 @@ class Simulator(Engine):
     def get_state_tensor(self, result):
         return result.execution_result
 
-    @abc.abstractmethod
-    def get_state_probabilities(self, result): # pragma: no cover
-        raise_error(NotImplementedError)
-
     def get_state_symbolic(self, result, decimals, cutoff, max_terms):
         import numpy as np
         state = self.to_numpy(self.state_tensor(result))
@@ -202,6 +198,10 @@ class Simulator(Engine):
                     break
         
         return " + ".join(terms)
+
+    @abc.abstractmethod
+    def calculate_probabilities(self, result): # pragma: no cover
+        raise_error(NotImplementedError)
 
     @abc.abstractmethod
     def sample_shots(self, probabilities, nshots):

@@ -167,9 +167,8 @@ class NumpyEngine(Simulator):
             new_state += coeff * self.apply_gate_density_matrix(gate, state, nqubits)
         return new_state
 
-    def get_state_probabilities(self, result, qubits):
+    def calculate_probabilities(self, result, qubits):
         # TODO: Implement GPU fallback for relevant backends
-        # TODO: Fix this so that it respects order of given qubits
         tensor = self.get_state_tensor(result)
         rtype = tensor.real.dtype
         if result.density_matrix:
@@ -185,6 +184,15 @@ class NumpyEngine(Simulator):
             unmeasured_qubits = tuple(i for i in range(result.nqubits) if i not in qubits)
             tensor = np.reshape(np.abs(tensor) ** 2, result.nqubits * (2,))
             probs = np.sum(tensor.astype(rtype), axis=unmeasured_qubits)
+
+        # arrange probabilities according to the given ``qubits`` ordering
+        unmeasured, reduced = [], {}
+        for i in range(result.nqubits):
+            if i in qubits:
+                reduced[i] = i - len(unmeasured)
+            else:
+                unmeasured.append(i)
+        probs = np.transpose(probs, [reduced.get(i) for i in qubits])
         return probs.ravel()
 
     def sample_shots(self, probabilities, nshots):

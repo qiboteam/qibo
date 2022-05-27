@@ -83,8 +83,8 @@ class CircuitResult:
             qubits (list, set): Set of qubits that are measured.
         """
         if qubits is None:
-            qubits = self.measured_qubits
-        return self.backend.get_state_probabilities(self, qubits)
+            qubits = self.circuit.measurement_gate.qubits
+        return self.backend.calculate_probabilities(self, qubits)
 
     def samples(self, binary=True, registers=False):
         """Returns raw measurement samples.
@@ -163,32 +163,33 @@ class CircuitResult:
                 a single `Counter` is returned which contains samples from all
                 the measured qubits, independently of their registers.
         """
+        qubits = self.circuit.measurement_gate.qubits
         if self._frequencies is None:
             if self._samples is None:
-                qubits = self.circuit.measurement_gate.qubits
                 probs = self.probabilities(qubits)
                 self._frequencies = self.backend.sample_frequencies(probs, self.nshots)
             else:
                 self._frequencies = self.backend.calculate_frequencies(self._samples)
 
         if registers:
+            qubit_map = {q: i for i, q in enumerate(qubits)}
             reg_frequencies = {}
-            for name, qubits in self.circuit.measurement_tuples.items():
+            binary_frequencies = self._frequencies_to_binary(self._frequencies, len(qubits))
+            for name, rqubits in self.circuit.measurement_tuples.items():
                 rfreqs = collections.Counter()
-                for bitstring, freq in self._binary_frequencies.items():
+                for bitstring, freq in binary_frequencies.items():
                     idx = 0
-                    for i, q in enumerate(qubits):
+                    for i, q in enumerate(rqubits):
                         if int(bitstring[qubit_map.get(q)]):
-                            idx += 2 ** (len(qubits) - i - 1)
+                            idx += 2 ** (len(rqubits) - i - 1)
                     rfreqs[idx] += freq
                 if binary:
-                    reg_frequencies[name] = self._frequencies_to_binary(rfreqs, len(qubits))
+                    reg_frequencies[name] = self._frequencies_to_binary(rfreqs, len(rqubits))
                 else:
                     reg_frequencies[name] = rfreqs
             return reg_frequencies
 
         if binary:
-            nqubits = len(self.circuit.measurement_gate.qubits)
-            return self._frequencies_to_binary(self._frequencies, nqubits)
+            return self._frequencies_to_binary(self._frequencies, len(qubits))
         else:
             return self._frequencies

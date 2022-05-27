@@ -130,12 +130,13 @@ def test_circuit_with_unmeasured_qubits(backend, accelerators):
     c.add(gates.M(0, 2))
     c.add(gates.X(3))
     c.add(gates.M(1, 4))
-    result = c(nshots=100)
+    result = backend.execute_circuit(c, nshots=100)
 
     target_binary_samples = np.zeros((100, 4))
     target_binary_samples[:, 1] = 1
     target_binary_samples[:, 3] = 1
-    assert_result(result, 5 * np.ones(100), target_binary_samples,
+    assert_result(backend, result, 
+                  5 * np.ones(100), target_binary_samples,
                   {5: 100}, {"0101": 100})
 
 
@@ -191,10 +192,10 @@ def test_circuit_copy_with_measurements(backend, accelerators):
     c1.add(gates.M(2, 0, register_name="b"))
     c2 = c1.copy()
 
-    r1 = c1(nshots=100)
-    r2 = c2(nshots=100)
+    r1 = backend.execute_circuit(c1, nshots=100)
+    r2 = backend.execute_circuit(c2, nshots=100)
 
-    K.assert_allclose(r1.samples(), r2.samples())
+    backend.assert_allclose(r1.samples(), r2.samples())
     rg1 = r1.frequencies(registers=True)
     rg2 = r2.frequencies(registers=True)
     assert rg1.keys() == rg2.keys()
@@ -202,9 +203,9 @@ def test_circuit_copy_with_measurements(backend, accelerators):
         assert rg1[k] == rg2[k]
 
 
+@pytest.mark.skip
 def test_measurement_compiled_circuit(backend):
-    from qibo import K
-    if K.is_custom:
+    if backend.is_custom:
         # use native gates because custom gates do not support compilation
         pytest.skip("Custom backend does not support compilation.")
     c = models.Circuit(2)
@@ -212,15 +213,16 @@ def test_measurement_compiled_circuit(backend):
     c.add(gates.M(0))
     c.add(gates.M(1))
     c.compile()
-    result = c(nshots=100)
+    result = backend.execute_circuit(c, nshots=100)
     target_binary_samples = np.zeros((100, 2))
     target_binary_samples[:, 0] = 1
-    assert_result(result, 2 * np.ones((100,)), target_binary_samples,
-                   {2: 100}, {"10": 100})
+    assert_result(backend, result, 
+                  2 * np.ones((100,)), target_binary_samples,
+                  {2: 100}, {"10": 100})
 
     target_state = np.zeros_like(c.final_state)
     target_state[2] = 1
-    K.assert_allclose(c.final_state, target_state)
+    backend.assert_allclose(c.final_state, target_state)
 
 
 def test_final_state(backend, accelerators):
@@ -231,13 +233,13 @@ def test_final_state(backend, accelerators):
     c.add(gates.M(0, 1))
     c.add(gates.M(2))
     c.add(gates.X(3))
-    result = c(nshots=100)
+    result = backend.execute_circuit(c, nshots=100)
     c = models.Circuit(4, accelerators)
     c.add(gates.X(1))
     c.add(gates.X(2))
     c.add(gates.X(3))
-    target_state = c()
-    K.assert_allclose(c.final_state, target_state)
+    target_state = backend.execute_circuit(c)
+    backend.assert_allclose(c.final_state, target_state)
 
 
 def test_measurement_gate_bitflip_errors():
