@@ -195,6 +195,9 @@ class NumpyEngine(Simulator):
         probs = np.transpose(probs, [reduced.get(i) for i in qubits])
         return probs.ravel()
 
+    def set_seed(self, seed):
+        np.random.seed(seed)
+
     def sample_shots(self, probabilities, nshots):
         # TODO: Implement GPU fallback for relevant backends
         return np.random.choice(range(len(probabilities)), size=nshots, p=probabilities)
@@ -215,15 +218,14 @@ class NumpyEngine(Simulator):
         def update_frequencies(nsamples, frequencies):
             samples = np.random.choice(range(len(nprobs)), size=nsamples, p=nprobs)
             res, counts = np.unique(samples, return_counts=True)
-            frequencies[res[0]] += counts[0]
+            frequencies[res] += counts
             return frequencies
 
-        #frequencies = np.zeros(len(nprobs), dtype="int64")
-        frequencies = collections.Counter()
+        frequencies = np.zeros(len(nprobs), dtype="int64")
         for _ in range(nshots // SHOT_BATCH_SIZE):
             frequencies = update_frequencies(SHOT_BATCH_SIZE, frequencies)
         frequencies = update_frequencies(nshots % SHOT_BATCH_SIZE, frequencies)
-        return frequencies
+        return collections.Counter({i: f for i, f in enumerate(frequencies) if f > 0})
 
     def calculate_frequencies(self, samples):
         res, counts = np.unique(samples, return_counts=True)
@@ -234,3 +236,23 @@ class NumpyEngine(Simulator):
         value = self.to_numpy(value)
         target = self.to_numpy(target)
         np.testing.assert_allclose(value, target, rtol=rtol, atol=atol)
+
+    def test_regressions(self, name):
+        if name == "test_measurementresult_apply_bitflips":
+            return [
+                [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
+                [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 0, 2, 0, 0, 0, 0, 0]
+            ]
+        elif name == "test_probabilistic_measurement": 
+            return {0: 249, 1: 231, 2: 253, 3: 267}
+        elif name == "test_unbalanced_probabilistic_measurement": 
+            return {0: 171, 1: 148, 2: 161, 3: 520}
+        elif name == "test_post_measurement_bitflips_on_circuit": 
+            return [
+                {5: 30}, {5: 18, 4: 5, 7: 4, 1: 2, 6: 1},
+                {4: 8, 2: 6, 5: 5, 1: 3, 3: 3, 6: 2, 7: 2, 0: 1}
+            ]
+        else:
+            return None

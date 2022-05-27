@@ -207,23 +207,27 @@ class Simulator(Engine):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def sample_shots(self, probabilities, nshots):
+    def set_seed(self, seed): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def samples_to_binary(self, samples, nqubits):
+    def sample_shots(self, probabilities, nshots): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def samples_to_decimal(self, samples, nqubits):
+    def samples_to_binary(self, samples, nqubits): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def sample_frequencies(self, probabilities, nshots):
+    def samples_to_decimal(self, samples, nqubits): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def calculate_frequencies(self, samples):
+    def sample_frequencies(self, probabilities, nshots): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def calculate_frequencies(self, samples): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
@@ -234,3 +238,11 @@ class Simulator(Engine):
         value = self.execute_circuit(circuit)
         target = self.execute_circuit(target_circuit)
         self.assert_allclose(value, target)
+
+    @abc.abstractmethod
+    def test_regressions(self, name):  # pragma: no cover
+        """Correct outcomes for tests that involve random numbers.
+
+        The outcomes of such tests depend on the backend.
+        """
+        raise_error(NotImplementedError)
