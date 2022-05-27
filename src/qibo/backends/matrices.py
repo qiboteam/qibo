@@ -1,141 +1,240 @@
 import numpy as np
+from functools import cached_property
+from qibo.config import raise_error
 
 
 class Matrices:
+    """Matrix representation of every gate as a numpy array."""
 
-    _NAMES = ["I", "H", "X", "Y", "Z", "S", "T", "CNOT", "CZ", "SWAP", "FSWAP", "TOFFOLI"]
+    def __init__(self, dtype):
+        self.dtype = dtype
 
-    def __init__(self, backend):
-        self.backend = backend
-        self._I = None
-        self._H = None
-        self._X = None
-        self._Y = None
-        self._Z = None
-        self._S = None
-        self._T = None
-        self._CNOT = None
-        self._CZ = None
-        self._SWAP = None
-        self._FSWAP = None
-        self._TOFFOLI = None
-        self.allocate_matrices()
-
-    def allocate_matrices(self):
-        for name in self._NAMES:
-            getattr(self, f"_set{name}")()
-
-    @property
-    def dtype(self):
-        return self.backend._dtypes.get('DTYPECPX')
-
-    @property
-    def I(self):
-        return self._I
-
-    @property
+    @cached_property
     def H(self):
-        return self._H
+        return np.array([
+            [1, 1], 
+            [1, -1]
+        ], dtype=self.dtype) / np.sqrt(2)
 
-    @property
+    @cached_property
     def X(self):
-        return self._X
+        return np.array([
+            [0, 1], 
+            [1, 0]
+        ], dtype=self.dtype)
 
-    @property
+    @cached_property
     def Y(self):
-        return self._Y
+        return np.array([
+            [0, -1j], 
+            [1j, 0]
+        ], dtype=self.dtype)
 
-    @property
+    @cached_property
     def Z(self):
-        return self._Z
+        return np.array([
+            [1, 0], 
+            [0, -1]
+        ], dtype=self.dtype)
 
-    @property
+    @cached_property
     def S(self):
-        return self._S
+        return np.array([
+            [1, 0], 
+            [0, 1j]
+        ], dtype=self.dtype)
 
-    @property
+    @cached_property
+    def SDG(self):
+        return np.conj(self.S)
+
+    @cached_property
     def T(self):
-        return self._T
+        return np.array([
+            [1, 0],
+            [0, np.exp(1j * np.pi / 4.0)]
+        ], dtype=self.dtype)
 
-    @property
+    @cached_property
+    def TDG(self):
+        return np.conj(self.T)
+
+    def I(self, nqubits=2):
+        return np.eye(2 ** nqubits, dtype=self.dtype)
+
+    def Align(self, nqubits=2):
+        return self.I(nqubits)
+
+    def M(self):
+        raise_error(NotImplementedError)
+
+    def RX(self, theta):
+        cos = np.cos(theta / 2.0) + 0j
+        isin = -1j * np.sin(theta / 2.0)
+        return np.array([
+            [cos, isin], 
+            [isin, cos]
+        ], dtype=self.dtype)
+
+    def RY(self, theta):
+        cos = np.cos(theta / 2.0) + 0j
+        sin = np.sin(theta / 2.0)
+        return np.array([
+            [cos, -sin], 
+            [sin, cos]
+        ], dtype=self.dtype)
+
+    def RZ(self, theta):
+        phase = np.exp(0.5j * theta)
+        return np.array([
+            [np.conj(phase), 0], 
+            [0, phase]
+        ], dtype=self.dtype)
+
+    def U1(self, theta):
+        phase = np.exp(1j * theta)
+        return np.array([
+            [1, 0], 
+            [0, phase]
+        ], dtype=self.dtype)
+
+    def U2(self, phi, lam):
+        eplus = np.exp(1j * (phi + lam) / 2.0)
+        eminus = np.exp(1j * (phi - lam) / 2.0)
+        return np.array([
+            [np.conj(eplus), - np.conj(eminus)],
+            [eminus, eplus]
+        ], dtype=self.dtype) / np.sqrt(2)
+
+    def U3(self, theta, phi, lam):
+        cost = np.cos(theta / 2)
+        sint = np.sin(theta / 2)
+        eplus = np.exp(1j * (phi + lam) / 2.0)
+        eminus = np.exp(1j * (phi - lam) / 2.0)
+        return np.array([
+            [np.conj(eplus) * cost, - np.conj(eminus) * sint],
+            [eminus * sint, eplus * cost]
+        ], dtype=self.dtype)
+
+    @cached_property
     def CNOT(self):
-        return self._CNOT
+        return np.array([
+            [1, 0, 0, 0], 
+            [0, 1, 0, 0], 
+            [0, 0, 0, 1], 
+            [0, 0, 1, 0]
+        ], dtype=self.dtype)
 
-    @property
+    @cached_property
     def CZ(self):
-        return self._CZ
+        return np.array([
+            [1, 0, 0, 0], 
+            [0, 1, 0, 0], 
+            [0, 0, 1, 0], 
+            [0, 0, 0, -1]
+        ], dtype=self.dtype)
 
-    @property
+    def CRX(self, theta):
+        m = np.eye(4, dtype=self.dtype)
+        m[2:, 2:] = self.RX(theta)
+        return m
+
+    def CRY(self, theta):
+        m = np.eye(4, dtype=self.dtype)
+        m[2:, 2:] = self.RY(theta)
+        return m
+
+    def CRZ(self, theta):
+        m = np.eye(4, dtype=self.dtype)
+        m[2:, 2:] = self.RZ(theta)
+        return m
+
+    def CU1(self, theta):
+        m = np.eye(4, dtype=self.dtype)
+        m[2:, 2:] = self.U1(theta)
+        return m
+
+    def CU2(self, phi, lam):
+        m = np.eye(4, dtype=self.dtype)
+        m[2:, 2:] = self.U2(phi, lam)
+        return m
+
+    def CU3(self, theta, phi, lam):
+        m = np.eye(4, dtype=self.dtype)
+        m[2:, 2:] = self.U3(theta, phi, lam)
+        return m
+
+    @cached_property
     def SWAP(self):
-        return self._SWAP
+        return np.array([
+            [1, 0, 0, 0], 
+            [0, 0, 1, 0], 
+            [0, 1, 0, 0], 
+            [0, 0, 0, 1]
+        ], dtype=self.dtype)
 
-    @property
+    @cached_property
     def FSWAP(self):
-        return self._FSWAP
+        return np.array([
+            [1, 0, 0, 0], 
+            [0, 0, 1, 0], 
+            [0, 1, 0, 0], 
+            [0, 0, 0, -1]
+        ], dtype=self.dtype)
 
-    @property
+    def fSim(self, theta, phi):
+        cost = np.cos(theta) + 0j
+        isint = -1j * np.sin(theta)
+        phase = np.exp(-1j * phi)
+        return np.array([
+            [1, 0, 0, 0],
+            [0, cost, isint, 0],
+            [0, isint, cost, 0],
+            [0, 0, 0, phase],
+        ], dtype=self.dtype)
+
+    def GeneralizedfSim(self, u, phi):
+        phase = np.exp(-1j * phi)
+        return np.array([
+            [1, 0, 0, 0],
+            [0, u[0, 0], u[0, 1], 0],
+            [0, u[1, 0], u[1, 1], 0],
+            [0, 0, 0, phase],
+        ], dtype=self.dtype)
+
+    @cached_property
     def TOFFOLI(self):
-        return self._TOFFOLI
-
-    def _setI(self):
-        self._I = self.backend.cast(np.eye(2, dtype=self.dtype))
-
-    def _setH(self):
-        m = np.ones((2, 2), dtype=self.dtype)
-        m[1, 1] = -1
-        self._H = self.backend.cast(m / np.sqrt(2))
-
-    def _setX(self):
-        m = np.zeros((2, 2), dtype=self.dtype)
-        m[0, 1], m[1, 0] = 1, 1
-        self._X = self.backend.cast(m)
-
-    def _setY(self):
-        m = np.zeros((2, 2), dtype=self.dtype)
-        m[0, 1], m[1, 0] = -1j, 1j
-        self._Y = self.backend.cast(m)
-
-    def _setZ(self):
-        m = np.eye(2, dtype=self.dtype)
-        m[1, 1] = -1
-        self._Z = self.backend.cast(m)
-
-    def _setS(self):
-        m = np.eye(2, dtype=self.dtype)
-        m[1, 1] = 1j
-        self._S = self.backend.cast(m)
-
-    def _setT(self):
-        m = np.eye(2, dtype=self.dtype)
-        m[1, 1] = np.exp(1j * np.pi / 4.0)
-        self._T = self.backend.cast(m)
-
-    def _setCNOT(self):
-        m = np.eye(4, dtype=self.dtype)
-        m[2, 2], m[2, 3] = 0, 1
-        m[3, 2], m[3, 3] = 1, 0
-        self._CNOT = self.backend.cast(m)
-
-    def _setCZ(self):
-        m = np.eye(4, dtype=self.dtype)
-        m[3, 3] = -1
-        self._CZ = self.backend.cast(m)
-
-    def _setSWAP(self):
-        m = np.eye(4, dtype=self.dtype)
-        m[1, 1], m[1, 2] = 0, 1
-        m[2, 1], m[2, 2] = 1, 0
-        self._SWAP = self.backend.cast(m)
-
-    def _setFSWAP(self):
-        m = np.eye(4, dtype=self.dtype)
-        m[1, 1], m[1, 2] = 0, 1
-        m[2, 1], m[2, 2] = 1, 0
-        m[3, 3] = -1
-        self._FSWAP = self.backend.cast(m)
-
-    def _setTOFFOLI(self):
         m = np.eye(8, dtype=self.dtype)
         m[-2, -2], m[-2, -1] = 0, 1
         m[-1, -2], m[-1, -1] = 1, 0
-        self._TOFFOLI = self.backend.cast(m)
+        return m
+
+    def Unitary(self, u):
+        return np.array(u, dtype=self.dtype, copy=False)
+
+    def VariationalLayer(self, *args):
+        raise_error(NotImplementedError)
+
+    def Flatten(self):
+        raise_error(NotImplementedError)
+
+    def CallbackGate(self):
+        raise_error(NotImplementedError)
+
+    def PartialTrace(self):
+        raise_error(NotImplementedError)
+
+    def UnitaryChannel(self):
+        raise_error(NotImplementedError)
+
+    def PauliNoiseChannel(self):
+        raise_error(NotImplementedError)
+
+    def ResetChannel(self):
+        raise_error(NotImplementedError)
+
+    def ThermalRelaxationChannel(self):
+        raise_error(NotImplementedError)
+
+    def FusedGate(self):
+        raise_error(NotImplementedError)
