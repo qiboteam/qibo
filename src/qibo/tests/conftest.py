@@ -16,6 +16,7 @@ ACTIVE_TESTS = {
     "qibo.tests.test_gates_density_matrix",
     "qibo.tests.test_gates_special",
     "qibo.tests.test_measurements",
+    "qibo.tests.test_measurements_registers",
     "qibo.tests.test_models_circuit",
     "qibo.tests.test_models_circuit_execution",
     "qibo.tests.test_models_circuit_features",

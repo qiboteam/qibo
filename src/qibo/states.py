@@ -115,11 +115,12 @@ class CircuitResult:
             self._samples = self.backend.sample_shots(probs, self.nshots)
 
         if registers:
+            qubit_map = {q: i for i, q in enumerate(qubits)}
             reg_samples = {}
             samples = self.backend.samples_to_binary(self._samples, len(qubits))
-            for name, rqubits in self.circuit.mesurement_tuples.items():
-                rqubits = tuple(qubit_map.get(q) for q in qubits)
-                rsamples = self.backend.register_samples(samples, rqubits)
+            for name, rqubits in self.circuit.measurement_tuples.items():
+                rqubits = tuple(qubit_map.get(q) for q in rqubits)
+                rsamples = samples[:, rqubits]
                 if binary:
                     reg_samples[name] = rsamples
                 else:
