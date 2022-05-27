@@ -1,457 +1,258 @@
-import math
-from qibo.backends import abstract, einsum_utils
-from qibo.config import raise_error, log
+import collections
+import numpy as np
+from qibo.config import raise_error
+from qibo.gates import FusedGate
+from qibo.backends import einsum_utils
+from qibo.backends.abstract import Simulator
+from qibo.backends.matrices import Matrices
 
 
-class NumpyBackend(abstract.AbstractBackend):
-
-    description = "Uses `np.einsum` to apply gates to states via matrix " \
-                  "multiplication."
-
-    TEST_REGRESSIONS = {
-        "test_measurementresult_apply_bitflips": [
-                [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
-                [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-                [0, 0, 0, 0, 2, 0, 0, 0, 0, 0]
-            ],
-        "test_probabilistic_measurement": {0: 249, 1: 231, 2: 253, 3: 267},
-        "test_unbalanced_probabilistic_measurement": {0: 171, 1: 148, 2: 161, 3: 520},
-        "test_post_measurement_bitflips_on_circuit": [
-                {5: 30}, {5: 18, 4: 5, 7: 4, 1: 2, 6: 1},
-                {4: 8, 2: 6, 5: 5, 1: 3, 3: 3, 6: 2, 7: 2, 0: 1}
-            ],
-    }
+class NumpyBackend(Simulator):
 
     def __init__(self):
         super().__init__()
-        import numpy as np
-        self.backend = np
         self.name = "numpy"
-        self.np = np
+        self.matrices = Matrices(self.dtype)
 
-        self.numeric_types = (np.int, np.float, np.complex, np.int32,
-                              np.int64, np.float32, np.float64,
-                              np.complex64, np.complex128)
-        self.tensor_types = (np.ndarray,)
-        self.native_types = (np.ndarray,)
-        self.Tensor = np.ndarray
-        self.random = np.random
-        self.newaxis = np.newaxis
-        from scipy import sparse
-        self.sparse = sparse
-        self.oom_error = MemoryError
-        self.optimization = None
-        self.cpu_devices = ["/CPU:0"]
-        self.gpu_devices = []
-        self.default_device = self.cpu_devices[0]
-
-    def set_device(self, name):
-        log.warning("Numpy does not support device placement. "
-                    "Aborting device change.")
+    def set_device(self, device):
+        if device != "/CPU:0":
+            raise_error(ValueError, f"Device {device} is not available for {self} backend.")
 
     def set_threads(self, nthreads):
-        log.warning("Numpy backend supports only single-thread execution. "
-                    "Cannot change the number of threads.")
-        abstract.AbstractBackend.set_threads(self, nthreads)
+        if nthreads > 1:
+            raise_error(ValueError, "numpy does not support more than one thread.")
 
-    def set_platform(self, platform):
-        pass
-
-    def get_platform(self):
-        return None
+    def cast(self, x):
+        return np.array(x, dtype=self.dtype, copy=False)
 
     def to_numpy(self, x):
-        if self.issparse(x):
-            return x.toarray()
         return x
 
-    def to_complex(self, re, img): # pragma: no cover
-        return re + 1j * img
-
-    def cast(self, x, dtype='DTYPECPX'):
-        if isinstance(dtype, str):
-            dtype = self.dtypes(dtype)
-        if isinstance(x, self.backend.ndarray):
-            return x.astype(dtype, copy=False)
-        elif self.issparse(x):
-            return x.astype(dtype=dtype, copy=False)
-        return self.backend.array(x, dtype=dtype)
-
-    def issparse(self, x):
-        return self.sparse.issparse(x)
-
-    def diag(self, x, dtype='DTYPECPX'):
-        if isinstance(dtype, str):
-            dtype = self.dtypes(dtype)
-        return self.backend.diag(x).astype(dtype)
-
-    def reshape(self, x, shape):
-        return self.backend.reshape(x, shape)
-
-    def stack(self, x, axis=0):
-        return self.backend.stack(x, axis=axis)
-
-    def concatenate(self, x, axis=0):
-        return self.backend.concatenate(x, axis=axis)
-
-    def expand_dims(self, x, axis):
-        return self.backend.expand_dims(x, axis)
-
-    def copy(self, x):
-        return self.backend.copy(x)
-
-    def range(self, start, finish, step, dtype=None):
-        if isinstance(dtype, str):
-            dtype = self.dtypes(dtype)
-        return self.backend.arange(start, finish, step, dtype=dtype)
-
-    def eye(self, shape, dtype='DTYPECPX'):
-        if isinstance(dtype, str):
-            dtype = self.dtypes(dtype)
-        return self.backend.eye(shape, dtype=dtype)
-
-    def zeros(self, shape, dtype='DTYPECPX'):
-        if isinstance(dtype, str):
-            dtype = self.dtypes(dtype)
-        return self.backend.zeros(shape, dtype=dtype)
-
-    def ones(self, shape, dtype='DTYPECPX'):
-        if isinstance(dtype, str):
-            dtype = self.dtypes(dtype)
-        return self.backend.ones(shape, dtype=dtype)
-
-    def zeros_like(self, x):
-        return self.backend.zeros_like(x)
-
-    def ones_like(self, x):
-        return self.backend.ones_like(x)
-
-    def real(self, x):
-        return self.backend.real(x)
-
-    def imag(self, x):
-        return self.backend.imag(x)
-
-    def conj(self, x):
-        return self.backend.conj(x)
-
-    def mod(self, x, y):
-        return self.backend.mod(x, y)
-
-    def right_shift(self, x, y):
-        return self.backend.right_shift(x, y)
-
-    def exp(self, x):
-        return self.backend.exp(x)
-
-    def sin(self, x):
-        return self.backend.sin(x)
-
-    def cos(self, x):
-        return self.backend.cos(x)
-
-    def pow(self, base, exponent):
-        return base ** exponent
-
-    def square(self, x):
-        return x ** 2
-
-    def sqrt(self, x):
-        return self.backend.sqrt(x)
-
-    def log(self, x):
-        return self.backend.log(x)
-
-    def abs(self, x):
-        return self.backend.abs(x)
-
-    def trace(self, x):
-        return self.backend.trace(x)
-
-    def expm(self, x):
-        if self.issparse(x):
-            from scipy.sparse.linalg import expm
-        else:
-            from scipy.linalg import expm
-        return expm(x)
-
-    def sum(self, x, axis=None):
-        return self.backend.sum(x, axis=axis)
-
-    def dot(self, x, y):
-        return x.dot(y)
-
-    def matmul(self, x, y):
-        return self.backend.matmul(x, y)
-
-    def outer(self, x, y):
-        return self.backend.outer(x, y)
-
-    def kron(self, x, y):
-        return self.backend.kron(x, y)
-
-    def einsum(self, *args):
-        return self.backend.einsum(*args)
-
-    def tensordot(self, x, y, axes=None):
-        return self.backend.tensordot(x, y, axes=axes)
-
-    def transpose(self, x, axes=None):
-        return self.backend.transpose(x, axes)
-
-    def inv(self, x):
-        return self.backend.linalg.inv(x)
-
-    def eigh(self, x, k=6):
-        if self.issparse(x):
-            if k < x.shape[0]:
-                from scipy.sparse.linalg import eigsh
-                return eigsh(x, k=k, which='SA')
-            x = self.to_numpy(x)
-        return self.backend.linalg.eigh(x)
-
-    def eigvalsh(self, x, k=6):
-        if self.issparse(x):
-            log.warning("Calculating sparse matrix eigenvectors because "
-                        "sparse modules do not provide ``eigvals`` method.")
-            return self.eigh(x, k=k)[0]
-        return self.backend.linalg.eigvalsh(x)
-
-    def less(self, x, y):
-        return self.backend.less(x, y)
-
-    def array_equal(self, x, y):
-        return self.np.array_equal(x, y)
-
-    def unique(self, x, return_counts=False):
-        # Uses numpy backend always (even on Tensorflow)
-        return self.np.unique(x, return_counts=return_counts)
-
-    def squeeze(self, x, axis=None):
-        return self.backend.squeeze(x, axis=axis)
-
-    def gather(self, x, indices=None, condition=None, axis=0):
-        if indices is None:
-            if condition is None:
-                raise_error(ValueError, "Gather call requires either indices "
-                                        "or condition.")
-            indices = condition
-        if axis < 0:
-            axis += len(x.shape)
-        idx = axis * (slice(None),) + (indices,)
-        return x[idx]
-
-    def gather_nd(self, x, indices):
-        return x[tuple(indices)]
-
-    def initial_state(self, nqubits, is_matrix=False):
-        if is_matrix:
-            state = self.zeros(2 * (2 ** nqubits,))
-            state[0, 0] = 1
-        else:
-            state = self.zeros((2 ** nqubits,))
-            state[0] = 1
+    def zero_state(self, nqubits):
+        state = np.zeros(2 ** nqubits, dtype=self.dtype)
+        state[0] = 1
         return state
 
-    def random_uniform(self, shape, dtype='DTYPE'):
-        return self.backend.random.random(shape).astype(self.dtypes(dtype))
+    def zero_density_matrix(self, nqubits):
+        state = np.zeros(2 * (2 ** nqubits,), dtype=self.dtype)
+        state[0, 0] = 1
+        return state
 
-    def sample_shots(self, probs, nshots):
-        return self.random.choice(range(len(probs)), size=nshots, p=probs)
+    def asmatrix_fused(self, fgate):
+        rank = len(fgate.target_qubits)
+        matrix = np.eye(2 ** rank, dtype=self.dtype)
+        for gate in fgate.gates:
+            # transfer gate matrix to numpy as it is more efficient for
+            # small tensor calculations
+            gmatrix = self.asmatrix(gate)
+            # Kronecker product with identity is needed to make the
+            # original matrix have shape (2**rank x 2**rank)
+            eye = np.eye(2 ** (rank - len(gate.qubits)), dtype=self.dtype)
+            gmatrix = np.kron(gmatrix, eye)
+            # Transpose the new matrix indices so that it targets the
+            # target qubits of the original gate
+            original_shape = gmatrix.shape
+            gmatrix = np.reshape(gmatrix, 2 * rank * (2,))
+            qubits = list(gate.qubits)
+            indices = qubits + [q for q in fgate.target_qubits if q not in qubits]
+            indices = np.argsort(indices)
+            transpose_indices = list(indices)
+            transpose_indices.extend(indices + rank)
+            gmatrix = np.transpose(gmatrix, transpose_indices)
+            gmatrix = np.reshape(gmatrix, original_shape)
+            # fuse the individual gate matrix to the total ``FusedGate`` matrix
+            matrix = gmatrix @ matrix
+        return matrix
 
-    def sample_frequencies(self, probs, nshots):
+    def asmatrix_special(self, gate):
+        if isinstance(gate, FusedGate):
+            return self.asmatrix_fused(gate)
+        else:
+            raise_error(NotImplementedError)
+
+    def control_matrix(self, gate):
+        if len(gate.control_qubits) > 1:
+            raise_error(NotImplementedError, "Cannot calculate controlled "
+                                             "unitary for more than two "
+                                             "control qubits.")
+        matrix = self.asmatrix(gate)
+        shape = matrix.shape
+        if shape != (2, 2):
+            raise_error(ValueError, "Cannot use ``control_unitary`` method on "
+                                    "gate matrix of shape {}.".format(shape))
+        zeros = np.zeros((2, 2), dtype=self.dtype)
+        part1 = np.concatenate([np.eye(2, dtype=self.dtype), zeros], axis=0)
+        part2 = np.concatenate([zeros, matrix], axis=0)
+        return np.concatenate([part1, part2], axis=1)
+
+    def apply_gate(self, gate, state, nqubits):
+        state = self.cast(state)
+        state = np.reshape(state, nqubits * (2,))
+        if gate.is_controlled_by:
+            matrix = np.reshape(self.asmatrix(gate), 2  * len(gate.target_qubits) * (2,))
+            ncontrol = len(gate.control_qubits)
+            nactive = nqubits - ncontrol
+            order, targets = einsum_utils.control_order(gate, nqubits)
+            state = np.transpose(state, order)
+            # Apply `einsum` only to the part of the state where all controls
+            # are active. This should be `state[-1]`
+            state = np.reshape(state, (2 ** ncontrol,) + nactive * (2,))
+            opstring = einsum_utils.apply_gate_string(targets, nactive)
+            updates = np.einsum(opstring, state[-1], matrix)
+            # Concatenate the updated part of the state `updates` with the
+            # part of of the state that remained unaffected `state[:-1]`.
+            state = np.concatenate([state[:-1], updates[np.newaxis]], axis=0)
+            state = np.reshape(state, nqubits * (2,))
+            # Put qubit indices back to their proper places
+            state = np.transpose(state, einsum_utils.reverse_order(order))
+        else:
+            matrix = np.reshape(self.asmatrix(gate), 2  * len(gate.qubits) * (2,))
+            opstring = einsum_utils.apply_gate_string(gate.qubits, nqubits)
+            state = np.einsum(opstring, state, matrix)
+        return np.reshape(state, (2 ** nqubits,))
+
+    def apply_gate_density_matrix(self, gate, state, nqubits):
+        state = self.cast(state)
+        state = np.reshape(state, 2 * nqubits * (2,))
+        if gate.is_controlled_by:
+            matrix = np.reshape(self.asmatrix(gate), 2  * len(gate.target_qubits) * (2,))
+            matrixc = np.conj(matrix)
+            ncontrol = len(gate.control_qubits)
+            nactive = nqubits - ncontrol
+            n = 2 ** ncontrol
+
+            order, targets = einsum_utils.control_order_density_matrix(gate, nqubits)
+            state = np.transpose(state, order)
+            state = np.reshape(state, 2 * (n,) + 2 * nactive * (2,))
+
+            leftc, rightc = einsum_utils.apply_gate_density_matrix_controlled_string(targets, nactive)
+            state01 = state[:n - 1, n - 1]
+            state01 = np.einsum(rightc, state01, matrixc)
+            state10 = state[n - 1, :n - 1]
+            state10 = np.einsum(leftc, state10, matrix)
+
+            left, right = einsum_utils.apply_gate_density_matrix_string(targets, nactive)
+            state11 = state[n - 1, n - 1]
+            state11 = np.einsum(right, state11, matrixc)
+            state11 = np.einsum(left, state11, matrix)
+
+            state00 = state[range(n - 1)]
+            state00 = state00[:, range(n - 1)]
+            state01 = np.concatenate([state00, state01[:, np.newaxis]], axis=1)
+            state10 = np.concatenate([state10, state11[np.newaxis]], axis=0)
+            state = np.concatenate([state01, state10[np.newaxis]], axis=0)
+            state = np.reshape(state, 2 * nqubits * (2,))
+            state = np.transpose(state, einsum_utils.reverse_order(order))
+        else:
+            matrix = np.reshape(self.asmatrix(gate), 2 * len(gate.qubits) * (2,))
+            matrixc = np.conj(matrix)
+            left, right = einsum_utils.apply_gate_density_matrix_string(gate.qubits, nqubits)
+            state = np.einsum(right, state, matrixc)
+            state = np.einsum(left, state, matrix)
+        return np.reshape(state, 2 * (2 ** nqubits,))
+
+    def apply_channel(self, channel, state, nqubits):
+        # TODO: Think how to implement seed
+        for coeff, gate in zip(channel.coefficients, channel.gates):
+            if np.random.random() < coeff:
+                state = self.apply_gate(gate, state, nqubits)
+        return state
+
+    def apply_channel_density_matrix(self, channel, state, nqubits):
+        # TODO: Think how to implement seed
+        # TODO: Inverse gates may be needed for qibojit (in-place updates)
+        state = self.cast(state)
+        new_state = (1 - channel.coefficient_sum) * state
+        for coeff, gate in zip(channel.coefficients, channel.gates):
+            new_state += coeff * self.apply_gate_density_matrix(gate, state, nqubits)
+        return new_state
+
+    def calculate_probabilities(self, result, qubits):
+        # TODO: Implement GPU fallback for relevant backends
+        tensor = self.get_state_tensor(result)
+        rtype = tensor.real.dtype
+        if result.density_matrix:
+            order = tuple(sorted(qubits))
+            order += tuple(i for i in range(result.nqubits) if i not in qubits)
+            order = order + tuple(i + result.nqubits for i in order)
+            shape = 2 * (2 ** len(qubits), 2 ** (result.nqubits - len(qubits)))
+            tensor = np.reshape(tensor, 2 * result.nqubits * (2,))
+            tensor = np.reshape(np.transpose(tensor, order), shape)
+            probs = np.einsum("abab->a", tensor).astype(rtype)
+            probs = np.reshape(probs, len(qubits) * (2,))
+        else:
+            unmeasured_qubits = tuple(i for i in range(result.nqubits) if i not in qubits)
+            tensor = np.reshape(np.abs(tensor) ** 2, result.nqubits * (2,))
+            probs = np.sum(tensor.astype(rtype), axis=unmeasured_qubits)
+
+        # arrange probabilities according to the given ``qubits`` ordering
+        unmeasured, reduced = [], {}
+        for i in range(result.nqubits):
+            if i in qubits:
+                reduced[i] = i - len(unmeasured)
+            else:
+                unmeasured.append(i)
+        probs = np.transpose(probs, [reduced.get(i) for i in qubits])
+        return probs.ravel()
+
+    def set_seed(self, seed):
+        np.random.seed(seed)
+
+    def sample_shots(self, probabilities, nshots):
+        # TODO: Implement GPU fallback for relevant backends
+        return np.random.choice(range(len(probabilities)), size=nshots, p=probabilities)
+
+    def samples_to_binary(self, samples, nqubits):
+        qrange = np.arange(nqubits - 1, -1, -1, dtype="int32")
+        return np.mod(np.right_shift(samples[:, np.newaxis], qrange), 2)
+
+    def samples_to_decimal(self, samples, nqubits):
+        qrange = np.arange(nqubits - 1, -1, -1, dtype="int32")
+        qrange = (2 ** qrange)[:, np.newaxis]
+        return np.matmul(samples, qrange)[:, 0]
+
+    def sample_frequencies(self, probabilities, nshots):
+        # TODO: Implement GPU fallback for relevant backends
         from qibo.config import SHOT_BATCH_SIZE
+        nprobs = probabilities / np.sum(probabilities)
         def update_frequencies(nsamples, frequencies):
-            samples = self.random.choice(
-                range(len(probs)), size=nsamples, p=probs/self.backend.sum(probs))
-            res, counts = self.backend.unique(samples, return_counts=True)
+            samples = np.random.choice(range(len(nprobs)), size=nsamples, p=nprobs)
+            res, counts = np.unique(samples, return_counts=True)
             frequencies[res] += counts
             return frequencies
 
-        frequencies = self.zeros(int(probs.shape[0]), dtype=self.dtypes('DTYPEINT'))
+        frequencies = np.zeros(len(nprobs), dtype="int64")
         for _ in range(nshots // SHOT_BATCH_SIZE):
             frequencies = update_frequencies(SHOT_BATCH_SIZE, frequencies)
         frequencies = update_frequencies(nshots % SHOT_BATCH_SIZE, frequencies)
-        return frequencies
+        return collections.Counter({i: f for i, f in enumerate(frequencies) if f > 0})
 
-    def compile(self, func):
-        return func
-
-    class DummyModule:
-
-        def __enter__(self, *args):
-            pass
-
-        def __exit__(self, *args):
-            pass
-
-    def device(self, device_name):
-        return self.DummyModule()
-
-    def set_seed(self, seed):
-        self.backend.random.seed(seed)
-
-    def create_einsum_cache(self, qubits, nqubits, ncontrol=None):
-        return einsum_utils.EinsumCache(qubits, nqubits, ncontrol)
-
-    def einsum_call(self, cache, state, matrix):
-        return self.einsum(cache, state, matrix)
-
-    class GateCache:
-        pass
-
-    def create_gate_cache(self, gate):
-        cache = self.GateCache()
-        s = 1 + gate.density_matrix
-        cache.tensor_shape = self.cast(s * gate.nqubits * (2,), dtype='DTYPEINT')
-        cache.flat_shape = self.cast(s * (2 ** gate.nqubits,), dtype='DTYPEINT')
-        if gate.is_controlled_by:
-            cache.control_cache = einsum_utils.ControlCache(gate)
-            nactive = gate.nqubits - len(gate.control_qubits)
-            targets = cache.control_cache.targets
-            ncontrol = len(gate.control_qubits)
-            cache.calculation_cache = self.create_einsum_cache(
-                targets, nactive, ncontrol)
-        else:
-            cache.calculation_cache = self.create_einsum_cache(gate.qubits, gate.nqubits)
-        return cache
-
-    def reshape_matrix(self, matrix):
-        """Reshapes the gate matrix to the tensor shape.
-
-        Helper method for gate calls.
-        """
-        rank = int(math.log2(int(matrix.shape[0])))
-        return self.reshape(matrix, 2 * rank * (2,))
-
-    def _state_vector_call(self, gate, state):
-        state = self.reshape(state, gate.cache.tensor_shape)
-        matrix = self.reshape_matrix(gate.native_op_matrix)
-        if gate.is_controlled_by:
-            ncontrol = len(gate.control_qubits)
-            nactive = gate.nqubits - ncontrol
-            state = self.transpose(state, gate.cache.control_cache.order(False))
-            # Apply `einsum` only to the part of the state where all controls
-            # are active. This should be `state[-1]`
-            state = self.reshape(state, (2 ** ncontrol,) + nactive * (2,))
-            updates = self.einsum_call(gate.cache.calculation_cache.vector, state[-1], matrix)
-            # Concatenate the updated part of the state `updates` with the
-            # part of of the state that remained unaffected `state[:-1]`.
-            state = self.concatenate([state[:-1], updates[self.newaxis]], axis=0)
-            state = self.reshape(state, gate.nqubits * (2,))
-            # Put qubit indices back to their proper places
-            state = self.transpose(state, gate.cache.control_cache.reverse(False))
-        else:
-            einsum_str = gate.cache.calculation_cache.vector
-            state = self.einsum_call(einsum_str, state, matrix)
-        return self.reshape(state, gate.cache.flat_shape)
-
-    def state_vector_matrix_call(self, gate, state):
-        return self._state_vector_call(gate, state)
-
-    def _density_matrix_call(self, gate, state):
-        state = self.reshape(state, gate.cache.tensor_shape)
-        matrix = self.reshape_matrix(gate.native_op_matrix)
-        matrixc = self.conj(matrix)
-        if gate.is_controlled_by:
-            ncontrol = len(gate.control_qubits)
-            nactive = gate.nqubits - ncontrol
-            n = 2 ** ncontrol
-            state = self.transpose(state, gate.cache.control_cache.order(True))
-            state = self.reshape(state, 2 * (n,) + 2 * nactive * (2,))
-            state01 = self.gather(state, indices=range(n - 1), axis=0)
-            state01 = self.squeeze(self.gather(state01, indices=[n - 1], axis=1), axis=1)
-            state01 = self.einsum_call(gate.cache.calculation_cache.right0, state01, matrixc)
-            state10 = self.gather(state, indices=range(n - 1), axis=1)
-            state10 = self.squeeze(self.gather(state10, indices=[n - 1], axis=0), axis=0)
-            state10 = self.einsum_call(gate.cache.calculation_cache.left0,
-                                       state10, matrix)
-
-            state11 = self.squeeze(self.gather(state, indices=[n - 1], axis=0), axis=0)
-            state11 = self.squeeze(self.gather(state11, indices=[n - 1], axis=0), axis=0)
-            state11 = self.einsum_call(gate.cache.calculation_cache.right, state11, matrixc)
-            state11 = self.einsum_call(gate.cache.calculation_cache.left, state11, matrix)
-
-            state00 = self.gather(state, indices=range(n - 1), axis=0)
-            state00 = self.gather(state00, indices=range(n - 1), axis=1)
-            state01 = self.concatenate([state00, state01[:, self.newaxis]], axis=1)
-            state10 = self.concatenate([state10, state11[self.newaxis]], axis=0)
-            state = self.concatenate([state01, state10[self.newaxis]], axis=0)
-            state = self.reshape(state, 2 * gate.nqubits * (2,))
-            state = self.transpose(state, gate.cache.control_cache.reverse(True))
-        else:
-            state = self.einsum_call(gate.cache.calculation_cache.right, state, matrixc)
-            state = self.einsum_call(gate.cache.calculation_cache.left, state, matrix)
-        return self.reshape(state, gate.cache.flat_shape)
-
-    def density_matrix_matrix_call(self, gate, state):
-        return self._density_matrix_call(gate, state)
-
-    def _density_matrix_half_call(self, gate, state):
-        if gate.is_controlled_by: # pragma: no cover
-            raise_error(NotImplementedError, "Gate density matrix half call is "
-                                             "not implemented for ``controlled_by``"
-                                             "gates.")
-        matrix = self.reshape_matrix(gate.native_op_matrix)
-        state = self.reshape(state, gate.cache.tensor_shape)
-        state = self.einsum_call(gate.cache.calculation_cache.left, state, matrix)
-        return self.reshape(state, gate.cache.flat_shape)
-
-    def density_matrix_half_matrix_call(self, gate, state):
-        return self._density_matrix_half_call(gate, state)
-
-    def _append_zeros(self, state, qubits, results):
-        """Helper method for `state_vector_collapse` and `density_matrix_collapse`."""
-        for q, r in zip(qubits, results):
-            state = self.expand_dims(state, axis=q)
-            if r:
-                state = self.concatenate([self.zeros_like(state), state], axis=q)
-            else:
-                state = self.concatenate([state, self.zeros_like(state)], axis=q)
-        return state
-
-    def state_vector_collapse(self, gate, state, result):
-        state = self.reshape(state, gate.cache.tensor_shape)
-        substate = self.gather_nd(self.transpose(state, gate.cache.order), result)
-        norm = self.sum(self.square(self.abs(substate)))
-        state = substate / self.cast(self.sqrt(norm), dtype=state.dtype)
-        state = self._append_zeros(state, sorted(gate.target_qubits), result)
-        return self.reshape(state, gate.cache.flat_shape)
-
-    def density_matrix_collapse(self, gate, state, result):
-        density_matrix_result = 2 * result
-        sorted_qubits = sorted(gate.target_qubits)
-        sorted_qubits = sorted_qubits + [q + gate.nqubits for q in sorted_qubits]
-        state = self.reshape(state, gate.cache.tensor_shape)
-        substate = self.gather_nd(self.transpose(state, gate.cache.order),
-                                  density_matrix_result)
-        n = 2 ** (len(tuple(substate.shape)) // 2)
-        norm = self.trace(self.reshape(substate, (n, n)))
-        state = substate / norm
-        state = self._append_zeros(state, sorted_qubits, density_matrix_result)
-        return self.reshape(state, gate.cache.flat_shape)
-
-    def on_cpu(self): # pragma: no cover
-        return self.device()
-
-    def cpu_tensor(self, x, dtype=None): # pragma: no cover
-        if dtype is None:
-            dtype = x.dtype
-        return self.np.asarray(x, dtype=dtype)
-
-    def cpu_cast(self, x, dtype='DTYPECPX'): # pragma: no cover
-        dtype = self._dtypes.get(dtype)
-        return self.np.array(x, dtype=dtype)
-
-    def cpu_assign(self, state, i, piece): # pragma: no cover
-        state.pieces[i] = self.to_numpy(piece)
-
-    def transpose_state(self, pieces, state, nqubits, order):
-        pieces = self.reshape(self.backend.stack(pieces), nqubits * (2,))
-        return self.reshape(self.transpose(pieces, order), state.shape)
+    def calculate_frequencies(self, samples):
+        res, counts = np.unique(samples, return_counts=True)
+        res, counts = np.array(res), np.array(counts)
+        return collections.Counter({k: v for k, v in zip(res, counts)})
 
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
         value = self.to_numpy(value)
         target = self.to_numpy(target)
-        self.np.testing.assert_allclose(value, target, rtol=rtol, atol=atol)
+        np.testing.assert_allclose(value, target, rtol=rtol, atol=atol)
+
+    def test_regressions(self, name):
+        if name == "test_measurementresult_apply_bitflips":
+            return [
+                [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
+                [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 0, 2, 0, 0, 0, 0, 0]
+            ]
+        elif name == "test_probabilistic_measurement": 
+            return {0: 249, 1: 231, 2: 253, 3: 267}
+        elif name == "test_unbalanced_probabilistic_measurement": 
+            return {0: 171, 1: 148, 2: 161, 3: 520}
+        elif name == "test_post_measurement_bitflips_on_circuit": 
+            return [
+                {5: 30}, {5: 18, 4: 5, 7: 4, 1: 2, 6: 1},
+                {4: 8, 2: 6, 5: 5, 1: 3, 3: 3, 6: 2, 7: 2, 0: 1}
+            ]
+        else:
+            return None

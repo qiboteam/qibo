@@ -5,7 +5,7 @@ Pytest fixtures.
 """
 import sys
 import pytest
-from qibo.engines import construct_backend
+from qibo.backends import construct_backend
 
 
 ACTIVE_TESTS = {
