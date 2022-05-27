@@ -72,7 +72,7 @@ class CircuitResult:
 
     def __array__(self):
         """State's tensor representation as an array."""
-        return self.state()
+        return self.state(numpy=True)
 
     def probabilities(self, qubits=None):
         """Calculates measurement probabilities by tracing out qubits.
