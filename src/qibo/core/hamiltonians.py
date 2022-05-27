@@ -2,7 +2,7 @@ import itertools
 import sympy
 from qibo import K, gates
 from qibo.config import log, raise_error, EINSUM_CHARS
-from qibo.abstractions import hamiltonians, states
+from qibo.abstractions import hamiltonians
 
 
 class Hamiltonian(hamiltonians.MatrixHamiltonian):

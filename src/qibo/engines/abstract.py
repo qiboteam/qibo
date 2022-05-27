@@ -30,7 +30,7 @@ class Engine(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def get_state_symbolic(self, result, decimals, cutoff, max_terms): # pragma: no cover
+    def get_state_symbolic(self, result, decimals=5, cutoff=1e-10, max_terms=20): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
@@ -133,6 +133,9 @@ class Simulator(Engine):
         if circuit.accelerators and not self.supports_multigpu:
             raise_error(NotImplementedError, f"{self} does not support distributed execution.")
 
+        if isinstance(initial_state, CircuitResult):
+            initial_state = initial_state.state()
+
         try:
             nqubits = circuit.nqubits
             if circuit.density_matrix:
@@ -165,14 +168,14 @@ class Simulator(Engine):
                                        "different one using ``qibo.set_device``.")
 
     def get_state_repr(self, result):
-        return self.circuit_result_symbolic(result)
+        return self.get_state_symbolic(result)
 
     def get_state_tensor(self, result):
         return result.execution_result
 
-    def get_state_symbolic(self, result, decimals, cutoff, max_terms):
+    def get_state_symbolic(self, result, decimals=5, cutoff=1e-10, max_terms=20):
         import numpy as np
-        state = self.to_numpy(self.state_tensor(result))
+        state = self.to_numpy(self.get_state_tensor(result))
         terms = []
         if result.density_matrix:
             indi, indj = K.np.nonzero(state)

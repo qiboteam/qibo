@@ -2,7 +2,6 @@ import math
 from abc import ABC, abstractmethod
 from qibo import K
 from qibo.abstractions import callbacks as abstract_callbacks
-from qibo.abstractions.states import AbstractState
 from qibo.config import EIGVAL_CUTOFF, raise_error, log
 
 

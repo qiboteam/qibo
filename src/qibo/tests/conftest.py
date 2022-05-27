@@ -28,7 +28,9 @@ ACTIVE_TESTS = {
 }
 
 # backends to be tested
-BACKENDS = ["numpy"]#, "qibojit-numba", "qibojit-cupy"]
+BACKENDS = ["numpy", "qibojit-numba", "qibojit-cupy"]
+BACKENDS = ["numpy", "qibojit-numba"]
+#BACKENDS = ["numpy"]
 
 def get_backend(backend_name):
     if "-" in backend_name:
