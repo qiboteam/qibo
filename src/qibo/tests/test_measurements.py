@@ -368,3 +368,17 @@ def test_registers_in_circuit_with_unmeasured_qubits(backend, accelerators):
     assert_register_result(backend, result, 
                            decimal_samples, binary_samples,
                            decimal_frequencies, binary_frequencies)
+
+
+def test_measurement_density_matrix(backend):
+    c = models.Circuit(2, density_matrix=True)
+    c.add(gates.X(0))
+    c.add(gates.M(0, 1))
+    result = backend.execute_circuit(c, nshots=100)
+    target_binary_samples = np.zeros((100, 2))
+    target_binary_samples[:, 0] = 1
+    assert_result(backend, result,
+                  decimal_samples=2 * np.ones((100,)),
+                  binary_samples=target_binary_samples,
+                  decimal_frequencies={2: 100},
+                  binary_frequencies={"10": 100})

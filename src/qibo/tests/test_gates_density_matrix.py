@@ -193,22 +193,3 @@ def test_controlled_by_random(backend, nqubits):
     target_psi = backend.execute_circuit(c, np.copy(initial_psi))
     target_rho = np.outer(target_psi, np.conj(target_psi))
     backend.assert_allclose(final_rho, target_rho)
-
-
-@pytest.mark.skip("Move this to measurement tests")
-def test_measurement_density_matrix(backend):
-    from qibo.tests.test_measurement_gate import assert_result
-    state = np.zeros(4)
-    state[2] = 1
-    rho = np.outer(state, state.conj())
-    mgate = gates.M(0, 1)
-    mgate.density_matrix = True
-    result = mgate(K.cast(rho), nshots=100)
-
-    target_binary_samples = np.zeros((100, 2))
-    target_binary_samples[:, 0] = 1
-    assert_result(result,
-                  decimal_samples=2 * np.ones((100,)),
-                  binary_samples=target_binary_samples,
-                  decimal_frequencies={2: 100},
-                  binary_frequencies={"10": 100})
