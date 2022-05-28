@@ -14,6 +14,8 @@ class CircuitResult:
 
         self._samples = None
         self._frequencies = None
+        self._bitflip_p0 = None
+        self._bitflip_p1 = None
 
     def __len__(self):
         """Number of components in the state's tensor representation."""
@@ -113,6 +115,13 @@ class CircuitResult:
         if self._samples is None:
             probs = self.probabilities(qubits)
             self._samples = self.backend.sample_shots(probs, self.nshots)
+            if self.circuit.measurement_gate.has_bitflip_noise():
+                p0, p1 = self.circuit.measurement_gate.bitflip_map
+                bitflip_probabilities = [[p0.get(q) for q in qubits],
+                                         [p1.get(q) for q in qubits]]
+                noiseless_samples = self.backend.samples_to_binary(self._samples, len(qubits))
+                noisy_samples = self.backend.apply_bitflips(noiseless_samples, bitflip_probabilities)
+                self._samples = self.backend.samples_to_decimal(noisy_samples, len(qubits))
 
         if registers:
             qubit_map = {q: i for i, q in enumerate(qubits)}
@@ -166,6 +175,8 @@ class CircuitResult:
         """
         qubits = self.circuit.measurement_gate.qubits
         if self._frequencies is None:
+            if self.circuit.measurement_gate.has_bitflip_noise() and self._samples is None:
+                self._samples = self.samples(binary=False)
             if self._samples is None:
                 probs = self.probabilities(qubits)
                 self._frequencies = self.backend.sample_frequencies(probs, self.nshots)

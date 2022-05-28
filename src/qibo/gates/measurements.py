@@ -81,6 +81,16 @@ class M(Gate):
 
         raise_error(TypeError, "Invalid type {} of bitflip map.".format(probs))
 
+    def _get_bitflip_map(self, p: Optional["ProbsType"] = None) -> Dict[int, float]:
+        """Creates dictionary with bitflip probabilities."""
+        if p is None:
+            return {q: 0 for q in self.qubits}
+        pt = self._get_bitflip_tuple(self.qubits, p)
+        return {q: p for q, p in zip(self.qubits, pt)}
+
+    def has_bitflip_noise(self):
+        return sum(self.bitflip_map[0].values()) > 0 or sum(self.bitflip_map[1].values()) > 0
+
     @staticmethod
     def einsum_string(qubits, nqubits, measuring=False):
         """Generates einsum string for partial trace of density matrices.
@@ -118,13 +128,6 @@ class M(Gate):
         left_in, left_out = "".join(left_in), "".join(left_out)
         right_in, right_out = "".join(right_in), "".join(right_out)
         return f"{left_in}{right_in}->{left_out}{right_out}"
-
-    def _get_bitflip_map(self, p: Optional["ProbsType"] = None) -> Dict[int, float]:
-        """Creates dictionary with bitflip probabilities."""
-        if p is None:
-            return {q: 0 for q in self.qubits}
-        pt = self._get_bitflip_tuple(self.qubits, p)
-        return {q: p for q, p in zip(self.qubits, pt)}
 
     def symbol(self):
         """Returns symbol containing measurement outcomes for ``collapse=True`` gates."""

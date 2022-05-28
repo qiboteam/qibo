@@ -232,6 +232,15 @@ class NumpyBackend(Simulator):
         res, counts = np.array(res), np.array(counts)
         return collections.Counter({k: v for k, v in zip(res, counts)})
 
+    def apply_bitflips(self, noiseless_samples, bitflip_probabilities):
+        fprobs = np.array(bitflip_probabilities, dtype="float64")
+        sprobs = np.random.random(noiseless_samples.shape)
+        flip0 = np.array(sprobs < fprobs[0], dtype=noiseless_samples.dtype)
+        flip1 = np.array(sprobs < fprobs[1], dtype=noiseless_samples.dtype)
+        noisy_samples = noiseless_samples + (1 - noiseless_samples) * flip0
+        noisy_samples = noisy_samples - noiseless_samples * flip1
+        return noisy_samples
+
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
         value = self.to_numpy(value)
         target = self.to_numpy(target)

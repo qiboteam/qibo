@@ -80,42 +80,32 @@ def test_measurements_with_probabilistic_noise(backend):
     K.assert_allclose(samples, target_samples)
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("i,probs", [(0, [0.0, 0.0, 0.0]),
                                      (1, [0.1, 0.3, 0.2]),
                                      (2, [0.5, 0.5, 0.5])])
 def test_post_measurement_bitflips_on_circuit(backend, accelerators, i, probs):
     """Check bitflip errors on circuit measurements."""
-    K.set_seed(123)
+    backend.set_seed(123)
     c = models.Circuit(5, accelerators=accelerators)
     c.add([gates.X(0), gates.X(2), gates.X(3)])
     c.add(gates.M(0, 1, p0={0: probs[0], 1: probs[1]}))
     c.add(gates.M(3, p0=probs[2]))
-    result = c(nshots=30).frequencies(binary=False)
-    targets = K.test_regressions("test_post_measurement_bitflips_on_circuit")
-    assert result == targets[i]
+    result = backend.execute_circuit(c, nshots=30)
+    freqs = result.frequencies(binary=False)
+    targets = backend.test_regressions("test_post_measurement_bitflips_on_circuit")
+    assert freqs == targets[i]
 
 
-@pytest.mark.skip
 def test_post_measurement_bitflips_on_circuit_result(backend):
     """Check bitflip errors on ``CircuitResult`` objects."""
     thetas = np.random.random(4)
+    backend.set_seed(123)
     c = models.Circuit(4)
     c.add((gates.RX(i, theta=t) for i, t in enumerate(thetas)))
-    c.add(gates.M(0, 1, register_name="a"))
-    c.add(gates.M(3, register_name="b"))
-    result = c(nshots=30)
-    samples = result.samples()
-    backend.set_seed(123)
-    noisy_result = result.copy().apply_bitflips({0: 0.2, 1: 0.4, 3: 0.3})
-    noisy_samples = noisy_result.samples(binary=True)
-    register_samples = noisy_result.samples(binary=True, registers=True)
-
-    backend.set_seed(123)
-    sprobs = K.to_numpy(K.random_uniform(samples.shape))
-    flipper = K.cast(sprobs < np.array([0.2, 0.4, 0.3]), dtype=samples.dtype)
-    target_samples = (samples + flipper) % 2
-    backend.assert_allclose(noisy_samples, target_samples)
-    # Check register samples
-    backend.assert_allclose(register_samples["a"], target_samples[:, :2])
-    backend.assert_allclose(register_samples["b"], target_samples[:, 2:])
+    c.add(gates.M(0, 1, register_name="a", p0={0: 0.2, 1: 0.4}))
+    c.add(gates.M(3, register_name="b", p0=0.3))
+    result = backend.execute_circuit(c, nshots=30)
+    samples = result.samples(binary=True)
+    register_samples = result.samples(binary=True, registers=True)
+    backend.assert_allclose(register_samples["a"], samples[:, :2])
+    backend.assert_allclose(register_samples["b"], samples[:, 2:])
