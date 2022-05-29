@@ -2,6 +2,7 @@ import abc
 from qibo.config import raise_error
 from qibo.states import CircuitResult
 from qibo.gates.abstract import ParametrizedGate, SpecialGate
+from qibo.gates.channels import Channel
 
 
 class Backend(abc.ABC):
@@ -75,7 +76,7 @@ class Simulator(Backend):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def cast(self, x):
+    def cast(self, x, copy=False):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
@@ -127,7 +128,6 @@ class Simulator(Backend):
         raise_error(NotImplementedError)
 
     def execute_circuit(self, circuit, initial_state=None, nshots=None):
-        # TODO: Implement shots
         # TODO: Implement repeated execution
         # TODO: Implement callbacks
         if circuit.accelerators and not self.supports_multigpu:
@@ -149,6 +149,9 @@ class Simulator(Backend):
                     state = self.apply_gate_density_matrix(gate, state, nqubits)
             
             else:
+                if circuit.repeated_execution:
+                    return self.execute_circuit_repeated(circuit, initial_state, nshots)
+
                 if initial_state is None:
                     state = self.zero_state(nqubits)
                 else:
@@ -166,6 +169,37 @@ class Simulator(Backend):
             raise_error(RuntimeError, f"State does not fit in {self.device} memory."
                                        "Please switch the execution device to a "
                                        "different one using ``qibo.set_device``.")
+
+    def execute_circuit_repeated(self, circuit, initial_state=None, nshots=None):
+        results = []
+        nqubits = circuit.nqubits
+        for _ in range(nshots):
+            if initial_state is None:
+                state = self.zero_state(nqubits)
+            else:
+                # cast to proper complex type
+                state = self.cast(initial_state, copy=True)
+            
+            for gate in circuit.queue:
+                if isinstance(gate, Channel):
+                    state = self.apply_channel(gate, state, nqubits)
+                else:
+                    state = self.apply_gate(gate, state, nqubits)
+            
+            if circuit.measurement_gate:
+                result = CircuitResult(self, circuit, state, nshots)
+                results.append(result.samples(binary=False))
+            else:
+                results.append(state)
+
+        if circuit.measurement_gate:
+            final_result = CircuitResult(self, circuit, state, nshots)
+            final_result._samples = self.cast(results)
+            circuit._final_state = final_result
+            return final_result
+        else:
+            circuit._final_state = CircuitResult(self, circuit, results[-1], nshots)
+            return results
 
     def get_state_repr(self, result):
         return self.get_state_symbolic(result)

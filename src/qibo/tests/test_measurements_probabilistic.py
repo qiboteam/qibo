@@ -51,7 +51,6 @@ def test_unbalanced_probabilistic_measurement(backend, use_samples):
     qibo.set_threads(original_threads)
 
 
-@pytest.mark.skip
 def test_measurements_with_probabilistic_noise(backend):
     """Check measurements when simulating noise with repeated execution."""
     thetas = np.random.random(5)
@@ -60,11 +59,12 @@ def test_measurements_with_probabilistic_noise(backend):
     c.add((gates.PauliNoiseChannel(i, px=0.0, py=0.2, pz=0.4, seed=123)
            for i in range(5)))
     c.add(gates.M(*range(5)))
-    K.set_seed(123)
-    samples = c(nshots=20).samples()
+    backend.set_seed(123)
+    result = backend.execute_circuit(c, nshots=20)
+    samples = result.samples()
 
     np.random.seed(123)
-    K.set_seed(123)
+    backend.set_seed(123)
     target_samples = []
     for _ in range(20):
         noiseless_c = models.Circuit(5)
@@ -75,9 +75,10 @@ def test_measurements_with_probabilistic_noise(backend):
             if np.random.random() < 0.4:
                 noiseless_c.add(gates.Z(i))
         noiseless_c.add(gates.M(*range(5)))
-        target_samples.append(noiseless_c(nshots=1).samples())
+        result = backend.execute_circuit(noiseless_c, nshots=1)
+        target_samples.append(result.samples())
     target_samples = np.concatenate(target_samples, axis=0)
-    K.assert_allclose(samples, target_samples)
+    backend.assert_allclose(samples, target_samples)
 
 
 @pytest.mark.parametrize("i,probs", [(0, [0.0, 0.0, 0.0]),

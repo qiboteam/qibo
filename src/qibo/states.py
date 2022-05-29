@@ -4,7 +4,7 @@ from qibo.config import raise_error
 
 class CircuitResult:
 
-    def __init__(self, backend, circuit, execution_result, nshots):
+    def __init__(self, backend, circuit, execution_result, nshots=None):
         self.backend = backend
         self.circuit = circuit
         self.nqubits = circuit.nqubits

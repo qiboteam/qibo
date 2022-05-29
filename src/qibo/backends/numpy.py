@@ -22,8 +22,8 @@ class NumpyBackend(Simulator):
         if nthreads > 1:
             raise_error(ValueError, "numpy does not support more than one thread.")
 
-    def cast(self, x):
-        return np.array(x, dtype=self.dtype, copy=False)
+    def cast(self, x, copy=False):
+        return np.array(x, dtype=self.dtype, copy=copy)
 
     def to_numpy(self, x):
         return x
@@ -152,15 +152,12 @@ class NumpyBackend(Simulator):
         return np.reshape(state, 2 * (2 ** nqubits,))
 
     def apply_channel(self, channel, state, nqubits):
-        # TODO: Think how to implement seed
         for coeff, gate in zip(channel.coefficients, channel.gates):
             if np.random.random() < coeff:
                 state = self.apply_gate(gate, state, nqubits)
         return state
 
     def apply_channel_density_matrix(self, channel, state, nqubits):
-        # TODO: Think how to implement seed
-        # TODO: Inverse gates may be needed for qibojit (in-place updates)
         state = self.cast(state)
         new_state = (1 - channel.coefficient_sum) * state
         for coeff, gate in zip(channel.coefficients, channel.gates):
