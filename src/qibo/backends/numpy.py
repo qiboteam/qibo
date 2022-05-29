@@ -22,8 +22,10 @@ class NumpyBackend(Simulator):
         if nthreads > 1:
             raise_error(ValueError, "numpy does not support more than one thread.")
 
-    def cast(self, x, copy=False):
-        return np.array(x, dtype=self.dtype, copy=copy)
+    def cast(self, x, dtype=None, copy=False):
+        if dtype is None:
+            dtype = self.dtype
+        return np.array(x, dtype=dtype, copy=copy)
 
     def to_numpy(self, x):
         return x
@@ -198,6 +200,9 @@ class NumpyBackend(Simulator):
     def sample_shots(self, probabilities, nshots):
         # TODO: Implement GPU fallback for relevant backends
         return np.random.choice(range(len(probabilities)), size=nshots, p=probabilities)
+
+    def aggregate_shots(self, shots):
+        return np.array(shots, dtype=shots[0].dtype)
 
     def samples_to_binary(self, samples, nqubits):
         qrange = np.arange(nqubits - 1, -1, -1, dtype="int32")

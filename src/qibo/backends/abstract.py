@@ -187,14 +187,14 @@ class Simulator(Backend):
                     state = self.apply_gate(gate, state, nqubits)
             
             if circuit.measurement_gate:
-                result = CircuitResult(self, circuit, state, nshots)
-                results.append(result.samples(binary=False))
+                result = CircuitResult(self, circuit, state, 1)
+                results.append(result.samples(binary=False)[0])
             else:
                 results.append(state)
 
         if circuit.measurement_gate:
             final_result = CircuitResult(self, circuit, state, nshots)
-            final_result._samples = self.cast(results)
+            final_result._samples = self.aggregate_shots(results)
             circuit._final_state = final_result
             return final_result
         else:
@@ -246,6 +246,10 @@ class Simulator(Backend):
 
     @abc.abstractmethod
     def sample_shots(self, probabilities, nshots): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def aggregate_shots(self, shots): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
