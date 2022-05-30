@@ -805,7 +805,7 @@ class Circuit:
         See :meth:`qibo.core.circuit.Circuit.execute` for more
         details.
         """
-        from qibo.engines import GlobalBackend
+        from qibo.backends import GlobalBackend
         return GlobalBackend().execute_circuit(self, initial_state, nshots)
 
     def __call__(self, initial_state=None, nshots=None):
