@@ -27,14 +27,6 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def get_state_tensor(self, result): # pragma: no cover
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def get_state_symbolic(self, result, decimals=5, cutoff=1e-10, max_terms=20): # pragma: no cover
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
     def calculate_probabilities(self, result): # pragma: no cover
         raise_error(NotImplementedError)
 
@@ -210,42 +202,25 @@ class Simulator(Backend):
             return results
 
     def get_state_repr(self, result):
-        return self.get_state_symbolic(result)
+        return result.symbolic()
 
     def get_state_tensor(self, result):
         return result.execution_result
 
-    def get_state_symbolic(self, result, decimals=5, cutoff=1e-10, max_terms=20):
-        import numpy as np
-        state = self.to_numpy(self.get_state_tensor(result))
-        terms = []
-        if result.density_matrix:
-            indi, indj = K.np.nonzero(state)
-            for i, j in zip(indi, indj):
-                bi = bin(i)[2:].zfill(self.nqubits)
-                bj = bin(j)[2:].zfill(self.nqubits)
-                if K.np.abs(state[i, j]) >= cutoff:
-                    x = round(state[i, j], decimals)
-                    terms.append(f"{x}|{bi}><{bj}|")
-                if len(terms) >= max_terms:
-                    terms.append("...")
-                    break
-    
-        else:
-            terms = []
-            for i in np.nonzero(state)[0]:
-                b = bin(i)[2:].zfill(result.nqubits)
-                if np.abs(state[i]) >= cutoff:
-                    x = round(state[i], decimals)
-                    terms.append(f"{x}|{b}>")
-                if len(terms) >= max_terms:
-                    terms.append("...")
-                    break
-        
-        return " + ".join(terms)
+    @abc.abstractmethod
+    def calculate_symbolic(self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20): # pragma: no cover
+        raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def calculate_probabilities(self, result): # pragma: no cover
+    def calculate_symbolic_density_matrix(self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def calculate_probabilities(self, state, qubits, nqubits): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def calculate_probabilities_density_matrix(self, state, qubits, nqubits): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod

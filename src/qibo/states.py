@@ -67,7 +67,12 @@ class CircuitResult:
         Returns:
             A string representing the state in the computational basis.
         """
-        return self.backend.get_state_symbolic(self, result, decimals, cutoff, max_terms)
+        state = self.backend.get_state_tensor(self)
+        if self.density_matrix:
+            terms = self.backend.calculate_symbolic(state, self.nqubits, decimals, cutoff, max_terms)
+        else:
+            terms = self.backend.calculate_symbolic_density_matrix(state, self.nqubits, decimals, cutoff, max_terms)
+        return " + ".join(terms)
 
     def __repr__(self):
         return self.backend.get_state_repr(self)
@@ -86,7 +91,12 @@ class CircuitResult:
         """
         if qubits is None:
             qubits = self.circuit.measurement_gate.qubits
-        return self.backend.calculate_probabilities(self, qubits)
+
+        state = self.backend.get_state_tensor(self)
+        if self.density_matrix:
+            return self.backend.calculate_probabilities_density_matrix(state, qubits, self.nqubits)
+        else:
+            return self.backend.calculate_probabilities(state, qubits, self.nqubits)
 
     def samples(self, binary=True, registers=False):
         """Returns raw measurement samples.

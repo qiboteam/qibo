@@ -206,32 +206,63 @@ class NumpyBackend(Simulator):
         state = self._append_zeros(state, qubits, result)
         return np.reshape(state, shape)
 
-    def calculate_probabilities(self, result, qubits):
-        tensor = self.get_state_tensor(result)
-        rtype = tensor.real.dtype
-        if result.density_matrix:
-            order = tuple(sorted(qubits))
-            order += tuple(i for i in range(result.nqubits) if i not in qubits)
-            order = order + tuple(i + result.nqubits for i in order)
-            shape = 2 * (2 ** len(qubits), 2 ** (result.nqubits - len(qubits)))
-            tensor = np.reshape(tensor, 2 * result.nqubits * (2,))
-            tensor = np.reshape(np.transpose(tensor, order), shape)
-            probs = np.einsum("abab->a", tensor).astype(rtype)
-            probs = np.reshape(probs, len(qubits) * (2,))
-        else:
-            unmeasured_qubits = tuple(i for i in range(result.nqubits) if i not in qubits)
-            tensor = np.reshape(np.abs(tensor) ** 2, result.nqubits * (2,))
-            probs = np.sum(tensor.astype(rtype), axis=unmeasured_qubits)
+    def calculate_symbolic(self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20):
+        state = self.to_numpy(state)
+        terms = []
+        for i in np.nonzero(state)[0]:
+            b = bin(i)[2:].zfill(nqubits)
+            if np.abs(state[i]) >= cutoff:
+                x = round(state[i], decimals)
+                terms.append(f"{x}|{b}>")
+            if len(terms) >= max_terms:
+                terms.append("...")
+                return terms
+        return terms
 
-        # arrange probabilities according to the given ``qubits`` ordering
+    def calculate_symbolic_density_matrix(self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20):
+        state = self.to_numpy(state)
+        terms = []
+        indi, indj = np.nonzero(state)
+        for i, j in zip(indi, indj):
+            bi = bin(i)[2:].zfill(nqubits)
+            bj = bin(j)[2:].zfill(nqubits)
+            if np.abs(state[i, j]) >= cutoff:
+                x = round(state[i, j], decimals)
+                terms.append(f"{x}|{bi}><{bj}|")
+            if len(terms) >= max_terms:
+                terms.append("...")
+                return terms
+        return terms
+
+    @staticmethod
+    def _order_probabilities(probs, qubits, nqubits):
+        """Arrange probabilities according to the given ``qubits`` ordering."""
         unmeasured, reduced = [], {}
-        for i in range(result.nqubits):
+        for i in range(nqubits):
             if i in qubits:
                 reduced[i] = i - len(unmeasured)
             else:
                 unmeasured.append(i)
-        probs = np.transpose(probs, [reduced.get(i) for i in qubits])
-        return probs.ravel()
+        return np.transpose(probs, [reduced.get(i) for i in qubits])
+
+    def calculate_probabilities(self, state, qubits, nqubits):
+        rtype = state.real.dtype
+        unmeasured_qubits = tuple(i for i in range(nqubits) if i not in qubits)
+        state = np.reshape(np.abs(state) ** 2, nqubits * (2,))
+        probs = np.sum(state.astype(rtype), axis=unmeasured_qubits)
+        return self._order_probabilities(probs, qubits, nqubits).ravel()
+
+    def calculate_probabilities_density_matrix(self, state, qubits, nqubits):
+        rtype = state.real.dtype
+        order = tuple(sorted(qubits))
+        order += tuple(i for i in range(nqubits) if i not in qubits)
+        order = order + tuple(i + nqubits for i in order)
+        shape = 2 * (2 ** len(qubits), 2 ** (nqubits - len(qubits)))
+        state = np.reshape(state, 2 * nqubits * (2,))
+        state = np.reshape(np.transpose(state, order), shape)
+        probs = np.einsum("abab->a", state).astype(rtype)
+        probs = np.reshape(probs, len(qubits) * (2,))
+        return self._order_probabilities(probs, qubits, nqubits).ravel()
 
     def set_seed(self, seed):
         np.random.seed(seed)
