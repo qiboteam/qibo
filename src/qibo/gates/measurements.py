@@ -4,6 +4,24 @@ from qibo.gates.abstract import Gate
 from typing import Dict, Optional, Tuple
 
 
+class MeasurementResult:
+
+    def __init__(self, qubits):
+        self.qubits = qubits
+
+        self.backend = None
+        self._samples = []
+
+    def append(self, shot):
+        self._samples.append(shot)
+
+    def samples(self, binary=True):
+        if binary:
+            return self._samples
+        else:
+            return self.backend.samples_to_decimal(self._samples, len(self.qubits))
+
+
 class MeasurementSymbol(sympy.Symbol):
     """``sympy.Symbol`` connected to measurement results.
 
@@ -17,31 +35,12 @@ class MeasurementSymbol(sympy.Symbol):
         cls._counter += 1
         return super().__new__(cls=cls, name=name)
 
-    def __init__(self, qubits, result=None):
-        # create seperate ``MeasurementSymbol`` object that maps to the same
-        # result for each measured qubit so that the user can use the symbol
-        # to control subsequent parametrized gates
-        self.qubit = qubits[0]
+    def __init__(self, index, result):
+        self.index = index
         self.result = result
-        if len(qubits) > 1:
-            self.elements = [self.__class__((q,), self) for q in qubits]
-
-    def samples(self, *args, **kwargs):
-        if self.result:
-            return self.result.samples(*args, **kwargs)
-        else:
-            pass
-
-    def frequencies(self, *args, **kwargs):
-        return self.result.frequencies(*args, **kwargs)
 
     def outcome(self):
-        if self.qubit is None:
-            return self.result.outcome()
-        return self.result.outcome(self.qubit)
-
-    def __getitem__(self, i):
-        return self.elements[i]
+        return self.result.samples()[-1][index]
 
     def evaluate(self, expr):
         """Substitutes the symbol's value in the given expression.
@@ -50,11 +49,6 @@ class MeasurementSymbol(sympy.Symbol):
             expr (sympy.Expr): Sympy expression that involves the current
                 measurement symbol.
         """
-        if self.qubit is None and len(self.result.qubits) > 1:
-            raise_error(NotImplementedError, "Symbolic measurements are not "
-                                             "available for more than one "
-                                             "measured qubits. Please use "
-                                             "seperate measurement gates.")
         return expr.subs(self, self.outcome())
 
 
@@ -94,7 +88,7 @@ class M(Gate):
         self.target_qubits = tuple(q)
         self.register_name = register_name
         self.collapse = collapse
-        self.symbol = None
+        self.result = None
 
         self.init_args = q
         self.init_kwargs = {"register_name": register_name,
@@ -104,12 +98,21 @@ class M(Gate):
             if p0 is not None or p1 is not None:
                 raise_error(NotImplementedError, "Bitflip measurement noise is not "
                                                 "available when collapsing.")
-            self.symbol = MeasurementSymbol(self.target_qubits)
+            self.result = MeasurementResult(self.target_qubits)
 
         if p1 is None: p1 = p0
         if p0 is None: p0 = p1
         self.bitflip_map = (self._get_bitflip_map(p0),
                             self._get_bitflip_map(p1))
+
+    def get_symbols(self):
+        symbols = []
+        for i, q in enumerate(self.target_qubits):
+            symbols.append(MeasurementSymbol(i, self.result))
+        if len(self.target_qubits) > 1:
+            return symbols
+        else:
+            return symbols[0]
 
     @staticmethod
     def _get_bitflip_tuple(qubits: Tuple[int], probs: "ProbsType"

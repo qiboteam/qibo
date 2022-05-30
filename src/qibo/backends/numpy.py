@@ -176,19 +176,27 @@ class NumpyBackend(Simulator):
                 state = np.concatenate([state, np.zeros_like(state)], axis=q)
         return state
 
-    def collapse_state(self, gate, state, result, nqubits):
+    def collapse_state(self, gate, state, nqubits):
         state = self.cast(state)
         shape = state.shape
-        qubits = sorted(gate.target_qubits) 
+        qubits = sorted(gate.target_qubits)
+        # measure and get result
+        probs = self.calculate_probabilities(state, gate.qubits, nqubits)
+        shots = self.sample_shots(probs, 1)
+        shots = self.samples_to_binary(shots, len(qubits))[0]
+        # update the gate's result with the measurement outcome
+        gate.result.backend = self
+        gate.result.append(shots)
+        # collapse state
         state = np.reshape(state, nqubits * (2,))
         order = list(qubits) + [q for q in range(nqubits) if q not in qubits]
-        substate = np.transpose(state, order)[result]
+        substate = np.transpose(state, order)[tuple(shots)]
         norm = np.sqrt(np.sum(np.abs(substate) ** 2))
         state = substate / norm
-        state = self._append_zeros(state, qubits, result)
+        state = self._append_zeros(state, qubits, shots)
         return np.reshape(state, shape)
 
-    def collapse_density_matrix(self, gate, state, result, nqubits):
+    def collapse_density_matrix(self, gate, state, nqubits):
         state = self.cast(state)
         shape = state.shape
         result = 2 * result

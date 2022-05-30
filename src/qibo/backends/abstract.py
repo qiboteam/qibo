@@ -128,7 +128,6 @@ class Simulator(Backend):
         raise_error(NotImplementedError)
 
     def execute_circuit(self, circuit, initial_state=None, nshots=None):
-        # TODO: Implement repeated execution
         # TODO: Implement callbacks
         if circuit.accelerators and not self.supports_multigpu:
             raise_error(NotImplementedError, f"{self} does not support distributed execution.")
@@ -171,6 +170,8 @@ class Simulator(Backend):
                                        "different one using ``qibo.set_device``.")
 
     def execute_circuit_repeated(self, circuit, initial_state=None, nshots=None):
+        from qibo.gates.measurements import M
+        from qibo.gates.channels import Channel
         results = []
         nqubits = circuit.nqubits
         for _ in range(nshots):
@@ -183,6 +184,8 @@ class Simulator(Backend):
             for gate in circuit.queue:
                 if isinstance(gate, Channel):
                     state = self.apply_channel(gate, state, nqubits)
+                elif isinstance(gate, M):
+                    state = self.collapse_state(gate, state, nqubits)
                 else:
                     state = self.apply_gate(gate, state, nqubits)
             

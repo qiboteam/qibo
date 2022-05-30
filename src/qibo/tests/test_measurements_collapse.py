@@ -1,7 +1,7 @@
 """Test :class:`qibo.abstractions.gates.M` as standalone and as part of circuit."""
 import pytest
 import numpy as np
-from qibo import models, gates, K
+from qibo import models, gates
 from qibo.tests.utils import random_state, random_density_matrix
 
 
@@ -10,9 +10,13 @@ from qibo.tests.utils import random_state, random_density_matrix
                           (6, [1, 3]), (4, [0, 2])])
 def test_measurement_collapse(backend, nqubits, targets):
     initial_state = random_state(nqubits)
-    gate = gates.M(*targets, collapse=True)
-    final_state = gate(K.cast(np.copy(initial_state)), nshots=1)
-    results = gate.result.binary[0]
+    c = models.Circuit(nqubits)
+    m = c.add(gates.M(*targets, collapse=True))
+    final_state = backend.execute_circuit(c, np.copy(initial_state), nshots=1)[0]
+    if len(targets) > 1:
+        results = m[0].result.samples()[0]
+    else:
+        results = m.result.samples()[0]
     slicer = nqubits * [slice(None)]
     for t, r in zip(targets, results):
         slicer[t] = int(r)
@@ -22,7 +26,7 @@ def test_measurement_collapse(backend, nqubits, targets):
     target_state[slicer] = initial_state[slicer]
     norm = (np.abs(target_state) ** 2).sum()
     target_state = target_state.ravel() / np.sqrt(norm)
-    K.assert_allclose(final_state, target_state)
+    backend.assert_allclose(final_state, target_state)
 
 
 @pytest.mark.parametrize("nqubits,targets",

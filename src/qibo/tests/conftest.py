@@ -29,7 +29,6 @@ INACTIVE_TESTS = {
     "qibo.tests.test_core_states",
     "qibo.tests.test_core_terms",
     "qibo.tests.test_hamiltonians",
-    "qibo.tests.test_measurement_gate_collapse",
     "qibo.tests.test_models_evolution",
     "qibo.tests.test_models_grover",
     "qibo.tests.test_models_hep",
