@@ -215,9 +215,6 @@ class Matrices:
     def VariationalLayer(self, *args):
         raise_error(NotImplementedError)
 
-    def Flatten(self):
-        raise_error(NotImplementedError)
-
     def CallbackGate(self):
         raise_error(NotImplementedError)
 

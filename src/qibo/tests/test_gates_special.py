@@ -38,28 +38,6 @@ def test_partial_trace_gate_errors(backend):
 
 
 @pytest.mark.skip
-def test_flatten(backend):
-    target_state = np.ones(4) / 2.0
-    final_state = apply_gates(backend, [gates.Flatten(target_state)], nqubits=2)
-    backend.assert_allclose(final_state, target_state)
-
-    target_state = np.ones(4) / 2.0
-    gate = gates.Flatten(target_state)
-    with pytest.raises(ValueError):
-        gate._construct_unitary()
-
-
-@pytest.mark.skip
-def test_flatten_density_matrix(backend):
-    """Check ``Flatten`` gate works with density matrices."""
-    target_rho = random_density_matrix(3)
-    initial_rho = np.zeros(6 * (2,))
-    gate = gates.Flatten(target_rho)
-    final_rho = np.reshape(gate(initial_rho), (8, 8))
-    backend.assert_allclose(final_rho, target_rho)
-
-
-@pytest.mark.skip
 def test_callback_gate_errors():
     from qibo import callbacks
     entropy = callbacks.EntanglementEntropy([0])
