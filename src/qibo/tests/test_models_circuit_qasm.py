@@ -60,14 +60,6 @@ id q[0];"""
     assert_strings_equal(c.to_qasm(), target)
 
 
-def test_unknown_gate_error():
-    """"Check that using `to_qasm` with not supported gates raises error."""
-    c = Circuit(2)
-    c.add(gates.Flatten(4 * [0]))
-    with pytest.raises(ValueError):
-        c.to_qasm()
-
-
 def test_controlled_by_error():
     """Check that using `to_qasm` with controlled by gates raises error."""
     c = Circuit(3)

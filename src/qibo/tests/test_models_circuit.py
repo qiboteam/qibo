@@ -230,11 +230,6 @@ def test_circuit_on_qubits_errors():
     with pytest.raises(ValueError):
         next(smallc.on_qubits(0, 1, 2))
 
-    smallc = Circuit(2)
-    smallc.add(gates.Flatten(4 * [0.5]))
-    with pytest.raises(NotImplementedError):
-        next(smallc.on_qubits(0, 1))
-
     from qibo.abstractions.callbacks import Callback
     smallc = Circuit(4)
     smallc.add(gates.CallbackGate(Callback()))
@@ -574,14 +569,6 @@ def test_circuit_draw_line_wrap():
     circuit.add(gates.M(*range(3)))
     assert circuit.draw(line_wrap=50) == ref_line_wrap_50
     assert circuit.draw(line_wrap=30) == ref_line_wrap_30
-
-
-def test_circuit_draw_not_supported_gates():
-    """Check that ``NotImplementedError`` is raised if gate is not supported."""
-    c = Circuit(2)
-    c.add(gates.Flatten(1))
-    with pytest.raises(NotImplementedError):
-        c.draw()
 
 
 @pytest.mark.parametrize("legend", [True, False])

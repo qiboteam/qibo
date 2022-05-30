@@ -202,13 +202,6 @@ def test_variational_layer_errors():
     np.testing.assert_allclose(gate.parameters, np.zeros(12))
 
 
-def test_flatten():
-    gate = gates.Flatten([1, 2, 3, 4])
-    assert gate.coefficients == [1, 2, 3, 4]
-    with pytest.raises(NotImplementedError):
-        gate.on_qubits({0: 1, 2: 2})
-
-
 def test_kraus_channel_init():
     import numpy as np
     ops = [((0,), np.random.random((2, 2))),
