@@ -1,6 +1,6 @@
 import itertools
 import sympy
-from qibo import K, gates
+from qibo import K
 from qibo.config import log, raise_error, EINSUM_CHARS
 from qibo.abstractions import hamiltonians, states
 

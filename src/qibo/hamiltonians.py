@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-from qibo import matrices, K, gates
+from qibo import matrices, K
 from qibo.config import raise_error
 from qibo.core.hamiltonians import Hamiltonian, SymbolicHamiltonian, TrotterHamiltonian
 from qibo.core.terms import HamiltonianTerm
-
 
 
 def multikron(matrix_list):
