@@ -40,7 +40,7 @@ class MeasurementSymbol(sympy.Symbol):
         self.result = result
 
     def outcome(self):
-        return self.result.samples()[-1][index]
+        return self.result.samples()[-1][self.index]
 
     def evaluate(self, expr):
         """Substitutes the symbol's value in the given expression.

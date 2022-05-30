@@ -187,6 +187,8 @@ class Simulator(Backend):
                 elif isinstance(gate, M):
                     state = self.collapse_state(gate, state, nqubits)
                 else:
+                    if gate.symbolic_parameters:
+                        gate.substitute_symbols()
                     state = self.apply_gate(gate, state, nqubits)
             
             if circuit.measurement_gate:

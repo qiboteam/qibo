@@ -29,6 +29,7 @@ def test_measurement_collapse(backend, nqubits, targets):
     backend.assert_allclose(final_state, target_state)
 
 
+@pytest.mark.skip
 @pytest.mark.parametrize("nqubits,targets",
                          [(2, [1]), (3, [1]), (4, [1, 3]), (5, [0, 3, 4])])
 def test_measurement_collapse_density_matrix(backend, nqubits, targets):
@@ -52,16 +53,8 @@ def test_measurement_collapse_density_matrix(backend, nqubits, targets):
     K.assert_allclose(final_rho, target_rho)
 
 
-def test_measurement_collapse_errors(backend):
-    gate = gates.M(0, 1, collapse=True)
-    state = np.ones(4) / 4
-    with pytest.raises(ValueError):
-        state = gate(K.cast(state), nshots=100)
-
-
-def test_measurement_collapse_bitflip_noise(backend, accelerators):
-    K.set_seed(123)
-    c = models.Circuit(4, accelerators)
+def test_measurement_collapse_bitflip_noise(backend):
+    c = models.Circuit(4)
     with pytest.raises(NotImplementedError):
         output = c.add(gates.M(0, 1, p0=0.2, collapse=True))
 
@@ -78,109 +71,106 @@ def test_measurement_result_parameters(backend, accelerators, effect):
     if effect:
         target_c.add(gates.X(0))
         target_c.add(gates.RX(1, theta=np.pi / 4))
-    K.assert_allclose(c(), target_c())
+
+    final_state = backend.execute_circuit(c, nshots=1)[0]
+    target_state = backend.execute_circuit(target_c)
+    backend.assert_allclose(final_state, target_state)
 
 
-def set_device_seed(seed, accelerators):
-    if accelerators:
-        with K.on_cpu():
-            K.set_seed(seed)
-    else:
-        K.set_seed(seed)
-
-
-def test_measurement_result_parameters_random(backend, accelerators):
-    test_device = K.cpu_devices[0] if accelerators else K.default_device
+def test_measurement_result_parameters_random(backend):
     initial_state = random_state(4)
-    set_device_seed(123, accelerators)
-    c = models.Circuit(4, accelerators)
+    backend.set_seed(123)
+    c = models.Circuit(4)
     output = c.add(gates.M(1, collapse=True))
     c.add(gates.RY(0, theta=np.pi * output / 5))
     c.add(gates.RX(2, theta=np.pi * output / 4))
-    result = c(initial_state=np.copy(initial_state))
-    assert len(output.frequencies()) == 1
+    final_state = backend.execute_circuit(c, initial_state=np.copy(initial_state), nshots=1)[0]
 
-    set_device_seed(123, accelerators)
-    with K.device(test_device):
-        collapse = gates.M(1, collapse=True)
-        target_state = collapse(K.cast(np.copy(initial_state)))
-        if int(collapse.result.outcome()):
-            target_state = gates.RY(0, theta=np.pi / 5)(target_state)
-            target_state = gates.RX(2, theta=np.pi / 4)(target_state)
-    K.assert_allclose(result, target_state)
+    backend.set_seed(123)
+    c = models.Circuit(4)
+    m = c.add(gates.M(1, collapse=True))
+    target_state = backend.execute_circuit(c, initial_state=np.copy(initial_state), nshots=1)[0]
+    if int(m.outcome()):
+        c = models.Circuit(4)
+        c.add(gates.RY(0, theta=np.pi / 5))
+        c.add(gates.RX(2, theta=np.pi / 4))
+        target_state = backend.execute_circuit(c, initial_state=target_state)
+    backend.assert_allclose(final_state, target_state)
 
 
 @pytest.mark.parametrize("use_loop", [True, False])
-def test_measurement_result_parameters_repeated_execution(backend, accelerators, use_loop):
-    test_device = K.cpu_devices[0] if accelerators else K.default_device
+def test_measurement_result_parameters_repeated_execution(backend, use_loop):
     initial_state = random_state(4)
-    set_device_seed(123, accelerators)
-    c = models.Circuit(4, accelerators)
+    backend.set_seed(123)
+    c = models.Circuit(4)
     output = c.add(gates.M(1, collapse=True))
     c.add(gates.RX(2, theta=np.pi * output / 4))
     if use_loop:
         final_states = []
         for _ in range(20):
-            final_states.append(c(np.copy(initial_state)).state())
+            final_state = backend.execute_circuit(c, initial_state=np.copy(initial_state), nshots=1)
+            final_states.append(final_state[0])
     else:
-        final_states = c(initial_state=np.copy(initial_state), nshots=20)
+        final_states = backend.execute_circuit(c, initial_state=np.copy(initial_state), nshots=20)
 
-    set_device_seed(123, accelerators)
+    backend.set_seed(123)
     target_states = []
-    with K.device(test_device):
-        for _ in range(20):
-            collapse = gates.M(1, collapse=True)
-            target_state = collapse(K.cast(np.copy(initial_state)))
-            if int(collapse.result.outcome()):
-                target_state = gates.RX(2, theta=np.pi / 4)(target_state)
-            target_states.append(np.copy(target_state))
-        final_states = K.stack(final_states)
-        target_states = K.stack(target_states)
-    K.assert_allclose(final_states, target_states)
+    for _ in range(20):
+        c = models.Circuit(4)
+        m = c.add(gates.M(1, collapse=True))
+        target_state = backend.execute_circuit(c, np.copy(initial_state), nshots=1)[0]
+        if int(m.outcome()):
+            target_state = backend.apply_gate(gates.RX(2, theta=np.pi / 4), target_state, 4)
+        target_states.append(backend.to_numpy(target_state))
+
+    final_states = [backend.to_numpy(x) for x in final_states]
+    backend.assert_allclose(final_states, target_states)
 
 
 def test_measurement_result_parameters_repeated_execution_final_measurements(backend):
     initial_state = random_state(4)
-    K.set_seed(123)
+    backend.set_seed(123)
     c = models.Circuit(4)
     output = c.add(gates.M(1, collapse=True))
     c.add(gates.RY(0, theta=np.pi * output / 3))
     c.add(gates.RY(2, theta=np.pi * output / 4))
     c.add(gates.M(0, 1, 2, 3))
-    result = c(initial_state=np.copy(initial_state), nshots=30)
+    result = backend.execute_circuit(c, initial_state=np.copy(initial_state), nshots=30)
     final_samples = result.samples(binary=False)
 
-    K.set_seed(123)
+    backend.set_seed(123)
     target_samples = []
     for _ in range(30):
-        collapse = gates.M(1, collapse=True)
-        target_state = collapse(K.cast(np.copy(initial_state)))
-        if int(collapse.result.outcome()):
-            target_state = gates.RY(0, theta=np.pi / 3)(target_state)
-            target_state = gates.RY(2, theta=np.pi / 4)(target_state)
-        with K.device(K.default_device):
-            target_result = gates.M(0, 1, 2, 3)(target_state)
-            target_samples.append(target_result.decimal[0])
-    target_samples = K.stack(target_samples)
-    K.assert_allclose(final_samples, target_samples)
+        c = models.Circuit(4)
+        m = c.add(gates.M(1, collapse=True))
+        target_state = backend.execute_circuit(c, np.copy(initial_state), nshots=1)[0]
+        c = models.Circuit(4)
+        if int(m.outcome()):
+            c.add(gates.RY(0, theta=np.pi / 3))
+            c.add(gates.RY(2, theta=np.pi / 4))
+        c.add(gates.M(0, 1, 2, 3))
+        result = backend.execute_circuit(c, target_state, nshots=1)
+        target_samples.append(result.samples(binary=False)[0])
+    backend.assert_allclose(final_samples, target_samples)
 
 
 def test_measurement_result_parameters_multiple_qubits(backend):
     initial_state = random_state(4)
-    K.set_seed(123)
+    backend.set_seed(123)
     c = models.Circuit(4)
     output = c.add(gates.M(0, 1, 2, collapse=True))
     c.add(gates.RY(1, theta=np.pi * output[0] / 5))
     c.add(gates.RX(3, theta=np.pi * output[2] / 3))
-    result = c(initial_state=np.copy(initial_state))
+    final_state = backend.execute_circuit(c, np.copy(initial_state), nshots=1)[0]
 
-    K.set_seed(123)
-    collapse = gates.M(0, 1, 2, collapse=True)
-    target_state = collapse(K.cast(np.copy(initial_state)))
+    backend.set_seed(123)
+    c = models.Circuit(4)
+    m = c.add(gates.M(0, 1, 2, collapse=True))
+    target_state = backend.execute_circuit(c, np.copy(initial_state), nshots=1)[0]
     # not including in coverage because outcomes are probabilistic and may
     # not occur for the CI run
-    if int(collapse.result.outcome(0)): # pragma: no cover
-        target_state = gates.RY(1, theta=np.pi / 5)(target_state)
-    if int(collapse.result.outcome(2)): # pragma: no cover
-        target_state = gates.RX(3, theta=np.pi / 3)(target_state)
-    K.assert_allclose(result, target_state)
+    if int(m[0].outcome()): # pragma: no cover
+        target_state = backend.apply_gate(gates.RY(1, theta=np.pi / 5), target_state, 4)
+    if int(m[2].outcome()): # pragma: no cover
+        target_state = backend.apply_gate(gates.RX(3, theta=np.pi / 3), target_state, 4)
+    backend.assert_allclose(final_state, target_state)
