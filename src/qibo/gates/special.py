@@ -7,21 +7,6 @@ class PartialTrace(SpecialGate):
     pass
 
 
-class Flatten(SpecialGate):
-    """Passes an arbitrary state vector in the circuit.
-
-    Args:
-        coefficients (list): list of the target state vector components.
-            This can also be a tensor supported by the backend.
-    """
-
-    def __init__(self, coefficients):
-        super(Flatten, self).__init__()
-        self.name = "Flatten"
-        self.coefficients = coefficients
-        self.init_args = [coefficients]
-
-
 class CallbackGate(SpecialGate):
     """Calculates a :class:`qibo.core.callbacks.Callback` at a specific point in the circuit.
 
