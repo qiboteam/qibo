@@ -485,7 +485,7 @@ class Circuit:
         self.queue.append(gate)
         if isinstance(gate, gates.M):
             self.repeated_execution = True
-            return gate.symbol()
+            return gate.symbol
         if isinstance(gate, gates.UnitaryChannel):
             self.repeated_execution = not self.density_matrix
         if isinstance(gate, gates.ParametrizedGate):

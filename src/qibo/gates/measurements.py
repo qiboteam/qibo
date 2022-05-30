@@ -1,6 +1,61 @@
+import sympy
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate
 from typing import Dict, Optional, Tuple
+
+
+class MeasurementSymbol(sympy.Symbol):
+    """``sympy.Symbol`` connected to measurement results.
+
+    Used by :class:`qibo.gates.measurements.M` with ``collapse=True`` to allow
+    controlling subsequent gates from the measurement results.
+    """
+    _counter = 0
+
+    def __new__(cls, *args, **kwargs):
+        name = "m{}".format(cls._counter)
+        cls._counter += 1
+        return super().__new__(cls=cls, name=name)
+
+    def __init__(self, qubits, result=None):
+        # create seperate ``MeasurementSymbol`` object that maps to the same
+        # result for each measured qubit so that the user can use the symbol
+        # to control subsequent parametrized gates
+        self.qubit = qubits[0]
+        self.result = result
+        if len(qubits) > 1:
+            self.elements = [self.__class__((q,), self) for q in qubits]
+
+    def samples(self, *args, **kwargs):
+        if self.result:
+            return self.result.samples(*args, **kwargs)
+        else:
+            pass
+
+    def frequencies(self, *args, **kwargs):
+        return self.result.frequencies(*args, **kwargs)
+
+    def outcome(self):
+        if self.qubit is None:
+            return self.result.outcome()
+        return self.result.outcome(self.qubit)
+
+    def __getitem__(self, i):
+        return self.elements[i]
+
+    def evaluate(self, expr):
+        """Substitutes the symbol's value in the given expression.
+
+        Args:
+            expr (sympy.Expr): Sympy expression that involves the current
+                measurement symbol.
+        """
+        if self.qubit is None and len(self.result.qubits) > 1:
+            raise_error(NotImplementedError, "Symbolic measurements are not "
+                                             "available for more than one "
+                                             "measured qubits. Please use "
+                                             "seperate measurement gates.")
+        return expr.subs(self, self.outcome())
 
 
 class M(Gate):
@@ -36,19 +91,20 @@ class M(Gate):
                  p1: Optional["ProbsType"] = None):
         super().__init__()
         self.name = "measure"
-        self.target_qubits = q
+        self.target_qubits = tuple(q)
         self.register_name = register_name
         self.collapse = collapse
-        self.result = None
-        self._symbol = None
+        self.symbol = None
 
         self.init_args = q
         self.init_kwargs = {"register_name": register_name,
                             "collapse": collapse,
                             "p0": p0, "p1": p1}
-        if collapse and (p0 is not None or p1 is not None):
-            raise_error(NotImplementedError, "Bitflip measurement noise is not "
-                                             "available when collapsing.")
+        if collapse:
+            if p0 is not None or p1 is not None:
+                raise_error(NotImplementedError, "Bitflip measurement noise is not "
+                                                "available when collapsing.")
+            self.symbol = MeasurementSymbol(self.target_qubits)
 
         if p1 is None: p1 = p0
         if p0 is None: p0 = p1
@@ -129,11 +185,7 @@ class M(Gate):
         right_in, right_out = "".join(right_in), "".join(right_out)
         return f"{left_in}{right_in}->{left_out}{right_out}"
 
-    def symbol(self):
-        """Returns symbol containing measurement outcomes for ``collapse=True`` gates."""
-        return self._symbol
-
-    def add(self, gate: "M"):
+    def add(self, gate):
         """Adds target qubits to a measurement gate.
 
         This method is only used for creating the global measurement gate used

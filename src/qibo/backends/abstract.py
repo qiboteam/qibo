@@ -127,6 +127,14 @@ class Simulator(Backend):
     def apply_channel_density_matrix(self, gate):
         raise_error(NotImplementedError)
 
+    @abc.abstractmethod
+    def collapse_state(self, gate, state, result, nqubits):
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def collapse_density_matrix(self, gate, state, result, nqubits):
+        raise_error(NotImplementedError)
+
     def execute_circuit(self, circuit, initial_state=None, nshots=None):
         # TODO: Implement repeated execution
         # TODO: Implement callbacks

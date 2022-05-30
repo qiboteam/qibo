@@ -166,8 +166,47 @@ class NumpyBackend(Simulator):
             new_state += coeff * self.apply_gate_density_matrix(gate, state, nqubits)
         return new_state
 
+    def _append_zeros(self, state, qubits, results):
+        """Helper method for collapse."""
+        for q, r in zip(qubits, results):
+            state = np.expand_dims(state, axis=q)
+            if r:
+                state = np.concatenate([np.zeros_like(state), state], axis=q)
+            else:
+                state = np.concatenate([state, np.zeros_like(state)], axis=q)
+        return state
+
+    def collapse_state(self, gate, state, result, nqubits):
+        state = self.cast(state)
+        shape = state.shape
+        qubits = sorted(gate.target_qubits) 
+        state = np.reshape(state, nqubits * (2,))
+        order = list(qubits) + [q for q in range(nqubits) if q not in qubits]
+        substate = np.transpose(state, order)[result]
+        norm = np.sqrt(np.sum(np.abs(substate) ** 2))
+        state = substate / norm
+        state = self._append_zeros(state, qubits, result)
+        return np.reshape(state, shape)
+
+    def collapse_density_matrix(self, gate, state, result, nqubits):
+        state = self.cast(state)
+        shape = state.shape
+        result = 2 * result
+        qubits = sorted(gate.target_qubits)
+        order = list(qubits) + [q + nqubits for q in qubits]
+        order.extend(q for q in range(nqubits) if q not in qubits)
+        order.extend(q + nqubits for q in range(nqubits) if q not in sorted_qubits)
+        qubits.extend(q + nqubits for q in qubits)
+
+        state = np.reshape(state, 2 * nqubits * (2,))
+        substate = np.transpose(state, order)[result]
+        n = 2 ** (len(substate.shape) // 2)
+        norm = np.trace(np.reshape(substate, (n, n)))
+        state = substate / norm
+        state = self._append_zeros(state, qubits, result)
+        return np.reshape(state, shape)
+
     def calculate_probabilities(self, result, qubits):
-        # TODO: Implement GPU fallback for relevant backends
         tensor = self.get_state_tensor(result)
         rtype = tensor.real.dtype
         if result.density_matrix:
@@ -198,7 +237,6 @@ class NumpyBackend(Simulator):
         np.random.seed(seed)
 
     def sample_shots(self, probabilities, nshots):
-        # TODO: Implement GPU fallback for relevant backends
         return np.random.choice(range(len(probabilities)), size=nshots, p=probabilities)
 
     def aggregate_shots(self, shots):
@@ -214,7 +252,6 @@ class NumpyBackend(Simulator):
         return np.matmul(samples, qrange)[:, 0]
 
     def sample_frequencies(self, probabilities, nshots):
-        # TODO: Implement GPU fallback for relevant backends
         from qibo.config import SHOT_BATCH_SIZE
         nprobs = probabilities / np.sum(probabilities)
         def update_frequencies(nsamples, frequencies):
