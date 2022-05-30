@@ -8,22 +8,38 @@ import pytest
 from qibo.backends import construct_backend
 
 
-ACTIVE_TESTS = {
-    "qibo.tests.test_cirq",
-    "qibo.tests.test_gates_abstract",
-    "qibo.tests.test_gates_channels",
-    "qibo.tests.test_gates_gates",
-    "qibo.tests.test_gates_density_matrix",
-    "qibo.tests.test_gates_special",
-    "qibo.tests.test_models_circuit",
-    "qibo.tests.test_models_circuit_execution",
-    "qibo.tests.test_models_circuit_features",
-    "qibo.tests.test_models_circuit_fuse",
-    "qibo.tests.test_models_circuit_parametrized",
-    "qibo.tests.test_models_circuit_qasm",
-    "qibo.tests.test_models_circuit_qasm_cirq",
-    "qibo.tests.test_models_qft",
-    "qibo.tests.test_simulators"
+INACTIVE_TESTS = {
+    "qibo.tests.test_abstract_states",
+    "qibo.tests.test_abstract_callbacks",
+    "qibo.tests.test_backends_agreement",
+    "qibo.tests.test_backends_init",
+    "qibo.tests.test_backends_matrices",
+    "qibo.tests.test_core_callbacks",
+    "qibo.tests.test_core_circuit_backpropagation",
+    "qibo.tests.test_core_circuit_noise",
+    "qibo.tests.test_core_distcircuit_execution",
+    "qibo.tests.test_core_distcircuit",
+    "qibo.tests.test_core_distutils",
+    "qibo.tests.test_core_gates_features",
+    "qibo.tests.test_core_hamiltonians_from_symbols",
+    "qibo.tests.test_core_hamiltonians_symbolic",
+    "qibo.tests.test_core_hamiltonians_trotter",
+    "qibo.tests.test_core_hamiltonians",
+    "qibo.tests.test_core_measurements",
+    "qibo.tests.test_core_states_distributed",
+    "qibo.tests.test_core_states",
+    "qibo.tests.test_core_terms",
+    "qibo.tests.test_hamiltonians",
+    "qibo.tests.test_measurement_gate",
+    "qibo.tests.test_measurement_gate_collapse",
+    "qibo.tests.test_measurement_gate_probabilistic",
+    "qibo.tests.test_measurement_gate_registers",
+    "qibo.tests.test_models_evolution",
+    "qibo.tests.test_models_hep",
+    "qibo.tests.test_models_qgan",
+    "qibo.tests.test_models_variational",
+    "qibo.tests.test_noise",
+    "qibo.tests.test_parallel",
 }
 
 # backends to be tested
@@ -65,7 +81,7 @@ def backend(backend_name):
 
 def pytest_generate_tests(metafunc):
     module_name = metafunc.module.__name__
-    if module_name not in ACTIVE_TESTS:
+    if module_name in INACTIVE_TESTS:
         pytest.skip()
 
     if "backend_name" in metafunc.fixturenames:
