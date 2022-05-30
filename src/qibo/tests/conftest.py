@@ -34,7 +34,6 @@ INACTIVE_TESTS = {
     "qibo.tests.test_models_qgan",
     "qibo.tests.test_models_variational",
     "qibo.tests.test_noise",
-    "qibo.tests.test_parallel",
 }
 
 # backends to be tested
