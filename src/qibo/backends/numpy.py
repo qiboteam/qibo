@@ -199,19 +199,26 @@ class NumpyBackend(Simulator):
     def collapse_density_matrix(self, gate, state, nqubits):
         state = self.cast(state)
         shape = state.shape
-        result = 2 * result
         qubits = sorted(gate.target_qubits)
+        # measure and get result
+        probs = self.calculate_probabilities_density_matrix(state, gate.qubits, nqubits)
+        shots = self.sample_shots(probs, 1)
+        shots = list(self.samples_to_binary(shots, len(qubits))[0])
+        # update the gate's result with the measurement outcome
+        gate.result.backend = self
+        gate.result.append(shots)
+        # collapse state
         order = list(qubits) + [q + nqubits for q in qubits]
         order.extend(q for q in range(nqubits) if q not in qubits)
-        order.extend(q + nqubits for q in range(nqubits) if q not in sorted_qubits)
-        qubits.extend(q + nqubits for q in qubits)
-
+        order.extend(q + nqubits for q in range(nqubits) if q not in qubits)
+        shots = 2 * shots
         state = np.reshape(state, 2 * nqubits * (2,))
-        substate = np.transpose(state, order)[result]
+        substate = np.transpose(state, order)[tuple(shots)]
         n = 2 ** (len(substate.shape) // 2)
         norm = np.trace(np.reshape(substate, (n, n)))
         state = substate / norm
-        state = self._append_zeros(state, qubits, result)
+        qubits = qubits + [q + nqubits for q in qubits]
+        state = self._append_zeros(state, qubits, shots)
         return np.reshape(state, shape)
 
     def calculate_symbolic(self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20):

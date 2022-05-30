@@ -29,15 +29,18 @@ def test_measurement_collapse(backend, nqubits, targets):
     backend.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("nqubits,targets",
                          [(2, [1]), (3, [1]), (4, [1, 3]), (5, [0, 3, 4])])
 def test_measurement_collapse_density_matrix(backend, nqubits, targets):
     initial_rho = random_density_matrix(nqubits)
-    gate = gates.M(*targets, collapse=True)
-    gate.density_matrix = True
-    final_rho = gate(K.cast(np.copy(initial_rho)), nshots=1)
-    results = gate.result.binary[0]
+    c = models.Circuit(nqubits, density_matrix=True)
+    m = c.add(gates.M(*targets, collapse=True))
+    final_rho = backend.execute_circuit(c, np.copy(initial_rho), nshots=1)[0]
+    
+    if len(targets) > 1:
+        results = m[0].result.samples()[0]
+    else:
+        results = m.result.samples()[0]
     target_rho = np.reshape(initial_rho, 2 * nqubits * (2,))
     for q, r in zip(targets, results):
         r = int(r)
@@ -50,7 +53,7 @@ def test_measurement_collapse_density_matrix(backend, nqubits, targets):
         target_rho[tuple(slicer)] = 0
     target_rho = np.reshape(target_rho, initial_rho.shape)
     target_rho = target_rho / np.trace(target_rho)
-    K.assert_allclose(final_rho, target_rho)
+    backend.assert_allclose(final_rho, target_rho)
 
 
 def test_measurement_collapse_bitflip_noise(backend):

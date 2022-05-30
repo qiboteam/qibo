@@ -120,11 +120,11 @@ class Simulator(Backend):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def collapse_state(self, gate, state, result, nqubits):
+    def collapse_state(self, gate, state, nqubits):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def collapse_density_matrix(self, gate, state, result, nqubits):
+    def collapse_density_matrix(self, gate, state, nqubits):
         raise_error(NotImplementedError)
 
     def execute_circuit(self, circuit, initial_state=None, nshots=None):
@@ -134,6 +134,9 @@ class Simulator(Backend):
 
         if isinstance(initial_state, CircuitResult):
             initial_state = initial_state.state()
+
+        if circuit.repeated_execution:
+            return self.execute_circuit_repeated(circuit, initial_state, nshots)
 
         try:
             nqubits = circuit.nqubits
@@ -148,9 +151,6 @@ class Simulator(Backend):
                     state = self.apply_gate_density_matrix(gate, state, nqubits)
             
             else:
-                if circuit.repeated_execution:
-                    return self.execute_circuit_repeated(circuit, initial_state, nshots)
-
                 if initial_state is None:
                     state = self.zero_state(nqubits)
                 else:
@@ -175,27 +175,49 @@ class Simulator(Backend):
         results = []
         nqubits = circuit.nqubits
         for _ in range(nshots):
-            if initial_state is None:
-                state = self.zero_state(nqubits)
-            else:
-                # cast to proper complex type
-                state = self.cast(initial_state, copy=True)
-            
-            for gate in circuit.queue:
-                if isinstance(gate, Channel):
-                    state = self.apply_channel(gate, state, nqubits)
-                elif isinstance(gate, M):
-                    state = self.collapse_state(gate, state, nqubits)
+            if circuit.density_matrix:
+                if initial_state is None:
+                    state = self.zero_density_matrix(nqubits)
                 else:
-                    if gate.symbolic_parameters:
-                        gate.substitute_symbols()
-                    state = self.apply_gate(gate, state, nqubits)
-            
-            if circuit.measurement_gate:
-                result = CircuitResult(self, circuit, state, 1)
-                results.append(result.samples(binary=False)[0])
+                    state = self.cast(initial_state, copy=True)
+                
+                for gate in circuit.queue:
+                    if isinstance(gate, Channel):
+                        state = self.apply_channel_density_matrix(gate, state, nqubits)
+                    elif isinstance(gate, M):
+                        state = self.collapse_density_matrix(gate, state, nqubits)
+                    else:
+                        if gate.symbolic_parameters:
+                            gate.substitute_symbols()
+                        state = self.apply_gate_density_matrix(gate, state, nqubits)
+
+                if circuit.measurement_gate:
+                    result = CircuitResult(self, circuit, state, 1)
+                    results.append(result.samples(binary=False)[0])
+                else:
+                    results.append(state)
+
             else:
-                results.append(state)
+                if initial_state is None:
+                    state = self.zero_state(nqubits)
+                else:
+                    state = self.cast(initial_state, copy=True)
+                
+                for gate in circuit.queue:
+                    if isinstance(gate, Channel):
+                        state = self.apply_channel(gate, state, nqubits)
+                    elif isinstance(gate, M):
+                        state = self.collapse_state(gate, state, nqubits)
+                    else:
+                        if gate.symbolic_parameters:
+                            gate.substitute_symbols()
+                        state = self.apply_gate(gate, state, nqubits)
+                
+                if circuit.measurement_gate:
+                    result = CircuitResult(self, circuit, state, 1)
+                    results.append(result.samples(binary=False)[0])
+                else:
+                    results.append(state)
 
         if circuit.measurement_gate:
             final_result = CircuitResult(self, circuit, state, nshots)
