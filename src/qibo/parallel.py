@@ -76,7 +76,7 @@ def _executor(params): # pragma: no cover
     return ParallelResources().run(params)
 
 
-def parallel_execution(circuit, states, processes=None):  # pragma: no cover
+def parallel_execution(circuit, states, processes=None, backend=None):  # pragma: no cover
     """Execute circuit for multiple states.
 
     Example:
@@ -107,14 +107,18 @@ def parallel_execution(circuit, states, processes=None):  # pragma: no cover
     Returns:
         Circuit evaluation for input states.
     """
+    if backend is None:
+        from qibo.backends import GlobalBackend
+        backend = GlobalBackend()
+
     if states is None or not isinstance(states, list):  # pragma: no cover
         from qibo.config import raise_error
         raise_error(RuntimeError, "states must be a list.")
 
-    _check_parallel_configuration(processes)
+    _check_parallel_configuration(processes, backend)
 
     def operation(state, circuit): # pragma: no cover
-        return circuit(state)
+        return backend.execute_circuit(circuit, state)
 
     ParallelResources().arguments = (circuit,)
     ParallelResources().custom_function = operation
@@ -128,7 +132,7 @@ def parallel_execution(circuit, states, processes=None):  # pragma: no cover
     return results
 
 
-def parallel_parametrized_execution(circuit, parameters, initial_state=None, processes=None):  # pragma: no cover
+def parallel_parametrized_execution(circuit, parameters, initial_state=None, processes=None, backend=None):  # pragma: no cover
     """Execute circuit for multiple parameters and fixed initial_state.
 
     Example:
@@ -169,15 +173,19 @@ def parallel_parametrized_execution(circuit, parameters, initial_state=None, pro
     Returns:
         Circuit evaluation for input parameters.
     """
+    if backend is None:
+        from qibo.backends import GlobalBackend
+        backend = GlobalBackend()
+
     if not isinstance(parameters, list):  # pragma: no cover
         from qibo.config import raise_error
         raise_error(RuntimeError, "parameters must be a list.")
 
-    _check_parallel_configuration(processes)
+    _check_parallel_configuration(processes, backend)
 
     def operation(params, circuit, state): # pragma: no cover
         circuit.set_parameters(params)
-        return circuit(state)
+        return backend.execute_circuit(circuit, state)
 
     ParallelResources().arguments = (circuit, initial_state)
     ParallelResources().custom_function = operation
@@ -191,19 +199,24 @@ def parallel_parametrized_execution(circuit, parameters, initial_state=None, pro
     return results
 
 
-def _check_parallel_configuration(processes):  # pragma: no cover
+def _check_parallel_configuration(processes, backend):  # pragma: no cover
     """Check if configuration is suitable for efficient parallel execution."""
     import sys, psutil
-    from qibo import get_device, get_backend, get_threads
     from qibo.config import raise_error, log
-    device = get_device()
+    
     if sys.platform == "win32" or sys.platform == 'darwin':  # pragma: no cover
         raise_error(RuntimeError, "Parallel evaluations supported only on linux.")
-    if get_backend() == "tensorflow":  # pragma: no cover
-        raise_error(RuntimeError, f"{get_backend()} backend does not support parallel evaluations.")
+    
+    name = backend.name
+    if name == "tensorflow":  # pragma: no cover
+        raise_error(RuntimeError, f"{name} backend does not support parallel evaluations.")
+
+    device = backend.device
     if device is not None and "GPU" in device:  # pragma: no cover
         raise_error(RuntimeError, "Parallel evaluations cannot be used with GPU.")
-    if ((processes is not None and processes * get_threads() > psutil.cpu_count()) or
-            (processes is None and get_threads() != 1)):  # pragma: no cover
+
+    nthreads = backend.nthreads
+    if ((processes is not None and processes * nthreads > psutil.cpu_count()) or
+            (processes is None and nthreads != 1)):  # pragma: no cover
         log.warning('Please consider using a lower number of threads per process,'
                     ' or reduce the number of processes for better performance')
