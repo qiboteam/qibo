@@ -302,3 +302,10 @@ def test_grover_example3(nqubits, num_1):
     sys.path[-1] = path
     os.chdir(path)
     run_script(args, script_name="example3.py")
+
+def test_qap():
+    args = locals()
+    path = os.path.join(base_dir, "qap")
+    sys.path[-1] = path
+    os.chdir(path)
+    run_script(args)
