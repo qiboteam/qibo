@@ -67,6 +67,7 @@ class NumpyBackend(Simulator):
         return matrix
 
     def asmatrix_special(self, gate):
+        # TODO: Remove this and use ``asmatrix_fused`` directly
         if isinstance(gate, FusedGate):
             return self.asmatrix_fused(gate)
         else:
@@ -260,27 +261,6 @@ class NumpyBackend(Simulator):
                 unmeasured.append(i)
         return np.transpose(probs, [reduced.get(i) for i in qubits])
 
-    def partial_trace(self, state, qubits, nqubits):
-        state = self.cast(state)
-        state = np.reshape(state, nqubits * (2,))
-        axes = 2 * [list(qubits)]
-        rho = np.tensordot(state, np.conj(state), axes=axes)
-        shape = 2 * (2 ** (nqubits - len(qubits)),)
-        return np.reshape(rho, shape)
-
-    def partial_trace_density_matrix(self, state, qubits, nqubits):
-        state = self.cast(state)
-        state = np.reshape(state, 2 * nqubits * (2,))
-        
-        order = tuple(sorted(qubits))
-        order += tuple(i for i in range(nqubits) if i not in qubits)
-        order += tuple(i + nqubits for i in order)
-        shape = 2 * (2 ** len(qubits), 2 ** (nqubits - len(qubits)))
-        
-        state = np.transpose(state, order)
-        state = np.reshape(state, shape)
-        return np.einsum("abac->bc", state)
-
     def calculate_probabilities(self, state, qubits, nqubits):
         rtype = state.real.dtype
         unmeasured_qubits = tuple(i for i in range(nqubits) if i not in qubits)
@@ -346,6 +326,53 @@ class NumpyBackend(Simulator):
         noisy_samples = noiseless_samples + (1 - noiseless_samples) * flip0
         noisy_samples = noisy_samples - noiseless_samples * flip1
         return noisy_samples
+
+    def partial_trace(self, state, qubits, nqubits):
+        state = self.cast(state)
+        state = np.reshape(state, nqubits * (2,))
+        axes = 2 * [list(qubits)]
+        rho = np.tensordot(state, np.conj(state), axes=axes)
+        shape = 2 * (2 ** (nqubits - len(qubits)),)
+        return np.reshape(rho, shape)
+
+    def partial_trace_density_matrix(self, state, qubits, nqubits):
+        state = self.cast(state)
+        state = np.reshape(state, 2 * nqubits * (2,))
+
+        order = tuple(sorted(qubits))
+        order += tuple(i for i in range(nqubits) if i not in qubits)
+        order += tuple(i + nqubits for i in order)
+        shape = 2 * (2 ** len(qubits), 2 ** (nqubits - len(qubits)))
+        
+        state = np.transpose(state, order)
+        state = np.reshape(state, shape)
+        return np.einsum("abac->bc", state)
+
+    def entanglement_entropy(self, rho):
+        from qibo.config import EIGVAL_CUTOFF
+        # Diagonalize
+        eigvals = np.linalg.eigvalsh(rho).real
+        # Treating zero and negative eigenvalues
+        masked_eigvals = eigvals[eigvals > EIGVAL_CUTOFF]
+        spectrum = -1 * np.log(masked_eigvals)
+        entropy = np.sum(masked_eigvals * spectrum) / np.log(2.0)
+        return entropy, spectrum
+
+    def calculate_norm(self, state):
+        state = self.cast(state)
+        return np.sqrt(np.sum(np.abs(state) ** 2))
+
+    def calculate_norm_density_matrix(self, state):
+        state = self.cast(state)
+        return np.trace(state)
+
+    def calculate_overlap(self, state1, state2):
+        state1 = self.cast(state1)
+        state2 = self.cast(state2)
+        return np.abs(np.sum(np.conj(state1) * state2))
+
+    def calculate_overlap_density_matrix(self, state1, state2):
+        raise_error(NotImplementedError)
 
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
         value = self.to_numpy(value)

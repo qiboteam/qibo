@@ -478,6 +478,10 @@ class Circuit:
                 return self._add_measurement(gate)
             elif isinstance(gate, gates.VariationalLayer):
                 return self._add_layer(gate)
+            elif isinstance(gate, gates.CallbackGate):
+                gate.callback.nqubits = self.nqubits
+                gate.callback.density_matrix = self.density_matrix
+                self.queue.append(gate)
             else:
                 return self._add_gate(gate)
 

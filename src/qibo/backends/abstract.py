@@ -128,7 +128,8 @@ class Simulator(Backend):
         raise_error(NotImplementedError)
 
     def execute_circuit(self, circuit, initial_state=None, nshots=None):
-        # TODO: Implement callbacks
+        from qibo.gates.special import CallbackGate
+
         if circuit.accelerators and not self.supports_multigpu:
             raise_error(NotImplementedError, f"{self} does not support distributed execution.")
 
@@ -148,7 +149,10 @@ class Simulator(Backend):
                     state = self.cast(initial_state)
                 
                 for gate in circuit.queue:
-                    state = self.apply_gate_density_matrix(gate, state, nqubits)
+                    if isinstance(gate, CallbackGate):
+                        gate.callback(self, state)
+                    else:
+                        state = self.apply_gate_density_matrix(gate, state, nqubits)
             
             else:
                 if initial_state is None:
@@ -158,7 +162,10 @@ class Simulator(Backend):
                     state = self.cast(initial_state)
 
                 for gate in circuit.queue:
-                    state = self.apply_gate(gate, state, nqubits)
+                    if isinstance(gate, CallbackGate):
+                        gate.callback(self, state)
+                    else:
+                        state = self.apply_gate(gate, state, nqubits)
 
             # TODO: Consider implementing a final state setter in circuits?
             circuit._final_state = CircuitResult(self, circuit, state, nshots)

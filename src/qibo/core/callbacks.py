@@ -124,7 +124,7 @@ class Overlap(BackendCallback, abstract_callbacks.Overlap):
 
     def _density_matrix_call(self, state):
         raise_error(NotImplementedError, "Overlap callback is not implemented "
-                                          "for density matrices.")
+                                         "for density matrices.")
 
 
 class Energy(BackendCallback, abstract_callbacks.Energy):
