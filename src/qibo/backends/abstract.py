@@ -2,7 +2,6 @@ import abc
 from qibo.config import raise_error
 from qibo.states import CircuitResult
 from qibo.gates.abstract import ParametrizedGate, SpecialGate
-from qibo.gates.channels import Channel
 
 
 class Backend(abc.ABC):
@@ -179,8 +178,6 @@ class Simulator(Backend):
                                        "different one using ``qibo.set_device``.")
 
     def execute_circuit_repeated(self, circuit, initial_state=None, nshots=None):
-        from qibo.gates.measurements import M
-        from qibo.gates.channels import Channel
         results = []
         nqubits = circuit.nqubits
         for _ in range(nshots):
@@ -195,12 +192,6 @@ class Simulator(Backend):
                         gate.substitute_symbols()
                     state = gate.apply_density_matrix(self, state, nqubits)
 
-                if circuit.measurement_gate:
-                    result = CircuitResult(self, circuit, state, 1)
-                    results.append(result.samples(binary=False)[0])
-                else:
-                    results.append(state)
-
             else:
                 if initial_state is None:
                     state = self.zero_state(nqubits)
@@ -212,11 +203,11 @@ class Simulator(Backend):
                         gate.substitute_symbols()
                     state = gate.apply(self, state, nqubits)
                 
-                if circuit.measurement_gate:
-                    result = CircuitResult(self, circuit, state, 1)
-                    results.append(result.samples(binary=False)[0])
-                else:
-                    results.append(state)
+            if circuit.measurement_gate:
+                result = CircuitResult(self, circuit, state, 1)
+                results.append(result.samples(binary=False)[0])
+            else:
+                results.append(state)
 
         if circuit.measurement_gate:
             final_result = CircuitResult(self, circuit, state, nshots)
