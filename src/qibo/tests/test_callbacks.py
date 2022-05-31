@@ -9,6 +9,30 @@ from qibo.models import Circuit#, AdiabaticEvolution
 _atol = 1e-8
 
 
+def test_abstract_callback_properties():
+    callback = callbacks.Callback()
+    callback.nqubits = 5
+    callback.append(1)
+    callback.extend([2, 3])
+    assert callback.nqubits == 5
+    assert callback.results == [1, 2, 3]
+    assert not callback.density_matrix
+
+
+def test_creating_callbacks():
+    callback = callbacks.EntanglementEntropy()
+    callback = callbacks.EntanglementEntropy([1, 2], compute_spectrum=True)
+    callback = callbacks.Norm()
+    callback = callbacks.Overlap(0)
+    callback = callbacks.Energy("test")
+    callback = callbacks.Gap()
+    callback = callbacks.Gap(2)
+    with pytest.raises(ValueError):
+        callback = callbacks.Gap("test")
+    with pytest.raises(TypeError):
+        callback = callbacks.Gap(1.0)
+
+
 def test_getitem_bad_indexing(backend):
     entropy = callbacks.EntanglementEntropy([0])
     c = Circuit(2)

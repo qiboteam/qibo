@@ -9,7 +9,6 @@ from qibo.backends import construct_backend
 
 
 INACTIVE_TESTS = {
-    "qibo.tests.test_abstract_callbacks",
     "qibo.tests.test_backends_agreement",
     "qibo.tests.test_backends_init",
     "qibo.tests.test_backends_matrices",
