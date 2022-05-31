@@ -250,14 +250,6 @@ class Simulator(Backend):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def partial_trace(self, state, qubits, nqubits): # pragma: no cover
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def partial_trace_density_matrix(self, state, qubits, nqubits): # pragma: no cover
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
     def calculate_probabilities(self, state, qubits, nqubits): # pragma: no cover
         raise_error(NotImplementedError)
 
@@ -291,6 +283,34 @@ class Simulator(Backend):
 
     @abc.abstractmethod
     def calculate_frequencies(self, samples): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def partial_trace(self, state, qubits, nqubits): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def partial_trace_density_matrix(self, state, qubits, nqubits): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def entanglement_entropy(self, rho): # pragma: no cover 
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def calculate_norm(self, state): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def calculate_norm_density_matrix(self, state): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def calculate_overlap(self, state1, state2): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def calculate_overlap_density_matrix(self, state1, state2): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
