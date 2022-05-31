@@ -260,6 +260,27 @@ class NumpyBackend(Simulator):
                 unmeasured.append(i)
         return np.transpose(probs, [reduced.get(i) for i in qubits])
 
+    def partial_trace(self, state, qubits, nqubits):
+        state = self.cast(state)
+        state = np.reshape(state, nqubits * (2,))
+        axes = 2 * [list(qubits)]
+        rho = np.tensordot(state, np.conj(state), axes=axes)
+        shape = 2 * (2 ** (nqubits - len(qubits)),)
+        return np.reshape(rho, shape)
+
+    def partial_trace_density_matrix(self, state, qubits, nqubits):
+        state = self.cast(state)
+        state = np.reshape(state, 2 * nqubits * (2,))
+        
+        order = tuple(sorted(qubits))
+        order += tuple(i for i in range(nqubits) if i not in qubits)
+        order += tuple(i + nqubits for i in order)
+        shape = 2 * (2 ** len(qubits), 2 ** (nqubits - len(qubits)))
+        
+        state = np.transpose(state, order)
+        state = np.reshape(state, shape)
+        return np.einsum("abac->bc", state)
+
     def calculate_probabilities(self, state, qubits, nqubits):
         rtype = state.real.dtype
         unmeasured_qubits = tuple(i for i in range(nqubits) if i not in qubits)

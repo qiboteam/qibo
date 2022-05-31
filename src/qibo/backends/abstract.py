@@ -243,6 +243,14 @@ class Simulator(Backend):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
+    def partial_trace(self, state, qubits, nqubits): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def partial_trace_density_matrix(self, state, qubits, nqubits): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
     def calculate_probabilities(self, state, qubits, nqubits): # pragma: no cover
         raise_error(NotImplementedError)
 

@@ -3,8 +3,29 @@ from qibo.gates.abstract import Gate, ParametrizedGate, SpecialGate
 
 
 class PartialTrace(SpecialGate):
-    # TODO: Implement this
-    pass
+    """Collapses a density matrix by tracing out selected qubits.
+
+    Works only with density matrices (not state vectors) and implements the
+    following transformation:
+
+    .. math::
+        \\mathcal{E}(\\rho ) = (|0\\rangle \\langle 0|) _A \\otimes \\mathrm{Tr} _A (\\rho )
+
+    where A denotes the subsystem of qubits that are traced out.
+
+    Args:
+        q (int): Qubit ids that will be traced-out and collapsed to the zero
+            state. More than one qubits can be given.
+    """
+    # TODO: Probably remove this gate
+
+    def __init__(self, *q):
+        super().__init__()
+        self.name = "PartialTrace"
+        self.target_qubits = tuple(q)
+
+        self.init_args = q
+        self.init_kwargs = {}
 
 
 class CallbackGate(SpecialGate):
