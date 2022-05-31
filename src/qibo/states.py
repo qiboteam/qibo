@@ -69,9 +69,9 @@ class CircuitResult:
         """
         state = self.backend.get_state_tensor(self)
         if self.density_matrix:
-            terms = self.backend.calculate_symbolic(state, self.nqubits, decimals, cutoff, max_terms)
-        else:
             terms = self.backend.calculate_symbolic_density_matrix(state, self.nqubits, decimals, cutoff, max_terms)
+        else:
+            terms = self.backend.calculate_symbolic(state, self.nqubits, decimals, cutoff, max_terms)
         return " + ".join(terms)
 
     def __repr__(self):

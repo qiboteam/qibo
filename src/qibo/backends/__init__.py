@@ -1,5 +1,6 @@
 from qibo import config
 from qibo.config import log, raise_error
+from qibo.backends.abstract import Backend
 from qibo.backends.numpy import NumpyBackend
 from qibo.backends.tensorflow import TensorflowBackend
 
@@ -28,7 +29,7 @@ def construct_backend(backend, platform=None):
         raise_error(ValueError, f"Backend {backend} is not available.")
 
 
-class GlobalBackend:
+class GlobalBackend(NumpyBackend):
     """The global backend will be used as default by ``circuit.execute()``."""
 
     _instance = None
@@ -58,8 +59,9 @@ class GlobalBackend:
 
     @classmethod
     def set_backend(cls, backend, platform=None):
-        if cls._instance is None or cls._instance.name != name or cls._instance.platform != platform:
+        if cls._instance is None or cls._instance.name != backend or cls._instance.platform != platform:
             if not config.ALLOW_SWITCHERS:
+                # TODO: Remove this warning
                 log.warning("Backend should not be changed after allocating gates.")
             cls._instance = construct_backend(backend, platform)
         log.info(f"Using {cls._instance} backend on {cls._instance.device}")
