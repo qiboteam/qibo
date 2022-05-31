@@ -1,9 +1,8 @@
-import abc
 from qibo.config import raise_error
 from typing import List, Optional, Set, Union
 
 
-class Callback(abc.ABC):
+class Callback:
     """Base callback class.
 
     Results of a callback can be accessed by indexing the corresponding object.
@@ -46,9 +45,8 @@ class Callback(abc.ABC):
         
         return self._results[k]
 
-    @abc.abstractmethod
-    def __call__(self, backend, state):
-        raise_error(NotImplementedError)
+    def __call__(self, backend, state): # pragma: no cover
+        pass
 
 
 class EntanglementEntropy(Callback):

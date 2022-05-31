@@ -2,9 +2,7 @@
 import pytest
 import numpy as np
 from qibo import gates, callbacks
-from qibo.models import Circuit
-#from qibo.models import Circuit, AdiabaticEvolution
-from qibo.config import EIGVAL_CUTOFF
+from qibo.models import Circuit#, AdiabaticEvolution
 
 
 # Absolute testing tolerance for the cases of zero entanglement entropy
@@ -51,9 +49,9 @@ def test_entropy_bad_state_type(backend):
         _ = entropy("test")
 
 
-@pytest.mark.skip
 def test_entropy_random_state(backend):
     """Check that entropy calculation agrees with numpy."""
+    from qibo.config import EIGVAL_CUTOFF
     # Generate a random positive and hermitian density matrix
     rho = np.random.random((8, 8)) + 1j * np.random.random((8, 8))
     rho = rho + rho.conj().T
@@ -61,18 +59,15 @@ def test_entropy_random_state(backend):
     s = 5 * np.random.random(8)
     s = s / s.sum()
     rho = u.dot(np.diag(s)).dot(u.conj().T)
-
-    callback = callbacks.EntanglementEntropy(compute_spectrum=True)
-    callback.nqubits = 3
-    callback.density_matrix = True
-    result = callback(backend, rho)
+    
+    result, spectrum = backend.entanglement_entropy(rho)
     target = - (s * np.log2(s)).sum()
     backend.assert_allclose(result, target)
 
-    ref_eigvals = np.linalg.eigvalsh(rho)
-    masked_eigvals = ref_eigvals[np.where(ref_eigvals > EIGVAL_CUTOFF)]
-    ref_spectrum = - np.log(masked_eigvals)
-    backend.assert_allclose(callback.spectrum[0], ref_spectrum)
+    target_eigvals = np.linalg.eigvalsh(rho)
+    masked_eigvals = target_eigvals[np.where(target_eigvals > EIGVAL_CUTOFF)]
+    target_spectrum = - np.log(masked_eigvals)
+    backend.assert_allclose(spectrum, target_spectrum)
 
 
 def test_entropy_switch_partition(backend):
