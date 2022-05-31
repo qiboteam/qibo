@@ -91,7 +91,7 @@ class _Queue(list):
 
 class Circuit:
     # TODO: Update docstrings
-    # TODO: Implement accelerators and density matrix.
+    # TODO: Implement accelerators.
     """Circuit object which holds a list of gates.
 
     This circuit is symbolic and cannot perform calculations.
@@ -478,10 +478,6 @@ class Circuit:
                 return self._add_measurement(gate)
             elif isinstance(gate, gates.VariationalLayer):
                 return self._add_layer(gate)
-            elif isinstance(gate, gates.CallbackGate):
-                gate.callback.nqubits = self.nqubits
-                gate.callback.density_matrix = self.density_matrix
-                self.queue.append(gate)
             else:
                 return self._add_gate(gate)
 

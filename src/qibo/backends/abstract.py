@@ -18,6 +18,14 @@ class Backend(abc.ABC):
             return f"{self.name} ({self.platform})"
 
     @abc.abstractmethod
+    def apply_gate(self, gate, state, nqubits): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def apply_gate_density_matrix(self, gate, state, nqubits): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
     def execute_circuit(self, circuit, nshots=None): # pragma: no cover
         """Executes a circuit."""
         raise_error(NotImplementedError)
@@ -149,11 +157,8 @@ class Simulator(Backend):
                     state = self.cast(initial_state)
                 
                 for gate in circuit.queue:
-                    if isinstance(gate, CallbackGate):
-                        gate.callback(self, state)
-                    else:
-                        state = self.apply_gate_density_matrix(gate, state, nqubits)
-            
+                    state = gate.apply_density_matrix(self, state, nqubits)
+
             else:
                 if initial_state is None:
                     state = self.zero_state(nqubits)
@@ -162,10 +167,7 @@ class Simulator(Backend):
                     state = self.cast(initial_state)
 
                 for gate in circuit.queue:
-                    if isinstance(gate, CallbackGate):
-                        gate.callback(self, state)
-                    else:
-                        state = self.apply_gate(gate, state, nqubits)
+                    state = gate.apply(self, state, nqubits)
 
             # TODO: Consider implementing a final state setter in circuits?
             circuit._final_state = CircuitResult(self, circuit, state, nshots)
@@ -189,14 +191,9 @@ class Simulator(Backend):
                     state = self.cast(initial_state, copy=True)
                 
                 for gate in circuit.queue:
-                    if isinstance(gate, Channel):
-                        state = self.apply_channel_density_matrix(gate, state, nqubits)
-                    elif isinstance(gate, M):
-                        state = self.collapse_density_matrix(gate, state, nqubits)
-                    else:
-                        if gate.symbolic_parameters:
-                            gate.substitute_symbols()
-                        state = self.apply_gate_density_matrix(gate, state, nqubits)
+                    if gate.symbolic_parameters:
+                        gate.substitute_symbols()
+                    state = gate.apply_density_matrix(self, state, nqubits)
 
                 if circuit.measurement_gate:
                     result = CircuitResult(self, circuit, state, 1)
@@ -211,14 +208,9 @@ class Simulator(Backend):
                     state = self.cast(initial_state, copy=True)
                 
                 for gate in circuit.queue:
-                    if isinstance(gate, Channel):
-                        state = self.apply_channel(gate, state, nqubits)
-                    elif isinstance(gate, M):
-                        state = self.collapse_state(gate, state, nqubits)
-                    else:
-                        if gate.symbolic_parameters:
-                            gate.substitute_symbols()
-                        state = self.apply_gate(gate, state, nqubits)
+                    if gate.symbolic_parameters:
+                        gate.substitute_symbols()
+                    state = gate.apply(self, state, nqubits)
                 
                 if circuit.measurement_gate:
                     result = CircuitResult(self, circuit, state, 1)

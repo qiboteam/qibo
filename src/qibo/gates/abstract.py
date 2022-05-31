@@ -233,6 +233,12 @@ class Gate:
         # of the same gate.
         return [self.__class__(*self.init_args, **self.init_kwargs)]
 
+    def apply(self, backend, state, nqubits):
+        return backend.apply_gate(self, state, nqubits)
+
+    def apply_density_matrix(self, backend, state, nqubits):
+        return backend.apply_gate_density_matrix(self, state, nqubits)
+
 
 class SpecialGate(Gate):
     """Abstract class for special gates.
@@ -316,6 +322,7 @@ class ParametrizedGate(Gate):
 
 class BaseBackendGate(Gate, ABC):
     """Abstract class for gate objects that can be used in calculations."""
+    # TODO: Remove this class
 
     def __init__(self):
         """

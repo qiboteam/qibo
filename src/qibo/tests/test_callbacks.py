@@ -16,7 +16,6 @@ def test_abstract_callback_properties():
     callback.extend([2, 3])
     assert callback.nqubits == 5
     assert callback.results == [1, 2, 3]
-    assert not callback.density_matrix
 
 
 def test_creating_callbacks():
@@ -52,7 +51,7 @@ def test_entropy_product_state(backend):
     entropy = callbacks.EntanglementEntropy()
     entropy.nqubits = 2
     state = np.ones(4) / 2.0
-    result = entropy(backend, state)
+    result = entropy.apply(backend, state)
     backend.assert_allclose(result, 0, atol=_atol)
 
 
@@ -63,14 +62,8 @@ def test_entropy_singlet_state(backend):
     state = np.zeros(4)
     state[0], state[-1] = 1, 1
     state = state / np.sqrt(2)
-    result = entropy(backend, state)
+    result = entropy.apply(backend, state)
     backend.assert_allclose(result, 1.0)
-
-
-def test_entropy_bad_state_type(backend):
-    entropy = callbacks.EntanglementEntropy([0])
-    with pytest.raises(TypeError):
-        _ = entropy("test")
 
 
 def test_entropy_random_state(backend):
@@ -102,7 +95,7 @@ def test_entropy_switch_partition(backend):
     state = np.zeros(2 ** 5)
     state[0], state[-1] = 1, 1
     state = state / np.sqrt(2)
-    result = entropy(backend, state)
+    result = entropy.apply(backend, state)
     backend.assert_allclose(result, 1.0)
 
 
@@ -236,20 +229,20 @@ def test_entropy_large_circuit(backend, accelerators):
     c1.add((gates.RY(i, thetas[0, i]) for i in range(8)))
     c1.add((gates.CZ(i, i + 1) for i in range(0, 7, 2)))
     state1 = backend.execute_circuit(c1).state()
-    e1 = target_entropy(backend, state1)
+    e1 = target_entropy.apply(backend, state1)
 
     c2 = Circuit(8)
     c2.add((gates.RY(i, thetas[1, i]) for i in range(8)))
     c2.add((gates.CZ(i, i + 1) for i in range(1, 7, 2)))
     c2.add(gates.CZ(0, 7))
     state2 = backend.execute_circuit(c1 + c2).state()
-    e2 = target_entropy(backend, state2)
+    e2 = target_entropy.apply(backend, state2)
 
     c3 = Circuit(8)
     c3.add((gates.RY(i, thetas[2, i]) for i in range(8)))
     c3.add((gates.CZ(i, i + 1) for i in range(0, 7, 2)))
     state3 = backend.execute_circuit(c1 + c2 + c3).state()
-    e3 = target_entropy(backend, state3)
+    e3 = target_entropy.apply(backend, state3)
 
     entropy = callbacks.EntanglementEntropy([0, 2, 4, 5])
     c = Circuit(8, accelerators)
@@ -281,9 +274,8 @@ def test_entropy_density_matrix(backend):
     # this is a positive rho
 
     entropy = callbacks.EntanglementEntropy([1, 3])
-    entropy.density_matrix = True
     entropy.nqubits = 4
-    final_ent = entropy(backend, rho)
+    final_ent = entropy.apply_density_matrix(backend, rho)
 
     rho = rho.reshape(8 * (2,))
     reduced_rho = np.einsum("abcdafch->bdfh", rho).reshape((4, 4))
@@ -323,15 +315,15 @@ def test_norm(backend, density_matrix):
     norm = callbacks.Norm()
     if density_matrix:
         norm.nqubits = 1
-        norm.density_matrix = True
         state = np.random.random((2, 2)) + 1j * np.random.random((2, 2))
         target_norm = np.trace(state)
+        final_norm = norm.apply_density_matrix(backend, state)
     else:
         norm.nqubits = 2
         state = np.random.random(4) + 1j * np.random.random(4)
         target_norm = np.sqrt((np.abs(state) ** 2).sum())
+        final_norm = norm.apply(backend, state)
 
-    final_norm = norm(backend, state)
     backend.assert_allclose(final_norm, target_norm)
 
 
@@ -341,12 +333,11 @@ def test_overlap(backend, density_matrix):
     state1 = np.random.random(4) + 1j * np.random.random(4)
     overlap = callbacks.Overlap(state0)
     overlap.nqubits = 2
-    overlap.density_matrix = density_matrix
     if density_matrix:
         with pytest.raises(NotImplementedError):
-            overlap(backend, state1)
+            overlap.apply_density_matrix(backend, state1)
     else:
-        final_overlap = overlap(backend, state1)
+        final_overlap = overlap.apply(backend, state1)
         target_overlap = np.abs((state0.conj() * state1).sum())
         backend.assert_allclose(final_overlap, target_overlap)
 
@@ -359,7 +350,6 @@ def test_energy(backend, density_matrix):
     energy = callbacks.Energy(ham)
     matrix = K.to_numpy(ham.matrix)
     if density_matrix:
-        energy.density_matrix = True
         state = np.random.random((16, 16)) + 1j * np.random.random((16, 16))
         target_energy = np.trace(matrix.dot(state))
     else:

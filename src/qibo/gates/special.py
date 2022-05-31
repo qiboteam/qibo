@@ -17,6 +17,16 @@ class CallbackGate(SpecialGate):
         self.callback = callback
         self.init_args = [callback]
 
+    def apply(self, backend, state, nqubits):
+        self.callback.nqubits = nqubits
+        self.callback.apply(backend, state)
+        return state
+
+    def apply_density_matrix(self, backend, state, nqubits):
+        self.callback.nqubits = nqubits
+        self.callback.apply_density_matrix(backend, state)
+        return state
+
 
 class FusedGate(SpecialGate):
     """Collection of gates that will be fused and applied as single gate during simulation.
@@ -247,3 +257,9 @@ class VariationalLayer(SpecialGate, ParametrizedGate):
         dagger = self.__class__(*self.init_args, **self.init_kwargs)
         dagger.gates = [gate.dagger() for gate in self.gates[::-1]]
         return dagger
+
+    def apply(self, backend, state, nqubits): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def apply_density_matrix(self, backend, state, nqubits): # pragma: no cover
+        raise_error(NotImplementedError)

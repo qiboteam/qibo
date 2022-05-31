@@ -11,7 +11,6 @@ class Callback:
     def __init__(self):
         self._results = []
         self._nqubits = None
-        self.density_matrix = False
 
     @property
     def nqubits(self): # pragma: no cover
@@ -45,7 +44,10 @@ class Callback:
         
         return self._results[k]
 
-    def __call__(self, backend, state): # pragma: no cover
+    def apply(self, backend, state): # pragma: no cover
+        pass
+
+    def apply_density_matrix(self, backend, state): # pragma: no cover
         pass
 
 
@@ -108,11 +110,16 @@ class EntanglementEntropy(Callback):
         if len(self.partition) <= self.nqubits // 2:
             self.partition = [i for i in range(self.nqubits) if i not in set(self.partition)]
 
-    def __call__(self, backend, state):
-        if self.density_matrix:
-            rho = backend.partial_trace_density_matrix(state, self.partition, self.nqubits)
-        else:
-            rho = backend.partial_trace(state, self.partition, self.nqubits)
+    def apply(self, backend, state):
+        rho = backend.partial_trace(state, self.partition, self.nqubits)
+        entropy, spectrum = backend.entanglement_entropy(rho)
+        self.append(entropy)
+        if self.compute_spectrum:
+            self.spectrum.append(spectrum)
+        return entropy
+
+    def apply_density_matrix(self, backend, state):
+        rho = backend.partial_trace_density_matrix(state, self.partition, self.nqubits)
         entropy, spectrum = backend.entanglement_entropy(rho)
         self.append(entropy)
         if self.compute_spectrum:
@@ -140,7 +147,11 @@ class State(Callback):
         super().__init__()
         self.copy = copy
 
-    def __call__(self, backend, state):
+    def apply(self, backend, state):
+        self.append(backend.cast(state, copy=self.copy))
+        return state
+
+    def apply_density_matrix(self, backend, state):
         self.append(backend.cast(state, copy=self.copy))
         return state
 
@@ -152,12 +163,12 @@ class Norm(Callback):
         \\mathrm{Norm} = \\left \\langle \\Psi | \\Psi \\right \\rangle
         = \\mathrm{Tr} (\\rho )
     """
+
+    def apply(self, backend, state):
+        return backend.calculate_norm(state)
     
-    def __call__(self, backend, state):
-        if self.density_matrix:
-            return backend.calculate_norm_density_matrix(state)
-        else:
-            return backend.calculate_norm(state)
+    def apply_density_matrix(self, backend, state):
+        return backend.calculate_norm_density_matrix(state)
 
 
 class Overlap(Callback):
@@ -178,11 +189,11 @@ class Overlap(Callback):
         super().__init__()
         self.state = state
     
-    def __call__(self, backend, state):
-        if self.density_matrix:
-            return backend.calculate_overlap_density_matrix(self.state, state)
-        else:
-            return backend.calculate_overlap(self.state, state)
+    def apply(self, backend, state):
+        return backend.calculate_overlap(self.state, state)
+    
+    def apply_density_matrix(self, backend, state):
+        return backend.calculate_overlap_density_matrix(self.state, state)
 
 
 class Energy(Callback):
