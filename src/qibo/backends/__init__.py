@@ -60,9 +60,6 @@ class GlobalBackend(NumpyBackend):
     @classmethod
     def set_backend(cls, backend, platform=None):
         if cls._instance is None or cls._instance.name != backend or cls._instance.platform != platform:
-            if not config.ALLOW_SWITCHERS:
-                # TODO: Remove this warning
-                log.warning("Backend should not be changed after allocating gates.")
             cls._instance = construct_backend(backend, platform)
         log.info(f"Using {cls._instance} backend on {cls._instance.device}")
 
