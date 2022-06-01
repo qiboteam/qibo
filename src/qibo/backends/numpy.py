@@ -1,6 +1,6 @@
 import collections
 import numpy as np
-from qibo.config import raise_error
+from qibo.config import raise_error, log
 from qibo.gates import FusedGate
 from qibo.backends import einsum_utils
 from qibo.backends.abstract import Simulator
@@ -26,6 +26,10 @@ class NumpyBackend(Simulator):
         if dtype is None:
             dtype = self.dtype
         return np.array(x, dtype=dtype, copy=copy)
+
+    def issparse(self, x):
+        from scipy import sparse
+        return sparse.issparse(x)
 
     def to_numpy(self, x):
         return x
@@ -373,6 +377,21 @@ class NumpyBackend(Simulator):
 
     def calculate_overlap_density_matrix(self, state1, state2):
         raise_error(NotImplementedError)
+
+    def calculate_eigenvalues(self, matrix, k):
+        if self.issparse(matrix):
+            log.warning("Calculating sparse matrix eigenvectors because "
+                        "sparse modules do not provide ``eigvals`` method.")
+            return self.calculate_eigenvectors(matrix, k=k)[0]
+        return np.linalg.eigvalsh(matrix)
+
+    def calculate_eigenvectors(self, matrix, k):
+        if self.issparse(matrix):
+            if k < matrix.shape[0]:
+                from scipy.sparse.linalg import eigsh
+                return eigsh(matrix, k=k, which='SA')
+            matrix = self.to_numpy(matrix)
+        return np.linalg.eigh(matrix)
 
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
         value = self.to_numpy(value)
