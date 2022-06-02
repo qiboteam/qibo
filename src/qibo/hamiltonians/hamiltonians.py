@@ -351,3 +351,74 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
     def exp(self, a):
         return self.dense.exp(a)
+
+    def _get_symbol_matrix(self, term):
+        """Calculates numerical matrix corresponding to symbolic expression.
+
+        This is partly equivalent to sympy's ``.subs``, which does not work
+        in our case as it does not allow us to substitute ``sympy.Symbol``
+        with numpy arrays and there are different complication when switching
+        to ``sympy.MatrixSymbol``. Here we calculate the full numerical matrix
+        given the symbolic expression using recursion.
+        Helper method for ``_calculate_dense_from_form``.
+
+        Args:
+            term (sympy.Expr): Symbolic expression containing local operators.
+
+        Returns:
+            Numerical matrix corresponding to the given expression as a numpy
+            array of size ``(2 ** self.nqubits, 2 ** self.nqubits).
+        """
+        from numpy import eye
+        if isinstance(term, sympy.Add):
+            # symbolic op for addition
+            result = sum(self._get_symbol_matrix(subterm)
+                         for subterm in term.as_ordered_terms())
+
+        elif isinstance(term, sympy.Mul):
+            # symbolic op for multiplication
+            # note that we need to use matrix multiplication even though
+            # we use scalar symbols for convenience
+            factors = term.as_ordered_factors()
+            result = self._get_symbol_matrix(factors[0])
+            for subterm in factors[1:]:
+                result = result @ self._get_symbol_matrix(subterm)
+
+        elif isinstance(term, sympy.Pow):
+            # symbolic op for power
+            base, exponent = term.as_base_exp()
+            matrix = self._get_symbol_matrix(base)
+            # multiply ``base`` matrix ``exponent`` times to itself
+            result = matrix
+            for _ in range(exponent - 1):
+                result = result @ matrix
+
+        elif isinstance(term, sympy.Symbol):
+            # if the term is a ``Symbol`` then it corresponds to a quantum
+            # operator for which we can construct the full matrix directly
+            if isinstance(term, self._qiboSymbol):
+                # if we have a Qibo symbol the matrix construction is
+                # implemented in :meth:`qibo.core.terms.SymbolicTerm.full_matrix`.
+                result = term.full_matrix(self.nqubits)
+            else:
+                q, matrix = self.symbol_map.get(term)
+                if not isinstance(matrix, self.backend.tensor_types):
+                    # symbols that do not correspond to quantum operators
+                    # for example parameters in the MaxCut Hamiltonian
+                    result = complex(matrix) * eye(2 ** self.nqubits)
+                else:
+                    # if we do not have a Qibo symbol we construct one and use
+                    # :meth:`qibo.core.terms.SymbolicTerm.full_matrix`.
+                    result = self._qiboSymbol(q, matrix).full_matrix(self.nqubits)
+
+        elif term.is_number:
+            # if the term is number we should return in the form of identity
+            # matrix because in expressions like `1 + Z`, `1` is not correspond
+            # to the float 1 but the identity operator (matrix)
+            result = complex(term) * eye(2 ** self.nqubits)
+
+        else:
+            raise_error(TypeError, "Cannot calculate matrix for symbolic term "
+                                   "of type {}.".format(type(term)))
+
+        return result
