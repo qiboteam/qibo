@@ -309,6 +309,14 @@ class Simulator(Backend):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
+    def calculate_expectation_state(self, matrix, state, normalize): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def calculate_expectation_density_matrix(self, matrix, state, normalize): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0): # pragma: no cover
         raise_error(NotImplementedError)
 

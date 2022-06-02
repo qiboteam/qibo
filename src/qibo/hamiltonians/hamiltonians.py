@@ -85,6 +85,57 @@ class Hamiltonian(AbstractHamiltonian):
                                                              self._eigenvalues, self.matrix)
         return self._exp.get("result")
 
+    def expectation(self, state, normalize=False):
+        if isinstance(state, self.backend.tensor_types):
+            shape = tuple(state.shape)
+            if len(shape) == 1: # state vector
+                return self.backend.calculate_expectation_state(self.matrix, state, normalize)
+            elif len(shape) == 2: # density matrix
+                return self.backend.calculate_expectation_density_matrix(self.matrix, state, normalize)
+            else:
+                raise_error(ValueError, "Cannot calculate Hamiltonian "
+                                        "expectation value for state of shape "
+                                        "{}.".format(shape))
+        else:
+            raise_error(TypeError, "Cannot calculate Hamiltonian expectation "
+                                   "value for state of type {}."
+                                   "".format(type(state)))
+
+
+class TrotterCircuit:
+    """Object that caches the Trotterized evolution circuit.
+
+    This object holds a reference to the circuit models and updates its
+    parameters if a different time step ``dt`` is given without recreating
+    every gate from scratch.
+
+    Args:
+        groups (list): List of :class:`qibo.core.terms.TermGroup` objects that
+            correspond to the Trotter groups of terms in the time evolution
+            exponential operator.
+        dt (float): Time step for the Trotterization.
+        nqubits (int): Number of qubits in the system that evolves.
+        accelerators (dict): Dictionary with accelerators for distributed
+            circuits.
+    """
+
+    def __init__(self, groups, dt, nqubits, accelerators):
+        from qibo.models import Circuit
+        self.gates = {}
+        self.dt = dt
+        self.circuit = Circuit(nqubits, accelerators=accelerators)
+        for group in itertools.chain(groups, groups[::-1]):
+            gate = group.term.expgate(dt / 2.0)
+            self.gates[gate] = group
+            self.circuit.add(gate)
+
+    def set(self, dt):
+        if self.dt != dt:
+            params = {gate: group.term.exp(dt / 2.0) for gate, group in self.gates.items()}
+            self.dt = dt
+            self.circuit.set_parameters(params)
+
+
 class SymbolicHamiltonian(AbstractHamiltonian):
     #TODO: update docstring
     """Backend implementation of :class:`qibo.abstractions.hamiltonians.SymbolicHamiltonian`.
@@ -126,6 +177,19 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         self._dense = None
         self._ground_state = ground_state
 
+        self._form = None
+        self._terms = None
+        self.constant = 0 # used only when we perform calculations using ``_terms``
+        self._dense = None
+        self.symbol_map = symbol_map
+        # if a symbol in the given form is not a Qibo symbol it must be
+        # included in the ``symbol_map``
+        self.trotter_circuit = None
+        from qibo.symbols import Symbol
+        self._qiboSymbol = Symbol # also used in ``self._get_symbol_matrix``
+        if form is not None:
+            self.form = form
+
     @property
     def dense(self):
         """Creates the equivalent :class:`qibo.abstractions.hamiltonians.MatrixHamiltonian`."""
@@ -143,9 +207,59 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         self._eigenvectors = hamiltonian._eigenvectors
         self._exp = hamiltonian._exp
 
-    # @abstractmethod
-    # def calculate_dense(self): # pragma: no cover
-    #     raise_error(NotImplementedError)
+    @property
+    def form(self):
+        return self._form
+
+    @form.setter
+    def form(self, form):
+        # Check that given form is a ``sympy`` expression
+        if not isinstance(form, sympy.Expr):
+            raise_error(TypeError, "Symbolic Hamiltonian should be a ``sympy`` "
+                                   "expression but is {}.".format(type(form)))
+        # Calculate number of qubits in the system described by the given
+        # Hamiltonian formula
+        nqubits = 0
+        for symbol in form.free_symbols:
+            if isinstance(symbol, self._qiboSymbol):
+                q = symbol.target_qubit
+            elif isinstance(symbol, sympy.Expr):
+                if symbol not in self.symbol_map:
+                    raise_error(ValueError, "Symbol {} is not in symbol "
+                                            "map.".format(symbol))
+                q, matrix = self.symbol_map.get(symbol)
+                if not isinstance(matrix, K.tensor_types):
+                    # ignore symbols that do not correspond to quantum operators
+                    # for example parameters in the MaxCut Hamiltonian
+                    q = 0
+            if q > nqubits:
+                nqubits = q
+
+        self._form = form
+        self.nqubits = nqubits + 1
+
+    @property
+    def terms(self):
+        """List of :class:`qibo.core.terms.HamiltonianTerm` objects of which the Hamiltonian is a sum of."""
+        if self._terms is None:
+            # Calculate terms based on ``self.form``
+            from qibo.core.terms import SymbolicTerm
+            form = sympy.expand(self.form)
+            terms = []
+            for f, c in form.as_coefficients_dict().items():
+                term = SymbolicTerm(c, f, self.symbol_map)
+                if term.target_qubits:
+                    terms.append(term)
+                else:
+                    self.constant += term.coefficient
+            assert self.nqubits == max(q for term in terms for q in term.target_qubits) + 1
+            self._terms = terms
+        return self._terms
+
+    @terms.setter
+    def terms(self, terms):
+        self._terms = terms
+        self.nqubits = max(q for term in self._terms for q in term.target_qubits) + 1
 
     @property
     def matrix(self):
@@ -166,7 +280,3 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
     def exp(self, a):
         return self.dense.exp(a)
-
-    # @abstractmethod
-    # def circuit(self, dt, accelerators=None, memory_device="/CPU:0"): # pragma: no cover
-    #     raise_error(NotImplementedError)

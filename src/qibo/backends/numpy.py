@@ -406,6 +406,22 @@ class NumpyBackend(Simulator):
             ud = np.transpose(np.conj(eigenvectors))
             return np.matmul(eigenvectors, np.matmul(expd, ud))
 
+    def calculate_expectation_state(self, matrix, state, normalize):
+        statec = np.conj(state)
+        hstate = matrix @ state
+        ev = np.real(np.sum(statec * hstate))
+        if normalize:
+            norm = np.sum(np.square(np.abs(state)))
+            ev = ev / norm
+        return ev
+
+    def calculate_expectation_density_matrix(self, matrix, state, normalize):
+        ev = np.real(np.trace(matrix @ state))
+        if normalize:
+            norm = np.real(np.trace(state))
+            ev = ev / norm
+        return ev
+
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
         value = self.to_numpy(value)
         target = self.to_numpy(target)
