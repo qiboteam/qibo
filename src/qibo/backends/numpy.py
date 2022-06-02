@@ -14,6 +14,10 @@ class NumpyBackend(Simulator):
         self.name = "numpy"
         self.matrices = Matrices(self.dtype)
         self.tensor_types = np.ndarray
+        # TODO: is numeric_types necessary
+        self.numeric_types = (np.int, np.float, np.complex, np.int32,
+                              np.int64, np.float32, np.float64,
+                              np.complex64, np.complex128)
 
     def set_device(self, device):
         if device != "/CPU:0":
@@ -31,6 +35,11 @@ class NumpyBackend(Simulator):
     def issparse(self, x):
         from scipy import sparse
         return sparse.issparse(x)
+
+    def eye(self, shape, dtype='DTYPECPX'):
+        if isinstance(dtype, str):
+            dtype = self.dtypes(dtype)
+        return np.eye(shape, dtype=dtype)
 
     def to_numpy(self, x):
         return x
@@ -421,6 +430,24 @@ class NumpyBackend(Simulator):
             norm = np.real(np.trace(state))
             ev = ev / norm
         return ev
+
+    def calculate_matrix_product(self, hamiltonian, o):
+        if isinstance(o, hamiltonian.__class__):
+            new_matrix = np.dot(hamiltonian.matrix, o.matrix)
+            return hamiltonian.__class__(hamiltonian.nqubits, new_matrix)
+
+        if isinstance(o, self.tensor_types):
+            rank = len(tuple(o.shape))
+            if rank == 1: # vector
+                return np.dot(hamiltonian.matrix, o[:, np.newaxis])[:, 0]
+            elif rank == 2: # matrix
+                return np.dot(hamiltonian.matrix, o)
+            else:
+                raise_error(ValueError, "Cannot multiply Hamiltonian with "
+                                        "rank-{} tensor.".format(rank))
+
+        raise_error(NotImplementedError, "Hamiltonian matmul to {} not "
+                                         "implemented.".format(type(o)))
 
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
         value = self.to_numpy(value)

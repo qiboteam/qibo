@@ -101,6 +101,77 @@ class Hamiltonian(AbstractHamiltonian):
                                    "value for state of type {}."
                                    "".format(type(state)))
 
+    def eye(self, n=None):
+        if n is None:
+            n = int(self.matrix.shape[0])
+            #TODO: see if we can remove backend.eye method
+        return self.backend.eye(n, dtype=self.matrix.dtype)
+
+    def __add__(self, o):
+        if isinstance(o, self.__class__):
+            if self.nqubits != o.nqubits:
+                raise_error(RuntimeError, "Only hamiltonians with the same "
+                                          "number of qubits can be added.")
+            new_matrix = self.matrix + o.matrix
+        elif isinstance(o, self.backend.numeric_types):
+            new_matrix = self.matrix + o * self.eye()
+        else:
+            raise_error(NotImplementedError, "Hamiltonian addition to {} not "
+                                             "implemented.".format(type(o)))
+        return self.__class__(self.nqubits, new_matrix)
+
+    def __sub__(self, o):
+        if isinstance(o, self.__class__):
+            if self.nqubits != o.nqubits:
+                raise_error(RuntimeError, "Only hamiltonians with the same "
+                                          "number of qubits can be subtracted.")
+            new_matrix = self.matrix - o.matrix
+        elif isinstance(o, self.backend.numeric_types):
+            new_matrix = self.matrix - o * self.eye()
+        else:
+            raise_error(NotImplementedError, "Hamiltonian subtraction to {} "
+                                             "not implemented.".format(type(o)))
+        return self.__class__(self.nqubits, new_matrix)
+
+    def __rsub__(self, o):
+        if isinstance(o, self.__class__): # pragma: no cover
+            # impractical case because it will be handled by `__sub__`
+            if self.nqubits != o.nqubits:
+                raise_error(RuntimeError, "Only hamiltonians with the same "
+                                          "number of qubits can be added.")
+            new_matrix = o.matrix - self.matrix
+        elif isinstance(o, self.backend.numeric_types):
+            new_matrix = o * self.eye() - self.matrix
+        else:
+            raise_error(NotImplementedError, "Hamiltonian subtraction to {} "
+                                             "not implemented.".format(type(o)))
+        return self.__class__(self.nqubits, new_matrix)
+
+    def __mul__(self, o):
+        from numpy import cast
+        # since there was K.qnp.cast
+        if isinstance(o, self.backend.tensor_types):
+            o = complex(o)
+        elif not isinstance(o, self.backend.numeric_types):
+            raise_error(NotImplementedError, "Hamiltonian multiplication to {} "
+                                             "not implemented.".format(type(o)))
+        new_matrix = self.matrix * o
+        r = self.__class__(self.nqubits, new_matrix)
+        if self._eigenvalues is not None:
+            if cast(o).real >= 0:
+                r._eigenvalues = o * self._eigenvalues
+            elif not self.backend.issparse(self.matrix):
+                r._eigenvalues = o * self._eigenvalues[::-1]
+        if self._eigenvectors is not None:
+            if cast(o).real > 0:
+                r._eigenvectors = self._eigenvectors
+            elif o == 0:
+                r._eigenvectors = self.eye(int(self._eigenvectors.shape[0]))
+        return r
+
+    def __matmul__(self, o):
+        return self.backend.calculate_matrix_product(self, o)
+
 
 class TrotterCircuit:
     """Object that caches the Trotterized evolution circuit.

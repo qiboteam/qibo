@@ -79,6 +79,14 @@ class Simulator(Backend):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
+    def issparse(self, x):
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def eye(self, shape, dtype='DTYPECPX'):
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
     def to_numpy(self, x):
         raise_error(NotImplementedError)
 
@@ -314,6 +322,10 @@ class Simulator(Backend):
 
     @abc.abstractmethod
     def calculate_expectation_density_matrix(self, matrix, state, normalize): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def calculate_matrix_product(self, hamiltonian, o): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
