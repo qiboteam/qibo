@@ -13,6 +13,7 @@ class NumpyBackend(Simulator):
         super().__init__()
         self.name = "numpy"
         self.matrices = Matrices(self.dtype)
+        self.tensor_types = np.ndarray
 
     def set_device(self, device):
         if device != "/CPU:0":
@@ -392,6 +393,18 @@ class NumpyBackend(Simulator):
                 return eigsh(matrix, k=k, which='SA')
             matrix = self.to_numpy(matrix)
         return np.linalg.eigh(matrix)
+
+    def calculate_exp(self, a, eigenvectors, eigenvalues, matrix):
+        if eigenvectors is None or self.issparse(matrix):
+            if self.issparse(matrix):
+                from scipy.sparse.linalg import expm
+            else:
+                from scipy.linalg import expm
+            return expm(-1j * a * matrix)
+        else:
+            expd = np.diag(np.exp(-1j * a * eigenvalues))
+            ud = np.transpose(np.conj(eigenvectors))
+            return np.matmul(eigenvectors, np.matmul(expd, ud))
 
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
         value = self.to_numpy(value)
