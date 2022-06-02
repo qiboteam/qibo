@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
-#from qibo import matrices, K
 from qibo.config import raise_error
-#from qibo.core.hamiltonians import Hamiltonian, SymbolicHamiltonian, TrotterHamiltonian
-#from qibo.core.terms import HamiltonianTerm
-from qibo.hamiltonians.hamiltonians import Hamiltonian
+from qibo.hamiltonians.hamiltonians import Hamiltonian, SymbolicHamiltonian
+from qibo.hamiltonians.terms import HamiltonianTerm
 from qibo.backends.matrices import Matrices
 from qibo.backends import GlobalBackend
 
@@ -99,12 +97,13 @@ def X(nqubits, dense=True):
             :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
     """
-    from qibo import K
-    def ground_state():
-        n = K.cast((2 ** nqubits,), dtype='DTYPEINT')
-        state = K.ones(n, dtype='DTYPECPX')
-        return state / K.sqrt(K.cast(n, dtype=state.dtype))
-    return _OneBodyPauli(nqubits, matrices.X, dense, ground_state)
+    #TODO: why are implementing the ground state for X
+    # from qibo import K
+    # def ground_state():
+    #     n = K.cast((2 ** nqubits,), dtype='DTYPEINT')
+    #     state = K.ones(n, dtype='DTYPECPX')
+    #     return state / K.sqrt(K.cast(n, dtype=state.dtype))
+    return _OneBodyPauli(nqubits, matrices.X, dense)
 
 
 def Y(nqubits, dense=True):
@@ -158,7 +157,7 @@ def TFIM(nqubits, h=0.0, dense=True):
             ham -= h * _build_spin_model(nqubits, matrices.X, condition)
         return Hamiltonian(nqubits, ham)
 
-    matrix = -(K.np.kron(matrices.Z, matrices.Z) + h * K.np.kron(matrices.X, matrices.I))
+    matrix = -(multikron([matrices.Z, matrices.Z]) + h * multikron([matrices.X, matrices.I]))
     terms = [HamiltonianTerm(matrix, i, i + 1) for i in range(nqubits - 1)]
     terms.append(HamiltonianTerm(matrix, nqubits - 1, 0))
     ham = SymbolicHamiltonian()
@@ -179,13 +178,14 @@ def MaxCut(nqubits, dense=True):
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
     """
     import sympy as sp
+    from numpy import ones
 
     Z = sp.symbols(f'Z:{nqubits}')
     V = sp.symbols(f'V:{nqubits**2}')
     sham = - sum(V[i * nqubits + j] * (1 - Z[i] * Z[j]) for i in range(nqubits) for j in range(nqubits))
     sham /= 2
 
-    v = K.qnp.ones(nqubits**2, dtype='DTYPEINT')
+    v = ones(nqubits**2, dtype='DTYPEINT')
     smap = {s: (i, matrices.Z) for i, s in enumerate(Z)}
     smap.update({s: (i, v[i]) for i, s in enumerate(V)})
 
