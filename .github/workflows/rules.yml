@@ -25,7 +25,7 @@ jobs:
         pip install tensorflow
     - name: Test with pylint
       run: |
-        pip install pylint
+        pip install pylint==2.13 # 2.14 does not disable E1120/1123, TODO check future releases.
         pylint src -E -d E1123,E1120
     - name: Test with pytest core
       run: |
