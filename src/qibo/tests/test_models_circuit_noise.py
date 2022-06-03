@@ -1,8 +1,8 @@
-"""Test :class:`qibo.core.circuit.Circuit` for density matrix and noise simulation."""
+"""Test :class:`qibo.models.circuit.Circuit` for density matrix and noise simulation."""
 import numpy as np
 import pytest
 import qibo
-from qibo import K, gates
+from qibo import gates
 from qibo.models import Circuit
 
 
@@ -13,17 +13,18 @@ def test_pauli_noise_channel(backend):
     c.add(gates.H(1))
     c.add(gates.PauliNoiseChannel(0, px=0.5, pz=0.3))
     c.add(gates.PauliNoiseChannel(1, py=0.1, pz=0.3))
-    final_rho = c().numpy()
+    final_rho = backend.execute_circuit(c)
 
     psi = np.ones(4) / 2
     rho = np.outer(psi, psi.conj())
     m1 = np.kron(matrices.X, matrices.I)
     m2 = np.kron(matrices.Z, matrices.I)
+    
     rho = 0.2 * rho + 0.5 * m1.dot(rho.dot(m1)) + 0.3 * m2.dot(rho.dot(m2))
     m1 = np.kron(matrices.I, matrices.Y)
     m2 = np.kron(matrices.I, matrices.Z)
     rho = 0.6 * rho + 0.1 * m1.dot(rho.dot(m1)) + 0.3 * m2.dot(rho.dot(m2))
-    K.assert_allclose(final_rho, rho)
+    backend.assert_allclose(final_rho, rho)
 
 
 def test_noisy_circuit_reexecution(backend):

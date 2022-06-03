@@ -59,7 +59,7 @@ class Matrices:
     def TDG(self):
         return np.conj(self.T)
 
-    def I(self, nqubits=2):
+    def I(self, nqubits=1):
         return np.eye(2 ** nqubits, dtype=self.dtype)
 
     def Align(self, nqubits=2):
