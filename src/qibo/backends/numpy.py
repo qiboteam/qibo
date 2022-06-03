@@ -36,9 +36,9 @@ class NumpyBackend(Simulator):
         from scipy import sparse
         return sparse.issparse(x)
 
-    def eye(self, shape, dtype='DTYPECPX'):
-        if isinstance(dtype, str):
-            dtype = self.dtypes(dtype)
+    def eye(self, shape, dtype=None):
+        if dtype is None:
+            dtype = self.dtype
         return np.eye(shape, dtype=dtype)
 
     def to_numpy(self, x):
