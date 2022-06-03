@@ -56,7 +56,7 @@ def test_measurements_with_probabilistic_noise(backend):
     thetas = np.random.random(5)
     c = models.Circuit(5)
     c.add((gates.RX(i, t) for i, t in enumerate(thetas)))
-    c.add((gates.PauliNoiseChannel(i, px=0.0, py=0.2, pz=0.4, seed=123)
+    c.add((gates.PauliNoiseChannel(i, px=0.0, py=0.2, pz=0.4)
            for i in range(5)))
     c.add(gates.M(*range(5)))
     backend.set_seed(123)

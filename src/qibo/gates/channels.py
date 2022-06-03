@@ -119,11 +119,9 @@ class UnitaryChannel(KrausChannel):
             ``qubits`` refers the qubit ids that ``Uk`` acts on and ``Uk`` is
             the corresponding matrix as a ``np.ndarray``/``tf.Tensor``.
             Must have the same length as the given probabilities ``p``.
-        seed (int): Optional seed for the random number generator when sampling
-            instead of density matrices is used to simulate this gate.
     """
 
-    def __init__(self, probabilities, ops, seed=None):
+    def __init__(self, probabilities, ops):
         if len(probabilities) != len(ops):
             raise_error(ValueError, "Probabilities list has length {} while "
                                     "{} gates were given."
@@ -137,10 +135,8 @@ class UnitaryChannel(KrausChannel):
         self.coefficients = tuple(probabilities)
         self.coefficient_sum = sum(probabilities)
         # TODO: Check that sum <= 1 up to tolerance
-        self.seed = seed
 
         self.init_args = [probabilities, self.gates]
-        self.init_kwargs = {"seed": seed}
 
     def apply(self, backend, state, nqubits):
         return backend.apply_channel(self, state, nqubits)
@@ -165,23 +161,21 @@ class PauliNoiseChannel(UnitaryChannel):
         px (float): Bit flip (X) error probability.
         py (float): Y-error probability.
         pz (float): Phase flip (Z) error probability.
-        seed (int): Optional seed for the random number generator when sampling
-            instead of density matrices is used to simulate this gate.
     """
 
-    def __init__(self, q, px=0, py=0, pz=0, seed=None):
+    def __init__(self, q, px=0, py=0, pz=0):
         probs, gates = [], []
         for p, gate in [(px, X), (py, Y), (pz, Z)]:
             if p > 0:
                 probs.append(p)
                 gates.append(gate(q))
 
-        super().__init__(probs, gates, seed=seed)
+        super().__init__(probs, gates)
         self.name = "PauliNoiseChannel"
         assert self.target_qubits == (q,)
 
         self.init_args = [q]
-        self.init_kwargs = {"px": px, "py": py, "pz": pz, "seed": seed}
+        self.init_kwargs = {"px": px, "py": py, "pz": pz}
 
 
 class ResetChannel(Channel):
@@ -197,17 +191,15 @@ class ResetChannel(Channel):
         q (int): Qubit id that the channel acts on.
         p0 (float): Probability to reset to 0.
         p1 (float): Probability to reset to 1.
-        seed (int): Optional seed for the random number generator when sampling
-            instead of density matrices is used to simulate this gate.
     """
 
-    def __init__(self, q, p0=0.0, p1=0.0, seed=None):
+    def __init__(self, q, p0=0.0, p1=0.0):
         super().__init__()
         self.name = "ResetChannel"
         self.target_qubits = (q,)
         self.coefficients = (p0, p1)
         self.init_args = [q]
-        self.init_kwargs = {"p0": p0, "p1": p1, "seed": seed}
+        self.init_kwargs = {"p0": p0, "p1": p1}
 
     def apply(self, backend, state, nqubits):
         raise_error(NotImplementedError, "Cannot apply Kraus channel to state vectors. "
@@ -265,15 +257,12 @@ class ThermalRelaxationChannel:
         time (float): the gate time for relaxation error.
         excited_population (float): the population of the excited state at
             equilibrium. Default is 0.
-        seed (int): Optional seed for the random number generator when sampling
-            instead of density matrices is used to simulate this gate.
     """
 
-    def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
+    def __init__(self, q, t1, t2, time, excited_population=0):
         self.name = "ThermalRelaxationChannel"
         self.init_args = [q, t1, t2, time]
-        self.init_kwargs = {"excited_population": excited_population,
-                            "seed": seed}
+        self.init_kwargs = {"excited_population": excited_population}
 
     def calculate_probabilities(self, t1, t2, time, excited_population):
         if excited_population < 0 or excited_population > 1:
@@ -300,14 +289,13 @@ class _ThermalRelaxationChannelA(UnitaryChannel):
         return ThermalRelaxationChannel.calculate_probabilities(
             self, t1, t2, time, excited_population)
 
-    def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
+    def __init__(self, q, t1, t2, time, excited_population=0):
         probs = self.calculate_probabilities(t1, t2, time, excited_population)
         gates = [Z(q), M(q, collapse=True), X(q)]
         super(_ThermalRelaxationChannelA, self).__init__(
-            probs, gates, seed=seed)
+            probs, gates)
         ThermalRelaxationChannel.__init__(
-            self, q, t1, t2, time, excited_population=excited_population,
-            seed=seed)
+            self, q, t1, t2, time, excited_population=excited_population)
         assert self.target_qubits == (q,)
 
 
@@ -319,13 +307,12 @@ class _ThermalRelaxationChannelB(Gate):
         return ThermalRelaxationChannel.calculate_probabilities(
             self, t1, t2, time, excited_population)
 
-    def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
+    def __init__(self, q, t1, t2, time, excited_population=0):
         probs = self.calculate_probabilities(t1, t2, time, excited_population)
         self.exp_t2, self.preset0, self.preset1 = probs # pylint: disable=E0633
 
         super(_ThermalRelaxationChannelB, self).__init__()
         self.target_qubits = (q,)
         ThermalRelaxationChannel.__init__(
-            self, q, t1, t2, time, excited_population=excited_population,
-            seed=seed)
+            self, q, t1, t2, time, excited_population=excited_population)
         # this case can only be applied to density matrices
