@@ -56,13 +56,8 @@ def test_unitary_channel(backend):
     backend.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.skip
-@pytest.mark.parametrize("precision", ["double", "single"])
-def test_unitary_channel_probability_tolerance(backend, precision):
+def test_unitary_channel_probability_tolerance(backend):
     """Create ``UnitaryChannel`` with probability sum within tolerance (see #562)."""
-    import qibo
-    original_precision = qibo.get_precision()
-    qibo.set_precision(precision)
     nqubits = 2
     param = 0.006
     num_terms = 2 ** (2 * nqubits)
@@ -70,16 +65,11 @@ def test_unitary_channel_probability_tolerance(backend, precision):
     prob_identity = 1 - param / max_param
     prob_pauli = param / num_terms
     probs = [prob_identity] + [prob_pauli] * (num_terms - 1)
-    if precision == "double":
-        probs = np.array(probs, dtype="float64")
-    else:
-        probs = np.array(probs, dtype="float32")
+    probs = np.array(probs, dtype="float64")
     matrices = len(probs) * [((0, 1), np.random.random((4, 4)))]
     gate = gates.UnitaryChannel(probs, matrices)
-    qibo.set_precision(original_precision)
 
 
-@pytest.mark.skip
 def test_unitary_channel_errors():
     """Check errors raised by ``gates.UnitaryChannel``."""
     a1 = np.array([[0, 1], [1, 0]])

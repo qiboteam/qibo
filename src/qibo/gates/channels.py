@@ -2,7 +2,7 @@ from abc import abstractmethod
 from qibo.gates.abstract import Gate
 from qibo.gates.gates import X, Y, Z, Unitary
 from qibo.gates.measurements import M
-from qibo.config import raise_error
+from qibo.config import raise_error, PRECISION_TOL
 
 
 class Channel(Gate):
@@ -134,7 +134,10 @@ class UnitaryChannel(KrausChannel):
         self.name = "UnitaryChannel"
         self.coefficients = tuple(probabilities)
         self.coefficient_sum = sum(probabilities)
-        # TODO: Check that sum <= 1 up to tolerance
+        if self.coefficient_sum > 1 + PRECISION_TOL or self.coefficient_sum <= 0:
+            raise_error(ValueError, "UnitaryChannel probability sum should be "
+                                    "between 0 and 1 but is {}."
+                                    "".format(self.coefficient_sum))
 
         self.init_args = [probabilities, self.gates]
 
@@ -309,40 +312,3 @@ class ThermalRelaxationChannel(Channel):
             return (backend.reset_error_density_matrix(self, state, nqubits) -
                     pz * backend.cast(state) +
                     pz * backend.apply_gate_density_matrix(Z(0), state, nqubits))
-
-
-class _ThermalRelaxationChannelA(UnitaryChannel):
-    """Implements thermal relaxation when T1 >= T2."""
-
-    def calculate_probabilities(self, t1, t2, time, excited_population): # pragma: no cover
-        # function not tested because it is redefined in `qibo.core.cgates._ThermalRelaxationChannelA`
-        return ThermalRelaxationChannel.calculate_probabilities(
-            self, t1, t2, time, excited_population)
-
-    def __init__(self, q, t1, t2, time, excited_population=0):
-        probs = self.calculate_probabilities(t1, t2, time, excited_population)
-        gates = [Z(q), M(q, collapse=True), X(q)]
-        super(_ThermalRelaxationChannelA, self).__init__(
-            probs, gates)
-        ThermalRelaxationChannel.__init__(
-            self, q, t1, t2, time, excited_population=excited_population)
-        assert self.target_qubits == (q,)
-
-
-class _ThermalRelaxationChannelB(Gate):
-    """Implements thermal relaxation when T1 < T2."""
-
-    def calculate_probabilities(self, t1, t2, time, excited_population): # pragma: no cover
-        # function not tested because it is redefined in `qibo.core.cgates._ThermalRelaxationChannelB`
-        return ThermalRelaxationChannel.calculate_probabilities(
-            self, t1, t2, time, excited_population)
-
-    def __init__(self, q, t1, t2, time, excited_population=0):
-        probs = self.calculate_probabilities(t1, t2, time, excited_population)
-        self.exp_t2, self.preset0, self.preset1 = probs # pylint: disable=E0633
-
-        super(_ThermalRelaxationChannelB, self).__init__()
-        self.target_qubits = (q,)
-        ThermalRelaxationChannel.__init__(
-            self, q, t1, t2, time, excited_population=excited_population)
-        # this case can only be applied to density matrices
