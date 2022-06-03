@@ -80,11 +80,11 @@ def parallel_execution(circuit, states, processes=None):  # pragma: no cover
     """Execute circuit for multiple states.
 
     Example:
-        .. testcode::
+        .. code-block:: python
 
             import qibo
             original_backend = qibo.get_backend()
-            qibo.set_backend("qibotf")
+            qibo.set_backend('qibojit')
             from qibo import models, set_threads
             from qibo.parallel import parallel_execution
             import numpy as np
@@ -132,11 +132,11 @@ def parallel_parametrized_execution(circuit, parameters, initial_state=None, pro
     """Execute circuit for multiple parameters and fixed initial_state.
 
     Example:
-        .. testcode::
+        .. code-block:: python
 
             import qibo
             original_backend = qibo.get_backend()
-            qibo.set_backend("qibotf")
+            qibo.set_backend('qibojit')
             from qibo import models, gates, set_threads
             from qibo.parallel import parallel_parametrized_execution
             import numpy as np
@@ -199,7 +199,7 @@ def _check_parallel_configuration(processes):  # pragma: no cover
     device = get_device()
     if sys.platform == "win32" or sys.platform == 'darwin':  # pragma: no cover
         raise_error(RuntimeError, "Parallel evaluations supported only on linux.")
-    if get_backend() == "tensorflow" or get_backend() == "qibojit":  # pragma: no cover
+    if get_backend() == "tensorflow":  # pragma: no cover
         raise_error(RuntimeError, f"{get_backend()} backend does not support parallel evaluations.")
     if device is not None and "GPU" in device:  # pragma: no cover
         raise_error(RuntimeError, "Parallel evaluations cannot be used with GPU.")

@@ -131,13 +131,9 @@ def test_unitary_gate(backend, nqubits):
     from qibo import K
     gate = gates.Unitary(matrix, *range(nqubits))
     gate.density_matrix = True
-    if K.name == "qibotf" and nqubits > 2:
-        with pytest.raises(NotImplementedError):
-            final_rho = gate(np.copy(initial_rho))
-    else:
-        final_rho = gate(np.copy(initial_rho))
-        target_rho = np.einsum("ab,bc,cd->ad", matrix, initial_rho, matrix.conj().T)
-        K.assert_allclose(final_rho, target_rho)
+    final_rho = gate(np.copy(initial_rho))
+    target_rho = np.einsum("ab,bc,cd->ad", matrix, initial_rho, matrix.conj().T)
+    K.assert_allclose(final_rho, target_rho)
 
 
 def test_cu1gate_application_twoqubit(backend):

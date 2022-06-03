@@ -87,20 +87,20 @@ circuit as groups of gates have been fused to a single
 is equivalent to simulating the original one but in most cases more efficient
 since less gates need to be applied to the state vector.
 
-The fusion algorithm works as follows: First all gates in the circuit are 
+The fusion algorithm works as follows: First all gates in the circuit are
 transformed to unmarked :class:`qibo.abstractions.gates.FusedGate`. The gates
 are then processed in the order they were added in the circuit. For each gate
-we identify the neighbors forth and back in time and attempt to fuse them to 
-the gate. Two gates can be fused if their total number of target qubits is 
-smaller than the fusion maximum qubits (specified by the user) and there are 
-no other gates between acting on the same target qubits. Gates that are fused 
-to others are marked. The new circuit queue contains the gates that remain 
+we identify the neighbors forth and back in time and attempt to fuse them to
+the gate. Two gates can be fused if their total number of target qubits is
+smaller than the fusion maximum qubits (specified by the user) and there are
+no other gates between acting on the same target qubits. Gates that are fused
+to others are marked. The new circuit queue contains the gates that remain
 unmarked after the above operations finish.
 
 Gates are processed in the original order given by user. There are no
 additional simplifications performed such as commuting gates acting on the same
-qubit or canceling gates even when such simplifications are mathematically possible. 
-The user can specify the maximum number of qubits in a fused gate using 
+qubit or canceling gates even when such simplifications are mathematically possible.
+The user can specify the maximum number of qubits in a fused gate using
 the ``max_qubits`` flag in :meth:`qibo.core.circuit.Circuit.fuse`.
 
 For example the following:
@@ -616,7 +616,7 @@ Sparse matrices from the
 `scipy.sparse <https://docs.scipy.org/doc/scipy/reference/sparse.html>`_
 module are supported by the numpy and qibojit backends while the
 `tf.sparse <https://www.tensorflow.org/api_docs/python/tf/sparse>_` can be
-used for tensorflow and qibotf. Scipy sparse matrices support algebraic
+used for tensorflow. Scipy sparse matrices support algebraic
 operations (addition, subtraction, scalar multiplication), linear algebra
 operations (eigenvalues, eigenvectors, matrix exponentiation) and
 multiplication to dense or other sparse matrices. All these properties are
@@ -772,7 +772,7 @@ by the currently active backend (see :ref:`Backends <Backends>` for more informa
 A copy of the state can be created using :meth:`qibo.abstractions.states.AbstractState.copy`.
 The new state will point to the same tensor in memory as the original one unless
 the ``deep=True`` option was used during the ``copy`` call.
-Note that some backends (qibojit, qibotf) perform in-place updates when the
+Note that the qibojit backend performs in-place updates
 state is used as input to a circuit or time evolution. This will modify the
 state's tensor and the tensor of all shallow copies and the current state vector
 values will be lost. If you intend to keep the current state values,
@@ -924,7 +924,7 @@ its abstract methods.
 
 Both backends are supplemented by custom operators defined under which can be
 used to efficiently apply gates to state vectors or density matrices.
-These custom operators are shipped as the separate libraries qibojit and qibotf.
+These custom operators are shipped as the separate library qibojit.
 We refer to :ref:`Packages <packages>` section for a complete list of the
 available computation backends and instructions on how to install each of
 these libraries on top of qibo.
@@ -939,11 +939,11 @@ The user can switch backends using
 .. testcode::
 
     import qibo
-    qibo.set_backend("qibotf")
+    qibo.set_backend("qibojit")
     qibo.set_backend("numpy")
 
 before creating any circuits or gates. The default backend is the first available
-from ``qibojit``, ``qibotf``, ``tensorflow``, ``numpy``.
+from ``qibojit``, ``tensorflow``, ``numpy``.
 
 Some backends support different platforms. For example, the qibojit backend
 provides two platforms (``cupy`` and ``cuquantum``) when used on GPU.

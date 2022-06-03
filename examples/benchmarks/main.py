@@ -70,7 +70,7 @@ if args.get("backend") == "qibojit" and threading is not None:
     select_numba_threading(threading)
 
 memory = args.pop("memory")
-if args.get("backend") in {"qibotf", "tensorflow"}:
+if args.get("backend") == "tensorflow":
     limit_gpu_memory(memory)
 
 import qibo

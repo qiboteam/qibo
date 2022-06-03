@@ -31,7 +31,7 @@ Here is an example of a circuit with 2 qubits:
     :hide:
 
     ...
-    
+
 If you are planning to freeze the circuit and just query for different initial
 states then you can use the ``Circuit.compile()`` method which will improve
 evaluation performance, e.g.:
@@ -55,9 +55,9 @@ evaluation performance, e.g.:
         init_state = np.ones(4) / 2.0 + i
         c(init_state)
 
-Note that compiling is only supported when the native ``tensorflow`` backend
-is used. This backend is much slower than ``qibotf`` which uses custom
-tensorflow operators to apply gates.
+Note that compiling is only supported when the native ``tensorflow`` backend is
+used. This backend is much slower than ``qibojit`` which uses custom operators
+to apply gates.
 
 
 How to print a circuit summary?
@@ -102,7 +102,7 @@ For example
     h: 3
     cx: 2
     ccx: 1
-    
+
 
 The circuit property ``circuit.gate_types`` will also return a ``collections.Counter``
 that contains the gate types and the corresponding numbers of appearance. The
@@ -225,7 +225,7 @@ we refer to the :ref:`How to collapse state during measurements? <collapse-examp
 
 The measured shots are obtained using pseudo-random number generators of the
 underlying backend (numpy or Tensorflow). If the user has installed a custom
-backend (eg. qibotf) and asks for frequencies with more than 100000 shots,
+backend (eg. qibojit) and asks for frequencies with more than 100000 shots,
 a custom Metropolis algorithm will be used to obtain the corresponding samples,
 for increase performance. The user can change the threshold for which this
 algorithm is used using the ``qibo.set_metropolis_threshold()`` method,
@@ -325,4 +325,4 @@ For example
     q2: ──────o──|──|────o──|──|──H─U1─U1────────|─|─
     q3: ─────────o──|───────o──|────o──|──H─U1───|─x─
     q4: ────────────o──────────o───────o────o──H─x───
-    
+
