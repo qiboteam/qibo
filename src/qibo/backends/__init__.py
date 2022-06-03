@@ -62,19 +62,18 @@ class Backend:
         # set default backend as active
         self.active_backend = self.construct_backend(default_backend)
 
-        # raise performance warning if qibojit and qibotf are not available
+        # raise performance warning if qibojit is not available
         self.show_config()
         if str(self) == "numpy":  # pragma: no cover
             log.warning("numpy backend uses `np.einsum` and supports CPU only. "
-                        "Consider installing the qibojit or qibotf backends for "
+                        "Consider installing the qibojit backend for "
                         "increased performance and to enable GPU acceleration.")
         elif str(self) == "tensorflow":  # pragma: no cover
             # case not tested because CI has tf installed
-            log.warning("qibotf library was not found. `tf.einsum` will be "
-                        "used to apply gates. In order to install Qibo's "
-                        "high performance custom operators for TensorFlow "
-                        "please use `pip install qibotf`. Alternatively, "
-                        "consider installing the qibojit backend.")
+            log.warning("tensorflow backend uses `tf.einsum` "
+                        "to apply gates. In order to install Qibo's "
+                        "high performance custom operators "
+                        "please use `pip install qibojit`.")
 
     @staticmethod
     def _get_backend_class(backend):
@@ -206,7 +205,6 @@ def set_backend(backend="qibojit", platform=None):
 
     The following backends are available:
     'qibojit': Numba/cupy backend with custom operators for applying gates,
-    'qibotf': Tensorflow backend with custom operators for applying gates,
     'tensorflow': Tensorflow backend that applies gates using ``tf.einsum``,
     'numpy': Numpy backend that applies gates using ``np.einsum``.
 

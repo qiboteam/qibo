@@ -76,12 +76,7 @@ def test_fuse_circuit_three_qubit_gate(backend, max_qubits):
     c.add(gates.CNOT(0, 1))
     c.add(gates.CZ(2, 3))
     fused_c = c.fuse(max_qubits=max_qubits)
-    if K.name == "qibotf" and max_qubits > 2:
-        # qibotf does not support multi-qubit kernel
-        with pytest.raises(NotImplementedError):
-            _ = fused_c()
-    else:
-        K.assert_allclose(fused_c(), c(), atol=1e-12)
+    K.assert_allclose(fused_c(), c(), atol=1e-12)
 
 
 @pytest.mark.parametrize("nqubits", [4, 5, 10, 11])
@@ -101,10 +96,7 @@ def test_variational_layer_fusion(backend, nqubits, nlayers, max_qubits):
         c.add(gates.CZ(0, nqubits - 1))
 
     fused_c = c.fuse(max_qubits=max_qubits)
-    if K.name == "qibotf" and max_qubits > 2:
-        pytest.skip("qibotf does not support multi-qubit kernel")
-    else:
-        K.assert_allclose(fused_c(), c())
+    K.assert_allclose(fused_c(), c())
 
 
 @pytest.mark.parametrize("nqubits", [4, 5])
@@ -126,10 +118,7 @@ def test_random_circuit_fusion(backend, nqubits, ngates, max_qubits):
             q0, q1 = np.random.randint(0, nqubits, (2,))
         c.add(gate(q0, q1))
     fused_c = c.fuse(max_qubits=max_qubits)
-    if K.name == "qibotf" and max_qubits > 2:
-        pytest.skip("qibotf does not support multi-qubit kernel")
-    else:
-        K.assert_allclose(fused_c(), c(), atol=1e-7)
+    K.assert_allclose(fused_c(), c(), atol=1e-7)
 
 
 def test_controlled_by_gates_fusion(backend):

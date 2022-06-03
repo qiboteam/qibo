@@ -65,8 +65,8 @@ raised prompting the user to switch the default device using ``qibo.set_device``
 Setting the number of CPU threads
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Qibo by default uses the ``qibojit`` or ``qibotf`` backends which are based on
-custom operators. These backends uses OpenMP instructions for parallelization.
+Qibo by default uses the ``qibojit`` backend which is based on
+custom operators. This backend uses OpenMP instructions for parallelization.
 In most cases, utilizing all available CPU threads provides better performance.
 However, for small circuits the parallelization overhead may decrease
 performance making single thread execution preferrable.
@@ -638,7 +638,7 @@ general two-qubit gates (as 4x4 matrices). The ansatz from the above example can
 be written using :class:`qibo.abstractions.gates.VariationalLayer` as follows:
 
 .. testsetup::
-    
+
     import numpy as np
     from qibo import models, gates, hamiltonians
 
@@ -805,8 +805,8 @@ function.
         optimizer.apply_gradients(zip([grads], [params]))
 
 
-Note that the ``"tensorflow"`` backend has to be used here because ``"qibotf"``
-and other custom backends do not support automatic differentiation.
+Note that the ``"tensorflow"`` backend has to be used here because other custom
+backends do not support automatic differentiation.
 
 The optimization procedure may also be compiled, however in this case it is not
 possible to use :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters` as the
@@ -1419,7 +1419,7 @@ similar to other callbacks:
     # define and execute the ``AdiabaticEvolution`` model
     evolution = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-1,
                                           callbacks=[gap, ground])
-                                   
+
     final_state = evolution(final_time=1.0)
     # print the values of the gap at each evolution time step
     print(gap[:])
