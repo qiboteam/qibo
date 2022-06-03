@@ -121,7 +121,8 @@ class Circuit:
             raise_error(ValueError, "Number of qubits must be positive but is "
                                     "{}.".format(nqubits))
         self.nqubits = nqubits
-        self.init_kwargs = {"nqubits": nqubits}
+        self.init_kwargs = {"nqubits": nqubits, "accelerators": accelerators,
+                            "density_matrix": density_matrix}
         self.queue = _Queue(nqubits)
         # Keep track of parametrized gates for the ``set_parameters`` method
         self.parametrized_gates = _ParametrizedGates()
@@ -415,7 +416,7 @@ class Circuit:
                             q, px=p[0], py=p[1], pz=p[2]))
 
         # Create new circuit with noise gates inside
-        noisy_circuit = self.__class__(self.nqubits)
+        noisy_circuit = self.__class__(**self.init_kwargs)
         for i, gate in enumerate(self.queue):
             # Do not use `circuit.add` here because these gates are already
             # added in the original circuit
