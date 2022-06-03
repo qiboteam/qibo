@@ -178,6 +178,7 @@ class Simulator(Backend):
                                        "different one using ``qibo.set_device``.")
 
     def execute_circuit_repeated(self, circuit, initial_state=None, nshots=None):
+        if nshots is None: nshots = 1
         results = []
         nqubits = circuit.nqubits
         for _ in range(nshots):
