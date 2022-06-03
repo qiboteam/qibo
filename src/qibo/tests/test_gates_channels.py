@@ -108,23 +108,19 @@ def test_pauli_noise_channel(backend):
     backend.assert_allclose(final_rho, target_rho)
 
 
-@pytest.mark.skip
 def test_reset_channel(backend):
     initial_rho = random_density_matrix(3)
     gate = gates.ResetChannel(0, p0=0.2, p1=0.2)
-    gate.density_matrix = True
-    final_rho = gate(np.copy(initial_rho))
+    final_rho = backend.reset_error_density_matrix(gate, np.copy(initial_rho), 3)
 
     dtype = initial_rho.dtype
-    collapsed_rho = np.copy(initial_rho).reshape(6 * (2,))
-    collapsed_rho[0, :, :, 1, :, :] = np.zeros(4 * (2,), dtype=dtype)
-    collapsed_rho[1, :, :, 0, :, :] = np.zeros(4 * (2,), dtype=dtype)
-    collapsed_rho[1, :, :, 1, :, :] = np.zeros(4 * (2,), dtype=dtype)
-    collapsed_rho = collapsed_rho.reshape((8, 8))
-    collapsed_rho /= np.trace(collapsed_rho)
-    mx = np.kron(np.array([[0, 1], [1, 0]]), np.eye(4))
-    flipped_rho = mx.dot(collapsed_rho.dot(mx))
-    target_rho = 0.6 * initial_rho + 0.2 * (collapsed_rho + flipped_rho)
+    trace = backend.to_numpy(backend.partial_trace_density_matrix(initial_rho, (0,), 3))
+    trace = np.reshape(trace, 4 * (2,))
+    zeros = np.tensordot(trace, np.array([[1, 0], [0, 0]], dtype=trace.dtype), axes=0)
+    ones = np.tensordot(trace, np.array([[0, 0], [0, 1]], dtype=trace.dtype), axes=0)
+    zeros = np.transpose(zeros, [4, 0, 1, 5, 2, 3])
+    ones = np.transpose(ones, [4, 0, 1, 5, 2, 3])
+    target_rho = 0.6 * initial_rho + 0.2 * np.reshape(zeros + ones, initial_rho.shape)
     backend.assert_allclose(final_rho, target_rho)
 
 

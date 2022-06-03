@@ -91,6 +91,11 @@ class KrausChannel(Channel):
         self.coefficients = len(self.gates) * (1,)
         self.coefficient_sum = 1
 
+    def apply(self, backend, state, nqubits):
+        raise_error(NotImplementedError, "Cannot apply Kraus channel to state vectors. "
+                                         "This channel is available only for density "
+                                         "matrices.")
+
 
 class UnitaryChannel(KrausChannel):
     """Channel that is a probabilistic sum of unitary operations.
@@ -137,6 +142,9 @@ class UnitaryChannel(KrausChannel):
         self.init_args = [probabilities, self.gates]
         self.init_kwargs = {"seed": seed}
 
+    def apply(self, backend, state, nqubits):
+        return backend.apply_channel(self, state, nqubits)
+
 
 class PauliNoiseChannel(UnitaryChannel):
     """Noise channel that applies Pauli operators with given probabilities.
@@ -176,20 +184,14 @@ class PauliNoiseChannel(UnitaryChannel):
         self.init_kwargs = {"px": px, "py": py, "pz": pz, "seed": seed}
 
 
-class ResetChannel(UnitaryChannel):
+class ResetChannel(Channel):
     """Single-qubit reset channel.
 
     Implements the following transformation:
 
     .. math::
         \\mathcal{E}(\\rho ) = (1 - p_0 - p_1) \\rho
-        + p_0 (|0\\rangle \\langle 0| \\otimes \\tilde{\\rho })
-        + p_1 (|1\\rangle \langle 1| \otimes \\tilde{\\rho })
-
-    with
-
-    .. math::
-        \\tilde{\\rho } = \\frac{\langle 0|\\rho |0\\rangle }{\mathrm{Tr}\langle 0|\\rho |0\\rangle}
+        +  \mathrm{Tr}\\rho \\otimes (p_0|0\\rangle \\langle 0| + p_1|1\\rangle \langle 1|)
 
     Args:
         q (int): Qubit id that the channel acts on.
@@ -200,14 +202,20 @@ class ResetChannel(UnitaryChannel):
     """
 
     def __init__(self, q, p0=0.0, p1=0.0, seed=None):
-        probs = [p0, p1]
-        gates = [M(q, collapse=True), X(q)]
-        super(ResetChannel, self).__init__(probs, gates, seed=seed)
+        super().__init__()
         self.name = "ResetChannel"
-        assert self.target_qubits == (q,)
-
+        self.target_qubits = (q,)
+        self.coefficients = (p0, p1)
         self.init_args = [q]
         self.init_kwargs = {"p0": p0, "p1": p1, "seed": seed}
+
+    def apply(self, backend, state, nqubits):
+        raise_error(NotImplementedError, "Cannot apply Kraus channel to state vectors. "
+                                         "This channel is available only for density "
+                                         "matrices.")
+
+    def apply_density_matrix(self, backend, state, nqubits):
+        return backend.reset_error_density_matrix(self, state, nqubits)
 
 
 class ThermalRelaxationChannel:

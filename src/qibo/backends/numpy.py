@@ -222,6 +222,23 @@ class NumpyBackend(Simulator):
         state = self._append_zeros(state, qubits, shots)
         return np.reshape(state, shape)
 
+    def reset_error_density_matrix(self, gate, state, nqubits):
+        from qibo.gates import X
+        state = self.cast(state)
+        shape = state.shape
+        q = gate.target_qubits[0]
+        p0, p1 = gate.coefficients
+        trace = self.partial_trace_density_matrix(state, (q,), nqubits)
+        trace = np.reshape(trace, 2 * (nqubits - 1) * (2,))
+        zero = self.zero_density_matrix(1)
+        zero = np.tensordot(trace, zero, axes=0)
+        order = list(range(2 * nqubits - 2))
+        order.insert(q, 2 * nqubits - 2)
+        order.insert(q + nqubits, 2 * nqubits - 1)
+        zero = np.reshape(np.transpose(zero, order), shape)
+        state = (1 - p0 - p1) * state + p0 * zero
+        return state + p1 * self.apply_gate_density_matrix(X(q), zero, nqubits)
+
     def calculate_symbolic(self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20):
         state = self.to_numpy(state)
         terms = []
