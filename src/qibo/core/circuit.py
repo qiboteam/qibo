@@ -46,6 +46,18 @@ class Circuit(circuit.AbstractCircuit):
             self._set_nqubits(gate.additional_unitary)
             self.queue.append(gate.additional_unitary)
 
+    def unitary(self):
+        """Creates the unitary matrix corresponding to all circuit gates.
+        
+        This is a ``(2 ** nqubits, 2 ** nqubits)`` matrix obtained by 
+        multiplying all circuit gates.
+        """
+        from qibo import gates
+        fgate = gates.FusedGate(*range(self.nqubits))
+        for gate in self.queue:
+            fgate.append(gate)
+        return fgate.matrix
+
     def fuse(self, max_qubits=2):
         """Creates an equivalent circuit by fusing gates for increased simulation performance.
 

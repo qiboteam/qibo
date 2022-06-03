@@ -760,6 +760,10 @@ class AbstractCircuit(ABC):
         return "\n".join(logs)
 
     @abstractmethod
+    def unitary(self): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def fuse(self): # pragma: no cover
         raise_error(NotImplementedError)
 

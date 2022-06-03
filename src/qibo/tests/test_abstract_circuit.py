@@ -12,6 +12,9 @@ class Circuit(AbstractCircuit): # pragma: no cover
     def _add_layer(self, gate):
         raise_error(NotImplementedError)
 
+    def unitary(self):
+        raise_error(NotImplementedError)
+
     def fuse(self):
         raise_error(NotImplementedError)
 
@@ -259,6 +262,7 @@ def test_circuit_on_qubits_errors():
 
 
 def test_circuit_light_cone():
+    from qibo import __version__
     nqubits = 10
     c = Circuit(nqubits)
     c.add(gates.RY(i, theta=0) for i in range(nqubits))
