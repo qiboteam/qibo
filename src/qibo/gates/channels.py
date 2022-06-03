@@ -202,7 +202,7 @@ class ResetChannel(Channel):
         self.init_kwargs = {"p0": p0, "p1": p1}
 
     def apply(self, backend, state, nqubits):
-        raise_error(NotImplementedError, "Cannot apply Kraus channel to state vectors. "
+        raise_error(NotImplementedError, "Cannot apply reset channel to state vectors. "
                                          "This channel is available only for density "
                                          "matrices.")
 
@@ -210,7 +210,7 @@ class ResetChannel(Channel):
         return backend.reset_error_density_matrix(self, state, nqubits)
 
 
-class ThermalRelaxationChannel:
+class ThermalRelaxationChannel(Channel):
     """Single-qubit thermal relaxation error channel.
 
     Implements the following transformation:
@@ -219,13 +219,8 @@ class ThermalRelaxationChannel:
 
     .. math::
         \\mathcal{E} (\\rho ) = (1 - p_z - p_0 - p_1)\\rho + p_zZ\\rho Z
-        + p_0 (|0\\rangle \\langle 0| \\otimes \\tilde{\\rho })
-        + p_1 (|1\\rangle \langle 1| \otimes \\tilde{\\rho })
+        +  \mathrm{Tr}\\rho \\otimes (p_0|0\\rangle \\langle 0| + p_1|1\\rangle \langle 1|)
 
-    with
-
-    .. math::
-        \\tilde{\\rho } = \\frac{\langle 0|\\rho |0\\rangle }{\mathrm{Tr}\langle 0|\\rho |0\\rangle}
 
     while if :math:`T_1 < T_2`:
 
@@ -260,11 +255,13 @@ class ThermalRelaxationChannel:
     """
 
     def __init__(self, q, t1, t2, time, excited_population=0):
+        super().__init__()
         self.name = "ThermalRelaxationChannel"
+        self.target_qubits = (q,)
         self.init_args = [q, t1, t2, time]
         self.init_kwargs = {"excited_population": excited_population}
 
-    def calculate_probabilities(self, t1, t2, time, excited_population):
+        # check given parameters
         if excited_population < 0 or excited_population > 1:
             raise_error(ValueError, "Invalid excited state population {}."
                                     "".format(excited_population))
@@ -279,6 +276,39 @@ class ThermalRelaxationChannel:
         if t2 > 2 * t1:
             raise_error(ValueError, "Invalid T_2 relaxation time parameter: "
                                     "T_2 greater than 2 * T_1.")
+
+        # calculate probabilities
+        import numpy as np
+        self.t1, self.t2 = t1, t2
+        p_reset = 1 - np.exp(-time / t1)
+        self.coefficients = [p_reset * (1 - excited_population),
+                             p_reset * excited_population]
+        if t1 < t2:
+            self.coefficients.append(np.exp(-time / t2))
+        else:
+            pz = p_reset + np.exp(-time / t2) * (1 - np.exp(time / t1))
+            self.coefficients.append(pz)
+
+    def apply_density_matrix(self, backend, state, nqubits):
+        q = self.target_qubits[0]
+        if self.t1 < self.t2:
+            from qibo.gates import Unitary
+            preset0, preset1, exp_t2 = self.coefficients
+            matrix = [[1 - preset1, 0, 0, preset1],
+                      [0, exp_t2, 0, 0],
+                      [0, 0, exp_t2, 0],
+                      [preset0, 0, 0, 1 - preset0]]
+
+            qubits = (q, q + nqubits)
+            gate = Unitary(matrix, *qubits)
+            return backend.thermal_error_density_matrix(gate, state, nqubits)
+
+        else:
+            from qibo.gates import Z
+            pz = self.coefficients[-1]
+            return (backend.reset_error_density_matrix(self, state, nqubits) -
+                    pz * backend.cast(state) +
+                    pz * backend.apply_gate_density_matrix(Z(0), state, nqubits))
 
 
 class _ThermalRelaxationChannelA(UnitaryChannel):

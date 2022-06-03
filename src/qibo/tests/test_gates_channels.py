@@ -113,7 +113,6 @@ def test_reset_channel(backend):
     gate = gates.ResetChannel(0, p0=0.2, p1=0.2)
     final_rho = backend.reset_error_density_matrix(gate, np.copy(initial_rho), 3)
 
-    dtype = initial_rho.dtype
     trace = backend.to_numpy(backend.partial_trace_density_matrix(initial_rho, (0,), 3))
     trace = np.reshape(trace, 4 * (2,))
     zeros = np.tensordot(trace, np.array([[1, 0], [0, 0]], dtype=trace.dtype), axes=0)
@@ -124,19 +123,16 @@ def test_reset_channel(backend):
     backend.assert_allclose(final_rho, target_rho)
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("t1,t2,time,excpop",
                          [(0.8, 0.5, 1.0, 0.4), (0.5, 0.8, 1.0, 0.4)])
 def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
     """Check ``gates.ThermalRelaxationChannel`` on a 3-qubit random density matrix."""
     initial_rho = random_density_matrix(3)
-    gate = gates.ThermalRelaxationChannel(0, t1, t2, time=time,
-        excited_population=excpop)
-    gate.density_matrix = True
-    final_rho = gate(np.copy(initial_rho)) # pylint: disable=E1102
+    gate = gates.ThermalRelaxationChannel(0, t1, t2, time=time, excited_population=excpop)
+    final_rho = gate.apply_density_matrix(backend, np.copy(initial_rho), 3)
 
-    exp, p0, p1 = gate.calculate_probabilities(t1, t2, time, excpop)
     if t2 > t1:
+        p0, p1, exp = gate.coefficients
         matrix = np.diag([1 - p1, p0, p1, 1 - p0])
         matrix[0, -1], matrix[-1, 0] = exp, exp
         matrix = matrix.reshape(4 * (2,))
@@ -145,29 +141,24 @@ def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
         target_rho = np.einsum("abcd,aJKcjk->bJKdjk", matrix, target_rho)
         target_rho = target_rho.reshape(initial_rho.shape)
     else:
-        pz = exp
-        pi = 1 - pz - p0 - p1
-        dtype = initial_rho.dtype
-        collapsed_rho = np.copy(initial_rho).reshape(6 * (2,))
-        collapsed_rho[0, :, :, 1, :, :] = np.zeros(4 * (2,), dtype=dtype)
-        collapsed_rho[1, :, :, 0, :, :] = np.zeros(4 * (2,), dtype=dtype)
-        collapsed_rho[1, :, :, 1, :, :] = np.zeros(4 * (2,), dtype=dtype)
-        collapsed_rho = collapsed_rho.reshape((8, 8))
-        collapsed_rho /= np.trace(collapsed_rho)
-        mx = np.kron(np.array([[0, 1], [1, 0]]), np.eye(4))
+        p0, p1, pz = gate.coefficients
         mz = np.kron(np.array([[1, 0], [0, -1]]), np.eye(4))
         z_rho = mz.dot(initial_rho.dot(mz))
-        flipped_rho = mx.dot(collapsed_rho.dot(mx))
-        target_rho = (pi * initial_rho + pz * z_rho + p0 * collapsed_rho +
-                      p1 * flipped_rho)
+
+        trace = backend.to_numpy(backend.partial_trace_density_matrix(initial_rho, (0,), 3))
+        trace = np.reshape(trace, 4 * (2,))
+        zeros = np.tensordot(trace, np.array([[1, 0], [0, 0]], dtype=trace.dtype), axes=0)
+        ones = np.tensordot(trace, np.array([[0, 0], [0, 1]], dtype=trace.dtype), axes=0)
+        zeros = np.transpose(zeros, [4, 0, 1, 5, 2, 3])
+        ones = np.transpose(ones, [4, 0, 1, 5, 2, 3])
+
+        pi = 1 - p0 - p1 - pz
+        target_rho = pi * initial_rho + pz * z_rho 
+        target_rho += np.reshape(p0 * zeros + p1 * ones, initial_rho.shape)
+
     backend.assert_allclose(final_rho, target_rho)
-    # Try to apply to state vector if t1 < t2
-    if t1 < t2:
-        with pytest.raises(ValueError):
-            gate._state_vector_call(initial_rho) # pylint: disable=no-member
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("t1,t2,time,excpop",
                          [(1.0, 0.5, 1.5, 1.5), (1.0, 0.5, -0.5, 0.5),
                           (1.0, -0.5, 1.5, 0.5), (-1.0, 0.5, 1.5, 0.5),

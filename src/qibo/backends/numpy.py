@@ -227,7 +227,7 @@ class NumpyBackend(Simulator):
         state = self.cast(state)
         shape = state.shape
         q = gate.target_qubits[0]
-        p0, p1 = gate.coefficients
+        p0, p1 = gate.coefficients[:2]
         trace = self.partial_trace_density_matrix(state, (q,), nqubits)
         trace = np.reshape(trace, 2 * (nqubits - 1) * (2,))
         zero = self.zero_density_matrix(1)
@@ -238,6 +238,12 @@ class NumpyBackend(Simulator):
         zero = np.reshape(np.transpose(zero, order), shape)
         state = (1 - p0 - p1) * state + p0 * zero
         return state + p1 * self.apply_gate_density_matrix(X(q), zero, nqubits)
+
+    def thermal_error_density_matrix(self, gate, state, nqubits):
+        state = self.cast(state)
+        shape = state.shape
+        state = self.apply_gate(gate, state.ravel(), 2 * nqubits)
+        return np.reshape(state, shape)
 
     def calculate_symbolic(self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20):
         state = self.to_numpy(state)
