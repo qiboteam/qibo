@@ -1,5 +1,6 @@
-from qibo import gates, K
-from qibo.hamiltonians import Hamiltonian, matrices
+import numpy as np # K.qnp, K.np -> np
+from qibo import gates
+from qibo.hamiltonians import Hamiltonian #, matrices
 from qibo.models.circuit import Circuit
 from qibo.config import raise_error
 
@@ -67,7 +68,7 @@ class qPDF:
         if len(parameters) != self.nparams: # pragma: no cover
             raise_error(
                 RuntimeError, 'Mismatch between number of parameters and model size.')
-        pdf = K.qnp.zeros(shape=(len(x), len(self.hamiltonian)), dtype='DTYPE')
+        pdf = np.zeros(shape=(len(x), len(self.hamiltonian)), dtype='DTYPE')
         for i, x_value in enumerate(x):
             params = self.rotation(parameters, x_value)
             self.circuit.set_parameters(params)
@@ -87,35 +88,38 @@ def qpdf_hamiltonian(nqubits, z_qubit=0):
     Returns:
         An Hamiltonian object.
     """
+    #TODO: find better way to pass numpy matrices, perhaps global object matrices?
+    from qibo.backends import NumpyBackend
+    matrices = NumpyBackend().matrices
     eye = matrices.I
     if z_qubit == 0:
         h = matrices.Z
         for _ in range(nqubits - 1):
-            h = K.np.kron(eye, h)
+            h = np.kron(eye, h)
 
     elif z_qubit == nqubits - 1:
         h = eye
         for _ in range(nqubits - 2):
-            h = K.np.kron(eye, h)
-        h = K.np.kron(matrices.Z, h)
+            h = np.kron(eye, h)
+        h = np.kron(matrices.Z, h)
     else:
         h = eye
         for _ in range(nqubits - 1):
             if _ + 1 == z_qubit:
-                h = K.np.kron(matrices.Z, h)
+                h = np.kron(matrices.Z, h)
             else:
-                h = K.np.kron(eye, h)
+                h = np.kron(eye, h)
     return Hamiltonian(nqubits, h)
 
 
 def map_to(x):
     """Auxiliary function"""
-    return 2 * K.np.pi * x
+    return 2 * np.pi * x
 
 
 def maplog_to(x):
     """Auxiliary function"""
-    return - K.np.pi * K.np.log10(x)
+    return - np.pi * np.log10(x)
 
 
 def ansatz_Fourier(layers, qubits=1):
@@ -188,7 +192,7 @@ def ansatz_Fourier(layers, qubits=1):
         return p
 
     nparams = 4 * layers * qubits + \
-        (layers - 1) * int(K.np.ceil(qubits / 2)) * \
+        (layers - 1) * int(np.ceil(qubits / 2)) * \
         (int(qubits > 1) + int(qubits > 2))
 
     return circuit, rotation, nparams
@@ -252,6 +256,6 @@ def ansatz_Weighted(layers, qubits=1):
         return p
 
     nparams = 4 * layers * qubits + \
-        (layers - 1) * int(K.np.ceil(qubits / 2)) * \
+        (layers - 1) * int(np.ceil(qubits / 2)) * \
         (int(qubits > 1) + int(qubits > 2))
     return circuit, rotation, nparams
