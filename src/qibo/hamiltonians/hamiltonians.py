@@ -306,7 +306,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                     raise_error(ValueError, "Symbol {} is not in symbol "
                                             "map.".format(symbol))
                 q, matrix = self.symbol_map.get(symbol)
-                if not isinstance(matrix, K.tensor_types):
+                if not isinstance(matrix, self.backend.tensor_types):
                     # ignore symbols that do not correspond to quantum operators
                     # for example parameters in the MaxCut Hamiltonian
                     q = 0
@@ -514,7 +514,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             if self._dense is not None and o._dense is not None:
                 new_ham.dense = self.dense - o.dense
 
-        elif isinstance(o, self.numeric_types):
+        elif isinstance(o, self.backend.numeric_types):
             new_ham = self.__class__(symbol_map=dict(self.symbol_map))
             if self._form is not None:
                 new_ham.form = self.form - o

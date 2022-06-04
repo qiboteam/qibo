@@ -1,5 +1,5 @@
 import sympy
-from qibo import gates
+from qibo import gates, matrices
 from qibo.config import raise_error
 
 class Symbol(sympy.Symbol):
@@ -70,26 +70,20 @@ class Symbol(sympy.Symbol):
             product between identities and the symbol's single-qubit matrix.
         """
         from qibo.hamiltonians import multikron
-        matrix_list = self.target_qubit * [self.backend.matrices.I]
+        matrix_list = self.target_qubit * [matrices.I]
         matrix_list.append(self.matrix)
         n = nqubits - self.target_qubit - 1
-        matrix_list.extend(self.backend.matrices.I for _ in range(n))
+        matrix_list.extend(matrices.I for _ in range(n))
         return multikron(matrix_list)
 
 
 class PauliSymbol(Symbol):
 
     def __new__(cls, q, commutative=False):
-        #TODO: improve
-        from qibo.backends.numpy import NumpyBackend
-        matrices = NumpyBackend().matrices
         matrix = getattr(matrices, cls.__name__)
         return super().__new__(cls, q, matrix, cls.__name__, commutative)
 
     def __init__(self, q, commutative=False):
-        #TODO: improve
-        from qibo.backends.numpy import NumpyBackend
-        matrices = NumpyBackend().matrices
         name = self.__class__.__name__
         matrix = getattr(matrices, name)
         super().__init__(q, matrix, name, commutative)

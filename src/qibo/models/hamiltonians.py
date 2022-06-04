@@ -1,12 +1,9 @@
 # -*- coding: utf-8 -*-
 from qibo.config import raise_error
+from qibo import matrices
 from qibo.hamiltonians.hamiltonians import Hamiltonian, SymbolicHamiltonian
 from qibo.hamiltonians.terms import HamiltonianTerm
-from qibo.backends.matrices import Matrices
-from qibo.backends import GlobalBackend
 
-#TODO: find if there is a better way to pass the matrices dtype
-matrices = Matrices(GlobalBackend().dtype)
 
 def multikron(matrix_list):
     """Calculates Kronecker product of a list of matrices.
