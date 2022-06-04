@@ -12,14 +12,18 @@ class Hamiltonian(AbstractHamiltonian):
             or on ``tf.sparse`` for the tensorflow backend are also
             supported.
     """
-    def __init__(self, nqubits, matrix=None, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, nqubits, matrix=None, backend=None):
+        if backend is None:
+            from qibo.backends import GlobalBackend
+            self.backend = GlobalBackend()
+
         if not (isinstance(matrix, self.backend.tensor_types) or self.backend.issparse(matrix)):
             raise_error(TypeError, "Matrix of invalid type {} given during "
                                    "Hamiltonian initialization"
                                    "".format(type(matrix)))
-
         matrix = self.backend.cast(matrix)
+
+        super().__init__()
 
         self.nqubits = nqubits
         self.matrix = matrix
@@ -243,9 +247,8 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             full Hamiltonian matrix only to find the ground state.
     """
 
-    def __init__(self, form=None, symbol_map={}, ground_state=None):
+    def __init__(self, form=None, symbol_map={}, ground_state=None, backend=None):
         super().__init__()
-        self._dense = None
         self._ground_state = ground_state
 
         self._form = None
@@ -260,6 +263,9 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         self._qiboSymbol = Symbol # also used in ``self._get_symbol_matrix``
         if form is not None:
             self.form = form
+        if backend is None:
+            from qibo.backends import GlobalBackend
+            self.backend = GlobalBackend()
 
     @property
     def dense(self):

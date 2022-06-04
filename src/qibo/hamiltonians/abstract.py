@@ -4,11 +4,8 @@ from qibo.config import raise_error
 class AbstractHamiltonian:
     """Qibo abstraction for Hamiltonian objects."""
 
-    def __init__(self, backend=None):
+    def __init__(self):
         self._nqubits = None
-        if backend is None:
-            from qibo.backends import GlobalBackend
-            self.backend = GlobalBackend()
 
     @property
     def nqubits(self):
