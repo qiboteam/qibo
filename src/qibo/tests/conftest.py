@@ -13,7 +13,6 @@ INACTIVE_TESTS = {
     "qibo.tests.test_backends_init",
     "qibo.tests.test_backends_matrices",
     "qibo.tests.test_core_circuit_backpropagation",
-    "qibo.tests.test_core_circuit_noise",
     "qibo.tests.test_core_distcircuit_execution",
     "qibo.tests.test_core_distcircuit",
     "qibo.tests.test_core_distutils",
@@ -30,7 +29,6 @@ INACTIVE_TESTS = {
     "qibo.tests.test_models_hep",
     "qibo.tests.test_models_qgan",
     "qibo.tests.test_models_variational",
-    "qibo.tests.test_noise",
 }
 
 # backends to be tested

@@ -1,8 +1,9 @@
-from qibo import config
+from functools import cached_property
 from qibo.config import log, raise_error
 from qibo.backends.abstract import Backend
 from qibo.backends.numpy import NumpyBackend
 from qibo.backends.tensorflow import TensorflowBackend
+from qibo.backends.matrices import Matrices
 
 
 def construct_backend(backend, platform=None):
@@ -60,11 +61,21 @@ class GlobalBackend(NumpyBackend):
     @classmethod
     def set_backend(cls, backend, platform=None):
         if cls._instance is None or cls._instance.name != backend or cls._instance.platform != platform:
-            if not config.ALLOW_SWITCHERS:
-                # TODO: Remove this warning
-                log.warning("Backend should not be changed after allocating gates.")
             cls._instance = construct_backend(backend, platform)
         log.info(f"Using {cls._instance} backend on {cls._instance.device}")
+
+
+class QiboMatrices:
+    # TODO: Update matrices dtype when ``set_precision`` is used
+
+    def __init__(self, dtype="complex128"):
+        self.matrices = Matrices("complex128")
+        self.I = self.matrices.I(1)
+        self.X = self.matrices.X
+        self.Y = self.matrices.Y
+        self.Z = self.matrices.Z
+
+matrices = QiboMatrices()
 
 
 def get_backend():
