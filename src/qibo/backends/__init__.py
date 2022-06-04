@@ -1,4 +1,3 @@
-from functools import cached_property
 from qibo.config import log, raise_error
 from qibo.backends.abstract import Backend
 from qibo.backends.numpy import NumpyBackend
