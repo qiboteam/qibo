@@ -1,5 +1,7 @@
-from qibo.config import raise_error, log
+import sympy
+from qibo.config import raise_error, log, EINSUM_CHARS
 from qibo.hamiltonians.abstract import AbstractHamiltonian
+
 
 class Hamiltonian(AbstractHamiltonian):
     """Hamiltonian based on a dense or sparse matrix representation.
@@ -152,8 +154,6 @@ class Hamiltonian(AbstractHamiltonian):
         return self.__class__(self.nqubits, new_matrix)
 
     def __mul__(self, o):
-        from numpy import cast
-        # since there was K.qnp.cast
         if isinstance(o, self.backend.tensor_types):
             o = complex(o)
         elif not isinstance(o, self.backend.numeric_types):
@@ -162,12 +162,12 @@ class Hamiltonian(AbstractHamiltonian):
         new_matrix = self.matrix * o
         r = self.__class__(self.nqubits, new_matrix)
         if self._eigenvalues is not None:
-            if cast(o).real >= 0:
+            if self.backend.cast(o).real >= 0: # TODO: check for side effects K.qnp
                 r._eigenvalues = o * self._eigenvalues
             elif not self.backend.issparse(self.matrix):
                 r._eigenvalues = o * self._eigenvalues[::-1]
         if self._eigenvectors is not None:
-            if cast(o).real > 0:
+            if self.backend.cast(o).real > 0: # TODO: see above
                 r._eigenvectors = self._eigenvectors
             elif o == 0:
                 r._eigenvectors = self.eye(int(self._eigenvectors.shape[0]))
@@ -196,10 +196,11 @@ class TrotterCircuit:
 
     def __init__(self, groups, dt, nqubits, accelerators):
         from qibo.models import Circuit
+        from itertools import chain
         self.gates = {}
         self.dt = dt
         self.circuit = Circuit(nqubits, accelerators=accelerators)
-        for group in itertools.chain(groups, groups[::-1]):
+        for group in chain(groups, groups[::-1]):
             gate = group.term.expgate(dt / 2.0)
             self.gates[gate] = group
             self.circuit.add(gate)
@@ -259,7 +260,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         # if a symbol in the given form is not a Qibo symbol it must be
         # included in the ``symbol_map``
         self.trotter_circuit = None
-        from qibo.symbols import Symbol
+        from qibo.hamiltonians.symbols import Symbol
         self._qiboSymbol = Symbol # also used in ``self._get_symbol_matrix``
         if form is not None:
             self.form = form
@@ -320,7 +321,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         """List of :class:`qibo.core.terms.HamiltonianTerm` objects of which the Hamiltonian is a sum of."""
         if self._terms is None:
             # Calculate terms based on ``self.form``
-            from qibo.core.terms import SymbolicTerm
+            from qibo.hamiltonians.terms import SymbolicTerm
             form = sympy.expand(self.form)
             terms = []
             for f, c in form.as_coefficients_dict().items():
@@ -428,3 +429,194 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                                    "of type {}.".format(type(term)))
 
         return result
+
+    def _calculate_dense_from_form(self):
+        """Calculates equivalent :class:`qibo.core.hamiltonians.Hamiltonian` using symbolic form.
+        Useful when the term representation is not available.
+        """
+        matrix = self._get_symbol_matrix(self.form)
+        return Hamiltonian(self.nqubits, matrix)
+
+    def _calculate_dense_from_terms(self):
+        """Calculates equivalent :class:`qibo.core.hamiltonians.Hamiltonian` using the term representation."""
+        from itertools import chain
+        import numpy as np
+        if 2 * self.nqubits > len(EINSUM_CHARS): # pragma: no cover
+            # case not tested because it only happens in large examples
+            raise_error(NotImplementedError, "Not enough einsum characters.")
+
+        matrix = 0
+        chars = EINSUM_CHARS[:2 * self.nqubits]
+        for term in self.terms:
+            ntargets = len(term.target_qubits)
+            tmat = np.reshape(term.matrix, 2 * ntargets * (2,))
+            n = self.nqubits - ntargets
+            emat = np.reshape(np.eye(2 ** n, dtype=tmat.dtype), 2 * n * (2,))
+            gen = lambda x: (chars[i + x] for i in term.target_qubits)
+            tc = "".join(chain(gen(0), gen(self.nqubits)))
+            ec = "".join((c for c in chars if c not in tc))
+            matrix += np.einsum(f"{tc},{ec}->{chars}", tmat, emat)
+        matrix = np.reshape(matrix, 2 * (2 ** self.nqubits,))
+        return Hamiltonian(self.nqubits, matrix) + self.constant
+
+    def calculate_dense(self):
+        if self._terms is None:
+            # calculate dense matrix directly using the form to avoid the
+            # costly ``sympy.expand`` call
+            return self._calculate_dense_from_form()
+        return self._calculate_dense_from_terms()
+
+    def expectation(self, state, normalize=False):
+        return Hamiltonian.expectation(self, state, normalize)
+
+    def __add__(self, o):
+        if isinstance(o, self.__class__):
+            if self.nqubits != o.nqubits:
+                raise_error(RuntimeError, "Only hamiltonians with the same "
+                                          "number of qubits can be added.")
+            new_ham = self.__class__(symbol_map=dict(self.symbol_map))
+            if self._form is not None and o._form is not None:
+                new_ham.form = self.form + o.form
+                new_ham.symbol_map.update(o.symbol_map)
+            if self._terms is not None and o._terms is not None:
+                new_ham.terms = self.terms + o.terms
+                new_ham.constant = self.constant + o.constant
+            if self._dense is not None and o._dense is not None:
+                new_ham.dense = self.dense + o.dense
+
+        elif isinstance(o, self.backend.numeric_types):
+            new_ham = self.__class__(symbol_map=dict(self.symbol_map))
+            if self._form is not None:
+                new_ham.form = self.form + o
+            if self._terms is not None:
+                new_ham.terms = self.terms
+                new_ham.constant = self.constant + o
+            if self._dense is not None:
+                new_ham.dense = self.dense + o
+
+        else:
+            raise_error(NotImplementedError, "SymbolicHamiltonian addition to {} not "
+                                             "implemented.".format(type(o)))
+        return new_ham
+
+    def __sub__(self, o):
+        if isinstance(o, self.__class__):
+            if self.nqubits != o.nqubits:
+                raise_error(RuntimeError, "Only hamiltonians with the same "
+                                          "number of qubits can be subtracted.")
+            new_ham = self.__class__(symbol_map=dict(self.symbol_map))
+            if self._form is not None and o._form is not None:
+                new_ham.form = self.form - o.form
+                new_ham.symbol_map.update(o.symbol_map)
+            if self._terms is not None and o._terms is not None:
+                new_ham.terms = self.terms + [-1 * x for x in o.terms]
+                new_ham.constant = self.constant - o.constant
+            if self._dense is not None and o._dense is not None:
+                new_ham.dense = self.dense - o.dense
+
+        elif isinstance(o, self.numeric_types):
+            new_ham = self.__class__(symbol_map=dict(self.symbol_map))
+            if self._form is not None:
+                new_ham.form = self.form - o
+            if self._terms is not None:
+                new_ham.terms = self.terms
+                new_ham.constant = self.constant - o
+            if self._dense is not None:
+                new_ham.dense = self.dense - o
+
+        else:
+            raise_error(NotImplementedError, "Hamiltonian subtraction to {} "
+                                             "not implemented.".format(type(o)))
+        return new_ham
+
+    def __rsub__(self, o):
+        if isinstance(o, self.backend.numeric_types):
+            new_ham = self.__class__(symbol_map=dict(self.symbol_map))
+            if self._form is not None:
+                new_ham.form = o - self.form
+            if self._terms is not None:
+                new_ham.terms = [-1 * x for x in self.terms]
+                new_ham.constant = o - self.constant
+            if self._dense is not None:
+                new_ham.dense = o - self.dense
+        else:
+            raise_error(NotImplementedError, "Hamiltonian subtraction to {} "
+                                             "not implemented.".format(type(o)))
+        return new_ham
+
+    def __mul__(self, o):
+        if not (isinstance(o, self.backend.numeric_types) or isinstance(o, self.backend.tensor_types)):
+            raise_error(NotImplementedError, "Hamiltonian multiplication to {} "
+                                             "not implemented.".format(type(o)))
+        o = complex(o)
+        new_ham = self.__class__(symbol_map=dict(self.symbol_map))
+        if self._form is not None:
+            new_ham.form = o * self.form
+        if self._terms is not None:
+            new_ham.terms = [o * x for x in self.terms]
+            new_ham.constant = self.constant * o
+        if self._dense is not None:
+            new_ham.dense = o * self._dense
+        return new_ham
+
+    def apply_gates(self, state, density_matrix=False):
+        """Applies gates corresponding to the Hamiltonian terms to a given state.
+        Helper method for ``__matmul__``.
+        """
+        total = 0
+        for term in self.terms:
+            total += term(self.backend.copy(state), density_matrix)
+        if self.constant:
+            total += self.constant * state
+        return total
+
+    def __matmul__(self, o):
+        """Matrix multiplication with other Hamiltonians or state vectors."""
+        if isinstance(o, self.__class__):
+            if self._form is None or o._form is None:
+                raise_error(NotImplementedError, "Multiplication of symbolic Hamiltonians "
+                                                 "without symbolic form is not implemented.")
+            new_form = self.form * o.form
+            new_symbol_map = dict(self.symbol_map)
+            new_symbol_map.update(o.symbol_map)
+            new_ham = self.__class__(new_form, symbol_map=new_symbol_map)
+            if self._dense is not None and o._dense is not None:
+                new_ham.dense = self.dense @ o.dense
+            return new_ham
+
+        if isinstance(o, self.backend.tensor_types):
+            rank = len(tuple(o.shape))
+            if rank == 1: # state vector
+                return self.apply_gates(o)
+            elif rank == 2: # density matrix
+                return self.apply_gates(o, density_matrix=True)
+            else:
+                raise_error(NotImplementedError, "Cannot multiply Hamiltonian with "
+                                                 "rank-{} tensor.".format(rank))
+
+        raise_error(NotImplementedError, "Hamiltonian matmul to {} not "
+                                         "implemented.".format(type(o)))
+
+    def circuit(self, dt, accelerators=None):
+        """Circuit that implements a Trotter step of this Hamiltonian for a given time step ``dt``."""
+        if self.trotter_circuit is None:
+            from qibo.hamiltonians.terms import TermGroup
+            groups = TermGroup.from_terms(self.terms)
+            self.trotter_circuit = TrotterCircuit(groups, dt, self.nqubits,
+                                                  accelerators)
+        self.trotter_circuit.set(dt)
+        return self.trotter_circuit.circuit
+
+
+class TrotterHamiltonian:
+    """"""
+
+    def __init__(self, *parts, ground_state=None):
+        raise_error(NotImplementedError,
+                    "`TrotterHamiltonian` is substituted by `SymbolicHamiltonian` "
+                    "and is no longer supported. Please check the documentation "
+                    "of `SymbolicHamiltonian` for more details.")
+
+    @classmethod
+    def from_symbolic(cls, symbolic_hamiltonian, symbol_map, ground_state=None):
+        return cls()

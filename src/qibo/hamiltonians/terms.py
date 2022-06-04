@@ -56,7 +56,11 @@ class HamiltonianTerm:
 
     def exp(self, x):
         """Matrix exponentiation of the term."""
-        return npb.expm(-1j * x * self.matrix)
+        if npb.issparse(x):
+            from scipy.sparse.linalg import expm
+        else:
+            from scipy.linalg import expm
+        return expm(-1j * x * self.matrix)
 
     def expgate(self, x):
         """:class:`qibo.abstractions.gates.Unitary` gate implementing the action of exp(term) on states."""
@@ -69,12 +73,13 @@ class HamiltonianTerm:
         The target qubits of the given term should be a subset of the target
         qubits of the current term.
         """
+        import numpy as np
         if not set(term.target_qubits).issubset(set(self.target_qubits)):
             raise_error(ValueError, "Cannot merge HamiltonianTerm acting on "
                                     "qubits {} to term on qubits {}."
                                     "".format(term.target_qubits, self.target_qubits))
-        matrix = npb.kron(term.matrix, npb.eye(2 ** (len(self) - len(term))))
-        matrix = npb.reshape(matrix, 2 * len(self) * (2,))
+        matrix = np.kron(term.matrix, npb.eye(2 ** (len(self) - len(term))))
+        matrix = np.reshape(matrix, 2 * len(self) * (2,))
         order = []
         i = len(term)
         for qubit in self.target_qubits:
@@ -84,8 +89,8 @@ class HamiltonianTerm:
                 order.append(i)
                 i += 1
         order.extend([x + len(order) for x in order])
-        matrix = npb.transpose(matrix, order)
-        matrix = npb.reshape(matrix, 2 * (2 ** len(self),))
+        matrix = np.transpose(matrix, order)
+        matrix = np.reshape(matrix, 2 * (2 ** len(self),))
         return HamiltonianTerm(self.matrix + matrix, *self.target_qubits)
 
     def __len__(self):
@@ -100,12 +105,12 @@ class HamiltonianTerm:
     def __call__(self, state, density_matrix=False):
         """Applies the term on a given state vector or density matrix."""
         if density_matrix:
-            self.gate.density_matrix = True
-            return self.gate._density_matrix_half_call(state)
-        return self.gate(state) # pylint: disable=E1102
+            npb.apply_gate_density_matrix(self.gate, state, len(self))
+        return npb.apply_gate(self.gate, state, len(self)) # pylint: disable=E1102
 
 
 class SymbolicTerm(HamiltonianTerm):
+    #TODO: update docstrings
     """:class:`qibo.core.terms.HamiltonianTerm` constructed using ``sympy`` expression.
 
     Example:
@@ -153,7 +158,7 @@ class SymbolicTerm(HamiltonianTerm):
                 # if the user is using ``symbol_map`` instead of qibo symbols,
                 # create the corresponding symbols
                 if factor in symbol_map:
-                    from qibo.symbols import Symbol
+                    from qibo.hamiltonians.symbols import Symbol
                     q, matrix = symbol_map.get(factor)
                     factor = Symbol(q, matrix, name=factor.name)
 
@@ -191,6 +196,7 @@ class SymbolicTerm(HamiltonianTerm):
             where ``ntargets`` is the number of qubits included in the factors
             of this term.
         """
+        import numpy as np
         if self._matrix is None:
             def matrices_product(matrices):
                 """Product of matrices that act on the same tuple of qubits.
@@ -201,7 +207,7 @@ class SymbolicTerm(HamiltonianTerm):
                 """
                 if len(matrices) == 1:
                     return matrices[0]
-                matrix = npb.copy(matrices[0])
+                matrix = np.copy(matrices[0])
                 for m in matrices[1:]:
                     matrix = matrix @ m
                 return matrix
@@ -209,7 +215,7 @@ class SymbolicTerm(HamiltonianTerm):
             self._matrix = self.coefficient
             for q in self.target_qubits:
                 matrix = matrices_product(self.matrix_map.get(q))
-                self._matrix = npb.kron(self._matrix, matrix)
+                self._matrix = np.kron(self._matrix, matrix)
         return self._matrix
 
     def copy(self):
