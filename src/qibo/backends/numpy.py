@@ -36,6 +36,9 @@ class NumpyBackend(Simulator):
             return x.astype(dtype, copy=copy)
         return np.array(x, dtype=dtype, copy=copy)
 
+    def copy(self, x):
+        return np.copy(x)
+
     def issparse(self, x):
         from scipy import sparse
         return sparse.issparse(x)
