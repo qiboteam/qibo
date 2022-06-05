@@ -87,10 +87,6 @@ class Simulator(Backend):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def eye(self, shape, dtype='DTYPECPX'):
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
     def to_numpy(self, x):
         raise_error(NotImplementedError)
 

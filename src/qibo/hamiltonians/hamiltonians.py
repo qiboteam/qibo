@@ -110,8 +110,7 @@ class Hamiltonian(AbstractHamiltonian):
     def eye(self, n=None):
         if n is None:
             n = int(self.matrix.shape[0])
-            #TODO: see if we can remove backend.eye method
-        return self.backend.eye(n, dtype=self.matrix.dtype)
+        return self.backend.matrices.I(n)
 
     def __add__(self, o):
         if isinstance(o, self.__class__):
