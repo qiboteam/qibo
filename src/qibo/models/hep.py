@@ -1,6 +1,6 @@
-import numpy as np # K.qnp, K.np -> np
-from qibo import gates
-from qibo.hamiltonians import Hamiltonian #, matrices
+import numpy as np
+from qibo import gates, matrices
+from qibo.hamiltonians import Hamiltonian
 from qibo.models.circuit import Circuit
 from qibo.config import raise_error
 
@@ -88,9 +88,6 @@ def qpdf_hamiltonian(nqubits, z_qubit=0):
     Returns:
         An Hamiltonian object.
     """
-    #TODO: find better way to pass numpy matrices, perhaps global object matrices?
-    from qibo.backends import NumpyBackend
-    matrices = NumpyBackend().matrices
     eye = matrices.I
     if z_qubit == 0:
         h = matrices.Z
