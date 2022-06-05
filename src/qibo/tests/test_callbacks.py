@@ -38,7 +38,7 @@ def test_getitem_bad_indexing(backend):
     c.add(gates.RY(0, 0.1234))
     c.add(gates.CNOT(0, 1))
     c.add(gates.CallbackGate(entropy))
-    final_state = c()
+    final_state = backend.execute_circuit(c)
     entropy[0]
     with pytest.raises(IndexError):
         entropy[1]
