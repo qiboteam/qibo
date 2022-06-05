@@ -79,10 +79,6 @@ class Simulator(Backend):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def copy(self, x):
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
     def issparse(self, x):
         raise_error(NotImplementedError)
 
