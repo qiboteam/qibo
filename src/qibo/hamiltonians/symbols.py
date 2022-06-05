@@ -1,4 +1,5 @@
 import sympy
+import numpy as np
 from qibo import gates, matrices
 from qibo.config import raise_error
 
@@ -38,13 +39,9 @@ class Symbol(sympy.Symbol):
         return super().__new__(cls=cls, name=name, commutative=commutative)
 
     def __init__(self, q, matrix=None, name="Symbol", commutative=False):
-        #TODO: improve this
-        from qibo.backends.numpy import NumpyBackend
-        self.backend = NumpyBackend()
         self.target_qubit = q
         self._gate = None
-        if not (matrix is None or isinstance(matrix, self.backend.numeric_types) or
-                isinstance(matrix, self.backend.tensor_types)):
+        if not (matrix is None or isinstance(matrix, np.ndarray)):
             raise_error(TypeError, "Invalid type {} of symbol matrix."
                                    "".format(type(matrix)))
         self.matrix = matrix
@@ -69,7 +66,7 @@ class Symbol(sympy.Symbol):
             Matrix of dimension (2^nqubits, 2^nqubits) composed of the Kronecker
             product between identities and the symbol's single-qubit matrix.
         """
-        from qibo.models.hamiltonians import multikron
+        from qibo.hamiltonians.models import multikron
         matrix_list = self.target_qubit * [matrices.I]
         matrix_list.append(self.matrix)
         n = nqubits - self.target_qubit - 1

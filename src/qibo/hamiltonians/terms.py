@@ -1,11 +1,7 @@
 import sympy
+import numpy as np
 from qibo import gates
 from qibo.config import raise_error
-from qibo.backends.numpy import NumpyBackend
-
-# TODO: all this file uses only npb or npb
-# possible solution, add global NumpyBackend
-npb = NumpyBackend()
 
 class HamiltonianTerm:
     """Term of a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
@@ -27,8 +23,7 @@ class HamiltonianTerm:
             if qi < 0:
                 raise_error(ValueError, "Invalid qubit id {} < 0 was given "
                                         "in Hamiltonian term".format(qi))
-        if not (matrix is None or isinstance(matrix, npb.numeric_types) or
-                isinstance(matrix, npb.tensor_types)):
+        if not isinstance(matrix, np.ndarray):
             raise_error(TypeError, "Invalid type {} of symbol matrix."
                                    "".format(type(matrix)))
         dim = int(matrix.shape[0])
@@ -56,7 +51,8 @@ class HamiltonianTerm:
 
     def exp(self, x):
         """Matrix exponentiation of the term."""
-        if npb.issparse(x):
+        from scipy.sparse import issparse
+        if issparse(x):
             from scipy.sparse.linalg import expm
         else:
             from scipy.linalg import expm
@@ -73,12 +69,11 @@ class HamiltonianTerm:
         The target qubits of the given term should be a subset of the target
         qubits of the current term.
         """
-        import numpy as np
         if not set(term.target_qubits).issubset(set(self.target_qubits)):
             raise_error(ValueError, "Cannot merge HamiltonianTerm acting on "
                                     "qubits {} to term on qubits {}."
                                     "".format(term.target_qubits, self.target_qubits))
-        matrix = np.kron(term.matrix, npb.eye(2 ** (len(self) - len(term))))
+        matrix = np.kron(term.matrix, np.eye(2 ** (len(self) - len(term))))
         matrix = np.reshape(matrix, 2 * len(self) * (2,))
         order = []
         i = len(term)
@@ -163,7 +158,7 @@ class SymbolicTerm(HamiltonianTerm):
                     factor = Symbol(q, matrix, name=factor.name)
 
                 if isinstance(factor, sympy.Symbol):
-                    if isinstance(factor.matrix, npb.tensor_types):
+                    if isinstance(matrix, np.ndarray):
                         self.factors.extend(pow * [factor])
                         q = factor.target_qubit
                         # if pow > 1 the matrix should be multiplied multiple
@@ -196,7 +191,6 @@ class SymbolicTerm(HamiltonianTerm):
             where ``ntargets`` is the number of qubits included in the factors
             of this term.
         """
-        import numpy as np
         if self._matrix is None:
             def matrices_product(matrices):
                 """Product of matrices that act on the same tuple of qubits.

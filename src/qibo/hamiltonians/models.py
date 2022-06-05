@@ -17,7 +17,7 @@ def multikron(matrix_list):
     import numpy as np
     h = 1
     for m in matrix_list:
-        # h = K.np.kron(h, m) TODO: check if this is the correct way
+        # TODO: check if we observe GPU deterioration
         h = np.kron(h, m)
     return h
 
