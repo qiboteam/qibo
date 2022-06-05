@@ -93,10 +93,9 @@ class NoiseModel():
                 to the initial circuit with noise gates added according
                 to the noise model.
         """
-
-        circ = circuit.__class__(**circuit.init_kwargs)
+        noisy_circuit = circuit.__class__(**circuit.init_kwargs)
         for gate in circuit.queue:
-            circ.add(gate)
+            noisy_circuit.add(gate)
             if gate.__class__ in self.errors:
                 error, qubits = self.errors.get(gate.__class__)
                 if qubits is None:
@@ -104,5 +103,7 @@ class NoiseModel():
                 else:
                     qubits = tuple(set(gate.qubits) & set(qubits))
                 for q in qubits:
-                    circ.add(error.channel(q, *error.options))
-        return circ
+                    noisy_circuit.add(error.channel(q, *error.options))
+        noisy_circuit.measurement_tuples = dict(circuit.measurement_tuples)
+        noisy_circuit.measurement_gate = circuit.measurement_gate
+        return noisy_circuit

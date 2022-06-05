@@ -418,13 +418,9 @@ class Circuit:
         # Create new circuit with noise gates inside
         noisy_circuit = self.__class__(**self.init_kwargs)
         for i, gate in enumerate(self.queue):
-            # Do not use `circuit.add` here because these gates are already
-            # added in the original circuit
-            noisy_circuit.queue.append(gate)
+            noisy_circuit.add(gate)
             for noise_gate in noise_gates[i]:
                 noisy_circuit.add(noise_gate)
-        noisy_circuit.parametrized_gates = list(self.parametrized_gates)
-        noisy_circuit.trainable_gates = list(self.trainable_gates)
         noisy_circuit.measurement_tuples = dict(self.measurement_tuples)
         noisy_circuit.measurement_gate = self.measurement_gate
         return noisy_circuit
@@ -787,6 +783,21 @@ class Circuit:
         circuit = self._shallow_copy()
         circuit.queue = queue.from_fused()
         return circuit
+
+    def unitary(self, backend=None):
+        """Creates the unitary matrix corresponding to all circuit gates.
+        
+        This is a ``(2 ** nqubits, 2 ** nqubits)`` matrix obtained by 
+        multiplying all circuit gates.
+        """
+        from qibo import gates
+        if backend is None:
+            from qibo.backends import GlobalBackend
+            backend = GlobalBackend()
+        fgate = gates.FusedGate(*range(self.nqubits))
+        for gate in self.queue:
+            fgate.append(gate)
+        return fgate.asmatrix(backend)
 
     @property
     def final_state(self):
