@@ -233,12 +233,22 @@ class Gate:
         # of the same gate.
         return [self.__class__(*self.init_args, **self.init_kwargs)]
 
+    def asmatrix(self, backend=None):
+        if backend is None:
+            from qibo.backends import GlobalBackend
+            backend = GlobalBackend()
+        return backend.asmatrix(self)
+
+    @property
+    def matrix(self):
+        return self.asmatrix()
+
     def apply(self, backend, state, nqubits):
         return backend.apply_gate(self, state, nqubits)
 
     def apply_density_matrix(self, backend, state, nqubits):
         return backend.apply_gate_density_matrix(self, state, nqubits)
-
+    
 
 class SpecialGate(Gate):
     """Abstract class for special gates.
