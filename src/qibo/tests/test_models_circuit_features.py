@@ -5,6 +5,41 @@ from qibo import gates
 from qibo.models import Circuit
 
 
+def test_circuit_unitary(backend):
+    from qibo import matrices
+    c = Circuit(2)
+    c.add(gates.H(0))
+    c.add(gates.H(1))
+    c.add(gates.CNOT(0, 1))
+    c.add(gates.X(0))
+    c.add(gates.Y(1))
+    final_matrix = c.unitary(backend)
+    h = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
+    cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
+    target_matrix = np.kron(matrices.X, matrices.Y) @ cnot @ np.kron(h, h)
+    backend.assert_allclose(final_matrix, target_matrix)
+
+
+def test_circuit_unitary_bigger(backend):
+    from qibo import matrices
+    c = Circuit(4)
+    c.add(gates.H(i) for i in range(4))
+    c.add(gates.CNOT(0, 1))
+    c.add(gates.CZ(1, 2))
+    c.add(gates.CNOT(0, 3))
+    final_matrix = c.unitary(backend)
+    h = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
+    h = np.kron(np.kron(h, h), np.kron(h, h))
+    cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
+    cz = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, -1]])
+    m1 = np.kron(cnot, np.eye(4))
+    m2 = np.kron(np.kron(np.eye(2), cz), np.eye(2))
+    m3 = np.kron(cnot, np.eye(4)).reshape(8 * (2,))
+    m3 = np.transpose(m3, [0, 2, 3, 1, 4, 6, 7, 5]).reshape((16, 16))
+    target_matrix = m3 @ m2 @ m1 @ h
+    backend.assert_allclose(final_matrix, target_matrix)
+
+
 @pytest.mark.skip
 @pytest.mark.parametrize("compile", [False, True])
 def test_circuit_vs_gate_execution(backend, compile):

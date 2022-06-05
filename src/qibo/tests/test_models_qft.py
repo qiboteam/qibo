@@ -36,13 +36,13 @@ def qft_matrix(dimension: int, inverse: bool = False) -> np.ndarray:
     """
     exponent = np.outer(np.arange(dimension), np.arange(dimension))
     sign = 1 - 2 * int(inverse)
-    return np.exp(sign * 2 * np.pi * 1j * exponent / dimension)
+    return np.exp(sign * 2 * np.pi * 1j * exponent / dimension) / np.sqrt(dimension)
 
 
 def exact_qft(x: np.ndarray, inverse: bool = False) -> np.ndarray:
     """Performs exact QFT to a given state vector."""
     dim = len(x)
-    return qft_matrix(dim, inverse).dot(x) / np.sqrt(dim)
+    return qft_matrix(dim, inverse).dot(x)
 
 
 @pytest.mark.parametrize("nqubits", [4, 10, 100])
@@ -51,6 +51,17 @@ def test_qft_circuit_size(backend, nqubits):
     assert c.nqubits == nqubits
     assert c.depth == 2 * nqubits
     assert c.ngates == nqubits ** 2 // 2 + nqubits
+
+
+@pytest.mark.parametrize("nqubits", [4, 5])
+def test_qft_matrix(backend, nqubits):
+    c = models.QFT(nqubits)
+    dim = 2 ** nqubits
+    target_matrix = qft_matrix(dim)
+    backend.assert_allclose(c.unitary(backend), target_matrix)
+    c = c.invert()
+    target_matrix = qft_matrix(dim, inverse=True)
+    backend.assert_allclose(c.unitary(backend), target_matrix)
 
 
 @pytest.mark.parametrize("nqubits", [5, 6, 12])
