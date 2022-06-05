@@ -32,6 +32,7 @@ INACTIVE_TESTS = {
     "qibo.tests.test_models_evolution",
     "qibo.tests.test_models_hep",
     "qibo.tests.test_models_qgan",
+    "qibo.tests.test_models_grover",
     "qibo.tests.test_models_variational",
     "qibo.tests.test_noise",
 }
