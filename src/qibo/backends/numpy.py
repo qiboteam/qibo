@@ -433,7 +433,7 @@ class NumpyBackend(Simulator):
             matrix = self.to_numpy(matrix)
         return np.linalg.eigh(matrix)
 
-    def calculate_exp(self, a, eigenvectors, eigenvalues, matrix):
+    def calculate_matrix_exp(self, matrix, a, eigenvectors=None, eigenvalues=None):
         if eigenvectors is None or self.issparse(matrix):
             if self.issparse(matrix):
                 from scipy.sparse.linalg import expm

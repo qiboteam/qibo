@@ -87,8 +87,8 @@ class Hamiltonian(AbstractHamiltonian):
     def exp(self, a):
         if self._exp.get("a") != a:
             self._exp["a"] = a
-            self._exp["result"] = self.backend.calculate_exp(a, self._eigenvectors,
-                                                             self._eigenvalues, self.matrix)
+            self._exp["result"] = self.backend.calculate_matrix_exp(a, self.matrix, self._eigenvectors,
+                                                             self._eigenvalues)
         return self._exp.get("result")
 
     def expectation(self, state, normalize=False):

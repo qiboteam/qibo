@@ -318,7 +318,7 @@ class Simulator(Backend):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def calculate_exp(self, a, eigenvectors, eigenvalues, matrix): # pragma: no cover
+    def calculate_matrix_exp(self, matrix, a, eigenvectors=None, eigenvalues=None): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
