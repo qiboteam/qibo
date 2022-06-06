@@ -319,11 +319,11 @@ class Simulator(Backend):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def calculate_eigenvalues(self, matrix, k): # pragma: no cover
+    def calculate_eigenvalues(self, matrix, k=6): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def calculate_eigenvectors(self, matrix, k): # pragma: no cover
+    def calculate_eigenvectors(self, matrix, k=6): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod

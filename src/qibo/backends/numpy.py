@@ -412,14 +412,14 @@ class NumpyBackend(Simulator):
     def calculate_overlap_density_matrix(self, state1, state2):
         raise_error(NotImplementedError)
 
-    def calculate_eigenvalues(self, matrix, k):
+    def calculate_eigenvalues(self, matrix, k=6):
         if self.issparse(matrix):
             log.warning("Calculating sparse matrix eigenvectors because "
                         "sparse modules do not provide ``eigvals`` method.")
             return self.calculate_eigenvectors(matrix, k=k)[0]
         return np.linalg.eigvalsh(matrix)
 
-    def calculate_eigenvectors(self, matrix, k):
+    def calculate_eigenvectors(self, matrix, k=6):
         if self.issparse(matrix):
             if k < matrix.shape[0]:
                 from scipy.sparse.linalg import eigsh
@@ -427,7 +427,7 @@ class NumpyBackend(Simulator):
             matrix = self.to_numpy(matrix)
         return np.linalg.eigh(matrix)
 
-    def calculate_matrix_exp(self, matrix, a, eigenvectors=None, eigenvalues=None):
+    def calculate_matrix_exp(self, a, matrix, eigenvectors=None, eigenvalues=None):
         if eigenvectors is None or self.issparse(matrix):
             if self.issparse(matrix):
                 from scipy.sparse.linalg import expm
@@ -463,9 +463,9 @@ class NumpyBackend(Simulator):
         if isinstance(o, self.tensor_types):
             rank = len(tuple(o.shape))
             if rank == 1: # vector
-                return np.dot(hamiltonian.matrix, o[:, np.newaxis])[:, 0]
+                return hamiltonian.matrix.dot(o[:, np.newaxis])[:, 0]
             elif rank == 2: # matrix
-                return np.dot(hamiltonian.matrix, o)
+                return hamiltonian.matrix.dot(o)
             else:
                 raise_error(ValueError, "Cannot multiply Hamiltonian with "
                                         "rank-{} tensor.".format(rank))
