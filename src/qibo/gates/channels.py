@@ -23,7 +23,7 @@ class Channel(Gate):
                                          "for the `Channel` gate.")
 
     def apply(self, backend, state, nqubits):
-        return backend.apply_channel(self, state, nqubits)
+        raise_error(NotImplementedError, f"{self.name} cannot be applied to state vector.")
 
     def apply_density_matrix(self, backend, state, nqubits):
         return backend.apply_channel_density_matrix(self, state, nqubits)
@@ -90,11 +90,6 @@ class KrausChannel(Channel):
         self.init_args = [self.gates]
         self.coefficients = len(self.gates) * (1,)
         self.coefficient_sum = 1
-
-    def apply(self, backend, state, nqubits):
-        raise_error(NotImplementedError, "Cannot apply Kraus channel to state vectors. "
-                                         "This channel is available only for density "
-                                         "matrices.")
 
 
 class UnitaryChannel(KrausChannel):
@@ -203,11 +198,6 @@ class ResetChannel(Channel):
         self.coefficients = (p0, p1)
         self.init_args = [q]
         self.init_kwargs = {"p0": p0, "p1": p1}
-
-    def apply(self, backend, state, nqubits):
-        raise_error(NotImplementedError, "Cannot apply reset channel to state vectors. "
-                                         "This channel is available only for density "
-                                         "matrices.")
 
     def apply_density_matrix(self, backend, state, nqubits):
         return backend.reset_error_density_matrix(self, state, nqubits)
