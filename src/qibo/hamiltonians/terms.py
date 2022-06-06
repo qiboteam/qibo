@@ -158,7 +158,7 @@ class SymbolicTerm(HamiltonianTerm):
                     factor = Symbol(q, matrix, name=factor.name)
 
                 if isinstance(factor, sympy.Symbol):
-                    if isinstance(matrix, np.ndarray):
+                    if isinstance(factor.matrix, np.ndarray):
                         self.factors.extend(pow * [factor])
                         q = factor.target_qubit
                         # if pow > 1 the matrix should be multiplied multiple

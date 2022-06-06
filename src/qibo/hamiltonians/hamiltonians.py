@@ -261,12 +261,11 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         self.trotter_circuit = None
         from qibo.hamiltonians.symbols import Symbol
         self._qiboSymbol = Symbol # also used in ``self._get_symbol_matrix``
-        if form is not None:
-            self.form = form
         if backend is None:
             from qibo.backends import GlobalBackend
             self.backend = GlobalBackend()
-
+        if form is not None:
+            self.form = form
     @property
     def dense(self):
         """Creates the equivalent :class:`qibo.abstractions.hamiltonians.MatrixHamiltonian`."""
