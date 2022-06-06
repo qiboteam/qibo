@@ -66,28 +66,28 @@ class Simulator(Backend):
                 self.matrices = self.matrices.__class__(self.dtype)
 
     @abc.abstractmethod
-    def set_device(self, device):
+    def set_device(self, device): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def set_threads(self, nthreads):
+    def set_threads(self, nthreads): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def cast(self, x):
+    def cast(self, x): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def to_numpy(self, x):
+    def to_numpy(self, x): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def zero_state(self, nqubits):
+    def zero_state(self, nqubits): # pragma: no cover
         """Generate |000...0> state as an array."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def zero_density_matrix(self, nqubits):
+    def zero_density_matrix(self, nqubits): # pragma: no cover
         raise_error(NotImplementedError)
 
     def asmatrix(self, gate):
@@ -111,19 +111,19 @@ class Simulator(Backend):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def apply_gate(self, gate):
+    def apply_gate(self, gate): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def apply_gate_density_matrix(self, gate):
+    def apply_gate_density_matrix(self, gate): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def apply_channel(self, gate):
+    def apply_channel(self, gate): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def apply_channel_density_matrix(self, gate):
+    def apply_channel_density_matrix(self, gate): # pragma: no cover
         raise_error(NotImplementedError)
 
     def execute_circuit(self, circuit, initial_state=None, nshots=None):
