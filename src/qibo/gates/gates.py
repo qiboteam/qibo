@@ -269,7 +269,7 @@ class I(ParametrizedGate):
         self.init_args = q
         # save the number of target qubits as parameter
         # for proper identity matrix construction
-        self.parameters = len(self.target_qubits)
+        self.parameters = 2 ** len(self.target_qubits)
 
 
 class Align(ParametrizedGate):
@@ -281,7 +281,7 @@ class Align(ParametrizedGate):
         self.init_args = q
         # save the number of target qubits as parameter
         # for proper identity matrix construction
-        self.parameters = len(self.target_qubits)
+        self.parameters = 2 ** len(self.target_qubits)
 
 
 class _Rn_(ParametrizedGate):

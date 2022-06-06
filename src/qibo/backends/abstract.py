@@ -9,12 +9,25 @@ class Backend(abc.ABC):
     def __init__(self):
         self.name = "backend"
         self.platform = None
+        self.matrices = None
 
     def __repr__(self):
         if self.platform is None:
             return self.name
         else:
             return f"{self.name} ({self.platform})"
+
+    @abc.abstractmethod   
+    def asmatrix(self, gate): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def asmatrix_parametrized(self, gate): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def asmatrix_fused(self, gate): # pragma: no cover
+        raise_error(NotImplementedError)
 
     @abc.abstractmethod
     def apply_gate(self, gate, state, nqubits): # pragma: no cover
@@ -26,7 +39,10 @@ class Backend(abc.ABC):
 
     @abc.abstractmethod
     def execute_circuit(self, circuit, nshots=None): # pragma: no cover
-        """Executes a circuit."""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def apply_gate(self, gate, state, nqubits): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
@@ -67,15 +83,15 @@ class Simulator(Backend):
                 self.matrices = self.matrices.__class__(self.dtype)
 
     @abc.abstractmethod
-    def set_device(self, device):
+    def set_device(self, device): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def set_threads(self, nthreads):
+    def set_threads(self, nthreads): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def cast(self, x, copy=False):
+    def cast(self, x, copy=False): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
@@ -87,47 +103,48 @@ class Simulator(Backend):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def zero_state(self, nqubits):
+    def zero_state(self, nqubits): # pragma: no cover
         """Generate |000...0> state as an array."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def zero_density_matrix(self, nqubits):
+    def zero_density_matrix(self, nqubits): # pragma: no cover
         raise_error(NotImplementedError)
 
     def asmatrix(self, gate):
         """Convert a gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
-        if isinstance(gate, ParametrizedGate):
-            return getattr(self.matrices, name)(*gate.parameters)
-        elif isinstance(gate, SpecialGate):
-            return self.asmatrix_special(gate)
-        else:
-            return getattr(self.matrices, name)
+        return getattr(self.matrices, name)
+
+    def asmatrix_parametrized(self, gate):
+        """Convert a parametrized gate to its matrix representation in the computational basis."""
+        name = gate.__class__.__name__
+        return getattr(self.matrices, name)(*gate.parameters)
 
     @abc.abstractmethod
-    def asmatrix_special(self, gate):
+    def asmatrix_fused(self, gate): # pragma: no cover
+        """Fuse matrices of multiple gates."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def control_matrix(self, gate):
+    def control_matrix(self, gate): # pragma: no cover
         """"Calculate full matrix representation of a controlled gate."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def apply_gate(self, gate):
+    def apply_gate(self, gate): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def apply_gate_density_matrix(self, gate):
+    def apply_gate_density_matrix(self, gate): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def apply_channel(self, gate):
+    def apply_channel(self, gate): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def apply_channel_density_matrix(self, gate):
+    def apply_channel_density_matrix(self, gate): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod

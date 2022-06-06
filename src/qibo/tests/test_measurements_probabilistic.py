@@ -2,7 +2,6 @@
 import sys
 import pytest
 import numpy as np
-import qibo
 from qibo import models, gates
 from qibo.tests.test_measurements import assert_result
 
@@ -31,9 +30,8 @@ def test_probabilistic_measurement(backend, accelerators, use_samples):
 
 @pytest.mark.parametrize("use_samples", [True, False])
 def test_unbalanced_probabilistic_measurement(backend, use_samples):
-    original_threads = qibo.get_threads()
     # set single-thread to fix the random values generated from the frequency custom op
-    qibo.set_threads(1)
+    backend.set_threads(1)
     state = np.array([1, 1, 1, np.sqrt(3)]) / np.sqrt(6)
     c = models.Circuit(2)
     c.add(gates.M(0, 1))
@@ -48,7 +46,6 @@ def test_unbalanced_probabilistic_measurement(backend, use_samples):
     decimal_frequencies = backend.test_regressions("test_unbalanced_probabilistic_measurement")
     assert sum(result.frequencies().values()) == 1000
     assert_result(backend, result, decimal_frequencies=decimal_frequencies)
-    qibo.set_threads(original_threads)
 
 
 def test_measurements_with_probabilistic_noise(backend):
