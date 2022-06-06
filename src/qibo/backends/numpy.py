@@ -30,8 +30,6 @@ class NumpyBackend(Simulator):
     def cast(self, x, dtype=None, copy=False):
         if dtype is None:
             dtype = self.dtype
-        if isinstance(x, self.tensor_types):
-            return x.astype(dtype, copy=copy)
         elif self.issparse(x):
             return x.astype(dtype, copy=copy)
         return np.array(x, dtype=dtype, copy=copy)
@@ -168,6 +166,21 @@ class NumpyBackend(Simulator):
             state = np.einsum(right, state, matrixc)
             state = np.einsum(left, state, matrix)
         return np.reshape(state, 2 * (2 ** nqubits,))
+
+    def apply_gate_half_density_matrix(self, gate, state, nqubits):
+        state = self.cast(state)
+        state = np.reshape(state, 2 * nqubits * (2,))
+        matrix = gate.asmatrix(self)
+        if gate.is_controlled_by: # pragma: no cover
+            raise_error(NotImplementedError, "Gate density matrix half call is "
+                                             "not implemented for ``controlled_by``"
+                                             "gates.")
+        else:
+            matrix = np.reshape(matrix, 2 * len(gate.qubits) * (2,))
+            left, _ = einsum_utils.apply_gate_density_matrix_string(gate.qubits, nqubits)
+            state = np.einsum(left, state, matrix)
+        return np.reshape(state, 2 * (2 ** nqubits,))
+
 
     def apply_channel(self, channel, state, nqubits):
         for coeff, gate in zip(channel.coefficients, channel.gates):
