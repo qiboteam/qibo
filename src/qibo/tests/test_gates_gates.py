@@ -94,7 +94,7 @@ def test_align(backend):
     final_state = apply_gates(backend, gatelist, nqubits=2)
     target_state = np.ones_like(final_state) / 2.0
     backend.assert_allclose(final_state, target_state)
-    gate_matrix = backend.asmatrix(gate)
+    gate_matrix = gate.asmatrix(backend)
     backend.assert_allclose(gate_matrix, np.eye(4))
 
 
@@ -209,7 +209,7 @@ def test_cun(backend, name, params):
     initial_state = random_state(2)
     gate = getattr(gates, name)(0, 1, **params)
     final_state = apply_gates(backend, [gate], initial_state=initial_state)
-    target_state = np.dot(backend.asmatrix(gate), initial_state)
+    target_state = np.dot(gate.asmatrix(backend), initial_state)
     backend.assert_allclose(final_state, target_state)
 
 

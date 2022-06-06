@@ -60,7 +60,7 @@ def test_fused_gate_construct_unitary(backend, nqubits):
         toffoli = np.eye(8)
         toffoli[-2:, -2:] = np.array([[0, 1], [1, 0]])
         target_matrix = toffoli @ np.kron(target_matrix, np.eye(2))
-    backend.assert_allclose(backend.asmatrix(gate), target_matrix)
+    backend.assert_allclose(gate.asmatrix(backend), target_matrix)
 
 
 @pytest.mark.parametrize("nqubits", [5, 6])

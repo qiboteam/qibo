@@ -64,7 +64,7 @@ def test_one_qubit_gates(backend, gatename, gatekwargs):
     gate = getattr(gates, gatename)(0, **gatekwargs)
     final_rho = apply_gates(backend, [gate], 1, initial_rho)
 
-    matrix = backend.asmatrix(gate)
+    matrix = gate.asmatrix(backend)
     target_rho = np.einsum("ab,bc,cd->ad", matrix, initial_rho, matrix.conj().T)
     backend.assert_allclose(final_rho, target_rho)
 
@@ -95,7 +95,7 @@ def test_two_qubit_gates(backend, gatename, gatekwargs):
     gate = getattr(gates, gatename)(0, 1, **gatekwargs)
     final_rho = apply_gates(backend, [gate], 2, initial_rho)
 
-    matrix = backend.asmatrix(gate)
+    matrix = gate.asmatrix(backend)
     target_rho = np.einsum("ab,bc,cd->ad", matrix, initial_rho, matrix.conj().T)
     backend.assert_allclose(final_rho, target_rho, atol=_atol)
 
@@ -106,7 +106,7 @@ def test_toffoli_gate(backend):
     gate = gates.TOFFOLI(0, 1, 2)
     final_rho = apply_gates(backend, [gate], 3, initial_rho)
 
-    matrix = backend.asmatrix(gate)
+    matrix = gate.asmatrix(backend)
     target_rho = np.einsum("ab,bc,cd->ad", matrix, initial_rho, matrix.conj().T)
     backend.assert_allclose(final_rho, target_rho)
 
