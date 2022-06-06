@@ -31,7 +31,7 @@ GATES = [
 @pytest.mark.parametrize("gate,qubits,target_matrix", GATES)
 def test_asmatrix(backend, gate, qubits, target_matrix):
     gate = getattr(gates, gate)(*qubits)
-    backend.assert_allclose(backend.asmatrix(gate), target_matrix)
+    backend.assert_allclose(gate.asmatrix(backend), target_matrix)
 
 
 GATES = [
@@ -51,8 +51,8 @@ def test_asmatrix_rotations(backend, gate, target_matrix):
         gate = getattr(gates, gate)(0, 1, theta)
     else:
         gate = getattr(gates, gate)(0, theta)
-    backend.assert_allclose(backend.asmatrix(gate), target_matrix(theta))
-    backend.assert_allclose(backend.asmatrix(gate), target_matrix(theta))
+    backend.assert_allclose(gate.asmatrix(backend), target_matrix(theta))
+    backend.assert_allclose(gate.asmatrix(backend), target_matrix(theta))
 
 
 def test_control_matrix(backend):
@@ -62,7 +62,7 @@ def test_control_matrix(backend):
     target_matrix = np.eye(4, dtype=rotation.dtype)
     target_matrix[2:, 2:] = rotation
     gate = gates.RY(0, theta).controlled_by(1)
-    backend.assert_allclose(backend.asmatrix(gate), target_matrix)
+    backend.assert_allclose(gate.asmatrix(backend), target_matrix)
 
     gate = gates.RY(0, theta).controlled_by(1, 2)
     with pytest.raises(NotImplementedError):

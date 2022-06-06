@@ -18,7 +18,7 @@ def test_fused_gate_construct_unitary(backend, nqubits):
         toffoli = np.eye(8)
         toffoli[-2:, -2:] = np.array([[0, 1], [1, 0]])
         target_matrix = toffoli @ np.kron(target_matrix, np.eye(2))
-    backend.assert_allclose(backend.asmatrix(gate), target_matrix)
+    backend.assert_allclose(gate.asmatrix(backend), target_matrix)
 
 
 def test_single_fusion_gate():
@@ -64,7 +64,7 @@ def test_fusedgate_matrix_calculation(backend):
     cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1],
                      [0, 0, 1, 0]])
     target_matrix = np.kron(x, x) @ cnot @ np.kron(h, h)
-    fused_matrix = backend.asmatrix(fused_gate)
+    fused_matrix = fused_gate.asmatrix(backend)
     backend.assert_allclose(fused_matrix, target_matrix)
 
 
