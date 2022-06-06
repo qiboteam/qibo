@@ -59,11 +59,11 @@ class Matrices:
     def TDG(self):
         return np.conj(self.T)
 
-    def I(self, nqubits=2):
-        return np.eye(2 ** nqubits, dtype=self.dtype)
+    def I(self, n=2):
+        return np.eye(n, dtype=self.dtype)
 
-    def Align(self, nqubits=2):
-        return self.I(nqubits)
+    def Align(self, n=2):
+        return self.I(n)
 
     def M(self):
         raise_error(NotImplementedError)

@@ -267,9 +267,9 @@ class I(ParametrizedGate):
         self.name = "id"
         self.target_qubits = tuple(q)
         self.init_args = q
-
-    def asmatrix(self, backend):
-        return backend.matrices.I(len(self.target_qubits))
+        # save the number of target qubits as parameter
+        # for proper identity matrix construction
+        self.parameters = 2 ** len(self.target_qubits)
 
 
 class Align(ParametrizedGate):
@@ -279,9 +279,9 @@ class Align(ParametrizedGate):
         self.name = "align"
         self.target_qubits = tuple(q)
         self.init_args = q
-    
-    def asmatrix(self, backend):
-        return backend.matrices.I(len(self.target_qubits))
+        # save the number of target qubits as parameter
+        # for proper identity matrix construction
+        self.parameters = 2 ** len(self.target_qubits)
 
 
 class M(Gate):
