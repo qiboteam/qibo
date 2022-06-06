@@ -97,11 +97,11 @@ class HamiltonianTerm:
     def __rmul__(self, x):
         return self.__mul__(x)
 
-    def __call__(self, state, density_matrix=False):
+    def __call__(self, backend, state, density_matrix=False):
         """Applies the term on a given state vector or density matrix."""
         if density_matrix:
-            npb.apply_gate_density_matrix(self.gate, state, len(self))
-        return npb.apply_gate(self.gate, state, len(self)) # pylint: disable=E1102
+            backend.apply_gate_density_matrix(self.gate, state, len(self))
+        return backend.apply_gate(self.gate, state, len(self)) # pylint: disable=E1102
 
 
 class SymbolicTerm(HamiltonianTerm):

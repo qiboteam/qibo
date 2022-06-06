@@ -4,6 +4,7 @@ from qibo import gates, matrices
 from qibo.config import raise_error
 
 class Symbol(sympy.Symbol):
+    #TODO: update docstring
     """Qibo specialization for ``sympy`` symbols.
 
     These symbols can be used to create :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.

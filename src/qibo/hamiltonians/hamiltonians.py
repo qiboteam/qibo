@@ -564,7 +564,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         """
         total = 0
         for term in self.terms:
-            total += term(self.backend.copy(state), density_matrix)
+            total += term(self.backend, self.backend.cast(state, copy=True), density_matrix)
         if self.constant:
             total += self.constant * state
         return total

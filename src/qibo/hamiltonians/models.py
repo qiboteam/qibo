@@ -94,7 +94,7 @@ def X(nqubits, dense=True):
             :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
     """
-    #TODO: why are implementing the ground state for X
+    #TODO: see if this is needed for later
     # from qibo import K
     # def ground_state():
     #     n = K.cast((2 ** nqubits,), dtype='DTYPEINT')
