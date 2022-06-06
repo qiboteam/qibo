@@ -62,8 +62,8 @@ def test_hamiltonian_algebraic_operations(backend, dtype, sparse_type):
         H2 = hamiltonians.XXZ(nqubits=2, delta=1)
         mH1, mH2 = backend.to_numpy(H1.matrix), backend.to_numpy(H2.matrix)
     else:
-        mH1 = sparse.rand(64, 64, format=sparse_type)
-        mH2 = sparse.rand(64, 64, format=sparse_type)
+        mH1 = random_sparse_matrix(backend, 64, sparse_type=sparse_type)
+        mH2 = random_sparse_matrix(backend, 64, sparse_type=sparse_type)
         H1 = hamiltonians.Hamiltonian(6, mH1)
         H2 = hamiltonians.Hamiltonian(6, mH2)
 
@@ -93,8 +93,8 @@ def test_hamiltonian_addition(backend, sparse_type):
         H1 = hamiltonians.Y(nqubits=3)
         H2 = hamiltonians.TFIM(nqubits=3, h=1.0)
     else:
-        H1 = hamiltonians.Hamiltonian(6, sparse.rand(64, 64, format=sparse_type))
-        H2 = hamiltonians.Hamiltonian(6, sparse.rand(64, 64, format=sparse_type))
+        H1 = hamiltonians.Hamiltonian(6, random_sparse_matrix(backend, 64, sparse_type=sparse_type))
+        H2 = hamiltonians.Hamiltonian(6, random_sparse_matrix(backend, 64, sparse_type=sparse_type))
 
     H = H1 + H2
     matrix = H1.matrix + H2.matrix
