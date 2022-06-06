@@ -97,8 +97,11 @@ class HamiltonianTerm:
     def __rmul__(self, x):
         return self.__mul__(x)
 
-    def __call__(self, backend, state, nqubits, gate, density_matrix):
+    def __call__(self, backend, state, nqubits, gate, density_matrix=False):
         """Applies the term on a given state vector or density matrix."""
+        #TODO: improve this and understand why it works
+        if isinstance(gate, bool):
+            gate = self.gate
         if density_matrix:
             return backend.apply_gate_half_density_matrix(gate, state, nqubits)
         return backend.apply_gate(gate, state, nqubits) # pylint: disable=E1102

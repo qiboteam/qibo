@@ -182,7 +182,7 @@ def MaxCut(nqubits, dense=True):
     sham = - sum(V[i * nqubits + j] * (1 - Z[i] * Z[j]) for i in range(nqubits) for j in range(nqubits))
     sham /= 2
 
-    v = ones(nqubits**2, dtype='DTYPEINT')
+    v = ones(nqubits**2)
     smap = {s: (i, matrices.Z) for i, s in enumerate(Z)}
     smap.update({s: (i, v[i]) for i, s in enumerate(V)})
 

@@ -16,7 +16,6 @@ INACTIVE_TESTS = {
     "qibo.tests.test_core_distcircuit_execution",
     "qibo.tests.test_core_distcircuit",
     "qibo.tests.test_core_distutils",
-    "qibo.tests.test_core_hamiltonians_trotter",
     "qibo.tests.test_core_hamiltonians",
     "qibo.tests.test_core_measurements",
     "qibo.tests.test_core_states_distributed",
