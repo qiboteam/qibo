@@ -97,11 +97,11 @@ class HamiltonianTerm:
     def __rmul__(self, x):
         return self.__mul__(x)
 
-    def __call__(self, backend, state, density_matrix=False):
+    def __call__(self, backend, state, nqubits, gate, density_matrix):
         """Applies the term on a given state vector or density matrix."""
         if density_matrix:
-            backend.apply_gate_density_matrix(self.gate, state, len(self))
-        return backend.apply_gate(self.gate, state, len(self)) # pylint: disable=E1102
+            return backend.apply_gate_half_density_matrix(gate, state, nqubits)
+        return backend.apply_gate(gate, state, nqubits) # pylint: disable=E1102
 
 
 class SymbolicTerm(HamiltonianTerm):
@@ -228,13 +228,9 @@ class SymbolicTerm(HamiltonianTerm):
             new._matrix = x * self._matrix
         return new
 
-    def __call__(self, state, density_matrix=False):
+    def __call__(self, backend, state, nqubits, density_matrix=False):
         for factor in self.factors:
-            if density_matrix:
-                factor.gate.density_matrix = True
-                state = factor.gate._density_matrix_half_call(state)
-            else:
-                state = factor.gate(state)
+            state = super().__call__(backend, state, nqubits, factor.gate, density_matrix)
         return self.coefficient * state
 
 
