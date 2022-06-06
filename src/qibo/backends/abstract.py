@@ -10,6 +10,7 @@ class Backend(abc.ABC):
     def __init__(self):
         self.name = "backend"
         self.platform = None
+        self.matrices = None
 
     def __repr__(self):
         if self.platform is None:
@@ -17,9 +18,24 @@ class Backend(abc.ABC):
         else:
             return f"{self.name} ({self.platform})"
 
+    @abc.abstractmethod   
+    def asmatrix(self, gate): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def asmatrix_parametrized(self, gate): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def asmatrix_fused(self, gate): # pragma: no cover
+        raise_error(NotImplementedError)
+
     @abc.abstractmethod
     def execute_circuit(self, circuit, nshots=None): # pragma: no cover
-        """Executes a circuit."""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def apply_gate(self, gate, state, nqubits): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
@@ -87,19 +103,20 @@ class Simulator(Backend):
     def asmatrix(self, gate):
         """Convert a gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
-        if isinstance(gate, ParametrizedGate):
-            return getattr(self.matrices, name)(*gate.parameters)
-        elif isinstance(gate, SpecialGate):
-            return self.asmatrix_special(gate)
-        else:
-            return getattr(self.matrices, name)
+        return getattr(self.matrices, name)
+
+    def asmatrix_parametrized(self, gate):
+        """Convert a parametrized gate to its matrix representation in the computational basis."""
+        name = gate.__class__.__name__
+        return getattr(self.matrices, name)(*gate.parameters)
 
     @abc.abstractmethod
-    def asmatrix_special(self, gate):
+    def asmatrix_fused(self, gate): # pragma: no cover
+        """Fuse matrices of multiple gates."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def control_matrix(self, gate):
+    def control_matrix(self, gate): # pragma: no cover
         """"Calculate full matrix representation of a controlled gate."""
         raise_error(NotImplementedError)
 
