@@ -42,7 +42,10 @@ class Symbol(sympy.Symbol):
     def __init__(self, q, matrix=None, name="Symbol", commutative=False):
         self.target_qubit = q
         self._gate = None
-        if not (matrix is None or isinstance(matrix, np.ndarray)):
+        if not (matrix is None or isinstance(matrix, np.ndarray) or
+              isinstance(matrix, (np.int, np.float, np.complex, np.int32,
+                                  np.int64, np.float32, np.float64,
+                                  np.complex64, np.complex128))):
             raise_error(TypeError, "Invalid type {} of symbol matrix."
                                    "".format(type(matrix)))
         self.matrix = matrix

@@ -12,7 +12,7 @@ from scipy.linalg import expm
 REGRESSION_FOLDER = pathlib.Path(__file__).with_name("regressions")
 
 
-def assert_regression_fixture(array, filename, rtol=1e-5):
+def assert_regression_fixture(backend, array, filename, rtol=1e-5):
     """Check array matches data inside filename.
 
     Args:
@@ -33,7 +33,7 @@ def assert_regression_fixture(array, filename, rtol=1e-5):
         # case not tested in GitHub workflows because files exist
         np.savetxt(filename, array)
         array_fixture = load(filename)
-    K.assert_allclose(array, array_fixture, rtol=rtol)
+    backend.assert_allclose(array, array_fixture, rtol=rtol)
 
 
 test_names = "method,options,compile,filename"
