@@ -114,5 +114,3 @@ def test_reset_error(backend, density_matrix):
     target_final_state = backend.execute_circuit(target_circuit, np.copy(initial_psi))
 
     backend.assert_allclose(final_state, target_final_state)
-
-
