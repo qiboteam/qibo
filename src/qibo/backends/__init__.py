@@ -69,7 +69,7 @@ class QiboMatrices:
 
     def __init__(self, dtype="complex128"):
         self.matrices = Matrices("complex128")
-        self.I = self.matrices.I(1)
+        self.I = self.matrices.I(2)
         self.X = self.matrices.X
         self.Y = self.matrices.Y
         self.Z = self.matrices.Z

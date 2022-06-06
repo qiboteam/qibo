@@ -233,15 +233,18 @@ class Gate:
         # of the same gate.
         return [self.__class__(*self.init_args, **self.init_kwargs)]
 
-    def asmatrix(self, backend=None):
+    def asmatrix(self, backend):
+        return backend.asmatrix(self)
+
+    def asmatrix_global(self, backend=None):
         if backend is None:
             from qibo.backends import GlobalBackend
             backend = GlobalBackend()
-        return backend.asmatrix(self)
+        return self.asmatrix(backend)
 
     @property
     def matrix(self):
-        return self.asmatrix()
+        return self.asmatrix_global()
 
     def apply(self, backend, state, nqubits):
         return backend.apply_gate(self, state, nqubits)
@@ -263,6 +266,10 @@ class SpecialGate(Gate):
     def on_qubits(self, qubit_map):
         raise_error(NotImplementedError,
                     "Cannot use special gates on subroutines.")
+
+    def asmatrix(self, backend):
+        raise_error(NotImplementedError, 
+                    "Special gates do not have matrix representation.")
 
 
 class ParametrizedGate(Gate):
@@ -320,3 +327,6 @@ class ParametrizedGate(Gate):
                 param = symbol.evaluate(param)
             params[i] = float(param)
         self.parameters = tuple(params)
+
+    def asmatrix(self, backend):
+        return backend.asmatrix_parametrized(self)

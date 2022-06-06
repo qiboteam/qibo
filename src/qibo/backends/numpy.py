@@ -46,7 +46,7 @@ class NumpyBackend(Simulator):
         for gate in fgate.gates:
             # transfer gate matrix to numpy as it is more efficient for
             # small tensor calculations
-            gmatrix = self.asmatrix(gate)
+            gmatrix = gate.asmatrix(self)
             # Kronecker product with identity is needed to make the
             # original matrix have shape (2**rank x 2**rank)
             eye = np.eye(2 ** (rank - len(gate.qubits)), dtype=self.dtype)
@@ -78,7 +78,7 @@ class NumpyBackend(Simulator):
             raise_error(NotImplementedError, "Cannot calculate controlled "
                                              "unitary for more than two "
                                              "control qubits.")
-        matrix = self.asmatrix(gate)
+        matrix = gate.asmatrix(self)
         shape = matrix.shape
         if shape != (2, 2):
             raise_error(ValueError, "Cannot use ``control_unitary`` method on "
@@ -91,8 +91,9 @@ class NumpyBackend(Simulator):
     def apply_gate(self, gate, state, nqubits):
         state = self.cast(state)
         state = np.reshape(state, nqubits * (2,))
+        matrix = gate.asmatrix(self)
         if gate.is_controlled_by:
-            matrix = np.reshape(self.asmatrix(gate), 2  * len(gate.target_qubits) * (2,))
+            matrix = np.reshape(matrix, 2  * len(gate.target_qubits) * (2,))
             ncontrol = len(gate.control_qubits)
             nactive = nqubits - ncontrol
             order, targets = einsum_utils.control_order(gate, nqubits)
@@ -109,7 +110,7 @@ class NumpyBackend(Simulator):
             # Put qubit indices back to their proper places
             state = np.transpose(state, einsum_utils.reverse_order(order))
         else:
-            matrix = np.reshape(self.asmatrix(gate), 2  * len(gate.qubits) * (2,))
+            matrix = np.reshape(matrix, 2  * len(gate.qubits) * (2,))
             opstring = einsum_utils.apply_gate_string(gate.qubits, nqubits)
             state = np.einsum(opstring, state, matrix)
         return np.reshape(state, (2 ** nqubits,))
@@ -117,8 +118,9 @@ class NumpyBackend(Simulator):
     def apply_gate_density_matrix(self, gate, state, nqubits):
         state = self.cast(state)
         state = np.reshape(state, 2 * nqubits * (2,))
+        matrix = gate.asmatrix(self)
         if gate.is_controlled_by:
-            matrix = np.reshape(self.asmatrix(gate), 2  * len(gate.target_qubits) * (2,))
+            matrix = np.reshape(matrix, 2  * len(gate.target_qubits) * (2,))
             matrixc = np.conj(matrix)
             ncontrol = len(gate.control_qubits)
             nactive = nqubits - ncontrol
@@ -147,7 +149,7 @@ class NumpyBackend(Simulator):
             state = np.reshape(state, 2 * nqubits * (2,))
             state = np.transpose(state, einsum_utils.reverse_order(order))
         else:
-            matrix = np.reshape(self.asmatrix(gate), 2 * len(gate.qubits) * (2,))
+            matrix = np.reshape(matrix, 2 * len(gate.qubits) * (2,))
             matrixc = np.conj(matrix)
             left, right = einsum_utils.apply_gate_density_matrix_string(gate.qubits, nqubits)
             state = np.einsum(right, state, matrixc)
