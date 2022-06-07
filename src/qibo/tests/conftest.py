@@ -29,12 +29,11 @@ INACTIVE_TESTS = {
     "qibo.tests.test_models_hep",
     "qibo.tests.test_models_qgan",
     "qibo.tests.test_models_variational",
-    "qibo.tests.test_parallel"
 }
 
 # backends to be tested
-#BACKENDS = ["numpy", "qibojit-numba", "qibojit-cupy"]
-BACKENDS = ["numpy", "tensorflow", "qibojit-numba"]
+BACKENDS = ["numpy", "tensorflow", "qibojit-numba", "qibojit-cupy"]
+
 
 def get_backend(backend_name):
     if "-" in backend_name:
@@ -43,12 +42,14 @@ def get_backend(backend_name):
         name, platform = backend_name, None
     return construct_backend(name, platform=platform)
 
-# remove backends that are not available in the current testing environment
+# ignore backends that are not available in the current testing environment
+AVAILABLE_BACKENDS = []
 for backend_name in BACKENDS:
     try:
         get_backend(backend_name)
+        AVAILABLE_BACKENDS.append(backend_name)
     except (ModuleNotFoundError, ImportError):
-        BACKENDS.remove(backend_name)
+        pass
 
 
 def pytest_runtest_setup(item):
@@ -76,7 +77,7 @@ def pytest_generate_tests(metafunc):
         pytest.skip()
 
     if "backend_name" in metafunc.fixturenames:
-        metafunc.parametrize("backend_name", BACKENDS)
+        metafunc.parametrize("backend_name", AVAILABLE_BACKENDS)
 
     if "accelerators" in metafunc.fixturenames:
         metafunc.parametrize("accelerators", [None])
