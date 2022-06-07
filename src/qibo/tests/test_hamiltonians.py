@@ -8,13 +8,13 @@ from qibo.tests.utils import random_complex, random_sparse_matrix
 
 def test_hamiltonian_init(backend):
     with pytest.raises(TypeError):
-        H = hamiltonians.Hamiltonian(2, "test")
+        H = hamiltonians.Hamiltonian(2, "test", backend=backend)
     with pytest.raises(ValueError):
-        H1 = hamiltonians.Hamiltonian(-2, np.eye(4))
+        H1 = hamiltonians.Hamiltonian(-2, np.eye(4), backend=backend)
     with pytest.raises(RuntimeError):
-        H2 = hamiltonians.Hamiltonian(np.eye(2), np.eye(4))
+        H2 = hamiltonians.Hamiltonian(np.eye(2), np.eye(4), backend=backend)
     with pytest.raises(ValueError):
-        H3 = hamiltonians.Hamiltonian(4, np.eye(10))
+        H3 = hamiltonians.Hamiltonian(4, np.eye(10), backend=backend)
 
 @pytest.mark.parametrize("dtype", [np.int, np.float, np.complex, np.int32,
                                    np.int64, np.float32, np.float64,
@@ -44,14 +44,14 @@ def test_hamiltonian_algebraic_operations(backend, dtype, sparse_type):
             return c1 - a + c2 * b
 
     if sparse_type is None:
-        H1 = hamiltonians.XXZ(nqubits=2, delta=0.5)
-        H2 = hamiltonians.XXZ(nqubits=2, delta=1)
+        H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, backend=backend)
+        H2 = hamiltonians.XXZ(nqubits=2, delta=1, backend=backend)
         mH1, mH2 = backend.to_numpy(H1.matrix), backend.to_numpy(H2.matrix)
     else:
         mH1 = random_sparse_matrix(backend, 64, sparse_type=sparse_type)
         mH2 = random_sparse_matrix(backend, 64, sparse_type=sparse_type)
-        H1 = hamiltonians.Hamiltonian(6, mH1)
-        H2 = hamiltonians.Hamiltonian(6, mH2)
+        H1 = hamiltonians.Hamiltonian(6, mH1, backend=backend)
+        H2 = hamiltonians.Hamiltonian(6, mH2, backend=backend)
 
     hH1 = transformation_a(mH1, mH2)
     hH2 = transformation_b(mH1, mH2)
@@ -76,11 +76,13 @@ def test_hamiltonian_algebraic_operations(backend, dtype, sparse_type):
 @pytest.mark.parametrize("sparse_type", [None, "coo", "csr", "csc", "dia"])
 def test_hamiltonian_addition(backend, sparse_type):
     if sparse_type is None:
-        H1 = hamiltonians.Y(nqubits=3)
-        H2 = hamiltonians.TFIM(nqubits=3, h=1.0)
+        H1 = hamiltonians.Y(nqubits=3, backend=backend)
+        H2 = hamiltonians.TFIM(nqubits=3, h=1.0, backend=backend)
     else:
-        H1 = hamiltonians.Hamiltonian(6, random_sparse_matrix(backend, 64, sparse_type=sparse_type))
-        H2 = hamiltonians.Hamiltonian(6, random_sparse_matrix(backend, 64, sparse_type=sparse_type))
+        H1 = hamiltonians.Hamiltonian(6,random_sparse_matrix(backend, 64, sparse_type=sparse_type),
+                                      backend=backend)
+        H2 = hamiltonians.Hamiltonian(6, random_sparse_matrix(backend, 64, sparse_type=sparse_type),
+                                      backend=backend)
 
     H = H1 + H2
     matrix = H1.matrix + H2.matrix
@@ -95,18 +97,18 @@ def test_hamiltonian_addition(backend, sparse_type):
         backend.assert_allclose(H.matrix, matrix)
 
 
-    H1 = hamiltonians.XXZ(nqubits=2, delta=0.5)
-    H2 = hamiltonians.XXZ(nqubits=3, delta=0.1)
+    H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, backend=backend)
+    H2 = hamiltonians.XXZ(nqubits=3, delta=0.1, backend=backend)
     with pytest.raises(RuntimeError):
         R = H1 + H2
     with pytest.raises(RuntimeError):
         R = H1 - H2
 
 
-def test_hamiltonian_operation_errors():
+def test_hamiltonian_operation_errors(backend):
     """Testing hamiltonian not implemented errors."""
-    H1 = hamiltonians.XXZ(nqubits=2, delta=0.5)
-    H2 = hamiltonians.XXZ(nqubits=2, delta=0.1)
+    H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, backend=backend)
+    H2 = hamiltonians.XXZ(nqubits=2, delta=0.1, backend=backend)
 
     with pytest.raises(NotImplementedError):
         R = H1 * H2
@@ -123,13 +125,15 @@ def test_hamiltonian_matmul(backend, sparse_type):
     """Test matrix multiplication between Hamiltonians."""
     if sparse_type is None:
         nqubits = 3
-        H1 = hamiltonians.TFIM(nqubits, h=1.0)
-        H2 = hamiltonians.Y(nqubits)
+        H1 = hamiltonians.TFIM(nqubits, h=1.0, backend=backend)
+        H2 = hamiltonians.Y(nqubits, backend=backend)
     else:
         nqubits = 5
         nstates = 2 ** nqubits
-        H1 = hamiltonians.Hamiltonian(nqubits, random_sparse_matrix(backend, nstates, sparse_type))
-        H2 = hamiltonians.Hamiltonian(nqubits, random_sparse_matrix(backend, nstates, sparse_type))
+        H1 = hamiltonians.Hamiltonian(nqubits, random_sparse_matrix(backend, nstates, sparse_type),
+                                      backend=backend)
+        H2 = hamiltonians.Hamiltonian(nqubits, random_sparse_matrix(backend, nstates, sparse_type),
+                                      backend=backend)
 
     m1 = backend.to_numpy(H1.matrix)
     m2 = backend.to_numpy(H2.matrix)
@@ -155,11 +159,12 @@ def test_hamiltonian_matmul_states(backend, sparse_type):
     """Test matrix multiplication between Hamiltonian and states."""
     if sparse_type is None:
         nqubits = 3
-        H = hamiltonians.TFIM(nqubits, h=1.0)
+        H = hamiltonians.TFIM(nqubits, h=1.0, backend=backend)
     else:
         nqubits = 5
         nstates = 2 ** nqubits
-        H = hamiltonians.Hamiltonian(nqubits, random_sparse_matrix(backend, nstates, sparse_type))
+        H = hamiltonians.Hamiltonian(nqubits, random_sparse_matrix(backend, nstates, sparse_type),
+                                     backend=backend)
 
     hm = backend.to_numpy(H.matrix)
     v = random_complex(2 ** nqubits, dtype=hm.dtype)
@@ -181,9 +186,9 @@ def test_hamiltonian_matmul_states(backend, sparse_type):
 def test_hamiltonian_expectation(backend, dense, density_matrix, sparse_type):
     """Test Hamiltonian expectation value calculation."""
     if sparse_type is None:
-        h = hamiltonians.XXZ(nqubits=3, delta=0.5, dense=dense)
+        h = hamiltonians.XXZ(nqubits=3, delta=0.5, dense=dense, backend=backend)
     else:
-        h = hamiltonians.Hamiltonian(6, random_sparse_matrix(backend, 64, sparse_type))
+        h = hamiltonians.Hamiltonian(6, random_sparse_matrix(backend, 64, sparse_type), backend=backend)
 
     matrix = backend.to_numpy(h.matrix)
     if density_matrix:
@@ -200,8 +205,8 @@ def test_hamiltonian_expectation(backend, dense, density_matrix, sparse_type):
     backend.assert_allclose(h.expectation(state, True), target_ev / norm)
 
 
-def test_hamiltonian_expectation_errors():
-    h = hamiltonians.XXZ(nqubits=3, delta=0.5)
+def test_hamiltonian_expectation_errors(backend):
+    h = hamiltonians.XXZ(nqubits=3, delta=0.5, backend=backend)
     state = random_complex((4, 4, 4))
     with pytest.raises(ValueError):
         h.expectation(state)
@@ -217,12 +222,12 @@ def test_hamiltonian_expectation_errors():
 def test_hamiltonian_eigenvalues(backend, dtype, sparse_type, dense):
     """Testing hamiltonian eigenvalues scaling."""
     if sparse_type is None:
-        H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense)
+        H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense, backend=backend)
     else:
         from scipy import sparse
-        H1 = hamiltonians.XXZ(nqubits=5, delta=0.5)
+        H1 = hamiltonians.XXZ(nqubits=5, delta=0.5, backend=backend)
         m = getattr(sparse, f"{sparse_type}_matrix")(backend.to_numpy(H1.matrix))
-        H1 = hamiltonians.Hamiltonian(5, m)
+        H1 = hamiltonians.Hamiltonian(5, m, backend=backend)
 
     H1_eigen = sorted(backend.to_numpy(H1.eigenvalues()))
     hH1_eigen = sorted(backend.to_numpy(backend.calculate_eigenvalues(H1.matrix)))
@@ -248,7 +253,7 @@ def test_hamiltonian_eigenvalues(backend, dtype, sparse_type, dense):
 @pytest.mark.parametrize("dense", [True, False])
 def test_hamiltonian_eigenvectors(backend, dtype, dense):
     """Testing hamiltonian eigenvectors scaling."""
-    H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense)
+    H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense, backend=backend)
 
     V1 = backend.to_numpy(H1.eigenvectors())
     U1 = backend.to_numpy(H1.eigenvalues())
@@ -280,12 +285,12 @@ def test_hamiltonian_eigenvectors(backend, dtype, dense):
 def test_hamiltonian_ground_state(backend, sparse_type, dense):
     """Test Hamiltonian ground state."""
     if sparse_type is None:
-        H = hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense)
+        H = hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense, backend=backend)
     else:
         from scipy import sparse
-        H = hamiltonians.XXZ(nqubits=5, delta=0.5)
+        H = hamiltonians.XXZ(nqubits=5, delta=0.5, backend=backend)
         m = getattr(sparse, f"{sparse_type}_matrix")(backend.to_numpy(H.matrix))
-        H = hamiltonians.Hamiltonian(5, m)
+        H = hamiltonians.Hamiltonian(5, m, backend=backend)
     V = backend.to_numpy(H.eigenvectors())
     backend.assert_allclose(H.ground_state(), V[:, 0])
 
@@ -299,12 +304,12 @@ def test_hamiltonian_exponentiation(backend, sparse_type, dense):
     from scipy.linalg import expm
     def construct_hamiltonian():
         if sparse_type is None:
-            return hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense)
+            return hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense, backend=backend)
         else:
             from scipy import sparse
-            ham = hamiltonians.XXZ(nqubits=5, delta=0.5)
+            ham = hamiltonians.XXZ(nqubits=5, delta=0.5, backend=backend)
             m = getattr(sparse, f"{sparse_type}_matrix")(backend.to_numpy(ham.matrix))
-            return hamiltonians.Hamiltonian(5, m)
+            return hamiltonians.Hamiltonian(5, m, backend=backend)
 
     H = construct_hamiltonian()
     target_matrix = expm(-0.5j * backend.to_numpy(H.matrix))

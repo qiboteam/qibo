@@ -30,7 +30,7 @@ def _build_spin_model(nqubits, matrix, condition):
     return h
 
 
-def XXZ(nqubits, delta=0.5, dense=True):
+def XXZ(nqubits, delta=0.5, dense=True, backend=None):
     """Heisenberg XXZ model with periodic boundary conditions.
 
     .. math::
@@ -49,13 +49,16 @@ def XXZ(nqubits, delta=0.5, dense=True):
             from qibo.hamiltonians import XXZ
             h = XXZ(3) # initialized XXZ model with 3 qubits
     """
+    if backend is None:
+        from qibo.backends import GlobalBackend
+        backend = GlobalBackend()
     if dense:
         condition = lambda i, j: i in {j % nqubits, (j+1) % nqubits}
         hx = _build_spin_model(nqubits, matrices.X, condition)
         hy = _build_spin_model(nqubits, matrices.Y, condition)
         hz = _build_spin_model(nqubits, matrices.Z, condition)
         matrix = hx + hy + delta * hz
-        return Hamiltonian(nqubits, matrix)
+        return Hamiltonian(nqubits, matrix, backend=backend)
 
     hx = multikron([matrices.X, matrices.X])
     hy = multikron([matrices.Y, matrices.Y])
@@ -63,13 +66,16 @@ def XXZ(nqubits, delta=0.5, dense=True):
     matrix = hx + hy + delta * hz
     terms = [HamiltonianTerm(matrix, i, i + 1) for i in range(nqubits - 1)]
     terms.append(HamiltonianTerm(matrix, nqubits - 1, 0))
-    ham = SymbolicHamiltonian()
+    ham = SymbolicHamiltonian(backend=backend)
     ham.terms = terms
     return ham
 
 
-def _OneBodyPauli(nqubits, matrix, dense=True, ground_state=None):
+def _OneBodyPauli(nqubits, matrix, dense=True, ground_state=None, backend=None):
     """Helper method for constracting non-interacting X, Y, Z Hamiltonians."""
+    if backend is None:
+        from qibo.backends import GlobalBackend
+        backend = GlobalBackend()
     if dense:
         condition = lambda i, j: i == j % nqubits
         ham = -_build_spin_model(nqubits, matrix, condition)
@@ -77,12 +83,12 @@ def _OneBodyPauli(nqubits, matrix, dense=True, ground_state=None):
 
     matrix = - matrix
     terms = [HamiltonianTerm(matrix, i) for i in range(nqubits)]
-    ham = SymbolicHamiltonian(ground_state=ground_state)
+    ham = SymbolicHamiltonian(ground_state=ground_state, backend=backend)
     ham.terms = terms
     return ham
 
 
-def X(nqubits, dense=True):
+def X(nqubits, dense=True, backend=None):
     """Non-interacting Pauli-X Hamiltonian.
 
     .. math::
@@ -100,10 +106,10 @@ def X(nqubits, dense=True):
     #     n = K.cast((2 ** nqubits,), dtype='DTYPEINT')
     #     state = K.ones(n, dtype='DTYPECPX')
     #     return state / K.sqrt(K.cast(n, dtype=state.dtype))
-    return _OneBodyPauli(nqubits, matrices.X, dense)
+    return _OneBodyPauli(nqubits, matrices.X, dense, backend=backend)
 
 
-def Y(nqubits, dense=True):
+def Y(nqubits, dense=True, backend=None):
     """Non-interacting Pauli-Y Hamiltonian.
 
     .. math::
@@ -115,10 +121,10 @@ def Y(nqubits, dense=True):
             :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
     """
-    return _OneBodyPauli(nqubits, matrices.Y, dense)
+    return _OneBodyPauli(nqubits, matrices.Y, dense, backend=backend)
 
 
-def Z(nqubits, dense=True):
+def Z(nqubits, dense=True, backend=None):
     """Non-interacting Pauli-Z Hamiltonian.
 
     .. math::
@@ -130,10 +136,10 @@ def Z(nqubits, dense=True):
             :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
     """
-    return _OneBodyPauli(nqubits, matrices.Z, dense)
+    return _OneBodyPauli(nqubits, matrices.Z, dense, backend=backend)
 
 
-def TFIM(nqubits, h=0.0, dense=True):
+def TFIM(nqubits, h=0.0, dense=True, backend=None):
     """Transverse field Ising model with periodic boundary conditions.
 
     .. math::
@@ -146,23 +152,26 @@ def TFIM(nqubits, h=0.0, dense=True):
             :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
     """
+    if backend is None:
+        from qibo.backends import GlobalBackend
+        backend = GlobalBackend()
     if dense:
         condition = lambda i, j: i in {j % nqubits, (j+1) % nqubits}
         ham = -_build_spin_model(nqubits, matrices.Z, condition)
         if h != 0:
             condition = lambda i, j: i == j % nqubits
             ham -= h * _build_spin_model(nqubits, matrices.X, condition)
-        return Hamiltonian(nqubits, ham)
+        return Hamiltonian(nqubits, ham, backend=backend)
 
     matrix = -(multikron([matrices.Z, matrices.Z]) + h * multikron([matrices.X, matrices.I]))
     terms = [HamiltonianTerm(matrix, i, i + 1) for i in range(nqubits - 1)]
     terms.append(HamiltonianTerm(matrix, nqubits - 1, 0))
-    ham = SymbolicHamiltonian()
+    ham = SymbolicHamiltonian(backend=backend)
     ham.terms = terms
     return ham
 
 
-def MaxCut(nqubits, dense=True):
+def MaxCut(nqubits, dense=True, backend=None):
     """Max Cut Hamiltonian.
 
     .. math::
@@ -177,6 +186,10 @@ def MaxCut(nqubits, dense=True):
     import sympy as sp
     from numpy import ones
 
+    if backend is None:
+        from qibo.backends import GlobalBackend
+        backend = GlobalBackend()
+
     Z = sp.symbols(f'Z:{nqubits}')
     V = sp.symbols(f'V:{nqubits**2}')
     sham = - sum(V[i * nqubits + j] * (1 - Z[i] * Z[j]) for i in range(nqubits) for j in range(nqubits))
@@ -186,7 +199,7 @@ def MaxCut(nqubits, dense=True):
     smap = {s: (i, matrices.Z) for i, s in enumerate(Z)}
     smap.update({s: (i, v[i]) for i, s in enumerate(V)})
 
-    ham = SymbolicHamiltonian(sham, smap)
+    ham = SymbolicHamiltonian(sham, smap, backend=backend)
     if dense:
         return ham.dense
     return ham

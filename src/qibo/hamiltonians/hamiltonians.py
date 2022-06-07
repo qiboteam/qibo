@@ -18,6 +18,8 @@ class Hamiltonian(AbstractHamiltonian):
         if backend is None:
             from qibo.backends import GlobalBackend
             self.backend = GlobalBackend()
+        else:
+            self.backend = backend
 
         if not (isinstance(matrix, self.backend.tensor_types) or self.backend.issparse(matrix)):
             raise_error(TypeError, "Matrix of invalid type {} given during "
@@ -52,7 +54,7 @@ class Hamiltonian(AbstractHamiltonian):
         self._matrix = m
 
     @classmethod
-    def from_symbolic(cls, symbolic_hamiltonian, symbol_map):
+    def from_symbolic(cls, symbolic_hamiltonian, symbol_map, backend=None):
         """Creates a ``Hamiltonian`` from a symbolic Hamiltonian.
 
         We refer to the :ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>`
@@ -72,7 +74,7 @@ class Hamiltonian(AbstractHamiltonian):
         log.warning("`Hamiltonian.from_symbolic` and the use of symbol maps is "
                     "deprecated. Please use `SymbolicHamiltonian` and Qibo symbols "
                     "to construct Hamiltonians using symbols.")
-        return SymbolicHamiltonian(symbolic_hamiltonian, symbol_map)
+        return SymbolicHamiltonian(symbolic_hamiltonian, symbol_map, backend)
 
     def eigenvalues(self, k=6):
         if self._eigenvalues is None:
@@ -263,6 +265,8 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         if backend is None:
             from qibo.backends import GlobalBackend
             self.backend = GlobalBackend()
+        else:
+            self.backend = backend
         if form is not None:
             self.form = form
     @property

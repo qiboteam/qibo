@@ -22,7 +22,7 @@ models_config = [
 def test_hamiltonian_models(backend, model, kwargs, filename):
     """Test pre-coded Hamiltonian models generate the proper matrices."""
     from qibo.tests.test_models_variational import assert_regression_fixture
-    H = getattr(hamiltonians, model)(**kwargs)
+    H = getattr(hamiltonians, model)(**kwargs, backend=backend)
     matrix = backend.to_numpy(H.matrix).flatten().real
     assert_regression_fixture(backend, matrix, filename)
 
@@ -43,7 +43,7 @@ def test_maxcut(backend, nqubits, dense, calcterms):
             M = np.eye(2**nqubits) - h
             ham += M
     target_ham = backend.cast(- ham / 2)
-    final_ham = hamiltonians.MaxCut(nqubits, dense)
+    final_ham = hamiltonians.MaxCut(nqubits, dense, backend=backend)
     if (not dense) and calcterms:
         _ = final_ham.terms
     backend.assert_allclose(final_ham.matrix, target_ham)

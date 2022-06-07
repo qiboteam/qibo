@@ -17,7 +17,7 @@ def test_tfim_hamiltonian_from_symbols(backend, nqubits, hamtype, calcterms):
         symham = sum(Z(i) * Z(i + 1) for i in range(nqubits - 1))
         symham += Z(0) * Z(nqubits - 1)
         symham += h * sum(X(i) for i in range(nqubits))
-        ham = hamiltonians.SymbolicHamiltonian(-symham)
+        ham = hamiltonians.SymbolicHamiltonian(-symham, backend=backend)
     else:
         h = 0.5
         z_symbols = sympy.symbols(" ".join((f"Z{i}" for i in range(nqubits))))
@@ -28,7 +28,7 @@ def test_tfim_hamiltonian_from_symbols(backend, nqubits, hamtype, calcterms):
         symham += h * sum(x_symbols)
         symmap = {z: (i, matrices.Z) for i, z in enumerate(z_symbols)}
         symmap.update({x: (i, matrices.X) for i, x in enumerate(x_symbols)})
-        ham = hamiltonians.Hamiltonian.from_symbolic(-symham, symmap)
+        ham = hamiltonians.Hamiltonian.from_symbolic(-symham, symmap, backend=backend)
 
     if calcterms:
         _ = ham.terms
@@ -45,13 +45,13 @@ def test_from_symbolic_with_power(backend, hamtype, calcterms):
         matrix = random_hermitian(1)
         symham =  (Symbol(0, matrix) ** 2 - Symbol(1, matrix) ** 2 +
                    3 * Symbol(1, matrix) - 2 * Symbol(0, matrix) * Symbol(2, matrix) + 1)
-        ham = hamiltonians.SymbolicHamiltonian(symham)
+        ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
     else:
         z = sympy.symbols(" ".join((f"Z{i}" for i in range(3))))
         symham =  z[0] ** 2 - z[1] ** 2 + 3 * z[1] - 2 * z[0] * z[2] + 1
         matrix = random_hermitian(1)
         symmap = {x: (i, matrix) for i, x in enumerate(z)}
-        ham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap)
+        ham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap, backend=backend)
 
     if calcterms:
         _ = ham.terms
@@ -72,14 +72,14 @@ def test_from_symbolic_with_complex_numbers(backend, hamtype, calcterms):
     """Check ``from_symbolic`` when the expression contains imaginary unit."""
     if hamtype == "symbolic":
         symham = (1 + 2j) * X(0) * X(1) + 2 * Y(0) * Y(1) - 3j * X(0) * Y(1) + 1j * Y(0) * X(1)
-        ham = hamiltonians.SymbolicHamiltonian(symham)
+        ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
     else:
         x = sympy.symbols(" ".join((f"X{i}" for i in range(2))))
         y = sympy.symbols(" ".join((f"Y{i}" for i in range(2))))
         symham = (1 + 2j) * x[0] * x[1] + 2 * y[0] * y[1] - 3j * x[0] * y[1] + 1j * y[0] * x[1]
         symmap = {s: (i, matrices.X) for i, s in enumerate(x)}
         symmap.update({s: (i, matrices.Y) for i, s in enumerate(y)})
-        ham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap)
+        ham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap, backend=backend)
 
     if calcterms:
         _ = ham.terms
@@ -99,10 +99,10 @@ def test_from_symbolic_application_hamiltonian(backend, calcterms):
     symham = (z1 * z2 - 0.5 * z1 * z3 + 2 * z2 * z3 + 0.35 * z2
               + 0.25 * z3 * z4 + 0.5 * z3 + z4 - z1)
     # Check that Trotter dense matrix agrees will full Hamiltonian matrix
-    fham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap)
+    fham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap, backend=backend)
     symham = (Z(0) * Z(1) - 0.5 * Z(0) * Z(2) + 2 * Z(1) * Z(2) + 0.35 * Z(1)
               + 0.25 * Z(2) * Z(3) + 0.5 * Z(2) + Z(3) - Z(0))
-    sham = hamiltonians.SymbolicHamiltonian(symham)
+    sham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
     if calcterms:
         _ = sham.terms
     backend.assert_allclose(sham.matrix, fham.matrix)
@@ -115,12 +115,12 @@ def test_x_hamiltonian_from_symbols(backend, nqubits, hamtype, calcterms):
     """Check creating sum(X) Hamiltonian using sympy."""
     if hamtype == "symbolic":
         symham = -sum(X(i) for i in range(nqubits))
-        ham = hamiltonians.SymbolicHamiltonian(symham)
+        ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
     else:
         x_symbols = sympy.symbols(" ".join((f"X{i}" for i in range(nqubits))))
         symham =  -sum(x_symbols)
         symmap = {x: (i, matrices.X) for i, x in enumerate(x_symbols)}
-        ham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap)
+        ham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap, backend=backend)
     if calcterms:
         _ = ham.terms
     final_matrix = ham.matrix
@@ -135,7 +135,7 @@ def test_three_qubit_term_hamiltonian_from_symbols(backend, hamtype, calcterms):
     if hamtype == "symbolic":
         symham = X(0) * Y(1) * Z(2) + 0.5 * Y(0) * Z(1) * X(3) + Z(0) * X(2)
         symham += Y(2) + 1.5 * Z(1) - 2 - 3 * X(1) * Y(3)
-        ham = hamiltonians.SymbolicHamiltonian(symham)
+        ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
     else:
         x_symbols = sympy.symbols(" ".join((f"X{i}" for i in range(4))))
         y_symbols = sympy.symbols(" ".join((f"Y{i}" for i in range(4))))
@@ -151,7 +151,7 @@ def test_three_qubit_term_hamiltonian_from_symbols(backend, hamtype, calcterms):
         symham += y_symbols[2]
         symham += 1.5 * z_symbols[1]
         symham -= 2
-        ham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap)
+        ham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap, backend=backend)
 
     if calcterms:
         _ = ham.terms
@@ -176,7 +176,7 @@ def test_three_qubit_term_hamiltonian_from_symbols(backend, hamtype, calcterms):
 def test_hamiltonian_with_identity_symbol(backend, calcterms):
     """Check creating Hamiltonian from expression which contains the identity symbol."""
     symham = X(0) * I(1) * Z(2) + 0.5 * Y(0) * Z(1) * I(3) + Z(0) * I(1) * X(2)
-    ham = hamiltonians.SymbolicHamiltonian(symham)
+    ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
     
     if calcterms:
         _ = ham.terms

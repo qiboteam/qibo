@@ -15,22 +15,22 @@ def symbolic_tfim(nqubits, h=1.0):
     return sham
 
 
-def test_symbolic_hamiltonian_errors():
+def test_symbolic_hamiltonian_errors(backend):
     # Wrong type of Symbol matrix
     from qibo.hamiltonians.symbols import Symbol
     with pytest.raises(TypeError):
         s = Symbol(0, "test")
     # Wrong type of symbolic expression
     with pytest.raises(TypeError):
-        ham = hamiltonians.SymbolicHamiltonian("test")
+        ham = hamiltonians.SymbolicHamiltonian("test", backend=backend)
     # Passing form with symbol that is not in ``symbol_map``
     from qibo import matrices
     Z, X = sympy.Symbol("Z"), sympy.Symbol("X")
     symbol_map = {Z: (0, matrices.Z)}
     with pytest.raises(ValueError):
-        ham = hamiltonians.SymbolicHamiltonian(Z * X, symbol_map)
+        ham = hamiltonians.SymbolicHamiltonian(Z * X, symbol_map, backend=backend)
     # Invalid operation in Hamiltonian expresion
-    ham = hamiltonians.SymbolicHamiltonian(sympy.cos(Z), symbol_map)
+    ham = hamiltonians.SymbolicHamiltonian(sympy.cos(Z), symbol_map, backend=backend)
     with pytest.raises(TypeError):
         dense = ham.dense
 
@@ -38,7 +38,7 @@ def test_symbolic_hamiltonian_errors():
 @pytest.mark.parametrize("nqubits", [3, 4])
 @pytest.mark.parametrize("calcterms", [False, True])
 def test_symbolictfim_hamiltonian_to_dense(backend, nqubits, calcterms):
-    final_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1))
+    final_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1), backend=backend)
     target_ham = hamiltonians.TFIM(nqubits, h=1)
     if calcterms:
         _ = final_ham.terms
