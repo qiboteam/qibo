@@ -1,24 +1,10 @@
 """Test methods in `qibo/core/hamiltonians.py`."""
 import pytest
 import numpy as np
-from scipy import sparse
 from qibo import hamiltonians
-from qibo.tests.utils import random_complex
+from qibo.tests.utils import random_complex, random_sparse_matrix
 
 #TODO: check if using .data is a good way to compare sparse matrices
-
-def random_sparse_matrix(backend, n, sparse_type=None):
-    if backend.name == "tensorflow":
-        nonzero = int(0.1 * n * n)
-        indices = np.random.randint(0, n, size=(nonzero, 2))
-        data = np.random.random(nonzero) + 1j * np.random.random(nonzero)
-        data = backend.cast(data)
-        return backend.sparse.SparseTensor(indices, data, (n, n))
-    else:
-        re = sparse.rand(n, n, format=sparse_type)
-        im = sparse.rand(n, n, format=sparse_type)
-        return re + 1j * im
-
 
 def test_hamiltonian_init(backend):
     with pytest.raises(TypeError):
@@ -315,6 +301,7 @@ def test_hamiltonian_exponentiation(backend, sparse_type, dense):
         if sparse_type is None:
             return hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense)
         else:
+            from scipy import sparse
             ham = hamiltonians.XXZ(nqubits=5, delta=0.5)
             m = getattr(sparse, f"{sparse_type}_matrix")(backend.to_numpy(ham.matrix))
             return hamiltonians.Hamiltonian(5, m)
@@ -324,9 +311,9 @@ def test_hamiltonian_exponentiation(backend, sparse_type, dense):
     H1 = construct_hamiltonian()
     _ = H1.eigenvectors()
 
-    if sparse is not None:
-        backend.assert_allclose(H.exp(0.5).data, target_matrix.data)
-        backend.assert_allclose(H1.exp(0.5).data, target_matrix.data)
-    else:
+    if sparse_type is None:
         backend.assert_allclose(H.exp(0.5), target_matrix)
         backend.assert_allclose(H1.exp(0.5), target_matrix)
+    else:
+        backend.assert_allclose(H.exp(0.5).data, target_matrix.data)
+        backend.assert_allclose(H1.exp(0.5).data, target_matrix.data)
