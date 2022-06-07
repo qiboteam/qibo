@@ -12,13 +12,13 @@ class TensorflowBackend(NumpyBackend):
         self.name = "tensorflow"
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(TF_LOG_LEVEL)
         import tensorflow as tf
-        import tensorflow.experimental.numpy as tnp
+        import tensorflow.experimental.numpy as tnp  # pylint: disable=E0401
         tnp.experimental_enable_numpy_behavior()
         self.tf = tf
         self.np = tnp
         
-        from tensorflow.python.framework.errors_impl import ResourceExhaustedError
-        self.oom_error = ResourceExhaustedError
+        from tensorflow.python.framework import errors_impl  # pylint: disable=E0611
+        self.oom_error = errors_impl.ResourceExhaustedError
 
         import psutil
         self.nthreads = psutil.cpu_count(logical=True)

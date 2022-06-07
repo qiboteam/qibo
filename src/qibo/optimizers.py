@@ -131,7 +131,7 @@ def newtonian(loss, initial_parameters, args=(), method='Powell',
     """
     if method == 'parallel_L-BFGS-B':  # pragma: no cover
         from qibo.parallel import _check_parallel_configuration
-        _check_parallel_configuration(processes)
+        _check_parallel_configuration(processes)  # pylint: disable=E1120
         o = ParallelBFGS(loss, args=args, processes=processes,
                          bounds=bounds, callback=callback, options=options)
         m = o.run(initial_parameters)
