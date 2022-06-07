@@ -34,15 +34,7 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def apply_gate_density_matrix(self, gate, state, nqubits): # pragma: no cover
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
     def execute_circuit(self, circuit, nshots=None): # pragma: no cover
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def apply_gate(self, gate, state, nqubits): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
@@ -284,6 +276,10 @@ class Simulator(Backend):
 
     @abc.abstractmethod
     def calculate_frequencies(self, samples): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def update_frequencies(self, frequencies, probabilities, nsamples): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
