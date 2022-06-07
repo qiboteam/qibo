@@ -1,5 +1,5 @@
-import collections
 import numpy as np
+import collections
 from qibo.config import raise_error
 from qibo.gates import FusedGate
 from qibo.backends import einsum_utils
@@ -11,6 +11,7 @@ class NumpyBackend(Simulator):
 
     def __init__(self):
         super().__init__()
+        self.np = np
         self.name = "numpy"
         self.matrices = Matrices(self.dtype)
 
@@ -76,82 +77,82 @@ class NumpyBackend(Simulator):
         if shape != (2, 2):
             raise_error(ValueError, "Cannot use ``control_unitary`` method on "
                                     "gate matrix of shape {}.".format(shape))
-        zeros = np.zeros((2, 2), dtype=self.dtype)
-        part1 = np.concatenate([np.eye(2, dtype=self.dtype), zeros], axis=0)
-        part2 = np.concatenate([zeros, matrix], axis=0)
-        return np.concatenate([part1, part2], axis=1)
+        zeros = self.np.zeros((2, 2), dtype=self.dtype)
+        part1 = self.np.concatenate([self.np.eye(2, dtype=self.dtype), zeros], axis=0)
+        part2 = self.np.concatenate([zeros, matrix], axis=0)
+        return self.np.concatenate([part1, part2], axis=1)
 
     def apply_gate(self, gate, state, nqubits):
         state = self.cast(state)
-        state = np.reshape(state, nqubits * (2,))
+        state = self.np.reshape(state, nqubits * (2,))
         matrix = gate.asmatrix(self)
         if gate.is_controlled_by:
-            matrix = np.reshape(matrix, 2  * len(gate.target_qubits) * (2,))
+            matrix = self.np.reshape(matrix, 2  * len(gate.target_qubits) * (2,))
             ncontrol = len(gate.control_qubits)
             nactive = nqubits - ncontrol
             order, targets = einsum_utils.control_order(gate, nqubits)
-            state = np.transpose(state, order)
+            state = self.np.transpose(state, order)
             # Apply `einsum` only to the part of the state where all controls
             # are active. This should be `state[-1]`
-            state = np.reshape(state, (2 ** ncontrol,) + nactive * (2,))
+            state = self.np.reshape(state, (2 ** ncontrol,) + nactive * (2,))
             opstring = einsum_utils.apply_gate_string(targets, nactive)
-            updates = np.einsum(opstring, state[-1], matrix)
+            updates = self.np.einsum(opstring, state[-1], matrix)
             # Concatenate the updated part of the state `updates` with the
             # part of of the state that remained unaffected `state[:-1]`.
-            state = np.concatenate([state[:-1], updates[np.newaxis]], axis=0)
-            state = np.reshape(state, nqubits * (2,))
+            state = self.np.concatenate([state[:-1], updates[self.np.newaxis]], axis=0)
+            state = self.np.reshape(state, nqubits * (2,))
             # Put qubit indices back to their proper places
-            state = np.transpose(state, einsum_utils.reverse_order(order))
+            state = self.np.transpose(state, einsum_utils.reverse_order(order))
         else:
-            matrix = np.reshape(matrix, 2  * len(gate.qubits) * (2,))
+            matrix = self.np.reshape(matrix, 2  * len(gate.qubits) * (2,))
             opstring = einsum_utils.apply_gate_string(gate.qubits, nqubits)
-            state = np.einsum(opstring, state, matrix)
-        return np.reshape(state, (2 ** nqubits,))
+            state = self.np.einsum(opstring, state, matrix)
+        return self.np.reshape(state, (2 ** nqubits,))
 
     def apply_gate_density_matrix(self, gate, state, nqubits):
         state = self.cast(state)
-        state = np.reshape(state, 2 * nqubits * (2,))
+        state = self.np.reshape(state, 2 * nqubits * (2,))
         matrix = gate.asmatrix(self)
         if gate.is_controlled_by:
-            matrix = np.reshape(matrix, 2  * len(gate.target_qubits) * (2,))
-            matrixc = np.conj(matrix)
+            matrix = self.np.reshape(matrix, 2  * len(gate.target_qubits) * (2,))
+            matrixc = self.np.conj(matrix)
             ncontrol = len(gate.control_qubits)
             nactive = nqubits - ncontrol
             n = 2 ** ncontrol
 
             order, targets = einsum_utils.control_order_density_matrix(gate, nqubits)
-            state = np.transpose(state, order)
-            state = np.reshape(state, 2 * (n,) + 2 * nactive * (2,))
+            state = self.np.transpose(state, order)
+            state = self.np.reshape(state, 2 * (n,) + 2 * nactive * (2,))
 
             leftc, rightc = einsum_utils.apply_gate_density_matrix_controlled_string(targets, nactive)
             state01 = state[:n - 1, n - 1]
-            state01 = np.einsum(rightc, state01, matrixc)
+            state01 = self.np.einsum(rightc, state01, matrixc)
             state10 = state[n - 1, :n - 1]
-            state10 = np.einsum(leftc, state10, matrix)
+            state10 = self.np.einsum(leftc, state10, matrix)
 
             left, right = einsum_utils.apply_gate_density_matrix_string(targets, nactive)
             state11 = state[n - 1, n - 1]
-            state11 = np.einsum(right, state11, matrixc)
-            state11 = np.einsum(left, state11, matrix)
+            state11 = self.np.einsum(right, state11, matrixc)
+            state11 = self.np.einsum(left, state11, matrix)
 
             state00 = state[range(n - 1)]
             state00 = state00[:, range(n - 1)]
-            state01 = np.concatenate([state00, state01[:, np.newaxis]], axis=1)
-            state10 = np.concatenate([state10, state11[np.newaxis]], axis=0)
-            state = np.concatenate([state01, state10[np.newaxis]], axis=0)
-            state = np.reshape(state, 2 * nqubits * (2,))
-            state = np.transpose(state, einsum_utils.reverse_order(order))
+            state01 = self.np.concatenate([state00, state01[:, self.np.newaxis]], axis=1)
+            state10 = self.np.concatenate([state10, state11[self.np.newaxis]], axis=0)
+            state = self.np.concatenate([state01, state10[self.np.newaxis]], axis=0)
+            state = self.np.reshape(state, 2 * nqubits * (2,))
+            state = self.np.transpose(state, einsum_utils.reverse_order(order))
         else:
-            matrix = np.reshape(matrix, 2 * len(gate.qubits) * (2,))
-            matrixc = np.conj(matrix)
+            matrix = self.np.reshape(matrix, 2 * len(gate.qubits) * (2,))
+            matrixc = self.np.conj(matrix)
             left, right = einsum_utils.apply_gate_density_matrix_string(gate.qubits, nqubits)
-            state = np.einsum(right, state, matrixc)
-            state = np.einsum(left, state, matrix)
-        return np.reshape(state, 2 * (2 ** nqubits,))
+            state = self.np.einsum(right, state, matrixc)
+            state = self.np.einsum(left, state, matrix)
+        return self.np.reshape(state, 2 * (2 ** nqubits,))
 
     def apply_channel(self, channel, state, nqubits):
         for coeff, gate in zip(channel.coefficients, channel.gates):
-            if np.random.random() < coeff:
+            if self.np.random.random() < coeff:
                 state = self.apply_gate(gate, state, nqubits)
         return state
 
@@ -165,11 +166,11 @@ class NumpyBackend(Simulator):
     def _append_zeros(self, state, qubits, results):
         """Helper method for collapse."""
         for q, r in zip(qubits, results):
-            state = np.expand_dims(state, axis=q)
+            state = self.np.expand_dims(state, axis=q)
             if r:
-                state = np.concatenate([np.zeros_like(state), state], axis=q)
+                state = self.np.concatenate([self.np.zeros_like(state), state], axis=q)
             else:
-                state = np.concatenate([state, np.zeros_like(state)], axis=q)
+                state = self.np.concatenate([state, self.np.zeros_like(state)], axis=q)
         return state
 
     def collapse_state(self, gate, state, nqubits):
@@ -184,13 +185,13 @@ class NumpyBackend(Simulator):
         gate.result.backend = self
         gate.result.append(shots)
         # collapse state
-        state = np.reshape(state, nqubits * (2,))
+        state = self.np.reshape(state, nqubits * (2,))
         order = list(qubits) + [q for q in range(nqubits) if q not in qubits]
-        substate = np.transpose(state, order)[tuple(shots)]
-        norm = np.sqrt(np.sum(np.abs(substate) ** 2))
+        substate = self.np.transpose(state, order)[tuple(shots)]
+        norm = self.np.sqrt(self.np.sum(self.np.abs(substate) ** 2))
         state = substate / norm
         state = self._append_zeros(state, qubits, shots)
-        return np.reshape(state, shape)
+        return self.np.reshape(state, shape)
 
     def collapse_density_matrix(self, gate, state, nqubits):
         state = self.cast(state)
@@ -208,14 +209,14 @@ class NumpyBackend(Simulator):
         order.extend(q for q in range(nqubits) if q not in qubits)
         order.extend(q + nqubits for q in range(nqubits) if q not in qubits)
         shots = 2 * shots
-        state = np.reshape(state, 2 * nqubits * (2,))
-        substate = np.transpose(state, order)[tuple(shots)]
+        state = self.np.reshape(state, 2 * nqubits * (2,))
+        substate = self.np.transpose(state, order)[tuple(shots)]
         n = 2 ** (len(substate.shape) // 2)
-        norm = np.trace(np.reshape(substate, (n, n)))
+        norm = self.np.trace(self.np.reshape(substate, (n, n)))
         state = substate / norm
         qubits = qubits + [q + nqubits for q in qubits]
         state = self._append_zeros(state, qubits, shots)
-        return np.reshape(state, shape)
+        return self.np.reshape(state, shape)
 
     def reset_error_density_matrix(self, gate, state, nqubits):
         from qibo.gates import X
@@ -224,13 +225,13 @@ class NumpyBackend(Simulator):
         q = gate.target_qubits[0]
         p0, p1 = gate.coefficients[:2]
         trace = self.partial_trace_density_matrix(state, (q,), nqubits)
-        trace = np.reshape(trace, 2 * (nqubits - 1) * (2,))
+        trace = self.np.reshape(trace, 2 * (nqubits - 1) * (2,))
         zero = self.zero_density_matrix(1)
-        zero = np.tensordot(trace, zero, axes=0)
+        zero = self.np.tensordot(trace, zero, axes=0)
         order = list(range(2 * nqubits - 2))
         order.insert(q, 2 * nqubits - 2)
         order.insert(q + nqubits, 2 * nqubits - 1)
-        zero = np.reshape(np.transpose(zero, order), shape)
+        zero = self.np.reshape(self.np.transpose(zero, order), shape)
         state = (1 - p0 - p1) * state + p0 * zero
         return state + p1 * self.apply_gate_density_matrix(X(q), zero, nqubits)
 
@@ -238,7 +239,7 @@ class NumpyBackend(Simulator):
         state = self.cast(state)
         shape = state.shape
         state = self.apply_gate(gate, state.ravel(), 2 * nqubits)
-        return np.reshape(state, shape)
+        return self.np.reshape(state, shape)
 
     def calculate_symbolic(self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20):
         state = self.to_numpy(state)
@@ -268,8 +269,7 @@ class NumpyBackend(Simulator):
                 return terms
         return terms
 
-    @staticmethod
-    def _order_probabilities(probs, qubits, nqubits):
+    def _order_probabilities(self, probs, qubits, nqubits):
         """Arrange probabilities according to the given ``qubits`` ordering."""
         unmeasured, reduced = [], {}
         for i in range(nqubits):
@@ -277,117 +277,117 @@ class NumpyBackend(Simulator):
                 reduced[i] = i - len(unmeasured)
             else:
                 unmeasured.append(i)
-        return np.transpose(probs, [reduced.get(i) for i in qubits])
+        return self.np.transpose(probs, [reduced.get(i) for i in qubits])
 
     def calculate_probabilities(self, state, qubits, nqubits):
-        rtype = state.real.dtype
+        rtype = self.np.real(state).dtype
         unmeasured_qubits = tuple(i for i in range(nqubits) if i not in qubits)
-        state = np.reshape(np.abs(state) ** 2, nqubits * (2,))
-        probs = np.sum(state.astype(rtype), axis=unmeasured_qubits)
+        state = self.np.reshape(self.np.abs(state) ** 2, nqubits * (2,))
+        probs = self.np.sum(state.astype(rtype), axis=unmeasured_qubits)
         return self._order_probabilities(probs, qubits, nqubits).ravel()
 
     def calculate_probabilities_density_matrix(self, state, qubits, nqubits):
-        rtype = state.real.dtype
+        rtype = self.np.real(state).dtype
         order = tuple(sorted(qubits))
         order += tuple(i for i in range(nqubits) if i not in qubits)
         order = order + tuple(i + nqubits for i in order)
         shape = 2 * (2 ** len(qubits), 2 ** (nqubits - len(qubits)))
-        state = np.reshape(state, 2 * nqubits * (2,))
-        state = np.reshape(np.transpose(state, order), shape)
-        probs = np.einsum("abab->a", state).astype(rtype)
-        probs = np.reshape(probs, len(qubits) * (2,))
+        state = self.np.reshape(state, 2 * nqubits * (2,))
+        state = self.np.reshape(self.np.transpose(state, order), shape)
+        probs = self.np.einsum("abab->a", state).astype(rtype)
+        probs = self.np.reshape(probs, len(qubits) * (2,))
         return self._order_probabilities(probs, qubits, nqubits).ravel()
 
     def set_seed(self, seed):
-        np.random.seed(seed)
+        self.np.random.seed(seed)
 
     def sample_shots(self, probabilities, nshots):
-        return np.random.choice(range(len(probabilities)), size=nshots, p=probabilities)
+        return self.np.random.choice(range(len(probabilities)), size=nshots, p=probabilities)
 
     def aggregate_shots(self, shots):
-        return np.array(shots, dtype=shots[0].dtype)
+        return self.np.array(shots, dtype=shots[0].dtype)
 
     def samples_to_binary(self, samples, nqubits):
-        qrange = np.arange(nqubits - 1, -1, -1, dtype="int32")
-        return np.mod(np.right_shift(samples[:, np.newaxis], qrange), 2)
+        qrange = self.np.arange(nqubits - 1, -1, -1, dtype="int32")
+        return self.np.mod(self.np.right_shift(samples[:, self.np.newaxis], qrange), 2)
 
     def samples_to_decimal(self, samples, nqubits):
-        qrange = np.arange(nqubits - 1, -1, -1, dtype="int32")
-        qrange = (2 ** qrange)[:, np.newaxis]
-        return np.matmul(samples, qrange)[:, 0]
+        qrange = self.np.arange(nqubits - 1, -1, -1, dtype="int32")
+        qrange = (2 ** qrange)[:, self.np.newaxis]
+        return self.np.matmul(samples, qrange)[:, 0]
+
+    def calculate_frequencies(self, samples):
+        res, counts = self.np.unique(samples, return_counts=True)
+        res, counts = self.np.array(res), self.np.array(counts)
+        return collections.Counter({k: v for k, v in zip(res, counts)})
+
+    def update_frequencies(self, frequencies, probabilities, nsamples):
+        samples = self.sample_shots(probabilities, nsamples)
+        res, counts = self.np.unique(samples, return_counts=True)
+        frequencies[res] += counts
+        return frequencies
 
     def sample_frequencies(self, probabilities, nshots):
         from qibo.config import SHOT_BATCH_SIZE
-        nprobs = probabilities / np.sum(probabilities)
-        def update_frequencies(nsamples, frequencies):
-            samples = np.random.choice(range(len(nprobs)), size=nsamples, p=nprobs)
-            res, counts = np.unique(samples, return_counts=True)
-            frequencies[res] += counts
-            return frequencies
-
-        frequencies = np.zeros(len(nprobs), dtype="int64")
+        nprobs = probabilities / self.np.sum(probabilities)
+        frequencies = self.np.zeros(len(nprobs), dtype="int64")
         for _ in range(nshots // SHOT_BATCH_SIZE):
-            frequencies = update_frequencies(SHOT_BATCH_SIZE, frequencies)
-        frequencies = update_frequencies(nshots % SHOT_BATCH_SIZE, frequencies)
+            frequencies = self.update_frequencies(frequencies, nprobs, SHOT_BATCH_SIZE)
+        frequencies = self.update_frequencies(frequencies, nprobs, nshots % SHOT_BATCH_SIZE)
         return collections.Counter({i: f for i, f in enumerate(frequencies) if f > 0})
 
-    def calculate_frequencies(self, samples):
-        res, counts = np.unique(samples, return_counts=True)
-        res, counts = np.array(res), np.array(counts)
-        return collections.Counter({k: v for k, v in zip(res, counts)})
-
     def apply_bitflips(self, noiseless_samples, bitflip_probabilities):
-        fprobs = np.array(bitflip_probabilities, dtype="float64")
-        sprobs = np.random.random(noiseless_samples.shape)
-        flip0 = np.array(sprobs < fprobs[0], dtype=noiseless_samples.dtype)
-        flip1 = np.array(sprobs < fprobs[1], dtype=noiseless_samples.dtype)
+        fprobs = self.np.array(bitflip_probabilities, dtype="float64")
+        sprobs = self.np.random.random(noiseless_samples.shape)
+        flip0 = self.np.array(sprobs < fprobs[0], dtype=noiseless_samples.dtype)
+        flip1 = self.np.array(sprobs < fprobs[1], dtype=noiseless_samples.dtype)
         noisy_samples = noiseless_samples + (1 - noiseless_samples) * flip0
         noisy_samples = noisy_samples - noiseless_samples * flip1
         return noisy_samples
 
     def partial_trace(self, state, qubits, nqubits):
         state = self.cast(state)
-        state = np.reshape(state, nqubits * (2,))
+        state = self.np.reshape(state, nqubits * (2,))
         axes = 2 * [list(qubits)]
-        rho = np.tensordot(state, np.conj(state), axes=axes)
+        rho = self.np.tensordot(state, self.np.conj(state), axes=axes)
         shape = 2 * (2 ** (nqubits - len(qubits)),)
-        return np.reshape(rho, shape)
+        return self.np.reshape(rho, shape)
 
     def partial_trace_density_matrix(self, state, qubits, nqubits):
         state = self.cast(state)
-        state = np.reshape(state, 2 * nqubits * (2,))
+        state = self.np.reshape(state, 2 * nqubits * (2,))
 
         order = tuple(sorted(qubits))
         order += tuple(i for i in range(nqubits) if i not in qubits)
         order += tuple(i + nqubits for i in order)
         shape = 2 * (2 ** len(qubits), 2 ** (nqubits - len(qubits)))
         
-        state = np.transpose(state, order)
-        state = np.reshape(state, shape)
-        return np.einsum("abac->bc", state)
+        state = self.np.transpose(state, order)
+        state = self.np.reshape(state, shape)
+        return self.np.einsum("abac->bc", state)
 
     def entanglement_entropy(self, rho):
         from qibo.config import EIGVAL_CUTOFF
         # Diagonalize
-        eigvals = np.linalg.eigvalsh(rho).real
+        eigvals = self.np.linalg.eigvalsh(rho).real
         # Treating zero and negative eigenvalues
         masked_eigvals = eigvals[eigvals > EIGVAL_CUTOFF]
-        spectrum = -1 * np.log(masked_eigvals)
-        entropy = np.sum(masked_eigvals * spectrum) / np.log(2.0)
+        spectrum = -1 * self.np.log(masked_eigvals)
+        entropy = self.np.sum(masked_eigvals * spectrum) / self.np.log(2.0)
         return entropy, spectrum
 
     def calculate_norm(self, state):
         state = self.cast(state)
-        return np.sqrt(np.sum(np.abs(state) ** 2))
+        return self.np.sqrt(self.np.sum(self.np.abs(state) ** 2))
 
     def calculate_norm_density_matrix(self, state):
         state = self.cast(state)
-        return np.trace(state)
+        return self.np.trace(state)
 
     def calculate_overlap(self, state1, state2):
         state1 = self.cast(state1)
         state2 = self.cast(state2)
-        return np.abs(np.sum(np.conj(state1) * state2))
+        return self.np.abs(self.np.sum(self.np.conj(state1) * state2))
 
     def calculate_overlap_density_matrix(self, state1, state2):
         raise_error(NotImplementedError)

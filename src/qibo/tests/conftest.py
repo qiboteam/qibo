@@ -29,12 +29,12 @@ INACTIVE_TESTS = {
     "qibo.tests.test_models_hep",
     "qibo.tests.test_models_qgan",
     "qibo.tests.test_models_variational",
+    "qibo.tests.test_parallel"
 }
 
 # backends to be tested
-BACKENDS = ["numpy", "qibojit-numba", "qibojit-cupy"]
-#BACKENDS = ["numpy", "qibojit-numba"]
-#BACKENDS = ["numpy"]
+#BACKENDS = ["numpy", "qibojit-numba", "qibojit-cupy"]
+BACKENDS = ["numpy", "tensorflow", "qibojit-numba"]
 
 def get_backend(backend_name):
     if "-" in backend_name:

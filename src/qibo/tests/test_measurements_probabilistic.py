@@ -60,20 +60,19 @@ def test_measurements_with_probabilistic_noise(backend):
     result = backend.execute_circuit(c, nshots=20)
     samples = result.samples()
 
-    np.random.seed(123)
     backend.set_seed(123)
     target_samples = []
     for _ in range(20):
         noiseless_c = models.Circuit(5)
         noiseless_c.add((gates.RX(i, t) for i, t in enumerate(thetas)))
         for i in range(5):
-            if np.random.random() < 0.2:
+            if backend.np.random.random() < 0.2:
                 noiseless_c.add(gates.Y(i))
-            if np.random.random() < 0.4:
+            if backend.np.random.random() < 0.4:
                 noiseless_c.add(gates.Z(i))
         noiseless_c.add(gates.M(*range(5)))
         result = backend.execute_circuit(noiseless_c, nshots=1)
-        target_samples.append(result.samples())
+        target_samples.append(backend.to_numpy(result.samples()))
     target_samples = np.concatenate(target_samples, axis=0)
     backend.assert_allclose(samples, target_samples)
 

@@ -1,8 +1,8 @@
 import os
+import collections
 import numpy as np
-from qibo.backends import einsum_utils
 from qibo.backends.numpy import NumpyBackend
-from qibo.config import raise_error, TF_LOG_LEVEL
+from qibo.config import log, raise_error, TF_LOG_LEVEL
 
 
 class TensorflowBackend(NumpyBackend):
@@ -12,51 +12,117 @@ class TensorflowBackend(NumpyBackend):
         self.name = "tensorflow"
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(TF_LOG_LEVEL)
         import tensorflow as tf
+        import tensorflow.experimental.numpy as tnp
+        tnp.experimental_enable_numpy_behavior()
         self.tf = tf
-    
+        self.np = tnp
+        
+        from tensorflow.python.framework.errors_impl import ResourceExhaustedError
+        self.oom_error = ResourceExhaustedError
+
+        import psutil
+        self.nthreads = psutil.cpu_count(logical=True)
+
     def set_device(self, device):
         # TODO: Implement this
         raise_error(NotImplementedError)
 
     def set_threads(self, nthreads):
-        # TODO: Implement this
-        raise_error(NotImplementedError)
+        log.warning("`set_threads` is not supported by the tensorflow "
+                    "backend. Please use tensorflow's thread setters: "
+                    "`tf.config.threading.set_inter_op_parallelism_threads` "
+                    "or `tf.config.threading.set_intra_op_parallelism_threads` "
+                    "to switch the number of threads.")
 
-    def asmatrix(self, gate):
-        npmatrix = super().asmatrix(gate)
-        return self.tf.cast(npmatrix, dtype=self.dtype)
+    def cast(self, x, dtype=None, copy=False):
+        if dtype is None:
+            dtype = self.dtype
+        x = self.tf.cast(x, dtype=dtype)
+        if copy:
+            return self.tf.identity(x)
+        return x
 
-    def apply_gate(self, gate, state, nqubits):
-        # TODO: Implement density matrices (most likely in another method)
-        state = self.tf.reshape(state, nqubits * (2,))
-        matrix = self.tf.reshape(self.asmatrix(gate), 2  * len(gate.qubits) * (2,))
-        if gate.is_controlled_by:
-            ncontrol = len(gate.control_qubits)
-            nactive = nqubits - ncontrol
-            order, targets = einsum_utils.control_order(gate, nqubits)
-            state = self.tf.transpose(state, order)
-            # Apply `einsum` only to the part of the state where all controls
-            # are active. This should be `state[-1]`
-            state = self.tf.reshape(state, (2 ** ncontrol,) + nactive * (2,))
-            opstring = einsum_utils.apply_gate_string(targets, nactive)
-            updates = self.tf.einsum(opstring, state[-1], matrix)
-            # Concatenate the updated part of the state `updates` with the
-            # part of of the state that remained unaffected `state[:-1]`.
-            state = self.tf.concatenate([state[:-1], updates[self.tf.newaxis]], axis=0)
-            state = self.tf.reshape(state, nqubits * (2,))
-            # Put qubit indices back to their proper places
-            reverse_order = len(order) * [0]
-            for i, r in enumerate(order):
-                reverse_order[r] = i
-            state = self.tf.transpose(state, reverse_order)
-        else:
-            state = self.tf.einsum(opstring, state, matrix)
-        return self.tf.reshape(state, (2 ** nqubits,))
+    def to_numpy(self, x):
+        return np.array(x)
 
     def zero_state(self, nqubits):
-        """Generate |000...0> state as an array."""
         idx = self.tf.constant([[0]], dtype="int32")
         state = self.tf.zeros((2 ** nqubits,), dtype=self.dtype)
         update = self.tf.constant([1], dtype=self.dtype)
         state = self.tf.tensor_scatter_nd_update(state, idx, update)
         return state
+
+    def zero_density_matrix(self, nqubits):
+        idx = self.tf.constant([[0, 0]], dtype="int32")
+        state = self.tf.zeros(2 * (2 ** nqubits,), dtype=self.dtype)
+        update = self.tf.constant([1], dtype=self.dtype)
+        state = self.tf.tensor_scatter_nd_update(state, idx, update)
+        return state
+
+    def asmatrix(self, gate):
+        npmatrix = super().asmatrix(gate)
+        return self.tf.cast(npmatrix, dtype=self.dtype)
+
+    def asmatrix_parametrized(self, gate):
+        npmatrix = super().asmatrix_parametrized(gate)
+        return self.tf.cast(npmatrix, dtype=self.dtype)
+
+    def asmatrix_fused(self, gate):
+        npmatrix = super().asmatrix_fused(gate)
+        return self.tf.cast(npmatrix, dtype=self.dtype)
+
+    def sample_shots(self, probabilities, nshots):
+        # redefining this because ``tnp.random.choice`` is not available
+        logits = self.tf.math.log(probabilities)[self.tf.newaxis]
+        samples = self.tf.random.categorical(logits, nshots)[0]
+        return samples
+
+    def samples_to_binary(self, samples, nqubits):
+        # redefining this because ``tnp.right_shift`` is not available
+        qrange = self.np.arange(nqubits - 1, -1, -1, dtype="int64")
+        samples = self.tf.bitwise.right_shift(samples[:, self.np.newaxis], qrange)
+        return self.tf.math.mod(samples, 2)
+
+    def calculate_frequencies(self, samples):
+        # redefining this because ``tnp.unique`` is not available
+        res, _, counts = self.tf.unique_with_counts(samples, out_idx="int64")
+        res, counts = self.np.array(res), self.np.array(counts)
+        return collections.Counter({int(k): int(v) for k, v in zip(res, counts)})
+
+    def update_frequencies(self, frequencies, probabilities, nsamples):
+        # redefining this because ``tnp.unique`` and tensor update is not available
+        samples = self.sample_shots(probabilities, nsamples)
+        res, _, counts = self.tf.unique_with_counts(samples, out_idx="int64")
+        frequencies = self.tf.tensor_scatter_nd_add(frequencies, res[:, self.tf.newaxis], counts)
+        return frequencies
+
+    def entanglement_entropy(self, rho):
+        # redefining this because ``tnp.linalg`` is not available
+        from qibo.config import EIGVAL_CUTOFF
+        # Diagonalize
+        eigvals = self.np.real(self.tf.linalg.eigvalsh(rho))
+        # Treating zero and negative eigenvalues
+        masked_eigvals = eigvals[eigvals > EIGVAL_CUTOFF]
+        spectrum = -1 * self.np.log(masked_eigvals)
+        entropy = self.np.sum(masked_eigvals * spectrum) / self.np.log(2.0)
+        return entropy, spectrum
+
+    def test_regressions(self, name):
+        if name == "test_measurementresult_apply_bitflips":
+            return [
+                [4, 0, 0, 1, 0, 2, 2, 4, 4, 0],
+                [4, 0, 0, 1, 0, 2, 2, 4, 4, 0],
+                [4, 0, 0, 1, 0, 0, 0, 4, 4, 0],
+                [4, 0, 0, 0, 0, 0, 0, 4, 4, 0]
+            ]
+        elif name == "test_probabilistic_measurement": 
+            return {0: 271, 1: 239, 2: 242, 3: 248}
+        elif name == "test_unbalanced_probabilistic_measurement": 
+            return {0: 168, 1: 188, 2: 154, 3: 490}
+        elif name == "test_post_measurement_bitflips_on_circuit": 
+            return [
+                {5: 30}, {5: 16, 7: 10, 6: 2, 3: 1, 4: 1},
+                {3: 6, 5: 6, 7: 5, 2: 4, 4: 3, 0: 2, 1: 2, 6: 2}
+            ]
+        else:
+            return None
