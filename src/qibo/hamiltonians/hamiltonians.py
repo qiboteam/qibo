@@ -212,8 +212,7 @@ class TrotterCircuit:
 
 
 class SymbolicHamiltonian(AbstractHamiltonian):
-    #TODO: update docstring
-    """Backend implementation of :class:`qibo.abstractions.hamiltonians.SymbolicHamiltonian`.
+    """Hamiltonian based on a symbolic representation.
 
     Calculations using symbolic Hamiltonians are either done directly using
     the given ``sympy`` expression as it is (``form``) or by parsing the
@@ -238,7 +237,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             It is not required if the Hamiltonian is constructed using Qibo symbols.
             The symbol_map can also be used to pass non-quantum operator arguments
             to the symbolic Hamiltonian, such as the parameters in the
-            :meth:`qibo.hamiltonians.MaxCut` Hamiltonian.
+            :meth:`qibo.hamiltonians.models.MaxCut` Hamiltonian.
         ground_state (Callable): Function with no arguments that returns the
             ground state of this Hamiltonian. This is useful in cases where
             the ground state is trivial and is used for initialization,

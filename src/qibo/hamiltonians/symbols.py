@@ -4,10 +4,9 @@ from qibo import gates, matrices
 from qibo.config import raise_error
 
 class Symbol(sympy.Symbol):
-    #TODO: update docstring
     """Qibo specialization for ``sympy`` symbols.
 
-    These symbols can be used to create :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+    These symbols can be used to create :class:`qibo.hamiltonians.hamiltonians.SymbolicHamiltonian`.
     See :ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>`
     for more details.
 
@@ -15,7 +14,7 @@ class Symbol(sympy.Symbol):
         .. testcode::
 
             from qibo import hamiltonians
-            from qibo.symbols import X, Y, Z
+            from qibo.hamiltonians.symbols import X, Y, Z
             # construct a XYZ Hamiltonian on two qubits using Qibo symbols
             form = X(0) * X(1) + Y(0) * Y(1) + Z(0) * Z(1)
             ham = hamiltonians.SymbolicHamiltonian(form)

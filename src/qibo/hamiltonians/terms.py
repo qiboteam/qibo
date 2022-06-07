@@ -4,10 +4,10 @@ from qibo import gates
 from qibo.config import raise_error
 
 class HamiltonianTerm:
-    """Term of a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+    """Term of a :class:`qibo.hamiltonians.hamiltonians.SymbolicHamiltonian`.
 
     Symbolic Hamiltonians are represented by a list of
-    :class:`qibo.core.terms.HamiltonianTerm` objects storred in the
+    :class:`qibo.hamiltonians.terms.HamiltonianTerm` objects storred in the
     ``SymbolicHamiltonian.terms`` attribute. The mathematical expression of
     the Hamiltonian is the sum of these terms.
 
@@ -44,7 +44,7 @@ class HamiltonianTerm:
 
     @property
     def gate(self):
-        """:class:`qibo.abstractions.gates.Unitary` gate that implements the action of the term on states."""
+        """:class:`qibo.gates.gates.Unitary` gate that implements the action of the term on states."""
         if self._gate is None:
             self._gate = gates.Unitary(self.matrix, *self.target_qubits)
         return self._gate
@@ -59,7 +59,7 @@ class HamiltonianTerm:
         return expm(-1j * x * self.matrix)
 
     def expgate(self, x):
-        """:class:`qibo.abstractions.gates.Unitary` gate implementing the action of exp(term) on states."""
+        """:class:`qibo.gates.gates.Unitary` gate implementing the action of exp(term) on states."""
         return gates.Unitary(self.exp(x), *self.target_qubits)
 
     def merge(self, term):
@@ -108,14 +108,13 @@ class HamiltonianTerm:
 
 
 class SymbolicTerm(HamiltonianTerm):
-    #TODO: update docstrings
-    """:class:`qibo.core.terms.HamiltonianTerm` constructed using ``sympy`` expression.
+    """:class:`qibo.hamiltonians.terms.HamiltonianTerm` constructed using ``sympy`` expression.
 
     Example:
         .. testcode::
 
-            from qibo.symbols import X, Y
-            from qibo.core.terms import SymbolicTerm
+            from qibo.hamiltonians.symbols import X, Y
+            from qibo.hamiltonians.terms import SymbolicTerm
             sham = X(0) * X(1) + 2 * Y(0) * Y(1)
             termsdict = sham.as_coefficients_dict()
             sterms = [SymbolicTerm(c, f) for f, c in termsdict.items()]
@@ -238,13 +237,13 @@ class SymbolicTerm(HamiltonianTerm):
 
 
 class TermGroup(list):
-    """Collection of multiple :class:`qibo.core.terms.HamiltonianTerm` objects.
+    """Collection of multiple :class:`qibo.hamiltonians.terms.HamiltonianTerm` objects.
 
     Allows merging multiple terms to a single one for faster exponentiation
     during Trotterized evolution.
 
     Args:
-        term (:class:`qibo.core.terms.HamiltonianTerm`): Parent term of the group.
+        term (:class:`qibo.hamiltonians.terms.HamiltonianTerm`): Parent term of the group.
             All terms appended later should target a subset of the parents'
             target qubits.
     """
@@ -255,7 +254,7 @@ class TermGroup(list):
         self._term = None
 
     def append(self, term):
-        """Appends a new :class:`qibo.core.terms.HamiltonianTerm` to the collection."""
+        """Appends a new :class:`qibo.hamiltonians.terms.HamiltonianTerm` to the collection."""
         super().append(term)
         self.target_qubits |= set(term.target_qubits)
         self._term = None
@@ -266,15 +265,15 @@ class TermGroup(list):
 
     @classmethod
     def from_terms(cls, terms):
-        """Divides a list of terms to multiple :class:`qibo.core.terms.TermGroup`s.
+        """Divides a list of terms to multiple :class:`qibo.hamiltonians.terms.TermGroup`s.
 
         Terms that target the same qubits are grouped to the same group.
 
         Args:
-            terms (list): List of :class:`qibo.core.terms.HamiltonianTerm` objects.
+            terms (list): List of :class:`qibo.hamiltonians.terms.HamiltonianTerm` objects.
 
         Returns:
-            List of :class:`qibo.core.terms.TermGroup` objects that contain
+            List of :class:`qibo.hamiltonians.terms.TermGroup` objects that contain
             all the given terms.
         """
         # split given terms according to their order
@@ -303,13 +302,13 @@ class TermGroup(list):
 
     @property
     def term(self):
-        """Returns a single :class:`qibo.core.terms.HamiltonianTerm`. after merging all terms in the group."""
+        """Returns a single :class:`qibo.hamiltonians.terms.HamiltonianTerm`. after merging all terms in the group."""
         if self._term is None:
             self._term = self.to_term()
         return self._term
 
     def to_term(self, coefficients={}):
-        """Calculates a single :class:`qibo.core.terms.HamiltonianTerm` by merging all terms in the group.
+        """Calculates a single :class:`qibo.hamiltonians.terms.HamiltonianTerm` by merging all terms in the group.
 
         Args:
             coefficients (dict): Optional dictionary that allows passing a different
