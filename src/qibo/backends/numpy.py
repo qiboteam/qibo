@@ -180,17 +180,19 @@ class NumpyBackend(Simulator):
         # measure and get result
         probs = self.calculate_probabilities(state, gate.qubits, nqubits)
         shots = self.sample_shots(probs, 1)
-        shots = self.samples_to_binary(shots, len(qubits))[0]
+        binshots = self.samples_to_binary(shots, len(qubits))[0]
         # update the gate's result with the measurement outcome
         gate.result.backend = self
-        gate.result.append(shots)
+        gate.result.append(binshots)
         # collapse state
         state = self.np.reshape(state, nqubits * (2,))
         order = list(qubits) + [q for q in range(nqubits) if q not in qubits]
-        substate = self.np.transpose(state, order)[tuple(shots)]
+        state = self.np.transpose(state, order)
+        subshape = (2 ** len(qubits),) + (nqubits - len(qubits)) * (2,)
+        substate = self.np.reshape(state, subshape)[int(shots)]
         norm = self.np.sqrt(self.np.sum(self.np.abs(substate) ** 2))
         state = substate / norm
-        state = self._append_zeros(state, qubits, shots)
+        state = self._append_zeros(state, qubits, binshots)
         return self.np.reshape(state, shape)
 
     def collapse_density_matrix(self, gate, state, nqubits):
@@ -200,22 +202,23 @@ class NumpyBackend(Simulator):
         # measure and get result
         probs = self.calculate_probabilities_density_matrix(state, gate.qubits, nqubits)
         shots = self.sample_shots(probs, 1)
-        shots = list(self.samples_to_binary(shots, len(qubits))[0])
+        binshots = list(self.samples_to_binary(shots, len(qubits))[0])
         # update the gate's result with the measurement outcome
         gate.result.backend = self
-        gate.result.append(shots)
+        gate.result.append(binshots)
         # collapse state
         order = list(qubits) + [q + nqubits for q in qubits]
         order.extend(q for q in range(nqubits) if q not in qubits)
         order.extend(q + nqubits for q in range(nqubits) if q not in qubits)
-        shots = 2 * shots
         state = self.np.reshape(state, 2 * nqubits * (2,))
-        substate = self.np.transpose(state, order)[tuple(shots)]
+        state = self.np.transpose(state, order)
+        subshape = 2 * (2 ** len(qubits),) + 2 * (nqubits - len(qubits)) * (2,)
+        substate = self.np.reshape(state, subshape)[int(shots), int(shots)]
         n = 2 ** (len(substate.shape) // 2)
         norm = self.np.trace(self.np.reshape(substate, (n, n)))
         state = substate / norm
         qubits = qubits + [q + nqubits for q in qubits]
-        state = self._append_zeros(state, qubits, shots)
+        state = self._append_zeros(state, qubits, 2 * binshots)
         return self.np.reshape(state, shape)
 
     def reset_error_density_matrix(self, gate, state, nqubits):
