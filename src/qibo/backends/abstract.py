@@ -46,10 +46,6 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def apply_gate(self, gate, state, nqubits): # pragma: no cover
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
     def get_state_repr(self, result): # pragma: no cover
         raise_error(NotImplementedError)
 
