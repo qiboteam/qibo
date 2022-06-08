@@ -51,6 +51,8 @@ def test_pauli_error(backend, density_matrix, nshots):
 
 @pytest.mark.parametrize("density_matrix", [False, True])
 def test_thermal_error(backend, density_matrix):
+    if not density_matrix:
+        pytest.skip("Reset error is not implemented for state vectors.")
     thermal = ThermalRelaxationError(2, 1, 0.3)
     noise = NoiseModel()
     noise.add(thermal, gates.X, 1)
@@ -76,10 +78,8 @@ def test_thermal_error(backend, density_matrix):
     target_circuit.add(gates.Z(2))
 
     initial_psi = random_density_matrix(3) if density_matrix else random_state(3)
-    np.random.seed(123)
     backend.set_seed(123)
     final_state = backend.execute_circuit(noise.apply(circuit), np.copy(initial_psi))
-    np.random.seed(123)
     backend.set_seed(123)
     target_final_state = backend.execute_circuit(target_circuit, np.copy(initial_psi))
 
@@ -108,13 +108,9 @@ def test_reset_error(backend, density_matrix):
     target_circuit.add(gates.ResetChannel(1, 0.8, 0.2))
 
     initial_psi = random_density_matrix(3) if density_matrix else random_state(3)
-    np.random.seed(123)
     backend.set_seed(123)
     final_state = backend.execute_circuit(noise.apply(circuit), np.copy(initial_psi))
-    np.random.seed(123)
     backend.set_seed(123)
     target_final_state = backend.execute_circuit(target_circuit, np.copy(initial_psi))
 
     backend.assert_allclose(final_state, target_final_state)
-
-
