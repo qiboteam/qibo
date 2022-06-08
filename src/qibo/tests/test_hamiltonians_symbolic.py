@@ -245,10 +245,10 @@ def test_symbolic_hamiltonian_abstract_symbol_ev(backend, density_matrix, calcte
     backend.assert_allclose(local_ev, target_ev)
 
 
-def test_trotter_hamiltonian_operation_errors():
+def test_trotter_hamiltonian_operation_errors(backend):
     """Test errors in ``SymbolicHamiltonian`` addition and subtraction."""
-    h1 = hamiltonians.SymbolicHamiltonian(symbolic_tfim(3, h=1.0))
-    h2 = hamiltonians.SymbolicHamiltonian(symbolic_tfim(4, h=1.0))
+    h1 = hamiltonians.SymbolicHamiltonian(symbolic_tfim(3, h=1.0), backend=backend)
+    h2 = hamiltonians.SymbolicHamiltonian(symbolic_tfim(4, h=1.0), backend=backend)
     with pytest.raises(RuntimeError):
         h = h1 + h2
     with pytest.raises(RuntimeError):
@@ -267,6 +267,6 @@ def test_trotter_hamiltonian_operation_errors():
         h = h1 @ "test"
     with pytest.raises(NotImplementedError):
         h = h1 @ np.ones((2, 2, 2, 2))
-    h2 = hamiltonians.XXZ(3, dense=False)
+    h2 = hamiltonians.XXZ(3, dense=False, backend=backend)
     with pytest.raises(NotImplementedError):
         h = h1 @ h2

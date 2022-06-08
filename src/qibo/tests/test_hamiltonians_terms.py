@@ -43,13 +43,13 @@ def test_hamiltonian_term_gates(backend):
     term = terms.HamiltonianTerm(matrix, 1, 2)
     gate = term.gate
     assert gate.target_qubits == (1, 2)
-    backend.assert_allclose(gate.matrix, matrix)
+    backend.assert_allclose(gate.asmatrix(backend), matrix)
 
     initial_state = random_state(nqubits)
     final_state = term(backend, np.copy(initial_state), nqubits)
     c = models.Circuit(nqubits)
     c.add(gates.Unitary(matrix, 1, 2))
-    target_state = c(np.copy(initial_state))
+    target_state = backend.execute_circuit(c, np.copy(initial_state))
     backend.assert_allclose(final_state, target_state)
 
 
