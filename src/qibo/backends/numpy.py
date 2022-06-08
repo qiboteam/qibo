@@ -41,6 +41,8 @@ class NumpyBackend(Simulator):
         return sparse.issparse(x)
 
     def to_numpy(self, x):
+        if self.issparse(x):
+            return x.toarray()
         return x
 
     def zero_state(self, nqubits):
