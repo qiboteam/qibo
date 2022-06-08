@@ -79,7 +79,7 @@ def _OneBodyPauli(nqubits, matrix, dense=True, ground_state=None, backend=None):
     if dense:
         condition = lambda i, j: i == j % nqubits
         ham = -_build_spin_model(nqubits, matrix, condition)
-        return Hamiltonian(nqubits, ham)
+        return Hamiltonian(nqubits, ham, backend=backend)
 
     matrix = - matrix
     terms = [HamiltonianTerm(matrix, i) for i in range(nqubits)]
