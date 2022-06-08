@@ -1,13 +1,13 @@
 import sympy
-from qibo import gates, K
+import numpy as np
+from qibo import gates
 from qibo.config import raise_error
 
-
 class HamiltonianTerm:
-    """Term of a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+    """Term of a :class:`qibo.hamiltonians.hamiltonians.SymbolicHamiltonian`.
 
     Symbolic Hamiltonians are represented by a list of
-    :class:`qibo.core.terms.HamiltonianTerm` objects storred in the
+    :class:`qibo.hamiltonians.terms.HamiltonianTerm` objects storred in the
     ``SymbolicHamiltonian.terms`` attribute. The mathematical expression of
     the Hamiltonian is the sum of these terms.
 
@@ -23,8 +23,7 @@ class HamiltonianTerm:
             if qi < 0:
                 raise_error(ValueError, "Invalid qubit id {} < 0 was given "
                                         "in Hamiltonian term".format(qi))
-        if not (matrix is None or isinstance(matrix, K.qnp.numeric_types) or
-                isinstance(matrix, K.qnp.tensor_types)):
+        if not isinstance(matrix, np.ndarray):
             raise_error(TypeError, "Invalid type {} of symbol matrix."
                                    "".format(type(matrix)))
         dim = int(matrix.shape[0])
@@ -45,17 +44,22 @@ class HamiltonianTerm:
 
     @property
     def gate(self):
-        """:class:`qibo.abstractions.gates.Unitary` gate that implements the action of the term on states."""
+        """:class:`qibo.gates.gates.Unitary` gate that implements the action of the term on states."""
         if self._gate is None:
             self._gate = gates.Unitary(self.matrix, *self.target_qubits)
         return self._gate
 
     def exp(self, x):
         """Matrix exponentiation of the term."""
-        return K.qnp.expm(-1j * x * self.matrix)
+        from scipy.sparse import issparse
+        if issparse(x):
+            from scipy.sparse.linalg import expm
+        else:
+            from scipy.linalg import expm
+        return expm(-1j * x * self.matrix)
 
     def expgate(self, x):
-        """:class:`qibo.abstractions.gates.Unitary` gate implementing the action of exp(term) on states."""
+        """:class:`qibo.gates.gates.Unitary` gate implementing the action of exp(term) on states."""
         return gates.Unitary(self.exp(x), *self.target_qubits)
 
     def merge(self, term):
@@ -69,8 +73,8 @@ class HamiltonianTerm:
             raise_error(ValueError, "Cannot merge HamiltonianTerm acting on "
                                     "qubits {} to term on qubits {}."
                                     "".format(term.target_qubits, self.target_qubits))
-        matrix = K.np.kron(term.matrix, K.qnp.eye(2 ** (len(self) - len(term))))
-        matrix = K.np.reshape(matrix, 2 * len(self) * (2,))
+        matrix = np.kron(term.matrix, np.eye(2 ** (len(self) - len(term))))
+        matrix = np.reshape(matrix, 2 * len(self) * (2,))
         order = []
         i = len(term)
         for qubit in self.target_qubits:
@@ -80,8 +84,8 @@ class HamiltonianTerm:
                 order.append(i)
                 i += 1
         order.extend([x + len(order) for x in order])
-        matrix = K.np.transpose(matrix, order)
-        matrix = K.np.reshape(matrix, 2 * (2 ** len(self),))
+        matrix = np.transpose(matrix, order)
+        matrix = np.reshape(matrix, 2 * (2 ** len(self),))
         return HamiltonianTerm(self.matrix + matrix, *self.target_qubits)
 
     def __len__(self):
@@ -93,22 +97,24 @@ class HamiltonianTerm:
     def __rmul__(self, x):
         return self.__mul__(x)
 
-    def __call__(self, state, density_matrix=False):
+    def __call__(self, backend, state, nqubits, gate=None, density_matrix=False):
         """Applies the term on a given state vector or density matrix."""
+        #TODO: improve this and understand why it works
+        if isinstance(gate, bool) or gate is None:
+            gate = self.gate
         if density_matrix:
-            self.gate.density_matrix = True
-            return self.gate._density_matrix_half_call(state)
-        return self.gate(state) # pylint: disable=E1102
+            return backend.apply_gate_half_density_matrix(gate, state, nqubits)
+        return backend.apply_gate(gate, state, nqubits) # pylint: disable=E1102
 
 
 class SymbolicTerm(HamiltonianTerm):
-    """:class:`qibo.core.terms.HamiltonianTerm` constructed using ``sympy`` expression.
+    """:class:`qibo.hamiltonians.terms.HamiltonianTerm` constructed using ``sympy`` expression.
 
     Example:
         .. testcode::
 
-            from qibo.symbols import X, Y
-            from qibo.core.terms import SymbolicTerm
+            from qibo.hamiltonians.symbols import X, Y
+            from qibo.hamiltonians.terms import SymbolicTerm
             sham = X(0) * X(1) + 2 * Y(0) * Y(1)
             termsdict = sham.as_coefficients_dict()
             sterms = [SymbolicTerm(c, f) for f, c in termsdict.items()]
@@ -149,12 +155,12 @@ class SymbolicTerm(HamiltonianTerm):
                 # if the user is using ``symbol_map`` instead of qibo symbols,
                 # create the corresponding symbols
                 if factor in symbol_map:
-                    from qibo.symbols import Symbol
+                    from qibo.hamiltonians.symbols import Symbol
                     q, matrix = symbol_map.get(factor)
                     factor = Symbol(q, matrix, name=factor.name)
 
                 if isinstance(factor, sympy.Symbol):
-                    if isinstance(factor.matrix, K.qnp.tensor_types):
+                    if isinstance(factor.matrix, np.ndarray):
                         self.factors.extend(pow * [factor])
                         q = factor.target_qubit
                         # if pow > 1 the matrix should be multiplied multiple
@@ -197,7 +203,7 @@ class SymbolicTerm(HamiltonianTerm):
                 """
                 if len(matrices) == 1:
                     return matrices[0]
-                matrix = K.np.copy(matrices[0])
+                matrix = np.copy(matrices[0])
                 for m in matrices[1:]:
                     matrix = matrix @ m
                 return matrix
@@ -205,7 +211,7 @@ class SymbolicTerm(HamiltonianTerm):
             self._matrix = self.coefficient
             for q in self.target_qubits:
                 matrix = matrices_product(self.matrix_map.get(q))
-                self._matrix = K.np.kron(self._matrix, matrix)
+                self._matrix = np.kron(self._matrix, matrix)
         return self._matrix
 
     def copy(self):
@@ -224,24 +230,20 @@ class SymbolicTerm(HamiltonianTerm):
             new._matrix = x * self._matrix
         return new
 
-    def __call__(self, state, density_matrix=False):
+    def __call__(self, backend, state, nqubits, density_matrix=False):
         for factor in self.factors:
-            if density_matrix:
-                factor.gate.density_matrix = True
-                state = factor.gate._density_matrix_half_call(state)
-            else:
-                state = factor.gate(state)
+            state = super().__call__(backend, state, nqubits, factor.gate, density_matrix)
         return self.coefficient * state
 
 
 class TermGroup(list):
-    """Collection of multiple :class:`qibo.core.terms.HamiltonianTerm` objects.
+    """Collection of multiple :class:`qibo.hamiltonians.terms.HamiltonianTerm` objects.
 
     Allows merging multiple terms to a single one for faster exponentiation
     during Trotterized evolution.
 
     Args:
-        term (:class:`qibo.core.terms.HamiltonianTerm`): Parent term of the group.
+        term (:class:`qibo.hamiltonians.terms.HamiltonianTerm`): Parent term of the group.
             All terms appended later should target a subset of the parents'
             target qubits.
     """
@@ -252,7 +254,7 @@ class TermGroup(list):
         self._term = None
 
     def append(self, term):
-        """Appends a new :class:`qibo.core.terms.HamiltonianTerm` to the collection."""
+        """Appends a new :class:`qibo.hamiltonians.terms.HamiltonianTerm` to the collection."""
         super().append(term)
         self.target_qubits |= set(term.target_qubits)
         self._term = None
@@ -263,15 +265,15 @@ class TermGroup(list):
 
     @classmethod
     def from_terms(cls, terms):
-        """Divides a list of terms to multiple :class:`qibo.core.terms.TermGroup`s.
+        """Divides a list of terms to multiple :class:`qibo.hamiltonians.terms.TermGroup`s.
 
         Terms that target the same qubits are grouped to the same group.
 
         Args:
-            terms (list): List of :class:`qibo.core.terms.HamiltonianTerm` objects.
+            terms (list): List of :class:`qibo.hamiltonians.terms.HamiltonianTerm` objects.
 
         Returns:
-            List of :class:`qibo.core.terms.TermGroup` objects that contain
+            List of :class:`qibo.hamiltonians.terms.TermGroup` objects that contain
             all the given terms.
         """
         # split given terms according to their order
@@ -300,13 +302,13 @@ class TermGroup(list):
 
     @property
     def term(self):
-        """Returns a single :class:`qibo.core.terms.HamiltonianTerm`. after merging all terms in the group."""
+        """Returns a single :class:`qibo.hamiltonians.terms.HamiltonianTerm`. after merging all terms in the group."""
         if self._term is None:
             self._term = self.to_term()
         return self._term
 
     def to_term(self, coefficients={}):
-        """Calculates a single :class:`qibo.core.terms.HamiltonianTerm` by merging all terms in the group.
+        """Calculates a single :class:`qibo.hamiltonians.terms.HamiltonianTerm` by merging all terms in the group.
 
         Args:
             coefficients (dict): Optional dictionary that allows passing a different
