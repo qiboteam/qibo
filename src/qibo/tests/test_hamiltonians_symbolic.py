@@ -39,7 +39,7 @@ def test_symbolic_hamiltonian_errors(backend):
 @pytest.mark.parametrize("calcterms", [False, True])
 def test_symbolictfim_hamiltonian_to_dense(backend, nqubits, calcterms):
     final_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1), backend=backend)
-    target_ham = hamiltonians.TFIM(nqubits, h=1)
+    target_ham = hamiltonians.TFIM(nqubits, h=1, backend=backend)
     if calcterms:
         _ = final_ham.terms
     backend.assert_allclose(final_ham.matrix, target_ham.matrix, atol=1e-15)
@@ -53,8 +53,8 @@ def test_symbolicxxz_hamiltonian_to_dense(backend, nqubits, calcterms):
     sham += sum(Y(i) * Y(i + 1) for i in range(nqubits - 1))
     sham += 0.5 * sum(Z(i) * Z(i + 1) for i in range(nqubits - 1))
     sham += X(0) * X(nqubits - 1) + Y(0) * Y(nqubits - 1) + 0.5 * Z(0) * Z(nqubits - 1)
-    final_ham = hamiltonians.SymbolicHamiltonian(sham)
-    target_ham = hamiltonians.XXZ(nqubits)
+    final_ham = hamiltonians.SymbolicHamiltonian(sham, backend=backend)
+    target_ham = hamiltonians.XXZ(nqubits, backend=backend)
     if calcterms:
         _ = final_ham.terms
     backend.assert_allclose(final_ham.matrix, target_ham.matrix, atol=1e-15)
@@ -65,8 +65,8 @@ def test_symbolicxxz_hamiltonian_to_dense(backend, nqubits, calcterms):
 @pytest.mark.parametrize("calcdense", [False, True])
 def test_symbolic_hamiltonian_scalar_mul(backend, nqubits, calcterms, calcdense):
     """Test multiplication of Trotter Hamiltonian with scalar."""
-    local_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0))
-    target_ham = 2 * hamiltonians.TFIM(nqubits, h=1.0)
+    local_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0), backend=backend)
+    target_ham = 2 * hamiltonians.TFIM(nqubits, h=1.0, backend=backend)
     if calcterms:
         _ = local_ham.terms
     if calcdense:
@@ -74,7 +74,7 @@ def test_symbolic_hamiltonian_scalar_mul(backend, nqubits, calcterms, calcdense)
     local_dense = (2 * local_ham).dense
     backend.assert_allclose(local_dense.matrix, target_ham.matrix)
 
-    local_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0))
+    local_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0), backend=backend)
     if calcterms:
         _ = local_ham.terms
     if calcdense:
@@ -88,8 +88,8 @@ def test_symbolic_hamiltonian_scalar_mul(backend, nqubits, calcterms, calcdense)
 @pytest.mark.parametrize("calcdense", [False, True])
 def test_symbolic_hamiltonian_scalar_add(backend, nqubits, calcterms, calcdense):
     """Test addition of Trotter Hamiltonian with scalar."""
-    local_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0))
-    target_ham = 2 + hamiltonians.TFIM(nqubits, h=1.0)
+    local_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0), backend=backend)
+    target_ham = 2 + hamiltonians.TFIM(nqubits, h=1.0, backend=backend)
     if calcterms:
         _ = local_ham.terms
     if calcdense:
@@ -97,7 +97,7 @@ def test_symbolic_hamiltonian_scalar_add(backend, nqubits, calcterms, calcdense)
     local_dense = (2 + local_ham).dense
     backend.assert_allclose(local_dense.matrix, target_ham.matrix)
 
-    local_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0))
+    local_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0), backend=backend)
     if calcterms:
         _ = local_ham.terms
     if calcdense:
@@ -111,8 +111,8 @@ def test_symbolic_hamiltonian_scalar_add(backend, nqubits, calcterms, calcdense)
 @pytest.mark.parametrize("calcdense", [False, True])
 def test_symbolic_hamiltonian_scalar_sub(backend, nqubits, calcterms, calcdense):
     """Test subtraction of Trotter Hamiltonian with scalar."""
-    local_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0))
-    target_ham = 2 - hamiltonians.TFIM(nqubits, h=1.0)
+    local_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0), backend=backend)
+    target_ham = 2 - hamiltonians.TFIM(nqubits, h=1.0, backend=backend)
     if calcterms:
         _ = local_ham.terms
     if calcdense:
@@ -120,8 +120,8 @@ def test_symbolic_hamiltonian_scalar_sub(backend, nqubits, calcterms, calcdense)
     local_dense = (2 - local_ham).dense
     backend.assert_allclose(local_dense.matrix, target_ham.matrix)
 
-    target_ham = hamiltonians.TFIM(nqubits, h=1.0) - 2
-    local_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0))
+    target_ham = hamiltonians.TFIM(nqubits, h=1.0, backend=backend) - 2
+    local_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0), backend=backend)
     if calcterms:
         _ = local_ham.terms
     if calcdense:
@@ -135,8 +135,8 @@ def test_symbolic_hamiltonian_scalar_sub(backend, nqubits, calcterms, calcdense)
 @pytest.mark.parametrize("calcdense", [False, True])
 def test_symbolic_hamiltonian_operator_add_and_sub(backend, nqubits, calcterms, calcdense):
     """Test addition and subtraction between Trotter Hamiltonians."""
-    local_ham1 = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0))
-    local_ham2 = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=0.5))
+    local_ham1 = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0), backend=backend)
+    local_ham2 = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=0.5), backend=backend)
     if calcterms:
         _ = local_ham1.terms
         _ = local_ham2.terms
@@ -144,13 +144,13 @@ def test_symbolic_hamiltonian_operator_add_and_sub(backend, nqubits, calcterms, 
         _ = local_ham1.dense
         _ = local_ham2.dense
     local_ham = local_ham1 + local_ham2
-    target_ham = (hamiltonians.TFIM(nqubits, h=1.0) +
-                  hamiltonians.TFIM(nqubits, h=0.5))
+    target_ham = (hamiltonians.TFIM(nqubits, h=1.0, backend=backend) +
+                  hamiltonians.TFIM(nqubits, h=0.5, backend=backend))
     dense = local_ham.dense
     backend.assert_allclose(dense.matrix, target_ham.matrix)
 
-    local_ham1 = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0))
-    local_ham2 = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=0.5))
+    local_ham1 = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0), backend=backend)
+    local_ham2 = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=0.5), backend=backend)
     if calcterms:
         _ = local_ham1.terms
         _ = local_ham2.terms
@@ -158,8 +158,8 @@ def test_symbolic_hamiltonian_operator_add_and_sub(backend, nqubits, calcterms, 
         _ = local_ham1.dense
         _ = local_ham2.dense
     local_ham = local_ham1 - local_ham2
-    target_ham = (hamiltonians.TFIM(nqubits, h=1.0) -
-                  hamiltonians.TFIM(nqubits, h=0.5))
+    target_ham = (hamiltonians.TFIM(nqubits, h=1.0, backend=backend) -
+                  hamiltonians.TFIM(nqubits, h=0.5, backend=backend))
     dense = local_ham.dense
     backend.assert_allclose(dense.matrix, target_ham.matrix)
 
@@ -168,10 +168,10 @@ def test_symbolic_hamiltonian_operator_add_and_sub(backend, nqubits, calcterms, 
 @pytest.mark.parametrize("calcterms", [False, True])
 @pytest.mark.parametrize("calcdense", [False, True])
 def test_symbolic_hamiltonian_hamiltonianmatmul(backend, nqubits, calcterms, calcdense):
-    local_ham1 = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0))
-    local_ham2 = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=0.5))
-    dense_ham1 = hamiltonians.TFIM(nqubits, h=1.0)
-    dense_ham2 = hamiltonians.TFIM(nqubits, h=0.5)
+    local_ham1 = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0), backend=backend)
+    local_ham2 = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=0.5), backend=backend)
+    dense_ham1 = hamiltonians.TFIM(nqubits, h=1.0, backend=backend)
+    dense_ham2 = hamiltonians.TFIM(nqubits, h=0.5, backend=backend)
     if calcterms:
         _ = local_ham1.terms
         _ = local_ham2.terms
@@ -196,8 +196,8 @@ def test_symbolic_hamiltonian_matmul(backend, nqubits, density_matrix, calcterms
         shape = (2 ** nqubits,)
         #state = VectorState.from_tensor(random_complex(shape))
     state = random_complex(shape)
-    local_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0))
-    dense_ham = hamiltonians.TFIM(nqubits, h=1.0)
+    local_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0), backend=backend)
+    dense_ham = hamiltonians.TFIM(nqubits, h=1.0, backend=backend)
     if calcterms:
         _ = local_ham.terms
     local_matmul = local_ham @ state
@@ -209,12 +209,12 @@ def test_symbolic_hamiltonian_matmul(backend, nqubits, density_matrix, calcterms
 @pytest.mark.parametrize("calcterms", [False, True])
 @pytest.mark.parametrize("calcdense", [False, True])
 def test_symbolic_hamiltonian_state_ev(backend, nqubits, normalize, calcterms, calcdense):
-    local_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0)) + 2
+    local_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0), backend=backend) + 2
     if calcterms:
         _ = local_ham.terms
     if calcdense:
         _ = local_ham.dense
-    dense_ham = hamiltonians.TFIM(nqubits, h=1.0) + 2
+    dense_ham = hamiltonians.TFIM(nqubits, h=1.0, backend=backend) + 2
 
     state = backend.cast(random_complex((2 ** nqubits,)))
     local_ev = local_ham.expectation(state, normalize)
@@ -233,7 +233,7 @@ def test_symbolic_hamiltonian_abstract_symbol_ev(backend, density_matrix, calcte
     from qibo.hamiltonians.symbols import X, Symbol
     matrix = np.random.random((2, 2))
     form = X(0) * Symbol(1, matrix) + Symbol(0, matrix) * X(1)
-    local_ham = hamiltonians.SymbolicHamiltonian(form)
+    local_ham = hamiltonians.SymbolicHamiltonian(form, backend=backend)
     if calcterms:
         _ = local_ham.terms
     if density_matrix:

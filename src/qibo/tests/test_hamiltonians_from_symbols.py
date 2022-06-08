@@ -33,7 +33,7 @@ def test_tfim_hamiltonian_from_symbols(backend, nqubits, hamtype, calcterms):
     if calcterms:
         _ = ham.terms
     final_matrix = ham.matrix
-    target_matrix = hamiltonians.TFIM(nqubits, h=h).matrix
+    target_matrix = hamiltonians.TFIM(nqubits, h=h, backend=backend).matrix
     backend.assert_allclose(final_matrix, target_matrix)
 
 
@@ -124,7 +124,7 @@ def test_x_hamiltonian_from_symbols(backend, nqubits, hamtype, calcterms):
     if calcterms:
         _ = ham.terms
     final_matrix = ham.matrix
-    target_matrix = hamiltonians.X(nqubits).matrix
+    target_matrix = hamiltonians.X(nqubits, backend=backend).matrix
     backend.assert_allclose(final_matrix, target_matrix)
 
 

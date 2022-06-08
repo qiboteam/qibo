@@ -74,7 +74,7 @@ class Hamiltonian(AbstractHamiltonian):
         log.warning("`Hamiltonian.from_symbolic` and the use of symbol maps is "
                     "deprecated. Please use `SymbolicHamiltonian` and Qibo symbols "
                     "to construct Hamiltonians using symbols.")
-        return SymbolicHamiltonian(symbolic_hamiltonian, symbol_map, backend)
+        return SymbolicHamiltonian(symbolic_hamiltonian, symbol_map, backend=backend)
 
     def eigenvalues(self, k=6):
         if self._eigenvalues is None:
@@ -436,7 +436,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         Useful when the term representation is not available.
         """
         matrix = self._get_symbol_matrix(self.form)
-        return Hamiltonian(self.nqubits, matrix)
+        return Hamiltonian(self.nqubits, matrix, backend=self.backend)
 
     def _calculate_dense_from_terms(self):
         """Calculates equivalent :class:`qibo.core.hamiltonians.Hamiltonian` using the term representation."""
@@ -458,7 +458,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             ec = "".join((c for c in chars if c not in tc))
             matrix += np.einsum(f"{tc},{ec}->{chars}", tmat, emat)
         matrix = np.reshape(matrix, 2 * (2 ** self.nqubits,))
-        return Hamiltonian(self.nqubits, matrix) + self.constant
+        return Hamiltonian(self.nqubits, matrix, backend=self.backend) + self.constant
 
     def calculate_dense(self):
         if self._terms is None:
