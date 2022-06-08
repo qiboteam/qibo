@@ -31,14 +31,14 @@ def test_hamiltonian_algebraic_operations(backend, dtype, sparse_type):
     def transformation_c(a, b, use_eye=False):
         c1 = dtype(4.5)
         if use_eye:
-            return a + c1 * np.eye(a.shape[0]) - b
+            return a + c1 * backend.matrices.I(a.shape[0]) - b
         else:
             return a + c1 - b
     def transformation_d(a, b, use_eye=False):
         c1 = dtype(10.5)
         c2 = dtype(2)
         if use_eye:
-            return c1 * np.eye(a.shape[0]) - a + c2 * b
+            return c1 * backend.matrices.I(a.shape[0]) - a + c2 * b
         else:
             return c1 - a + c2 * b
 

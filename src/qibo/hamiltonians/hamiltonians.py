@@ -112,7 +112,7 @@ class Hamiltonian(AbstractHamiltonian):
     def eye(self, n=None):
         if n is None:
             n = int(self.matrix.shape[0])
-        return self.backend.matrices.I(n)
+        return self.backend.cast(self.backend.matrices.I(n), dtype=self.matrix.dtype)
 
     def __add__(self, o):
         if isinstance(o, self.__class__):
@@ -621,3 +621,4 @@ class TrotterHamiltonian:
     @classmethod
     def from_symbolic(cls, symbolic_hamiltonian, symbol_map, ground_state=None):
         return cls()
+
