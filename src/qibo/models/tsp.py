@@ -1,5 +1,5 @@
 from qibo.symbols import X, Y, Z
-from qibo.models import Circuit, QAOA
+from qibo.models import Circuit
 from qibo.core.hamiltonians import Hamiltonian, SymbolicHamiltonian
 from qibo import gates
 import numpy as np
@@ -19,7 +19,6 @@ def calculate_two_to_one(num_cities):
 
 def tsp_phaser(distance_matrix, dense=True):
     """
-
     Args:
         distance_matrix: a numpy matrix encoding the distances
         dense: whether the hamiltonian is dense,
@@ -77,6 +76,7 @@ class tsp:
     This is a TSP (traveling salesman problem) class that enables us to implement TSP according to
     `arxiv:1709.03489<https://arxiv.org/abs/1709.03489>` by Hadfield (2017).
     ..testcode::
+        from qibo.models import QAOA
         num_cities = 3
         distance_matrix = np.array([[0, 0.9, 0.8],
          [0.4, 0, 0.1],
