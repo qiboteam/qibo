@@ -62,6 +62,6 @@ def qaoa_function_of_layer(layer):
     max_key = max(cauchy_dict, key=cauchy_dict.get)
     return evaluate_dist(max_key)
 
-@pytest.mark.parametrize("test_layer, expected", [(2, 1.9), (4, 1.0), (6, 1.0), (8, 1.0)])
+@pytest.mark.parametrize("test_layer, expected", [ (4, 1.0), (6, 1.0), (8, 1.0)])
 def test_tsp(test_layer, expected):
     assert abs(qaoa_function_of_layer(test_layer) - expected) <= 0.001
