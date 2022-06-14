@@ -45,7 +45,7 @@ def qaoa_function_of_layer(layer):
     in the number of layers and compute the distance of the mode of the histogram obtained
     from QAOA
     '''
-    best_energy, final_parameters, extra = qaoa.minimize(initial_p=[0.1] * layer,
+    best_energy, final_parameters, extra = qaoa.minimize(initial_p=[0.1 for i in range(layer)] ,
                                                          initial_state=initial_state)
     qaoa.set_parameters(final_parameters)
     quantum_state = qaoa.execute(initial_state)
