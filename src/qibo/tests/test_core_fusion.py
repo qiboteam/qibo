@@ -12,9 +12,10 @@ def test_single_fusion_gate():
     c.add(queue)
     c = c.fuse()
     assert len(c.queue) == 1
-    gate = c.queue[0]
-    for gate, target in zip(gate.gates, queue):
-        assert gate == target
+    fgate = c.queue[0]
+    assert fgate.gates[0] == queue[1]
+    assert fgate.gates[1] == queue[0]
+    assert fgate.gates[2] == queue[2]
 
 
 def test_two_fusion_gate():
@@ -27,12 +28,10 @@ def test_two_fusion_gate():
     c.add(queue)
     c = c.fuse()
     assert len(c.queue) == 2
-    gate1, gate2 = c.queue
-    if len(gate1.gates) > len(gate2.gates): # pragma: no cover
-        # disabling coverage as this may not always happen
-        gate1, gate2 = gate2, gate1
-    assert gate1.gates == [queue[0], queue[-1]]
-    assert gate2.gates == queue[1:-1]
+    fgate1, fgate2 = c.queue
+    assert fgate2.gates[0] == queue[0]
+    assert fgate2.gates[1] == queue[-1]
+    assert fgate1.gates == [queue[1], queue[2], queue[4], queue[3]]
 
 
 def test_fusedgate_matrix_calculation(backend):
@@ -64,7 +63,8 @@ def test_fuse_circuit_two_qubit_gates(backend):
     K.assert_allclose(fused_c(), c())
 
 
-def test_fuse_circuit_three_qubit_gate(backend):
+@pytest.mark.parametrize("max_qubits", [2, 3, 4])
+def test_fuse_circuit_three_qubit_gate(backend, max_qubits):
     """Check circuit fusion in circuit with three-qubit gate."""
     c = Circuit(4)
     c.add((gates.H(i) for i in range(4)))
@@ -75,13 +75,14 @@ def test_fuse_circuit_three_qubit_gate(backend):
     c.add((gates.H(i) for i in range(4)))
     c.add(gates.CNOT(0, 1))
     c.add(gates.CZ(2, 3))
-    fused_c = c.fuse()
+    fused_c = c.fuse(max_qubits=max_qubits)
     K.assert_allclose(fused_c(), c(), atol=1e-12)
 
 
 @pytest.mark.parametrize("nqubits", [4, 5, 10, 11])
 @pytest.mark.parametrize("nlayers", [1, 2])
-def test_variational_layer_fusion(backend, nqubits, nlayers):
+@pytest.mark.parametrize("max_qubits", [2, 3, 4])
+def test_variational_layer_fusion(backend, nqubits, nlayers, max_qubits):
     """Check fused variational layer execution."""
     theta = 2 * np.pi * np.random.random((2 * nlayers * nqubits,))
     theta_iter = iter(theta)
@@ -94,13 +95,14 @@ def test_variational_layer_fusion(backend, nqubits, nlayers):
         c.add((gates.CZ(i, i + 1) for i in range(1, nqubits - 1, 2)))
         c.add(gates.CZ(0, nqubits - 1))
 
-    fused_c = c.fuse()
+    fused_c = c.fuse(max_qubits=max_qubits)
     K.assert_allclose(fused_c(), c())
 
 
 @pytest.mark.parametrize("nqubits", [4, 5])
 @pytest.mark.parametrize("ngates", [10, 20])
-def test_random_circuit_fusion(backend, nqubits, ngates):
+@pytest.mark.parametrize("max_qubits", [2, 3, 4])
+def test_random_circuit_fusion(backend, nqubits, ngates, max_qubits):
     """Check gate fusion in randomly generated circuits."""
     one_qubit_gates = [gates.RX, gates.RY, gates.RZ]
     two_qubit_gates = [gates.CNOT, gates.CZ, gates.SWAP]
@@ -115,7 +117,7 @@ def test_random_circuit_fusion(backend, nqubits, ngates):
         while q0 == q1:
             q0, q1 = np.random.randint(0, nqubits, (2,))
         c.add(gate(q0, q1))
-    fused_c = c.fuse()
+    fused_c = c.fuse(max_qubits=max_qubits)
     K.assert_allclose(fused_c(), c(), atol=1e-7)
 
 

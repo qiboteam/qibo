@@ -62,19 +62,18 @@ class Backend:
         # set default backend as active
         self.active_backend = self.construct_backend(default_backend)
 
-        # raise performance warning if qibojit and qibotf are not available
+        # raise performance warning if qibojit is not available
         self.show_config()
         if str(self) == "numpy":  # pragma: no cover
             log.warning("numpy backend uses `np.einsum` and supports CPU only. "
-                        "Consider installing the qibojit or qibotf backends for "
+                        "Consider installing the qibojit backend for "
                         "increased performance and to enable GPU acceleration.")
         elif str(self) == "tensorflow":  # pragma: no cover
             # case not tested because CI has tf installed
-            log.warning("qibotf library was not found. `tf.einsum` will be "
-                        "used to apply gates. In order to install Qibo's "
-                        "high performance custom operators for TensorFlow "
-                        "please use `pip install qibotf`. Alternatively, "
-                        "consider installing the qibojit backend.")
+            log.warning("tensorflow backend uses `tf.einsum` "
+                        "to apply gates. In order to install Qibo's "
+                        "high performance custom operators "
+                        "please use `pip install qibojit`.")
 
     @staticmethod
     def _get_backend_class(backend):
@@ -136,6 +135,26 @@ class Backend:
 
         return self.constructed_backends.get(name)
 
+    def __getstate__(self):
+        return {
+            "profile": self.profile,
+            "_availability": self._availability,
+            "qnp": self.qnp,
+            "_backends_min_version": self._backends_min_version,
+            "constructed_backends": self.constructed_backends,
+            "hardware_backends": self.hardware_backends,
+            "active_backend": self.active_backend
+        }
+
+    def __setstate__(self, data):
+        self.profile = data.get("profile")
+        self._availability = data.get("_availability")
+        self.qnp = data.get("qnp")
+        self._backends_min_version = data.get("_backends_min_version")
+        self.constructed_backends = data.get("constructed_backends")
+        self.hardware_backends = data.get("hardware_backends")
+        self.active_backend = data.get("active_backend")
+
     def __getattr__(self, x):
         return getattr(self.active_backend, x)
 
@@ -186,7 +205,6 @@ def set_backend(backend="qibojit", platform=None):
 
     The following backends are available:
     'qibojit': Numba/cupy backend with custom operators for applying gates,
-    'qibotf': Tensorflow backend with custom operators for applying gates,
     'tensorflow': Tensorflow backend that applies gates using ``tf.einsum``,
     'numpy': Numpy backend that applies gates using ``np.einsum``.
 

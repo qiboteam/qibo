@@ -46,8 +46,23 @@ class Circuit(circuit.AbstractCircuit):
             self._set_nqubits(gate.additional_unitary)
             self.queue.append(gate.additional_unitary)
 
-    def fuse(self):
-        """Creates an equivalent circuit with the gates fused up to two-qubits.
+    def unitary(self):
+        """Creates the unitary matrix corresponding to all circuit gates.
+        
+        This is a ``(2 ** nqubits, 2 ** nqubits)`` matrix obtained by 
+        multiplying all circuit gates.
+        """
+        from qibo import gates
+        fgate = gates.FusedGate(*range(self.nqubits))
+        for gate in self.queue:
+            fgate.append(gate)
+        return fgate.matrix
+
+    def fuse(self, max_qubits=2):
+        """Creates an equivalent circuit by fusing gates for increased simulation performance.
+
+        Args:
+            max_qubits (int): Maximum number of qubits in the fused gates.
 
         Returns:
             A :class:`qibo.core.circuit.Circuit` object containing
@@ -69,118 +84,22 @@ class Circuit(circuit.AbstractCircuit):
                 # now ``fused_c`` contains a single ``FusedGate`` that is
                 # equivalent to applying the five original gates
         """
-        from qibo import gates
-        from qibo.abstractions.circuit import _Queue
-        from qibo.abstractions.abstract_gates import SpecialGate
-
-        class FusedQueue(_Queue):
-            """Helper queue implementation that checks if a gate already exists
-            in queue to avoid re-appending it.
-            """
-
-            def __init__(self, *args, **kwargs):
-                super().__init__(*args, **kwargs)
-                self.set = set()
-
-            def append(self, gate):
-                """Appends a gate in queue only if it is not already in."""
-                # Use a ``set`` instead of the original ``list`` to check if
-                # the gate already exists in queue as lookup is typically
-                # more efficient for sets
-                # (although actual performance difference is probably negligible)
-                if gate not in self.set:
-                    self.set.add(gate)
-                    super().append(gate)
-
-        # new circuit queue that will hold the fused gates
-        fused_queue = FusedQueue(self.nqubits)
-        # dictionary that maps each qubit id (int) to the corresponding
-        # active ``FusedGate`` that is part of
-        fused_gates = collections.OrderedDict()
-        # use ``OrderedDict`` so that the original gate order is not changed
-        for gate in self.queue:
-            qubits = gate.qubits
-            if len(qubits) == 1:
-                # add one-qubit gates to the active ``FusedGate`` of this qubit
-                # or create a new one if it does not exist
-                q = qubits[0]
-                if q not in fused_gates:
-                    fused_gates[q] = gates.FusedGate(q)
-                fused_gates.get(q).add(gate)
-
-            elif len(qubits) == 2:
-                # fuse two-qubit gates
-                q0, q1 = tuple(sorted(qubits))
-                if (q0 in fused_gates and q1 in fused_gates and
-                    fused_gates.get(q0) == fused_gates.get(q1)):
-                    # if the target qubit pair is compatible with the active
-                    # ``FusedGate`` of both qubits then add it to the ``FusedGate``
-                    fused_gates.get(q0).add(gate)
-                else:
-                    # otherwise we need to create a new ``FusedGate`` and
-                    # update the active gates of both target qubits
-                    fgate = gates.FusedGate(q0, q1)
-                    if q0 in fused_gates:
-                        # first qubit has existing active gate
-                        ogate = fused_gates.pop(q0)
-                        if len(ogate.target_qubits) == 1:
-                            # existing active gate is one-qubit so we just add
-                            # it to the new ``FusedGate``
-                            fgate.add(ogate)
-                        else:
-                            # existing active gate is two-qubit so we need to
-                            # add it to the new queue
-                            fused_queue.append(ogate)
-                    if q1 in fused_gates:
-                        # second qubit has existing active gate
-                        ogate = fused_gates.pop(q1)
-                        if len(ogate.target_qubits) == 1:
-                            # existing active gate is one-qubit so we just add
-                            # it to the new ``FusedGate``
-                            fgate.add(ogate)
-                        else:
-                            # existing active gate is two-qubit so we need to
-                            # add it to the new queue
-                            fused_queue.append(ogate)
-                    # add the two-qubit gate to the newly created ``FusedGate``
-                    # and update the active ``FusedGate``s of both target qubits
-                    fgate.add(gate)
-                    fused_gates[q0], fused_gates[q1] = fgate, fgate
-
-            elif isinstance(gate, SpecialGate):
-                # ``SpecialGate``s act on all qubits (like a barrier) so we
-                # so we need to temporarily stop the fusion, add all active
-                # gates in the new queue and restart fusion after the barrier
-                for g in fused_gates.values():
-                    fused_queue.append(g)
-                fused_gates = collections.OrderedDict()
-                fused_queue.append(gate)
-
-            else:
-                # gate has more than two target qubits so it cannot be included
-                # in the ``FusedGate``s which support up to two qubits.
-                # Therefore we deactivate the ``FusedGate``s of all target qubits
-                for q in qubits:
-                    if q in fused_gates:
-                        fused_queue.append(fused_gates.pop(q))
-                fused_queue.append(gate)
-
-        for gate in fused_gates.values():
-            # add remaining active ``FusedGate``s in the new queue
-            fused_queue.append(gate)
-
-        queue = _Queue(self.nqubits)
-        for gate in fused_queue:
-            if isinstance(gate, gates.FusedGate) and len(gate.gates) == 1:
-                # replace ``FusedGate``s that contain only one gate by this
-                # gate for efficiency
-                gate = gate.gates[0]
-            queue.append(gate)
-
+        queue = self.queue.to_fused()
+        for gate in queue:
+            if not gate.marked:
+                for q in gate.qubits:
+                    # fuse nearest neighbors forth in time
+                    neighbor = gate.right_neighbors.get(q)
+                    if gate.can_fuse(neighbor, max_qubits):
+                        gate.fuse(neighbor)
+                    # fuse nearest neighbors back in time
+                    neighbor = gate.left_neighbors.get(q)
+                    if gate.can_fuse(neighbor, max_qubits):
+                        neighbor.fuse(gate)
         # create a circuit and assign the new queue
-        new_circuit = self._shallow_copy()
-        new_circuit.queue = queue
-        return new_circuit
+        circuit = self._shallow_copy()
+        circuit.queue = queue.from_fused()
+        return circuit
 
     def _eager_execute(self, state):
         """Simulates the circuit gates in eager mode."""

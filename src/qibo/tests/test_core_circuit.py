@@ -31,6 +31,36 @@ def test_circuit_add_layer(backend, nqubits, accelerators):
     for gate in c.queue:
         assert isinstance(gate, gates.Unitary)
 
+
+def test_circuit_unitary(backend):
+    from qibo import matrices
+    c = Circuit(2)
+    c.add(gates.H(0))
+    c.add(gates.H(1))
+    c.add(gates.CNOT(0, 1))
+    c.add(gates.X(0))
+    c.add(gates.Y(1))
+    h = np.kron(matrices.H, matrices.H)
+    target_matrix = np.kron(matrices.X, matrices.Y) @ matrices.CNOT @ h
+    K.assert_allclose(c.unitary(), target_matrix)
+
+
+def test_circuit_unitary_bigger(backend):
+    from qibo import matrices
+    c = Circuit(4)
+    c.add(gates.H(i) for i in range(4))
+    c.add(gates.CNOT(0, 1))
+    c.add(gates.CZ(1, 2))
+    c.add(gates.CNOT(0, 3))
+    h = np.kron(matrices.H, matrices.H)
+    h = np.kron(h, h)
+    m1 = np.kron(matrices.CNOT, np.eye(4))
+    m2 = np.kron(np.kron(np.eye(2), matrices.CZ), np.eye(2))
+    m3 = np.kron(matrices.CNOT, np.eye(4)).reshape(8 * (2,))
+    m3 = np.transpose(m3, [0, 2, 3, 1, 4, 6, 7, 5]).reshape((16, 16))
+    target_matrix = m3 @ m2 @ m1 @ h
+    K.assert_allclose(c.unitary(), target_matrix)
+
 # :meth:`qibo.core.circuit.Circuit.fuse` is tested in `test_core_fusion.py`
 
 def test_eager_execute(backend, accelerators):
