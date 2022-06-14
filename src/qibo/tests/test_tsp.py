@@ -39,7 +39,7 @@ def evaluate_dist(cauchy):
     return sum(distance_matrix[cauchy[i]][cauchy[(i + 1) % m]] for i in range(m))
 
 
-def qaoa_function_of_layer(layer):
+def qaoa_function_of_layer(layer, qaoa):
     '''
     this is a function to study the impact of the number of layers on QAOA, it takes
     in the number of layers and compute the distance of the mode of the histogram obtained
@@ -61,5 +61,5 @@ def qaoa_function_of_layer(layer):
 
 @pytest.mark.parametrize("test_layer, expected", [ (4, 1.0), (6, 1.0), (8, 1.0)])
 def test_tsp(test_layer, expected):
-    tmp = qaoa_function_of_layer(test_layer)
+    tmp = qaoa_function_of_layer(test_layer, qaoa)
     assert abs( tmp - expected) <= 0.001 or abs(tmp - 1.9) <= 0.001
