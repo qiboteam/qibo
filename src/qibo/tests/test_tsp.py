@@ -56,9 +56,6 @@ def qaoa_function_of_layer(layer):
     for freq_key in freq_counter:
         standard_cauchy_key = convert_to_standard_Cauchy(freq_key)
         cauchy_dict[standard_cauchy_key] += freq_counter[freq_key]
-    # print("for {} layers, this is the corresponding histogram:".format(layer))
-    # print(cauchy_dict)
-    # find the mode and compute the corresponding distance
     max_key = max(cauchy_dict, key=cauchy_dict.get)
     return evaluate_dist(max_key)
 
