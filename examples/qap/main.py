@@ -3,7 +3,7 @@
 import numpy as np
 import argparse
 from qap import qubo_qap, qubo_qap_penalty, qubo_qap_feasibility, qubo_qap_energy, hamiltonian_qap
-from utils import binary2spin, spin2QiboHamiltonian
+from qubo_utils import binary2spin, spin2QiboHamiltonian
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--filename', default='./tiny04a.dat', type=str)

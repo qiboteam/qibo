@@ -2,7 +2,7 @@ import numpy as np
 
 from typing import Dict, List, Tuple, Union, Any
 from typing import Optional, Generator, Iterator, Hashable
-from utils import binary2spin, spin2QiboHamiltonian
+from qubo_utils import binary2spin, spin2QiboHamiltonian
 
 
 def qubo_qap(g: Tuple[np.ndarray, np.ndarray], penalty: float=None):
