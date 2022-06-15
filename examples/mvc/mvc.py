@@ -1,5 +1,5 @@
 import networkx as nx
-from utils import binary2spin, spin2QiboHamiltonian
+from qubo_utils import binary2spin, spin2QiboHamiltonian
 
 
 def qubo_mvc(g:nx.Graph, penalty=None):

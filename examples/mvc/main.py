@@ -5,7 +5,7 @@ import argparse
 from qibo import callbacks, hamiltonians, models
 
 from mvc import qubo_mvc, qubo_mvc_penalty, mvc_feasibility, mvc_easy_fix, mvc_energy, hamiltonian_mvc
-from utils import binary2spin, spin2QiboHamiltonian
+from qubo_utils import binary2spin, spin2QiboHamiltonian
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--filename', default='./mvc.csv', type=str)
