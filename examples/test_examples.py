@@ -184,7 +184,7 @@ def test_qaoa_benchmarks(nqubits, nangles, dense, solver, method="Powell"):
 @pytest.mark.parametrize("dt", [0.1, 0.01])
 @pytest.mark.parametrize("dense", [False, True])
 @pytest.mark.parametrize("solver", ["exp", "rk4"])
-@pytest.mark.parametrize("backend", ["qibojit", "qibotf"])
+@pytest.mark.parametrize("backend", ["qibojit"])
 def test_evolution_benchmarks(nqubits, dt, dense, solver, backend):
     args = locals()
     path = os.path.join(base_dir, "benchmarks")

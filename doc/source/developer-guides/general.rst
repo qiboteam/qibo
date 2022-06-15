@@ -39,10 +39,6 @@ Here you have an example for the structure of the  ``profile.yml`` file:
         driver: qibojit.custom_operators.JITCustomBackend
         minimum_version: 0.0.4rc0
 
-      - name: qibotf
-        driver: qibotf.custom_operators.TensorflowCustomBackend
-        minimum_version: 0.0.4rc0
-
       - name: tensorflow
         driver: qibo.backends.tensorflow.TensorflowBackend
         minimum_version: 2.2.0
