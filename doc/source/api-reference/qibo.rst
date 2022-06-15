@@ -211,6 +211,12 @@ Grover's Algorithm
     :members:
     :member-order: bysource
 
+Travelling Salesman Problem
+"""""""""""""""""""""""""""
+
+.. automodule:: qibo.models.tsp
+    :members:
+    :member-order: bysource
 
 .. _timeevolution:
 
