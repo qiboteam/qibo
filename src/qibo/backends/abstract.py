@@ -38,11 +38,11 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def execute_circuit(self, circuit, nshots=None): # pragma: no cover
+    def apply_gate_half_density_matrix(self, gate, state, nqubits): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def apply_gate(self, gate, state, nqubits): # pragma: no cover
+    def execute_circuit(self, circuit, nshots=None): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
@@ -95,7 +95,11 @@ class Simulator(Backend):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def to_numpy(self, x): # pragma: no cover
+    def issparse(self, x):
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def to_numpy(self, x):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
@@ -312,6 +316,30 @@ class Simulator(Backend):
 
     @abc.abstractmethod
     def calculate_overlap_density_matrix(self, state1, state2): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def calculate_eigenvalues(self, matrix, k=6): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def calculate_eigenvectors(self, matrix, k=6): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def calculate_matrix_exp(self, matrix, a, eigenvectors=None, eigenvalues=None): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def calculate_expectation_state(self, matrix, state, normalize): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def calculate_expectation_density_matrix(self, matrix, state, normalize): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def calculate_matrix_product(self, hamiltonian, o): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod

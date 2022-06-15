@@ -1,12 +1,12 @@
 import sympy
-from qibo import gates, matrices, K
+import numpy as np
+from qibo import gates, matrices
 from qibo.config import raise_error
-
 
 class Symbol(sympy.Symbol):
     """Qibo specialization for ``sympy`` symbols.
 
-    These symbols can be used to create :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+    These symbols can be used to create :class:`qibo.hamiltonians.hamiltonians.SymbolicHamiltonian`.
     See :ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>`
     for more details.
 
@@ -14,7 +14,7 @@ class Symbol(sympy.Symbol):
         .. testcode::
 
             from qibo import hamiltonians
-            from qibo.symbols import X, Y, Z
+            from qibo.hamiltonians.symbols import X, Y, Z
             # construct a XYZ Hamiltonian on two qubits using Qibo symbols
             form = X(0) * X(1) + Y(0) * Y(1) + Z(0) * Z(1)
             ham = hamiltonians.SymbolicHamiltonian(form)
@@ -41,8 +41,10 @@ class Symbol(sympy.Symbol):
     def __init__(self, q, matrix=None, name="Symbol", commutative=False):
         self.target_qubit = q
         self._gate = None
-        if not (matrix is None or isinstance(matrix, K.qnp.numeric_types) or
-                isinstance(matrix, K.qnp.tensor_types)):
+        if not (matrix is None or isinstance(matrix, np.ndarray) or
+              isinstance(matrix, (np.int, np.float, np.complex, np.int32,
+                                  np.int64, np.float32, np.float64,
+                                  np.complex64, np.complex128))):
             raise_error(TypeError, "Invalid type {} of symbol matrix."
                                    "".format(type(matrix)))
         self.matrix = matrix
@@ -67,7 +69,7 @@ class Symbol(sympy.Symbol):
             Matrix of dimension (2^nqubits, 2^nqubits) composed of the Kronecker
             product between identities and the symbol's single-qubit matrix.
         """
-        from qibo.hamiltonians import multikron
+        from qibo.hamiltonians.models import multikron
         matrix_list = self.target_qubit * [matrices.I]
         matrix_list.append(self.matrix)
         n = nqubits - self.target_qubit - 1
