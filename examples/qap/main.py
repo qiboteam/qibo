@@ -32,7 +32,7 @@ def load_qap(filename):
     return f, d
 
 
-def main(filename: str):
+def main(filename: str='./tiny04a.dat'):
     
     print(f'Load flow and distance matrices from {filename} and make a QUBO')
     F, D = load_qap(filename)
