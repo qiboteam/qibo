@@ -10,7 +10,7 @@ from qubo_utils import binary2spin, spin2QiboHamiltonian
 parser = argparse.ArgumentParser()
 parser.add_argument('--filename', default='./mvc.csv', type=str)
 
-def load_csv(filename:str='./mvc.csv'):
+def load_csv(filename:str):
     """ Load graph from csv file
     """
     with open(filename, 'r', newline='') as f:
@@ -34,7 +34,7 @@ def load_csv(filename:str='./mvc.csv'):
 
 
 
-def main(filename: str):
+def main(filename: str='./mvc.csv'):
     
     print(f'Load a graph from {filename} and make it a QUBO')
     g = load_csv(filename)
