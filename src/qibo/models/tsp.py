@@ -1,18 +1,21 @@
+import numpy as np
 from qibo.symbols import X, Y, Z
 from qibo.models import Circuit
-from qibo.core.hamiltonians import Hamiltonian, SymbolicHamiltonian
+from qibo.core.hamiltonians import SymbolicHamiltonian
 from qibo import gates
-import numpy as np
-from collections import defaultdict
+
 
 
 def calculate_two_to_one(num_cities):
     """
     Args:
+
         num_cities: number of cities
 
     Returns:
+
         a matrix to faciliate conversion from 2 dimension to one dimension
+
     """
     return np.arange(num_cities ** 2).reshape(num_cities, num_cities)
 
@@ -20,11 +23,14 @@ def calculate_two_to_one(num_cities):
 def tsp_phaser(distance_matrix, dense=True):
     """
     Args:
+
         distance_matrix: a numpy matrix encoding the distances
         dense: whether the hamiltonian is dense,
 
-    Returns: a hamiltonian representing the TSP(traveling salesman problem) phaser according to
-    `arxiv:1709.03489<https://arxiv.org/abs/1709.03489>` by Hadfield (2017).
+    Returns:
+
+        a hamiltonian representing the TSP(traveling salesman problem) phaser according to
+    `arxiv:1709.03489<https://arxiv.org/abs/1709.03489>`_ by Hadfield (2017).
 
     """
     num_cities = distance_matrix.shape[0]
@@ -45,10 +51,13 @@ def tsp_phaser(distance_matrix, dense=True):
 def tsp_mixer(num_cities, dense=True):
     """
     Args:
+
         num_cities: number of cities in TSP
         dense: whether the hamiltonian is dense
 
-    Returns: a mixer hamiltonian representing the TSP(traveling salesman problem) phaser
+    Returns:
+
+        a mixer hamiltonian representing the TSP(traveling salesman problem) phaser
     according to
     `arxiv:1709.03489<https://arxiv.org/abs/1709.03489>` by Hadfield (2017).
 
@@ -71,10 +80,10 @@ def tsp_mixer(num_cities, dense=True):
     return ham
 
 
-class tsp:
+class TSP:
     """
     This is a TSP (traveling salesman problem) class that enables us to implement TSP according to
-    `arxiv:1709.03489<https://arxiv.org/abs/1709.03489>` by Hadfield (2017).
+    `arxiv:1709.03489<https://arxiv.org/abs/1709.03489>`_ by Hadfield (2017).
     ..testcode::
         from qibo.models import QAOA
         num_cities = 3
@@ -83,7 +92,7 @@ class tsp:
          [0,  0.7, 0]])
         # there are two possible cycles, one with distance 1, one with distance 1.9
         distance_matrix = distance_matrix.round(1)
-        small_tsp = tsp(distance_matrix)
+        small_tsp = TSP(distance_matrix)
         obj_hamil, mixer = small_tsp.hamiltonians(dense=False)
         initial_parameters = np.random.uniform(0, 1, 2)
         initial_state = small_tsp.prepare_initial_state([i for i in range(num_cities)])
@@ -137,14 +146,15 @@ class tsp:
 
 
         print([qaoa_function_of_layer(i) for i in [2, 4, 6, 8]])
-        # we should obtain [1.9, 1.0, 1.0, 1.0]
-        # as the number of layers increases, it is more likely to obtain the optimal solution which is 1.0
-            """
+        # we should obtain an array such as [1.9, 1.0, 1.0, 1.9]
+    """
 
     def __init__(self, distance_matrix):
         """
         Args:
+
             distance_matrix: a numpy matrix encoding the distance matrix.
+
         """
         self.distance_matrix = distance_matrix
         self.num_cities = distance_matrix.shape[0]
@@ -153,8 +163,12 @@ class tsp:
     def hamiltonians(self, dense=True):
         """
         Args:
+
             dense: Indicates if the Hamiltonian is dense.
-        Returns: Return a pair of Hamiltonian for the objective as well as the mixer.
+
+        Returns:
+
+            Return a pair of Hamiltonian for the objective as well as the mixer.
         """
         return tsp_phaser(self.distance_matrix, dense), tsp_mixer(self.num_cities, dense)
 
@@ -162,8 +176,12 @@ class tsp:
         """
         To run QAOA by Hadsfield, we need to start from a valid permutation function to ensure feasibility.
         Args:
+
             ordering is a list which is a permutation from 0 to n-1
-        Returns: return an initial state that can be used to start TSP QAOA.
+
+        Returns:
+            return an initial state that can be used to start TSP QAOA.
+
         """
         c = Circuit(len(ordering) ** 2)
         for i in range(len(ordering)):
