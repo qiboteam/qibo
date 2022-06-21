@@ -5,7 +5,6 @@ from qibo.core.hamiltonians import SymbolicHamiltonian
 from qibo import gates
 
 
-
 def calculate_two_to_one(num_cities):
     """
     Args:
@@ -20,12 +19,11 @@ def calculate_two_to_one(num_cities):
     return np.arange(num_cities ** 2).reshape(num_cities, num_cities)
 
 
-def tsp_phaser(distance_matrix, dense=True):
+def tsp_phaser(distance_matrix):
     """
     Args:
 
         distance_matrix: a numpy matrix encoding the distances
-        dense: whether the hamiltonian is dense,
 
     Returns:
 
@@ -43,17 +41,14 @@ def tsp_phaser(distance_matrix, dense=True):
                     form += distance_matrix[u, v] * Z(int(two_to_one[u, i]))* Z(
                         int(two_to_one[v, (i + 1) % num_cities]))
     ham = SymbolicHamiltonian(form)
-    if dense:
-        ham = ham.dense
     return ham
 
 
-def tsp_mixer(num_cities, dense=True):
+def tsp_mixer(num_cities):
     """
     Args:
 
         num_cities: number of cities in TSP
-        dense: whether the hamiltonian is dense
 
     Returns:
 
@@ -75,8 +70,6 @@ def tsp_mixer(num_cities, dense=True):
                             i + 1) % num_cities) * splus(u, (i + 1) % num_cities) * splus(
                         v, i)
     ham = SymbolicHamiltonian(form)
-    if dense:
-        ham = ham.dense
     return ham
 
 
@@ -93,7 +86,7 @@ class TSP:
         # there are two possible cycles, one with distance 1, one with distance 1.9
         distance_matrix = distance_matrix.round(1)
         small_tsp = TSP(distance_matrix)
-        obj_hamil, mixer = small_tsp.hamiltonians(dense=False)
+        obj_hamil, mixer = small_tsp.hamiltonians()
         initial_parameters = np.random.uniform(0, 1, 2)
         initial_state = small_tsp.prepare_initial_state([i for i in range(num_cities)])
         qaoa = QAOA(obj_hamil, mixer=mixer)
@@ -160,17 +153,13 @@ class TSP:
         self.num_cities = distance_matrix.shape[0]
         self.two_to_one = calculate_two_to_one(self.num_cities)
 
-    def hamiltonians(self, dense=True):
+    def hamiltonians(self):
         """
-        Args:
-
-            dense: Indicates if the Hamiltonian is dense.
-
         Returns:
 
             Return a pair of Hamiltonian for the objective as well as the mixer.
         """
-        return tsp_phaser(self.distance_matrix, dense), tsp_mixer(self.num_cities, dense)
+        return tsp_phaser(self.distance_matrix), tsp_mixer(self.num_cities)
 
     def prepare_initial_state(self, ordering):
         """

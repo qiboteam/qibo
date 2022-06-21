@@ -4,7 +4,6 @@ import numpy as np
 from qibo.models import QAOA
 from qibo import gates
 from collections import defaultdict
-import qibo
 
 np.random.seed(42)
 num_cities = 3
@@ -41,12 +40,12 @@ def evaluate_dist(cauchy):
 
 def qaoa_function_of_layer(layer, distance_matrix):
     '''
-    this is a function to study the impact of the number of layers on QAOA, it takes
+    This is a function to study the impact of the number of layers on QAOA, it takes
     in the number of layers and compute the distance of the mode of the histogram obtained
     from QAOA
     '''
     small_tsp = TSP(distance_matrix)
-    obj_hamil, mixer = small_tsp.hamiltonians(dense=False)
+    obj_hamil, mixer = small_tsp.hamiltonians()
     qaoa = QAOA(obj_hamil, mixer=mixer)
     best_energy, final_parameters, extra = qaoa.minimize(initial_p=[0.1 for i in range(layer)] ,
                                                          initial_state=initial_state, method='BFGS')
@@ -62,7 +61,8 @@ def qaoa_function_of_layer(layer, distance_matrix):
     max_key = max(cauchy_dict, key=cauchy_dict.get)
     return evaluate_dist(max_key)
 
-@pytest.mark.parametrize("test_layer, expected", [ (4, 1.0), (6, 1.0), (8, 1.9)])
+@pytest.mark.parametrize("test_layer, expected",
+                         [ (4, 1.0), (6, 1.0), (8, 1.9)])
 def test_tsp(test_layer, expected):
-    tmp = qaoa_function_of_layer(test_layer, distance_matrix)
+    tmp = qaoa_function_of_layer(test_layer, distance_matrix, )
     assert abs(tmp - expected) <= 0.001
