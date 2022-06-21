@@ -17,7 +17,7 @@ class Backend(abc.ABC):
         else:
             return f"{self.name} ({self.platform})"
 
-    @abc.abstractmethod   
+    @abc.abstractmethod
     def asmatrix(self, gate): # pragma: no cover
         raise_error(NotImplementedError)
 
