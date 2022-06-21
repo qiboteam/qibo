@@ -66,6 +66,7 @@ class NumpyBackend(Simulator):
             matrix = gmatrix @ matrix
         return matrix
 
+<<<<<<< HEAD
     def asmatrix_special(self, gate):
         # TODO: Remove this and use ``asmatrix_fused`` directly
         if isinstance(gate, FusedGate):
@@ -73,6 +74,8 @@ class NumpyBackend(Simulator):
         else:
             raise_error(NotImplementedError)
 
+=======
+>>>>>>> abstrstate
     def control_matrix(self, gate):
         if len(gate.control_qubits) > 1:
             raise_error(NotImplementedError, "Cannot calculate controlled "
