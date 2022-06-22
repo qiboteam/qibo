@@ -34,8 +34,7 @@ class TensorflowBackend(NumpyBackend):
         self.tensor_types = (np.ndarray, tf.Tensor, tf.Variable)
 
     def set_device(self, device):
-        # TODO: Implement this
-        raise_error(NotImplementedError)
+        self.device = device
 
     def set_threads(self, nthreads):
         log.warning("`set_threads` is not supported by the tensorflow "
@@ -83,6 +82,14 @@ class TensorflowBackend(NumpyBackend):
     def asmatrix_fused(self, gate):
         npmatrix = super().asmatrix_fused(gate)
         return self.tf.cast(npmatrix, dtype=self.dtype)
+
+    def execute_circuit(self, circuit, initial_state=None, nshots=None):
+        with self.tf.device(self.device):
+            return super().execute_circuit(circuit, initial_state, nshots)
+        
+    def execute_circuit_repeated(self, circuit, initial_state=None, nshots=None):
+        with self.tf.device(self.device):
+            return super().execute_circuit_repeated(circuit, initial_state, nshots)
 
     def sample_shots(self, probabilities, nshots):
         # redefining this because ``tnp.random.choice`` is not available
