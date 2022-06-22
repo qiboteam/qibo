@@ -44,7 +44,9 @@ class TSP:
     """
     The travelling salesman problem (also called the travelling salesperson problem or TSP)
     asks the following question: "Given a list of cities and the distances between each pair of cities,
-    what is the shortest possible route that visits each city exactly once and returns to the origin city?" It is an NP-hard problem in combinatorial optimization, important in theoretical computer science and operations research.
+    what is the shortest possible route for a salesman to visit each city exactly once and return to the origin city?"
+    It is an NP-hard problem in combinatorial optimization. It is also important in theoretical computer science and
+    operations research.
 
     This is a TSP class that enables us to implement TSP according to
     `arxiv:1709.03489 <https://arxiv.org/abs/1709.03489>`_ by Hadfield (2017).
@@ -99,8 +101,8 @@ class TSP:
                 small_tsp = TSP(distance_matrix)
                 obj_hamil, mixer = small_tsp.hamiltonians()
                 qaoa = QAOA(obj_hamil, mixer=mixer)
-                best_energy, final_parameters, extra = qaoa.minimize(initial_p=[0.1 for i in range(layer)] ,
-                                                                     initial_state=initial_state, method='BFGS')
+                best_energy, final_parameters, extra = qaoa.minimize(initial_p=[0.1] * layer,
+                                                     initial_state=initial_state, method='BFGS')
                 qaoa.set_parameters(final_parameters)
                 quantum_state = qaoa.execute(initial_state)
                 meas = quantum_state.measure(gates.M(*range(9)), nshots=1000)
@@ -131,7 +133,7 @@ class TSP:
     def hamiltonians(self):
         """
         Returns:
-            The pair of Hamiltonian describing the phaser hamiltonian
+            The pair of Hamiltonian describes the phaser hamiltonian
             and the mixer hamiltonian.
 
         """
@@ -153,3 +155,6 @@ class TSP:
             c.add(gates.X(int(self.two_to_one[ordering[i], i])))
         result = c()
         return result.state(numpy=True)
+
+
+
