@@ -448,23 +448,23 @@ class NumpyBackend(Simulator):
                 from scipy.linalg import expm
             return expm(-1j * a * matrix)
         else:
-            expd = np.diag(np.exp(-1j * a * eigenvalues))
-            ud = np.transpose(np.conj(eigenvectors))
-            return np.matmul(eigenvectors, np.matmul(expd, ud))
+            expd = self.np.diag(self.np.exp(-1j * a * eigenvalues))
+            ud = self.np.transpose(self.np.conj(eigenvectors))
+            return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
 
     def calculate_expectation_state(self, matrix, state, normalize):
-        statec = np.conj(state)
+        statec = self.np.conj(state)
         hstate = matrix @ state
-        ev = np.real(np.sum(statec * hstate))
+        ev = self.np.real(self.np.sum(statec * hstate))
         if normalize:
-            norm = np.sum(np.square(np.abs(state)))
+            norm = self.np.sum(self.np.square(self.np.abs(state)))
             ev = ev / norm
         return ev
 
     def calculate_expectation_density_matrix(self, matrix, state, normalize):
-        ev = np.real(np.trace(matrix @ state))
+        ev = self.np.real(self.np.trace(matrix @ state))
         if normalize:
-            norm = np.real(np.trace(state))
+            norm = self.np.real(self.np.trace(state))
             ev = ev / norm
         return ev
 

@@ -23,6 +23,8 @@ class TensorflowBackend(NumpyBackend):
         import psutil
         self.nthreads = psutil.cpu_count(logical=True)
 
+        self.tensor_types = (np.ndarray, tf.Tensor, tf.Variable)
+
     def set_device(self, device):
         # TODO: Implement this
         raise_error(NotImplementedError)
@@ -41,6 +43,9 @@ class TensorflowBackend(NumpyBackend):
         if copy:
             return self.tf.identity(x)
         return x
+
+    def issparse(self, x):
+        return isinstance(x, self.tf.sparse.SparseTensor)
 
     def to_numpy(self, x):
         return np.array(x)
@@ -106,6 +111,36 @@ class TensorflowBackend(NumpyBackend):
         spectrum = -1 * self.np.log(masked_eigvals)
         entropy = self.np.sum(masked_eigvals * spectrum) / self.np.log(2.0)
         return entropy, spectrum
+
+    def calculate_eigenvalues(self, matrix, k=6):
+        return self.tf.linalg.eigvalsh(matrix)
+
+    def calculate_eigenvectors(self, matrix, k=6):
+        return self.tf.linalg.eigh(matrix)
+
+    def calculate_matrix_exp(self, a, matrix, eigenvectors=None, eigenvalues=None):
+        if eigenvectors is None or self.issparse(matrix):
+            return self.tf.linalg.expm(-1j * a * matrix)
+        else:
+            return super().calculate_matrix_exp(a, matrix, eigenvectors, eigenvalues)
+
+    def calculate_matrix_product(self, hamiltonian, o):
+        if isinstance(o, hamiltonian.__class__):
+            new_matrix = self.np.dot(hamiltonian.matrix, o.matrix)
+            return hamiltonian.__class__(hamiltonian.nqubits, new_matrix, backend=self)
+
+        if isinstance(o, self.tensor_types):
+            rank = len(tuple(o.shape))
+            if rank == 1: # vector
+                return self.np.matmul(hamiltonian.matrix, o[:, self.np.newaxis])[:, 0]
+            elif rank == 2: # matrix
+                return self.np.matmul(hamiltonian.matrix, o)
+            else:
+                raise_error(ValueError, "Cannot multiply Hamiltonian with "
+                                        "rank-{} tensor.".format(rank))
+
+        raise_error(NotImplementedError, "Hamiltonian matmul to {} not "
+                                         "implemented.".format(type(o)))
 
     def test_regressions(self, name):
         if name == "test_measurementresult_apply_bitflips":

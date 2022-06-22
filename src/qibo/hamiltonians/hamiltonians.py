@@ -28,7 +28,6 @@ class Hamiltonian(AbstractHamiltonian):
         matrix = self.backend.cast(matrix)
 
         super().__init__()
-
         self.nqubits = nqubits
         self.matrix = matrix
         self._eigenvalues = None
@@ -163,12 +162,12 @@ class Hamiltonian(AbstractHamiltonian):
         new_matrix = self.matrix * o
         r = self.__class__(self.nqubits, new_matrix, backend=self.backend)
         if self._eigenvalues is not None:
-            if self.backend.cast(o).real >= 0: # TODO: check for side effects K.qnp
+            if self.backend.np.real(o) >= 0: # TODO: check for side effects K.qnp
                 r._eigenvalues = o * self._eigenvalues
             elif not self.backend.issparse(self.matrix):
                 r._eigenvalues = o * self._eigenvalues[::-1]
         if self._eigenvectors is not None:
-            if self.backend.cast(o).real > 0: # TODO: see above
+            if self.backend.np.real(o) > 0: # TODO: see above
                 r._eigenvectors = self._eigenvectors
             elif o == 0:
                 r._eigenvectors = self.eye(int(self._eigenvectors.shape[0]))
