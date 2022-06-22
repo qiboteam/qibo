@@ -53,6 +53,7 @@ class TSP:
 
     Example:
         .. testcode::
+
             from qibo.models.tsp import TSP
             import numpy as np
             from collections import defaultdict
