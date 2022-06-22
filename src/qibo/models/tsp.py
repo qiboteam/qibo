@@ -6,14 +6,10 @@ from qibo import gates
 
 
 def calculate_two_to_one(num_cities):
-    """ mapping coordinate from two index to a single index,
-    used in TSP mapping double index variable to a single variable"""
     return np.arange(num_cities ** 2).reshape(num_cities, num_cities)
 
 
 def tsp_phaser(distance_matrix):
-    """ this function returns the phaser of TSP implemented according to
-    `arxiv:1709.03489<https://arxiv.org/abs/1709.03489>`_ by Hadfield (2017)."""
     num_cities = distance_matrix.shape[0]
     two_to_one = calculate_two_to_one(num_cities)
     form = 0
@@ -28,8 +24,6 @@ def tsp_phaser(distance_matrix):
 
 
 def tsp_mixer(num_cities):
-    """this function returns the mixer of TSP implemented according to
-    `arxiv:1709.03489<https://arxiv.org/abs/1709.03489>`_ by Hadfield (2017)."""
     two_to_one = calculate_two_to_one(num_cities)
     splus = lambda u, i: X(int(two_to_one[u, i])) + 1j * Y(int(two_to_one[u, i]))
     sminus = lambda u, i: X(int(two_to_one[u, i])) - 1j * Y(int(two_to_one[u, i]))
@@ -46,17 +40,18 @@ def tsp_mixer(num_cities):
     return ham
 
 
-class TSP:
+class TSP():
     """
     The travelling salesman problem (also called the travelling salesperson problem or TSP)
     asks the following question: "Given a list of cities and the distances between each pair of cities,
     what is the shortest possible route that visits each city exactly once and returns to the origin city?" It is an NP-hard problem in combinatorial optimization, important in theoretical computer science and operations research.
 
     This is a TSP class that enables us to implement TSP according to
-    `arxiv:1709.03489<https://arxiv.org/abs/1709.03489>`_ by Hadfield (2017).
+    `arxiv:1709.03489 <https://arxiv.org/abs/1709.03489>`_ by Hadfield (2017).
 
     Example:
-        ..testcode::
+        .. testcode::
+
             from collections import defaultdict
             from qibo.models import QAOA
             np.random.seed(42)
@@ -88,6 +83,7 @@ class TSP:
             def evaluate_dist(cauchy):
                 '''
                 Given a permutation of 0 to n-1, we compute the distance of the tour
+
                 '''
                 m = len(cauchy)
                 return sum(distance_matrix[cauchy[i]][cauchy[(i+1)%m]] for i in range(m))
@@ -98,6 +94,7 @@ class TSP:
                 This is a function to study the impact of the number of layers on QAOA, it takes
                 in the number of layers and compute the distance of the mode of the histogram obtained
                 from QAOA
+
                 '''
                 small_tsp = TSP(distance_matrix)
                 obj_hamil, mixer = small_tsp.hamiltonians()
@@ -116,9 +113,9 @@ class TSP:
                 max_key = max(cauchy_dict, key=cauchy_dict.get)
                 return evaluate_dist(max_key)
 
-
             print([qaoa_function_of_layer(i, distance_matrix) for i in [2, 4, 6, 8]])
             # we should obtain the array [1.0, 1.0, 1.0, 1.9]
+
     """
 
     def __init__(self, distance_matrix):
@@ -134,7 +131,8 @@ class TSP:
     def hamiltonians(self):
         """
         Returns:
-            Return a pair of Hamiltonian for the objective as well as the mixer.
+            The pair of Hamiltonian describing the phaser hamiltonian
+            and the mixer hamiltonian.
 
         """
         return tsp_phaser(self.distance_matrix), tsp_mixer(self.num_cities)
@@ -144,10 +142,10 @@ class TSP:
         To run QAOA by Hadsfield, we need to start from a valid permutation function to ensure feasibility.
 
         Args:
-            ordering is a list which is a permutation from 0 to n-1
+            ordering (array): A list describing permutation from 0 to n-1
 
         Returns:
-            return an initial state that can be used to start TSP QAOA.
+            An initial state that is used to start TSP QAOA.
 
         """
         c = Circuit(len(ordering) ** 2)
