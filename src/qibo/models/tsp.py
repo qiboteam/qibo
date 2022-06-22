@@ -53,7 +53,7 @@ class TSP:
 
     Example:
         .. testcode::
-
+            from qibo.models.tsp import TSP
             from collections import defaultdict
             from qibo.models import QAOA
             np.random.seed(42)
