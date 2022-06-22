@@ -6,10 +6,14 @@ from qibo import gates
 
 
 def calculate_two_to_one(num_cities):
+    """ mapping coordinate from two index to a single index,
+    used in TSP mapping double index variable to a single variable"""
     return np.arange(num_cities ** 2).reshape(num_cities, num_cities)
 
 
 def tsp_phaser(distance_matrix):
+    """ this function returns the phaser of TSP implemented according to
+    `arxiv:1709.03489<https://arxiv.org/abs/1709.03489>`_ by Hadfield (2017)."""
     num_cities = distance_matrix.shape[0]
     two_to_one = calculate_two_to_one(num_cities)
     form = 0
@@ -24,6 +28,8 @@ def tsp_phaser(distance_matrix):
 
 
 def tsp_mixer(num_cities):
+    """this function returns the mixer of TSP implemented according to
+    `arxiv:1709.03489<https://arxiv.org/abs/1709.03489>`_ by Hadfield (2017)."""
     two_to_one = calculate_two_to_one(num_cities)
     splus = lambda u, i: X(int(two_to_one[u, i])) + 1j * Y(int(two_to_one[u, i]))
     sminus = lambda u, i: X(int(two_to_one[u, i])) - 1j * Y(int(two_to_one[u, i]))
