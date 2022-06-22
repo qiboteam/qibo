@@ -6,27 +6,10 @@ from qibo import gates
 
 
 def calculate_two_to_one(num_cities):
-    """
-    Args:
-        num_cities: number of cities
-
-    Returns:
-        a matrix to faciliate conversion from 2 dimension to one dimension
-
-    """
     return np.arange(num_cities ** 2).reshape(num_cities, num_cities)
 
 
 def tsp_phaser(distance_matrix):
-    """
-    Args:
-        distance_matrix: a numpy matrix encoding the distances
-
-    Returns:
-        a hamiltonian representing the TSP(traveling salesman problem) phaser according to
-    `arxiv:1709.03489<https://arxiv.org/abs/1709.03489>`_ by Hadfield (2017).
-
-    """
     num_cities = distance_matrix.shape[0]
     two_to_one = calculate_two_to_one(num_cities)
     form = 0
@@ -41,16 +24,6 @@ def tsp_phaser(distance_matrix):
 
 
 def tsp_mixer(num_cities):
-    """
-    Args:
-        num_cities: number of cities in TSP
-
-    Returns:
-        a mixer hamiltonian representing the TSP(traveling salesman problem) phaser
-    according to
-    `arxiv:1709.03489<https://arxiv.org/abs/1709.03489>` by Hadfield (2017).
-
-    """
     two_to_one = calculate_two_to_one(num_cities)
     splus = lambda u, i: X(int(two_to_one[u, i])) + 1j * Y(int(two_to_one[u, i]))
     sminus = lambda u, i: X(int(two_to_one[u, i])) - 1j * Y(int(two_to_one[u, i]))
@@ -69,7 +42,11 @@ def tsp_mixer(num_cities):
 
 class TSP:
     """
-    This is a TSP (traveling salesman problem) class that enables us to implement TSP according to
+    The travelling salesman problem (also called the travelling salesperson problem or TSP)
+    asks the following question: "Given a list of cities and the distances between each pair of cities,
+    what is the shortest possible route that visits each city exactly once and returns to the origin city?" It is an NP-hard problem in combinatorial optimization, important in theoretical computer science and operations research.
+
+    This is a TSP class that enables us to implement TSP according to
     `arxiv:1709.03489<https://arxiv.org/abs/1709.03489>`_ by Hadfield (2017).
 
     Example:
