@@ -1,7 +1,7 @@
-from qibo import K
-from qibo.abstractions import hamiltonians
 from qibo.config import raise_error
-from qibo.core.adiabatic import BaseAdiabaticHamiltonian
+from qibo.hamiltonians.abstract import AbstractHamiltonian
+from qibo.hamiltonians.adiabatic import BaseAdiabaticHamiltonian
+from qibo.hamiltonians.hamiltonians import SymbolicHamiltonian
 
 
 class BaseSolver:
@@ -9,15 +9,17 @@ class BaseSolver:
 
     Args:
         dt (float): Time step size.
-        hamiltonian (:class:`qibo.abstractions.hamiltonians.Hamiltonian`): Hamiltonian object
+        hamiltonian (:class:`qibo.hamiltonians.abstract.AbstractHamiltonian`): Hamiltonian object
             that the state evolves under.
     """
 
     def __init__(self, dt, hamiltonian):
         self.dt = dt
-        if isinstance(hamiltonian, hamiltonians.AbstractHamiltonian):
+        if isinstance(hamiltonian, AbstractHamiltonian):
+            self.backend = hamiltonian.backend
             self.hamiltonian = lambda t: hamiltonian
         else:
+            self.backend = hamiltonian(0).backend
             self.hamiltonian = hamiltonian
         self.t = 0
 
@@ -42,7 +44,7 @@ class TrotterizedExponential(BaseSolver):
 
     Created automatically from the :class:`qibo.solvers.Exponential` if the
     given Hamiltonian object is a
-    :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian`.
+    :class:`qibo.hamiltonians.hamiltonians.TrotterHamiltonian`.
     """
 
     def __init__(self, dt, hamiltonian):
@@ -55,7 +57,7 @@ class TrotterizedExponential(BaseSolver):
     def __call__(self, state):
         circuit = self.circuit(self.t, self.dt)
         self.t += self.dt
-        return circuit(state)
+        return circuit(state).state()
 
 
 class Exponential(BaseSolver):
@@ -69,13 +71,13 @@ class Exponential(BaseSolver):
     """
 
     def __new__(cls, dt, hamiltonian):
-        if isinstance(hamiltonian, hamiltonians.AbstractHamiltonian):
+        if isinstance(hamiltonian, AbstractHamiltonian):
             h0 = hamiltonian
         elif isinstance(hamiltonian, BaseAdiabaticHamiltonian):
             h0 = hamiltonian.h0
         else:
             h0 = hamiltonian(0)
-        if isinstance(h0, hamiltonians.SymbolicHamiltonian):
+        if isinstance(h0, SymbolicHamiltonian):
             return TrotterizedExponential(dt, hamiltonian)
         else:
             return super(Exponential, cls).__new__(cls)
@@ -83,7 +85,7 @@ class Exponential(BaseSolver):
     def __call__(self, state):
         propagator = self.current_hamiltonian.exp(self.dt)
         self.t += self.dt
-        return K.matmul(propagator, state[:, K.newaxis])[:, 0]
+        return (propagator @ state[:, self.backend.np.newaxis])[:, 0]
 
 
 class RungeKutta4(BaseSolver):
