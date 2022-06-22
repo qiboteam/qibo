@@ -54,14 +54,15 @@ class TSP:
     Example:
         .. testcode::
             from qibo.models.tsp import TSP
+            import numpy as np
             from collections import defaultdict
+            from qibo import gates
             from qibo.models import QAOA
             np.random.seed(42)
             num_cities = 3
             distance_matrix = np.array([[0, 0.9, 0.8],
                                         [0.4, 0, 0.1],
                                         [0, 0.7, 0]])
-            # there are two possible cycles, one with distance 1, one with distance 1.9
             distance_matrix = distance_matrix.round(1)
             small_tsp = TSP(distance_matrix)
             initial_parameters = np.random.uniform(0, 1, 2)
@@ -155,6 +156,3 @@ class TSP:
             c.add(gates.X(int(self.two_to_one[ordering[i], i])))
         result = c()
         return result.state(numpy=True)
-
-
-
