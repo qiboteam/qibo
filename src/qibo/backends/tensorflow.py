@@ -20,6 +20,14 @@ class TensorflowBackend(NumpyBackend):
         from tensorflow.python.framework import errors_impl  # pylint: disable=E0611
         self.oom_error = errors_impl.ResourceExhaustedError
 
+        cpu_devices = tf.config.list_logical_devices("CPU")
+        gpu_devices = tf.config.list_logical_devices("GPU")
+        if gpu_devices: # pragma: no cover
+            # CI does not use GPUs
+            self.device = gpu_devices[0].name
+        elif cpu_devices:
+            self.device = cpu_devices[0].name
+
         import psutil
         self.nthreads = psutil.cpu_count(logical=True)
 
