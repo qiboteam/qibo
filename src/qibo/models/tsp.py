@@ -58,13 +58,6 @@ class TSP:
             from collections import defaultdict
             from qibo import gates
             from qibo.models import QAOA
-            np.random.seed(42)
-            num_cities = 3
-            distance_matrix = np.array([[0, 0.9, 0.8], [0.4, 0, 0.1],[0, 0.7, 0]])
-            distance_matrix = distance_matrix.round(1)
-            small_tsp = TSP(distance_matrix)
-            initial_parameters = np.random.uniform(0, 1, 2)
-            initial_state = small_tsp.prepare_initial_state([i for i in range(num_cities)])
 
 
             def convert_to_standard_Cauchy(config):
@@ -114,6 +107,13 @@ class TSP:
                 max_key = max(cauchy_dict, key=cauchy_dict.get)
                 return evaluate_dist(max_key)
 
+            np.random.seed(42)
+            num_cities = 3
+            distance_matrix = np.array([[0, 0.9, 0.8], [0.4, 0, 0.1],[0, 0.7, 0]])
+            distance_matrix = distance_matrix.round(1)
+            small_tsp = TSP(distance_matrix)
+            initial_parameters = np.random.uniform(0, 1, 2)
+            initial_state = small_tsp.prepare_initial_state([i for i in range(num_cities)])
             print([qaoa_function_of_layer(i, distance_matrix) for i in [2, 4, 6, 8]])
             # we should obtain the array [1.0, 1.0, 1.0, 1.9]
 
