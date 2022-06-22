@@ -40,7 +40,7 @@ def tsp_mixer(num_cities):
     return ham
 
 
-class TSP():
+class TSP:
     """
     The travelling salesman problem (also called the travelling salesperson problem or TSP)
     asks the following question: "Given a list of cities and the distances between each pair of cities,
