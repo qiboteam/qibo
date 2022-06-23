@@ -2,7 +2,7 @@
 import pytest
 import numpy as np
 from qibo import gates, callbacks
-from qibo.models import Circuit#, AdiabaticEvolution
+from qibo.models import Circuit, AdiabaticEvolution
 
 
 # Absolute testing tolerance for the cases of zero entanglement entropy
@@ -361,22 +361,21 @@ def test_energy(backend, density_matrix):
     backend.assert_allclose(final_energy, target_energy)
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("dense", [False, True])
 @pytest.mark.parametrize("check_degenerate", [False, True])
 def test_gap(backend, dense, check_degenerate):
     from qibo import hamiltonians
-    h0 = hamiltonians.X(4, dense=dense)
+    h0 = hamiltonians.X(4, dense=dense, backend=backend)
     if check_degenerate:
         # use h=0 to make this Hamiltonian degenerate
-        h1 = hamiltonians.TFIM(4, h=0, dense=dense)
+        h1 = hamiltonians.TFIM(4, h=0, dense=dense, backend=backend)
     else:
-        h1 = hamiltonians.TFIM(4, h=1, dense=dense)
+        h1 = hamiltonians.TFIM(4, h=1, dense=dense, backend=backend)
 
     ham = lambda t: (1 - t) * h0.matrix + t * h1.matrix
     targets = {"ground": [], "excited": [], "gap": []}
     for t in np.linspace(0, 1, 11):
-        eigvals = K.real(K.eigvalsh(ham(t)))
+        eigvals = np.real(np.linalg.eigvalsh(ham(t)))
         targets["ground"].append(eigvals[0])
         targets["excited"].append(eigvals[1])
         targets["gap"].append(eigvals[1] - eigvals[0])
@@ -389,13 +388,17 @@ def test_gap(backend, dense, check_degenerate):
     evolution = AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-1,
                                    callbacks=[gap, ground, excited])
     final_state = evolution(final_time=1.0)
-    targets = {k: K.stack(v) for k, v in targets.items()}
-    K.assert_allclose(ground[:], targets["ground"])
-    K.assert_allclose(excited[:], targets["excited"])
-    K.assert_allclose(gap[:], targets["gap"])
+    targets = {k: np.stack(v) for k, v in targets.items()}
+
+    values = {
+        "ground": np.array([backend.to_numpy(x) for x in ground]),
+        "excited": np.array([backend.to_numpy(x) for x in excited]),
+        "gap": np.array([backend.to_numpy(x) for x in gap])
+    }
+    for k, v in values.items():
+        backend.assert_allclose(v, targets.get(k))
 
 
-@pytest.mark.skip
 def test_gap_errors():
     """Check errors in gap callback instantiation."""
     # invalid string ``mode``
@@ -406,16 +409,9 @@ def test_gap_errors():
         gap = callbacks.Gap([])
 
     gap = callbacks.Gap()
-    # invalid evolution model type
-    with pytest.raises(TypeError):
-        gap.evolution = "test"
     # call before setting evolution model
-    with pytest.raises(ValueError):
-        gap(np.ones(4))
+    with pytest.raises(RuntimeError):
+        gap.apply(None, np.ones(4))
     # not implemented for density matrices
-    gap.density_matrix = True
     with pytest.raises(NotImplementedError):
-        gap(np.zeros(8))
-    # for coverage
-    _ = gap.density_matrix
-    gap.density_matrix = False
+        gap.apply_density_matrix(None, np.zeros(8))
