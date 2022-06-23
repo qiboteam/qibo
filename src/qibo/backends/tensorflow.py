@@ -2,7 +2,144 @@ import os
 import collections
 import numpy as np
 from qibo.backends.numpy import NumpyBackend
+from qibo.backends.matrices import Matrices
 from qibo.config import log, raise_error, TF_LOG_LEVEL
+
+
+class TensorflowMatrices(Matrices):
+    # Redefine parametrized gate matrices for backpropagation to work
+
+    def __init__(self, dtype):
+        super().__init__(dtype)
+        import tensorflow as tf
+        import tensorflow.experimental.numpy as tnp  # pylint: disable=E0401
+        self.tf = tf
+        self.np = tnp
+
+    def RX(self, theta):
+        cos = self.np.cos(theta / 2.0) + 0j
+        isin = -1j * self.np.sin(theta / 2.0)
+        return self.tf.cast([
+            [cos, isin], 
+            [isin, cos]
+        ], dtype=self.dtype)
+
+    def RY(self, theta):
+        cos = self.np.cos(theta / 2.0) + 0j
+        sin = self.np.sin(theta / 2.0) + 0j
+        return self.tf.cast([
+            [cos, -sin], 
+            [sin, cos]
+        ], dtype=self.dtype)
+
+    def RZ(self, theta):
+        phase = self.np.exp(0.5j * theta)
+        return self.tf.cast([
+            [self.np.conj(phase), 0], 
+            [0, phase]
+        ], dtype=self.dtype)
+
+    def U1(self, theta):
+        phase = self.np.exp(1j * theta)
+        return self.tf.cast([
+            [1, 0], 
+            [0, phase]
+        ], dtype=self.dtype)
+
+    def U2(self, phi, lam):
+        eplus = self.np.exp(1j * (phi + lam) / 2.0)
+        eminus = self.np.exp(1j * (phi - lam) / 2.0)
+        return self.tf.cast([
+            [self.np.conj(eplus), - self.np.conj(eminus)],
+            [eminus, eplus]
+        ], dtype=self.dtype) / self.np.sqrt(2)
+
+    def U3(self, theta, phi, lam):
+        cost = self.np.cos(theta / 2)
+        sint = self.np.sin(theta / 2)
+        eplus = self.np.exp(1j * (phi + lam) / 2.0)
+        eminus = self.np.exp(1j * (phi - lam) / 2.0)
+        return self.tf.cast([
+            [self.np.conj(eplus) * cost, - self.np.conj(eminus) * sint],
+            [eminus * sint, eplus * cost]
+        ], dtype=self.dtype)
+
+    def CRX(self, theta):
+        r = self.RX(theta)
+        return self.tf.cast([
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, r[0, 0], r[0, 1]],
+            [0, 0, r[1, 0], r[1, 1]],
+        ], dtype=self.dtype)
+
+    def CRY(self, theta):
+        r = self.RY(theta)
+        return self.tf.cast([
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, r[0, 0], r[0, 1]],
+            [0, 0, r[1, 0], r[1, 1]],
+        ], dtype=self.dtype)
+
+    def CRZ(self, theta):
+        r = self.RZ(theta)
+        return self.tf.cast([
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, r[0, 0], r[0, 1]],
+            [0, 0, r[1, 0], r[1, 1]],
+        ], dtype=self.dtype)
+
+    def CU1(self, theta):
+        r = self.U1(theta)
+        return self.tf.cast([
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, r[0, 0], r[0, 1]],
+            [0, 0, r[1, 0], r[1, 1]],
+        ], dtype=self.dtype)
+
+    def CU2(self, phi, lam):
+        r = self.U2(phi, lam)
+        return self.tf.cast([
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, r[0, 0], r[0, 1]],
+            [0, 0, r[1, 0], r[1, 1]],
+        ], dtype=self.dtype)
+
+    def CU3(self, theta, phi, lam):
+        r = self.U3(theta, phi, lam)
+        return self.tf.cast([
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, r[0, 0], r[0, 1]],
+            [0, 0, r[1, 0], r[1, 1]],
+        ], dtype=self.dtype)
+
+    def fSim(self, theta, phi):
+        cost = self.np.cos(theta) + 0j
+        isint = -1j * self.np.sin(theta)
+        phase = self.np.exp(-1j * phi)
+        return self.tf.cast([
+            [1, 0, 0, 0],
+            [0, cost, isint, 0],
+            [0, isint, cost, 0],
+            [0, 0, 0, phase],
+        ], dtype=self.dtype)
+
+    def GeneralizedfSim(self, u, phi):
+        phase = self.np.exp(-1j * phi)
+        return self.tf.cast([
+            [1, 0, 0, 0],
+            [0, u[0, 0], u[0, 1], 0],
+            [0, u[1, 0], u[1, 1], 0],
+            [0, 0, 0, phase],
+        ], dtype=self.dtype)
+
+    def Unitary(self, u):
+        return self.tf.cast(u, dtype=self.dtype)
 
 
 class TensorflowBackend(NumpyBackend):
@@ -16,6 +153,7 @@ class TensorflowBackend(NumpyBackend):
         tnp.experimental_enable_numpy_behavior()
         self.tf = tf
         self.np = tnp
+        self.matrices = TensorflowMatrices(self.dtype)
         
         from tensorflow.python.framework import errors_impl  # pylint: disable=E0611
         self.oom_error = errors_impl.ResourceExhaustedError

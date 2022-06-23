@@ -249,7 +249,7 @@ def test_variable_theta():
         from qibo.backends import construct_backend
         backend = construct_backend("tensorflow")
     except ModuleNotFoundError: # pragma: no cover
-        pytest.skip("Skiping variable test because tensorflow is not available")
+        pytest.skip("Skipping variable test because tensorflow is not available.")
     
     import tensorflow as tf
     theta1 = tf.Variable(0.1234, dtype="float64")
