@@ -270,8 +270,6 @@ def test_adiabatic_evolution_execute_errors():
         final_state = adevp(final_time=1)
 
 
-# TODO: Unskip this when energy callback is implemented
-@pytest.mark.skip
 @pytest.mark.parametrize("solver,dt,atol",
                          [("exp", 1e-1, 1e-10), ("rk45", 1e-2, 1e-2)])
 def test_energy_callback(backend, solver, dt, atol):
@@ -294,7 +292,8 @@ def test_energy_callback(backend, solver, dt, atol):
 
     assert_states_equal(backend, final_psi, target_psi, atol=atol)
     target_energies = backend.cast(target_energies)
-    backend.assert_allclose(energy[:], target_energies, atol=atol)
+    final_energies = np.array([backend.to_numpy(x) for x in energy[:]])
+    backend.assert_allclose(final_energies, target_energies, atol=atol)
 
 
 # TODO: Unskip this when variational are implemented

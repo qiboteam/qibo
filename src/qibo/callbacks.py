@@ -217,6 +217,14 @@ class Energy(Callback):
         super().__init__()
         self.hamiltonian = hamiltonian
 
+    def apply(self, backend, state):
+        assert type(self.hamiltonian.backend) == type(backend)
+        return self.hamiltonian.expectation(state)
+
+    def apply_density_matrix(self, backend, state):
+        assert type(self.hamiltonian.backend) == type(backend)
+        return self.hamiltonian.expectation(state)
+
 
 class Gap(Callback):
     """Callback for calculating the gap of adiabatic evolution Hamiltonians.

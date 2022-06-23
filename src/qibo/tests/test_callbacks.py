@@ -342,20 +342,23 @@ def test_overlap(backend, density_matrix):
         backend.assert_allclose(final_overlap, target_overlap)
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("density_matrix", [False, True])
 def test_energy(backend, density_matrix):
     from qibo import hamiltonians
-    ham = hamiltonians.TFIM(4, h=1.0)
+    ham = hamiltonians.TFIM(4, h=1.0, backend=backend)
     energy = callbacks.Energy(ham)
-    matrix = K.to_numpy(ham.matrix)
+    matrix = backend.to_numpy(ham.matrix)
     if density_matrix:
-        state = np.random.random((16, 16)) + 1j * np.random.random((16, 16))
+        from qibo.tests.utils import random_density_matrix
+        state = random_density_matrix(4)
         target_energy = np.trace(matrix.dot(state))
+        final_energy = energy.apply_density_matrix(backend, state)
     else:
-        state = np.random.random(16) + 1j * np.random.random(16)
+        from qibo.tests.utils import random_state
+        state = random_state(4)
         target_energy = state.conj().dot(matrix.dot(state))
-    K.assert_allclose(energy(K.cast(state)), target_energy)
+        final_energy = energy.apply(backend, state)
+    backend.assert_allclose(final_energy, target_energy)
 
 
 @pytest.mark.skip
