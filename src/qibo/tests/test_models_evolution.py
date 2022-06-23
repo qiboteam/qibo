@@ -7,7 +7,9 @@ from scipy.linalg import expm
 
 def assert_states_equal(backend, state, target_state, atol=0):
     """Asserts that two state vectors are equal up to a phase."""
-    phase = backend.to_numpy(state)[0] / backend.to_numpy(target_state)[0]
+    state = backend.to_numpy(state)
+    target_state = backend.to_numpy(target_state)
+    phase = state[0] / target_state[0]
     backend.assert_allclose(state, phase * target_state, atol=atol)
 
 
@@ -292,7 +294,6 @@ def test_energy_callback(backend, solver, dt, atol):
 
     assert_states_equal(backend, final_psi, target_psi, atol=atol)
     target_energies = backend.cast(target_energies)
-    print(energy[:])
     backend.assert_allclose(energy[:], target_energies, atol=atol)
 
 

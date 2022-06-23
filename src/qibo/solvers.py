@@ -57,7 +57,8 @@ class TrotterizedExponential(BaseSolver):
     def __call__(self, state):
         circuit = self.circuit(self.t, self.dt)
         self.t += self.dt
-        return circuit(state).state()
+        result = self.backend.execute_circuit(circuit, initial_state=state)
+        return result.state()
 
 
 class Exponential(BaseSolver):
