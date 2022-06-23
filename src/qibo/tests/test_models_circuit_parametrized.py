@@ -243,21 +243,24 @@ def test_set_parameters_with_double_variationallayer(backend, nqubits, trainable
     backend.assert_circuitclose(c, target_c)
 
 
-@pytest.mark.skip
-def test_variable_theta(backend):
+def test_variable_theta():
     """Check that parametrized gates accept `tf.Variable` parameters."""
-    backend = qibo.get_backend()
-    if backend != "tensorflow":
-        pytest.skip("Numpy backends do not support variable parameters.")
-    theta1 = K.optimization.Variable(0.1234, dtype=K.dtypes('DTYPE'))
-    theta2 = K.optimization.Variable(0.4321, dtype=K.dtypes('DTYPE'))
+    try:
+        from qibo.backends import construct_backend
+        backend = construct_backend("tensorflow")
+    except ModuleNotFoundError: # pragma: no cover
+        pytest.skip("Skiping variable test because tensorflow is not available")
+    
+    import tensorflow as tf
+    theta1 = tf.Variable(0.1234, dtype="float64")
+    theta2 = tf.Variable(0.4321, dtype="float64")
     cvar = Circuit(2)
     cvar.add(gates.RX(0, theta1))
     cvar.add(gates.RY(1, theta2))
-    final_state = cvar()
+    final_state = backend.execute_circuit(cvar)
 
     c = Circuit(2)
     c.add(gates.RX(0, 0.1234))
     c.add(gates.RY(1, 0.4321))
-    target_state = c()
-    K.assert_allclose(final_state, target_state)
+    target_state = backend.execute_circuit(c)
+    backend.assert_allclose(final_state, target_state)
