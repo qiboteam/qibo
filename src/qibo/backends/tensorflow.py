@@ -57,6 +57,9 @@ class TensorflowBackend(NumpyBackend):
     def to_numpy(self, x):
         return np.array(x)
 
+    def compile(self, func):
+        return self.tf.function(func)
+
     def zero_state(self, nqubits):
         idx = self.tf.constant([[0]], dtype="int32")
         state = self.tf.zeros((2 ** nqubits,), dtype=self.dtype)
@@ -83,10 +86,10 @@ class TensorflowBackend(NumpyBackend):
         npmatrix = super().asmatrix_fused(gate)
         return self.tf.cast(npmatrix, dtype=self.dtype)
 
-    def execute_circuit(self, circuit, initial_state=None, nshots=None):
+    def execute_circuit(self, circuit, initial_state=None, nshots=None, return_array=False):
         with self.tf.device(self.device):
-            return super().execute_circuit(circuit, initial_state, nshots)
-        
+            return super().execute_circuit(circuit, initial_state, nshots, return_array)
+
     def execute_circuit_repeated(self, circuit, initial_state=None, nshots=None):
         with self.tf.device(self.device):
             return super().execute_circuit_repeated(circuit, initial_state, nshots)
