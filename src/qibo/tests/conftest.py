@@ -12,7 +12,6 @@ INACTIVE_TESTS = {
     "qibo.tests.test_backends_agreement",
     "qibo.tests.test_backends_init",
     "qibo.tests.test_backends_matrices",
-    "qibo.tests.test_core_circuit_backpropagation",
     "qibo.tests.test_core_distcircuit_execution",
     "qibo.tests.test_core_distcircuit",
     "qibo.tests.test_core_distutils",

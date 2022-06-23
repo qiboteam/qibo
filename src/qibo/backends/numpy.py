@@ -46,6 +46,9 @@ class NumpyBackend(Simulator):
             return x.toarray()
         return x
 
+    def compile(self, func):
+        return func
+
     def zero_state(self, nqubits):
         state = np.zeros(2 ** nqubits, dtype=self.dtype)
         state[0] = 1

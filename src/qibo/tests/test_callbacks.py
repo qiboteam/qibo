@@ -161,23 +161,6 @@ def test_entropy_in_distributed_circuit(backend, accelerators, gateconf, target_
     backend.assert_allclose(values, target_entropy, atol=_atol)
 
 
-@pytest.mark.skip
-def test_entropy_in_compiled_circuit(backend):
-    """Check that entropy calculation works when circuit is compiled."""
-    from qibo import get_backend
-    entropy = callbacks.EntanglementEntropy([0])
-    c = Circuit(2)
-    c.add(gates.CallbackGate(entropy))
-    c.add(gates.H(0))
-    c.add(gates.CallbackGate(entropy))
-    c.add(gates.CNOT(0, 1))
-    c.add(gates.CallbackGate(entropy))
-    c.compile()
-    final_state = backend.execute_circuit(c)
-    values = [backend.to_numpy(x) for x in entropy[:]]
-    backend.assert_allclose(values, [0, 0, 1.0], atol=_atol)
-
-
 def test_entropy_multiple_executions(backend, accelerators):
     """Check entropy calculation when the callback is used in multiple executions."""
     target_c = Circuit(4)
