@@ -817,6 +817,9 @@ class Circuit:
             raise_error(RuntimeError, "Circuit is already compiled.")
         if not self.queue:
             raise_error(RuntimeError, "Cannot compile circuit without gates.")
+        for gate in self.queue:
+            if isinstance(gate, gates.CallbackGate):
+                raise_error(NotImplementedError, "Circuit compilation is not available with callbacks.")
         if backend is None:
             from qibo.backends import GlobalBackend
             backend = GlobalBackend()
