@@ -9,7 +9,7 @@ np.random.seed(42)
 num_cities = 3
 distance_matrix = np.array([[0, 0.9, 0.8],
                             [0.4, 0, 0.1],
-                            [0, 0.7, 0]])
+                            [0, 0.7, 0]])^
 # there are two possible cycles, one with distance 1, one with distance 1.9
 distance_matrix = distance_matrix.round(1)
 small_tsp = TSP(distance_matrix)
@@ -60,6 +60,7 @@ def qaoa_function_of_layer(layer, distance_matrix):
         cauchy_dict[standard_cauchy_key] += freq_counter[freq_key]
     max_key = max(cauchy_dict, key=cauchy_dict.get)
     return evaluate_dist(max_key)
+
 
 @pytest.mark.parametrize("test_layer, expected",
                          [ (4, 1.0), (6, 1.0), (8, 1.9)])

@@ -74,7 +74,6 @@ class TSP:
                         return tuple(cauchy)  # now, the cauchy notation for permutation begins with 0
 
 
-
             def evaluate_dist(cauchy):
                 '''
                 Given a permutation of 0 to n-1, we compute the distance of the tour
