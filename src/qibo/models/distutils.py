@@ -1,5 +1,6 @@
 import copy
-from qibo.abstractions import gates
+from qibo import gates
+from qibo.gates.abstract import Gate, SpecialGate, ParametrizedGate
 from qibo.config import raise_error
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -79,7 +80,7 @@ class DistributedQueues:
         # in the end
         self.swaps_list = []
 
-        self.device_to_ids = {d: v for d, v in self._ids(circuit.calc_devices)}
+        self.device_to_ids = {d: v for d, v in self._ids(circuit.accelerators)}
         self.ids_to_device = self.ndevices * [None]
         for device, ids in self.device_to_ids.items():
             for i in ids:
@@ -101,7 +102,7 @@ class DistributedQueues:
     def ndevices(self):
         return self.circuit.ndevices
 
-    def set(self, queue: List[gates.Gate]):
+    def set(self, queue: List[Gate]):
         """Prepares gates for device-specific gate execution.
 
         Each gate has to be recreated in the device that will be executed to
@@ -124,25 +125,25 @@ class DistributedQueues:
             transformed_queue = self.transform(queue, counter)
             self.create(transformed_queue)
 
-    def _ids(self, calc_devices: Dict[str, int]) -> Tuple[str, List[int]]:
+    def _ids(self, accelerators: Dict[str, int]) -> Tuple[str, List[int]]:
         """Generator of device piece indices."""
         start = 0
-        for device, n in calc_devices.items():
+        for device, n in accelerators.items():
             stop = start + n
             yield device, list(range(start, stop))
             start = stop
 
-    def _create_device_gate(self, gate: gates.Gate) -> gates.Gate:
+    def _create_device_gate(self, gate: Gate) -> Gate:
         """Creates a copy of a gate for specific device application.
 
         Target and control qubits are modified according to the local qubits of
         the circuit when this gate will be applied.
 
         Args:
-            gate: The :class:`qibo.abstractions.gates.Gate` object of the gate to copy.
+            gate: The :class:`qibo.gates.abstract.Gate` object of the gate to copy.
 
         Returns:
-            A :class:`qibo.abstractions.gates.Gate` object with the proper target and
+            A :class:`qibo.gates.abstract.Gate` object with the proper target and
             control qubit indices for device-specific application.
         """
         devgate = copy.copy(gate)
@@ -158,7 +159,7 @@ class DistributedQueues:
         return devgate
 
     @staticmethod
-    def count(queue: List[gates.Gate], nqubits: int):
+    def count(queue: List[Gate], nqubits: int):
         """Counts how many gates target each qubit.
 
         Args:
@@ -176,13 +177,13 @@ class DistributedQueues:
                 counter[qubit] += 1
         return counter
 
-    def _transform(self, queue: List[gates.Gate],
-                   remaining_queue: List[gates.Gate],
-                   counter) -> List[gates.Gate]:
+    def _transform(self, queue: List[Gate],
+                   remaining_queue: List[Gate],
+                   counter) -> List[Gate]:
         """Helper recursive method for ``transform``."""
         new_remaining_queue = []
         for gate in remaining_queue:
-            if isinstance(gate, (gates.SpecialGate, gates.M)):
+            if isinstance(gate, (SpecialGate, gates.M)):
                 gate.swap_reset = list(self.swaps_list)
 
             global_targets = set(gate.target_qubits) & self.qubits.set
@@ -259,7 +260,7 @@ class DistributedQueues:
                           for p in reversed(self.swaps_list)))
         return new_queue
 
-    def create(self, queue: List[gates.Gate]):
+    def create(self, queue: List[Gate]):
         """Creates the queues for each accelerator device.
 
         Args:
@@ -313,5 +314,5 @@ class DistributedQueues:
                                 break
                         if flag:
                             self.queues[-1][i].append(devgate)
-                            if isinstance(gate, gates.ParametrizedGate):
+                            if isinstance(gate, ParametrizedGate):
                                 gate.device_gates.add(devgate)

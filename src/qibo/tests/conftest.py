@@ -13,7 +13,6 @@ INACTIVE_TESTS = {
     "qibo.tests.test_backends_init",
     "qibo.tests.test_backends_matrices",
     "qibo.tests.test_core_distcircuit_execution",
-    "qibo.tests.test_core_distcircuit",
     "qibo.tests.test_core_distutils",
     "qibo.tests.test_core_measurements",
     "qibo.tests.test_core_states_distributed",
@@ -25,6 +24,9 @@ INACTIVE_TESTS = {
 
 # backends to be tested
 BACKENDS = ["numpy", "tensorflow", "qibojit-numba", "qibojit-cupy"]
+# multigpu configurations to be tested (only with qibojit-cupy)
+ACCELERATORS = [{"/GPU:0": 1, "/GPU:1": 1}, {"/GPU:0": 2, "/GPU:1": 2},
+                {"/GPU:0": 1, "/GPU:1": 1, "/GPU:2": 1, "/GPU:3": 1}]
 
 
 def get_backend(backend_name):
@@ -69,7 +71,13 @@ def pytest_generate_tests(metafunc):
         pytest.skip()
 
     if "backend_name" in metafunc.fixturenames:
-        metafunc.parametrize("backend_name", AVAILABLE_BACKENDS)
+        if "accelerators" in metafunc.fixturenames:
+            config = [(backend, None) for backend in AVAILABLE_BACKENDS]
+            if "qibojit-cupy" in AVAILABLE_BACKENDS:
+                config.extend(("qibojit-cupy", acc) for acc in ACCELERATORS)
+            metafunc.parametrize("backend_name,accelerators", config)
+        else:    
+            metafunc.parametrize("backend_name", AVAILABLE_BACKENDS)
 
-    if "accelerators" in metafunc.fixturenames:
-        metafunc.parametrize("accelerators", [None])
+    elif "accelerators" in metafunc.fixturenames:
+        metafunc.parametrize("accelerators", ACCELERATORS)

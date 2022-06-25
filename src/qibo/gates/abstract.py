@@ -39,6 +39,10 @@ class Gate:
 
         self.symbolic_parameters = {}
 
+        # for distributed circuits
+        self.device_gates = set()
+        self.original_gate = None
+
     @property
     def target_qubits(self) -> Tuple[int]:
         """Tuple with ids of target qubits."""
