@@ -19,8 +19,8 @@ def test_distributed_circuit_execution(backend, accelerators, use_global_qubits)
     dist_c.global_qubits = range(dist_c.nlocal, dist_c.nqubits)
 
     initial_state = random_state(c.nqubits)    
-    final_state = dist_c(np.copy(initial_state))
-    target_state = c(np.copy(initial_state))
+    final_state = backend.execute_circuit(dist_c, np.copy(initial_state))
+    target_state = backend.execute_circuit(c, np.copy(initial_state))
     backend.assert_allclose(target_state, final_state)
 
 
@@ -36,8 +36,8 @@ def test_distributed_circuit_execution_pretransformed(backend, accelerators):
     c.add((gates.H(i) for i in range(dist_c.nglobal, 4)))
 
     initial_state = random_state(c.nqubits)
-    final_state = dist_c(np.copy(initial_state))
-    target_state = c(np.copy(initial_state))
+    final_state = backend.execute_circuit(dist_c, np.copy(initial_state))
+    target_state = backend.execute_circuit(c, np.copy(initial_state))
     backend.assert_allclose(target_state, final_state, atol=1e-7)
 
 
@@ -52,22 +52,27 @@ def test_distributed_circuit_execution_with_swap(backend, accelerators):
     c.add((gates.SWAP(i, i + 1) for i in range(5)))
 
     initial_state = random_state(c.nqubits)
-    final_state = dist_c(np.copy(initial_state))
-    target_state = c(np.copy(initial_state))
+    final_state = backend.execute_circuit(dist_c, np.copy(initial_state))
+    target_state = backend.execute_circuit(c, np.copy(initial_state))
     backend.assert_allclose(target_state, final_state, atol=1e-7)
 
 
-@pytest.mark.skip
 def test_distributed_circuit_execution_special_gate(backend, accelerators):
+    from qibo import callbacks
     dist_c = Circuit(6, accelerators)
     initial_state = random_state(dist_c.nqubits)
-    dist_c.add(gates.Flatten(np.copy(initial_state)))
+    entropy = callbacks.EntanglementEntropy([0])
+    dist_c.add(gates.CallbackGate(entropy))
     dist_c.add((gates.H(i) for i in range(dist_c.nlocal)))
+    dist_c.add(gates.CallbackGate(entropy))
     dist_c.global_qubits = range(dist_c.nlocal, dist_c.nqubits)
     c = Circuit(6)
-    c.add(gates.Flatten(np.copy(initial_state)))
+    c.add(gates.CallbackGate(entropy))
     c.add((gates.H(i) for i in range(dist_c.nlocal)))
-    backend.assert_allclose(dist_c(), c())
+    c.add(gates.CallbackGate(entropy))
+    final_state = backend.execute_circuit(dist_c, initial_state=np.copy(initial_state))
+    target_state = backend.execute_circuit(c, initial_state=np.copy(initial_state))
+    backend.assert_allclose(final_state, target_state, atol=1e-7)
 
 
 def test_distributed_circuit_execution_controlled_gate(backend, accelerators):
@@ -79,8 +84,8 @@ def test_distributed_circuit_execution_controlled_gate(backend, accelerators):
     c.add(gates.CNOT(0, 2))
 
     initial_state = random_state(c.nqubits)
-    final_state = dist_c(np.copy(initial_state))
-    target_state = c(np.copy(initial_state))
+    final_state = backend.execute_circuit(dist_c, np.copy(initial_state))
+    target_state = backend.execute_circuit(c, np.copy(initial_state))
     backend.assert_allclose(target_state, final_state)
 
 
@@ -100,8 +105,8 @@ def test_distributed_circuit_execution_controlled_by_gates(backend, accelerators
     c.add([gates.X(2), gates.X(3), gates.X(4)])
 
     initial_state = random_state(c.nqubits)
-    final_state = dist_c(np.copy(initial_state))
-    target_state = c(np.copy(initial_state))
+    final_state = backend.execute_circuit(dist_c, np.copy(initial_state))
+    target_state = backend.execute_circuit(c, np.copy(initial_state))
     backend.assert_allclose(target_state, final_state, atol=1e-7)
 
 
@@ -124,7 +129,9 @@ def test_distributed_circuit_execution_addition(backend, accelerators):
     c.add([gates.CNOT(i, i + 1) for i in range(5)])
     c.add([gates.Z(i) for i in range(6)])
     assert c.depth == dist_c.depth
-    backend.assert_allclose(dist_c(), c())
+    final_state = backend.execute_circuit(dist_c)
+    target_state = backend.execute_circuit(c)
+    backend.assert_allclose(final_state, target_state, atol=1e-7)
 
 
 def test_distributed_circuit_empty_execution(backend, accelerators):
@@ -136,10 +143,13 @@ def test_distributed_circuit_empty_execution(backend, accelerators):
     backend.assert_allclose(final_state, target_state)
     # test re-executing the circuit with a given initial state
     initial_state = random_state(c.nqubits)
-    backend.assert_allclose(c(initial_state), initial_state)
+    final_state = backend.execute_circuit(c, initial_state)
+    backend.assert_allclose(final_state, initial_state)
     # test executing a new circuit with a given initial state
     c = Circuit(5, accelerators)
     initial_state = random_state(c.nqubits)
-    backend.assert_allclose(c(initial_state), initial_state)
+    final_state = backend.execute_circuit(c, initial_state)
+    backend.assert_allclose(final_state, initial_state)
     # test re-executing the circuit with the default initial state
-    backend.assert_allclose(c(), target_state)
+    final_state = backend.execute_circuit(c)
+    backend.assert_allclose(final_state, target_state)
