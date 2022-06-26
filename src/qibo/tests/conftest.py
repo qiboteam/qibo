@@ -12,8 +12,6 @@ INACTIVE_TESTS = {
     "qibo.tests.test_backends_agreement",
     "qibo.tests.test_backends_init",
     "qibo.tests.test_backends_matrices",
-    "qibo.tests.test_core_distcircuit_execution",
-    "qibo.tests.test_core_distutils",
     "qibo.tests.test_core_measurements",
     "qibo.tests.test_core_states_distributed",
     "qibo.tests.test_core_states",
@@ -70,14 +68,21 @@ def pytest_generate_tests(metafunc):
     if module_name in INACTIVE_TESTS:
         pytest.skip()
 
-    if "backend_name" in metafunc.fixturenames:
-        if "accelerators" in metafunc.fixturenames:
-            config = [(backend, None) for backend in AVAILABLE_BACKENDS]
-            if "qibojit-cupy" in AVAILABLE_BACKENDS:
-                config.extend(("qibojit-cupy", acc) for acc in ACCELERATORS)
-            metafunc.parametrize("backend_name,accelerators", config)
-        else:    
-            metafunc.parametrize("backend_name", AVAILABLE_BACKENDS)
+    if module_name == "qibo.tests.test_models_distcircuit_execution":
+        config = []
+        if "qibojit-cupy" in AVAILABLE_BACKENDS:
+            config.extend(("qibojit-cupy", acc) for acc in ACCELERATORS)
+        metafunc.parametrize("backend_name,accelerators", config)
 
-    elif "accelerators" in metafunc.fixturenames:
-        metafunc.parametrize("accelerators", ACCELERATORS)
+    else:
+        if "backend_name" in metafunc.fixturenames:
+            if "accelerators" in metafunc.fixturenames:
+                config = [(backend, None) for backend in AVAILABLE_BACKENDS]
+                if "qibojit-cupy" in AVAILABLE_BACKENDS:
+                    config.extend(("qibojit-cupy", acc) for acc in ACCELERATORS)
+                metafunc.parametrize("backend_name,accelerators", config)
+            else:    
+                metafunc.parametrize("backend_name", AVAILABLE_BACKENDS)
+
+        elif "accelerators" in metafunc.fixturenames:
+            metafunc.parametrize("accelerators", ACCELERATORS)

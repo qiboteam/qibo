@@ -249,8 +249,9 @@ class Simulator(Backend):
     def get_state_repr(self, result):
         return result.symbolic()
 
+    @abc.abstractmethod
     def get_state_tensor(self, result):
-        return result.execution_result
+        raise_error(NotImplementedError)
 
     @abc.abstractmethod
     def calculate_symbolic(self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20): # pragma: no cover

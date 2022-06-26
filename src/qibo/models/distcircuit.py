@@ -1,12 +1,8 @@
-# -*- coding: utf-8 -*-
-# @authors: S. Efthymiou
-import sys
 import copy
 import math
-import joblib
 import collections
 from qibo.config import raise_error
-from qibo import gates, states
+from qibo import gates
 from qibo.models.circuit import Circuit
 from qibo.gates.abstract import Gate, SpecialGate, ParametrizedGate
 from typing import Dict, List, Optional, Sequence, Set, Tuple, Union
@@ -353,11 +349,13 @@ class DistributedCircuit(Circuit):
             The total number of logical devices must be a power of 2.
     """
 
-    def __new__(cls, nqubits: int, accelerators: Dict[str, int]):
+    def __new__(cls, nqubits: int, accelerators: Dict[str, int],
+                density_matrix: bool = False):
         return object().__new__(cls)
 
-    def __init__(self, nqubits: int, accelerators: Dict[str, int]):
-        super().__init__(nqubits, accelerators)
+    def __init__(self, nqubits: int, accelerators: Dict[str, int], 
+                 density_matrix: bool = False):
+        super().__init__(nqubits, accelerators, density_matrix)
         self.ndevices = sum(accelerators.values())
         self.nglobal = float(math.log2(self.ndevices))
 
@@ -413,15 +411,5 @@ class DistributedCircuit(Circuit):
         raise_error(RuntimeError, "Cannot compile circuit that uses custom operators.")
 
     def execute(self, initial_state=None, nshots=None):
-        """Equivalent to :meth:`qibo.models.circuit.Circuit.execute`.
-
-        Returns:
-            A :class:`qibo.core.states.DistributedState` object corresponding
-            to the final state of execution. Note that this state contains the
-            full state vector scattered to pieces and does not create a
-            single tensor unless the user explicitly calls the ``tensor``
-            property. This avoids creating multiple copies of large states in
-            CPU memory.
-        """
         from qibo.backends import GlobalBackend
         return GlobalBackend().execute_distributed_circuit(self, initial_state, nshots)
