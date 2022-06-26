@@ -36,10 +36,13 @@ def get_backend(backend_name):
 
 # ignore backends that are not available in the current testing environment
 AVAILABLE_BACKENDS = []
+MULTIGPU_BACKENDS = []
 for backend_name in BACKENDS:
     try:
-        get_backend(backend_name)
+        _backend = get_backend(backend_name)
         AVAILABLE_BACKENDS.append(backend_name)
+        if _backend.supports_multigpu:
+            MULTIGPU_BACKENDS.append(backend_name)
     except (ModuleNotFoundError, ImportError):
         pass
 
@@ -69,17 +72,14 @@ def pytest_generate_tests(metafunc):
         pytest.skip()
 
     if module_name == "qibo.tests.test_models_distcircuit_execution":
-        config = []
-        if "qibojit-cupy" in AVAILABLE_BACKENDS:
-            config.extend(("qibojit-cupy", acc) for acc in ACCELERATORS)
+        config = [(bk, acc) for acc in ACCELERATORS for bk in MULTIGPU_BACKENDS]
         metafunc.parametrize("backend_name,accelerators", config)
 
     else:
         if "backend_name" in metafunc.fixturenames:
             if "accelerators" in metafunc.fixturenames:
                 config = [(backend, None) for backend in AVAILABLE_BACKENDS]
-                if "qibojit-cupy" in AVAILABLE_BACKENDS:
-                    config.extend(("qibojit-cupy", acc) for acc in ACCELERATORS)
+                config.extend((bk, acc) for acc in ACCELERATORS for bk in MULTIGPU_BACKENDS)
                 metafunc.parametrize("backend_name,accelerators", config)
             else:    
                 metafunc.parametrize("backend_name", AVAILABLE_BACKENDS)
