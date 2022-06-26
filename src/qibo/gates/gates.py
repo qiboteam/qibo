@@ -1083,6 +1083,8 @@ class Unitary(ParametrizedGate):
         import numpy as np
         shape = self.parameters[0].shape
         self._parameters = (np.reshape(x, shape),)
+        for gate in self.device_gates:
+            gate.parameters = x
 
     def on_qubits(self, qubit_map) -> "Gate":
         args = [self.init_args[0]]

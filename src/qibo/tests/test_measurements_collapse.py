@@ -63,8 +63,8 @@ def test_measurement_collapse_bitflip_noise(backend):
 
 
 @pytest.mark.parametrize("effect", [False, True])
-def test_measurement_result_parameters(backend, accelerators, effect):
-    c = models.Circuit(4, accelerators)
+def test_measurement_result_parameters(backend, effect):
+    c = models.Circuit(4)
     if effect:
         c.add(gates.X(0))
     output = c.add(gates.M(0, collapse=True))

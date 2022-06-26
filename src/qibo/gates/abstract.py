@@ -321,8 +321,10 @@ class ParametrizedGate(Gate):
                 self.symbolic_parameters[i] = v
             params[i] = v
         self._parameters = tuple(params)
-        
-        # TODO: Handle parameter setting for distributed circuits
+       
+        # set parameters in device gates
+        for gate in self.device_gates:
+            gate.parameters = x
 
     def substitute_symbols(self):
         params = list(self._parameters)
