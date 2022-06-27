@@ -71,7 +71,7 @@ class VQE(object):
 
         if compile:
             #TODO: introduce is_custom attribute or maybe just compare with qibojit
-            if self.hamiltonian.backend.is_custom:
+            if not self.hamiltonian.backend == 'qibojit':
                 raise_error(RuntimeError, "Cannot compile VQE that uses custom operators. "
                                           "Set the compile flag to False.")
             for gate in self.circuit.queue:
@@ -81,7 +81,9 @@ class VQE(object):
             loss = _loss
 
         if method == "cma":
-            dtype = getattr(self.hamiltonian.backend.np, self.hamiltonian.backend._dtypes.get('DTYPE'))
+            #TODO: check if we can use this shortcut
+            # dtype = getattr(self.hamiltonian.backend.np, self.hamiltonian.backend._dtypes.get('DTYPE'))
+            dtype = self.hamiltonian.backend.np.float64
             loss = lambda p, c, h: dtype(_loss(p, c, h))
         elif method != "sgd":
             loss = lambda p, c, h: self.hamiltonian.backend.to_numpy(_loss(p, c, h))
