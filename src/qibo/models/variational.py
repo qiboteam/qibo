@@ -1,6 +1,5 @@
-from qibo import K
 from qibo.config import raise_error
-from qibo.core.circuit import Circuit
+from qibo.models.circuit import Circuit
 from qibo.models.evolution import StateEvolution
 
 
@@ -8,7 +7,7 @@ class VQE(object):
     """This class implements the variational quantum eigensolver algorithm.
 
     Args:
-        circuit (:class:`qibo.abstractions.circuit.AbstractCircuit`): Circuit that
+        circuit (:class:`qibo.models.circuit.Circuit`): Circuit that
             implements the variaional ansatz.
         hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): Hamiltonian object.
 
@@ -71,20 +70,21 @@ class VQE(object):
             return hamiltonian.expectation(final_state)
 
         if compile:
-            if K.is_custom:
+            #TODO: introduce is_custom attribute or maybe just compare with qibojit
+            if self.hamiltonian.backend.is_custom:
                 raise_error(RuntimeError, "Cannot compile VQE that uses custom operators. "
                                           "Set the compile flag to False.")
             for gate in self.circuit.queue:
                 _ = gate.cache
-            loss = K.compile(_loss)
+            loss = self.hamiltonian.backend.compile(_loss)
         else:
             loss = _loss
 
         if method == "cma":
-            dtype = getattr(K.np, K._dtypes.get('DTYPE'))
+            dtype = getattr(self.hamiltonian.backend.np, self.hamiltonian.backend._dtypes.get('DTYPE'))
             loss = lambda p, c, h: dtype(_loss(p, c, h))
         elif method != "sgd":
-            loss = lambda p, c, h: K.to_numpy(_loss(p, c, h))
+            loss = lambda p, c, h: self.hamiltonian.backend.to_numpy(_loss(p, c, h))
 
         result, parameters, extra = self.optimizers.optimize(loss, initial_state,
                                                              args=(self.circuit, self.hamiltonian),
@@ -101,7 +101,7 @@ class AAVQE(object):
     algorithm. See https://arxiv.org/abs/1806.02287.
 
     Args:
-        circuit (:class:`qibo.abstractions.circuit.AbstractCircuit`): variational ansatz.
+        circuit (:class:`qibo.models.circuit.Circuit`): variational ansatz.
         easy_hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): initial Hamiltonian object.
         problem_hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): problem Hamiltonian object.
         s (callable): scheduling function of time that defines the adiabatic
@@ -233,7 +233,7 @@ class QAOA(object):
     The QAOA is introduced in `arXiv:1411.4028 <https://arxiv.org/abs/1411.4028>`_.
 
     Args:
-        hamiltonian (:class:`qibo.abstractions.hamiltonians.Hamiltonian`): problem Hamiltonian
+        hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): problem Hamiltonian
             whose ground state is sought.
         mixer (:class:`qibo.abstractions.hamiltonians.Hamiltonian`): mixer Hamiltonian.
             Must be of the same type and act on the same number of qubits as ``hamiltonian``.
@@ -265,7 +265,7 @@ class QAOA(object):
 
     def __init__(self, hamiltonian, mixer=None, solver="exp", callbacks=[],
                  accelerators=None):
-        from qibo.abstractions.hamiltonians import AbstractHamiltonian
+        from qibo.hamiltonians.abstract import AbstractHamiltonian
         # list of QAOA variational parameters (angles)
         self.params = None
         # problem hamiltonian
@@ -411,9 +411,9 @@ class QAOA(object):
             return hamiltonian.expectation(state)
 
         if method == "sgd":
-            loss = lambda p, c, h: _loss(K.cast(p), c, h)
+            loss = lambda p, c, h: _loss(self.hamiltonian.backend.cast(p), c, h)
         else:
-            loss = lambda p, c, h: K.to_numpy(_loss(p, c, h))
+            loss = lambda p, c, h: self.hamiltonian.backend.to_numpy(_loss(p, c, h))
 
         result, parameters, extra = self.optimizers.optimize(loss, initial_p, args=(self, self.hamiltonian),
                                                              method=method, jac=jac, hess=hess, hessp=hessp,
@@ -431,9 +431,9 @@ class FALQON(QAOA):
     It inherits the QAOA class.
 
     Args:
-        hamiltonian (:class:`qibo.abstractions.hamiltonians.Hamiltonian`): problem Hamiltonian
+        hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): problem Hamiltonian
             whose ground state is sought.
-        mixer (:class:`qibo.abstractions.hamiltonians.Hamiltonian`): mixer Hamiltonian.
+        mixer (:class:`qibo.hamiltonians.Hamiltonian`): mixer Hamiltonian.
             If ``None``, :class:`qibo.hamiltonians.X` is used.
         solver (str): solver used to apply the exponential operators.
             Default solver is 'exp' (:class:`qibo.solvers.Exponential`).
@@ -491,10 +491,10 @@ class FALQON(QAOA):
         energy = [np.inf]
         callback_result = []
         for it in range(1, max_layers + 1):
-            beta = K.to_numpy(_loss(parameters, self, self.evol_hamiltonian))
+            beta = self.hamiltonian.backend.to_numpy(_loss(parameters, self, self.evol_hamiltonian))
 
             if tol is not None:
-                energy.append(K.to_numpy(_loss(parameters, self, self.hamiltonian)))
+                energy.append(self.hamiltonian.backend.to_numpy(_loss(parameters, self, self.hamiltonian)))
                 if abs(energy[-1] - energy[-2]) < tol:
                     break
 
