@@ -1,6 +1,6 @@
 import numpy as np
 from numpy.random import randn
-from qibo import gates, hamiltonians, models, get_backend, K
+from qibo import gates, hamiltonians, models, get_backend
 from qibo.config import raise_error
 
 
@@ -13,7 +13,7 @@ class StyleQGAN(object):
         latent_dim (int): number of latent dimensions.
         layers (int): number of layers for the quantum generator. Provide this value only if not using
             a custom quantum generator.
-        circuit (:class:`qibo.core.circuit.Circuit`): custom quantum generator circuit. If not provided,
+        circuit (:class:`qibo.models.circuit.Circuit`): custom quantum generator circuit. If not provided,
             the default quantum circuit will be used.
         set_parameters (function): function that creates the array of parameters for the quantum generator.
             If not provided, the default function will be used.
@@ -145,9 +145,9 @@ class StyleQGAN(object):
         # quantum generator circuit
         for i in range(samples):
             self.set_parameters(circuit, params, x_input, i)
-            circuit_execute = circuit.execute()
+            final_state = circuit.execute().state()
             for ii in range(self.nqubits):
-                X[ii].append(hamiltonians_list[ii].expectation(circuit_execute))
+                X[ii].append(hamiltonians_list[ii].expectation(final_state))
         # shape array
         X = tf.stack([X[i] for i in range(len(X))], axis=1)
         # create class labels

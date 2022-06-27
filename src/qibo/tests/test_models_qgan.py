@@ -2,7 +2,7 @@
 import pytest
 import numpy as np
 import qibo
-from qibo import gates, models, K
+from qibo import gates, models
 
 
 def generate_distribution(samples):
@@ -15,8 +15,8 @@ def generate_distribution(samples):
     return np.hstack((s1, s2, s3))
 
 
-def test_default_qgan():
-    if not K.check_availability("tensorflow"):  # pragma: no cover
+def test_default_qgan(backend):
+    if not backend.name == 'tensorflow':  # pragma: no cover
         pytest.skip("Skipping StyleQGAN test because tensorflow backend is not available.")
 
     original_backend = qibo.get_backend()
@@ -32,8 +32,8 @@ def test_default_qgan():
     qibo.set_backend(original_backend)
 
 
-def test_custom_qgan():
-    if not K.check_availability("tensorflow"):  # pragma: no cover
+def test_custom_qgan(backend):
+    if not backend.name == 'tensorflow':  # pragma: no cover
         pytest.skip("Skipping StyleQGAN test because tensorflow backend is not available.")
 
     original_backend = qibo.get_backend()
@@ -85,18 +85,18 @@ def test_custom_qgan():
     qibo.set_backend(original_backend)
 
 
-def test_qgan_errors(backend_name):
-    if not K.check_availability("tensorflow"):  # pragma: no cover
-        pytest.skip("Skipping StyleQGAN test because tensorflow backend is not available.")
+def test_qgan_errors(backend):
 
-    original_backend = qibo.get_backend()
-
-    if backend_name != "tensorflow":
-        qibo.set_backend(backend_name)
+    if backend.name != "tensorflow":
         with pytest.raises(RuntimeError):
             qgan = models.StyleQGAN(latent_dim=2)
 
+    if not backend.name == 'tensorflow':  # pragma: no cover
+        pytest.skip("Skipping StyleQGAN test because tensorflow backend is not available.")
+
+    original_backend = qibo.get_backend()
     qibo.set_backend("tensorflow")
+
     with pytest.raises(ValueError):
         qgan = models.StyleQGAN(latent_dim=2)
     circuit = models.Circuit(2)
@@ -120,8 +120,8 @@ def test_qgan_errors(backend_name):
     qibo.set_backend(original_backend)
 
 
-def test_qgan_custom_discriminator():
-    if not K.check_availability("tensorflow"):  # pragma: no cover
+def test_qgan_custom_discriminator(backend):
+    if not backend.name == 'tensorflow':  # pragma: no cover
         pytest.skip("Skipping StyleQGAN test because tensorflow backend is not available.")
 
     from tensorflow.keras.models import Sequential  # pylint: disable=E0611,E0401
@@ -140,8 +140,8 @@ def test_qgan_custom_discriminator():
     qibo.set_backend(original_backend)
 
 
-def test_qgan_circuit_error():
-    if not K.check_availability("tensorflow"):  # pragma: no cover
+def test_qgan_circuit_error(backend):
+    if not backend.name == 'tensorflow':  # pragma: no cover
         pytest.skip("Skipping StyleQGAN test because tensorflow backend is not available.")
 
     original_backend = qibo.get_backend()

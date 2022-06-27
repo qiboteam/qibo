@@ -18,7 +18,6 @@ INACTIVE_TESTS = {
     "qibo.tests.test_core_measurements",
     "qibo.tests.test_core_states_distributed",
     "qibo.tests.test_core_states",
-    "qibo.tests.test_models_qgan",
     "qibo.tests.test_parallel"
 }
 
