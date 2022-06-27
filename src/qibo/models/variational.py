@@ -66,7 +66,7 @@ class VQE(object):
         """
         def _loss(params, circuit, hamiltonian):
             circuit.set_parameters(params)
-            final_state = circuit()
+            final_state = circuit().state()
             return hamiltonian.expectation(final_state)
 
         if compile:
@@ -261,7 +261,6 @@ class QAOA(object):
             best_energy, final_parameters, extra = qaoa.minimize(initial_parameters, method="BFGS")
     """
     from qibo import hamiltonians, optimizers
-    from qibo.core import states
 
     def __init__(self, hamiltonian, mixer=None, solver="exp", callbacks=[],
                  accelerators=None):
@@ -308,7 +307,6 @@ class QAOA(object):
         self.ham_solver = solvers.factory[solver](1e-2, self.hamiltonian)
         self.mix_solver = solvers.factory[solver](1e-2, self.mixer)
 
-        self.state_cls = self.states.VectorState
         self.callbacks = callbacks
         self.accelerators = accelerators
         self.normalize_state = StateEvolution._create_normalize_state(
@@ -365,8 +363,9 @@ class QAOA(object):
                 state = self.states.DistributedState.plus_state(c)
             return c.get_initial_state(state)
 
-        if state is None:
-            return self.state_cls.plus_state(self.nqubits).tensor
+        # if state is None:
+        #     #TODO: implement plus_state
+        #     return self.state_cls.plus_state(self.nqubits).tensor
         return Circuit.get_initial_state(self, state)
 
     def minimize(self, initial_p, initial_state=None, method='Powell',
