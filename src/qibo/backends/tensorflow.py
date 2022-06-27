@@ -212,6 +212,18 @@ class TensorflowBackend(NumpyBackend):
         state = self.tf.tensor_scatter_nd_update(state, idx, update)
         return state
 
+    def plus_state(self, nqubits):
+        state = self.tf.ones((2 ** nqubits,), dtype=self.dtype)
+        norm = self.tf.cast(self.np.sqrt(2 ** nqubits), dtype=self.dtype)
+        state = self.tf.math.scalar_mul(1/norm, state)
+        return state
+
+    def plus_density_matrix(self, nqubits):
+        state = self.tf.zeros(2 * (2 ** nqubits,), dtype=self.dtype)
+        norm = self.tf.cast(2 ** nqubits, dtype=self.dtype)
+        state = self.tf.math.scalar_mul(1/norm, state)
+        return state
+
     def asmatrix(self, gate):
         npmatrix = super().asmatrix(gate)
         return self.tf.cast(npmatrix, dtype=self.dtype)

@@ -357,15 +357,16 @@ class QAOA(object):
 
     def get_initial_state(self, state=None):
         """"""
-        if self.accelerators is not None:
-            c = self.hamiltonian.circuit(self.params[0])
-            if state is None:
-                state = self.states.DistributedState.plus_state(c)
-            return c.get_initial_state(state)
+        #TODO: update this
+        # if self.accelerators is not None:
+        #     c = self.hamiltonian.circuit(self.params[0])
+        #     if state is None:
+        #         state = self.states.DistributedState.plus_state(c)
+        #     return c.get_initial_state(state)
 
-        # if state is None:
-        #     #TODO: implement plus_state
-        #     return self.state_cls.plus_state(self.nqubits).tensor
+        if state is None:
+            return self.hamiltonian.backend.plus_state(self.nqubits)
+            #TODO: update this line, is get_initial_state necessary for circuits?
         return Circuit.get_initial_state(self, state)
 
     def minimize(self, initial_p, initial_state=None, method='Powell',

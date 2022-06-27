@@ -59,6 +59,16 @@ class NumpyBackend(Simulator):
         state[0, 0] = 1
         return state
 
+    def plus_state(self, nqubits):
+        state = np.ones(2 ** nqubits, dtype=self.dtype)
+        state /= np.sqrt(2 ** nqubits)
+        return state
+
+    def plus_density_matrix(self, nqubits):
+        state = np.ones(2 * (2 ** nqubits,), dtype=self.dtype)
+        state /= 2 ** nqubits
+        return state
+
     def asmatrix_fused(self, fgate):
         rank = len(fgate.target_qubits)
         matrix = np.eye(2 ** rank, dtype=self.dtype)
