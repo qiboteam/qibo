@@ -604,13 +604,13 @@ class RXX(MatrixGate, abstract_gates.RXX):
         MatrixGate.__init__(self)
         abstract_gates.RXX.__init__(self, q0, q1, theta, trainable)
 
-    @property
-    def custom_op_matrix(self):
-        if self._custom_op_matrix is None:
-            theta = self.parameters
-            cos, isin = K.qnp.cos(theta*0.5) + 0j, -1j * K.qnp.sin(theta*0.5)            
-            #self._custom_op_matrix = K.cast([cos, isin, isin, cos]) #?
-        return self._custom_op_matrix
+    # @property
+    # def custom_op_matrix(self):
+    #     if self._custom_op_matrix is None:
+    #         theta = self.parameters
+    #         cos, isin = K.qnp.cos(theta*0.5) + 0j, -1j * K.qnp.sin(theta*0.5)            
+    #         #self._custom_op_matrix = K.cast([cos, isin, isin, cos]) #?
+    #     return self._custom_op_matrix
 
     def _construct_unitary(self):
         theta = self.parameters

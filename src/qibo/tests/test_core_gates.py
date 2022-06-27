@@ -264,6 +264,18 @@ def test_fsim(backend):
     K.assert_allclose(final_state, target_state)
 
 
+def test_RXX(backend):
+    theta = 0.1234
+    gatelist = [gates.H(0), gates.H(1), gates.RXX(0, 1, theta)]
+    final_state = apply_gates(gatelist, nqubits=2)
+    target_state = np.ones_like(K.to_numpy(final_state)) / 2.0
+    cos, isin = np.cos(theta*0.5), -1j * np.sin(theta*0.5)
+    matrix = cos*np.eye(4, dtype=target_state.dtype)
+    matrix[0, 3], matrix[1, 2], matrix[2, 1], matrix[3, 0]= isin, isin, isin, isin
+    target_state = matrix.dot(target_state)
+    K.assert_allclose(final_state, target_state)
+
+
 def test_generalized_fsim(backend):
     phi = np.random.random()
     rotation = np.random.random((2, 2)) + 1j * np.random.random((2, 2))
