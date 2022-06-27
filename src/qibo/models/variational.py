@@ -279,7 +279,8 @@ class QAOA(object):
         if mixer is None:
             trotter = isinstance(
                 self.hamiltonian, self.hamiltonians.SymbolicHamiltonian)
-            self.mixer = self.hamiltonians.X(self.nqubits, dense=not trotter)
+            self.mixer = self.hamiltonians.X(self.nqubits, dense=not trotter,
+                                             backend=self.hamiltonian.backend)
         else:
             if type(mixer) != type(hamiltonian):
                   raise_error(TypeError, "Given Hamiltonian is of type {} "
@@ -310,11 +311,12 @@ class QAOA(object):
         self.mix_solver = solvers.factory[solver](1e-2, self.mixer)
 
         self.callbacks = callbacks
+        self.backend = hamiltonian.backend # to avoid error with _create_calculate_callbacks
         self.accelerators = accelerators
         self.normalize_state = StateEvolution._create_normalize_state(
             self, solver)
-        self.calculate_callbacks = StateEvolution._create_calculate_callbacks(
-            self, accelerators)
+        self.calculate_callbacks = StateEvolution._create_calculate_callbacks(self,
+            accelerators)
 
     def set_parameters(self, p):
         """Sets the variational parameters.
@@ -369,7 +371,7 @@ class QAOA(object):
         if state is None:
             return self.hamiltonian.backend.plus_state(self.nqubits)
             #TODO: update this line, is get_initial_state necessary for circuits?
-        return Circuit.get_initial_state(self, state)
+        return state # Circuit.get_initial_state(self, state)
 
     def minimize(self, initial_p, initial_state=None, method='Powell',
                  jac=None, hess=None, hessp=None, bounds=None, constraints=(),

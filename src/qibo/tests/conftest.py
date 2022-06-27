@@ -19,7 +19,6 @@ INACTIVE_TESTS = {
     "qibo.tests.test_core_states_distributed",
     "qibo.tests.test_core_states",
     "qibo.tests.test_models_qgan",
-    "qibo.tests.test_models_variational",
     "qibo.tests.test_parallel"
 }
 
@@ -57,7 +56,6 @@ def pytest_runtest_setup(item):
 def pytest_configure(config):
     config.addinivalue_line("markers", "linux: mark test to run only on linux")
 
-
 @pytest.fixture
 def backend(backend_name):
     yield get_backend(backend_name)
@@ -73,3 +71,6 @@ def pytest_generate_tests(metafunc):
 
     if "accelerators" in metafunc.fixturenames:
         metafunc.parametrize("accelerators", [None])
+
+    if "skip_parallel" in metafunc.fixturenames:
+        metafunc.parametrize("skip_parallel", [skip_parallel])
