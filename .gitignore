@@ -134,3 +134,6 @@ dmypy.json
 
 # tmp files
 tmp/
+
+# Mac
+.DS_Store

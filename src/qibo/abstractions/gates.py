@@ -1049,6 +1049,47 @@ class fSim(ParametrizedGate):
         return self.__class__(q0, q1, *(-x for x in self.parameters))
 
 
+class RXX(ParametrizedGate):
+    """The RXX gate defined in https://qiskit.org/documentation/stubs/qiskit.circuit.library.RXXGate.html
+    A parametric 2-qubit  interaction (rotation about XX).
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        cos \\theta*0.5 & 0 & 0 & -i\\sin\\theta*0.5 \\\\
+        0 & \\cos \\theta*0.5 & -i\\sin \\theta*0.5 & 0 \\\\
+        0 & -i\\sin \\theta*0.5 & \\cos \\theta*0.5 & 0 \\\\
+        -i\\sin \\theta*0.5 & 0 & 0 & cos \\theta*0.5 } \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the first qubit to .
+        q1 (int): the second qubit to .
+        theta (float): Angle for the two-qubit rotation.       
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
+            (default is ``True``).
+    """
+    # TODO: .
+
+    def __init__(self, q0, q1, theta, trainable=True):
+        super(RXX, self).__init__(trainable)
+        self.name = "RXX"
+        self.target_qubits = (q0, q1)
+
+        self.parameter_names = "theta"
+        self.parameters = theta
+        self.nparams = 1
+
+        self.init_args = [q0, q1]
+        self.init_kwargs = {"theta": theta, "trainable": trainable}
+
+    def _dagger(self) -> "Gate":
+        """"""
+        q0, q1 = self.target_qubits
+        return self.__class__(q0, q1, *(-x for x in self.parameters))
+
+    
 class GeneralizedfSim(ParametrizedGate):
     """The fSim gate with a general rotation.
 

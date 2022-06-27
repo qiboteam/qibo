@@ -598,6 +598,34 @@ class fSim(MatrixGate, abstract_gates.fSim):
         return K.cast(matrix)
 
 
+class RXX(MatrixGate, abstract_gates.RXX):
+
+    def __init__(self, q0, q1, theta, trainable=True):
+        MatrixGate.__init__(self)
+        abstract_gates.RXX.__init__(self, q0, q1, theta, trainable)
+
+    @property
+    def custom_op_matrix(self):
+        if self._custom_op_matrix is None:
+            theta = self.parameters
+            cos, isin = K.qnp.cos(theta*0.5) + 0j, -1j * K.qnp.sin(theta*0.5)            
+            #self._custom_op_matrix = K.cast([cos, isin, isin, cos]) #?
+        return self._custom_op_matrix
+
+    def _construct_unitary(self):
+        theta = self.parameters
+        if isinstance(theta, K.native_types) or isinstance(theta, K.native_types): # pragma: no cover
+            p = K
+        else:
+            p = K.qnp
+        cos, isin = p.cos(theta*0.5), -1j * p.sin(theta*0.5)
+        matrix = cos*p.eye(4)
+        #matrix[1, 1], matrix[2, 2] = cos, cos
+        matrix[0, 3], matrix[1, 2], matrix[2, 1], matrix[3, 0]= isin, isin, isin, isin
+        
+        return K.cast(matrix)
+
+
 class GeneralizedfSim(MatrixGate, abstract_gates.GeneralizedfSim):
 
     def __init__(self, q0, q1, unitary, phi, trainable=True):
