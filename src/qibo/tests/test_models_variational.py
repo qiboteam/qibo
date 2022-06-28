@@ -47,7 +47,7 @@ def test_vqc(backend, method, options, compile, filename):
     from qibo.optimizers import optimize
     def myloss(parameters, circuit, target):
         circuit.set_parameters(parameters)
-        state = backend.to_numpy(circuit().state())
+        state = backend.to_numpy(backend.execute_circuit(circuit).state())
         return 1 - np.abs(np.dot(np.conj(target), state))
 
     nqubits = 6
@@ -116,7 +116,6 @@ def test_vqe(backend, method, options, compile, filename, skip_parallel=True):
         circuit.add(gates.CZ(0, nqubits-1))
     for q in range(nqubits):
         circuit.add(gates.RY(q, theta=1.0))
-
     hamiltonian = hamiltonians.XXZ(nqubits=nqubits, backend=backend)
     np.random.seed(0)
     initial_parameters = np.random.uniform(0, 2*np.pi, 2*nqubits*layers + nqubits)
