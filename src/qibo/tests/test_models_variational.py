@@ -8,7 +8,7 @@ import qibo
 from qibo import gates, models, hamiltonians
 from qibo.tests.utils import random_state
 from scipy.linalg import expm
-#TODO: fix skip-parallel
+
 REGRESSION_FOLDER = pathlib.Path(__file__).with_name("regressions")
 
 
@@ -86,7 +86,7 @@ test_values = [("Powell", {'maxiter': 1}, True, 'vqe_powell.out'),
                ("sgd", {"nepochs": 5}, False, None),
                ("sgd", {"nepochs": 5}, True, None)]
 @pytest.mark.parametrize(test_names, test_values)
-def test_vqe(backend, method, options, compile, filename, skip_parallel=True):
+def test_vqe(backend, method, options, compile, filename, skip_parallel):
     """Performs a VQE circuit minimization test."""
     original_threads = qibo.get_threads()
     if (method == "sgd" or compile) and qibo.get_backend() != "tensorflow":
@@ -316,7 +316,7 @@ test_values = [("Powell", {'maxiter': 1}, False, 'aavqe_powell.out'),
                ("cma", {"maxfevals": 2}, False, None),
                ("parallel_L-BFGS-B", {'maxiter': 1}, False, None)]
 @pytest.mark.parametrize(test_names, test_values)
-def test_aavqe(backend, method, options, compile, filename, skip_parallel=True):
+def test_aavqe(backend, method, options, compile, filename, skip_parallel):
     """Performs a AAVQE circuit minimization test."""
     original_threads = qibo.get_threads()
 
