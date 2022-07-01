@@ -16,7 +16,7 @@ class NumpyBackend(Simulator):
         self.matrices = Matrices(self.dtype)
         self.tensor_types = np.ndarray
         # TODO: is numeric_types necessary
-        self.numeric_types = (np.int, np.float, np.complex, np.int32,
+        self.numeric_types = (int, float, complex, np.int32,
                               np.int64, np.float32, np.float64,
                               np.complex64, np.complex128)
 
