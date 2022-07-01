@@ -66,7 +66,8 @@ class VQE(object):
         """
         def _loss(params, circuit, hamiltonian):
             circuit.set_parameters(params)
-            final_state = circuit().state()
+            result = self.hamiltonian.backend.execute_circuit(circuit)
+            final_state = result.state()
             return hamiltonian.expectation(final_state)
 
         if compile:
