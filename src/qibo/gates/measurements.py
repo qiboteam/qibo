@@ -214,7 +214,25 @@ class M(Gate):
         raise_error(NotImplementedError, "Measurement gates do not have matrix representation.")
 
     def apply(self, backend, state, nqubits):
-        return backend.collapse_state(self, state, nqubits)
+        qubits = sorted(self.target_qubits)
+        # measure and get result
+        probs = backend.calculate_probabilities(state, qubits, nqubits)
+        shot = backend.sample_shots(probs, 1)
+        # update the gate's result with the measurement outcome
+        binshot = backend.samples_to_binary(shot, len(qubits))[0]
+        self.result.backend = backend
+        self.result.append(binshot)
+        # collapse state
+        return backend.collapse_state(state, qubits, shot, nqubits)
 
     def apply_density_matrix(self, backend, state, nqubits):
-        return backend.collapse_density_matrix(self, state, nqubits)
+        qubits = sorted(self.target_qubits)
+        # measure and get result
+        probs = backend.calculate_probabilities_density_matrix(state, qubits, nqubits)
+        shot = backend.sample_shots(probs, 1)
+        binshot = backend.samples_to_binary(shot, len(qubits))[0]
+        # update the gate's result with the measurement outcome
+        self.result.backend = backend
+        self.result.append(binshot)
+        # collapse state
+        return backend.collapse_density_matrix(state, qubits, shot, nqubits)
