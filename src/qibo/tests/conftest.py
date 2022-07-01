@@ -58,6 +58,12 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "linux: mark test to run only on linux")
 
 
+def pytest_addoption(parser):
+    parser.addoption("--skip-parallel", action="store_true",
+                     help="Skip tests that use the ``qibo.parallel`` module.")
+    # parallel tests make the CI hang
+
+
 @pytest.fixture
 def backend(backend_name):
     yield get_backend(backend_name)
