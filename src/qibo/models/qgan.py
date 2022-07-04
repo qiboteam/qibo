@@ -43,8 +43,9 @@ class StyleQGAN(object):
     """
 
     def __init__(self, latent_dim, layers=None, circuit=None, set_parameters=None, discriminator=None):
-        if get_backend() != 'tensorflow':
-            raise_error(RuntimeError, "StyleQGAN model requires tensorflow backend.")
+        # qgan works only with tensorflow
+        from qibo.backends import TensorflowBackend
+        self.backend = TensorflowBackend()
 
         if layers is not None and circuit is not None:
             raise_error(ValueError, "Set the number of layers for the default quantum generator "
@@ -145,7 +146,7 @@ class StyleQGAN(object):
         # quantum generator circuit
         for i in range(samples):
             self.set_parameters(circuit, params, x_input, i)
-            final_state = circuit.execute().state()
+            final_state = self.backend.execute_circuit(circuit, return_array=True)
             for ii in range(self.nqubits):
                 X[ii].append(hamiltonians_list[ii].expectation(final_state))
         # shape array

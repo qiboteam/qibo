@@ -61,7 +61,7 @@ class _Queue(list):
         for gate in self:
             if not gate.marked:
                 if len(gate.gates) == 1:
-                    # replace ``FusedGate``s that contain only one gate 
+                    # replace ``FusedGate``s that contain only one gate
                     # by this gate for efficiency
                     queue.append(gate.gates[0])
                 else:
@@ -226,17 +226,17 @@ class Circuit:
     def light_cone(self, *qubits):
         """Reduces circuit to the qubits relevant for an observable.
 
-        Useful for calculating expectation values of local observables without 
+        Useful for calculating expectation values of local observables without
         requiring simulation of large circuits.
-        Uses the light cone construction described in 
+        Uses the light cone construction described in
         `issue #571 <https://github.com/qiboteam/qibo/issues/571>`_.
 
         Args:
             qubits (int): Qubit ids that the observable has support on.
 
         Returns:
-            circuit (qibo.models.Circuit): Circuit that contains only 
-                the qubits that are required for calculating expectation 
+            circuit (qibo.models.Circuit): Circuit that contains only
+                the qubits that are required for calculating expectation
                 involving the given observable qubits.
             qubit_map (dict): Dictionary mapping the qubit ids of the original
                 circuit to the ids in the new one.
@@ -248,11 +248,11 @@ class Circuit:
         for gate in reversed(self.queue):
             gate_qubits = set(gate.qubits)
             if gate_qubits & qubits:
-                # if the gate involves any qubit included in the 
+                # if the gate involves any qubit included in the
                 # light cone, add all its qubits in the light cone
                 qubits |= gate_qubits
                 gates.append(gate)
-        
+
         # Create a new circuit ignoring gates that are not in the light cone
         qubit_map = {q: i for i, q in enumerate(sorted(qubits))}
         kwargs = dict(self.init_kwargs)
@@ -630,12 +630,8 @@ class Circuit:
                 params = [0.123, 0.456, 0.789, 0.321]
                 c.set_parameters(params)
         """
-        import tensorflow as tf
-        if isinstance(parameters, (list, tuple, np.ndarray)):
-            self._set_parameters_list(parameters, len(parameters))
-        elif isinstance(parameters, (tf.Tensor, tf.Variable)):
-            self._set_parameters_list(parameters, int(parameters.shape[0]))
-        elif isinstance(parameters, dict):
+        from collections.abc import Iterable
+        if isinstance(parameters, dict):
             diff = set(parameters.keys()) - self.trainable_gates.set
             if diff:
                 raise_error(KeyError, "Dictionary contains gates {} which are "
@@ -643,6 +639,12 @@ class Circuit:
                                       "of the circuit.".format(diff))
             for gate, params in parameters.items():
                 gate.parameters = params
+        elif isinstance(parameters, Iterable) and not isinstance(parameters, (set, str)):
+            try:
+                nparams = int(parameters.shape[0])
+            except AttributeError:
+                nparams = len(parameters)
+            self._set_parameters_list(parameters, nparams)
         else:
             raise_error(TypeError, "Invalid type of parameters {}."
                                    "".format(type(parameters)))
@@ -790,8 +792,8 @@ class Circuit:
 
     def unitary(self, backend=None):
         """Creates the unitary matrix corresponding to all circuit gates.
-        
-        This is a ``(2 ** nqubits, 2 ** nqubits)`` matrix obtained by 
+
+        This is a ``(2 ** nqubits, 2 ** nqubits)`` matrix obtained by
         multiplying all circuit gates.
         """
         from qibo import gates

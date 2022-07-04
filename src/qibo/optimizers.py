@@ -72,9 +72,12 @@ def optimize(loss, initial_parameters, args=(), method='Powell',
             backend = GlobalBackend()
         return sgd(loss, initial_parameters, args, options, compile, backend)
     else:
+        if backend is None:
+            from qibo.backends import GlobalBackend
+            backend = GlobalBackend()
         return newtonian(loss, initial_parameters, args, method,
                          jac, hess, hessp, bounds, constraints, tol,
-                         callback, options, processes)
+                         callback, options, processes, backend)
 
 
 def cmaes(loss, initial_parameters, args=(), options=None):
@@ -97,7 +100,7 @@ def cmaes(loss, initial_parameters, args=(), options=None):
 
 def newtonian(loss, initial_parameters, args=(), method='Powell',
               jac=None, hess=None, hessp=None, bounds=None, constraints=(),
-              tol=None, callback=None, options=None, processes=None):
+              tol=None, callback=None, options=None, processes=None, backend=None):
     """Newtonian optimization approaches based on ``scipy.optimize.minimize``.
 
     For more details check the `scipy documentation <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
@@ -134,7 +137,7 @@ def newtonian(loss, initial_parameters, args=(), method='Powell',
     """
     if method == 'parallel_L-BFGS-B':  # pragma: no cover
         from qibo.parallel import _check_parallel_configuration
-        _check_parallel_configuration(processes)  # pylint: disable=E1120
+        _check_parallel_configuration(processes, backend)  # pylint: disable=E1120
         o = ParallelBFGS(loss, args=args, processes=processes,
                          bounds=bounds, callback=callback, options=options)
         m = o.run(initial_parameters)

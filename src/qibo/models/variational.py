@@ -145,8 +145,8 @@ class AAVQE(object):
             raise_error(ValueError, "The easy Hamiltonian has {} qubits while problem Hamiltonian has {}."
                                     "".format(easy_hamiltonian.nqubits, problem_hamiltonian.nqubits))
 
-        self.ATOL = bounds_tolerance 
-        self.ATOL_TIME = time_tolerance 
+        self.ATOL = bounds_tolerance
+        self.ATOL_TIME = time_tolerance
 
         self._circuit = circuit
         self._h0 = easy_hamiltonian
@@ -161,7 +161,7 @@ class AAVQE(object):
             raise_error(ValueError,"Scheduling function must take only one argument,"
                                    "but the function proposed takes {}.".format(nparams))
         self.set_schedule(s)
-    
+
     def set_schedule(self, func):
         """ Set scheduling function s(t) as func."""
         #check boundary conditions
@@ -201,7 +201,7 @@ class AAVQE(object):
 
         Args:
             params (np.ndarray or list): initial guess for the parameters of the variational circuit.
-            method (str): optimizer to employ. 
+            method (str): optimizer to employ.
             jac (dict): Method for computing the gradient vector for scipy optimizers.
             hess (dict): Method for computing the hessian matrix for scipy optimizers.
             hessp (callable): Hessian of objective function times an arbitrary
@@ -218,8 +218,8 @@ class AAVQE(object):
         while (t-self._t_max)<=self.ATOL_TIME:
             H = self.hamiltonian(t)
             vqe = models.VQE(self._circuit, H)
-            best, params, _ = vqe.minimize(params, method=method, jac=jac, hess=hess, hessp=hessp, 
-                                        bounds=bounds, constraints=constraints, tol=tol, 
+            best, params, _ = vqe.minimize(params, method=method, jac=jac, hess=hess, hessp=hessp,
+                                        bounds=bounds, constraints=constraints, tol=tol,
                                         options=options, compile=compile, processes=processes)
             t += self._dt
         return best, params
@@ -366,8 +366,7 @@ class QAOA(object):
 
         if state is None:
             return self.hamiltonian.backend.plus_state(self.nqubits)
-            #TODO: update this line, is get_initial_state necessary for circuits?
-        return state # Circuit.get_initial_state(self, state)
+        return self.hamiltonian.backend.cast(state)
 
     def minimize(self, initial_p, initial_state=None, method='Powell',
                  jac=None, hess=None, hessp=None, bounds=None, constraints=(),

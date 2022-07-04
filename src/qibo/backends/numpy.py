@@ -393,7 +393,7 @@ class NumpyBackend(Simulator):
         order += tuple(i for i in range(nqubits) if i not in qubits)
         order += tuple(i + nqubits for i in order)
         shape = 2 * (2 ** len(qubits), 2 ** (nqubits - len(qubits)))
-        
+
         state = self.np.transpose(state, order)
         state = self.np.reshape(state, shape)
         return self.np.einsum("abac->bc", state)
@@ -498,11 +498,11 @@ class NumpyBackend(Simulator):
                 [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
                 [0, 0, 0, 0, 2, 0, 0, 0, 0, 0]
             ]
-        elif name == "test_probabilistic_measurement": 
+        elif name == "test_probabilistic_measurement":
             return {0: 249, 1: 231, 2: 253, 3: 267}
-        elif name == "test_unbalanced_probabilistic_measurement": 
+        elif name == "test_unbalanced_probabilistic_measurement":
             return {0: 171, 1: 148, 2: 161, 3: 520}
-        elif name == "test_post_measurement_bitflips_on_circuit": 
+        elif name == "test_post_measurement_bitflips_on_circuit":
             return [
                 {5: 30}, {5: 18, 4: 5, 7: 4, 1: 2, 6: 1},
                 {4: 8, 2: 6, 5: 5, 1: 3, 3: 3, 6: 2, 7: 2, 0: 1}

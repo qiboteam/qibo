@@ -72,6 +72,9 @@ def pytest_generate_tests(metafunc):
     if module_name in INACTIVE_TESTS:
         pytest.skip()
 
+    if module_name == "qibo.tests.test_models_qgan" and "tensorflow" not in AVAILABLE_BACKENDS:
+        pytest.skip("Skipping QGAN tests because tensorflow is not available.")
+
     if "backend_name" in metafunc.fixturenames:
         metafunc.parametrize("backend_name", AVAILABLE_BACKENDS)
 
