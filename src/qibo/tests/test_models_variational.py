@@ -89,14 +89,14 @@ test_values = [("Powell", {'maxiter': 1}, True, 'vqe_powell.out'),
 def test_vqe(backend, method, options, compile, filename, skip_parallel):
     """Performs a VQE circuit minimization test."""
     original_threads = qibo.get_threads()
-    if (method == "sgd" or compile) and qibo.get_backend() != "tensorflow":
+    if (method == "sgd" or compile) and backend.name != "tensorflow":
         pytest.skip("Skipping SGD test for unsupported backend.")
 
     if method == 'parallel_L-BFGS-B':  # pragma: no cover
         if skip_parallel:
             pytest.skip("Skipping parallel test.")
         from qibo.tests.test_parallel import is_parallel_supported
-        backend_name = qibo.get_backend()
+        backend_name = backend.name
         if not is_parallel_supported(backend_name):
             pytest.skip("Skipping parallel test due to unsupported configuration.")
         qibo.set_threads(1)
@@ -129,35 +129,6 @@ def test_vqe(backend, method, options, compile, filename, skip_parallel):
     if filename is not None:
         assert_regression_fixture(backend, params, filename)
     qibo.set_threads(original_threads)
-
-
-def test_vqe_custom_gates_errors(backend):
-    """Check that ``RuntimeError``s is raised when using custom gates."""
-    original_backend = qibo.get_backend()
-    try:
-        qibo.set_backend("qibojit")
-    except ValueError:  # pragma: no cover
-        pytest.skip("Custom backend not available.")
-
-    nqubits = 6
-    circuit = models.Circuit(nqubits)
-    for q in range(nqubits):
-        circuit.add(gates.RY(q, theta=0))
-    for q in range(0, nqubits-1, 2):
-        circuit.add(gates.CZ(q, q+1))
-
-    hamiltonian = hamiltonians.XXZ(nqubits=nqubits, backend=backend)
-    initial_parameters = np.random.uniform(0, 2*np.pi, 2*nqubits + nqubits)
-    v = models.VQE(circuit, hamiltonian)
-    # compile with custom gates
-    with pytest.raises(RuntimeError):
-        best, params, _ = v.minimize(initial_parameters, method="BFGS",
-                                     options={'maxiter': 1}, compile=True)
-    # use SGD with custom gates
-    with pytest.raises(RuntimeError):
-        best, params, _ = v.minimize(initial_parameters, method="sgd",
-                                     compile=False)
-    qibo.set_backend(original_backend)
 
 
 def test_initial_state(backend, accelerators):

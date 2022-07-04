@@ -3,7 +3,7 @@ from qibo.parallel import ParallelResources, _executor
 
 def optimize(loss, initial_parameters, args=(), method='Powell',
              jac=None, hess=None, hessp=None, bounds=None, constraints=(),
-             tol=None, callback=None, options=None, compile=False, processes=None):
+             tol=None, callback=None, options=None, compile=False, processes=None, backend=None):
     """Main optimization method. Selects one of the following optimizers:
         - :meth:`qibo.optimizers.cmaes`
         - :meth:`qibo.optimizers.newtonian`
@@ -67,7 +67,10 @@ def optimize(loss, initial_parameters, args=(), method='Powell',
     if method == "cma":
         return cmaes(loss, initial_parameters, args, options)
     elif method == "sgd":
-        return sgd(loss, initial_parameters, args, options, compile)
+        if backend is None:
+            from qibo.backends import GlobalBackend
+            backend = GlobalBackend()
+        return sgd(loss, initial_parameters, args, options, compile, backend)
     else:
         return newtonian(loss, initial_parameters, args, method,
                          jac, hess, hessp, bounds, constraints, tol,
@@ -165,7 +168,7 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False, backend=
               a message of the loss function.
     """
     from qibo.config import log, raise_error
-    if not backend == 'tensorflow':
+    if not backend.name == 'tensorflow':
         raise_error(RuntimeError, "SGD optimizer requires Tensorflow backend.")
 
     sgd_options = {"nepochs": 1000000,

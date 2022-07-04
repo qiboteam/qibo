@@ -66,17 +66,11 @@ class VQE(object):
         """
         def _loss(params, circuit, hamiltonian):
             circuit.set_parameters(params)
-            result = self.hamiltonian.backend.execute_circuit(circuit)
+            result = hamiltonian.backend.execute_circuit(circuit)
             final_state = result.state()
             return hamiltonian.expectation(final_state)
 
         if compile:
-            #TODO: introduce is_custom attribute or maybe just compare with qibojit
-            if not self.hamiltonian.backend == 'qibojit':
-                raise_error(RuntimeError, "Cannot compile VQE that uses custom operators. "
-                                          "Set the compile flag to False.")
-            for gate in self.circuit.queue:
-                _ = gate.cache
             loss = self.hamiltonian.backend.compile(_loss)
         else:
             loss = _loss
@@ -94,7 +88,8 @@ class VQE(object):
                                                              method=method, jac=jac, hess=hess, hessp=hessp,
                                                              bounds=bounds, constraints=constraints,
                                                              tol=tol, callback=callback, options=options,
-                                                             compile=compile, processes=processes)
+                                                             compile=compile, processes=processes,
+                                                             backend=self.hamiltonian.backend)
         self.circuit.set_parameters(parameters)
         return result, parameters, extra
 

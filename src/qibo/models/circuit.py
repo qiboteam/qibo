@@ -630,8 +630,11 @@ class Circuit:
                 params = [0.123, 0.456, 0.789, 0.321]
                 c.set_parameters(params)
         """
+        import tensorflow as tf
         if isinstance(parameters, (list, tuple, np.ndarray)):
             self._set_parameters_list(parameters, len(parameters))
+        elif isinstance(parameters, (tf.Tensor, tf.Variable)):
+            self._set_parameters_list(parameters, int(parameters.shape[0]))
         elif isinstance(parameters, dict):
             diff = set(parameters.keys()) - self.trainable_gates.set
             if diff:
