@@ -66,7 +66,7 @@ class Hamiltonian(AbstractHamiltonian):
                 the Hamiltonian to a pair of (target, matrix).
 
         Returns:
-            A :class:`qibo.abstractions.hamiltonians.SymbolicHamiltonian` object
+            A :class:`qibo.hamiltonians.SymbolicHamiltonian` object
             that implements the Hamiltonian represented by the given symbolic
             expression.
         """
@@ -270,7 +270,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             self.form = form
     @property
     def dense(self):
-        """Creates the equivalent :class:`qibo.abstractions.hamiltonians.MatrixHamiltonian`."""
+        """Creates the equivalent :class:`qibo.hamiltonians.MatrixHamiltonian`."""
         if self._dense is None:
             log.warning("Calculating the dense form of a symbolic Hamiltonian. "
                         "This operation is memory inefficient.")

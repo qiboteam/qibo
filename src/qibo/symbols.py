@@ -15,7 +15,7 @@ class Symbol(sympy.Symbol):
         .. testcode::
 
             from qibo import hamiltonians
-            from qibo.hamiltonians.symbols import X, Y, Z
+            from qibo.symbols import X, Y, Z
             # construct a XYZ Hamiltonian on two qubits using Qibo symbols
             form = X(0) * X(1) + Y(0) * Y(1) + Z(0) * Z(1)
             ham = hamiltonians.SymbolicHamiltonian(form)
