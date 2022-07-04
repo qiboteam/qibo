@@ -179,8 +179,6 @@ class Simulator(Backend):
                     state = self.cast(initial_state)
 
                 for gate in circuit.queue:
-                    if gate.symbolic_parameters:
-                        gate.substitute_symbols()
                     state = gate.apply_density_matrix(self, state, nqubits)
 
             else:
@@ -191,8 +189,6 @@ class Simulator(Backend):
                     state = self.cast(initial_state)
 
                 for gate in circuit.queue:
-                    if gate.symbolic_parameters:
-                        gate.substitute_symbols()
                     state = gate.apply(self, state, nqubits)
 
             if return_array:
