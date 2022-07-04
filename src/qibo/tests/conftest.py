@@ -12,16 +12,15 @@ INACTIVE_TESTS = {
     "qibo.tests.test_backends_agreement",
     "qibo.tests.test_backends_init",
     "qibo.tests.test_backends_matrices",
-    "qibo.tests.test_core_circuit_backpropagation",
     "qibo.tests.test_core_distcircuit_execution",
     "qibo.tests.test_core_distcircuit",
     "qibo.tests.test_core_distutils",
     "qibo.tests.test_core_measurements",
     "qibo.tests.test_core_states_distributed",
     "qibo.tests.test_core_states",
-    "qibo.tests.test_models_evolution",
     "qibo.tests.test_models_qgan",
     "qibo.tests.test_models_variational",
+    "qibo.tests.test_parallel"
 }
 
 # backends to be tested
@@ -57,6 +56,12 @@ def pytest_runtest_setup(item):
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "linux: mark test to run only on linux")
+
+
+def pytest_addoption(parser):
+    parser.addoption("--skip-parallel", action="store_true",
+                     help="Skip tests that use the ``qibo.parallel`` module.")
+    # parallel tests make the CI hang
 
 
 @pytest.fixture

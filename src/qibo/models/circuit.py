@@ -133,6 +133,7 @@ class Circuit:
         self.measurement_gate_result = None
 
         self._final_state = None
+        self.compiled = None
         self.repeated_execution = False
 
         self.density_matrix = density_matrix
@@ -811,14 +812,37 @@ class Circuit:
                                       "circuit is executed.")
         return self._final_state
 
+    def compile(self, backend=None):
+        if self.compiled:
+            raise_error(RuntimeError, "Circuit is already compiled.")
+        if not self.queue:
+            raise_error(RuntimeError, "Cannot compile circuit without gates.")
+        for gate in self.queue:
+            if isinstance(gate, gates.CallbackGate):
+                raise_error(NotImplementedError, "Circuit compilation is not available with callbacks.")
+        if backend is None:
+            from qibo.backends import GlobalBackend
+            backend = GlobalBackend()
+
+        from qibo.states import CircuitResult
+        executor = lambda state, nshots: backend.execute_circuit(self, state, nshots, return_array=True)
+        self.compiled = type("CompiledExecutor", (), {})()
+        self.compiled.executor = backend.compile(executor)
+        self.compiled.result = lambda state, nshots: CircuitResult(backend, self, state, nshots)
+
     def execute(self, initial_state=None, nshots=None):
         """Executes the circuit. Exact implementation depends on the backend.
 
         See :meth:`qibo.core.circuit.Circuit.execute` for more
         details.
         """
-        from qibo.backends import GlobalBackend
-        return GlobalBackend().execute_circuit(self, initial_state, nshots)
+        if self.compiled:
+            state = self.compiled.executor(initial_state, nshots)
+            self._final_state = self.compiled.result(state, nshots)
+            return self._final_state
+        else:
+            from qibo.backends import GlobalBackend
+            return GlobalBackend().execute_circuit(self, initial_state, nshots)
 
     def __call__(self, initial_state=None, nshots=None):
         """Equivalent to ``circuit.execute``."""

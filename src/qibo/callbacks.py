@@ -217,6 +217,14 @@ class Energy(Callback):
         super().__init__()
         self.hamiltonian = hamiltonian
 
+    def apply(self, backend, state):
+        assert type(self.hamiltonian.backend) == type(backend)
+        return self.hamiltonian.expectation(state)
+
+    def apply_density_matrix(self, backend, state):
+        assert type(self.hamiltonian.backend) == type(backend)
+        return self.hamiltonian.expectation(state)
+
 
 class Gap(Callback):
     """Callback for calculating the gap of adiabatic evolution Hamiltonians.
@@ -267,13 +275,44 @@ class Gap(Callback):
     """
 
     def __init__(self, mode: Union[str, int] = "gap", check_degenerate: bool = True):
-        super(Gap, self).__init__()
-        if isinstance(mode, str):
-            if mode != "gap":
-                raise_error(ValueError, "Unsupported mode {} for gap callback."
-                                        "".format(mode))
-        elif not isinstance(mode, int):
+        super().__init__()
+        if not isinstance(mode, (int, str)):
             raise_error(TypeError, "Gap callback mode should be integer or "
                                    "string but is {}.".format(type(mode)))
+        elif isinstance(mode, str) and mode != "gap":
+            raise_error(ValueError, "Unsupported mode {} for gap callback."
+                                    "".format(mode))
         self.mode = mode
         self.check_degenerate = check_degenerate
+        self.evolution = None
+
+    def apply(self, backend, state):
+        from qibo.config import log, EIGVAL_CUTOFF
+        if self.evolution is None:
+            raise_error(RuntimeError, "Gap callback can only be used in "
+                                      "adiabatic evolution models.")
+        hamiltonian = self.evolution.solver.current_hamiltonian  # pylint: disable=E1101
+        assert type(hamiltonian.backend) == type(backend)
+        # Call the eigenvectors so that they are cached for the ``exp`` call
+        hamiltonian.eigenvectors()
+        eigvals = hamiltonian.eigenvalues()
+        if isinstance(self.mode, int):
+            return backend.np.real(eigvals[self.mode])
+
+        # case: self.mode == "gap"
+        excited = 1
+        gap = backend.np.real(eigvals[excited] - eigvals[0])
+        if not self.check_degenerate:
+            return gap
+
+        while backend.np.less(gap, EIGVAL_CUTOFF):
+            gap = backend.np.real(eigvals[excited] - eigvals[0])
+            excited += 1
+        if excited > 1:
+            log.warning("The Hamiltonian is degenerate. Using eigenvalue {} "
+                        "to calculate gap.".format(excited))
+        return gap
+
+    def apply_density_matrix(self, backend, state):
+        raise_error(NotImplementedError, "Gap callback is not implemented for "
+                                         "density matrices.")

@@ -12,7 +12,6 @@ def test_eager_execute(backend, accelerators):
     backend.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.skip
 def test_compiled_execute(backend):
     def create_circuit(theta = 0.1234):
         c = Circuit(2)
@@ -28,17 +27,15 @@ def test_compiled_execute(backend):
 
     # Run eager circuit
     c1 = create_circuit()
-    r1 = c1.execute()
+    r1 = backend.execute_circuit(c1)
 
     # Run compiled circuit
     c2 = create_circuit()
-    c2.compile()
+    c2.compile(backend)
     r2 = c2()
-    init_state = c2.get_initial_state()
     np.testing.assert_allclose(r1, r2)
 
 
-@pytest.mark.skip
 def test_compiling_twice_exception(backend):
     """Check that compiling a circuit a second time raises error."""
     c = Circuit(2)

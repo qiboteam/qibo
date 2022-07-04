@@ -1,16 +1,17 @@
 """Models for time evolution of state vectors."""
-from qibo import solvers, optimizers, K
-from qibo.abstractions import hamiltonians
-from qibo.core import adiabatic, circuit, states
+from qibo import solvers, optimizers
 from qibo.config import log, raise_error
 from qibo.callbacks import Norm, Gap
+from qibo.hamiltonians.abstract import AbstractHamiltonian
+from qibo.hamiltonians.adiabatic import BaseAdiabaticHamiltonian, AdiabaticHamiltonian
+from qibo.hamiltonians.hamiltonians import SymbolicHamiltonian
 
 
 class StateEvolution:
     """Unitary time evolution of a state vector under a Hamiltonian.
 
     Args:
-        hamiltonian (:class:`qibo.abstractions.hamiltonians.Hamiltonian`): Hamiltonian
+        hamiltonian (:class:`qibo.hamiltonians.abstract.AbstractHamiltonian`): Hamiltonian
             to evolve under.
         dt (float): Time step to use for the numerical integration of
             Schrondiger's equation.
@@ -19,10 +20,10 @@ class StateEvolution:
             operator and 'rk4' or 'rk45' which use Runge-Kutta methods to
             integrate the Schordinger's time-dependent equation in time.
             When the 'exp' solver is used to evolve a
-            :class:`qibo.core.hamiltonians.SymbolicHamiltonian` then the
+            :class:`qibo.hamiltonians.hamiltonians.SymbolicHamiltonian` then the
             Trotter decomposition of the evolution operator will be calculated
             and used automatically. If the 'exp' is used on a dense
-            :class:`qibo.core.hamiltonians.Hamiltonian` the full Hamiltonian
+            :class:`qibo.core.hamiltonians.hamiltonians.Hamiltonian` the full Hamiltonian
             matrix will be exponentiated to obtain the exact evolution operator.
             Runge-Kutta solvers use simple matrix multiplications of the
             Hamiltonian to the state and no exponentiation is involved.
@@ -49,20 +50,21 @@ class StateEvolution:
 
     def __init__(self, hamiltonian, dt, solver="exp", callbacks=[],
                  accelerators=None):
-        hamtypes = (hamiltonians.AbstractHamiltonian, adiabatic.BaseAdiabaticHamiltonian)
+        hamtypes = (AbstractHamiltonian, BaseAdiabaticHamiltonian)
         if isinstance(hamiltonian, hamtypes):
             ham = hamiltonian
         else:
             ham = hamiltonian(0)
-            if not isinstance(ham, hamiltonians.AbstractHamiltonian):
+            if not isinstance(ham, AbstractHamiltonian):
                 raise TypeError("Hamiltonian type {} not understood."
                                 "".format(type(ham)))
         self.nqubits = ham.nqubits
+        self.backend = ham.backend
         if dt <= 0:
             raise_error(ValueError, f"Time step dt should be positive but is {dt}.")
         self.dt = dt
 
-        disthamtypes = (hamiltonians.SymbolicHamiltonian, adiabatic.BaseAdiabaticHamiltonian)
+        disthamtypes = (SymbolicHamiltonian, BaseAdiabaticHamiltonian)
         if accelerators is not None:
             if not isinstance(ham, disthamtypes) or solver != "exp":
                 raise_error(NotImplementedError, "Distributed evolution is only "
@@ -70,35 +72,34 @@ class StateEvolution:
                                                  "exponential solver.")
             ham.circuit(dt, accelerators)
         self.solver = solvers.factory[solver](self.dt, hamiltonian)
-
         self.callbacks = callbacks
         self.accelerators = accelerators
-        self.state_cls = states.VectorState
         self.normalize_state = self._create_normalize_state(solver)
         self.calculate_callbacks = self._create_calculate_callbacks(accelerators)
 
     def _create_normalize_state(self, solver):
         if "rk" in solver:
-            norm = Norm()
             log.info('Normalizing state during RK solution.')
-            return lambda s: s / K.cast(norm(s), dtype=s.dtype)
+            return lambda s: s / self.backend.calculate_norm(s)
         else:
             return lambda s: s
 
     def _create_calculate_callbacks(self, accelerators):
         def calculate_callbacks(state):
             for callback in self.callbacks:
-                callback.append(callback(state))
+                callback.append(callback.apply(self.backend, state))
 
         if accelerators is None:
             return calculate_callbacks
 
         def calculate_callbacks_distributed(state):
-            with K.on_cpu():
-                if not isinstance(state, K.tensor_types):
-                    state = state.tensor
-            with K.on_cpu():
-                calculate_callbacks(state)
+            # TODO: Fix this whn distributed circuit is implemented
+            raise_error(NotImplementedError)
+            #with K.on_cpu():
+            #    if not isinstance(state, K.tensor_types):
+            #        state = state.tensor
+            #with K.on_cpu():
+            #    calculate_callbacks(state)
 
         return calculate_callbacks_distributed
 
@@ -137,7 +138,7 @@ class StateEvolution:
             raise_error(ValueError, "StateEvolution cannot be used without "
                                     "initial state.")
         if self.accelerators is None:
-            return circuit.Circuit.get_initial_state(self, state)
+            return self.backend.cast(state)
         else:
             c = self.solver.hamiltonian(0).circuit(self.solver.dt)
             return c.get_initial_state(state)
@@ -150,8 +151,8 @@ class AdiabaticEvolution(StateEvolution):
         H(t) = (1 - s(t)) H_0 + s(t) H_1
 
     Args:
-        h0 (:class:`qibo.abstractions.hamiltonians.Hamiltonian`): Easy Hamiltonian.
-        h1 (:class:`qibo.abstractions.hamiltonians.Hamiltonian`): Problem Hamiltonian.
+        h0 (:class:`qibo.hamiltonians.abstract.AbstractHamiltonian`): Easy Hamiltonian.
+        h1 (:class:`qibo.hamiltonians.abstract.AbstractHamiltonian`): Problem Hamiltonian.
             These Hamiltonians should be time-independent.
         s (callable): Function of time that defines the scheduling of the
             adiabatic evolution. Can be either a function of time s(t) or a
@@ -164,10 +165,10 @@ class AdiabaticEvolution(StateEvolution):
             operator and 'rk4' or 'rk45' which use Runge-Kutta methods to
             integrate the Schordinger's time-dependent equation in time.
             When the 'exp' solver is used to evolve a
-            :class:`qibo.core.hamiltonians.SymbolicHamiltonian` then the
+            :class:`qibo.hamiltonians.hamiltonians.SymbolicHamiltonian` then the
             Trotter decomposition of the evolution operator will be calculated
             and used automatically. If the 'exp' is used on a dense
-            :class:`qibo.core.hamiltonians.Hamiltonian` the full Hamiltonian
+            :class:`qibo.hamiltonians.hamiltonians.Hamiltonian` the full Hamiltonian
             matrix will be exponentiated to obtain the exact evolution operator.
             Runge-Kutta solvers use simple matrix multiplications of the
             Hamiltonian to the state and no exponentiation is involved.
@@ -181,9 +182,8 @@ class AdiabaticEvolution(StateEvolution):
 
     def __init__(self, h0, h1, s, dt, solver="exp", callbacks=[],
                  accelerators=None):
-        self.hamiltonian = adiabatic.AdiabaticHamiltonian(h0, h1) # pylint: disable=E0110
-        super(AdiabaticEvolution, self).__init__(self.hamiltonian, dt, solver,
-                                                 callbacks, accelerators)
+        self.hamiltonian = AdiabaticHamiltonian(h0, h1) # pylint: disable=E0110
+        super().__init__(self.hamiltonian, dt, solver, callbacks, accelerators)
 
         # Set evolution model to "Gap" callback if one exists
         for callback in self.callbacks:
@@ -290,12 +290,12 @@ class AdiabaticEvolution(StateEvolution):
         if method == "sgd":
             loss = self._loss
         else:
-            loss = lambda p, ae, h1, msg, hist: K.to_numpy(self._loss(p, ae, h1, msg, hist))
+            loss = lambda p, ae, h1, msg, hist: self.backend.to_numpy(self._loss(p, ae, h1, msg, hist))
 
         args = (self, self.hamiltonian.h1, self.opt_messages, self.opt_history)
         result, parameters, extra = optimizers.optimize(
             loss, initial_parameters, args=args, method=method, options=options)
-        if isinstance(parameters, K.tensor_types) and not len(parameters.shape): # pragma: no cover
+        if isinstance(parameters, self.backend.tensor_types) and not len(parameters.shape): # pragma: no cover
             # some optimizers like ``Powell`` return number instead of list
             parameters = [parameters]
         self.set_parameters(parameters)

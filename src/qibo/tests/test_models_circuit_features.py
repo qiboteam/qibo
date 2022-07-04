@@ -298,11 +298,11 @@ def test_repeated_execute_pauli_noise_channel(backend):
         noiseless_c = Circuit(4)
         noiseless_c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
         for i in range(4):
-            if np.random.random() < 0.1:
+            if backend.np.random.random() < 0.1:
                 noiseless_c.add(gates.X(i))
-            if np.random.random() < 0.2:
+            if backend.np.random.random() < 0.2:
                 noiseless_c.add(gates.Y(i))
-            if np.random.random() < 0.3:
+            if backend.np.random.random() < 0.3:
                 noiseless_c.add(gates.Z(i))
         result = backend.execute_circuit(noiseless_c)
         target_state.append(result.state(numpy=True))
@@ -319,15 +319,15 @@ def test_repeated_execute_with_noise(backend):
     backend.set_seed(1234)
     final_state = backend.execute_circuit(noisy_c, nshots=20)
 
-    np.random.seed(1234)
+    backend.set_seed(1234)
     target_state = []
     for _ in range(20):
         noiseless_c = Circuit(4)
         for i, t in enumerate(thetas):
             noiseless_c.add(gates.RY(i, theta=t))
-            if np.random.random() < 0.2:
+            if backend.np.random.random() < 0.2:
                 noiseless_c.add(gates.X(i))
-            if np.random.random() < 0.1:
+            if backend.np.random.random() < 0.1:
                 noiseless_c.add(gates.Z(i))
         result = backend.execute_circuit(noiseless_c)
         target_state.append(result.state(numpy=True))

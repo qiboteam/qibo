@@ -75,7 +75,21 @@ def assert_cirq_gates_equivalent(qibo_gate, cirq_gate):
     Cirq gate parameters are extracted by parsing the gate string.
     """
     import re
-    pieces = [x for x in re.split("[()]", str(cirq_gate)) if x]
+
+    # Fix for cirq >= 0.15.0
+    chars = iter(str(cirq_gate))
+    clean_gate = []
+    open = False
+    for char in chars:
+        if char == "q":
+            open = True
+            next(chars)
+        elif open and char == ")":
+            open = False
+        else:
+            clean_gate.append(char)
+
+    pieces = [x for x in re.split("[()]", "".join(clean_gate)) if x]
     if len(pieces) == 2:
         gatename, targets = pieces
         theta = None
@@ -117,7 +131,6 @@ def test_x_decompose_with_cirq(target, controls, free):
     controls = [qubits[i] for i in controls]
     free = [qubits[i] for i in free]
     cirq_decomp = cirq.decompose_multi_controlled_x(controls, qubits[target], free)
-
     assert len(qibo_decomp) == len(cirq_decomp)
     for qibo_gate, cirq_gate in zip(qibo_decomp, cirq_decomp):
         assert_cirq_gates_equivalent(qibo_gate, cirq_gate)

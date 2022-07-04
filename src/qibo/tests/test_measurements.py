@@ -229,17 +229,13 @@ def test_circuit_copy_with_measurements(backend, accelerators):
         assert rg1[k] == rg2[k]
 
 
-@pytest.mark.skip
 def test_measurement_compiled_circuit(backend):
-    if backend.is_custom:
-        # use native gates because custom gates do not support compilation
-        pytest.skip("Custom backend does not support compilation.")
     c = models.Circuit(2)
     c.add(gates.X(0))
     c.add(gates.M(0))
     c.add(gates.M(1))
-    c.compile()
-    result = backend.execute_circuit(c, nshots=100)
+    c.compile(backend)
+    result = c(nshots=100)
     target_binary_samples = np.zeros((100, 2))
     target_binary_samples[:, 0] = 1
     assert_result(backend, result, 

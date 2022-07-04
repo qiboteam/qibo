@@ -102,7 +102,9 @@ def set_device(device):
     if device[0] != "/" or len(parts) < 2 or len(parts) > 3:
         raise_error(ValueError, "Device name should follow the pattern: "
                                 "/{device type}:{device number}.")
-    GlobalBackend().set_device(device)
+    backend = GlobalBackend()
+    backend.set_device(device)
+    log.info(f"Using {backend} backend on {backend.device}")
 
 
 def get_threads():

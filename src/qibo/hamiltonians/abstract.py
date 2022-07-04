@@ -1,6 +1,7 @@
 from abc import abstractmethod
 from qibo.config import raise_error
 
+
 class AbstractHamiltonian:
     """Qibo abstraction for Hamiltonian objects."""
 

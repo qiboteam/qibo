@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from qibo.config import raise_error
-from qibo.core import hamiltonians, terms
+from qibo.hamiltonians import hamiltonians, terms
 
 
 class AdiabaticHamiltonian(ABC):
@@ -50,13 +50,16 @@ class AdiabaticHamiltonian(ABC):
 
 
 class BaseAdiabaticHamiltonian:
-    """Adiabatic Hamiltonian that is a sum of :class:`qibo.core.hamiltonians.Hamiltonian`."""
+    """Adiabatic Hamiltonian that is a sum of :class:`qibo.hamiltonians.hamiltonians.Hamiltonian`."""
 
     def __init__(self, h0, h1):
         if h0.nqubits != h1.nqubits:
             raise_error(ValueError, "H0 has {} qubits while H1 has {}."
                                     "".format(h0.nqubits, h1.nqubits))
         self.nqubits = h0.nqubits
+        if h0.backend != h1.backend:
+            raise_error(ValueError, "H0 and H1 have different backend.")
+        self.backend = h0.backend
         self.h0, self.h1 = h0, h1
         self.schedule = None
         self.total_time = None
@@ -68,7 +71,7 @@ class BaseAdiabaticHamiltonian:
         """Hamiltonian object corresponding to the given time.
 
         Returns:
-            A :class:`qibo.core.hamiltonians.Hamiltonian` object corresponding
+            A :class:`qibo.hamiltonians.hamiltonians.Hamiltonian` object corresponding
             to the adiabatic Hamiltonian at a given time.
         """
         if t == 0:
@@ -89,7 +92,7 @@ class BaseAdiabaticHamiltonian:
 class TrotterCircuit(hamiltonians.TrotterCircuit):
     """Object that caches the Trotterized evolution circuit.
 
-    See :class:`qibo.core.hamiltonians.TrotterCircuit` for more details.
+    See :class:`qibo.hamiltonians.hamiltonians.TrotterCircuit` for more details.
     """
 
     def set(self, dt, coefficients):
@@ -105,7 +108,7 @@ class TrotterCircuit(hamiltonians.TrotterCircuit):
 
 
 class SymbolicAdiabaticHamiltonian(BaseAdiabaticHamiltonian):
-    """Adiabatic Hamiltonian that is sum of :class:`qibo.core.hamiltonians.SymbolicHamiltonian`."""
+    """Adiabatic Hamiltonian that is sum of :class:`qibo.hamiltonians.hamiltonians.SymbolicHamiltonian`."""
 
     def __init__(self, h0, h1):
         super().__init__(h0, h1)

@@ -131,7 +131,7 @@ def newtonian(loss, initial_parameters, args=(), method='Powell',
     """
     if method == 'parallel_L-BFGS-B':  # pragma: no cover
         from qibo.parallel import _check_parallel_configuration
-        _check_parallel_configuration(processes)
+        _check_parallel_configuration(processes)  # pylint: disable=E1120
         o = ParallelBFGS(loss, args=args, processes=processes,
                          bounds=bounds, callback=callback, options=options)
         m = o.run(initial_parameters)
@@ -215,7 +215,7 @@ class ParallelBFGS:  # pragma: no cover
     import multiprocessing as mp
     import functools
     import itertools
-    from qibo import K
+    import numpy as np
 
     def __init__(self, function, args=(), bounds=None,
                  callback=None, options=None, processes=None):
@@ -224,7 +224,7 @@ class ParallelBFGS:  # pragma: no cover
         self.xval = None
         self.function_value = None
         self.jacobian_value = None
-        self.precision = self.K.np.finfo(self.K.qnp.dtypes("DTYPE")).eps
+        self.precision = self.np.finfo("float64").eps
         self.bounds = bounds
         self.callback = callback
         self.options = options
@@ -244,7 +244,7 @@ class ParallelBFGS:  # pragma: no cover
             out = minimize(fun=self.fun, x0=x0, jac=self.jac, method='L-BFGS-B',
                            bounds=self.bounds, callback=self.callback, options=self.options)
         ParallelResources().reset()
-        out.hess_inv = out.hess_inv * self.K.np.identity(len(x0))
+        out.hess_inv = out.hess_inv * self.np.identity(len(x0))
         return out
 
     @staticmethod

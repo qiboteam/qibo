@@ -38,10 +38,6 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def apply_gate_half_density_matrix(self, gate, state, nqubits): # pragma: no cover
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
     def execute_circuit(self, circuit, nshots=None): # pragma: no cover
         raise_error(NotImplementedError)
 
@@ -95,11 +91,15 @@ class Simulator(Backend):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def issparse(self, x):
+    def issparse(self, x): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def to_numpy(self, x):
+    def to_numpy(self, x): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def compile(self, func): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
@@ -140,6 +140,10 @@ class Simulator(Backend):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
+    def apply_gate_half_density_matrix(self, gate, state, nqubits): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
     def apply_channel(self, gate): # pragma: no cover
         raise_error(NotImplementedError)
 
@@ -148,14 +152,14 @@ class Simulator(Backend):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def collapse_state(self, gate, state, nqubits):
+    def collapse_state(self, state, qubits, shot, nqubits, normalize=True):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def collapse_density_matrix(self, gate, state, nqubits):
+    def collapse_density_matrix(self, state, qubits, shot, nqubits, normalize=True):
         raise_error(NotImplementedError)
 
-    def execute_circuit(self, circuit, initial_state=None, nshots=None):
+    def execute_circuit(self, circuit, initial_state=None, nshots=None, return_array=False):
         from qibo.gates.special import CallbackGate
 
         if circuit.accelerators and not self.supports_multigpu:
@@ -189,10 +193,12 @@ class Simulator(Backend):
                 for gate in circuit.queue:
                     state = gate.apply(self, state, nqubits)
 
-            # TODO: Consider implementing a final state setter in circuits?
-            circuit._final_state = CircuitResult(self, circuit, state, nshots)
-            return circuit._final_state
-        
+            if return_array:
+                return state
+            else:
+                circuit._final_state = CircuitResult(self, circuit, state, nshots)
+                return circuit._final_state
+
         except self.oom_error:
             raise_error(RuntimeError, f"State does not fit in {self.device} memory."
                                        "Please switch the execution device to a "
@@ -288,6 +294,10 @@ class Simulator(Backend):
 
     @abc.abstractmethod
     def calculate_frequencies(self, samples): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def update_frequencies(self, frequencies, probabilities, nsamples): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
