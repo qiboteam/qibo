@@ -168,8 +168,8 @@ information about the measured samples. For example
 Measurements are now accessible using the ``samples`` and ``frequencies`` methods
 on the ``result`` object. In particular
 
-* ``result.samples(binary=True)`` will return the array ``tf.Tensor([[1, 0], [1, 0], ..., [1, 0]])`` with shape ``(100, 2)``,
-* ``result.samples(binary=False)`` will return the array ``tf.Tensor([2, 2, ..., 2])``,
+* ``result.samples(binary=True)`` will return the array ``[[1, 0], [1, 0], ..., [1, 0]]`` with shape ``(100, 2)``,
+* ``result.samples(binary=False)`` will return the array ``[2, 2, ..., 2]``,
 * ``result.frequencies(binary=True)`` will return ``collections.Counter({"10": 100})``,
 * ``result.frequencies(binary=False)`` will return ``collections.Counter({2: 100})``.
 
@@ -193,7 +193,7 @@ creates a circuit with five qubits that has two registers: ``A`` consisting of
 qubits ``0`` and ``1`` and ``B`` consisting of qubits ``3`` and ``4``. Here
 qubit ``2`` remains unmeasured. Measured results can now be accessed as
 
-* ``result.samples(binary=False, registers=True)`` will return a dictionary with the measured sample tensors for each register: ``{"A": tf.Tensor([2, 2, ...]), "B": tf.Tensor([1, 1, ...])}``,
+* ``result.samples(binary=False, registers=True)`` will return a dictionary with the measured sample tensors for each register: ``{"A": [2, 2, ...], "B": [1, 1, ...]}``,
 * ``result.frequencies(binary=True, registers=True)`` will return a dictionary with the frequencies for each register: ``{"A": collections.Counter({"10": 100}), "B": collections.Counter({"01": 100})}``.
 
 Setting ``registers=False`` (default option) will ignore the registers and return the
@@ -210,8 +210,7 @@ Unmeasured qubits are ignored by the measurement objects. Also, the
 order that qubits appear in the results is defined by the order the user added
 the measurements and not the qubit ids.
 
-The final state vector is still accessible via
-:meth:`qibo.abstractions.states.AbstractState.state`.
+The final state vector is still accessible via :meth:`qibo.states.CircuitResult.state`.
 Note that the state vector accessed this way corresponds to the state as if no
 measurements occurred, that is the state is not collapsed during the measurement.
 This is because measurement gates are only used to sample bitstrings and do not

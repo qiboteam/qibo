@@ -113,8 +113,7 @@ following options:
 * ``--accelerators`` (``str``): Devices to use for distributed execution of the circuit.
   Example: ``--accelerators 1/GPU:0,1/GPU:1`` will distribute the execution
   on two GPUs. The coefficient of each device denotes the number of times to
-  reuse this device. See :class:`qibo.core.distcircuit.DistributedCircuit` for
-  more details in the distributed implementation.
+  reuse this device.
 
 * ``--memory`` (``int``): Limits GPU memory used for execution. Relevant only
   for Tensorflow backends, as Tensorflow uses the full GPU memory by default.
@@ -152,7 +151,7 @@ using the ``--type`` flag. This accepts one of the following options:
 
     - ``--nlayers``: Total number of layers.
 
-* ``opt-variational``: Same as ``variational`` using the :class:`qibo.abstractions.gates.VariationalLayer`.
+* ``opt-variational``: Same as ``variational`` using the :class:`qibo.gates.VariationalLayer`.
   This gate optimizes execution by fusing the parametrized with the entangling
   gates before applying them to the state vector.
   Supports the following options:
@@ -191,7 +190,7 @@ and supports the following options:
 * ``--backend`` (``str``): Qibo backend to use.
   See :ref:`Simulation backends <simulation-backends>` for more information on the
   calculation backends. Default is ``qibojit``.
-* ``--varlayer`` (``bool``): If ``True`` the :class:`qibo.abstractions.gates.VariationalLayer`
+* ``--varlayer`` (``bool``): If ``True`` the :class:`qibo.gates.VariationalLayer`
   will be used to construct the circuit, otherwise plain ``RY`` and ``CZ`` gates
   will be used. Default is ``False``.
 * ``--filename`` (``str``): Name of the file to save benchmark logs.
@@ -240,8 +239,6 @@ following options:
   evolve the system, otherwise it will perform the Trotter decomposition.
   Default is ``False``.
 * ``--accelerators`` (``str``): Devices to use for distributed execution of the circuit.
-  See :class:`qibo.core.distcircuit.DistributedCircuit` for more details on the
-  distributed implementation.
 * ``--maxiter`` (``int``): Maximum number of iterations for the optimizer. Default is ``None``.
 * ``--filename`` (``str``): Name of the file to save benchmark logs.
 
