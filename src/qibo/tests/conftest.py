@@ -9,17 +9,14 @@ from qibo.backends import construct_backend
 
 
 INACTIVE_TESTS = {
-    "qibo.tests.test_abstract_callbacks",
     "qibo.tests.test_backends_agreement",
     "qibo.tests.test_backends_init",
     "qibo.tests.test_backends_matrices",
-    "qibo.tests.test_core_callbacks",
     "qibo.tests.test_core_circuit_backpropagation",
     "qibo.tests.test_core_circuit_noise",
     "qibo.tests.test_core_distcircuit_execution",
     "qibo.tests.test_core_distcircuit",
     "qibo.tests.test_core_distutils",
-    "qibo.tests.test_core_gates_features",
     "qibo.tests.test_core_hamiltonians_from_symbols",
     "qibo.tests.test_core_hamiltonians_symbolic",
     "qibo.tests.test_core_hamiltonians_trotter",

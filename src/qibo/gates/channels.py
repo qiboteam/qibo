@@ -22,6 +22,12 @@ class Channel(Gate):
         raise_error(NotImplementedError, "`on_qubits` method is not available "
                                          "for the `Channel` gate.")
 
+    def apply(self, backend, state, nqubits):
+        return backend.apply_channel(self, state, nqubits)
+
+    def apply_density_matrix(self, backend, state, nqubits):
+        return backend.apply_channel_density_matrix(self, state, nqubits)
+
 
 class KrausChannel(Channel):
     """General channel defined by arbitrary Krauss operators.

@@ -2,11 +2,6 @@ from qibo.config import raise_error
 from qibo.gates.abstract import Gate, ParametrizedGate, SpecialGate
 
 
-class PartialTrace(SpecialGate):
-    # TODO: Implement this
-    pass
-
-
 class CallbackGate(SpecialGate):
     """Calculates a :class:`qibo.core.callbacks.Callback` at a specific point in the circuit.
 
@@ -21,6 +16,16 @@ class CallbackGate(SpecialGate):
         self.name = callback.__class__.__name__
         self.callback = callback
         self.init_args = [callback]
+
+    def apply(self, backend, state, nqubits):
+        self.callback.nqubits = nqubits
+        self.callback.apply(backend, state)
+        return state
+
+    def apply_density_matrix(self, backend, state, nqubits):
+        self.callback.nqubits = nqubits
+        self.callback.apply_density_matrix(backend, state)
+        return state
 
 
 class FusedGate(SpecialGate):
@@ -255,3 +260,9 @@ class VariationalLayer(SpecialGate, ParametrizedGate):
         dagger = self.__class__(*self.init_args, **self.init_kwargs)
         dagger.gates = [gate.dagger() for gate in self.gates[::-1]]
         return dagger
+
+    def apply(self, backend, state, nqubits): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def apply_density_matrix(self, backend, state, nqubits): # pragma: no cover
+        raise_error(NotImplementedError)

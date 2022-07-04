@@ -230,7 +230,7 @@ def test_circuit_on_qubits_errors():
     with pytest.raises(ValueError):
         next(smallc.on_qubits(0, 1, 2))
 
-    from qibo.abstractions.callbacks import Callback
+    from qibo.callbacks import Callback
     smallc = Circuit(4)
     smallc.add(gates.CallbackGate(Callback()))
     with pytest.raises(NotImplementedError):
@@ -596,7 +596,6 @@ def test_circuit_draw_channels(legend):
     assert c.draw(legend=legend) == ref
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("legend", [True, False])
 def test_circuit_draw_callbacks(legend):
     """Check that callbacks are drawn correcly"""

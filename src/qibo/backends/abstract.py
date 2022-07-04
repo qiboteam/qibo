@@ -2,7 +2,6 @@ import abc
 from qibo.config import raise_error
 from qibo.states import CircuitResult
 from qibo.gates.abstract import ParametrizedGate, SpecialGate
-from qibo.gates.channels import Channel
 
 
 class Backend(abc.ABC):
@@ -28,6 +27,14 @@ class Backend(abc.ABC):
 
     @abc.abstractmethod
     def asmatrix_fused(self, gate): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def apply_gate(self, gate, state, nqubits): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def apply_gate_density_matrix(self, gate, state, nqubits): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
@@ -145,7 +152,8 @@ class Simulator(Backend):
         raise_error(NotImplementedError)
 
     def execute_circuit(self, circuit, initial_state=None, nshots=None):
-        # TODO: Implement callbacks
+        from qibo.gates.special import CallbackGate
+
         if circuit.accelerators and not self.supports_multigpu:
             raise_error(NotImplementedError, f"{self} does not support distributed execution.")
 
@@ -165,8 +173,8 @@ class Simulator(Backend):
                     state = self.cast(initial_state)
                 
                 for gate in circuit.queue:
-                    state = self.apply_gate_density_matrix(gate, state, nqubits)
-            
+                    state = gate.apply_density_matrix(self, state, nqubits)
+
             else:
                 if initial_state is None:
                     state = self.zero_state(nqubits)
@@ -175,7 +183,7 @@ class Simulator(Backend):
                     state = self.cast(initial_state)
 
                 for gate in circuit.queue:
-                    state = self.apply_gate(gate, state, nqubits)
+                    state = gate.apply(self, state, nqubits)
 
             # TODO: Consider implementing a final state setter in circuits?
             circuit._final_state = CircuitResult(self, circuit, state, nshots)
@@ -187,8 +195,6 @@ class Simulator(Backend):
                                        "different one using ``qibo.set_device``.")
 
     def execute_circuit_repeated(self, circuit, initial_state=None, nshots=None):
-        from qibo.gates.measurements import M
-        from qibo.gates.channels import Channel
         results = []
         nqubits = circuit.nqubits
         for _ in range(nshots):
@@ -199,20 +205,9 @@ class Simulator(Backend):
                     state = self.cast(initial_state, copy=True)
                 
                 for gate in circuit.queue:
-                    if isinstance(gate, Channel):
-                        state = self.apply_channel_density_matrix(gate, state, nqubits)
-                    elif isinstance(gate, M):
-                        state = self.collapse_density_matrix(gate, state, nqubits)
-                    else:
-                        if gate.symbolic_parameters:
-                            gate.substitute_symbols()
-                        state = self.apply_gate_density_matrix(gate, state, nqubits)
-
-                if circuit.measurement_gate:
-                    result = CircuitResult(self, circuit, state, 1)
-                    results.append(result.samples(binary=False)[0])
-                else:
-                    results.append(state)
+                    if gate.symbolic_parameters:
+                        gate.substitute_symbols()
+                    state = gate.apply_density_matrix(self, state, nqubits)
 
             else:
                 if initial_state is None:
@@ -221,20 +216,15 @@ class Simulator(Backend):
                     state = self.cast(initial_state, copy=True)
                 
                 for gate in circuit.queue:
-                    if isinstance(gate, Channel):
-                        state = self.apply_channel(gate, state, nqubits)
-                    elif isinstance(gate, M):
-                        state = self.collapse_state(gate, state, nqubits)
-                    else:
-                        if gate.symbolic_parameters:
-                            gate.substitute_symbols()
-                        state = self.apply_gate(gate, state, nqubits)
+                    if gate.symbolic_parameters:
+                        gate.substitute_symbols()
+                    state = gate.apply(self, state, nqubits)
                 
-                if circuit.measurement_gate:
-                    result = CircuitResult(self, circuit, state, 1)
-                    results.append(result.samples(binary=False)[0])
-                else:
-                    results.append(state)
+            if circuit.measurement_gate:
+                result = CircuitResult(self, circuit, state, 1)
+                results.append(result.samples(binary=False)[0])
+            else:
+                results.append(state)
 
         if circuit.measurement_gate:
             final_result = CircuitResult(self, circuit, state, nshots)
@@ -293,6 +283,34 @@ class Simulator(Backend):
 
     @abc.abstractmethod
     def calculate_frequencies(self, samples): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def partial_trace(self, state, qubits, nqubits): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def partial_trace_density_matrix(self, state, qubits, nqubits): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def entanglement_entropy(self, rho): # pragma: no cover 
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def calculate_norm(self, state): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def calculate_norm_density_matrix(self, state): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def calculate_overlap(self, state1, state2): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def calculate_overlap_density_matrix(self, state1, state2): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod

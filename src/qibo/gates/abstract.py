@@ -246,6 +246,12 @@ class Gate:
     def matrix(self):
         return self.asmatrix_global()
 
+    def apply(self, backend, state, nqubits):
+        return backend.apply_gate(self, state, nqubits)
+
+    def apply_density_matrix(self, backend, state, nqubits):
+        return backend.apply_gate_density_matrix(self, state, nqubits)
+    
 
 class SpecialGate(Gate):
     """Abstract class for special gates.
@@ -311,16 +317,8 @@ class ParametrizedGate(Gate):
                 self.symbolic_parameters[i] = v
             params[i] = v
         self._parameters = tuple(params)
-
-        # This part uses ``BackendGate`` attributes (see below), assuming
-        # that the gate was initialized using a calculation backend.
-        # I could not find a cleaner way to write this so that the
-        # ``circuit.set_parameters`` method works properly.
-        # pylint: disable=E1101
-        if isinstance(self, BaseBackendGate):
-            self._reset_unitary()
-            for devgate in self.device_gates:
-                devgate.parameters = x
+        
+        # TODO: Handle parameter setting for distributed circuits
 
     def substitute_symbols(self):
         params = list(self._parameters)
@@ -332,128 +330,3 @@ class ParametrizedGate(Gate):
 
     def asmatrix(self, backend):
         return backend.asmatrix_parametrized(self)
-
-
-class BaseBackendGate(Gate, ABC):
-    """Abstract class for gate objects that can be used in calculations."""
-
-    def __init__(self):
-        """
-        Attributes:
-            unitary: Unitary matrix representation of the gate in the computational
-                basis.
-            is_prepared: ``True`` if the gate is prepared for action to states.
-                A gate is prepared when its matrix and/or other tensors required
-                in the computation are calculated.
-                See :meth:`qibo.abstractions.abstract_gates.BackendGate.prepare` for more
-                details.
-                Note that gate preparation is triggered automatically when a gate
-                is added to a circuit or when it acts on a state.
-            device: Hardware device to use in order to simulate this gate.
-        """
-        from qibo import get_device
-        Gate.__init__(self)
-        self._matrix = None
-        self._cache = None
-        # Cast gate matrices to the proper device
-        self.device = get_device()
-        # Reference to copies of this gate that are casted in devices when
-        # a distributed circuit is used
-        self.device_gates = set()
-        self.original_gate = None
-
-    @property
-    def matrix(self):
-        """Unitary matrix representing the gate in the computational basis."""        
-        if self._matrix is None:
-            self._matrix = self._construct_unitary()
-        if self.is_controlled_by:
-            if len(self.qubits) > 2:
-                raise_error(NotImplementedError, "Cannot calculate control matrix for "
-                                                 "gates that target more than two qubits.")
-            if tuple(self._matrix.shape) == (2, 2):
-                self._matrix = self._control_unitary(self._matrix)
-        return self._matrix
-
-    def __matmul__(self, other: "Gate") -> "Gate":
-        # TODO: Find a way to pass ``self.module`` that is required here
-        """Gate multiplication."""
-        if self.qubits != other.qubits:
-            raise_error(NotImplementedError, "Cannot multiply gates that target "
-                                             "different qubits.")
-        if self.__class__.__name__ == other.__class__.__name__:
-            square_identity = {"H", "X", "Y", "Z", "CNOT", "CZ", "SWAP"}
-            if self.__class__.__name__ in square_identity:
-                from qibo.gates import I
-                return I(*self.qubits)
-        return self.module.Unitary(self.matrix @ other.matrix, *self.qubits)
-
-    def __rmatmul__(self, other): # pragma: no cover
-        # always falls back to left ``__matmul__``
-        return self.__matmul__(other)
-
-    @staticmethod
-    @abstractmethod
-    def _control_unitary(unitary): # pragma: no cover
-        """Updates the unitary matrix of the gate if it is controlled."""
-        raise_error(NotImplementedError)
-
-    @abstractmethod
-    def _construct_unitary(self): # pragma: no cover
-        """Constructs the gate's unitary matrix."""
-        return raise_error(NotImplementedError)
-
-    def _reset_unitary(self):
-        """Resets the gate matrices back to ``None``.
-
-        Useful when the gate matrix need to be recalculated.
-        """
-        self._matrix = None
-
-    @property
-    @abstractmethod
-    def cache(self): # pragma: no cover
-        raise_error(NotImplementedError)
-
-    @abstractmethod
-    def _state_vector_call(self, state): # pragma: no cover
-        """Applies the gate on a state vector."""
-        raise_error(NotImplementedError)
-
-    @abstractmethod
-    def _density_matrix_call(self, state): # pragma: no cover
-        """Applies the gate on a density matrix."""
-        raise_error(NotImplementedError)
-
-    @abstractmethod
-    def _density_matrix_half_call(self, state): # pragma: no cover
-        """Half application of gate to density matrix.
-
-        For an arbitrary unitary gate U the
-        :meth:`qibo.abstractions.abstract_gates.BaseBackendGate._density_matrix_call`
-        calculates
-
-        .. math::
-            U\\rho U^\\dagger
-
-        while this method calculates only
-
-        .. math::
-            U\\rho
-
-        This is useful for :class:`qibo.abstractions.hamiltonians.SymbolicHamiltonian`
-        multiplication to density matrices.
-        """
-        raise_error(NotImplementedError)
-
-    def __call__(self, state):
-        """Applies the gate on a state.
-
-        Falls back to a state vector or density matrix call according to the
-        current value of the ``gate.density_matrix`` flag.
-        It automatically prepares the gate if it is not already prepared.
-        """
-        if not self.well_defined:
-            self.substitute_symbols() # pylint: disable=E1101
-            # method available only for parametrized gates
-        return getattr(self, self._active_call)(state)

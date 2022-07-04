@@ -313,7 +313,7 @@ class _Rn_(ParametrizedGate):
     def controlled_by(self, *q):
         """Fall back to CRn if there is only one control."""
         if len(q) == 1:
-            gate = self._controlled_gate(
+            gate = self._controlled_gate( # pylint: disable=E1102
                 q[0], self.target_qubits[0], **self.init_kwargs)
         else:
             gate = super().controlled_by(*q)
@@ -422,8 +422,8 @@ class _Un_(ParametrizedGate):
     def controlled_by(self, *q):
         """Fall back to CUn if there is only one control."""
         if len(q) == 1:
-            gate = self._controlled_gate(
-              q[0], self.target_qubits[0], **self.init_kwargs)
+            gate = self._controlled_gate( # pylint: disable=E1102
+              q[0], self.target_qubits[0], **self.init_kwargs) 
         else:
             gate = super().controlled_by(*q)
         return gate
@@ -533,7 +533,7 @@ class U3(_Un_):
 
     def _dagger(self) -> "Gate":
         """"""
-        theta, lam, phi = tuple(-x for x in self.parameters)
+        theta, lam, phi = tuple(-x for x in self.parameters) # pylint: disable=E1130
         return self.__class__(self.target_qubits[0], theta, phi, lam)
 
 
@@ -846,7 +846,7 @@ class CU3(_CUn_):
         """"""
         q0 = self.control_qubits[0]
         q1 = self.target_qubits[0]
-        theta, lam, phi = tuple(-x for x in self.parameters)
+        theta, lam, phi = tuple(-x for x in self.parameters) # pylint: disable=E1130
         return self.__class__(q0, q1, theta, phi, lam)
 
 
@@ -939,7 +939,7 @@ class fSim(ParametrizedGate):
     def _dagger(self) -> "Gate":
         """"""
         q0, q1 = self.target_qubits
-        params = (-x for x in self.parameters)
+        params = (-x for x in self.parameters) # pylint: disable=E1130
         return self.__class__(q0, q1, *params)
 
 
@@ -988,7 +988,7 @@ class GeneralizedfSim(ParametrizedGate):
         init_kwargs["phi"] = -phi
         return self.__class__(q0, q1, **init_kwargs)
 
-    @ParametrizedGate.parameters.setter
+    @Gate.parameters.setter
     def parameters(self, x):
         shape = tuple(x[0].shape)
         if shape != (2, 2):
@@ -1097,28 +1097,3 @@ class Unitary(ParametrizedGate):
         import numpy as np
         ud = np.conj(np.transpose(self.parameters[0]))
         return self.__class__(ud, *self.target_qubits, **self.init_kwargs)
-
-
-class PartialTrace(Gate):
-    """Collapses a density matrix by tracing out selected qubits.
-
-    Works only with density matrices (not state vectors) and implements the
-    following transformation:
-
-    .. math::
-        \\mathcal{E}(\\rho ) = (|0\\rangle \\langle 0|) _A \\otimes \\mathrm{Tr} _A (\\rho )
-
-    where A denotes the subsystem of qubits that are traced out.
-
-    Args:
-        q (int): Qubit ids that will be traced-out and collapsed to the zero
-            state. More than one qubits can be given.
-    """
-
-    def __init__(self, *q):
-        super().__init__()
-        self.name = "PartialTrace"
-        self.target_qubits = tuple(q)
-
-        self.init_args = q
-        self.init_kwargs = {}

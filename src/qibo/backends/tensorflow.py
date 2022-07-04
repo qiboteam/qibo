@@ -1,7 +1,8 @@
 import os
 import numpy as np
+from qibo.backends import einsum_utils
 from qibo.backends.numpy import NumpyBackend
-from qibo.config import TF_LOG_LEVEL
+from qibo.config import raise_error, TF_LOG_LEVEL
 
 
 class TensorflowBackend(NumpyBackend):
@@ -29,15 +30,15 @@ class TensorflowBackend(NumpyBackend):
         # TODO: Implement density matrices (most likely in another method)
         state = self.tf.reshape(state, nqubits * (2,))
         matrix = self.tf.reshape(self.asmatrix(gate), 2  * len(gate.qubits) * (2,))
-        opstring = self._einsum_string(gate, nqubits)
         if gate.is_controlled_by:
             ncontrol = len(gate.control_qubits)
             nactive = nqubits - ncontrol
-            order, _ = self._control_order(gate, nqubits)
+            order, targets = einsum_utils.control_order(gate, nqubits)
             state = self.tf.transpose(state, order)
             # Apply `einsum` only to the part of the state where all controls
             # are active. This should be `state[-1]`
             state = self.tf.reshape(state, (2 ** ncontrol,) + nactive * (2,))
+            opstring = einsum_utils.apply_gate_string(targets, nactive)
             updates = self.tf.einsum(opstring, state[-1], matrix)
             # Concatenate the updated part of the state `updates` with the
             # part of of the state that remained unaffected `state[:-1]`.

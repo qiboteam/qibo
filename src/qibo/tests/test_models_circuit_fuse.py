@@ -152,7 +152,6 @@ def test_controlled_by_gates_fusion(backend):
     backend.assert_circuitclose(fused_c, c)
 
 
-@pytest.mark.skip
 def test_callbacks_fusion(backend):
     """Check entropy calculation in fused circuit."""
     from qibo import callbacks
@@ -166,7 +165,8 @@ def test_callbacks_fusion(backend):
     fused_c = c.fuse()
     backend.assert_circuitclose(fused_c, c)
     target_entropy = [0.0, 1.0, 0.0, 1.0]
-    backend.assert_allclose(entropy[:], target_entropy, atol=1e-7)
+    final_entropy = [backend.to_numpy(x) for x in entropy[:]]
+    backend.assert_allclose(final_entropy, target_entropy, atol=1e-7)
 
 
 def test_set_parameters_fusion(backend):

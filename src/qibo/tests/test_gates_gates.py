@@ -617,3 +617,70 @@ def test_generalizedfsim_dagger(backend):
     backend.assert_allclose(final_state, initial_state)
 
 ###############################################################################
+
+############################# Test multiplication #############################
+# TODO: Remove these tests if gate multiplication is dropped
+
+@pytest.mark.skip
+def test_one_qubit_gate_multiplication(backend):
+    gate1 = gates.X(0)
+    gate2 = gates.H(0)
+    final_gate = gate1 @ gate2
+    assert final_gate.__class__.__name__ == "Unitary"
+    target_matrix = (np.array([[0, 1], [1, 0]]) @
+                     np.array([[1, 1], [1, -1]]) / np.sqrt(2))
+    K.assert_allclose(final_gate.matrix, target_matrix)
+
+    final_gate = gate2 @ gate1
+    assert final_gate.__class__.__name__ == "Unitary"
+    target_matrix = (np.array([[1, 1], [1, -1]]) / np.sqrt(2) @
+                     np.array([[0, 1], [1, 0]]))
+    K.assert_allclose(final_gate.matrix, target_matrix)
+
+    gate1 = gates.X(1)
+    gate2 = gates.X(1)
+    assert (gate1 @ gate2).__class__.__name__ == "I"
+    assert (gate2 @ gate1).__class__.__name__ == "I"
+
+
+@pytest.mark.skip
+def test_two_qubit_gate_multiplication(backend):
+    theta, phi = 0.1234, 0.5432
+    gate1 = gates.fSim(0, 1, theta=theta, phi=phi)
+    gate2 = gates.SWAP(0, 1)
+    final_gate = gate1 @ gate2
+    target_matrix = (np.array([[1, 0, 0, 0],
+                               [0, np.cos(theta), -1j * np.sin(theta), 0],
+                               [0, -1j * np.sin(theta), np.cos(theta), 0],
+                               [0, 0, 0, np.exp(-1j * phi)]]) @
+                     np.array([[1, 0, 0, 0], [0, 0, 1, 0],
+                               [0, 1, 0, 0], [0, 0, 0, 1]]))
+    K.assert_allclose(final_gate.matrix, target_matrix)
+    # Check that error is raised when target qubits do not agree
+    with pytest.raises(NotImplementedError):
+        final_gate = gate1 @ gates.SWAP(0, 2)
+
+###############################################################################
+
+########################### Test gate decomposition ###########################
+
+@pytest.mark.parametrize(("target", "controls", "free"),
+                         [(0, (1,), ()), (2, (0, 1), ()),
+                          (3, (0, 1, 4), (2, 5)),
+                          (7, (0, 1, 2, 3, 4), (5, 6)),
+                          (5, (0, 2, 4, 6, 7), (1, 3)),
+                          (8, (0, 2, 4, 6, 9), (3, 5, 7))])
+@pytest.mark.parametrize("use_toffolis", [True, False])
+def test_x_decomposition_execution(backend, target, controls, free, use_toffolis):
+    """Check that applying the decomposition is equivalent to applying the multi-control gate."""
+    gate = gates.X(target).controlled_by(*controls)
+    nqubits = max((target,) + controls + free) + 1
+    initial_state = random_state(nqubits)
+    target_state = backend.apply_gate(gate, np.copy(initial_state), nqubits)
+    dgates = gate.decompose(*free, use_toffolis=use_toffolis)
+    final_state = np.copy(initial_state)
+    for gate in dgates:
+        final_state = backend.apply_gate(gate, final_state, nqubits)
+    backend.assert_allclose(final_state, target_state, atol=1e-6)
+
+###############################################################################

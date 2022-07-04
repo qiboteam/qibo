@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from qibo import callbacks, hamiltonians, models, K
+from qibo import hamiltonians, models, K
 from qibo.config import raise_error
 from scipy.linalg import expm
 
@@ -11,7 +11,7 @@ def assert_states_equal(state, target_state, atol=0):
     K.assert_allclose(state, phase * target_state, atol=atol)
 
 
-class TimeStepChecker(callbacks.BackendCallback):
+class TimeStepChecker:#(callbacks.BackendCallback):
     """Callback that checks each evolution time step."""
 
     def __init__(self, target_states, atol=0):

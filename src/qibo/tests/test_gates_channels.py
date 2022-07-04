@@ -180,4 +180,3 @@ def test_thermal_relaxation_channel_errors(backend, t1, t2, time, excpop):
     with pytest.raises(ValueError):
         gate = gates.ThermalRelaxationChannel(
             0, t1, t2, time, excited_population=excpop)
-

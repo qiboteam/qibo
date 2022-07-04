@@ -6,6 +6,29 @@ from qibo import gates
 from qibo.models import Circuit
 
 
+def test_rx_parameter_setter(backend):
+    """Check the parameter setter of RX gate."""
+    def exact_state(theta):
+        phase = np.exp(1j * theta / 2.0)
+        gate = np.array([[phase.real, -1j * phase.imag],
+                        [-1j * phase.imag, phase.real]])
+        return gate.dot(np.ones(2)) / np.sqrt(2)
+
+    theta = 0.1234
+    gate = gates.RX(0, theta=theta)
+    initial_state = np.ones(2) / np.sqrt(2)
+    final_state = backend.apply_gate(gate, initial_state, 1)
+    target_state = exact_state(theta)
+    backend.assert_allclose(final_state, target_state)
+
+    theta = 0.4321
+    gate.parameters = theta
+    initial_state = np.ones(2) / np.sqrt(2)
+    final_state = backend.apply_gate(gate, initial_state, 1)
+    target_state = exact_state(theta)
+    backend.assert_allclose(final_state, target_state)
+
+
 @pytest.mark.parametrize("trainable", [True, False])
 def test_set_parameters_with_list(backend, trainable):
     """Check updating parameters of circuit with list."""
