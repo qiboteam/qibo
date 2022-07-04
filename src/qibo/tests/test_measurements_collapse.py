@@ -36,7 +36,7 @@ def test_measurement_collapse_density_matrix(backend, nqubits, targets):
     c = models.Circuit(nqubits, density_matrix=True)
     m = c.add(gates.M(*targets, collapse=True))
     final_rho = backend.execute_circuit(c, np.copy(initial_rho), nshots=1)[0]
-    
+
     if len(targets) > 1:
         results = m[0].result.samples()[0]
     else:
