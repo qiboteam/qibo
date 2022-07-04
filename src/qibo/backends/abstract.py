@@ -152,11 +152,11 @@ class Simulator(Backend):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def collapse_state(self, gate, state, nqubits):
+    def collapse_state(self, state, qubits, shot, nqubits, normalize=True):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def collapse_density_matrix(self, gate, state, nqubits):
+    def collapse_density_matrix(self, state, qubits, shot, nqubits, normalize=True):
         raise_error(NotImplementedError)
 
     def execute_circuit(self, circuit, initial_state=None, nshots=None, return_array=False):
