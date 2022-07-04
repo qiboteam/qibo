@@ -259,7 +259,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         # if a symbol in the given form is not a Qibo symbol it must be
         # included in the ``symbol_map``
         self.trotter_circuit = None
-        from qibo.hamiltonians.symbols import Symbol
+        from qibo.symbols import Symbol
         self._qiboSymbol = Symbol # also used in ``self._get_symbol_matrix``
         if backend is None:
             from qibo.backends import GlobalBackend

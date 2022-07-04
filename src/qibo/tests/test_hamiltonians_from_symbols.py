@@ -3,7 +3,7 @@ import pytest
 import numpy as np
 import sympy
 from qibo import hamiltonians, matrices
-from qibo.hamiltonians.symbols import I, X, Y, Z, Symbol
+from qibo.symbols import I, X, Y, Z, Symbol
 from qibo.tests.utils import random_hermitian
 
 
@@ -177,7 +177,7 @@ def test_hamiltonian_with_identity_symbol(backend, calcterms):
     """Check creating Hamiltonian from expression which contains the identity symbol."""
     symham = X(0) * I(1) * Z(2) + 0.5 * Y(0) * Z(1) * I(3) + Z(0) * I(1) * X(2)
     ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
-    
+
     if calcterms:
         _ = ham.terms
     final_matrix = ham.matrix
