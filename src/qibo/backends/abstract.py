@@ -55,7 +55,7 @@ class Simulator(Backend):
     def __init__(self):
         super().__init__()
         self.name = "simulator"
-        
+
         self.precision = "double"
         self.dtype = "complex128"
         self.matrices = None
@@ -177,7 +177,7 @@ class Simulator(Backend):
                 else:
                     # cast to proper complex type
                     state = self.cast(initial_state)
-                
+
                 for gate in circuit.queue:
                     if gate.symbolic_parameters:
                         gate.substitute_symbols()
@@ -214,7 +214,31 @@ class Simulator(Backend):
         nqubits = circuit.nqubits
         circuit.repeated_execution = False
         for _ in range(nshots):
-            state = self.execute_circuit(circuit, initial_state, return_array=True)
+            if circuit.density_matrix:
+                if initial_state is None:
+                    state = self.zero_density_matrix(nqubits)
+                else:
+                    state = self.cast(initial_state, copy=True)
+
+                for gate in circuit.queue:
+                    if gate.symbolic_parameters:
+                        gate.substitute_symbols()
+                    state = gate.apply_density_matrix(self, state, nqubits)
+
+            else:
+                if circuit.accelerators:
+                    state = self.execute_distributed_circuit(circuit, initial_state, return_array=True)
+                else:
+                    if initial_state is None:
+                        state = self.zero_state(nqubits)
+                    else:
+                        state = self.cast(initial_state, copy=True)
+
+                    for gate in circuit.queue:
+                        if gate.symbolic_parameters:
+                            gate.substitute_symbols()
+                        state = gate.apply(self, state, nqubits)
+
             if circuit.measurement_gate:
                 result = CircuitResult(self, circuit, state, 1)
                 results.append(result.samples(binary=False)[0])
@@ -298,7 +322,7 @@ class Simulator(Backend):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def entanglement_entropy(self, rho): # pragma: no cover 
+    def entanglement_entropy(self, rho): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
