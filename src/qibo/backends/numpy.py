@@ -50,22 +50,22 @@ class NumpyBackend(Simulator):
         return func
 
     def zero_state(self, nqubits):
-        state = np.zeros(2 ** nqubits, dtype=self.dtype)
+        state = self.np.zeros(2 ** nqubits, dtype=self.dtype)
         state[0] = 1
         return state
 
     def zero_density_matrix(self, nqubits):
-        state = np.zeros(2 * (2 ** nqubits,), dtype=self.dtype)
+        state = self.np.zeros(2 * (2 ** nqubits,), dtype=self.dtype)
         state[0, 0] = 1
         return state
 
     def plus_state(self, nqubits):
-        state = np.ones(2 ** nqubits, dtype=self.dtype)
-        state /= np.sqrt(2 ** nqubits)
+        state = self.np.ones(2 ** nqubits, dtype=self.dtype)
+        state /= self.np.sqrt(2 ** nqubits)
         return state
 
     def plus_density_matrix(self, nqubits):
-        state = np.ones(2 * (2 ** nqubits,), dtype=self.dtype)
+        state = self.np.ones(2 * (2 ** nqubits,), dtype=self.dtype)
         state /= 2 ** nqubits
         return state
 
