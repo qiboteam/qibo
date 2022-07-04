@@ -1,6 +1,6 @@
 import collections
 import numpy as np
-from qibo.config import raise_error
+from qibo.config import raise_error, log
 from qibo.gates import FusedGate
 from qibo.backends import einsum_utils
 from qibo.backends.abstract import Simulator
@@ -13,6 +13,11 @@ class NumpyBackend(Simulator):
         super().__init__()
         self.name = "numpy"
         self.matrices = Matrices(self.dtype)
+        self.tensor_types = np.ndarray
+        # TODO: is numeric_types necessary
+        self.numeric_types = (np.int, np.float, np.complex, np.int32,
+                              np.int64, np.float32, np.float64,
+                              np.complex64, np.complex128)
 
     def set_device(self, device):
         if device != "/CPU:0":
@@ -25,9 +30,19 @@ class NumpyBackend(Simulator):
     def cast(self, x, dtype=None, copy=False):
         if dtype is None:
             dtype = self.dtype
+        if isinstance(x, self.tensor_types):
+            return x.astype(dtype, copy=copy)
+        elif self.issparse(x):
+            return x.astype(dtype, copy=copy)
         return np.array(x, dtype=dtype, copy=copy)
 
+    def issparse(self, x):
+        from scipy import sparse
+        return sparse.issparse(x)
+
     def to_numpy(self, x):
+        if self.issparse(x):
+            return x.toarray()
         return x
 
     def zero_state(self, nqubits):
@@ -149,6 +164,21 @@ class NumpyBackend(Simulator):
             state = np.einsum(left, state, matrix)
         return np.reshape(state, 2 * (2 ** nqubits,))
 
+    def apply_gate_half_density_matrix(self, gate, state, nqubits):
+        state = self.cast(state)
+        state = np.reshape(state, 2 * nqubits * (2,))
+        matrix = gate.asmatrix(self)
+        if gate.is_controlled_by: # pragma: no cover
+            raise_error(NotImplementedError, "Gate density matrix half call is "
+                                             "not implemented for ``controlled_by``"
+                                             "gates.")
+        else:
+            matrix = np.reshape(matrix, 2 * len(gate.qubits) * (2,))
+            left, _ = einsum_utils.apply_gate_density_matrix_string(gate.qubits, nqubits)
+            state = np.einsum(left, state, matrix)
+        return np.reshape(state, 2 * (2 ** nqubits,))
+
+
     def apply_channel(self, channel, state, nqubits):
         for coeff, gate in zip(channel.coefficients, channel.gates):
             if np.random.random() < coeff:
@@ -215,6 +245,29 @@ class NumpyBackend(Simulator):
         state = substate / norm
         qubits = qubits + [q + nqubits for q in qubits]
         state = self._append_zeros(state, qubits, shots)
+        return np.reshape(state, shape)
+
+    def reset_error_density_matrix(self, gate, state, nqubits):
+        from qibo.gates import X
+        state = self.cast(state)
+        shape = state.shape
+        q = gate.target_qubits[0]
+        p0, p1 = gate.coefficients[:2]
+        trace = self.partial_trace_density_matrix(state, (q,), nqubits)
+        trace = np.reshape(trace, 2 * (nqubits - 1) * (2,))
+        zero = self.zero_density_matrix(1)
+        zero = np.tensordot(trace, zero, axes=0)
+        order = list(range(2 * nqubits - 2))
+        order.insert(q, 2 * nqubits - 2)
+        order.insert(q + nqubits, 2 * nqubits - 1)
+        zero = np.reshape(np.transpose(zero, order), shape)
+        state = (1 - p0 - p1) * state + p0 * zero
+        return state + p1 * self.apply_gate_density_matrix(X(q), zero, nqubits)
+
+    def thermal_error_density_matrix(self, gate, state, nqubits):
+        state = self.cast(state)
+        shape = state.shape
+        state = self.apply_gate(gate, state.ravel(), 2 * nqubits)
         return np.reshape(state, shape)
 
     def calculate_symbolic(self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20):
@@ -368,6 +421,67 @@ class NumpyBackend(Simulator):
 
     def calculate_overlap_density_matrix(self, state1, state2):
         raise_error(NotImplementedError)
+
+    def calculate_eigenvalues(self, matrix, k=6):
+        if self.issparse(matrix):
+            log.warning("Calculating sparse matrix eigenvectors because "
+                        "sparse modules do not provide ``eigvals`` method.")
+            return self.calculate_eigenvectors(matrix, k=k)[0]
+        return np.linalg.eigvalsh(matrix)
+
+    def calculate_eigenvectors(self, matrix, k=6):
+        if self.issparse(matrix):
+            if k < matrix.shape[0]:
+                from scipy.sparse.linalg import eigsh
+                return eigsh(matrix, k=k, which='SA')
+            matrix = self.to_numpy(matrix)
+        return np.linalg.eigh(matrix)
+
+    def calculate_matrix_exp(self, a, matrix, eigenvectors=None, eigenvalues=None):
+        if eigenvectors is None or self.issparse(matrix):
+            if self.issparse(matrix):
+                from scipy.sparse.linalg import expm
+            else:
+                from scipy.linalg import expm
+            return expm(-1j * a * matrix)
+        else:
+            expd = np.diag(np.exp(-1j * a * eigenvalues))
+            ud = np.transpose(np.conj(eigenvectors))
+            return np.matmul(eigenvectors, np.matmul(expd, ud))
+
+    def calculate_expectation_state(self, matrix, state, normalize):
+        statec = np.conj(state)
+        hstate = matrix @ state
+        ev = np.real(np.sum(statec * hstate))
+        if normalize:
+            norm = np.sum(np.square(np.abs(state)))
+            ev = ev / norm
+        return ev
+
+    def calculate_expectation_density_matrix(self, matrix, state, normalize):
+        ev = np.real(np.trace(matrix @ state))
+        if normalize:
+            norm = np.real(np.trace(state))
+            ev = ev / norm
+        return ev
+
+    def calculate_matrix_product(self, hamiltonian, o):
+        if isinstance(o, hamiltonian.__class__):
+            new_matrix = np.dot(hamiltonian.matrix, o.matrix)
+            return hamiltonian.__class__(hamiltonian.nqubits, new_matrix, backend=self)
+
+        if isinstance(o, self.tensor_types):
+            rank = len(tuple(o.shape))
+            if rank == 1: # vector
+                return hamiltonian.matrix.dot(o[:, np.newaxis])[:, 0]
+            elif rank == 2: # matrix
+                return hamiltonian.matrix.dot(o)
+            else:
+                raise_error(ValueError, "Cannot multiply Hamiltonian with "
+                                        "rank-{} tensor.".format(rank))
+
+        raise_error(NotImplementedError, "Hamiltonian matmul to {} not "
+                                         "implemented.".format(type(o)))
 
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
         value = self.to_numpy(value)

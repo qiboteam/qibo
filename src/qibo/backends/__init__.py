@@ -1,4 +1,3 @@
-from qibo import config
 from qibo.config import log, raise_error
 from qibo.backends.abstract import Backend
 from qibo.backends.numpy import NumpyBackend
@@ -50,7 +49,7 @@ class GlobalBackend(NumpyBackend):
         for kwargs in cls._default_order:
             try:
                 cls._instance = construct_backend(**kwargs)
-            except ModuleNotFoundError:
+            except (ModuleNotFoundError, ImportError):
                 pass
             if cls._instance is not None:
                 log.info(f"Using {cls._instance} backend on {cls._instance.device}")

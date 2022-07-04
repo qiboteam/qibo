@@ -2,7 +2,7 @@ from abc import abstractmethod
 from qibo.gates.abstract import Gate
 from qibo.gates.gates import X, Y, Z, Unitary
 from qibo.gates.measurements import M
-from qibo.config import raise_error
+from qibo.config import raise_error, PRECISION_TOL
 
 
 class Channel(Gate):
@@ -23,7 +23,7 @@ class Channel(Gate):
                                          "for the `Channel` gate.")
 
     def apply(self, backend, state, nqubits):
-        return backend.apply_channel(self, state, nqubits)
+        raise_error(NotImplementedError, f"{self.name} cannot be applied to state vector.")
 
     def apply_density_matrix(self, backend, state, nqubits):
         return backend.apply_channel_density_matrix(self, state, nqubits)
@@ -114,11 +114,9 @@ class UnitaryChannel(KrausChannel):
             ``qubits`` refers the qubit ids that ``Uk`` acts on and ``Uk`` is
             the corresponding matrix as a ``np.ndarray``/``tf.Tensor``.
             Must have the same length as the given probabilities ``p``.
-        seed (int): Optional seed for the random number generator when sampling
-            instead of density matrices is used to simulate this gate.
     """
 
-    def __init__(self, probabilities, ops, seed=None):
+    def __init__(self, probabilities, ops):
         if len(probabilities) != len(ops):
             raise_error(ValueError, "Probabilities list has length {} while "
                                     "{} gates were given."
@@ -131,11 +129,15 @@ class UnitaryChannel(KrausChannel):
         self.name = "UnitaryChannel"
         self.coefficients = tuple(probabilities)
         self.coefficient_sum = sum(probabilities)
-        # TODO: Check that sum <= 1 up to tolerance
-        self.seed = seed
+        if self.coefficient_sum > 1 + PRECISION_TOL or self.coefficient_sum <= 0:
+            raise_error(ValueError, "UnitaryChannel probability sum should be "
+                                    "between 0 and 1 but is {}."
+                                    "".format(self.coefficient_sum))
 
         self.init_args = [probabilities, self.gates]
-        self.init_kwargs = {"seed": seed}
+
+    def apply(self, backend, state, nqubits):
+        return backend.apply_channel(self, state, nqubits)
 
 
 class PauliNoiseChannel(UnitaryChannel):
@@ -157,60 +159,51 @@ class PauliNoiseChannel(UnitaryChannel):
         px (float): Bit flip (X) error probability.
         py (float): Y-error probability.
         pz (float): Phase flip (Z) error probability.
-        seed (int): Optional seed for the random number generator when sampling
-            instead of density matrices is used to simulate this gate.
     """
 
-    def __init__(self, q, px=0, py=0, pz=0, seed=None):
+    def __init__(self, q, px=0, py=0, pz=0):
         probs, gates = [], []
         for p, gate in [(px, X), (py, Y), (pz, Z)]:
             if p > 0:
                 probs.append(p)
                 gates.append(gate(q))
 
-        super().__init__(probs, gates, seed=seed)
+        super().__init__(probs, gates)
         self.name = "PauliNoiseChannel"
         assert self.target_qubits == (q,)
 
         self.init_args = [q]
-        self.init_kwargs = {"px": px, "py": py, "pz": pz, "seed": seed}
+        self.init_kwargs = {"px": px, "py": py, "pz": pz}
 
 
-class ResetChannel(UnitaryChannel):
+class ResetChannel(Channel):
     """Single-qubit reset channel.
 
     Implements the following transformation:
 
     .. math::
         \\mathcal{E}(\\rho ) = (1 - p_0 - p_1) \\rho
-        + p_0 (|0\\rangle \\langle 0| \\otimes \\tilde{\\rho })
-        + p_1 (|1\\rangle \langle 1| \otimes \\tilde{\\rho })
-
-    with
-
-    .. math::
-        \\tilde{\\rho } = \\frac{\langle 0|\\rho |0\\rangle }{\mathrm{Tr}\langle 0|\\rho |0\\rangle}
+        +  \mathrm{Tr}\\rho \\otimes (p_0|0\\rangle \\langle 0| + p_1|1\\rangle \langle 1|)
 
     Args:
         q (int): Qubit id that the channel acts on.
         p0 (float): Probability to reset to 0.
         p1 (float): Probability to reset to 1.
-        seed (int): Optional seed for the random number generator when sampling
-            instead of density matrices is used to simulate this gate.
     """
 
-    def __init__(self, q, p0=0.0, p1=0.0, seed=None):
-        probs = [p0, p1]
-        gates = [M(q, collapse=True), X(q)]
-        super(ResetChannel, self).__init__(probs, gates, seed=seed)
+    def __init__(self, q, p0=0.0, p1=0.0):
+        super().__init__()
         self.name = "ResetChannel"
-        assert self.target_qubits == (q,)
-
+        self.target_qubits = (q,)
+        self.coefficients = (p0, p1)
         self.init_args = [q]
-        self.init_kwargs = {"p0": p0, "p1": p1, "seed": seed}
+        self.init_kwargs = {"p0": p0, "p1": p1}
+
+    def apply_density_matrix(self, backend, state, nqubits):
+        return backend.reset_error_density_matrix(self, state, nqubits)
 
 
-class ThermalRelaxationChannel:
+class ThermalRelaxationChannel(Channel):
     """Single-qubit thermal relaxation error channel.
 
     Implements the following transformation:
@@ -219,13 +212,8 @@ class ThermalRelaxationChannel:
 
     .. math::
         \\mathcal{E} (\\rho ) = (1 - p_z - p_0 - p_1)\\rho + p_zZ\\rho Z
-        + p_0 (|0\\rangle \\langle 0| \\otimes \\tilde{\\rho })
-        + p_1 (|1\\rangle \langle 1| \otimes \\tilde{\\rho })
+        +  \mathrm{Tr}\\rho \\otimes (p_0|0\\rangle \\langle 0| + p_1|1\\rangle \langle 1|)
 
-    with
-
-    .. math::
-        \\tilde{\\rho } = \\frac{\langle 0|\\rho |0\\rangle }{\mathrm{Tr}\langle 0|\\rho |0\\rangle}
 
     while if :math:`T_1 < T_2`:
 
@@ -257,17 +245,16 @@ class ThermalRelaxationChannel:
         time (float): the gate time for relaxation error.
         excited_population (float): the population of the excited state at
             equilibrium. Default is 0.
-        seed (int): Optional seed for the random number generator when sampling
-            instead of density matrices is used to simulate this gate.
     """
 
-    def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
+    def __init__(self, q, t1, t2, time, excited_population=0):
+        super().__init__()
         self.name = "ThermalRelaxationChannel"
+        self.target_qubits = (q,)
         self.init_args = [q, t1, t2, time]
-        self.init_kwargs = {"excited_population": excited_population,
-                            "seed": seed}
+        self.init_kwargs = {"excited_population": excited_population}
 
-    def calculate_probabilities(self, t1, t2, time, excited_population):
+        # check given parameters
         if excited_population < 0 or excited_population > 1:
             raise_error(ValueError, "Invalid excited state population {}."
                                     "".format(excited_population))
@@ -283,41 +270,35 @@ class ThermalRelaxationChannel:
             raise_error(ValueError, "Invalid T_2 relaxation time parameter: "
                                     "T_2 greater than 2 * T_1.")
 
+        # calculate probabilities
+        import numpy as np
+        self.t1, self.t2 = t1, t2
+        p_reset = 1 - np.exp(-time / t1)
+        self.coefficients = [p_reset * (1 - excited_population),
+                             p_reset * excited_population]
+        if t1 < t2:
+            self.coefficients.append(np.exp(-time / t2))
+        else:
+            pz = p_reset + np.exp(-time / t2) * (1 - np.exp(time / t1))
+            self.coefficients.append(pz)
 
-class _ThermalRelaxationChannelA(UnitaryChannel):
-    """Implements thermal relaxation when T1 >= T2."""
+    def apply_density_matrix(self, backend, state, nqubits):
+        q = self.target_qubits[0]
+        if self.t1 < self.t2:
+            from qibo.gates import Unitary
+            preset0, preset1, exp_t2 = self.coefficients
+            matrix = [[1 - preset1, 0, 0, preset1],
+                      [0, exp_t2, 0, 0],
+                      [0, 0, exp_t2, 0],
+                      [preset0, 0, 0, 1 - preset0]]
 
-    def calculate_probabilities(self, t1, t2, time, excited_population): # pragma: no cover
-        # function not tested because it is redefined in `qibo.core.cgates._ThermalRelaxationChannelA`
-        return ThermalRelaxationChannel.calculate_probabilities(
-            self, t1, t2, time, excited_population)
+            qubits = (q, q + nqubits)
+            gate = Unitary(matrix, *qubits)
+            return backend.thermal_error_density_matrix(gate, state, nqubits)
 
-    def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
-        probs = self.calculate_probabilities(t1, t2, time, excited_population)
-        gates = [Z(q), M(q, collapse=True), X(q)]
-        super(_ThermalRelaxationChannelA, self).__init__(
-            probs, gates, seed=seed)
-        ThermalRelaxationChannel.__init__(
-            self, q, t1, t2, time, excited_population=excited_population,
-            seed=seed)
-        assert self.target_qubits == (q,)
-
-
-class _ThermalRelaxationChannelB(Gate):
-    """Implements thermal relaxation when T1 < T2."""
-
-    def calculate_probabilities(self, t1, t2, time, excited_population): # pragma: no cover
-        # function not tested because it is redefined in `qibo.core.cgates._ThermalRelaxationChannelB`
-        return ThermalRelaxationChannel.calculate_probabilities(
-            self, t1, t2, time, excited_population)
-
-    def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
-        probs = self.calculate_probabilities(t1, t2, time, excited_population)
-        self.exp_t2, self.preset0, self.preset1 = probs # pylint: disable=E0633
-
-        super(_ThermalRelaxationChannelB, self).__init__()
-        self.target_qubits = (q,)
-        ThermalRelaxationChannel.__init__(
-            self, q, t1, t2, time, excited_population=excited_population,
-            seed=seed)
-        # this case can only be applied to density matrices
+        else:
+            from qibo.gates import Z
+            pz = self.coefficients[-1]
+            return (backend.reset_error_density_matrix(self, state, nqubits) -
+                    pz * backend.cast(state) +
+                    pz * backend.apply_gate_density_matrix(Z(0), state, nqubits))

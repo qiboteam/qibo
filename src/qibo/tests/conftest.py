@@ -13,30 +13,20 @@ INACTIVE_TESTS = {
     "qibo.tests.test_backends_init",
     "qibo.tests.test_backends_matrices",
     "qibo.tests.test_core_circuit_backpropagation",
-    "qibo.tests.test_core_circuit_noise",
     "qibo.tests.test_core_distcircuit_execution",
     "qibo.tests.test_core_distcircuit",
     "qibo.tests.test_core_distutils",
-    "qibo.tests.test_core_hamiltonians_from_symbols",
-    "qibo.tests.test_core_hamiltonians_symbolic",
-    "qibo.tests.test_core_hamiltonians_trotter",
-    "qibo.tests.test_core_hamiltonians",
     "qibo.tests.test_core_measurements",
     "qibo.tests.test_core_states_distributed",
     "qibo.tests.test_core_states",
-    "qibo.tests.test_core_terms",
-    "qibo.tests.test_hamiltonians",
     "qibo.tests.test_models_evolution",
-    "qibo.tests.test_models_hep",
     "qibo.tests.test_models_qgan",
     "qibo.tests.test_models_variational",
-    "qibo.tests.test_noise",
 }
 
 # backends to be tested
-BACKENDS = ["numpy", "qibojit-numba", "qibojit-cupy"]
-#BACKENDS = ["numpy", "qibojit-numba"]
-#BACKENDS = ["numpy"]
+BACKENDS = ["numpy", "tensorflow", "qibojit-numba", "qibojit-cupy"]
+
 
 def get_backend(backend_name):
     if "-" in backend_name:
@@ -45,12 +35,14 @@ def get_backend(backend_name):
         name, platform = backend_name, None
     return construct_backend(name, platform=platform)
 
-# remove backends that are not available in the current testing environment
+# ignore backends that are not available in the current testing environment
+AVAILABLE_BACKENDS = []
 for backend_name in BACKENDS:
     try:
         get_backend(backend_name)
+        AVAILABLE_BACKENDS.append(backend_name)
     except (ModuleNotFoundError, ImportError):
-        BACKENDS.remove(backend_name)
+        pass
 
 
 def pytest_runtest_setup(item):
@@ -78,7 +70,7 @@ def pytest_generate_tests(metafunc):
         pytest.skip()
 
     if "backend_name" in metafunc.fixturenames:
-        metafunc.parametrize("backend_name", BACKENDS)
+        metafunc.parametrize("backend_name", AVAILABLE_BACKENDS)
 
     if "accelerators" in metafunc.fixturenames:
         metafunc.parametrize("accelerators", [None])

@@ -7,8 +7,8 @@ class PauliError():
             options (tuple): see :class:`qibo.abstractions.gates.PauliNoiseChannel`
     """
 
-    def __init__(self, px=0, py=0, pz=0, seed=None):
-        self.options = px, py, pz, seed
+    def __init__(self, px=0, py=0, pz=0):
+        self.options = px, py, pz
         self.channel = gates.PauliNoiseChannel
 
 
@@ -19,8 +19,8 @@ class ThermalRelaxationError():
             options (tuple): see :class:`qibo.abstractions.gates.ThermalRelaxationChannel`
     """
 
-    def __init__(self, t1, t2, time, excited_population=0, seed=None):
-        self.options = t1, t2, time, excited_population, seed
+    def __init__(self, t1, t2, time, excited_population=0):
+        self.options = t1, t2, time, excited_population
         self.channel = gates.ThermalRelaxationChannel
 
 
@@ -31,8 +31,8 @@ class ResetError():
             options (tuple): see :class:`qibo.abstractions.gates.ResetChannel`
     """
 
-    def __init__(self, p0, p1, seed=None):
-        self.options = p0, p1, seed
+    def __init__(self, p0, p1):
+        self.options = p0, p1
         self.channel = gates.ResetChannel
 
 

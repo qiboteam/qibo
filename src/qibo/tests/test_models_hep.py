@@ -24,7 +24,7 @@ test_values = [
 @pytest.mark.parametrize(test_names, test_values)
 def test_qpdf(backend, ansatz, layers, nqubits, multi_output, output):
     """Performs a qPDF circuit minimization test."""
-    model = qPDF(ansatz, layers, nqubits, multi_output)
+    model = qPDF(ansatz, layers, nqubits, multi_output, backend=backend)
     np.random.seed(0)
     params = np.random.rand(model.nparams)
     result = model.predict(params, [0.1])

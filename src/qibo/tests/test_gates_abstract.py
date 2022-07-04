@@ -246,8 +246,6 @@ def test_pauli_noise_channel_init():
 def test_reset_channel_init():
     gate = gates.ResetChannel(0, 0.1, 0.2)
     assert gate.target_qubits == (0,)
-    assert isinstance(gate.gates[0], gates.M)
-    assert isinstance(gate.gates[1], gates.X)
 
 
 def test_qubit_getter_and_setter():

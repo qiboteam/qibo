@@ -22,8 +22,7 @@ EINSUM_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 EIGVAL_CUTOFF = 1e-14
 
 # Tolerance for the probability sum check in the unitary channel
-PRECISION_TOL_SINGLE = 1e-8
-PRECISION_TOL_DOUBLE = 1e-12
+PRECISION_TOL = 1e-8
 
 # Batch size for sampling shots in measurement frequencies calculation
 SHOT_BATCH_SIZE = 2 ** 18

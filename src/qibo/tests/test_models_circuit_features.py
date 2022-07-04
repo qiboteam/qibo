@@ -288,11 +288,11 @@ def test_repeated_execute_pauli_noise_channel(backend):
     backend.set_seed(1234)
     c = Circuit(4)
     c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
-    c.add((gates.PauliNoiseChannel(i, px=0.1, py=0.2, pz=0.3, seed=1234)
+    c.add((gates.PauliNoiseChannel(i, px=0.1, py=0.2, pz=0.3)
           for i in range(4)))
     final_state = backend.execute_circuit(c, nshots=20)
 
-    np.random.seed(1234)
+    backend.set_seed(1234)
     target_state = []
     for _ in range(20):
         noiseless_c = Circuit(4)
