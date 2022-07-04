@@ -40,33 +40,33 @@ def test_circuit_unitary_bigger(backend):
     backend.assert_allclose(final_matrix, target_matrix)
 
 
-@pytest.mark.skip
-@pytest.mark.parametrize("compile", [False, True])
+# TODO: Enable compile when ``tensorflow`` backend is implemented
+@pytest.mark.parametrize("compile", [False])
 def test_circuit_vs_gate_execution(backend, compile):
     """Check consistency between executing circuit and stand alone gates."""
-    from qibo import K
+    nqubits = 2
     theta = 0.1234
-    target_c = Circuit(2)
+    target_c = Circuit(nqubits)
     target_c.add(gates.X(0))
     target_c.add(gates.X(1))
     target_c.add(gates.CU1(0, 1, theta))
-    target_result = target_c()
+    target_result = backend.execute_circuit(target_c)
 
     # custom circuit
-    def custom_circuit(initial_state, theta):
-        l1 = gates.X(0)(initial_state)
-        l2 = gates.X(1)(l1)
-        o = gates.CU1(0, 1, theta)(l2)
-        return o
+    def custom_circuit(state, theta):
+        state = backend.apply_gate(gates.X(0), state, nqubits)
+        state = backend.apply_gate(gates.X(1), state, nqubits)
+        state = backend.apply_gate(gates.CU1(0, 1, theta), state, nqubits)
+        return state
 
-    initial_state = target_c.get_initial_state()
+    initial_state = backend.zero_state(nqubits)
     if compile:
         c = K.compile(custom_circuit)
     else:
         c = custom_circuit
 
     result = c(initial_state, theta)
-    K.assert_allclose(result, target_result)
+    backend.assert_allclose(result, target_result)
 
 
 def test_circuit_addition_execution(backend, accelerators):
@@ -283,15 +283,14 @@ def test_circuit_decompose_execution(backend):
     backend.assert_circuitclose(c, decomp_c, atol=1e-6)
 
 
-@pytest.mark.skip
 def test_repeated_execute_pauli_noise_channel(backend):
     thetas = np.random.random(4)
+    backend.set_seed(1234)
     c = Circuit(4)
     c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
-
     c.add((gates.PauliNoiseChannel(i, px=0.1, py=0.2, pz=0.3, seed=1234)
           for i in range(4)))
-    final_state = c(nshots=20)
+    final_state = backend.execute_circuit(c, nshots=20)
 
     np.random.seed(1234)
     target_state = []
@@ -305,19 +304,20 @@ def test_repeated_execute_pauli_noise_channel(backend):
                 noiseless_c.add(gates.Y(i))
             if np.random.random() < 0.3:
                 noiseless_c.add(gates.Z(i))
-        target_state.append(noiseless_c())
+        result = backend.execute_circuit(noiseless_c)
+        target_state.append(result.state(numpy=True))
+    final_state = [backend.to_numpy(x) for x in final_state]
     target_state = np.stack(target_state)
-    K.assert_allclose(final_state, target_state)
+    backend.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.skip
 def test_repeated_execute_with_noise(backend):
     thetas = np.random.random(4)
     c = Circuit(4)
     c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
     noisy_c = c.with_noise((0.2, 0.0, 0.1))
-    np.random.seed(1234)
-    final_state = noisy_c(nshots=20)
+    backend.set_seed(1234)
+    final_state = backend.execute_circuit(noisy_c, nshots=20)
 
     np.random.seed(1234)
     target_state = []
@@ -329,6 +329,8 @@ def test_repeated_execute_with_noise(backend):
                 noiseless_c.add(gates.X(i))
             if np.random.random() < 0.1:
                 noiseless_c.add(gates.Z(i))
-        target_state.append(noiseless_c())
+        result = backend.execute_circuit(noiseless_c)
+        target_state.append(result.state(numpy=True))
     target_state = np.stack(target_state)
-    K.assert_allclose(final_state, target_state)
+    final_state = [backend.to_numpy(x) for x in final_state]
+    backend.assert_allclose(final_state, target_state)

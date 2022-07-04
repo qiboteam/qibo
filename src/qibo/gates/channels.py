@@ -1,6 +1,7 @@
 from abc import abstractmethod
 from qibo.gates.abstract import Gate
-from qibo.gates.gates import X, Y, Z, M, Unitary
+from qibo.gates.gates import X, Y, Z, Unitary
+from qibo.gates.measurements import M
 from qibo.config import raise_error
 
 

@@ -9,7 +9,6 @@ from qibo.backends import construct_backend
 
 
 INACTIVE_TESTS = {
-    "qibo.tests.test_abstract_states",
     "qibo.tests.test_abstract_callbacks",
     "qibo.tests.test_backends_agreement",
     "qibo.tests.test_backends_init",
@@ -30,20 +29,17 @@ INACTIVE_TESTS = {
     "qibo.tests.test_core_states",
     "qibo.tests.test_core_terms",
     "qibo.tests.test_hamiltonians",
-    "qibo.tests.test_measurement_gate",
-    "qibo.tests.test_measurement_gate_collapse",
-    "qibo.tests.test_measurement_gate_probabilistic",
-    "qibo.tests.test_measurement_gate_registers",
     "qibo.tests.test_models_evolution",
     "qibo.tests.test_models_hep",
     "qibo.tests.test_models_qgan",
-    "qibo.tests.test_models_grover",
     "qibo.tests.test_models_variational",
     "qibo.tests.test_noise",
 }
 
 # backends to be tested
 BACKENDS = ["numpy", "qibojit-numba", "qibojit-cupy"]
+#BACKENDS = ["numpy", "qibojit-numba"]
+#BACKENDS = ["numpy"]
 
 def get_backend(backend_name):
     if "-" in backend_name:

@@ -37,11 +37,7 @@ class Gate:
         self._parameters = tuple()
         config.ALLOW_SWITCHERS = False
 
-        self.well_defined = True
-        # Keeps track of whether parametrized gates are well-defined
-        # (parameter value is known during circuit creation) or if they are
-        # measurement dependent so the parameter value is determined during
-        # execution
+        self.symbolic_parameters = {}
 
     @property
     def target_qubits(self) -> Tuple[int]:
@@ -281,7 +277,6 @@ class ParametrizedGate(Gate):
         self.parameter_names = "theta"
         self.nparams = 1
         self.trainable = trainable
-        self.symbolic_parameters = {}
 
     @Gate.parameters.setter
     def parameters(self, x):
@@ -313,7 +308,6 @@ class ParametrizedGate(Gate):
                                     "".format(nparams, len(x)))
         for i, v in enumerate(x):
             if isinstance(v, sympy.Expr):
-                self.well_defined = False
                 self.symbolic_parameters[i] = v
             params[i] = v
         self._parameters = tuple(params)

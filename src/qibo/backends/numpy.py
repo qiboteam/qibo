@@ -1,3 +1,4 @@
+import collections
 import numpy as np
 from qibo.config import raise_error
 from qibo.gates import FusedGate
@@ -21,8 +22,10 @@ class NumpyBackend(Simulator):
         if nthreads > 1:
             raise_error(ValueError, "numpy does not support more than one thread.")
 
-    def cast(self, x):
-        return np.array(x, dtype=self.dtype, copy=False)
+    def cast(self, x, dtype=None, copy=False):
+        if dtype is None:
+            dtype = self.dtype
+        return np.array(x, dtype=dtype, copy=copy)
 
     def to_numpy(self, x):
         return x
@@ -147,22 +150,199 @@ class NumpyBackend(Simulator):
         return np.reshape(state, 2 * (2 ** nqubits,))
 
     def apply_channel(self, channel, state, nqubits):
-        # TODO: Think how to implement seed
         for coeff, gate in zip(channel.coefficients, channel.gates):
             if np.random.random() < coeff:
                 state = self.apply_gate(gate, state, nqubits)
         return state
 
     def apply_channel_density_matrix(self, channel, state, nqubits):
-        # TODO: Think how to implement seed
-        # TODO: Inverse gates may be needed for qibojit (in-place updates)
         state = self.cast(state)
         new_state = (1 - channel.coefficient_sum) * state
         for coeff, gate in zip(channel.coefficients, channel.gates):
             new_state += coeff * self.apply_gate_density_matrix(gate, state, nqubits)
         return new_state
 
+    def _append_zeros(self, state, qubits, results):
+        """Helper method for collapse."""
+        for q, r in zip(qubits, results):
+            state = np.expand_dims(state, axis=q)
+            if r:
+                state = np.concatenate([np.zeros_like(state), state], axis=q)
+            else:
+                state = np.concatenate([state, np.zeros_like(state)], axis=q)
+        return state
+
+    def collapse_state(self, gate, state, nqubits):
+        state = self.cast(state)
+        shape = state.shape
+        qubits = sorted(gate.target_qubits)
+        # measure and get result
+        probs = self.calculate_probabilities(state, gate.qubits, nqubits)
+        shots = self.sample_shots(probs, 1)
+        shots = self.samples_to_binary(shots, len(qubits))[0]
+        # update the gate's result with the measurement outcome
+        gate.result.backend = self
+        gate.result.append(shots)
+        # collapse state
+        state = np.reshape(state, nqubits * (2,))
+        order = list(qubits) + [q for q in range(nqubits) if q not in qubits]
+        substate = np.transpose(state, order)[tuple(shots)]
+        norm = np.sqrt(np.sum(np.abs(substate) ** 2))
+        state = substate / norm
+        state = self._append_zeros(state, qubits, shots)
+        return np.reshape(state, shape)
+
+    def collapse_density_matrix(self, gate, state, nqubits):
+        state = self.cast(state)
+        shape = state.shape
+        qubits = sorted(gate.target_qubits)
+        # measure and get result
+        probs = self.calculate_probabilities_density_matrix(state, gate.qubits, nqubits)
+        shots = self.sample_shots(probs, 1)
+        shots = list(self.samples_to_binary(shots, len(qubits))[0])
+        # update the gate's result with the measurement outcome
+        gate.result.backend = self
+        gate.result.append(shots)
+        # collapse state
+        order = list(qubits) + [q + nqubits for q in qubits]
+        order.extend(q for q in range(nqubits) if q not in qubits)
+        order.extend(q + nqubits for q in range(nqubits) if q not in qubits)
+        shots = 2 * shots
+        state = np.reshape(state, 2 * nqubits * (2,))
+        substate = np.transpose(state, order)[tuple(shots)]
+        n = 2 ** (len(substate.shape) // 2)
+        norm = np.trace(np.reshape(substate, (n, n)))
+        state = substate / norm
+        qubits = qubits + [q + nqubits for q in qubits]
+        state = self._append_zeros(state, qubits, shots)
+        return np.reshape(state, shape)
+
+    def calculate_symbolic(self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20):
+        state = self.to_numpy(state)
+        terms = []
+        for i in np.nonzero(state)[0]:
+            b = bin(i)[2:].zfill(nqubits)
+            if np.abs(state[i]) >= cutoff:
+                x = round(state[i], decimals)
+                terms.append(f"{x}|{b}>")
+            if len(terms) >= max_terms:
+                terms.append("...")
+                return terms
+        return terms
+
+    def calculate_symbolic_density_matrix(self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20):
+        state = self.to_numpy(state)
+        terms = []
+        indi, indj = np.nonzero(state)
+        for i, j in zip(indi, indj):
+            bi = bin(i)[2:].zfill(nqubits)
+            bj = bin(j)[2:].zfill(nqubits)
+            if np.abs(state[i, j]) >= cutoff:
+                x = round(state[i, j], decimals)
+                terms.append(f"{x}|{bi}><{bj}|")
+            if len(terms) >= max_terms:
+                terms.append("...")
+                return terms
+        return terms
+
+    @staticmethod
+    def _order_probabilities(probs, qubits, nqubits):
+        """Arrange probabilities according to the given ``qubits`` ordering."""
+        unmeasured, reduced = [], {}
+        for i in range(nqubits):
+            if i in qubits:
+                reduced[i] = i - len(unmeasured)
+            else:
+                unmeasured.append(i)
+        return np.transpose(probs, [reduced.get(i) for i in qubits])
+
+    def calculate_probabilities(self, state, qubits, nqubits):
+        rtype = state.real.dtype
+        unmeasured_qubits = tuple(i for i in range(nqubits) if i not in qubits)
+        state = np.reshape(np.abs(state) ** 2, nqubits * (2,))
+        probs = np.sum(state.astype(rtype), axis=unmeasured_qubits)
+        return self._order_probabilities(probs, qubits, nqubits).ravel()
+
+    def calculate_probabilities_density_matrix(self, state, qubits, nqubits):
+        rtype = state.real.dtype
+        order = tuple(sorted(qubits))
+        order += tuple(i for i in range(nqubits) if i not in qubits)
+        order = order + tuple(i + nqubits for i in order)
+        shape = 2 * (2 ** len(qubits), 2 ** (nqubits - len(qubits)))
+        state = np.reshape(state, 2 * nqubits * (2,))
+        state = np.reshape(np.transpose(state, order), shape)
+        probs = np.einsum("abab->a", state).astype(rtype)
+        probs = np.reshape(probs, len(qubits) * (2,))
+        return self._order_probabilities(probs, qubits, nqubits).ravel()
+
+    def set_seed(self, seed):
+        np.random.seed(seed)
+
+    def sample_shots(self, probabilities, nshots):
+        return np.random.choice(range(len(probabilities)), size=nshots, p=probabilities)
+
+    def aggregate_shots(self, shots):
+        return np.array(shots, dtype=shots[0].dtype)
+
+    def samples_to_binary(self, samples, nqubits):
+        qrange = np.arange(nqubits - 1, -1, -1, dtype="int32")
+        return np.mod(np.right_shift(samples[:, np.newaxis], qrange), 2)
+
+    def samples_to_decimal(self, samples, nqubits):
+        qrange = np.arange(nqubits - 1, -1, -1, dtype="int32")
+        qrange = (2 ** qrange)[:, np.newaxis]
+        return np.matmul(samples, qrange)[:, 0]
+
+    def sample_frequencies(self, probabilities, nshots):
+        from qibo.config import SHOT_BATCH_SIZE
+        nprobs = probabilities / np.sum(probabilities)
+        def update_frequencies(nsamples, frequencies):
+            samples = np.random.choice(range(len(nprobs)), size=nsamples, p=nprobs)
+            res, counts = np.unique(samples, return_counts=True)
+            frequencies[res] += counts
+            return frequencies
+
+        frequencies = np.zeros(len(nprobs), dtype="int64")
+        for _ in range(nshots // SHOT_BATCH_SIZE):
+            frequencies = update_frequencies(SHOT_BATCH_SIZE, frequencies)
+        frequencies = update_frequencies(nshots % SHOT_BATCH_SIZE, frequencies)
+        return collections.Counter({i: f for i, f in enumerate(frequencies) if f > 0})
+
+    def calculate_frequencies(self, samples):
+        res, counts = np.unique(samples, return_counts=True)
+        res, counts = np.array(res), np.array(counts)
+        return collections.Counter({k: v for k, v in zip(res, counts)})
+
+    def apply_bitflips(self, noiseless_samples, bitflip_probabilities):
+        fprobs = np.array(bitflip_probabilities, dtype="float64")
+        sprobs = np.random.random(noiseless_samples.shape)
+        flip0 = np.array(sprobs < fprobs[0], dtype=noiseless_samples.dtype)
+        flip1 = np.array(sprobs < fprobs[1], dtype=noiseless_samples.dtype)
+        noisy_samples = noiseless_samples + (1 - noiseless_samples) * flip0
+        noisy_samples = noisy_samples - noiseless_samples * flip1
+        return noisy_samples
+
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
         value = self.to_numpy(value)
         target = self.to_numpy(target)
         np.testing.assert_allclose(value, target, rtol=rtol, atol=atol)
+
+    def test_regressions(self, name):
+        if name == "test_measurementresult_apply_bitflips":
+            return [
+                [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
+                [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 0, 2, 0, 0, 0, 0, 0]
+            ]
+        elif name == "test_probabilistic_measurement": 
+            return {0: 249, 1: 231, 2: 253, 3: 267}
+        elif name == "test_unbalanced_probabilistic_measurement": 
+            return {0: 171, 1: 148, 2: 161, 3: 520}
+        elif name == "test_post_measurement_bitflips_on_circuit": 
+            return [
+                {5: 30}, {5: 18, 4: 5, 7: 4, 1: 2, 6: 1},
+                {4: 8, 2: 6, 5: 5, 1: 3, 3: 3, 6: 2, 7: 2, 0: 1}
+            ]
+        else:
+            return None
