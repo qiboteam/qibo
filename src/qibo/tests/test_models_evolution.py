@@ -296,16 +296,14 @@ def test_energy_callback(backend, solver, dt, atol):
     backend.assert_allclose(final_energies, target_energies, atol=atol)
 
 
-# TODO: Unskip this when variational are implemented
 test_names = "method,options,messages,dense,filename"
 test_values = [
     ("BFGS", {'maxiter': 1}, True, True, "adiabatic_bfgs.out"),
     ("BFGS", {'maxiter': 1}, True, False, "trotter_adiabatic_bfgs.out"),
     ("sgd", {"nepochs": 5}, False, True, None)
     ]
-@pytest.mark.skip
 @pytest.mark.parametrize(test_names, test_values)
-def test_scheduling_optimization(method, options, messages, dense, filename):
+def test_scheduling_optimization(backend, method, options, messages, dense, filename):
     """Test optimization of s(t)."""
     from qibo.tests.test_models_variational import assert_regression_fixture
     h0 = hamiltonians.X(3, dense=dense)
@@ -314,8 +312,7 @@ def test_scheduling_optimization(method, options, messages, dense, filename):
     adevp = models.AdiabaticEvolution(h0, h1, sp, dt=1e-1)
 
     if method == "sgd":
-        from qibo import K
-        if not K.supports_gradients:
+        if backend.name != "tensorflow":
             with pytest.raises(RuntimeError):
                 best, params, _ = adevp.minimize([0.5, 1], method=method, options=options,
                                 messages=messages)
@@ -324,4 +321,4 @@ def test_scheduling_optimization(method, options, messages, dense, filename):
                                         messages=messages)
 
     if filename is not None:
-        assert_regression_fixture(params, filename)
+        assert_regression_fixture(backend, params, filename)
