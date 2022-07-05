@@ -1,4 +1,4 @@
-"""Test how features defined in :class:`qibo.abstractions.circuit.AbstractCircuit` work during circuit execution."""
+"""Test how features defined in :class:`qibo.models.circuit.Circuit` work during circuit execution."""
 import numpy as np
 import pytest
 from qibo import gates

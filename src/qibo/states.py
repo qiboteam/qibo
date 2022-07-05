@@ -104,8 +104,6 @@ class CircuitResult:
         Args:
             binary (bool): Return samples in binary or decimal form.
             registers (bool): Group samples according to registers.
-                Can be used only if ``registers`` were given when calling
-                :meth:`qibo.abstractions.states.AbstractState.measure`.
 
         Returns:
             If `binary` is `True`
@@ -163,8 +161,6 @@ class CircuitResult:
         Args:
             binary (bool): Return frequency keys in binary or decimal form.
             registers (bool): Group frequencies according to registers.
-                Can be used only if ``registers`` were given when calling
-                :meth:`qibo.abstractions.states.AbstractState.measure`.
 
         Returns:
             A `collections.Counter` where the keys are the observed values

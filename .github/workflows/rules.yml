@@ -36,7 +36,7 @@ jobs:
         sudo apt install pandoc
         make -C doc doctest
     # Disable example tests temporarily
-    - name: Test examples
+    #- name: Test examples
     #  if: startsWith(matrix.os, 'ubuntu') && matrix.python-version == '3.9'
     #  run: |
     #    OMP_NUM_THREADS=1 pytest examples/
