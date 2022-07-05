@@ -41,7 +41,7 @@ class _Queue(list):
         self.moment_index = nqubits * [0]
 
     def to_fused(self):
-        """Transforms all gates in queue to :class:`qibo.abstractions.gates.FusedGate`."""
+        """Transforms all gates in queue to :class:`qibo.gates.FusedGate`."""
         last_gate = {}
         queue = self.__class__(self.nqubits)
         for gate in self:
@@ -272,7 +272,7 @@ class Circuit:
         return circuit, qubit_map
 
     def _shallow_copy(self):
-        """Helper method for :meth:`qibo.abstractions.circuit.AbstractCircuit.copy`
+        """Helper method for :meth:`qibo.models.circuit.Circuit.copy`
         and :meth:`qibo.core.circuit.Circuit.fuse`."""
         new_circuit = self.__class__(**self.init_kwargs)
         new_circuit.parametrized_gates = _ParametrizedGates(self.parametrized_gates)
@@ -453,7 +453,7 @@ class Circuit:
         """Add a gate to a given queue.
 
         Args:
-            gate (:class:`qibo.abstractions.gates.Gate`): the gate object to add.
+            gate (:class:`qibo.gates.Gate`): the gate object to add.
                 See :ref:`Gates` for a list of available gates.
                 `gate` can also be an iterable or generator of gates.
                 In this case all gates in the iterable will be added in the
@@ -664,12 +664,12 @@ class Circuit:
                        ) -> Union[List, Dict]: # pylint: disable=W0622
         """Returns the parameters of all parametrized gates in the circuit.
 
-        Inverse method of :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`.
+        Inverse method of :meth:`qibo.models.circuit.Circuit.set_parameters`.
 
         Args:
             format (str): How to return the variational parameters.
                 Available formats are ``'list'``, ``'dict'`` and ``'flatlist'``.
-                See :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
+                See :meth:`qibo.models.circuit.Circuit.set_parameters`
                 for more details on each format. Default is ``'list'``.
             include_not_trainable (bool): If ``True`` it includes the parameters
                 of non-trainable parametrized gates in the returned list or
@@ -765,7 +765,7 @@ class Circuit:
 
         Returns:
             A :class:`qibo.core.circuit.Circuit` object containing
-            :class:`qibo.abstractions.gates.FusedGate` gates, each of which
+            :class:`qibo.gates.FusedGate` gates, each of which
             corresponds to a group of some original gates.
             For more details on the fusion algorithm we refer to the
             :ref:`Circuit fusion <circuit-fusion>` section.
@@ -915,7 +915,7 @@ class Circuit:
             qasm_code (str): String with the QASM script.
 
         Returns:
-            A :class:`qibo.abstractions.circuit.AbstractCircuit` that contains the gates
+            A :class:`qibo.models.circuit.Circuit` that contains the gates
             specified by the given QASM script.
 
         Example:

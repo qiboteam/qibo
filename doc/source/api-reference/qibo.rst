@@ -566,7 +566,7 @@ used for tensorflow. Scipy sparse matrices support algebraic
 operations (addition, subtraction, scalar multiplication), linear algebra
 operations (eigenvalues, eigenvectors, matrix exponentiation) and
 multiplication to dense or other sparse matrices. All these properties are
-inherited by :class:`qibo.core.hamiltonians.Hamiltonian` objects created
+inherited by :class:`qibo.hamiltonians.Hamiltonian` objects created
 using sparse matrices. Tensorflow sparse matrices support only multiplication
 to dense matrices. Both backends support calculating Hamiltonian expectation
 values using a sparse Hamiltonian matrix.
@@ -574,6 +574,7 @@ values using a sparse Hamiltonian matrix.
 .. autoclass:: qibo.hamiltonians.Hamiltonian
     :members:
     :member-order: bysource
+    :noindex:
 
 
 Symbolic Hamiltonian
@@ -588,10 +589,7 @@ For more information on constructing Hamiltonians using symbols we refer to the
 .. autoclass:: qibo.hamiltonians.SymbolicHamiltonian
     :members:
     :member-order: bysource
-
-.. autoclass:: qibo.hamiltonians.SymbolicHamiltonian
-    :members:
-    :member-order: bysource
+    :noindex:
 
 
 When a :class:`qibo.hamiltonians.SymbolicHamiltonian` is used for time

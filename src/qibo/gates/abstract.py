@@ -17,7 +17,7 @@ class Gate:
         Attributes:
             name (str): Name of the gate.
             is_controlled_by (bool): ``True`` if the gate was created using the
-                :meth:`qibo.abstractions.abstract_gates.Gate.controlled_by` method,
+                :meth:`qibo.gates.abstract.Gate.controlled_by` method,
                 otherwise ``False``.
             init_args (list): Arguments used to initialize the gate.
             init_kwargs (dict): Arguments used to initialize the gate.
@@ -255,7 +255,7 @@ class Gate:
 
     def apply_density_matrix(self, backend, state, nqubits):
         return backend.apply_gate_density_matrix(self, state, nqubits)
-    
+
 
 class SpecialGate(Gate):
     """Abstract class for special gates.
@@ -272,7 +272,7 @@ class SpecialGate(Gate):
                     "Cannot use special gates on subroutines.")
 
     def asmatrix(self, backend):
-        raise_error(NotImplementedError, 
+        raise_error(NotImplementedError,
                     "Special gates do not have matrix representation.")
 
 
@@ -321,7 +321,7 @@ class ParametrizedGate(Gate):
                 self.symbolic_parameters[i] = v
             params[i] = v
         self._parameters = tuple(params)
-       
+
         # set parameters in device gates
         for gate in self.device_gates:
             gate.parameters = x
