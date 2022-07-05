@@ -113,6 +113,16 @@ class Circuit:
         nqubits (int): Total number of qubits in the circuit.
     """
 
+    def __new__(cls, nqubits, accelerators=None, density_matrix=False):
+        if accelerators:
+            if density_matrix:
+                raise_error(NotImplementedError, "Distributed circuit is not implemented "
+                                                 "for density matrices.")
+            from qibo.models.distcircuit import DistributedCircuit
+            return DistributedCircuit(nqubits, accelerators)
+        else:
+            return super().__new__(cls)
+
     def __init__(self, nqubits, accelerators=None, density_matrix=False):
         if not isinstance(nqubits, int):
             raise_error(TypeError, "Number of qubits must be an integer but "

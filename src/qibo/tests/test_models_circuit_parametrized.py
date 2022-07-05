@@ -187,10 +187,10 @@ def test_set_parameters_with_gate_fusion(backend, trainable):
 
 
 @pytest.mark.parametrize("nqubits", [4, 5])
-def test_set_parameters_with_variationallayer(backend, nqubits, accelerators):
+def test_set_parameters_with_variationallayer(backend, nqubits):
     """Check updating parameters of variational layer."""
     theta = np.random.random(nqubits)
-    c = Circuit(nqubits, accelerators)
+    c = Circuit(nqubits)
     pairs = [(i, i + 1) for i in range(0, nqubits - 1, 2)]
     c.add(gates.VariationalLayer(range(nqubits), pairs,
                                  gates.RY, gates.CZ, theta))
@@ -215,10 +215,10 @@ def test_set_parameters_with_variationallayer(backend, nqubits, accelerators):
 
 @pytest.mark.parametrize("nqubits", [4, 5])
 @pytest.mark.parametrize("trainable", [False])
-def test_set_parameters_with_double_variationallayer(backend, nqubits, trainable, accelerators):
+def test_set_parameters_with_double_variationallayer(backend, nqubits, trainable):
     """Check updating parameters of variational layer."""
     theta = np.random.random((3, nqubits))
-    c = Circuit(nqubits, accelerators)
+    c = Circuit(nqubits)
     pairs = [(i, i + 1) for i in range(0, nqubits - 1, 2)]
     c.add(gates.VariationalLayer(range(nqubits), pairs,
                                  gates.RY, gates.CZ,

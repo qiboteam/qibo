@@ -1,7 +1,11 @@
 import copy
-from qibo.abstractions import gates
+import math
+import collections
 from qibo.config import raise_error
-from typing import Dict, List, Optional, Sequence, Tuple
+from qibo import gates
+from qibo.models.circuit import Circuit
+from qibo.gates.abstract import Gate, SpecialGate, ParametrizedGate
+from typing import Dict, List, Optional, Sequence, Set, Tuple, Union
 
 
 class DistributedQubits:
@@ -51,8 +55,6 @@ class DistributedQueues:
     global qubits are swapped and we proceed to the next gate group.
 
     Holds the following data (in addition to ``DistributedBase``):
-    * ``gate_module``: Gate module used by the circuit. This is used to create
-        new SWAP gates when needed.
     * ``device_to_ids``: Dictionary that maps device (str) to list of piece indices.
         When a device is used multiple times then it is responsible for updating
         multiple state pieces. The list of indices specifies which pieces the device
@@ -68,9 +70,8 @@ class DistributedQueues:
         ``CallbackGate``, ``Flatten`` or SWAPs between local and global qubits.
     """
 
-    def __init__(self, circuit, gate_module):
+    def __init__(self, circuit):
         self.circuit = circuit
-        self.gate_module = gate_module
         self.queues = []
         self.special_queue = []
         self.qubits = None
@@ -79,7 +80,7 @@ class DistributedQueues:
         # in the end
         self.swaps_list = []
 
-        self.device_to_ids = {d: v for d, v in self._ids(circuit.calc_devices)}
+        self.device_to_ids = {d: v for d, v in self._ids(circuit.accelerators)}
         self.ids_to_device = self.ndevices * [None]
         for device, ids in self.device_to_ids.items():
             for i in ids:
@@ -101,7 +102,7 @@ class DistributedQueues:
     def ndevices(self):
         return self.circuit.ndevices
 
-    def set(self, queue: List[gates.Gate]):
+    def set(self, queue: List[Gate]):
         """Prepares gates for device-specific gate execution.
 
         Each gate has to be recreated in the device that will be executed to
@@ -124,25 +125,25 @@ class DistributedQueues:
             transformed_queue = self.transform(queue, counter)
             self.create(transformed_queue)
 
-    def _ids(self, calc_devices: Dict[str, int]) -> Tuple[str, List[int]]:
+    def _ids(self, accelerators: Dict[str, int]) -> Tuple[str, List[int]]:
         """Generator of device piece indices."""
         start = 0
-        for device, n in calc_devices.items():
+        for device, n in accelerators.items():
             stop = start + n
             yield device, list(range(start, stop))
             start = stop
 
-    def _create_device_gate(self, gate: gates.Gate) -> gates.Gate:
+    def _create_device_gate(self, gate: Gate) -> Gate:
         """Creates a copy of a gate for specific device application.
 
         Target and control qubits are modified according to the local qubits of
         the circuit when this gate will be applied.
 
         Args:
-            gate: The :class:`qibo.abstractions.gates.Gate` object of the gate to copy.
+            gate: The :class:`qibo.gates.abstract.Gate` object of the gate to copy.
 
         Returns:
-            A :class:`qibo.abstractions.gates.Gate` object with the proper target and
+            A :class:`qibo.gates.abstract.Gate` object with the proper target and
             control qubit indices for device-specific application.
         """
         devgate = copy.copy(gate)
@@ -158,7 +159,7 @@ class DistributedQueues:
         return devgate
 
     @staticmethod
-    def count(queue: List[gates.Gate], nqubits: int):
+    def count(queue: List[Gate], nqubits: int):
         """Counts how many gates target each qubit.
 
         Args:
@@ -176,13 +177,13 @@ class DistributedQueues:
                 counter[qubit] += 1
         return counter
 
-    def _transform(self, queue: List[gates.Gate],
-                   remaining_queue: List[gates.Gate],
-                   counter) -> List[gates.Gate]:
+    def _transform(self, queue: List[Gate],
+                   remaining_queue: List[Gate],
+                   counter) -> List[Gate]:
         """Helper recursive method for ``transform``."""
         new_remaining_queue = []
         for gate in remaining_queue:
-            if isinstance(gate, (gates.SpecialGate, gates.M)):
+            if isinstance(gate, (SpecialGate, gates.M)):
                 gate.swap_reset = list(self.swaps_list)
 
             global_targets = set(gate.target_qubits) & self.qubits.set
@@ -222,7 +223,7 @@ class DistributedQueues:
             # Keep SWAPs in memory to reset them in the end
             self.swaps_list.append((min(q, qs), max(q, qs)))
             # Add ``SWAP`` gate in ``queue``.
-            queue.append(self.gate_module.SWAP(q, qs))
+            queue.append(gates.SWAP(q, qs))
             #  Modify ``counter`` to take into account the swaps
             counter[q], counter[qs] = counter[qs], counter[q]
 
@@ -255,11 +256,10 @@ class DistributedQueues:
         if counter is None:
             counter = self.count(queue, self.nqubits)
         new_queue = self._transform([], queue, counter)
-        new_queue.extend((self.gate_module.SWAP(*p)
-                          for p in reversed(self.swaps_list)))
+        new_queue.extend((gates.SWAP(*p) for p in reversed(self.swaps_list)))
         return new_queue
 
-    def create(self, queue: List[gates.Gate]):
+    def create(self, queue: List[Gate]):
         """Creates the queues for each accelerator device.
 
         Args:
@@ -313,5 +313,103 @@ class DistributedQueues:
                                 break
                         if flag:
                             self.queues[-1][i].append(devgate)
-                            if isinstance(gate, gates.ParametrizedGate):
+                            if isinstance(gate, ParametrizedGate):
                                 gate.device_gates.add(devgate)
+
+
+class DistributedCircuit(Circuit):
+    """Distributed implementation of :class:`qibo.models.circuit.Circuit`.
+
+    Uses multiple `accelerator` devices (GPUs) for applying gates to the state vector.
+    The full state vector is saved in the given `memory device` (usually the CPU)
+    during the simulation. A gate is applied by splitting the state to pieces
+    and copying each piece to an accelerator device that is used to perform the
+    matrix multiplication. An `accelerator` device can be used more than once
+    resulting to logical devices that are more than the physical accelerators in
+    the system.
+
+    Distributed circuits currently do not support native tensorflow gates,
+    compilation and callbacks.
+
+    Example:
+        .. code-block:: python
+
+            from qibo.models import Circuit
+            # The system has two GPUs and we would like to use each GPU twice
+            # resulting to four total logical accelerators
+            accelerators = {'/GPU:0': 2, '/GPU:1': 2}
+            # Define a circuit on 32 qubits to be run in the above GPUs keeping
+            # the full state vector in the CPU memory.
+            c = Circuit(32, accelerators)
+
+    Args:
+        nqubits (int): Total number of qubits in the circuit.
+        accelerators (dict): Dictionary that maps device names to the number of
+            times each device will be used.
+            The total number of logical devices must be a power of 2.
+    """
+
+    def __new__(cls, nqubits: int, accelerators: Dict[str, int],
+                density_matrix: bool = False):
+        return object().__new__(cls)
+
+    def __init__(self, nqubits: int, accelerators: Dict[str, int], 
+                 density_matrix: bool = False):
+        super().__init__(nqubits, accelerators, density_matrix)
+        self.ndevices = sum(accelerators.values())
+        self.nglobal = float(math.log2(self.ndevices))
+
+        if not (self.nglobal.is_integer() and self.nglobal > 0):
+            raise_error(ValueError, "Number of calculation devices should be a power "
+                                    "of 2 but is {}.".format(self.ndevices))
+        self.nglobal = int(self.nglobal)
+        self.nlocal = self.nqubits - self.nglobal
+        
+        self.queues = DistributedQueues(self)
+
+    def _set_nqubits(self, gate):
+        AbstractCircuit._set_nqubits(self, gate)
+
+    def on_qubits(self, *q):
+        if self.queues.queues:
+            raise_error(RuntimeError, "Cannot use distributed circuit as a "
+                                      "subroutine after it was executed.")
+        return super().on_qubits(*q)
+
+    def copy(self, deep: bool = True):
+        if not deep:
+            raise_error(ValueError, "Non-deep copy is not allowed for distributed "
+                                    "circuits because they modify gate objects.")
+        return super().copy(deep)
+
+    def fuse(self):
+        raise_error(NotImplementedError, "Fusion is not implemented for "
+                                         "distributed circuits.")
+
+    def with_noise(self, noise_map, measurement_noise=None):
+        raise_error(NotImplementedError, "Distributed circuit does not support "
+                                         "density matrices yet.")
+
+    def add(self, gate):
+        if isinstance(gate, collections.abc.Iterable):
+            for g in gate:
+                self.add(g)
+        
+        else:
+            if isinstance(gate, gates.KrausChannel):
+                raise_error(NotImplementedError, "Distributed circuits do not "
+                                                "support channels.")
+            elif (self.nqubits - len(gate.target_qubits) < self.nglobal and
+                not isinstance(gate, (gates.M, gates.VariationalLayer))):
+                # Check if there is sufficient number of local qubits
+                raise_error(ValueError, "Insufficient qubits to use for global in "
+                                        "distributed circuit.")
+            return super().add(gate)
+
+    def compile(self):
+        """"""
+        raise_error(RuntimeError, "Cannot compile circuit that uses custom operators.")
+
+    def execute(self, initial_state=None, nshots=None):
+        from qibo.backends import GlobalBackend
+        return GlobalBackend().execute_distributed_circuit(self, initial_state, nshots)

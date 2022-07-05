@@ -273,6 +273,9 @@ class NumpyBackend(Simulator):
         state = self.apply_gate(gate, state.ravel(), 2 * nqubits)
         return self.np.reshape(state, shape)
 
+    def get_state_tensor(self, result):
+        return result.execution_result
+
     def calculate_symbolic(self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20):
         state = self.to_numpy(state)
         terms = []

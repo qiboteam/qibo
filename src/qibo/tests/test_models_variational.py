@@ -126,15 +126,6 @@ def test_vqe(backend, method, options, compile, filename, skip_parallel):
         assert_regression_fixture(backend, params, filename)
 
 
-def test_initial_state(backend, accelerators):
-    h = hamiltonians.TFIM(5, h=1.0, dense=False, backend=backend)
-    qaoa = models.QAOA(h, accelerators=accelerators)
-    qaoa.set_parameters(np.random.random(4))
-    target_state = np.ones(2 ** 5) / np.sqrt(2 ** 5)
-    final_state = qaoa.get_initial_state()
-    backend.assert_allclose(final_state, target_state)
-
-
 @pytest.mark.parametrize("solver,dense",
                          [("exp", False), ("exp", True),
                           ("rk4", False),  ("rk4", True),
@@ -177,11 +168,7 @@ def test_qaoa_callbacks(backend, accelerators):
     from qibo import callbacks
     # use ``Y`` Hamiltonian so that there are no errors
     # in the Trotter decomposition
-    if accelerators:
-        with backend.on_cpu():
-            h = hamiltonians.Y(5, backend=backend)
-    else:
-        h = hamiltonians.Y(5, backend=backend)
+    h = hamiltonians.Y(5, backend=backend)
     energy = callbacks.Energy(h)
     params = 0.1 * np.random.random(4)
     state = random_state(5)
