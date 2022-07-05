@@ -1,6 +1,6 @@
 import numpy as np
 from numpy.random import randn
-from qibo import gates, hamiltonians, models, get_backend, K
+from qibo import gates, hamiltonians, matrices, models
 from qibo.config import raise_error
 
 
@@ -13,7 +13,7 @@ class StyleQGAN(object):
         latent_dim (int): number of latent dimensions.
         layers (int): number of layers for the quantum generator. Provide this value only if not using
             a custom quantum generator.
-        circuit (:class:`qibo.core.circuit.Circuit`): custom quantum generator circuit. If not provided,
+        circuit (:class:`qibo.models.circuit.Circuit`): custom quantum generator circuit. If not provided,
             the default quantum circuit will be used.
         set_parameters (function): function that creates the array of parameters for the quantum generator.
             If not provided, the default function will be used.
@@ -43,8 +43,9 @@ class StyleQGAN(object):
     """
 
     def __init__(self, latent_dim, layers=None, circuit=None, set_parameters=None, discriminator=None):
-        if get_backend() != 'tensorflow':
-            raise_error(RuntimeError, "StyleQGAN model requires tensorflow backend.")
+        # qgan works only with tensorflow
+        from qibo.backends import TensorflowBackend
+        self.backend = TensorflowBackend()
 
         if layers is not None and circuit is not None:
             raise_error(ValueError, "Set the number of layers for the default quantum generator "
@@ -145,9 +146,9 @@ class StyleQGAN(object):
         # quantum generator circuit
         for i in range(samples):
             self.set_parameters(circuit, params, x_input, i)
-            circuit_execute = circuit.execute()
+            final_state = self.backend.execute_circuit(circuit, return_array=True)
             for ii in range(self.nqubits):
-                X[ii].append(hamiltonians_list[ii].expectation(circuit_execute))
+                X[ii].append(hamiltonians_list[ii].expectation(final_state))
         # shape array
         X = tf.stack([X[i] for i in range(len(X))], axis=1)
         # create class labels
@@ -281,21 +282,18 @@ class StyleQGAN(object):
 
         # define hamiltonian to generate fake samples
         def hamiltonian(nqubits, position):
-            identity = [[1, 0], [0, 1]]
-            m0 = hamiltonians.Z(1).matrix
             kron = []
             for i in range(nqubits):
                 if i == position:
-                    kron.append(m0)
+                    kron.append(matrices.Z)
                 else:
-                    kron.append(identity)
+                    kron.append(matrices.I)
             for i in range(nqubits - 1):
                 if i==0:
                     ham = np.kron(kron[i+1], kron[i])
                 else:
                     ham = np.kron(kron[i+1], ham)
-            ham = hamiltonians.Hamiltonian(nqubits, ham)
-            return ham
+            return hamiltonians.Hamiltonian(nqubits, ham, backend=self.backend)
 
         hamiltonians_list = []
         for i in range(self.nqubits):

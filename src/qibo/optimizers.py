@@ -3,7 +3,7 @@ from qibo.parallel import ParallelResources, _executor
 
 def optimize(loss, initial_parameters, args=(), method='Powell',
              jac=None, hess=None, hessp=None, bounds=None, constraints=(),
-             tol=None, callback=None, options=None, compile=False, processes=None):
+             tol=None, callback=None, options=None, compile=False, processes=None, backend=None):
     """Main optimization method. Selects one of the following optimizers:
         - :meth:`qibo.optimizers.cmaes`
         - :meth:`qibo.optimizers.newtonian`
@@ -67,11 +67,17 @@ def optimize(loss, initial_parameters, args=(), method='Powell',
     if method == "cma":
         return cmaes(loss, initial_parameters, args, options)
     elif method == "sgd":
-        return sgd(loss, initial_parameters, args, options, compile)
+        if backend is None:
+            from qibo.backends import GlobalBackend
+            backend = GlobalBackend()
+        return sgd(loss, initial_parameters, args, options, compile, backend)
     else:
+        if backend is None:
+            from qibo.backends import GlobalBackend
+            backend = GlobalBackend()
         return newtonian(loss, initial_parameters, args, method,
                          jac, hess, hessp, bounds, constraints, tol,
-                         callback, options, processes)
+                         callback, options, processes, backend)
 
 
 def cmaes(loss, initial_parameters, args=(), options=None):
@@ -94,7 +100,7 @@ def cmaes(loss, initial_parameters, args=(), options=None):
 
 def newtonian(loss, initial_parameters, args=(), method='Powell',
               jac=None, hess=None, hessp=None, bounds=None, constraints=(),
-              tol=None, callback=None, options=None, processes=None):
+              tol=None, callback=None, options=None, processes=None, backend=None):
     """Newtonian optimization approaches based on ``scipy.optimize.minimize``.
 
     For more details check the `scipy documentation <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
@@ -131,7 +137,7 @@ def newtonian(loss, initial_parameters, args=(), method='Powell',
     """
     if method == 'parallel_L-BFGS-B':  # pragma: no cover
         from qibo.parallel import _check_parallel_configuration
-        _check_parallel_configuration(processes)  # pylint: disable=E1120
+        _check_parallel_configuration(processes, backend)  # pylint: disable=E1120
         o = ParallelBFGS(loss, args=args, processes=processes,
                          bounds=bounds, callback=callback, options=options)
         m = o.run(initial_parameters)
@@ -143,7 +149,7 @@ def newtonian(loss, initial_parameters, args=(), method='Powell',
     return m.fun, m.x, m
 
 
-def sgd(loss, initial_parameters, args=(), options=None, compile=False):
+def sgd(loss, initial_parameters, args=(), options=None, compile=False, backend=None):
     """Stochastic Gradient Descent (SGD) optimizer using Tensorflow backpropagation.
 
     See `tf.keras.Optimizers <https://www.tensorflow.org/api_docs/python/tf/keras/optimizers>`_
@@ -164,9 +170,8 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False):
             - ``'nmessage'`` (int, default: ``1e3``): Every how many epochs to print
               a message of the loss function.
     """
-    from qibo import K
     from qibo.config import log, raise_error
-    if not K.supports_gradients:
+    if not backend.name == 'tensorflow':
         raise_error(RuntimeError, "SGD optimizer requires Tensorflow backend.")
 
     sgd_options = {"nepochs": 1000000,
@@ -177,20 +182,20 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False):
         sgd_options.update(options)
 
     # proceed with the training
-    vparams = K.optimization.Variable(initial_parameters)
-    optimizer = getattr(K.optimization.optimizers, sgd_options["optimizer"])(
+    vparams = backend.tf.Variable(initial_parameters)
+    optimizer = getattr(backend.tf.optimizers, sgd_options["optimizer"])(
         learning_rate=sgd_options["learning_rate"])
 
     def opt_step():
-        with K.optimization.GradientTape() as tape:
+        with backend.tf.GradientTape() as tape:
             l = loss(vparams, *args)
         grads = tape.gradient(l, [vparams])
         optimizer.apply_gradients(zip(grads, [vparams]))
         return l
 
     if compile:
-        loss = K.compile(loss)
-        opt_step = K.compile(opt_step)
+        loss = backend.compile(loss)
+        opt_step = backend.compile(opt_step)
 
     for e in range(sgd_options["nepochs"]):
         l = opt_step()
