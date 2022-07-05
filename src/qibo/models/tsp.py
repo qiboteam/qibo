@@ -1,15 +1,15 @@
 import numpy as np
+from qibo import gates
 from qibo.symbols import X, Y, Z
 from qibo.models import Circuit
-from qibo.core.hamiltonians import SymbolicHamiltonian
-from qibo import gates
+from qibo.hamiltonians import SymbolicHamiltonian
 
 
 def calculate_two_to_one(num_cities):
     return np.arange(num_cities ** 2).reshape(num_cities, num_cities)
 
 
-def tsp_phaser(distance_matrix):
+def tsp_phaser(distance_matrix, backend=None):
     num_cities = distance_matrix.shape[0]
     two_to_one = calculate_two_to_one(num_cities)
     form = 0
@@ -19,11 +19,11 @@ def tsp_phaser(distance_matrix):
                 if u != v:
                     form += distance_matrix[u, v] * Z(int(two_to_one[u, i]))* Z(
                         int(two_to_one[v, (i + 1) % num_cities]))
-    ham = SymbolicHamiltonian(form)
+    ham = SymbolicHamiltonian(form, backend=backend)
     return ham
 
 
-def tsp_mixer(num_cities):
+def tsp_mixer(num_cities, backend=None):
     two_to_one = calculate_two_to_one(num_cities)
     splus = lambda u, i: X(int(two_to_one[u, i])) + 1j * Y(int(two_to_one[u, i]))
     sminus = lambda u, i: X(int(two_to_one[u, i])) - 1j * Y(int(two_to_one[u, i]))
@@ -36,7 +36,7 @@ def tsp_mixer(num_cities):
                             i + 1) % num_cities) * sminus(v, i) + sminus(u, i) * sminus(v, (
                             i + 1) % num_cities) * splus(u, (i + 1) % num_cities) * splus(
                         v, i)
-    ham = SymbolicHamiltonian(form)
+    ham = SymbolicHamiltonian(form, backend=backend)
     return ham
 
 
@@ -50,6 +50,10 @@ class TSP:
 
     This is a TSP class that enables us to implement TSP according to
     `arxiv:1709.03489 <https://arxiv.org/abs/1709.03489>`_ by Hadfield (2017).
+
+    Args:
+            distance_matrix: a numpy matrix encoding the distance matrix.
+            backend: Backend to use for calculations. If not given the global backend will be used.
 
     Example:
         .. testcode::
@@ -118,12 +122,12 @@ class TSP:
 
     """
 
-    def __init__(self, distance_matrix):
-        """
-        Args:
-            distance_matrix: a numpy matrix encoding the distance matrix.
-
-        """
+    def __init__(self, distance_matrix, backend=None):
+        if backend is None:
+            from qibo.backends import GlobalBackend
+            self.backend = GlobalBackend()
+        else:
+            self.backend = backend
         self.distance_matrix = distance_matrix
         self.num_cities = distance_matrix.shape[0]
         self.two_to_one = calculate_two_to_one(self.num_cities)
@@ -151,5 +155,5 @@ class TSP:
         c = Circuit(len(ordering) ** 2)
         for i in range(len(ordering)):
             c.add(gates.X(int(self.two_to_one[ordering[i], i])))
-        result = c()
+        result = self.backend.execute_circuit(c)
         return result.state(numpy=True)
