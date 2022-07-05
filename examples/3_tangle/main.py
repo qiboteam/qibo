@@ -2,6 +2,8 @@ from canonizator import *
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
+import qibo
+qibo.set_backend("numpy")
 
 
 parser = argparse.ArgumentParser()
@@ -30,7 +32,7 @@ def main(N, p, shots, post_selection, no_plot):
         """
         if i % 10 == 0:
             print('Initialized state with seed %s'%i + '/ %s'%N)
-        state = create_random_state(i)
+        state = create_random_state(i, p>0)
         tangles[i] = compute_random_tangle(i)
         fun, params = canonize(state, circuit, shots=np.int32(shots))
         opt_tangles[i] = canonical_tangle(state, params, circuit, post_selection=post_selection)
