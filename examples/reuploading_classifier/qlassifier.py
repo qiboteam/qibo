@@ -1,6 +1,6 @@
 import numpy as np
 from qibo.models import Circuit
-from qibo import gates, K
+from qibo import gates
 from datasets import create_dataset, create_target, fig_template, world_map_template
 from matplotlib.cm import get_cmap
 from matplotlib.colors import Normalize
@@ -81,7 +81,7 @@ class single_qubit_classifier:
             float with the cost function.
         """
         C = self.circuit(x)
-        state = C.execute()
+        state = C.execute().state()
         cf = .5 * (1 - fidelity(state, self.target[y])) ** 2
         return cf
 
@@ -110,17 +110,13 @@ class single_qubit_classifier:
         if method == 'cma':
             # Genetic optimizer
             import cma
-            r = cma.fmin2(lambda p: K.to_numpy(loss(p)), self.params, 2)
+            r = cma.fmin2(lambda p: loss(p), self.params, 2)
             result = r[1].result.fbest
             parameters = r[1].result.xbest
 
         elif method == 'sgd':
+            import tensorflow as tf
             circuit = self.circuit(self.training_set[0])
-            for gate in circuit.queue:
-                if not K.supports_gradients:
-                    from qibo.config import raise_error
-                    raise_error(RuntimeError,
-                                'Use tensorflow backend in order to compute gradients.')
 
             sgd_options = {"nepochs": 5001,
                            "nmessage": 1000,
@@ -130,19 +126,19 @@ class single_qubit_classifier:
                 sgd_options.update(options)
 
             # proceed with the training
-            vparams = K.Variable(self.params)
-            optimizer = getattr(K.optimizers, sgd_options["optimizer"])(
+            vparams = tf.Variable(self.params)
+            optimizer = getattr(tf.optimizers, sgd_options["optimizer"])(
                 learning_rate=sgd_options["learning_rate"])
 
             def opt_step():
-                with K.GradientTape() as tape:
+                with tf.GradientTape() as tape:
                     l = loss(vparams)
                 grads = tape.gradient(l, [vparams])
                 optimizer.apply_gradients(zip(grads, [vparams]))
                 return l, vparams
 
             if compile:
-                opt_step = K.function(opt_step)
+                opt_step = tf.function(opt_step)
 
             l_optimal, params_optimal = 10, self.params
             for e in range(sgd_options["nepochs"]):
@@ -150,15 +146,15 @@ class single_qubit_classifier:
                 if l < l_optimal:
                     l_optimal, params_optimal = l, vparams
                 if e % sgd_options["nmessage"] == 0:
-                    print('ite %d : loss %f' % (e, K.to_numpy(l)))
+                    print('ite %d : loss %f' % (e, l))
 
-            result = K.to_numpy(self.cost_function(params_optimal))
-            parameters = K.to_numpy(params_optimal)
+            result = np.array(self.cost_function(params_optimal))
+            parameters = np.array(params_optimal)
 
         else:
             import numpy as np
             from scipy.optimize import minimize
-            m = minimize(lambda p: K.to_numpy(loss(p)), self.params,
+            m = minimize(lambda p: loss(p), self.params,
                          method=method, options=options)
             result = m.fun
             parameters = m.x
@@ -174,7 +170,7 @@ class single_qubit_classifier:
         labels = [[0]] * len(self.test_set[0])
         for j, x in enumerate(self.test_set[0]):
             C = self.circuit(x)
-            state = C.execute()
+            state = C.execute().state()
             fids = np.empty(len(self.target))
             for i, t in enumerate(self.target):
                 fids[i] = fidelity(state, t)
@@ -221,7 +217,7 @@ class single_qubit_classifier:
         norm_class = Normalize(vmin=0, vmax=10)
         for i, x in enumerate(self.test_set[0]):
             C = self.circuit(x)
-            state = C.execute()
+            state = C.execute().state()
             angles[i, 0] = np.pi / 2 - \
                 np.arccos(np.abs(state[0]) ** 2 - np.abs(state[1]) ** 2)
             angles[i, 1] = np.angle(state[1] / state[0])
@@ -266,4 +262,4 @@ class single_qubit_classifier:
 
 
 def fidelity(state1, state2):
-    return K.abs(K.sum(K.qnp.conj(state2) * state1)) ** 2
+    return np.abs(np.sum(np.conj(state2) * state1)) ** 2

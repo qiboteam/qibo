@@ -162,7 +162,7 @@ def main(nqubits, circuit_name, backend="custom", precision="double",
         if transfer:
             result = result.numpy()
         transfer_times.append(time.time() - start_time)
-        logs[-1]["dtype"] = str(result.dtype)
+        logs[-1]["dtype"] = str(result.state().dtype)
         if nshots is None:
             del(result)
 
@@ -177,10 +177,6 @@ def main(nqubits, circuit_name, backend="custom", precision="double",
     if nshots is not None:
         freqs = result.frequencies()
     logs[-1]["measurement_time"] = time.time() - start_time
-
-    if logs[-1]["backend"] == "qibojit" and qibo.K.get_platform() == "numba":
-        from numba import threading_layer
-        logs[-1]["threading"] = threading_layer()
 
     print()
     print(logs)

@@ -108,7 +108,7 @@ def opt_hyperdeterminant(measures):
     return hyp
 
 
-def create_random_state(seed):
+def create_random_state(seed, density_matrix=False):
     """Function to create a random quantum state from sees
         Args:
             seed (int): random seed
@@ -118,8 +118,10 @@ def create_random_state(seed):
     np.random.seed(seed)
     state = (np.random.rand(8) - .5) + 1j*(np.random.rand(8) - .5)
     state = state / np.linalg.norm(state)
-
-    return state
+    if density_matrix:
+        return np.tensordot(np.conj(state), state, axes=0)
+    else:
+        return state
 
 
 def compute_random_tangle(seed):

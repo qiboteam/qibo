@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import numpy as np
-from qibo import hamiltonians, gates, models, K
+from qibo import hamiltonians, gates, models
 from qibo.hamiltonians import Hamiltonian
 from scipy.optimize import minimize
 from sklearn.datasets import load_digits
@@ -19,7 +19,7 @@ def main(layers, autoencoder, example, maxiter):
         Returns:
             Encoding Hamiltonian.
         """
-        m0 = K.to_numpy(hamiltonians.Z(ncompress).matrix)
+        m0 = hamiltonians.Z(ncompress).matrix
         m1 = np.eye(2 ** (nqubits - ncompress), dtype=m0.dtype)
         ham = hamiltonians.Hamiltonian(nqubits, np.kron(m1, m0))
         return 0.5 * (ham + ncompress)
@@ -84,8 +84,8 @@ def main(layers, autoencoder, example, maxiter):
                 cost = 0
                 circuit.set_parameters(params) # this will change all thetas to the appropriate values
                 for i in range(len(ising_groundstates)):
-                    final_state = circuit.execute(np.copy(ising_groundstates[i]))
-                    cost += K.to_numpy(encoder.expectation(final_state)).real
+                    final_state = circuit.execute(np.copy(ising_groundstates[i])).state()
+                    cost += np.real(encoder.expectation(final_state))
 
                 cost_function_steps.append(cost/len(ising_groundstates)) # save cost function value after each step
 
@@ -134,8 +134,8 @@ def main(layers, autoencoder, example, maxiter):
                 for i in range(len(ising_groundstates)):
                     newparams = rotate(params, lambdas[i])
                     circuit.set_parameters(newparams)
-                    final_state = circuit.execute(np.copy(ising_groundstates[i]))
-                    cost += K.to_numpy(encoder.expectation(final_state)).real
+                    final_state = circuit.execute(np.copy(ising_groundstates[i])).state()
+                    cost += np.real(encoder.expectation(final_state))
 
                 cost_function_steps.append(cost/len(ising_groundstates)) # save cost function value after each step
 
@@ -196,11 +196,11 @@ def main(layers, autoencoder, example, maxiter):
                 cost = 0
                 circuit.set_parameters(params) # this will change all thetas to the appropriate values
                 for i in range(len(vector_0)):
-                    final_state = circuit.execute(np.copy(vector_0[i]))
-                    cost += K.to_numpy(encoder.expectation(final_state)).real
+                    final_state = circuit.execute(np.copy(vector_0[i])).state()
+                    cost += np.real(encoder.expectation(final_state))
                 for i in range(len(vector_1)):
-                    final_state = circuit.execute(np.copy(vector_1[i]))
-                    cost += K.to_numpy(encoder.expectation(final_state)).real
+                    final_state = circuit.execute(np.copy(vector_1[i])).state()
+                    cost += np.real(encoder.expectation(final_state))
 
                 cost_function_steps.append(cost/(len(vector_0)+len(vector_1))) # save cost function value after each step
 
@@ -249,13 +249,13 @@ def main(layers, autoencoder, example, maxiter):
                 newparams = rotate(params, 1)
                 circuit.set_parameters(newparams)
                 for i in range(len(vector_0)):
-                    final_state = circuit.execute(np.copy(vector_0[i]))
-                    cost += K.to_numpy(encoder.expectation(final_state)).real
+                    final_state = circuit.execute(np.copy(vector_0[i])).state()
+                    cost += np.real(encoder.expectation(final_state))
                 newparams = rotate(params, 2)
                 circuit.set_parameters(newparams)
                 for i in range(len(vector_1)):
-                    final_state = circuit.execute(np.copy(vector_1[i]))
-                    cost += K.to_numpy(encoder.expectation(final_state)).real
+                    final_state = circuit.execute(np.copy(vector_1[i])).state()
+                    cost += np.real(encoder.expectation(final_state))
 
                 cost_function_steps.append(cost/(len(vector_0)+len(vector_1))) # save cost function value after each step
 
