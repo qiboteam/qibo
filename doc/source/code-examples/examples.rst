@@ -36,7 +36,7 @@ If you are planning to freeze the circuit and just query for different initial
 states then you can use the ``Circuit.compile()`` method which will improve
 evaluation performance, e.g.:
 
-.. testcode::
+.. code-block::  python
 
     import numpy as np
     # switch backend to "tensorflow"
@@ -153,6 +153,10 @@ when executing the circuit. In this case the returned
 :class:`qibo.abstractions.states.AbstractState` will contain all the
 information about the measured samples. For example
 
+.. testsetup::
+    import qibo
+    qibo.set_backend("numpy")
+
 .. testcode::
 
     from qibo.models import Circuit
@@ -168,14 +172,18 @@ information about the measured samples. For example
 Measurements are now accessible using the ``samples`` and ``frequencies`` methods
 on the ``result`` object. In particular
 
-* ``result.samples(binary=True)`` will return the array ``tf.Tensor([[1, 0], [1, 0], ..., [1, 0]])`` with shape ``(100, 2)``,
-* ``result.samples(binary=False)`` will return the array ``tf.Tensor([2, 2, ..., 2])``,
+* ``result.samples(binary=True)`` will return the array ``[[1, 0], [1, 0], ..., [1, 0]]`` with shape ``(100, 2)``,
+* ``result.samples(binary=False)`` will return the array ``[2, 2, ..., 2]``,
 * ``result.frequencies(binary=True)`` will return ``collections.Counter({"10": 100})``,
 * ``result.frequencies(binary=False)`` will return ``collections.Counter({2: 100})``.
 
 In addition to the functionality described above, it is possible to collect
 measurement results grouped according to registers. The registers are defined
 during the addition of measurement gates in the circuit. For example
+
+.. testsetup::
+    import qibo
+    qibo.set_backend("numpy")
 
 .. testcode::
 
@@ -193,7 +201,7 @@ creates a circuit with five qubits that has two registers: ``A`` consisting of
 qubits ``0`` and ``1`` and ``B`` consisting of qubits ``3`` and ``4``. Here
 qubit ``2`` remains unmeasured. Measured results can now be accessed as
 
-* ``result.samples(binary=False, registers=True)`` will return a dictionary with the measured sample tensors for each register: ``{"A": tf.Tensor([2, 2, ...]), "B": tf.Tensor([1, 1, ...])}``,
+* ``result.samples(binary=False, registers=True)`` will return a dictionary with the measured sample tensors for each register: ``{"A": [2, 2, ...], "B": [1, 1, ...]}``,
 * ``result.frequencies(binary=True, registers=True)`` will return a dictionary with the frequencies for each register: ``{"A": collections.Counter({"10": 100}), "B": collections.Counter({"01": 100})}``.
 
 Setting ``registers=False`` (default option) will ignore the registers and return the
@@ -210,8 +218,7 @@ Unmeasured qubits are ignored by the measurement objects. Also, the
 order that qubits appear in the results is defined by the order the user added
 the measurements and not the qubit ids.
 
-The final state vector is still accessible via
-:meth:`qibo.abstractions.states.AbstractState.state`.
+The final state vector is still accessible via :meth:`qibo.states.CircuitResult.state`.
 Note that the state vector accessed this way corresponds to the state as if no
 measurements occurred, that is the state is not collapsed during the measurement.
 This is because measurement gates are only used to sample bitstrings and do not

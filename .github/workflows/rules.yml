@@ -30,12 +30,11 @@ jobs:
     - name: Test with pytest core
       run: |
         pytest src/qibo/tests/ --skip-parallel --cov=qibo --cov-report=xml --pyargs qibo --durations=60
-    # Disable doctests temporarily
-    #- name: Test documentation examples
-    #  if: startsWith(matrix.os, 'ubuntu')
-    #  run: |
-    #    sudo apt install pandoc
-    #    make -C doc doctest
+    - name: Test documentation examples
+      if: startsWith(matrix.os, 'ubuntu')
+      run: |
+        sudo apt install pandoc
+        make -C doc doctest
     # Disable example tests temporarily
     #- name: Test examples
     #  if: startsWith(matrix.os, 'ubuntu') && matrix.python-version == '3.9'

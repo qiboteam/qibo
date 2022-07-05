@@ -61,7 +61,7 @@ class X(Gate):
             free: Ids of free qubits to use for the gate decomposition.
             use_toffolis: If ``True`` the decomposition contains only ``TOFFOLI`` gates.
                 If ``False`` a congruent representation is used for ``TOFFOLI`` gates.
-                See :class:`qibo.abstractions.gates.TOFFOLI` for more details on this representation.
+                See :class:`qibo.gates.TOFFOLI` for more details on this representation.
 
         Returns:
             List with one-qubit, ``CNOT`` and ``TOFFOLI`` gates that have the
@@ -291,10 +291,10 @@ class _Rn_(ParametrizedGate):
         q (int): the qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
+            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
-    
+
     def __init__(self, q, theta, trainable=True):
         super().__init__(trainable)
         self.name = None
@@ -337,10 +337,10 @@ class RX(_Rn_):
         q (int): the qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
+            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
-    
+
     def __init__(self, q, theta, trainable=True):
         super().__init__(q, theta, trainable)
         self.name = "rx"
@@ -364,7 +364,7 @@ class RY(_Rn_):
         q (int): the qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
+            :meth:`qibo.models.circuit.Circuit.set_parameters`
             (default is ``True``).
     """
 
@@ -389,10 +389,10 @@ class RZ(_Rn_):
         q (int): the qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
+            :meth:`qibo.models.circuit.Circuit.set_parameters`
             (default is ``True``).
     """
-    
+
     def __init__(self, q, theta, trainable=True):
         super().__init__(q, theta, trainable)
         self.name = "rz"
@@ -405,7 +405,7 @@ class _Un_(ParametrizedGate):
     Args:
         q (int): the qubit id number.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
+            :meth:`qibo.models.circuit.Circuit.set_parameters`
             (default is ``True``).
     """
 
@@ -423,7 +423,7 @@ class _Un_(ParametrizedGate):
         """Fall back to CUn if there is only one control."""
         if len(q) == 1:
             gate = self._controlled_gate( # pylint: disable=E1102
-              q[0], self.target_qubits[0], **self.init_kwargs) 
+              q[0], self.target_qubits[0], **self.init_kwargs)
         else:
             gate = super().controlled_by(*q)
         return gate
@@ -444,7 +444,7 @@ class U1(_Un_):
         q (int): the qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
+            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
 
@@ -478,7 +478,7 @@ class U2(_Un_):
         phi (float): first rotation angle.
         lamb (float): second rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
+            :meth:`qibo.models.circuit.Circuit.set_parameters`
             (default is ``True``).
     """
 
@@ -516,7 +516,7 @@ class U3(_Un_):
         phi (float): second rotation angle.
         lamb (float): third rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
+            :meth:`qibo.models.circuit.Circuit.set_parameters`
             (default is ``True``).
     """
 
@@ -601,7 +601,7 @@ class _CRn_(ParametrizedGate):
         q1 (int): the target qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
+            :meth:`qibo.models.circuit.Circuit.set_parameters`
             (default is ``True``).
     """
 
@@ -641,10 +641,10 @@ class CRX(_CRn_):
         q1 (int): the target qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
+            :meth:`qibo.models.circuit.Circuit.set_parameters`
             (default is ``True``).
     """
-    
+
     def __init__(self, q0, q1, theta, trainable=True):
         super().__init__(q0, q1, theta, trainable)
         self.name = "crx"
@@ -663,17 +663,17 @@ class CRY(_CRn_):
         0 & 0 & \\sin \\frac{\\theta }{2}  & \\cos \\frac{\\theta }{2} \\\\
         \\end{pmatrix}
 
-    Note that this differs from the :class:`qibo.abstractions.gates.RZ` gate.
+    Note that this differs from the :class:`qibo.gates.RZ` gate.
 
     Args:
         q0 (int): the control qubit id number.
         q1 (int): the target qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
+            :meth:`qibo.models.circuit.Circuit.set_parameters`
             (default is ``True``).
     """
-    
+
     def __init__(self, q0, q1, theta, trainable=True):
         super().__init__(q0, q1, theta, trainable)
         self.name = "cry"
@@ -697,10 +697,10 @@ class CRZ(_CRn_):
         q1 (int): the target qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
+            :meth:`qibo.models.circuit.Circuit.set_parameters`
             (default is ``True``).
     """
-    
+
     def __init__(self, q0, q1, theta, trainable=True):
         super().__init__(q0, q1, theta, trainable)
         self.name = "crz"
@@ -713,7 +713,7 @@ class _CUn_(ParametrizedGate):
         q0 (int): the control qubit id number.
         q1 (int): the target qubit id number.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
+            :meth:`qibo.models.circuit.Circuit.set_parameters`
             (default is ``True``).
     """
 
@@ -740,14 +740,14 @@ class CU1(_CUn_):
         0 & 0 & 0 & e^{i \\theta } \\\\
         \\end{pmatrix}
 
-    Note that this differs from the :class:`qibo.abstractions.gates.CRZ` gate.
+    Note that this differs from the :class:`qibo.gates.CRZ` gate.
 
     Args:
         q0 (int): the control qubit id number.
         q1 (int): the target qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
+            :meth:`qibo.models.circuit.Circuit.set_parameters`
             (default is ``True``).
     """
 
@@ -786,7 +786,7 @@ class CU2(_CUn_):
         phi (float): first rotation angle.
         lamb (float): second rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
+            :meth:`qibo.models.circuit.Circuit.set_parameters`
             (default is ``True``).
     """
 
@@ -828,7 +828,7 @@ class CU3(_CUn_):
         phi (float): second rotation angle.
         lamb (float): third rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
+            :meth:`qibo.models.circuit.Circuit.set_parameters`
             (default is ``True``).
     """
 
@@ -919,7 +919,7 @@ class fSim(ParametrizedGate):
         theta (float): Angle for the one-qubit rotation.
         phi (float): Angle for the ``|11>`` phase.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
+            :meth:`qibo.models.circuit.Circuit.set_parameters`
             (default is ``True``).
     """
     # TODO: Check how this works with QASM.
@@ -962,7 +962,7 @@ class GeneralizedfSim(ParametrizedGate):
         unitary (np.ndarray): Unitary that corresponds to the one-qubit rotation.
         phi (float): Angle for the ``|11>`` phase.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
+            :meth:`qibo.models.circuit.Circuit.set_parameters`
             (default is ``True``).
     """
 
@@ -1056,7 +1056,7 @@ class Unitary(ParametrizedGate):
             unitary. This allows the user to create non-unitary gates.
         *q (int): Qubit id numbers that the gate acts on.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
+            :meth:`qibo.models.circuit.Circuit.set_parameters`
             (default is ``True``).
         name (str): Optional name for the gate.
     """

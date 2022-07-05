@@ -1,10 +1,10 @@
 from qibo import gates
 
 class PauliError():
-    """Quantum error associated with the :class:`qibo.abstractions.gates.PauliNoiseChannel`.
+    """Quantum error associated with the :class:`qibo.gates.PauliNoiseChannel`.
 
         Args:
-            options (tuple): see :class:`qibo.abstractions.gates.PauliNoiseChannel`
+            options (tuple): see :class:`qibo.gates.PauliNoiseChannel`
     """
 
     def __init__(self, px=0, py=0, pz=0):
@@ -13,10 +13,10 @@ class PauliError():
 
 
 class ThermalRelaxationError():
-    """Quantum error associated with the :class:`qibo.abstractions.gates.ThermalRelaxationChannel`.
+    """Quantum error associated with the :class:`qibo.gates.ThermalRelaxationChannel`.
 
         Args:
-            options (tuple): see :class:`qibo.abstractions.gates.ThermalRelaxationChannel`
+            options (tuple): see :class:`qibo.gates.ThermalRelaxationChannel`
     """
 
     def __init__(self, t1, t2, time, excited_population=0):
@@ -25,10 +25,10 @@ class ThermalRelaxationError():
 
 
 class ResetError():
-    """Quantum error associated with the `qibo.abstractions.gates.ResetChannel`.
+    """Quantum error associated with the `qibo.gates.ResetChannel`.
 
         Args:
-            options (tuple): see :class:`qibo.abstractions.gates.ResetChannel`
+            options (tuple): see :class:`qibo.gates.ResetChannel`
     """
 
     def __init__(self, p0, p1):
@@ -72,7 +72,7 @@ class NoiseModel():
                        are :class:`qibo.noise.PauliError`,
                        :class:`qibo.noise.ThermalRelaxationError` and
                        :class:`qibo.noise.ResetError`.
-                gate (:class:`qibo.abstractions.gates.Gate`): gate after which the noise will be added.
+                gate (:class:`qibo.gates.Gate`): gate after which the noise will be added.
                 qubits (tuple): qubits where the noise will be applied, if None the noise
                                 will be added after every instance of the gate.
         """
@@ -86,10 +86,10 @@ class NoiseModel():
         """Generate a noisy quantum circuit according to the noise model built.
 
             Args:
-                circuit (:class:`qibo.core.circuit.Circuit`): quantum circuit
+                circuit (:class:`qibo.models.circuit.Circuit`): quantum circuit
 
             Returns:
-                A (:class:`qibo.core.circuit.Circuit`) which corresponds
+                A (:class:`qibo.models.circuit.Circuit`) which corresponds
                 to the initial circuit with noise gates added according
                 to the noise model.
         """

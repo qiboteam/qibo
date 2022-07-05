@@ -17,7 +17,7 @@ class Gate:
         Attributes:
             name (str): Name of the gate.
             is_controlled_by (bool): ``True`` if the gate was created using the
-                :meth:`qibo.abstractions.abstract_gates.Gate.controlled_by` method,
+                :meth:`qibo.gates.abstract.Gate.controlled_by` method,
                 otherwise ``False``.
             init_args (list): Arguments used to initialize the gate.
             init_kwargs (dict): Arguments used to initialize the gate.
@@ -143,7 +143,7 @@ class Gate:
             qubit_map (int): Dictionary mapping original qubit indices to new ones.
 
         Returns:
-            A :class:`qibo.abstractions.gates.Gate` object of the original gate
+            A :class:`qibo.gates.Gate` object of the original gate
             type targeting the given qubits.
 
         Example:
@@ -176,7 +176,7 @@ class Gate:
         return gate
 
     def _dagger(self) -> "Gate":
-        """Helper method for :meth:`qibo.abstractions.gates.Gate.dagger`."""
+        """Helper method for :meth:`qibo.gates.Gate.dagger`."""
         # By default the ``_dagger`` method creates an equivalent gate, assuming
         # that the gate is Hermitian (true for common gates like H or Paulis).
         # If the gate is not Hermitian the ``_dagger`` method should be modified.
@@ -186,7 +186,7 @@ class Gate:
         """Returns the dagger (conjugate transpose) of the gate.
 
         Returns:
-            A :class:`qibo.abstractions.gates.Gate` object representing the dagger of
+            A :class:`qibo.gates.Gate` object representing the dagger of
             the original gate.
         """
         new_gate = self._dagger()
@@ -212,7 +212,7 @@ class Gate:
             *qubits (int): Ids of the qubits that the gate will be controlled on.
 
         Returns:
-            A :class:`qibo.abstractions.gates.Gate` object in with the corresponding
+            A :class:`qibo.gates.Gate` object in with the corresponding
             gate being controlled in the given qubits.
         """
         if qubits:
@@ -255,14 +255,10 @@ class Gate:
 
     def apply_density_matrix(self, backend, state, nqubits):
         return backend.apply_gate_density_matrix(self, state, nqubits)
-    
+
 
 class SpecialGate(Gate):
-    """Abstract class for special gates.
-
-    Current special gates are :class:`qibo.abstractions.gates.CallbackGate` and
-    :class:`qibo.abstractions.gates.Flatten`.
-    """
+    """Abstract class for special gates."""
 
     def commutes(self, gate):
         return False
@@ -272,7 +268,7 @@ class SpecialGate(Gate):
                     "Cannot use special gates on subroutines.")
 
     def asmatrix(self, backend):
-        raise_error(NotImplementedError, 
+        raise_error(NotImplementedError,
                     "Special gates do not have matrix representation.")
 
 
@@ -321,7 +317,7 @@ class ParametrizedGate(Gate):
                 self.symbolic_parameters[i] = v
             params[i] = v
         self._parameters = tuple(params)
-       
+
         # set parameters in device gates
         for gate in self.device_gates:
             gate.parameters = x

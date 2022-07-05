@@ -8,7 +8,7 @@ from qibo.tests.utils import random_complex
 
 def symbolic_tfim(nqubits, h=1.0):
     """Constructs symbolic Hamiltonian for TFIM."""
-    from qibo.hamiltonians.symbols import Z, X
+    from qibo.symbols import Z, X
     sham = -sum(Z(i) * Z(i + 1) for i in range(nqubits - 1))
     sham -= Z(0) * Z(nqubits - 1)
     sham -= h * sum(X(i) for i in range(nqubits))
@@ -17,7 +17,7 @@ def symbolic_tfim(nqubits, h=1.0):
 
 def test_symbolic_hamiltonian_errors(backend):
     # Wrong type of Symbol matrix
-    from qibo.hamiltonians.symbols import Symbol
+    from qibo.symbols import Symbol
     with pytest.raises(TypeError):
         s = Symbol(0, "test")
     # Wrong type of symbolic expression
@@ -48,7 +48,7 @@ def test_symbolictfim_hamiltonian_to_dense(backend, nqubits, calcterms):
 @pytest.mark.parametrize("nqubits", [3, 4])
 @pytest.mark.parametrize("calcterms", [False, True])
 def test_symbolicxxz_hamiltonian_to_dense(backend, nqubits, calcterms):
-    from qibo.hamiltonians.symbols import X, Y, Z
+    from qibo.symbols import X, Y, Z
     sham = sum(X(i) * X(i + 1) for i in range(nqubits - 1))
     sham += sum(Y(i) * Y(i + 1) for i in range(nqubits - 1))
     sham += 0.5 * sum(Z(i) * Z(i + 1) for i in range(nqubits - 1))
@@ -230,7 +230,7 @@ def test_symbolic_hamiltonian_state_ev(backend, nqubits, normalize, calcterms, c
 @pytest.mark.parametrize("density_matrix", [False, True])
 @pytest.mark.parametrize("calcterms", [False, True])
 def test_symbolic_hamiltonian_abstract_symbol_ev(backend, density_matrix, calcterms):
-    from qibo.hamiltonians.symbols import X, Symbol
+    from qibo.symbols import X, Symbol
     matrix = np.random.random((2, 2))
     form = X(0) * Symbol(1, matrix) + Symbol(0, matrix) * X(1)
     local_ham = hamiltonians.SymbolicHamiltonian(form, backend=backend)

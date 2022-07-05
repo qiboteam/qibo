@@ -1,4 +1,4 @@
-"""Test :class:`qibo.abstractions.gates.M` as standalone and as part of circuit."""
+"""Test :class:`qibo.gates.M` as standalone and as part of circuit."""
 import pytest
 import numpy as np
 from qibo import models, gates

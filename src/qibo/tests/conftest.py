@@ -8,16 +8,6 @@ import pytest
 from qibo.backends import construct_backend
 
 
-INACTIVE_TESTS = {
-    "qibo.tests.test_backends_agreement",
-    "qibo.tests.test_backends_init",
-    "qibo.tests.test_backends_matrices",
-    "qibo.tests.test_core_measurements",
-    "qibo.tests.test_core_states_distributed",
-    "qibo.tests.test_core_states",
-    "qibo.tests.test_parallel"
-}
-
 # backends to be tested
 BACKENDS = ["numpy", "tensorflow", "qibojit-numba", "qibojit-cupy"]
 # multigpu configurations to be tested (only with qibojit-cupy)
@@ -72,8 +62,8 @@ def backend(backend_name):
 
 def pytest_generate_tests(metafunc):
     module_name = metafunc.module.__name__
-    if module_name in INACTIVE_TESTS:
-        pytest.skip()
+    if module_name == "qibo.tests.test_parallel":
+        pytest.skip("Skip parallel tests due to pickle error.")
 
     if module_name == "qibo.tests.test_models_qgan" and "tensorflow" not in AVAILABLE_BACKENDS:
         pytest.skip("Skipping QGAN tests because tensorflow is not available.")

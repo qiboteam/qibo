@@ -233,7 +233,7 @@ class QAOA(object):
     Args:
         hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): problem Hamiltonian
             whose ground state is sought.
-        mixer (:class:`qibo.abstractions.hamiltonians.Hamiltonian`): mixer Hamiltonian.
+        mixer (:class:`qibo.hamiltonians.Hamiltonian`): mixer Hamiltonian.
             Must be of the same type and act on the same number of qubits as ``hamiltonian``.
             If ``None``, :class:`qibo.hamiltonians.X` is used.
         solver (str): solver used to apply the exponential operators.
@@ -242,7 +242,7 @@ class QAOA(object):
         accelerators (dict): Dictionary of devices to use for distributed
             execution. See :class:`qibo.core.distcircuit.DistributedCircuit`
             for more details. This option is available only when ``hamiltonian``
-            is a :class:`qibo.abstractions.hamiltonians.SymbolicHamiltonian`.
+            is a :class:`qibo.hamiltonians.SymbolicHamiltonian`.
 
     Example:
         .. testcode::
@@ -432,7 +432,7 @@ class FALQON(QAOA):
         accelerators (dict): Dictionary of devices to use for distributed
             execution. See :class:`qibo.tensorflow.distcircuit.DistributedCircuit`
             for more details. This option is available only when ``hamiltonian``
-            is a :class:`qibo.abstractions.hamiltonians.SymbolicHamiltonian`.
+            is a :class:`qibo.hamiltonians.SymbolicHamiltonian`.
 
     Example:
         .. testcode::

@@ -1,4 +1,4 @@
-"""Test all methods defined in `qibo/abstractions/circuit.py`."""
+"""Test all methods defined in `qibo/models/circuit.py`."""
 import pytest
 from qibo import gates
 from qibo.models import Circuit

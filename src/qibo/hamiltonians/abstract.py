@@ -51,7 +51,7 @@ class AbstractHamiltonian:
     def ground_state(self):
         """Computes the ground state of the Hamiltonian.
 
-        Uses :meth:`qibo.abstractions.hamiltonians.AbstractHamiltonian.eigenvectors`
+        Uses :meth:`qibo.hamiltonians.AbstractHamiltonian.eigenvectors`
         and returns eigenvector corresponding to the lowest energy.
         """
         return self.eigenvectors()[:, 0]

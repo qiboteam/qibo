@@ -91,7 +91,7 @@ when running Qibo on GPU.
 This backend is used by default, however, if needed, in order to switch to the
 ``qibojit`` backend please do:
 
-.. testcode::
+.. code-block::  python
 
       import qibo
       qibo.set_backend("qibojit")
@@ -101,7 +101,7 @@ custom numba kernels if a GPU is not available.
 If a GPU is available it is possible to switch to the cuQuantum implementation
 using the ``platform`` argument, for example:
 
-.. testcode::
+.. code-block::  python
 
       import qibo
       # switch to the cuquantum implementation
@@ -191,7 +191,7 @@ backend.
 This backend is used by default if ``qibojit`` is not installed, however, if
 needed, in order to switch to the ``tensorflow`` backend please do:
 
-.. testcode::
+.. code-block::  python
 
       import qibo
       qibo.set_backend("tensorflow")
@@ -220,7 +220,7 @@ This backend is used by default if ``qibojit`` or ``tensorflow`` are not
 installed, however, if needed, in order to switch to the ``numpy`` backend
 please do:
 
-.. testcode::
+.. code-block::  python
 
       import qibo
       qibo.set_backend("numpy")

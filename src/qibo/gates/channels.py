@@ -102,13 +102,13 @@ class UnitaryChannel(KrausChannel):
                                 \\sum _k p_k U_k \\rho U_k^\\dagger
 
     where U are arbitrary unitary operators and p are floats between 0 and 1.
-    Note that unlike :class:`qibo.abstractions.gates.KrausChannel` which requires
+    Note that unlike :class:`qibo.gates.KrausChannel` which requires
     density matrices, it is possible to simulate the unitary channel using
     state vectors and probabilistic sampling. For more information on this
     approach we refer to :ref:`Using repeated execution <repeatedexec-example>`.
 
     Args:
-        probabilities (list): List of floats that correspond to the probability 
+        probabilities (list): List of floats that correspond to the probability
             that each unitary Uk is applied.
         ops (list): List of  operators as pairs ``(qubits, Uk)`` where
             ``qubits`` refers the qubit ids that ``Uk`` acts on and ``Uk`` is

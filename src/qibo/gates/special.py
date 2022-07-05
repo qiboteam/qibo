@@ -3,12 +3,12 @@ from qibo.gates.abstract import Gate, ParametrizedGate, SpecialGate
 
 
 class CallbackGate(SpecialGate):
-    """Calculates a :class:`qibo.core.callbacks.Callback` at a specific point in the circuit.
+    """Calculates a :class:`qibo.callbacks.Callback` at a specific point in the circuit.
 
     This gate performs the callback calulation without affecting the state vector.
 
     Args:
-        callback (:class:`qibo.core.callbacks.Callback`): Callback object to calculate.
+        callback (:class:`qibo.callbacks.Callback`): Callback object to calculate.
     """
 
     def __init__(self, callback: "Callback"):
@@ -31,7 +31,7 @@ class CallbackGate(SpecialGate):
 class FusedGate(SpecialGate):
     """Collection of gates that will be fused and applied as single gate during simulation.
 
-    This gate is constructed automatically by :meth:`qibo.core.circuit.Circuit.fuse`
+    This gate is constructed automatically by :meth:`qibo.models.circuit.Circuit.fuse`
     and should not be used by user.
     """
 
@@ -174,7 +174,7 @@ class VariationalLayer(SpecialGate, ParametrizedGate):
             has the same length as ``qubits``. These gates act after the layer
             of entangling gates.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
+            :meth:`qibo.models.circuit.Circuit.set_parameters`
             (default is ``True``).
 
     Example:
@@ -240,7 +240,7 @@ class VariationalLayer(SpecialGate, ParametrizedGate):
                 fgate.append(one_qubit_gate(q1, self.params2.get(q1), trainable=trainable))
                 fgate.append(one_qubit_gate(q2, self.params2.get(q2), trainable=trainable))
             self.gates.append(fgate)
-        
+
         q = self.additional_target
         if q is not None:
             fgate = FusedGate(q)

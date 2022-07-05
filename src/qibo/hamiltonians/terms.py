@@ -113,7 +113,7 @@ class SymbolicTerm(HamiltonianTerm):
     Example:
         .. testcode::
 
-            from qibo.hamiltonians.symbols import X, Y
+            from qibo.symbols import X, Y
             from qibo.hamiltonians.terms import SymbolicTerm
             sham = X(0) * X(1) + 2 * Y(0) * Y(1)
             termsdict = sham.as_coefficients_dict()
@@ -155,7 +155,7 @@ class SymbolicTerm(HamiltonianTerm):
                 # if the user is using ``symbol_map`` instead of qibo symbols,
                 # create the corresponding symbols
                 if factor in symbol_map:
-                    from qibo.hamiltonians.symbols import Symbol
+                    from qibo.symbols import Symbol
                     q, matrix = symbol_map.get(factor)
                     factor = Symbol(q, matrix, name=factor.name)
 

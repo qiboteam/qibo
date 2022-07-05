@@ -104,8 +104,6 @@ class CircuitResult:
         Args:
             binary (bool): Return samples in binary or decimal form.
             registers (bool): Group samples according to registers.
-                Can be used only if ``registers`` were given when calling
-                :meth:`qibo.abstractions.states.AbstractState.measure`.
 
         Returns:
             If `binary` is `True`
@@ -154,7 +152,7 @@ class CircuitResult:
     @staticmethod
     def _frequencies_to_binary(frequencies, nqubits):
         return collections.Counter(
-                {"{0:b}".format(k).zfill(nqubits): v 
+                {"{0:b}".format(k).zfill(nqubits): v
                  for k, v in frequencies.items()})
 
     def frequencies(self, binary=True, registers=False):
@@ -163,8 +161,6 @@ class CircuitResult:
         Args:
             binary (bool): Return frequency keys in binary or decimal form.
             registers (bool): Group frequencies according to registers.
-                Can be used only if ``registers`` were given when calling
-                :meth:`qibo.abstractions.states.AbstractState.measure`.
 
         Returns:
             A `collections.Counter` where the keys are the observed values
@@ -215,3 +211,13 @@ class CircuitResult:
             return self._frequencies_to_binary(self._frequencies, len(qubits))
         else:
             return self._frequencies
+
+    def apply_bitflips(self, p0, p1=None):
+        mgate = self.circuit.measurement_gate
+        if p1 is None:
+            probs = 2 * (mgate._get_bitflip_tuple(mgate.qubits, p0),)
+        else:
+            probs = (mgate._get_bitflip_tuple(mgate.qubits, p0),
+                     mgate._get_bitflip_tuple(mgate.qubits, p1))
+        noiseless_samples = self.samples()
+        return self.backend.apply_bitflips(noiseless_samples, probs)
