@@ -341,7 +341,11 @@ class QAOA(object):
         Returns:
             State vector after applying the QAOA exponential gates.
         """
-        state = self.get_initial_state(initial_state)
+        if initial_state is None:
+            state = self.hamiltonian.backend.plus_state(self.nqubits)
+        else:
+            state = self.hamiltonian.backend.cast(initial_state)
+
         self.calculate_callbacks(state)
         n = int(self.params.shape[0])
         for i in range(n // 2):
@@ -354,19 +358,6 @@ class QAOA(object):
     def __call__(self, initial_state=None):
         """Equivalent to :meth:`qibo.models.QAOA.execute`."""
         return self.execute(initial_state)
-
-    def get_initial_state(self, state=None):
-        """"""
-        #TODO: update this
-        # if self.accelerators is not None:
-        #     c = self.hamiltonian.circuit(self.params[0])
-        #     if state is None:
-        #         state = self.states.DistributedState.plus_state(c)
-        #     return c.get_initial_state(state)
-
-        if state is None:
-            return self.hamiltonian.backend.plus_state(self.nqubits)
-        return self.hamiltonian.backend.cast(state)
 
     def minimize(self, initial_p, initial_state=None, method='Powell',
                  jac=None, hess=None, hessp=None, bounds=None, constraints=(),
