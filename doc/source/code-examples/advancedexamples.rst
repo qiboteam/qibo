@@ -343,11 +343,11 @@ the ``trainable=False`` during gate creation. For example:
     c.add(gates.fSim(0, 2, theta=0.789, phi=0.567))
 
     print(c.get_parameters())
-    # prints [0.123, (0.789, 0.567)] ignoring the parameters of the RY gate
+    # prints [(0.123,), (0.789, 0.567)] ignoring the parameters of the RY gate
 
 .. testoutput::
 
-    [0.123, (0.789, 0.567)]
+    [(0.123,), (0.789, 0.567)]
 
 
 This is useful when the user wants to freeze the parameters of specific
@@ -380,7 +380,7 @@ of the :class:`qibo.gates.M` gate. For example
     output = c.add(gates.M(0, collapse=True))
     c.add(gates.H(0))
     result = c()
-    print(result.state())
+    print(result)
     # prints [0.7071, 0.7071] if 0 is measured
     # or [0.7071, -0.7071] if 1 is measured
 .. testoutput::
@@ -632,7 +632,7 @@ Here is a simple example using a custom loss function:
     # custom loss function, computes fidelity
     def myloss(parameters, circuit, target):
         circuit.set_parameters(parameters)
-        final_state = circuit().numpy()
+        final_state = circuit().state(numpy=True)
         return 1 - np.abs(np.conj(target).dot(final_state))
 
     nqubits = 6
@@ -1085,7 +1085,7 @@ original noiseless measurement samples are no longer accessible. It is possible
 to keep the original samples by creating a copy of the states before applying
 the bitflips:
 
-.. testsetup::
+.. testcode::
 
       import numpy as np
       from qibo import models, gates
@@ -1101,16 +1101,6 @@ the bitflips:
       error_map = {0: 0.2, 1: 0.1, 2: 0.3, 3: 0.1}
       result.apply_bitflips(error_map)
 
-.. testcode::
-
-      # create a copy of the state containing the noiseless samples
-      noisy_result = result.copy()
-      # perform bitflips in the copy
-      noisy_result.apply_bitflips(0.2)
-
-Creating a copy as shown in the above example does not duplicate the state
-vector for memory efficiency reasons. All copies of the state point to the
-same tensor in memory.
 
 Alternatively, the user may specify a bit-flip error map when defining
 measurement gates:
