@@ -2,8 +2,6 @@ from canonizator import *
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
-import qibo
-qibo.set_backend("numpy")
 
 
 parser = argparse.ArgumentParser()
