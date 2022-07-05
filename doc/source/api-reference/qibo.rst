@@ -41,12 +41,10 @@ Circuit addition
 .. testsetup::
 
     import qibo
-    qibo.set_backend("qibojit")
-
-.. testcode::
-
     from qibo import models
     from qibo import gates
+
+.. testcode::
 
     c1 = models.QFT(4)
 
@@ -876,7 +874,7 @@ only supported by the native ``tensorflow`` backend.
 
 The user can switch backends using
 
-.. testcode::
+.. code-block::  python
 
     import qibo
     qibo.set_backend("qibojit")
@@ -889,7 +887,7 @@ Some backends support different platforms. For example, the qibojit backend
 provides two platforms (``cupy`` and ``cuquantum``) when used on GPU.
 The active platform can be switched using
 
-.. testcode::
+.. code-block::  python
 
     import qibo
     qibo.set_backend("qibojit", platform="cuquantum")
@@ -903,6 +901,6 @@ and include the reference to your new module. Alternatively, you can set a
 custom profile file by storing the file path in the ``QIBO_PROFILE`` environment
 variable before executing the code.
 
-.. autoclass:: qibo.backends.abstract.AbstractBackend
+.. autoclass:: qibo.backends.abstract.Backend
     :members:
     :member-order: bysource
