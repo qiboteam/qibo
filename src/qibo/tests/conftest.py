@@ -62,8 +62,6 @@ def backend(backend_name):
 
 def pytest_generate_tests(metafunc):
     module_name = metafunc.module.__name__
-    if module_name == "qibo.tests.test_parallel":
-        pytest.skip("Skip parallel tests due to pickle error.")
 
     if module_name == "qibo.tests.test_models_qgan" and "tensorflow" not in AVAILABLE_BACKENDS:
         pytest.skip("Skipping QGAN tests because tensorflow is not available.")
@@ -84,6 +82,7 @@ def pytest_generate_tests(metafunc):
         elif "accelerators" in metafunc.fixturenames:
             metafunc.parametrize("accelerators", ACCELERATORS)
 
-    if "skip_parallel" in metafunc.fixturenames:
-        skip_parallel = metafunc.config.option.skip_parallel
-        metafunc.parametrize("skip_parallel", [skip_parallel])
+    # TODO: check workflow
+    # if "skip_parallel" in metafunc.fixturenames:
+    #     skip_parallel = metafunc.config.option.skip_parallel
+    #     metafunc.parametrize("skip_parallel", [skip_parallel])

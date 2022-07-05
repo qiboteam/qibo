@@ -10,24 +10,8 @@ from qibo.models import Circuit, QFT
 from qibo.parallel import parallel_parametrized_execution, parallel_execution
 
 
-def is_parallel_supported(backend):  # pragma: no cover
-    if "GPU" in backend.device:
-        return False
-    if backend.name in ("tensorflow", "qibojit"):
-        return False
-    if sys.platform in ("darwin", "win32"):
-        return False
-    return True
-
-
 def test_parallel_circuit_evaluation(backend):  # pragma: no cover
     """Evaluate circuit for multiple input states."""
-    #if skip_parallel:
-    #    pytest.skip("Skipping parallel test.")
-    if not is_parallel_supported(backend):
-        pytest.skip("Skipping parallel test due to unsupported configuration.")
-    backend.set_threads(1)
-
     nqubits = 10
     np.random.seed(0)
     c = QFT(nqubits)
@@ -46,12 +30,6 @@ def test_parallel_circuit_evaluation(backend):  # pragma: no cover
 
 def test_parallel_parametrized_circuit(backend):  # pragma: no cover
     """Evaluate circuit for multiple parameters."""
-    #if skip_parallel:
-    #    pytest.skip("Skipping parallel test.")
-    if not is_parallel_supported(backend):
-        pytest.skip("Skipping parallel test due to unsupported configuration.")
-    backend.set_threads(1)
-
     nqubits = 5
     nlayers  = 10
     c = Circuit(nqubits)

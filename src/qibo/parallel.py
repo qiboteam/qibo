@@ -26,10 +26,10 @@ class ParallelResources:  # pragma: no cover
         if cls._instance is None:
             cls._instance = super(ParallelResources, cls).__new__(
                 cls, *args, **kwargs)
-            if cls.sys.platform == 'win32' or cls.sys.platform == 'darwin': # pragma: no cover
+            if cls.sys.platform == 'win32' or cls.sys.platform == 'darwin':  # pragma: no cover
                 from qibo.config import raise_error
                 raise_error(NotImplementedError,
-                    "Parallel evaluation supported only on linux.")
+                            "Parallel evaluation supported only on linux.")
         return cls._instance
 
     def run(self, params=None):
@@ -54,7 +54,8 @@ class ParallelResources:  # pragma: no cover
                     copy = obj
                 except Exception as e:
                     # use print otherwise the message will not appear # CodeText:skip
-                    print('Exception in ParallelResources', str(e)) # CodeText:skip
+                    print('Exception in ParallelResources',
+                          str(e))  # CodeText:skip
                 args.append(copy)
             args = tuple(args)
             self._objects_per_process[pname] = args
@@ -71,7 +72,7 @@ class ParallelResources:  # pragma: no cover
         self.arguments = ()
 
 
-def _executor(params): # pragma: no cover
+def _executor(params):  # pragma: no cover
     """Executes singleton call."""
     return ParallelResources().run(params)
 
@@ -115,20 +116,13 @@ def parallel_execution(circuit, states, processes=None, backend=None):  # pragma
         from qibo.config import raise_error
         raise_error(RuntimeError, "states must be a list.")
 
-    _check_parallel_configuration(processes, backend)
-
-    def operation(state, circuit): # pragma: no cover
+    def operation(state, circuit):  # pragma: no cover
         return backend.execute_circuit(circuit, state)
 
-    ParallelResources().arguments = (circuit,)
-    ParallelResources().custom_function = operation
+    from joblib import Parallel, delayed
+    results = Parallel(n_jobs=processes, prefer='threads')(
+        delayed(operation)(state, circuit) for state in states)
 
-    import multiprocessing as mp
-    ParallelResources().lock = mp.Lock()
-    with mp.Pool(processes=processes) as pool:
-        results = pool.map(_executor, states)
-
-    ParallelResources().reset()
     return results
 
 
@@ -181,39 +175,36 @@ def parallel_parametrized_execution(circuit, parameters, initial_state=None, pro
         from qibo.config import raise_error
         raise_error(RuntimeError, "parameters must be a list.")
 
-    _check_parallel_configuration(processes, backend)
-
-    def operation(params, circuit, state): # pragma: no cover
+    def operation(params, circuit, state):  # pragma: no cover
         circuit.set_parameters(params)
         return backend.execute_circuit(circuit, state)
 
-    ParallelResources().arguments = (circuit, initial_state)
-    ParallelResources().custom_function = operation
+    from joblib import Parallel, delayed
+    results = Parallel(n_jobs=processes, prefer='threads')(
+        delayed(operation)(param, circuit, initial_state) for param in parameters)
 
-    import multiprocessing as mp
-    ParallelResources().lock = mp.Lock()
-    with mp.Pool(processes=processes) as pool:
-        results = pool.map(_executor, parameters)
-
-    ParallelResources().reset()
     return results
 
 
 def _check_parallel_configuration(processes, backend):  # pragma: no cover
     """Check if configuration is suitable for efficient parallel execution."""
-    import sys, psutil
+    import sys
+    import psutil
     from qibo.config import raise_error, log
-    
+
     if sys.platform == "win32" or sys.platform == 'darwin':  # pragma: no cover
-        raise_error(RuntimeError, "Parallel evaluations supported only on linux.")
-    
+        raise_error(
+            RuntimeError, "Parallel evaluations supported only on linux.")
+
     name = backend.name
     if name == "tensorflow":  # pragma: no cover
-        raise_error(RuntimeError, f"{name} backend does not support parallel evaluations.")
+        raise_error(
+            RuntimeError, f"{name} backend does not support parallel evaluations.")
 
     device = backend.device
     if device is not None and "GPU" in device:  # pragma: no cover
-        raise_error(RuntimeError, "Parallel evaluations cannot be used with GPU.")
+        raise_error(
+            RuntimeError, "Parallel evaluations cannot be used with GPU.")
 
     nthreads = backend.nthreads
     if ((processes is not None and processes * nthreads > psutil.cpu_count()) or
