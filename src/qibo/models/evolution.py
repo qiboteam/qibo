@@ -89,18 +89,14 @@ class StateEvolution:
             for callback in self.callbacks:
                 callback.append(callback.apply(self.backend, state))
 
-        if accelerators is None:
+        if accelerators is None:            
             return calculate_callbacks
 
         def calculate_callbacks_distributed(state):
-            # TODO: Fix this whn distributed circuit is implemented
-            raise_error(NotImplementedError)
-            #with K.on_cpu():
-            #    if not isinstance(state, K.tensor_types):
-            #        state = state.tensor
-            #with K.on_cpu():
-            #    calculate_callbacks(state)
-
+            if not isinstance(state, self.backend.tensor_types):
+                state = state.state()
+            calculate_callbacks(state)
+            
         return calculate_callbacks_distributed
 
     def execute(self, final_time, start_time=0.0, initial_state=None):
@@ -116,7 +112,10 @@ class StateEvolution:
             :class:`qibo.core.distutils.DistributedState` when a
             distributed execution is used.
         """
-        state = self.get_initial_state(initial_state)
+        if initial_state is None:
+            raise_error(ValueError, "StateEvolution cannot be used without "
+                                    "initial state.")
+        state = self.backend.cast(initial_state)
         self.solver.t = start_time
         nsteps = int((final_time - start_time) / self.solver.dt)
         self.calculate_callbacks(state)
@@ -131,17 +130,6 @@ class StateEvolution:
     def __call__(self, final_time, start_time=0.0, initial_state=None):
         """Equivalent to :meth:`qibo.models.StateEvolution.execute`."""
         return self.execute(final_time, start_time, initial_state)
-
-    def get_initial_state(self, state=None):
-        """"""
-        if state is None:
-            raise_error(ValueError, "StateEvolution cannot be used without "
-                                    "initial state.")
-        if self.accelerators is None:
-            return self.backend.cast(state)
-        else:
-            c = self.solver.hamiltonian(0).circuit(self.solver.dt)
-            return c.get_initial_state(state)
 
 
 class AdiabaticEvolution(StateEvolution):
@@ -235,24 +223,9 @@ class AdiabaticEvolution(StateEvolution):
             raise_error(NotImplementedError, "Adiabatic evolution supports only t=0 "
                                              "as initial time.")
         self.hamiltonian.total_time = final_time - start_time
-        return super(AdiabaticEvolution, self).execute(
-            final_time, start_time, initial_state)
-
-    def get_initial_state(self, state=None):
-        """Casts initial state as a tensor.
-
-        If initial state is not given the ground state of ``h0`` is used, which
-        is the common practice in adiabatic evolution.
-        """
-        if state is None:
-            if self.accelerators is None:
-                return self.hamiltonian.ground_state()
-            else:
-                from qibo.core.states import DistributedState
-                c = self.hamiltonian.circuit(self.solver.dt) # pylint: disable=E1111
-                state = DistributedState.plus_state(c)
-                return c.get_initial_state(state)
-        return super(AdiabaticEvolution, self).get_initial_state(state)
+        if initial_state is None:
+            initial_state = self.hamiltonian.ground_state()
+        return super(AdiabaticEvolution, self).execute(final_time, start_time, initial_state)
 
     @staticmethod
     def _loss(params, adiabatic_evolution, h1, opt_messages, opt_history):

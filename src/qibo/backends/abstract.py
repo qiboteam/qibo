@@ -55,7 +55,7 @@ class Simulator(Backend):
     def __init__(self):
         super().__init__()
         self.name = "simulator"
-        
+
         self.precision = "double"
         self.dtype = "complex128"
         self.matrices = None
@@ -160,26 +160,24 @@ class Simulator(Backend):
         raise_error(NotImplementedError)
 
     def execute_circuit(self, circuit, initial_state=None, nshots=None, return_array=False):
-        from qibo.gates.special import CallbackGate
-
-        if circuit.accelerators and not self.supports_multigpu:
-            raise_error(NotImplementedError, f"{self} does not support distributed execution.")
-
-        if isinstance(initial_state, CircuitResult):
-            initial_state = initial_state.state()
-
         if circuit.repeated_execution:
             return self.execute_circuit_repeated(circuit, initial_state, nshots)
 
+        if circuit.accelerators:
+            return self.execute_distributed_circuit(circuit, initial_state, nshots)
+
         try:
             nqubits = circuit.nqubits
+            if isinstance(initial_state, CircuitResult):
+                initial_state = initial_state.state()
+
             if circuit.density_matrix:
                 if initial_state is None:
                     state = self.zero_density_matrix(nqubits)
                 else:
                     # cast to proper complex type
                     state = self.cast(initial_state)
-                
+
                 for gate in circuit.queue:
                     state = gate.apply_density_matrix(self, state, nqubits)
 
@@ -205,37 +203,44 @@ class Simulator(Backend):
                                        "different one using ``qibo.set_device``.")
 
     def execute_circuit_repeated(self, circuit, initial_state=None, nshots=None):
-        if nshots is None: nshots = 1
+        if nshots is None:
+            nshots = 1
+
         results = []
         nqubits = circuit.nqubits
+        circuit.repeated_execution = False
         for _ in range(nshots):
             if circuit.density_matrix:
                 if initial_state is None:
                     state = self.zero_density_matrix(nqubits)
                 else:
                     state = self.cast(initial_state, copy=True)
-                
+
                 for gate in circuit.queue:
                     if gate.symbolic_parameters:
                         gate.substitute_symbols()
                     state = gate.apply_density_matrix(self, state, nqubits)
 
             else:
-                if initial_state is None:
-                    state = self.zero_state(nqubits)
+                if circuit.accelerators:
+                    state = self.execute_distributed_circuit(circuit, initial_state, return_array=True) # pylint: disable=E1111
                 else:
-                    state = self.cast(initial_state, copy=True)
-                
-                for gate in circuit.queue:
-                    if gate.symbolic_parameters:
-                        gate.substitute_symbols()
-                    state = gate.apply(self, state, nqubits)
-                
+                    if initial_state is None:
+                        state = self.zero_state(nqubits)
+                    else:
+                        state = self.cast(initial_state, copy=True)
+
+                    for gate in circuit.queue:
+                        if gate.symbolic_parameters:
+                            gate.substitute_symbols()
+                        state = gate.apply(self, state, nqubits)
+
             if circuit.measurement_gate:
                 result = CircuitResult(self, circuit, state, 1)
                 results.append(result.samples(binary=False)[0])
             else:
                 results.append(state)
+        circuit.repeated_execution = True
 
         if circuit.measurement_gate:
             final_result = CircuitResult(self, circuit, state, nshots)
@@ -246,11 +251,15 @@ class Simulator(Backend):
             circuit._final_state = CircuitResult(self, circuit, results[-1], nshots)
             return results
 
+    def execute_distributed_circuit(self, circuit, initial_state=None, nshots=None, return_array=False):
+        raise_error(NotImplementedError, f"{self} does not support distributed execution.")
+
     def get_state_repr(self, result):
         return result.symbolic()
 
+    @abc.abstractmethod
     def get_state_tensor(self, result):
-        return result.execution_result
+        raise_error(NotImplementedError)
 
     @abc.abstractmethod
     def calculate_symbolic(self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20): # pragma: no cover
@@ -309,7 +318,7 @@ class Simulator(Backend):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def entanglement_entropy(self, rho): # pragma: no cover 
+    def entanglement_entropy(self, rho): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod

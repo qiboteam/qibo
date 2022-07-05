@@ -12,19 +12,17 @@ INACTIVE_TESTS = {
     "qibo.tests.test_backends_agreement",
     "qibo.tests.test_backends_init",
     "qibo.tests.test_backends_matrices",
-    "qibo.tests.test_core_distcircuit_execution",
-    "qibo.tests.test_core_distcircuit",
-    "qibo.tests.test_core_distutils",
     "qibo.tests.test_core_measurements",
     "qibo.tests.test_core_states_distributed",
     "qibo.tests.test_core_states",
-    "qibo.tests.test_models_qgan",
-    "qibo.tests.test_models_variational",
     "qibo.tests.test_parallel"
 }
 
 # backends to be tested
 BACKENDS = ["numpy", "tensorflow", "qibojit-numba", "qibojit-cupy"]
+# multigpu configurations to be tested (only with qibojit-cupy)
+ACCELERATORS = [{"/GPU:0": 1, "/GPU:1": 1}, {"/GPU:0": 2, "/GPU:1": 2},
+                {"/GPU:0": 1, "/GPU:1": 1, "/GPU:2": 1, "/GPU:3": 1}]
 
 
 def get_backend(backend_name):
@@ -36,10 +34,13 @@ def get_backend(backend_name):
 
 # ignore backends that are not available in the current testing environment
 AVAILABLE_BACKENDS = []
+MULTIGPU_BACKENDS = []
 for backend_name in BACKENDS:
     try:
-        get_backend(backend_name)
+        _backend = get_backend(backend_name)
         AVAILABLE_BACKENDS.append(backend_name)
+        if _backend.supports_multigpu:
+            MULTIGPU_BACKENDS.append(backend_name)
     except (ModuleNotFoundError, ImportError):
         pass
 
@@ -74,8 +75,25 @@ def pytest_generate_tests(metafunc):
     if module_name in INACTIVE_TESTS:
         pytest.skip()
 
-    if "backend_name" in metafunc.fixturenames:
-        metafunc.parametrize("backend_name", AVAILABLE_BACKENDS)
+    if module_name == "qibo.tests.test_models_qgan" and "tensorflow" not in AVAILABLE_BACKENDS:
+        pytest.skip("Skipping QGAN tests because tensorflow is not available.")
 
-    if "accelerators" in metafunc.fixturenames:
-        metafunc.parametrize("accelerators", [None])
+    if module_name == "qibo.tests.test_models_distcircuit_execution":
+        config = [(bk, acc) for acc in ACCELERATORS for bk in MULTIGPU_BACKENDS]
+        metafunc.parametrize("backend_name,accelerators", config)
+
+    else:
+        if "backend_name" in metafunc.fixturenames:
+            if "accelerators" in metafunc.fixturenames:
+                config = [(backend, None) for backend in AVAILABLE_BACKENDS]
+                config.extend((bk, acc) for acc in ACCELERATORS for bk in MULTIGPU_BACKENDS)
+                metafunc.parametrize("backend_name,accelerators", config)
+            else:
+                metafunc.parametrize("backend_name", AVAILABLE_BACKENDS)
+
+        elif "accelerators" in metafunc.fixturenames:
+            metafunc.parametrize("accelerators", ACCELERATORS)
+
+    if "skip_parallel" in metafunc.fixturenames:
+        skip_parallel = metafunc.config.option.skip_parallel
+        metafunc.parametrize("skip_parallel", [skip_parallel])

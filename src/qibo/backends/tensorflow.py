@@ -212,6 +212,7 @@ class TensorflowBackend(NumpyBackend):
         state = self.tf.tensor_scatter_nd_update(state, idx, update)
         return state
 
+
     def asmatrix(self, gate):
         npmatrix = super().asmatrix(gate)
         return self.tf.cast(npmatrix, dtype=self.dtype)

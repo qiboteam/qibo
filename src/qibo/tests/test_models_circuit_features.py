@@ -249,14 +249,14 @@ def test_circuit_on_qubits_with_unitary_execution(backend, accelerators, control
     backend.assert_circuitclose(largec, targetc)
 
 
-def test_circuit_on_qubits_with_varlayer_execution(backend, accelerators):
+def test_circuit_on_qubits_with_varlayer_execution(backend):
     thetas = np.random.random([2, 4])
     smallc = Circuit(4)
     smallc.add(gates.VariationalLayer(range(4), [(0, 1), (2, 3)],
                                       gates.RX, gates.CNOT,
                                       thetas[0]))
 
-    largec = Circuit(8, accelerators=accelerators)
+    largec = Circuit(8)
     largec.add(smallc.on_qubits(*range(0, 8, 2)))
     largec.add(gates.VariationalLayer(range(1, 8, 2), [(1, 3), (5, 7)],
                                       gates.RY, gates.CZ,
