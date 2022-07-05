@@ -1,6 +1,6 @@
 import numpy as np
 from numpy.random import randn
-from qibo import gates, hamiltonians, models, get_backend
+from qibo import gates, hamiltonians, matrices, models
 from qibo.config import raise_error
 
 
@@ -282,21 +282,18 @@ class StyleQGAN(object):
 
         # define hamiltonian to generate fake samples
         def hamiltonian(nqubits, position):
-            identity = [[1, 0], [0, 1]]
-            m0 = hamiltonians.Z(1).matrix
             kron = []
             for i in range(nqubits):
                 if i == position:
-                    kron.append(m0)
+                    kron.append(matrices.Z)
                 else:
-                    kron.append(identity)
+                    kron.append(matrices.I)
             for i in range(nqubits - 1):
                 if i==0:
                     ham = np.kron(kron[i+1], kron[i])
                 else:
                     ham = np.kron(kron[i+1], ham)
-            ham = hamiltonians.Hamiltonian(nqubits, ham)
-            return ham
+            return hamiltonians.Hamiltonian(nqubits, ham, backend=self.backend)
 
         hamiltonians_list = []
         for i in range(self.nqubits):
