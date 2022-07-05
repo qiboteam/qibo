@@ -48,6 +48,15 @@ Finance
     tutorials/unary/README.md
 
 
+High-Energy Physics
+^^^^^^^^^^^^^^^^^^^
+
+.. toctree::
+    :maxdepth: 1
+
+    tutorials/qPDF/qPDF.ipynb
+
+
 Quantum Physics
 ^^^^^^^^^^^^^^^
 
@@ -93,6 +102,7 @@ Variational Quantum Circuits
     tutorials/EF_QAE/README.md
     tutorials/unary/README.md
     tutorials/bell-variational/README.md
+    tutorials/qPDF/qPDF.ipynb
 
 
 Grover's Algorithm

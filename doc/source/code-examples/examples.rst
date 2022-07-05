@@ -36,7 +36,7 @@ If you are planning to freeze the circuit and just query for different initial
 states then you can use the ``Circuit.compile()`` method which will improve
 evaluation performance, e.g.:
 
-.. testcode::
+.. code-block::  python
 
     import numpy as np
     # switch backend to "tensorflow"
@@ -153,6 +153,10 @@ when executing the circuit. In this case the returned
 :class:`qibo.abstractions.states.AbstractState` will contain all the
 information about the measured samples. For example
 
+.. testsetup::
+    import qibo
+    qibo.set_backend("numpy")
+
 .. testcode::
 
     from qibo.models import Circuit
@@ -176,6 +180,10 @@ on the ``result`` object. In particular
 In addition to the functionality described above, it is possible to collect
 measurement results grouped according to registers. The registers are defined
 during the addition of measurement gates in the circuit. For example
+
+.. testsetup::
+    import qibo
+    qibo.set_backend("numpy")
 
 .. testcode::
 
