@@ -858,15 +858,16 @@ numpy and one based on Tensorflow. It is possible to define new backends by
 inheriting :class:`qibo.backends.abstract.Backend` and implementing
 its abstract methods.
 
-Both backends are supplemented by custom operators defined under which can be
+An additional backend is shipped as the separate library qibojit.
+This backend is supplemented by custom operators defined under which can be
 used to efficiently apply gates to state vectors or density matrices.
-These custom operators are shipped as the separate library qibojit.
+
 We refer to :ref:`Packages <packages>` section for a complete list of the
 available computation backends and instructions on how to install each of
 these libraries on top of qibo.
 
 Custom operators are much faster than implementations based on numpy or Tensorflow
-primitives (such as ``einsum``) but do not support some features, such as
+primitives, such as ``einsum``, but do not support some features, such as
 automatic differentiation for backpropagation of variational circuits which is
 only supported by the native ``tensorflow`` backend.
 
@@ -891,13 +892,9 @@ The active platform can be switched using
     qibo.set_backend("qibojit", platform="cuquantum")
     qibo.set_backend("qibojit", platform="cupy")
 
-For developers, we provide a configuration file in
-``qibo/backends/profiles.yml`` containing the technical specifications for all
-backends supported by the Qibo team. If you are planning to introduce a new
-backend module for simulation or hardware, you can simply edit this profile file
-and include the reference to your new module. Alternatively, you can set a
-custom profile file by storing the file path in the ``QIBO_PROFILE`` environment
-variable before executing the code.
+The default backend order is qibojit (if available), tensorflow (if available),
+numpy. The default backend can be changed using the ``QIBO_BACKEND`` environment
+variable.
 
 .. autoclass:: qibo.backends.abstract.Backend
     :members:
