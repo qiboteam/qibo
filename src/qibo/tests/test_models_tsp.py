@@ -1,9 +1,11 @@
 import pytest
-from qibo.models.tsp import TSP
 import numpy as np
-from qibo.models import QAOA
-from qibo import gates
 from collections import defaultdict
+from qibo import gates
+from qibo.models import QAOA, Circuit
+from qibo.models.tsp import TSP
+from qibo.states import CircuitResult
+
 
 np.random.seed(42)
 num_cities = 3
@@ -51,8 +53,10 @@ def qaoa_function_of_layer(layer, distance_matrix, backend):
                                                          initial_state=initial_state, method='BFGS')
     qaoa.set_parameters(final_parameters)
     quantum_state = qaoa.execute(initial_state)
-    meas = quantum_state.measure(gates.M(*range(9)), nshots=1000)
-    freq_counter = meas.frequencies()
+    circuit = Circuit(9)
+    circuit.add(gates.M(*range(9)))
+    result = CircuitResult(backend, circuit, quantum_state, nshots=1000)
+    freq_counter = result.frequencies()
     # let's combine freq_counter here, first convert each key and sum up the frequency
     cauchy_dict = defaultdict(int)
     for freq_key in freq_counter:
