@@ -368,7 +368,7 @@ class Simulator(Backend):
     def assert_circuitclose(self, circuit, target_circuit, rtol=1e-7, atol=0.0):
         value = self.execute_circuit(circuit)
         target = self.execute_circuit(target_circuit)
-        self.assert_allclose(value, target)
+        self.assert_allclose(value, target, rtol=rtol, atol=atol)
 
     @abc.abstractmethod
     def test_regressions(self, name):  # pragma: no cover

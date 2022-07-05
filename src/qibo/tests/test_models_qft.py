@@ -59,7 +59,6 @@ def test_qft_execution(backend, accelerators, nqubits, random):
     backend.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.skip
 def test_qft_errors(backend):
     """Check that ``_DistributedQFT`` raises error if not sufficient qubits."""
     from qibo.models.qft import _DistributedQFT
