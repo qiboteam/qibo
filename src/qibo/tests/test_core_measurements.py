@@ -81,19 +81,6 @@ def test_measurementresult_frequencies(backend):
     assert result.frequencies(binary=False) == dfreqs
 
 
-@pytest.mark.parametrize("i,p0,p1",
-                         [(0, 0.2, None), (1, 0.2, 0.1),
-                          (2, (0.1, 0.0, 0.2), None),
-                          (3, {0: 0.2, 1: 0.1, 2: 0.0}, None)])
-def test_measurementresult_apply_bitflips(backend, i, p0, p1):
-    result = measurements.MeasurementResult((0, 1, 2))
-    result.decimal = K.zeros(10, dtype='DTYPEINT')
-    K.set_seed(123)
-    noisy_result = result.apply_bitflips(p0, p1)
-    targets = K.test_regressions("test_measurementresult_apply_bitflips")
-    K.assert_allclose(noisy_result.samples(binary=False), targets[i])
-
-
 @pytest.mark.parametrize("probs", [0.2, {0: 0.1, 1: 0.2, 2: 0.8, 3: 0.3}])
 def test_measurementresult_apply_bitflips_random_samples(backend, probs):
     qubits = tuple(range(4))

@@ -154,7 +154,7 @@ class CircuitResult:
     @staticmethod
     def _frequencies_to_binary(frequencies, nqubits):
         return collections.Counter(
-                {"{0:b}".format(k).zfill(nqubits): v 
+                {"{0:b}".format(k).zfill(nqubits): v
                  for k, v in frequencies.items()})
 
     def frequencies(self, binary=True, registers=False):
@@ -215,3 +215,13 @@ class CircuitResult:
             return self._frequencies_to_binary(self._frequencies, len(qubits))
         else:
             return self._frequencies
+
+    def apply_bitflips(self, p0, p1=None):
+        mgate = self.circuit.measurement_gate
+        if p1 is None:
+            probs = 2 * (mgate._get_bitflip_tuple(mgate.qubits, p0),)
+        else:
+            probs = (mgate._get_bitflip_tuple(mgate.qubits, p0),
+                     mgate._get_bitflip_tuple(mgate.qubits, p1))
+        noiseless_samples = self.samples()
+        return self.backend.apply_bitflips(noiseless_samples, probs)

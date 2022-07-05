@@ -106,3 +106,20 @@ def test_post_measurement_bitflips_on_circuit_result(backend):
     register_samples = result.samples(binary=True, registers=True)
     backend.assert_allclose(register_samples["a"], samples[:, :2])
     backend.assert_allclose(register_samples["b"], samples[:, 2:])
+
+
+@pytest.mark.parametrize("i,p0,p1",
+                         [(0, 0.2, None), (1, 0.2, 0.1),
+                          (2, (0.1, 0.0, 0.2), None),
+                          (3, {0: 0.2, 1: 0.1, 2: 0.0}, None)])
+def test_measurementresult_apply_bitflips(backend, i, p0, p1):
+    from qibo.states import CircuitResult
+    c = models.Circuit(3)
+    c.add(gates.M(*range(3)))
+    result = CircuitResult(backend, c, None)
+    result._samples = np.zeros(10, dtype="int64")
+    backend.set_seed(123)
+    noisy_samples = result.apply_bitflips(p0, p1)
+    targets = backend.test_regressions("test_measurementresult_apply_bitflips")
+    noisy_samples = backend.samples_to_decimal(noisy_samples, 3)
+    backend.assert_allclose(noisy_samples, targets[i])
