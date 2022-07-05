@@ -418,7 +418,8 @@ class QAOA(object):
                                                              method=method, jac=jac, hess=hess, hessp=hessp,
                                                              bounds=bounds, constraints=constraints,
                                                              tol=tol, callback=callback, options=options,
-                                                             compile=compile, processes=processes)
+                                                             compile=compile, processes=processes,
+                                                             backend=self.backend)
         self.set_parameters(parameters)
         return result, parameters, extra
 
