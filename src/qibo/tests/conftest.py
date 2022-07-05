@@ -18,8 +18,6 @@ INACTIVE_TESTS = {
     "qibo.tests.test_core_measurements",
     "qibo.tests.test_core_states_distributed",
     "qibo.tests.test_core_states",
-    "qibo.tests.test_models_qgan",
-    "qibo.tests.test_models_variational",
     "qibo.tests.test_parallel"
 }
 
@@ -74,8 +72,15 @@ def pytest_generate_tests(metafunc):
     if module_name in INACTIVE_TESTS:
         pytest.skip()
 
+    if module_name == "qibo.tests.test_models_qgan" and "tensorflow" not in AVAILABLE_BACKENDS:
+        pytest.skip("Skipping QGAN tests because tensorflow is not available.")
+
     if "backend_name" in metafunc.fixturenames:
         metafunc.parametrize("backend_name", AVAILABLE_BACKENDS)
 
     if "accelerators" in metafunc.fixturenames:
         metafunc.parametrize("accelerators", [None])
+
+    skip_parallel = metafunc.config.option.skip_parallel
+    if "skip_parallel" in metafunc.fixturenames:
+        metafunc.parametrize("skip_parallel", [skip_parallel])
