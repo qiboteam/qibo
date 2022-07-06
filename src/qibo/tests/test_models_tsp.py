@@ -7,16 +7,13 @@ from qibo.models.tsp import TSP
 from qibo.states import CircuitResult
 
 
-np.random.seed(42)
 num_cities = 3
 distance_matrix = np.array([[0, 0.9, 0.8],
                             [0.4, 0, 0.1],
                             [0, 0.7, 0]])
 # there are two possible cycles, one with distance 1, one with distance 1.9
 distance_matrix = distance_matrix.round(1)
-small_tsp = TSP(distance_matrix)
 initial_parameters = np.random.uniform(0, 1, 2)
-initial_state = small_tsp.prepare_initial_state([i for i in range(num_cities)])
 
 
 def convert_to_standard_Cauchy(config):
@@ -47,6 +44,7 @@ def qaoa_function_of_layer(layer, distance_matrix, backend):
     from QAOA
     '''
     small_tsp = TSP(distance_matrix, backend)
+    initial_state = small_tsp.prepare_initial_state([i for i in range(num_cities)])
     obj_hamil, mixer = small_tsp.hamiltonians()
     qaoa = QAOA(obj_hamil, mixer=mixer)
     best_energy, final_parameters, extra = qaoa.minimize(initial_p=[0.1 for i in range(layer)] ,
@@ -68,5 +66,6 @@ def qaoa_function_of_layer(layer, distance_matrix, backend):
 
 @pytest.mark.parametrize("test_layer, expected", [(4, 1.0), (6, 1.0), (8, 1.9)])
 def test_tsp(backend, test_layer, expected):
+    np.random.seed(42)
     tmp = qaoa_function_of_layer(test_layer, distance_matrix, backend)
     assert abs(tmp - expected) <= 0.001
