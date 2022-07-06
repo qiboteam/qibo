@@ -1,3 +1,4 @@
+import os
 from qibo.config import log, raise_error
 from qibo.backends.abstract import Backend
 from qibo.backends.numpy import NumpyBackend
@@ -17,7 +18,7 @@ def construct_backend(backend, platform=None):
                 return CupyBackend()
             except (ModuleNotFoundError, ImportError):
                 return NumbaBackend()
-        
+
     elif backend == "tensorflow":
         return TensorflowBackend()
 
@@ -45,17 +46,25 @@ class GlobalBackend(NumpyBackend):
         if cls._instance is not None:
             return cls._instance
 
-        # Create default backend
-        for kwargs in cls._default_order:
-            try:
-                cls._instance = construct_backend(**kwargs)
-            except (ModuleNotFoundError, ImportError):
-                pass
-            if cls._instance is not None:
-                log.info(f"Using {cls._instance} backend on {cls._instance.device}")
-                return cls._instance
+        backend = os.environ.get("QIBO_BACKEND")
+        if backend:
+            # Create backend specified by user
+            platform = os.environ.get("QIBO_PLATFORM")
+            cls._instance = construct_backend(backend, platform)
+        else:
+            # Create backend according to default order
+            for kwargs in cls._default_order:
+                try:
+                    cls._instance = construct_backend(**kwargs)
+                    break
+                except (ModuleNotFoundError, ImportError):
+                    pass
 
-        raise_error(RuntimeError, "No backends available.")
+        if cls._instance is None: # pragma: no cover
+            raise_error(RuntimeError, "No backends available.")
+
+        log.info(f"Using {cls._instance} backend on {cls._instance.device}")
+        return cls._instance
 
     @classmethod
     def set_backend(cls, backend, platform=None):
@@ -78,7 +87,7 @@ matrices = QiboMatrices()
 
 
 def get_backend():
-    return GlobalBackend().name
+    return str(GlobalBackend())
 
 
 def set_backend(backend, platform=None):
