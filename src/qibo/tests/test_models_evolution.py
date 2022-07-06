@@ -306,8 +306,8 @@ test_values = [
 def test_scheduling_optimization(backend, method, options, messages, dense, filename):
     """Test optimization of s(t)."""
     from qibo.tests.test_models_variational import assert_regression_fixture
-    h0 = hamiltonians.X(3, dense=dense)
-    h1 = hamiltonians.TFIM(3, dense=dense)
+    h0 = hamiltonians.X(3, dense=dense, backend=backend)
+    h1 = hamiltonians.TFIM(3, dense=dense, backend=backend)
     sp = lambda t, p: (1 - p) * np.sqrt(t) + p * t
     adevp = models.AdiabaticEvolution(h0, h1, sp, dt=1e-1)
 

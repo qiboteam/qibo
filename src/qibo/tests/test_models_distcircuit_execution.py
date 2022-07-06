@@ -137,7 +137,7 @@ def test_distributed_circuit_execution_addition(backend, accelerators):  # pragm
 def test_distributed_circuit_empty_execution(backend, accelerators):  # pragma: no cover
     # test executing a circuit with the default initial state
     c = Circuit(5, accelerators)
-    final_state = c().state()
+    final_state = backend.execute_circuit(c).state()
     target_state = np.zeros_like(final_state)
     target_state[0] = 1
     backend.assert_allclose(final_state, target_state)
