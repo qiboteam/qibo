@@ -174,7 +174,16 @@ class Hamiltonian(AbstractHamiltonian):
         return r
 
     def __matmul__(self, o):
-        return self.backend.calculate_matrix_product(self, o)
+        if isinstance(o, self.__class__):
+            matrix = self.backend.np.dot(self.matrix, o.matrix)
+            return self.__class__(self.nqubits, matrix, backend=self.backend)
+
+        elif isinstance(o, self.backend.tensor_types):
+            return self.backend.calculate_hamiltonian_state_product(self.matrix, o)
+
+        else:
+            raise_error(NotImplementedError, "Hamiltonian matmul to {} not "
+                                         "implemented.".format(type(o)))
 
 
 class TrotterCircuit:

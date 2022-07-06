@@ -20,7 +20,7 @@ class TensorflowMatrices(Matrices):
         cos = self.np.cos(theta / 2.0) + 0j
         isin = -1j * self.np.sin(theta / 2.0)
         return self.tf.cast([
-            [cos, isin], 
+            [cos, isin],
             [isin, cos]
         ], dtype=self.dtype)
 
@@ -28,21 +28,21 @@ class TensorflowMatrices(Matrices):
         cos = self.np.cos(theta / 2.0) + 0j
         sin = self.np.sin(theta / 2.0) + 0j
         return self.tf.cast([
-            [cos, -sin], 
+            [cos, -sin],
             [sin, cos]
         ], dtype=self.dtype)
 
     def RZ(self, theta):
         phase = self.np.exp(0.5j * theta)
         return self.tf.cast([
-            [self.np.conj(phase), 0], 
+            [self.np.conj(phase), 0],
             [0, phase]
         ], dtype=self.dtype)
 
     def U1(self, theta):
         phase = self.np.exp(1j * theta)
         return self.tf.cast([
-            [1, 0], 
+            [1, 0],
             [0, phase]
         ], dtype=self.dtype)
 
@@ -154,7 +154,7 @@ class TensorflowBackend(NumpyBackend):
         self.tf = tf
         self.np = tnp
         self.matrices = TensorflowMatrices(self.dtype)
-        
+
         from tensorflow.python.framework import errors_impl  # pylint: disable=E0611
         self.oom_error = errors_impl.ResourceExhaustedError
 
@@ -281,23 +281,15 @@ class TensorflowBackend(NumpyBackend):
         else:
             return super().calculate_matrix_exp(a, matrix, eigenvectors, eigenvalues)
 
-    def calculate_matrix_product(self, hamiltonian, o):
-        if isinstance(o, hamiltonian.__class__):
-            new_matrix = self.np.dot(hamiltonian.matrix, o.matrix)
-            return hamiltonian.__class__(hamiltonian.nqubits, new_matrix, backend=self)
-
-        if isinstance(o, self.tensor_types):
-            rank = len(tuple(o.shape))
-            if rank == 1: # vector
-                return self.np.matmul(hamiltonian.matrix, o[:, self.np.newaxis])[:, 0]
-            elif rank == 2: # matrix
-                return self.np.matmul(hamiltonian.matrix, o)
-            else:
-                raise_error(ValueError, "Cannot multiply Hamiltonian with "
-                                        "rank-{} tensor.".format(rank))
-
-        raise_error(NotImplementedError, "Hamiltonian matmul to {} not "
-                                         "implemented.".format(type(o)))
+    def calculate_hamiltonian_state_product(self, matrix, state):
+        rank = len(tuple(state.shape))
+        if rank == 1: # vector
+            return self.np.matmul(matrix, state[:, self.np.newaxis])[:, 0]
+        elif rank == 2: # matrix
+            return self.np.matmul(matrix, state)
+        else:
+            raise_error(ValueError, "Cannot multiply Hamiltonian with "
+                                    "rank-{} tensor.".format(rank))
 
     def test_regressions(self, name):
         if name == "test_measurementresult_apply_bitflips":
@@ -307,11 +299,11 @@ class TensorflowBackend(NumpyBackend):
                 [4, 0, 0, 1, 0, 0, 0, 4, 4, 0],
                 [4, 0, 0, 0, 0, 0, 0, 4, 4, 0]
             ]
-        elif name == "test_probabilistic_measurement": 
+        elif name == "test_probabilistic_measurement":
             return {0: 271, 1: 239, 2: 242, 3: 248}
-        elif name == "test_unbalanced_probabilistic_measurement": 
+        elif name == "test_unbalanced_probabilistic_measurement":
             return {0: 168, 1: 188, 2: 154, 3: 490}
-        elif name == "test_post_measurement_bitflips_on_circuit": 
+        elif name == "test_post_measurement_bitflips_on_circuit":
             return [
                 {5: 30}, {5: 16, 7: 10, 6: 2, 3: 1, 4: 1},
                 {3: 6, 5: 6, 7: 5, 2: 4, 4: 3, 0: 2, 1: 2, 6: 2}
