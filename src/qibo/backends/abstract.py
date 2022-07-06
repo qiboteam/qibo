@@ -38,7 +38,7 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def execute_circuit(self, circuit, nshots=None): # pragma: no cover
+    def execute_circuit(self, circuit, initial_state=None, nshots=None): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
