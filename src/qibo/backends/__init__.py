@@ -17,7 +17,7 @@ def construct_backend(backend, platform=None):
                 return CupyBackend()
             except (ModuleNotFoundError, ImportError):
                 return NumbaBackend()
-        
+
     elif backend == "tensorflow":
         return TensorflowBackend()
 

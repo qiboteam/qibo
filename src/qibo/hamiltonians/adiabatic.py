@@ -57,7 +57,7 @@ class BaseAdiabaticHamiltonian:
             raise_error(ValueError, "H0 has {} qubits while H1 has {}."
                                     "".format(h0.nqubits, h1.nqubits))
         self.nqubits = h0.nqubits
-        if h0.backend != h1.backend:
+        if h0.backend != h1.backend:  # pragma: no cover
             raise_error(ValueError, "H0 and H1 have different backend.")
         self.backend = h0.backend
         self.h0, self.h1 = h0, h1
