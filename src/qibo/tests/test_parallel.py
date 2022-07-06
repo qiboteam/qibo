@@ -10,24 +10,8 @@ from qibo.models import Circuit, QFT
 from qibo.parallel import parallel_parametrized_execution, parallel_execution
 
 
-def is_parallel_supported(backend):  # pragma: no cover
-    if "GPU" in backend.device:
-        return False
-    if backend.name in ("tensorflow", "qibojit"):
-        return False
-    if sys.platform in ("darwin", "win32"):
-        return False
-    return True
-
-
-def test_parallel_circuit_evaluation(backend):  # pragma: no cover
+def test_parallel_circuit_evaluation(backend):
     """Evaluate circuit for multiple input states."""
-    #if skip_parallel:
-    #    pytest.skip("Skipping parallel test.")
-    if not is_parallel_supported(backend):
-        pytest.skip("Skipping parallel test due to unsupported configuration.")
-    backend.set_threads(1)
-
     nqubits = 10
     np.random.seed(0)
     c = QFT(nqubits)
@@ -44,14 +28,8 @@ def test_parallel_circuit_evaluation(backend):  # pragma: no cover
     backend.assert_allclose(r1, r2)
 
 
-def test_parallel_parametrized_circuit(backend):  # pragma: no cover
+def test_parallel_parametrized_circuit(backend):
     """Evaluate circuit for multiple parameters."""
-    #if skip_parallel:
-    #    pytest.skip("Skipping parallel test.")
-    if not is_parallel_supported(backend):
-        pytest.skip("Skipping parallel test due to unsupported configuration.")
-    backend.set_threads(1)
-
     nqubits = 5
     nlayers  = 10
     c = Circuit(nqubits)
@@ -66,12 +44,12 @@ def test_parallel_parametrized_circuit(backend):  # pragma: no cover
     size = len(c.get_parameters())
     np.random.seed(0)
     parameters = [np.random.uniform(0, 2*np.pi, size) for i in range(10)]
-    state = None
+    state = np.random.random(2**nqubits)
 
     r1 = []
     for params in parameters:
         c.set_parameters(params)
-        r1.append(backend.execute_circuit(c, state))
+        r1.append(backend.execute_circuit(c, backend.cast(state)))
 
     r2 = parallel_parametrized_execution(c, parameters=parameters, initial_state=state, processes=2, backend=backend)
     r1 = [x.state(numpy=True) for x in r1]

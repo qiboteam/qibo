@@ -84,19 +84,10 @@ test_values = [("Powell", {'maxiter': 1}, True, 'vqe_powell.out'),
                ("sgd", {"nepochs": 5}, False, None),
                ("sgd", {"nepochs": 5}, True, None)]
 @pytest.mark.parametrize(test_names, test_values)
-def test_vqe(backend, method, options, compile, filename, skip_parallel):
+def test_vqe(backend, method, options, compile, filename):
     """Performs a VQE circuit minimization test."""
     if (method == "sgd" or compile) and backend.name != "tensorflow":
         pytest.skip("Skipping SGD test for unsupported backend.")
-
-    if method == 'parallel_L-BFGS-B':  # pragma: no cover
-        if skip_parallel:
-            pytest.skip("Skipping parallel test.")
-        from qibo.tests.test_parallel import is_parallel_supported
-        if not is_parallel_supported(backend):
-            pytest.skip("Skipping parallel test due to unsupported configuration.")
-        backend.set_threads(1)
-
     nqubits = 6
     layers  = 4
     circuit = models.Circuit(nqubits)
@@ -269,15 +260,8 @@ test_values = [("BFGS", {'maxiter': 1}, False, 'aavqe_bfgs.out'),
                ("cma", {"maxfevals": 2}, False, None),
                ("parallel_L-BFGS-B", {'maxiter': 1}, False, None)]
 @pytest.mark.parametrize(test_names, test_values)
-def test_aavqe(backend, method, options, compile, filename, skip_parallel):
+def test_aavqe(backend, method, options, compile, filename):
     """Performs a AAVQE circuit minimization test."""
-    if method == 'parallel_L-BFGS-B':  # pragma: no cover
-        if skip_parallel:
-            pytest.skip("Skipping parallel test.")
-        from qibo.tests.test_parallel import is_parallel_supported
-        if not is_parallel_supported(backend):
-            pytest.skip("Skipping parallel test due to unsupported configuration.")
-        backend.set_threads(1)
     nqubits = 4
     layers  = 1
     circuit = models.Circuit(nqubits)
