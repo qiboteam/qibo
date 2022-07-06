@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import numpy as np
-from qibo import gates, models, hamiltonians, K
+from qibo import gates, models, hamiltonians
 import argparse
 
 def main(nqubits, layers, maxsteps, T_max):
@@ -26,8 +26,9 @@ def main(nqubits, layers, maxsteps, T_max):
 
     #We compute the difference from the exact value to check performance
     eigenvalue = problem_hamiltonian.eigenvalues()
-    print('Difference from exact value: ',best - K.real(eigenvalue[0]))
-    print('Log difference: ',-np.log10(best - K.real(eigenvalue[0])))
+    print(eigenvalue)
+    print('Difference from exact value: ',best - np.real(eigenvalue[0]))
+    print('Log difference: ',-np.log10(best - np.real(eigenvalue[0])))
 
 
 if __name__ == "__main__":

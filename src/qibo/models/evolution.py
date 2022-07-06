@@ -89,14 +89,14 @@ class StateEvolution:
             for callback in self.callbacks:
                 callback.append(callback.apply(self.backend, state))
 
-        if accelerators is None:            
+        if accelerators is None:
             return calculate_callbacks
 
         def calculate_callbacks_distributed(state):
             if not isinstance(state, self.backend.tensor_types):
                 state = state.state()
             calculate_callbacks(state)
-            
+
         return calculate_callbacks_distributed
 
     def execute(self, final_time, start_time=0.0, initial_state=None):
@@ -234,7 +234,8 @@ class AdiabaticEvolution(StateEvolution):
         Returns a ``tf.Tensor``.
         """
         adiabatic_evolution.set_parameters(params)
-        final_state = super(AdiabaticEvolution, adiabatic_evolution).execute(params[-1])
+        initial_state = adiabatic_evolution.hamiltonian.h0.ground_state()
+        final_state = super(AdiabaticEvolution, adiabatic_evolution).execute(params[-1], initial_state=initial_state)
         loss = h1.expectation(final_state, normalize=True)
         if opt_messages:
             opt_history["params"].append(params)

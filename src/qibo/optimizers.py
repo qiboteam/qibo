@@ -1,4 +1,3 @@
-from qibo.parallel import ParallelResources, _executor
 
 
 def optimize(loss, initial_parameters, args=(), method='Powell',
@@ -136,8 +135,6 @@ def newtonian(loss, initial_parameters, args=(), method='Powell',
         processes (int): number of processes when using the parallel BFGS method.
     """
     if method == 'parallel_L-BFGS-B':  # pragma: no cover
-        from qibo.parallel import _check_parallel_configuration
-        _check_parallel_configuration(processes, backend)  # pylint: disable=E1120
         o = ParallelBFGS(loss, args=args, processes=processes,
                          bounds=bounds, callback=callback, options=options)
         m = o.run(initial_parameters)
@@ -217,15 +214,12 @@ class ParallelBFGS:  # pragma: no cover
         options (dict): follows ``scipy.optimize.minimize`` syntax for L-BFGS-B.
         processes (int): number of processes when using the paralle BFGS method.
     """
-    import multiprocessing as mp
-    import functools
-    import itertools
     import numpy as np
 
     def __init__(self, function, args=(), bounds=None,
                  callback=None, options=None, processes=None):
-        ParallelResources().arguments = args
-        ParallelResources().custom_function = function
+        self.function = function
+        self.args = args
         self.xval = None
         self.function_value = None
         self.jacobian_value = None
@@ -243,12 +237,9 @@ class ParallelBFGS:  # pragma: no cover
         Returns:
             scipy.minimize result object
         """
-        ParallelResources().lock = self.mp.Lock()
-        with self.mp.Pool(processes=self.processes) as self.pool:
-            from scipy.optimize import minimize
-            out = minimize(fun=self.fun, x0=x0, jac=self.jac, method='L-BFGS-B',
-                           bounds=self.bounds, callback=self.callback, options=self.options)
-        ParallelResources().reset()
+        from scipy.optimize import minimize
+        out = minimize(fun=self.fun, x0=x0, jac=self.jac, method='L-BFGS-B',
+                        bounds=self.bounds, callback=self.callback, options=self.options)
         out.hess_inv = out.hess_inv * self.np.identity(len(x0))
         return out
 
@@ -268,10 +259,11 @@ class ParallelBFGS:  # pragma: no cover
         if not (self.xval is not None and all(abs(self.xval - x) <= self.precision*2)):
             eps_at = range(len(x)+1)
             self.xval = x.copy()
-            ret = self.pool.starmap(self._eval_approx, zip(eps_at,
-                                    self.itertools.repeat(_executor),
-                                    self.itertools.repeat(x),
-                                    self.itertools.repeat(eps)))
+            def operation(epsi):
+                return self._eval_approx(epsi, lambda y: self.function(y, *self.args), x, eps)
+
+            from joblib import Parallel, delayed
+            ret = Parallel(self.processes, prefer='threads')(delayed(operation)(epsi) for epsi in eps_at)
             self.function_value = ret[0]
             self.jacobian_value = (
                 ret[1:(len(x)+1)] - self.function_value) / eps

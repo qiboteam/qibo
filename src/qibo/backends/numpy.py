@@ -470,23 +470,16 @@ class NumpyBackend(Simulator):
             ev = ev / norm
         return ev
 
-    def calculate_matrix_product(self, hamiltonian, o):
-        if isinstance(o, hamiltonian.__class__):
-            new_matrix = np.dot(hamiltonian.matrix, o.matrix)
-            return hamiltonian.__class__(hamiltonian.nqubits, new_matrix, backend=self)
-
-        if isinstance(o, self.tensor_types):
-            rank = len(tuple(o.shape))
-            if rank == 1: # vector
-                return hamiltonian.matrix.dot(o[:, np.newaxis])[:, 0]
-            elif rank == 2: # matrix
-                return hamiltonian.matrix.dot(o)
-            else:
-                raise_error(ValueError, "Cannot multiply Hamiltonian with "
-                                        "rank-{} tensor.".format(rank))
-
-        raise_error(NotImplementedError, "Hamiltonian matmul to {} not "
-                                         "implemented.".format(type(o)))
+    def calculate_hamiltonian_state_product(self, matrix, state):
+        rank = len(tuple(state.shape))
+        state = self.cast(state)
+        if rank == 1: # vector
+            return matrix.dot(state[:, np.newaxis])[:, 0]
+        elif rank == 2: # matrix
+            return matrix.dot(state)
+        else:
+            raise_error(ValueError, "Cannot multiply Hamiltonian with "
+                                    "rank-{} tensor.".format(rank))
 
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
         value = self.to_numpy(value)

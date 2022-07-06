@@ -358,7 +358,7 @@ class Simulator(Backend):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def calculate_matrix_product(self, hamiltonian, o): # pragma: no cover
+    def calculate_hamiltonian_state_product(self, matrix, state): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod

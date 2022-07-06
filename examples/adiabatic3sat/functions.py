@@ -1,6 +1,6 @@
 import sympy
 import numpy as np
-from qibo import K, matrices, hamiltonians, symbols
+from qibo import matrices, hamiltonians, symbols
 import matplotlib.pyplot as plt
 
 
@@ -78,7 +78,7 @@ def spolynomial(t, params):
 
 def ground_state(nqubits):
     """Returns |++...+> state to be used as the ground state of the easy Hamiltonian."""
-    return K.cast(np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits))
+    return np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
 
 
 def plot(qubits, ground, first, gap, dt, T):
