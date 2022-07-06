@@ -103,7 +103,7 @@ def parallel_parametrized_execution(circuit, parameters, initial_state=None, pro
 
     def operation(params, circuit, state):
         if state is not None:
-            state = backend.cast(state)
+            state = backend.cast(state, copy=True)
         circuit.set_parameters(params)
         return backend.execute_circuit(circuit, state)
 
