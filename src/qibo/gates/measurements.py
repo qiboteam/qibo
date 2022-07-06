@@ -18,7 +18,7 @@ class MeasurementResult:
     def samples(self, binary=True):
         if binary:
             return self._samples
-        else:
+        else:  # pragma: no cover
             return self.backend.samples_to_decimal(self._samples, len(self.qubits))
 
 
@@ -118,7 +118,7 @@ class M(Gate):
     def _get_bitflip_tuple(qubits: Tuple[int], probs: "ProbsType"
                            ) -> Tuple[float]:
         if isinstance(probs, float):
-            if probs < 0 or probs > 1:
+            if probs < 0 or probs > 1:  # pragma: no cover
                 raise_error(ValueError, "Invalid bitflip probability {}."
                                         "".format(probs))
             return len(qubits) * (probs,)

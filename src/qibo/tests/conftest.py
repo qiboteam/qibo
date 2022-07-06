@@ -29,7 +29,7 @@ for backend_name in BACKENDS:
     try:
         _backend = get_backend(backend_name)
         AVAILABLE_BACKENDS.append(backend_name)
-        if _backend.supports_multigpu:
+        if _backend.supports_multigpu:  # pragma: no cover
             MULTIGPU_BACKENDS.append(backend_name)
     except (ModuleNotFoundError, ImportError):
         pass

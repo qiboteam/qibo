@@ -92,12 +92,13 @@ class StateEvolution:
         if accelerators is None:
             return calculate_callbacks
 
-        def calculate_callbacks_distributed(state):  # pragma: no cover
-            if not isinstance(state, self.backend.tensor_types):
-                state = state.state()
-            calculate_callbacks(state)
+        else:  # pragma: no cover
+            def calculate_callbacks_distributed(state):
+                if not isinstance(state, self.backend.tensor_types):
+                    state = state.state()
+                calculate_callbacks(state)
 
-        return calculate_callbacks_distributed
+            return calculate_callbacks_distributed
 
     def execute(self, final_time, start_time=0.0, initial_state=None):
         """Runs unitary evolution for a given total time.

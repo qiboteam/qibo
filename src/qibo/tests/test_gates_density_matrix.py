@@ -8,19 +8,7 @@ from qibo.tests.utils import random_density_matrix
 _atol = 1e-8
 
 def apply_gates(backend, gatelist, nqubits=None, initial_state=None):
-    if initial_state is None:
-        # TODO: Update this for density matrices
-        state = backend.zero_state(nqubits)
-    elif isinstance(initial_state, np.ndarray):
-        state = backend.cast(np.copy(initial_state))
-        if nqubits is None:
-            nqubits = int(np.log2(len(state)))
-        else: # pragma: no cover
-            assert nqubits == int(np.log2(len(state)))
-    else: # pragma: no cover
-        raise_error(TypeError, "Invalid initial state type {}."
-                               "".format(type(initial_state)))
-
+    state = backend.cast(np.copy(initial_state))
     for gate in gatelist:
         state = backend.apply_gate_density_matrix(gate, state, nqubits)
     return backend.to_numpy(state)
