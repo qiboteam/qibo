@@ -139,7 +139,8 @@ class TSP:
             and the mixer hamiltonian.
 
         """
-        return tsp_phaser(self.distance_matrix), tsp_mixer(self.num_cities)
+        return (tsp_phaser(self.distance_matrix, backend=self.backend),
+                tsp_mixer(self.num_cities, backend=self.backend))
 
     def prepare_initial_state(self, ordering):
         """
