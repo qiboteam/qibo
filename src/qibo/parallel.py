@@ -62,7 +62,7 @@ class ParallelResources:  # pragma: no cover
         # unlock
         self.lock.release()
         # finally compute the custom function
-        return self.custom_function(params, *args)
+        return self.custom_function(params, *args) # pylint: disable=not-callable
 
     def reset(self):
         """Cleanup memory."""
