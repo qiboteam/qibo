@@ -13,7 +13,7 @@ def construct_backend(backend, platform=None):
             return CupyBackend()
         elif platform == "numba":
             return NumbaBackend()
-        else:
+        else:  # pragma: no cover
             try:
                 return CupyBackend()
             except (ModuleNotFoundError, ImportError):
@@ -25,8 +25,7 @@ def construct_backend(backend, platform=None):
     elif backend == "numpy":
         return NumpyBackend()
 
-    else:
-        # TODO: Fix errors to their previous format
+    else:  # pragma: no cover
         raise_error(ValueError, f"Backend {backend} is not available.")
 
 
@@ -47,7 +46,7 @@ class GlobalBackend(NumpyBackend):
             return cls._instance
 
         backend = os.environ.get("QIBO_BACKEND")
-        if backend:
+        if backend:  # pragma: no cover
             # Create backend specified by user
             platform = os.environ.get("QIBO_PLATFORM")
             cls._instance = construct_backend(backend, platform)
@@ -67,7 +66,7 @@ class GlobalBackend(NumpyBackend):
         return cls._instance
 
     @classmethod
-    def set_backend(cls, backend, platform=None):
+    def set_backend(cls, backend, platform=None):  # pragma: no cover
         if cls._instance is None or cls._instance.name != backend or cls._instance.platform != platform:
             cls._instance = construct_backend(backend, platform)
         log.info(f"Using {cls._instance} backend on {cls._instance.device}")
@@ -95,7 +94,7 @@ def set_backend(backend, platform=None):
 
 
 def get_precision():
-    GlobalBackend().precision
+    return GlobalBackend().precision
 
 
 def set_precision(precision):
@@ -121,8 +120,8 @@ def get_threads():
 
 
 def set_threads(nthreads):
-    if not isinstance(nthreads, int): # pragma: no cover
+    if not isinstance(nthreads, int):
         raise_error(TypeError, "Number of threads must be integer.")
-    if nthreads < 1: # pragma: no cover
+    if nthreads < 1:
         raise_error(ValueError, "Number of threads must be positive.")
     GlobalBackend().set_threads(nthreads)

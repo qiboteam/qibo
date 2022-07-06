@@ -503,5 +503,3 @@ class NumpyBackend(Simulator):
                 {5: 30}, {5: 18, 4: 5, 7: 4, 1: 2, 6: 1},
                 {4: 8, 2: 6, 5: 5, 1: 3, 3: 3, 6: 2, 7: 2, 0: 1}
             ]
-        else:
-            return None
