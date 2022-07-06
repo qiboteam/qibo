@@ -65,7 +65,7 @@ class StateEvolution:
         self.dt = dt
 
         disthamtypes = (SymbolicHamiltonian, BaseAdiabaticHamiltonian)
-        if accelerators is not None:
+        if accelerators is not None:  # pragma: no cover
             if not isinstance(ham, disthamtypes) or solver != "exp":
                 raise_error(NotImplementedError, "Distributed evolution is only "
                                                  "implemented using the Trotter "
@@ -92,7 +92,7 @@ class StateEvolution:
         if accelerators is None:
             return calculate_callbacks
 
-        def calculate_callbacks_distributed(state):
+        def calculate_callbacks_distributed(state):  # pragma: no cover
             if not isinstance(state, self.backend.tensor_types):
                 state = state.state()
             calculate_callbacks(state)

@@ -7,7 +7,7 @@ from qibo.tests.utils import random_state
 
 
 @pytest.mark.parametrize("use_global_qubits", [False, True])
-def test_distributed_circuit_execution(backend, accelerators, use_global_qubits):
+def test_distributed_circuit_execution(backend, accelerators, use_global_qubits):  # pragma: no cover
     dist_c = Circuit(6, accelerators)
     c = Circuit(6)
     if use_global_qubits:
@@ -18,13 +18,13 @@ def test_distributed_circuit_execution(backend, accelerators, use_global_qubits)
         c.add((gates.H(i) for i in range(dist_c.nlocal)))
     dist_c.global_qubits = range(dist_c.nlocal, dist_c.nqubits)
 
-    initial_state = random_state(c.nqubits)    
+    initial_state = random_state(c.nqubits)
     final_state = backend.execute_circuit(dist_c, np.copy(initial_state))
     target_state = backend.execute_circuit(c, np.copy(initial_state))
     backend.assert_allclose(target_state, final_state)
 
 
-def test_distributed_circuit_execution_pretransformed(backend, accelerators):
+def test_distributed_circuit_execution_pretransformed(backend, accelerators):  # pragma: no cover
     dist_c = Circuit(4, accelerators)
     dist_c.add((gates.H(i) for i in range(dist_c.nglobal, 4)))
     dist_c.add(gates.SWAP(0, 2))
@@ -41,7 +41,7 @@ def test_distributed_circuit_execution_pretransformed(backend, accelerators):
     backend.assert_allclose(target_state, final_state, atol=1e-7)
 
 
-def test_distributed_circuit_execution_with_swap(backend, accelerators):
+def test_distributed_circuit_execution_with_swap(backend, accelerators):  # pragma: no cover
     dist_c = Circuit(6, accelerators)
     dist_c.add((gates.H(i) for i in range(6)))
     dist_c.add((gates.SWAP(i, i + 1) for i in range(5)))
@@ -57,7 +57,7 @@ def test_distributed_circuit_execution_with_swap(backend, accelerators):
     backend.assert_allclose(target_state, final_state, atol=1e-7)
 
 
-def test_distributed_circuit_execution_special_gate(backend, accelerators):
+def test_distributed_circuit_execution_special_gate(backend, accelerators):  # pragma: no cover
     from qibo import callbacks
     dist_c = Circuit(6, accelerators)
     initial_state = random_state(dist_c.nqubits)
@@ -75,7 +75,7 @@ def test_distributed_circuit_execution_special_gate(backend, accelerators):
     backend.assert_allclose(final_state, target_state, atol=1e-7)
 
 
-def test_distributed_circuit_execution_controlled_gate(backend, accelerators):
+def test_distributed_circuit_execution_controlled_gate(backend, accelerators):  # pragma: no cover
     dist_c = Circuit(4, accelerators)
     dist_c.add((gates.H(i) for i in range(dist_c.nglobal, 4)))
     dist_c.add(gates.CNOT(0, 2))
@@ -89,7 +89,7 @@ def test_distributed_circuit_execution_controlled_gate(backend, accelerators):
     backend.assert_allclose(target_state, final_state)
 
 
-def test_distributed_circuit_execution_controlled_by_gates(backend, accelerators):
+def test_distributed_circuit_execution_controlled_by_gates(backend, accelerators):  # pragma: no cover
     dist_c = Circuit(6, accelerators)
     dist_c.add([gates.H(0), gates.H(2), gates.H(3)])
     dist_c.add(gates.CNOT(4, 5))
@@ -110,7 +110,7 @@ def test_distributed_circuit_execution_controlled_by_gates(backend, accelerators
     backend.assert_allclose(target_state, final_state, atol=1e-7)
 
 
-def test_distributed_circuit_execution_addition(backend, accelerators):
+def test_distributed_circuit_execution_addition(backend, accelerators):  # pragma: no cover
     # Attempt to add circuits with different devices
     c1 = Circuit(6, {"/GPU:0": 2, "/GPU:1": 2})
     c2 = Circuit(6, {"/GPU:0": 2})
@@ -134,7 +134,7 @@ def test_distributed_circuit_execution_addition(backend, accelerators):
     backend.assert_allclose(final_state, target_state, atol=1e-7)
 
 
-def test_distributed_circuit_empty_execution(backend, accelerators):
+def test_distributed_circuit_empty_execution(backend, accelerators):  # pragma: no cover
     # test executing a circuit with the default initial state
     c = Circuit(5, accelerators)
     final_state = c().state()

@@ -84,7 +84,7 @@ def test_state_evolution_time_dependent_hamiltonian(backend, nqubits, dt):
 @pytest.mark.parametrize("nqubits", [5])
 @pytest.mark.parametrize("solver,dt,atol", [("exp", 1e-1, 1e-2), ("rk45", 1e-2, 1e-1)])
 def test_state_evolution_trotter_hamiltonian(backend, accelerators, nqubits, solver, dt, atol):
-    if accelerators is not None and solver != "exp":
+    if accelerators is not None and solver != "exp":  # pragma: no cover
         pytest.skip("Distributed evolution is supported only with exp solver.")
     h = 1.0
 
