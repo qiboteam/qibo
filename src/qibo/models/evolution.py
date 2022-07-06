@@ -235,7 +235,8 @@ class AdiabaticEvolution(StateEvolution):
         Returns a ``tf.Tensor``.
         """
         adiabatic_evolution.set_parameters(params)
-        initial_state = adiabatic_evolution.hamiltonian.h0.ground_state()
+        ham = adiabatic_evolution.hamiltonian
+        initial_state = ham.backend.cast(ham.h0.ground_state(), copy=True)
         final_state = super(AdiabaticEvolution, adiabatic_evolution).execute(params[-1], initial_state=initial_state)
         loss = h1.expectation(final_state, normalize=True)
         if opt_messages:
