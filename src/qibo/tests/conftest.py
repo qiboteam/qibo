@@ -49,12 +49,6 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "linux: mark test to run only on linux")
 
 
-def pytest_addoption(parser):
-    parser.addoption("--skip-parallel", action="store_true",
-                     help="Skip tests that use the ``qibo.parallel`` module.")
-    # parallel tests make the CI hang
-
-
 @pytest.fixture
 def backend(backend_name):
     yield get_backend(backend_name)
@@ -81,8 +75,3 @@ def pytest_generate_tests(metafunc):
 
         elif "accelerators" in metafunc.fixturenames:
             metafunc.parametrize("accelerators", ACCELERATORS)
-
-    # TODO: check workflow
-    # if "skip_parallel" in metafunc.fixturenames:
-    #     skip_parallel = metafunc.config.option.skip_parallel
-    #     metafunc.parametrize("skip_parallel", [skip_parallel])

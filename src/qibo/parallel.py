@@ -77,7 +77,7 @@ def _executor(params):  # pragma: no cover
     return ParallelResources().run(params)
 
 
-def parallel_execution(circuit, states, processes=None, backend=None):  # pragma: no cover
+def parallel_execution(circuit, states, processes=None, backend=None):
     """Execute circuit for multiple states.
 
     Example:
@@ -112,11 +112,11 @@ def parallel_execution(circuit, states, processes=None, backend=None):  # pragma
         from qibo.backends import GlobalBackend
         backend = GlobalBackend()
 
-    if states is None or not isinstance(states, list):  # pragma: no cover
+    if states is None or not isinstance(states, list):
         from qibo.config import raise_error
         raise_error(RuntimeError, "states must be a list.")
 
-    def operation(state, circuit):  # pragma: no cover
+    def operation(state, circuit):
         return backend.execute_circuit(circuit, state)
 
     from joblib import Parallel, delayed
@@ -126,7 +126,7 @@ def parallel_execution(circuit, states, processes=None, backend=None):  # pragma
     return results
 
 
-def parallel_parametrized_execution(circuit, parameters, initial_state=None, processes=None, backend=None):  # pragma: no cover
+def parallel_parametrized_execution(circuit, parameters, initial_state=None, processes=None, backend=None):
     """Execute circuit for multiple parameters and fixed initial_state.
 
     Example:
@@ -171,17 +171,19 @@ def parallel_parametrized_execution(circuit, parameters, initial_state=None, pro
         from qibo.backends import GlobalBackend
         backend = GlobalBackend()
 
-    if not isinstance(parameters, list):  # pragma: no cover
+    if not isinstance(parameters, list):
         from qibo.config import raise_error
         raise_error(RuntimeError, "parameters must be a list.")
 
-    def operation(params, circuit, state):  # pragma: no cover
+    def operation(params, circuit, state):
+        if state is not None:
+            state = backend.cast(state)
         circuit.set_parameters(params)
         return backend.execute_circuit(circuit, state)
 
     from joblib import Parallel, delayed
     results = Parallel(n_jobs=processes, prefer='threads')(
-        delayed(operation)(param, circuit, initial_state) for param in parameters)
+        delayed(operation)(param, circuit.copy(deep=True), initial_state) for param in parameters)
 
     return results
 

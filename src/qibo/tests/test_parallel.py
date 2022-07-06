@@ -44,12 +44,12 @@ def test_parallel_parametrized_circuit(backend):  # pragma: no cover
     size = len(c.get_parameters())
     np.random.seed(0)
     parameters = [np.random.uniform(0, 2*np.pi, size) for i in range(10)]
-    state = None
+    state = np.random.random(2**nqubits)
 
     r1 = []
     for params in parameters:
         c.set_parameters(params)
-        r1.append(backend.execute_circuit(c, state))
+        r1.append(backend.execute_circuit(c, backend.cast(state)))
 
     r2 = parallel_parametrized_execution(c, parameters=parameters, initial_state=state, processes=2, backend=backend)
     r1 = [x.state(numpy=True) for x in r1]
