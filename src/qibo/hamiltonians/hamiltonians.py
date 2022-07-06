@@ -362,7 +362,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
     def ground_state(self):
         if self._ground_state is None:
             log.warning("Ground state for this Hamiltonian was not given.")
-            return self.eigenvectors()[:, 0]
+            self._ground_state = self.eigenvectors()[:, 0]
         return self._ground_state()
 
     def exp(self, a):
@@ -575,7 +575,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         total = 0
         for term in self.terms:
             total += term(self.backend, self.backend.cast(state, copy=True), self.nqubits, density_matrix)
-        if self.constant:
+        if self.constant:  # pragma: no cover
             total += self.constant * state
         return total
 
