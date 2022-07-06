@@ -128,7 +128,7 @@ class Gate:
         Returns:
             ``True`` if the gates commute, otherwise ``False``.
         """
-        if isinstance(gate, SpecialGate):
+        if isinstance(gate, SpecialGate):  # pragma: no cover
             return False
         t1 = set(self.target_qubits)
         t2 = set(gate.target_qubits)
@@ -319,7 +319,7 @@ class ParametrizedGate(Gate):
         self._parameters = tuple(params)
 
         # set parameters in device gates
-        for gate in self.device_gates:
+        for gate in self.device_gates:  # pragma: no cover
             gate.parameters = x
 
     def substitute_symbols(self):
