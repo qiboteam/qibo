@@ -10,7 +10,7 @@ from qibo.models import Circuit, QFT
 from qibo.parallel import parallel_parametrized_execution, parallel_execution
 
 
-def test_parallel_circuit_evaluation(backend):  # pragma: no cover
+def test_parallel_circuit_evaluation(backend):
     """Evaluate circuit for multiple input states."""
     nqubits = 10
     np.random.seed(0)
@@ -28,7 +28,7 @@ def test_parallel_circuit_evaluation(backend):  # pragma: no cover
     backend.assert_allclose(r1, r2)
 
 
-def test_parallel_parametrized_circuit(backend):  # pragma: no cover
+def test_parallel_parametrized_circuit(backend):
     """Evaluate circuit for multiple parameters."""
     nqubits = 5
     nlayers  = 10
