@@ -14,9 +14,9 @@ def test_measurement_collapse(backend, nqubits, targets):
     m = c.add(gates.M(*targets, collapse=True))
     final_state = backend.execute_circuit(c, np.copy(initial_state), nshots=1)[0]
     if len(targets) > 1:
-        results = m[0].result.samples()[0]
+        results = m[0].result.samples[0]
     else:
-        results = m.result.samples()[0]
+        results = m.result.samples[0]
     slicer = nqubits * [slice(None)]
     for t, r in zip(targets, results):
         slicer[t] = int(r)
@@ -38,9 +38,9 @@ def test_measurement_collapse_density_matrix(backend, nqubits, targets):
     final_rho = backend.execute_circuit(c, np.copy(initial_rho), nshots=1)[0]
 
     if len(targets) > 1:
-        results = m[0].result.samples()[0]
+        results = m[0].result.samples[0]
     else:
-        results = m.result.samples()[0]
+        results = m.result.samples[0]
     target_rho = np.reshape(initial_rho, 2 * nqubits * (2,))
     for q, r in zip(targets, results):
         r = int(r)

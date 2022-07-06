@@ -8,18 +8,10 @@ class MeasurementResult:
 
     def __init__(self, qubits):
         self.qubits = qubits
-
-        self.backend = None
-        self._samples = []
+        self.samples = []
 
     def append(self, shot):
-        self._samples.append(shot)
-
-    def samples(self, binary=True):
-        if binary:
-            return self._samples
-        else:  # pragma: no cover
-            return self.backend.samples_to_decimal(self._samples, len(self.qubits))
+        self.samples.append(shot)
 
 
 class MeasurementSymbol(sympy.Symbol):
@@ -40,7 +32,7 @@ class MeasurementSymbol(sympy.Symbol):
         self.result = result
 
     def outcome(self):
-        return self.result.samples()[-1][self.index]
+        return self.result.samples[-1][self.index]
 
     def evaluate(self, expr):
         """Substitutes the symbol's value in the given expression.
