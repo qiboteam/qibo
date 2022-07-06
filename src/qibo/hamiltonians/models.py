@@ -68,7 +68,7 @@ def XXZ(nqubits, delta=0.5, dense=True, backend=None):
     return ham
 
 
-def _OneBodyPauli(nqubits, matrix, dense=True, ground_state=None, backend=None):
+def _OneBodyPauli(nqubits, matrix, dense=True, backend=None):
     """Helper method for constracting non-interacting X, Y, Z Hamiltonians."""
     if dense:
         condition = lambda i, j: i == j % nqubits
@@ -77,7 +77,7 @@ def _OneBodyPauli(nqubits, matrix, dense=True, ground_state=None, backend=None):
 
     matrix = - matrix
     terms = [HamiltonianTerm(matrix, i) for i in range(nqubits)]
-    ham = SymbolicHamiltonian(ground_state=ground_state, backend=backend)
+    ham = SymbolicHamiltonian(backend=backend)
     ham.terms = terms
     return ham
 
