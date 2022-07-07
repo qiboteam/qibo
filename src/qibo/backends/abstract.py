@@ -1,60 +1,13 @@
 import abc
 from qibo.config import raise_error
-from qibo.states import CircuitResult
-from qibo.gates.abstract import ParametrizedGate, SpecialGate
 
 
 class Backend(abc.ABC):
 
     def __init__(self):
-        self.name = "backend"
-        self.platform = None
-        self.matrices = None
-
-    def __repr__(self):
-        if self.platform is None:
-            return self.name
-        else:
-            return f"{self.name} ({self.platform})"
-
-    @abc.abstractmethod
-    def asmatrix(self, gate): # pragma: no cover
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def asmatrix_parametrized(self, gate): # pragma: no cover
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def asmatrix_fused(self, gate): # pragma: no cover
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def apply_gate(self, gate, state, nqubits): # pragma: no cover
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def apply_gate_density_matrix(self, gate, state, nqubits): # pragma: no cover
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def execute_circuit(self, circuit, nshots=None): # pragma: no cover
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def get_state_repr(self, result): # pragma: no cover
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def calculate_probabilities(self, result): # pragma: no cover
-        raise_error(NotImplementedError)
-
-
-class Simulator(Backend):
-
-    def __init__(self):
         super().__init__()
-        self.name = "simulator"
+        self.name = "backend"
+        self.platform= None
 
         self.precision = "double"
         self.dtype = "complex128"
@@ -65,18 +18,15 @@ class Simulator(Backend):
         self.supports_multigpu = False
         self.oom_error = MemoryError
 
-    def set_precision(self, precision):
-        if precision != self.precision:
-            if precision == "single":
-                self.precision = precision
-                self.dtype = "complex64"
-            elif precision == "double":
-                self.precision = precision
-                self.dtype = "complex128"
-            else:
-                raise_error(ValueError, f"Unknown precision {precision}.")
-            if self.matrices:
-                self.matrices = self.matrices.__class__(self.dtype)
+    def __repr__(self):
+        if self.platform is None:
+            return self.name
+        else:
+            return f"{self.name} ({self.platform})"
+
+    @abc.abstractmethod
+    def set_precision(self, precision): # pragma: no cover
+        raise_error(NotImplementedError)
 
     @abc.abstractmethod
     def set_device(self, device): # pragma: no cover
@@ -111,15 +61,13 @@ class Simulator(Backend):
     def zero_density_matrix(self, nqubits): # pragma: no cover
         raise_error(NotImplementedError)
 
-    def asmatrix(self, gate):
-        """Convert a gate to its matrix representation in the computational basis."""
-        name = gate.__class__.__name__
-        return getattr(self.matrices, name)
+    @abc.abstractmethod
+    def asmatrix(self, gate): # pragma: no cover
+        raise_error(NotImplementedError)
 
-    def asmatrix_parametrized(self, gate):
-        """Convert a parametrized gate to its matrix representation in the computational basis."""
-        name = gate.__class__.__name__
-        return getattr(self.matrices, name)(*gate.parameters)
+    @abc.abstractmethod
+    def asmatrix_parametrized(self, gate): # pragma: no cover
+        raise_error(NotImplementedError)
 
     @abc.abstractmethod
     def asmatrix_fused(self, gate): # pragma: no cover
@@ -132,11 +80,11 @@ class Simulator(Backend):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def apply_gate(self, gate): # pragma: no cover
+    def apply_gate(self, gate, state, nqubits): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def apply_gate_density_matrix(self, gate): # pragma: no cover
+    def apply_gate_density_matrix(self, gate, state, nqubits): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
@@ -152,113 +100,23 @@ class Simulator(Backend):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def collapse_state(self, state, qubits, shot, nqubits, normalize=True):
+    def collapse_state(self, state, qubits, shot, nqubits, normalize=True): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def collapse_density_matrix(self, state, qubits, shot, nqubits, normalize=True):
+    def collapse_density_matrix(self, state, qubits, shot, nqubits, normalize=True): # pragma: no cover
         raise_error(NotImplementedError)
 
-    def execute_circuit(self, circuit, initial_state=None, nshots=None, return_array=False):
-        if circuit.repeated_execution:
-            return self.execute_circuit_repeated(circuit, initial_state, nshots)
-
-        if circuit.accelerators:
-            return self.execute_distributed_circuit(circuit, initial_state, nshots)
-
-        try:
-            nqubits = circuit.nqubits
-            if isinstance(initial_state, CircuitResult):
-                initial_state = initial_state.state()
-
-            if circuit.density_matrix:
-                if initial_state is None:
-                    state = self.zero_density_matrix(nqubits)
-                else:
-                    # cast to proper complex type
-                    state = self.cast(initial_state)
-
-                for gate in circuit.queue:
-                    state = gate.apply_density_matrix(self, state, nqubits)
-
-            else:
-                if initial_state is None:
-                    state = self.zero_state(nqubits)
-                else:
-                    # cast to proper complex type
-                    state = self.cast(initial_state)
-
-                for gate in circuit.queue:
-                    state = gate.apply(self, state, nqubits)
-
-            if return_array:
-                return state
-            else:
-                circuit._final_state = CircuitResult(self, circuit, state, nshots)
-                return circuit._final_state
-
-        except self.oom_error:
-            raise_error(RuntimeError, f"State does not fit in {self.device} memory."
-                                       "Please switch the execution device to a "
-                                       "different one using ``qibo.set_device``.")
-
-    def execute_circuit_repeated(self, circuit, initial_state=None, nshots=None):
-        if nshots is None:
-            nshots = 1
-
-        results = []
-        nqubits = circuit.nqubits
-        circuit.repeated_execution = False
-        for _ in range(nshots):
-            if circuit.density_matrix:
-                if initial_state is None:
-                    state = self.zero_density_matrix(nqubits)
-                else:
-                    state = self.cast(initial_state, copy=True)
-
-                for gate in circuit.queue:
-                    if gate.symbolic_parameters:
-                        gate.substitute_symbols()
-                    state = gate.apply_density_matrix(self, state, nqubits)
-
-            else:
-                if circuit.accelerators:
-                    state = self.execute_distributed_circuit(circuit, initial_state, return_array=True) # pylint: disable=E1111
-                else:
-                    if initial_state is None:
-                        state = self.zero_state(nqubits)
-                    else:
-                        state = self.cast(initial_state, copy=True)
-
-                    for gate in circuit.queue:
-                        if gate.symbolic_parameters:
-                            gate.substitute_symbols()
-                        state = gate.apply(self, state, nqubits)
-
-            if circuit.measurement_gate:
-                result = CircuitResult(self, circuit, state, 1)
-                results.append(result.samples(binary=False)[0])
-            else:
-                results.append(state)
-        circuit.repeated_execution = True
-
-        if circuit.measurement_gate:
-            final_result = CircuitResult(self, circuit, state, nshots)
-            final_result._samples = self.aggregate_shots(results)
-            circuit._final_state = final_result
-            return final_result
-        else:
-            circuit._final_state = CircuitResult(self, circuit, results[-1], nshots)
-            return results
-
-    def execute_distributed_circuit(self, circuit, initial_state=None, nshots=None, return_array=False):
-        raise_error(NotImplementedError, f"{self} does not support distributed execution.")
-
-    def get_state_repr(self, result):
-        return result.symbolic()
+    @abc.abstractmethod
+    def execute_circuit(self, circuit, nshots=None): # pragma: no cover
+        raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def get_state_tensor(self, result):
+    def get_state_repr(self, result): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def get_state_tensor(self, result): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
@@ -270,7 +128,7 @@ class Simulator(Backend):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def calculate_probabilities(self, state, qubits, nqubits): # pragma: no cover
+    def calculate_probabilities(self, result): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abc.abstractmethod

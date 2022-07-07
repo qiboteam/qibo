@@ -16,6 +16,8 @@ def test_set_precision():
     assert qibo.get_precision() == "single"
     qibo.set_precision("double")
     assert qibo.get_precision() == "double"
+    with pytest.raises(ValueError):
+        qibo.set_precision("test")
 
 
 def test_set_device():

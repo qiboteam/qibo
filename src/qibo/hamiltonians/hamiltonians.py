@@ -262,7 +262,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         self.trotter_circuit = None
         from qibo.symbols import Symbol
         self._qiboSymbol = Symbol # also used in ``self._get_symbol_matrix``
-        if backend is None:
+        if backend is None:  # pragma: no cover
             from qibo.backends import GlobalBackend
             self.backend = GlobalBackend()
         else:
