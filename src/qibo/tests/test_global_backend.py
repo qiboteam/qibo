@@ -24,6 +24,8 @@ def test_set_device():
     assert qibo.get_device() == "/CPU:0"
     with pytest.raises(ValueError):
         qibo.set_device("test")
+    with pytest.raises(ValueError):
+        qibo.set_device("/GPU:0")
 
 
 def test_set_threads():
@@ -72,3 +74,9 @@ def test_circuit_execution():
     c.add(qibo.gates.H(0))
     result = c()
     unitary = c.unitary()
+
+
+def test_gate_matrix():
+    qibo.set_backend("numpy")
+    gate = qibo.gates.H(0)
+    matrix = gate.matrix

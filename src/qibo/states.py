@@ -85,7 +85,7 @@ class CircuitResult:
         Args:
             qubits (list, set): Set of qubits that are measured.
         """
-        if qubits is None:
+        if qubits is None:  # pragma: no cover
             qubits = self.circuit.measurement_gate.qubits
 
         state = self.backend.get_state_tensor(self)
