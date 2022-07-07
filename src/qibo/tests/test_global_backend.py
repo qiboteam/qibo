@@ -3,9 +3,11 @@ import qibo
 
 
 def test_set_backend():
+    from qibo.backends import GlobalBackend
+    backend = GlobalBackend()
     qibo.set_backend("numpy")
     assert qibo.get_backend() == "numpy"
-    from qibo.backends import GlobalBackend
+    assert backend.name == "numpy"
     assert GlobalBackend().name == "numpy"
 
 
@@ -20,6 +22,7 @@ def test_set_precision():
 def test_set_device():
     qibo.set_backend("numpy")
     qibo.set_device("/CPU:0")
+    assert qibo.get_device() == "/CPU:0"
     with pytest.raises(ValueError):
         qibo.set_device("test")
 

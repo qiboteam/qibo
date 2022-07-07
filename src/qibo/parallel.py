@@ -34,11 +34,11 @@ def parallel_execution(circuit, states, processes=None, backend=None):
     Returns:
         Circuit evaluation for input states.
     """
-    if backend is None:
+    if backend is None:  # pragma: no cover
         from qibo.backends import GlobalBackend
         backend = GlobalBackend()
 
-    if states is None or not isinstance(states, list):
+    if states is None or not isinstance(states, list):  # pragma: no cover
         from qibo.config import raise_error
         raise_error(RuntimeError, "states must be a list.")
 
@@ -93,11 +93,11 @@ def parallel_parametrized_execution(circuit, parameters, initial_state=None, pro
     Returns:
         Circuit evaluation for input parameters.
     """
-    if backend is None:
+    if backend is None:  # pragma: no cover
         from qibo.backends import GlobalBackend
         backend = GlobalBackend()
 
-    if not isinstance(parameters, list):
+    if not isinstance(parameters, list):  # pragma: no cover
         from qibo.config import raise_error
         raise_error(RuntimeError, "parameters must be a list.")
 
