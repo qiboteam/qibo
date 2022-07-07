@@ -44,7 +44,7 @@ def test_state_evolution_init(backend):
 
 
 def test_state_evolution_get_initial_state(backend):
-    ham = hamiltonians.Z(2, backend)
+    ham = hamiltonians.Z(2, backend=backend)
     evolution = models.StateEvolution(ham, dt=1)
     # execute without initial state
     with pytest.raises(ValueError):
@@ -108,13 +108,13 @@ def test_state_evolution_trotter_hamiltonian(backend, accelerators, nqubits, sol
         assert_states_equal(backend, final_psi, target_psi[-1], atol=atol)
 
 
-def test_adiabatic_evolution_init():
+def test_adiabatic_evolution_init(backend):
     # Hamiltonians of bad type
-    h0 = hamiltonians.X(3)
+    h0 = hamiltonians.X(3, backend=backend)
     s = lambda t: t
     with pytest.raises(TypeError):
         adev = models.AdiabaticEvolution(h0, lambda t: h0, s, dt=1e-2)
-    h1 = hamiltonians.TFIM(2)
+    h1 = hamiltonians.TFIM(2, backend=backend)
     with pytest.raises(TypeError):
         adev = models.AdiabaticEvolution(lambda t: h1, h1, s, dt=1e-2)
     # Hamiltonians with different number of qubits
@@ -125,15 +125,15 @@ def test_adiabatic_evolution_init():
     with pytest.raises(TypeError):
         h = AdiabaticHamiltonian("a", "b") # pylint: disable=E0110
     # s with three arguments
-    h0 = hamiltonians.X(2)
+    h0 = hamiltonians.X(2, backend=backend)
     s = lambda t, a, b: t + a + b
     with pytest.raises(ValueError):
         adev = models.AdiabaticEvolution(h0, h1, s, dt=1e-2)
 
 
-def test_adiabatic_evolution_schedule():
-    h0 = hamiltonians.X(3)
-    h1 = hamiltonians.TFIM(3)
+def test_adiabatic_evolution_schedule(backend):
+    h0 = hamiltonians.X(3, backend=backend)
+    h1 = hamiltonians.TFIM(3, backend=backend)
     adev = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-2)
     assert adev.schedule(0.2) == 0.2 # pylint: disable=E1102
     assert adev.schedule(0.8) == 0.8 # pylint: disable=E1102
@@ -145,10 +145,10 @@ def test_adiabatic_evolution_schedule():
         adev = models.AdiabaticEvolution(h0, h1, lambda t: t / 2, dt=1e-2)
 
 
-def test_set_scheduling_parameters():
+def test_set_scheduling_parameters(backend):
     """Test ``AdiabaticEvolution.set_parameters``."""
-    h0 = hamiltonians.X(3)
-    h1 = hamiltonians.TFIM(3)
+    h0 = hamiltonians.X(3, backend=backend)
+    h1 = hamiltonians.TFIM(3, backend=backend)
     sp = lambda t, p: (1 - p[0]) * np.sqrt(t) + p[0] * t
     adevp = models.AdiabaticEvolution(h0, h1, sp, 1e-2)
     # access parametrized scheduling before setting parameters
@@ -256,9 +256,9 @@ def test_adiabatic_evolution_execute_rk(backend, solver, dense, dt):
     final_psi = adev(final_time=1, initial_state=np.copy(target_psi[0]))
 
 
-def test_adiabatic_evolution_execute_errors():
-    h0 = hamiltonians.X(3)
-    h1 = hamiltonians.TFIM(3)
+def test_adiabatic_evolution_execute_errors(backend):
+    h0 = hamiltonians.X(3, backend=backend)
+    h1 = hamiltonians.TFIM(3, backend=backend)
     # Non-zero ``start_time``
     adev = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-2)
     with pytest.raises(NotImplementedError):

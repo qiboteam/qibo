@@ -15,7 +15,7 @@ class Hamiltonian(AbstractHamiltonian):
             supported.
     """
     def __init__(self, nqubits, matrix=None, backend=None):
-        if backend is None:
+        if backend is None:  # pragma: no cover
             from qibo.backends import GlobalBackend
             self.backend = GlobalBackend()
         else:
