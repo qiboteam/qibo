@@ -281,6 +281,11 @@ class TensorflowBackend(NumpyBackend):
         else:
             return super().calculate_matrix_exp(a, matrix, eigenvectors, eigenvalues)
 
+    def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
+        if self.issparse(matrix1) or self.issparse(matrix2):
+            raise_error(NotImplementedError, "Multiplication of sparse matrices is not supported with Tensorflow.")
+        return super().calculate_hamiltonian_matrix_product(matrix1, matrix2)
+
     def calculate_hamiltonian_state_product(self, matrix, state):
         rank = len(tuple(state.shape))
         if rank == 1: # vector

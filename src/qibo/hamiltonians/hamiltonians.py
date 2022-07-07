@@ -15,7 +15,7 @@ class Hamiltonian(AbstractHamiltonian):
             supported.
     """
     def __init__(self, nqubits, matrix=None, backend=None):
-        if backend is None:
+        if backend is None:  # pragma: no cover
             from qibo.backends import GlobalBackend
             self.backend = GlobalBackend()
         else:
@@ -175,7 +175,7 @@ class Hamiltonian(AbstractHamiltonian):
 
     def __matmul__(self, o):
         if isinstance(o, self.__class__):
-            matrix = self.backend.np.dot(self.matrix, o.matrix)
+            matrix = self.backend.calculate_hamiltonian_matrix_product(self.matrix, o.matrix)
             return self.__class__(self.nqubits, matrix, backend=self.backend)
 
         elif isinstance(o, self.backend.tensor_types):
@@ -262,7 +262,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         self.trotter_circuit = None
         from qibo.symbols import Symbol
         self._qiboSymbol = Symbol # also used in ``self._get_symbol_matrix``
-        if backend is None:
+        if backend is None:  # pragma: no cover
             from qibo.backends import GlobalBackend
             self.backend = GlobalBackend()
         else:

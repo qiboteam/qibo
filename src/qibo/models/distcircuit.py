@@ -183,7 +183,7 @@ class DistributedQueues:
         """Helper recursive method for ``transform``."""
         new_remaining_queue = []
         for gate in remaining_queue:
-            if isinstance(gate, (SpecialGate, gates.M)):
+            if isinstance(gate, (SpecialGate, gates.M)):  # pragma: no cover
                 gate.swap_reset = list(self.swaps_list)
 
             global_targets = set(gate.target_qubits) & self.qubits.set
@@ -269,7 +269,8 @@ class DistributedQueues:
         """
         for gate in queue:
             is_collapse = isinstance(gate, gates.M) and gate.collapse
-            if not gate.target_qubits or is_collapse: # special gate
+            if not gate.target_qubits or is_collapse:  # pragma: no cover
+                # special gate
                 gate.nqubits = self.nqubits
                 self.special_queue.append(gate)
                 self.queues.append([])

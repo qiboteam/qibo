@@ -2,12 +2,14 @@ import numpy as np
 import collections
 from qibo.config import raise_error, log
 from qibo.gates import FusedGate
+from qibo.states import CircuitResult
 from qibo.backends import einsum_utils
-from qibo.backends.abstract import Simulator
+from qibo.backends.abstract import Backend
 from qibo.backends.matrices import Matrices
+from qibo.gates.abstract import ParametrizedGate, SpecialGate
 
 
-class NumpyBackend(Simulator):
+class NumpyBackend(Backend):
 
     def __init__(self):
         super().__init__()
@@ -15,10 +17,22 @@ class NumpyBackend(Simulator):
         self.name = "numpy"
         self.matrices = Matrices(self.dtype)
         self.tensor_types = np.ndarray
-        # TODO: is numeric_types necessary
         self.numeric_types = (int, float, complex, np.int32,
                               np.int64, np.float32, np.float64,
                               np.complex64, np.complex128)
+
+    def set_precision(self, precision):
+        if precision != self.precision:
+            if precision == "single":
+                self.precision = precision
+                self.dtype = "complex64"
+            elif precision == "double":
+                self.precision = precision
+                self.dtype = "complex128"
+            else:
+                raise_error(ValueError, f"Unknown precision {precision}.")
+            if self.matrices:
+                self.matrices = self.matrices.__class__(self.dtype)
 
     def set_device(self, device):
         if device != "/CPU:0":
@@ -68,6 +82,16 @@ class NumpyBackend(Simulator):
         state = self.np.ones(2 * (2 ** nqubits,), dtype=self.dtype)
         state /= 2 ** nqubits
         return state
+
+    def asmatrix(self, gate):
+        """Convert a gate to its matrix representation in the computational basis."""
+        name = gate.__class__.__name__
+        return getattr(self.matrices, name)
+
+    def asmatrix_parametrized(self, gate):
+        """Convert a parametrized gate to its matrix representation in the computational basis."""
+        name = gate.__class__.__name__
+        return getattr(self.matrices, name)(*gate.parameters)
 
     def asmatrix_fused(self, fgate):
         rank = len(fgate.target_qubits)
@@ -192,7 +216,6 @@ class NumpyBackend(Simulator):
             state = np.einsum(left, state, matrix)
         return np.reshape(state, 2 * (2 ** nqubits,))
 
-
     def apply_channel(self, channel, state, nqubits):
         for coeff, gate in zip(channel.coefficients, channel.gates):
             if self.np.random.random() < coeff:
@@ -272,6 +295,102 @@ class NumpyBackend(Simulator):
         shape = state.shape
         state = self.apply_gate(gate, state.ravel(), 2 * nqubits)
         return self.np.reshape(state, shape)
+
+    def execute_circuit(self, circuit, initial_state=None, nshots=None, return_array=False):
+        if circuit.repeated_execution:
+            return self.execute_circuit_repeated(circuit, initial_state, nshots)
+
+        if circuit.accelerators:  # pragma: no cover
+            return self.execute_distributed_circuit(circuit, initial_state, nshots)
+
+        try:
+            nqubits = circuit.nqubits
+            if isinstance(initial_state, CircuitResult):
+                initial_state = initial_state.state()
+
+            if circuit.density_matrix:
+                if initial_state is None:
+                    state = self.zero_density_matrix(nqubits)
+                else:
+                    # cast to proper complex type
+                    state = self.cast(initial_state)
+
+                for gate in circuit.queue:
+                    state = gate.apply_density_matrix(self, state, nqubits)
+
+            else:
+                if initial_state is None:
+                    state = self.zero_state(nqubits)
+                else:
+                    # cast to proper complex type
+                    state = self.cast(initial_state)
+
+                for gate in circuit.queue:
+                    state = gate.apply(self, state, nqubits)
+
+            if return_array:
+                return state
+            else:
+                circuit._final_state = CircuitResult(self, circuit, state, nshots)
+                return circuit._final_state
+
+        except self.oom_error:
+            raise_error(RuntimeError, f"State does not fit in {self.device} memory."
+                                       "Please switch the execution device to a "
+                                       "different one using ``qibo.set_device``.")
+
+    def execute_circuit_repeated(self, circuit, initial_state=None, nshots=None):
+        if nshots is None:
+            nshots = 1
+
+        results = []
+        nqubits = circuit.nqubits
+        for _ in range(nshots):
+            if circuit.density_matrix:
+                if initial_state is None:
+                    state = self.zero_density_matrix(nqubits)
+                else:
+                    state = self.cast(initial_state, copy=True)
+
+                for gate in circuit.queue:
+                    if gate.symbolic_parameters:
+                        gate.substitute_symbols()
+                    state = gate.apply_density_matrix(self, state, nqubits)
+
+            else:
+                if circuit.accelerators:  # pragma: no cover
+                    state = self.execute_distributed_circuit(circuit, initial_state, return_array=True) # pylint: disable=E1111
+                else:
+                    if initial_state is None:
+                        state = self.zero_state(nqubits)
+                    else:
+                        state = self.cast(initial_state, copy=True)
+
+                    for gate in circuit.queue:
+                        if gate.symbolic_parameters:
+                            gate.substitute_symbols()
+                        state = gate.apply(self, state, nqubits)
+
+            if circuit.measurement_gate:
+                result = CircuitResult(self, circuit, state, 1)
+                results.append(result.samples(binary=False)[0])
+            else:
+                results.append(state)
+
+        if circuit.measurement_gate:
+            final_result = CircuitResult(self, circuit, state, nshots)
+            final_result._samples = self.aggregate_shots(results)
+            circuit._final_state = final_result
+            return final_result
+        else:
+            circuit._final_state = CircuitResult(self, circuit, results[-1], nshots)
+            return results
+
+    def execute_distributed_circuit(self, circuit, initial_state=None, nshots=None, return_array=False):
+        raise_error(NotImplementedError, f"{self} does not support distributed execution.")
+
+    def get_state_repr(self, result):
+        return result.symbolic()
 
     def get_state_tensor(self, result):
         return result.execution_result
@@ -439,7 +558,8 @@ class NumpyBackend(Simulator):
             if k < matrix.shape[0]:
                 from scipy.sparse.linalg import eigsh
                 return eigsh(matrix, k=k, which='SA')
-            matrix = self.to_numpy(matrix)
+            else:  # pragma: no cover
+                matrix = self.to_numpy(matrix)
         return np.linalg.eigh(matrix)
 
     def calculate_matrix_exp(self, a, matrix, eigenvectors=None, eigenvalues=None):
@@ -469,6 +589,9 @@ class NumpyBackend(Simulator):
             norm = self.np.real(self.np.trace(state))
             ev = ev / norm
         return ev
+
+    def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
+        return self.np.dot(matrix1, matrix2)
 
     def calculate_hamiltonian_state_product(self, matrix, state):
         rank = len(tuple(state.shape))

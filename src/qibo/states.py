@@ -17,10 +17,6 @@ class CircuitResult:
         self._bitflip_p0 = None
         self._bitflip_p1 = None
 
-    def __len__(self):
-        """Number of components in the state's tensor representation."""
-        return 2 ** self.nqubits
-
     def state(self, numpy=False, decimals=-1, cutoff=1e-10, max_terms=20):
         """State's tensor representation as an backend tensor.
 
@@ -89,7 +85,7 @@ class CircuitResult:
         Args:
             qubits (list, set): Set of qubits that are measured.
         """
-        if qubits is None:
+        if qubits is None:  # pragma: no cover
             qubits = self.circuit.measurement_gate.qubits
 
         state = self.backend.get_state_tensor(self)

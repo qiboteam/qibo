@@ -8,9 +8,11 @@ from qibo.backends.matrices import Matrices
 
 def construct_backend(backend, platform=None, runcard=None):
     if backend == "qibojit":
-        from qibojit.backends import CupyBackend, NumbaBackend
-        if platform == "cupy":
+        from qibojit.backends import CupyBackend, CuQuantumBackend, NumbaBackend
+        if platform == "cupy":  # pragma: no cover
             return CupyBackend()
+        elif platform == "cuquantum":  # pragma: no cover
+            return CuQuantumBackend()
         elif platform == "numba":
             return NumbaBackend()
         else:  # pragma: no cover
@@ -77,14 +79,17 @@ class GlobalBackend(NumpyBackend):
 
 
 class QiboMatrices:
-    # TODO: Update matrices dtype when ``set_precision`` is used
 
     def __init__(self, dtype="complex128"):
-        self.matrices = Matrices("complex128")
+        self.create(dtype)
+
+    def create(self, dtype):
+        self.matrices = Matrices(dtype)
         self.I = self.matrices.I(2)
         self.X = self.matrices.X
         self.Y = self.matrices.Y
         self.Z = self.matrices.Z
+
 
 matrices = QiboMatrices()
 
@@ -103,6 +108,7 @@ def get_precision():
 
 def set_precision(precision):
     GlobalBackend().set_precision(precision)
+    matrices.create(GlobalBackend().dtype)
 
 
 def get_device():

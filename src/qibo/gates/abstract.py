@@ -240,15 +240,11 @@ class Gate:
     def asmatrix(self, backend):
         return backend.asmatrix(self)
 
-    def asmatrix_global(self, backend=None):
-        if backend is None:
-            from qibo.backends import GlobalBackend
-            backend = GlobalBackend()
-        return self.asmatrix(backend)
-
     @property
     def matrix(self):
-        return self.asmatrix_global()
+        from qibo.backends import GlobalBackend
+        backend = GlobalBackend()
+        return self.asmatrix(backend)
 
     def apply(self, backend, state, nqubits):
         return backend.apply_gate(self, state, nqubits)
@@ -267,7 +263,7 @@ class SpecialGate(Gate):
         raise_error(NotImplementedError,
                     "Cannot use special gates on subroutines.")
 
-    def asmatrix(self, backend):
+    def asmatrix(self, backend):  # pragma: no cover
         raise_error(NotImplementedError,
                     "Special gates do not have matrix representation.")
 
@@ -295,7 +291,7 @@ class ParametrizedGate(Gate):
                 # Captures the ``Unitary`` gate case where the given parameter
                 # can be an array
                 try:
-                    if len(x) != 1:
+                    if len(x) != 1:  # pragma: no cover
                         x = [x]
                 except TypeError: # tf.Variable case
                     s = tuple(x.shape)

@@ -1,27 +1,37 @@
 import pytest
 import qibo
+from qibo import matrices
 
 
 def test_set_backend():
+    from qibo.backends import GlobalBackend
+    backend = GlobalBackend()
     qibo.set_backend("numpy")
     assert qibo.get_backend() == "numpy"
-    from qibo.backends import GlobalBackend
     assert GlobalBackend().name == "numpy"
 
 
 def test_set_precision():
+    import numpy as np
     assert qibo.get_precision() == "double"
     qibo.set_precision("single")
+    assert matrices.I.dtype == np.complex64
     assert qibo.get_precision() == "single"
     qibo.set_precision("double")
+    assert matrices.I.dtype == np.complex128
     assert qibo.get_precision() == "double"
+    with pytest.raises(ValueError):
+        qibo.set_precision("test")
 
 
 def test_set_device():
     qibo.set_backend("numpy")
     qibo.set_device("/CPU:0")
+    assert qibo.get_device() == "/CPU:0"
     with pytest.raises(ValueError):
         qibo.set_device("test")
+    with pytest.raises(ValueError):
+        qibo.set_device("/GPU:0")
 
 
 def test_set_threads():
@@ -62,3 +72,17 @@ def test_set_metropolis_threshold():
     with pytest.raises(ValueError):
         qibo.set_metropolis_threshold(-10)
     qibo.set_metropolis_threshold(original_threshold)
+
+
+def test_circuit_execution():
+    qibo.set_backend("numpy")
+    c = qibo.models.Circuit(2)
+    c.add(qibo.gates.H(0))
+    result = c()
+    unitary = c.unitary()
+
+
+def test_gate_matrix():
+    qibo.set_backend("numpy")
+    gate = qibo.gates.H(0)
+    matrix = gate.matrix

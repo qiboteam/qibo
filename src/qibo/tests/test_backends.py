@@ -76,10 +76,14 @@ def test_control_matrix_unitary(backend):
     target_matrix = np.eye(4, dtype=backend.dtype)
     target_matrix[2:, 2:] = u
     backend.assert_allclose(matrix, target_matrix)
-    
+
     u = np.random.random((16, 16))
     gate = gates.Unitary(u, 0, 1, 2, 3).controlled_by(4)
     with pytest.raises(ValueError):
         matrix = backend.control_matrix(gate)
 
-###############################################################################
+
+def test_plus_density_matrix(backend):
+    matrix = backend.plus_density_matrix(4)
+    target_matrix = np.ones((16, 16)) / 16
+    backend.assert_allclose(matrix, target_matrix)
