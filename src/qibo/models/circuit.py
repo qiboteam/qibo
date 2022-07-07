@@ -145,7 +145,14 @@ class Circuit:
         self.repeated_execution = False
 
         self.density_matrix = density_matrix
+
+        # for distributed circuits
         self.accelerators = accelerators
+        self.ndevices = None
+        self.nglobal = None
+        self.nglobal = None
+        self.nlocal = None
+        self.queues = None
 
     def __add__(self, circuit):
         """Add circuits.
@@ -850,8 +857,8 @@ class Circuit:
         details.
         """
         if self.compiled:
-            state = self.compiled.executor(initial_state, nshots)
-            self._final_state = self.compiled.result(state, nshots)
+            state = self.compiled.executor(initial_state, nshots) # pylint: disable=E1101
+            self._final_state = self.compiled.result(state, nshots) # pylint: disable=E1101
             return self._final_state
         else:
             from qibo.backends import GlobalBackend
