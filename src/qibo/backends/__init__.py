@@ -8,9 +8,11 @@ from qibo.backends.matrices import Matrices
 
 def construct_backend(backend, platform=None):
     if backend == "qibojit":
-        from qibojit.backends import CupyBackend, NumbaBackend
-        if platform == "cupy":
+        from qibojit.backends import CupyBackend, CuQuantumBackend, NumbaBackend
+        if platform == "cupy":  # pragma: no cover
             return CupyBackend()
+        elif platform == "cuquantum":  # pragma: no cover
+            return CuQuantumBackend()
         elif platform == "numba":
             return NumbaBackend()
         else:  # pragma: no cover
