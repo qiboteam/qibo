@@ -57,7 +57,7 @@ class Symbol(sympy.Symbol):
             self._gate = self.calculate_gate()
         return self._gate
 
-    def calculate_gate(self):
+    def calculate_gate(self):  # pragma: no cover
         return gates.Unitary(self.matrix, self.target_qubit)
 
     def full_matrix(self, nqubits):

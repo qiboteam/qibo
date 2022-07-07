@@ -8,12 +8,14 @@ from qibo.backends.matrices import Matrices
 
 def construct_backend(backend, platform=None):
     if backend == "qibojit":
-        from qibojit.backends import CupyBackend, NumbaBackend
-        if platform == "cupy":
+        from qibojit.backends import CupyBackend, CuQuantumBackend, NumbaBackend
+        if platform == "cupy":  # pragma: no cover
             return CupyBackend()
+        elif platform == "cuquantum":  # pragma: no cover
+            return CuQuantumBackend()
         elif platform == "numba":
             return NumbaBackend()
-        else:
+        else:  # pragma: no cover
             try:
                 return CupyBackend()
             except (ModuleNotFoundError, ImportError):
@@ -25,8 +27,7 @@ def construct_backend(backend, platform=None):
     elif backend == "numpy":
         return NumpyBackend()
 
-    else:
-        # TODO: Fix errors to their previous format
+    else:  # pragma: no cover
         raise_error(ValueError, f"Backend {backend} is not available.")
 
 
@@ -47,7 +48,7 @@ class GlobalBackend(NumpyBackend):
             return cls._instance
 
         backend = os.environ.get("QIBO_BACKEND")
-        if backend:
+        if backend:  # pragma: no cover
             # Create backend specified by user
             platform = os.environ.get("QIBO_PLATFORM")
             cls._instance = construct_backend(backend, platform)
@@ -67,21 +68,24 @@ class GlobalBackend(NumpyBackend):
         return cls._instance
 
     @classmethod
-    def set_backend(cls, backend, platform=None):
+    def set_backend(cls, backend, platform=None):  # pragma: no cover
         if cls._instance is None or cls._instance.name != backend or cls._instance.platform != platform:
             cls._instance = construct_backend(backend, platform)
         log.info(f"Using {cls._instance} backend on {cls._instance.device}")
 
 
 class QiboMatrices:
-    # TODO: Update matrices dtype when ``set_precision`` is used
 
     def __init__(self, dtype="complex128"):
-        self.matrices = Matrices("complex128")
+        self.create(dtype)
+
+    def create(self, dtype):
+        self.matrices = Matrices(dtype)
         self.I = self.matrices.I(2)
         self.X = self.matrices.X
         self.Y = self.matrices.Y
         self.Z = self.matrices.Z
+
 
 matrices = QiboMatrices()
 
@@ -95,11 +99,12 @@ def set_backend(backend, platform=None):
 
 
 def get_precision():
-    GlobalBackend().precision
+    return GlobalBackend().precision
 
 
 def set_precision(precision):
     GlobalBackend().set_precision(precision)
+    matrices.create(GlobalBackend().dtype)
 
 
 def get_device():
@@ -121,8 +126,8 @@ def get_threads():
 
 
 def set_threads(nthreads):
-    if not isinstance(nthreads, int): # pragma: no cover
+    if not isinstance(nthreads, int):
         raise_error(TypeError, "Number of threads must be integer.")
-    if nthreads < 1: # pragma: no cover
+    if nthreads < 1:
         raise_error(ValueError, "Number of threads must be positive.")
     GlobalBackend().set_threads(nthreads)

@@ -183,7 +183,7 @@ class DistributedQueues:
         """Helper recursive method for ``transform``."""
         new_remaining_queue = []
         for gate in remaining_queue:
-            if isinstance(gate, (SpecialGate, gates.M)):
+            if isinstance(gate, (SpecialGate, gates.M)):  # pragma: no cover
                 gate.swap_reset = list(self.swaps_list)
 
             global_targets = set(gate.target_qubits) & self.qubits.set
@@ -269,7 +269,8 @@ class DistributedQueues:
         """
         for gate in queue:
             is_collapse = isinstance(gate, gates.M) and gate.collapse
-            if not gate.target_qubits or is_collapse: # special gate
+            if not gate.target_qubits or is_collapse:  # pragma: no cover
+                # special gate
                 gate.nqubits = self.nqubits
                 self.special_queue.append(gate)
                 self.queues.append([])
@@ -317,7 +318,7 @@ class DistributedQueues:
                                 gate.device_gates.add(devgate)
 
 
-class DistributedCircuit(Circuit):
+class DistributedCircuit(Circuit):  # pragma: no cover
     """Distributed implementation of :class:`qibo.models.circuit.Circuit`.
 
     Uses multiple `accelerator` devices (GPUs) for applying gates to the state vector.
@@ -353,7 +354,7 @@ class DistributedCircuit(Circuit):
                 density_matrix: bool = False):
         return object().__new__(cls)
 
-    def __init__(self, nqubits: int, accelerators: Dict[str, int], 
+    def __init__(self, nqubits: int, accelerators: Dict[str, int],
                  density_matrix: bool = False):
         super().__init__(nqubits, accelerators, density_matrix)
         self.ndevices = sum(accelerators.values())
@@ -364,7 +365,7 @@ class DistributedCircuit(Circuit):
                                     "of 2 but is {}.".format(self.ndevices))
         self.nglobal = int(self.nglobal)
         self.nlocal = self.nqubits - self.nglobal
-        
+
         self.queues = DistributedQueues(self)
 
     def _set_nqubits(self, gate):
@@ -394,7 +395,7 @@ class DistributedCircuit(Circuit):
         if isinstance(gate, collections.abc.Iterable):
             for g in gate:
                 self.add(g)
-        
+
         else:
             if isinstance(gate, gates.KrausChannel):
                 raise_error(NotImplementedError, "Distributed circuits do not "

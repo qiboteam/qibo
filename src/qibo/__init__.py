@@ -10,6 +10,3 @@ from qibo.backends import set_threads, get_threads
 from qibo import gates, models
 from qibo import callbacks, hamiltonians
 from qibo import parallel, optimizers, solvers
-
-# TODO: Remove this (temporary to make tests pass)
-K = None

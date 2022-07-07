@@ -156,7 +156,7 @@ class Grover(object):
             measured (str): bitstring measured and checked as a valid solution.
             total_iterations (int): number of times the oracle has been called.
         """
-        if backend is None:
+        if backend is None:  # pragma: no cover
             from qibo.backends import GlobalBackend
             backend = GlobalBackend()
 
@@ -192,7 +192,7 @@ class Grover(object):
             solution (str): bitstring (or list of bitstrings) measured as solution of the search.
             iterations (int): number of oracle calls done to reach a solution.
         """
-        if backend is None:
+        if backend is None:  # pragma: no cover
             from qibo.backends import GlobalBackend
             backend = GlobalBackend()
 

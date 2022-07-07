@@ -29,7 +29,7 @@ for backend_name in BACKENDS:
     try:
         _backend = get_backend(backend_name)
         AVAILABLE_BACKENDS.append(backend_name)
-        if _backend.supports_multigpu:
+        if _backend.supports_multigpu:  # pragma: no cover
             MULTIGPU_BACKENDS.append(backend_name)
     except (ModuleNotFoundError, ImportError):
         pass
@@ -57,7 +57,7 @@ def backend(backend_name):
 def pytest_generate_tests(metafunc):
     module_name = metafunc.module.__name__
 
-    if module_name == "qibo.tests.test_models_qgan" and "tensorflow" not in AVAILABLE_BACKENDS:
+    if module_name == "qibo.tests.test_models_qgan" and "tensorflow" not in AVAILABLE_BACKENDS:  # pragma: no cover
         pytest.skip("Skipping QGAN tests because tensorflow is not available.")
 
     if module_name == "qibo.tests.test_models_distcircuit_execution":

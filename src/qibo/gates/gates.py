@@ -1074,19 +1074,15 @@ class Unitary(ParametrizedGate):
         self.init_args = [unitary] + list(q)
         self.init_kwargs = {"name": name, "trainable": trainable}
 
-    @property
-    def rank(self) -> int:
-        return len(self.target_qubits)
-
     @Gate.parameters.setter
     def parameters(self, x):
         import numpy as np
         shape = self.parameters[0].shape
         self._parameters = (np.reshape(x, shape),)
-        for gate in self.device_gates:
+        for gate in self.device_gates:  # pragma: no cover
             gate.parameters = x
 
-    def on_qubits(self, qubit_map) -> "Gate":
+    def on_qubits(self, qubit_map):
         args = [self.init_args[0]]
         args.extend((qubit_map.get(i) for i in self.target_qubits))
         gate = self.__class__(*args, **self.init_kwargs)

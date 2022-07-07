@@ -3,7 +3,7 @@ from qibo.config import raise_error
 
 if sys.version_info.minor >= 8:
     from functools import cached_property  # pylint: disable=E0611
-else:
+else:  # pragma: no cover
     # Custom ``cached_property`` because it is not available for Python < 3.8
     from functools import lru_cache
     def cached_property(func):
@@ -24,35 +24,35 @@ class Matrices:
     @cached_property
     def H(self):
         return self.np.array([
-            [1, 1], 
+            [1, 1],
             [1, -1]
         ], dtype=self.dtype) / self.np.sqrt(2)
 
     @cached_property
     def X(self):
         return self.np.array([
-            [0, 1], 
+            [0, 1],
             [1, 0]
         ], dtype=self.dtype)
 
     @cached_property
     def Y(self):
         return self.np.array([
-            [0, -1j], 
+            [0, -1j],
             [1j, 0]
         ], dtype=self.dtype)
 
     @cached_property
     def Z(self):
         return self.np.array([
-            [1, 0], 
+            [1, 0],
             [0, -1]
         ], dtype=self.dtype)
 
     @cached_property
     def S(self):
         return self.np.array([
-            [1, 0], 
+            [1, 0],
             [0, 1j]
         ], dtype=self.dtype)
 
@@ -77,14 +77,14 @@ class Matrices:
     def Align(self, n=2):
         return self.I(n)
 
-    def M(self):
+    def M(self):  # pragma: no cover
         raise_error(NotImplementedError)
 
     def RX(self, theta):
         cos = self.np.cos(theta / 2.0) + 0j
         isin = -1j * self.np.sin(theta / 2.0)
         return self.np.array([
-            [cos, isin], 
+            [cos, isin],
             [isin, cos]
         ], dtype=self.dtype)
 
@@ -92,21 +92,21 @@ class Matrices:
         cos = self.np.cos(theta / 2.0) + 0j
         sin = self.np.sin(theta / 2.0)
         return self.np.array([
-            [cos, -sin], 
+            [cos, -sin],
             [sin, cos]
         ], dtype=self.dtype)
 
     def RZ(self, theta):
         phase = self.np.exp(0.5j * theta)
         return self.np.array([
-            [self.np.conj(phase), 0], 
+            [self.np.conj(phase), 0],
             [0, phase]
         ], dtype=self.dtype)
 
     def U1(self, theta):
         phase = self.np.exp(1j * theta)
         return self.np.array([
-            [1, 0], 
+            [1, 0],
             [0, phase]
         ], dtype=self.dtype)
 
@@ -131,18 +131,18 @@ class Matrices:
     @cached_property
     def CNOT(self):
         return self.np.array([
-            [1, 0, 0, 0], 
-            [0, 1, 0, 0], 
-            [0, 0, 0, 1], 
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 0, 1],
             [0, 0, 1, 0]
         ], dtype=self.dtype)
 
     @cached_property
     def CZ(self):
         return self.np.array([
-            [1, 0, 0, 0], 
-            [0, 1, 0, 0], 
-            [0, 0, 1, 0], 
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 1, 0],
             [0, 0, 0, -1]
         ], dtype=self.dtype)
 
@@ -179,18 +179,18 @@ class Matrices:
     @cached_property
     def SWAP(self):
         return self.np.array([
-            [1, 0, 0, 0], 
-            [0, 0, 1, 0], 
-            [0, 1, 0, 0], 
+            [1, 0, 0, 0],
+            [0, 0, 1, 0],
+            [0, 1, 0, 0],
             [0, 0, 0, 1]
         ], dtype=self.dtype)
 
     @cached_property
     def FSWAP(self):
         return self.np.array([
-            [1, 0, 0, 0], 
-            [0, 0, 1, 0], 
-            [0, 1, 0, 0], 
+            [1, 0, 0, 0],
+            [0, 0, 1, 0],
+            [0, 1, 0, 0],
             [0, 0, 0, -1]
         ], dtype=self.dtype)
 
@@ -230,26 +230,26 @@ class Matrices:
     def Unitary(self, u):
         return self.np.array(u, dtype=self.dtype, copy=False)
 
-    def VariationalLayer(self, *args):
+    def VariationalLayer(self, *args):  # pragma: no cover
         raise_error(NotImplementedError)
 
-    def CallbackGate(self):
+    def CallbackGate(self):  # pragma: no cover
         raise_error(NotImplementedError)
 
-    def PartialTrace(self):
+    def PartialTrace(self):  # pragma: no cover
         raise_error(NotImplementedError)
 
-    def UnitaryChannel(self):
+    def UnitaryChannel(self):  # pragma: no cover
         raise_error(NotImplementedError)
 
-    def PauliNoiseChannel(self):
+    def PauliNoiseChannel(self):  # pragma: no cover
         raise_error(NotImplementedError)
 
-    def ResetChannel(self):
+    def ResetChannel(self):  # pragma: no cover
         raise_error(NotImplementedError)
 
-    def ThermalRelaxationChannel(self):
+    def ThermalRelaxationChannel(self):  # pragma: no cover
         raise_error(NotImplementedError)
 
-    def FusedGate(self):
+    def FusedGate(self):  # pragma: no cover
         raise_error(NotImplementedError)

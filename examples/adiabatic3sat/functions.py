@@ -76,11 +76,6 @@ def spolynomial(t, params):
     return f
 
 
-def ground_state(nqubits):
-    """Returns |++...+> state to be used as the ground state of the easy Hamiltonian."""
-    return np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
-
-
 def plot(qubits, ground, first, gap, dt, T):
     """Get the first two eigenvalues and the gap energy
     Args:
