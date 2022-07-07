@@ -346,7 +346,6 @@ class NumpyBackend(Backend):
 
         results = []
         nqubits = circuit.nqubits
-        circuit.repeated_execution = False
         for _ in range(nshots):
             if circuit.density_matrix:
                 if initial_state is None:
@@ -378,7 +377,6 @@ class NumpyBackend(Backend):
                 results.append(result.samples(binary=False)[0])
             else:
                 results.append(state)
-        circuit.repeated_execution = True
 
         if circuit.measurement_gate:
             final_result = CircuitResult(self, circuit, state, nshots)

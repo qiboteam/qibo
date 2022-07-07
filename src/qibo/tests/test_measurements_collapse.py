@@ -62,15 +62,16 @@ def test_measurement_collapse_bitflip_noise(backend):
         output = c.add(gates.M(0, 1, p0=0.2, collapse=True))
 
 
+@pytest.mark.parametrize("density_matrix", [False, True])
 @pytest.mark.parametrize("effect", [False, True])
-def test_measurement_result_parameters(backend, effect):
-    c = models.Circuit(4)
+def test_measurement_result_parameters(backend, effect, density_matrix):
+    c = models.Circuit(4, density_matrix=density_matrix)
     if effect:
         c.add(gates.X(0))
     output = c.add(gates.M(0, collapse=True))
     c.add(gates.RX(1, theta=np.pi * output / 4))
 
-    target_c = models.Circuit(4)
+    target_c = models.Circuit(4, density_matrix=density_matrix)
     if effect:
         target_c.add(gates.X(0))
         target_c.add(gates.RX(1, theta=np.pi / 4))
