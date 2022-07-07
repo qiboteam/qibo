@@ -62,3 +62,11 @@ def test_set_metropolis_threshold():
     with pytest.raises(ValueError):
         qibo.set_metropolis_threshold(-10)
     qibo.set_metropolis_threshold(original_threshold)
+
+
+def test_circuit_execution():
+    qibo.set_backend("numpy")
+    c = qibo.models.Circuit(2)
+    c.add(qibo.gates.H(0))
+    result = c()
+    unitary = c.unitary()

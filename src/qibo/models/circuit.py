@@ -833,7 +833,7 @@ class Circuit:
         if not self.queue:
             raise_error(RuntimeError, "Cannot compile circuit without gates.")
         for gate in self.queue:
-            if isinstance(gate, gates.CallbackGate):
+            if isinstance(gate, gates.CallbackGate):  # pragma: no cover
                 raise_error(NotImplementedError, "Circuit compilation is not available with callbacks.")
         if backend is None:
             from qibo.backends import GlobalBackend
@@ -891,11 +891,8 @@ class Circuit:
 
             qubits = ",".join(f"q[{i}]" for i in gate.qubits)
             if gate.name in gates.PARAMETRIZED_GATES:
-                if isinstance(gate.parameters, collections.abc.Iterable):
-                    params = (str(x) for x in gate.parameters)
-                    name = "{}({})".format(gate.name, ", ".join(params))
-                else:
-                    name = f"{gate.name}({gate.parameters})"
+                params = (str(x) for x in gate.parameters)
+                name = "{}({})".format(gate.name, ", ".join(params))
             else:
                 name = gate.name
             code.append(f"{name} {qubits};")
@@ -1118,7 +1115,7 @@ class Circuit:
         idx = [0] * self.nqubits
 
         for gate in self.queue:
-            if gate.name not in labels:
+            if gate.name not in labels:  # pragma: no cover
                 raise_error(NotImplementedError, f"{gate.name} gate is not supported by `circuit.draw`")
             gate_name = labels.get(gate.name)
             if isinstance(gate, gates.CallbackGate):
