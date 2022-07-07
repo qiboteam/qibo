@@ -20,7 +20,7 @@ def convert_to_standard_Cauchy(config):
             return tuple(cauchy)  # now, the cauchy notation for permutation begins with 0
 
 
-def qaoa_function_of_layer(layer):
+def qaoa_function_of_layer(backend, layer):
     '''
     This is a function to study the impact of the number of layers on QAOA, it takes
     in the number of layers and compute the distance of the mode of the histogram obtained
@@ -33,11 +33,12 @@ def qaoa_function_of_layer(layer):
     # there are two possible cycles, one with distance 1, one with distance 1.9
     distance_matrix = distance_matrix.round(1)
 
-    small_tsp = TSP(distance_matrix)
+    small_tsp = TSP(distance_matrix, backend=backend)
     initial_state = small_tsp.prepare_initial_state([i for i in range(num_cities)])
     obj_hamil, mixer = small_tsp.hamiltonians()
     qaoa = QAOA(obj_hamil, mixer=mixer)
-    best_energy, final_parameters, extra = qaoa.minimize(initial_p=[0.1 for i in range(layer)] ,
+    initial_state = backend.cast(initial_state, copy=True)
+    best_energy, final_parameters, extra = qaoa.minimize(initial_p=[0.1 for i in range(layer)],
                                                          initial_state=initial_state, method='BFGS')
     qaoa.set_parameters(final_parameters)
     quantum_state = qaoa.execute(initial_state)
@@ -57,8 +58,6 @@ def qaoa_function_of_layer(layer):
 
 
 @pytest.mark.parametrize("test_layer, expected", [(4, 1.0), (6, 1.0), (8, 1.9)])
-def test_tsp(test_layer, expected):
-    import qibo
-    qibo.set_backend("numpy")
-    tmp = qaoa_function_of_layer(test_layer)
+def test_tsp(backend, test_layer, expected):
+    tmp = qaoa_function_of_layer(backend, test_layer)
     assert abs(tmp - expected) <= 0.001
