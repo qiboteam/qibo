@@ -90,8 +90,6 @@ class _Queue(list):
 
 
 class Circuit:
-    # TODO: Update docstrings
-    # TODO: Implement accelerators.
     """Circuit object which holds a list of gates.
 
     This circuit is symbolic and cannot perform calculations.

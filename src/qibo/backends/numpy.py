@@ -15,7 +15,6 @@ class NumpyBackend(Simulator):
         self.name = "numpy"
         self.matrices = Matrices(self.dtype)
         self.tensor_types = np.ndarray
-        # TODO: is numeric_types necessary
         self.numeric_types = (int, float, complex, np.int32,
                               np.int64, np.float32, np.float64,
                               np.complex64, np.complex128)
@@ -439,7 +438,8 @@ class NumpyBackend(Simulator):
             if k < matrix.shape[0]:
                 from scipy.sparse.linalg import eigsh
                 return eigsh(matrix, k=k, which='SA')
-            matrix = self.to_numpy(matrix)
+            else:  # pragma: no cover
+                matrix = self.to_numpy(matrix)
         return np.linalg.eigh(matrix)
 
     def calculate_matrix_exp(self, a, matrix, eigenvectors=None, eigenvalues=None):

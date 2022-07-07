@@ -17,10 +17,6 @@ class CircuitResult:
         self._bitflip_p0 = None
         self._bitflip_p1 = None
 
-    def __len__(self):
-        """Number of components in the state's tensor representation."""
-        return 2 ** self.nqubits
-
     def state(self, numpy=False, decimals=-1, cutoff=1e-10, max_terms=20):
         """State's tensor representation as an backend tensor.
 

@@ -7,7 +7,6 @@ def test_set_backend():
     backend = GlobalBackend()
     qibo.set_backend("numpy")
     assert qibo.get_backend() == "numpy"
-    assert backend.name == "numpy"
     assert GlobalBackend().name == "numpy"
 
 
