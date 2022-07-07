@@ -56,8 +56,9 @@ def qaoa_function_of_layer(layer):
     return sum(distance_matrix[max_key[i]][max_key[(i + 1) % m]] for i in range(m))
 
 
-@pytest.mark.parametrize("test_layer, expected", [(4, 1.0), (6, 1.0)])
+@pytest.mark.parametrize("test_layer, expected", [(4, 1.0), (6, 1.0), (8, 1.9)])
 def test_tsp(test_layer, expected):
-    np.random.seed(42)
+    import qibo
+    qibo.set_backend("numpy")
     tmp = qaoa_function_of_layer(test_layer)
     assert abs(tmp - expected) <= 0.001
