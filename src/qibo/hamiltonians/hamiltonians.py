@@ -175,7 +175,7 @@ class Hamiltonian(AbstractHamiltonian):
 
     def __matmul__(self, o):
         if isinstance(o, self.__class__):
-            matrix = self.backend.np.dot(self.matrix, o.matrix)
+            matrix = self.backend.calculate_hamiltonian_matrix_product(self.matrix, o.matrix)
             return self.__class__(self.nqubits, matrix, backend=self.backend)
 
         elif isinstance(o, self.backend.tensor_types):

@@ -470,6 +470,9 @@ class NumpyBackend(Simulator):
             ev = ev / norm
         return ev
 
+    def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
+        return self.np.dot(matrix1, matrix2)
+
     def calculate_hamiltonian_state_product(self, matrix, state):
         rank = len(tuple(state.shape))
         state = self.cast(state)
