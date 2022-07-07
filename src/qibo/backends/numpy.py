@@ -216,7 +216,6 @@ class NumpyBackend(Backend):
             state = np.einsum(left, state, matrix)
         return np.reshape(state, 2 * (2 ** nqubits,))
 
-
     def apply_channel(self, channel, state, nqubits):
         for coeff, gate in zip(channel.coefficients, channel.gates):
             if self.np.random.random() < coeff:
