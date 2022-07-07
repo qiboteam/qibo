@@ -40,8 +40,7 @@ def test_circuit_unitary_bigger(backend):
     backend.assert_allclose(final_matrix, target_matrix)
 
 
-# TODO: Enable compile when ``tensorflow`` backend is implemented
-@pytest.mark.parametrize("compile", [False])
+@pytest.mark.parametrize("compile", [False, True])
 def test_circuit_vs_gate_execution(backend, compile):
     """Check consistency between executing circuit and stand alone gates."""
     nqubits = 2
@@ -61,7 +60,7 @@ def test_circuit_vs_gate_execution(backend, compile):
 
     initial_state = backend.zero_state(nqubits)
     if compile:
-        c = K.compile(custom_circuit)
+        c = backend.compile(custom_circuit)
     else:
         c = custom_circuit
 
@@ -95,7 +94,7 @@ def test_copied_circuit_execution(backend, accelerators, deep):
     c1 = Circuit(4, accelerators)
     c1.add([gates.X(0), gates.X(1), gates.CU1(0, 1, theta)])
     c1.add([gates.H(2), gates.H(3), gates.CU1(2, 3, theta)])
-    if not deep and accelerators is not None:
+    if not deep and accelerators is not None:  # pragma: no cover
         with pytest.raises(ValueError):
             c2 = c1.copy(deep)
     else:
@@ -114,7 +113,7 @@ def test_inverse_circuit_execution(backend, accelerators, fuse):
     c.add(gates.fSim(0, 2, theta=0.1, phi=0.3))
     c.add(gates.CU2(0, 1, phi=0.1, lam=0.1))
     if fuse:
-        if accelerators:
+        if accelerators:  # pragma: no cover
             with pytest.raises(NotImplementedError):
                 c = c.fuse()
         else:
@@ -179,7 +178,7 @@ def test_circuit_on_qubits_double_execution(backend, accelerators, distribute_sm
 
     largec = Circuit(6, accelerators=accelerators)
     largec.add((gates.RY(i, theta=i + 0.2) for i in range(0, 6, 2)))
-    if distribute_small and accelerators is not None:
+    if distribute_small and accelerators is not None:  # pragma: no cover
         with pytest.raises(RuntimeError):
             largec.add(smallc.on_qubits(1, 3, 5))
     else:

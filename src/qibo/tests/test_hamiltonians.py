@@ -122,8 +122,6 @@ def test_hamiltonian_matmul(backend, sparse_type):
         H1 = hamiltonians.TFIM(nqubits, h=1.0, backend=backend)
         H2 = hamiltonians.Y(nqubits, backend=backend)
     else:
-        if backend.name == "tensorflow":
-            pytest.skip("Tensorflow does not support operations with sparse matrices.")
         nqubits = 5
         nstates = 2 ** nqubits
         H1 = hamiltonians.Hamiltonian(nqubits, random_sparse_matrix(backend, nstates, sparse_type),

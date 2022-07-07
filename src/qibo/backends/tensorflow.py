@@ -171,7 +171,7 @@ class TensorflowBackend(NumpyBackend):
 
         self.tensor_types = (np.ndarray, tf.Tensor, tf.Variable)
 
-    def set_device(self, device):
+    def set_device(self, device):  # pragma: no cover
         self.device = device
 
     def set_threads(self, nthreads):
@@ -281,6 +281,11 @@ class TensorflowBackend(NumpyBackend):
         else:
             return super().calculate_matrix_exp(a, matrix, eigenvectors, eigenvalues)
 
+    def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
+        if self.issparse(matrix1) or self.issparse(matrix2):
+            raise_error(NotImplementedError, "Multiplication of sparse matrices is not supported with Tensorflow.")
+        return super().calculate_hamiltonian_matrix_product(matrix1, matrix2)
+
     def calculate_hamiltonian_state_product(self, matrix, state):
         rank = len(tuple(state.shape))
         if rank == 1: # vector
@@ -308,5 +313,3 @@ class TensorflowBackend(NumpyBackend):
                 {5: 30}, {5: 16, 7: 10, 6: 2, 3: 1, 4: 1},
                 {3: 6, 5: 6, 7: 5, 2: 4, 4: 3, 0: 2, 1: 2, 6: 2}
             ]
-        else:
-            return None

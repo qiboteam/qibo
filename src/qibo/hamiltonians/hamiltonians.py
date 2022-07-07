@@ -15,7 +15,7 @@ class Hamiltonian(AbstractHamiltonian):
             supported.
     """
     def __init__(self, nqubits, matrix=None, backend=None):
-        if backend is None:
+        if backend is None:  # pragma: no cover
             from qibo.backends import GlobalBackend
             self.backend = GlobalBackend()
         else:
@@ -175,7 +175,7 @@ class Hamiltonian(AbstractHamiltonian):
 
     def __matmul__(self, o):
         if isinstance(o, self.__class__):
-            matrix = self.backend.np.dot(self.matrix, o.matrix)
+            matrix = self.backend.calculate_hamiltonian_matrix_product(self.matrix, o.matrix)
             return self.__class__(self.nqubits, matrix, backend=self.backend)
 
         elif isinstance(o, self.backend.tensor_types):
@@ -248,18 +248,10 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             The symbol_map can also be used to pass non-quantum operator arguments
             to the symbolic Hamiltonian, such as the parameters in the
             :meth:`qibo.hamiltonians.models.MaxCut` Hamiltonian.
-        ground_state (Callable): Function with no arguments that returns the
-            ground state of this Hamiltonian. This is useful in cases where
-            the ground state is trivial and is used for initialization,
-            for example the easy Hamiltonian in adiabatic evolution,
-            however we would like to avoid constructing and diagonalizing the
-            full Hamiltonian matrix only to find the ground state.
     """
 
-    def __init__(self, form=None, symbol_map={}, ground_state=None, backend=None):
+    def __init__(self, form=None, symbol_map={}, backend=None):
         super().__init__()
-        self._ground_state = ground_state
-
         self._form = None
         self._terms = None
         self.constant = 0 # used only when we perform calculations using ``_terms``
@@ -270,7 +262,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         self.trotter_circuit = None
         from qibo.symbols import Symbol
         self._qiboSymbol = Symbol # also used in ``self._get_symbol_matrix``
-        if backend is None:
+        if backend is None:  # pragma: no cover
             from qibo.backends import GlobalBackend
             self.backend = GlobalBackend()
         else:
@@ -360,10 +352,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         return self.dense.eigenvectors(k)
 
     def ground_state(self):
-        if self._ground_state is None:
-            log.warning("Ground state for this Hamiltonian was not given.")
-            return self.eigenvectors()[:, 0]
-        return self._ground_state()
+        return self.eigenvectors()[:, 0]
 
     def exp(self, a):
         return self.dense.exp(a)
@@ -575,7 +564,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         total = 0
         for term in self.terms:
             total += term(self.backend, self.backend.cast(state, copy=True), self.nqubits, density_matrix)
-        if self.constant:
+        if self.constant:  # pragma: no cover
             total += self.constant * state
         return total
 
@@ -620,13 +609,13 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 class TrotterHamiltonian:
     """"""
 
-    def __init__(self, *parts, ground_state=None):
+    def __init__(self, *parts):
         raise_error(NotImplementedError,
                     "`TrotterHamiltonian` is substituted by `SymbolicHamiltonian` "
                     "and is no longer supported. Please check the documentation "
                     "of `SymbolicHamiltonian` for more details.")
 
     @classmethod
-    def from_symbolic(cls, symbolic_hamiltonian, symbol_map, ground_state=None):
+    def from_symbolic(cls, symbolic_hamiltonian, symbol_map):
         return cls()
 

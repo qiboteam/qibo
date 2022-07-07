@@ -214,8 +214,7 @@ def test_set_parameters_with_variationallayer(backend, nqubits):
 
 
 @pytest.mark.parametrize("nqubits", [4, 5])
-@pytest.mark.parametrize("trainable", [False])
-def test_set_parameters_with_double_variationallayer(backend, nqubits, trainable):
+def test_set_parameters_with_double_variationallayer(backend, nqubits):
     """Check updating parameters of variational layer."""
     theta = np.random.random((3, nqubits))
     c = Circuit(nqubits)
@@ -223,7 +222,7 @@ def test_set_parameters_with_double_variationallayer(backend, nqubits, trainable
     c.add(gates.VariationalLayer(range(nqubits), pairs,
                                  gates.RY, gates.CZ,
                                  theta[0], theta[1],
-                                 trainable=trainable))
+                                 trainable=False))
     c.add((gates.RX(i, theta[2, i]) for i in range(nqubits)))
 
     target_c = Circuit(nqubits)
@@ -234,11 +233,8 @@ def test_set_parameters_with_double_variationallayer(backend, nqubits, trainable
     backend.assert_circuitclose(c, target_c)
 
     new_theta = np.random.random(3 * nqubits)
-    if trainable:
-        c.set_parameters(np.copy(new_theta))
-    else:
-        c.set_parameters(np.copy(new_theta[2 * nqubits:]))
-        new_theta[:2 * nqubits] = theta[:2].ravel()
+    c.set_parameters(np.copy(new_theta[2 * nqubits:]))
+    new_theta[:2 * nqubits] = theta[:2].ravel()
     target_c.set_parameters(np.copy(new_theta))
     backend.assert_circuitclose(c, target_c)
 
@@ -250,7 +246,7 @@ def test_variable_theta():
         backend = construct_backend("tensorflow")
     except ModuleNotFoundError: # pragma: no cover
         pytest.skip("Skipping variable test because tensorflow is not available.")
-    
+
     import tensorflow as tf
     theta1 = tf.Variable(0.1234, dtype="float64")
     theta2 = tf.Variable(0.4321, dtype="float64")

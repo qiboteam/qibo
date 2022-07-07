@@ -49,9 +49,6 @@ def XXZ(nqubits, delta=0.5, dense=True, backend=None):
             from qibo.hamiltonians import XXZ
             h = XXZ(3) # initialized XXZ model with 3 qubits
     """
-    if backend is None:
-        from qibo.backends import GlobalBackend
-        backend = GlobalBackend()
     if dense:
         condition = lambda i, j: i in {j % nqubits, (j+1) % nqubits}
         hx = _build_spin_model(nqubits, matrices.X, condition)
@@ -71,11 +68,8 @@ def XXZ(nqubits, delta=0.5, dense=True, backend=None):
     return ham
 
 
-def _OneBodyPauli(nqubits, matrix, dense=True, ground_state=None, backend=None):
+def _OneBodyPauli(nqubits, matrix, dense=True, backend=None):
     """Helper method for constracting non-interacting X, Y, Z Hamiltonians."""
-    if backend is None:
-        from qibo.backends import GlobalBackend
-        backend = GlobalBackend()
     if dense:
         condition = lambda i, j: i == j % nqubits
         ham = -_build_spin_model(nqubits, matrix, condition)
@@ -83,7 +77,7 @@ def _OneBodyPauli(nqubits, matrix, dense=True, ground_state=None, backend=None):
 
     matrix = - matrix
     terms = [HamiltonianTerm(matrix, i) for i in range(nqubits)]
-    ham = SymbolicHamiltonian(ground_state=ground_state, backend=backend)
+    ham = SymbolicHamiltonian(backend=backend)
     ham.terms = terms
     return ham
 
@@ -100,12 +94,6 @@ def X(nqubits, dense=True, backend=None):
             :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
     """
-    #TODO: see if this is needed for later
-    # from qibo import K
-    # def ground_state():
-    #     n = K.cast((2 ** nqubits,), dtype='DTYPEINT')
-    #     state = K.ones(n, dtype='DTYPECPX')
-    #     return state / K.sqrt(K.cast(n, dtype=state.dtype))
     return _OneBodyPauli(nqubits, matrices.X, dense, backend=backend)
 
 
@@ -152,9 +140,6 @@ def TFIM(nqubits, h=0.0, dense=True, backend=None):
             :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
     """
-    if backend is None:
-        from qibo.backends import GlobalBackend
-        backend = GlobalBackend()
     if dense:
         condition = lambda i, j: i in {j % nqubits, (j+1) % nqubits}
         ham = -_build_spin_model(nqubits, matrices.Z, condition)
@@ -185,10 +170,6 @@ def MaxCut(nqubits, dense=True, backend=None):
     """
     import sympy as sp
     from numpy import ones
-
-    if backend is None:
-        from qibo.backends import GlobalBackend
-        backend = GlobalBackend()
 
     Z = sp.symbols(f'Z:{nqubits}')
     V = sp.symbols(f'V:{nqubits**2}')

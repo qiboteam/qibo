@@ -64,6 +64,5 @@ def test_qft_errors(backend):
     from qibo.models.qft import _DistributedQFT
     with pytest.raises(NotImplementedError):
         c = models.QFT(10, with_swaps=False, accelerators={"/GPU:0": 2})
-    if backend.supports_multigpu:
-        with pytest.raises(NotImplementedError):
-            c = _DistributedQFT(2, accelerators={"/GPU:0": 4})
+    with pytest.raises(NotImplementedError):
+        c = _DistributedQFT(2, accelerators={"/GPU:0": 4})

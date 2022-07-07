@@ -65,7 +65,7 @@ class StateEvolution:
         self.dt = dt
 
         disthamtypes = (SymbolicHamiltonian, BaseAdiabaticHamiltonian)
-        if accelerators is not None:
+        if accelerators is not None:  # pragma: no cover
             if not isinstance(ham, disthamtypes) or solver != "exp":
                 raise_error(NotImplementedError, "Distributed evolution is only "
                                                  "implemented using the Trotter "
@@ -92,12 +92,13 @@ class StateEvolution:
         if accelerators is None:
             return calculate_callbacks
 
-        def calculate_callbacks_distributed(state):
-            if not isinstance(state, self.backend.tensor_types):
-                state = state.state()
-            calculate_callbacks(state)
+        else:  # pragma: no cover
+            def calculate_callbacks_distributed(state):
+                if not isinstance(state, self.backend.tensor_types):
+                    state = state.state()
+                calculate_callbacks(state)
 
-        return calculate_callbacks_distributed
+            return calculate_callbacks_distributed
 
     def execute(self, final_time, start_time=0.0, initial_state=None):
         """Runs unitary evolution for a given total time.
@@ -234,7 +235,8 @@ class AdiabaticEvolution(StateEvolution):
         Returns a ``tf.Tensor``.
         """
         adiabatic_evolution.set_parameters(params)
-        initial_state = adiabatic_evolution.hamiltonian.h0.ground_state()
+        ham = adiabatic_evolution.hamiltonian
+        initial_state = ham.backend.cast(ham.h0.ground_state(), copy=True)
         final_state = super(AdiabaticEvolution, adiabatic_evolution).execute(params[-1], initial_state=initial_state)
         loss = h1.expectation(final_state, normalize=True)
         if opt_messages:

@@ -51,11 +51,7 @@ class HamiltonianTerm:
 
     def exp(self, x):
         """Matrix exponentiation of the term."""
-        from scipy.sparse import issparse
-        if issparse(x):
-            from scipy.sparse.linalg import expm
-        else:
-            from scipy.linalg import expm
+        from scipy.linalg import expm
         return expm(-1j * x * self.matrix)
 
     def expgate(self, x):

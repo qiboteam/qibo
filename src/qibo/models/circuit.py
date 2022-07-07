@@ -90,8 +90,6 @@ class _Queue(list):
 
 
 class Circuit:
-    # TODO: Update docstrings
-    # TODO: Implement accelerators.
     """Circuit object which holds a list of gates.
 
     This circuit is symbolic and cannot perform calculations.
@@ -147,7 +145,14 @@ class Circuit:
         self.repeated_execution = False
 
         self.density_matrix = density_matrix
+
+        # for distributed circuits
         self.accelerators = accelerators
+        self.ndevices = None
+        self.nglobal = None
+        self.nglobal = None
+        self.nlocal = None
+        self.queues = None
 
     def __add__(self, circuit):
         """Add circuits.
@@ -833,7 +838,7 @@ class Circuit:
         if not self.queue:
             raise_error(RuntimeError, "Cannot compile circuit without gates.")
         for gate in self.queue:
-            if isinstance(gate, gates.CallbackGate):
+            if isinstance(gate, gates.CallbackGate):  # pragma: no cover
                 raise_error(NotImplementedError, "Circuit compilation is not available with callbacks.")
         if backend is None:
             from qibo.backends import GlobalBackend
@@ -852,8 +857,8 @@ class Circuit:
         details.
         """
         if self.compiled:
-            state = self.compiled.executor(initial_state, nshots)
-            self._final_state = self.compiled.result(state, nshots)
+            state = self.compiled.executor(initial_state, nshots) # pylint: disable=E1101
+            self._final_state = self.compiled.result(state, nshots) # pylint: disable=E1101
             return self._final_state
         else:
             from qibo.backends import GlobalBackend
@@ -891,11 +896,8 @@ class Circuit:
 
             qubits = ",".join(f"q[{i}]" for i in gate.qubits)
             if gate.name in gates.PARAMETRIZED_GATES:
-                if isinstance(gate.parameters, collections.abc.Iterable):
-                    params = (str(x) for x in gate.parameters)
-                    name = "{}({})".format(gate.name, ", ".join(params))
-                else:
-                    name = f"{gate.name}({gate.parameters})"
+                params = (str(x) for x in gate.parameters)
+                name = "{}({})".format(gate.name, ", ".join(params))
             else:
                 name = gate.name
             code.append(f"{name} {qubits};")
@@ -1118,7 +1120,7 @@ class Circuit:
         idx = [0] * self.nqubits
 
         for gate in self.queue:
-            if gate.name not in labels:
+            if gate.name not in labels:  # pragma: no cover
                 raise_error(NotImplementedError, f"{gate.name} gate is not supported by `circuit.draw`")
             gate_name = labels.get(gate.name)
             if isinstance(gate, gates.CallbackGate):

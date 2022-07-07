@@ -17,12 +17,12 @@ class Channel(Gate):
         """"""
         raise_error(ValueError, "Noise channel cannot be controlled on qubits.")
 
-    def on_qubits(self, qubit_map): # pragma: no cover
+    def on_qubits(self, qubit_map):  # pragma: no cover
         # future TODO
         raise_error(NotImplementedError, "`on_qubits` method is not available "
                                          "for the `Channel` gate.")
 
-    def apply(self, backend, state, nqubits):
+    def apply(self, backend, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, f"{self.name} cannot be applied to state vector.")
 
     def apply_density_matrix(self, backend, state, nqubits):
