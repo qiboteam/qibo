@@ -241,7 +241,8 @@ class TensorflowBackend(NumpyBackend):
 
     def samples_to_binary(self, samples, nqubits):
         # redefining this because ``tnp.right_shift`` is not available
-        qrange = self.np.arange(nqubits - 1, -1, -1, dtype="int64")
+        qrange = self.np.arange(nqubits - 1, -1, -1, dtype="int32")
+        samples = self.tf.cast(samples, dtype="int32")
         samples = self.tf.bitwise.right_shift(samples[:, self.np.newaxis], qrange)
         return self.tf.math.mod(samples, 2)
 
@@ -305,9 +306,15 @@ class TensorflowBackend(NumpyBackend):
                 [4, 0, 0, 0, 0, 0, 0, 4, 4, 0]
             ]
         elif name == "test_probabilistic_measurement":
-            return {0: 271, 1: 239, 2: 242, 3: 248}
+            if "GPU" in self.device:  # pragma: no cover
+                return {0: 273, 1: 233, 2: 242, 3: 252}
+            else:
+                return {0: 271, 1: 239, 2: 242, 3: 248}
         elif name == "test_unbalanced_probabilistic_measurement":
-            return {0: 168, 1: 188, 2: 154, 3: 490}
+            if "GPU" in self.device:  # pragma: no cover
+                return {0: 196, 1: 153, 2: 156, 3: 495}
+            else:
+                return {0: 168, 1: 188, 2: 154, 3: 490}
         elif name == "test_post_measurement_bitflips_on_circuit":
             return [
                 {5: 30}, {5: 16, 7: 10, 6: 2, 3: 1, 4: 1},

@@ -368,9 +368,6 @@ class DistributedCircuit(Circuit):  # pragma: no cover
 
         self.queues = DistributedQueues(self)
 
-    def _set_nqubits(self, gate):
-        AbstractCircuit._set_nqubits(self, gate)
-
     def on_qubits(self, *q):
         if self.queues.queues:
             raise_error(RuntimeError, "Cannot use distributed circuit as a "
