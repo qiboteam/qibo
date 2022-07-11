@@ -57,7 +57,7 @@ def qaoa_function_of_layer(backend, layer):
     return sum(distance_matrix[max_key[i]][max_key[(i + 1) % m]] for i in range(m))
 
 
-@pytest.mark.parametrize("test_layer, expected", [(4, 1.0), (6, 1.0), (8, 1.9)])
+@pytest.mark.parametrize("test_layer, expected", [(4, 1.0), (6, 1.0), (8, 1.0)])
 def test_tsp(backend, test_layer, expected):
     tmp = qaoa_function_of_layer(backend, test_layer)
     assert abs(tmp - expected) <= 0.001
