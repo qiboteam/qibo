@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import numpy as np
-from qibo import K
-from qibo import hamiltonians, gates, models, K
+from qibo import hamiltonians, gates, models
 from scipy.optimize import minimize
 import argparse
 
@@ -18,7 +17,7 @@ def main(nqubits, layers, compress, lambdas, maxiter):
         Returns:
             Encoding Hamiltonian.
         """
-        m0 = K.to_numpy(hamiltonians.Z(ncompress).matrix)
+        m0 = hamiltonians.Z(ncompress).matrix
         m1 = np.eye(2 ** (nqubits - ncompress), dtype=m0.dtype)
         ham = hamiltonians.Hamiltonian(nqubits, np.kron(m1, m0))
         return 0.5 * (ham + ncompress)
@@ -50,13 +49,13 @@ def main(nqubits, layers, compress, lambdas, maxiter):
         circuit.set_parameters(params) # this will change all thetas to the appropriate values
         for i in range(len(ising_groundstates)):
             final_state = circuit(np.copy(ising_groundstates[i]))
-            cost += K.real(encoder.expectation(final_state))
+            cost += np.real(encoder.expectation(final_state.state()))
 
         if count[0] % 50 == 0:
             print(count[0], cost/len(ising_groundstates))
         count[0] += 1
 
-        return K.to_numpy(cost)/len(ising_groundstates)
+        return cost / len(ising_groundstates)
 
     nparams = 2 * nqubits * layers + nqubits
     initial_params = np.random.uniform(0, 2*np.pi, nparams)

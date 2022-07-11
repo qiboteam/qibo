@@ -1,287 +1,133 @@
 import os
-from qibo import config
-from qibo.config import raise_error, log
+from qibo.config import log, raise_error
+from qibo.backends.abstract import Backend
+from qibo.backends.numpy import NumpyBackend
+from qibo.backends.tensorflow import TensorflowBackend
+from qibo.backends.matrices import Matrices
 
 
-class Backend:
-
-    def __init__(self):
-        # load profile from default file
-        from pathlib import Path
-        profile_path = Path(os.environ.get(
-            'QIBO_PROFILE', Path(__file__).parent / "profiles.yml"))
-        try:
-            with open(profile_path) as f:
-                import yaml
-                self.profile = yaml.safe_load(f)
-        except FileNotFoundError:  # pragma: no cover
-            raise_error(FileNotFoundError, f"Profile file {profile_path} not found.")
-
-        # dictionary to cache if backends are available
-        # used by ``self.check_availability``
-        self._availability = {}
-
-        # create numpy backend (is always available as numpy is a requirement)
-        if self.check_availability("numpy", check_version=False):
-            from qibo.backends.numpy import NumpyBackend
-            self.qnp = NumpyBackend()
+def construct_backend(backend, platform=None):
+    if backend == "qibojit":
+        from qibojit.backends import CupyBackend, CuQuantumBackend, NumbaBackend
+        if platform == "cupy":  # pragma: no cover
+            return CupyBackend()
+        elif platform == "cuquantum":  # pragma: no cover
+            return CuQuantumBackend()
+        elif platform == "numba":
+            return NumbaBackend()
         else:  # pragma: no cover
-            raise_error(ModuleNotFoundError, "Numpy is not installed. "
-                                             "Please install it using "
-                                             "`pip install numpy`.")
+            try:
+                return CupyBackend()
+            except (ModuleNotFoundError, ImportError):
+                return NumbaBackend()
 
-        # loading backend names and version
-        self._backends_min_version = {backend.get("name"): backend.get("minimum_version") for backend in self.profile.get("backends")}
+    elif backend == "tensorflow":
+        return TensorflowBackend()
 
-        # find the default backend name
-        default_backend = os.environ.get('QIBO_BACKEND', self.profile.get('default'))
+    elif backend == "numpy":
+        return NumpyBackend()
 
-        # check if default backend is described in the profile file
-        if default_backend != "numpy":
+    else:  # pragma: no cover
+        raise_error(ValueError, f"Backend {backend} is not available.")
 
-            if default_backend not in (backend.get("name") for backend in self.profile.get("backends")): # pragma: no cover
-                raise_error(ModuleNotFoundError, f"Default backend {default_backend} not set in {profile_path}.")
 
-            # change the default backend if it is not available
-            if not self.check_availability(default_backend):  # pragma: no cover
-                # set the default backend to the first available declared backend in the profile file
-                # if none is available it falls back to numpy
-                for backend in self.profile.get('backends'):
-                    name = backend.get('name')
-                    if self.check_availability(name) and not backend.get('is_hardware'):
-                        # excluding hardware backends from default for development
-                        # convenience until proper hardware testing is implemented
-                        default_backend = name
-                        break
-                    # make numpy default if no other backend is available
-                    default_backend = "numpy"
+class GlobalBackend(NumpyBackend):
+    """The global backend will be used as default by ``circuit.execute()``."""
 
-        self.active_backend = None
-        self.constructed_backends = {"numpy": self.qnp}
-        self.hardware_backends = {}
-        # set default backend as active
-        self.active_backend = self.construct_backend(default_backend)
+    _instance = None
+    _dtypes = {"double": "complex128", "single": "complex64"}
+    _default_order = [
+        {"backend": "qibojit", "platform": "cupy"},
+        {"backend": "qibojit", "platform": "numba"},
+        {"backend": "tensorflow"},
+        {"backend": "numpy"}
+    ]
 
-        # raise performance warning if qibojit is not available
-        self.show_config()
-        if str(self) == "numpy":  # pragma: no cover
-            log.warning("numpy backend uses `np.einsum` and supports CPU only. "
-                        "Consider installing the qibojit backend for "
-                        "increased performance and to enable GPU acceleration.")
-        elif str(self) == "tensorflow":  # pragma: no cover
-            # case not tested because CI has tf installed
-            log.warning("tensorflow backend uses `tf.einsum` "
-                        "to apply gates. In order to install Qibo's "
-                        "high performance custom operators "
-                        "please use `pip install qibojit`.")
+    def __new__(cls):
+        if cls._instance is not None:
+            return cls._instance
 
-    @staticmethod
-    def _get_backend_class(backend):
-        """Loads class associated with the given backend.
-
-        Helper method for ``construct_backend``.
-
-        Args:
-            backend (dict): The backend dictionary as read from ``profiles.yml``.
-
-        Returns:
-            Class that is used to initialize the given backend.
-        """
-        import importlib
-        components = backend.get('driver').split('.')
-        module, clsname = '.'.join(components[:-1]), components[-1]
-        backend_module = importlib.import_module(module)
-        return getattr(backend_module, clsname)
-
-    def construct_backend(self, name):
-        """Constructs and returns a backend.
-
-        If the backend already exists in previously constructed backends then
-        the existing object is returned.
-
-        Args:
-            name (str): Name of the backend to construct.
-                See ``available_backends`` for the list of supported names.
-
-        Returns:
-            Backend object.
-        """
-        if name not in self.constructed_backends:
-            backend = None
-            if self.check_availability(name):
-                for backend in self.profile.get('backends'):
-                    if backend.get('name') == name:
-                        break
-            if backend is not None and backend.get('name') == name:
-                backend_instance = self._get_backend_class(backend)()
-                if self.active_backend is not None:
-                    backend_instance.set_precision(self.active_backend.precision)
-                self.constructed_backends[name] = backend_instance
-                if backend.get('is_hardware', False):  # pragma: no cover
-                    self.hardware_backends[name] = backend
-
-            else:
-                available = []
-                for backend in self.profile.get('backends'):
-                    n = backend.get('name')
-                    if self.check_availability(n):
-                        d = self._get_backend_class(backend).description
-                        available.append(f" - {n}: {d}")
-                available.append(f" - numpy: {self.qnp.description}")
-                available = "\n".join(available)
-                raise_error(ValueError, "Unknown backend {}. Please select one "
-                                        "of the available backends:\n{}"
-                                        "".format(name, available))
-
-        return self.constructed_backends.get(name)
-
-    def __getstate__(self):
-        return {
-            "profile": self.profile,
-            "_availability": self._availability,
-            "qnp": self.qnp,
-            "_backends_min_version": self._backends_min_version,
-            "constructed_backends": self.constructed_backends,
-            "hardware_backends": self.hardware_backends,
-            "active_backend": self.active_backend
-        }
-
-    def __setstate__(self, data):
-        self.profile = data.get("profile")
-        self._availability = data.get("_availability")
-        self.qnp = data.get("qnp")
-        self._backends_min_version = data.get("_backends_min_version")
-        self.constructed_backends = data.get("constructed_backends")
-        self.hardware_backends = data.get("hardware_backends")
-        self.active_backend = data.get("active_backend")
-
-    def __getattr__(self, x):
-        return getattr(self.active_backend, x)
-
-    def __str__(self):
-        backend = self.active_backend.name
-        if self.active_backend.platform is None:
-            return backend
+        backend = os.environ.get("QIBO_BACKEND")
+        if backend:  # pragma: no cover
+            # Create backend specified by user
+            platform = os.environ.get("QIBO_PLATFORM")
+            cls._instance = construct_backend(backend, platform)
         else:
-            return f"{backend} ({self.active_backend.platform.name})"
+            # Create backend according to default order
+            for kwargs in cls._default_order:
+                try:
+                    cls._instance = construct_backend(**kwargs)
+                    break
+                except (ModuleNotFoundError, ImportError):
+                    pass
 
-    def __repr__(self):
-        return str(self)
+        if cls._instance is None: # pragma: no cover
+            raise_error(RuntimeError, "No backends available.")
 
-    def show_config(self):
-        log.info(f"Using {self} backend on {self.active_backend.default_device}")
+        log.info(f"Using {cls._instance} backend on {cls._instance.device}")
+        return cls._instance
 
-    def check_availability(self, module_name, check_version=True):
-        """Check if module is installed.
-
-        Args:
-            module_name (str): module name.
-            check_version (str): check if module has the required minimum version.
-                A `ModuleNotFoundError` is raised if version is lower than minimum.
-
-        Returns:
-            ``True`` if the module is installed, ``False`` otherwise.
-        """
-        if module_name not in self._availability:
-            from pkgutil import iter_modules
-            is_available = module_name in (name for _, name, _ in iter_modules())
-            if is_available and check_version:
-                from importlib_metadata import version
-                from packaging.version import parse
-                minimum_version = self._backends_min_version.get(module_name, None)
-                if minimum_version is not None and (parse(version(module_name)) < parse(minimum_version)): # pragma: no cover
-                    raise_error(ModuleNotFoundError, f"Please upgrade {module_name}. "
-                                                     f"Minimum supported version {minimum_version}.")
-            self._availability[module_name] = is_available
-        return self._availability.get(module_name)
+    @classmethod
+    def set_backend(cls, backend, platform=None):  # pragma: no cover
+        if cls._instance is None or cls._instance.name != backend or cls._instance.platform != platform:
+            cls._instance = construct_backend(backend, platform)
+        log.info(f"Using {cls._instance} backend on {cls._instance.device}")
 
 
-K = Backend()
-numpy_matrices = K.qnp.matrices
+class QiboMatrices:
+
+    def __init__(self, dtype="complex128"):
+        self.create(dtype)
+
+    def create(self, dtype):
+        self.matrices = Matrices(dtype)
+        self.I = self.matrices.I(2)
+        self.X = self.matrices.X
+        self.Y = self.matrices.Y
+        self.Z = self.matrices.Z
 
 
-def set_backend(backend="qibojit", platform=None):
-    """Sets backend used for mathematical operations and applying gates.
-
-    The following backends are available:
-    'qibojit': Numba/cupy backend with custom operators for applying gates,
-    'tensorflow': Tensorflow backend that applies gates using ``tf.einsum``,
-    'numpy': Numpy backend that applies gates using ``np.einsum``.
-
-    Args:
-        backend (str): A backend from the above options.
-        platform (str): Optional platform specification for backends that
-            support this. For example, the 'qibojit' backend supports two
-            platforms ('cupy', 'cuquantum') when used with GPU.
-    """
-    if not config.ALLOW_SWITCHERS and backend != K.name:
-        log.warning("Backend should not be changed after allocating gates.")
-    K.active_backend = K.construct_backend(backend)
-    if platform is not None:
-        K.set_platform(platform)
-    K.show_config()
+matrices = QiboMatrices()
 
 
 def get_backend():
-    """Get backend used to implement gates.
-
-    Returns:
-        A string with the backend name.
-    """
-    return K.name
+    return str(GlobalBackend())
 
 
-def set_precision(dtype="double"):
-    """Set precision for states and gates simulation.
-
-    Args:
-        dtype (str): possible options are 'single' for single precision
-            (complex64) and 'double' for double precision (complex128).
-    """
-    if not config.ALLOW_SWITCHERS and dtype != K.precision:
-        log.warning("Precision should not be changed after allocating gates.")
-    for bk in K.constructed_backends.values():
-        bk.set_precision(dtype)
+def set_backend(backend, platform=None):
+    GlobalBackend.set_backend(backend, platform)
 
 
 def get_precision():
-    """Get precision for states and gates simulation.
-
-    Returns:
-        A string with the precision name ('single', 'double').
-    """
-    return K.precision
+    return GlobalBackend().precision
 
 
-def set_device(name):
-    """Set default execution device.
-
-    Args:
-        name (str): Device name. Should follow the pattern
-            '/{device type}:{device number}' where device type is one of
-            CPU or GPU.
-    """
-    if not config.ALLOW_SWITCHERS and name != K.default_device:
-        log.warning("Device should not be changed after allocating gates.")
-    K.set_device(name)
-    for bk in K.constructed_backends.values():
-        if bk.name != "numpy" and bk != K.active_backend:
-            bk.set_device(name)
+def set_precision(precision):
+    GlobalBackend().set_precision(precision)
+    matrices.create(GlobalBackend().dtype)
 
 
 def get_device():
-    return K.default_device
+    return GlobalBackend().device
 
 
-def set_threads(nthreads):
-    """Set number of CPU threads.
-
-    Args:
-        nthreads (int): number of threads.
-    """
-    K.set_threads(nthreads)
+def set_device(device):
+    parts = device[1:].split(":")
+    if device[0] != "/" or len(parts) < 2 or len(parts) > 3:
+        raise_error(ValueError, "Device name should follow the pattern: "
+                                "/{device type}:{device number}.")
+    backend = GlobalBackend()
+    backend.set_device(device)
+    log.info(f"Using {backend} backend on {backend.device}")
 
 
 def get_threads():
-    """Returns number of threads."""
-    return K.nthreads
+    return GlobalBackend().nthreads
+
+
+def set_threads(nthreads):
+    if not isinstance(nthreads, int):
+        raise_error(TypeError, "Number of threads must be integer.")
+    if nthreads < 1:
+        raise_error(ValueError, "Number of threads must be positive.")
+    GlobalBackend().set_threads(nthreads)

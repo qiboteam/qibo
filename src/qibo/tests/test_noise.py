@@ -1,14 +1,14 @@
 import numpy as np
 import pytest
-from qibo import K, gates
+from qibo import gates
 from qibo.models import Circuit
 from qibo.noise import *
 from qibo.tests.utils import random_density_matrix, random_state
 
+
 @pytest.mark.parametrize("density_matrix", [False, True])
 @pytest.mark.parametrize("nshots", [None, 10, 100])
 def test_pauli_error(backend, density_matrix, nshots):
-
     pauli = PauliError(0, 0.2, 0.3)
     noise = NoiseModel()
     noise.add(pauli, gates.X, 1)
@@ -36,24 +36,23 @@ def test_pauli_error(backend, density_matrix, nshots):
     target_circuit.add(gates.M(0, 1, 2))
 
     initial_psi = random_density_matrix(3) if density_matrix else random_state(3)
-    np.random.seed(123)
-    K.set_seed(123)
-    final_state = noise.apply(circuit)(initial_state=np.copy(initial_psi), nshots=nshots)
+    backend.set_seed(123)
+    final_state = backend.execute_circuit(noise.apply(circuit), initial_state=np.copy(initial_psi), nshots=nshots)
     final_state_samples = final_state.samples() if nshots else None
-    np.random.seed(123)
-    K.set_seed(123)
-    target_final_state = target_circuit(initial_state=np.copy(initial_psi), nshots=nshots)
+    backend.set_seed(123)
+    target_final_state = backend.execute_circuit(target_circuit, initial_state=np.copy(initial_psi), nshots=nshots)
     target_final_state_samples = target_final_state.samples() if nshots else None
 
     if nshots is None:
-        K.assert_allclose(final_state, target_final_state)
+        backend.assert_allclose(final_state, target_final_state)
     else:
-        K.assert_allclose(final_state_samples, target_final_state_samples)
+        backend.assert_allclose(final_state_samples, target_final_state_samples)
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
 def test_thermal_error(backend, density_matrix):
-
+    if not density_matrix:
+        pytest.skip("Reset error is not implemented for state vectors.")
     thermal = ThermalRelaxationError(2, 1, 0.3)
     noise = NoiseModel()
     noise.add(thermal, gates.X, 1)
@@ -79,19 +78,18 @@ def test_thermal_error(backend, density_matrix):
     target_circuit.add(gates.Z(2))
 
     initial_psi = random_density_matrix(3) if density_matrix else random_state(3)
-    np.random.seed(123)
-    K.set_seed(123)
-    final_state = noise.apply(circuit)(initial_state=np.copy(initial_psi))
-    np.random.seed(123)
-    K.set_seed(123)
-    target_final_state = target_circuit(initial_state=np.copy(initial_psi))
+    backend.set_seed(123)
+    final_state = backend.execute_circuit(noise.apply(circuit), np.copy(initial_psi))
+    backend.set_seed(123)
+    target_final_state = backend.execute_circuit(target_circuit, np.copy(initial_psi))
 
-    K.assert_allclose(final_state, target_final_state)
+    backend.assert_allclose(final_state, target_final_state)
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
 def test_reset_error(backend, density_matrix):
-
+    if not density_matrix:
+        pytest.skip("Reset error is not implemented for state vectors.")
     reset = ResetError(0.8, 0.2)
     noise = NoiseModel()
     noise.add(reset, gates.X, 1)
@@ -110,13 +108,9 @@ def test_reset_error(backend, density_matrix):
     target_circuit.add(gates.ResetChannel(1, 0.8, 0.2))
 
     initial_psi = random_density_matrix(3) if density_matrix else random_state(3)
-    np.random.seed(123)
-    K.set_seed(123)
-    final_state = noise.apply(circuit)(initial_state=np.copy(initial_psi))
-    np.random.seed(123)
-    K.set_seed(123)
-    target_final_state = target_circuit(initial_state=np.copy(initial_psi))
+    backend.set_seed(123)
+    final_state = backend.execute_circuit(noise.apply(circuit), np.copy(initial_psi))
+    backend.set_seed(123)
+    target_final_state = backend.execute_circuit(target_circuit, np.copy(initial_psi))
 
-    K.assert_allclose(final_state, target_final_state)
-
-
+    backend.assert_allclose(final_state, target_final_state)

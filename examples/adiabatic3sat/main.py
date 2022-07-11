@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import numpy as np
-from qibo import hamiltonians, models, callbacks, K
+from qibo import hamiltonians, models, callbacks
 import functions
 import argparse
 
@@ -36,8 +36,7 @@ def main(nqubits, instance, T, dt, solver, plot, dense, params,
     times = functions.times(nqubits, clauses)
     sh0 = functions.h_initial(nqubits, times)
     sh1 = functions.h_problem(nqubits, clauses)
-    gs = lambda: functions.ground_state(nqubits)
-    H0 = hamiltonians.SymbolicHamiltonian(sh0, ground_state=gs)
+    H0 = hamiltonians.SymbolicHamiltonian(sh0)
     H1 = hamiltonians.SymbolicHamiltonian(sh1)
     if dense:
         print('Using the full Hamiltonian evolution\n')
@@ -92,9 +91,9 @@ def main(nqubits, instance, T, dt, solver, plot, dense, params,
     # Perform evolution
     initial_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
     final_state = evolve(final_time=T, initial_state=initial_state)
-    output_dec = (np.abs(K.to_numpy(final_state))**2).argmax()
+    output_dec = (np.abs(final_state)**2).argmax()
     max_output = "{0:0{bits}b}".format(output_dec, bits = nqubits)
-    max_prob = (np.abs(K.to_numpy(final_state))**2).max()
+    max_prob = (np.abs(final_state)**2).max()
     print("Exact cover instance with {} qubits.\n".format(nqubits))
     if solution:
         print('Known solution: {}\n'.format(''.join(solution)))

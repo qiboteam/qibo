@@ -144,17 +144,22 @@ class Grover(object):
         c.add(gates.M(*range(self.sup_qubits)))
         return c
 
-    def iterative_grover(self, lamda_value=6/5):
+    def iterative_grover(self, lamda_value=6/5, backend=None):
         """Iterative approach of Grover for when the number of solutions is not known.
 
         Args:
             lamda_value (real): parameter that controls the evolution of the iterative method.
                                 Must be between 1 and 4/3.
+            backend (:class:`qibo.backends.abstract.Backend`): Backend to use for circuit execution.
 
         Returns:
             measured (str): bitstring measured and checked as a valid solution.
             total_iterations (int): number of times the oracle has been called.
         """
+        if backend is None:  # pragma: no cover
+            from qibo.backends import GlobalBackend
+            backend = GlobalBackend()
+
         k = 1
         lamda = lamda_value
         total_iterations = 0
@@ -163,7 +168,7 @@ class Grover(object):
             if it != 0:
                 total_iterations += it
                 circuit = self.circuit(it)
-                result = circuit(nshots=1)
+                result = backend.execute_circuit(circuit, nshots=1)
                 measured = result.frequencies(binary=True).most_common(1)[0][0]
                 if self.check(measured, *self.check_args):
                     return measured, total_iterations
@@ -172,7 +177,7 @@ class Grover(object):
                 log.warning("Too many total iterations, output might not be solution.")
                 return measured, total_iterations
 
-    def execute(self, nshots=100, freq=False, logs=False):
+    def execute(self, nshots=100, freq=False, logs=False, backend=None):
         """Execute Grover's algorithm.
 
         If the number of solutions is given, calculates iterations,
@@ -181,18 +186,24 @@ class Grover(object):
         Args:
             nshots (int): number of shots in order to get the frequencies.
             freq (bool): print the full frequencies after the exact Grover algorithm.
+            backend (:class:`qibo.backends.abstract.Backend`): Backend to use for circuit execution.
 
         Returns:
             solution (str): bitstring (or list of bitstrings) measured as solution of the search.
             iterations (int): number of oracle calls done to reach a solution.
         """
+        if backend is None:  # pragma: no cover
+            from qibo.backends import GlobalBackend
+            backend = GlobalBackend()
+
         if (self.num_sol or self.targ_a) and not self.iterative:
             if self.targ_a:
                 it = int(np.pi * (1/self.targ_a) / 4)
             else:
                 it = int(np.pi * np.sqrt(self.sup_size / self.num_sol) / 4)
             circuit = self.circuit(it)
-            result = circuit(nshots=nshots).frequencies(binary=True)
+            result = backend.execute_circuit(circuit, nshots=nshots)
+            result = result.frequencies(binary=True)
             if freq:
                 if logs:
                     log.info("Result of sampling Grover's algorihm")
@@ -219,7 +230,7 @@ class Grover(object):
         else:
             if not self.check:
                 raise_error(ValueError, "Check function needed for iterative approach.")
-            measured, total_iterations = self.iterative_grover()
+            measured, total_iterations = self.iterative_grover(backend=backend)
             if logs:
                 log.info('Solution found in an iterative process.')
                 log.info(f'Solution: {measured}')
@@ -229,6 +240,6 @@ class Grover(object):
         return self.solution, self.iterations
 
 
-    def __call__(self, nshots=100, freq=False, logs=False):
+    def __call__(self, nshots=100, freq=False, logs=False, backend=None):
         """Equivalent to :meth:`qibo.models.grover.Grover.execute`."""
-        return self.execute(nshots=nshots, freq=freq, logs=logs)
+        return self.execute(nshots=nshots, freq=freq, logs=logs, backend=backend)

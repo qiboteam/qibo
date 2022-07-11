@@ -1,12 +1,13 @@
 import sympy
-from qibo import gates, matrices, K
+import numpy as np
+from qibo import gates, matrices
 from qibo.config import raise_error
 
 
 class Symbol(sympy.Symbol):
     """Qibo specialization for ``sympy`` symbols.
 
-    These symbols can be used to create :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+    These symbols can be used to create :class:`qibo.hamiltonians.hamiltonians.SymbolicHamiltonian`.
     See :ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>`
     for more details.
 
@@ -41,8 +42,10 @@ class Symbol(sympy.Symbol):
     def __init__(self, q, matrix=None, name="Symbol", commutative=False):
         self.target_qubit = q
         self._gate = None
-        if not (matrix is None or isinstance(matrix, K.qnp.numeric_types) or
-                isinstance(matrix, K.qnp.tensor_types)):
+        if not (matrix is None or isinstance(matrix, np.ndarray) or
+              isinstance(matrix, (np.int, np.float, np.complex, np.int32,
+                                  np.int64, np.float32, np.float64,
+                                  np.complex64, np.complex128))):
             raise_error(TypeError, "Invalid type {} of symbol matrix."
                                    "".format(type(matrix)))
         self.matrix = matrix
@@ -54,7 +57,7 @@ class Symbol(sympy.Symbol):
             self._gate = self.calculate_gate()
         return self._gate
 
-    def calculate_gate(self):
+    def calculate_gate(self):  # pragma: no cover
         return gates.Unitary(self.matrix, self.target_qubit)
 
     def full_matrix(self, nqubits):
@@ -67,7 +70,7 @@ class Symbol(sympy.Symbol):
             Matrix of dimension (2^nqubits, 2^nqubits) composed of the Kronecker
             product between identities and the symbol's single-qubit matrix.
         """
-        from qibo.hamiltonians import multikron
+        from qibo.hamiltonians.models import multikron
         matrix_list = self.target_qubit * [matrices.I]
         matrix_list.append(self.matrix)
         n = nqubits - self.target_qubit - 1

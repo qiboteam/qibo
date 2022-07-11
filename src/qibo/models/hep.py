@@ -1,5 +1,6 @@
-from qibo import gates, K
-from qibo.hamiltonians import Hamiltonian, matrices
+import numpy as np
+from qibo import gates, matrices
+from qibo.hamiltonians import Hamiltonian
 from qibo.models.circuit import Circuit
 from qibo.config import raise_error
 
@@ -12,8 +13,11 @@ class qPDF:
         layers (int): the number of layers for the ansatz.
         nqubits (int): the number of qubits for the circuit.
         multi_output (bool): allocates a multi-output model per PDF flavour (default is False).
+        backend (:class:`qibo.backends.abstract.Backend`): Backend object to use for execution.
+            If ``None`` the currently active global backend is used.
+            Default is ``None``.
     """
-    def __init__(self, ansatz, layers, nqubits, multi_output=False):
+    def __init__(self, ansatz, layers, nqubits, multi_output=False, backend=None):
         """Initialize qPDF."""
         if not isinstance(layers, int) or layers < 1: # pragma: no cover
             raise_error(RuntimeError, "Layers must be positive and integer.")
@@ -33,12 +37,19 @@ class qPDF:
         # load ansatz
         self.circuit, self.rotation, self.nparams = ansatz_function(layers, nqubits)
 
+        # load backend
+        if backend is None:  # pragma: no cover
+            from qibo.backends import GlobalBackend
+            self.backend = GlobalBackend()
+        else:
+            self.backend = backend
+
         # load hamiltonian
         if multi_output:
             self.hamiltonian = [qpdf_hamiltonian(
-                nqubits, z_qubit=q) for q in range(nqubits)]
+                nqubits, z_qubit=q, backend=self.backend) for q in range(nqubits)]
         else:
-            self.hamiltonian = [qpdf_hamiltonian(nqubits)]
+            self.hamiltonian = [qpdf_hamiltonian(nqubits, backend=self.backend)]
 
     def _model(self, state, hamiltonian):
         """Internal function for the evaluation of PDFs.
@@ -67,22 +78,26 @@ class qPDF:
         if len(parameters) != self.nparams: # pragma: no cover
             raise_error(
                 RuntimeError, 'Mismatch between number of parameters and model size.')
-        pdf = K.qnp.zeros(shape=(len(x), len(self.hamiltonian)), dtype='DTYPE')
+        pdf = np.zeros(shape=(len(x), len(self.hamiltonian)))
         for i, x_value in enumerate(x):
             params = self.rotation(parameters, x_value)
             self.circuit.set_parameters(params)
-            state = self.circuit()
+            result = self.backend.execute_circuit(self.circuit)
+            state = result.state()
             for flavour, flavour_hamiltonian in enumerate(self.hamiltonian):
                 pdf[i, flavour] = self._model(state, flavour_hamiltonian)
         return pdf
 
 
-def qpdf_hamiltonian(nqubits, z_qubit=0):
+def qpdf_hamiltonian(nqubits, z_qubit=0, backend=None):
     """Precomputes Hamiltonian.
 
     Args:
         nqubits (int): number of qubits.
         z_qubit (int): qubit where the Z measurement is applied, must be z_qubit < nqubits
+        backend (:class:`qibo.backends.abstract.Backend`): Backend object to use for execution.
+            If ``None`` the currently active global backend is used.
+            Default is ``None``.
 
     Returns:
         An Hamiltonian object.
@@ -91,31 +106,31 @@ def qpdf_hamiltonian(nqubits, z_qubit=0):
     if z_qubit == 0:
         h = matrices.Z
         for _ in range(nqubits - 1):
-            h = K.np.kron(eye, h)
+            h = np.kron(eye, h)
 
     elif z_qubit == nqubits - 1:
         h = eye
         for _ in range(nqubits - 2):
-            h = K.np.kron(eye, h)
-        h = K.np.kron(matrices.Z, h)
+            h = np.kron(eye, h)
+        h = np.kron(matrices.Z, h)
     else:
         h = eye
         for _ in range(nqubits - 1):
             if _ + 1 == z_qubit:
-                h = K.np.kron(matrices.Z, h)
+                h = np.kron(matrices.Z, h)
             else:
-                h = K.np.kron(eye, h)
-    return Hamiltonian(nqubits, h)
+                h = np.kron(eye, h)
+    return Hamiltonian(nqubits, h, backend=backend)
 
 
 def map_to(x):
     """Auxiliary function"""
-    return 2 * K.np.pi * x
+    return 2 * np.pi * x
 
 
 def maplog_to(x):
     """Auxiliary function"""
-    return - K.np.pi * K.np.log10(x)
+    return - np.pi * np.log10(x)
 
 
 def ansatz_Fourier(layers, qubits=1):
@@ -188,7 +203,7 @@ def ansatz_Fourier(layers, qubits=1):
         return p
 
     nparams = 4 * layers * qubits + \
-        (layers - 1) * int(K.np.ceil(qubits / 2)) * \
+        (layers - 1) * int(np.ceil(qubits / 2)) * \
         (int(qubits > 1) + int(qubits > 2))
 
     return circuit, rotation, nparams
@@ -252,6 +267,6 @@ def ansatz_Weighted(layers, qubits=1):
         return p
 
     nparams = 4 * layers * qubits + \
-        (layers - 1) * int(K.np.ceil(qubits / 2)) * \
+        (layers - 1) * int(np.ceil(qubits / 2)) * \
         (int(qubits > 1) + int(qubits > 2))
     return circuit, rotation, nparams

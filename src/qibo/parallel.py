@@ -3,80 +3,7 @@ Resources for parallel circuit evaluation.
 """
 
 
-class ParallelResources:  # pragma: no cover
-    """Auxiliary singleton class for sharing memory objects in a
-    multiprocessing environment when performing a parallel evaluations.
-
-    This class takes care of duplicating resources for each process
-    and calling the respective loss function.
-    """
-    import sys
-    import multiprocessing as mp
-
-    # private objects holding the state
-    _instance = None
-    # dict with of shared objects
-    _objects_per_process = {}
-    custom_function = None
-    lock = None
-    arguments = ()
-
-    def __new__(cls, *args, **kwargs):
-        """Creates singleton instance."""
-        if cls._instance is None:
-            cls._instance = super(ParallelResources, cls).__new__(
-                cls, *args, **kwargs)
-            if cls.sys.platform == 'win32' or cls.sys.platform == 'darwin': # pragma: no cover
-                from qibo.config import raise_error
-                raise_error(NotImplementedError,
-                    "Parallel evaluation supported only on linux.")
-        return cls._instance
-
-    def run(self, params=None):
-        """Evaluates the custom_function object for a specific set of
-        parameters. This class performs the lock mechanism to duplicate objects
-        for each process.
-        """
-        # lock to avoid race conditions
-        self.lock.acquire()
-        # get process name
-        pname = self.mp.current_process().name
-        # check if there are objects already stored
-        args = self._objects_per_process.get(pname, None)
-        if args is None:
-            args = []
-            for obj in self.arguments:
-                try:
-                    # copy object if copy method is available
-                    copy = obj.copy(deep=True)
-                except (TypeError, AttributeError):
-                    # if copy is not implemented just use the original object
-                    copy = obj
-                except Exception as e:
-                    # use print otherwise the message will not appear # CodeText:skip
-                    print('Exception in ParallelResources', str(e)) # CodeText:skip
-                args.append(copy)
-            args = tuple(args)
-            self._objects_per_process[pname] = args
-        # unlock
-        self.lock.release()
-        # finally compute the custom function
-        return self.custom_function(params, *args)
-
-    def reset(self):
-        """Cleanup memory."""
-        self._objects_per_process = {}
-        self.custom_function = None
-        self.lock = None
-        self.arguments = ()
-
-
-def _executor(params): # pragma: no cover
-    """Executes singleton call."""
-    return ParallelResources().run(params)
-
-
-def parallel_execution(circuit, states, processes=None):  # pragma: no cover
+def parallel_execution(circuit, states, processes=None, backend=None):
     """Execute circuit for multiple states.
 
     Example:
@@ -107,28 +34,25 @@ def parallel_execution(circuit, states, processes=None):  # pragma: no cover
     Returns:
         Circuit evaluation for input states.
     """
+    if backend is None:  # pragma: no cover
+        from qibo.backends import GlobalBackend
+        backend = GlobalBackend()
+
     if states is None or not isinstance(states, list):  # pragma: no cover
         from qibo.config import raise_error
         raise_error(RuntimeError, "states must be a list.")
 
-    _check_parallel_configuration(processes)
+    def operation(state, circuit):
+        return backend.execute_circuit(circuit, state)
 
-    def operation(state, circuit): # pragma: no cover
-        return circuit(state)
+    from joblib import Parallel, delayed
+    results = Parallel(n_jobs=processes, prefer='threads')(
+        delayed(operation)(state, circuit) for state in states)
 
-    ParallelResources().arguments = (circuit,)
-    ParallelResources().custom_function = operation
-
-    import multiprocessing as mp
-    ParallelResources().lock = mp.Lock()
-    with mp.Pool(processes=processes) as pool:
-        results = pool.map(_executor, states)
-
-    ParallelResources().reset()
     return results
 
 
-def parallel_parametrized_execution(circuit, parameters, initial_state=None, processes=None):  # pragma: no cover
+def parallel_parametrized_execution(circuit, parameters, initial_state=None, processes=None, backend=None):
     """Execute circuit for multiple parameters and fixed initial_state.
 
     Example:
@@ -169,41 +93,22 @@ def parallel_parametrized_execution(circuit, parameters, initial_state=None, pro
     Returns:
         Circuit evaluation for input parameters.
     """
+    if backend is None:  # pragma: no cover
+        from qibo.backends import GlobalBackend
+        backend = GlobalBackend()
+
     if not isinstance(parameters, list):  # pragma: no cover
         from qibo.config import raise_error
         raise_error(RuntimeError, "parameters must be a list.")
 
-    _check_parallel_configuration(processes)
-
-    def operation(params, circuit, state): # pragma: no cover
+    def operation(params, circuit, state):
+        if state is not None:
+            state = backend.cast(state, copy=True)
         circuit.set_parameters(params)
-        return circuit(state)
+        return backend.execute_circuit(circuit, state)
 
-    ParallelResources().arguments = (circuit, initial_state)
-    ParallelResources().custom_function = operation
+    from joblib import Parallel, delayed
+    results = Parallel(n_jobs=processes, prefer='threads')(
+        delayed(operation)(param, circuit.copy(deep=True), initial_state) for param in parameters)
 
-    import multiprocessing as mp
-    ParallelResources().lock = mp.Lock()
-    with mp.Pool(processes=processes) as pool:
-        results = pool.map(_executor, parameters)
-
-    ParallelResources().reset()
     return results
-
-
-def _check_parallel_configuration(processes):  # pragma: no cover
-    """Check if configuration is suitable for efficient parallel execution."""
-    import sys, psutil
-    from qibo import get_device, get_backend, get_threads
-    from qibo.config import raise_error, log
-    device = get_device()
-    if sys.platform == "win32" or sys.platform == 'darwin':  # pragma: no cover
-        raise_error(RuntimeError, "Parallel evaluations supported only on linux.")
-    if get_backend() == "tensorflow":  # pragma: no cover
-        raise_error(RuntimeError, f"{get_backend()} backend does not support parallel evaluations.")
-    if device is not None and "GPU" in device:  # pragma: no cover
-        raise_error(RuntimeError, "Parallel evaluations cannot be used with GPU.")
-    if ((processes is not None and processes * get_threads() > psutil.cpu_count()) or
-            (processes is None and get_threads() != 1)):  # pragma: no cover
-        log.warning('Please consider using a lower number of threads per process,'
-                    ' or reduce the number of processes for better performance')

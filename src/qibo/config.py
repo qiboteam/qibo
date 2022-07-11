@@ -22,17 +22,13 @@ EINSUM_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 EIGVAL_CUTOFF = 1e-14
 
 # Tolerance for the probability sum check in the unitary channel
-PRECISION_TOL_SINGLE = 1e-8
-PRECISION_TOL_DOUBLE = 1e-12
+PRECISION_TOL = 1e-8
 
 # Batch size for sampling shots in measurement frequencies calculation
 SHOT_BATCH_SIZE = 2 ** 18
 
 # Threshold size for sampling shots in measurements frequencies with custom operator
 SHOT_METROPOLIS_THRESHOLD = 100000
-
-# Flag for raising warning in ``set_precision`` and ``set_backend``
-ALLOW_SWITCHERS = True
 
 
 def raise_error(exception, message=None, args=None):
