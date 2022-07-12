@@ -28,7 +28,7 @@ def construct_backend(backend, platform=None, runcard=None):
         return NumpyBackend()
 
     elif backend == "qibolab":  # pragma: no cover
-        from qibolab.backends import QibolabBackend
+        from qibolab.backends import QibolabBackend # pylint: disable=E0401
         return QibolabBackend(platform, runcard)
 
     else:  # pragma: no cover
