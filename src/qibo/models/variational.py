@@ -359,7 +359,7 @@ class QAOA(object):
         """Equivalent to :meth:`qibo.models.QAOA.execute`."""
         return self.execute(initial_state)
 
-    def minimize(self, initial_p, initial_state=None, method='Powell',
+    def minimize(self, initial_p, initial_state=None, method='Powell', loss=None,
                  jac=None, hess=None, hessp=None, bounds=None, constraints=(),
                  tol=None, callback=None, options=None, compile=False, processes=None):
         """Optimizes the variational parameters of the QAOA.
@@ -370,6 +370,7 @@ class QAOA(object):
             method (str): the desired minimization method.
                 See :meth:`qibo.optimizers.optimize` for available optimization
                 methods.
+            loss (str): Name of customized loss function
             jac (dict): Method for computing the gradient vector for scipy optimizers.
             hess (dict): Method for computing the hessian matrix for scipy optimizers.
             hessp (callable): Hessian of objective function times an arbitrary
@@ -398,7 +399,12 @@ class QAOA(object):
         def _loss(params, qaoa, hamiltonian):
             qaoa.set_parameters(params)
             state = qaoa(initial_state)
-            return hamiltonian.expectation(state)
+            if loss is None:
+                return hamiltonian.expectation(state)
+            elif loss == "cvar":
+                return hamiltonian.cvar(state)
+            elif loss == "gibbs":
+                return hamiltonian.gibbs(state)
 
         if method == "sgd":
             loss = lambda p, c, h: _loss(self.hamiltonian.backend.cast(p), c, h)
