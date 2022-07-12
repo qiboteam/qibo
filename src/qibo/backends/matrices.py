@@ -230,9 +230,6 @@ class Matrices:
     def Unitary(self, u):
         return self.np.array(u, dtype=self.dtype, copy=False)
 
-    def VariationalLayer(self, *args):  # pragma: no cover
-        raise_error(NotImplementedError)
-
     def CallbackGate(self):  # pragma: no cover
         raise_error(NotImplementedError)
 

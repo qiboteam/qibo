@@ -186,59 +186,6 @@ def test_set_parameters_with_gate_fusion(backend, trainable):
     backend.assert_circuitclose(fused_c, c)
 
 
-@pytest.mark.parametrize("nqubits", [4, 5])
-def test_set_parameters_with_variationallayer(backend, nqubits):
-    """Check updating parameters of variational layer."""
-    theta = np.random.random(nqubits)
-    c = Circuit(nqubits)
-    pairs = [(i, i + 1) for i in range(0, nqubits - 1, 2)]
-    c.add(gates.VariationalLayer(range(nqubits), pairs,
-                                 gates.RY, gates.CZ, theta))
-
-    target_c = Circuit(nqubits)
-    target_c.add((gates.RY(i, theta[i]) for i in range(nqubits)))
-    target_c.add((gates.CZ(i, i + 1) for i in range(0, nqubits - 1, 2)))
-    backend.assert_circuitclose(c, target_c)
-
-    # Test setting VariationalLayer using a list
-    new_theta = np.random.random(nqubits)
-    c.set_parameters(np.copy(new_theta))
-    target_c.set_parameters(np.copy(new_theta))
-    backend.assert_circuitclose(c, target_c)
-
-    # Test setting VariationalLayer using an array
-    new_theta = np.random.random(nqubits)
-    c.set_parameters(np.copy(new_theta))
-    target_c.set_parameters(np.copy(new_theta))
-    backend.assert_circuitclose(c, target_c)
-
-
-@pytest.mark.parametrize("nqubits", [4, 5])
-def test_set_parameters_with_double_variationallayer(backend, nqubits):
-    """Check updating parameters of variational layer."""
-    theta = np.random.random((3, nqubits))
-    c = Circuit(nqubits)
-    pairs = [(i, i + 1) for i in range(0, nqubits - 1, 2)]
-    c.add(gates.VariationalLayer(range(nqubits), pairs,
-                                 gates.RY, gates.CZ,
-                                 theta[0], theta[1],
-                                 trainable=False))
-    c.add((gates.RX(i, theta[2, i]) for i in range(nqubits)))
-
-    target_c = Circuit(nqubits)
-    target_c.add((gates.RY(i, theta[0, i]) for i in range(nqubits)))
-    target_c.add((gates.CZ(i, i + 1) for i in range(0, nqubits - 1, 2)))
-    target_c.add((gates.RY(i, theta[1, i]) for i in range(nqubits)))
-    target_c.add((gates.RX(i, theta[2, i]) for i in range(nqubits)))
-    backend.assert_circuitclose(c, target_c)
-
-    new_theta = np.random.random(3 * nqubits)
-    c.set_parameters(np.copy(new_theta[2 * nqubits:]))
-    new_theta[:2 * nqubits] = theta[:2].ravel()
-    target_c.set_parameters(np.copy(new_theta))
-    backend.assert_circuitclose(c, target_c)
-
-
 def test_variable_theta():
     """Check that parametrized gates accept `tf.Variable` parameters."""
     try:

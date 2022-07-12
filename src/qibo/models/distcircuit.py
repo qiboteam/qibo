@@ -397,8 +397,7 @@ class DistributedCircuit(Circuit):  # pragma: no cover
             if isinstance(gate, gates.KrausChannel):
                 raise_error(NotImplementedError, "Distributed circuits do not "
                                                 "support channels.")
-            elif (self.nqubits - len(gate.target_qubits) < self.nglobal and
-                not isinstance(gate, (gates.M, gates.VariationalLayer))):
+            elif self.nqubits - len(gate.target_qubits) < self.nglobal and not isinstance(gate, gates.M):
                 # Check if there is sufficient number of local qubits
                 raise_error(ValueError, "Insufficient qubits to use for global in "
                                         "distributed circuit.")
