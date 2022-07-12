@@ -79,9 +79,7 @@ class QuantumCNN():
         c.add(gates.RZ(bit,symbols[2]))
         
         return c
-    '''
-    #to define gate: XX, YY, ZZ
-    '''
+
     
     def two_qubit_unitary(self, bits, symbols):
         """Make a circuit that creates an arbitrary two qubit unitary."""
@@ -89,15 +87,18 @@ class QuantumCNN():
         c.add(one_qubit_unitary(bits[0], symbols[0:3]))
         c.add(one_qubit_unitary(bits[1], symbols[3:6]))
         #to improve: to define new gates of XX YY and ZZ outside.
-        matrixXX = K.np.kron(matrices.X,matrices.X)
+        '''matrixXX = K.np.kron(matrices.X,matrices.X)
         matrixYY = K.np.kron(matrices.Y,matrices.Y)
-        matrixZZ = K.np.kron(matrices.Z,matrices.Z)
+        matrixZZ = K.np.kron(matrices.Z,matrices.Z)'''
         '''gates.Unitary(matrixXX, 0, 1,name="XX")
         gates.Unitary(matrixYY, 0, 1,name="YY")
         gates.Unitary(matrixZZ, 0, 1,name="ZZ")'''
-        c.add(symbols[6]*gates.Unitary(matrixZZ, 0, 1))
+        '''c.add(symbols[6]*gates.Unitary(matrixZZ, 0, 1))
         c.add(symbols[7]*gates.Unitary(matrixYY, 0, 1))
-        c.add(symbols[8]*gates.Unitary(matrixXX, 0, 1))
+        c.add(symbols[8]*gates.Unitary(matrixXX, 0, 1))'''
+        c.add(gates.RZZ(0,1,symbols[6]))
+        c.add(gates.RYY(0,1,symbols[7]))
+        c.add(gates.RXX(0,1,symbols[8]))
         
         c.add(one_qubit_unitary(bits[0], symbols[9:12]))
         c.add(one_qubit_unitary(bits[1], symbols[12:]))
