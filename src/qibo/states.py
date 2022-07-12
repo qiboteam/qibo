@@ -80,19 +80,10 @@ class CircuitResult:
     def probabilities(self, qubits=None):
         """Calculates measurement probabilities by tracing out qubits.
 
-        Exactly one of the following arguments should be given.
-
         Args:
             qubits (list, set): Set of qubits that are measured.
         """
-        if qubits is None:  # pragma: no cover
-            qubits = self.circuit.measurement_gate.qubits
-
-        state = self.backend.circuit_result_tensor(self)
-        if self.density_matrix:
-            return self.backend.calculate_probabilities_density_matrix(state, qubits, self.nqubits)
-        else:
-            return self.backend.calculate_probabilities(state, qubits, self.nqubits)
+        return self.backend.circuit_result_probabilities(self, qubits)
 
     def samples(self, binary=True, registers=False):
         """Returns raw measurement samples.

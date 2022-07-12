@@ -204,6 +204,17 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
+    def circuit_result_probabilities(self, result, qubits=None):  # pragma: no cover
+        """Calculates measurement probabilities by tracing out qubits.
+
+        Args:
+            result (:class:`qibo.states.CircuitResult`): Result object that contains
+                the data required to represent the state.
+            qubits (list, set): Set of qubits that are measured.
+        """
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
     def calculate_symbolic(self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20): # pragma: no cover
         """Dirac representation of a state vector."""
         raise_error(NotImplementedError)

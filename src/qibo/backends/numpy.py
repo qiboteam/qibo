@@ -395,6 +395,16 @@ class NumpyBackend(Backend):
     def circuit_result_tensor(self, result):
         return result.execution_result
 
+    def circuit_result_probabilities(self, result, qubits=None):
+        if qubits is None:  # pragma: no cover
+            qubits = result.circuit.measurement_gate.qubits
+
+        state = self.circuit_result_tensor(result)
+        if result.density_matrix:
+            return self.calculate_probabilities_density_matrix(state, qubits, result.nqubits)
+        else:
+            return self.calculate_probabilities(state, qubits, result.nqubits)
+
     def calculate_symbolic(self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20):
         state = self.to_numpy(state)
         terms = []
