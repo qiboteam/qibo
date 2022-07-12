@@ -117,7 +117,7 @@ class QuantumCNN():
         pool_circuit.add(gates.CNOT(source_qubit, sink_qubit))
         #pool_circuit.add(sink_basis_selector**-1) 
         #question: how to replace sink_basis_selector**-1
-        #pool_circuit.add(gates.RX(sink_basis_selector,-1))
+        pool_circuit=pool_circuit.invert()
         
         return pool_circuit
 
