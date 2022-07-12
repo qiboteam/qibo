@@ -40,7 +40,7 @@ class CircuitResult:
             basis, otherwise a string with the Dirac representation of the state
             in the computational basis.
         """
-        tensor = self.backend.get_state_tensor(self)
+        tensor = self.backend.circuit_result_tensor(self)
         if decimals >= 0:
             return self.symbolic(decimals, cutoff, max_terms)
         if numpy:
@@ -63,7 +63,7 @@ class CircuitResult:
         Returns:
             A string representing the state in the computational basis.
         """
-        state = self.backend.get_state_tensor(self)
+        state = self.backend.circuit_result_tensor(self)
         if self.density_matrix:
             terms = self.backend.calculate_symbolic_density_matrix(state, self.nqubits, decimals, cutoff, max_terms)
         else:
@@ -71,7 +71,7 @@ class CircuitResult:
         return " + ".join(terms)
 
     def __repr__(self):
-        return self.backend.get_state_repr(self)
+        return self.backend.circuit_result_representation(self)
 
     def __array__(self):
         """State's tensor representation as an array."""
@@ -88,7 +88,7 @@ class CircuitResult:
         if qubits is None:  # pragma: no cover
             qubits = self.circuit.measurement_gate.qubits
 
-        state = self.backend.get_state_tensor(self)
+        state = self.backend.circuit_result_tensor(self)
         if self.density_matrix:
             return self.backend.calculate_probabilities_density_matrix(state, qubits, self.nqubits)
         else:

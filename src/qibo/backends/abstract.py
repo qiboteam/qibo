@@ -184,7 +184,7 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def get_state_repr(self, result): # pragma: no cover
+    def circuit_result_representation(self, result): # pragma: no cover
         """Represent a quantum state based on circuit execution results.
 
         Args:
@@ -194,7 +194,7 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def get_state_tensor(self, result): # pragma: no cover
+    def circuit_result_tensor(self, result): # pragma: no cover
         """State vector or density matrix representing a quantum state as an array.
 
         Args:

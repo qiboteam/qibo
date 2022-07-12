@@ -389,10 +389,10 @@ class NumpyBackend(Backend):
     def execute_distributed_circuit(self, circuit, initial_state=None, nshots=None, return_array=False):
         raise_error(NotImplementedError, f"{self} does not support distributed execution.")
 
-    def get_state_repr(self, result):
+    def circuit_result_representation(self, result):
         return result.symbolic()
 
-    def get_state_tensor(self, result):
+    def circuit_result_tensor(self, result):
         return result.execution_result
 
     def calculate_symbolic(self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20):
