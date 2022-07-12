@@ -96,12 +96,6 @@ class FusedGate(SpecialGate):
             return False
         return True
 
-    def on_qubits(self, qubit_map):
-        fgate = self.__class__()
-        for gate in self:
-            fgate.append(gate.on_qubits(qubit_map))
-        return fgate
-
     def asmatrix(self, backend):
         return backend.asmatrix_fused(self)
 
