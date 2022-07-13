@@ -157,4 +157,4 @@ class TSP:
         for i in range(len(ordering)):
             c.add(gates.X(int(self.two_to_one[ordering[i], i])))
         result = self.backend.execute_circuit(c)
-        return result.state(numpy=True)
+        return result.state()
