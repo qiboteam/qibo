@@ -36,5 +36,5 @@ def qaoa_function_of_layer(backend, layer):
 @pytest.mark.parametrize("test_layer, expected", [(4, 1.0), (6, 1.0), (8, 1.0)])
 def test_tsp(backend, test_layer, expected):
     final_state = backend.to_numpy(qaoa_function_of_layer(backend, test_layer))
-    assert_regression_fixture(backend, final_state.real, f"tsp_layer{test_layer}_real.out", atol=1e-6)
-    assert_regression_fixture(backend, final_state.imag, f"tsp_layer{test_layer}_imag.out", atol=1e-6)
+    assert_regression_fixture(backend, final_state.real, f"tsp_layer{test_layer}_real.out", rtol=1e-3)
+    assert_regression_fixture(backend, final_state.imag, f"tsp_layer{test_layer}_imag.out", rtol=1e-3)
