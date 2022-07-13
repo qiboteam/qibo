@@ -6,7 +6,7 @@ from qibo.backends.tensorflow import TensorflowBackend
 from qibo.backends.matrices import Matrices
 
 
-def construct_backend(backend, platform=None):
+def construct_backend(backend, platform=None, runcard=None):
     if backend == "qibojit":
         from qibojit.backends import CupyBackend, CuQuantumBackend, NumbaBackend
         if platform == "cupy":  # pragma: no cover
@@ -26,6 +26,10 @@ def construct_backend(backend, platform=None):
 
     elif backend == "numpy":
         return NumpyBackend()
+
+    elif backend == "qibolab":  # pragma: no cover
+        from qibolab.backends import QibolabBackend # pylint: disable=E0401
+        return QibolabBackend(platform, runcard)
 
     else:  # pragma: no cover
         raise_error(ValueError, f"Backend {backend} is not available.")
@@ -68,9 +72,9 @@ class GlobalBackend(NumpyBackend):
         return cls._instance
 
     @classmethod
-    def set_backend(cls, backend, platform=None):  # pragma: no cover
+    def set_backend(cls, backend, platform=None, runcard=None):  # pragma: no cover
         if cls._instance is None or cls._instance.name != backend or cls._instance.platform != platform:
-            cls._instance = construct_backend(backend, platform)
+            cls._instance = construct_backend(backend, platform, runcard)
         log.info(f"Using {cls._instance} backend on {cls._instance.device}")
 
 
@@ -94,8 +98,8 @@ def get_backend():
     return str(GlobalBackend())
 
 
-def set_backend(backend, platform=None):
-    GlobalBackend.set_backend(backend, platform)
+def set_backend(backend, platform=None, runcard=None):
+    GlobalBackend.set_backend(backend, platform, runcard)
 
 
 def get_precision():

@@ -7,7 +7,7 @@ class Backend(abc.ABC):
     def __init__(self):
         super().__init__()
         self.name = "backend"
-        self.platform= None
+        self.platform = None
 
         self.precision = "double"
         self.dtype = "complex128"
