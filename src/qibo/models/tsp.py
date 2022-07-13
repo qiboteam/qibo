@@ -101,8 +101,10 @@ class TSP:
                                                      initial_state=initial_state, method='BFGS')
                 qaoa.set_parameters(final_parameters)
                 quantum_state = qaoa.execute(initial_state)
-                meas = quantum_state.measure(gates.M(*range(9)), nshots=1000)
-                freq_counter = meas.frequencies()
+                circuit = Circuit(9)
+                circuit.add(gates.M(*range(9)))
+                result = CircuitResult(small_tsp.backend, circuit, quantum_state, nshots=1000)
+                freq_counter = result.frequencies()
                 # let's combine freq_counter here, first convert each key and sum up the frequency
                 cauchy_dict = defaultdict(int)
                 for freq_key in freq_counter:

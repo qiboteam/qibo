@@ -4,7 +4,6 @@ from collections import defaultdict
 from qibo import gates
 from qibo.models import QAOA, Circuit
 from qibo.models.tsp import TSP
-from qibo.states import CircuitResult
 from qibo.tests.test_models_variational import assert_regression_fixture
 
 
