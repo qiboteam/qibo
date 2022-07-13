@@ -126,7 +126,7 @@ class TSP:
     """
 
     def __init__(self, distance_matrix, backend=None):
-        if backend is None:
+        if backend is None:  # pragma: no cover
             from qibo.backends import GlobalBackend
             self.backend = GlobalBackend()
         else:
