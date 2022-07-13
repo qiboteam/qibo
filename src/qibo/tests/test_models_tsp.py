@@ -59,6 +59,6 @@ def qaoa_function_of_layer(backend, layer):
 
 @pytest.mark.parametrize("test_layer, expected", [(4, 1.0), (6, 1.0), (8, 1.0)])
 def test_tsp(backend, test_layer, expected):
-    backend.set_seed(20)
+    backend.set_seed(21)
     tmp = qaoa_function_of_layer(backend, test_layer)
     assert abs(tmp - expected) <= 0.001
