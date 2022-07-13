@@ -158,8 +158,8 @@ def test_benchmarks(nqubits, circuit_name):
 
 @pytest.mark.parametrize("nqubits", [3, 4])
 @pytest.mark.parametrize("nlayers", [1, 2])
-@pytest.mark.parametrize("varlayer", [False, True])
-def test_vqe_benchmarks(nqubits, nlayers, varlayer, method="Powell"):
+@pytest.mark.parametrize("fuse", [False, True])
+def test_vqe_benchmarks(nqubits, nlayers, fuse, method="Powell"):
     args = locals()
     args["backend"] = "qibojit"
     path = os.path.join(base_dir, "benchmarks")

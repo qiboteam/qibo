@@ -171,37 +171,6 @@ def test_unitary_init(targets):
     assert gate.nparams == 4 ** len(targets)
 
 
-@pytest.mark.parametrize("targets", [range(5), range(6)])
-def test_variational_layer_init(targets):
-    import numpy as np
-    targets = tuple(targets)
-    pairs = [(i, i + 1) for i in range(0, len(targets) - 1, 2)]
-    params = np.random.random(len(targets))
-    gate = gates.VariationalLayer(targets, pairs, gates.RY, gates.CZ, params)
-    assert gate.target_qubits == targets
-    assert gate.params == {q: p for q, p in zip(targets, params)}
-    assert gate.params2 == {}
-
-    pairs = [(0, 1)]
-    with pytest.raises(ValueError):
-        gate = gates.VariationalLayer(targets, pairs, gates.RY, gates.CZ, params)
-
-
-def test_variational_layer_errors():
-    import numpy as np
-    pairs = [(i, i + 1) for i in range(0, 5, 2)]
-    with pytest.raises(ValueError):
-        gate = gates.VariationalLayer(range(6), pairs, gates.RY, gates.CZ,
-                                      np.zeros(6), np.zeros(7))
-    with pytest.raises(ValueError):
-        gate = gates.VariationalLayer(range(10), pairs,
-                                      gates.RY, gates.CZ,
-                                      np.zeros(10), np.zeros(10))
-    gate = gates.VariationalLayer(range(6), pairs, gates.RY, gates.CZ,
-                                  np.zeros(6), np.zeros(6))
-    np.testing.assert_allclose(gate.parameters, np.zeros(12))
-
-
 def test_kraus_channel_init():
     import numpy as np
     ops = [((0,), np.random.random((2, 2))),

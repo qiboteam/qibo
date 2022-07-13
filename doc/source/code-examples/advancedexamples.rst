@@ -295,28 +295,6 @@ The following gates support parameter setting:
   array or ``tf.Tensor`` of shape ``(2, 2)``.
 * :class:`qibo.gates.Unitary`: Accepts a single ``unitary`` parameter. This
   should be an array or ``tf.Tensor`` of shape ``(2, 2)``.
-* :class:`qibo.gates.VariationalLayer`: Accepts a list of ``float``
-  parameters with length compatible to the number of one qubit rotations implemented
-  by the layer, for example:
-
-.. testcode::
-
-    import numpy as np
-    from qibo.models import Circuit
-    from qibo import gates
-
-    nqubits = 5
-    c = Circuit(nqubits)
-    pairs = [(i, i + 1) for i in range(0, 4, 2)]
-    c.add(gates.VariationalLayer(range(nqubits), pairs,
-                                 gates.RY, gates.CZ,
-                                 params=np.zeros(5)))
-    c.add((gates.RX(i, theta=0) for i in range(5)))
-
-    # set random parameters to all rotations in the circuit
-    c.set_parameters(np.random.random(10))
-    # note that 10 numbers are used as the VariationalLayer contains five
-    # rotations and five additional RX rotations are added afterwards.
 
 Note that a ``np.ndarray`` or a ``tf.Tensor`` may also be used in the place of
 a flat list. Using :meth:`qibo.models.circuit.Circuit.set_parameters` is more
@@ -588,11 +566,11 @@ To switch the backend one can do ``qibo.set_backend("tensorflow")``.
 Check the :ref:`How to use automatic differentiation? <autodiff-example>`
 section for more details.
 
-A useful gate for defining the ansatz of the VQE is :class:`qibo.gates.VariationalLayer`.
+When using a VQE with more than 12 qubits, it may be useful to fuse the circit implementing
+the ansatz using :meth:`qibo.models.Circuit.fuse`.
 This optimizes performance by fusing the layer of one-qubit parametrized gates with
 the layer of two-qubit entangling gates and applying both as a single layer of
-general two-qubit gates (as 4x4 matrices). The ansatz from the above example can
-be written using :class:`qibo.gates.VariationalLayer` as follows:
+general two-qubit gates (as 4x4 matrices).
 
 .. testsetup::
 
@@ -602,15 +580,14 @@ be written using :class:`qibo.gates.VariationalLayer` as follows:
 .. testcode::
 
     circuit = models.Circuit(nqubits)
-    pairs = [(i, i + 1) for i in range(0, nqubits - 1, 2)]
-    theta = np.zeros(nqubits)
     for l in range(nlayers):
-        circuit.add(gates.VariationalLayer(range(nqubits), pairs,
-                                           gates.RY, gates.CZ,
-                                           theta, theta))
-        circuit.add((gates.CZ(i, i + 1) for i in range(1, nqubits - 2, 2)))
-        circuit.add(gates.CZ(0, nqubits - 1))
-    circuit.add((gates.RY(i, theta) for i in range(nqubits)))
+        circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
+        circuit.add((gates.CZ(q, q+1) for q in range(0, nqubits-1, 2)))
+        circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
+        circuit.add((gates.CZ(q, q+1) for q in range(1, nqubits-2, 2)))
+        circuit.add(gates.CZ(0, nqubits-1))
+    circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
+    circuit = circuit.fuse()
 
 .. _vqc-example:
 

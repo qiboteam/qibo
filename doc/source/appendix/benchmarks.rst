@@ -151,13 +151,6 @@ using the ``--type`` flag. This accepts one of the following options:
 
     - ``--nlayers``: Total number of layers.
 
-* ``opt-variational``: Same as ``variational`` using the :class:`qibo.gates.VariationalLayer`.
-  This gate optimizes execution by fusing the parametrized with the entangling
-  gates before applying them to the state vector.
-  Supports the following options:
-
-    - ``--nlayers``: Total number of layers.
-
 * ``one-qubit-gate``: Single one-qubit gate applied to all qubits.
   Supports the following options:
 
@@ -190,9 +183,7 @@ and supports the following options:
 * ``--backend`` (``str``): Qibo backend to use.
   See :ref:`Simulation backends <simulation-backends>` for more information on the
   calculation backends. Default is ``qibojit``.
-* ``--varlayer`` (``bool``): If ``True`` the :class:`qibo.gates.VariationalLayer`
-  will be used to construct the circuit, otherwise plain ``RY`` and ``CZ`` gates
-  will be used. Default is ``False``.
+* ``--fuse`` (``bool``): If ``True`` the gates of the circuit will be fused. Default is ``False``.
 * ``--filename`` (``str``): Name of the file to save benchmark logs.
 
 The script will perform the VQE minimization and will print the optimal energy

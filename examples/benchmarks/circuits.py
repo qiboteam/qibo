@@ -20,22 +20,6 @@ def VariationalCircuit(nqubits, nlayers=1, theta_values=None):
         yield gates.CZ(0, nqubits - 1)
 
 
-def OptimizedVariationalCircuit(nqubits, nlayers=1, theta_values=None):
-    if theta_values is None:
-        theta = 2 * np.pi * np.random.random((2 * nlayers, nqubits))
-    else:
-        theta = theta_values.reshape((2 * nlayers, nqubits))
-
-    pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
-    for l in range(nlayers):
-        yield gates.VariationalLayer(range(nqubits), pairs,
-                                     gates.RY, gates.CZ,
-                                     theta[2 * l], theta[2 * l + 1])
-        for i in range(1, nqubits - 2, 2):
-            yield gates.CZ(i, i + 1)
-        yield gates.CZ(0, nqubits - 1)
-
-
 def OneQubitGate(nqubits, gate_type="H", params={}, nlayers=1):
     gate = lambda q: getattr(gates, gate_type)(q, **params)
     for _ in range(nlayers):
@@ -69,7 +53,6 @@ def PrepareGHZ(nqubits):
 
 
 _CIRCUITS = {"variational": VariationalCircuit,
-             "opt-variational": OptimizedVariationalCircuit,
              "one-qubit-gate": OneQubitGate,
              "two-qubit-gate": TwoQubitGate,
              "toffoli-gate": ToffoliGate,

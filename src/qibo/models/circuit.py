@@ -489,8 +489,6 @@ class Circuit:
             self.check_measured(gate.qubits)
             if isinstance(gate, gates.M) and not gate.collapse:
                 return self._add_measurement(gate)
-            elif isinstance(gate, gates.VariationalLayer):
-                return self._add_layer(gate)
             else:
                 return self._add_gate(gate)
 
@@ -505,15 +503,6 @@ class Circuit:
             self.parametrized_gates.append(gate)
             if gate.trainable:
                 self.trainable_gates.append(gate)
-
-    def _add_layer(self, gate):
-        for fgate in gate.gates:
-            self.queue.append(fgate)
-            for gate in fgate.gates:
-                if isinstance(gate, gates.ParametrizedGate):
-                    self.parametrized_gates.append(gate)
-                    if gate.trainable:
-                        self.trainable_gates.append(gate)
 
     def _add_measurement(self, gate: gates.Gate):
         """Called automatically by `add` when `gate` is measurement.
