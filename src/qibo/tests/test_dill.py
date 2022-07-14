@@ -4,7 +4,6 @@ import dill
 import numpy as np
 
 
-@pytest.mark.skip
 def test_dill_circuit():
     from qibo import gates
     from qibo.models import Circuit
@@ -18,7 +17,6 @@ def test_dill_circuit():
     assert new_circuit.to_qasm() == circuit.to_qasm()
 
 
-@pytest.mark.skip
 def test_dill_circuit_result(backend):
     from qibo.models import QFT
     circuit = QFT(4)

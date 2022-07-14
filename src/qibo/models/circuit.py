@@ -94,32 +94,10 @@ class Circuit:
 
     This circuit is symbolic and cannot perform calculations.
     A specific backend has to be used for performing calculations.
-    All backend-based circuits should inherit ``AbstractCircuit``.
-
-    Qibo provides the following circuits:
-
-    * A state vector simulation circuit:
-      :class:`qibo.core.circuit.Circuit`.
-    * A density matrix simulation circuit:
-      :class:`qibo.core.circuit.DensityMatrixCircuit`.
-    * A circuit that distributes state vector simulation on multiple devices:
-      :class:`qibo.core.distcircuit.DistributedCircuit`.
-
-    All circuits use core as the computation backend.
 
     Args:
         nqubits (int): Total number of qubits in the circuit.
     """
-
-    def __new__(cls, nqubits, accelerators=None, density_matrix=False):
-        if accelerators:
-            if density_matrix:
-                raise_error(NotImplementedError, "Distributed circuit is not implemented "
-                                                 "for density matrices.")
-            from qibo.models.distcircuit import DistributedCircuit
-            return DistributedCircuit(nqubits, accelerators)
-        else:
-            return super().__new__(cls)
 
     def __init__(self, nqubits, accelerators=None, density_matrix=False):
         if not isinstance(nqubits, int):
@@ -153,6 +131,53 @@ class Circuit:
         self.nglobal = None
         self.nlocal = None
         self.queues = None
+        if accelerators:  # pragma: no cover
+            if density_matrix:
+                raise_error(NotImplementedError, "Distributed circuit is not implemented "
+                                                 "for density matrices.")
+            self._distributed_init(nqubits, accelerators)
+
+    def _distributed_init(self, nqubits, accelerators):  # pragma: no cover
+        """Distributed implementation of :class:`qibo.models.circuit.Circuit`.
+
+        Uses multiple `accelerator` devices (GPUs) for applying gates to the state vector.
+        The full state vector is saved in the given `memory device` (usually the CPU)
+        during the simulation. A gate is applied by splitting the state to pieces
+        and copying each piece to an accelerator device that is used to perform the
+        matrix multiplication. An `accelerator` device can be used more than once
+        resulting to logical devices that are more than the physical accelerators in
+        the system.
+
+        Distributed circuits currently do not support native tensorflow gates,
+        compilation and callbacks.
+
+        Example:
+            .. code-block:: python
+
+                from qibo.models import Circuit
+                # The system has two GPUs and we would like to use each GPU twice
+                # resulting to four total logical accelerators
+                accelerators = {'/GPU:0': 2, '/GPU:1': 2}
+                # Define a circuit on 32 qubits to be run in the above GPUs keeping
+                # the full state vector in the CPU memory.
+                c = Circuit(32, accelerators)
+
+        Args:
+            nqubits (int): Total number of qubits in the circuit.
+            accelerators (dict): Dictionary that maps device names to the number of
+                times each device will be used.
+                The total number of logical devices must be a power of 2.
+        """
+        self.ndevices = sum(accelerators.values())
+        self.nglobal = float(np.log2(self.ndevices))
+        if not (self.nglobal.is_integer() and self.nglobal > 0):
+            raise_error(ValueError, "Number of calculation devices should be a power "
+                                    "of 2 but is {}.".format(self.ndevices))
+        self.nglobal = int(self.nglobal)
+        self.nlocal = self.nqubits - self.nglobal
+
+        from qibo.models.distcircuit import DistributedQueues
+        self.queues = DistributedQueues(self)
 
     def __add__(self, circuit):
         """Add circuits.
@@ -234,6 +259,10 @@ class Circuit:
             raise_error(ValueError, "Cannot return gates on {} qubits because "
                                     "the circuit contains {} qubits."
                                     "".format(len(qubits), self.nqubits))
+        if self.accelerators and self.queues.queues:  # pragma: no cover
+            raise_error(RuntimeError, "Cannot use distributed circuit as a "
+                                      "subroutine after it was executed.")
+
         qubit_map = {i: q for i, q in enumerate(qubits)}
         for gate in self.queue:
             yield gate.on_qubits(qubit_map)
@@ -315,6 +344,9 @@ class Circuit:
             new_circuit.measurement_gate = copy.copy(self.measurement_gate)
             new_circuit.measurement_tuples = dict(self.measurement_tuples)
         else:
+            if self.accelerators:  # pragma: no cover
+                raise_error(ValueError, "Non-deep copy is not allowed for distributed "
+                                    "circuits because they modify gate objects.")
             new_circuit = self._shallow_copy()
             new_circuit.queue = copy.copy(self.queue)
         return new_circuit
@@ -416,6 +448,10 @@ class Circuit:
                 c2.add(gates.PauliNoiseChannel(0, 0.1, 0.0, 0.2))
                 c2.add(gates.PauliNoiseChannel(1, 0.0, 0.2, 0.1))
         """
+        if self.accelerators:  # pragma: no cover
+            raise_error(NotImplementedError, "Distributed circuit does not support "
+                                         "density matrices yet.")
+
         noise_map = self._check_noise_map(noise_map)
         # Generate noise gates
         noise_gates = []
@@ -473,6 +509,15 @@ class Circuit:
                 self.add(g)
 
         else:
+            if self.accelerators:  # pragma: no cover
+                if isinstance(gate, gates.KrausChannel):
+                    raise_error(NotImplementedError, "Distributed circuits do not "
+                                                    "support channels.")
+                elif self.nqubits - len(gate.target_qubits) < self.nglobal and not isinstance(gate, gates.M):
+                    # Check if there is sufficient number of local qubits
+                    raise_error(ValueError, "Insufficient qubits to use for global in "
+                                            "distributed circuit.")
+
             if not isinstance(gate, gates.Gate):
                 raise_error(TypeError, "Unknown gate type {}.".format(type(gate)))
 
@@ -777,6 +822,10 @@ class Circuit:
                 # now ``fused_c`` contains a single ``FusedGate`` that is
                 # equivalent to applying the five original gates
         """
+        if self.accelerators:  # pragma: no cover
+            raise_error(NotImplementedError, "Fusion is not implemented for "
+                                         "distributed circuits.")
+
         queue = self.queue.to_fused()
         for gate in queue:
             if not gate.marked:
@@ -822,6 +871,9 @@ class Circuit:
         return self._final_state
 
     def compile(self, backend=None):
+        if self.accelerators:  # pragma: no cover
+            raise_error(RuntimeError, "Cannot compile circuit that uses custom operators.")
+
         if self.compiled:
             raise_error(RuntimeError, "Circuit is already compiled.")
         if not self.queue:
@@ -851,7 +903,10 @@ class Circuit:
             return self._final_state
         else:
             from qibo.backends import GlobalBackend
-            return GlobalBackend().execute_circuit(self, initial_state, nshots)
+            if self.accelerators:  # pragma: no cover
+                return GlobalBackend().execute_distributed_circuit(self, initial_state, nshots)
+            else:
+                return GlobalBackend().execute_circuit(self, initial_state, nshots)
 
     def __call__(self, initial_state=None, nshots=None):
         """Equivalent to ``circuit.execute``."""
@@ -1043,10 +1098,9 @@ class Circuit:
                     try:
                         for i, p in enumerate(params):
                             if 'pi' in p:
-                                import math
                                 from operator import mul
                                 from functools import reduce
-                                s = p.replace('pi', str(math.pi)).split('*')
+                                s = p.replace('pi', str(np.pi)).split('*')
                                 p = reduce(mul, [float(j) for j in s], 1)
                             params[i] = float(p)
                     except ValueError:
