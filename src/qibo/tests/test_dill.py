@@ -1,7 +1,24 @@
-import os
 import pytest
 import dill
 import numpy as np
+
+
+def test_dill_backends(backend):
+    serial = dill.dumps(backend)
+    new_backend = dill.loads(serial)
+    assert type(new_backend) == type(backend)
+    assert new_backend.name == backend.name
+    assert new_backend.platform == backend.platform
+    assert type(new_backend.matrices) == type(backend.matrices)
+
+
+def test_dill_global_backend():
+    from qibo.backends import GlobalBackend
+    backend = GlobalBackend()
+    serial = dill.dumps(backend)
+    new_backend = dill.loads(serial)
+    assert type(new_backend) == type(backend)
+    assert new_backend.name == backend.name
 
 
 def test_dill_circuit(accelerators):
@@ -25,15 +42,6 @@ def test_dill_circuit_result(backend):
     assert type(new_result) == type(result)
     assert str(new_result) == str(result)
     backend.assert_allclose(new_result.state(), result.state())
-
-
-def test_dill_backend():
-    from qibo.backends import GlobalBackend
-    backend = GlobalBackend()
-    serial = dill.dumps(backend)
-    new_backend = dill.loads(serial)
-    assert type(new_backend) == type(backend)
-    assert new_backend.name == backend.name
 
 
 def test_dill_symbols():
