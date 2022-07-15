@@ -4,12 +4,11 @@ import dill
 import numpy as np
 
 
-def test_dill_circuit():
+def test_dill_circuit(accelerators):
     from qibo import gates
     from qibo.models import Circuit
-    circuit = Circuit(2)
-    circuit.add(gates.H(0))
-    circuit.add(gates.H(1))
+    circuit = Circuit(5, accelerators=accelerators)
+    circuit.add(gates.H(i) for i in range(5))
     serial = dill.dumps(circuit)
     new_circuit = dill.loads(serial)
     assert type(new_circuit) == type(circuit)
@@ -63,3 +62,29 @@ def test_dill_symbols():
     assert type(nx) == type(x)
     np.testing.assert_allclose(nx.matrix, x.matrix)
     np.testing.assert_allclose(ns.matrix, s.matrix)
+
+
+def test_dill_symbolic_hamiltonian(backend):
+    from qibo.symbols import X, Y, Z
+    from qibo.hamiltonians import SymbolicHamiltonian
+    form = X(0) * X(1) + Y(0) * Y(1) + Z(0) * Z(1)
+    ham = SymbolicHamiltonian(form, backend=backend)
+    serial = dill.dumps(ham)
+    nham = dill.loads(serial)
+    assert type(nham) == type(ham)
+    backend.assert_allclose(nham.matrix, ham.matrix)
+
+
+def test_dill_variational_models(backend):
+    from qibo import gates
+    from qibo.hamiltonians import TFIM
+    from qibo.models import Circuit, VQE, QAOA
+    ham = TFIM(4, backend=backend)
+    circuit = Circuit(4)
+    circuit.add(gates.RX(i, theta=0) for i in range(4))
+    vqe = VQE(circuit, ham)
+    qaoa = QAOA(ham)
+    nvqe = dill.loads(dill.dumps(vqe))
+    nqaoa = dill.loads(dill.dumps(qaoa))
+    assert type(nvqe) == type(vqe)
+    assert type(nqaoa) == type(qaoa)

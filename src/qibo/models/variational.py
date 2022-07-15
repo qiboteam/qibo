@@ -301,9 +301,9 @@ class QAOA(object):
             self.mixer.circuit(1e-2, accelerators)
 
         # evolution solvers
-        from qibo import solvers
-        self.ham_solver = solvers.factory[solver](1e-2, self.hamiltonian)
-        self.mix_solver = solvers.factory[solver](1e-2, self.mixer)
+        from qibo.solvers import get_solver
+        self.ham_solver = get_solver(solver, 1e-2, self.hamiltonian)
+        self.mix_solver = get_solver(solver, 1e-2, self.mixer)
 
         self.callbacks = callbacks
         self.backend = hamiltonian.backend # to avoid error with _create_calculate_callbacks

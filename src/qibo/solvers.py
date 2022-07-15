@@ -71,18 +71,6 @@ class Exponential(BaseSolver):
     time-dependent Hamiltonians.
     """
 
-    def __new__(cls, dt, hamiltonian):
-        if isinstance(hamiltonian, AbstractHamiltonian):
-            h0 = hamiltonian
-        elif isinstance(hamiltonian, BaseAdiabaticHamiltonian):
-            h0 = hamiltonian.h0
-        else:
-            h0 = hamiltonian(0)
-        if isinstance(h0, SymbolicHamiltonian):
-            return TrotterizedExponential(dt, hamiltonian)
-        else:
-            return super(Exponential, cls).__new__(cls)
-
     def __call__(self, state):
         propagator = self.current_hamiltonian.exp(self.dt)
         self.t += self.dt
@@ -128,8 +116,26 @@ class RungeKutta45(BaseSolver):
                                         9 * k5 / 50.0 + 2 * k6 / 55.0))
 
 
-factory = {
-    "exp": Exponential,
-    "rk4": RungeKutta4,
-    "rk45": RungeKutta45
-}
+def get_solver(solver_name, dt, hamiltonian):
+    if solver_name == "exp":
+        if isinstance(hamiltonian, AbstractHamiltonian):
+            h0 = hamiltonian
+        elif isinstance(hamiltonian, BaseAdiabaticHamiltonian):
+            h0 = hamiltonian.h0
+        else:
+            h0 = hamiltonian(0)
+
+        if isinstance(h0, SymbolicHamiltonian):
+            return TrotterizedExponential(dt, hamiltonian)
+        else:
+            return Exponential(dt, hamiltonian)
+        return Exponential(dt, hamiltonian)
+
+    elif solver_name == "rk4":
+        return RungeKutta4(dt, hamiltonian)
+
+    elif solver_name == "rk45":
+        return RungeKutta45(dt, hamiltonian)
+
+    else:  # pragma: no cover
+        raise_error(ValueError, f"Unknown solver {solver_name}.")

@@ -70,7 +70,7 @@ class StateEvolution:
                                                  "implemented using the Trotter "
                                                  "exponential solver.")
             ham.circuit(dt, accelerators)
-        self.solver = solvers.factory[solver](self.dt, hamiltonian)
+        self.solver = solvers.get_solver(solver, self.dt, hamiltonian)
         self.callbacks = callbacks
         self.accelerators = accelerators
         self.normalize_state = self._create_normalize_state(solver)
