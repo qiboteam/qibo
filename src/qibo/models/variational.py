@@ -240,8 +240,7 @@ class QAOA(object):
             Default solver is 'exp' (:class:`qibo.solvers.Exponential`).
         callbacks (list): List of callbacks to calculate during evolution.
         accelerators (dict): Dictionary of devices to use for distributed
-            execution. See :class:`qibo.core.distcircuit.DistributedCircuit`
-            for more details. This option is available only when ``hamiltonian``
+            execution. This option is available only when ``hamiltonian``
             is a :class:`qibo.hamiltonians.SymbolicHamiltonian`.
 
     Example:
@@ -302,9 +301,9 @@ class QAOA(object):
             self.mixer.circuit(1e-2, accelerators)
 
         # evolution solvers
-        from qibo import solvers
-        self.ham_solver = solvers.factory[solver](1e-2, self.hamiltonian)
-        self.mix_solver = solvers.factory[solver](1e-2, self.mixer)
+        from qibo.solvers import get_solver
+        self.ham_solver = get_solver(solver, 1e-2, self.hamiltonian)
+        self.mix_solver = get_solver(solver, 1e-2, self.mixer)
 
         self.callbacks = callbacks
         self.backend = hamiltonian.backend # to avoid error with _create_calculate_callbacks
@@ -430,8 +429,7 @@ class FALQON(QAOA):
             Default solver is 'exp' (:class:`qibo.solvers.Exponential`).
         callbacks (list): List of callbacks to calculate during evolution.
         accelerators (dict): Dictionary of devices to use for distributed
-            execution. See :class:`qibo.tensorflow.distcircuit.DistributedCircuit`
-            for more details. This option is available only when ``hamiltonian``
+            execution. This option is available only when ``hamiltonian``
             is a :class:`qibo.hamiltonians.SymbolicHamiltonian`.
 
     Example:

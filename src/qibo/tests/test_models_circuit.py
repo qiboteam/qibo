@@ -37,7 +37,6 @@ def test_circuit_init_errors(nqubits):
 
 
 def test_circuit_constructor():
-    from qibo.models.distcircuit import DistributedCircuit
     c = Circuit(5)
     assert isinstance(c, Circuit)
     assert not c.density_matrix
@@ -45,7 +44,6 @@ def test_circuit_constructor():
     assert isinstance(c, Circuit)
     assert c.density_matrix
     c = Circuit(5, accelerators={"/GPU:0": 2})
-    assert isinstance(c, DistributedCircuit)
     with pytest.raises(NotImplementedError):
         c = Circuit(5, accelerators={"/GPU:0": 2}, density_matrix=True)
 
