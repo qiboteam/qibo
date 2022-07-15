@@ -31,6 +31,18 @@ class MeasurementSymbol(sympy.Symbol):
         self.index = index
         self.result = result
 
+    def __getstate__(self):
+        return {
+            "index": self.index,
+            "result": self.result,
+            "name": self.name
+        }
+
+    def __setstate__(self, data):
+        self.index = data.get("index")
+        self.result = data.get("result")
+        self.name = data.get("name")
+
     def outcome(self):
         return self.result.samples[-1][self.index]
 

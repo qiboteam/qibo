@@ -36,6 +36,31 @@ def test_dill_backend():
     assert new_backend.name == backend.name
 
 
+def test_dill_symbols():
+    from qibo.symbols import Symbol, X
+    matrix = np.random.random((2, 2))
+    s = Symbol(0, matrix)
+    x = X(1)
+    ns = dill.loads(dill.dumps(s))
+    nx = dill.loads(dill.dumps(x))
+    assert type(ns) == type(s)
+    assert type(nx) == type(x)
+    np.testing.assert_allclose(nx.matrix, x.matrix)
+    np.testing.assert_allclose(ns.matrix, s.matrix)
+
+
+def test_dill_measurement_symbol(backend):
+    from qibo import gates
+    from qibo.models import Circuit
+    circuit = Circuit(1)
+    circuit.add(gates.H(0))
+    symbol = circuit.add(gates.M(0, collapse=True))
+    result = backend.execute_circuit(circuit, nshots=1)
+    nsymbol = dill.loads(dill.dumps(symbol))
+    assert type(nsymbol) == type(symbol)
+    backend.assert_allclose(nsymbol.outcome(), symbol.outcome())
+
+
 def test_dill_hamiltonian(backend):
     from qibo.hamiltonians import XXZ, Hamiltonian
     matrix = np.random.random((4, 4))
@@ -49,19 +74,6 @@ def test_dill_hamiltonian(backend):
     assert type(nham2) == type(ham2)
     backend.assert_allclose(nham1.matrix, nham1.matrix)
     backend.assert_allclose(nham2.matrix, nham2.matrix)
-
-
-def test_dill_symbols():
-    from qibo.symbols import Symbol, X
-    matrix = np.random.random((2, 2))
-    s = Symbol(0, matrix)
-    x = X(1)
-    ns = dill.loads(dill.dumps(s))
-    nx = dill.loads(dill.dumps(x))
-    assert type(ns) == type(s)
-    assert type(nx) == type(x)
-    np.testing.assert_allclose(nx.matrix, x.matrix)
-    np.testing.assert_allclose(ns.matrix, s.matrix)
 
 
 def test_dill_symbolic_hamiltonian(backend):

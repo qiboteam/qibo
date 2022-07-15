@@ -55,7 +55,7 @@ class Symbol(sympy.Symbol):
         return {
             "target_qubit": self.target_qubit,
             "matrix": self.matrix,
-            "name": self.name,
+            "name": self.name
         }
 
     def __setstate__(self, data):
