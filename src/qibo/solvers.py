@@ -129,7 +129,6 @@ def get_solver(solver_name, dt, hamiltonian):
             return TrotterizedExponential(dt, hamiltonian)
         else:
             return Exponential(dt, hamiltonian)
-        return Exponential(dt, hamiltonian)
 
     elif solver_name == "rk4":
         return RungeKutta4(dt, hamiltonian)
