@@ -7,7 +7,7 @@ class Backend(abc.ABC):
     def __init__(self):
         super().__init__()
         self.name = "backend"
-        self.platform= None
+        self.platform = None
 
         self.precision = "double"
         self.dtype = "complex128"
@@ -184,7 +184,7 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def get_state_repr(self, result): # pragma: no cover
+    def circuit_result_representation(self, result): # pragma: no cover
         """Represent a quantum state based on circuit execution results.
 
         Args:
@@ -194,12 +194,23 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def get_state_tensor(self, result): # pragma: no cover
+    def circuit_result_tensor(self, result): # pragma: no cover
         """State vector or density matrix representing a quantum state as an array.
 
         Args:
             result (:class:`qibo.states.CircuitResult`): Result object that contains
                 the data required to represent the state.
+        """
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def circuit_result_probabilities(self, result, qubits=None):  # pragma: no cover
+        """Calculates measurement probabilities by tracing out qubits.
+
+        Args:
+            result (:class:`qibo.states.CircuitResult`): Result object that contains
+                the data required to represent the state.
+            qubits (list, set): Set of qubits that are measured.
         """
         raise_error(NotImplementedError)
 

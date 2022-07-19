@@ -37,7 +37,6 @@ def test_circuit_init_errors(nqubits):
 
 
 def test_circuit_constructor():
-    from qibo.models.distcircuit import DistributedCircuit
     c = Circuit(5)
     assert isinstance(c, Circuit)
     assert not c.density_matrix
@@ -45,7 +44,6 @@ def test_circuit_constructor():
     assert isinstance(c, Circuit)
     assert c.density_matrix
     c = Circuit(5, accelerators={"/GPU:0": 2})
-    assert isinstance(c, DistributedCircuit)
     with pytest.raises(NotImplementedError):
         c = Circuit(5, accelerators={"/GPU:0": 2}, density_matrix=True)
 
@@ -127,15 +125,6 @@ def test_add_measurement():
     with pytest.raises(KeyError):
         c.add(gates.M(4, register_name="b"))
 
-
-@pytest.mark.parametrize("nqubits", [5, 6])
-def test_circuit_add_layer(backend, nqubits):
-    c = Circuit(nqubits)
-    qubits = list(range(nqubits))
-    pairs = [(2 * i, 2 * i + 1) for i in range(nqubits // 2)]
-    params = nqubits * [0.1]
-    c.add(gates.VariationalLayer(qubits, pairs, gates.RY, gates.CZ, params))
-    assert len(c.queue) == nqubits // 2 + nqubits % 2
 
 # :meth:`qibo.core.circuit.Circuit.fuse` is tested in `test_core_fusion.py`
 

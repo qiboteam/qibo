@@ -440,13 +440,6 @@ Arbitrary unitary
     :members:
     :member-order: bysource
 
-Variational layer
-"""""""""""""""""
-
-.. autoclass:: qibo.gates.VariationalLayer
-    :members:
-    :member-order: bysource
-
 Callback gate
 """""""""""""
 

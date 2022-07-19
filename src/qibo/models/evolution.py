@@ -29,8 +29,7 @@ class StateEvolution:
             Hamiltonian to the state and no exponentiation is involved.
         callbacks (list): List of callbacks to calculate during evolution.
         accelerators (dict): Dictionary of devices to use for distributed
-            execution. See :class:`qibo.core.distcircuit.DistributedCircuit`
-            for more details. This option is available only when the Trotter
+            execution. This option is available only when the Trotter
             decomposition is used for the time evolution.
 
     Example:
@@ -71,7 +70,7 @@ class StateEvolution:
                                                  "implemented using the Trotter "
                                                  "exponential solver.")
             ham.circuit(dt, accelerators)
-        self.solver = solvers.factory[solver](self.dt, hamiltonian)
+        self.solver = solvers.get_solver(solver, self.dt, hamiltonian)
         self.callbacks = callbacks
         self.accelerators = accelerators
         self.normalize_state = self._create_normalize_state(solver)
@@ -163,8 +162,7 @@ class AdiabaticEvolution(StateEvolution):
             Hamiltonian to the state and no exponentiation is involved.
         callbacks (list): List of callbacks to calculate during evolution.
         accelerators (dict): Dictionary of devices to use for distributed
-            execution. See :class:`qibo.core.distcircuit.DistributedCircuit`
-            for more details. This option is available only when the Trotter
+            execution. This option is available only when the Trotter
             decomposition is used for the time evolution.
     """
     ATOL = 1e-7 # Tolerance for checking s(0) = 0 and s(T) = 1.

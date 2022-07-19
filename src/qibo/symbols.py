@@ -35,9 +35,10 @@ class Symbol(sympy.Symbol):
             (for example when the Hamiltonian consists of Z terms only).
     """
 
-    def __new__(cls, q, matrix=None, name="Symbol", commutative=False):
+    def __new__(cls, q, matrix=None, name="Symbol", commutative=False, **assumptions):
         name = "{}{}".format(name, q)
-        return super().__new__(cls=cls, name=name, commutative=commutative)
+        assumptions["commutative"] = commutative
+        return super().__new__(cls=cls, name=name, **assumptions)
 
     def __init__(self, q, matrix=None, name="Symbol", commutative=False):
         self.target_qubit = q
@@ -49,6 +50,19 @@ class Symbol(sympy.Symbol):
             raise_error(TypeError, "Invalid type {} of symbol matrix."
                                    "".format(type(matrix)))
         self.matrix = matrix
+
+    def __getstate__(self):
+        return {
+            "target_qubit": self.target_qubit,
+            "matrix": self.matrix,
+            "name": self.name
+        }
+
+    def __setstate__(self, data):
+        self.target_qubit = data.get("target_qubit")
+        self.matrix = data.get("matrix")
+        self.name = data.get("name")
+        self._gate = None
 
     @property
     def gate(self):
@@ -80,9 +94,9 @@ class Symbol(sympy.Symbol):
 
 class PauliSymbol(Symbol):
 
-    def __new__(cls, q, commutative=False):
+    def __new__(cls, q, commutative=False, **assumptions):
         matrix = getattr(matrices, cls.__name__)
-        return super().__new__(cls, q, matrix, cls.__name__, commutative)
+        return super().__new__(cls, q, matrix, cls.__name__, commutative, **assumptions)
 
     def __init__(self, q, commutative=False):
         name = self.__class__.__name__
