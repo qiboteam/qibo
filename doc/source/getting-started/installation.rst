@@ -133,6 +133,11 @@ In order to install the package use the following command:
       <https://docs.cupy.dev/en/stable/install.html>`_ for your GPU hardware.
       The installation instructions for `cuQuantum <https://developer.nvidia.com/cuquantum-sdk>`_
       are available in the `official documentation <https://docs.nvidia.com/cuda/cuquantum/python/README.html>`__.
+      ``qibojit`` is compatible with
+      `cuQuantum SDK v22.03 <https://docs.nvidia.com/cuda/cuquantum/cuquantum_sdk_release_notes.html#cuquantum-sdk-v22-03>`__
+      and
+      `cuQuantum SDK v22.05 <https://docs.nvidia.com/cuda/cuquantum/cuquantum_sdk_release_notes.html#cuquantum-sdk-v22-05>`__.
+
 
 Installing with conda
 """""""""""""""""""""
@@ -157,6 +162,11 @@ To install both packages with conda run:
       <https://docs.cupy.dev/en/stable/install.html>`_ for your GPU hardware.
       The installation instructions for `cuQuantum <https://developer.nvidia.com/cuquantum-sdk>`_
       are available in the `official documentation <https://docs.nvidia.com/cuda/cuquantum/python/README.html>`__.
+      ``qibojit`` is compatible with
+      `cuQuantum SDK v22.03 <https://docs.nvidia.com/cuda/cuquantum/cuquantum_sdk_release_notes.html#cuquantum-sdk-v22-03>`__
+      and
+      `cuQuantum SDK v22.05 <https://docs.nvidia.com/cuda/cuquantum/cuquantum_sdk_release_notes.html#cuquantum-sdk-v22-05>`__.
+
 
 Installing from source
 """"""""""""""""""""""
