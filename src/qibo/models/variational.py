@@ -394,17 +394,20 @@ class QAOA(object):
                                     "contain an even number of values but "
                                     "contains {}.".format(len(initial_p)))
 
-        def _loss(params, qaoa, hamiltonian):
+        def _loss(params, qaoa, hamiltonian, state):
+            if state is not None:
+                state = hamiltonian.backend.cast(state, copy=True)
             qaoa.set_parameters(params)
-            state = qaoa(initial_state)
+            state = qaoa(state)
             return hamiltonian.expectation(state)
 
-        if method == "sgd":
-            loss = lambda p, c, h: _loss(self.hamiltonian.backend.cast(p), c, h)
-        else:
-            loss = lambda p, c, h: self.hamiltonian.backend.to_numpy(_loss(p, c, h))
 
-        result, parameters, extra = self.optimizers.optimize(loss, initial_p, args=(self, self.hamiltonian),
+        if method == "sgd":
+            loss = lambda p, c, h, s: _loss(self.hamiltonian.backend.cast(p), c, h, s)
+        else:
+            loss = lambda p, c, h, s: self.hamiltonian.backend.to_numpy(_loss(p, c, h, s))
+
+        result, parameters, extra = self.optimizers.optimize(loss, initial_p, args=(self, self.hamiltonian, initial_state),
                                                              method=method, jac=jac, hess=hess, hessp=hessp,
                                                              bounds=bounds, constraints=constraints,
                                                              tol=tol, callback=callback, options=options,
