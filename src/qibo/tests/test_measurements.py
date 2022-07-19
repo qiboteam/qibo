@@ -213,7 +213,7 @@ def test_circuit_copy_with_measurements(backend, accelerators):
     c1.add([gates.X(0), gates.X(1), gates.X(3)])
     c1.add(gates.M(5, 1, 3, register_name="a"))
     c1.add(gates.M(2, 0, register_name="b"))
-    c2 = c1.copy()
+    c2 = c1.copy(deep=True)
 
     r1 = backend.execute_circuit(c1, nshots=100)
     r2 = backend.execute_circuit(c2, nshots=100)
