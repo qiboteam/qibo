@@ -9,11 +9,11 @@ from qibo import matrices, K
 
 class QuantumCNN():
 
-    def __init__(self, nclasses, nqubits, nlayers, RY=True):
+    def __init__(self, nqubits, nlayers, nclasses=2, RY=True): ### TODO: modify this to build the QCNN circuit
         """
         Class for a multi-task variational quantum classifier
         Args:
-            nclases: int number of classes to be classified
+            nclasses: int number of classes to be classified. Default setting of 2 (phases).
             nqubits: int number of qubits employed in the quantum circuit
         """
         self.nclasses = nclasses
@@ -48,7 +48,7 @@ class QuantumCNN():
 
         yield gates.CZ(0, self.nqubits-1)
 
-    def ansatz(self, nlayers, rotations):
+    def ansatz(self, nlayers, rotations):    ### TODO: QCNN ansatz goes here
         """
         Args:
             theta: list or numpy.array with the angles to be used in the circuit
