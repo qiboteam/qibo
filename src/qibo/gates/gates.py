@@ -13,7 +13,7 @@ QASM_GATES = {"h": "H", "x": "X", "y": "Y", "z": "Z",
               "cu1": "CU1", "cu3": "CU3",
               "ccx": "TOFFOLI", "id": "I", "s": "S",
               "sdg": "SDG", "t": "T", "tdg": "TDG"}
-PARAMETRIZED_GATES = {"rx", "ry", "rz", "u1", "u2", "u3",
+PARAMETRIZED_GATES = {"rx", "ry", "rz", "rxx", "ryy", "rzz", "u1", "u2", "u3",
                       "crx", "cry", "crz", "cu1", "cu3"}
 
 
