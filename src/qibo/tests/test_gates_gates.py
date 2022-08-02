@@ -277,6 +277,37 @@ def test_generalized_fsim_parameter_setter(backend):
         gate = gates.GeneralizedfSim(0, 1, matrix, phi)
 
 
+def test_rxx(backend):
+    theta = 0.1234
+    final_state = apply_gates(backend, [gates.H(0), gates.H(1), gates.RXX(0, 1, theta=theta)], nqubits=2)
+    phase = np.exp(1j*theta/2.0)
+    gate = np.array([[phase.real, 0, 0, -1j*phase.imag],
+                     [0, phase.real, -1j*phase.imag, 0],
+                     [0, -1j*phase.imag, phase.real, 0],
+                     [-1j*phase.imag, 0, 0, phase.real]])
+    target_state = gate.dot(np.ones(4))/2.0
+    backend.assert_allclose(final_state, target_state)
+    
+def test_ryy(backend):
+    theta = 0.1234
+    final_state = apply_gates(backend, [gates.H(0), gates.H(1), gates.RYY(0, 1, theta=theta)], nqubits=2)
+    phase = np.exp(1j*theta/2.0)
+    gate = np.array([[phase.real, 0, 0, 1j*phase.imag],
+                     [0, phase.real, -1j*phase.imag, 0],
+                     [0, -1j*phase.imag, phase.real, 0],
+                     [1j*phase.imag, 0, 0, phase.real]]) 
+    target_state = gate.dot(np.ones(4))/2.0
+    backend.assert_allclose(final_state, target_state)
+
+#@pytest.mark.parametrize("applyx", [True, False])
+def test_rzz(backend):
+    theta = 0.1234
+    final_state = apply_gates(backend, [gates.X(0), gates.X(1), gates.RZZ(0, 1, theta=theta)], nqubits=2)
+    target_state = np.zeros_like(final_state)
+    target_state[3] = np.exp(-1j*theta/2.0)
+    backend.assert_allclose(final_state, target_state)
+
+
 @pytest.mark.parametrize("applyx", [False, True])
 def test_toffoli(backend, applyx):
     if applyx:
