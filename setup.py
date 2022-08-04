@@ -73,7 +73,7 @@ setup(
             "nbsphinx",
             "IPython",
         ],
-        "tests": ["pytest", "cirq", "ply", "sklearn", "dill"],
+        "tests": ["pytest", "cirq", "ply", "sklearn", "dill", "pre-commit"],
     },
     python_requires=">=3.7.0",
     long_description=long_description,
