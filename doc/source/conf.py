@@ -44,7 +44,6 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "recommonmark",
-    "sphinx_markdown_tables",
     "nbsphinx",
 ]
 
