@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 __version__ = "0.1.8rc1.dev0"
 from qibo.config import set_batch_size, get_batch_size
 from qibo.config import set_metropolis_threshold, get_metropolis_threshold

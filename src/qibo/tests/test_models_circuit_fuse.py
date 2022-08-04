@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 import pytest
 from qibo import gates
@@ -36,10 +37,14 @@ def test_single_fusion_gate():
 
 def test_two_fusion_gate():
     """Check fusion that creates two ``FusedGate``s."""
-    queue = [gates.X(0), gates.H(1),
-             gates.RX(2, theta=0.1234).controlled_by(1),
-             gates.H(2), gates.Y(1),
-             gates.H(0)]
+    queue = [
+        gates.X(0),
+        gates.H(1),
+        gates.RX(2, theta=0.1234).controlled_by(1),
+        gates.H(2),
+        gates.Y(1),
+        gates.H(0),
+    ]
     c = Circuit(3)
     c.add(queue)
     c = c.fuse()
@@ -51,8 +56,7 @@ def test_two_fusion_gate():
 
 
 def test_fusedgate_matrix_calculation(backend):
-    queue = [gates.H(0), gates.H(1), gates.CNOT(0, 1),
-             gates.X(0), gates.X(1)]
+    queue = [gates.H(0), gates.H(1), gates.CNOT(0, 1), gates.X(0), gates.X(1)]
     circuit = Circuit(2)
     circuit.add(queue)
     circuit = circuit.fuse()
@@ -61,8 +65,7 @@ def test_fusedgate_matrix_calculation(backend):
 
     x = np.array([[0, 1], [1, 0]])
     h = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
-    cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1],
-                     [0, 0, 1, 0]])
+    cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
     target_matrix = np.kron(x, x) @ cnot @ np.kron(h, h)
     fused_matrix = fused_gate.asmatrix(backend)
     backend.assert_allclose(fused_matrix, target_matrix)
@@ -154,6 +157,7 @@ def test_controlled_by_gates_fusion(backend):
 def test_callbacks_fusion(backend):
     """Check entropy calculation in fused circuit."""
     from qibo import callbacks
+
     entropy = callbacks.EntanglementEntropy([0])
     c = Circuit(5)
     c.add(gates.H(0))

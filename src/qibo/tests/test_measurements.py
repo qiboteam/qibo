@@ -1,12 +1,18 @@
+# -*- coding: utf-8 -*-
 """Test circuit result measurements and measurement gate and as part of circuit."""
 import pytest
 import numpy as np
 from qibo import models, gates
 
 
-def assert_result(backend, result,
-                  decimal_samples=None, binary_samples=None,
-                  decimal_frequencies=None, binary_frequencies=None):
+def assert_result(
+    backend,
+    result,
+    decimal_samples=None,
+    binary_samples=None,
+    decimal_frequencies=None,
+    binary_frequencies=None,
+):
     if decimal_frequencies is not None:
         assert result.frequencies(False) == decimal_frequencies
     if binary_frequencies is not None:
@@ -26,9 +32,14 @@ def assert_dicts_equal(backend, d1, d2):
             backend.assert_allclose(v, d2[k])
 
 
-def assert_register_result(backend, result,
-                           decimal_samples=None, binary_samples=None,
-                           decimal_frequencies=None, binary_frequencies=None):
+def assert_register_result(
+    backend,
+    result,
+    decimal_samples=None,
+    binary_samples=None,
+    decimal_frequencies=None,
+    binary_frequencies=None,
+):
     if decimal_samples:
         register_result = result.samples(binary=False, registers=True)
         assert_dicts_equal(backend, register_result, decimal_samples)
@@ -51,8 +62,14 @@ def test_measurement_gate(backend, n, nshots):
         c.add(gates.X(1))
     c.add(gates.M(1))
     result = backend.execute_circuit(c, nshots=nshots)
-    assert_result(backend, result, n * np.ones(nshots), n * np.ones((nshots, 1)),
-                  {n: nshots}, {str(n): nshots})
+    assert_result(
+        backend,
+        result,
+        n * np.ones(nshots),
+        n * np.ones((nshots, 1)),
+        {n: nshots},
+        {str(n): nshots},
+    )
 
 
 def test_multiple_qubit_measurement_gate(backend):
@@ -62,8 +79,14 @@ def test_multiple_qubit_measurement_gate(backend):
     result = backend.execute_circuit(c, nshots=100)
     target_binary_samples = np.zeros((100, 2))
     target_binary_samples[:, 0] = 1
-    assert_result(backend, result, 2 * np.ones((100,)), target_binary_samples,
-                  {2: 100}, {"10": 100})
+    assert_result(
+        backend,
+        result,
+        2 * np.ones((100,)),
+        target_binary_samples,
+        {2: 100},
+        {"10": 100},
+    )
 
 
 def test_measurement_gate_errors(backend):
@@ -81,9 +104,9 @@ def test_measurement_circuit(backend, accelerators):
     c.add(gates.X(0))
     c.add(gates.M(0))
     result = backend.execute_circuit(c, nshots=100)
-    assert_result(backend, result,
-                  np.ones((100,)), np.ones((100, 1)),
-                  {1: 100}, {"1": 100})
+    assert_result(
+        backend, result, np.ones((100,)), np.ones((100, 1)), {1: 100}, {"1": 100}
+    )
 
 
 def test_gate_after_measurement_error(backend, accelerators):
@@ -109,9 +132,9 @@ def test_measurement_qubit_order_simple(backend, registers):
 
     target_binary_samples = np.zeros((100, 2))
     target_binary_samples[:, 1] = 1
-    assert_result(backend, result,
-                  np.ones(100), target_binary_samples,
-                  {1: 100}, {"01": 100})
+    assert_result(
+        backend, result, np.ones(100), target_binary_samples, {1: 100}, {"01": 100}
+    )
 
 
 @pytest.mark.parametrize("nshots", [100, 1000000])
@@ -125,9 +148,14 @@ def test_measurement_qubit_order(backend, accelerators, nshots):
     target_binary_samples = np.zeros((nshots, 4))
     target_binary_samples[:, 0] = 1
     target_binary_samples[:, 3] = 1
-    assert_result(backend, result,
-                  9 * np.ones(nshots), target_binary_samples,
-                  {9: nshots}, {"1001": nshots})
+    assert_result(
+        backend,
+        result,
+        9 * np.ones(nshots),
+        target_binary_samples,
+        {9: nshots},
+        {"1001": nshots},
+    )
 
 
 def test_multiple_measurement_gates_circuit(backend):
@@ -141,9 +169,9 @@ def test_multiple_measurement_gates_circuit(backend):
 
     target_binary_samples = np.ones((100, 3))
     target_binary_samples[:, 0] = 0
-    assert_result(backend, result,
-                  3 * np.ones(100), target_binary_samples,
-                  {3: 100}, {"011": 100})
+    assert_result(
+        backend, result, 3 * np.ones(100), target_binary_samples, {3: 100}, {"011": 100}
+    )
 
 
 def test_circuit_with_unmeasured_qubits(backend, accelerators):
@@ -158,9 +186,14 @@ def test_circuit_with_unmeasured_qubits(backend, accelerators):
     target_binary_samples = np.zeros((100, 4))
     target_binary_samples[:, 1] = 1
     target_binary_samples[:, 3] = 1
-    assert_result(backend, result,
-                  5 * np.ones(100), target_binary_samples,
-                  {5: 100}, {"0101": 100})
+    assert_result(
+        backend,
+        result,
+        5 * np.ones(100),
+        target_binary_samples,
+        {5: 100},
+        {"0101": 100},
+    )
 
 
 def test_circuit_addition_with_measurements(backend):
@@ -235,9 +268,14 @@ def test_measurement_compiled_circuit(backend):
     result = c(nshots=100)
     target_binary_samples = np.zeros((100, 2))
     target_binary_samples[:, 0] = 1
-    assert_result(backend, result,
-                  2 * np.ones((100,)), target_binary_samples,
-                  {2: 100}, {"10": 100})
+    assert_result(
+        backend,
+        result,
+        2 * np.ones((100,)),
+        target_binary_samples,
+        {2: 100},
+        {"10": 100},
+    )
 
     target_state = np.zeros_like(c.final_state)
     target_state[2] = 1
@@ -279,15 +317,19 @@ def test_register_measurements(backend):
     c.add(gates.M(1))
     result = backend.execute_circuit(c, nshots=100)
 
-    decimal_samples = {"register0": 2 * np.ones((100,)),
-                        "register1": np.ones((100,))}
-    binary_samples = {"register0": np.zeros((100, 2)),
-                      "register1": np.ones((100, 1))}
+    decimal_samples = {"register0": 2 * np.ones((100,)), "register1": np.ones((100,))}
+    binary_samples = {"register0": np.zeros((100, 2)), "register1": np.ones((100, 1))}
     binary_samples["register0"][:, 0] = 1
     decimal_frequencies = {"register0": {2: 100}, "register1": {1: 100}}
     binary_frequencies = {"register0": {"10": 100}, "register1": {"1": 100}}
-    assert_register_result(backend, result, decimal_samples, binary_samples,
-                           decimal_frequencies, binary_frequencies)
+    assert_register_result(
+        backend,
+        result,
+        decimal_samples,
+        binary_samples,
+        decimal_frequencies,
+        binary_frequencies,
+    )
 
 
 def test_register_name_error(backend):
@@ -326,9 +368,14 @@ def test_measurement_qubit_order_multiple_registers(backend, accelerators):
     target_binary_samples[:, 1] = 1
     target_binary_samples[:, 2] = 1
     target_binary_samples[:, 4] = 1
-    assert_result(backend, result,
-                  13 * np.ones((100,)), target_binary_samples,
-                  {13: 100}, {"01101": 100})
+    assert_result(
+        backend,
+        result,
+        13 * np.ones((100,)),
+        target_binary_samples,
+        {13: 100},
+        {"01101": 100},
+    )
 
     decimal_samples = {"a": 3 * np.ones((100,)), "b": np.ones((100,))}
     binary_samples = {"a": np.zeros((100, 3)), "b": np.zeros((100, 2))}
@@ -337,8 +384,14 @@ def test_measurement_qubit_order_multiple_registers(backend, accelerators):
     binary_samples["b"][:, 1] = 1
     decimal_frequencies = {"a": {3: 100}, "b": {1: 100}}
     binary_frequencies = {"a": {"011": 100}, "b": {"01": 100}}
-    assert_register_result(backend, result, decimal_samples, binary_samples,
-                           decimal_frequencies, binary_frequencies)
+    assert_register_result(
+        backend,
+        result,
+        decimal_samples,
+        binary_samples,
+        decimal_frequencies,
+        binary_frequencies,
+    )
 
 
 def test_registers_in_circuit_with_unmeasured_qubits(backend, accelerators):
@@ -358,9 +411,14 @@ def test_registers_in_circuit_with_unmeasured_qubits(backend, accelerators):
     binary_samples["B"][:, 0] = 1
     decimal_frequencies = {"A": {1: 100}, "B": {2: 100}}
     binary_frequencies = {"A": {"01": 100}, "B": {"10": 100}}
-    assert_register_result(backend, result,
-                           decimal_samples, binary_samples,
-                           decimal_frequencies, binary_frequencies)
+    assert_register_result(
+        backend,
+        result,
+        decimal_samples,
+        binary_samples,
+        decimal_frequencies,
+        binary_frequencies,
+    )
 
 
 def test_measurement_density_matrix(backend):
@@ -370,8 +428,11 @@ def test_measurement_density_matrix(backend):
     result = backend.execute_circuit(c, nshots=100)
     target_binary_samples = np.zeros((100, 2))
     target_binary_samples[:, 0] = 1
-    assert_result(backend, result,
-                  decimal_samples=2 * np.ones((100,)),
-                  binary_samples=target_binary_samples,
-                  decimal_frequencies={2: 100},
-                  binary_frequencies={"10": 100})
+    assert_result(
+        backend,
+        result,
+        decimal_samples=2 * np.ones((100,)),
+        binary_samples=target_binary_samples,
+        decimal_frequencies={2: 100},
+        binary_frequencies={"10": 100},
+    )

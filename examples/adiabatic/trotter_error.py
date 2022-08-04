@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Error of evolution using Trotter decomposition."""
 import argparse
 import numpy as np
@@ -5,8 +6,9 @@ import matplotlib
 import matplotlib.pyplot as plt
 from scipy.stats import linregress
 from qibo import callbacks, hamiltonians, models
-matplotlib.rcParams['mathtext.fontset'] = 'cm'
-matplotlib.rcParams['font.family'] = 'STIXGeneral'
+
+matplotlib.rcParams["mathtext.fontset"] = "cm"
+matplotlib.rcParams["font.family"] = "STIXGeneral"
 matplotlib.rcParams["font.size"] = 14
 
 
@@ -34,13 +36,13 @@ def main(nqubits, hfield, T, save):
     """
     dense_h = hamiltonians.TFIM(nqubits, h=hfield)
     trotter_h = hamiltonians.TFIM(nqubits, h=hfield, dense=False)
-    initial_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
+    initial_state = np.ones(2**nqubits) / np.sqrt(2**nqubits)
 
     nsteps_list = np.arange(50, 550, 50)
     overlaps = []
     for nsteps in nsteps_list:
-        exact_ev = models.StateEvolution(dense_h, dt=T/nsteps)
-        trotter_ev = models.StateEvolution(trotter_h, dt=T/nsteps)
+        exact_ev = models.StateEvolution(dense_h, dt=T / nsteps)
+        trotter_ev = models.StateEvolution(trotter_h, dt=T / nsteps)
         exact_state = exact_ev(final_time=T, initial_state=np.copy(initial_state))
         trotter_state = trotter_ev(final_time=T, initial_state=np.copy(initial_state))
         overlaps.append(callbacks.Overlap(exact_state)(trotter_state).numpy())
@@ -49,18 +51,26 @@ def main(nqubits, hfield, T, save):
     overlaps = 1 - np.array(overlaps)
 
     exponent = int(linregress(np.log(dt_list), np.log(overlaps))[0])
-    err = [overlaps[0] * (dt_list / dt_list[0])**(exponent - 1),
-           overlaps[0] * (dt_list / dt_list[0])**exponent,
-           overlaps[0] * (dt_list / dt_list[0])**(exponent + 1)]
+    err = [
+        overlaps[0] * (dt_list / dt_list[0]) ** (exponent - 1),
+        overlaps[0] * (dt_list / dt_list[0]) ** exponent,
+        overlaps[0] * (dt_list / dt_list[0]) ** (exponent + 1),
+    ]
     alphas = [1.0, 0.7, 0.4]
-    labels = [r"$\delta t ^{}$".format(exponent - 1),
-              r"$\delta t ^{}$".format(exponent),
-              r"$\delta t ^{}$".format(exponent + 1)]
+    labels = [
+        r"$\delta t ^{}$".format(exponent - 1),
+        r"$\delta t ^{}$".format(exponent),
+        r"$\delta t ^{}$".format(exponent + 1),
+    ]
 
     plt.figure(figsize=(7, 4))
-    plt.semilogy(nsteps_list, overlaps, marker="o", markersize=8, linewidth=2.0, label="Error")
+    plt.semilogy(
+        nsteps_list, overlaps, marker="o", markersize=8, linewidth=2.0, label="Error"
+    )
     for e, a, l in zip(err, alphas, labels):
-        plt.semilogy(nsteps_list, e, color="red", alpha=a, linestyle="--", linewidth=2.0, label=l)
+        plt.semilogy(
+            nsteps_list, e, color="red", alpha=a, linestyle="--", linewidth=2.0, label=l
+        )
     plt.xlabel("Number of steps")
     plt.ylabel("$1 -$ Overlap")
     plt.legend()

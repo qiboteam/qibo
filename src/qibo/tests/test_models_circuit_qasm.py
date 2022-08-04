@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Tests creating abstract Qibo circuits from OpenQASM code."""
 import pytest
 import qibo
@@ -32,6 +33,7 @@ qreg q[2];
 h q[0];
 h q[1];"""
     assert_strings_equal(c.to_qasm(), target)
+
 
 def test_singlequbit_gates():
     c = Circuit(2)

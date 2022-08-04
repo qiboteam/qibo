@@ -1,17 +1,20 @@
+# -*- coding: utf-8 -*-
 import os
 import pytest
 import sys
 import importlib
 import signal
 from contextlib import contextmanager
+
 base_dir = os.path.join(os.getcwd(), "examples")
 sys.path.append(base_dir)
 
 
 @pytest.fixture(autouse=True)
 def max_time_setter(request):
-    request.function.__globals__['max_time'] = request.config.getoption(
-        "--examples-timeout")
+    request.function.__globals__["max_time"] = request.config.getoption(
+        "--examples-timeout"
+    )
 
 
 @contextmanager
@@ -85,8 +88,7 @@ def test_autoencoder(nqubits, layers, compress, lambdas, maxiter):
     run_script(args)
 
 
-@pytest.mark.parametrize(("h_value", "collisions", "b"),
-                         [(163, 2, 7)])
+@pytest.mark.parametrize(("h_value", "collisions", "b"), [(163, 2, 7)])
 def test_hash_grover(h_value, collisions, b):
     # remove ``functions`` module from 3SAT because the same name is used
     # for a different module in the Hash
@@ -142,16 +144,28 @@ def test_benchmarks(nqubits, circuit_name):
     code = open("main.py", "r").read()
     start = code.find("def main")
     end = code.find("\nif __name__ ==")
-    header = ("import argparse\nimport os\nimport time\nimport numpy as np"
-              "\nimport qibo\nimport circuits\nfrom utils import "
-              "BenchmarkLogger, parse_accelerators\n\n")
-    args = {"nqubits": nqubits, "circuit_name": circuit_name,
-            "backend": "qibojit", "precision": "double",
-            "device": None, "accelerators": None, "get_branch": False,
-            "nshots": None, "fuse": False, "compile": False,
-            "nlayers": None, "gate_type": None, "params": {},
-            "filename": None}
-    code = header + code[start: end] + "\n\nmain(**args)"
+    header = (
+        "import argparse\nimport os\nimport time\nimport numpy as np"
+        "\nimport qibo\nimport circuits\nfrom utils import "
+        "BenchmarkLogger, parse_accelerators\n\n"
+    )
+    args = {
+        "nqubits": nqubits,
+        "circuit_name": circuit_name,
+        "backend": "qibojit",
+        "precision": "double",
+        "device": None,
+        "accelerators": None,
+        "get_branch": False,
+        "nshots": None,
+        "fuse": False,
+        "compile": False,
+        "nlayers": None,
+        "gate_type": None,
+        "params": {},
+        "filename": None,
+    }
+    code = header + code[start:end] + "\n\nmain(**args)"
     with timeout(max_time):
         exec(code, {"args": args})
 
@@ -199,8 +213,9 @@ def test_evolution_benchmarks(nqubits, dt, dense, solver, backend):
 @pytest.mark.parametrize("nshots", [int(1e5)])
 @pytest.mark.parametrize("training", [False])
 @pytest.mark.parametrize("RxRzRx", [False])
-def test_variational_classifier(nclasses, nqubits, nlayers,
-                                nshots, training, RxRzRx, method='Powell'):
+def test_variational_classifier(
+    nclasses, nqubits, nlayers, nshots, training, RxRzRx, method="Powell"
+):
     args = locals()
     path = os.path.join(base_dir, "variational_classifier")
     sys.path[-1] = path
@@ -225,8 +240,9 @@ def test_grover3sat(nqubits, instance):
 @pytest.mark.parametrize("dense", [True, False])
 @pytest.mark.parametrize("params", [[0.5, 0.5]])
 @pytest.mark.parametrize("method,maxiter", [("BFGS", 1)])
-def test_adiabatic3sat(nqubits, instance, T, dt, solver, dense, params,
-                       method, maxiter, plot=False):
+def test_adiabatic3sat(
+    nqubits, instance, T, dt, solver, dense, params, method, maxiter, plot=False
+):
     if "functions" in sys.modules:
         del sys.modules["functions"]
     args = locals()

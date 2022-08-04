@@ -1,7 +1,9 @@
+# -*- coding: utf-8 -*-
 import sympy
 import numpy as np
 from qibo import gates
 from qibo.config import raise_error
+
 
 class HamiltonianTerm:
     """Term of a :class:`qibo.hamiltonians.hamiltonians.SymbolicHamiltonian`.
@@ -21,17 +23,24 @@ class HamiltonianTerm:
     def __init__(self, matrix, *q):
         for qi in q:
             if qi < 0:
-                raise_error(ValueError, "Invalid qubit id {} < 0 was given "
-                                        "in Hamiltonian term".format(qi))
+                raise_error(
+                    ValueError,
+                    "Invalid qubit id {} < 0 was given "
+                    "in Hamiltonian term".format(qi),
+                )
         if not isinstance(matrix, np.ndarray):
-            raise_error(TypeError, "Invalid type {} of symbol matrix."
-                                   "".format(type(matrix)))
+            raise_error(
+                TypeError, "Invalid type {} of symbol matrix." "".format(type(matrix))
+            )
         dim = int(matrix.shape[0])
         if 2 ** len(q) != dim:
-            raise_error(ValueError, "Matrix dimension {} given in Hamiltonian "
-                                    "term is not compatible with the number "
-                                    "of target qubits {}."
-                                    "".format(dim, len(q)))
+            raise_error(
+                ValueError,
+                "Matrix dimension {} given in Hamiltonian "
+                "term is not compatible with the number "
+                "of target qubits {}."
+                "".format(dim, len(q)),
+            )
         self.target_qubits = tuple(q)
         self._gate = None
         self.hamiltonian = None
@@ -52,6 +61,7 @@ class HamiltonianTerm:
     def exp(self, x):
         """Matrix exponentiation of the term."""
         from scipy.linalg import expm
+
         return expm(-1j * x * self.matrix)
 
     def expgate(self, x):
@@ -66,9 +76,12 @@ class HamiltonianTerm:
         qubits of the current term.
         """
         if not set(term.target_qubits).issubset(set(self.target_qubits)):
-            raise_error(ValueError, "Cannot merge HamiltonianTerm acting on "
-                                    "qubits {} to term on qubits {}."
-                                    "".format(term.target_qubits, self.target_qubits))
+            raise_error(
+                ValueError,
+                "Cannot merge HamiltonianTerm acting on "
+                "qubits {} to term on qubits {}."
+                "".format(term.target_qubits, self.target_qubits),
+            )
         matrix = np.kron(term.matrix, np.eye(2 ** (len(self) - len(term))))
         matrix = np.reshape(matrix, 2 * len(self) * (2,))
         order = []
@@ -95,12 +108,12 @@ class HamiltonianTerm:
 
     def __call__(self, backend, state, nqubits, gate=None, density_matrix=False):
         """Applies the term on a given state vector or density matrix."""
-        #TODO: improve this and understand why it works
+        # TODO: improve this and understand why it works
         if isinstance(gate, bool) or gate is None:
             gate = self.gate
         if density_matrix:
             return backend.apply_gate_half_density_matrix(gate, state, nqubits)
-        return backend.apply_gate(gate, state, nqubits) # pylint: disable=E1102
+        return backend.apply_gate(gate, state, nqubits)  # pylint: disable=E1102
 
 
 class SymbolicTerm(HamiltonianTerm):
@@ -152,6 +165,7 @@ class SymbolicTerm(HamiltonianTerm):
                 # create the corresponding symbols
                 if factor in symbol_map:
                     from qibo.symbols import Symbol
+
                     q, matrix = symbol_map.get(factor)
                     factor = Symbol(q, matrix, name=factor.name)
 
@@ -175,7 +189,7 @@ class SymbolicTerm(HamiltonianTerm):
                     self.coefficient *= 1j
                 elif factor.is_number:
                     self.coefficient *= complex(factor)
-                else: # pragma: no cover
+                else:  # pragma: no cover
                     raise_error(TypeError, "Cannot parse factor {}.".format(factor))
 
         self.target_qubits = tuple(sorted(self.matrix_map.keys()))
@@ -190,6 +204,7 @@ class SymbolicTerm(HamiltonianTerm):
             of this term.
         """
         if self._matrix is None:
+
             def matrices_product(matrices):
                 """Product of matrices that act on the same tuple of qubits.
 
@@ -228,7 +243,9 @@ class SymbolicTerm(HamiltonianTerm):
 
     def __call__(self, backend, state, nqubits, density_matrix=False):
         for factor in self.factors:
-            state = super().__call__(backend, state, nqubits, factor.gate, density_matrix)
+            state = super().__call__(
+                backend, state, nqubits, factor.gate, density_matrix
+            )
         return self.coefficient * state
 
 

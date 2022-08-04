@@ -1,11 +1,13 @@
+# -*- coding: utf-8 -*-
 """Adiabatic evolution for the Ising Hamiltonian using linear scaling."""
 import argparse
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 from qibo import callbacks, hamiltonians, models
-matplotlib.rcParams['mathtext.fontset'] = 'cm'
-matplotlib.rcParams['font.family'] = 'STIXGeneral'
+
+matplotlib.rcParams["mathtext.fontset"] = "cm"
+matplotlib.rcParams["font.family"] = "STIXGeneral"
 matplotlib.rcParams["font.size"] = 14
 
 
@@ -46,9 +48,9 @@ def main(nqubits, hfield, T, dt, solver, save):
 
     energy = callbacks.Energy(h1)
     overlap = callbacks.Overlap(target_state)
-    evolution = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=dt,
-                                          solver=solver,
-                                          callbacks=[energy, overlap])
+    evolution = models.AdiabaticEvolution(
+        h0, h1, lambda t: t, dt=dt, solver=solver, callbacks=[energy, overlap]
+    )
     final_psi = evolution(final_time=T)
 
     # Plots

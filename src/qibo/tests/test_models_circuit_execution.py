@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import pytest
 import numpy as np
 from qibo import gates
@@ -13,7 +14,7 @@ def test_eager_execute(backend, accelerators):
 
 
 def test_compiled_execute(backend):
-    def create_circuit(theta = 0.1234):
+    def create_circuit(theta=0.1234):
         c = Circuit(2)
         c.add(gates.X(0))
         c.add(gates.X(1))
@@ -44,8 +45,10 @@ def test_compiling_twice_exception(backend):
     with pytest.raises(RuntimeError):
         c.compile()
 
+
 # TODO: Test circuit execution with measurements
 # TODO: Test compiled circuit execution with measurements
+
 
 @pytest.mark.linux
 def test_memory_error(backend, accelerators):
@@ -83,6 +86,7 @@ def test_final_state_property(backend):
 
 def test_density_matrix_circuit(backend):
     from qibo.tests.utils import random_density_matrix
+
     theta = 0.1234
     initial_rho = random_density_matrix(3)
 
@@ -94,8 +98,7 @@ def test_density_matrix_circuit(backend):
     final_rho = backend.execute_circuit(c, np.copy(initial_rho))
 
     h = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
-    cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0],
-                     [0, 0, 0, 1], [0, 0, 1, 0]])
+    cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
     m1 = np.kron(np.kron(h, h), np.eye(2))
     m2 = np.kron(cnot, np.eye(2))
     m3 = np.kron(np.eye(4), h)

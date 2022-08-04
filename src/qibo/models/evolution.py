@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Models for time evolution of state vectors."""
 from qibo import solvers, optimizers
 from qibo.config import log, raise_error
@@ -47,16 +48,16 @@ class StateEvolution:
             final_state2 = evolve(final_time=2, initial_state=initial_state)
     """
 
-    def __init__(self, hamiltonian, dt, solver="exp", callbacks=[],
-                 accelerators=None):
+    def __init__(self, hamiltonian, dt, solver="exp", callbacks=[], accelerators=None):
         hamtypes = (AbstractHamiltonian, BaseAdiabaticHamiltonian)
         if isinstance(hamiltonian, hamtypes):
             ham = hamiltonian
         else:
             ham = hamiltonian(0)
             if not isinstance(ham, AbstractHamiltonian):
-                raise TypeError("Hamiltonian type {} not understood."
-                                "".format(type(ham)))
+                raise TypeError(
+                    "Hamiltonian type {} not understood." "".format(type(ham))
+                )
         self.nqubits = ham.nqubits
         self.backend = ham.backend
         if dt <= 0:
@@ -66,9 +67,12 @@ class StateEvolution:
         disthamtypes = (SymbolicHamiltonian, BaseAdiabaticHamiltonian)
         if accelerators is not None:  # pragma: no cover
             if not isinstance(ham, disthamtypes) or solver != "exp":
-                raise_error(NotImplementedError, "Distributed evolution is only "
-                                                 "implemented using the Trotter "
-                                                 "exponential solver.")
+                raise_error(
+                    NotImplementedError,
+                    "Distributed evolution is only "
+                    "implemented using the Trotter "
+                    "exponential solver.",
+                )
             ham.circuit(dt, accelerators)
         self.solver = solvers.get_solver(solver, self.dt, hamiltonian)
         self.callbacks = callbacks
@@ -78,7 +82,7 @@ class StateEvolution:
 
     def _create_normalize_state(self, solver):
         if "rk" in solver:
-            log.info('Normalizing state during RK solution.')
+            log.info("Normalizing state during RK solution.")
             return lambda s: s / self.backend.calculate_norm(s)
         else:
             return lambda s: s
@@ -92,6 +96,7 @@ class StateEvolution:
             return calculate_callbacks
 
         else:  # pragma: no cover
+
             def calculate_callbacks_distributed(state):
                 if not isinstance(state, self.backend.tensor_types):
                     state = state.state()
@@ -113,8 +118,9 @@ class StateEvolution:
             distributed execution is used.
         """
         if initial_state is None:
-            raise_error(ValueError, "StateEvolution cannot be used without "
-                                    "initial state.")
+            raise_error(
+                ValueError, "StateEvolution cannot be used without " "initial state."
+            )
         state = self.backend.cast(initial_state)
         self.solver.t = start_time
         nsteps = int((final_time - start_time) / self.solver.dt)
@@ -165,11 +171,11 @@ class AdiabaticEvolution(StateEvolution):
             execution. This option is available only when the Trotter
             decomposition is used for the time evolution.
     """
-    ATOL = 1e-7 # Tolerance for checking s(0) = 0 and s(T) = 1.
 
-    def __init__(self, h0, h1, s, dt, solver="exp", callbacks=[],
-                 accelerators=None):
-        self.hamiltonian = AdiabaticHamiltonian(h0, h1) # pylint: disable=E0110
+    ATOL = 1e-7  # Tolerance for checking s(0) = 0 and s(T) = 1.
+
+    def __init__(self, h0, h1, s, dt, solver="exp", callbacks=[], accelerators=None):
+        self.hamiltonian = AdiabaticHamiltonian(h0, h1)  # pylint: disable=E0110
         super().__init__(self.hamiltonian, dt, solver, callbacks, accelerators)
 
         # Set evolution model to "Gap" callback if one exists
@@ -183,20 +189,26 @@ class AdiabaticEvolution(StateEvolution):
 
         self.parametrized_schedule = None
         nparams = s.__code__.co_argcount
-        if nparams == 1: # given ``s`` is a function of time only
+        if nparams == 1:  # given ``s`` is a function of time only
             self.schedule = s
-        elif nparams == 2: # given ``s`` has undefined parameters
+        elif nparams == 2:  # given ``s`` has undefined parameters
             self.parametrized_schedule = s
         else:
-            raise_error(ValueError, f"Scheduling function shoud take one or "
-                                     "two arguments but it takes {nparams}.")
+            raise_error(
+                ValueError,
+                f"Scheduling function shoud take one or "
+                "two arguments but it takes {nparams}.",
+            )
 
     @property
     def schedule(self):
         """Returns scheduling as a function of time."""
         if self.hamiltonian.schedule is None:
-            raise_error(ValueError, "Cannot access scheduling function before "
-                                    "setting its free parameters.")
+            raise_error(
+                ValueError,
+                "Cannot access scheduling function before "
+                "setting its free parameters.",
+            )
         return self.hamiltonian.schedule
 
     @schedule.setter
@@ -219,12 +231,16 @@ class AdiabaticEvolution(StateEvolution):
     def execute(self, final_time, start_time=0.0, initial_state=None):
         """"""
         if start_time != 0:
-            raise_error(NotImplementedError, "Adiabatic evolution supports only t=0 "
-                                             "as initial time.")
+            raise_error(
+                NotImplementedError,
+                "Adiabatic evolution supports only t=0 " "as initial time.",
+            )
         self.hamiltonian.total_time = final_time - start_time
         if initial_state is None:
             initial_state = self.hamiltonian.ground_state()
-        return super(AdiabaticEvolution, self).execute(final_time, start_time, initial_state)
+        return super(AdiabaticEvolution, self).execute(
+            final_time, start_time, initial_state
+        )
 
     @staticmethod
     def _loss(params, adiabatic_evolution, h1, opt_messages, opt_history):
@@ -235,7 +251,9 @@ class AdiabaticEvolution(StateEvolution):
         adiabatic_evolution.set_parameters(params)
         ham = adiabatic_evolution.hamiltonian
         initial_state = ham.backend.cast(ham.h0.ground_state(), copy=True)
-        final_state = super(AdiabaticEvolution, adiabatic_evolution).execute(params[-1], initial_state=initial_state)
+        final_state = super(AdiabaticEvolution, adiabatic_evolution).execute(
+            params[-1], initial_state=initial_state
+        )
         loss = h1.expectation(final_state, normalize=True)
         if opt_messages:
             opt_history["params"].append(params)
@@ -243,8 +261,7 @@ class AdiabaticEvolution(StateEvolution):
             log.info(f"Params: {params}  -  <H1> = {loss}")
         return loss
 
-    def minimize(self, initial_parameters, method="BFGS", options=None,
-                 messages=False):
+    def minimize(self, initial_parameters, method="BFGS", options=None, messages=False):
         """Optimize the free parameters of the scheduling function.
 
         Args:
@@ -264,12 +281,17 @@ class AdiabaticEvolution(StateEvolution):
         if method == "sgd":
             loss = self._loss
         else:
-            loss = lambda p, ae, h1, msg, hist: self.backend.to_numpy(self._loss(p, ae, h1, msg, hist))
+            loss = lambda p, ae, h1, msg, hist: self.backend.to_numpy(
+                self._loss(p, ae, h1, msg, hist)
+            )
 
         args = (self, self.hamiltonian.h1, self.opt_messages, self.opt_history)
         result, parameters, extra = optimizers.optimize(
-            loss, initial_parameters, args=args, method=method, options=options)
-        if isinstance(parameters, self.backend.tensor_types) and not len(parameters.shape): # pragma: no cover
+            loss, initial_parameters, args=args, method=method, options=options
+        )
+        if isinstance(parameters, self.backend.tensor_types) and not len(
+            parameters.shape
+        ):  # pragma: no cover
             # some optimizers like ``Powell`` return number instead of list
             parameters = [parameters]
         self.set_parameters(parameters)

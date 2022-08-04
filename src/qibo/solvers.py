@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from qibo.config import raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.hamiltonians.adiabatic import BaseAdiabaticHamiltonian
@@ -34,7 +35,7 @@ class BaseSolver:
         self._t = new_t
         self.current_hamiltonian = self.hamiltonian(self.t)
 
-    def __call__(self, state): # pragma: no cover
+    def __call__(self, state):  # pragma: no cover
         # abstract method
         raise_error(NotImplementedError)
 
@@ -89,7 +90,7 @@ class RungeKutta4(BaseSolver):
         k3 = ham2 @ (state + self.dt * k2 / 2.0)
         k4 = ham3 @ (state + self.dt * k3)
         self.t += self.dt
-        return (state - 1j * self.dt * (k1 + 2 * k2 + 2 * k3 + k4) / 6.0)
+        return state - 1j * self.dt * (k1 + 2 * k2 + 2 * k3 + k4) / 6.0
 
 
 class RungeKutta45(BaseSolver):
@@ -105,15 +106,31 @@ class RungeKutta45(BaseSolver):
         k1 = ham1 @ state
         k2 = ham2 @ (state + self.dt * k1 / 4.0)
         k3 = ham3 @ (state + self.dt * (3 * k1 + 9 * k2) / 32.0)
-        k4 = ham4 @ (state + self.dt * (1932 * k1 -
-                                        7200 * k2 + 7296 * k3) / 2197.0)
-        k5 = ham5 @ (state + self.dt * (439 * k1 / 216.0 - 8 *
-                                        k2 + 3680 * k3 / 513.0 - 845 * k4 / 4104.0))
-        k6 = ham6 @ (state + self.dt * (-8 * k1 / 27.0 + 2 * k2 -
-                                        3544 * k3 / 2565 + 1859 * k4 / 4104 - 11 * k5 / 40.0))
+        k4 = ham4 @ (state + self.dt * (1932 * k1 - 7200 * k2 + 7296 * k3) / 2197.0)
+        k5 = ham5 @ (
+            state
+            + self.dt
+            * (439 * k1 / 216.0 - 8 * k2 + 3680 * k3 / 513.0 - 845 * k4 / 4104.0)
+        )
+        k6 = ham6 @ (
+            state
+            + self.dt
+            * (
+                -8 * k1 / 27.0
+                + 2 * k2
+                - 3544 * k3 / 2565
+                + 1859 * k4 / 4104
+                - 11 * k5 / 40.0
+            )
+        )
         self.t += self.dt
-        return (state - 1j * self.dt * (16 * k1 / 135.0 + 6656 * k3 / 12825.0 + 28561 * k4 / 56430.0 -
-                                        9 * k5 / 50.0 + 2 * k6 / 55.0))
+        return state - 1j * self.dt * (
+            16 * k1 / 135.0
+            + 6656 * k3 / 12825.0
+            + 28561 * k4 / 56430.0
+            - 9 * k5 / 50.0
+            + 2 * k6 / 55.0
+        )
 
 
 def get_solver(solver_name, dt, hamiltonian):

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import math
 from qibo import gates
 from qibo.config import raise_error
@@ -33,8 +34,10 @@ def QFT(nqubits, with_swaps=True, accelerators=None) -> Circuit:
     """
     if accelerators is not None:
         if not with_swaps:
-            raise_error(NotImplementedError, "Distributed QFT is only implemented "
-                                             "with SWAPs.")
+            raise_error(
+                NotImplementedError,
+                "Distributed QFT is only implemented " "with SWAPs.",
+            )
         return _DistributedQFT(nqubits, accelerators)
 
     circuit = Circuit(nqubits)
@@ -56,11 +59,14 @@ def _DistributedQFT(nqubits, accelerators=None):
     circuit = Circuit(nqubits, accelerators)
     icrit = nqubits // 2 + nqubits % 2
     if accelerators is not None:
-        circuit.global_qubits = range(circuit.nlocal, nqubits) # pylint: disable=E1101
-        if icrit < circuit.nglobal: # pylint: disable=E1101
-            raise_error(NotImplementedError, "Cannot implement QFT for {} qubits "
-                                             "using {} global qubits."
-                                             "".format(nqubits, circuit.nglobal)) # pylint: disable=E1101
+        circuit.global_qubits = range(circuit.nlocal, nqubits)  # pylint: disable=E1101
+        if icrit < circuit.nglobal:  # pylint: disable=E1101
+            raise_error(
+                NotImplementedError,
+                "Cannot implement QFT for {} qubits "
+                "using {} global qubits."
+                "".format(nqubits, circuit.nglobal),
+            )  # pylint: disable=E1101
 
     for i1 in range(nqubits):
         if i1 < icrit:

@@ -1,19 +1,50 @@
+# -*- coding: utf-8 -*-
 import math
 from qibo.config import raise_error
 from typing import Dict, List, Optional, Tuple
 from qibo.gates.abstract import Gate, ParametrizedGate
 
 
-QASM_GATES = {"h": "H", "x": "X", "y": "Y", "z": "Z",
-              "rx": "RX", "ry": "RY", "rz": "RZ",
-              "u1": "U1", "u2": "U2", "u3": "U3",
-              "cx": "CNOT", "swap": "SWAP", "fswap": "FSWAP", "cz": "CZ",
-              "crx": "CRX", "cry": "CRY", "crz": "CRZ",
-              "cu1": "CU1", "cu3": "CU3",
-              "ccx": "TOFFOLI", "id": "I", "s": "S",
-              "sdg": "SDG", "t": "T", "tdg": "TDG"}
-PARAMETRIZED_GATES = {"rx", "ry", "rz", "u1", "u2", "u3",
-                      "crx", "cry", "crz", "cu1", "cu3"}
+QASM_GATES = {
+    "h": "H",
+    "x": "X",
+    "y": "Y",
+    "z": "Z",
+    "rx": "RX",
+    "ry": "RY",
+    "rz": "RZ",
+    "u1": "U1",
+    "u2": "U2",
+    "u3": "U3",
+    "cx": "CNOT",
+    "swap": "SWAP",
+    "fswap": "FSWAP",
+    "cz": "CZ",
+    "crx": "CRX",
+    "cry": "CRY",
+    "crz": "CRZ",
+    "cu1": "CU1",
+    "cu3": "CU3",
+    "ccx": "TOFFOLI",
+    "id": "I",
+    "s": "S",
+    "sdg": "SDG",
+    "t": "T",
+    "tdg": "TDG",
+}
+PARAMETRIZED_GATES = {
+    "rx",
+    "ry",
+    "rz",
+    "u1",
+    "u2",
+    "u3",
+    "crx",
+    "cry",
+    "crz",
+    "cu1",
+    "cu3",
+}
 
 
 class H(Gate):
@@ -68,8 +99,11 @@ class X(Gate):
             same effect as applying the original multi-control gate.
         """
         if set(free) & set(self.qubits):
-            raise_error(ValueError, "Cannot decompose multi-control X gate if free "
-                                    "qubits coincide with target or controls.")
+            raise_error(
+                ValueError,
+                "Cannot decompose multi-control X gate if free "
+                "qubits coincide with target or controls.",
+            )
 
         controls = self.control_qubits
         target = self.target_qubits[0]
@@ -80,13 +114,15 @@ class X(Gate):
         decomp_gates = []
         n = m + 1 + len(free)
         if (n >= 2 * m - 1) and (m >= 3):
-            gates1 = [TOFFOLI(controls[m - 2 - i],
-                              free[m - 4 - i],
-                              free[m - 3 - i]
-                              ).congruent(use_toffolis=use_toffolis)
-                      for i in range(m - 3)]
-            gates2 = TOFFOLI(controls[0], controls[1], free[0]
-                             ).congruent(use_toffolis=use_toffolis)
+            gates1 = [
+                TOFFOLI(
+                    controls[m - 2 - i], free[m - 4 - i], free[m - 3 - i]
+                ).congruent(use_toffolis=use_toffolis)
+                for i in range(m - 3)
+            ]
+            gates2 = TOFFOLI(controls[0], controls[1], free[0]).congruent(
+                use_toffolis=use_toffolis
+            )
             first_toffoli = TOFFOLI(controls[m - 1], free[m - 3], target)
 
             decomp_gates.append(first_toffoli)
@@ -109,10 +145,12 @@ class X(Gate):
 
             decomp_gates = [*part1, *part2]
 
-        else: # pragma: no cover
+        else:  # pragma: no cover
             # impractical case
-            raise_error(NotImplementedError, "X decomposition not implemented "
-                                             "for zero free qubits.")
+            raise_error(
+                NotImplementedError,
+                "X decomposition not implemented " "for zero free qubits.",
+            )
 
         decomp_gates.extend(decomp_gates)
         return decomp_gates
@@ -273,7 +311,6 @@ class I(ParametrizedGate):
 
 
 class Align(ParametrizedGate):
-
     def __init__(self, *q):
         super(Align, self).__init__()
         self.name = "align"
@@ -307,14 +344,17 @@ class _Rn_(ParametrizedGate):
 
     def _dagger(self) -> "Gate":
         """"""
-        return self.__class__(self.target_qubits[0], -self.parameters[0]) # pylint: disable=E1130
+        return self.__class__(
+            self.target_qubits[0], -self.parameters[0]
+        )  # pylint: disable=E1130
 
     @Gate.check_controls
     def controlled_by(self, *q):
         """Fall back to CRn if there is only one control."""
         if len(q) == 1:
-            gate = self._controlled_gate( # pylint: disable=E1102
-                q[0], self.target_qubits[0], **self.init_kwargs)
+            gate = self._controlled_gate(  # pylint: disable=E1102
+                q[0], self.target_qubits[0], **self.init_kwargs
+            )
         else:
             gate = super().controlled_by(*q)
         return gate
@@ -422,8 +462,9 @@ class _Un_(ParametrizedGate):
     def controlled_by(self, *q):
         """Fall back to CUn if there is only one control."""
         if len(q) == 1:
-            gate = self._controlled_gate( # pylint: disable=E1102
-              q[0], self.target_qubits[0], **self.init_kwargs)
+            gate = self._controlled_gate(  # pylint: disable=E1102
+                q[0], self.target_qubits[0], **self.init_kwargs
+            )
         else:
             gate = super().controlled_by(*q)
         return gate
@@ -457,8 +498,8 @@ class U1(_Un_):
         self.init_kwargs = {"theta": theta, "trainable": trainable}
 
     def _dagger(self) -> "Gate":
-        theta = - self.parameters[0]
-        return self.__class__(self.target_qubits[0], theta) # pylint: disable=E1130
+        theta = -self.parameters[0]
+        return self.__class__(self.target_qubits[0], theta)  # pylint: disable=E1130
 
 
 class U2(_Un_):
@@ -495,7 +536,7 @@ class U2(_Un_):
     def _dagger(self) -> "Gate":
         """"""
         phi, lam = self.parameters
-        phi, lam = math.pi - lam, - math.pi - phi
+        phi, lam = math.pi - lam, -math.pi - phi
         return self.__class__(self.target_qubits[0], phi, lam)
 
 
@@ -526,14 +567,18 @@ class U3(_Un_):
         self._controlled_gate = CU3
         self.nparams = 3
         self._theta, self._phi, self._lam = None, None, None
-        self.init_kwargs = {"theta": theta, "phi": phi, "lam": lam,
-                            "trainable": trainable}
+        self.init_kwargs = {
+            "theta": theta,
+            "phi": phi,
+            "lam": lam,
+            "trainable": trainable,
+        }
         self.parameter_names = ["theta", "phi", "lam"]
         self.parameters = theta, phi, lam
 
     def _dagger(self) -> "Gate":
         """"""
-        theta, lam, phi = tuple(-x for x in self.parameters) # pylint: disable=E1130
+        theta, lam, phi = tuple(-x for x in self.parameters)  # pylint: disable=E1130
         return self.__class__(self.target_qubits[0], theta, phi, lam)
 
 
@@ -619,8 +664,8 @@ class _CRn_(ParametrizedGate):
         """"""
         q0 = self.control_qubits[0]
         q1 = self.target_qubits[0]
-        theta = - self.parameters[0]
-        return self.__class__(q0, q1, theta) # pylint: disable=E1130
+        theta = -self.parameters[0]
+        return self.__class__(q0, q1, theta)  # pylint: disable=E1130
 
 
 class CRX(_CRn_):
@@ -762,8 +807,8 @@ class CU1(_CUn_):
         """"""
         q0 = self.control_qubits[0]
         q1 = self.target_qubits[0]
-        theta = - self.parameters[0]
-        return self.__class__(q0, q1, theta) # pylint: disable=E1130
+        theta = -self.parameters[0]
+        return self.__class__(q0, q1, theta)  # pylint: disable=E1130
 
 
 class CU2(_CUn_):
@@ -804,7 +849,7 @@ class CU2(_CUn_):
         q0 = self.control_qubits[0]
         q1 = self.target_qubits[0]
         phi, lam = self.parameters
-        phi, lam = math.pi - lam, - math.pi - phi
+        phi, lam = math.pi - lam, -math.pi - phi
         return self.__class__(q0, q1, phi, lam)
 
 
@@ -837,8 +882,12 @@ class CU3(_CUn_):
         self.name = "cu3"
         self.nparams = 3
         self._theta, self._phi, self._lam = None, None, None
-        self.init_kwargs = {"theta": theta, "phi": phi, "lam": lam,
-                            "trainable": trainable}
+        self.init_kwargs = {
+            "theta": theta,
+            "phi": phi,
+            "lam": lam,
+            "trainable": trainable,
+        }
         self.parameter_names = ["theta", "phi", "lam"]
         self.parameters = theta, phi, lam
 
@@ -846,7 +895,7 @@ class CU3(_CUn_):
         """"""
         q0 = self.control_qubits[0]
         q1 = self.target_qubits[0]
-        theta, lam, phi = tuple(-x for x in self.parameters) # pylint: disable=E1130
+        theta, lam, phi = tuple(-x for x in self.parameters)  # pylint: disable=E1130
         return self.__class__(q0, q1, theta, phi, lam)
 
 
@@ -922,6 +971,7 @@ class fSim(ParametrizedGate):
             :meth:`qibo.models.circuit.Circuit.set_parameters`
             (default is ``True``).
     """
+
     # TODO: Check how this works with QASM.
 
     def __init__(self, q0, q1, theta, phi, trainable=True):
@@ -939,7 +989,7 @@ class fSim(ParametrizedGate):
     def _dagger(self) -> "Gate":
         """"""
         q0, q1 = self.target_qubits
-        params = (-x for x in self.parameters) # pylint: disable=E1130
+        params = (-x for x in self.parameters)  # pylint: disable=E1130
         return self.__class__(q0, q1, *params)
 
 
@@ -976,11 +1026,11 @@ class GeneralizedfSim(ParametrizedGate):
         self.nparams = 5
 
         self.init_args = [q0, q1]
-        self.init_kwargs = {"unitary": unitary, "phi": phi,
-                            "trainable": trainable}
+        self.init_kwargs = {"unitary": unitary, "phi": phi, "trainable": trainable}
 
     def _dagger(self):
         import numpy as np
+
         q0, q1 = self.target_qubits
         u, phi = self.parameters
         init_kwargs = dict(self.init_kwargs)
@@ -992,9 +1042,11 @@ class GeneralizedfSim(ParametrizedGate):
     def parameters(self, x):
         shape = tuple(x[0].shape)
         if shape != (2, 2):
-            raise_error(ValueError, "Invalid rotation shape {} for generalized "
-                                    "fSim gate".format(shape))
-        ParametrizedGate.parameters.fset(self, x) # pylint: disable=no-member
+            raise_error(
+                ValueError,
+                "Invalid rotation shape {} for generalized " "fSim gate".format(shape),
+            )
+        ParametrizedGate.parameters.fset(self, x)  # pylint: disable=no-member
 
 
 class TOFFOLI(Gate):
@@ -1039,12 +1091,18 @@ class TOFFOLI(Gate):
             return self.decompose()
 
         import importlib
+
         control0, control1 = self.control_qubits
         target = self.target_qubits[0]
-        return [RY(target, -math.pi / 4), CNOT(control1, target),
-                RY(target, -math.pi / 4), CNOT(control0, target),
-                RY(target, math.pi / 4), CNOT(control1, target),
-                RY(target, math.pi / 4)]
+        return [
+            RY(target, -math.pi / 4),
+            CNOT(control1, target),
+            RY(target, -math.pi / 4),
+            CNOT(control0, target),
+            RY(target, math.pi / 4),
+            CNOT(control1, target),
+            RY(target, math.pi / 4),
+        ]
 
 
 class Unitary(ParametrizedGate):
@@ -1077,6 +1135,7 @@ class Unitary(ParametrizedGate):
     @Gate.parameters.setter
     def parameters(self, x):
         import numpy as np
+
         shape = self.parameters[0].shape
         self._parameters = (np.reshape(x, shape),)
         for gate in self.device_gates:  # pragma: no cover
@@ -1093,5 +1152,6 @@ class Unitary(ParametrizedGate):
 
     def _dagger(self):
         import numpy as np
+
         ud = np.conj(np.transpose(self.parameters[0]))
         return self.__class__(ud, *self.target_qubits, **self.init_kwargs)

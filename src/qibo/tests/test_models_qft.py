@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Test methods defined in `qibo/models/circuit.py`."""
 import sys
 import numpy as np
@@ -32,13 +33,13 @@ def test_qft_circuit_size(backend, nqubits):
     c = models.QFT(nqubits)
     assert c.nqubits == nqubits
     assert c.depth == 2 * nqubits
-    assert c.ngates == nqubits ** 2 // 2 + nqubits
+    assert c.ngates == nqubits**2 // 2 + nqubits
 
 
 @pytest.mark.parametrize("nqubits", [4, 5])
 def test_qft_matrix(backend, nqubits):
     c = models.QFT(nqubits)
-    dim = 2 ** nqubits
+    dim = 2**nqubits
     target_matrix = qft_matrix(dim)
     backend.assert_allclose(c.unitary(backend), target_matrix)
     c = c.invert()
@@ -62,6 +63,7 @@ def test_qft_execution(backend, accelerators, nqubits, random):
 def test_qft_errors(backend):
     """Check that ``_DistributedQFT`` raises error if not sufficient qubits."""
     from qibo.models.qft import _DistributedQFT
+
     with pytest.raises(NotImplementedError):
         c = models.QFT(10, with_swaps=False, accelerators={"/GPU:0": 2})
     with pytest.raises(NotImplementedError):

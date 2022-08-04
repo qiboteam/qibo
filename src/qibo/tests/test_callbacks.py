@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Test methods defined in `qibo/core/callbacks.py`."""
 import pytest
 import numpy as np
@@ -69,6 +70,7 @@ def test_entropy_singlet_state(backend):
 def test_entropy_random_state(backend):
     """Check that entropy calculation agrees with numpy."""
     from qibo.config import EIGVAL_CUTOFF
+
     # Generate a random positive and hermitian density matrix
     rho = np.random.random((8, 8)) + 1j * np.random.random((8, 8))
     rho = rho + rho.conj().T
@@ -78,12 +80,12 @@ def test_entropy_random_state(backend):
     rho = u.dot(np.diag(s)).dot(u.conj().T)
 
     result, spectrum = backend.entanglement_entropy(rho)
-    target = - (s * np.log2(s)).sum()
+    target = -(s * np.log2(s)).sum()
     backend.assert_allclose(result, target)
 
     target_eigvals = np.linalg.eigvalsh(rho)
     masked_eigvals = target_eigvals[np.where(target_eigvals > EIGVAL_CUTOFF)]
-    target_spectrum = - np.log(masked_eigvals)
+    target_spectrum = -np.log(masked_eigvals)
     backend.assert_allclose(spectrum, target_spectrum)
 
 
@@ -92,7 +94,7 @@ def test_entropy_switch_partition(backend):
     entropy = callbacks.EntanglementEntropy([0])
     entropy.nqubits = 5
     # Prepare ghz state of 5 qubits
-    state = np.zeros(2 ** 5)
+    state = np.zeros(2**5)
     state[0], state[-1] = 1, 1
     state = state / np.sqrt(2)
     result = entropy.apply(backend, state)
@@ -101,13 +103,35 @@ def test_entropy_switch_partition(backend):
 
 def test_entropy_numerical(backend):
     """Check that entropy calculation does not fail for tiny eigenvalues."""
-    eigvals = np.array([-1e-10, -1e-15, -2e-17, -1e-18, -5e-60, 1e-48, 4e-32,
-                        5e-14, 1e-14, 9.9e-13, 9e-13, 5e-13, 1e-13, 1e-12,
-                        1e-11, 1e-10, 1e-9, 1e-7, 1, 4, 10])
+    eigvals = np.array(
+        [
+            -1e-10,
+            -1e-15,
+            -2e-17,
+            -1e-18,
+            -5e-60,
+            1e-48,
+            4e-32,
+            5e-14,
+            1e-14,
+            9.9e-13,
+            9e-13,
+            5e-13,
+            1e-13,
+            1e-12,
+            1e-11,
+            1e-10,
+            1e-9,
+            1e-7,
+            1,
+            4,
+            10,
+        ]
+    )
     rho = np.diag(eigvals)
     result, _ = backend.entanglement_entropy(rho)
     mask = eigvals > 0
-    target = - (eigvals[mask] * np.log2(eigvals[mask])).sum()
+    target = -(eigvals[mask] * np.log2(eigvals[mask])).sum()
     backend.assert_allclose(result, target)
 
 
@@ -132,14 +156,20 @@ def test_entropy_in_circuit(backend, density_matrix):
     backend.assert_allclose(entropy_spectrum, target_spectrum, atol=_atol)
 
 
-@pytest.mark.parametrize("gateconf,target_entropy",
-                         [(["H", "CNOT", "entropy"], [1.0]),
-                          (["H", "entropy", "CNOT"], [0.0]),
-                          (["entropy", "H", "CNOT"], [0.0]),
-                          (["entropy", "H", "CNOT", "entropy"], [0.0, 1.0]),
-                          (["H", "entropy", "CNOT", "entropy"], [0.0, 1.0]),
-                          (["entropy", "H", "entropy", "CNOT"], [0.0, 0.0])])
-def test_entropy_in_distributed_circuit(backend, accelerators, gateconf, target_entropy):
+@pytest.mark.parametrize(
+    "gateconf,target_entropy",
+    [
+        (["H", "CNOT", "entropy"], [1.0]),
+        (["H", "entropy", "CNOT"], [0.0]),
+        (["entropy", "H", "CNOT"], [0.0]),
+        (["entropy", "H", "CNOT", "entropy"], [0.0, 1.0]),
+        (["H", "entropy", "CNOT", "entropy"], [0.0, 1.0]),
+        (["entropy", "H", "entropy", "CNOT"], [0.0, 0.0]),
+    ],
+)
+def test_entropy_in_distributed_circuit(
+    backend, accelerators, gateconf, target_entropy
+):
     """Check that various entropy configurations work in distributed circuit."""
     target_c = Circuit(4)
     target_c.add([gates.H(0), gates.CNOT(0, 1)])
@@ -190,7 +220,7 @@ def test_entropy_multiple_executions(backend, accelerators):
     def target_entropy(t):
         cos = np.cos(t / 2.0) ** 2
         sin = np.sin(t / 2.0) ** 2
-        return - cos * np.log2(cos) - sin * np.log2(sin)
+        return -cos * np.log2(cos) - sin * np.log2(sin)
 
     target = [0, target_entropy(0.1234), 0, target_entropy(0.4321)]
     values = [backend.to_numpy(x) for x in entropy[:]]
@@ -249,6 +279,7 @@ def test_entropy_large_circuit(backend, accelerators):
 
 def test_entropy_density_matrix(backend):
     from qibo.tests.utils import random_density_matrix
+
     rho = random_density_matrix(4)
     # this rho is not always positive. Make rho positive for this application
     _, u = np.linalg.eigh(rho)
@@ -265,7 +296,7 @@ def test_entropy_density_matrix(backend):
     # assert that all eigenvalues are non-negative
     assert (eigvals >= 0).prod()
     mask = eigvals > 0
-    target_ent = - (eigvals[mask] * np.log2(eigvals[mask])).sum()
+    target_ent = -(eigvals[mask] * np.log2(eigvals[mask])).sum()
     backend.assert_allclose(final_ent, target_ent)
 
 
@@ -327,16 +358,19 @@ def test_overlap(backend, density_matrix):
 @pytest.mark.parametrize("density_matrix", [False, True])
 def test_energy(backend, density_matrix):
     from qibo import hamiltonians
+
     ham = hamiltonians.TFIM(4, h=1.0, backend=backend)
     energy = callbacks.Energy(ham)
     matrix = backend.to_numpy(ham.matrix)
     if density_matrix:
         from qibo.tests.utils import random_density_matrix
+
         state = random_density_matrix(4)
         target_energy = np.trace(matrix.dot(state))
         final_energy = energy.apply_density_matrix(backend, state)
     else:
         from qibo.tests.utils import random_state
+
         state = random_state(4)
         target_energy = state.conj().dot(matrix.dot(state))
         final_energy = energy.apply(backend, state)
@@ -347,6 +381,7 @@ def test_energy(backend, density_matrix):
 @pytest.mark.parametrize("check_degenerate", [False, True])
 def test_gap(backend, dense, check_degenerate):
     from qibo import hamiltonians
+
     h0 = hamiltonians.X(4, dense=dense, backend=backend)
     if check_degenerate:
         # use h=0 to make this Hamiltonian degenerate
@@ -367,15 +402,16 @@ def test_gap(backend, dense, check_degenerate):
     gap = callbacks.Gap(check_degenerate=check_degenerate)
     ground = callbacks.Gap(0)
     excited = callbacks.Gap(1)
-    evolution = AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-1,
-                                   callbacks=[gap, ground, excited])
+    evolution = AdiabaticEvolution(
+        h0, h1, lambda t: t, dt=1e-1, callbacks=[gap, ground, excited]
+    )
     final_state = evolution(final_time=1.0)
     targets = {k: np.stack(v) for k, v in targets.items()}
 
     values = {
         "ground": np.array([backend.to_numpy(x) for x in ground]),
         "excited": np.array([backend.to_numpy(x) for x in excited]),
-        "gap": np.array([backend.to_numpy(x) for x in gap])
+        "gap": np.array([backend.to_numpy(x) for x in gap]),
     }
     for k, v in values.items():
         backend.assert_allclose(v, targets.get(k))

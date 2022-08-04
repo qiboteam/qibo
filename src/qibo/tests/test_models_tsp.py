@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import pytest
 import numpy as np
 from collections import defaultdict
@@ -8,15 +9,13 @@ from qibo.tests.test_models_variational import assert_regression_fixture
 
 
 def qaoa_function_of_layer(backend, layer):
-    '''
+    """
     This is a function to study the impact of the number of layers on QAOA, it takes
     in the number of layers and compute the distance of the mode of the histogram obtained
     from QAOA
-    '''
+    """
     num_cities = 3
-    distance_matrix = np.array([[0, 0.9, 0.8],
-                                [0.4, 0, 0.1],
-                                [0, 0.7, 0]])
+    distance_matrix = np.array([[0, 0.9, 0.8], [0.4, 0, 0.1], [0, 0.7, 0]])
     # there are two possible cycles, one with distance 1, one with distance 1.9
     distance_matrix = distance_matrix.round(1)
 
@@ -25,9 +24,12 @@ def qaoa_function_of_layer(backend, layer):
     obj_hamil, mixer = small_tsp.hamiltonians()
     qaoa = QAOA(obj_hamil, mixer=mixer)
     initial_state = backend.cast(initial_state, copy=True)
-    best_energy, final_parameters, extra = qaoa.minimize(initial_p=[0.1 for i in range(layer)],
-                                                         initial_state=initial_state, method='BFGS',
-                                                         options={"maxiter": 1})
+    best_energy, final_parameters, extra = qaoa.minimize(
+        initial_p=[0.1 for i in range(layer)],
+        initial_state=initial_state,
+        method="BFGS",
+        options={"maxiter": 1},
+    )
     qaoa.set_parameters(final_parameters)
     return qaoa.execute(initial_state)
 
@@ -35,5 +37,9 @@ def qaoa_function_of_layer(backend, layer):
 @pytest.mark.parametrize("nlayers", [4, 6, 8])
 def test_tsp(backend, nlayers):
     final_state = backend.to_numpy(qaoa_function_of_layer(backend, nlayers))
-    assert_regression_fixture(backend, final_state.real, f"tsp_layer{nlayers}_real.out", rtol=1e-3)
-    assert_regression_fixture(backend, final_state.imag, f"tsp_layer{nlayers}_imag.out", rtol=1e-3)
+    assert_regression_fixture(
+        backend, final_state.real, f"tsp_layer{nlayers}_real.out", rtol=1e-3
+    )
+    assert_regression_fixture(
+        backend, final_state.imag, f"tsp_layer{nlayers}_imag.out", rtol=1e-3
+    )

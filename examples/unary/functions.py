@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 import matplotlib.pyplot as plt
 from qibo.models import Circuit
@@ -15,22 +16,22 @@ def rw_circuit(qubits, parameters, X=True):
     Returns:
         generator that yield the gates needed for the amplitude distributor circuit
     """
-    if qubits%2==0:
-        mid1 = int(qubits/2)
-        mid0 = int(mid1-1)
+    if qubits % 2 == 0:
+        mid1 = int(qubits / 2)
+        mid0 = int(mid1 - 1)
         if X:
             yield gates.X(mid1)
-        yield gates.fSim(mid1, mid0, parameters[mid0]/2, 0)
+        yield gates.fSim(mid1, mid0, parameters[mid0] / 2, 0)
         for i in range(mid0):
-            yield gates.fSim(mid0-i, mid0-i-1, parameters[mid0-i-1]/2, 0)
-            yield gates.fSim(mid1+i, mid1+i+1, parameters[mid1+i]/2, 0)
+            yield gates.fSim(mid0 - i, mid0 - i - 1, parameters[mid0 - i - 1] / 2, 0)
+            yield gates.fSim(mid1 + i, mid1 + i + 1, parameters[mid1 + i] / 2, 0)
     else:
-        mid = int((qubits-1)/2)
+        mid = int((qubits - 1) / 2)
         if X:
             yield gates.X(mid)
         for i in range(mid):
-            yield gates.fSim(mid-i, mid-i-1, parameters[mid-i-1]/2, 0)
-            yield gates.fSim(mid+i, mid+i+1, parameters[mid+i]/2, 0)
+            yield gates.fSim(mid - i, mid - i - 1, parameters[mid - i - 1] / 2, 0)
+            yield gates.fSim(mid + i, mid + i + 1, parameters[mid + i] / 2, 0)
 
 
 def rw_circuit_inv(qubits, parameters, X=True):
@@ -44,17 +45,17 @@ def rw_circuit_inv(qubits, parameters, X=True):
     Returns:
         generator that yield the gates needed for the amplitude distributor circuit in reverse order.
     """
-    if qubits%2==0:
-        mid1 = int(qubits/2)
-        mid0 = int(mid1-1)
+    if qubits % 2 == 0:
+        mid1 = int(qubits / 2)
+        mid0 = int(mid1 - 1)
         for i in range(mid0 - 1, -1, -1):
-            yield gates.fSim(mid0 - i, mid0 - i - 1, -parameters[mid0 - i - 1]/2, 0)
-            yield gates.fSim(mid1 + i, mid1 + i + 1, -parameters[mid1 + i]/2, 0)
-        yield gates.fSim(mid1, mid0, -parameters[mid0]/2, 0)
+            yield gates.fSim(mid0 - i, mid0 - i - 1, -parameters[mid0 - i - 1] / 2, 0)
+            yield gates.fSim(mid1 + i, mid1 + i + 1, -parameters[mid1 + i] / 2, 0)
+        yield gates.fSim(mid1, mid0, -parameters[mid0] / 2, 0)
         if X:
             yield gates.X(mid1)
     else:
-        mid = int((qubits-1)/2)
+        mid = int((qubits - 1) / 2)
         for i in range(mid - 1, -1, -1):
             yield gates.fSim(mid + i, mid + i + 1, -parameters[mid + i] / 2, 0)
             yield gates.fSim(mid - i, mid - i - 1, -parameters[mid - i - 1] / 2, 0)
@@ -74,7 +75,7 @@ def create_qc(qubits):
     """
     q = [i for i in range(qubits)]
     ancilla = qubits
-    circuit = Circuit(qubits+1)
+    circuit = Circuit(qubits + 1)
     return q, ancilla, circuit
 
 
@@ -87,23 +88,25 @@ def rw_parameters(qubits, pdf):
     Returns:
         paramters (list): values to be introduces into the fSim gates for amplitude distribution.
     """
-    if qubits%2==0:
+    if qubits % 2 == 0:
         mid = qubits // 2
     else:
-        mid = (qubits-1)//2 #Important to keep track of the centre
+        mid = (qubits - 1) // 2  # Important to keep track of the centre
     last = 1
     parameters = []
-    for i in range(mid-1):
-        angle = 2 * np.arctan(np.sqrt(pdf[i]/(pdf[i+1] * last)))
+    for i in range(mid - 1):
+        angle = 2 * np.arctan(np.sqrt(pdf[i] / (pdf[i + 1] * last)))
         parameters.append(angle)
-        last = (np.cos(angle/2))**2 #The last solution is needed to solve the next one
-    angle = 2 * np.arcsin(np.sqrt(pdf[mid-1]/last))
+        last = (
+            np.cos(angle / 2)
+        ) ** 2  # The last solution is needed to solve the next one
+    angle = 2 * np.arcsin(np.sqrt(pdf[mid - 1] / last))
     parameters.append(angle)
-    last = (np.cos(angle/2))**2
-    for i in range(mid, qubits-1):
-        angle = 2 * np.arccos(np.sqrt(pdf[i]/last))
+    last = (np.cos(angle / 2)) ** 2
+    for i in range(mid, qubits - 1):
+        angle = 2 * np.arccos(np.sqrt(pdf[i] / last))
         parameters.append(angle)
-        last *= (np.sin(angle/2))**2
+        last *= (np.sin(angle / 2)) ** 2
     return parameters
 
 
@@ -115,23 +118,25 @@ def measure_probability(q):
     Returns:
         generator that yels the measuring gates to check the probability distribution.
     """
-    yield gates.M(*q, register_name='prob') #No measure on the ancilla qubit is necessary
+    yield gates.M(
+        *q, register_name="prob"
+    )  # No measure on the ancilla qubit is necessary
 
 
 def extract_probability(qubits, counts, samples):
     """Measuring gates on the unary basis qubits to check the validity of the amplitude distributor.
     Args:
         qubits (int): number of qubits used for the unary basis.
-        counts (dict): times each output has been measured. 
+        counts (dict): times each output has been measured.
         samples (int): number of samples for normalization.
 
     Returns:
         prob (list): normalized probabilities for the measured outcomes.
     """
-    form = '{0:0%sb}' % str(qubits) # qubits?
+    form = "{0:0%sb}" % str(qubits)  # qubits?
     prob = []
     for i in reversed(range(qubits)):
-        prob.append(counts.get(form.format(2**i), 0)/samples)
+        prob.append(counts.get(form.format(2**i), 0) / samples)
     return prob
 
 
@@ -148,10 +153,12 @@ def get_pdf(qubits, S0, sig, r, T):
         values (np.array): price values associated to the unary basis.
         pdf (np.array): probability distribution for the asset's price evolution.
     """
-    mu = (r - 0.5 * sig ** 2) * T + np.log(S0)
-    mean = np.exp(mu + 0.5 * T * sig ** 2)
-    variance = (np.exp(T * sig ** 2) - 1) * np.exp(2 * mu + T * sig ** 2)
-    values = np.linspace(max(mean - 3 * np.sqrt(variance), 0), mean + 3 * np.sqrt(variance), qubits)
+    mu = (r - 0.5 * sig**2) * T + np.log(S0)
+    mean = np.exp(mu + 0.5 * T * sig**2)
+    variance = (np.exp(T * sig**2) - 1) * np.exp(2 * mu + T * sig**2)
+    values = np.linspace(
+        max(mean - 3 * np.sqrt(variance), 0), mean + 3 * np.sqrt(variance), qubits
+    )
     pdf = aux.log_normal(values, mu, sig * np.sqrt(T))
     return values, pdf
 
@@ -172,9 +179,15 @@ def load_quantum_sim(qu, S0, sig, r, T):
     """
     (values, pdf) = get_pdf(qu, S0, sig, r, T)
     q, ancilla, circuit = create_qc(qu)
-    lognormal_parameters = rw_parameters(qu, pdf) # Solve for the parameters needed to create the target lognormal distribution
-    circuit.add(rw_circuit(qu, lognormal_parameters)) # Build the probaility loading circuit with the adjusted parameters
-    circuit.add(measure_probability(q)) #Circuit to test the precision of the probability loading algorithm
+    lognormal_parameters = rw_parameters(
+        qu, pdf
+    )  # Solve for the parameters needed to create the target lognormal distribution
+    circuit.add(
+        rw_circuit(qu, lognormal_parameters)
+    )  # Build the probaility loading circuit with the adjusted parameters
+    circuit.add(
+        measure_probability(q)
+    )  # Circuit to test the precision of the probability loading algorithm
     return circuit, (values, pdf)
 
 
@@ -207,13 +220,15 @@ def payoff_circuit(qubits, ancilla, K, S):
     Returns:
         generator that yields the gates required to encode the payoff into an ancillary qubit.
     """
-    for i in range(qubits): #Determine the first qubit's price that
-        qK = i              #surpasses the strike price
-        if K<S[i]:
+    for i in range(qubits):  # Determine the first qubit's price that
+        qK = i  # surpasses the strike price
+        if K < S[i]:
             break
-    for i in range(qK, qubits):                              #Control-RY rotations controled by states
-        angle = 2 * np.arcsin(np.sqrt((S[i]-K)/(S[qubits-1]-K))) #with higher value than the strike
-        yield gates.RY(ancilla, angle).controlled_by(i)                    #targeting the ancilla qubit
+    for i in range(qK, qubits):  # Control-RY rotations controled by states
+        angle = 2 * np.arcsin(
+            np.sqrt((S[i] - K) / (S[qubits - 1] - K))
+        )  # with higher value than the strike
+        yield gates.RY(ancilla, angle).controlled_by(i)  # targeting the ancilla qubit
 
 
 def payoff_circuit_inv(qubits, ancilla, K, S):
@@ -229,13 +244,15 @@ def payoff_circuit_inv(qubits, ancilla, K, S):
         generator that yields the gates required for the inverse of the circuit used to encode
         the payoff into an ancillary qubit.
     """
-    for i in range(qubits): #Determine the first qubit's price that
-        qK = i              #surpasses the strike price
-        if K<S[i]:
+    for i in range(qubits):  # Determine the first qubit's price that
+        qK = i  # surpasses the strike price
+        if K < S[i]:
             break
-    for i in range(qK, qubits):                              #Control-RY rotations controled by states
-        angle = 2 * np.arcsin(np.sqrt((S[i]-K)/(S[qubits-1]-K))) #with higher value than the strike
-        yield gates.RY(ancilla, -angle).controlled_by(i)                     #targeting the ancilla qubit
+    for i in range(qK, qubits):  # Control-RY rotations controled by states
+        angle = 2 * np.arcsin(
+            np.sqrt((S[i] - K) / (S[qubits - 1] - K))
+        )  # with higher value than the strike
+        yield gates.RY(ancilla, -angle).controlled_by(i)  # targeting the ancilla qubit
 
 
 def measure_payoff(q, ancilla):
@@ -247,7 +264,7 @@ def measure_payoff(q, ancilla):
     Returns:
         generator that yields the measurement gates to recover the expected payoff.
     """
-    yield gates.M(*(q+[ancilla]), register_name='payoff')
+    yield gates.M(*(q + [ancilla]), register_name="payoff")
 
 
 def load_payoff_quantum_sim(qubits, S0, sig, r, T, K):
@@ -264,10 +281,12 @@ def load_payoff_quantum_sim(qubits, S0, sig, r, T, K):
         circuit (Circuit): full quantum circuit with the amplitude distributor and payoff estimator.
         S (np.array): equivalent asset price for each element of the unary basis.
     """
-    mu = (r - 0.5 * sig ** 2) * T + np.log(S0)
-    mean = np.exp(mu + 0.5 * T * sig ** 2)
-    variance = (np.exp(T * sig ** 2) - 1) * np.exp(2 * mu + T * sig ** 2)
-    S = np.linspace(max(mean - 3 * np.sqrt(variance), 0), mean + 3 * np.sqrt(variance), qubits)
+    mu = (r - 0.5 * sig**2) * T + np.log(S0)
+    mean = np.exp(mu + 0.5 * T * sig**2)
+    variance = (np.exp(T * sig**2) - 1) * np.exp(2 * mu + T * sig**2)
+    S = np.linspace(
+        max(mean - 3 * np.sqrt(variance), 0), mean + 3 * np.sqrt(variance), qubits
+    )
     ln = aux.log_normal(S, mu, sig * np.sqrt(T))
     q, ancilla, circuit = create_qc(qubits)
     lognormal_parameters = rw_parameters(qubits, ln)
@@ -292,18 +311,18 @@ def run_payoff_quantum_sim(qubits, circuit, shots, S, K):
     """
     job_payoff_sim = circuit(nshots=shots)
     counts_payoff_sim = job_payoff_sim.frequencies(binary=True, registers=False)
-    ones=0
-    zeroes=0
-    for key in counts_payoff_sim.keys(): # Post-selection
+    ones = 0
+    zeroes = 0
+    for key in counts_payoff_sim.keys():  # Post-selection
         unary = 0
-        for i in range(0,qubits):
-            unary+=int(key[i])
-        if unary==1:
-            if int(key[qubits])==0:
-                zeroes+=counts_payoff_sim.get(key)
+        for i in range(0, qubits):
+            unary += int(key[i])
+        if unary == 1:
+            if int(key[qubits]) == 0:
+                zeroes += counts_payoff_sim.get(key)
             else:
-                ones+=counts_payoff_sim.get(key)
-    qu_payoff_sim = ones * (S[qubits - 1]-K) / (ones + zeroes)
+                ones += counts_payoff_sim.get(key)
+    qu_payoff_sim = ones * (S[qubits - 1] - K) / (ones + zeroes)
     return qu_payoff_sim
 
 
@@ -316,7 +335,7 @@ def diff_qu_cl(qu_payoff_sim, cl_payoff):
     Returns:
         error (real): relative error between the simulated and exact result, in percentage.
     """
-    error = (100 * np.abs(qu_payoff_sim - cl_payoff) / cl_payoff)
+    error = 100 * np.abs(qu_payoff_sim - cl_payoff) / cl_payoff
     return error
 
 
@@ -326,12 +345,12 @@ def diffusion_operator(qubits):
         qubits (int): number of qubits used for the unary basis.
 
     Returns:
-        generator that yield the necessary gates to perform the diffusion operator.        
+        generator that yield the necessary gates to perform the diffusion operator.
     """
-    if qubits%2==0:
-        mid = int(qubits/2)
+    if qubits % 2 == 0:
+        mid = int(qubits / 2)
     else:
-        mid = int((qubits-1)/2) #The random walk starts from the middle qubit
+        mid = int((qubits - 1) / 2)  # The random walk starts from the middle qubit
     yield gates.X(qubits)
     yield gates.H(qubits)
     yield gates.CNOT(mid, qubits)
@@ -345,11 +364,11 @@ def oracle_operator(qubits):
         qubits (int): number of qubits used for the unary basis.
 
     Returns:
-        generator that yield the necessary gates to perform the oracke operator.        
+        generator that yield the necessary gates to perform the oracke operator.
     """
     yield gates.Z(qubits)
 
-    
+
 def Q(qubits, ancilla, K, S, lognormal_parameters):
     """Quantum circuit that performs the main operator for the amplitude estimation algorithm.
     Args:
@@ -360,7 +379,7 @@ def Q(qubits, ancilla, K, S, lognormal_parameters):
         lognormal_parameters (list): values to be introduces into the fSim gates for amplitude distribution.
 
     Returns:
-        generator that yield the necessary gates to perform the main operator for AE.       
+        generator that yield the necessary gates to perform the main operator for AE.
     """
     yield oracle_operator(qubits)
     yield payoff_circuit_inv(qubits, ancilla, K, S)
@@ -386,12 +405,14 @@ def load_Q_operator(qubits, iterations, S0, sig, r, T, K):
             amplitude estimation algorithm.
     """
     iterations = int(iterations)
-    mu = (r - 0.5 * sig ** 2) * T + np.log(S0)
-    mean = np.exp(mu + 0.5 * T * sig ** 2)
-    variance = (np.exp(T * sig ** 2) - 1) * np.exp(2 * mu + T * sig ** 2)
-    S = np.linspace(max(mean - 3 * np.sqrt(variance), 0), mean + 3 * np.sqrt(variance), qubits)
+    mu = (r - 0.5 * sig**2) * T + np.log(S0)
+    mean = np.exp(mu + 0.5 * T * sig**2)
+    variance = (np.exp(T * sig**2) - 1) * np.exp(2 * mu + T * sig**2)
+    S = np.linspace(
+        max(mean - 3 * np.sqrt(variance), 0), mean + 3 * np.sqrt(variance), qubits
+    )
     ln = aux.log_normal(S, mu, sig * np.sqrt(T))
-    lognormal_parameters = rw_parameters(qubits,ln)
+    lognormal_parameters = rw_parameters(qubits, ln)
     q, ancilla, circuit = create_qc(qubits)
     circuit.add(rw_circuit(qubits, lognormal_parameters))
     circuit.add(payoff_circuit(qubits, ancilla, K, S))
@@ -433,7 +454,7 @@ def paint_prob_distribution(bins, prob_sim, S0, sig, r, T):
     """Funtion that returns a histogram with the probabilities of the outcome measures and compares it
     with the target probability distribution.
     Args:
-        bins (int): number of bins of precision. 
+        bins (int): number of bins of precision.
         prob_sim (list): probabilities from measuring the quantum circuit.
         S0 (real): initial asset price.
         sig (real): market volatility.
@@ -444,31 +465,36 @@ def paint_prob_distribution(bins, prob_sim, S0, sig, r, T):
         image of the probability histogram in a .png file.
     """
     from scipy.integrate import trapz
-    mu = (r - 0.5 * sig ** 2) * T + np.log(S0)
-    mean = np.exp(mu + 0.5 * T * sig ** 2)
-    variance = (np.exp(T * sig ** 2) - 1) * np.exp(2 * mu + T * sig ** 2)
-    S = np.linspace(max(mean - 3 * np.sqrt(variance), 0), mean + 3 * np.sqrt(variance),bins)
+
+    mu = (r - 0.5 * sig**2) * T + np.log(S0)
+    mean = np.exp(mu + 0.5 * T * sig**2)
+    variance = (np.exp(T * sig**2) - 1) * np.exp(2 * mu + T * sig**2)
+    S = np.linspace(
+        max(mean - 3 * np.sqrt(variance), 0), mean + 3 * np.sqrt(variance), bins
+    )
     width = (S[1] - S[0]) / 1.2
     fig, ax = plt.subplots()
-    ax.bar(S, prob_sim, width, label='Quantum', alpha=0.8)
-    x = np.linspace(max(mean - 3 * np.sqrt(variance), 0), mean + 3 * np.sqrt(variance), bins * 100)
+    ax.bar(S, prob_sim, width, label="Quantum", alpha=0.8)
+    x = np.linspace(
+        max(mean - 3 * np.sqrt(variance), 0), mean + 3 * np.sqrt(variance), bins * 100
+    )
     y = aux.log_normal(x, mu, sig * np.sqrt(T))
     y = y * trapz(prob_sim, S) / trapz(y, x)
-    ax.plot(x, y, label='PDF', color='black')
-    plt.ylabel('Probability')
-    plt.xlabel('Option price')
-    plt.title('Option price distribution for {} qubits '.format(bins))
+    ax.plot(x, y, label="PDF", color="black")
+    plt.ylabel("Probability")
+    plt.xlabel("Option price")
+    plt.title("Option price distribution for {} qubits ".format(bins))
     ax.legend()
     fig.tight_layout()
-    fig.savefig('Probability_distribution.png')
+    fig.savefig("Probability_distribution.png")
 
 
-def paint_AE(a, a_conf, bins, M, data, shots=10000, alpha = 0.05):
+def paint_AE(a, a_conf, bins, M, data, shots=10000, alpha=0.05):
     """Visualization of the results of applying amplitude estimation to the option pricing algorithm.
     Args:
         a (np.array): estimated values for the probability of measuring the ancilla.
         a_conf (np.array): errors on the estimation of the probability of measuring the ancilla.
-        bins (int): number of bins of precision. 
+        bins (int): number of bins of precision.
         M (int): total number of aplications of the Q operator.
         data (tuple): data necessary to characterize the probability distribution.
         shots (int): number of shots to be taken in intermediate steps of the AE algorithm.
@@ -484,35 +510,54 @@ def paint_AE(a, a_conf, bins, M, data, shots=10000, alpha = 0.05):
     fig, ax = plt.subplots()
     un_data = a * (values[bins - 1] - K)
     un_conf = a_conf * (values[bins - 1] - K)
-    ax.scatter(np.arange(M + 1), un_data, c='C0', marker='x', zorder=10, label='Measurements')
-    ax.fill_between(np.arange(M + 1), un_data - un_conf, un_data + un_conf, color='C0', alpha=0.3)
-    ax.plot([0, M], [cl_payoff, cl_payoff], c='black', ls='--', label='Cl. payoff')
-    ax.plot([0, M], [a_un, a_un], c='blue', ls='--', label='Optimal approximation')
+    ax.scatter(
+        np.arange(M + 1), un_data, c="C0", marker="x", zorder=10, label="Measurements"
+    )
+    ax.fill_between(
+        np.arange(M + 1), un_data - un_conf, un_data + un_conf, color="C0", alpha=0.3
+    )
+    ax.plot([0, M], [cl_payoff, cl_payoff], c="black", ls="--", label="Cl. payoff")
+    ax.plot([0, M], [a_un, a_un], c="blue", ls="--", label="Optimal approximation")
     ax.set(ylim=[0.15, 0.17])
     ax.legend()
     fig.tight_layout()
-    fig.savefig('Amplitude_Estimation_Results.png')
+    fig.savefig("Amplitude_Estimation_Results.png")
     from scipy.special import erfinv
+
     z = erfinv(1 - alpha / 2)
     fig, bx = plt.subplots()
-    bx.scatter(np.arange(M + 1), un_conf, c='C0', marker='x', zorder=10, label='Measurements')
-    a_max = (np.max(values) - K)
-    bound_down = np.sqrt(un_data) * np.sqrt(a_max - un_data) * z / np.sqrt(shots) / np.cumsum(
-        1 + 2 * (np.arange(M + 1)))
-    bound_up = np.sqrt(un_data) * np.sqrt(a_max - un_data) * z / np.sqrt(shots) / np.sqrt(np.cumsum(
-        1 + 2 * (np.arange(M + 1))))
-    bx.plot(np.arange(M + 1), bound_up, ls=':', c='C0', label='Classical sampling')
-    bx.plot(np.arange(M + 1), bound_down, ls='-.', c='C0', label='Optimal Quantum Sampling')
+    bx.scatter(
+        np.arange(M + 1), un_conf, c="C0", marker="x", zorder=10, label="Measurements"
+    )
+    a_max = np.max(values) - K
+    bound_down = (
+        np.sqrt(un_data)
+        * np.sqrt(a_max - un_data)
+        * z
+        / np.sqrt(shots)
+        / np.cumsum(1 + 2 * (np.arange(M + 1)))
+    )
+    bound_up = (
+        np.sqrt(un_data)
+        * np.sqrt(a_max - un_data)
+        * z
+        / np.sqrt(shots)
+        / np.sqrt(np.cumsum(1 + 2 * (np.arange(M + 1))))
+    )
+    bx.plot(np.arange(M + 1), bound_up, ls=":", c="C0", label="Classical sampling")
+    bx.plot(
+        np.arange(M + 1), bound_down, ls="-.", c="C0", label="Optimal Quantum Sampling"
+    )
     bx.legend()
-    bx.set(yscale='log')
+    bx.set(yscale="log")
     fig.tight_layout()
-    fig.savefig('Amplitude_Estimation_Uncertainties.png')
+    fig.savefig("Amplitude_Estimation_Uncertainties.png")
 
 
 def amplitude_estimation(bins, M, data, shots=10000):
     """Execution of the quantum circuit for a step in the used amplitude estimation algorithm.
     Args:
-        bins (int): number of bins of precision. 
+        bins (int): number of bins of precision.
         M (int): total number of aplications of the Q operator.
         data (tuple): data necessary to characterize the probability distribution.
         shots (int): number of shots to be taken in intermediate steps of the AE algorithm.
@@ -536,6 +581,7 @@ def amplitude_estimation(bins, M, data, shots=10000):
         ones_s.append(ones)
         zeroes_s.append(zeroes)
     theta_max_s, error_theta_s = aux.get_theta(m_s, ones_s, zeroes_s)
-    a_s, error_s = np.sin(theta_max_s) ** 2, np.abs(np.sin(2 * theta_max_s) * error_theta_s)
+    a_s, error_s = np.sin(theta_max_s) ** 2, np.abs(
+        np.sin(2 * theta_max_s) * error_theta_s
+    )
     return a_s, error_s
-

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import pytest
 import dill
 import numpy as np
@@ -14,6 +15,7 @@ def test_dill_backends(backend):
 
 def test_dill_global_backend():
     from qibo.backends import GlobalBackend
+
     backend = GlobalBackend()
     serial = dill.dumps(backend)
     new_backend = dill.loads(serial)
@@ -24,6 +26,7 @@ def test_dill_global_backend():
 def test_dill_circuit(accelerators):
     from qibo import gates
     from qibo.models import Circuit
+
     circuit = Circuit(5, accelerators=accelerators)
     circuit.add(gates.H(i) for i in range(5))
     serial = dill.dumps(circuit)
@@ -35,6 +38,7 @@ def test_dill_circuit(accelerators):
 
 def test_dill_circuit_result(backend):
     from qibo.models import QFT
+
     circuit = QFT(4)
     result = backend.execute_circuit(circuit)
     serial = dill.dumps(result)
@@ -46,6 +50,7 @@ def test_dill_circuit_result(backend):
 
 def test_dill_symbols():
     from qibo.symbols import Symbol, X
+
     matrix = np.random.random((2, 2))
     s = Symbol(0, matrix)
     x = X(1)
@@ -60,6 +65,7 @@ def test_dill_symbols():
 def test_dill_measurement_symbol(backend):
     from qibo import gates
     from qibo.models import Circuit
+
     circuit = Circuit(1)
     circuit.add(gates.H(0))
     symbol = circuit.add(gates.M(0, collapse=True))
@@ -71,6 +77,7 @@ def test_dill_measurement_symbol(backend):
 
 def test_dill_hamiltonian(backend):
     from qibo.hamiltonians import XXZ, Hamiltonian
+
     matrix = np.random.random((4, 4))
     ham1 = Hamiltonian(2, matrix, backend=backend)
     ham2 = XXZ(3, backend=backend)
@@ -87,6 +94,7 @@ def test_dill_hamiltonian(backend):
 def test_dill_symbolic_hamiltonian(backend):
     from qibo.symbols import X, Y, Z
     from qibo.hamiltonians import SymbolicHamiltonian
+
     form = X(0) * X(1) + Y(0) * Y(1) + Z(0) * Z(1)
     ham = SymbolicHamiltonian(form, backend=backend)
     serial = dill.dumps(ham)
@@ -99,6 +107,7 @@ def test_dill_variational_models(backend):
     from qibo import gates
     from qibo.hamiltonians import TFIM
     from qibo.models import Circuit, VQE, QAOA
+
     ham = TFIM(4, backend=backend)
     circuit = Circuit(4)
     circuit.add(gates.RX(i, theta=0) for i in range(4))

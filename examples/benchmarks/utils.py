@@ -1,9 +1,9 @@
+# -*- coding: utf-8 -*-
 import os
 import json
 
 
 class BenchmarkLogger(list):
-
     def __init__(self, filename=None):
         self.filename = filename
         if filename is not None and os.path.isfile(filename):

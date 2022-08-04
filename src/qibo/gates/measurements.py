@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import sympy
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate
@@ -5,7 +6,6 @@ from typing import Dict, Optional, Tuple
 
 
 class MeasurementResult:
-
     def __init__(self, qubits):
         self.qubits = qubits
         self.samples = []
@@ -20,6 +20,7 @@ class MeasurementSymbol(sympy.Symbol):
     Used by :class:`qibo.gates.measurements.M` with ``collapse=True`` to allow
     controlling subsequent gates from the measurement results.
     """
+
     _counter = 0
 
     def __new__(cls, *args, **kwargs):
@@ -32,11 +33,7 @@ class MeasurementSymbol(sympy.Symbol):
         self.result = result
 
     def __getstate__(self):
-        return {
-            "index": self.index,
-            "result": self.result,
-            "name": self.name
-        }
+        return {"index": self.index, "result": self.result, "name": self.name}
 
     def __setstate__(self, data):
         self.index = data.get("index")
@@ -83,10 +80,14 @@ class M(Gate):
             1->0 bitflips.
     """
 
-    def __init__(self, *q, register_name: Optional[str] = None,
-                 collapse: bool = False,
-                 p0: Optional["ProbsType"] = None,
-                 p1: Optional["ProbsType"] = None):
+    def __init__(
+        self,
+        *q,
+        register_name: Optional[str] = None,
+        collapse: bool = False,
+        p0: Optional["ProbsType"] = None,
+        p1: Optional["ProbsType"] = None,
+    ):
         super().__init__()
         self.name = "measure"
         self.target_qubits = tuple(q)
@@ -95,19 +96,25 @@ class M(Gate):
         self.result = None
 
         self.init_args = q
-        self.init_kwargs = {"register_name": register_name,
-                            "collapse": collapse,
-                            "p0": p0, "p1": p1}
+        self.init_kwargs = {
+            "register_name": register_name,
+            "collapse": collapse,
+            "p0": p0,
+            "p1": p1,
+        }
         if collapse:
             if p0 is not None or p1 is not None:
-                raise_error(NotImplementedError, "Bitflip measurement noise is not "
-                                                "available when collapsing.")
+                raise_error(
+                    NotImplementedError,
+                    "Bitflip measurement noise is not " "available when collapsing.",
+                )
             self.result = MeasurementResult(self.target_qubits)
 
-        if p1 is None: p1 = p0
-        if p0 is None: p0 = p1
-        self.bitflip_map = (self._get_bitflip_map(p0),
-                            self._get_bitflip_map(p1))
+        if p1 is None:
+            p1 = p0
+        if p0 is None:
+            p0 = p1
+        self.bitflip_map = (self._get_bitflip_map(p0), self._get_bitflip_map(p1))
 
     def get_symbols(self):
         symbols = []
@@ -119,27 +126,32 @@ class M(Gate):
             return symbols[0]
 
     @staticmethod
-    def _get_bitflip_tuple(qubits: Tuple[int], probs: "ProbsType"
-                           ) -> Tuple[float]:
+    def _get_bitflip_tuple(qubits: Tuple[int], probs: "ProbsType") -> Tuple[float]:
         if isinstance(probs, float):
             if probs < 0 or probs > 1:  # pragma: no cover
-                raise_error(ValueError, "Invalid bitflip probability {}."
-                                        "".format(probs))
+                raise_error(
+                    ValueError, "Invalid bitflip probability {}." "".format(probs)
+                )
             return len(qubits) * (probs,)
 
         if isinstance(probs, (tuple, list)):
             if len(probs) != len(qubits):
-                raise_error(ValueError, "{} qubits were measured but the given "
-                                        "bitflip probability list contains {} "
-                                        "values.".format(
-                                            len(qubits), len(probs)))
+                raise_error(
+                    ValueError,
+                    "{} qubits were measured but the given "
+                    "bitflip probability list contains {} "
+                    "values.".format(len(qubits), len(probs)),
+                )
             return tuple(probs)
 
         if isinstance(probs, dict):
             diff = set(probs.keys()) - set(qubits)
             if diff:
-                raise_error(KeyError, "Bitflip map contains {} qubits that are "
-                                      "not measured.".format(diff))
+                raise_error(
+                    KeyError,
+                    "Bitflip map contains {} qubits that are "
+                    "not measured.".format(diff),
+                )
             return tuple(probs[q] if q in probs else 0.0 for q in qubits)
 
         raise_error(TypeError, "Invalid type {} of bitflip map.".format(probs))
@@ -152,7 +164,10 @@ class M(Gate):
         return {q: p for q, p in zip(self.qubits, pt)}
 
     def has_bitflip_noise(self):
-        return sum(self.bitflip_map[0].values()) > 0 or sum(self.bitflip_map[1].values()) > 0
+        return (
+            sum(self.bitflip_map[0].values()) > 0
+            or sum(self.bitflip_map[1].values()) > 0
+        )
 
     @staticmethod
     def einsum_string(qubits, nqubits, measuring=False):
@@ -171,7 +186,8 @@ class M(Gate):
         """
         # TODO: Move this somewhere else (if it is needed at all)
         from qibo.config import EINSUM_CHARS
-        if (2 - int(measuring)) * nqubits > len(EINSUM_CHARS): # pragma: no cover
+
+        if (2 - int(measuring)) * nqubits > len(EINSUM_CHARS):  # pragma: no cover
             # case not tested because it requires large instance
             raise_error(NotImplementedError, "Not enough einsum characters.")
 
@@ -215,7 +231,9 @@ class M(Gate):
     @property
     def matrix(self):
         """"""
-        raise_error(NotImplementedError, "Measurement gates do not have matrix representation.")
+        raise_error(
+            NotImplementedError, "Measurement gates do not have matrix representation."
+        )
 
     def apply(self, backend, state, nqubits):
         qubits = sorted(self.target_qubits)

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Test :class:`qibo.models.circuit.Circuit` for density matrix and noise simulation."""
 import numpy as np
 import pytest
@@ -8,6 +9,7 @@ from qibo.models import Circuit
 
 def test_pauli_noise_channel(backend):
     from qibo import matrices
+
     c = Circuit(2, density_matrix=True)
     c.add(gates.H(0))
     c.add(gates.H(1))
@@ -80,8 +82,7 @@ def test_circuit_with_noise_measurements(backend):
 
 
 def test_circuit_with_noise_noise_map(backend):
-    noise_map = {0: (0.1, 0.2, 0.1), 1: (0.2, 0.3, 0.0),
-                 2: (0.0, 0.0, 0.0)}
+    noise_map = {0: (0.1, 0.2, 0.1), 1: (0.2, 0.3, 0.0), 2: (0.0, 0.0, 0.0)}
 
     c = Circuit(3, density_matrix=True)
     c.add([gates.H(0), gates.H(1), gates.X(2)])
@@ -119,6 +120,7 @@ def test_circuit_with_noise_errors():
 def test_density_matrix_circuit_measurement(backend):
     """Check measurement gate on density matrices using circuit."""
     from qibo.tests.test_measurements import assert_result, assert_register_result
+
     state = np.zeros(16)
     state[0] = 1
     init_rho = np.outer(state, state.conj())
@@ -133,17 +135,18 @@ def test_density_matrix_circuit_measurement(backend):
     target_binary_samples = np.zeros((100, 4))
     target_binary_samples[:, 1] = 1
     target_binary_samples[:, 2] = 1
-    assert_result(backend, result,
-                  decimal_samples=6 * np.ones((100,)),
-                  binary_samples=target_binary_samples,
-                  decimal_frequencies={6: 100},
-                  binary_frequencies={"0110": 100})
+    assert_result(
+        backend,
+        result,
+        decimal_samples=6 * np.ones((100,)),
+        binary_samples=target_binary_samples,
+        decimal_frequencies={6: 100},
+        binary_frequencies={"0110": 100},
+    )
 
     target = {}
-    target["decimal_samples"] = {"A": np.ones((100,)),
-                                 "B": 2 * np.ones((100,))}
-    target["binary_samples"] = {"A": np.zeros((100, 2)),
-                                "B": np.zeros((100, 2))}
+    target["decimal_samples"] = {"A": np.ones((100,)), "B": 2 * np.ones((100,))}
+    target["binary_samples"] = {"A": np.zeros((100, 2)), "B": np.zeros((100, 2))}
     target["binary_samples"]["A"][:, 1] = 1
     target["binary_samples"]["B"][:, 0] = 1
     target["decimal_frequencies"] = {"A": {1: 100}, "B": {2: 100}}

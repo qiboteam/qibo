@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Adiabatic evolution for the Ising Hamiltonian using linear scaling."""
 import argparse
 import time
@@ -15,8 +16,7 @@ parser.add_argument("--backend", default="qibojit", type=str)
 parser.add_argument("--filename", default=None, type=str)
 
 
-def main(nqubits, dt, solver, backend, dense=False, accelerators=None,
-         filename=None):
+def main(nqubits, dt, solver, backend, dense=False, accelerators=None, filename=None):
     """Performs adiabatic evolution with critical TFIM as the "hard" Hamiltonian."""
     qibo.set_backend(backend)
     if accelerators is not None:
@@ -24,12 +24,19 @@ def main(nqubits, dt, solver, backend, dense=False, accelerators=None,
         solver = "exp"
 
     logs = BenchmarkLogger(filename)
-    logs.append({
-        "nqubits": nqubits, "dt": dt, "solver": solver, "dense": dense,
-        "backend": qibo.get_backend(), "precision": qibo.get_precision(),
-        "device": qibo.get_device(), "threads": qibo.get_threads(),
-        "accelerators": accelerators
-        })
+    logs.append(
+        {
+            "nqubits": nqubits,
+            "dt": dt,
+            "solver": solver,
+            "dense": dense,
+            "backend": qibo.get_backend(),
+            "precision": qibo.get_precision(),
+            "device": qibo.get_device(),
+            "threads": qibo.get_threads(),
+            "accelerators": accelerators,
+        }
+    )
     print(f"Using {solver} solver and dt = {dt}.")
     print(f"Accelerators: {accelerators}")
     print("Backend:", logs[-1]["backend"])
@@ -43,8 +50,9 @@ def main(nqubits, dt, solver, backend, dense=False, accelerators=None,
     print("Hamiltonians created in:", logs[-1]["hamiltonian_creation_time"])
 
     start_time = time.time()
-    evolution = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=dt, solver=solver,
-                                          accelerators=accelerators)
+    evolution = models.AdiabaticEvolution(
+        h0, h1, lambda t: t, dt=dt, solver=solver, accelerators=accelerators
+    )
     logs[-1]["creation_time"] = time.time() - start_time
     print("Evolution model created in:", logs[-1]["creation_time"])
 
