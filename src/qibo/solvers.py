@@ -7,7 +7,7 @@ from qibo.hamiltonians.hamiltonians import SymbolicHamiltonian
 
 class BaseSolver:
     """Basic solver that should be inherited by all solvers.
-
+    
     Args:
         dt (float): Time step size.
         hamiltonian (:class:`qibo.hamiltonians.abstract.AbstractHamiltonian`): Hamiltonian object
