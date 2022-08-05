@@ -26,7 +26,7 @@ def multikron(matrix_list):
 def _build_spin_model(nqubits, matrix, condition):
     """Helper method for building nearest-neighbor spin model Hamiltonians."""
     h = sum(
-        multikron((matrix if condition(i, j) else matrices.I for j in range(nqubits)))
+        multikron(matrix if condition(i, j) else matrices.I for j in range(nqubits))
         for i in range(nqubits)
     )
     return h

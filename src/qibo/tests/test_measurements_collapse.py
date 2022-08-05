@@ -216,9 +216,9 @@ def test_measurement_collapse_distributed(backend, accelerators, nqubits, target
 def test_collapse_after_measurement(backend):
     qubits = [0, 2, 3]
     c = models.Circuit(5)
-    c.add((gates.H(i) for i in range(5)))
+    c.add(gates.H(i) for i in range(5))
     output = c.add(gates.M(*qubits, collapse=True))
-    c.add((gates.H(i) for i in range(5)))
+    c.add(gates.H(i) for i in range(5))
     final_state = backend.execute_circuit(c, nshots=1)[0]
 
     ct = models.Circuit(5)
@@ -226,6 +226,6 @@ def test_collapse_after_measurement(backend):
     for i, r in zip(qubits, bitstring):
         if r:
             ct.add(gates.X(i))
-    ct.add((gates.H(i) for i in qubits))
+    ct.add(gates.H(i) for i in qubits)
     target_state = backend.execute_circuit(ct)
     backend.assert_allclose(final_state, target_state, atol=1e-15)

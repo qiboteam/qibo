@@ -56,7 +56,7 @@ def test_distributed_circuit_various_errors():
 
 def test_distributed_circuit_fusion(accelerators):
     c = Circuit(4, accelerators)
-    c.add((gates.H(i) for i in range(4)))
+    c.add(gates.H(i) for i in range(4))
     with pytest.raises(NotImplementedError):
         c.fuse()
 
@@ -64,7 +64,7 @@ def test_distributed_circuit_fusion(accelerators):
 def test_distributed_circuit_set_gates():
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c = Circuit(6, devices)
-    c.add((gates.H(i) for i in range(4)))
+    c.add(gates.H(i) for i in range(4))
     c.queues.set(c.queue)
 
     check_device_queues(c.queues)
@@ -108,7 +108,7 @@ def test_distributed_qft_global_qubits_validity(nqubits, ndevices):
 def test_transform_queue_simple():
     devices = {"/GPU:0": 1, "/GPU:1": 1}
     c = Circuit(4, devices)
-    c.add((gates.H(i) for i in range(4)))
+    c.add(gates.H(i) for i in range(4))
     c.queues.qubits = DistributedQubits([0], c.nqubits)
     tqueue = c.queues.transform(c.queue)
     assert len(tqueue) == 6
