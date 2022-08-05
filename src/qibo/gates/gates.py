@@ -19,9 +19,9 @@ QASM_GATES = {
     "cx": "CNOT",
     "swap": "SWAP",
     "fswap": "FSWAP",
-    "rxx": "RXX", 
-    "ryy": "RYY", 
-    "rzz": "RZZ", 
+    "rxx": "RXX",
+    "ryy": "RYY",
+    "rzz": "RZZ",
     "cz": "CZ",
     "crx": "CRX",
     "cry": "CRY",
@@ -39,8 +39,8 @@ PARAMETRIZED_GATES = {
     "rx",
     "ry",
     "rz",
-    "rxx", 
-    "ryy", 
+    "rxx",
+    "ryy",
     "rzz",
     "u1",
     "u2",
@@ -1079,11 +1079,14 @@ class _Rnn_(ParametrizedGate):
 
     def _dagger(self) -> "Gate":
         """"""
-        return self.__class__(self.target_qubits[0], -self.parameters[0]) # pylint: disable=E1130
+        return self.__class__(
+            self.target_qubits[0], -self.parameters[0]
+        )  # pylint: disable=E1130
+
 
 class RXX(_Rnn_):
-    """Parametric 2-qubit X \otimes X interaction, or rotation about XX. 
-    
+    """Parametric 2-qubit X \otimes X interaction, or rotation about XX.
+
     This is a symmetric gate.
 
     Corresponds to the following unitary matrix

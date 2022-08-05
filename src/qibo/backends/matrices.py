@@ -190,31 +190,40 @@ class Matrices:
     def RXX(self, theta):
         cos = self.np.cos(theta / 2.0) + 0j
         isin = -1j * self.np.sin(theta / 2.0)
-        return self.np.array([
-            [cos, 0, 0, isin],
-            [0, cos, isin, 0],
-            [0, isin, cos, 0],
-            [isin, 0, 0, cos]
-        ], dtype=self.dtype)
+        return self.np.array(
+            [
+                [cos, 0, 0, isin],
+                [0, cos, isin, 0],
+                [0, isin, cos, 0],
+                [isin, 0, 0, cos],
+            ],
+            dtype=self.dtype,
+        )
 
     def RYY(self, theta):
         cos = self.np.cos(theta / 2.0) + 0j
         isin = -1j * self.np.sin(theta / 2.0)
-        return self.np.array([
-            [cos, 0, 0, -isin],
-            [0, cos, isin, 0],
-            [0, isin, cos, 0],
-            [-isin, 0, 0, cos]
-        ], dtype=self.dtype)
+        return self.np.array(
+            [
+                [cos, 0, 0, -isin],
+                [0, cos, isin, 0],
+                [0, isin, cos, 0],
+                [-isin, 0, 0, cos],
+            ],
+            dtype=self.dtype,
+        )
 
     def RZZ(self, theta):
         phase = self.np.exp(0.5j * theta)
-        return self.np.array([
-            [self.np.conj(phase), 0, 0, 0],
-            [0, phase, 0, 0],
-            [0, 0, phase, 0],
-            [0, 0, 0, self.np.conj(phase)]
-        ], dtype=self.dtype)
+        return self.np.array(
+            [
+                [self.np.conj(phase), 0, 0, 0],
+                [0, phase, 0, 0],
+                [0, 0, phase, 0],
+                [0, 0, 0, self.np.conj(phase)],
+            ],
+            dtype=self.dtype,
+        )
 
     @cached_property
     def TOFFOLI(self):
