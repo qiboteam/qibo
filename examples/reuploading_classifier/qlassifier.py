@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
+import os
+
 import numpy as np
-from qibo.models import Circuit
-from qibo import gates
 from datasets import create_dataset, create_target, fig_template, world_map_template
 from matplotlib.cm import get_cmap
 from matplotlib.colors import Normalize
-import os
+
+from qibo import gates
+from qibo.models import Circuit
 
 
 class single_qubit_classifier:

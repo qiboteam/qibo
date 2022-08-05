@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
-import sympy
 import numpy as np
-from qibo import gates, matrices
+import sympy
+
+from qibo import gates
+from qibo.backends import matrices
 from qibo.config import raise_error
 
 

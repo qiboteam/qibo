@@ -7,6 +7,7 @@ The type of the circuit is selected using the ``--type`` flag.
 import argparse
 import os
 import time
+
 import numpy as np
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # disable Tensorflow warnings
@@ -78,9 +79,10 @@ memory = args.pop("memory")
 if args.get("backend") == "tensorflow":
     limit_gpu_memory(memory)
 
-import qibo
 import circuits
 from utils import BenchmarkLogger, parse_accelerators
+
+import qibo
 
 
 def get_active_branch_name():

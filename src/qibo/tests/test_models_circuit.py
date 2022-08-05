@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """Test all methods defined in `qibo/models/circuit.py`."""
 import pytest
+
 from qibo import gates
-from qibo.models import Circuit
 from qibo.config import raise_error
+from qibo.models import Circuit
 
 
 def test_parametrizedgates_class():
@@ -119,7 +120,7 @@ def test_circuit_add_nested_generator():
         yield gates.CNOT(0, 1)
 
     c = Circuit(2)
-    c.add((gen() for _ in range(3)))
+    c.add(gen() for _ in range(3))
     assert c.depth == 6
     assert c.ngates == 9
     assert isinstance(c.queue[2], gates.CNOT)
@@ -251,7 +252,7 @@ def test_circuit_on_qubits():
 
 def test_circuit_on_qubits_errors():
     smallc = Circuit(2)
-    smallc.add((gates.H(i) for i in range(2)))
+    smallc.add(gates.H(i) for i in range(2))
     with pytest.raises(ValueError):
         next(smallc.on_qubits(0, 1, 2))
 

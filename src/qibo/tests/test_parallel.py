@@ -3,12 +3,14 @@
 Testing parallel evaluations.
 """
 import sys
+
 import numpy as np
 import pytest
+
 import qibo
 from qibo import gates
-from qibo.models import Circuit, QFT
-from qibo.parallel import parallel_parametrized_execution, parallel_execution
+from qibo.models import QFT, Circuit
+from qibo.parallel import parallel_execution, parallel_parametrized_execution
 
 
 def test_parallel_circuit_evaluation(backend):
@@ -35,12 +37,12 @@ def test_parallel_parametrized_circuit(backend):
     nlayers = 10
     c = Circuit(nqubits)
     for l in range(nlayers):
-        c.add((gates.RY(q, theta=0) for q in range(nqubits)))
-        c.add((gates.CZ(q, q + 1) for q in range(0, nqubits - 1, 2)))
-        c.add((gates.RY(q, theta=0) for q in range(nqubits)))
-        c.add((gates.CZ(q, q + 1) for q in range(1, nqubits - 2, 2)))
+        c.add(gates.RY(q, theta=0) for q in range(nqubits))
+        c.add(gates.CZ(q, q + 1) for q in range(0, nqubits - 1, 2))
+        c.add(gates.RY(q, theta=0) for q in range(nqubits))
+        c.add(gates.CZ(q, q + 1) for q in range(1, nqubits - 2, 2))
         c.add(gates.CZ(0, nqubits - 1))
-    c.add((gates.RY(q, theta=0) for q in range(nqubits)))
+    c.add(gates.RY(q, theta=0) for q in range(nqubits))
 
     size = len(c.get_parameters())
     np.random.seed(0)

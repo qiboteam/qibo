@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-import pytest
 import numpy as np
-from qibo import gates
+import pytest
 
+from qibo import gates
 
 ####################### Test `asmatrix` #######################
 GATES = [

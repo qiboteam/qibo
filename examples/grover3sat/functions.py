@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
+import numpy as np
+
 from qibo import gates
 from qibo.models import Circuit
-import numpy as np
 
 
 def read_file(file_name, instance):

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import math
+
 from qibo import gates
 from qibo.config import raise_error
 from qibo.models.circuit import Circuit

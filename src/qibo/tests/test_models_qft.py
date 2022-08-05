@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """Test methods defined in `qibo/models/circuit.py`."""
 import sys
+
 import numpy as np
 import pytest
+
 from qibo import gates, models
 from qibo.tests.utils import random_state
 

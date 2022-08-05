@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """Test channels defined in `qibo/gates.py`."""
-import pytest
 import numpy as np
+import pytest
+
 from qibo import gates
 from qibo.tests.utils import random_density_matrix
 

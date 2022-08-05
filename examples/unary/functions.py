@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-import numpy as np
-import matplotlib.pyplot as plt
-from qibo.models import Circuit
-from qibo import gates
 import aux_functions as aux
+import matplotlib.pyplot as plt
+import numpy as np
+
+from qibo import gates
+from qibo.models import Circuit
 
 
 def rw_circuit(qubits, parameters, X=True):

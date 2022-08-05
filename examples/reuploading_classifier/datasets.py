@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-import numpy as np
 from itertools import product
+
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 def create_dataset(name, grid=None, samples=1000, seed=0):

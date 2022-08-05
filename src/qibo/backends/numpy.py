@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
-import numpy as np
 import collections
-from qibo.config import raise_error, log
-from qibo.gates import FusedGate
-from qibo.states import CircuitResult
+
+import numpy as np
+
 from qibo.backends import einsum_utils
 from qibo.backends.abstract import Backend
 from qibo.backends.matrices import Matrices
+from qibo.config import log, raise_error
+from qibo.gates import FusedGate
 from qibo.gates.abstract import ParametrizedGate, SpecialGate
+from qibo.states import CircuitResult
 
 
 class NumpyBackend(Backend):

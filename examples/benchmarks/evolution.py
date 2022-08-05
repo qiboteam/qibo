@@ -2,9 +2,11 @@
 """Adiabatic evolution for the Ising Hamiltonian using linear scaling."""
 import argparse
 import time
+
+from utils import BenchmarkLogger, parse_accelerators
+
 import qibo
 from qibo import callbacks, hamiltonians, models
-from utils import parse_accelerators, BenchmarkLogger
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default=4, type=int)

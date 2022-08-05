@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
-import pytest
 import numpy as np
+import pytest
+
 from qibo import gates
 from qibo.models import Circuit
 
 
 def test_eager_execute(backend, accelerators):
     c = Circuit(4, accelerators)
-    c.add((gates.H(i) for i in range(4)))
+    c.add(gates.H(i) for i in range(4))
     final_state = backend.execute_circuit(c)
     target_state = np.ones(16) / 4.0
     backend.assert_allclose(final_state, target_state)
@@ -54,7 +55,7 @@ def test_compiling_twice_exception(backend):
 def test_memory_error(backend, accelerators):
     """Check that ``RuntimeError`` is raised if device runs out of memory."""
     c = Circuit(40, accelerators)
-    c.add((gates.H(i) for i in range(0, 40, 5)))
+    c.add(gates.H(i) for i in range(0, 40, 5))
     with pytest.raises(RuntimeError):
         final_state = backend.execute_circuit(c)
 

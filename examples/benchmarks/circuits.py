@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from qibo import models, gates
+
+from qibo import gates, models
 
 
 def VariationalCircuit(nqubits, nlayers=1, theta_values=None):

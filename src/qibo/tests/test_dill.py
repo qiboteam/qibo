@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-import pytest
 import dill
 import numpy as np
+import pytest
 
 
 def test_dill_backends(backend):
@@ -92,8 +92,8 @@ def test_dill_hamiltonian(backend):
 
 
 def test_dill_symbolic_hamiltonian(backend):
-    from qibo.symbols import X, Y, Z
     from qibo.hamiltonians import SymbolicHamiltonian
+    from qibo.symbols import X, Y, Z
 
     form = X(0) * X(1) + Y(0) * Y(1) + Z(0) * Z(1)
     ham = SymbolicHamiltonian(form, backend=backend)
@@ -106,7 +106,7 @@ def test_dill_symbolic_hamiltonian(backend):
 def test_dill_variational_models(backend):
     from qibo import gates
     from qibo.hamiltonians import TFIM
-    from qibo.models import Circuit, VQE, QAOA
+    from qibo.models import QAOA, VQE, Circuit
 
     ham = TFIM(4, backend=backend)
     circuit = Circuit(4)

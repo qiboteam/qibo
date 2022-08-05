@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """Test that the source contains no prints."""
 import os
-import pytest
 import pathlib
+
+import pytest
+
 from qibo.config import raise_error
 
 

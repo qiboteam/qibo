@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 import math
-from qibo.config import raise_error
 from typing import Dict, List, Optional, Tuple
-from qibo.gates.abstract import Gate, ParametrizedGate
 
+from qibo.config import raise_error
+from qibo.gates.abstract import Gate, ParametrizedGate
 
 QASM_GATES = {
     "h": "H",
@@ -1143,7 +1143,7 @@ class Unitary(ParametrizedGate):
 
     def on_qubits(self, qubit_map):
         args = [self.init_args[0]]
-        args.extend((qubit_map.get(i) for i in self.target_qubits))
+        args.extend(qubit_map.get(i) for i in self.target_qubits)
         gate = self.__class__(*args, **self.init_kwargs)
         if self.is_controlled_by:
             controls = (qubit_map.get(i) for i in self.control_qubits)

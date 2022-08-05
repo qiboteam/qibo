@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from abc import abstractmethod
+
 from qibo.config import raise_error
 
 

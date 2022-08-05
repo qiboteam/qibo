@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 # /usr/bin/env python
-from qlassifier import single_qubit_classifier
-import pickle
 import argparse
+import pickle
+
+from qlassifier import single_qubit_classifier
 
 # TODO: fix issue with .pkl
 

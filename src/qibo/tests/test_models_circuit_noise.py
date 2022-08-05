@@ -2,6 +2,7 @@
 """Test :class:`qibo.models.circuit.Circuit` for density matrix and noise simulation."""
 import numpy as np
 import pytest
+
 import qibo
 from qibo import gates
 from qibo.models import Circuit
@@ -119,7 +120,7 @@ def test_circuit_with_noise_errors():
 
 def test_density_matrix_circuit_measurement(backend):
     """Check measurement gate on density matrices using circuit."""
-    from qibo.tests.test_measurements import assert_result, assert_register_result
+    from qibo.tests.test_measurements import assert_register_result, assert_result
 
     state = np.zeros(16)
     state[0] = 1

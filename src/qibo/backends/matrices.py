@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import sys
+
 from qibo.config import raise_error
 
 if sys.version_info.minor >= 8:

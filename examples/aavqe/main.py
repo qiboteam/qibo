@@ -1,19 +1,21 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import numpy as np
-from qibo import gates, models, hamiltonians
 import argparse
+
+import numpy as np
+
+from qibo import gates, hamiltonians, models
 
 
 def main(nqubits, layers, maxsteps, T_max):
     circuit = models.Circuit(nqubits)
     for l in range(layers):
-        circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
-        circuit.add((gates.CZ(q, q + 1) for q in range(0, nqubits - 1, 2)))
-        circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
-        circuit.add((gates.CZ(q, q + 1) for q in range(1, nqubits - 2, 2)))
+        circuit.add(gates.RY(q, theta=0) for q in range(nqubits))
+        circuit.add(gates.CZ(q, q + 1) for q in range(0, nqubits - 1, 2))
+        circuit.add(gates.RY(q, theta=0) for q in range(nqubits))
+        circuit.add(gates.CZ(q, q + 1) for q in range(1, nqubits - 2, 2))
         circuit.add(gates.CZ(0, nqubits - 1))
-    circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
+    circuit.add(gates.RY(q, theta=0) for q in range(nqubits))
     problem_hamiltonian = hamiltonians.XXZ(nqubits)
     easy_hamiltonian = hamiltonians.X(nqubits)
     s = lambda t: t

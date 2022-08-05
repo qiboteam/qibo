@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 import numpy as np
+
 from qibo import gates
-from qibo.symbols import X, Y, Z
-from qibo.models import Circuit
 from qibo.hamiltonians import SymbolicHamiltonian
+from qibo.models.circuit import Circuit
+from qibo.symbols import X, Y, Z
 
 
 def calculate_two_to_one(num_cities):

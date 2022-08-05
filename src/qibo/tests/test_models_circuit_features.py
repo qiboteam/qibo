@@ -2,6 +2,7 @@
 """Test how features defined in :class:`qibo.models.circuit.Circuit` work during circuit execution."""
 import numpy as np
 import pytest
+
 from qibo import gates
 from qibo.models import Circuit
 
@@ -153,16 +154,16 @@ def test_circuit_on_qubits_execution(backend, accelerators, distribute_small):
         smallc = Circuit(3, accelerators=accelerators)
     else:
         smallc = Circuit(3)
-    smallc.add((gates.RX(i, theta=i + 0.1) for i in range(3)))
+    smallc.add(gates.RX(i, theta=i + 0.1) for i in range(3))
     smallc.add((gates.CNOT(0, 1), gates.CZ(1, 2)))
 
     largec = Circuit(6, accelerators=accelerators)
-    largec.add((gates.RY(i, theta=i + 0.2) for i in range(0, 6, 2)))
+    largec.add(gates.RY(i, theta=i + 0.2) for i in range(0, 6, 2))
     largec.add(smallc.on_qubits(1, 3, 5))
 
     targetc = Circuit(6)
-    targetc.add((gates.RY(i, theta=i + 0.2) for i in range(0, 6, 2)))
-    targetc.add((gates.RX(i, theta=i // 2 + 0.1) for i in range(1, 6, 2)))
+    targetc.add(gates.RY(i, theta=i + 0.2) for i in range(0, 6, 2))
+    targetc.add(gates.RX(i, theta=i // 2 + 0.1) for i in range(1, 6, 2))
     targetc.add((gates.CNOT(1, 3), gates.CZ(3, 5)))
     assert largec.depth == targetc.depth
     backend.assert_circuitclose(largec, targetc)
@@ -174,21 +175,21 @@ def test_circuit_on_qubits_double_execution(backend, accelerators, distribute_sm
         smallc = Circuit(3, accelerators=accelerators)
     else:
         smallc = Circuit(3)
-    smallc.add((gates.RX(i, theta=i + 0.1) for i in range(3)))
+    smallc.add(gates.RX(i, theta=i + 0.1) for i in range(3))
     smallc.add((gates.CNOT(0, 1), gates.CZ(1, 2)))
     # execute the small circuit before adding it to the large one
     _ = backend.execute_circuit(smallc)
 
     largec = Circuit(6, accelerators=accelerators)
-    largec.add((gates.RY(i, theta=i + 0.2) for i in range(0, 6, 2)))
+    largec.add(gates.RY(i, theta=i + 0.2) for i in range(0, 6, 2))
     if distribute_small and accelerators is not None:  # pragma: no cover
         with pytest.raises(RuntimeError):
             largec.add(smallc.on_qubits(1, 3, 5))
     else:
         largec.add(smallc.on_qubits(1, 3, 5))
         targetc = Circuit(6)
-        targetc.add((gates.RY(i, theta=i + 0.2) for i in range(0, 6, 2)))
-        targetc.add((gates.RX(i, theta=i // 2 + 0.1) for i in range(1, 6, 2)))
+        targetc.add(gates.RY(i, theta=i + 0.2) for i in range(0, 6, 2))
+        targetc.add(gates.RX(i, theta=i // 2 + 0.1) for i in range(1, 6, 2))
         targetc.add((gates.CNOT(1, 3), gates.CZ(3, 5)))
         assert largec.depth == targetc.depth
         backend.assert_circuitclose(largec, targetc)
@@ -255,7 +256,7 @@ def test_circuit_decompose_execution(backend):
     c = Circuit(6)
     c.add(gates.RX(0, 0.1234))
     c.add(gates.RY(1, 0.4321))
-    c.add((gates.H(i) for i in range(2, 6)))
+    c.add(gates.H(i) for i in range(2, 6))
     c.add(gates.CNOT(0, 1))
     c.add(gates.X(3).controlled_by(0, 1, 2, 4))
     decomp_c = c.decompose(5)
@@ -267,7 +268,7 @@ def test_repeated_execute_pauli_noise_channel(backend):
     backend.set_seed(1234)
     c = Circuit(4)
     c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
-    c.add((gates.PauliNoiseChannel(i, px=0.1, py=0.2, pz=0.3) for i in range(4)))
+    c.add(gates.PauliNoiseChannel(i, px=0.1, py=0.2, pz=0.3) for i in range(4))
     final_state = backend.execute_circuit(c, nshots=20)
 
     backend.set_seed(1234)

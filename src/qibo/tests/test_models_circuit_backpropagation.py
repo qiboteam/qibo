@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """Tests Tensorflow's backpropagation when using `tf.Variable` parameters."""
-import pytest
 import numpy as np
+import pytest
+
 from qibo import gates
 from qibo.models import Circuit
 

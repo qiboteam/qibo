@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import pytest
+
 import qibo
 from qibo import matrices
 

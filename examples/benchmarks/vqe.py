@@ -4,11 +4,12 @@ Benchmark Variational Quantum Eigensolver.
 """
 import argparse
 import time
+
 import numpy as np
-import qibo
-from qibo import gates, models, hamiltonians
 from utils import BenchmarkLogger
 
+import qibo
+from qibo import gates, hamiltonians, models
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default=6, help="Number of qubits.", type=int)
@@ -30,12 +31,12 @@ def create_circuit(nqubits, nlayers):
     """Creates variational circuit."""
     circuit = models.Circuit(nqubits)
     for l in range(nlayers):
-        circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
-        circuit.add((gates.CZ(q, q + 1) for q in range(0, nqubits - 1, 2)))
-        circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
-        circuit.add((gates.CZ(q, q + 1) for q in range(1, nqubits - 2, 2)))
+        circuit.add(gates.RY(q, theta=0) for q in range(nqubits))
+        circuit.add(gates.CZ(q, q + 1) for q in range(0, nqubits - 1, 2))
+        circuit.add(gates.RY(q, theta=0) for q in range(nqubits))
+        circuit.add(gates.CZ(q, q + 1) for q in range(1, nqubits - 2, 2))
         circuit.add(gates.CZ(0, nqubits - 1))
-    circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
+    circuit.add(gates.RY(q, theta=0) for q in range(nqubits))
     return circuit
 
 

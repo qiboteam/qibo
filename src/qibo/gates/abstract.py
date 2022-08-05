@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 import collections
-import sympy
 from abc import ABC, abstractmethod
-from qibo.config import raise_error
 from collections.abc import Iterable
 from typing import List, Sequence, Tuple
+
+import sympy
+
+from qibo.config import raise_error
 
 
 class Gate:

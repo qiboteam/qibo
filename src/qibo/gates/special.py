@@ -114,7 +114,7 @@ class FusedGate(SpecialGate):
         # fuse will be the parent
         if len(left_gates) > len(right_gates):
             parent, child = self, gate
-            between_gates = set(parent.right_neighbors.get(q) for q in qubits)
+            between_gates = {parent.right_neighbors.get(q) for q in qubits}
             if between_gates == {child}:
                 child.marked = True
                 parent.append(child)
@@ -127,7 +127,7 @@ class FusedGate(SpecialGate):
                         parent.right_neighbors.pop(q)
         else:
             parent, child = gate, self
-            between_gates = set(parent.left_neighbors.get(q) for q in qubits)
+            between_gates = {parent.left_neighbors.get(q) for q in qubits}
             if between_gates == {child}:
                 child.marked = True
                 parent.prepend(child)

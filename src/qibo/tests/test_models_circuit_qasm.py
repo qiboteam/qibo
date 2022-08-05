@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Tests creating abstract Qibo circuits from OpenQASM code."""
 import pytest
+
 import qibo
 from qibo import __version__, gates
 from qibo.models import Circuit

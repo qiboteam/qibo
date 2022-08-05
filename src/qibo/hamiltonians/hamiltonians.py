@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import sympy
-from qibo.config import raise_error, log, EINSUM_CHARS
+
+from qibo.config import EINSUM_CHARS, log, raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 
 
@@ -250,8 +251,9 @@ class TrotterCircuit:
     """
 
     def __init__(self, groups, dt, nqubits, accelerators):
-        from qibo.models import Circuit
         from itertools import chain
+
+        from qibo.models import Circuit
 
         self.gates = {}
         self.dt = dt
@@ -504,6 +506,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
     def _calculate_dense_from_terms(self):
         """Calculates equivalent :class:`qibo.core.hamiltonians.Hamiltonian` using the term representation."""
         from itertools import chain
+
         import numpy as np
 
         if 2 * self.nqubits > len(EINSUM_CHARS):  # pragma: no cover
@@ -519,7 +522,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             emat = np.reshape(np.eye(2**n, dtype=tmat.dtype), 2 * n * (2,))
             gen = lambda x: (chars[i + x] for i in term.target_qubits)
             tc = "".join(chain(gen(0), gen(self.nqubits)))
-            ec = "".join((c for c in chars if c not in tc))
+            ec = "".join(c for c in chars if c not in tc)
             matrix += np.einsum(f"{tc},{ec}->{chars}", tmat, emat)
         matrix = np.reshape(matrix, 2 * (2**self.nqubits,))
         return Hamiltonian(self.nqubits, matrix, backend=self.backend) + self.constant

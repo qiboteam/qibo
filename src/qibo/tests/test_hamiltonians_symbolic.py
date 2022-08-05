@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 """Test methods of :class:`qibo.core.hamiltonians.SymbolicHamiltonian`."""
-import pytest
 import numpy as np
+import pytest
 import sympy
+
 from qibo import hamiltonians
 from qibo.tests.utils import random_complex
 
 
 def symbolic_tfim(nqubits, h=1.0):
     """Constructs symbolic Hamiltonian for TFIM."""
-    from qibo.symbols import Z, X
+    from qibo.symbols import X, Z
 
     sham = -sum(Z(i) * Z(i + 1) for i in range(nqubits - 1))
     sham -= Z(0) * Z(nqubits - 1)
@@ -272,7 +273,7 @@ def test_symbolic_hamiltonian_state_ev(
 @pytest.mark.parametrize("density_matrix", [False, True])
 @pytest.mark.parametrize("calcterms", [False, True])
 def test_symbolic_hamiltonian_abstract_symbol_ev(backend, density_matrix, calcterms):
-    from qibo.symbols import X, Symbol
+    from qibo.symbols import Symbol, X
 
     matrix = np.random.random((2, 2))
     form = X(0) * Symbol(1, matrix) + Symbol(0, matrix) * X(1)

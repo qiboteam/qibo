@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import numpy as np
-from qibo import hamiltonians, models, callbacks
-import functions
 import argparse
+
+import functions
+import numpy as np
+
+from qibo import callbacks, hamiltonians, models
 
 
 def main(nqubits, instance, T, dt, solver, plot, dense, params, method, maxiter):

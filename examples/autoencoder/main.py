@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import numpy as np
-from qibo import hamiltonians, gates, models
-from scipy.optimize import minimize
 import argparse
+
+import numpy as np
+from scipy.optimize import minimize
+
+from qibo import gates, hamiltonians, models
 
 
 def main(nqubits, layers, compress, lambdas, maxiter):

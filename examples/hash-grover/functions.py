@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-from qibo.models import Circuit
-from qibo import gates
 import numpy as np
+
+from qibo import gates
+from qibo.models import Circuit
 
 
 def n_mCNOT(controls, target, work):

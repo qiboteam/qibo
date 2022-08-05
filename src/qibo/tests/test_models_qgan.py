@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """Test style-qGAN model defined in `qibo/models/qgan.py`."""
-import pytest
 import numpy as np
+import pytest
+
 from qibo import gates, models
 
 
@@ -94,8 +95,8 @@ def test_qgan_errors():
 
 
 def test_qgan_custom_discriminator():
-    from tensorflow.keras.models import Sequential  # pylint: disable=E0611,E0401
     from tensorflow.keras.layers import Dense  # pylint: disable=E0611,E0401
+    from tensorflow.keras.models import Sequential  # pylint: disable=E0611,E0401
 
     reference_distribution = generate_distribution(10)
     # use wrong number of qubits so that we capture the error

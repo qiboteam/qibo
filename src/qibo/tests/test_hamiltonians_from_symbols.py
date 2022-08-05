@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """Test dense matrix of Hamiltonians constructed using symbols."""
-import pytest
 import numpy as np
+import pytest
 import sympy
+
 from qibo import hamiltonians, matrices
-from qibo.symbols import I, X, Y, Z, Symbol
+from qibo.symbols import I, Symbol, X, Y, Z
 from qibo.tests.utils import random_hermitian
 
 
@@ -21,8 +22,8 @@ def test_tfim_hamiltonian_from_symbols(backend, nqubits, hamtype, calcterms):
         ham = hamiltonians.SymbolicHamiltonian(-symham, backend=backend)
     else:
         h = 0.5
-        z_symbols = sympy.symbols(" ".join((f"Z{i}" for i in range(nqubits))))
-        x_symbols = sympy.symbols(" ".join((f"X{i}" for i in range(nqubits))))
+        z_symbols = sympy.symbols(" ".join(f"Z{i}" for i in range(nqubits)))
+        x_symbols = sympy.symbols(" ".join(f"X{i}" for i in range(nqubits)))
 
         symham = sum(z_symbols[i] * z_symbols[i + 1] for i in range(nqubits - 1))
         symham += z_symbols[0] * z_symbols[-1]
@@ -53,7 +54,7 @@ def test_from_symbolic_with_power(backend, hamtype, calcterms):
         )
         ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
     else:
-        z = sympy.symbols(" ".join((f"Z{i}" for i in range(3))))
+        z = sympy.symbols(" ".join(f"Z{i}" for i in range(3)))
         symham = z[0] ** 2 - z[1] ** 2 + 3 * z[1] - 2 * z[0] * z[2] + 1
         matrix = random_hermitian(1)
         symmap = {x: (i, matrix) for i, x in enumerate(z)}
@@ -85,8 +86,8 @@ def test_from_symbolic_with_complex_numbers(backend, hamtype, calcterms):
         )
         ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
     else:
-        x = sympy.symbols(" ".join((f"X{i}" for i in range(2))))
-        y = sympy.symbols(" ".join((f"Y{i}" for i in range(2))))
+        x = sympy.symbols(" ".join(f"X{i}" for i in range(2)))
+        y = sympy.symbols(" ".join(f"Y{i}" for i in range(2)))
         symham = (
             (1 + 2j) * x[0] * x[1]
             + 2 * y[0] * y[1]
@@ -149,7 +150,7 @@ def test_x_hamiltonian_from_symbols(backend, nqubits, hamtype, calcterms):
         symham = -sum(X(i) for i in range(nqubits))
         ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
     else:
-        x_symbols = sympy.symbols(" ".join((f"X{i}" for i in range(nqubits))))
+        x_symbols = sympy.symbols(" ".join(f"X{i}" for i in range(nqubits)))
         symham = -sum(x_symbols)
         symmap = {x: (i, matrices.X) for i, x in enumerate(x_symbols)}
         ham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap, backend=backend)
@@ -169,9 +170,9 @@ def test_three_qubit_term_hamiltonian_from_symbols(backend, hamtype, calcterms):
         symham += Y(2) + 1.5 * Z(1) - 2 - 3 * X(1) * Y(3)
         ham = hamiltonians.SymbolicHamiltonian(symham, backend=backend)
     else:
-        x_symbols = sympy.symbols(" ".join((f"X{i}" for i in range(4))))
-        y_symbols = sympy.symbols(" ".join((f"Y{i}" for i in range(4))))
-        z_symbols = sympy.symbols(" ".join((f"Z{i}" for i in range(4))))
+        x_symbols = sympy.symbols(" ".join(f"X{i}" for i in range(4)))
+        y_symbols = sympy.symbols(" ".join(f"Y{i}" for i in range(4)))
+        z_symbols = sympy.symbols(" ".join(f"Z{i}" for i in range(4)))
         symmap = {x: (i, matrices.X) for i, x in enumerate(x_symbols)}
         symmap.update({x: (i, matrices.Y) for i, x in enumerate(y_symbols)})
         symmap.update({x: (i, matrices.Z) for i, x in enumerate(z_symbols)})

@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-import functions as fun
-import aux_functions as aux
 import argparse
+
+import aux_functions as aux
+import functions as fun
 
 
 def main(data, bins, M, shots):

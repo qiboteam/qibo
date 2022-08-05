@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-from qibo import gates
-from qibo.models.grover import Grover
-from qibo.models import Circuit
 import argparse
+
+from qibo import gates
+from qibo.models import Circuit
+from qibo.models.grover import Grover
 
 
 def main(nqubits):

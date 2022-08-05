@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """Test circuit result measurements and measurement gate and as part of circuit."""
-import pytest
 import numpy as np
-from qibo import models, gates
+import pytest
+
+from qibo import gates, models
 
 
 def assert_result(

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
+
 from qibo import gates
 from qibo.config import log, raise_error
 from qibo.models.circuit import Circuit

@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 """Error of evolution using Trotter decomposition."""
 import argparse
-import numpy as np
+
 import matplotlib
 import matplotlib.pyplot as plt
+import numpy as np
 from scipy.stats import linregress
+
 from qibo import callbacks, hamiltonians, models
 
 matplotlib.rcParams["mathtext.fontset"] = "cm"

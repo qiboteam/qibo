@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import abc
+
 from qibo.config import raise_error
 
 

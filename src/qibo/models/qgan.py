@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 from numpy.random import randn
-from qibo import gates, hamiltonians, matrices, models
+
+from qibo import gates, hamiltonians, models
+from qibo.backends import matrices
 from qibo.config import raise_error
 
 
@@ -91,16 +93,16 @@ class StyleQGAN(object):
 
     def define_discriminator(self, alpha=0.2, dropout=0.2):
         """Define the standalone discriminator model."""
+        from tensorflow.keras.layers import (  # pylint: disable=E0611,E0401
+            Conv2D,
+            Dense,
+            Dropout,
+            Flatten,
+            LeakyReLU,
+            Reshape,
+        )
         from tensorflow.keras.models import Sequential  # pylint: disable=E0611,E0401
         from tensorflow.keras.optimizers import Adadelta  # pylint: disable=E0611,E0401
-        from tensorflow.keras.layers import (
-            Dense,
-            Conv2D,
-            Dropout,
-            Reshape,
-            LeakyReLU,
-            Flatten,
-        )  # pylint: disable=E0611,E0401
 
         model = Sequential()
         model.add(Dense(200, use_bias=False, input_dim=self.nqubits))
