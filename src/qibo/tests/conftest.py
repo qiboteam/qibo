@@ -5,9 +5,10 @@ conftest.py
 Pytest fixtures.
 """
 import sys
-import pytest
-from qibo.backends import construct_backend
 
+import pytest
+
+from qibo.backends import construct_backend
 
 # backends to be tested
 BACKENDS = ["numpy", "tensorflow", "qibojit-numba", "qibojit-cupy", "qibojit-cuquantum"]

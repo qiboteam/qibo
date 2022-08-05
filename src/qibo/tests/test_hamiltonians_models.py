@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """Tests methods from `qibo/src/hamiltonians/models.py`."""
-import pytest
 import numpy as np
-from qibo import hamiltonians, matrices
+import pytest
 
+from qibo import hamiltonians, matrices
 
 models_config = [
     ("TFIM", {"nqubits": 3, "h": 0.0}, "tfim_N3h0.0.out"),

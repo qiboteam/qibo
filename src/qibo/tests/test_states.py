@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import pytest
+
 from qibo import gates
 from qibo.models import Circuit
 
@@ -29,7 +30,7 @@ def test_state_representation(backend, target, density_matrix):
 
 @pytest.mark.parametrize("density_matrix", [False, True])
 def test_state_representation_max_terms(backend, density_matrix):
-    from qibo import models, gates
+    from qibo import gates, models
 
     c = models.Circuit(5, density_matrix=density_matrix)
     c.add(gates.H(i) for i in range(5))

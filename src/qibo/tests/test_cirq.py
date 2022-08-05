@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 """Test that Qibo gate execution agrees with Cirq."""
 import sys
-import numpy as np
+
 import cirq
+import numpy as np
 import pytest
+
 from qibo import gates, models
 from qibo.tests.utils import random_state
 

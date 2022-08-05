@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 """Test circuit measurements when outcome is probabilistic."""
 import sys
-import pytest
+
 import numpy as np
-from qibo import models, gates
+import pytest
+
+from qibo import gates, models
 from qibo.tests.test_measurements import assert_result
 
 

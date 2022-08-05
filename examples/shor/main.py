@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import numpy as np
-import functions
 import argparse
 import fractions
+
+import functions
+import numpy as np
 
 
 def main(N, times, A, semiclassical, enhance):

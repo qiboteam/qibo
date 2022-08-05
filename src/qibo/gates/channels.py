@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 from abc import abstractmethod
+
+from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate
-from qibo.gates.gates import X, Y, Z, Unitary
+from qibo.gates.gates import Unitary, X, Y, Z
 from qibo.gates.measurements import M
-from qibo.config import raise_error, PRECISION_TOL
 
 
 class Channel(Gate):

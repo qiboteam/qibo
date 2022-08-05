@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-from qibo.models import Circuit
-from qibo import gates
 import numpy as np
 from scipy.optimize import minimize
+
+from qibo import gates
+from qibo.models import Circuit
 
 
 def ansatz(p=0):

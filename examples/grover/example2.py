@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
-from qibo import gates
-from qibo.models.grover import Grover
-from qibo.models import Circuit
+import argparse
+
 import numpy as np
 from scipy.special import binom
-import argparse
+
+from qibo import gates
+from qibo.models import Circuit
+from qibo.models.grover import Grover
 
 
 def one_sum(sum_qubits):

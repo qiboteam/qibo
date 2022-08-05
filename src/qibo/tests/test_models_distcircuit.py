@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """Test functions defined in `qibo/models/distcircuit.py`."""
-import pytest
 import numpy as np
+import pytest
+
 import qibo
 from qibo import gates
 from qibo.models import Circuit

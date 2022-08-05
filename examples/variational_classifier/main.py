@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from qclassifier import QuantumClassifer
 import argparse
-import numpy as np
 
+import numpy as np
+from qclassifier import QuantumClassifer
 
 parser = argparse.ArgumentParser()
 parser.add_argument(

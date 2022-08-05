@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
+from typing import Dict, Optional, Tuple
+
 import sympy
+
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate
-from typing import Dict, Optional, Tuple
 
 
 class MeasurementResult:

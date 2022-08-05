@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import argparse
+
 import numpy as np
-from qibo import hamiltonians, gates, models
-from qibo.hamiltonians import Hamiltonian
 from scipy.optimize import minimize
 from sklearn.datasets import load_digits
-import argparse
+
+from qibo import gates, hamiltonians, models
+from qibo.hamiltonians import Hamiltonian
 
 
 def main(layers, autoencoder, example, maxiter):

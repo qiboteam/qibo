@@ -2,12 +2,14 @@
 """
 Testing Variational Quantum Circuits.
 """
-import numpy as np
 import pathlib
+
+import numpy as np
 import pytest
-from qibo import gates, models, hamiltonians
-from qibo.tests.utils import random_state
 from scipy.linalg import expm
+
+from qibo import gates, hamiltonians, models
+from qibo.tests.utils import random_state
 
 REGRESSION_FOLDER = pathlib.Path(__file__).with_name("regressions")
 

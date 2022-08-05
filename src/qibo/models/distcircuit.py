@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
+import collections
 import copy
 import math
-import collections
-from qibo.config import raise_error
-from qibo import gates
-from qibo.models.circuit import Circuit
-from qibo.gates.abstract import Gate, SpecialGate, ParametrizedGate
 from typing import Dict, List, Optional, Sequence, Set, Tuple, Union
+
+from qibo import gates
+from qibo.config import raise_error
+from qibo.gates.abstract import Gate, ParametrizedGate, SpecialGate
+from qibo.models.circuit import Circuit
 
 
 class DistributedQubits:

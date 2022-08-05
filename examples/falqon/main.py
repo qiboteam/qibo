@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import argparse
-from qibo import models, hamiltonians
+
+from qibo import hamiltonians, models
 
 
 def main(nqubits, delta_t=0.1, max_layers=100):

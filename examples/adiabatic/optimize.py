@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """Adiabatic evolution scheduling optimization for the Ising Hamiltonian."""
 import argparse
-import numpy as np
-from qibo import callbacks, hamiltonians, models
 
+import numpy as np
+
+from qibo import callbacks, hamiltonians, models
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default=4, type=int)

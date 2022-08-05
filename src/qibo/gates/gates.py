@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 import math
-from qibo.config import raise_error
 from typing import Dict, List, Optional, Tuple
-from qibo.gates.abstract import Gate, ParametrizedGate
 
+from qibo.config import raise_error
+from qibo.gates.abstract import Gate, ParametrizedGate
 
 QASM_GATES = {
     "h": "H",

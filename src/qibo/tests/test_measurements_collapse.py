@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """Test :class:`qibo.gates.M` as standalone and as part of circuit."""
-import pytest
 import numpy as np
-from qibo import models, gates
-from qibo.tests.utils import random_state, random_density_matrix
+import pytest
+
+from qibo import gates, models
+from qibo.tests.utils import random_density_matrix, random_state
 
 
 @pytest.mark.parametrize(

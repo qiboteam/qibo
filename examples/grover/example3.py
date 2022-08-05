@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-from qibo import gates
-from qibo.models import Circuit
+import argparse
+
 import numpy as np
 from scipy.special import binom as binomial
-import argparse
-from qibo.models import Grover
+
+from qibo import gates
+from qibo.models import Circuit, Grover
 
 
 def set_ancillas_to_num(ancillas, num):

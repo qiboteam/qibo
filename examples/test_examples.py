@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-import os
-import pytest
-import sys
 import importlib
+import os
 import signal
+import sys
 from contextlib import contextmanager
+
+import pytest
 
 base_dir = os.path.join(os.getcwd(), "examples")
 sys.path.append(base_dir)

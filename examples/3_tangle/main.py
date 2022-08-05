@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-from canonizator import *
-import numpy as np
-import matplotlib.pyplot as plt
 import argparse
 
+import matplotlib.pyplot as plt
+import numpy as np
+from canonizator import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--N", default=100, help="Number of random states.", type=int)

@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 import collections
+from typing import Dict, List, Tuple, Union
+
 import numpy as np
+
 from qibo import gates
 from qibo import gates as gate_module
 from qibo.config import raise_error
-from typing import Dict, List, Tuple, Union
 
 NoiseMapType = Union[Tuple[int, int, int], Dict[int, Tuple[int, int, int]]]
 
@@ -1234,8 +1236,8 @@ class Circuit:
                     try:
                         for i, p in enumerate(params):
                             if "pi" in p:
-                                from operator import mul
                                 from functools import reduce
+                                from operator import mul
 
                                 s = p.replace("pi", str(np.pi)).split("*")
                                 p = reduce(mul, [float(j) for j in s], 1)

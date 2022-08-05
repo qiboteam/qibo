@@ -2,8 +2,8 @@
 """Testing HEP models."""
 import numpy as np
 import pytest
-from qibo.models.hep import qPDF
 
+from qibo.models.hep import qPDF
 
 test_names = "ansatz,layers,nqubits,multi_output,output"
 test_values = [

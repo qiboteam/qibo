@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import numpy as np
-import functions
 import argparse
+
+import functions
+import numpy as np
 
 
 def main(nqubits, instance):

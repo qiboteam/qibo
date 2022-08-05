@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """Test methods in `qibo/core/hamiltonians.py`."""
-import pytest
 import numpy as np
+import pytest
+
 from qibo import hamiltonians
 from qibo.tests.utils import random_complex, random_sparse_matrix
 

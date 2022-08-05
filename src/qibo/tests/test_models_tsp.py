@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
-import pytest
-import numpy as np
 from collections import defaultdict
+
+import numpy as np
+import pytest
+
 from qibo import gates
 from qibo.models import QAOA, Circuit
 from qibo.models.tsp import TSP

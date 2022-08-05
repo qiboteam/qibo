@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from qsvd import QSVD
 import argparse
-import numpy as np
 
+import numpy as np
+from qsvd import QSVD
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default=6, help="Number of qubits", type=int)

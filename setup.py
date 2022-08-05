@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 # Installation script for python
-from setuptools import setup, find_packages
 import os
 import re
+
+from setuptools import find_packages, setup
 
 PACKAGE = "qibo"
 

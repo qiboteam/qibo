@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """Test methods defined in `qibo/core/callbacks.py`."""
-import pytest
 import numpy as np
-from qibo import gates, callbacks
-from qibo.models import Circuit, AdiabaticEvolution
+import pytest
 
+from qibo import callbacks, gates
+from qibo.models import AdiabaticEvolution, Circuit
 
 # Absolute testing tolerance for the cases of zero entanglement entropy
 _atol = 1e-8

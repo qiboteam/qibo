@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """Test all methods defined in `qibo/models/circuit.py`."""
 import pytest
+
 from qibo import gates
-from qibo.models import Circuit
 from qibo.config import raise_error
+from qibo.models import Circuit
 
 
 def test_parametrizedgates_class():

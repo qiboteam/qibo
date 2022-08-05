@@ -2,6 +2,7 @@
 """Test how features defined in :class:`qibo.models.circuit.Circuit` work during circuit execution."""
 import numpy as np
 import pytest
+
 from qibo import gates
 from qibo.models import Circuit
 

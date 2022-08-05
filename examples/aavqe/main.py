@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import numpy as np
-from qibo import gates, models, hamiltonians
 import argparse
+
+import numpy as np
+
+from qibo import gates, hamiltonians, models
 
 
 def main(nqubits, layers, maxsteps, T_max):

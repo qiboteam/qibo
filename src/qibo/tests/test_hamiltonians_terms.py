@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """Tests methods defined in `qibo/core/terms.py`."""
-import pytest
 import numpy as np
-from qibo import matrices, models, gates
+import pytest
+
+from qibo import gates, matrices, models
 from qibo.hamiltonians import terms
-from qibo.tests.utils import random_state, random_density_matrix
+from qibo.tests.utils import random_density_matrix, random_state
 
 
 def test_hamiltonian_term_initialization(backend):

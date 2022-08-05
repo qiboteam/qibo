@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """Test dense matrix of Hamiltonians constructed using symbols."""
-import pytest
 import numpy as np
+import pytest
 import sympy
+
 from qibo import hamiltonians, matrices
-from qibo.symbols import I, X, Y, Z, Symbol
+from qibo.symbols import I, Symbol, X, Y, Z
 from qibo.tests.utils import random_hermitian
 
 

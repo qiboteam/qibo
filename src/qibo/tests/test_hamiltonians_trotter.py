@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """Test Trotter Hamiltonian methods from `qibo/core/hamiltonians.py`."""
-import pytest
 import numpy as np
+import pytest
+
 from qibo import hamiltonians
-from qibo.tests.utils import random_state, random_complex, random_hermitian
+from qibo.tests.utils import random_complex, random_hermitian, random_state
 
 
 @pytest.mark.parametrize("nqubits", [3, 4])
@@ -97,6 +98,7 @@ def test_trotter_hamiltonian_matmul(backend, nqubits, normalize):
 def test_trotter_hamiltonian_three_qubit_term(backend):
     """Test creating ``TrotterHamiltonian`` with three qubit term."""
     from scipy.linalg import expm
+
     from qibo.hamiltonians.terms import HamiltonianTerm
 
     m1 = random_hermitian(3)

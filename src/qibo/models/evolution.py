@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """Models for time evolution of state vectors."""
-from qibo import solvers, optimizers
+from qibo import optimizers, solvers
+from qibo.callbacks import Gap, Norm
 from qibo.config import log, raise_error
-from qibo.callbacks import Norm, Gap
 from qibo.hamiltonians.abstract import AbstractHamiltonian
-from qibo.hamiltonians.adiabatic import BaseAdiabaticHamiltonian, AdiabaticHamiltonian
+from qibo.hamiltonians.adiabatic import AdiabaticHamiltonian, BaseAdiabaticHamiltonian
 from qibo.hamiltonians.hamiltonians import SymbolicHamiltonian
 
 

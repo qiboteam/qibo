@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-from qibo.config import raise_error
 from typing import List, Optional, Set, Union
+
+from qibo.config import raise_error
 
 
 class Callback:
@@ -301,7 +302,7 @@ class Gap(Callback):
         self.evolution = None
 
     def apply(self, backend, state):
-        from qibo.config import log, EIGVAL_CUTOFF
+        from qibo.config import EIGVAL_CUTOFF, log
 
         if self.evolution is None:
             raise_error(

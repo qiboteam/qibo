@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """Test gates defined in `qibo/gates/gates.py`."""
-import pytest
 import numpy as np
+import pytest
+
 from qibo import gates
 from qibo.config import raise_error
 from qibo.tests.utils import random_state

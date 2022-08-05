@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """Test :class:`qibo.models.distcircuit.DistributedCircuit` execution."""
-import pytest
 import numpy as np
+import pytest
+
 from qibo import gates
 from qibo.models import Circuit
 from qibo.tests.utils import random_state

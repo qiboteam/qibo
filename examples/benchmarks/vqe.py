@@ -4,11 +4,12 @@ Benchmark Variational Quantum Eigensolver.
 """
 import argparse
 import time
+
 import numpy as np
-import qibo
-from qibo import gates, models, hamiltonians
 from utils import BenchmarkLogger
 
+import qibo
+from qibo import gates, hamiltonians, models
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default=6, help="Number of qubits.", type=int)

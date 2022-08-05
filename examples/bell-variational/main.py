@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
-import numpy as np
-from qibo.optimizers import optimize
-from functions import set_parametrized_circuits, cost_function, compute_chsh
-from qibo import set_backend
 import argparse
+
+import numpy as np
+from functions import compute_chsh, cost_function, set_parametrized_circuits
+
+from qibo import set_backend
+from qibo.optimizers import optimize
 
 
 def main(nshots, backend):

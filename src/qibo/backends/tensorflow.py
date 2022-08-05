@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
-import os
 import collections
+import os
+
 import numpy as np
-from qibo.backends.numpy import NumpyBackend
+
 from qibo.backends.matrices import Matrices
-from qibo.config import log, raise_error, TF_LOG_LEVEL
+from qibo.backends.numpy import NumpyBackend
+from qibo.config import TF_LOG_LEVEL, log, raise_error
 
 
 class TensorflowMatrices(Matrices):

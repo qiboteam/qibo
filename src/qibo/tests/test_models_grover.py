@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test Grover model defined in `qibo/models/grover.py`."""
 import pytest
+
 from qibo import gates
 from qibo.models import Circuit, Grover
 

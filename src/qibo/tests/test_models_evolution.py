@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-import pytest
 import numpy as np
+import pytest
+from scipy.linalg import expm
+
 from qibo import callbacks, hamiltonians, models
 from qibo.config import raise_error
-from scipy.linalg import expm
 
 
 def assert_states_equal(backend, state, target_state, atol=0):

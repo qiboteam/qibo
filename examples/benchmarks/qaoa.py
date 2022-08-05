@@ -4,11 +4,12 @@ Benchmark Quantum Approximate Optimization Algorithm model.
 """
 import argparse
 import time
+
 import numpy as np
-import qibo
-from qibo import models, hamiltonians
 from utils import BenchmarkLogger
 
+import qibo
+from qibo import hamiltonians, models
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default=4, help="Number of qubits.", type=int)

@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 import os
-from qibo.config import log, raise_error
+
 from qibo.backends.abstract import Backend
+from qibo.backends.matrices import Matrices
 from qibo.backends.numpy import NumpyBackend
 from qibo.backends.tensorflow import TensorflowBackend
-from qibo.backends.matrices import Matrices
+from qibo.config import log, raise_error
 
 
 def construct_backend(backend, platform=None, runcard=None):

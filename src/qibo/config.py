@@ -2,8 +2,8 @@
 """
 Define the default circuit, constants and types.
 """
-import os
 import logging
+import os
 
 # Logging level from 0 (all) to 4 (errors) (see https://docs.python.org/3/library/logging.html#logging-levels)
 QIBO_LOG_LEVEL = 1

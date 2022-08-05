@@ -3,12 +3,14 @@
 Testing parallel evaluations.
 """
 import sys
+
 import numpy as np
 import pytest
+
 import qibo
 from qibo import gates
-from qibo.models import Circuit, QFT
-from qibo.parallel import parallel_parametrized_execution, parallel_execution
+from qibo.models import QFT, Circuit
+from qibo.parallel import parallel_execution, parallel_parametrized_execution
 
 
 def test_parallel_circuit_evaluation(backend):

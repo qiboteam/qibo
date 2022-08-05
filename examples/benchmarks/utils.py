@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-import os
 import json
+import os
 
 
 class BenchmarkLogger(list):
