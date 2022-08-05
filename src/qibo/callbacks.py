@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from qibo.config import raise_error
 from typing import List, Optional, Set, Union
 
@@ -13,13 +14,13 @@ class Callback:
         self._nqubits = None
 
     @property
-    def nqubits(self): # pragma: no cover
+    def nqubits(self):  # pragma: no cover
         """Total number of qubits in the circuit that the callback was added in."""
         # abstract method
         return self._nqubits
 
     @nqubits.setter
-    def nqubits(self, n: int): # pragma: no cover
+    def nqubits(self, n: int):  # pragma: no cover
         # abstract method
         self._nqubits = n
 
@@ -36,18 +37,21 @@ class Callback:
     def __getitem__(self, k):
         if not isinstance(k, (int, slice, list, tuple)):
             raise_error(IndexError, "Unrecognized type for index {}.".format(k))
-        
+
         if isinstance(k, int) and k >= len(self._results):
-            raise_error(IndexError, "Attempting to access callbacks {} run but "
-                                    "the callback has been used in {} executions."
-                                    "".format(k, len(self._results)))
-        
+            raise_error(
+                IndexError,
+                "Attempting to access callbacks {} run but "
+                "the callback has been used in {} executions."
+                "".format(k, len(self._results)),
+            )
+
         return self._results[k]
 
-    def apply(self, backend, state): # pragma: no cover
+    def apply(self, backend, state):  # pragma: no cover
         pass
 
-    def apply_density_matrix(self, backend, state): # pragma: no cover
+    def apply_density_matrix(self, backend, state):  # pragma: no cover
         pass
 
 
@@ -91,8 +95,9 @@ class EntanglementEntropy(Callback):
             ...
     """
 
-    def __init__(self, partition: Optional[List[int]] = None,
-                 compute_spectrum: bool = False):
+    def __init__(
+        self, partition: Optional[List[int]] = None, compute_spectrum: bool = False
+    ):
         super().__init__()
         self.partition = partition
         self.compute_spectrum = compute_spectrum
@@ -101,14 +106,19 @@ class EntanglementEntropy(Callback):
     @Callback.nqubits.setter
     def nqubits(self, n: int):
         from qibo import gates
+
         if self._nqubits is not None and self._nqubits != n:
-            raise_error(RuntimeError,
-                        f"Changing EntanglementEntropy nqubits from {self._nqubits} to {n}.")
+            raise_error(
+                RuntimeError,
+                f"Changing EntanglementEntropy nqubits from {self._nqubits} to {n}.",
+            )
         self._nqubits = n
         if self.partition is None:
             self.partition = list(range(n // 2 + n % 2))
         if len(self.partition) <= self.nqubits // 2:
-            self.partition = [i for i in range(self.nqubits) if i not in set(self.partition)]
+            self.partition = [
+                i for i in range(self.nqubits) if i not in set(self.partition)
+            ]
 
     def apply(self, backend, state):
         rho = backend.partial_trace(state, self.partition, self.nqubits)
@@ -166,7 +176,7 @@ class Norm(Callback):
 
     def apply(self, backend, state):
         return backend.calculate_norm(state)
-    
+
     def apply_density_matrix(self, backend, state):
         return backend.calculate_norm_density_matrix(state)
 
@@ -184,14 +194,14 @@ class Overlap(Callback):
         normalize (bool): If ``True`` the states are normalized for the overlap
             calculation.
     """
-    
+
     def __init__(self, state):
         super().__init__()
         self.state = state
-    
+
     def apply(self, backend, state):
         return backend.calculate_overlap(self.state, state)
-    
+
     def apply_density_matrix(self, backend, state):
         return backend.calculate_overlap_density_matrix(self.state, state)
 
@@ -277,20 +287,27 @@ class Gap(Callback):
     def __init__(self, mode: Union[str, int] = "gap", check_degenerate: bool = True):
         super().__init__()
         if not isinstance(mode, (int, str)):
-            raise_error(TypeError, "Gap callback mode should be integer or "
-                                   "string but is {}.".format(type(mode)))
+            raise_error(
+                TypeError,
+                "Gap callback mode should be integer or "
+                "string but is {}.".format(type(mode)),
+            )
         elif isinstance(mode, str) and mode != "gap":
-            raise_error(ValueError, "Unsupported mode {} for gap callback."
-                                    "".format(mode))
+            raise_error(
+                ValueError, "Unsupported mode {} for gap callback." "".format(mode)
+            )
         self.mode = mode
         self.check_degenerate = check_degenerate
         self.evolution = None
 
     def apply(self, backend, state):
         from qibo.config import log, EIGVAL_CUTOFF
+
         if self.evolution is None:
-            raise_error(RuntimeError, "Gap callback can only be used in "
-                                      "adiabatic evolution models.")
+            raise_error(
+                RuntimeError,
+                "Gap callback can only be used in " "adiabatic evolution models.",
+            )
         hamiltonian = self.evolution.solver.current_hamiltonian  # pylint: disable=E1101
         assert type(hamiltonian.backend) == type(backend)
         # Call the eigenvectors so that they are cached for the ``exp`` call
@@ -309,10 +326,14 @@ class Gap(Callback):
             gap = backend.np.real(eigvals[excited] - eigvals[0])
             excited += 1
         if excited > 1:
-            log.warning("The Hamiltonian is degenerate. Using eigenvalue {} "
-                        "to calculate gap.".format(excited))
+            log.warning(
+                "The Hamiltonian is degenerate. Using eigenvalue {} "
+                "to calculate gap.".format(excited)
+            )
         return gap
 
     def apply_density_matrix(self, backend, state):
-        raise_error(NotImplementedError, "Gap callback is not implemented for "
-                                         "density matrices.")
+        raise_error(
+            NotImplementedError,
+            "Gap callback is not implemented for " "density matrices.",
+        )

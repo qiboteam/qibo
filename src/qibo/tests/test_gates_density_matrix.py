@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Test gates acting on density matrices."""
 import pytest
 import numpy as np
@@ -6,6 +7,7 @@ from qibo.config import raise_error
 from qibo.tests.utils import random_density_matrix
 
 _atol = 1e-8
+
 
 def apply_gates(backend, gatelist, nqubits=None, initial_state=None):
     state = backend.cast(np.copy(initial_state))
@@ -38,14 +40,27 @@ def test_rygate_density_matrix(backend):
     backend.assert_allclose(final_rho, target_rho, atol=_atol)
 
 
-@pytest.mark.parametrize("gatename,gatekwargs",
-                         [("H", {}), ("X", {}), ("Y", {}), ("Z", {}),
-                          ("S", {}), ("SDG", {}), ("T", {}), ("TDG", {}),
-                          ("I", {}), ("Align", {}),
-                          ("RX", {"theta": 0.123}), ("RY", {"theta": 0.123}),
-                          ("RZ", {"theta": 0.123}), ("U1", {"theta": 0.123}),
-                          ("U2", {"phi": 0.123, "lam": 0.321}),
-                          ("U3", {"theta": 0.123, "phi": 0.321, "lam": 0.123})])
+@pytest.mark.parametrize(
+    "gatename,gatekwargs",
+    [
+        ("H", {}),
+        ("X", {}),
+        ("Y", {}),
+        ("Z", {}),
+        ("S", {}),
+        ("SDG", {}),
+        ("T", {}),
+        ("TDG", {}),
+        ("I", {}),
+        ("Align", {}),
+        ("RX", {"theta": 0.123}),
+        ("RY", {"theta": 0.123}),
+        ("RZ", {"theta": 0.123}),
+        ("U1", {"theta": 0.123}),
+        ("U2", {"phi": 0.123, "lam": 0.321}),
+        ("U3", {"theta": 0.123, "phi": 0.321, "lam": 0.123}),
+    ],
+)
 def test_one_qubit_gates(backend, gatename, gatekwargs):
     """Check applying one qubit gates to one qubit density matrix."""
     initial_rho = random_density_matrix(1)
@@ -70,13 +85,21 @@ def test_controlled_by_one_qubit_gates(backend, gatename):
     backend.assert_allclose(final_rho, target_rho)
 
 
-@pytest.mark.parametrize("gatename,gatekwargs",
-                         [("CNOT", {}), ("CZ", {}), ("SWAP", {}),
-                          ("CRX", {"theta": 0.123}), ("CRY", {"theta": 0.123}),
-                          ("CRZ", {"theta": 0.123}), ("CU1", {"theta": 0.123}),
-                          ("CU2", {"phi": 0.123, "lam": 0.321}),
-                          ("CU3", {"theta": 0.123, "phi": 0.321, "lam": 0.123}),
-                          ("fSim", {"theta": 0.123, "phi": 0.543})])
+@pytest.mark.parametrize(
+    "gatename,gatekwargs",
+    [
+        ("CNOT", {}),
+        ("CZ", {}),
+        ("SWAP", {}),
+        ("CRX", {"theta": 0.123}),
+        ("CRY", {"theta": 0.123}),
+        ("CRZ", {"theta": 0.123}),
+        ("CU1", {"theta": 0.123}),
+        ("CU2", {"phi": 0.123, "lam": 0.321}),
+        ("CU3", {"theta": 0.123, "phi": 0.321, "lam": 0.123}),
+        ("fSim", {"theta": 0.123, "phi": 0.543}),
+    ],
+)
 def test_two_qubit_gates(backend, gatename, gatekwargs):
     """Check applying two qubit gates to two qubit density matrix."""
     initial_rho = random_density_matrix(2)
@@ -102,7 +125,7 @@ def test_toffoli_gate(backend):
 @pytest.mark.parametrize("nqubits", [1, 2, 3])
 def test_unitary_gate(backend, nqubits):
     """Check applying `gates.Unitary` to density matrix."""
-    shape = 2 * (2 ** nqubits,)
+    shape = 2 * (2**nqubits,)
     matrix = np.random.random(shape) + 1j * np.random.random(shape)
     initial_rho = random_density_matrix(nqubits)
     gate = gates.Unitary(matrix, *range(nqubits))
@@ -129,6 +152,7 @@ def test_cu1gate_application_twoqubit(backend):
 def test_controlled_by_no_effect(backend):
     """Check controlled_by SWAP that should not be applied."""
     from qibo.models import Circuit
+
     initial_rho = np.zeros((16, 16))
     initial_rho[0, 0] = 1
 
@@ -146,6 +170,7 @@ def test_controlled_by_no_effect(backend):
 def test_controlled_with_effect(backend):
     """Check controlled_by SWAP that should be applied."""
     from qibo.models import Circuit
+
     initial_rho = np.zeros((16, 16))
     initial_rho[0, 0] = 1
 
@@ -168,6 +193,7 @@ def test_controlled_by_random(backend, nqubits):
     """Check controlled_by method on gate."""
     from qibo.models import Circuit
     from qibo.tests.utils import random_state
+
     initial_psi = random_state(nqubits)
     initial_rho = np.outer(initial_psi, initial_psi.conj())
     c = Circuit(nqubits, density_matrix=True)

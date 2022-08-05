@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from canonizator import *
 import numpy as np
 import matplotlib.pyplot as plt
@@ -6,13 +7,20 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--N", default=100, help="Number of random states.", type=int)
-parser.add_argument("--p", default=0.001, help="Probability of occurring an error.", type=float)
-parser.add_argument("--shots", default=1000, help="Shots used for measuring every circuit.", type=float)
-parser.add_argument("--post_selection", default=True, help="Post selection technique", type=bool)
+parser.add_argument(
+    "--p", default=0.001, help="Probability of occurring an error.", type=float
+)
+parser.add_argument(
+    "--shots", default=1000, help="Shots used for measuring every circuit.", type=float
+)
+parser.add_argument(
+    "--post_selection", default=True, help="Post selection technique", type=bool
+)
 parser.add_argument("--no_plot", action="store_true", help="Avoid plots")
 
+
 def main(N, p, shots, post_selection, no_plot):
-    #Initialize exact and measured tangles
+    # Initialize exact and measured tangles
     tangles = np.empty(N)
     opt_tangles = np.empty(N)
     circuit = ansatz(p)
@@ -29,23 +37,27 @@ def main(N, p, shots, post_selection, no_plot):
         Results are stored into variables to paint the results
         """
         if i % 10 == 0:
-            print('Initialized state with seed %s'%i + '/ %s'%N)
-        state = create_random_state(i, p>0)
+            print("Initialized state with seed %s" % i + "/ %s" % N)
+        state = create_random_state(i, p > 0)
         tangles[i] = compute_random_tangle(i)
         fun, params = canonize(state, circuit, shots=np.int32(shots))
-        opt_tangles[i] = canonical_tangle(state, params, circuit, post_selection=post_selection)
+        opt_tangles[i] = canonical_tangle(
+            state, params, circuit, post_selection=post_selection
+        )
 
     if not no_plot:
-        print('Painting results')
-        fig, ax = plt.subplots() # Plotting
+        print("Painting results")
+        fig, ax = plt.subplots()  # Plotting
         if post_selection:
-            color = 'red'
+            color = "red"
         else:
-            color='green'
+            color = "green"
         ax.scatter(tangles, opt_tangles, s=20, c=color)
-        ax.plot([0., 1.], [0., 1.], color='black')
-        ax.set(xlabel='Exact tangle', ylabel='Measured tangle', xlim=[0,1], ylim=[0,1])
-        plt.grid('on')
+        ax.plot([0.0, 1.0], [0.0, 1.0], color="black")
+        ax.set(
+            xlabel="Exact tangle", ylabel="Measured tangle", xlim=[0, 1], ylim=[0, 1]
+        )
+        plt.grid("on")
         plt.show()
 
 

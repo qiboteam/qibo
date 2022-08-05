@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from qibo import gates
 from qibo.models.grover import Grover
 from qibo.models import Circuit
@@ -22,20 +23,18 @@ def main(nqubits):
     # Create superoposition circuit: Full superposition over the selected number qubits.
 
     # Generate and execute Grover class
-    grover = Grover(oracle, superposition_circuit=superposition,
-                    number_solutions=1)
+    grover = Grover(oracle, superposition_circuit=superposition, number_solutions=1)
 
     solution, iterations = grover()
 
-    print('The solution is', solution)
-    print('Number of iterations needed:', iterations)
+    print("The solution is", solution)
+    print("Number of iterations needed:", iterations)
 
     return solution, iterations
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--nqubits", default=10, type=int,
-                        help="Number of qubits.")
+    parser.add_argument("--nqubits", default=10, type=int, help="Number of qubits.")
     args = vars(parser.parse_args())
     main(**args)

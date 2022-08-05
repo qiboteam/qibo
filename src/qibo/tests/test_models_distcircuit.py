@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Test functions defined in `qibo/models/distcircuit.py`."""
 import pytest
 import numpy as np
@@ -97,9 +98,10 @@ def test_distributed_circuit_set_gates_controlled():
 def test_distributed_qft_global_qubits_validity(nqubits, ndevices):
     """Check that no gates are applied to global qubits for practical QFT cases."""
     from qibo.models import QFT
+
     c = QFT(nqubits, accelerators={"/GPU:0": ndevices})
-    c.queues.set(c.queue) # pylint: disable=E1101
-    check_device_queues(c.queues) # pylint: disable=E1101
+    c.queues.set(c.queue)  # pylint: disable=E1101
+    check_device_queues(c.queues)  # pylint: disable=E1101
 
 
 def test_transform_queue_simple():

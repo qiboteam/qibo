@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from abc import abstractmethod
 from qibo.config import raise_error
 
@@ -15,15 +16,17 @@ class AbstractHamiltonian:
     @nqubits.setter
     def nqubits(self, n):
         if not isinstance(n, int):
-            raise_error(RuntimeError, "nqubits must be an integer but is "
-                                      "{}.".format(type(n)))
+            raise_error(
+                RuntimeError, "nqubits must be an integer but is " "{}.".format(type(n))
+            )
         if n < 1:
-            raise_error(ValueError, "nqubits must be a positive integer but is "
-                                    "{}".format(n))
+            raise_error(
+                ValueError, "nqubits must be a positive integer but is " "{}".format(n)
+            )
         self._nqubits = n
 
     @abstractmethod
-    def eigenvalues(self, k=6): # pragma: no cover
+    def eigenvalues(self, k=6):  # pragma: no cover
         """Computes the eigenvalues for the Hamiltonian.
 
         Args:
@@ -36,7 +39,7 @@ class AbstractHamiltonian:
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def eigenvectors(self, k=6): # pragma: no cover
+    def eigenvectors(self, k=6):  # pragma: no cover
         """Computes a tensor with the eigenvectors for the Hamiltonian.
 
         Args:
@@ -57,7 +60,7 @@ class AbstractHamiltonian:
         return self.eigenvectors()[:, 0]
 
     @abstractmethod
-    def exp(self, a): # pragma: no cover
+    def exp(self, a):  # pragma: no cover
         """Computes a tensor corresponding to exp(-1j * a * H).
 
         Args:
@@ -67,7 +70,7 @@ class AbstractHamiltonian:
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def expectation(self, state, normalize=False): # pragma: no cover
+    def expectation(self, state, normalize=False):  # pragma: no cover
         """Computes the real expectation value for a given state.
 
         Args:
@@ -81,7 +84,7 @@ class AbstractHamiltonian:
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def __add__(self, o): # pragma: no cover
+    def __add__(self, o):  # pragma: no cover
         """Add operator."""
         raise_error(NotImplementedError)
 
@@ -90,17 +93,17 @@ class AbstractHamiltonian:
         return self.__add__(o)
 
     @abstractmethod
-    def __sub__(self, o): # pragma: no cover
+    def __sub__(self, o):  # pragma: no cover
         """Subtraction operator."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def __rsub__(self, o): # pragma: no cover
+    def __rsub__(self, o):  # pragma: no cover
         """Right subtraction operator."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def __mul__(self, o): # pragma: no cover
+    def __mul__(self, o):  # pragma: no cover
         """Multiplication to scalar operator."""
         raise_error(NotImplementedError)
 
@@ -109,6 +112,6 @@ class AbstractHamiltonian:
         return self.__mul__(o)
 
     @abstractmethod
-    def __matmul__(self, o): # pragma: no cover
+    def __matmul__(self, o):  # pragma: no cover
         """Matrix multiplication with other Hamiltonians or state vectors."""
         raise_error(NotImplementedError)

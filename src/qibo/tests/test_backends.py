@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import pytest
 import numpy as np
 from qibo import gates
@@ -11,23 +12,41 @@ GATES = [
     ("Z", (1,), np.array([[1, 0], [0, -1]])),
     ("S", (2,), np.array([[1, 0], [0, 1j]])),
     ("T", (2,), np.array([[1, 0], [0, np.exp(1j * np.pi / 4.0)]])),
-    ("CNOT", (0, 1), np.array([[1, 0, 0, 0], [0, 1, 0, 0],
-                               [0, 0, 0, 1], [0, 0, 1, 0]])),
-    ("CZ", (1, 3), np.array([[1, 0, 0, 0], [0, 1, 0, 0],
-                             [0, 0, 1, 0], [0, 0, 0, -1]])),
-    ("SWAP", (2, 4), np.array([[1, 0, 0, 0], [0, 0, 1, 0],
-                               [0, 1, 0, 0], [0, 0, 0, 1]])),
-    ("FSWAP", (2, 4), np.array([[1, 0, 0, 0], [0, 0, 1, 0],
-                               [0, 1, 0, 0], [0, 0, 0, -1]])),
-    ("TOFFOLI", (1, 2, 3), np.array([[1, 0, 0, 0, 0, 0, 0, 0],
-                                     [0, 1, 0, 0, 0, 0, 0, 0],
-                                     [0, 0, 1, 0, 0, 0, 0, 0],
-                                     [0, 0, 0, 1, 0, 0, 0, 0],
-                                     [0, 0, 0, 0, 1, 0, 0, 0],
-                                     [0, 0, 0, 0, 0, 1, 0, 0],
-                                     [0, 0, 0, 0, 0, 0, 0, 1],
-                                     [0, 0, 0, 0, 0, 0, 1, 0]]))
+    (
+        "CNOT",
+        (0, 1),
+        np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]]),
+    ),
+    ("CZ", (1, 3), np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, -1]])),
+    (
+        "SWAP",
+        (2, 4),
+        np.array([[1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1]]),
+    ),
+    (
+        "FSWAP",
+        (2, 4),
+        np.array([[1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, -1]]),
+    ),
+    (
+        "TOFFOLI",
+        (1, 2, 3),
+        np.array(
+            [
+                [1, 0, 0, 0, 0, 0, 0, 0],
+                [0, 1, 0, 0, 0, 0, 0, 0],
+                [0, 0, 1, 0, 0, 0, 0, 0],
+                [0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 0, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 1],
+                [0, 0, 0, 0, 0, 0, 1, 0],
+            ]
+        ),
+    ),
 ]
+
+
 @pytest.mark.parametrize("gate,qubits,target_matrix", GATES)
 def test_asmatrix(backend, gate, qubits, target_matrix):
     gate = getattr(gates, gate)(*qubits)
@@ -35,14 +54,27 @@ def test_asmatrix(backend, gate, qubits, target_matrix):
 
 
 GATES = [
-    ("RX", lambda x: np.array([[np.cos(x / 2.0), -1j * np.sin(x / 2.0)],
-                               [-1j * np.sin(x / 2.0), np.cos(x / 2.0)]])),
-    ("RY", lambda x: np.array([[np.cos(x / 2.0), -np.sin(x / 2.0)],
-                               [np.sin(x / 2.0), np.cos(x / 2.0)]])),
+    (
+        "RX",
+        lambda x: np.array(
+            [
+                [np.cos(x / 2.0), -1j * np.sin(x / 2.0)],
+                [-1j * np.sin(x / 2.0), np.cos(x / 2.0)],
+            ]
+        ),
+    ),
+    (
+        "RY",
+        lambda x: np.array(
+            [[np.cos(x / 2.0), -np.sin(x / 2.0)], [np.sin(x / 2.0), np.cos(x / 2.0)]]
+        ),
+    ),
     ("RZ", lambda x: np.diag([np.exp(-1j * x / 2.0), np.exp(1j * x / 2.0)])),
     ("U1", lambda x: np.diag([1, np.exp(1j * x)])),
-    ("CU1", lambda x: np.diag([1, 1, 1, np.exp(1j * x)]))
+    ("CU1", lambda x: np.diag([1, 1, 1, np.exp(1j * x)])),
 ]
+
+
 @pytest.mark.parametrize("gate,target_matrix", GATES)
 def test_asmatrix_rotations(backend, gate, target_matrix):
     """Check that `_construct_unitary` method constructs the proper matrix."""
@@ -57,8 +89,12 @@ def test_asmatrix_rotations(backend, gate, target_matrix):
 
 def test_control_matrix(backend):
     theta = 0.1234
-    rotation = np.array([[np.cos(theta / 2.0), -np.sin(theta / 2.0)],
-                         [np.sin(theta / 2.0), np.cos(theta / 2.0)]])
+    rotation = np.array(
+        [
+            [np.cos(theta / 2.0), -np.sin(theta / 2.0)],
+            [np.sin(theta / 2.0), np.cos(theta / 2.0)],
+        ]
+    )
     target_matrix = np.eye(4, dtype=rotation.dtype)
     target_matrix[2:, 2:] = rotation
     gate = gates.RY(0, theta).controlled_by(1)

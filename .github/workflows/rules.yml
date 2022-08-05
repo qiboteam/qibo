@@ -19,15 +19,15 @@ jobs:
     - name: Install package
       run: |
         python -m pip install --upgrade pip
-        pip install markdown==3.3.7 # docs fail with >=3.4
         pip install pytest-cov
         pip install .[tests,docs]
         pip install git+https://github.com/qiboteam/qibojit
         pip install tensorflow
     - name: Test with pylint
       run: |
-        pip install pylint==2.13 # 2.14 does not disable E1120/1123, TODO check future releases.
-        pylint src -E -d E1123,E1120
+        pip install pylint
+        pylint src/**/*.py -E -f colorized
+        pylint src/**/*.py --exit-zero -f colorized
     - name: Test with pytest core
       run: |
         pytest src/qibo/tests/ --cov=qibo --cov-report=xml --pyargs qibo --durations=60

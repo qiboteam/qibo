@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Tests methods defined in `qibo/core/terms.py`."""
 import pytest
 import numpy as np
@@ -56,6 +57,7 @@ def test_hamiltonian_term_gates(backend):
 def test_hamiltonian_term_exponentiation(backend):
     """Test exp gate application of ``HamiltonianTerm``."""
     from scipy.linalg import expm
+
     matrix = np.random.random((2, 2))
     term = terms.HamiltonianTerm(matrix, 1)
     exp_matrix = expm(-0.5j * matrix)
@@ -99,14 +101,15 @@ def test_symbolic_term_creation(backend, use_symbols):
     """Test creating ``SymbolicTerm`` from sympy expression."""
     if use_symbols:
         from qibo.symbols import X, Y
+
         expression = X(0) * Y(1) * X(1)
         symbol_map = {}
     else:
         import sympy
+
         x0, x1, y1 = sympy.symbols("X0 X1 Y1", commutative=False)
         expression = x0 * y1 * x1
-        symbol_map = {x0: (0, matrices.X), x1: (1, matrices.X),
-                      y1: (1, matrices.Y)}
+        symbol_map = {x0: (0, matrices.X), x1: (1, matrices.X), y1: (1, matrices.Y)}
     term = terms.SymbolicTerm(2, expression, symbol_map)
     assert term.target_qubits == (0, 1)
     assert len(term.matrix_map) == 2
@@ -118,6 +121,7 @@ def test_symbolic_term_creation(backend, use_symbols):
 def test_symbolic_term_with_power_creation(backend):
     """Test creating ``SymbolicTerm`` from sympy expression that contains powers."""
     from qibo.symbols import X, Z
+
     expression = X(0) ** 4 * Z(1) ** 2 * X(2)
     term = terms.SymbolicTerm(2, expression)
     assert term.target_qubits == (0, 1, 2)
@@ -131,6 +135,7 @@ def test_symbolic_term_with_power_creation(backend):
 def test_symbolic_term_with_imag_creation(backend):
     """Test creating ``SymbolicTerm`` from sympy expression that contains imaginary coefficients."""
     from qibo.symbols import Y
+
     expression = 3j * Y(0)
     term = terms.SymbolicTerm(2, expression)
     assert term.target_qubits == (0,)
@@ -140,6 +145,7 @@ def test_symbolic_term_with_imag_creation(backend):
 def test_symbolic_term_matrix(backend):
     """Test matrix calculation of ``SymbolicTerm``."""
     from qibo.symbols import X, Y, Z
+
     expression = X(0) * Y(1) * Z(2) * X(1)
     term = terms.SymbolicTerm(2, expression)
     assert term.target_qubits == (0, 1, 2)
@@ -151,6 +157,7 @@ def test_symbolic_term_matrix(backend):
 def test_symbolic_term_mul(backend):
     """Test multiplying scalar to ``SymbolicTerm``."""
     from qibo.symbols import X, Y, Z
+
     expression = Y(2) * Z(3) * X(2) * X(3)
     term = terms.SymbolicTerm(1, expression)
     assert term.target_qubits == (2, 3)
@@ -164,13 +171,18 @@ def test_symbolic_term_mul(backend):
 def test_symbolic_term_call(backend, density_matrix):
     """Test applying ``SymbolicTerm`` to state."""
     from qibo.symbols import X, Y, Z
+
     expression = Z(0) * X(1) * Y(2)
     term = terms.SymbolicTerm(2, expression)
-    matrixlist = [np.kron(matrices.Z, np.eye(4)),
-                  np.kron(np.kron(np.eye(2), matrices.X), np.eye(2)),
-                  np.kron(np.eye(4), matrices.Y)]
+    matrixlist = [
+        np.kron(matrices.Z, np.eye(4)),
+        np.kron(np.kron(np.eye(2), matrices.X), np.eye(2)),
+        np.kron(np.eye(4), matrices.Y),
+    ]
     initial_state = random_density_matrix(3) if density_matrix else random_state(3)
-    final_state = term(backend, np.copy(initial_state), 3, density_matrix=density_matrix)
+    final_state = term(
+        backend, np.copy(initial_state), 3, density_matrix=density_matrix
+    )
     target_state = 2 * np.copy(initial_state)
     for matrix in matrixlist:
         target_state = matrix @ target_state
@@ -180,6 +192,7 @@ def test_symbolic_term_call(backend, density_matrix):
 def test_symbolic_term_merge(backend):
     """Test merging ``SymbolicTerm`` to ``HamiltonianTerm``."""
     from qibo.symbols import X, Z
+
     matrix = np.random.random((4, 4))
     term1 = terms.HamiltonianTerm(matrix, 0, 1)
     term2 = terms.SymbolicTerm(1, X(0) * Z(1))
@@ -206,6 +219,7 @@ def test_term_group_append():
 def test_term_group_to_term(backend):
     """Test ``GroupTerm.term`` property."""
     from qibo.symbols import X, Z
+
     matrix = np.random.random((8, 8))
     term1 = terms.HamiltonianTerm(matrix, 0, 1, 3)
     term2 = terms.SymbolicTerm(1, X(0) * Z(3))

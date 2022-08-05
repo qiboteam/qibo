@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import sympy
 import numpy as np
 from qibo import matrices, hamiltonians, symbols
@@ -16,7 +17,7 @@ def read_file(file_name, instance):
         solution (list): list of the correct outputs of the instance for testing.
         clauses (list): list of all clauses, with the qubits each clause acts upon.
     """
-    file = open('../data3sat/{q}bit/n{q}i{i}.txt'.format(q=file_name, i=instance), 'r')
+    file = open("../data3sat/{q}bit/n{q}i{i}.txt".format(q=file_name, i=instance), "r")
     control = list(map(int, file.readline().split()))
     solution = list(map(str, file.readline().split()))
     clauses = [list(map(int, file.readline().split())) for _ in range(control[1])]
@@ -35,7 +36,7 @@ def times(qubits, clauses):
     times = np.zeros(qubits)
     for clause in clauses:
         for num in clause:
-            times[num-1] += 1
+            times[num - 1] += 1
     return times
 
 
@@ -91,20 +92,20 @@ def plot(qubits, ground, first, gap, dt, T):
         {}_qubits_gap_energy.png: gap evolution during the adiabatic process.
     """
     fig, ax = plt.subplots()
-    times = np.arange(0, T+dt, dt)
-    ax.plot(times, ground, label='ground state', color='C0')
-    ax.plot(times, first, label='first excited state', color='C1')
-    plt.ylabel('energy')
-    plt.xlabel('schedule')
-    plt.title('Energy during adiabatic evolution')
+    times = np.arange(0, T + dt, dt)
+    ax.plot(times, ground, label="ground state", color="C0")
+    ax.plot(times, first, label="first excited state", color="C1")
+    plt.ylabel("energy")
+    plt.xlabel("schedule")
+    plt.title("Energy during adiabatic evolution")
     ax.legend()
     fig.tight_layout()
-    fig.savefig('{}_qubits_energy.png'.format(qubits), dpi=300, bbox_inches='tight')
+    fig.savefig("{}_qubits_energy.png".format(qubits), dpi=300, bbox_inches="tight")
     fig, ax = plt.subplots()
-    ax.plot(times, gap, label='gap energy', color='C0')
-    plt.ylabel('energy')
-    plt.xlabel('schedule')
-    plt.title('Energy during adiabatic evolution')
+    ax.plot(times, gap, label="gap energy", color="C0")
+    plt.ylabel("energy")
+    plt.xlabel("schedule")
+    plt.title("Energy during adiabatic evolution")
     ax.legend()
     fig.tight_layout()
-    fig.savefig('{}_qubits_gap.png'.format(qubits), dpi=300, bbox_inches='tight')
+    fig.savefig("{}_qubits_gap.png".format(qubits), dpi=300, bbox_inches="tight")

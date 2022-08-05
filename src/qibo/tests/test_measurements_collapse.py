@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Test :class:`qibo.gates.M` as standalone and as part of circuit."""
 import pytest
 import numpy as np
@@ -5,9 +6,10 @@ from qibo import models, gates
 from qibo.tests.utils import random_state, random_density_matrix
 
 
-@pytest.mark.parametrize("nqubits,targets",
-                         [(2, [1]), (3, [1]), (4, [1, 3]), (5, [0, 3, 4]),
-                          (6, [1, 3]), (4, [0, 2])])
+@pytest.mark.parametrize(
+    "nqubits,targets",
+    [(2, [1]), (3, [1]), (4, [1, 3]), (5, [0, 3, 4]), (6, [1, 3]), (4, [0, 2])],
+)
 def test_measurement_collapse(backend, nqubits, targets):
     initial_state = random_state(nqubits)
     c = models.Circuit(nqubits)
@@ -29,8 +31,9 @@ def test_measurement_collapse(backend, nqubits, targets):
     backend.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("nqubits,targets",
-                         [(2, [1]), (3, [1]), (4, [1, 3]), (5, [0, 3, 4])])
+@pytest.mark.parametrize(
+    "nqubits,targets", [(2, [1]), (3, [1]), (4, [1, 3]), (5, [0, 3, 4])]
+)
 def test_measurement_collapse_density_matrix(backend, nqubits, targets):
     initial_rho = random_density_matrix(nqubits)
     c = models.Circuit(nqubits, density_matrix=True)
@@ -88,12 +91,16 @@ def test_measurement_result_parameters_random(backend):
     output = c.add(gates.M(1, collapse=True))
     c.add(gates.RY(0, theta=np.pi * output / 5))
     c.add(gates.RX(2, theta=np.pi * output / 4))
-    final_state = backend.execute_circuit(c, initial_state=np.copy(initial_state), nshots=1)[0]
+    final_state = backend.execute_circuit(
+        c, initial_state=np.copy(initial_state), nshots=1
+    )[0]
 
     backend.set_seed(123)
     c = models.Circuit(4)
     m = c.add(gates.M(1, collapse=True))
-    target_state = backend.execute_circuit(c, initial_state=np.copy(initial_state), nshots=1)[0]
+    target_state = backend.execute_circuit(
+        c, initial_state=np.copy(initial_state), nshots=1
+    )[0]
     if int(m.outcome()):
         c = models.Circuit(4)
         c.add(gates.RY(0, theta=np.pi / 5))
@@ -112,10 +119,14 @@ def test_measurement_result_parameters_repeated_execution(backend, use_loop):
     if use_loop:
         final_states = []
         for _ in range(20):
-            final_state = backend.execute_circuit(c, initial_state=np.copy(initial_state), nshots=1)
+            final_state = backend.execute_circuit(
+                c, initial_state=np.copy(initial_state), nshots=1
+            )
             final_states.append(final_state[0])
     else:
-        final_states = backend.execute_circuit(c, initial_state=np.copy(initial_state), nshots=20)
+        final_states = backend.execute_circuit(
+            c, initial_state=np.copy(initial_state), nshots=20
+        )
 
     backend.set_seed(123)
     target_states = []
@@ -124,7 +135,9 @@ def test_measurement_result_parameters_repeated_execution(backend, use_loop):
         m = c.add(gates.M(1, collapse=True))
         target_state = backend.execute_circuit(c, np.copy(initial_state), nshots=1)[0]
         if int(m.outcome()):
-            target_state = backend.apply_gate(gates.RX(2, theta=np.pi / 4), target_state, 4)
+            target_state = backend.apply_gate(
+                gates.RX(2, theta=np.pi / 4), target_state, 4
+            )
         target_states.append(backend.to_numpy(target_state))
 
     final_states = [backend.to_numpy(x) for x in final_states]
@@ -173,9 +186,9 @@ def test_measurement_result_parameters_multiple_qubits(backend):
     target_state = backend.execute_circuit(c, np.copy(initial_state), nshots=1)[0]
     # not including in coverage because outcomes are probabilistic and may
     # not occur for the CI run
-    if int(m[0].outcome()): # pragma: no cover
+    if int(m[0].outcome()):  # pragma: no cover
         target_state = backend.apply_gate(gates.RY(1, theta=np.pi / 5), target_state, 4)
-    if int(m[2].outcome()): # pragma: no cover
+    if int(m[2].outcome()):  # pragma: no cover
         target_state = backend.apply_gate(gates.RX(3, theta=np.pi / 3), target_state, 4)
     backend.assert_allclose(final_state, target_state)
 

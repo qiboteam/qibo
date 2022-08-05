@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from qibo import gates
 from qibo.models import Circuit
 import numpy as np
@@ -8,14 +9,14 @@ def read_file(file_name, instance):
     Args:
         file_name (str): name of the file that contains the instance information.
         instance (str): number of intance to use.
-        
+
     Returns:
-        control (list): important parameters of the instance. 
+        control (list): important parameters of the instance.
             [number of qubits, number of clauses, number of ones in the solution]
         solution (list): list of the correct outputs of the instance for testing.
         clauses (list): list of all clauses, with the qubits each clause acts upon.
     """
-    file = open('../data3sat/{q}bit/n{q}i{i}.txt'.format(q=file_name, i=instance), 'r')
+    file = open("../data3sat/{q}bit/n{q}i{i}.txt".format(q=file_name, i=instance), "r")
     control = list(map(int, file.readline().split()))
     solution = list(map(str, file.readline().split()))
     clauses = [list(map(int, file.readline().split())) for _ in range(control[1])]
@@ -23,7 +24,7 @@ def read_file(file_name, instance):
 
 
 def create_qc(qubits, clause_num):
-    """Create the quantum circuit necessary to solve the problem. 
+    """Create the quantum circuit necessary to solve the problem.
     Args:
         qubits (int): qubits needed to encode the problem.
         clause_num (int): number of clauses of the problem.
@@ -31,7 +32,7 @@ def create_qc(qubits, clause_num):
     Returns:
         q (list): quantum register that encodes the problem.
         c (list): quantum register that that records the satisfies clauses.
-        ancilla (int): Grover ancillary qubit. 
+        ancilla (int): Grover ancillary qubit.
         circuit (Circuit): quantum circuit where the gates will be allocated.
     """
     q = [i for i in range(qubits)]
@@ -45,7 +46,7 @@ def start_grover(q, ancilla):
     """Generator that performs the starting step in Grover's search algorithm.
     Args:
         q (list): quantum register that encodes the problem.
-        ancilla (int): Grover ancillary qubit. 
+        ancilla (int): Grover ancillary qubit.
 
     Returns:
         quantum gate generator for the first step of Grover.
@@ -74,7 +75,9 @@ def oracle(q, c, ancilla, clauses):
         yield gates.CNOT(q[clause[0] - 1], c[k])
         yield gates.CNOT(q[clause[1] - 1], c[k])
         yield gates.CNOT(q[clause[2] - 1], c[k])
-        yield gates.X(c[k]).controlled_by(q[clause[0] - 1], q[clause[1] - 1], q[clause[2] - 1])
+        yield gates.X(c[k]).controlled_by(
+            q[clause[0] - 1], q[clause[1] - 1], q[clause[2] - 1]
+        )
         k += 1
     yield gates.X(ancilla).controlled_by(*c)
     k = 0
@@ -82,10 +85,12 @@ def oracle(q, c, ancilla, clauses):
         yield gates.CNOT(q[clause[0] - 1], c[k])
         yield gates.CNOT(q[clause[1] - 1], c[k])
         yield gates.CNOT(q[clause[2] - 1], c[k])
-        yield gates.X(c[k]).controlled_by(q[clause[0] - 1], q[clause[1] - 1], q[clause[2] - 1])
+        yield gates.X(c[k]).controlled_by(
+            q[clause[0] - 1], q[clause[1] - 1], q[clause[2] - 1]
+        )
         k += 1
 
-        
+
 def diffusion(q):
     """Generator that performs the inversion over the average step in Grover's search algorithm.
     Args:
@@ -98,7 +103,7 @@ def diffusion(q):
         yield gates.H(i)
         yield gates.X(i)
     yield gates.H(q[0])
-    yield gates.X(q[0]).controlled_by(*q[1:len(q)])
+    yield gates.X(q[0]).controlled_by(*q[1 : len(q)])
     yield gates.H(q[0])
     for i in q:
         yield gates.X(i)
@@ -115,7 +120,7 @@ def grover(circuit, q, c, ancilla, clauses, steps):
         clauses (list): list of all clauses, with the qubits each clause acts upon.
         steps (int): number of times the oracle+diffuser operators have to be applied
             in order to find the solution. Grover's search algorihtm dictates O(sqrt(2**qubits)).
-            
+
     Returns:
         circuit (Circuit): circuit with the full grover algorithm applied.
     """
@@ -123,7 +128,5 @@ def grover(circuit, q, c, ancilla, clauses, steps):
     for i in range(steps):
         circuit.add(oracle(q, c, ancilla, clauses))
         circuit.add(diffusion(q))
-    circuit.add(gates.M(*(q), register_name='result'))
+    circuit.add(gates.M(*(q), register_name="result"))
     return circuit
-
-

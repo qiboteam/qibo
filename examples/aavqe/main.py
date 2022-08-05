@@ -1,7 +1,9 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 import numpy as np
 from qibo import gates, models, hamiltonians
 import argparse
+
 
 def main(nqubits, layers, maxsteps, T_max):
     circuit = models.Circuit(nqubits)
@@ -15,20 +17,23 @@ def main(nqubits, layers, maxsteps, T_max):
     problem_hamiltonian = hamiltonians.XXZ(nqubits)
     easy_hamiltonian = hamiltonians.X(nqubits)
     s = lambda t: t
-    aavqe = models.variational.AAVQE(circuit, easy_hamiltonian, problem_hamiltonian, s, nsteps=maxsteps, t_max=T_max)
+    aavqe = models.variational.AAVQE(
+        circuit, easy_hamiltonian, problem_hamiltonian, s, nsteps=maxsteps, t_max=T_max
+    )
 
-    initial_parameters = np.random.uniform(0, 2 * np.pi*0.1,
-                                           2 * nqubits * layers + nqubits)
+    initial_parameters = np.random.uniform(
+        0, 2 * np.pi * 0.1, 2 * nqubits * layers + nqubits
+    )
     best, params = aavqe.minimize(initial_parameters)
 
-    print('Final parameters: ', params)
-    print('Final energy: ', best)
+    print("Final parameters: ", params)
+    print("Final energy: ", best)
 
-    #We compute the difference from the exact value to check performance
+    # We compute the difference from the exact value to check performance
     eigenvalue = problem_hamiltonian.eigenvalues()
     print(eigenvalue)
-    print('Difference from exact value: ',best - np.real(eigenvalue[0]))
-    print('Log difference: ',-np.log10(best - np.real(eigenvalue[0])))
+    print("Difference from exact value: ", best - np.real(eigenvalue[0]))
+    print("Log difference: ", -np.log10(best - np.real(eigenvalue[0])))
 
 
 if __name__ == "__main__":

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Resources for parallel circuit evaluation.
 """
@@ -36,23 +37,29 @@ def parallel_execution(circuit, states, processes=None, backend=None):
     """
     if backend is None:  # pragma: no cover
         from qibo.backends import GlobalBackend
+
         backend = GlobalBackend()
 
     if states is None or not isinstance(states, list):  # pragma: no cover
         from qibo.config import raise_error
+
         raise_error(RuntimeError, "states must be a list.")
 
     def operation(state, circuit):
         return backend.execute_circuit(circuit, state)
 
     from joblib import Parallel, delayed
-    results = Parallel(n_jobs=processes, prefer='threads')(
-        delayed(operation)(state, circuit) for state in states)
+
+    results = Parallel(n_jobs=processes, prefer="threads")(
+        delayed(operation)(state, circuit) for state in states
+    )
 
     return results
 
 
-def parallel_parametrized_execution(circuit, parameters, initial_state=None, processes=None, backend=None):
+def parallel_parametrized_execution(
+    circuit, parameters, initial_state=None, processes=None, backend=None
+):
     """Execute circuit for multiple parameters and fixed initial_state.
 
     Example:
@@ -95,10 +102,12 @@ def parallel_parametrized_execution(circuit, parameters, initial_state=None, pro
     """
     if backend is None:  # pragma: no cover
         from qibo.backends import GlobalBackend
+
         backend = GlobalBackend()
 
     if not isinstance(parameters, list):  # pragma: no cover
         from qibo.config import raise_error
+
         raise_error(RuntimeError, "parameters must be a list.")
 
     def operation(params, circuit, state):
@@ -108,7 +117,10 @@ def parallel_parametrized_execution(circuit, parameters, initial_state=None, pro
         return backend.execute_circuit(circuit, state)
 
     from joblib import Parallel, delayed
-    results = Parallel(n_jobs=processes, prefer='threads')(
-        delayed(operation)(param, circuit.copy(deep=True), initial_state) for param in parameters)
+
+    results = Parallel(n_jobs=processes, prefer="threads")(
+        delayed(operation)(param, circuit.copy(deep=True), initial_state)
+        for param in parameters
+    )
 
     return results

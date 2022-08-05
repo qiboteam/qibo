@@ -12,6 +12,7 @@ class Gate:
 
     All base gates should inherit this class.
     """
+
     def __init__(self):
         """
         Attributes:
@@ -26,6 +27,7 @@ class Gate:
                 increasing order.
         """
         from qibo import config
+
         self.name = None
         self.is_controlled_by = False
         # args for creating gate
@@ -63,16 +65,22 @@ class Gate:
         self._target_qubits = tuple(qubits)
         if len(self._target_qubits) != len(set(qubits)):
             repeated = self._find_repeated(qubits)
-            raise_error(ValueError, "Target qubit {} was given twice for gate {}."
-                                    "".format(repeated, self.name))
+            raise_error(
+                ValueError,
+                "Target qubit {} was given twice for gate {}."
+                "".format(repeated, self.name),
+            )
 
     def _set_control_qubits(self, qubits: Sequence[int]):
         """Helper method for setting control qubits."""
         self._control_qubits = set(qubits)
         if len(self._control_qubits) != len(qubits):
             repeated = self._find_repeated(qubits)
-            raise_error(ValueError, "Control qubit {} was given twice for gate {}."
-                                    "".format(repeated, self.name))
+            raise_error(
+                ValueError,
+                "Control qubit {} was given twice for gate {}."
+                "".format(repeated, self.name),
+            )
 
     @target_qubits.setter
     def target_qubits(self, qubits: Sequence[int]):
@@ -86,8 +94,9 @@ class Gate:
         self._set_control_qubits(qubits)
         self._check_control_target_overlap()
 
-    def _set_targets_and_controls(self, target_qubits: Sequence[int],
-                                 control_qubits: Sequence[int]):
+    def _set_targets_and_controls(
+        self, target_qubits: Sequence[int], control_qubits: Sequence[int]
+    ):
         """Sets target and control qubits simultaneously.
 
         This is used for the reduced qubit updates in the distributed circuits
@@ -111,8 +120,11 @@ class Gate:
         """Checks that there are no qubits that are both target and controls."""
         common = set(self._target_qubits) & self._control_qubits
         if common:
-            raise_error(ValueError, "{} qubits are both targets and controls for "
-                                    "gate {}.".format(common, self.name))
+            raise_error(
+                ValueError,
+                "{} qubits are both targets and controls for "
+                "gate {}.".format(common, self.name),
+            )
 
     @property
     def parameters(self):
@@ -194,14 +206,18 @@ class Gate:
         new_gate.control_qubits = self.control_qubits
         return new_gate
 
-    def check_controls(func): # pylint: disable=E0213
+    def check_controls(func):  # pylint: disable=E0213
         def wrapper(self, *args):
             if self.control_qubits:
-                raise_error(RuntimeError, "Cannot use `controlled_by` method "
-                                          "on gate {} because it is already "
-                                          "controlled by {}."
-                                          "".format(self, self.control_qubits))
-            return func(self, *args) # pylint: disable=E1102
+                raise_error(
+                    RuntimeError,
+                    "Cannot use `controlled_by` method "
+                    "on gate {} because it is already "
+                    "controlled by {}."
+                    "".format(self, self.control_qubits),
+                )
+            return func(self, *args)  # pylint: disable=E1102
+
         return wrapper
 
     @check_controls
@@ -243,6 +259,7 @@ class Gate:
     @property
     def matrix(self):
         from qibo.backends import GlobalBackend
+
         backend = GlobalBackend()
         return self.asmatrix(backend)
 
@@ -260,12 +277,12 @@ class SpecialGate(Gate):
         return False
 
     def on_qubits(self, qubit_map):
-        raise_error(NotImplementedError,
-                    "Cannot use special gates on subroutines.")
+        raise_error(NotImplementedError, "Cannot use special gates on subroutines.")
 
     def asmatrix(self, backend):  # pragma: no cover
-        raise_error(NotImplementedError,
-                    "Special gates do not have matrix representation.")
+        raise_error(
+            NotImplementedError, "Special gates do not have matrix representation."
+        )
 
 
 class ParametrizedGate(Gate):
@@ -293,7 +310,7 @@ class ParametrizedGate(Gate):
                 try:
                     if len(x) != 1:  # pragma: no cover
                         x = [x]
-                except TypeError: # tf.Variable case
+                except TypeError:  # tf.Variable case
                     s = tuple(x.shape)
                     if not s or s[0] != 1:
                         x = [x]
@@ -305,9 +322,12 @@ class ParametrizedGate(Gate):
         else:
             params = list(self._parameters)
         if len(x) != nparams:
-            raise_error(ValueError, "Parametrized gate has {} parameters "
-                                    "but {} update values were given."
-                                    "".format(nparams, len(x)))
+            raise_error(
+                ValueError,
+                "Parametrized gate has {} parameters "
+                "but {} update values were given."
+                "".format(nparams, len(x)),
+            )
         for i, v in enumerate(x):
             if isinstance(v, sympy.Expr):
                 self.symbolic_parameters[i] = v

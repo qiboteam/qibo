@@ -1,19 +1,20 @@
+# -*- coding: utf-8 -*-
 """Tests methods defined in `qibo/gates/abstract.py` and `qibo/gates/gates.py`."""
 import pytest
 from qibo import gates
 
 
-@pytest.mark.parametrize("gatename", ["H", "X", "Y", "Z",
-                                      "S", "SDG", "T", "TDG",
-                                      "I", "Align"])
+@pytest.mark.parametrize(
+    "gatename", ["H", "X", "Y", "Z", "S", "SDG", "T", "TDG", "I", "Align"]
+)
 def test_one_qubit_gates_init(gatename):
     gate = getattr(gates, gatename)(0)
     assert gate.target_qubits == (0,)
 
 
-@pytest.mark.parametrize("controls,instance",
-                         [((1,), "CNOT"), ((1, 2), "TOFFOLI"),
-                          ((1, 2, 4), "X")])
+@pytest.mark.parametrize(
+    "controls,instance", [((1,), "CNOT"), ((1, 2), "TOFFOLI"), ((1, 2, 4), "X")]
+)
 def test_x_controlled_by(controls, instance):
     gate = gates.X(0).controlled_by(*controls)
     assert gate.target_qubits == (0,)
@@ -45,10 +46,10 @@ def test_z_controlled_by(controls, instance):
     assert isinstance(gate, getattr(gates, instance))
 
 
-@pytest.mark.parametrize("targets,p0,p1",
-                         [((0,), None, None),
-                          ((0, 1, 2), None, None),
-                          ((0, 3, 2), 0.2, 0.1)])
+@pytest.mark.parametrize(
+    "targets,p0,p1",
+    [((0,), None, None), ((0, 1, 2), None, None), ((0, 3, 2), 0.2, 0.1)],
+)
 def test_measurement_init(targets, p0, p1):
     # also tests `_get_bitflip_map`
     gate = gates.M(*targets, p0=p0, p1=p1)
@@ -76,8 +77,7 @@ def test_measurement_add():
     assert gate.bitflip_map == 2 * ({0: 0, 2: 0},)
     gate.add(gates.M(1, 3, p0=0.3, p1=0.0))
     assert gate.target_qubits == (0, 2, 1, 3)
-    assert gate.bitflip_map == ({0: 0, 1: 0.3, 2: 0, 3: 0.3},
-                                {0: 0, 1: 0, 2: 0, 3: 0})
+    assert gate.bitflip_map == ({0: 0, 1: 0.3, 2: 0, 3: 0.3}, {0: 0, 1: 0, 2: 0, 3: 0})
 
 
 def test_measurement_errors():
@@ -86,22 +86,34 @@ def test_measurement_errors():
         gate.controlled_by(1)
 
 
-@pytest.mark.parametrize("gatename,params",
-                         [("RX", (0.1234,)), ("RY", (0.1234,)),
-                          ("RZ", (0.1234,)), ("U1", (0.1234,)),
-                          ("U2", (0.1234, 0.4321)),
-                          ("U3", (0.1234, 0.4321, 0.5678))])
+@pytest.mark.parametrize(
+    "gatename,params",
+    [
+        ("RX", (0.1234,)),
+        ("RY", (0.1234,)),
+        ("RZ", (0.1234,)),
+        ("U1", (0.1234,)),
+        ("U2", (0.1234, 0.4321)),
+        ("U3", (0.1234, 0.4321, 0.5678)),
+    ],
+)
 def test_one_qubit_rotations_init(gatename, params):
     gate = getattr(gates, gatename)(0, *params)
     assert gate.target_qubits == (0,)
     assert gate.parameters == params
 
 
-@pytest.mark.parametrize("gatename,params",
-                         [("RX", (0.1234,)), ("RY", (0.1234,)),
-                          ("RZ", (0.1234,)), ("U1", (0.1234,)),
-                          ("U2", (0.1234, 0.4321)),
-                          ("U3", (0.1234, 0.4321, 0.5678))])
+@pytest.mark.parametrize(
+    "gatename,params",
+    [
+        ("RX", (0.1234,)),
+        ("RY", (0.1234,)),
+        ("RZ", (0.1234,)),
+        ("U1", (0.1234,)),
+        ("U2", (0.1234, 0.4321)),
+        ("U3", (0.1234, 0.4321, 0.5678)),
+    ],
+)
 def test_one_qubit_rotations_controlled_by(gatename, params):
     gate = getattr(gates, gatename)(0, *params).controlled_by(1)
     assert gate.target_qubits == (0,)
@@ -121,14 +133,22 @@ def test_cnot_and_cz_init():
     assert gate.target_qubits == (2,)
     assert gate.control_qubits == (3,)
 
+
 # :meth:`qibo.gates.CNOT.decompose` is tested in
 # ``test_x_decompose_with_cirq`` above
 
-@pytest.mark.parametrize("gatename,params",
-                         [("CRX", (0.1234,)), ("CRY", (0.1234,)),
-                          ("CRZ", (0.1234,)), ("CU1", (0.1234,)),
-                          ("CU2", (0.1234, 0.4321)),
-                          ("CU3", (0.1234, 0.4321, 0.5678))])
+
+@pytest.mark.parametrize(
+    "gatename,params",
+    [
+        ("CRX", (0.1234,)),
+        ("CRY", (0.1234,)),
+        ("CRZ", (0.1234,)),
+        ("CU1", (0.1234,)),
+        ("CU2", (0.1234, 0.4321)),
+        ("CU3", (0.1234, 0.4321, 0.5678)),
+    ],
+)
 def test_two_qubit_controlled_rotations_init(gatename, params):
     gate = getattr(gates, gatename)(0, 2, *params)
     assert gate.target_qubits == (2,)
@@ -142,6 +162,7 @@ def test_swap_init():
 
 def test_fsim_init():
     import numpy as np
+
     gate = gates.fSim(0, 1, 0.1234, 0.4321)
     assert gate.target_qubits == (0, 1)
     matrix = np.random.random((2, 2))
@@ -158,13 +179,16 @@ def test_toffoli_init():
     assert gate.target_qubits == (1,)
     assert gate.control_qubits == (0, 2)
 
+
 # :meth:`qibo.gates.TOFFOLI.decompose` and
 # :meth:`qibo.gates.TOFFOLI.congruent`
 # are tested in `test_x_decompose_with_cirq`
 
+
 @pytest.mark.parametrize("targets", [(0,), (2, 0), (1, 3, 2)])
 def test_unitary_init(targets):
     import numpy as np
+
     matrix = np.random.random(2 * (2 ** len(targets),))
     gate = gates.Unitary(matrix, *targets)
     assert gate.target_qubits == targets
@@ -173,10 +197,13 @@ def test_unitary_init(targets):
 
 def test_kraus_channel_init():
     import numpy as np
-    ops = [((0,), np.random.random((2, 2))),
-           ((0, 1), np.random.random((4, 4))),
-           ((0, 2), np.random.random((4, 4))),
-           ((3,), np.random.random((2, 2)))]
+
+    ops = [
+        ((0,), np.random.random((2, 2))),
+        ((0, 1), np.random.random((4, 4))),
+        ((0, 2), np.random.random((4, 4))),
+        ((3,), np.random.random((2, 2))),
+    ]
     gate = gates.KrausChannel(ops)
     gate.target_qubits == (0, 1, 2, 3)
     for g in gate.gates:
@@ -189,10 +216,13 @@ def test_kraus_channel_init():
 
 def test_unitary_channel_init():
     import numpy as np
-    ops = [((0,), np.random.random((2, 2))),
-           ((0, 1), np.random.random((4, 4))),
-           ((0, 2), np.random.random((4, 4))),
-           ((3,), np.random.random((2, 2)))]
+
+    ops = [
+        ((0,), np.random.random((2, 2))),
+        ((0, 1), np.random.random((4, 4))),
+        ((0, 2), np.random.random((4, 4))),
+        ((3,), np.random.random((2, 2))),
+    ]
     gate = gates.UnitaryChannel(4 * [0.1], ops)
     gate.target_qubits == (0, 1, 2, 3)
     for g in gate.gates:
@@ -219,6 +249,7 @@ def test_reset_channel_init():
 
 def test_qubit_getter_and_setter():
     from qibo.gates.abstract import Gate
+
     gate = Gate()
     gate.target_qubits = (0, 3)
     gate.control_qubits = (1, 4, 2)
@@ -238,6 +269,7 @@ def test_qubit_getter_and_setter():
 
 def test_density_matrix_getter_and_setter():
     from qibo.gates.abstract import Gate
+
     gate = Gate()
     gate.target_qubits = (0, 1)
     gate.control_qubits = (2,)
@@ -290,6 +322,7 @@ def test_decompose():
 
 def test_special_gate():
     from qibo.gates.abstract import SpecialGate
+
     gate = SpecialGate()
     assert not gate.commutes(gates.H(0))
     with pytest.raises(NotImplementedError):

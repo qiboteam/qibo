@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Test circuit measurements when outcome is probabilistic."""
 import sys
 import pytest
@@ -43,7 +44,9 @@ def test_unbalanced_probabilistic_measurement(backend, use_samples):
         # otherwise it uses the frequency-only calculation
         _ = result.samples()
     # update reference values based on backend and device
-    decimal_frequencies = backend.test_regressions("test_unbalanced_probabilistic_measurement")
+    decimal_frequencies = backend.test_regressions(
+        "test_unbalanced_probabilistic_measurement"
+    )
     assert sum(result.frequencies().values()) == 1000
     assert_result(backend, result, decimal_frequencies=decimal_frequencies)
 
@@ -53,8 +56,7 @@ def test_measurements_with_probabilistic_noise(backend):
     thetas = np.random.random(5)
     c = models.Circuit(5)
     c.add((gates.RX(i, t) for i, t in enumerate(thetas)))
-    c.add((gates.PauliNoiseChannel(i, px=0.0, py=0.2, pz=0.4)
-           for i in range(5)))
+    c.add((gates.PauliNoiseChannel(i, px=0.0, py=0.2, pz=0.4) for i in range(5)))
     c.add(gates.M(*range(5)))
     backend.set_seed(123)
     result = backend.execute_circuit(c, nshots=20)
@@ -77,9 +79,9 @@ def test_measurements_with_probabilistic_noise(backend):
     backend.assert_allclose(samples, target_samples)
 
 
-@pytest.mark.parametrize("i,probs", [(0, [0.0, 0.0, 0.0]),
-                                     (1, [0.1, 0.3, 0.2]),
-                                     (2, [0.5, 0.5, 0.5])])
+@pytest.mark.parametrize(
+    "i,probs", [(0, [0.0, 0.0, 0.0]), (1, [0.1, 0.3, 0.2]), (2, [0.5, 0.5, 0.5])]
+)
 def test_post_measurement_bitflips_on_circuit(backend, accelerators, i, probs):
     """Check bitflip errors on circuit measurements."""
     backend.set_seed(123)
@@ -108,12 +110,18 @@ def test_post_measurement_bitflips_on_circuit_result(backend):
     backend.assert_allclose(register_samples["b"], samples[:, 2:])
 
 
-@pytest.mark.parametrize("i,p0,p1",
-                         [(0, 0.2, None), (1, 0.2, 0.1),
-                          (2, (0.1, 0.0, 0.2), None),
-                          (3, {0: 0.2, 1: 0.1, 2: 0.0}, None)])
+@pytest.mark.parametrize(
+    "i,p0,p1",
+    [
+        (0, 0.2, None),
+        (1, 0.2, 0.1),
+        (2, (0.1, 0.0, 0.2), None),
+        (3, {0: 0.2, 1: 0.1, 2: 0.0}, None),
+    ],
+)
 def test_measurementresult_apply_bitflips(backend, i, p0, p1):
     from qibo.states import CircuitResult
+
     c = models.Circuit(3)
     c.add(gates.M(*range(3)))
     result = CircuitResult(backend, c, None)

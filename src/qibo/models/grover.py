@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 from qibo import gates
 from qibo.config import log, raise_error
@@ -53,9 +54,19 @@ class Grover(object):
             solution, iterations = grover()
     """
 
-    def __init__(self, oracle, superposition_circuit=None, initial_state_circuit=None,
-                 superposition_qubits=None, superposition_size=None, number_solutions=None,
-                 target_amplitude = None, check=None, check_args=(), iterative=False):
+    def __init__(
+        self,
+        oracle,
+        superposition_circuit=None,
+        initial_state_circuit=None,
+        superposition_qubits=None,
+        superposition_size=None,
+        number_solutions=None,
+        target_amplitude=None,
+        check=None,
+        check_args=(),
+        iterative=False,
+    ):
 
         self.oracle = oracle
         self.initial_state_circuit = initial_state_circuit
@@ -64,9 +75,12 @@ class Grover(object):
             self.superposition = superposition_circuit
         else:
             if not superposition_qubits:
-                raise_error(ValueError, "Cannot create Grover model if the "
-                                        "superposition circuit or number of "
-                                        "qubits is not specified.")
+                raise_error(
+                    ValueError,
+                    "Cannot create Grover model if the "
+                    "superposition circuit or number of "
+                    "qubits is not specified.",
+                )
             self.superposition = Circuit(superposition_qubits)
             self.superposition.add([gates.H(i) for i in range(superposition_qubits)])
 
@@ -78,14 +92,16 @@ class Grover(object):
         if superposition_size:
             self.sup_size = superposition_size
         else:
-            self.sup_size = int(2 ** self.sup_qubits)
+            self.sup_size = int(2**self.sup_qubits)
 
         assert oracle.nqubits > self.sup_qubits
 
         self.anc_qubits_sup = self.superposition.nqubits - self.sup_qubits
         self.anc_qubits_ora = self.oracle.nqubits - self.sup_qubits - 1
 
-        self.nqubits = self.sup_qubits + max(self.anc_qubits_sup, self.anc_qubits_ora) + 1
+        self.nqubits = (
+            self.sup_qubits + max(self.anc_qubits_sup, self.anc_qubits_ora) + 1
+        )
 
         self.check = check
         self.check_args = check_args
@@ -94,15 +110,21 @@ class Grover(object):
         self.iterative = iterative
 
         self.space_sup = list(range(self.sup_qubits + self.anc_qubits_sup))
-        self.space_ora = list(range(self.sup_qubits + self.anc_qubits_ora)) + [self.nqubits-1]
+        self.space_ora = list(range(self.sup_qubits + self.anc_qubits_ora)) + [
+            self.nqubits - 1
+        ]
 
     def initialize(self):
         """Initialize the Grover algorithm with the superposition and Grover ancilla."""
         c = Circuit(self.nqubits)
-        c.add(gates.X(self.nqubits-1))
-        c.add(gates.H(self.nqubits-1))
+        c.add(gates.X(self.nqubits - 1))
+        c.add(gates.H(self.nqubits - 1))
         if self.initial_state_circuit:
-            c.add(self.initial_state_circuit.invert().on_qubits(*range(self.initial_state_circuit.nqubits)))
+            c.add(
+                self.initial_state_circuit.invert().on_qubits(
+                    *range(self.initial_state_circuit.nqubits)
+                )
+            )
         c.add(self.superposition.on_qubits(*self.space_sup))
         return c
 
@@ -110,22 +132,30 @@ class Grover(object):
         """Construct the diffusion operator out of the superposition circuit."""
         nqubits = self.superposition.nqubits + 1
         c = Circuit(nqubits)
-        c.add(self.superposition.invert().on_qubits(*range(nqubits-1)))
+        c.add(self.superposition.invert().on_qubits(*range(nqubits - 1)))
         if self.initial_state_circuit:
-            c.add(self.initial_state_circuit.invert().on_qubits(*range(self.initial_state_circuit.nqubits)))
+            c.add(
+                self.initial_state_circuit.invert().on_qubits(
+                    *range(self.initial_state_circuit.nqubits)
+                )
+            )
         c.add([gates.X(i) for i in range(self.sup_qubits)])
-        c.add(gates.X(nqubits-1).controlled_by(*range(self.sup_qubits)))
+        c.add(gates.X(nqubits - 1).controlled_by(*range(self.sup_qubits)))
         c.add([gates.X(i) for i in range(self.sup_qubits)])
         if self.initial_state_circuit:
-            c.add(self.initial_state_circuit.on_qubits(*range(self.initial_state_circuit.nqubits)))
-        c.add(self.superposition.on_qubits(*range(nqubits-1)))
+            c.add(
+                self.initial_state_circuit.on_qubits(
+                    *range(self.initial_state_circuit.nqubits)
+                )
+            )
+        c.add(self.superposition.on_qubits(*range(nqubits - 1)))
         return c
 
     def step(self):
         """Combine oracle and diffusion for a Grover step."""
         c = Circuit(self.nqubits)
         c.add(self.oracle.on_qubits(*self.space_ora))
-        c.add(self.diffusion().on_qubits(*(self.space_sup+[self.nqubits-1])))
+        c.add(self.diffusion().on_qubits(*(self.space_sup + [self.nqubits - 1])))
         return c
 
     def circuit(self, iterations):
@@ -144,7 +174,7 @@ class Grover(object):
         c.add(gates.M(*range(self.sup_qubits)))
         return c
 
-    def iterative_grover(self, lamda_value=6/5, backend=None):
+    def iterative_grover(self, lamda_value=6 / 5, backend=None):
         """Iterative approach of Grover for when the number of solutions is not known.
 
         Args:
@@ -158,6 +188,7 @@ class Grover(object):
         """
         if backend is None:  # pragma: no cover
             from qibo.backends import GlobalBackend
+
             backend = GlobalBackend()
 
         k = 1
@@ -173,7 +204,7 @@ class Grover(object):
                 if self.check(measured, *self.check_args):
                     return measured, total_iterations
             k = min(lamda * k, np.sqrt(self.sup_size))
-            if total_iterations > (9/4) * np.sqrt(self.sup_size):
+            if total_iterations > (9 / 4) * np.sqrt(self.sup_size):
                 log.warning("Too many total iterations, output might not be solution.")
                 return measured, total_iterations
 
@@ -194,11 +225,12 @@ class Grover(object):
         """
         if backend is None:  # pragma: no cover
             from qibo.backends import GlobalBackend
+
             backend = GlobalBackend()
 
         if (self.num_sol or self.targ_a) and not self.iterative:
             if self.targ_a:
-                it = int(np.pi * (1/self.targ_a) / 4)
+                it = int(np.pi * (1 / self.targ_a) / 4)
             else:
                 it = int(np.pi * np.sqrt(self.sup_size / self.num_sol) / 4)
             circuit = self.circuit(it)
@@ -210,7 +242,9 @@ class Grover(object):
                     log.info(result)
                 self.frequencies = result
             if logs:
-                log.info(f"Most common states found using Grover's algorithm with {it} iterations:")
+                log.info(
+                    f"Most common states found using Grover's algorithm with {it} iterations:"
+                )
             if self.targ_a:
                 most_common = result.most_common(1)
             else:
@@ -224,21 +258,22 @@ class Grover(object):
                 if logs:
                     if self.check:
                         if self.check(i[0], *self.check_args):
-                            log.info('Solution checked and successful.')
+                            log.info("Solution checked and successful.")
                         else:
-                            log.info('Not a solution of the problem. Something went wrong.')
+                            log.info(
+                                "Not a solution of the problem. Something went wrong."
+                            )
         else:
             if not self.check:
                 raise_error(ValueError, "Check function needed for iterative approach.")
             measured, total_iterations = self.iterative_grover(backend=backend)
             if logs:
-                log.info('Solution found in an iterative process.')
-                log.info(f'Solution: {measured}')
-                log.info(f'Total Grover iterations taken: {total_iterations}')
+                log.info("Solution found in an iterative process.")
+                log.info(f"Solution: {measured}")
+                log.info(f"Total Grover iterations taken: {total_iterations}")
             self.solution = measured
             self.iterations = total_iterations
         return self.solution, self.iterations
-
 
     def __call__(self, nshots=100, freq=False, logs=False, backend=None):
         """Equivalent to :meth:`qibo.models.grover.Grover.execute`."""
