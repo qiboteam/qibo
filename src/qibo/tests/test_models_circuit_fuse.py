@@ -88,12 +88,12 @@ def test_fuse_circuit_two_qubit_gates(backend):
 def test_fuse_circuit_three_qubit_gate(backend, max_qubits):
     """Check circuit fusion in circuit with three-qubit gate."""
     c = Circuit(4)
-    c.add((gates.H(i) for i in range(4)))
+    c.add(gates.H(i) for i in range(4))
     c.add(gates.CZ(0, 1))
     c.add(gates.CZ(2, 3))
     c.add(gates.TOFFOLI(0, 1, 2))
     c.add(gates.SWAP(1, 2))
-    c.add((gates.H(i) for i in range(4)))
+    c.add(gates.H(i) for i in range(4))
     c.add(gates.CNOT(0, 1))
     c.add(gates.CZ(2, 3))
     fused_c = c.fuse(max_qubits=max_qubits)
@@ -110,10 +110,10 @@ def test_variational_layer_fusion(backend, nqubits, nlayers, max_qubits):
 
     c = Circuit(nqubits)
     for _ in range(nlayers):
-        c.add((gates.RY(i, next(theta_iter)) for i in range(nqubits)))
-        c.add((gates.CZ(i, i + 1) for i in range(0, nqubits - 1, 2)))
-        c.add((gates.RY(i, next(theta_iter)) for i in range(nqubits)))
-        c.add((gates.CZ(i, i + 1) for i in range(1, nqubits - 1, 2)))
+        c.add(gates.RY(i, next(theta_iter)) for i in range(nqubits))
+        c.add(gates.CZ(i, i + 1) for i in range(0, nqubits - 1, 2))
+        c.add(gates.RY(i, next(theta_iter)) for i in range(nqubits))
+        c.add(gates.CZ(i, i + 1) for i in range(1, nqubits - 1, 2))
         c.add(gates.CZ(0, nqubits - 1))
 
     fused_c = c.fuse(max_qubits=max_qubits)
@@ -145,10 +145,10 @@ def test_random_circuit_fusion(backend, nqubits, ngates, max_qubits):
 def test_controlled_by_gates_fusion(backend):
     """Check circuit fusion that contains ``controlled_by`` gates."""
     c = Circuit(4)
-    c.add((gates.H(i) for i in range(4)))
+    c.add(gates.H(i) for i in range(4))
     c.add(gates.RX(1, theta=0.1234).controlled_by(0))
     c.add(gates.RX(3, theta=0.4321).controlled_by(2))
-    c.add((gates.RY(i, theta=0.5678) for i in range(4)))
+    c.add(gates.RY(i, theta=0.5678) for i in range(4))
     c.add(gates.RX(1, theta=0.1234).controlled_by(0))
     c.add(gates.RX(3, theta=0.4321).controlled_by(2))
     fused_c = c.fuse()

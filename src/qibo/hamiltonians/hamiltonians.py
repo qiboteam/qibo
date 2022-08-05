@@ -522,7 +522,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             emat = np.reshape(np.eye(2**n, dtype=tmat.dtype), 2 * n * (2,))
             gen = lambda x: (chars[i + x] for i in term.target_qubits)
             tc = "".join(chain(gen(0), gen(self.nqubits)))
-            ec = "".join((c for c in chars if c not in tc))
+            ec = "".join(c for c in chars if c not in tc)
             matrix += np.einsum(f"{tc},{ec}->{chars}", tmat, emat)
         matrix = np.reshape(matrix, 2 * (2**self.nqubits,))
         return Hamiltonian(self.nqubits, matrix, backend=self.backend) + self.constant

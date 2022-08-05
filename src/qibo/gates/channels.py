@@ -79,7 +79,7 @@ class KrausChannel(Channel):
         if isinstance(ops[0], Gate):
             self.gates = tuple(ops)
             self.target_qubits = tuple(
-                sorted(set(q for gate in ops for q in gate.target_qubits))
+                sorted({q for gate in ops for q in gate.target_qubits})
             )
         else:
             gates, qubitset = [], set()
@@ -202,7 +202,7 @@ class ResetChannel(Channel):
 
     .. math::
         \\mathcal{E}(\\rho ) = (1 - p_0 - p_1) \\rho
-        +  \mathrm{Tr}\\rho \\otimes (p_0|0\\rangle \\langle 0| + p_1|1\\rangle \langle 1|)
+        +  \\mathrm{Tr}\\rho \\otimes (p_0|0\\rangle \\langle 0| + p_1|1\\rangle \\langle 1|)
 
     Args:
         q (int): Qubit id that the channel acts on.
@@ -231,7 +231,7 @@ class ThermalRelaxationChannel(Channel):
 
     .. math::
         \\mathcal{E} (\\rho ) = (1 - p_z - p_0 - p_1)\\rho + p_zZ\\rho Z
-        +  \mathrm{Tr}\\rho \\otimes (p_0|0\\rangle \\langle 0| + p_1|1\\rangle \langle 1|)
+        +  \\mathrm{Tr}\\rho \\otimes (p_0|0\\rangle \\langle 0| + p_1|1\\rangle \\langle 1|)
 
 
     while if :math:`T_1 < T_2`:

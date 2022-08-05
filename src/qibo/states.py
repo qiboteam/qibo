@@ -154,7 +154,7 @@ class CircuitResult:
     @staticmethod
     def _frequencies_to_binary(frequencies, nqubits):
         return collections.Counter(
-            {"{0:b}".format(k).zfill(nqubits): v for k, v in frequencies.items()}
+            {"{:b}".format(k).zfill(nqubits): v for k, v in frequencies.items()}
         )
 
     def frequencies(self, binary=True, registers=False):

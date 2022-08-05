@@ -64,12 +64,12 @@ def test_vqc(backend, method, options, compile, filename):
     # Create variational circuit
     c = models.Circuit(nqubits)
     for _ in range(nlayers):
-        c.add((gates.RY(q, theta=0) for q in range(nqubits)))
-        c.add((gates.CZ(q, q + 1) for q in range(0, nqubits - 1, 2)))
-        c.add((gates.RY(q, theta=0) for q in range(nqubits)))
-        c.add((gates.CZ(q, q + 1) for q in range(1, nqubits - 2, 2)))
+        c.add(gates.RY(q, theta=0) for q in range(nqubits))
+        c.add(gates.CZ(q, q + 1) for q in range(0, nqubits - 1, 2))
+        c.add(gates.RY(q, theta=0) for q in range(nqubits))
+        c.add(gates.CZ(q, q + 1) for q in range(1, nqubits - 2, 2))
         c.add(gates.CZ(0, nqubits - 1))
-    c.add((gates.RY(q, theta=0) for q in range(nqubits)))
+    c.add(gates.RY(q, theta=0) for q in range(nqubits))
 
     # Optimize starting from a random guess for the variational parameters
     np.random.seed(0)

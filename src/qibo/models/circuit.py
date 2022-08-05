@@ -1382,7 +1382,7 @@ class Circuit:
 
         # Add some spacers
         for col in range(len(matrix[0])):
-            maxlen = max([len(matrix[l][col]) for l in range(self.nqubits)])
+            maxlen = max(len(matrix[l][col]) for l in range(self.nqubits))
             for row in range(self.nqubits):
                 matrix[row][col] += "─" * (1 + maxlen - len(matrix[row][col]))
 
