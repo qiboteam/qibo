@@ -15,6 +15,7 @@ def multikron(matrix_list):
         ``np.ndarray`` of the Kronecker product of all ``matrices``.
     """
     import numpy as np
+
     h = 1
     for m in matrix_list:
         # TODO: check if we observe GPU deterioration
@@ -24,9 +25,10 @@ def multikron(matrix_list):
 
 def _build_spin_model(nqubits, matrix, condition):
     """Helper method for building nearest-neighbor spin model Hamiltonians."""
-    h = sum(multikron(
-      (matrix if condition(i, j) else matrices.I for j in range(nqubits)))
-            for i in range(nqubits))
+    h = sum(
+        multikron((matrix if condition(i, j) else matrices.I for j in range(nqubits)))
+        for i in range(nqubits)
+    )
     return h
 
 
@@ -50,7 +52,7 @@ def XXZ(nqubits, delta=0.5, dense=True, backend=None):
             h = XXZ(3) # initialized XXZ model with 3 qubits
     """
     if dense:
-        condition = lambda i, j: i in {j % nqubits, (j+1) % nqubits}
+        condition = lambda i, j: i in {j % nqubits, (j + 1) % nqubits}
         hx = _build_spin_model(nqubits, matrices.X, condition)
         hy = _build_spin_model(nqubits, matrices.Y, condition)
         hz = _build_spin_model(nqubits, matrices.Z, condition)
@@ -75,7 +77,7 @@ def _OneBodyPauli(nqubits, matrix, dense=True, backend=None):
         ham = -_build_spin_model(nqubits, matrix, condition)
         return Hamiltonian(nqubits, ham, backend=backend)
 
-    matrix = - matrix
+    matrix = -matrix
     terms = [HamiltonianTerm(matrix, i) for i in range(nqubits)]
     ham = SymbolicHamiltonian(backend=backend)
     ham.terms = terms
@@ -141,14 +143,16 @@ def TFIM(nqubits, h=0.0, dense=True, backend=None):
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
     """
     if dense:
-        condition = lambda i, j: i in {j % nqubits, (j+1) % nqubits}
+        condition = lambda i, j: i in {j % nqubits, (j + 1) % nqubits}
         ham = -_build_spin_model(nqubits, matrices.Z, condition)
         if h != 0:
             condition = lambda i, j: i == j % nqubits
             ham -= h * _build_spin_model(nqubits, matrices.X, condition)
         return Hamiltonian(nqubits, ham, backend=backend)
 
-    matrix = -(multikron([matrices.Z, matrices.Z]) + h * multikron([matrices.X, matrices.I]))
+    matrix = -(
+        multikron([matrices.Z, matrices.Z]) + h * multikron([matrices.X, matrices.I])
+    )
     terms = [HamiltonianTerm(matrix, i, i + 1) for i in range(nqubits - 1)]
     terms.append(HamiltonianTerm(matrix, nqubits - 1, 0))
     ham = SymbolicHamiltonian(backend=backend)
@@ -171,9 +175,13 @@ def MaxCut(nqubits, dense=True, backend=None):
     import sympy as sp
     from numpy import ones
 
-    Z = sp.symbols(f'Z:{nqubits}')
-    V = sp.symbols(f'V:{nqubits**2}')
-    sham = - sum(V[i * nqubits + j] * (1 - Z[i] * Z[j]) for i in range(nqubits) for j in range(nqubits))
+    Z = sp.symbols(f"Z:{nqubits}")
+    V = sp.symbols(f"V:{nqubits**2}")
+    sham = -sum(
+        V[i * nqubits + j] * (1 - Z[i] * Z[j])
+        for i in range(nqubits)
+        for j in range(nqubits)
+    )
     sham /= 2
 
     v = ones(nqubits**2)

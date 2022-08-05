@@ -1,13 +1,14 @@
+# -*- coding: utf-8 -*-
 """
 Gates use ``einsum`` to apply gates to state vectors. The einsum string that
-specifies the contraction indices is created using the following methods and 
+specifies the contraction indices is created using the following methods and
 used by :meth:`qibo.backends.numpy.NumpyEngine.apply_gate`.
 """
 from qibo.config import raise_error, EINSUM_CHARS
 
 
 def prepare_strings(qubits, nqubits):
-    if nqubits + len(qubits) > len(EINSUM_CHARS): # pragma: no cover
+    if nqubits + len(qubits) > len(EINSUM_CHARS):  # pragma: no cover
         raise_error(NotImplementedError, "Not enough einsum characters.")
 
     inp = list(EINSUM_CHARS[:nqubits])
@@ -20,7 +21,7 @@ def prepare_strings(qubits, nqubits):
     inp = "".join(inp)
     out = "".join(out)
     trans = "".join(trans)
-    rest = EINSUM_CHARS[nqubits + len(qubits):]
+    rest = EINSUM_CHARS[nqubits + len(qubits) :]
     return inp, out, trans, rest
 
 
@@ -31,9 +32,9 @@ def apply_gate_string(qubits, nqubits):
 
 def apply_gate_density_matrix_string(qubits, nqubits):
     inp, out, trans, rest = prepare_strings(qubits, nqubits)
-    if nqubits > len(rest): # pragma: no cover
+    if nqubits > len(rest):  # pragma: no cover
         raise_error(NotImplementedError, "Not enough einsum characters.")
-    
+
     trest = rest[:nqubits]
     left = f"{inp}{trest},{trans}->{out}{trest}"
     right = f"{trest}{inp},{trans}->{trest}{out}"
@@ -42,9 +43,9 @@ def apply_gate_density_matrix_string(qubits, nqubits):
 
 def apply_gate_density_matrix_controlled_string(qubits, nqubits):
     inp, out, trans, rest = prepare_strings(qubits, nqubits)
-    if nqubits > len(rest): # pragma: no cover
+    if nqubits > len(rest):  # pragma: no cover
         raise_error(NotImplementedError, "Not enough einsum characters.")
-    
+
     trest, c = rest[:nqubits], rest[nqubits]
     left = f"{c}{inp}{trest},{trans}->{c}{out}{trest}"
     right = f"{c}{trest}{inp},{trans}->{c}{trest}{out}"
@@ -71,10 +72,12 @@ def control_order_density_matrix(gate, nqubits):
     ncontrol = len(gate.control_qubits)
     order, targets = control_order(gate, nqubits)
     additional_order = [x + len(order) for x in order]
-    order_dm = (order[:ncontrol] +
-                list(additional_order[:ncontrol]) +
-                order[ncontrol:] +
-                list(additional_order[ncontrol:]))
+    order_dm = (
+        order[:ncontrol]
+        + list(additional_order[:ncontrol])
+        + order[ncontrol:]
+        + list(additional_order[ncontrol:])
+    )
     return order_dm, targets
 
 

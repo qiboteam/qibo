@@ -2,7 +2,7 @@
 
 Code at: [https://github.com/qiboteam/qibo/tree/shor/examples/shor](https://github.com/qiboteam/qibo/tree/shor/examples/shor)
 
-The original paper by Shor [arXiv:9508027](https://arxiv.org/abs/quant-ph/9508027) stated that the discrete logarithm problem and factorization could be reduced to order finding. Then, Shor proposed an order finding algorithm using a quantum computer that would run in polynomial time. 
+The original paper by Shor [arXiv:9508027](https://arxiv.org/abs/quant-ph/9508027) stated that the discrete logarithm problem and factorization could be reduced to order finding. Then, Shor proposed an order finding algorithm using a quantum computer that would run in polynomial time.
 
 A circuit proposal for Shor's algorithm, mainly on the construction of a quantum modular exponentiation, followed shortly [arXiv:9511018](https://arxiv.org/abs/quant-ph/9511018) by Vedral, Barenco and Ekert. This implementation required 7n+2 qubits, where n refers to the number of bits needed to encode the number to factorize.
 
@@ -43,7 +43,7 @@ This can be increased to O(1) if the result of the quantum computer is enhanced 
 
 #### Qubit reduction techniques
 
-Beauregard achieves a qubit reduction to 2n+3 due to two main modifications. 
+Beauregard achieves a qubit reduction to 2n+3 due to two main modifications.
 
 ##### Fixing x and N
 
@@ -75,4 +75,3 @@ Certain parameters can be given to the main file in order to tune the example.
 - `enhance`: flag to enhance the quantum result classically in order to find the solution in less iterations.
 
 This example returns a comprehensible step by step analysis of Shor's factorization algorithm, culmination with two non-trivial factors of given number N.
-

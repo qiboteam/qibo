@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Generic benchmark script that runs circuits defined in `benchmark_models.py`.
 
@@ -7,7 +8,8 @@ import argparse
 import os
 import time
 import numpy as np
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3" # disable Tensorflow warnings
+
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # disable Tensorflow warnings
 
 
 parser = argparse.ArgumentParser()
@@ -45,6 +47,7 @@ def limit_gpu_memory(memory_limit=None):
         memory_limit: Memory limit in MBs.
     """
     import tensorflow as tf
+
     if memory_limit is None:
         print("\nNo GPU memory limiter used.\n")
         return
@@ -53,7 +56,8 @@ def limit_gpu_memory(memory_limit=None):
     gpus = tf.config.list_physical_devices("GPU")
     for gpu in tf.config.list_physical_devices("GPU"):
         config = tf.config.experimental.VirtualDeviceConfiguration(
-                      memory_limit=memory_limit)
+            memory_limit=memory_limit
+        )
         tf.config.experimental.set_virtual_device_configuration(gpu, [config])
         print("Limiting memory of {} to {}.".format(gpu.name, memory_limit))
     print()
@@ -61,6 +65,7 @@ def limit_gpu_memory(memory_limit=None):
 
 def select_numba_threading(threading):
     from numba import config
+
     print(f"\nSwitching threading to {threading}.\n")
     config.THREADING_LAYER = threading
 
@@ -81,6 +86,7 @@ from utils import BenchmarkLogger, parse_accelerators
 def get_active_branch_name():
     """Returns the name of the active git branch."""
     from pathlib import Path
+
     qibo_dir = Path(qibo.__file__).parent.parent.parent
     head_dir = qibo_dir / ".git" / "HEAD"
     with head_dir.open("r") as f:
@@ -90,11 +96,25 @@ def get_active_branch_name():
             return line.partition("refs/heads/")[2]
 
 
-def main(nqubits, circuit_name, backend="custom", precision="double",
-         nreps=1, nshots=None, transfer=False, fuse=False,
-         device=None, accelerators=None, threadsafe=False,
-         compile=False, get_branch=True, nlayers=None, gate_type=None,
-         params={}, filename=None):
+def main(
+    nqubits,
+    circuit_name,
+    backend="custom",
+    precision="double",
+    nreps=1,
+    nshots=None,
+    transfer=False,
+    fuse=False,
+    device=None,
+    accelerators=None,
+    threadsafe=False,
+    compile=False,
+    get_branch=True,
+    nlayers=None,
+    gate_type=None,
+    params={},
+    filename=None,
+):
     """Runs circuit simulation benchmarks for different circuits.
 
     See benchmark documentation for a description of arguments.
@@ -106,21 +126,32 @@ def main(nqubits, circuit_name, backend="custom", precision="double",
 
     logs = BenchmarkLogger(filename)
     # Create log dict
-    logs.append({
-        "nqubits": nqubits, "circuit_name": circuit_name, "threading": "",
-        "backend": qibo.get_backend(), "precision": qibo.get_precision(),
-        "device": qibo.get_device(), "accelerators": accelerators,
-        "nshots": nshots, "transfer": transfer,
-        "fuse": fuse, "compile": compile,
-        })
+    logs.append(
+        {
+            "nqubits": nqubits,
+            "circuit_name": circuit_name,
+            "threading": "",
+            "backend": qibo.get_backend(),
+            "precision": qibo.get_precision(),
+            "device": qibo.get_device(),
+            "accelerators": accelerators,
+            "nshots": nshots,
+            "transfer": transfer,
+            "fuse": fuse,
+            "compile": compile,
+        }
+    )
     if get_branch:
         logs[-1]["branch"] = get_active_branch_name()
 
     params = {k: v for k, v in params.items() if v is not None}
     kwargs = {"nqubits": nqubits, "circuit_name": circuit_name}
-    if params: kwargs["params"] = params
-    if nlayers is not None: kwargs["nlayers"] = nlayers
-    if gate_type is not None: kwargs["gate_type"] = gate_type
+    if params:
+        kwargs["params"] = params
+    if nlayers is not None:
+        kwargs["nlayers"] = nlayers
+    if gate_type is not None:
+        kwargs["gate_type"] = gate_type
     if accelerators is not None:
         kwargs["accelerators"] = accelerators
     logs[-1].update(kwargs)
@@ -140,7 +171,7 @@ def main(nqubits, circuit_name, backend="custom", precision="double",
         # Try executing here so that compile time is not included
         # in the simulation time
         result = circuit(nshots=nshots)
-        del(result)
+        del result
     logs[-1]["compile_time"] = time.time() - start_time
 
     start_time = time.time()
@@ -150,8 +181,7 @@ def main(nqubits, circuit_name, backend="custom", precision="double",
     if transfer:
         result = result.numpy()
     logs[-1]["dry_run_transfer_time"] = time.time() - start_time
-    del(result)
-
+    del result
 
     simulation_times, transfer_times = [], []
     for _ in range(nreps):
@@ -164,7 +194,7 @@ def main(nqubits, circuit_name, backend="custom", precision="double",
         transfer_times.append(time.time() - start_time)
         logs[-1]["dtype"] = str(result.state().dtype)
         if nshots is None:
-            del(result)
+            del result
 
     logs[-1]["simulation_times"] = simulation_times
     logs[-1]["transfer_times"] = transfer_times

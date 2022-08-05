@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Test how features defined in :class:`qibo.models.circuit.Circuit` work during circuit execution."""
 import numpy as np
 import pytest
@@ -7,6 +8,7 @@ from qibo.models import Circuit
 
 def test_circuit_unitary(backend):
     from qibo import matrices
+
     c = Circuit(2)
     c.add(gates.H(0))
     c.add(gates.H(1))
@@ -22,6 +24,7 @@ def test_circuit_unitary(backend):
 
 def test_circuit_unitary_bigger(backend):
     from qibo import matrices
+
     c = Circuit(4)
     c.add(gates.H(i) for i in range(4))
     c.add(gates.CNOT(0, 1))
@@ -119,7 +122,7 @@ def test_inverse_circuit_execution(backend, accelerators, fuse):
         else:
             c = c.fuse()
     invc = c.invert()
-    target_state = np.ones(2 ** 4) / 4
+    target_state = np.ones(2**4) / 4
     final_state = backend.execute_circuit(c, initial_state=np.copy(target_state))
     final_state = backend.execute_circuit(invc, initial_state=final_state)
     backend.assert_allclose(final_state, target_state)
@@ -264,8 +267,7 @@ def test_repeated_execute_pauli_noise_channel(backend):
     backend.set_seed(1234)
     c = Circuit(4)
     c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
-    c.add((gates.PauliNoiseChannel(i, px=0.1, py=0.2, pz=0.3)
-          for i in range(4)))
+    c.add((gates.PauliNoiseChannel(i, px=0.1, py=0.2, pz=0.3) for i in range(4)))
     final_state = backend.execute_circuit(c, nshots=20)
 
     backend.set_seed(1234)

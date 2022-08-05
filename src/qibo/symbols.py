@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import sympy
 import numpy as np
 from qibo import gates, matrices
@@ -43,19 +44,34 @@ class Symbol(sympy.Symbol):
     def __init__(self, q, matrix=None, name="Symbol", commutative=False):
         self.target_qubit = q
         self._gate = None
-        if not (matrix is None or isinstance(matrix, np.ndarray) or
-              isinstance(matrix, (np.int, np.float, np.complex, np.int32,
-                                  np.int64, np.float32, np.float64,
-                                  np.complex64, np.complex128))):
-            raise_error(TypeError, "Invalid type {} of symbol matrix."
-                                   "".format(type(matrix)))
+        if not (
+            matrix is None
+            or isinstance(matrix, np.ndarray)
+            or isinstance(
+                matrix,
+                (
+                    np.int,
+                    np.float,
+                    np.complex,
+                    np.int32,
+                    np.int64,
+                    np.float32,
+                    np.float64,
+                    np.complex64,
+                    np.complex128,
+                ),
+            )
+        ):
+            raise_error(
+                TypeError, "Invalid type {} of symbol matrix." "".format(type(matrix))
+            )
         self.matrix = matrix
 
     def __getstate__(self):
         return {
             "target_qubit": self.target_qubit,
             "matrix": self.matrix,
-            "name": self.name
+            "name": self.name,
         }
 
     def __setstate__(self, data):
@@ -85,6 +101,7 @@ class Symbol(sympy.Symbol):
             product between identities and the symbol's single-qubit matrix.
         """
         from qibo.hamiltonians.models import multikron
+
         matrix_list = self.target_qubit * [matrices.I]
         matrix_list.append(self.matrix)
         n = nqubits - self.target_qubit - 1
@@ -93,7 +110,6 @@ class Symbol(sympy.Symbol):
 
 
 class PauliSymbol(Symbol):
-
     def __new__(cls, q, commutative=False, **assumptions):
         matrix = getattr(matrices, cls.__name__)
         return super().__new__(cls, q, matrix, cls.__name__, commutative, **assumptions)
@@ -114,6 +130,7 @@ class I(PauliSymbol):
     Args:
         q (int): Target qubit id.
     """
+
     pass
 
 
@@ -123,6 +140,7 @@ class X(PauliSymbol):
     Args:
         q (int): Target qubit id.
     """
+
     pass
 
 
@@ -132,6 +150,7 @@ class Y(PauliSymbol):
     Args:
         q (int): Target qubit id.
     """
+
     pass
 
 
@@ -141,4 +160,5 @@ class Z(PauliSymbol):
     Args:
         q (int): Target qubit id.
     """
+
     pass

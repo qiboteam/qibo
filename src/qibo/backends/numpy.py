@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 import collections
 from qibo.config import raise_error, log
@@ -10,16 +11,23 @@ from qibo.gates.abstract import ParametrizedGate, SpecialGate
 
 
 class NumpyBackend(Backend):
-
     def __init__(self):
         super().__init__()
         self.np = np
         self.name = "numpy"
         self.matrices = Matrices(self.dtype)
         self.tensor_types = np.ndarray
-        self.numeric_types = (int, float, complex, np.int32,
-                              np.int64, np.float32, np.float64,
-                              np.complex64, np.complex128)
+        self.numeric_types = (
+            int,
+            float,
+            complex,
+            np.int32,
+            np.int64,
+            np.float32,
+            np.float64,
+            np.complex64,
+            np.complex128,
+        )
 
     def set_precision(self, precision):
         if precision != self.precision:
@@ -36,7 +44,9 @@ class NumpyBackend(Backend):
 
     def set_device(self, device):
         if device != "/CPU:0":
-            raise_error(ValueError, f"Device {device} is not available for {self} backend.")
+            raise_error(
+                ValueError, f"Device {device} is not available for {self} backend."
+            )
 
     def set_threads(self, nthreads):
         if nthreads > 1:
@@ -53,6 +63,7 @@ class NumpyBackend(Backend):
 
     def issparse(self, x):
         from scipy import sparse
+
         return sparse.issparse(x)
 
     def to_numpy(self, x):
@@ -64,23 +75,23 @@ class NumpyBackend(Backend):
         return func
 
     def zero_state(self, nqubits):
-        state = self.np.zeros(2 ** nqubits, dtype=self.dtype)
+        state = self.np.zeros(2**nqubits, dtype=self.dtype)
         state[0] = 1
         return state
 
     def zero_density_matrix(self, nqubits):
-        state = self.np.zeros(2 * (2 ** nqubits,), dtype=self.dtype)
+        state = self.np.zeros(2 * (2**nqubits,), dtype=self.dtype)
         state[0, 0] = 1
         return state
 
     def plus_state(self, nqubits):
-        state = self.np.ones(2 ** nqubits, dtype=self.dtype)
-        state /= self.np.sqrt(2 ** nqubits)
+        state = self.np.ones(2**nqubits, dtype=self.dtype)
+        state /= self.np.sqrt(2**nqubits)
         return state
 
     def plus_density_matrix(self, nqubits):
-        state = self.np.ones(2 * (2 ** nqubits,), dtype=self.dtype)
-        state /= 2 ** nqubits
+        state = self.np.ones(2 * (2**nqubits,), dtype=self.dtype)
+        state /= 2**nqubits
         return state
 
     def asmatrix(self, gate):
@@ -95,7 +106,7 @@ class NumpyBackend(Backend):
 
     def asmatrix_fused(self, fgate):
         rank = len(fgate.target_qubits)
-        matrix = np.eye(2 ** rank, dtype=self.dtype)
+        matrix = np.eye(2**rank, dtype=self.dtype)
         for gate in fgate.gates:
             # transfer gate matrix to numpy as it is more efficient for
             # small tensor calculations
@@ -121,14 +132,20 @@ class NumpyBackend(Backend):
 
     def control_matrix(self, gate):
         if len(gate.control_qubits) > 1:
-            raise_error(NotImplementedError, "Cannot calculate controlled "
-                                             "unitary for more than two "
-                                             "control qubits.")
+            raise_error(
+                NotImplementedError,
+                "Cannot calculate controlled "
+                "unitary for more than two "
+                "control qubits.",
+            )
         matrix = gate.asmatrix(self)
         shape = matrix.shape
         if shape != (2, 2):
-            raise_error(ValueError, "Cannot use ``control_unitary`` method on "
-                                    "gate matrix of shape {}.".format(shape))
+            raise_error(
+                ValueError,
+                "Cannot use ``control_unitary`` method on "
+                "gate matrix of shape {}.".format(shape),
+            )
         zeros = self.np.zeros((2, 2), dtype=self.dtype)
         part1 = self.np.concatenate([self.np.eye(2, dtype=self.dtype), zeros], axis=0)
         part2 = self.np.concatenate([zeros, matrix], axis=0)
@@ -139,14 +156,14 @@ class NumpyBackend(Backend):
         state = self.np.reshape(state, nqubits * (2,))
         matrix = gate.asmatrix(self)
         if gate.is_controlled_by:
-            matrix = self.np.reshape(matrix, 2  * len(gate.target_qubits) * (2,))
+            matrix = self.np.reshape(matrix, 2 * len(gate.target_qubits) * (2,))
             ncontrol = len(gate.control_qubits)
             nactive = nqubits - ncontrol
             order, targets = einsum_utils.control_order(gate, nqubits)
             state = self.np.transpose(state, order)
             # Apply `einsum` only to the part of the state where all controls
             # are active. This should be `state[-1]`
-            state = self.np.reshape(state, (2 ** ncontrol,) + nactive * (2,))
+            state = self.np.reshape(state, (2**ncontrol,) + nactive * (2,))
             opstring = einsum_utils.apply_gate_string(targets, nactive)
             updates = self.np.einsum(opstring, state[-1], matrix)
             # Concatenate the updated part of the state `updates` with the
@@ -156,40 +173,46 @@ class NumpyBackend(Backend):
             # Put qubit indices back to their proper places
             state = self.np.transpose(state, einsum_utils.reverse_order(order))
         else:
-            matrix = self.np.reshape(matrix, 2  * len(gate.qubits) * (2,))
+            matrix = self.np.reshape(matrix, 2 * len(gate.qubits) * (2,))
             opstring = einsum_utils.apply_gate_string(gate.qubits, nqubits)
             state = self.np.einsum(opstring, state, matrix)
-        return self.np.reshape(state, (2 ** nqubits,))
+        return self.np.reshape(state, (2**nqubits,))
 
     def apply_gate_density_matrix(self, gate, state, nqubits):
         state = self.cast(state)
         state = self.np.reshape(state, 2 * nqubits * (2,))
         matrix = gate.asmatrix(self)
         if gate.is_controlled_by:
-            matrix = self.np.reshape(matrix, 2  * len(gate.target_qubits) * (2,))
+            matrix = self.np.reshape(matrix, 2 * len(gate.target_qubits) * (2,))
             matrixc = self.np.conj(matrix)
             ncontrol = len(gate.control_qubits)
             nactive = nqubits - ncontrol
-            n = 2 ** ncontrol
+            n = 2**ncontrol
 
             order, targets = einsum_utils.control_order_density_matrix(gate, nqubits)
             state = self.np.transpose(state, order)
             state = self.np.reshape(state, 2 * (n,) + 2 * nactive * (2,))
 
-            leftc, rightc = einsum_utils.apply_gate_density_matrix_controlled_string(targets, nactive)
-            state01 = state[:n - 1, n - 1]
+            leftc, rightc = einsum_utils.apply_gate_density_matrix_controlled_string(
+                targets, nactive
+            )
+            state01 = state[: n - 1, n - 1]
             state01 = self.np.einsum(rightc, state01, matrixc)
-            state10 = state[n - 1, :n - 1]
+            state10 = state[n - 1, : n - 1]
             state10 = self.np.einsum(leftc, state10, matrix)
 
-            left, right = einsum_utils.apply_gate_density_matrix_string(targets, nactive)
+            left, right = einsum_utils.apply_gate_density_matrix_string(
+                targets, nactive
+            )
             state11 = state[n - 1, n - 1]
             state11 = self.np.einsum(right, state11, matrixc)
             state11 = self.np.einsum(left, state11, matrix)
 
             state00 = state[range(n - 1)]
             state00 = state00[:, range(n - 1)]
-            state01 = self.np.concatenate([state00, state01[:, self.np.newaxis]], axis=1)
+            state01 = self.np.concatenate(
+                [state00, state01[:, self.np.newaxis]], axis=1
+            )
             state10 = self.np.concatenate([state10, state11[self.np.newaxis]], axis=0)
             state = self.np.concatenate([state01, state10[self.np.newaxis]], axis=0)
             state = self.np.reshape(state, 2 * nqubits * (2,))
@@ -197,24 +220,31 @@ class NumpyBackend(Backend):
         else:
             matrix = self.np.reshape(matrix, 2 * len(gate.qubits) * (2,))
             matrixc = self.np.conj(matrix)
-            left, right = einsum_utils.apply_gate_density_matrix_string(gate.qubits, nqubits)
+            left, right = einsum_utils.apply_gate_density_matrix_string(
+                gate.qubits, nqubits
+            )
             state = self.np.einsum(right, state, matrixc)
             state = self.np.einsum(left, state, matrix)
-        return self.np.reshape(state, 2 * (2 ** nqubits,))
+        return self.np.reshape(state, 2 * (2**nqubits,))
 
     def apply_gate_half_density_matrix(self, gate, state, nqubits):
         state = self.cast(state)
         state = np.reshape(state, 2 * nqubits * (2,))
         matrix = gate.asmatrix(self)
-        if gate.is_controlled_by: # pragma: no cover
-            raise_error(NotImplementedError, "Gate density matrix half call is "
-                                             "not implemented for ``controlled_by``"
-                                             "gates.")
+        if gate.is_controlled_by:  # pragma: no cover
+            raise_error(
+                NotImplementedError,
+                "Gate density matrix half call is "
+                "not implemented for ``controlled_by``"
+                "gates.",
+            )
         else:
             matrix = np.reshape(matrix, 2 * len(gate.qubits) * (2,))
-            left, _ = einsum_utils.apply_gate_density_matrix_string(gate.qubits, nqubits)
+            left, _ = einsum_utils.apply_gate_density_matrix_string(
+                gate.qubits, nqubits
+            )
             state = np.einsum(left, state, matrix)
-        return np.reshape(state, 2 * (2 ** nqubits,))
+        return np.reshape(state, 2 * (2**nqubits,))
 
     def apply_channel(self, channel, state, nqubits):
         for coeff, gate in zip(channel.coefficients, channel.gates):
@@ -275,6 +305,7 @@ class NumpyBackend(Backend):
 
     def reset_error_density_matrix(self, gate, state, nqubits):
         from qibo.gates import X
+
         state = self.cast(state)
         shape = state.shape
         q = gate.target_qubits[0]
@@ -296,7 +327,9 @@ class NumpyBackend(Backend):
         state = self.apply_gate(gate, state.ravel(), 2 * nqubits)
         return self.np.reshape(state, shape)
 
-    def execute_circuit(self, circuit, initial_state=None, nshots=None, return_array=False):
+    def execute_circuit(
+        self, circuit, initial_state=None, nshots=None, return_array=False
+    ):
         if circuit.repeated_execution:
             return self.execute_circuit_repeated(circuit, initial_state, nshots)
 
@@ -335,9 +368,12 @@ class NumpyBackend(Backend):
                 return circuit._final_state
 
         except self.oom_error:
-            raise_error(RuntimeError, f"State does not fit in {self.device} memory."
-                                       "Please switch the execution device to a "
-                                       "different one using ``qibo.set_device``.")
+            raise_error(
+                RuntimeError,
+                f"State does not fit in {self.device} memory."
+                "Please switch the execution device to a "
+                "different one using ``qibo.set_device``.",
+            )
 
     def execute_circuit_repeated(self, circuit, initial_state=None, nshots=None):
         if nshots is None:
@@ -359,7 +395,9 @@ class NumpyBackend(Backend):
 
             else:
                 if circuit.accelerators:  # pragma: no cover
-                    state = self.execute_distributed_circuit(circuit, initial_state, return_array=True) # pylint: disable=E1111
+                    state = self.execute_distributed_circuit(
+                        circuit, initial_state, return_array=True
+                    )  # pylint: disable=E1111
                 else:
                     if initial_state is None:
                         state = self.zero_state(nqubits)
@@ -386,8 +424,12 @@ class NumpyBackend(Backend):
             circuit._final_state = CircuitResult(self, circuit, results[-1], nshots)
             return results
 
-    def execute_distributed_circuit(self, circuit, initial_state=None, nshots=None, return_array=False):
-        raise_error(NotImplementedError, f"{self} does not support distributed execution.")
+    def execute_distributed_circuit(
+        self, circuit, initial_state=None, nshots=None, return_array=False
+    ):
+        raise_error(
+            NotImplementedError, f"{self} does not support distributed execution."
+        )
 
     def circuit_result_representation(self, result):
         return result.symbolic()
@@ -401,11 +443,15 @@ class NumpyBackend(Backend):
 
         state = self.circuit_result_tensor(result)
         if result.density_matrix:
-            return self.calculate_probabilities_density_matrix(state, qubits, result.nqubits)
+            return self.calculate_probabilities_density_matrix(
+                state, qubits, result.nqubits
+            )
         else:
             return self.calculate_probabilities(state, qubits, result.nqubits)
 
-    def calculate_symbolic(self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20):
+    def calculate_symbolic(
+        self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20
+    ):
         state = self.to_numpy(state)
         terms = []
         for i in np.nonzero(state)[0]:
@@ -418,7 +464,9 @@ class NumpyBackend(Backend):
                 return terms
         return terms
 
-    def calculate_symbolic_density_matrix(self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20):
+    def calculate_symbolic_density_matrix(
+        self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20
+    ):
         state = self.to_numpy(state)
         terms = []
         indi, indj = np.nonzero(state)
@@ -466,7 +514,9 @@ class NumpyBackend(Backend):
         self.np.random.seed(seed)
 
     def sample_shots(self, probabilities, nshots):
-        return self.np.random.choice(range(len(probabilities)), size=nshots, p=probabilities)
+        return self.np.random.choice(
+            range(len(probabilities)), size=nshots, p=probabilities
+        )
 
     def aggregate_shots(self, shots):
         return self.np.array(shots, dtype=shots[0].dtype)
@@ -477,7 +527,7 @@ class NumpyBackend(Backend):
 
     def samples_to_decimal(self, samples, nqubits):
         qrange = self.np.arange(nqubits - 1, -1, -1, dtype="int32")
-        qrange = (2 ** qrange)[:, self.np.newaxis]
+        qrange = (2**qrange)[:, self.np.newaxis]
         return self.np.matmul(samples, qrange)[:, 0]
 
     def calculate_frequencies(self, samples):
@@ -493,11 +543,14 @@ class NumpyBackend(Backend):
 
     def sample_frequencies(self, probabilities, nshots):
         from qibo.config import SHOT_BATCH_SIZE
+
         nprobs = probabilities / self.np.sum(probabilities)
         frequencies = self.np.zeros(len(nprobs), dtype="int64")
         for _ in range(nshots // SHOT_BATCH_SIZE):
             frequencies = self.update_frequencies(frequencies, nprobs, SHOT_BATCH_SIZE)
-        frequencies = self.update_frequencies(frequencies, nprobs, nshots % SHOT_BATCH_SIZE)
+        frequencies = self.update_frequencies(
+            frequencies, nprobs, nshots % SHOT_BATCH_SIZE
+        )
         return collections.Counter({i: f for i, f in enumerate(frequencies) if f > 0})
 
     def apply_bitflips(self, noiseless_samples, bitflip_probabilities):
@@ -532,6 +585,7 @@ class NumpyBackend(Backend):
 
     def entanglement_entropy(self, rho):
         from qibo.config import EIGVAL_CUTOFF
+
         # Diagonalize
         eigvals = self.np.linalg.eigvalsh(rho).real
         # Treating zero and negative eigenvalues
@@ -558,8 +612,10 @@ class NumpyBackend(Backend):
 
     def calculate_eigenvalues(self, matrix, k=6):
         if self.issparse(matrix):
-            log.warning("Calculating sparse matrix eigenvectors because "
-                        "sparse modules do not provide ``eigvals`` method.")
+            log.warning(
+                "Calculating sparse matrix eigenvectors because "
+                "sparse modules do not provide ``eigvals`` method."
+            )
             return self.calculate_eigenvectors(matrix, k=k)[0]
         return np.linalg.eigvalsh(matrix)
 
@@ -567,7 +623,8 @@ class NumpyBackend(Backend):
         if self.issparse(matrix):
             if k < matrix.shape[0]:
                 from scipy.sparse.linalg import eigsh
-                return eigsh(matrix, k=k, which='SA')
+
+                return eigsh(matrix, k=k, which="SA")
             else:  # pragma: no cover
                 matrix = self.to_numpy(matrix)
         return np.linalg.eigh(matrix)
@@ -606,13 +663,15 @@ class NumpyBackend(Backend):
     def calculate_hamiltonian_state_product(self, matrix, state):
         rank = len(tuple(state.shape))
         state = self.cast(state)
-        if rank == 1: # vector
+        if rank == 1:  # vector
             return matrix.dot(state[:, np.newaxis])[:, 0]
-        elif rank == 2: # matrix
+        elif rank == 2:  # matrix
             return matrix.dot(state)
         else:
-            raise_error(ValueError, "Cannot multiply Hamiltonian with "
-                                    "rank-{} tensor.".format(rank))
+            raise_error(
+                ValueError,
+                "Cannot multiply Hamiltonian with " "rank-{} tensor.".format(rank),
+            )
 
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
         value = self.to_numpy(value)
@@ -625,7 +684,7 @@ class NumpyBackend(Backend):
                 [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
                 [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-                [0, 0, 0, 0, 2, 0, 0, 0, 0, 0]
+                [0, 0, 0, 0, 2, 0, 0, 0, 0, 0],
             ]
         elif name == "test_probabilistic_measurement":
             return {0: 249, 1: 231, 2: 253, 3: 267}
@@ -633,6 +692,7 @@ class NumpyBackend(Backend):
             return {0: 171, 1: 148, 2: 161, 3: 520}
         elif name == "test_post_measurement_bitflips_on_circuit":
             return [
-                {5: 30}, {5: 18, 4: 5, 7: 4, 1: 2, 6: 1},
-                {4: 8, 2: 6, 5: 5, 1: 3, 3: 3, 6: 2, 7: 2, 0: 1}
+                {5: 30},
+                {5: 18, 4: 5, 7: 4, 1: 2, 6: 1},
+                {4: 8, 2: 6, 5: 5, 1: 3, 3: 3, 6: 2, 7: 2, 0: 1},
             ]

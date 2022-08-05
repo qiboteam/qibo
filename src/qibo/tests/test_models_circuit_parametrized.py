@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Test :meth:`qibo.models.circuit.Circuit.get_parameters` and :meth:`qibo.models.circuit.Circuit.set_parameters`."""
 import numpy as np
 import pytest
@@ -8,10 +9,12 @@ from qibo.models import Circuit
 
 def test_rx_parameter_setter(backend):
     """Check the parameter setter of RX gate."""
+
     def exact_state(theta):
         phase = np.exp(1j * theta / 2.0)
-        gate = np.array([[phase.real, -1j * phase.imag],
-                        [-1j * phase.imag, phase.real]])
+        gate = np.array(
+            [[phase.real, -1j * phase.imag], [-1j * phase.imag, phase.real]]
+        )
         return gate.dot(np.ones(2)) / np.sqrt(2)
 
     theta = 0.1234
@@ -190,11 +193,13 @@ def test_variable_theta():
     """Check that parametrized gates accept `tf.Variable` parameters."""
     try:
         from qibo.backends import construct_backend
+
         backend = construct_backend("tensorflow")
-    except ModuleNotFoundError: # pragma: no cover
+    except ModuleNotFoundError:  # pragma: no cover
         pytest.skip("Skipping variable test because tensorflow is not available.")
 
     import tensorflow as tf
+
     theta1 = tf.Variable(0.1234, dtype="float64")
     theta2 = tf.Variable(0.4321, dtype="float64")
     cvar = Circuit(2)

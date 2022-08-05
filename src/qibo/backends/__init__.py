@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 from qibo.config import log, raise_error
 from qibo.backends.abstract import Backend
@@ -9,6 +10,7 @@ from qibo.backends.matrices import Matrices
 def construct_backend(backend, platform=None, runcard=None):
     if backend == "qibojit":
         from qibojit.backends import CupyBackend, CuQuantumBackend, NumbaBackend
+
         if platform == "cupy":  # pragma: no cover
             return CupyBackend()
         elif platform == "cuquantum":  # pragma: no cover
@@ -28,7 +30,8 @@ def construct_backend(backend, platform=None, runcard=None):
         return NumpyBackend()
 
     elif backend == "qibolab":  # pragma: no cover
-        from qibolab.backends import QibolabBackend # pylint: disable=E0401
+        from qibolab.backends import QibolabBackend  # pylint: disable=E0401
+
         return QibolabBackend(platform, runcard)
 
     else:  # pragma: no cover
@@ -44,7 +47,7 @@ class GlobalBackend(NumpyBackend):
         {"backend": "qibojit", "platform": "cupy"},
         {"backend": "qibojit", "platform": "numba"},
         {"backend": "tensorflow"},
-        {"backend": "numpy"}
+        {"backend": "numpy"},
     ]
 
     def __new__(cls):
@@ -65,7 +68,7 @@ class GlobalBackend(NumpyBackend):
                 except (ModuleNotFoundError, ImportError):
                     pass
 
-        if cls._instance is None: # pragma: no cover
+        if cls._instance is None:  # pragma: no cover
             raise_error(RuntimeError, "No backends available.")
 
         log.info(f"Using {cls._instance} backend on {cls._instance.device}")
@@ -73,13 +76,16 @@ class GlobalBackend(NumpyBackend):
 
     @classmethod
     def set_backend(cls, backend, platform=None, runcard=None):  # pragma: no cover
-        if cls._instance is None or cls._instance.name != backend or cls._instance.platform != platform:
+        if (
+            cls._instance is None
+            or cls._instance.name != backend
+            or cls._instance.platform != platform
+        ):
             cls._instance = construct_backend(backend, platform, runcard)
         log.info(f"Using {cls._instance} backend on {cls._instance.device}")
 
 
 class QiboMatrices:
-
     def __init__(self, dtype="complex128"):
         self.create(dtype)
 
@@ -118,8 +124,10 @@ def get_device():
 def set_device(device):
     parts = device[1:].split(":")
     if device[0] != "/" or len(parts) < 2 or len(parts) > 3:
-        raise_error(ValueError, "Device name should follow the pattern: "
-                                "/{device type}:{device number}.")
+        raise_error(
+            ValueError,
+            "Device name should follow the pattern: " "/{device type}:{device number}.",
+        )
     backend = GlobalBackend()
     backend.set_device(device)
     log.info(f"Using {backend} backend on {backend.device}")

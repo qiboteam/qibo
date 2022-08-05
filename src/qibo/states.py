@@ -1,9 +1,9 @@
+# -*- coding: utf-8 -*-
 import collections
 from qibo.config import raise_error
 
 
 class CircuitResult:
-
     def __init__(self, backend, circuit, execution_result, nshots=None):
         self.backend = backend
         self.circuit = circuit
@@ -65,9 +65,13 @@ class CircuitResult:
         """
         state = self.backend.circuit_result_tensor(self)
         if self.density_matrix:
-            terms = self.backend.calculate_symbolic_density_matrix(state, self.nqubits, decimals, cutoff, max_terms)
+            terms = self.backend.calculate_symbolic_density_matrix(
+                state, self.nqubits, decimals, cutoff, max_terms
+            )
         else:
-            terms = self.backend.calculate_symbolic(state, self.nqubits, decimals, cutoff, max_terms)
+            terms = self.backend.calculate_symbolic(
+                state, self.nqubits, decimals, cutoff, max_terms
+            )
         return " + ".join(terms)
 
     def __repr__(self):
@@ -112,11 +116,19 @@ class CircuitResult:
             self._samples = self.backend.sample_shots(probs, self.nshots)
             if self.circuit.measurement_gate.has_bitflip_noise():
                 p0, p1 = self.circuit.measurement_gate.bitflip_map
-                bitflip_probabilities = [[p0.get(q) for q in qubits],
-                                         [p1.get(q) for q in qubits]]
-                noiseless_samples = self.backend.samples_to_binary(self._samples, len(qubits))
-                noisy_samples = self.backend.apply_bitflips(noiseless_samples, bitflip_probabilities)
-                self._samples = self.backend.samples_to_decimal(noisy_samples, len(qubits))
+                bitflip_probabilities = [
+                    [p0.get(q) for q in qubits],
+                    [p1.get(q) for q in qubits],
+                ]
+                noiseless_samples = self.backend.samples_to_binary(
+                    self._samples, len(qubits)
+                )
+                noisy_samples = self.backend.apply_bitflips(
+                    noiseless_samples, bitflip_probabilities
+                )
+                self._samples = self.backend.samples_to_decimal(
+                    noisy_samples, len(qubits)
+                )
 
         if registers:
             qubit_map = {q: i for i, q in enumerate(qubits)}
@@ -128,7 +140,9 @@ class CircuitResult:
                 if binary:
                     reg_samples[name] = rsamples
                 else:
-                    reg_samples[name] = self.backend.samples_to_decimal(rsamples, len(rqubits))
+                    reg_samples[name] = self.backend.samples_to_decimal(
+                        rsamples, len(rqubits)
+                    )
             return reg_samples
 
         if binary:
@@ -139,8 +153,8 @@ class CircuitResult:
     @staticmethod
     def _frequencies_to_binary(frequencies, nqubits):
         return collections.Counter(
-                {"{0:b}".format(k).zfill(nqubits): v
-                 for k, v in frequencies.items()})
+            {"{0:b}".format(k).zfill(nqubits): v for k, v in frequencies.items()}
+        )
 
     def frequencies(self, binary=True, registers=False):
         """Returns the frequencies of measured samples.
@@ -168,7 +182,10 @@ class CircuitResult:
         """
         qubits = self.circuit.measurement_gate.qubits
         if self._frequencies is None:
-            if self.circuit.measurement_gate.has_bitflip_noise() and self._samples is None:
+            if (
+                self.circuit.measurement_gate.has_bitflip_noise()
+                and self._samples is None
+            ):
                 self._samples = self.samples(binary=False)
             if self._samples is None:
                 probs = self.probabilities(qubits)
@@ -179,7 +196,9 @@ class CircuitResult:
         if registers:
             qubit_map = {q: i for i, q in enumerate(qubits)}
             reg_frequencies = {}
-            binary_frequencies = self._frequencies_to_binary(self._frequencies, len(qubits))
+            binary_frequencies = self._frequencies_to_binary(
+                self._frequencies, len(qubits)
+            )
             for name, rqubits in self.circuit.measurement_tuples.items():
                 rfreqs = collections.Counter()
                 for bitstring, freq in binary_frequencies.items():
@@ -189,7 +208,9 @@ class CircuitResult:
                             idx += 2 ** (len(rqubits) - i - 1)
                     rfreqs[idx] += freq
                 if binary:
-                    reg_frequencies[name] = self._frequencies_to_binary(rfreqs, len(rqubits))
+                    reg_frequencies[name] = self._frequencies_to_binary(
+                        rfreqs, len(rqubits)
+                    )
                 else:
                     reg_frequencies[name] = rfreqs
             return reg_frequencies
@@ -204,7 +225,9 @@ class CircuitResult:
         if p1 is None:
             probs = 2 * (mgate._get_bitflip_tuple(mgate.qubits, p0),)
         else:
-            probs = (mgate._get_bitflip_tuple(mgate.qubits, p0),
-                     mgate._get_bitflip_tuple(mgate.qubits, p1))
+            probs = (
+                mgate._get_bitflip_tuple(mgate.qubits, p0),
+                mgate._get_bitflip_tuple(mgate.qubits, p1),
+            )
         noiseless_samples = self.samples()
         return self.backend.apply_bitflips(noiseless_samples, probs)

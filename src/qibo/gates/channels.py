@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from abc import abstractmethod
 from qibo.gates.abstract import Gate
 from qibo.gates.gates import X, Y, Z, Unitary
@@ -19,11 +20,15 @@ class Channel(Gate):
 
     def on_qubits(self, qubit_map):  # pragma: no cover
         # future TODO
-        raise_error(NotImplementedError, "`on_qubits` method is not available "
-                                         "for the `Channel` gate.")
+        raise_error(
+            NotImplementedError,
+            "`on_qubits` method is not available " "for the `Channel` gate.",
+        )
 
     def apply(self, backend, state, nqubits):  # pragma: no cover
-        raise_error(NotImplementedError, f"{self.name} cannot be applied to state vector.")
+        raise_error(
+            NotImplementedError, f"{self.name} cannot be applied to state vector."
+        )
 
     def apply_density_matrix(self, backend, state, nqubits):
         return backend.apply_channel_density_matrix(self, state, nqubits)
@@ -72,17 +77,21 @@ class KrausChannel(Channel):
         self.name = "KrausChannel"
         if isinstance(ops[0], Gate):
             self.gates = tuple(ops)
-            self.target_qubits = tuple(sorted(set(
-                q for gate in ops for q in gate.target_qubits)))
+            self.target_qubits = tuple(
+                sorted(set(q for gate in ops for q in gate.target_qubits))
+            )
         else:
             gates, qubitset = [], set()
             for qubits, matrix in ops:
                 rank = 2 ** len(qubits)
                 shape = tuple(matrix.shape)
                 if shape != (rank, rank):
-                    raise_error(ValueError, "Invalid Krauss operator shape {} for "
-                                            "acting on {} qubits."
-                                            "".format(shape, len(qubits)))
+                    raise_error(
+                        ValueError,
+                        "Invalid Krauss operator shape {} for "
+                        "acting on {} qubits."
+                        "".format(shape, len(qubits)),
+                    )
                 qubitset.update(qubits)
                 gates.append(Unitary(matrix, *list(qubits)))
             self.gates = tuple(gates)
@@ -118,21 +127,30 @@ class UnitaryChannel(KrausChannel):
 
     def __init__(self, probabilities, ops):
         if len(probabilities) != len(ops):
-            raise_error(ValueError, "Probabilities list has length {} while "
-                                    "{} gates were given."
-                                    "".format(len(probabilities), len(ops)))
+            raise_error(
+                ValueError,
+                "Probabilities list has length {} while "
+                "{} gates were given."
+                "".format(len(probabilities), len(ops)),
+            )
         for p in probabilities:
             if p < 0 or p > 1:
-                raise_error(ValueError, "Probabilities should be between 0 "
-                                        "and 1 but {} was given.".format(p))
+                raise_error(
+                    ValueError,
+                    "Probabilities should be between 0 "
+                    "and 1 but {} was given.".format(p),
+                )
         super().__init__(ops)
         self.name = "UnitaryChannel"
         self.coefficients = tuple(probabilities)
         self.coefficient_sum = sum(probabilities)
         if self.coefficient_sum > 1 + PRECISION_TOL or self.coefficient_sum <= 0:
-            raise_error(ValueError, "UnitaryChannel probability sum should be "
-                                    "between 0 and 1 but is {}."
-                                    "".format(self.coefficient_sum))
+            raise_error(
+                ValueError,
+                "UnitaryChannel probability sum should be "
+                "between 0 and 1 but is {}."
+                "".format(self.coefficient_sum),
+            )
 
         self.init_args = [probabilities, self.gates]
 
@@ -256,26 +274,35 @@ class ThermalRelaxationChannel(Channel):
 
         # check given parameters
         if excited_population < 0 or excited_population > 1:
-            raise_error(ValueError, "Invalid excited state population {}."
-                                    "".format(excited_population))
+            raise_error(
+                ValueError,
+                "Invalid excited state population {}." "".format(excited_population),
+            )
         if time < 0:
             raise_error(ValueError, "Invalid gate_time ({} < 0)".format(time))
         if t1 <= 0:
-            raise_error(ValueError, "Invalid T_1 relaxation time parameter: "
-                                    "T_1 <= 0.")
+            raise_error(
+                ValueError, "Invalid T_1 relaxation time parameter: " "T_1 <= 0."
+            )
         if t2 <= 0:
-            raise_error(ValueError, "Invalid T_2 relaxation time parameter: "
-                                    "T_2 <= 0.")
+            raise_error(
+                ValueError, "Invalid T_2 relaxation time parameter: " "T_2 <= 0."
+            )
         if t2 > 2 * t1:
-            raise_error(ValueError, "Invalid T_2 relaxation time parameter: "
-                                    "T_2 greater than 2 * T_1.")
+            raise_error(
+                ValueError,
+                "Invalid T_2 relaxation time parameter: " "T_2 greater than 2 * T_1.",
+            )
 
         # calculate probabilities
         import numpy as np
+
         self.t1, self.t2 = t1, t2
         p_reset = 1 - np.exp(-time / t1)
-        self.coefficients = [p_reset * (1 - excited_population),
-                             p_reset * excited_population]
+        self.coefficients = [
+            p_reset * (1 - excited_population),
+            p_reset * excited_population,
+        ]
         if t1 < t2:
             self.coefficients.append(np.exp(-time / t2))
         else:
@@ -286,11 +313,14 @@ class ThermalRelaxationChannel(Channel):
         q = self.target_qubits[0]
         if self.t1 < self.t2:
             from qibo.gates import Unitary
+
             preset0, preset1, exp_t2 = self.coefficients
-            matrix = [[1 - preset1, 0, 0, preset1],
-                      [0, exp_t2, 0, 0],
-                      [0, 0, exp_t2, 0],
-                      [preset0, 0, 0, 1 - preset0]]
+            matrix = [
+                [1 - preset1, 0, 0, preset1],
+                [0, exp_t2, 0, 0],
+                [0, 0, exp_t2, 0],
+                [preset0, 0, 0, 1 - preset0],
+            ]
 
             qubits = (q, q + nqubits)
             gate = Unitary(matrix, *qubits)
@@ -298,7 +328,10 @@ class ThermalRelaxationChannel(Channel):
 
         else:
             from qibo.gates import Z
+
             pz = self.coefficients[-1]
-            return (backend.reset_error_density_matrix(self, state, nqubits) -
-                    pz * backend.cast(state) +
-                    pz * backend.apply_gate_density_matrix(Z(0), state, nqubits))
+            return (
+                backend.reset_error_density_matrix(self, state, nqubits)
+                - pz * backend.cast(state)
+                + pz * backend.apply_gate_density_matrix(Z(0), state, nqubits)
+            )

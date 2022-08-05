@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import pytest
 import qibo
 from qibo import matrices
@@ -5,6 +6,7 @@ from qibo import matrices
 
 def test_set_backend():
     from qibo.backends import GlobalBackend
+
     backend = GlobalBackend()
     qibo.set_backend("numpy")
     assert qibo.get_backend() == "numpy"
@@ -13,6 +15,7 @@ def test_set_backend():
 
 def test_set_precision():
     import numpy as np
+
     assert qibo.get_precision() == "double"
     qibo.set_precision("single")
     assert matrices.I.dtype == np.complex64
@@ -51,13 +54,14 @@ def test_set_shot_batch_size():
     qibo.set_batch_size(1024)
     assert qibo.get_batch_size() == 1024
     from qibo.config import SHOT_BATCH_SIZE
+
     assert SHOT_BATCH_SIZE == 1024
     with pytest.raises(TypeError):
         qibo.set_batch_size("test")
     with pytest.raises(ValueError):
         qibo.set_batch_size(-10)
     with pytest.raises(ValueError):
-        qibo.set_batch_size(2 ** 35)
+        qibo.set_batch_size(2**35)
     qibo.set_batch_size(original_batch_size)
 
 
@@ -66,6 +70,7 @@ def test_set_metropolis_threshold():
     qibo.set_metropolis_threshold(100)
     assert qibo.get_metropolis_threshold() == 100
     from qibo.config import SHOT_METROPOLIS_THRESHOLD
+
     assert SHOT_METROPOLIS_THRESHOLD == 100
     with pytest.raises(TypeError):
         qibo.set_metropolis_threshold("test")

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import copy
 import math
 import collections
@@ -30,8 +31,7 @@ class DistributedQubits:
         self.list = sorted(qubits)
         self.local = [q for q in range(nqubits) if q not in self.set]
         self.reduced_global = {q: self.list.index(q) for q in self.list}
-        self.reduced_local = {q: q - self.reduction_number(q)
-                              for q in self.local}
+        self.reduced_local = {q: q - self.reduction_number(q) for q in self.local}
 
         self.transpose_order = self.list + self.local
         self.reverse_transpose_order = nqubits * [0]
@@ -119,8 +119,9 @@ class DistributedQueues:
         """
         counter = self.count(queue, self.nqubits)
         if self.qubits is None:
-            self.qubits = DistributedQubits(counter.argsort()[:self.nglobal],
-                                            self.nqubits)
+            self.qubits = DistributedQubits(
+                counter.argsort()[: self.nglobal], self.nqubits
+            )
         if queue:
             transformed_queue = self.transform(queue, counter)
             self.create(transformed_queue)
@@ -148,11 +149,14 @@ class DistributedQueues:
         """
         devgate = copy.copy(gate)
         # Recompute the target/control indices considering only local qubits.
-        new_target_qubits = tuple(q - self.qubits.reduction_number(q)
-                                  for q in devgate.target_qubits)
-        new_control_qubits = tuple(q - self.qubits.reduction_number(q)
-                                   for q in devgate.control_qubits
-                                   if q not in self.qubits.set)
+        new_target_qubits = tuple(
+            q - self.qubits.reduction_number(q) for q in devgate.target_qubits
+        )
+        new_control_qubits = tuple(
+            q - self.qubits.reduction_number(q)
+            for q in devgate.control_qubits
+            if q not in self.qubits.set
+        )
         devgate._set_targets_and_controls(new_target_qubits, new_control_qubits)
         devgate.original_gate = gate
         devgate.device_gates = set()
@@ -171,15 +175,16 @@ class DistributedQueues:
             for each qubit id.
         """
         import numpy as np
+
         counter = np.zeros(nqubits, dtype=np.int64)
         for gate in queue:
             for qubit in gate.target_qubits:
                 counter[qubit] += 1
         return counter
 
-    def _transform(self, queue: List[Gate],
-                   remaining_queue: List[Gate],
-                   counter) -> List[Gate]:
+    def _transform(
+        self, queue: List[Gate], remaining_queue: List[Gate], counter
+    ) -> List[Gate]:
         """Helper recursive method for ``transform``."""
         new_remaining_queue = []
         for gate in remaining_queue:
@@ -207,13 +212,14 @@ class DistributedQueues:
         gate = new_remaining_queue[0]
         target_set = set(gate.target_qubits)
         global_targets = target_set & self.qubits.set
-        if isinstance(gate, gates.SWAP): # pragma: no cover
+        if isinstance(gate, gates.SWAP):  # pragma: no cover
             # special case of swap on two global qubits
             assert len(global_targets) == 2
             global_targets.remove(target_set.pop())
 
-        available_swaps = (q for q in counter.argsort()
-                           if q not in self.qubits.set | target_set)
+        available_swaps = (
+            q for q in counter.argsort() if q not in self.qubits.set | target_set
+        )
         qubit_map = {}
         for q in global_targets:
             qs = next(available_swaps)
@@ -229,10 +235,12 @@ class DistributedQueues:
 
         # Modify gates to take into account the swaps
         for gate in new_remaining_queue:
-            new_target_qubits = tuple(qubit_map[q] if q in qubit_map else q
-                                       for q in gate.target_qubits)
-            new_control_qubits = tuple(qubit_map[q] if q in qubit_map else q
-                                        for q in gate.control_qubits)
+            new_target_qubits = tuple(
+                qubit_map[q] if q in qubit_map else q for q in gate.target_qubits
+            )
+            new_control_qubits = tuple(
+                qubit_map[q] if q in qubit_map else q for q in gate.control_qubits
+            )
             gate._set_targets_and_controls(new_target_qubits, new_control_qubits)
 
         return self._transform(queue, new_remaining_queue, counter)
@@ -275,13 +283,17 @@ class DistributedQueues:
                 self.special_queue.append(gate)
                 self.queues.append([])
 
-            elif set(gate.target_qubits) & self.qubits.set: # global swap gate
+            elif set(gate.target_qubits) & self.qubits.set:  # global swap gate
                 global_qubits = set(gate.target_qubits) & self.qubits.set
                 if not isinstance(gate, gates.SWAP):
-                    raise_error(ValueError, "Only SWAP gates are supported for "
-                                            "global qubits.")
+                    raise_error(
+                        ValueError,
+                        "Only SWAP gates are supported for " "global qubits.",
+                    )
                 if len(global_qubits) > 1:
-                    raise_error(ValueError, "SWAPs between global qubits are not allowed.")
+                    raise_error(
+                        ValueError, "SWAPs between global qubits are not allowed."
+                    )
 
                 global_qubit = global_qubits.pop()
                 local_qubit = gate.target_qubits[0]
@@ -305,11 +317,10 @@ class DistributedQueues:
                         flag = True
                         # If there are control qubits that are global then
                         # the gate should not be applied by all devices
-                        for control in (set(gate.control_qubits) &
-                                        self.qubits.set):
+                        for control in set(gate.control_qubits) & self.qubits.set:
                             ic = self.qubits.list.index(control)
                             ic = self.nglobal - ic - 1
-                            flag = bool((i // (2 ** ic)) % 2)
+                            flag = bool((i // (2**ic)) % 2)
                             if not flag:
                                 break
                         if flag:

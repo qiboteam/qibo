@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 from numpy.random import randn
 from qibo import gates, hamiltonians, matrices, models
@@ -42,22 +43,42 @@ class StyleQGAN(object):
             train_qGAN.fit(reference_distribution, n_epochs=1)
     """
 
-    def __init__(self, latent_dim, layers=None, circuit=None, set_parameters=None, discriminator=None):
+    def __init__(
+        self,
+        latent_dim,
+        layers=None,
+        circuit=None,
+        set_parameters=None,
+        discriminator=None,
+    ):
         # qgan works only with tensorflow
         from qibo.backends import TensorflowBackend
+
         self.backend = TensorflowBackend()
 
         if layers is not None and circuit is not None:
-            raise_error(ValueError, "Set the number of layers for the default quantum generator "
-                        "or use a custom quantum generator, do not define both.")
+            raise_error(
+                ValueError,
+                "Set the number of layers for the default quantum generator "
+                "or use a custom quantum generator, do not define both.",
+            )
         elif layers is None and circuit is None:
-            raise_error(ValueError, "Set the number of layers for the default quantum generator "
-                        "or use a custom quantum generator.")
+            raise_error(
+                ValueError,
+                "Set the number of layers for the default quantum generator "
+                "or use a custom quantum generator.",
+            )
 
         if set_parameters is None and circuit is not None:
-            raise_error(ValueError, "Set parameters function has to be given for your custom quantum generator.")
+            raise_error(
+                ValueError,
+                "Set parameters function has to be given for your custom quantum generator.",
+            )
         elif set_parameters is not None and circuit is None:
-            raise_error(ValueError, "Define the custom quantum generator to use custom set parameters function.")
+            raise_error(
+                ValueError,
+                "Define the custom quantum generator to use custom set parameters function.",
+            )
 
         self.discriminator = discriminator
         self.circuit = circuit
@@ -72,26 +93,65 @@ class StyleQGAN(object):
         """Define the standalone discriminator model."""
         from tensorflow.keras.models import Sequential  # pylint: disable=E0611,E0401
         from tensorflow.keras.optimizers import Adadelta  # pylint: disable=E0611,E0401
-        from tensorflow.keras.layers import Dense, Conv2D, Dropout, Reshape, LeakyReLU, Flatten  # pylint: disable=E0611,E0401
+        from tensorflow.keras.layers import (
+            Dense,
+            Conv2D,
+            Dropout,
+            Reshape,
+            LeakyReLU,
+            Flatten,
+        )  # pylint: disable=E0611,E0401
 
         model = Sequential()
         model.add(Dense(200, use_bias=False, input_dim=self.nqubits))
-        model.add(Reshape((10,10,2)))
-        model.add(Conv2D(64, kernel_size=3, strides=1, padding='same', kernel_initializer='glorot_normal'))
+        model.add(Reshape((10, 10, 2)))
+        model.add(
+            Conv2D(
+                64,
+                kernel_size=3,
+                strides=1,
+                padding="same",
+                kernel_initializer="glorot_normal",
+            )
+        )
         model.add(LeakyReLU(alpha=alpha))
-        model.add(Conv2D(32, kernel_size=3, strides=1, padding='same', kernel_initializer='glorot_normal'))
+        model.add(
+            Conv2D(
+                32,
+                kernel_size=3,
+                strides=1,
+                padding="same",
+                kernel_initializer="glorot_normal",
+            )
+        )
         model.add(LeakyReLU(alpha=alpha))
-        model.add(Conv2D(16, kernel_size=3, strides=1, padding='same', kernel_initializer='glorot_normal'))
+        model.add(
+            Conv2D(
+                16,
+                kernel_size=3,
+                strides=1,
+                padding="same",
+                kernel_initializer="glorot_normal",
+            )
+        )
         model.add(LeakyReLU(alpha=alpha))
-        model.add(Conv2D(8, kernel_size=3, strides=1, padding='same', kernel_initializer='glorot_normal'))
+        model.add(
+            Conv2D(
+                8,
+                kernel_size=3,
+                strides=1,
+                padding="same",
+                kernel_initializer="glorot_normal",
+            )
+        )
         model.add(Flatten())
         model.add(LeakyReLU(alpha=alpha))
         model.add(Dropout(dropout))
-        model.add(Dense(1, activation='sigmoid'))
+        model.add(Dense(1, activation="sigmoid"))
 
         # compile model
         opt = Adadelta(learning_rate=0.1)
-        model.compile(loss='binary_crossentropy', optimizer=opt, metrics=['accuracy'])
+        model.compile(loss="binary_crossentropy", optimizer=opt, metrics=["accuracy"])
         return model
 
     def set_params(self, circuit, params, x_input, i):
@@ -101,28 +161,28 @@ class StyleQGAN(object):
         noise = 0
         for l in range(self.layers):
             for q in range(self.nqubits):
-                p.append(params[index]*x_input[noise][i] + params[index+1])
-                index+=2
-                noise=(noise+1)%self.latent_dim
-                p.append(params[index]*x_input[noise][i] + params[index+1])
-                index+=2
-                p.append(params[index]*x_input[noise][i] + params[index+1])
-                index+=2
-                noise=(noise+1)%self.latent_dim
-                p.append(params[index]*x_input[noise][i] + params[index+1])
-                index+=2
-                noise=(noise+1)%self.latent_dim
-            for i in range(0, self.nqubits-1):
-                p.append(params[index]*x_input[noise][i] + params[index+1])
-                index+=2
-                noise=(noise+1)%self.latent_dim
-            p.append(params[index]*x_input[noise][i] + params[index+1])
-            index+=2
-            noise=(noise+1)%self.latent_dim
+                p.append(params[index] * x_input[noise][i] + params[index + 1])
+                index += 2
+                noise = (noise + 1) % self.latent_dim
+                p.append(params[index] * x_input[noise][i] + params[index + 1])
+                index += 2
+                p.append(params[index] * x_input[noise][i] + params[index + 1])
+                index += 2
+                noise = (noise + 1) % self.latent_dim
+                p.append(params[index] * x_input[noise][i] + params[index + 1])
+                index += 2
+                noise = (noise + 1) % self.latent_dim
+            for i in range(0, self.nqubits - 1):
+                p.append(params[index] * x_input[noise][i] + params[index + 1])
+                index += 2
+                noise = (noise + 1) % self.latent_dim
+            p.append(params[index] * x_input[noise][i] + params[index + 1])
+            index += 2
+            noise = (noise + 1) % self.latent_dim
         for q in range(self.nqubits):
-            p.append(params[index]*x_input[noise][i] + params[index+1])
-            index+=2
-            noise=(noise+1)%self.latent_dim
+            p.append(params[index] * x_input[noise][i] + params[index + 1])
+            index += 2
+            noise = (noise + 1) % self.latent_dim
         circuit.set_parameters(p)
 
     def generate_latent_points(self, samples):
@@ -135,6 +195,7 @@ class StyleQGAN(object):
 
     def generate_fake_samples(self, params, samples, circuit, hamiltonians_list):
         import tensorflow as tf
+
         """Use the generator to generate fake examples, with class labels."""
         # generate points in latent space
         x_input = self.generate_latent_points(samples)
@@ -155,11 +216,16 @@ class StyleQGAN(object):
         y = np.zeros((samples, 1))
         return X, y
 
-    def define_cost_gan(self, params, discriminator, samples, circuit, hamiltonians_list):
+    def define_cost_gan(
+        self, params, discriminator, samples, circuit, hamiltonians_list
+    ):
         import tensorflow as tf
+
         """Define the combined generator and discriminator model, for updating the generator."""
         # generate fake samples
-        x_fake, y_fake = self.generate_fake_samples(params, samples, circuit, hamiltonians_list)
+        x_fake, y_fake = self.generate_fake_samples(
+            params, samples, circuit, hamiltonians_list
+        )
         # create inverted labels for the fake samples
         y_fake = np.ones((samples, 1))
         # evaluate discriminator on fake examples
@@ -176,7 +242,7 @@ class StyleQGAN(object):
             """Generate real samples with class labels."""
             # generate samples from the distribution
             idx = np.random.randint(real_samples, size=samples)
-            X = distribution[idx,:]
+            X = distribution[idx, :]
             # generate class labels
             y = np.ones((samples, 1))
             return X, y
@@ -196,31 +262,55 @@ class StyleQGAN(object):
         # manually enumerate epochs
         for i in range(self.n_epochs):
             # prepare real samples
-            x_real, y_real = generate_real_samples(half_samples, s, self.training_samples)
+            x_real, y_real = generate_real_samples(
+                half_samples, s, self.training_samples
+            )
             # prepare fake examples
-            x_fake, y_fake = self.generate_fake_samples(initial_params, half_samples, circuit, hamiltonians_list)
+            x_fake, y_fake = self.generate_fake_samples(
+                initial_params, half_samples, circuit, hamiltonians_list
+            )
             # update discriminator
             d_loss_real, _ = d_model.train_on_batch(x_real, y_real)
             d_loss_fake, _ = d_model.train_on_batch(x_fake, y_fake)
-            d_loss.append((d_loss_real + d_loss_fake)/2)
+            d_loss.append((d_loss_real + d_loss_fake) / 2)
             # update generator
             with tf.GradientTape() as tape:
-                loss = self.define_cost_gan(initial_params, d_model, self.batch_samples, circuit, hamiltonians_list)
+                loss = self.define_cost_gan(
+                    initial_params,
+                    d_model,
+                    self.batch_samples,
+                    circuit,
+                    hamiltonians_list,
+                )
             grads = tape.gradient(loss, initial_params)
             optimizer.apply_gradients([(grads, initial_params)])
             g_loss.append(loss)
             if save:  # pragma: no cover
                 # saving is skipped in tests to avoid creating files
-                params = (self.nqubits, self.latent_dim, self.layers,
-                          self.training_samples, self.batch_samples, self.lr)
+                params = (
+                    self.nqubits,
+                    self.latent_dim,
+                    self.layers,
+                    self.training_samples,
+                    self.batch_samples,
+                    self.lr,
+                )
                 filename = "_".join(str(p) for p in params)
-                np.savetxt(f"PARAMS_{filename}", [initial_params.numpy()], newline='')
-                np.savetxt(f"dloss_{filename}", [d_loss], newline='')
-                np.savetxt(f"gloss_{filename}", [g_loss], newline='')
+                np.savetxt(f"PARAMS_{filename}", [initial_params.numpy()], newline="")
+                np.savetxt(f"dloss_{filename}", [d_loss], newline="")
+                np.savetxt(f"gloss_{filename}", [g_loss], newline="")
                 # serialize weights to HDF5
                 d_model.save_weights(f"discriminator_{filename}.h5")
 
-    def fit(self, reference, initial_params=None, batch_samples=128, n_epochs=20000, lr=0.5, save=True):
+    def fit(
+        self,
+        reference,
+        initial_params=None,
+        batch_samples=128,
+        n_epochs=20000,
+        lr=0.5,
+        save=True,
+    ):
         """Execute qGAN training.
 
         Args:
@@ -237,9 +327,15 @@ class StyleQGAN(object):
                 will be saved on disk. Default is ``True``.
         """
         if initial_params is None and self.circuit is not None:
-            raise_error(ValueError, "Set the initial parameters for your custom quantum generator.")
+            raise_error(
+                ValueError,
+                "Set the initial parameters for your custom quantum generator.",
+            )
         elif initial_params is not None and self.circuit is None:
-            raise_error(ValueError, "Define the custom quantum generator to use custom initial parameters.")
+            raise_error(
+                ValueError,
+                "Define the custom quantum generator to use custom initial parameters.",
+            )
 
         self.reference = reference
         self.nqubits = reference.shape[1]
@@ -256,8 +352,11 @@ class StyleQGAN(object):
             discriminator = self.discriminator
 
         if discriminator.input_shape[1] is not self.nqubits:
-                raise_error(ValueError, "The number of input neurons in the discriminator has to be equal to "
-                            "the number of qubits in the circuit (dimension of the input reference distribution).")
+            raise_error(
+                ValueError,
+                "The number of input neurons in the discriminator has to be equal to "
+                "the number of qubits in the circuit (dimension of the input reference distribution).",
+            )
 
         # create quantum generator
         if self.circuit is None:
@@ -268,17 +367,20 @@ class StyleQGAN(object):
                     circuit.add(gates.RZ(q, 0))
                     circuit.add(gates.RY(q, 0))
                     circuit.add(gates.RZ(q, 0))
-                for i in range(0, self.nqubits-1):
-                    circuit.add(gates.CRY(i, i+1, 0))
-                circuit.add(gates.CRY(self.nqubits-1, 0, 0))
+                for i in range(0, self.nqubits - 1):
+                    circuit.add(gates.CRY(i, i + 1, 0))
+                circuit.add(gates.CRY(self.nqubits - 1, 0, 0))
             for q in range(self.nqubits):
                 circuit.add(gates.RY(q, 0))
         else:
             circuit = self.circuit
 
         if circuit.nqubits != self.nqubits:
-                raise_error(ValueError, "The number of qubits in the circuit has to be equal to "
-                            "the number of dimensions in the reference distribution.")
+            raise_error(
+                ValueError,
+                "The number of qubits in the circuit has to be equal to "
+                "the number of dimensions in the reference distribution.",
+            )
 
         # define hamiltonian to generate fake samples
         def hamiltonian(nqubits, position):
@@ -289,10 +391,10 @@ class StyleQGAN(object):
                 else:
                     kron.append(matrices.I)
             for i in range(nqubits - 1):
-                if i==0:
-                    ham = np.kron(kron[i+1], kron[i])
+                if i == 0:
+                    ham = np.kron(kron[i + 1], kron[i])
                 else:
-                    ham = np.kron(kron[i+1], ham)
+                    ham = np.kron(kron[i + 1], ham)
             return hamiltonians.Hamiltonian(nqubits, ham, backend=self.backend)
 
         hamiltonians_list = []

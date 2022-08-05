@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 from qibo import gates
 from qibo.symbols import X, Y, Z
@@ -6,7 +7,7 @@ from qibo.hamiltonians import SymbolicHamiltonian
 
 
 def calculate_two_to_one(num_cities):
-    return np.arange(num_cities ** 2).reshape(num_cities, num_cities)
+    return np.arange(num_cities**2).reshape(num_cities, num_cities)
 
 
 def tsp_phaser(distance_matrix, backend=None):
@@ -17,8 +18,11 @@ def tsp_phaser(distance_matrix, backend=None):
         for u in range(num_cities):
             for v in range(num_cities):
                 if u != v:
-                    form += distance_matrix[u, v] * Z(int(two_to_one[u, i]))* Z(
-                        int(two_to_one[v, (i + 1) % num_cities]))
+                    form += (
+                        distance_matrix[u, v]
+                        * Z(int(two_to_one[u, i]))
+                        * Z(int(two_to_one[v, (i + 1) % num_cities]))
+                    )
     ham = SymbolicHamiltonian(form, backend=backend)
     return ham
 
@@ -32,10 +36,15 @@ def tsp_mixer(num_cities, backend=None):
         for u in range(num_cities):
             for v in range(num_cities):
                 if u != v:
-                    form += splus(u, i) * splus(v, (i + 1) % num_cities) * sminus(u, (
-                            i + 1) % num_cities) * sminus(v, i) + sminus(u, i) * sminus(v, (
-                            i + 1) % num_cities) * splus(u, (i + 1) % num_cities) * splus(
-                        v, i)
+                    form += splus(u, i) * splus(v, (i + 1) % num_cities) * sminus(
+                        u, (i + 1) % num_cities
+                    ) * sminus(v, i) + sminus(u, i) * sminus(
+                        v, (i + 1) % num_cities
+                    ) * splus(
+                        u, (i + 1) % num_cities
+                    ) * splus(
+                        v, i
+                    )
     ham = SymbolicHamiltonian(form, backend=backend)
     return ham
 
@@ -128,6 +137,7 @@ class TSP:
     def __init__(self, distance_matrix, backend=None):
         if backend is None:  # pragma: no cover
             from qibo.backends import GlobalBackend
+
             self.backend = GlobalBackend()
         else:
             self.backend = backend
@@ -142,8 +152,10 @@ class TSP:
             and the mixer hamiltonian.
 
         """
-        return (tsp_phaser(self.distance_matrix, backend=self.backend),
-                tsp_mixer(self.num_cities, backend=self.backend))
+        return (
+            tsp_phaser(self.distance_matrix, backend=self.backend),
+            tsp_mixer(self.num_cities, backend=self.backend),
+        )
 
     def prepare_initial_state(self, ordering):
         """

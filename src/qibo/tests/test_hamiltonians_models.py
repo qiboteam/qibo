@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Tests methods from `qibo/src/hamiltonians/models.py`."""
 import pytest
 import numpy as np
@@ -18,19 +19,24 @@ models_config = [
     ("MaxCut", {"nqubits": 4}, "maxcut_N4.out"),
     ("MaxCut", {"nqubits": 5}, "maxcut_N5.out"),
 ]
+
+
 @pytest.mark.parametrize(("model", "kwargs", "filename"), models_config)
 def test_hamiltonian_models(backend, model, kwargs, filename):
     """Test pre-coded Hamiltonian models generate the proper matrices."""
     from qibo.tests.test_models_variational import assert_regression_fixture
+
     H = getattr(hamiltonians, model)(**kwargs, backend=backend)
     matrix = backend.to_numpy(H.matrix).flatten().real
     assert_regression_fixture(backend, matrix, filename)
 
 
 @pytest.mark.parametrize("nqubits", [3, 4])
-@pytest.mark.parametrize("dense,calcterms", [(True, False), (False, False), (False, True)])
+@pytest.mark.parametrize(
+    "dense,calcterms", [(True, False), (False, False), (False, True)]
+)
 def test_maxcut(backend, nqubits, dense, calcterms):
-    size = 2 ** nqubits
+    size = 2**nqubits
     ham = np.zeros(shape=(size, size), dtype=np.complex128)
     for i in range(nqubits):
         for j in range(nqubits):
@@ -42,7 +48,7 @@ def test_maxcut(backend, nqubits, dense, calcterms):
                     h = np.kron(h, matrices.I)
             M = np.eye(2**nqubits) - h
             ham += M
-    target_ham = backend.cast(- ham / 2)
+    target_ham = backend.cast(-ham / 2)
     final_ham = hamiltonians.MaxCut(nqubits, dense, backend=backend)
     if (not dense) and calcterms:
         _ = final_ham.terms

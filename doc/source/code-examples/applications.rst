@@ -142,4 +142,3 @@ FALQON
     :maxdepth: 1
 
     tutorials/falqon/README.md
-

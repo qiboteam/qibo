@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from qibo import gates
 from qibo.models.grover import Grover
 from qibo.models import Circuit
@@ -23,8 +24,11 @@ def sum_circuit(qubits):
     sum_circuit.add(gates.X(qubits + 1).controlled_by(*[0, 1]))
 
     for qub in range(2, qubits):
-        sum_circuit.add(one_sum(sum_qubits).on_qubits(
-            *([qub] + list(range(qubits, qubits + sum_qubits)))))
+        sum_circuit.add(
+            one_sum(sum_qubits).on_qubits(
+                *([qub] + list(range(qubits, qubits + sum_qubits)))
+            )
+        )
 
     return sum_circuit
 
@@ -37,13 +41,13 @@ def oracle(qubits, num_1):
     booleans = np.binary_repr(num_1, int(np.ceil(np.log2(qubits)) + 1))
 
     for i, b in enumerate(booleans[::-1]):
-        if b == '0':
+        if b == "0":
             oracle.add(gates.X(qubits + i))
 
     oracle.add(gates.X(sum.nqubits).controlled_by(*range(qubits, sum.nqubits)))
 
     for i, b in enumerate(booleans[::-1]):
-        if b == '0':
+        if b == "0":
             oracle.add(gates.X(qubits + i))
 
     oracle.add(sum.invert().on_qubits(*range(sum.nqubits)))
@@ -52,7 +56,7 @@ def oracle(qubits, num_1):
 
 
 def check(instance, num_1):
-    res = instance.count('1') == num_1
+    res = instance.count("1") == num_1
     return res
 
 
@@ -74,17 +78,24 @@ def main(nqubits, num_1, iterative=False):
     #################################################################
 
     if not iterative:
-        grover = Grover(oracle_circuit, superposition_qubits=nqubits,
-                        number_solutions=int(binom(nqubits, num_1)))
+        grover = Grover(
+            oracle_circuit,
+            superposition_qubits=nqubits,
+            number_solutions=int(binom(nqubits, num_1)),
+        )
 
         solution, iterations = grover()
 
-        print('\nNON ITERATIVE MODEL: \n')
+        print("\nNON ITERATIVE MODEL: \n")
 
-        print('The solution is', solution)
-        print('Number of iterations needed:', iterations)
-        print('\nFound number of solutions: ', len(solution),
-              '\nTheoretical number of solutions:', int(binom(nqubits, num_1)))
+        print("The solution is", solution)
+        print("Number of iterations needed:", iterations)
+        print(
+            "\nFound number of solutions: ",
+            len(solution),
+            "\nTheoretical number of solutions:",
+            int(binom(nqubits, num_1)),
+        )
 
         return solution, iterations
 
@@ -92,26 +103,27 @@ def main(nqubits, num_1, iterative=False):
     ######################## ITERATIVE MODEL ########################
     #################################################################
 
-    print('\nITERATIVE MODEL: \n')
+    print("\nITERATIVE MODEL: \n")
 
     if iterative:
-        grover = Grover(oracle_circuit, superposition_qubits=nqubits,
-                        check=check, check_args=(num_1,))
+        grover = Grover(
+            oracle_circuit,
+            superposition_qubits=nqubits,
+            check=check,
+            check_args=(num_1,),
+        )
         solution, iterations = grover()
 
-        print('Found solution:', solution)
-        print('Number of iterations needed:', iterations)
+        print("Found solution:", solution)
+        print("Number of iterations needed:", iterations)
 
         return solution, iterations
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--nqubits", default=10, type=int,
-                        help="Number of qubits.")
-    parser.add_argument("--num_1", default=2, type=int,
-                        help="Number of 1's to find.")
-    parser.add_argument('--iterative', action='store_true',
-                        help="Use iterative model")
+    parser.add_argument("--nqubits", default=10, type=int, help="Number of qubits.")
+    parser.add_argument("--num_1", default=2, type=int, help="Number of 1's to find.")
+    parser.add_argument("--iterative", action="store_true", help="Use iterative model")
     args = vars(parser.parse_args())
     main(**args)

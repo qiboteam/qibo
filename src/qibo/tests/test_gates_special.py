@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import pytest
 import numpy as np
 from qibo import gates
@@ -7,6 +8,7 @@ from qibo.tests.utils import random_state
 
 def test_callback_gate_errors():
     from qibo import callbacks
+
     entropy = callbacks.EntanglementEntropy([0])
     gate = gates.CallbackGate(entropy)
     with pytest.raises(NotImplementedError):

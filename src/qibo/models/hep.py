@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 from qibo import gates, matrices
 from qibo.hamiltonians import Hamiltonian
@@ -17,21 +18,22 @@ class qPDF:
             If ``None`` the currently active global backend is used.
             Default is ``None``.
     """
+
     def __init__(self, ansatz, layers, nqubits, multi_output=False, backend=None):
         """Initialize qPDF."""
-        if not isinstance(layers, int) or layers < 1: # pragma: no cover
+        if not isinstance(layers, int) or layers < 1:  # pragma: no cover
             raise_error(RuntimeError, "Layers must be positive and integer.")
-        if not isinstance(nqubits, int) or nqubits < 1: # pragma: no cover
+        if not isinstance(nqubits, int) or nqubits < 1:  # pragma: no cover
             raise_error(RuntimeError, "Number of qubits must be positive and integer.")
-        if not isinstance(multi_output, bool): # pragma: no cover
+        if not isinstance(multi_output, bool):  # pragma: no cover
             raise_error(TypeError, "multi-output must be a boolean.")
 
         # parse ansatz
-        if ansatz == 'Weighted':
+        if ansatz == "Weighted":
             ansatz_function = ansatz_Weighted
-        elif ansatz == 'Fourier':
+        elif ansatz == "Fourier":
             ansatz_function = ansatz_Fourier
-        else: # pragma: no cover
+        else:  # pragma: no cover
             raise_error(NotImplementedError, f"Ansatz {ansatz} not found.")
 
         # load ansatz
@@ -40,14 +42,17 @@ class qPDF:
         # load backend
         if backend is None:  # pragma: no cover
             from qibo.backends import GlobalBackend
+
             self.backend = GlobalBackend()
         else:
             self.backend = backend
 
         # load hamiltonian
         if multi_output:
-            self.hamiltonian = [qpdf_hamiltonian(
-                nqubits, z_qubit=q, backend=self.backend) for q in range(nqubits)]
+            self.hamiltonian = [
+                qpdf_hamiltonian(nqubits, z_qubit=q, backend=self.backend)
+                for q in range(nqubits)
+            ]
         else:
             self.hamiltonian = [qpdf_hamiltonian(nqubits, backend=self.backend)]
 
@@ -75,9 +80,10 @@ class qPDF:
         Returns:
             A numpy array with the PDF values.
         """
-        if len(parameters) != self.nparams: # pragma: no cover
+        if len(parameters) != self.nparams:  # pragma: no cover
             raise_error(
-                RuntimeError, 'Mismatch between number of parameters and model size.')
+                RuntimeError, "Mismatch between number of parameters and model size."
+            )
         pdf = np.zeros(shape=(len(x), len(self.hamiltonian)))
         for i, x_value in enumerate(x):
             params = self.rotation(parameters, x_value)
@@ -130,7 +136,7 @@ def map_to(x):
 
 def maplog_to(x):
     """Auxiliary function"""
-    return - np.pi * np.log10(x)
+    return -np.pi * np.log10(x)
 
 
 def ansatz_Fourier(layers, qubits=1):
@@ -172,12 +178,12 @@ def ansatz_Fourier(layers, qubits=1):
         for l in range(layers - 1):
             for q in range(qubits):
                 p[i] = map_to(x)
-                p[i + 1: i + 3] = theta[j: j + 2]
+                p[i + 1 : i + 3] = theta[j : j + 2]
                 i += 3
                 j += 2
 
-                p[i] = .5 * maplog_to(x)
-                p[i + 1: i + 3] = theta[j: j + 2]
+                p[i] = 0.5 * maplog_to(x)
+                p[i + 1 : i + 3] = theta[j : j + 2]
                 i += 3
                 j += 2
             if qubits > 1:
@@ -191,20 +197,20 @@ def ansatz_Fourier(layers, qubits=1):
                     i += 1
                     j += 1
         for q in range(qubits):
-            p[i] = .5 * map_to(x)
-            p[i + 1: i + 3] = theta[j: j + 2]
+            p[i] = 0.5 * map_to(x)
+            p[i + 1 : i + 3] = theta[j : j + 2]
             i += 3
             j += 2
 
-            p[i] = .5 * maplog_to(x)
-            p[i + 1: i + 3] = theta[j: j + 2]
+            p[i] = 0.5 * maplog_to(x)
+            p[i + 1 : i + 3] = theta[j : j + 2]
             i += 3
             j += 2
         return p
 
-    nparams = 4 * layers * qubits + \
-        (layers - 1) * int(np.ceil(qubits / 2)) * \
-        (int(qubits > 1) + int(qubits > 2))
+    nparams = 4 * layers * qubits + (layers - 1) * int(np.ceil(qubits / 2)) * (
+        int(qubits > 1) + int(qubits > 2)
+    )
 
     return circuit, rotation, nparams
 
@@ -266,7 +272,7 @@ def ansatz_Weighted(layers, qubits=1):
 
         return p
 
-    nparams = 4 * layers * qubits + \
-        (layers - 1) * int(np.ceil(qubits / 2)) * \
-        (int(qubits > 1) + int(qubits > 2))
+    nparams = 4 * layers * qubits + (layers - 1) * int(np.ceil(qubits / 2)) * (
+        int(qubits > 1) + int(qubits > 2)
+    )
     return circuit, rotation, nparams

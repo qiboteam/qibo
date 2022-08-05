@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Test gates defined in `qibo/gates/gates.py`."""
 import pytest
 import numpy as np
@@ -13,11 +14,12 @@ def apply_gates(backend, gatelist, nqubits=None, initial_state=None):
         state = backend.cast(np.copy(initial_state))
         if nqubits is None:
             nqubits = int(np.log2(len(state)))
-        else: # pragma: no cover
+        else:  # pragma: no cover
             assert nqubits == int(np.log2(len(state)))
-    else: # pragma: no cover
-        raise_error(TypeError, "Invalid initial state type {}."
-                               "".format(type(initial_state)))
+    else:  # pragma: no cover
+        raise_error(
+            TypeError, "Invalid initial state type {}." "".format(type(initial_state))
+        )
 
     for gate in gatelist:
         state = backend.apply_gate(gate, state, nqubits)
@@ -59,22 +61,24 @@ def test_s(backend):
 
 
 def test_sdg(backend):
-    final_state = apply_gates(backend, [gates.H(0), gates.H(1), gates.SDG(1)], nqubits=2)
+    final_state = apply_gates(
+        backend, [gates.H(0), gates.H(1), gates.SDG(1)], nqubits=2
+    )
     target_state = np.array([0.5, -0.5j, 0.5, -0.5j])
     backend.assert_allclose(final_state, target_state)
 
 
 def test_t(backend):
     final_state = apply_gates(backend, [gates.H(0), gates.H(1), gates.T(1)], nqubits=2)
-    target_state = np.array([0.5, (1 + 1j) / np.sqrt(8),
-                             0.5, (1 + 1j) / np.sqrt(8)])
+    target_state = np.array([0.5, (1 + 1j) / np.sqrt(8), 0.5, (1 + 1j) / np.sqrt(8)])
     backend.assert_allclose(final_state, target_state)
 
 
 def test_tdg(backend):
-    final_state = apply_gates(backend, [gates.H(0), gates.H(1), gates.TDG(1)], nqubits=2)
-    target_state = np.array([0.5, (1 - 1j) / np.sqrt(8),
-                             0.5, (1 - 1j) / np.sqrt(8)])
+    final_state = apply_gates(
+        backend, [gates.H(0), gates.H(1), gates.TDG(1)], nqubits=2
+    )
+    target_state = np.array([0.5, (1 - 1j) / np.sqrt(8), 0.5, (1 - 1j) / np.sqrt(8)])
     backend.assert_allclose(final_state, target_state)
 
 
@@ -100,22 +104,25 @@ def test_align(backend):
 
 # :class:`qibo.core.cgates.M` is tested seperately in `test_measurement_gate.py`
 
+
 def test_rx(backend):
     theta = 0.1234
-    final_state = apply_gates(backend, [gates.H(0), gates.RX(0, theta=theta)], nqubits=1)
+    final_state = apply_gates(
+        backend, [gates.H(0), gates.RX(0, theta=theta)], nqubits=1
+    )
     phase = np.exp(1j * theta / 2.0)
-    gate = np.array([[phase.real, -1j * phase.imag],
-                    [-1j * phase.imag, phase.real]])
+    gate = np.array([[phase.real, -1j * phase.imag], [-1j * phase.imag, phase.real]])
     target_state = gate.dot(np.ones(2)) / np.sqrt(2)
     backend.assert_allclose(final_state, target_state)
 
 
 def test_ry(backend):
     theta = 0.1234
-    final_state = apply_gates(backend, [gates.H(0), gates.RY(0, theta=theta)], nqubits=1)
+    final_state = apply_gates(
+        backend, [gates.H(0), gates.RY(0, theta=theta)], nqubits=1
+    )
     phase = np.exp(1j * theta / 2.0)
-    gate = np.array([[phase.real, -phase.imag],
-                     [phase.imag, phase.real]])
+    gate = np.array([[phase.real, -phase.imag], [phase.imag, phase.real]])
     target_state = gate.dot(np.ones(2)) / np.sqrt(2)
     backend.assert_allclose(final_state, target_state)
 
@@ -147,9 +154,15 @@ def test_u2(backend):
     phi = 0.1234
     lam = 0.4321
     initial_state = random_state(1)
-    final_state = apply_gates(backend, [gates.U2(0, phi, lam)], initial_state=initial_state)
-    matrix = np.array([[np.exp(-1j * (phi + lam) / 2), -np.exp(-1j * (phi - lam) / 2)],
-                       [np.exp(1j * (phi - lam) / 2), np.exp(1j * (phi + lam) / 2)]])
+    final_state = apply_gates(
+        backend, [gates.U2(0, phi, lam)], initial_state=initial_state
+    )
+    matrix = np.array(
+        [
+            [np.exp(-1j * (phi + lam) / 2), -np.exp(-1j * (phi - lam) / 2)],
+            [np.exp(1j * (phi - lam) / 2), np.exp(1j * (phi + lam) / 2)],
+        ]
+    )
     target_state = matrix.dot(initial_state) / np.sqrt(2)
     backend.assert_allclose(final_state, target_state)
 
@@ -159,13 +172,13 @@ def test_u3(backend):
     phi = 0.1234
     lam = 0.4321
     initial_state = random_state(1)
-    final_state = apply_gates(backend, [gates.U3(0, theta, phi, lam)],
-                              initial_state=initial_state)
+    final_state = apply_gates(
+        backend, [gates.U3(0, theta, phi, lam)], initial_state=initial_state
+    )
     cost, sint = np.cos(theta / 2), np.sin(theta / 2)
     ep = np.exp(1j * (phi + lam) / 2)
     em = np.exp(1j * (phi - lam) / 2)
-    matrix = np.array([[ep.conj() * cost, - em.conj() * sint],
-                       [em * sint, ep * cost]])
+    matrix = np.array([[ep.conj() * cost, -em.conj() * sint], [em * sint, ep * cost]])
     target_state = matrix.dot(initial_state)
     backend.assert_allclose(final_state, target_state)
 
@@ -198,13 +211,17 @@ def test_cz(backend, controlled_by):
     backend.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("name,params",
-                         [("CRX", {"theta": 0.1}),
-                          ("CRY", {"theta": 0.2}),
-                          ("CRZ", {"theta": 0.3}),
-                          ("CU1", {"theta": 0.1}),
-                          ("CU2", {"phi": 0.1, "lam": 0.2}),
-                          ("CU3", {"theta": 0.1, "phi": 0.2, "lam": 0.3})])
+@pytest.mark.parametrize(
+    "name,params",
+    [
+        ("CRX", {"theta": 0.1}),
+        ("CRY", {"theta": 0.2}),
+        ("CRZ", {"theta": 0.3}),
+        ("CU1", {"theta": 0.1}),
+        ("CU2", {"phi": 0.1, "lam": 0.2}),
+        ("CU3", {"theta": 0.1, "phi": 0.2, "lam": 0.3}),
+    ],
+)
 def test_cun(backend, name, params):
     initial_state = random_state(2)
     gate = getattr(gates, name)(0, 1, **params)
@@ -221,7 +238,9 @@ def test_swap(backend):
 
 
 def test_fswap(backend):
-    final_state = apply_gates(backend, [gates.H(0), gates.X(1), gates.FSWAP(0, 1)], nqubits=2)
+    final_state = apply_gates(
+        backend, [gates.H(0), gates.X(1), gates.FSWAP(0, 1)], nqubits=2
+    )
     target_state = np.zeros_like(final_state)
     target_state[2] = 1.0 / np.sqrt(2)
     target_state[3] = -1.0 / np.sqrt(2)
@@ -242,8 +261,9 @@ def test_fsim(backend):
     gatelist = [gates.H(0), gates.H(1), gates.fSim(0, 1, theta, phi)]
     final_state = apply_gates(backend, gatelist, nqubits=2)
     target_state = np.ones_like(final_state) / 2.0
-    rotation = np.array([[np.cos(theta), -1j * np.sin(theta)],
-                         [-1j * np.sin(theta), np.cos(theta)]])
+    rotation = np.array(
+        [[np.cos(theta), -1j * np.sin(theta)], [-1j * np.sin(theta), np.cos(theta)]]
+    )
     matrix = np.eye(4, dtype=target_state.dtype)
     matrix[1:3, 1:3] = rotation
     matrix[3, 3] = np.exp(-1j * phi)
@@ -294,7 +314,7 @@ def test_toffoli(backend, applyx):
 
 @pytest.mark.parametrize("nqubits", [2, 3])
 def test_unitary(backend, nqubits):
-    initial_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
+    initial_state = np.ones(2**nqubits) / np.sqrt(2**nqubits)
     matrix = np.random.random(2 * (2 ** (nqubits - 1),))
     target_state = np.kron(np.eye(2), matrix).dot(initial_state)
     gatelist = [gates.H(i) for i in range(nqubits)]
@@ -311,24 +331,32 @@ def test_unitary_initialization(backend):
 
 def test_unitary_common_gates(backend):
     target_state = apply_gates(backend, [gates.X(0), gates.H(1)], nqubits=2)
-    gatelist = [gates.Unitary(np.array([[0, 1], [1, 0]]), 0),
-                gates.Unitary(np.array([[1, 1], [1, -1]]) / np.sqrt(2), 1)]
+    gatelist = [
+        gates.Unitary(np.array([[0, 1], [1, 0]]), 0),
+        gates.Unitary(np.array([[1, 1], [1, -1]]) / np.sqrt(2), 1),
+    ]
     final_state = apply_gates(backend, gatelist, nqubits=2)
     backend.assert_allclose(final_state, target_state)
 
     thetax = 0.1234
     thetay = 0.4321
-    gatelist = [gates.RX(0, theta=thetax), gates.RY(1, theta=thetay),
-                gates.CNOT(0, 1)]
+    gatelist = [gates.RX(0, theta=thetax), gates.RY(1, theta=thetay), gates.CNOT(0, 1)]
     target_state = apply_gates(backend, gatelist, nqubits=2)
 
-    rx = np.array([[np.cos(thetax / 2), -1j * np.sin(thetax / 2)],
-                   [-1j * np.sin(thetax / 2), np.cos(thetax / 2)]])
-    ry = np.array([[np.cos(thetay / 2), -np.sin(thetay / 2)],
-                   [np.sin(thetay / 2), np.cos(thetay / 2)]])
+    rx = np.array(
+        [
+            [np.cos(thetax / 2), -1j * np.sin(thetax / 2)],
+            [-1j * np.sin(thetax / 2), np.cos(thetax / 2)],
+        ]
+    )
+    ry = np.array(
+        [
+            [np.cos(thetay / 2), -np.sin(thetay / 2)],
+            [np.sin(thetay / 2), np.cos(thetay / 2)],
+        ]
+    )
     cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
-    gatelist = [gates.Unitary(rx, 0), gates.Unitary(ry, 1),
-                gates.Unitary(cnot, 0, 1)]
+    gatelist = [gates.Unitary(rx, 0), gates.Unitary(ry, 1), gates.Unitary(cnot, 0, 1)]
     final_state = apply_gates(backend, gatelist, nqubits=2)
     backend.assert_allclose(final_state, target_state)
 
@@ -353,10 +381,16 @@ def test_unitary_multiqubit(backend):
 
 ############################# Test ``controlled_by`` #############################
 
+
 def test_controlled_x(backend):
-    gatelist = [gates.X(0), gates.X(1), gates.X(2),
-                gates.X(3).controlled_by(0, 1, 2),
-                gates.X(0), gates.X(2)]
+    gatelist = [
+        gates.X(0),
+        gates.X(1),
+        gates.X(2),
+        gates.X(3).controlled_by(0, 1, 2),
+        gates.X(0),
+        gates.X(2),
+    ]
     final_state = apply_gates(backend, gatelist, nqubits=4)
     gatelist = [gates.X(1), gates.X(3)]
     target_state = apply_gates(backend, gatelist, nqubits=4)
@@ -418,8 +452,7 @@ def test_controlled_u2(backend):
     gatelist.append(gates.U2(2, phi, lam).controlled_by(0, 1))
     gatelist.extend([gates.X(0), gates.X(1)])
     final_state = apply_gates(backend, gatelist, nqubits=3)
-    gatelist = [gates.X(0), gates.X(1), gates.U2(2, phi, lam),
-                gates.X(0), gates.X(1)]
+    gatelist = [gates.X(0), gates.X(1), gates.U2(2, phi, lam), gates.X(0), gates.X(1)]
     target_state = apply_gates(backend, gatelist, nqubits=3)
     backend.assert_allclose(final_state, target_state)
     # for coverage
@@ -430,8 +463,12 @@ def test_controlled_u2(backend):
 def test_controlled_u3(backend):
     theta, phi, lam = 0.1, 0.1234, 0.4321
     initial_state = random_state(2)
-    final_state = apply_gates(backend, [gates.U3(1, theta, phi, lam).controlled_by(0)], 2, initial_state)
-    target_state = apply_gates(backend, [gates.CU3(0, 1, theta, phi, lam)], 2, initial_state)
+    final_state = apply_gates(
+        backend, [gates.U3(1, theta, phi, lam).controlled_by(0)], 2, initial_state
+    )
+    target_state = apply_gates(
+        backend, [gates.CU3(0, 1, theta, phi, lam)], 2, initial_state
+    )
     backend.assert_allclose(final_state, target_state)
     # for coverage
     gate = gates.U3(0, theta, phi, lam)
@@ -445,8 +482,13 @@ def test_controlled_swap(backend, applyx, free_qubit):
     gatelist = []
     if applyx:
         gatelist.append(gates.X(0))
-    gatelist.extend([gates.RX(1 + f, theta=0.1234), gates.RY(2 + f, theta=0.4321),
-                     gates.SWAP(1 + f, 2 + f).controlled_by(0)])
+    gatelist.extend(
+        [
+            gates.RX(1 + f, theta=0.1234),
+            gates.RY(2 + f, theta=0.4321),
+            gates.SWAP(1 + f, 2 + f).controlled_by(0),
+        ]
+    )
     final_state = apply_gates(backend, gatelist, 3 + f)
     gatelist = [gates.RX(1 + f, theta=0.1234), gates.RY(2 + f, theta=0.4321)]
     if applyx:
@@ -479,9 +521,10 @@ def test_controlled_fsim(backend):
     gatelist.append(gates.fSim(5, 3, theta, phi).controlled_by(0, 2, 1))
     final_state = apply_gates(backend, gatelist, 6)
 
-    target_state = np.ones_like(final_state) / np.sqrt(2 ** 6)
-    rotation = np.array([[np.cos(theta), -1j * np.sin(theta)],
-                         [-1j * np.sin(theta), np.cos(theta)]])
+    target_state = np.ones_like(final_state) / np.sqrt(2**6)
+    rotation = np.array(
+        [[np.cos(theta), -1j * np.sin(theta)], [-1j * np.sin(theta), np.cos(theta)]]
+    )
     matrix = np.eye(4, dtype=target_state.dtype)
     matrix[1:3, 1:3] = rotation
     matrix[3, 3] = np.exp(-1j * phi)
@@ -494,8 +537,7 @@ def test_controlled_fsim(backend):
 
 def test_controlled_unitary(backend):
     matrix = np.random.random((2, 2))
-    gatelist = [gates.H(0), gates.H(1),
-                gates.Unitary(matrix, 1).controlled_by(0)]
+    gatelist = [gates.H(0), gates.H(1), gates.Unitary(matrix, 1).controlled_by(0)]
     final_state = apply_gates(backend, gatelist, 2)
     target_state = np.ones_like(final_state) / 2.0
     target_state[2:] = matrix.dot(target_state[2:])
@@ -519,6 +561,7 @@ def test_controlled_unitary_matrix(backend):
     u = backend.control_matrix(gate)
     final_state = np.dot(u, initial_state)
     backend.assert_allclose(final_state, target_state)
+
 
 ###############################################################################
 
@@ -544,8 +587,10 @@ GATES = [
     ("CU1", (0, 1, 0.1)),
     ("CU2", (0, 1, 0.2, 0.3)),
     ("CU3", (0, 1, 0.1, 0.2, 0.3)),
-    ("fSim", (0, 1, 0.1, 0.2))
+    ("fSim", (0, 1, 0.1, 0.2)),
 ]
+
+
 @pytest.mark.parametrize("gate,args", GATES)
 def test_dagger(backend, gate, args):
     gate = getattr(gates, gate)(*args)
@@ -565,8 +610,10 @@ GATES = [
     ("TDG", (3,)),
     ("RX", (3, 0.1)),
     ("U1", (3, 0.1)),
-    ("U3", (3, 0.1, 0.2, 0.3))
+    ("U3", (3, 0.1, 0.2, 0.3)),
 ]
+
+
 @pytest.mark.parametrize("gate,args", GATES)
 def test_controlled_dagger(backend, gate, args):
     gate = getattr(gates, gate)(*args).controlled_by(0, 1, 2)
@@ -587,7 +634,7 @@ def test_dagger_consistency(backend, gate_1, gate_2, qubit):
 
 @pytest.mark.parametrize("nqubits", [1, 2])
 def test_unitary_dagger(backend, nqubits):
-    matrix = np.random.random((2 ** nqubits, 2 ** nqubits))
+    matrix = np.random.random((2**nqubits, 2**nqubits))
     gate = gates.Unitary(matrix, *range(nqubits))
     initial_state = random_state(nqubits)
     final_state = apply_gates(backend, [gate, gate.dagger()], nqubits, initial_state)
@@ -598,6 +645,7 @@ def test_unitary_dagger(backend, nqubits):
 
 def test_controlled_unitary_dagger(backend):
     from scipy.linalg import expm
+
     matrix = np.random.random((2, 2))
     matrix = expm(1j * (matrix + matrix.T))
     gate = gates.Unitary(matrix, 0).controlled_by(1, 2, 3, 4)
@@ -608,6 +656,7 @@ def test_controlled_unitary_dagger(backend):
 
 def test_generalizedfsim_dagger(backend):
     from scipy.linalg import expm
+
     phi = 0.2
     matrix = np.random.random((2, 2))
     matrix = expm(1j * (matrix + matrix.T))
@@ -616,16 +665,23 @@ def test_generalizedfsim_dagger(backend):
     final_state = apply_gates(backend, [gate, gate.dagger()], 2, initial_state)
     backend.assert_allclose(final_state, initial_state)
 
+
 ###############################################################################
 
 ########################### Test gate decomposition ###########################
 
-@pytest.mark.parametrize(("target", "controls", "free"),
-                         [(0, (1,), ()), (2, (0, 1), ()),
-                          (3, (0, 1, 4), (2, 5)),
-                          (7, (0, 1, 2, 3, 4), (5, 6)),
-                          (5, (0, 2, 4, 6, 7), (1, 3)),
-                          (8, (0, 2, 4, 6, 9), (3, 5, 7))])
+
+@pytest.mark.parametrize(
+    ("target", "controls", "free"),
+    [
+        (0, (1,), ()),
+        (2, (0, 1), ()),
+        (3, (0, 1, 4), (2, 5)),
+        (7, (0, 1, 2, 3, 4), (5, 6)),
+        (5, (0, 2, 4, 6, 7), (1, 3)),
+        (8, (0, 2, 4, 6, 9), (3, 5, 7)),
+    ],
+)
 @pytest.mark.parametrize("use_toffolis", [True, False])
 def test_x_decomposition_execution(backend, target, controls, free, use_toffolis):
     """Check that applying the decomposition is equivalent to applying the multi-control gate."""
@@ -638,5 +694,6 @@ def test_x_decomposition_execution(backend, target, controls, free, use_toffolis
     for gate in dgates:
         final_state = backend.apply_gate(gate, final_state, nqubits)
     backend.assert_allclose(final_state, target_state, atol=1e-6)
+
 
 ###############################################################################

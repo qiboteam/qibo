@@ -42,7 +42,7 @@ This small example is designed to be an early test for small quantum devices, in
 
 ## How to run the example?
 
-Run the `main.py` file from the console in order to perform the minimization. 
+Run the `main.py` file from the console in order to perform the minimization.
 
 By modifying the flag `--nshots` one can control the number of samples to take for each quantum circuit. The more samples taken the more costly is the algorithm but the smoother the cost function is in order for the minimization to find the global minima.
 
