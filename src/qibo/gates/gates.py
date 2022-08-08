@@ -1079,9 +1079,8 @@ class _Rnn_(ParametrizedGate):
 
     def _dagger(self) -> "Gate":
         """"""
-        return self.__class__(
-            self.target_qubits[0], -self.parameters[0]
-        )  # pylint: disable=E1130
+        q0, q1 = self.target_qubits
+        return self.__class__(q0, q1, -self.parameters[0])  # pylint: disable=E1130
 
 
 class RXX(_Rnn_):
