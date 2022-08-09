@@ -19,6 +19,9 @@ QASM_GATES = {
     "cx": "CNOT",
     "swap": "SWAP",
     "fswap": "FSWAP",
+    "rxx": "RXX",
+    "ryy": "RYY",
+    "rzz": "RZZ",
     "cz": "CZ",
     "crx": "CRX",
     "cry": "CRY",
@@ -36,6 +39,9 @@ PARAMETRIZED_GATES = {
     "rx",
     "ry",
     "rz",
+    "rxx",
+    "ryy",
+    "rzz",
     "u1",
     "u2",
     "u3",
@@ -1047,6 +1053,116 @@ class GeneralizedfSim(ParametrizedGate):
                 "Invalid rotation shape {} for generalized " "fSim gate".format(shape),
             )
         ParametrizedGate.parameters.fset(self, x)  # pylint: disable=no-member
+
+
+class _Rnn_(ParametrizedGate):
+    """Abstract class for defining the RXX, RYY and RZZ rotations.
+
+    Args:
+        q0 (int): the first entangled qubit id number.
+        q1 (int): the second entangled qubit id number.
+        theta (float): the rotation angle.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`
+            (default is ``True``).
+    """
+
+    def __init__(self, q0, q1, theta, trainable=True):
+        super().__init__(trainable)
+        self.name = None
+        self._controlled_gate = None
+        self.target_qubits = (q0, q1)
+
+        self.parameters = theta
+        self.init_args = [q0, q1]
+        self.init_kwargs = {"theta": theta, "trainable": trainable}
+
+    def _dagger(self) -> "Gate":
+        """"""
+        q0, q1 = self.target_qubits
+        return self.__class__(q0, q1, -self.parameters[0])  # pylint: disable=E1130
+
+
+class RXX(_Rnn_):
+    """Parametric 2-qubit X \\otimes X interaction, or rotation about XX.
+
+    This is a symmetric gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        \\cos \\frac{\\theta }{2} & 0 & 0 & -i\\sin \\frac{\\theta }{2} \\\\
+        0 & \\cos \\frac{\\theta }{2} & -i\\sin \\frac{\\theta }{2} & 0 \\\\
+        0 & -i\\sin \\frac{\\theta }{2} & \\cos \\frac{\\theta }{2} & 0 \\\\
+        -i\\sin \\frac{\\theta }{2} & 0 & 0 & \\cos \\frac{\\theta }{2} \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the first entangled qubit id number.
+        q1 (int): the second entangled qubit id number.
+        theta (float): the rotation angle.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`
+            (default is ``True``).
+    """
+
+    def __init__(self, q0, q1, theta, trainable=True):
+        super().__init__(q0, q1, theta, trainable)
+        self.name = "rxx"
+
+
+class RYY(_Rnn_):
+    """Parametric 2-qubit Y \\otimes Y interaction, or rotation about YY.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        \\cos \\frac{\\theta }{2} & 0 & 0 & i\\sin \\frac{\\theta }{2} \\\\
+        0 & \\cos \\frac{\\theta }{2} & -i\\sin \\frac{\\theta }{2} & 0 \\\\
+        0 & -i\\sin \\frac{\\theta }{2} & \\cos \\frac{\\theta }{2} & 0 \\\\
+        i\\sin \\frac{\\theta }{2} & 0 & 0 & \\cos \\frac{\\theta }{2} \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the first entangled qubit id number.
+        q1 (int): the second entangled qubit id number.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.Circuit.set_parameters`
+            (default is ``True``).
+    """
+
+    def __init__(self, q0, q1, theta, trainable=True):
+        super().__init__(q0, q1, theta, trainable)
+        self.name = "ryy"
+
+
+class RZZ(_Rnn_):
+    """Parametric 2-qubit Z \\otimes Z interaction, or rotation about ZZ.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        e^{-i \\theta / 2} & 0 & 0 & 0 \\\\
+        0 & e^{i \\theta / 2} & 0 & 0 \\\\
+        0 & 0 & e^{i \\theta / 2} & 0 \\\\
+        0 & 0 & 0 & e^{-i \\theta / 2} \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the first entangled qubit id number.
+        q1 (int): the second entangled qubit id number.
+        theta (float): the rotation angle.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.Circuit.set_parameters`
+            (default is ``True``).
+    """
+
+    def __init__(self, q0, q1, theta, trainable=True):
+        super().__init__(q0, q1, theta, trainable)
+        self.name = "rzz"
 
 
 class TOFFOLI(Gate):
