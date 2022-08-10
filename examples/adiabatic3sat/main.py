@@ -1,12 +1,14 @@
 #!/usr/bin/env python
-import numpy as np
-from qibo import hamiltonians, models, callbacks, K
-import functions
+# -*- coding: utf-8 -*-
 import argparse
 
+import functions
+import numpy as np
 
-def main(nqubits, instance, T, dt, solver, plot, dense, params,
-         method, maxiter):
+from qibo import callbacks, hamiltonians, models
+
+
+def main(nqubits, instance, T, dt, solver, plot, dense, params, method, maxiter):
     """Adiabatic evoluition to find the solution of an exact cover instance.
 
     Args:
@@ -36,23 +38,24 @@ def main(nqubits, instance, T, dt, solver, plot, dense, params,
     times = functions.times(nqubits, clauses)
     sh0 = functions.h_initial(nqubits, times)
     sh1 = functions.h_problem(nqubits, clauses)
-    gs = lambda: functions.ground_state(nqubits)
-    H0 = hamiltonians.SymbolicHamiltonian(sh0, ground_state=gs)
+    H0 = hamiltonians.SymbolicHamiltonian(sh0)
     H1 = hamiltonians.SymbolicHamiltonian(sh1)
     if dense:
-        print('Using the full Hamiltonian evolution\n')
+        print("Using the full Hamiltonian evolution\n")
         H0, H1 = H0.dense, H1.dense
     else:
-        print('Using Trotter decomposition for the Hamiltonian\n')
+        print("Using Trotter decomposition for the Hamiltonian\n")
 
-    print('-'*20+'\n')
+    print("-" * 20 + "\n")
     if plot and nqubits >= 14:
-        print('Currently not possible to calculate gap energy for {} qubits.'
-              '\n Proceeding to adiabatic evolution without plotting data.\n'
-              ''.format(nqubits))
+        print(
+            "Currently not possible to calculate gap energy for {} qubits."
+            "\n Proceeding to adiabatic evolution without plotting data.\n"
+            "".format(nqubits)
+        )
         plot = False
     if plot and method is not None:
-        print('Not possible to calculate gap energy during optimization.')
+        print("Not possible to calculate gap energy during optimization.")
         plot = False
 
     # Define scheduling according to given params
@@ -70,13 +73,14 @@ def main(nqubits, instance, T, dt, solver, plot, dense, params,
         ground = callbacks.Gap(0)
         excited = callbacks.Gap(1)
         gap = callbacks.Gap()
-        evolve = models.AdiabaticEvolution(H0, H1, s, dt, solver=solver,
-                                           callbacks=[gap, ground, excited])
+        evolve = models.AdiabaticEvolution(
+            H0, H1, s, dt, solver=solver, callbacks=[gap, ground, excited]
+        )
     else:
         evolve = models.AdiabaticEvolution(H0, H1, s, dt, solver=solver)
 
     if method is not None:
-        print(f'Optimizing scheduling using {method}.\n')
+        print(f"Optimizing scheduling using {method}.\n")
         if params is None:
             params = [T]
         else:
@@ -85,28 +89,29 @@ def main(nqubits, instance, T, dt, solver, plot, dense, params,
             options = {"nepochs": maxiter}
         else:
             options = {"maxiter": maxiter, "disp": True}
-        energy, params, _ = evolve.minimize(params, method=method,
-                                            options=options)
+        energy, params, _ = evolve.minimize(params, method=method, options=options)
         T = params[-1]
 
     # Perform evolution
-    initial_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
+    initial_state = np.ones(2**nqubits) / np.sqrt(2**nqubits)
     final_state = evolve(final_time=T, initial_state=initial_state)
-    output_dec = (np.abs(K.to_numpy(final_state))**2).argmax()
-    max_output = "{0:0{bits}b}".format(output_dec, bits = nqubits)
-    max_prob = (np.abs(K.to_numpy(final_state))**2).max()
+    output_dec = (np.abs(final_state) ** 2).argmax()
+    max_output = "{0:0{bits}b}".format(output_dec, bits=nqubits)
+    max_prob = (np.abs(final_state) ** 2).max()
     print("Exact cover instance with {} qubits.\n".format(nqubits))
     if solution:
-        print('Known solution: {}\n'.format(''.join(solution)))
-    print('-'*20+'\n')
-    print(f'Adiabatic evolution with total time {T}, evolution step {dt} and '
-          f'solver {solver}.\n')
-    print(f'Most common solution after adiabatic evolution: {max_output}.\n')
-    print(f'Found with probability: {max_prob}.\n')
+        print("Known solution: {}\n".format("".join(solution)))
+    print("-" * 20 + "\n")
+    print(
+        f"Adiabatic evolution with total time {T}, evolution step {dt} and "
+        f"solver {solver}.\n"
+    )
+    print(f"Most common solution after adiabatic evolution: {max_output}.\n")
+    print(f"Found with probability: {max_prob}.\n")
     if plot:
-        print('-'*20+'\n')
+        print("-" * 20 + "\n")
         functions.plot(nqubits, ground[:], excited[:], gap[:], dt, T)
-        print('Plots finished.\n')
+        print("Plots finished.\n")
 
 
 if __name__ == "__main__":

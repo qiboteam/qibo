@@ -16,18 +16,9 @@ in order to maximize performance for the available hardware configuration.
 Switching between CPU and GPU
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-If a GPU with CUDA support is available in the system and Tensorflow is installed
-for CUDA then circuits will be executed on the GPU automatically unless the user
-specifies otherwise. In order to force the device a circuit will be executed
-one can use:
-
-.. code-block::  python
-
-    with tf.device("/CPU:0"):
-        # execute circuit on CPU with default initial state |000...0>.
-        final_state = c()
-
-or switch the default Qibo device using ``qibo.set_device`` as:
+If a GPU with CUDA support is available in the system and tensorflow or qibojit (cupy)
+are installed then circuits will be executed on the GPU automatically unless the user
+specifies otherwise. One can change the default simulation device using ``qibo.set_device``:
 
 .. code-block::  python
 
@@ -41,8 +32,7 @@ distinguishes multiple devices of the same type starting from 0. For more detail
 we refer to `Tensorflow's tutorial <https://www.tensorflow.org/guide/gpu#manual_device_placement>`_
 on manual device placement.
 Alternatively, running the command ``CUDA_VISIBLE_DEVICES=""`` in a terminal
-hides GPUs from tensorflow. As a result, any program executed from the same
-terminal will run on CPU even if ``tf.device`` is not used.
+hides CUDA GPUs from this terminal session.
 
 In most cases the GPU accelerates execution compared to CPU, however the
 following limitations should be noted:
@@ -65,8 +55,8 @@ raised prompting the user to switch the default device using ``qibo.set_device``
 Setting the number of CPU threads
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Qibo by default uses the ``qibojit`` or ``qibotf`` backends which are based on
-custom operators. These backends uses OpenMP instructions for parallelization.
+Qibo by default uses the ``qibojit`` backend which is based on
+custom operators. This backend uses OpenMP instructions for parallelization.
 In most cases, utilizing all available CPU threads provides better performance.
 However, for small circuits the parallelization overhead may decrease
 performance making single thread execution preferrable.
@@ -100,7 +90,7 @@ Tensorflow allows restricting the number of threads as follows:
     import qibo
 
 Note that this should be run during Tensorflow initialization in the beginning
-of the script and before any circuit or gate allocation.
+of the script and before creating the qibo backend.
 
 Using multiple GPUs
 ^^^^^^^^^^^^^^^^^^^
@@ -141,16 +131,8 @@ bottleneck. However for more than 30 qubits (which do not fit in single GPU) and
 specific applications (such as the QFT) the multi-GPU scheme can be faster than
 using only CPU.
 
-For more details in the distributed implementation one can look in the related
-code: :class:`qibo.core.distcircuit.DistributedCircuit`. When
-``models.Circuit`` is called then this distributed implementation is used automatically
-if the ``accelerators`` dictionary is passed, otherwise the standard single device
-:class:`qibo.core.circuit.Circuit` is used.
-
-Note that executing a:class:`qibo.core.distcircuit.DistributedCircuit`
-will return a :class:`qibo.core.distutils.DistributedState` which holds
-the state vector partitioned in multiple pieces which are distributed to the
-different devices during the simulation.
+Note that simulating a circuit using multiple GPUs partitions the state in
+multiple pieces which are distributed to the different devices.
 Creating the full state as a single tensor would require merging
 these pieces and using twice as much memory. This is disabled by default,
 however the user may create the full state as follows:
@@ -175,19 +157,14 @@ however the user may create the full state as follows:
     # ``final_state`` is a ``tf.Tensor``
 
 
-Note that indexing a class:`qibo.core.distutils.DistributedState` uses
-the state pieces without requiring to merge and create the single state vector
-tensor.
-
-
 How to use callbacks?
 ---------------------
 
 Callbacks allow the user to apply additional functions on the state vector
 during circuit execution. An example use case of this is the calculation of
 entanglement entropy as the state propagates through a circuit. This can be
-implemented easily using :class:`qibo.abstractions.callbacks.EntanglementEntropy`
-and the :class:`qibo.abstractions.gates.CallbackGate` gate. For example:
+implemented easily using :class:`qibo.callbacks.EntanglementEntropy`
+and the :class:`qibo.gates.CallbackGate` gate. For example:
 
 .. testcode::
 
@@ -208,7 +185,7 @@ and the :class:`qibo.abstractions.gates.CallbackGate` gate. For example:
     final_state = c()
 
 The results can be accessed using indexing on the callback objects. In this
-example ``entropy[:]`` will return ``tf.Tensor([0, 0, 1])`` which are the
+example ``entropy[:]`` will return ``[0, 0, 1]`` which are the
 values of entropy after every gate in the circuit.
 
 The same callback object can be used in a second execution of this or a different
@@ -241,7 +218,7 @@ circuit. For example
     final_state = c()
 
     # print result
-    print(entropy[:]) # tf.Tensor([0, 0, 1, 0, 0, 1])
+    print(entropy[:]) # [0, 0, 1, 0, 0, 1]
 .. testoutput::
     :hide:
 
@@ -250,26 +227,6 @@ circuit. For example
 The callback for entanglement entropy can also be used on state vectors directly.
 For example
 
-.. testcode::
-
-    import numpy as np
-    from qibo import callbacks
-    # import the backend to access math ops directly
-    from qibo import K
-    # create a singlet state vector
-    state = K.zeros(4)
-    state[0], state[3] = 1 / K.sqrt(2), 1 / K.sqrt(2)
-
-    # create an `EntanglementEntropy` callback object
-    entropy = callbacks.EntanglementEntropy([0])
-    # call the object on the state
-    print(entropy(state))
-.. testoutput::
-    :hide:
-
-    ...
-
-will print ``tf.Tensor(1.0)``.
 
 .. _params-examples:
 
@@ -278,7 +235,7 @@ How to use parametrized gates?
 
 Some Qibo gates such as rotations accept values for their free parameter. Once
 such gates are added in a circuit their parameters can be updated using the
-:meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters` method. For example:
+:meth:`qibo.models.circuit.Circuit.set_parameters` method. For example:
 
 .. testcode::
 
@@ -332,45 +289,23 @@ keys should be all the parametrized gates in the circuit.
 The following gates support parameter setting:
 
 * ``RX``, ``RY``, ``RZ``, ``U1``, ``CU1``: Accept a single ``theta`` parameter.
-* :class:`qibo.abstractions.gates.fSim`: Accepts a tuple of two parameters ``(theta, phi)``.
-* :class:`qibo.abstractions.gates.GeneralizedfSim`: Accepts a tuple of two parameters
+* :class:`qibo.gates.fSim`: Accepts a tuple of two parameters ``(theta, phi)``.
+* :class:`qibo.gates.GeneralizedfSim`: Accepts a tuple of two parameters
   ``(unitary, phi)``. Here ``unitary`` should be a unitary matrix given as an
   array or ``tf.Tensor`` of shape ``(2, 2)``.
-* :class:`qibo.abstractions.gates.Unitary`: Accepts a single ``unitary`` parameter. This
+* :class:`qibo.gates.Unitary`: Accepts a single ``unitary`` parameter. This
   should be an array or ``tf.Tensor`` of shape ``(2, 2)``.
-* :class:`qibo.abstractions.gates.VariationalLayer`: Accepts a list of ``float``
-  parameters with length compatible to the number of one qubit rotations implemented
-  by the layer, for example:
-
-.. testcode::
-
-    import numpy as np
-    from qibo.models import Circuit
-    from qibo import gates
-
-    nqubits = 5
-    c = Circuit(nqubits)
-    pairs = [(i, i + 1) for i in range(0, 4, 2)]
-    c.add(gates.VariationalLayer(range(nqubits), pairs,
-                                 gates.RY, gates.CZ,
-                                 params=np.zeros(5)))
-    c.add((gates.RX(i, theta=0) for i in range(5)))
-
-    # set random parameters to all rotations in the circuit
-    c.set_parameters(np.random.random(10))
-    # note that 10 numbers are used as the VariationalLayer contains five
-    # rotations and five additional RX rotations are added afterwards.
 
 Note that a ``np.ndarray`` or a ``tf.Tensor`` may also be used in the place of
-a flat list. Using :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters` is more
+a flat list. Using :meth:`qibo.models.circuit.Circuit.set_parameters` is more
 efficient than recreating a new circuit with new parameter values. The inverse
-method :meth:`qibo.abstractions.circuit.AbstractCircuit.get_parameters` is also available
+method :meth:`qibo.models.circuit.Circuit.get_parameters` is also available
 and returns a list, dictionary or flat list with the current parameter values
 of all parametrized gates in the circuit.
 
 It is possible to hide a parametrized gate from the action of
-:meth:`qibo.abstractions.circuit.AbstractCircuit.get_parameters` and
-:meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters` by setting
+:meth:`qibo.models.circuit.Circuit.get_parameters` and
+:meth:`qibo.models.circuit.Circuit.set_parameters` by setting
 the ``trainable=False`` during gate creation. For example:
 
 .. testsetup::
@@ -386,11 +321,11 @@ the ``trainable=False`` during gate creation. For example:
     c.add(gates.fSim(0, 2, theta=0.789, phi=0.567))
 
     print(c.get_parameters())
-    # prints [0.123, (0.789, 0.567)] ignoring the parameters of the RY gate
+    # prints [(0.123,), (0.789, 0.567)] ignoring the parameters of the RY gate
 
 .. testoutput::
 
-    [0.123, (0.789, 0.567)]
+    [(0.123,), (0.789, 0.567)]
 
 
 This is useful when the user wants to freeze the parameters of specific
@@ -411,7 +346,7 @@ Collapsing the state means projecting to the ``|0>`` or ``|1>`` subspace accordi
 the sampled result for each measured qubit.
 
 The state is collapsed when the ``collapse=True`` is used during instantiation
-of the :class:`qibo.abstractions.gates.M` gate. For example
+of the :class:`qibo.gates.M` gate. For example
 
 .. testcode::
 
@@ -423,7 +358,7 @@ of the :class:`qibo.abstractions.gates.M` gate. For example
     output = c.add(gates.M(0, collapse=True))
     c.add(gates.H(0))
     result = c()
-    print(result.state())
+    print(result)
     # prints [0.7071, 0.7071] if 0 is measured
     # or [0.7071, -0.7071] if 1 is measured
 .. testoutput::
@@ -533,7 +468,7 @@ How to invert a circuit?
 
 Many quantum algorithms require using a specific subroutine and its inverse
 in the same circuit. Qibo simplifies this implementation via the
-:meth:`qibo.abstractions.circuit.AbstractCircuit.invert` method. This method produces
+:meth:`qibo.models.circuit.Circuit.invert` method. This method produces
 the inverse of a circuit by taking the dagger of all gates in reverse order. It
 can be used with circuit addition to simplify the construction of algorithms,
 for example:
@@ -558,7 +493,7 @@ for example:
 
 Note that circuit addition works only between circuits that act on the same number
 of qubits. It is often useful to add subroutines only on a subset of qubits of the
-large circuit. This is possible using the :meth:`qibo.abstractions.circuit.AbstractCircuit.on_qubits`
+large circuit. This is possible using the :meth:`qibo.models.circuit.Circuit.on_qubits`
 method. For example:
 
 .. testcode::
@@ -631,29 +566,28 @@ To switch the backend one can do ``qibo.set_backend("tensorflow")``.
 Check the :ref:`How to use automatic differentiation? <autodiff-example>`
 section for more details.
 
-A useful gate for defining the ansatz of the VQE is :class:`qibo.abstractions.gates.VariationalLayer`.
+When using a VQE with more than 12 qubits, it may be useful to fuse the circit implementing
+the ansatz using :meth:`qibo.models.Circuit.fuse`.
 This optimizes performance by fusing the layer of one-qubit parametrized gates with
 the layer of two-qubit entangling gates and applying both as a single layer of
-general two-qubit gates (as 4x4 matrices). The ansatz from the above example can
-be written using :class:`qibo.abstractions.gates.VariationalLayer` as follows:
+general two-qubit gates (as 4x4 matrices).
 
 .. testsetup::
-    
+
     import numpy as np
     from qibo import models, gates, hamiltonians
 
 .. testcode::
 
     circuit = models.Circuit(nqubits)
-    pairs = [(i, i + 1) for i in range(0, nqubits - 1, 2)]
-    theta = np.zeros(nqubits)
     for l in range(nlayers):
-        circuit.add(gates.VariationalLayer(range(nqubits), pairs,
-                                           gates.RY, gates.CZ,
-                                           theta, theta))
-        circuit.add((gates.CZ(i, i + 1) for i in range(1, nqubits - 2, 2)))
-        circuit.add(gates.CZ(0, nqubits - 1))
-    circuit.add((gates.RY(i, theta) for i in range(nqubits)))
+        circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
+        circuit.add((gates.CZ(q, q+1) for q in range(0, nqubits-1, 2)))
+        circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
+        circuit.add((gates.CZ(q, q+1) for q in range(1, nqubits-2, 2)))
+        circuit.add(gates.CZ(0, nqubits-1))
+    circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
+    circuit = circuit.fuse()
 
 .. _vqc-example:
 
@@ -675,7 +609,7 @@ Here is a simple example using a custom loss function:
     # custom loss function, computes fidelity
     def myloss(parameters, circuit, target):
         circuit.set_parameters(parameters)
-        final_state = circuit().numpy()
+        final_state = circuit().state(numpy=True)
         return 1 - np.abs(np.conj(target).dot(final_state))
 
     nqubits = 6
@@ -711,7 +645,7 @@ The quantum approximate optimization algorithm (QAOA) was introduced in
 `arXiv:1411.4028 <https://arxiv.org/abs/1411.4028>`_ and is a prominent
 algorithm for solving hard optimization problems using the circuit-based model
 of quantum computation. Qibo provides an implementation of the QAOA as a model
-that can be defined using a :class:`qibo.abstractions.hamiltonians.Hamiltonian`. When
+that can be defined using a :class:`qibo.hamiltonians.Hamiltonian`. When
 properly optimized, the QAOA ansatz will approximate the ground state of this
 Hamiltonian. Here is a simple example using the Heisenberg XXZ Hamiltonian:
 
@@ -746,9 +680,9 @@ executing or optimizing by passing the ``initial_state`` argument.
 The QAOA model uses :ref:`Solvers <Solvers>` to apply the exponential operators
 to the state vector. For more information on how solvers work we refer to the
 :ref:`How to simulate time evolution? <timeevol-example>` section.
-When a :class:`qibo.abstractions.hamiltonians.Hamiltonian` is used then solvers will
+When a :class:`qibo.hamiltonians.Hamiltonian` is used then solvers will
 exponentiate it using its full matrix. Alternatively, if a
-:class:`qibo.core.hamiltonians.SymbolicHamiltonian` is used then solvers
+:class:`qibo.hamiltonians.SymbolicHamiltonian` is used then solvers
 will fall back to traditional Qibo circuits that perform Trotter steps. For
 more information on how the Trotter decomposition is implemented in Qibo we
 refer to the :ref:`Using Trotter decomposition <trotterdecomp-example>` example.
@@ -805,11 +739,11 @@ function.
         optimizer.apply_gradients(zip([grads], [params]))
 
 
-Note that the ``"tensorflow"`` backend has to be used here because ``"qibotf"``
-and other custom backends do not support automatic differentiation.
+Note that the ``"tensorflow"`` backend has to be used here because other custom
+backends do not support automatic differentiation.
 
 The optimization procedure may also be compiled, however in this case it is not
-possible to use :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters` as the
+possible to use :meth:`qibo.circuit.Circuit.set_parameters` as the
 circuit needs to be defined inside the compiled ``tf.GradientTape()``.
 For example:
 
@@ -886,8 +820,7 @@ Qibo circuits can evolve density matrices if they are initialized using the
     c.add(gates.H(0))
     c.add(gates.H(1))
     # execute using the default initial state |00><00|
-    result = c()
-    # result.state() will be tf.ones(4) / 4 which corresponds to |++><++|
+    result = c() # will be |++><++|
 
 will perform the transformation
 
@@ -960,7 +893,7 @@ as follows:
     result = c(nshots=1000)
 
 In this example the simulation is repeated 1000 times and the action of the
-:class:`qibo.abstractions.gates.PauliNoiseChannel` gate differs each time, because
+:class:`qibo.gates.PauliNoiseChannel` gate differs each time, because
 the error ``X``, ``Y`` and ``Z`` gates are sampled according to the given
 probabilities. Note that when a channel is used, the command ``c(nshots=1000)``
 has a different behavior than what is described in
@@ -984,18 +917,18 @@ therefore this usage is not advised.
 
 Unlike the density matrix approach, it is not possible to use every channel
 with sampling and repeated execution. Specifically,
-:class:`qibo.abstractions.gates.UnitaryChannel` and
-:class:`qibo.abstractions.gates.PauliNoiseChannel` can be used with sampling, while
-:class:`qibo.abstractions.gates.KrausChannel` requires density matrices.
+:class:`qibo.gates.UnitaryChannel` and
+:class:`qibo.gates.PauliNoiseChannel` can be used with sampling, while
+:class:`qibo.gates.KrausChannel` requires density matrices.
 
 
 Adding noise after every gate
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In practical applications noise typically occurs after every gate.
-Qibo provides the :meth:`qibo.abstractions.circuit.AbstractCircuit.with_noise()` method
+Qibo provides the :meth:`qibo.models.circuit.Circuit.with_noise` method
 which automatically creates a new circuit that contains a
-:class:`qibo.abstractions.gates.PauliNoiseChannel` after every gate.
+:class:`qibo.gates.PauliNoiseChannel` after every gate.
 The user can control the probabilities of the noise channel using a noise map,
 which is a dictionary that maps qubits to the corresponding probability
 triplets. For example, the following script
@@ -1034,12 +967,11 @@ That is ``noise_map = (0.1, 0.0, 0.1)`` is equivalent to
 ``noise_map = {0: (0.1, 0.0, 0.1), 1: (0.1, 0.0, 0.1), ...}``.
 
 As described in the previous sections, if
-:meth:`qibo.abstractions.circuit.AbstractCircuit.with_noise()` is used in a circuit
+:meth:`qibo.models.circuit.Circuit.with_noise` is used in a circuit
 that uses state vectors then noise will be simulated with repeated execution.
 If the user wishes to use density matrices instead, this is possible by
-initializing a :class:`qibo.core.circuit.DensityMatrixCircuit`
-using the ``density_matrix=True`` flag during initialization and call
-``.with_noise`` on this circuit.
+passing the ``density_matrix=True`` flag during the circuit initialization and call
+``.with_noise`` on the new circuit.
 
 .. _noisemodel-example:
 
@@ -1093,9 +1025,7 @@ The noisy circuit defined above will be equivalent to the following circuit:
 
 
 The :class:`qibo.noise.NoiseModel` class supports also density matrices,
-it is sufficient to pass a circuit which was initialized with ``density_matrix=True``
-to generate the correspoding :class:`qibo.core.circuit.DensityMatrixCircuit`.
-
+it is sufficient to pass a circuit which was initialized with ``density_matrix=True``.
 
 
 .. _measurementbitflips-example:
@@ -1103,9 +1033,8 @@ to generate the correspoding :class:`qibo.core.circuit.DensityMatrixCircuit`.
 Measurement errors
 ^^^^^^^^^^^^^^^^^^
 
-:class:`qibo.abstractions.states.AbstractState` provides
-the :meth:`qibo.abstractions.states.AbstractState.apply_bitflips` method which
-allows adding bit-flip errors to the sampled bit-strings without having to
+:class:`qibo.states.CircuitResult` provides :meth:`qibo.states.CircuitResult.apply_bitflips`
+which allows adding bit-flip errors to the sampled bit-strings without having to
 re-execute the simulation. For example:
 
 .. testcode::
@@ -1127,13 +1056,13 @@ re-execute the simulation. For example:
 The corresponding noisy samples and frequencies can then be obtained as described
 in the :ref:`How to perform measurements? <measurement-examples>` example.
 
-Note that :meth:`qibo.abstractions.states.AbstractState.apply_bitflips` modifies
+Note that :meth:`qibo.states.CircuitResult.apply_bitflips` modifies
 the measurement samples contained in the corresponding state and therefore the
 original noiseless measurement samples are no longer accessible. It is possible
 to keep the original samples by creating a copy of the states before applying
 the bitflips:
 
-.. testsetup::
+.. testcode::
 
       import numpy as np
       from qibo import models, gates
@@ -1149,16 +1078,6 @@ the bitflips:
       error_map = {0: 0.2, 1: 0.1, 2: 0.3, 3: 0.1}
       result.apply_bitflips(error_map)
 
-.. testcode::
-
-      # create a copy of the state containing the noiseless samples
-      noisy_result = result.copy()
-      # perform bitflips in the copy
-      noisy_result.apply_bitflips(0.2)
-
-Creating a copy as shown in the above example does not duplicate the state
-vector for memory efficiency reasons. All copies of the state point to the
-same tensor in memory.
 
 Alternatively, the user may specify a bit-flip error map when defining
 measurement gates:
@@ -1189,7 +1108,7 @@ Moreover, it is possible to simulate asymmetric bit-flips using the ``p1``
 argument as ``result.apply_bitflips(p0=0.2, p1=0.1)``. In this case a
 probability of 0.2 will be used for 0->1 errors but 0.1 for 1->0 errors.
 Similarly to ``p0``, ``p1`` can be a single float number or a dictionary and
-can be used both in :meth:`qibo.abstractions.states.AbstractState.apply_bitflips`
+can be used both in :meth:`qibo.states.CircuitResult.apply_bitflips`
 and the measurement gate. If ``p1`` is not specified the value of ``p0`` will
 be used for both errors.
 
@@ -1240,7 +1159,7 @@ can track how <X> changes as follows:
     final_state = evolve(final_time=1, initial_state=initial_state)
 
     print(observable[:])
-    # will print a ``tf.Tensor`` of shape ``(1001,)`` that holds <X>(t) values
+    # will print an array of shape ``(1001,)`` that holds <X>(t) values
 .. testoutput::
     :hide:
 
@@ -1254,7 +1173,7 @@ In the above cases the exact time evolution operator (exponential of the Hamilto
 was used to evolve the state vector. Because the evolution Hamiltonian is
 time-independent, the matrix exponentiation happens only once. It is possible to
 simulate time-dependent Hamiltonians by passing a function of time instead of
-a :class:`qibo.abstractions.hamiltonians.Hamiltonian` in the
+a :class:`qibo.hamiltonians.Hamiltonian` in the
 :class:`qibo.models.StateEvolution` model. For example:
 
 .. testcode::
@@ -1291,7 +1210,7 @@ functionality to perform this transformation automatically, if the underlying
 Hamiltonian object is defined as a sum of commuting parts that consist of terms
 that can be exponentiated efficiently.
 Such Hamiltonian can be implemented in Qibo using
-:class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+:class:`qibo.hamiltonians.SymbolicHamiltonian`.
 The implementation of Trotter decomposition is based on Sec.
 4.1 of `arXiv:1901.05824 <https://arxiv.org/abs/1901.05824>`_.
 Below is an example of how to use this object in practice:
@@ -1308,16 +1227,16 @@ Below is an example of how to use this object in practice:
 
 
 This is a standard :class:`qibo.core.circuit.Circuit` that
-contains :class:`qibo.abstractions.gates.Unitary` gates corresponding to the
+contains :class:`qibo.gates.Unitary` gates corresponding to the
 exponentials of the Trotter decomposition and can be executed on any state.
 
 Note that in the transverse field Ising model (TFIM) that was used in this
 example is among the pre-coded Hamiltonians in Qibo and could be created as
-a :class:`qibo.core.hamiltonians.SymbolicHamiltonian` simply using the
+a :class:`qibo.hamiltonians.SymbolicHamiltonian` simply using the
 ``dense=False`` flag. For more information on the difference between dense
 and non-dense Hamiltonians we refer to the :ref:`Hamiltonians <Hamiltonians>`
 section. Note that only non-dense Hamiltonians created using ``dense=False``
-or through the :class:`qibo.core.hamiltonians.SymbolicHamiltonian` object
+or through the :class:`qibo.hamiltonians.SymbolicHamiltonian` object
 can be used for evolution using Trotter decomposition. If a dense Hamiltonian
 is used then evolution will be done by exponentiating the full Hamiltonian
 matrix.
@@ -1329,9 +1248,9 @@ For more information on this we refer to the
 :ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>`
 example.
 
-A :class:`qibo.core.hamiltonians.SymbolicHamiltonian` can also be used to
+A :class:`qibo.hamiltonians.SymbolicHamiltonian` can also be used to
 simulate time evolution. This can be done by passing the Hamiltonian to a
-:class:`qibo.evolution.StateEvolution` model and using the exponential solver.
+:class:`qibo.models.StateEvolution` model and using the exponential solver.
 For example:
 
 .. testcode::
@@ -1356,7 +1275,7 @@ final state of the evolution.
 Since Trotter evolution is based on Qibo circuits, it also supports distributed
 execution on multiple devices (GPUs). This can be enabled by passing an
 ``accelerators`` dictionary when defining the
-:class:`qibo.evolution.StateEvolution` model. We refer to the
+:class:`qibo.models.StateEvolution` model. We refer to the
 :ref:`How to select hardware devices? <gpu-examples>` example for more details
 on how the ``accelerators`` dictionary can be used.
 
@@ -1400,7 +1319,7 @@ of the ``AdiabaticEvolution`` model. In this case the default initial state is
 ``|++...+>`` (full superposition in the computational basis).
 
 Callbacks may also be used as in the previous example. An additional callback
-(:class:`qibo.abstractions.callbacks.Gap`) is available for calculating the
+(:class:`qibo.callbacks.Gap`) is available for calculating the
 energies and the gap of the adiabatic evolution Hamiltonian. Its usage is
 similar to other callbacks:
 
@@ -1419,7 +1338,7 @@ similar to other callbacks:
     # define and execute the ``AdiabaticEvolution`` model
     evolution = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-1,
                                           callbacks=[gap, ground])
-                                   
+
     final_state = evolution(final_time=1.0)
     # print the values of the gap at each evolution time step
     print(gap[:])
@@ -1441,7 +1360,7 @@ used for simulating adiabatic evolution. The solver can be specified during the
 initialization of the :class:`qibo.models.AdiabaticEvolution` model and a
 Trotter decomposition may be used with the exponential solver. The Trotter
 decomposition will be used automatically if ``h0`` and ``h1`` are defined
-using as :class:`qibo.core.hamiltonians.SymbolicHamiltonian` objects. For
+using as :class:`qibo.hamiltonians.SymbolicHamiltonian` objects. For
 pre-coded Hamiltonians this can be done simply as:
 
 .. testcode::
@@ -1459,18 +1378,18 @@ pre-coded Hamiltonians this can be done simply as:
 
 When Trotter evolution is used, it is also possible to execute on multiple
 devices by passing an ``accelerators`` dictionary in the creation of the
-:class:`qibo.evolution.AdiabaticEvolution` model.
+:class:`qibo.models.AdiabaticEvolution` model.
 
 Note that ``h0`` and ``h1`` should have the same type, either both
-:class:`qibo.core.hamiltonians.Hamiltonian` or both
-:class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+:class:`qibo.hamiltonians.Hamiltonian` or both
+:class:`qibo.hamiltonians.SymbolicHamiltonian`.
 
 
 Optimizing the scheduling function
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The free parameters ``p`` of the scheduling function can be optimized using
-the :meth:`qibo.evolution.AdiabaticEvolution.minimize` method. The parameters
+the :meth:`qibo.models.AdiabaticEvolution.minimize` method. The parameters
 are optimized so that the final state of the adiabatic evolution approximates
 the ground state of the "hard" Hamiltonian. Optimization is similar to what is
 described in the :ref:`How to write a VQE? <vqe-example>` example and can be
@@ -1511,9 +1430,9 @@ How to define custom Hamiltonians using symbols?
 ------------------------------------------------
 
 In order to use the VQE, QAOA and time evolution models in Qibo the user has to
-define Hamiltonians based on :class:`qibo.core.hamiltonians.Hamiltonian` which
+define Hamiltonians based on :class:`qibo.hamiltonians.Hamiltonian` which
 uses the full matrix representation of the corresponding operator or
-:class:`qibo.core.hamiltonians.SymbolicHamiltonian` which uses a more efficient
+:class:`qibo.hamiltonians.SymbolicHamiltonian` which uses a more efficient
 term representation. Qibo provides pre-coded Hamiltonians for some common models,
 such as the transverse field Ising model (TFIM) and the Heisenberg model
 (see :ref:`Hamiltonians <Hamiltonians>` for a complete list of the pre-coded models).
@@ -1547,12 +1466,12 @@ corresponding 16x16 matrix:
 Although it is possible to generalize the above construction to arbitrary number
 of qubits this procedure may be more complex for other Hamiltonians. Moreover
 constructing the full matrix does not scale well with increasing the number of
-qubits. This makes the use of :class:`qibo.abstractions.hamiltonians.SymbolicHamiltonian`
+qubits. This makes the use of :class:`qibo.hamiltonians.SymbolicHamiltonian`
 preferrable as the qubit number increases, as this Hamiltonians is not based
 in the full matrix representation.
 
 To simplify the construction of Hamiltonians, Qibo provides the
-:class:`qibo.abstractions.hamiltonians.SymbolicHamiltonian` object which
+:class:`qibo.hamiltonians.SymbolicHamiltonian` object which
 allows the user to construct Hamiltonian objects by writing their symbolic
 form using ``sympy`` symbols. Moreover Qibo provides quantum-computation specific
 symbols (:class:`qibo.symbols.Symbol`) such as the Pauli operators.
@@ -1584,7 +1503,7 @@ For example, the TFIM on four qubits could be constructed as:
 
 Defining Hamiltonians from symbols is usually a simple process as the symbolic
 form is very close to the form of the Hamiltonian on paper. Note that when a
-:class:`qibo.core.hamiltonians.SymbolicHamiltonian` is used for time evolution,
+:class:`qibo.hamiltonians.SymbolicHamiltonian` is used for time evolution,
 Qibo handles automatically automatically the Trotter decomposition by splitting
 to the appropriate terms.
 

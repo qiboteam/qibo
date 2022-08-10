@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import numpy as np
+
 import qibo
-from qibo.models import Circuit
 from qibo import gates
+from qibo.models import Circuit
 
 
-class QuantumClassifer():
-
+class QuantumClassifer:
     def __init__(self, nclasses, nqubits, nlayers, RY=True):
         """
         Class for a multi-task variational quantum classifier
@@ -21,13 +21,16 @@ class QuantumClassifer():
         self.measured_qubits = int(np.ceil(np.log2(self.nclasses)))
 
         if self.nqubits <= 1:
-            raise ValueError('nqubits must be larger than 1')
+            raise ValueError("nqubits must be larger than 1")
 
         if RY:
+
             def rotations():
                 for q in range(self.nqubits):
                     yield gates.RY(q, theta=0)
+
         else:
+
             def rotations():
                 for q in range(self.nqubits):
                     yield gates.RX(q, theta=0)
@@ -38,15 +41,15 @@ class QuantumClassifer():
 
     def _CZ_gates1(self):
         """Yields CZ gates used in the variational circuit."""
-        for q in range(0, self.nqubits-1, 2):
-            yield gates.CZ(q, q+1)
+        for q in range(0, self.nqubits - 1, 2):
+            yield gates.CZ(q, q + 1)
 
     def _CZ_gates2(self):
         """Yields CZ gates used in the variational circuit."""
-        for q in range(1, self.nqubits-1, 2):
-            yield gates.CZ(q, q+1)
+        for q in range(1, self.nqubits - 1, 2):
+            yield gates.CZ(q, q + 1)
 
-        yield gates.CZ(0, self.nqubits-1)
+        yield gates.CZ(0, self.nqubits - 1)
 
     def ansatz(self, nlayers, rotations):
         """
@@ -81,8 +84,8 @@ class QuantumClassifer():
         Returns:
             Circuit implementing the variational ansatz for angles "theta"
         """
-        bias = np.array(theta[0:self.measured_qubits])
-        angles = theta[self.measured_qubits:]
+        bias = np.array(theta[0 : self.measured_qubits])
+        angles = theta[self.measured_qubits :]
 
         self._circuit.set_parameters(angles)
 
@@ -98,7 +101,7 @@ class QuantumClassifer():
         Returns:
             numpy.array() with predictions for each qubit, for the initial state
         """
-        bias = np.array(theta[0:self.measured_qubits])
+        bias = np.array(theta[0 : self.measured_qubits])
         circuit = circuit(init_state, nshots)
         result = circuit.frequencies(binary=False)
         prediction = np.zeros(self.measured_qubits)
@@ -106,9 +109,9 @@ class QuantumClassifer():
         for qubit in range(self.measured_qubits):
             for clase in range(self.nclasses):
                 binary = bin(clase)[2:].zfill(self.measured_qubits)
-                prediction[qubit] += result[clase] * (1-2*int(binary[-qubit-1]))
+                prediction[qubit] += result[clase] * (1 - 2 * int(binary[-qubit - 1]))
 
-        return prediction/nshots + bias
+        return prediction / nshots + bias
 
     def square_loss(self, labels, predictions):
         """
@@ -140,8 +143,8 @@ class QuantumClassifer():
         """
         circ = self.Classifier_circuit(theta)
 
-        Bias = np.array(theta[0:self.measured_qubits])
-        predictions = np.zeros(shape=(len(data),self.measured_qubits))
+        Bias = np.array(theta[0 : self.measured_qubits])
+        predictions = np.zeros(shape=(len(data), self.measured_qubits))
 
         for i, text in enumerate(data):
             predictions[i] = self.Predictions(circ, Bias, text, nshots)
@@ -150,7 +153,9 @@ class QuantumClassifer():
 
         return s
 
-    def minimize(self, init_theta, data=None, labels=None, nshots=10000, method='Powell'):
+    def minimize(
+        self, init_theta, data=None, labels=None, nshots=10000, method="Powell"
+    ):
         """
         Args:
             theta: list or numpy.array with the angles to be used in the circuit
@@ -166,7 +171,9 @@ class QuantumClassifer():
         """
         from scipy.optimize import minimize
 
-        result = minimize(self.Cost_function, init_theta, args=(data,labels,nshots), method=method)
+        result = minimize(
+            self.Cost_function, init_theta, args=(data, labels, nshots), method=method
+        )
         loss = result.fun
         optimal_angles = result.x
 
@@ -189,7 +196,7 @@ class QuantumClassifer():
 
         accur = 0
         for l, p in zip(labels, predictions):
-            if np.allclose(l, p, rtol=0., atol=tolerance):
+            if np.allclose(l, p, rtol=0.0, atol=tolerance):
                 accur += 1
 
         accur = accur / len(labels)

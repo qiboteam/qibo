@@ -48,7 +48,6 @@ Contents
     :maxdepth: 2
     :caption: Appendix
 
-    appendix/benchmarks
     appendix/citing-qibo
 
 

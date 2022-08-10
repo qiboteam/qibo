@@ -1,8 +1,10 @@
+# -*- coding: utf-8 -*-
 """Adiabatic evolution scheduling optimization for the Ising Hamiltonian."""
 import argparse
-import numpy as np
-from qibo import callbacks, hamiltonians, models
 
+import numpy as np
+
+from qibo import callbacks, hamiltonians, models
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default=4, type=int)
@@ -50,12 +52,11 @@ def main(nqubits, hfield, params, dt, solver, method, maxiter, save):
     state_energy = callbacks.Energy(h1)(target_state).numpy()
     np.testing.assert_allclose(state_energy.real, target_energy)
 
-    evolution = models.AdiabaticEvolution(h0, h1, spolynomial, dt=dt,
-                                          solver=solver)
+    evolution = models.AdiabaticEvolution(h0, h1, spolynomial, dt=dt, solver=solver)
     options = {"maxiter": maxiter, "disp": True}
-    energy, parameters, _ = evolution.minimize(params, method=method,
-                                               options=options,
-                                               messages=True)
+    energy, parameters, _ = evolution.minimize(
+        params, method=method, options=options, messages=True
+    )
 
     print("\nBest energy found:", energy)
     print("Final parameters:", parameters)
@@ -67,10 +68,10 @@ def main(nqubits, hfield, params, dt, solver, method, maxiter, save):
 
     if save:
         evolution.opt_history["loss"].append(target_energy)
-        np.save(f"optparams/{save}_n{nqubits}_loss.npy",
-                evolution.opt_history["loss"])
-        np.save(f"optparams/{save}_n{nqubits}_params.npy",
-                evolution.opt_history["params"])
+        np.save(f"optparams/{save}_n{nqubits}_loss.npy", evolution.opt_history["loss"])
+        np.save(
+            f"optparams/{save}_n{nqubits}_params.npy", evolution.opt_history["params"]
+        )
 
 
 if __name__ == "__main__":

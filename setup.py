@@ -1,15 +1,17 @@
+# -*- coding: utf-8 -*-
 # Installation script for python
-from setuptools import setup, find_packages
 import os
 import re
+
+from setuptools import find_packages, setup
 
 PACKAGE = "qibo"
 
 
 # Returns the qibo version
 def get_version():
-    """ Gets the version from the package's __init__ file
-    if there is some problem, let it happily fail """
+    """Gets the version from the package's __init__ file
+    if there is some problem, let it happily fail"""
     VERSIONFILE = os.path.join("src", PACKAGE, "__init__.py")
     initfile_lines = open(VERSIONFILE, "rt").readlines()
     VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
@@ -27,10 +29,10 @@ with open(os.path.join(this_directory, "README.md"), encoding="utf-8") as f:
 
 # read Tensorflow version requirement
 BACKENDFILE = os.path.join("src", PACKAGE, "config.py")
-with open(BACKENDFILE, 'r') as f:
+with open(BACKENDFILE, "r") as f:
     content = f.readlines()
     for line in content:
-        if 'TF_MIN_VERSION' in line:
+        if "TF_MIN_VERSION" in line:
             TF_MIN_VERSION = str(line.split()[2].replace("'", ""))
             break
 
@@ -60,13 +62,21 @@ setup(
         "psutil",
         "pyyaml",
         "importlib_metadata",
-        "tabulate"
+        "tabulate",
     ],
     extras_require={
-        "docs": ["sphinx", "sphinx_rtd_theme", "recommonmark", "sphinxcontrib-bibtex", "sphinx_markdown_tables", "nbsphinx", "IPython"],
-        "tests": ["pytest", "cirq", "ply", "sklearn", "dill"],
+        "docs": [
+            "sphinx",
+            "sphinx_rtd_theme",
+            "recommonmark",
+            "sphinxcontrib-bibtex",
+            "sphinx_markdown_tables",
+            "nbsphinx",
+            "IPython",
+        ],
+        "tests": ["pytest", "cirq", "ply", "sklearn", "dill", "pre-commit"],
     },
     python_requires=">=3.7.0",
     long_description=long_description,
-    long_description_content_type='text/markdown',
+    long_description_content_type="text/markdown",
 )

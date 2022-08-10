@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Configuration file for the Sphinx documentation builder.
 #
 # This file only contains a selection of the most common options. For a full
@@ -12,11 +13,11 @@
 #
 import os
 import sys
+
 from recommonmark.transform import AutoStructify
 
 sys.path.insert(0, os.path.abspath(".."))
 import qibo
-
 
 # -- Project information -----------------------------------------------------
 
@@ -43,8 +44,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "recommonmark",
-    "sphinx_markdown_tables",
-    "nbsphinx"
+    "nbsphinx",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -99,6 +99,7 @@ autodoc_member_order = "bysource"
 def setup(app):
     app.add_config_value("recommonmark_config", {"enable_eval_rst": True}, True)
     app.add_transform(AutoStructify)
+
 
 html_logo = "logo.png"
 

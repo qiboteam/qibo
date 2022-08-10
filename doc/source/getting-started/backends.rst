@@ -35,8 +35,7 @@ We provide multiple simulation backends for Qibo, which are automatically loaded
 if the corresponding packages are installed, following the hierarchy below:
 
 * :ref:`installing-qibojit`: an efficient simulation backend for CPU, GPU and multi-GPU based on just-in-time (JIT) compiled custom operators. Install this package if you need to simulate quantum circuits with large number of qubits or complex quantum algorithms which may benefit from computing parallelism.
-* :ref:`installing-qibotf`: an efficient simulation backend for CPU, GPU and multi-GPU based on TensorFlow custom operators. Install this package if you need to simulate quantum circuits with large number of qubits or complex quantum algorithms which may benefit from computing parallelism.
-* :ref:`installing-tensorflow`: a pure TensorFlow implementation for quantum simulation which provides access to gradient descent optimization and the possibility to implement classical and quantum architectures together. This backend is not optimized for memory and speed, use :ref:`installing-qibotf` instead.
+* :ref:`installing-tensorflow`: a pure TensorFlow implementation for quantum simulation which provides access to gradient descent optimization and the possibility to implement classical and quantum architectures together. This backend is not optimized for memory and speed, use :ref:`installing-qibojit` instead.
 * :ref:`installing-numpy`: a lightweight quantum simulator shipped with the :ref:`installing-qibo` base package. Use this simulator if your CPU architecture is not supported by the other backends. Please note that the simulation performance is quite poor in comparison to other backends.
 
 The default backend that is used is the first available from the above list.
@@ -44,12 +43,12 @@ The user can switch to a different using the ``qibo.set_backend`` method
 (see :ref:`Backends <Backends>` section for more details).
 
 The active default backend will be printed as an info message the first time
-Qibo is imported in the code. If qibojit and qibotf are not installed,
-an additional warning will appear prompting the user to install one of the two
-for increased performance and multi-threading and/or GPU capabilities.
-The logging level can be controlled using the ``QIBO_LOG_LEVEL`` environment
-variable. This can be set to 3 to hide info messages or 4 to hide both info
-and warning messages. The default value is 1 allowing all messages to appear.
+Qibo is imported in the code. If qibojit is not installed, an additional warning
+will appear prompting the user to install qibojit for increased
+performance and multi-threading and/or GPU capabilities. The logging level can
+be controlled using the ``QIBO_LOG_LEVEL`` environment variable. This can be set
+to 3 to hide info messages or 4 to hide both info and warning messages. The
+default value is 1 allowing all messages to appear.
 
 
 .. _hardware-backends:
@@ -60,4 +59,3 @@ Hardware backends
 We provide the following hardware control backends for Qibo:
 
 * qibolab (*under development*): a module for laboratories.
-

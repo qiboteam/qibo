@@ -23,17 +23,14 @@ jobs:
         pip install .[tests,docs]
         pip install git+https://github.com/qiboteam/qibojit
         pip install tensorflow
-    - name: Install qibotf
-      if: startsWith(matrix.os, 'windows') == 0
-      run: |
-        pip install qibotf --pre
     - name: Test with pylint
       run: |
         pip install pylint
-        pylint src -E -d E1123,E1120
+        pylint src/**/*.py -E -f colorized
+        pylint src/**/*.py --exit-zero -f colorized
     - name: Test with pytest core
       run: |
-        pytest src/qibo/tests/ --skip-parallel --cov=qibo --cov-report=xml --pyargs qibo --durations=60
+        pytest src/qibo/tests/ --cov=qibo --cov-report=xml --pyargs qibo --durations=60
     - name: Test documentation examples
       if: startsWith(matrix.os, 'ubuntu')
       run: |

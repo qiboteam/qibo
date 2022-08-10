@@ -7,15 +7,15 @@ Operating systems support
 In the table below we summarize the status of *pre-compiled binaries
 distributed with pypi* for the packages listed above.
 
-+------------------+------+---------+--------+------------+
-| Operating System | qibo | qibojit | qibotf | tensorflow |
-+==================+======+=========+========+============+
-| Linux x86        | Yes  | Yes     | Yes    | Yes        |
-+------------------+------+---------+--------+------------+
-| MacOS >= 10.15   | Yes  | Yes     | Yes    | Yes        |
-+------------------+------+---------+--------+------------+
-| Windows          | Yes  | Yes     | No     | Yes        |
-+------------------+------+---------+--------+------------+
++------------------+------+---------+------------+
+| Operating System | qibo | qibojit | tensorflow |
++==================+======+=========+============+
+| Linux x86        | Yes  | Yes     | Yes        |
++------------------+------+---------+------------+
+| MacOS >= 10.15   | Yes  | Yes     | Yes        |
++------------------+------+---------+------------+
+| Windows          | Yes  | Yes     | Yes        |
++------------------+------+---------+------------+
 
 .. note::
       All packages are supported for Python >= 3.7.
@@ -91,7 +91,7 @@ when running Qibo on GPU.
 This backend is used by default, however, if needed, in order to switch to the
 ``qibojit`` backend please do:
 
-.. testcode::
+.. code-block::  python
 
       import qibo
       qibo.set_backend("qibojit")
@@ -101,7 +101,7 @@ custom numba kernels if a GPU is not available.
 If a GPU is available it is possible to switch to the cuQuantum implementation
 using the ``platform`` argument, for example:
 
-.. testcode::
+.. code-block::  python
 
       import qibo
       # switch to the cuquantum implementation
@@ -133,6 +133,11 @@ In order to install the package use the following command:
       <https://docs.cupy.dev/en/stable/install.html>`_ for your GPU hardware.
       The installation instructions for `cuQuantum <https://developer.nvidia.com/cuquantum-sdk>`_
       are available in the `official documentation <https://docs.nvidia.com/cuda/cuquantum/python/README.html>`__.
+      ``qibojit`` is compatible with
+      `cuQuantum SDK v22.03 <https://docs.nvidia.com/cuda/cuquantum/cuquantum_sdk_release_notes.html#cuquantum-sdk-v22-03>`__
+      and
+      `cuQuantum SDK v22.05 <https://docs.nvidia.com/cuda/cuquantum/cuquantum_sdk_release_notes.html#cuquantum-sdk-v22-05>`__.
+
 
 Installing with conda
 """""""""""""""""""""
@@ -157,6 +162,11 @@ To install both packages with conda run:
       <https://docs.cupy.dev/en/stable/install.html>`_ for your GPU hardware.
       The installation instructions for `cuQuantum <https://developer.nvidia.com/cuquantum-sdk>`_
       are available in the `official documentation <https://docs.nvidia.com/cuda/cuquantum/python/README.html>`__.
+      ``qibojit`` is compatible with
+      `cuQuantum SDK v22.03 <https://docs.nvidia.com/cuda/cuquantum/cuquantum_sdk_release_notes.html#cuquantum-sdk-v22-03>`__
+      and
+      `cuQuantum SDK v22.05 <https://docs.nvidia.com/cuda/cuquantum/cuquantum_sdk_release_notes.html#cuquantum-sdk-v22-05>`__.
+
 
 Installing from source
 """"""""""""""""""""""
@@ -179,116 +189,6 @@ Then proceed with the ``qibojit`` installation using ``pip``
 
 _______________________
 
-.. _installing-qibotf:
-
-qibotf
-^^^^^^
-
-The ``qibotf`` package contains a custom simulator implementation based on
-TensorFlow and custom operators in CUDA/C++.
-
-If needed, in order to switch to the ``qibotf`` backend please do:
-
-.. testcode::
-
-      import qibo
-      qibo.set_backend("qibotf")
-
-Installing with pip
-"""""""""""""""""""
-
-The installation using ``pip`` is the recommended approach to install
-``qibotf``. We provide precompiled packages for linux x86/64 and macosx 10.15 or
-greater for Python 3.7, 3.8 and 3.9.
-
-In order to install the package use the following command:
-
-.. code-block:: bash
-
-      pip install qibo qibotf
-
-The ``pip`` program will download and install all the required
-dependencies.
-
-.. note::
-      The ``pip`` packages for linux are compiled with CUDA support, so if your
-      system has a NVIDIA GPU, Qibo will perform calculations on GPU. Note that
-      ``qibotf`` uses TensorFlow for GPU management, if your system has a NVIDIA
-      GPU, make sure TensorFlow runs on GPU, please refer to the `official
-      documentation <https://www.tensorflow.org/install/gpu>`_.
-
-
-Installing from source
-""""""""""""""""""""""
-
-The installation procedure presented in this section is useful if the
-pre-compiled binary packages for your operating system is not available or if
-you have to develop the code from source.
-
-In order to install the package perform the following steps:
-
-.. code-block::
-
-      git clone https://github.com/qiboteam/qibotf.git
-      cd qibotf
-
-then proceed with the installation of requirements with:
-
-.. code-block::
-
-      pip install -r requirements.txt
-
-Make sure your system has a GNU ``g++ >= 4`` compiler. If you are working on
-macosx make sure the command ``c++`` is ``clang >= 11`` and install the libomp
-library with ``brew install libomp`` command.
-
-Optionally, you can use the ``CXX`` environment variable to set then compiler
-path. Similarly, the ``PYTHON`` environment variable sets the python interpreter
-path.
-
-.. note::
-      If your system has a NVIDIA GPU, make sure TensorFlow is installed
-      properly and runs on GPU, please refer to the `official
-      documentation <https://www.tensorflow.org/install/gpu>`_.
-
-      In that case, you can activate GPU support for Qibo by:
-
-      1. installing the NVCC compiler matching the TensorFlow CUDA version, see the `CUDA documentation <https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html>`_.
-
-      2. exporting the ``CUDA_PATH`` variable with the CUDA installation path containing the cuda compiler.
-
-      3. make sure the NVCC compiler is available from ``CUDA_PATH/bin/nvcc``, otherwise the compilation may fail. You can locate it with ``whereis nvcc`` and eventually link/copy to your ``CUDA_PATH/bin`` folder.
-
-      For example, TensorFlow 2.5.0 supports CUDA 11.2. After installing
-      TensorFlow proceed with the NVCC 11.2 installation. On linux the
-      installation path usually is ``/usr/local/cuda-11.2/``.
-
-      Before installing Qibo do ``export CUDA_PATH=/usr/local/cuda-11.2``.
-
-      Note that Qibo will not enable GPU support if points 1 and 2 are not
-      performed.
-
-
-Then proceed with the ``qibotf`` installation using ``pip``
-
-.. code-block::
-
-      pip install .
-
-or if you prefer to manually execute all installation steps:
-
-.. code-block::
-
-      # builds binaries
-      python setup.py build
-
-      # installs the Qibo packages
-      python setup.py install # or python setup.py develop
-
-
-
-_______________________
-
 .. _installing-tensorflow:
 
 tensorflow
@@ -298,10 +198,10 @@ If the `TensorFlow <https://www.tensorflow.org>`_ package is installed Qibo
 will detect and provide to the user the possibility to use ``tensorflow``
 backend.
 
-This backend is used by default if ``qibotf`` is not installed, however, if
+This backend is used by default if ``qibojit`` is not installed, however, if
 needed, in order to switch to the ``tensorflow`` backend please do:
 
-.. testcode::
+.. code-block::  python
 
       import qibo
       qibo.set_backend("tensorflow")
@@ -326,11 +226,11 @@ numpy
 The ``qibo`` base package is distributed with a lightweight quantum simulator
 shipped with the qibo base package. No extra packages are required.
 
-This backend is used by default if ``qibotf`` or ``tensorflow`` are not
+This backend is used by default if ``qibojit`` or ``tensorflow`` are not
 installed, however, if needed, in order to switch to the ``numpy`` backend
 please do:
 
-.. testcode::
+.. code-block::  python
 
       import qibo
       qibo.set_backend("numpy")

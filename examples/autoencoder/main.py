@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import numpy as np
-from qibo import K
-from qibo import hamiltonians, gates, models, K
-from scipy.optimize import minimize
 import argparse
+
+import numpy as np
+from scipy.optimize import minimize
+
+from qibo import gates, hamiltonians, models
 
 
 def main(nqubits, layers, compress, lambdas, maxiter):
-
     def encoder_hamiltonian_simple(nqubits, ncompress):
         """Creates the encoding Hamiltonian.
         Args:
@@ -18,7 +18,7 @@ def main(nqubits, layers, compress, lambdas, maxiter):
         Returns:
             Encoding Hamiltonian.
         """
-        m0 = K.to_numpy(hamiltonians.Z(ncompress).matrix)
+        m0 = hamiltonians.Z(ncompress).matrix
         m1 = np.eye(2 ** (nqubits - ncompress), dtype=m0.dtype)
         ham = hamiltonians.Hamiltonian(nqubits, np.kron(m1, m0))
         return 0.5 * (ham + ncompress)
@@ -36,30 +36,32 @@ def main(nqubits, layers, compress, lambdas, maxiter):
         for l in range(layers):
             for q in range(nqubits):
                 circuit.add(gates.RY(q, theta=0))
-            for q in range(0, nqubits-1, 2):
-                circuit.add(gates.CZ(q, q+1))
+            for q in range(0, nqubits - 1, 2):
+                circuit.add(gates.CZ(q, q + 1))
             for q in range(nqubits):
                 circuit.add(gates.RY(q, theta=0))
-            for q in range(1, nqubits-2, 2):
-                circuit.add(gates.CZ(q, q+1))
-            circuit.add(gates.CZ(0, nqubits-1))
+            for q in range(1, nqubits - 2, 2):
+                circuit.add(gates.CZ(q, q + 1))
+            circuit.add(gates.CZ(0, nqubits - 1))
         for q in range(nqubits):
             circuit.add(gates.RY(q, theta=0))
 
         cost = 0
-        circuit.set_parameters(params) # this will change all thetas to the appropriate values
+        circuit.set_parameters(
+            params
+        )  # this will change all thetas to the appropriate values
         for i in range(len(ising_groundstates)):
             final_state = circuit(np.copy(ising_groundstates[i]))
-            cost += K.real(encoder.expectation(final_state))
+            cost += np.real(encoder.expectation(final_state.state()))
 
         if count[0] % 50 == 0:
-            print(count[0], cost/len(ising_groundstates))
+            print(count[0], cost / len(ising_groundstates))
         count[0] += 1
 
-        return K.to_numpy(cost)/len(ising_groundstates)
+        return cost / len(ising_groundstates)
 
     nparams = 2 * nqubits * layers + nqubits
-    initial_params = np.random.uniform(0, 2*np.pi, nparams)
+    initial_params = np.random.uniform(0, 2 * np.pi, nparams)
     encoder = encoder_hamiltonian_simple(nqubits, compress)
 
     ising_groundstates = []
@@ -68,11 +70,15 @@ def main(nqubits, layers, compress, lambdas, maxiter):
         ising_groundstates.append(ising_ham.eigenvectors()[0])
 
     count = [0]
-    result = minimize(lambda p: cost_function(p, count), initial_params,
-                      method='L-BFGS-B', options={'maxiter': maxiter, 'maxfun': 2.0e3})
+    result = minimize(
+        lambda p: cost_function(p, count),
+        initial_params,
+        method="L-BFGS-B",
+        options={"maxiter": maxiter, "maxfun": 2.0e3},
+    )
 
-    print('Final parameters: ', result.x)
-    print('Final cost function: ', result.fun)
+    print("Final parameters: ", result.x)
+    print("Final cost function: ", result.fun)
 
 
 if __name__ == "__main__":

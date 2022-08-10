@@ -1,11 +1,20 @@
-__version__ = "0.1.8.dev0"
-from qibo.config import set_batch_size, get_batch_size
-from qibo.config import set_metropolis_threshold, get_metropolis_threshold
-from qibo.backends import set_backend, get_backend
-from qibo.backends import set_precision, get_precision
-from qibo.backends import set_device, get_device
-from qibo.backends import set_threads, get_threads
-from qibo.backends import numpy_matrices as matrices
-from qibo.backends import K
-from qibo import callbacks, gates, hamiltonians, models
-from qibo import parallel, optimizers, solvers
+# -*- coding: utf-8 -*-
+__version__ = "0.1.8rc1.dev0"
+from qibo import callbacks, gates, hamiltonians, models, optimizers, parallel, solvers
+from qibo.backends import (
+    get_backend,
+    get_device,
+    get_precision,
+    get_threads,
+    matrices,
+    set_backend,
+    set_device,
+    set_precision,
+    set_threads,
+)
+from qibo.config import (
+    get_batch_size,
+    get_metropolis_threshold,
+    set_batch_size,
+    set_metropolis_threshold,
+)

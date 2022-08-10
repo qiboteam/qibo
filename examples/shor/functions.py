@@ -1,4 +1,6 @@
+# -*- coding: utf-8 -*-
 import numpy as np
+
 from qibo import gates
 from qibo.models import Circuit
 
@@ -12,14 +14,14 @@ def adder_angles(a, n):
     Returns:
         angles (list) = list of angles in order of application.
     """
-    A = "{0:0{bits}b}".format(a, bits=n+1)
+    A = "{0:0{bits}b}".format(a, bits=n + 1)
     angles = []
     for i in reversed(range(len(A))):
         angle = 0
         m = 1
         for j in range(i, len(A)):
             if int(A[j]) == 1:
-                angle += 2*np.pi/(2**m)
+                angle += 2 * np.pi / (2**m)
             m += 1
         angles.append(angle)
     return angles
@@ -212,7 +214,7 @@ def c_mult_mod(c, x, b, a, N, ancilla, n):
     ang_N = adder_angles(N, n)
     yield qft(b)
     for i in range(len(x)):
-        ang_a = adder_angles((a*2**(n-1-i))%N, n)
+        ang_a = adder_angles((a * 2 ** (n - 1 - i)) % N, n)
         yield cc_phi_mod_adder(c, x[i], b, ang_a, ang_N, ancilla)
     yield i_qft(b)
 
@@ -234,7 +236,7 @@ def i_c_mult_mod(c, x, b, a, N, ancilla, n):
     ang_N = adder_angles(N, n)
     yield qft(b)
     for i in reversed(range(len(x))):
-        ang_a = adder_angles((a*2**(n-1-i))%N, n)
+        ang_a = adder_angles((a * 2 ** (n - 1 - i)) % N, n)
         yield i_cc_phi_mod_adder(c, x[i], b, ang_a, ang_N, ancilla)
     yield i_qft(b)
 
@@ -256,7 +258,7 @@ def c_U(c, x, b, a, N, ancilla, n):
     """
     yield c_mult_mod(c, x, b, a, N, ancilla, n)
     for i in range(1, len(b)):
-        yield gates.SWAP(b[i], x[i-1]).controlled_by(c)
+        yield gates.SWAP(b[i], x[i - 1]).controlled_by(c)
     a_inv = mod_inv(a, N)
     yield i_c_mult_mod(c, x, b, a_inv, N, ancilla, n)
 
@@ -271,7 +273,7 @@ def find_factor_of_prime_power(N):
         If the number is a prime power: f1 (int) or f2 (int)
     """
     for i in range(2, int(np.floor(np.log2(N))) + 1):
-        f = N**(1/i)
+        f = N ** (1 / i)
         f1 = np.floor(f)
         if f1**i == N:
             return f1
@@ -282,8 +284,7 @@ def find_factor_of_prime_power(N):
 
 
 def egcd(a, b):
-    """Extended Euclid's algorithm for the modular inverse calculation.
-    """
+    """Extended Euclid's algorithm for the modular inverse calculation."""
     if a == 0:
         return (b, 0, 1)
     else:
@@ -302,7 +303,7 @@ def mod_inv(a, N):
     """
     g, x, y = egcd(a, N)
     if g != 1:
-        raise ValueError('modular inverse does not exist')
+        raise ValueError("modular inverse does not exist")
     else:
         return x % N
 
@@ -316,27 +317,29 @@ def quantum_order_finding_full(N, a):
     Returns:
         s (float): value of the state measured by the quantum computer.
     """
-    print('  - Performing algorithm using a fully quantum iQFT.\n')
+    print("  - Performing algorithm using a fully quantum iQFT.\n")
     # Creating the parts of the needed quantum circuit.
     n = int(np.ceil(np.log2(N)))
-    b = [i for i in range(n+1)]
-    x = [n+1+i for i in range(n)]
-    ancilla = 2*n + 1
-    q_reg = [2*n + 2 + i for i in range(2*n)]
-    circuit = Circuit(4*n+2)
-    print(f'  - Total number of qubits used: {4*n+2}.\n')
+    b = [i for i in range(n + 1)]
+    x = [n + 1 + i for i in range(n)]
+    ancilla = 2 * n + 1
+    q_reg = [2 * n + 2 + i for i in range(2 * n)]
+    circuit = Circuit(4 * n + 2)
+    print(f"  - Total number of qubits used: {4*n+2}.\n")
 
     # Building the quantum circuit
     for i in range(len(q_reg)):
         circuit.add(gates.H(q_reg[i]))
-    circuit.add(gates.X(x[len(x)-1]))
+    circuit.add(gates.X(x[len(x) - 1]))
     exponents = []
-    exp = a%N
+    exp = a % N
     for i in range(len(q_reg)):
         exponents.append(exp)
-        exp = (exp**2)%N
-    #a**(2**i)
-    circuit.add((c_U(q, x, b, exponents[i], N, ancilla, n) for i, q in enumerate(q_reg)))
+        exp = (exp**2) % N
+    # a**(2**i)
+    circuit.add(
+        (c_U(q, x, b, exponents[i], N, ancilla, n) for i, q in enumerate(q_reg))
+    )
     circuit.add(i_qft(q_reg))
 
     # Adding measurement gates
@@ -356,67 +359,67 @@ def quantum_order_finding_semiclassical(N, a):
     Returns:
         s (float): value of the state measured by the quantum computer.
     """
-    print('  - Performing algorithm using a semiclassical iQFT.\n')
+    print("  - Performing algorithm using a semiclassical iQFT.\n")
     # Creating the parts of the needed quantum circuit.
     n = int(np.ceil(np.log2(N)))
-    b = [i for i in range(n+1)]
-    x = [n+1+i for i in range(n)]
-    ancilla = 2*n + 1
-    q_reg = 2*n + 2
-    print(f'  - Total number of qubits used: {2*n+3}.\n')
+    b = [i for i in range(n + 1)]
+    x = [n + 1 + i for i in range(n)]
+    ancilla = 2 * n + 1
+    q_reg = 2 * n + 2
+    print(f"  - Total number of qubits used: {2*n+3}.\n")
     results = []
     exponents = []
-    exp = a%N
-    for i in range(2*n):
+    exp = a % N
+    for i in range(2 * n):
         exponents.append(exp)
-        exp = (exp**2)%N
+        exp = (exp**2) % N
 
     circuit = Circuit(2 * n + 3)
     # Building the quantum circuit
     circuit.add(gates.H(q_reg))
     circuit.add(gates.X(x[len(x) - 1]))
-    #a_i = (a**(2**(2*n - 1)))
+    # a_i = (a**(2**(2*n - 1)))
     circuit.add(c_U(q_reg, x, b, exponents[-1], N, ancilla, n))
     circuit.add(gates.H(q_reg))
     results.append(circuit.add(gates.M(q_reg, collapse=True)))
     # Using multiple measurements for the semiclassical QFT.
-    for i in range(1, 2*n):
+    for i in range(1, 2 * n):
         # reset measured qubit to |0>
         circuit.add(gates.RX(q_reg, theta=np.pi * results[-1]))
         circuit.add(gates.H(q_reg))
-        #a_i = (a**(2**(2*n - 1 - i)))
-        circuit.add(c_U(q_reg, x, b, exponents[-1-i], N, ancilla, n))
+        # a_i = (a**(2**(2*n - 1 - i)))
+        circuit.add(c_U(q_reg, x, b, exponents[-1 - i], N, ancilla, n))
         angle = 0
-        for k in range(2, i+2):
-            angle += 2 * np.pi * results[i + 1 - k] / (2 ** k)
+        for k in range(2, i + 2):
+            angle += 2 * np.pi * results[i + 1 - k] / (2**k)
         circuit.add(gates.U1(q_reg, -angle))
         circuit.add(gates.H(q_reg))
         results.append(circuit.add(gates.M(q_reg, collapse=True)))
 
-    circuit() # execute
-    s = sum(int(r.outcome()) * (2 ** i) for i, r in enumerate(results))
+    circuit()  # execute
+    s = sum(int(r.outcome()) * (2**i) for i, r in enumerate(results))
     print(f"The quantum circuit measures s = {s}.\n")
     return s
 
 
 def find_factors(r, a, N):
     if r % 2 != 0:
-        print('The value found for r is not even. Trying again.\n')
-        print('-'*60+'\n')
+        print("The value found for r is not even. Trying again.\n")
+        print("-" * 60 + "\n")
         return None
-    if a**(r//2) == -1%N:
-        print('Unusable value for r found. Trying again.\n')
-        print('-'*60+'\n')
+    if a ** (r // 2) == -1 % N:
+        print("Unusable value for r found. Trying again.\n")
+        print("-" * 60 + "\n")
         return None
-    f1 = np.gcd((a**(r//2))-1, N)
-    f2 = np.gcd((a**(r//2))+1, N)
+    f1 = np.gcd((a ** (r // 2)) - 1, N)
+    f2 = np.gcd((a ** (r // 2)) + 1, N)
     if (f1 == N or f1 == 1) and (f2 == N or f2 == 1):
-        print(f'Trivial factors 1 and {N} found. Trying again.\n')
-        print('-'*60+'\n')
+        print(f"Trivial factors 1 and {N} found. Trying again.\n")
+        print("-" * 60 + "\n")
         return None
     if f1 != 1 and f1 != N:
         f2 = N // f1
     elif f2 != 1 and f2 != N:
         f1 = N // f2
-    print(f'Found as factors for {N}:  {f1}  and  {f2}.\n')
+    print(f"Found as factors for {N}:  {f1}  and  {f2}.\n")
     return f1, f2

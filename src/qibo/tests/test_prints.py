@@ -1,8 +1,12 @@
+# -*- coding: utf-8 -*-
 """Test that the source contains no prints."""
 import os
-import pytest
 import pathlib
+
+import pytest
+
 from qibo.config import raise_error
+
 
 class CodeText:
     """Helper class to iterate through code text skipping the docstrings."""
@@ -56,8 +60,11 @@ class CodeText:
             for offset, line in enumerate(piece.split("\n")):
                 if ("print" in line) and ("CodeText:skip" not in line):
                     line_num = self.line_counter + offset + 1
-                    raise_error(ValueError, f"Found `{target_word}` in line {line_num} "
-                                            f"of {self.filedir}.")
+                    raise_error(
+                        ValueError,
+                        f"Found `{target_word}` in line {line_num} "
+                        f"of {self.filedir}.",
+                    )
 
 
 def python_files():
@@ -71,19 +78,22 @@ def python_files():
             if len(pieces) == 2 and pieces[1] == "py" and pieces[0] != "test_prints":
                 yield os.path.join(subdir, file)
 
+
 # Make sure the CodeText class works as intended
 text_examples = [
     ('print("Test")', True),
     ('print("Test")\n""" docstring """', True),
     ('""" docstring """\nprint("Test")\n""" docstring """', True),
-    ('pass', False),
+    ("pass", False),
     ('pass\n""" docstring with print """', False),
     ('""" docstring with print """\npass\n""" docstring with print """', False),
-    ('pass # CodeText:skip', False),
+    ("pass # CodeText:skip", False),
     ('print("Test") # CodeText:skip', False),
     ('print("Test")\nprint("Test) # CodeText:skip', True),
-    ('print("Test") # CodeText:skip\nprint("Test)', True)
+    ('print("Test") # CodeText:skip\nprint("Test)', True),
 ]
+
+
 @pytest.mark.parametrize(("text", "contains_print"), text_examples)
 def test_codetext_class(text, contains_print):
     """Check if the CodeText class is working properly"""
@@ -92,6 +102,7 @@ def test_codetext_class(text, contains_print):
             CodeText(text).check_exists("print")
     else:
         CodeText(text).check_exists("print")
+
 
 @pytest.mark.parametrize("filename", python_files())
 def test_qibo_code(filename):

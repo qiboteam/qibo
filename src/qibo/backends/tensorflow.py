@@ -1,279 +1,355 @@
+# -*- coding: utf-8 -*-
+import collections
 import os
-from qibo.backends.abstract import AbstractBackend, AbstractCustomOperators
+
+import numpy as np
+
+from qibo.backends.matrices import Matrices
 from qibo.backends.numpy import NumpyBackend
-from qibo.config import raise_error, log, TF_LOG_LEVEL
+from qibo.config import TF_LOG_LEVEL, log, raise_error
 
 
-class Optimization:
+class TensorflowMatrices(Matrices):
+    # Redefine parametrized gate matrices for backpropagation to work
 
-    def __init__(self):
-        import tensorflow as tf  # pylint: disable=E0401
-        self.Variable = tf.Variable
-        self.GradientTape = tf.GradientTape
-        self.optimizers = tf.optimizers
+    def __init__(self, dtype):
+        super().__init__(dtype)
+        import tensorflow as tf
+        import tensorflow.experimental.numpy as tnp  # pylint: disable=E0401
+
+        self.tf = tf
+        self.np = tnp
+
+    def RX(self, theta):
+        cos = self.np.cos(theta / 2.0) + 0j
+        isin = -1j * self.np.sin(theta / 2.0)
+        return self.tf.cast([[cos, isin], [isin, cos]], dtype=self.dtype)
+
+    def RY(self, theta):
+        cos = self.np.cos(theta / 2.0) + 0j
+        sin = self.np.sin(theta / 2.0) + 0j
+        return self.tf.cast([[cos, -sin], [sin, cos]], dtype=self.dtype)
+
+    def RZ(self, theta):
+        phase = self.np.exp(0.5j * theta)
+        return self.tf.cast([[self.np.conj(phase), 0], [0, phase]], dtype=self.dtype)
+
+    def U1(self, theta):
+        phase = self.np.exp(1j * theta)
+        return self.tf.cast([[1, 0], [0, phase]], dtype=self.dtype)
+
+    def U2(self, phi, lam):
+        eplus = self.np.exp(1j * (phi + lam) / 2.0)
+        eminus = self.np.exp(1j * (phi - lam) / 2.0)
+        return self.tf.cast(
+            [[self.np.conj(eplus), -self.np.conj(eminus)], [eminus, eplus]],
+            dtype=self.dtype,
+        ) / self.np.sqrt(2)
+
+    def U3(self, theta, phi, lam):
+        cost = self.np.cos(theta / 2)
+        sint = self.np.sin(theta / 2)
+        eplus = self.np.exp(1j * (phi + lam) / 2.0)
+        eminus = self.np.exp(1j * (phi - lam) / 2.0)
+        return self.tf.cast(
+            [
+                [self.np.conj(eplus) * cost, -self.np.conj(eminus) * sint],
+                [eminus * sint, eplus * cost],
+            ],
+            dtype=self.dtype,
+        )
+
+    def CRX(self, theta):
+        r = self.RX(theta)
+        return self.tf.cast(
+            [
+                [1, 0, 0, 0],
+                [0, 1, 0, 0],
+                [0, 0, r[0, 0], r[0, 1]],
+                [0, 0, r[1, 0], r[1, 1]],
+            ],
+            dtype=self.dtype,
+        )
+
+    def CRY(self, theta):
+        r = self.RY(theta)
+        return self.tf.cast(
+            [
+                [1, 0, 0, 0],
+                [0, 1, 0, 0],
+                [0, 0, r[0, 0], r[0, 1]],
+                [0, 0, r[1, 0], r[1, 1]],
+            ],
+            dtype=self.dtype,
+        )
+
+    def CRZ(self, theta):
+        r = self.RZ(theta)
+        return self.tf.cast(
+            [
+                [1, 0, 0, 0],
+                [0, 1, 0, 0],
+                [0, 0, r[0, 0], r[0, 1]],
+                [0, 0, r[1, 0], r[1, 1]],
+            ],
+            dtype=self.dtype,
+        )
+
+    def CU1(self, theta):
+        r = self.U1(theta)
+        return self.tf.cast(
+            [
+                [1, 0, 0, 0],
+                [0, 1, 0, 0],
+                [0, 0, r[0, 0], r[0, 1]],
+                [0, 0, r[1, 0], r[1, 1]],
+            ],
+            dtype=self.dtype,
+        )
+
+    def CU2(self, phi, lam):
+        r = self.U2(phi, lam)
+        return self.tf.cast(
+            [
+                [1, 0, 0, 0],
+                [0, 1, 0, 0],
+                [0, 0, r[0, 0], r[0, 1]],
+                [0, 0, r[1, 0], r[1, 1]],
+            ],
+            dtype=self.dtype,
+        )
+
+    def CU3(self, theta, phi, lam):
+        r = self.U3(theta, phi, lam)
+        return self.tf.cast(
+            [
+                [1, 0, 0, 0],
+                [0, 1, 0, 0],
+                [0, 0, r[0, 0], r[0, 1]],
+                [0, 0, r[1, 0], r[1, 1]],
+            ],
+            dtype=self.dtype,
+        )
+
+    def fSim(self, theta, phi):
+        cost = self.np.cos(theta) + 0j
+        isint = -1j * self.np.sin(theta)
+        phase = self.np.exp(-1j * phi)
+        return self.tf.cast(
+            [
+                [1, 0, 0, 0],
+                [0, cost, isint, 0],
+                [0, isint, cost, 0],
+                [0, 0, 0, phase],
+            ],
+            dtype=self.dtype,
+        )
+
+    def GeneralizedfSim(self, u, phi):
+        phase = self.np.exp(-1j * phi)
+        return self.tf.cast(
+            [
+                [1, 0, 0, 0],
+                [0, u[0, 0], u[0, 1], 0],
+                [0, u[1, 0], u[1, 1], 0],
+                [0, 0, 0, phase],
+            ],
+            dtype=self.dtype,
+        )
+
+    def Unitary(self, u):
+        return self.tf.cast(u, dtype=self.dtype)
 
 
 class TensorflowBackend(NumpyBackend):
-
-    description = "Uses `tf.einsum` to apply gates to states via matrix " \
-                  "multiplication."
-
-    TEST_REGRESSIONS_CPU = {
-        "test_measurementresult_apply_bitflips": [
-            [4, 0, 0, 1, 0, 2, 2, 4, 4, 0],
-            [4, 0, 0, 1, 0, 2, 2, 4, 4, 0],
-            [4, 0, 0, 1, 0, 0, 0, 4, 4, 0],
-            [4, 0, 0, 0, 0, 0, 0, 4, 4, 0]
-        ],
-        "test_probabilistic_measurement": {0: 271, 1: 239, 2: 242, 3: 248},
-        "test_unbalanced_probabilistic_measurement": {0: 168, 1: 188, 2: 154, 3: 490},
-        "test_post_measurement_bitflips_on_circuit": [
-                {5: 30}, {5: 16, 7: 10, 6: 2, 3: 1, 4: 1},
-                {3: 6, 5: 6, 7: 5, 2: 4, 4: 3, 0: 2, 1: 2, 6: 2}
-            ],
-    }
-    TEST_REGRESSIONS_GPU = {
-        "test_measurementresult_apply_bitflips": [
-            [4, 0, 0, 1, 0, 2, 2, 4, 4, 0],
-            [4, 0, 0, 1, 0, 2, 2, 4, 4, 0],
-            [4, 0, 0, 1, 0, 0, 0, 4, 4, 0],
-            [4, 0, 0, 0, 0, 0, 0, 4, 4, 0]
-        ],
-        "test_probabilistic_measurement": {0: 273, 1: 233, 2: 242, 3: 252},
-        "test_unbalanced_probabilistic_measurement": {0: 196, 1: 153, 2: 156, 3: 495},
-        "test_post_measurement_bitflips_on_circuit": [
-                {5: 30}, {5: 16, 7: 10, 6: 2, 3: 1, 4: 1},
-                {3: 6, 5: 6, 7: 5, 2: 4, 4: 3, 0: 2, 1: 2, 6: 2}
-            ],
-    }
-
     def __init__(self):
         super().__init__()
-        os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(TF_LOG_LEVEL)
-        import tensorflow as tf  # pylint: disable=E0401
-        self.backend = tf
         self.name = "tensorflow"
+        os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(TF_LOG_LEVEL)
+        import tensorflow as tf
+        import tensorflow.experimental.numpy as tnp  # pylint: disable=E0401
 
-        self.cpu_devices = tf.config.list_logical_devices("CPU")
-        self.gpu_devices = tf.config.list_logical_devices("GPU")
-        if self.gpu_devices: # pragma: no cover
-            # CI does not use GPUs
-            self.default_device = self.gpu_devices[0].name
-        elif self.cpu_devices:
-            self.default_device = self.cpu_devices[0].name
-        else: # pragma: no cover
-            # case not tested by GitHub workflows because it requires no device
-            raise_error(RuntimeError, "Unable to find Tensorflow devices.")
+        tnp.experimental_enable_numpy_behavior()
+        self.tf = tf
+        self.np = tnp
+        self.matrices = TensorflowMatrices(self.dtype)
 
-        self.tensor_types = (self.np.ndarray, tf.Tensor, tf.Variable)
-        self.native_types = (tf.Tensor, tf.Variable)
-        self.Tensor = tf.Tensor
-        self.random = tf.random
-        self.newaxis = tf.newaxis
-        self.sparse = tf.sparse
-        from tensorflow.python.framework import errors_impl  # pylint: disable=E0611,E0401
+        from tensorflow.python.framework import errors_impl  # pylint: disable=E0611
+
         self.oom_error = errors_impl.ResourceExhaustedError
-        self.optimization = Optimization()
 
-        # seed to use in the measurement frequency custom op
-        self._seed = None
-        # seed can be modified using ``K.set_seed``
-        self.supports_gradients = True
+        cpu_devices = tf.config.list_logical_devices("CPU")
+        gpu_devices = tf.config.list_logical_devices("GPU")
+        if gpu_devices:  # pragma: no cover
+            # CI does not use GPUs
+            self.device = gpu_devices[0].name
+        elif cpu_devices:
+            self.device = cpu_devices[0].name
 
-    def test_regressions(self, name):
-        if "GPU" in self.default_device:  # pragma: no cover
-            # Ci does not use GPUs
-            return self.TEST_REGRESSIONS_GPU.get(name)
-        else:
-            return self.TEST_REGRESSIONS_CPU.get(name)
+        import psutil
 
-    def set_device(self, name):
-        AbstractBackend.set_device(self, name)
+        self.nthreads = psutil.cpu_count(logical=True)
+
+        self.tensor_types = (np.ndarray, tf.Tensor, tf.Variable)
+
+    def set_device(self, device):  # pragma: no cover
+        self.device = device
 
     def set_threads(self, nthreads):
-        log.warning("`set_threads` is not supported by the tensorflow "
-                    "backend. Please use tensorflow's thread setters: "
-                    "`tf.config.threading.set_inter_op_parallelism_threads` "
-                    "or `tf.config.threading.set_intra_op_parallelism_threads` "
-                    "to switch the number of threads.")
-        AbstractBackend.set_threads(self, nthreads)
+        log.warning(
+            "`set_threads` is not supported by the tensorflow "
+            "backend. Please use tensorflow's thread setters: "
+            "`tf.config.threading.set_inter_op_parallelism_threads` "
+            "or `tf.config.threading.set_intra_op_parallelism_threads` "
+            "to switch the number of threads."
+        )
 
-    def to_numpy(self, x):
-        if isinstance(x, self.numeric_types):
-            return x
-        elif self.issparse(x):
-            from scipy.sparse import coo_matrix
-            idx = self.np.array(x.indices)
-            values = self.np.array(x.values)
-            shape = tuple(x.shape)
-            return coo_matrix((values, (idx[:, 0], idx[:, 1])), shape=shape)
-        return self.np.array(x, copy=False)
-
-    def to_complex(self, re, img):
-        return self.backend.complex(re, img)
-
-    def cast(self, x, dtype='DTYPECPX'):
-        if isinstance(dtype, str):
-            dtype = self.dtypes(dtype)
-        if isinstance(x, self.np.ndarray):
-            dtypestr = dtype.__repr__().split(".")[1]
-            x = x.astype(getattr(self.np, dtypestr))
-        elif self.issparse(x):
-            return x
-        return self.backend.cast(x, dtype=dtype)
+    def cast(self, x, dtype=None, copy=False):
+        if dtype is None:
+            dtype = self.dtype
+        x = self.tf.cast(x, dtype=dtype)
+        if copy:
+            return self.tf.identity(x)
+        return x
 
     def issparse(self, x):
-        return isinstance(x, self.sparse.SparseTensor)
+        return isinstance(x, self.tf.sparse.SparseTensor)
 
-    def diag(self, x, dtype='DTYPECPX'):
-        if isinstance(dtype, str):
-            dtype = self.dtypes(dtype)
-        return self.backend.cast(self.backend.linalg.diag(x), dtype=dtype)
-
-    def concatenate(self, x, axis=None):
-        return self.backend.concat(x, axis=axis)
-
-    def copy(self, x):
-        return x + self.backend.zeros_like(x)
-
-    def range(self, start, finish, step, dtype=None):
-        if isinstance(dtype, str):
-            dtype = self.dtypes(dtype)
-        return self.backend.range(start, finish, step, dtype=dtype)
-
-    def real(self, x):
-        return self.backend.math.real(x)
-
-    def imag(self, x):
-        return self.backend.math.imag(x)
-
-    def conj(self, x):
-        return self.backend.math.conj(x)
-
-    def mod(self, x, y):
-        return self.backend.math.mod(x, y)
-
-    def right_shift(self, x, y):
-        return self.backend.bitwise.right_shift(x, y)
-
-    def pow(self, base, exponent):
-        return self.backend.math.pow(base, exponent)
-
-    def square(self, x):
-        return self.backend.square(x)
-
-    def sqrt(self, x):
-        return self.backend.math.sqrt(x)
-
-    def log(self, x):
-        return self.backend.math.log(x)
-
-    def trace(self, x):
-        return self.backend.linalg.trace(x)
-
-    def expm(self, x):
-        return self.backend.linalg.expm(x)
-
-    def sum(self, x, axis=None):
-        return self.backend.reduce_sum(x, axis=axis)
-
-    def dot(self, x, y):
-        if self.issparse(x) or self.issparse(y):
-            if self.issparse(x) and self.issparse(y):
-                raise_error(NotImplementedError, "Tensorflow does not support "
-                                                 "multiplication of two sparse "
-                                                 "matrices.")
-            return self.sparse.sparse_dense_matmul(x, y)
-        return self.tensordot(x, y, axes=1)
-
-    def outer(self, x, y):
-        return self.tensordot(x, y, axes=0)
-
-    def kron(self, x, y):
-        dim = int(x.shape[0]) * int(y.shape[0])
-        z = self.transpose(self.outer(x, y), axes=[0, 2, 1, 3])
-        return self.reshape(z, (dim, dim))
-
-    def inv(self, x):
-        raise_error(NotImplementedError)
-
-    def unique(self, x, return_counts=False):
-        if return_counts:
-            res, _, counts = self.backend.unique_with_counts(
-                x, out_idx=self.dtypes('DTYPEINT'))
-            return res, counts
-        res, _  = self.backend.unique(x, out_idx=self.dtypes('DTYPEINT'))
-        return res
-
-    def gather(self, x, indices=None, condition=None, axis=0):
-        if indices is not None:
-            return self.backend.gather(x, indices, axis=axis)
-
-        if condition is None:
-            raise_error(ValueError, "Gather call is missing indices and "
-                                    "condition.")
-        indices = self.backend.where(condition)
-        return self.backend.gather(x, indices, axis=axis)[:, 0]
-
-    def gather_nd(self, x, indices):
-        return self.backend.gather_nd(x, indices)
-
-    def initial_state(self, nqubits, is_matrix=False): # pragma: no cover
-        dim = 1 + is_matrix
-        shape = dim * (2 ** nqubits,)
-        idx = self.backend.constant([dim * [0]], dtype=self.dtypes('DTYPEINT'))
-        state = self.backend.zeros(shape, dtype=self.dtypes('DTYPECPX'))
-        update = self.backend.constant([1], dtype=self.dtypes('DTYPECPX'))
-        state = self.backend.tensor_scatter_nd_update(state, idx, update)
-        return state
-
-    def random_uniform(self, shape, dtype='DTYPE'):
-        return self.backend.random.uniform(shape, dtype=self.dtypes(dtype))
-
-    def sample_shots(self, probs, nshots):
-        from qibo.config import SHOT_BATCH_SIZE
-        logits = self.log(probs)[self.newaxis]
-        samples = [self.random.categorical(
-            logits, SHOT_BATCH_SIZE, dtype=self.dtypes('DTYPEINT'))[0]
-            for _ in range(nshots // SHOT_BATCH_SIZE)]
-        samples.append(self.random.categorical(
-                logits, nshots % SHOT_BATCH_SIZE,
-                dtype=self.dtypes('DTYPEINT'))[0])
-        return self.concatenate(samples, axis=0)
-
-    def sample_frequencies(self, probs, nshots):
-        logits = self.log(probs)[self.newaxis]
-        samples = self.random.categorical(logits, nshots, dtype=self.dtypes('DTYPEINT'))[0]
-        res, counts = self.unique(samples, return_counts=True)
-        frequencies = self.zeros(int(probs.shape[0]), dtype=self.dtypes('DTYPEINT'))
-        frequencies = self.backend.tensor_scatter_nd_add(frequencies, res[:, self.newaxis], counts)
-        return frequencies
+    def to_numpy(self, x):
+        return np.array(x)
 
     def compile(self, func):
-        return self.backend.function(func)
+        return self.tf.function(func)
 
-    def device(self, device_name):
-        return self.backend.device(device_name)
+    def zero_state(self, nqubits):
+        idx = self.tf.constant([[0]], dtype="int32")
+        state = self.tf.zeros((2**nqubits,), dtype=self.dtype)
+        update = self.tf.constant([1], dtype=self.dtype)
+        state = self.tf.tensor_scatter_nd_update(state, idx, update)
+        return state
 
-    def on_cpu(self):
-        return self.device(self.cpu_devices[0])
+    def zero_density_matrix(self, nqubits):
+        idx = self.tf.constant([[0, 0]], dtype="int32")
+        state = self.tf.zeros(2 * (2**nqubits,), dtype=self.dtype)
+        update = self.tf.constant([1], dtype=self.dtype)
+        state = self.tf.tensor_scatter_nd_update(state, idx, update)
+        return state
 
-    def cpu_tensor(self, x, dtype=None):
-        if dtype is None:
-            dtype = x.dtype
-        return self.backend.Variable(x, dtype=dtype)
+    def asmatrix(self, gate):
+        npmatrix = super().asmatrix(gate)
+        return self.tf.cast(npmatrix, dtype=self.dtype)
 
-    def cpu_cast(self, x, dtype='DTYPECPX'):
-        dtype = self._dtypes.get(dtype)
-        with self.on_cpu():
-            return self.cast(x, dtype=dtype)
+    def asmatrix_parametrized(self, gate):
+        npmatrix = super().asmatrix_parametrized(gate)
+        return self.tf.cast(npmatrix, dtype=self.dtype)
 
-    def cpu_assign(self, state, i, piece):
-        state.pieces[i].assign(piece)
+    def asmatrix_fused(self, gate):
+        npmatrix = super().asmatrix_fused(gate)
+        return self.tf.cast(npmatrix, dtype=self.dtype)
 
-    def executing_eagerly(self):
-        return self.backend.executing_eagerly()
+    def execute_circuit(
+        self, circuit, initial_state=None, nshots=None, return_array=False
+    ):
+        with self.tf.device(self.device):
+            return super().execute_circuit(circuit, initial_state, nshots, return_array)
 
-    def set_seed(self, seed):
-        self._seed = seed
-        self.backend.random.set_seed(seed)
+    def execute_circuit_repeated(self, circuit, initial_state=None, nshots=None):
+        with self.tf.device(self.device):
+            return super().execute_circuit_repeated(circuit, initial_state, nshots)
+
+    def sample_shots(self, probabilities, nshots):
+        # redefining this because ``tnp.random.choice`` is not available
+        logits = self.tf.math.log(probabilities)[self.tf.newaxis]
+        samples = self.tf.random.categorical(logits, nshots)[0]
+        return samples
+
+    def samples_to_binary(self, samples, nqubits):
+        # redefining this because ``tnp.right_shift`` is not available
+        qrange = self.np.arange(nqubits - 1, -1, -1, dtype="int32")
+        samples = self.tf.cast(samples, dtype="int32")
+        samples = self.tf.bitwise.right_shift(samples[:, self.np.newaxis], qrange)
+        return self.tf.math.mod(samples, 2)
+
+    def calculate_frequencies(self, samples):
+        # redefining this because ``tnp.unique`` is not available
+        res, _, counts = self.tf.unique_with_counts(samples, out_idx="int64")
+        res, counts = self.np.array(res), self.np.array(counts)
+        return collections.Counter({int(k): int(v) for k, v in zip(res, counts)})
+
+    def update_frequencies(self, frequencies, probabilities, nsamples):
+        # redefining this because ``tnp.unique`` and tensor update is not available
+        samples = self.sample_shots(probabilities, nsamples)
+        res, _, counts = self.tf.unique_with_counts(samples, out_idx="int64")
+        frequencies = self.tf.tensor_scatter_nd_add(
+            frequencies, res[:, self.tf.newaxis], counts
+        )
+        return frequencies
+
+    def entanglement_entropy(self, rho):
+        # redefining this because ``tnp.linalg`` is not available
+        from qibo.config import EIGVAL_CUTOFF
+
+        # Diagonalize
+        eigvals = self.np.real(self.tf.linalg.eigvalsh(rho))
+        # Treating zero and negative eigenvalues
+        masked_eigvals = eigvals[eigvals > EIGVAL_CUTOFF]
+        spectrum = -1 * self.np.log(masked_eigvals)
+        entropy = self.np.sum(masked_eigvals * spectrum) / self.np.log(2.0)
+        return entropy, spectrum
+
+    def calculate_eigenvalues(self, matrix, k=6):
+        return self.tf.linalg.eigvalsh(matrix)
+
+    def calculate_eigenvectors(self, matrix, k=6):
+        return self.tf.linalg.eigh(matrix)
+
+    def calculate_matrix_exp(self, a, matrix, eigenvectors=None, eigenvalues=None):
+        if eigenvectors is None or self.issparse(matrix):
+            return self.tf.linalg.expm(-1j * a * matrix)
+        else:
+            return super().calculate_matrix_exp(a, matrix, eigenvectors, eigenvalues)
+
+    def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
+        if self.issparse(matrix1) or self.issparse(matrix2):
+            raise_error(
+                NotImplementedError,
+                "Multiplication of sparse matrices is not supported with Tensorflow.",
+            )
+        return super().calculate_hamiltonian_matrix_product(matrix1, matrix2)
+
+    def calculate_hamiltonian_state_product(self, matrix, state):
+        rank = len(tuple(state.shape))
+        if rank == 1:  # vector
+            return self.np.matmul(matrix, state[:, self.np.newaxis])[:, 0]
+        elif rank == 2:  # matrix
+            return self.np.matmul(matrix, state)
+        else:
+            raise_error(
+                ValueError,
+                "Cannot multiply Hamiltonian with " "rank-{} tensor.".format(rank),
+            )
+
+    def test_regressions(self, name):
+        if name == "test_measurementresult_apply_bitflips":
+            return [
+                [4, 0, 0, 1, 0, 2, 2, 4, 4, 0],
+                [4, 0, 0, 1, 0, 2, 2, 4, 4, 0],
+                [4, 0, 0, 1, 0, 0, 0, 4, 4, 0],
+                [4, 0, 0, 0, 0, 0, 0, 4, 4, 0],
+            ]
+        elif name == "test_probabilistic_measurement":
+            if "GPU" in self.device:  # pragma: no cover
+                return {0: 273, 1: 233, 2: 242, 3: 252}
+            else:
+                return {0: 271, 1: 239, 2: 242, 3: 248}
+        elif name == "test_unbalanced_probabilistic_measurement":
+            if "GPU" in self.device:  # pragma: no cover
+                return {0: 196, 1: 153, 2: 156, 3: 495}
+            else:
+                return {0: 168, 1: 188, 2: 154, 3: 490}
+        elif name == "test_post_measurement_bitflips_on_circuit":
+            return [
+                {5: 30},
+                {5: 16, 7: 10, 6: 2, 3: 1, 4: 1},
+                {3: 6, 5: 6, 7: 5, 2: 4, 4: 3, 0: 2, 1: 2, 6: 2},
+            ]

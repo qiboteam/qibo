@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import numpy as np
-from qibo.models import Circuit
+
 from qibo import gates
+from qibo.models import Circuit
 
 
-class QSVD():
-
+class QSVD:
     def __init__(self, nqubits, subsize, nlayers, RY=False):
         """
         Class for the Quantum Singular Value Decomposer variational algorithm
@@ -23,10 +23,13 @@ class QSVD():
         self.subsize2 = nqubits - subsize
 
         if RY:
+
             def rotations():
                 for q in range(self.nqubits):
                     yield gates.RY(q, theta=0)
+
         else:
+
             def rotations():
                 for q in range(self.nqubits):
                     yield gates.RX(q, theta=0)
@@ -65,7 +68,7 @@ class QSVD():
         small = min(self.subsize, self.subsize2)
         for q in range(small):
             c.add(gates.M(q))
-            c.add(gates.M(q+self.subsize))
+            c.add(gates.M(q + self.subsize))
         return c
 
     def QSVD_circuit(self, theta):
@@ -89,6 +92,7 @@ class QSVD():
         Returns:
             numpy.float32 with the value of the cost function for the QSVD with angles theta
         """
+
         def Hamming(string1, string2):
             """
             Args:
@@ -105,13 +109,14 @@ class QSVD():
 
         loss = 0
         for bit_string in result:
-            a = bit_string[:self.subsize2]
-            b = bit_string[self.subsize2:]
+            a = bit_string[: self.subsize2]
+            b = bit_string[self.subsize2 :]
             loss += Hamming(a, b) * result[bit_string]
-        return loss/nshots
+        return loss / nshots
 
-    def minimize(self, init_theta, init_state=None, nshots=100000,
-                 method='Powell', maxiter=None):
+    def minimize(
+        self, init_theta, init_state=None, nshots=100000, method="Powell", maxiter=None
+    ):
         """
         Args:
             theta: list or numpy.array with the angles to be used in the circuit
@@ -124,8 +129,13 @@ class QSVD():
         """
         from scipy.optimize import minimize
 
-        result = minimize(self.QSVD_cost, init_theta, args=(init_state, nshots),
-                          method=method, options={'disp': True, 'maxiter': maxiter})
+        result = minimize(
+            self.QSVD_cost,
+            init_theta,
+            args=(init_state, nshots),
+            method=method,
+            options={"disp": True, "maxiter": maxiter},
+        )
         loss = result.fun
         optimal_angles = result.x
 
@@ -151,7 +161,7 @@ class QSVD():
         for i in range(2**small):
 
             bit_string = bin(i)[2:].zfill(small)
-            Schmidt.append(result[2*bit_string])
+            Schmidt.append(result[2 * bit_string])
 
         Schmidt = np.array(sorted(Schmidt, reverse=True))
         Schmidt = np.sqrt(Schmidt / nshots)
