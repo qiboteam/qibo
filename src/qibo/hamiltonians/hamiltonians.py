@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import sympy
-
+import numpy as np
 from qibo.config import EINSUM_CHARS, log, raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 
@@ -135,6 +135,79 @@ class Hamiltonian(AbstractHamiltonian):
                 "value for state of type {}."
                 "".format(type(state)),
             )
+
+    def convert_bit_to_energy(self, bitstring):
+        n = len(bitstring)
+        c = Circuit(n)
+        for i in range(n):
+            c.add(gates.X(int(i)))
+        state = c()  # this is an execution result, a quantum state
+        return self.expection(self, state)
+
+
+    def convert_state_to_count(self, state):
+        """
+        This is a function that convert a quantum state to a dictionary keeping track of energy and its frequency.
+        d[energy] records the frequency
+        """
+        meas = state.measure(gates.M(*range(len(state))), nshots=1000)
+        counts = meas.frequencies()
+        return counts
+
+
+    def compute_cvar(self, probabilities, values, alpha):
+        """
+        Auxilliary method to computes CVaR for given probabilities, values, and confidence level.
+
+        Attributes:
+        - probabilities: list/array of probabilities
+        - values: list/array of corresponding values
+        - alpha: confidence level
+
+        Returns:
+        - CVaR
+        """
+        sorted_indices = np.argsort(values)
+        probs = np.array(probabilities)[sorted_indices]
+        vals = np.array(values)[sorted_indices]
+        cvar = 0
+        total_prob = 0
+        for i, (p, v) in enumerate(zip(probs, vals)):
+            done = False
+            if p >= alpha - total_prob:
+                p = alpha - total_prob
+                done = True
+            total_prob += p
+            cvar += p * v
+        cvar /= total_prob
+        return cvar
+
+    def cvar(self, state, alpha=0.1): # rather than counts in the input, we take in a state and the create counts
+        # create and run circuit
+        # evaluate counts
+        counts = self.convert_state_to_count(state)  # i need to work further on this
+        probabilities = np.zeros(len(counts))
+        values = np.zeros(len(counts))
+        for i, (x, p) in enumerate(counts.items()):
+            values[i] = self.convert_bit_to_energy(x)   #tsp_obj(x)  this was a function to evaluate the objective of the string
+            probabilities[i] = p
+        # evaluate cvar
+        cvar = self.compute_cvar(probabilities, values, alpha)
+        return cvar
+
+    def gibbs(self, state, eta=0.1):  # rather than counts in the input, we take in a state and the create counts
+        counts = self.convert_state_to_count(state)
+        avg = 0
+        sum_count = 0
+        # common_metric = float("inf")
+        for bitstring, count in counts.items():
+            obj = self.convert_bit_to_energy(bitstring)#tsp_obj(bitstring) this was a function to evaluate the objective of the string
+            avg += np.exp(-eta * obj)
+            sum_count += count
+            # common_metric = min(common_metric, obj)
+        # print("gibbs common metric", common_metric)
+        return -np.log(avg / sum_count)
+
 
     def eye(self, n=None):
         if n is None:
