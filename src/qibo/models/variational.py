@@ -511,7 +511,7 @@ class QAOA(object):
             if loss is None:
                 return hamiltonian.expectation(state)
             elif loss == "cvar":
-                return hamiltonian.expectation(state)
+                return hamiltonian.cvar(state)
             elif loss == "gibbs":
                 return hamiltonian.gibbs(state)
 
