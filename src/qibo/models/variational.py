@@ -508,13 +508,13 @@ class QAOA(object):
                 state = hamiltonian.backend.cast(state, copy=True)
             qaoa.set_parameters(params)
             state = qaoa(state)
-            if loss is None:  # How do I make this None? usually it is something like <function QAOA.minimize.<locals>.<lambda> at 0x14777fdc0>
-                return hamiltonian.expectation(state)
-            elif loss == "cvar":
-                return hamiltonian.cvar(state)
-            elif loss == "gibbs":
-                return hamiltonian.gibbs(state)
-
+            #if loss is None:  # How do I make this a default mode usually it is something like <function QAOA.minimize.<locals>.<lambda> at 0x14777fdc0>
+            return hamiltonian.expectation(state)
+            #elif loss == "cvar":
+            #    return hamiltonian.cvar(state)
+            #elif loss == "gibbs":
+            #    return hamiltonian.gibbs(state)
+        print(loss)
         if method == "sgd":
             loss = lambda p, c, h, s: _loss(self.hamiltonian.backend.cast(p), c, h, s)
         else:
