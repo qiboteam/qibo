@@ -508,7 +508,7 @@ class QAOA(object):
                 state = hamiltonian.backend.cast(state, copy=True)
             qaoa.set_parameters(params)
             state = qaoa(state)
-            if loss is None:
+            if loss is None:  # How do I make this None? usually it is something like <function QAOA.minimize.<locals>.<lambda> at 0x14777fdc0>
                 return hamiltonian.expectation(state)
             elif loss == "cvar":
                 return hamiltonian.cvar(state)
