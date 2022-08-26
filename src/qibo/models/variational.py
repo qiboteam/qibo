@@ -350,9 +350,6 @@ class QAOA(object):
         state = qaoa(state)
         return hamiltonian.gibbs(state)
 
-
-
-
     def __init__(
         self, hamiltonian, mixer=None, solver="exp", callbacks=[], accelerators=None
     ):
@@ -530,7 +527,6 @@ class QAOA(object):
             #    return hamiltonian.cvar(state)
             # elif loss == "gibbs":
             #    return hamiltonian.gibbs(state)
-
 
         if loss is None:
             if method == "sgd":
