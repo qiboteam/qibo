@@ -212,7 +212,6 @@ class Hamiltonian(AbstractHamiltonian):
             avg += np.exp(-eta * obj)
             sum_count += count
             # common_metric = min(common_metric, obj)
-        # print("gibbs common metric", common_metric)
         return -np.log(avg / sum_count)
 
     def eye(self, n=None):
