@@ -514,8 +514,7 @@ class QAOA(object):
             #    return hamiltonian.cvar(state)
             #elif loss == "gibbs":
             #    return hamiltonian.gibbs(state)
-        print("examine loss")
-        print(loss)
+
         if loss is None:
             if method == "sgd":
                 loss = lambda p, c, h, s: _loss(self.hamiltonian.backend.cast(p), c, h, s)
