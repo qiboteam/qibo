@@ -336,6 +336,23 @@ class QAOA(object):
 
     from qibo import hamiltonians, optimizers
 
+    def _cvar_loss(params, qaoa, hamiltonian, state):
+        if state is not None:
+            state = hamiltonian.backend.cast(state, copy=True)
+        qaoa.set_parameters(params)
+        state = qaoa(state)
+        return hamiltonian.expectation(state)
+
+    def _gibbs_loss(params, qaoa, hamiltonian, state):
+        if state is not None:
+            state = hamiltonian.backend.cast(state, copy=True)
+        qaoa.set_parameters(params)
+        state = qaoa(state)
+        return hamiltonian.gibbs(state)
+
+
+
+
     def __init__(
         self, hamiltonian, mixer=None, solver="exp", callbacks=[], accelerators=None
     ):
@@ -508,12 +525,12 @@ class QAOA(object):
                 state = hamiltonian.backend.cast(state, copy=True)
             qaoa.set_parameters(params)
             state = qaoa(state)
-            # if loss is None:  # How do I make this a default mode usually it is something like <function QAOA.minimize.<locals>.<lambda> at 0x14777fdc0>
             return hamiltonian.expectation(state)
             # elif loss == "cvar":
             #    return hamiltonian.cvar(state)
             # elif loss == "gibbs":
             #    return hamiltonian.gibbs(state)
+
 
         if loss is None:
             if method == "sgd":
