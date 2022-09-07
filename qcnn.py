@@ -84,8 +84,8 @@ class QuantumCNN():
     def two_qubit_unitary(self, bits, symbols):
         """Make a circuit that creates an arbitrary two qubit unitary."""
         c = Circuit(2)
-        c.add(one_qubit_unitary(bits[0], symbols[0:3]))
-        c.add(one_qubit_unitary(bits[1], symbols[3:6]))
+        c.add(self.one_qubit_unitary(bits[0], symbols[0:3]))
+        c.add(self.one_qubit_unitary(bits[1], symbols[3:6]))
         #to improve: to define new gates of XX YY and ZZ outside.
         '''matrixXX = K.np.kron(matrices.X,matrices.X)
         matrixYY = K.np.kron(matrices.Y,matrices.Y)
@@ -100,8 +100,8 @@ class QuantumCNN():
         c.add(gates.RYY(0,1,symbols[7]))
         c.add(gates.RXX(0,1,symbols[8]))
         
-        c.add(one_qubit_unitary(bits[0], symbols[9:12]))
-        c.add(one_qubit_unitary(bits[1], symbols[12:]))
+        c.add(self.one_qubit_unitary(bits[0], symbols[9:12]))
+        c.add(self.one_qubit_unitary(bits[1], symbols[12:]))
         
         return c
 
@@ -110,8 +110,8 @@ class QuantumCNN():
         """Make a circuit to do a parameterized 'pooling' operation, which
         attempts to reduce entanglement down from two qubits to just one."""
         pool_circuit = Circuit(2)
-        sink_basis_selector = one_qubit_unitary(sink_qubit, symbols[0:3])
-        source_basis_selector = one_qubit_unitary(source_qubit, symbols[3:6])
+        sink_basis_selector = self.one_qubit_unitary(sink_qubit, symbols[0:3])
+        source_basis_selector = self.one_qubit_unitary(source_qubit, symbols[3:6])
         pool_circuit.add(sink_basis_selector)
         pool_circuit.add(source_basis_selector)
         pool_circuit.add(gates.CNOT(source_qubit, sink_qubit))
