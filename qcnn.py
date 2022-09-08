@@ -173,7 +173,7 @@ class QuantumCNN():
             param_start = layer * self.nparams_layer
             conv_params = params[param_start:param_start+self.nparams_conv]
             pool_params = params[param_start+self.nparams_conv:param_start+self.nparams_layer]
-            pool_params += pool_params[-1:-4:-1]
+            pool_params += pool_params[2::-1]
             expanded_params += conv_params * int((nleft if nleft > 2 else 1))
             expanded_params += pool_params * int(nleft/2)
 
