@@ -142,7 +142,9 @@ class Hamiltonian(AbstractHamiltonian):
         c = Circuit(n)
         for i in range(n):
             c.add(gates.X(int(i)))
-        state = self.backend.execute_circuit(c)  # this is an execution result, a quantum state
+        state = self.backend.execute_circuit(
+            c
+        )  # this is an execution result, a quantum state
         return self.expection(self, state)
 
     def convert_state_to_count(self, state):
