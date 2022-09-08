@@ -5,7 +5,7 @@ import numpy as np
 import qibo
 from qibo.models import Circuit
 from qibo import gates
-from qibo import matrices, K
+from qibo import matrices
 
 
 class QuantumCNN():
@@ -19,6 +19,12 @@ class QuantumCNN():
         """
         self.nclasses = nclasses
         self.nqubits = nqubits
+        self.nlayers = nlayers
+
+        #NOTE: magic number: 21=15+6 params per layer of conv and pool
+        self.nparams_conv = 15
+        self.nparams_pool = 6
+        self.nparams_layer = self.nparams_conv + self.nparams_pool
         self.measured_qubits = int(np.ceil(np.log2(self.nclasses)))
 
         if self.nqubits <= 1:
@@ -37,29 +43,20 @@ class QuantumCNN():
 
         self._circuit = self.ansatz(nlayers, rotations)
 
-    def _CZ_gates1(self):
-        """Yields CZ gates used in the variational circuit."""
-        for q in range(0, self.nqubits-1, 2):
-            yield gates.CZ(q, q+1)
 
-    def _CZ_gates2(self):
-        """Yields CZ gates used in the variational circuit."""
-        for q in range(1, self.nqubits-1, 2):
-            yield gates.CZ(q, q+1)
-
-        yield gates.CZ(0, self.nqubits-1)
-
-
-    def quantum_conv(self, bits, symbols):
+    def quantum_conv_circuit(self, bits, symbols):
         c = Circuit(self.nqubits)
         for first, second in zip(bits[0::2], bits[1::2]):
             c += self.two_qubit_unitary([first, second], symbols)
-        for first, second in zip(bits[1::2], bits[2::2] + [bits[0]]):
-            c += self.two_qubit_unitary([first, second], symbols)
+
+        # check that there are more than 2 qubits to prevent double conv
+        if len(bits)>2: 
+            for first, second in zip(bits[1::2], bits[2::2] + [bits[0]]):
+                c += self.two_qubit_unitary([first, second], symbols)
         return c
 
 
-    def quantum_pool(self, source_bits, sink_bits, symbols):
+    def quantum_pool_circuit(self, source_bits, sink_bits, symbols):
         c = Circuit(self.nqubits)
         for source, sink in zip(source_bits, sink_bits):
             c += self.two_qubit_pool(source, sink, symbols)
@@ -85,23 +82,29 @@ class QuantumCNN():
             model_circuit.add (quantum_conv_circuit(qubits[6:], symbols[42:57]))
             model_circuit.add (quantum_pool_circuit([qubits[6]], [qubits[7]],symbols[57:63]))
         """
+        
+        nparams_conv = self.nparams_conv
+        nparams_layer = self.nparams_layer
+
         if params is not None:
             symbols = params
-        else
-            symbols = 1
+        else:
+            symbols = [0 for _ in range(nlayers*nparams_layer)]
 
+        nbits = self.nqubits
+        
+        qubits = [_ for _ in range(nbits)]
         c = Circuit(self.nqubits)
         for layer in range(nlayers):
-            # c.add(rotations())
-            # c.add(self._CZ_gates1())
-            # c.add(rotations())
-            # c.add(self._CZ_gates2())
-            c += self.quantum_conv()
-            c += self.quantum_pool()
-        # Final rotations
-        c.add(rotations())
+            conv_start = int(nbits-nbits/(2**layer))
+            pool_start = int(nbits-nbits/(2**(layer+1)))
+            param_start = layer * nparams_layer
+            c += self.quantum_conv_circuit(qubits[conv_start:], symbols[param_start:param_start+nparams_conv])
+            c += self.quantum_pool_circuit(qubits[conv_start:pool_start], qubits[pool_start:],
+                                            symbols[param_start+nparams_conv:param_start+nparams_layer])
+
         # Measurements
-        c.add(gates.M(*range(self.measured_qubits)))
+        c.add(gates.M(*[nbits-1-i for i in range(self.measured_qubits)]))
 
         return c
 
@@ -123,8 +126,8 @@ class QuantumCNN():
         Symbols should be a list of length 15.
         """
         c = Circuit(self.nqubits)
-        c.add(self.one_qubit_unitary(bits[0], symbols[0:3]))
-        c.add(self.one_qubit_unitary(bits[1], symbols[3:6]))
+        c += self.one_qubit_unitary(bits[0], symbols[0:3])
+        c += self.one_qubit_unitary(bits[1], symbols[3:6])
         #to improve: to define new gates of XX YY and ZZ outside.
         '''matrixXX = K.np.kron(matrices.X,matrices.X)
         matrixYY = K.np.kron(matrices.Y,matrices.Y)
@@ -139,8 +142,8 @@ class QuantumCNN():
         c.add(gates.RYY(0,1,symbols[7]))
         c.add(gates.RXX(0,1,symbols[8]))
         
-        c.add(self.one_qubit_unitary(bits[0], symbols[9:12]))
-        c.add(self.one_qubit_unitary(bits[1], symbols[12:]))
+        c += self.one_qubit_unitary(bits[0], symbols[9:12])
+        c += self.one_qubit_unitary(bits[1], symbols[12:])
         
         return c
 
@@ -153,38 +156,28 @@ class QuantumCNN():
         pool_circuit = Circuit(self.nqubits)
         sink_basis_selector = self.one_qubit_unitary(sink_qubit, symbols[0:3])
         source_basis_selector = self.one_qubit_unitary(source_qubit, symbols[3:6])
-        pool_circuit.add(sink_basis_selector)
-        pool_circuit.add(source_basis_selector)
+        pool_circuit += sink_basis_selector
+        pool_circuit += source_basis_selector
         pool_circuit.add(gates.CNOT(source_qubit, sink_qubit))        
-        pool_circuit.add(sink_basis_selector.invert())
+        pool_circuit += sink_basis_selector.invert()
         
         return pool_circuit
 
+    def set_circuit_params(self, angles):
 
-    def quantum_conv_circuit(self, bits, symbols):
-        """Quantum Convolution Layer .
-        Return a circuit with the cascade of `two_qubit_unitary` applied
-        to all pairs of qubits in `bits` .
-        """
-        circuit = Circuit()
-        for first, second in zip(bits[0::2], bits[1::2]):
-            circuit.add(two_qubit_unitary([first, second], symbols))
-        for first, second in zip(bits[1::2], bits[2::2] + [bits[0]]):
-            circuit.add(two_qubit_unitary([first, second], symbols))
-        return circuit
+        params = list(angles)
+        expanded_params = []
+        nbits = self.nqubits
+        for layer in range(self.nlayers):
+            nleft = nbits/(2**layer)
+            param_start = layer * self.nparams_layer
+            conv_params = params[param_start:param_start+self.nparams_conv]
+            pool_params = params[param_start+self.nparams_conv:param_start+self.nparams_layer]
+            pool_params += pool_params[-1:-4:-1]
+            expanded_params += conv_params * int((nleft if nleft > 2 else 1))
+            expanded_params += pool_params * int(nleft/2)
 
-
-
-    def quantum_pool_circuit(self, source_bits, sink_bits, symbols):
-        """A layer that specifies a quantum pooling operation.
-        A Quantum pool tries to learn to pool the relevant information from two
-        qubits onto 1.
-        """
-        circuit = Circuit()
-        for source, sink in zip(source_bits, sink_bits):
-            circuit.add(two_qubit_pool(source, sink, symbols))
-        return circuit
-
+        self._circuit.set_parameters(expanded_params)
 
     def Classifier_circuit(self, theta):
         """
@@ -199,8 +192,7 @@ class QuantumCNN():
         bias = np.array(theta[0:self.measured_qubits])
         angles = theta[self.measured_qubits:]
 
-        self._circuit.set_parameters(angles)
-
+        self.set_circuit_params(angles)
         return self._circuit
 
     def Predictions(self, circuit, theta, init_state, nshots=10000):
