@@ -114,12 +114,10 @@ class Hamiltonian(AbstractHamiltonian):
         if isinstance(state, self.backend.tensor_types):
             shape = tuple(state.shape)
             if len(shape) == 1:  # state vector
-                return self.backend.calculate_expectation_state(
-                    self.matrix, state, normalize
-                )
+                return self.backend.calculate_expectation_state(self, state, normalize)
             elif len(shape) == 2:  # density matrix
                 return self.backend.calculate_expectation_density_matrix(
-                    self.matrix, state, normalize
+                    self, state, normalize
                 )
             else:
                 raise_error(
@@ -664,7 +662,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                 self.backend,
                 self.backend.cast(state, copy=True),
                 self.nqubits,
-                density_matrix,
+                density_matrix=density_matrix,
             )
         if self.constant:  # pragma: no cover
             total += self.constant * state
