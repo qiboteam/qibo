@@ -142,7 +142,7 @@ class Hamiltonian(AbstractHamiltonian):
         c = Circuit(n)
         for i in range(n):
             c.add(gates.X(int(i)))
-        state = c()  # this is an execution result, a quantum state
+        state = self.backend.execute_circuit(c)  # this is an execution result, a quantum state
         return self.expection(self, state)
 
     def convert_state_to_count(self, state):
@@ -158,10 +158,10 @@ class Hamiltonian(AbstractHamiltonian):
         """
         Auxilliary method to computes CVaR for given probabilities, values, and confidence level.
 
-        Attributes:
-        - probabilities: list/array of probabilities
-        - values: list/array of corresponding values
-        - alpha: confidence level
+        Args:
+            probabilities (list): list/array of probabilities
+            values (list): list/array of corresponding values
+            alpha (float): confidence level
 
         Returns:
         - CVaR

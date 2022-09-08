@@ -341,7 +341,7 @@ class QAOA(object):
             state = hamiltonian.backend.cast(state, copy=True)
         qaoa.set_parameters(params)
         state = qaoa(state)
-        return hamiltonian.expectation(state)
+        return hamiltonian.cvar(state)
 
     def _gibbs_loss(params, qaoa, hamiltonian, state):
         if state is not None:
@@ -523,10 +523,6 @@ class QAOA(object):
             qaoa.set_parameters(params)
             state = qaoa(state)
             return hamiltonian.expectation(state)
-            # elif loss == "cvar":
-            #    return hamiltonian.cvar(state)
-            # elif loss == "gibbs":
-            #    return hamiltonian.gibbs(state)
 
         if loss is None:
             if method == "sgd":
@@ -540,7 +536,7 @@ class QAOA(object):
         else:
             if method == "sgd":
                 loss = lambda p, c, h, s: loss(
-                    self.hamiltonian.backend.case(p), c, h, s
+                    self.hamiltonian.backend.cast(p), c, h, s
                 )
             else:
                 loss = lambda p, c, h, s: self.hamiltonian.backend.to_numpy(
