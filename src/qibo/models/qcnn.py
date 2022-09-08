@@ -138,9 +138,9 @@ class QuantumCNN():
         '''c.add(symbols[6]*gates.Unitary(matrixZZ, 0, 1))
         c.add(symbols[7]*gates.Unitary(matrixYY, 0, 1))
         c.add(symbols[8]*gates.Unitary(matrixXX, 0, 1))'''
-        c.add(gates.RZZ(0,1,symbols[6]))
-        c.add(gates.RYY(0,1,symbols[7]))
-        c.add(gates.RXX(0,1,symbols[8]))
+        c.add(gates.RZZ(bits[0],bits[1],symbols[6]))
+        c.add(gates.RYY(bits[0],bits[1],symbols[7]))
+        c.add(gates.RXX(bits[0],bits[1],symbols[8]))
         
         c += self.one_qubit_unitary(bits[0], symbols[9:12])
         c += self.one_qubit_unitary(bits[1], symbols[12:])
