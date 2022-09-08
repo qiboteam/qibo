@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+from tkinter import N
 import numpy as np
 import qibo
 from qibo.models import Circuit
@@ -48,7 +49,24 @@ class QuantumCNN():
 
         yield gates.CZ(0, self.nqubits-1)
 
-    def ansatz(self, nlayers, rotations):    ### TODO: QCNN ansatz goes here
+
+    def quantum_conv(self, bits, symbols):
+        c = Circuit(self.nqubits)
+        for first, second in zip(bits[0::2], bits[1::2]):
+            c += self.two_qubit_unitary([first, second], symbols)
+        for first, second in zip(bits[1::2], bits[2::2] + [bits[0]]):
+            c += self.two_qubit_unitary([first, second], symbols)
+        return c
+
+
+    def quantum_pool(self, source_bits, sink_bits, symbols):
+        c = Circuit(self.nqubits)
+        for source, sink in zip(source_bits, sink_bits):
+            c += self.two_qubit_pool(source, sink, symbols)
+        return c
+
+
+    def ansatz(self, nlayers, rotations, params=None):    ### TODO: QCNN ansatz goes here
         """
         Args:
             theta: list or numpy.array with the angles to be used in the circuit
@@ -56,12 +74,19 @@ class QuantumCNN():
         Returns:
             Circuit implementing the variational ansatz
         """
+        if params is not None:
+            symbols = params
+        else
+            symbols = 1
+
         c = Circuit(self.nqubits)
-        for _ in range(nlayers):
-            c.add(rotations())
-            c.add(self._CZ_gates1())
-            c.add(rotations())
-            c.add(self._CZ_gates2())
+        for layer in range(nlayers):
+            # c.add(rotations())
+            # c.add(self._CZ_gates1())
+            # c.add(rotations())
+            # c.add(self._CZ_gates2())
+            c += self.quantum_conv()
+            c += self.quantum_pool()
         # Final rotations
         c.add(rotations())
         # Measurements
@@ -72,8 +97,9 @@ class QuantumCNN():
     def one_qubit_unitary(self, bit, symbols):
         """Make a circuit enacting a rotation of the bloch sphere about the X,
         Y and Z axis, that depends on the values in `symbols`.
+        Symbols should be a list of length 3.
         """
-        c = Circuit(1)
+        c = Circuit(self.nqubits)
         c.add(gates.RX(bit,symbols[0]))#question: is  cirq.X(bit)**symbols[0] same as RX(bit,symbols[0])
         c.add(gates.RY(bit,symbols[1]))
         c.add(gates.RZ(bit,symbols[2]))
@@ -82,8 +108,10 @@ class QuantumCNN():
 
     
     def two_qubit_unitary(self, bits, symbols):
-        """Make a circuit that creates an arbitrary two qubit unitary."""
-        c = Circuit(2)
+        """Make a circuit that creates an arbitrary two qubit unitary.
+        Symbols should be a list of length 15.
+        """
+        c = Circuit(self.nqubits)
         c.add(self.one_qubit_unitary(bits[0], symbols[0:3]))
         c.add(self.one_qubit_unitary(bits[1], symbols[3:6]))
         #to improve: to define new gates of XX YY and ZZ outside.
@@ -108,8 +136,10 @@ class QuantumCNN():
 
     def two_qubit_pool(self, source_qubit, sink_qubit, symbols):
         """Make a circuit to do a parameterized 'pooling' operation, which
-        attempts to reduce entanglement down from two qubits to just one."""
-        pool_circuit = Circuit(2)
+        attempts to reduce entanglement down from two qubits to just one.
+        Symbols should be a list of 6 params.
+        """
+        pool_circuit = Circuit(self.nqubits)
         sink_basis_selector = self.one_qubit_unitary(sink_qubit, symbols[0:3])
         source_basis_selector = self.one_qubit_unitary(source_qubit, symbols[3:6])
         pool_circuit.add(sink_basis_selector)
