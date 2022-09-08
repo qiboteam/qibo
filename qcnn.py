@@ -74,6 +74,17 @@ class QuantumCNN():
         Returns:
             Circuit implementing the variational ansatz
         """
+        """
+        Wenjun's version:
+            symbols = sympy.symbols('qconv0:63')
+            # uses sympy.Symbols to map learnable variables. ? scans incoming circuits and replaces these with ? variables.
+            model_circuit.add (quantum_conv_circuit(qubits, symbols[0:15]))
+            model_circuit.add (quantum_pool_circuit(qubits[:4], qubits[4:], symbols[15:21]))
+            model_circuit.add (quantum_conv_circuit(qubits[4:], symbols[21:36]))
+            model_circuit.add (quantum_pool_circuit(qubits[4:6], qubits[6:], symbols[36:42]))
+            model_circuit.add (quantum_conv_circuit(qubits[6:], symbols[42:57]))
+            model_circuit.add (quantum_pool_circuit([qubits[6]], [qubits[7]],symbols[57:63]))
+        """
         if params is not None:
             symbols = params
         else
@@ -144,12 +155,35 @@ class QuantumCNN():
         source_basis_selector = self.one_qubit_unitary(source_qubit, symbols[3:6])
         pool_circuit.add(sink_basis_selector)
         pool_circuit.add(source_basis_selector)
-        pool_circuit.add(gates.CNOT(source_qubit, sink_qubit))
-        #pool_circuit.add(sink_basis_selector**-1) 
-        #question: how to replace sink_basis_selector**-1
-        pool_circuit=pool_circuit.invert()
+        pool_circuit.add(gates.CNOT(source_qubit, sink_qubit))        
+        pool_circuit.add(sink_basis_selector.invert())
         
         return pool_circuit
+
+
+    def quantum_conv_circuit(self, bits, symbols):
+        """Quantum Convolution Layer .
+        Return a circuit with the cascade of `two_qubit_unitary` applied
+        to all pairs of qubits in `bits` .
+        """
+        circuit = Circuit()
+        for first, second in zip(bits[0::2], bits[1::2]):
+            circuit.add(two_qubit_unitary([first, second], symbols))
+        for first, second in zip(bits[1::2], bits[2::2] + [bits[0]]):
+            circuit.add(two_qubit_unitary([first, second], symbols))
+        return circuit
+
+
+
+    def quantum_pool_circuit(self, source_bits, sink_bits, symbols):
+        """A layer that specifies a quantum pooling operation.
+        A Quantum pool tries to learn to pool the relevant information from two
+        qubits onto 1.
+        """
+        circuit = Circuit()
+        for source, sink in zip(source_bits, sink_bits):
+            circuit.add(two_qubit_pool(source, sink, symbols))
+        return circuit
 
 
     def Classifier_circuit(self, theta):
