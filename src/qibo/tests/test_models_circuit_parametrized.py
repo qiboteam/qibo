@@ -191,8 +191,8 @@ def test_set_parameters_with_gate_fusion(backend, trainable):
 
 
 @pytest.mark.parametrize("trainable", [True, False])
-def test_set_parameters_with_gate_fusion(backend, trainable):
-    """Check updating parameters of fused circuit."""
+def test_set_parameters_with_light_cone(backend, trainable):
+    """Check updating parameters of light cone circuit."""
     params = np.random.random(4)
     c = Circuit(4)
     c.add(gates.RX(0, theta=params[0], trainable=trainable))
