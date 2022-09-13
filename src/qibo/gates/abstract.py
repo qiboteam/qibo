@@ -340,6 +340,11 @@ class ParametrizedGate(Gate):
         for gate in self.device_gates:  # pragma: no cover
             gate.parameters = x
 
+    def on_qubits(self, qubit_map):
+        gate = super().on_qubits(qubit_map)
+        gate.parameters = self.parameters
+        return gate
+
     def substitute_symbols(self):
         params = list(self._parameters)
         for i, param in self.symbolic_parameters.items():

@@ -1264,6 +1264,7 @@ class Unitary(ParametrizedGate):
         if self.is_controlled_by:
             controls = (qubit_map.get(i) for i in self.control_qubits)
             gate = gate.controlled_by(*controls)
+        gate.parameters = self.parameters
         return gate
 
     def _dagger(self):
