@@ -145,6 +145,8 @@ class Hamiltonian(AbstractHamiltonian):
         state = self.backend.execute_circuit(c)  # this is an execution result, a quantum state
         return self.expection(self, state)
 
+
+
     def convert_state_to_count(self, state):
         """
         This is a function that convert a quantum state to a dictionary keeping track of energy and its frequency.
@@ -164,7 +166,7 @@ class Hamiltonian(AbstractHamiltonian):
             alpha (float): confidence level
 
         Returns:
-        - CVaR
+            CVaR
         """
         sorted_indices = np.argsort(values)
         probs = np.array(probabilities)[sorted_indices]
@@ -181,12 +183,8 @@ class Hamiltonian(AbstractHamiltonian):
         cvar /= total_prob
         return cvar
 
-    def cvar(
-        self, state, alpha=0.1
-    ):  # rather than counts in the input, we take in a state and the create counts
-        # create and run circuit
-        # evaluate counts
-        counts = self.convert_state_to_count(state)  # i need to work further on this
+    def cvar(self, state, alpha=0.1):
+        counts = self.convert_state_to_count(state)
         probabilities = np.zeros(len(counts))
         values = np.zeros(len(counts))
         for i, (x, p) in enumerate(counts.items()):
@@ -198,20 +196,16 @@ class Hamiltonian(AbstractHamiltonian):
         cvar = self.compute_cvar(probabilities, values, alpha)
         return cvar
 
-    def gibbs(
-        self, state, eta=0.1
-    ):  # rather than counts in the input, we take in a state and the create counts
+
+    def gibbs(self, state, eta=0.1):
         counts = self.convert_state_to_count(state)
         avg = 0
         sum_count = 0
         # common_metric = float("inf")
         for bitstring, count in counts.items():
-            obj = self.convert_bit_to_energy(
-                bitstring
-            )  # tsp_obj(bitstring) this was a function to evaluate the objective of the string
+            obj = self.convert_bit_to_energy(bitstring)
             avg += np.exp(-eta * obj)
             sum_count += count
-            # common_metric = min(common_metric, obj)
         return -np.log(avg / sum_count)
 
     def eye(self, n=None):
@@ -309,6 +303,7 @@ class Hamiltonian(AbstractHamiltonian):
                 NotImplementedError,
                 "Hamiltonian matmul to {} not " "implemented.".format(type(o)),
             )
+
 
 
 class TrotterCircuit:

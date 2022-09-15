@@ -350,6 +350,7 @@ class QAOA(object):
         state = qaoa(state)
         return hamiltonian.gibbs(state)
 
+
     def __init__(
         self, hamiltonian, mixer=None, solver="exp", callbacks=[], accelerators=None
     ):
@@ -488,7 +489,7 @@ class QAOA(object):
             method (str): the desired minimization method.
                 See :meth:`qibo.optimizers.optimize` for available optimization
                 methods.
-            loss (str): the desired loss function. It can be None, "gibbs", or "cvar".
+            loss (func): the desired loss function.
             jac (dict): Method for computing the gradient vector for scipy optimizers.
             hess (dict): Method for computing the hessian matrix for scipy optimizers.
             hessp (callable): Hessian of objective function times an arbitrary
