@@ -147,8 +147,6 @@ class Hamiltonian(AbstractHamiltonian):
         )  # this is an execution result, a quantum state
         return self.expection(self, state)
 
-
-
     def convert_state_to_count(self, state):
         """
         This is a function that convert a quantum state to a dictionary keeping track of energy and its frequency.
@@ -197,7 +195,6 @@ class Hamiltonian(AbstractHamiltonian):
         # evaluate cvar
         cvar = self.compute_cvar(probabilities, values, alpha)
         return cvar
-
 
     def gibbs(self, state, eta=0.1):
         counts = self.convert_state_to_count(state)
@@ -305,7 +302,6 @@ class Hamiltonian(AbstractHamiltonian):
                 NotImplementedError,
                 "Hamiltonian matmul to {} not " "implemented.".format(type(o)),
             )
-
 
 
 class TrotterCircuit:

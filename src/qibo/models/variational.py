@@ -350,7 +350,6 @@ class QAOA(object):
         state = qaoa(state)
         return hamiltonian.gibbs(state)
 
-
     def __init__(
         self, hamiltonian, mixer=None, solver="exp", callbacks=[], accelerators=None
     ):
