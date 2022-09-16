@@ -201,7 +201,6 @@ x q[0];
 y q[1];
 measure q[0] -> register0[0];
 measure q[1] -> register0[1];"""
-    print(c.to_qasm())
     assert_strings_equal(c.to_qasm(), target)
 
 
