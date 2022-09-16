@@ -110,17 +110,6 @@ def test_measurement_circuit(backend, accelerators):
     )
 
 
-@pytest.mark.skip
-def test_gate_after_measurement_error(backend, accelerators):
-    c = models.Circuit(4, accelerators)
-    c.add(gates.X(0))
-    c.add(gates.M(0))
-    c.add(gates.X(1))
-    # TODO: Change this to NotImplementedError
-    with pytest.raises(ValueError):
-        c.add(gates.H(0))
-
-
 @pytest.mark.parametrize("registers", [False, True])
 def test_measurement_qubit_order_simple(backend, registers):
     c = models.Circuit(2)
@@ -224,24 +213,6 @@ def test_circuit_addition_with_measurements_in_both_circuits(backend, accelerato
     c = c1 + c2
     assert len(c.measurement_gate.target_qubits) == 2
     assert c.measurement_tuples == {"a": (1,), "b": (0,)}
-
-
-@pytest.mark.skip
-def test_gate_after_measurement_with_addition_error(backend, accelerators):
-    c = models.Circuit(4, accelerators)
-    c.add(gates.H(0))
-    c.add(gates.M(1))
-
-    # Try to add gate to qubit that is already measured
-    c2 = models.Circuit(4, accelerators)
-    c2.add(gates.H(1))
-    with pytest.raises(ValueError):
-        c += c2
-    # Try to add measurement to qubit that is already measured
-    c2 = models.Circuit(4, accelerators)
-    c2.add(gates.M(1, register_name="a"))
-    with pytest.raises(ValueError):
-        c += c2
 
 
 def test_circuit_copy_with_measurements(backend, accelerators):
