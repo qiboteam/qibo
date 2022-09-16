@@ -123,10 +123,7 @@ class Circuit:
         # Keep track of parametrized gates for the ``set_parameters`` method
         self.parametrized_gates = _ParametrizedGates()
         self.trainable_gates = _ParametrizedGates()
-
-        self.measurement_tuples = dict()
-        self.measurement_gate = None
-        self.measurement_gate_result = None
+        self.measurements = []  # list of non-collapsible measurements
 
         self._final_state = None
         self.compiled = None
@@ -217,37 +214,12 @@ class Circuit:
         newcircuit = self.__class__(**self.init_kwargs)
         # Add gates from `self` to `newcircuit` (including measurements)
         for gate in self.queue:
-            newcircuit.queue.append(gate)
-            if isinstance(gate, gates.ParametrizedGate):
-                newcircuit.parametrized_gates.append(gate)
-                if gate.trainable:
-                    newcircuit.trainable_gates.append(gate)
-        newcircuit.measurement_gate = self.measurement_gate
-        newcircuit.measurement_tuples = self.measurement_tuples
+            newcircuit.add(gate)
         # Add gates from `circuit` to `newcircuit` (including measurements)
         for gate in circuit.queue:
-            newcircuit.check_measured(gate.qubits)
-            newcircuit.queue.append(gate)
-            if isinstance(gate, gates.ParametrizedGate):
-                newcircuit.parametrized_gates.append(gate)
-                if gate.trainable:
-                    newcircuit.trainable_gates.append(gate)
+            newcircuit.add(gate)
 
-        if newcircuit.measurement_gate is None:
-            newcircuit.measurement_gate = circuit.measurement_gate
-            newcircuit.measurement_tuples = circuit.measurement_tuples
-        elif circuit.measurement_gate is not None:
-            for k, v in circuit.measurement_tuples.items():
-                if k in newcircuit.measurement_tuples:
-                    raise_error(
-                        KeyError,
-                        "Register name {} already exists in " "circuit.".format(k),
-                    )
-                newcircuit.check_measured(v)
-                newcircuit.measurement_tuples[k] = v
-            newcircuit.measurement_gate.add(circuit.measurement_gate)
-
-        # Re-execute full circuit when sampling if one of the circuit has repeated_execution True
+        # Re-execute full circuit when sampling if one of the circuit has repeated_execution ``True``
         newcircuit.repeated_execution = (
             self.repeated_execution or circuit.repeated_execution
         )
@@ -339,8 +311,7 @@ class Circuit:
         new_circuit = self.__class__(**self.init_kwargs)
         new_circuit.parametrized_gates = _ParametrizedGates(self.parametrized_gates)
         new_circuit.trainable_gates = _ParametrizedGates(self.trainable_gates)
-        new_circuit.measurement_gate = self.measurement_gate
-        new_circuit.measurement_tuples = dict(self.measurement_tuples)
+        new_circuit.measurements = self.measurements
         return new_circuit
 
     def copy(self, deep: bool = False):
@@ -363,7 +334,7 @@ class Circuit:
                     # impractical case
                     raise_error(
                         NotImplementedError,
-                        "Cannot create deep copy " "of fused circuit.",
+                        "Cannot create deep copy of fused circuit.",
                     )
 
                 new_gate = copy.copy(gate)
@@ -372,8 +343,7 @@ class Circuit:
                     new_circuit.parametrized_gates.append(new_gate)
                     if gate.trainable:
                         new_circuit.trainable_gates.append(new_gate)
-            new_circuit.measurement_gate = copy.copy(self.measurement_gate)
-            new_circuit.measurement_tuples = dict(self.measurement_tuples)
+            new_circuit.measurements = list(self.measurements)
         else:
             if self.accelerators:  # pragma: no cover
                 raise_error(
@@ -536,6 +506,7 @@ class Circuit:
         a `NotImplementedError` if they are because currently we do not allow
         measured qubits to be reused.
         """
+        # TODO: Remove this
         for qubit in gate_qubits:
             if (
                 self.measurement_gate is not None
@@ -588,7 +559,7 @@ class Circuit:
             if self._final_state is not None:
                 raise_error(
                     RuntimeError,
-                    "Cannot add gates to a circuit after it is " "executed.",
+                    "Cannot add gates to a circuit after it is executed.",
                 )
 
             for q in gate.target_qubits:
@@ -600,48 +571,49 @@ class Circuit:
                         "".format(gate.target_qubits, self.nqubits),
                     )
 
-            self.check_measured(gate.qubits)
-            if isinstance(gate, gates.M) and not gate.collapse:
-                return self._add_measurement(gate)
+            self.queue.append(gate)
+            if isinstance(gate, gates.M):
+                if gate.register_name is not None:
+                    name = gate.register_name
+                    if name in self.measurement_tuples:
+                        raise_error(
+                            KeyError, f"Register {name} already exists in circuit."
+                        )
+                if gate.collapse:
+                    self.repeated_execution = True
+                    return gate.get_symbols()
+                else:
+                    self.measurements.append(gate)
+
+            if isinstance(gate, gates.UnitaryChannel):
+                self.repeated_execution = not self.density_matrix
+            if isinstance(gate, gates.ParametrizedGate):
+                self.parametrized_gates.append(gate)
+                if gate.trainable:
+                    self.trainable_gates.append(gate)
+
+    @property
+    def measurement_gate(self) -> gates.M:
+        mgate = None
+        for gate in self.measurements:
+            if mgate is None:
+                mgate = gates.M(*gate.init_args, **gate.init_kwargs)
             else:
-                return self._add_gate(gate)
+                mgate.add(gate)
+        return mgate
 
-    def _add_gate(self, gate):
-        self.queue.append(gate)
-        if isinstance(gate, gates.M):
-            self.repeated_execution = True
-            return gate.get_symbols()
-        if isinstance(gate, gates.UnitaryChannel):
-            self.repeated_execution = not self.density_matrix
-        if isinstance(gate, gates.ParametrizedGate):
-            self.parametrized_gates.append(gate)
-            if gate.trainable:
-                self.trainable_gates.append(gate)
-
-    def _add_measurement(self, gate: gates.Gate):
-        """Called automatically by `add` when `gate` is measurement.
-
-        This is because measurement gates (`gates.M`) are treated differently
-        than all other gates.
-        The user is not supposed to use the `_add_measurement` method.
-        """
-        # Set register's name and log the set of qubits in `self.measurement_tuples`
-        name = gate.register_name
-        if name is None:
-            name = "register{}".format(len(self.measurement_tuples))
-            gate.register_name = name
-        elif name in self.measurement_tuples:
-            raise_error(
-                KeyError, "Register name {} has already been used." "".format(name)
-            )
-
-        # Update circuit's global measurement gate
-        if self.measurement_gate is None:
-            self.measurement_gate = gate
-            self.measurement_tuples[name] = tuple(gate.target_qubits)
-        else:
-            self.measurement_gate.add(gate)
-            self.measurement_tuples[name] = gate.target_qubits
+    @property
+    def measurement_tuples(self) -> Dict[str, Tuple[int]]:
+        mtuples = {}
+        for gate in self.measurements:
+            name = gate.register_name
+            if name is None:
+                name = "register{}".format(len(mtuples))
+                gate.register_name = name
+            elif name in mtuples:
+                raise_error(KeyError, f"Register name {name} has already been used.")
+            mtuples[name] = gate.target_qubits
+        return mtuples
 
     @property
     def ngates(self) -> int:

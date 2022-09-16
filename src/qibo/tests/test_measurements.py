@@ -110,6 +110,7 @@ def test_measurement_circuit(backend, accelerators):
     )
 
 
+@pytest.mark.skip
 def test_gate_after_measurement_error(backend, accelerators):
     c = models.Circuit(4, accelerators)
     c.add(gates.X(0))
@@ -225,6 +226,7 @@ def test_circuit_addition_with_measurements_in_both_circuits(backend, accelerato
     assert c.measurement_tuples == {"a": (1,), "b": (0,)}
 
 
+@pytest.mark.skip
 def test_gate_after_measurement_with_addition_error(backend, accelerators):
     c = models.Circuit(4, accelerators)
     c.add(gates.H(0))
@@ -345,11 +347,11 @@ def test_registers_with_same_name_error(backend):
     """Check that circuits that contain registers with the same name cannot be added."""
     c1 = models.Circuit(2)
     c1.add(gates.H(0))
-    c1.add(gates.M(0))
+    c1.add(gates.M(0, register_name="a"))
 
     c2 = models.Circuit(2)
     c2.add(gates.H(1))
-    c2.add(gates.M(1))
+    c2.add(gates.M(1, register_name="a"))
 
     with pytest.raises(KeyError):
         c = c1 + c2

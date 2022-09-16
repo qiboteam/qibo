@@ -238,6 +238,9 @@ class M(Gate):
         )
 
     def apply(self, backend, state, nqubits):
+        if not self.collapse:
+            return state
+
         qubits = sorted(self.target_qubits)
         # measure and get result
         probs = backend.calculate_probabilities(state, qubits, nqubits)
@@ -250,6 +253,9 @@ class M(Gate):
         return backend.collapse_state(state, qubits, shot, nqubits)
 
     def apply_density_matrix(self, backend, state, nqubits):
+        if not self.collapse:
+            return state
+
         qubits = sorted(self.target_qubits)
         # measure and get result
         probs = backend.calculate_probabilities_density_matrix(state, qubits, nqubits)
