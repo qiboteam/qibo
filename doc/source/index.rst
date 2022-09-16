@@ -69,3 +69,4 @@ Supporters and collaborators
 * Barcelona Supercomputing Center (BSC), Spain.
 * Centre for Quantum Technologies (CQT), Singapore.
 * Institute of High Performance Computing (IHPC), Singapore.
+* NVIDIA (cuQuantum), USA.
