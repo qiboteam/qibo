@@ -365,13 +365,16 @@ class Circuit:
         Returns:
             The circuit inverse.
         """
-        import copy
-
+        skip_measurements = True
+        measurements = []
         new_circuit = self.__class__(**self.init_kwargs)
         for gate in self.queue[::-1]:
-            new_circuit.add(gate.dagger())
-        new_circuit.measurement_gate = copy.copy(self.measurement_gate)
-        new_circuit.measurement_tuples = dict(self.measurement_tuples)
+            if isinstance(gate, gates.M) and skip_measurements:
+                measurements.append(gate)
+            else:
+                new_circuit.add(gate.dagger())
+                skip_measurements = False
+        new_circuit.add(measurements[::-1])
         return new_circuit
 
     def _check_noise_map(self, noise_map: NoiseMapType) -> NoiseMapType:
@@ -419,8 +422,6 @@ class Circuit:
         decomp_circuit = self.__class__(self.nqubits)
         for gate in self.queue:
             decomp_circuit.add(gate.decompose(*free))
-        decomp_circuit.measurement_tuples = dict(self.measurement_tuples)
-        decomp_circuit.measurement_gate = self.measurement_gate
         return decomp_circuit
 
     def with_noise(self, noise_map: NoiseMapType):
@@ -482,12 +483,13 @@ class Circuit:
                     "channels.",
                 )
             noise_gates.append([])
-            for q in gate.qubits:
-                if q in noise_map and sum(noise_map[q]) > 0:
-                    p = noise_map[q]
-                    noise_gates[-1].append(
-                        gate_module.PauliNoiseChannel(q, px=p[0], py=p[1], pz=p[2])
-                    )
+            if not isinstance(gate, gates.M):
+                for q in gate.qubits:
+                    if q in noise_map and sum(noise_map[q]) > 0:
+                        p = noise_map[q]
+                        noise_gates[-1].append(
+                            gate_module.PauliNoiseChannel(q, px=p[0], py=p[1], pz=p[2])
+                        )
 
         # Create new circuit with noise gates inside
         noisy_circuit = self.__class__(**self.init_kwargs)
@@ -495,28 +497,7 @@ class Circuit:
             noisy_circuit.add(gate)
             for noise_gate in noise_gates[i]:
                 noisy_circuit.add(noise_gate)
-        noisy_circuit.measurement_tuples = dict(self.measurement_tuples)
-        noisy_circuit.measurement_gate = self.measurement_gate
         return noisy_circuit
-
-    def check_measured(self, gate_qubits: Tuple[int]):
-        """Helper method for `add`.
-
-        Checks if the qubits that a gate acts are already measured and raises
-        a `NotImplementedError` if they are because currently we do not allow
-        measured qubits to be reused.
-        """
-        # TODO: Remove this
-        for qubit in gate_qubits:
-            if (
-                self.measurement_gate is not None
-                and qubit in self.measurement_gate.target_qubits
-            ):
-                raise_error(
-                    ValueError,
-                    "Cannot reuse qubit {} because it is already "
-                    "measured".format(qubit),
-                )
 
     def add(self, gate):
         """Add a gate to a given queue.
@@ -1017,6 +998,9 @@ class Circuit:
 
         # Add gates
         for gate in self.queue:
+            if isinstance(gate, gates.M):
+                continue
+
             if gate.name not in gates.QASM_GATES:
                 raise_error(
                     ValueError, f"Gate {gate.name} is not supported by OpenQASM."
@@ -1347,13 +1331,6 @@ class Circuit:
                 idx[targets[0]] += 1
             else:
                 idx = [col + 1] * self.nqubits
-
-        # Include measurement gates
-        if self.measurement_gate:
-            for iq in range(self.nqubits):
-                matrix[iq].append(
-                    "M" if iq in self.measurement_gate.target_qubits else ""
-                )
 
         # Add some spacers
         for col in range(len(matrix[0])):

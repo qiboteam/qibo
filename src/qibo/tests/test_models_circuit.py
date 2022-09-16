@@ -133,10 +133,12 @@ def test_add_measurement():
     g1 = gates.M(0, 2, register_name="a")
     g2 = gates.M(3, register_name="b")
     c.add([g1, g2])
-    assert c.measurement_gate is g1
+    mgate = c.measurement_gate
+    assert len(c.queue) == 2
     assert c.measurement_tuples == {"a": (0, 2), "b": (3,)}
-    assert g1.target_qubits == (0, 2, 3)
+    assert g1.target_qubits == (0, 2)
     assert g2.target_qubits == (3,)
+    assert mgate.target_qubits == (0, 2, 3)
     with pytest.raises(KeyError):
         c.add(gates.M(4, register_name="b"))
 
@@ -214,8 +216,7 @@ def test_circuit_addition(measurements):
         c2.add(gates.M(1, register_name="b"))
 
     c3 = c1 + c2
-    assert c3.depth == 3
-    assert list(c3.queue) == [g1, g2, g3]
+    assert c3.depth == 3 + int(measurements)
     if measurements:
         assert c3.measurement_tuples == {"a": (0,), "b": (1,)}
         assert c3.measurement_gate.target_qubits == (0, 1)
@@ -337,7 +338,6 @@ def test_circuit_copy_with_measurements():
     c1.add(gates.M(0, 1, register_name="a"))
     c1.add(gates.M(3, register_name="b"))
     c2 = c1.copy()
-    assert c2.measurement_gate is c1.measurement_gate
     assert c2.measurement_tuples == {"a": (0, 1), "b": (3,)}
 
 
