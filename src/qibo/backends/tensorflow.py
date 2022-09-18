@@ -169,6 +169,8 @@ class TensorflowBackend(NumpyBackend):
         import tensorflow as tf
         import tensorflow.experimental.numpy as tnp  # pylint: disable=E0401
 
+        self.version = tf.__version__
+
         tnp.experimental_enable_numpy_behavior()
         self.tf = tf
         self.np = tnp
