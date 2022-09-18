@@ -64,7 +64,7 @@ Supporters and collaborators
 * Quantum Research Center, Technology Innovation Institute (TII), United Arab Emirates
 * Università degli Studi di Milano (UNIMI), Italy.
 * Istituto Nazionale di Fisica Nucleare (INFN), Italy.
-* European Organization for Nuclear research (CERN), Swizerland.
+* European Organization for Nuclear research (CERN), Switzerland.
 * Universitat de Barcelona (UB), Spain.
 * Barcelona Supercomputing Center (BSC), Spain.
 * Centre for Quantum Technologies (CQT), Singapore.
