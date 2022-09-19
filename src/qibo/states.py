@@ -199,8 +199,12 @@ class MeasurementResult:
 
 class CircuitResult(MeasurementResult):
     def __init__(self, backend, circuit, execution_result, nshots=None):
-        mgate = circuit.measurement_gate
-        mtuples = circuit.measurement_tuples
+        if hasattr(circuit, "measurement_gate"):
+            mgate = circuit.measurement_gate
+            mtuples = circuit.measurement_tuples
+        else:
+            mgate, mtuples = None, None
+
         super().__init__(mgate, mtuples, nshots, backend)
         self.nqubits = circuit.nqubits
         self.density_matrix = circuit.density_matrix
