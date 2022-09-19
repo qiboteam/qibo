@@ -562,7 +562,7 @@ class Circuit:
                         )
                 if gate.collapse:
                     self.repeated_execution = True
-                    return gate.get_symbols()
+                    return gate.result
                 else:
                     self.measurements.append(gate)
 

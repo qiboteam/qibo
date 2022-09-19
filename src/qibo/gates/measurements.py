@@ -5,15 +5,7 @@ import sympy
 
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate
-
-
-class MeasurementResult:
-    def __init__(self, qubits):
-        self.qubits = qubits
-        self.samples = []
-
-    def append(self, shot):
-        self.samples.append(shot)
+from qibo.states import MeasurementResult
 
 
 class MeasurementSymbol(sympy.Symbol):
@@ -43,7 +35,7 @@ class MeasurementSymbol(sympy.Symbol):
         self.name = data.get("name")
 
     def outcome(self):
-        return self.result.samples[-1][self.index]
+        return self.result.samples(binary=True)[-1][self.index]
 
     def evaluate(self, expr):
         """Substitutes the symbol's value in the given expression.
@@ -110,22 +102,13 @@ class M(Gate):
                     NotImplementedError,
                     "Bitflip measurement noise is not " "available when collapsing.",
                 )
-            self.result = MeasurementResult(self.target_qubits)
+            self.result = MeasurementResult(self)
 
         if p1 is None:
             p1 = p0
         if p0 is None:
             p0 = p1
         self.bitflip_map = (self._get_bitflip_map(p0), self._get_bitflip_map(p1))
-
-    def get_symbols(self):
-        symbols = []
-        for i, q in enumerate(self.target_qubits):
-            symbols.append(MeasurementSymbol(i, self.result))
-        if len(self.target_qubits) > 1:
-            return symbols
-        else:
-            return symbols[0]
 
     @staticmethod
     def _get_bitflip_tuple(qubits: Tuple[int], probs: "ProbsType") -> Tuple[float]:
@@ -244,11 +227,8 @@ class M(Gate):
         qubits = sorted(self.target_qubits)
         # measure and get result
         probs = backend.calculate_probabilities(state, qubits, nqubits)
-        shot = backend.sample_shots(probs, 1)
-        # update the gate's result with the measurement outcome
-        binshot = backend.samples_to_binary(shot, len(qubits))[0]
         self.result.backend = backend
-        self.result.append(binshot)
+        shot = self.result.add_shot(probs)
         # collapse state
         return backend.collapse_state(state, qubits, shot, nqubits)
 
@@ -259,10 +239,7 @@ class M(Gate):
         qubits = sorted(self.target_qubits)
         # measure and get result
         probs = backend.calculate_probabilities_density_matrix(state, qubits, nqubits)
-        shot = backend.sample_shots(probs, 1)
-        binshot = backend.samples_to_binary(shot, len(qubits))[0]
-        # update the gate's result with the measurement outcome
         self.result.backend = backend
-        self.result.append(binshot)
+        shot = self.result.add_shot(probs)
         # collapse state
         return backend.collapse_density_matrix(state, qubits, shot, nqubits)
