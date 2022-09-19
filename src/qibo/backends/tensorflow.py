@@ -4,10 +4,10 @@ import os
 
 import numpy as np
 
+from qibo import __version__
 from qibo.backends.matrices import Matrices
 from qibo.backends.numpy import NumpyBackend
 from qibo.config import TF_LOG_LEVEL, log, raise_error
-from qibo import __version__
 
 
 class TensorflowMatrices(Matrices):
@@ -174,11 +174,11 @@ class TensorflowBackend(NumpyBackend):
         self.tf = tf
         self.np = tnp
 
-        self.versions = { "qibo" : __version__,
-                          "numpy" : np.__version__ ,
-                          "tensorflow" :  tf.__version__
-                          
-                        }
+        self.versions = {
+            "qibo": __version__,
+            "numpy": np.__version__,
+            "tensorflow": tf.__version__,
+        }
 
         self.matrices = TensorflowMatrices(self.dtype)
 
