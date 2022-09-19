@@ -300,6 +300,7 @@ class AAVQE(object):
             t += self._dt
         return best, params
 
+
 def _cvar_loss(params, qaoa, hamiltonian, state):
     if state is not None:
         state = hamiltonian.backend.cast(state, copy=True)
@@ -307,12 +308,14 @@ def _cvar_loss(params, qaoa, hamiltonian, state):
     state = qaoa(state)
     return hamiltonian.cvar(state)
 
+
 def _gibbs_loss(params, qaoa, hamiltonian, state):
     if state is not None:
         state = hamiltonian.backend.cast(state, copy=True)
     qaoa.set_parameters(params)
     state = qaoa(state)
     return hamiltonian.gibbs(state)
+
 
 class QAOA(object):
     """Quantum Approximate Optimization Algorithm (QAOA) model.
@@ -461,8 +464,6 @@ class QAOA(object):
     def __call__(self, initial_state=None):
         """Equivalent to :meth:`qibo.models.QAOA.execute`."""
         return self.execute(initial_state)
-
-
 
     def minimize(
         self,
@@ -659,10 +660,11 @@ class FALQON(QAOA):
         final_loss = _loss(parameters, self, self.hamiltonian)
         extra = {"energies": energy, "callbacks": callback_result}
         return final_loss, parameters, extra
+
+
 from qibo import hamiltonians
+
 h = hamiltonians.XXZ(3)
 qaoa = QAOA(h)
 initial_p = [0.05, 0.06, 0.07, 0.08]
-best, params, _ = qaoa.minimize(
-        initial_p, method="BFGS", loss=_cvar_loss
-    )
+best, params, _ = qaoa.minimize(initial_p, method="BFGS", loss=_cvar_loss)
