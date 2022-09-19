@@ -253,20 +253,6 @@ def test_qaoa_optimization(backend, method, options, dense, filename):
         assert_regression_fixture(backend, params, filename)
 
 
-@pytest.mark.parametrize(test_names, test_values)
-def test_qaoa_optimization_other_loss(backend, method, options, dense, filename):
-    if method == "sgd" and backend.name != "tensorflow":
-        pytest.skip("Skipping SGD test for unsupported backend.")
-    h = hamiltonians.XXZ(3, dense=dense, backend=backend)
-    qaoa = models.QAOA(h)
-    initial_p = [0.05, 0.06, 0.07, 0.08]
-    best, params, _ = qaoa.minimize(
-        initial_p, method=method, loss=qaoa._cvar_loss(qaoa, h, None), options=options
-    )
-    if filename is not None:
-        assert_regression_fixture(backend, params, filename)
-
-
 test_names = "delta_t,max_layers,tolerance,filename"
 test_values = [
     (0.1, 5, None, "falqon1.out"),

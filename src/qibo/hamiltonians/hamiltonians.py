@@ -193,8 +193,8 @@ class Hamiltonian(AbstractHamiltonian):
             )  # tsp_obj(x)  this was a function to evaluate the objective of the string
             probabilities[i] = p
         # evaluate cvar
-        cvar = self.compute_cvar(probabilities, values, alpha)
-        return cvar
+        cvar_ans = self.compute_cvar(probabilities, values, alpha)
+        return cvar_ans
 
     def gibbs(self, state, eta=0.1):
         counts = self.convert_state_to_count(state)
