@@ -805,10 +805,12 @@ class TrotterHamiltonian:
     def from_symbolic(cls, symbolic_hamiltonian, symbol_map):
         return cls()
 
-from qibo.tests.utils import random_state
+
 import models
+
+from qibo.tests.utils import random_state
+
 h = models.XXZ(3)
 
 s = random_state(3)
 h.cvar(s)
-
