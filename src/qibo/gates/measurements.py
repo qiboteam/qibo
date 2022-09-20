@@ -87,7 +87,7 @@ class M(Gate):
         self.target_qubits = tuple(q)
         self.register_name = register_name
         self.collapse = collapse
-        self.result = None
+        self._result = None
 
         self.init_args = q
         self.init_kwargs = {
@@ -102,13 +102,19 @@ class M(Gate):
                     NotImplementedError,
                     "Bitflip measurement noise is not " "available when collapsing.",
                 )
-            self.result = MeasurementResult(self)
+            self._result = MeasurementResult(self)
 
         if p1 is None:
             p1 = p0
         if p0 is None:
             p0 = p1
         self.bitflip_map = (self._get_bitflip_map(p0), self._get_bitflip_map(p1))
+
+    @property
+    def result(self):
+        if self._result is None:
+            self._result = MeasurementResult(self)
+        return self._result
 
     @staticmethod
     def _get_bitflip_tuple(qubits: Tuple[int], probs: "ProbsType") -> Tuple[float]:

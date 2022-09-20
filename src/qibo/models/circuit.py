@@ -565,6 +565,11 @@ class Circuit:
                     return gate.result
                 else:
                     self.measurements.append(gate)
+            else:
+                for measurement in self.measurements:
+                    if set(measurement.qubits) & set(gate.qubits):
+                        measurement.collapse = True
+                        self.repeated_execution = True
 
             if isinstance(gate, gates.UnitaryChannel):
                 self.repeated_execution = not self.density_matrix
