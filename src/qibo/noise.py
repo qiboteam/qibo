@@ -34,7 +34,7 @@ class DepolarizingError:
     """
     
     def __init__(self, lam):
-        self.options = lam
+        self.options = lam,
         self.channel = gates.DepolarizingChannel   
 
 
