@@ -84,7 +84,8 @@ class NoiseModel:
         Args:
             error: quantum error to associate with the gate. Possible choices
                    are :class:`qibo.noise.PauliError`,
-                   :class:`qibo.noise.ThermalRelaxationError` and
+                   :class:`qibo.noise.ThermalRelaxationError`,
+                   :class:`qibo.noise.DepolarizingError` and
                    :class:`qibo.noise.ResetError`.
             gate (:class:`qibo.gates.Gate`): gate after which the noise will be added.
             qubits (tuple): qubits where the noise will be applied, if None the noise
@@ -116,8 +117,11 @@ class NoiseModel:
                     qubits = gate.qubits
                 else:
                     qubits = tuple(set(gate.qubits) & set(qubits))
-                for q in qubits:
-                    noisy_circuit.add(error.channel(q, *error.options))
+                if isinstance(error, DepolarizingError):
+                    noisy_circuit.add(error.channel(qubits, *error.options))
+                else:
+                    for q in qubits:
+                        noisy_circuit.add(error.channel(q, *error.options))
         noisy_circuit.measurement_tuples = dict(circuit.measurement_tuples)
         noisy_circuit.measurement_gate = circuit.measurement_gate
         return noisy_circuit
