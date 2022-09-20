@@ -556,20 +556,23 @@ class Circuit:
             if isinstance(gate, gates.M):
                 if gate.register_name is not None:
                     name = gate.register_name
-                    if name in self.measurement_tuples:
-                        raise_error(
-                            KeyError, f"Register {name} already exists in circuit."
-                        )
+                    for mgate in self.measurements:
+                        if name == mgate.register_name:
+                            raise_error(
+                                KeyError, f"Register {name} already exists in circuit."
+                            )
                 if gate.collapse:
                     self.repeated_execution = True
-                    return gate.result
                 else:
                     self.measurements.append(gate)
+                return gate.result
+
             else:
-                for measurement in self.measurements:
+                for measurement in list(self.measurements):
                     if set(measurement.qubits) & set(gate.qubits):
                         measurement.collapse = True
                         self.repeated_execution = True
+                        self.measurements.remove(measurement)
 
             if isinstance(gate, gates.UnitaryChannel):
                 self.repeated_execution = not self.density_matrix
@@ -577,29 +580,6 @@ class Circuit:
                 self.parametrized_gates.append(gate)
                 if gate.trainable:
                     self.trainable_gates.append(gate)
-
-    @property
-    def measurement_gate(self) -> gates.M:
-        mgate = None
-        for gate in self.measurements:
-            if mgate is None:
-                mgate = gates.M(*gate.init_args, **gate.init_kwargs)
-            else:
-                mgate.add(gate)
-        return mgate
-
-    @property
-    def measurement_tuples(self) -> Dict[str, Tuple[int]]:
-        mtuples = {}
-        for gate in self.measurements:
-            name = gate.register_name
-            if name is None:
-                name = "register{}".format(len(mtuples))
-                gate.register_name = name
-            elif name in mtuples:
-                raise_error(KeyError, f"Register name {name} has already been used.")
-            mtuples[name] = gate.target_qubits
-        return mtuples
 
     @property
     def ngates(self) -> int:

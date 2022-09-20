@@ -411,13 +411,13 @@ class NumpyBackend(Backend):
                             gate.substitute_symbols()
                         state = gate.apply(self, state, nqubits)
 
-            if circuit.measurement_gate:
+            if circuit.measurements:
                 result = CircuitResult(self, circuit, state, 1)
-                results.append(result.samples(binary=False)[0])
+                results.append(result.samples()[0])
             else:
                 results.append(state)
 
-        if circuit.measurement_gate:
+        if circuit.measurements:
             final_result = CircuitResult(self, circuit, state, nshots)
             final_result._samples = self.aggregate_shots(results)
             circuit._final_state = final_result

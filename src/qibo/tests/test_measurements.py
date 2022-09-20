@@ -189,21 +189,29 @@ def test_circuit_with_unmeasured_qubits(backend, accelerators):
 
 def test_circuit_addition_with_measurements(backend):
     c = models.Circuit(2)
-    c.add(gates.H(0))
-    c.add(gates.H(1))
+    c.add(gates.X(0))
+    c.add(gates.X(1))
 
     meas_c = models.Circuit(2)
     c.add(gates.M(0, 1))
 
     c += meas_c
-    assert len(c.measurement_gate.target_qubits) == 2
-    assert c.measurement_tuples == {"register0": (0, 1)}
+    result = backend.execute_circuit(c, nshots=100)
+
+    assert_result(
+        backend,
+        result,
+        3 * np.ones(100),
+        np.ones((100, 2)),
+        {3: 100},
+        {"11": 100},
+    )
 
 
 def test_circuit_addition_with_measurements_in_both_circuits(backend, accelerators):
     c1 = models.Circuit(4, accelerators)
-    c1.add(gates.H(0))
-    c1.add(gates.H(1))
+    c1.add(gates.X(0))
+    c1.add(gates.X(1))
     c1.add(gates.M(1, register_name="a"))
 
     c2 = models.Circuit(4, accelerators)
@@ -211,8 +219,12 @@ def test_circuit_addition_with_measurements_in_both_circuits(backend, accelerato
     c2.add(gates.M(0, register_name="b"))
 
     c = c1 + c2
-    assert len(c.measurement_gate.target_qubits) == 2
-    assert c.measurement_tuples == {"a": (1,), "b": (0,)}
+    result = backend.execute_circuit(c, nshots=100)
+    assert_result(
+        backend,
+        result,
+        binary_frequencies={"10": 100},
+    )
 
 
 def test_circuit_copy_with_measurements(backend, accelerators):
