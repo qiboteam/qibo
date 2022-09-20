@@ -436,18 +436,19 @@ any parametrized gate as follows:
     c = Circuit(2)
     c.add(gates.H(0))
     output = c.add(gates.M(0, collapse=True))
-    c.add(gates.RX(1, theta=np.pi * output / 4))
+    c.add(gates.RX(1, theta=np.pi * output.symbols[0] / 4))
     result = c()
 
 In this case the first qubit will be measured and if 1 is found a pi/4 X-rotation
 will be applied to the second qubit, otherwise no rotation. Qibo allows to
-use ``output`` as a parameter during circuit creation by representing it using
-a ``sympy.Symbol``. The symbol acquires a numerical value later during execution
-when the measurement is performed. As explained above, if a ``nshots > 1`` is
-given during circuit execution the execution is repeated using a loop.
+use ``output`` as a parameter during circuit creation through the use of
+``sympy.Symbol`` objects. These symbols can be accessed through the ``output.symbols``
+list and they acquire a numerical value during execution when the measurement
+is performed. As explained above, if ``nshots > 1`` is given during circuit
+execution the execution is repeated using a loop.
 
 If more than one qubits are used in a ``collapse=True`` measurement gate the
-``output`` can be indexed accordingly:
+``output.symbols`` list can be indexed accordingly:
 
 .. testcode::
 
@@ -458,8 +459,8 @@ If more than one qubits are used in a ``collapse=True`` measurement gate the
     c = Circuit(3)
     c.add(gates.H(0))
     output = c.add(gates.M(0, 1, collapse=True))
-    c.add(gates.RX(1, theta=np.pi * output[0] / 4))
-    c.add(gates.RY(2, theta=np.pi * (output[0] + output[1]) / 5))
+    c.add(gates.RX(1, theta=np.pi * output.symbols[0] / 4))
+    c.add(gates.RY(2, theta=np.pi * (output.symbols[0] + output.symbols[1]) / 5))
     result = c()
 
 
