@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import collections
 
+import numpy as np
+
 from qibo.config import raise_error
 
 
@@ -94,7 +96,7 @@ class MeasurementResult:
                 of shape `(nshots,)`.
         """
         if binary:
-            return self.backend.cast(self._samples, dtype="int32")
+            return np.array(self._samples, dtype="int32")
         else:
             qubits = self.measurement_gate.target_qubits
             return self.backend.samples_to_decimal(self._samples, len(qubits))
@@ -273,7 +275,7 @@ class CircuitResult:
         qubits = self.measurement_gate.target_qubits
         if self._samples is None:
             if self.measurements[0].result.has_samples():
-                self._samples = self.backend.np.concatenate(
+                self._samples = np.concatenate(
                     [gate.result.samples() for gate in self.measurements], axis=1
                 )
             else:
@@ -294,7 +296,7 @@ class CircuitResult:
                 qubit_map = {
                     q: i for i, q in enumerate(self.measurement_gate.target_qubits)
                 }
-                self._samples = self.backend.cast(samples, dtype="int64")
+                self._samples = np.array(samples, dtype="int32")
                 for gate in self.measurements:
                     rqubits = tuple(qubit_map.get(q) for q in gate.target_qubits)
                     gate.result.register_samples(
