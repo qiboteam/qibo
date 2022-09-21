@@ -136,6 +136,7 @@ class CircuitResult:
         self.nqubits = circuit.nqubits
         self.measurements = circuit.measurements
         self.density_matrix = circuit.density_matrix
+        self.circuit = circuit
         self.execution_result = execution_result
         self.backend = backend
         self.nshots = nshots
@@ -148,24 +149,6 @@ class CircuitResult:
         self._symbols = None
         for gate in self.measurements:
             gate.result.reset()
-
-    @property
-    def measurement_gate(self):
-        if self._measurement_gate is None:
-            from qibo import gates
-
-            if not self.measurements:
-                raise_error(ValueError, "Circuit does not contain measurements.")
-
-            for gate in self.measurements:
-                if self._measurement_gate is None:
-                    self._measurement_gate = gates.M(
-                        *gate.init_args, **gate.init_kwargs
-                    )
-                else:
-                    self._measurement_gate.add(gate)
-
-        return self._measurement_gate
 
     def state(self, numpy=False, decimals=-1, cutoff=1e-10, max_terms=20):
         """State's tensor representation as an backend tensor.
@@ -238,6 +221,33 @@ class CircuitResult:
             qubits (list, set): Set of qubits that are measured.
         """
         return self.backend.circuit_result_probabilities(self, qubits)
+
+    def has_samples(self):
+        if self.measurements:
+            return self.measurements[0].result.has_samples()
+        return False
+
+    @property
+    def measurement_gate(self):
+        """Single measurement gate containing all measured qubits.
+
+        Useful for sampling all measured qubits at once when simulating.
+        """
+        if self._measurement_gate is None:
+            from qibo import gates
+
+            if not self.measurements:
+                raise_error(ValueError, "Circuit does not contain measurements.")
+
+            for gate in self.measurements:
+                if self._measurement_gate is None:
+                    self._measurement_gate = gates.M(
+                        *gate.init_args, **gate.init_kwargs
+                    )
+                else:
+                    self._measurement_gate.add(gate)
+
+        return self._measurement_gate
 
     def samples(self, binary=True, registers=False):
         """Returns raw measurement samples.
@@ -333,9 +343,9 @@ class CircuitResult:
         """
         qubits = self.measurement_gate.qubits
         if self._frequencies is None:
-            if self.measurement_gate.has_bitflip_noise() and self._samples is None:
+            if self.measurement_gate.has_bitflip_noise() and not self.has_samples():
                 self._samples = self.samples()
-            if self._samples is None:
+            if not self.has_samples():
                 # generate new frequencies
                 probs = self.probabilities(qubits)
                 self._frequencies = self.backend.sample_frequencies(probs, self.nshots)
