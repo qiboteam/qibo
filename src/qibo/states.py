@@ -265,7 +265,8 @@ class CircuitResult:
     def has_samples(self):
         if self.measurements:
             return self.measurements[0].result.has_samples()
-        return False
+        else:  # pragma: no cover
+            return False
 
     @property
     def measurement_gate(self):
@@ -276,7 +277,7 @@ class CircuitResult:
         if self._measurement_gate is None:
             from qibo import gates
 
-            if not self.measurements:
+            if not self.measurements:  # pragma: no cover
                 raise_error(ValueError, "Circuit does not contain measurements.")
 
             for gate in self.measurements:
@@ -342,15 +343,10 @@ class CircuitResult:
                     )
 
         if registers:
-            nreg = 0
-            results = {}
-            for gate in self.measurements:
-                name = gate.register_name
-                if name is None:
-                    name = f"register{nreg}"
-                    nreg += 1
-                results[name] = gate.result.samples(binary)
-            return results
+            return {
+                gate.register_name: gate.result.samples(binary)
+                for gate in self.measurements
+            }
 
         if binary:
             return self._samples
@@ -411,15 +407,10 @@ class CircuitResult:
                 )
 
         if registers:
-            nreg = 0
-            results = {}
-            for gate in self.measurements:
-                name = gate.register_name
-                if name is None:
-                    name = f"register{nreg}"
-                    nreg += 1
-                results[name] = gate.result.frequencies(binary)
-            return results
+            return {
+                gate.register_name: gate.result.frequencies(binary)
+                for gate in self.measurements
+            }
 
         if binary:
             return frequencies_to_binary(self._frequencies, len(qubits))

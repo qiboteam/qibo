@@ -3,6 +3,12 @@ import pytest
 
 from qibo import gates
 from qibo.models import Circuit
+from qibo.states import MeasurementResult
+
+
+def test_measurement_result_repr():
+    result = MeasurementResult(gates.M(0), nshots=10)
+    assert str(result) == "MeasurementResult(qubits=(0,), nshots=10)"
 
 
 @pytest.mark.parametrize("target", range(5))

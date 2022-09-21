@@ -42,6 +42,7 @@ class _Queue(list):
         self.nqubits = nqubits
         self.moments = [nqubits * [None]]
         self.moment_index = nqubits * [0]
+        self.nmeasurements = 0
 
     def to_fused(self):
         """Transforms all gates in queue to :class:`qibo.gates.FusedGate`."""
@@ -81,6 +82,9 @@ class _Queue(list):
             qubits = gate.qubits
         else:  # special gate acting on all qubits
             qubits = tuple(range(self.nqubits))
+
+        if isinstance(gate, gates.M):
+            self.nmeasurements += 1
 
         # calculate moment index for this gate
         idx = max(self.moment_index[q] for q in qubits)
@@ -556,7 +560,8 @@ class Circuit:
             if isinstance(gate, gates.M):
                 if gate.register_name is None:
                     # add default register name
-                    gate.register_name = f"register{len(self.measurements)}"
+                    nreg = self.queue.nmeasurements - 1
+                    gate.register_name = f"register{nreg}"
                 else:
                     name = gate.register_name
                     for mgate in self.measurements:

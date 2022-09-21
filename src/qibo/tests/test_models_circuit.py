@@ -141,6 +141,20 @@ def test_add_measurement():
         c.add(gates.M(4, register_name="b"))
 
 
+def test_add_measurement_collapse():
+    c = Circuit(3)
+    c.add(gates.X(0))
+    c.add(gates.M(0, 1))
+    c.add(gates.X(1))
+    c.add(gates.M(1))
+    c.add(gates.X(2))
+    c.add(gates.M(2))
+    assert len(c.queue) == 6
+    # assert that the first measurement was switched to collapse automatically
+    assert c.queue[1].collapse
+    assert len(c.measurements) == 2
+
+
 # :meth:`qibo.core.circuit.Circuit.fuse` is tested in `test_core_fusion.py`
 
 
