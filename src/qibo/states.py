@@ -26,6 +26,19 @@ def apply_bitflips(result, p0, p1=None):
 
 
 class MeasurementResult:
+    """Data structure for holding measurement outcomes.
+
+    :class:`qibo.states.MeasurementResult` objects can be obtained
+    when adding measurement gates to a circuit.
+
+    Args:
+        gate (:class:`qibo.gates.M`): Measurement gate associated with
+            this result object.
+        nshots (int): Number of measurement shots.
+        backend (:class:`qibo.backends.abstract.AbstractBackend`): Backend
+            to use for calculations.
+    """
+
     def __init__(self, gate, nshots=0, backend=None):
         self.measurement_gate = gate
         self.backend = backend
@@ -57,21 +70,28 @@ class MeasurementResult:
         return self._samples is not None
 
     def register_samples(self, samples, backend=None):
+        """Register samples array to the ``MeasurementResult`` object."""
         self._samples = samples
         if self.backend is None:
             self.backend = backend
 
     def register_frequencies(self, frequencies, backend=None):
+        """Register frequencies to the ``MeasurementResult`` object."""
         self._frequencies = frequencies
         if self.backend is None:
             self.backend = backend
 
     def reset(self):
+        """Remove all registered samples and frequencies."""
         self._samples = None
         self._frequencies = None
 
     @property
     def symbols(self):
+        """List of ``sympy.Symbols`` associated with the results of the measurement.
+
+        These symbols are useful for conditioning parametrized gates on measurement outcomes.
+        """
         if self._symbols is None:
             from qibo.gates.measurements import MeasurementSymbol
 
@@ -134,6 +154,24 @@ class MeasurementResult:
 
 
 class CircuitResult:
+    """Data structure returned by circuit execution.
+
+    Contains all the results produced by the circuit execution, such as
+    the state vector or density matrix, measurement samples and frequencies.
+
+    Args:
+        backend (:class:`qibo.backends.abstract.AbstractBackend`): Backend
+            to use for calculations.
+        circuit (:class:`qibo.models.Circuit`): Circuit object that is producing
+            this result.
+        execution_result: Abstract raw data created by the circuit execution.
+            The format of these data depends on the backend and they are processed
+            by the backend. For simulation backends ``execution_result`` is a tensor
+            holding the state vector or density matrix representation in the
+            computational basis.
+        nshots (int): Number of measurement shots, if measurements are performed.
+    """
+
     def __init__(self, backend, circuit, execution_result, nshots=None):
         self.nqubits = circuit.nqubits
         self.measurements = circuit.measurements
