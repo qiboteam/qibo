@@ -133,12 +133,10 @@ def test_add_measurement():
     g1 = gates.M(0, 2, register_name="a")
     g2 = gates.M(3, register_name="b")
     c.add([g1, g2])
-    mgate = c.measurement_gate
     assert len(c.queue) == 2
     assert c.measurement_tuples == {"a": (0, 2), "b": (3,)}
     assert g1.target_qubits == (0, 2)
     assert g2.target_qubits == (3,)
-    assert mgate.target_qubits == (0, 2, 3)
     with pytest.raises(KeyError):
         c.add(gates.M(4, register_name="b"))
 
@@ -219,7 +217,6 @@ def test_circuit_addition(measurements):
     assert c3.depth == 3 + int(measurements)
     if measurements:
         assert c3.measurement_tuples == {"a": (0,), "b": (1,)}
-        assert c3.measurement_gate.target_qubits == (0, 1)
 
 
 def test_circuit_addition_errors():
@@ -355,7 +352,6 @@ def test_circuit_invert(measurements):
         assert g1.target_qubits == g2.target_qubits
         assert g1.control_qubits == g2.control_qubits
     if measurements:
-        assert invc.measurement_gate.target_qubits == (0, 2)
         assert invc.measurement_tuples == {"register0": (0, 2)}
 
 
@@ -376,7 +372,6 @@ def test_circuit_decompose(measurements):
         assert g1.target_qubits == g2.target_qubits
         assert g1.control_qubits == g2.control_qubits
     if measurements:
-        assert decompc.measurement_gate.target_qubits == (0, 2)
         assert decompc.measurement_tuples == {"register0": (0, 2)}
 
 
@@ -406,7 +401,6 @@ def test_circuit_with_noise(measurements, noise_map):
         assert g1.target_qubits == g2.target_qubits
         assert g1.control_qubits == g2.control_qubits
     if measurements:
-        assert noisyc.measurement_gate.target_qubits == (0, 1)
         assert noisyc.measurement_tuples == {"register0": (0, 1)}
 
 

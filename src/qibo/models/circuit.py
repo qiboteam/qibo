@@ -554,13 +554,17 @@ class Circuit:
 
             self.queue.append(gate)
             if isinstance(gate, gates.M):
-                if gate.register_name is not None:
+                if gate.register_name is None:
+                    # add default register name
+                    gate.register_name = f"register{len(self.measurements)}"
+                else:
                     name = gate.register_name
                     for mgate in self.measurements:
                         if name == mgate.register_name:
                             raise_error(
                                 KeyError, f"Register {name} already exists in circuit."
                             )
+
                 if gate.collapse:
                     self.repeated_execution = True
                 else:
@@ -580,6 +584,11 @@ class Circuit:
                 self.parametrized_gates.append(gate)
                 if gate.trainable:
                     self.trainable_gates.append(gate)
+
+    @property
+    def measurement_tuples(self):
+        # used for testing only
+        return {m.register_name: m.target_qubits for m in self.measurements}
 
     @property
     def ngates(self) -> int:
@@ -972,7 +981,9 @@ class Circuit:
         code += [f"qreg q[{self.nqubits}];"]
 
         # Set measurements
-        for reg_name, reg_qubits in self.measurement_tuples.items():
+        for measurement in self.measurements:
+            reg_name = measurement.register_name
+            reg_qubits = measurement.target_qubits
             if not reg_name.islower():
                 raise_error(
                     NameError,
@@ -1004,8 +1015,9 @@ class Circuit:
             code.append(f"{name} {qubits};")
 
         # Add measurements
-        for reg_name, reg_qubits in self.measurement_tuples.items():
-            for i, q in enumerate(reg_qubits):
+        for measurement in self.measurements:
+            reg_name = measurement.register_name
+            for i, q in enumerate(measurement.target_qubits):
                 code.append(f"measure q[{q}] -> {reg_name}[{i}];")
 
         return "\n".join(code)
