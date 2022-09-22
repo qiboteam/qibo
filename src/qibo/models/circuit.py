@@ -49,7 +49,12 @@ class _Queue(list):
         queue = self.__class__(self.nqubits)
         for gate in self:
             fgate = gates.FusedGate.from_gate(gate)
-            for q in gate.qubits:
+            if isinstance(gate, gates.SpecialGate):
+                fgate.qubit_set = set(range(self.nqubits))
+                fgate.init_args = sorted(fgate.qubit_set)
+                fgate.target_qubits = tuple(fgate.init_args)
+
+            for q in fgate.qubits:
                 if q in last_gate:
                     neighbor = last_gate.get(q)
                     fgate.left_neighbors[q] = neighbor
@@ -582,8 +587,6 @@ class Circuit:
                         self.repeated_execution = True
                         self.measurements.remove(measurement)
 
-            if isinstance(gate, gates.CallbackGate):
-                gate.target_qubits = tuple(range(self.nqubits))
             if isinstance(gate, gates.UnitaryChannel):
                 self.repeated_execution = not self.density_matrix
             if isinstance(gate, gates.ParametrizedGate):
