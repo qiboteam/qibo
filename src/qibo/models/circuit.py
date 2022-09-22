@@ -582,6 +582,8 @@ class Circuit:
                         self.repeated_execution = True
                         self.measurements.remove(measurement)
 
+            if isinstance(gate, gates.CallbackGate):
+                gate.target_qubits = tuple(range(self.nqubits))
             if isinstance(gate, gates.UnitaryChannel):
                 self.repeated_execution = not self.density_matrix
             if isinstance(gate, gates.ParametrizedGate):
