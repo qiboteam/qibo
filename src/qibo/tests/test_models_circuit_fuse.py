@@ -187,3 +187,14 @@ def test_set_parameters_fusion(backend):
     c.set_parameters(4 * [0.4321])
     fused_c.set_parameters(4 * [0.4321])
     backend.assert_circuitclose(fused_c, c)
+
+
+@pytest.mark.parametrize("max_qubits", [2])
+def test_fusion_with_measurements(backend, max_qubits):
+    c = Circuit(3)
+    c.add(gates.RX(i, theta=0.1234) for i in range(3))
+    c.add(gates.M(0))
+    c.add(gates.CNOT(0, 1))
+    c.add(gates.H(2))
+    fused_c = c.fuse(max_qubits=max_qubits)
+    backend.assert_circuitclose(fused_c, c)

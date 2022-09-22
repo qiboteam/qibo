@@ -5,7 +5,6 @@ from typing import Dict, List, Tuple, Union
 import numpy as np
 
 from qibo import gates
-from qibo import gates as gate_module
 from qibo.config import raise_error
 
 NoiseMapType = Union[Tuple[int, int, int], Dict[int, Tuple[int, int, int]]]
@@ -49,7 +48,7 @@ class _Queue(list):
         last_gate = {}
         queue = self.__class__(self.nqubits)
         for gate in self:
-            fgate = gate_module.FusedGate.from_gate(gate)
+            fgate = gates.FusedGate.from_gate(gate)
             for q in gate.qubits:
                 if q in last_gate:
                     neighbor = last_gate.get(q)
@@ -492,7 +491,7 @@ class Circuit:
                     if q in noise_map and sum(noise_map[q]) > 0:
                         p = noise_map[q]
                         noise_gates[-1].append(
-                            gate_module.PauliNoiseChannel(q, px=p[0], py=p[1], pz=p[2])
+                            gates.PauliNoiseChannel(q, px=p[0], py=p[1], pz=p[2])
                         )
 
         # Create new circuit with noise gates inside
@@ -1059,7 +1058,7 @@ class Circuit:
         nqubits, gate_list = cls._parse_qasm(qasm_code)
         circuit = cls(nqubits, accelerators, density_matrix)
         for gate_name, qubits, params in gate_list:
-            gate = getattr(gate_module, gate_name)
+            gate = getattr(gates, gate_name)
             if gate_name == "M":
                 circuit.add(gate(*qubits, register_name=params))
             elif params is None:
