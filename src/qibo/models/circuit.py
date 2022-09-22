@@ -69,7 +69,7 @@ class _Queue(list):
                     queue.append(gate.gates[0])
                 else:
                     queue.append(gate)
-            elif not gate.qubits:
+            elif isinstance(gate.gates[0], (gates.SpecialGate, gates.M)):
                 # special gates are marked by default so we need
                 # to add them manually
                 queue.append(gate.gates[0])
