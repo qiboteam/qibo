@@ -137,8 +137,6 @@ class Hamiltonian(AbstractHamiltonian):
                 "".format(type(state)),
             )
 
-
-
     def eye(self, n=None):
         if n is None:
             n = int(self.matrix.shape[0])
@@ -736,6 +734,3 @@ class TrotterHamiltonian:
     @classmethod
     def from_symbolic(cls, symbolic_hamiltonian, symbol_map):
         return cls()
-
-
-
