@@ -2,6 +2,85 @@
 from qibo.config import raise_error
 from qibo.models.circuit import Circuit
 from qibo.models.evolution import StateEvolution
+from qibo.gates import gates
+import numpy as np
+from qibo import gates as maingates
+
+
+def convert_bit_to_energy(hamiltonian, bitstring):
+    n = len(bitstring)
+    c = Circuit(n)
+    for i in range(n):
+        c.add(gates.X(int(i)))
+    state = c()  # this is an execution result, a quantum state
+    return hamiltonian.expection(state)
+
+
+def convert_state_to_count(state):
+    """
+    This is a function that convert a quantum state to a dictionary keeping track of energy and its frequency.
+    d[energy] records the frequency
+    """
+    m = int(np.log2(state.size))
+    c = Circuit(m)
+    c.add(maingates.M(*[i for i in range(m)]))
+    result = c(state, nshots=100)
+    counts = result.frequencies(binary=True)
+    return counts
+
+
+def compute_cvar(probabilities, values, alpha):
+    """
+    Auxilliary method to computes CVaR for given probabilities, values, and confidence level.
+
+    Args:
+        probabilities (list): list/array of probabilities
+        values (list): list/array of corresponding values
+        alpha (float): confidence level
+
+    Returns:
+        CVaR
+    """
+    sorted_indices = np.argsort(values)
+    probs = np.array(probabilities)[sorted_indices]
+    vals = np.array(values)[sorted_indices]
+    cvar = 0
+    total_prob = 0
+    for i, (p, v) in enumerate(zip(probs, vals)):
+        done = False
+        if p >= alpha - total_prob:
+            p = alpha - total_prob
+            done = True
+        total_prob += p
+        cvar += p * v
+    cvar /= total_prob
+    return cvar
+
+
+def cvar(state, alpha=0.1):
+    counts = convert_state_to_count(state)
+    probabilities = np.zeros(len(counts))
+    values = np.zeros(len(counts))
+    for i, (x, p) in enumerate(counts.items()):
+        values[i] = convert_bit_to_energy(
+            x
+        )
+        probabilities[i] = p
+    # evaluate cvar
+    cvar_ans = compute_cvar(probabilities, values, alpha)
+    return cvar_ans
+
+
+def gibbs(state, eta=0.1):
+    counts = convert_state_to_count(state)
+    avg = 0
+    sum_count = 0
+    # common_metric = float("inf")
+    for bitstring, count in counts.items():
+        obj = convert_bit_to_energy(bitstring)
+        avg += np.exp(-eta * obj)
+        sum_count += count
+    return -np.log(avg / sum_count)
 
 
 class VQE(object):
@@ -308,6 +387,9 @@ def _cvar_loss(params, qaoa, hamiltonian, state):
     state = qaoa(state)
     return hamiltonian.cvar(state)
 
+def _dummy_zero(params, qaoa, hamiltonian, state, mode):
+    return 0
+
 
 def _gibbs_loss(params, qaoa, hamiltonian, state):
     if state is not None:
@@ -470,7 +552,7 @@ class QAOA(object):
         initial_p,
         initial_state=None,
         method="Powell",
-        loss=None,
+        mode=None,
         jac=None,
         hess=None,
         hessp=None,
@@ -490,7 +572,7 @@ class QAOA(object):
             method (str): the desired minimization method.
                 See :meth:`qibo.optimizers.optimize` for available optimization
                 methods.
-            loss (func): the desired loss function.
+            mode (str): the desired loss function.
             jac (dict): Method for computing the gradient vector for scipy optimizers.
             hess (dict): Method for computing the hessian matrix for scipy optimizers.
             hessp (callable): Hessian of objective function times an arbitrary
@@ -524,26 +606,24 @@ class QAOA(object):
                 state = hamiltonian.backend.cast(state, copy=True)
             qaoa.set_parameters(params)
             state = qaoa(state)
-            return hamiltonian.expectation(state)
+            print(mode)
+            if mode is None:
+                return hamiltonian.expectation(state)
+            elif mode == "cvar":
+                return cvar(state)
+            elif mode == "gibbs":
+                return gibbs(state)
 
-        if loss is None:
-            if method == "sgd":
-                loss = lambda p, c, h, s: _loss(
-                    self.hamiltonian.backend.cast(p), c, h, s
-                )
-            else:
-                loss = lambda p, c, h, s: self.hamiltonian.backend.to_numpy(
-                    _loss(p, c, h, s)
-                )
+        if method == "sgd":
+            loss = lambda p, c, h, s: _loss(
+                self.hamiltonian.backend.cast(p), c, h, s
+            )
         else:
-            if method == "sgd":
-                loss = lambda p, c, h, s: loss(
-                    self.hamiltonian.backend.cast(p), c, h, s
-                )
-            else:
-                loss = lambda p, c, h, s: self.hamiltonian.backend.to_numpy(
-                    loss(p, c, h, s)
-                )
+            loss = lambda p, c, h, s: self.hamiltonian.backend.to_numpy(
+                _loss(p, c, h, s)
+            )
+
+
 
         result, parameters, extra = self.optimizers.optimize(
             loss,
@@ -667,4 +747,7 @@ from qibo import hamiltonians
 h = hamiltonians.XXZ(3)
 qaoa = QAOA(h)
 initial_p = [0.05, 0.06, 0.07, 0.08]
-best, params, _ = qaoa.minimize(initial_p, method="BFGS", loss=_cvar_loss)
+best, params, _ = qaoa.minimize(initial_p, method="BFGS", mode=None)
+best, params, _ = qaoa.minimize(initial_p, method="BFGS", mode="cvar")
+#best, params, _ = qaoa.minimize(initial_p, method="BFGS", loss=_gibbs_loss)
+#best, params, _ = qaoa.minimize(initial_p, method="BFGS", loss=_cvar_loss)
