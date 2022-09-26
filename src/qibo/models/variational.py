@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
-import numpy as np
-
-from qibo import gates as maingates
 from qibo.config import raise_error
-from qibo.gates import gates
 from qibo.models.circuit import Circuit
 from qibo.models.evolution import StateEvolution
+from qibo.gates import gates
+import numpy as np
+from qibo import gates as maingates
 
 
 def convert_bit_to_energy(hamiltonian, bitstring):
@@ -13,8 +12,8 @@ def convert_bit_to_energy(hamiltonian, bitstring):
     c = Circuit(n)
     for i in range(n):
         c.add(gates.X(int(i)))
-    state = c()  # this is an execution result, a quantum state
-    return hamiltonian.expection(state)
+    result = c()  # this is an execution result, a quantum state
+    return hamiltonian.expectation(result.state())
 
 
 def convert_state_to_count(state):
@@ -58,25 +57,26 @@ def compute_cvar(probabilities, values, alpha):
     return cvar
 
 
-def cvar(state, alpha=0.1):
+def cvar(hamiltonian, state, alpha=0.1):
     counts = convert_state_to_count(state)
     probabilities = np.zeros(len(counts))
     values = np.zeros(len(counts))
     for i, (x, p) in enumerate(counts.items()):
-        values[i] = convert_bit_to_energy(x)
+        values[i] = convert_bit_to_energy(hamiltonian, x
+        )
         probabilities[i] = p
     # evaluate cvar
     cvar_ans = compute_cvar(probabilities, values, alpha)
     return cvar_ans
 
 
-def gibbs(state, eta=0.1):
+def gibbs(hamiltonian, state, eta=0.1):
     counts = convert_state_to_count(state)
     avg = 0
     sum_count = 0
     # common_metric = float("inf")
     for bitstring, count in counts.items():
-        obj = convert_bit_to_energy(bitstring)
+        obj = convert_bit_to_energy(hamiltonian, bitstring)
         avg += np.exp(-eta * obj)
         sum_count += count
     return -np.log(avg / sum_count)
@@ -384,8 +384,7 @@ def _cvar_loss(params, qaoa, hamiltonian, state):
         state = hamiltonian.backend.cast(state, copy=True)
     qaoa.set_parameters(params)
     state = qaoa(state)
-    return hamiltonian.cvar(state)
-
+    return cvar(hamiltonian, state)
 
 def _dummy_zero(params, qaoa, hamiltonian, state, mode):
     return 0
@@ -610,16 +609,20 @@ class QAOA(object):
             if mode is None:
                 return hamiltonian.expectation(state)
             elif mode == "cvar":
-                return cvar(state)
+                return cvar(hamiltonian, state)
             elif mode == "gibbs":
-                return gibbs(state)
+                return gibbs(hamiltonian, state)
 
         if method == "sgd":
-            loss = lambda p, c, h, s: _loss(self.hamiltonian.backend.cast(p), c, h, s)
+            loss = lambda p, c, h, s: _loss(
+                self.hamiltonian.backend.cast(p), c, h, s
+            )
         else:
             loss = lambda p, c, h, s: self.hamiltonian.backend.to_numpy(
                 _loss(p, c, h, s)
             )
+
+
 
         result, parameters, extra = self.optimizers.optimize(
             loss,
@@ -744,6 +747,8 @@ h = hamiltonians.XXZ(3)
 qaoa = QAOA(h)
 initial_p = [0.05, 0.06, 0.07, 0.08]
 best, params, _ = qaoa.minimize(initial_p, method="BFGS", mode=None)
+print(best, params)
 best, params, _ = qaoa.minimize(initial_p, method="BFGS", mode="cvar")
-# best, params, _ = qaoa.minimize(initial_p, method="BFGS", loss=_gibbs_loss)
-# best, params, _ = qaoa.minimize(initial_p, method="BFGS", loss=_cvar_loss)
+print(best, params)
+best, params, _ = qaoa.minimize(initial_p, method="BFGS", mode="gibbs")
+print(best, params)
