@@ -117,7 +117,7 @@ class NoiseModel:
                     qubits = gate.qubits
                 else:
                     qubits = tuple(set(gate.qubits) & set(qubits))
-                if isinstance(error, DepolarizingError):
+                if isinstance(error, DepolarizingError) and qubits:
                     noisy_circuit.add(error.channel(qubits, *error.options))
                 else:
                     for q in qubits:
