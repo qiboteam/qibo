@@ -29,6 +29,11 @@ def test_krauss_channel_errors():
     with pytest.raises(ValueError):
         gate = gates.KrausChannel([((0, 1), a1)])
 
+        
+def test_depolarizing_channel_errors():
+    with pytest.raises(ValueError):
+        gate = gates.DepolarizingChannel((0,1), 1.2)
+
 
 def test_controlled_by_channel_error():
     with pytest.raises(ValueError):
