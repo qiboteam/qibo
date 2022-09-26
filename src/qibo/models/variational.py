@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
+import numpy as np
+
+from qibo import gates as maingates
 from qibo.config import raise_error
+from qibo.gates import gates
 from qibo.models.circuit import Circuit
 from qibo.models.evolution import StateEvolution
-from qibo.gates import gates
-import numpy as np
-from qibo import gates as maingates
 
 
 def convert_bit_to_energy(hamiltonian, bitstring):
@@ -62,8 +63,7 @@ def cvar(hamiltonian, state, alpha=0.1):
     probabilities = np.zeros(len(counts))
     values = np.zeros(len(counts))
     for i, (x, p) in enumerate(counts.items()):
-        values[i] = convert_bit_to_energy(hamiltonian, x
-        )
+        values[i] = convert_bit_to_energy(hamiltonian, x)
         probabilities[i] = p
     # evaluate cvar
     cvar_ans = compute_cvar(probabilities, values, alpha)
@@ -386,6 +386,7 @@ def _cvar_loss(params, qaoa, hamiltonian, state):
     state = qaoa(state)
     return cvar(hamiltonian, state)
 
+
 def _dummy_zero(params, qaoa, hamiltonian, state, mode):
     return 0
 
@@ -614,15 +615,11 @@ class QAOA(object):
                 return gibbs(hamiltonian, state)
 
         if method == "sgd":
-            loss = lambda p, c, h, s: _loss(
-                self.hamiltonian.backend.cast(p), c, h, s
-            )
+            loss = lambda p, c, h, s: _loss(self.hamiltonian.backend.cast(p), c, h, s)
         else:
             loss = lambda p, c, h, s: self.hamiltonian.backend.to_numpy(
                 _loss(p, c, h, s)
             )
-
-
 
         result, parameters, extra = self.optimizers.optimize(
             loss,
