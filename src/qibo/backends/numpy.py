@@ -3,6 +3,7 @@ import collections
 
 import numpy as np
 
+from qibo import __version__
 from qibo.backends import einsum_utils
 from qibo.backends.abstract import Backend
 from qibo.backends.matrices import Matrices
@@ -19,7 +20,7 @@ class NumpyBackend(Backend):
         self.name = "numpy"
         self.matrices = Matrices(self.dtype)
         self.tensor_types = np.ndarray
-        self.version = np.__version__
+        self.versions = {"qibo": __version__, "numpy": self.np.__version__}
         self.numeric_types = (
             int,
             float,
