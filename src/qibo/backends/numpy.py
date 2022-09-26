@@ -19,6 +19,7 @@ class NumpyBackend(Backend):
         self.name = "numpy"
         self.matrices = Matrices(self.dtype)
         self.tensor_types = np.ndarray
+        self.version = np.__version__
         self.numeric_types = (
             int,
             float,
