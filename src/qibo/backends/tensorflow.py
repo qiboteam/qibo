@@ -169,17 +169,17 @@ class TensorflowBackend(NumpyBackend):
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(TF_LOG_LEVEL)
         import tensorflow as tf
         import tensorflow.experimental.numpy as tnp  # pylint: disable=E0401
-        
+
         tnp.experimental_enable_numpy_behavior()
         self.tf = tf
         self.np = tnp
-        
+
         self.versions = {
             "qibo": __version__,
             "numpy": np.__version__,
             "tensorflow": tf.__version__,
         }
-        
+
         self.matrices = TensorflowMatrices(self.dtype)
 
         from tensorflow.python.framework import errors_impl  # pylint: disable=E0611

@@ -53,10 +53,10 @@ def test_pauli_error(backend, density_matrix, nshots):
         backend.assert_allclose(final_state, target_final_state)
     else:
         backend.assert_allclose(final_state_samples, target_final_state_samples)
-        
-        
+
+
 @pytest.mark.parametrize("density_matrix", [False, True])
-@pytest.mark.parametrize("nshots", [None, 10, 100])        
+@pytest.mark.parametrize("nshots", [None, 10, 100])
 def test_depolarizing_error(backend, density_matrix, nshots):
     depol = DepolarizingError(0.3)
     noise = NoiseModel()
@@ -74,7 +74,7 @@ def test_depolarizing_error(backend, density_matrix, nshots):
 
     target_circuit = Circuit(3, density_matrix=density_matrix)
     target_circuit.add(gates.CNOT(0, 1))
-    target_circuit.add(gates.DepolarizingChannel((0,1), 0.3))
+    target_circuit.add(gates.DepolarizingChannel((0, 1), 0.3))
     target_circuit.add(gates.Z(1))
     target_circuit.add(gates.DepolarizingChannel((1,), 0.3))
     target_circuit.add(gates.X(1))

@@ -24,18 +24,18 @@ class ThermalRelaxationError:
     def __init__(self, t1, t2, time, excited_population=0):
         self.options = t1, t2, time, excited_population
         self.channel = gates.ThermalRelaxationChannel
-        
-        
+
+
 class DepolarizingError:
     """Quantum error associated with the :class:`qibo.gates.DepolarizingChannel`.
 
     Args:
         options (float): see :class:`qibo.gates.DepolarizingChannel`
     """
-    
+
     def __init__(self, lam):
-        self.options = lam,
-        self.channel = gates.DepolarizingChannel   
+        self.options = (lam,)
+        self.channel = gates.DepolarizingChannel
 
 
 class ResetError:
