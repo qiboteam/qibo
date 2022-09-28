@@ -13,11 +13,11 @@ def test_classifier_circuit2():
   """
   nqubits = 2
   nlayers = int(nqubits / 2)
-  init_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)  #
-  angles = [i * math.pi / num_angles for i in range(num_angles)] 
+  init_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)  #   
   
   qcnn = QuantumCNN(nqubits, nlayers, nclasses=2, RY=True)
   num_angles =  qcnn.nparams_layer
+  angles = [i * math.pi / num_angles for i in range(num_angles)]
   
   circuit = qcnn.Classififer_circuit(angles)
   #circuit.set_circuit_params(angles) #this line is included in Classififer_circuit()  
