@@ -13,7 +13,7 @@ def test_classifier_circuit2():
   """
   nqubits = 2
   nlayers = int(nqubits / 2)
-  init_state = np.ones(nqubits) / 2.0 + i  #
+  init_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)  #
   angles = [i * math.pi / num_angles for i in range(num_angles)] 
   
   qcnn = QuantumCNN(nqubits, nlayers, nclasses=2, RY=True)
@@ -79,7 +79,7 @@ def test_classifier_circuit4():
   """
   nqubits = 4
   nlayers = int(nqubits / 2)
-  init_state = np.ones(nqubits) / 2.0 + i  #
+  init_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)  #
   
   
   qcnn = QuantumCNN(nqubits, nlayers, nclasses=2, RY=True)
