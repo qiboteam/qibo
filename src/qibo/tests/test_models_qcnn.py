@@ -98,7 +98,7 @@ def test_classifier_circuit4():
 def get_real_vector4():
   nqubits = 4
   init_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)  #
-  num_angles = 21*2
+  num_angles = 21
   angles = [i * math.pi / num_angles for i in range(num_angles)] 
   
   
@@ -127,7 +127,7 @@ def get_real_vector4():
   a[i] = one_qubit_unitary(bits[1], angles[k:k+3])
   
   i+=1
-  k+=3
+  k=0 #k+=3
   a[i] = one_qubit_unitary(bits[2], angles[k:k+3])
   i+=1
   k+=3
@@ -150,7 +150,7 @@ def get_real_vector4():
   
   # pooling - layer 1
   i+=1
-  k+=3
+  k=15 #k+=3
   ksink = k
   a[i] = one_qubit_unitary(bits[2], angles[k:k+3])
   i+=1
@@ -163,7 +163,7 @@ def get_real_vector4():
   #a[i] = sink_basis_selector.invert() #one_qubit_unitary(bits[2], angles[ksink:ksink+3]).invert()  
   
   i+=1
-  k+=3
+  k=15 #k+=3
   ksink = k
   a[i] = one_qubit_unitary(bits[3], angles[k:k+3])
   i+=1
