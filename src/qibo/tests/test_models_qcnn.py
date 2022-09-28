@@ -16,10 +16,10 @@ def test_classifier_circuit2():
   init_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)  #   
   
   qcnn = QuantumCNN(nqubits, nlayers, nclasses=2, RY=True)
-  num_angles =  qcnn.nparams_layer
+  num_angles =  21 #qcnn.nparams_layer
   angles = [i * math.pi / num_angles for i in range(num_angles)]
   
-  circuit = qcnn.Classififer_circuit(angles)
+  circuit = qcnn.Classifier_circuit(angles)
   #circuit.set_circuit_params(angles) #this line is included in Classififer_circuit()  
   statevector = circuit(init_state).state()  
   real_vector = get_real_vector2()
@@ -33,60 +33,47 @@ def get_real_vector2():
   nqubits = 2
   init_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)  #
   num_angles = 21
-  angles = [i * math.pi / num_angles for i in range(num_angles)] 
-  
+  angles = [i * math.pi / num_angles for i in range(num_angles)]   
   
   # convolution
-  #to declare matrix array a  
-  i=0
   k=0
-  a[i] = one_qubit_unitary(bits[0], angles[k:k+3])
-  i+=1
+  a = one_qubit_unitary(nqubits, bits[0], angles[k:k+3]).unitary()*init_state
   k+=3
-  a[i] = one_qubit_unitary(bits[1], angles[k:k+3])
-  i+=1
+  a = one_qubit_unitary(nqubits, bits[1], angles[k:k+3]).unitary()*a
   k+=3
-  a[i] = gates.RZZ(bits[0], bits[1], angles[k])
-  i+=1
+  a = gates.RZZ(bits[0], bits[1], angles[k])*a
   k+=1
-  a[i] = gates.RYY(bits[0], bits[1], angles[k])
-  i+=1
+  a = gates.RYY(bits[0], bits[1], angles[k])*a
   k+=1
-  a[i] = gates.RXX(bits[0], bits[1], angles[k])
-  i+=1
+  a = gates.RXX(bits[0], bits[1], angles[k])*a
   k+=3
-  a[i] = one_qubit_unitary(bits[0], angles[k:k+3])
-  i+=1
+  a = one_qubit_unitary(nqubits, bits[0], angles[k:k+3]).unitary()*a
   k+=3
-  a[i] = one_qubit_unitary(bits[1], angles[k:k+3])
+  a = one_qubit_unitary(nqubits, bits[1], angles[k:k+3]).unitary()*a
   
   # pooling
-  i+=1
   k+=3
   ksink = k
-  a[i] = one_qubit_unitary(bits[1], angles[k:k+3])
-  i+=1
+  a = one_qubit_unitary(nqubits, bits[1], angles[k:k+3]).unitary()*a
   k+=3
-  a[i] = one_qubit_unitary(bits[0], angles[k:k+3])
-  i+=1
-  a[i] = gates.CNOT(bits[0], bits[1])
-  i+=1
-  #a[i] = sink_basis_selector.invert() #one_qubit_unitary(bits[1], angles[ksink:ksink+3]).invert()  
+  a = one_qubit_unitary(nqubits, bits[0], angles[k:k+3]).unitary()*a
+  a = gates.CNOT(bits[0], bits[1])*a
+  a = one_qubit_unitary(nqubits, bits[1], angles[ksink:ksink+3]).invert().unitary()*a
   
+  return a
 
 def test_classifier_circuit4():
   """
   """
   nqubits = 4
   nlayers = int(nqubits / 2)
-  init_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)  #
-  
+  init_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)  #  
   
   qcnn = QuantumCNN(nqubits, nlayers, nclasses=2, RY=True)
-  num_angles =  qcnn.nparams_layer
+  num_angles =  21 #qcnn.nparams_layer
   angles = [i * math.pi / num_angles for i in range(num_angles)] 
   
-  circuit = qcnn.Classififer_circuit(angles)
+  circuit = qcnn.Classifier_circuit(angles)
   statevector = circuit(init_state).state()  
   real_vector = get_real_vector4()
   
@@ -104,122 +91,91 @@ def get_real_vector4():
   
   # convolution - layer 1
   #to declare matrix array a 
-  i=0
   k=0
-  a[i] = one_qubit_unitary(bits[0], angles[k:k+3])
-  i+=1
+  a = one_qubit_unitary(nqubits, bits[0], angles[k:k+3]).unitary()*init_state
   k+=3
-  a[i] = one_qubit_unitary(bits[1], angles[k:k+3])
-  i+=1
+  a = one_qubit_unitary(nqubits, bits[1], angles[k:k+3]).unitary()*a
   k+=3
-  a[i] = gates.RZZ(bits[0], bits[1], angles[k])
-  i+=1
+  a = gates.RZZ(bits[0], bits[1], angles[k])*a
   k+=1
-  a[i] = gates.RYY(bits[0], bits[1], angles[k])
-  i+=1
+  a = gates.RYY(bits[0], bits[1], angles[k])*a
   k+=1
-  a[i] = gates.RXX(bits[0], bits[1], angles[k])
-  i+=1
+  a = gates.RXX(bits[0], bits[1], angles[k])*a
   k+=3
-  a[i] = one_qubit_unitary(bits[0], angles[k:k+3])
-  i+=1
+  a = one_qubit_unitary(nqubits, bits[0], angles[k:k+3]).unitary()*a
   k+=3
-  a[i] = one_qubit_unitary(bits[1], angles[k:k+3])
+  a = one_qubit_unitary(nqubits, bits[1], angles[k:k+3]).unitary()*a
   
-  i+=1
   k=0 #k+=3
-  a[i] = one_qubit_unitary(bits[2], angles[k:k+3])
-  i+=1
+  a = one_qubit_unitary(nqubits, bits[2], angles[k:k+3]).unitary()*a
   k+=3
-  a[i] = one_qubit_unitary(bits[3], angles[k:k+3])
-  i+=1
+  a = one_qubit_unitary(nqubits, bits[3], angles[k:k+3]).unitary()*a
   k+=3
-  a[i] = gates.RZZ(bits[2], bits[3], angles[k])
-  i+=1
+  a = gates.RZZ(bits[2], bits[3], angles[k])*a
   k+=1
-  a[i] = gates.RYY(bits[2], bits[3], angles[k])
-  i+=1
+  a = gates.RYY(bits[2], bits[3], angles[k])*a
   k+=1
-  a[i] = gates.RXX(bits[2], bits[3], angles[k])
-  i+=1
+  a = gates.RXX(bits[2], bits[3], angles[k])*a
   k+=3
-  a[i] = one_qubit_unitary(bits[2], angles[k:k+3])
-  i+=1
+  a = one_qubit_unitary(nqubits, bits[2], angles[k:k+3]).unitary()*a
   k+=3
-  a[i] = one_qubit_unitary(bits[3], angles[k:k+3])
+  a = one_qubit_unitary(nqubits, bits[3], angles[k:k+3]).unitary()*a
   
   # pooling - layer 1
-  i+=1
   k=15 #k+=3
   ksink = k
-  a[i] = one_qubit_unitary(bits[2], angles[k:k+3])
-  i+=1
+  a = one_qubit_unitary(nqubits, bits[2], angles[k:k+3]).unitary()*a
   k+=3
-  a[i] = one_qubit_unitary(bits[0], angles[k:k+3])
-  i+=1
+  a = one_qubit_unitary(nqubits, bits[0], angles[k:k+3]).unitary()*a
   k+=3
-  a[i] = gates.CNOT(bits[0], bits[2])
-  i+=1
-  #a[i] = sink_basis_selector.invert() #one_qubit_unitary(bits[2], angles[ksink:ksink+3]).invert()  
+  a = gates.CNOT(bits[0], bits[2])
+  a = one_qubit_unitary(nqubits, bits[2], angles[ksink:ksink+3]).invert().unitary()*a  
   
-  i+=1
   k=15 #k+=3
   ksink = k
-  a[i] = one_qubit_unitary(bits[3], angles[k:k+3])
-  i+=1
+  a = one_qubit_unitary(nqubits, bits[3], angles[k:k+3]).unitary()*a
   k+=3
-  a[i] = one_qubit_unitary(bits[1], angles[k:k+3])
-  i+=1
-  a[i] = gates.CNOT(bits[1], bits[3])
-  i+=1
-  #a[i] = sink_basis_selector.invert() #one_qubit_unitary(bits[3], angles[ksink:ksink+3]).invert() 
+  a = one_qubit_unitary(nqubits, bits[1], angles[k:k+3]).unitary()*a
+  a = gates.CNOT(bits[1], bits[3])
+  a = one_qubit_unitary(nqubits, bits[3], angles[ksink:ksink+3]).invert().unitary()*a 
  
 
   # convolution - layer 2
-  i+=1
   k=0
-  a[i] = one_qubit_unitary(bits[2], angles[k:k+3])
-  i+=1
+  a = one_qubit_unitary(nqubits, bits[2], angles[k:k+3]).unitary()*a
   k+=3
-  a[i] = one_qubit_unitary(bits[3], angles[k:k+3])
-  i+=1
+  a = one_qubit_unitary(nqubits, bits[3], angles[k:k+3]).unitary()*a
   k+=3
-  a[i] = gates.RZZ(bits[2], bits[3], angles[k])
-  i+=1
+  a = gates.RZZ(bits[2], bits[3], angles[k])*a
   k+=1
-  a[i] = gates.RYY(bits[2], bits[3], angles[k])
-  i+=1
+  a = gates.RYY(bits[2], bits[3], angles[k])*a
   k+=1
-  a[i] = gates.RXX(bits[2], bits[3], angles[k])
-  i+=1
+  a = gates.RXX(bits[2], bits[3], angles[k])*a
   k+=3
-  a[i] = one_qubit_unitary(bits[2], angles[k:k+3])
-  i+=1
+  a = one_qubit_unitary(nqubits, bits[2], angles[k:k+3]).unitary()*a
   k+=3
-  a[i] = one_qubit_unitary(bits[3], angles[k:k+3])
+  a = one_qubit_unitary(nqubits, bits[3], angles[k:k+3]).unitary()*a
   
   # pooling - layer 2
-  i+=1
   k+=3
   ksink = k
-  a[i] = one_qubit_unitary(bits[3], angles[k:k+3])
-  i+=1
+  a = one_qubit_unitary(nqubits, bits[3], angles[k:k+3]).unitary()*a
   k+=3
-  a[i] = one_qubit_unitary(bits[2], angles[k:k+3])
-  i+=1
-  a[i] = gates.CNOT(bits[2], bits[3])
-  i+=1
-  #a[i] = sink_basis_selector.invert() #one_qubit_unitary(bits[3], angles[ksink:ksink+3]).invert()  
+  a = one_qubit_unitary(nqubits, bits[2], angles[k:k+3]).unitary()*a
+  a = gates.CNOT(bits[2], bits[3])
+  a = one_qubit_unitary(nqubits, bits[3], angles[ksink:ksink+3]).invert().unitary()*a  
+  
+  return a
   
     
-def one_qubit_unitary(bit, symbols):
-  c = Circuit(1)
+def one_qubit_unitary(nqubits, bit, symbols):
+  c = Circuit(nqubits)
   c.add(gates.RX(bit,symbols[0]))
   c.add(gates.RY(bit,symbols[1]))
   c.add(gates.RZ(bit,symbols[2]))
 
   return c    
     
-
+ 
   
   
