@@ -31,7 +31,7 @@ def test_classifier_circuit2():
  
 def get_real_vector2():
   nqubits = 2
-  init_state = np.ones(nqubits) / 2.0 + i  #
+  init_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)  #
   num_angles = 21
   angles = [i * math.pi / num_angles for i in range(num_angles)] 
   
