@@ -330,6 +330,7 @@ def test_aavqe(backend, method, options, compile, filename):
     if filename is not None:
         assert_regression_fixture(backend, params, filename, rtol=1e-2)
 
+
 @pytest.mark.parametrize("test_input,expected", [("cvar", 1.5), ("gibbs", 2.67)])
 def test_custom_loss(test_input, expected):
     from qibo import hamiltonians
@@ -338,4 +339,4 @@ def test_custom_loss(test_input, expected):
     qaoa = models.QAOA(h)
     initial_p = [0.314, 0.217, 0.05, 0.59]
     best, params, _ = qaoa.minimize(initial_p, mode=test_input)
-    assert abs(best - expected)<=0.01
+    assert abs(best - expected) <= 0.01
