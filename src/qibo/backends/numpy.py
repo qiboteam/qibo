@@ -3,6 +3,7 @@ import collections
 
 import numpy as np
 
+from qibo import __version__
 from qibo.backends import einsum_utils
 from qibo.backends.abstract import Backend
 from qibo.backends.matrices import Matrices
@@ -19,6 +20,7 @@ class NumpyBackend(Backend):
         self.name = "numpy"
         self.matrices = Matrices(self.dtype)
         self.tensor_types = np.ndarray
+        self.versions = {"qibo": __version__, "numpy": self.np.__version__}
         self.numeric_types = (
             int,
             float,
@@ -643,17 +645,17 @@ class NumpyBackend(Backend):
             ud = self.np.transpose(self.np.conj(eigenvectors))
             return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
 
-    def calculate_expectation_state(self, matrix, state, normalize):
+    def calculate_expectation_state(self, hamiltonian, state, normalize):
         statec = self.np.conj(state)
-        hstate = matrix @ state
+        hstate = hamiltonian @ state
         ev = self.np.real(self.np.sum(statec * hstate))
         if normalize:
             norm = self.np.sum(self.np.square(self.np.abs(state)))
             ev = ev / norm
         return ev
 
-    def calculate_expectation_density_matrix(self, matrix, state, normalize):
-        ev = self.np.real(self.np.trace(matrix @ state))
+    def calculate_expectation_density_matrix(self, hamiltonian, state, normalize):
+        ev = self.np.real(self.np.trace(hamiltonian @ state))
         if normalize:
             norm = self.np.real(self.np.trace(state))
             ev = ev / norm
