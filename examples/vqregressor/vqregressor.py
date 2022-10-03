@@ -9,7 +9,7 @@ from qibo import gates, hamiltonians, models, set_backend
 
 class VQRegressor():
     
-    def __init__(self, layers, states=None):
+    def __init__(self, layers, ndata, states=None):
         """
         This class implement an Adam Descent optimization performed on a 
         1-qubit Variational Quantum Circuit like this:
@@ -17,6 +17,7 @@ class VQRegressor():
         where each couple of squared parenthesis represents a layer.
         Args:
             layers: integer value representing the number of layers
+            ndata: integer value representing the training set's cardinality
             states: (2, N)-dim np.matrix containing the states on which we perform the training.
                     You can prepare a state sample generating some point in [-1,1] and submitting them to 
                     VQRegressor.prepare_states() 
@@ -26,7 +27,7 @@ class VQRegressor():
         self.layers   = layers
         self.params   = np.random.randn(3 * layers).astype('float64')
         self.nparams  = len(self.params)
-        self.features, self.labels = self.prepare_training_set(50, states)
+        self.features, self.labels = self.prepare_training_set(ndata, states)
         self.nsample  = len(self.labels)
         self._circuit = self.ansatz(layers)
         print(self._circuit.get_parameters())
@@ -59,7 +60,7 @@ class VQRegressor():
         Returns: np.float64 array of output variables  
         """
         #here you can define the function you want to fit
-        y = np.sin(6*x)
+        y = np.sin(2*x)
         
         ymax = np.max(np.abs(y))
         y = (y / ymax)
@@ -127,11 +128,11 @@ class VQRegressor():
         plt.ylabel('y')
         plt.legend()
         plt.tight_layout()
-        
         if save is True:
             plt.savefig(title +'.pdf')
             plt.close()
-    
+        plt.show()
+
     
     def set_parameters(self, new_params):
         """
