@@ -1,3 +1,12 @@
+import time
+import matplotlib.pyplot as plt
+import numpy as np
+import os
+import qibo
+from qibo.models import Circuit
+from qibo import gates, hamiltonians, models, set_backend
+
+
 class VQRegressor():
     
     def __init__(self, layers, states=None):
@@ -335,24 +344,6 @@ class VQRegressor():
             self.params[i] -= learning_rate * mhat / (np.sqrt(vhat) + epsilon)
         
         return m, v, loss
-    
-    
-    def cma_optimize(self):
-        """
-        Method which performs a GA optimization.
-        Returns: np.float value of the best obtained loss func and list of the best params.
-        """
-        
-        myloss = self.loss
-        
-        import cma
-
-        r = cma.fmin2(lambda p: myloss(p), self.params, 2, options={'ftarget':5e-3, 
-        'verb_log':1, 'verb_disp':1})
-        result = r[1].result.fbest
-        parameters = r[1].result.xbest
-        
-        return result, parameters
     
     
     def train_with_psr(self, epochs, learning_rate, batches, J_treshold):
