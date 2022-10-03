@@ -6,6 +6,7 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 from qibo.models.qcnn import QuantumCNN
+from qibo import matrices
 
 
 def test_classifier_circuit2():
@@ -41,23 +42,23 @@ def get_real_vector2():
   k+=3
   a = one_qubit_unitary(nqubits, bits[1], angles[k:k+3]).unitary()*a
   k+=3
-  a = gates.RZZ(bits[0], bits[1], angles[k])*a
+  a = matrices.RZZ(bits[0], bits[1], angles[k])*a
   k+=1
-  a = gates.RYY(bits[0], bits[1], angles[k])*a
+  a = matrices.RYY(bits[0], bits[1], angles[k])*a
   k+=1
-  a = gates.RXX(bits[0], bits[1], angles[k])*a
-  k+=3
+  a = matrices.RXX(bits[0], bits[1], angles[k])*a
+  k+=1
   a = one_qubit_unitary(nqubits, bits[0], angles[k:k+3]).unitary()*a
   k+=3
   a = one_qubit_unitary(nqubits, bits[1], angles[k:k+3]).unitary()*a
-  
-  # pooling
   k+=3
+  
+  # pooling  
   ksink = k
   a = one_qubit_unitary(nqubits, bits[1], angles[k:k+3]).unitary()*a
   k+=3
-  a = one_qubit_unitary(nqubits, bits[0], angles[k:k+3]).unitary()*a
-  a = gates.CNOT(bits[0], bits[1])*a
+  a = one_qubit_unitary(nqubits, bits[0], angles[k:k+3]).unitary()*a  
+  a = matrices.CNOT(bits[0], bits[1])*a
   a = one_qubit_unitary(nqubits, bits[1], angles[ksink:ksink+3]).invert().unitary()*a
   
   return a
@@ -96,12 +97,12 @@ def get_real_vector4():
   k+=3
   a = one_qubit_unitary(nqubits, bits[1], angles[k:k+3]).unitary()*a
   k+=3
-  a = gates.RZZ(bits[0], bits[1], angles[k])*a
+  a = matrices.RZZ(bits[0], bits[1], angles[k])*a
   k+=1
-  a = gates.RYY(bits[0], bits[1], angles[k])*a
+  a = matrices.RYY(bits[0], bits[1], angles[k])*a
   k+=1
-  a = gates.RXX(bits[0], bits[1], angles[k])*a
-  k+=3
+  a = matrices.RXX(bits[0], bits[1], angles[k])*a
+  k+=1
   a = one_qubit_unitary(nqubits, bits[0], angles[k:k+3]).unitary()*a
   k+=3
   a = one_qubit_unitary(nqubits, bits[1], angles[k:k+3]).unitary()*a
@@ -111,12 +112,12 @@ def get_real_vector4():
   k+=3
   a = one_qubit_unitary(nqubits, bits[3], angles[k:k+3]).unitary()*a
   k+=3
-  a = gates.RZZ(bits[2], bits[3], angles[k])*a
+  a = matrices.RZZ(bits[2], bits[3], angles[k])*a
   k+=1
-  a = gates.RYY(bits[2], bits[3], angles[k])*a
+  a = matrices.RYY(bits[2], bits[3], angles[k])*a
   k+=1
-  a = gates.RXX(bits[2], bits[3], angles[k])*a
-  k+=3
+  a = matrices.RXX(bits[2], bits[3], angles[k])*a
+  k+=1
   a = one_qubit_unitary(nqubits, bits[2], angles[k:k+3]).unitary()*a
   k+=3
   a = one_qubit_unitary(nqubits, bits[3], angles[k:k+3]).unitary()*a
@@ -126,9 +127,8 @@ def get_real_vector4():
   ksink = k
   a = one_qubit_unitary(nqubits, bits[2], angles[k:k+3]).unitary()*a
   k+=3
-  a = one_qubit_unitary(nqubits, bits[0], angles[k:k+3]).unitary()*a
-  k+=3
-  a = gates.CNOT(bits[0], bits[2])
+  a = one_qubit_unitary(nqubits, bits[0], angles[k:k+3]).unitary()*a  
+  a = matrices.CNOT(bits[0], bits[2])*a
   a = one_qubit_unitary(nqubits, bits[2], angles[ksink:ksink+3]).invert().unitary()*a  
   
   k=15 #k+=3
@@ -136,7 +136,7 @@ def get_real_vector4():
   a = one_qubit_unitary(nqubits, bits[3], angles[k:k+3]).unitary()*a
   k+=3
   a = one_qubit_unitary(nqubits, bits[1], angles[k:k+3]).unitary()*a
-  a = gates.CNOT(bits[1], bits[3])
+  a = matrices.CNOT(bits[1], bits[3])*a
   a = one_qubit_unitary(nqubits, bits[3], angles[ksink:ksink+3]).invert().unitary()*a 
  
 
@@ -146,23 +146,23 @@ def get_real_vector4():
   k+=3
   a = one_qubit_unitary(nqubits, bits[3], angles[k:k+3]).unitary()*a
   k+=3
-  a = gates.RZZ(bits[2], bits[3], angles[k])*a
+  a = matrices.RZZ(bits[2], bits[3], angles[k])*a
   k+=1
-  a = gates.RYY(bits[2], bits[3], angles[k])*a
+  a = matrices.RYY(bits[2], bits[3], angles[k])*a
   k+=1
-  a = gates.RXX(bits[2], bits[3], angles[k])*a
-  k+=3
+  a = matrices.RXX(bits[2], bits[3], angles[k])*a
+  k+=1
   a = one_qubit_unitary(nqubits, bits[2], angles[k:k+3]).unitary()*a
   k+=3
   a = one_qubit_unitary(nqubits, bits[3], angles[k:k+3]).unitary()*a
-  
-  # pooling - layer 2
   k+=3
+  
+  # pooling - layer 2  
   ksink = k
   a = one_qubit_unitary(nqubits, bits[3], angles[k:k+3]).unitary()*a
   k+=3
   a = one_qubit_unitary(nqubits, bits[2], angles[k:k+3]).unitary()*a
-  a = gates.CNOT(bits[2], bits[3])
+  a = matrices.CNOT(bits[2], bits[3])*a
   a = one_qubit_unitary(nqubits, bits[3], angles[ksink:ksink+3]).invert().unitary()*a  
   
   return a
