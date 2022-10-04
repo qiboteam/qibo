@@ -41,7 +41,7 @@ where we indicate with the subscript $x_j$ the dipendence of $J$ on $x_j$ and $y
 
 As mentioned above, we use a Variational Quantum Circuit based on a re-uploading strategy. In particular, we use the following architecture:
 
-![ansatz](https://github.com/qiboteam/qibo/blob/vqregressor/examples/vqregressor/Images/ansatz.png)
+![ansatz](https://github.com/qiboteam/qibo/blob/vqregressor/examples/vqregressor/images/ansatz.png)
 
 At the end of the circuit execution we perform a measurement on the qubit. After $N_{shots}$ measurements, we use the difference of the probabilities
 of occurrence of the two states $|0 \rangle$ and $| 1 \rangle$ as estimator for $y$. 
@@ -55,7 +55,9 @@ In this example we use only two files:
 
 The user can change the target function modifying the method `vqregressor.label_points`, in which the true law is written and normalized. Once in the folder, one have to run a command like the following:
 
-`python3 main.py --layers 1 --learning_rate 0.05 --epochs 100 --batches 1 --ndata 30 --J_treshold 1e-4`
+`python3 main.py --layers 1 --learning_rate 0.05 --epochs 200 --batches 1 --ndata 30 --J_treshold 1e-4`
 
 for performing an optimization. At the end of the process it shows a plot containing true labels of the training sample and the predictions purposed
 by the model in a form like the following:
+
+![results](https://github.com/qiboteam/qibo/blob/vqregressor/examples/vqregressor/images/results.png)
