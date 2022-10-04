@@ -122,8 +122,8 @@ class VQRegressor():
         
         plt.figure(figsize=(15,7))
         plt.title(title)
-        plt.scatter(features.T[0], predictions, label='Predicted', s=20, color='blue', alpha=0.65)
-        plt.scatter(features.T[0], labels, label='original', s=20, color='red', alpha=0.65)
+        plt.scatter(features.T[0], predictions, label='Predicted', s=100, color='blue', alpha=0.65)
+        plt.scatter(features.T[0], labels, label='original', s=100, color='red', alpha=0.65)
         plt.xlabel('x')
         plt.ylabel('y')
         plt.legend()
