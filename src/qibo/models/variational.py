@@ -387,10 +387,6 @@ def _cvar_loss(params, qaoa, hamiltonian, state):
     return cvar(hamiltonian, state)
 
 
-def _dummy_zero(params, qaoa, hamiltonian, state, mode):
-    return 0
-
-
 def _gibbs_loss(params, qaoa, hamiltonian, state):
     if state is not None:
         state = hamiltonian.backend.cast(state, copy=True)
@@ -572,7 +568,8 @@ class QAOA(object):
             method (str): the desired minimization method.
                 See :meth:`qibo.optimizers.optimize` for available optimization
                 methods.
-            mode (str): the desired loss function.
+            mode (str): the desired loss function. The default is None. Alternatives are
+             "cvar", and "gibbs".
             jac (dict): Method for computing the gradient vector for scipy optimizers.
             hess (dict): Method for computing the hessian matrix for scipy optimizers.
             hessp (callable): Hessian of objective function times an arbitrary
