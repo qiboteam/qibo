@@ -7,18 +7,18 @@ from qibo.gates import gates
 from qibo.models.circuit import Circuit
 from qibo.models.evolution import StateEvolution
 
+
 class Loss_Utils(object):
     def convert_bit_to_energy(self, hamiltonian, bitstring):
-        '''
+        """
         Given a binary string and a hamiltonian, we compute the corresponding energy.
-        '''
+        """
         n = len(bitstring)
         c = Circuit(n)
         for i in range(n):
             c.add(gates.X(int(i)))
         result = c()  # this is an execution result, a quantum state
         return hamiltonian.expectation(result.state())
-
 
     def convert_state_to_count(self, state):
         """
@@ -32,7 +32,6 @@ class Loss_Utils(object):
         result = c(state, nshots=100)
         counts = result.frequencies(binary=True)
         return counts
-
 
     def compute_cvar(self, probabilities, values, alpha):
         """
@@ -61,7 +60,6 @@ class Loss_Utils(object):
         cvar /= total_prob
         return cvar
 
-
     def cvar(self, hamiltonian, state, alpha=0.1):
         counts = self.convert_state_to_count(state)
         probabilities = np.zeros(len(counts))
@@ -72,7 +70,6 @@ class Loss_Utils(object):
         # evaluate cvar
         cvar_ans = self.compute_cvar(probabilities, values, alpha)
         return cvar_ans
-
 
     def gibbs(self, hamiltonian, state, eta=0.1):
         counts = self.convert_state_to_count(state)
@@ -394,9 +391,6 @@ class AAVQE(object):
             )
             t += self._dt
         return best, params
-
-
-
 
 
 class QAOA(object):
