@@ -7,79 +7,96 @@ from qibo.gates import gates
 from qibo.models.circuit import Circuit
 from qibo.models.evolution import StateEvolution
 
-
-def convert_bit_to_energy(hamiltonian, bitstring):
-    n = len(bitstring)
-    c = Circuit(n)
-    for i in range(n):
-        c.add(gates.X(int(i)))
-    result = c()  # this is an execution result, a quantum state
-    return hamiltonian.expectation(result.state())
-
-
-def convert_state_to_count(state):
-    """
-    This is a function that convert a quantum state to a dictionary keeping track of energy and its frequency.
-    d[energy] records the frequency
-    """
-    m = int(np.log2(state.size))
-    c = Circuit(m)
-    c.add(maingates.M(*[i for i in range(m)]))
-    result = c(state, nshots=100)
-    counts = result.frequencies(binary=True)
-    return counts
+class Loss_Utils(object):
+    def convert_bit_to_energy(self, hamiltonian, bitstring):
+        '''
+        Given a binary string and a hamiltonian, we compute the corresponding energy.
+        '''
+        n = len(bitstring)
+        c = Circuit(n)
+        for i in range(n):
+            c.add(gates.X(int(i)))
+        result = c()  # this is an execution result, a quantum state
+        return hamiltonian.expectation(result.state())
 
 
-def compute_cvar(probabilities, values, alpha):
-    """
-    Auxilliary method to computes CVaR for given probabilities, values, and confidence level.
-
-    Args:
-        probabilities (list): list/array of probabilities
-        values (list): list/array of corresponding values
-        alpha (float): confidence level
-
-    Returns:
-        CVaR
-    """
-    sorted_indices = np.argsort(values)
-    probs = np.array(probabilities)[sorted_indices]
-    vals = np.array(values)[sorted_indices]
-    cvar = 0
-    total_prob = 0
-    for i, (p, v) in enumerate(zip(probs, vals)):
-        done = False
-        if p >= alpha - total_prob:
-            p = alpha - total_prob
-            done = True
-        total_prob += p
-        cvar += p * v
-    cvar /= total_prob
-    return cvar
+    def convert_state_to_count(self, state):
+        """
+        This is a function that convert a quantum state to a dictionary keeping track of
+        energy and its frequency.
+        d[energy] records the frequency
+        """
+        m = int(np.log2(state.size))
+        c = Circuit(m)
+        c.add(maingates.M(*[i for i in range(m)]))
+        result = c(state, nshots=100)
+        counts = result.frequencies(binary=True)
+        return counts
 
 
-def cvar(hamiltonian, state, alpha=0.1):
-    counts = convert_state_to_count(state)
-    probabilities = np.zeros(len(counts))
-    values = np.zeros(len(counts))
-    for i, (x, p) in enumerate(counts.items()):
-        values[i] = convert_bit_to_energy(hamiltonian, x)
-        probabilities[i] = p
-    # evaluate cvar
-    cvar_ans = compute_cvar(probabilities, values, alpha)
-    return cvar_ans
+    def compute_cvar(self, probabilities, values, alpha):
+        """
+        Auxilliary method to computes CVaR for given probabilities, values, and confidence level.
+
+        Args:
+            probabilities (list): list/array of probabilities
+            values (list): list/array of corresponding values
+            alpha (float): confidence level
+
+        Returns:
+            CVaR
+        """
+        sorted_indices = np.argsort(values)
+        probs = np.array(probabilities)[sorted_indices]
+        vals = np.array(values)[sorted_indices]
+        cvar = 0
+        total_prob = 0
+        for i, (p, v) in enumerate(zip(probs, vals)):
+            done = False
+            if p >= alpha - total_prob:
+                p = alpha - total_prob
+                done = True
+            total_prob += p
+            cvar += p * v
+        cvar /= total_prob
+        return cvar
 
 
-def gibbs(hamiltonian, state, eta=0.1):
-    counts = convert_state_to_count(state)
-    avg = 0
-    sum_count = 0
-    # common_metric = float("inf")
-    for bitstring, count in counts.items():
-        obj = convert_bit_to_energy(hamiltonian, bitstring)
-        avg += np.exp(-eta * obj)
-        sum_count += count
-    return -np.log(avg / sum_count)
+    def cvar(self, hamiltonian, state, alpha=0.1):
+        counts = self.convert_state_to_count(state)
+        probabilities = np.zeros(len(counts))
+        values = np.zeros(len(counts))
+        for i, (x, p) in enumerate(counts.items()):
+            values[i] = self.convert_bit_to_energy(hamiltonian, x)
+            probabilities[i] = p
+        # evaluate cvar
+        cvar_ans = self.compute_cvar(probabilities, values, alpha)
+        return cvar_ans
+
+
+    def gibbs(self, hamiltonian, state, eta=0.1):
+        counts = self.convert_state_to_count(state)
+        avg = 0
+        sum_count = 0
+        for bitstring, count in counts.items():
+            obj = self.convert_bit_to_energy(hamiltonian, bitstring)
+            avg += np.exp(-eta * obj)
+            sum_count += count
+        return -np.log(avg / sum_count)
+
+    def _cvar_loss(self, params, qaoa, hamiltonian, state):
+        if state is not None:
+            state = hamiltonian.backend.cast(state, copy=True)
+        qaoa.set_parameters(params)
+        state = qaoa(state)
+        return self.cvar(hamiltonian, state)
+
+    def _gibbs_loss(self, params, qaoa, hamiltonian, state):
+        if state is not None:
+            state = hamiltonian.backend.cast(state, copy=True)
+        qaoa.set_parameters(params)
+        state = qaoa(state)
+        return self.gibbs(hamiltonian, state)
 
 
 class VQE(object):
@@ -379,20 +396,7 @@ class AAVQE(object):
         return best, params
 
 
-def _cvar_loss(params, qaoa, hamiltonian, state):
-    if state is not None:
-        state = hamiltonian.backend.cast(state, copy=True)
-    qaoa.set_parameters(params)
-    state = qaoa(state)
-    return cvar(hamiltonian, state)
 
-
-def _gibbs_loss(params, qaoa, hamiltonian, state):
-    if state is not None:
-        state = hamiltonian.backend.cast(state, copy=True)
-    qaoa.set_parameters(params)
-    state = qaoa(state)
-    return hamiltonian.gibbs(state)
 
 
 class QAOA(object):
@@ -603,12 +607,13 @@ class QAOA(object):
                 state = hamiltonian.backend.cast(state, copy=True)
             qaoa.set_parameters(params)
             state = qaoa(state)
+            l = Loss_Utils()
             if mode is None:
                 return hamiltonian.expectation(state)
             elif mode == "cvar":
-                return cvar(hamiltonian, state)
+                return l.cvar(hamiltonian, state)
             elif mode == "gibbs":
-                return gibbs(hamiltonian, state)
+                return l.gibbs(hamiltonian, state)
 
         if method == "sgd":
             loss = lambda p, c, h, s: _loss(self.hamiltonian.backend.cast(p), c, h, s)
