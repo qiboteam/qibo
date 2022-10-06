@@ -61,17 +61,24 @@ class Loss_Utils(object):
         return cvar
 
     def cvar(self, hamiltonian, state, alpha=0.1):
+        '''
+        Given the hamiltonian and state, this function estimate the
+        corresponding cvar function
+        '''
         counts = self.convert_state_to_count(state)
         probabilities = np.zeros(len(counts))
         values = np.zeros(len(counts))
         for i, (x, p) in enumerate(counts.items()):
             values[i] = self.convert_bit_to_energy(hamiltonian, x)
             probabilities[i] = p
-        # evaluate cvar
         cvar_ans = self.compute_cvar(probabilities, values, alpha)
         return cvar_ans
 
     def gibbs(self, hamiltonian, state, eta=0.1):
+        '''
+        Given the hamiltonian and the state, and optional eta value
+        it estimate the gibbs function value.
+        '''
         counts = self.convert_state_to_count(state)
         avg = 0
         sum_count = 0
@@ -80,20 +87,6 @@ class Loss_Utils(object):
             avg += np.exp(-eta * obj)
             sum_count += count
         return -np.log(avg / sum_count)
-
-    def _cvar_loss(self, params, qaoa, hamiltonian, state):
-        if state is not None:
-            state = hamiltonian.backend.cast(state, copy=True)
-        qaoa.set_parameters(params)
-        state = qaoa(state)
-        return self.cvar(hamiltonian, state)
-
-    def _gibbs_loss(self, params, qaoa, hamiltonian, state):
-        if state is not None:
-            state = hamiltonian.backend.cast(state, copy=True)
-        qaoa.set_parameters(params)
-        state = qaoa(state)
-        return self.gibbs(hamiltonian, state)
 
 
 class VQE(object):
