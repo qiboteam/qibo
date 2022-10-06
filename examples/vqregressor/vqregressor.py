@@ -1,9 +1,10 @@
+# -*- coding: utf-8 -*-
 <<<<<<< HEAD
 import matplotlib.pyplot as plt
 import numpy as np
-from qibo.models import Circuit
-from qibo import gates
 
+from qibo import gates
+from qibo.models import Circuit
 
 #Here we use the default numpy backend
 =======
@@ -17,6 +18,7 @@ import numpy as np
 import qibo
 from qibo import gates, hamiltonians, models, set_backend
 from qibo.models import Circuit
+
 >>>>>>> 4f077bb039cbf8cf207cc48d8591c618f10d51d3
 
 
@@ -43,9 +45,9 @@ class VQRegressor:
         self.nsample = len(self.labels)
         self._circuit = self.ansatz(layers)
 <<<<<<< HEAD
-        
-        
-        
+
+
+
 =======
         print(self._circuit.get_parameters())
 
@@ -77,7 +79,7 @@ class VQRegressor:
 <<<<<<< HEAD
         #here you can define the function you want to fit
         y = np.sin(2*x)
-        
+
         #that is normalized here
 =======
         # here you can define the function you want to fit
@@ -293,11 +295,11 @@ class VQRegressor:
         original = self.params.copy()
         shifted = self.params.copy()
 <<<<<<< HEAD
-        
+
         #customized parameter shift rule when x contributes to param's definition
         if (i % 3 == 0):
             shifted[i] += np.pi/2 / this_feature[0]
-            
+
 =======
 
         if i % 3 == 0:
