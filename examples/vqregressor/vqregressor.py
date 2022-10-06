@@ -5,7 +5,7 @@ import numpy as np
 from qibo import gates
 from qibo.models import Circuit
 
-#Here we use the default numpy backend
+# Here we use the default numpy backend
 
 
 class VQRegressor:
@@ -31,8 +31,6 @@ class VQRegressor:
         self.nsample = len(self.labels)
         self._circuit = self.ansatz(layers)
 
-
-
     def ansatz(self, layers):
         """
         The circuit's ansatz: a sequence of RZ and RY with a beginning H gate
@@ -57,10 +55,10 @@ class VQRegressor:
             x: np.float64 array of input variables
         Returns: np.float64 array of output variables
         """
-        #here you can define the function you want to fit
-        y = np.sin(2*x)
+        # here you can define the function you want to fit
+        y = np.sin(2 * x)
 
-        #that is normalized here
+        # that is normalized here
         ymax = np.max(np.abs(y))
         y = y / ymax
 
@@ -116,10 +114,19 @@ class VQRegressor:
 
         plt.figure(figsize=(15, 7))
         plt.title(title)
-        plt.scatter(features.T[0], predictions, label='Predicted', s=100, color='blue', alpha=0.65)
-        plt.scatter(features.T[0], labels, label='Original', s=100, color='red', alpha=0.65)
-        plt.xlabel('x')
-        plt.ylabel('y')
+        plt.scatter(
+            features.T[0],
+            predictions,
+            label="Predicted",
+            s=100,
+            color="blue",
+            alpha=0.65,
+        )
+        plt.scatter(
+            features.T[0], labels, label="Original", s=100, color="red", alpha=0.65
+        )
+        plt.xlabel("x")
+        plt.ylabel("y")
         plt.legend()
         plt.tight_layout()
         if save is True:
@@ -254,9 +261,9 @@ class VQRegressor:
         original = self.params.copy()
         shifted = self.params.copy()
 
-        #customized parameter shift rule when x contributes to param's definition
-        if (i % 3 == 0):
-            shifted[i] += np.pi/2 / this_feature[0]
+        # customized parameter shift rule when x contributes to param's definition
+        if i % 3 == 0:
+            shifted[i] += np.pi / 2 / this_feature[0]
 
             self.set_parameters(shifted)
             forward = self.one_prediction(this_feature)
@@ -380,11 +387,20 @@ class VQRegressor:
 
                 features = self.features[idx[indices[ib]]]
                 labels = self.labels[idx[indices[ib]]]
-                #update parameters
-                m, v, this_loss = self.AdamDescent(learning_rate, m, v, features, labels, iteration)
-                #track the training
-                print('Iteration ', iteration, " epoch ", epoch + 1,  " | loss: ", this_loss)
-                #in case one wants to plot J in function of the iterations
+                # update parameters
+                m, v, this_loss = self.AdamDescent(
+                    learning_rate, m, v, features, labels, iteration
+                )
+                # track the training
+                print(
+                    "Iteration ",
+                    iteration,
+                    " epoch ",
+                    epoch + 1,
+                    " | loss: ",
+                    this_loss,
+                )
+                # in case one wants to plot J in function of the iterations
                 losses.append(this_loss)
 
         return losses
