@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 from abc import abstractmethod
+from itertools import product
 
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate
-from qibo.gates.gates import Unitary, X, Y, Z
+from qibo.gates.gates import I, Unitary, X, Y, Z
 from qibo.gates.measurements import M
 
 
@@ -193,6 +194,54 @@ class PauliNoiseChannel(UnitaryChannel):
 
         self.init_args = [q]
         self.init_kwargs = {"px": px, "py": py, "pz": pz}
+
+
+class DepolarizingChannel(UnitaryChannel):
+    """:math:`n`-qubit Depolarizing quantum error channel,
+
+    .. math::
+        \\mathcal{E}(\\rho ) = (1 - \\lambda) \\rho +\\lambda \\text{Tr}[\\rho] \\frac{I}{2^n}
+
+    where :math:`\\lambda` is the depolarizing error parameter and :math:`0 \\le \\lambda \\le 4^n / (4^n - 1)`.
+
+    * If :math:`\\lambda = 1` this is a completely depolarizing channel
+      :math:`E(\\rho) = I / 2^n`
+    * If :math:`\\lambda = 4^n / (4^n - 1)` this is a uniform Pauli
+      error channel: :math:`E(\\rho) = \\sum_j P_j \\rho P_j / (4^n - 1)` for
+      all :math:`P_j != I`.
+
+    Args:
+        q (tuple): Qubit ids that the noise acts on.
+        lam (float): Depolarizing error parameter.
+    """
+
+    def __init__(self, q, lam=0):
+        from qibo.models.circuit import Circuit
+
+        num_qubits = len(q)
+        num_terms = 4**num_qubits
+        max_param = num_terms / (num_terms - 1)
+        if lam < 0 or lam > max_param:
+            raise_error(
+                ValueError,
+                "Depolarizing parameter must be in between 0 and {}.".format(max_param),
+            )
+        prob_iden = 1 - lam / max_param
+        prob_pauli = lam / num_terms
+        probs = (num_terms - 1) * [prob_pauli]
+        gates = []
+        for pauli_list in list(product([I, X, Y, Z], repeat=num_qubits))[1::]:
+            qc = Circuit(num_qubits)
+            for j, pauli in enumerate(pauli_list):
+                qc.add(pauli(j))
+            gates.append(Unitary(qc.unitary(), *q))
+
+        super().__init__(probs, gates)
+        self.name = "DepolarizingChannel"
+        assert self.target_qubits == q
+
+        self.init_args = [q]
+        self.init_kwargs = {"lam": lam}
 
 
 class ResetChannel(Channel):
