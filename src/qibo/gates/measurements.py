@@ -1,50 +1,9 @@
 # -*- coding: utf-8 -*-
 from typing import Dict, Optional, Tuple
 
-import sympy
-
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate
 from qibo.states import MeasurementResult
-
-
-class MeasurementSymbol(sympy.Symbol):
-    """``sympy.Symbol`` connected to measurement results.
-
-    Used by :class:`qibo.gates.measurements.M` with ``collapse=True`` to allow
-    controlling subsequent gates from the measurement results.
-    """
-
-    _counter = 0
-
-    def __new__(cls, *args, **kwargs):
-        name = "m{}".format(cls._counter)
-        cls._counter += 1
-        return super().__new__(cls=cls, name=name)
-
-    def __init__(self, index, result):
-        self.index = index
-        self.result = result
-
-    def __getstate__(self):
-        return {"index": self.index, "result": self.result, "name": self.name}
-
-    def __setstate__(self, data):
-        self.index = data.get("index")
-        self.result = data.get("result")
-        self.name = data.get("name")
-
-    def outcome(self):
-        return self.result.samples(binary=True)[-1][self.index]
-
-    def evaluate(self, expr):
-        """Substitutes the symbol's value in the given expression.
-
-        Args:
-            expr (sympy.Expr): Sympy expression that involves the current
-                measurement symbol.
-        """
-        return expr.subs(self, self.outcome())
 
 
 class M(Gate):

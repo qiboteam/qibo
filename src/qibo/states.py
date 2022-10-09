@@ -2,6 +2,7 @@
 import collections
 
 import numpy as np
+import sympy
 
 from qibo.config import raise_error
 
@@ -23,6 +24,45 @@ def apply_bitflips(result, p0, p1=None):
         )
     noiseless_samples = result.samples()
     return result.backend.apply_bitflips(noiseless_samples, probs)
+
+
+class MeasurementSymbol(sympy.Symbol):
+    """``sympy.Symbol`` connected to measurement results.
+
+    Used by :class:`qibo.gates.measurements.M` with ``collapse=True`` to allow
+    controlling subsequent gates from the measurement results.
+    """
+
+    _counter = 0
+
+    def __new__(cls, *args, **kwargs):
+        name = "m{}".format(cls._counter)
+        cls._counter += 1
+        return super().__new__(cls=cls, name=name)
+
+    def __init__(self, index, result):
+        self.index = index
+        self.result = result
+
+    def __getstate__(self):
+        return {"index": self.index, "result": self.result, "name": self.name}
+
+    def __setstate__(self, data):
+        self.index = data.get("index")
+        self.result = data.get("result")
+        self.name = data.get("name")
+
+    def outcome(self):
+        return self.result.samples(binary=True)[-1][self.index]
+
+    def evaluate(self, expr):
+        """Substitutes the symbol's value in the given expression.
+
+        Args:
+            expr (sympy.Expr): Sympy expression that involves the current
+                measurement symbol.
+        """
+        return expr.subs(self, self.outcome())
 
 
 class MeasurementResult:
@@ -72,12 +112,14 @@ class MeasurementResult:
     def register_samples(self, samples, backend=None):
         """Register samples array to the ``MeasurementResult`` object."""
         self._samples = samples
+        self.nshots = len(samples)
         if self.backend is None:
             self.backend = backend
 
     def register_frequencies(self, frequencies, backend=None):
         """Register frequencies to the ``MeasurementResult`` object."""
         self._frequencies = frequencies
+        self.nshots = sum(frequencies)
         if self.backend is None:
             self.backend = backend
 
@@ -93,8 +135,6 @@ class MeasurementResult:
         These symbols are useful for conditioning parametrized gates on measurement outcomes.
         """
         if self._symbols is None:
-            from qibo.gates.measurements import MeasurementSymbol
-
             qubits = self.measurement_gate.target_qubits
             self._symbols = [MeasurementSymbol(i, self) for i in range(len(qubits))]
 
