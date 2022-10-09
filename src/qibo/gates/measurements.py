@@ -47,6 +47,9 @@ class M(Gate):
         self.register_name = register_name
         self.collapse = collapse
         self.result = MeasurementResult(self)
+        # list of measurement pulses implementing the gate
+        # relevant for experiments only
+        self.pulses = None
 
         self.init_args = q
         self.init_kwargs = {
