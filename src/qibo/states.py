@@ -119,7 +119,7 @@ class MeasurementResult:
     def register_frequencies(self, frequencies, backend=None):
         """Register frequencies to the ``MeasurementResult`` object."""
         self._frequencies = frequencies
-        self.nshots = sum(frequencies)
+        self.nshots = sum(frequencies.values())
         if self.backend is None:
             self.backend = backend
 
