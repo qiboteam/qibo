@@ -112,45 +112,6 @@ class M(Gate):
             or sum(self.bitflip_map[1].values()) > 0
         )
 
-    @staticmethod
-    def einsum_string(qubits, nqubits, measuring=False):
-        """Generates einsum string for partial trace of density matrices.
-
-        Args:
-            qubits (list): Set of qubit ids that are traced out.
-            nqubits (int): Total number of qubits in the state.
-            measuring (bool): If True non-traced-out indices are multiplied and
-                the output has shape (nqubits - len(qubits),).
-                If False the output has shape 2 * (nqubits - len(qubits),).
-
-        Returns:
-            String to use in einsum for performing partial density of a
-            density matrix.
-        """
-        # TODO: Move this somewhere else (if it is needed at all)
-        from qibo.config import EINSUM_CHARS
-
-        if (2 - int(measuring)) * nqubits > len(EINSUM_CHARS):  # pragma: no cover
-            # case not tested because it requires large instance
-            raise_error(NotImplementedError, "Not enough einsum characters.")
-
-        left_in, right_in, left_out, right_out = [], [], [], []
-        for i in range(nqubits):
-            left_in.append(EINSUM_CHARS[i])
-            if i in qubits:
-                right_in.append(EINSUM_CHARS[i])
-            else:
-                left_out.append(EINSUM_CHARS[i])
-                if measuring:
-                    right_in.append(EINSUM_CHARS[i])
-                else:
-                    right_in.append(EINSUM_CHARS[i + nqubits])
-                    right_out.append(EINSUM_CHARS[i + nqubits])
-
-        left_in, left_out = "".join(left_in), "".join(left_out)
-        right_in, right_out = "".join(right_in), "".join(right_out)
-        return f"{left_in}{right_in}->{left_out}{right_out}"
-
     def add(self, gate):
         """Adds target qubits to a measurement gate.
 
