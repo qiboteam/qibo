@@ -4,9 +4,10 @@ Code at: [https://github.com/qiboteam/qibo/tree/vqregressor/examples/vqregressor
 
 ### Problem overview
 
+
 We want to tackle a simple one dimensional regression problem using a single qubit Variational Quantum Circuit (VQC) as model,
 initialized using a [re-uploading strategy](https://arxiv.org/abs/1907.02085). In particular, in this example we
-fit the function $y = \sin (2x)$, picking the $x$ points from the interval $\mathcal{I}=[-1,1]$.
+fit the function y = sin(2x), picking the x points from the interval I=[-1,1].
 The optimization is performed using an [Adam](https://arxiv.org/abs/1412.6980) optimizer.
 It needs the circuit's gradients, which we evaluate through the [Parameter Shift Rule](https://arxiv.org/abs/1811.11184) (PSR).
 
@@ -18,37 +19,36 @@ can perform a gradient descent even on the physical qubit.
 
 ### The Parameter Shift Rule in a nutshell
 
-Let's consider a circuit $\mathcal{U}(\vec{\theta})$, in which we build up a gate of the form $\mathcal{G}=\exp \bigl[-i\mu G \bigr]$ with $\mu \in \vec{\theta}$,
-(which represents an unitary operator with at most two eigenvalues $\pm r$), and an observable $B$.
-Finally, let $q_f$ be the state we obtain by applying $\mathcal{U}$ to $| 0 \rangle$.
+Let's consider a parametrized circuit U, in which we build up a gate of the form G = exp [-i a A]
+(which represents an unitary operator with at most two eigenvalues +r and -r), and an observable B.
+Finally, let |qf> be the state we obtain by applying U to |0>.
 
 We are interested in evaluating the gradients of the following expression:
 
-$$ f(\mu) \equiv \langle q_f | B | q_f \rangle,$$
+![equation_f](images/equation_f.png)
 
-where we specify that $f$ depends directly on $\mu$. We are interested in this result because the expectation value of $B$ is typically involved
-in computing predictions in quantum machine learning problems. The PSR allows us to calculate the derivative of $f(\mu)$ with respect to $\mu$ evaluating
-$f$ twice more:
+where we specify that f depends directly on the parameter a. We are interested in this result because the expectation value of B is typically involved
+in computing predictions in quantum machine learning problems. The PSR allows us to calculate the derivative of f(a) with respect to a evaluating
+f twice more:
 
-$$ \partial_{\mu} f(\mu) = r \bigl( f(\mu^+) - f(\mu^-) \bigr), $$
+![equation_psr](images/equation_psr.png)
 
-where $\mu^{\pm}=\mu \pm s$ and $s = \pi/4 r$. Finally, if we pick $G$ from the rotations generators $\frac{1}{2}$ { $\sigma_x, \sigma_y, \sigma_z$ },
-we can use $s=\pi/2$ and $r=1/2$.
+where the two new parameters involved in the evaluation of f are obtained by shifting a forward and backward by a shift parameter s and s = (pi/4)r. Finally, if we pick A from the rotations generators we can use s=pi/2 and r=1/2.
 
 In the end, we have to use PSR into a gradient descent strategy. We choose an [MSE loss function](https://en.wikipedia.org/wiki/Mean_squared_error), which leads to the following explicit formula:
 
-$$ \partial_{\mu} J_{mse} = 2 \langle B \rangle_{x_j} \partial_{\mu} \langle B \rangle_{x_j} - 2y\langle B \rangle_{x_j},  $$
+![equation_dJ](images/equation_dJ.png)
 
-where we indicate with the subscript $x_j$ the dipendence of $J$ on $x_j$ and $y$ is the correct label of $x_j$ under the true law.
+where we indicate with the subscript j the dipendence of J on the j-th input variable and y is the correct label of that specific x under the true law.
 
 ### This example
 
 As mentioned above, we use a Variational Quantum Circuit based on a re-uploading strategy. In particular, we use the following architecture:
 
-![ansatz](https://github.com/qiboteam/qibo/blob/vqregressor/examples/vqregressor/images/ansatz.png)
+![ansatz](images/ansatz.png)
 
-At the end of the circuit execution we perform a measurement on the qubit. After $N_{shots}$ measurements, we use the difference of the probabilities
-of occurrence of the two states $|0 \rangle$ and $| 1 \rangle$ as estimator for $y$.
+At the end of the circuit execution we perform a measurement on the qubit. After Nshots measurements, we use the difference of the probabilities
+of occurrence of the two states |0> and |1> as estimator for y.
 
 ### How to use it?
 
@@ -64,4 +64,4 @@ The user can change the target function modifying the method `vqregressor.label_
 for performing an optimization. At the end of the process it shows a plot containing true labels of the training sample and the predictions purposed
 by the model in a form like the following:
 
-![results](https://github.com/qiboteam/qibo/blob/vqregressor/examples/vqregressor/images/results.png)
+![results](images/results.png)
