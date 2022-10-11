@@ -1,5 +1,9 @@
 # Parameter Shift Rule for an hardware-compatible Variational Quantum Regressor
 
+Code at: [https://github.com/qiboteam/qibo/tree/vqregressor/examples/vqregressor](https://github.com/qiboteam/qibo/tree/vqregressor/examples/vqregressor)
+
+### Problem overview
+
 We want to tackle a simple one dimensional regression problem using a single qubit Variational Quantum Circuit (VQC) as model,
 initialized using a [re-uploading strategy](https://arxiv.org/abs/1907.02085). In particular, in this example we
 fit the function $y = \sin (2x)$, picking the $x$ points from the interval $\mathcal{I}=[-1,1]$.
