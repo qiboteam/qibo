@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import importlib
 import os
 import signal
@@ -51,7 +50,7 @@ def run_script(args, script_name="main.py"):
         script_name (str): Name of the script file.
         max_time (float): Time-out time in seconds.
     """
-    code = open(script_name, "r").read()
+    code = open(script_name).read()
     end = code.find("\nif __name__ ==")
     code = code[:end] + "\n\nmain(**args)"
     with timeout(max_time):
@@ -142,7 +141,7 @@ def test_benchmarks(nqubits, circuit_name):
     path = os.path.join(base_dir, "benchmarks")
     sys.path[-1] = path
     os.chdir(path)
-    code = open("main.py", "r").read()
+    code = open("main.py").read()
     start = code.find("def main")
     end = code.find("\nif __name__ ==")
     header = (

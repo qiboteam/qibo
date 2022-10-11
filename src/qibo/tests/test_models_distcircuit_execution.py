@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test :class:`qibo.models.distcircuit.DistributedCircuit` execution."""
 import numpy as np
 import pytest

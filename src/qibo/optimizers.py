@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 def optimize(
     loss,
     initial_parameters,

@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 from qibo.config import raise_error
 from qibo.models.circuit import Circuit
 from qibo.models.evolution import StateEvolution
 
 
-class VQE(object):
+class VQE:
     """This class implements the variational quantum eigensolver algorithm.
 
     Args:
@@ -119,7 +118,7 @@ class VQE(object):
         return result, parameters, extra
 
 
-class AAVQE(object):
+class AAVQE:
     """This class implements the Adiabatically Assisted Variational Quantum Eigensolver
     algorithm. See https://arxiv.org/abs/1806.02287.
 
@@ -301,7 +300,7 @@ class AAVQE(object):
         return best, params
 
 
-class QAOA(object):
+class QAOA:
     """Quantum Approximate Optimization Algorithm (QAOA) model.
 
     The QAOA is introduced in `arXiv:1411.4028 <https://arxiv.org/abs/1411.4028>`_.

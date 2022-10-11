@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import numpy as np
 from numpy.random import randn
 
@@ -7,7 +6,7 @@ from qibo.backends import matrices
 from qibo.config import raise_error
 
 
-class StyleQGAN(object):
+class StyleQGAN:
     """Model that implements and trains a style-based quantum generative adversarial network.
 
     For original manuscript: `arXiv:2110.06933 <https://arxiv.org/abs/2110.06933>`_
