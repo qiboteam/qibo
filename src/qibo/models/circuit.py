@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import collections
 from typing import Dict, List, Tuple, Union
 

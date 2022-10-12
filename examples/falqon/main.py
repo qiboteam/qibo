@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import argparse
 
 from qibo import hamiltonians, models

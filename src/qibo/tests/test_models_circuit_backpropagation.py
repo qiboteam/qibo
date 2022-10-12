@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Tests Tensorflow's backpropagation when using `tf.Variable` parameters."""
 import numpy as np
 import pytest

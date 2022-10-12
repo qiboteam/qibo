@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from qibo.config import raise_error
 from qibo.models.circuit import Circuit
 from qibo.models.evolution import StateEvolution
