@@ -238,9 +238,7 @@ class AdiabaticEvolution(StateEvolution):
         self.hamiltonian.total_time = final_time - start_time
         if initial_state is None:
             initial_state = self.hamiltonian.ground_state()
-        return super(AdiabaticEvolution, self).execute(
-            final_time, start_time, initial_state
-        )
+        return super().execute(final_time, start_time, initial_state)
 
     @staticmethod
     def _loss(params, adiabatic_evolution, h1, opt_messages, opt_history):

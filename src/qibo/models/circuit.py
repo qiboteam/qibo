@@ -38,7 +38,7 @@ class _Queue(list):
     """
 
     def __init__(self, nqubits):
-        super(_Queue, self).__init__(self)
+        super().__init__(self)
         self.nqubits = nqubits
         self.moments = [nqubits * [None]]
         self.moment_index = nqubits * [0]
@@ -76,7 +76,7 @@ class _Queue(list):
         return queue
 
     def append(self, gate: gates.Gate):
-        super(_Queue, self).append(gate)
+        super().append(gate)
         if gate.qubits:
             qubits = gate.qubits
         else:  # special gate acting on all qubits
@@ -812,8 +812,7 @@ class Circuit:
                     def traverse(x):
                         if isinstance(x, np.ndarray):
                             for v1 in x:
-                                for v2 in traverse(v1):
-                                    yield v2
+                                yield from traverse(v1)
                         else:
                             yield x
 

@@ -18,7 +18,7 @@ def read_file(file_name, instance):
         solution (list): list of the correct outputs of the instance for testing.
         clauses (list): list of all clauses, with the qubits each clause acts upon.
     """
-    file = open("../data3sat/{q}bit/n{q}i{i}.txt".format(q=file_name, i=instance), "r")
+    file = open("../data3sat/{q}bit/n{q}i{i}.txt".format(q=file_name, i=instance))
     control = list(map(int, file.readline().split()))
     solution = list(map(str, file.readline().split()))
     clauses = [list(map(int, file.readline().split())) for _ in range(control[1])]

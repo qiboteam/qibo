@@ -61,7 +61,7 @@ class H(Gate):
     """
 
     def __init__(self, q):
-        super(H, self).__init__()
+        super().__init__()
         self.name = "h"
         self.target_qubits = (q,)
         self.init_args = [q]
@@ -75,7 +75,7 @@ class X(Gate):
     """
 
     def __init__(self, q):
-        super(X, self).__init__()
+        super().__init__()
         self.name = "x"
         self.target_qubits = (q,)
         self.init_args = [q]
@@ -88,7 +88,7 @@ class X(Gate):
         elif len(q) == 2:
             gate = TOFFOLI(q[0], q[1], self.target_qubits[0])
         else:
-            gate = super(X, self).controlled_by(*q)
+            gate = super().controlled_by(*q)
         return gate
 
     def decompose(self, *free, use_toffolis=True):
@@ -170,7 +170,7 @@ class Y(Gate):
     """
 
     def __init__(self, q):
-        super(Y, self).__init__()
+        super().__init__()
         self.name = "y"
         self.target_qubits = (q,)
         self.init_args = [q]
@@ -184,7 +184,7 @@ class Z(Gate):
     """
 
     def __init__(self, q):
-        super(Z, self).__init__()
+        super().__init__()
         self.name = "z"
         self.target_qubits = (q,)
         self.init_args = [q]
@@ -195,7 +195,7 @@ class Z(Gate):
         if len(q) == 1:
             gate = CZ(q[0], self.target_qubits[0])
         else:
-            gate = super(Z, self).controlled_by(*q)
+            gate = super().controlled_by(*q)
         return gate
 
 
@@ -307,7 +307,7 @@ class I(ParametrizedGate):
     """
 
     def __init__(self, *q):
-        super(I, self).__init__()
+        super().__init__()
         self.name = "id"
         self.target_qubits = tuple(q)
         self.init_args = q
@@ -318,7 +318,7 @@ class I(ParametrizedGate):
 
 class Align(ParametrizedGate):
     def __init__(self, *q):
-        super(Align, self).__init__()
+        super().__init__()
         self.name = "align"
         self.target_qubits = tuple(q)
         self.init_args = q
@@ -607,7 +607,7 @@ class CNOT(Gate):
     """
 
     def __init__(self, q0, q1):
-        super(CNOT, self).__init__()
+        super().__init__()
         self.name = "cx"
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
@@ -637,7 +637,7 @@ class CZ(Gate):
     """
 
     def __init__(self, q0, q1):
-        super(CZ, self).__init__()
+        super().__init__()
         self.name = "cz"
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
@@ -657,7 +657,7 @@ class _CRn_(ParametrizedGate):
     """
 
     def __init__(self, q0, q1, theta, trainable=True):
-        super(_CRn_, self).__init__(trainable)
+        super().__init__(trainable)
         self.name = None
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
@@ -769,7 +769,7 @@ class _CUn_(ParametrizedGate):
     """
 
     def __init__(self, q0, q1, trainable=True):
-        super(_CUn_, self).__init__(trainable)
+        super().__init__(trainable)
         self.name = None
         self.nparams = 0
         self.control_qubits = (q0,)
@@ -884,7 +884,7 @@ class CU3(_CUn_):
     """
 
     def __init__(self, q0, q1, theta, phi, lam, trainable=True):
-        super(CU3, self).__init__(q0, q1, trainable=trainable)
+        super().__init__(q0, q1, trainable=trainable)
         self.name = "cu3"
         self.nparams = 3
         self._theta, self._phi, self._lam = None, None, None
@@ -924,7 +924,7 @@ class SWAP(Gate):
     """
 
     def __init__(self, q0, q1):
-        super(SWAP, self).__init__()
+        super().__init__()
         self.name = "swap"
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
@@ -949,7 +949,7 @@ class FSWAP(Gate):
     """
 
     def __init__(self, q0, q1):
-        super(FSWAP, self).__init__()
+        super().__init__()
         self.name = "fswap"
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
@@ -981,7 +981,7 @@ class fSim(ParametrizedGate):
     # TODO: Check how this works with QASM.
 
     def __init__(self, q0, q1, theta, phi, trainable=True):
-        super(fSim, self).__init__(trainable)
+        super().__init__(trainable)
         self.name = "fsim"
         self.target_qubits = (q0, q1)
 
@@ -1023,7 +1023,7 @@ class GeneralizedfSim(ParametrizedGate):
     """
 
     def __init__(self, q0, q1, unitary, phi, trainable=True):
-        super(GeneralizedfSim, self).__init__(trainable)
+        super().__init__(trainable)
         self.name = "generalizedfsim"
         self.target_qubits = (q0, q1)
 
@@ -1175,7 +1175,7 @@ class TOFFOLI(Gate):
     """
 
     def __init__(self, q0, q1, q2):
-        super(TOFFOLI, self).__init__()
+        super().__init__()
         self.name = "ccx"
         self.control_qubits = (q0, q1)
         self.target_qubits = (q2,)
@@ -1236,7 +1236,7 @@ class Unitary(ParametrizedGate):
     """
 
     def __init__(self, unitary, *q, trainable=True, name=None):
-        super(Unitary, self).__init__(trainable)
+        super().__init__(trainable)
         self.name = "Unitary" if name is None else name
         self.target_qubits = tuple(q)
 
