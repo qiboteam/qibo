@@ -75,7 +75,6 @@ def cvar(hamiltonian, state, alpha=0.1):
     return cvar_ans
 
 
-@staticmethod
 def gibbs(hamiltonian, state, eta=0.1):
     """
     Given the hamiltonian and the state, and optional eta value
