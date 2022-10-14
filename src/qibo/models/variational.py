@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
+
 from qibo.config import raise_error
 from qibo.models.evolution import StateEvolution
 from qibo.models.utilities import Loss_Utils

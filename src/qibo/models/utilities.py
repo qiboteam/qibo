@@ -1,7 +1,10 @@
-from qibo.models.circuit import Circuit
-from qibo.gates import gates
+# -*- coding: utf-8 -*-
 import numpy as np
+
 from qibo import gates as maingates
+from qibo.gates import gates
+from qibo.models.circuit import Circuit
+
 
 class Loss_Utils(object):
     @staticmethod
