@@ -6,7 +6,6 @@ from qibo.gates import gates
 from qibo.models.circuit import Circuit
 
 
-@staticmethod
 def convert_bit_to_energy(hamiltonian, bitstring):
     """
     Given a binary string and a hamiltonian, we compute the corresponding energy.
@@ -19,7 +18,6 @@ def convert_bit_to_energy(hamiltonian, bitstring):
     return hamiltonian.expectation(result.state())
 
 
-@staticmethod
 def convert_state_to_count(state):
     """
     This is a function that convert a quantum state to a dictionary keeping track of
@@ -34,7 +32,6 @@ def convert_state_to_count(state):
     return counts
 
 
-@staticmethod
 def compute_cvar(probabilities, values, alpha):
     """
     Auxilliary method to computes CVaR for given probabilities, values, and confidence level.
@@ -63,7 +60,6 @@ def compute_cvar(probabilities, values, alpha):
     return cvar
 
 
-@staticmethod
 def cvar(hamiltonian, state, alpha=0.1):
     """
     Given the hamiltonian and state, this function estimate the
