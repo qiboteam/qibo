@@ -514,7 +514,7 @@ class QAOA(object):
                 return hamiltonian.expectation(state)
             elif mode == "cvar":
                 from qibo.models.utils import cvar
-                
+
                 return cvar(hamiltonian, state)
             elif mode == "gibbs":
                 return gibbs(hamiltonian, state)
