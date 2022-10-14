@@ -2,7 +2,6 @@
 
 from qibo.config import raise_error
 from qibo.models.evolution import StateEvolution
-from qibo.models.utils import cvar, gibbs
 
 
 class VQE(object):
@@ -517,6 +516,7 @@ class QAOA(object):
 
                 return cvar(hamiltonian, state)
             elif mode == "gibbs":
+                from qibo.models.utils import gibbs
                 return gibbs(hamiltonian, state)
 
         if method == "sgd":
