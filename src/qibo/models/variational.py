@@ -517,6 +517,7 @@ class QAOA(object):
                 return cvar(hamiltonian, state)
             elif mode == "gibbs":
                 from qibo.models.utils import gibbs
+
                 return gibbs(hamiltonian, state)
 
         if method == "sgd":
