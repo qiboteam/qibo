@@ -18,6 +18,7 @@ def convert_bit_to_energy(hamiltonian, bitstring):
     result = c()  # this is an execution result, a quantum state
     return hamiltonian.expectation(result.state())
 
+
 @staticmethod
 def convert_state_to_count(state):
     """
@@ -31,6 +32,7 @@ def convert_state_to_count(state):
     result = c(state, nshots=100)
     counts = result.frequencies(binary=True)
     return counts
+
 
 @staticmethod
 def compute_cvar(probabilities, values, alpha):
@@ -60,6 +62,7 @@ def compute_cvar(probabilities, values, alpha):
     cvar /= total_prob
     return cvar
 
+
 @staticmethod
 def cvar(hamiltonian, state, alpha=0.1):
     """
@@ -74,6 +77,7 @@ def cvar(hamiltonian, state, alpha=0.1):
         probabilities[i] = p
     cvar_ans = compute_cvar(probabilities, values, alpha)
     return cvar_ans
+
 
 @staticmethod
 def gibbs(hamiltonian, state, eta=0.1):
