@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import numpy as np
 import sympy
 
 from qibo.config import EINSUM_CHARS, log, raise_error

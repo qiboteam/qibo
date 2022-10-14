@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-import numpy as np
 
 from qibo.config import raise_error
 from qibo.models.evolution import StateEvolution
-from qibo.models.utils import Loss_Utils
+from qibo.models.utils import cvar, gibbs
 
 
 class VQE(object):
@@ -518,7 +517,7 @@ class QAOA(object):
                 
                 return cvar(hamiltonian, state)
             elif mode == "gibbs":
-                return Loss_Utils.gibbs(hamiltonian, state)
+                return gibbs(hamiltonian, state)
 
         if method == "sgd":
             loss = lambda p, c, h, s: _loss(self.hamiltonian.backend.cast(p), c, h, s)
