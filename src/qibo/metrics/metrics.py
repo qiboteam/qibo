@@ -34,7 +34,9 @@ def trace_distance(state: np.ndarray, target: np.ndarray):
         target = np.outer(np.conj(target), target)
 
     difference = state - target
-    difference_sqrt, _ = scipy.linalg.sqrtm(np.dot(np.conj(np.transpose(difference)), difference))
+    difference_sqrt, _ = scipy.linalg.sqrtm(
+        np.dot(np.conj(np.transpose(difference)), difference)
+    )
     return np.trace(difference_sqrt) / 2
 
 
