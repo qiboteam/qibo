@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 
-from qibo import gates as maingates
-from qibo.gates import gates
+from qibo import gates
 from qibo.models.circuit import Circuit
 
 
@@ -12,8 +11,9 @@ def convert_bit_to_energy(hamiltonian, bitstring):
     """
     n = len(bitstring)
     c = Circuit(n)
-    for i in range(n):
-        c.add(gates.X(int(i)))
+    active_bit = [i for i in bitstring if bitstring[i]== "1"]
+    for i in active_bit:
+        c.add(gates.X(i))
     result = c()  # this is an execution result, a quantum state
     return hamiltonian.expectation(result.state())
 
@@ -26,7 +26,7 @@ def convert_state_to_count(state):
     """
     m = int(np.log2(state.size))
     c = Circuit(m)
-    c.add(maingates.M(*[i for i in range(m)]))
+    c.add(gates.M(*[i for i in range(m)]))
     result = c(state, nshots=100)
     counts = result.frequencies(binary=True)
     return counts
@@ -75,7 +75,7 @@ def cvar(hamiltonian, state, alpha=0.1):
     return cvar_ans
 
 
-def gibbs(hamiltonian, state, eta=0.1):
+def gibbs(hamiltonian, state, eta):
     """
     Given the hamiltonian and the state, and optional eta value
     it estimate the gibbs function value.
