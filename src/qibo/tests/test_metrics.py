@@ -1,4 +1,4 @@
 # -*- coding: utf-8 -*-
 import pytest
 
-from qibo.metrics.metrics import *
+from qibo.quantum_info.metrics import *
