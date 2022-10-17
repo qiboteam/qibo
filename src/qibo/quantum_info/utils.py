@@ -38,7 +38,9 @@ def shannon_entropy(probability_array, base: float = 2):
             "All elements of the probability array must be between 0. and 1.."
         )
 
-    if (np.sum(probability_array) > 1.0 + PRECISION_TOL) or (np.sum(probability_array) < 1. - PRECISION_TOL):
+    if (np.sum(probability_array) > 1.0 + PRECISION_TOL) or (
+        np.sum(probability_array) < 1.0 - PRECISION_TOL
+    ):
         raise ValueError("Probability vector must sum to 1.")
 
     if base == 2:
@@ -70,7 +72,7 @@ def shannon_entropy(probability_array, base: float = 2):
             if any(probability_array == 0.0)
             else np.log(probability_array) / np.log(base)
         )
-    
+
     entropy = -np.sum(probability_array * log_prob)
 
     # absolute value if entropy == 0.0 to avoid returning -0.0
