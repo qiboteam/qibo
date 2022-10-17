@@ -75,7 +75,7 @@ def cvar(hamiltonian, state, alpha=0.1):
     return cvar_ans
 
 
-def gibbs(hamiltonian, state, eta):
+def gibbs(hamiltonian, state, eta=0.1):
     """
     Given the hamiltonian and the state, and optional eta value
     it estimate the gibbs function value.
