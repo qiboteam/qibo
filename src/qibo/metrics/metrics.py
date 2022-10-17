@@ -3,8 +3,31 @@ import numpy as np
 import scipy
 
 
+def purity(state):
+    """Purity of a quantum state :math:`\\rho`, which is given by :math:`\\text{Tr}(\\rho^{2})`.
+
+    Args:
+        state: state vector or density matrix.
+    
+    Returns:
+        Purity of quantum state :math:`\\rho`.
+
+    """
+    if len(state.shape) >= 3 or len(state.shape) == 0:
+        raise TypeError(
+            f"Object must have dims either (k,) or (k,l), but have dims {state.shape}."
+        )
+
+    if len(state.shape) == 1:
+        pur = np.abs(np.conj(state), state) ** 2
+    else:
+        pur = np.trace(np.dot(state, state))
+
+    return pur
+
+
 def trace_distance(state, target):
-    """Trace distance between two quantum states
+    """Trace distance between two quantum states:
 
     ..math::
         T(\\rho, \\sigma) \\coloneqq \\frac{1}{2} \\, ||\\rho - \\sigma||_{1}
@@ -24,7 +47,7 @@ def trace_distance(state, target):
         raise TypeError(
             f"State has dims {state.shape} while target has dims {target.shape}."
         )
-    elif len(state.shape) >= 3:
+    elif len(state.shape) >= 3 or len(state.shape) == 0:
         raise TypeError(
             f"Both objects must have dims either (k,) or (k,l), but have dims {state.shape} and {target.shape}"
         )
@@ -41,7 +64,7 @@ def trace_distance(state, target):
 
 
 def hilbert_schmidt_distance(state, target):
-    """Hilbert-Schmidt distance between two quantum states
+    """Hilbert-Schmidt distance between two quantum states:
 
     ..math::
         <\\rho, \\sigma>_{\\text{HS}} = \\text{Tr}\\left[(\\rho - \\sigma)^{2}\\right]
@@ -59,7 +82,7 @@ def hilbert_schmidt_distance(state, target):
         raise TypeError(
             f"State has dims {state.shape} while target has dims {target.shape}."
         )
-    elif len(state.shape) >= 3:
+    elif len(state.shape) >= 3 or len(state.shape) == 0:
         raise TypeError(
             f"Both objects must have dims either (k,) or (k,l), but have dims {state.shape} and {target.shape}"
         )
@@ -90,7 +113,7 @@ def fidelity(state, target):
         raise TypeError(
             f"State has dims {state.shape} while target has dims {target.shape}."
         )
-    elif len(state.shape) >= 3:
+    elif len(state.shape) >= 3 or len(state.shape) == 0:
         raise TypeError(
             f"Both objects must have dims either (k,) or (k,l), but have dims {state.shape} and {target.shape}"
         )
