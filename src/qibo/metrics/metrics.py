@@ -3,7 +3,7 @@ import numpy as np
 import scipy
 
 
-def trace_distance(state: np.ndarray, target: np.ndarray):
+def trace_distance(state, target):
     """Trace distance between two quantum states
 
     ..math::
