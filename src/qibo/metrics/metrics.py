@@ -8,7 +8,7 @@ def purity(state):
 
     Args:
         state: state vector or density matrix.
-    
+
     Returns:
         Purity of quantum state :math:`\\rho`.
 
