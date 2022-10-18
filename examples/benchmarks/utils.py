@@ -8,7 +8,7 @@ class BenchmarkLogger(list):
         self.filename = filename
         if filename is not None and os.path.isfile(filename):
             print("Extending existing logs from {}.".format(filename))
-            with open(filename, "r") as file:
+            with open(filename) as file:
                 super().__init__(json.load(file))
         else:
             if filename is not None:
