@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from inspect import trace
+
 import numpy as np
 import pytest
 
@@ -39,13 +40,13 @@ def test_purity(backend):
         purity(state)
     state = np.asarray([1.0, 0.0, 0.0, 0.0])
     backend.assert_allclose(purity(state), 1.0)
-    
+
     state = np.outer(np.conj(state), state)
     backend.assert_allclose(purity(state), 1.0)
 
     d = 4
     state = np.eye(d) / d
-    backend.assert_allclose(purity(state), 1. / d)
+    backend.assert_allclose(purity(state), 1.0 / d)
 
 
 def test_trace_distance(backend):
@@ -62,16 +63,16 @@ def test_trace_distance(backend):
         target = np.asarray([])
         trace_distance(state, target)
 
-    state = np.asarray([1., 0., 0., 0.])
-    target = np.asarray([1., 0., 0., 0.])
+    state = np.asarray([1.0, 0.0, 0.0, 0.0])
+    target = np.asarray([1.0, 0.0, 0.0, 0.0])
     backend.assert_allclose(trace_distance(state, target), 0.0)
 
     state = np.outer(np.conj(state), state)
     target = np.outer(np.conj(target), target)
     backend.assert_allclose(trace_distance(state, target), 0.0)
 
-    state = np.asarray([0., 1., 0., 0.])
-    target = np.asarray([1., 0., 0., 0.])
+    state = np.asarray([0.0, 1.0, 0.0, 0.0])
+    target = np.asarray([1.0, 0.0, 0.0, 0.0])
     backend.assert_allclose(trace_distance(state, target), 1.0)
 
 
@@ -89,14 +90,14 @@ def test_hilbert_schmidt_distance(backend):
         target = np.asarray([])
         hilbert_schmidt_distance(state, target)
 
-    state = np.asarray([1., 0., 0., 0.])
-    target = np.asarray([1., 0., 0., 0.])
+    state = np.asarray([1.0, 0.0, 0.0, 0.0])
+    target = np.asarray([1.0, 0.0, 0.0, 0.0])
     backend.assert_allclose(hilbert_schmidt_distance(state, target), 0.0)
 
     state = np.outer(np.conj(state), state)
     target = np.outer(np.conj(target), target)
     backend.assert_allclose(hilbert_schmidt_distance(state, target), 0.0)
 
-    state = np.asarray([0., 1., 0., 0.])
-    target = np.asarray([1., 0., 0., 0.])
+    state = np.asarray([0.0, 1.0, 0.0, 0.0])
+    target = np.asarray([1.0, 0.0, 0.0, 0.0])
     backend.assert_allclose(hilbert_schmidt_distance(state, target), 2.0)

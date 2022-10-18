@@ -3,6 +3,7 @@
 import numpy as np
 from scipy.linalg import sqrtm
 
+
 def purity(state):
     """Purity of a quantum state :math:`\\rho`, which is given by :math:`\\text{Tr}(\\rho^{2})`.
 
@@ -14,7 +15,11 @@ def purity(state):
 
     """
 
-    if (len(state.shape) >= 3) or (len(state) == 0) or (len(state.shape) == 2 and state.shape[0] != state.shape[1]):
+    if (
+        (len(state.shape) >= 3)
+        or (len(state) == 0)
+        or (len(state.shape) == 2 and state.shape[0] != state.shape[1])
+    ):
         raise TypeError(
             f"Object must have dims either (k,) or (k,k), but have dims {state.shape}."
         )
@@ -48,7 +53,7 @@ def trace_distance(state, target):
         raise TypeError(
             f"State has dims {state.shape} while target has dims {target.shape}."
         )
-    
+
     if (len(state.shape) >= 3) or (len(state) == 0):
         raise TypeError(
             f"Both objects must have dims either (k,) or (k,l), but have dims {state.shape} and {target.shape}"
@@ -59,9 +64,7 @@ def trace_distance(state, target):
         target = np.outer(np.conj(target), target)
 
     difference = state - target
-    difference_sqrt = sqrtm(
-        np.dot(np.conj(np.transpose(difference)), difference)
-    )
+    difference_sqrt = sqrtm(np.dot(np.conj(np.transpose(difference)), difference))
     return np.trace(difference_sqrt) / 2
 
 
@@ -84,7 +87,7 @@ def hilbert_schmidt_distance(state, target):
         raise TypeError(
             f"State has dims {state.shape} while target has dims {target.shape}."
         )
-    
+
     if (len(state.shape) >= 3) or (len(state) == 0):
         raise TypeError(
             f"Both objects must have dims either (k,) or (k,l), but have dims {state.shape} and {target.shape}"
