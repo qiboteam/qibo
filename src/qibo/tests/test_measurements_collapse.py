@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test :class:`qibo.gates.M` as standalone and as part of circuit."""
 import numpy as np
 import pytest
