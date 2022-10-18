@@ -1,8 +1,24 @@
 # -*- coding: utf-8 -*-
+from inspect import trace
 import numpy as np
 import pytest
 
 from qibo.quantum_info import *
+
+
+def test_shannon_entropy_errors():
+    with pytest.raises(ValueError):
+        p = np.asarray([1.0, 0.0])
+        shannon_entropy(p, -2)
+    with pytest.raises(TypeError):
+        p = np.asarray([[1.0, 0.0]])
+        shannon_entropy(p)
+    with pytest.raises(TypeError):
+        p = np.asarray([])
+        shannon_entropy(p)
+    with pytest.raises(ValueError):
+        p = np.asarray([0.5, 0.4999999])
+        shannon_entropy(p)
 
 
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
@@ -17,16 +33,70 @@ def test_shannon_entropy(backend, base):
         backend.assert_allclose(result, 1.0)
 
 
-def test_shannon_entropy_errors():
-    with pytest.raises(ValueError):
-        x = np.asarray([1.0, 0.0])
-        shannon_entropy(x, -2)
+def test_purity(backend):
     with pytest.raises(TypeError):
-        x = np.asarray([[1.0, 0.0]])
-        shannon_entropy(x)
+        state = np.random.rand(2, 3)
+        purity(state)
+    state = np.asarray([1.0, 0.0, 0.0, 0.0])
+    backend.assert_allclose(purity(state), 1.0)
+    
+    state = np.outer(np.conj(state), state)
+    backend.assert_allclose(purity(state), 1.0)
+
+    d = 4
+    state = np.eye(d) / d
+    backend.assert_allclose(purity(state), 1. / d)
+
+
+def test_trace_distance(backend):
     with pytest.raises(TypeError):
-        x = np.asarray([])
-        shannon_entropy(x)
-    with pytest.raises(ValueError):
-        x = np.asarray([0.5, 0.4999999])
-        shannon_entropy(x)
+        state = np.random.rand(2, 2)
+        target = np.random.rand(4, 4)
+        trace_distance(state, target)
+    with pytest.raises(TypeError):
+        state = np.random.rand(2, 2, 2)
+        target = np.random.rand(2, 2, 2)
+        trace_distance(state, target)
+    with pytest.raises(TypeError):
+        state = np.asarray([])
+        target = np.asarray([])
+        trace_distance(state, target)
+
+    state = np.asarray([1., 0., 0., 0.])
+    target = np.asarray([1., 0., 0., 0.])
+    backend.assert_allclose(trace_distance(state, target), 0.0)
+
+    state = np.outer(np.conj(state), state)
+    target = np.outer(np.conj(target), target)
+    backend.assert_allclose(trace_distance(state, target), 0.0)
+
+    state = np.asarray([0., 1., 0., 0.])
+    target = np.asarray([1., 0., 0., 0.])
+    backend.assert_allclose(trace_distance(state, target), 1.0)
+
+
+def test_hilbert_schmidt_distance(backend):
+    with pytest.raises(TypeError):
+        state = np.random.rand(2, 2)
+        target = np.random.rand(4, 4)
+        hilbert_schmidt_distance(state, target)
+    with pytest.raises(TypeError):
+        state = np.random.rand(2, 2, 2)
+        target = np.random.rand(2, 2, 2)
+        hilbert_schmidt_distance(state, target)
+    with pytest.raises(TypeError):
+        state = np.asarray([])
+        target = np.asarray([])
+        hilbert_schmidt_distance(state, target)
+
+    state = np.asarray([1., 0., 0., 0.])
+    target = np.asarray([1., 0., 0., 0.])
+    backend.assert_allclose(hilbert_schmidt_distance(state, target), 0.0)
+
+    state = np.outer(np.conj(state), state)
+    target = np.outer(np.conj(target), target)
+    backend.assert_allclose(hilbert_schmidt_distance(state, target), 0.0)
+
+    state = np.asarray([0., 1., 0., 0.])
+    target = np.asarray([1., 0., 0., 0.])
+    backend.assert_allclose(hilbert_schmidt_distance(state, target), 2.0)
