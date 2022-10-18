@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-from inspect import trace
-
 import numpy as np
 import pytest
 
@@ -101,3 +99,41 @@ def test_hilbert_schmidt_distance(backend):
     state = np.asarray([0.0, 1.0, 0.0, 0.0])
     target = np.asarray([1.0, 0.0, 0.0, 0.0])
     backend.assert_allclose(hilbert_schmidt_distance(state, target), 2.0)
+
+
+def test_fidelity(backend):
+    with pytest.raises(TypeError):
+        state = np.random.rand(2, 2)
+        target = np.random.rand(4, 4)
+        fidelity(state, target)
+    with pytest.raises(TypeError):
+        state = np.random.rand(2, 2, 2)
+        target = np.random.rand(2, 2, 2)
+        fidelity(state, target)
+
+    state = np.asarray([0., 0., 0., 1.])
+    target = np.asarray([0., 0., 0., 1.])
+    backend.assert_allclose(fidelity(state, target), 1.0)
+
+    state = np.outer(np.conj(state), state)
+    target = np.outer(np.conj(target), target)
+    backend.assert_allclose(fidelity(state, target), 1.0)
+    
+    state = np.asarray([0., 1., 0., 0.])
+    target = np.asarray([0., 0., 0., 1.])
+    backend.assert_allclose(fidelity(state, target), 0.0)
+
+
+def test_process_fidelity(backend):
+    d = 2
+    with pytest.raises(TypeError):
+        channel = np.random.rand(d**2, d**2)
+        target = np.random.rand(d**2, d**2, 1)
+        process_fidelity(channel, target)
+
+    channel = np.eye(d**2)
+    backend.assert_allclose(process_fidelity(channel), 1.0)
+    backend.assert_allclose(process_fidelity(channel, channel), 1.0)
+
+def test_average_fidelity(backend):
+    test_process_fidelity(backend)
