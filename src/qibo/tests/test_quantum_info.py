@@ -111,16 +111,16 @@ def test_fidelity(backend):
         target = np.random.rand(2, 2, 2)
         fidelity(state, target)
 
-    state = np.asarray([0., 0., 0., 1.])
-    target = np.asarray([0., 0., 0., 1.])
+    state = np.asarray([0.0, 0.0, 0.0, 1.0])
+    target = np.asarray([0.0, 0.0, 0.0, 1.0])
     backend.assert_allclose(fidelity(state, target), 1.0)
 
     state = np.outer(np.conj(state), state)
     target = np.outer(np.conj(target), target)
     backend.assert_allclose(fidelity(state, target), 1.0)
-    
-    state = np.asarray([0., 1., 0., 0.])
-    target = np.asarray([0., 0., 0., 1.])
+
+    state = np.asarray([0.0, 1.0, 0.0, 0.0])
+    target = np.asarray([0.0, 0.0, 0.0, 1.0])
     backend.assert_allclose(fidelity(state, target), 0.0)
 
 
@@ -134,6 +134,7 @@ def test_process_fidelity(backend):
     channel = np.eye(d**2)
     backend.assert_allclose(process_fidelity(channel), 1.0)
     backend.assert_allclose(process_fidelity(channel, channel), 1.0)
+
 
 def test_average_fidelity(backend):
     test_process_fidelity(backend)

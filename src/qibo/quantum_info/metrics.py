@@ -119,7 +119,7 @@ def fidelity(state, target):
         raise TypeError(
             f"State has dims {state.shape} while target has dims {target.shape}."
         )
-    
+
     if len(state.shape) >= 3 or len(state.shape) == 0:
         raise TypeError(
             f"Both objects must have dims either (k,) or (k,l), but have dims {state.shape} and {target.shape}"
