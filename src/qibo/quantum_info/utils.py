@@ -33,7 +33,7 @@ def shannon_entropy(probability_array, base: float = 2):
     if len(probability_array) == 0:
         raise TypeError("Empty array.")
 
-    if any(probability_array) < 0 or any(probability_array) > 1.0:
+    if any(probability_array < 0) or any(probability_array > 1.0):
         raise ValueError(
             "All elements of the probability array must be between 0. and 1.."
         )

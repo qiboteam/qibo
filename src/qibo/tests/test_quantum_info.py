@@ -18,6 +18,7 @@ def test_shannon_entropy_errors():
     with pytest.raises(ValueError):
         p = np.asarray([1.0, -1.0])
         shannon_entropy(p)
+    with pytest.raises(TypeError):
         p = np.asarray([1.1, 0.0])
         shannon_entropy(p)
     with pytest.raises(ValueError):
