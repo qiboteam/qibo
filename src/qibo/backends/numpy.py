@@ -442,8 +442,8 @@ class NumpyBackend(Backend):
         return result.execution_result
 
     def circuit_result_probabilities(self, result, qubits=None):
-        if qubits is None:  # pragma: no cover
-            qubits = result.circuit.measurement_gate.qubits
+        if qubits is None:
+            qubits = result.measurement_gate.qubits
 
         state = self.circuit_result_tensor(result)
         if result.density_matrix:

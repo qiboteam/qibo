@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import pytest
+import numpy as np
 
 from qibo import gates
 from qibo.models import Circuit
@@ -36,9 +37,7 @@ def test_state_representation(backend, target, density_matrix):
 
 @pytest.mark.parametrize("density_matrix", [False, True])
 def test_state_representation_max_terms(backend, density_matrix):
-    from qibo import gates, models
-
-    c = models.Circuit(5, density_matrix=density_matrix)
+    c = Circuit(5, density_matrix=density_matrix)
     c.add(gates.H(i) for i in range(5))
     result = backend.execute_circuit(c)
     if density_matrix:
@@ -59,3 +58,20 @@ def test_state_representation_max_terms(backend, density_matrix):
             result.symbolic(max_terms=5)
             == "(0.17678+0j)|00000> + (0.17678+0j)|00001> + (0.17678+0j)|00010> + (0.17678+0j)|00011> + (0.17678+0j)|00100> + ..."
         )
+
+
+@pytest.mark.parametrize("density_matrix", [False, True])
+def test_state_probabilities(backend, density_matrix):
+    c = Circuit(4, density_matrix=density_matrix)
+    c.add(gates.H(i) for i in range(4))
+    result = backend.execute_circuit(c)
+    with pytest.raises(ValueError):
+        final_probabilities = result.probabilities()
+
+    c = Circuit(4, density_matrix=density_matrix)
+    c.add(gates.H(i) for i in range(4))
+    c.add(gates.M(*range(4)))
+    result = backend.execute_circuit(c)
+    final_probabilities = result.probabilities()
+    target_probabilities = np.ones(16) / 16
+    backend.assert_allclose(final_probabilities, target_probabilities)
