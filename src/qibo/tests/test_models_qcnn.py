@@ -12,6 +12,7 @@ from qibo import matrices
 def test_classifier_circuit2():
   """
   """
+  qibo.set_backend('numpy')
   nqubits = 2
   nlayers = int(nqubits / 2)
   init_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)  #   
@@ -32,6 +33,7 @@ def test_classifier_circuit2():
  
 def get_real_vector2():
   nqubits = 2
+  bits = range(nqubits)
   init_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)  #
   num_angles = 21
   angles = [i * math.pi / num_angles for i in range(num_angles)]   
@@ -66,7 +68,9 @@ def get_real_vector2():
 def test_classifier_circuit4():
   """
   """
+  qibo.set_backend('numpy')
   nqubits = 4
+  bits = range(nqubits)
   nlayers = int(nqubits / 2)
   init_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)  #  
   
@@ -177,5 +181,53 @@ def one_qubit_unitary(nqubits, bit, symbols):
   return c    
     
  
-  
+#def RXX_matrix(nqubits, bit1, bit2, angle):
+def RXX_matrix(angle):
+  theta = angle*0.5
+  cos = math.cos(theta)
+  sin = -1j*math.sin(theta)
+  m = np.array(
+        [
+            [cos, 0, 0, sin],
+            [0, cos, sin, 0],
+            [0, sin, cos, 0],
+            [sin, 0, 0, cos],
+        ]
+    )
+
+  return m
+
+
+def RYY_matrix(angle):
+  theta = angle*0.5
+  cos = math.cos(theta)
+  sin = 1j*math.sin(theta)
+  m = np.array(
+        [
+            [cos, 0, 0, sin],
+            [0, cos, -sin, 0],
+            [0, -sin, cos, 0],
+            [sin, 0, 0, cos],
+        ]
+    )
+
+  return m
+
+
+def RZZ_matrix(angle):
+  theta = angle*0.5
+  cos = math.cos(theta)
+  sin = 1j*math.sin(theta)
+  m = np.array(
+        [
+            [cos-sin, 0, 0, 0],
+            [0, cos+sin, 0, 0],
+            [0, 0, cos+sin, 0],
+            [0, 0, 0, cos-sin],
+        ]
+    )
+
+  return m
+
+
   
