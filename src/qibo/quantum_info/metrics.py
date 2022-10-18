@@ -119,7 +119,8 @@ def fidelity(state, target):
         raise TypeError(
             f"State has dims {state.shape} while target has dims {target.shape}."
         )
-    elif len(state.shape) >= 3 or len(state.shape) == 0:
+    
+    if len(state.shape) >= 3 or len(state.shape) == 0:
         raise TypeError(
             f"Both objects must have dims either (k,) or (k,l), but have dims {state.shape} and {target.shape}"
         )
@@ -147,12 +148,12 @@ def process_fidelity(channel, target=None):
 
     """
 
-    if target:
+    if target is not None:
         if channel.shape != target.shape:
             raise TypeError(
                 f"Channels must have the same dims, but {channel.shape} != {target.shape}"
             )
-    d = channel.shape[0]
+    d = int(np.sqrt(channel.shape[0]))
     if target is None:
         # With no target, return process fidelity with Identity channel
         return np.trace(channel) / d**2
