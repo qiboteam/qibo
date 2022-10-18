@@ -14,7 +14,7 @@ def test_shannon_entropy(backend, base):
     if base == 2:
         prob_array = np.asarray([0.5, 0.5])
         result = shannon_entropy(prob_array, base)
-        backend.assert_allclose(result, 2.0)
+        backend.assert_allclose(result, 1.0)
 
 
 def test_shannon_entropy_errors():
