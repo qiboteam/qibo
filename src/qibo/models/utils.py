@@ -11,7 +11,7 @@ def convert_bit_to_energy(hamiltonian, bitstring):
     """
     n = len(bitstring)
     c = Circuit(n)
-    active_bit = [i for i in bitstring if bitstring[i]== "1"]
+    active_bit = [i for i in bitstring if bitstring[i] == "1"]
     for i in active_bit:
         c.add(gates.X(i))
     result = c()  # this is an execution result, a quantum state
