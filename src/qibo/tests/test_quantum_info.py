@@ -10,10 +10,15 @@ def test_shannon_entropy_errors():
         p = np.asarray([1.0, 0.0])
         shannon_entropy(p, -2)
     with pytest.raises(TypeError):
-        p = np.asarray([[1.0, 0.0]])
+        p = np.asarray([[1.0], [0.0]])
         shannon_entropy(p)
     with pytest.raises(TypeError):
         p = np.asarray([])
+        shannon_entropy(p)
+    with pytest.raises(ValueError):
+        p = np.asarray([1.0, -1.0])
+        shannon_entropy(p)
+        p = np.asarray([1.1, 0.0])
         shannon_entropy(p)
     with pytest.raises(ValueError):
         p = np.asarray([0.5, 0.4999999])
@@ -136,5 +141,5 @@ def test_process_fidelity(backend):
     backend.assert_allclose(process_fidelity(channel, channel), 1.0)
 
 
-def test_average_fidelity(backend):
-    test_process_fidelity(backend)
+def test_average_fidelity():
+    average_gate_fidelity(np.eye(4))
