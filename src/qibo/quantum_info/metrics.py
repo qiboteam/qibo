@@ -26,7 +26,7 @@ def purity(state):
     if len(state.shape) == 1:
         pur = np.abs(np.dot(np.conj(state), state)) ** 2
     else:
-        pur = np.trace(np.dot(state, state))
+        pur = np.real(np.trace(np.dot(state, state)))
 
     return pur
 
@@ -64,7 +64,7 @@ def trace_distance(state, target):
 
     difference = state - target
     difference_sqrt = sqrtm(np.dot(np.conj(np.transpose(difference)), difference))
-    return np.trace(difference_sqrt) / 2
+    return np.real(np.trace(difference_sqrt)) / 2
 
 
 def hilbert_schmidt_distance(state, target):
@@ -96,7 +96,7 @@ def hilbert_schmidt_distance(state, target):
         state = np.outer(np.conj(state), state)
         target = np.outer(np.conj(target), target)
 
-    return np.trace((state - target) ** 2)
+    return np.real(np.trace((state - target) ** 2))
 
 
 def fidelity(state, target):
@@ -127,7 +127,7 @@ def fidelity(state, target):
     if len(state.shape) == 1 and len(target.shape) == 1:
         fid = np.abs(np.dot(np.conj(state), target)) ** 2
     elif len(state.shape) == 2 and len(target.shape) == 2:
-        fid = np.trace(np.dot(state, target))
+        fid = np.real(np.trace(np.dot(state, target)))
 
     return fid
 
@@ -155,9 +155,9 @@ def process_fidelity(channel, target=None):
     d = int(np.sqrt(channel.shape[0]))
     if target is None:
         # With no target, return process fidelity with Identity channel
-        return np.trace(channel) / d**2
+        return np.real(np.trace(channel)) / d**2
     else:
-        return np.trace(np.dot(np.conj(np.transpose(channel)), target)) / d**2
+        return np.real(np.trace(np.dot(np.conj(np.transpose(channel)), target))) / d**2
 
 
 def average_gate_fidelity(channel, target=None):
