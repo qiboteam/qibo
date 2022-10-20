@@ -157,7 +157,9 @@ def process_fidelity(channel, target=None):
         # With no target, return process fidelity with Identity channel
         return np.real(np.trace(channel)) / d**2
     else:
-        return np.real(np.trace(np.dot(np.conj(np.transpose(channel)), target))) / d**2
+        return (
+            np.real(np.trace(np.dot(np.conj(np.transpose(channel)), target))) / d**2
+        )
 
 
 def average_gate_fidelity(channel, target=None):
