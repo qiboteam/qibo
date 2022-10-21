@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from typing import Type
+
 import numpy as np
 import pytest
 
