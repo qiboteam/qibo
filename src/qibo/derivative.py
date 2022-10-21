@@ -1,38 +1,35 @@
+# -*- coding: utf-8 -*-
 def parameter_shift(
-    circuit,
-    observable,
-    parameter_index,
-    gate_eigenv,
-    initial_state = None
+    circuit, observable, parameter_index, gate_eigenv, initial_state=None
 ):
     """In this method the parameter shift rule (PSR) is implemented.
     Given a circuit U and an observable H, the PSR allows to calculate the derivative
-    of the expected value of H on the final state obtained by application of U with 
+    of the expected value of H on the final state obtained by application of U with
     respect to a variational parameter of the circuit.
-    
+
     Original references:
         `https://arxiv.org/abs/1811.11184`;
         `https://arxiv.org/abs/1803.00745`.
-        
+
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
         observable (:class: `qibo.hamiltonians.Hamiltonian`): the hamiltonian here is the target observable.
         parameter_index (int): the index which identify the targe parameter in the circuit.get_parameters list
         gate_eigenv (float): abs(eigenvalue) of H. In case of Pauli 1/2{sigmas} observable r = 0.5
-        initial_state ((1, 2**nqubits) matrix): initial state on which we act with the circuit. 
-    
+        initial_state ((1, 2**nqubits) matrix): initial state on which we act with the circuit.
+
     Returns:
         np.float value of the derivative of the expected value of H on the final state obtained applying U
         to the initial state with respect to the target variational parameter.
-        
+
     Example:
         .. testcode::
-        
+
             import qibo
             import numpy as np
             from qibo import hamiltonians, gates
             from qibo.models import Circuit
-        
+
             # in order to see the difference with tf gradients
             import tensorflow as tf
             qibo.set_backend('tensorflow')
@@ -59,7 +56,7 @@ def parameter_shift(
                     c = circuit(nqubits = 1)
                     c.set_parameters(params)
                     h = hamiltonian()
-                    expected_value = h.expectation(c.execute().state()) 
+                    expected_value = h.expectation(c.execute().state())
 
                 grads = tape.gradient(expected_value, [params])
                 return grads
@@ -85,38 +82,44 @@ def parameter_shift(
             print('Test gradient with respect params[0] with tf:  ', tf_grads[0][0].numpy())
             print('Test gradient with respect params[0] with PSR: ', grad_1.numpy())
             print('Test gradient with respect params[0] with tf:  ', tf_grads[0][1].numpy())
-    
+
     """
-    
-    if(parameter_index > len(circuit.get_parameters())):
-        raise ValueError('''This index doesn't exist! Use one of the circuit's parameters.''')
-    
+
+    if parameter_index > len(circuit.get_parameters()):
+        raise ValueError(
+            """This index doesn't exist! Use one of the circuit's parameters."""
+        )
+
     # defining the shift according to the psr
     s = np.pi / (4 * gate_eigenv)
-        
+
     # saving original parameters and making a copy
     original = np.asarray(circuit.get_parameters()).copy()
     shifted = original.copy()
-        
+
     # forward shift and evaluation
     shifted[parameter_index] += s
     circuit.set_parameters(shifted)
-    
-    if initial_state is None: 
+
+    if initial_state is None:
         forward = observable.expectation(circuit.execute().state())
     else:
-        forward = observable.expectation(circuit.execute(initial_state = initial_state).state())
-    
+        forward = observable.expectation(
+            circuit.execute(initial_state=initial_state).state()
+        )
+
     # backward shift and evaluation
-    shifted[parameter_index] -= 2*s
+    shifted[parameter_index] -= 2 * s
     circuit.set_parameters(shifted)
-    
+
     if initial_state is None:
         backward = observable.expectation(circuit.execute().state())
     else:
-        backward = observable.expectation(circuit.execute(initial_state = initial_state).state())
-    
+        backward = observable.expectation(
+            circuit.execute(initial_state=initial_state).state()
+        )
+
     # restoring the original circuit
     circuit.set_parameters(original)
-    
+
     return gate_eigenv * (forward - backward)
