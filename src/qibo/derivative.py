@@ -80,8 +80,8 @@ def parameter_shift(
 
             print('Test gradient with respect params[0] with PSR: ', grad_0.numpy())
             print('Test gradient with respect params[0] with tf:  ', tf_grads[0][0].numpy())
-            print('Test gradient with respect params[0] with PSR: ', grad_1.numpy())
-            print('Test gradient with respect params[0] with tf:  ', tf_grads[0][1].numpy())
+            print('Test gradient with respect params[1] with PSR: ', grad_1.numpy())
+            print('Test gradient with respect params[1] with tf:  ', tf_grads[0][1].numpy())
 
     """
 
