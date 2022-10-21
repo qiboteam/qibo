@@ -2,6 +2,7 @@
 import numpy as np
 from scipy.linalg import sqrtm
 
+from qibo.config import PRECISION_TOL
 
 def purity(state):
     """Purity of a quantum state :math:`\\rho`, which is given by :math:`\\text{Tr}(\\rho^{2})`.
@@ -99,7 +100,7 @@ def hilbert_schmidt_distance(state, target):
     return np.real(np.trace((state - target) ** 2))
 
 
-def fidelity(state, target):
+def fidelity(state, target, validate=False):
     """Fidelity between two quantum states (when at least one state is pure).
 
     ..math::
@@ -108,6 +109,7 @@ def fidelity(state, target):
     Args:
         state: state vector or density matrix.
         target: state vector or density matrix.
+        validate (bool): if True, checks if one of the input states is pure. Default: False.
 
     Returns:
         Fidelity between state :math:`\\rho` and target :math:`\\sigma`.
@@ -124,6 +126,13 @@ def fidelity(state, target):
             f"Both objects must have dims either (k,) or (k,l), but have dims {state.shape} and {target.shape}"
         )
 
+    if validate:
+        purity_state = purity(state)
+        purity_target = purity(target)
+        if ((purity_state < 1. - PRECISION_TOL) or (purity_state > 1. + PRECISION_TOL)) and \
+            ((purity_target < 1. - PRECISION_TOL) or (purity_target > 1. + PRECISION_TOL)):
+            raise ValueError(f"Neither state is pure. Purity state: {purity_state} , Purity target: {purity_target}.")
+
     if len(state.shape) == 1 and len(target.shape) == 1:
         fid = np.abs(np.dot(np.conj(state), target)) ** 2
     elif len(state.shape) == 2 and len(target.shape) == 2:
@@ -132,7 +141,7 @@ def fidelity(state, target):
     return fid
 
 
-def process_fidelity(channel, target=None):
+def process_fidelity(channel, target=None, validate=False):
     """Process fidelity between two quantum channels (when at least one channel is` unitary),
 
     ..math::
@@ -152,7 +161,18 @@ def process_fidelity(channel, target=None):
             raise TypeError(
                 f"Channels must have the same dims, but {channel.shape} != {target.shape}"
             )
+
     d = int(np.sqrt(channel.shape[0]))
+
+    if validate:
+        norm_channel = np.linalg.norm(np.dot(np.conj(np.transpose(channel)), channel) - np.eye(d**2))
+        if target is None and norm_channel > PRECISION_TOL:
+            raise TypeError(f"Channel is not unitary and Target is None.")
+        if target is not None:
+            norm_target = np.linalg.norm(np.dot(np.conj(np.transpose(target)), target) - np.eye(d**2))
+            if (norm_channel > PRECISION_TOL) and (norm_target > PRECISION_TOL):
+                raise TypeError(f"Neither channel is unitary.")
+
     if target is None:
         # With no target, return process fidelity with Identity channel
         return np.real(np.trace(channel)) / d**2

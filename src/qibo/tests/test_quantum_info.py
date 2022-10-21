@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from typing import Type
 import numpy as np
 import pytest
 
@@ -116,6 +117,10 @@ def test_fidelity(backend):
         state = np.random.rand(2, 2, 2)
         target = np.random.rand(2, 2, 2)
         fidelity(state, target)
+    with pytest.raises(ValueError):
+        state = np.random.rand(2, 2)
+        target = np.random.rand(2, 2)
+        fidelity(state, target, validate=True)
 
     state = np.asarray([0.0, 0.0, 0.0, 1.0])
     target = np.asarray([0.0, 0.0, 0.0, 1.0])
@@ -136,6 +141,13 @@ def test_process_fidelity(backend):
         channel = np.random.rand(d**2, d**2)
         target = np.random.rand(d**2, d**2, 1)
         process_fidelity(channel, target)
+    with pytest.raises(TypeError):
+        channel = np.random.rand(d**2, d**2)
+        process_fidelity(channel, validate=True)
+    with pytest.raises(TypeError):
+        channel = np.random.rand(d**2, d**2)
+        target = np.random.rand(d**2, d**2)
+        process_fidelity(channel, target, validate=True)
 
     channel = np.eye(d**2)
     backend.assert_allclose(process_fidelity(channel), 1.0)
