@@ -14,7 +14,7 @@ def shannon_entropy(probability_array, base: float = 2):
     :math:`b` is the log base (default 2), and :math:`0 \\log_{b}(0) \\equiv 0`.
 
     Args:
-        probability_array: a probability vector :math:`\\mathbf{p}`.
+        probability_array: a probability array :math:`\\mathbf{p}`.
         base: the base of the log. Default: 2.
 
     Returns:
@@ -41,7 +41,7 @@ def shannon_entropy(probability_array, base: float = 2):
     if (np.sum(probability_array) > 1.0 + PRECISION_TOL) or (
         np.sum(probability_array) < 1.0 - PRECISION_TOL
     ):
-        raise ValueError("Probability vector must sum to 1.")
+        raise ValueError("Probability array must sum to 1.")
 
     if base == 2:
         log_prob = (
@@ -79,3 +79,44 @@ def shannon_entropy(probability_array, base: float = 2):
     entropy = np.abs(entropy) if entropy == 0.0 else entropy
 
     return entropy
+
+
+def hellinger_distance(prob_dist_p, prob_dist_q, validate:bool=False):
+    """Calculate the Hellinger ditance :math:`H(p, q)` between
+    two discrete probability distributions, :math:`p` and :math:`q`.
+
+    Args:
+        prob_dist_p: (discrete) probability distribution :math:`p`.
+        prob_dist_q: (discrete) probability distribution :math:`q`.
+        validate (bool): if True, checks if :math:`p` and :math:`q` are proper
+            probability distributions. Default: False.
+
+    Returns:
+        Hellinger ditance :math:`H(p, q)`.
+
+    """
+    
+    if (len(prob_dist_p.shape) != 1) or (len(prob_dist_q.shape) != 1):
+        raise TypeError(
+            f"Probability arrays must have dims (k,) but have dims {prob_dist_p.shape} and {prob_dist_q.shape}."
+        )
+
+    if (len(prob_dist_p) == 0) or (len(prob_dist_q) == 0):
+        raise TypeError("At least one of the arrays is empty.")
+
+    if validate:
+        if (any(prob_dist_p < 0) or any(prob_dist_p > 1.0)) or (any(prob_dist_q < 0) or any(prob_dist_q > 1.0)):
+            raise ValueError(
+                "All elements of the probability array must be between 0. and 1.."
+            )
+        if (np.sum(prob_dist_p) > 1.0 + PRECISION_TOL) or (
+            np.sum(prob_dist_p) < 1.0 - PRECISION_TOL
+        ):
+            raise ValueError("First probability array must sum to 1.")
+
+        if (np.sum(prob_dist_q) > 1.0 + PRECISION_TOL) or (
+            np.sum(prob_dist_q) < 1.0 - PRECISION_TOL
+        ):
+            raise ValueError("Second probability array must sum to 1.")
+
+    return np.linalg.norm(np.sqrt(prob_dist_p) - np.sqrt(prob_dist_q)) / np.sqrt(2)

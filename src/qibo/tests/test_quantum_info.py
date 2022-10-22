@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-from typing import Type
-
 import numpy as np
 import pytest
 
@@ -38,6 +36,33 @@ def test_shannon_entropy(backend, base):
         prob_array = np.asarray([0.5, 0.5])
         result = shannon_entropy(prob_array, base)
         backend.assert_allclose(result, 1.0)
+
+
+def test_hellinger_distance(backend):
+    with pytest.raises(TypeError):
+        p = np.random.rand(1, 2)
+        q = np.random.rand(1, 5)
+        hellinger_distance(p, q)
+    with pytest.raises(TypeError):
+        p = np.random.rand(1, 2)
+        q = np.array([])
+        hellinger_distance(p, q)
+    with pytest.raises(ValueError):
+        p = np.array([-1, 2.])
+        q = np.random.rand(1, 5)[0]
+        hellinger_distance(p, q, validate=True)
+    with pytest.raises(ValueError):
+        p = np.random.rand(1, 2)[0]
+        q = np.array([1.0, 0.0])
+        hellinger_distance(p, q, validate=True)
+    with pytest.raises(ValueError):
+        p = np.array([1.0, 0.0])
+        q = np.random.rand(1, 2)[0]
+        hellinger_distance(p, q, validate=True)
+
+    p = np.array([1.0, 0.0])
+    q = np.array([1.0, 0.0])
+    backend.assert_allclose(hellinger_distance(p, q), 0.0)
 
 
 def test_purity(backend):
