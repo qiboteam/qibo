@@ -44,7 +44,7 @@ def test_hellinger_distance(backend):
         q = np.random.rand(1, 5)
         hellinger_distance(p, q)
     with pytest.raises(TypeError):
-        p = np.random.rand(1, 2)
+        p = np.random.rand(1, 2)[0]
         q = np.array([])
         hellinger_distance(p, q)
     with pytest.raises(ValueError):
