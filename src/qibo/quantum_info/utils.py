@@ -81,7 +81,7 @@ def shannon_entropy(probability_array, base: float = 2):
     return entropy
 
 
-def hellinger_distance(prob_dist_p, prob_dist_q, validate:bool=False):
+def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False):
     """Calculate the Hellinger ditance :math:`H(p, q)` between
     two discrete probability distributions, :math:`p` and :math:`q`.
 
@@ -95,7 +95,7 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate:bool=False):
         Hellinger ditance :math:`H(p, q)`.
 
     """
-    
+
     if (len(prob_dist_p.shape) != 1) or (len(prob_dist_q.shape) != 1):
         raise TypeError(
             f"Probability arrays must have dims (k,) but have dims {prob_dist_p.shape} and {prob_dist_q.shape}."
@@ -105,7 +105,9 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate:bool=False):
         raise TypeError("At least one of the arrays is empty.")
 
     if validate:
-        if (any(prob_dist_p < 0) or any(prob_dist_p > 1.0)) or (any(prob_dist_q < 0) or any(prob_dist_q > 1.0)):
+        if (any(prob_dist_p < 0) or any(prob_dist_p > 1.0)) or (
+            any(prob_dist_q < 0) or any(prob_dist_q > 1.0)
+        ):
             raise ValueError(
                 "All elements of the probability array must be between 0. and 1.."
             )
