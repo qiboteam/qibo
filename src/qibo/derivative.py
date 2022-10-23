@@ -56,13 +56,13 @@ def parameter_shift(
             # using GradientTape to benchmark
             def gradient_tape(params):
                 params = tf.Variable(params)
-
+                
                 with tf.GradientTape() as tape:
                     c = circuit(nqubits = 1)
                     c.set_parameters(params)
                     h = hamiltonian()
-                    expected_value = h.expectation(c.execute().state())
-
+                    expected_value = h.expectation(c.execute().state()) 
+    
                 grads = tape.gradient(expected_value, [params])
                 return grads
 
@@ -73,21 +73,18 @@ def parameter_shift(
             test_params = np.random.randn(2)
             c.set_parameters(test_params)
 
-            # a test hamiltonian
             test_hamiltonian = hamiltonian()
 
             # running the psr with respect to the two parameters
-            grad_0 = parameter_shift(circuit = c, observable = test_hamiltonian, parameter_index = 0, gate_eigenv = 0.5)
-            grad_1 = parameter_shift(circuit = c, observable = test_hamiltonian, parameter_index = 1, gate_eigenv = 0.5)
+            grad_0 = parameter_shift(circuit = c, hamiltonian = test_hamiltonian, parameter_index = 0, generator_eigenval = 0.5)
+            grad_1 = parameter_shift(circuit = c, hamiltonian = test_hamiltonian, parameter_index = 1, generator_eigenval = 0.5)
 
-            # evaluating the gradients using tensorflow
             tf_grads = gradient_tape(test_params)
 
             print('Test gradient with respect params[0] with PSR: ', grad_0.numpy())
             print('Test gradient with respect params[0] with tf:  ', tf_grads[0][0].numpy())
-            print('Test gradient with respect params[1] with PSR: ', grad_1.numpy())
-            print('Test gradient with respect params[1] with tf:  ', tf_grads[0][1].numpy())
-
+            print('Test gradient with respect params[0] with PSR: ', grad_1.numpy())
+            print('Test gradient with respect params[0] with tf:  ', tf_grads[0][1].numpy())
     """
 
     if parameter_index > len(circuit.get_parameters()):
