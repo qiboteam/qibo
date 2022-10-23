@@ -2,6 +2,7 @@
 
 import numpy as np
 from qibo.hamiltonians.abstract import AbstractHamiltonian
+from qibo.config import raise_error
 
 
 def parameter_shift(
@@ -17,7 +18,7 @@ def parameter_shift(
 
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
-        observable (:class: `qibo.hamiltonians.Hamiltonian`): the hamiltonian here is the target observable.
+        observable (:class: `qibo.hamiltonians.Hamiltonian`): target observable.
         parameter_index (int): the index which identifies the target parameter in the circuit.get_parameters() list
         gate_eigenv (float): abs(eigenvalue) of H. In case of Pauli 1/2{sigmas} observable r = 0.5
         initial_state ((1, 2**nqubits) matrix): initial state on which we act with the circuit.
@@ -90,12 +91,10 @@ def parameter_shift(
     """
 
     if parameter_index > len(circuit.get_parameters()):
-        raise ValueError(
-            """This index is out of bounds."""
-        )
+        raise_error(ValueError, """This index is out of bounds.""")
 
     if not isinstance(hamiltonian, AbstractHamiltonian):
-        raise TypeError('hamiltonian must be a qibo.hamiltonians.Hamiltonian or qibo.hamiltonians.SymbolicHamiltonian object')
+        raise_error(TypeError, 'hamiltonian must be a qibo.hamiltonians.Hamiltonian or qibo.hamiltonians.SymbolicHamiltonian object')
 
     # defining the shift according to the psr
     s = np.pi / (4 * generator_eigenval)
