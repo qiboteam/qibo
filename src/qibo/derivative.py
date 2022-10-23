@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
+from qibo.hamiltonians.abstract import AbstractHamiltonian
+
 
 def parameter_shift(
-    circuit, hamiltonian, parameter_index, gate_eigenv, initial_state=None
+    circuit, hamiltonian, parameter_index, generator_eigenval, initial_state=None
 ):
     """In this method the parameter shift rule (PSR) is implemented.
     Given a circuit U and an observable H, the PSR allows to calculate the derivative
@@ -16,7 +18,7 @@ def parameter_shift(
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
         observable (:class: `qibo.hamiltonians.Hamiltonian`): the hamiltonian here is the target observable.
-        parameter_index (int): the index which identify the targe parameter in the circuit.get_parameters list
+        parameter_index (int): the index which identifies the target parameter in the circuit.get_parameters() list
         gate_eigenv (float): abs(eigenvalue) of H. In case of Pauli 1/2{sigmas} observable r = 0.5
         initial_state ((1, 2**nqubits) matrix): initial state on which we act with the circuit.
 
@@ -96,7 +98,7 @@ def parameter_shift(
         raise TypeError('hamiltonian must be a qibo.hamiltonians.Hamiltonian or qibo.hamiltonians.SymbolicHamiltonian object')
 
     # defining the shift according to the psr
-    s = np.pi / (4 * gate_eigenv)
+    s = np.pi / (4 * generator_eigenval)
 
     # saving original parameters and making a copy
     original = np.asarray(circuit.get_parameters()).copy()
@@ -117,4 +119,4 @@ def parameter_shift(
     # restoring the original circuit
     circuit.set_parameters(original)
 
-    return gate_eigenv * (forward - backward)
+    return generator_eigenval * (forward - backward)
