@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from qibo.hamiltonians.abstract import AbstractHamiltonian
+
 from qibo.config import raise_error
+from qibo.hamiltonians.abstract import AbstractHamiltonian
 
 
 def parameter_shift(
@@ -56,13 +57,13 @@ def parameter_shift(
             # using GradientTape to benchmark
             def gradient_tape(params):
                 params = tf.Variable(params)
-                
+
                 with tf.GradientTape() as tape:
                     c = circuit(nqubits = 1)
                     c.set_parameters(params)
                     h = hamiltonian()
-                    expected_value = h.expectation(c.execute().state()) 
-    
+                    expected_value = h.expectation(c.execute().state())
+
                 grads = tape.gradient(expected_value, [params])
                 return grads
 
@@ -91,7 +92,10 @@ def parameter_shift(
         raise_error(ValueError, """This index is out of bounds.""")
 
     if not isinstance(hamiltonian, AbstractHamiltonian):
-        raise_error(TypeError, 'hamiltonian must be a qibo.hamiltonians.Hamiltonian or qibo.hamiltonians.SymbolicHamiltonian object')
+        raise_error(
+            TypeError,
+            "hamiltonian must be a qibo.hamiltonians.Hamiltonian or qibo.hamiltonians.SymbolicHamiltonian object",
+        )
 
     # defining the shift according to the psr
     s = np.pi / (4 * generator_eigenval)
@@ -104,13 +108,17 @@ def parameter_shift(
     shifted[parameter_index] += s
     circuit.set_parameters(shifted)
 
-    forward = hamiltonian.expectation(circuit.execute(initial_state=initial_state).state())
+    forward = hamiltonian.expectation(
+        circuit.execute(initial_state=initial_state).state()
+    )
 
     # backward shift and evaluation
     shifted[parameter_index] -= 2 * s
     circuit.set_parameters(shifted)
 
-    backward = hamiltonian.expectation(circuit.execute(initial_state=initial_state).state())
+    backward = hamiltonian.expectation(
+        circuit.execute(initial_state=initial_state).state()
+    )
 
     # restoring the original circuit
     circuit.set_parameters(original)
