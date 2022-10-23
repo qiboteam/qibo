@@ -95,5 +95,3 @@ Conference Proceedings
 
 .. _`ICHEP2022`: https://www.ichep2022.it/
 .. _`arXiv:2210.10787`: https://arxiv.org/abs/2210.10787
-
-
