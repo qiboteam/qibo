@@ -18,9 +18,9 @@ def parameter_shift(
 
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
-        observable (:class: `qibo.hamiltonians.Hamiltonian`): target observable.
+        hamiltonian (:class: `qibo.hamiltonians.Hamiltonian`): target observable.
         parameter_index (int): the index which identifies the target parameter in the circuit.get_parameters() list
-        gate_eigenv (float): abs(eigenvalue) of H. In case of Pauli 1/2{sigmas} observable r = 0.5
+        generator_eigenval (float): abs(eigenvalue) of H. In case of Pauli 1/2{sigmas} observable r = 0.5
         initial_state ((1, 2**nqubits) matrix): initial state on which we act with the circuit.
 
     Returns:
