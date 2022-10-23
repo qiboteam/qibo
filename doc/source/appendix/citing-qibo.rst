@@ -89,3 +89,11 @@ Conference Proceedings
 
 .. _`ACAT2021`: https://indico.cern.ch/event/855454/
 .. _`arXiv:2202.07017`: https://arxiv.org/abs/2202.07017
+
+* M. Robbiati, S. Efthymiou, A. Pasquale, S. Carrazza. A quantum analytical Adam descent through parameter shift rule using Qibo. (2022) `ICHEP2022`_,
+     (`arXiv:2210.10787`_).
+
+.. _`ICHEP2022`: https://www.ichep2022.it/
+.. _`arXiv:2210.10787`: https://arxiv.org/abs/2210.10787
+
+
