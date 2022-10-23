@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
+
+import numpy as np
+
 def parameter_shift(
-    circuit, observable, parameter_index, gate_eigenv, initial_state=None
+    circuit, hamiltonian, parameter_index, gate_eigenv, initial_state=None
 ):
     """In this method the parameter shift rule (PSR) is implemented.
     Given a circuit U and an observable H, the PSR allows to calculate the derivative
-    of the expected value of H on the final state obtained by application of U with
-    respect to a variational parameter of the circuit.
+    of the expected value of H on the final state with respect to a variational parameter of the circuit.
 
     Original references:
         `https://arxiv.org/abs/1811.11184`;
@@ -87,8 +89,11 @@ def parameter_shift(
 
     if parameter_index > len(circuit.get_parameters()):
         raise ValueError(
-            """This index doesn't exist! Use one of the circuit's parameters."""
+            """This index is out of bounds."""
         )
+
+    if not isinstance(hamiltonian, AbstractHamiltonian):
+        raise TypeError('hamiltonian must be a qibo.hamiltonians.Hamiltonian or qibo.hamiltonians.SymbolicHamiltonian object')
 
     # defining the shift according to the psr
     s = np.pi / (4 * gate_eigenv)
@@ -101,23 +106,13 @@ def parameter_shift(
     shifted[parameter_index] += s
     circuit.set_parameters(shifted)
 
-    if initial_state is None:
-        forward = observable.expectation(circuit.execute().state())
-    else:
-        forward = observable.expectation(
-            circuit.execute(initial_state=initial_state).state()
-        )
+    forward = hamiltonian.expectation(circuit.execute(initial_state=initial_state).state())
 
     # backward shift and evaluation
     shifted[parameter_index] -= 2 * s
     circuit.set_parameters(shifted)
 
-    if initial_state is None:
-        backward = observable.expectation(circuit.execute().state())
-    else:
-        backward = observable.expectation(
-            circuit.execute(initial_state=initial_state).state()
-        )
+    backward = hamiltonian.expectation(circuit.execute(initial_state=initial_state).state())
 
     # restoring the original circuit
     circuit.set_parameters(original)
