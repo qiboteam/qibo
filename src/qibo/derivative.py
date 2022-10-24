@@ -92,11 +92,14 @@ def parameter_shift(
         raise_error(ValueError, """This index is out of bounds.""")
 
     if not isinstance(hamiltonian, AbstractHamiltonian):
-        raise_error(TypeError, 'hamiltonian must be a qibo.hamiltonians.Hamiltonian or qibo.hamiltonians.SymbolicHamiltonian object')
+        raise_error(
+            TypeError,
+            "hamiltonian must be a qibo.hamiltonians.Hamiltonian or qibo.hamiltonians.SymbolicHamiltonian object",
+        )
 
     # inheriting hamiltonian's backend
     backend = hamiltonian.backend
-        
+
     # defining the shift according to the psr
     s = np.pi / (4 * generator_eigenval)
 
@@ -108,13 +111,17 @@ def parameter_shift(
     shifted[parameter_index] += s
     circuit.set_parameters(shifted)
 
-    forward = hamiltonian.expectation(backend.execute_circuit(circuit=circuit, initial_state=initial_state).state())
+    forward = hamiltonian.expectation(
+        backend.execute_circuit(circuit=circuit, initial_state=initial_state).state()
+    )
 
     # backward shift and evaluation
     shifted[parameter_index] -= 2 * s
     circuit.set_parameters(shifted)
 
-    backward = hamiltonian.expectation(backend.execute_circuit(circuit=circuit, initial_state=initial_state).state())
+    backward = hamiltonian.expectation(
+        backend.execute_circuit(circuit=circuit, initial_state=initial_state).state()
+    )
 
     # restoring the original circuit
     circuit.set_parameters(original)
