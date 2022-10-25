@@ -133,6 +133,23 @@ class Hamiltonian(AbstractHamiltonian):
                 "value for state of type {}."
                 "".format(type(state)),
             )
+            
+    def expectation_from_samples(self, freq, qubit_map=None):
+        Obs=self.matrix
+        if np.count_nonzero(Obs - np.diag(np.diagonal(Obs)))!=0:
+            raise_error(NotImplementedError, "Observable is not diagonal.")
+        keys=list(freq.keys())
+        if qubit_map is None:
+            qubit_map=list(range(len(keys[0])))
+        counts=np.array(list(freq.values()))/sum(freq.values())
+        O=0
+        kl=len(keys[0])
+        for j, k in enumerate(keys):
+            index=0
+            for i in qubit_map:
+                index+=int(k[qubit_map.index(i)])*2**(kl-1-i)
+            O+=Obs[index,index]*counts[j]
+        return O
 
     def eye(self, n=None):
         if n is None:
