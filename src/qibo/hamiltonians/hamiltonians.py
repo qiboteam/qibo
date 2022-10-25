@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 import sympy
-
+import numpy as np
 from qibo.config import EINSUM_CHARS, log, raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
-
+from qibo.symbols import Z
 
 class Hamiltonian(AbstractHamiltonian):
     """Hamiltonian based on a dense or sparse matrix representation.
@@ -534,7 +534,37 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
     def expectation(self, state, normalize=False):
         return Hamiltonian.expectation(self, state, normalize)
-
+    
+    def expectation_from_samples(self, freq, qubit_map=None):
+        obs=self.terms
+        for term in obs:
+            for factor in term.factors:
+                if isinstance(factor,Z)==False:
+                    raise_error(NotImplementedError, "Observable is not a Z Pauli string.")
+        keys=list(freq.keys())
+        counts=np.array(list(freq.values()))/sum(freq.values())
+        coeff=list(self.form.as_coefficients_dict().values())
+        qubits=[]
+        for o in obs:
+            Qubits=[]
+            for k in o.target_qubits:
+                Qubits.append(k)
+            qubits.append(Qubits) 
+        if qubit_map is None:
+            qubit_map=list(range(len(keys[0])))
+        O=0
+        for j, q in enumerate(qubits):
+            subk=[]
+            O_q=0
+            for i, k in enumerate(keys):
+                subk=[int(k[qubit_map.index(s)]) for s in q]
+                o_k=1
+                if subk.count(1)%2==1:
+                    o_k=-1
+                O_q+=o_k*counts[i]
+            O+=O_q*coeff[j]
+        return O
+        
     def __add__(self, o):
         if isinstance(o, self.__class__):
             if self.nqubits != o.nqubits:
