@@ -8,8 +8,11 @@ from qibo.models.circuit import Circuit
 def convert_bit_to_energy(hamiltonian, bitstring):
     """
     Given a binary string and a hamiltonian, we compute the corresponding energy.
+    make sure the bitstring is of the right length
     """
     n = len(bitstring)
+    print('bit string length')
+    print(n)
     c = Circuit(n)
     active_bit = [i for i in range(n) if bitstring[i] == "1"]
     for i in active_bit:
@@ -24,12 +27,7 @@ def convert_state_to_count(state):
     energy and its frequency.
     d[energy] records the frequency
     """
-    m = int(np.log2(state.size))
-    c = Circuit(m)
-    c.add(gates.M(*[i for i in range(m)]))
-    result = c(state, nshots=100)
-    counts = result.frequencies(binary=True)
-    return counts
+    return np.abs(state)**2
 
 
 def compute_cvar(probabilities, values, alpha):
@@ -50,10 +48,8 @@ def compute_cvar(probabilities, values, alpha):
     cvar = 0
     total_prob = 0
     for i, (p, v) in enumerate(zip(probs, vals)):
-        done = False
         if p >= alpha - total_prob:
             p = alpha - total_prob
-            done = True
         total_prob += p
         cvar += p * v
     cvar /= total_prob
@@ -68,8 +64,9 @@ def cvar(hamiltonian, state, alpha=0.1):
     counts = convert_state_to_count(state)
     probabilities = np.zeros(len(counts))
     values = np.zeros(len(counts))
-    for i, (x, p) in enumerate(counts.items()):
-        values[i] = convert_bit_to_energy(hamiltonian, x)
+    m = int(np.log2(state.size))
+    for i, p in enumerate(counts):
+        values[i] = convert_bit_to_energy(hamiltonian, bin(i)[2:].zfill(m))
         probabilities[i] = p
     cvar_ans = compute_cvar(probabilities, values, alpha)
     return cvar_ans
@@ -83,8 +80,9 @@ def gibbs(hamiltonian, state, eta=0.1):
     counts = convert_state_to_count(state)
     avg = 0
     sum_count = 0
-    for bitstring, count in counts.items():
-        obj = convert_bit_to_energy(hamiltonian, bitstring)
+    m = int(np.log2(state.size))
+    for bitstring, count in enumerate(counts):
+        obj = convert_bit_to_energy(hamiltonian, bin(bitstring)[2:].zfill(m))
         avg += np.exp(-eta * obj)
         sum_count += count
     return -np.log(avg / sum_count)
