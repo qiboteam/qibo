@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 
-from qibo.config import PRECISION_TOL
+from qibo.config import PRECISION_TOL, raise_error
 
 
 def shannon_entropy(probability_array, base: float = 2):
@@ -23,25 +23,25 @@ def shannon_entropy(probability_array, base: float = 2):
     """
 
     if base < 0:
-        raise ValueError("log base must be non-negative.")
+        raise_error(ValueError, "log base must be non-negative.")
 
     if len(probability_array.shape) != 1:
-        raise TypeError(
+        raise_error(TypeError,
             f"Probability array must have dims (k,) but it has {probability_array.shape}."
         )
 
     if len(probability_array) == 0:
-        raise TypeError("Empty array.")
+        raise_error(TypeError, "Empty array.")
 
     if any(probability_array < 0) or any(probability_array > 1.0):
-        raise ValueError(
+        raise_error(ValueError,
             "All elements of the probability array must be between 0. and 1.."
         )
 
     if (np.sum(probability_array) > 1.0 + PRECISION_TOL) or (
         np.sum(probability_array) < 1.0 - PRECISION_TOL
     ):
-        raise ValueError("Probability array must sum to 1.")
+        raise_error(ValueError, "Probability array must sum to 1.")
 
     if base == 2:
         log_prob = (
@@ -97,28 +97,28 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False):
     """
 
     if (len(prob_dist_p.shape) != 1) or (len(prob_dist_q.shape) != 1):
-        raise TypeError(
+        raise_error(TypeError,
             f"Probability arrays must have dims (k,) but have dims {prob_dist_p.shape} and {prob_dist_q.shape}."
         )
 
     if (len(prob_dist_p) == 0) or (len(prob_dist_q) == 0):
-        raise TypeError("At least one of the arrays is empty.")
+        raise_error(TypeError, "At least one of the arrays is empty.")
 
     if validate:
         if (any(prob_dist_p < 0) or any(prob_dist_p > 1.0)) or (
             any(prob_dist_q < 0) or any(prob_dist_q > 1.0)
         ):
-            raise ValueError(
+            raise_error(ValueError,
                 "All elements of the probability array must be between 0. and 1.."
             )
         if (np.sum(prob_dist_p) > 1.0 + PRECISION_TOL) or (
             np.sum(prob_dist_p) < 1.0 - PRECISION_TOL
         ):
-            raise ValueError("First probability array must sum to 1.")
+            raise_error(ValueError, "First probability array must sum to 1.")
 
         if (np.sum(prob_dist_q) > 1.0 + PRECISION_TOL) or (
             np.sum(prob_dist_q) < 1.0 - PRECISION_TOL
         ):
-            raise ValueError("Second probability array must sum to 1.")
+            raise_error(ValueError, "Second probability array must sum to 1.")
 
     return np.linalg.norm(np.sqrt(prob_dist_p) - np.sqrt(prob_dist_q)) / np.sqrt(2)

@@ -2,7 +2,7 @@
 import numpy as np
 from scipy.linalg import sqrtm
 
-from qibo.config import PRECISION_TOL
+from qibo.config import PRECISION_TOL, raise_error
 
 
 def purity(state):
@@ -21,7 +21,7 @@ def purity(state):
         or (len(state) == 0)
         or (len(state.shape) == 2 and state.shape[0] != state.shape[1])
     ):
-        raise TypeError(
+        raise_error(TypeError,
             f"Object must have dims either (k,) or (k,k), but have dims {state.shape}."
         )
 
@@ -51,12 +51,12 @@ def trace_distance(state, target):
     """
 
     if state.shape != target.shape:
-        raise TypeError(
+        raise_error(TypeError, 
             f"State has dims {state.shape} while target has dims {target.shape}."
         )
 
     if (len(state.shape) >= 3) or (len(state) == 0):
-        raise TypeError(
+        raise_error(TypeError, 
             f"Both objects must have dims either (k,) or (k,l), but have dims {state.shape} and {target.shape}"
         )
 
@@ -85,12 +85,12 @@ def hilbert_schmidt_distance(state, target):
     """
 
     if state.shape != target.shape:
-        raise TypeError(
+        raise_error(TypeError, 
             f"State has dims {state.shape} while target has dims {target.shape}."
         )
 
     if (len(state.shape) >= 3) or (len(state) == 0):
-        raise TypeError(
+        raise_error(TypeError, 
             f"Both objects must have dims either (k,) or (k,l), but have dims {state.shape} and {target.shape}"
         )
 
@@ -118,12 +118,12 @@ def fidelity(state, target, validate=False):
     """
 
     if state.shape != target.shape:
-        raise TypeError(
+        raise_error(TypeError, 
             f"State has dims {state.shape} while target has dims {target.shape}."
         )
 
     if len(state.shape) >= 3 or len(state.shape) == 0:
-        raise TypeError(
+        raise_error(TypeError, 
             f"Both objects must have dims either (k,) or (k,l), but have dims {state.shape} and {target.shape}"
         )
 
@@ -136,7 +136,7 @@ def fidelity(state, target, validate=False):
             (purity_target < 1.0 - PRECISION_TOL)
             or (purity_target > 1.0 + PRECISION_TOL)
         ):
-            raise ValueError(
+            raise_error(ValueError, 
                 f"Neither state is pure. Purity state: {purity_state} , Purity target: {purity_target}."
             )
 
@@ -165,7 +165,7 @@ def process_fidelity(channel, target=None, validate=False):
 
     if target is not None:
         if channel.shape != target.shape:
-            raise TypeError(
+            raise_error(TypeError, 
                 f"Channels must have the same dims, but {channel.shape} != {target.shape}"
             )
 
@@ -176,13 +176,13 @@ def process_fidelity(channel, target=None, validate=False):
             np.dot(np.conj(np.transpose(channel)), channel) - np.eye(d**2)
         )
         if target is None and norm_channel > PRECISION_TOL:
-            raise TypeError(f"Channel is not unitary and Target is None.")
+            raise_error(TypeError, f"Channel is not unitary and Target is None.")
         if target is not None:
             norm_target = np.linalg.norm(
                 np.dot(np.conj(np.transpose(target)), target) - np.eye(d**2)
             )
             if (norm_channel > PRECISION_TOL) and (norm_target > PRECISION_TOL):
-                raise TypeError(f"Neither channel is unitary.")
+                raise_error(TypeError, f"Neither channel is unitary.")
 
     if target is None:
         # With no target, return process fidelity with Identity channel
