@@ -2,7 +2,7 @@
 from qibo import models,gates
 from qibo.noise import NoiseModel, ThermalRelaxationError, DepolarizingError
 
-def Realistic_Noise_Model(Circuit,Params):
+def noise_model(Circuit,params):
     """Creates a noisy circuit from the circuit given as argument.
     
     The function applies a :class:`qibo.gates.ThermalRelaxationChannel` after each step of the circuit
@@ -80,7 +80,7 @@ def Realistic_Noise_Model(Circuit,Params):
                 Noisy_Circuit.add(gates.ThermalRelaxationChannel(q_min, params[0][0][q_min][0], params[0][0][q_min][1], time, params[0][2]))
                 current_time[q_min] += time
     
-    for q in c.measurement_gate.qubits:
+    for q in Circuit.measurement_gate.qubits:
         Noisy_Circuit.add(gates.PauliNoiseChannel(q, px = params[2][q]))
         
     Noisy_Circuit.measurement_tuples = dict(Circuit.measurement_tuples)
