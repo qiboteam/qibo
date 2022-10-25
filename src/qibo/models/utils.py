@@ -11,7 +11,7 @@ def convert_bit_to_energy(hamiltonian, bitstring):
     make sure the bitstring is of the right length
     """
     n = len(bitstring)
-    print('bit string length')
+    print("bit string length")
     print(n)
     c = Circuit(n)
     active_bit = [i for i in range(n) if bitstring[i] == "1"]
@@ -27,7 +27,7 @@ def convert_state_to_count(state):
     energy and its frequency.
     d[energy] records the frequency
     """
-    return np.abs(state)**2
+    return np.abs(state) ** 2
 
 
 def compute_cvar(probabilities, values, alpha):
