@@ -7,7 +7,7 @@ import sympy
 from qibo import hamiltonians, gates
 from qibo.tests.utils import random_complex
 from qibo.models import Circuit
-from qibo.symbols import Z, I
+from qibo.symbols import Z, Y, I
 
 
 def symbolic_tfim(nqubits, h=1.0):
@@ -296,7 +296,7 @@ def test_hamiltonian_expectation_from_samples(backend):
 def test_hamiltonian_expectation_from_samples_errors(backend):
     obs = Z(0) * Y(1)
     h = hamiltonians.SymbolicHamiltonian(obs,backend=backend)
-    with pytest.raises(ValueError):
+    with pytest.raises(NotImplementedError):
         h.expectation_from_samples(None,qubit_map=None)
 
 

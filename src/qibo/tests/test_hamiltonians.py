@@ -273,7 +273,7 @@ def test_hamiltonian_expectation_from_samples(backend):
 def test_hamiltonian_expectation_from_samples_errors(backend):
     obs=random_complex((4, 4))
     h=hamiltonians.Hamiltonian(2,obs,backend=backend)
-    with pytest.raises(ValueError):
+    with pytest.raises(NotImplementedError):
         h.expectation_from_samples(None,qubit_map=None)
 
 
