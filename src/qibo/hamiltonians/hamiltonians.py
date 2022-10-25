@@ -140,10 +140,10 @@ class Hamiltonian(AbstractHamiltonian):
             raise_error(NotImplementedError, "Observable is not diagonal.")
         keys=list(freq.keys())
         if qubit_map is None:
-            qubit_map=list(range(len(keys[0])))
+            qubit_map=list(range(int(np.log2(len(Obs)))))
         counts=np.array(list(freq.values()))/sum(freq.values())
         O=0
-        kl=len(keys[0])
+        kl=len(qubit_map)
         for j, k in enumerate(keys):
             index=0
             for i in qubit_map:
@@ -579,7 +579,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                 if subk.count(1)%2==1:
                     o_k=-1
                 O_q+=o_k*counts[i]
-            O+=O_q*coeff[j]
+            O+=O_q*float(coeff[j])
         return O
         
     def __add__(self, o):
