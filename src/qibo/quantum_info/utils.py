@@ -82,7 +82,7 @@ def shannon_entropy(probability_array, base: float = 2):
 
 
 def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False):
-    """Calculate the Hellinger ditance :math:`H(p, q)` between
+    """Calculate the Hellinger distance :math:`H(p, q)` between
     two discrete probability distributions, :math:`p` and :math:`q`.
 
     Args:
@@ -92,7 +92,7 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False):
             probability distributions. Default: False.
 
     Returns:
-        Hellinger ditance :math:`H(p, q)`.
+        Hellinger distance :math:`H(p, q)`.
 
     """
 
