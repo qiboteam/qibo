@@ -21,8 +21,9 @@ def purity(state):
         or (len(state) == 0)
         or (len(state.shape) == 2 and state.shape[0] != state.shape[1])
     ):
-        raise_error(TypeError,
-            f"Object must have dims either (k,) or (k,k), but have dims {state.shape}."
+        raise_error(
+            TypeError,
+            f"Object must have dims either (k,) or (k,k), but have dims {state.shape}.",
         )
 
     if len(state.shape) == 1:
@@ -51,13 +52,15 @@ def trace_distance(state, target):
     """
 
     if state.shape != target.shape:
-        raise_error(TypeError, 
-            f"State has dims {state.shape} while target has dims {target.shape}."
+        raise_error(
+            TypeError,
+            f"State has dims {state.shape} while target has dims {target.shape}.",
         )
 
     if (len(state.shape) >= 3) or (len(state) == 0):
-        raise_error(TypeError, 
-            f"Both objects must have dims either (k,) or (k,l), but have dims {state.shape} and {target.shape}"
+        raise_error(
+            TypeError,
+            f"Both objects must have dims either (k,) or (k,l), but have dims {state.shape} and {target.shape}",
         )
 
     if len(state.shape) == 1:
@@ -85,13 +88,15 @@ def hilbert_schmidt_distance(state, target):
     """
 
     if state.shape != target.shape:
-        raise_error(TypeError, 
-            f"State has dims {state.shape} while target has dims {target.shape}."
+        raise_error(
+            TypeError,
+            f"State has dims {state.shape} while target has dims {target.shape}.",
         )
 
     if (len(state.shape) >= 3) or (len(state) == 0):
-        raise_error(TypeError, 
-            f"Both objects must have dims either (k,) or (k,l), but have dims {state.shape} and {target.shape}"
+        raise_error(
+            TypeError,
+            f"Both objects must have dims either (k,) or (k,l), but have dims {state.shape} and {target.shape}",
         )
 
     if len(state.shape) == 1:
@@ -118,13 +123,15 @@ def fidelity(state, target, validate=False):
     """
 
     if state.shape != target.shape:
-        raise_error(TypeError, 
-            f"State has dims {state.shape} while target has dims {target.shape}."
+        raise_error(
+            TypeError,
+            f"State has dims {state.shape} while target has dims {target.shape}.",
         )
 
     if len(state.shape) >= 3 or len(state.shape) == 0:
-        raise_error(TypeError, 
-            f"Both objects must have dims either (k,) or (k,l), but have dims {state.shape} and {target.shape}"
+        raise_error(
+            TypeError,
+            f"Both objects must have dims either (k,) or (k,l), but have dims {state.shape} and {target.shape}",
         )
 
     if validate:
@@ -136,8 +143,9 @@ def fidelity(state, target, validate=False):
             (purity_target < 1.0 - PRECISION_TOL)
             or (purity_target > 1.0 + PRECISION_TOL)
         ):
-            raise_error(ValueError, 
-                f"Neither state is pure. Purity state: {purity_state} , Purity target: {purity_target}."
+            raise_error(
+                ValueError,
+                f"Neither state is pure. Purity state: {purity_state} , Purity target: {purity_target}.",
             )
 
     if len(state.shape) == 1 and len(target.shape) == 1:
@@ -165,8 +173,9 @@ def process_fidelity(channel, target=None, validate=False):
 
     if target is not None:
         if channel.shape != target.shape:
-            raise_error(TypeError, 
-                f"Channels must have the same dims, but {channel.shape} != {target.shape}"
+            raise_error(
+                TypeError,
+                f"Channels must have the same dims, but {channel.shape} != {target.shape}",
             )
 
     d = int(np.sqrt(channel.shape[0]))
