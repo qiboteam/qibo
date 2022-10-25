@@ -25,7 +25,7 @@ def convert_state_to_count(state):
     energy and its frequency.
     d[energy] records the frequency
     """
-    return np.abs(state)**2
+    return np.abs(state) ** 2
 
 
 def compute_cvar(probabilities, values, alpha):
