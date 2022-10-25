@@ -11,8 +11,6 @@ def convert_bit_to_energy(hamiltonian, bitstring):
     make sure the bitstring is of the right length
     """
     n = len(bitstring)
-    print('bit string length')
-    print(n)
     c = Circuit(n)
     active_bit = [i for i in range(n) if bitstring[i] == "1"]
     for i in active_bit:
