@@ -178,7 +178,5 @@ def test_process_fidelity(backend):
     channel = np.eye(d**2)
     backend.assert_allclose(process_fidelity(channel), 1.0)
     backend.assert_allclose(process_fidelity(channel, channel), 1.0)
-
-
-def test_average_fidelity():
-    average_gate_fidelity(np.eye(4))
+    backend.assert_allclose(average_gate_fidelity(channel), 1.0)
+    backend.assert_allclose(average_gate_fidelity(channel, channel), 1.0)
