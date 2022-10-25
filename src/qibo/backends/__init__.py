@@ -98,7 +98,7 @@ class QiboMatrices:
         self.Z = self.matrices.Z
 
 
-matrices = QiboMatrices()
+qmatrices = QiboMatrices()
 
 
 def get_backend():
@@ -115,7 +115,7 @@ def get_precision():
 
 def set_precision(precision):
     GlobalBackend().set_precision(precision)
-    matrices.create(GlobalBackend().dtype)
+    qmatrices.create(GlobalBackend().dtype)
 
 
 def get_device():

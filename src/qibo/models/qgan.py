@@ -3,7 +3,7 @@ import numpy as np
 from numpy.random import randn
 
 from qibo import gates, hamiltonians, models
-from qibo.backends import matrices
+from qibo.backends import qmatrices as matrices
 from qibo.config import raise_error
 
 

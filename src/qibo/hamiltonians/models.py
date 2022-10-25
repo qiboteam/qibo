@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from qibo.backends import matrices
+from qibo.backends import qmatrices as matrices
 from qibo.config import raise_error
 from qibo.hamiltonians.hamiltonians import Hamiltonian, SymbolicHamiltonian
 from qibo.hamiltonians.terms import HamiltonianTerm

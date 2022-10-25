@@ -2,7 +2,7 @@
 import numpy as np
 
 from qibo import gates
-from qibo.backends import matrices
+from qibo.backends import qmatrices as matrices
 from qibo.config import raise_error
 from qibo.hamiltonians import Hamiltonian
 from qibo.models.circuit import Circuit

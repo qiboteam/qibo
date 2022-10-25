@@ -3,7 +3,7 @@ import numpy as np
 import sympy
 
 from qibo import gates
-from qibo.backends import matrices
+from qibo.backends import qmatrices as matrices
 from qibo.config import raise_error
 
 
