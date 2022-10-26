@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
-import sympy
 import numpy as np
+import sympy
+
 from qibo.config import EINSUM_CHARS, log, raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.symbols import Z
+
 
 class Hamiltonian(AbstractHamiltonian):
     """Hamiltonian based on a dense or sparse matrix representation.
@@ -133,22 +135,22 @@ class Hamiltonian(AbstractHamiltonian):
                 "value for state of type {}."
                 "".format(type(state)),
             )
-            
+
     def expectation_from_samples(self, freq, qubit_map=None):
-        Obs=self.matrix
-        if np.count_nonzero(Obs - np.diag(np.diagonal(Obs)))!=0:
+        Obs = self.matrix
+        if np.count_nonzero(Obs - np.diag(np.diagonal(Obs))) != 0:
             raise_error(NotImplementedError, "Observable is not diagonal.")
-        keys=list(freq.keys())
+        keys = list(freq.keys())
         if qubit_map is None:
-            qubit_map=list(range(int(np.log2(len(Obs)))))
-        counts=np.array(list(freq.values()))/sum(freq.values())
-        O=0
-        kl=len(qubit_map)
+            qubit_map = list(range(int(np.log2(len(Obs)))))
+        counts = np.array(list(freq.values())) / sum(freq.values())
+        O = 0
+        kl = len(qubit_map)
         for j, k in enumerate(keys):
-            index=0
+            index = 0
             for i in qubit_map:
-                index+=int(k[qubit_map.index(i)])*2**(kl-1-i)
-            O+=Obs[index,index]*counts[j]
+                index += int(k[qubit_map.index(i)]) * 2 ** (kl - 1 - i)
+            O += Obs[index, index] * counts[j]
         return O
 
     def eye(self, n=None):
@@ -551,37 +553,39 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
     def expectation(self, state, normalize=False):
         return Hamiltonian.expectation(self, state, normalize)
-    
+
     def expectation_from_samples(self, freq, qubit_map=None):
-        obs=self.terms
+        obs = self.terms
         for term in obs:
             for factor in term.factors:
-                if isinstance(factor,Z)==False:
-                    raise_error(NotImplementedError, "Observable is not a Z Pauli string.")
-        keys=list(freq.keys())
-        counts=np.array(list(freq.values()))/sum(freq.values())
-        coeff=list(self.form.as_coefficients_dict().values())
-        qubits=[]
+                if isinstance(factor, Z) == False:
+                    raise_error(
+                        NotImplementedError, "Observable is not a Z Pauli string."
+                    )
+        keys = list(freq.keys())
+        counts = np.array(list(freq.values())) / sum(freq.values())
+        coeff = list(self.form.as_coefficients_dict().values())
+        qubits = []
         for o in obs:
-            Qubits=[]
+            Qubits = []
             for k in o.target_qubits:
                 Qubits.append(k)
-            qubits.append(Qubits) 
+            qubits.append(Qubits)
         if qubit_map is None:
-            qubit_map=list(range(len(keys[0])))
-        O=0
+            qubit_map = list(range(len(keys[0])))
+        O = 0
         for j, q in enumerate(qubits):
-            subk=[]
-            O_q=0
+            subk = []
+            O_q = 0
             for i, k in enumerate(keys):
-                subk=[int(k[qubit_map.index(s)]) for s in q]
-                o_k=1
-                if subk.count(1)%2==1:
-                    o_k=-1
-                O_q+=o_k*counts[i]
-            O+=O_q*float(coeff[j])
+                subk = [int(k[qubit_map.index(s)]) for s in q]
+                o_k = 1
+                if subk.count(1) % 2 == 1:
+                    o_k = -1
+                O_q += o_k * counts[i]
+            O += O_q * float(coeff[j])
         return O
-        
+
     def __add__(self, o):
         if isinstance(o, self.__class__):
             if self.nqubits != o.nqubits:

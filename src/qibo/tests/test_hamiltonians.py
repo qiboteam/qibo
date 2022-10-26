@@ -3,10 +3,11 @@
 import numpy as np
 import pytest
 
-from qibo import hamiltonians, gates
-from qibo.tests.utils import random_complex, random_sparse_matrix
+from qibo import gates, hamiltonians
 from qibo.models import Circuit
-from qibo.symbols import Z, I
+from qibo.symbols import I, Z
+from qibo.tests.utils import random_complex, random_sparse_matrix
+
 
 def test_hamiltonian_init(backend):
     with pytest.raises(TypeError):
@@ -245,36 +246,38 @@ def test_hamiltonian_expectation_errors(backend):
         h.expectation(state)
     with pytest.raises(TypeError):
         h.expectation("test")
-        
+
 
 def test_hamiltonian_expectation_from_samples(backend):
     """Test Hamiltonian expectation value calculation."""
-    obs0 = Z(0) * Z(1)+Z(0) * Z(2)
-    obs1= Z(0) * Z(1)+Z(0) * Z(2)*I(3)
-    h0 = hamiltonians.SymbolicHamiltonian(obs0,backend=backend)
-    h1 = hamiltonians.SymbolicHamiltonian(obs1,backend=backend)
+    obs0 = Z(0) * Z(1) + Z(0) * Z(2)
+    obs1 = Z(0) * Z(1) + Z(0) * Z(2) * I(3)
+    h0 = hamiltonians.SymbolicHamiltonian(obs0, backend=backend)
+    h1 = hamiltonians.SymbolicHamiltonian(obs1, backend=backend)
     matrix = backend.to_numpy(h0.matrix)
     c = Circuit(4)
-    c.add(gates.RX(0,np.random.rand()))
-    c.add(gates.RX(1,np.random.rand()))
-    c.add(gates.RX(2,np.random.rand()))
-    c.add(gates.RX(3,np.random.rand()))
+    c.add(gates.RX(0, np.random.rand()))
+    c.add(gates.RX(1, np.random.rand()))
+    c.add(gates.RX(2, np.random.rand()))
+    c.add(gates.RX(3, np.random.rand()))
     c.add(gates.M(0, 1, 2, 3))
-    nshots=10**5
+    nshots = 10**5
     result = c(nshots=nshots)
     state = c()
-    freq=result.frequencies(binary=True)
-    Obs0=hamiltonians.Hamiltonian(3,matrix).expectation_from_samples(freq,qubit_map=None)
-    Obs1=h1.expectation(c().state())
+    freq = result.frequencies(binary=True)
+    Obs0 = hamiltonians.Hamiltonian(3, matrix).expectation_from_samples(
+        freq, qubit_map=None
+    )
+    Obs1 = h1.expectation(c().state())
 
-    backend.assert_allclose(Obs0, Obs1, atol=10/np.sqrt(nshots))
-    
+    backend.assert_allclose(Obs0, Obs1, atol=10 / np.sqrt(nshots))
+
 
 def test_hamiltonian_expectation_from_samples_errors(backend):
-    obs=random_complex((4, 4))
-    h=hamiltonians.Hamiltonian(2,obs,backend=backend)
+    obs = random_complex((4, 4))
+    h = hamiltonians.Hamiltonian(2, obs, backend=backend)
     with pytest.raises(NotImplementedError):
-        h.expectation_from_samples(None,qubit_map=None)
+        h.expectation_from_samples(None, qubit_map=None)
 
 
 @pytest.mark.parametrize("dtype", [np.complex128, np.complex64])

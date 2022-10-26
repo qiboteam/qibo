@@ -4,10 +4,10 @@ import numpy as np
 import pytest
 import sympy
 
-from qibo import hamiltonians, gates
-from qibo.tests.utils import random_complex
+from qibo import gates, hamiltonians
 from qibo.models import Circuit
-from qibo.symbols import Z, Y, I
+from qibo.symbols import I, Y, Z
+from qibo.tests.utils import random_complex
 
 
 def symbolic_tfim(nqubits, h=1.0):
@@ -270,34 +270,34 @@ def test_symbolic_hamiltonian_state_ev(
     local_ev = local_ham.expectation(state, normalize)
     target_ev = dense_ham.expectation(state, normalize)
     backend.assert_allclose(local_ev, target_ev)
-    
-    
+
+
 def test_hamiltonian_expectation_from_samples(backend):
     """Test Hamiltonian expectation value calculation."""
-    obs0 = Z(0) * Z(1)+Z(0) * Z(2)
-    obs1= Z(0) * Z(1)+Z(0) * Z(2)*I(3)
-    h0 = hamiltonians.SymbolicHamiltonian(obs0,backend=backend)
-    h1 = hamiltonians.SymbolicHamiltonian(obs1,backend=backend)
+    obs0 = Z(0) * Z(1) + Z(0) * Z(2)
+    obs1 = Z(0) * Z(1) + Z(0) * Z(2) * I(3)
+    h0 = hamiltonians.SymbolicHamiltonian(obs0, backend=backend)
+    h1 = hamiltonians.SymbolicHamiltonian(obs1, backend=backend)
     c = Circuit(4)
-    c.add(gates.RX(0,np.random.rand()))
-    c.add(gates.RX(1,np.random.rand()))
-    c.add(gates.RX(2,np.random.rand()))
-    c.add(gates.RX(3,np.random.rand()))
+    c.add(gates.RX(0, np.random.rand()))
+    c.add(gates.RX(1, np.random.rand()))
+    c.add(gates.RX(2, np.random.rand()))
+    c.add(gates.RX(3, np.random.rand()))
     c.add(gates.M(0, 1, 2, 3))
-    nshots=10**5
+    nshots = 10**5
     result = c(nshots=nshots)
     state = c()
-    freq=result.frequencies(binary=True)
-    Obs0=h0.expectation_from_samples(freq,qubit_map=None)
-    Obs1=h1.expectation(c().state())
-    backend.assert_allclose(Obs0, Obs1, atol=10/np.sqrt(nshots))
-    
+    freq = result.frequencies(binary=True)
+    Obs0 = h0.expectation_from_samples(freq, qubit_map=None)
+    Obs1 = h1.expectation(c().state())
+    backend.assert_allclose(Obs0, Obs1, atol=10 / np.sqrt(nshots))
+
 
 def test_hamiltonian_expectation_from_samples_errors(backend):
     obs = Z(0) * Y(1)
-    h = hamiltonians.SymbolicHamiltonian(obs,backend=backend)
+    h = hamiltonians.SymbolicHamiltonian(obs, backend=backend)
     with pytest.raises(NotImplementedError):
-        h.expectation_from_samples(None,qubit_map=None)
+        h.expectation_from_samples(None, qubit_map=None)
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])

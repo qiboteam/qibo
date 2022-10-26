@@ -83,7 +83,7 @@ class AbstractHamiltonian:
             Real number corresponding to the expectation value.
         """
         raise_error(NotImplementedError)
-        
+
     @abstractmethod
     def expectation_from_samples(self, freq, qubit_map=None):  # pragma: no cover
         """Computes the real expectation value of a diagonal observable given the frequencies when measuring in the computational basis.
