@@ -5,35 +5,43 @@ import pytest
 from qibo.quantum_info import *
 
 
-def test_shannon_entropy_errors():
+def test_shannon_entropy_errors(backend):
     with pytest.raises(ValueError):
         p = np.asarray([1.0, 0.0])
+        p = backend.cast(p, dtype=p.dtype)
         shannon_entropy(p, -2)
     with pytest.raises(TypeError):
         p = np.asarray([[1.0], [0.0]])
+        p = backend.cast(p, dtype=p.dtype)
         shannon_entropy(p)
     with pytest.raises(TypeError):
         p = np.asarray([])
+        p = backend.cast(p, dtype=p.dtype)
         shannon_entropy(p)
     with pytest.raises(ValueError):
         p = np.asarray([1.0, -1.0])
+        p = backend.cast(p, dtype=p.dtype)
         shannon_entropy(p)
     with pytest.raises(ValueError):
         p = np.asarray([1.1, 0.0])
+        p = backend.cast(p, dtype=p.dtype)
         shannon_entropy(p)
     with pytest.raises(ValueError):
         p = np.asarray([0.5, 0.4999999])
+        p = backend.cast(p, dtype=p.dtype)
         shannon_entropy(p)
 
 
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
 def test_shannon_entropy(backend, base):
     prob_array = np.asarray([1.0, 0.0])
+    prob_array = backend.cast(prob_array, dtype=prob_array.dtype)
     result = shannon_entropy(prob_array, base)
     backend.assert_allclose(result, 0.0)
 
     if base == 2:
         prob_array = np.asarray([0.5, 0.5])
+        prob_array = backend.cast(prob_array, dtype=prob_array.dtype)
         result = shannon_entropy(prob_array, base)
         backend.assert_allclose(result, 1.0)
 
@@ -42,41 +50,57 @@ def test_hellinger_distance(backend):
     with pytest.raises(TypeError):
         p = np.random.rand(1, 2)
         q = np.random.rand(1, 5)
+        p = backend.cast(p, dtype=p.dtype)
+        q = backend.cast(q, dtype=q.dtype)
         hellinger_distance(p, q)
     with pytest.raises(TypeError):
         p = np.random.rand(1, 2)[0]
         q = np.array([])
+        p = backend.cast(p, dtype=p.dtype)
+        q = backend.cast(q, dtype=q.dtype)
         hellinger_distance(p, q)
     with pytest.raises(ValueError):
         p = np.array([-1, 2.0])
         q = np.random.rand(1, 5)[0]
+        p = backend.cast(p, dtype=p.dtype)
+        q = backend.cast(q, dtype=q.dtype)
         hellinger_distance(p, q, validate=True)
     with pytest.raises(ValueError):
         p = np.random.rand(1, 2)[0]
         q = np.array([1.0, 0.0])
+        p = backend.cast(p, dtype=p.dtype)
+        q = backend.cast(q, dtype=q.dtype)
         hellinger_distance(p, q, validate=True)
     with pytest.raises(ValueError):
         p = np.array([1.0, 0.0])
         q = np.random.rand(1, 2)[0]
+        p = backend.cast(p, dtype=p.dtype)
+        q = backend.cast(q, dtype=q.dtype)
         hellinger_distance(p, q, validate=True)
 
     p = np.array([1.0, 0.0])
     q = np.array([1.0, 0.0])
+    p = backend.cast(p, dtype=p.dtype)
+    q = backend.cast(q, dtype=q.dtype)
     backend.assert_allclose(hellinger_distance(p, q), 0.0)
 
 
 def test_purity(backend):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
+        state = backend.cast(state, dtype=state.dtype)
         purity(state)
     state = np.asarray([1.0, 0.0, 0.0, 0.0])
+    state = backend.cast(state, dtype=state.dtype)
     backend.assert_allclose(purity(state), 1.0)
 
     state = np.outer(np.conj(state), state)
+    state = backend.cast(state, dtype=state.dtype)
     backend.assert_allclose(purity(state), 1.0)
 
     d = 4
     state = np.eye(d) / d
+    state = backend.cast(state, dtype=state.dtype)
     backend.assert_allclose(purity(state), 1.0 / d)
 
 
@@ -84,26 +108,38 @@ def test_trace_distance(backend):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 2)
         target = np.random.rand(4, 4)
+        state = backend.cast(state, dtype=state.dtype)
+        target = backend.cast(target, dtype=target.dtype)
         trace_distance(state, target)
     with pytest.raises(TypeError):
         state = np.random.rand(2, 2, 2)
         target = np.random.rand(2, 2, 2)
+        state = backend.cast(state, dtype=state.dtype)
+        target = backend.cast(target, dtype=target.dtype)
         trace_distance(state, target)
     with pytest.raises(TypeError):
         state = np.asarray([])
         target = np.asarray([])
+        state = backend.cast(state, dtype=state.dtype)
+        target = backend.cast(target, dtype=state.dtype)
         trace_distance(state, target)
 
     state = np.asarray([1.0, 0.0, 0.0, 0.0])
     target = np.asarray([1.0, 0.0, 0.0, 0.0])
+    state = backend.cast(state, dtype=state.dtype)
+    target = backend.cast(target, dtype=target.dtype)
     backend.assert_allclose(trace_distance(state, target), 0.0)
 
     state = np.outer(np.conj(state), state)
     target = np.outer(np.conj(target), target)
+    state = backend.cast(state, dtype=state.dtype)
+    target = backend.cast(target, dtype=target.dtype)
     backend.assert_allclose(trace_distance(state, target), 0.0)
 
     state = np.asarray([0.0, 1.0, 0.0, 0.0])
     target = np.asarray([1.0, 0.0, 0.0, 0.0])
+    state = backend.cast(state, dtype=state.dtype)
+    target = backend.cast(target, dtype=target.dtype)
     backend.assert_allclose(trace_distance(state, target), 1.0)
 
 
@@ -111,26 +147,38 @@ def test_hilbert_schmidt_distance(backend):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 2)
         target = np.random.rand(4, 4)
+        state = backend.cast(state, dtype=state.dtype)
+        target = backend.cast(target, dtype=target.dtype)
         hilbert_schmidt_distance(state, target)
     with pytest.raises(TypeError):
         state = np.random.rand(2, 2, 2)
         target = np.random.rand(2, 2, 2)
+        state = backend.cast(state, dtype=state.dtype)
+        target = backend.cast(target, dtype=target.dtype)
         hilbert_schmidt_distance(state, target)
     with pytest.raises(TypeError):
         state = np.asarray([])
         target = np.asarray([])
+        state = backend.cast(state, dtype=state.dtype)
+        target = backend.cast(target, dtype=target.dtype)
         hilbert_schmidt_distance(state, target)
 
     state = np.asarray([1.0, 0.0, 0.0, 0.0])
     target = np.asarray([1.0, 0.0, 0.0, 0.0])
+    state = backend.cast(state, dtype=state.dtype)
+    target = backend.cast(target, dtype=target.dtype)
     backend.assert_allclose(hilbert_schmidt_distance(state, target), 0.0)
 
     state = np.outer(np.conj(state), state)
     target = np.outer(np.conj(target), target)
+    state = backend.cast(state, dtype=state.dtype)
+    target = backend.cast(target, dtype=target.dtype)
     backend.assert_allclose(hilbert_schmidt_distance(state, target), 0.0)
 
     state = np.asarray([0.0, 1.0, 0.0, 0.0])
     target = np.asarray([1.0, 0.0, 0.0, 0.0])
+    state = backend.cast(state, dtype=state.dtype)
+    target = backend.cast(target, dtype=target.dtype)
     backend.assert_allclose(hilbert_schmidt_distance(state, target), 2.0)
 
 
@@ -138,26 +186,38 @@ def test_fidelity(backend):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 2)
         target = np.random.rand(4, 4)
+        state = backend.cast(state, dtype=state.dtype)
+        target = backend.cast(target, dtype=target.dtype)
         fidelity(state, target)
     with pytest.raises(TypeError):
         state = np.random.rand(2, 2, 2)
         target = np.random.rand(2, 2, 2)
+        state = backend.cast(state, dtype=state.dtype)
+        target = backend.cast(target, dtype=target.dtype)
         fidelity(state, target)
     with pytest.raises(ValueError):
         state = np.random.rand(2, 2)
         target = np.random.rand(2, 2)
+        state = backend.cast(state, dtype=state.dtype)
+        target = backend.cast(target, dtype=target.dtype)
         fidelity(state, target, validate=True)
 
     state = np.asarray([0.0, 0.0, 0.0, 1.0])
     target = np.asarray([0.0, 0.0, 0.0, 1.0])
+    state = backend.cast(state, dtype=state.dtype)
+    target = backend.cast(target, dtype=target.dtype)
     backend.assert_allclose(fidelity(state, target), 1.0)
 
     state = np.outer(np.conj(state), state)
     target = np.outer(np.conj(target), target)
+    state = backend.cast(state, dtype=state.dtype)
+    target = backend.cast(target, dtype=target.dtype)
     backend.assert_allclose(fidelity(state, target), 1.0)
 
     state = np.asarray([0.0, 1.0, 0.0, 0.0])
     target = np.asarray([0.0, 0.0, 0.0, 1.0])
+    state = backend.cast(state, dtype=state.dtype)
+    target = backend.cast(target, dtype=target.dtype)
     backend.assert_allclose(fidelity(state, target), 0.0)
 
 
@@ -166,16 +226,22 @@ def test_process_fidelity(backend):
     with pytest.raises(TypeError):
         channel = np.random.rand(d**2, d**2)
         target = np.random.rand(d**2, d**2, 1)
+        channel = backend.cast(channel, dtype=channel.dtype)
+        target = backend.cast(target, dtype=target.dtype)
         process_fidelity(channel, target)
     with pytest.raises(TypeError):
         channel = np.random.rand(d**2, d**2)
+        channel = backend.cast(channel, dtype=channel.dtype)
         process_fidelity(channel, validate=True)
     with pytest.raises(TypeError):
         channel = np.random.rand(d**2, d**2)
         target = np.random.rand(d**2, d**2)
+        channel = backend.cast(channel, dtype=channel.dtype)
+        target = backend.cast(target, dtype=target.dtype)
         process_fidelity(channel, target, validate=True)
 
     channel = np.eye(d**2)
+    channel = backend.cast(channel, dtype=channel.dtype)
     backend.assert_allclose(process_fidelity(channel), 1.0)
     backend.assert_allclose(process_fidelity(channel, channel), 1.0)
     backend.assert_allclose(average_gate_fidelity(channel), 1.0)
