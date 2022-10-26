@@ -22,7 +22,7 @@ def shannon_entropy(probability_array, base: float = 2):
 
     """
 
-    if base < 0:
+    if base <= 0:
         raise_error(ValueError, "log base must be non-negative.")
 
     if len(probability_array.shape) != 1:
