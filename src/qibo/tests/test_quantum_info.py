@@ -105,6 +105,41 @@ def test_purity(backend):
     backend.assert_allclose(purity(state), 1.0 / d)
 
 
+def test_entropy_errors(backend):
+    with pytest.raises(ValueError):
+        state = np.asarray([1.0, 0.0])
+        state = backend.cast(state, dtype=state.dtype)
+        entropy(state, 0)
+    with pytest.raises(TypeError):
+        state = np.random.rand(2, 3)
+        state = backend.cast(state, dtype=state.dtype)
+        entropy(state)
+
+
+@pytest.mark.parametrize("base", [2, 10, np.e, 5])
+def test_entropy(backend, base):
+    state = np.array([1.0, 0.0])
+    state = backend.cast(state, dtype=state.dtype)
+    backend.assert_allclose(entropy(state), 0.0)
+
+    d = 4
+    Id = np.eye(d) / d
+    Id = backend.cast(Id, dtype=Id.dtype)
+
+    state = np.array([1.0, 0.0, 0.0, 0.0])
+    state = np.outer(state, state)
+    state = backend.cast(state, dtype=state.dtype)
+
+    if base == 2:
+        lamb = 0.0
+        state = lamb * state + (1 - lamb) * Id
+        backend.assert_allclose(entropy(state, base), 2.0)
+    else:
+        lamb = 1.0
+        state = lamb * state + (1 - lamb) * Id
+        backend.assert_allclose(entropy(state, base), 0.0)
+
+
 def test_trace_distance(backend):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 2)
