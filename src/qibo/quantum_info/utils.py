@@ -126,3 +126,23 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False):
             raise_error(ValueError, "Second probability array must sum to 1.")
 
     return np.linalg.norm(np.sqrt(prob_dist_p) - np.sqrt(prob_dist_q)) / np.sqrt(2)
+
+
+def hellinger_fidelity(prob_dist_p, prob_dist_q, validate: bool = False):
+    """Calculate the Hellinger fidelity between two discrete 
+    probability distributions, :math:`p` and :math:`q`. The fidelity is
+    defined as :math:`(1 - H^{2}(p, q))^{2}`, where :math:`H(p, q)`
+    is the Hellinger distance.
+
+    Args:
+        prob_dist_p: (discrete) probability distribution :math:`p`.
+        prob_dist_q: (discrete) probability distribution :math:`q`.
+        validate (bool): if True, checks if :math:`p` and :math:`q` are proper
+            probability distributions. Default: False.
+
+    Returns:
+        Hellinger fidelity.
+
+    """
+
+    return (1 - hellinger_distance(prob_dist_p, prob_dist_q, validate) ** 2) ** 2

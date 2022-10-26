@@ -46,7 +46,7 @@ def test_shannon_entropy(backend, base):
         backend.assert_allclose(result, 1.0)
 
 
-def test_hellinger_distance(backend):
+def test_hellinger(backend):
     with pytest.raises(TypeError):
         p = np.random.rand(1, 2)
         q = np.random.rand(1, 5)
@@ -83,7 +83,7 @@ def test_hellinger_distance(backend):
     p = backend.cast(p, dtype=p.dtype)
     q = backend.cast(q, dtype=q.dtype)
     backend.assert_allclose(hellinger_distance(p, q), 0.0)
-
+    backend.assert_allclose(hellinger_fidelity(p, q), 1.0)
 
 def test_purity(backend):
     with pytest.raises(TypeError):
