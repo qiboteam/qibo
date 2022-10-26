@@ -47,9 +47,9 @@ def entropy(state, base: float = 2):
 
     Returns:
         The von-Neumann entropy :math:`S(\\rho)`.
-    
+
     """
-    
+
     if base <= 0.0:
         raise_error(ValueError, "log base must be non-negative.")
 
@@ -75,7 +75,9 @@ def entropy(state, base: float = 2):
             )
         elif base == 10:
             log_prob = (
-                np.asarray([0.0 if eig == 0.0 else np.log10(eig) for eig in eigenvalues])
+                np.asarray(
+                    [0.0 if eig == 0.0 else np.log10(eig) for eig in eigenvalues]
+                )
                 if any(eigenvalues == 0.0)
                 else np.log(eigenvalues)
             )
@@ -98,7 +100,7 @@ def entropy(state, base: float = 2):
             )
 
         ent = -np.sum(eigenvalues * log_prob)
-    
+
     return ent
 
 
