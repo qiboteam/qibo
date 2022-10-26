@@ -34,6 +34,74 @@ def purity(state):
     return pur
 
 
+def entropy(state, base: float = 2):
+    """The von-Neumann entropy :math:`S(\\rho)` of a quantum state :math:`\\rho`, which
+    is given by
+
+    ..math::
+        S(\\rho) \\coloneqq - \\text{Tr}\\left[\\rho \\, \\log(\\rho)\\right]
+
+    Args:
+        state: state vector or density matrix.
+        base (float): the base of the log. Default: 2.
+
+    Returns:
+        The von-Neumann entropy :math:`S(\\rho)`.
+    
+    """
+    
+    if base <= 0.0:
+        raise_error(ValueError, "log base must be non-negative.")
+
+    if (
+        (len(state.shape) >= 3)
+        or (len(state) == 0)
+        or (len(state.shape) == 2 and state.shape[0] != state.shape[1])
+    ):
+        raise_error(
+            TypeError,
+            f"Object must have dims either (k,) or (k,k), but have dims {state.shape}.",
+        )
+
+    if purity(state) == 1.0:
+        ent = 0.0
+    else:
+        eigenvalues, _ = np.linalg.eig(state)
+        if base == 2:
+            log_prob = (
+                np.asarray([0.0 if eig == 0.0 else np.log2(eig) for eig in eigenvalues])
+                if any(eigenvalues == 0.0)
+                else np.log2(eigenvalues)
+            )
+        elif base == 10:
+            log_prob = (
+                np.asarray([0.0 if eig == 0.0 else np.log10(eig) for eig in eigenvalues])
+                if any(eigenvalues == 0.0)
+                else np.log(eigenvalues)
+            )
+        elif base == np.e:
+            log_prob = (
+                np.asarray([0.0 if eig == 0.0 else np.log(eig) for eig in eigenvalues])
+                if any(eigenvalues == 0.0)
+                else np.log(eigenvalues)
+            )
+        else:
+            log_prob = (
+                np.asarray(
+                    [
+                        0.0 if eig == 0.0 else np.log(eig) / np.log(base)
+                        for eig in eigenvalues
+                    ]
+                )
+                if any(eigenvalues == 0.0)
+                else np.log(eigenvalues) / np.log(base)
+            )
+
+        ent = -np.sum(eigenvalues * log_prob)
+    
+    return ent
+
+
 def trace_distance(state, target):
     """Trace distance between two quantum states:
 
