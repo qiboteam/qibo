@@ -15,7 +15,7 @@ def shannon_entropy(probability_array, base: float = 2):
 
     Args:
         probability_array: a probability array :math:`\\mathbf{p}`.
-        base: the base of the log. Default: 2.
+        base (float): the base of the log. Default: 2.
 
     Returns:
         The Shannon entropy :math:`H(\\mathcal{p})`.
