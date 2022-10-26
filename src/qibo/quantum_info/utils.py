@@ -129,7 +129,7 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False):
 
 
 def hellinger_fidelity(prob_dist_p, prob_dist_q, validate: bool = False):
-    """Calculate the Hellinger fidelity between two discrete 
+    """Calculate the Hellinger fidelity between two discrete
     probability distributions, :math:`p` and :math:`q`. The fidelity is
     defined as :math:`(1 - H^{2}(p, q))^{2}`, where :math:`H(p, q)`
     is the Hellinger distance.

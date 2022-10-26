@@ -85,6 +85,7 @@ def test_hellinger(backend):
     backend.assert_allclose(hellinger_distance(p, q), 0.0)
     backend.assert_allclose(hellinger_fidelity(p, q), 1.0)
 
+
 def test_purity(backend):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
