@@ -84,6 +84,7 @@ html_static_path = ["_static"]
 
 intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
 
+
 # -- Doctest ------------------------------------------------------------------
 #
 
@@ -99,13 +100,9 @@ autodoc_member_order = "bysource"
 def setup(app):
     app.add_config_value("recommonmark_config", {"enable_eval_rst": True}, True)
     app.add_transform(AutoStructify)
+    app.add_css_file("css/style.css")
 
 
 html_logo = "logo.png"
 
 html_show_sourcelink = False
-
-
-def setup(app):
-    """Include custom style to change colors"""
-    app.add_css_file("css/style.css")

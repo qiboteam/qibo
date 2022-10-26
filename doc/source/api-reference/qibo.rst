@@ -490,6 +490,13 @@ Pauli noise channel
     :members:
     :member-order: bysource
 
+Depolarizing channel
+^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.gates.DepolarizingChannel
+    :members:
+    :member-order: bysource
+
 Reset channel
 ^^^^^^^^^^^^^
 
@@ -530,6 +537,10 @@ The quantum errors available to build a noise model are the following:
     :member-order: bysource
 
 .. autoclass:: qibo.noise.ThermalRelaxationError
+    :members:
+    :member-order: bysource
+
+.. autoclass:: qibo.noise.DepolarizingError
     :members:
     :member-order: bysource
 
