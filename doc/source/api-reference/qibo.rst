@@ -210,6 +210,34 @@ Adiabatic evolution
     :members:
     :member-order: bysource
 
+Error Mitigation
+^^^^^^^^^^^^^^^^
+
+Qibo allows for mitigating noise in circuits via error mitigation methods. Unlike error correction, error mitigation does not aim to correct qubit errors, but rather it provides the means to estimate the noise-free expected value of an observable measured at the end of a noisy circuit.
+
+Zero Noise Extrapolation (ZNE)
+""""""""""""""""""""""""""""""
+
+Given a noisy circuit :math:`C` and an observable :math:`A`,  Zero Noise Extrapolation (ZNE) consists in running :math:`n+1` versions of the circuit with different noise levels :math:`\{c_j\}_{j=0..n}` and, for each of them, measuring the expected value of the observable :math:`E_j=\langle A\rangle_j`.
+
+Then, an estimate for the expected value of the observable in the noise-free condition is obtained as:
+
+.. math::
+   \hat{E} = \sum_{j=0}^n \gamma_jE_j
+   
+with :math:`\gamma_j` satisfying:
+
+.. math::
+   \sum_{j=0}^n \gamma_j = 1 \qquad \sum_{j=0}^n \gamma_j c_j^k = 0 \quad \text{for}\,\, k=1,..,n
+
+This implementation of ZNE relies on the insertion of CNOT pairs (that resolve to the identity in the noise-free case) to realize the different noise levels :math:`\{c_j\}`, see the `original paper by He et al <https://journals.aps.org/pra/abstract/10.1103/PhysRevA.102.012426>`_ for more details. Hence, the canonical levels are mapped to the number of inserted pairs as :math:`c_j\rightarrow 2 c_j + 1`.
+   
+.. autofunction:: qibo.models.error_mitigation.ZNE
+
+.. autofunction:: qibo.models.error_mitigation.get_gammas
+
+.. autofunction:: qibo.models.error_mitigation.get_noisy_circuit
+
 _______________________
 
 .. _Gates:
@@ -547,7 +575,6 @@ The quantum errors available to build a noise model are the following:
 .. autoclass:: qibo.noise.ResetError
     :members:
     :member-order: bysource
-
 
 .. _Hamiltonians:
 

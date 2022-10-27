@@ -1,6 +1,7 @@
+# -*- coding: utf-8 -*-
+"""Error Mitigation Methods."""
 import numpy as np
 from qibo import gates
-
 
 def get_gammas(c, solve=True):
     """Standalone function to compute the ZNE coefficients given the noise levels.
@@ -10,7 +11,7 @@ def get_gammas(c, solve=True):
         solve (bool): If ``True`` computes the coeffients by solving the linear system. Otherwise, use the analytical solution valid for the CNOT insertion method.
 
     Returns:
-        gammas (numpy.ndarray): The computed coefficients.
+        numpy.ndarray: The computed coefficients.
     """
     if solve:
         c = 2*c + 1
@@ -34,7 +35,7 @@ def get_noisy_circuit(circuit, cj):
         cj (int): Number of CNOT pairs to add.
     
     Returns:
-        noisy_circuit (qibo.models.circuit.Circuit): The circuit with the inserted CNOT pairs.
+        qibo.models.circuit.Circuit: The circuit with the inserted CNOT pairs.
     """
     noisy_circuit = circuit.__class__(**circuit.init_kwargs)
     for gate in circuit.queue:
@@ -59,7 +60,7 @@ def ZNE(circuit, observable, c, init_state=None, CNOT_noise_model=None):
         CNOT_noise_model (qibo.noise.NoiseModel): Noise model applied to each CNOT gate, used for simulating noisy CNOTs.
 
     Returns:
-        Estimate of the expected value of ``observable`` in the noise free condition.
+        numpy.ndarray: Estimate of the expected value of ``observable`` in the noise free condition.
     """
     assert circuit.density_matrix, "Circuit.density_matrix == True is needed."
     expected_val = []
