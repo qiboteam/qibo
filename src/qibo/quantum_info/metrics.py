@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from scipy.linalg import sqrtm
 
 from qibo.config import PRECISION_TOL, raise_error
 
