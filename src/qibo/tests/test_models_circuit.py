@@ -621,7 +621,7 @@ def test_circuit_draw_channels(legend):
     c.add(gates.PauliNoiseChannel(0, 0.1, 0.0, 0.2))
     c.add(gates.PauliNoiseChannel(1, 0.0, 0.2, 0.1))
     c.add(gates.CNOT(0, 1))
-    c.add(gates.DepolarizingChannel((0,1), 0.1))
+    c.add(gates.DepolarizingChannel((0, 1), 0.1))
     c.add(gates.CNOT(0, 1))
     c.add(gates.DepolarizingChannel((0,), 0.1))
     c.add(gates.CNOT(0, 1))
@@ -637,7 +637,7 @@ def test_circuit_draw_channels(legend):
             "| PauliNoiseChannel   | PN       |\n"
             "| DepolarizingChannel | D        |"
         )
-        
+
     assert c.draw(legend=legend) == ref
 
 
