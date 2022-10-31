@@ -75,7 +75,7 @@ def test_classifier_circuit4():
   init_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)  #  
   
   qcnn = QuantumCNN(nqubits, nlayers, nclasses=2, RY=True)
-  angles = [0] + angles0 
+  angles = [0,0] + angles0 
   
   circuit = qcnn.Classifier_circuit(angles)
   statevector = circuit(init_state).state()  
