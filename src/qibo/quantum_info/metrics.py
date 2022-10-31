@@ -92,10 +92,10 @@ def entropy(state, base: float = 2):
 
 
 def trace_distance(state, target):
-    """Trace distance between two quantum states:
+    """Trace distance between two quantum states, :math:`\\rho` and :math:`\\sigma`:
 
     ..math::
-        T(\\rho, \\sigma) \\coloneqq \\frac{1}{2} \\, ||\\rho - \\sigma||_{1}
+        T(\\rho, \\sigma) \\coloneqq \\frac{1}{2} \\, ||\\rho - \\sigma||_{1} = \frac{1}{2} \\, \text{Tr}\\left[ \\sqrt((\\rho - \\sigma)^{\\dagger}(\\rho - \\sigma)) \\right] \\, ,
 
     where :math:`||\\cdot||_{1}` is the Schatten 1-norm.
 
@@ -124,9 +124,9 @@ def trace_distance(state, target):
         state = np.outer(np.conj(state), state)
         target = np.outer(np.conj(target), target)
 
-    difference = state - target
-    difference_sqrt = sqrtm(np.dot(np.conj(np.transpose(difference)), difference))
-    return np.real(np.trace(difference_sqrt)) / 2
+    eigenvalues, _ = np.linalg.eig(state - target)
+
+    return np.sum(np.absolute(eigenvalues)) / 2
 
 
 def hilbert_schmidt_distance(state, target):
