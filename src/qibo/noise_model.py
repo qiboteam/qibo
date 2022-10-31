@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
-from qibo import models,gates
-from qibo.noise import NoiseModel, ThermalRelaxationError, DepolarizingError
-from qibo.gates import ThermalRelaxationChannel,DepolarizingChannel
 import numpy as np
+
+from qibo import gates, models
+from qibo.gates import DepolarizingChannel, ThermalRelaxationChannel
+from qibo.noise import DepolarizingError, NoiseModel, ThermalRelaxationError
+
 
 def noise_model(circuit, params):
     """Creates a noisy circuit from the circuit given as argument.
@@ -44,12 +46,12 @@ def noise_model(circuit, params):
     depolarizing_error_1 = params["depolarizing error"][0]
     depolarizing_error_2 = params["depolarizing error"][1]
     bitflips = params["bitflips error"]
-    
+
     noisy_circuit = models.Circuit(circuit.nqubits, density_matrix=True)
 
     time_steps = max(circuit.queue.moment_index)
     current_time = np.zeros(circuit.nqubits)
-    
+
     for t in range(time_steps):
         for qubit in range(circuit.nqubits):
             if circuit.queue.moments[t][qubit] == None:
@@ -57,10 +59,10 @@ def noise_model(circuit, params):
 
             elif len(circuit.queue.moments[t][qubit].qubits) == 1:
                 noisy_circuit.add(circuit.queue.moments[t][qubit])
-                #noisy_circuit.add(gates.PauliNoiseChannel(qubit, 0.1, 0.0, 0.2))
+                # noisy_circuit.add(gates.PauliNoiseChannel(qubit, 0.1, 0.0, 0.2))
                 noisy_circuit.add(
                     gates.DepolarizingChannel(
-                            circuit.queue.moments[t][qubit].qubits, depolarizing_error_1
+                        circuit.queue.moments[t][qubit].qubits, depolarizing_error_1
                     )
                 )
                 noisy_circuit.add(
@@ -96,11 +98,12 @@ def noise_model(circuit, params):
                     current_time[q_min] += time_difference
 
                 noisy_circuit.add(circuit.queue.moments[t][qubit])
-                #for q in circuit.queue.moments[t][qubit].qubits:
+                # for q in circuit.queue.moments[t][qubit].qubits:
                 #    noisy_circuit.add(gates.PauliNoiseChannel(q, 0.1, 0.0, 0.2))
                 noisy_circuit.add(
                     gates.DepolarizingChannel(
-                        tuple(set(circuit.queue.moments[t][qubit].qubits)), depolarizing_error_2
+                        tuple(set(circuit.queue.moments[t][qubit].qubits)),
+                        depolarizing_error_2,
                     )
                 )
                 noisy_circuit.add(
