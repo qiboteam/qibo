@@ -137,21 +137,21 @@ class Hamiltonian(AbstractHamiltonian):
             )
 
     def expectation_from_samples(self, freq, qubit_map=None):
-        Obs = self.matrix
-        if np.count_nonzero(Obs - np.diag(np.diagonal(Obs))) != 0:
+        obs = self.matrix
+        if np.count_nonzero(obs - np.diag(np.diagonal(obs))) != 0:
             raise_error(NotImplementedError, "Observable is not diagonal.")
         keys = list(freq.keys())
         if qubit_map is None:
-            qubit_map = list(range(int(np.log2(len(Obs)))))
+            qubit_map = list(range(int(np.log2(len(obs)))))
         counts = np.array(list(freq.values())) / sum(freq.values())
-        O = 0
+        expval = 0
         kl = len(qubit_map)
         for j, k in enumerate(keys):
             index = 0
             for i in qubit_map:
                 index += int(k[qubit_map.index(i)]) * 2 ** (kl - 1 - i)
-            O += Obs[index, index] * counts[j]
-        return O
+            expval += obs[index, index] * counts[j]
+        return expval
 
     def eye(self, n=None):
         if n is None:
@@ -555,36 +555,40 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         return Hamiltonian.expectation(self, state, normalize)
 
     def expectation_from_samples(self, freq, qubit_map=None):
-        obs = self.terms
-        for term in obs:
+        terms = self.terms
+        for term in terms:
             for factor in term.factors:
                 if isinstance(factor, Z) == False:
                     raise_error(
                         NotImplementedError, "Observable is not a Z Pauli string."
                     )
+            if len(term.factors) != len(set(term.factors)):
+                raise_error(
+                        NotImplementedError, "Z^k is not implemented since Z^2=I."
+                    )
         keys = list(freq.keys())
         counts = np.array(list(freq.values())) / sum(freq.values())
         coeff = list(self.form.as_coefficients_dict().values())
         qubits = []
-        for o in obs:
-            Qubits = []
-            for k in o.target_qubits:
-                Qubits.append(k)
-            qubits.append(Qubits)
+        for term in terms:
+            qubits_term = []
+            for k in term.target_qubits:
+                qubits_term.append(k)
+            qubits.append(qubits_term)
         if qubit_map is None:
             qubit_map = list(range(len(keys[0])))
-        O = 0
+        expval = 0
         for j, q in enumerate(qubits):
             subk = []
-            O_q = 0
+            expval_q = 0
             for i, k in enumerate(keys):
                 subk = [int(k[qubit_map.index(s)]) for s in q]
-                o_k = 1
+                expval_k = 1
                 if subk.count(1) % 2 == 1:
-                    o_k = -1
-                O_q += o_k * counts[i]
-            O += O_q * float(coeff[j])
-        return O
+                    expval_k = -1
+                expval_q += expval_k * counts[i]
+            expval += expval_q * float(coeff[j])
+        return expval
 
     def __add__(self, o):
         if isinstance(o, self.__class__):
