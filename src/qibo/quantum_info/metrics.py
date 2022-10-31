@@ -68,13 +68,21 @@ def entropy(state, base: float = 2):
     else:
         eigenvalues, _ = np.linalg.eig(state)
         if base == 2:
-            log_prob = np.log2(eigenvalues, out=np.zeros_like(eigenvalues), where=(eigenvalues!=0))
+            log_prob = np.log2(
+                eigenvalues, out=np.zeros_like(eigenvalues), where=(eigenvalues != 0)
+            )
         elif base == 10:
-            log_prob = np.log10(eigenvalues, out=np.zeros_like(eigenvalues), where=(eigenvalues!=0))
+            log_prob = np.log10(
+                eigenvalues, out=np.zeros_like(eigenvalues), where=(eigenvalues != 0)
+            )
         elif base == np.e:
-            log_prob = np.log(eigenvalues, out=np.zeros_like(eigenvalues), where=(eigenvalues!=0))
+            log_prob = np.log(
+                eigenvalues, out=np.zeros_like(eigenvalues), where=(eigenvalues != 0)
+            )
         else:
-            log_prob = np.log(eigenvalues, out=np.zeros_like(eigenvalues), where=(eigenvalues!=0)) / np.log(base)
+            log_prob = np.log(
+                eigenvalues, out=np.zeros_like(eigenvalues), where=(eigenvalues != 0)
+            ) / np.log(base)
 
         ent = -np.sum(eigenvalues * log_prob)
 
