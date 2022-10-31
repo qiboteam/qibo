@@ -86,7 +86,7 @@ def trace_distance(state, target):
     """Trace distance between two quantum states, :math:`\\rho` and :math:`\\sigma`:
 
     .. math::
-        T(\\rho, \\sigma) = \\frac{1}{2} \\, ||\\rho - \\sigma||_{1} = \frac{1}{2} \\, \text{Tr}\\left[ \\sqrt((\\rho - \\sigma)^{\\dagger}(\\rho - \\sigma)) \\right] \\, ,
+        T(\\rho, \\sigma) = \\frac{1}{2} \\, ||\\rho - \\sigma||_{1} = \\frac{1}{2} \\, \text{Tr}\\left[ \\sqrt((\\rho - \\sigma)^{\\dagger}(\\rho - \\sigma)) \\right] \\, ,
 
     where :math:`||\\cdot||_{1}` is the Schatten 1-norm.
 
