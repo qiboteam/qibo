@@ -900,6 +900,30 @@ Gate error
     :member-order: bysource
 
 
+Utility Functions
+^^^^^^^^^^^^^^^^^
+
+Shannon entropy
+"""""""""""""""
+.. automodule:: qibo.quantum_info.shannon_entropy
+    :members:
+    :member-order: bysource
+
+
+Hellinger distance
+""""""""""""""""""
+.. automodule:: qibo.quantum_info.hellinger_distance
+    :members:
+    :member-order: bysource
+
+
+Hellinger fidelity
+""""""""""""""""""
+.. automodule:: qibo.quantum_info.gate_error
+    :members:
+    :member-order: bysource
+
+
 .. _Parallel:
 
 Parallelism
