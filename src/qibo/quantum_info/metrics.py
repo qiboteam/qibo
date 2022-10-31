@@ -37,7 +37,7 @@ def entropy(state, base: float = 2):
     is given by
 
     .. math::
-        S(\\rho) \\coloneqq - \\text{Tr}\\left[\\rho \\, \\log(\\rho)\\right]
+        S(\\rho) = - \\text{Tr}\\left[\\rho \\, \\log(\\rho)\\right]
 
     Args:
         state: state vector or density matrix.
@@ -86,7 +86,7 @@ def trace_distance(state, target):
     """Trace distance between two quantum states, :math:`\\rho` and :math:`\\sigma`:
 
     .. math::
-        T(\\rho, \\sigma) \\coloneqq \\frac{1}{2} \\, ||\\rho - \\sigma||_{1} = \frac{1}{2} \\, \text{Tr}\\left[ \\sqrt((\\rho - \\sigma)^{\\dagger}(\\rho - \\sigma)) \\right] \\, ,
+        T(\\rho, \\sigma) = \\frac{1}{2} \\, ||\\rho - \\sigma||_{1} = \frac{1}{2} \\, \text{Tr}\\left[ \\sqrt((\\rho - \\sigma)^{\\dagger}(\\rho - \\sigma)) \\right] \\, ,
 
     where :math:`||\\cdot||_{1}` is the Schatten 1-norm.
 
