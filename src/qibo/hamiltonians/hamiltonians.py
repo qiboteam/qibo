@@ -563,9 +563,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                         NotImplementedError, "Observable is not a Z Pauli string."
                     )
             if len(term.factors) != len(set(term.factors)):
-                raise_error(
-                        NotImplementedError, "Z^k is not implemented since Z^2=I."
-                    )
+                raise_error(NotImplementedError, "Z^k is not implemented since Z^2=I.")
         keys = list(freq.keys())
         counts = np.array(list(freq.values())) / sum(freq.values())
         coeff = list(self.form.as_coefficients_dict().values())

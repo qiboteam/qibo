@@ -274,8 +274,8 @@ def test_symbolic_hamiltonian_state_ev(
 
 def test_hamiltonian_expectation_from_samples(backend):
     """Test Hamiltonian expectation value calculation."""
-    obs0 = 2*Z(0) * Z(1) + Z(0) * Z(2)
-    obs1 = 2*Z(0) * Z(1) + Z(0) * Z(2) * I(3)
+    obs0 = 2 * Z(0) * Z(1) + Z(0) * Z(2)
+    obs1 = 2 * Z(0) * Z(1) + Z(0) * Z(2) * I(3)
     h0 = hamiltonians.SymbolicHamiltonian(obs0, backend=backend)
     h1 = hamiltonians.SymbolicHamiltonian(obs1, backend=backend)
     c = Circuit(4)
@@ -294,7 +294,7 @@ def test_hamiltonian_expectation_from_samples(backend):
 
 
 def test_hamiltonian_expectation_from_samples_errors(backend):
-    obs = [Z(0) * Y(1), Z(0)*Z(1)**3]
+    obs = [Z(0) * Y(1), Z(0) * Z(1) ** 3]
     h1 = hamiltonians.SymbolicHamiltonian(obs[0], backend=backend)
     h2 = hamiltonians.SymbolicHamiltonian(obs[1], backend=backend)
     with pytest.raises(NotImplementedError):
