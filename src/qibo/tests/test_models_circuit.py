@@ -620,17 +620,24 @@ def test_circuit_draw_channels(legend):
     c.add(gates.CNOT(0, 1))
     c.add(gates.PauliNoiseChannel(0, 0.1, 0.0, 0.2))
     c.add(gates.PauliNoiseChannel(1, 0.0, 0.2, 0.1))
+    c.add(gates.CNOT(0, 1))
+    c.add(gates.DepolarizingChannel((0,1), 0.1))
+    c.add(gates.CNOT(0, 1))
+    c.add(gates.DepolarizingChannel((0,), 0.1))
+    c.add(gates.CNOT(0, 1))
+    c.add(gates.DepolarizingChannel((1,), 0.1))
 
-    ref = "q0: ─H─PN─o─PN─\n" "q1: ─H─PN─X─PN─"
+    ref = "q0: ─H─PN─o─PN─o─D─o─D─o───\n" "q1: ─H─PN─X─PN─X─D─X───X─D─"
 
     if legend:
         ref += (
             "\n\n Legend for callbacks and channels: \n"
-            "| Gate              | Symbol   |\n"
-            "|-------------------+----------|\n"
-            "| PauliNoiseChannel | PN       |"
+            "| Gate                | Symbol   |\n"
+            "|---------------------+----------|\n"
+            "| PauliNoiseChannel   | PN       |\n"
+            "| DepolarizingChannel | D        |"
         )
-
+        
     assert c.draw(legend=legend) == ref
 
 
