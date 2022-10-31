@@ -65,7 +65,7 @@ def entropy(state, base: float = 2):
     if purity(state) == 1.0:
         ent = 0.0
     else:
-        eigenvalues, _ = np.linalg.eig(state)
+        eigenvalues, _ = np.linalg.eigh(state)
         if base == 2:
             log_prob = np.where(eigenvalues != 0, np.log2(eigenvalues), 0.0)
         elif base == 10:
@@ -117,7 +117,7 @@ def trace_distance(state, target):
         state = np.outer(np.conj(state), state)
         target = np.outer(np.conj(target), target)
 
-    eigenvalues, _ = np.linalg.eig(state - target)
+    eigenvalues, _ = np.linalg.eigh(state - target)
 
     return np.sum(np.absolute(eigenvalues)) / 2
 
