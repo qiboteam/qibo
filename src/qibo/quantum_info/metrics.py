@@ -85,6 +85,8 @@ def entropy(state, base: float = 2):
             ) / np.log(base)
 
         ent = -np.sum(eigenvalues * log_prob)
+        # absolute value if entropy == 0.0 to avoid returning -0.0
+        ent = np.abs(ent) if ent == 0.0 else ent
 
     return ent
 
