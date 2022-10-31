@@ -13,7 +13,6 @@ from qibo.models import QFT, Circuit
 from qibo.parallel import parallel_execution, parallel_parametrized_execution
 
 
-@pytest.mark.skipif(sys.platform == "darwin", reason="Mac tests")
 def test_parallel_circuit_evaluation(backend):
     """Evaluate circuit for multiple input states."""
     nqubits = 10
@@ -32,7 +31,6 @@ def test_parallel_circuit_evaluation(backend):
     backend.assert_allclose(r1, r2)
 
 
-@pytest.mark.skipif(sys.platform == "darwin", reason="Mac tests")
 def test_parallel_parametrized_circuit(backend):
     """Evaluate circuit for multiple parameters."""
     nqubits = 5
