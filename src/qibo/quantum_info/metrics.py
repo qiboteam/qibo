@@ -73,7 +73,9 @@ def entropy(state, base: float = 2):
         elif base == np.e:
             log_prob = np.where(eigenvalues != 0, np.log(eigenvalues), 0.0)
         else:
-            log_prob = np.where(eigenvalues != 0, np.log(eigenvalues) / np.log(base), 0.0)
+            log_prob = np.where(
+                eigenvalues != 0, np.log(eigenvalues) / np.log(base), 0.0
+            )
 
         ent = -np.sum(eigenvalues * log_prob)
         # absolute value if entropy == 0.0 to avoid returning -0.0

@@ -52,7 +52,9 @@ def shannon_entropy(probability_array, base: float = 2):
     elif base == np.e:
         log_prob = np.where(probability_array != 0, np.log(probability_array), 0.0)
     else:
-        log_prob = np.where(probability_array != 0, np.log(probability_array) / np.log(base), 0.0)
+        log_prob = np.where(
+            probability_array != 0, np.log(probability_array) / np.log(base), 0.0
+        )
 
     entropy = -np.sum(probability_array * log_prob)
 
