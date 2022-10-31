@@ -846,6 +846,7 @@ Metrics
 
 Purity
 """"""
+
 .. automodule:: qibo.quantum_info.purity
     :members:
     :member-order: bysource
@@ -853,6 +854,7 @@ Purity
 
 Entropy
 """""""
+
 .. automodule:: qibo.quantum_info.entropy
     :members:
     :member-order: bysource
@@ -860,6 +862,7 @@ Entropy
 
 Trace distance
 """"""""""""""
+
 .. automodule:: qibo.quantum_info.trace_distance
     :members:
     :member-order: bysource
@@ -867,6 +870,7 @@ Trace distance
 
 Hilbert-Schmidt distance
 """"""""""""""""""""""""
+
 .. automodule:: qibo.quantum_info.hilbert_schmidt_distance
     :members:
     :member-order: bysource
@@ -874,6 +878,7 @@ Hilbert-Schmidt distance
 
 Fidelity
 """"""""
+
 .. automodule:: qibo.quantum_info.fidelity
     :members:
     :member-order: bysource
@@ -881,6 +886,7 @@ Fidelity
 
 Process fidelity
 """"""""""""""""
+
 .. automodule:: qibo.quantum_info.process_fidelity
     :members:
     :member-order: bysource
@@ -888,6 +894,7 @@ Process fidelity
 
 Average gate fidelity
 """""""""""""""""""""
+
 .. automodule:: qibo.quantum_info.average_gate_fidelity
     :members:
     :member-order: bysource
@@ -895,6 +902,7 @@ Average gate fidelity
 
 Gate error
 """"""""""
+
 .. automodule:: qibo.quantum_info.gate_error
     :members:
     :member-order: bysource
@@ -905,6 +913,7 @@ Utility Functions
 
 Shannon entropy
 """""""""""""""
+
 .. automodule:: qibo.quantum_info.shannon_entropy
     :members:
     :member-order: bysource
@@ -912,6 +921,7 @@ Shannon entropy
 
 Hellinger distance
 """"""""""""""""""
+
 .. automodule:: qibo.quantum_info.hellinger_distance
     :members:
     :member-order: bysource
@@ -919,6 +929,7 @@ Hellinger distance
 
 Hellinger fidelity
 """"""""""""""""""
+
 .. automodule:: qibo.quantum_info.gate_error
     :members:
     :member-order: bysource

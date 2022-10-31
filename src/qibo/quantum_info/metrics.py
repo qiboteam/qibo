@@ -96,6 +96,7 @@ def trace_distance(state, target):
 
     Returns:
         Trace distance between state :math:`\\rho` and target :math:`\\sigma`.
+
     """
 
     if state.shape != target.shape:

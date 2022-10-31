@@ -7,7 +7,7 @@ from qibo.config import PRECISION_TOL, raise_error
 def shannon_entropy(probability_array, base: float = 2):
     """Calculate the Shannon entropy of a probability array :math:`\\mathbf{p}`, which is given by
 
-    ..math::
+    .. math::
         H(\\mathbf{p}) \\coloneqq - \\sum_{k = 0}^{d^{2} - 1} \\, p_{k} \\, \\log_{b}(p_{k}) \\, ,
 
     where :math:`d = \\text{dim}(\\mathcal{H})` is the dimension of the Hilbert space :math:`\\mathcal{H}`,
