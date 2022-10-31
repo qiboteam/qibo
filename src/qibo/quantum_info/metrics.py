@@ -263,15 +263,15 @@ def average_gate_fidelity(channel, target=None):
     """Average gate fidelity between two quantum channels (when at least one channel is unitary),
 
     ..math::
-        F_{avg}(\\mathcal{E}, \\mathcal{U}) = \\frac{d * F_{pro}(\\mathcal{E}, \\mathcal{U}) + 1}{d + 1}
+        F_{\\text{avg}}(\\mathcal{E}, \\mathcal{U}) = \\frac{d * F_{pro}(\\mathcal{E}, \\mathcal{U}) + 1}{d + 1}
 
     where :math:`d` is the dimension of the channels and :math:`F_{pro}(\\mathcal{E}, \\mathcal{U})` is the
     :meth:`~qibo.metrics.process_fidelily` of channel :math:`\\mathcal{E}` with respect to the unitary
     channel :math:`\\mathcal{U}`.
 
     Args:
-        channel: quantum channel.
-        target: quantum channel. If None, target is the Identity channel.
+        channel: quantum channel :math:`\\mathcal{E}`.
+        target: quantum channel :math:`\\mathcal{U}`. If None, target is the Identity channel.
 
     Returns:
         Process fidelity between channel :math:`\\mathcal{E}` and target unitary channel :math:`\\mathcal{U}`.
@@ -280,3 +280,24 @@ def average_gate_fidelity(channel, target=None):
 
     d = channel.shape[0]
     return (d * process_fidelity(channel, target) + 1) / (d + 1)
+
+
+def gate_error(channel, target=None):
+    """Gate error between two quantum channels (when at least one is unitary), which is 
+    defined as
+
+    ..math:
+        E(\\mathcal{E}, \\mathcal{U}) = 1 - F_{\\text{avg}}(\\mathcal{E}, \\mathcal{U}) \\, ,
+    where F_{\\text{avg}}(\\mathcal{E}, \\mathcal{U}) is the `average_gate_fidelity()`
+    between channel :math:`\\mathcal{E}` and target :math:`\mathcal{U}`.
+
+    Args:
+        channel: quantum channel :math:`\\mathcal{E}`.
+        target: quantum channel :math:`\\mathcal{U}`. If None, target is the Identity channel.
+
+    Returns:
+        Gate error between :math:`\\mathcal{E}` and :math:`\\mathcal{U}`.
+
+    """
+
+    return 1 - average_gate_fidelity(channel, target)
