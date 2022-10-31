@@ -8,18 +8,20 @@ from qibo.models import Circuit
 from qibo.models.qcnn import QuantumCNN
 from qibo import matrices
 
+num_angles =  21
+angles0 = [i * math.pi / num_angles for i in range(num_angles)]
+
 
 def test_classifier_circuit2():
   """
   """
-  qibo.set_backend('numpy')
   nqubits = 2
   nlayers = int(nqubits / 2)
   init_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)  #   
   
   qcnn = QuantumCNN(nqubits, nlayers, nclasses=2, RY=True)
-  num_angles =  21 #qcnn.nparams_layer
-  angles = [i * math.pi / num_angles for i in range(num_angles)]
+  
+  angles = angles0
   
   circuit = qcnn.Classifier_circuit(angles)
   #circuit.set_circuit_params(angles) #this line is included in Classififer_circuit()  
@@ -34,49 +36,46 @@ def test_classifier_circuit2():
 def get_real_vector2():
   nqubits = 2
   bits = range(nqubits)
-  init_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)  #
-  num_angles = 21
-  angles = [i * math.pi / num_angles for i in range(num_angles)]   
+  init_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)  #  
+  angles = angles0  
   
   # convolution
   k=0
-  a = one_qubit_unitary(nqubits, bits[0], angles[k:k+3]).unitary()*init_state
+  a = np.dot(one_qubit_unitary(nqubits, bits[0], angles[k:k+3]).unitary(),init_state)
   k+=3
-  a = one_qubit_unitary(nqubits, bits[1], angles[k:k+3]).unitary()*a
+  a = np.dot(one_qubit_unitary(nqubits, bits[1], angles[k:k+3]).unitary(),a)
   k+=3
-  a = matrices.RZZ(bits[0], bits[1], angles[k])*a
+  a = np.dot(RZZ_unitary(nqubits, bits[0], bits[1], angles[k]).unitary(),a)
   k+=1
-  a = matrices.RYY(bits[0], bits[1], angles[k])*a
+  a = np.dot(RYY_unitary(nqubits, bits[0], bits[1], angles[k]).unitary(),a)
   k+=1
-  a = matrices.RXX(bits[0], bits[1], angles[k])*a
+  a = np.dot(RXX_unitary(nqubits, bits[0], bits[1], angles[k]).unitary(),a)
   k+=1
-  a = one_qubit_unitary(nqubits, bits[0], angles[k:k+3]).unitary()*a
+  a = np.dot(one_qubit_unitary(nqubits, bits[0], angles[k:k+3]).unitary(),a)
   k+=3
-  a = one_qubit_unitary(nqubits, bits[1], angles[k:k+3]).unitary()*a
+  a = np.dot(one_qubit_unitary(nqubits, bits[1], angles[k:k+3]).unitary(),a)
   k+=3
-  
-  # pooling  
+  # pooling
   ksink = k
-  a = one_qubit_unitary(nqubits, bits[1], angles[k:k+3]).unitary()*a
+  a = np.dot(one_qubit_unitary(nqubits, bits[1], angles[k:k+3]).unitary(),a)
+  print("pool_state=",a)
   k+=3
-  a = one_qubit_unitary(nqubits, bits[0], angles[k:k+3]).unitary()*a  
-  a = matrices.CNOT(bits[0], bits[1])*a
-  a = one_qubit_unitary(nqubits, bits[1], angles[ksink:ksink+3]).invert().unitary()*a
+  a = np.dot(one_qubit_unitary(nqubits, bits[0], angles[k:k+3]).unitary(),a)
+  a = np.dot(CNOT_unitary(nqubits, bits[0],bits[1]).unitary(),a)
+  a = np.dot(one_qubit_unitary(nqubits, bits[1], angles[ksink:ksink+3]).invert().unitary(),a)
   
   return a
 
 def test_classifier_circuit4():
   """
-  """
-  qibo.set_backend('numpy')
+  """  
   nqubits = 4
   bits = range(nqubits)
   nlayers = int(nqubits / 2)
   init_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)  #  
   
   qcnn = QuantumCNN(nqubits, nlayers, nclasses=2, RY=True)
-  num_angles =  21 #qcnn.nparams_layer
-  angles = [i * math.pi / num_angles for i in range(num_angles)] 
+  angles = [0] + angles0 
   
   circuit = qcnn.Classifier_circuit(angles)
   statevector = circuit(init_state).state()  
@@ -90,85 +89,86 @@ def test_classifier_circuit4():
 def get_real_vector4():
   nqubits = 4
   init_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)  #
-  num_angles = 21
-  angles = [i * math.pi / num_angles for i in range(num_angles)] 
+  angles = angles0 
   
   
   # convolution - layer 1
   #to declare matrix array a 
-  k=0
-  a = one_qubit_unitary(nqubits, bits[0], angles[k:k+3]).unitary()*init_state
+    k=0
+  a = np.dot(one_qubit_unitary(nqubits, bits[0], angles[k:k+3]).unitary(),init_state)
   k+=3
-  a = one_qubit_unitary(nqubits, bits[1], angles[k:k+3]).unitary()*a
+  a = np.dot(one_qubit_unitary(nqubits, bits[1], angles[k:k+3]).unitary(),a)
   k+=3
-  a = matrices.RZZ(bits[0], bits[1], angles[k])*a
+  a = np.dot(RZZ_unitary(nqubits,bits[0], bits[1], angles[k]).unitary(),a)
   k+=1
-  a = matrices.RYY(bits[0], bits[1], angles[k])*a
+  a = np.dot(RYY_unitary(nqubits,bits[0], bits[1], angles[k]).unitary(),a)
   k+=1
-  a = matrices.RXX(bits[0], bits[1], angles[k])*a
+  a = np.dot(RXX_unitary(nqubits,bits[0], bits[1], angles[k]).unitary(),a)
   k+=1
-  a = one_qubit_unitary(nqubits, bits[0], angles[k:k+3]).unitary()*a
+  a = np.dot(one_qubit_unitary(nqubits, bits[0], angles[k:k+3]).unitary(),a)
   k+=3
-  a = one_qubit_unitary(nqubits, bits[1], angles[k:k+3]).unitary()*a
+  a = np.dot(one_qubit_unitary(nqubits, bits[1], angles[k:k+3]).unitary(),a)
   
   k=0 #k+=3
-  a = one_qubit_unitary(nqubits, bits[2], angles[k:k+3]).unitary()*a
+    a = np.dot(one_qubit_unitary(nqubits, bits[2], angles[k:k+3]).unitary(),a)
   k+=3
-  a = one_qubit_unitary(nqubits, bits[3], angles[k:k+3]).unitary()*a
+  a = np.dot(one_qubit_unitary(nqubits, bits[3], angles[k:k+3]).unitary(),a)
   k+=3
-  a = matrices.RZZ(bits[2], bits[3], angles[k])*a
+  a = np.dot(RZZ_unitary(nqubits, bits[2], bits[3], angles[k]).unitary(),a)
   k+=1
-  a = matrices.RYY(bits[2], bits[3], angles[k])*a
+  a = np.dot(RYY_unitary(nqubits, bits[2], bits[3], angles[k]).unitary(),a)
   k+=1
-  a = matrices.RXX(bits[2], bits[3], angles[k])*a
+  a = np.dot(RXX_unitary(nqubits, bits[2], bits[3], angles[k]).unitary(),a)
   k+=1
-  a = one_qubit_unitary(nqubits, bits[2], angles[k:k+3]).unitary()*a
+  a = np.dot(one_qubit_unitary(nqubits, bits[2], angles[k:k+3]).unitary(),a)
   k+=3
-  a = one_qubit_unitary(nqubits, bits[3], angles[k:k+3]).unitary()*a
+  a = np.dot(one_qubit_unitary(nqubits, bits[3], angles[k:k+3]).unitary(),a)
+
   
   # pooling - layer 1
   k=15 #k+=3
   ksink = k
-  a = one_qubit_unitary(nqubits, bits[2], angles[k:k+3]).unitary()*a
+    a = np.dot(one_qubit_unitary(nqubits, bits[2], angles[k:k+3]).unitary(),a)
   k+=3
-  a = one_qubit_unitary(nqubits, bits[0], angles[k:k+3]).unitary()*a  
-  a = matrices.CNOT(bits[0], bits[2])*a
-  a = one_qubit_unitary(nqubits, bits[2], angles[ksink:ksink+3]).invert().unitary()*a  
+  a = np.dot(one_qubit_unitary(nqubits, bits[0], angles[k:k+3]).unitary(),a)
+  a = np.dot(CNOT_unitary(nqubits,bits[0], bits[2]).unitary(),a)
+  a = np.dot(one_qubit_unitary(nqubits, bits[2], angles[ksink:ksink+3]).invert().unitary(),a)
+ 
   
   k=15 #k+=3
   ksink = k
-  a = one_qubit_unitary(nqubits, bits[3], angles[k:k+3]).unitary()*a
+    a = np.dot(one_qubit_unitary(nqubits, bits[3], angles[k:k+3]).unitary(),a)
   k+=3
-  a = one_qubit_unitary(nqubits, bits[1], angles[k:k+3]).unitary()*a
-  a = matrices.CNOT(bits[1], bits[3])*a
-  a = one_qubit_unitary(nqubits, bits[3], angles[ksink:ksink+3]).invert().unitary()*a 
+  a = np.dot(one_qubit_unitary(nqubits, bits[1], angles[k:k+3]).unitary(),a)
+  a = np.dot(CNOT_unitary(nqubits,bits[1], bits[3]).unitary(),a)
+  a = np.dot(one_qubit_unitary(nqubits, bits[3], angles[ksink:ksink+3]).invert().unitary(),a)
  
 
   # convolution - layer 2
   k=0
-  a = one_qubit_unitary(nqubits, bits[2], angles[k:k+3]).unitary()*a
+    a = np.dot(one_qubit_unitary(nqubits, bits[2], angles[k:k+3]).unitary(),a)
   k+=3
-  a = one_qubit_unitary(nqubits, bits[3], angles[k:k+3]).unitary()*a
+  a = np.dot(one_qubit_unitary(nqubits, bits[3], angles[k:k+3]).unitary(),a)
   k+=3
-  a = matrices.RZZ(bits[2], bits[3], angles[k])*a
+  a = np.dot(RZZ_unitary(nqubits, bits[2], bits[3], angles[k]).unitary(),a)
   k+=1
-  a = matrices.RYY(bits[2], bits[3], angles[k])*a
+  a = np.dot(RYY_unitary(nqubits, bits[2], bits[3], angles[k]).unitary(),a)
   k+=1
-  a = matrices.RXX(bits[2], bits[3], angles[k])*a
+  a = np.dot(RXX_unitary(nqubits, bits[2], bits[3], angles[k]).unitary(),a)
   k+=1
-  a = one_qubit_unitary(nqubits, bits[2], angles[k:k+3]).unitary()*a
+  a = np.dot(one_qubit_unitary(nqubits, bits[2], angles[k:k+3]).unitary(),a)
   k+=3
-  a = one_qubit_unitary(nqubits, bits[3], angles[k:k+3]).unitary()*a
+  a = np.dot(one_qubit_unitary(nqubits, bits[3], angles[k:k+3]).unitary(),a)
   k+=3
   
   # pooling - layer 2  
   ksink = k
-  a = one_qubit_unitary(nqubits, bits[3], angles[k:k+3]).unitary()*a
+  a = np.dot(one_qubit_unitary(nqubits, bits[3], angles[k:k+3]).unitary(),a)
   k+=3
-  a = one_qubit_unitary(nqubits, bits[2], angles[k:k+3]).unitary()*a
-  a = matrices.CNOT(bits[2], bits[3])*a
-  a = one_qubit_unitary(nqubits, bits[3], angles[ksink:ksink+3]).invert().unitary()*a  
-  
+  a = np.dot(one_qubit_unitary(nqubits, bits[2], angles[k:k+3]).unitary(),a)
+  a = np.dot(CNOT_unitary(nqubits,bits[2], bits[3]).unitary(),a)
+  a = np.dot(one_qubit_unitary(nqubits, bits[3], angles[ksink:ksink+3]).invert().unitary(),a)
+   
   return a
   
     
@@ -181,53 +181,33 @@ def one_qubit_unitary(nqubits, bit, symbols):
   return c    
     
  
-#def RXX_matrix(nqubits, bit1, bit2, angle):
-def RXX_matrix(angle):
-  theta = angle*0.5
-  cos = math.cos(theta)
-  sin = -1j*math.sin(theta)
-  m = np.array(
-        [
-            [cos, 0, 0, sin],
-            [0, cos, sin, 0],
-            [0, sin, cos, 0],
-            [sin, 0, 0, cos],
-        ]
-    )
+def RXX_unitary(nqubits, bit0, bit1, angle):
+  c = Circuit(nqubits)
+  c.add(gates.RXX(bit0,bit1,angle))
 
-  return m
+  return c
 
 
-def RYY_matrix(angle):
-  theta = angle*0.5
-  cos = math.cos(theta)
-  sin = 1j*math.sin(theta)
-  m = np.array(
-        [
-            [cos, 0, 0, sin],
-            [0, cos, -sin, 0],
-            [0, -sin, cos, 0],
-            [sin, 0, 0, cos],
-        ]
-    )
+def RYY_unitary(nqubits, bit0, bit1, angle):
+  c = Circuit(nqubits)
+  c.add(gates.RYY(bit0,bit1,angle))
 
-  return m
+  return c
 
 
-def RZZ_matrix(angle):
-  theta = angle*0.5
-  cos = math.cos(theta)
-  sin = 1j*math.sin(theta)
-  m = np.array(
-        [
-            [cos-sin, 0, 0, 0],
-            [0, cos+sin, 0, 0],
-            [0, 0, cos+sin, 0],
-            [0, 0, 0, cos-sin],
-        ]
-    )
+def RZZ_unitary(nqubits, bit0, bit1, angle):
+  c = Circuit(nqubits)
+  c.add(gates.RZZ(bit0,bit1,angle))
 
-  return m
+  return c
+
+
+def CNOT_unitary(nqubits, bit0, bit1):
+  c = Circuit(nqubits)
+  c.add(gates.CNOT(bit0,bit1))
+
+  return c
+
 
 
   
