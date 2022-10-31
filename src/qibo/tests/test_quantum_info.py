@@ -282,3 +282,5 @@ def test_process_fidelity(backend):
     backend.assert_allclose(process_fidelity(channel, channel), 1.0)
     backend.assert_allclose(average_gate_fidelity(channel), 1.0)
     backend.assert_allclose(average_gate_fidelity(channel, channel), 1.0)
+    backend.assert_allclose(gate_error(channel), 0.0)
+    backend.assert_allclose(gate_error(channel, channel), 0.0)
