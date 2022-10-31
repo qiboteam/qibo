@@ -12,7 +12,6 @@ def purity(state):
 
     Returns:
         Purity of quantum state :math:`\\rho`.
-
     """
 
     if (
@@ -37,7 +36,7 @@ def entropy(state, base: float = 2):
     """The von-Neumann entropy :math:`S(\\rho)` of a quantum state :math:`\\rho`, which
     is given by
 
-    ..math::
+    .. math::
         S(\\rho) \\coloneqq - \\text{Tr}\\left[\\rho \\, \\log(\\rho)\\right]
 
     Args:
@@ -46,7 +45,6 @@ def entropy(state, base: float = 2):
 
     Returns:
         The von-Neumann entropy :math:`S(\\rho)`.
-
     """
 
     if base <= 0.0:
@@ -87,7 +85,7 @@ def entropy(state, base: float = 2):
 def trace_distance(state, target):
     """Trace distance between two quantum states, :math:`\\rho` and :math:`\\sigma`:
 
-    ..math::
+    .. math::
         T(\\rho, \\sigma) \\coloneqq \\frac{1}{2} \\, ||\\rho - \\sigma||_{1} = \frac{1}{2} \\, \text{Tr}\\left[ \\sqrt((\\rho - \\sigma)^{\\dagger}(\\rho - \\sigma)) \\right] \\, ,
 
     where :math:`||\\cdot||_{1}` is the Schatten 1-norm.
@@ -98,7 +96,6 @@ def trace_distance(state, target):
 
     Returns:
         Trace distance between state :math:`\\rho` and target :math:`\\sigma`.
-
     """
 
     if state.shape != target.shape:
@@ -125,7 +122,7 @@ def trace_distance(state, target):
 def hilbert_schmidt_distance(state, target):
     """Hilbert-Schmidt distance between two quantum states:
 
-    ..math::
+    .. math::
         <\\rho, \\sigma>_{\\text{HS}} = \\text{Tr}\\left[(\\rho - \\sigma)^{2}\\right]
 
     Args:
@@ -134,7 +131,6 @@ def hilbert_schmidt_distance(state, target):
 
     Returns:
         Hilbert-Schmidt distance between state :math:`\\rho` and target :math:`\\sigma`.
-
     """
 
     if state.shape != target.shape:
@@ -159,7 +155,7 @@ def hilbert_schmidt_distance(state, target):
 def fidelity(state, target, validate=False):
     """Fidelity between two quantum states (when at least one state is pure).
 
-    ..math::
+    .. math::
         F(\\rho, \\sigma) = \\Tr(\\rho \\, \\sigma)
 
     Args:
@@ -169,7 +165,6 @@ def fidelity(state, target, validate=False):
 
     Returns:
         Fidelity between state :math:`\\rho` and target :math:`\\sigma`.
-
     """
 
     if state.shape != target.shape:
@@ -209,7 +204,7 @@ def fidelity(state, target, validate=False):
 def process_fidelity(channel, target=None, validate=False):
     """Process fidelity between two quantum channels (when at least one channel is` unitary),
 
-    ..math::
+    .. math::
         F_{pro}(\\mathcal{E}, \\mathcal{U}) = \\frac{1}{d^{2}} \\, \\Tr(\\mathcal{E}^{\\dagger}, \\mathcal{U})
 
     Args:
@@ -218,7 +213,6 @@ def process_fidelity(channel, target=None, validate=False):
 
     Returns:
         Process fidelity between channels :math:`\\mathcal{E}` and target :math:`\\mathcal{U}`.
-
     """
 
     if target is not None:
@@ -255,7 +249,7 @@ def process_fidelity(channel, target=None, validate=False):
 def average_gate_fidelity(channel, target=None):
     """Average gate fidelity between two quantum channels (when at least one channel is unitary),
 
-    ..math::
+    .. math::
         F_{\\text{avg}}(\\mathcal{E}, \\mathcal{U}) = \\frac{d * F_{pro}(\\mathcal{E}, \\mathcal{U}) + 1}{d + 1}
 
     where :math:`d` is the dimension of the channels and :math:`F_{pro}(\\mathcal{E}, \\mathcal{U})` is the
@@ -268,7 +262,6 @@ def average_gate_fidelity(channel, target=None):
 
     Returns:
         Process fidelity between channel :math:`\\mathcal{E}` and target unitary channel :math:`\\mathcal{U}`.
-
     """
 
     d = channel.shape[0]
@@ -279,9 +272,9 @@ def gate_error(channel, target=None):
     """Gate error between two quantum channels (when at least one is unitary), which is
     defined as
 
-    ..math:
+    .. math:
         E(\\mathcal{E}, \\mathcal{U}) = 1 - F_{\\text{avg}}(\\mathcal{E}, \\mathcal{U}) \\, ,
-    where F_{\\text{avg}}(\\mathcal{E}, \\mathcal{U}) is the `average_gate_fidelity()`
+    where :math:`F_{\\text{avg}}(\\mathcal{E}, \\mathcal{U})` is the ``average_gate_fidelity()``
     between channel :math:`\\mathcal{E}` and target :math:`\\mathcal{U}`.
 
     Args:
@@ -290,7 +283,6 @@ def gate_error(channel, target=None):
 
     Returns:
         Gate error between :math:`\\mathcal{E}` and :math:`\\mathcal{U}`.
-
     """
 
     return 1 - average_gate_fidelity(channel, target)
