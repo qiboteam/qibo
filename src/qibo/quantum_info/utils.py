@@ -46,34 +46,13 @@ def shannon_entropy(probability_array, base: float = 2):
         raise_error(ValueError, "Probability array must sum to 1.")
 
     if base == 2:
-        log_prob = (
-            np.asarray([0.0 if p == 0.0 else np.log2(p) for p in probability_array])
-            if any(probability_array == 0.0)
-            else np.log2(probability_array)
-        )
+        log_prob = np.log2(probability_array, out=np.zeros_like(probability_array), where=(probability_array!=0))
     elif base == 10:
-        log_prob = (
-            np.asarray([0.0 if p == 0.0 else np.log10(p) for p in probability_array])
-            if any(probability_array == 0.0)
-            else np.log(probability_array)
-        )
+        log_prob = np.log10(probability_array, out=np.zeros_like(probability_array), where=(probability_array!=0))
     elif base == np.e:
-        log_prob = (
-            np.asarray([0.0 if p == 0.0 else np.log(p) for p in probability_array])
-            if any(probability_array == 0.0)
-            else np.log(probability_array)
-        )
+        log_prob = np.log(probability_array, out=np.zeros_like(probability_array), where=(probability_array!=0))
     else:
-        log_prob = (
-            np.asarray(
-                [
-                    0.0 if p == 0.0 else np.log(p) / np.log(base)
-                    for p in probability_array
-                ]
-            )
-            if any(probability_array == 0.0)
-            else np.log(probability_array) / np.log(base)
-        )
+        log_prob = np.log(probability_array, out=np.zeros_like(probability_array), where=(probability_array!=0)) / np.log(base)
 
     entropy = -np.sum(probability_array * log_prob)
 
