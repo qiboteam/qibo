@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Installation script for python
 import os
 import re
