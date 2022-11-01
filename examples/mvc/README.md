@@ -19,18 +19,18 @@ that find smallest vertex cover of a given graph.
 def load_csv(filename:str):
     """ Load graph from csv file
     """
-    
+
     with open(filename, 'r', newline='') as f:
         reader = csv.reader(f)
         data = [[int(row[0]), int(row[1]), float(row[2])] for row in reader]
-    
+
     nodes = [k0 for k0, k1, v in data if k0 == k1]
     edges = [[k0, k1] for k0, k1, v in data if k0 != k1]
-    
+
     g = nx.Graph()
     g.add_nodes_from(nodes)
     g.add_edges_from(edges)
-    
+
     node_weights = {k0: {'weight': v} for k0, k1, v in data if k0 == k1}
     edge_weights = {(k0, k1): {'weight': v} for k0, k1, v in data if k0 != k1}
 
@@ -40,25 +40,25 @@ def load_csv(filename:str):
     return g
 ```
 
-csv Format:  
+csv Format:
 
-0,0,0.4696822179283675  
-1,1,0.6917392308135916  
-2,2,0.7130420958314817  
-3,3,0.49342677332980056  
-4,4,0.49661600571433673  
-5,5,0.55601135361347  
-6,6,0.2831095711244086  
-7,7,0.18737823232636885  
-0,1,0.98602725407379  
-1,2,0.935853268681996  
-2,3,0.23080434023289664  
-4,5,0.25521731195623476  
-5,6,0.37096743935296606  
-6,7,0.04408120693490547  
-0,2,0.5619060764177991  
-4,7,0.48402095290884917  
-1,6,0.7106584134580318  
+0,0,0.4696822179283675
+1,1,0.6917392308135916
+2,2,0.7130420958314817
+3,3,0.49342677332980056
+4,4,0.49661600571433673
+5,5,0.55601135361347
+6,6,0.2831095711244086
+7,7,0.18737823232636885
+0,1,0.98602725407379
+1,2,0.935853268681996
+2,3,0.23080434023289664
+4,5,0.25521731195623476
+5,6,0.37096743935296606
+6,7,0.04408120693490547
+0,2,0.5619060764177991
+4,7,0.48402095290884917
+1,6,0.7106584134580318
 
 
 
@@ -73,9 +73,9 @@ nx.draw(g, pos)
 ```
 
 
-    
+
 ![png](README_files/README_7_0.png)
-    
+
 
 
 
@@ -112,7 +112,7 @@ print(f'Number of quadratic terms: {len(quadratic)}\n')
 
     Number of linear terms: 8
     Number of quadratic terms: 9
-    
+
 
 
 ## Generate random solutions
@@ -126,7 +126,7 @@ print(f'The random solution is {random_solution}\n')
 ```
 
     The random solution is {0: 1, 1: 1, 2: 1, 3: 0, 4: 0, 5: 1, 6: 0, 7: 0}
-    
+
 
 
 ## Check feasibility
@@ -138,7 +138,7 @@ print(f'The feasibility is {feasibility}\n')
 ```
 
     The feasibility is False
-    
+
 
 
 ## Fix broken constraints
@@ -150,7 +150,7 @@ print(f'After fixation, the solution is {fixed_solution}\n')
 ```
 
     After fixation, the solution is {0: 1, 1: 1, 2: 1, 3: 0, 4: 1, 5: 1, 6: 1, 7: 0}
-    
+
 
 
 
@@ -160,7 +160,7 @@ print(f'The feasibility is {feasibility}\n')
 ```
 
     The feasibility is True
-    
+
 
 
 ## Visualisation
@@ -184,9 +184,9 @@ ax1.set_title(f'Vertex cover in orange after fix')
 
 
 
-    
+
 ![png](README_files/README_22_1.png)
-    
+
 
 
 ## Calculate energy
