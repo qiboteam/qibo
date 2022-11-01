@@ -158,7 +158,7 @@ def fidelity(state, target, validate=False):
 
     .. math::
         F(\\rho, \\sigma) = \\text{Tr}^{2}\\left( \\sqrt{\\sqrt{\\sigma} \\, \\rho^{\\dagger} \\, \\sqrt{\\sigma}} \\right) = \\text{Tr}(\\rho \\, \\sigma)
-    
+
     where the last equality holds because the ``target`` state :math:`\\sigma` is assumed to be pure.
 
     Args:
