@@ -1,8 +1,22 @@
-from typing import Dict, List, Tuple, Union, Any, Optional, Generator, Iterator, Hashable
+# -*- coding: utf-8 -*-
+from typing import (
+    Any,
+    Dict,
+    Generator,
+    Hashable,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    Union,
+)
 
-def binary2spin(linear: Dict[int, float],
-                quadratic: Dict[Tuple[int, int], float],
-                offset: float=0,):
+
+def binary2spin(
+    linear: Dict[int, float],
+    quadratic: Dict[Tuple[int, int], float],
+    offset: float = 0,
+):
     """Convert binary model to spin model
 
         Please remember to put a negative sign to h and J after using this
@@ -21,7 +35,7 @@ def binary2spin(linear: Dict[int, float],
         offset (float): offset of the spin model
     """
 
-    h = dict((x, 0.5 * w) for x, w in linear.items())
+    h = {x: 0.5 * w for x, w in linear.items()}
 
     J = []
     for (x, y), w in quadratic.items():
@@ -36,12 +50,14 @@ def binary2spin(linear: Dict[int, float],
     return h, J, offset
 
 
-def spin2binary(h: Dict[int, float], 
-                J: Dict[Tuple[int, int], float],
-                offset: float=0,):
+def spin2binary(
+    h: Dict[int, float],
+    J: Dict[Tuple[int, int], float],
+    offset: float = 0,
+):
     """Convert spin model to binary model
 
-        Please remember to put a negative sign to h and J before using this 
+        Please remember to put a negative sign to h and J before using this
         function if you extract them from a hamiltonian.  Hamiltonians
         usually have a leading negative sign in them, but QUBOs don't.
 
@@ -56,13 +72,13 @@ def spin2binary(h: Dict[int, float],
         offset (float): offset of the binary model
     """
 
-    linear = dict((s, 2. * bias) for s, bias in h.items())
+    linear = {s: 2.0 * bias for s, bias in h.items()}
 
     quadratic = []
     for (s, t), bias in J.items():
-        quadratic.append(((s, t), 4. * bias))
-        linear[s] -= 2. * bias
-        linear[t] -= 2. * bias
+        quadratic.append(((s, t), 4.0 * bias))
+        linear[s] -= 2.0 * bias
+        linear[t] -= 2.0 * bias
     quadratic = dict(quadratic)
 
     offset -= sum(linear.values())
@@ -70,9 +86,12 @@ def spin2binary(h: Dict[int, float],
 
     return linear, quadratic, offset
 
-def spin2QiboHamiltonian(h: Dict[int, float], 
-                         J: Dict[Tuple[int, int], float],
-                         dense: bool=True,):
+
+def spin2QiboHamiltonian(
+    h: Dict[int, float],
+    J: Dict[Tuple[int, int], float],
+    dense: bool = True,
+):
     """Convert spin model to qibo Hamiltonian
 
         Mixer is not included.
