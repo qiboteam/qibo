@@ -5,7 +5,7 @@ import numpy as np
 from qibo import __version__
 from qibo.backends import einsum_utils
 from qibo.backends.abstract import Backend
-from qibo.backends.matrices import Matrices
+from qibo.backends.npmatrices import NumpyMatrices
 from qibo.config import log, raise_error
 from qibo.gates import FusedGate
 from qibo.gates.abstract import ParametrizedGate, SpecialGate
@@ -17,7 +17,7 @@ class NumpyBackend(Backend):
         super().__init__()
         self.np = np
         self.name = "numpy"
-        self.matrices = Matrices(self.dtype)
+        self.matrices = NumpyMatrices(self.dtype)
         self.tensor_types = np.ndarray
         self.versions = {"qibo": __version__, "numpy": self.np.__version__}
         self.numeric_types = (

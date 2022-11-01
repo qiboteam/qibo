@@ -16,7 +16,7 @@ else:  # pragma: no cover
         return wrapper
 
 
-class Matrices:
+class NumpyMatrices:
     """Matrix representation of every gate as a numpy array."""
 
     def __init__(self, dtype):

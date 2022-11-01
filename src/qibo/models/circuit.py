@@ -1321,6 +1321,7 @@ class Circuit:
             "KrausChannel": "K",
             "UnitaryChannel": "U",
             "ThermalRelaxationChannel": "TR",
+            "DepolarizingChannel": "D",
             "ResetChannel": "R",
             "PartialTrace": "PT",
             "EntanglementEntropy": "EE",
