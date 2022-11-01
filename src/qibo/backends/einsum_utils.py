@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Gates use ``einsum`` to apply gates to state vectors. The einsum string that
 specifies the contraction indices is created using the following methods and

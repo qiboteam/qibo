@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from itertools import product
 
 import matplotlib.pyplot as plt

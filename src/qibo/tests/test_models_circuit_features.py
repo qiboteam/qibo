@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Test how features defined in :class:`qibo.models.circuit.Circuit` work during circuit execution."""
 import numpy as np
 import pytest
