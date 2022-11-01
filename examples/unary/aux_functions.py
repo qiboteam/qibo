@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 from scipy.special import erfinv
 
@@ -12,9 +13,13 @@ def log_normal(x, mu, sig):
     Returns:
         f (np.array): normalized probability distribution for the intervals of x.
     """
-    dx = x[1]-x[0]
-    log_norm = 1 / (x * sig * np.sqrt(2 * np.pi)) * np.exp(- np.power(np.log(x) - mu, 2.) / (2 * np.power(sig, 2.)))
-    f = log_norm*dx/(np.sum(log_norm * dx))
+    dx = x[1] - x[0]
+    log_norm = (
+        1
+        / (x * sig * np.sqrt(2 * np.pi))
+        * np.exp(-np.power(np.log(x) - mu, 2.0) / (2 * np.power(sig, 2.0)))
+    )
+    f = log_norm * dx / (np.sum(log_norm * dx))
     return f
 
 
@@ -31,11 +36,17 @@ def classical_payoff(S0, sig, r, T, K, samples=1000000):
     Returns:
         cl_payoff (real): classically computed payoff.
     """
-    mu = (r - 0.5 * sig ** 2) * T + np.log(S0)  # Define all the parameters to be used in the computation
-    mean = np.exp(mu + 0.5 * T * sig ** 2)  # Set the relevant zone of study and create the mapping between qubit and option price, and
+    mu = (r - 0.5 * sig**2) * T + np.log(
+        S0
+    )  # Define all the parameters to be used in the computation
+    mean = np.exp(
+        mu + 0.5 * T * sig**2
+    )  # Set the relevant zone of study and create the mapping between qubit and option price, and
     # generate the target lognormal distribution within the interval
-    variance = (np.exp(T * sig ** 2) - 1) * np.exp(2 * mu + T * sig ** 2)
-    Sp = np.linspace(max(mean - 3 * np.sqrt(variance), 0), mean + 3 * np.sqrt(variance), samples)
+    variance = (np.exp(T * sig**2) - 1) * np.exp(2 * mu + T * sig**2)
+    Sp = np.linspace(
+        max(mean - 3 * np.sqrt(variance), 0), mean + 3 * np.sqrt(variance), samples
+    )
     lnp = log_normal(Sp, mu, sig * np.sqrt(T))
     cl_payoff = 0
     for i in range(len(Sp)):
@@ -67,17 +78,22 @@ def get_theta(m_s, ones_s, zeroes_s, alpha=0.05):
         theta_s[0] = np.arcsin(np.sqrt(a_s[0]))
         err_theta_s[0] = z / 2 / np.sqrt(valid_s[0])
     else:
-        raise ValueError('AE does not start with m=0')
+        raise ValueError("AE does not start with m=0")
     for j, m in enumerate(m_s[1:]):
         aux_theta = np.arcsin(np.sqrt(a_s[j + 1]))
-        theta = [aux_theta] + [np.pi * k + aux_theta for k in range(1, m + 1, 1)] + \
-                [np.pi * k - aux_theta for k in range(1, m + 1, 1)]
+        theta = (
+            [aux_theta]
+            + [np.pi * k + aux_theta for k in range(1, m + 1, 1)]
+            + [np.pi * k - aux_theta for k in range(1, m + 1, 1)]
+        )
         theta = np.array(theta) / (2 * m + 1)
         arg = np.argmin(np.abs(theta - theta_s[j]))
         new_theta = theta[arg]
         new_error_theta = z / 2 / np.sqrt(valid_s[j + 1]) / (2 * m + 1)
-        theta_s[j + 1] = (theta_s[j] / err_theta_s[j] ** 2 + new_theta / new_error_theta**2 ) /\
-                         (1 / err_theta_s[j] ** 2 + 1 / new_error_theta**2 )
-        err_theta_s[j + 1] = (1 / err_theta_s[j] ** 2 + 1 / new_error_theta**2 )**(-1/2)
+        theta_s[j + 1] = (
+            theta_s[j] / err_theta_s[j] ** 2 + new_theta / new_error_theta**2
+        ) / (1 / err_theta_s[j] ** 2 + 1 / new_error_theta**2)
+        err_theta_s[j + 1] = (1 / err_theta_s[j] ** 2 + 1 / new_error_theta**2) ** (
+            -1 / 2
+        )
     return theta_s, err_theta_s
-

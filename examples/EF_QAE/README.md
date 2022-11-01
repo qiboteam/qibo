@@ -4,7 +4,7 @@ Code at: [https://github.com/qiboteam/qibo/tree/master/examples/EF_QAE](https://
 
 ## Problem overview
 
-Noisy intermediate-scale quantum computers are limited by coherence times and gate errors. Therefore, any algorithm that reduces quantum computational resources is especially valuable in the near future. Here, we present the enhanced feature quantum autoencoder (EF-QAE). As we will see, its key ingredient is to define a parameterized quantum circuit that depends upon adjustable parameters and a feature vector that characterizes the model we aim to compress. 
+Noisy intermediate-scale quantum computers are limited by coherence times and gate errors. Therefore, any algorithm that reduces quantum computational resources is especially valuable in the near future. Here, we present the enhanced feature quantum autoencoder (EF-QAE). As we will see, its key ingredient is to define a parameterized quantum circuit that depends upon adjustable parameters and a feature vector that characterizes the model we aim to compress.
 
 Remarkably, EF-QAE achieves better compression than the standard [quantum autoencoder (QAE)](https://iopscience.iop.org/article/10.1088/2058-9565/aa8072) using the same amount of limited quantum resources. In contrast, it needs additional classical optimization.  In this sense, EF-QAE is a step toward what could be done on NISQ computers, shortening the distance between current quantum devices and practical applications.
 

@@ -91,7 +91,7 @@ when running Qibo on GPU.
 This backend is used by default, however, if needed, in order to switch to the
 ``qibojit`` backend please do:
 
-.. testcode::
+.. code-block::  python
 
       import qibo
       qibo.set_backend("qibojit")
@@ -101,7 +101,7 @@ custom numba kernels if a GPU is not available.
 If a GPU is available it is possible to switch to the cuQuantum implementation
 using the ``platform`` argument, for example:
 
-.. testcode::
+.. code-block::  python
 
       import qibo
       # switch to the cuquantum implementation
@@ -133,6 +133,11 @@ In order to install the package use the following command:
       <https://docs.cupy.dev/en/stable/install.html>`_ for your GPU hardware.
       The installation instructions for `cuQuantum <https://developer.nvidia.com/cuquantum-sdk>`_
       are available in the `official documentation <https://docs.nvidia.com/cuda/cuquantum/python/README.html>`__.
+      ``qibojit`` is compatible with
+      `cuQuantum SDK v22.03 <https://docs.nvidia.com/cuda/cuquantum/cuquantum_sdk_release_notes.html#cuquantum-sdk-v22-03>`__
+      and
+      `cuQuantum SDK v22.05 <https://docs.nvidia.com/cuda/cuquantum/cuquantum_sdk_release_notes.html#cuquantum-sdk-v22-05>`__.
+
 
 Installing with conda
 """""""""""""""""""""
@@ -157,6 +162,11 @@ To install both packages with conda run:
       <https://docs.cupy.dev/en/stable/install.html>`_ for your GPU hardware.
       The installation instructions for `cuQuantum <https://developer.nvidia.com/cuquantum-sdk>`_
       are available in the `official documentation <https://docs.nvidia.com/cuda/cuquantum/python/README.html>`__.
+      ``qibojit`` is compatible with
+      `cuQuantum SDK v22.03 <https://docs.nvidia.com/cuda/cuquantum/cuquantum_sdk_release_notes.html#cuquantum-sdk-v22-03>`__
+      and
+      `cuQuantum SDK v22.05 <https://docs.nvidia.com/cuda/cuquantum/cuquantum_sdk_release_notes.html#cuquantum-sdk-v22-05>`__.
+
 
 Installing from source
 """"""""""""""""""""""
@@ -191,7 +201,7 @@ backend.
 This backend is used by default if ``qibojit`` is not installed, however, if
 needed, in order to switch to the ``tensorflow`` backend please do:
 
-.. testcode::
+.. code-block::  python
 
       import qibo
       qibo.set_backend("tensorflow")
@@ -220,7 +230,7 @@ This backend is used by default if ``qibojit`` or ``tensorflow`` are not
 installed, however, if needed, in order to switch to the ``numpy`` backend
 please do:
 
-.. testcode::
+.. code-block::  python
 
       import qibo
       qibo.set_backend("numpy")
