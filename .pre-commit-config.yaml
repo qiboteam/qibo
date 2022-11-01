@@ -18,6 +18,7 @@ repos:
       - id: check-yaml
       - id: debug-statements
       - id: fix-encoding-pragma
+        args: ['--remove']
   - repo: https://github.com/psf/black
     rev: 22.10.0
     hooks:
