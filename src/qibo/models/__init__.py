@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from qibo.models import hep, tsp
 from qibo.models.circuit import Circuit
 from qibo.models.evolution import AdiabaticEvolution, StateEvolution
