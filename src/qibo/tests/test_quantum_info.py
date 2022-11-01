@@ -123,21 +123,23 @@ def test_entropy(backend, base):
     backend.assert_allclose(entropy(state), 0.0)
 
     d = 4
-    Id = np.eye(d) / d
+    Id = np.eye(d)
     Id = backend.cast(Id, dtype=Id.dtype)
 
     state = np.array([1.0, 0.0, 0.0, 0.0])
     state = np.outer(state, state)
     state = backend.cast(state, dtype=state.dtype)
 
+    state = Id / d
+    state = backend.cast(state, dtype=state.dtype)
     if base == 2:
-        lamb = 0.0
-        state = lamb * state + (1 - lamb) * Id
         backend.assert_allclose(entropy(state, base), 2.0)
+    elif base == 10:
+        backend.assert_allclose(entropy(state, base), 0.6020599913279624)
+    elif base == np.e:
+        backend.assert_allclose(entropy(state, base), 1.3862943611198906)
     else:
-        lamb = 1.0
-        state = lamb * state + (1 - lamb) * Id
-        backend.assert_allclose(entropy(state, base), 0.0)
+        backend.assert_allclose(entropy(state, base), 0.8613531161467861)
 
 
 def test_trace_distance(backend):
