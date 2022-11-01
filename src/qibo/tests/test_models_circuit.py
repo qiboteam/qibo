@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test all methods defined in `qibo/models/circuit.py`."""
 import pytest
 
