@@ -1,14 +1,14 @@
-import os
+# -*- coding: utf-8 -*-
 import json
+import os
 
 
 class BenchmarkLogger(list):
-
     def __init__(self, filename=None):
         self.filename = filename
         if filename is not None and os.path.isfile(filename):
             print("Extending existing logs from {}.".format(filename))
-            with open(filename, "r") as file:
+            with open(filename) as file:
                 super().__init__(json.load(file))
         else:
             if filename is not None:

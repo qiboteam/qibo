@@ -48,7 +48,6 @@ Contents
     :maxdepth: 2
     :caption: Appendix
 
-    appendix/benchmarks
     appendix/citing-qibo
 
 
@@ -57,3 +56,20 @@ Indices and tables
 
 * :ref:`genindex`
 * :ref:`search`
+
+
+Supporters and collaborators
+============================
+
+* Quantum Research Center, Technology Innovation Institute (TII), United Arab Emirates
+* Università degli Studi di Milano (UNIMI), Italy.
+* Istituto Nazionale di Fisica Nucleare (INFN), Italy.
+* European Organization for Nuclear research (CERN), Switzerland.
+* Universitat de Barcelona (UB), Spain.
+* Barcelona Supercomputing Center (BSC), Spain.
+* Qilimanjaro Quantum Tech, Spain.
+* Centre for Quantum Technologies (CQT), Singapore.
+* Institute of High Performance Computing (IHPC), Singapore.
+* National Supercomputing Centre (NSCC), Singapore.
+* RIKEN Center for Computational Science (R-CCS), Japan.
+* NVIDIA (cuQuantum), USA.

@@ -45,6 +45,7 @@ The current code standards that are applied to any new changes:
 - **Tests**: We use pytest to run our tests that must continue to pass when new changes are integrated in the code. Regression tests, which are run by the continuous integration workflow are stored in ``qibo/tests``. These tests contain several examples about how to use Qibo.
 - **Coverage**: Test coverage should be maintained / be at least at the same level when new features are implemented.
 - **Pylint**: Test code for anomalies, such as bad coding practices, missing documentation, unused variables.
+- **Pre commit**: We use pre-commit to enforce automation and to format the code. The `pre-commit ci <https://pre-commit.ci/>`_ will automatically run pre-commit whenever a commit is performed inside a pull request.
 
 Besides the linter, further custom rules are applied e.g. checks for ``print`` statements that bypass the logging system
 (such check can be excluded line by line with the ``# CodeText:skip`` flag).
