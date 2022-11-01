@@ -5,12 +5,12 @@ import os
 import numpy as np
 
 from qibo import __version__
-from qibo.backends.matrices import Matrices
+from qibo.backends.npmatrices import NumpyMatrices
 from qibo.backends.numpy import NumpyBackend
 from qibo.config import TF_LOG_LEVEL, log, raise_error
 
 
-class TensorflowMatrices(Matrices):
+class TensorflowMatrices(NumpyMatrices):
     # Redefine parametrized gate matrices for backpropagation to work
 
     def __init__(self, dtype):
