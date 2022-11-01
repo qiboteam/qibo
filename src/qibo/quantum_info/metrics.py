@@ -124,7 +124,7 @@ def hilbert_schmidt_distance(state, target):
     """Hilbert-Schmidt distance between two quantum states:
 
     .. math::
-        <\\rho, \\sigma>_{\\text{HS}} = \\text{Tr}\\left[(\\rho - \\sigma)^{2}\\right]
+        <\\rho \\, , \\, \\sigma>_{\\text{HS}} = \\text{Tr}\\left[(\\rho - \\sigma)^{2}\\right]
 
     Args:
         state: state vector or density matrix.
@@ -157,7 +157,7 @@ def fidelity(state, target, validate=False):
     """Fidelity between two quantum states (when at least one state is pure).
 
     .. math::
-        F(\\rho, \\sigma) = \\Tr(\\rho \\, \\sigma)
+        F(\\rho, \\sigma) = \\text{Tr}(\\rho \\, \\sigma)
 
     Args:
         state: state vector or density matrix.
@@ -206,7 +206,7 @@ def process_fidelity(channel, target=None, validate=False):
     """Process fidelity between two quantum channels (when at least one channel is` unitary),
 
     .. math::
-        F_{pro}(\\mathcal{E}, \\mathcal{U}) = \\frac{1}{d^{2}} \\, \\Tr(\\mathcal{E}^{\\dagger}, \\mathcal{U})
+        F_{pro}(\\mathcal{E}, \\mathcal{U}) = \\frac{1}{d^{2}} \\, \\text{Tr}(\\mathcal{E}^{\\dagger} \\, \\mathcal{U})
 
     Args:
         channel: quantum channel.
@@ -251,7 +251,7 @@ def average_gate_fidelity(channel, target=None):
     """Average gate fidelity between two quantum channels (when at least one channel is unitary),
 
     .. math::
-        F_{\\text{avg}}(\\mathcal{E}, \\mathcal{U}) = \\frac{d * F_{pro}(\\mathcal{E}, \\mathcal{U}) + 1}{d + 1}
+        F_{\\text{avg}}(\\mathcal{E}, \\mathcal{U}) = \\frac{d \\, F_{pro}(\\mathcal{E}, \\mathcal{U}) + 1}{d + 1}
 
     where :math:`d` is the dimension of the channels and :math:`F_{pro}(\\mathcal{E}, \\mathcal{U})` is the
     :meth:`~qibo.metrics.process_fidelily` of channel :math:`\\mathcal{E}` with respect to the unitary

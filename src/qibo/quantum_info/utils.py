@@ -8,7 +8,7 @@ def shannon_entropy(probability_array, base: float = 2):
     """Calculate the Shannon entropy of a probability array :math:`\\mathbf{p}`, which is given by
 
     .. math::
-        H(\\mathbf{p}) \\coloneqq - \\sum_{k = 0}^{d^{2} - 1} \\, p_{k} \\, \\log_{b}(p_{k}) \\, ,
+        H(\\mathbf{p}) = - \\sum_{k = 0}^{d^{2} - 1} \\, p_{k} \\, \\log_{b}(p_{k}) \\, ,
 
     where :math:`d = \\text{dim}(\\mathcal{H})` is the dimension of the Hilbert space :math:`\\mathcal{H}`,
     :math:`b` is the log base (default 2), and :math:`0 \\log_{b}(0) \\equiv 0`.
@@ -66,7 +66,13 @@ def shannon_entropy(probability_array, base: float = 2):
 
 def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False):
     """Calculate the Hellinger distance :math:`H(p, q)` between
-    two discrete probability distributions, :math:`p` and :math:`q`.
+    two discrete probability distributions, :math:`\\mathbf{p}` and :math:`\\mathbf{q}`.
+    It is defined as
+
+    .. math::
+        H(\\mathbf{p} \\, , \\, \\mathbf{q}) = \\frac{1}{\\sqrt{2}} \\, || \\sqrt{\\mathbf{p}} - \\sqrt{\\mathbf{q}} ||_{2}
+
+    where :math:`||\\cdot||_{2}` is the Euclidean norm.
 
     Args:
         prob_dist_p: (discrete) probability distribution :math:`p`.
