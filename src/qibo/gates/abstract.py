@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import collections
 from abc import ABC, abstractmethod
 from collections.abc import Iterable

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import sys
 
 from qibo.config import raise_error

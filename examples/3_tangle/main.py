@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import argparse
 
 import matplotlib.pyplot as plt

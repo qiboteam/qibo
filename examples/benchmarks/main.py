@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Generic benchmark script that runs circuits defined in `benchmark_models.py`.
 

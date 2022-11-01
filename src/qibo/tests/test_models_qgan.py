@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Test style-qGAN model defined in `qibo/models/qgan.py`."""
 import numpy as np
 import pytest
