@@ -155,3 +155,24 @@ ham = hamiltonian_qap((F, D), dense=False)
 
     [Qibo 0.1.6|INFO|2022-05-31 14:47:26]: Using qibojit backend on /GPU:0
 
+
+# Solve the Hamiltonian with QAOA
+
+QAP of size 4 is too large for Qibo QAOA. Let's reduce the size to 3
+
+
+```python
+ham = hamiltonian_qap((F[:3,:3], D[:3,:3]), dense=False)
+
+
+from qibo import models, hamiltonians 
+
+# Create QAOA model
+qaoa = models.QAOA(ham)
+
+# Optimize starting from a random guess for the variational parameters
+initial_parameters = 0.01 * np.random.uniform(0,1,2)
+best_energy, final_parameters, extra = qaoa.minimize(initial_parameters, method="BFGS")
+```
+
+    [Qibo 0.1.8|WARNING|2022-10-31 14:14:37]: Calculating the dense form of a symbolic Hamiltonian. This operation is memory inefficient.
