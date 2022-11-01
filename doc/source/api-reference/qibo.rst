@@ -838,11 +838,11 @@ variational model.
 Quantum Information
 -------------------
 
-
+.
 
 Metrics
 ^^^^^^^
-
+.
 
 Purity
 """"""
