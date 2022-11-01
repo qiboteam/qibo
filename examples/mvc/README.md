@@ -115,7 +115,7 @@ print(f'Number of quadratic terms: {len(quadratic)}\n')
     
 
 
-# Generate random solutions
+## Generate random solutions
 
 
 ```python
@@ -129,7 +129,7 @@ print(f'The random solution is {random_solution}\n')
     
 
 
-# Check feasibility
+## Check feasibility
 
 
 ```python
@@ -141,7 +141,7 @@ print(f'The feasibility is {feasibility}\n')
     
 
 
-# Fix broken constraints
+## Fix broken constraints
 
 
 ```python
@@ -163,7 +163,7 @@ print(f'The feasibility is {feasibility}\n')
     
 
 
-# Visualisation
+## Visualisation
 
 
 ```python
@@ -189,7 +189,7 @@ ax1.set_title(f'Vertex cover in orange after fix')
     
 
 
-# Calculate energy
+## Calculate energy
 
 
 ```python
@@ -199,3 +199,29 @@ print(f'The energy is {energy}')
 
     The energy is 3.2102004750256556
 
+
+#  Hamiltonian of the MVC problem
+
+
+```python
+ham = hamiltonian_mvc(g, penalty=penalty, dense=True)
+```
+
+    [Qibo 0.1.8|INFO|2022-11-01 10:26:19]: Using numpy backend on /CPU:0
+
+
+## Solve the hamiltonian with QAOA
+
+
+```python
+from qibo import models, hamiltonians
+
+# Create QAOA model
+qaoa = models.QAOA(ham)
+
+# Optimize starting from a random guess for the variational parameters
+initial_parameters = 0.01 * np.random.uniform(0,1,2)
+best_energy, final_parameters, extra = qaoa.minimize(initial_parameters, method="BFGS")
+```
+
+    [Qibo 0.1.8|WARNING|2022-10-31 14:14:37]: Calculating the dense form of a symbolic Hamiltonian. This operation is memory inefficient.
