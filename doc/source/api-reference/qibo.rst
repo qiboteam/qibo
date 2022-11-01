@@ -29,8 +29,8 @@ Circuit
 """""""
 
 .. autoclass:: qibo.models.circuit.Circuit
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 
 Circuit addition
@@ -135,60 +135,60 @@ Quantum Fourier Transform (QFT)
 """""""""""""""""""""""""""""""
 
 .. autoclass:: qibo.models.qft.QFT
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Variational Quantum Eigensolver (VQE)
 """""""""""""""""""""""""""""""""""""
 
 .. autoclass:: qibo.models.variational.VQE
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Adiabatically Assisted Variational Quantum Eigensolver (AAVQE)
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 .. autoclass:: qibo.models.variational.AAVQE
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Quantum Approximate Optimization Algorithm (QAOA)
 """""""""""""""""""""""""""""""""""""""""""""""""
 
 .. autoclass:: qibo.models.variational.QAOA
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Feedback-based Algorithm for Quantum Optimization (FALQON)
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 .. autoclass:: qibo.models.variational.FALQON
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 
 Style-based Quantum Generative Adversarial Network (style-qGAN)
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 .. autoclass:: qibo.models.qgan.StyleQGAN
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 
 Grover's Algorithm
 """"""""""""""""""
 
 .. autoclass:: qibo.models.grover.Grover
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 
 Travelling Salesman Problem
 """""""""""""""""""""""""""
 
 .. automodule:: qibo.models.tsp
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 
 .. _timeevolution:
@@ -200,15 +200,15 @@ State evolution
 """""""""""""""
 
 .. autoclass:: qibo.models.evolution.StateEvolution
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Adiabatic evolution
 """""""""""""""""""
 
 .. autoclass:: qibo.models.evolution.AdiabaticEvolution
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 _______________________
 
@@ -231,8 +231,8 @@ Abstract gate
 ^^^^^^^^^^^^^
 
 .. autoclass:: qibo.gates.abstract.Gate
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Single qubit gates
 ^^^^^^^^^^^^^^^^^^
@@ -241,99 +241,99 @@ Hadamard (H)
 """"""""""""
 
 .. autoclass:: qibo.gates.H
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Pauli X (X)
 """""""""""
 
 .. autoclass:: qibo.gates.X
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Pauli Y (Y)
 """""""""""
 
 .. autoclass:: qibo.gates.Y
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Pauli Z (Z)
 """""""""""
 
 .. autoclass:: qibo.gates.Z
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 S gate (S)
 """""""""""
 
 .. autoclass:: qibo.gates.S
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 T gate (T)
 """""""""""
 
 .. autoclass:: qibo.gates.T
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Identity (I)
 """"""""""""
 
 .. autoclass:: qibo.gates.I
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Measurement (M)
 """""""""""""""
 
 .. autoclass:: qibo.gates.M
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Rotation X-axis (RX)
 """"""""""""""""""""
 
 .. autoclass:: qibo.gates.RX
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Rotation Y-axis (RY)
 """"""""""""""""""""
 
 .. autoclass:: qibo.gates.RY
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Rotation Z-axis (RZ)
 """"""""""""""""""""
 
 .. autoclass:: qibo.gates.RZ
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 First general unitary (U1)
 """"""""""""""""""""""""""
 
 .. autoclass:: qibo.gates.U1
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Second general unitary (U2)
 """""""""""""""""""""""""""
 
 .. autoclass:: qibo.gates.U2
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Third general unitary (U3)
 """"""""""""""""""""""""""
 
 .. autoclass:: qibo.gates.U3
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Two qubit gates
 ^^^^^^^^^^^^^^^
@@ -342,85 +342,85 @@ Controlled-NOT (CNOT)
 """""""""""""""""""""
 
 .. autoclass:: qibo.gates.CNOT
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Controlled-phase (CZ)
 """""""""""""""""""""
 
 .. autoclass:: qibo.gates.CZ
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Controlled-rotation X-axis (CRX)
 """"""""""""""""""""""""""""""""
 
 .. autoclass:: qibo.gates.CRX
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Controlled-rotation Y-axis (CRY)
 """"""""""""""""""""""""""""""""
 
 .. autoclass:: qibo.gates.CRY
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Controlled-rotation Z-axis (CRZ)
 """"""""""""""""""""""""""""""""
 
 .. autoclass:: qibo.gates.CRZ
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Controlled first general unitary (CU1)
 """"""""""""""""""""""""""""""""""""""
 
 .. autoclass:: qibo.gates.CU1
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Controlled second general unitary (CU2)
 """""""""""""""""""""""""""""""""""""""
 
 .. autoclass:: qibo.gates.CU2
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Controlled third general unitary (CU3)
 """"""""""""""""""""""""""""""""""""""
 
 .. autoclass:: qibo.gates.CU3
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Swap (SWAP)
 """""""""""
 
 .. autoclass:: qibo.gates.SWAP
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 f-Swap (FSWAP)
 """"""""""""""
 
 .. autoclass:: qibo.gates.FSWAP
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 fSim
 """"
 
 .. autoclass:: qibo.gates.fSim
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 fSim with general rotation
 """"""""""""""""""""""""""
 
 .. autoclass:: qibo.gates.GeneralizedfSim
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 
 Special gates
@@ -430,29 +430,29 @@ Toffoli
 """""""
 
 .. autoclass:: qibo.gates.TOFFOLI
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Arbitrary unitary
 """""""""""""""""
 
 .. autoclass:: qibo.gates.Unitary
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Callback gate
 """""""""""""
 
 .. autoclass:: qibo.gates.CallbackGate
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Fusion gate
 """""""""""
 
 .. autoclass:: qibo.gates.FusedGate
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 _______________________
 
@@ -473,43 +473,43 @@ Kraus channel
 ^^^^^^^^^^^^^
 
 .. autoclass:: qibo.gates.KrausChannel
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Unitary channel
 ^^^^^^^^^^^^^^^
 
 .. autoclass:: qibo.gates.UnitaryChannel
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Pauli noise channel
 ^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: qibo.gates.PauliNoiseChannel
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Depolarizing channel
 ^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: qibo.gates.DepolarizingChannel
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Reset channel
 ^^^^^^^^^^^^^
 
 .. autoclass:: qibo.gates.ResetChannel
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Thermal relaxation channel
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: qibo.gates.ThermalRelaxationChannel
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 _______________________
 
@@ -524,8 +524,8 @@ For more information on the use of :class:`qibo.noise.NoiseModel` see
 :ref:`How to perform noisy simulation? <noisemodel-example>`
 
 .. autoclass:: qibo.noise.NoiseModel
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Quantum errors
 ^^^^^^^^^^^^^^
@@ -533,20 +533,20 @@ Quantum errors
 The quantum errors available to build a noise model are the following:
 
 .. autoclass:: qibo.noise.PauliError
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 .. autoclass:: qibo.noise.ThermalRelaxationError
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 .. autoclass:: qibo.noise.DepolarizingError
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 .. autoclass:: qibo.noise.ResetError
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 
 .. _Hamiltonians:
@@ -557,8 +557,8 @@ Hamiltonians
 The main abstract Hamiltonian object of Qibo is:
 
 .. autoclass:: qibo.hamiltonians.abstract.AbstractHamiltonian
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 
 Matrix Hamiltonian
@@ -584,8 +584,8 @@ to dense matrices. Both backends support calculating Hamiltonian expectation
 values using a sparse Hamiltonian matrix.
 
 .. autoclass:: qibo.hamiltonians.Hamiltonian
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
     :noindex:
 
 
@@ -599,8 +599,8 @@ For more information on constructing Hamiltonians using symbols we refer to the
 :ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>` example.
 
 .. autoclass:: qibo.hamiltonians.SymbolicHamiltonian
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
     :noindex:
 
 
@@ -620,43 +620,43 @@ Heisenberg XXZ
 ^^^^^^^^^^^^^^
 
 .. autoclass:: qibo.hamiltonians.XXZ
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Non-interacting Pauli-X
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: qibo.hamiltonians.X
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Non-interacting Pauli-Y
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: qibo.hamiltonians.Y
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Non-interacting Pauli-Z
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: qibo.hamiltonians.Z
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Transverse field Ising model
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: qibo.hamiltonians.TFIM
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Max Cut
 ^^^^^^^
 
 .. autoclass:: qibo.hamiltonians.MaxCut
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 
 .. note::
@@ -688,20 +688,20 @@ and can be used to construct :class:`qibo.hamiltonians.SymbolicHamiltonian`
 objects as described in the previous section.
 
 .. autoclass:: qibo.symbols.Symbol
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 .. autoclass:: qibo.symbols.X
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 .. autoclass:: qibo.symbols.Y
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 .. autoclass:: qibo.symbols.Z
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 _______________________
 
@@ -745,8 +745,8 @@ Circuit result
 ^^^^^^^^^^^^^^
 
 .. autoclass:: qibo.states.CircuitResult
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 
 .. _Callbacks:
@@ -764,43 +764,43 @@ calculated inside the circuit is defined by adding a :class:`qibo.gates.Callback
 This can be added similarly to a standard gate and does not affect the state vector.
 
 .. autoclass:: qibo.callbacks.Callback
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Entanglement entropy
 ^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: qibo.callbacks.EntanglementEntropy
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Norm
 ^^^^
 
 .. autoclass:: qibo.callbacks.Norm
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Overlap
 ^^^^^^^
 
 .. autoclass:: qibo.callbacks.Overlap
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Energy
 ^^^^^^
 
 .. autoclass:: qibo.callbacks.Energy
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 Gap
 ^^^
 
 .. autoclass:: qibo.callbacks.Gap
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 
 .. _Solvers:
@@ -813,8 +813,8 @@ They perform steps in time by integrating the time-dependent Schrodinger
 equation.
 
 .. automodule:: qibo.solvers
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 .. _Optimizers:
 
@@ -829,83 +829,83 @@ can be passed when calling the ``minimize`` method of the respective Qibo
 variational model.
 
 .. automodule:: qibo.optimizers
-   :members:
-   :member-order: bysource
-   :exclude-members: ParallelBFGS
+    :members:
+    :member-order: bysource
+    :exclude-members: ParallelBFGS
 
 .. _Quantum Information:
 
 Quantum Information
 -------------------
 
-
+.
 
 Metrics
 ^^^^^^^
-
+.
 
 Purity
 """"""
 
 .. automodule:: qibo.quantum_info.purity
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 
 Entropy
 """""""
 
 .. automodule:: qibo.quantum_info.entropy
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 
 Trace distance
 """"""""""""""
 
 .. automodule:: qibo.quantum_info.trace_distance
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 
 Hilbert-Schmidt distance
 """"""""""""""""""""""""
 
 .. automodule:: qibo.quantum_info.hilbert_schmidt_distance
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 
 Fidelity
 """"""""
 
 .. automodule:: qibo.quantum_info.fidelity
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 
 Process fidelity
 """"""""""""""""
 
 .. automodule:: qibo.quantum_info.process_fidelity
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 
 Average gate fidelity
 """""""""""""""""""""
 
 .. automodule:: qibo.quantum_info.average_gate_fidelity
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 
 Gate error
 """"""""""
 
 .. automodule:: qibo.quantum_info.gate_error
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 
 Utility Functions
@@ -915,24 +915,24 @@ Shannon entropy
 """""""""""""""
 
 .. automodule:: qibo.quantum_info.shannon_entropy
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 
 Hellinger distance
 """"""""""""""""""
 
 .. automodule:: qibo.quantum_info.hellinger_distance
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 
 Hellinger fidelity
 """"""""""""""""""
 
 .. automodule:: qibo.quantum_info.gate_error
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
 
 
 .. _Parallel:
@@ -954,9 +954,9 @@ size circuits you may benefit from single thread per process, thus set
 ``qibo.set_threads(1)`` before running the optimization.
 
 .. automodule:: qibo.parallel
-   :members:
-   :member-order: bysource
-   :exclude-members: ParallelResources
+    :members:
+    :member-order: bysource
+    :exclude-members: ParallelResources
 
 .. _Backends:
 
@@ -1011,5 +1011,5 @@ numpy. The default backend can be changed using the ``QIBO_BACKEND`` environment
 variable.
 
 .. autoclass:: qibo.backends.abstract.Backend
-   :members:
-   :member-order: bysource
+    :members:
+    :member-order: bysource
