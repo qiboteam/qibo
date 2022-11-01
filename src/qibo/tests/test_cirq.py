@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test that Qibo gate execution agrees with Cirq."""
 import sys
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Adiabatic evolution scheduling optimization for the Ising Hamiltonian."""
 import argparse
 
