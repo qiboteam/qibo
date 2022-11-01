@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Resources for parallel circuit evaluation.
 """

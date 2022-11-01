@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Test gates acting on density matrices."""
 import numpy as np
 import pytest

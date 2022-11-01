@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Tests methods defined in `qibo/gates/abstract.py` and `qibo/gates/gates.py`."""
 import pytest
 

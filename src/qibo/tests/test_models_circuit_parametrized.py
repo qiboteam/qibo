@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Test :meth:`qibo.models.circuit.Circuit.get_parameters` and :meth:`qibo.models.circuit.Circuit.set_parameters`."""
 import numpy as np
 import pytest

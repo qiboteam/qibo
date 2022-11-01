@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Test that the source contains no prints."""
 import os
 import pathlib
