@@ -241,15 +241,15 @@ Hadamard (H)
 """"""""""""
 
 .. autoclass:: qibo.gates.H
-    :members:
-    :member-order: bysource
+   :members:
+   :member-order: bysource
 
 Pauli X (X)
 """""""""""
 
 .. autoclass:: qibo.gates.X
-    :members:
-    :member-order: bysource
+   :members:
+   :member-order: bysource
 
 Pauli Y (Y)
 """""""""""
@@ -764,22 +764,22 @@ calculated inside the circuit is defined by adding a :class:`qibo.gates.Callback
 This can be added similarly to a standard gate and does not affect the state vector.
 
 .. autoclass:: qibo.callbacks.Callback
-    :members:
-    :member-order: bysource
+   :members:
+   :member-order: bysource
 
 Entanglement entropy
 ^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: qibo.callbacks.EntanglementEntropy
-    :members:
-    :member-order: bysource
+   :members:
+   :member-order: bysource
 
 Norm
 ^^^^
 
 .. autoclass:: qibo.callbacks.Norm
-    :members:
-    :member-order: bysource
+   :members:
+   :member-order: bysource
 
 Overlap
 ^^^^^^^
@@ -813,8 +813,8 @@ They perform steps in time by integrating the time-dependent Schrodinger
 equation.
 
 .. automodule:: qibo.solvers
-    :members:
-    :member-order: bysource
+   :members:
+   :member-order: bysource
 
 .. _Optimizers:
 
@@ -829,20 +829,20 @@ can be passed when calling the ``minimize`` method of the respective Qibo
 variational model.
 
 .. automodule:: qibo.optimizers
-    :members:
-    :member-order: bysource
-    :exclude-members: ParallelBFGS
+   :members:
+   :member-order: bysource
+   :exclude-members: ParallelBFGS
 
 .. _Quantum Information:
 
 Quantum Information
 -------------------
 
-.
+
 
 Metrics
 ^^^^^^^
-.
+
 
 Purity
 """"""
@@ -954,9 +954,9 @@ size circuits you may benefit from single thread per process, thus set
 ``qibo.set_threads(1)`` before running the optimization.
 
 .. automodule:: qibo.parallel
-    :members:
-    :member-order: bysource
-    :exclude-members: ParallelResources
+   :members:
+   :member-order: bysource
+   :exclude-members: ParallelResources
 
 .. _Backends:
 
