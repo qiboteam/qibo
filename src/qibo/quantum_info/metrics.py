@@ -157,7 +157,9 @@ def fidelity(state, target, validate=False):
     """Fidelity between two quantum states (when at least one state is pure).
 
     .. math::
-        F(\\rho, \\sigma) = \\text{Tr}(\\rho \\, \\sigma)
+        F(\\rho, \\sigma) = \\text{Tr}^{2}\\left( \\sqrt{\\sqrt{\\sigma} \\, \\rho^{\\dagger} \\, \\sqrt{\\sigma}} \\right) = \\text{Tr}(\\rho \\, \\sigma)
+    
+    where the last equality holds because the ``target`` state :math:`\\sigma` is assumed to be pure.
 
     Args:
         state: state vector or density matrix.
