@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import numpy as np
 
 from qibo.config import PRECISION_TOL, raise_error
@@ -42,7 +41,7 @@ def entropy(state, base: float = 2, validate: bool = False):
     Args:
         state: state vector or density matrix.
         base (float): the base of the log. Default: 2.
-        validate (bool): if True, checks if `state` is Hermitian. If False, 
+        validate (bool): if True, checks if `state` is Hermitian. If False,
             it assumes `state` is Hermitian . Default: False.
 
     Returns:
@@ -66,8 +65,14 @@ def entropy(state, base: float = 2, validate: bool = False):
         ent = 0.0
     else:
         if validate:
-            hermitian = True if np.linalg.norm(np.transpose(np.conj(state)) - state) <= PRECISION_TOL else False
-            eigenvalues, _ = np.linalg.eigh(state) if hermitian else np.linalg.eig(state)
+            hermitian = (
+                True
+                if np.linalg.norm(np.transpose(np.conj(state)) - state) <= PRECISION_TOL
+                else False
+            )
+            eigenvalues, _ = (
+                np.linalg.eigh(state) if hermitian else np.linalg.eig(state)
+            )
         else:
             eigenvalues, _ = np.linalg.eigh(state)
 
@@ -126,8 +131,15 @@ def trace_distance(state, target, validate: bool = False):
 
     difference = state - target
     if validate:
-        hermitian = True if np.linalg.norm(np.transpose(np.conj(difference)) - difference) <= PRECISION_TOL else False
-        eigenvalues, _ = np.linalg.eigh(difference) if hermitian else np.linalg.eig(difference)
+        hermitian = (
+            True
+            if np.linalg.norm(np.transpose(np.conj(difference)) - difference)
+            <= PRECISION_TOL
+            else False
+        )
+        eigenvalues, _ = (
+            np.linalg.eigh(difference) if hermitian else np.linalg.eig(difference)
+        )
     else:
         eigenvalues, _ = np.linalg.eigh(difference)
 
@@ -167,7 +179,7 @@ def hilbert_schmidt_distance(state, target):
     return np.real(np.trace((state - target) ** 2))
 
 
-def fidelity(state, target, validate: bool =False):
+def fidelity(state, target, validate: bool = False):
     """Fidelity between two quantum states (when at least one state is pure).
 
     .. math::
