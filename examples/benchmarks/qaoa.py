@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Benchmark Quantum Approximate Optimization Algorithm model.
 """

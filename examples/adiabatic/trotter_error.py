@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Error of evolution using Trotter decomposition."""
 import argparse
 
