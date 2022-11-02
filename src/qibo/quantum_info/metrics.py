@@ -32,7 +32,7 @@ def purity(state):
     return pur
 
 
-def entropy(state, base: float = 2):
+def entropy(state, base: float = 2, validate: bool = False):
     """The von-Neumann entropy :math:`S(\\rho)` of a quantum state :math:`\\rho`, which
     is given by
 
@@ -42,6 +42,8 @@ def entropy(state, base: float = 2):
     Args:
         state: state vector or density matrix.
         base (float): the base of the log. Default: 2.
+        validate (bool): if True, checks if `state` is Hermitian. If False, 
+            it assumes `state` is Hermitian . Default: False.
 
     Returns:
         The von-Neumann entropy :math:`S(\\rho)`.
@@ -63,7 +65,12 @@ def entropy(state, base: float = 2):
     if purity(state) == 1.0:
         ent = 0.0
     else:
-        eigenvalues, _ = np.linalg.eigh(state)
+        if validate:
+            hermitian = True if np.linalg.norm(np.transpose(np.conj(state)) - state) <= PRECISION_TOL else False
+            eigenvalues, _ = np.linalg.eigh(state) if hermitian else np.linalg.eig(state)
+        else:
+            eigenvalues, _ = np.linalg.eigh(state)
+
         if base == 2:
             log_prob = np.where(eigenvalues != 0, np.log2(eigenvalues), 0.0)
         elif base == 10:
@@ -82,7 +89,7 @@ def entropy(state, base: float = 2):
     return ent
 
 
-def trace_distance(state, target):
+def trace_distance(state, target, validate: bool = False):
     """Trace distance between two quantum states, :math:`\\rho` and :math:`\\sigma`:
 
     .. math::
@@ -93,6 +100,8 @@ def trace_distance(state, target):
     Args:
         state: state vector or density matrix.
         target: state vector or density matrix.
+        validate (bool): if True, checks if :math:`\\rho - \\sigma` is Hermitian.
+            If False, it assumes the difference is Hermitian. Default: False.
 
     Returns:
         Trace distance between state :math:`\\rho` and target :math:`\\sigma`.
@@ -115,7 +124,12 @@ def trace_distance(state, target):
         state = np.outer(np.conj(state), state)
         target = np.outer(np.conj(target), target)
 
-    eigenvalues, _ = np.linalg.eigh(state - target)
+    difference = state - target
+    if validate:
+        hermitian = True if np.linalg.norm(np.transpose(np.conj(difference)) - difference) <= PRECISION_TOL else False
+        eigenvalues, _ = np.linalg.eigh(difference) if hermitian else np.linalg.eig(difference)
+    else:
+        eigenvalues, _ = np.linalg.eigh(difference)
 
     return np.sum(np.absolute(eigenvalues)) / 2
 
@@ -153,7 +167,7 @@ def hilbert_schmidt_distance(state, target):
     return np.real(np.trace((state - target) ** 2))
 
 
-def fidelity(state, target, validate=False):
+def fidelity(state, target, validate: bool =False):
     """Fidelity between two quantum states (when at least one state is pure).
 
     .. math::

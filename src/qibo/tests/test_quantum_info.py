@@ -134,12 +134,16 @@ def test_entropy(backend, base):
     state = backend.cast(state, dtype=state.dtype)
     if base == 2:
         backend.assert_allclose(entropy(state, base), 2.0)
+        backend.assert_allclose(entropy(state, base, validate=True), 2.0)
     elif base == 10:
         backend.assert_allclose(entropy(state, base), 0.6020599913279624)
+        backend.assert_allclose(entropy(state, base, validate=True), 0.6020599913279624)
     elif base == np.e:
         backend.assert_allclose(entropy(state, base), 1.3862943611198906)
+        backend.assert_allclose(entropy(state, base, validate=True), 1.3862943611198906)
     else:
         backend.assert_allclose(entropy(state, base), 0.8613531161467861)
+        backend.assert_allclose(entropy(state, base, validate=True), 0.8613531161467861)
 
 
 def test_trace_distance(backend):
