@@ -170,18 +170,21 @@ def test_trace_distance(backend):
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
     backend.assert_allclose(trace_distance(state, target), 0.0)
+    backend.assert_allclose(trace_distance(state, target, validate=True), 0.0)
 
     state = np.outer(np.conj(state), state)
     target = np.outer(np.conj(target), target)
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
     backend.assert_allclose(trace_distance(state, target), 0.0)
+    backend.assert_allclose(trace_distance(state, target, validate=True), 0.0)
 
     state = np.asarray([0.0, 1.0, 0.0, 0.0])
     target = np.asarray([1.0, 0.0, 0.0, 0.0])
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
     backend.assert_allclose(trace_distance(state, target), 1.0)
+    backend.assert_allclose(trace_distance(state, target, validate=True), 1.0)
 
 
 def test_hilbert_schmidt_distance(backend):
