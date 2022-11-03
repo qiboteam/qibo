@@ -863,7 +863,7 @@ Entropy
 
 .. note::
     ``validate`` flag allows the user to choose if the function will check if input :math:`\\rho` is Hermitian or not.
-    Default option is ``validate=False``, i.e. the assumption of Hermiticity, because it is faster nd, more importantly,
+    Default option is ``validate=False``, i.e. the assumption of Hermiticity, because it is faster and, more importantly,
     the functions are intended to be used on Hermitian inputs. When ``validate=True`` and
     :math:`\\rho` is non-Hermitian, an error will be raised when using `cupy` backend.
 
