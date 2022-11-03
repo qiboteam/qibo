@@ -838,11 +838,13 @@ variational model.
 Quantum Information
 -------------------
 
-.
+This module provides tools for generation and analysis of quantum (and classical) information.
 
 Metrics
 ^^^^^^^
-.
+
+Set of functions that are used to calculate metrics of states, (pseudo-)distance measures
+between states, and distance measures between quantum channels.
 
 Purity
 """"""
@@ -859,6 +861,11 @@ Entropy
     :members:
     :member-order: bysource
 
+.. note::
+    ``validate`` flag allows the user to choose if the function will check if input :math:`\\rho` is Hermitian or not.
+    Default option is ``validate=False``, i.e. the assumption of Hermiticity, because it is faster and, more importantly,
+    the functions are intended to be used on Hermitian inputs. When ``validate=True`` and
+    :math:`\\rho` is non-Hermitian, an error will be raised when using `cupy` backend.
 
 Trace distance
 """"""""""""""
@@ -867,6 +874,11 @@ Trace distance
     :members:
     :member-order: bysource
 
+.. note::
+    ``validate`` flag allows the user to choose if the function will check if difference between inputs,
+    :math:`\\rho - \\sigma`, is Hermitian or not. Default option is ``validate=False``, i.e. the assumption of Hermiticity,
+    because it is faster and, more importantly, the functions are intended to be used on Hermitian inputs.
+    When ``validate=True`` and :math:`\\rho - \\sigma` is non-Hermitian, an error will be raised when using `cupy` backend.
 
 Hilbert-Schmidt distance
 """"""""""""""""""""""""
@@ -910,6 +922,9 @@ Gate error
 
 Utility Functions
 ^^^^^^^^^^^^^^^^^
+
+Functions that can be used to calculate metrics and distance measures
+on classical probability arrays.
 
 Shannon entropy
 """""""""""""""
