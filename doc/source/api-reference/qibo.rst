@@ -863,8 +863,8 @@ Entropy
 
 .. note::
     ``validate`` flag allows the user to choose if the function will check if input :math:`\\rho` is Hermitian or not.
-    Default option is ``validate=False``, i.e. the assumption of Hermiticity, because it is the faster implementation
-    and, more inportantly, the functions are intended to be used on Hermitian inputs. When ``validate=True`` and
+    Default option is ``validate=False``, i.e. the assumption of Hermiticity, because it is faster nd, more importantly,
+    the functions are intended to be used on Hermitian inputs. When ``validate=True`` and
     :math:`\\rho` is non-Hermitian, an error will be raised when using `cupy` backend.
 
 Trace distance
@@ -877,7 +877,7 @@ Trace distance
 .. note::
     ``validate`` flag allows the user to choose if the function will check if difference between inputs,
     :math:`\\rho - \\sigma`, is Hermitian or not. Default option is ``validate=False``, i.e. the assumption of Hermiticity,
-    because it is the faster implementation and, more inportantly, the functions are intended to be used on Hermitian inputs.
+    because it is faster and, more importantly, the functions are intended to be used on Hermitian inputs.
     When ``validate=True`` and :math:`\\rho - \\sigma` is non-Hermitian, an error will be raised when using `cupy` backend.
 
 Hilbert-Schmidt distance
