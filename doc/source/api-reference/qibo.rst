@@ -838,11 +838,13 @@ variational model.
 Quantum Information
 -------------------
 
-.
+This module provides tools for generation and analysis of quantum (and classical) information.
 
 Metrics
 ^^^^^^^
-.
+
+Set of functions that are used to calculate metrics of states, (pseudo-)distance measures
+between states, and distance measures between quantum channels.
 
 Purity
 """"""
@@ -920,6 +922,9 @@ Gate error
 
 Utility Functions
 ^^^^^^^^^^^^^^^^^
+
+Functions that can be used to calculate metrics and distance measures
+on classical probability arrays.
 
 Shannon entropy
 """""""""""""""
