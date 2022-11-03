@@ -32,7 +32,7 @@ jobs:
     steps:
       - name: Documentation
         run: |
-          pip install '.[docs]'
+          pip install qibo[docs]
           cd doc
           make html
       - name: Checkout
