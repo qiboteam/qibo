@@ -92,7 +92,7 @@ class AbstractHamiltonian:
             freq (collections.Counter): the keys are the observed values in binary form
             and the values the corresponding frequencies, that is the number
             of times each measured value/bitstring appears.
-            qubit_map (list): Mapping between frequencies and qubits. If None, [1,...,len(key)]
+            qubit_map (tuple): Mapping between frequencies and qubits. If None, [1,...,len(key)]
 
         Returns:
             Real number corresponding to the expectation value.
