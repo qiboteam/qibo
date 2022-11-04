@@ -136,6 +136,7 @@ class Hamiltonian(AbstractHamiltonian):
 
     def expectation_from_samples(self, freq, qubit_map=None):
         import numpy as np
+
         obs = self.matrix
         if np.count_nonzero(obs - np.diag(np.diagonal(obs))) != 0:
             raise_error(NotImplementedError, "Observable is not diagonal.")
@@ -555,6 +556,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
     def expectation_from_samples(self, freq, qubit_map=None):
         import numpy as np
+
         terms = self.terms
         for term in terms:
             for factor in term.factors:

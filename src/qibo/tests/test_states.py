@@ -1,9 +1,10 @@
+import numpy as np
 import pytest
 
 from qibo import gates, hamiltonians
 from qibo.models import Circuit
 from qibo.symbols import I, Z
-import numpy as np
+
 
 @pytest.mark.parametrize("target", range(5))
 @pytest.mark.parametrize("density_matrix", [False, True])
@@ -54,14 +55,14 @@ def test_state_representation_max_terms(backend, density_matrix):
             == "(0.17678+0j)|00000> + (0.17678+0j)|00001> + (0.17678+0j)|00010> + (0.17678+0j)|00011> + (0.17678+0j)|00100> + ..."
         )
 
-        
+
 @pytest.mark.parametrize("density_matrix", [False, True])
 def test_expectation_from_samples(backend, density_matrix):
 
     obs0 = 2 * Z(0) * Z(1) + Z(0) * Z(2)
     obs1 = 2 * Z(0) * Z(1) + Z(0) * Z(2) * I(3)
     h_sym = hamiltonians.SymbolicHamiltonian(obs0, backend=backend)
-    h_dense =  hamiltonians.Hamiltonian(3, h_sym.matrix, backend=backend)
+    h_dense = hamiltonians.Hamiltonian(3, h_sym.matrix, backend=backend)
     h1 = hamiltonians.SymbolicHamiltonian(obs1, backend=backend)
     c = Circuit(4)
     c.add(gates.RX(0, np.random.rand()))
