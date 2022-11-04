@@ -286,10 +286,9 @@ def test_hamiltonian_expectation_from_samples(backend):
     c.add(gates.M(0, 1, 2, 3))
     nshots = 10**5
     result = c(nshots=nshots)
-    state = c()
     freq = result.frequencies(binary=True)
     Obs0 = h0.expectation_from_samples(freq, qubit_map=None)
-    Obs1 = h1.expectation(c().state())
+    Obs1 = h1.expectation(result.state())
     backend.assert_allclose(Obs0, Obs1, atol=10 / np.sqrt(nshots))
 
 
