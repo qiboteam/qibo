@@ -833,6 +833,123 @@ variational model.
    :member-order: bysource
    :exclude-members: ParallelBFGS
 
+.. _Quantum Information:
+
+Quantum Information
+-------------------
+
+This module provides tools for generation and analysis of quantum (and classical) information.
+
+Metrics
+^^^^^^^
+
+Set of functions that are used to calculate metrics of states, (pseudo-)distance measures
+between states, and distance measures between quantum channels.
+
+Purity
+""""""
+
+.. automodule:: qibo.quantum_info.purity
+    :members:
+    :member-order: bysource
+
+
+Entropy
+"""""""
+
+.. automodule:: qibo.quantum_info.entropy
+    :members:
+    :member-order: bysource
+
+.. note::
+    ``validate`` flag allows the user to choose if the function will check if input :math:`\\rho` is Hermitian or not.
+    Default option is ``validate=False``, i.e. the assumption of Hermiticity, because it is faster and, more importantly,
+    the functions are intended to be used on Hermitian inputs. When ``validate=True`` and
+    :math:`\\rho` is non-Hermitian, an error will be raised when using `cupy` backend.
+
+Trace distance
+""""""""""""""
+
+.. automodule:: qibo.quantum_info.trace_distance
+    :members:
+    :member-order: bysource
+
+.. note::
+    ``validate`` flag allows the user to choose if the function will check if difference between inputs,
+    :math:`\\rho - \\sigma`, is Hermitian or not. Default option is ``validate=False``, i.e. the assumption of Hermiticity,
+    because it is faster and, more importantly, the functions are intended to be used on Hermitian inputs.
+    When ``validate=True`` and :math:`\\rho - \\sigma` is non-Hermitian, an error will be raised when using `cupy` backend.
+
+Hilbert-Schmidt distance
+""""""""""""""""""""""""
+
+.. automodule:: qibo.quantum_info.hilbert_schmidt_distance
+    :members:
+    :member-order: bysource
+
+
+Fidelity
+""""""""
+
+.. automodule:: qibo.quantum_info.fidelity
+    :members:
+    :member-order: bysource
+
+
+Process fidelity
+""""""""""""""""
+
+.. automodule:: qibo.quantum_info.process_fidelity
+    :members:
+    :member-order: bysource
+
+
+Average gate fidelity
+"""""""""""""""""""""
+
+.. automodule:: qibo.quantum_info.average_gate_fidelity
+    :members:
+    :member-order: bysource
+
+
+Gate error
+""""""""""
+
+.. automodule:: qibo.quantum_info.gate_error
+    :members:
+    :member-order: bysource
+
+
+Utility Functions
+^^^^^^^^^^^^^^^^^
+
+Functions that can be used to calculate metrics and distance measures
+on classical probability arrays.
+
+Shannon entropy
+"""""""""""""""
+
+.. automodule:: qibo.quantum_info.shannon_entropy
+    :members:
+    :member-order: bysource
+
+
+Hellinger distance
+""""""""""""""""""
+
+.. automodule:: qibo.quantum_info.hellinger_distance
+    :members:
+    :member-order: bysource
+
+
+Hellinger fidelity
+""""""""""""""""""
+
+.. automodule:: qibo.quantum_info.gate_error
+    :members:
+    :member-order: bysource
+
+
 .. _Parallel:
 
 Parallelism

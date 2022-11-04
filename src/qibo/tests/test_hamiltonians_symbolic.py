@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test methods of :class:`qibo.core.hamiltonians.SymbolicHamiltonian`."""
 import numpy as np
 import pytest
