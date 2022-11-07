@@ -2,6 +2,7 @@
 """Error Mitigation Methods."""
 import numpy as np
 from qibo import gates
+from scipy.optimize import curve_fit
 
 def get_gammas(c, solve=True):
     """Standalone function to compute the ZNE coefficients given the noise levels.
@@ -72,5 +73,89 @@ def ZNE(circuit, observable, c, init_state=None, CNOT_noise_model=None):
         expected_val.append(observable.dot(rho.state()).trace())
     gamma = get_gammas(c, solve=False)
     return (gamma*expected_val).sum()
+
+def sample_training_circuit(circuit, replacement_gates=[(gates.RZ, {'th': n*np.pi/2}) for n in range(3)], sigma=0.5):
+    """Samples a training circuit for CDR by susbtituting some of the non-Clifford gates.
+
+    Args:
+        circuit (qibo.models.circuit.Circuit): Circuit to sample from, decomposed in `RX(pi/2)`, `X`, `CNOT` and `RZ` gates.
+        replacement_gates (list): Candidates for the substitution of the non-Clifford gates. The list should be composed by tuples of the form (gates.XYZ, kwargs). For example, phase gates are used by default: `list((RZ, {'th':0}), (RZ, {'th':pi/2}), (RZ, {'th':pi}), (RZ, {'th':3*pi/2}))`.
+        sigma (float): Scaling factor for the Frobenius norm.
+    
+    Returns:
+        qibo.models.circuit.Circuit: The sampled circuit.
+    """
+    # Find all the non-Clifford RZ gates
+    gates_to_replace = []
+    for i, gate in enumerate(circuit.queue):
+        if gate.__class__ == gates.RZ:
+            if gate.init_kwargs['theta'] % (np.pi/2) != 0.:
+                gates_to_replace.append((i, gate))
+    
+    # For each RZ gate build the possible candidates and
+    # compute the frobenius distance to the candidates
+    replacement, distance = [], []
+    for _, gate in gates_to_replace:
+        rep_gates = np.array([
+            rg(*gate.init_args, **kwargs)
+            for rg, kwargs in replacement_gates
+        ])
+        replacement.append(rep_gates)
+        distance.append(
+            np.linalg.norm(
+                gate.matrix - rep_gates,
+                ord='fro',
+                axis=(1,2)
+            )
+        )
+    distance = np.vstack(distance)
+    # Compute the scores
+    prob = np.exp(-distance/sigma**2)
+    # Sample which of the RZ found to substitute
+    index = np.random.choice(
+        range(len(gates_to_replace)),
+        size=min(int(len(gates_to_replace)/2),50),
+        replace=False,
+        p=prob.sum(-1)/prob.sum()
+    )
+    gates_to_replace = gates_to_replace[index]
+    prob = prob[index]
+    # Sample which replacement gate to substitute with
+    replacement = [
+        replacement[np.random.choice(range(len(p)), size=1, p=p/p.sum())]
+        for p in prob
+    ]
+    # Build the training circuit by substituting the sampled gates
+    sampled_circuit = circuit.__class__(**circuit.init_kwargs)
+    for i, gate in enumerate(circuit.queue):
+        if i == gates_to_replace[0][0]:
+            sampled_circuit.add(replacement.pop(0))
+            gates_to_replace.pop(0)
+        else:
+            sampled_circuit.add(gate)
+    return sampled_circuit
+
+def CDR(circuit, observable, noise_model, model=lambda x,a,b: a*x + b, n_training_samples=100, init_state=None):
+    """
+    """
+    # Sample the training set
+    training_circuits = [sample_training_circuit(circuit) for n in range(n_training_samples)]
+    # Run the sampled circuits
+    expected_val = {'noise-free': [], 'noisy': []}
+    for k in ('noise-free', 'noisy'):
+        for c in training_citcuit:
+            if k == 'noisy':
+                rho = noise_model.apply(c)(initial_state = init_state)
+            else:
+                rho = c(initial_state = init_state)
+            val = observable.dot(rho.state()).trace()
+            expected_val[k].append(val)
+    # Fit the model
+    optimal_params = curve_fit(model, expected_val['noisy'], expected_val['noise-free'])
+    # Run the input circuit
+    rho = circuit(initial_state = init_state)
+    val = observable.dot(rho.state()).trace()
+    return model(val, *optimal_params)
+    
 
 
