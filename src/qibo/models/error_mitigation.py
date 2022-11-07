@@ -42,8 +42,8 @@ def get_noisy_circuit(circuit, cj):
     for gate in circuit.queue:
         noisy_circuit.add(gate)
         if gate.__class__ == gates.CNOT:
-            control = gate.control_qubits
-            target = gate.target_qubits
+            control = gate.control_qubits[0]
+            target = gate.target_qubits[0]
             for i in range(cj):
                 noisy_circuit.add(gates.CNOT(control, target))
                 noisy_circuit.add(gates.CNOT(control, target))
@@ -74,7 +74,7 @@ def ZNE(circuit, observable, c, init_state=None, CNOT_noise_model=None):
     gamma = get_gammas(c, solve=False)
     return (gamma*expected_val).sum()
 
-def sample_training_circuit(circuit, replacement_gates=[(gates.RZ, {'th': n*np.pi/2}) for n in range(3)], sigma=0.5):
+def sample_training_circuit(circuit, replacement_gates=[(gates.RZ, {'theta': n*np.pi/2}) for n in range(3)], sigma=0.5):
     """Samples a training circuit for CDR by susbtituting some of the non-Clifford gates.
 
     Args:
@@ -90,8 +90,8 @@ def sample_training_circuit(circuit, replacement_gates=[(gates.RZ, {'th': n*np.p
     for i, gate in enumerate(circuit.queue):
         if gate.__class__ == gates.RZ:
             if gate.init_kwargs['theta'] % (np.pi/2) != 0.:
-                gates_to_replace.append((i, gate))
-    
+                gates_to_replace.append((i, gate))                
+                
     # For each RZ gate build the possible candidates and
     # compute the frobenius distance to the candidates
     replacement, distance = [], []
@@ -100,10 +100,11 @@ def sample_training_circuit(circuit, replacement_gates=[(gates.RZ, {'th': n*np.p
             rg(*gate.init_args, **kwargs)
             for rg, kwargs in replacement_gates
         ])
+
         replacement.append(rep_gates)
         distance.append(
             np.linalg.norm(
-                gate.matrix - rep_gates,
+                gate.matrix - [rep_gate.matrix for rep_gate in rep_gates] ,
                 ord='fro',
                 axis=(1,2)
             )
@@ -118,17 +119,17 @@ def sample_training_circuit(circuit, replacement_gates=[(gates.RZ, {'th': n*np.p
         replace=False,
         p=prob.sum(-1)/prob.sum()
     )
-    gates_to_replace = gates_to_replace[index]
-    prob = prob[index]
+    gates_to_replace = [gates_to_replace[i] for i in index]
+    prob = [(i,prob[i]) for i in index]
     # Sample which replacement gate to substitute with
     replacement = [
-        replacement[np.random.choice(range(len(p)), size=1, p=p/p.sum())]
-        for p in prob
+        replacement[p[0]][np.random.choice(range(len(p[1])), size=1, p=p[1]/p[1].sum())[0]]
+        for p in prob 
     ]
     # Build the training circuit by substituting the sampled gates
     sampled_circuit = circuit.__class__(**circuit.init_kwargs)
     for i, gate in enumerate(circuit.queue):
-        if i == gates_to_replace[0][0]:
+        if len(gates_to_replace)!=0 and i == gates_to_replace[0][0]:
             sampled_circuit.add(replacement.pop(0))
             gates_to_replace.pop(0)
         else:
