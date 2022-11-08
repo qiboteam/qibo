@@ -74,7 +74,7 @@ def ZNE(circuit, observable, c, init_state=None, CNOT_noise_model=None):
     gamma = get_gammas(c, solve=False)
     return (gamma*expected_val).sum()
 
-def sample_training_circuit(circuit, replacement_gates=[(gates.RZ, {'theta': n*np.pi/2}) for n in range(3)], sigma=0.5):
+def sample_training_circuit(circuit, replacement_gates=[(gates.RZ, {'theta': n*np.pi/2}) for n in range(4)], sigma=0.5):
     """Samples a training circuit for CDR by susbtituting some of the non-Clifford gates.
 
     Args:
@@ -111,7 +111,7 @@ def sample_training_circuit(circuit, replacement_gates=[(gates.RZ, {'theta': n*n
         )
     distance = np.vstack(distance)
     # Compute the scores
-    prob = np.exp(-distance/sigma**2)
+    prob = np.exp(-distance**2/sigma**2)
     # Sample which of the RZ found to substitute
     index = np.random.choice(
         range(len(gates_to_replace)),
@@ -119,7 +119,7 @@ def sample_training_circuit(circuit, replacement_gates=[(gates.RZ, {'theta': n*n
         replace=False,
         p=prob.sum(-1)/prob.sum()
     )
-    gates_to_replace = [gates_to_replace[i] for i in index]
+    gates_to_replace = np.array([gates_to_replace[i] for i in index])
     prob = [(i,prob[i]) for i in index]
     # Sample which replacement gate to substitute with
     replacement = [
@@ -129,9 +129,12 @@ def sample_training_circuit(circuit, replacement_gates=[(gates.RZ, {'theta': n*n
     # Build the training circuit by substituting the sampled gates
     sampled_circuit = circuit.__class__(**circuit.init_kwargs)
     for i, gate in enumerate(circuit.queue):
-        if len(gates_to_replace)!=0 and i == gates_to_replace[0][0]:
-            sampled_circuit.add(replacement.pop(0))
-            gates_to_replace.pop(0)
+        if len(gates_to_replace)!=0 and i in gates_to_replace[:,0]:
+            #sampled_circuit.add(replacement.pop(gates_to_replace[:,0]))
+            index=np.where(gates_to_replace[:,0]==i)[0][0]
+            sampled_circuit.add(replacement.pop(index))
+            #gates_to_replace=gates_to_replace[1:]
+            gates_to_replace=np.delete(gates_to_replace,index,axis=0)
         else:
             sampled_circuit.add(gate)
     return sampled_circuit
@@ -143,20 +146,19 @@ def CDR(circuit, observable, noise_model, model=lambda x,a,b: a*x + b, n_trainin
     training_circuits = [sample_training_circuit(circuit) for n in range(n_training_samples)]
     # Run the sampled circuits
     expected_val = {'noise-free': [], 'noisy': []}
-    for k in ('noise-free', 'noisy'):
-        for c in training_citcuit:
-            if k == 'noisy':
-                rho = noise_model.apply(c)(initial_state = init_state)
-            else:
-                rho = c(initial_state = init_state)
-            val = observable.dot(rho.state()).trace()
-            expected_val[k].append(val)
+    for c in training_circuits:
+        rho = c(initial_state = init_state)
+        val = observable.dot(rho.state()).trace()
+        expected_val['noise-free'].append(val)
+        rho = noise_model.apply(c)(initial_state = init_state)
+        val = observable.dot(rho.state()).trace()
+        expected_val['noisy'].append(val)                                                
     # Fit the model
     optimal_params = curve_fit(model, expected_val['noisy'], expected_val['noise-free'])
     # Run the input circuit
-    rho = circuit(initial_state = init_state)
+    rho = noise_model.apply(circuit)(initial_state = init_state)
     val = observable.dot(rho.state()).trace()
-    return model(val, *optimal_params)
+    return [model(val, *optimal_params[0]), val, optimal_params[0], expected_val]
     
 
 
