@@ -170,7 +170,7 @@ def CDR(circuit, observable, noise_model, model=lambda x,a,b: a*x + b, n_trainin
     rho = noise_model.apply(circuit)(initial_state = init_state)
     val = observable.dot(rho.state()).trace()
     return [model(val, *optimal_params[0]), val, optimal_params[0], expected_val]
-    
+
 def vnCDR(circuit, observable, noise_levels, noise_model, n_training_samples=100, init_state=None):
     """Runs the vnCDR error mitigation method.
     
@@ -188,7 +188,7 @@ def vnCDR(circuit, observable, noise_levels, noise_model, n_training_samples=100
     """
     # Sample the training circuits
     training_circuits = [sample_training_circuit(circuit) for n in range(n_training_samples)]
-    expected_val = {'noise-free': [], 'noisy': []}
+    expected_val = {'noise-free': [], 'noisy': []}      
     # Add the different noise levels and run the circuits
     for c in training_circuits:
         rho = c(initial_state = init_state)
@@ -200,16 +200,15 @@ def vnCDR(circuit, observable, noise_levels, noise_model, n_training_samples=100
             val = observable.dot(rho.state()).trace()
             expected_val['noisy'].append(val)
     # Repeat noise-free values for each noise level
-    expected_val['noisy'] = np.array(expected_val['noisy']).reshape(-1, len(noise_levels))
+    expected_val['noisy'] = np.array(expected_val['noisy']).reshape(-1, len(noise_levels))    
     # Fit the model
+    model=lambda x, *params: (x * np.array(params).reshape(-1,1)).sum(0)
     params = np.random.rand(len(noise_levels))
-    def model(x, *params):
-        return (x * np.array(params)).sum()
-    optimal_params = curve_fit(model, expected_val['noisy'], expected_val['noise-free'], p0=params)
+    optimal_params = curve_fit(model, expected_val['noisy'].T, expected_val['noise-free'], p0=params)   
     # Run the input circuit
     val = []
     for level in noise_levels:
         noisy_c = get_noisy_circuit(circuit, level)
         rho = noise_model.apply(noisy_c)(initial_state = init_state)
         val.append(observable.dot(rho.state()).trace())
-    return model(np.array(val), *optimal_params)
+    return model(np.array(val).reshape(len(noise_levels),1), *optimal_params[0])[0]
