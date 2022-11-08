@@ -211,4 +211,4 @@ def vnCDR(circuit, observable, noise_levels, noise_model, n_training_samples=100
         noisy_c = get_noisy_circuit(circuit, level)
         rho = noise_model.apply(noisy_c)(initial_state = init_state)
         val.append(observable.dot(rho.state()).trace())
-    return model(np.array(val).reshape(len(noise_levels),1), *optimal_params[0])[0]
+    return model(np.array(val).reshape(-1,1), *optimal_params[0])[0]
