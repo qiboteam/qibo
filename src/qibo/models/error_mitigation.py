@@ -140,7 +140,18 @@ def sample_training_circuit(circuit, replacement_gates=[(gates.RZ, {'theta': n*n
     return sampled_circuit
 
 def CDR(circuit, observable, noise_model, model=lambda x,a,b: a*x + b, n_training_samples=100, init_state=None):
-    """
+    """Runs the CDR error mitigation method.
+    
+    Args:
+        circuit (qibo.models.circuit.Circuit): Input circuit decomposed in the primitive gates: X, CNOT, RX(pi/2), RZ(theta).
+        observable (numpy.ndarray): Observable to measure.
+        noise_model (qibo.noise.NoiseModel): Noise model used for simulating noisy computation.
+        model : Model used for fitting. This should be a callable function object `f(x, *params)` taking as input the predictor variable and the parameters. By default a simple linear model `f(x,a,b) := a*x + b` is used.
+        n_training_samples (int): Number of training circuits to sample.
+        init_state (numpy.ndarray): Initial state. 
+
+    Returns:
+        float: Returns the estimated expected value of `observable`.
     """
     # Sample the training set
     training_circuits = [sample_training_circuit(circuit) for n in range(n_training_samples)]
@@ -160,5 +171,40 @@ def CDR(circuit, observable, noise_model, model=lambda x,a,b: a*x + b, n_trainin
     val = observable.dot(rho.state()).trace()
     return [model(val, *optimal_params[0]), val, optimal_params[0], expected_val]
     
+def vnCDR(circuit, observable, noise_levels, noise_model, model=lambda x,a: a*x, n_training_samples=100, init_state=None):
+    """Runs the vnCDR error mitigation method.
+    
+    Args:
+        circuit (qibo.models.circuit.Circuit): Input circuit decomposed in the primitive gates: X, CNOT, RX(pi/2), RZ(theta).
+        observable (numpy.ndarray): Observable to measure.
+        noise_levels (numpy.ndarray): Sequence of noise levels.
+        noise_model (qibo.noise.NoiseModel): Noise model used for simulating noisy computation.
+        model : Model used for fitting. This should be a callable function object `f(x, *params)` taking as input the predictor variable and the parameters. By default a simple linear model `f(x,a) := a*x` is used.
+        n_training_samples (int): Number of training circuits to sample.
+        init_state (numpy.ndarray): Initial state. 
 
-
+    Returns:
+        float: Returns the estimated expected value of `observable`.
+    """
+    # Sample the training circuits
+    training_circuits = [sample_training_circuit(circuit) for n in range(n_training_samples)]
+    expected_val = {'noise-free': [], 'noisy': []}
+    # Add the different noise levels and run the circuits
+    for c in training_circuits:
+        rho = c(initial_state = init_state)
+        val = observable.dot(rho.state()).trace()
+        expected_val['noise-free'].append(val)
+        for level in noise_levels:
+            noisy_c = get_noisy_circuit(c, level)
+            rho = noise_model.apply(noisy_c)(initial_state = init_state)
+            val = observable.dot(rho.state()).trace()
+            expected_val['noisy'].append(val)
+    # Repeat noise-free values for each noise level
+    expected_val['noisy'] = np.array(expected_val['noisy'])
+    expected_val['noise-free'] = np.vstack([ expected_val['noise-free'] for i in range(len(noise_levels)) ]).T.flatten()
+    # Fit the model
+    optimal_params = curve_fit(model, expected_val['noisy'], expected_val['noise-free'])
+    # Run the input circuit
+    rho = circuit(initial_state = init_state)
+    val = observable.dot(rho.state()).trace()
+    return model(val, *optimal_params)
