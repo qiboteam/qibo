@@ -171,7 +171,7 @@ def CDR(circuit, observable, noise_model, model=lambda x,a,b: a*x + b, n_trainin
     val = observable.dot(rho.state()).trace()
     return [model(val, *optimal_params[0]), val, optimal_params[0], expected_val]
     
-def vnCDR(circuit, observable, noise_levels, noise_model, model=lambda x,a: a*x, n_training_samples=100, init_state=None):
+def vnCDR(circuit, observable, noise_levels, noise_model, n_training_samples=100, init_state=None):
     """Runs the vnCDR error mitigation method.
     
     Args:
@@ -200,11 +200,16 @@ def vnCDR(circuit, observable, noise_levels, noise_model, model=lambda x,a: a*x,
             val = observable.dot(rho.state()).trace()
             expected_val['noisy'].append(val)
     # Repeat noise-free values for each noise level
-    expected_val['noisy'] = np.array(expected_val['noisy'])
-    expected_val['noise-free'] = np.vstack([ expected_val['noise-free'] for i in range(len(noise_levels)) ]).T.flatten()
+    expected_val['noisy'] = np.array(expected_val['noisy']).reshape(-1, len(noise_levels))
     # Fit the model
-    optimal_params = curve_fit(model, expected_val['noisy'], expected_val['noise-free'])
+    params = np.random.rand(len(noise_levels))
+    def model(x, *params):
+        return (x*params).sum()
+    optimal_params = curve_fit(model, expected_val['noisy'], expected_val['noise-free'], p0=params)
     # Run the input circuit
-    rho = circuit(initial_state = init_state)
-    val = observable.dot(rho.state()).trace()
-    return model(val, *optimal_params)
+    val = []
+    for level in noise_levels:
+        noisy_c = get_noisy_circuit(circuit, level)
+        rho = noise_model.apply(noisy_c)(initial_state = init_state)
+        val.append(observable.dot(rho.state()).trace())
+    return model(np.array(val), *optimal_params)
