@@ -84,6 +84,21 @@ class AbstractHamiltonian:
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def expectation_from_samples(self, freq, qubit_map=None):  # pragma: no cover
+        """Computes the real expectation value of a diagonal observable given the frequencies when measuring in the computational basis.
+
+        Args:
+            freq (collections.Counter): the keys are the observed values in binary form
+            and the values the corresponding frequencies, that is the number
+            of times each measured value/bitstring appears.
+            qubit_map (tuple): Mapping between frequencies and qubits. If None, [1,...,len(key)]
+
+        Returns:
+            Real number corresponding to the expectation value.
+        """
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def __add__(self, o):  # pragma: no cover
         """Add operator."""
         raise_error(NotImplementedError)
