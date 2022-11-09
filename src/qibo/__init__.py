@@ -1,4 +1,4 @@
-__version__ = "0.1.9.dev0"
+__version__ = "0.1.9"
 from qibo import callbacks, gates, hamiltonians, models, optimizers, parallel, solvers
 from qibo.backends import (
     get_backend,
