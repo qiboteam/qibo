@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import sys
 
 from qibo.config import raise_error
@@ -17,7 +16,7 @@ else:  # pragma: no cover
         return wrapper
 
 
-class Matrices:
+class NumpyMatrices:
     """Matrix representation of every gate as a numpy array."""
 
     def __init__(self, dtype):

@@ -67,6 +67,9 @@ Supporters and collaborators
 * European Organization for Nuclear research (CERN), Switzerland.
 * Universitat de Barcelona (UB), Spain.
 * Barcelona Supercomputing Center (BSC), Spain.
+* Qilimanjaro Quantum Tech, Spain.
 * Centre for Quantum Technologies (CQT), Singapore.
 * Institute of High Performance Computing (IHPC), Singapore.
+* National Supercomputing Centre (NSCC), Singapore.
+* RIKEN Center for Computational Science (R-CCS), Japan.
 * NVIDIA (cuQuantum), USA.

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import numpy as np
 
 from qibo import gates
@@ -6,7 +5,7 @@ from qibo.config import log, raise_error
 from qibo.models.circuit import Circuit
 
 
-class Grover(object):
+class Grover:
     """Model that performs Grover's algorithm.
 
     For Grover's original search algorithm: `arXiv:quant-ph/9605043 <https://arxiv.org/abs/quant-ph/9605043>`_

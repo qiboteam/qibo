@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate, ParametrizedGate, SpecialGate
 
@@ -13,7 +12,7 @@ class CallbackGate(SpecialGate):
     """
 
     def __init__(self, callback: "Callback"):
-        super(CallbackGate, self).__init__()
+        super().__init__()
         self.name = callback.__class__.__name__
         self.callback = callback
         self.init_args = [callback]

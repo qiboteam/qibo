@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test Grover model defined in `qibo/models/grover.py`."""
 import pytest
 
