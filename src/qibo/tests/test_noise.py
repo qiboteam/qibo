@@ -172,7 +172,7 @@ def test_reset_error(backend, density_matrix):
 @pytest.mark.parametrize("nshots", [None, 10, 100])
 def test_noise_model(backend, density_matrix, nshots):
 
-    circuit = models.Circuit(3, density_matrix=density_matrix)
+    circuit = Circuit(3, density_matrix=density_matrix)
     circuit.add(
         [
             gates.H(0),
