@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Error Mitigation Methods."""
 import warnings
 
@@ -59,10 +58,11 @@ def get_noisy_circuit(circuit, cj):
             for i in range(cj):
                 noisy_circuit.add(gates.CNOT(control, target))
                 noisy_circuit.add(gates.CNOT(control, target))
+    noisy_circuit.add(circuit.measurement_gate)
     return noisy_circuit
 
 
-def ZNE(circuit, observable, c, init_state=None, noise_model=None):
+def ZNE(circuit, observable, c, nshots=10000, init_state=None, noise_model=None):
     """Runs the Zero Noise Extrapolation method for error mitigation.
     The different noise levels are realized by the insertion of pairs of CNOT gates that resolve to the identiy in the noise-free case.
 
@@ -76,14 +76,16 @@ def ZNE(circuit, observable, c, init_state=None, noise_model=None):
     Returns:
         numpy.ndarray: Estimate of the expected value of ``observable`` in the noise free condition.
     """
-    assert circuit.density_matrix, "Circuit.density_matrix == True is needed."
     expected_val = []
     for cj in c:
         noisy_circuit = get_noisy_circuit(circuit, cj)
         if noise_model != None:
             noisy_circuit = noise_model.apply(noisy_circuit)
-        rho = noisy_circuit(initial_state=init_state)
-        expected_val.append(observable.dot(rho.state()).trace())
+        expected_val.append(
+            noisy_circuit(
+                nshots=nshots, initial_state=init_state
+            ).expectation_from_samples(observable)
+        )
     gamma = get_gammas(c, solve=False)
     return (gamma * expected_val).sum()
 
@@ -155,12 +157,14 @@ def sample_training_circuit(
             sampled_circuit.add(replacement[i])
         else:
             sampled_circuit.add(gate)
+    sampled_circuit.add(circuit.measurement_gate)
     return sampled_circuit
 
 
 def CDR(
     circuit,
     observable,
+    nshots,
     noise_model,
     model=lambda x, a, b: a * x + b,
     n_training_samples=100,
@@ -186,17 +190,22 @@ def CDR(
     # Run the sampled circuits
     expected_val = {"noise-free": [], "noisy": []}
     for c in training_circuits:
-        rho = c(initial_state=init_state)
-        val = observable.dot(rho.state()).trace()
+        val = c(nshots=nshots, initial_state=init_state).expectation_from_samples(
+            observable
+        )
         expected_val["noise-free"].append(val)
-        rho = noise_model.apply(c)(initial_state=init_state)
-        val = observable.dot(rho.state()).trace()
+        noisy_circuit = noise_model.apply(c)
+        val = noisy_circuit(
+            nshots=nshots, initial_state=init_state
+        ).expectation_from_samples(observable)
         expected_val["noisy"].append(val)
     # Fit the model
     optimal_params = curve_fit(model, expected_val["noisy"], expected_val["noise-free"])
     # Run the input circuit
-    rho = noise_model.apply(circuit)(initial_state=init_state)
-    val = observable.dot(rho.state()).trace()
+    noisy_circuit = noise_model.apply(circuit)
+    val = noisy_circuit(
+        nshots=nshots, initial_state=init_state
+    ).expectation_from_samples(observable)
     return [model(val, *optimal_params[0]), val, optimal_params[0], expected_val]
 
 
@@ -204,6 +213,7 @@ def vnCDR(
     circuit,
     observable,
     noise_levels,
+    nshots,
     noise_model,
     model=lambda x, *params: (x * np.array(params).reshape(-1, 1)).sum(0),
     n_training_samples=100,
@@ -230,13 +240,17 @@ def vnCDR(
     expected_val = {"noise-free": [], "noisy": []}
     # Add the different noise levels and run the circuits
     for c in training_circuits:
-        rho = c(initial_state=init_state)
-        val = observable.dot(rho.state()).trace()
+        # rho = c(initial_state=init_state)
+        # val = observable.dot(rho.state()).trace()
+        val = c(nshots=nshots, initial_state=init_state).expectation_from_samples(
+            observable
+        )
         expected_val["noise-free"].append(val)
         for level in noise_levels:
             noisy_c = get_noisy_circuit(c, level)
-            rho = noise_model.apply(noisy_c)(initial_state=init_state)
-            val = observable.dot(rho.state()).trace()
+            val = noise_model.apply(noisy_c)(
+                nshots=nshots, initial_state=init_state
+            ).expectation_from_samples(observable)
             expected_val["noisy"].append(val)
     # Repeat noise-free values for each noise level
     expected_val["noisy"] = np.array(expected_val["noisy"]).reshape(
@@ -251,6 +265,9 @@ def vnCDR(
     val = []
     for level in noise_levels:
         noisy_c = get_noisy_circuit(circuit, level)
-        rho = noise_model.apply(noisy_c)(initial_state=init_state)
-        val.append(observable.dot(rho.state()).trace())
+        val.append(
+            noise_model.apply(noisy_c)(
+                nshots=nshots, initial_state=init_state
+            ).expectation_from_samples(observable)
+        )
     return model(np.array(val).reshape(-1, 1), *optimal_params[0])[0]
