@@ -59,7 +59,6 @@ def noise_model(circuit, params):
 
             elif len(circuit.queue.moments[t][qubit].qubits) == 1:
                 noisy_circuit.add(circuit.queue.moments[t][qubit])
-                # noisy_circuit.add(gates.PauliNoiseChannel(qubit, 0.1, 0.0, 0.2))
                 noisy_circuit.add(
                     gates.DepolarizingChannel(
                         circuit.queue.moments[t][qubit].qubits, depolarizing_error_1
@@ -98,8 +97,6 @@ def noise_model(circuit, params):
                     current_time[q_min] += time_difference
 
                 noisy_circuit.add(circuit.queue.moments[t][qubit])
-                # for q in circuit.queue.moments[t][qubit].qubits:
-                #    noisy_circuit.add(gates.PauliNoiseChannel(q, 0.1, 0.0, 0.2))
                 noisy_circuit.add(
                     gates.DepolarizingChannel(
                         tuple(set(circuit.queue.moments[t][qubit].qubits)),
