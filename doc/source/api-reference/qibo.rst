@@ -224,19 +224,59 @@ Then, an estimate for the expected value of the observable in the noise-free con
 
 .. math::
    \hat{E} = \sum_{j=0}^n \gamma_jE_j
-   
+
 with :math:`\gamma_j` satisfying:
 
 .. math::
    \sum_{j=0}^n \gamma_j = 1 \qquad \sum_{j=0}^n \gamma_j c_j^k = 0 \quad \text{for}\,\, k=1,..,n
 
-This implementation of ZNE relies on the insertion of CNOT pairs (that resolve to the identity in the noise-free case) to realize the different noise levels :math:`\{c_j\}`, see the `original paper by He et al <https://journals.aps.org/pra/abstract/10.1103/PhysRevA.102.012426>`_ for more details. Hence, the canonical levels are mapped to the number of inserted pairs as :math:`c_j\rightarrow 2 c_j + 1`.
-   
+This implementation of ZNE relies on the insertion of CNOT pairs (that resolve to the identity in the noise-free case) to realize the different noise levels :math:`\{c_j\}`, see the `He et al <https://journals.aps.org/pra/abstract/10.1103/PhysRevA.102.012426>`_ for more details. Hence, the canonical levels are mapped to the number of inserted pairs as :math:`c_j\rightarrow 2 c_j + 1`.
+
 .. autofunction:: qibo.models.error_mitigation.ZNE
 
 .. autofunction:: qibo.models.error_mitigation.get_gammas
 
 .. autofunction:: qibo.models.error_mitigation.get_noisy_circuit
+
+
+Clifford Data Regression (CDR)
+""""""""""""""""""""""""""""""
+
+In the Clifford Data Regression (CDR) method, a set of :math:`n` circuits :math:`S_n=\{C_i\}_{i=1,..,n}` is generated starting from the original circuit :math:`C_0` by replacing some of the non-Clifford gates with Clifford ones. Given an observable :math:`A`, all the circuits of :math:`S_n` are both: simulated to obtain the correspondent expected values of :math:`A` in noise-free condition :math:`\{a_i^{exact}\}_{i=1,..,n}`, and run in noisy conditions to obtain the noisy expected values :math:`\{a_i^{noisy}\}_{i=1,..,n}`.
+
+Finally a model :math:`f` is trained to minimize the mean squared error:
+
+.. math::
+   E = \sum_{i=1}^n \bigg(a_i^{exact}-f(a_i^{noisy})\bigg)^2
+
+and learn the mapping :math:`a^{noisy}\rightarrow a^{exact}`. The mitigated expected value of :math:`A` at the end of :math:`C_0` is then obtained simply with :math:`f(a_0^{noisy})`.
+
+In this implementation the initial circuit is expected to be decomposed in the three Clifford gates :math:`RX(\frac{\pi}{2})`, :math:`CNOT`, :math:`X` and in :math:`RZ(\theta)` (which is Clifford only for :math:`\theta=\frac{n\pi}{2}`). Whereas, by the default the set of Clifford gates used for substitution is :math:`\{RZ(0),RZ(\frac{\pi}{2}),RZ(\pi),RZ(\frac{3}{2}\pi)\}`. See `Sopena et al <https://arxiv.org/abs/2103.12680>`_ for more details.
+
+.. autofunction:: qibo.models.error_mitigation.CDR
+.. autofunction:: qibo.models.error_mitigation.sample_training_circuit
+
+
+Variable Noise CDR (vnCDR)
+""""""""""""""""""""""""""
+
+Variable Noise CDR (vnCDR) is an extension of the CDR method described above that factors in different noise levels as in ZNE. In detail, the set of circuits :math:`S_n=\{\mathbf{C}_i\}_{i=1,..,n}` is still generated as in CDR, but for each :math:`\mathbf{C}_i` we have :math:`k` different versions with increased noise :math:`\mathbf{C}_i=C_i^0,C_i^1,...,C_i^{k-1}`.
+
+Therefore, in this case we have a :math:`k`-dimensional predictor variable :math:`\mathbf{a}_i^{noisy}=\big(a_i^0, a_i^1,..,a_i^{k-1}\big)^{noisy}` with the same noise-free targets :math:`a_i^{exact}`, and we want to learn the mapping:
+
+.. math::
+   f:\mathbf{a}_i^{noisy}\rightarrow a_i^{exact}
+
+via minimizing the same mean squared error:
+
+.. math::
+   E = \sum_{i=1}^n \bigg(a_i^{exact}-f(\mathbf{a}_i^{noisy})\bigg)^2
+
+In particular, the default choice is to take :math:`f(\mathbf{x}):=\Gamma\cdot \mathbf{x}\;`, with :math:`\Gamma=\text{diag}(\gamma_0,\gamma_1,...,\gamma_{k-1})\;`, that corresponds to the ZNE calculation for the estimate for the expected value.
+
+Here as in the implementation of the CDR above, the circuit is supposed to be decomposed in the set of primitive gates :math:`{RX(\frac{\pi}{2}),CNOT,X,RZ(\theta)}`. See `Sopena et al <https://arxiv.org/abs/2103.12680>`_ for all the details.
+
+.. autofunction:: qibo.models.error_mitigation.vnCDR
 
 _______________________
 

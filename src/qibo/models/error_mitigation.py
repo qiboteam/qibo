@@ -64,6 +64,7 @@ def get_noisy_circuit(circuit, cj):
 
 def ZNE(circuit, observable, c, nshots=10000, init_state=None, noise_model=None):
     """Runs the Zero Noise Extrapolation method for error mitigation.
+
     The different noise levels are realized by the insertion of pairs of CNOT gates that resolve to the identiy in the noise-free case.
 
     Args:
@@ -98,9 +99,9 @@ def sample_training_circuit(
     """Samples a training circuit for CDR by susbtituting some of the non-Clifford gates.
 
     Args:
-        circuit (qibo.models.circuit.Circuit): Circuit to sample from, decomposed in `RX(pi/2)`, `X`, `CNOT` and `RZ` gates.
-        replacement_gates (list): Candidates for the substitution of the non-Clifford gates. The list should be composed by tuples of the form (gates.XYZ, kwargs). For example, phase gates are used by default: `list((RZ, {'th':0}), (RZ, {'th':pi/2}), (RZ, {'th':pi}), (RZ, {'th':3*pi/2}))`.
-        sigma (float): Scaling factor for the Frobenius norm.
+        circuit (qibo.models.circuit.Circuit): Circuit to sample from, decomposed in ``RX(pi/2)``, ``X``, ``CNOT`` and ``RZ`` gates.
+        replacement_gates (list): Candidates for the substitution of the non-Clifford gates. The list should be composed by tuples of the form (``gates.XYZ``, ``kwargs``). For example, phase gates are used by default: ``list((RZ, {'theta':0}), (RZ, {'theta':pi/2}), (RZ, {'theta':pi}), (RZ, {'theta':3*pi/2}))``.
+        sigma (float): Standard devation of the gaussian used for sampling.
 
     Returns:
         qibo.models.circuit.Circuit: The sampled circuit.
@@ -173,10 +174,10 @@ def CDR(
     """Runs the CDR error mitigation method.
 
     Args:
-        circuit (qibo.models.circuit.Circuit): Input circuit decomposed in the primitive gates: X, CNOT, RX(pi/2), RZ(theta).
+        circuit (qibo.models.circuit.Circuit): Input circuit decomposed in the primitive gates: ``X``, ``CNOT``, ``RX(pi/2)``, ``RZ(theta)``.
         observable (numpy.ndarray): Observable to measure.
         noise_model (qibo.noise.NoiseModel): Noise model used for simulating noisy computation.
-        model : Model used for fitting. This should be a callable function object `f(x, *params)` taking as input the predictor variable and the parameters. By default a simple linear model `f(x,a,b) := a*x + b` is used.
+        model : Model used for fitting. This should be a callable function object ``f(x, *params)`` taking as input the predictor variable and the parameters. By default a simple linear model ``f(x,a,b) := a*x + b`` is used.
         n_training_samples (int): Number of training circuits to sample.
         init_state (numpy.ndarray): Initial state.
 
@@ -222,11 +223,11 @@ def vnCDR(
     """Runs the vnCDR error mitigation method.
 
     Args:
-        circuit (qibo.models.circuit.Circuit): Input circuit decomposed in the primitive gates: X, CNOT, RX(pi/2), RZ(theta).
+        circuit (qibo.models.circuit.Circuit): Input circuit decomposed in the primitive gates: ``X``, ``CNOT``, ``RX(pi/2)``, ``RZ(theta)``.
         observable (numpy.ndarray): Observable to measure.
         noise_levels (numpy.ndarray): Sequence of noise levels.
         noise_model (qibo.noise.NoiseModel): Noise model used for simulating noisy computation.
-        model : Model used for fitting. This should be a callable function object `f(x, *params)` taking as input the predictor variable and the parameters. By default a simple linear model `f(x,a) := a*x` is used, with `a` beeing the diagonal matrix containing the parameters.
+        model : Model used for fitting. This should be a callable function object ``f(x, *params)`` taking as input the predictor variable and the parameters. By default a simple linear model ``f(x,a) := a*x`` is used, with ``a`` beeing the diagonal matrix containing the parameters.
         n_training_samples (int): Number of training circuits to sample.
         init_state (numpy.ndarray): Initial state.
 
