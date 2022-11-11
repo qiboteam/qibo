@@ -20,7 +20,7 @@ import qibo
 
 # -- Project information -----------------------------------------------------
 
-project = "Qibo"
+project = "qibo"
 copyright = "2020-2022 by the Qibo team"
 author = "The Qibo team"
 
