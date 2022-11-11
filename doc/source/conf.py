@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Configuration file for the Sphinx documentation builder.
 #
 # This file only contains a selection of the most common options. For a full
@@ -26,7 +25,7 @@ copyright = "2020-2022 by the Qibo team"
 author = "The Qibo team"
 
 # The full version, including alpha/beta/rc tags
-#release = qibo.__version__
+# release = qibo.__version__
 
 
 # -- General configuration ---------------------------------------------------
@@ -111,6 +110,6 @@ def setup(app):
     app.add_css_file("css/style.css")
 
 
-#html_logo = "logo.png"
+# html_logo = "logo.png"
 
 html_show_sourcelink = False
