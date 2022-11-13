@@ -1,4 +1,3 @@
-#%%
 import numpy as np
 
 from qibo.config import PRECISION_TOL, raise_error
@@ -54,16 +53,34 @@ def random_unitary(dims: int, measure: str = "haar"):
     if dims <= 0:
         raise_error(ValueError, f"dims must be type int and positive.")
 
-    if measure != "haar":
-        raise_error(NotImplementedError, f"measure {measure} not implemented.")
+    if measure is not None and measure != "haar":
+        raise_error(ValueError, f"measure {measure} not implemented.")
 
-    gaussian_matrix = random_ginibre_unitary_matrix(dims, dims)
+    if measure == "haar":
+        gaussian_matrix = random_ginibre_unitary_matrix(dims, dims)
 
-    Q, R = np.linalg.qr(gaussian_matrix)
-    D = np.diag(R)
-    D = D / np.abs(D)
-    R = np.diag(D)
-    unitary = np.dot(Q, R)
+        Q, R = np.linalg.qr(gaussian_matrix)
+        D = np.diag(R)
+        D = D / np.abs(D)
+        R = np.diag(D)
+        unitary = np.dot(Q, R)
+    elif measure is None:
+        from qibo import get_backend
+
+        if get_backend() == "qibojit (cupy)":
+            raise_error(
+                NotImplementedError,
+                f"measure not implemented for the backend {get_backend()}.",
+            )
+        else:
+            from scipy.linalg import expm
+
+            matrix_1 = np.random.randn(dims, dims)
+            matrix_2 = np.random.randn(dims, dims)
+            H = (matrix_1 + np.transpose(matrix_1)) + 1.0j * (
+                matrix_2 - np.transpose(matrix_2.T)
+            )
+            unitary = expm(-1.0j * H / 2)
 
     return unitary
 
@@ -107,6 +124,56 @@ def random_density_matrix(
             state = np.dot(state, np.transpose(np.conj(state)))
             state = state / np.trace(state)
         else:
-            raise_error(NotImplementedError, f"method {method} is not implemented.")
+            raise_error(ValueError, f"method {method} not found.")
 
     return state
+
+
+def stochastic_matrix(
+    dims: int,
+    bistochastic: bool = False,
+    max_iterations: int = None,
+    precision_tol: float = None,
+):
+    """."""
+
+    if precision_tol is not None and precision_tol < 0.0:
+        raise_error(ValueError, f"precision_tol must be non-negative.")
+    if max_iterations is not None and max_iterations <= 0.0:
+        raise_error(ValueError, f"precision_tol must be non-negative.")
+
+    if precision_tol is None:
+        precision_tol = PRECISION_TOL
+    if max_iterations is None:
+        max_iterations = 20
+
+    matrix = np.random.rand(dims, dims)
+    row_sum = matrix.sum(axis=1)
+
+    if bistochastic:
+        column_sum = matrix.sum(axis=0)
+        count = 0
+        while (
+            count <= max_iterations - 1
+            and (
+                np.any(row_sum >= 1 + precision_tol)
+                or np.any(row_sum <= 1 - precision_tol)
+            )
+            or (
+                np.any(column_sum >= 1 + precision_tol)
+                or np.any(column_sum <= 1 - precision_tol)
+            )
+        ):
+            matrix = matrix / matrix.sum(axis=0)
+            matrix = matrix / matrix.sum(axis=1)[:, np.newaxis]
+            row_sum = matrix.sum(axis=1)
+            column_sum = matrix.sum(axis=0)
+            count += 1
+        if count == max_iterations - 1:
+            import warnings
+
+            warnings.warn("Reached max iterations.", RuntimeError)
+    else:
+        matrix = matrix / np.outer(row_sum, [1] * dims)
+
+    return matrix
