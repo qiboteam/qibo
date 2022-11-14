@@ -6,28 +6,28 @@ from qibo.config import PRECISION_TOL
 from qibo.quantum_info import *
 
 
-def test_random_ginibre_unitary_matrix(backend):
+def test_random_gaussian_matrix(backend):
     with pytest.raises(TypeError):
         dims = np.array([2])
         dims = backend.cast(dims, dtype=dims.dtype)
-        random_ginibre_unitary_matrix(dims)
+        random_gaussian_matrix(dims)
     with pytest.raises(TypeError):
         dims = 2
         rank = np.array([2])
         rank = backend.cast(rank, dtype=rank.dtype)
-        random_ginibre_unitary_matrix(dims, rank)
+        random_gaussian_matrix(dims, rank)
     with pytest.raises(ValueError):
         dims = -1
-        random_ginibre_unitary_matrix(dims)
+        random_gaussian_matrix(dims)
     with pytest.raises(ValueError):
         dims, rank = 2, 4
-        random_ginibre_unitary_matrix(dims, rank)
+        random_gaussian_matrix(dims, rank)
     with pytest.raises(ValueError):
         dims, rank = 2, -1
-        random_ginibre_unitary_matrix(dims, rank)
+        random_gaussian_matrix(dims, rank)
 
     # just runs the fucntion with no tests
-    random_ginibre_unitary_matrix(4)
+    random_gaussian_matrix(4)
 
 
 def test_random_hermitian_operator(backend):
