@@ -7,7 +7,12 @@ from qibo.hamiltonians.abstract import AbstractHamiltonian
 
 
 def parameter_shift(
-    circuit, hamiltonian, parameter_index, generator_eigenval, initial_state=None
+    circuit,
+    hamiltonian,
+    parameter_index,
+    is_rotation,
+    generator_eigenval=None,
+    initial_state=None,
 ):
     """In this method the parameter shift rule (PSR) is implemented.
     Given a circuit U and an observable H, the PSR allows to calculate the derivative
@@ -18,8 +23,9 @@ def parameter_shift(
         `https://arxiv.org/abs/1803.00745`.
 
     Args:
-        circuit (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
-        hamiltonian (:class: `qibo.hamiltonians.Hamiltonian`): target observable.
+        circuit (:class:`qibo.models.circuit.Circuit`): custom quantum circuit
+        hamiltonian (:class: `qibo.hamiltonians.Hamiltonian`): target observable
+        is_rotation (bool): it must be `True` if the gate affected by the target parameter is in {I, RX, RY, RZ}
         parameter_index (int): the index which identifies the target parameter in the circuit.get_parameters() list
         generator_eigenval (float): abs(eigenvalue) of H. In case of Pauli 1/2{sigmas} observable r = 0.5
         initial_state ((1, 2**nqubits) matrix): initial state on which we act with the circuit.
@@ -73,6 +79,7 @@ def parameter_shift(
             print('Test gradient with respect params[0]: ', grad_1.numpy())
     """
 
+    # some raise_error
     if parameter_index > len(circuit.get_parameters()):
         raise_error(ValueError, """This index is out of bounds.""")
 
