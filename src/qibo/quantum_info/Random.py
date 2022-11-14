@@ -1,11 +1,14 @@
-#%%
 import numpy as np
 
 from qibo.config import MAX_ITERATIONS, PRECISION_TOL, raise_error
 
 
-def random_ginibre_unitary_matrix(dims: int, rank: int = None):
-    """."""
+def random_gaussian_matrix(dims: int, rank: int = None):
+    """Generate a random Gaussian Unitary Matrix.
+
+    Gaussian unitary matrices
+
+    """
 
     if dims <= 0:
         raise_error(ValueError, f"dims must be type int and positive.")
@@ -22,9 +25,8 @@ def random_ginibre_unitary_matrix(dims: int, rank: int = None):
 
     dims = (dims, rank)
 
-    matrix = np.random.normal(0, 1 / 2, size=dims) + 1.0j * np.random.normal(
-        0, 1 / 2, size=dims
-    )
+    matrix = np.random.normal(size=dims) + 1.0j * np.random.normal(size=dims)
+
     return matrix
 
 
@@ -38,7 +40,7 @@ def random_hermitian_operator(
     if not isinstance(semidefinite, bool) or not isinstance(normalize, bool):
         raise_error(TypeError, f"semidefinite and normalize must be type bool.")
 
-    operator = random_ginibre_unitary_matrix(dims, dims)
+    operator = random_gaussian_matrix(dims, dims)
     if semidefinite:
         operator = np.dot(np.transpose(np.conj(operator)), operator)
     else:
@@ -65,7 +67,7 @@ def random_unitary(dims: int, measure: str = "haar"):
             raise_error(ValueError, f"measure {measure} not implemented.")
 
     if measure == "haar":
-        gaussian_matrix = random_ginibre_unitary_matrix(dims, dims)
+        gaussian_matrix = random_gaussian_matrix(dims, dims)
 
         Q, R = np.linalg.qr(gaussian_matrix)
         D = np.diag(R)
@@ -129,12 +131,12 @@ def random_density_matrix(
         state = np.outer(state, np.transpose(np.conj(state)))
     else:
         if method == "Hilbert-Schmidt":
-            state = random_ginibre_unitary_matrix(dims, rank)
+            state = random_gaussian_matrix(dims, rank)
             state = np.dot(state, np.transpose(np.conj(state)))
             state = state / np.trace(state)
         elif method == "Bures":
             state = np.eye(dims) + random_unitary(dims)
-            state = np.dot(state, random_ginibre_unitary_matrix(dims, rank))
+            state = np.dot(state, random_gaussian_matrix(dims, rank))
             state = np.dot(state, np.transpose(np.conj(state)))
             state = state / np.trace(state)
         else:
@@ -208,3 +210,8 @@ def stochastic_matrix(
         matrix = matrix / np.outer(row_sum, [1] * dims)
 
     return matrix
+
+
+# %%
+m = random_gaussian_matrix(4)
+np.linalg.norm(np.linalg.inv(m) - m.T.conj())
