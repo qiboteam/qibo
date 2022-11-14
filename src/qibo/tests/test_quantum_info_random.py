@@ -40,10 +40,10 @@ def test_random_hermitian_operator(backend):
     with pytest.raises(TypeError):
         dims = np.array([1])
         dims = backend.cast(dims, dtype=dims.dtype)
-        random_ginibre_unitary_matrix(dims)
+        random_hermitian_operator(dims)
     with pytest.raises(ValueError):
         dims = 0
-        random_ginibre_unitary_matrix(dims)
+        random_hermitian_operator(dims)
 
     # test if function returns Hermitian operator
     dims = 4
@@ -110,6 +110,9 @@ def test_random_unitary(backend):
     with pytest.raises(ValueError):
         dims = 0
         random_unitary(dims)
+    with pytest.raises(ValueError):
+        dims = 2
+        random_unitary(dims, measure="gaussian")
 
     # tests if operator is unitary (measure == "haar")
     dims = 4
@@ -276,4 +279,4 @@ def test_stochastic_matrix(backend):
 
     # tests warning for max_iterations
     dims = 4
-    stochastic_matrix(dims, max_iterations=1)
+    stochastic_matrix(dims, bistochastic=True, max_iterations=1)
