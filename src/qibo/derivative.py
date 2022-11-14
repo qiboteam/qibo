@@ -54,19 +54,6 @@ def parameter_shift(
                 c.add(gates.M(0))
                 return c
 
-            # using GradientTape to benchmark
-            def gradient_tape(params):
-                params = tf.Variable(params)
-
-                with tf.GradientTape() as tape:
-                    c = circuit(nqubits = 1)
-                    c.set_parameters(params)
-                    h = hamiltonian()
-                    expected_value = h.expectation(c.execute().state())
-
-                grads = tape.gradient(expected_value, [params])
-                return grads
-
             # initializing the circuit
             c = circuit(nqubits = 1)
 
@@ -82,10 +69,8 @@ def parameter_shift(
 
             tf_grads = gradient_tape(test_params)
 
-            print('Test gradient with respect params[0] with PSR: ', grad_0.numpy())
-            print('Test gradient with respect params[0] with tf:  ', tf_grads[0][0].numpy())
-            print('Test gradient with respect params[0] with PSR: ', grad_1.numpy())
-            print('Test gradient with respect params[0] with tf:  ', tf_grads[0][1].numpy())
+            print('Test gradient with respect params[0]: ', grad_0.numpy())
+            print('Test gradient with respect params[0]: ', grad_1.numpy())
     """
 
     if parameter_index > len(circuit.get_parameters()):
