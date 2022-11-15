@@ -2,6 +2,37 @@ import numpy as np
 
 from qibo.config import PRECISION_TOL, raise_error
 
+# Phases corresponding to all 24 single-qubit Clifford gates
+ONEQUBIT_CLIFFORD_PARAMS = [
+    (0, 0, 0, 0),
+    (np.pi, 1, 0, 0),
+    (np.pi, 0, 1, 0),
+    (np.pi, 0, 0, 1),
+    (np.pi / 2, 1, 0, 0),
+    (-np.pi / 2, 1, 0, 0),
+    (np.pi / 2, 0, 1, 0),
+    (-np.pi / 2, 0, 1, 0),
+    (np.pi / 2, 0, 0, 1),
+    (-np.pi / 2, 0, 0, 1),
+    (np.pi, 1 / np.sqrt(2), 1 / np.sqrt(2), 0),
+    (np.pi, 1 / np.sqrt(2), 0, 1 / np.sqrt(2)),
+    (np.pi, 0, 1 / np.sqrt(2), 1 / np.sqrt(2)),
+    (np.pi, -1 / np.sqrt(2), 1 / np.sqrt(2), 0),
+    (np.pi, 1 / np.sqrt(2), 0, -1 / np.sqrt(2)),
+    (np.pi, 0, -1 / np.sqrt(2), 1 / np.sqrt(2)),
+    (2 * np.pi / 3, 1 / np.sqrt(3), 1 / np.sqrt(3), 1 / np.sqrt(3)),
+    (-2 * np.pi / 3, 1 / np.sqrt(3), 1 / np.sqrt(3), 1 / np.sqrt(3)),
+    (2 * np.pi / 3, -1 / np.sqrt(3), 1 / np.sqrt(3), 1 / np.sqrt(3)),
+    (-2 * np.pi / 3, -1 / np.sqrt(3), 1 / np.sqrt(3), 1 / np.sqrt(3)),
+    (2 * np.pi / 3, 1 / np.sqrt(3), -1 / np.sqrt(3), 1 / np.sqrt(3)),
+    (-2 * np.pi / 3, 1 / np.sqrt(3), -1 / np.sqrt(3), 1 / np.sqrt(3)),
+    (2 * np.pi / 3, 1 / np.sqrt(3), 1 / np.sqrt(3), -1 / np.sqrt(3)),
+    (-2 * np.pi / 3, 1 / np.sqrt(3), 1 / np.sqrt(3), -1 / np.sqrt(3)),
+]
+
+# total number of Clifford gates (must be == 24)
+NUM_CLIFFORDS = len(ONEQUBIT_CLIFFORD_PARAMS)
+
 
 def shannon_entropy(probability_array, base: float = 2):
     """Calculate the Shannon entropy of a probability array :math:`\\mathbf{p}`, which is given by
