@@ -76,7 +76,24 @@ def random_gaussian_matrix(
 def random_hermitian_operator(
     dims: int, semidefinite: bool = False, normalize: bool = False, seed: int = None
 ):
-    """Generates a random Hermitian operator."""
+    """Generates a random Hermitian operator :math:`H`, i.e.
+    a random operator such that :math:`H = H^{\\dagger}.`
+
+    Args:
+        dims (int): dimension of the matrix.
+        semidefinite (bool): if `True`, returns a Hermitian matrix that
+            is also positive semidefinite. Default: `False`.
+        normalize (bool): if `True` and `semidefinite=False`, returns
+            a Hermitian matrix with eigenvalues in the interval
+            :math:`[-1, \\,1]`. If `True` and `semidefinite=True`,
+            interval is :math:`[0,\\,1]`. Default: `False`.
+        seed (int): Random seed used to initialize the pseudo-random number generator.
+            Default: `None`.
+
+    Returns:
+        Hermitian matrix :math:`H` with dimensions `(dims, dims)`.
+
+    """
 
     if dims <= 0:
         raise_error(ValueError, f"dims ({dims}) must be type int and positive.")
@@ -104,8 +121,23 @@ def random_hermitian_operator(
     return operator
 
 
-def random_unitary(dims: int, measure: str = "haar", seed: int = None):
-    """."""
+def random_unitary(dims: int, measure: str = None, seed: int = None):
+    """Returns a random Unitary operator :math:`U`,, i.e.
+    a random operator such that :math:`U^{-1} = U^{\\dagger}`.
+
+    Args:
+        dims (int): dimension of the matrix.
+        measure (str): probability measure in which to sample the unitary from.
+            If `None`, functions returns :math:`\\exp{-i \\, H}`, where :math:`H`
+            is a Hermitian operator. If `"haar"`, returns an Unitary matrix
+            sampled from the Haar measure. Default: `None`.
+        seed (int): Random seed used to initialize the pseudo-random number generator.
+            Default: `None`.
+
+    Returns:
+        Unitary matrix :math:`U` with dimensions `(dims, dims)`.
+
+    """
 
     if dims <= 0:
         raise_error(ValueError, f"dims must be type int and positive.")
@@ -147,7 +179,26 @@ def random_unitary(dims: int, measure: str = "haar", seed: int = None):
 
 
 def random_statevector(dims: int, haar: bool = False, seed: int = None):
-    """."""
+    """Creates a random statevector :math:`\\ket{\\psi}`.
+
+    .. math::
+        \\ket{\\psi} = \\sum_{k = 0}^{d - 1} \\, \\sqrt{p_{k}} \\, e^{i \\phi_{k}} \\, \\ket{\\k} \\,
+
+    where :math:`d` is `dims`, and :math:`p_{k}` and :math:`\\phi_{k}` are, respectively,
+    the probability and phase corresponding to the computational basis state :math:`\\ket{k}`.
+
+    Args:
+        dims (int): dimension of the matrix.
+        haar (bool): if `True`, statevector is created by sampling a Haar random unitary
+            :math:`U` and acting with it on a random computational basis state
+            :math:`\\ket{k}`, i.e. :math:`\\ket{\\psi} = U \\ket{k}`. Default: `False`.
+        seed (int): Random seed used to initialize the pseudo-random number generator.
+            Default: `None`.
+
+    Returns:
+        Random statevector :math:`\\ket{\\psi}`.
+
+    """
 
     if dims <= 0:
         raise_error(ValueError, "dim must be of type int and >= 1")
@@ -179,10 +230,21 @@ def random_density_matrix(
     dims,
     rank: int = None,
     pure: bool = False,
-    method: str = "Hilbert-Schmidt",
+    metric: str = "Hilbert-Schmidt",
     seed: int = None,
 ):
-    """."""
+    """Creates a random density matrix :math:`\\rho`.
+
+    Args:
+        dims (int): dimension of the matrix.
+        rank (int): rank of the matrix. If `None`, then `rank == dims`. Default: `None`.
+        pure (bool): if `True`, returns a pure state. Default: `False`.
+        metric (str): metric to sample the density matrix from. Options:
+            `"Hilbert-Schmidt"` and `"Bures"`. Default: `"Hilbert-Schmidt"`.
+        seed (int): Random seed used to initialize the pseudo-random number generator.
+            Default: `None`.
+
+    """
 
     if dims <= 0:
         raise_error(ValueError, f"dims must be type int and positive.")
@@ -196,9 +258,9 @@ def random_density_matrix(
     if not isinstance(pure, bool):
         raise_error(TypeError, f"pure must be type bool, but it is type {type(pure)}.")
 
-    if not isinstance(method, str):
+    if not isinstance(metric, str):
         raise_error(
-            TypeError, f"method must be type str, but it is type {type(method)}."
+            TypeError, f"metric must be type str, but it is type {type(metric)}."
         )
 
     if seed is not None and not isinstance(seed, int):
@@ -208,17 +270,17 @@ def random_density_matrix(
         state = random_statevector(dims, seed=seed)
         state = np.outer(state, np.transpose(np.conj(state)))
     else:
-        if method == "Hilbert-Schmidt":
+        if metric == "Hilbert-Schmidt":
             state = random_gaussian_matrix(dims, rank, seed=seed)
             state = np.dot(state, np.transpose(np.conj(state)))
             state = state / np.trace(state)
-        elif method == "Bures":
+        elif metric == "Bures":
             state = np.eye(dims) + random_unitary(dims, seed=seed)
             state = np.dot(state, random_gaussian_matrix(dims, rank, seed=seed))
             state = np.dot(state, np.transpose(np.conj(state)))
             state = state / np.trace(state)
         else:
-            raise_error(ValueError, f"method {method} not found.")
+            raise_error(ValueError, f"metric {metric} not found.")
 
     return state
 
@@ -227,6 +289,15 @@ def _clifford_unitary(phase, x, y, z):
     """Returns a parametrized single-qubit Clifford gate,
     where possible parameters are defined in
     `qibo.quantum_info.utils.ONEQUBIT_CLIFFORD_PARAMS`.
+
+    Args:
+        phase (float) : An angle.
+        x (float) : prefactor.
+        y (float) : prefactor.
+        z (float) : prefactor.
+
+    Returns:
+        Clifford unitary with dimensions (2, 2).
 
     """
 
@@ -244,8 +315,26 @@ def _clifford_unitary(phase, x, y, z):
     )
 
 
-def random_clifford_gate(qubits, return_circuit: bool = False, seed: int = None):
-    """."""
+def random_clifford_gate(
+    qubits, return_circuit: bool = False, fuse: bool = False, seed: int = None
+):
+    """Generates random Clifford operator(s).
+
+    Args:
+        qubits (int or list or ndarray): if `int`, the number of qubits for the Clifford.
+            If `list` or `ndarray`, indexes of the qubits for the Clifford to act on.
+        return_circuit (bool): if `True`, returns a `qibo.gates.Unitary` object.
+            If `False` returns an `ndarray` object. Default: `False`.
+        fuse (bool): if `False`, returns an `ndarray` with one Clifford gate per qubit.
+            If `True`, returns the tensor product of the Clifford gates that were
+            sampled. Default: `False`.
+        seed (int): Random seed used to initialize the pseudo-random number generator.
+            Default: `None`.
+
+    Returns:
+        Random Clifford operator(s).
+
+    """
 
     if (
         not isinstance(qubits, int)
@@ -271,6 +360,9 @@ def random_clifford_gate(qubits, return_circuit: bool = False, seed: int = None)
             f"return_circuit must be type bool, but it is type {type(return_circuit)}.",
         )
 
+    if not isinstance(fuse, bool):
+        raise_error(TypeError, f"fuse must be type bool, but it is type {type(fuse)}.")
+
     if seed is not None and not isinstance(seed, int):
         raise_error(TypeError, f"seed must be type int.")
 
@@ -295,7 +387,12 @@ def random_clifford_gate(qubits, return_circuit: bool = False, seed: int = None)
 
         unitaries = gates.Unitary(unitaries, *qubits)
     else:
-        unitaries = np.array(unitaries) if len(unitaries) > 1 else unitaries[0]
+        if len(unitaries) == 1:
+            unitaries = unitaries[0]
+        elif fuse:
+            unitaries = reduce(np.kron, unitaries)
+        elif not fuse:
+            unitaries = np.array(unitaries)
 
     return unitaries
 
@@ -307,7 +404,22 @@ def random_stochastic_matrix(
     max_iterations: int = None,
     seed: int = None,
 ):
-    """."""
+    """Creates a random stochastic matrix.
+
+    Args:
+        dims (int): dimension of the matrix.
+        bistochastic (bool): if `True`, matrix is row- and column-stochastic.
+            If `False`, matrix is row-stochastic. Default: `False`.
+        precision_tol (float): tolerance level for how much each probability
+            distribution can deviate from summing up to `1.0`. If `None`,
+            it defaults to `qibo.config.PRECISION_TOL`. Default: `None`.
+        max_iterations (int): when `bistochastic=True`, maximum number of iterations
+            used to normalize all rows and columns simultaneously. If `None`,
+            it defaults to `qibo.config.MAX_ITERATIONS`. Default: `None`.
+        seed (int): Random seed used to initialize the pseudo-random number generator.
+            Default: `None`.
+
+    """
     if dims <= 0:
         raise_error(ValueError, f"dims must be type int and positive.")
 

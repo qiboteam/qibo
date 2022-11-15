@@ -209,8 +209,9 @@ def test_random_density_matrix(metric):
 
 @pytest.mark.parametrize("qubits", [2, [0, 1], np.array([0, 1])])
 @pytest.mark.parametrize("return_circuit", [False, True])
+@pytest.mark.parametrize("fuse", [False, True])
 @pytest.mark.parametrize("seed", [10])
-def test_random_clifford(qubits, return_circuit, seed):
+def test_random_clifford(qubits, return_circuit, fuse, seed):
     with pytest.raises(TypeError):
         q = "1"
         random_clifford_gate(q)
@@ -224,6 +225,9 @@ def test_random_clifford(qubits, return_circuit, seed):
         q = 1
         random_clifford_gate(q, return_circuit="True")
     with pytest.raises(TypeError):
+        q = 2
+        random_clifford_gate(q, fuse="True")
+    with pytest.raises(TypeError):
         q = 1
         random_clifford_gate(q, seed=0.1)
 
@@ -236,11 +240,17 @@ def test_random_clifford(qubits, return_circuit, seed):
         ]
     )
 
-    matrix = random_clifford_gate(qubits, return_circuit=return_circuit, seed=seed)
+    matrix = random_clifford_gate(
+        qubits, return_circuit=return_circuit, fuse=fuse, seed=seed
+    )
 
-    if return_circuit == True:
+    if return_circuit:
         assert np.linalg.norm(matrix.matrix - result) < PRECISION_TOL
-    else:
+
+    if not return_circuit and fuse:
+        assert np.linalg.norm(matrix - result) < PRECISION_TOL
+
+    if not return_circuit and not fuse:
         from functools import reduce
 
         assert np.linalg.norm(reduce(np.kron, matrix) - result) < PRECISION_TOL
