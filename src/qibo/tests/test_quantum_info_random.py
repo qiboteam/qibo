@@ -152,8 +152,8 @@ def test_random_statevector():
     assert purity(state) >= 1.0 - PRECISION_TOL
 
 
-@pytest.mark.parametrize("method", ["Hilbert-Schmidt", "Bures"])
-def test_random_density_matrix(method):
+@pytest.mark.parametrize("metric", ["Hilbert-Schmidt", "Bures"])
+def test_random_density_matrix(metric):
     with pytest.raises(TypeError):
         dims = np.array([1])
         random_density_matrix(dims)
@@ -175,17 +175,17 @@ def test_random_density_matrix(method):
         random_density_matrix(dims, pure="True")
     with pytest.raises(TypeError):
         dims = 2
-        random_density_matrix(dims, method=1)
+        random_density_matrix(dims, metric=1)
     with pytest.raises(ValueError):
         dims = 2
-        random_density_matrix(dims, method="gaussian")
+        random_density_matrix(dims, metric="gaussian")
     with pytest.raises(TypeError):
         dims = 4
         random_density_matrix(dims, seed=0.1)
 
     # for pure=True, tests if it is a density matrix and if state is pure
     dims = 4
-    state = random_density_matrix(dims, pure=True, method=method)
+    state = random_density_matrix(dims, pure=True, metric=metric)
     assert np.real(np.trace(state)) <= 1.0 + PRECISION_TOL
     assert np.real(np.trace(state)) >= 1.0 - PRECISION_TOL
     assert purity(state) <= 1.0 + PRECISION_TOL
@@ -197,7 +197,7 @@ def test_random_density_matrix(method):
 
     # for pure=False, tests if it is a density matrix and if state is mixed
     dims = 4
-    state = random_density_matrix(dims, method=method)
+    state = random_density_matrix(dims, metric=metric)
     assert np.real(np.trace(state)) <= 1.0 + PRECISION_TOL
     assert np.real(np.trace(state)) >= 1.0 - PRECISION_TOL
     assert purity(state) <= 1.0 + PRECISION_TOL
