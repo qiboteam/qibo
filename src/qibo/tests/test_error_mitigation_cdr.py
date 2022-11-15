@@ -5,8 +5,8 @@ from qibo import gates
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.models import Circuit
 from qibo.models.error_mitigation import CDR
-from qibo.noise import DepolarizingError, NoiseModel, PauliError
-from qibo.symbols import I, X, Y, Z
+from qibo.noise import DepolarizingError, NoiseModel
+from qibo.symbols import Z
 
 
 def get_noise_model(error):
@@ -15,7 +15,7 @@ def get_noise_model(error):
     return noise
 
 
-@pytest.mark.parametrize("nqubits", [4])
+@pytest.mark.parametrize("nqubits", [3])
 @pytest.mark.parametrize(
     "noise",
     [get_noise_model(DepolarizingError(0.1))],
@@ -23,17 +23,21 @@ def get_noise_model(error):
 def test_cdr(nqubits, noise):
     """Test that CDR reduces the noise."""
     # Define the circuit
-    nlayers=3
+    hz=0.5
+    hx=0.5
+    dt=0.25
     c = Circuit(nqubits, density_matrix = True)
-    for l in range(nlayers):
-        c.add((gates.RY(q,theta=np.random.rand()*2*np.pi)for q in range(nqubits)))
-        c.add((gates.RZ(q, theta=np.random.rand()*2*np.pi) for q in range(nqubits)))
-        c.add((gates.CNOT(q, q+1) for q in range(0, nqubits-1, 2)))
-        c.add((gates.RZ(q, theta=np.random.rand()*2*np.pi) for q in range(nqubits)))
-        c.add((gates.CNOT(q, q+1) for q in range(1, nqubits-2, 2)))
-        c.add((gates.RY(q,theta=np.random.rand()*2*np.pi)for q in range(nqubits)))
-        c.add(gates.CNOT(0, nqubits-1))
-        c.add((gates.RZ(q, theta=np.random.rand()*2*np.pi) for q in range(nqubits)))
+    c.add((gates.RZ(q,theta=-2*hz*dt-np.pi/2) for q in range(nqubits)))
+    c.add((gates.RX(q,theta=np.pi/2) for q in range(nqubits)))
+    c.add((gates.RZ(q,theta=-2*hx*dt+np.pi) for q in range(nqubits)))
+    c.add((gates.RX(q,theta=np.pi/2) for q in range(nqubits)))
+    c.add((gates.RZ(q,theta=-np.pi/2) for q in range(nqubits)))
+    c.add((gates.CNOT(q, q+1) for q in range(0,nqubits-1, 2)))
+    c.add((gates.RZ(q+1,theta=-2*dt) for q in range(0,nqubits-1, 2)))
+    c.add((gates.CNOT(q, q+1) for q in range(0,nqubits-1, 2)))
+    c.add((gates.CNOT(q, q+1) for q in range(1,nqubits, 2)))
+    c.add((gates.RZ(q+1,theta=-2*dt) for q in range(1,nqubits, 2)))
+    c.add((gates.CNOT(q, q+1) for q in range(1,nqubits, 2)))
     c.add(gates.M(q) for q in range(nqubits))
     # Define the observable
     obs = np.prod([Z(i) for i in range(nqubits)])
