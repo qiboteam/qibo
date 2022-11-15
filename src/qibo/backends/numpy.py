@@ -509,7 +509,7 @@ class NumpyBackend(Backend):
         shape = 2 * (2 ** len(qubits), 2 ** (nqubits - len(qubits)))
         state = self.np.reshape(state, 2 * nqubits * (2,))
         state = self.np.reshape(self.np.transpose(state, order), shape)
-        probs = self.np.einsum("abab->a", state).astype(rtype)
+        probs = self.np.abs(self.np.einsum("abab->a", state).astype(rtype))
         probs = self.np.reshape(probs, len(qubits) * (2,))
         return self._order_probabilities(probs, qubits, nqubits).ravel()
 
