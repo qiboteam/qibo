@@ -62,7 +62,7 @@ def get_noisy_circuit(circuit, cj):
     return noisy_circuit
 
 
-def ZNE(circuit, observable, c, nshots=10000, init_state=None, noise_model=None):
+def ZNE(circuit, observable, noise_levels, backend=None, noise_model=None, nshots=10000):
     """Runs the Zero Noise Extrapolation method for error mitigation.
 
     The different noise levels are realized by the insertion of pairs of CNOT gates that resolve to the identiy in the noise-free case.
@@ -70,24 +70,28 @@ def ZNE(circuit, observable, c, nshots=10000, init_state=None, noise_model=None)
     Args:
         circuit (qibo.models.circuit.Circuit): Input circuit.
         observable (numpy.ndarray): Observable to measure.
-        c (numpy.ndarray): Sequence of noise levels.
-        init_state (numpy.ndarray): Initial state.
+        noise_levels (numpy.ndarray): Sequence of noise levels.
+        backend (qibo.backends.abstract.Backend): Calculation engine.
         noise_model (qibo.noise.NoiseModel): Noise model applied to simulate noisy computation.
+        nshots (int): Number of shots.
 
     Returns:
         numpy.ndarray: Estimate of the expected value of ``observable`` in the noise free condition.
     """
+
+    if backend == None:
+        from qibo.backends import GlobalBackend
+        backend = GlobalBackend()
     expected_val = []
-    for cj in c:
+    for cj in noise_levels:
         noisy_circuit = get_noisy_circuit(circuit, cj)
-        if noise_model != None:
+        if noise_model != None and backend.name != "qibolab":
             noisy_circuit = noise_model.apply(noisy_circuit)
+        circuit_result = backend.execute_circuit(noisy_circuit, nshots=nshots)
         expected_val.append(
-            noisy_circuit(
-                nshots=nshots, initial_state=init_state
-            ).expectation_from_samples(observable)
+            circuit_result.expectation_from_samples(observable)
         )
-    gamma = get_gammas(c, solve=False)
+    gamma = get_gammas(noise_levels, solve=False)
     return (gamma * expected_val).sum()
 
 
@@ -165,110 +169,142 @@ def sample_training_circuit(
 def CDR(
     circuit,
     observable,
+    backend,
     noise_model,
     nshots=10000,
     model=lambda x, a, b: a * x + b,
     n_training_samples=100,
-    init_state=None,
+    full_output=False,
 ):
     """Runs the CDR error mitigation method.
 
     Args:
         circuit (qibo.models.circuit.Circuit): Input circuit decomposed in the primitive gates: ``X``, ``CNOT``, ``RX(pi/2)``, ``RZ(theta)``.
         observable (numpy.ndarray): Observable to measure.
+        backend (qibo.backends.abstract.Backend): Calculation engine.
         noise_model (qibo.noise.NoiseModel): Noise model used for simulating noisy computation.
+        nshots (int): Number of shots.
         model : Model used for fitting. This should be a callable function object ``f(x, *params)`` taking as input the predictor variable and the parameters. By default a simple linear model ``f(x,a,b) := a*x + b`` is used.
         n_training_samples (int): Number of training circuits to sample.
-        init_state (numpy.ndarray): Initial state.
+        full_output (bool): If True, this function returns additional information: `val`, `optimal_params`, `train_val`.
 
     Returns:
-        float: Returns the estimated expected value of `observable`.
+        mit_val (float): Mitigated expectation value of `observable`.
+        val (float): Noisy expectation value of `observable`.
+        optimal_params (list): Optimal values for `params`.
+        train_val (dict): Contains the noise-free and noisy expectation values obtained with the training circuits.
     """
+
+    # Set backend
+    if backend == None:
+        from qibo.backends import GlobalBackend
+        backend = GlobalBackend()
     # Sample the training set
     training_circuits = [
         sample_training_circuit(circuit) for n in range(n_training_samples)
     ]
     # Run the sampled circuits
-    expected_val = {"noise-free": [], "noisy": []}
+    train_val = {"noise-free": [], "noisy": []}
     for c in training_circuits:
-        val = c(nshots=nshots, initial_state=init_state).expectation_from_samples(
+        val = c(nshots=nshots).expectation_from_samples(
             observable
         )
-        expected_val["noise-free"].append(val)
-        noisy_circuit = noise_model.apply(c)
-        val = noisy_circuit(
-            nshots=nshots, initial_state=init_state
-        ).expectation_from_samples(observable)
-        expected_val["noisy"].append(val)
+        train_val["noise-free"].append(val)
+        if noise_model != None and backend.name != "qibolab":
+            c = noise_model.apply(c)
+        circuit_result = backend.execute_circuit(c, nshots=nshots)
+        val = circuit_result.expectation_from_samples(observable)
+        train_val["noisy"].append(val)
     # Fit the model
-    optimal_params = curve_fit(model, expected_val["noisy"], expected_val["noise-free"])
+    optimal_params = curve_fit(model, train_val["noisy"], train_val["noise-free"])[0]
     # Run the input circuit
-    noisy_circuit = noise_model.apply(circuit)
-    val = noisy_circuit(
-        nshots=nshots, initial_state=init_state
-    ).expectation_from_samples(observable)
-    return [model(val, *optimal_params[0]), val, optimal_params[0], expected_val]
+    if noise_model != None and backend.name != "qibolab":
+        noisy_circuit = noise_model.apply(circuit)
+    circuit_result = backend.execute_circuit(noisy_circuit, nshots=nshots)
+    val = circuit_result.expectation_from_samples(observable)
+    mit_val = model(val, *optimal_params)
+    #Return data
+    if full_output==True:
+        return mit_val, val, optimal_params, train_val
+    else:
+        return mit_val
 
 
 def vnCDR(
     circuit,
     observable,
+    backend,
     noise_levels,
     noise_model,
     nshots=10000,
     model=lambda x, *params: (x * np.array(params).reshape(-1, 1)).sum(0),
     n_training_samples=100,
-    init_state=None,
+    full_output=False,
 ):
     """Runs the vnCDR error mitigation method.
 
     Args:
         circuit (qibo.models.circuit.Circuit): Input circuit decomposed in the primitive gates: ``X``, ``CNOT``, ``RX(pi/2)``, ``RZ(theta)``.
         observable (numpy.ndarray): Observable to measure.
+        backend (qibo.backends.abstract.Backend): Calculation engine.
         noise_levels (numpy.ndarray): Sequence of noise levels.
         noise_model (qibo.noise.NoiseModel): Noise model used for simulating noisy computation.
+        nshots (int): Number of shots.
         model : Model used for fitting. This should be a callable function object ``f(x, *params)`` taking as input the predictor variable and the parameters. By default a simple linear model ``f(x,a) := a*x`` is used, with ``a`` beeing the diagonal matrix containing the parameters.
         n_training_samples (int): Number of training circuits to sample.
-        init_state (numpy.ndarray): Initial state.
+        full_output (bool): If True, this function returns additional information: `val`, `optimal_params`, `train_val`.
 
     Returns:
-        float: Returns the estimated expected value of `observable`.
+        mit_val (float): Mitigated expectation value of `observable`.
+        val (list): Expectation value of `observable` with increased noise levels.
+        optimal_params (list): Optimal values for `params`.
+        train_val (dict): Contains the noise-free and noisy expectation values obtained with the training circuits.
     """
+
+    # Set backend
+    if backend == None:
+        from qibo.backends import GlobalBackend
+        backend = GlobalBackend()
     # Sample the training circuits
     training_circuits = [
         sample_training_circuit(circuit) for n in range(n_training_samples)
     ]
-    expected_val = {"noise-free": [], "noisy": []}
+    train_val = {"noise-free": [], "noisy": []}
     # Add the different noise levels and run the circuits
     for c in training_circuits:
-        # rho = c(initial_state=init_state)
-        # val = observable.dot(rho.state()).trace()
-        val = c(nshots=nshots, initial_state=init_state).expectation_from_samples(
+        val = c(nshots=nshots).expectation_from_samples(
             observable
         )
-        expected_val["noise-free"].append(val)
+        train_val["noise-free"].append(val)
         for level in noise_levels:
             noisy_c = get_noisy_circuit(c, level)
-            val = noise_model.apply(noisy_c)(
-                nshots=nshots, initial_state=init_state
-            ).expectation_from_samples(observable)
-            expected_val["noisy"].append(val)
+            if noise_model != None and backend.name != "qibolab":
+                noisy_c = noise_model.apply(c)
+            circuit_result = backend.execute_circuit(noisy_c, nshots=nshots)
+            val = circuit_result.expectation_from_samples(observable)
+            train_val["noisy"].append(val)
     # Repeat noise-free values for each noise level
-    expected_val["noisy"] = np.array(expected_val["noisy"]).reshape(
+    train_val["noisy"] = np.array(train_val["noisy"]).reshape(
         -1, len(noise_levels)
     )
     # Fit the model
     params = np.random.rand(len(noise_levels))
     optimal_params = curve_fit(
-        model, expected_val["noisy"].T, expected_val["noise-free"], p0=params
+        model, train_val["noisy"].T, train_val["noise-free"], p0=params
     )
     # Run the input circuit
     val = []
     for level in noise_levels:
         noisy_c = get_noisy_circuit(circuit, level)
+        if noise_model != None and backend.name != "qibolab":
+            noisy_c = noise_model.apply(circuit)
+        circuit_result = backend.execute_circuit(noisy_c, nshots=nshots)
         val.append(
-            noise_model.apply(noisy_c)(
-                nshots=nshots, initial_state=init_state
-            ).expectation_from_samples(observable)
+            circuit_result.expectation_from_samples(observable)
         )
-    return model(np.array(val).reshape(-1, 1), *optimal_params[0])[0]
+    mit_val = model(np.array(val).reshape(-1, 1), *optimal_params[0])[0]
+    #Return data
+    if full_output==True:
+        return mit_val, val, optimal_params, train_val
+    else:
+        return mit_val
