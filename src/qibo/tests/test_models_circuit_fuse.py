@@ -186,3 +186,23 @@ def test_set_parameters_fusion(backend):
     c.set_parameters(4 * [0.4321])
     fused_c.set_parameters(4 * [0.4321])
     backend.assert_circuitclose(fused_c, c)
+
+
+def test_add_fused_gate(backend):
+    """Check adding fused gate to a circuit."""
+    c = Circuit(2)
+    c.add(gates.H(0))
+    c.add(gates.H(1))
+    c.add(gates.CNOT(0, 1))
+    fused_c = c.fuse()
+    fgate = fused_c.queue[0]
+    assert isinstance(fgate, gates.FusedGate)
+
+    new_c = Circuit(2)
+    new_c.add(fgate)
+    assert c.depth == 2
+    assert c.ngates == 3
+    assert new_c.depth == 1
+    assert new_c.ngates == 1
+    backend.assert_circuitclose(fused_c, c)
+    backend.assert_circuitclose(new_c, c)

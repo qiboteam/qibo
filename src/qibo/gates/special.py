@@ -75,9 +75,6 @@ class FusedGate(SpecialGate):
         else:
             self.gates.append(gate)
 
-    def __iter__(self):
-        return iter(self.gates)
-
     def _dagger(self):
         dagger = self.__class__(*self.init_args)
         for gate in self.gates[::-1]:
