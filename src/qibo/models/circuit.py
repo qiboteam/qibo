@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import collections
 from typing import Dict, List, Tuple, Union
 
@@ -1284,6 +1283,7 @@ class Circuit:
             "KrausChannel": "K",
             "UnitaryChannel": "U",
             "ThermalRelaxationChannel": "TR",
+            "DepolarizingChannel": "D",
             "ResetChannel": "R",
             "PartialTrace": "PT",
             "EntanglementEntropy": "EE",

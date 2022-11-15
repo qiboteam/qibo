@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test circuit measurements when outcome is probabilistic."""
 import sys
 

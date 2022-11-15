@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from typing import Dict, Optional, Tuple
 
 from qibo.config import raise_error

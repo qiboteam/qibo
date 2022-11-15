@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
 import numpy as np
 import pytest
 
-from qibo import gates
+from qibo import gates, hamiltonians
 from qibo.models import Circuit
 from qibo.states import MeasurementResult
+from qibo.symbols import I, Z
 
 
 def test_measurement_result_repr():
@@ -75,3 +75,25 @@ def test_state_probabilities(backend, density_matrix):
     final_probabilities = result.probabilities()
     target_probabilities = np.ones(16) / 16
     backend.assert_allclose(final_probabilities, target_probabilities)
+
+
+@pytest.mark.parametrize("density_matrix", [False, True])
+def test_expectation_from_samples(backend, density_matrix):
+    obs0 = 2 * Z(0) * Z(1) + Z(0) * Z(2)
+    obs1 = 2 * Z(0) * Z(1) + Z(0) * Z(2) * I(3)
+    h_sym = hamiltonians.SymbolicHamiltonian(obs0, backend=backend)
+    h_dense = hamiltonians.Hamiltonian(3, h_sym.matrix, backend=backend)
+    h1 = hamiltonians.SymbolicHamiltonian(obs1, backend=backend)
+    c = Circuit(4)
+    c.add(gates.RX(0, np.random.rand()))
+    c.add(gates.RX(1, np.random.rand()))
+    c.add(gates.RX(2, np.random.rand()))
+    c.add(gates.RX(3, np.random.rand()))
+    c.add(gates.M(0, 1, 2))
+    nshots = 10**5
+    result = backend.execute_circuit(c, nshots=nshots)
+    expval_sym = result.expectation_from_samples(h_sym)
+    expval_dense = result.expectation_from_samples(h_dense)
+    expval = h1.expectation(result.state())
+    backend.assert_allclose(expval_sym, expval_dense)
+    backend.assert_allclose(expval_sym, expval, atol=10 / np.sqrt(nshots))
