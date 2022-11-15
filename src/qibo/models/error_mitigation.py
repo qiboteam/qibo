@@ -62,7 +62,9 @@ def get_noisy_circuit(circuit, cj):
     return noisy_circuit
 
 
-def ZNE(circuit, observable, noise_levels, backend=None, noise_model=None, nshots=10000):
+def ZNE(
+    circuit, observable, noise_levels, backend=None, noise_model=None, nshots=10000
+):
     """Runs the Zero Noise Extrapolation method for error mitigation.
 
     The different noise levels are realized by the insertion of pairs of CNOT gates that resolve to the identiy in the noise-free case.
@@ -81,6 +83,7 @@ def ZNE(circuit, observable, noise_levels, backend=None, noise_model=None, nshot
 
     if backend == None:
         from qibo.backends import GlobalBackend
+
         backend = GlobalBackend()
     expected_val = []
     for cj in noise_levels:
@@ -88,9 +91,7 @@ def ZNE(circuit, observable, noise_levels, backend=None, noise_model=None, nshot
         if noise_model != None and backend.name != "qibolab":
             noisy_circuit = noise_model.apply(noisy_circuit)
         circuit_result = backend.execute_circuit(noisy_circuit, nshots=nshots)
-        expected_val.append(
-            circuit_result.expectation_from_samples(observable)
-        )
+        expected_val.append(circuit_result.expectation_from_samples(observable))
     gamma = get_gammas(noise_levels, solve=False)
     return (gamma * expected_val).sum()
 
@@ -198,6 +199,7 @@ def CDR(
     # Set backend
     if backend == None:
         from qibo.backends import GlobalBackend
+
         backend = GlobalBackend()
     # Sample the training set
     training_circuits = [
@@ -206,9 +208,7 @@ def CDR(
     # Run the sampled circuits
     train_val = {"noise-free": [], "noisy": []}
     for c in training_circuits:
-        val = c(nshots=nshots).expectation_from_samples(
-            observable
-        )
+        val = c(nshots=nshots).expectation_from_samples(observable)
         train_val["noise-free"].append(val)
         if noise_model != None and backend.name != "qibolab":
             c = noise_model.apply(c)
@@ -223,8 +223,8 @@ def CDR(
     circuit_result = backend.execute_circuit(noisy_circuit, nshots=nshots)
     val = circuit_result.expectation_from_samples(observable)
     mit_val = model(val, *optimal_params)
-    #Return data
-    if full_output==True:
+    # Return data
+    if full_output == True:
         return mit_val, val, optimal_params, train_val
     else:
         return mit_val
@@ -264,6 +264,7 @@ def vnCDR(
     # Set backend
     if backend == None:
         from qibo.backends import GlobalBackend
+
         backend = GlobalBackend()
     # Sample the training circuits
     training_circuits = [
@@ -272,9 +273,7 @@ def vnCDR(
     train_val = {"noise-free": [], "noisy": []}
     # Add the different noise levels and run the circuits
     for c in training_circuits:
-        val = c(nshots=nshots).expectation_from_samples(
-            observable
-        )
+        val = c(nshots=nshots).expectation_from_samples(observable)
         train_val["noise-free"].append(val)
         for level in noise_levels:
             noisy_c = get_noisy_circuit(c, level)
@@ -284,9 +283,7 @@ def vnCDR(
             val = circuit_result.expectation_from_samples(observable)
             train_val["noisy"].append(val)
     # Repeat noise-free values for each noise level
-    train_val["noisy"] = np.array(train_val["noisy"]).reshape(
-        -1, len(noise_levels)
-    )
+    train_val["noisy"] = np.array(train_val["noisy"]).reshape(-1, len(noise_levels))
     # Fit the model
     params = np.random.rand(len(noise_levels))
     optimal_params = curve_fit(
@@ -299,12 +296,10 @@ def vnCDR(
         if noise_model != None and backend.name != "qibolab":
             noisy_c = noise_model.apply(circuit)
         circuit_result = backend.execute_circuit(noisy_c, nshots=nshots)
-        val.append(
-            circuit_result.expectation_from_samples(observable)
-        )
+        val.append(circuit_result.expectation_from_samples(observable))
     mit_val = model(np.array(val).reshape(-1, 1), *optimal_params[0])[0]
-    #Return data
-    if full_output==True:
+    # Return data
+    if full_output == True:
         return mit_val, val, optimal_params, train_val
     else:
         return mit_val
