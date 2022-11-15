@@ -75,37 +75,37 @@ def random_unitary(dims: int, measure: str = "haar"):
         R = np.diag(D)
         unitary = np.dot(Q, R)
     elif measure is None:
-        from qibo import get_backend
+        from scipy.linalg import expm
 
-        if get_backend() == "qibojit (cupy)":
-            raise_error(
-                NotImplementedError,
-                f"measure not implemented for the backend {get_backend()}.",
-            )
-        else:
-            from scipy.linalg import expm
-
-            matrix_1 = np.random.randn(dims, dims)
-            matrix_2 = np.random.randn(dims, dims)
-            H = (matrix_1 + np.transpose(matrix_1)) + 1.0j * (
-                matrix_2 - np.transpose(matrix_2.T)
-            )
-            unitary = expm(-1.0j * H / 2)
+        matrix_1 = np.random.randn(dims, dims)
+        matrix_2 = np.random.randn(dims, dims)
+        H = (matrix_1 + np.transpose(matrix_1)) + 1.0j * (
+            matrix_2 - np.transpose(matrix_2.T)
+        )
+        unitary = expm(-1.0j * H / 2)
 
     return unitary
 
 
-def random_statevector(dims: int):
+def random_statevector(dims: int, haar: bool = False):
     """."""
 
     if dims <= 0:
         raise_error(ValueError, "dim must be of type int and >= 1")
+    if not isinstance(haar, bool):
+        raise_error(TypeError, f"haar must be type bool, but it is type {type(haar)}.")
 
-    probabilities = np.random.rand(dims)
-    probabilities = probabilities / np.sum(probabilities)
-    phases = 2 * np.pi * np.random.rand(dims)
+    if not haar:
+        probabilities = np.random.rand(dims)
+        probabilities = probabilities / np.sum(probabilities)
+        phases = 2 * np.pi * np.random.rand(dims)
+        state = np.sqrt(probabilities) * np.exp(1.0j * phases)
+    else:
+        # select a random column of a haar random unitary
+        k = np.random.randint(dims)
+        state = random_unitary(dims, measure="haar")[:, k]
 
-    return np.sqrt(probabilities) * np.exp(1.0j * phases)
+    return state
 
 
 def random_density_matrix(
@@ -210,8 +210,3 @@ def stochastic_matrix(
         matrix = matrix / np.outer(row_sum, [1] * dims)
 
     return matrix
-
-
-# %%
-m = random_gaussian_matrix(4)
-np.linalg.norm(np.linalg.inv(m) - m.T.conj())
