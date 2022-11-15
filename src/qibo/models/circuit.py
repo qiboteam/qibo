@@ -63,7 +63,7 @@ class _Queue(list):
         return queue
 
     def from_fused(self):
-        """Creates the fused circuit queue by removing gatest that have been fused to others."""
+        """Creates the fused circuit queue by removing gates that have been fused to others."""
         queue = self.__class__(self.nqubits)
         for gate in self:
             if not gate.marked:
@@ -897,7 +897,8 @@ class Circuit:
             backend = GlobalBackend()
         fgate = gates.FusedGate(*range(self.nqubits))
         for gate in self.queue:
-            fgate.append(gate)
+            if not isinstance(gate, (gates.SpecialGate, gates.M)):
+                fgate.append(gate)
         return fgate.asmatrix(backend)
 
     @property
