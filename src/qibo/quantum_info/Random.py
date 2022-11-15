@@ -3,7 +3,7 @@ from functools import reduce
 import numpy as np
 
 from qibo.config import MAX_ITERATIONS, PRECISION_TOL, raise_error
-from qibo.quantum_info import NUM_CLIFFORDS, ONEQUBIT_CLIFFORD_PARAMS
+from qibo.quantum_info.utils import NUM_CLIFFORDS, ONEQUBIT_CLIFFORD_PARAMS
 
 
 def random_gaussian_matrix(
@@ -55,6 +55,11 @@ def random_gaussian_matrix(
     if seed is not None and not isinstance(seed, int):
         raise_error(TypeError, f"seed must be type int.")
 
+    if mean is None:
+        mean = 0
+    if stddev is None:
+        stddev = 1
+
     local_state = (
         np.random.RandomState(seed) if seed is not None else np.random.RandomState()
     )
@@ -71,7 +76,7 @@ def random_gaussian_matrix(
 def random_hermitian_operator(
     dims: int, semidefinite: bool = False, normalize: bool = False, seed: int = None
 ):
-    """ """
+    """Generates a random Hermitian operator."""
 
     if dims <= 0:
         raise_error(ValueError, f"dims ({dims}) must be type int and positive.")
