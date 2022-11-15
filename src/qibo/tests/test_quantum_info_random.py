@@ -27,7 +27,7 @@ def test_random_gaussian_matrix():
         dims = 2
         random_gaussian_matrix(dims, seed=0.1)
 
-    # just runs the fucntion with no tests
+    # just runs the function with no tests
     random_gaussian_matrix(4)
 
 
