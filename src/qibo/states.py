@@ -457,16 +457,7 @@ class CircuitResult:
             return self._frequencies
 
     def apply_bitflips(self, p0, p1=None):
-        mgate = self.measurement_gate
-        if p1 is None:
-            probs = 2 * (mgate._get_bitflip_tuple(mgate.qubits, p0),)
-        else:
-            probs = (
-                mgate._get_bitflip_tuple(mgate.qubits, p0),
-                mgate._get_bitflip_tuple(mgate.qubits, p1),
-            )
-        noiseless_samples = self.samples()
-        return self.backend.apply_bitflips(noiseless_samples, probs)
+        return apply_bitflips(self, p0, p1)
 
     def expectation_from_samples(self, observable):
         """Computes the real expectation value of a diagonal observable from frequencies.
