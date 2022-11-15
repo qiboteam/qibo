@@ -6,15 +6,13 @@ from qibo.config import PRECISION_TOL
 from qibo.quantum_info import *
 
 
-def test_random_gaussian_matrix(backend):
+def test_random_gaussian_matrix():
     with pytest.raises(TypeError):
         dims = np.array([2])
-        dims = backend.cast(dims, dtype=dims.dtype)
         random_gaussian_matrix(dims)
     with pytest.raises(TypeError):
         dims = 2
         rank = np.array([2])
-        rank = backend.cast(rank, dtype=rank.dtype)
         random_gaussian_matrix(dims, rank)
     with pytest.raises(ValueError):
         dims = -1
@@ -30,7 +28,7 @@ def test_random_gaussian_matrix(backend):
     random_gaussian_matrix(4)
 
 
-def test_random_hermitian_operator(backend):
+def test_random_hermitian_operator():
     with pytest.raises(TypeError):
         dims = 2
         random_hermitian_operator(dims, semidefinite="True")
@@ -39,7 +37,6 @@ def test_random_hermitian_operator(backend):
         random_hermitian_operator(dims, normalize="True")
     with pytest.raises(TypeError):
         dims = np.array([1])
-        dims = backend.cast(dims, dtype=dims.dtype)
         random_hermitian_operator(dims)
     with pytest.raises(ValueError):
         dims = 0
@@ -49,59 +46,47 @@ def test_random_hermitian_operator(backend):
     dims = 4
     matrix = random_hermitian_operator(dims)
     matrix_dagger = np.transpose(np.conj(matrix))
-    matrix = backend.cast(matrix, dtype=matrix.dtype)
-    matrix_dagger = backend.cast(matrix_dagger, dtype=matrix_dagger.dtype)
     norm = np.linalg.norm(matrix - matrix_dagger)
-    backend.assert_allclose(norm < PRECISION_TOL, True)
+    assert norm < PRECISION_TOL
 
     # test if function returns semidefinite Hermitian operator
     dims = 4
     matrix = random_hermitian_operator(dims, semidefinite=True)
     matrix_dagger = np.transpose(np.conj(matrix))
-    matrix = backend.cast(matrix, dtype=matrix.dtype)
-    matrix_dagger = backend.cast(matrix_dagger, dtype=matrix_dagger.dtype)
     norm = np.linalg.norm(matrix - matrix_dagger)
-    backend.assert_allclose(norm < PRECISION_TOL, True)
+    assert norm < PRECISION_TOL
 
     eigenvalues, _ = np.linalg.eigh(matrix)
     eigenvalues = np.real(eigenvalues)
-    eigenvalues = backend.cast(eigenvalues, dtype=eigenvalues.dtype)
-    backend.assert_allclose(all(eigenvalues >= 0), True)
+    assert all(eigenvalues >= 0)
 
     # test if function returns normalized Hermitian operator
     dims = 4
     matrix = random_hermitian_operator(dims, normalize=True)
     matrix_dagger = np.transpose(np.conj(matrix))
-    matrix = backend.cast(matrix, dtype=matrix.dtype)
-    matrix_dagger = backend.cast(matrix_dagger, dtype=matrix_dagger.dtype)
     norm = np.linalg.norm(matrix - matrix_dagger)
-    backend.assert_allclose(norm < PRECISION_TOL, True)
+    assert norm < PRECISION_TOL
 
     eigenvalues, _ = np.linalg.eigh(matrix)
     eigenvalues = np.real(eigenvalues)
-    eigenvalues = backend.cast(np.absolute(eigenvalues), dtype=eigenvalues.dtype)
-    backend.assert_allclose(all(eigenvalues <= 1), True)
+    assert all(eigenvalues <= 1)
 
     # test if function returns normalized and semidefinite Hermitian operator
     dims = 4
     matrix = random_hermitian_operator(dims, semidefinite=True, normalize=True)
     matrix_dagger = np.transpose(np.conj(matrix))
-    matrix = backend.cast(matrix, dtype=matrix.dtype)
-    matrix_dagger = backend.cast(matrix_dagger, dtype=matrix_dagger.dtype)
     norm = np.linalg.norm(matrix - matrix_dagger)
-    backend.assert_allclose(norm < PRECISION_TOL, True)
+    assert norm < PRECISION_TOL
 
     eigenvalues, _ = np.linalg.eigh(matrix)
     eigenvalues = np.real(eigenvalues)
-    eigenvalues = backend.cast(eigenvalues, dtype=eigenvalues.dtype)
-    backend.assert_allclose(all(eigenvalues >= 0), True)
-    backend.assert_allclose(all(eigenvalues <= 1), True)
+    assert all(eigenvalues >= 0)
+    assert all(eigenvalues <= 1)
 
 
-def test_random_unitary(backend):
+def test_random_unitary():
     with pytest.raises(TypeError):
         dims = np.array([1])
-        dims = backend.cast(dims, dtype=dims.dtype)
         random_unitary(dims)
     with pytest.raises(TypeError):
         dims = 2
@@ -119,47 +104,45 @@ def test_random_unitary(backend):
     matrix = random_unitary(dims)
     matrix_dagger = np.transpose(np.conj(matrix))
     matrix_inv = np.linalg.inv(matrix)
-    matrix = backend.cast(matrix, dtype=matrix.dtype)
-    matrix_dagger = backend.cast(matrix_dagger, dtype=matrix_dagger.dtype)
-    matrix_inv = backend.cast(matrix_inv, dtype=matrix_inv.dtype)
     norm = np.linalg.norm(matrix_inv - matrix_dagger)
-    backend.assert_allclose(norm < PRECISION_TOL, True)
+    assert norm < PRECISION_TOL
 
     # tests if operator is unitary (measure == None)
     dims, measure = 4, None
-    if get_backend() == "qibojit (cupy)":
-        with pytest.raises(NotImplementedError):
-            matrix = random_unitary(dims, measure)
-    else:
-        matrix = random_unitary(dims, measure)
-        matrix_dagger = np.transpose(np.conj(matrix))
-        matrix_inv = np.linalg.inv(matrix)
-        matrix = backend.cast(matrix, dtype=matrix.dtype)
-        matrix_dagger = backend.cast(matrix_dagger, dtype=matrix_dagger.dtype)
-        matrix_inv = backend.cast(matrix_inv, dtype=matrix_inv.dtype)
-        norm = np.linalg.norm(matrix_inv - matrix_dagger)
-        backend.assert_allclose(norm < PRECISION_TOL, True)
+    matrix = random_unitary(dims, measure)
+    matrix_dagger = np.transpose(np.conj(matrix))
+    matrix_inv = np.linalg.inv(matrix)
+    norm = np.linalg.norm(matrix_inv - matrix_dagger)
+    assert norm < PRECISION_TOL
 
 
-def test_random_statevector(backend):
+def test_random_statevector():
     with pytest.raises(TypeError):
         dims = np.array([1])
-        dims = backend.cast(dims, dtype=dims.dtype)
         random_statevector(dims)
     with pytest.raises(ValueError):
         dims = 0
         random_statevector(dims)
+    with pytest.raises(TypeError):
+        dims, haar = 2, 1
+        random_statevector(dims, haar)
 
+    # tests if random statevector is a pure state
     dims = 4
     state = random_statevector(dims)
-    state = backend.cast(state, dtype=state.dtype)
-    backend.assert_allclose(purity(state), 1.0)
+    assert purity(state) <= 1.0 + PRECISION_TOL
+    assert purity(state) >= 1.0 - PRECISION_TOL
+
+    # tests if haar random statevector is a pure state
+    dims = 4
+    state = random_statevector(dims, haar=True)
+    assert purity(state) <= 1.0 + PRECISION_TOL
+    assert purity(state) >= 1.0 - PRECISION_TOL
 
 
-def test_random_density_matrix(backend):
+def test_random_density_matrix():
     with pytest.raises(TypeError):
         dims = np.array([1])
-        dims = backend.cast(dims, dtype=dims.dtype)
         random_density_matrix(dims)
     with pytest.raises(ValueError):
         dims = 0
@@ -167,7 +150,6 @@ def test_random_density_matrix(backend):
     with pytest.raises(TypeError):
         dims = 2
         rank = np.array([1])
-        rank = backend.cast(rank, dtype=rank.dtype)
         random_density_matrix(dims, rank)
     with pytest.raises(ValueError):
         dims, rank = 2, 3
@@ -188,53 +170,50 @@ def test_random_density_matrix(backend):
     # for pure=True, tests if it is a density matrix and if state is pure
     dims = 4
     state = random_density_matrix(dims, pure=True)
-    state = backend.cast(state, dtype=state.dtype)
-    backend.assert_allclose(np.trace(state), 1.0)
-    backend.assert_allclose(purity(state), 1.0)
+    assert np.real(np.trace(state)) <= 1.0 + PRECISION_TOL
+    assert np.real(np.trace(state)) >= 1.0 - PRECISION_TOL
+    assert purity(state) <= 1.0 + PRECISION_TOL
+    assert purity(state) >= 1.0 - PRECISION_TOL
 
     state_dagger = np.transpose(np.conj(state))
-    state_dagger = backend.cast(state, dtype=state.dtype)
     norm = np.linalg.norm(state - state_dagger)
-    backend.assert_allclose(norm < PRECISION_TOL, True)
+    assert norm < PRECISION_TOL
 
     state = random_density_matrix(dims, pure=True, method="Bures")
-    state = backend.cast(state, dtype=state.dtype)
-    backend.assert_allclose(np.trace(state), 1.0)
-    backend.assert_allclose(purity(state), 1.0)
+    assert np.real(np.trace(state)) <= 1.0 + PRECISION_TOL
+    assert np.real(np.trace(state)) >= 1.0 - PRECISION_TOL
+    assert purity(state) <= 1.0 + PRECISION_TOL
+    assert purity(state) >= 1.0 - PRECISION_TOL
 
     state_dagger = np.transpose(np.conj(state))
-    state_dagger = backend.cast(state, dtype=state.dtype)
     norm = np.linalg.norm(state - state_dagger)
-    backend.assert_allclose(norm < PRECISION_TOL, True)
+    assert norm < PRECISION_TOL
 
     # for pure=False, tests if it is a density matrix and if state is mixed
     dims = 4
     state = random_density_matrix(dims)
-    state = backend.cast(state, dtype=state.dtype)
-    backend.assert_allclose(np.trace(state), 1.0)
-    backend.assert_allclose(purity(state) <= 1.0, True)
+    assert np.real(np.trace(state)) <= 1.0 + PRECISION_TOL
+    assert np.real(np.trace(state)) >= 1.0 - PRECISION_TOL
+    assert purity(state) <= 1.0 + PRECISION_TOL
 
     state_dagger = np.transpose(np.conj(state))
-    state_dagger = backend.cast(state, dtype=state.dtype)
     norm = np.linalg.norm(state - state_dagger)
-    backend.assert_allclose(norm < PRECISION_TOL, True)
+    assert norm < PRECISION_TOL
 
     dims = 4
     state = random_density_matrix(dims, method="Bures")
-    state = backend.cast(state, dtype=state.dtype)
-    backend.assert_allclose(np.trace(state), 1.0)
-    backend.assert_allclose(purity(state) <= 1.0, True)
+    assert np.real(np.trace(state)) <= 1.0 + PRECISION_TOL
+    assert np.real(np.trace(state)) >= 1.0 - PRECISION_TOL
+    assert purity(state) <= 1.0 + PRECISION_TOL
 
     state_dagger = np.transpose(np.conj(state))
-    state_dagger = backend.cast(state, dtype=state.dtype)
     norm = np.linalg.norm(state - state_dagger)
-    backend.assert_allclose(norm < PRECISION_TOL, True)
+    assert norm < PRECISION_TOL
 
 
-def test_stochastic_matrix(backend):
+def test_stochastic_matrix():
     with pytest.raises(TypeError):
         dims = np.array([1])
-        dims = backend.cast(dims, dtype=dims.dtype)
         stochastic_matrix(dims)
     with pytest.raises(ValueError):
         dims = 0
@@ -261,21 +240,18 @@ def test_stochastic_matrix(backend):
     dims = 4
     matrix = stochastic_matrix(dims)
     sum_rows = np.sum(matrix, axis=1)
-    sum_rows = backend.cast(sum_rows, dtype=sum_rows.dtype)
-    backend.assert_allclose(all(sum_rows < 1 + PRECISION_TOL), True)
-    backend.assert_allclose(all(sum_rows > 1 - PRECISION_TOL), True)
+    assert all(sum_rows < 1 + PRECISION_TOL)
+    assert all(sum_rows > 1 - PRECISION_TOL)
 
     # tests if matrix is bistochastic
     dims = 4
     matrix = stochastic_matrix(dims, bistochastic=True)
     sum_rows = np.sum(matrix, axis=1)
     column_rows = np.sum(matrix, axis=0)
-    sum_rows = backend.cast(sum_rows, dtype=sum_rows.dtype)
-    column_rows = backend.cast(column_rows, dtype=sum_rows.dtype)
-    backend.assert_allclose(all(sum_rows < 1 + PRECISION_TOL), True)
-    backend.assert_allclose(all(sum_rows > 1 - PRECISION_TOL), True)
-    backend.assert_allclose(all(column_rows < 1 + PRECISION_TOL), True)
-    backend.assert_allclose(all(column_rows > 1 - PRECISION_TOL), True)
+    assert all(sum_rows < 1 + PRECISION_TOL)
+    assert all(sum_rows > 1 - PRECISION_TOL)
+    assert all(column_rows < 1 + PRECISION_TOL)
+    assert all(column_rows > 1 - PRECISION_TOL)
 
     # tests warning for max_iterations
     dims = 4
