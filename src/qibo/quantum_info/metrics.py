@@ -42,8 +42,8 @@ def entropy(state, base: float = 2, validate: bool = False):
     Args:
         state: state vector or density matrix.
         base (float, optional): the base of the log. Default: 2.
-        validate (bool, optional): if True, checks if `state` is Hermitian. If False,
-            it assumes `state` is Hermitian . Default: False.
+        validate (bool, optional): if ``True``, checks if ``state`` is Hermitian. If ``False``,
+            it assumes ``state`` is Hermitian . Default: ``False``.
 
     Returns:
         (float): The von-Neumann entropy :math:`S(\\rho)`.

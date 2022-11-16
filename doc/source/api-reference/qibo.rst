@@ -872,7 +872,7 @@ Trace distance
     ``validate`` flag allows the user to choose if the function will check if difference between inputs,
     :math:`\\rho - \\sigma`, is Hermitian or not. Default option is ``validate=False``, i.e. the assumption of Hermiticity,
     because it is faster and, more importantly, the functions are intended to be used on Hermitian inputs.
-    When ``validate=True`` and :math:`\\rho - \\sigma` is non-Hermitian, an error will be raised when using `cupy` backend.
+    When ``validate=True`` and ``state - target`` is non-Hermitian, an error will be raised when using `cupy` backend.
 
 Hilbert-Schmidt distance
 """"""""""""""""""""""""
