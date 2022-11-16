@@ -48,7 +48,7 @@ def shannon_entropy(probability_array, base: float = 2):
         base (float): the base of the log. Default: 2.
 
     Returns:
-        The Shannon entropy :math:`H(\\mathcal{p})`.
+        (float): The Shannon entropy :math:`H(\\mathcal{p})`.
 
     """
 
@@ -111,7 +111,7 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False):
             probability distributions. Default: False.
 
     Returns:
-        Hellinger distance :math:`H(p, q)`.
+        (float): Hellinger distance :math:`H(p, q)`.
 
     """
 
@@ -158,7 +158,7 @@ def hellinger_fidelity(prob_dist_p, prob_dist_q, validate: bool = False):
             probability distributions. Default: False.
 
     Returns:
-        Hellinger fidelity.
+        (float): Hellinger fidelity.
 
     """
 
