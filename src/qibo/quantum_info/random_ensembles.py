@@ -27,14 +27,14 @@ def random_gaussian_matrix(
 
     Args:
         dims (int): dimension of the matrix.
-        rank (int, optional): rank of the matrix. If `None`, then `rank == dims`. Default: `None`.
+        rank (int, optional): rank of the matrix. If ``None``, then ``rank == dims``. Default: ``None``.
         mean (float, optional): mean of the Gaussian distribution.
         stddev (float, optional): standard deviation of the Gaussian distribution.
         seed (int, optional): Random seed used to initialize the pseudo-random number generator.
-            Default: `None`.
+            Default: ``None``.
 
     Returns:
-        Random Gaussian matrix with dimensions `(dims, rank)`.
+        Random Gaussian matrix with dimensions ``(dims, rank)``.
 
     """
 
@@ -83,17 +83,17 @@ def random_hermitian(
 
     Args:
         dims (int): dimension of the matrix.
-        semidefinite (bool, optional): if `True`, returns a Hermitian matrix that
-            is also positive semidefinite. Default: `False`.
-        normalize (bool, optional): if `True` and `semidefinite=False`, returns
+        semidefinite (bool, optional): if ``True``, returns a Hermitian matrix that
+            is also positive semidefinite. Default: ``False``.
+        normalize (bool, optional): if ``True`` and ``semidefinite=False``, returns
             a Hermitian matrix with eigenvalues in the interval
-            :math:`[-1, \\,1]`. If `True` and `semidefinite=True`,
-            interval is :math:`[0,\\,1]`. Default: `False`.
+            :math:`[-1, \\,1]`. If ``True`` and ``semidefinite=True``,
+            interval is :math:`[0,\\,1]`. Default: ``False``.
         seed (int, optional): Random seed used to initialize the pseudo-random number generator.
-            Default: `None`.
+            Default: ``None``.
 
     Returns:
-        Hermitian matrix :math:`H` with dimensions `(dims, dims)`.
+        Hermitian matrix :math:`H` with dimensions ``(dims, dims)``.
 
     """
 
@@ -130,14 +130,14 @@ def random_unitary(dims: int, measure: str = None, seed: int = None):
     Args:
         dims (int): dimension of the matrix.
         measure (str, optional): probability measure in which to sample the unitary from.
-            If `None`, functions returns :math:`\\exp{-i \\, H}`, where :math:`H`
-            is a Hermitian operator. If `"haar"`, returns an Unitary matrix
-            sampled from the Haar measure. Default: `None`.
+            If ``None``, functions returns :math:`\\exp{-i \\, H}`, where :math:`H`
+            is a Hermitian operator. If ``"haar"``, returns an Unitary matrix
+            sampled from the Haar measure. Default: ``None``.
         seed (int, optional): Random seed used to initialize the pseudo-random number generator.
-            Default: `None`.
+            Default: ``None``.
 
     Returns:
-        Unitary matrix :math:`U` with dimensions `(dims, dims)`.
+        Unitary matrix :math:`U` with dimensions ``(dims, dims)``.
 
     """
 
@@ -186,16 +186,16 @@ def random_statevector(dims: int, haar: bool = False, seed: int = None):
     .. math::
         \\ket{\\psi} = \\sum_{k = 0}^{d - 1} \\, \\sqrt{p_{k}} \\, e^{i \\phi_{k}} \\, \\ket{\\k} \\,
 
-    where :math:`d` is `dims`, and :math:`p_{k}` and :math:`\\phi_{k}` are, respectively,
+    where :math:`d` is ``dims``, and :math:`p_{k}` and :math:`\\phi_{k}` are, respectively,
     the probability and phase corresponding to the computational basis state :math:`\\ket{k}`.
 
     Args:
         dims (int): dimension of the matrix.
-        haar (bool, optional): if `True`, statevector is created by sampling a Haar random unitary
+        haar (bool, optional): if ``True``, statevector is created by sampling a Haar random unitary
             :math:`U` and acting with it on a random computational basis state
-            :math:`\\ket{k}`, i.e. :math:`\\ket{\\psi} = U \\ket{k}`. Default: `False`.
+            :math:`\\ket{k}`, i.e. :math:`\\ket{\\psi} = U \\ket{k}`. Default: ``False``.
         seed (int, optional): Random seed used to initialize the pseudo-random number generator.
-            Default: `None`.
+            Default: ``None``.
 
     Returns:
         Random statevector :math:`\\ket{\\psi}`.
@@ -239,12 +239,12 @@ def random_density_matrix(
 
     Args:
         dims (int): dimension of the matrix.
-        rank (int, optional): rank of the matrix. If `None`, then `rank == dims`. Default: `None`.
-        pure (bool, optional): if `True`, returns a pure state. Default: `False`.
+        rank (int, optional): rank of the matrix. If ``None``, then ``rank == dims``. Default: ``None``.
+        pure (bool, optional): if ``True``, returns a pure state. Default: ``False``.
         metric (str, optional): metric to sample the density matrix from. Options:
-            `"Hilbert-Schmidt"` and `"Bures"`. Default: `"Hilbert-Schmidt"`.
+            ``"Hilbert-Schmidt"`` and ``"Bures"``. Default: ``"Hilbert-Schmidt"``.
         seed (int, optional): Random seed used to initialize the pseudo-random number generator.
-            Default: `None`.
+            Default: ``None``.
 
     """
 
@@ -290,7 +290,7 @@ def random_density_matrix(
 def _clifford_unitary(phase, x, y, z):
     """Returns a parametrized single-qubit Clifford gate,
     where possible parameters are defined in
-    `qibo.quantum_info.utils.ONEQUBIT_CLIFFORD_PARAMS`.
+    ``qibo.quantum_info.utils.ONEQUBIT_CLIFFORD_PARAMS``.
 
     Args:
         phase (float) : An angle.
@@ -317,21 +317,21 @@ def _clifford_unitary(phase, x, y, z):
     )
 
 
-def random_clifford_gate(
+def random_clifford(
     qubits, return_circuit: bool = False, fuse: bool = False, seed: int = None
 ):
     """Generates random Clifford operator(s).
 
     Args:
-        qubits (int or list or ndarray): if `int`, the number of qubits for the Clifford.
-            If `list` or `ndarray`, indexes of the qubits for the Clifford to act on.
-        return_circuit (bool, optional): if `True`, returns a `qibo.gates.Unitary` object.
-            If `False`, returns an `ndarray` object. Default: `False`.
-        fuse (bool, optional): if `False`, returns an `ndarray` with one Clifford gate per qubit.
-            If `True`, returns the tensor product of the Clifford gates that were
-            sampled. Default: `False`.
+        qubits (int or list or ndarray): if ``int``, the number of qubits for the Clifford.
+            If ``list`` or ``ndarray``, indexes of the qubits for the Clifford to act on.
+        return_circuit (bool, optional): if ``True``, returns a ``qibo.gates.Unitary`` object.
+            If ``False``, returns an ``ndarray`` object. Default: ``False``.
+        fuse (bool, optional): if ``False``, returns an ``ndarray`` with one Clifford gate per qubit.
+            If ``True``, returns the tensor product of the Clifford gates that were
+            sampled. Default: ``False``.
         seed (int, optional): Random seed used to initialize the pseudo-random number generator.
-            Default: `None`.
+            Default: ``None``.
 
     Returns:
         Random Clifford operator(s).
@@ -407,25 +407,25 @@ def random_pauli(
 ):
     """Creates random Pauli operators.
 
-    Pauli operators are sampled from the single-qubit Pauli set :math:`\\{'I', 'X', 'Y', 'Z'\\}`.
+    Pauli operators are sampled from the single-qubit Pauli set :math:`\\{I, X, Y, Z\\}`.
 
     Args:
-        qubits (int or list or ndarray): if `int` and `max_qubits=None`, the number of qubits.
-            If `int` and `max_qubits != None`, qubit index in which the Pauli sequence will act.
-            If `list` or `ndarray`, indexes of the qubits for the Pauli sequence to act.
+        qubits (int or list or ndarray): if ``int`` and ``max_qubits=None``, the number of qubits.
+            If ``int`` and ``max_qubits != None``, qubit index in which the Pauli sequence will act.
+            If ``list`` or ``ndarray``, indexes of the qubits for the Pauli sequence to act.
         depth (int): length of the sequence of Pauli gates.
-        max_qubits (int, optional): total number of qubits in the circuit. If `None`,
-            `max_qubits = max(qubits)`. Default: `None`.
+        max_qubits (int, optional): total number of qubits in the circuit. If ``None``,
+            ``max_qubits = max(qubits)``. Default: ``None``.
         subset (list, optional): list containing a subset of the 4 single-qubit Pauli
-            operators. If `None`, defaults to the complete set. Default: `None`.
-        return_circuit (bool, optional): if `True`, returns a `qibo.models.Circuit` object.
-            If `False`, returns an `ndarray` with shape (qubits, depth, 2, 2) that contains
-            all Pauli matrices that were sampled. Default: `True`.
+            operators. If ``None``, defaults to the complete set. Default: ``None``.
+        return_circuit (bool, optional): if ``True``, returns a ``qibo.models.Circuit`` object.
+            If ``False``, returns an ``ndarray`` with shape (qubits, depth, 2, 2) that contains
+            all Pauli matrices that were sampled. Default: ``True``.
         seed (int, optional): Random seed used to initialize the pseudo-random number generator.
-            Default: `None`.
+            Default: ``None``.
 
     Returns:
-        A `qibo.models.Circuit` or `ndarray` with all sampled Pauli operators.
+        A ``qibo.models.Circuit`` or ``ndarray`` with all sampled Pauli operators.
 
     """
 
@@ -532,16 +532,16 @@ def random_stochastic_matrix(
 
     Args:
         dims (int): dimension of the matrix.
-        bistochastic (bool, optional): if `True`, matrix is row- and column-stochastic.
-            If `False`, matrix is row-stochastic. Default: `False`.
+        bistochastic (bool, optional): if ``True``, matrix is row- and column-stochastic.
+            If ``False``, matrix is row-stochastic. Default: ``False``.
         precision_tol (float, optional): tolerance level for how much each probability
-            distribution can deviate from summing up to `1.0`. If `None`,
-            it defaults to `qibo.config.PRECISION_TOL`. Default: `None`.
-        max_iterations (int, optional): when `bistochastic=True`, maximum number of iterations
-            used to normalize all rows and columns simultaneously. If `None`,
-            defaults to `qibo.config.MAX_ITERATIONS`. Default: `None`.
+            distribution can deviate from summing up to ``1.0``. If ``None``,
+            it defaults to ``qibo.config.PRECISION_TOL``. Default: ``None``.
+        max_iterations (int, optional): when ``bistochastic=True``, maximum number of iterations
+            used to normalize all rows and columns simultaneously. If ``None``,
+            defaults to ``qibo.config.MAX_ITERATIONS``. Default: ``None``.
         seed (int, optional): Random seed used to initialize the pseudo-random number generator.
-            Default: `None`.
+            Default: ``None``.
 
     """
     if dims <= 0:
