@@ -1,6 +1,5 @@
 name: Deploy doc
 
-
 on:
   push:
       branches: [master,test_workflow]
