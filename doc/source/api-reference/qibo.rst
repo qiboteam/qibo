@@ -916,17 +916,13 @@ between states, and distance measures between quantum channels.
 Purity
 """"""
 
-.. automodule:: qibo.quantum_info.purity
-    :members:
-    :member-order: bysource
+.. autofunction:: qibo.quantum_info.purity
 
 
 Entropy
 """""""
 
-.. automodule:: qibo.quantum_info.entropy
-    :members:
-    :member-order: bysource
+.. autofunction:: qibo.quantum_info.entropy
 
 .. note::
     ``validate`` flag allows the user to choose if the function will check if input :math:`\\rho` is Hermitian or not.
@@ -937,9 +933,7 @@ Entropy
 Trace distance
 """"""""""""""
 
-.. automodule:: qibo.quantum_info.trace_distance
-    :members:
-    :member-order: bysource
+.. autofunction:: qibo.quantum_info.trace_distance
 
 .. note::
     ``validate`` flag allows the user to choose if the function will check if difference between inputs,
@@ -950,41 +944,31 @@ Trace distance
 Hilbert-Schmidt distance
 """"""""""""""""""""""""
 
-.. automodule:: qibo.quantum_info.hilbert_schmidt_distance
-    :members:
-    :member-order: bysource
+.. autofunction:: qibo.quantum_info.hilbert_schmidt_distance
 
 
 Fidelity
 """"""""
 
-.. automodule:: qibo.quantum_info.fidelity
-    :members:
-    :member-order: bysource
+.. autofunction:: qibo.quantum_info.fidelity
 
 
 Process fidelity
 """"""""""""""""
 
-.. automodule:: qibo.quantum_info.process_fidelity
-    :members:
-    :member-order: bysource
+.. autofunction:: qibo.quantum_info.process_fidelity
 
 
 Average gate fidelity
 """""""""""""""""""""
 
-.. automodule:: qibo.quantum_info.average_gate_fidelity
-    :members:
-    :member-order: bysource
+.. autofunction:: qibo.quantum_info.average_gate_fidelity
 
 
 Gate error
 """"""""""
 
-.. automodule:: qibo.quantum_info.gate_error
-    :members:
-    :member-order: bysource
+.. autofunction:: qibo.quantum_info.gate_error
 
 
 Utility Functions
@@ -996,25 +980,19 @@ on classical probability arrays.
 Shannon entropy
 """""""""""""""
 
-.. automodule:: qibo.quantum_info.shannon_entropy
-    :members:
-    :member-order: bysource
+.. autofunction:: qibo.quantum_info.shannon_entropy
 
 
 Hellinger distance
 """"""""""""""""""
 
-.. automodule:: qibo.quantum_info.hellinger_distance
-    :members:
-    :member-order: bysource
+.. autofunction:: qibo.quantum_info.hellinger_distance
 
 
 Hellinger fidelity
 """"""""""""""""""
 
-.. automodule:: qibo.quantum_info.gate_error
-    :members:
-    :member-order: bysource
+.. autofunction:: qibo.quantum_info.gate_error
 
 
 .. _Parallel:
