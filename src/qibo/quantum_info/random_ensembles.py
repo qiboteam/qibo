@@ -21,9 +21,9 @@ def random_gaussian_matrix(
     sampled from a Gaussian probability distribution
 
     .. math::
-        p(x) = \\frac{1}{\\sqrt{2 \\, \\pi} \\, \\sigma} \\, \\exp{-\\frac{(x - \\mu)^{2}}{2\\,\\sigma^{2}}}
+        p(x) = \\frac{1}{\\sqrt{2 \\, \\pi} \\, \\sigma} \\, \\exp{\\left(-\\frac{(x - \\mu)^{2}}{2\\,\\sigma^{2}}\\right)}
 
-    with mean :math:`\\mu` and standard deviation :math:`sigma`.
+    with mean :math:`\\mu` and standard deviation :math:`\\sigma`.
 
     Args:
         dims (int): dimension of the matrix.
@@ -34,7 +34,7 @@ def random_gaussian_matrix(
             Default: ``None``.
 
     Returns:
-        Random Gaussian matrix with dimensions ``(dims, rank)``.
+        (ndarray): Random Gaussian matrix with dimensions ``(dims, rank)``.
 
     """
 
@@ -93,7 +93,7 @@ def random_hermitian(
             Default: ``None``.
 
     Returns:
-        Hermitian matrix :math:`H` with dimensions ``(dims, dims)``.
+        (ndarray): Hermitian matrix :math:`H` with dimensions ``(dims, dims)``.
 
     """
 
@@ -130,14 +130,14 @@ def random_unitary(dims: int, measure: str = None, seed: int = None):
     Args:
         dims (int): dimension of the matrix.
         measure (str, optional): probability measure in which to sample the unitary from.
-            If ``None``, functions returns :math:`\\exp{-i \\, H}`, where :math:`H`
+            If ``None``, functions returns :math:`\\exp{(-i \\, H)}`, where :math:`H`
             is a Hermitian operator. If ``"haar"``, returns an Unitary matrix
             sampled from the Haar measure. Default: ``None``.
         seed (int, optional): Random seed used to initialize the pseudo-random number generator.
             Default: ``None``.
 
     Returns:
-        Unitary matrix :math:`U` with dimensions ``(dims, dims)``.
+        (ndarray): Unitary matrix :math:`U` with dimensions ``(dims, dims)``.
 
     """
 
@@ -184,7 +184,7 @@ def random_statevector(dims: int, haar: bool = False, seed: int = None):
     """Creates a random statevector :math:`\\ket{\\psi}`.
 
     .. math::
-        \\ket{\\psi} = \\sum_{k = 0}^{d - 1} \\, \\sqrt{p_{k}} \\, e^{i \\phi_{k}} \\, \\ket{\\k} \\,
+        \\ket{\\psi} = \\sum_{k = 0}^{d - 1} \\, \\sqrt{p_{k}} \\, e^{i \\phi_{k}} \\, \\ket{k} \\, ,
 
     where :math:`d` is ``dims``, and :math:`p_{k}` and :math:`\\phi_{k}` are, respectively,
     the probability and phase corresponding to the computational basis state :math:`\\ket{k}`.
@@ -192,13 +192,13 @@ def random_statevector(dims: int, haar: bool = False, seed: int = None):
     Args:
         dims (int): dimension of the matrix.
         haar (bool, optional): if ``True``, statevector is created by sampling a Haar random unitary
-            :math:`U` and acting with it on a random computational basis state
-            :math:`\\ket{k}`, i.e. :math:`\\ket{\\psi} = U \\ket{k}`. Default: ``False``.
+            :math:`U_{\\text{haar}}` and acting with it on a random computational basis state
+            :math:`\\ket{k}`, i.e. :math:`\\ket{\\psi} = U_{\\text{haar}} \\ket{k}`. Default: ``False``.
         seed (int, optional): Random seed used to initialize the pseudo-random number generator.
             Default: ``None``.
 
     Returns:
-        Random statevector :math:`\\ket{\\psi}`.
+        (ndarray): Random statevector :math:`\\ket{\\psi}`.
 
     """
 
@@ -245,6 +245,9 @@ def random_density_matrix(
             ``"Hilbert-Schmidt"`` and ``"Bures"``. Default: ``"Hilbert-Schmidt"``.
         seed (int, optional): Random seed used to initialize the pseudo-random number generator.
             Default: ``None``.
+
+    Returns:
+        (ndarray): Random density matrix :math:`\\rho`.
 
     """
 
@@ -299,7 +302,7 @@ def _clifford_unitary(phase, x, y, z):
         z (float) : prefactor.
 
     Returns:
-        Clifford unitary with dimensions (2, 2).
+        (ndarray): Clifford unitary with dimensions (2, 2).
 
     """
 
@@ -334,7 +337,7 @@ def random_clifford(
             Default: ``None``.
 
     Returns:
-        Random Clifford operator(s).
+        (ndarray or ``qibo.gates.Unitary``): Random Clifford operator(s).
 
     """
 
@@ -425,7 +428,7 @@ def random_pauli(
             Default: ``None``.
 
     Returns:
-        A ``qibo.models.Circuit`` or ``ndarray`` with all sampled Pauli operators.
+        (ndarray or ``qibo.models.Circuit``): all sampled Pauli operators.
 
     """
 
@@ -542,6 +545,9 @@ def random_stochastic_matrix(
             defaults to ``qibo.config.MAX_ITERATIONS``. Default: ``None``.
         seed (int, optional): Random seed used to initialize the pseudo-random number generator.
             Default: ``None``.
+
+    Returns:
+        (ndarray): a random stochastic matrix.
 
     """
     if dims <= 0:
