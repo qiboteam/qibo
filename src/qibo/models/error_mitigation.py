@@ -5,6 +5,7 @@ import numpy as np
 from scipy.optimize import curve_fit
 
 from qibo import gates
+from qibo.config import raise_error
 
 
 def get_gammas(c, solve=True):
@@ -142,8 +143,7 @@ def sample_training_circuit(
             )
         )
     if len(gates_to_replace) == 0:
-        warnings.warn("No non-Clifford RZ gate found, no circuit sampled.")
-        return None
+        raise_error(ValueError,"No non-Clifford RZ gate found, no circuit sampled.")
     distance = np.vstack(distance)
     # Compute the scores
     prob = np.exp(-(distance**2) / sigma**2)
