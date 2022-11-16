@@ -502,14 +502,13 @@ class NumpyBackend(Backend):
         return self._order_probabilities(probs, qubits, nqubits).ravel()
 
     def calculate_probabilities_density_matrix(self, state, qubits, nqubits):
-        rtype = self.np.real(state).dtype
         order = tuple(sorted(qubits))
         order += tuple(i for i in range(nqubits) if i not in qubits)
         order = order + tuple(i + nqubits for i in order)
         shape = 2 * (2 ** len(qubits), 2 ** (nqubits - len(qubits)))
         state = self.np.reshape(state, 2 * nqubits * (2,))
         state = self.np.reshape(self.np.transpose(state, order), shape)
-        probs = self.np.abs(self.np.einsum("abab->a", state).astype(rtype))
+        probs = self.np.abs(self.np.einsum("abab->a", state))
         probs = self.np.reshape(probs, len(qubits) * (2,))
         return self._order_probabilities(probs, qubits, nqubits).ravel()
 
