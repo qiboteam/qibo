@@ -110,6 +110,4 @@ def setup(app):
     app.add_css_file("css/style.css")
 
 
-html_logo = "logo.png"
-
 html_show_sourcelink = False
