@@ -11,6 +11,7 @@ def purity(state):
 
     Returns:
         (float): Purity of quantum state :math:`\\rho`.
+
     """
 
     if (
@@ -46,6 +47,7 @@ def entropy(state, base: float = 2, validate: bool = False):
 
     Returns:
         (float): The von-Neumann entropy :math:`S(\\rho)`.
+
     """
 
     if base <= 0.0:
@@ -158,6 +160,7 @@ def hilbert_schmidt_distance(state, target):
 
     Returns:
         (float): Hilbert-Schmidt distance between state :math:`\\rho` and target :math:`\\sigma`.
+
     """
 
     if state.shape != target.shape:
@@ -194,6 +197,7 @@ def fidelity(state, target, validate: bool = False):
 
     Returns:
         (float): Fidelity between state :math:`\\rho` and target :math:`\\sigma`.
+
     """
 
     if state.shape != target.shape:
@@ -242,6 +246,7 @@ def process_fidelity(channel, target=None, validate=False):
 
     Returns:
         (float): Process fidelity between channels :math:`\\mathcal{E}` and target :math:`\\mathcal{U}`.
+
     """
 
     if target is not None:
@@ -291,6 +296,7 @@ def average_gate_fidelity(channel, target=None):
 
     Returns:
         (float): Process fidelity between channel :math:`\\mathcal{E}` and target unitary channel :math:`\\mathcal{U}`.
+
     """
 
     d = channel.shape[0]
@@ -312,6 +318,7 @@ def gate_error(channel, target=None):
 
     Returns:
         (float): Gate error between :math:`\\mathcal{E}` and :math:`\\mathcal{U}`.
+
     """
 
     return 1 - average_gate_fidelity(channel, target)
