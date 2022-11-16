@@ -41,8 +41,8 @@ def entropy(state, base: float = 2, validate: bool = False):
 
     Args:
         state: state vector or density matrix.
-        base (float): the base of the log. Default: 2.
-        validate (bool): if True, checks if `state` is Hermitian. If False,
+        base (float, optional): the base of the log. Default: 2.
+        validate (bool, optional): if True, checks if `state` is Hermitian. If False,
             it assumes `state` is Hermitian . Default: False.
 
     Returns:
@@ -107,8 +107,8 @@ def trace_distance(state, target, validate: bool = False):
     Args:
         state: state vector or density matrix.
         target: state vector or density matrix.
-        validate (bool): if True, checks if :math:`\\rho - \\sigma` is Hermitian.
-            If False, it assumes the difference is Hermitian. Default: False.
+        validate (bool, optional): if ``True``, checks if :math:`\\rho - \\sigma` is Hermitian.
+            If ``False``, it assumes the difference is Hermitian. Default: ``False``.
 
     Returns:
         (float): Trace distance between state :math:`\\rho` and target :math:`\\sigma`.
@@ -193,7 +193,7 @@ def fidelity(state, target, validate: bool = False):
     Args:
         state: state vector or density matrix.
         target: state vector or density matrix.
-        validate (bool): if True, checks if one of the input states is pure. Default: False.
+        validate (bool, optional): if True, checks if one of the input states is pure. Default: False.
 
     Returns:
         (float): Fidelity between state :math:`\\rho` and target :math:`\\sigma`.
@@ -234,7 +234,7 @@ def fidelity(state, target, validate: bool = False):
     return fid
 
 
-def process_fidelity(channel, target=None, validate=False):
+def process_fidelity(channel, target=None, validate: bool = False):
     """Process fidelity between two quantum channels (when at least one channel is` unitary),
 
     .. math::
@@ -242,7 +242,10 @@ def process_fidelity(channel, target=None, validate=False):
 
     Args:
         channel: quantum channel.
-        target: quantum channel. If None, target is the Identity channel.
+        target (optional): quantum channel. If None, target is the Identity channel.
+            Default: ``None``.
+        validate (bool, optional): if True, checks if one of the input channels
+            is unitary. Default: ``False``.
 
     Returns:
         (float): Process fidelity between channels :math:`\\mathcal{E}` and target :math:`\\mathcal{U}`.
@@ -292,7 +295,8 @@ def average_gate_fidelity(channel, target=None):
 
     Args:
         channel: quantum channel :math:`\\mathcal{E}`.
-        target: quantum channel :math:`\\mathcal{U}`. If None, target is the Identity channel.
+        target (optional): quantum channel :math:`\\mathcal{U}`. If ``None``,
+            target is the Identity channel. Default: ``None``.
 
     Returns:
         (float): Process fidelity between channel :math:`\\mathcal{E}` and target unitary channel :math:`\\mathcal{U}`.
@@ -314,7 +318,8 @@ def gate_error(channel, target=None):
 
     Args:
         channel: quantum channel :math:`\\mathcal{E}`.
-        target: quantum channel :math:`\\mathcal{U}`. If None, target is the Identity channel.
+        target (optional): quantum channel :math:`\\mathcal{U}`. If ``None``,
+            target is the Identity channel. Default: ``None``.
 
     Returns:
         (float): Gate error between :math:`\\mathcal{E}` and :math:`\\mathcal{U}`.
