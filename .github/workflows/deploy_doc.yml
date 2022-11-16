@@ -8,3 +8,5 @@ jobs:
 
   call-workflow-in-another-repo:
     uses: qibogang/workflows/.github/workflows/try.yml@doc
+    with:
+      python-version: 3.9
