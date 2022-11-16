@@ -31,33 +31,33 @@ def test_random_gaussian_matrix():
     random_gaussian_matrix(4)
 
 
-def test_random_hermitian_matrix():
+def test_random_hermitian():
     with pytest.raises(TypeError):
         dims = 2
-        random_hermitian_matrix(dims, semidefinite="True")
+        random_hermitian(dims, semidefinite="True")
     with pytest.raises(TypeError):
         dims = 2
-        random_hermitian_matrix(dims, normalize="True")
+        random_hermitian(dims, normalize="True")
     with pytest.raises(TypeError):
         dims = np.array([1])
-        random_hermitian_matrix(dims)
+        random_hermitian(dims)
     with pytest.raises(ValueError):
         dims = 0
-        random_hermitian_matrix(dims)
+        random_hermitian(dims)
     with pytest.raises(TypeError):
         dims = 2
-        random_hermitian_matrix(dims, seed=0.1)
+        random_hermitian(dims, seed=0.1)
 
     # test if function returns Hermitian operator
     dims = 4
-    matrix = random_hermitian_matrix(dims)
+    matrix = random_hermitian(dims)
     matrix_dagger = np.transpose(np.conj(matrix))
     norm = np.linalg.norm(matrix - matrix_dagger)
     assert norm < PRECISION_TOL
 
     # test if function returns semidefinite Hermitian operator
     dims = 4
-    matrix = random_hermitian_matrix(dims, semidefinite=True)
+    matrix = random_hermitian(dims, semidefinite=True)
     matrix_dagger = np.transpose(np.conj(matrix))
     norm = np.linalg.norm(matrix - matrix_dagger)
     assert norm < PRECISION_TOL
@@ -68,7 +68,7 @@ def test_random_hermitian_matrix():
 
     # test if function returns normalized Hermitian operator
     dims = 4
-    matrix = random_hermitian_matrix(dims, normalize=True)
+    matrix = random_hermitian(dims, normalize=True)
     matrix_dagger = np.transpose(np.conj(matrix))
     norm = np.linalg.norm(matrix - matrix_dagger)
     assert norm < PRECISION_TOL
@@ -79,7 +79,7 @@ def test_random_hermitian_matrix():
 
     # test if function returns normalized and semidefinite Hermitian operator
     dims = 4
-    matrix = random_hermitian_matrix(dims, semidefinite=True, normalize=True)
+    matrix = random_hermitian(dims, semidefinite=True, normalize=True)
     matrix_dagger = np.transpose(np.conj(matrix))
     norm = np.linalg.norm(matrix - matrix_dagger)
     assert norm < PRECISION_TOL
