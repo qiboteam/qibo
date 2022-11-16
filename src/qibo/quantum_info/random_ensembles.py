@@ -75,11 +75,11 @@ def random_gaussian_matrix(
     return matrix
 
 
-def random_hermitian_operator(
+def random_hermitian(
     dims: int, semidefinite: bool = False, normalize: bool = False, seed: int = None
 ):
-    """Generates a random Hermitian operator :math:`H`, i.e.
-    a random operator such that :math:`H = H^{\\dagger}.`
+    """Generates a random Hermitian matrix :math:`H`, i.e.
+    a random matrix such that :math:`H = H^{\\dagger}.`
 
     Args:
         dims (int): dimension of the matrix.
@@ -110,17 +110,17 @@ def random_hermitian_operator(
         np.random.RandomState(seed) if seed is not None else np.random.RandomState()
     )
 
-    operator = random_gaussian_matrix(dims, dims)
+    matrix = random_gaussian_matrix(dims, dims)
 
     if semidefinite:
-        operator = np.dot(np.transpose(np.conj(operator)), operator)
+        matrix = np.dot(np.transpose(np.conj(matrix)), matrix)
     else:
-        operator = (operator + np.transpose(np.conj(operator))) / 2
+        matrix = (matrix + np.transpose(np.conj(matrix))) / 2
 
     if normalize:
-        operator = operator / np.linalg.norm(operator)
+        matrix = matrix / np.linalg.norm(matrix)
 
-    return operator
+    return matrix
 
 
 def random_unitary(dims: int, measure: str = None, seed: int = None):
