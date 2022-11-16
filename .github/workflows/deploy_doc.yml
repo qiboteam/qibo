@@ -5,7 +5,6 @@ on:
       branches: [master,test_workflow]
 
 jobs:
-
   deploy-docs:
     uses: qibogang/workflows/.github/workflows/deploy-sphinx-docs-to-ghpages.yml@doc
     with:
