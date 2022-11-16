@@ -66,7 +66,7 @@ def test_sample_training_circuit(nqubits):
     # Define the circuit
     hz = -2
     hx = 1
-    dt = np.pi/4
+    dt = np.pi / 4
     c = Circuit(nqubits, density_matrix=True)
     c.add(gates.RZ(q, theta=-2 * hz * dt - np.pi / 2) for q in range(nqubits))
     c.add(gates.RX(q, theta=np.pi / 2) for q in range(nqubits))

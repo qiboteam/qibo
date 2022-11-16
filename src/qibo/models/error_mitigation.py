@@ -143,7 +143,7 @@ def sample_training_circuit(
             )
         )
     if len(gates_to_replace) == 0:
-        raise_error(ValueError,"No non-Clifford RZ gate found, no circuit sampled.")
+        raise_error(ValueError, "No non-Clifford RZ gate found, no circuit sampled.")
     distance = np.vstack(distance)
     # Compute the scores
     prob = np.exp(-(distance**2) / sigma**2)
