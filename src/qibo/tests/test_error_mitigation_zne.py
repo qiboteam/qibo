@@ -51,7 +51,7 @@ def test_zne(nqubits, noise, solve):
         circuit=c,
         observable=obs,
         backend=None,
-        noise_levels=range(5),
+        noise_levels=np.array(range(5)),
         noise_model=noise,
         nshots=10000,
         solve_for_gammas=solve,
