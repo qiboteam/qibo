@@ -20,6 +20,7 @@ def get_noise_model(error):
     "noise",
     [get_noise_model(DepolarizingError(0.1))],
 )
+@pytest.mark.parametrize("full_output", [False, True])
 def test_vncdr(nqubits, noise):
     """Test that vnCDR reduces the noise."""
     # Define the circuit
@@ -42,10 +43,11 @@ def test_vncdr(nqubits, noise):
     # Define the observable
     obs = np.prod([Z(i) for i in range(nqubits)])
     obs = SymbolicHamiltonian(obs)
-    # Define the noise model
     # Noise-free expected value
     exact = obs.expectation(c().state())
+    # Noisy expected value without mitigation
     noisy = obs.expectation(noise.apply(c)().state())
+    # Mitigated expected value
     estimate = vnCDR(
         circuit=c,
         observable=obs,
@@ -53,5 +55,8 @@ def test_vncdr(nqubits, noise):
         noise_levels=range(3),
         noise_model=noise,
         nshots=10000,
+        full_output=full_output,
     )
+    if full_output:
+        estimate = estimate[0]
     assert np.abs(exact - estimate) <= np.abs(exact - noisy)

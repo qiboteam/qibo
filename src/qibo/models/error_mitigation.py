@@ -63,7 +63,13 @@ def get_noisy_circuit(circuit, cj):
 
 
 def ZNE(
-    circuit, observable, noise_levels, backend=None, noise_model=None, nshots=10000
+    circuit,
+    observable,
+    noise_levels,
+    backend=None,
+    noise_model=None,
+    nshots=10000,
+    solve_for_gammas=False,
 ):
     """Runs the Zero Noise Extrapolation method for error mitigation.
 
@@ -76,6 +82,7 @@ def ZNE(
         backend (qibo.backends.abstract.Backend): Calculation engine.
         noise_model (qibo.noise.NoiseModel): Noise model applied to simulate noisy computation.
         nshots (int): Number of shots.
+        solve_for_gammas (bool): If ``true``, explicitely solve the equations to obtain the gamma coefficients.
 
     Returns:
         numpy.ndarray: Estimate of the expected value of ``observable`` in the noise free condition.
@@ -92,7 +99,7 @@ def ZNE(
             noisy_circuit = noise_model.apply(noisy_circuit)
         circuit_result = backend.execute_circuit(noisy_circuit, nshots=nshots)
         expected_val.append(circuit_result.expectation_from_samples(observable))
-    gamma = get_gammas(noise_levels, solve=False)
+    gamma = get_gammas(noise_levels, solve=solve_for_gammas)
     return (gamma * expected_val).sum()
 
 

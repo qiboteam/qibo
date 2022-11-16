@@ -19,7 +19,8 @@ def get_noise_model(error):
     "noise",
     [get_noise_model(DepolarizingError(0.1))],
 )
-def test_zne(nqubits, noise):
+@pytest.mark.parametrize("solve", [False, True])
+def test_zne(nqubits, noise, solve):
     """Test that ZNE reduces the noise."""
     # Define the circuit
     hz = 0.5
@@ -41,10 +42,11 @@ def test_zne(nqubits, noise):
     # Define the observable
     obs = np.prod([Z(i) for i in range(nqubits)])
     obs = hamiltonians.SymbolicHamiltonian(obs)
-    # Define the noise model
     # Noise-free expected value
     exact = obs.expectation(c().state())
+    # Noisy expected value without mitigation
     noisy = obs.expectation(noise.apply(c)().state())
+    # Mitigated expected value
     estimate = ZNE(
         circuit=c,
         observable=obs,
@@ -52,5 +54,6 @@ def test_zne(nqubits, noise):
         noise_levels=range(5),
         noise_model=noise,
         nshots=10000,
+        solve_for_gammas=solve,
     )
     assert np.abs(exact - estimate) <= np.abs(exact - noisy)
