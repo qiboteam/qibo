@@ -922,7 +922,7 @@ Random Hermitian matrix
 .. autofunction:: qibo.quantum_info.random_hermitian
 
 
-Random Unitary matrix
+Random unitary matrix
 """""""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.random_unitary
@@ -979,7 +979,7 @@ Hellinger distance
 Hellinger fidelity
 """"""""""""""""""
 
-.. autofunction:: qibo.quantum_info.gate_error
+.. autofunction:: qibo.quantum_info.hellinger_fidelity
 
 
 .. _Parallel:
