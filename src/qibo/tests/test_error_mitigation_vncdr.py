@@ -21,7 +21,7 @@ def get_noise_model(error):
     [get_noise_model(DepolarizingError(0.1))],
 )
 @pytest.mark.parametrize("full_output", [False, True])
-def test_vncdr(nqubits, noise):
+def test_vncdr(nqubits, noise, full_output):
     """Test that vnCDR reduces the noise."""
     # Define the circuit
     hz = 0.5
