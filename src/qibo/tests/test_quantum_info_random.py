@@ -256,6 +256,113 @@ def test_random_clifford(qubits, return_circuit, fuse, seed):
         assert np.linalg.norm(reduce(np.kron, matrix) - result) < PRECISION_TOL
 
 
+def test_random_pauli_errors():
+    with pytest.raises(TypeError):
+        q, depth = "1", 1
+        random_pauli(q, depth)
+    with pytest.raises(ValueError):
+        q, depth = -1, 1
+        random_pauli(q, depth)
+    with pytest.raises(ValueError):
+        q = [0, 1, -3]
+        depth = 1
+        random_pauli(q, depth)
+    with pytest.raises(TypeError):
+        q, depth = 1, "1"
+        random_pauli(q, depth)
+    with pytest.raises(ValueError):
+        q, depth = 1, 0
+        random_pauli(q, depth)
+    with pytest.raises(TypeError):
+        q, depth, max_qubits = 1, 1, "1"
+        random_pauli(q, depth, max_qubits=max_qubits)
+    with pytest.raises(ValueError):
+        q, depth, max_qubits = 1, 1, 0
+        random_pauli(q, depth, max_qubits=max_qubits)
+    with pytest.raises(ValueError):
+        q, depth, max_qubits = 4, 1, 3
+        random_pauli(q, depth, max_qubits=max_qubits)
+    with pytest.raises(ValueError):
+        q = [0, 1, 3]
+        depth = 1
+        max_qubits = 2
+        random_pauli(q, depth, max_qubits=max_qubits)
+    with pytest.raises(TypeError):
+        q = 1
+        random_clifford_gate(q, return_circuit="True")
+    with pytest.raises(TypeError):
+        q, depth = 2, 1
+        subset = np.array([0, 1])
+        random_pauli(q, depth, subset=subset)
+    with pytest.raises(TypeError):
+        q, depth = 2, 1
+        subset = ["I", 0]
+        random_pauli(q, depth, subset=subset)
+    with pytest.raises(TypeError):
+        q = 1
+        random_clifford_gate(q, seed=0.1)
+
+
+@pytest.mark.parametrize("qubits", [2, [0, 1], np.array([0, 1])])
+@pytest.mark.parametrize("depth", [2])
+@pytest.mark.parametrize("max_qubits", [None])
+@pytest.mark.parametrize("subset", [None, ["I", "X"]])
+@pytest.mark.parametrize("return_circuit", [True, False])
+@pytest.mark.parametrize("seed", [10])
+def test_random_pauli(backend, qubits, depth, max_qubits, subset, return_circuit, seed):
+    result_complete_set = np.array(
+        [
+            [1.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
+            [0.0 + 0.0j, -1.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
+            [0.0 + 0.0j, 0.0 + 0.0j, 1.0 + 0.0j, 0.0 + 0.0j],
+            [0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, -1.0 + 0.0j],
+        ]
+    )
+    result_complete_set = backend.cast(
+        result_complete_set, dtype=result_complete_set.dtype
+    )
+    result_subset = np.array(
+        [
+            [0.0 + 0.0j, 1.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
+            [1.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
+            [0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 1.0 + 0.0j],
+            [0.0 + 0.0j, 0.0 + 0.0j, 1.0 + 0.0j, 0.0 + 0.0j],
+        ]
+    )
+    result_subset = backend.cast(result_subset, dtype=result_subset.dtype)
+
+    # qubits = backend.cast(qubits, dtype=qubits.dtype) if isinstance(qubits, np.ndarray) else qubits
+
+    matrix = random_pauli(qubits, depth, max_qubits, subset, return_circuit, seed)
+
+    if return_circuit:
+        matrix = matrix.unitary()
+        matrix = backend.cast(matrix, dtype=matrix.dtype)
+        if subset is None:
+            backend.assert_allclose(
+                backend.calculate_norm(matrix - result_complete_set) < PRECISION_TOL,
+                True,
+            )
+        else:
+            backend.assert_allclose(
+                backend.calculate_norm(matrix - result_subset) < PRECISION_TOL, True
+            )
+    else:
+        matrix = np.transpose(matrix, (1, 0, 2, 3))
+        matrix = [reduce(np.kron, row) for row in matrix]
+        matrix = reduce(np.dot, matrix)
+        matrix = backend.cast(matrix, dtype=matrix.dtype)
+        if subset is None:
+            backend.assert_allclose(
+                backend.calculate_norm(matrix - result_complete_set) < PRECISION_TOL,
+                True,
+            )
+        else:
+            backend.assert_allclose(
+                backend.calculate_norm(matrix - result_subset) < PRECISION_TOL, True
+            )
+
+
 def test_random_stochastic_matrix():
     with pytest.raises(TypeError):
         dims = np.array([1])

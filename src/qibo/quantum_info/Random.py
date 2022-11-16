@@ -2,7 +2,9 @@ from functools import reduce
 
 import numpy as np
 
+from qibo import gates
 from qibo.config import MAX_ITERATIONS, PRECISION_TOL, raise_error
+from qibo.models import Circuit
 from qibo.quantum_info.utils import NUM_CLIFFORDS, ONEQUBIT_CLIFFORD_PARAMS
 
 
@@ -25,10 +27,10 @@ def random_gaussian_matrix(
 
     Args:
         dims (int): dimension of the matrix.
-        rank (int): rank of the matrix. If `None`, then `rank == dims`. Default: `None`.
-        mean (float): mean of the Gaussian distribution.
-        stddev (float): standard deviation of the Gaussian distribution.
-        seed (int): Random seed used to initialize the pseudo-random number generator.
+        rank (int, optional): rank of the matrix. If `None`, then `rank == dims`. Default: `None`.
+        mean (float, optional): mean of the Gaussian distribution.
+        stddev (float, optional): standard deviation of the Gaussian distribution.
+        seed (int, optional): Random seed used to initialize the pseudo-random number generator.
             Default: `None`.
 
     Returns:
@@ -81,13 +83,13 @@ def random_hermitian_operator(
 
     Args:
         dims (int): dimension of the matrix.
-        semidefinite (bool): if `True`, returns a Hermitian matrix that
+        semidefinite (bool, optional): if `True`, returns a Hermitian matrix that
             is also positive semidefinite. Default: `False`.
-        normalize (bool): if `True` and `semidefinite=False`, returns
+        normalize (bool, optional): if `True` and `semidefinite=False`, returns
             a Hermitian matrix with eigenvalues in the interval
             :math:`[-1, \\,1]`. If `True` and `semidefinite=True`,
             interval is :math:`[0,\\,1]`. Default: `False`.
-        seed (int): Random seed used to initialize the pseudo-random number generator.
+        seed (int, optional): Random seed used to initialize the pseudo-random number generator.
             Default: `None`.
 
     Returns:
@@ -127,11 +129,11 @@ def random_unitary(dims: int, measure: str = None, seed: int = None):
 
     Args:
         dims (int): dimension of the matrix.
-        measure (str): probability measure in which to sample the unitary from.
+        measure (str, optional): probability measure in which to sample the unitary from.
             If `None`, functions returns :math:`\\exp{-i \\, H}`, where :math:`H`
             is a Hermitian operator. If `"haar"`, returns an Unitary matrix
             sampled from the Haar measure. Default: `None`.
-        seed (int): Random seed used to initialize the pseudo-random number generator.
+        seed (int, optional): Random seed used to initialize the pseudo-random number generator.
             Default: `None`.
 
     Returns:
@@ -189,10 +191,10 @@ def random_statevector(dims: int, haar: bool = False, seed: int = None):
 
     Args:
         dims (int): dimension of the matrix.
-        haar (bool): if `True`, statevector is created by sampling a Haar random unitary
+        haar (bool, optional): if `True`, statevector is created by sampling a Haar random unitary
             :math:`U` and acting with it on a random computational basis state
             :math:`\\ket{k}`, i.e. :math:`\\ket{\\psi} = U \\ket{k}`. Default: `False`.
-        seed (int): Random seed used to initialize the pseudo-random number generator.
+        seed (int, optional): Random seed used to initialize the pseudo-random number generator.
             Default: `None`.
 
     Returns:
@@ -237,11 +239,11 @@ def random_density_matrix(
 
     Args:
         dims (int): dimension of the matrix.
-        rank (int): rank of the matrix. If `None`, then `rank == dims`. Default: `None`.
-        pure (bool): if `True`, returns a pure state. Default: `False`.
-        metric (str): metric to sample the density matrix from. Options:
+        rank (int, optional): rank of the matrix. If `None`, then `rank == dims`. Default: `None`.
+        pure (bool, optional): if `True`, returns a pure state. Default: `False`.
+        metric (str, optional): metric to sample the density matrix from. Options:
             `"Hilbert-Schmidt"` and `"Bures"`. Default: `"Hilbert-Schmidt"`.
-        seed (int): Random seed used to initialize the pseudo-random number generator.
+        seed (int, optional): Random seed used to initialize the pseudo-random number generator.
             Default: `None`.
 
     """
@@ -323,12 +325,12 @@ def random_clifford_gate(
     Args:
         qubits (int or list or ndarray): if `int`, the number of qubits for the Clifford.
             If `list` or `ndarray`, indexes of the qubits for the Clifford to act on.
-        return_circuit (bool): if `True`, returns a `qibo.gates.Unitary` object.
-            If `False` returns an `ndarray` object. Default: `False`.
-        fuse (bool): if `False`, returns an `ndarray` with one Clifford gate per qubit.
+        return_circuit (bool, optional): if `True`, returns a `qibo.gates.Unitary` object.
+            If `False`, returns an `ndarray` object. Default: `False`.
+        fuse (bool, optional): if `False`, returns an `ndarray` with one Clifford gate per qubit.
             If `True`, returns the tensor product of the Clifford gates that were
             sampled. Default: `False`.
-        seed (int): Random seed used to initialize the pseudo-random number generator.
+        seed (int, optional): Random seed used to initialize the pseudo-random number generator.
             Default: `None`.
 
     Returns:
@@ -380,8 +382,6 @@ def random_clifford_gate(
     unitaries = [_clifford_unitary(*ONEQUBIT_CLIFFORD_PARAMS[p]) for p in parameters]
 
     if return_circuit == True:
-        from qibo import gates
-
         # tensor product of all gates generated
         unitaries = reduce(np.kron, unitaries)
 
@@ -397,6 +397,130 @@ def random_clifford_gate(
     return unitaries
 
 
+def random_pauli(
+    qubits,
+    depth: int,
+    max_qubits: int = None,
+    subset: list = None,
+    return_circuit: bool = True,
+    seed: int = None,
+):
+    """Creates random Pauli operators.
+
+    Pauli operators are sampled from the single-qubit Pauli set :math:`\\{'I', 'X', 'Y', 'Z'\\}`.
+
+    Args:
+        qubits (int or list or ndarray): if `int` and `max_qubits=None`, the number of qubits.
+            If `int` and `max_qubits != None`, qubit index in which the Pauli sequence will act.
+            If `list` or `ndarray`, indexes of the qubits for the Pauli sequence to act.
+        depth (int): length of the sequence of Pauli gates.
+        max_qubits (int, optional): total number of qubits in the circuit. If `None`,
+            `max_qubits = max(qubits)`. Default: `None`.
+        subset (list, optional): list containing a subset of the 4 single-qubit Pauli
+            operators. If `None`, defaults to the complete set. Default: `None`.
+        return_circuit (bool, optional): if `True`, returns a `qibo.models.Circuit` object.
+            If `False`, returns an `ndarray` with shape (qubits, depth, 2, 2) that contains
+            all Pauli matrices that were sampled. Default: `True`.
+        seed (int, optional): Random seed used to initialize the pseudo-random number generator.
+            Default: `None`.
+
+    Returns:
+        A `qibo.models.Circuit` or `ndarray` with all sampled Pauli operators.
+
+    """
+
+    if (
+        not isinstance(qubits, int)
+        and not isinstance(qubits, list)
+        and not isinstance(qubits, np.ndarray)
+    ):
+        raise_error(
+            TypeError,
+            f"qubits must be either type int, list or ndarray, but it is type {type(qubits)}.",
+        )
+
+    if isinstance(qubits, int) and qubits <= 0:
+        raise_error(ValueError, f"qubits must be a positive integer.")
+
+    if not isinstance(qubits, int) and any(q < 0 for q in qubits):
+        raise_error(ValueError, f"qubit indexes must be non-negative integers.")
+
+    if isinstance(depth, int) and depth <= 0:
+        raise_error(ValueError, f"depth must be a positive integer.")
+
+    if isinstance(max_qubits, int) and max_qubits <= 0:
+        raise_error(ValueError, f"max_qubits must be a positive integer.")
+
+    if max_qubits is not None:
+        if isinstance(qubits, int) and qubits > max_qubits:
+            raise_error(ValueError, f"number of qubits cannot exceed max_qubits.")
+        elif not isinstance(qubits, int) and any(q >= max_qubits for q in qubits):
+            raise_error(ValueError, f"all qubit indexes must be < max_qubits.")
+
+    if not isinstance(return_circuit, bool):
+        raise_error(
+            TypeError,
+            f"return_circuit must be type bool, but it is type {type(return_circuit)}.",
+        )
+
+    if subset is not None and not isinstance(subset, list):
+        raise_error(
+            TypeError, f"subset must be type list, but it is type {type(subset)}."
+        )
+
+    if subset is not None and any(isinstance(item, str) == False for item in subset):
+        raise_error(
+            TypeError,
+            f"subset argument must be a subset of strings in the set ['I', 'X', 'Y', 'Z'].",
+        )
+
+    if seed is not None and not isinstance(seed, int):
+        raise_error(TypeError, f"seed must be type int.")
+
+    local_state = (
+        np.random.RandomState(seed=seed)
+        if seed is not None
+        else np.random.RandomState()
+    )
+
+    complete_set = {"I": gates.I, "X": gates.X, "Y": gates.Y, "Z": gates.Z}
+
+    if subset is None:
+        subset = complete_set
+    else:
+        subset = {key: complete_set[key] for key in subset}
+
+    keys = list(subset.keys())
+
+    if max_qubits is None:
+        if isinstance(qubits, int):
+            max_qubits = qubits
+            qubits = range(qubits)
+        else:
+            max_qubits = int(max(qubits)) + 1
+    else:
+        if isinstance(qubits, int):
+            qubits = [qubits]
+
+    indexes = local_state.randint(0, len(subset), size=(len(qubits), depth))
+    indexes = [[keys[item] for item in row] for row in indexes]
+
+    if return_circuit:
+        gate_grid = Circuit(max_qubits)
+        for qubit, row in zip(qubits, indexes):
+            for column_item in row:
+                gate_grid.add(subset[column_item](qubit))
+    else:
+        gate_grid = np.array(
+            [
+                [subset[column_item](qubit).matrix for column_item in row]
+                for qubit, row in zip(qubits, indexes)
+            ]
+        )
+
+    return gate_grid
+
+
 def random_stochastic_matrix(
     dims: int,
     bistochastic: bool = False,
@@ -408,15 +532,15 @@ def random_stochastic_matrix(
 
     Args:
         dims (int): dimension of the matrix.
-        bistochastic (bool): if `True`, matrix is row- and column-stochastic.
+        bistochastic (bool, optional): if `True`, matrix is row- and column-stochastic.
             If `False`, matrix is row-stochastic. Default: `False`.
-        precision_tol (float): tolerance level for how much each probability
+        precision_tol (float, optional): tolerance level for how much each probability
             distribution can deviate from summing up to `1.0`. If `None`,
             it defaults to `qibo.config.PRECISION_TOL`. Default: `None`.
-        max_iterations (int): when `bistochastic=True`, maximum number of iterations
+        max_iterations (int, optional): when `bistochastic=True`, maximum number of iterations
             used to normalize all rows and columns simultaneously. If `None`,
-            it defaults to `qibo.config.MAX_ITERATIONS`. Default: `None`.
-        seed (int): Random seed used to initialize the pseudo-random number generator.
+            defaults to `qibo.config.MAX_ITERATIONS`. Default: `None`.
+        seed (int, optional): Random seed used to initialize the pseudo-random number generator.
             Default: `None`.
 
     """
