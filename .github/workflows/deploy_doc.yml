@@ -3,6 +3,8 @@ name: Deploy docs
 on:
   push:
       branches: [master,test_workflow]
+  
+  workflow_dispatch:
 
 jobs:
   deploy-docs:
