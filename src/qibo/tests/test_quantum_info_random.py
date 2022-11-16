@@ -214,22 +214,22 @@ def test_random_density_matrix(metric):
 def test_random_clifford(qubits, return_circuit, fuse, seed):
     with pytest.raises(TypeError):
         q = "1"
-        random_clifford_gate(q)
+        random_clifford(q)
     with pytest.raises(ValueError):
         q = -1
-        random_clifford_gate(q)
+        random_clifford(q)
     with pytest.raises(ValueError):
         q = [0, 1, -3]
-        random_clifford_gate(q)
+        random_clifford(q)
     with pytest.raises(TypeError):
         q = 1
-        random_clifford_gate(q, return_circuit="True")
+        random_clifford(q, return_circuit="True")
     with pytest.raises(TypeError):
         q = 2
-        random_clifford_gate(q, fuse="True")
+        random_clifford(q, fuse="True")
     with pytest.raises(TypeError):
         q = 1
-        random_clifford_gate(q, seed=0.1)
+        random_clifford(q, seed=0.1)
 
     result = np.array(
         [
@@ -240,7 +240,7 @@ def test_random_clifford(qubits, return_circuit, fuse, seed):
         ]
     )
 
-    matrix = random_clifford_gate(
+    matrix = random_clifford(
         qubits, return_circuit=return_circuit, fuse=fuse, seed=seed
     )
 
@@ -288,8 +288,8 @@ def test_random_pauli_errors():
         max_qubits = 2
         random_pauli(q, depth, max_qubits=max_qubits)
     with pytest.raises(TypeError):
-        q = 1
-        random_clifford_gate(q, return_circuit="True")
+        q, depth = 1, 1
+        random_pauli(q, depth, return_circuit="True")
     with pytest.raises(TypeError):
         q, depth = 2, 1
         subset = np.array([0, 1])
@@ -299,8 +299,8 @@ def test_random_pauli_errors():
         subset = ["I", 0]
         random_pauli(q, depth, subset=subset)
     with pytest.raises(TypeError):
-        q = 1
-        random_clifford_gate(q, seed=0.1)
+        q, depth = 1, 1
+        random_pauli(q, depth, seed=0.1)
 
 
 @pytest.mark.parametrize("qubits", [2, [0, 1], np.array([0, 1])])
