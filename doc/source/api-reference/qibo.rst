@@ -904,6 +904,60 @@ Gate error
 .. autofunction:: qibo.quantum_info.gate_error
 
 
+Random Ensembles
+^^^^^^^^^^^^^^^^
+
+Functions that can generate random quantum objects.
+
+
+Random Gaussian matrix
+""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_ensembles.random_gaussian_matrix
+
+
+Random Hermitian matrix
+"""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_hermitian
+
+
+Random Unitary matrix
+"""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_unitary
+
+
+Random statevector
+""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_statevector
+
+
+Random density matrix
+"""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_density_matrix
+
+
+Random Clifford
+"""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_clifford
+
+
+Random Pauli
+""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_pauli
+
+
+Random stochastic matrix
+""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_stochastic_matrix
+
+
 Utility Functions
 ^^^^^^^^^^^^^^^^^
 
