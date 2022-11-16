@@ -913,7 +913,7 @@ Functions that can generate random quantum objects.
 Random Gaussian matrix
 """"""""""""""""""""""
 
-.. autofunction:: qibo.quantum_info.random_ensembles.random_gaussian_matrix
+.. autofunction:: qibo.quantum_info.random_gaussian_matrix
 
 
 Random Hermitian matrix
@@ -953,7 +953,7 @@ Random Pauli
 
 
 Random stochastic matrix
-""""""""""""""""""""""
+""""""""""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.random_stochastic_matrix
 
