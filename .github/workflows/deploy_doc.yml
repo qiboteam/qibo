@@ -7,6 +7,6 @@ on:
 jobs:
 
   call-workflow-in-another-repo:
-    uses: qibogang/workflows/.github/workflows/try.yml@doc
+    uses: qibogang/workflows/.github/workflows/deploy-sphinx-docs-to-ghpages.yml@doc
     with:
       python-version: 3.9
