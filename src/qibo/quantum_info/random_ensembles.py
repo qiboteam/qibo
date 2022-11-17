@@ -442,8 +442,8 @@ def random_pauli(
             f"qubits must be either type int, list or ndarray, but it is type {type(qubits)}.",
         )
 
-    if isinstance(qubits, int) and qubits <= 0:
-        raise_error(ValueError, f"qubits must be a positive integer.")
+    if isinstance(qubits, int) and qubits < 0:
+        raise_error(ValueError, f"qubits must be a non-negative integer.")
 
     if not isinstance(qubits, int) and any(q < 0 for q in qubits):
         raise_error(ValueError, f"qubit indexes must be non-negative integers.")
@@ -455,8 +455,11 @@ def random_pauli(
         raise_error(ValueError, f"max_qubits must be a positive integer.")
 
     if max_qubits is not None:
-        if isinstance(qubits, int) and qubits > max_qubits:
-            raise_error(ValueError, f"number of qubits cannot exceed max_qubits.")
+        if isinstance(qubits, int) and qubits >= max_qubits:
+            raise_error(
+                ValueError,
+                f"qubit index ({qubits}) must be < max_qubits ({max_qubits}).",
+            )
         elif not isinstance(qubits, int) and any(q >= max_qubits for q in qubits):
             raise_error(ValueError, f"all qubit indexes must be < max_qubits.")
 

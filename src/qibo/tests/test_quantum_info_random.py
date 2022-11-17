@@ -23,6 +23,9 @@ def test_random_gaussian_matrix():
     with pytest.raises(ValueError):
         dims, rank = 2, -1
         random_gaussian_matrix(dims, rank)
+    with pytest.raises(ValueError):
+        dims, stddev = 2, -1
+        random_gaussian_matrix(dims, stddev=stddev)
     with pytest.raises(TypeError):
         dims = 2
         random_gaussian_matrix(dims, seed=0.1)
@@ -207,7 +210,7 @@ def test_random_density_matrix(metric):
     assert norm < PRECISION_TOL
 
 
-@pytest.mark.parametrize("qubits", [2, [0, 1], np.array([0, 1])])
+@pytest.mark.parametrize("qubits", [1, 2, [0, 1], np.array([0, 1])])
 @pytest.mark.parametrize("return_circuit", [False, True])
 @pytest.mark.parametrize("fuse", [False, True])
 @pytest.mark.parametrize("seed", [10])
@@ -231,7 +234,11 @@ def test_random_clifford(qubits, return_circuit, fuse, seed):
         q = 1
         random_clifford(q, seed=0.1)
 
-    result = np.array(
+    result_single = np.array(
+        [[0.70710678 + 0.70710678j, 0.0 + 0.0j], [0.0 + 0.0j, 0.70710678 - 0.70710678j]]
+    )
+
+    result_two = np.array(
         [
             [0.5 + 0.5j, 0.5 - 0.5j, 0.0 + 0.0j, 0.0 + 0.0j],
             [0.5 - 0.5j, 0.5 + 0.5j, 0.0 + 0.0j, 0.0 + 0.0j],
@@ -239,6 +246,8 @@ def test_random_clifford(qubits, return_circuit, fuse, seed):
             [0.0 + 0.0j, 0.0 + 0.0j, -0.5 - 0.5j, 0.5 - 0.5j],
         ]
     )
+
+    result = result_single if (isinstance(qubits, int) and qubits == 1) else result_two
 
     matrix = random_clifford(
         qubits, return_circuit=return_circuit, fuse=fuse, seed=seed
@@ -251,9 +260,12 @@ def test_random_clifford(qubits, return_circuit, fuse, seed):
         assert np.linalg.norm(matrix - result) < PRECISION_TOL
 
     if not return_circuit and not fuse:
-        from functools import reduce
+        if isinstance(qubits, int) and qubits == 1:
+            assert np.linalg.norm(matrix - result) < PRECISION_TOL
+        else:
+            from functools import reduce
 
-        assert np.linalg.norm(reduce(np.kron, matrix) - result) < PRECISION_TOL
+            assert np.linalg.norm(reduce(np.kron, matrix) - result) < PRECISION_TOL
 
 
 def test_random_pauli_errors():
@@ -301,6 +313,16 @@ def test_random_pauli_errors():
     with pytest.raises(TypeError):
         q, depth = 1, 1
         random_pauli(q, depth, seed=0.1)
+
+
+def test_pauli_single(backend):
+    result = np.array([[0.0 + 0.0j, 1.0 + 0.0j], [1.0 + 0.0j, 0.0 + 0.0j]])
+    result = backend.cast(result, dtype=result.dtype)
+    matrix = random_pauli(0, 1, 1, seed=10).unitary()
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
+    backend.assert_allclose(
+        backend.calculate_norm(matrix - result) < PRECISION_TOL, True
+    )
 
 
 @pytest.mark.parametrize("qubits", [2, [0, 1], np.array([0, 1])])
