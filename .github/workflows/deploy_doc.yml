@@ -1,9 +1,10 @@
 name: Deploy docs
 
-on: 
-  workflow_dispatch:
-  push:
-      branches: [master]
+on: [workflow_dispatch] #TODO: remove this line and uncomment the following ones
+#on: 
+#  workflow_dispatch:
+#  push:
+#      branches: [master]
   
 
 
