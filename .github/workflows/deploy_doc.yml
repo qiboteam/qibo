@@ -1,10 +1,11 @@
 name: Deploy docs
 
-on:
+on: 
+  workflow_dispatch:
   push:
       branches: [master,test_workflow]
   
-  workflow_dispatch:
+
 
 jobs:
 
