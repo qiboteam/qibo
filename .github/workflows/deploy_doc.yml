@@ -6,8 +6,6 @@ on:
   push:
       branches: [master]
   
-
-
 jobs:
 
   deploy-docs:
