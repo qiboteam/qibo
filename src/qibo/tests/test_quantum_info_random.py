@@ -6,7 +6,8 @@ from qibo.config import PRECISION_TOL
 from qibo.quantum_info import *
 
 
-def test_random_gaussian_matrix():
+@pytest.mark.parametrize("seed", [None, 10, np.random.Generator(np.random.MT19937(10))])
+def test_random_gaussian_matrix(seed):
     with pytest.raises(TypeError):
         dims = np.array([2])
         random_gaussian_matrix(dims)
@@ -31,7 +32,7 @@ def test_random_gaussian_matrix():
         random_gaussian_matrix(dims, seed=0.1)
 
     # just runs the function with no tests
-    random_gaussian_matrix(4)
+    random_gaussian_matrix(4, seed=seed)
 
 
 def test_random_hermitian():
@@ -128,29 +129,25 @@ def test_random_unitary():
     assert norm < PRECISION_TOL
 
 
-def test_random_statevector():
+@pytest.mark.parametrize("haar", [False, True])
+@pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
+def test_random_statevector(haar, seed):
     with pytest.raises(TypeError):
-        dims = np.array([1])
+        dims = "10"
         random_statevector(dims)
     with pytest.raises(ValueError):
         dims = 0
         random_statevector(dims)
     with pytest.raises(TypeError):
-        dims, haar = 2, 1
-        random_statevector(dims, haar)
+        dims = 2
+        random_statevector(dims, haar=1)
     with pytest.raises(TypeError):
         dims = 2
         random_statevector(dims, seed=0.1)
 
     # tests if random statevector is a pure state
     dims = 4
-    state = random_statevector(dims)
-    assert purity(state) <= 1.0 + PRECISION_TOL
-    assert purity(state) >= 1.0 - PRECISION_TOL
-
-    # tests if haar random statevector is a pure state
-    dims = 4
-    state = random_statevector(dims, haar=True)
+    state = random_statevector(dims, haar=haar, seed=seed)
     assert purity(state) <= 1.0 + PRECISION_TOL
     assert purity(state) >= 1.0 - PRECISION_TOL
 
@@ -234,16 +231,14 @@ def test_random_clifford(qubits, return_circuit, fuse, seed):
         q = 1
         random_clifford(q, seed=0.1)
 
-    result_single = np.array(
-        [[0.70710678 + 0.70710678j, 0.0 + 0.0j], [0.0 + 0.0j, 0.70710678 - 0.70710678j]]
-    )
+    result_single = np.array([[0.5 - 0.5j, -0.5 + 0.5j], [0.5 + 0.5j, 0.5 + 0.5j]])
 
     result_two = np.array(
         [
-            [0.5 + 0.5j, 0.5 - 0.5j, 0.0 + 0.0j, 0.0 + 0.0j],
-            [0.5 - 0.5j, 0.5 + 0.5j, 0.0 + 0.0j, 0.0 + 0.0j],
-            [0.0 + 0.0j, 0.0 + 0.0j, 0.5 - 0.5j, -0.5 - 0.5j],
-            [0.0 + 0.0j, 0.0 + 0.0j, -0.5 - 0.5j, 0.5 - 0.5j],
+            [0.5 + 0.0j, -0.5 - 0.0j, -0.5 + 0.0j, 0.5 + 0.0j],
+            [0.0 - 0.5j, 0.0 - 0.5j, 0.0 + 0.5j, 0.0 + 0.5j],
+            [0.0 + 0.5j, 0.0 - 0.5j, 0.0 + 0.5j, 0.0 - 0.5j],
+            [0.5 + 0.0j, 0.5 + 0.0j, 0.5 - 0.0j, 0.5 + 0.0j],
         ]
     )
 
@@ -316,7 +311,7 @@ def test_random_pauli_errors():
 
 
 def test_pauli_single(backend):
-    result = np.array([[0.0 + 0.0j, 1.0 + 0.0j], [1.0 + 0.0j, 0.0 + 0.0j]])
+    result = np.array([[1.0 + 0.0j, 0.0 + 0.0j], [0.0 + 0.0j, -1.0 + 0.0j]])
     result = backend.cast(result, dtype=result.dtype)
     matrix = random_pauli(0, 1, 1, seed=10).unitary()
     matrix = backend.cast(matrix, dtype=matrix.dtype)
@@ -334,23 +329,23 @@ def test_pauli_single(backend):
 def test_random_pauli(backend, qubits, depth, max_qubits, subset, return_circuit, seed):
     result_complete_set = np.array(
         [
-            [1.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
-            [0.0 + 0.0j, -1.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
-            [0.0 + 0.0j, 0.0 + 0.0j, 1.0 + 0.0j, 0.0 + 0.0j],
-            [0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, -1.0 + 0.0j],
-        ]
-    )
-    result_complete_set = backend.cast(
-        result_complete_set, dtype=result_complete_set.dtype
-    )
-    result_subset = np.array(
-        [
             [0.0 + 0.0j, 1.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
             [1.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
             [0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 1.0 + 0.0j],
             [0.0 + 0.0j, 0.0 + 0.0j, 1.0 + 0.0j, 0.0 + 0.0j],
         ]
     )
+    result_complete_set = backend.cast(
+        result_complete_set, dtype=result_complete_set.dtype
+    )
+    result_subset = np.eye(4)  # np.array(
+    #     [
+    #         [1.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
+    #         [0.0 + 0.0j, 1.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
+    #         [0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 1.0 + 0.0j],
+    #         [0.0 + 0.0j, 0.0 + 0.0j, 1.0 + 0.0j, 0.0 + 0.0j],
+    #     ]
+    # )
     result_subset = backend.cast(result_subset, dtype=result_subset.dtype)
 
     # qubits = backend.cast(qubits, dtype=qubits.dtype) if isinstance(qubits, np.ndarray) else qubits

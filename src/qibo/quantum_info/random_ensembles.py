@@ -13,7 +13,7 @@ def random_gaussian_matrix(
     rank: int = None,
     mean: float = None,
     stddev: float = None,
-    seed: int = None,
+    seed=None,
 ):
     """Generates a random Gaussian Matrix.
 
@@ -23,15 +23,16 @@ def random_gaussian_matrix(
     .. math::
         p(x) = \\frac{1}{\\sqrt{2 \\, \\pi} \\, \\sigma} \\, \\exp{\\left(-\\frac{(x - \\mu)^{2}}{2\\,\\sigma^{2}}\\right)}
 
-    with mean :math:`\\mu` and standard deviation :math:`\\sigma`.
+    with mean :math:`\\mu` and standard deviation :mGeneratorath:`\\sigma`.
 
     Args:
         dims (int): dimension of the matrix.
         rank (int, optional): rank of the matrix. If ``None``, then ``rank == dims``. Default: ``None``.
         mean (float, optional): mean of the Gaussian distribution.
         stddev (float, optional): standard deviation of the Gaussian distribution.
-        seed (int, optional): Random seed used to initialize the pseudo-random number generator.
-            Default: ``None``.
+        seed (int or ``numpy.random.Generator``, optional): Either a generator of random numbers
+            or a fixed seed to initialize a generator. If ``None``, initializes a generator with
+            a random seed. Default: ``None``.
 
     Returns:
         (ndarray): Random Gaussian matrix with dimensions ``(dims, rank)``.
@@ -54,17 +55,23 @@ def random_gaussian_matrix(
     if stddev is not None and stddev <= 0.0:
         raise_error(ValueError, f"stddev must be a positive float.")
 
-    if seed is not None and not isinstance(seed, int):
-        raise_error(TypeError, f"seed must be type int.")
+    if (
+        seed is not None
+        and not isinstance(seed, int)
+        and not isinstance(seed, np.random.Generator)
+    ):
+        raise_error(
+            TypeError, f"seed must be either type int or numpy.random.Generator."
+        )
+
+    local_state = (
+        np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
+    )
 
     if mean is None:
         mean = 0
     if stddev is None:
         stddev = 1
-
-    local_state = (
-        np.random.RandomState(seed) if seed is not None else np.random.RandomState()
-    )
 
     dims = (dims, rank)
 
@@ -76,10 +83,10 @@ def random_gaussian_matrix(
 
 
 def random_hermitian(
-    dims: int, semidefinite: bool = False, normalize: bool = False, seed: int = None
+    dims: int, semidefinite: bool = False, normalize: bool = False, seed=None
 ):
     """Generates a random Hermitian matrix :math:`H`, i.e.
-    a random matrix such that :math:`H = H^{\\dagger}.`
+    a random matrix such that :math:`H = H^{\\daggerGenerator}.`
 
     Args:
         dims (int): dimension of the matrix.
@@ -89,8 +96,9 @@ def random_hermitian(
             a Hermitian matrix with eigenvalues in the interval
             :math:`[-1, \\,1]`. If ``True`` and ``semidefinite=True``,
             interval is :math:`[0,\\,1]`. Default: ``False``.
-        seed (int, optional): Random seed used to initialize the pseudo-random number generator.
-            Default: ``None``.
+        seed (int or ``numpy.random.Generator``, optional): Either a generator of random numbers
+            or a fixed seed to initialize a generator. If ``None``, initializes a generator with
+            a random seed. Default: ``None``.
 
     Returns:
         (ndarray): Hermitian matrix :math:`H` with dimensions ``(dims, dims)``.
@@ -103,14 +111,7 @@ def random_hermitian(
     if not isinstance(semidefinite, bool) or not isinstance(normalize, bool):
         raise_error(TypeError, f"semidefinite and normalize must be type bool.")
 
-    if seed is not None and not isinstance(seed, int):
-        raise_error(TypeError, f"seed must be type int.")
-
-    local_state = (
-        np.random.RandomState(seed) if seed is not None else np.random.RandomState()
-    )
-
-    matrix = random_gaussian_matrix(dims, dims)
+    matrix = random_gaussian_matrix(dims, dims, seed=seed)
 
     if semidefinite:
         matrix = np.dot(np.transpose(np.conj(matrix)), matrix)
@@ -123,7 +124,7 @@ def random_hermitian(
     return matrix
 
 
-def random_unitary(dims: int, measure: str = None, seed: int = None):
+def random_unitary(dims: int, measure: str = None, seed=None):
     """Returns a random Unitary operator :math:`U`,, i.e.
     a random operator such that :math:`U^{-1} = U^{\\dagger}`.
 
@@ -133,8 +134,9 @@ def random_unitary(dims: int, measure: str = None, seed: int = None):
             If ``None``, functions returns :math:`\\exp{(-i \\, H)}`, where :math:`H`
             is a Hermitian operator. If ``"haar"``, returns an Unitary matrix
             sampled from the Haar measure. Default: ``None``.
-        seed (int, optional): Random seed used to initialize the pseudo-random number generator.
-            Default: ``None``.
+        seed (int or ``numpy.random.Generator``, optional): Either a generator of random numbers
+            or a fixed seed to initialize a generator. If ``None``, initializes a generator with
+            a random seed. Default: ``None``.
 
     Returns:
         (ndarray): Unitary matrix :math:`U` with dimensions ``(dims, dims)``.
@@ -152,15 +154,8 @@ def random_unitary(dims: int, measure: str = None, seed: int = None):
         if measure != "haar":
             raise_error(ValueError, f"measure {measure} not implemented.")
 
-    if seed is not None and not isinstance(seed, int):
-        raise_error(TypeError, f"seed must be type int.")
-
-    local_state = (
-        np.random.RandomState(seed) if seed is not None else np.random.RandomState()
-    )
-
     if measure == "haar":
-        gaussian_matrix = random_gaussian_matrix(dims, dims)
+        gaussian_matrix = random_gaussian_matrix(dims, dims, seed=seed)
 
         Q, R = np.linalg.qr(gaussian_matrix)
         D = np.diag(R)
@@ -170,17 +165,13 @@ def random_unitary(dims: int, measure: str = None, seed: int = None):
     elif measure is None:
         from scipy.linalg import expm
 
-        matrix_1 = local_state.randn(dims, dims)
-        matrix_2 = local_state.randn(dims, dims)
-        H = (matrix_1 + np.transpose(matrix_1)) + 1.0j * (
-            matrix_2 - np.transpose(matrix_2.T)
-        )
+        H = random_hermitian(dims, seed=seed)
         unitary = expm(-1.0j * H / 2)
 
     return unitary
 
 
-def random_statevector(dims: int, haar: bool = False, seed: int = None):
+def random_statevector(dims: int, haar: bool = False, seed=None):
     """Creates a random statevector :math:`\\ket{\\psi}`.
 
     .. math::
@@ -194,8 +185,9 @@ def random_statevector(dims: int, haar: bool = False, seed: int = None):
         haar (bool, optional): if ``True``, statevector is created by sampling a Haar random unitary
             :math:`U_{\\text{haar}}` and acting with it on a random computational basis state
             :math:`\\ket{k}`, i.e. :math:`\\ket{\\psi} = U_{\\text{haar}} \\ket{k}`. Default: ``False``.
-        seed (int, optional): Random seed used to initialize the pseudo-random number generator.
-            Default: ``None``.
+        seed (int or ``numpy.random.Generator``, optional): Either a generator of random numbers
+            or a fixed seed to initialize a generator. If ``None``, initializes a generator with
+            a random seed. Default: ``None``.
 
     Returns:
         (ndarray): Random statevector :math:`\\ket{\\psi}`.
@@ -208,22 +200,28 @@ def random_statevector(dims: int, haar: bool = False, seed: int = None):
     if not isinstance(haar, bool):
         raise_error(TypeError, f"haar must be type bool, but it is type {type(haar)}.")
 
-    if seed is not None and not isinstance(seed, int):
-        raise_error(TypeError, f"seed must be type int.")
+    if (
+        seed is not None
+        and not isinstance(seed, int)
+        and not isinstance(seed, np.random.Generator)
+    ):
+        raise_error(
+            TypeError, f"seed must be either type int or numpy.random.Generator."
+        )
 
     local_state = (
-        np.random.RandomState(seed) if seed is not None else np.random.RandomState()
+        np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
     )
 
     if not haar:
-        probabilities = local_state.rand(dims)
+        probabilities = local_state.random(dims)
         probabilities = probabilities / np.sum(probabilities)
-        phases = 2 * np.pi * local_state.rand(dims)
+        phases = 2 * np.pi * local_state.random(dims)
         state = np.sqrt(probabilities) * np.exp(1.0j * phases)
     else:
         # select a random column of a haar random unitary
-        k = local_state.randint(dims)
-        state = random_unitary(dims, measure="haar")[:, k]
+        k = local_state.integers(low=0, high=dims)
+        state = random_unitary(dims, measure="haar", seed=seed)[:, k]
 
     return state
 
@@ -233,7 +231,7 @@ def random_density_matrix(
     rank: int = None,
     pure: bool = False,
     metric: str = "Hilbert-Schmidt",
-    seed: int = None,
+    seed=None,
 ):
     """Creates a random density matrix :math:`\\rho`.
 
@@ -243,8 +241,9 @@ def random_density_matrix(
         pure (bool, optional): if ``True``, returns a pure state. Default: ``False``.
         metric (str, optional): metric to sample the density matrix from. Options:
             ``"Hilbert-Schmidt"`` and ``"Bures"``. Default: ``"Hilbert-Schmidt"``.
-        seed (int, optional): Random seed used to initialize the pseudo-random number generator.
-            Default: ``None``.
+        seed (int or ``numpy.random.Generator``, optional): Either a generator of random numbers
+            or a fixed seed to initialize a generator. If ``None``, initializes a generator with
+            a random seed. Default: ``None``.
 
     Returns:
         (ndarray): Random density matrix :math:`\\rho`.
@@ -267,9 +266,6 @@ def random_density_matrix(
         raise_error(
             TypeError, f"metric must be type str, but it is type {type(metric)}."
         )
-
-    if seed is not None and not isinstance(seed, int):
-        raise_error(TypeError, f"seed must be type int.")
 
     if pure:
         state = random_statevector(dims, seed=seed)
@@ -321,7 +317,7 @@ def _clifford_unitary(phase, x, y, z):
 
 
 def random_clifford(
-    qubits, return_circuit: bool = False, fuse: bool = False, seed: int = None
+    qubits, return_circuit: bool = False, fuse: bool = False, seed=None
 ):
     """Generates random Clifford operator(s).
 
@@ -333,8 +329,9 @@ def random_clifford(
         fuse (bool, optional): if ``False``, returns an ``ndarray`` with one Clifford gate per qubit.
             If ``True``, returns the tensor product of the Clifford gates that were
             sampled. Default: ``False``.
-        seed (int, optional): Random seed used to initialize the pseudo-random number generator.
-            Default: ``None``.
+        seed (int or ``numpy.random.Generator``, optional): Either a generator of random numbers
+            or a fixed seed to initialize a generator. If ``None``, initializes a generator with
+            a random seed. Default: ``None``.
 
     Returns:
         (ndarray or ``qibo.gates.Unitary``): Random Clifford operator(s).
@@ -368,19 +365,23 @@ def random_clifford(
     if not isinstance(fuse, bool):
         raise_error(TypeError, f"fuse must be type bool, but it is type {type(fuse)}.")
 
-    if seed is not None and not isinstance(seed, int):
-        raise_error(TypeError, f"seed must be type int.")
+    if (
+        seed is not None
+        and not isinstance(seed, int)
+        and not isinstance(seed, np.random.Generator)
+    ):
+        raise_error(
+            TypeError, f"seed must be either type int or numpy.random.Generator."
+        )
 
     local_state = (
-        np.random.RandomState(seed=seed)
-        if seed is not None
-        else np.random.RandomState()
+        np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
     )
 
     if isinstance(qubits, int):
         qubits = range(qubits)
 
-    parameters = local_state.randint(0, NUM_CLIFFORDS, len(qubits))
+    parameters = local_state.integers(0, NUM_CLIFFORDS, len(qubits))
 
     unitaries = [_clifford_unitary(*ONEQUBIT_CLIFFORD_PARAMS[p]) for p in parameters]
 
@@ -406,7 +407,7 @@ def random_pauli(
     max_qubits: int = None,
     subset: list = None,
     return_circuit: bool = True,
-    seed: int = None,
+    seed=None,
 ):
     """Creates random Pauli operators.
 
@@ -424,8 +425,9 @@ def random_pauli(
         return_circuit (bool, optional): if ``True``, returns a ``qibo.models.Circuit`` object.
             If ``False``, returns an ``ndarray`` with shape (qubits, depth, 2, 2) that contains
             all Pauli matrices that were sampled. Default: ``True``.
-        seed (int, optional): Random seed used to initialize the pseudo-random number generator.
-            Default: ``None``.
+        seed (int or ``numpy.random.Generator``, optional): Either a generator of random numbers
+            or a fixed seed to initialize a generator. If ``None``, initializes a generator with
+            a random seed. Default: ``None``.
 
     Returns:
         (ndarray or ``qibo.models.Circuit``): all sampled Pauli operators.
@@ -480,13 +482,17 @@ def random_pauli(
             f"subset argument must be a subset of strings in the set ['I', 'X', 'Y', 'Z'].",
         )
 
-    if seed is not None and not isinstance(seed, int):
-        raise_error(TypeError, f"seed must be type int.")
+    if (
+        seed is not None
+        and not isinstance(seed, int)
+        and not isinstance(seed, np.random.Generator)
+    ):
+        raise_error(
+            TypeError, f"seed must be either type int or numpy.random.Generator."
+        )
 
     local_state = (
-        np.random.RandomState(seed=seed)
-        if seed is not None
-        else np.random.RandomState()
+        np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
     )
 
     complete_set = {"I": gates.I, "X": gates.X, "Y": gates.Y, "Z": gates.Z}
@@ -508,7 +514,7 @@ def random_pauli(
         if isinstance(qubits, int):
             qubits = [qubits]
 
-    indexes = local_state.randint(0, len(subset), size=(len(qubits), depth))
+    indexes = local_state.integers(0, len(subset), size=(len(qubits), depth))
     indexes = [[keys[item] for item in row] for row in indexes]
 
     if return_circuit:
@@ -532,7 +538,7 @@ def random_stochastic_matrix(
     bistochastic: bool = False,
     precision_tol: float = None,
     max_iterations: int = None,
-    seed: int = None,
+    seed=None,
 ):
     """Creates a random stochastic matrix.
 
@@ -546,8 +552,9 @@ def random_stochastic_matrix(
         max_iterations (int, optional): when ``bistochastic=True``, maximum number of iterations
             used to normalize all rows and columns simultaneously. If ``None``,
             defaults to ``qibo.config.MAX_ITERATIONS``. Default: ``None``.
-        seed (int, optional): Random seed used to initialize the pseudo-random number generator.
-            Default: ``None``.
+        seed (int or ``numpy.random.Generator``, optional): Either a generator of random numbers
+            or a fixed seed to initialize a generator. If ``None``, initializes a generator with
+            a random seed. Default: ``None``.
 
     Returns:
         (ndarray): a random stochastic matrix.
@@ -580,11 +587,17 @@ def random_stochastic_matrix(
         if max_iterations <= 0.0:
             raise_error(ValueError, f"max_iterations must be a positive int.")
 
-    if seed is not None and not isinstance(seed, int):
-        raise_error(TypeError, f"seed must be type int.")
+    if (
+        seed is not None
+        and not isinstance(seed, int)
+        and not isinstance(seed, np.random.Generator)
+    ):
+        raise_error(
+            TypeError, f"seed must be either type int or numpy.random.Generator."
+        )
 
     local_state = (
-        np.random.RandomState(seed) if seed is not None else np.random.RandomState()
+        np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
     )
 
     if precision_tol is None:
@@ -592,7 +605,7 @@ def random_stochastic_matrix(
     if max_iterations is None:
         max_iterations = MAX_ITERATIONS
 
-    matrix = local_state.rand(dims, dims)
+    matrix = local_state.random(size=(dims, dims))
     row_sum = matrix.sum(axis=1)
 
     if bistochastic:
