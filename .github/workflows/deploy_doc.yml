@@ -3,7 +3,7 @@ name: Deploy docs
 on: 
   workflow_dispatch:
   push:
-      branches: [master,test_workflow]
+      branches: [master]
   
 
 
