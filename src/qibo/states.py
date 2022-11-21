@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import collections
 
 from qibo.config import raise_error
@@ -232,3 +231,16 @@ class CircuitResult:
             )
         noiseless_samples = self.samples()
         return self.backend.apply_bitflips(noiseless_samples, probs)
+
+    def expectation_from_samples(self, observable):
+        """Computes the real expectation value of a diagonal observable from frequencies.
+
+        Args:
+            observable (Hamiltonian/SymbolicHamiltonian): diagonal observable in the computational basis.
+
+        Returns:
+            Real number corresponding to the expectation value.
+        """
+        freq = self.frequencies(binary=True)
+        qubit_map = self.circuit.measurement_gate.qubits
+        return observable.expectation_from_samples(freq, qubit_map)

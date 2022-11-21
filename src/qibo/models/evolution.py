@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Models for time evolution of state vectors."""
 from qibo import optimizers, solvers
 from qibo.callbacks import Gap, Norm

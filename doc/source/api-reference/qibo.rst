@@ -833,6 +833,101 @@ variational model.
    :member-order: bysource
    :exclude-members: ParallelBFGS
 
+.. _Quantum Information:
+
+Quantum Information
+-------------------
+
+This module provides tools for generation and analysis of quantum (and classical) information.
+
+Metrics
+^^^^^^^
+
+Set of functions that are used to calculate metrics of states, (pseudo-)distance measures
+between states, and distance measures between quantum channels.
+
+Purity
+""""""
+
+.. autofunction:: qibo.quantum_info.purity
+
+
+Entropy
+"""""""
+
+.. autofunction:: qibo.quantum_info.entropy
+
+.. note::
+    ``validate`` flag allows the user to choose if the function will check if input :math:`\\rho` is Hermitian or not.
+    Default option is ``validate=False``, i.e. the assumption of Hermiticity, because it is faster and, more importantly,
+    the functions are intended to be used on Hermitian inputs. When ``validate=True`` and
+    :math:`\\rho` is non-Hermitian, an error will be raised when using `cupy` backend.
+
+Trace distance
+""""""""""""""
+
+.. autofunction:: qibo.quantum_info.trace_distance
+
+.. note::
+    ``validate`` flag allows the user to choose if the function will check if difference between inputs,
+    :math:`\\rho - \\sigma`, is Hermitian or not. Default option is ``validate=False``, i.e. the assumption of Hermiticity,
+    because it is faster and, more importantly, the functions are intended to be used on Hermitian inputs.
+    When ``validate=True`` and :math:`\\rho - \\sigma` is non-Hermitian, an error will be raised when using `cupy` backend.
+
+Hilbert-Schmidt distance
+""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.hilbert_schmidt_distance
+
+
+Fidelity
+""""""""
+
+.. autofunction:: qibo.quantum_info.fidelity
+
+
+Process fidelity
+""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.process_fidelity
+
+
+Average gate fidelity
+"""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.average_gate_fidelity
+
+
+Gate error
+""""""""""
+
+.. autofunction:: qibo.quantum_info.gate_error
+
+
+Utility Functions
+^^^^^^^^^^^^^^^^^
+
+Functions that can be used to calculate metrics and distance measures
+on classical probability arrays.
+
+Shannon entropy
+"""""""""""""""
+
+.. autofunction:: qibo.quantum_info.shannon_entropy
+
+
+Hellinger distance
+""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.hellinger_distance
+
+
+Hellinger fidelity
+""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.gate_error
+
+
 .. _Parallel:
 
 Parallelism
