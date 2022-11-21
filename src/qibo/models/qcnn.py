@@ -216,12 +216,12 @@ class QuantumCNN:
         circuit = circuit(init_state, nshots)
         result = circuit.frequencies(binary=False)
         prediction = np.zeros(self.measured_qubits)
-
+        # print(result)
         for qubit in range(self.measured_qubits):
             for clase in range(self.nclasses):
                 binary = bin(clase)[2:].zfill(self.measured_qubits)
                 prediction[qubit] += result[clase] * (1 - 2 * int(binary[-qubit - 1]))
-
+        # print(prediction)
         return prediction / nshots + bias
 
     def square_loss(self, labels, predictions):
@@ -285,6 +285,7 @@ class QuantumCNN:
         loss = result.fun
         optimal_angles = result.x
 
+        self.set_circuit_params(optimal_angles[self.measured_qubits :])
         return loss, optimal_angles
 
     def Accuracy(self, labels, predictions, sign=True, tolerance=1e-2):
