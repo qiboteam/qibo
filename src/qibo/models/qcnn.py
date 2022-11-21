@@ -10,7 +10,7 @@ from qibo.models import Circuit
 
 class QuantumCNN:
     def __init__(
-        self, nqubits, nlayers, nclasses=2, RY=True
+        self, nqubits, nlayers, nclasses=2, RY=True, params=None
     ):  ### TODO: modify this to build the QCNN circuit
         """
         Class for a multi-task variational quantum classifier
@@ -45,7 +45,7 @@ class QuantumCNN:
                     yield gates.RZ(q, theta=0)
                     yield gates.RX(q, theta=0)
 
-        self._circuit = self.ansatz(nlayers, rotations)
+        self._circuit = self.ansatz(nlayers, rotations, params=params)
 
     def quantum_conv_circuit(self, bits, symbols):
         c = Circuit(self.nqubits)
@@ -181,7 +181,8 @@ class QuantumCNN:
             pool_params = params[
                 param_start + self.nparams_conv : param_start + self.nparams_layer
             ]
-            pool_params += pool_params[2::-1]
+            # pool_params += pool_params[2::-1]
+            pool_params += [-pool_params[2], -pool_params[1], -pool_params[0]]
             expanded_params += conv_params * int(nleft if nleft > 2 else 1)
             expanded_params += pool_params * int(nleft / 2)
 
