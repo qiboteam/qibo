@@ -858,10 +858,10 @@ Entropy
 .. autofunction:: qibo.quantum_info.entropy
 
 .. note::
-    ``validate`` flag allows the user to choose if the function will check if input :math:`\\rho` is Hermitian or not.
+    ``validate`` flag allows the user to choose if the function will check if input ``state`` is Hermitian or not.
     Default option is ``validate=False``, i.e. the assumption of Hermiticity, because it is faster and, more importantly,
     the functions are intended to be used on Hermitian inputs. When ``validate=True`` and
-    :math:`\\rho` is non-Hermitian, an error will be raised when using `cupy` backend.
+    ``state`` is non-Hermitian, an error will be raised when using `cupy` backend.
 
 Trace distance
 """"""""""""""
@@ -870,9 +870,9 @@ Trace distance
 
 .. note::
     ``validate`` flag allows the user to choose if the function will check if difference between inputs,
-    :math:`\\rho - \\sigma`, is Hermitian or not. Default option is ``validate=False``, i.e. the assumption of Hermiticity,
+    ``state - target``, is Hermitian or not. Default option is ``validate=False``, i.e. the assumption of Hermiticity,
     because it is faster and, more importantly, the functions are intended to be used on Hermitian inputs.
-    When ``validate=True`` and :math:`\\rho - \\sigma` is non-Hermitian, an error will be raised when using `cupy` backend.
+    When ``validate=True`` and ``state - target`` is non-Hermitian, an error will be raised when using `cupy` backend.
 
 Hilbert-Schmidt distance
 """"""""""""""""""""""""
@@ -904,6 +904,60 @@ Gate error
 .. autofunction:: qibo.quantum_info.gate_error
 
 
+Random Ensembles
+^^^^^^^^^^^^^^^^
+
+Functions that can generate random quantum objects.
+
+
+Random Gaussian matrix
+""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_gaussian_matrix
+
+
+Random Hermitian matrix
+"""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_hermitian
+
+
+Random unitary matrix
+"""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_unitary
+
+
+Random statevector
+""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_statevector
+
+
+Random density matrix
+"""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_density_matrix
+
+
+Random Clifford
+"""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_clifford
+
+
+Random Pauli
+""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_pauli
+
+
+Random stochastic matrix
+""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_stochastic_matrix
+
+
 Utility Functions
 ^^^^^^^^^^^^^^^^^
 
@@ -925,7 +979,7 @@ Hellinger distance
 Hellinger fidelity
 """"""""""""""""""
 
-.. autofunction:: qibo.quantum_info.gate_error
+.. autofunction:: qibo.quantum_info.hellinger_fidelity
 
 
 .. _Parallel:
