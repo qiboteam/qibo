@@ -5,14 +5,14 @@ import numpy as np
 from qibo import gates
 from qibo.config import MAX_ITERATIONS, PRECISION_TOL, raise_error
 from qibo.models import Circuit
-from qibo.quantum_info.utils import NUM_CLIFFORDS, ONEQUBIT_CLIFFORD_PARAMS
+from qibo.quantum_info.utils import ONEQUBIT_CLIFFORD_PARAMS
 
 
 def random_gaussian_matrix(
     dims: int,
     rank: int = None,
-    mean: float = None,
-    stddev: float = None,
+    mean: float = 0,
+    stddev: float = 1,
     seed=None,
 ):
     """Generates a random Gaussian Matrix.
@@ -23,13 +23,13 @@ def random_gaussian_matrix(
     .. math::
         p(x) = \\frac{1}{\\sqrt{2 \\, \\pi} \\, \\sigma} \\, \\exp{\\left(-\\frac{(x - \\mu)^{2}}{2\\,\\sigma^{2}}\\right)}
 
-    with mean :math:`\\mu` and standard deviation :mGeneratorath:`\\sigma`.
+    with mean :math:`\\mu` and standard deviation :math:`\\sigma`.
 
     Args:
         dims (int): dimension of the matrix.
         rank (int, optional): rank of the matrix. If ``None``, then ``rank == dims``. Default: ``None``.
-        mean (float, optional): mean of the Gaussian distribution.
-        stddev (float, optional): standard deviation of the Gaussian distribution.
+        mean (float, optional): mean of the Gaussian distribution. Default is 0.
+        stddev (float, optional): standard deviation of the Gaussian distribution. Default is 1.
         seed (int or ``numpy.random.Generator``, optional): Either a generator of random numbers
             or a fixed seed to initialize a generator. If ``None``, initializes a generator with
             a random seed. Default: ``None``.
@@ -68,11 +68,6 @@ def random_gaussian_matrix(
         np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
     )
 
-    if mean is None:
-        mean = 0
-    if stddev is None:
-        stddev = 1
-
     dims = (dims, rank)
 
     matrix = local_state.normal(
@@ -86,7 +81,7 @@ def random_hermitian(
     dims: int, semidefinite: bool = False, normalize: bool = False, seed=None
 ):
     """Generates a random Hermitian matrix :math:`H`, i.e.
-    a random matrix such that :math:`H = H^{\\daggerGenerator}.`
+    a random matrix such that :math:`H = H^{\\dagger}.`
 
     Args:
         dims (int): dimension of the matrix.
@@ -381,7 +376,7 @@ def random_clifford(
     if isinstance(qubits, int):
         qubits = range(qubits)
 
-    parameters = local_state.integers(0, NUM_CLIFFORDS, len(qubits))
+    parameters = local_state.integers(0, len(ONEQUBIT_CLIFFORD_PARAMS), len(qubits))
 
     unitaries = [_clifford_unitary(*ONEQUBIT_CLIFFORD_PARAMS[p]) for p in parameters]
 

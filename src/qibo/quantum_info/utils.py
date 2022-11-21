@@ -30,9 +30,6 @@ ONEQUBIT_CLIFFORD_PARAMS = [
     (-2 * np.pi / 3, 1 / np.sqrt(3), 1 / np.sqrt(3), -1 / np.sqrt(3)),
 ]
 
-# total number of Clifford gates (must be == 24)
-NUM_CLIFFORDS = len(ONEQUBIT_CLIFFORD_PARAMS)
-
 
 def shannon_entropy(probability_array, base: float = 2):
     """Calculate the Shannon entropy of a probability array :math:`\\mathbf{p}`, which is given by

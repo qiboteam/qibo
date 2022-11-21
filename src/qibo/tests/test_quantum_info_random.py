@@ -338,17 +338,8 @@ def test_random_pauli(backend, qubits, depth, max_qubits, subset, return_circuit
     result_complete_set = backend.cast(
         result_complete_set, dtype=result_complete_set.dtype
     )
-    result_subset = np.eye(4)  # np.array(
-    #     [
-    #         [1.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
-    #         [0.0 + 0.0j, 1.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
-    #         [0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 1.0 + 0.0j],
-    #         [0.0 + 0.0j, 0.0 + 0.0j, 1.0 + 0.0j, 0.0 + 0.0j],
-    #     ]
-    # )
+    result_subset = np.eye(4)
     result_subset = backend.cast(result_subset, dtype=result_subset.dtype)
-
-    # qubits = backend.cast(qubits, dtype=qubits.dtype) if isinstance(qubits, np.ndarray) else qubits
 
     matrix = random_pauli(qubits, depth, max_qubits, subset, return_circuit, seed)
 
