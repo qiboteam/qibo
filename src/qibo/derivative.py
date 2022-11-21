@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 
 from qibo.config import raise_error
@@ -70,8 +71,6 @@ def parameter_shift(
             # running the psr with respect to the two parameters
             grad_0 = parameter_shift(circuit = c, hamiltonian = test_hamiltonian, parameter_index = 0, generator_eigenval = 0.5)
             grad_1 = parameter_shift(circuit = c, hamiltonian = test_hamiltonian, parameter_index = 1, generator_eigenval = 0.5)
-
-            tf_grads = gradient_tape(test_params)
 
             print('Test gradient with respect params[0]: ', grad_0.numpy())
             print('Test gradient with respect params[0]: ', grad_1.numpy())
