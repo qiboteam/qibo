@@ -5,25 +5,6 @@ from qibo.config import raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 
 
-def gate_from_par_index(circuit, parameter_index):
-    """
-    This function returns the gate affected by the parameter identified by
-    parameter_index
-
-    Args:
-        circuit (:class:`qibo.models.circuit.Circuit`): custom quantum circuit
-        parameter_index (int): the index which identifies the target parameter in the circuit.get_parameters() list
-
-    Returns: the gate affected by the target parameter
-    """
-    idx_to_gate = []
-    for gate in circuit.parametrized_gates:
-        npar = len(gate.parameters)
-        idx_to_gate.extend([gate] * npar)
-
-    return idx_to_gate[parameter_index]
-
-
 def parameter_shift(
     circuit,
     hamiltonian,
@@ -56,10 +37,7 @@ def parameter_shift(
             import numpy as np
             from qibo import hamiltonians, gates
             from qibo.models import Circuit
-
-            # in order to see the difference with tf gradients
-            import tensorflow as tf
-            qibo.set_backend('tensorflow')
+            from qibo.derivative import parameter_shift
 
             # defining an observable
             def hamiltonian(nqubits = 1):
@@ -85,8 +63,8 @@ def parameter_shift(
             test_hamiltonian = hamiltonian()
 
             # running the psr with respect to the two parameters
-            grad_0 = parameter_shift(circuit = c, hamiltonian = test_hamiltonian, parameter_index = 0, generator_eigenval = 0.5)
-            grad_1 = parameter_shift(circuit = c, hamiltonian = test_hamiltonian, parameter_index = 1, generator_eigenval = 0.5)
+            grad_0 = parameter_shift(circuit = c, hamiltonian = test_hamiltonian, parameter_index = 0)
+            grad_1 = parameter_shift(circuit = c, hamiltonian = test_hamiltonian, parameter_index = 1)
 
             print('Test gradient with respect params[0]: ', grad_0.numpy())
             print('Test gradient with respect params[0]: ', grad_1.numpy())
@@ -106,7 +84,7 @@ def parameter_shift(
     backend = hamiltonian.backend
 
     # getting the gate's type
-    gate = gate_from_par_index(circuit, parameter_index)
+    gate = circuit.associate_gates_with_parameters()[parameter_index]
 
     # getting the generator_eigenvalue
     generator_eigenval = gate.generator_eigenvalue()
