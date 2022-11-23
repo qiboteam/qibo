@@ -1083,9 +1083,7 @@ class _Rnn_(ParametrizedGate):
 
 
 class RXX(_Rnn_):
-    """Parametric 2-qubit X \\otimes X interaction, or rotation about XX.
-
-    This is a symmetric gate.
+    """Parametric 2-qubit XX interaction, or rotation about XX-axis.
 
     Corresponds to the following unitary matrix
 
@@ -1112,7 +1110,7 @@ class RXX(_Rnn_):
 
 
 class RYY(_Rnn_):
-    """Parametric 2-qubit Y \\otimes Y interaction, or rotation about YY.
+    """Parametric 2-qubit YY interaction, or rotation about YY-axis.
 
     Corresponds to the following unitary matrix
 
@@ -1138,7 +1136,7 @@ class RYY(_Rnn_):
 
 
 class RZZ(_Rnn_):
-    """Parametric 2-qubit Z \\otimes Z interaction, or rotation about ZZ.
+    """Parametric 2-qubit ZZ interaction, or rotation about ZZ-axis.
 
     Corresponds to the following unitary matrix
 
