@@ -392,6 +392,9 @@ class RX(_Rn_):
         self.name = "rx"
         self._controlled_gate = CRX
 
+    def generator_eigenvalue(self):
+        return 0.5
+
 
 class RY(_Rn_):
     """Rotation around the Y-axis of the Bloch sphere.
@@ -419,6 +422,9 @@ class RY(_Rn_):
         self.name = "ry"
         self._controlled_gate = CRY
 
+    def generator_eigenvalue(self):
+        return 0.5
+
 
 class RZ(_Rn_):
     """Rotation around the Z-axis of the Bloch sphere.
@@ -443,6 +449,9 @@ class RZ(_Rn_):
         super().__init__(q, theta, trainable)
         self.name = "rz"
         self._controlled_gate = CRZ
+
+    def generator_eigenvalue(self):
+        return 0.5
 
 
 class _Un_(ParametrizedGate):

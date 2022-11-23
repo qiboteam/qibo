@@ -258,6 +258,20 @@ class Gate:
     def asmatrix(self, backend):
         return backend.asmatrix(self)
 
+    def generator_eigenvalue(self):
+        """
+        This function returns the absolute value of the eigenvalues of the
+        operator which generates the unitary target one.
+
+        Returns:
+            generator's eigenvalue value or raise an error if not implemented.
+        """
+
+        raise_error(
+            NotImplementedError,
+            "For this gate, the function has not yet been implemented.",
+        )
+
     @property
     def matrix(self):
         from qibo.backends import GlobalBackend
