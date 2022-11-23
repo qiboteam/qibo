@@ -422,6 +422,26 @@ fSim with general rotation
     :members:
     :member-order: bysource
 
+Parametric XX interaction (RXX)
+"""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.RXX
+    :members:
+    :member-order: bysource
+
+Parametric YY interaction (RYY)
+"""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.RYY
+    :members:
+    :member-order: bysource
+
+Parametric ZZ interaction (RZZ)
+"""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.RZZ
+    :members:
+    :member-order: bysource
 
 Special gates
 ^^^^^^^^^^^^^
