@@ -1272,9 +1272,16 @@ class Circuit:
 
         return len(qubits), gate_list
 
-    def _update_draw_matrix(self, gate, matrix, idx):
+    def _update_draw_matrix(self, matrix, idx, gate, gate_symbol=None):
         """Helper method for :meth:`qibo.models.circuit.Circuit.draw`."""
-        gate_name = gates.DRAW_LABELS.get(gate.name)
+        if gate_symbol is None:
+            if gate.name not in gates.DRAW_LABELS:  # pragma: no cover
+                raise_error(
+                    NotImplementedError,
+                    f"{gate.name} gate is not supported by `circuit.draw`",
+                )
+            gate_symbol = gates.DRAW_LABELS.get(gate.name)
+
         if isinstance(gate, gates.CallbackGate):
             targets = list(range(self.nqubits))
         else:
@@ -1297,7 +1304,7 @@ class Circuit:
         # fill
         for iq in range(min_qubits_id, max_qubits_id + 1):
             if iq in targets:
-                matrix[iq][col] = gate_name
+                matrix[iq][col] = gate_symbol
             elif iq in controls:
                 matrix[iq][col] = "o"
             else:
@@ -1328,14 +1335,16 @@ class Circuit:
         idx = [0] * self.nqubits
 
         for gate in self.queue:
-            if gate.name not in gates.DRAW_LABELS:  # pragma: no cover
-                raise_error(
-                    NotImplementedError,
-                    f"{gate.name} gate is not supported by `circuit.draw`",
-                )
-
+            if isinstance(gate, gates.FusedGate):
+                # start fused gate
+                matrix, idx = self._update_draw_matrix(matrix, idx, gate, "[")
+                # draw gates contained in the fused gate
+                for subgate in gate.gates:
+                    matrix, idx = self._update_draw_matrix(matrix, idx, subgate)
+                # end fused gate
+                matrix, idx = self._update_draw_matrix(matrix, idx, gate, "]")
             else:
-                matrix, idx = self._update_draw_matrix(gate, matrix, idx)
+                matrix, idx = self._update_draw_matrix(matrix, idx, gate)
 
         # Include measurement gates
         if self.measurement_gate:
