@@ -17,6 +17,7 @@ QASM_GATES = {
     "u3": "U3",
     "cx": "CNOT",
     "swap": "SWAP",
+    "iswap": "iSWAP",
     "fswap": "FSWAP",
     "rxx": "RXX",
     "ryy": "RYY",
