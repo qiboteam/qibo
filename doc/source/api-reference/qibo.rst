@@ -401,6 +401,13 @@ Swap (SWAP)
     :members:
     :member-order: bysource
 
+iSwap (iSWAP)
+"""""""""""""
+
+.. autoclass:: qibo.gates.iSWAP
+    :members:
+    :member-order: bysource
+
 f-Swap (FSWAP)
 """"""""""""""
 

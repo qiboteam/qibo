@@ -1301,6 +1301,7 @@ class Circuit:
             "u3": "U3",
             "cx": "X",
             "swap": "x",
+            "iswap": "i",
             "cz": "Z",
             "crx": "RX",
             "cry": "RY",
