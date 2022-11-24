@@ -37,7 +37,7 @@ class FusedGate(SpecialGate):
 
     def __init__(self, *q):
         super().__init__()
-        self.name = "fused"
+        self.name = "Fused Gate"
         self.target_qubits = tuple(sorted(q))
         self.init_args = list(q)
         self.qubit_set = set(q)

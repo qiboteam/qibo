@@ -95,6 +95,7 @@ DRAW_LABELS = {
     "Norm": "N",
     "Overlap": "O",
     "Energy": "E",
+    "Fused Gate": "[]",
 }
 
 

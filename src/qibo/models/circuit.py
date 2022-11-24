@@ -1377,7 +1377,7 @@ class Circuit:
             names = [
                 i.name
                 for i in self.queue
-                if isinstance(i, gates.CallbackGate) or "Channel" in i.name
+                if isinstance(i, gates.SpecialGate) or "Channel" in i.name
             ]
             names = list(dict.fromkeys(names))
             table = tabulate(
