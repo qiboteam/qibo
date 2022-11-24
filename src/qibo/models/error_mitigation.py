@@ -89,7 +89,7 @@ def ZNE(
         numpy.ndarray: Estimate of the expected value of ``observable`` in the noise free condition.
     """
 
-    if backend == None:
+    if backend == None:  # pragma: no cover
         from qibo.backends import GlobalBackend
 
         backend = GlobalBackend()
@@ -206,7 +206,7 @@ def CDR(
     """
 
     # Set backend
-    if backend == None:
+    if backend == None:  # pragma: no cover
         from qibo.backends import GlobalBackend
 
         backend = GlobalBackend()
@@ -271,7 +271,7 @@ def vnCDR(
     """
 
     # Set backend
-    if backend == None:
+    if backend == None:  # pragma: no cover
         from qibo.backends import GlobalBackend
 
         backend = GlobalBackend()

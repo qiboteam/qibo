@@ -2,7 +2,6 @@ import numpy as np
 import pytest
 
 from qibo import gates
-from qibo.backends import GlobalBackend
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.models import Circuit
 from qibo.models.error_mitigation import CDR, ZNE, sample_training_circuit, vnCDR
@@ -16,7 +15,6 @@ def get_noise_model(error):
     return noise
 
 
-@pytest.mark.parametrize("backend", [None, GlobalBackend()])
 @pytest.mark.parametrize("nqubits", [3])
 @pytest.mark.parametrize(
     "noise",
@@ -44,12 +42,11 @@ def test_zne(backend, nqubits, noise, solve):
     c.add(gates.M(q) for q in range(nqubits))
     # Define the observable
     obs = np.prod([Z(i) for i in range(nqubits)])
-    b = GlobalBackend() if backend is None else backend
-    obs = SymbolicHamiltonian(obs, backend=b)
+    obs = SymbolicHamiltonian(obs, backend=backend)
     # Noise-free expected value
-    exact = obs.expectation(b.execute_circuit(c).state())
+    exact = obs.expectation(backend.execute_circuit(c).state())
     # Noisy expected value without mitigation
-    noisy = obs.expectation(b.execute_circuit(noise.apply(c)).state())
+    noisy = obs.expectation(backend.execute_circuit(noise.apply(c)).state())
     # Mitigated expected value
     estimate = ZNE(
         circuit=c,
@@ -63,7 +60,6 @@ def test_zne(backend, nqubits, noise, solve):
     assert np.abs(exact - estimate) <= np.abs(exact - noisy)
 
 
-@pytest.mark.parametrize("backend", [None, GlobalBackend()])
 @pytest.mark.parametrize("nqubits", [3])
 @pytest.mark.parametrize(
     "noise",
@@ -91,12 +87,11 @@ def test_cdr(backend, nqubits, noise, full_output):
     c.add(gates.M(q) for q in range(nqubits))
     # Define the observable
     obs = np.prod([Z(i) for i in range(nqubits)])
-    b = GlobalBackend() if backend is None else backend
-    obs = SymbolicHamiltonian(obs, backend=b)
+    obs = SymbolicHamiltonian(obs, backend=backend)
     # Noise-free expected value
-    exact = obs.expectation(b.execute_circuit(c).state())
+    exact = obs.expectation(backend.execute_circuit(c).state())
     # Noisy expected value without mitigation
-    noisy = obs.expectation(b.execute_circuit(noise.apply(c)).state())
+    noisy = obs.expectation(backend.execute_circuit(noise.apply(c)).state())
     # Mitigated expected value
     estimate = CDR(
         circuit=c,
@@ -134,7 +129,6 @@ def test_sample_training_circuit(nqubits):
         sample_training_circuit(c)
 
 
-@pytest.mark.parametrize("backend", [None, GlobalBackend()])
 @pytest.mark.parametrize("nqubits", [3])
 @pytest.mark.parametrize(
     "noise",
@@ -162,12 +156,11 @@ def test_vncdr(backend, nqubits, noise, full_output):
     c.add(gates.M(q) for q in range(nqubits))
     # Define the observable
     obs = np.prod([Z(i) for i in range(nqubits)])
-    b = GlobalBackend() if backend is None else backend
-    obs = SymbolicHamiltonian(obs, backend=b)
+    obs = SymbolicHamiltonian(obs, backend=backend)
     # Noise-free expected value
-    exact = obs.expectation(b.execute_circuit(c).state())
+    exact = obs.expectation(backend.execute_circuit(c).state())
     # Noisy expected value without mitigation
-    noisy = obs.expectation(b.execute_circuit(noise.apply(c)).state())
+    noisy = obs.expectation(backend.execute_circuit(noise.apply(c)).state())
     # Mitigated expected value
     estimate = vnCDR(
         circuit=c,
