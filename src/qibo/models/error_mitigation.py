@@ -53,7 +53,7 @@ def get_noisy_circuit(circuit, cj):
     noisy_circuit = circuit.__class__(**circuit.init_kwargs)
     for gate in circuit.queue:
         noisy_circuit.add(gate)
-        if gate.__class__ == gates.CNOT:
+        if isinstance(gate, gates.CNOT):
             control = gate.control_qubits[0]
             target = gate.target_qubits[0]
             for i in range(cj):
@@ -106,7 +106,7 @@ def ZNE(
 
 def sample_training_circuit(
     circuit,
-    replacement_gates=[(gates.RZ, {"theta": n * np.pi / 2}) for n in range(4)],
+    replacement_gates=None,
     sigma=0.5,
 ):
     """Samples a training circuit for CDR by susbtituting some of the non-Clifford gates.
@@ -119,10 +119,12 @@ def sample_training_circuit(
     Returns:
         qibo.models.circuit.Circuit: The sampled circuit.
     """
+    if replacement_gates is None:
+        replacement_gates = [(gates.RZ, {"theta": n * np.pi / 2}) for n in range(4)]
     # Find all the non-Clifford RZ gates
     gates_to_replace = []
     for i, gate in enumerate(circuit.queue):
-        if gate.__class__ == gates.RZ:
+        if isinstance(gate, gates.RZ):
             if gate.init_kwargs["theta"] % (np.pi / 2) != 0.0:
                 gates_to_replace.append((i, gate))
 
