@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, Tuple
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate, ParametrizedGate
 
+# TODO: Make these dictionaries gate properties
 QASM_GATES = {
     "h": "H",
     "x": "X",
@@ -49,6 +50,52 @@ PARAMETRIZED_GATES = {
     "crz",
     "cu1",
     "cu3",
+}
+DRAW_LABELS = {
+    "h": "H",
+    "x": "X",
+    "y": "Y",
+    "z": "Z",
+    "s": "S",
+    "sdg": "SDG",
+    "t": "T",
+    "tdg": "TDG",
+    "rx": "RX",
+    "ry": "RY",
+    "rz": "RZ",
+    "u1": "U1",
+    "u2": "U2",
+    "u3": "U3",
+    "cx": "X",
+    "swap": "x",
+    "cz": "Z",
+    "crx": "RX",
+    "cry": "RY",
+    "crz": "RZ",
+    "cu1": "U1",
+    "cu3": "U3",
+    "ccx": "X",
+    "id": "I",
+    "measure": "M",
+    "fsim": "f",
+    "generalizedfsim": "gf",
+    "rxx": "RXX",
+    "ryy": "RYY",
+    "rzz": "RZZ",
+    "Unitary": "U",
+    "fswap": "fx",
+    "PauliNoiseChannel": "PN",
+    "KrausChannel": "K",
+    "UnitaryChannel": "U",
+    "ThermalRelaxationChannel": "TR",
+    "DepolarizingChannel": "D",
+    "ResetChannel": "R",
+    "PartialTrace": "PT",
+    "EntanglementEntropy": "EE",
+    "Norm": "N",
+    "Overlap": "O",
+    "Energy": "E",
+    "Fused Gate": "[]",
 }
 
 

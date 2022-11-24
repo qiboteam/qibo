@@ -1272,6 +1272,52 @@ class Circuit:
 
         return len(qubits), gate_list
 
+    def _update_draw_matrix(self, matrix, idx, gate, gate_symbol=None):
+        """Helper method for :meth:`qibo.models.circuit.Circuit.draw`."""
+        if gate_symbol is None:
+            if gate.name not in gates.DRAW_LABELS:  # pragma: no cover
+                raise_error(
+                    NotImplementedError,
+                    f"{gate.name} gate is not supported by `circuit.draw`",
+                )
+            gate_symbol = gates.DRAW_LABELS.get(gate.name)
+
+        if isinstance(gate, gates.CallbackGate):
+            targets = list(range(self.nqubits))
+        else:
+            targets = list(gate.target_qubits)
+        controls = list(gate.control_qubits)
+
+        # identify boundaries
+        qubits = targets + controls
+        qubits.sort()
+        min_qubits_id = qubits[0]
+        max_qubits_id = qubits[-1]
+
+        # identify column
+        col = idx[targets[0]] if not controls and len(targets) == 1 else max(idx)
+
+        # extend matrix
+        for iq in range(self.nqubits):
+            matrix[iq].extend((1 + col - len(matrix[iq])) * [""])
+
+        # fill
+        for iq in range(min_qubits_id, max_qubits_id + 1):
+            if iq in targets:
+                matrix[iq][col] = gate_symbol
+            elif iq in controls:
+                matrix[iq][col] = "o"
+            else:
+                matrix[iq][col] = "|"
+
+        # update indexes
+        if not controls and len(targets) == 1:
+            idx[targets[0]] += 1
+        else:
+            idx = [col + 1] * self.nqubits
+
+        return matrix, idx
+
     def draw(self, line_wrap=70, legend=False) -> str:
         """Draw text circuit using unicode symbols.
 
@@ -1284,96 +1330,21 @@ class Circuit:
         Return:
             String containing text circuit diagram.
         """
-        labels = {
-            "h": "H",
-            "x": "X",
-            "y": "Y",
-            "z": "Z",
-            "s": "S",
-            "sdg": "SDG",
-            "t": "T",
-            "tdg": "TDG",
-            "rx": "RX",
-            "ry": "RY",
-            "rz": "RZ",
-            "u1": "U1",
-            "u2": "U2",
-            "u3": "U3",
-            "cx": "X",
-            "swap": "x",
-            "cz": "Z",
-            "crx": "RX",
-            "cry": "RY",
-            "crz": "RZ",
-            "cu1": "U1",
-            "cu3": "U3",
-            "ccx": "X",
-            "id": "I",
-            "measure": "M",
-            "fsim": "f",
-            "generalizedfsim": "gf",
-            "rxx": "RXX",
-            "ryy": "RYY",
-            "rzz": "RZZ",
-            "Unitary": "U",
-            "fswap": "fx",
-            "PauliNoiseChannel": "PN",
-            "KrausChannel": "K",
-            "UnitaryChannel": "U",
-            "ThermalRelaxationChannel": "TR",
-            "DepolarizingChannel": "D",
-            "ResetChannel": "R",
-            "PartialTrace": "PT",
-            "EntanglementEntropy": "EE",
-            "Norm": "N",
-            "Overlap": "O",
-            "Energy": "E",
-        }
-
         # build string representation of gates
         matrix = [[] for _ in range(self.nqubits)]
         idx = [0] * self.nqubits
 
         for gate in self.queue:
-            if gate.name not in labels:  # pragma: no cover
-                raise_error(
-                    NotImplementedError,
-                    f"{gate.name} gate is not supported by `circuit.draw`",
-                )
-            gate_name = labels.get(gate.name)
-            if isinstance(gate, gates.CallbackGate):
-                targets = list(range(self.nqubits))
+            if isinstance(gate, gates.FusedGate):
+                # start fused gate
+                matrix, idx = self._update_draw_matrix(matrix, idx, gate, "[")
+                # draw gates contained in the fused gate
+                for subgate in gate.gates:
+                    matrix, idx = self._update_draw_matrix(matrix, idx, subgate)
+                # end fused gate
+                matrix, idx = self._update_draw_matrix(matrix, idx, gate, "]")
             else:
-                targets = list(gate.target_qubits)
-            controls = list(gate.control_qubits)
-
-            # identify boundaries
-            qubits = targets + controls
-            qubits.sort()
-            min_qubits_id = qubits[0]
-            max_qubits_id = qubits[-1]
-
-            # identify column
-            col = idx[targets[0]] if not controls and len(targets) == 1 else max(idx)
-
-            # extend matrix
-            for iq in range(self.nqubits):
-                matrix[iq].extend((1 + col - len(matrix[iq])) * [""])
-
-            # fill
-            for iq in range(min_qubits_id, max_qubits_id + 1):
-                if iq in targets:
-                    matrix[iq][col] = gate_name
-                elif iq in controls:
-                    matrix[iq][col] = "o"
-                else:
-                    matrix[iq][col] = "|"
-
-            # update indexes
-            if not controls and len(targets) == 1:
-                idx[targets[0]] += 1
-            else:
-                idx = [col + 1] * self.nqubits
+                matrix, idx = self._update_draw_matrix(matrix, idx, gate)
 
         # Include measurement gates
         if self.measurement_gate:
@@ -1406,11 +1377,11 @@ class Circuit:
             names = [
                 i.name
                 for i in self.queue
-                if isinstance(i, gates.CallbackGate) or "Channel" in i.name
+                if isinstance(i, gates.SpecialGate) or "Channel" in i.name
             ]
             names = list(dict.fromkeys(names))
             table = tabulate(
-                [[i, labels[i]] for i in names],
+                [[i, gates.DRAW_LABELS[i]] for i in names],
                 headers=["Gate", "Symbol"],
                 tablefmt="orgtbl",
             )

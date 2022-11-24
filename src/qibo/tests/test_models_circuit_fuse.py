@@ -206,3 +206,22 @@ def test_add_fused_gate(backend):
     assert new_c.ngates == 1
     backend.assert_circuitclose(fused_c, c)
     backend.assert_circuitclose(new_c, c)
+
+
+def test_fused_gate_draw():
+    ref = (
+        "q0: ─[─H─U1───]─U1─U1─U1─────────────────────────────────────x───\n"
+        "q1: ─[───o──H─]─|──|──|──[─U1───]─U1─U1──────────────────────|─x─\n"
+        "q2: ────────────o──|──|──[─o──H─]─|──|──[─U1───]─U1──────────|─|─\n"
+        "q3: ───────────────o──|───────────o──|──[─o──H─]─|──[─U1───]─|─x─\n"
+        "q4: ──────────────────o──────────────o───────────o──[─o──H─]─x───"
+    )
+    circuit = Circuit(5)
+    for i1 in range(5):
+        circuit.add(gates.H(i1))
+        for i2 in range(i1 + 1, 5):
+            circuit.add(gates.CU1(i2, i1, theta=0))
+    circuit.add(gates.SWAP(0, 4))
+    circuit.add(gates.SWAP(1, 3))
+    circuit = circuit.fuse()
+    assert circuit.draw() == ref
