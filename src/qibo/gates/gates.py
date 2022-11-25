@@ -18,6 +18,7 @@ QASM_GATES = {
     "u3": "U3",
     "cx": "CNOT",
     "swap": "SWAP",
+    "iswap": "iSWAP",
     "fswap": "FSWAP",
     "rxx": "RXX",
     "ryy": "RYY",
@@ -68,6 +69,7 @@ DRAW_LABELS = {
     "u3": "U3",
     "cx": "X",
     "swap": "x",
+    "iswap": "i",
     "cz": "Z",
     "crx": "RX",
     "cry": "RY",
@@ -972,6 +974,31 @@ class SWAP(Gate):
     def __init__(self, q0, q1):
         super().__init__()
         self.name = "swap"
+        self.target_qubits = (q0, q1)
+        self.init_args = [q0, q1]
+
+
+class iSWAP(Gate):
+    """The iswap gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 & 0 & 0 \\\\
+        0 & 0 & i & 0 \\\\
+        0 & i & 0 & 0 \\\\
+        0 & 0 & 0 & 1 \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the first qubit to be swapped id number.
+        q1 (int): the second qubit to be swapped id number.
+    """
+
+    def __init__(self, q0, q1):
+        super().__init__()
+        self.name = "iswap"
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
 
