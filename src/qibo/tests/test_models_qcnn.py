@@ -17,12 +17,12 @@ def test_classifier_circuit2():
     nlayers = int(nqubits / 2)
     init_state = np.ones(2**nqubits) / np.sqrt(2**nqubits)  #
 
-    qcnn = QuantumCNN(nqubits, nlayers, nclasses=2, RY=True)#, params=angles0)
+    qcnn = QuantumCNN(nqubits, nlayers, nclasses=2, RY=True)  # , params=angles0)
 
     angles = [0] + angles0
 
     circuit = qcnn.Classifier_circuit(angles)
-    #circuit = qcnn._circuit
+    # circuit = qcnn._circuit
     statevector = circuit(init_state).state()
     real_vector = get_real_vector2()
 
@@ -167,7 +167,6 @@ def get_real_vector4():
     a = np.dot(one_qubit_unitary(nqubits, bits[b0], angles[k : k + 3]).unitary(), a)
     k += 3
     a = np.dot(one_qubit_unitary(nqubits, bits[b1], angles[k : k + 3]).unitary(), a)
-
 
     # pooling - layer 1
     k = 15  # k+=3
