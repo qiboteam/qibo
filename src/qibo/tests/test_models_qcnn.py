@@ -17,11 +17,12 @@ def test_classifier_circuit2():
     nlayers = int(nqubits / 2)
     init_state = np.ones(2**nqubits) / np.sqrt(2**nqubits)  #
 
-    qcnn = QuantumCNN(nqubits, nlayers, nclasses=2, RY=True)
+    qcnn = QuantumCNN(nqubits, nlayers, nclasses=2, RY=True, params=angles0)
 
-    angles = angles0
+    angles = [0] + angles0
 
-    circuit = qcnn.Classifier_circuit(angles)
+    #circuit = qcnn.Classifier_circuit(angles)
+    circuit = qcnn._circuit
     statevector = circuit(init_state).state()
     real_vector = get_real_vector2()
 
@@ -60,12 +61,7 @@ def get_real_vector2():
     k += 3
     a = np.dot(one_qubit_unitary(nqubits, bits[0], angles[k : k + 3]).unitary(), a)
     a = np.dot(CNOT_unitary(nqubits, bits[0], bits[1]).unitary(), a)
-    a = np.dot(
-        one_qubit_unitary(nqubits, bits[1], angles[ksink : ksink + 3])
-        .invert()
-        .unitary(),
-        a,
-    )
+    a = np.dot(one_qubit_unitary(nqubits, bits[1], angles[ksink : ksink + 3]).invert().unitary(), a)
 
     return a
 
@@ -135,12 +131,7 @@ def get_real_vector4():
     k += 3
     a = np.dot(one_qubit_unitary(nqubits, bits[0], angles[k : k + 3]).unitary(), a)
     a = np.dot(CNOT_unitary(nqubits, bits[0], bits[2]).unitary(), a)
-    a = np.dot(
-        one_qubit_unitary(nqubits, bits[2], angles[ksink : ksink + 3])
-        .invert()
-        .unitary(),
-        a,
-    )
+    a = np.dot(one_qubit_unitary(nqubits, bits[2], angles[ksink : ksink + 3]).invert().unitary(),a)
 
     k = 15  # k+=3
     ksink = k
@@ -149,11 +140,7 @@ def get_real_vector4():
     a = np.dot(one_qubit_unitary(nqubits, bits[1], angles[k : k + 3]).unitary(), a)
     a = np.dot(CNOT_unitary(nqubits, bits[1], bits[3]).unitary(), a)
     a = np.dot(
-        one_qubit_unitary(nqubits, bits[3], angles[ksink : ksink + 3])
-        .invert()
-        .unitary(),
-        a,
-    )
+        one_qubit_unitary(nqubits, bits[3], angles[ksink : ksink + 3]).invert().unitary(),a)
 
     # convolution - layer 2
     k = 0
@@ -178,12 +165,7 @@ def get_real_vector4():
     k += 3
     a = np.dot(one_qubit_unitary(nqubits, bits[2], angles[k : k + 3]).unitary(), a)
     a = np.dot(CNOT_unitary(nqubits, bits[2], bits[3]).unitary(), a)
-    a = np.dot(
-        one_qubit_unitary(nqubits, bits[3], angles[ksink : ksink + 3])
-        .invert()
-        .unitary(),
-        a,
-    )
+    a = np.dot(one_qubit_unitary(nqubits, bits[3], angles[ksink : ksink + 3]).invert().unitary(),a)
 
     return a
 
