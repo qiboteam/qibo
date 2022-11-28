@@ -222,7 +222,7 @@ class QuantumCNN:
             for clase in range(self.nclasses):
                 binary = bin(clase)[2:].zfill(self.measured_qubits)
                 prediction[qubit] += result[clase] * (1 - 2 * int(binary[-qubit - 1]))
-        # print(prediction)
+        
         return prediction / nshots + bias
 
     def square_loss(self, labels, predictions):
