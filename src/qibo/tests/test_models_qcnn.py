@@ -97,7 +97,7 @@ def get_real_vector4():
 
     # convolution - layer 1
     # to declare matrix array a
-    
+
     b0 = 0
     b1 = 1
     k = 0
@@ -118,7 +118,7 @@ def get_real_vector4():
     a = np.dot(one_qubit_unitary(nqubits, bits[b1], angles[k : k + 3]).unitary(), a)
 
     b0 = 2
-    b1 = 3    
+    b1 = 3
     k = 0  # k+=3
      a = np.dot(one_qubit_unitary(nqubits, bits[b0], angles[k : k + 3]).unitary(), a)
     k += 3
@@ -135,7 +135,7 @@ def get_real_vector4():
     a = np.dot(one_qubit_unitary(nqubits, bits[b1], angles[k : k + 3]).unitary(), a)
 
     b0 = 1
-    b1 = 2    
+    b1 = 2
     k = 0  # k+=3
     a = np.dot(one_qubit_unitary(nqubits, bits[b0], angles[k : k + 3]).unitary(), a)
     k += 3
@@ -149,10 +149,10 @@ def get_real_vector4():
     k += 1
     a = np.dot(one_qubit_unitary(nqubits, bits[b0], angles[k : k + 3]).unitary(), a)
     k += 3
-    a = np.dot(one_qubit_unitary(nqubits, bits[b1], angles[k : k + 3]).unitary(), a)   
-    
+    a = np.dot(one_qubit_unitary(nqubits, bits[b1], angles[k : k + 3]).unitary(), a)
+
     b0 = 3
-    b1 = 0    
+    b1 = 0
     k = 0  # k+=3
     a = np.dot(one_qubit_unitary(nqubits, bits[b0], angles[k : k + 3]).unitary(), a)
     k += 3
@@ -166,9 +166,9 @@ def get_real_vector4():
     k += 1
     a = np.dot(one_qubit_unitary(nqubits, bits[b0], angles[k : k + 3]).unitary(), a)
     k += 3
-    a = np.dot(one_qubit_unitary(nqubits, bits[b1], angles[k : k + 3]).unitary(), a)   
-    
-    
+    a = np.dot(one_qubit_unitary(nqubits, bits[b1], angles[k : k + 3]).unitary(), a)
+
+
     # pooling - layer 1
     k = 15  # k+=3
     ksink = k
