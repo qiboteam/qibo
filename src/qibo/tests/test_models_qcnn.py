@@ -120,7 +120,7 @@ def get_real_vector4():
     b0 = 2
     b1 = 3
     k = 0  # k+=3
-     a = np.dot(one_qubit_unitary(nqubits, bits[b0], angles[k : k + 3]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[b0], angles[k : k + 3]).unitary(), a)
     k += 3
     a = np.dot(one_qubit_unitary(nqubits, bits[b1], angles[k : k + 3]).unitary(), a)
     k += 3
