@@ -217,7 +217,7 @@ class QuantumCNN:
         circuit = circuit(init_state, nshots)
         result = circuit.frequencies(binary=False)
         prediction = np.zeros(self.measured_qubits)
-        
+
         for qubit in range(self.measured_qubits):
             for clase in range(self.nclasses):
                 binary = bin(clase)[2:].zfill(self.measured_qubits)
