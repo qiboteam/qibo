@@ -73,8 +73,7 @@ def get_real_vector2():
 
 def test_classifier_circuit4():
     """ """
-    nqubits = 4
-    # bits = range(nqubits)
+    nqubits = 4 
     nlayers = int(nqubits / 2)
     init_state = np.ones(2**nqubits) / np.sqrt(2**nqubits)  #
 
@@ -94,7 +93,7 @@ def get_real_vector4():
     nqubits = 4
     init_state = np.ones(2**nqubits) / np.sqrt(2**nqubits)  #
     angles = angles0
-
+    bits = range(nqubits)
     # convolution - layer 1
     # to declare matrix array a
 
