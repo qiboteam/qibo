@@ -113,15 +113,11 @@ class MeasurementResult:
         """Register samples array to the ``MeasurementResult`` object."""
         self._samples = samples
         self.nshots = len(samples)
-        if self.backend is None:
-            self.backend = backend
 
     def register_frequencies(self, frequencies, backend=None):
         """Register frequencies to the ``MeasurementResult`` object."""
         self._frequencies = frequencies
         self.nshots = sum(frequencies.values())
-        if self.backend is None:
-            self.backend = backend
 
     def reset(self):
         """Remove all registered samples and frequencies."""
