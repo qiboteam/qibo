@@ -2,6 +2,34 @@ import numpy as np
 
 from qibo.config import PRECISION_TOL, raise_error
 
+# Phases corresponding to all 24 single-qubit Clifford gates
+ONEQUBIT_CLIFFORD_PARAMS = [
+    (0, 0, 0, 0),
+    (np.pi, 1, 0, 0),
+    (np.pi, 0, 1, 0),
+    (np.pi, 0, 0, 1),
+    (np.pi / 2, 1, 0, 0),
+    (-np.pi / 2, 1, 0, 0),
+    (np.pi / 2, 0, 1, 0),
+    (-np.pi / 2, 0, 1, 0),
+    (np.pi / 2, 0, 0, 1),
+    (-np.pi / 2, 0, 0, 1),
+    (np.pi, 1 / np.sqrt(2), 1 / np.sqrt(2), 0),
+    (np.pi, 1 / np.sqrt(2), 0, 1 / np.sqrt(2)),
+    (np.pi, 0, 1 / np.sqrt(2), 1 / np.sqrt(2)),
+    (np.pi, -1 / np.sqrt(2), 1 / np.sqrt(2), 0),
+    (np.pi, 1 / np.sqrt(2), 0, -1 / np.sqrt(2)),
+    (np.pi, 0, -1 / np.sqrt(2), 1 / np.sqrt(2)),
+    (2 * np.pi / 3, 1 / np.sqrt(3), 1 / np.sqrt(3), 1 / np.sqrt(3)),
+    (-2 * np.pi / 3, 1 / np.sqrt(3), 1 / np.sqrt(3), 1 / np.sqrt(3)),
+    (2 * np.pi / 3, -1 / np.sqrt(3), 1 / np.sqrt(3), 1 / np.sqrt(3)),
+    (-2 * np.pi / 3, -1 / np.sqrt(3), 1 / np.sqrt(3), 1 / np.sqrt(3)),
+    (2 * np.pi / 3, 1 / np.sqrt(3), -1 / np.sqrt(3), 1 / np.sqrt(3)),
+    (-2 * np.pi / 3, 1 / np.sqrt(3), -1 / np.sqrt(3), 1 / np.sqrt(3)),
+    (2 * np.pi / 3, 1 / np.sqrt(3), 1 / np.sqrt(3), -1 / np.sqrt(3)),
+    (-2 * np.pi / 3, 1 / np.sqrt(3), 1 / np.sqrt(3), -1 / np.sqrt(3)),
+]
+
 
 def shannon_entropy(probability_array, base: float = 2):
     """Calculate the Shannon entropy of a probability array :math:`\\mathbf{p}`, which is given by
@@ -17,7 +45,7 @@ def shannon_entropy(probability_array, base: float = 2):
         base (float): the base of the log. Default: 2.
 
     Returns:
-        The Shannon entropy :math:`H(\\mathcal{p})`.
+        (float): The Shannon entropy :math:`H(\\mathcal{p})`.
 
     """
 
@@ -80,7 +108,7 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False):
             probability distributions. Default: False.
 
     Returns:
-        Hellinger distance :math:`H(p, q)`.
+        (float): Hellinger distance :math:`H(p, q)`.
 
     """
 
@@ -127,7 +155,7 @@ def hellinger_fidelity(prob_dist_p, prob_dist_q, validate: bool = False):
             probability distributions. Default: False.
 
     Returns:
-        Hellinger fidelity.
+        (float): Hellinger fidelity.
 
     """
 
