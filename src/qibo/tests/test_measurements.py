@@ -421,3 +421,15 @@ def test_measurement_density_matrix(backend):
         decimal_frequencies={2: 100},
         binary_frequencies={"10": 100},
     )
+
+
+def test_measurement_result_vs_circuit_result(backend, accelerators):
+    c = models.Circuit(6, accelerators)
+    c.add([gates.X(0), gates.X(1), gates.X(3)])
+    ma = c.add(gates.M(5, 1, 3, register_name="a"))
+    mb = c.add(gates.M(2, 0, register_name="b"))
+    result = backend.execute_circuit(c, nshots=100)
+
+    frequencies = result.frequencies(registers=True)
+    assert ma.frequencies() == frequencies.get("a")
+    assert mb.frequencies() == frequencies.get("b")

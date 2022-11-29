@@ -82,6 +82,7 @@ class MeasurementResult:
         self.measurement_gate = gate
         self.backend = backend
         self.nshots = nshots
+        self.circuit = None
 
         self._samples = None
         self._frequencies = None
@@ -154,6 +155,14 @@ class MeasurementResult:
                 samples are returned in decimal form as a tensor
                 of shape `(nshots,)`.
         """
+        if self._samples is None:
+            if self.circuit is None:
+                raise_error(
+                    RuntimeError, "Cannot calculate samples if circuit is not provided."
+                )
+            # calculate samples for the whole circuit so that
+            # individual register samples are registered here
+            self.circuit.final_state.samples()
         if binary:
             return np.array(self._samples, dtype="int32")
         else:

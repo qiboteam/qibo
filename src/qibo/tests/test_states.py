@@ -12,6 +12,12 @@ def test_measurement_result_repr():
     assert str(result) == "MeasurementResult(qubits=(0,), nshots=10)"
 
 
+def test_measurement_result_error():
+    result = MeasurementResult(gates.M(0), nshots=10)
+    with pytest.raises(RuntimeError):
+        samples = result.samples()
+
+
 @pytest.mark.parametrize("target", range(5))
 @pytest.mark.parametrize("density_matrix", [False, True])
 def test_state_representation(backend, target, density_matrix):

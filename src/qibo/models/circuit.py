@@ -573,6 +573,7 @@ class Circuit:
                                 KeyError, f"Register {name} already exists in circuit."
                             )
 
+                gate.result.circuit = self
                 if gate.collapse:
                     self.repeated_execution = True
                 else:
