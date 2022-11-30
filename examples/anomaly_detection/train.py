@@ -1,11 +1,14 @@
 import argparse
 import math
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.optimizers import Adam, schedules
+
 import qibo
 from qibo import gates
 from qibo.models import Circuit
+
 
 def main(n_layers, batch_size, nepochs, train_size, filename, lr_boundaries):
     qibo.set_backend("tensorflow")
@@ -30,7 +33,6 @@ def main(n_layers, batch_size, nepochs, train_size, filename, lr_boundaries):
             index += 3
         return encoder
 
-
     @tf.function
     def compute_loss(encoder, params, vector):
         encoder.set_parameters(params)
@@ -43,7 +45,6 @@ def main(n_layers, batch_size, nepochs, train_size, filename, lr_boundaries):
         )
         return loss
 
-
     @tf.function
     def train_step(batch_size, encoder, params, dataset):
         loss = 0.0
@@ -54,7 +55,6 @@ def main(n_layers, batch_size, nepochs, train_size, filename, lr_boundaries):
             grads = tape.gradient(loss, params)
             optimizer.apply_gradients(zip([grads], [params]))
         return loss
-
 
     dataset_np = np.load("data/standard_data.npy")
     dataset = tf.convert_to_tensor(dataset_np)
@@ -90,7 +90,10 @@ def main(n_layers, batch_size, nepochs, train_size, filename, lr_boundaries):
         tf.random.shuffle(train)
         for i in range(steps_for_epoch):
             loss = train_step(
-                batch_size, encoder, params, train[i * batch_size : (i + 1) * batch_size]
+                batch_size,
+                encoder,
+                params,
+                train[i * batch_size : (i + 1) * batch_size],
             )
         trained_params[epoch] = params.numpy()
         print("Epoch: %d  Loss: %f" % (epoch + 1, loss))
@@ -132,7 +135,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--lr_boundaries",
-        default=[3,6,9,12,15,18],
+        default=[3, 6, 9, 12, 15, 18],
         type=list,
         help="(list): epochs when learning rate is reduced (6 monotone growing values from 0 to nepochs)",
     )

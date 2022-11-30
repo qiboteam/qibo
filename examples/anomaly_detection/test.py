@@ -1,10 +1,13 @@
 import argparse
+
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
+
 import qibo
 from qibo import gates
 from qibo.models import Circuit
+
 
 def main(n_layers, train_size, filename):
     qibo.set_backend("tensorflow")
@@ -29,7 +32,6 @@ def main(n_layers, train_size, filename):
             index += 3
         return encoder
 
-
     def compute_loss_test(encoder, vector):
         reconstructed = encoder(vector)
         # 3q compression
@@ -39,7 +41,6 @@ def main(n_layers, train_size, filename):
             + reconstructed.probabilities(qubits=[2])[0]
         )
         return loss
-
 
     n_qubits = 6
     q_compression = 3
@@ -109,7 +110,6 @@ def main(n_layers, train_size, filename):
                 c += 1
         true_positive = c / float(tot_pos)
         tpr.append(true_positive)
-
 
     plt.title("Receiver Operating Characteristic")
     plt.plot(fpr, tpr)

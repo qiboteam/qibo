@@ -42,7 +42,7 @@ In this section we want to explain the main elements to understand the proposed 
 ### Anomaly detection
 
 Anomaly detection is a classification algorithm that allows to identify anomalous data. The advantage in using this machine learning technique is that only standard data are required for the training.
-To achieve this it's necessary to train a particular artificial neural network (ANN) architecture called autoencoder. An autoencoder is composed of two main parts: encoder and decoder. 
+To achieve this it's necessary to train a particular artificial neural network (ANN) architecture called autoencoder. An autoencoder is composed of two main parts: encoder and decoder.
 
 ![autoencoder](images/autoencoder.png)
 
@@ -74,9 +74,8 @@ Moreover this configuration requires only nearest neighbour connectivity for six
 ### Training
 
 For the training of the circuit a dataset of 5000 images of zero handwritten digits has been employed. The loss function is the sum of the probabilities of the ground state for the first three qubits, thus these qubits are forced to the |1> state.
-Training has been performed for 20 epochs using Adam optimizer, with a dynamic learning rate that spans from 0.4 in the first epochs to 0.001 in the last ones. This variable learning rate has helped reducing the problem of barren plateaus. 
+Training has been performed for 20 epochs using Adam optimizer, with a dynamic learning rate that spans from 0.4 in the first epochs to 0.001 in the last ones. This variable learning rate has helped reducing the problem of barren plateaus.
 
 ### Performance evaluation
 
 To test the anomaly detection algorithm after the training phase, we have used 2000 standard images not used in the training and 2000 anomalous images. Figure below shows the loss distribution for the two test datasets.
-
