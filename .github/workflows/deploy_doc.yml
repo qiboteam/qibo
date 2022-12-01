@@ -9,6 +9,6 @@ on:
 jobs:
 
   deploy-docs:
-    uses: qibogang/workflows/.github/workflows/deploy-sphinx-docs-to-ghpages.yml@cache_pip
+    uses: qibogang/workflows/.github/workflows/deploy-sphinx-docs-to-ghpages.yml@documentation
     with:
       python-version: 3.9
