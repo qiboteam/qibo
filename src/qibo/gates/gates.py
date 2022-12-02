@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
 import math
 from typing import Dict, List, Optional, Tuple
 
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate, ParametrizedGate
 
+# TODO: Make these dictionaries gate properties
 QASM_GATES = {
     "h": "H",
     "x": "X",
@@ -18,6 +18,7 @@ QASM_GATES = {
     "u3": "U3",
     "cx": "CNOT",
     "swap": "SWAP",
+    "iswap": "iSWAP",
     "fswap": "FSWAP",
     "rxx": "RXX",
     "ryy": "RYY",
@@ -51,6 +52,53 @@ PARAMETRIZED_GATES = {
     "cu1",
     "cu3",
 }
+DRAW_LABELS = {
+    "h": "H",
+    "x": "X",
+    "y": "Y",
+    "z": "Z",
+    "s": "S",
+    "sdg": "SDG",
+    "t": "T",
+    "tdg": "TDG",
+    "rx": "RX",
+    "ry": "RY",
+    "rz": "RZ",
+    "u1": "U1",
+    "u2": "U2",
+    "u3": "U3",
+    "cx": "X",
+    "swap": "x",
+    "iswap": "i",
+    "cz": "Z",
+    "crx": "RX",
+    "cry": "RY",
+    "crz": "RZ",
+    "cu1": "U1",
+    "cu3": "U3",
+    "ccx": "X",
+    "id": "I",
+    "measure": "M",
+    "fsim": "f",
+    "generalizedfsim": "gf",
+    "rxx": "RXX",
+    "ryy": "RYY",
+    "rzz": "RZZ",
+    "Unitary": "U",
+    "fswap": "fx",
+    "PauliNoiseChannel": "PN",
+    "KrausChannel": "K",
+    "UnitaryChannel": "U",
+    "ThermalRelaxationChannel": "TR",
+    "DepolarizingChannel": "D",
+    "ResetChannel": "R",
+    "PartialTrace": "PT",
+    "EntanglementEntropy": "EE",
+    "Norm": "N",
+    "Overlap": "O",
+    "Energy": "E",
+    "Fused Gate": "[]",
+}
 
 
 class H(Gate):
@@ -61,7 +109,7 @@ class H(Gate):
     """
 
     def __init__(self, q):
-        super(H, self).__init__()
+        super().__init__()
         self.name = "h"
         self.target_qubits = (q,)
         self.init_args = [q]
@@ -75,7 +123,7 @@ class X(Gate):
     """
 
     def __init__(self, q):
-        super(X, self).__init__()
+        super().__init__()
         self.name = "x"
         self.target_qubits = (q,)
         self.init_args = [q]
@@ -88,7 +136,7 @@ class X(Gate):
         elif len(q) == 2:
             gate = TOFFOLI(q[0], q[1], self.target_qubits[0])
         else:
-            gate = super(X, self).controlled_by(*q)
+            gate = super().controlled_by(*q)
         return gate
 
     def decompose(self, *free, use_toffolis=True):
@@ -170,7 +218,7 @@ class Y(Gate):
     """
 
     def __init__(self, q):
-        super(Y, self).__init__()
+        super().__init__()
         self.name = "y"
         self.target_qubits = (q,)
         self.init_args = [q]
@@ -184,7 +232,7 @@ class Z(Gate):
     """
 
     def __init__(self, q):
-        super(Z, self).__init__()
+        super().__init__()
         self.name = "z"
         self.target_qubits = (q,)
         self.init_args = [q]
@@ -195,7 +243,7 @@ class Z(Gate):
         if len(q) == 1:
             gate = CZ(q[0], self.target_qubits[0])
         else:
-            gate = super(Z, self).controlled_by(*q)
+            gate = super().controlled_by(*q)
         return gate
 
 
@@ -307,7 +355,7 @@ class I(ParametrizedGate):
     """
 
     def __init__(self, *q):
-        super(I, self).__init__()
+        super().__init__()
         self.name = "id"
         self.target_qubits = tuple(q)
         self.init_args = q
@@ -318,7 +366,7 @@ class I(ParametrizedGate):
 
 class Align(ParametrizedGate):
     def __init__(self, *q):
-        super(Align, self).__init__()
+        super().__init__()
         self.name = "align"
         self.target_qubits = tuple(q)
         self.init_args = q
@@ -607,7 +655,7 @@ class CNOT(Gate):
     """
 
     def __init__(self, q0, q1):
-        super(CNOT, self).__init__()
+        super().__init__()
         self.name = "cx"
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
@@ -637,7 +685,7 @@ class CZ(Gate):
     """
 
     def __init__(self, q0, q1):
-        super(CZ, self).__init__()
+        super().__init__()
         self.name = "cz"
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
@@ -657,7 +705,7 @@ class _CRn_(ParametrizedGate):
     """
 
     def __init__(self, q0, q1, theta, trainable=True):
-        super(_CRn_, self).__init__(trainable)
+        super().__init__(trainable)
         self.name = None
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
@@ -769,7 +817,7 @@ class _CUn_(ParametrizedGate):
     """
 
     def __init__(self, q0, q1, trainable=True):
-        super(_CUn_, self).__init__(trainable)
+        super().__init__(trainable)
         self.name = None
         self.nparams = 0
         self.control_qubits = (q0,)
@@ -884,7 +932,7 @@ class CU3(_CUn_):
     """
 
     def __init__(self, q0, q1, theta, phi, lam, trainable=True):
-        super(CU3, self).__init__(q0, q1, trainable=trainable)
+        super().__init__(q0, q1, trainable=trainable)
         self.name = "cu3"
         self.nparams = 3
         self._theta, self._phi, self._lam = None, None, None
@@ -924,8 +972,33 @@ class SWAP(Gate):
     """
 
     def __init__(self, q0, q1):
-        super(SWAP, self).__init__()
+        super().__init__()
         self.name = "swap"
+        self.target_qubits = (q0, q1)
+        self.init_args = [q0, q1]
+
+
+class iSWAP(Gate):
+    """The iswap gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 & 0 & 0 \\\\
+        0 & 0 & i & 0 \\\\
+        0 & i & 0 & 0 \\\\
+        0 & 0 & 0 & 1 \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the first qubit to be swapped id number.
+        q1 (int): the second qubit to be swapped id number.
+    """
+
+    def __init__(self, q0, q1):
+        super().__init__()
+        self.name = "iswap"
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
 
@@ -949,7 +1022,7 @@ class FSWAP(Gate):
     """
 
     def __init__(self, q0, q1):
-        super(FSWAP, self).__init__()
+        super().__init__()
         self.name = "fswap"
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
@@ -981,7 +1054,7 @@ class fSim(ParametrizedGate):
     # TODO: Check how this works with QASM.
 
     def __init__(self, q0, q1, theta, phi, trainable=True):
-        super(fSim, self).__init__(trainable)
+        super().__init__(trainable)
         self.name = "fsim"
         self.target_qubits = (q0, q1)
 
@@ -1023,7 +1096,7 @@ class GeneralizedfSim(ParametrizedGate):
     """
 
     def __init__(self, q0, q1, unitary, phi, trainable=True):
-        super(GeneralizedfSim, self).__init__(trainable)
+        super().__init__(trainable)
         self.name = "generalizedfsim"
         self.target_qubits = (q0, q1)
 
@@ -1084,9 +1157,7 @@ class _Rnn_(ParametrizedGate):
 
 
 class RXX(_Rnn_):
-    """Parametric 2-qubit X \\otimes X interaction, or rotation about XX.
-
-    This is a symmetric gate.
+    """Parametric 2-qubit XX interaction, or rotation about XX-axis.
 
     Corresponds to the following unitary matrix
 
@@ -1113,7 +1184,7 @@ class RXX(_Rnn_):
 
 
 class RYY(_Rnn_):
-    """Parametric 2-qubit Y \\otimes Y interaction, or rotation about YY.
+    """Parametric 2-qubit YY interaction, or rotation about YY-axis.
 
     Corresponds to the following unitary matrix
 
@@ -1139,7 +1210,7 @@ class RYY(_Rnn_):
 
 
 class RZZ(_Rnn_):
-    """Parametric 2-qubit Z \\otimes Z interaction, or rotation about ZZ.
+    """Parametric 2-qubit ZZ interaction, or rotation about ZZ-axis.
 
     Corresponds to the following unitary matrix
 
@@ -1175,7 +1246,7 @@ class TOFFOLI(Gate):
     """
 
     def __init__(self, q0, q1, q2):
-        super(TOFFOLI, self).__init__()
+        super().__init__()
         self.name = "ccx"
         self.control_qubits = (q0, q1)
         self.target_qubits = (q2,)
@@ -1236,7 +1307,7 @@ class Unitary(ParametrizedGate):
     """
 
     def __init__(self, unitary, *q, trainable=True, name=None):
-        super(Unitary, self).__init__(trainable)
+        super().__init__(trainable)
         self.name = "Unitary" if name is None else name
         self.target_qubits = tuple(q)
 
@@ -1264,6 +1335,7 @@ class Unitary(ParametrizedGate):
         if self.is_controlled_by:
             controls = (qubit_map.get(i) for i in self.control_qubits)
             gate = gate.controlled_by(*controls)
+        gate.parameters = self.parameters
         return gate
 
     def _dagger(self):

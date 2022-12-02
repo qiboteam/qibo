@@ -401,6 +401,13 @@ Swap (SWAP)
     :members:
     :member-order: bysource
 
+iSwap (iSWAP)
+"""""""""""""
+
+.. autoclass:: qibo.gates.iSWAP
+    :members:
+    :member-order: bysource
+
 f-Swap (FSWAP)
 """"""""""""""
 
@@ -422,6 +429,26 @@ fSim with general rotation
     :members:
     :member-order: bysource
 
+Parametric XX interaction (RXX)
+"""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.RXX
+    :members:
+    :member-order: bysource
+
+Parametric YY interaction (RYY)
+"""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.RYY
+    :members:
+    :member-order: bysource
+
+Parametric ZZ interaction (RZZ)
+"""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.RZZ
+    :members:
+    :member-order: bysource
 
 Special gates
 ^^^^^^^^^^^^^
@@ -490,6 +517,13 @@ Pauli noise channel
     :members:
     :member-order: bysource
 
+Depolarizing channel
+^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.gates.DepolarizingChannel
+    :members:
+    :member-order: bysource
+
 Reset channel
 ^^^^^^^^^^^^^
 
@@ -530,6 +564,10 @@ The quantum errors available to build a noise model are the following:
     :member-order: bysource
 
 .. autoclass:: qibo.noise.ThermalRelaxationError
+    :members:
+    :member-order: bysource
+
+.. autoclass:: qibo.noise.DepolarizingError
     :members:
     :member-order: bysource
 
@@ -821,6 +859,155 @@ variational model.
    :members:
    :member-order: bysource
    :exclude-members: ParallelBFGS
+
+.. _Quantum Information:
+
+Quantum Information
+-------------------
+
+This module provides tools for generation and analysis of quantum (and classical) information.
+
+Metrics
+^^^^^^^
+
+Set of functions that are used to calculate metrics of states, (pseudo-)distance measures
+between states, and distance measures between quantum channels.
+
+Purity
+""""""
+
+.. autofunction:: qibo.quantum_info.purity
+
+
+Entropy
+"""""""
+
+.. autofunction:: qibo.quantum_info.entropy
+
+.. note::
+    ``validate`` flag allows the user to choose if the function will check if input ``state`` is Hermitian or not.
+    Default option is ``validate=False``, i.e. the assumption of Hermiticity, because it is faster and, more importantly,
+    the functions are intended to be used on Hermitian inputs. When ``validate=True`` and
+    ``state`` is non-Hermitian, an error will be raised when using `cupy` backend.
+
+Trace distance
+""""""""""""""
+
+.. autofunction:: qibo.quantum_info.trace_distance
+
+.. note::
+    ``validate`` flag allows the user to choose if the function will check if difference between inputs,
+    ``state - target``, is Hermitian or not. Default option is ``validate=False``, i.e. the assumption of Hermiticity,
+    because it is faster and, more importantly, the functions are intended to be used on Hermitian inputs.
+    When ``validate=True`` and ``state - target`` is non-Hermitian, an error will be raised when using `cupy` backend.
+
+Hilbert-Schmidt distance
+""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.hilbert_schmidt_distance
+
+
+Fidelity
+""""""""
+
+.. autofunction:: qibo.quantum_info.fidelity
+
+
+Process fidelity
+""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.process_fidelity
+
+
+Average gate fidelity
+"""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.average_gate_fidelity
+
+
+Gate error
+""""""""""
+
+.. autofunction:: qibo.quantum_info.gate_error
+
+
+Random Ensembles
+^^^^^^^^^^^^^^^^
+
+Functions that can generate random quantum objects.
+
+
+Random Gaussian matrix
+""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_gaussian_matrix
+
+
+Random Hermitian matrix
+"""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_hermitian
+
+
+Random unitary matrix
+"""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_unitary
+
+
+Random statevector
+""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_statevector
+
+
+Random density matrix
+"""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_density_matrix
+
+
+Random Clifford
+"""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_clifford
+
+
+Random Pauli
+""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_pauli
+
+
+Random stochastic matrix
+""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_stochastic_matrix
+
+
+Utility Functions
+^^^^^^^^^^^^^^^^^
+
+Functions that can be used to calculate metrics and distance measures
+on classical probability arrays.
+
+Shannon entropy
+"""""""""""""""
+
+.. autofunction:: qibo.quantum_info.shannon_entropy
+
+
+Hellinger distance
+""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.hellinger_distance
+
+
+Hellinger fidelity
+""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.hellinger_fidelity
+
 
 .. _Parallel:
 

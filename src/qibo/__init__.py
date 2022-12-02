@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-__version__ = "0.1.8rc1.dev0"
+__version__ = "0.2.0.dev0"
 from qibo import callbacks, gates, hamiltonians, models, optimizers, parallel, solvers
 from qibo.backends import (
     get_backend,

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test channels defined in `qibo/gates.py`."""
 import numpy as np
 import pytest
@@ -28,6 +27,11 @@ def test_krauss_channel_errors():
     a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
     with pytest.raises(ValueError):
         gate = gates.KrausChannel([((0, 1), a1)])
+
+
+def test_depolarizing_channel_errors():
+    with pytest.raises(ValueError):
+        gate = gates.DepolarizingChannel((0, 1), 1.2)
 
 
 def test_controlled_by_channel_error():
@@ -105,6 +109,19 @@ def test_pauli_noise_channel(backend):
     target_rho = 0.3 * backend.to_numpy(target_rho)
     target_rho += 0.7 * initial_rho
     backend.assert_allclose(final_rho, target_rho)
+
+
+def test_depolarizing_channel(backend):
+    initial_rho = random_density_matrix(3)
+    lam = 0.3
+    initial_rho_r = np.einsum("ijik->jk", initial_rho.reshape([2, 4, 2, 4]))
+    channel = gates.DepolarizingChannel((1, 2), lam)
+    final_rho = backend.apply_channel_density_matrix(channel, np.copy(initial_rho), 3)
+    final_rho_r = np.einsum("ijik->jk", final_rho.reshape([2, 4, 2, 4]))
+    target_rho_r = (1 - lam) * initial_rho_r + lam * np.trace(
+        initial_rho_r
+    ) * np.identity(4) / 4
+    backend.assert_allclose(final_rho_r, target_rho_r)
 
 
 def test_reset_channel(backend):

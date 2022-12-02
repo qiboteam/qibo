@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import abc
 
 from qibo.config import raise_error
@@ -349,13 +348,15 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def calculate_expectation_state(self, matrix, state, normalize):  # pragma: no cover
+    def calculate_expectation_state(
+        self, hamiltonian, state, normalize
+    ):  # pragma: no cover
         """Calculate expectation value of a state vector given the observable matrix."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
     def calculate_expectation_density_matrix(
-        self, matrix, state, normalize
+        self, hamiltonian, state, normalize
     ):  # pragma: no cover
         """Calculate expectation value of a density matrix given the observable matrix."""
         raise_error(NotImplementedError)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate, ParametrizedGate, SpecialGate
 
@@ -13,7 +12,7 @@ class CallbackGate(SpecialGate):
     """
 
     def __init__(self, callback: "Callback"):
-        super(CallbackGate, self).__init__()
+        super().__init__()
         self.name = callback.__class__.__name__
         self.callback = callback
         self.init_args = [callback]
@@ -38,7 +37,7 @@ class FusedGate(SpecialGate):
 
     def __init__(self, *q):
         super().__init__()
-        self.name = "fused"
+        self.name = "Fused Gate"
         self.target_qubits = tuple(sorted(q))
         self.init_args = list(q)
         self.qubit_set = set(q)
@@ -75,9 +74,6 @@ class FusedGate(SpecialGate):
             self.gates.extend(gate.gates)
         else:
             self.gates.append(gate)
-
-    def __iter__(self):
-        return iter(self.gates)
 
     def _dagger(self):
         dagger = self.__class__(*self.init_args)

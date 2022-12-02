@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import argparse
 
 import aux_functions as aux

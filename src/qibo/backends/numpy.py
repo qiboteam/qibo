@@ -1,11 +1,11 @@
-# -*- coding: utf-8 -*-
 import collections
 
 import numpy as np
 
+from qibo import __version__
 from qibo.backends import einsum_utils
 from qibo.backends.abstract import Backend
-from qibo.backends.matrices import Matrices
+from qibo.backends.npmatrices import NumpyMatrices
 from qibo.config import log, raise_error
 from qibo.gates import FusedGate
 from qibo.gates.abstract import ParametrizedGate, SpecialGate
@@ -17,8 +17,9 @@ class NumpyBackend(Backend):
         super().__init__()
         self.np = np
         self.name = "numpy"
-        self.matrices = Matrices(self.dtype)
+        self.matrices = NumpyMatrices(self.dtype)
         self.tensor_types = np.ndarray
+        self.versions = {"qibo": __version__, "numpy": self.np.__version__}
         self.numeric_types = (
             int,
             float,
@@ -501,14 +502,13 @@ class NumpyBackend(Backend):
         return self._order_probabilities(probs, qubits, nqubits).ravel()
 
     def calculate_probabilities_density_matrix(self, state, qubits, nqubits):
-        rtype = self.np.real(state).dtype
         order = tuple(sorted(qubits))
         order += tuple(i for i in range(nqubits) if i not in qubits)
         order = order + tuple(i + nqubits for i in order)
         shape = 2 * (2 ** len(qubits), 2 ** (nqubits - len(qubits)))
         state = self.np.reshape(state, 2 * nqubits * (2,))
         state = self.np.reshape(self.np.transpose(state, order), shape)
-        probs = self.np.einsum("abab->a", state).astype(rtype)
+        probs = self.np.abs(self.np.einsum("abab->a", state))
         probs = self.np.reshape(probs, len(qubits) * (2,))
         return self._order_probabilities(probs, qubits, nqubits).ravel()
 
@@ -643,17 +643,17 @@ class NumpyBackend(Backend):
             ud = self.np.transpose(self.np.conj(eigenvectors))
             return self.np.matmul(eigenvectors, self.np.matmul(expd, ud))
 
-    def calculate_expectation_state(self, matrix, state, normalize):
+    def calculate_expectation_state(self, hamiltonian, state, normalize):
         statec = self.np.conj(state)
-        hstate = matrix @ state
+        hstate = hamiltonian @ state
         ev = self.np.real(self.np.sum(statec * hstate))
         if normalize:
             norm = self.np.sum(self.np.square(self.np.abs(state)))
             ev = ev / norm
         return ev
 
-    def calculate_expectation_density_matrix(self, matrix, state, normalize):
-        ev = self.np.real(self.np.trace(matrix @ state))
+    def calculate_expectation_density_matrix(self, hamiltonian, state, normalize):
+        ev = self.np.real(self.np.trace(hamiltonian @ state))
         if normalize:
             norm = self.np.real(self.np.trace(state))
             ev = ev / norm

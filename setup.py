@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Installation script for python
 import os
 import re
@@ -13,7 +12,7 @@ def get_version():
     """Gets the version from the package's __init__ file
     if there is some problem, let it happily fail"""
     VERSIONFILE = os.path.join("src", PACKAGE, "__init__.py")
-    initfile_lines = open(VERSIONFILE, "rt").readlines()
+    initfile_lines = open(VERSIONFILE).readlines()
     VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
     for line in initfile_lines:
         mo = re.search(VSRE, line, re.M)
@@ -29,7 +28,7 @@ with open(os.path.join(this_directory, "README.md"), encoding="utf-8") as f:
 
 # read Tensorflow version requirement
 BACKENDFILE = os.path.join("src", PACKAGE, "config.py")
-with open(BACKENDFILE, "r") as f:
+with open(BACKENDFILE) as f:
     content = f.readlines()
     for line in content:
         if "TF_MIN_VERSION" in line:
@@ -67,14 +66,14 @@ setup(
     extras_require={
         "docs": [
             "sphinx",
-            "sphinx_rtd_theme",
+            "furo",
             "recommonmark",
             "sphinxcontrib-bibtex",
             "sphinx_markdown_tables",
             "nbsphinx",
             "IPython",
         ],
-        "tests": ["pytest", "cirq", "ply", "sklearn", "dill", "pre-commit"],
+        "tests": ["pytest", "cirq", "ply", "scikit-learn", "dill", "pre-commit"],
     },
     python_requires=">=3.7.0",
     long_description=long_description,

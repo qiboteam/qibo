@@ -1,15 +1,15 @@
-# -*- coding: utf-8 -*-
 import collections
 import os
 
 import numpy as np
 
-from qibo.backends.matrices import Matrices
+from qibo import __version__
+from qibo.backends.npmatrices import NumpyMatrices
 from qibo.backends.numpy import NumpyBackend
 from qibo.config import TF_LOG_LEVEL, log, raise_error
 
 
-class TensorflowMatrices(Matrices):
+class TensorflowMatrices(NumpyMatrices):
     # Redefine parametrized gate matrices for backpropagation to work
 
     def __init__(self, dtype):
@@ -172,6 +172,13 @@ class TensorflowBackend(NumpyBackend):
         tnp.experimental_enable_numpy_behavior()
         self.tf = tf
         self.np = tnp
+
+        self.versions = {
+            "qibo": __version__,
+            "numpy": np.__version__,
+            "tensorflow": tf.__version__,
+        }
+
         self.matrices = TensorflowMatrices(self.dtype)
 
         from tensorflow.python.framework import errors_impl  # pylint: disable=E0611

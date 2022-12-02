@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test that the source contains no prints."""
 import os
 import pathlib
@@ -21,7 +20,7 @@ class CodeText:
     @classmethod
     def from_file(cls, filedir):
         assert filedir[-3:] == ".py"
-        with open(filedir, "r", encoding="utf-8") as file:
+        with open(filedir, encoding="utf-8") as file:
             code = file.read()
         return cls(code, filedir)
 

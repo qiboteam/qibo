@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import numpy as np
 import pytest
 from scipy.linalg import expm
@@ -19,7 +18,7 @@ class TimeStepChecker(callbacks.Callback):
     """Callback that checks each evolution time step."""
 
     def __init__(self, target_states, atol=0):
-        super(TimeStepChecker, self).__init__()
+        super().__init__()
         self.target_states = iter(target_states)
         self.atol = atol
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test :meth:`qibo.models.circuit.Circuit.get_parameters` and :meth:`qibo.models.circuit.Circuit.set_parameters`."""
 import numpy as np
 import pytest
@@ -188,6 +187,27 @@ def test_set_parameters_with_gate_fusion(backend, trainable):
     c.set_parameters(new_params_list)
     fused_c.set_parameters(new_params_list)
     backend.assert_circuitclose(fused_c, c)
+
+
+@pytest.mark.parametrize("trainable", [True, False])
+def test_set_parameters_with_light_cone(backend, trainable):
+    """Check updating parameters of light cone circuit."""
+    params = np.random.random(4)
+    c = Circuit(4)
+    c.add(gates.RX(0, theta=params[0], trainable=trainable))
+    c.add(gates.RY(1, theta=params[1]))
+    c.add(gates.CZ(0, 1))
+    c.add(gates.RX(2, theta=params[2]))
+    c.add(gates.RY(3, theta=params[3], trainable=trainable))
+    c.add(gates.CZ(2, 3))
+    if trainable:
+        c.set_parameters(np.random.random(4))
+    else:
+        c.set_parameters(np.random.random(2))
+    target_state = backend.execute_circuit(c)
+    lc, _ = c.light_cone(1, 2)
+    final_state = backend.execute_circuit(lc)
+    backend.assert_allclose(final_state, target_state)
 
 
 def test_variable_theta():

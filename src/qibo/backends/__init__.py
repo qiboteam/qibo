@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
 import os
 
 from qibo.backends.abstract import Backend
-from qibo.backends.matrices import Matrices
+from qibo.backends.npmatrices import NumpyMatrices
 from qibo.backends.numpy import NumpyBackend
 from qibo.backends.tensorflow import TensorflowBackend
 from qibo.config import log, raise_error
@@ -91,7 +90,7 @@ class QiboMatrices:
         self.create(dtype)
 
     def create(self, dtype):
-        self.matrices = Matrices(dtype)
+        self.matrices = NumpyMatrices(dtype)
         self.I = self.matrices.I(2)
         self.X = self.matrices.X
         self.Y = self.matrices.Y

@@ -41,6 +41,31 @@ Peer-Reviewed Articles
 .. _`doi:10.1088/2058-9565/ac39f5`: https://doi.org/10.1088/2058-9565/ac39f5
 .. _`arXiv:2009.01845`: https://arxiv.org/abs/2009.01845
 
+* S. Efthymiou, M. Lazzarin, A. Pasquale, S. Carrazza, *Quantum simulation with
+     just-in-time compilation*, Quantum (6) (2022).
+     `doi:10.22331/q-2022-09-22-814`_, (`arXiv:2203.08826`_).
+
+  In *BibTeX* format:
+
+  .. code-block:: text
+
+    @article{qibojit_paper,
+        doi       = {10.22331/q-2022-09-22-814},
+        url       = {https://doi.org/10.22331/q-2022-09-22-814},
+        title     = {Quantum simulation with just-in-time compilation},
+        author    = {Efthymiou, Stavros and Lazzarin, Marco and Pasquale, Andrea and Carrazza, Stefano},
+        journal   = {{Quantum}},
+        issn      = {2521-327X},
+        publisher = {{Verein zur F{\"{o}}rderung des Open Access Publizierens in den Quantenwissenschaften}},
+        volume    = {6},
+        pages     = {814},
+        month     = sep,
+        year      = {2022}
+    }
+
+.. _`doi:10.22331/q-2022-09-22-814`: https://doi.org/10.22331/q-2022-09-22-814
+.. _`arXiv:2203.08826`: https://arxiv.org/abs/2203.08826
+
 Software References in Zenodo
 -----------------------------
 
@@ -64,3 +89,9 @@ Conference Proceedings
 
 .. _`ACAT2021`: https://indico.cern.ch/event/855454/
 .. _`arXiv:2202.07017`: https://arxiv.org/abs/2202.07017
+
+* M. Robbiati, S. Efthymiou, A. Pasquale, S. Carrazza. A quantum analytical Adam descent through parameter shift rule using Qibo. (2022) `ICHEP2022`_,
+     (`arXiv:2210.10787`_).
+
+.. _`ICHEP2022`: https://www.ichep2022.it/
+.. _`arXiv:2210.10787`: https://arxiv.org/abs/2210.10787
