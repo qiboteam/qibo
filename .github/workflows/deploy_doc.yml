@@ -13,3 +13,4 @@ jobs:
     with:
       python-version: 3.9
       package-manager: 'pip'
+      dependency-path: '**/setup.py'
