@@ -31,7 +31,7 @@ class QuantumCNN:
         if self.nqubits <= 1:
             raise ValueError("nqubits must be larger than 1")
 
-        self._circuit = self.ansatz(nlayers, rotations, params=params)
+        self._circuit = self.ansatz(nlayers, params=params)
 
     def quantum_conv_circuit(self, bits, symbols):
         c = Circuit(self.nqubits)
@@ -50,7 +50,7 @@ class QuantumCNN:
             c += self.two_qubit_pool(source, sink, symbols)
         return c
 
-    def ansatz(self, nlayers, rotations, params=None):  ### TODO: QCNN ansatz goes here
+    def ansatz(self, nlayers, params=None):  ### TODO: QCNN ansatz goes here
         """
         Args:
             theta: list or numpy.array with the angles to be used in the circuit
