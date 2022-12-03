@@ -274,26 +274,32 @@ def test_1_qubit_classifier_circuit_error():
 
 def test_qcnn_training():
     import random
-    
+
     # generate 2 random states and labels for pytest
-    data = np.zeros([2,16])
+    data = np.zeros([2, 16])
     for i in range(2):
         data_i = np.random.rand(16)
-        data[i] = data_i/np.linalg.norm(data_i)
-    labels = [[1,-1]]
+        data[i] = data_i / np.linalg.norm(data_i)
+    labels = [[1, -1]]
 
     # test qcnn training
     testbias = np.zeros(test_qcnn.measured_qubits)
-    testangles = [random.uniform(0,2*np.pi) for i in range(21*2)]
+    testangles = [random.uniform(0, 2 * np.pi) for i in range(21 * 2)]
     init_theta = np.concatenate((testbias, testangles))
     test_qcnn = QuantumCNN(nqubits=4, nlayers=1, nclasses=2, params=init_theta)
     testcircuit = test_qcnn._circuit
-    result = test_qcnn.minimize(init_theta, data=data, labels=labels, nshots=10000, method='Powell')
-    
+    result = test_qcnn.minimize(
+        init_theta, data=data, labels=labels, nshots=10000, method="Powell"
+    )
+
     # test Predictions function
     predictions = []
     for n in range(len(data)):
-        predictions.append(test_qcnn.Predictions(testcircuit, results_save[1], data[n], nshots=10000)[0])
-    
+        predictions.append(
+            test_qcnn.Predictions(testcircuit, results_save[1], data[n], nshots=10000)[
+                0
+            ]
+        )
+
     # test Accuracy function
-    test_qcnn.Accuracy(labels,predictions)
+    test_qcnn.Accuracy(labels, predictions)
