@@ -10,7 +10,7 @@ from qibo.models import Circuit
 
 class QuantumCNN:
     def __init__(
-        self, nqubits, nlayers, nclasses=2, RY=True, params=None
+        self, nqubits, nlayers, nclasses=2, params=None
     ):  ### TODO: modify this to build the QCNN circuit
         """
         Class for a multi-task variational quantum classifier
@@ -30,20 +30,6 @@ class QuantumCNN:
 
         if self.nqubits <= 1:
             raise ValueError("nqubits must be larger than 1")
-
-        if RY:
-
-            def rotations():
-                for q in range(self.nqubits):
-                    yield gates.RY(q, theta=0)
-
-        else:
-
-            def rotations():
-                for q in range(self.nqubits):
-                    yield gates.RX(q, theta=0)
-                    yield gates.RZ(q, theta=0)
-                    yield gates.RX(q, theta=0)
 
         self._circuit = self.ansatz(nlayers, rotations, params=params)
 

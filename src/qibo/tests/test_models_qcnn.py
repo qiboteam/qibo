@@ -17,7 +17,7 @@ def test_classifier_circuit2():
     nlayers = int(nqubits / 2)
     init_state = np.ones(2**nqubits) / np.sqrt(2**nqubits)  #
 
-    qcnn = QuantumCNN(nqubits, nlayers, nclasses=2, RY=True)  # , params=angles0)
+    qcnn = QuantumCNN(nqubits, nlayers, nclasses=2)  # , params=angles0)
 
     angles = [0] + angles0
 
@@ -77,7 +77,7 @@ def test_classifier_circuit4():
     nlayers = int(nqubits / 2)
     init_state = np.ones(2**nqubits) / np.sqrt(2**nqubits)  #
 
-    qcnn = QuantumCNN(nqubits, nlayers, nclasses=2, RY=True)
+    qcnn = QuantumCNN(nqubits, nlayers, nclasses=2)
     angles = [0] + angles0 + angles0
 
     circuit = qcnn.Classifier_circuit(angles)
@@ -262,3 +262,38 @@ def CNOT_unitary(nqubits, bit0, bit1):
     c.add(gates.CNOT(bit0, bit1))
 
     return c
+
+
+def test_1_qubit_classifier_circuit_error():
+    nqubits = 1
+    nlayers = 1
+    init_state = np.ones(2**nqubits) / np.sqrt(2**nqubits)  #
+
+    qcnn = QuantumCNN(nqubits, nlayers, nclasses=2)  # , params=angles0)
+
+
+def test_qcnn_training():
+    import random
+    
+    # generate 2 random states and labels for pytest
+    data = np.zeros([2,16])
+    for i in range(2):
+        data_i = np.random.rand(16)
+        data[i] = data_i/np.linalg.norm(data_i)
+    labels = [[1,-1]]
+
+    # test qcnn training
+    testbias = np.zeros(test_qcnn.measured_qubits)
+    testangles = [random.uniform(0,2*np.pi) for i in range(21*2)]
+    init_theta = np.concatenate((testbias, testangles))
+    test_qcnn = QuantumCNN(nqubits=4, nlayers=1, nclasses=2, params=init_theta)
+    testcircuit = test_qcnn._circuit
+    result = test_qcnn.minimize(init_theta, data=data, labels=labels, nshots=10000, method='Powell')
+    
+    # test Predictions function
+    predictions = []
+    for n in range(len(data)):
+        predictions.append(test_qcnn.Predictions(testcircuit, results_save[1], data[n], nshots=10000)[0])
+    
+    # test Accuracy function
+    test_qcnn.Accuracy(labels,predictions)
