@@ -283,7 +283,7 @@ def test_qcnn_training():
     labels = [[1, -1]]
 
     # test qcnn training
-    testbias = np.zeros(test_qcnn.measured_qubits)
+    testbias = np.zeros(1)
     testangles = [random.uniform(0, 2 * np.pi) for i in range(21 * 2)]
     init_theta = np.concatenate((testbias, testangles))
     test_qcnn = QuantumCNN(nqubits=4, nlayers=1, nclasses=2, params=init_theta)
