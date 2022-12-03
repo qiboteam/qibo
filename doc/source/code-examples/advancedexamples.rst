@@ -1156,6 +1156,9 @@ For example, let's define a dummy circuit with some RZ, RX and CNOT gates:
    #  q1: ─RZ─RX─RZ─RX─RZ─X─RZ─X─o────o─M─
    #  q2: ─RZ─RX─RZ─RX─RZ────────X─RZ─X─M─
 
+.. testoutput::
+   :hide:
+
 remember to initialize the circuit with ``density_matrix=True`` and to include the measuerement gates at the end for expectation value calculation.
 
 As observable we can simply take :math:`Z_0 Z_1 Z_2` :
@@ -1192,6 +1195,9 @@ real quantum hardware, instead, we can use a noise model:
    print(noisy)
    # 0.5967928466302935
 
+.. testoutput::
+   :hide:
+
 Note that when running on the quantum hardware, you don't need to use a noise model
 anymore, you just have to change the backend to the appropriate one.
 
@@ -1201,9 +1207,7 @@ Zero Noise Extrapolation (ZNE)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 To run ZNE, we just need to define the noise levels to use. Each level corresponds to the
-number of CNOT pairs inserted in the circuit in correspondence to the original CNOTs:
-
-.. testcode::
+number of CNOT pairs inserted in the circuit in correspondence to the original CNOTs::
 
    Level 1
    q0: ─X─  -->  q0: ─X───X──X─
@@ -1217,7 +1221,7 @@ number of CNOT pairs inserted in the circuit in correspondence to the original C
    .
    .
 
-for example if we use the five levels ``[0,1,2,3,4]`` :
+For example if we use the five levels ``[0,1,2,3,4]`` :
 
 .. testcode::
 
@@ -1234,6 +1238,9 @@ for example if we use the five levels ``[0,1,2,3,4]`` :
    )
    print(estimate)
    # 0.8859203125000003
+
+.. testoutput::
+   :hide:
 
 we get an expected value closer to the exact one.
 
@@ -1258,6 +1265,9 @@ circuit is expected to be decomposed in the set of primitive gates :math:`RX(\fr
    print(estimate)
    # 0.9090604794014961
 
+.. testoutput::
+   :hide:
+
 Again, the mitigated expected value improves over the noisy one and is also slightly better compared to ZNE.
 
 Variable Noise CDR (vnCDR)
@@ -1281,6 +1291,9 @@ caveat about the input circuit for CDR is valid here as well.
    )
    print(estimate)
    # 0.9085991439303123
+
+.. testoutput::
+   :hide:
 
 We record a better estimation of the exact expected value for vnCDR as well.
 
