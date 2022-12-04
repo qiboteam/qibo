@@ -279,7 +279,7 @@ def test_qcnn_training():
     for i in range(2):
         data_i = np.random.rand(16)
         data[i] = data_i / np.linalg.norm(data_i)
-    labels = [[1],[-1]]
+    labels = [[1], [-1]]
 
     # test qcnn training
     testbias = np.zeros(1)
@@ -299,6 +299,6 @@ def test_qcnn_training():
         )
 
     # test Accuracy function
-    predictions.append(1)    
-    labels = np.array([[1],[-1],[1]])
-    test_qcnn.Accuracy(labels,predictions)
+    predictions.append(1)
+    labels = np.array([[1], [-1], [1]])
+    test_qcnn.Accuracy(labels, predictions)
