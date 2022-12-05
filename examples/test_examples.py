@@ -326,7 +326,7 @@ def test_grover_example3(nqubits, num_1):
 @pytest.mark.parametrize("train_size", [1000])
 @pytest.mark.parametrize("filename", ["parameters/test_params"])
 @pytest.mark.parametrize("lr_boundaries", [[1, 2, 3, 4, 5, 6]])
-def test_anomalydetection_train(n_layers, batch_size, nepochs, train_size, filename):
+def test_anomalydetection_train(n_layers, batch_size, nepochs, train_size, filename, lr_boundaries):
     args = locals()
     path = os.path.join(base_dir, "anomaly_detection")
     sys.path[-1] = path
