@@ -186,3 +186,42 @@ def test_set_parameters_fusion(backend):
     c.set_parameters(4 * [0.4321])
     fused_c.set_parameters(4 * [0.4321])
     backend.assert_circuitclose(fused_c, c)
+
+
+def test_add_fused_gate(backend):
+    """Check adding fused gate to a circuit."""
+    c = Circuit(2)
+    c.add(gates.H(0))
+    c.add(gates.H(1))
+    c.add(gates.CNOT(0, 1))
+    fused_c = c.fuse()
+    fgate = fused_c.queue[0]
+    assert isinstance(fgate, gates.FusedGate)
+
+    new_c = Circuit(2)
+    new_c.add(fgate)
+    assert c.depth == 2
+    assert c.ngates == 3
+    assert new_c.depth == 1
+    assert new_c.ngates == 1
+    backend.assert_circuitclose(fused_c, c)
+    backend.assert_circuitclose(new_c, c)
+
+
+def test_fused_gate_draw():
+    ref = (
+        "q0: ─[─H─U1───]─U1─U1─U1─────────────────────────────────────x───\n"
+        "q1: ─[───o──H─]─|──|──|──[─U1───]─U1─U1──────────────────────|─x─\n"
+        "q2: ────────────o──|──|──[─o──H─]─|──|──[─U1───]─U1──────────|─|─\n"
+        "q3: ───────────────o──|───────────o──|──[─o──H─]─|──[─U1───]─|─x─\n"
+        "q4: ──────────────────o──────────────o───────────o──[─o──H─]─x───"
+    )
+    circuit = Circuit(5)
+    for i1 in range(5):
+        circuit.add(gates.H(i1))
+        for i2 in range(i1 + 1, 5):
+            circuit.add(gates.CU1(i2, i1, theta=0))
+    circuit.add(gates.SWAP(0, 4))
+    circuit.add(gates.SWAP(1, 3))
+    circuit = circuit.fuse()
+    assert circuit.draw() == ref
