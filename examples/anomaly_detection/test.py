@@ -12,7 +12,7 @@ from qibo.models import Circuit
 def main(n_layers, train_size, filename):
     qibo.set_backend("tensorflow")
 
-    #Circuit ansatz
+    # Circuit ansatz
     def make_encoder(n_qubits, n_layers, params, q_compression):
         index = 0
         encoder = Circuit(n_qubits)
@@ -33,7 +33,7 @@ def main(n_layers, train_size, filename):
             index += 3
         return encoder
 
-    #Evaluate loss function (3 qubit compression) for one sample
+    # Evaluate loss function (3 qubit compression) for one sample
     def compute_loss_test(encoder, vector):
         reconstructed = encoder(vector)
         # 3 qubits compression
@@ -44,11 +44,11 @@ def main(n_layers, train_size, filename):
         )
         return loss
 
-    #Other hyperparameters
+    # Other hyperparameters
     n_qubits = 6
     q_compression = 3
 
-    #Load and pre-process data
+    # Load and pre-process data
     dataset_np_s = np.load("data/standard_data.npy")
     dataset_np_s = dataset_np_s[train_size:]
     dataset_s = tf.convert_to_tensor(dataset_np_s)
@@ -56,23 +56,23 @@ def main(n_layers, train_size, filename):
     dataset_np_a = dataset_np_a[train_size:]
     dataset_a = tf.convert_to_tensor(dataset_np_a)
 
-    #Load trained parameters
+    # Load trained parameters
     trained_params_np = np.load(filename)
     trained_params = tf.convert_to_tensor(trained_params_np)
 
-    #Create and print encoder circuit
+    # Create and print encoder circuit
     encoder_test = make_encoder(n_qubits, n_layers, trained_params, q_compression)
     encoder_test.compile()
     print("Circuit model summary")
     print(encoder_test.draw())
 
     print("Computing losses...")
-    #Compute loss for standard data
+    # Compute loss for standard data
     loss_s = []
     for i in range(len(dataset_np_s)):
         loss_s.append(compute_loss_test(encoder_test, dataset_s[i]).numpy())
 
-    #compute loss anomalous data
+    # compute loss anomalous data
     loss_a = []
     for i in range(len(dataset_np_a)):
         loss_a.append(compute_loss_test(encoder_test, dataset_a[i]).numpy())

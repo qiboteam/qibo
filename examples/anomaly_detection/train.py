@@ -13,7 +13,7 @@ from qibo.models import Circuit
 def main(n_layers, batch_size, nepochs, train_size, filename, lr_boundaries):
     qibo.set_backend("tensorflow")
 
-    #Circuit ansatz
+    # Circuit ansatz
     def make_encoder(n_qubits, n_layers, params, q_compression):
         index = 0
         encoder = Circuit(n_qubits)
@@ -34,7 +34,7 @@ def main(n_layers, batch_size, nepochs, train_size, filename, lr_boundaries):
             index += 3
         return encoder
 
-    #Evaluate loss function (3 qubit compression) for one sample
+    # Evaluate loss function (3 qubit compression) for one sample
     @tf.function
     def compute_loss(encoder, params, vector):
         encoder.set_parameters(params)
@@ -47,7 +47,7 @@ def main(n_layers, batch_size, nepochs, train_size, filename, lr_boundaries):
         )
         return loss
 
-    #One optimization step
+    # One optimization step
     @tf.function
     def train_step(batch_size, encoder, params, dataset):
         loss = 0.0
@@ -59,25 +59,25 @@ def main(n_layers, batch_size, nepochs, train_size, filename, lr_boundaries):
             optimizer.apply_gradients(zip([grads], [params]))
         return loss
 
-    #Other hyperparameters
+    # Other hyperparameters
     n_qubits = 6
     q_compression = 3
 
-    #Load and pre-process data
+    # Load and pre-process data
     dataset_np = np.load("data/standard_data.npy")
     dataset = tf.convert_to_tensor(dataset_np)
     train = dataset[0:train_size]
 
-    #Initial random parameters
+    # Initial random parameters
     n_params = (n_layers * n_qubits + q_compression) * 3
     params = tf.Variable(tf.random.normal((n_params,)))
 
-    #Create and print encoder circuit
+    # Create and print encoder circuit
     encoder = make_encoder(n_qubits, n_layers, params, q_compression)
     print("Circuit model summary")
     print(encoder.draw())
 
-    #Define optimizer parameters
+    # Define optimizer parameters
     steps_for_epoch = math.ceil(train_size / batch_size)
     boundaries = [
         steps_for_epoch * lr_boundaries[0],
@@ -96,7 +96,7 @@ def main(n_layers, batch_size, nepochs, train_size, filename, lr_boundaries):
     # This array contains the parameters at each epoch
     trained_params = np.zeros((nepochs, n_params), dtype=float)
 
-    #Training
+    # Training
     print("Trained parameters will be saved in: ", filename)
     print("Start training")
     for epoch in range(nepochs):
@@ -111,7 +111,7 @@ def main(n_layers, batch_size, nepochs, train_size, filename, lr_boundaries):
         trained_params[epoch] = params.numpy()
         print("Epoch: %d  Loss: %f" % (epoch + 1, loss))
 
-    #Save parameters of last epoch
+    # Save parameters of last epoch
     np.save(filename, trained_params[-1])
 
 
