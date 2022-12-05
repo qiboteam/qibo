@@ -1116,11 +1116,15 @@ be used for both errors.
 How to perform error mitigation?
 --------------------------------
 
-In Qibo, three different methods are implemented for mitigating errors in circuits.
-Given a circuit :math:`C` and an observable :math:`A`, they provide an estimate of the
-noise-free expected value :math:`\langle A \rangle`.
+Noise and errors in circuits are on of the biggest obstacles to face in quantum computing.
+Say that you have a circuit :math:`C` and you want to measure an observable :math:`A` at the end of it,
+in general you are going to obtain an expected value :math:`\langle A \rangle_{noisy}` that
+can lie quiet far from the true one :math:`\langle A \rangle_{exact}`.
+In Qibo, three different methods are implemented for mitigating errors in circuits and obtaining
+a better estimate of the noise-free expected value :math:`\langle A \rangle_{exact}`.
 
-For example, let's define a dummy circuit with some RZ, RX and CNOT gates:
+
+Let's see how to use them. For starters, let's define a dummy circuit with some RZ, RX and CNOT gates:
 
 .. testcode::
 
@@ -1158,6 +1162,7 @@ For example, let's define a dummy circuit with some RZ, RX and CNOT gates:
 
 .. testoutput::
    :hide:
+   :skipif: True
 
 remember to initialize the circuit with ``density_matrix=True`` and to include the measuerement gates at the end for expectation value calculation.
 
@@ -1175,8 +1180,8 @@ As observable we can simply take :math:`Z_0 Z_1 Z_2` :
    obs = np.prod([Z(i) for i in range(nqubits)])
    obs = SymbolicHamiltonian(obs, backend=backend)
 
-We can obtain the exact expected value by running the circuit, to mimic the execution on
-real quantum hardware, instead, we can use a noise model:
+We can obtain the exact expected value by running the circuit on any simulation ``backend``, to mimic the execution on
+the real quantum hardware, instead, we can use a noise model:
 
 .. testcode::
 
@@ -1197,9 +1202,10 @@ real quantum hardware, instead, we can use a noise model:
 
 .. testoutput::
    :hide:
+   :skipif: True
 
-Note that when running on the quantum hardware, you don't need to use a noise model
-anymore, you just have to change the backend to the appropriate one.
+Note that when running on the quantum hardware, you won't need to use a noise model
+anymore, you will just have to change the backend to the appropriate one.
 
 Now let's check that error mitigation produces better estimates of the exact expected value.
 
@@ -1241,6 +1247,7 @@ For example if we use the five levels ``[0,1,2,3,4]`` :
 
 .. testoutput::
    :hide:
+   :skipif: True
 
 we get an expected value closer to the exact one.
 
@@ -1267,6 +1274,7 @@ circuit is expected to be decomposed in the set of primitive gates :math:`RX(\fr
 
 .. testoutput::
    :hide:
+   :skipif: True
 
 Again, the mitigated expected value improves over the noisy one and is also slightly better compared to ZNE.
 
@@ -1294,8 +1302,13 @@ caveat about the input circuit for CDR is valid here as well.
 
 .. testoutput::
    :hide:
+   :skipif: True
 
-We record a better estimation of the exact expected value for vnCDR as well.
+The result is similar to the one obtained by CDR. Usually, one would expect slightly better results for vnCDR,
+however, this can substantially vary depending on the circuit and the observable considered and, therefore, it is hard to tell
+a priori.
+
+This was just a basic example usage of the three methods, for all the details about them you should check the API-reference page :ref:`Error Mitigation <error-mitigation>`.
 
 .. _timeevol-example:
 

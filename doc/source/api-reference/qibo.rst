@@ -210,6 +210,8 @@ Adiabatic evolution
     :members:
     :member-order: bysource
 
+.. _error-mitigation:
+
 Error Mitigation
 ^^^^^^^^^^^^^^^^
 
