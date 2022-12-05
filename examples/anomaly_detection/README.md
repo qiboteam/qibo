@@ -16,7 +16,7 @@ It is possible to define the following hyper-parameters for the training of the 
 - `batch_size` (int): number of samples in one training batch (default 20).
 - `nepochs` (int): number of training epochs (default 20).
 - `train_size` (int): number of samples used for training, the remainings are used for performance evaluation, total samples are 7000 (default 5000).
-- `filename` (str): location and file name where trained parameters are saved (default "parameters/trained_params").
+- `filename` (str): location and file name where trained parameters are saved (default "parameters/trained_params.npy").
 - `lr_boundaries` (list): epochs when learning rate is reduced (6 monotone growing values from 0 to nepochs) (default [3,6,9,12,15,18]).
 
 It is possible to define the following hyper-parameters for the performance evaluation of the circuit, n_layers must be equal to the one used for training:

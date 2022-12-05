@@ -336,7 +336,7 @@ def test_anomalydetection_train(n_layers, batch_size, nepochs, train_size, filen
 
 @pytest.mark.parametrize("n_layers", [6])
 @pytest.mark.parametrize("train_size", [5000])
-@pytest.mark.parametrize("filename", ["parameters/trained_params"])
+@pytest.mark.parametrize("filename", ["parameters/trained_params.npy"])
 def test_anomalydetection_test(n_layers, train_size, filename):
     args = locals()
     path = os.path.join(base_dir, "anomaly_detection")
