@@ -1,10 +1,8 @@
-from abc import abstractmethod
 from itertools import product
 
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate
 from qibo.gates.gates import I, Unitary, X, Y, Z
-from qibo.gates.measurements import M
 
 
 class Channel(Gate):
@@ -100,6 +98,29 @@ class KrausChannel(Channel):
         self.init_args = [self.gates]
         self.coefficients = len(self.gates) * (1,)
         self.coefficient_sum = 1
+
+    def to_superop(self, backend=None):
+        import numpy as np
+
+        from qibo import gates
+
+        if backend is None:
+            from qibo.backends import GlobalBackend
+
+            backend = GlobalBackend()
+
+        self.nqubits = 1 + max(self.target_qubits)
+
+        super_op = np.zeros((4**self.nqubits, 4**self.nqubits), dtype="complex")
+        super_op = backend.cast(super_op, dtype=super_op.dtype)
+        for gate in self.gates:
+            kraus_op = gates.FusedGate(*range(self.nqubits))
+            kraus_op.append(gate)
+            kraus_op = kraus_op.asmatrix(backend)
+            kraus_op = np.kron(np.conj(kraus_op), kraus_op)
+            super_op += backend.cast(kraus_op, dtype=kraus_op.dtype)
+
+        return super_op
 
 
 class UnitaryChannel(KrausChannel):
