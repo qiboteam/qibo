@@ -136,7 +136,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--filename",
-        default="parameters/trained_params",
+        default="parameters/trained_params.npy",
         type=str,
         help="(str): location and file name of trained parameters to be tested",
     )
