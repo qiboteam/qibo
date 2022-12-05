@@ -82,6 +82,6 @@ To test the anomaly detection algorithm after the training phase, we have used 2
 
 ![Loss function distribution](images/Fig5.png)
 
-The ROC curve shows the rate of true positive with respect to the rate of false positive by moving the loss value threshold for the binary classification. 
+The ROC curve shows the rate of true positive with respect to the rate of false positive by moving the loss value threshold for the binary classification.
 
 ![ROC curve](images/Fig6.png)
