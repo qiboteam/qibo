@@ -1162,7 +1162,8 @@ Let's see how to use them. For starters, let's define a dummy circuit with some 
 
 .. testoutput::
    :hide:
-   :skipif: True
+
+   ...
 
 remember to initialize the circuit with ``density_matrix=True`` and to include the measuerement gates at the end for expectation value calculation.
 
@@ -1202,7 +1203,8 @@ the real quantum hardware, instead, we can use a noise model:
 
 .. testoutput::
    :hide:
-   :skipif: True
+
+   ...
 
 Note that when running on the quantum hardware, you won't need to use a noise model
 anymore, you will just have to change the backend to the appropriate one.
@@ -1247,7 +1249,8 @@ For example if we use the five levels ``[0,1,2,3,4]`` :
 
 .. testoutput::
    :hide:
-   :skipif: True
+
+   ...
 
 we get an expected value closer to the exact one.
 
@@ -1274,7 +1277,8 @@ circuit is expected to be decomposed in the set of primitive gates :math:`RX(\fr
 
 .. testoutput::
    :hide:
-   :skipif: True
+
+   ...
 
 Again, the mitigated expected value improves over the noisy one and is also slightly better compared to ZNE.
 
@@ -1302,7 +1306,8 @@ caveat about the input circuit for CDR is valid here as well.
 
 .. testoutput::
    :hide:
-   :skipif: True
+
+   ...
 
 The result is similar to the one obtained by CDR. Usually, one would expect slightly better results for vnCDR,
 however, this can substantially vary depending on the circuit and the observable considered and, therefore, it is hard to tell
