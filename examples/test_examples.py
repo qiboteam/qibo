@@ -325,7 +325,7 @@ def test_grover_example3(nqubits, num_1):
 @pytest.mark.parametrize("filename", ["parameters/trained_params.npy"])
 @pytest.mark.parametrize("plot", [False])
 @pytest.mark.parametrize("save_loss", [False])
-def test_anomalydetection_test(n_layers, train_size, filename):
+def test_anomalydetection_test(n_layers, train_size, filename, plot, save_loss):
     args = locals()
     path = os.path.join(base_dir, "anomaly_detection")
     sys.path[-1] = path
