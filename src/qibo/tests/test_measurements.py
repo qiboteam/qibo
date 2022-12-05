@@ -430,6 +430,8 @@ def test_measurement_result_vs_circuit_result(backend, accelerators):
     mb = c.add(gates.M(2, 0, register_name="b"))
     result = backend.execute_circuit(c, nshots=100)
 
+    ma_freq = ma.frequencies()
+    mb_freq = mb.frequencies()
     frequencies = result.frequencies(registers=True)
-    assert ma.frequencies() == frequencies.get("a")
-    assert mb.frequencies() == frequencies.get("b")
+    assert ma_freq == frequencies.get("a")
+    assert mb_freq == frequencies.get("b")
