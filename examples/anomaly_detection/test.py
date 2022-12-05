@@ -78,11 +78,11 @@ def main(n_layers, train_size, filename, plot, save_loss):
         loss_a.append(compute_loss_test(encoder_test, dataset_a[i]).numpy())
 
     if save_loss:
-        np.save("results/losses_standard_data",loss_s)
-        np.save("results/losses_anomalous_data",loss_a)
+        np.save("results/losses_standard_data", loss_s)
+        np.save("results/losses_anomalous_data", loss_a)
 
-    if plot==True:
-        """Loss distribution graph """
+    if plot == True:
+        """Loss distribution graph"""
         plt.hist(loss_a, bins=60, histtype="step", color="red", label="Anomalous data")
         plt.hist(loss_s, bins=60, histtype="step", color="blue", label="Standard data")
         plt.ylabel("Number of images")
