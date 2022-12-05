@@ -9,7 +9,7 @@ from qibo import gates
 from qibo.models import Circuit
 
 
-def main(n_layers, train_size, filename):
+def main(n_layers, train_size, filename, plot, save_loss):
     qibo.set_backend("tensorflow")
 
     # Circuit ansatz
@@ -77,58 +77,60 @@ def main(n_layers, train_size, filename):
     for i in range(len(dataset_np_a)):
         loss_a.append(compute_loss_test(encoder_test, dataset_a[i]).numpy())
 
-    # np.save("results/losses_standard_data",loss_s)
-    # np.save("results/losses_anomalous_data",loss_a)
+    if save_loss:
+        np.save("results/losses_standard_data",loss_s)
+        np.save("results/losses_anomalous_data",loss_a)
 
-    """Loss distribution graph """
-    plt.hist(loss_a, bins=60, histtype="step", color="red", label="Anomalous data")
-    plt.hist(loss_s, bins=60, histtype="step", color="blue", label="Standard data")
-    plt.ylabel("Number of images")
-    plt.xlabel("Loss value")
-    plt.title("Loss function distribution (MNIST dataset)")
-    plt.legend()
-    plt.savefig("results/loss_distribution.png")
-    plt.close()
+    if plot==True:
+        """Loss distribution graph """
+        plt.hist(loss_a, bins=60, histtype="step", color="red", label="Anomalous data")
+        plt.hist(loss_s, bins=60, histtype="step", color="blue", label="Standard data")
+        plt.ylabel("Number of images")
+        plt.xlabel("Loss value")
+        plt.title("Loss function distribution (MNIST dataset)")
+        plt.legend()
+        plt.savefig("results/loss_distribution.png")
+        plt.close()
 
-    """Compute ROC curve"""
-    max1 = np.amax(loss_s)
-    max2 = np.amax(loss_a)
-    ma = max(max1, max2)
-    min1 = np.amin(loss_s)
-    min2 = np.amin(loss_a)
-    mi = min(min1, min2)
+        """Compute ROC curve"""
+        max1 = np.amax(loss_s)
+        max2 = np.amax(loss_a)
+        ma = max(max1, max2)
+        min1 = np.amin(loss_s)
+        min2 = np.amin(loss_a)
+        mi = min(min1, min2)
 
-    tot_neg = len(loss_s)
-    tot_pos = len(loss_a)
+        tot_neg = len(loss_s)
+        tot_pos = len(loss_a)
 
-    n_step = 100.0
-    n_step_int = 100
-    step = (ma - mi) / n_step
-    fpr = []
-    tpr = []
-    for i in range(n_step_int):
-        treshold = i * step + mi
-        c = 0
-        for j in range(tot_neg):
-            if loss_s[j] > treshold:
-                c += 1
-        false_positive = c / float(tot_neg)
-        fpr.append(false_positive)
-        c = 0
-        for j in range(tot_pos):
-            if loss_a[j] > treshold:
-                c += 1
-        true_positive = c / float(tot_pos)
-        tpr.append(true_positive)
+        n_step = 100.0
+        n_step_int = 100
+        step = (ma - mi) / n_step
+        fpr = []
+        tpr = []
+        for i in range(n_step_int):
+            treshold = i * step + mi
+            c = 0
+            for j in range(tot_neg):
+                if loss_s[j] > treshold:
+                    c += 1
+            false_positive = c / float(tot_neg)
+            fpr.append(false_positive)
+            c = 0
+            for j in range(tot_pos):
+                if loss_a[j] > treshold:
+                    c += 1
+            true_positive = c / float(tot_pos)
+            tpr.append(true_positive)
 
-    """Roc curve graph """
-    plt.title("Receiver Operating Characteristic")
-    plt.plot(fpr, tpr)
-    plt.xlim([0, 1])
-    plt.ylim([0, 1])
-    plt.ylabel("True Positive Rate")
-    plt.xlabel("False Positive Rate")
-    plt.savefig("results/ROC.png")
+        """Roc curve graph """
+        plt.title("Receiver Operating Characteristic")
+        plt.plot(fpr, tpr)
+        plt.xlim([0, 1])
+        plt.ylim([0, 1])
+        plt.ylabel("True Positive Rate")
+        plt.xlabel("False Positive Rate")
+        plt.savefig("results/ROC.png")
 
 
 if __name__ == "__main__":
@@ -150,6 +152,18 @@ if __name__ == "__main__":
         default="parameters/trained_params.npy",
         type=str,
         help="(str): location and file name of trained parameters to be tested",
+    )
+    parser.add_argument(
+        "--plot",
+        default=True,
+        type=bool,
+        help="(bool): make plots of ROC and loss function distribution",
+    )
+    parser.add_argument(
+        "--save_loss",
+        default=False,
+        type=bool,
+        help="(bool): save losses for standard and anomalous data",
     )
     args = parser.parse_args()
     main(**vars(args))

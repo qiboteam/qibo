@@ -17,12 +17,14 @@ It is possible to define the following hyper-parameters for the training of the 
 - `nepochs` (int): number of training epochs (default 20).
 - `train_size` (int): number of samples used for training, the remainings are used for performance evaluation, total samples are 7000 (default 5000).
 - `filename` (str): location and file name where trained parameters are saved (default "parameters/trained_params.npy").
-- `lr_boundaries` (list): epochs when learning rate is reduced (6 monotone growing values from 0 to nepochs) (default [3,6,9,12,15,18]).
+- `lr_boundaries` (list): epochs when learning rate is reduced, 6 monotone growing values from 0 to nepochs (default [3,6,9,12,15,18]).
 
 It is possible to define the following hyper-parameters for the performance evaluation of the circuit, n_layers must be equal to the one used for training:
 - `n_layers` (int): number of ansatz circuit layers (default 6).
 - `train_size` (int): number of samples used for training, the remainings are used for performance evaluation, total samples are 7000 (default 5000).
 - `filename` (str): location and file name of trained parameters to be tested (default "parameters/trained_params.npy").
+- `plot` (bool): make plots of ROC and loss function distribution (default True).
+- `save_loss` (bool): save losses for standard and anomalous data (default False).
 
 As an example, in order to use 4 layers in the variational quantum ansatz, you should execute the following command for training:
 
