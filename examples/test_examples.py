@@ -321,6 +321,17 @@ def test_grover_example3(nqubits, num_1):
 
 
 @pytest.mark.parametrize("n_layers", [6])
+@pytest.mark.parametrize("train_size", [5000])
+@pytest.mark.parametrize("filename", ["parameters/trained_params.npy"])
+def test_anomalydetection_test(n_layers, train_size, filename):
+    args = locals()
+    path = os.path.join(base_dir, "anomaly_detection")
+    sys.path[-1] = path
+    os.chdir(path)
+    run_script(args, script_name="test.py")
+
+
+@pytest.mark.parametrize("n_layers", [6])
 @pytest.mark.parametrize("batch_size", [20])
 @pytest.mark.parametrize("nepochs", [7])
 @pytest.mark.parametrize("train_size", [1000])
@@ -332,14 +343,3 @@ def test_anomalydetection_train(n_layers, batch_size, nepochs, train_size, filen
     sys.path[-1] = path
     os.chdir(path)
     run_script(args, script_name="train.py")
-
-
-@pytest.mark.parametrize("n_layers", [6])
-@pytest.mark.parametrize("train_size", [5000])
-@pytest.mark.parametrize("filename", ["parameters/trained_params.npy"])
-def test_anomalydetection_test(n_layers, train_size, filename):
-    args = locals()
-    path = os.path.join(base_dir, "anomaly_detection")
-    sys.path[-1] = path
-    os.chdir(path)
-    run_script(args, script_name="test.py")
