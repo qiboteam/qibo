@@ -1,9 +1,10 @@
 from qibo import gates
 from qibo.config import raise_error
 
+
 class CustomError:
     """Quantum error associated with the :class:`qibo.gates.Channel`
-    
+
     Args:
         channel (:class:`qibo.gates.Channel`): any channel
 
@@ -91,8 +92,7 @@ class KrausError:
         if any(o.shape != shape for o in ops):
             raise_error(
                 ValueError,
-                "Kraus operators of different shapes."
-                "Use qibo.noise.Error instead."
+                "Kraus operators of different shapes." "Use qibo.noise.Error instead.",
             )
 
         self.rank = shape[0]
@@ -104,7 +104,7 @@ class KrausError:
 
 class UnitaryError:
     """Quantum error associated with the :class:`qibo.gates.UnitaryChannel`.
-    
+
     Args:
         probabilities (list): List of floats that correspond to the probability
             that each unitary Uk is applied.
@@ -121,7 +121,7 @@ class UnitaryError:
             raise_error(
                 ValueError,
                 "Unitary matrices have different shapes."
-                "Use qibo.noise.Error instead."
+                "Use qibo.noise.Error instead.",
             )
 
         self.rank = shape[0]
@@ -207,7 +207,7 @@ class NoiseModel:
                         for q in qubits:
                             noisy_circuit.add(error.channel([q]))
                     elif error.rank == 2 ** len(qubits):
-                        noisy_circuit.add(error.channel(qubits))                        
+                        noisy_circuit.add(error.channel(qubits))
                 else:
                     for q in qubits:
                         noisy_circuit.add(error.channel(q, *error.options))
