@@ -1116,7 +1116,7 @@ be used for both errors.
 How to perform error mitigation?
 --------------------------------
 
-Noise and errors in circuits are on of the biggest obstacles to face in quantum computing.
+Noise and errors in circuits are one of the biggest obstacles to face in quantum computing.
 Say that you have a circuit :math:`C` and you want to measure an observable :math:`A` at the end of it,
 in general you are going to obtain an expected value :math:`\langle A \rangle_{noisy}` that
 can lie quiet far from the true one :math:`\langle A \rangle_{exact}`.
