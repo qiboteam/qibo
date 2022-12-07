@@ -62,7 +62,8 @@ jobs:
         mv artifact.tar "${{needs.evaluate-label.outputs.label}}.tar" 
         mv "${{needs.evaluate-label.outputs.label}}.tar" new_docs/
         cd new_docs
+        ls # TODO: remove debugging line 
         mkdir ${{needs.evaluate-label.outputs.label}}
-        tar -xf "${{needs.evaluate-label.outputs.label}}.tar" -C "/${{needs.evaluate-label.outputs.label}}"
+        tar -xf "${{needs.evaluate-label.outputs.label}}.tar" -C "${{needs.evaluate-label.outputs.label}}/"
         cd .. # TODO: remove this debugging line 
         ls new_docs # TODO: remove this debugging line
