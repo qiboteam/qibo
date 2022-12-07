@@ -3,7 +3,19 @@ import pytest
 
 from qibo import gates, hamiltonians
 from qibo.models import Circuit
+from qibo.states import MeasurementResult
 from qibo.symbols import I, Z
+
+
+def test_measurement_result_repr():
+    result = MeasurementResult(gates.M(0), nshots=10)
+    assert str(result) == "MeasurementResult(qubits=(0,), nshots=10)"
+
+
+def test_measurement_result_error():
+    result = MeasurementResult(gates.M(0), nshots=10)
+    with pytest.raises(RuntimeError):
+        samples = result.samples()
 
 
 @pytest.mark.parametrize("target", range(5))
@@ -31,9 +43,7 @@ def test_state_representation(backend, target, density_matrix):
 
 @pytest.mark.parametrize("density_matrix", [False, True])
 def test_state_representation_max_terms(backend, density_matrix):
-    from qibo import gates, models
-
-    c = models.Circuit(5, density_matrix=density_matrix)
+    c = Circuit(5, density_matrix=density_matrix)
     c.add(gates.H(i) for i in range(5))
     result = backend.execute_circuit(c)
     if density_matrix:
@@ -57,8 +67,24 @@ def test_state_representation_max_terms(backend, density_matrix):
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
-def test_expectation_from_samples(backend, density_matrix):
+def test_state_probabilities(backend, density_matrix):
+    c = Circuit(4, density_matrix=density_matrix)
+    c.add(gates.H(i) for i in range(4))
+    result = backend.execute_circuit(c)
+    with pytest.raises(ValueError):
+        final_probabilities = result.probabilities()
 
+    c = Circuit(4, density_matrix=density_matrix)
+    c.add(gates.H(i) for i in range(4))
+    c.add(gates.M(*range(4)))
+    result = backend.execute_circuit(c)
+    final_probabilities = result.probabilities()
+    target_probabilities = np.ones(16) / 16
+    backend.assert_allclose(final_probabilities, target_probabilities)
+
+
+@pytest.mark.parametrize("density_matrix", [False, True])
+def test_expectation_from_samples(backend, density_matrix):
     obs0 = 2 * Z(0) * Z(1) + Z(0) * Z(2)
     obs1 = 2 * Z(0) * Z(1) + Z(0) * Z(2) * I(3)
     h_sym = hamiltonians.SymbolicHamiltonian(obs0, backend=backend)
@@ -71,7 +97,7 @@ def test_expectation_from_samples(backend, density_matrix):
     c.add(gates.RX(3, np.random.rand()))
     c.add(gates.M(0, 1, 2))
     nshots = 10**5
-    result = c(nshots=nshots)
+    result = backend.execute_circuit(c, nshots=nshots)
     expval_sym = result.expectation_from_samples(h_sym)
     expval_dense = result.expectation_from_samples(h_dense)
     expval = h1.expectation(result.state())

@@ -412,13 +412,13 @@ class NumpyBackend(Backend):
                             gate.substitute_symbols()
                         state = gate.apply(self, state, nqubits)
 
-            if circuit.measurement_gate:
+            if circuit.measurements:
                 result = CircuitResult(self, circuit, state, 1)
-                results.append(result.samples(binary=False)[0])
+                results.append(result.samples()[0])
             else:
                 results.append(state)
 
-        if circuit.measurement_gate:
+        if circuit.measurements:
             final_result = CircuitResult(self, circuit, state, nshots)
             final_result._samples = self.aggregate_shots(results)
             circuit._final_state = final_result
@@ -441,8 +441,8 @@ class NumpyBackend(Backend):
         return result.execution_result
 
     def circuit_result_probabilities(self, result, qubits=None):
-        if qubits is None:  # pragma: no cover
-            qubits = result.circuit.measurement_gate.qubits
+        if qubits is None:
+            qubits = result.measurement_gate.qubits
 
         state = self.circuit_result_tensor(result)
         if result.density_matrix:
