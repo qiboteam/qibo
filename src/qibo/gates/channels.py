@@ -3,6 +3,7 @@ from itertools import product
 
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate
+from qibo.gates.special import FusedGate
 from qibo.gates.gates import I, Unitary, X, Y, Z
 from qibo.gates.measurements import M
 
@@ -215,7 +216,7 @@ class DepolarizingChannel(UnitaryChannel):
     """
 
     def __init__(self, q, lam=0):
-        from qibo.models.circuit import Circuit
+        from qibo.backends import NumpyBackend
 
         num_qubits = len(q)
         num_terms = 4**num_qubits
@@ -225,15 +226,15 @@ class DepolarizingChannel(UnitaryChannel):
                 ValueError,
                 "Depolarizing parameter must be in between 0 and {}.".format(max_param),
             )
-        prob_iden = 1 - lam / max_param
         prob_pauli = lam / num_terms
         probs = (num_terms - 1) * [prob_pauli]
         gates = []
+        backend = NumpyBackend()
         for pauli_list in list(product([I, X, Y, Z], repeat=num_qubits))[1::]:
-            qc = Circuit(num_qubits)
+            fgate = FusedGate(*range(num_qubits))
             for j, pauli in enumerate(pauli_list):
-                qc.add(pauli(j))
-            gates.append(Unitary(qc.unitary(), *q))
+                fgate.append(pauli(j))
+            gates.append(Unitary(backend.asmatrix_fused(fgate), *q))
 
         super().__init__(probs, gates)
         self.name = "DepolarizingChannel"
