@@ -4,9 +4,12 @@ name: Deploy docs
 on: 
   workflow_dispatch:
   push:
-      branches: [master]
+      branches: [master,versions] # TODO: remove versions branch 
+      tags:
   
 jobs:
+  find-version:
+    run: echo ${{ github.event_name }} #TODO: remove this debugging line 
 
   deploy-docs:
     uses: qibogang/workflows/.github/workflows/deploy-sphinx-docs-to-ghpages.yml@main
