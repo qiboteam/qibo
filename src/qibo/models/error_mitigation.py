@@ -58,7 +58,6 @@ def get_noisy_circuit(circuit, cj):
             for i in range(cj):
                 noisy_circuit.add(gates.CNOT(control, target))
                 noisy_circuit.add(gates.CNOT(control, target))
-    noisy_circuit.add(circuit.measurement_gate)
     return noisy_circuit
 
 
@@ -171,7 +170,6 @@ def sample_training_circuit(
             sampled_circuit.add(replacement[i])
         else:
             sampled_circuit.add(gate)
-    sampled_circuit.add(circuit.measurement_gate)
     return sampled_circuit
 
 
