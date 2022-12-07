@@ -1,7 +1,6 @@
 import numpy as np
 import pytest
 
-import qibo
 from qibo import gates
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.models import Circuit
