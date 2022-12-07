@@ -31,6 +31,7 @@ jobs:
   generate-docs:
     needs: [evaluate-label]
     if: needs.evaluate-label.outputs.lable != "Error"
+    runs-on: ubuntu-latest
     steps:
       - run: echo ${{ needs.evaluate-label.outputs.lable }} # TODO: remove this debugging line 
 
