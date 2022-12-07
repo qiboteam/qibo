@@ -10,9 +10,14 @@ on:
 jobs:
   find-version:
     runs-on: ubuntu-latest
+    outputs:
+      label: ${{ steps.evaluate_label.outputs.version}}
     steps:
       - run: echo ${{ github.event_name }} #TODO: remove this debugging line 
       - run: echo ${{ github.ref }} # TODO: remove this debugging line 
+      - id: evaluate_label
+        run: echo "version=latest" >> $GITHUB_OUTPUT
+        if: ${{ github.event_name == 'push' }} & ${{ github.ref == 'refs/heads/versions' }} 
   deploy-docs:
     uses: qibogang/workflows/.github/workflows/deploy-sphinx-docs-to-ghpages.yml@main
     with:
