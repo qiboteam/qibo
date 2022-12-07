@@ -66,7 +66,7 @@ setup(
     extras_require={
         "docs": [
             "sphinx",
-            "sphinx_rtd_theme",
+            "furo",
             "recommonmark",
             "sphinxcontrib-bibtex",
             "sphinx_markdown_tables",

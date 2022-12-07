@@ -126,7 +126,7 @@ def test_measurementresult_apply_bitflips(backend, i, p0, p1):
     c = models.Circuit(3)
     c.add(gates.M(*range(3)))
     result = CircuitResult(backend, c, None)
-    result._samples = np.zeros(10, dtype="int64")
+    result._samples = np.zeros((10, 3), dtype="int32")
     backend.set_seed(123)
     noisy_samples = result.apply_bitflips(p0, p1)
     targets = backend.test_regressions("test_measurementresult_apply_bitflips")
