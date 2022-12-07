@@ -4,7 +4,7 @@ name: Deploy docs
 on: 
   workflow_dispatch:
   push:
-      branches: [master,versions] # TODO: remove versions branch 
+      branches: [master] 
       tags:
   
 jobs:
@@ -46,7 +46,7 @@ jobs:
   # deploy-sphinx-docs-to-ghpages.yml.
   # This is only a test 
   new-artifact:
-    needs: [deploy-docs]
+    needs: [deploy-docs, evaluate-label]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -56,3 +56,7 @@ jobs:
     - run: | # TODO: remove this debugging line
         ls 
         pwd 
+    - run: |
+      mkdir new_docs
+      mv artifact.tar "${{needs.evaluate-label.outputs.label}}.tar" 
+      ls # TODO: remove this debugging line
