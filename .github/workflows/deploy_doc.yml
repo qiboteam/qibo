@@ -53,4 +53,6 @@ jobs:
     - uses: actions/download-artifact@v3
       with:
         name: github-pages  
-    - run: ls -R # TODO: remove this debugging line
+    - run: | # TODO: remove this debugging line
+        ls 
+        pwd 
