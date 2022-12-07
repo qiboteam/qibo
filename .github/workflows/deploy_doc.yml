@@ -9,7 +9,7 @@ on:
 jobs:
 
   deploy-docs:
-    uses: qibogang/workflows/.github/workflows/deploy-sphinx-docs-to-ghpages.yml@documentation
+    uses: qibogang/workflows/.github/workflows/deploy-sphinx-docs-to-ghpages.yml@main
     with:
       python-version: 3.9
       package-manager: 'pip'
