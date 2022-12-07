@@ -57,6 +57,6 @@ jobs:
         ls 
         pwd 
     - run: |
-      mkdir new_docs
-      mv artifact.tar "${{needs.evaluate-label.outputs.label}}.tar" 
-      ls # TODO: remove this debugging line
+        mkdir new_docs
+        mv artifact.tar "${{needs.evaluate-label.outputs.label}}.tar" 
+        ls # TODO: remove this debugging line
