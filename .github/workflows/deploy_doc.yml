@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: echo ${{ github.event_name }} #TODO: remove this debugging line 
-
+      - run: echo ${{ github.ref }} # TODO: remove this debugging line 
   deploy-docs:
     uses: qibogang/workflows/.github/workflows/deploy-sphinx-docs-to-ghpages.yml@main
     with:
