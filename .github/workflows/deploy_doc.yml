@@ -41,3 +41,16 @@ jobs:
       python-version: 3.9
       package-manager: 'pip'
       dependency-path: '**/setup.py'
+
+  # The following job should be included in the 
+  # deploy-sphinx-docs-to-ghpages.yml.
+  # This is only a test 
+  new-artifact:
+    needs: [deploy-docs]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/download-artifact@v3
+      with:
+        name: github-pages  
+    - run: ls -R # TODO: remove this debugging line
