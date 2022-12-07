@@ -18,13 +18,13 @@ jobs:
       - name: checks for the label 
         id: evaluate_label 
         run: |
-          if [[ "${{ github.event_name }}" == "push" & "${{ github.ref  }}" == "refs/heads/versions"]]; then
+          if [[ "${{ github.event_name }}" == "push" ]] && [[ "${{ github.ref  }}" == "refs/heads/versions" ]]; then
                 echo "version=latest" >> $GITHUB_OUTPUT
           fi
-          if [[ "${{ github.event_name }}" == "push" & "${{ github.ref  }}" != "refs/heads/versions"]]; then
+          if [[ "${{ github.event_name }}" == "push" ]] && [[ "${{ github.ref  }}" != "refs/heads/versions" ]]; then
                 echo "Error" >> $GITHUB_OUTPUT
           fi
-          if [[ "${{ github.event_name }}" == "tag"]]; then
+          if [[ "${{ github.event_name }}" == "tag" ]]; then
                 echo "version=stable" >> $GITHUB_OUTPUT
           fi 
   deploy-docs:
