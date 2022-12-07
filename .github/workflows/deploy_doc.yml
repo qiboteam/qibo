@@ -11,18 +11,18 @@ jobs:
   evaluate-label:
     runs-on: ubuntu-latest
     outputs:
-      label: ${{ steps.evaluate_label.outputs.version}}
+      label: ${{ steps.label_step.outputs.version}}
     steps:
       - run: echo ${{ github.event_name }} #TODO: remove this debugging line 
       - run: echo ${{ github.ref }} # TODO: remove this debugging line 
       - name: checks for the label 
-        id: evaluate_label 
+        id: label_step 
         run: |
           if [[ "${{ github.event_name }}" == "push" ]] && [[ "${{ github.ref  }}" == "refs/heads/versions" ]]; then
                 echo "version=latest" >> $GITHUB_OUTPUT
           fi
           if [[ "${{ github.event_name }}" == "push" ]] && [[ "${{ github.ref  }}" != "refs/heads/versions" ]]; then
-                echo "Error" >> $GITHUB_OUTPUT
+                echo "version=Error" >> $GITHUB_OUTPUT
           fi
           if [[ "${{ github.event_name }}" == "tag" ]]; then
                 echo "version=stable" >> $GITHUB_OUTPUT
@@ -30,10 +30,10 @@ jobs:
 
   generate-docs:
     needs: [evaluate-label]
-    if: needs.evaluate-label.outputs.lable != 'Error'
+    if: needs.evaluate-label.outputs.label != 'Error'
     runs-on: ubuntu-latest
     steps:
-      - run: echo ${{ needs.evaluate-label.outputs.lable }} # TODO: remove this debugging line 
+      - run: echo ${{needs.evaluate-label.outputs.label}} # TODO: remove this debugging line 
 
   deploy-docs:
     uses: qibogang/workflows/.github/workflows/deploy-sphinx-docs-to-ghpages.yml@main
