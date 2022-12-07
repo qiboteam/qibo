@@ -15,14 +15,18 @@ jobs:
     steps:
       - run: echo ${{ github.event_name }} #TODO: remove this debugging line 
       - run: echo ${{ github.ref }} # TODO: remove this debugging line 
-      - name: checks for the label 'latest' 
-        id: evaluate_label
-        run: echo "version=latest" >> $GITHUB_OUTPUT
-        if: ${{ github.event_name == 'push' }} & ${{ github.ref == 'refs/heads/versions' }}
-      - name: checks for the label 'stable' 
-        id: evaluate_label
-        run: echo "version=stable" >> $GITHUB_OUTPUT
-        if: ${{ github.event_name == 'tag' }} 
+      - name: checks for the label 
+        id: evaluate_label 
+        run: |
+          if [[ "${{ github.event_name }}" == "push" & "${{ github.ref  }}" == "refs/heads/versions"]]; then
+                echo "version=latest" >> $GITHUB_OUTPUT
+          fi
+          if [[ "${{ github.event_name }}" == "push" & "${{ github.ref  }}" != "refs/heads/versions"]]; then
+                echo "Error" >> $GITHUB_OUTPUT
+          fi
+          if [[ "${{ github.event_name }}" == "tag"]]; then
+                echo "version=stable" >> $GITHUB_OUTPUT
+          fi 
   deploy-docs:
     uses: qibogang/workflows/.github/workflows/deploy-sphinx-docs-to-ghpages.yml@main
     with:
