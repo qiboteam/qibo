@@ -62,6 +62,6 @@ jobs:
         mv artifact.tar "${{needs.evaluate-label.outputs.label}}.tar" 
         ls # TODO: remove this debugging line
         mv "${{needs.evaluate-label.outputs.label}}.tar" new_docs/
-        unzip new_docs/ "${{needs.evaluate-label.outputs.label}}.tar"
+        unzip new_docs/"${{needs.evaluate-label.outputs.label}}.tar"
         ls # TODO: remove this debugging line 
         ls new_docs # TODO: remove this debugging line
