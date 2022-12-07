@@ -24,7 +24,7 @@ def get_noise_model(error):
 @pytest.mark.parametrize("solve", [False, True])
 def test_zne(backend, nqubits, noise, solve):
     """Test that ZNE reduces the noise."""
-    qibo.set_threads(1)
+    backend.set_threads(1)
     # Define the circuit
     hz = 0.5
     hx = 0.5
@@ -69,7 +69,7 @@ def test_zne(backend, nqubits, noise, solve):
 )
 @pytest.mark.parametrize("full_output", [False, True])
 def test_cdr(backend, nqubits, noise, full_output):
-    qibo.set_threads(1)
+    backend.set_threads(1)
     """Test that CDR reduces the noise."""
     # Define the circuit
     hz = 0.5
@@ -140,7 +140,7 @@ def test_sample_training_circuit(nqubits):
 @pytest.mark.parametrize("full_output", [False, True])
 def test_vncdr(backend, nqubits, noise, full_output):
     """Test that vnCDR reduces the noise."""
-    qibo.set_threads(1)
+    backend.set_threads(1)
     # Define the circuit
     hz = 0.5
     hx = 0.5
