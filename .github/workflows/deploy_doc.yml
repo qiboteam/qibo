@@ -8,7 +8,7 @@ on:
       tags:
   
 jobs:
-  find-version:
+  evaluate-label:
     runs-on: ubuntu-latest
     outputs:
       label: ${{ steps.evaluate_label.outputs.version}}
@@ -27,6 +27,14 @@ jobs:
           if [[ "${{ github.event_name }}" == "tag" ]]; then
                 echo "version=stable" >> $GITHUB_OUTPUT
           fi 
+
+  generate-docs:
+    needs: [evaluate-label]
+    if: ${{ needs.evaluate-label.outputs.lable != "Error" }}
+    run-on: ubuntu-latest 
+    steps:
+      - run: echo ${{ needs.evaluate-label.outputs.lable }} # TODO: remove this debugging line 
+
   deploy-docs:
     uses: qibogang/workflows/.github/workflows/deploy-sphinx-docs-to-ghpages.yml@main
     with:
