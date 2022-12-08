@@ -3,6 +3,7 @@ from itertools import product
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate
 from qibo.gates.gates import I, Unitary, X, Y, Z
+from qibo.quantum_info import comp_basis_to_pauli
 
 
 class Channel(Gate):
@@ -121,6 +122,18 @@ class KrausChannel(Channel):
             super_op += backend.cast(kraus_op, dtype=kraus_op.dtype)
 
         return super_op
+
+    def to_pauli_liouville(self, backend=None):
+        import numpy as np
+
+        super_op = self.to_superop(backend=backend)
+
+        # unitary that transforms from comp basis to pauli basis
+        U = comp_basis_to_pauli(self.nqubits)
+
+        super_op = np.matmul(U, np.matmul(super_op, np.transpose(np.conj(U))))
+
+        return backend.cast(super_op, dtype=super_op.dtype)
 
 
 class UnitaryChannel(KrausChannel):
