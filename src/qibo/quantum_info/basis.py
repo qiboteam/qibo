@@ -84,18 +84,15 @@ def comp_basis_to_pauli(nqubits: int, normalize: bool = False, backend=None):
 
     d = 2**nqubits
 
-    paulis = pauli_basis(nqubits)
+    paulis = pauli_basis(nqubits, normalize, backend)
 
-    if normalize:
-        paulis /= np.sqrt(d)
-
-    comp_basis_state = np.zeros((d**2), dtype="complex")
+    comp_basis_state = np.zeros((d**2, 1), dtype="complex")
     matrix = np.zeros((d**2, d**2), dtype="complex")
     for index, pauli in enumerate(paulis):
-        comp_basis_state[index] = 1.0
-        pauli = pauli.flatten("F")
-        matrix += np.kron(comp_basis_state.reshape((-1, 1)), np.conj(pauli))
-        comp_basis_state[index] = 0.0
+        comp_basis_state[index, 0] = 1.0
+        pauli = np.reshape(pauli, (1, -1))
+        matrix += np.kron(comp_basis_state, np.conj(pauli))
+        comp_basis_state[index, 0] = 0.0
 
     return backend.cast(matrix, dtype=matrix.dtype)
 
@@ -121,4 +118,6 @@ def pauli_to_comp_basis(nqubits: int, normalize: bool = False, backend=None):
         Unitary matrix :math:`U`.
     """
 
-    return np.transpose(np.conj(comp_basis_to_pauli(nqubits, normalize=normalize)))
+    matrix = np.transpose(np.conj(comp_basis_to_pauli(nqubits, normalize, backend)))
+
+    return backend.cast(matrix, dtype=matrix.dtype)
