@@ -3,7 +3,8 @@ from itertools import product
 
 import numpy as np
 
-from qibo import gates
+from qibo.config import raise_error
+from qibo.gates.gates import I, X, Y, Z
 
 
 def pauli_basis(nqubits: int, normalize: bool = False, backend=None):
@@ -20,17 +21,26 @@ def pauli_basis(nqubits: int, normalize: bool = False, backend=None):
         list: list with all Pauli matrices forming the basis.
     """
 
+    if nqubits <= 0:
+        raise_error(ValueError, "nqubits must be a positive int.")
+
+    if not isinstance(normalize, bool):
+        raise_error(
+            TypeError,
+            f"normalize must be type bool, but it is type {type(normalize)} instead.",
+        )
+
     if backend is None:
         from qibo.backends import GlobalBackend
 
         backend = GlobalBackend()
 
-    I = gates.I(0).asmatrix(backend)
-    X = gates.X(0).asmatrix(backend)
-    Y = gates.Y(0).asmatrix(backend)
-    Z = gates.Z(0).asmatrix(backend)
-
-    basis_single_qubit = [I, X, Y, Z]
+    basis_single_qubit = [
+        I(0).asmatrix(backend),
+        X(0).asmatrix(backend),
+        Y(0).asmatrix(backend),
+        Z(0).asmatrix(backend),
+    ]
 
     if nqubits == 1:
         basis = basis_single_qubit
