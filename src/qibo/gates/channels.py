@@ -3,7 +3,6 @@ from itertools import product
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate
 from qibo.gates.gates import I, Unitary, X, Y, Z
-from qibo.quantum_info import comp_basis_to_pauli
 
 
 class Channel(Gate):
@@ -103,7 +102,7 @@ class KrausChannel(Channel):
     def to_superop(self, backend=None):
         import numpy as np
 
-        from qibo import gates
+        from qibo.gates.special import FusedGate
 
         if backend is None:
             from qibo.backends import GlobalBackend
@@ -115,7 +114,7 @@ class KrausChannel(Channel):
         super_op = np.zeros((4**self.nqubits, 4**self.nqubits), dtype="complex")
         super_op = backend.cast(super_op, dtype=super_op.dtype)
         for gate in self.gates:
-            kraus_op = gates.FusedGate(*range(self.nqubits))
+            kraus_op = FusedGate(*range(self.nqubits))
             kraus_op.append(gate)
             kraus_op = kraus_op.asmatrix(backend)
             kraus_op = np.kron(np.conj(kraus_op), kraus_op)
@@ -125,6 +124,8 @@ class KrausChannel(Channel):
 
     def to_pauli_liouville(self, backend=None):
         import numpy as np
+
+        from qibo.quantum_info import comp_basis_to_pauli
 
         super_op = self.to_superop(backend=backend)
 
