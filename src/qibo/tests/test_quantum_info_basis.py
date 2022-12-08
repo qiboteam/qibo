@@ -30,8 +30,6 @@ def test_pauli_basis(backend, nqubits, normalize):
         basis_test = list(product(single_basis, repeat=nqubits))
         basis_test = [reduce(np.kron, matrix) for matrix in basis_test]
 
-    print(basis_test)
-
     if normalize:
         basis_test /= np.sqrt(2**nqubits)
 
