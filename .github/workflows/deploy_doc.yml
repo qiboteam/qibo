@@ -24,10 +24,10 @@ jobs:
           if [[ "${{ github.event_name }}" == "push" ]] && [[ "${{ github.ref  }}" != "refs/heads/versions" ]]; then
                 echo "version=Error" >> $GITHUB_OUTPUT
           fi
-          if [[ "${{ github.event_name }}" == "tag" ]]; then
+          if [[ "${{ github.event_name }}" == "tag" ]]; then # TODO: test if it works 
                 echo "version=stable" >> $GITHUB_OUTPUT
           fi 
-          
+
   # TODO: this is a debugging job, delete it 
   generate-docs:
     needs: [evaluate-label]
@@ -36,13 +36,110 @@ jobs:
     steps:
       - run: echo ${{needs.evaluate-label.outputs.label}} 
 
-  deploy-docs:
-    needs: [evaluate-label]
-    if: needs.evaluate-label.outputs.label != 'Error'
-    uses: qibogang/workflows/.github/workflows/deploy-sphinx-docs-to-ghpages.yml@versions
-    with:
-      python-version: 3.9
-      package-manager: 'pip'
-      dependency-path: '**/setup.py'
-      trigger-label: '${{needs.evaluate-label.outputs.label}}'
+  build:
+    
+    runs-on: ubuntu-latest
 
+    
+    steps:
+      
+      - uses: actions/checkout@v3
+      - name: Install poetry
+        run: pipx install poetry
+        if: ${{ inputs.package-manager == 'poetry' }}
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: ${{ inputs.package-manager }}
+          cache-dependency-path: ${{ inputs.dependency-path }} 
+      - name: Install dependencies with pip
+        run: |
+          ${{ inputs.package-manager }} install .[docs]
+          # required by nbsphinx
+          # https://nbsphinx.readthedocs.io/en/0.2.15/installation.html#pandoc
+          sudo apt install pandoc
+        if : ${{ inputs.package-manager == 'pip' }}
+      - name: Install dependencies and compile the documentation with poetry
+        run: |
+          poetry install --no-interaction ${{ inputs.poetry-extras }}
+          pip install poethepoet
+          poe docs
+        if: ${{ inputs.package-manager == 'poetry' }}
+      - name: Compile documentation
+        working-directory: ${{ inputs.path-doc }}
+        run: |
+          make html
+        if : ${{ inputs.package-manager == 'pip' }} 
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1
+        with:
+          name: documentation
+          path: ${{ inputs.path-doc }}/build/html
+  
+  # TODO: this job should have a own reusable workflow
+  new-artifact:
+    needs: [build]
+    if: ${{ ( inputs.trigger-label == 'latest' ) || ( inputs.trigger-label == 'stable' ) }} 
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - run: ls # TODO: remove this debugging line 
+    - uses: actions/download-artifact@v3
+      with:
+        name: documentation  
+    - run: | # TODO: remove this debugging line
+        ls 
+        pwd 
+    - name: generate the ${{inputs.trigger-label}} documentation 
+      run: |
+        label=${{inputs.trigger-label}}
+        mkdir new_docs
+        mv artifact.tar "${label}.tar" 
+        mv "${label}.tar" new_docs/
+        cd new_docs
+        ls # TODO: remove debugging line 
+        mkdir $label
+        tar -xf "${label}.tar" -C "${label}/" 
+        ls ../new_docs # TODO: remove this debugging line
+    - name: generate the remaning documentation
+      run: | 
+        label=${{inputs.trigger-label}} 
+        cd new_docs
+        if [[ ${label} == "latest" ]]; 
+          then 
+            missing_doc="stable"
+          else
+            missing_doc="latest"
+        fi
+        URL="https://qibogang.github.io/qibo/${missing_doc}/${missing_doc}"
+        mkdir "$missing_doc"
+        # Check if it is possible to connect to the website 
+        # Otherwise it copies the existing docs
+        if wget --spider "${URL}" 2>/dev/null; then 
+            wget "$URL"  
+        else
+            cp "${label}.tar" "${missing_doc}.tar"
+        fi   
+        tar -xf "${missing_doc}.tar" -C "${missing_doc}/"
+        echo "generate remaning doc" # TODO: remove this debugging line
+        ls # TODO: remove this debugging line
+        echo "let see in stable folder" # TODO: remove this debugging line
+        ls stable # TODO: remove this debugging line
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v1
+      with:
+        path: new_docs/
+
+
+  # Deployment job
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url}}
+    runs-on: ubuntu-latest
+    needs: new-artifact
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v1
+    
