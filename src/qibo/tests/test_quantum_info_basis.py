@@ -59,4 +59,5 @@ def test_comp_basis_to_pauli(backend, nqubits, normalize):
         matrix = comp_basis_to_pauli(nqubits, normalize, backend)
         backend.assert_allclose(np.linalg.norm(matrix - test) < PRECISION_TOL, True)
 
-    matrix = comp_basis_to_pauli(nqubits, normalize)
+    comp_basis_to_pauli(nqubits, normalize)
+    pauli_to_comp_basis(nqubits, normalize)
