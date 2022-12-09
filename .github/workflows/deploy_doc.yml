@@ -72,7 +72,7 @@ jobs:
       run: | # !!!!!!!!! Move the job !!!!!!!
         cd new_docs
         if [[ ${{needs.evaluate-label.outputs.label}} == "latest" ]]; then
-            URL = "https://qibogang.github.io/qibo/stable/stable.tar"
+            URL="https://qibogang.github.io/qibo/stable/stable.tar"
             mkdir stable
             # Check if it is possible to connect to the website 
             # Otherwise it copies the latest
