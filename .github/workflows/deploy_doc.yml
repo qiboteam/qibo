@@ -57,7 +57,8 @@ jobs:
     - run: | # TODO: remove this debugging line
         ls 
         pwd 
-    - run: |
+    - name: generate the ${{needs.evaluate-label.outputs.label}} documentation 
+      run: |
         mkdir new_docs
         mv artifact.tar "${{needs.evaluate-label.outputs.label}}.tar" 
         mv "${{needs.evaluate-label.outputs.label}}.tar" new_docs/
@@ -67,3 +68,25 @@ jobs:
         tar -xf "${{needs.evaluate-label.outputs.label}}.tar" -C "${{needs.evaluate-label.outputs.label}}/"
         cd .. # TODO: remove this debugging line 
         ls new_docs # TODO: remove this debugging line
+    - name: generate the remaning documentation
+      run: | # !!!!!!!!! Move the job !!!!!!!
+        cd new_docs
+        if [[ ${{needs.evaluate-label.outputs.label}} == "latest" ]]; then
+            URL = "https://qibogang.github.io/qibo/stable/stable.tar"
+            mkdir stable
+            # Check if it is possible to connect to the website 
+            # Otherwise it copies the latest
+            if wget --spider "${URL}" 2>/dev/null; then 
+                wget "$URL"
+                
+            else
+                cp latest.tar stable.tar
+                
+            fi 
+            tar -xf "stable.tar" -C "stable/"
+        fi
+        echo "generate remaning doc" # TODO: remove this debugging line
+        ls # TODO: remove this debugging line
+        echo "let see in stable folder" # TODO: remove this debugging line
+        ls stable # TODO: remove this debugging line
+        
