@@ -118,6 +118,11 @@ def pauli_to_comp_basis(nqubits: int, normalize: bool = False, backend=None):
         Unitary matrix :math:`U`.
     """
 
+    if backend is None:
+        from qibo.backends import GlobalBackend
+
+        backend = GlobalBackend()
+
     matrix = np.transpose(np.conj(comp_basis_to_pauli(nqubits, normalize, backend)))
 
     return backend.cast(matrix, dtype=matrix.dtype)
