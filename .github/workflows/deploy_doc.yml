@@ -66,12 +66,11 @@ jobs:
         cd new_docs
         ls # TODO: remove debugging line 
         mkdir $label
-        tar -xf "${label}.tar" -C "${label}/"
-        cd .. # TODO: remove this debugging line 
-        ls new_docs # TODO: remove this debugging line
+        tar -xf "${label}.tar" -C "${label}/" 
+        ls ../new_docs # TODO: remove this debugging line
     - name: generate the remaning documentation
       run: | # !!!!!!!!! Move the job !!!!!!!
-        cd new_docs
+        echo "$label"
         if [[ ${{needs.evaluate-label.outputs.label}} == "latest" ]]; 
           then 
             missing_doc="stable"
