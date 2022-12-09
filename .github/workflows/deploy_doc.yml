@@ -92,4 +92,8 @@ jobs:
         ls # TODO: remove this debugging line
         echo "let see in stable folder" # TODO: remove this debugging line
         ls stable # TODO: remove this debugging line
-        
+    - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1
+        with:
+          name: "new-docs"
+          path: new_docs/
