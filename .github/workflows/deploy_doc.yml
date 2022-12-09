@@ -71,19 +71,24 @@ jobs:
     - name: generate the remaning documentation
       run: | # !!!!!!!!! Move the job !!!!!!!
         cd new_docs
-        if [[ ${{needs.evaluate-label.outputs.label}} == "latest" ]]; then
-            URL="https://qibogang.github.io/qibo/stable/stable.tar"
-            mkdir stable
-            # Check if it is possible to connect to the website 
-            # Otherwise it copies the latest
-            if wget --spider "${URL}" 2>/dev/null; then 
-                wget "$URL"
-                
-            else
-                cp latest.tar stable.tar
-                
-            fi 
-            tar -xf "stable.tar" -C "stable/"
+        if [[ ${{needs.evaluate-label.outputs.label}} == "latest" ]]; 
+          then 
+            missing_doc="stable"
+          else
+            missing_doc="latest"
+        fi
+        URL="https://qibogang.github.io/qibo/${missing_doc}/${missing_doc}"
+        mkdir "$missing_doc"
+        # Check if it is possible to connect to the website 
+        # Otherwise it copies the existing docs
+        if wget --spider "${URL}" 2>/dev/null; then 
+            wget "$URL"
+            
+        else
+            cp "${{needs.evaluate-label.outputs.label}}.tar" "${missing_doc}.tar"
+            
+        fi 
+        tar -xf "${missing_doc}.tar" -C "${missing_doc}/"
         fi
         echo "generate remaning doc" # TODO: remove this debugging line
         ls # TODO: remove this debugging line
