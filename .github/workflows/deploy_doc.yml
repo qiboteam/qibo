@@ -70,8 +70,9 @@ jobs:
         ls ../new_docs # TODO: remove this debugging line
     - name: generate the remaning documentation
       run: | # !!!!!!!!! Move the job !!!!!!!
-        echo "$label"
-        if [[ ${{needs.evaluate-label.outputs.label}} == "latest" ]]; 
+        label=${{needs.evaluate-label.outputs.label}} 
+        cd new_docs
+        if [[ ${label} == "latest" ]]; 
           then 
             missing_doc="stable"
           else
@@ -84,7 +85,7 @@ jobs:
         if wget --spider "${URL}" 2>/dev/null; then 
             wget "$URL"  
         else
-            cp "${{needs.evaluate-label.outputs.label}}.tar" "${missing_doc}.tar"
+            cp "${label}.tar" "${missing_doc}.tar"
         fi   
         tar -xf "${missing_doc}.tar" -C "${missing_doc}/"
         echo "generate remaning doc" # TODO: remove this debugging line
