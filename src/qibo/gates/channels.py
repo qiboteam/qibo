@@ -132,11 +132,13 @@ class KrausChannel(Channel):
 
         return super_op
 
-    def to_pauli_liouville(self, backend=None):
+    def to_pauli_liouville(self, normalize: bool = False, backend=None):
         """Returns the Liouville representation of the Kraus channel
         in the Pauli basis.
 
         Args:
+            normalize (bool, optional): If ``True``, normalized basis ir returned.
+                Defaults to False.
             backend (``qibo.backends.abstract.Backend``, optional): backend
                 to be used in the execution. If ``None``, it uses
                 ``GlobalBackend()``. Defaults to ``None``.
@@ -146,12 +148,17 @@ class KrausChannel(Channel):
         """
         import numpy as np
 
-        from qibo.quantum_info import comp_basis_to_pauli
+        from qibo.quantum_info.basis import comp_basis_to_pauli
+
+        if backend is None:
+            from qibo.backends import GlobalBackend
+
+            backend = GlobalBackend()
 
         super_op = self.to_superop(backend=backend)
 
         # unitary that transforms from comp basis to pauli basis
-        U = comp_basis_to_pauli(self.nqubits)
+        U = comp_basis_to_pauli(self.nqubits, normalize, backend)
 
         super_op = np.matmul(U, np.matmul(super_op, np.transpose(np.conj(U))))
 

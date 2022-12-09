@@ -3,6 +3,7 @@ import numpy as np
 import pytest
 
 from qibo import gates
+from qibo.config import PRECISION_TOL
 from qibo.tests.utils import random_density_matrix
 
 
@@ -25,8 +26,25 @@ def test_general_channel(backend):
 
 def test_krauss_channel_errors():
     a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
+    a2 = np.sqrt(0.6) * np.array([[1, 0], [0, -1]])
     with pytest.raises(ValueError):
         gate = gates.KrausChannel([((0, 1), a1)])
+
+    test_superop = np.array(
+        [
+            [0.6 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.4 + 0.0j],
+            [0.0 + 0.0j, -0.6 + 0.0j, 0.4 + 0.0j, 0.0 + 0.0j],
+            [0.0 + 0.0j, 0.4 + 0.0j, -0.6 + 0.0j, 0.0 + 0.0j],
+            [0.4 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.6 + 0.0j],
+        ]
+    )
+
+    test_pauli = np.diag([2.0, -0.4, -2.0, 0.4])
+
+    channel = gates.KrausChannel([((0,), a1), ((0,), a2)])
+
+    assert np.linalg.norm(channel.to_superop() - test_superop) < PRECISION_TOL
+    assert np.linalg.norm(channel.to_pauli_liouville() - test_pauli) < PRECISION_TOL
 
 
 def test_depolarizing_channel_errors():
