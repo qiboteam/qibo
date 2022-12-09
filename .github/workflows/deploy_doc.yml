@@ -66,7 +66,7 @@ jobs:
         cd new_docs
         ls # TODO: remove debugging line 
         mkdir $label
-        tar -xf "${{needs.evaluate-label.outputs.label}}.tar" -C "${{needs.evaluate-label.outputs.label}}/"
+        tar -xf "${label}.tar" -C "${label}/"
         cd .. # TODO: remove this debugging line 
         ls new_docs # TODO: remove this debugging line
     - name: generate the remaning documentation
