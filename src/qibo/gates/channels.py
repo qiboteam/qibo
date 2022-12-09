@@ -100,6 +100,16 @@ class KrausChannel(Channel):
         self.coefficient_sum = 1
 
     def to_superop(self, backend=None):
+        """Returns the Liouville representation of the Kraus channel.
+
+        Args:
+            backend (``qibo.backends.abstract.Backend``, optional): backend
+                to be used in the execution. If ``None``, it uses
+                ``GlobalBackend()``. Defaults to ``None``.
+
+        Returns:
+            Liouville representation of the channel.
+        """
         import numpy as np
 
         from qibo.gates.special import FusedGate
@@ -123,6 +133,17 @@ class KrausChannel(Channel):
         return super_op
 
     def to_pauli_liouville(self, backend=None):
+        """Returns the Liouville representation of the Kraus channel
+        in the Pauli basis.
+
+        Args:
+            backend (``qibo.backends.abstract.Backend``, optional): backend
+                to be used in the execution. If ``None``, it uses
+                ``GlobalBackend()``. Defaults to ``None``.
+
+        Returns:
+            Pauli-Liouville representation of the channel.
+        """
         import numpy as np
 
         from qibo.quantum_info import comp_basis_to_pauli
