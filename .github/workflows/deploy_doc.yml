@@ -86,10 +86,8 @@ jobs:
             
         else
             cp "${{needs.evaluate-label.outputs.label}}.tar" "${missing_doc}.tar"
-            
-        fi 
+        fi   
         tar -xf "${missing_doc}.tar" -C "${missing_doc}/"
-        fi
         echo "generate remaning doc" # TODO: remove this debugging line
         ls # TODO: remove this debugging line
         echo "let see in stable folder" # TODO: remove this debugging line
