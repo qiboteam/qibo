@@ -2,12 +2,15 @@ from functools import reduce
 from itertools import product
 
 import numpy as np
+from scipy import sparse
 
 from qibo.config import raise_error
 from qibo.gates.gates import I, X, Y, Z
 
 
-def pauli_basis(nqubits: int, normalize: bool = False, backend=None):
+def pauli_basis(
+    nqubits: int, normalize: bool = False, vectorize: bool = False, backend=None
+):
     """Creates the ``nqubits``-qubit Pauli basis.
 
     Args:
@@ -30,28 +33,40 @@ def pauli_basis(nqubits: int, normalize: bool = False, backend=None):
             f"normalize must be type bool, but it is type {type(normalize)} instead.",
         )
 
+    if not isinstance(vectorize, bool):
+        raise_error(
+            TypeError,
+            f"vectorize must be type bool, but it is type {type(vectorize)} instead.",
+        )
+
     if backend is None:
         from qibo.backends import GlobalBackend
 
         backend = GlobalBackend()
 
-    basis_single_qubit = [
+    basis = [
         I(0).asmatrix(backend),
         X(0).asmatrix(backend),
         Y(0).asmatrix(backend),
         Z(0).asmatrix(backend),
     ]
 
-    if nqubits == 1:
-        basis = basis_single_qubit
-    else:
-        basis = list(product(basis_single_qubit, repeat=nqubits))
-        basis = [reduce(np.kron, matrix) for matrix in basis]
+    if vectorize:
+        basis = [matrix.reshape((1, -1), order="F")[0] for matrix in basis]
+
+    if nqubits >= 2:
+        basis = list(product(basis, repeat=nqubits))
+        if vectorize:
+            basis = [reduce(np.outer, matrix).ravel() for matrix in basis]
+        else:
+            basis = [reduce(np.kron, matrix) for matrix in basis]
+
+    basis = np.array(basis)
 
     if normalize:
         basis /= np.sqrt(2**nqubits)
 
-    return basis
+    return backend.cast(basis, dtype=basis.dtype)
 
 
 def comp_basis_to_pauli(nqubits: int, normalize: bool = False, backend=None):
@@ -82,19 +97,10 @@ def comp_basis_to_pauli(nqubits: int, normalize: bool = False, backend=None):
 
         backend = GlobalBackend()
 
-    d = 2**nqubits
+    unitary = pauli_basis(nqubits, normalize, vectorize=True, backend=backend)
+    unitary = np.conj(unitary)
 
-    paulis = pauli_basis(nqubits, normalize, backend)
-
-    comp_basis_state = np.zeros((d**2, 1), dtype="complex")
-    matrix = np.zeros((d**2, d**2), dtype="complex")
-    for index, pauli in enumerate(paulis):
-        comp_basis_state[index, 0] = 1.0
-        pauli = np.reshape(pauli, (1, -1))
-        matrix += np.kron(comp_basis_state, np.conj(pauli))
-        comp_basis_state[index, 0] = 0.0
-
-    return backend.cast(matrix, dtype=matrix.dtype)
+    return backend.cast(unitary, dtype=unitary.dtype)
 
 
 def pauli_to_comp_basis(nqubits: int, normalize: bool = False, backend=None):
