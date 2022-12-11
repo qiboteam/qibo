@@ -28,7 +28,6 @@ def test_pauli_basis(backend, nqubits, normalize, vectorize):
 
     if vectorize:
         single_basis = [matrix.reshape((1, -1), order="F") for matrix in single_basis]
-        print(single_basis)
 
     if nqubits == 1:
         basis_test = single_basis
