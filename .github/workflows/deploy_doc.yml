@@ -24,7 +24,7 @@ jobs:
           if [[ "${{ github.ref_type }}" == "branch" ]] && [[ "${{ github.ref  }}" != "refs/heads/versions" ]]; then
                 echo "version=Error" >> $GITHUB_OUTPUT
           fi
-          if [[ "${{ github.event_name }}" == "tag" ]]; then # TODO: check if it works 
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then # TODO: check if it works 
                 echo "version=stable" >> $GITHUB_OUTPUT
           fi 
 
