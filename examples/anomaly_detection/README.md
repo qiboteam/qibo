@@ -1,11 +1,11 @@
-# Anomaly detection with parametrized quantum circuits
+# Anomaly detection with variational quantum circuits
 
 Code at: [https://github.com/qiboteam/qibo/tree/master/examples/anomaly_detection](https://github.com/qiboteam/qibo/tree/master/examples/anomaly_detection).
 
 ## Problem overview
 
 With the contemporary peak in interest regarding machine learning algorithms for their many applications in scientific research as well as industrial technology, we also have the simultaneous development of quantum computing. A combination of these two fields has lead to the development of quantum machine learning algorithms.
-With this example we want to study the quantum version of a classic machine learning algorithm known as anomaly detection. This algorithm is implemented with an artificial neural network, in particular an autoencoder. In quantum machine learning, the autoencoder is realised using parametrized quantum circuits.The proposed algorithm is not meant to outperform the classical counterpart on classical data. This work aims to demonstrate that it is possible to use quantum variational algorithms for anomaly detection with possible future advantages in the analysis of quantum data.
+With this example we want to study the quantum version of a classic machine learning algorithm known as anomaly detection. This algorithm is implemented with an artificial neural network, in particular an autoencoder. In quantum machine learning, the autoencoder is realised using a variational quantum circuit. The proposed algorithm is not meant to outperform the classical counterpart on classical data. This work aims to demonstrate that it is possible to use quantum variational algorithms for anomaly detection with possible future advantages in the analysis of quantum data.
 
 ## Background
 
@@ -13,21 +13,21 @@ In this section we want to explain the main elements to understand the proposed 
 
 ### Anomaly detection
 
-Anomaly detection is a classification algorithm that allows to identify anomalous data. The advantage in using this machine learning technique is that only standard data are required for the training.
+Anomaly detection is a classification algorithm that allows to identify anomalous data. The advantage in using this machine learning technique is that only a dataset with non anomalous (standard) data samples is required for the training.
 To achieve this it's necessary to train a particular artificial neural network (ANN) architecture called autoencoder. An autoencoder is composed of two main parts: encoder and decoder.
 
 ![Autoencoder architecture](images/Fig1.png)
 
-The encoder compresses initial data down to a small dimension (called latent dimension). The decoder inverts the process to reconstruct the original data from the compressed one. The parameters of the neural network are trained in order to minimise the difference between the initial and reconstructed data. The loss function (also called reconstruction loss) is therefore a measure of how accurately the reconstructed data resembles the original.
+The encoder compresses initial data down to a small dimension (called latent dimension). The decoder inverts the process to reconstruct the original data from the compressed one. The parameters of the neural network are trained in order to minimize the difference between the initial and reconstructed data. The loss function (also called reconstruction loss) is therefore a measure of how accurately the reconstructed data resembles the original.
 
 For anomaly detection, the autoencoder is trained only on data samples belonging to the standard class. When the trained model is applied to new samples we expect the loss function to have different values for standard and anomalous data.
-By choosing a threshold value for the loss function it is possible to classify an input based on whether its reconstruction loss lands above or below this threshold. The ROC curve (Receiver operating characteristic) indicates the true positive rate and false positive rate as a function of the threshold. This can help to set the threshold value in order to maximize true positive classifications and minimize false positives.
+By choosing a threshold value for the loss function it is possible to classify an input based on whether its reconstruction loss lands above or below this threshold. The ROC curve (Receiver Operating Characteristic) indicates the true positive rate and false positive rate as a function of the threshold. This can help to set the threshold value in order to maximize true positive classifications and minimize false positives.
 
-### Parametrized quantum circuits
+### Variational quantum circuits 
 
-A parametrized quantum circuit (PQC), also known as variational quantum circuits, can be used as the quantum counterpart of classical ANNs. In this kind of circuits the input information is stored in the initial state of the qubits. It can be stored as the phase (phase encoding) or in the states amplitudes (amplitude encoding). The initial state is transformed using rotation gates and entangling gates, usually controlled-not (C-NOT) gates. These gates can be organised in layers, in this circuit architecture one layer is composed of rotation gates (R_x, R_y, R_z) acting on all qubits followed by a series of C-NOT gates coupling neighbouring qubits. The trainable weights are the angles of rotation gates and can be trained using standard backpropagation (implemented with Tensorflow).
+A Variational Quantum Circuit (VQC), also known as parametrized quantum circuit, can be used as the quantum counterpart of classical ANNs. In this kind of circuits the input information is stored in the initial state of the qubits. It can be stored as the phase (phase encoding) or in the states amplitudes (amplitude encoding). The initial state is transformed using rotation gates and entangling gates, usually controlled-not (C-NOT) gates. These gates can be organised in layers, in this circuit architecture one layer is composed of rotation gates (R_x, R_y, R_z) acting on all qubits followed by a series of C-NOT gates coupling neighbouring qubits. The trainable weights are the angles of rotation gates and can be trained using standard backpropagation (implemented with Tensorflow).
 
-![parametrized quantum circuit (one layer)](images/Fig2.png)
+![variational quantum circuit (one layer)](images/Fig2.png)
 
 A quantum circuit implements a unitary, thus invertible, transformation on the initial state. This represents a great advantage for the autoencoder architecture, as the decoder can be taken as the inverse of the encoder quantum circuit. In order to compress information the encoder circuit has to disentangle and set to zero state a given number of qubits. The loss function is thus taken as the expected measurement values of these qubits. In this way, for the training of the circuit, it is necessary only the encoder.
 

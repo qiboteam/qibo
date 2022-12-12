@@ -33,7 +33,7 @@ def main(n_layers, train_size, filename, plot, save_loss):
             q_compression (int): number of compressed qubits.
 
         Returns:
-            encoder (qibo.models.Circuit): parametrized quantum circuit.
+            encoder (qibo.models.Circuit): variational quantum circuit.
         """
 
         index = 0
@@ -60,7 +60,7 @@ def main(n_layers, train_size, filename, plot, save_loss):
         """Evaluate loss function for one test sample.
 
         Args:
-            encoder (qibo.models.Circuit): parametrized quantum circuit (trained).
+            encoder (qibo.models.Circuit): variational quantum circuit (trained).
             vector (tf.Tensor): test sample, in the form of 1d vector.
 
         Returns:
