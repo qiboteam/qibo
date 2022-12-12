@@ -2,10 +2,72 @@ from functools import reduce
 from itertools import product
 
 import numpy as np
-from scipy import sparse
 
 from qibo.config import raise_error
 from qibo.gates.gates import I, X, Y, Z
+
+
+def vectorization(state):  # , nrows, ncols):
+    """Returns state :math:`\\rho` in its Liouville
+    representation :math:`\\ket{\\rho}`.
+
+    Args:
+        state: state vector or density matrix.
+
+    Returns:
+        Liouville representation of ``state``.
+    """
+
+    if (
+        (len(state.shape) >= 3)
+        or (len(state) == 0)
+        or (len(state.shape) == 2 and state.shape[0] != state.shape[1])
+    ):
+        raise_error(
+            TypeError,
+            f"Object must have dims either (k,) or (k,k), but have dims {state.shape}.",
+        )
+
+    def block_split(matrix, nrows: int, ncols: int):
+        """Block-vectorization of a square :math:`N \times N`
+        matrix into 4 :math:`\frac{N}{2} \times \frac{N}{2}`
+        matrices, where :math:`N = 2^{n}` and :math:`n` is the
+        number of qubits.
+
+        Args:
+            matrix: :math:`N \times N` matrix.
+            nrows (int): number of rows of the block matrix.
+            ncols (int): number of columns of the block matrix
+
+        Returns:
+            Block-vectorization of ``matrix``.
+        """
+        dim, _ = matrix.shape
+        return (
+            matrix.reshape(int(dim / nrows), nrows, -1, ncols)
+            .swapaxes(1, 2)
+            .reshape(-1, nrows, ncols)[[0, 2, 1, 3]]
+        )
+
+    d = len(state)
+    n = int(d / 2)
+    nqubits = int(np.log2(d))
+
+    if len(state.shape) == 1:
+        state = np.outer(state, state.conj())
+
+    if n == 1:
+        state = state.reshape((1, -1), order="F")[0]
+    else:
+        state = block_split(state, n, n)
+        for _ in range(nqubits - 2, 0, -1):
+            n = int(n / 2)
+            state = np.array([block_split(matrix, n, n) for matrix in state])
+            state = state.reshape((np.prod(state.shape[:-2]), *(state.shape[-2:])))
+        state = np.array(
+            [matrix.reshape((1, -1), order="F") for matrix in state]
+        ).flatten()
+    return state
 
 
 def pauli_basis(
@@ -17,6 +79,9 @@ def pauli_basis(
         qubits (int): number of qubits.
         normalize (bool, optional): If ``True``, normalized basis ir returned.
             Defaults to False.
+        vectorize (bool, optional): If ``False``, returns a nested array with
+            all Pauli matrices. If ``True``, retuns an array where every
+            row is a vectorized Pauli matrix. Defaults to ``False``.
         backend (``qibo.backends.abstract.Backend``, optional): Backend for execution.
             If ``None``, defaults to ``GlobalBackend()``.
 
@@ -70,22 +135,26 @@ def pauli_basis(
 
 
 def comp_basis_to_pauli(nqubits: int, normalize: bool = False, backend=None):
-    """Unitary matrix :math:`U` that converts operators from the Liouville representation
-    in the computational basis to the Pauli-Liouville representation.
+    """Unitary matrix :math:`U` that converts operators from the Liouville
+    representation in the computational basis to the Pauli-Liouville
+    representation.
 
     The unitary :math:`U` is given by
 
     ..math::
-        U = \\sum_{k = 0}^{d^{2} - 1} \\, {|b_{k})}{(P_{k}|} \\,\\, ,
+        U = \\sum_{k = 0}^{d^{2} - 1} \\, {|k)}{(P_{k}|} \\,\\, ,
 
-    where :math:`{|A)}` is the column-vectorization of :math:`A`.
+    where :math:`{|A)}` is the system-vectorization of :math:`A`,
+    :math:`{|k)}` is the vectorization of the computational basis element
+    :math:`\\ketbra{k}`, and :math:`{|P_{k})}` is the vectorization of the
+    :math:`k`-th Pauli matrix.
 
     Args:
         nqubits (int): number of qubits.
         normalize (bool, optional): If ``True``, converts to the
         Pauli basis. Defaults to False.
-        backend (``qibo.backends.abstract.Backend``, optional): Backend for execution.
-            If ``None``, defaults to ``GlobalBackend()``.
+        backend (``qibo.backends.abstract.Backend``, optional): Backend
+            for execution. If ``None``, defaults to ``GlobalBackend()``.
 
     Returns:
         Unitary matrix :math:`U`.
