@@ -6,12 +6,14 @@ from qibo.models import Circuit
 from qibo.noise import *
 from qibo.tests.utils import random_density_matrix, random_state
 
+
 @pytest.mark.parametrize("density_matrix", [True])
 @pytest.mark.parametrize("nshots", [None, 10, 100])
 def test_custom_error(backend, density_matrix, nshots):
     a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
-    a2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0],
-                              [0, 0, 0, 1], [0, 0, 1, 0]])
+    a2 = np.sqrt(0.6) * np.array(
+        [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]]
+    )
     error_channel = gates.KrausChannel([([1], a1), ([0, 2], a2)])
     custom_error = CustomError(error_channel)
 
@@ -242,7 +244,9 @@ def test_unitary_error(backend, density_matrix, nshots):
 
     target_circuit = Circuit(3, density_matrix=density_matrix)
     target_circuit.add(gates.CNOT(0, 1))
-    target_circuit.add(gates.UnitaryChannel(probabilities, [([0, 1], u1), ([0, 1], u2)]))
+    target_circuit.add(
+        gates.UnitaryChannel(probabilities, [([0, 1], u1), ([0, 1], u2)])
+    )
     target_circuit.add(gates.Z(1))
     target_circuit.add(gates.X(1))
     target_circuit.add(gates.X(2))
@@ -319,4 +323,3 @@ def test_kraus_error(backend, density_matrix, nshots):
         backend.assert_allclose(final_state, target_final_state)
     else:
         backend.assert_allclose(final_state_samples, target_final_state_samples)
-    
