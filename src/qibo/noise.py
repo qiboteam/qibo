@@ -13,7 +13,7 @@ class CustomError:
 
         import numpy as np
         from qibo.gates import KrausChannel
-        from qibo.noise import Error
+        from qibo.noise import CustomError
 
         # define |0><0|
         a1 = np.array([[1, 0], [0, 0]])
@@ -21,7 +21,7 @@ class CustomError:
         a2 = np.array([[0, 1], [0, 0]])
 
         # Create an Error associated with Kraus Channel rho -> |0><0| rho |0><0| + |0><1| rho |0><1|
-        error = Error(gates.KrausChannel([((0,), a1), ((0,), a2)]))
+        error = CustomError(gates.KrausChannel([((0,), a1), ((0,), a2)]))
     """
 
     def __init__(self, channel):
