@@ -7,40 +7,27 @@ on:
       branches: [master,versions] # TODO: remove branch versions 
       tags:
         - '*'
-  
+
+
+
 jobs:
   evaluate-label:
     runs-on: ubuntu-latest
     outputs:
       label: ${{ steps.label_step.outputs.version}}
     steps:
-      - run: echo ${{ github.event_name }} #TODO: remove this debugging line 
-      - run: echo ${{ github.ref }} # TODO: remove this debugging line 
       - name: checks for the label 
         id: label_step 
         run: |
-          if [[ "${{ github.ref  }}" == "refs/heads/versions" ]]; then
+          if [[ "${{ github.ref  }}" == "refs/heads/versions" ]]; then # TODO: modify the branch after merging
                 echo "version=latest" >> $GITHUB_OUTPUT
           fi
-          if [[ "${{ github.ref_type }}" == "branch" ]] && [[ "${{ github.ref  }}" != "refs/heads/versions" ]]; then
+          if [[ "${{ github.ref_type }}" == "branch" ]] && [[ "${{ github.ref  }}" != "refs/heads/versions" ]]; then # TODO: modify the branch after merging
                 echo "version=Error" >> $GITHUB_OUTPUT
           fi
-          if [[ "${{ github.ref_type }}" == "tag" ]]; then # TODO: check if it works 
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then 
                 echo "version=stable" >> $GITHUB_OUTPUT
           fi 
-
-
-
-
-  # TODO: this is a debugging job, delete it 
-  generate-docs:
-    needs: [evaluate-label]
-    if: needs.evaluate-label.outputs.label != 'Error'
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo ${{needs.evaluate-label.outputs.label}} 
-
-
 
 
 
