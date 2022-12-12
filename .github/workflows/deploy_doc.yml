@@ -18,14 +18,15 @@ jobs:
       - name: checks for the label 
         id: label_step 
         run: |
-          if [[ "${{ github.event_name }}" == "push" ]] && [[ "${{ github.ref  }}" == "refs/heads/versions" ]]; then
+          if [[ "${{ github.ref  }}" == "refs/heads/versions" ]]; then # TODO: change the branch after merging 
                 echo "version=latest" >> $GITHUB_OUTPUT
           fi
-          if [[ "${{ github.event_name }}" == "push" ]] && [[ "${{ github.ref  }}" != "refs/heads/versions" ]]; then
+          if [[ ${{ github.ref_type }}" == "branch" ]] && [[ "${{ github.ref  }}" != "refs/heads/versions" ]]; then # TODO: change the branch after merging 
                 echo "version=Error" >> $GITHUB_OUTPUT
           fi
-          if [[ "${{ github.event_name }}" == "tag" ]]; then # TODO: check if it works 
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then # TODO: check if it works 
                 echo "version=stable" >> $GITHUB_OUTPUT
+                
           fi 
 
 
