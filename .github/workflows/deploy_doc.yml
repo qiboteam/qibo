@@ -6,6 +6,7 @@ on:
   push:
       branches: [master,versions] # TODO: remove branch versions 
       tags:
+        - '*'
   
 jobs:
   evaluate-label:
