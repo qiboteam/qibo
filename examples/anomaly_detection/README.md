@@ -87,4 +87,3 @@ And the following command for performance evaluation:
 ```python
 python test.py --n_layers 4
 ```
-
