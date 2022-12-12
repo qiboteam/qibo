@@ -46,7 +46,7 @@ Moreover this configuration requires only nearest neighbour connectivity for six
 ### Training
 
 For the training of the circuit a dataset of 5000 images of zero handwritten digits has been employed. The loss function is the sum of the probabilities of the ground state for the first three qubits, thus these qubits are forced to the |1> state.
-Training has been performed for 20 epochs using Adam optimizer, with a dynamic learning rate that spans from 0.4 in the first epochs to 0.001 in the last ones. This variable learning rate has helped reducing the problem of barren plateaus.
+Training has been performed for 20 epochs using [Adam optimizer](https://arxiv.org/pdf/1412.6980.pdf), with a dynamic learning rate that spans from 0.4 in the first epochs to 0.001 in the last ones. This variable learning rate has helped reducing the problem of [barren plateaus](https://arxiv.org/pdf/1803.11173.pdf).
 
 ### Performance evaluation
 
