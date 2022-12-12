@@ -11,10 +11,33 @@ from qibo.models import Circuit
 
 
 def main(n_layers, batch_size, nepochs, train_size, filename, lr_boundaries):
+    """Implements training of quantum circuit.
+
+    Args:
+        n_layers (int): number of ansatz circuit layers (default 6).
+        batch_size (int): number of samples in one training batch (default 20).
+        nepochs (int): number of training epochs (default 20).
+        train_size (int): number of samples used for training, the remainings are used for performance evaluation, total samples are 7000 (default 5000).
+        filename (str): location and file name where trained parameters are saved (default "parameters/trained_params.npy").
+        lr_boundaries (list): epochs when learning rate is reduced, 6 monotone growing values from 0 to nepochs (default [3,6,9,12,15,18]).
+    """
+
     qibo.set_backend("tensorflow")
 
     # Circuit ansatz
     def make_encoder(n_qubits, n_layers, params, q_compression):
+        """Create encoder quantum circuit.
+
+        Args:
+            n_qubits (int): number of qubits in the circuit.
+            n_layers (int): number of ansatz circuit layers.
+            params (tf.Variable): parameters of the circuit.
+            q_compression (int): number of compressed qubits.
+
+        Returns:
+            encoder (qibo.models.Circuit): parametrized quantum circuit.
+        """
+
         index = 0
         encoder = Circuit(n_qubits)
         for i in range(n_layers):
@@ -37,6 +60,17 @@ def main(n_layers, batch_size, nepochs, train_size, filename, lr_boundaries):
     # Evaluate loss function (3 qubit compression) for one sample
     @tf.function
     def compute_loss(encoder, params, vector):
+        """Evaluate loss function for one train sample.
+
+        Args:
+            encoder (qibo.models.Circuit): parametrized quantum circuit.
+            params (tf.Variable): parameters of the circuit.
+            vector (tf.Tensor): train sample, in the form of 1d vector.
+
+        Returns:
+            loss (tf.Variable): loss of the training sample.
+        """
+
         encoder.set_parameters(params)
         reconstructed = encoder(vector)
         # 3 qubits compression
@@ -50,6 +84,18 @@ def main(n_layers, batch_size, nepochs, train_size, filename, lr_boundaries):
     # One optimization step
     @tf.function
     def train_step(batch_size, encoder, params, dataset):
+        """Evaluate loss function on one train batch.
+
+        Args:
+            batch_size (int): number of samples in one training batch.
+            encoder (qibo.models.Circuit): parametrized quantum circuit.
+            params (tf.Variable): parameters of the circuit.
+            vector (tf.Tensor): train sample, in the form of 1d vector.
+
+        Returns:
+            loss (tf.Variable): average loss of the training batch.
+        """
+
         loss = 0.0
         with tf.GradientTape() as tape:
             for sample in range(batch_size):
@@ -68,7 +114,7 @@ def main(n_layers, batch_size, nepochs, train_size, filename, lr_boundaries):
     dataset = tf.convert_to_tensor(dataset_np)
     train = dataset[0:train_size]
 
-    # Initial random parameters
+    # Initialize random parameters
     n_params = (n_layers * n_qubits + q_compression) * 3
     params = tf.Variable(tf.random.normal((n_params,)))
 

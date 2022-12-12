@@ -7,36 +7,6 @@ Code at: [https://github.com/qiboteam/qibo/tree/master/examples/anomaly_detectio
 With the contemporary peak in interest regarding machine learning algorithms for their many applications in scientific research as well as industrial technology, we also have the simultaneous development of quantum computing. A combination of these two fields has lead to the development of quantum machine learning algorithms.
 With this example we want to study the quantum version of a classic machine learning algorithm known as anomaly detection. This algorithm is implemented with an artificial neural network, in particular an autoencoder. In quantum machine learning, the autoencoder is realised using parametrized quantum circuits.The proposed algorithm is not meant to outperform the classical counterpart on classical data. This work aims to demonstrate that it is possible to use quantum variational algorithms for anomaly detection with possible future advantages in the analysis of quantum data.
 
-## How to run an example?
-
-The code is divided into two parts, training of the circuit (train.py) and performance evaluation (test.py).
-
-It is possible to define the following hyper-parameters for the training of the circuit (default have good performance):
-- `n_layers` (int): number of ansatz circuit layers (default 6).
-- `batch_size` (int): number of samples in one training batch (default 20).
-- `nepochs` (int): number of training epochs (default 20).
-- `train_size` (int): number of samples used for training, the remainings are used for performance evaluation, total samples are 7000 (default 5000).
-- `filename` (str): location and file name where trained parameters are saved (default "parameters/trained_params.npy").
-- `lr_boundaries` (list): epochs when learning rate is reduced, 6 monotone growing values from 0 to nepochs (default [3,6,9,12,15,18]).
-
-It is possible to define the following hyper-parameters for the performance evaluation of the circuit, n_layers must be equal to the one used for training:
-- `n_layers` (int): number of ansatz circuit layers (default 6).
-- `train_size` (int): number of samples used for training, the remainings are used for performance evaluation, total samples are 7000 (default 5000).
-- `filename` (str): location and file name of trained parameters to be tested (default "parameters/trained_params.npy").
-- `plot` (bool): make plots of ROC and loss function distribution (default True).
-- `save_loss` (bool): save losses for standard and anomalous data (default False).
-
-As an example, in order to use 4 layers in the variational quantum ansatz, you should execute the following command for training:
-
-```python
-python train.py --n_layers 4
-```
-And the following command for performance evaluation:
-
-```python
-python test.py --n_layers 4
-```
-
 ## Background
 
 In this section we want to explain the main elements to understand the proposed quantum anomaly detection algorithm.
@@ -87,3 +57,34 @@ To test the anomaly detection algorithm after the training phase, we have used 2
 The ROC curve shows the rate of true positive with respect to the rate of false positive by moving the loss value threshold for the binary classification.
 
 ![ROC curve](images/Fig6.png)
+
+## How to run an example?
+
+The code is divided into two parts, training of the circuit (`train.py`) and performance evaluation (`test.py`).
+
+It is possible to define the following hyper-parameters for the training of the circuit (default have good performance):
+- `n_layers` (int): number of ansatz circuit layers (default 6).
+- `batch_size` (int): number of samples in one training batch (default 20).
+- `nepochs` (int): number of training epochs (default 20).
+- `train_size` (int): number of samples used for training, the remainings are used for performance evaluation, total samples are 7000 (default 5000).
+- `filename` (str): location and file name where trained parameters are saved (default "parameters/trained_params.npy").
+- `lr_boundaries` (list): epochs when learning rate is reduced, 6 monotone growing values from 0 to nepochs (default [3,6,9,12,15,18]).
+
+It is possible to define the following hyper-parameters for the performance evaluation of the circuit, `n_layers` must be equal to the one used for training:
+- `n_layers` (int): number of ansatz circuit layers (default 6).
+- `train_size` (int): number of samples used for training, the remainings are used for performance evaluation, total samples are 7000 (default 5000).
+- `filename` (str): location and file name of trained parameters to be tested (default "parameters/trained_params.npy").
+- `plot` (bool): make plots of ROC and loss function distribution (default True).
+- `save_loss` (bool): save losses for standard and anomalous data (default False).
+
+As an example, in order to use 4 layers in the variational quantum ansatz, you should execute the following command for training:
+
+```python
+python train.py --n_layers 4
+```
+And the following command for performance evaluation:
+
+```python
+python test.py --n_layers 4
+```
+

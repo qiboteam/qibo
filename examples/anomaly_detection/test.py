@@ -10,10 +10,32 @@ from qibo.models import Circuit
 
 
 def main(n_layers, train_size, filename, plot, save_loss):
+    """Implements performance evaluation of a trained circuit.
+
+    Args:
+        n_layers (int): number of ansatz circuit layers (default 6).
+        train_size (int): number of samples used for training, the remainings are used for performance evaluation, total samples are 7000 (default 5000).
+        filename (str): location and file name of trained parameters to be tested (default "parameters/trained_params.npy").
+        plot (bool): make plots of ROC and loss function distribution (default True).
+        save_loss (bool): save losses for standard and anomalous data (default False).
+    """
+
     qibo.set_backend("tensorflow")
 
     # Circuit ansatz
     def make_encoder(n_qubits, n_layers, params, q_compression):
+        """Create encoder quantum circuit.
+
+        Args:
+            n_qubits (int): number of qubits in the circuit.
+            n_layers (int): number of ansatz circuit layers.
+            params (tf.Tensor): parameters of the circuit.
+            q_compression (int): number of compressed qubits.
+
+        Returns:
+            encoder (qibo.models.Circuit): parametrized quantum circuit.
+        """
+
         index = 0
         encoder = Circuit(n_qubits)
         for i in range(n_layers):
@@ -35,6 +57,15 @@ def main(n_layers, train_size, filename, plot, save_loss):
 
     # Evaluate loss function (3 qubit compression) for one sample
     def compute_loss_test(encoder, vector):
+        """Evaluate loss function for one test sample.
+
+        Args:
+            encoder (qibo.models.Circuit): parametrized quantum circuit (trained).
+            vector (tf.Tensor): test sample, in the form of 1d vector.
+
+        Returns:
+            loss (tf.Variable): loss of the test sample.
+        """
         reconstructed = encoder(vector)
         # 3 qubits compression
         loss = (
@@ -72,7 +103,7 @@ def main(n_layers, train_size, filename, plot, save_loss):
     for i in range(len(dataset_np_s)):
         loss_s.append(compute_loss_test(encoder_test, dataset_s[i]).numpy())
 
-    # compute loss anomalous data
+    # Compute loss for anomalous data
     loss_a = []
     for i in range(len(dataset_np_a)):
         loss_a.append(compute_loss_test(encoder_test, dataset_a[i]).numpy())
@@ -81,7 +112,9 @@ def main(n_layers, train_size, filename, plot, save_loss):
         np.save("results/losses_standard_data", loss_s)
         np.save("results/losses_anomalous_data", loss_a)
 
+    # Make graphs for performance analysis
     if plot:
+
         """Loss distribution graph"""
         plt.hist(loss_a, bins=60, histtype="step", color="red", label="Anomalous data")
         plt.hist(loss_s, bins=60, histtype="step", color="blue", label="Standard data")
