@@ -18,7 +18,7 @@ jobs:
       - name: checks for the label 
         id: label_step 
         run: |
-          if [[ "${{ github.event_name }}" == "push" ]] && [[ "${{ github.ref  }}" == "refs/heads/versions" ]]; then
+          if [[ "${{ github.ref  }}" == "refs/heads/versions" ]]; then
                 echo "version=latest" >> $GITHUB_OUTPUT
           fi
           if [[ "${{ github.event_name }}" == "push" ]] && [[ "${{ github.ref  }}" != "refs/heads/versions" ]]; then
