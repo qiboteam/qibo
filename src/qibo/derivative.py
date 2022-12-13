@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 
 from qibo.config import raise_error
@@ -20,14 +21,14 @@ def parameter_shift(
         `https://arxiv.org/abs/1803.00745`.
 
     Args:
-        circuit (:class:`qibo.models.circuit.Circuit`): custom quantum circuit
-        hamiltonian (:class: `qibo.hamiltonians.Hamiltonian`): target observable
+        circuit (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
+        hamiltonian (:class: `qibo.hamiltonians.Hamiltonian`): target observable.
         parameter_index (int): the index which identifies the target parameter in the circuit.get_parameters() list
-        initial_state ((1, 2**nqubits) matrix): initial state on which we act with the circuit.
+        initial_state ((1, 2**nqubits) matrix): initial state on which the circuit acts.
 
     Returns:
-        np.float value of the derivative of the expected value of H on the final state obtained applying U
-        to the initial state with respect to the target variational parameter.
+        np.float value of the derivative of the expectation value of the hamiltonian
+        with respect to the target variational parameter.
 
     Example:
         .. testcode::
@@ -65,8 +66,8 @@ def parameter_shift(
             grad_0 = parameter_shift(circuit = c, hamiltonian = test_hamiltonian, parameter_index = 0)
             grad_1 = parameter_shift(circuit = c, hamiltonian = test_hamiltonian, parameter_index = 1)
 
-            print('Test gradient with respect params[0]: ', grad_0.numpy())
-            print('Test gradient with respect params[0]: ', grad_1.numpy())
+            print('Test gradient with respect params[0]: ', grad_0)
+            print('Test gradient with respect params[1]: ', grad_1)
     """
 
     # some raise_error
