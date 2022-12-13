@@ -260,11 +260,10 @@ class Gate:
 
     def generator_eigenvalue(self):
         """
-        This function returns the absolute value of the eigenvalues of the
-        operator which generates the unitary target one.
+        This function returns the eigenvalues of the gate's generator.
 
         Returns:
-            generator's eigenvalue value or raise an error if not implemented.
+            np.float generator's eigenvalue or raise an error if not implemented.
         """
 
         raise_error(
