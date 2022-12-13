@@ -268,7 +268,7 @@ class Gate:
 
         raise_error(
             NotImplementedError,
-            "For this gate, the function has not yet been implemented.",
+            f"Generator eigenvalue is not implemented for {self.name}",
         )
 
     @property
