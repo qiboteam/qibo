@@ -559,6 +559,10 @@ Quantum errors
 
 The quantum errors available to build a noise model are the following:
 
+.. autoclass:: qibo.noise.CustomError
+    :members:
+    :member-order: bysource
+
 .. autoclass:: qibo.noise.PauliError
     :members:
     :member-order: bysource
@@ -572,6 +576,14 @@ The quantum errors available to build a noise model are the following:
     :member-order: bysource
 
 .. autoclass:: qibo.noise.ResetError
+    :members:
+    :member-order: bysource
+
+.. autoclass:: qibo.noise.UnitaryError
+    :members:
+    :member-order: bysource
+
+.. autoclass:: qibo.noise.KrausError
     :members:
     :member-order: bysource
 
