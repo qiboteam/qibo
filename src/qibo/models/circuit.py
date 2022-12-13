@@ -832,8 +832,8 @@ class Circuit:
         """Associates to each parameter its gate.
 
         Returns:
-            A nparams-long flatlist whose i-th element is the gate affected by the
-            i-th parameter.
+            A nparams-long flatlist whose i-th element is the gate parameterized
+            by the i-th parameter.
         """
 
         parameter_to_gate = []
