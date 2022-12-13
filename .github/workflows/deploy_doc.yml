@@ -9,7 +9,6 @@ on:
         - '*'
 
 
-
 jobs:
   evaluate-label:
     runs-on: ubuntu-latest
@@ -23,17 +22,15 @@ jobs:
                 echo "version=latest" >> $GITHUB_OUTPUT
           fi
           if [[ "${{ github.ref_type }}" == "branch" ]] && [[ "${{ github.ref  }}" != "refs/heads/versions" ]]; then # TODO: modify the branch after merging
-                echo "version=Error" >> $GITHUB_OUTPUT
+                exit 1
           fi
           if [[ "${{ github.ref_type }}" == "tag" ]]; then 
                 echo "version=stable" >> $GITHUB_OUTPUT
           fi 
 
 
-
   deploy-docs:
     needs: [evaluate-label]
-    if: needs.evaluate-label.outputs.label != 'Error'
     uses: qibogang/workflows/.github/workflows/deploy-ghpages-latest-stable.yml@versions
     with:
       python-version: 3.9
