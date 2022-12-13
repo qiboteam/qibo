@@ -7,12 +7,14 @@ from qibo.config import raise_error
 from qibo.gates.gates import I, X, Y, Z
 
 
-def vectorization(state):  # , nrows, ncols):
+def vectorization(state, backend=None):  # , nrows, ncols):
     """Returns state :math:`\\rho` in its Liouville
     representation :math:`\\ket{\\rho}`.
 
     Args:
         state: state vector or density matrix.
+        backend (``qibo.backends.abstract.Backend``, optional): Backend for execution.
+            If ``None``, defaults to ``GlobalBackend()``.
 
     Returns:
         Liouville representation of ``state``.
@@ -49,6 +51,11 @@ def vectorization(state):  # , nrows, ncols):
             .reshape(-1, nrows, ncols)[[0, 2, 1, 3]]
         )
 
+    if backend is None:
+        from qibo.backends import GlobalBackend
+
+        backend = GlobalBackend()
+
     d = len(state)
     n = int(d / 2)
     nqubits = int(np.log2(d))
@@ -67,7 +74,8 @@ def vectorization(state):  # , nrows, ncols):
         state = np.array(
             [matrix.reshape((1, -1), order="F") for matrix in state]
         ).flatten()
-    return state
+
+    return backend.cast(state, dtype=state.dtype)
 
 
 def pauli_basis(
