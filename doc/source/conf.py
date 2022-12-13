@@ -16,16 +16,15 @@ import sys
 from recommonmark.transform import AutoStructify
 
 sys.path.insert(0, os.path.abspath(".."))
-import qibo
 
 # -- Project information -----------------------------------------------------
 
-project = "qibo"
+project = " "
 copyright = "2020-2022 by the Qibo team"
 author = "The Qibo team"
 
 # The full version, including alpha/beta/rc tags
-# release = qibo.__version__
+release = " "
 
 
 # -- General configuration ---------------------------------------------------
@@ -70,7 +69,7 @@ exclude_patterns = []
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-#
+
 html_theme = "furo"
 
 html_theme_options = {
@@ -84,6 +83,7 @@ html_theme_options = {
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
+
 html_static_path = ["_static"]
 
 
@@ -109,5 +109,7 @@ def setup(app):
     app.add_transform(AutoStructify)
     app.add_css_file("css/style.css")
 
+
+#html_logo = "logo.png"
 
 html_show_sourcelink = False
