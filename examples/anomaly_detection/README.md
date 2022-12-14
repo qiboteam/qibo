@@ -5,7 +5,7 @@ Code at: [https://github.com/qiboteam/qibo/tree/master/examples/anomaly_detectio
 ## Problem overview
 
 With the contemporary peak in interest regarding machine learning algorithms for their many applications in scientific research as well as industrial technology, we also have the simultaneous development of quantum computing. A combination of these two fields has lead to the development of quantum machine learning algorithms.
-With this example we want to study the quantum version of a classic machine learning algorithm known as anomaly detection. This algorithm is implemented with an artificial neural network, in particular an autoencoder. In quantum machine learning, the autoencoder is realised using a variational quantum circuit. The proposed algorithm is not meant to outperform the classical counterpart on classical data. This work aims to demonstrate that it is possible to use quantum variational algorithms for anomaly detection with possible future advantages in the analysis of quantum data.
+With this example we want to study the quantum version of a classic machine learning algorithm known as [anomaly detection](https://arxiv.org/abs/2007.02500). This algorithm is implemented with an artificial neural network, in particular an autoencoder. In quantum machine learning, the autoencoder is realised using a variational quantum circuit. The proposed algorithm is not meant to outperform the classical counterpart on classical data. This work aims to demonstrate that it is possible to use quantum variational algorithms for anomaly detection with possible future advantages in the analysis of quantum data.
 
 ## Background
 
