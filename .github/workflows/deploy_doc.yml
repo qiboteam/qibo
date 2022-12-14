@@ -8,7 +8,6 @@ on:
       tags:
         - '*'
 
-
 jobs:
   evaluate-label:
     runs-on: ubuntu-latest
@@ -28,10 +27,9 @@ jobs:
                 echo "version=stable" >> $GITHUB_OUTPUT
           fi 
 
-
   deploy-docs:
     needs: [evaluate-label]
-    uses: qibogang/workflows/.github/workflows/deploy-ghpages-latest-stable.yml@versions
+    uses: qibogang/workflows/.github/workflows/deploy-ghpages-latest-stable.yml@tar
     with:
       python-version: 3.9
       package-manager: 'pip'
