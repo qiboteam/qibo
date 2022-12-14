@@ -14,7 +14,7 @@ In this section we want to explain the main elements to understand the proposed 
 ### Anomaly detection
 
 Anomaly detection is a classification algorithm that allows to identify anomalous data. The advantage in using this machine learning technique is that only a dataset with non anomalous (standard) data samples is required for the training.
-To achieve this it's necessary to train a particular artificial neural network (ANN) architecture called autoencoder. An autoencoder is composed of two main parts: encoder and decoder.
+To achieve this it's necessary to train a particular artificial neural network (ANN) architecture called [autoencoder](https://arxiv.org/abs/2003.05991). An autoencoder is composed of two main parts: encoder and decoder.
 
 ![Autoencoder architecture](images/Fig1.png)
 
