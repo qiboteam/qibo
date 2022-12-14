@@ -33,7 +33,7 @@ def main(n_layers, train_size, filename, plot, save_loss):
             q_compression (int): number of compressed qubits.
 
         Returns:
-            encoder (qibo.models.Circuit): variational quantum circuit.
+            encoder (:class:`qibo.models.circuit.Circuit`): variational quantum circuit.
         """
 
         index = 0
