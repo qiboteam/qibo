@@ -1114,6 +1114,208 @@ and the measurement gate. If ``p1`` is not specified the value of ``p0`` will
 be used for both errors.
 
 
+How to perform error mitigation?
+--------------------------------
+
+Noise and errors in circuits are one of the biggest obstacles to face in quantum computing.
+Say that you have a circuit :math:`C` and you want to measure an observable :math:`A` at the end of it,
+in general you are going to obtain an expected value :math:`\langle A \rangle_{noisy}` that
+can lie quiet far from the true one :math:`\langle A \rangle_{exact}`.
+In Qibo, three different methods are implemented for mitigating errors in circuits and obtaining
+a better estimate of the noise-free expected value :math:`\langle A \rangle_{exact}`.
+
+
+Let's see how to use them. For starters, let's define a dummy circuit with some RZ, RX and CNOT gates:
+
+.. testcode::
+
+   import numpy as np
+
+   from qibo import gates
+   from qibo.models import Circuit
+
+   # Define the circuit
+   nqubits = 3
+   hz = 0.5
+   hx = 0.5
+   dt = 0.25
+   c = Circuit(nqubits, density_matrix=True)
+   c.add(gates.RZ(q, theta=-2 * hz * dt - np.pi / 2) for q in range(nqubits))
+   c.add(gates.RX(q, theta=np.pi / 2) for q in range(nqubits))
+   c.add(gates.RZ(q, theta=-2 * hx * dt + np.pi) for q in range(nqubits))
+   c.add(gates.RX(q, theta=np.pi / 2) for q in range(nqubits))
+   c.add(gates.RZ(q, theta=-np.pi / 2) for q in range(nqubits))
+   c.add(gates.CNOT(q, q + 1) for q in range(0, nqubits - 1, 2))
+   c.add(gates.RZ(q + 1, theta=-2 * dt) for q in range(0, nqubits - 1, 2))
+   c.add(gates.CNOT(q, q + 1) for q in range(0, nqubits - 1, 2))
+   c.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
+   c.add(gates.RZ(q + 1, theta=-2 * dt) for q in range(1, nqubits, 2))
+   c.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
+   # Include the measurements
+   c.add(gates.M(q) for q in range(nqubits))
+
+   # visualize the circuit
+   print(c.draw())
+
+   #  q0: ─RZ─RX─RZ─RX─RZ─o────o────────M─
+   #  q1: ─RZ─RX─RZ─RX─RZ─X─RZ─X─o────o─M─
+   #  q2: ─RZ─RX─RZ─RX─RZ────────X─RZ─X─M─
+
+.. testoutput::
+   :hide:
+
+   ...
+
+remember to initialize the circuit with ``density_matrix=True`` and to include the measuerement gates at the end for expectation value calculation.
+
+As observable we can simply take :math:`Z_0 Z_1 Z_2` :
+
+.. testcode::
+
+   from qibo.symbols import Z
+   from qibo.hamiltonians import SymbolicHamiltonian
+   from qibo.backends import GlobalBackend
+
+   backend = GlobalBackend()
+
+   # Define the observable
+   obs = np.prod([Z(i) for i in range(nqubits)])
+   obs = SymbolicHamiltonian(obs, backend=backend)
+
+We can obtain the exact expected value by running the circuit on any simulation ``backend``, to mimic the execution on
+the real quantum hardware, instead, we can use a noise model:
+
+.. testcode::
+
+   # Noise-free expected value
+   exact = obs.expectation(backend.execute_circuit(c).state())
+   print(exact)
+   # 0.9096065335014379
+
+   from qibo.noise import DepolarizingError, NoiseModel
+
+   # Define the noise model
+   noise =  NoiseModel()
+   noise.add(DepolarizingError(0.1), gates.CNOT)
+   # Noisy expected value without mitigation
+   noisy = obs.expectation(backend.execute_circuit(noise.apply(c)).state())
+   print(noisy)
+   # 0.5967928466302935
+
+.. testoutput::
+   :hide:
+
+   ...
+
+Note that when running on the quantum hardware, you won't need to use a noise model
+anymore, you will just have to change the backend to the appropriate one.
+
+Now let's check that error mitigation produces better estimates of the exact expected value.
+
+Zero Noise Extrapolation (ZNE)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To run ZNE, we just need to define the noise levels to use. Each level corresponds to the
+number of CNOT pairs inserted in the circuit in correspondence to the original CNOTs::
+
+   Level 1
+   q0: ─X─  -->  q0: ─X───X──X─
+   q1: ─o─  -->  q1: ─o───o──o─
+
+   Level 2
+   q0: ─X─  -->  q0: ─X───X──X───X──X─
+   q1: ─o─  -->  q1: ─o───o──o───o──o─
+
+   .
+   .
+   .
+
+For example if we use the five levels ``[0,1,2,3,4]`` :
+
+.. testcode::
+
+   from qibo.models.error_mitigation import ZNE
+
+   # Mitigated expected value
+   estimate = ZNE(
+       circuit=c,
+       observable=obs,
+       backend=backend,
+       noise_levels=np.arange(5),
+       noise_model=noise,
+       nshots=10000,
+   )
+   print(estimate)
+   # 0.8859203125000003
+
+.. testoutput::
+   :hide:
+
+   ...
+
+we get an expected value closer to the exact one.
+
+Clifford Data Regression (CDR)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For CDR instead, you don't need to define anything additional. However, keep in mind that the input
+circuit is expected to be decomposed in the set of primitive gates :math:`RX(\frac{\pi}{2}), CNOT, X` and :math:`RZ(\theta)`.
+
+.. testcode::
+
+   from qibo.models.error_mitigation import CDR
+
+   # Mitigated expected value
+   estimate = CDR(
+       circuit=c,
+       observable=obs,
+       backend=backend,
+       noise_model=noise,
+       nshots=10000,
+   )
+   print(estimate)
+   # 0.9090604794014961
+
+.. testoutput::
+   :hide:
+
+   ...
+
+Again, the mitigated expected value improves over the noisy one and is also slightly better compared to ZNE.
+
+Variable Noise CDR (vnCDR)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Being a combination of ZNE and CDR, vnCDR requires you to define the noise levels as done in ZNE, and the same
+caveat about the input circuit for CDR is valid here as well.
+
+.. testcode::
+
+   from qibo.models.error_mitigation import vnCDR
+
+   # Mitigated expected value
+   estimate = vnCDR(
+       circuit=c,
+       observable=obs,
+       backend=backend,
+       noise_levels=np.arange(3),
+       noise_model=noise,
+       nshots=10000,
+   )
+   print(estimate)
+   # 0.9085991439303123
+
+.. testoutput::
+   :hide:
+
+   ...
+
+The result is similar to the one obtained by CDR. Usually, one would expect slightly better results for vnCDR,
+however, this can substantially vary depending on the circuit and the observable considered and, therefore, it is hard to tell
+a priori.
+
+This was just a basic example usage of the three methods, for all the details about them you should check the API-reference page :ref:`Error Mitigation <error-mitigation>`.
+
 .. _timeevol-example:
 
 How to simulate time evolution?
