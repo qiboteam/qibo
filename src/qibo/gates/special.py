@@ -1,5 +1,6 @@
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate, ParametrizedGate, SpecialGate
+from qibo.gates.measurements import M
 
 
 class CallbackGate(SpecialGate):
@@ -52,7 +53,7 @@ class FusedGate(SpecialGate):
     def from_gate(cls, gate):
         fgate = cls(*gate.qubits)
         fgate.append(gate)
-        if isinstance(gate, SpecialGate):
+        if isinstance(gate, (M, SpecialGate)):
             # special gates do not participate in fusion
             fgate.marked = True
         return fgate

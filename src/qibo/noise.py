@@ -211,6 +211,4 @@ class NoiseModel:
                 else:
                     for q in qubits:
                         noisy_circuit.add(error.channel(q, *error.options))
-        noisy_circuit.measurement_tuples = dict(circuit.measurement_tuples)
-        noisy_circuit.measurement_gate = circuit.measurement_gate
         return noisy_circuit
