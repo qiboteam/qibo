@@ -84,6 +84,6 @@ python train.py --n_layers 4
 ```
 And the following command for performance evaluation:
 
-```python
+```bash
 python test.py --n_layers 4
 ```
