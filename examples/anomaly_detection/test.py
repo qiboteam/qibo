@@ -60,7 +60,7 @@ def main(n_layers, train_size, filename, plot, save_loss):
         """Evaluate loss function for one test sample.
 
         Args:
-            encoder (qibo.models.Circuit): variational quantum circuit (trained).
+            encoder (:class:`qibo.models.circuit.Circuit`): variational quantum circuit (trained).
             vector (tf.Tensor): test sample, in the form of 1d vector.
 
         Returns:
