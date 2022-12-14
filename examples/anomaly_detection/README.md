@@ -79,7 +79,7 @@ It is possible to define the following hyper-parameters for the performance eval
 
 As an example, in order to use 4 layers in the variational quantum ansatz, you should execute the following command for training:
 
-```python
+```bash
 python train.py --n_layers 4
 ```
 And the following command for performance evaluation:
