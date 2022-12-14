@@ -4,7 +4,7 @@ name: Deploy docs
 on: 
   workflow_dispatch:
   push:
-      branches: [master,versions] # TODO: remove branch versions 
+      branches: [master]
       tags:
         - '*'
 
@@ -17,10 +17,10 @@ jobs:
       - name: checks for the label 
         id: label_step 
         run: |
-          if [[ "${{ github.ref  }}" == "refs/heads/versions" ]]; then # TODO: modify the branch after merging
+          if [[ "${{ github.ref  }}" == "refs/heads/master" ]]; then 
                 echo "version=latest" >> $GITHUB_OUTPUT
           fi
-          if [[ "${{ github.ref_type }}" == "branch" ]] && [[ "${{ github.ref  }}" != "refs/heads/versions" ]]; then # TODO: modify the branch after merging
+          if [[ "${{ github.ref_type }}" == "branch" ]] && [[ "${{ github.ref  }}" != "refs/heads/master" ]]; then 
                 exit 1
           fi
           if [[ "${{ github.ref_type }}" == "tag" ]]; then 
@@ -29,7 +29,7 @@ jobs:
 
   deploy-docs:
     needs: [evaluate-label]
-    uses: qibogang/workflows/.github/workflows/deploy-ghpages-latest-stable.yml@tar
+    uses: qibogang/workflows/.github/workflows/deploy-ghpages-latest-stable.yml@tar #TODO: change the branch
     with:
       python-version: 3.9
       package-manager: 'pip'
