@@ -35,7 +35,7 @@ def main(n_layers, batch_size, nepochs, train_size, filename, lr_boundaries):
             q_compression (int): number of compressed qubits.
 
         Returns:
-            encoder (qibo.models.Circuit): variational quantum circuit.
+            encoder (:class:`qibo.models.circuit.Circuit`): variational quantum circuit.
         """
 
         index = 0
@@ -63,7 +63,7 @@ def main(n_layers, batch_size, nepochs, train_size, filename, lr_boundaries):
         """Evaluate loss function for one train sample.
 
         Args:
-            encoder (qibo.models.Circuit): variational quantum circuit.
+            encoder (:class:`qibo.models.circuit.Circuit`): variational quantum circuit.
             params (tf.Variable): parameters of the circuit.
             vector (tf.Tensor): train sample, in the form of 1d vector.
 
@@ -88,7 +88,7 @@ def main(n_layers, batch_size, nepochs, train_size, filename, lr_boundaries):
 
         Args:
             batch_size (int): number of samples in one training batch.
-            encoder (qibo.models.Circuit): variational quantum circuit.
+            encoder (:class:`qibo.models.circuit.Circuit`): variational quantum circuit.
             params (tf.Variable): parameters of the circuit.
             vector (tf.Tensor): train sample, in the form of 1d vector.
 
