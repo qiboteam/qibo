@@ -1,4 +1,32 @@
 from qibo import gates
+from qibo.config import raise_error
+
+
+class CustomError:
+    """Quantum error associated with the :class:`qibo.gates.Channel`
+
+    Args:
+        channel (:class:`qibo.gates.Channel`): any channel
+
+    Example:
+
+    .. testcode::
+
+        import numpy as np
+        from qibo.gates import KrausChannel
+        from qibo.noise import CustomError
+
+        # define |0><0|
+        a1 = np.array([[1, 0], [0, 0]])
+        # define |0><1|
+        a2 = np.array([[0, 1], [0, 0]])
+
+        # Create an Error associated with Kraus Channel rho -> |0><0| rho |0><0| + |0><1| rho |0><1|
+        error = CustomError(gates.KrausChannel([((0,), a1), ((0,), a2)]))
+    """
+
+    def __init__(self, channel):
+        self.channel = channel
 
 
 class PauliError:
@@ -47,6 +75,60 @@ class ResetError:
     def __init__(self, p0, p1):
         self.options = p0, p1
         self.channel = gates.ResetChannel
+
+
+class KrausError:
+    """Quantum error associated with the :class:`qibo.gates.KrausChannel`.
+
+    Args:
+        ops (list): List of Kraus operators as a ``np.ndarray`` or ``tf.Tensor``.
+        nqubits (int): Number of qubits each that Kraus operator acts on.
+    """
+
+    def __init__(self, ops):
+        self.options = ops
+
+        shape = ops[0].shape
+        if any(o.shape != shape for o in ops):
+            raise_error(
+                ValueError,
+                "Kraus operators of different shapes." "Use qibo.noise.Error instead.",
+            )
+
+        self.rank = shape[0]
+
+    def channel(self, qubits):
+        ops = [([*qubits], o) for o in self.options]
+        return gates.KrausChannel(ops)
+
+
+class UnitaryError:
+    """Quantum error associated with the :class:`qibo.gates.UnitaryChannel`.
+
+    Args:
+        probabilities (list): List of floats that correspond to the probability
+            that each unitary Uk is applied.
+        unitaries (list): List of unitary matrices as ``np.ndarray``/``tf.Tensor`` of the same shape.
+            Must have the same length as the given probabilities ``p``.
+    """
+
+    def __init__(self, probabilities, unitaries):
+        self.probabilities = probabilities
+        self.unitaries = unitaries
+
+        shape = unitaries[0].shape
+        if any(o.shape != shape for o in unitaries):
+            raise_error(
+                ValueError,
+                "Unitary matrices have different shapes."
+                "Use qibo.noise.Error instead.",
+            )
+
+        self.rank = shape[0]
+
+    def channel(self, qubits):
+        ops = [([*qubits], u) for u in self.unitaries]
+        return gates.UnitaryChannel(self.probabilities, ops)
 
 
 class NoiseModel:
@@ -116,8 +198,16 @@ class NoiseModel:
                     qubits = gate.qubits
                 else:
                     qubits = tuple(set(gate.qubits) & set(qubits))
-                if isinstance(error, DepolarizingError) and qubits:
+                if isinstance(error, CustomError) and qubits:
+                    noisy_circuit.add(error.channel)
+                elif isinstance(error, DepolarizingError) and qubits:
                     noisy_circuit.add(error.channel(qubits, *error.options))
+                elif isinstance(error, UnitaryError) or isinstance(error, KrausError):
+                    if error.rank == 2:
+                        for q in qubits:
+                            noisy_circuit.add(error.channel([q]))
+                    elif error.rank == 2 ** len(qubits):
+                        noisy_circuit.add(error.channel(qubits))
                 else:
                     for q in qubits:
                         noisy_circuit.add(error.channel(q, *error.options))
