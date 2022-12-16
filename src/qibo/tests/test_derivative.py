@@ -2,7 +2,6 @@
 import numpy as np
 import pytest
 
-import qibo
 from qibo import gates, hamiltonians
 from qibo.derivative import parameter_shift
 from qibo.models import Circuit
@@ -24,7 +23,7 @@ def circuit(nqubits=1):
     return c
 
 
-def test_parameter_index():
+def test_derivative():
 
     # initializing the circuit
     c = circuit(nqubits=1)
@@ -41,14 +40,12 @@ def test_parameter_index():
             circuit=c, hamiltonian=test_hamiltonian, parameter_index=3
         )
 
-
-def test_hamiltonian_type():
-
-    c = circuit(nqubits=1)
-
-    test_params = np.random.randn(2)
-    c.set_parameters(test_params)
-
     # testing hamiltonian type
     with pytest.raises(TypeError):
         grad_0 = parameter_shift(circuit=c, hamiltonian=c, parameter_shift=0)
+
+    test_parameters = np.zeros(2)
+
+    grad_0 = parameter_shift(circuit=c, hamiltonian=test_hamiltonian, parameter_index=0)
+
+    grad_1 = parameter_shift(circuit=c, hamiltonian=test_hamiltonian, parameter_index=1)
