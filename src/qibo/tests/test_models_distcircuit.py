@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test functions defined in `qibo/models/distcircuit.py`."""
 import numpy as np
 import pytest

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import numpy as np
 import pytest
 
@@ -171,7 +170,8 @@ def test_reset_error(backend, density_matrix):
 @pytest.mark.parametrize("density_matrix", [False, True])
 @pytest.mark.parametrize("nshots", [None, 10, 100])
 def test_noise_model(backend, density_matrix, nshots):
-
+    if not density_matrix:
+        pytest.skip("Thermal Relaxation Error is not implemented for state vectors.")
     circuit = Circuit(3, density_matrix=density_matrix)
     circuit.add(
         [
