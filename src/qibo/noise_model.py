@@ -1,7 +1,8 @@
-# -*- coding: utf-8 -*-
-from qibo.gates import ThermalRelaxationChannel,DepolarizingChannel
-from qibo import models,gates
 import numpy as np
+
+from qibo import gates, models
+from qibo.gates import DepolarizingChannel, ThermalRelaxationChannel
+
 
 def noise_model(circuit, params):
     """Creates a noisy sample from the circuit given as argument.
@@ -46,12 +47,12 @@ def noise_model(circuit, params):
     nshots = params["nshots"]
     bitflips_01 = params["bitflips error"][0]
     bitflips_10 = params["bitflips error"][1]
-    
+
     noisy_circuit = models.Circuit(circuit.nqubits, density_matrix=True)
 
     time_steps = max(circuit.queue.moment_index)
     current_time = np.zeros(circuit.nqubits)
-    
+
     for t in range(time_steps):
         for qubit in range(circuit.nqubits):
             if circuit.queue.moments[t][qubit] == None:
@@ -61,7 +62,7 @@ def noise_model(circuit, params):
                 noisy_circuit.add(circuit.queue.moments[t][qubit])
                 noisy_circuit.add(
                     gates.DepolarizingChannel(
-                            circuit.queue.moments[t][qubit].qubits, depolarizing_error_1
+                        circuit.queue.moments[t][qubit].qubits, depolarizing_error_1
                     )
                 )
                 noisy_circuit.add(
@@ -99,7 +100,8 @@ def noise_model(circuit, params):
                 noisy_circuit.add(circuit.queue.moments[t][qubit])
                 noisy_circuit.add(
                     gates.DepolarizingChannel(
-                        tuple(set(circuit.queue.moments[t][qubit].qubits)), depolarizing_error_2
+                        tuple(set(circuit.queue.moments[t][qubit].qubits)),
+                        depolarizing_error_2,
                     )
                 )
                 noisy_circuit.add(
@@ -142,9 +144,7 @@ def noise_model(circuit, params):
 
     noisy_circuit.measurement_tuples = dict(circuit.measurement_tuples)
     noisy_circuit.measurement_gate = circuit.measurement_gate
-    
-    result=noisy_circuit(nshots=nshots)
 
-    return result.apply_bitflips(p0 = bitflips_01, p1 = bitflips_10)
+    result = noisy_circuit(nshots=nshots)
 
-    
+    return result.apply_bitflips(p0=bitflips_01, p1=bitflips_10)
