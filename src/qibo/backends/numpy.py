@@ -412,13 +412,13 @@ class NumpyBackend(Backend):
                             gate.substitute_symbols()
                         state = gate.apply(self, state, nqubits)
 
-            if circuit.measurement_gate:
+            if circuit.measurements:
                 result = CircuitResult(self, circuit, state, 1)
-                results.append(result.samples(binary=False)[0])
+                results.append(result.samples()[0])
             else:
                 results.append(state)
 
-        if circuit.measurement_gate:
+        if circuit.measurements:
             final_result = CircuitResult(self, circuit, state, nshots)
             final_result._samples = self.aggregate_shots(results)
             circuit._final_state = final_result
@@ -441,8 +441,8 @@ class NumpyBackend(Backend):
         return result.execution_result
 
     def circuit_result_probabilities(self, result, qubits=None):
-        if qubits is None:  # pragma: no cover
-            qubits = result.circuit.measurement_gate.qubits
+        if qubits is None:
+            qubits = result.measurement_gate.qubits
 
         state = self.circuit_result_tensor(result)
         if result.density_matrix:
@@ -502,14 +502,13 @@ class NumpyBackend(Backend):
         return self._order_probabilities(probs, qubits, nqubits).ravel()
 
     def calculate_probabilities_density_matrix(self, state, qubits, nqubits):
-        rtype = self.np.real(state).dtype
         order = tuple(sorted(qubits))
         order += tuple(i for i in range(nqubits) if i not in qubits)
         order = order + tuple(i + nqubits for i in order)
         shape = 2 * (2 ** len(qubits), 2 ** (nqubits - len(qubits)))
         state = self.np.reshape(state, 2 * nqubits * (2,))
         state = self.np.reshape(self.np.transpose(state, order), shape)
-        probs = self.np.einsum("abab->a", state).astype(rtype)
+        probs = self.np.abs(self.np.einsum("abab->a", state))
         probs = self.np.reshape(probs, len(qubits) * (2,))
         return self._order_probabilities(probs, qubits, nqubits).ravel()
 

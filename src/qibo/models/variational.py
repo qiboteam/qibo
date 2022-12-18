@@ -1,5 +1,4 @@
 from qibo.config import raise_error
-from qibo.models.circuit import Circuit
 from qibo.models.evolution import StateEvolution
 
 
@@ -453,6 +452,7 @@ class QAOA:
         initial_p,
         initial_state=None,
         method="Powell",
+        mode=None,
         jac=None,
         hess=None,
         hessp=None,
@@ -472,6 +472,8 @@ class QAOA:
             method (str): the desired minimization method.
                 See :meth:`qibo.optimizers.optimize` for available optimization
                 methods.
+            mode (str): the desired loss function. The default is None. Alternatives are
+             "cvar", and "gibbs".
             jac (dict): Method for computing the gradient vector for scipy optimizers.
             hess (dict): Method for computing the hessian matrix for scipy optimizers.
             hessp (callable): Hessian of objective function times an arbitrary
@@ -505,7 +507,16 @@ class QAOA:
                 state = hamiltonian.backend.cast(state, copy=True)
             qaoa.set_parameters(params)
             state = qaoa(state)
-            return hamiltonian.expectation(state)
+            if mode is None:
+                return hamiltonian.expectation(state)
+            elif mode == "cvar":
+                from qibo.models.utils import cvar
+
+                return cvar(hamiltonian, state)
+            elif mode == "gibbs":
+                from qibo.models.utils import gibbs
+
+                return gibbs(hamiltonian, state)
 
         if method == "sgd":
             loss = lambda p, c, h, s: _loss(self.hamiltonian.backend.cast(p), c, h, s)

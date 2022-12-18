@@ -55,6 +55,7 @@ High-Energy Physics
     :maxdepth: 1
 
     tutorials/qPDF/qPDF.ipynb
+    tutorials/anomaly_detection/README.md
 
 
 Quantum Physics
@@ -105,6 +106,7 @@ Variational Quantum Circuits
     tutorials/unary/README.md
     tutorials/bell-variational/README.md
     tutorials/qPDF/qPDF.ipynb
+    tutorials/anomaly_detection/README.md
 
 
 Grover's Algorithm

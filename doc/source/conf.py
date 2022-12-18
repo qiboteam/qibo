@@ -20,12 +20,12 @@ import qibo
 
 # -- Project information -----------------------------------------------------
 
-project = "Qibo"
+project = "qibo"
 copyright = "2020-2022 by the Qibo team"
 author = "The Qibo team"
 
 # The full version, including alpha/beta/rc tags
-release = qibo.__version__
+# release = qibo.__version__
 
 
 # -- General configuration ---------------------------------------------------
@@ -71,7 +71,15 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "sphinx_rtd_theme"
+html_theme = "furo"
+
+html_theme_options = {
+    "light_css_variables": {
+        "color-brand-primary": "#6400FF",
+        "color-brand-secondary": "#6400FF",
+        "color-brand-content": "#6400FF",
+    }
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -101,7 +109,5 @@ def setup(app):
     app.add_transform(AutoStructify)
     app.add_css_file("css/style.css")
 
-
-html_logo = "logo.png"
 
 html_show_sourcelink = False

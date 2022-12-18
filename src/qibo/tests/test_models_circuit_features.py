@@ -2,13 +2,11 @@
 import numpy as np
 import pytest
 
-from qibo import gates
+from qibo import gates, matrices
 from qibo.models import Circuit
 
 
 def test_circuit_unitary(backend):
-    from qibo import matrices
-
     c = Circuit(2)
     c.add(gates.H(0))
     c.add(gates.H(1))
@@ -22,14 +20,15 @@ def test_circuit_unitary(backend):
     backend.assert_allclose(final_matrix, target_matrix)
 
 
-def test_circuit_unitary_bigger(backend):
-    from qibo import matrices
-
+@pytest.mark.parametrize("with_measurement", [False, True])
+def test_circuit_unitary_bigger(backend, with_measurement):
     c = Circuit(4)
     c.add(gates.H(i) for i in range(4))
     c.add(gates.CNOT(0, 1))
     c.add(gates.CZ(1, 2))
     c.add(gates.CNOT(0, 3))
+    if with_measurement:
+        c.add(gates.M(*range(4)))
     final_matrix = c.unitary(backend)
     h = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
     h = np.kron(np.kron(h, h), np.kron(h, h))

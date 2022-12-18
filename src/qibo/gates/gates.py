@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, Tuple
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate, ParametrizedGate
 
+# TODO: Make these dictionaries gate properties
 QASM_GATES = {
     "h": "H",
     "x": "X",
@@ -17,6 +18,7 @@ QASM_GATES = {
     "u3": "U3",
     "cx": "CNOT",
     "swap": "SWAP",
+    "iswap": "iSWAP",
     "fswap": "FSWAP",
     "rxx": "RXX",
     "ryy": "RYY",
@@ -49,6 +51,53 @@ PARAMETRIZED_GATES = {
     "crz",
     "cu1",
     "cu3",
+}
+DRAW_LABELS = {
+    "h": "H",
+    "x": "X",
+    "y": "Y",
+    "z": "Z",
+    "s": "S",
+    "sdg": "SDG",
+    "t": "T",
+    "tdg": "TDG",
+    "rx": "RX",
+    "ry": "RY",
+    "rz": "RZ",
+    "u1": "U1",
+    "u2": "U2",
+    "u3": "U3",
+    "cx": "X",
+    "swap": "x",
+    "iswap": "i",
+    "cz": "Z",
+    "crx": "RX",
+    "cry": "RY",
+    "crz": "RZ",
+    "cu1": "U1",
+    "cu3": "U3",
+    "ccx": "X",
+    "id": "I",
+    "measure": "M",
+    "fsim": "f",
+    "generalizedfsim": "gf",
+    "rxx": "RXX",
+    "ryy": "RYY",
+    "rzz": "RZZ",
+    "Unitary": "U",
+    "fswap": "fx",
+    "PauliNoiseChannel": "PN",
+    "KrausChannel": "K",
+    "UnitaryChannel": "U",
+    "ThermalRelaxationChannel": "TR",
+    "DepolarizingChannel": "D",
+    "ResetChannel": "R",
+    "PartialTrace": "PT",
+    "EntanglementEntropy": "EE",
+    "Norm": "N",
+    "Overlap": "O",
+    "Energy": "E",
+    "Fused Gate": "[]",
 }
 
 
@@ -929,6 +978,31 @@ class SWAP(Gate):
         self.init_args = [q0, q1]
 
 
+class iSWAP(Gate):
+    """The iswap gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 & 0 & 0 \\\\
+        0 & 0 & i & 0 \\\\
+        0 & i & 0 & 0 \\\\
+        0 & 0 & 0 & 1 \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the first qubit to be swapped id number.
+        q1 (int): the second qubit to be swapped id number.
+    """
+
+    def __init__(self, q0, q1):
+        super().__init__()
+        self.name = "iswap"
+        self.target_qubits = (q0, q1)
+        self.init_args = [q0, q1]
+
+
 class FSWAP(Gate):
     """The fermionic swap gate.
 
@@ -1083,9 +1157,7 @@ class _Rnn_(ParametrizedGate):
 
 
 class RXX(_Rnn_):
-    """Parametric 2-qubit X \\otimes X interaction, or rotation about XX.
-
-    This is a symmetric gate.
+    """Parametric 2-qubit XX interaction, or rotation about XX-axis.
 
     Corresponds to the following unitary matrix
 
@@ -1112,7 +1184,7 @@ class RXX(_Rnn_):
 
 
 class RYY(_Rnn_):
-    """Parametric 2-qubit Y \\otimes Y interaction, or rotation about YY.
+    """Parametric 2-qubit YY interaction, or rotation about YY-axis.
 
     Corresponds to the following unitary matrix
 
@@ -1138,7 +1210,7 @@ class RYY(_Rnn_):
 
 
 class RZZ(_Rnn_):
-    """Parametric 2-qubit Z \\otimes Z interaction, or rotation about ZZ.
+    """Parametric 2-qubit ZZ interaction, or rotation about ZZ-axis.
 
     Corresponds to the following unitary matrix
 

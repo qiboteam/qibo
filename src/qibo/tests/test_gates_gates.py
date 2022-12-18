@@ -237,6 +237,13 @@ def test_swap(backend):
     backend.assert_allclose(final_state, target_state)
 
 
+def test_iswap(backend):
+    final_state = apply_gates(backend, [gates.X(1), gates.iSWAP(0, 1)], nqubits=2)
+    target_state = np.zeros_like(final_state)
+    target_state[2] = 1.0j
+    backend.assert_allclose(final_state, target_state)
+
+
 def test_fswap(backend):
     final_state = apply_gates(
         backend, [gates.H(0), gates.X(1), gates.FSWAP(0, 1)], nqubits=2

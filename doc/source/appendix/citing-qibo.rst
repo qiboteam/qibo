@@ -41,7 +41,7 @@ Peer-Reviewed Articles
 .. _`doi:10.1088/2058-9565/ac39f5`: https://doi.org/10.1088/2058-9565/ac39f5
 .. _`arXiv:2009.01845`: https://arxiv.org/abs/2009.01845
 
-* S. Efthymiou, M. Lazzarin, A. Pasquale, S. Carrazza, *Quantum simulatin with
+* S. Efthymiou, M. Lazzarin, A. Pasquale, S. Carrazza, *Quantum simulation with
      just-in-time compilation*, Quantum (6) (2022).
      `doi:10.22331/q-2022-09-22-814`_, (`arXiv:2203.08826`_).
 

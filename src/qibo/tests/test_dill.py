@@ -67,8 +67,9 @@ def test_dill_measurement_symbol(backend):
 
     circuit = Circuit(1)
     circuit.add(gates.H(0))
-    symbol = circuit.add(gates.M(0, collapse=True))
+    cresult = circuit.add(gates.M(0, collapse=True))
     result = backend.execute_circuit(circuit, nshots=1)
+    symbol = cresult.symbols[0]
     nsymbol = dill.loads(dill.dumps(symbol))
     assert type(nsymbol) == type(symbol)
     backend.assert_allclose(nsymbol.outcome(), symbol.outcome())
