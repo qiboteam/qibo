@@ -356,7 +356,7 @@ def test_noise_model(backend, nshots):
     }
 
     backend.set_seed(123)
-    final_samples = noise_model.noise_model(circuit, params)(nshots=nshots).samples()
+    final_samples = backend.execute_circuit(noise_model.noise_model(circuit, params), nshots=nshots).samples()
 
     target_circuit = Circuit(3, density_matrix=True)
     target_circuit.add(gates.H(0))
@@ -397,8 +397,8 @@ def test_noise_model(backend, nshots):
     target_circuit.add(gates.M(2))
 
     backend.set_seed(123)
-    target_result = target_circuit(nshots=nshots)
-    target_samples = target_result.apply_bitflips(
+    target_state = backend.execute_circuit(target_circuit,nshots=nshots)
+    target_samples = target_state.apply_bitflips(
         p0=[0.01, 0.02, 0.03], p1=[0.02, 0.03, 0.04]
     )
 
