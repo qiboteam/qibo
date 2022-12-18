@@ -328,27 +328,42 @@ def test_kraus_error(backend, density_matrix, nshots):
 @pytest.mark.parametrize("nshots", [10, 100, 1000])
 def test_noise_model(backend, nshots):
 
-    circuit = Circuit(3,density_matrix=True)
-    circuit.add([gates.H(0), gates.X(0), gates.CNOT(2,1), gates.Z(2), gates.Z(0),
-           gates.H(1),gates.H(2),gates.CNOT(2,1), gates.H(0), gates.X(0), gates.M(0, 1),gates.M(2)])
-    
-    params = {"t1" : (1.0, 1.1, 1.2),
-          "t2" : (0.7, 0.8, 0.9),
-          "gate time" : (1.5, 1.6),
-          "excited population": 0,
-          "depolarizing error" : (0.5, 0.6),
-          "bitflips error" : ([0.01, 0.02, 0.03], [0.02, 0.03, 0.04])
-         }
-         
+    circuit = Circuit(3, density_matrix=True)
+    circuit.add(
+        [
+            gates.H(0),
+            gates.X(0),
+            gates.CNOT(2, 1),
+            gates.Z(2),
+            gates.Z(0),
+            gates.H(1),
+            gates.H(2),
+            gates.CNOT(2, 1),
+            gates.H(0),
+            gates.X(0),
+            gates.M(0, 1),
+            gates.M(2),
+        ]
+    )
+
+    params = {
+        "t1": (1.0, 1.1, 1.2),
+        "t2": (0.7, 0.8, 0.9),
+        "gate time": (1.5, 1.6),
+        "excited population": 0,
+        "depolarizing error": (0.5, 0.6),
+        "bitflips error": ([0.01, 0.02, 0.03], [0.02, 0.03, 0.04]),
+    }
+
     backend.set_seed(123)
-    final_samples = noise_model.noise_model(circuit,params)(nshots=nshots).samples()
-    
+    final_samples = noise_model.noise_model(circuit, params)(nshots=nshots).samples()
+
     target_circuit = Circuit(3, density_matrix=True)
     target_circuit.add(gates.H(0))
     target_circuit.add(gates.DepolarizingChannel((0,), 0.5))
     target_circuit.add(gates.ThermalRelaxationChannel(0, 1.0, 0.7, 1.5, 0))
-    target_circuit.add(gates.CNOT(2,1))
-    target_circuit.add(gates.DepolarizingChannel((1,2),0.6))
+    target_circuit.add(gates.CNOT(2, 1))
+    target_circuit.add(gates.DepolarizingChannel((1, 2), 0.6))
     target_circuit.add(gates.ThermalRelaxationChannel(1, 1.1, 0.8, 1.6, 0))
     target_circuit.add(gates.ThermalRelaxationChannel(2, 1.2, 0.9, 1.6, 0))
     target_circuit.add(gates.X(0))
@@ -369,20 +384,22 @@ def test_noise_model(backend, nshots):
     target_circuit.add(gates.H(0))
     target_circuit.add(gates.DepolarizingChannel((0,), 0.5))
     target_circuit.add(gates.ThermalRelaxationChannel(0, 1.0, 0.7, 1.5, 0))
-    target_circuit.add(gates.ThermalRelaxationChannel(1, 1.1, 0.8, 1.5, 0))#dt
-    target_circuit.add(gates.CNOT(2,1))
-    target_circuit.add(gates.DepolarizingChannel((1,2), 0.6))
+    target_circuit.add(gates.ThermalRelaxationChannel(1, 1.1, 0.8, 1.5, 0))  # dt
+    target_circuit.add(gates.CNOT(2, 1))
+    target_circuit.add(gates.DepolarizingChannel((1, 2), 0.6))
     target_circuit.add(gates.ThermalRelaxationChannel(1, 1.1, 0.8, 1.6, 0))
     target_circuit.add(gates.ThermalRelaxationChannel(2, 1.2, 0.9, 1.6, 0))
     target_circuit.add(gates.X(0))
     target_circuit.add(gates.DepolarizingChannel((0,), 0.5))
     target_circuit.add(gates.ThermalRelaxationChannel(0, 1.0, 0.7, 1.5, 0))
-    target_circuit.add(gates.ThermalRelaxationChannel(1, 1.1, 0.8, 1.3, 0))#dt
+    target_circuit.add(gates.ThermalRelaxationChannel(1, 1.1, 0.8, 1.3, 0))  # dt
     target_circuit.add(gates.M(0, 1))
     target_circuit.add(gates.M(2))
 
     backend.set_seed(123)
     target_result = target_circuit(nshots=nshots)
-    target_samples = target_result.apply_bitflips(p0 = [0.01, 0.02, 0.03], p1 = [0.02, 0.03, 0.04])
+    target_samples = target_result.apply_bitflips(
+        p0=[0.01, 0.02, 0.03], p1=[0.02, 0.03, 0.04]
+    )
 
     backend.assert_allclose(final_samples, target_samples)
