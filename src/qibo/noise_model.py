@@ -1,8 +1,7 @@
+# -*- coding: utf-8 -*-
+from qibo.gates import ThermalRelaxationChannel,DepolarizingChannel
+from qibo import models,gates
 import numpy as np
-
-from qibo import gates, models
-from qibo.gates import DepolarizingChannel, ThermalRelaxationChannel
-
 
 def noise_model(circuit, params):
     """Creates a noisy sample from the circuit given as argument.
@@ -22,7 +21,6 @@ def noise_model(circuit, params):
           "gate time" : (time1, time2),
           "excited population": 0,
           "depolarizing error" : (lambda1, lambda2),
-          "nshots" : int,
           "bitflips error" : ([p1, p2,..., pm], [p1, p2,..., pm])
          }
         Where n is the number of qubits, and m the number of measurement gates.
@@ -33,7 +31,7 @@ def noise_model(circuit, params):
         The last parameter is a tuple containg the two arrays for bitflips probability errors: the first one implements 0->1 errors, the other one 1->0.
 
     Returns:
-        class 'numpy.ndarray' (nshots, nqubits).
+        circuit (qibo.models.Circuit)
 
 
     """
@@ -44,25 +42,58 @@ def noise_model(circuit, params):
     excited_population = params["excited population"]
     depolarizing_error_1 = params["depolarizing error"][0]
     depolarizing_error_2 = params["depolarizing error"][1]
-    nshots = params["nshots"]
     bitflips_01 = params["bitflips error"][0]
     bitflips_10 = params["bitflips error"][1]
-
+    
     noisy_circuit = models.Circuit(circuit.nqubits, density_matrix=True)
 
     time_steps = max(circuit.queue.moment_index)
     current_time = np.zeros(circuit.nqubits)
-
     for t in range(time_steps):
         for qubit in range(circuit.nqubits):
             if circuit.queue.moments[t][qubit] == None:
                 pass
-
+            elif isinstance(circuit.queue.moments[t][qubit],gates.measurements.M):
+                for key in list(circuit.measurement_tuples):
+                    if len(circuit.measurement_tuples[key]) > 1:
+                        q1 = circuit.measurement_tuples[key][0]
+                        q2 = circuit.measurement_tuples[key][1]
+                        if current_time[q1] != current_time[q2]:
+                            q_min = q1
+                            q_max = q2
+                            if current_time[q1] > current_time[q2]:
+                                q_min = q2
+                                q_max = q1
+                            time_difference = current_time[q_max] - current_time[q_min]
+                            noisy_circuit.add(
+                                gates.ThermalRelaxationChannel(
+                                    q_min,
+                                    t1[q_min],
+                                    t2[q_min],
+                                    time_difference,
+                                    excited_population,
+                                )
+                            )
+                            current_time[q_min] += time_difference
+                q = circuit.queue.moments[t][qubit].qubits
+                if len(circuit.queue.moments[t][qubit].qubits) == 1:
+                    q = q[0]
+                    noisy_circuit.add(gates.M(q, p0=bitflips_01[q], p1=bitflips_10[q]))
+                else:
+                    p0q = []
+                    p1q = []
+                    for j in q:
+                        p0q.append(bitflips_01[j])
+                        p1q.append(bitflips_10[j])
+                    noisy_circuit.add(gates.M(*q, p0=p0q, p1=p1q))
+                    circuit.queue.moments[t][
+                    max(circuit.queue.moments[t][qubit].qubits)
+                    ] = None
             elif len(circuit.queue.moments[t][qubit].qubits) == 1:
                 noisy_circuit.add(circuit.queue.moments[t][qubit])
                 noisy_circuit.add(
                     gates.DepolarizingChannel(
-                        circuit.queue.moments[t][qubit].qubits, depolarizing_error_1
+                            circuit.queue.moments[t][qubit].qubits, depolarizing_error_1
                     )
                 )
                 noisy_circuit.add(
@@ -100,8 +131,7 @@ def noise_model(circuit, params):
                 noisy_circuit.add(circuit.queue.moments[t][qubit])
                 noisy_circuit.add(
                     gates.DepolarizingChannel(
-                        tuple(set(circuit.queue.moments[t][qubit].qubits)),
-                        depolarizing_error_2,
+                        tuple(set(circuit.queue.moments[t][qubit].qubits)), depolarizing_error_2
                     )
                 )
                 noisy_circuit.add(
@@ -120,31 +150,19 @@ def noise_model(circuit, params):
                     max(circuit.queue.moments[t][qubit].qubits)
                 ] = None
 
-    for key in list(circuit.measurement_tuples):
-        if len(circuit.measurement_tuples[key]) > 1:
-            q1 = circuit.measurement_tuples[key][0]
-            q2 = circuit.measurement_tuples[key][1]
-            if current_time[q1] != current_time[q2]:
-                q_min = q1
-                q_max = q2
-                if current_time[q1] > current_time[q2]:
-                    q_min = q2
-                    q_max = q1
-                time_difference = current_time[q_max] - current_time[q_min]
-                noisy_circuit.add(
-                    gates.ThermalRelaxationChannel(
-                        q_min,
-                        t1[q_min],
-                        t2[q_min],
-                        time_difference,
-                        excited_population,
-                    )
-                )
-                current_time[q_min] += time_difference
+    measurements = []
+    for m in circuit.measurements:
+        q = m.qubits
+        if len(q) == 1:
+            q = q[0]
+            measurements.append(gates.M(q, p0=bitflips_01[q], p1=bitflips_10[q]))
+        else:
+            p0q = []
+            p1q = []
+            for j in q:
+                p0q.append(bitflips_01[j])
+                p1q.append(bitflips_10[j])
+            measurements.append(gates.M(*q, p0=p0q, p1=p1q))
+    noisy_circuit.measurements = measurements
 
-    noisy_circuit.measurement_tuples = dict(circuit.measurement_tuples)
-    noisy_circuit.measurement_gate = circuit.measurement_gate
-
-    result = noisy_circuit(nshots=nshots)
-
-    return result.apply_bitflips(p0=bitflips_01, p1=bitflips_10)
+    return noisy_circuit
