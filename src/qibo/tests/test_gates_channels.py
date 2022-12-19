@@ -128,6 +128,25 @@ def test_pauli_noise_channel(backend):
     target_rho += 0.7 * initial_rho
     backend.assert_allclose(final_rho, target_rho)
 
+    pnp = np.array([0.1, 0.02, 0.05])
+    a0 = 1
+    a1 = 1 - 2 * pnp[1] - 2 * pnp[2]
+    a2 = 1 - 2 * pnp[0] - 2 * pnp[2]
+    a3 = 1 - 2 * pnp[0] - 2 * pnp[1]
+    test_representation = np.diag([a0, a1, a2, a3])
+    test_representation = backend.cast(
+        test_representation, dtype=test_representation.dtype
+    )
+
+    backend.assert_allclose(
+        np.linalg.norm(
+            gates.PauliNoiseChannel(0, *pnp).to_pauli_liouville(True)
+            - test_representation
+        )
+        < PRECISION_TOL,
+        True,
+    )
+
 
 def test_depolarizing_channel(backend):
     initial_rho = random_density_matrix(3)
