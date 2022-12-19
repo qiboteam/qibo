@@ -121,13 +121,20 @@ class KrausChannel(Channel):
 
         self.nqubits = 1 + max(self.target_qubits)
 
+        if self.name == "PauliNoiseChannel":
+            p0 = 1.0
+            for coeff in self.coefficients:
+                p0 = p0 - coeff
+            self.coefficients += (p0,)
+            self.gates += (I(self.target_qubits[0]),)
+
         super_op = np.zeros((4**self.nqubits, 4**self.nqubits), dtype="complex")
         super_op = backend.cast(super_op, dtype=super_op.dtype)
-        for gate in self.gates:
+        for coeff, gate in zip(self.coefficients, self.gates):
             kraus_op = FusedGate(*range(self.nqubits))
             kraus_op.append(gate)
             kraus_op = kraus_op.asmatrix(backend)
-            kraus_op = np.kron(np.conj(kraus_op), kraus_op)
+            kraus_op = coeff * np.kron(np.conj(kraus_op), kraus_op)
             super_op += backend.cast(kraus_op, dtype=kraus_op.dtype)
 
         return super_op
