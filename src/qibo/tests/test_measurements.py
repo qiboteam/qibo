@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test circuit result measurements and measurement gate and as part of circuit."""
 import numpy as np
 import pytest
@@ -110,16 +109,6 @@ def test_measurement_circuit(backend, accelerators):
     )
 
 
-def test_gate_after_measurement_error(backend, accelerators):
-    c = models.Circuit(4, accelerators)
-    c.add(gates.X(0))
-    c.add(gates.M(0))
-    c.add(gates.X(1))
-    # TODO: Change this to NotImplementedError
-    with pytest.raises(ValueError):
-        c.add(gates.H(0))
-
-
 @pytest.mark.parametrize("registers", [False, True])
 def test_measurement_qubit_order_simple(backend, registers):
     c = models.Circuit(2)
@@ -199,21 +188,29 @@ def test_circuit_with_unmeasured_qubits(backend, accelerators):
 
 def test_circuit_addition_with_measurements(backend):
     c = models.Circuit(2)
-    c.add(gates.H(0))
-    c.add(gates.H(1))
+    c.add(gates.X(0))
+    c.add(gates.X(1))
 
     meas_c = models.Circuit(2)
     c.add(gates.M(0, 1))
 
     c += meas_c
-    assert len(c.measurement_gate.target_qubits) == 2
-    assert c.measurement_tuples == {"register0": (0, 1)}
+    result = backend.execute_circuit(c, nshots=100)
+
+    assert_result(
+        backend,
+        result,
+        3 * np.ones(100),
+        np.ones((100, 2)),
+        {3: 100},
+        {"11": 100},
+    )
 
 
 def test_circuit_addition_with_measurements_in_both_circuits(backend, accelerators):
     c1 = models.Circuit(4, accelerators)
-    c1.add(gates.H(0))
-    c1.add(gates.H(1))
+    c1.add(gates.X(0))
+    c1.add(gates.X(1))
     c1.add(gates.M(1, register_name="a"))
 
     c2 = models.Circuit(4, accelerators)
@@ -221,25 +218,12 @@ def test_circuit_addition_with_measurements_in_both_circuits(backend, accelerato
     c2.add(gates.M(0, register_name="b"))
 
     c = c1 + c2
-    assert len(c.measurement_gate.target_qubits) == 2
-    assert c.measurement_tuples == {"a": (1,), "b": (0,)}
-
-
-def test_gate_after_measurement_with_addition_error(backend, accelerators):
-    c = models.Circuit(4, accelerators)
-    c.add(gates.H(0))
-    c.add(gates.M(1))
-
-    # Try to add gate to qubit that is already measured
-    c2 = models.Circuit(4, accelerators)
-    c2.add(gates.H(1))
-    with pytest.raises(ValueError):
-        c += c2
-    # Try to add measurement to qubit that is already measured
-    c2 = models.Circuit(4, accelerators)
-    c2.add(gates.M(1, register_name="a"))
-    with pytest.raises(ValueError):
-        c += c2
+    result = backend.execute_circuit(c, nshots=100)
+    assert_result(
+        backend,
+        result,
+        binary_frequencies={"10": 100},
+    )
 
 
 def test_circuit_copy_with_measurements(backend, accelerators):
@@ -345,11 +329,11 @@ def test_registers_with_same_name_error(backend):
     """Check that circuits that contain registers with the same name cannot be added."""
     c1 = models.Circuit(2)
     c1.add(gates.H(0))
-    c1.add(gates.M(0))
+    c1.add(gates.M(0, register_name="a"))
 
     c2 = models.Circuit(2)
     c2.add(gates.H(1))
-    c2.add(gates.M(1))
+    c2.add(gates.M(1, register_name="a"))
 
     with pytest.raises(KeyError):
         c = c1 + c2
@@ -437,3 +421,17 @@ def test_measurement_density_matrix(backend):
         decimal_frequencies={2: 100},
         binary_frequencies={"10": 100},
     )
+
+
+def test_measurement_result_vs_circuit_result(backend, accelerators):
+    c = models.Circuit(6, accelerators)
+    c.add([gates.X(0), gates.X(1), gates.X(3)])
+    ma = c.add(gates.M(5, 1, 3, register_name="a"))
+    mb = c.add(gates.M(2, 0, register_name="b"))
+    result = backend.execute_circuit(c, nshots=100)
+
+    ma_freq = ma.frequencies()
+    mb_freq = mb.frequencies()
+    frequencies = result.frequencies(registers=True)
+    assert ma_freq == frequencies.get("a")
+    assert mb_freq == frequencies.get("b")

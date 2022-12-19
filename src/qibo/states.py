@@ -1,22 +1,238 @@
-# -*- coding: utf-8 -*-
 import collections
+
+import numpy as np
+import sympy
 
 from qibo.config import raise_error
 
 
-class CircuitResult:
-    def __init__(self, backend, circuit, execution_result, nshots=None):
+def frequencies_to_binary(frequencies, nqubits):
+    return collections.Counter(
+        {"{:b}".format(k).zfill(nqubits): v for k, v in frequencies.items()}
+    )
+
+
+def apply_bitflips(result, p0, p1=None):
+    gate = result.measurement_gate
+    if p1 is None:
+        probs = 2 * (gate._get_bitflip_tuple(gate.qubits, p0),)
+    else:
+        probs = (
+            gate._get_bitflip_tuple(gate.qubits, p0),
+            gate._get_bitflip_tuple(gate.qubits, p1),
+        )
+    noiseless_samples = result.samples()
+    return result.backend.apply_bitflips(noiseless_samples, probs)
+
+
+class MeasurementSymbol(sympy.Symbol):
+    """``sympy.Symbol`` connected to measurement results.
+
+    Used by :class:`qibo.gates.measurements.M` with ``collapse=True`` to allow
+    controlling subsequent gates from the measurement results.
+    """
+
+    _counter = 0
+
+    def __new__(cls, *args, **kwargs):
+        name = "m{}".format(cls._counter)
+        cls._counter += 1
+        return super().__new__(cls=cls, name=name)
+
+    def __init__(self, index, result):
+        self.index = index
+        self.result = result
+
+    def __getstate__(self):
+        return {"index": self.index, "result": self.result, "name": self.name}
+
+    def __setstate__(self, data):
+        self.index = data.get("index")
+        self.result = data.get("result")
+        self.name = data.get("name")
+
+    def outcome(self):
+        return self.result.samples(binary=True)[-1][self.index]
+
+    def evaluate(self, expr):
+        """Substitutes the symbol's value in the given expression.
+
+        Args:
+            expr (sympy.Expr): Sympy expression that involves the current
+                measurement symbol.
+        """
+        return expr.subs(self, self.outcome())
+
+
+class MeasurementResult:
+    """Data structure for holding measurement outcomes.
+
+    :class:`qibo.states.MeasurementResult` objects can be obtained
+    when adding measurement gates to a circuit.
+
+    Args:
+        gate (:class:`qibo.gates.M`): Measurement gate associated with
+            this result object.
+        nshots (int): Number of measurement shots.
+        backend (:class:`qibo.backends.abstract.AbstractBackend`): Backend
+            to use for calculations.
+    """
+
+    def __init__(self, gate, nshots=0, backend=None):
+        self.measurement_gate = gate
         self.backend = backend
-        self.circuit = circuit
-        self.nqubits = circuit.nqubits
-        self.density_matrix = circuit.density_matrix
-        self.execution_result = execution_result
         self.nshots = nshots
+        self.circuit = None
 
         self._samples = None
         self._frequencies = None
         self._bitflip_p0 = None
         self._bitflip_p1 = None
+        self._symbols = None
+
+    def __repr__(self):
+        qubits = self.measurement_gate.qubits
+        nshots = self.nshots
+        return f"MeasurementResult(qubits={qubits}, nshots={nshots})"
+
+    def add_shot(self, probs):
+        qubits = sorted(self.measurement_gate.target_qubits)
+        shot = self.backend.sample_shots(probs, 1)
+        bshot = self.backend.samples_to_binary(shot, len(qubits))
+        if self._samples:
+            self._samples.append(bshot[0])
+        else:
+            self._samples = [bshot[0]]
+        self.nshots += 1
+        return shot
+
+    def has_samples(self):
+        return self._samples is not None
+
+    def register_samples(self, samples, backend=None):
+        """Register samples array to the ``MeasurementResult`` object."""
+        self._samples = samples
+        self.nshots = len(samples)
+
+    def register_frequencies(self, frequencies, backend=None):
+        """Register frequencies to the ``MeasurementResult`` object."""
+        self._frequencies = frequencies
+        self.nshots = sum(frequencies.values())
+
+    def reset(self):
+        """Remove all registered samples and frequencies."""
+        self._samples = None
+        self._frequencies = None
+
+    @property
+    def symbols(self):
+        """List of ``sympy.Symbols`` associated with the results of the measurement.
+
+        These symbols are useful for conditioning parametrized gates on measurement outcomes.
+        """
+        if self._symbols is None:
+            qubits = self.measurement_gate.target_qubits
+            self._symbols = [MeasurementSymbol(i, self) for i in range(len(qubits))]
+
+        return self._symbols
+
+    def samples(self, binary=True, registers=False):
+        """Returns raw measurement samples.
+
+        Args:
+            binary (bool): Return samples in binary or decimal form.
+            registers (bool): Group samples according to registers.
+
+        Returns:
+            If `binary` is `True`
+                samples are returned in binary form as a tensor
+                of shape `(nshots, n_measured_qubits)`.
+            If `binary` is `False`
+                samples are returned in decimal form as a tensor
+                of shape `(nshots,)`.
+        """
+        if self._samples is None:
+            if self.circuit is None:
+                raise_error(
+                    RuntimeError, "Cannot calculate samples if circuit is not provided."
+                )
+            # calculate samples for the whole circuit so that
+            # individual register samples are registered here
+            self.circuit.final_state.samples()
+        if binary:
+            return np.array(self._samples, dtype="int32")
+        else:
+            qubits = self.measurement_gate.target_qubits
+            return self.backend.samples_to_decimal(self._samples, len(qubits))
+
+    def frequencies(self, binary=True, registers=False):
+        """Returns the frequencies of measured samples.
+
+        Args:
+            binary (bool): Return frequency keys in binary or decimal form.
+            registers (bool): Group frequencies according to registers.
+
+        Returns:
+            A `collections.Counter` where the keys are the observed values
+            and the values the corresponding frequencies, that is the number
+            of times each measured value/bitstring appears.
+
+            If `binary` is `True`
+                the keys of the `Counter` are in binary form, as strings of
+                0s and 1s.
+            If `binary` is `False`
+                the keys of the `Counter` are integers.
+        """
+        if self._frequencies is None:
+            self._frequencies = self.backend.calculate_frequencies(
+                self.samples(binary=False)
+            )
+        if binary:
+            qubits = self.measurement_gate.target_qubits
+            return frequencies_to_binary(self._frequencies, len(qubits))
+        else:
+            return self._frequencies
+
+    def apply_bitflips(self, p0, p1=None):  # pragma: no cover
+        return apply_bitflips(self, p0, p1)
+
+
+class CircuitResult:
+    """Data structure returned by circuit execution.
+
+    Contains all the results produced by the circuit execution, such as
+    the state vector or density matrix, measurement samples and frequencies.
+
+    Args:
+        backend (:class:`qibo.backends.abstract.AbstractBackend`): Backend
+            to use for calculations.
+        circuit (:class:`qibo.models.Circuit`): Circuit object that is producing
+            this result.
+        execution_result: Abstract raw data created by the circuit execution.
+            The format of these data depends on the backend and they are processed
+            by the backend. For simulation backends ``execution_result`` is a tensor
+            holding the state vector or density matrix representation in the
+            computational basis.
+        nshots (int): Number of measurement shots, if measurements are performed.
+    """
+
+    def __init__(self, backend, circuit, execution_result, nshots=None):
+        self.nqubits = circuit.nqubits
+        self.measurements = circuit.measurements
+        self.density_matrix = circuit.density_matrix
+        self.circuit = circuit
+        self.execution_result = execution_result
+        self.backend = backend
+        self.nshots = nshots
+
+        self._measurement_gate = None
+        self._samples = None
+        self._frequencies = None
+        self._bitflip_p0 = None
+        self._bitflip_p1 = None
+        self._symbols = None
+        for gate in self.measurements:
+            gate.result.reset()
 
     def state(self, numpy=False, decimals=-1, cutoff=1e-10, max_terms=20):
         """State's tensor representation as an backend tensor.
@@ -90,6 +306,34 @@ class CircuitResult:
         """
         return self.backend.circuit_result_probabilities(self, qubits)
 
+    def has_samples(self):
+        if self.measurements:
+            return self.measurements[0].result.has_samples()
+        else:  # pragma: no cover
+            return False
+
+    @property
+    def measurement_gate(self):
+        """Single measurement gate containing all measured qubits.
+
+        Useful for sampling all measured qubits at once when simulating.
+        """
+        if self._measurement_gate is None:
+            from qibo import gates
+
+            if not self.measurements:  # pragma: no cover
+                raise_error(ValueError, "Circuit does not contain measurements.")
+
+            for gate in self.measurements:
+                if self._measurement_gate is None:
+                    self._measurement_gate = gates.M(
+                        *gate.init_args, **gate.init_kwargs
+                    )
+                else:
+                    self._measurement_gate.add(gate)
+
+        return self._measurement_gate
+
     def samples(self, binary=True, registers=False):
         """Returns raw measurement samples.
 
@@ -111,51 +355,47 @@ class CircuitResult:
                 a single tensor is returned which contains samples from all the
                 measured qubits, independently of their registers.
         """
-        qubits = self.circuit.measurement_gate.qubits
+        qubits = self.measurement_gate.target_qubits
         if self._samples is None:
-            probs = self.probabilities(qubits)
-            self._samples = self.backend.sample_shots(probs, self.nshots)
-            if self.circuit.measurement_gate.has_bitflip_noise():
-                p0, p1 = self.circuit.measurement_gate.bitflip_map
-                bitflip_probabilities = [
-                    [p0.get(q) for q in qubits],
-                    [p1.get(q) for q in qubits],
-                ]
-                noiseless_samples = self.backend.samples_to_binary(
-                    self._samples, len(qubits)
+            if self.measurements[0].result.has_samples():
+                self._samples = np.concatenate(
+                    [gate.result.samples() for gate in self.measurements], axis=1
                 )
-                noisy_samples = self.backend.apply_bitflips(
-                    noiseless_samples, bitflip_probabilities
-                )
-                self._samples = self.backend.samples_to_decimal(
-                    noisy_samples, len(qubits)
-                )
+            else:
+                # generate new samples
+                probs = self.probabilities(qubits)
+                samples = self.backend.sample_shots(probs, self.nshots)
+                samples = self.backend.samples_to_binary(samples, len(qubits))
+                if self.measurement_gate.has_bitflip_noise():
+                    p0, p1 = self.measurement_gate.bitflip_map
+                    bitflip_probabilities = [
+                        [p0.get(q) for q in qubits],
+                        [p1.get(q) for q in qubits],
+                    ]
+                    samples = self.backend.apply_bitflips(
+                        samples, bitflip_probabilities
+                    )
+                # register samples to individual gate ``MeasurementResult``
+                qubit_map = {
+                    q: i for i, q in enumerate(self.measurement_gate.target_qubits)
+                }
+                self._samples = np.array(samples, dtype="int32")
+                for gate in self.measurements:
+                    rqubits = tuple(qubit_map.get(q) for q in gate.target_qubits)
+                    gate.result.register_samples(
+                        self._samples[:, rqubits], self.backend
+                    )
 
         if registers:
-            qubit_map = {q: i for i, q in enumerate(qubits)}
-            reg_samples = {}
-            samples = self.backend.samples_to_binary(self._samples, len(qubits))
-            for name, rqubits in self.circuit.measurement_tuples.items():
-                rqubits = tuple(qubit_map.get(q) for q in rqubits)
-                rsamples = samples[:, rqubits]
-                if binary:
-                    reg_samples[name] = rsamples
-                else:
-                    reg_samples[name] = self.backend.samples_to_decimal(
-                        rsamples, len(rqubits)
-                    )
-            return reg_samples
+            return {
+                gate.register_name: gate.result.samples(binary)
+                for gate in self.measurements
+            }
 
         if binary:
-            return self.backend.samples_to_binary(self._samples, len(qubits))
-        else:
             return self._samples
-
-    @staticmethod
-    def _frequencies_to_binary(frequencies, nqubits):
-        return collections.Counter(
-            {"{:b}".format(k).zfill(nqubits): v for k, v in frequencies.items()}
-        )
+        else:
+            return self.backend.samples_to_decimal(self._samples, len(qubits))
 
     def frequencies(self, binary=True, registers=False):
         """Returns the frequencies of measured samples.
@@ -181,54 +421,58 @@ class CircuitResult:
                 a single `Counter` is returned which contains samples from all
                 the measured qubits, independently of their registers.
         """
-        qubits = self.circuit.measurement_gate.qubits
+        qubits = self.measurement_gate.qubits
         if self._frequencies is None:
-            if (
-                self.circuit.measurement_gate.has_bitflip_noise()
-                and self._samples is None
-            ):
-                self._samples = self.samples(binary=False)
-            if self._samples is None:
+            if self.measurement_gate.has_bitflip_noise() and not self.has_samples():
+                self._samples = self.samples()
+            if not self.has_samples():
+                # generate new frequencies
                 probs = self.probabilities(qubits)
                 self._frequencies = self.backend.sample_frequencies(probs, self.nshots)
+                # register frequencies to individual gate ``MeasurementResult``
+                qubit_map = {q: i for i, q in enumerate(qubits)}
+                reg_frequencies = {}
+                binary_frequencies = frequencies_to_binary(
+                    self._frequencies, len(qubits)
+                )
+                for gate in self.measurements:
+                    rfreqs = collections.Counter()
+                    for bitstring, freq in binary_frequencies.items():
+                        idx = 0
+                        rqubits = gate.target_qubits
+                        for i, q in enumerate(rqubits):
+                            if int(bitstring[qubit_map.get(q)]):
+                                idx += 2 ** (len(rqubits) - i - 1)
+                        rfreqs[idx] += freq
+                    gate.result.register_frequencies(rfreqs, self.backend)
             else:
-                self._frequencies = self.backend.calculate_frequencies(self._samples)
+                self._frequencies = self.backend.calculate_frequencies(
+                    self.samples(binary=False)
+                )
 
         if registers:
-            qubit_map = {q: i for i, q in enumerate(qubits)}
-            reg_frequencies = {}
-            binary_frequencies = self._frequencies_to_binary(
-                self._frequencies, len(qubits)
-            )
-            for name, rqubits in self.circuit.measurement_tuples.items():
-                rfreqs = collections.Counter()
-                for bitstring, freq in binary_frequencies.items():
-                    idx = 0
-                    for i, q in enumerate(rqubits):
-                        if int(bitstring[qubit_map.get(q)]):
-                            idx += 2 ** (len(rqubits) - i - 1)
-                    rfreqs[idx] += freq
-                if binary:
-                    reg_frequencies[name] = self._frequencies_to_binary(
-                        rfreqs, len(rqubits)
-                    )
-                else:
-                    reg_frequencies[name] = rfreqs
-            return reg_frequencies
+            return {
+                gate.register_name: gate.result.frequencies(binary)
+                for gate in self.measurements
+            }
 
         if binary:
-            return self._frequencies_to_binary(self._frequencies, len(qubits))
+            return frequencies_to_binary(self._frequencies, len(qubits))
         else:
             return self._frequencies
 
     def apply_bitflips(self, p0, p1=None):
-        mgate = self.circuit.measurement_gate
-        if p1 is None:
-            probs = 2 * (mgate._get_bitflip_tuple(mgate.qubits, p0),)
-        else:
-            probs = (
-                mgate._get_bitflip_tuple(mgate.qubits, p0),
-                mgate._get_bitflip_tuple(mgate.qubits, p1),
-            )
-        noiseless_samples = self.samples()
-        return self.backend.apply_bitflips(noiseless_samples, probs)
+        return apply_bitflips(self, p0, p1)
+
+    def expectation_from_samples(self, observable):
+        """Computes the real expectation value of a diagonal observable from frequencies.
+
+        Args:
+            observable (Hamiltonian/SymbolicHamiltonian): diagonal observable in the computational basis.
+
+        Returns:
+            Real number corresponding to the expectation value.
+        """
+        freq = self.frequencies(binary=True)
+        qubit_map = self.measurement_gate.qubits
+        return observable.expectation_from_samples(freq, qubit_map)

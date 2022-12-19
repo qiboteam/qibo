@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import numpy as np
 
 from qibo import gates
@@ -385,19 +384,19 @@ def quantum_order_finding_semiclassical(N, a):
     # Using multiple measurements for the semiclassical QFT.
     for i in range(1, 2 * n):
         # reset measured qubit to |0>
-        circuit.add(gates.RX(q_reg, theta=np.pi * results[-1]))
+        circuit.add(gates.RX(q_reg, theta=np.pi * results[-1].symbols[0]))
         circuit.add(gates.H(q_reg))
         # a_i = (a**(2**(2*n - 1 - i)))
         circuit.add(c_U(q_reg, x, b, exponents[-1 - i], N, ancilla, n))
         angle = 0
         for k in range(2, i + 2):
-            angle += 2 * np.pi * results[i + 1 - k] / (2**k)
+            angle += 2 * np.pi * results[i + 1 - k].symbols[0] / (2**k)
         circuit.add(gates.U1(q_reg, -angle))
         circuit.add(gates.H(q_reg))
         results.append(circuit.add(gates.M(q_reg, collapse=True)))
 
     circuit()  # execute
-    s = sum(int(r.outcome()) * (2**i) for i, r in enumerate(results))
+    s = sum(int(r.symbols[0].outcome()) * (2**i) for i, r in enumerate(results))
     print(f"The quantum circuit measures s = {s}.\n")
     return s
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Installation script for python
 import os
 import re
@@ -67,14 +66,14 @@ setup(
     extras_require={
         "docs": [
             "sphinx",
-            "sphinx_rtd_theme",
+            "furo",
             "recommonmark",
             "sphinxcontrib-bibtex",
             "sphinx_markdown_tables",
             "nbsphinx",
             "IPython",
         ],
-        "tests": ["pytest", "cirq", "ply", "sklearn", "dill", "pre-commit"],
+        "tests": ["pytest", "cirq", "ply", "scikit-learn", "dill", "pre-commit"],
     },
     python_requires=">=3.7.0",
     long_description=long_description,

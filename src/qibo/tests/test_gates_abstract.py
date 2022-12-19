@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests methods defined in `qibo/gates/abstract.py` and `qibo/gates/gates.py`."""
 import pytest
 
@@ -58,18 +57,6 @@ def test_measurement_init(targets, p0, p1):
     p0map = {q: 0 if p0 is None else p0 for q in targets}
     p1map = {q: 0 if p1 is None else p1 for q in targets}
     assert gate.bitflip_map == (p0map, p1map)
-
-
-def test_measurement_einsum_string():
-    func = gates.M.einsum_string
-    estr = func({0, 2, 4}, 5)
-    assert estr == "abcdeagcie->bdgi"
-    estr = func({0, 2, 4}, 5, measuring=True)
-    assert estr == "abcdeabcde->bd"
-    estr = func({0, 1, 3, 5, 6}, 10, measuring=False)
-    assert estr == "abcdefghijabmdofgrst->cehijmorst"
-    estr = func({0, 1, 3, 5, 6}, 10, measuring=True)
-    assert estr == "abcdefghijabcdefghij->cehij"
 
 
 def test_measurement_add():
