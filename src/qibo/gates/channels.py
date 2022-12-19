@@ -1,4 +1,3 @@
-#%%
 from itertools import product
 
 from qibo.config import PRECISION_TOL, raise_error
@@ -455,28 +454,3 @@ class ThermalRelaxationChannel(Channel):
                 - pz * backend.cast(state)
                 + pz * backend.apply_gate_density_matrix(Z(0), state, nqubits)
             )
-
-#%%
-import numpy as np
-
-px, py, pz = 0.1, 0.02, 0.05
-Ax = np.sqrt(px) * np.array([[0, 1], [1, 0]], dtype='complex')
-Ay = np.sqrt(py) * np.array([[0, -1.0j], [1.0j, 0.0]], dtype='complex')
-Az = np.sqrt(pz) * np.array([[1, 0], [0, -1]], dtype='complex')
-A1 = np.sqrt(1-px-py-pz) * np.eye(2)
-
-channel = KrausChannel([((0,), A1), ((0,), Ax), ((0,), Ay), ((0,), Az)])
-print(channel.to_superop())
-print(channel.to_pauli_liouville(True))
-
-# %%
-pnp = np.array([0.1, 0.02, 0.05])
-a0 = 1
-a1 = 1 - 2 * pnp[1] - 2 * pnp[2]
-a2 = 1 - 2 * pnp[0] - 2 * pnp[2]
-a3 = 1 - 2 * pnp[0] - 2 * pnp[1]
-test_representation = np.diag([a0, a1, a2, a3])
-paulinoise = PauliNoiseChannel(0, *pnp)
-representation = paulinoise.to_pauli_liouville(normalize = True)
-print(test_representation)
-print(representation)
