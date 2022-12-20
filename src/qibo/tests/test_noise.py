@@ -4,7 +4,7 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 from qibo.noise import *
-from qibo.noise_model import noisy_circuit, CompositeNoiseModel
+from qibo.noise_model import CompositeNoiseModel, noisy_circuit
 from qibo.tests.utils import random_density_matrix, random_state
 
 
@@ -364,9 +364,7 @@ def test_noisy_circuit(backend, nshots, idle_qubits):
     noisy_circ = noise_model.noisy_circuit
 
     backend.set_seed(123)
-    final_samples = backend.execute_circuit(
-        noisy_circ, nshots=nshots
-    ).samples()
+    final_samples = backend.execute_circuit(noisy_circ, nshots=nshots).samples()
 
     target_circuit = Circuit(3, density_matrix=True)
     target_circuit.add(gates.H(0))

@@ -219,7 +219,7 @@ def loss(parameters, *args):
     norm = sum(freq.values())
     for k in freq:
         freq[k] /= norm
-         
+
     return hellinger_distance(target_freq, freq)
 
 
@@ -304,7 +304,7 @@ class CompositeNoiseModel:
 
         args = (circuit, nshots, target_freq, idle_qubits, backend)
         self.hellinger0 = loss(initial_params, *args)
-        
+
         result, parameters, extra = optimizers.optimize(
             loss,
             initial_params,
