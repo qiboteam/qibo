@@ -34,7 +34,7 @@ def test_derivative(backend):
 
     test_hamiltonian = hamiltonian(nqubits=1, backend=backend)
 
-    # ------------------- normal parameter shift rule ---------------------------
+    # ------------------- normal parameter shift rule --------------------------
 
     # testing parameter out of bounds
     with pytest.raises(ValueError):
@@ -55,11 +55,11 @@ def test_derivative(backend):
 
     # check of known values
     # calculated using tf.GradientTape
-    assert round(grad_0, 10) == 8.51104358e-02
-    assert round(grad_1, 8) == 5.20075970e-01
-    assert round(grad_2, 10) == 0.0000000000
+    backend.assert_allclose(grad_0, 8.51104358e-02, atol=1e-10)
+    backend.assert_allclose(grad_1, 5.20075970e-01, atol=1e-10)
+    backend.assert_allclose(grad_2, 0, atol=1e-10)
 
-    # ------------------- rescaled parameter shift rule -------------------------
+    # ------------------- rescaled parameter shift rule ------------------------
 
     # params * scale_factor
     x = 0.5
@@ -68,13 +68,13 @@ def test_derivative(backend):
 
     # testing parameter out of bounds
     with pytest.raises(ValueError):
-        grad_0 = rescaled_parameter_shift(
+        grad_0_res = rescaled_parameter_shift(
             circuit=c, hamiltonian=test_hamiltonian, parameter_index=5, scale_factor=x
         )
 
     # testing hamiltonian type
     with pytest.raises(TypeError):
-        grad_0 = rescaled_parameter_shift(
+        grad_0_res = rescaled_parameter_shift(
             circuit=c, hamiltonian=c, parameter_index=0, scale_factor=x
         )
 
@@ -91,6 +91,6 @@ def test_derivative(backend):
 
     # check of known values
     # calculated using tf.GradientTape
-    assert round(grad_0_res, 8) == 0.02405061
-    assert round(grad_1_res, 8) == 0.13560379
-    assert round(grad_2_res, 8) == 0.00000000
+    backend.assert_allclose(grad_0_res, 0.02405061, atol=1e-8)
+    backend.assert_allclose(grad_1_res, 0.13560379, atol=1e-8)
+    backend.assert_allclose(grad_2_res, 0, atol=1e-8)
