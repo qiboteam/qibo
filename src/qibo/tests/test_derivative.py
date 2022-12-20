@@ -52,6 +52,6 @@ def test_derivative(backend):
     assert isinstance(test_hamiltonian, hamiltonians.AbstractHamiltonian)
     # check of known values
     # calculated using tf.GradientTape
-    assert round(grad_0, 10) == 8.51104358e-02
-    assert round(grad_1, 8) == 5.20075970e-01
-    assert round(grad_2, 10) == 0.0000000000
+    backend.assert_allclose(grad_0, 8.51104358e-02, atol=1e-10)
+    backend.assert_allclose(grad_1, 5.20075970e-01, atol=1e-10)
+    backend.assert_allclose(grad_2, 0, atol=1e-10)
