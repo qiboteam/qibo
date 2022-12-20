@@ -1,5 +1,6 @@
 from qibo import gates
 from qibo.config import raise_error
+from qibo.noise_model import CompositeNoiseModel
 
 
 class CustomError:
@@ -158,6 +159,7 @@ class NoiseModel:
 
     def __init__(self):
         self.errors = {}
+        self.noise_model = {}
 
     def add(self, error, gate, qubits=None):
         """Add a quantum error for a specific gate and qubit to the noise model.
@@ -178,6 +180,10 @@ class NoiseModel:
 
         self.errors[gate] = (error, qubits)
 
+    def composite(self, params):
+
+        self.noise_model = CompositeNoiseModel(params)
+
     def apply(self, circuit):
         """Generate a noisy quantum circuit according to the noise model built.
 
@@ -189,26 +195,31 @@ class NoiseModel:
             to the initial circuit with noise gates added according
             to the noise model.
         """
-        noisy_circuit = circuit.__class__(**circuit.init_kwargs)
-        for gate in circuit.queue:
-            noisy_circuit.add(gate)
-            if gate.__class__ in self.errors:
-                error, qubits = self.errors.get(gate.__class__)
-                if qubits is None:
-                    qubits = gate.qubits
-                else:
-                    qubits = tuple(set(gate.qubits) & set(qubits))
-                if isinstance(error, CustomError) and qubits:
-                    noisy_circuit.add(error.channel)
-                elif isinstance(error, DepolarizingError) and qubits:
-                    noisy_circuit.add(error.channel(qubits, *error.options))
-                elif isinstance(error, UnitaryError) or isinstance(error, KrausError):
-                    if error.rank == 2:
+
+        if isinstance(self.noise_model, CompositeNoiseModel):
+            self.noise_model.apply(circuit)
+            noisy_circuit = self.noise_model.noisy_circuit
+        else:
+            noisy_circuit = circuit.__class__(**circuit.init_kwargs)
+            for gate in circuit.queue:
+                noisy_circuit.add(gate)
+                if gate.__class__ in self.errors:
+                    error, qubits = self.errors.get(gate.__class__)
+                    if qubits is None:
+                        qubits = gate.qubits
+                    else:
+                        qubits = tuple(set(gate.qubits) & set(qubits))
+                    if isinstance(error, CustomError) and qubits:
+                        noisy_circuit.add(error.channel)
+                    elif isinstance(error, DepolarizingError) and qubits:
+                        noisy_circuit.add(error.channel(qubits, *error.options))
+                    elif isinstance(error, UnitaryError) or isinstance(error, KrausError):
+                        if error.rank == 2:
+                            for q in qubits:
+                                noisy_circuit.add(error.channel([q]))
+                        elif error.rank == 2 ** len(qubits):
+                            noisy_circuit.add(error.channel(qubits))
+                    else:
                         for q in qubits:
-                            noisy_circuit.add(error.channel([q]))
-                    elif error.rank == 2 ** len(qubits):
-                        noisy_circuit.add(error.channel(qubits))
-                else:
-                    for q in qubits:
-                        noisy_circuit.add(error.channel(q, *error.options))
+                            noisy_circuit.add(error.channel(q, *error.options))
         return noisy_circuit
