@@ -3,8 +3,8 @@ from itertools import product
 
 import numpy as np
 
+from qibo import matrices
 from qibo.config import raise_error
-from qibo.gates.gates import I, X, Y, Z
 
 
 def vectorization(state, backend=None):  # , nrows, ncols):
@@ -13,7 +13,7 @@ def vectorization(state, backend=None):  # , nrows, ncols):
 
     Args:
         state: state vector or density matrix.
-        backend (``qibo.backends.abstract.Backend``, optional): Backend for execution.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend for execution.
             If ``None``, defaults to ``GlobalBackend()``.
 
     Returns:
@@ -84,8 +84,8 @@ def pauli_basis(
     """Creates the ``nqubits``-qubit Pauli basis.
 
     Args:
-        qubits (int): number of qubits.
-        normalize (bool, optional): If ``True``, normalized basis ir returned.
+        nqubits (int): number of qubits.
+        normalize (bool, optional): If ``True``, normalized basis is returned.
             Defaults to False.
         vectorize (bool, optional): If ``False``, returns a nested array with
             all Pauli matrices. If ``True``, retuns an array where every
@@ -117,12 +117,7 @@ def pauli_basis(
 
         backend = GlobalBackend()
 
-    basis = [
-        I(0).asmatrix(backend),
-        X(0).asmatrix(backend),
-        Y(0).asmatrix(backend),
-        Z(0).asmatrix(backend),
-    ]
+    basis = [matrices.I, matrices.X, matrices.Y, matrices.Z]
 
     if vectorize:
         basis = [matrix.reshape((1, -1), order="F")[0] for matrix in basis]
