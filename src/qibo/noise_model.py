@@ -218,21 +218,18 @@ def loss(parameters, *args):
     freq = backend.execute_circuit(circuit=noisy_circ, nshots=nshots).frequencies()
     norm = sum(freq.values())
     for k in freq:
-        freq[k] /= norm
-         
+        freq[k] /= norm   
+             
     return hellinger_distance(target_freq, freq)
 
 
 class CompositeNoiseModel:
-    def __init__(self):
+    def __init__(self, params):
         self.noisy_circuit = {}
-        self.params = {}
+        self.params = params
         self.hellinger = {}
         self.hellinger0 = {}
         self.extra = {}
-
-    def add(self, params):
-        self.params = params
 
     def apply(self, circuit):
         self.noisy_circuit = noisy_circuit(circuit, self.params)
@@ -240,7 +237,6 @@ class CompositeNoiseModel:
     def fit(
         self,
         target_result,
-        initial_params,
         method="trust-constr",
         jac=None,
         hess=None,
@@ -264,8 +260,9 @@ class CompositeNoiseModel:
         circuit = target_result.circuit
         nshots = target_result.nshots
         target_freq = target_result.frequencies()
+        initial_params = self.params
         idle_qubits = initial_params["idle_qubits"]
-        norm = sum(target_freq.values())
+        norm = target_result.nshots
         for k in target_freq:
             target_freq[k] /= norm
         qubits = target_result.nqubits
@@ -301,7 +298,7 @@ class CompositeNoiseModel:
             + initial_params["bitflips_error"][0]
             + initial_params["bitflips_error"][1]
         )
-
+        
         args = (circuit, nshots, target_freq, idle_qubits, backend)
         self.hellinger0 = loss(initial_params, *args)
         
