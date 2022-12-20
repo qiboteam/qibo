@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from qibo import gates, hamiltonians
-from qibo.derivative import parameter_shift
+from qibo.derivative import parameter_shift, rescaled_parameter_shift
 from qibo.models import Circuit
 
 
@@ -13,7 +13,7 @@ def hamiltonian(nqubits, backend):
 
 # defining a dummy circuit
 def circuit(nqubits=1):
-    c = Circuit(nqubits=1)
+    c = Circuit(nqubits)
     # all gates for which generator eigenvalue is implemented
     c.add(gates.RX(q=0, theta=0))
     c.add(gates.RY(q=0, theta=0))
@@ -34,6 +34,8 @@ def test_derivative(backend):
 
     test_hamiltonian = hamiltonian(nqubits=1, backend=backend)
 
+    # ------------------- normal parameter shift rule ---------------------------
+
     # testing parameter out of bounds
     with pytest.raises(ValueError):
         grad_0 = parameter_shift(
@@ -42,7 +44,7 @@ def test_derivative(backend):
 
     # testing hamiltonian type
     with pytest.raises(TypeError):
-        grad_0 = parameter_shift(circuit=c, hamiltonian=c, parameter_shift=0)
+        grad_0 = parameter_shift(circuit=c, hamiltonian=c, parameter_index=0)
 
     # executing all the procedure
     grad_0 = parameter_shift(circuit=c, hamiltonian=test_hamiltonian, parameter_index=0)
@@ -50,8 +52,45 @@ def test_derivative(backend):
     grad_2 = parameter_shift(circuit=c, hamiltonian=test_hamiltonian, parameter_index=2)
 
     assert isinstance(test_hamiltonian, hamiltonians.AbstractHamiltonian)
+
     # check of known values
     # calculated using tf.GradientTape
     assert round(grad_0, 10) == 8.51104358e-02
     assert round(grad_1, 8) == 5.20075970e-01
     assert round(grad_2, 10) == 0.0000000000
+
+    # ------------------- rescaled parameter shift rule -------------------------
+
+    # params * scale_factor
+    x = 0.5
+    test_params *= 0.5
+    c.set_parameters(test_params)
+
+    # testing parameter out of bounds
+    with pytest.raises(ValueError):
+        grad_0 = rescaled_parameter_shift(
+            circuit=c, hamiltonian=test_hamiltonian, parameter_index=5, scale_factor=x
+        )
+
+    # testing hamiltonian type
+    with pytest.raises(TypeError):
+        grad_0 = rescaled_parameter_shift(
+            circuit=c, hamiltonian=c, parameter_index=0, scale_factor=x
+        )
+
+    # executing all the procedure
+    grad_0_res = rescaled_parameter_shift(
+        circuit=c, hamiltonian=test_hamiltonian, parameter_index=0, scale_factor=x
+    )
+    grad_1_res = rescaled_parameter_shift(
+        circuit=c, hamiltonian=test_hamiltonian, parameter_index=1, scale_factor=x
+    )
+    grad_2_res = rescaled_parameter_shift(
+        circuit=c, hamiltonian=test_hamiltonian, parameter_index=2, scale_factor=x
+    )
+
+    # check of known values
+    # calculated using tf.GradientTape
+    assert round(grad_0_res, 8) == 0.02405061
+    assert round(grad_1_res, 8) == 0.13560379
+    assert round(grad_2_res, 8) == 0.00000000
