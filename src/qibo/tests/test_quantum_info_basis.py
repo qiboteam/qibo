@@ -1,13 +1,13 @@
 import numpy as np
 import pytest
 
+from qibo import matrices
 from qibo.config import PRECISION_TOL
-from qibo.gates.gates import I, X, Y, Z
 from qibo.quantum_info import *
 
 
 @pytest.mark.parametrize("nqubits", [1, 2, 3])
-def test_vectorization(backend, nqubits):
+def test_vectorization(nqubits):
     with pytest.raises(TypeError):
         vectorization(np.array([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]]))
     with pytest.raises(TypeError):
@@ -87,19 +87,18 @@ def test_vectorization(backend, nqubits):
             63,
         ]
     matrix_test = np.array(matrix_test)
-    matrix_test = backend.cast(matrix_test, dtype=matrix_test.dtype)
 
     d = 2**nqubits
     matrix = np.arange(d**2).reshape((d, d))
-    matrix = vectorization(matrix, backend)
+    matrix = vectorization(matrix)
 
-    backend.assert_allclose(np.linalg.norm(matrix - matrix_test) < PRECISION_TOL, True)
+    assert np.linalg.norm(matrix - matrix_test) < PRECISION_TOL
 
 
 @pytest.mark.parametrize("vectorize", [False, True])
 @pytest.mark.parametrize("normalize", [False, True])
 @pytest.mark.parametrize("nqubits", [1, 2])
-def test_pauli_basis(backend, nqubits, normalize, vectorize):
+def test_pauli_basis(nqubits, normalize, vectorize):
     with pytest.raises(ValueError):
         pauli_basis(-1)
     with pytest.raises(TypeError):
@@ -109,12 +108,7 @@ def test_pauli_basis(backend, nqubits, normalize, vectorize):
     with pytest.raises(TypeError):
         pauli_basis(1, False, "True")
 
-    single_basis = [
-        I(0).asmatrix(backend),
-        X(0).asmatrix(backend),
-        Y(0).asmatrix(backend),
-        Z(0).asmatrix(backend),
-    ]
+    single_basis = [matrices.I, matrices.X, matrices.Y, matrices.Z]
 
     if vectorize:
         single_basis = [matrix.reshape((1, -1), order="F") for matrix in single_basis]
@@ -134,9 +128,7 @@ def test_pauli_basis(backend, nqubits, normalize, vectorize):
     basis = pauli_basis(nqubits, normalize, vectorize)
 
     for pauli, pauli_test in zip(basis, basis_test):
-        backend.assert_allclose(
-            np.linalg.norm(pauli - pauli_test) < PRECISION_TOL, True
-        )
+        assert np.linalg.norm(pauli - pauli_test) < PRECISION_TOL
 
     comp_basis_to_pauli(nqubits, normalize)
     pauli_to_comp_basis(nqubits, normalize)

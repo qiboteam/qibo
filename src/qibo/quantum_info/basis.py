@@ -7,14 +7,12 @@ from qibo import matrices
 from qibo.config import raise_error
 
 
-def vectorization(state, backend=None):  # , nrows, ncols):
+def vectorization(state):
     """Returns state :math:`\\rho` in its Liouville
     representation :math:`\\ket{\\rho}`.
 
     Args:
         state: state vector or density matrix.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend for execution.
-            If ``None``, defaults to ``GlobalBackend()``.
 
     Returns:
         Liouville representation of ``state``.
@@ -51,11 +49,6 @@ def vectorization(state, backend=None):  # , nrows, ncols):
             .reshape(-1, nrows, ncols)[[0, 2, 1, 3]]
         )
 
-    if backend is None:
-        from qibo.backends import GlobalBackend
-
-        backend = GlobalBackend()
-
     d = len(state)
     n = int(d / 2)
     nqubits = int(np.log2(d))
@@ -75,12 +68,10 @@ def vectorization(state, backend=None):  # , nrows, ncols):
             [matrix.reshape((1, -1), order="F") for matrix in state]
         ).flatten()
 
-    return backend.cast(state, dtype=state.dtype)
+    return state
 
 
-def pauli_basis(
-    nqubits: int, normalize: bool = False, vectorize: bool = False, backend=None
-):
+def pauli_basis(nqubits: int, normalize: bool = False, vectorize: bool = False):
     """Creates the ``nqubits``-qubit Pauli basis.
 
     Args:
@@ -90,8 +81,6 @@ def pauli_basis(
         vectorize (bool, optional): If ``False``, returns a nested array with
             all Pauli matrices. If ``True``, retuns an array where every
             row is a vectorized Pauli matrix. Defaults to ``False``.
-        backend (``qibo.backends.abstract.Backend``, optional): Backend for execution.
-            If ``None``, defaults to ``GlobalBackend()``.
 
     Returns:
         list: list with all Pauli matrices forming the basis.
@@ -112,11 +101,6 @@ def pauli_basis(
             f"vectorize must be type bool, but it is type {type(vectorize)} instead.",
         )
 
-    if backend is None:
-        from qibo.backends import GlobalBackend
-
-        backend = GlobalBackend()
-
     basis = [matrices.I, matrices.X, matrices.Y, matrices.Z]
 
     if vectorize:
@@ -134,10 +118,10 @@ def pauli_basis(
     if normalize:
         basis /= np.sqrt(2**nqubits)
 
-    return backend.cast(basis, dtype=basis.dtype)
+    return basis
 
 
-def comp_basis_to_pauli(nqubits: int, normalize: bool = False, backend=None):
+def comp_basis_to_pauli(nqubits: int, normalize: bool = False):
     """Unitary matrix :math:`U` that converts operators from the Liouville
     representation in the computational basis to the Pauli-Liouville
     representation.
@@ -156,26 +140,19 @@ def comp_basis_to_pauli(nqubits: int, normalize: bool = False, backend=None):
         nqubits (int): number of qubits.
         normalize (bool, optional): If ``True``, converts to the
         Pauli basis. Defaults to False.
-        backend (``qibo.backends.abstract.Backend``, optional): Backend
-            for execution. If ``None``, defaults to ``GlobalBackend()``.
 
     Returns:
         Unitary matrix :math:`U`.
 
     """
 
-    if backend is None:
-        from qibo.backends import GlobalBackend
-
-        backend = GlobalBackend()
-
-    unitary = pauli_basis(nqubits, normalize, vectorize=True, backend=backend)
+    unitary = pauli_basis(nqubits, normalize, vectorize=True)
     unitary = np.conj(unitary)
 
-    return backend.cast(unitary, dtype=unitary.dtype)
+    return unitary
 
 
-def pauli_to_comp_basis(nqubits: int, normalize: bool = False, backend=None):
+def pauli_to_comp_basis(nqubits: int, normalize: bool = False):
     """Unitary matrix :math:`U` that converts operators from the
     Pauli-Liouville representation to the Liouville representation
     in the computational basis.
@@ -189,18 +166,11 @@ def pauli_to_comp_basis(nqubits: int, normalize: bool = False, backend=None):
         nqubits (int): number of qubits.
         normalize (bool, optional): If ``True``, converts to the
         Pauli basis. Defaults to False.
-        backend (``qibo.backends.abstract.Backend``, optional): Backend for execution.
-            If ``None``, defaults to ``GlobalBackend()``.
 
     Returns:
         Unitary matrix :math:`U`.
     """
 
-    if backend is None:
-        from qibo.backends import GlobalBackend
+    matrix = np.transpose(np.conj(comp_basis_to_pauli(nqubits, normalize)))
 
-        backend = GlobalBackend()
-
-    matrix = np.transpose(np.conj(comp_basis_to_pauli(nqubits, normalize, backend)))
-
-    return backend.cast(matrix, dtype=matrix.dtype)
+    return matrix
