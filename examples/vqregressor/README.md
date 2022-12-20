@@ -1,6 +1,6 @@
 # Parameter Shift Rule for an hardware-compatible Variational Quantum Regressor
 
-Code at: [https://github.com/qiboteam/qibo/tree/vqregressor/examples/vqregressor](https://github.com/qiboteam/qibo/tree/vqregressor/examples/vqregressor)
+Code at: [https://github.com/qiboteam/qibo/tree/master/examples/vqregressor](https://github.com/qiboteam/qibo/tree/master/examples/vqregressor)
 
 ### Problem overview
 
