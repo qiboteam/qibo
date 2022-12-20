@@ -326,7 +326,8 @@ def test_kraus_error(backend, density_matrix, nshots):
 
 
 @pytest.mark.parametrize("nshots", [10, 100, 1000])
-def test_noise_model(backend, nshots):
+@pytest.mark.parametrize("idle_qubits", [True, False])
+def test_noise_model(backend, nshots, idle_qubits):
 
     circuit = Circuit(3, density_matrix=True)
     circuit.add(
@@ -349,10 +350,11 @@ def test_noise_model(backend, nshots):
     params = {
         "t1": (1.0, 1.1, 1.2),
         "t2": (0.7, 0.8, 0.9),
-        "gate time": (1.5, 1.6),
-        "excited population": 0,
-        "depolarizing error": (0.5, 0.6),
-        "bitflips error": ([0.01, 0.02, 0.03], [0.02, 0.03, 0.04]),
+        "gate_time": (1.5, 1.6),
+        "excited_population": 0,
+        "depolarizing_error": (0.5, 0.6),
+        "bitflips_error": ([0.01, 0.02, 0.03], [0.02, 0.03, 0.04]),
+        "idle_qubits": idle_qubits
     }
 
     backend.set_seed(123)
@@ -386,7 +388,8 @@ def test_noise_model(backend, nshots):
     target_circuit.add(gates.H(0))
     target_circuit.add(gates.DepolarizingChannel((0,), 0.5))
     target_circuit.add(gates.ThermalRelaxationChannel(0, 1.0, 0.7, 1.5, 0))
-    target_circuit.add(gates.ThermalRelaxationChannel(1, 1.1, 0.8, 1.5, 0))  # dt
+    if idle_qubits == True:
+        target_circuit.add(gates.ThermalRelaxationChannel(1, 1.1, 0.8, 1.5, 0))  # dt
     target_circuit.add(gates.CNOT(2, 1))
     target_circuit.add(gates.DepolarizingChannel((1, 2), 0.6))
     target_circuit.add(gates.ThermalRelaxationChannel(1, 1.1, 0.8, 1.6, 0))
@@ -394,7 +397,8 @@ def test_noise_model(backend, nshots):
     target_circuit.add(gates.X(0))
     target_circuit.add(gates.DepolarizingChannel((0,), 0.5))
     target_circuit.add(gates.ThermalRelaxationChannel(0, 1.0, 0.7, 1.5, 0))
-    target_circuit.add(gates.ThermalRelaxationChannel(1, 1.1, 0.8, 1.3, 0))  # dt
+    if idle_qubits == True:
+        target_circuit.add(gates.ThermalRelaxationChannel(1, 1.1, 0.8, 1.3, 0))  # dt
     target_circuit.add(gates.M(0, 1))
     target_circuit.add(gates.M(2))
 

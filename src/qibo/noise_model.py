@@ -38,13 +38,14 @@ def noise_model(circuit, params):
     """
     t1 = params["t1"]
     t2 = params["t2"]
-    time1 = params["gate time"][0]
-    time2 = params["gate time"][1]
-    excited_population = params["excited population"]
-    depolarizing_error_1 = params["depolarizing error"][0]
-    depolarizing_error_2 = params["depolarizing error"][1]
-    bitflips_01 = params["bitflips error"][0]
-    bitflips_10 = params["bitflips error"][1]
+    time1 = params["gate_time"][0]
+    time2 = params["gate_time"][1]
+    excited_population = params["excited_population"]
+    depolarizing_error_1 = params["depolarizing_error"][0]
+    depolarizing_error_2 = params["depolarizing_error"][1]
+    bitflips_01 = params["bitflips_error"][0]
+    bitflips_10 = params["bitflips_error"][1]
+    idle_qubits = params["idle_qubits"]
 
     noisy_circuit = models.Circuit(circuit.nqubits, density_matrix=True)
 
@@ -59,13 +60,14 @@ def noise_model(circuit, params):
                     if len(circuit.measurement_tuples[key]) > 1:
                         q1 = circuit.measurement_tuples[key][0]
                         q2 = circuit.measurement_tuples[key][1]
-                        if current_time[q1] != current_time[q2]:
+                        if current_time[q1] != current_time[q2] and idle_qubits == True:
                             q_min = q1
                             q_max = q2
                             if current_time[q1] > current_time[q2]:
                                 q_min = q2
                                 q_max = q1
-                            time_difference = current_time[q_max] - current_time[q_min]
+                            time_difference = current_time[q_max] - \
+                                current_time[q_min]
                             noisy_circuit.add(
                                 gates.ThermalRelaxationChannel(
                                     q_min,
@@ -79,7 +81,8 @@ def noise_model(circuit, params):
                 q = circuit.queue.moments[t][qubit].qubits
                 if len(circuit.queue.moments[t][qubit].qubits) == 1:
                     q = q[0]
-                    noisy_circuit.add(gates.M(q, p0=bitflips_01[q], p1=bitflips_10[q]))
+                    noisy_circuit.add(
+                        gates.M(q, p0=bitflips_01[q], p1=bitflips_10[q]))
                 else:
                     p0q = []
                     p1q = []
@@ -111,7 +114,7 @@ def noise_model(circuit, params):
             else:
                 q1 = circuit.queue.moments[t][qubit].qubits[0]
                 q2 = circuit.queue.moments[t][qubit].qubits[1]
-                if current_time[q1] != current_time[q2]:
+                if current_time[q1] != current_time[q2] and idle_qubits == True:
                     q_min = q1
                     q_max = q2
                     if current_time[q1] > current_time[q2]:
@@ -146,8 +149,10 @@ def noise_model(circuit, params):
                         q2, t1[q2], t2[q2], time2, excited_population
                     )
                 )
-                current_time[circuit.queue.moments[t][qubit].qubits[0]] += time2
-                current_time[circuit.queue.moments[t][qubit].qubits[1]] += time2
+                current_time[circuit.queue.moments[t]
+                             [qubit].qubits[0]] += time2
+                current_time[circuit.queue.moments[t]
+                             [qubit].qubits[1]] += time2
                 circuit.queue.moments[t][
                     max(circuit.queue.moments[t][qubit].qubits)
                 ] = None
@@ -157,7 +162,8 @@ def noise_model(circuit, params):
         q = m.qubits
         if len(q) == 1:
             q = q[0]
-            measurements.append(gates.M(q, p0=bitflips_01[q], p1=bitflips_10[q]))
+            measurements.append(
+                gates.M(q, p0=bitflips_01[q], p1=bitflips_10[q]))
         else:
             p0q = []
             p1q = []
