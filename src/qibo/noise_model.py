@@ -218,8 +218,8 @@ def loss(parameters, *args):
     freq = backend.execute_circuit(circuit=noisy_circ, nshots=nshots).frequencies()
     norm = sum(freq.values())
     for k in freq:
-        freq[k] /= norm   
-             
+        freq[k] /= norm
+
     return hellinger_distance(target_freq, freq)
 
 
@@ -298,10 +298,10 @@ class CompositeNoiseModel:
             + initial_params["bitflips_error"][0]
             + initial_params["bitflips_error"][1]
         )
-        
+
         args = (circuit, nshots, target_freq, idle_qubits, backend)
         self.hellinger0 = loss(initial_params, *args)
-        
+
         result, parameters, extra = optimizers.optimize(
             loss,
             initial_params,

@@ -213,7 +213,9 @@ class NoiseModel:
                         noisy_circuit.add(error.channel)
                     elif isinstance(error, DepolarizingError) and qubits:
                         noisy_circuit.add(error.channel(qubits, *error.options))
-                    elif isinstance(error, UnitaryError) or isinstance(error, KrausError):
+                    elif isinstance(error, UnitaryError) or isinstance(
+                        error, KrausError
+                    ):
                         if error.rank == 2:
                             for q in qubits:
                                 noisy_circuit.add(error.channel([q]))
