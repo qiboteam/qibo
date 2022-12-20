@@ -171,7 +171,7 @@ def rescaled_parameter_shift(
     generator_eigenval = gate.generator_eigenvalue()
 
     # defining the shift according to the psr
-    s = np.pi / (4 * generator_eigenval * scale_factor)
+    s = np.pi / (4 * generator_eigenval)
 
     # saving original parameters and making a copy
     original = np.asarray(circuit.get_parameters()).copy()
