@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import importlib
 import os
 import signal
@@ -319,3 +318,19 @@ def test_grover_example3(nqubits, num_1):
     sys.path[-1] = path
     os.chdir(path)
     run_script(args, script_name="example3.py")
+
+
+@pytest.mark.parametrize("n_layers", [6])
+@pytest.mark.parametrize("batch_size", [20])
+@pytest.mark.parametrize("nepochs", [7])
+@pytest.mark.parametrize("train_size", [100])
+@pytest.mark.parametrize("filename", ["parameters/test_params"])
+@pytest.mark.parametrize("lr_boundaries", [[1, 2, 3, 4, 5, 6]])
+def test_anomalydetection_train(
+    n_layers, batch_size, nepochs, train_size, filename, lr_boundaries
+):
+    args = locals()
+    path = os.path.join(base_dir, "anomaly_detection")
+    sys.path[-1] = path
+    os.chdir(path)
+    run_script(args, script_name="train.py")

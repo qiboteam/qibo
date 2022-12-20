@@ -210,6 +210,76 @@ Adiabatic evolution
     :members:
     :member-order: bysource
 
+.. _error-mitigation:
+
+Error Mitigation
+^^^^^^^^^^^^^^^^
+
+Qibo allows for mitigating noise in circuits via error mitigation methods. Unlike error correction, error mitigation does not aim to correct qubit errors, but rather it provides the means to estimate the noise-free expected value of an observable measured at the end of a noisy circuit.
+
+Zero Noise Extrapolation (ZNE)
+""""""""""""""""""""""""""""""
+
+Given a noisy circuit :math:`C` and an observable :math:`A`,  Zero Noise Extrapolation (ZNE) consists in running :math:`n+1` versions of the circuit with different noise levels :math:`\{c_j\}_{j=0..n}` and, for each of them, measuring the expected value of the observable :math:`E_j=\langle A\rangle_j`.
+
+Then, an estimate for the expected value of the observable in the noise-free condition is obtained as:
+
+.. math::
+   \hat{E} = \sum_{j=0}^n \gamma_jE_j
+
+with :math:`\gamma_j` satisfying:
+
+.. math::
+   \sum_{j=0}^n \gamma_j = 1 \qquad \sum_{j=0}^n \gamma_j c_j^k = 0 \quad \text{for}\,\, k=1,..,n
+
+This implementation of ZNE relies on the insertion of CNOT pairs (that resolve to the identity in the noise-free case) to realize the different noise levels :math:`\{c_j\}`, see `He et al <https://journals.aps.org/pra/abstract/10.1103/PhysRevA.102.012426>`_ for more details. Hence, the canonical levels are mapped to the number of inserted pairs as :math:`c_j\rightarrow 2 c_j + 1`.
+
+.. autofunction:: qibo.models.error_mitigation.ZNE
+
+.. autofunction:: qibo.models.error_mitigation.get_gammas
+
+.. autofunction:: qibo.models.error_mitigation.get_noisy_circuit
+
+
+Clifford Data Regression (CDR)
+""""""""""""""""""""""""""""""
+
+In the Clifford Data Regression (CDR) method, a set of :math:`n` circuits :math:`S_n=\{C_i\}_{i=1,..,n}` is generated starting from the original circuit :math:`C_0` by replacing some of the non-Clifford gates with Clifford ones. Given an observable :math:`A`, all the circuits of :math:`S_n` are both: simulated to obtain the correspondent expected values of :math:`A` in noise-free condition :math:`\{a_i^{exact}\}_{i=1,..,n}`, and run in noisy conditions to obtain the noisy expected values :math:`\{a_i^{noisy}\}_{i=1,..,n}`.
+
+Finally a model :math:`f` is trained to minimize the mean squared error:
+
+.. math::
+   E = \sum_{i=1}^n \bigg(a_i^{exact}-f(a_i^{noisy})\bigg)^2
+
+and learn the mapping :math:`a^{noisy}\rightarrow a^{exact}`. The mitigated expected value of :math:`A` at the end of :math:`C_0` is then obtained simply with :math:`f(a_0^{noisy})`.
+
+In this implementation the initial circuit is expected to be decomposed in the three Clifford gates :math:`RX(\frac{\pi}{2})`, :math:`CNOT`, :math:`X` and in :math:`RZ(\theta)` (which is Clifford only for :math:`\theta=\frac{n\pi}{2}`). By default the set of Clifford gates used for substitution is :math:`\{RZ(0),RZ(\frac{\pi}{2}),RZ(\pi),RZ(\frac{3}{2}\pi)\}`. See `Sopena et al <https://arxiv.org/abs/2103.12680>`_ for more details.
+
+.. autofunction:: qibo.models.error_mitigation.CDR
+.. autofunction:: qibo.models.error_mitigation.sample_training_circuit
+
+
+Variable Noise CDR (vnCDR)
+""""""""""""""""""""""""""
+
+Variable Noise CDR (vnCDR) is an extension of the CDR method described above that factors in different noise levels as in ZNE. In detail, the set of circuits :math:`S_n=\{\mathbf{C}_i\}_{i=1,..,n}` is still generated as in CDR, but for each :math:`\mathbf{C}_i` we have :math:`k` different versions of it with increased noise :math:`\mathbf{C}_i=C_i^0,C_i^1,...,C_i^{k-1}`.
+
+Therefore, in this case we have a :math:`k`-dimensional predictor variable :math:`\mathbf{a}_i^{noisy}=\big(a_i^0, a_i^1,..,a_i^{k-1}\big)^{noisy}` for the same noise-free targets :math:`a_i^{exact}`, and we want to learn the mapping:
+
+.. math::
+   f:\mathbf{a}_i^{noisy}\rightarrow a_i^{exact}
+
+via minimizing the same mean squared error:
+
+.. math::
+   E = \sum_{i=1}^n \bigg(a_i^{exact}-f(\mathbf{a}_i^{noisy})\bigg)^2
+
+In particular, the default choice is to take :math:`f(\mathbf{x}):=\Gamma\cdot \mathbf{x}\;`, with :math:`\Gamma=\text{diag}(\gamma_0,\gamma_1,...,\gamma_{k-1})\;`, that corresponds to the ZNE calculation for the estimate of the expected value.
+
+Here, as in the implementation of the CDR above, the circuit is supposed to be decomposed in the set of primitive gates :math:`{RX(\frac{\pi}{2}),CNOT,X,RZ(\theta)}`. See `Sopena et al <https://arxiv.org/abs/2103.12680>`_ for all the details.
+
+.. autofunction:: qibo.models.error_mitigation.vnCDR
+
 _______________________
 
 .. _Gates:
@@ -401,6 +471,13 @@ Swap (SWAP)
     :members:
     :member-order: bysource
 
+iSwap (iSWAP)
+"""""""""""""
+
+.. autoclass:: qibo.gates.iSWAP
+    :members:
+    :member-order: bysource
+
 f-Swap (FSWAP)
 """"""""""""""
 
@@ -422,6 +499,26 @@ fSim with general rotation
     :members:
     :member-order: bysource
 
+Parametric XX interaction (RXX)
+"""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.RXX
+    :members:
+    :member-order: bysource
+
+Parametric YY interaction (RYY)
+"""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.RYY
+    :members:
+    :member-order: bysource
+
+Parametric ZZ interaction (RZZ)
+"""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.RZZ
+    :members:
+    :member-order: bysource
 
 Special gates
 ^^^^^^^^^^^^^
@@ -532,6 +629,10 @@ Quantum errors
 
 The quantum errors available to build a noise model are the following:
 
+.. autoclass:: qibo.noise.CustomError
+    :members:
+    :member-order: bysource
+
 .. autoclass:: qibo.noise.PauliError
     :members:
     :member-order: bysource
@@ -548,6 +649,15 @@ The quantum errors available to build a noise model are the following:
     :members:
     :member-order: bysource
 
+.. autoclass:: qibo.noise.UnitaryError
+    :members:
+    :member-order: bysource
+
+.. autoclass:: qibo.noise.KrausError
+    :members:
+    :member-order: bysource
+
+_______________________
 
 .. _Hamiltonians:
 
@@ -832,6 +942,155 @@ variational model.
    :members:
    :member-order: bysource
    :exclude-members: ParallelBFGS
+
+.. _Quantum Information:
+
+Quantum Information
+-------------------
+
+This module provides tools for generation and analysis of quantum (and classical) information.
+
+Metrics
+^^^^^^^
+
+Set of functions that are used to calculate metrics of states, (pseudo-)distance measures
+between states, and distance measures between quantum channels.
+
+Purity
+""""""
+
+.. autofunction:: qibo.quantum_info.purity
+
+
+Entropy
+"""""""
+
+.. autofunction:: qibo.quantum_info.entropy
+
+.. note::
+    ``validate`` flag allows the user to choose if the function will check if input ``state`` is Hermitian or not.
+    Default option is ``validate=False``, i.e. the assumption of Hermiticity, because it is faster and, more importantly,
+    the functions are intended to be used on Hermitian inputs. When ``validate=True`` and
+    ``state`` is non-Hermitian, an error will be raised when using `cupy` backend.
+
+Trace distance
+""""""""""""""
+
+.. autofunction:: qibo.quantum_info.trace_distance
+
+.. note::
+    ``validate`` flag allows the user to choose if the function will check if difference between inputs,
+    ``state - target``, is Hermitian or not. Default option is ``validate=False``, i.e. the assumption of Hermiticity,
+    because it is faster and, more importantly, the functions are intended to be used on Hermitian inputs.
+    When ``validate=True`` and ``state - target`` is non-Hermitian, an error will be raised when using `cupy` backend.
+
+Hilbert-Schmidt distance
+""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.hilbert_schmidt_distance
+
+
+Fidelity
+""""""""
+
+.. autofunction:: qibo.quantum_info.fidelity
+
+
+Process fidelity
+""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.process_fidelity
+
+
+Average gate fidelity
+"""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.average_gate_fidelity
+
+
+Gate error
+""""""""""
+
+.. autofunction:: qibo.quantum_info.gate_error
+
+
+Random Ensembles
+^^^^^^^^^^^^^^^^
+
+Functions that can generate random quantum objects.
+
+
+Random Gaussian matrix
+""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_gaussian_matrix
+
+
+Random Hermitian matrix
+"""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_hermitian
+
+
+Random unitary matrix
+"""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_unitary
+
+
+Random statevector
+""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_statevector
+
+
+Random density matrix
+"""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_density_matrix
+
+
+Random Clifford
+"""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_clifford
+
+
+Random Pauli
+""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_pauli
+
+
+Random stochastic matrix
+""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_stochastic_matrix
+
+
+Utility Functions
+^^^^^^^^^^^^^^^^^
+
+Functions that can be used to calculate metrics and distance measures
+on classical probability arrays.
+
+Shannon entropy
+"""""""""""""""
+
+.. autofunction:: qibo.quantum_info.shannon_entropy
+
+
+Hellinger distance
+""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.hellinger_distance
+
+
+Hellinger fidelity
+""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.hellinger_fidelity
+
 
 .. _Parallel:
 

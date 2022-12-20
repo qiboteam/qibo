@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import collections
 import copy
 import math
@@ -118,6 +117,9 @@ class DistributedQueues:
         This method also creates the ``DistributedQubits`` object holding the
         global qubits list.
         """
+        queue = [
+            gate for gate in queue if not isinstance(gate, gates.M) or gate.collapse
+        ]
         counter = self.count(queue, self.nqubits)
         if self.qubits is None:
             self.qubits = DistributedQubits(

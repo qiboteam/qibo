@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import sys
 
 from qibo.config import raise_error
@@ -154,6 +153,12 @@ class NumpyMatrices:
     def SWAP(self):
         return self.np.array(
             [[1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1]], dtype=self.dtype
+        )
+
+    @cached_property
+    def iSWAP(self):
+        return self.np.array(
+            [[1, 0, 0, 0], [0, 0, 1j, 0], [0, 1j, 0, 0], [0, 0, 0, 1]], dtype=self.dtype
         )
 
     @cached_property

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Define the default circuit, constants and types.
 """
@@ -30,6 +29,9 @@ SHOT_BATCH_SIZE = 2**18
 
 # Threshold size for sampling shots in measurements frequencies with custom operator
 SHOT_METROPOLIS_THRESHOLD = 100000
+
+# Max iterations for normalizing bistochastic matrices
+MAX_ITERATIONS = 50
 
 
 def raise_error(exception, message=None, args=None):

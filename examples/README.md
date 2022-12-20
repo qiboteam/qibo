@@ -21,6 +21,7 @@ physics problems.
 - [Maximal violation of Bell inequalities variationally](bell-variational/README.md)
 - [Feedback-based ALgorithm for Quantum OptimizatioN - FALQON](falqon/README.md)
 - [A general Grover model](grover/README.md)
+- [Quantum anomaly detection](anomaly_detection/README.md)
 
 In the `benchmarks` folder we have included examples concerning:
 - A generic benchmark script for multiple circuits (`benchmarks/main.py`)

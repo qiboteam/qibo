@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test gates defined in `qibo/gates/gates.py`."""
 import numpy as np
 import pytest
@@ -235,6 +234,13 @@ def test_swap(backend):
     final_state = apply_gates(backend, [gates.X(1), gates.SWAP(0, 1)], nqubits=2)
     target_state = np.zeros_like(final_state)
     target_state[2] = 1.0
+    backend.assert_allclose(final_state, target_state)
+
+
+def test_iswap(backend):
+    final_state = apply_gates(backend, [gates.X(1), gates.iSWAP(0, 1)], nqubits=2)
+    target_state = np.zeros_like(final_state)
+    target_state[2] = 1.0j
     backend.assert_allclose(final_state, target_state)
 
 

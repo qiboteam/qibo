@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test dense matrix of Hamiltonians constructed using symbols."""
 import numpy as np
 import pytest

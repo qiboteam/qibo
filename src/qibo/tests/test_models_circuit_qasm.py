@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests creating abstract Qibo circuits from OpenQASM code."""
 import pytest
 
@@ -418,9 +417,8 @@ measure q[2] -> a[1];
 measure q[4] -> a[2];
 measure q[3] -> b[1];"""
     c = Circuit.from_qasm(target)
-    assert c.depth == 1
-    assert isinstance(c.queue[0], gates.X)
-    assert isinstance(c.measurement_gate, gates.M)
+    assert c.depth == 2
+    assert isinstance(c.queue[1], gates.X)
     assert c.measurement_tuples == {"a": (0, 2, 4), "b": (1, 3)}
 
 
@@ -462,18 +460,6 @@ measure q[0] -> b[0];"""
 qreg q[2];
 creg a[2];
 measure q[0] -> a[2];"""
-    with pytest.raises(ValueError):
-        c = Circuit.from_qasm(target)
-
-    # Reuse measured qubit
-    target = """OPENQASM 2.0;
-qreg q[2];
-creg a[2];
-measure q[0] -> a[0];
-x q[1];
-measure q[1] -> a[1];"""
-    # Note that in this example the full register measurement is added during
-    # the first `measurement` call
     with pytest.raises(ValueError):
         c = Circuit.from_qasm(target)
 
@@ -535,7 +521,7 @@ creg a[2]; h q[0];x q[1]; cx q[0], q[1];
 measure q[0] -> a[0];measure q[1]->a[1]"""
     c = Circuit.from_qasm(target)
     assert c.nqubits == 2
-    assert c.depth == 2
+    assert c.depth == 3
     assert isinstance(c.queue[0], gates.H)
     assert isinstance(c.queue[1], gates.X)
     assert isinstance(c.queue[2], gates.CNOT)

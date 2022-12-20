@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import aux_functions as aux
 import matplotlib.pyplot as plt
 import numpy as np
