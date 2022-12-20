@@ -1,7 +1,6 @@
 import numpy as np
 
 from qibo import gates, models
-from qibo.gates import DepolarizingChannel, ThermalRelaxationChannel
 
 
 def noise_model(circuit, params):
@@ -174,3 +173,161 @@ def noise_model(circuit, params):
     noisy_circuit.measurements = measurements
 
     return noisy_circuit
+
+
+def hellinger_distance(p, q):
+    """Hellinger distance between two discrete distributions.
+
+    Args:
+        p (collections.Counter): First frequencies.
+        q (collections.Counter): Second frequencies.
+
+    Returns:
+        Hellinger distance between p and q.
+    """
+    nqubits = len(list(p.keys())[0])
+    sum = 0
+    for k in range(2**nqubits):
+        index = "{:b}".format(k).zfill(nqubits)
+        p_i = p[index]
+        q_i = q[index]
+        sum += (np.sqrt(p_i) - np.sqrt(q_i)) ** 2
+    hellinger = np.sqrt(sum) / np.sqrt(2)
+    return hellinger
+
+
+def loss(parameters, *args):
+
+    circuit = args[0]
+    nshots = args[1]
+    target_freq = args[2]
+    idle_qubits = args[3]
+    backend = args[4]
+    qubits = circuit.nqubits
+    parameters = np.array(parameters)
+    # if any(parameters<0):
+    #     return np.inf
+    # elif parameters[2*qubits+2]>4/3 or parameters[2*qubits+3]>15/16:
+    #     return np.inf
+    # elif any(parameters[2*qubits+4:4*qubits+4]>1):
+    #     return np.inf
+    # elif any(2*parameters[0:qubits]-parameters[qubits:2*qubits] <0):
+    #     return np.inf
+
+    params = {"t1": tuple(parameters[0:qubits]),
+              "t2": tuple(parameters[qubits:2*qubits]),
+              "gate_time": tuple(parameters[2*qubits:2*qubits+2]),
+              "excited_population": 0,
+              "depolarizing_error": tuple(parameters[2*qubits+2:2*qubits+4]),
+              "bitflips_error": (parameters[2*qubits+4:3*qubits+4], parameters[3*qubits+4:4*qubits+4]),
+              "idle_qubits": idle_qubits,
+              }
+    print(params)
+    noisy_circuit = noise_model(circuit, params)
+    freq = backend.execute_circuit(
+        circuit=noisy_circuit, nshots=nshots).frequencies()
+    norm = sum(freq.values())
+    for k in freq:
+        freq[k] /= norm
+    print(hellinger_distance(target_freq, freq))
+    return hellinger_distance(target_freq, freq)
+
+
+class NoiseModel:
+
+    def __init__(self):
+        self.noisy_circuit = {}
+        self.params = {}
+        self.hellinger = {}
+        self.hellinger0 = {}
+        self.extra = {}
+
+    def add(self, params):
+        self.params = params
+
+    def apply(self, circuit):
+        self.noisy_circuit = noise_model(circuit, self.params)
+
+    def fit(self,
+            target_result,
+            initial_params,
+            method='trust-constr',
+            jac=None,
+            hess=None,
+            hessp=None,
+            bounds=True,
+            constraints=True,
+            tol=None,
+            callback=None,
+            options=None,
+            compile=False,
+            processes=None,
+            backend=None,
+            ):
+        from qibo import optimizers
+        if backend == None:
+            from qibo.backends import GlobalBackend
+            backend = GlobalBackend()
+
+        circuit = target_result.circuit
+        nshots = target_result.nshots
+        target_freq = target_result.frequencies()
+        idle_qubits = initial_params["idle_qubits"]
+        norm = sum(target_freq.values())
+        for k in target_freq:
+            target_freq[k] /= norm
+        qubits = target_result.nqubits
+        if bounds == True:
+            from scipy.optimize import Bounds
+            qubits = target_result.nqubits
+            lb = np.zeros(4*qubits+4)
+            ub = [np.inf]*(2*qubits+2)+[4/3, 15/16]+[1]*2*qubits
+            bounds = Bounds(lb, ub, keep_feasible=True)
+        if constraints == True:
+            from scipy.optimize import LinearConstraint
+
+            qubits = target_result.nqubits
+            cons = np.eye(4*qubits+4)
+            for j in range(qubits):  # t1 t2
+                cons[j, j] = 2
+                cons[j, qubits+j] = 1
+            lb = np.zeros(4*qubits+4)
+            ub = [np.inf]*(2*qubits+2)+[4/3, 15/16]+[1]*2*qubits
+            constraints = LinearConstraint(cons, lb, ub, keep_feasible=True)
+
+        if tol == None:
+            tol = 10/np.sqrt(nshots)
+
+        initial_params = list(initial_params["t1"]+initial_params["t2"]+initial_params["gate_time"]
+                              + initial_params["depolarizing_error"])+initial_params["bitflips_error"][0]+initial_params["bitflips_error"][1]
+
+        args = (circuit, nshots, target_freq, idle_qubits, backend)
+        self.hellinger0 = loss(initial_params, *args)
+        print(self.hellinger0)
+        result, parameters, extra = optimizers.optimize(
+            loss,
+            initial_params,
+            args=args,
+            method=method,
+            jac=jac,
+            hess=hess,
+            hessp=hessp,
+            bounds=bounds,
+            constraints=constraints,
+            tol=tol,
+            callback=callback,
+            options=options,
+            compile=compile,
+            processes=processes,
+            backend=backend,
+        )
+        params = {"t1": tuple(parameters[0:qubits]),
+                  "t2": tuple(parameters[qubits:2*qubits]),
+                  "gate_time": tuple(parameters[2*qubits:2*qubits+2]),
+                  "excited_population": 0,
+                  "depolarizing_error": tuple(parameters[2*qubits+2:2*qubits+4]),
+                  "bitflips_error": (parameters[2*qubits+4:3*qubits+4], parameters[3*qubits+4:4*qubits+4])
+                  }
+        self.hellinger = result
+        self.params = params
+        self.extra = extra
