@@ -1,9 +1,10 @@
 import numpy as np
 import pytest
 
-from qibo import gates, noise_model
+from qibo import gates
 from qibo.models import Circuit
 from qibo.noise import *
+from qibo.noise_model import noisy_circuit, CompositeNoiseModel
 from qibo.tests.utils import random_density_matrix, random_state
 
 
@@ -327,7 +328,7 @@ def test_kraus_error(backend, density_matrix, nshots):
 
 @pytest.mark.parametrize("nshots", [10, 100, 1000])
 @pytest.mark.parametrize("idle_qubits", [True, False])
-def test_noise_model(backend, nshots, idle_qubits):
+def test_noisy_circuit(backend, nshots, idle_qubits):
 
     circuit = Circuit(3, density_matrix=True)
     circuit.add(
@@ -357,9 +358,14 @@ def test_noise_model(backend, nshots, idle_qubits):
         "idle_qubits": idle_qubits,
     }
 
+    noise_model = CompositeNoiseModel()
+    noise_model.add(params)
+    noise_model.apply(circuit)
+    noisy_circ = noise_model.noisy_circuit
+
     backend.set_seed(123)
     final_samples = backend.execute_circuit(
-        noise_model.noise_model(circuit, params), nshots=nshots
+        noisy_circ, nshots=nshots
     ).samples()
 
     target_circuit = Circuit(3, density_matrix=True)

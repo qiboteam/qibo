@@ -3,7 +3,7 @@ import numpy as np
 from qibo import gates, models
 
 
-def noise_model(circuit, params):
+def noisy_circuit(circuit, params):
     """Creates a noisy sample from the circuit given as argument.
 
     The function applies a :class:`qibo.gates.ThermalRelaxationChannel` after each step of the circuit
@@ -46,7 +46,7 @@ def noise_model(circuit, params):
     bitflips_10 = params["bitflips_error"][1]
     idle_qubits = params["idle_qubits"]
 
-    noisy_circuit = models.Circuit(circuit.nqubits, density_matrix=True)
+    noisy_circ = models.Circuit(circuit.nqubits, density_matrix=True)
 
     time_steps = max(circuit.queue.moment_index)
     current_time = np.zeros(circuit.nqubits)
@@ -66,7 +66,7 @@ def noise_model(circuit, params):
                                 q_min = q2
                                 q_max = q1
                             time_difference = current_time[q_max] - current_time[q_min]
-                            noisy_circuit.add(
+                            noisy_circ.add(
                                 gates.ThermalRelaxationChannel(
                                     q_min,
                                     t1[q_min],
@@ -79,25 +79,25 @@ def noise_model(circuit, params):
                 q = circuit.queue.moments[t][qubit].qubits
                 if len(circuit.queue.moments[t][qubit].qubits) == 1:
                     q = q[0]
-                    noisy_circuit.add(gates.M(q, p0=bitflips_01[q], p1=bitflips_10[q]))
+                    noisy_circ.add(gates.M(q, p0=bitflips_01[q], p1=bitflips_10[q]))
                 else:
                     p0q = []
                     p1q = []
                     for j in q:
                         p0q.append(bitflips_01[j])
                         p1q.append(bitflips_10[j])
-                    noisy_circuit.add(gates.M(*q, p0=p0q, p1=p1q))
+                    noisy_circ.add(gates.M(*q, p0=p0q, p1=p1q))
                     circuit.queue.moments[t][
                         max(circuit.queue.moments[t][qubit].qubits)
                     ] = None
             elif len(circuit.queue.moments[t][qubit].qubits) == 1:
-                noisy_circuit.add(circuit.queue.moments[t][qubit])
-                noisy_circuit.add(
+                noisy_circ.add(circuit.queue.moments[t][qubit])
+                noisy_circ.add(
                     gates.DepolarizingChannel(
                         circuit.queue.moments[t][qubit].qubits, depolarizing_error_1
                     )
                 )
-                noisy_circuit.add(
+                noisy_circ.add(
                     gates.ThermalRelaxationChannel(
                         qubit,
                         t1[qubit],
@@ -118,7 +118,7 @@ def noise_model(circuit, params):
                         q_min = q2
                         q_max = q1
                     time_difference = current_time[q_max] - current_time[q_min]
-                    noisy_circuit.add(
+                    noisy_circ.add(
                         gates.ThermalRelaxationChannel(
                             q_min,
                             t1[q_min],
@@ -129,19 +129,19 @@ def noise_model(circuit, params):
                     )
                     current_time[q_min] += time_difference
 
-                noisy_circuit.add(circuit.queue.moments[t][qubit])
-                noisy_circuit.add(
+                noisy_circ.add(circuit.queue.moments[t][qubit])
+                noisy_circ.add(
                     gates.DepolarizingChannel(
                         tuple(set(circuit.queue.moments[t][qubit].qubits)),
                         depolarizing_error_2,
                     )
                 )
-                noisy_circuit.add(
+                noisy_circ.add(
                     gates.ThermalRelaxationChannel(
                         q1, t1[q1], t2[q1], time2, excited_population
                     )
                 )
-                noisy_circuit.add(
+                noisy_circ.add(
                     gates.ThermalRelaxationChannel(
                         q2, t1[q2], t2[q2], time2, excited_population
                     )
@@ -165,9 +165,9 @@ def noise_model(circuit, params):
                 p0q.append(bitflips_01[j])
                 p1q.append(bitflips_10[j])
             measurements.append(gates.M(*q, p0=p0q, p1=p1q))
-    noisy_circuit.measurements = measurements
+    noisy_circ.measurements = measurements
 
-    return noisy_circuit
+    return noisy_circ
 
 
 def hellinger_distance(p, q):
@@ -200,14 +200,6 @@ def loss(parameters, *args):
     backend = args[4]
     qubits = circuit.nqubits
     parameters = np.array(parameters)
-    # if any(parameters<0):
-    #     return np.inf
-    # elif parameters[2*qubits+2]>4/3 or parameters[2*qubits+3]>15/16:
-    #     return np.inf
-    # elif any(parameters[2*qubits+4:4*qubits+4]>1):
-    #     return np.inf
-    # elif any(2*parameters[0:qubits]-parameters[qubits:2*qubits] <0):
-    #     return np.inf
 
     params = {
         "t1": tuple(parameters[0:qubits]),
@@ -221,17 +213,17 @@ def loss(parameters, *args):
         ),
         "idle_qubits": idle_qubits,
     }
-    print(params)
-    noisy_circuit = noise_model(circuit, params)
-    freq = backend.execute_circuit(circuit=noisy_circuit, nshots=nshots).frequencies()
+
+    noisy_circ = noisy_circuit(circuit, params)
+    freq = backend.execute_circuit(circuit=noisy_circ, nshots=nshots).frequencies()
     norm = sum(freq.values())
     for k in freq:
         freq[k] /= norm
-    print(hellinger_distance(target_freq, freq))
+         
     return hellinger_distance(target_freq, freq)
 
 
-class NoiseModel:
+class CompositeNoiseModel:
     def __init__(self):
         self.noisy_circuit = {}
         self.params = {}
@@ -243,7 +235,7 @@ class NoiseModel:
         self.params = params
 
     def apply(self, circuit):
-        self.noisy_circuit = noise_model(circuit, self.params)
+        self.noisy_circuit = noisy_circuit(circuit, self.params)
 
     def fit(
         self,
@@ -312,7 +304,7 @@ class NoiseModel:
 
         args = (circuit, nshots, target_freq, idle_qubits, backend)
         self.hellinger0 = loss(initial_params, *args)
-        print(self.hellinger0)
+        
         result, parameters, extra = optimizers.optimize(
             loss,
             initial_params,
@@ -340,6 +332,7 @@ class NoiseModel:
                 parameters[2 * qubits + 4 : 3 * qubits + 4],
                 parameters[3 * qubits + 4 : 4 * qubits + 4],
             ),
+            "idle_qubits": idle_qubits,
         }
         self.hellinger = result
         self.params = params
