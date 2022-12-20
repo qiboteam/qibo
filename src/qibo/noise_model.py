@@ -65,8 +65,7 @@ def noise_model(circuit, params):
                             if current_time[q1] > current_time[q2]:
                                 q_min = q2
                                 q_max = q1
-                            time_difference = current_time[q_max] - \
-                                current_time[q_min]
+                            time_difference = current_time[q_max] - current_time[q_min]
                             noisy_circuit.add(
                                 gates.ThermalRelaxationChannel(
                                     q_min,
@@ -80,8 +79,7 @@ def noise_model(circuit, params):
                 q = circuit.queue.moments[t][qubit].qubits
                 if len(circuit.queue.moments[t][qubit].qubits) == 1:
                     q = q[0]
-                    noisy_circuit.add(
-                        gates.M(q, p0=bitflips_01[q], p1=bitflips_10[q]))
+                    noisy_circuit.add(gates.M(q, p0=bitflips_01[q], p1=bitflips_10[q]))
                 else:
                     p0q = []
                     p1q = []
@@ -148,10 +146,8 @@ def noise_model(circuit, params):
                         q2, t1[q2], t2[q2], time2, excited_population
                     )
                 )
-                current_time[circuit.queue.moments[t]
-                             [qubit].qubits[0]] += time2
-                current_time[circuit.queue.moments[t]
-                             [qubit].qubits[1]] += time2
+                current_time[circuit.queue.moments[t][qubit].qubits[0]] += time2
+                current_time[circuit.queue.moments[t][qubit].qubits[1]] += time2
                 circuit.queue.moments[t][
                     max(circuit.queue.moments[t][qubit].qubits)
                 ] = None
@@ -161,8 +157,7 @@ def noise_model(circuit, params):
         q = m.qubits
         if len(q) == 1:
             q = q[0]
-            measurements.append(
-                gates.M(q, p0=bitflips_01[q], p1=bitflips_10[q]))
+            measurements.append(gates.M(q, p0=bitflips_01[q], p1=bitflips_10[q]))
         else:
             p0q = []
             p1q = []
@@ -214,18 +209,21 @@ def loss(parameters, *args):
     # elif any(2*parameters[0:qubits]-parameters[qubits:2*qubits] <0):
     #     return np.inf
 
-    params = {"t1": tuple(parameters[0:qubits]),
-              "t2": tuple(parameters[qubits:2*qubits]),
-              "gate_time": tuple(parameters[2*qubits:2*qubits+2]),
-              "excited_population": 0,
-              "depolarizing_error": tuple(parameters[2*qubits+2:2*qubits+4]),
-              "bitflips_error": (parameters[2*qubits+4:3*qubits+4], parameters[3*qubits+4:4*qubits+4]),
-              "idle_qubits": idle_qubits,
-              }
+    params = {
+        "t1": tuple(parameters[0:qubits]),
+        "t2": tuple(parameters[qubits : 2 * qubits]),
+        "gate_time": tuple(parameters[2 * qubits : 2 * qubits + 2]),
+        "excited_population": 0,
+        "depolarizing_error": tuple(parameters[2 * qubits + 2 : 2 * qubits + 4]),
+        "bitflips_error": (
+            parameters[2 * qubits + 4 : 3 * qubits + 4],
+            parameters[3 * qubits + 4 : 4 * qubits + 4],
+        ),
+        "idle_qubits": idle_qubits,
+    }
     print(params)
     noisy_circuit = noise_model(circuit, params)
-    freq = backend.execute_circuit(
-        circuit=noisy_circuit, nshots=nshots).frequencies()
+    freq = backend.execute_circuit(circuit=noisy_circuit, nshots=nshots).frequencies()
     norm = sum(freq.values())
     for k in freq:
         freq[k] /= norm
@@ -234,7 +232,6 @@ def loss(parameters, *args):
 
 
 class NoiseModel:
-
     def __init__(self):
         self.noisy_circuit = {}
         self.params = {}
@@ -248,25 +245,28 @@ class NoiseModel:
     def apply(self, circuit):
         self.noisy_circuit = noise_model(circuit, self.params)
 
-    def fit(self,
-            target_result,
-            initial_params,
-            method='trust-constr',
-            jac=None,
-            hess=None,
-            hessp=None,
-            bounds=True,
-            constraints=True,
-            tol=None,
-            callback=None,
-            options=None,
-            compile=False,
-            processes=None,
-            backend=None,
-            ):
+    def fit(
+        self,
+        target_result,
+        initial_params,
+        method="trust-constr",
+        jac=None,
+        hess=None,
+        hessp=None,
+        bounds=True,
+        constraints=True,
+        tol=None,
+        callback=None,
+        options=None,
+        compile=False,
+        processes=None,
+        backend=None,
+    ):
         from qibo import optimizers
+
         if backend == None:
             from qibo.backends import GlobalBackend
+
             backend = GlobalBackend()
 
         circuit = target_result.circuit
@@ -279,27 +279,36 @@ class NoiseModel:
         qubits = target_result.nqubits
         if bounds == True:
             from scipy.optimize import Bounds
+
             qubits = target_result.nqubits
-            lb = np.zeros(4*qubits+4)
-            ub = [np.inf]*(2*qubits+2)+[4/3, 15/16]+[1]*2*qubits
+            lb = np.zeros(4 * qubits + 4)
+            ub = [np.inf] * (2 * qubits + 2) + [4 / 3, 15 / 16] + [1] * 2 * qubits
             bounds = Bounds(lb, ub, keep_feasible=True)
         if constraints == True:
             from scipy.optimize import LinearConstraint
 
             qubits = target_result.nqubits
-            cons = np.eye(4*qubits+4)
+            cons = np.eye(4 * qubits + 4)
             for j in range(qubits):  # t1 t2
                 cons[j, j] = 2
-                cons[j, qubits+j] = 1
-            lb = np.zeros(4*qubits+4)
-            ub = [np.inf]*(2*qubits+2)+[4/3, 15/16]+[1]*2*qubits
+                cons[j, qubits + j] = 1
+            lb = np.zeros(4 * qubits + 4)
+            ub = [np.inf] * (2 * qubits + 2) + [4 / 3, 15 / 16] + [1] * 2 * qubits
             constraints = LinearConstraint(cons, lb, ub, keep_feasible=True)
 
         if tol == None:
-            tol = 10/np.sqrt(nshots)
+            tol = 10 / np.sqrt(nshots)
 
-        initial_params = list(initial_params["t1"]+initial_params["t2"]+initial_params["gate_time"]
-                              + initial_params["depolarizing_error"])+initial_params["bitflips_error"][0]+initial_params["bitflips_error"][1]
+        initial_params = (
+            list(
+                initial_params["t1"]
+                + initial_params["t2"]
+                + initial_params["gate_time"]
+                + initial_params["depolarizing_error"]
+            )
+            + initial_params["bitflips_error"][0]
+            + initial_params["bitflips_error"][1]
+        )
 
         args = (circuit, nshots, target_freq, idle_qubits, backend)
         self.hellinger0 = loss(initial_params, *args)
@@ -321,13 +330,17 @@ class NoiseModel:
             processes=processes,
             backend=backend,
         )
-        params = {"t1": tuple(parameters[0:qubits]),
-                  "t2": tuple(parameters[qubits:2*qubits]),
-                  "gate_time": tuple(parameters[2*qubits:2*qubits+2]),
-                  "excited_population": 0,
-                  "depolarizing_error": tuple(parameters[2*qubits+2:2*qubits+4]),
-                  "bitflips_error": (parameters[2*qubits+4:3*qubits+4], parameters[3*qubits+4:4*qubits+4])
-                  }
+        params = {
+            "t1": tuple(parameters[0:qubits]),
+            "t2": tuple(parameters[qubits : 2 * qubits]),
+            "gate_time": tuple(parameters[2 * qubits : 2 * qubits + 2]),
+            "excited_population": 0,
+            "depolarizing_error": tuple(parameters[2 * qubits + 2 : 2 * qubits + 4]),
+            "bitflips_error": (
+                parameters[2 * qubits + 4 : 3 * qubits + 4],
+                parameters[3 * qubits + 4 : 4 * qubits + 4],
+            ),
+        }
         self.hellinger = result
         self.params = params
         self.extra = extra

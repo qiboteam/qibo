@@ -354,7 +354,7 @@ def test_noise_model(backend, nshots, idle_qubits):
         "excited_population": 0,
         "depolarizing_error": (0.5, 0.6),
         "bitflips_error": ([0.01, 0.02, 0.03], [0.02, 0.03, 0.04]),
-        "idle_qubits": idle_qubits
+        "idle_qubits": idle_qubits,
     }
 
     backend.set_seed(123)
