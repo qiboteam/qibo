@@ -49,7 +49,6 @@ def test_derivative(backend):
     grad_1 = parameter_shift(circuit=c, hamiltonian=test_hamiltonian, parameter_index=1)
     grad_2 = parameter_shift(circuit=c, hamiltonian=test_hamiltonian, parameter_index=2)
 
-    assert isinstance(test_hamiltonian, hamiltonians.AbstractHamiltonian)
     # check of known values
     # calculated using tf.GradientTape
     backend.assert_allclose(grad_0, 8.51104358e-02, atol=1e-10)
