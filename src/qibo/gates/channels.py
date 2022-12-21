@@ -121,7 +121,7 @@ class KrausChannel(Channel):
 
         self.nqubits = 1 + max(self.target_qubits)
 
-        if self.name != 'KrausChannel':
+        if self.name != "KrausChannel":
             p0 = 1
             for coeff in self.coefficients:
                 p0 = p0 - coeff
@@ -165,7 +165,7 @@ class KrausChannel(Channel):
         super_op = self.to_superop(backend=backend)
 
         # unitary that transforms from comp basis to pauli basis
-        U = comp_basis_to_pauli(self.nqubits, normalize, backend)
+        U = comp_basis_to_pauli(self.nqubits, normalize)
 
         super_op = np.matmul(U, np.matmul(super_op, np.transpose(np.conj(U))))
 
