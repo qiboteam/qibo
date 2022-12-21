@@ -24,7 +24,7 @@ def test_general_channel(backend):
     backend.assert_allclose(final_rho, target_rho)
 
 
-def test_krauss_channel_errors():
+def test_krauss_channel_errors(backend):
     a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
     a2 = np.sqrt(0.6) * np.array([[1, 0], [0, -1]])
     with pytest.raises(ValueError):
@@ -43,8 +43,18 @@ def test_krauss_channel_errors():
 
     channel = gates.KrausChannel([((0,), a1), ((0,), a2)])
 
-    assert np.linalg.norm(channel.to_superop() - test_superop) < PRECISION_TOL
-    assert np.linalg.norm(channel.to_pauli_liouville() - test_pauli) < PRECISION_TOL
+    assert (
+        np.linalg.norm(
+            backend.to_numpy(channel.to_superop(backend=backend)) - test_superop
+        )
+        < PRECISION_TOL
+    )
+    assert (
+        np.linalg.norm(
+            backend.to_numpy(channel.to_pauli_liouville(backend=backend)) - test_pauli
+        )
+        < PRECISION_TOL
+    )
 
 
 def test_depolarizing_channel_errors():
