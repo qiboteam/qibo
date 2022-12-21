@@ -150,7 +150,9 @@ def test_pauli_noise_channel(backend):
 
     assert (
         np.linalg.norm(
-            gates.PauliNoiseChannel(0, *pnp).to_pauli_liouville(True)
+            backend.to_numpy(
+                gates.PauliNoiseChannel(0, *pnp).to_pauli_liouville(True, backend)
+            )
             - test_representation
         )
         < PRECISION_TOL
