@@ -784,6 +784,21 @@ class Circuit:
             )
         return params
 
+    def associate_gates_with_parameters(self):
+        """Associates to each parameter its gate.
+
+        Returns:
+            A nparams-long flatlist whose i-th element is the gate parameterized
+            by the i-th parameter.
+        """
+
+        parameter_to_gate = []
+        for gate in self.parametrized_gates:
+            npar = len(gate.parameters)
+            parameter_to_gate.extend([gate] * npar)
+
+        return parameter_to_gate
+
     def summary(self) -> str:
         """Generates a summary of the circuit.
 

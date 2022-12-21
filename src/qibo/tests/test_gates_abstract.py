@@ -326,3 +326,10 @@ def test_fused_gate():
     assert gate.qubits == (0, 1, 2)
     assert len(gate.gates) == 3
     assert isinstance(gate.gates[0], gates.TOFFOLI)
+
+
+def test_generator_eigenvalue():
+
+    gate = gates.H(0)
+    with pytest.raises(NotImplementedError):
+        gate.generator_eigenvalue()

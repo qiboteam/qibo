@@ -257,6 +257,19 @@ class Gate:
     def asmatrix(self, backend):
         return backend.asmatrix(self)
 
+    def generator_eigenvalue(self):
+        """
+        This function returns the eigenvalues of the gate's generator.
+
+        Returns:
+            np.float generator's eigenvalue or raise an error if not implemented.
+        """
+
+        raise_error(
+            NotImplementedError,
+            f"Generator eigenvalue is not implemented for {self.name}",
+        )
+
     @property
     def matrix(self):
         from qibo.backends import GlobalBackend
