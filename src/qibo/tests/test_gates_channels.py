@@ -56,6 +56,9 @@ def test_krauss_channel_errors(backend):
         < PRECISION_TOL
     )
 
+    channel.to_superop()
+    channel.to_pauli_liouville()
+
 
 def test_depolarizing_channel_errors():
     with pytest.raises(ValueError):
