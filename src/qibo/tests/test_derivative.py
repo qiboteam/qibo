@@ -42,7 +42,7 @@ def test_derivative(backend):
 
     # testing hamiltonian type
     with pytest.raises(TypeError):
-        grad_0 = parameter_shift(circuit=c, hamiltonian=c, parameter_shift=0)
+        grad_0 = parameter_shift(circuit=c, hamiltonian=c, parameter_index=0)
 
     # executing all the procedure
     grad_0 = parameter_shift(circuit=c, hamiltonian=test_hamiltonian, parameter_index=0)
