@@ -114,7 +114,7 @@ class KrausChannel(Channel):
         """
         import numpy as np
 
-        if backend is None:
+        if backend is None:  # pragma: no cover
             from qibo.backends import GlobalBackend
 
             backend = GlobalBackend()
@@ -157,7 +157,7 @@ class KrausChannel(Channel):
 
         from qibo.quantum_info.basis import comp_basis_to_pauli
 
-        if backend is None:
+        if backend is None:  # pragma: no cover
             from qibo.backends import GlobalBackend
 
             backend = GlobalBackend()
@@ -165,9 +165,9 @@ class KrausChannel(Channel):
         super_op = self.to_superop(backend=backend)
 
         # unitary that transforms from comp basis to pauli basis
-        U = comp_basis_to_pauli(self.nqubits, normalize)
+        U = backend.cast(comp_basis_to_pauli(self.nqubits, normalize))
 
-        super_op = np.matmul(U, np.matmul(super_op, np.transpose(np.conj(U))))
+        super_op = U @ super_op @ np.transpose(np.conj(U))
 
         return backend.cast(super_op, dtype=super_op.dtype)
 

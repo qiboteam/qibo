@@ -56,9 +56,6 @@ def test_krauss_channel_errors(backend):
         < PRECISION_TOL
     )
 
-    channel.to_superop()
-    channel.to_pauli_liouville()
-
 
 def test_depolarizing_channel_errors():
     with pytest.raises(ValueError):
@@ -147,19 +144,10 @@ def test_pauli_noise_channel(backend):
     a2 = 1 - 2 * pnp[0] - 2 * pnp[2]
     a3 = 1 - 2 * pnp[0] - 2 * pnp[1]
     test_representation = np.diag([a0, a1, a2, a3])
-    test_representation = backend.cast(
-        test_representation, dtype=test_representation.dtype
-    )
 
-    assert (
-        np.linalg.norm(
-            backend.to_numpy(
-                gates.PauliNoiseChannel(0, *pnp).to_pauli_liouville(True, backend)
-            )
-            - test_representation
-        )
-        < PRECISION_TOL
-    )
+    liouville = gates.PauliNoiseChannel(0, *pnp).to_pauli_liouville(True, backend)
+    norm = np.linalg.norm(backend.to_numpy(liouville) - test_representation)
+    assert norm < PRECISION_TOL
 
 
 def test_depolarizing_channel(backend):
