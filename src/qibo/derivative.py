@@ -33,7 +33,7 @@ def parameter_shift(
 
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
-        hamiltonian (:class: `qibo.hamiltonians.Hamiltonian`): target observable.
+        hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): target observable.
         parameter_index (int): the index which identifies the target parameter in the circuit.get_parameters() list
         initial_state ((2**nqubits) vector): initial state on which the circuit acts (default None).
         scale_factor (float): parameter scale factor (default None).
