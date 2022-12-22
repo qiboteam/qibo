@@ -45,8 +45,7 @@ PARAMETRIZED_GATES = {
     "rxx",
     "ryy",
     "rzz",
-    "ms"
-    "u1",
+    "ms" "u1",
     "u2",
     "u3",
     "crx",
@@ -91,7 +90,7 @@ DRAW_LABELS = {
     "rzz": "RZZ",
     "Unitary": "U",
     "fswap": "fx",
-    "ms" : "MS",
+    "ms": "MS",
     "PauliNoiseChannel": "PN",
     "KrausChannel": "K",
     "UnitaryChannel": "U",
@@ -521,7 +520,7 @@ class GPI(ParametrizedGate):
     def __init__(self, q, phi, trainable=True):
         super().__init__(trainable)
         self.name = "gpi"
-        self.target_qubits = (q, )
+        self.target_qubits = (q,)
 
         self.parameter_names = "phi"
         self.parameters = phi
@@ -529,6 +528,7 @@ class GPI(ParametrizedGate):
 
         self.init_args = [q]
         self.init_kwargs = {"phi": phi, "trainable": trainable}
+
 
 class GPI2(ParametrizedGate):
     """The GPI2 gate.
@@ -552,7 +552,7 @@ class GPI2(ParametrizedGate):
     def __init__(self, q, phi, trainable=True):
         super().__init__(trainable)
         self.name = "gpi"
-        self.target_qubits = (q, )
+        self.target_qubits = (q,)
 
         self.parameter_names = "phi"
         self.parameters = phi
@@ -563,8 +563,7 @@ class GPI2(ParametrizedGate):
 
     def _dagger(self) -> "Gate":
         """"""
-        return self.__class__(self.target_qubits[0], self.parameters[0]+ math.pi)
-
+        return self.__class__(self.target_qubits[0], self.parameters[0] + math.pi)
 
 
 class _Un_(ParametrizedGate):
@@ -1309,6 +1308,7 @@ class RZZ(_Rnn_):
         super().__init__(q0, q1, theta, trainable)
         self.name = "rzz"
 
+
 class MS(ParametrizedGate):
     """The Mølmer–Sørensen (MS) gate is a two qubit gate native to trapped ions.
 
@@ -1351,6 +1351,7 @@ class MS(ParametrizedGate):
         q0, q1 = self.target_qubits
         phi0, phi1 = self.parameters
         return self.__class__(q0, q1, phi0 + math.pi, phi1)
+
 
 class TOFFOLI(Gate):
     """The Toffoli gate.
