@@ -1109,7 +1109,7 @@ class GeneralizedfSim(ParametrizedGate):
         self.name = "generalizedfsim"
         self.target_qubits = (q0, q1)
 
-        self.parameter_names = ["u", "phi"]
+        self.parameter_names = ["unitary", "phi"]
         self.parameters = unitary, phi
         self.nparams = 5
 
