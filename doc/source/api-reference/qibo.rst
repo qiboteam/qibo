@@ -520,6 +520,13 @@ Parametric ZZ interaction (RZZ)
     :members:
     :member-order: bysource
 
+Mølmer–Sørensen (MS)
+"""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.MS
+    :members:
+    :member-order: bysource
+
 Special gates
 ^^^^^^^^^^^^^
 

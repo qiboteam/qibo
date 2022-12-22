@@ -231,6 +231,21 @@ class NumpyMatrices:
             dtype=self.dtype,
         )
 
+    def MS(self, phi0, phi1):
+        plus = self.np.exp(1.j * (phi0 + phi1))
+        minus = self.np.exp(1.j * (phi0 - phi1))
+
+        return self.np.array(
+            [
+                [1, 0, 0,  -1.j*self.np.conj(plus)],
+                [0, 1, -1.j*self.np.conj(minus), 0],
+                [0, -1.j*minus, 1, 0],
+                [-1.j*plus, 0, 0, 1],
+            ],
+            dtype=self.dtype,
+        ) / self.np.sqrt(2)
+
+
     @cached_property
     def TOFFOLI(self):
         return self.np.array(

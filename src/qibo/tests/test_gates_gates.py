@@ -340,7 +340,6 @@ def test_ryy(backend):
     backend.assert_allclose(final_state, target_state)
 
 
-# @pytest.mark.parametrize("applyx", [True, False])
 def test_rzz(backend):
     theta = 0.1234
     final_state = apply_gates(
@@ -348,6 +347,26 @@ def test_rzz(backend):
     )
     target_state = np.zeros_like(final_state)
     target_state[3] = np.exp(-1j * theta / 2.0)
+    backend.assert_allclose(final_state, target_state)
+
+def test_ms(backend):
+    phi0 = 0.1234
+    phi1 = 0.4321
+    final_state = apply_gates(
+        backend, [gates.H(0), gates.H(1), gates.MS(0, 1, phi0=phi0, phi1=phi1)], nqubits=2
+    )
+    target_state = np.ones_like(final_state) / 2.0
+    plus = np.exp(1.j * (phi0 + phi1))
+    minus = np.exp(1.j * (phi0 - phi1))
+
+    matrix = np.eye(4, dtype=target_state.dtype)
+    matrix[3, 0] = -1.j * plus
+    matrix[0, 3] = -1.j * np.conj(plus)
+    matrix[2, 1] = -1.j * minus
+    matrix[1, 2] = -1.j * np.conj(minus)
+    matrix /=  np.sqrt(2)
+    target_state = matrix.dot(target_state) 
+
     backend.assert_allclose(final_state, target_state)
 
 
@@ -645,6 +664,7 @@ GATES = [
     ("RXX", (0, 1, 0.1)),
     ("RYY", (0, 1, 0.2)),
     ("RZZ", (0, 1, 0.3)),
+    ("MS",  (0, 1, 0.1, 0.2))
 ]
 
 
