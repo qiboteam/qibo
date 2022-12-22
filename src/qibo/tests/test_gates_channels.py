@@ -3,6 +3,7 @@ import numpy as np
 import pytest
 
 from qibo import gates
+from qibo.config import PRECISION_TOL
 from qibo.tests.utils import random_density_matrix
 
 
@@ -23,10 +24,37 @@ def test_general_channel(backend):
     backend.assert_allclose(final_rho, target_rho)
 
 
-def test_krauss_channel_errors():
+def test_krauss_channel_errors(backend):
     a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
+    a2 = np.sqrt(0.6) * np.array([[1, 0], [0, -1]])
     with pytest.raises(ValueError):
         gate = gates.KrausChannel([((0, 1), a1)])
+
+    test_superop = np.array(
+        [
+            [0.6 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.4 + 0.0j],
+            [0.0 + 0.0j, -0.6 + 0.0j, 0.4 + 0.0j, 0.0 + 0.0j],
+            [0.0 + 0.0j, 0.4 + 0.0j, -0.6 + 0.0j, 0.0 + 0.0j],
+            [0.4 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.6 + 0.0j],
+        ]
+    )
+
+    test_pauli = np.diag([2.0, -0.4, -2.0, 0.4])
+
+    channel = gates.KrausChannel([((0,), a1), ((0,), a2)])
+
+    assert (
+        np.linalg.norm(
+            backend.to_numpy(channel.to_superop(backend=backend)) - test_superop
+        )
+        < PRECISION_TOL
+    )
+    assert (
+        np.linalg.norm(
+            backend.to_numpy(channel.to_pauli_liouville(backend=backend)) - test_pauli
+        )
+        < PRECISION_TOL
+    )
 
 
 def test_depolarizing_channel_errors():
@@ -109,6 +137,17 @@ def test_pauli_noise_channel(backend):
     target_rho = 0.3 * backend.to_numpy(target_rho)
     target_rho += 0.7 * initial_rho
     backend.assert_allclose(final_rho, target_rho)
+
+    pnp = np.array([0.1, 0.02, 0.05])
+    a0 = 1
+    a1 = 1 - 2 * pnp[1] - 2 * pnp[2]
+    a2 = 1 - 2 * pnp[0] - 2 * pnp[2]
+    a3 = 1 - 2 * pnp[0] - 2 * pnp[1]
+    test_representation = np.diag([a0, a1, a2, a3])
+
+    liouville = gates.PauliNoiseChannel(0, *pnp).to_pauli_liouville(True, backend)
+    norm = np.linalg.norm(backend.to_numpy(liouville) - test_representation)
+    assert norm < PRECISION_TOL
 
 
 def test_depolarizing_channel(backend):
