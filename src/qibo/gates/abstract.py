@@ -349,7 +349,9 @@ class ParametrizedGate(Gate):
                 self.symbolic_parameters[i] = v
             params[i] = v
         self._parameters = tuple(params)
-        self.init_kwargs.update({n: v for n, v in zip(names, self._parameters)})
+        self.init_kwargs.update(
+            {n: v for n, v in zip(names, self._parameters) if n in self.init_kwargs}
+        )
 
         # set parameters in device gates
         for gate in self.device_gates:  # pragma: no cover
