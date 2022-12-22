@@ -9,11 +9,23 @@ def parameter_shift(
     hamiltonian,
     parameter_index,
     initial_state=None,
+    scale_factor=None,
 ):
     """In this method the parameter shift rule (PSR) is implemented.
     Given a circuit U and an observable H, the PSR allows to calculate the derivative
     of the expected value of H on the final state with respect to a variational
     parameter of the circuit.
+    There is also the possibility of setting a scale factor. It is useful when a
+    circuit's parameter is obtained by combination of a variational
+    parameter and an external object, such as a training variable in a Quantum
+    Machine Learning problem. For example, performing a re-uploading strategy
+    to embed some data into a circuit, we apply to the quantum state rotations
+    whose angles are in the form: theta' = theta * x, where theta is a variational
+    parameter and x an input variable. The PSR allows to calculate the derivative
+    with respect of theta' but, if we want to optimize a system with respect its
+    variational parameters we need to "free" this procedure from the x depencency.
+    If the `scale_factor` is not provided, it is set equal to one and doesn't
+    affect the calculation.
 
     Original references:
         `https://arxiv.org/abs/1811.11184`;
@@ -23,7 +35,9 @@ def parameter_shift(
         circuit (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
         hamiltonian (:class: `qibo.hamiltonians.Hamiltonian`): target observable.
         parameter_index (int): the index which identifies the target parameter in the circuit.get_parameters() list
-        initial_state ((2**nqubits) vector): initial state on which the circuit acts.
+        initial_state ((2**nqubits) vector): initial state on which the circuit acts (default None).
+        scale_factor (float): parameter scale factor (default None).
+
 
     Returns:
         np.float value of the derivative of the expectation value of the hamiltonian
@@ -79,87 +93,9 @@ def parameter_shift(
             "hamiltonian must be a qibo.hamiltonians.Hamiltonian or qibo.hamiltonians.SymbolicHamiltonian object",
         )
 
-    # inheriting hamiltonian's backend
-    backend = hamiltonian.backend
-
-    # getting the gate's type
-    gate = circuit.associate_gates_with_parameters()[parameter_index]
-
-    # getting the generator_eigenvalue
-    generator_eigenval = gate.generator_eigenvalue()
-
-    # defining the shift according to the psr
-    s = np.pi / (4 * generator_eigenval)
-
-    # saving original parameters and making a copy
-    original = np.asarray(circuit.get_parameters()).copy()
-    shifted = original.copy()
-
-    # forward shift and evaluation
-    shifted[parameter_index] += s
-    circuit.set_parameters(shifted)
-
-    forward = hamiltonian.expectation(
-        backend.execute_circuit(circuit=circuit, initial_state=initial_state).state()
-    )
-
-    # backward shift and evaluation
-    shifted[parameter_index] -= 2 * s
-    circuit.set_parameters(shifted)
-
-    backward = hamiltonian.expectation(
-        backend.execute_circuit(circuit=circuit, initial_state=initial_state).state()
-    )
-
-    # restoring the original circuit
-    circuit.set_parameters(original)
-
-    return generator_eigenval * (forward - backward)
-
-
-def rescaled_parameter_shift(
-    circuit,
-    hamiltonian,
-    parameter_index,
-    scale_factor,
-    initial_state=None,
-):
-    """In this method a rescaled version of the parameter shift rule (PSR) is implemented.
-    It is useful when a circuit's parameter is obtained by combination of a variational
-    parameter and an external object, such as a training variable in a Quantum
-    Machine Learning problem. For example, performing a re-uploading strategy
-    to embed some data into a circuit, we apply to the quantum state rotations
-    whose angles are in the form: theta' = theta * x, where theta is a variational
-    parameter and x an input variable. The PSR allows to calculate the derivative
-    with respect of theta' but, if we want to optimize a system with respect its
-    variational parameters we need to "free" this procedure from the x depencency.
-    This is the aim of this method.
-
-    Original references:
-        `https://arxiv.org/abs/1811.11184`;
-        `https://arxiv.org/abs/2210.10787`.
-
-    Args:
-        circuit (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
-        hamiltonian (:class: `qibo.hamiltonians.Hamiltonian`): target observable.
-        parameter_index (int): the index which identifies the target parameter in the circuit.get_parameters() list
-        scale_factor (float): parameter scale factor;
-        initial_state ((1, 2**nqubits) matrix): initial state on which the circuit acts.
-
-    Returns:
-        np.float value of the derivative of the expectation value of the hamiltonian
-        with respect to the target variational parameter.
-    """
-
-    # some raise_error
-    if parameter_index > len(circuit.get_parameters()):
-        raise_error(ValueError, """This index is out of bounds.""")
-
-    if not isinstance(hamiltonian, AbstractHamiltonian):
-        raise_error(
-            TypeError,
-            "hamiltonian must be a qibo.hamiltonians.Hamiltonian or qibo.hamiltonians.SymbolicHamiltonian object",
-        )
+    # set scale factor to 1 if not provided
+    if scale_factor is None:
+        scale_factor = 1.0
 
     # inheriting hamiltonian's backend
     backend = hamiltonian.backend

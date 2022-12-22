@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from qibo import gates, hamiltonians
-from qibo.derivative import parameter_shift, rescaled_parameter_shift
+from qibo.derivative import parameter_shift
 from qibo.models import Circuit
 
 
@@ -64,26 +64,14 @@ def test_derivative(backend):
     test_params *= 0.5
     c.set_parameters(test_params)
 
-    # testing parameter out of bounds
-    with pytest.raises(ValueError):
-        grad_0_res = rescaled_parameter_shift(
-            circuit=c, hamiltonian=test_hamiltonian, parameter_index=5, scale_factor=x
-        )
-
-    # testing hamiltonian type
-    with pytest.raises(TypeError):
-        grad_0_res = rescaled_parameter_shift(
-            circuit=c, hamiltonian=c, parameter_index=0, scale_factor=x
-        )
-
     # executing all the procedure
-    grad_0_res = rescaled_parameter_shift(
+    grad_0_res = parameter_shift(
         circuit=c, hamiltonian=test_hamiltonian, parameter_index=0, scale_factor=x
     )
-    grad_1_res = rescaled_parameter_shift(
+    grad_1_res = parameter_shift(
         circuit=c, hamiltonian=test_hamiltonian, parameter_index=1, scale_factor=x
     )
-    grad_2_res = rescaled_parameter_shift(
+    grad_2_res = parameter_shift(
         circuit=c, hamiltonian=test_hamiltonian, parameter_index=2, scale_factor=x
     )
 
