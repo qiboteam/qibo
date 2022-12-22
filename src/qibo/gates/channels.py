@@ -1,4 +1,3 @@
-from abc import abstractmethod
 from itertools import product
 
 from qibo.config import PRECISION_TOL, raise_error
@@ -101,6 +100,76 @@ class KrausChannel(Channel):
         self.init_args = [self.gates]
         self.coefficients = len(self.gates) * (1,)
         self.coefficient_sum = 1
+
+    def to_superop(self, backend=None):
+        """Returns the Liouville representation of the Kraus channel.
+
+        Args:
+            backend (``qibo.backends.abstract.Backend``, optional): backend
+                to be used in the execution. If ``None``, it uses
+                ``GlobalBackend()``. Defaults to ``None``.
+
+        Returns:
+            Liouville representation of the channel.
+        """
+        import numpy as np
+
+        if backend is None:  # pragma: no cover
+            from qibo.backends import GlobalBackend
+
+            backend = GlobalBackend()
+
+        self.nqubits = 1 + max(self.target_qubits)
+
+        if self.name != "KrausChannel":
+            p0 = 1
+            for coeff in self.coefficients:
+                p0 = p0 - coeff
+            self.coefficients += (p0,)
+            self.gates += (I(*self.target_qubits),)
+
+        super_op = np.zeros((4**self.nqubits, 4**self.nqubits), dtype="complex")
+        super_op = backend.cast(super_op, dtype=super_op.dtype)
+        for coeff, gate in zip(self.coefficients, self.gates):
+            kraus_op = FusedGate(*range(self.nqubits))
+            kraus_op.append(gate)
+            kraus_op = kraus_op.asmatrix(backend)
+            kraus_op = coeff * np.kron(np.conj(kraus_op), kraus_op)
+            super_op += backend.cast(kraus_op, dtype=kraus_op.dtype)
+
+        return super_op
+
+    def to_pauli_liouville(self, normalize: bool = False, backend=None):
+        """Returns the Liouville representation of the Kraus channel
+        in the Pauli basis.
+
+        Args:
+            normalize (bool, optional): If ``True``, normalized basis ir returned.
+                Defaults to False.
+            backend (``qibo.backends.abstract.Backend``, optional): backend
+                to be used in the execution. If ``None``, it uses
+                ``GlobalBackend()``. Defaults to ``None``.
+
+        Returns:
+            Pauli-Liouville representation of the channel.
+        """
+        import numpy as np
+
+        from qibo.quantum_info.basis import comp_basis_to_pauli
+
+        if backend is None:  # pragma: no cover
+            from qibo.backends import GlobalBackend
+
+            backend = GlobalBackend()
+
+        super_op = self.to_superop(backend=backend)
+
+        # unitary that transforms from comp basis to pauli basis
+        U = backend.cast(comp_basis_to_pauli(self.nqubits, normalize))
+
+        super_op = U @ super_op @ np.transpose(np.conj(U))
+
+        return backend.cast(super_op, dtype=super_op.dtype)
 
 
 class UnitaryChannel(KrausChannel):

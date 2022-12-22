@@ -326,3 +326,34 @@ def test_fused_gate():
     assert gate.qubits == (0, 1, 2)
     assert len(gate.gates) == 3
     assert isinstance(gate.gates[0], gates.TOFFOLI)
+
+
+def test_generator_eigenvalue():
+    gate = gates.H(0)
+    with pytest.raises(NotImplementedError):
+        gate.generator_eigenvalue()
+
+
+def test_gate_set_parameters():
+    gate = gates.RX(0, theta=0)
+    assert gate.parameters == (0,)
+    gate.parameters = 0.5
+    gate2 = gate.__class__(*gate.init_args, **gate.init_kwargs)
+    assert gate.parameters == (0.5,)
+    assert gate2.parameters == (0.5,)
+
+
+def test_generalizedfsim_set_parameters():
+    import numpy as np
+
+    gate = gates.GeneralizedfSim(0, 1, unitary=np.eye(2), phi=0)
+    np.testing.assert_allclose(gate.parameters[0], np.eye(2))
+    assert gate.parameters[1] == 0
+
+    new_unitary = np.random.random((2, 2))
+    gate.parameters = (new_unitary, 0.5)
+    gate2 = gate.__class__(*gate.init_args, **gate.init_kwargs)
+    np.testing.assert_allclose(gate.parameters[0], new_unitary)
+    np.testing.assert_allclose(gate2.parameters[0], new_unitary)
+    assert gate.parameters[1] == 0.5
+    assert gate2.parameters[1] == 0.5
