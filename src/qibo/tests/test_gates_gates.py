@@ -142,6 +142,30 @@ def test_rz(backend, applyx):
     backend.assert_allclose(final_state, target_state)
 
 
+def test_gpi(backend):
+    phi = 0.1234
+    initial_state = random_state(1)
+    final_state = apply_gates(backend, [gates.GPI(0, phi)],  initial_state=initial_state)
+
+    phase = np.exp(1.j * phi)
+    matrix = np.array([[0, np.conj(phase)], [phase, 0]])
+
+    target_state = matrix.dot(initial_state)
+    backend.assert_allclose(final_state, target_state)
+
+
+def test_gpi2(backend):
+    phi = 0.1234
+    initial_state = random_state(1)
+    final_state = apply_gates(backend, [gates.GPI2(0, phi)],  initial_state=initial_state)
+
+    phase = np.exp(1.j * phi)
+    matrix = np.array([[1, -1.j * np.conj(phase)], [-1.j * phase, 1]]) / np.sqrt(2)
+
+    target_state = matrix.dot(initial_state)
+    backend.assert_allclose(final_state, target_state)
+
+
 def test_u1(backend):
     theta = 0.1234
     final_state = apply_gates(backend, [gates.X(0), gates.U1(0, theta)], nqubits=1)
@@ -651,6 +675,8 @@ GATES = [
     ("RX", (0, 0.1)),
     ("RY", (0, 0.2)),
     ("RZ", (0, 0.3)),
+    ("GPI", (0, 0.1)),
+    ("GPI2", (0, 0.2)),
     ("U1", (0, 0.1)),
     ("U2", (0, 0.2, 0.3)),
     ("U3", (0, 0.1, 0.2, 0.3)),

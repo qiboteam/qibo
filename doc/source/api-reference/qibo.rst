@@ -520,12 +520,6 @@ Parametric ZZ interaction (RZZ)
     :members:
     :member-order: bysource
 
-Mølmer–Sørensen (MS)
-"""""""""""""""""""""""""""""""
-
-.. autoclass:: qibo.gates.MS
-    :members:
-    :member-order: bysource
 
 Special gates
 ^^^^^^^^^^^^^
@@ -558,7 +552,33 @@ Fusion gate
     :members:
     :member-order: bysource
 
+IONQ Native gates
+^^^^^^^^^^^^^^^^^
+
+GPI
+"""
+
+.. autoclass:: qibo.gates.GPI
+    :members:
+    :member-order: bysource
+
+GPI2
+""""
+
+.. autoclass:: qibo.gates.GPI2
+    :members:
+    :member-order: bysource
+
+Mølmer–Sørensen (MS)
+""""""""""""""""""""
+
+.. autoclass:: qibo.gates.MS
+    :members:
+    :member-order: bysource
+
+
 _______________________
+
 
 .. _Channels:
 

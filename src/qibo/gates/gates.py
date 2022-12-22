@@ -40,9 +40,12 @@ PARAMETRIZED_GATES = {
     "rx",
     "ry",
     "rz",
+    "gpi",
+    "gpi2",
     "rxx",
     "ryy",
     "rzz",
+    "ms"
     "u1",
     "u2",
     "u3",
@@ -64,6 +67,8 @@ DRAW_LABELS = {
     "rx": "RX",
     "ry": "RY",
     "rz": "RZ",
+    "gpi": "GPI",
+    "gpi2": "GPI2",
     "u1": "U1",
     "u2": "U2",
     "u3": "U3",
@@ -492,6 +497,74 @@ class RZ(_Rn_):
         super().__init__(q, theta, trainable)
         self.name = "rz"
         self._controlled_gate = CRZ
+
+
+class GPI(ParametrizedGate):
+    """The GPI gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        0 & e^{- i \\phi} \\\\
+        e^{i \\phi} & 0 \\\\
+        \\end{pmatrix}
+
+    Args:
+        q (int): the qubit id number.
+        phi (float): phase.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`
+            (default is ``True``).
+    """
+
+    def __init__(self, q, phi, trainable=True):
+        super().__init__(trainable)
+        self.name = "gpi"
+        self.target_qubits = (q, )
+
+        self.parameter_names = "phi"
+        self.parameters = phi
+        self.nparams = 1
+
+        self.init_args = [q]
+        self.init_kwargs = {"phi": phi, "trainable": trainable}
+
+class GPI2(ParametrizedGate):
+    """The GPI2 gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & -i e^{- i \\phi} \\\\
+        -i e^{i \\phi} & 1 \\\\
+        \\end{pmatrix}
+
+    Args:
+        q (int): the qubit id number.
+        phi (float): phase.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`
+            (default is ``True``).
+    """
+
+    def __init__(self, q, phi, trainable=True):
+        super().__init__(trainable)
+        self.name = "gpi"
+        self.target_qubits = (q, )
+
+        self.parameter_names = "phi"
+        self.parameters = phi
+        self.nparams = 1
+
+        self.init_args = [q]
+        self.init_kwargs = {"phi": phi, "trainable": trainable}
+
+    def _dagger(self) -> "Gate":
+        """"""
+        return self.__class__(self.target_qubits[0], self.parameters[0]+ math.pi)
+
 
 
 class _Un_(ParametrizedGate):

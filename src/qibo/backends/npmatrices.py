@@ -82,6 +82,14 @@ class NumpyMatrices:
         phase = self.np.exp(0.5j * theta)
         return self.np.array([[self.np.conj(phase), 0], [0, phase]], dtype=self.dtype)
 
+    def GPI(self, phi):
+        phase = self.np.exp(1.j * phi)
+        return self.np.array([[0, self.np.conj(phase)], [phase, 0]], dtype=self.dtype)
+
+    def GPI2(self, phi):
+        phase = self.np.exp(1.j * phi)
+        return self.np.array([[1, -1.j * self.np.conj(phase)], [-1.j * phase, 1]], dtype=self.dtype) / self.np.sqrt(2)
+
     def U1(self, theta):
         phase = self.np.exp(1j * theta)
         return self.np.array([[1, 0], [0, phase]], dtype=self.dtype)
