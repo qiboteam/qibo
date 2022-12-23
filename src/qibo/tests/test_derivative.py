@@ -13,7 +13,7 @@ def hamiltonian(nqubits, backend):
 
 # defining a dummy circuit
 def circuit(nqubits=1):
-    c = Circuit(nqubits=1)
+    c = Circuit(nqubits)
     # all gates for which generator eigenvalue is implemented
     c.add(gates.RX(q=0, theta=0))
     c.add(gates.RY(q=0, theta=0))
@@ -33,6 +33,8 @@ def test_derivative(backend):
     c.set_parameters(test_params)
 
     test_hamiltonian = hamiltonian(nqubits=1, backend=backend)
+
+    # ------------------- normal parameter shift rule --------------------------
 
     # testing parameter out of bounds
     with pytest.raises(ValueError):
@@ -54,3 +56,27 @@ def test_derivative(backend):
     backend.assert_allclose(grad_0, 8.51104358e-02, atol=1e-10)
     backend.assert_allclose(grad_1, 5.20075970e-01, atol=1e-10)
     backend.assert_allclose(grad_2, 0, atol=1e-10)
+
+    # ------------------- rescaled parameter shift rule ------------------------
+
+    # params * scale_factor
+    x = 0.5
+    test_params *= 0.5
+    c.set_parameters(test_params)
+
+    # executing all the procedure
+    grad_0_res = parameter_shift(
+        circuit=c, hamiltonian=test_hamiltonian, parameter_index=0, scale_factor=x
+    )
+    grad_1_res = parameter_shift(
+        circuit=c, hamiltonian=test_hamiltonian, parameter_index=1, scale_factor=x
+    )
+    grad_2_res = parameter_shift(
+        circuit=c, hamiltonian=test_hamiltonian, parameter_index=2, scale_factor=x
+    )
+
+    # check of known values
+    # calculated using tf.GradientTape
+    backend.assert_allclose(grad_0_res, 0.02405061, atol=1e-8)
+    backend.assert_allclose(grad_1_res, 0.13560379, atol=1e-8)
+    backend.assert_allclose(grad_2_res, 0, atol=1e-8)
