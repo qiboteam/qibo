@@ -9,7 +9,7 @@ def parameter_shift(
     hamiltonian,
     parameter_index,
     initial_state=None,
-    scale_factor=None,
+    scale_factor=1,
 ):
     """In this method the parameter shift rule (PSR) is implemented.
     Given a circuit U and an observable H, the PSR allows to calculate the derivative
@@ -92,10 +92,6 @@ def parameter_shift(
             TypeError,
             "hamiltonian must be a qibo.hamiltonians.Hamiltonian or qibo.hamiltonians.SymbolicHamiltonian object",
         )
-
-    # set scale factor to 1 if not provided
-    if scale_factor is None:
-        scale_factor = 1.0
 
     # inheriting hamiltonian's backend
     backend = hamiltonian.backend
