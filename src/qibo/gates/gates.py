@@ -40,9 +40,12 @@ PARAMETRIZED_GATES = {
     "rx",
     "ry",
     "rz",
+    "gpi",
+    "gpi2",
     "rxx",
     "ryy",
     "rzz",
+    "ms",
     "u1",
     "u2",
     "u3",
@@ -64,6 +67,8 @@ DRAW_LABELS = {
     "rx": "RX",
     "ry": "RY",
     "rz": "RZ",
+    "gpi": "GPI",
+    "gpi2": "GPI2",
     "u1": "U1",
     "u2": "U2",
     "u3": "U3",
@@ -86,6 +91,7 @@ DRAW_LABELS = {
     "rzz": "RZZ",
     "Unitary": "U",
     "fswap": "fx",
+    "ms": "MS",
     "PauliNoiseChannel": "PN",
     "KrausChannel": "K",
     "UnitaryChannel": "U",
@@ -500,6 +506,74 @@ class RZ(_Rn_):
 
     def generator_eigenvalue(self):
         return 0.5
+
+
+class GPI(ParametrizedGate):
+    """The GPI gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        0 & e^{- i \\phi} \\\\
+        e^{i \\phi} & 0 \\\\
+        \\end{pmatrix}
+
+    Args:
+        q (int): the qubit id number.
+        phi (float): phase.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`
+            (default is ``True``).
+    """
+
+    def __init__(self, q, phi, trainable=True):
+        super().__init__(trainable)
+        self.name = "gpi"
+        self.target_qubits = (q,)
+
+        self.parameter_names = "phi"
+        self.parameters = phi
+        self.nparams = 1
+
+        self.init_args = [q]
+        self.init_kwargs = {"phi": phi, "trainable": trainable}
+
+
+class GPI2(ParametrizedGate):
+    """The GPI2 gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & -i e^{- i \\phi} \\\\
+        -i e^{i \\phi} & 1 \\\\
+        \\end{pmatrix}
+
+    Args:
+        q (int): the qubit id number.
+        phi (float): phase.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`
+            (default is ``True``).
+    """
+
+    def __init__(self, q, phi, trainable=True):
+        super().__init__(trainable)
+        self.name = "gpi"
+        self.target_qubits = (q,)
+
+        self.parameter_names = "phi"
+        self.parameters = phi
+        self.nparams = 1
+
+        self.init_args = [q]
+        self.init_kwargs = {"phi": phi, "trainable": trainable}
+
+    def _dagger(self) -> "Gate":
+        """"""
+        return self.__class__(self.target_qubits[0], self.parameters[0] + math.pi)
 
 
 class _Un_(ParametrizedGate):
@@ -1243,6 +1317,50 @@ class RZZ(_Rnn_):
     def __init__(self, q0, q1, theta, trainable=True):
         super().__init__(q0, q1, theta, trainable)
         self.name = "rzz"
+
+
+class MS(ParametrizedGate):
+    """The Mølmer–Sørensen (MS) gate is a two qubit gate native to trapped ions.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 & 0 & -i e^{-i( \\phi_0 +  \\phi_1)} \\\\
+        0 & 1 & -i e^{-i( \\phi_0 -  \\phi_1)} \\\\
+        0 & -i e^{i( \\phi_0 -  \\phi_1)} & 1 & 0 \\\\
+        -i e^{i( \\phi_0 +  \\phi_1)} & 0 & 0 & 1 \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the first qubit to be swapped id number.
+        q1 (int): the second qubit to be swapped id number.
+        phi0 (float): first qubit's phase.
+        phi1 (float): second qubit's phase
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.Circuit.set_parameters`
+            (default is ``True``).
+    """
+
+    # TODO: Check how this works with QASM.
+
+    def __init__(self, q0, q1, phi0, phi1, trainable=True):
+        super().__init__(trainable)
+        self.name = "ms"
+        self.target_qubits = (q0, q1)
+
+        self.parameter_names = ["phi0", "phi1"]
+        self.parameters = phi0, phi1
+        self.nparams = 2
+
+        self.init_args = [q0, q1]
+        self.init_kwargs = {"phi0": phi0, "phi1": phi1, "trainable": trainable}
+
+    def _dagger(self) -> "Gate":
+        """"""
+        q0, q1 = self.target_qubits
+        phi0, phi1 = self.parameters
+        return self.__class__(q0, q1, phi0 + math.pi, phi1)
 
 
 class TOFFOLI(Gate):
