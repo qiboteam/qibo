@@ -962,12 +962,14 @@ propagation of information within the network. Using a real circuit, we would no
 be able to access this information without taking a measurement, causing the state
 of the system to collapse and losing the information accumulated up to that moment.
 For this reason, in `qibo` we have also implemented methods for calculating the
-gradients which can be performed directly on the hardware, such as the Parameter Shift Rule.
+gradients which can be performed directly on the hardware, such as the
+`Parameter Shift Rule`_.
 
 .. automodule:: qibo.derivative
    :members:
    :member-order: bysource
 
+.. _`Parameter Shift Rule`: https://arxiv.org/abs/1811.11184
 
 .. _Quantum Information:
 

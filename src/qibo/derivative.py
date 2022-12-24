@@ -27,10 +27,6 @@ def parameter_shift(
     If the `scale_factor` is not provided, it is set equal to one and doesn't
     affect the calculation.
 
-    Original references:
-        `https://arxiv.org/abs/1811.11184`;
-        `https://arxiv.org/abs/1803.00745`.
-
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
         hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): target observable.
