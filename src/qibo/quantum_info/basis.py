@@ -125,7 +125,7 @@ def unvectorization(state, order: str = "row"):
         if order == "system":
             raise_error(NotImplementedError)
 
-    d = int(np.log2(len(state)))
+    d = int(np.sqrt(len(state)))
     order = "C" if order == "row" else "F"
 
     state = np.reshape(state, (d, d), order=order)
