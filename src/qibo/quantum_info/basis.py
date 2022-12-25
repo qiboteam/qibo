@@ -7,12 +7,16 @@ from qibo import matrices
 from qibo.config import raise_error
 
 
-def vectorization(state):
+def vectorization(state, order: str = "row"):
     """Returns state :math:`\\rho` in its Liouville
     representation :math:`\\ket{\\rho}`.
 
     Args:
         state: state vector or density matrix.
+        order (str, optional): If ``row``, vectorization is performed
+            row-wise. If ``column``, vectorization is performed
+            column-wise. If ``system``, a block-vectorization is
+            performed. Default is ``row``.
 
     Returns:
         Liouville representation of ``state``.
@@ -28,45 +32,103 @@ def vectorization(state):
             f"Object must have dims either (k,) or (k,k), but have dims {state.shape}.",
         )
 
-    def block_split(matrix, nrows: int, ncols: int):
-        """Block-vectorization of a square :math:`N \times N`
-        matrix into 4 :math:`\frac{N}{2} \times \frac{N}{2}`
-        matrices, where :math:`N = 2^{n}` and :math:`n` is the
-        number of qubits.
-
-        Args:
-            matrix: :math:`N \times N` matrix.
-            nrows (int): number of rows of the block matrix.
-            ncols (int): number of columns of the block matrix
-
-        Returns:
-            Block-vectorization of ``matrix``.
-        """
-        dim, _ = matrix.shape
-        return (
-            matrix.reshape(int(dim / nrows), nrows, -1, ncols)
-            .swapaxes(1, 2)
-            .reshape(-1, nrows, ncols)[[0, 2, 1, 3]]
+    if not isinstance(order, str):
+        raise_error(
+            TypeError, f"order must be type str, but it is type {type(order)} instead."
         )
-
-    d = len(state)
-    n = int(d / 2)
-    nqubits = int(np.log2(d))
+    else:
+        if (order != "row") and (order != "column") and (order != "system"):
+            raise_error(
+                ValueError,
+                f"order must be either 'row' or 'column' or 'system', but it is {order}.",
+            )
 
     if len(state.shape) == 1:
-        state = np.outer(state, state.conj())
+        state = np.outer(state, np.conj(state))
 
-    if n == 1:
-        state = state.reshape((1, -1), order="F")[0]
+    if order == "row":
+        state = np.reshape(state, (1, -1), order="C")[0]
+    elif order == "column":
+        state = np.reshape(state, (1, -1), order="F")[0]
     else:
-        state = block_split(state, n, n)
-        for _ in range(nqubits - 2, 0, -1):
-            n = int(n / 2)
-            state = np.array([block_split(matrix, n, n) for matrix in state])
-            state = state.reshape((np.prod(state.shape[:-2]), *(state.shape[-2:])))
-        state = np.array(
-            [matrix.reshape((1, -1), order="F") for matrix in state]
-        ).flatten()
+
+        def _block_split(matrix, nrows: int, ncols: int):
+            """Block-vectorization of a square :math:`N \times N`
+            matrix into 4 :math:`\frac{N}{2} \times \frac{N}{2}`
+            matrices, where :math:`N = 2^{n}` and :math:`n` is the
+            number of qubits.
+
+            Args:
+                matrix: :math:`N \times N` matrix.
+                nrows (int): number of rows of the block matrix.
+                ncols (int): number of columns of the block matrix
+
+            Returns:
+                Block-vectorization of ``matrix``.
+            """
+            dim, _ = matrix.shape
+            return (
+                matrix.reshape(int(dim / nrows), nrows, -1, ncols)
+                .swapaxes(1, 2)
+                .reshape(-1, nrows, ncols)[[0, 2, 1, 3]]
+            )
+
+        d = len(state)
+        n = int(d / 2)
+        nqubits = int(np.log2(d))
+
+        if n == 1:
+            state = state.reshape((1, -1), order="F")[0]
+        else:
+            state = _block_split(state, n, n)
+            for _ in range(nqubits - 2, 0, -1):
+                n = int(n / 2)
+                state = np.array([_block_split(matrix, n, n) for matrix in state])
+                state = state.reshape((np.prod(state.shape[:-2]), *(state.shape[-2:])))
+            state = np.array(
+                [matrix.reshape((1, -1), order="F") for matrix in state]
+            ).flatten()
+
+    return state
+
+
+def unvectorization(state, order: str = "row"):
+    """Returns state :math:`\\rho` from its Liouville
+    representation :math:`\\ket{\\rho}`.
+
+    Args:
+        state: :func:`vectorization` of a quantum state.
+        order (str, optional): If ``row``, unvectorization is performed
+            row-wise. If ``column``, unvectorization is performed
+            column-wise. Default is ``row``.
+
+    Returns:
+        Density matrix of ``state``.
+    """
+
+    if len(state.shape) != 1:
+        raise_error(
+            TypeError,
+            f"Object must have dims (k,), but have dims {state.shape}.",
+        )
+
+    if not isinstance(order, str):
+        raise_error(
+            TypeError, f"order must be type str, but it is type {type(order)} instead."
+        )
+    else:
+        if (order != "row") and (order != "column") and (order != "system"):
+            raise_error(
+                ValueError,
+                f"order must be either 'row' or 'column' or 'system', but it is {order}.",
+            )
+        if order == "system":
+            raise_error(NotImplementedError)
+
+    d = int(np.log2(len(state)))
+    order = "C" if order == "row" else "F"
+
+    state = np.reshape(state, (d, d), order=order)
 
     return state
 
