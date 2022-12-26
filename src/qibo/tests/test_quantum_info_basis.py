@@ -121,8 +121,8 @@ def test_vectorization(nqubits, order):
     assert np.linalg.norm(matrix - matrix_test) < PRECISION_TOL
 
 
-@pytest.mark.parametrize("order", ["row", "column"])
-@pytest.mark.parametrize("nqubits", [2, 3])
+@pytest.mark.parametrize("order", ["row", "column", "system"])
+@pytest.mark.parametrize("nqubits", [2, 3, 4, 5])
 def test_unvectorization(nqubits, order):
     with pytest.raises(TypeError):
         unvectorization(random_density_matrix(2**nqubits))
@@ -130,8 +130,6 @@ def test_unvectorization(nqubits, order):
         unvectorization(random_statevector(4**nqubits), order=1)
     with pytest.raises(ValueError):
         unvectorization(random_statevector(4**2), order="1")
-    with pytest.raises(NotImplementedError):
-        unvectorization(random_statevector(4**2), order="system")
 
     d = 2**nqubits
     matrix_test = random_density_matrix(d)

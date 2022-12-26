@@ -122,13 +122,22 @@ def unvectorization(state, order: str = "row"):
                 ValueError,
                 f"order must be either 'row' or 'column' or 'system', but it is {order}.",
             )
-        if order == "system":
-            raise_error(NotImplementedError)
 
     d = int(np.sqrt(len(state)))
-    order = "C" if order == "row" else "F"
 
-    state = np.reshape(state, (d, d), order=order)
+    if (order == "row") or (order == "column"):
+        order = "C" if order == "row" else "F"
+        state = np.reshape(state, (d, d), order=order)
+    else:
+        nqubits = int(np.log2(d))
+        axes_old = list(np.arange(0, 2 * nqubits))
+        state = np.reshape(
+            np.transpose(
+                np.reshape(state, [2] * 2 * nqubits),
+                axes=axes_old[1::2] + axes_old[0::2],
+            ),
+            [2**nqubits] * 2,
+        )
 
     return state
 
