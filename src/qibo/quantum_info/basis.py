@@ -190,13 +190,12 @@ def comp_basis_to_pauli(nqubits: int, normalize: bool = False):
 
     The unitary :math:`U` is given by
 
-    ..math::
-        U = \\sum_{k = 0}^{d^{2} - 1} \\, {|k)}{(P_{k}|} \\,\\, ,
+    .. math::
+        U = \\sum_{k = 0}^{d^{2} - 1} \\, \\ketbra{k}{P_{k}} \\,\\, ,
 
-    where :math:`{|A)}` is the system-vectorization of :math:`A`,
-    :math:`{|k)}` is the vectorization of the computational basis element
-    :math:`\\ketbra{k}`, and :math:`{|P_{k})}` is the vectorization of the
-    :math:`k`-th Pauli matrix.
+    where :math:`\\ket{P_{k}}` is the system-vectorization of the :math:`k`-th
+    Pauli operator :math:`P_{k}}`, and :math:`\\ket{k}` is the computational
+    basis element.
 
     When converting a state :math:`\\ket{\\rho}` to its Pauli-Liouville
     representation :math:`\\ket{\\rho'} = `, one should use ``order="system"``
@@ -236,8 +235,8 @@ def pauli_to_comp_basis(nqubits: int, normalize: bool = False):
 
     The unitary :math:`U` is given by
 
-    ..math::
-        U = \\sum_{k = 0}^{d^{2} - 1} \\, {|P_{k})}{(b_{k}|} \\, .
+    .. math::
+        U = \\sum_{k = 0}^{d^{2} - 1} \\, \\ketbra{P_{k}}{b_{k}} \\, .
 
     Args:
         nqubits (int): number of qubits.
