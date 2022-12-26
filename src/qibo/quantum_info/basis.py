@@ -198,6 +198,21 @@ def comp_basis_to_pauli(nqubits: int, normalize: bool = False):
     :math:`\\ketbra{k}`, and :math:`{|P_{k})}` is the vectorization of the
     :math:`k`-th Pauli matrix.
 
+    When converting a state :math:`\\ket{\\rho}` to its Pauli-Liouville
+    representation :math:`\\ket{\\rho'} = `, one should use ``order="system"``
+    in :func:`vectorization`.
+
+    Example:
+        .. code-block:: python
+            from qibo.quantum_info import random_density_matrix, vectorization, comp_basis_to_pauli
+
+            nqubits = 2
+            d = 2**nqubits
+            rho = random_density_matrix(d)
+            U_c2p = comp_basis_to_pauli(nqubits)
+            rho_liouville = vectorization(rho, order="system")
+            rho_pauli_liouville = U_c2p @ rho_liouville
+
     Args:
         nqubits (int): number of qubits.
         normalize (bool, optional): If ``True``, converts to the
