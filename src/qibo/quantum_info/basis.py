@@ -13,10 +13,10 @@ def vectorization(state, order: str = "row"):
 
     Args:
         state: state vector or density matrix.
-        order (str, optional): If ``row``, vectorization is performed
-            row-wise. If ``column``, vectorization is performed
-            column-wise. If ``system``, a block-vectorization is
-            performed. Default is ``row``.
+        order (str, optional): If ``"row"``, vectorization is performed
+            row-wise. If ``"column"``, vectorization is performed
+            column-wise. If ``"system"``, a block-vectorization is
+            performed. Default is ``"row"``.
 
     Returns:
         Liouville representation of ``state``.
@@ -98,9 +98,10 @@ def unvectorization(state, order: str = "row"):
 
     Args:
         state: :func:`vectorization` of a quantum state.
-        order (str, optional): If ``row``, unvectorization is performed
-            row-wise. If ``column``, unvectorization is performed
-            column-wise. Default is ``row``.
+        order (str, optional): If ``"row"``, unvectorization is performed
+            row-wise. If ``"column"``, unvectorization is performed
+            column-wise. If ``"system"``, system-wise vectorization is
+            performed. Default is ``"row"``.
 
     Returns:
         Density matrix of ``state``.
@@ -224,7 +225,7 @@ def comp_basis_to_pauli(nqubits: int, normalize: bool = False):
     Args:
         nqubits (int): number of qubits.
         normalize (bool, optional): If ``True``, converts to the
-        Pauli basis. Defaults to False.
+            Pauli basis. Defaults to ``False``.
 
     Returns:
         Unitary matrix :math:`U`.
@@ -250,7 +251,7 @@ def pauli_to_comp_basis(nqubits: int, normalize: bool = False):
     Args:
         nqubits (int): number of qubits.
         normalize (bool, optional): If ``True``, converts to the
-        Pauli basis. Defaults to False.
+            Pauli basis. Defaults to ``False``.
 
     Returns:
         Unitary matrix :math:`U`.
