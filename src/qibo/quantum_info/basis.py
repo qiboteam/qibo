@@ -194,7 +194,7 @@ def comp_basis_to_pauli(nqubits: int, normalize: bool = False):
         U = \\sum_{k = 0}^{d^{2} - 1} \\, \\ketbra{k}{P_{k}} \\,\\, ,
 
     where :math:`\\ket{P_{k}}` is the system-vectorization of the :math:`k`-th
-    Pauli operator :math:`P_{k}}`, and :math:`\\ket{k}` is the computational
+    Pauli operator :math:`P_{k}`, and :math:`\\ket{k}` is the computational
     basis element.
 
     When converting a state :math:`\\ket{\\rho}` to its Pauli-Liouville
@@ -203,8 +203,8 @@ def comp_basis_to_pauli(nqubits: int, normalize: bool = False):
 
     Example:
         .. code-block:: python
-            from qibo.quantum_info import random_density_matrix, vectorization, comp_basis_to_pauli
 
+            from qibo.quantum_info import random_density_matrix, vectorization, comp_basis_to_pauli
             nqubits = 2
             d = 2**nqubits
             rho = random_density_matrix(d)
