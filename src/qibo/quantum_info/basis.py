@@ -51,43 +51,8 @@ def vectorization(state, order: str = "row"):
     elif order == "column":
         state = np.reshape(state, (1, -1), order="F")[0]
     else:
-
-        # def _block_split(matrix, nrows: int, ncols: int):
-        #     """Block-vectorization of a square :math:`N \times N`
-        #     matrix into 4 :math:`\frac{N}{2} \times \frac{N}{2}`
-        #     matrices, where :math:`N = 2^{n}` and :math:`n` is the
-        #     number of qubits.
-
-        #     Args:
-        #         matrix: :math:`N \times N` matrix.
-        #         nrows (int): number of rows of the block matrix.
-        #         ncols (int): number of columns of the block matrix
-
-        #     Returns:
-        #         Block-vectorization of ``matrix``.
-        #     """
-        #     dim, _ = matrix.shape
-        #     return (
-        #         matrix.reshape(int(dim / nrows), nrows, -1, ncols)
-        #         .swapaxes(1, 2)
-        #         .reshape(-1, nrows, ncols)[[0, 2, 1, 3]]
-        #     )
-
         d = len(state)
-        # n = int(d / 2)
         nqubits = int(np.log2(d))
-
-        # if n == 1:
-        #     state = state.reshape((1, -1), order="F")[0]
-        # else:
-        #     state = _block_split(state, n, n)
-        #     for _ in range(nqubits - 2, 0, -1):
-        #         n = int(n / 2)
-        #         state = np.array([_block_split(matrix, n, n) for matrix in state])
-        #         state = state.reshape((np.prod(state.shape[:-2]), *(state.shape[-2:])))
-        #     state = np.array(
-        #         [matrix.reshape((1, -1), order="F") for matrix in state]
-        #     ).flatten()
 
         new_axis = []
         for x in range(nqubits):
