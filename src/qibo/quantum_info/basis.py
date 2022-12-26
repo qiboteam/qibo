@@ -198,7 +198,7 @@ def comp_basis_to_pauli(nqubits: int, normalize: bool = False):
     basis element.
 
     When converting a state :math:`\\ket{\\rho}` to its Pauli-Liouville
-    representation :math:`\\ket{\\rho'} = `, one should use ``order="system"``
+    representation :math:`\\ket{\\rho'}`, one should use ``order="system"``
     in :func:`vectorization`.
 
     Example:
