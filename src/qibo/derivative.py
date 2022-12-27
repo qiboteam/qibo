@@ -74,9 +74,6 @@ def parameter_shift(
             # running the psr with respect to the two parameters
             grad_0 = parameter_shift(circuit = c, hamiltonian = test_hamiltonian, parameter_index = 0)
             grad_1 = parameter_shift(circuit = c, hamiltonian = test_hamiltonian, parameter_index = 1)
-
-            print('Test gradient with respect params[0]: ', grad_0)
-            print('Test gradient with respect params[1]: ', grad_1)
     """
 
     # some raise_error
