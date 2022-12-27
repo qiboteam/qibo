@@ -74,7 +74,7 @@ exclude_patterns = []
 html_theme = "furo"
 
 # custom title
-html_title = "Software version " + release
+html_title = "Version " + release
 
 html_theme_options = {
     "light_css_variables": {
