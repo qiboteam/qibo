@@ -20,7 +20,7 @@ import qibo
 
 # -- Project information -----------------------------------------------------
 
-project = "Release"
+project = "qibo"
 copyright = "2020-2022 by the Qibo team"
 author = "The Qibo team"
 
@@ -70,8 +70,11 @@ exclude_patterns = []
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-#
+
 html_theme = "furo"
+
+# custom title
+html_title = "Software version " + release
 
 html_theme_options = {
     "light_css_variables": {
