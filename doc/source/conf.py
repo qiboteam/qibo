@@ -78,6 +78,8 @@ html_theme_options = {
         "color-brand-primary": "#6400FF",
         "color-brand-secondary": "#6400FF",
         "color-brand-content": "#6400FF",
+        "font-stack": "Ubuntu",
+        "font-stack--monospace": "Courier, monospace",
     }
 }
 
