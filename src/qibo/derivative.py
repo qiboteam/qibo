@@ -9,21 +9,31 @@ def parameter_shift(
     hamiltonian,
     parameter_index,
     initial_state=None,
+    scale_factor=1,
 ):
     """In this method the parameter shift rule (PSR) is implemented.
     Given a circuit U and an observable H, the PSR allows to calculate the derivative
     of the expected value of H on the final state with respect to a variational
     parameter of the circuit.
-
-    Original references:
-        `https://arxiv.org/abs/1811.11184`;
-        `https://arxiv.org/abs/1803.00745`.
+    There is also the possibility of setting a scale factor. It is useful when a
+    circuit's parameter is obtained by combination of a variational
+    parameter and an external object, such as a training variable in a Quantum
+    Machine Learning problem. For example, performing a re-uploading strategy
+    to embed some data into a circuit, we apply to the quantum state rotations
+    whose angles are in the form: theta' = theta * x, where theta is a variational
+    parameter and x an input variable. The PSR allows to calculate the derivative
+    with respect of theta' but, if we want to optimize a system with respect its
+    variational parameters we need to "free" this procedure from the x depencency.
+    If the `scale_factor` is not provided, it is set equal to one and doesn't
+    affect the calculation.
 
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
-        hamiltonian (:class: `qibo.hamiltonians.Hamiltonian`): target observable.
+        hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): target observable.
         parameter_index (int): the index which identifies the target parameter in the circuit.get_parameters() list
-        initial_state ((2**nqubits) vector): initial state on which the circuit acts.
+        initial_state ((2**nqubits) vector): initial state on which the circuit acts (default None).
+        scale_factor (float): parameter scale factor (default None).
+
 
     Returns:
         np.float value of the derivative of the expectation value of the hamiltonian
@@ -64,9 +74,6 @@ def parameter_shift(
             # running the psr with respect to the two parameters
             grad_0 = parameter_shift(circuit = c, hamiltonian = test_hamiltonian, parameter_index = 0)
             grad_1 = parameter_shift(circuit = c, hamiltonian = test_hamiltonian, parameter_index = 1)
-
-            print('Test gradient with respect params[0]: ', grad_0)
-            print('Test gradient with respect params[1]: ', grad_1)
     """
 
     # some raise_error
@@ -114,4 +121,4 @@ def parameter_shift(
     # restoring the original circuit
     circuit.set_parameters(original)
 
-    return generator_eigenval * (forward - backward)
+    return generator_eigenval * (forward - backward) * scale_factor
