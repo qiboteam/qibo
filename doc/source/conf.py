@@ -20,12 +20,12 @@ import qibo
 
 # -- Project information -----------------------------------------------------
 
-project = "qibo"
+project = "Release"
 copyright = "2020-2022 by the Qibo team"
 author = "The Qibo team"
 
 # The full version, including alpha/beta/rc tags
-# release = qibo.__version__
+release = qibo.__version__
 
 
 # -- General configuration ---------------------------------------------------
