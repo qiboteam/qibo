@@ -435,10 +435,10 @@ class ThermalRelaxationChannel(Channel):
 
             preset0, preset1, exp_t2 = self.coefficients
             matrix = [
-                [1 - preset1, 0, 0, preset1],
+                [1 - preset1, 0, 0, preset0],
                 [0, exp_t2, 0, 0],
                 [0, 0, exp_t2, 0],
-                [preset0, 0, 0, 1 - preset0],
+                [preset1, 0, 0, 1 - preset0],
             ]
 
             qubits = (q, q + nqubits)

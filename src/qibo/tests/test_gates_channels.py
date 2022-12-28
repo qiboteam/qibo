@@ -191,7 +191,7 @@ def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
 
     if t2 > t1:
         p0, p1, exp = gate.coefficients
-        matrix = np.diag([1 - p1, p0, p1, 1 - p0])
+        matrix = np.diag([1 - p1, p1, p0, 1 - p0])
         matrix[0, -1], matrix[-1, 0] = exp, exp
         matrix = matrix.reshape(4 * (2,))
         # Apply matrix using Eq. (3.28) from arXiv:1111.6950
