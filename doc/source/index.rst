@@ -25,8 +25,6 @@ Qibo key features:
 * Efficient simulation backends with GPU, multi-GPU and CPU with multi-threading support.
 * Simple mechanism for the implementation of new simulation and hardware backend drivers.
 
-This documentation refers to Qibo |release|.
-
 Contents
 ========
 

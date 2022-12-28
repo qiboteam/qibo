@@ -24,7 +24,7 @@ copyright = "2020-2022 by the Qibo team"
 author = "The Qibo team"
 
 # The full version, including alpha/beta/rc tags
-release = " "
+release = qibo.__version__
 
 
 # -- General configuration ---------------------------------------------------
@@ -72,11 +72,16 @@ exclude_patterns = []
 
 html_theme = "furo"
 
+# custom title
+html_title = "Version " + release
+
 html_theme_options = {
     "light_css_variables": {
         "color-brand-primary": "#6400FF",
         "color-brand-secondary": "#6400FF",
         "color-brand-content": "#6400FF",
+        "font-stack": "Ubuntu",
+        "font-stack--monospace": "Courier, monospace",
     }
 }
 
