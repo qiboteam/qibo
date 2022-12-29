@@ -464,7 +464,7 @@ class QAOA:
         compile=False,
         processes=None,
     ):
-        """Optimizes the variational parameters of the QAOA. A few loss functiosn are
+        """Optimizes the variational parameters of the QAOA. A few loss functions are
         provided for QAOA optimizations such as expected value (default), CVar which is introduced in
         `Quantum 4, 256 <https://quantum-journal.org/papers/q-2020-04-20-256/>`_, and
         Gibbs loss function which is introduced in
