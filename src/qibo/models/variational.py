@@ -508,7 +508,7 @@ class QAOA:
                 initial_p = [0.314, 0.22, 0.05, 0.59]
                 best, params, _ = qaoa.minimize(initial_p)
                 best, params, _ = qaoa.minimize(initial_p, mode="gibbs")
-                best, prams, _ = qaoa.minimize(initial_p, mode="cvar")
+                best, params, _ = qaoa.minimize(initial_p, mode="cvar")
 
         """
         if len(initial_p) % 2 != 0:
