@@ -70,7 +70,7 @@ It is also possible to optimize the polynomial coefficients using the following
 arguments:
 
 - `--method` (str) optimization method to use. See the
-[Qibo optimizer documentation](https://qibo.readthedocs.io/en/stable/qibo.html#optimizers)
+[Qibo optimizer documentation](https://qibo.science/qibo/stable/api-reference/qibo.html#optimizers)
 for more details on the available optimization methods.
 - `--maxiter` (int) maximum number of optimization iterations
 

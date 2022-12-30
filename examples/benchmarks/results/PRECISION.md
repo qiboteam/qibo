@@ -2,7 +2,7 @@
 
 Qibo allows the user to easily switch between single (``complex64``)
 and double (``complex128``) precision as described in
-[How to modify the simulation precision?](https://qibo.readthedocs.io/en/stable/examples.html#how-to-modify-the-simulation-precision).
+[How to modify the simulation precision?](https://qibo.science/qibo/stable/code-examples/examples.html#how-to-modify-the-simulation-precision).
 In this section we compare simulation performance of both precisions.
 We find that as the number of qubits grows using single precision is ~2
 times faster on GPU and ~1.5 faster on CPU.
