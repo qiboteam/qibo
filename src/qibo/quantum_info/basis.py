@@ -128,7 +128,7 @@ def comp_basis_to_pauli(nqubits: int, normalize: bool = False):
 
     The unitary :math:`U` is given by
 
-    ..math::
+    .. math::
         U = \\sum_{k = 0}^{d^{2} - 1} \\, {|k)}{(P_{k}|} \\,\\, ,
 
     where :math:`{|A)}` is the system-vectorization of :math:`A`,
@@ -159,7 +159,7 @@ def pauli_to_comp_basis(nqubits: int, normalize: bool = False):
 
     The unitary :math:`U` is given by
 
-    ..math::
+    .. math::
         U = \\sum_{k = 0}^{d^{2} - 1} \\, {|P_{k})}{(b_{k}|} \\, .
 
     Args:
