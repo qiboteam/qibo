@@ -263,7 +263,7 @@ class CompositeNoiseModel:
         callback=None,
         backend=None,
     ):
-        from scipy import optimize
+        from scipy.optimize import Bounds, direct
 
         if backend == None:
             from qibo.backends import GlobalBackend
@@ -276,7 +276,6 @@ class CompositeNoiseModel:
 
         idle_qubits = self.params["idle_qubits"]
         qubits = target_result.nqubits
-        from scipy.optimize import Bounds
 
         if bounds == True:
 
@@ -305,7 +304,7 @@ class CompositeNoiseModel:
 
         self.hellinger0 = {"fidelity": abs(result[0]), "shot_error": result[1]}
 
-        res = optimize.direct(
+        res = direct(
             loss,
             bounds,
             args=args,
