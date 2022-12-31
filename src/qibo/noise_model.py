@@ -1,6 +1,8 @@
 import numpy as np
+from scipy.linalg import sqrtm
 
 from qibo import gates, models
+from qibo.quantum_info import hellinger_distance, hellinger_fidelity
 
 
 def noisy_circuit(circuit, params):
@@ -170,36 +172,46 @@ def noisy_circuit(circuit, params):
     return noisy_circ
 
 
-def hellinger_distance(p, q):
-    """Hellinger distance between two discrete distributions.
-
-    Args:
-        p (collections.Counter): First frequencies.
-        q (collections.Counter): Second frequencies.
-
-    Returns:
-        Hellinger distance between p and q.
-    """
-    nqubits = len(list(p.keys())[0])
-    sum = 0
+def freq_to_prob(freq):
+    norm = sum(freq.values())
+    nqubits = len(list(freq.keys())[0])
+    prob = np.zeros(2**nqubits)
     for k in range(2**nqubits):
         index = "{:b}".format(k).zfill(nqubits)
-        p_i = p[index]
-        q_i = q[index]
-        sum += (np.sqrt(p_i) - np.sqrt(q_i)) ** 2
-    hellinger = np.sqrt(sum) / np.sqrt(2)
-    return hellinger
+        prob[k] = freq[index] / norm
+    return prob
+
+
+def hellinger_shot_error(p, q, nshots):
+    prob_p = np.sqrt((p - p**2) / nshots)
+    prob_q = np.sqrt((q - q**2) / nshots)
+    hellinger_dist = hellinger_distance(p, q)
+    hellinger_dist_e = np.sum(
+        (abs(1 - np.sqrt(q / p)) * prob_p + abs(1 - np.sqrt(p / q)) * prob_q)
+        / (4 * hellinger_dist)
+    )
+    hellinger_fid_e = 4 * hellinger_dist * (1 - hellinger_dist**2) * hellinger_dist_e
+    return hellinger_fid_e
 
 
 def loss(parameters, *args):
-
     circuit = args[0]
     nshots = args[1]
-    target_freq = args[2]
+    target_prob = args[2]
     idle_qubits = args[3]
     backend = args[4]
+    error = args[5]
     qubits = circuit.nqubits
     parameters = np.array(parameters)
+
+    if any(parameters < 0):
+        return np.inf
+    elif parameters[2 * qubits + 2] > 4 / 3 or parameters[2 * qubits + 3] > 16 / 15:
+        return np.inf
+    elif any(parameters[2 * qubits + 4 : 4 * qubits + 4] > 1):
+        return np.inf
+    elif any(2 * parameters[0:qubits] - parameters[qubits : 2 * qubits] < 0):
+        return np.inf
 
     params = {
         "t1": tuple(parameters[0:qubits]),
@@ -216,11 +228,14 @@ def loss(parameters, *args):
 
     noisy_circ = noisy_circuit(circuit, params)
     freq = backend.execute_circuit(circuit=noisy_circ, nshots=nshots).frequencies()
-    norm = sum(freq.values())
-    for k in freq:
-        freq[k] /= norm
+    prob = freq_to_prob(freq)
 
-    return hellinger_distance(target_freq, freq)
+    hellinger_fid = hellinger_fidelity(target_prob, prob)
+
+    if error == True:
+        return [-hellinger_fid, hellinger_shot_error(target_prob, prob, nshots)]
+    else:
+        return -hellinger_fid
 
 
 class CompositeNoiseModel:
@@ -229,7 +244,6 @@ class CompositeNoiseModel:
         self.params = params
         self.hellinger = {}
         self.hellinger0 = {}
-        self.extra = {}
 
     def apply(self, circuit):
         self.noisy_circuit = noisy_circuit(circuit, self.params)
@@ -237,20 +251,19 @@ class CompositeNoiseModel:
     def fit(
         self,
         target_result,
-        method="trust-constr",
-        jac=None,
-        hess=None,
-        hessp=None,
         bounds=True,
-        constraints=True,
-        tol=None,
+        eps=1e-4,
+        maxfun=None,
+        maxiter=1000,
+        locally_biased=True,
+        f_min=-1,
+        f_min_rtol=None,
+        vol_tol=1e-16,
+        len_tol=1e-6,
         callback=None,
-        options=None,
-        compile=False,
-        processes=None,
         backend=None,
     ):
-        from qibo import optimizers
+        from scipy import optimize
 
         if backend == None:
             from qibo.backends import GlobalBackend
@@ -259,66 +272,55 @@ class CompositeNoiseModel:
 
         circuit = target_result.circuit
         nshots = target_result.nshots
-        target_freq = target_result.frequencies()
-        initial_params = self.params
-        idle_qubits = initial_params["idle_qubits"]
-        norm = target_result.nshots
-        for k in target_freq:
-            target_freq[k] /= norm
+        target_prob = freq_to_prob(target_result.frequencies())
+
+        idle_qubits = self.params["idle_qubits"]
         qubits = target_result.nqubits
+        from scipy.optimize import Bounds
+
         if bounds == True:
-            from scipy.optimize import Bounds
 
             qubits = target_result.nqubits
             lb = np.zeros(4 * qubits + 4)
-            ub = [np.inf] * (2 * qubits + 2) + [4 / 3, 15 / 16] + [1] * 2 * qubits
-            bounds = Bounds(lb, ub, keep_feasible=True)
-        if constraints == True:
-            from scipy.optimize import LinearConstraint
+            ub = [10000] * (2 * qubits + 2) + [4 / 3, 16 / 15] + [1] * 2 * qubits
+            bounds = Bounds(lb, ub)
+        else:
+            lb = bounds[0]
+            ub = bounds[1]
+            bounds = Bounds(lb, ub)
 
-            qubits = target_result.nqubits
-            cons = np.eye(4 * qubits + 4)
-            for j in range(qubits):  # t1 t2
-                cons[j, j] = 2
-                cons[j, qubits + j] = 1
-            lb = np.zeros(4 * qubits + 4)
-            ub = [np.inf] * (2 * qubits + 2) + [4 / 3, 15 / 16] + [1] * 2 * qubits
-            constraints = LinearConstraint(cons, lb, ub, keep_feasible=True)
+        shot_error = True
+        args = (circuit, nshots, target_prob, idle_qubits, backend, shot_error)
+        result = np.inf
+        while result == np.inf:
+            initial_params = np.random.uniform(bounds.lb, bounds.ub)
+            result = loss(initial_params, *args)
 
-        if tol == None:
-            tol = 10 / np.sqrt(nshots)
+        if f_min_rtol == None:
+            f_min_rtol = result[1]
 
-        initial_params = (
-            list(
-                initial_params["t1"]
-                + initial_params["t2"]
-                + initial_params["gate_time"]
-                + initial_params["depolarizing_error"]
-            )
-            + initial_params["bitflips_error"][0]
-            + initial_params["bitflips_error"][1]
-        )
+        args = list(args)
+        args[5] = False
+        args = tuple(args)
 
-        args = (circuit, nshots, target_freq, idle_qubits, backend)
-        self.hellinger0 = loss(initial_params, *args)
+        self.hellinger0 = {"fidelity": abs(result[0]), "shot_error": result[1]}
 
-        result, parameters, extra = optimizers.optimize(
+        res = optimize.direct(
             loss,
-            initial_params,
+            bounds,
             args=args,
-            method=method,
-            jac=jac,
-            hess=hess,
-            hessp=hessp,
-            bounds=bounds,
-            constraints=constraints,
-            tol=tol,
+            eps=eps,
+            maxfun=maxfun,
+            maxiter=maxiter,
+            locally_biased=locally_biased,
+            f_min=f_min,
+            f_min_rtol=f_min_rtol,
+            vol_tol=vol_tol,
+            len_tol=len_tol,
             callback=callback,
-            options=options,
-            compile=compile,
-            processes=processes,
-            backend=backend,
         )
+
+        parameters = res.x
         params = {
             "t1": tuple(parameters[0:qubits]),
             "t2": tuple(parameters[qubits : 2 * qubits]),
@@ -331,6 +333,11 @@ class CompositeNoiseModel:
             ),
             "idle_qubits": idle_qubits,
         }
-        self.hellinger = result
+        self.hellinger = abs(res.fun)
         self.params = params
-        self.extra = extra
+        self.extra = {
+            "success": res.success,
+            "message": res.message,
+            "nfev": res.nfev,
+            "nit": res.nit,
+        }
