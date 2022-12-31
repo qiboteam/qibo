@@ -82,6 +82,16 @@ class NumpyMatrices:
         phase = self.np.exp(0.5j * theta)
         return self.np.array([[self.np.conj(phase), 0], [0, phase]], dtype=self.dtype)
 
+    def GPI(self, phi):
+        phase = self.np.exp(1.0j * phi)
+        return self.np.array([[0, self.np.conj(phase)], [phase, 0]], dtype=self.dtype)
+
+    def GPI2(self, phi):
+        phase = self.np.exp(1.0j * phi)
+        return self.np.array(
+            [[1, -1.0j * self.np.conj(phase)], [-1.0j * phase, 1]], dtype=self.dtype
+        ) / self.np.sqrt(2)
+
     def U1(self, theta):
         phase = self.np.exp(1j * theta)
         return self.np.array([[1, 0], [0, phase]], dtype=self.dtype)
@@ -230,6 +240,20 @@ class NumpyMatrices:
             ],
             dtype=self.dtype,
         )
+
+    def MS(self, phi0, phi1):
+        plus = self.np.exp(1.0j * (phi0 + phi1))
+        minus = self.np.exp(1.0j * (phi0 - phi1))
+
+        return self.np.array(
+            [
+                [1, 0, 0, -1.0j * self.np.conj(plus)],
+                [0, 1, -1.0j * self.np.conj(minus), 0],
+                [0, -1.0j * minus, 1, 0],
+                [-1.0j * plus, 0, 0, 1],
+            ],
+            dtype=self.dtype,
+        ) / self.np.sqrt(2)
 
     @cached_property
     def TOFFOLI(self):

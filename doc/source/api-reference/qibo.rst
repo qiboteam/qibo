@@ -520,6 +520,7 @@ Parametric ZZ interaction (RZZ)
     :members:
     :member-order: bysource
 
+
 Special gates
 ^^^^^^^^^^^^^
 
@@ -551,7 +552,33 @@ Fusion gate
     :members:
     :member-order: bysource
 
+IONQ Native gates
+^^^^^^^^^^^^^^^^^
+
+GPI
+"""
+
+.. autoclass:: qibo.gates.GPI
+    :members:
+    :member-order: bysource
+
+GPI2
+""""
+
+.. autoclass:: qibo.gates.GPI2
+    :members:
+    :member-order: bysource
+
+Mølmer–Sørensen (MS)
+""""""""""""""""""""
+
+.. autoclass:: qibo.gates.MS
+    :members:
+    :member-order: bysource
+
+
 _______________________
+
 
 .. _Channels:
 
@@ -926,6 +953,7 @@ equation.
    :members:
    :member-order: bysource
 
+
 .. _Optimizers:
 
 Optimizers
@@ -943,12 +971,63 @@ variational model.
    :member-order: bysource
    :exclude-members: ParallelBFGS
 
+
+.. _Gradients:
+
+Gradients
+---------
+
+In the context of optimization, particularly when dealing with Quantum Machine
+Learning problems, it is often necessary to calculate the gradients of functions
+that are to be minimized (or maximized). Hybrid methods, which are based on the
+use of classical techniques for the optimization of quantum computation procedures,
+have been presented in the previous section. This approach is very useful in
+simulation, but some classical methods cannot be used when using real circuits:
+for example, in the context of neural networks, the Back-Propagation algorithm
+is used, where it is necessary to know the value of a target function during the
+propagation of information within the network. Using a real circuit, we would not
+be able to access this information without taking a measurement, causing the state
+of the system to collapse and losing the information accumulated up to that moment.
+For this reason, in `qibo` we have also implemented methods for calculating the
+gradients which can be performed directly on the hardware, such as the
+`Parameter Shift Rule`_.
+
+.. automodule:: qibo.derivative
+   :members:
+   :member-order: bysource
+
+.. _`Parameter Shift Rule`: https://arxiv.org/abs/1811.11184
+
 .. _Quantum Information:
 
 Quantum Information
 -------------------
 
 This module provides tools for generation and analysis of quantum (and classical) information.
+
+Basis
+^^^^^
+
+Set of functions related to basis and basis transformations.
+
+
+Pauli basis
+"""""""""""
+
+.. autofunction:: qibo.quantum_info.pauli_basis
+
+
+Computational basis to Pauli basis
+""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.comp_basis_to_pauli
+
+
+Pauli basis to computational basis
+""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.pauli_to_comp_basis
+
 
 Metrics
 ^^^^^^^
@@ -973,6 +1052,7 @@ Entropy
     the functions are intended to be used on Hermitian inputs. When ``validate=True`` and
     ``state`` is non-Hermitian, an error will be raised when using `cupy` backend.
 
+
 Trace distance
 """"""""""""""
 
@@ -983,6 +1063,7 @@ Trace distance
     ``state - target``, is Hermitian or not. Default option is ``validate=False``, i.e. the assumption of Hermiticity,
     because it is faster and, more importantly, the functions are intended to be used on Hermitian inputs.
     When ``validate=True`` and ``state - target`` is non-Hermitian, an error will be raised when using `cupy` backend.
+
 
 Hilbert-Schmidt distance
 """"""""""""""""""""""""

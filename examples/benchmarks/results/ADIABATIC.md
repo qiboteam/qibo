@@ -3,7 +3,7 @@
 We use Qibo to simulate adiabatic evolution under the transverse field Ising
 Hamiltonians using linear scaling `s(t) = t`. We simulate for a total time
 of T=1 using double precision (`complex128`) and different
-[solvers](https://qibo.readthedocs.io/en/stable/qibo.html#solvers)
+[solvers](https://qibo.science/qibo/stable/api-reference/qibo.html#solvers)
 on CPU and GPU. In the first section we provide the scaling of execution time
 as a function of the number of qubits in the system and in the second section
 as a function of the time step `dt` used to discretize and integrate in time.
