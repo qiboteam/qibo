@@ -204,13 +204,7 @@ def loss(parameters, *args):
     qubits = circuit.nqubits
     parameters = np.array(parameters)
 
-    if any(parameters < 0):
-        return np.inf
-    elif parameters[2 * qubits + 2] > 4 / 3 or parameters[2 * qubits + 3] > 16 / 15:
-        return np.inf
-    elif any(parameters[2 * qubits + 4 : 4 * qubits + 4] > 1):
-        return np.inf
-    elif any(2 * parameters[0:qubits] - parameters[qubits : 2 * qubits] < 0):
+    if any(2 * parameters[0:qubits] - parameters[qubits : 2 * qubits] < 0):
         return np.inf
 
     params = {
@@ -265,7 +259,7 @@ class CompositeNoiseModel:
     ):
         from scipy.optimize import Bounds, direct
 
-        if backend == None:
+        if backend == None:  # pragma: no cover
             from qibo.backends import GlobalBackend
 
             backend = GlobalBackend()

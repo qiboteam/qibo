@@ -1,3 +1,5 @@
+from collections import Counter
+
 import numpy as np
 import pytest
 
@@ -325,89 +327,187 @@ def test_kraus_error(backend, density_matrix, nshots):
         backend.assert_allclose(final_state_samples, target_final_state_samples)
 
 
-@pytest.mark.parametrize("nshots", [10, 100, 1000])
+@pytest.mark.parametrize("nshots", [100, 1000, 20000])
 @pytest.mark.parametrize("idle_qubits", [True, False])
 def test_noisy_circuit(backend, nshots, idle_qubits):
+    backend.set_threads(1)
+    if nshots != 20000:
 
-    circuit = Circuit(3, density_matrix=True)
-    circuit.add(
-        [
-            gates.H(0),
-            gates.X(0),
-            gates.CNOT(2, 1),
-            gates.Z(2),
-            gates.Z(0),
-            gates.H(1),
-            gates.H(2),
-            gates.CNOT(2, 1),
-            gates.H(0),
-            gates.X(0),
-            gates.M(0, 1),
-            gates.M(2),
+        circuit = Circuit(3, density_matrix=True)
+        circuit.add(
+            [
+                gates.H(0),
+                gates.X(0),
+                gates.CNOT(2, 1),
+                gates.Z(2),
+                gates.Z(0),
+                gates.H(1),
+                gates.H(2),
+                gates.CNOT(2, 1),
+                gates.H(0),
+                gates.X(0),
+                gates.M(0, 1),
+                gates.M(2),
+            ]
+        )
+
+        params = {
+            "t1": (1.0, 1.1, 1.2),
+            "t2": (0.7, 0.8, 0.9),
+            "gate_time": (1.5, 1.6),
+            "excited_population": 0,
+            "depolarizing_error": (0.5, 0.6),
+            "bitflips_error": ([0.01, 0.02, 0.03], [0.02, 0.03, 0.04]),
+            "idle_qubits": idle_qubits,
+        }
+
+        noise_model = NoiseModel()
+        noise_model.composite(params)
+        noisy_circ = noise_model.apply(circuit)
+
+        backend.set_seed(123)
+        final_samples = backend.execute_circuit(noisy_circ, nshots=nshots).samples()
+
+        target_circuit = Circuit(3, density_matrix=True)
+        target_circuit.add(gates.H(0))
+        target_circuit.add(gates.DepolarizingChannel((0,), 0.5))
+        target_circuit.add(gates.ThermalRelaxationChannel(0, 1.0, 0.7, 1.5, 0))
+        target_circuit.add(gates.CNOT(2, 1))
+        target_circuit.add(gates.DepolarizingChannel((1, 2), 0.6))
+        target_circuit.add(gates.ThermalRelaxationChannel(1, 1.1, 0.8, 1.6, 0))
+        target_circuit.add(gates.ThermalRelaxationChannel(2, 1.2, 0.9, 1.6, 0))
+        target_circuit.add(gates.X(0))
+        target_circuit.add(gates.DepolarizingChannel((0,), 0.5))
+        target_circuit.add(gates.ThermalRelaxationChannel(0, 1.0, 0.7, 1.5, 0))
+        target_circuit.add(gates.H(1))
+        target_circuit.add(gates.DepolarizingChannel((1,), 0.5))
+        target_circuit.add(gates.ThermalRelaxationChannel(1, 1.1, 0.8, 1.5, 0))
+        target_circuit.add(gates.Z(2))
+        target_circuit.add(gates.DepolarizingChannel((2,), 0.5))
+        target_circuit.add(gates.ThermalRelaxationChannel(2, 1.2, 0.9, 1.5, 0))
+        target_circuit.add(gates.Z(0))
+        target_circuit.add(gates.DepolarizingChannel((0,), 0.5))
+        target_circuit.add(gates.ThermalRelaxationChannel(0, 1.0, 0.7, 1.5, 0))
+        target_circuit.add(gates.H(2))
+        target_circuit.add(gates.DepolarizingChannel((2,), 0.5))
+        target_circuit.add(gates.ThermalRelaxationChannel(2, 1.2, 0.9, 1.5, 0))
+        target_circuit.add(gates.H(0))
+        target_circuit.add(gates.DepolarizingChannel((0,), 0.5))
+        target_circuit.add(gates.ThermalRelaxationChannel(0, 1.0, 0.7, 1.5, 0))
+        if idle_qubits == True:
+            target_circuit.add(
+                gates.ThermalRelaxationChannel(1, 1.1, 0.8, 1.5, 0)
+            )  # dt
+        target_circuit.add(gates.CNOT(2, 1))
+        target_circuit.add(gates.DepolarizingChannel((1, 2), 0.6))
+        target_circuit.add(gates.ThermalRelaxationChannel(1, 1.1, 0.8, 1.6, 0))
+        target_circuit.add(gates.ThermalRelaxationChannel(2, 1.2, 0.9, 1.6, 0))
+        target_circuit.add(gates.X(0))
+        target_circuit.add(gates.DepolarizingChannel((0,), 0.5))
+        target_circuit.add(gates.ThermalRelaxationChannel(0, 1.0, 0.7, 1.5, 0))
+        if idle_qubits == True:
+            target_circuit.add(
+                gates.ThermalRelaxationChannel(1, 1.1, 0.8, 1.3, 0)
+            )  # dt
+        target_circuit.add(gates.M(0, 1))
+        target_circuit.add(gates.M(2))
+
+        backend.set_seed(123)
+        target_state = backend.execute_circuit(target_circuit, nshots=nshots)
+        target_samples = target_state.apply_bitflips(
+            p0=[0.01, 0.02, 0.03], p1=[0.02, 0.03, 0.04]
+        )
+
+        backend.assert_allclose(final_samples, target_samples)
+
+    else:
+
+        circuit = Circuit(3, density_matrix=True)
+
+        circuit.add(
+            [
+                gates.CNOT(0, 1),
+                gates.RZ(2, -np.pi / 2),
+                gates.RZ(0, -np.pi / 2),
+                gates.RZ(1, np.pi / 2),
+                gates.RX(2, np.pi / 2),
+                gates.RX(0, np.pi / 2),
+                gates.RX(1, np.pi / 2),
+                gates.RZ(2, -np.pi / 2),
+                gates.RZ(0, np.pi / 2),
+                gates.RZ(1, np.pi / 2),
+                gates.CNOT(2, 1),
+                gates.CNOT(0, 1),
+                gates.CNOT(0, 1),
+                gates.RZ(2, -np.pi / 2),
+                gates.RZ(0, -np.pi / 2),
+                gates.RZ(1, np.pi / 2),
+                gates.RX(2, np.pi / 2),
+                gates.RX(0, np.pi / 2),
+                gates.RX(1, np.pi / 2),
+                gates.RZ(2, -np.pi / 2),
+                gates.RZ(0, np.pi / 2),
+                gates.RZ(1, np.pi / 2),
+                gates.CNOT(2, 1),
+                gates.CNOT(0, 1),
+                gates.CNOT(0, 1),
+                gates.RZ(2, -np.pi / 2),
+                gates.RZ(0, -np.pi / 2),
+                gates.RZ(1, np.pi / 2),
+                gates.RX(2, np.pi / 2),
+                gates.RX(0, np.pi / 2),
+                gates.RX(1, np.pi / 2),
+                gates.RZ(2, -np.pi / 2),
+                gates.RZ(0, np.pi / 2),
+                gates.RZ(1, np.pi / 2),
+                gates.CNOT(2, 1),
+                gates.CNOT(0, 1),
+                gates.CNOT(0, 1),
+                gates.RZ(2, -np.pi / 2),
+                gates.RZ(0, -np.pi / 2),
+                gates.RZ(1, np.pi / 2),
+                gates.RX(2, np.pi / 2),
+                gates.RX(0, np.pi / 2),
+                gates.RX(1, np.pi / 2),
+                gates.RZ(2, -np.pi / 2),
+                gates.RZ(0, np.pi / 2),
+                gates.RZ(1, np.pi / 2),
+                gates.CNOT(2, 1),
+                gates.CNOT(0, 1),
+                gates.CNOT(0, 1),
+                gates.RZ(2, -np.pi / 2),
+                gates.RZ(0, -np.pi / 2),
+                gates.RZ(1, np.pi / 2),
+                gates.RX(2, np.pi / 2),
+                gates.RX(0, np.pi / 2),
+                gates.RX(1, np.pi / 2),
+                gates.RZ(2, -np.pi / 2),
+                gates.RZ(0, np.pi / 2),
+                gates.RZ(1, np.pi / 2),
+                gates.CNOT(2, 1),
+                gates.CNOT(0, 1),
+                gates.M(0),
+                gates.M(1),
+                gates.M(2),
+            ]
+        )
+        result = circuit(nshots=20000)
+        f = {0: 2908, 1: 2504, 2: 2064, 3: 2851, 4: 2273, 5: 2670, 6: 2170, 7: 2560}
+        counts = Counter({k: v for k, v in f.items()})
+        result._frequencies = counts
+        result.frequencies()
+
+        params = {"idle_qubits": True}
+        bounds = [
+            True,
+            [
+                [50e-6] * 6 + [50e-9] * 2 + [1e-5] + [1e-3] * 7,
+                [500e-6] * 6 + [300e-9] * 2 + [0.2] * 2 + [0.3] * 6,
+            ],
         ]
-    )
-
-    params = {
-        "t1": (1.0, 1.1, 1.2),
-        "t2": (0.7, 0.8, 0.9),
-        "gate_time": (1.5, 1.6),
-        "excited_population": 0,
-        "depolarizing_error": (0.5, 0.6),
-        "bitflips_error": ([0.01, 0.02, 0.03], [0.02, 0.03, 0.04]),
-        "idle_qubits": idle_qubits,
-    }
-
-    noise_model = NoiseModel()
-    noise_model.composite(params)
-    noisy_circ = noise_model.apply(circuit)
-
-    backend.set_seed(123)
-    final_samples = backend.execute_circuit(noisy_circ, nshots=nshots).samples()
-
-    target_circuit = Circuit(3, density_matrix=True)
-    target_circuit.add(gates.H(0))
-    target_circuit.add(gates.DepolarizingChannel((0,), 0.5))
-    target_circuit.add(gates.ThermalRelaxationChannel(0, 1.0, 0.7, 1.5, 0))
-    target_circuit.add(gates.CNOT(2, 1))
-    target_circuit.add(gates.DepolarizingChannel((1, 2), 0.6))
-    target_circuit.add(gates.ThermalRelaxationChannel(1, 1.1, 0.8, 1.6, 0))
-    target_circuit.add(gates.ThermalRelaxationChannel(2, 1.2, 0.9, 1.6, 0))
-    target_circuit.add(gates.X(0))
-    target_circuit.add(gates.DepolarizingChannel((0,), 0.5))
-    target_circuit.add(gates.ThermalRelaxationChannel(0, 1.0, 0.7, 1.5, 0))
-    target_circuit.add(gates.H(1))
-    target_circuit.add(gates.DepolarizingChannel((1,), 0.5))
-    target_circuit.add(gates.ThermalRelaxationChannel(1, 1.1, 0.8, 1.5, 0))
-    target_circuit.add(gates.Z(2))
-    target_circuit.add(gates.DepolarizingChannel((2,), 0.5))
-    target_circuit.add(gates.ThermalRelaxationChannel(2, 1.2, 0.9, 1.5, 0))
-    target_circuit.add(gates.Z(0))
-    target_circuit.add(gates.DepolarizingChannel((0,), 0.5))
-    target_circuit.add(gates.ThermalRelaxationChannel(0, 1.0, 0.7, 1.5, 0))
-    target_circuit.add(gates.H(2))
-    target_circuit.add(gates.DepolarizingChannel((2,), 0.5))
-    target_circuit.add(gates.ThermalRelaxationChannel(2, 1.2, 0.9, 1.5, 0))
-    target_circuit.add(gates.H(0))
-    target_circuit.add(gates.DepolarizingChannel((0,), 0.5))
-    target_circuit.add(gates.ThermalRelaxationChannel(0, 1.0, 0.7, 1.5, 0))
-    if idle_qubits == True:
-        target_circuit.add(gates.ThermalRelaxationChannel(1, 1.1, 0.8, 1.5, 0))  # dt
-    target_circuit.add(gates.CNOT(2, 1))
-    target_circuit.add(gates.DepolarizingChannel((1, 2), 0.6))
-    target_circuit.add(gates.ThermalRelaxationChannel(1, 1.1, 0.8, 1.6, 0))
-    target_circuit.add(gates.ThermalRelaxationChannel(2, 1.2, 0.9, 1.6, 0))
-    target_circuit.add(gates.X(0))
-    target_circuit.add(gates.DepolarizingChannel((0,), 0.5))
-    target_circuit.add(gates.ThermalRelaxationChannel(0, 1.0, 0.7, 1.5, 0))
-    if idle_qubits == True:
-        target_circuit.add(gates.ThermalRelaxationChannel(1, 1.1, 0.8, 1.3, 0))  # dt
-    target_circuit.add(gates.M(0, 1))
-    target_circuit.add(gates.M(2))
-
-    backend.set_seed(123)
-    target_state = backend.execute_circuit(target_circuit, nshots=nshots)
-    target_samples = target_state.apply_bitflips(
-        p0=[0.01, 0.02, 0.03], p1=[0.02, 0.03, 0.04]
-    )
-
-    backend.assert_allclose(final_samples, target_samples)
+        for bounds in bounds:
+            noise_model = CompositeNoiseModel(params)
+            noise_model.fit(result, bounds=bounds, backend=backend)
+            backend.assert_allclose(
+                1, noise_model.hellinger, rtol=noise_model.hellinger0["shot_error"]
+            )
