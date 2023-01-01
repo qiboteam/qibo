@@ -491,7 +491,7 @@ def test_noisy_circuit(backend, nshots, idle_qubits):
                 gates.M(2),
             ]
         )
-        result = circuit(nshots=20000)
+        result = circuit(nshots=1000)
         f = {0: 2908, 1: 2504, 2: 2064, 3: 2851, 4: 2273, 5: 2670, 6: 2170, 7: 2560}
         counts = Counter({k: v for k, v in f.items()})
         result._frequencies = counts
@@ -509,5 +509,5 @@ def test_noisy_circuit(backend, nshots, idle_qubits):
             noise_model = CompositeNoiseModel(params)
             noise_model.fit(result, bounds=bounds, backend=backend)
             backend.assert_allclose(
-                1, noise_model.hellinger, rtol=noise_model.hellinger0["shot_error"]
+                noise_model.hellinger, 1, rtol=noise_model.hellinger0["shot_error"]
             )
