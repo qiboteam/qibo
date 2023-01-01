@@ -246,18 +246,18 @@ class CompositeNoiseModel:
         self,
         target_result,
         bounds=True,
+        nvar=None,
+        disp=False,
         eps=1e-4,
-        maxfun=None,
-        maxiter=1000,
-        locally_biased=True,
-        f_min=-1,
+        maxf=2e4,
+        maxT=6e3,
+        algmethod=1,
         f_min_rtol=None,
-        vol_tol=1e-16,
-        len_tol=1e-6,
-        callback=None,
+        volper=-1,
+        sigmaper=-1,
         backend=None,
     ):
-        from scipy.optimize import Bounds, direct
+        from scipydirect import minimize
 
         if backend == None:  # pragma: no cover
             from qibo.backends import GlobalBackend
@@ -276,17 +276,17 @@ class CompositeNoiseModel:
             qubits = target_result.nqubits
             lb = np.zeros(4 * qubits + 4)
             ub = [10000] * (2 * qubits + 2) + [4 / 3, 16 / 15] + [1] * 2 * qubits
-            bounds = Bounds(lb, ub)
+            bounds = [b for b in zip(lb, ub)]
         else:
             lb = bounds[0]
             ub = bounds[1]
-            bounds = Bounds(lb, ub)
+            bounds = [b for b in zip(lb, ub)]
 
         shot_error = True
         args = (circuit, nshots, target_prob, idle_qubits, backend, shot_error)
         result = np.inf
         while result == np.inf:
-            initial_params = np.random.uniform(bounds.lb, bounds.ub)
+            initial_params = np.random.uniform(lb, ub)
             result = loss(initial_params, *args)
 
         if f_min_rtol == None:
@@ -298,19 +298,20 @@ class CompositeNoiseModel:
 
         self.hellinger0 = {"fidelity": abs(result[0]), "shot_error": result[1]}
 
-        res = direct(
+        res = minimize(
             loss,
-            bounds,
+            bounds=bounds,
+            nvar=nvar,
             args=args,
+            disp=disp,
             eps=eps,
-            maxfun=maxfun,
-            maxiter=maxiter,
-            locally_biased=locally_biased,
-            f_min=f_min,
-            f_min_rtol=f_min_rtol,
-            vol_tol=vol_tol,
-            len_tol=len_tol,
-            callback=callback,
+            maxf=maxf,
+            maxT=maxT,
+            algmethod=algmethod,
+            fglobal=-1,
+            fglper=f_min_rtol * 100,
+            volper=volper,
+            sigmaper=sigmaper,
         )
 
         parameters = res.x
@@ -331,6 +332,4 @@ class CompositeNoiseModel:
         self.extra = {
             "success": res.success,
             "message": res.message,
-            "nfev": res.nfev,
-            "nit": res.nit,
         }

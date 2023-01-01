@@ -56,6 +56,7 @@ setup(
         "scipy",
         "sympy",
         "cma",
+        "scipydirect",
         "joblib",
         "matplotlib",
         "psutil",
