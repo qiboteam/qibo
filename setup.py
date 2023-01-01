@@ -53,6 +53,7 @@ setup(
         "Topic :: Scientific/Engineering :: Physics",
     ],
     install_requires=[
+        "numpy",
         "scipy",
         "sympy",
         "cma",
