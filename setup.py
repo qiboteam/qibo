@@ -54,9 +54,9 @@ setup(
     ],
     install_requires=[
         "scipy",
-        "scipydirect",
         "sympy",
         "cma",
+        "nlopt",
         "joblib",
         "matplotlib",
         "psutil",

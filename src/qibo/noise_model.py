@@ -194,7 +194,7 @@ def hellinger_shot_error(p, q, nshots):
     return hellinger_fid_e
 
 
-def loss(parameters, *args):
+def loss(parameters, grad, args):
     circuit = args[0]
     nshots = args[1]
     target_prob = args[2]
@@ -205,7 +205,7 @@ def loss(parameters, *args):
     parameters = np.array(parameters)
 
     if any(2 * parameters[0:qubits] - parameters[qubits : 2 * qubits] < 0):
-        return np.inf
+        return -np.inf
 
     params = {
         "t1": tuple(parameters[0:qubits]),
@@ -227,9 +227,9 @@ def loss(parameters, *args):
     hellinger_fid = hellinger_fidelity(target_prob, prob)
 
     if error == True:
-        return [-hellinger_fid, hellinger_shot_error(target_prob, prob, nshots)]
+        return [hellinger_fid, hellinger_shot_error(target_prob, prob, nshots)]
     else:
-        return -hellinger_fid
+        return hellinger_fid
 
 
 class CompositeNoiseModel:
@@ -246,18 +246,12 @@ class CompositeNoiseModel:
         self,
         target_result,
         bounds=True,
-        nvar=None,
-        disp=False,
-        eps=1e-4,
-        maxf=2e4,
-        maxT=6e3,
-        algmethod=1,
         f_min_rtol=None,
-        volper=-1,
-        sigmaper=-1,
         backend=None,
     ):
-        from scipydirect import minimize
+        from functools import partial
+
+        import nlopt
 
         if backend == None:  # pragma: no cover
             from qibo.backends import GlobalBackend
@@ -272,22 +266,19 @@ class CompositeNoiseModel:
         qubits = target_result.nqubits
 
         if bounds == True:
-
             qubits = target_result.nqubits
             lb = np.zeros(4 * qubits + 4)
             ub = [10000] * (2 * qubits + 2) + [4 / 3, 16 / 15] + [1] * 2 * qubits
-            bounds = [b for b in zip(lb, ub)]
         else:
             lb = bounds[0]
             ub = bounds[1]
-            bounds = [b for b in zip(lb, ub)]
 
         shot_error = True
         args = (circuit, nshots, target_prob, idle_qubits, backend, shot_error)
-        result = np.inf
-        while result == np.inf:
+        result = -np.inf
+        while result == -np.inf:
             initial_params = np.random.uniform(lb, ub)
-            result = loss(initial_params, *args)
+            result = loss(initial_params, 0, args)
 
         if f_min_rtol == None:
             f_min_rtol = result[1]
@@ -298,23 +289,17 @@ class CompositeNoiseModel:
 
         self.hellinger0 = {"fidelity": abs(result[0]), "shot_error": result[1]}
 
-        res = minimize(
-            loss,
-            bounds=bounds,
-            nvar=nvar,
-            args=args,
-            disp=disp,
-            eps=eps,
-            maxf=maxf,
-            maxT=maxT,
-            algmethod=algmethod,
-            fglobal=-1,
-            fglper=f_min_rtol * 100,
-            volper=volper,
-            sigmaper=sigmaper,
-        )
+        opt = nlopt.opt(nlopt.GN_DIRECT_L_RAND, len(initial_params))
+        f = partial(loss, args=args)
+        opt.set_max_objective(f)
+        opt.set_lower_bounds(lb)
+        opt.set_upper_bounds(ub)
+        opt.set_stopval(1 - f_min_rtol)
+        xopt = opt.optimize(list(initial_params))
+        maxf = opt.last_optimum_value()
+        result = opt.last_optimize_result()
 
-        parameters = res.x
+        parameters = xopt
         params = {
             "t1": tuple(parameters[0:qubits]),
             "t2": tuple(parameters[qubits : 2 * qubits]),
@@ -327,9 +312,8 @@ class CompositeNoiseModel:
             ),
             "idle_qubits": idle_qubits,
         }
-        self.hellinger = abs(res.fun)
+        self.hellinger = maxf
         self.params = params
         self.extra = {
-            "success": res.success,
-            "message": res.message,
+            "message": result,
         }

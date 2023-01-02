@@ -330,7 +330,6 @@ def test_kraus_error(backend, density_matrix, nshots):
 @pytest.mark.parametrize("nshots", [100, 1000, 20000])
 @pytest.mark.parametrize("idle_qubits", [True, False])
 def test_noisy_circuit(backend, nshots, idle_qubits):
-    backend.set_threads(1)
     if nshots != 20000:
 
         circuit = Circuit(3, density_matrix=True)
@@ -491,7 +490,7 @@ def test_noisy_circuit(backend, nshots, idle_qubits):
                 gates.M(2),
             ]
         )
-        result = circuit(nshots=1000)
+        result = circuit(nshots=2000)
         f = {0: 2908, 1: 2504, 2: 2064, 3: 2851, 4: 2273, 5: 2670, 6: 2170, 7: 2560}
         counts = Counter({k: v for k, v in f.items()})
         result._frequencies = counts
