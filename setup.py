@@ -53,11 +53,10 @@ setup(
         "Topic :: Scientific/Engineering :: Physics",
     ],
     install_requires=[
-        "numpy",
         "scipy",
+        "scipydirect",
         "sympy",
         "cma",
-        "scipydirect",
         "joblib",
         "matplotlib",
         "psutil",
