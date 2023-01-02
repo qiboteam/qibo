@@ -1011,6 +1011,18 @@ Basis
 Set of functions related to basis and basis transformations.
 
 
+Vectorization
+"""""""""""""
+
+.. autofunction:: qibo.quantum_info.vectorization
+
+
+Unvectorization
+"""""""""""""""
+
+.. autofunction:: qibo.quantum_info.unvectorization
+
+
 Pauli basis
 """""""""""
 
