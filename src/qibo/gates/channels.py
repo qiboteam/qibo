@@ -303,21 +303,16 @@ class DepolarizingChannel(Channel):
 
     def apply_density_matrix(self, backend, state, nqubits):
         lam = self.init_kwargs["lam"]
-        return (1 - lam) * backend.cast(
-            state
-        ) + lam * backend.apply_gate_density_matrix(
-            I(*self.target_qubits), state, nqubits
-        )
+        return (1 - lam) * backend.cast(state) + lam / 2**nqubits * I(
+            *range(nqubits)
+        ).asmatrix(backend)
 
     def apply(self, backend, state, nqubits):
-        from qibo.backends import NumpyBackend
-
         num_qubits = len(self.target_qubits)
         num_terms = 4**num_qubits
         prob_pauli = self.init_kwargs["lam"] / num_terms
         probs = (num_terms - 1) * [prob_pauli]
         gates = []
-        backend = NumpyBackend()
         for pauli_list in list(product([I, X, Y, Z], repeat=num_qubits))[1::]:
             fgate = FusedGate(*range(num_qubits))
             for j, pauli in enumerate(pauli_list):
