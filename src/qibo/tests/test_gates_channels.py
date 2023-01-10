@@ -155,7 +155,7 @@ def test_depolarizing_channel(backend):
     lam = 0.3
     initial_rho_r = np.einsum("ijik->jk", initial_rho.reshape([2, 4, 2, 4]))
     channel = gates.DepolarizingChannel((1, 2), lam)
-    final_rho = backend.apply_channel_density_matrix(channel, np.copy(initial_rho), 3)
+    final_rho = channel.apply_density_matrix(backend, np.copy(initial_rho), 3)
     final_rho_r = np.einsum("ijik->jk", final_rho.reshape([2, 4, 2, 4]))
     target_rho_r = (1 - lam) * initial_rho_r + lam * np.trace(
         initial_rho_r

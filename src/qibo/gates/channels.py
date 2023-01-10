@@ -265,7 +265,7 @@ class PauliNoiseChannel(UnitaryChannel):
         self.init_kwargs = {"px": px, "py": py, "pz": pz}
 
 
-class DepolarizingChannel(UnitaryChannel):
+class DepolarizingChannel(Channel):
     """:math:`n`-qubit Depolarizing quantum error channel,
 
     .. math::
@@ -285,8 +285,7 @@ class DepolarizingChannel(UnitaryChannel):
     """
 
     def __init__(self, q, lam=0):
-        from qibo.backends import NumpyBackend
-
+        super().__init__()
         num_qubits = len(q)
         num_terms = 4**num_qubits
         max_param = num_terms / (num_terms - 1)
@@ -295,22 +294,33 @@ class DepolarizingChannel(UnitaryChannel):
                 ValueError,
                 "Depolarizing parameter must be in between 0 and {}.".format(max_param),
             )
-        prob_pauli = lam / num_terms
+
+        self.name = "DepolarizingChannel"
+        self.target_qubits = q
+
+        self.init_args = [q]
+        self.init_kwargs = {"lam": lam}
+
+    def apply_density_matrix(self, backend, state, nqubits):
+        lam = self.init_kwargs["lam"]
+        return (1 - lam) * backend.cast(state) + lam / 2**nqubits * I(
+            *range(nqubits)
+        ).asmatrix(backend)
+
+    def apply(self, backend, state, nqubits):
+        num_qubits = len(self.target_qubits)
+        num_terms = 4**num_qubits
+        prob_pauli = self.init_kwargs["lam"] / num_terms
         probs = (num_terms - 1) * [prob_pauli]
         gates = []
-        backend = NumpyBackend()
         for pauli_list in list(product([I, X, Y, Z], repeat=num_qubits))[1::]:
             fgate = FusedGate(*range(num_qubits))
             for j, pauli in enumerate(pauli_list):
                 fgate.append(pauli(j))
-            gates.append(Unitary(backend.asmatrix_fused(fgate), *q))
-
-        super().__init__(probs, gates)
-        self.name = "DepolarizingChannel"
-        assert self.target_qubits == q
-
-        self.init_args = [q]
-        self.init_kwargs = {"lam": lam}
+            gates.append(Unitary(backend.asmatrix_fused(fgate), *self.target_qubits))
+        self.gates = tuple(gates)
+        self.coefficients = tuple(probs)
+        return backend.apply_channel(self, state, nqubits)
 
 
 class ResetChannel(Channel):
