@@ -72,7 +72,8 @@ def main(nqubits, hfield, params, dt, solver, method, maxiter, save):
         out_fol.mkdir(exist_ok=True)
         evolution.opt_history["loss"].append(target_energy)
         np.save(out_fol / f"{save}_n{nqubits}_loss.npy", evolution.opt_history["loss"])
-        np.save(out_fol / f"{save}_n{nqubits}_params.npy", evolution.opt_history["params"]
+        np.save(
+            out_fol / f"{save}_n{nqubits}_params.npy", evolution.opt_history["params"]
         )
 
 
