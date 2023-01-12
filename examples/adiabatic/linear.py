@@ -46,7 +46,7 @@ def main(nqubits, hfield, T, dt, solver, save):
     target_energy = bac.to_numpy(h1.eigenvalues()[0]).real
 
     # Check ground state
-    state_energy = bac.to_numpy(callbacks.Energy(h1).apply(bac, target_state)).real
+    state_energy = bac.to_numpy(h1.expectation(target_state)).real
     np.testing.assert_allclose(state_energy.real, target_energy)
 
     energy = callbacks.Energy(h1)
