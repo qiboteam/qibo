@@ -158,10 +158,10 @@ def test_pauli_basis(nqubits, normalize, vectorize, order):
     if nqubits >= 2:
         basis_test = list(product(basis_test, repeat=nqubits))
         basis_test = [reduce(np.kron, matrices) for matrices in basis_test]
-    
+
     if vectorize:
         basis_test = [vectorization(matrix, order=order) for matrix in basis_test]
-    
+
     basis_test = np.array(basis_test)
 
     if normalize:

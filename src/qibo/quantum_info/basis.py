@@ -115,7 +115,9 @@ def unvectorization(state, order: str = "row"):
     return state
 
 
-def pauli_basis(nqubits: int, normalize: bool = False, vectorize: bool = False, order: str = "row"):
+def pauli_basis(
+    nqubits: int, normalize: bool = False, vectorize: bool = False, order: str = "row"
+):
     """Creates the ``nqubits``-qubit Pauli basis.
 
     Args:
@@ -157,7 +159,10 @@ def pauli_basis(nqubits: int, normalize: bool = False, vectorize: bool = False, 
     if nqubits >= 2:
         basis = list(product(basis, repeat=nqubits))
         if vectorize:
-            basis = [vectorization(reduce(np.kron, matrices), order=order) for matrices in basis]
+            basis = [
+                vectorization(reduce(np.kron, matrices), order=order)
+                for matrices in basis
+            ]
         else:
             basis = [reduce(np.kron, matrices) for matrices in basis]
     else:
