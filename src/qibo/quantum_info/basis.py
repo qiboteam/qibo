@@ -116,7 +116,7 @@ def unvectorization(state, order: str = "row"):
 
 
 def pauli_basis(
-    nqubits: int, normalize: bool = False, vectorize: bool = False, order: str = "row"
+    nqubits: int, normalize: bool = False, vectorize: bool = False, order: str = None
 ):
     """Creates the ``nqubits``-qubit Pauli basis.
 
@@ -131,10 +131,10 @@ def pauli_basis(
             performed row-wise. If ``"column"``, vectorization is performed
             column-wise. If ``"system"``, system-wise vectorization is
             performed. If ``vectorization=False``, then ``order=None`` is
-            forced. Default is ``"row"``.
+            forced. Default is ``None``.
 
     Returns:
-        list: list with all Pauli matrices forming the basis.
+        ndarray: all Pauli matrices forming the basis.
     """
 
     if nqubits <= 0:
@@ -152,7 +152,8 @@ def pauli_basis(
             f"vectorize must be type bool, but it is type {type(vectorize)} instead.",
         )
 
-    order = None if not vectorize else order
+    if vectorize and order is None:
+        raise_error(ValueError, "when vectorize=True, order must be specified.")
 
     basis = [matrices.I, matrices.X, matrices.Y, matrices.Z]
 

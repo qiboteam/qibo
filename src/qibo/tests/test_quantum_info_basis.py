@@ -153,6 +153,8 @@ def test_pauli_basis(nqubits, normalize, vectorize, order):
         pauli_basis(1, "True")
     with pytest.raises(TypeError):
         pauli_basis(1, False, "True")
+    with pytest.raises(ValueError):
+        pauli_basis(1, False, True)
 
     basis_test = [matrices.I, matrices.X, matrices.Y, matrices.Z]
     if nqubits >= 2:
