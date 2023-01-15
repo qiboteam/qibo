@@ -249,6 +249,7 @@ def pauli_to_comp_basis(nqubits: int, normalize: bool = False, order: str = "row
         Unitary matrix :math:`U`.
     """
 
-    matrix = np.transpose(np.conj(comp_basis_to_pauli(nqubits, normalize, order)))
+    unitary = pauli_basis(nqubits, normalize, vectorize=True, order=order)
+    unitary = np.transpose(unitary)
 
-    return matrix
+    return unitary
