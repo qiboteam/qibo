@@ -140,10 +140,11 @@ def test_unvectorization(nqubits, order):
     assert np.linalg.norm(matrix_test - matrix) < PRECISION_TOL
 
 
+@pytest.mark.parametrize("order", ["row", "column", "system"])
 @pytest.mark.parametrize("vectorize", [False, True])
 @pytest.mark.parametrize("normalize", [False, True])
 @pytest.mark.parametrize("nqubits", [1, 2])
-def test_pauli_basis(nqubits, normalize, vectorize):
+def test_pauli_basis(nqubits, normalize, vectorize, order):
     with pytest.raises(ValueError):
         pauli_basis(-1)
     with pytest.raises(TypeError):
@@ -152,28 +153,26 @@ def test_pauli_basis(nqubits, normalize, vectorize):
         pauli_basis(1, "True")
     with pytest.raises(TypeError):
         pauli_basis(1, False, "True")
+    with pytest.raises(ValueError):
+        pauli_basis(1, False, True)
 
-    single_basis = [matrices.I, matrices.X, matrices.Y, matrices.Z]
+    basis_test = [matrices.I, matrices.X, matrices.Y, matrices.Z]
+    if nqubits >= 2:
+        basis_test = list(product(basis_test, repeat=nqubits))
+        basis_test = [reduce(np.kron, matrices) for matrices in basis_test]
 
     if vectorize:
-        single_basis = [matrix.reshape((1, -1), order="F") for matrix in single_basis]
+        basis_test = [vectorization(matrix, order=order) for matrix in basis_test]
 
-    if nqubits == 1:
-        basis_test = single_basis
-    else:
-        basis_test = list(product(single_basis, repeat=nqubits))
-        if vectorize:
-            basis_test = [reduce(np.outer, matrix).ravel() for matrix in basis_test]
-        else:
-            basis_test = [reduce(np.kron, matrix) for matrix in basis_test]
+    basis_test = np.array(basis_test)
 
     if normalize:
         basis_test /= np.sqrt(2**nqubits)
 
-    basis = pauli_basis(nqubits, normalize, vectorize)
+    basis = pauli_basis(nqubits, normalize, vectorize, order)
 
     for pauli, pauli_test in zip(basis, basis_test):
         assert np.linalg.norm(pauli - pauli_test) < PRECISION_TOL
 
-    comp_basis_to_pauli(nqubits, normalize)
-    pauli_to_comp_basis(nqubits, normalize)
+    comp_basis_to_pauli(nqubits, normalize, order)
+    pauli_to_comp_basis(nqubits, normalize, order)

@@ -115,7 +115,9 @@ def unvectorization(state, order: str = "row"):
     return state
 
 
-def pauli_basis(nqubits: int, normalize: bool = False, vectorize: bool = False):
+def pauli_basis(
+    nqubits: int, normalize: bool = False, vectorize: bool = False, order: str = None
+):
     """Creates the ``nqubits``-qubit Pauli basis.
 
     Args:
@@ -125,9 +127,14 @@ def pauli_basis(nqubits: int, normalize: bool = False, vectorize: bool = False):
         vectorize (bool, optional): If ``False``, returns a nested array with
             all Pauli matrices. If ``True``, retuns an array where every
             row is a vectorized Pauli matrix. Defaults to ``False``.
+        order (str, optional): If ``"row"``, vectorization of Pauli basis is
+            performed row-wise. If ``"column"``, vectorization is performed
+            column-wise. If ``"system"``, system-wise vectorization is
+            performed. If ``vectorization=False``, then ``order=None`` is
+            forced. Default is ``None``.
 
     Returns:
-        list: list with all Pauli matrices forming the basis.
+        ndarray: all Pauli matrices forming the basis.
     """
 
     if nqubits <= 0:
@@ -145,17 +152,23 @@ def pauli_basis(nqubits: int, normalize: bool = False, vectorize: bool = False):
             f"vectorize must be type bool, but it is type {type(vectorize)} instead.",
         )
 
-    basis = [matrices.I, matrices.X, matrices.Y, matrices.Z]
+    if vectorize and order is None:
+        raise_error(ValueError, "when vectorize=True, order must be specified.")
 
-    if vectorize:
-        basis = [matrix.reshape((1, -1), order="F")[0] for matrix in basis]
+    basis = [matrices.I, matrices.X, matrices.Y, matrices.Z]
 
     if nqubits >= 2:
         basis = list(product(basis, repeat=nqubits))
         if vectorize:
-            basis = [reduce(np.outer, matrix).ravel() for matrix in basis]
+            basis = [
+                vectorization(reduce(np.kron, matrices), order=order)
+                for matrices in basis
+            ]
         else:
-            basis = [reduce(np.kron, matrix) for matrix in basis]
+            basis = [reduce(np.kron, matrices) for matrices in basis]
+    else:
+        if vectorize:
+            basis = [vectorization(matrix, order=order) for matrix in basis]
 
     basis = np.array(basis)
 
@@ -165,7 +178,7 @@ def pauli_basis(nqubits: int, normalize: bool = False, vectorize: bool = False):
     return basis
 
 
-def comp_basis_to_pauli(nqubits: int, normalize: bool = False):
+def comp_basis_to_pauli(nqubits: int, normalize: bool = False, order: str = "row"):
     """Unitary matrix :math:`U` that converts operators from the Liouville
     representation in the computational basis to the Pauli-Liouville
     representation.
@@ -198,19 +211,23 @@ def comp_basis_to_pauli(nqubits: int, normalize: bool = False):
         nqubits (int): number of qubits.
         normalize (bool, optional): If ``True``, converts to the
             Pauli basis. Defaults to ``False``.
+        order (str, optional): If ``"row"``, vectorization of Pauli basis is
+            performed row-wise. If ``"column"``, vectorization is performed
+            column-wise. If ``"system"``, system-wise vectorization is
+            performed. Default is ``"row"``.
 
     Returns:
         Unitary matrix :math:`U`.
 
     """
 
-    unitary = pauli_basis(nqubits, normalize, vectorize=True)
+    unitary = pauli_basis(nqubits, normalize, vectorize=True, order=order)
     unitary = np.conj(unitary)
 
     return unitary
 
 
-def pauli_to_comp_basis(nqubits: int, normalize: bool = False):
+def pauli_to_comp_basis(nqubits: int, normalize: bool = False, order: str = "row"):
     """Unitary matrix :math:`U` that converts operators from the
     Pauli-Liouville representation to the Liouville representation
     in the computational basis.
@@ -224,11 +241,16 @@ def pauli_to_comp_basis(nqubits: int, normalize: bool = False):
         nqubits (int): number of qubits.
         normalize (bool, optional): If ``True``, converts to the
             Pauli basis. Defaults to ``False``.
+        order (str, optional): If ``"row"``, vectorization of Pauli basis is
+            performed row-wise. If ``"column"``, vectorization is performed
+            column-wise. If ``"system"``, system-wise vectorization is
+            performed. Default is ``"row"``.
 
     Returns:
         Unitary matrix :math:`U`.
     """
 
-    matrix = np.transpose(np.conj(comp_basis_to_pauli(nqubits, normalize)))
+    unitary = pauli_basis(nqubits, normalize, vectorize=True, order=order)
+    unitary = np.transpose(unitary)
 
-    return matrix
+    return unitary
