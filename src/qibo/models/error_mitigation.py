@@ -45,7 +45,7 @@ def get_noisy_circuit(circuit, cj, insertion_gate='CNOT'):
     Args:
         circuit (qibo.models.circuit.Circuit): Input circuit to modify.
         cj (int): Number of insertion gate pairs to add.
-        insertion_gate (str): Which gate to use for the insertion. Default value: 'CNOT', use 'RX' for the `RX(pi/2)` gate.
+        insertion_gate (str): Which gate to use for the insertion. Default value: 'CNOT', use 'RX' for the ``RX(pi/2)`` gate.
 
     Returns:
         qibo.models.circuit.Circuit: The circuit with the inserted CNOT pairs.
@@ -96,6 +96,7 @@ def ZNE(
         noise_model (qibo.noise.NoiseModel): Noise model applied to simulate noisy computation.
         nshots (int): Number of shots.
         solve_for_gammas (bool): If ``true``, explicitely solve the equations to obtain the gamma coefficients.
+        insertion_gate (str): Which gate to use for the insertion. Default value: 'CNOT', use 'RX' for the ``RX(pi/2)`` gate.
 
     Returns:
         numpy.ndarray: Estimate of the expected value of ``observable`` in the noise free condition.
@@ -273,6 +274,7 @@ def vnCDR(
         nshots (int): Number of shots.
         model : Model used for fitting. This should be a callable function object ``f(x, *params)`` taking as input the predictor variable and the parameters. By default a simple linear model ``f(x,a) := a*x`` is used, with ``a`` beeing the diagonal matrix containing the parameters.
         n_training_samples (int): Number of training circuits to sample.
+        insertion_gate (str): Which gate to use for the insertion. Default value: 'CNOT', use 'RX' for the ``RX(pi/2)`` gate.
         full_output (bool): If True, this function returns additional information: `val`, `optimal_params`, `train_val`.
 
     Returns:
