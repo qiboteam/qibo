@@ -21,7 +21,8 @@ def get_noise_model(error):
     [get_noise_model(DepolarizingError(0.1))],
 )
 @pytest.mark.parametrize("solve", [False, True])
-def test_zne(backend, nqubits, noise, solve):
+@pytest.mark.parametrize("insertion_gate", ['CNOT', 'RX'])
+def test_zne(backend, nqubits, noise, solve, insertion_gate):
     """Test that ZNE reduces the noise."""
     backend.set_threads(1)
     # Define the circuit
@@ -53,10 +54,11 @@ def test_zne(backend, nqubits, noise, solve):
         circuit=c,
         observable=obs,
         backend=backend,
-        noise_levels=np.array(range(5)),
+        noise_levels=np.array(range(6)),
         noise_model=noise,
         nshots=10000,
         solve_for_gammas=solve,
+        insertion_gate=insertion_gate,
     )
     assert np.abs(exact - estimate) <= np.abs(exact - noisy)
 
@@ -137,7 +139,8 @@ def test_sample_training_circuit(nqubits):
     [get_noise_model(DepolarizingError(0.1))],
 )
 @pytest.mark.parametrize("full_output", [False, True])
-def test_vncdr(backend, nqubits, noise, full_output):
+@pytest.mark.parametrize("insertion_gate", ['CNOT', 'RX'])
+def test_vncdr(backend, nqubits, noise, full_output, insertion_gate):
     """Test that vnCDR reduces the noise."""
     backend.set_threads(1)
     # Define the circuit
@@ -172,6 +175,7 @@ def test_vncdr(backend, nqubits, noise, full_output):
         noise_levels=range(3),
         noise_model=noise,
         nshots=10000,
+        insertion_gate=insertion_gate,
         full_output=full_output,
     )
     if full_output:
