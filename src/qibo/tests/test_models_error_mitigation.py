@@ -9,19 +9,18 @@ from qibo.noise import DepolarizingError, NoiseModel
 from qibo.symbols import Z
 
 
-def get_noise_model(error):
+def get_noise_model(error, gate):
     noise = NoiseModel()
-    noise.add(error, gates.CNOT)
+    noise.add(error, gate)
     return noise
 
 
 @pytest.mark.parametrize("nqubits", [3])
 @pytest.mark.parametrize(
-    "noise",
-    [get_noise_model(DepolarizingError(0.1))],
+    "noise,insertion_gate",
+    [(get_noise_model(DepolarizingError(0.1), gates.CNOT), 'CNOT'), (get_noise_model(DepolarizingError(0.1), gates.RX), 'RX'),],
 )
 @pytest.mark.parametrize("solve", [False, True])
-@pytest.mark.parametrize("insertion_gate", ['CNOT', 'RX'])
 def test_zne(backend, nqubits, noise, solve, insertion_gate):
     """Test that ZNE reduces the noise."""
     backend.set_threads(1)
@@ -54,7 +53,7 @@ def test_zne(backend, nqubits, noise, solve, insertion_gate):
         circuit=c,
         observable=obs,
         backend=backend,
-        noise_levels=np.array(range(6)),
+        noise_levels=np.array(range(5)),
         noise_model=noise,
         nshots=10000,
         solve_for_gammas=solve,
@@ -66,7 +65,7 @@ def test_zne(backend, nqubits, noise, solve, insertion_gate):
 @pytest.mark.parametrize("nqubits", [3])
 @pytest.mark.parametrize(
     "noise",
-    [get_noise_model(DepolarizingError(0.1))],
+    [get_noise_model(DepolarizingError(0.1), gates.CNOT)],
 )
 @pytest.mark.parametrize("full_output", [False, True])
 def test_cdr(backend, nqubits, noise, full_output):
@@ -135,11 +134,10 @@ def test_sample_training_circuit(nqubits):
 
 @pytest.mark.parametrize("nqubits", [3])
 @pytest.mark.parametrize(
-    "noise",
-    [get_noise_model(DepolarizingError(0.1))],
+    "noise,insertion_gate",
+    [(get_noise_model(DepolarizingError(0.1), gates.CNOT), 'CNOT'), (get_noise_model(DepolarizingError(0.1), gates.RX), 'RX'),],
 )
 @pytest.mark.parametrize("full_output", [False, True])
-@pytest.mark.parametrize("insertion_gate", ['CNOT', 'RX'])
 def test_vncdr(backend, nqubits, noise, full_output, insertion_gate):
     """Test that vnCDR reduces the noise."""
     backend.set_threads(1)
