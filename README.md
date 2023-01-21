@@ -15,12 +15,7 @@ Some of the key features of Qibo are:
 
 ## Documentation
 
-Qibo documentation is available at [qibo.readthedocs.io](https://qibo.readthedocs.io).
-
-- [Overview and installation](https://qibo.readthedocs.io/en/stable/getting-started/index.html)
-- [Examples](https://qibo.readthedocs.io/en/stable/code-examples/index.html)
-- [API reference](https://qibo.readthedocs.io/en/stable/api-reference/index.html)
-- [Benchmarks](https://qibo.readthedocs.io/en/stable/appendix/benchmarks.html)
+Qibo documentation is available [here](https://qibo.science).
 
 ## Minimum Working Examples
 
@@ -56,7 +51,7 @@ In both cases, the simulation will run in a single device CPU or GPU in double p
 
 ## Citation policy
 
-If you use the package please refer to [the documentation](https://qibo.readthedocs.io/en/stable/appendix/citing-qibo.html) for citation instructions.
+If you use the package please refer to [the documentation](https://qibo.science/qibo/stable/appendix/citing-qibo.html#publications) for citation instructions.
 
 ## Supporters and collaborators
 

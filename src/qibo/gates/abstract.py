@@ -257,6 +257,19 @@ class Gate:
     def asmatrix(self, backend):
         return backend.asmatrix(self)
 
+    def generator_eigenvalue(self):
+        """
+        This function returns the eigenvalues of the gate's generator.
+
+        Returns:
+            np.float generator's eigenvalue or raise an error if not implemented.
+        """
+
+        raise_error(
+            NotImplementedError,
+            f"Generator eigenvalue is not implemented for {self.name}",
+        )
+
     @property
     def matrix(self):
         from qibo.backends import GlobalBackend
@@ -303,6 +316,7 @@ class ParametrizedGate(Gate):
         """Updates the values of gate's parameters."""
         if isinstance(self.parameter_names, str):
             nparams = 1
+            names = [self.parameter_names]
             if not isinstance(x, collections.abc.Iterable):
                 x = [x]
             else:
@@ -317,6 +331,7 @@ class ParametrizedGate(Gate):
                         x = [x]
         else:
             nparams = len(self.parameter_names)
+            names = self.parameter_names
 
         if not self._parameters:
             params = nparams * [None]
@@ -334,6 +349,9 @@ class ParametrizedGate(Gate):
                 self.symbolic_parameters[i] = v
             params[i] = v
         self._parameters = tuple(params)
+        self.init_kwargs.update(
+            {n: v for n, v in zip(names, self._parameters) if n in self.init_kwargs}
+        )
 
         # set parameters in device gates
         for gate in self.device_gates:  # pragma: no cover

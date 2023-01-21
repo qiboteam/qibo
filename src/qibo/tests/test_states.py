@@ -85,6 +85,8 @@ def test_state_probabilities(backend, density_matrix):
 
 @pytest.mark.parametrize("density_matrix", [False, True])
 def test_expectation_from_samples(backend, density_matrix):
+    # fix seed to use the same samples in every execution
+    np.random.seed(123)
     obs0 = 2 * Z(0) * Z(1) + Z(0) * Z(2)
     obs1 = 2 * Z(0) * Z(1) + Z(0) * Z(2) * I(3)
     h_sym = hamiltonians.SymbolicHamiltonian(obs0, backend=backend)

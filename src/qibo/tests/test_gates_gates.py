@@ -142,6 +142,32 @@ def test_rz(backend, applyx):
     backend.assert_allclose(final_state, target_state)
 
 
+def test_gpi(backend):
+    phi = 0.1234
+    initial_state = random_state(1)
+    final_state = apply_gates(backend, [gates.GPI(0, phi)], initial_state=initial_state)
+
+    phase = np.exp(1.0j * phi)
+    matrix = np.array([[0, np.conj(phase)], [phase, 0]])
+
+    target_state = matrix.dot(initial_state)
+    backend.assert_allclose(final_state, target_state)
+
+
+def test_gpi2(backend):
+    phi = 0.1234
+    initial_state = random_state(1)
+    final_state = apply_gates(
+        backend, [gates.GPI2(0, phi)], initial_state=initial_state
+    )
+
+    phase = np.exp(1.0j * phi)
+    matrix = np.array([[1, -1.0j * np.conj(phase)], [-1.0j * phase, 1]]) / np.sqrt(2)
+
+    target_state = matrix.dot(initial_state)
+    backend.assert_allclose(final_state, target_state)
+
+
 def test_u1(backend):
     theta = 0.1234
     final_state = apply_gates(backend, [gates.X(0), gates.U1(0, theta)], nqubits=1)
@@ -340,7 +366,6 @@ def test_ryy(backend):
     backend.assert_allclose(final_state, target_state)
 
 
-# @pytest.mark.parametrize("applyx", [True, False])
 def test_rzz(backend):
     theta = 0.1234
     final_state = apply_gates(
@@ -348,6 +373,29 @@ def test_rzz(backend):
     )
     target_state = np.zeros_like(final_state)
     target_state[3] = np.exp(-1j * theta / 2.0)
+    backend.assert_allclose(final_state, target_state)
+
+
+def test_ms(backend):
+    phi0 = 0.1234
+    phi1 = 0.4321
+    final_state = apply_gates(
+        backend,
+        [gates.H(0), gates.H(1), gates.MS(0, 1, phi0=phi0, phi1=phi1)],
+        nqubits=2,
+    )
+    target_state = np.ones_like(final_state) / 2.0
+    plus = np.exp(1.0j * (phi0 + phi1))
+    minus = np.exp(1.0j * (phi0 - phi1))
+
+    matrix = np.eye(4, dtype=target_state.dtype)
+    matrix[3, 0] = -1.0j * plus
+    matrix[0, 3] = -1.0j * np.conj(plus)
+    matrix[2, 1] = -1.0j * minus
+    matrix[1, 2] = -1.0j * np.conj(minus)
+    matrix /= np.sqrt(2)
+    target_state = matrix.dot(target_state)
+
     backend.assert_allclose(final_state, target_state)
 
 
@@ -632,6 +680,8 @@ GATES = [
     ("RX", (0, 0.1)),
     ("RY", (0, 0.2)),
     ("RZ", (0, 0.3)),
+    ("GPI", (0, 0.1)),
+    ("GPI2", (0, 0.2)),
     ("U1", (0, 0.1)),
     ("U2", (0, 0.2, 0.3)),
     ("U3", (0, 0.1, 0.2, 0.3)),
@@ -645,6 +695,7 @@ GATES = [
     ("RXX", (0, 1, 0.1)),
     ("RYY", (0, 1, 0.2)),
     ("RZZ", (0, 1, 0.3)),
+    ("MS", (0, 1, 0.1, 0.2)),
 ]
 
 

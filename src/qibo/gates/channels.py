@@ -1,4 +1,3 @@
-from abc import abstractmethod
 from itertools import product
 
 from qibo.config import PRECISION_TOL, raise_error
@@ -102,6 +101,76 @@ class KrausChannel(Channel):
         self.coefficients = len(self.gates) * (1,)
         self.coefficient_sum = 1
 
+    def to_superop(self, backend=None):
+        """Returns the Liouville representation of the Kraus channel.
+
+        Args:
+            backend (``qibo.backends.abstract.Backend``, optional): backend
+                to be used in the execution. If ``None``, it uses
+                ``GlobalBackend()``. Defaults to ``None``.
+
+        Returns:
+            Liouville representation of the channel.
+        """
+        import numpy as np
+
+        if backend is None:  # pragma: no cover
+            from qibo.backends import GlobalBackend
+
+            backend = GlobalBackend()
+
+        self.nqubits = 1 + max(self.target_qubits)
+
+        if self.name != "KrausChannel":
+            p0 = 1
+            for coeff in self.coefficients:
+                p0 = p0 - coeff
+            self.coefficients += (p0,)
+            self.gates += (I(*self.target_qubits),)
+
+        super_op = np.zeros((4**self.nqubits, 4**self.nqubits), dtype="complex")
+        super_op = backend.cast(super_op, dtype=super_op.dtype)
+        for coeff, gate in zip(self.coefficients, self.gates):
+            kraus_op = FusedGate(*range(self.nqubits))
+            kraus_op.append(gate)
+            kraus_op = kraus_op.asmatrix(backend)
+            kraus_op = coeff * np.kron(np.conj(kraus_op), kraus_op)
+            super_op += backend.cast(kraus_op, dtype=kraus_op.dtype)
+
+        return super_op
+
+    def to_pauli_liouville(self, normalize: bool = False, backend=None):
+        """Returns the Liouville representation of the Kraus channel
+        in the Pauli basis.
+
+        Args:
+            normalize (bool, optional): If ``True``, normalized basis ir returned.
+                Defaults to False.
+            backend (``qibo.backends.abstract.Backend``, optional): backend
+                to be used in the execution. If ``None``, it uses
+                ``GlobalBackend()``. Defaults to ``None``.
+
+        Returns:
+            Pauli-Liouville representation of the channel.
+        """
+        import numpy as np
+
+        from qibo.quantum_info.basis import comp_basis_to_pauli
+
+        if backend is None:  # pragma: no cover
+            from qibo.backends import GlobalBackend
+
+            backend = GlobalBackend()
+
+        super_op = self.to_superop(backend=backend)
+
+        # unitary that transforms from comp basis to pauli basis
+        U = backend.cast(comp_basis_to_pauli(self.nqubits, normalize))
+
+        super_op = U @ super_op @ np.transpose(np.conj(U))
+
+        return backend.cast(super_op, dtype=super_op.dtype)
+
 
 class UnitaryChannel(KrausChannel):
     """Channel that is a probabilistic sum of unitary operations.
@@ -196,7 +265,7 @@ class PauliNoiseChannel(UnitaryChannel):
         self.init_kwargs = {"px": px, "py": py, "pz": pz}
 
 
-class DepolarizingChannel(UnitaryChannel):
+class DepolarizingChannel(Channel):
     """:math:`n`-qubit Depolarizing quantum error channel,
 
     .. math::
@@ -216,8 +285,7 @@ class DepolarizingChannel(UnitaryChannel):
     """
 
     def __init__(self, q, lam=0):
-        from qibo.backends import NumpyBackend
-
+        super().__init__()
         num_qubits = len(q)
         num_terms = 4**num_qubits
         max_param = num_terms / (num_terms - 1)
@@ -226,22 +294,33 @@ class DepolarizingChannel(UnitaryChannel):
                 ValueError,
                 "Depolarizing parameter must be in between 0 and {}.".format(max_param),
             )
-        prob_pauli = lam / num_terms
+
+        self.name = "DepolarizingChannel"
+        self.target_qubits = q
+
+        self.init_args = [q]
+        self.init_kwargs = {"lam": lam}
+
+    def apply_density_matrix(self, backend, state, nqubits):
+        lam = self.init_kwargs["lam"]
+        return (1 - lam) * backend.cast(state) + lam / 2**nqubits * I(
+            *range(nqubits)
+        ).asmatrix(backend)
+
+    def apply(self, backend, state, nqubits):
+        num_qubits = len(self.target_qubits)
+        num_terms = 4**num_qubits
+        prob_pauli = self.init_kwargs["lam"] / num_terms
         probs = (num_terms - 1) * [prob_pauli]
         gates = []
-        backend = NumpyBackend()
         for pauli_list in list(product([I, X, Y, Z], repeat=num_qubits))[1::]:
             fgate = FusedGate(*range(num_qubits))
             for j, pauli in enumerate(pauli_list):
                 fgate.append(pauli(j))
-            gates.append(Unitary(backend.asmatrix_fused(fgate), *q))
-
-        super().__init__(probs, gates)
-        self.name = "DepolarizingChannel"
-        assert self.target_qubits == q
-
-        self.init_args = [q]
-        self.init_kwargs = {"lam": lam}
+            gates.append(Unitary(backend.asmatrix_fused(fgate), *self.target_qubits))
+        self.gates = tuple(gates)
+        self.coefficients = tuple(probs)
+        return backend.apply_channel(self, state, nqubits)
 
 
 class ResetChannel(Channel):
@@ -366,10 +445,10 @@ class ThermalRelaxationChannel(Channel):
 
             preset0, preset1, exp_t2 = self.coefficients
             matrix = [
-                [1 - preset1, 0, 0, preset1],
+                [1 - preset1, 0, 0, preset0],
                 [0, exp_t2, 0, 0],
                 [0, 0, exp_t2, 0],
-                [preset0, 0, 0, 1 - preset0],
+                [preset1, 0, 0, 1 - preset0],
             ]
 
             qubits = (q, q + nqubits)
