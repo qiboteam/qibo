@@ -6,13 +6,12 @@ from qibo.quantum_info import hellinger_distance, hellinger_fidelity
 
 
 def noisy_circuit(circuit, params):
-    """Creates a noisy sample from the circuit given as argument.
+    """Creates a noisy circuit from the circuit given as argument.
 
     The function applies a :class:`qibo.gates.ThermalRelaxationChannel` after each step of the circuit
     and, after each gate, a :class:`qibo.gates.DepolarizingChannel`, whose parameter depends on whether the
-    gate applies on one or two qubits. In the end on the samples are applied bitflips errors using
-    the method `qibo.states.CircuitResult.apply_bitflips()`.
-
+    gate applies on one or two qubits. In the end are applied  asymmetric bitflips on measurement gates.
+    
 
     Args:
         circuit (qibo.models.Circuit): Circuit on which noise will be applied. Since in the end are
@@ -21,22 +20,25 @@ def noisy_circuit(circuit, params):
         params = {"t1" : (t1, t2,..., tn),
           "t2" : (t1, t2,..., tn),
           "gate time" : (time1, time2),
-          "excited population": 0,
+          "excited population" : 0,
           "depolarizing error" : (lambda1, lambda2),
-          "bitflips error" : ([p1, p2,..., pm], [p1, p2,..., pm])
+          "bitflips error" : ([p1, p2,..., pm], [p1, p2,..., pm]),
+          "idle_qubits" : 1
          }
         Where n is the number of qubits, and m the number of measurement gates.
         The first four parameters are used by the thermal relaxation error. The first two  elements are the
         tuple containing the T_1 and T_2 parameters; the third one is a tuple which contain the gate times,
         for single and two qubit gates; then we have the excited population parameter.
         The fifth parameter is a tuple containing the depolaraziong errors for single and 2 qubit gate.
-        The last parameter is a tuple containg the two arrays for bitflips probability errors: the first one implements 0->1 errors, the other one 1->0.
+        The sisxth parameter is a tuple containg the two arrays for bitflips probability errors: the first one implements 0->1 errors, the other one 1->0.
+        The last parameter is a boolean variable: if True the noise model takes into account idle qubits.
 
     Returns:
-        circuit (qibo.models.Circuit)
+        The new noisy circuit (qibo.models.Circuit).
 
 
     """
+    #parameters of the model
     t1 = params["t1"]
     t2 = params["t2"]
     time1 = params["gate_time"][0]
@@ -48,16 +50,31 @@ def noisy_circuit(circuit, params):
     bitflips_10 = params["bitflips_error"][1]
     idle_qubits = params["idle_qubits"]
 
+    #new circuit
     noisy_circ = models.Circuit(circuit.nqubits, density_matrix=True)
-
+    
+    #time steps of the circuit
     time_steps = max(circuit.queue.moment_index)
+    
+    #current_time keeps track of the time spent by the qubits
+    #being manipulated by the gates of the circuit
     current_time = np.zeros(circuit.nqubits)
+    
+    #the idea behind ths loop is to build the old circuit adding the noise channels and
+    #keeping track of the time qubits spend being manipulated by the gates, in order
+    #to correct the thermal relaxation time of each qubit, even if they are idle.
     for t in range(time_steps):
+        #for each time step, I look for each qubit what gate are applied
         for qubit in range(circuit.nqubits):
+            #if there's no gate, move on!
             if circuit.queue.moments[t][qubit] == None:
                 pass
+            #measurement gates
             elif isinstance(circuit.queue.moments[t][qubit], gates.measurements.M):
                 for key in list(circuit.measurement_tuples):
+                    #if there is a 2-qubits measurement gate we must check that both qubit intercated
+                    #with the environment for the same amount of time. If not, before applying
+                    #the 2-qubits gate we apply the therm-rel channel for the time difference
                     if len(circuit.measurement_tuples[key]) > 1:
                         q1 = circuit.measurement_tuples[key][0]
                         q2 = circuit.measurement_tuples[key][1]
@@ -68,6 +85,8 @@ def noisy_circuit(circuit, params):
                                 q_min = q2
                                 q_max = q1
                             time_difference = current_time[q_max] - current_time[q_min]
+                            #this is the thermal relaxation channel which model the intercation
+                            #of the idle qubit with the environment
                             noisy_circ.add(
                                 gates.ThermalRelaxationChannel(
                                     q_min,
@@ -77,8 +96,10 @@ def noisy_circuit(circuit, params):
                                     excited_population,
                                 )
                             )
+                            #update the qubit time
                             current_time[q_min] += time_difference
                 q = circuit.queue.moments[t][qubit].qubits
+                #adding measurements gates
                 if len(circuit.queue.moments[t][qubit].qubits) == 1:
                     q = q[0]
                     noisy_circ.add(gates.M(q, p0=bitflips_01[q], p1=bitflips_10[q]))
@@ -92,6 +113,7 @@ def noisy_circuit(circuit, params):
                     circuit.queue.moments[t][
                         max(circuit.queue.moments[t][qubit].qubits)
                     ] = None
+            #if there is a 1-qubit gate I add the old gate, the dep and therm-rel channels
             elif len(circuit.queue.moments[t][qubit].qubits) == 1:
                 noisy_circ.add(circuit.queue.moments[t][qubit])
                 noisy_circ.add(
@@ -108,8 +130,11 @@ def noisy_circuit(circuit, params):
                         excited_population,
                     )
                 )
+                #I update the qubit time
                 current_time[qubit] += time1
-
+            #if there is a 2-qubits gate we must check that both qubit intercated
+            #with the environment for the same amount of time. If not, before applying
+            #the 2-qubits gate we apply the therm-rel channel for the time difference
             else:
                 q1 = circuit.queue.moments[t][qubit].qubits[0]
                 q2 = circuit.queue.moments[t][qubit].qubits[1]
@@ -120,6 +145,8 @@ def noisy_circuit(circuit, params):
                         q_min = q2
                         q_max = q1
                     time_difference = current_time[q_max] - current_time[q_min]
+                    #this is the thermal relaxation channel which model the intercation
+                    #of the idle qubit with the environment
                     noisy_circ.add(
                         gates.ThermalRelaxationChannel(
                             q_min,
@@ -129,8 +156,9 @@ def noisy_circuit(circuit, params):
                             excited_population,
                         )
                     )
+                    #I update the qubit time
                     current_time[q_min] += time_difference
-
+                #I add the 2-qubit gate, dep and therm-rel channels
                 noisy_circ.add(circuit.queue.moments[t][qubit])
                 noisy_circ.add(
                     gates.DepolarizingChannel(
@@ -148,6 +176,7 @@ def noisy_circuit(circuit, params):
                         q2, t1[q2], t2[q2], time2, excited_population
                     )
                 )
+                #I update the qubit time
                 current_time[circuit.queue.moments[t][qubit].qubits[0]] += time2
                 current_time[circuit.queue.moments[t][qubit].qubits[1]] += time2
                 circuit.queue.moments[t][

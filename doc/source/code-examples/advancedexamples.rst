@@ -1113,6 +1113,47 @@ can be used both in :meth:`qibo.states.CircuitResult.apply_bitflips`
 and the measurement gate. If ``p1`` is not specified the value of ``p0`` will
 be used for both errors.
 
+Simulating a real quantum computer
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Qibo can perform a simulation of a real quantum computer using the `composite` method of the `qibo.noise.NoiseModel` class. This is possible by passing the circuit instance that we want to simulate and the noise channels' parameters as a dictionary.
+In this model, the user must set the relaxation times `t1` and `t2` for each qubit, an approximated `gate time` and `depolarizing error` for each one-qubit gate and two-qubits gate and bitflips probabilities for each qubit which is measured.
+
+.. testcode::
+
+
+      from qibo import models, gates
+      from qibo.noise import NoiseModel
+
+      c = models.Circuit(2,density_matrix=True)
+      c.add([gates.H(0), gates.X(1) ,gates.Z(0), gates.X(0), gates.CNOT(0,1),
+         gates.CNOT(1, 0),gates.X(1),gates.Z(1), gates.M(0,1)])
+
+      print()
+      print("raw circuit:")
+      print(c.draw())
+      print()
+
+
+      par = {"t1" : (250*1e-06, 240*1e-06),
+             "t2" : (150*1e-06, 160*1e-06),
+             "gate_time" : (200*1e-9, 400*1e-9),
+             "excited_population" : 0,
+             "depolarizing_error" : (4.000e-4, 1.500e-4),
+             "bitflips_error" : ([0.022, 0.015], [0.034, 0.041]),
+             "idle_qubits" : 1
+            }
+      noise= NoiseModel()
+      noise.composite(par)
+      noisy_circ=noise.apply(c)
+
+      print()
+      print("noisy circuit:")
+      print(noisy_circ.draw())
+
+
+``noisy_circ`` is the new circuit containing the error gate channels.
+
 
 How to perform error mitigation?
 --------------------------------
