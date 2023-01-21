@@ -39,28 +39,34 @@ def get_gammas(c, solve=True):
     return gammas
 
 
-def get_noisy_circuit(circuit, cj, insertion_gate='CNOT'):
-    """Standalone function to generate the noisy circuit with the inverse gate pairs insertion.
+def get_noisy_circuit(circuit, cj, insertion_gate="CNOT"):
+    """Standalone function to generate the noisy circuit with the inverse gate pairs insertions.
 
     Args:
         circuit (qibo.models.circuit.Circuit): Input circuit to modify.
         cj (int): Number of insertion gate pairs to add.
-        insertion_gate (str): Which gate to use for the insertion. Default value: 'CNOT', use 'RX' for the ``RX(pi/2)`` gate.
+        insertion_gate (str): Which gate to use for the insertion. Default value: 'CNOT', use 'RX' for the ``RX(pi/2)`` gate instead.
 
     Returns:
         qibo.models.circuit.Circuit: The circuit with the inserted CNOT pairs.
     """
-    if insertion_gate not in ('CNOT', 'RX'): # pragma: no cover
-        raise_error(ValueError, "Invalid insertion gate specification. Please select one between \'CNOT\' and \'RX\'.")
-    if insertion_gate == 'CNOT' and circuit.nqubits < 2: # pragma: no cover
-        raise_error(ValueError, "Provide a circuit with at least 2 qubits when using the \'CNOT\' insertion gate. Alternatively, try with the \'RX\' insertion gate instead.")
-    i_gate = gates.CNOT if insertion_gate == 'CNOT' else gates.RX
-    theta = np.pi/2
+    if insertion_gate not in ("CNOT", "RX"):  # pragma: no cover
+        raise_error(
+            ValueError,
+            "Invalid insertion gate specification. Please select one between 'CNOT' and 'RX'.",
+        )
+    if insertion_gate == "CNOT" and circuit.nqubits < 2:  # pragma: no cover
+        raise_error(
+            ValueError,
+            "Provide a circuit with at least 2 qubits when using the 'CNOT' insertion gate. Alternatively, try with the 'RX' insertion gate instead.",
+        )
+    i_gate = gates.CNOT if insertion_gate == "CNOT" else gates.RX
+    theta = np.pi / 2
     noisy_circuit = circuit.__class__(**circuit.init_kwargs)
     for gate in circuit.queue:
         noisy_circuit.add(gate)
         if isinstance(gate, i_gate):
-            if insertion_gate == 'CNOT':
+            if insertion_gate == "CNOT":
                 control = gate.control_qubits[0]
                 target = gate.target_qubits[0]
                 for i in range(cj):
@@ -82,11 +88,11 @@ def ZNE(
     noise_model=None,
     nshots=10000,
     solve_for_gammas=False,
-    insertion_gate='CNOT',
+    insertion_gate="CNOT",
 ):
     """Runs the Zero Noise Extrapolation method for error mitigation.
 
-    The different noise levels are realized by the insertion of pairs of CNOT gates that resolve to the identiy in the noise-free case.
+    The different noise levels are realized by the insertion of pairs of either ``CNOT`` or ``RX(pi/2)`` gates that resolve to the identiy in the noise-free case.
 
     Args:
         circuit (qibo.models.circuit.Circuit): Input circuit.
@@ -96,7 +102,7 @@ def ZNE(
         noise_model (qibo.noise.NoiseModel): Noise model applied to simulate noisy computation.
         nshots (int): Number of shots.
         solve_for_gammas (bool): If ``true``, explicitely solve the equations to obtain the gamma coefficients.
-        insertion_gate (str): Which gate to use for the insertion. Default value: 'CNOT', use 'RX' for the ``RX(pi/2)`` gate.
+        insertion_gate (str): Which gate to use for the insertion. Default value: 'CNOT', use 'RX' for the ``RX(pi/2)`` gate instead.
 
     Returns:
         numpy.ndarray: Estimate of the expected value of ``observable`` in the noise free condition.
@@ -260,7 +266,7 @@ def vnCDR(
     nshots=10000,
     model=lambda x, *params: (x * np.array(params).reshape(-1, 1)).sum(0),
     n_training_samples=100,
-    insertion_gate='CNOT',
+    insertion_gate="CNOT",
     full_output=False,
 ):
     """Runs the vnCDR error mitigation method.
@@ -274,7 +280,7 @@ def vnCDR(
         nshots (int): Number of shots.
         model : Model used for fitting. This should be a callable function object ``f(x, *params)`` taking as input the predictor variable and the parameters. By default a simple linear model ``f(x,a) := a*x`` is used, with ``a`` beeing the diagonal matrix containing the parameters.
         n_training_samples (int): Number of training circuits to sample.
-        insertion_gate (str): Which gate to use for the insertion. Default value: 'CNOT', use 'RX' for the ``RX(pi/2)`` gate.
+        insertion_gate (str): Which gate to use for the insertion. Default value: 'CNOT', use 'RX' for the ``RX(pi/2)`` gate instead.
         full_output (bool): If True, this function returns additional information: `val`, `optimal_params`, `train_val`.
 
     Returns:
