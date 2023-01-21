@@ -18,7 +18,10 @@ def get_noise_model(error, gate):
 @pytest.mark.parametrize("nqubits", [3])
 @pytest.mark.parametrize(
     "noise,insertion_gate",
-    [(get_noise_model(DepolarizingError(0.1), gates.CNOT), 'CNOT'), (get_noise_model(DepolarizingError(0.1), gates.RX), 'RX'),],
+    [
+        (get_noise_model(DepolarizingError(0.1), gates.CNOT), "CNOT"),
+        (get_noise_model(DepolarizingError(0.1), gates.RX), "RX"),
+    ],
 )
 @pytest.mark.parametrize("solve", [False, True])
 def test_zne(backend, nqubits, noise, solve, insertion_gate):
@@ -135,7 +138,10 @@ def test_sample_training_circuit(nqubits):
 @pytest.mark.parametrize("nqubits", [3])
 @pytest.mark.parametrize(
     "noise,insertion_gate",
-    [(get_noise_model(DepolarizingError(0.1), gates.CNOT), 'CNOT'), (get_noise_model(DepolarizingError(0.1), gates.RX), 'RX'),],
+    [
+        (get_noise_model(DepolarizingError(0.1), gates.CNOT), "CNOT"),
+        (get_noise_model(DepolarizingError(0.1), gates.RX), "RX"),
+    ],
 )
 @pytest.mark.parametrize("full_output", [False, True])
 def test_vncdr(backend, nqubits, noise, full_output, insertion_gate):
