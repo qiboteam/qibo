@@ -39,25 +39,44 @@ def get_gammas(c, solve=True):
     return gammas
 
 
-def get_noisy_circuit(circuit, cj):
-    """Standalone function to generate the noisy circuit with the CNOT pairs insertion.
+def get_noisy_circuit(circuit, cj, insertion_gate="CNOT"):
+    """Standalone function to generate the noisy circuit with the inverse gate pairs insertions.
 
     Args:
         circuit (qibo.models.circuit.Circuit): Input circuit to modify.
-        cj (int): Number of CNOT pairs to add.
+        cj (int): Number of insertion gate pairs to add.
+        insertion_gate (str): Which gate to use for the insertion. Default value: 'CNOT', use 'RX' for the ``RX(pi/2)`` gate instead.
 
     Returns:
         qibo.models.circuit.Circuit: The circuit with the inserted CNOT pairs.
     """
+    if insertion_gate not in ("CNOT", "RX"):  # pragma: no cover
+        raise_error(
+            ValueError,
+            "Invalid insertion gate specification. Please select one between 'CNOT' and 'RX'.",
+        )
+    if insertion_gate == "CNOT" and circuit.nqubits < 2:  # pragma: no cover
+        raise_error(
+            ValueError,
+            "Provide a circuit with at least 2 qubits when using the 'CNOT' insertion gate. Alternatively, try with the 'RX' insertion gate instead.",
+        )
+    i_gate = gates.CNOT if insertion_gate == "CNOT" else gates.RX
+    theta = np.pi / 2
     noisy_circuit = circuit.__class__(**circuit.init_kwargs)
     for gate in circuit.queue:
         noisy_circuit.add(gate)
-        if isinstance(gate, gates.CNOT):
-            control = gate.control_qubits[0]
-            target = gate.target_qubits[0]
-            for i in range(cj):
-                noisy_circuit.add(gates.CNOT(control, target))
-                noisy_circuit.add(gates.CNOT(control, target))
+        if isinstance(gate, i_gate):
+            if insertion_gate == "CNOT":
+                control = gate.control_qubits[0]
+                target = gate.target_qubits[0]
+                for i in range(cj):
+                    noisy_circuit.add(gates.CNOT(control, target))
+                    noisy_circuit.add(gates.CNOT(control, target))
+            elif gate.init_kwargs["theta"] == theta:
+                qubit = gate.qubits[0]
+                for i in range(cj):
+                    noisy_circuit.add(gates.RX(qubit, theta=theta))
+                    noisy_circuit.add(gates.RX(qubit, theta=-theta))
     return noisy_circuit
 
 
@@ -69,10 +88,11 @@ def ZNE(
     noise_model=None,
     nshots=10000,
     solve_for_gammas=False,
+    insertion_gate="CNOT",
 ):
     """Runs the Zero Noise Extrapolation method for error mitigation.
 
-    The different noise levels are realized by the insertion of pairs of CNOT gates that resolve to the identiy in the noise-free case.
+    The different noise levels are realized by the insertion of pairs of either ``CNOT`` or ``RX(pi/2)`` gates that resolve to the identiy in the noise-free case.
 
     Args:
         circuit (qibo.models.circuit.Circuit): Input circuit.
@@ -82,6 +102,7 @@ def ZNE(
         noise_model (qibo.noise.NoiseModel): Noise model applied to simulate noisy computation.
         nshots (int): Number of shots.
         solve_for_gammas (bool): If ``true``, explicitely solve the equations to obtain the gamma coefficients.
+        insertion_gate (str): Which gate to use for the insertion. Default value: 'CNOT', use 'RX' for the ``RX(pi/2)`` gate instead.
 
     Returns:
         numpy.ndarray: Estimate of the expected value of ``observable`` in the noise free condition.
@@ -93,7 +114,7 @@ def ZNE(
         backend = GlobalBackend()
     expected_val = []
     for cj in noise_levels:
-        noisy_circuit = get_noisy_circuit(circuit, cj)
+        noisy_circuit = get_noisy_circuit(circuit, cj, insertion_gate=insertion_gate)
         if noise_model != None and backend.name != "qibolab":
             noisy_circuit = noise_model.apply(noisy_circuit)
         circuit_result = backend.execute_circuit(noisy_circuit, nshots=nshots)
@@ -245,6 +266,7 @@ def vnCDR(
     nshots=10000,
     model=lambda x, *params: (x * np.array(params).reshape(-1, 1)).sum(0),
     n_training_samples=100,
+    insertion_gate="CNOT",
     full_output=False,
 ):
     """Runs the vnCDR error mitigation method.
@@ -258,6 +280,7 @@ def vnCDR(
         nshots (int): Number of shots.
         model : Model used for fitting. This should be a callable function object ``f(x, *params)`` taking as input the predictor variable and the parameters. By default a simple linear model ``f(x,a) := a*x`` is used, with ``a`` beeing the diagonal matrix containing the parameters.
         n_training_samples (int): Number of training circuits to sample.
+        insertion_gate (str): Which gate to use for the insertion. Default value: 'CNOT', use 'RX' for the ``RX(pi/2)`` gate instead.
         full_output (bool): If True, this function returns additional information: `val`, `optimal_params`, `train_val`.
 
     Returns:
@@ -282,7 +305,7 @@ def vnCDR(
         val = c(nshots=nshots).expectation_from_samples(observable)
         train_val["noise-free"].append(val)
         for level in noise_levels:
-            noisy_c = get_noisy_circuit(c, level)
+            noisy_c = get_noisy_circuit(c, level, insertion_gate=insertion_gate)
             if noise_model != None and backend.name != "qibolab":
                 noisy_c = noise_model.apply(c)
             circuit_result = backend.execute_circuit(noisy_c, nshots=nshots)

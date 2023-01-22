@@ -9,19 +9,22 @@ from qibo.noise import DepolarizingError, NoiseModel
 from qibo.symbols import Z
 
 
-def get_noise_model(error):
+def get_noise_model(error, gate):
     noise = NoiseModel()
-    noise.add(error, gates.CNOT)
+    noise.add(error, gate)
     return noise
 
 
 @pytest.mark.parametrize("nqubits", [3])
 @pytest.mark.parametrize(
-    "noise",
-    [get_noise_model(DepolarizingError(0.1))],
+    "noise,insertion_gate",
+    [
+        (get_noise_model(DepolarizingError(0.1), gates.CNOT), "CNOT"),
+        (get_noise_model(DepolarizingError(0.1), gates.RX), "RX"),
+    ],
 )
 @pytest.mark.parametrize("solve", [False, True])
-def test_zne(backend, nqubits, noise, solve):
+def test_zne(backend, nqubits, noise, solve, insertion_gate):
     """Test that ZNE reduces the noise."""
     backend.set_threads(1)
     # Define the circuit
@@ -57,6 +60,7 @@ def test_zne(backend, nqubits, noise, solve):
         noise_model=noise,
         nshots=10000,
         solve_for_gammas=solve,
+        insertion_gate=insertion_gate,
     )
     assert np.abs(exact - estimate) <= np.abs(exact - noisy)
 
@@ -64,7 +68,7 @@ def test_zne(backend, nqubits, noise, solve):
 @pytest.mark.parametrize("nqubits", [3])
 @pytest.mark.parametrize(
     "noise",
-    [get_noise_model(DepolarizingError(0.1))],
+    [get_noise_model(DepolarizingError(0.1), gates.CNOT)],
 )
 @pytest.mark.parametrize("full_output", [False, True])
 def test_cdr(backend, nqubits, noise, full_output):
@@ -133,11 +137,14 @@ def test_sample_training_circuit(nqubits):
 
 @pytest.mark.parametrize("nqubits", [3])
 @pytest.mark.parametrize(
-    "noise",
-    [get_noise_model(DepolarizingError(0.1))],
+    "noise,insertion_gate",
+    [
+        (get_noise_model(DepolarizingError(0.1), gates.CNOT), "CNOT"),
+        (get_noise_model(DepolarizingError(0.1), gates.RX), "RX"),
+    ],
 )
 @pytest.mark.parametrize("full_output", [False, True])
-def test_vncdr(backend, nqubits, noise, full_output):
+def test_vncdr(backend, nqubits, noise, full_output, insertion_gate):
     """Test that vnCDR reduces the noise."""
     backend.set_threads(1)
     # Define the circuit
@@ -172,6 +179,7 @@ def test_vncdr(backend, nqubits, noise, full_output):
         noise_levels=range(3),
         noise_model=noise,
         nshots=10000,
+        insertion_gate=insertion_gate,
         full_output=full_output,
     )
     if full_output:

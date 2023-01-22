@@ -232,7 +232,7 @@ with :math:`\gamma_j` satisfying:
 .. math::
    \sum_{j=0}^n \gamma_j = 1 \qquad \sum_{j=0}^n \gamma_j c_j^k = 0 \quad \text{for}\,\, k=1,..,n
 
-This implementation of ZNE relies on the insertion of CNOT pairs (that resolve to the identity in the noise-free case) to realize the different noise levels :math:`\{c_j\}`, see `He et al <https://journals.aps.org/pra/abstract/10.1103/PhysRevA.102.012426>`_ for more details. Hence, the canonical levels are mapped to the number of inserted pairs as :math:`c_j\rightarrow 2 c_j + 1`.
+This implementation of ZNE relies on the insertion of gate pairs (that resolve to the identity in the noise-free case) to realize the different noise levels :math:`\{c_j\}`, see `He et al <https://journals.aps.org/pra/abstract/10.1103/PhysRevA.102.012426>`_ for more details. Hence, the canonical levels are mapped to the number of inserted pairs as :math:`c_j\rightarrow 2 c_j + 1`.
 
 .. autofunction:: qibo.models.error_mitigation.ZNE
 
