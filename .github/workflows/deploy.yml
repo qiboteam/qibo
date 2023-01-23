@@ -19,12 +19,10 @@ jobs:
       python-version: ${{ matrix.python-version }}
 
   deploy:
-    runs-on: ubuntu-latest
     needs: build
     if: github.event_name == 'release' && github.event.action == 'published'
-    uses: qiboteam/workflows/.github/workflows/deploy-release.yml@migration
-    secrets: 
-      PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+    uses: qiboteam/workflows/.github/workflows/deploy-release.yml@migration  
+    secrets: inherit
 
   deploy-docker-image:
     runs-on: ubuntu-latest
