@@ -23,7 +23,8 @@ jobs:
     needs: build
     if: github.event_name == 'release' && github.event.action == 'published'
     uses: qiboteam/workflows/.github/workflows/deploy-release.yml@migration
-    secrets: inherit
+    secrets: 
+      PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
 
   deploy-docker-image:
     runs-on: ubuntu-latest
