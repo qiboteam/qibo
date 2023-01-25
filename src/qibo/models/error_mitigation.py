@@ -321,7 +321,7 @@ def vnCDR(
     # Run the input circuit
     val = []
     for level in noise_levels:
-        noisy_c = get_noisy_circuit(circuit, level)
+        noisy_c = get_noisy_circuit(circuit, level, insertion_gate=insertion_gate)
         if noise_model != None and backend.name != "qibolab":
             noisy_c = noise_model.apply(circuit)
         circuit_result = backend.execute_circuit(noisy_c, nshots=nshots)
