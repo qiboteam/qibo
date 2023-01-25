@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-from tkinter import N
-
 import numpy as np
 
 import qibo
@@ -9,9 +6,7 @@ from qibo.models import Circuit
 
 
 class QuantumCNN:
-    def __init__(
-        self, nqubits, nlayers, nclasses=2, params=None
-    ):  ### TODO: modify this to build the QCNN circuit
+    def __init__(self, nqubits, nlayers, nclasses=2, params=None):
         """
         Class for a multi-task variational quantum classifier
         Args:
@@ -22,7 +17,6 @@ class QuantumCNN:
         self.nqubits = nqubits
         self.nlayers = nlayers
 
-        # NOTE: magic number: 21=15+6 params per layer of conv and pool
         self.nparams_conv = 15
         self.nparams_pool = 6
         self.nparams_layer = self.nparams_conv + self.nparams_pool
@@ -50,24 +44,13 @@ class QuantumCNN:
             c += self.two_qubit_pool(source, sink, symbols)
         return c
 
-    def ansatz(self, nlayers, params=None):  ### TODO: QCNN ansatz goes here
+    def ansatz(self, nlayers, params=None):
         """
         Args:
             theta: list or numpy.array with the angles to be used in the circuit
             nlayers: int number of layers of the varitional circuit ansatz
         Returns:
-            Circuit implementing the variational ansatz
-        """
-        """
-        Wenjun's version:
-            symbols = sympy.symbols('qconv0:63')
-            # uses sympy.Symbols to map learnable variables. ? scans incoming circuits and replaces these with ? variables.
-            model_circuit.add (quantum_conv_circuit(qubits, symbols[0:15]))
-            model_circuit.add (quantum_pool_circuit(qubits[:4], qubits[4:], symbols[15:21]))
-            model_circuit.add (quantum_conv_circuit(qubits[4:], symbols[21:36]))
-            model_circuit.add (quantum_pool_circuit(qubits[4:6], qubits[6:], symbols[36:42]))
-            model_circuit.add (quantum_conv_circuit(qubits[6:], symbols[42:57]))
-            model_circuit.add (quantum_pool_circuit([qubits[6]], [qubits[7]],symbols[57:63]))
+            Circuit implementing the QCNN variational ansatz
         """
 
         nparams_conv = self.nparams_conv
@@ -121,16 +104,6 @@ class QuantumCNN:
         c = Circuit(self.nqubits)
         c += self.one_qubit_unitary(bits[0], symbols[0:3])
         c += self.one_qubit_unitary(bits[1], symbols[3:6])
-        # to improve: to define new gates of XX YY and ZZ outside.
-        """matrixXX = K.np.kron(matrices.X,matrices.X)
-        matrixYY = K.np.kron(matrices.Y,matrices.Y)
-        matrixZZ = K.np.kron(matrices.Z,matrices.Z)"""
-        """gates.Unitary(matrixXX, 0, 1,name="XX")
-        gates.Unitary(matrixYY, 0, 1,name="YY")
-        gates.Unitary(matrixZZ, 0, 1,name="ZZ")"""
-        """c.add(symbols[6]*gates.Unitary(matrixZZ, 0, 1))
-        c.add(symbols[7]*gates.Unitary(matrixYY, 0, 1))
-        c.add(symbols[8]*gates.Unitary(matrixXX, 0, 1))"""
         c.add(gates.RZZ(bits[0], bits[1], symbols[6]))
         c.add(gates.RYY(bits[0], bits[1], symbols[7]))
         c.add(gates.RXX(bits[0], bits[1], symbols[8]))
