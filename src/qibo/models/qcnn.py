@@ -89,9 +89,7 @@ class QuantumCNN:
         Symbols should be a list of length 3.
         """
         c = Circuit(self.nqubits)
-        c.add(
-            gates.RX(bit, symbols[0])
-        )
+        c.add(gates.RX(bit, symbols[0]))
         c.add(gates.RY(bit, symbols[1]))
         c.add(gates.RZ(bit, symbols[2]))
 
