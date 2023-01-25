@@ -3,6 +3,7 @@ import numpy as np
 import pytest
 
 from qibo import gates
+from qibo.config import PRECISION_TOL
 from qibo.tests.utils import random_density_matrix
 
 
@@ -23,10 +24,37 @@ def test_general_channel(backend):
     backend.assert_allclose(final_rho, target_rho)
 
 
-def test_krauss_channel_errors():
+def test_krauss_channel_errors(backend):
     a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
+    a2 = np.sqrt(0.6) * np.array([[1, 0], [0, -1]])
     with pytest.raises(ValueError):
         gate = gates.KrausChannel([((0, 1), a1)])
+
+    test_superop = np.array(
+        [
+            [0.6 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.4 + 0.0j],
+            [0.0 + 0.0j, -0.6 + 0.0j, 0.4 + 0.0j, 0.0 + 0.0j],
+            [0.0 + 0.0j, 0.4 + 0.0j, -0.6 + 0.0j, 0.0 + 0.0j],
+            [0.4 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.6 + 0.0j],
+        ]
+    )
+
+    test_pauli = np.diag([2.0, -0.4, -2.0, 0.4])
+
+    channel = gates.KrausChannel([((0,), a1), ((0,), a2)])
+
+    assert (
+        np.linalg.norm(
+            backend.to_numpy(channel.to_superop(backend=backend)) - test_superop
+        )
+        < PRECISION_TOL
+    )
+    assert (
+        np.linalg.norm(
+            backend.to_numpy(channel.to_pauli_liouville(backend=backend)) - test_pauli
+        )
+        < PRECISION_TOL
+    )
 
 
 def test_depolarizing_channel_errors():
@@ -110,13 +138,24 @@ def test_pauli_noise_channel(backend):
     target_rho += 0.7 * initial_rho
     backend.assert_allclose(final_rho, target_rho)
 
+    pnp = np.array([0.1, 0.02, 0.05])
+    a0 = 1
+    a1 = 1 - 2 * pnp[1] - 2 * pnp[2]
+    a2 = 1 - 2 * pnp[0] - 2 * pnp[2]
+    a3 = 1 - 2 * pnp[0] - 2 * pnp[1]
+    test_representation = np.diag([a0, a1, a2, a3])
+
+    liouville = gates.PauliNoiseChannel(0, *pnp).to_pauli_liouville(True, backend)
+    norm = np.linalg.norm(backend.to_numpy(liouville) - test_representation)
+    assert norm < PRECISION_TOL
+
 
 def test_depolarizing_channel(backend):
     initial_rho = random_density_matrix(3)
     lam = 0.3
     initial_rho_r = np.einsum("ijik->jk", initial_rho.reshape([2, 4, 2, 4]))
     channel = gates.DepolarizingChannel((1, 2), lam)
-    final_rho = backend.apply_channel_density_matrix(channel, np.copy(initial_rho), 3)
+    final_rho = channel.apply_density_matrix(backend, np.copy(initial_rho), 3)
     final_rho_r = np.einsum("ijik->jk", final_rho.reshape([2, 4, 2, 4]))
     target_rho_r = (1 - lam) * initial_rho_r + lam * np.trace(
         initial_rho_r
@@ -152,7 +191,7 @@ def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
 
     if t2 > t1:
         p0, p1, exp = gate.coefficients
-        matrix = np.diag([1 - p1, p0, p1, 1 - p0])
+        matrix = np.diag([1 - p1, p1, p0, 1 - p0])
         matrix[0, -1], matrix[-1, 0] = exp, exp
         matrix = matrix.reshape(4 * (2,))
         # Apply matrix using Eq. (3.28) from arXiv:1111.6950

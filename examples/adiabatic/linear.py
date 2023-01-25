@@ -1,5 +1,6 @@
 """Adiabatic evolution for the Ising Hamiltonian using linear scaling."""
 import argparse
+from pathlib import Path
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -38,13 +39,14 @@ def main(nqubits, hfield, T, dt, solver, save):
     """
     h0 = hamiltonians.X(nqubits)
     h1 = hamiltonians.TFIM(nqubits, h=hfield)
+    bac = h1.backend
 
     # Calculate target values (H1 ground state)
     target_state = h1.ground_state()
-    target_energy = h1.eigenvalues()[0].numpy().real
+    target_energy = bac.to_numpy(h1.eigenvalues()[0]).real
 
     # Check ground state
-    state_energy = callbacks.Energy(h1)(target_state).numpy()
+    state_energy = bac.to_numpy(h1.expectation(target_state)).real
     np.testing.assert_allclose(state_energy.real, target_energy)
 
     energy = callbacks.Energy(h1)
@@ -70,7 +72,9 @@ def main(nqubits, hfield, T, dt, solver, save):
     plt.ylabel("Overlap")
 
     if save:
-        plt.savefig(f"images/dynamics_n{nqubits}T{T}.png", bbox_inches="tight")
+        out_fol = Path("images")
+        out_fol.mkdir(exist_ok=True)
+        plt.savefig(out_fol / f"dynamics_n{nqubits}T{T}.png", bbox_inches="tight")
     else:
         plt.show()
 

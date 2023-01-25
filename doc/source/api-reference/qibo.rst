@@ -210,6 +210,76 @@ Adiabatic evolution
     :members:
     :member-order: bysource
 
+.. _error-mitigation:
+
+Error Mitigation
+^^^^^^^^^^^^^^^^
+
+Qibo allows for mitigating noise in circuits via error mitigation methods. Unlike error correction, error mitigation does not aim to correct qubit errors, but rather it provides the means to estimate the noise-free expected value of an observable measured at the end of a noisy circuit.
+
+Zero Noise Extrapolation (ZNE)
+""""""""""""""""""""""""""""""
+
+Given a noisy circuit :math:`C` and an observable :math:`A`,  Zero Noise Extrapolation (ZNE) consists in running :math:`n+1` versions of the circuit with different noise levels :math:`\{c_j\}_{j=0..n}` and, for each of them, measuring the expected value of the observable :math:`E_j=\langle A\rangle_j`.
+
+Then, an estimate for the expected value of the observable in the noise-free condition is obtained as:
+
+.. math::
+   \hat{E} = \sum_{j=0}^n \gamma_jE_j
+
+with :math:`\gamma_j` satisfying:
+
+.. math::
+   \sum_{j=0}^n \gamma_j = 1 \qquad \sum_{j=0}^n \gamma_j c_j^k = 0 \quad \text{for}\,\, k=1,..,n
+
+This implementation of ZNE relies on the insertion of gate pairs (that resolve to the identity in the noise-free case) to realize the different noise levels :math:`\{c_j\}`, see `He et al <https://journals.aps.org/pra/abstract/10.1103/PhysRevA.102.012426>`_ for more details. Hence, the canonical levels are mapped to the number of inserted pairs as :math:`c_j\rightarrow 2 c_j + 1`.
+
+.. autofunction:: qibo.models.error_mitigation.ZNE
+
+.. autofunction:: qibo.models.error_mitigation.get_gammas
+
+.. autofunction:: qibo.models.error_mitigation.get_noisy_circuit
+
+
+Clifford Data Regression (CDR)
+""""""""""""""""""""""""""""""
+
+In the Clifford Data Regression (CDR) method, a set of :math:`n` circuits :math:`S_n=\{C_i\}_{i=1,..,n}` is generated starting from the original circuit :math:`C_0` by replacing some of the non-Clifford gates with Clifford ones. Given an observable :math:`A`, all the circuits of :math:`S_n` are both: simulated to obtain the correspondent expected values of :math:`A` in noise-free condition :math:`\{a_i^{exact}\}_{i=1,..,n}`, and run in noisy conditions to obtain the noisy expected values :math:`\{a_i^{noisy}\}_{i=1,..,n}`.
+
+Finally a model :math:`f` is trained to minimize the mean squared error:
+
+.. math::
+   E = \sum_{i=1}^n \bigg(a_i^{exact}-f(a_i^{noisy})\bigg)^2
+
+and learn the mapping :math:`a^{noisy}\rightarrow a^{exact}`. The mitigated expected value of :math:`A` at the end of :math:`C_0` is then obtained simply with :math:`f(a_0^{noisy})`.
+
+In this implementation the initial circuit is expected to be decomposed in the three Clifford gates :math:`RX(\frac{\pi}{2})`, :math:`CNOT`, :math:`X` and in :math:`RZ(\theta)` (which is Clifford only for :math:`\theta=\frac{n\pi}{2}`). By default the set of Clifford gates used for substitution is :math:`\{RZ(0),RZ(\frac{\pi}{2}),RZ(\pi),RZ(\frac{3}{2}\pi)\}`. See `Sopena et al <https://arxiv.org/abs/2103.12680>`_ for more details.
+
+.. autofunction:: qibo.models.error_mitigation.CDR
+.. autofunction:: qibo.models.error_mitigation.sample_training_circuit
+
+
+Variable Noise CDR (vnCDR)
+""""""""""""""""""""""""""
+
+Variable Noise CDR (vnCDR) is an extension of the CDR method described above that factors in different noise levels as in ZNE. In detail, the set of circuits :math:`S_n=\{\mathbf{C}_i\}_{i=1,..,n}` is still generated as in CDR, but for each :math:`\mathbf{C}_i` we have :math:`k` different versions of it with increased noise :math:`\mathbf{C}_i=C_i^0,C_i^1,...,C_i^{k-1}`.
+
+Therefore, in this case we have a :math:`k`-dimensional predictor variable :math:`\mathbf{a}_i^{noisy}=\big(a_i^0, a_i^1,..,a_i^{k-1}\big)^{noisy}` for the same noise-free targets :math:`a_i^{exact}`, and we want to learn the mapping:
+
+.. math::
+   f:\mathbf{a}_i^{noisy}\rightarrow a_i^{exact}
+
+via minimizing the same mean squared error:
+
+.. math::
+   E = \sum_{i=1}^n \bigg(a_i^{exact}-f(\mathbf{a}_i^{noisy})\bigg)^2
+
+In particular, the default choice is to take :math:`f(\mathbf{x}):=\Gamma\cdot \mathbf{x}\;`, with :math:`\Gamma=\text{diag}(\gamma_0,\gamma_1,...,\gamma_{k-1})\;`, that corresponds to the ZNE calculation for the estimate of the expected value.
+
+Here, as in the implementation of the CDR above, the circuit is supposed to be decomposed in the set of primitive gates :math:`{RX(\frac{\pi}{2}),CNOT,X,RZ(\theta)}`. See `Sopena et al <https://arxiv.org/abs/2103.12680>`_ for all the details.
+
+.. autofunction:: qibo.models.error_mitigation.vnCDR
+
 _______________________
 
 .. _Gates:
@@ -450,6 +520,7 @@ Parametric ZZ interaction (RZZ)
     :members:
     :member-order: bysource
 
+
 Special gates
 ^^^^^^^^^^^^^
 
@@ -481,7 +552,33 @@ Fusion gate
     :members:
     :member-order: bysource
 
+IONQ Native gates
+^^^^^^^^^^^^^^^^^
+
+GPI
+"""
+
+.. autoclass:: qibo.gates.GPI
+    :members:
+    :member-order: bysource
+
+GPI2
+""""
+
+.. autoclass:: qibo.gates.GPI2
+    :members:
+    :member-order: bysource
+
+Mølmer–Sørensen (MS)
+""""""""""""""""""""
+
+.. autoclass:: qibo.gates.MS
+    :members:
+    :member-order: bysource
+
+
 _______________________
+
 
 .. _Channels:
 
@@ -559,6 +656,10 @@ Quantum errors
 
 The quantum errors available to build a noise model are the following:
 
+.. autoclass:: qibo.noise.CustomError
+    :members:
+    :member-order: bysource
+
 .. autoclass:: qibo.noise.PauliError
     :members:
     :member-order: bysource
@@ -575,6 +676,15 @@ The quantum errors available to build a noise model are the following:
     :members:
     :member-order: bysource
 
+.. autoclass:: qibo.noise.UnitaryError
+    :members:
+    :member-order: bysource
+
+.. autoclass:: qibo.noise.KrausError
+    :members:
+    :member-order: bysource
+
+_______________________
 
 .. _Hamiltonians:
 
@@ -843,6 +953,7 @@ equation.
    :members:
    :member-order: bysource
 
+
 .. _Optimizers:
 
 Optimizers
@@ -860,12 +971,75 @@ variational model.
    :member-order: bysource
    :exclude-members: ParallelBFGS
 
+
+.. _Gradients:
+
+Gradients
+---------
+
+In the context of optimization, particularly when dealing with Quantum Machine
+Learning problems, it is often necessary to calculate the gradients of functions
+that are to be minimized (or maximized). Hybrid methods, which are based on the
+use of classical techniques for the optimization of quantum computation procedures,
+have been presented in the previous section. This approach is very useful in
+simulation, but some classical methods cannot be used when using real circuits:
+for example, in the context of neural networks, the Back-Propagation algorithm
+is used, where it is necessary to know the value of a target function during the
+propagation of information within the network. Using a real circuit, we would not
+be able to access this information without taking a measurement, causing the state
+of the system to collapse and losing the information accumulated up to that moment.
+For this reason, in `qibo` we have also implemented methods for calculating the
+gradients which can be performed directly on the hardware, such as the
+`Parameter Shift Rule`_.
+
+.. automodule:: qibo.derivative
+   :members:
+   :member-order: bysource
+
+.. _`Parameter Shift Rule`: https://arxiv.org/abs/1811.11184
+
 .. _Quantum Information:
 
 Quantum Information
 -------------------
 
 This module provides tools for generation and analysis of quantum (and classical) information.
+
+Basis
+^^^^^
+
+Set of functions related to basis and basis transformations.
+
+
+Vectorization
+"""""""""""""
+
+.. autofunction:: qibo.quantum_info.vectorization
+
+
+Unvectorization
+"""""""""""""""
+
+.. autofunction:: qibo.quantum_info.unvectorization
+
+
+Pauli basis
+"""""""""""
+
+.. autofunction:: qibo.quantum_info.pauli_basis
+
+
+Computational basis to Pauli basis
+""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.comp_basis_to_pauli
+
+
+Pauli basis to computational basis
+""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.pauli_to_comp_basis
+
 
 Metrics
 ^^^^^^^
@@ -890,6 +1064,7 @@ Entropy
     the functions are intended to be used on Hermitian inputs. When ``validate=True`` and
     ``state`` is non-Hermitian, an error will be raised when using `cupy` backend.
 
+
 Trace distance
 """"""""""""""
 
@@ -900,6 +1075,7 @@ Trace distance
     ``state - target``, is Hermitian or not. Default option is ``validate=False``, i.e. the assumption of Hermiticity,
     because it is faster and, more importantly, the functions are intended to be used on Hermitian inputs.
     When ``validate=True`` and ``state - target`` is non-Hermitian, an error will be raised when using `cupy` backend.
+
 
 Hilbert-Schmidt distance
 """"""""""""""""""""""""

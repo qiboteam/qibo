@@ -46,7 +46,8 @@ def main(nqubits, hfield, T, save):
         trotter_ev = models.StateEvolution(trotter_h, dt=T / nsteps)
         exact_state = exact_ev(final_time=T, initial_state=np.copy(initial_state))
         trotter_state = trotter_ev(final_time=T, initial_state=np.copy(initial_state))
-        overlaps.append(callbacks.Overlap(exact_state)(trotter_state).numpy())
+        ovlp = callbacks.Overlap(exact_state).apply(dense_h.backend, trotter_state)
+        overlaps.append(dense_h.backend.to_numpy(ovlp))
 
     dt_list = T / nsteps_list
     overlaps = 1 - np.array(overlaps)

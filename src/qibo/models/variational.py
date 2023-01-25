@@ -464,7 +464,11 @@ class QAOA:
         compile=False,
         processes=None,
     ):
-        """Optimizes the variational parameters of the QAOA.
+        """Optimizes the variational parameters of the QAOA. A few loss functions are
+        provided for QAOA optimizations such as expected value (default), CVar which is introduced in
+        `Quantum 4, 256 <https://quantum-journal.org/papers/q-2020-04-20-256/>`_, and
+        Gibbs loss function which is introduced in
+        `PRR 2, 023074 (2020) <https://journals.aps.org/prresearch/abstract/10.1103/PhysRevResearch.2.023074>`_.
 
         Args:
             initial_p (np.ndarray): initial guess for the parameters.
@@ -493,6 +497,19 @@ class QAOA:
             returns the ``OptimizeResult``, for ``'cma'`` the
             ``CMAEvolutionStrategy.result``, and for ``'sgd'``
             the options used during the optimization.
+
+        Example:
+            .. testcode::
+
+                from qibo import hamiltonians
+
+                h = hamiltonians.XXZ(3)
+                qaoa = models.QAOA(h)
+                initial_p = [0.314, 0.22, 0.05, 0.59]
+                best, params, _ = qaoa.minimize(initial_p)
+                best, params, _ = qaoa.minimize(initial_p, mode="gibbs")
+                best, params, _ = qaoa.minimize(initial_p, mode="cvar")
+
         """
         if len(initial_p) % 2 != 0:
             raise_error(
