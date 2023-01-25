@@ -22,7 +22,7 @@ jobs:
 
   deploy-docker-image:
     runs-on: ubuntu-latest
-    needs: deploy
+    needs: build 
     steps:
       - uses: actions/checkout@v2
       - name: Build docker image and upload to ghcr
