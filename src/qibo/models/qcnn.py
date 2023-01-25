@@ -140,7 +140,6 @@ class QuantumCNN:
             pool_params = params[
                 param_start + self.nparams_conv : param_start + self.nparams_layer
             ]
-            # pool_params += pool_params[2::-1]
             pool_params += [-pool_params[2], -pool_params[1], -pool_params[0]]
             expanded_params += conv_params * int(nleft if nleft > 2 else 1)
             expanded_params += pool_params * int(nleft / 2)
