@@ -91,7 +91,7 @@ class QuantumCNN:
         c = Circuit(self.nqubits)
         c.add(
             gates.RX(bit, symbols[0])
-        )  # question: is  cirq.X(bit)**symbols[0] same as RX(bit,symbols[0])
+        )
         c.add(gates.RY(bit, symbols[1]))
         c.add(gates.RZ(bit, symbols[2]))
 
