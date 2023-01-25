@@ -13,15 +13,11 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: [3.7, 3.8, 3.9, '3.10']
-    uses: qiboteam/workflows/.github/workflows/build-wheels.yml@migration
+    uses: qiboteam/workflows/.github/workflows/deploy-pip.yml@migration
     with:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
-
-  deploy:
-    needs: build
-    if: github.event_name == 'release' && github.event.action == 'published'
-    uses: qiboteam/workflows/.github/workflows/deploy-release.yml@migration
+      publish-PyPI: github.event_name == 'release' && github.event.action == 'published'
     secrets: inherit
 
   deploy-docker-image:
