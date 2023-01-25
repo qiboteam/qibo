@@ -15,12 +15,11 @@ def get_noise_model(error, gate):
     return noise
 
 
-@pytest.mark.parametrize("nqubits", [3])
 @pytest.mark.parametrize(
-    "noise,insertion_gate",
+    "nqubits,noise,insertion_gate",
     [
-        (get_noise_model(DepolarizingError(0.1), gates.CNOT), "CNOT"),
-        (get_noise_model(DepolarizingError(0.1), gates.RX), "RX"),
+        (3, get_noise_model(DepolarizingError(0.1), gates.CNOT), "CNOT"),
+        (1, get_noise_model(DepolarizingError(0.1), gates.RX), "RX"),
     ],
 )
 @pytest.mark.parametrize("solve", [False, True])
@@ -135,12 +134,11 @@ def test_sample_training_circuit(nqubits):
         sample_training_circuit(c)
 
 
-@pytest.mark.parametrize("nqubits", [3])
 @pytest.mark.parametrize(
-    "noise,insertion_gate",
+    "nqubits,noise,insertion_gate",
     [
-        (get_noise_model(DepolarizingError(0.1), gates.CNOT), "CNOT"),
-        (get_noise_model(DepolarizingError(0.1), gates.RX), "RX"),
+        (3, get_noise_model(DepolarizingError(0.1), gates.CNOT), "CNOT"),
+        (1, get_noise_model(DepolarizingError(0.1), gates.RX), "RX"),
     ],
 )
 @pytest.mark.parametrize("full_output", [False, True])
