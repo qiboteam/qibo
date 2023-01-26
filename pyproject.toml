@@ -1,9 +1,16 @@
 [tool.pylint.master]
+
 exit-zero = true
 errors-only = true
+
+[tool.pylint.reports]
+
+# Available formats are:
+# text, parseable, colorized, json and msvs (visual studio).
 output-format = "colorized"
 
 [tool.pytest.ini_options]
+
 testpaths = ['src/qibo/tests/']
 addopts = [
     '--cov=qibo',
