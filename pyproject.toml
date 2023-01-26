@@ -1,0 +1,13 @@
+[tool.pylint.master]
+exit-zero = true
+errors-only = true
+output-format = "colorized"
+
+[tool.pytest.ini_options]
+testpaths = ['src/qibo/tests/']
+addopts = [
+    '--cov=qibo',
+    '--cov-report=xml',
+    '--pyargs qibo',
+    '--durations=60'
+]

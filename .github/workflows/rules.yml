@@ -19,4 +19,6 @@ jobs:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
       environment: "qibo"
+      pip-flags: "tests,docs"
+      test-flag: ${{ matrix.os == 'ubuntu'}}
     secrets: inherit
