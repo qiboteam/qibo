@@ -17,7 +17,7 @@ jobs:
     with:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
-      publish-PyPI: ${{ github.event_name == 'release' && github.event.action == 'published' }}
+      publish: ${{ github.event_name == 'release' && github.event.action == 'published' }}
     secrets: inherit
 
   deploy-docker-image:
