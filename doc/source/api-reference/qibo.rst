@@ -683,7 +683,7 @@ The quantum errors available to build a noise model are the following:
 .. autoclass:: qibo.noise.KrausError
     :members:
     :member-order: bysource
-    
+
 Realistic Noise Model
 ^^^^^^^^^^^^^^^^^^^^^
 
