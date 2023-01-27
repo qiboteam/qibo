@@ -15,7 +15,5 @@ testpaths = ['src/qibo/tests/']
 filterwarnings = ["ignore::RuntimeWarning"]
 addopts = [
     '--cov=qibo',
-    '--cov-report=xml',
-    '--pyargs qibo',
-    '--durations=60'
+    '--cov-report=xml'
 ]
