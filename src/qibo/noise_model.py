@@ -27,7 +27,7 @@ def noisy_circuit(circuit, params):
          }
         Where n is the number of qubits, and m the number of measurement gates.
         The first four parameters are used by the thermal relaxation error. The first two  elements are the
-        tuple containing the T_1 and T_2 parameters; the third one is a tuple which contain the gate times,
+        tuple containing the $T_1$ and $T_2$ parameters; the third one is a tuple which contain the gate times,
         for single and two qubit gates; then we have the excited population parameter.
         The fifth parameter is a tuple containing the depolaraziong errors for single and 2 qubit gate.
         The sisxth parameter is a tuple containg the two arrays for bitflips probability errors: the first one implements 0->1 errors, the other one 1->0.
@@ -183,6 +183,7 @@ def noisy_circuit(circuit, params):
                     max(circuit.queue.moments[t][qubit].qubits)
                 ] = None
 
+    #setting noisy_circ.measurements
     measurements = []
     for m in circuit.measurements:
         q = m.qubits
@@ -202,6 +203,14 @@ def noisy_circuit(circuit, params):
 
 
 def freq_to_prob(freq):
+    """Transforms a dictionary of frequencies in an array of probabilities.
+    
+       Args:
+           freq (CircuitResult.frequencies): frequencies you want to transform.
+           
+       Returns:
+           The new array (numpy.ndarray).
+    """
     norm = sum(freq.values())
     nqubits = len(list(freq.keys())[0])
     prob = np.zeros(2**nqubits)
@@ -212,6 +221,20 @@ def freq_to_prob(freq):
 
 
 def hellinger_shot_error(p, q, nshots):
+    """Hellinger fidelity error caused by using two probability distributions estimated using a finite number of shots.
+    It is calculated propagating the probability error of each state of the system. The complete formula is:
+    :math:`4 * H(p, q) * (1 - H^{2}(p, q)) * (\sum_{i=1}^{n}(|1 - \sqrt{\frac{q_i}{p_i}}| * \sqrt{\frac{p_i - {p_i}^2}{nshots}} + |1 - \sqrt{\frac{p_i}{q_i}}| * \sqrt{\frac{q_i - {q_i}^2}{nshots}}) / (4 * H(p,q))`
+    where the sum is made all over the possible states and :math:`H(p, q)` is the Hellinger distance.
+    
+       Args:
+           p (numpy.ndarray): (discrete) probability distribution :math:`p`.
+           q (numpy.ndarray): (discrete) probability distribution :math:`q`.
+           nshots (int): the number of shots we used to run the circuit to obtain :math:`p` and :math:`q`.
+           
+       Returns:
+           (float): The Hellinger fidelity error.
+    
+    """
     prob_p = np.sqrt((p - p**2) / nshots)
     prob_q = np.sqrt((q - q**2) / nshots)
     hellinger_dist = hellinger_distance(p, q)
@@ -224,6 +247,25 @@ def hellinger_shot_error(p, q, nshots):
 
 
 def loss(parameters, grad, args):
+    """The loss function used to be maximized in the fit method of the :class:`qibo.noise_model.CompositeNoiseModel`.
+    It's the hellinger fidelity calculated between the probability distribution of the noise model and the experimental target distribution using the :func:`qibo.quantum_info.hellinger_fidelity`.
+    It is possible to return also the finite shot error correction calculated with the :func:`qibo.noise_model.hellinger_shot_error`.
+    
+       Args:
+           parameters (numpy.ndarray): parameters of the :func:`qibo.noise_model.noisy_circuit` which must be inferred.
+           They must be given in form of array as
+           array([params["t1"], params["t2"], params["gate_time"], params["depolarizing_error"], params["bitflips_error"]])
+           q (numpy.ndarray): (discrete) probability distribution :math:`q`.
+           nshots (int): the number of shots we used to run the circuit to obtain :math:`p` and :math:`q`.
+           args (numpy.ndarray): other parameters which don't need to be inferred as
+           array([circuit, nshots, target_prob, idle_qubits, backend, error]).
+           The circuit you want to simulate; the number of shots of the simulatin; the target probability; the boolean variable idle_qubits,
+           if you want the noise model to take into account idle qubits; the backend; the boolean variable error, if you want to take into account the hellinger fidelity error due to shot noise.
+           
+       Returns:
+           (float): The Hellinger fidelity if error is False.
+           (list): [Hellinger fidelity, Hellinger fidelity error] if error is True.
+    """
     circuit = args[0]
     nshots = args[1]
     target_prob = args[2]
@@ -262,6 +304,17 @@ def loss(parameters, grad, args):
 
 
 class CompositeNoiseModel:
+    """Class associated with a realistic representation of a noisy circuit modeled by the :func:`qibo.noise_model.noisy_circuit`.
+    This class is able to fit the parameters of the noise model to reproduce an experimental realization of the circuit
+    you want to simulate.
+    
+    Args:
+        noisy_circuit (qibo.models.Circuit): the noisy circuit. See :func:`qibo.noise_model.noisy_circuit`.
+        params (dictionary): the parameters of the noise model. See :func:`qibo.noise_model.noisy_circuit`.
+        hellinger (float): current value of the hellinger fidelity between the noisy simulation and the given target result.
+        hellinger0 (dictionary): the fidelity and the shot error fidelity  organized as {"fidelity": (float) f, "shot_error": (float) e}.
+    """
+    
     def __init__(self, params):
         self.noisy_circuit = {}
         self.params = params
@@ -269,6 +322,11 @@ class CompositeNoiseModel:
         self.hellinger0 = {}
 
     def apply(self, circuit):
+    """Creates the noisy circuit from the circuit given as argument by using the :func:`qibo.noise_model.noisy_circuit`.
+    
+        Args:
+            circuit (qibo.models.Circuit): the circuit you want to simulate.
+    """
         self.noisy_circuit = noisy_circuit(circuit, self.params)
 
     def fit(
@@ -278,6 +336,18 @@ class CompositeNoiseModel:
         f_min_rtol=None,
         backend=None,
     ):
+    """Performes the fitting procedure of the noise model parameters, using the method nlopt.opt from the library nplot. The fitting procedure is implemented to maximize the hellinger fidelity calculated using the :func:`qibo.noise_model.loss` between the probability distribution function estimated by the noise model and the one measured experimentally. Since, we are using probability distribution functions estimated using a finite number of shots, the hellinger fidelity is going to have an error caused by an imperfect estimation of the probabilities. This method takes into account this effect and stops when the fidelity reaches a corrected maximum $1-\epsilon$, with $\epsilon$=:func:`qibo.noise_model.hellinger_shot_error`.
+    
+        Args:
+            target_result (qibo.states.CircuitResult): the circuit result with frequencies you want to emulate.
+            bounds: If True are given the default bounds for the depolarizing and thermal relaxation channels' parameters.
+            Otherwise it's possible to pass a matrix of size (2, 4 * nqubits + 4), where bounds[0] and bounds[1]
+            will be respectively the lower and the upper bounds for the parameters. The first 2 * nqubit columns are related
+            to the $T_1$ and $T_2$ parameters; the subsequent 2 columns are related to the gate time parameters; the other subsequent 2 columns are related depolarizing error parameters; the last 2 * nqubit columns are related to bitflips errors.
+            f_min_rtol (float): the tolerance of the optimization. The optimization will finish when the fidelity reaches the value
+            $1-f_min_rtol$, by default f_min_rtol is set to be the fidelity error caused by the finite number of shots and calculated by the :func:`qibo.noise_model.hellinger_shot_error`.
+            backend: you can specify your backend. If None qibo.backends.GlobalBackend is used.
+    """
         from functools import partial
 
         import nlopt

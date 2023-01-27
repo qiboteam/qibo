@@ -1151,6 +1151,10 @@ In this model, the user must set the relaxation times `t1` and `t2` for each qub
       print("noisy circuit:")
       print(noisy_circ.draw())
 
+.. testoutput::
+   :hide:
+
+   ...
 
 ``noisy_circ`` is the new circuit containing the error gate channels.
 
