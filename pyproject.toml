@@ -14,6 +14,7 @@ output-format = "colorized"
 python_files = ['test_*.py']
 python_functions = ['test_*']
 testpaths = ['src/qibo/tests/']
+filterwarnings = ["ignore::RuntimeWarning"]
 addopts = [
     '--cov=qibo',
     '--cov-report=xml',
