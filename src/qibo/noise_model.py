@@ -1,8 +1,7 @@
 import numpy as np
-from scipy.linalg import sqrtm
 
 from qibo import gates, models
-from qibo.quantum_info import hellinger_distance, hellinger_fidelity
+from qibo.quantum_info import hellinger_fidelity
 
 
 def noisy_circuit(circuit, params):
@@ -16,23 +15,21 @@ def noisy_circuit(circuit, params):
     Args:
         circuit (qibo.models.Circuit): Circuit on which noise will be applied. Since in the end are
         applied bitflips, measurement gates are required.
-        params (dictionary): object which contains the parameters of the channels organized as follow
-        params = {"t1" : (t1, t2,..., tn),
-          "t2" : (t1, t2,..., tn),
-          "gate time" : (time1, time2),
-          "excited population" : 0,
-          "depolarizing error" : (lambda1, lambda2),
-          "bitflips error" : ([p1, p2,..., pm], [p1, p2,..., pm]),
-          "idle_qubits" : 1
-         }
-        Where n is the number of qubits, and m the number of measurement gates.
-        The first four parameters are used by the thermal relaxation error. The first two  elements are the
-        tuple containing the $T_1$ and $T_2$ parameters; the third one is a tuple which contain the gate times,
-        for single and two qubit gates; then we have the excited population parameter.
-        The fifth parameter is a tuple containing the depolaraziong errors for single and 2 qubit gate.
-        The sisxth parameter is a tuple containg the two arrays for bitflips probability errors: the first one implements 0->1 errors, the other one 1->0.
-        The last parameter is a boolean variable: if True the noise model takes into account idle qubits.
-
+        params (dict): contains the parameters of the channels organized as follow \n
+                {'t1' : (``t1``, ``t2``,..., ``tn``),
+                't2' : (``t1``, ``t2``,..., ``tn``),
+                'gate time' : (``time1``, ``time2``),
+                'excited population' : 0,
+                'depolarizing error' : (``lambda1``, ``lambda2``),
+                'bitflips error' : ([``p1``, ``p2``,..., ``pm``], [``p1``, ``p2``,..., ``pm``]),
+                'idle_qubits' : True}
+            where `n` is the number of qubits, and `m` the number of measurement gates.
+            The first four parameters are used by the thermal relaxation error. The first two  elements are the
+            tuple containing the :math:`T_1` and :math:`T_2` parameters; the third one is a tuple which contain the gate times,
+            for single and two qubit gates; then we have the excited population parameter.
+            The fifth parameter is a tuple containing the depolaraziong errors for single and 2 qubit gate.
+            The sisxth parameter is a tuple containg the two arrays for bitflips probability errors: the first one implements 0->1 errors, the other one 1->0.
+            The last parameter is a boolean variable: if True the noise model takes into account idle qubits.
     Returns:
         The new noisy circuit (qibo.models.Circuit).
 
@@ -100,16 +97,10 @@ def noisy_circuit(circuit, params):
                             current_time[q_min] += time_difference
                 q = circuit.queue.moments[t][qubit].qubits
                 # adding measurements gates
-                if len(circuit.queue.moments[t][qubit].qubits) == 1:
-                    q = q[0]
-                    noisy_circ.add(gates.M(q, p0=bitflips_01[q], p1=bitflips_10[q]))
-                else:
-                    p0q = []
-                    p1q = []
-                    for j in q:
-                        p0q.append(bitflips_01[j])
-                        p1q.append(bitflips_10[j])
-                    noisy_circ.add(gates.M(*q, p0=p0q, p1=p1q))
+                p0q = [bitflips_01[j] for j in q]
+                p1q = [bitflips_10[j] for j in q]
+                noisy_circ.add(gates.M(*q, p0=p0q, p1=p1q))
+                if len(circuit.queue.moments[t][qubit].qubits) != 1:
                     circuit.queue.moments[t][
                         max(circuit.queue.moments[t][qubit].qubits)
                     ] = None
@@ -187,16 +178,9 @@ def noisy_circuit(circuit, params):
     measurements = []
     for m in circuit.measurements:
         q = m.qubits
-        if len(q) == 1:
-            q = q[0]
-            measurements.append(gates.M(q, p0=bitflips_01[q], p1=bitflips_10[q]))
-        else:
-            p0q = []
-            p1q = []
-            for j in q:
-                p0q.append(bitflips_01[j])
-                p1q.append(bitflips_10[j])
-            measurements.append(gates.M(*q, p0=p0q, p1=p1q))
+        p0q = [bitflips_01[j] for j in q]
+        p1q = [bitflips_10[j] for j in q]
+        measurements.append(gates.M(*q, p0=p0q, p1=p1q))
     noisy_circ.measurements = measurements
 
     return noisy_circ
@@ -223,7 +207,7 @@ def freq_to_prob(freq):
 def hellinger_shot_error(p, q, nshots):
     """Hellinger fidelity error caused by using two probability distributions estimated using a finite number of shots.
     It is calculated propagating the probability error of each state of the system. The complete formula is:
-    :math:`4 * H(p, q) * (1 - H^{2}(p, q)) * (\\sum_{i=1}^{n}(|1 - \\sqrt{\frac{q_i}{p_i}}| * \\sqrt{\frac{p_i - {p_i}^2}{nshots}} + |1 - \\sqrt{\frac{p_i}{q_i}}| * \\sqrt{\frac{q_i - {q_i}^2}{nshots}}) / (4 * H(p,q))`
+    :math:`(1 - H^{2}(p, q))/\\sqrt{nshots} * \\sum_{i=1}^{n}(\\sqrt{p_i(1-q_i)}+\\sqrt{q_i(1-p_i)})`
     where the sum is made all over the possible states and :math:`H(p, q)` is the Hellinger distance.
 
        Args:
@@ -235,20 +219,16 @@ def hellinger_shot_error(p, q, nshots):
            (float): The Hellinger fidelity error.
 
     """
-    prob_p = np.sqrt((p - p**2) / nshots)
-    prob_q = np.sqrt((q - q**2) / nshots)
-    hellinger_dist = hellinger_distance(p, q)
-    hellinger_dist_e = np.sum(
-        (abs(1 - np.sqrt(q / p)) * prob_p + abs(1 - np.sqrt(p / q)) * prob_q)
-        / (4 * hellinger_dist)
+    hellinger_fid = hellinger_fidelity(p, q)
+    hellinger_fid_e = np.sqrt(hellinger_fid / nshots) * np.sum(
+        np.sqrt(q * (1 - p)) + np.sqrt(p * (1 - q))
     )
-    hellinger_fid_e = 4 * hellinger_dist * (1 - hellinger_dist**2) * hellinger_dist_e
     return hellinger_fid_e
 
 
 def loss(parameters, grad, args):
     """The loss function used to be maximized in the fit method of the :class:`qibo.noise_model.CompositeNoiseModel`.
-    It's the hellinger fidelity calculated between the probability distribution of the noise model and the experimental target distribution using the :func:`qibo.quantum_info.hellinger_fidelity`.
+    It is the hellinger fidelity calculated between the probability distribution of the noise model and the experimental target distribution using the :func:`qibo.quantum_info.hellinger_fidelity`.
     It is possible to return also the finite shot error correction calculated with the :func:`qibo.noise_model.hellinger_shot_error`.
 
        Args:
@@ -342,7 +322,7 @@ class CompositeNoiseModel:
             bounds: If True are given the default bounds for the depolarizing and thermal relaxation channels' parameters.
             Otherwise it's possible to pass a matrix of size (2, 4 * nqubits + 4), where bounds[0] and bounds[1]
             will be respectively the lower and the upper bounds for the parameters. The first 2 * nqubit columns are related
-            to the $T_1$ and $T_2$ parameters; the subsequent 2 columns are related to the gate time parameters; the other subsequent 2 columns are related depolarizing error parameters; the last 2 * nqubit columns are related to bitflips errors.
+            to the :math:`T_1` and :math:`T_2` parameters; the subsequent 2 columns are related to the gate time parameters; the other subsequent 2 columns are related depolarizing error parameters; the last 2 * nqubit columns are related to bitflips errors.
             f_min_rtol (float): the tolerance of the optimization. The optimization will finish when the fidelity reaches the value
             $1-f_min_rtol$, by default f_min_rtol is set to be the fidelity error caused by the finite number of shots and calculated by the :func:`qibo.noise_model.hellinger_shot_error`.
             backend: you can specify your backend. If None qibo.backends.GlobalBackend is used.

@@ -184,21 +184,21 @@ class NoiseModel:
         """Build a noise model to simulate the noisy behaviour of a quantum computer.
 
         Args:
-            params: {"t1" : (t1, t2,..., tn),
-            "t2" : (t1, t2,..., tn),
-            "gate time" : (time1, time2),
-            "excited population" : 0,
-            "depolarizing error" : (lambda1, lambda2),
-            "bitflips error" : ([p1, p2,..., pm], [p1, p2,..., pm]),
-            "idle_qubits" : 1
-            }
-            where n is the number of qubits, and m the number of measurement gates.
-            The first four parameters are used by the thermal relaxation error. The first two  elements are the
-            tuple containing the :math:`T_1` and :math:`T_2` parameters; the third one is a tuple which contain the gate times,
-            for single and two qubit gates; then we have the excited population parameter.
-            The fifth parameter is a tuple containing the depolaraziong errors for single and 2 qubit gate.
-            The sisxth parameter is a tuple containg the two arrays for bitflips probability errors: the first one implements 0->1 errors, the other one 1->0.
-            The last parameter is a boolean variable: if True the noise model takes into account idle qubits.
+            params (dict): contains the parameters of the channels organized as follow \n
+                    {'t1' : (``t1``, ``t2``,..., ``tn``),
+                    't2' : (``t1``, ``t2``,..., ``tn``),
+                    'gate time' : (``time1``, ``time2``),
+                    'excited population' : 0,
+                    'depolarizing error' : (``lambda1``, ``lambda2``),
+                    'bitflips error' : ([``p1``, ``p2``,..., ``pm``], [``p1``, ``p2``,..., ``pm``]),
+                    'idle_qubits' : True}
+                where `n` is the number of qubits, and `m` the number of measurement gates.
+                The first four parameters are used by the thermal relaxation error. The first two  elements are the
+                tuple containing the :math:`T_1` and :math:`T_2` parameters; the third one is a tuple which contain the gate times,
+                for single and two qubit gates; then we have the excited population parameter.
+                The fifth parameter is a tuple containing the depolaraziong errors for single and 2 qubit gate.
+                The sisxth parameter is a tuple containg the two arrays for bitflips probability errors: the first one implements 0->1 errors, the other one 1->0.
+                The last parameter is a boolean variable: if True the noise model takes into account idle qubits.
         """
 
         self.noise_model = CompositeNoiseModel(params)
