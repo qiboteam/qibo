@@ -242,6 +242,8 @@ class QuantumCNN:
         loss = result.fun
         optimal_angles = result.x
 
+        self._optimal_angles = optimal_angles
+
         self.set_circuit_params(optimal_angles[self.measured_qubits :])
         return loss, optimal_angles
 
@@ -267,3 +269,8 @@ class QuantumCNN:
         accur = accur / len(labels)
 
         return accur
+
+    def predict(self, init_state, nshots=10000):
+        return self.Predictions(
+            self._circuit, self._optimal_angles, init_state, nshots=nshots
+        )
