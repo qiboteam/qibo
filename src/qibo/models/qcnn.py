@@ -170,8 +170,8 @@ class QuantumCNN:
             numpy.array() with predictions for each qubit, for the initial state
         """
         bias = np.array(theta[0 : self.measured_qubits])
-        circuit = circuit(init_state, nshots)
-        result = circuit.frequencies(binary=False)
+        circuit_exec = circuit(init_state, nshots)
+        result = circuit_exec.frequencies(binary=False)
         prediction = np.zeros(self.measured_qubits)
 
         for qubit in range(self.measured_qubits):
