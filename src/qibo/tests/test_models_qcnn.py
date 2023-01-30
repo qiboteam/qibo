@@ -295,7 +295,7 @@ def test_qcnn_training():
     predictions = []
     for n in range(len(data)):
         predictions.append(
-            test_qcnn.Predictions(testcircuit, result, data[n], nshots=10000)[0]
+            test_qcnn.predict(data[n], nshots=10000)[0]
         )
 
     # test Accuracy function
