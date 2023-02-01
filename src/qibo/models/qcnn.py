@@ -6,13 +6,25 @@ from qibo.models import Circuit
 
 
 class QuantumCNN:
+    """
+    Model that implements and trains a variational quantum convolutional network (QCNN) for
+    classification tasks.
+    The QCNN model was originally proposed in: `arXiv:1810.03787 <https://arxiv.org/abs/1810.03787>`_
+    for the identification of quantum phases.
+
+    Args:
+        nqubits (int): number of qubits of the input states. Currently supports powers of 2.
+        nlayers (int): number of convolutional and pooling layers.
+        nclasses (int): number of classes to be classified. Default setting of 2 (phases).
+        params: initial list of variational parameters. If not provided, all parameters
+            will be initialized to zero.
+    Example:
+        .. testcode::
+
+    """
+
     def __init__(self, nqubits, nlayers, nclasses=2, params=None):
-        """
-        Class for a multi-task variational quantum classifier
-        Args:
-            nclasses: int number of classes to be classified. Default setting of 2 (phases).
-            nqubits: int number of qubits employed in the quantum circuit
-        """
+
         self.nclasses = nclasses
         self.nqubits = nqubits
         self.nlayers = nlayers
