@@ -26,7 +26,7 @@ class QuantumCNN:
             import math
             import numpy as np
             import random
-            
+
             data = np.random.rand(16)
             data = data / np.linalg.norm(data)
             labels = [[1], [-1]]
