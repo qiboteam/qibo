@@ -312,11 +312,11 @@ def vnCDR(
             val = circuit_result.expectation_from_samples(observable)
             train_val["noisy"].append(val)
     # Repeat noise-free values for each noise level
-    train_val["noisy"] = np.array(train_val["noisy"]).reshape(-1, len(noise_levels))
+    noisy_array = np.array(train_val["noisy"]).reshape(-1, len(noise_levels))
     # Fit the model
     params = np.random.rand(len(noise_levels))
     optimal_params = curve_fit(
-        model, train_val["noisy"].T, train_val["noise-free"], p0=params
+        model, noisy_array.T, train_val["noise-free"], p0=params 
     )
     # Run the input circuit
     val = []

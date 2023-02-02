@@ -396,9 +396,10 @@ class NumpyBackend(Backend):
 
             else:
                 if circuit.accelerators:  # pragma: no cover
+                    # pylint: disable=E1111
                     state = self.execute_distributed_circuit(
                         circuit, initial_state, return_array=True
-                    )  # pylint: disable=E1111
+                    )  
                 else:
                     if initial_state is None:
                         state = self.zero_state(nqubits)
