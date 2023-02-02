@@ -971,12 +971,8 @@ class Circuit:
         """
         if self.compiled:
             # pylint: disable=E1101
-            state = self.compiled.executor(   
-                initial_state, nshots 
-            )  
-            self._final_state = self.compiled.result(
-                state, nshots
-            )  
+            state = self.compiled.executor(initial_state, nshots)
+            self._final_state = self.compiled.result(state, nshots)
             return self._final_state
         else:
             from qibo.backends import GlobalBackend
