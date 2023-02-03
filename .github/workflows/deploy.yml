@@ -13,7 +13,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: [3.7, 3.8, 3.9, '3.10']
-    uses: qiboteam/workflows/.github/workflows/deploy-pip.yml@migration
+    uses: qiboteam/workflows/.github/workflows/deploy-pip.yml@main
     with:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
