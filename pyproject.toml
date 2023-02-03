@@ -1,7 +1,11 @@
 [tool.pylint.master]
+<<<<<<< HEAD
 
 exit-zero = true
 errors-only = true
+=======
+output-format = "colorized"
+>>>>>>> eeaf05571b873a792b27e0631ddfba6f0ac08810
 
 [tool.pylint.reports]
 
