@@ -1,0 +1,14 @@
+[tool.pylint.master]
+output-format = "colorized"
+
+[tool.pylint.reports]
+
+# Available formats are:
+# text, parseable, colorized, json and msvs (visual studio).
+output-format = "colorized"
+
+[tool.pytest.ini_options]
+
+testpaths = ['src/qibo/tests/']
+filterwarnings = ["ignore::RuntimeWarning"]
+addopts =  ' --cov=qibo --cov-report=xml --pyargs qibo --durations=60'

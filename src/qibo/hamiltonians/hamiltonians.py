@@ -559,6 +559,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
         terms = self.terms
         for term in terms:
+            # pylint: disable=E1101
             for factor in term.factors:
                 if isinstance(factor, Z) == False:
                     raise_error(
