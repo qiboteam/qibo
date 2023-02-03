@@ -289,7 +289,7 @@ class CompositeNoiseModel:
     you want to simulate.
 
     Args:
-        noisy_circuit (qibo.models.Circuit): the noisy circuit. See :func:`qibo.noise_model.noisy_circuit`.
+        noisy_circuit (:class:`qibo.models.circuit.Circuit`): the noisy circuit. See :func:`qibo.noise_model.noisy_circuit`.
         params (dictionary): the parameters of the noise model. See :func:`qibo.noise_model.noisy_circuit`.
         hellinger (float): current value of the hellinger fidelity between the noisy simulation and the given target result.
         hellinger0 (dictionary): the fidelity and the shot error fidelity  organized as {"fidelity": (float) f, "shot_error": (float) e}.
@@ -315,14 +315,14 @@ class CompositeNoiseModel:
         f_min_rtol=None,
         backend=None,
     ):
-        r"""Performes the fitting procedure of the noise model parameters, using the method nlopt.opt from the library nplot. The fitting procedure is implemented to maximize the hellinger fidelity calculated using the :func:`qibo.noise_model.loss` between the probability distribution function estimated by the noise model and the one measured experimentally. Since, we are using probability distribution functions estimated using a finite number of shots, the hellinger fidelity is going to have an error caused by an imperfect estimation of the probabilities. This method takes into account this effect and stops when the fidelity reaches a corrected maximum $1-\epsilon$, with $\epsilon$=:func:`qibo.noise_model.hellinger_shot_error`.
+        r"""Performs the fitting procedure of the noise model parameters, using the method nlopt.opt from the library NLopt. The fitting procedure is implemented to maximize the hellinger fidelity calculated using the :func:`qibo.noise_model.loss` between the probability distribution function estimated by the noise model and the one measured experimentally. Since, we are using probability distribution functions estimated using a finite number of shots, the hellinger fidelity is going to have an error caused by an imperfect estimation of the probabilities. This method takes into account this effect and stops when the fidelity reaches a corrected maximum $1-\epsilon$, with $\epsilon$=:func:`qibo.noise_model.hellinger_shot_error`.
 
         Args:
-            target_result (qibo.states.CircuitResult): the circuit result with frequencies you want to emulate.
-            bounds: If True are given the default bounds for the depolarizing and thermal relaxation channels' parameters.
+            target_result (:class:`qibo.states.CircuitResult`): the circuit result with frequencies you want to emulate.
+            bounds: if True are given the default bounds for the depolarizing and thermal relaxation channels' parameters.
             Otherwise it's possible to pass a matrix of size (2, 4 * nqubits + 4), where bounds[0] and bounds[1]
             will be respectively the lower and the upper bounds for the parameters. The first 2 * nqubit columns are related
-            to the :math:`T_1` and :math:`T_2` parameters; the subsequent 2 columns are related to the gate time parameters; the other subsequent 2 columns are related depolarizing error parameters; the last 2 * nqubit columns are related to bitflips errors.
+            to the :math:`T_1` and :math:`T_2` parameters; the subsequent 2 columns are related to the gate time parameters; the other subsequent 2 columns are related to depolarizing error parameters; the last 2 * nqubit columns are related to bitflips errors.
             f_min_rtol (float): the tolerance of the optimization. The optimization will finish when the fidelity reaches the value
             $1-f_min_rtol$, by default f_min_rtol is set to be the fidelity error caused by the finite number of shots and calculated by the :func:`qibo.noise_model.hellinger_shot_error`.
             backend: you can specify your backend. If None qibo.backends.GlobalBackend is used.
