@@ -504,9 +504,9 @@ def test_noisy_circuit(backend, nshots, idle_qubits):
                 [500e-6] * 6 + [300e-9] * 2 + [0.2] * 2 + [0.3] * 6,
             ],
         ]
-        for bounds in bounds:
+        for bound in bounds:
             noise_model = CompositeNoiseModel(params)
-            noise_model.fit(result, bounds=bounds, backend=backend)
+            noise_model.fit(result, bounds=bound, backend=backend)
             backend.assert_allclose(
                 noise_model.hellinger, 1, rtol=noise_model.hellinger0["shot_error"]
             )
