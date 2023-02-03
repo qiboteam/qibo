@@ -1,7 +1,5 @@
 [tool.pylint.master]
-
-exit-zero = true
-errors-only = true
+output-format = "colorized"
 
 [tool.pylint.reports]
 
