@@ -684,6 +684,13 @@ The quantum errors available to build a noise model are the following:
     :members:
     :member-order: bysource
 
+Realistic noise model
+^^^^^^^^^^^^^^^^^^^^^
+
+In Qibo, it is possible to build a realistic noise model of a real quantum computer by using the :meth:`qibo.noise.NoiseModel.composite()` method. The noise model is built using a combination of the :class:`qibo.gates.ThermalRelaxationChannel` and :class:`qibo.gates.DepolarizingChannel` channels. After each gate of the original circuit, the function applies a depolarizing and a thermal relaxation channel. At the end of the circuit, if the qubit is measured, bitflips errors are set. Moreover, the model handles idle qubits by applying a thermal relaxation channel for the duration of the idle-time.
+
+For more information on the :meth:`qibo.noise.NoiseModel.composite()` method, see the example on :ref:`Simulating quantum hardware <noise-hardware-example>`.
+
 _______________________
 
 .. _Hamiltonians:
