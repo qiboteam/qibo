@@ -52,3 +52,9 @@ def test_maxcut(backend, nqubits, dense, calcterms):
     if (not dense) and calcterms:
         _ = final_ham.terms
     backend.assert_allclose(final_ham.matrix, target_ham)
+
+
+@pytest.mark.parametrize("model", ["XXZ", "TFIM"])
+def test_missing_neighbour_qubit(backend, model):
+    with pytest.raises(ValueError):
+        H = getattr(hamiltonians, model)(nqubits=1, backend=backend)
