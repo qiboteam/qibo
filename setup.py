@@ -56,13 +56,11 @@ setup(
         "scipy",
         "sympy",
         "cma",
-        "nlopt",
         "joblib",
         "matplotlib",
         "psutil",
-        "pyyaml",
-        "importlib_metadata",
         "tabulate",
+        "nlopt",
     ],
     extras_require={
         "docs": [
