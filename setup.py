@@ -56,13 +56,11 @@ setup(
         "scipy",
         "sympy",
         "cma",
-        "nlopt",
         "joblib",
         "matplotlib",
         "psutil",
-        "pyyaml",
-        "importlib_metadata",
         "tabulate",
+        "nlopt",
     ],
     extras_require={
         "docs": [
@@ -74,7 +72,7 @@ setup(
             "nbsphinx",
             "IPython",
         ],
-        "tests": ["pytest", "cirq", "ply", "scikit-learn", "dill", "pre-commit"],
+        "tests": ["pytest", "cirq", "ply", "scikit-learn", "dill"],
     },
     python_requires=">=3.7.0",
     long_description=long_description,
