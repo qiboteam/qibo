@@ -101,7 +101,6 @@ class KrausChannel(Channel):
         self.coefficients = len(self.gates) * (1,)
         self.coefficient_sum = 1
 
-
     def to_choi(self, order: str = "row", backend=None):
         """Returns the Choi representation of the Kraus operator.
 
@@ -125,7 +124,7 @@ class KrausChannel(Channel):
             from qibo.backends import GlobalBackend
 
             backend = GlobalBackend()
-        
+
         self.nqubits = 1 + max(self.target_qubits)
 
         if self.name != "KrausChannel":
@@ -147,7 +146,6 @@ class KrausChannel(Channel):
         super_op = backend.cast(super_op, dtype=super_op.dtype)
 
         return super_op
-
 
     def to_superop(self, order: str = "column", backend=None):
         """Returns the Liouville representation of the Kraus channel.
@@ -173,7 +171,7 @@ class KrausChannel(Channel):
 
         super_op = self.to_choi(order=order, backend=backend)
 
-        d = 2 ** self.nqubits
+        d = 2**self.nqubits
 
         super_op = np.reshape(super_op, [d] * 4)
         super_op = np.swapaxes(super_op, 0, 3)
