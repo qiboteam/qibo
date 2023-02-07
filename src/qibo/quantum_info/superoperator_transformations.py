@@ -158,6 +158,18 @@ def choi_to_kraus(choi_super_op, precision_tol: float = None):
             respective coefficients.
     """
 
+    if precision_tol is not None and not isinstance(precision_tol, float):
+        raise_error(
+            TypeError,
+            f"precision_tol must be type float, but it is type {type(precision_tol)}"
+        )
+    
+    if precision_tol is not None and precision_tol < 0:
+        raise_error(
+            ValueError,
+            f"precision_tol must be a non-negative float, but it is {precision_tol}."
+        )
+
     if precision_tol is None:  # pragma: no cover
         from qibo.config import PRECISION_TOL
 
@@ -273,7 +285,7 @@ def _reshuffling(super_op):
     return super_op
 
 
-def _set_gate_and_target_qubits(kraus_ops):
+def _set_gate_and_target_qubits(kraus_ops):  # pragma: no cover
     """Returns Kraus operators as a set of gates acting on
     their respective ``target qubits``.
 
