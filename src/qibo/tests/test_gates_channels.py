@@ -24,7 +24,7 @@ def test_general_channel(backend):
     backend.assert_allclose(final_rho, target_rho)
 
 
-def test_krauss_channel_errors(backend):
+def test_kraus_channel_errors(backend):
     a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
     a2 = np.sqrt(0.6) * np.array([[1, 0], [0, -1]])
     with pytest.raises(ValueError):
@@ -38,15 +38,22 @@ def test_krauss_channel_errors(backend):
             [0.4 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.6 + 0.0j],
         ]
     )
-    test_superop = backend.cast(test_superop, dtype=test_superop.dtype)
-
+    test_choi = np.reshape(test_superop, [2] * 4).swapaxes(0, 3).reshape([4, 4])
     test_pauli = np.diag([2.0, -0.4, -2.0, 0.4])
+
+    test_superop = backend.cast(test_superop, dtype=test_superop.dtype)
+    test_choi = backend.cast(test_choi, dtype=test_choi.dtype)
     test_pauli = backend.cast(test_pauli, dtype=test_pauli.dtype)
 
     channel = gates.KrausChannel([((0,), a1), ((0,), a2)])
 
     backend.assert_allclose(
         backend.calculate_norm(channel.to_superop(backend=backend) - test_superop)
+        < PRECISION_TOL,
+        True,
+    )
+    backend.assert_allclose(
+        backend.calculate_norm(channel.to_choi(backend=backend) - test_choi)
         < PRECISION_TOL,
         True,
     )
