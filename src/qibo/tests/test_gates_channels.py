@@ -2,13 +2,13 @@
 import numpy as np
 import pytest
 
-from qibo import gates
+from qibo import gates, matrices
 from qibo.config import PRECISION_TOL
 from qibo.tests.utils import random_density_matrix
 
 
 def test_general_channel(backend):
-    a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
+    a1 = np.sqrt(0.4) * matrices.X
     a2 = np.sqrt(0.6) * np.array(
         [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]]
     )
@@ -25,8 +25,8 @@ def test_general_channel(backend):
 
 
 def test_kraus_channel_errors(backend):
-    a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
-    a2 = np.sqrt(0.6) * np.array([[1, 0], [0, -1]])
+    a1 = np.sqrt(0.4) * matrices.X
+    a2 = np.sqrt(0.6) * matrices.Z
     with pytest.raises(ValueError):
         gate = gates.KrausChannel([((0, 1), a1)])
 
@@ -73,7 +73,7 @@ def test_controlled_by_channel_error():
     with pytest.raises(ValueError):
         gates.PauliNoiseChannel(0, px=0.5).controlled_by(1)
 
-    a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
+    a1 = np.sqrt(0.4) * matrices.X
     a2 = np.sqrt(0.6) * np.array(
         [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]]
     )
@@ -83,7 +83,7 @@ def test_controlled_by_channel_error():
 
 
 def test_unitary_channel(backend):
-    a1 = np.array([[0, 1], [1, 0]])
+    a1 = matrices.X
     a2 = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
     probs = [0.4, 0.3]
     matrices = [((0,), a1), ((2, 3), a2)]
@@ -120,7 +120,7 @@ def test_unitary_channel_probability_tolerance(backend):
 
 def test_unitary_channel_errors():
     """Check errors raised by ``gates.UnitaryChannel``."""
-    a1 = np.array([[0, 1], [1, 0]])
+    a1 = matrices.X
     a2 = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
     probs = [0.4, 0.3]
     matrices = [((0,), a1), ((2, 3), a2)]
