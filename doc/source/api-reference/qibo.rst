@@ -1018,18 +1018,6 @@ Basis
 Set of functions related to basis and basis transformations.
 
 
-Vectorization
-"""""""""""""
-
-.. autofunction:: qibo.quantum_info.vectorization
-
-
-Unvectorization
-"""""""""""""""
-
-.. autofunction:: qibo.quantum_info.unvectorization
-
-
 Pauli basis
 """""""""""
 
@@ -1166,6 +1154,59 @@ Random stochastic matrix
 """"""""""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.random_stochastic_matrix
+
+
+Superoperator Transformations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Functions used to convert superoperators among their possible representations.
+
+Vectorization
+"""""""""""""
+
+.. autofunction:: qibo.quantum_info.vectorization
+
+
+Unvectorization
+"""""""""""""""
+
+.. autofunction:: qibo.quantum_info.unvectorization
+
+
+Liouville to Choi
+"""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.liouville_to_choi
+
+
+Choi to Liouville
+"""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.choi_to_liouville
+
+
+Choi to Kraus
+"""""""""""""
+
+.. autofunction:: qibo.quantum_info.choi_to_kraus
+
+
+Kraus to Choi
+"""""""""""""
+
+.. autofunction:: qibo.quantum_info.kraus_to_choi
+
+
+Kraus to Liouville
+""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.kraus_to_liouville
+
+
+Liouville to Kraus
+""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.liouville_to_kraus
 
 
 Utility Functions
