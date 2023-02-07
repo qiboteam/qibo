@@ -139,6 +139,7 @@ def test_unvectorization(nqubits, order):
 
     assert np.linalg.norm(matrix_test - matrix) < PRECISION_TOL
 
+
 test_a0 = np.sqrt(0.4) * matrices.X
 test_a1 = np.sqrt(0.6) * matrices.Z
 test_kraus = [((0,), test_a0), ((0,), test_a1)]
@@ -167,7 +168,7 @@ def test_choi_to_liouville():
 
 def test_choi_to_kraus():
     with pytest.raises(TypeError):
-        choi_to_kraus(test_choi, '1e-8')
+        choi_to_kraus(test_choi, "1e-8")
     with pytest.raises(ValueError):
         choi_to_kraus(test_choi, -1.0 * 1e-8)
 
