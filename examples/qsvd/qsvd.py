@@ -158,7 +158,6 @@ class QSVD:
 
         Schmidt = []
         for i in range(2**small):
-
             bit_string = bin(i)[2:].zfill(small)
             Schmidt.append(result[2 * bit_string])
 

@@ -331,7 +331,6 @@ def test_kraus_error(backend, density_matrix, nshots):
 @pytest.mark.parametrize("idle_qubits", [True, False])
 def test_noisy_circuit(backend, nshots, idle_qubits):
     if nshots != 20000:
-
         circuit = Circuit(3, density_matrix=True)
         circuit.add(
             [
@@ -420,7 +419,6 @@ def test_noisy_circuit(backend, nshots, idle_qubits):
         backend.assert_allclose(final_samples, target_samples)
 
     else:
-
         circuit = Circuit(3, density_matrix=True)
 
         circuit.add(

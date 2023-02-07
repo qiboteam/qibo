@@ -27,7 +27,6 @@ def circuit(nqubits=1):
     [(1, [8.51104358e-02, 5.20075970e-01, 0]), (0.5, [0.02405061, 0.13560379, 0])],
 )
 def test_derivative(backend, scale_factor, grads):
-
     # initializing the circuit
     c = circuit(nqubits=1)
 
