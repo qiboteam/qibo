@@ -161,13 +161,13 @@ def choi_to_kraus(choi_super_op, precision_tol: float = None):
     if precision_tol is not None and not isinstance(precision_tol, float):
         raise_error(
             TypeError,
-            f"precision_tol must be type float, but it is type {type(precision_tol)}"
+            f"precision_tol must be type float, but it is type {type(precision_tol)}",
         )
-    
+
     if precision_tol is not None and precision_tol < 0:
         raise_error(
             ValueError,
-            f"precision_tol must be a non-negative float, but it is {precision_tol}."
+            f"precision_tol must be a non-negative float, but it is {precision_tol}.",
         )
 
     if precision_tol is None:  # pragma: no cover
