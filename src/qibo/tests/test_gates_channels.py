@@ -86,9 +86,9 @@ def test_unitary_channel(backend):
     a1 = matrices.X
     a2 = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
     probs = [0.4, 0.3]
-    matrices = [((0,), a1), ((2, 3), a2)]
+    matrices_ = [((0,), a1), ((2, 3), a2)]
     initial_state = random_density_matrix(4)
-    channel = gates.UnitaryChannel(probs, matrices)
+    channel = gates.UnitaryChannel(probs, matrices_)
     final_state = backend.apply_channel_density_matrix(
         channel, np.copy(initial_state), 4
     )
@@ -114,8 +114,8 @@ def test_unitary_channel_probability_tolerance(backend):
     prob_pauli = param / num_terms
     probs = [prob_identity] + [prob_pauli] * (num_terms - 1)
     probs = np.array(probs, dtype="float64")
-    matrices = len(probs) * [((0, 1), np.random.random((4, 4)))]
-    gate = gates.UnitaryChannel(probs, matrices)
+    matrices_ = len(probs) * [((0, 1), np.random.random((4, 4)))]
+    gate = gates.UnitaryChannel(probs, matrices_)
 
 
 def test_unitary_channel_errors():
@@ -123,16 +123,16 @@ def test_unitary_channel_errors():
     a1 = matrices.X
     a2 = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
     probs = [0.4, 0.3]
-    matrices = [((0,), a1), ((2, 3), a2)]
+    matrices_ = [((0,), a1), ((2, 3), a2)]
     # Invalid probability length
     with pytest.raises(ValueError):
-        gate = gates.UnitaryChannel([0.1, 0.3, 0.2], matrices)
+        gate = gates.UnitaryChannel([0.1, 0.3, 0.2], matrices_)
     # Probability > 1
     with pytest.raises(ValueError):
-        gate = gates.UnitaryChannel([1.1, 0.2], matrices)
+        gate = gates.UnitaryChannel([1.1, 0.2], matrices_)
     # Probability sum < 0
     with pytest.raises(ValueError):
-        gate = gates.UnitaryChannel([0.0, 0.0], matrices)
+        gate = gates.UnitaryChannel([0.0, 0.0], matrices_)
 
 
 def test_pauli_noise_channel(backend):
