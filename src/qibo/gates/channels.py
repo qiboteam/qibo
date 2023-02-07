@@ -192,7 +192,23 @@ class KrausChannel(Channel):
 
             backend = GlobalBackend()
 
-        super_op = self.to_superop(backend=backend)
+        self.nqubits = 1 + max(self.target_qubits)
+
+        if self.name != "KrausChannel":
+            p0 = 1
+            for coeff in self.coefficients:
+                p0 = p0 - coeff
+            self.coefficients += (p0,)
+            self.gates += (I(*self.target_qubits),)
+
+        super_op = np.zeros((4**self.nqubits, 4**self.nqubits), dtype="complex")
+        super_op = backend.cast(super_op, dtype=super_op.dtype)
+        for coeff, gate in zip(self.coefficients, self.gates):
+            kraus_op = FusedGate(*range(self.nqubits))
+            kraus_op.append(gate)
+            kraus_op = kraus_op.asmatrix(backend)
+            kraus_op = coeff * np.kron(np.conj(kraus_op), kraus_op)
+            super_op += backend.cast(kraus_op, dtype=kraus_op.dtype)
 
         # unitary that transforms from comp basis to pauli basis
         U = backend.cast(comp_basis_to_pauli(self.nqubits, normalize))
