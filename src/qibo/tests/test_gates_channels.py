@@ -103,6 +103,7 @@ def test_unitary_channel(backend):
     )
     backend.assert_allclose(final_state, target_state)
 
+    channel.to_choi(backend=backend)
 
 def test_unitary_channel_probability_tolerance(backend):
     """Create ``UnitaryChannel`` with probability sum within tolerance (see #562)."""
