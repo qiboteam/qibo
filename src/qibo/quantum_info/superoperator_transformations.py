@@ -5,6 +5,7 @@ from qibo.gates.abstract import Gate
 from qibo.gates.gates import Unitary
 from qibo.gates.special import FusedGate
 
+
 def vectorization(state, order: str = "row"):
     """Returns state :math:`\\rho` in its Liouville
     representation :math:`\\ket{\\rho}`.
@@ -140,15 +141,16 @@ def choi_to_liouville(choi_super_op):
 
     return _reshuffling(choi_super_op)
 
+
 def choi_to_kraus(choi_super_op, precision_tol: float = None):
     """Convert Choi representation of a quantum channel into Kraus operators.
 
     Args:
         choi_super_op: Choi representation of a quantum channel.
-        precision_tol (float, optional): Precision tolerance for eigenvalues 
-            found in the spectral decomposition problem. Any eigenvalue 
+        precision_tol (float, optional): Precision tolerance for eigenvalues
+            found in the spectral decomposition problem. Any eigenvalue
             :math:`\\lambda < \\text{precision_tol}` is set to 0 (zero).
-            If ``None``, ``precision_tol`` defaults to 
+            If ``None``, ``precision_tol`` defaults to
             ``qibo.config.PRECISION_TOL=1e-8``. Defaults to ``None``.
 
     Returns:
@@ -156,16 +158,15 @@ def choi_to_kraus(choi_super_op, precision_tol: float = None):
         ndarray: coefficients of Kraus operators.
     """
 
-    if precision_tol is None: # pragma: no cover
+    if precision_tol is None:  # pragma: no cover
         from qibo.config import PRECISION_TOL
 
         precision_tol = PRECISION_TOL
 
-    # using eigh because Choi representation is, 
+    # using eigh because Choi representation is,
     # in theory,    always Hermitian
     eigenvalues, eigenvectors = np.linalg.eigh(choi_super_op)
     eigenvectors = np.transpose(eigenvectors)
-
 
     kraus_ops, coefficients = list(), list()
     for eig, kraus in zip(eigenvalues, eigenvectors):
@@ -185,7 +186,7 @@ def kraus_to_choi(kraus_ops):
 
     Args:
         ops (list): List of Kraus operators as pairs ``(qubits, Ak)`` where
-            ``qubits`` refers the qubit ids that :math:`A_k` acts on and 
+            ``qubits`` refers the qubit ids that :math:`A_k` acts on and
             :math:`A_k` is the corresponding matrix as a ``np.ndarray``.
 
     Returns:
@@ -198,7 +199,7 @@ def kraus_to_choi(kraus_ops):
 
     gates, target_qubits = _set_gate_and_target_qubits(kraus_ops)
     nqubits = 1 + max(target_qubits)
-    d = 2 ** nqubits
+    d = 2**nqubits
 
     super_op = np.zeros((d**2, d**2), dtype="complex")
     for gate in gates:
@@ -213,7 +214,6 @@ def kraus_to_choi(kraus_ops):
 
 
 def kraus_to_liouville(kraus_ops, coefficients=None):
-
     super_op = kraus_to_choi(kraus_ops, coefficients)
     super_op = choi_to_liouville(super_op)
 
@@ -221,7 +221,6 @@ def kraus_to_liouville(kraus_ops, coefficients=None):
 
 
 def liouville_to_kraus(super_op, precision_tol: float = None):
-
     choi_super_op = liouville_to_choi(super_op)
     kraus_ops, coefficients = choi_to_kraus(choi_super_op, precision_tol)
 
@@ -229,7 +228,6 @@ def liouville_to_kraus(super_op, precision_tol: float = None):
 
 
 def _reshuffling(super_operator):
-
     d = int(np.sqrt(super_operator.shape[0]))
 
     super_operator = np.reshape(super_operator, [d] * 4)
@@ -240,7 +238,6 @@ def _reshuffling(super_operator):
 
 
 def _set_gate_and_target_qubits(kraus_ops):
-
     if isinstance(kraus_ops[0], Gate):
         gates = tuple(kraus_ops)
         target_qubits = tuple(
