@@ -114,7 +114,6 @@ def main(n_layers, train_size, filename, plot, save_loss):
 
     # Make graphs for performance analysis
     if plot:
-
         """Loss distribution graph"""
         plt.hist(loss_a, bins=60, histtype="step", color="red", label="Anomalous data")
         plt.hist(loss_s, bins=60, histtype="step", color="blue", label="Standard data")

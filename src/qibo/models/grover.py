@@ -67,7 +67,6 @@ class Grover:
         check_args=(),
         iterative=False,
     ):
-
         self.oracle = oracle
         self.initial_state_circuit = initial_state_circuit
 
