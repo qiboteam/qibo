@@ -154,7 +154,7 @@ def choi_to_kraus(choi_super_op, precision_tol: float = None):
             ``qibo.config.PRECISION_TOL=1e-8``. Defaults to ``None``.
 
     Returns:
-        (ndarray, ndarray): Kraus operators of quantum channel and their 
+        (ndarray, ndarray): Kraus operators of quantum channel and their
             respective coefficients.
     """
 
@@ -185,7 +185,7 @@ def kraus_to_choi(kraus_ops):
     to its Choi representation.
 
     Args:
-        kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)`` 
+        kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
             where ``qubits`` refers the qubit ids that :math:`A_k`  acts on
             and :math:`A_k` is the corresponding matrix as a ``np.ndarray``.
 
@@ -217,7 +217,7 @@ def kraus_to_liouville(kraus_ops):
     """Convert from Kraus representation to Liouville representation.
 
     Args:
-        kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)`` 
+        kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
             where ``qubits`` refers the qubit ids that :math:`A_k` acts on
             and :math:`A_k` is the corresponding matrix as a ``np.ndarray``.
 
@@ -244,7 +244,7 @@ def liouville_to_kraus(super_op, precision_tol: float = None):
             ``qibo.config.PRECISION_TOL=1e-8``. Defaults to None.
 
     Returns:
-        (ndarray, ndarray): Kraus operators of quantum channel and their 
+        (ndarray, ndarray): Kraus operators of quantum channel and their
             respective coefficients.
     """
     choi_super_op = liouville_to_choi(super_op)
@@ -258,7 +258,7 @@ def _reshuffling(super_op):
     of quantum channels to their Choi representation (and vice-versa).
 
     Args:
-        super_op (ndarray): Liouville (Choi) representation of a 
+        super_op (ndarray): Liouville (Choi) representation of a
             quantum channel.
 
     Returns:
@@ -278,7 +278,7 @@ def _set_gate_and_target_qubits(kraus_ops):
     their respective ``target qubits``.
 
     Args:
-        kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)`` 
+        kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
             where ``qubits`` refers the qubit ids that :math:`A_k` acts on
             and :math:`A_k` is the corresponding matrix as a ``np.ndarray``.
 
