@@ -18,7 +18,7 @@ def vectorization(state, order: str = "row"):
             performed. Default is ``"row"``.
 
     Returns:
-        Liouville representation of ``state``.
+        ndarray: Liouville representation of ``state``.
     """
 
     if (
@@ -75,7 +75,7 @@ def unvectorization(state, order: str = "row"):
             performed. Default is ``"row"``.
 
     Returns:
-        Density matrix of ``state``.
+        ndarray: Density matrix of ``state``.
     """
 
     if len(state.shape) != 1:
@@ -154,8 +154,8 @@ def choi_to_kraus(choi_super_op, precision_tol: float = None):
             ``qibo.config.PRECISION_TOL=1e-8``. Defaults to ``None``.
 
     Returns:
-        ndarray: Kraus operators of quantum channel.
-        ndarray: coefficients of Kraus operators.
+        (ndarray, ndarray): Kraus operators of quantum channel and their 
+            respective coefficients.
     """
 
     if precision_tol is None:  # pragma: no cover
@@ -164,7 +164,7 @@ def choi_to_kraus(choi_super_op, precision_tol: float = None):
         precision_tol = PRECISION_TOL
 
     # using eigh because Choi representation is,
-    # in theory,    always Hermitian
+    # in theory, always Hermitian
     eigenvalues, eigenvectors = np.linalg.eigh(choi_super_op)
     eigenvectors = np.transpose(eigenvectors)
 
@@ -185,9 +185,9 @@ def kraus_to_choi(kraus_ops):
     to its Choi representation.
 
     Args:
-        ops (list): List of Kraus operators as pairs ``(qubits, Ak)`` where
-            ``qubits`` refers the qubit ids that :math:`A_k` acts on and
-            :math:`A_k` is the corresponding matrix as a ``np.ndarray``.
+        kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)`` 
+            where ``qubits`` refers the qubit ids that :math:`A_k`  acts on
+            and :math:`A_k` is the corresponding matrix as a ``np.ndarray``.
 
     Returns:
         ndarray: Choi representation of the Kraus channel.
@@ -213,31 +213,78 @@ def kraus_to_choi(kraus_ops):
     return super_op
 
 
-def kraus_to_liouville(kraus_ops, coefficients=None):
-    super_op = kraus_to_choi(kraus_ops, coefficients)
+def kraus_to_liouville(kraus_ops):
+    """Convert from Kraus representation to Liouville representation.
+
+    Args:
+        kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)`` 
+            where ``qubits`` refers the qubit ids that :math:`A_k` acts on
+            and :math:`A_k` is the corresponding matrix as a ``np.ndarray``.
+
+    Returns:
+        ndarray: Liouville representation of quantum channel.
+    """
+    super_op = kraus_to_choi(kraus_ops)
     super_op = choi_to_liouville(super_op)
 
     return super_op
 
 
 def liouville_to_kraus(super_op, precision_tol: float = None):
+    """Convert Liouville representation of a quantum channel to
+    its Kraus representation. It uses the Choi representation as
+    an intermediate step.
+
+    Args:
+        super_op (ndarray): Liouville representation of quantum channel.
+        precision_tol (float, optional): Precision tolerance for eigenvalues
+            found in the spectral decomposition problem. Any eigenvalue
+            :math:`\\lambda < \\text{precision_tol}` is set to 0 (zero).
+            If ``None``, ``precision_tol`` defaults to
+            ``qibo.config.PRECISION_TOL=1e-8``. Defaults to None.
+
+    Returns:
+        (ndarray, ndarray): Kraus operators of quantum channel and their 
+            respective coefficients.
+    """
     choi_super_op = liouville_to_choi(super_op)
     kraus_ops, coefficients = choi_to_kraus(choi_super_op, precision_tol)
 
     return kraus_ops, coefficients
 
 
-def _reshuffling(super_operator):
-    d = int(np.sqrt(super_operator.shape[0]))
+def _reshuffling(super_op):
+    """Reshuffling operation used to convert Lioville representation
+    of quantum channels to their Choi representation (and vice-versa).
 
-    super_operator = np.reshape(super_operator, [d] * 4)
-    super_operator = np.swapaxes(super_operator, 0, 3)
-    super_operator = np.reshape(super_operator, [d**2, d**2])
+    Args:
+        super_op (ndarray): Liouville (Choi) representation of a 
+            quantum channel.
 
-    return super_operator
+    Returns:
+        ndarray: Choi (Liouville) representation of the quantum channel.
+    """
+    d = int(np.sqrt(super_op.shape[0]))
+
+    super_op = np.reshape(super_op, [d] * 4)
+    super_op = np.swapaxes(super_op, 0, 3)
+    super_op = np.reshape(super_op, [d**2, d**2])
+
+    return super_op
 
 
 def _set_gate_and_target_qubits(kraus_ops):
+    """Returns Kraus operators as a set of gates acting on
+    their respective ``target qubits``.
+
+    Args:
+        kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)`` 
+            where ``qubits`` refers the qubit ids that :math:`A_k` acts on
+            and :math:`A_k` is the corresponding matrix as a ``np.ndarray``.
+
+    Returns:
+        (tuple, tuple): gates and their respective target qubits.
+    """
     if isinstance(kraus_ops[0], Gate):
         gates = tuple(kraus_ops)
         target_qubits = tuple(
