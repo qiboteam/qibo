@@ -78,10 +78,10 @@ class QuantumCNN:
     def ansatz(self, nlayers, params=None):
         """
         Args:
-            theta: list or numpy.array with the angles to be used in the circuit
-            nlayers: int number of layers of the varitional circuit ansatz
+            theta: list or numpy.array with the angles to be used in the circuit.
+            nlayers: int number of layers of the varitional circuit ansatz.
         Returns:
-            Circuit implementing the QCNN variational ansatz
+            Circuit implementing the QCNN variational ansatz.
         """
 
         nparams_conv = self.nparams_conv
@@ -178,12 +178,12 @@ class QuantumCNN:
     def Classifier_circuit(self, theta):
         """
         Args:
-            theta: list or numpy.array with the biases and the angles to be used in the circuit
-            nlayers: int number of layers of the varitional circuit ansatz
-            RY: if True, parameterized Rx,Rz,Rx gates are used in the circuit
-                if False, parameterized Ry gates are used in the circuit (default=False)
+            theta: list or numpy.array with the biases and the angles to be used in the circuit.
+            nlayers: int number of layers of the varitional circuit ansatz.
+            RY: if True, parameterized Rx,Rz,Rx gates are used in the circuit.
+                if False, parameterized Ry gates are used in the circuit (default=False).
         Returns:
-            Circuit implementing the variational ansatz for angles "theta"
+            Circuit implementing the variational ansatz for angles "theta".
         """
         bias = np.array(theta[0 : self.measured_qubits])
         angles = theta[self.measured_qubits :]
@@ -194,11 +194,11 @@ class QuantumCNN:
     def Predictions(self, circuit, theta, init_state, nshots=10000):
         """
         Args:
-            theta: list or numpy.array with the biases to be used in the circuit
-            init_state: numpy.array with the quantum state to be classified
-            nshots: int number of runs of the circuit during the sampling process (default=10000)
+            theta: list or numpy.array with the biases to be used in the circuit.
+            init_state: numpy.array with the quantum state to be classified.
+            nshots: int number of runs of the circuit during the sampling process (default=10000).
         Returns:
-            numpy.array() with predictions for each qubit, for the initial state
+            numpy.array() with predictions for each qubit, for the initial state.
         """
         bias = np.array(theta[0 : self.measured_qubits])
         circuit_exec = circuit(init_state, nshots)
@@ -215,10 +215,10 @@ class QuantumCNN:
     def square_loss(self, labels, predictions):
         """
         Args:
-            labels: list or numpy.array with the qubit labels of the quantum states to be classified
-            predictions: list or numpy.array with the qubit predictions for the quantum states to be classified
+            labels: list or numpy.array with the qubit labels of the quantum states to be classified.
+            predictions: list or numpy.array with the qubit predictions for the quantum states to be classified.
         Returns:
-            numpy.float32 with the value of the square-loss function
+            numpy.float32 with the value of the square-loss function.
         """
         loss = 0
         for l, p in zip(labels, predictions):
@@ -230,13 +230,13 @@ class QuantumCNN:
     def Cost_function(self, theta, data=None, labels=None, nshots=10000):
         """
         Args:
-            theta: list or numpy.array with the biases and the angles to be used in the circuit
-            nlayers: int number of layers of the varitional circuit ansatz
-            data: numpy.array data[page][word]  (this is an array of kets)
-            labels: list or numpy.array with the labels of the quantum states to be classified
-            nshots: int number of runs of the circuit during the sampling process (default=10000)
+            theta: list or numpy.array with the biases and the angles to be used in the circuit.
+            nlayers: int number of layers of the varitional circuit ansatz.
+            data: numpy.array data[page][word]  (this is an array of kets).
+            labels: list or numpy.array with the labels of the quantum states to be classified.
+            nshots: int number of runs of the circuit during the sampling process (default=10000).
         Returns:
-            numpy.float32 with the value of the square-loss function
+            numpy.float32 with the value of the square-loss function.
         """
         circ = self.Classifier_circuit(theta)
 
@@ -255,15 +255,15 @@ class QuantumCNN:
     ):
         """
         Args:
-            theta: list or numpy.array with the angles to be used in the circuit
-            nlayers: int number of layers of the varitional ansatz
-            init_state: numpy.array with the quantum state to be Schmidt-decomposed
-            nshots: int number of runs of the circuit during the sampling process (default=10000)
-            RY: if True, parameterized Rx,Rz,Rx gates are used in the circuit
-                if False, parameterized Ry gates are used in the circuit (default=True)
-            method: str 'classical optimizer for the minimization'. All methods from scipy.optimize.minmize are suported (default='Powell')
+            theta: list or numpy.array with the angles to be used in the circuit.
+            nlayers: int number of layers of the varitional ansatz.
+            init_state: numpy.array with the quantum state to be Schmidt-decomposed.
+            nshots: int number of runs of the circuit during the sampling process (default=10000).
+            RY: if True, parameterized Rx,Rz,Rx gates are used in the circuit.
+                if False, parameterized Ry gates are used in the circuit (default=True).
+            method: str 'classical optimizer for the minimization'. All methods from scipy.optimize.minmize are suported (default='Powell').
         Returns:
-            numpy.float64 with value of the minimum found, numpy.ndarray with the optimal angles
+            numpy.float64 with value of the minimum found, numpy.ndarray with the optimal angles.
         """
         from scipy.optimize import minimize
 
@@ -281,12 +281,12 @@ class QuantumCNN:
     def Accuracy(self, labels, predictions, sign=True, tolerance=1e-2):
         """
         Args:
-            labels: numpy.array with the labels of the quantum states to be classified
-            predictions: numpy.array with the predictions for the quantum states classified
-            sign: if True, labels = np.sign(labels) and predictions = np.sign(predictions) (default=True)
-            tolerance: float tolerance level to consider a prediction correct (default=1e-2)
+            labels: numpy.array with the labels of the quantum states to be classified.
+            predictions: numpy.array with the predictions for the quantum states classified.
+            sign: if True, labels = np.sign(labels) and predictions = np.sign(predictions) (default=True).
+            tolerance: float tolerance level to consider a prediction correct (default=1e-2).
         Returns:
-            float with the proportion of states classified successfully
+            float with the proportion of states classified successfully.
         """
         if sign == True:
             labels = [np.sign(label) for label in labels]
