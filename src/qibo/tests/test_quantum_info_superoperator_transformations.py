@@ -219,15 +219,23 @@ def test_liouville_to_kraus():
     assert np.linalg.norm(evolution_a1 - test_evolution_a1) < PRECISION_TOL, True
 
 
-def test_reshuffling():
+@pytest.mark.parametrize("order", ["row", "column"])
+def test_reshuffling(order):
     from qibo.quantum_info.superoperator_transformations import _reshuffling
 
-    reshuffled = _reshuffling(test_superop)
-    reshuffled = _reshuffling(reshuffled)
+    with pytest.raises(TypeError):
+        _reshuffling(test_superop, True)
+    with pytest.raises(ValueError):
+        _reshuffling(test_superop, "sustem")
+    with pytest.raises(NotImplementedError):
+        _reshuffling(test_superop, "system")
+
+    reshuffled = _reshuffling(test_superop, order)
+    reshuffled = _reshuffling(reshuffled, order)
 
     assert np.linalg.norm(reshuffled - test_superop) < PRECISION_TOL, True
 
-    reshuffled = _reshuffling(test_choi)
-    reshuffled = _reshuffling(reshuffled)
+    reshuffled = _reshuffling(test_choi, order)
+    reshuffled = _reshuffling(reshuffled, order)
 
     assert np.linalg.norm(reshuffled - test_choi) < PRECISION_TOL, True

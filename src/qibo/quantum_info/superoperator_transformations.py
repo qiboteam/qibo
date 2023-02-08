@@ -114,35 +114,48 @@ def unvectorization(state, order: str = "row"):
     return state
 
 
-def liouville_to_choi(super_op):
+def liouville_to_choi(super_op, order: str = "row"):
     """Convert Liouville representation of quantum channel
     to its Choi representation.
 
     Args:
         super_op: Liouville representation of quanutm channel.
-
+        order (str, optional): If ``"row"``, reshuffling is performed
+            with respect to row-wise vectorization. If ``"column"``,
+            reshuffling is performed with respect to column-wise
+            vectorization. If ``"system"``, operator is converted to
+            a representation based on row vectorization, reshuffled,
+            and then converted back to its representation with
+            respect to system-wise vectorization. Default is ``"row"``.
     Returns:
         ndarray: Choi representation of quantum channel.
     """
 
-    return _reshuffling(super_op)
+    return _reshuffling(super_op, order=order)
 
 
-def choi_to_liouville(choi_super_op):
+def choi_to_liouville(choi_super_op, order: str = "row"):
     """Convert Choi representation of quantum channel
     to its Liouville representation.
 
     Args:
         choi_super_op: Choi representation of quanutm channel.
+        order (str, optional): If ``"row"``, reshuffling is performed
+            with respect to row-wise vectorization. If ``"column"``,
+            reshuffling is performed with respect to column-wise
+            vectorization. If ``"system"``, operator is converted to
+            a representation based on row vectorization, reshuffled,
+            and then converted back to its representation with
+            respect to system-wise vectorization. Default is ``"row"``.
 
     Returns:
         ndarray: Liouville representation of quantum channel.
     """
 
-    return _reshuffling(choi_super_op)
+    return _reshuffling(choi_super_op, order=order)
 
 
-def choi_to_kraus(choi_super_op, precision_tol: float = None):
+def choi_to_kraus(choi_super_op, precision_tol: float = None, order: str = "row"):
     """Convert Choi representation of a quantum channel into Kraus operators.
 
     Args:
@@ -152,6 +165,13 @@ def choi_to_kraus(choi_super_op, precision_tol: float = None):
             :math:`\\lambda < \\text{precision_tol}` is set to 0 (zero).
             If ``None``, ``precision_tol`` defaults to
             ``qibo.config.PRECISION_TOL=1e-8``. Defaults to ``None``.
+        order (str, optional): If ``"row"``, reshuffling is performed
+            with respect to row-wise vectorization. If ``"column"``,
+            reshuffling is performed with respect to column-wise
+            vectorization. If ``"system"``, operator is converted to
+            a representation based on row vectorization, reshuffled,
+            and then converted back to its representation with
+            respect to system-wise vectorization. Default is ``"row"``.
 
     Returns:
         (ndarray, ndarray): Kraus operators of quantum channel and their
@@ -183,7 +203,7 @@ def choi_to_kraus(choi_super_op, precision_tol: float = None):
     kraus_ops, coefficients = list(), list()
     for eig, kraus in zip(eigenvalues, eigenvectors):
         if np.abs(eig) > precision_tol:
-            kraus_ops.append(unvectorization(kraus))
+            kraus_ops.append(unvectorization(kraus, order=order))
             coefficients.append(np.sqrt(eig))
 
     kraus_ops = np.array(kraus_ops)
@@ -192,7 +212,7 @@ def choi_to_kraus(choi_super_op, precision_tol: float = None):
     return kraus_ops, coefficients
 
 
-def kraus_to_choi(kraus_ops):
+def kraus_to_choi(kraus_ops, order: str = "row"):
     """Convert Kraus representation of quantum channel
     to its Choi representation.
 
@@ -200,6 +220,13 @@ def kraus_to_choi(kraus_ops):
         kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
             where ``qubits`` refers the qubit ids that :math:`A_k`  acts on
             and :math:`A_k` is the corresponding matrix as a ``np.ndarray``.
+        order (str, optional): If ``"row"``, reshuffling is performed
+            with respect to row-wise vectorization. If ``"column"``,
+            reshuffling is performed with respect to column-wise
+            vectorization. If ``"system"``, operator is converted to
+            a representation based on row vectorization, reshuffled,
+            and then converted back to its representation with
+            respect to system-wise vectorization. Default is ``"row"``.
 
     Returns:
         ndarray: Choi representation of the Kraus channel.
@@ -218,31 +245,38 @@ def kraus_to_choi(kraus_ops):
         kraus_op = FusedGate(*range(nqubits))
         kraus_op.append(gate)
         kraus_op = kraus_op.asmatrix(backend)
-        kraus_op = vectorization(kraus_op)
+        kraus_op = vectorization(kraus_op, order=order)
         super_op += np.outer(kraus_op, np.conj(kraus_op))
         del kraus_op
 
     return super_op
 
 
-def kraus_to_liouville(kraus_ops):
+def kraus_to_liouville(kraus_ops, order: str = "row"):
     """Convert from Kraus representation to Liouville representation.
 
     Args:
         kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
             where ``qubits`` refers the qubit ids that :math:`A_k` acts on
             and :math:`A_k` is the corresponding matrix as a ``np.ndarray``.
+        order (str, optional): If ``"row"``, reshuffling is performed
+            with respect to row-wise vectorization. If ``"column"``,
+            reshuffling is performed with respect to column-wise
+            vectorization. If ``"system"``, operator is converted to
+            a representation based on row vectorization, reshuffled,
+            and then converted back to its representation with
+            respect to system-wise vectorization. Default is ``"row"``.
 
     Returns:
         ndarray: Liouville representation of quantum channel.
     """
-    super_op = kraus_to_choi(kraus_ops)
-    super_op = choi_to_liouville(super_op)
+    super_op = kraus_to_choi(kraus_ops, order=order)
+    super_op = choi_to_liouville(super_op, order=order)
 
     return super_op
 
 
-def liouville_to_kraus(super_op, precision_tol: float = None):
+def liouville_to_kraus(super_op, precision_tol: float = None, order: str = "row"):
     """Convert Liouville representation of a quantum channel to
     its Kraus representation. It uses the Choi representation as
     an intermediate step.
@@ -254,32 +288,66 @@ def liouville_to_kraus(super_op, precision_tol: float = None):
             :math:`\\lambda < \\text{precision_tol}` is set to 0 (zero).
             If ``None``, ``precision_tol`` defaults to
             ``qibo.config.PRECISION_TOL=1e-8``. Defaults to None.
+        order (str, optional): If ``"row"``, reshuffling is performed
+            with respect to row-wise vectorization. If ``"column"``,
+            reshuffling is performed with respect to column-wise
+            vectorization. If ``"system"``, operator is converted to
+            a representation based on row vectorization, reshuffled,
+            and then converted back to its representation with
+            respect to system-wise vectorization. Default is ``"row"``.
 
     Returns:
         (ndarray, ndarray): Kraus operators of quantum channel and their
             respective coefficients.
     """
-    choi_super_op = liouville_to_choi(super_op)
-    kraus_ops, coefficients = choi_to_kraus(choi_super_op, precision_tol)
+    choi_super_op = liouville_to_choi(super_op, order=order)
+    kraus_ops, coefficients = choi_to_kraus(choi_super_op, precision_tol, order=order)
 
     return kraus_ops, coefficients
 
 
-def _reshuffling(super_op):
+def _reshuffling(super_op, order: str = "row"):
     """Reshuffling operation used to convert Lioville representation
     of quantum channels to their Choi representation (and vice-versa).
 
     Args:
         super_op (ndarray): Liouville (Choi) representation of a
             quantum channel.
+        order (str, optional): If ``"row"``, reshuffling is performed
+            with respect to row-wise vectorization. If ``"column"``,
+            reshuffling is performed with respect to column-wise
+            vectorization. If ``"system"``, operator is converted to
+            a representation based on row vectorization, reshuffled,
+            and then converted back to its representation with
+            respect to system-wise vectorization. Default is ``"row"``.
 
     Returns:
         ndarray: Choi (Liouville) representation of the quantum channel.
     """
+
+    if not isinstance(order, str):
+        raise_error(TypeError, f"order must be type str, but it is type {type(order)}.")
+
+    orders = ["row", "column", "system"]
+    if order not in orders:
+        raise_error(
+            ValueError,
+            f"order must be either 'row' or 'column' or 'system', but it is {order}.",
+        )
+    del orders
+
+    if order == "system":
+        raise_error(
+            NotImplementedError, "reshuffling not implemented for system vectorization."
+        )
+
     d = int(np.sqrt(super_op.shape[0]))
 
     super_op = np.reshape(super_op, [d] * 4)
-    super_op = np.swapaxes(super_op, 0, 3)
+
+    axes = [1, 2] if order == "row" else [0, 3]
+    super_op = np.swapaxes(super_op, *axes)
+
     super_op = np.reshape(super_op, [d**2, d**2])
 
     return super_op
