@@ -197,10 +197,7 @@ def choi_to_kraus(choi_super_op, precision_tol: float = None, order: str = "row"
 
     norm = np.linalg.norm(choi_super_op - choi_super_op.T.conj())
     if norm > PRECISION_TOL:
-        raise_error(
-            ValueError,
-            "Input operator is not Hermitian."
-        )
+        raise_error(ValueError, "Input operator is not Hermitian.")
 
     # using eigh because Choi representation is,
     # in theory, always Hermitian

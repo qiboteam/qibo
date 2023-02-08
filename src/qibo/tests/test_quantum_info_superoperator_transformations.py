@@ -177,7 +177,7 @@ def test_choi_to_kraus(order):
     with pytest.raises(ValueError):
         # a random unitary is extremely unlikely to be Hermitian
         # so this test should be fine
-        d = 2 ** 3
+        d = 2**3
         choi_to_kraus(random_unitary(d))
 
     kraus_ops, coefficients = choi_to_kraus(test_choi, order=order)
