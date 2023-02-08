@@ -1161,6 +1161,7 @@ Superoperator Transformations
 
 Functions used to convert superoperators among their possible representations.
 
+
 Vectorization
 """""""""""""
 
@@ -1188,7 +1189,17 @@ Choi to Liouville
 Choi to Kraus
 """""""""""""
 
-.. autofunction:: qibo.quantum_info.choi_to_kraus
+.. autofunction:: qibo.quantum_info.superoperator_transformations.choi_to_kraus
+
+.. note::
+    Due to the spectral decomposition subroutine in this function, the resulting Kraus
+    operators :math:`\{K_{\alpha}\}_{\alpha}` might contain global phases. That
+    implies these operators are not exactly equal to the "true" Kraus operators
+    :math:`\{K_{\alpha}^{(\text{ideal})}\}_{\alpha}`. However, since these are
+    global phases, the operators' actions are the same, i.e.
+
+    .. math::
+        K_{\alpha} \, \rho \, K_{\alpha}^{\dagger} = K_{\alpha}^{\text{(ideal)}} \, \rho \,\, (K_{\alpha}^{\text{(ideal)}})^{\dagger} \,\,\,\,\, , \,\, \forall \, \alpha
 
 
 Kraus to Choi
@@ -1207,6 +1218,16 @@ Liouville to Kraus
 """"""""""""""""""
 
 .. autofunction:: qibo.quantum_info.liouville_to_kraus
+
+.. note::
+    Due to the spectral decomposition subroutine in this function, the resulting Kraus
+    operators :math:`\{K_{\alpha}\}_{\alpha}` might contain global phases. That
+    implies these operators are not exactly equal to the "true" Kraus operators
+    :math:`\{K_{\alpha}^{(\text{ideal})}\}_{\alpha}`. However, since these are
+    global phases, the operators' actions are the same, i.e.
+
+    .. math::
+        K_{\alpha} \, \rho \, K_{\alpha}^{\dagger} = K_{\alpha}^{\text{(ideal)}} \, \rho \,\, (K_{\alpha}^{\text{(ideal)}})^{\dagger} \,\,\,\,\, , \,\, \forall \, \alpha
 
 
 Utility Functions
