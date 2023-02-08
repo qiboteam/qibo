@@ -43,7 +43,6 @@ class QuantumCNN:
     """
 
     def __init__(self, nqubits, nlayers, nclasses=2, params=None):
-
         self.nclasses = nclasses
         self.nqubits = nqubits
         self.nlayers = nlayers
@@ -158,7 +157,6 @@ class QuantumCNN:
         return pool_circuit
 
     def set_circuit_params(self, angles):
-
         params = list(angles)
         expanded_params = []
         nbits = self.nqubits
