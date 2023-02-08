@@ -154,25 +154,33 @@ test_superop = np.array(
 test_choi = np.reshape(test_superop, [2] * 4).swapaxes(0, 3).reshape([4, 4])
 
 
-def test_liouville_to_choi():
-    choi = liouville_to_choi(test_superop)
+@pytest.mark.parametrize("order", ["row", "column"])
+def test_liouville_to_choi(order):
+    choi = liouville_to_choi(test_superop, order)
 
     assert np.linalg.norm(choi - test_choi) < PRECISION_TOL, True
 
 
-def test_choi_to_liouville():
-    liouville = choi_to_liouville(test_choi)
+@pytest.mark.parametrize("order", ["row", "column"])
+def test_choi_to_liouville(order):
+    liouville = choi_to_liouville(test_choi, order=order)
 
     assert np.linalg.norm(liouville - test_superop) < PRECISION_TOL, True
 
 
-def test_choi_to_kraus():
+@pytest.mark.parametrize("order", ["row", "column"])
+def test_choi_to_kraus(order):
     with pytest.raises(TypeError):
         choi_to_kraus(test_choi, "1e-8")
     with pytest.raises(ValueError):
         choi_to_kraus(test_choi, -1.0 * 1e-8)
+    with pytest.raises(ValueError):
+        # a random unitary is extremely unlikely to be Hermitian
+        # so this test should be fine
+        d = 2 ** 3
+        choi_to_kraus(random_unitary(d))
 
-    kraus_ops, coefficients = choi_to_kraus(test_choi)
+    kraus_ops, coefficients = choi_to_kraus(test_choi, order=order)
 
     a0 = coefficients[0] * kraus_ops[0]
     a1 = coefficients[1] * kraus_ops[1]
@@ -189,20 +197,23 @@ def test_choi_to_kraus():
     assert np.linalg.norm(evolution_a1 - test_evolution_a1) < PRECISION_TOL, True
 
 
-def test_kraus_to_choi():
-    choi = kraus_to_choi(test_kraus)
+@pytest.mark.parametrize("order", ["row", "column"])
+def test_kraus_to_choi(order):
+    choi = kraus_to_choi(test_kraus, order=order)
 
     assert np.linalg.norm(choi - test_choi) < PRECISION_TOL, True
 
 
-def test_kraus_to_liouville():
-    liouville = kraus_to_liouville(test_kraus)
+@pytest.mark.parametrize("order", ["row", "column"])
+def test_kraus_to_liouville(order):
+    liouville = kraus_to_liouville(test_kraus, order=order)
 
     assert np.linalg.norm(liouville - test_superop) < PRECISION_TOL, True
 
 
-def test_liouville_to_kraus():
-    kraus_ops, coefficients = liouville_to_kraus(test_superop)
+@pytest.mark.parametrize("order", ["row", "column"])
+def test_liouville_to_kraus(order):
+    kraus_ops, coefficients = liouville_to_kraus(test_superop, order=order)
 
     a0 = coefficients[0] * kraus_ops[0]
     a1 = coefficients[1] * kraus_ops[1]
