@@ -212,8 +212,6 @@ def choi_to_kraus(
             f"validate_CP must be type bool, but it is type {type(validate_CP)}.",
         )
 
-    non_CP = False
-
     if validate_CP:
         norm = np.linalg.norm(choi_super_op - np.transpose(np.conj(choi_super_op)))
         if norm > PRECISION_TOL:
@@ -226,6 +224,7 @@ def choi_to_kraus(
 
             non_CP = True if any(eigenvalues < -PRECISION_TOL) else False
     else:
+        non_CP = False
         # using eigh because, in this case, choi_super_op is
         # *assumed* to be Hermitian
         eigenvalues, eigenvectors = np.linalg.eigh(choi_super_op)

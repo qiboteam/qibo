@@ -152,42 +152,31 @@ test_superop = np.array(
     ]
 )
 test_choi = np.reshape(test_superop, [2] * 4).swapaxes(0, 3).reshape([4, 4])
-test_unitary = random_unitary(4, seed=1)
+test_non_CP = np.array(
+    [
+        [0.20031418, 0.37198771, 0.05642046, 0.37127765],
+        [0.15812476, 0.21466209, 0.41971479, 0.20749836],
+        [0.29408764, 0.01474688, 0.40320494, 0.28796054],
+        [0.17587069, 0.42052825, 0.16171658, 0.24188449],
+    ]
+)
 test_kraus_left = np.array(
     [
-        [
-            [-0.38068877 + 0.11296525j, -0.39782478 + 0.08989654j],
-            [-0.65281073 + 0.02893486j, -0.49884838 - 0.01096303j],
-        ],
-        [
-            [0.35475606 - 0.43422396j, 0.13898893 + 0.04923652j],
-            [0.19211425 + 0.29348959j, -0.70049065 - 0.22388468j],
-        ],
-        [
-            [-0.65483846 + 0.11750935j, 0.1586421 + 0.39708145j],
-            [0.41066392 + 0.09820736j, -0.05065834 - 0.44009243j],
-        ],
-        [
-            [-0.15692373 - 0.24630405j, 0.79248345 + 0.03226286j],
-            [-0.51702235 + 0.0659943j, 0.118193 + 0.00118186j],
-        ],
+        [[-0.50326669, -0.50293148], [-0.49268667, -0.50104133]],
+        [[-0.54148474, 0.32931326], [0.64742923, -0.42329947]],
+        [[0.49035364, -0.62330138], [0.495577, -0.35419223]],
+        [[-0.46159531, -0.50010808], [0.30413594, 0.66657558]],
     ]
 )
 test_kraus_right = np.array(
     [
-        [[-0.0 - 0.0j, 0.34874292 - 0.0j], [-0.92998111 - 0.0j, 0.11624764 - 0.0j]],
-        [
-            [0.0 - 0.0j, 0.32088598 + 0.09012539j],
-            [0.02665682 - 0.03748461j, -0.74940337 - 0.57025303j],
-        ],
-        [[-1.0 - 0.0j, -0.0 - 0.0j], [0.0 - 0.0j, -0.0 - 0.0j]],
-        [
-            [-0.0 - 0.0j, 0.85328705 + 0.1979626j],
-            [0.35119646 + 0.09838952j, 0.24971055 + 0.19322839j],
-        ],
+        [[-0.41111026, -0.51035787], [-0.51635098, -0.55127567]],
+        [[0.13825514, -0.69451163], [0.69697805, -0.11296331]],
+        [[0.43827885, -0.49057101], [-0.48197173, 0.57875296]],
+        [[0.78726458, 0.12856331], [-0.12371948, -0.59023677]],
     ]
 )
-test_coefficients = np.ones(4)
+test_coefficients = np.array([1.002719  , 0.65635444, 0.43548   , 0.21124177])
 
 
 @pytest.mark.parametrize("order", ["row", "column"])
@@ -232,9 +221,9 @@ def test_choi_to_kraus(order, validate_CP):
     assert np.linalg.norm(evolution_a0 - test_evolution_a0) < PRECISION_TOL, True
     assert np.linalg.norm(evolution_a1 - test_evolution_a1) < PRECISION_TOL, True
 
-    if validate_CP:
+    if validate_CP and order == "row":
         kraus_left, kraus_right, coefficients = choi_to_kraus(
-            test_unitary, order="row", validate_CP=validate_CP
+            test_non_CP, order=order, validate_CP=validate_CP
         )
 
         for test_left, left, test_right, right, test_coeff, coeff in zip(
@@ -245,6 +234,9 @@ def test_choi_to_kraus(order, validate_CP):
             test_coefficients,
             coefficients,
         ):
+
+            print(test_left)
+            print(left)
             state = random_density_matrix(2)
             evolution = coeff**2 * left @ state @ right.T.conj()
             test_evolution = test_coeff**2 * test_left @ state @ test_right.T.conj()
