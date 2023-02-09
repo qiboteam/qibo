@@ -183,10 +183,10 @@ def choi_to_kraus(
             Defaults to ``True``.
 
     Returns:
-        (ndarray, ndarray) or (ndarray, ndarray, ndarray): Kraus operators of
-            quantum channel and their respective coefficients. If map is non-CP,
-            then function returns left- and right-generalized Kraus operators
-            as well as the square root of their corresponding singular values.
+        (ndarray, ndarray): Kraus operators of quantum channel and their respective
+            coefficients. If map is non-CP, then function returns left- and
+            right-generalized Kraus operators as well as the square root of their
+            corresponding singular values.
     """
 
     if precision_tol is not None and not isinstance(precision_tol, float):
@@ -236,9 +236,9 @@ def choi_to_kraus(
         warn("Input choi_super_op is a non-completely positive map.")
 
         # using singular value decomposition because choi_super_op is non-CP
-        U, S, V = np.linalg.svd(choi_super_op)
+        U, coefficients, V = np.linalg.svd(choi_super_op)
         U = np.transpose(U)
-        S = np.sqrt(S)
+        coefficients = np.sqrt(coefficients)
         V = np.conj(V)
 
         kraus_left, kraus_right = list(), list()
@@ -249,7 +249,7 @@ def choi_to_kraus(
         kraus_left = np.array(kraus_left)
         kraus_right = np.array(kraus_right)
 
-        return kraus_left, kraus_right, S
+        kraus_ops = np.array([kraus_left, kraus_right])
     else:
         # when choi_super_op is CP
         kraus_ops, coefficients = list(), list()
@@ -261,7 +261,7 @@ def choi_to_kraus(
         kraus_ops = np.array(kraus_ops)
         coefficients = np.array(coefficients)
 
-        return kraus_ops, coefficients
+    return kraus_ops, coefficients
 
 
 def kraus_to_choi(kraus_ops, order: str = "row"):

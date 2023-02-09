@@ -222,7 +222,7 @@ def test_choi_to_kraus(order, validate_CP):
     assert np.linalg.norm(evolution_a1 - test_evolution_a1) < PRECISION_TOL, True
 
     if validate_CP and order == "row":
-        kraus_left, kraus_right, coefficients = choi_to_kraus(
+        (kraus_left, kraus_right), coefficients = choi_to_kraus(
             test_non_CP, order=order, validate_CP=validate_CP
         )
 
