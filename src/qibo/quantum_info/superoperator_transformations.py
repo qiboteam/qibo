@@ -155,7 +155,12 @@ def choi_to_liouville(choi_super_op, order: str = "row"):
     return _reshuffling(choi_super_op, order=order)
 
 
-def choi_to_kraus(choi_super_op, precision_tol: float = None, order: str = "row"):
+def choi_to_kraus(
+    choi_super_op,
+    precision_tol: float = None,
+    order: str = "row",
+    validate_CP: bool = True,
+):
     """Convert Choi representation of a quantum channel into Kraus operators.
 
     Args:
@@ -172,10 +177,16 @@ def choi_to_kraus(choi_super_op, precision_tol: float = None, order: str = "row"
             a representation based on row vectorization, reshuffled,
             and then converted back to its representation with
             respect to system-wise vectorization. Default is ``"row"``.
+        validate_CP (bool, optional): If ``True``, checks if ``choi_super_op``
+            is a completely positive map. If ``False``, it assumes that
+            ``choi_super_op`` is completely positive (and Hermitian).
+            Defaults to ``True``.
 
     Returns:
-        (ndarray, ndarray): Kraus operators of quantum channel and their
-            respective coefficients.
+        (ndarray, ndarray) or (ndarray, ndarray, ndarray): Kraus operators of
+            quantum channel and their respective coefficients. If map is non-CP,
+            then function returns left- and right-generalized Kraus operators
+            as well as the square root of their corresponding singular values.
     """
 
     if precision_tol is not None and not isinstance(precision_tol, float):
@@ -195,25 +206,63 @@ def choi_to_kraus(choi_super_op, precision_tol: float = None, order: str = "row"
 
         precision_tol = PRECISION_TOL
 
-    norm = np.linalg.norm(choi_super_op - choi_super_op.T.conj())
-    if norm > PRECISION_TOL:
-        raise_error(ValueError, "Input operator is not Hermitian.")
+    if not isinstance(validate_CP, bool):
+        raise_error(
+            TypeError,
+            f"validate_CP must be type bool, but it is type {type(validate_CP)}.",
+        )
 
-    # using eigh because Choi representation is,
-    # in theory, always Hermitian
-    eigenvalues, eigenvectors = np.linalg.eigh(choi_super_op)
-    eigenvectors = np.transpose(eigenvectors)
+    non_CP = False
 
-    kraus_ops, coefficients = list(), list()
-    for eig, kraus in zip(eigenvalues, eigenvectors):
-        if np.abs(eig) > precision_tol:
-            kraus_ops.append(unvectorization(kraus, order=order))
-            coefficients.append(np.sqrt(eig))
+    if validate_CP:
+        norm = np.linalg.norm(choi_super_op - np.transpose(np.conj(choi_super_op)))
+        if norm > PRECISION_TOL:
+            non_CP = True
+        else:
+            # using eigh because, in this case, choi_super_op is
+            # *already confirmed* to be Hermitian
+            eigenvalues, eigenvectors = np.linalg.eigh(choi_super_op)
+            eigenvectors = np.transpose(eigenvectors)
 
-    kraus_ops = np.array(kraus_ops)
-    coefficients = np.array(coefficients)
+            non_CP = True if any(eigenvalues < -PRECISION_TOL) else False
+    else:
+        # using eigh because, in this case, choi_super_op is
+        # *assumed* to be Hermitian
+        eigenvalues, eigenvectors = np.linalg.eigh(choi_super_op)
+        eigenvectors = np.transpose(eigenvectors)
 
-    return kraus_ops, coefficients
+    if non_CP:
+        from warnings import warn
+
+        warn("Input choi_super_op is a non-completely positive map.")
+
+        # using singular value decomposition because choi_super_op is non-CP
+        U, S, V = np.linalg.svd(choi_super_op)
+        U = np.transpose(U)
+        S = np.sqrt(S)
+        V = np.conj(V)
+
+        kraus_left, kraus_right = list(), list()
+        for eigenvector_left, eigenvector_right in zip(U, V):
+            kraus_left.append(unvectorization(eigenvector_left, order=order))
+            kraus_right.append(unvectorization(eigenvector_right, order=order))
+
+        kraus_left = np.array(kraus_left)
+        kraus_right = np.array(kraus_right)
+
+        return kraus_left, kraus_right, S
+    else:
+        # when choi_super_op is CP
+        kraus_ops, coefficients = list(), list()
+        for eig, kraus in zip(eigenvalues, eigenvectors):
+            if np.abs(eig) > precision_tol:
+                kraus_ops.append(unvectorization(kraus, order=order))
+                coefficients.append(np.sqrt(eig))
+
+        kraus_ops = np.array(kraus_ops)
+        coefficients = np.array(coefficients)
+
+        return kraus_ops, coefficients
 
 
 def kraus_to_choi(kraus_ops, order: str = "row"):

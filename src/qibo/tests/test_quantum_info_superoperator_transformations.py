@@ -152,6 +152,42 @@ test_superop = np.array(
     ]
 )
 test_choi = np.reshape(test_superop, [2] * 4).swapaxes(0, 3).reshape([4, 4])
+test_unitary = random_unitary(4, seed=1)
+test_kraus_left = np.array(
+    [
+        [
+            [-0.38068877 + 0.11296525j, -0.39782478 + 0.08989654j],
+            [-0.65281073 + 0.02893486j, -0.49884838 - 0.01096303j],
+        ],
+        [
+            [0.35475606 - 0.43422396j, 0.13898893 + 0.04923652j],
+            [0.19211425 + 0.29348959j, -0.70049065 - 0.22388468j],
+        ],
+        [
+            [-0.65483846 + 0.11750935j, 0.1586421 + 0.39708145j],
+            [0.41066392 + 0.09820736j, -0.05065834 - 0.44009243j],
+        ],
+        [
+            [-0.15692373 - 0.24630405j, 0.79248345 + 0.03226286j],
+            [-0.51702235 + 0.0659943j, 0.118193 + 0.00118186j],
+        ],
+    ]
+)
+test_kraus_right = np.array(
+    [
+        [[-0.0 - 0.0j, 0.34874292 - 0.0j], [-0.92998111 - 0.0j, 0.11624764 - 0.0j]],
+        [
+            [0.0 - 0.0j, 0.32088598 + 0.09012539j],
+            [0.02665682 - 0.03748461j, -0.74940337 - 0.57025303j],
+        ],
+        [[-1.0 - 0.0j, -0.0 - 0.0j], [0.0 - 0.0j, -0.0 - 0.0j]],
+        [
+            [-0.0 - 0.0j, 0.85328705 + 0.1979626j],
+            [0.35119646 + 0.09838952j, 0.24971055 + 0.19322839j],
+        ],
+    ]
+)
+test_coefficients = np.ones(4)
 
 
 @pytest.mark.parametrize("order", ["row", "column"])
@@ -168,19 +204,19 @@ def test_choi_to_liouville(order):
     assert np.linalg.norm(liouville - test_superop) < PRECISION_TOL, True
 
 
+@pytest.mark.parametrize("validate_CP", [False, True])
 @pytest.mark.parametrize("order", ["row", "column"])
-def test_choi_to_kraus(order):
+def test_choi_to_kraus(order, validate_CP):
     with pytest.raises(TypeError):
         choi_to_kraus(test_choi, "1e-8")
     with pytest.raises(ValueError):
         choi_to_kraus(test_choi, -1.0 * 1e-8)
-    with pytest.raises(ValueError):
-        # a random unitary is extremely unlikely to be Hermitian
-        # so this test should be fine
-        d = 2**3
-        choi_to_kraus(random_unitary(d))
+    with pytest.raises(TypeError):
+        choi_to_kraus(test_choi, validate_CP="True")
 
-    kraus_ops, coefficients = choi_to_kraus(test_choi, order=order)
+    kraus_ops, coefficients = choi_to_kraus(
+        test_choi, order=order, validate_CP=validate_CP
+    )
 
     a0 = coefficients[0] * kraus_ops[0]
     a1 = coefficients[1] * kraus_ops[1]
@@ -195,6 +231,25 @@ def test_choi_to_kraus(order):
 
     assert np.linalg.norm(evolution_a0 - test_evolution_a0) < PRECISION_TOL, True
     assert np.linalg.norm(evolution_a1 - test_evolution_a1) < PRECISION_TOL, True
+
+    if validate_CP:
+        kraus_left, kraus_right, coefficients = choi_to_kraus(
+            test_unitary, order="row", validate_CP=validate_CP
+        )
+
+        for test_left, left, test_right, right, test_coeff, coeff in zip(
+            test_kraus_left,
+            kraus_left,
+            test_kraus_right,
+            kraus_right,
+            test_coefficients,
+            coefficients,
+        ):
+            state = random_density_matrix(2)
+            evolution = coeff**2 * left @ state @ right.T.conj()
+            test_evolution = test_coeff**2 * test_left @ state @ test_right.T.conj()
+
+            assert np.linalg.norm(evolution - test_evolution) < PRECISION_TOL, True
 
 
 @pytest.mark.parametrize("order", ["row", "column"])
