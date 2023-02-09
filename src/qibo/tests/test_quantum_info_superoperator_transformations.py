@@ -234,8 +234,6 @@ def test_choi_to_kraus(order, validate_CP):
             test_coefficients,
             coefficients,
         ):
-            print(test_left)
-            print(left)
             state = random_density_matrix(2)
             evolution = coeff**2 * left @ state @ right.T.conj()
             test_evolution = test_coeff**2 * test_left @ state @ test_right.T.conj()
