@@ -176,7 +176,7 @@ test_kraus_right = np.array(
         [[0.78726458, 0.12856331], [-0.12371948, -0.59023677]],
     ]
 )
-test_coefficients = np.array([1.002719  , 0.65635444, 0.43548   , 0.21124177])
+test_coefficients = np.array([1.002719, 0.65635444, 0.43548, 0.21124177])
 
 
 @pytest.mark.parametrize("order", ["row", "column"])
@@ -234,7 +234,6 @@ def test_choi_to_kraus(order, validate_CP):
             test_coefficients,
             coefficients,
         ):
-
             print(test_left)
             print(left)
             state = random_density_matrix(2)
