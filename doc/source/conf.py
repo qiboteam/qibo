@@ -104,6 +104,7 @@ doctest_path = [os.path.abspath("../examples")]
 #
 autodoc_member_order = "bysource"
 
+
 # Adapted this from
 # https://github.com/readthedocs/recommonmark/blob/ddd56e7717e9745f11300059e4268e204138a6b1/docs/conf.py
 # app setup hook

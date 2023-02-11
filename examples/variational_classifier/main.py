@@ -34,7 +34,6 @@ parser.add_argument(
 
 
 def main(nclasses, nqubits, nlayers, nshots, training, RxRzRx, method):
-
     # We initialize the quantum classifier
     RY = not RxRzRx
     qc = QuantumClassifer(nclasses, nqubits, nlayers, RY=RY)

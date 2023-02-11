@@ -35,7 +35,6 @@ parser.add_argument(
 
 
 def main(nqubits, subsize, nlayers, nshots, RY, method, maxiter):
-
     # We initialize the QSVD
     Qsvd = QSVD(nqubits, subsize, nlayers, RY=RY)
 

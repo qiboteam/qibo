@@ -29,7 +29,6 @@ parser.add_argument(
 
 
 def main(layers, learning_rate, epochs, batches, ndata, J_treshold):
-
     # We initialize the quantum regressor
     vqr = VQRegressor(layers=layers, ndata=ndata)
     # and the initial parameters
