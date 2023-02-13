@@ -93,7 +93,7 @@ class KrausError:
         if any(o.shape != shape for o in ops):
             raise_error(
                 ValueError,
-                "Kraus operators of different shapes." "Use qibo.noise.Error instead.",
+                "Kraus operators of different shapes." "Use qibo.noise.CustomError instead.",
             )
 
         self.rank = shape[0]
@@ -122,7 +122,7 @@ class UnitaryError:
             raise_error(
                 ValueError,
                 "Unitary matrices have different shapes."
-                "Use qibo.noise.Error instead.",
+                "Use qibo.noise.CustomError instead.",
             )
 
         self.rank = shape[0]
@@ -182,13 +182,23 @@ class NoiseModel:
         
         if condition is not None:
             if callable(condition):
-                self.conditions[gate] = (condition, error, qubits)
+                if gate not in self.conditions:
+                    self.conditions[gate] = ([condition], [error], [qubits])
+                else:
+                    self.conditions[gate][0].append(condition)
+                    self.conditions[gate][1].append(error)
+                    self.conditions[gate][2].append(qubits)
             else:
                 raise TypeError(
                     "condition should be callable. Got {} instead." "".format(type(condition))
                 )
-
-        self.errors[gate] = (error, qubits)
+        else:
+            if gate not in self.errors:
+                self.errors[gate] = ([error], [qubits])
+            else:
+                self.errors[gate][0].append(error)
+                self.errors[gate][1].append(qubits)
+            
 
     def composite(self, params):
         """Build a noise model to simulate the noisy behaviour of a quantum computer.
@@ -231,49 +241,57 @@ class NoiseModel:
         else:
             noisy_circuit = circuit.__class__(**circuit.init_kwargs)
             for gate in circuit.queue:
-                noisy_circuit.add(gate)  
+                noisy_circuit.add(gate)
+
                 if gate.__class__ in self.errors:
-                    error, qubits = self.errors.get(gate.__class__)
-                    if qubits is None:
-                        qubits = gate.qubits
-                    else:
-                        qubits = tuple(set(gate.qubits) & set(qubits))
-                    if isinstance(error, CustomError) and qubits:
-                        noisy_circuit.add(error.channel)
-                    elif isinstance(error, DepolarizingError) and qubits:
-                        noisy_circuit.add(error.channel(qubits, *error.options))
-                    elif isinstance(error, UnitaryError) or isinstance(
-                        error, KrausError
-                    ):
-                        if error.rank == 2:
+                    error_list, qubits_list = self.errors.get(gate.__class__)
+                    for i in range(len(error_list)): 
+                        error = error_list[i]
+                        qubits = qubits_list[i]
+                        if qubits is None:
+                            qubits = gate.qubits
+                        else:
+                            qubits = tuple(set(gate.qubits) & set(qubits))
+                        if isinstance(error, CustomError) and qubits:
+                            noisy_circuit.add(error.channel)
+                        elif isinstance(error, DepolarizingError) and qubits:
+                            noisy_circuit.add(error.channel(qubits, *error.options))
+                        elif isinstance(error, UnitaryError) or isinstance(
+                            error, KrausError
+                        ):
+                            if error.rank == 2:
+                                for q in qubits:
+                                    noisy_circuit.add(error.channel([q]))
+                            elif error.rank == 2 ** len(qubits):
+                                noisy_circuit.add(error.channel(qubits))
+                        else:
                             for q in qubits:
-                                noisy_circuit.add(error.channel([q]))
-                        elif error.rank == 2 ** len(qubits):
-                            noisy_circuit.add(error.channel(qubits))
-                    else:
-                        for q in qubits:
-                            noisy_circuit.add(error.channel(q, *error.options))
+                                noisy_circuit.add(error.channel(q, *error.options))
+                
                 if gate.__class__ in self.conditions:
-                    condition, error, qubits = self.conditions.get(gate.__class__)
-                    if not condition(gate):
-                        continue
-                    if qubits is None:
-                        qubits = gate.qubits
-                    else:
-                        qubits = tuple(set(gate.qubits) & set(qubits))
-                    if isinstance(error, CustomError) and qubits:
-                        noisy_circuit.add(error.channel)
-                    elif isinstance(error, DepolarizingError) and qubits:
-                        noisy_circuit.add(error.channel(qubits, *error.options))
-                    elif isinstance(error, UnitaryError) or isinstance(
-                        error, KrausError
-                    ):
-                        if error.rank == 2:
+                    condition_list, error_list, qubits_list = self.conditions.get(gate.__class__)
+                    for i in range(len(condition_list)): 
+                        if not condition_list[i](gate):
+                            continue
+                        qubits = qubits_list[i]
+                        error = error_list[i]
+                        if qubits is None:
+                            qubits = gate.qubits
+                        else:
+                            qubits = tuple(set(gate.qubits) & set(qubits))
+                        if isinstance(error, CustomError) and qubits:
+                            noisy_circuit.add(error.channel)
+                        elif isinstance(error, DepolarizingError) and qubits:
+                            noisy_circuit.add(error.channel(qubits, *error.options))
+                        elif isinstance(error, UnitaryError) or isinstance(
+                            error, KrausError
+                        ):
+                            if error.rank == 2:
+                                for q in qubits:
+                                    noisy_circuit.add(error.channel([q]))
+                            elif error.rank == 2 ** len(qubits):
+                                noisy_circuit.add(error.channel(qubits))
+                        else:
                             for q in qubits:
-                                noisy_circuit.add(error.channel([q]))
-                        elif error.rank == 2 ** len(qubits):
-                            noisy_circuit.add(error.channel(qubits))
-                    else:
-                        for q in qubits:
-                            noisy_circuit.add(error.channel(q, *error.options))
+                                noisy_circuit.add(error.channel(q, *error.options))
         return noisy_circuit

@@ -157,7 +157,7 @@ def test_depolarizing_error(backend, density_matrix, nshots):
 @pytest.mark.parametrize("density_matrix", [False, True])
 def test_thermal_error(backend, density_matrix):
     if not density_matrix:
-        pytest.skip("Reset error is not implemented for state vectors.")
+        pytest.skip("Thermal Relaxation error is not implemented for state vectors.")
     thermal = ThermalRelaxationError(2, 1, 0.3)
     noise = NoiseModel()
     noise.add(thermal, gates.X, 1)
@@ -508,3 +508,44 @@ def test_noisy_circuit(backend, nshots, idle_qubits):
             backend.assert_allclose(
                 noise_model.hellinger, 1, rtol=noise_model.hellinger0["shot_error"]
             )
+
+
+@pytest.mark.parametrize("density_matrix", [True])
+def test_add_condition(backend, density_matrix):
+    def condition_pi_2(gate):
+        return np.pi / 2 in gate.parameters
+    
+    def condition_3_pi_2(gate):
+        return 3 * np.pi / 2 in gate.parameters
+    
+    reset = ResetError(0.8, 0.2)
+    thermal = ThermalRelaxationError(2, 1, 0.3)
+    noise = NoiseModel()
+    noise.add(reset, gates.RX, condition=condition_pi_2)
+    noise.add(thermal, gates.RX, condition=condition_3_pi_2)
+
+    circuit = Circuit(3, density_matrix=density_matrix)
+    circuit.add(gates.RX(0, np.pi))
+    circuit.add(gates.RX(0, np.pi / 2))
+    circuit.add(gates.RX(0, np.pi / 3))
+    circuit.add(gates.RX(1, np.pi))
+    circuit.add(gates.RX(1, 3 * np.pi / 2))
+    circuit.add(gates.RX(1, 2 * np.pi / 3))
+
+    target_circuit = Circuit(3, density_matrix=density_matrix)
+    target_circuit.add(gates.RX(0, np.pi))
+    target_circuit.add(gates.RX(0, np.pi / 2))
+    target_circuit.add(gates.ResetChannel(0, 0.8, 0.2))
+    target_circuit.add(gates.RX(0, np.pi / 3))
+    target_circuit.add(gates.RX(1, np.pi))
+    target_circuit.add(gates.RX(1, 3 * np.pi / 2))
+    target_circuit.add(gates.ThermalRelaxationChannel(1, 2, 1, 0.3))
+    target_circuit.add(gates.RX(1, 2 * np.pi / 3))
+
+    initial_psi = random_density_matrix(3) if density_matrix else random_state(3)
+    backend.set_seed(123)
+    final_state = backend.execute_circuit(noise.apply(circuit), np.copy(initial_psi))
+    backend.set_seed(123)
+    target_final_state = backend.execute_circuit(target_circuit, np.copy(initial_psi))
+
+    backend.assert_allclose(final_state, target_final_state)
