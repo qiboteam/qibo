@@ -514,10 +514,10 @@ def test_noisy_circuit(backend, nshots, idle_qubits):
 def test_add_condition(backend, density_matrix):
     def condition_pi_2(gate):
         return np.pi / 2 in gate.parameters
-    
+
     def condition_3_pi_2(gate):
         return 3 * np.pi / 2 in gate.parameters
-    
+
     reset = ResetError(0.8, 0.2)
     thermal = ThermalRelaxationError(2, 1, 0.3)
     noise = NoiseModel()
