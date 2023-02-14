@@ -2,6 +2,8 @@ from qibo import gates
 from qibo.config import raise_error
 from qibo.noise_model import CompositeNoiseModel
 
+import collections
+
 
 class CustomError:
     """Quantum error associated with the :class:`qibo.gates.Channel`
@@ -158,8 +160,8 @@ class NoiseModel:
     """
 
     def __init__(self):
-        self.errors = {}
-        self.conditions = {}
+        self.errors = collections.defaultdict(list)
+        self.conditions = collections.defaultdict(list)
         self.noise_model = {}
 
     def add(self, error, gate, qubits=None, condition=None):
@@ -175,6 +177,34 @@ class NoiseModel:
             qubits (tuple): qubits where the noise will be applied, if None the noise
                             will be added after every instance of the gate.
             condition (callable): Optional function that takes :class:`qibo.gates.Gate` object as an input and returns True if noise should be added to it.
+        
+        Example:
+
+        .. testcode::
+
+        import numpy as np
+        from qibo import gates
+        from qibo.models import Circuit
+        from qibo.noise import NoiseModel, PauliError
+
+            # Check if a gate is RX(pi/2).
+            def is_sqrt_x(gate):
+                return np.pi/2 in gate.parameters
+
+            # Build a noise model with a Pauli error on RX(pi/2) gates.
+            error = PauliError(0.01, 0.5, 0.1)
+            noise = NoiseModel()
+            noise.add(PauliError(px = 0.5), gates.RX, condition=is_sqrt_x)
+
+            # Generate a noiseless circuit.
+            circuit = Circuit(1)
+            circuit.add(gates.RX(0, np.pi / 2))
+            circuit.add(gates.RX(0, 3 * np.pi / 2))
+            circuit.add(gates.X(0))
+
+            # Apply noise to the circuit.
+            circuit = noise.apply(circuit)
+
         """
 
         if isinstance(qubits, int):
@@ -182,22 +212,13 @@ class NoiseModel:
         
         if condition is not None:
             if callable(condition):
-                if gate not in self.conditions:
-                    self.conditions[gate] = ([condition], [error], [qubits])
-                else:
-                    self.conditions[gate][0].append(condition)
-                    self.conditions[gate][1].append(error)
-                    self.conditions[gate][2].append(qubits)
+                self.conditions[gate].append((condition, error, qubits))
             else:
                 raise TypeError(
                     "condition should be callable. Got {} instead." "".format(type(condition))
                 )
         else:
-            if gate not in self.errors:
-                self.errors[gate] = ([error], [qubits])
-            else:
-                self.errors[gate][0].append(error)
-                self.errors[gate][1].append(qubits)
+            self.errors[gate].append((error, qubits))
             
 
     def composite(self, params):
@@ -244,10 +265,7 @@ class NoiseModel:
                 noisy_circuit.add(gate)
 
                 if gate.__class__ in self.errors:
-                    error_list, qubits_list = self.errors.get(gate.__class__)
-                    for i in range(len(error_list)): 
-                        error = error_list[i]
-                        qubits = qubits_list[i]
+                    for error, qubits in self.errors.get(gate.__class__):
                         if qubits is None:
                             qubits = gate.qubits
                         else:
@@ -269,12 +287,9 @@ class NoiseModel:
                                 noisy_circuit.add(error.channel(q, *error.options))
                 
                 if gate.__class__ in self.conditions:
-                    condition_list, error_list, qubits_list = self.conditions.get(gate.__class__)
-                    for i in range(len(condition_list)): 
-                        if not condition_list[i](gate):
+                    for condition, error, qubits in self.conditions.get(gate.__class__):
+                        if not condition(gate):
                             continue
-                        qubits = qubits_list[i]
-                        error = error_list[i]
                         if qubits is None:
                             qubits = gate.qubits
                         else:

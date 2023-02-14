@@ -524,6 +524,9 @@ def test_add_condition(backend, density_matrix):
     noise.add(reset, gates.RX, condition=condition_pi_2)
     noise.add(thermal, gates.RX, condition=condition_3_pi_2)
 
+    with pytest.raises(TypeError):
+        noise.add(reset, gates.RX, condition=2)
+
     circuit = Circuit(3, density_matrix=density_matrix)
     circuit.add(gates.RX(0, np.pi))
     circuit.add(gates.RX(0, np.pi / 2))
