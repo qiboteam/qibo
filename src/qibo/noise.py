@@ -1,8 +1,8 @@
+import collections
+
 from qibo import gates
 from qibo.config import raise_error
 from qibo.noise_model import CompositeNoiseModel
-
-import collections
 
 
 class CustomError:
@@ -178,7 +178,7 @@ class NoiseModel:
             qubits (tuple): qubits where the noise will be applied, if None the noise
                             will be added after every instance of the gate.
             condition (callable): Optional function that takes :class:`qibo.gates.Gate` object as an input and returns True if noise should be added to it.
-        
+
         Example:
 
         .. testcode::
