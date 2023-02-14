@@ -95,7 +95,8 @@ class KrausError:
         if any(o.shape != shape for o in ops):
             raise_error(
                 ValueError,
-                "Kraus operators of different shapes." "Use qibo.noise.CustomError instead.",
+                "Kraus operators of different shapes."
+                "Use qibo.noise.CustomError instead.",
             )
 
         self.rank = shape[0]
@@ -209,17 +210,17 @@ class NoiseModel:
 
         if isinstance(qubits, int):
             qubits = (qubits,)
-        
+
         if condition is not None:
             if callable(condition):
                 self.conditions[gate].append((condition, error, qubits))
             else:
                 raise TypeError(
-                    "condition should be callable. Got {} instead." "".format(type(condition))
+                    "condition should be callable. Got {} instead."
+                    "".format(type(condition))
                 )
         else:
             self.errors[gate].append((error, qubits))
-            
 
     def composite(self, params):
         """Build a noise model to simulate the noisy behaviour of a quantum computer.
@@ -285,7 +286,7 @@ class NoiseModel:
                         else:
                             for q in qubits:
                                 noisy_circuit.add(error.channel(q, *error.options))
-                
+
                 if gate.__class__ in self.conditions:
                     for condition, error, qubits in self.conditions.get(gate.__class__):
                         if not condition(gate):
