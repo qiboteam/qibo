@@ -162,7 +162,6 @@ class NoiseModel:
 
     def __init__(self):
         self.errors = collections.defaultdict(list)
-        self.conditions = collections.defaultdict(list)
         self.noise_model = {}
 
     def add(self, error, gate, qubits=None, condition=None):
@@ -285,27 +284,4 @@ class NoiseModel:
                                 for q in qubits:
                                     noisy_circuit.add(error.channel(q, *error.options))
 
-                if gate.__class__ in self.conditions:
-                    for condition, error, qubits in self.conditions.get(gate.__class__):
-                        if not condition(gate):
-                            continue
-                        if qubits is None:
-                            qubits = gate.qubits
-                        else:
-                            qubits = tuple(set(gate.qubits) & set(qubits))
-                        if isinstance(error, CustomError) and qubits:
-                            noisy_circuit.add(error.channel)
-                        elif isinstance(error, DepolarizingError) and qubits:
-                            noisy_circuit.add(error.channel(qubits, *error.options))
-                        elif isinstance(error, UnitaryError) or isinstance(
-                            error, KrausError
-                        ):
-                            if error.rank == 2:
-                                for q in qubits:
-                                    noisy_circuit.add(error.channel([q]))
-                            elif error.rank == 2 ** len(qubits):
-                                noisy_circuit.add(error.channel(qubits))
-                        else:
-                            for q in qubits:
-                                noisy_circuit.add(error.channel(q, *error.options))
         return noisy_circuit
