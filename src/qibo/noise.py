@@ -263,26 +263,27 @@ class NoiseModel:
                 noisy_circuit.add(gate)
 
                 if gate.__class__ in self.errors:
-                    for error, qubits in self.errors.get(gate.__class__):
-                        if qubits is None:
-                            qubits = gate.qubits
-                        else:
-                            qubits = tuple(set(gate.qubits) & set(qubits))
-                        if isinstance(error, CustomError) and qubits:
-                            noisy_circuit.add(error.channel)
-                        elif isinstance(error, DepolarizingError) and qubits:
-                            noisy_circuit.add(error.channel(qubits, *error.options))
-                        elif isinstance(error, UnitaryError) or isinstance(
-                            error, KrausError
-                        ):
-                            if error.rank == 2:
+                    for condition, error, qubits in self.errors.get(gate.__class__):
+                        if condition is None or condition(gate):
+                            if qubits is None:
+                                qubits = gate.qubits
+                            else:
+                                qubits = tuple(set(gate.qubits) & set(qubits))
+                            if isinstance(error, CustomError) and qubits:
+                                noisy_circuit.add(error.channel)
+                            elif isinstance(error, DepolarizingError) and qubits:
+                                noisy_circuit.add(error.channel(qubits, *error.options))
+                            elif isinstance(error, UnitaryError) or isinstance(
+                                error, KrausError
+                            ):
+                                if error.rank == 2:
+                                    for q in qubits:
+                                        noisy_circuit.add(error.channel([q]))
+                                elif error.rank == 2 ** len(qubits):
+                                    noisy_circuit.add(error.channel(qubits))
+                            else:
                                 for q in qubits:
-                                    noisy_circuit.add(error.channel([q]))
-                            elif error.rank == 2 ** len(qubits):
-                                noisy_circuit.add(error.channel(qubits))
-                        else:
-                            for q in qubits:
-                                noisy_circuit.add(error.channel(q, *error.options))
+                                    noisy_circuit.add(error.channel(q, *error.options))
 
                 if gate.__class__ in self.conditions:
                     for condition, error, qubits in self.conditions.get(gate.__class__):
