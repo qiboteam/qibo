@@ -2,13 +2,13 @@
 import numpy as np
 import pytest
 
-from qibo import gates
+from qibo import gates, matrices
 from qibo.config import PRECISION_TOL
 from qibo.tests.utils import random_density_matrix
 
 
 def test_general_channel(backend):
-    a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
+    a1 = np.sqrt(0.4) * matrices.X
     a2 = np.sqrt(0.6) * np.array(
         [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]]
     )
@@ -24,9 +24,9 @@ def test_general_channel(backend):
     backend.assert_allclose(final_rho, target_rho)
 
 
-def test_krauss_channel_errors(backend):
-    a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
-    a2 = np.sqrt(0.6) * np.array([[1, 0], [0, -1]])
+def test_kraus_channel_errors(backend):
+    a1 = np.sqrt(0.4) * matrices.X
+    a2 = np.sqrt(0.6) * matrices.Z
     with pytest.raises(ValueError):
         gate = gates.KrausChannel([((0, 1), a1)])
 
@@ -38,22 +38,29 @@ def test_krauss_channel_errors(backend):
             [0.4 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.6 + 0.0j],
         ]
     )
-
+    test_choi = np.reshape(test_superop, [2] * 4).swapaxes(0, 3).reshape([4, 4])
     test_pauli = np.diag([2.0, -0.4, -2.0, 0.4])
+
+    test_superop = backend.cast(test_superop, dtype=test_superop.dtype)
+    test_choi = backend.cast(test_choi, dtype=test_choi.dtype)
+    test_pauli = backend.cast(test_pauli, dtype=test_pauli.dtype)
 
     channel = gates.KrausChannel([((0,), a1), ((0,), a2)])
 
-    assert (
-        np.linalg.norm(
-            backend.to_numpy(channel.to_superop(backend=backend)) - test_superop
-        )
-        < PRECISION_TOL
+    backend.assert_allclose(
+        backend.calculate_norm(channel.to_superop(backend=backend) - test_superop)
+        < PRECISION_TOL,
+        True,
     )
-    assert (
-        np.linalg.norm(
-            backend.to_numpy(channel.to_pauli_liouville(backend=backend)) - test_pauli
-        )
-        < PRECISION_TOL
+    backend.assert_allclose(
+        backend.calculate_norm(channel.to_choi(backend=backend) - test_choi)
+        < PRECISION_TOL,
+        True,
+    )
+    backend.assert_allclose(
+        backend.calculate_norm(channel.to_pauli_liouville(backend=backend) - test_pauli)
+        < PRECISION_TOL,
+        True,
     )
 
 
@@ -66,7 +73,7 @@ def test_controlled_by_channel_error():
     with pytest.raises(ValueError):
         gates.PauliNoiseChannel(0, px=0.5).controlled_by(1)
 
-    a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
+    a1 = np.sqrt(0.4) * matrices.X
     a2 = np.sqrt(0.6) * np.array(
         [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]]
     )
@@ -76,12 +83,12 @@ def test_controlled_by_channel_error():
 
 
 def test_unitary_channel(backend):
-    a1 = np.array([[0, 1], [1, 0]])
+    a1 = matrices.X
     a2 = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
     probs = [0.4, 0.3]
-    matrices = [((0,), a1), ((2, 3), a2)]
+    matrices_ = [((0,), a1), ((2, 3), a2)]
     initial_state = random_density_matrix(4)
-    channel = gates.UnitaryChannel(probs, matrices)
+    channel = gates.UnitaryChannel(probs, matrices_)
     final_state = backend.apply_channel_density_matrix(
         channel, np.copy(initial_state), 4
     )
@@ -96,6 +103,8 @@ def test_unitary_channel(backend):
     )
     backend.assert_allclose(final_state, target_state)
 
+    channel.to_choi(backend=backend)
+
 
 def test_unitary_channel_probability_tolerance(backend):
     """Create ``UnitaryChannel`` with probability sum within tolerance (see #562)."""
@@ -107,25 +116,25 @@ def test_unitary_channel_probability_tolerance(backend):
     prob_pauli = param / num_terms
     probs = [prob_identity] + [prob_pauli] * (num_terms - 1)
     probs = np.array(probs, dtype="float64")
-    matrices = len(probs) * [((0, 1), np.random.random((4, 4)))]
-    gate = gates.UnitaryChannel(probs, matrices)
+    matrices_ = len(probs) * [((0, 1), np.random.random((4, 4)))]
+    gate = gates.UnitaryChannel(probs, matrices_)
 
 
 def test_unitary_channel_errors():
     """Check errors raised by ``gates.UnitaryChannel``."""
-    a1 = np.array([[0, 1], [1, 0]])
+    a1 = matrices.X
     a2 = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
     probs = [0.4, 0.3]
-    matrices = [((0,), a1), ((2, 3), a2)]
+    matrices_ = [((0,), a1), ((2, 3), a2)]
     # Invalid probability length
     with pytest.raises(ValueError):
-        gate = gates.UnitaryChannel([0.1, 0.3, 0.2], matrices)
+        gate = gates.UnitaryChannel([0.1, 0.3, 0.2], matrices_)
     # Probability > 1
     with pytest.raises(ValueError):
-        gate = gates.UnitaryChannel([1.1, 0.2], matrices)
+        gate = gates.UnitaryChannel([1.1, 0.2], matrices_)
     # Probability sum < 0
     with pytest.raises(ValueError):
-        gate = gates.UnitaryChannel([0.0, 0.0], matrices)
+        gate = gates.UnitaryChannel([0.0, 0.0], matrices_)
 
 
 def test_pauli_noise_channel(backend):

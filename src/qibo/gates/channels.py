@@ -101,18 +101,20 @@ class KrausChannel(Channel):
         self.coefficients = len(self.gates) * (1,)
         self.coefficient_sum = 1
 
-    def to_superop(self, backend=None):
-        """Returns the Liouville representation of the Kraus channel.
+    def to_choi(self, backend=None):
+        """Returns the Choi representation of the Kraus channel.
 
         Args:
-            backend (``qibo.backends.abstract.Backend``, optional): backend
-                to be used in the execution. If ``None``, it uses
-                ``GlobalBackend()``. Defaults to ``None``.
+            backend (``qibo.backends.abstract.Backend``, optional): backend to be
+                used in the execution. If ``None``, it uses ``GlobalBackend()``.
+                Defaults to ``None``.
 
         Returns:
-            Liouville representation of the channel.
+            Choi representation of the Kraus channel.
         """
         import numpy as np
+
+        from qibo.quantum_info.superoperator_transformations import vectorization
 
         if backend is None:  # pragma: no cover
             from qibo.backends import GlobalBackend
@@ -129,13 +131,41 @@ class KrausChannel(Channel):
             self.gates += (I(*self.target_qubits),)
 
         super_op = np.zeros((4**self.nqubits, 4**self.nqubits), dtype="complex")
-        super_op = backend.cast(super_op, dtype=super_op.dtype)
         for coeff, gate in zip(self.coefficients, self.gates):
             kraus_op = FusedGate(*range(self.nqubits))
             kraus_op.append(gate)
             kraus_op = kraus_op.asmatrix(backend)
-            kraus_op = coeff * np.kron(np.conj(kraus_op), kraus_op)
-            super_op += backend.cast(kraus_op, dtype=kraus_op.dtype)
+            kraus_op = vectorization(coeff * kraus_op)
+            super_op += np.outer(kraus_op, np.conj(kraus_op))
+            del kraus_op
+
+        super_op = backend.cast(super_op, dtype=super_op.dtype)
+
+        return super_op
+
+    def to_superop(self, backend=None):
+        """Returns the Liouville representation of the Kraus channel.
+
+        Args:
+            backend (``qibo.backends.abstract.Backend``, optional): backend
+                to be used in the execution. If ``None``, it uses
+                ``GlobalBackend()``. Defaults to ``None``.
+
+        Returns:
+            Liouville representation of the channel.
+        """
+        import numpy as np
+
+        from qibo.quantum_info.superoperator_transformations import choi_to_liouville
+
+        if backend is None:  # pragma: no cover
+            from qibo.backends import GlobalBackend
+
+            backend = GlobalBackend()
+
+        super_op = self.to_choi(backend=backend)
+        super_op = choi_to_liouville(super_op)
+        super_op = backend.cast(super_op, dtype=super_op.dtype)
 
         return super_op
 
@@ -162,7 +192,23 @@ class KrausChannel(Channel):
 
             backend = GlobalBackend()
 
-        super_op = self.to_superop(backend=backend)
+        self.nqubits = 1 + max(self.target_qubits)
+
+        if self.name != "KrausChannel":
+            p0 = 1
+            for coeff in self.coefficients:
+                p0 = p0 - coeff
+            self.coefficients += (p0,)
+            self.gates += (I(*self.target_qubits),)
+
+        super_op = np.zeros((4**self.nqubits, 4**self.nqubits), dtype="complex")
+        super_op = backend.cast(super_op, dtype=super_op.dtype)
+        for coeff, gate in zip(self.coefficients, self.gates):
+            kraus_op = FusedGate(*range(self.nqubits))
+            kraus_op.append(gate)
+            kraus_op = kraus_op.asmatrix(backend)
+            kraus_op = coeff * np.kron(np.conj(kraus_op), kraus_op)
+            super_op += backend.cast(kraus_op, dtype=kraus_op.dtype)
 
         # unitary that transforms from comp basis to pauli basis
         U = backend.cast(comp_basis_to_pauli(self.nqubits, normalize))
