@@ -211,16 +211,13 @@ class NoiseModel:
         if isinstance(qubits, int):
             qubits = (qubits,)
 
-        if condition is not None:
-            if callable(condition):
-                self.conditions[gate].append((condition, error, qubits))
-            else:
-                raise TypeError(
+        if condition is not None and not callable(condition):
+            raise TypeError(
                     "condition should be callable. Got {} instead."
                     "".format(type(condition))
                 )
         else:
-            self.errors[gate].append((error, qubits))
+            self.errors[gate].append((condition, error, qubits))
 
     def composite(self, params):
         """Build a noise model to simulate the noisy behaviour of a quantum computer.
