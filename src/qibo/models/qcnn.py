@@ -58,6 +58,15 @@ class QuantumCNN:
         self._circuit = self.ansatz(nlayers, params=params)
 
     def quantum_conv_circuit(self, bits, symbols):
+        """
+        Internal helper function to construct a single convolutional layer.
+
+        Args:
+            bits: list or numpy.array with the qubits that the convolutional layer should apply to.
+            symbols: list or numpy.array with the angles to be used in the circuit.
+        Returns:
+            Circuit for a single convolutional layer
+        """
         c = Circuit(self.nqubits)
         for first, second in zip(bits[0::2], bits[1::2]):
             c += self.two_qubit_unitary([first, second], symbols)
@@ -69,6 +78,16 @@ class QuantumCNN:
         return c
 
     def quantum_pool_circuit(self, source_bits, sink_bits, symbols):
+        """
+        Internal helper function to construct a single pooling layer.
+
+        Args:
+            source_bits: list or numpy.array with the source qubits for the pooling layer.
+            sink_bits: list or numpy.array with the sink qubits for the pooling layer.
+            symbols: list or numpy.array with the angles to be used in the circuit.
+        Returns:
+            Circuit for a single pooling layer
+        """
         c = Circuit(self.nqubits)
         for source, sink in zip(source_bits, sink_bits):
             c += self.two_qubit_pool(source, sink, symbols)
@@ -253,12 +272,10 @@ class QuantumCNN:
     ):
         """
         Args:
-            theta: list or numpy.array with the angles to be used in the circuit.
-            nlayers: int number of layers of the varitional ansatz.
-            init_state: numpy.array with the quantum state to be Schmidt-decomposed.
+            init_theta: list or numpy.array with the angles to be used in the circuit.
+            data: the training data to be used in the minimization.
+            labels: the corresponding ground truth for the training data.
             nshots: int number of runs of the circuit during the sampling process (default=10000).
-            RY: if True, parameterized Rx,Rz,Rx gates are used in the circuit.
-                if False, parameterized Ry gates are used in the circuit (default=True).
             method: str 'classical optimizer for the minimization'. All methods from scipy.optimize.minmize are suported (default='Powell').
         Returns:
             numpy.float64 with value of the minimum found, numpy.ndarray with the optimal angles.
