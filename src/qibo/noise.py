@@ -213,9 +213,9 @@ class NoiseModel:
 
         if condition is not None and not callable(condition):
             raise TypeError(
-                    "condition should be callable. Got {} instead."
-                    "".format(type(condition))
-                )
+                "condition should be callable. Got {} instead."
+                "".format(type(condition))
+            )
         else:
             self.errors[gate].append((condition, error, qubits))
 
