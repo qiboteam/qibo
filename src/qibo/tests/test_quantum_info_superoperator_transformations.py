@@ -258,8 +258,8 @@ def test_kraus_to_liouville(order):
 def test_liouville_to_kraus(order):
     kraus_ops, coefficients = liouville_to_kraus(test_superop, order=order)
 
-    a0 = coefficients[0] * kraus_ops[0]
-    a1 = coefficients[1] * kraus_ops[1]
+    a0 = kraus_ops[0]
+    a1 = kraus_ops[1]
 
     state = random_density_matrix(2)
 
