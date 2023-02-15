@@ -1160,6 +1160,8 @@ Superoperator Transformations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Functions used to convert superoperators among their possible representations.
+For more in-depth theoretical description of the representations and transformations,
+we direct the reader to `Wood, Biamonte, and Cory, Quant. Inf. Comp. 15, 0579-0811 (2015) <https://arxiv.org/abs/1111.6950>`_.
 
 
 Vectorization
@@ -1212,10 +1214,10 @@ Choi to Kraus
         K_{\alpha} \, \rho \, K_{\alpha}^{\dagger} = K_{\alpha}^{\text{(ideal)}} \, \rho \,\, (K_{\alpha}^{\text{(ideal)}})^{\dagger} \,\,\,\,\, , \,\, \forall \, \alpha
 
 .. note::
-    User can set `validate_CP=False` in order to speed up execution by not checking if
-    input map `choi_super_op` is completely positive (CP) and Hermitian. However, that may
-    lead to erroneous outputs if `choi_super_op` is not guaranteed to be CP. We advise users
-    to either set this flag carefully or leave it in its default setting (`validate_CP=True`).
+    User can set ``validate_CP=False`` in order to speed up execution by not checking if
+    input map ``choi_super_op`` is completely positive (CP) and Hermitian. However, that may
+    lead to erroneous outputs if ``choi_super_op`` is not guaranteed to be CP. We advise users
+    to either set this flag carefully or leave it in its default setting (``validate_CP=True``).
 
 
 Kraus to Choi
