@@ -204,7 +204,7 @@ class NoiseModel:
             circuit.add(gates.X(0))
 
             # Apply noise to the circuit.
-            circuit = noise.apply(circuit)
+            noisy_circuit = noise.apply(circuit)
 
         """
 
