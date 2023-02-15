@@ -997,7 +997,7 @@ Here is an example on how to use a noise model:
 
       import numpy as np
       from qibo import models, gates
-      from noise import NoiseModel, PauliError
+      from qibo.noise import NoiseModel, PauliError
 
       # Build specific noise model with 3 quantum errors:
       # - Pauli error on H only for qubit 1.
