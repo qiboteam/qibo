@@ -207,8 +207,8 @@ def test_choi_to_kraus(order, validate_CP):
         test_choi, order=order, validate_CP=validate_CP
     )
 
-    a0 = coefficients[0] * kraus_ops[0]
-    a1 = coefficients[1] * kraus_ops[1]
+    a0 = kraus_ops[0]
+    a1 = kraus_ops[1]
 
     state = random_density_matrix(2)
 
@@ -222,20 +222,19 @@ def test_choi_to_kraus(order, validate_CP):
     assert np.linalg.norm(evolution_a1 - test_evolution_a1) < PRECISION_TOL, True
 
     if validate_CP and order == "row":
-        (kraus_left, kraus_right), coefficients = choi_to_kraus(
+        (kraus_left, kraus_right), _ = choi_to_kraus(
             test_non_CP, order=order, validate_CP=validate_CP
         )
 
-        for test_left, left, test_right, right, test_coeff, coeff in zip(
+        for test_left, left, test_right, right, test_coeff in zip(
             test_kraus_left,
             kraus_left,
             test_kraus_right,
             kraus_right,
             test_coefficients,
-            coefficients,
         ):
             state = random_density_matrix(2)
-            evolution = coeff**2 * left @ state @ right.T.conj()
+            evolution = left @ state @ right.T.conj()
             test_evolution = test_coeff**2 * test_left @ state @ test_right.T.conj()
 
             assert np.linalg.norm(evolution - test_evolution) < PRECISION_TOL, True

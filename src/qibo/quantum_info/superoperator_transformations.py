@@ -8,7 +8,17 @@ from qibo.gates.special import FusedGate
 
 def vectorization(state, order: str = "row"):
     """Returns state :math:`\\rho` in its Liouville
-    representation :math:`\\ket{\\rho}`.
+    representation :math:`|\\rho\\rangle\\rangle`.
+
+    If ``order="row"``, then:
+
+    .. math::
+        |\\rho\\rangle\\rangle = \\sum_{k, l} \\, \\rho_{kl} \\, \\ket{k} \\otimes \\ket{l}
+
+    If ``order="column"``, then:
+
+    .. math::
+        |\\rho\\rangle\\rangle = \\sum_{k, l} \\, \\rho_{kl} \\, \\ket{l} \\otimes \\ket{k}
 
     Args:
         state: state vector or density matrix.
@@ -65,10 +75,17 @@ def vectorization(state, order: str = "row"):
 
 def unvectorization(state, order: str = "row"):
     """Returns state :math:`\\rho` from its Liouville
-    representation :math:`\\ket{\\rho}`.
+    representation :math:`|\\rho\\rangle\\rangle`. This operation is
+    the inverse function of :func:`vectorization`, i.e.
+
+    .. math::
+        \\begin{align}
+            \\rho &= \\text{unvectorization}(|\\rho\\rangle\\rangle) \\nonumber \\\\
+            &= \\text{unvectorization}(\\text{vectorization}(\\rho)) \\nonumber
+        \\end{align}
 
     Args:
-        state: :func:`vectorization` of a quantum state.
+        state: quantum state in Liouville representation.
         order (str, optional): If ``"row"``, unvectorization is performed
             row-wise. If ``"column"``, unvectorization is performed
             column-wise. If ``"system"``, system-wise vectorization is
@@ -115,8 +132,19 @@ def unvectorization(state, order: str = "row"):
 
 
 def liouville_to_choi(super_op, order: str = "row"):
-    """Convert Liouville representation of quantum channel
-    to its Choi representation.
+    """Convert Liouville representation of quantum channel :math:`\\mathcal{E}`
+    to its Choi representation :math:`\\Lambda`. Indexing :math:`\\mathcal{E}` as
+    :math:`\\mathcal{E}_{\\alpha\\beta, \\, \\gamma\\delta} \\,\\,`, then
+
+    If ``order="row"``:
+
+    .. math::
+        \\Lambda = \\sum_{k, l} \\, \\ketbra{k}{l} \\otimes \\mathcal{E}(\\ketbra{k}{l}) \\equiv \\mathcal{E}_{\\alpha\\gamma, \\, \\beta\\delta}
+
+    If ``order="column"``, then:
+
+    .. math::
+            \\Lambda = \\sum_{k, l} \\, \\mathcal{E}(\\ketbra{k}{l}) \\otimes \\ketbra{k}{l} \\equiv \\mathcal{E}_{\\delta\\beta, \\, \\gamma\\alpha}
 
     Args:
         super_op: Liouville representation of quanutm channel.
@@ -135,8 +163,20 @@ def liouville_to_choi(super_op, order: str = "row"):
 
 
 def choi_to_liouville(choi_super_op, order: str = "row"):
-    """Convert Choi representation of quantum channel
-    to its Liouville representation.
+    """Convert Choi representation :math:`\\Lambda` of quantum channel
+    to its Liouville representation :math:`\\mathcal{E}`.
+
+
+    If ``order="row"``, then:
+
+    .. math::
+        \\Lambda_{\\alpha\\beta, \\, \\gamma\\delta} \\mapsto \\Lambda_{\\alpha\\gamma, \\, \\beta\\delta} \\equiv \\mathcal{E}
+
+    If ``order="column"``, then:
+
+    .. math::
+        \\Lambda_{\\alpha\\beta, \\, \\gamma\\delta} \\mapsto \\Lambda_{\\delta\\beta, \\, \\gamma\\alpha} \\equiv \\mathcal{E}
+
 
     Args:
         choi_super_op: Choi representation of quanutm channel.
@@ -161,13 +201,39 @@ def choi_to_kraus(
     order: str = "row",
     validate_CP: bool = True,
 ):
-    """Convert Choi representation of a quantum channel into Kraus operators.
+    """Convert Choi representation :math:`\\Lambda` of a quantum channel :math:`\\mathcal{E}`
+    into Kraus operators :math:`\\{ K_{\\alpha} \\}_{\\alpha}`.
+
+    If :math:`\\mathcal{E}` is a completely positive (CP) map, then
+
+    .. math::
+        \\Lambda = \\sum_{\\alpha} \\, \\lambda_{\\alpha}^{2} \\, |\\tilde{K}_{\\alpha}\\rangle\\rangle \\langle\\langle \\tilde{K}_{\\alpha}| \\, .
+
+    This is the spectral decomposition of :math:`\\Lambda`, Hence, the set :math:`\\{\\lambda_{\\alpha}, \\, \\tilde{K}_{\\alpha}\\}_{\\alpha}`
+    is found by diagonalization of :math:`\\Lambda`. The Kraus operators :math:`\\{K_{\\alpha}\\}_{\\alpha}`
+    are defined as
+
+    .. math::
+        K_{\\alpha} = \\lambda_{\\alpha} \\, \\text{unvectorization}(|\\tilde{K}_{\\alpha}\\rangle\\rangle) \\, .
+    
+    If :math:`\\mathcal{E}` is not CP, then spectral composition is replaced by
+    a singular value decomposition (SVD), i.e.
+    
+    .. math::
+        \\Lambda = U \\, S \\, V^{\\dagger} \\, ,
+    
+    where :math:`U` is a :math:`d^{2} \\times d^{2}` unitary matrix, :math:`S` is a 
+    :math:`d^{2} \\times d^{2}` positive diagonal matrix containing the singular values
+    of :math:`\\Lambda`, and :math:`V` is a :math:`d^{2} \\times d^{2}` unitary matrix. 
+    The Kraus coefficients are replaced by the square root of the singular values, and 
+    :math:`U` (:math:`V`) determine the left-generalized (right-generalized) Kraus
+    operators.
 
     Args:
         choi_super_op: Choi representation of a quantum channel.
         precision_tol (float, optional): Precision tolerance for eigenvalues
             found in the spectral decomposition problem. Any eigenvalue
-            :math:`\\lambda < \\text{precision_tol}` is set to 0 (zero).
+            :math:`\\lambda <` ``precision_tol`` is set to 0 (zero).
             If ``None``, ``precision_tol`` defaults to
             ``qibo.config.PRECISION_TOL=1e-8``. Defaults to ``None``.
         order (str, optional): If ``"row"``, reshuffling is performed
@@ -183,10 +249,12 @@ def choi_to_kraus(
             Defaults to ``True``.
 
     Returns:
-        (ndarray, ndarray): Kraus operators of quantum channel and their respective
-            coefficients. If map is non-CP, then function returns left- and
-            right-generalized Kraus operators as well as the square root of their
-            corresponding singular values.
+        (ndarray, ndarray): The set :math:`\\{K_{\\alpha}, \\, \\lambda_{\\alpha} \\}_{\\alpha}`
+        of Kraus operators representing the quantum channel and their respective coefficients.
+        If map is non-CP, then function returns the set 
+        :math:`\\{ \\{K_{L}, \\, K_{R}\\}_{\\alpha}, \\, \\lambda_{\\alpha} \\}_{\\alpha}`,
+        with the left- and right-generalized Kraus operators as well as the square root of 
+        their corresponding singular values.
     """
 
     if precision_tol is not None and not isinstance(precision_tol, float):
@@ -242,9 +310,9 @@ def choi_to_kraus(
         V = np.conj(V)
 
         kraus_left, kraus_right = list(), list()
-        for eigenvector_left, eigenvector_right in zip(U, V):
-            kraus_left.append(unvectorization(eigenvector_left, order=order))
-            kraus_right.append(unvectorization(eigenvector_right, order=order))
+        for coeff, eigenvector_left, eigenvector_right in zip(coefficients, U, V):
+            kraus_left.append(coeff * unvectorization(eigenvector_left, order=order))
+            kraus_right.append(coeff * unvectorization(eigenvector_right, order=order))
 
         kraus_left = np.array(kraus_left)
         kraus_right = np.array(kraus_right)
@@ -255,8 +323,9 @@ def choi_to_kraus(
         kraus_ops, coefficients = list(), list()
         for eig, kraus in zip(eigenvalues, eigenvectors):
             if np.abs(eig) > precision_tol:
-                kraus_ops.append(unvectorization(kraus, order=order))
-                coefficients.append(np.sqrt(eig))
+                eig = np.sqrt(eig)
+                kraus_ops.append(eig * unvectorization(kraus, order=order))
+                coefficients.append(eig)
 
         kraus_ops = np.array(kraus_ops)
         coefficients = np.array(coefficients)
@@ -265,8 +334,11 @@ def choi_to_kraus(
 
 
 def kraus_to_choi(kraus_ops, order: str = "row"):
-    """Convert Kraus representation of quantum channel
-    to its Choi representation.
+    """Convert Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`
+    of quantum channel to its Choi representation :math:`\\Lambda`.
+
+    .. math::
+        \\Lambda = \\sum_{\\alpha} \\, |K_{\\alpha}\\rangle\\rangle \\langle\\langle K_{\\alpha} |
 
     Args:
         kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
@@ -305,7 +377,15 @@ def kraus_to_choi(kraus_ops, order: str = "row"):
 
 
 def kraus_to_liouville(kraus_ops, order: str = "row"):
-    """Convert from Kraus representation to Liouville representation.
+    """Convert from Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}` 
+    of quantum channel to its Liouville representation :math:`\\mathcal{E}`.
+    It uses the Choi representation as an intermediate step.
+
+    .. math::
+        \\begin{align}
+            \\mathcal{E} &= \\sum_{\\alpha} \\, K_{\\alpha}^{*} \\otimes K_{\\alpha} \\\\
+            &\\equiv \\text{choi_to_liouville}(\\text{kraus_to_choi}(\\{K_{\\alpha}\\}_{\\alpha}))
+        \\end{align}
 
     Args:
         kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
@@ -329,9 +409,12 @@ def kraus_to_liouville(kraus_ops, order: str = "row"):
 
 
 def liouville_to_kraus(super_op, precision_tol: float = None, order: str = "row"):
-    """Convert Liouville representation of a quantum channel to
-    its Kraus representation. It uses the Choi representation as
-    an intermediate step.
+    """Convert Liouville representation :math:`\\mathcal{E}` of a quantum
+    channel to its Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`.
+    It uses the Choi representation as an intermediate step.
+
+    .. math::
+        \\{K_{\\alpha}, \\, \\lambda_{\\alpha}\\}_{\\alpha} = \\text{choi_to_kraus}(\\text{liouville_to_choi}(\\mathcal{E}))
 
     Args:
         super_op (ndarray): Liouville representation of quantum channel.
@@ -361,6 +444,21 @@ def liouville_to_kraus(super_op, precision_tol: float = None, order: str = "row"
 def _reshuffling(super_op, order: str = "row"):
     """Reshuffling operation used to convert Lioville representation
     of quantum channels to their Choi representation (and vice-versa).
+
+    For an operator :math:`A` with dimensions :math:`d^{2} \times d^{2}`,
+    the reshuffling operation consists of reshaping :math:`A` as a
+    4-dimensional tensor, swapping two axes, and reshaping back to a
+    :math:`d^{2} \times d^{2}` matrix.
+
+    If ``order="row"``, then:
+
+    .. math::
+        A_{\\alpha\\beta, \\, \\gamma\\delta} \\mapsto A_{\\alpha, \\, \\beta, \\, \\gamma, \\, \\delta} \\mapsto A_{\\alpha, \\, \\gamma, \\, \\beta, \\, \\delta} \\mapsto A_{\\alpha\\gamma, \\, \\beta\\delta}
+
+    If ``order="column"``, then:
+
+    .. math::
+        A_{\\alpha\\beta, \\, \\gamma\\delta} \\mapsto A_{\\alpha, \\, \\beta, \\, \\gamma, \\, \\delta} \\mapsto A_{\\delta, \\, \\beta, \\, \\gamma, \\, \\alpha} \\mapsto A_{\\delta\\beta, \\, \\gamma\\alpha}
 
     Args:
         super_op (ndarray): Liouville (Choi) representation of a
