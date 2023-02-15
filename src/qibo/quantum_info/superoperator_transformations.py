@@ -215,17 +215,17 @@ def choi_to_kraus(
 
     .. math::
         K_{\\alpha} = \\lambda_{\\alpha} \\, \\text{unvectorization}(|\\tilde{K}_{\\alpha}\\rangle\\rangle) \\, .
-    
+
     If :math:`\\mathcal{E}` is not CP, then spectral composition is replaced by
     a singular value decomposition (SVD), i.e.
-    
+
     .. math::
         \\Lambda = U \\, S \\, V^{\\dagger} \\, ,
-    
-    where :math:`U` is a :math:`d^{2} \\times d^{2}` unitary matrix, :math:`S` is a 
+
+    where :math:`U` is a :math:`d^{2} \\times d^{2}` unitary matrix, :math:`S` is a
     :math:`d^{2} \\times d^{2}` positive diagonal matrix containing the singular values
-    of :math:`\\Lambda`, and :math:`V` is a :math:`d^{2} \\times d^{2}` unitary matrix. 
-    The Kraus coefficients are replaced by the square root of the singular values, and 
+    of :math:`\\Lambda`, and :math:`V` is a :math:`d^{2} \\times d^{2}` unitary matrix.
+    The Kraus coefficients are replaced by the square root of the singular values, and
     :math:`U` (:math:`V`) determine the left-generalized (right-generalized) Kraus
     operators.
 
@@ -251,9 +251,9 @@ def choi_to_kraus(
     Returns:
         (ndarray, ndarray): The set :math:`\\{K_{\\alpha}, \\, \\lambda_{\\alpha} \\}_{\\alpha}`
         of Kraus operators representing the quantum channel and their respective coefficients.
-        If map is non-CP, then function returns the set 
+        If map is non-CP, then function returns the set
         :math:`\\{ \\{K_{L}, \\, K_{R}\\}_{\\alpha}, \\, \\lambda_{\\alpha} \\}_{\\alpha}`,
-        with the left- and right-generalized Kraus operators as well as the square root of 
+        with the left- and right-generalized Kraus operators as well as the square root of
         their corresponding singular values.
     """
 
@@ -377,7 +377,7 @@ def kraus_to_choi(kraus_ops, order: str = "row"):
 
 
 def kraus_to_liouville(kraus_ops, order: str = "row"):
-    """Convert from Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}` 
+    """Convert from Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`
     of quantum channel to its Liouville representation :math:`\\mathcal{E}`.
     It uses the Choi representation as an intermediate step.
 
