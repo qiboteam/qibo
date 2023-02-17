@@ -16,5 +16,6 @@ addopts = [
   '--cov-append',
   '--cov-report=xml',
   '--cov-report=html',
+  '--pyargs',
   '--durations=60',
 ]
