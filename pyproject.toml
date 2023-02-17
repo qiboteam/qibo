@@ -17,5 +17,6 @@ addopts = [
   '--cov-report=xml',
   '--cov-report=html',
   '--pyargs',
+  'qibo',
   '--durations=60',
 ]
