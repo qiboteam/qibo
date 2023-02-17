@@ -215,6 +215,9 @@ class X(Gate):
         decomp_gates.extend(decomp_gates)
         return decomp_gates
 
+    def basis_rotation(self):
+        return H(self.target_qubits[0])
+
 
 class Y(Gate):
     """The Pauli Y gate.
@@ -228,6 +231,12 @@ class Y(Gate):
         self.name = "y"
         self.target_qubits = (q,)
         self.init_args = [q]
+
+    def basis_rotation(self):
+        from qibo import matrices
+
+        matrix = (matrices.Y + matrices.Z) / math.sqrt(2)
+        return Unitary(matrix, self.target_qubits[0], trainable=False)
 
 
 class Z(Gate):
