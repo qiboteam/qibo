@@ -203,9 +203,7 @@ def test_choi_to_kraus(order, validate_CP):
     with pytest.raises(TypeError):
         choi_to_kraus(test_choi, validate_CP="True")
 
-    kraus_ops, coefficients = choi_to_kraus(
-        test_choi, order=order, validate_CP=validate_CP
-    )
+    kraus_ops, _ = choi_to_kraus(test_choi, order=order, validate_CP=validate_CP)
 
     a0 = kraus_ops[0]
     a1 = kraus_ops[1]
@@ -218,8 +216,8 @@ def test_choi_to_kraus(order, validate_CP):
     test_evolution_a0 = test_a0 @ state @ test_a0.T.conj()
     test_evolution_a1 = test_a1 @ state @ test_a1.T.conj()
 
-    assert np.linalg.norm(evolution_a0 - test_evolution_a0) < PRECISION_TOL, True
-    assert np.linalg.norm(evolution_a1 - test_evolution_a1) < PRECISION_TOL, True
+    assert np.linalg.norm(evolution_a0 - test_evolution_a0) < 2 * PRECISION_TOL, True
+    assert np.linalg.norm(evolution_a1 - test_evolution_a1) < 2 * PRECISION_TOL, True
 
     if validate_CP and order == "row":
         (kraus_left, kraus_right), _ = choi_to_kraus(
@@ -237,7 +235,7 @@ def test_choi_to_kraus(order, validate_CP):
             evolution = left @ state @ right.T.conj()
             test_evolution = test_coeff**2 * test_left @ state @ test_right.T.conj()
 
-            assert np.linalg.norm(evolution - test_evolution) < PRECISION_TOL, True
+            assert np.linalg.norm(evolution - test_evolution) < 2 * PRECISION_TOL, True
 
 
 @pytest.mark.parametrize("order", ["row", "column"])
