@@ -9,6 +9,6 @@ output-format = "colorized"
 
 [tool.pytest.ini_options]
 
-testpaths = ['tests/']
+testpaths = ['src/qibo/tests/']
 filterwarnings = ['ignore::RuntimeWarning']
-addopts =  [ '--pyargs qibo', '--cov=qibo', '--cov-report=xml', '--durations=60']
+addopts = ['--cov=qibo', '--cov-report=xml', '--durations=60']
