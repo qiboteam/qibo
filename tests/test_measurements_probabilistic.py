@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 from qibo import gates, models
-from qibo.tests.test_measurements import assert_result
+from .test_measurements import assert_result
 
 
 @pytest.mark.parametrize("use_samples", [True, False])

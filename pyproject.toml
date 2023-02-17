@@ -9,7 +9,7 @@ output-format = "colorized"
 
 [tool.pytest.ini_options]
 
-testpaths = ['src/qibo/tests/']
+testpaths = ['tests/']
 filterwarnings = ['ignore::RuntimeWarning']
 addopts = [
   '--cov=qibo',
@@ -17,6 +17,4 @@ addopts = [
   '--cov-report=xml',
   '--cov-report=html',
   '--durations=60',
-  '--pyargs',
-  'qibo',
 ]

@@ -5,7 +5,7 @@ import sympy
 
 from qibo import hamiltonians, matrices
 from qibo.symbols import I, Symbol, X, Y, Z
-from qibo.tests.utils import random_hermitian
+from .utils import random_hermitian
 
 
 @pytest.mark.parametrize("nqubits", [4, 5])

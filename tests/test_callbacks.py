@@ -277,7 +277,7 @@ def test_entropy_large_circuit(backend, accelerators):
 
 
 def test_entropy_density_matrix(backend):
-    from qibo.tests.utils import random_density_matrix
+    from .utils import random_density_matrix
 
     rho = random_density_matrix(4)
     # this rho is not always positive. Make rho positive for this application
@@ -362,13 +362,13 @@ def test_energy(backend, density_matrix):
     energy = callbacks.Energy(ham)
     matrix = backend.to_numpy(ham.matrix)
     if density_matrix:
-        from qibo.tests.utils import random_density_matrix
+        from .utils import random_density_matrix
 
         state = random_density_matrix(4)
         target_energy = np.trace(matrix.dot(state))
         final_energy = energy.apply_density_matrix(backend, state)
     else:
-        from qibo.tests.utils import random_state
+        from .utils import random_state
 
         state = random_state(4)
         target_energy = state.conj().dot(matrix.dot(state))

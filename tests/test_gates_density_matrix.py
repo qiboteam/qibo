@@ -4,7 +4,7 @@ import pytest
 
 from qibo import gates
 from qibo.config import raise_error
-from qibo.tests.utils import random_density_matrix
+from .utils import random_density_matrix
 
 _atol = 1e-8
 
@@ -192,7 +192,7 @@ def test_controlled_with_effect(backend):
 def test_controlled_by_random(backend, nqubits):
     """Check controlled_by method on gate."""
     from qibo.models import Circuit
-    from qibo.tests.utils import random_state
+    from .utils import random_state
 
     initial_psi = random_state(nqubits)
     initial_rho = np.outer(initial_psi, initial_psi.conj())

@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 
 from qibo import hamiltonians
-from qibo.tests.utils import random_complex, random_hermitian, random_state
+from .utils import random_complex, random_hermitian, random_state
 
 
 @pytest.mark.parametrize("nqubits", [3, 4])

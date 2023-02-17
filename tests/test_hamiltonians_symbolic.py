@@ -6,7 +6,7 @@ import sympy
 from qibo import gates, hamiltonians
 from qibo.models import Circuit
 from qibo.symbols import I, Y, Z
-from qibo.tests.utils import random_complex
+from .utils import random_complex
 
 
 def symbolic_tfim(nqubits, h=1.0):
