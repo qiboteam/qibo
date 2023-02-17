@@ -435,3 +435,15 @@ def test_measurement_result_vs_circuit_result(backend, accelerators):
     frequencies = result.frequencies(registers=True)
     assert ma_freq == frequencies.get("a")
     assert mb_freq == frequencies.get("b")
+
+
+@pytest.mark.parametrize("nqubits", [1, 4])
+@pytest.mark.parametrize("outcome", [0, 1])
+def test_measurement_basis(backend, nqubits, outcome):
+    c = models.Circuit(nqubits)
+    if outcome:
+        c.add(gates.X(q) for q in range(nqubits))
+    c.add(gates.H(q) for q in range(nqubits))
+    c.add(gates.M(*range(nqubits), basis=gates.X))
+    result = c(nshots=100)
+    assert result.frequencies() == {nqubits * str(outcome): 100}

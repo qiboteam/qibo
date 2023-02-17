@@ -561,6 +561,7 @@ class Circuit:
 
             self.queue.append(gate)
             if isinstance(gate, gates.M):
+                self.add(gate.basis)
                 if gate.register_name is None:
                     # add default register name
                     nreg = self.queue.nmeasurements - 1

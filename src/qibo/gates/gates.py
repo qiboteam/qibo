@@ -261,6 +261,9 @@ class Z(Gate):
             gate = super().controlled_by(*q)
         return gate
 
+    def basis_rotation(self):
+        return None
+
 
 class S(Gate):
     """The S gate.
