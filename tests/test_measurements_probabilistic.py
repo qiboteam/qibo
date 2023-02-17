@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 from qibo import gates, models
+
 from .test_measurements import assert_result
 
 

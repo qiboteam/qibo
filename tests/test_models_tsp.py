@@ -6,6 +6,7 @@ import pytest
 from qibo import gates
 from qibo.models import QAOA, Circuit
 from qibo.models.tsp import TSP
+
 from .test_models_variational import assert_regression_fixture
 
 

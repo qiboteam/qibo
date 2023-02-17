@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 from qibo import gates, models
+
 from .utils import random_state
 
 

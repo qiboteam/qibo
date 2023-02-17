@@ -6,6 +6,7 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 from qibo.noise import *
+
 from .utils import random_density_matrix, random_state
 
 

@@ -3,6 +3,7 @@ import numpy as np
 import pytest
 
 from qibo import gates, models
+
 from .utils import random_density_matrix, random_state
 
 

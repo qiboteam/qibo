@@ -6,6 +6,7 @@ import sympy
 from qibo import gates, hamiltonians
 from qibo.models import Circuit
 from qibo.symbols import I, Y, Z
+
 from .utils import random_complex
 
 

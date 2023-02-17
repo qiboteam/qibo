@@ -3,6 +3,7 @@ import numpy as np
 import pytest
 
 from qibo import hamiltonians
+
 from .utils import random_complex, random_hermitian, random_state
 
 

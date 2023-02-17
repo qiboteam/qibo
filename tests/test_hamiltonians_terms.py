@@ -4,6 +4,7 @@ import pytest
 
 from qibo import gates, matrices, models
 from qibo.hamiltonians import terms
+
 from .utils import random_density_matrix, random_state
 
 

@@ -4,6 +4,7 @@ import pytest
 
 from qibo import gates, matrices
 from qibo.config import PRECISION_TOL
+
 from .utils import random_density_matrix
 
 
