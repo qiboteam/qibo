@@ -216,8 +216,8 @@ def test_choi_to_kraus(order, validate_CP):
     test_evolution_a0 = test_a0 @ state @ test_a0.T.conj()
     test_evolution_a1 = test_a1 @ state @ test_a1.T.conj()
 
-    assert np.linalg.norm(evolution_a0 - test_evolution_a0) < 1e-7, True
-    assert np.linalg.norm(evolution_a1 - test_evolution_a1) < 1e-7, True
+    assert np.linalg.norm(evolution_a0 - test_evolution_a0) < 2 * PRECISION_TOL, True
+    assert np.linalg.norm(evolution_a1 - test_evolution_a1) < 2 * PRECISION_TOL, True
 
     if validate_CP and order == "row":
         (kraus_left, kraus_right), _ = choi_to_kraus(
@@ -235,7 +235,7 @@ def test_choi_to_kraus(order, validate_CP):
             evolution = left @ state @ right.T.conj()
             test_evolution = test_coeff**2 * test_left @ state @ test_right.T.conj()
 
-            assert np.linalg.norm(evolution - test_evolution) < 1e-7, True
+            assert np.linalg.norm(evolution - test_evolution) < 2 * PRECISION_TOL, True
 
 
 @pytest.mark.parametrize("order", ["row", "column"])
