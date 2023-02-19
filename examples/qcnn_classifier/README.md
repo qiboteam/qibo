@@ -9,12 +9,20 @@ You will prepare a cluster state and train a quantum classifier to detect if it 
 1. Like the QCNN, the cluster state on a ring is translationally invariant.
 2. The cluster state is highly entangled.
 This architecture should be effective at reducing entanglement, obtaining the classification by reading out a single qubit.
+
+Workflow of qcnn model:
 ![workflow](images/workflow.PNG)
 
+Schematic of qcnn model:
 ![schematic](images/structure.PNG)
 
+Convolutional layer:
+
+Pooling layer:
+
+
 ## How to run an example
-To run a particular instance of the problem, we have to set up the initial arguments:
+To run a particular instance of the problem, we have to set up the variables:
 - `nqubits` (int): number of quantum bits. It must be larger than 1. 
 - `nlayers` (int): number of layers of the varitional ansatz.
 - `nclasses` (int): number of classes of the training set (default=2).
@@ -25,7 +33,7 @@ To run a particular instance of the problem, we have to set up the initial argum
 - `nshots` (int):number of runs of the circuit during the sampling process (default=10000)
 - `method` (string): str 'classical optimizer for the minimization'. All methods from scipy.optimize.minmize are suported (default='Powell').
 
-To run an example ..., first to include necessary packages:
+Here is how we create QuantumCNN object. The user should include necessary packages:
 
 ```bash
 from qibo.models.qcnn import QuantumCNN
@@ -37,7 +45,7 @@ import qibo
 qibo.set_backend("numpy")
 ```
 
-Define data and labels:
+Here we provide the ground states of 4-qubit TFIM in data folder. To define data and labels:
 
 ```bash
 data = np.load('nqubits_4_data_shuffled.npy')
@@ -55,14 +63,15 @@ test = QuantumCNN(nqubits=4, nlayers=1, nclasses=2)
 testcircuit = test._circuit
 testcircuit.draw()
 ```
-Training:
+draw() is to plot the circuit to see how it is constructed. Next we proceed to train the model:
+
 ```
 testbias = np.zeros(test.measured_qubits)
 testangles = [random.uniform(0,2*np.pi) for i in range(21*2)]
 init_theta = np.concatenate((testbias, testangles))
 result = test.minimize(init_theta, data=data, labels=labels, nshots=10000, method='Powell')
 ```
-Predicting:
+Prediction:
 ```
 predictions = []
 for n in range(len(data)):
@@ -71,6 +80,11 @@ for n in range(len(data)):
 
 Results:
 ```
+import matplotlib.pyplot as plt
+plt.scatter(labels.reshape(len(labels)),predictions)
+plt.xlabel('label')
+plt.ylabel('prediction')
+
 test.Accuracy(labels,predictions)
 ```
 
