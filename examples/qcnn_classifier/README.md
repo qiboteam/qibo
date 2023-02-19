@@ -24,18 +24,51 @@ To run a particular instance of the problem, we have to set up the initial argum
 - `nshots` (int):number of runs of the circuit during the sampling process (default=10000)
 - `method` (string): str 'classical optimizer for the minimization'. All methods from scipy.optimize.minmize are suported (default='Powell').
 
-To run an example ..., you should execute the following command:
+To run an example ..., first to include necessary packages:
 
 ```bash
-python main.py
+from qibo.models.qcnn import QuantumCNN
+from qibo import gates
+import random
+import numpy as np
+
+import qibo
+qibo.set_backend("numpy")
 ```
 
-To run an example with different values,  type for example:
+Define data and labels:
 
 ```bash
-python main.py --nqubits 4 --nlayers 5 --nshots 100000 --training
+data = np.load('nqubits_4_data_shuffled.npy')
+labels = np.load('nqubits_4_labels_shuffled.npy')
+labels = np.transpose(np.array([labels])) # restructure to required array format
 ```
 
-Note that ...
+Structure of data and labels are like in the Fig.1
 
-## Results
+Define circuit:
+```
+test = QuantumCNN(nqubits=4, nlayers=1, nclasses=2)
+testcircuit = test._circuit
+testcircuit.draw()
+```
+Training:
+```
+testbias = np.zeros(test.measured_qubits)
+testangles = [random.uniform(0,2*np.pi) for i in range(21*2)]
+init_theta = np.concatenate((testbias, testangles))
+result = test.minimize(init_theta, data=data, labels=labels, nshots=10000, method='Powell')
+```
+Predicting:
+```
+predictions = []
+for n in range(len(data)):
+    predictions.append(test.Predictions(testcircuit, result[1], data[n], nshots=10000)[0])
+```
+
+Results:
+```
+test.Accuracy(labels,predictions)
+```
+
+
