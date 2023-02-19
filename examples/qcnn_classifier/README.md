@@ -9,9 +9,9 @@ You will prepare a cluster state and train a quantum classifier to detect if it 
 1. Like the QCNN, the cluster state on a ring is translationally invariant.
 2. The cluster state is highly entangled.
 This architecture should be effective at reducing entanglement, obtaining the classification by reading out a single qubit.
-![workflow](images/workflow.png)
+![workflow](images/workflow.PNG)
 
-![schematic](images/structure.png)
+![schematic](images/structure.PNG)
 
 ## How to run an example
 To run a particular instance of the problem, we have to set up the initial arguments:
@@ -46,7 +46,7 @@ labels = np.transpose(np.array([labels])) # restructure to required array format
 ```
 
 Structure of data and labels are like:
-![data_labels](images/data_labels.png)
+![data_labels](images/data_labels.PNG)
 
 
 Define circuit:
