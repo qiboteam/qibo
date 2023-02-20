@@ -48,8 +48,8 @@ qibo.set_backend("numpy")
 Here we provide the ground states of 4-qubit TFIM in data folder. To define data and labels:
 
 ```bash
-data = np.load('nqubits_4_data_shuffled.npy')
-labels = np.load('nqubits_4_labels_shuffled.npy')
+data = np.load('nqubits_4_data_shuffled_no0.npy')
+labels = np.load('nqubits_4_labels_shuffled_no0.npy')
 labels = np.transpose(np.array([labels])) # restructure to required array format
 ```
 
@@ -63,29 +63,36 @@ test = QuantumCNN(nqubits=4, nlayers=1, nclasses=2)
 testcircuit = test._circuit
 testcircuit.draw()
 ```
-draw() is to plot the circuit to see how it is constructed. Next we proceed to train the model:
+draw() is to plot the circuit to see how it is constructed. 
 
+Initialize model parameters:
 ```
 testbias = np.zeros(test.measured_qubits)
 testangles = [random.uniform(0,2*np.pi) for i in range(21*2)]
 init_theta = np.concatenate((testbias, testangles))
-result = test.minimize(init_theta, data=data, labels=labels, nshots=10000, method='Powell')
 ```
-Prediction:
+Train model with optimize parameters:
+```result = test.minimize(init_theta, data=data, labels=labels, nshots=10000, method='Powell')
+```
+
+Generate predictions from optimized model:
 ```
 predictions = []
 for n in range(len(data)):
     predictions.append(test.Predictions(testcircuit, result[1], data[n], nshots=10000)[0])
 ```
 
-Results:
+Result visualization:
 ```
-import matplotlib.pyplot as plt
-plt.scatter(labels.reshape(len(labels)),predictions)
-plt.xlabel('label')
-plt.ylabel('prediction')
+from sklearn import metrics
+actual = [np.sign(label) for label in labels]
+predicted = [np.sign(prediction) for prediction in predictions]
+confusion_matrix = metrics.confusion_matrix(actual, predicted)
+cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix = confusion_matrix, display_labels = [1, -1])
+cm_display.plot()
+plt.show()
 
 test.Accuracy(labels,predictions)
 ```
-
+![result](images/result_confusion_matrix.PNG)
 
