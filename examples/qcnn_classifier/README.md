@@ -47,7 +47,7 @@ qibo.set_backend("numpy")
 
 Here we provide the ground states of 4-qubit TFIM in data folder. To define data and labels:
 
-```bash
+```
 data = np.load('nqubits_4_data_shuffled_no0.npy')
 labels = np.load('nqubits_4_labels_shuffled_no0.npy')
 labels = np.transpose(np.array([labels])) # restructure to required array format
@@ -72,7 +72,8 @@ testangles = [random.uniform(0,2*np.pi) for i in range(21*2)]
 init_theta = np.concatenate((testbias, testangles))
 ```
 Train model with optimize parameters:
-```result = test.minimize(init_theta, data=data, labels=labels, nshots=10000, method='Powell')
+```
+result = test.minimize(init_theta, data=data, labels=labels, nshots=10000, method='Powell')
 ```
 
 Generate predictions from optimized model:
@@ -96,3 +97,4 @@ test.Accuracy(labels,predictions)
 ```
 ![result](images/result_confusion_matrix.PNG)
 
+In this example, we achieved a accuracy of 0.969849.
