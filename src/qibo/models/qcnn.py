@@ -1,6 +1,4 @@
 import numpy as np
-
-import qibo
 from qibo import gates, matrices
 from qibo.models import Circuit
 
@@ -133,9 +131,15 @@ class QuantumCNN:
         return c
 
     def one_qubit_unitary(self, bit, symbols):
-        """Make a circuit enacting a rotation of the bloch sphere about the X,
+        """
+        Internal helper function to make a circuit enacting a rotation of the bloch sphere about the X,
         Y and Z axis, that depends on the values in `symbols`.
-        Symbols should be a list of length 3.
+
+        Args:
+            bit: the qubit to apply the one-qubit unitaries to
+            symbols: length 3 array containing the parameters
+        Returns:
+            Circuit containing the unitaries added to the specified qubit.
         """
         c = Circuit(self.nqubits)
         c.add(gates.RX(bit, symbols[0]))
@@ -145,9 +149,16 @@ class QuantumCNN:
         return c
 
     def two_qubit_unitary(self, bits, symbols):
-        """Make a circuit that creates an arbitrary two qubit unitary.
-        Symbols should be a list of length 15.
         """
+        Internal helper function to create a circuit consisting of two qubit unitaries.
+
+        Args:
+            bits: the two qubits to apply the unitaries to
+            symbols: length 15 array containing the parameters
+        Returns:
+            Circuit containing the unitaries added to the specified qubits.
+        """
+
         c = Circuit(self.nqubits)
         c += self.one_qubit_unitary(bits[0], symbols[0:3])
         c += self.one_qubit_unitary(bits[1], symbols[3:6])
@@ -161,9 +172,16 @@ class QuantumCNN:
         return c
 
     def two_qubit_pool(self, source_qubit, sink_qubit, symbols):
-        """Make a circuit to do a parameterized 'pooling' operation, which
+        """
+        Internal helper function to create a circuit to do a parameterized 'pooling' operation with controlled unitaries, which
         attempts to reduce entanglement down from two qubits to just one.
-        Symbols should be a list of 6 params.
+
+        Args:
+            source_qubit: the control qubit.
+            sink_qubit: the target qubit for the controlled unitaries.
+            symbols: array with 6 elements containing the parameters.
+        Returns:
+            Circuit containing the unitaries added to the specified qubits.
         """
         pool_circuit = Circuit(self.nqubits)
         sink_basis_selector = self.one_qubit_unitary(sink_qubit, symbols[0:3])
@@ -175,8 +193,20 @@ class QuantumCNN:
 
         return pool_circuit
 
-    def set_circuit_params(self, angles):
-        params = list(angles)
+    def set_circuit_params(self, angles, has_bias=False):
+        """
+        Sets the parameters of the QCNN circuit. Can be used to load previously saved or optimized parameters.
+
+        Args:
+            angles: the parameters to be loaded.
+            has_bias: specify whether the list of angles contains the bias.
+
+        """
+        if not has_bias:
+            params = list(angles)
+        else:
+            params = list(angles[self.measured_qubits :])
+
         expanded_params = []
         nbits = self.nqubits
         for layer in range(self.nlayers):
@@ -317,6 +347,15 @@ class QuantumCNN:
         return accur
 
     def predict(self, init_state, nshots=10000):
+        """
+        This function is used to produce predictions on new input state after the model is trained. Currently it only takes in one input data.
+
+        Args:
+            init_state: the input state to be predicted.
+            nshots (default=10000): number of shots.
+        Returns:
+            numpy.array() with predictions for each qubit, for the initial state.
+        """
         return self.Predictions(
             self._circuit, self._optimal_angles, init_state, nshots=nshots
         )
