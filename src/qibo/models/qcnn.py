@@ -205,6 +205,7 @@ class QuantumCNN:
         if not has_bias:
             params = list(angles)
         else:
+            self._optimal_angles = angles
             params = list(angles[self.measured_qubits :])
 
         expanded_params = []
