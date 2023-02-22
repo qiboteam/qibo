@@ -581,8 +581,12 @@ def test_gate_independent_noise(backend, density_matrix):
 
     initial_psi = random_density_matrix(3) if density_matrix else random_state(3)
     backend.set_seed(123)
-    final_state = backend.execute_circuit(noise.apply(circuit), initial_state=np.copy(initial_psi))
+    final_state = backend.execute_circuit(
+        noise.apply(circuit), initial_state=np.copy(initial_psi)
+    )
     backend.set_seed(123)
-    target_final_state = backend.execute_circuit(target_circuit, initial_state=np.copy(initial_psi))
+    target_final_state = backend.execute_circuit(
+        target_circuit, initial_state=np.copy(initial_psi)
+    )
 
     backend.assert_allclose(final_state, target_final_state)
