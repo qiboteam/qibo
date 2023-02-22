@@ -552,3 +552,43 @@ def test_add_condition(backend, density_matrix):
     target_final_state = backend.execute_circuit(target_circuit, np.copy(initial_psi))
 
     backend.assert_allclose(final_state, target_final_state)
+
+
+@pytest.mark.parametrize("density_matrix", [False, True])
+def test_gate_independent_noise(backend, density_matrix):
+    pauli = PauliError(0, 0.2, 0.3)
+    depol = DepolarizingError(0.3)
+    noise = NoiseModel()
+    noise.add(pauli)
+    noise.add(depol, qubits=0)
+
+    circuit = Circuit(3, density_matrix=density_matrix)
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.Z(1))
+    circuit.add(gates.X(1))
+    circuit.add(gates.X(2))
+    circuit.add(gates.Z(2))
+    circuit.add(gates.M(0, 1, 2))
+
+    target_circuit = Circuit(3, density_matrix=density_matrix)
+    target_circuit.add(gates.CNOT(0, 1))
+    target_circuit.add(gates.PauliNoiseChannel(0, 0, 0.2, 0.3))
+    target_circuit.add(gates.DepolarizingChannel((0,), 0.3))
+    target_circuit.add(gates.PauliNoiseChannel(1, 0, 0.2, 0.3))
+    target_circuit.add(gates.Z(1))
+    target_circuit.add(gates.PauliNoiseChannel(1, 0, 0.2, 0.3))
+    target_circuit.add(gates.X(1))
+    target_circuit.add(gates.PauliNoiseChannel(1, 0, 0.2, 0.3))
+    target_circuit.add(gates.X(2))
+    target_circuit.add(gates.PauliNoiseChannel(2, 0, 0.2, 0.3))
+    target_circuit.add(gates.Z(2))
+    target_circuit.add(gates.PauliNoiseChannel(2, 0, 0.2, 0.3))
+    target_circuit.add(gates.M(0, 1, 2))
+
+    initial_psi = random_density_matrix(3) if density_matrix else random_state(3)
+    backend.set_seed(123)
+    final_state = backend.execute_circuit(noise.apply(circuit), np.copy(initial_psi))
+    backend.set_seed(123)
+    target_final_state = backend.execute_circuit(target_circuit, np.copy(initial_psi))
+
+    backend.assert_allclose(final_state, target_final_state)
