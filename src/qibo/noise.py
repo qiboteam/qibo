@@ -264,8 +264,12 @@ class NoiseModel:
             noisy_circuit = circuit.__class__(**circuit.init_kwargs)
             for gate in circuit.queue:
                 noisy_circuit.add(gate)
-                errors_list = self.errors[gate.__class__] if (isinstance(gate, gates.Channel) or isinstance(gate, gates.M)) else self.errors[gate.__class__] + self.errors[None]
-                
+                errors_list = (
+                    self.errors[gate.__class__]
+                    if (isinstance(gate, gates.Channel) or isinstance(gate, gates.M))
+                    else self.errors[gate.__class__] + self.errors[None]
+                )
+
                 for condition, error, qubits in errors_list:
                     # import pdb
                     # pdb.set_trace()
