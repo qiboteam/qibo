@@ -135,8 +135,8 @@ class KrausChannel(Channel):
             kraus_op = FusedGate(*range(self.nqubits))
             kraus_op.append(gate)
             kraus_op = kraus_op.asmatrix(backend)
-            kraus_op = vectorization(coeff * kraus_op)
-            super_op += np.outer(kraus_op, np.conj(kraus_op))
+            kraus_op = vectorization(kraus_op)
+            super_op += coeff * np.outer(kraus_op, np.conj(kraus_op))
             del kraus_op
 
         super_op = backend.cast(super_op, dtype=super_op.dtype)
