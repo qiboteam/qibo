@@ -4,7 +4,7 @@ import pytest
 
 from qibo import gates
 from qibo.config import raise_error
-from qibo.tests.utils import random_state
+from qibo.quantum_info import random_statevector
 
 
 def apply_gates(backend, gatelist, nqubits=None, initial_state=None):
@@ -144,7 +144,8 @@ def test_rz(backend, applyx):
 
 def test_gpi(backend):
     phi = 0.1234
-    initial_state = random_state(1)
+    nqubits = 1
+    initial_state = random_statevector(2**nqubits)
     final_state = apply_gates(backend, [gates.GPI(0, phi)], initial_state=initial_state)
 
     phase = np.exp(1.0j * phi)
@@ -156,7 +157,8 @@ def test_gpi(backend):
 
 def test_gpi2(backend):
     phi = 0.1234
-    initial_state = random_state(1)
+    nqubits = 1
+    initial_state = random_statevector(2**nqubits)
     final_state = apply_gates(
         backend, [gates.GPI2(0, phi)], initial_state=initial_state
     )
@@ -179,7 +181,8 @@ def test_u1(backend):
 def test_u2(backend):
     phi = 0.1234
     lam = 0.4321
-    initial_state = random_state(1)
+    nqubits = 1
+    initial_state = random_statevector(2**nqubits)
     final_state = apply_gates(
         backend, [gates.U2(0, phi, lam)], initial_state=initial_state
     )
@@ -197,7 +200,8 @@ def test_u3(backend):
     theta = 0.1111
     phi = 0.1234
     lam = 0.4321
-    initial_state = random_state(1)
+    nqubits = 1
+    initial_state = random_statevector(2**nqubits)
     final_state = apply_gates(
         backend, [gates.U3(0, theta, phi, lam)], initial_state=initial_state
     )
@@ -224,7 +228,8 @@ def test_cnot(backend, applyx):
 
 @pytest.mark.parametrize("controlled_by", [False, True])
 def test_cz(backend, controlled_by):
-    initial_state = random_state(2)
+    nqubits = 2
+    initial_state = random_statevector(2**nqubits)
     matrix = np.eye(4)
     matrix[3, 3] = -1
     target_state = matrix.dot(initial_state)
@@ -249,7 +254,8 @@ def test_cz(backend, controlled_by):
     ],
 )
 def test_cun(backend, name, params):
-    initial_state = random_state(2)
+    nqubits = 2
+    initial_state = random_statevector(2**nqubits)
     gate = getattr(gates, name)(0, 1, **params)
     final_state = apply_gates(backend, [gate], initial_state=initial_state)
     target_state = np.dot(gate.asmatrix(backend), initial_state)
@@ -564,7 +570,8 @@ def test_controlled_u2(backend):
 
 def test_controlled_u3(backend):
     theta, phi, lam = 0.1, 0.1234, 0.4321
-    initial_state = random_state(2)
+    nqubits = 2
+    initial_state = random_statevector(2**nqubits)
     final_state = apply_gates(
         backend, [gates.U3(1, theta, phi, lam).controlled_by(0)], 2, initial_state
     )
@@ -656,7 +663,8 @@ def test_controlled_unitary(backend):
 
 
 def test_controlled_unitary_matrix(backend):
-    initial_state = random_state(2)
+    nqubits = 2
+    initial_state = random_statevector(2**nqubits)
     matrix = np.random.random((2, 2))
     gate = gates.Unitary(matrix, 1).controlled_by(0)
     target_state = apply_gates(backend, [gate], 2, initial_state)
@@ -703,7 +711,7 @@ GATES = [
 def test_dagger(backend, gate, args):
     gate = getattr(gates, gate)(*args)
     nqubits = len(gate.qubits)
-    initial_state = random_state(nqubits)
+    initial_state = random_statevector(2**nqubits)
     final_state = apply_gates(backend, [gate, gate.dagger()], nqubits, initial_state)
     backend.assert_allclose(final_state, initial_state)
 
@@ -725,7 +733,8 @@ GATES = [
 @pytest.mark.parametrize("gate,args", GATES)
 def test_controlled_dagger(backend, gate, args):
     gate = getattr(gates, gate)(*args).controlled_by(0, 1, 2)
-    initial_state = random_state(4)
+    nqubits = 4
+    initial_state = random_statevector(2**nqubits)
     final_state = apply_gates(backend, [gate, gate.dagger()], 4, initial_state)
     backend.assert_allclose(final_state, initial_state)
 
@@ -735,7 +744,7 @@ def test_controlled_dagger(backend, gate, args):
 def test_dagger_consistency(backend, gate_1, gate_2, qubit):
     gate_1 = getattr(gates, gate_1)(qubit)
     gate_2 = getattr(gates, gate_2)(qubit)
-    initial_state = random_state(qubit + 1)
+    initial_state = random_statevector(2 ** (qubit + 1))
     final_state = apply_gates(backend, [gate_1, gate_2], qubit + 1, initial_state)
     backend.assert_allclose(final_state, initial_state)
 
@@ -744,7 +753,7 @@ def test_dagger_consistency(backend, gate_1, gate_2, qubit):
 def test_unitary_dagger(backend, nqubits):
     matrix = np.random.random((2**nqubits, 2**nqubits))
     gate = gates.Unitary(matrix, *range(nqubits))
-    initial_state = random_state(nqubits)
+    initial_state = random_statevector(2**nqubits)
     final_state = apply_gates(backend, [gate, gate.dagger()], nqubits, initial_state)
     target_state = np.dot(matrix, initial_state)
     target_state = np.dot(np.conj(matrix).T, target_state)
@@ -757,7 +766,8 @@ def test_controlled_unitary_dagger(backend):
     matrix = np.random.random((2, 2))
     matrix = expm(1j * (matrix + matrix.T))
     gate = gates.Unitary(matrix, 0).controlled_by(1, 2, 3, 4)
-    initial_state = random_state(5)
+    nqubits = 5
+    initial_state = random_statevector(2**nqubits)
     final_state = apply_gates(backend, [gate, gate.dagger()], 5, initial_state)
     backend.assert_allclose(final_state, initial_state)
 
@@ -769,7 +779,8 @@ def test_generalizedfsim_dagger(backend):
     matrix = np.random.random((2, 2))
     matrix = expm(1j * (matrix + matrix.T))
     gate = gates.GeneralizedfSim(0, 1, matrix, phi)
-    initial_state = random_state(2)
+    nqubits = 2
+    initial_state = random_statevector(2**nqubits)
     final_state = apply_gates(backend, [gate, gate.dagger()], 2, initial_state)
     backend.assert_allclose(final_state, initial_state)
 
@@ -795,7 +806,7 @@ def test_x_decomposition_execution(backend, target, controls, free, use_toffolis
     """Check that applying the decomposition is equivalent to applying the multi-control gate."""
     gate = gates.X(target).controlled_by(*controls)
     nqubits = max((target,) + controls + free) + 1
-    initial_state = random_state(nqubits)
+    initial_state = random_statevector(2**nqubits)
     target_state = backend.apply_gate(gate, np.copy(initial_state), nqubits)
     dgates = gate.decompose(*free, use_toffolis=use_toffolis)
     final_state = np.copy(initial_state)

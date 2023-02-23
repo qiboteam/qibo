@@ -6,7 +6,7 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 from qibo.noise import *
-from qibo.tests.utils import random_density_matrix, random_state
+from qibo.quantum_info import random_density_matrix, random_statevector
 
 
 @pytest.mark.parametrize("density_matrix", [True])
@@ -43,7 +43,9 @@ def test_custom_error(backend, density_matrix, nshots):
     target_circuit.add(gates.Z(2))
     target_circuit.add(gates.M(0, 1, 2))
 
-    initial_psi = random_density_matrix(3) if density_matrix else random_state(3)
+    initial_psi = (
+        random_density_matrix(2**3) if density_matrix else random_statevector(2**3)
+    )
     backend.set_seed(123)
     final_state = backend.execute_circuit(
         noise.apply(circuit), initial_state=np.copy(initial_psi), nshots=nshots
@@ -90,7 +92,9 @@ def test_pauli_error(backend, density_matrix, nshots):
     target_circuit.add(gates.Z(2))
     target_circuit.add(gates.M(0, 1, 2))
 
-    initial_psi = random_density_matrix(3) if density_matrix else random_state(3)
+    initial_psi = (
+        random_density_matrix(2**3) if density_matrix else random_statevector(2**3)
+    )
     backend.set_seed(123)
     final_state = backend.execute_circuit(
         noise.apply(circuit), initial_state=np.copy(initial_psi), nshots=nshots
@@ -136,7 +140,9 @@ def test_depolarizing_error(backend, density_matrix, nshots):
     target_circuit.add(gates.Z(2))
     target_circuit.add(gates.M(0, 1, 2))
 
-    initial_psi = random_density_matrix(3) if density_matrix else random_state(3)
+    initial_psi = (
+        random_density_matrix(2**3) if density_matrix else random_statevector(2**3)
+    )
     backend.set_seed(123)
     final_state = backend.execute_circuit(
         noise.apply(circuit), initial_state=np.copy(initial_psi), nshots=nshots
@@ -182,7 +188,9 @@ def test_thermal_error(backend, density_matrix):
     target_circuit.add(gates.X(2))
     target_circuit.add(gates.Z(2))
 
-    initial_psi = random_density_matrix(3) if density_matrix else random_state(3)
+    initial_psi = (
+        random_density_matrix(2**3) if density_matrix else random_statevector(2**3)
+    )
     backend.set_seed(123)
     final_state = backend.execute_circuit(noise.apply(circuit), np.copy(initial_psi))
     backend.set_seed(123)
@@ -212,7 +220,9 @@ def test_reset_error(backend, density_matrix):
     target_circuit.add(gates.Z(1))
     target_circuit.add(gates.ResetChannel(1, 0.8, 0.2))
 
-    initial_psi = random_density_matrix(3) if density_matrix else random_state(3)
+    initial_psi = (
+        random_density_matrix(2**3) if density_matrix else random_statevector(2**3)
+    )
     backend.set_seed(123)
     final_state = backend.execute_circuit(noise.apply(circuit), np.copy(initial_psi))
     backend.set_seed(123)
@@ -255,7 +265,9 @@ def test_unitary_error(backend, density_matrix, nshots):
     target_circuit.add(gates.Z(2))
     target_circuit.add(gates.M(0, 1, 2))
 
-    initial_psi = random_density_matrix(3) if density_matrix else random_state(3)
+    initial_psi = (
+        random_density_matrix(2**3) if density_matrix else random_statevector(2**3)
+    )
     backend.set_seed(123)
     final_state = backend.execute_circuit(
         noise.apply(circuit), initial_state=np.copy(initial_psi), nshots=nshots
@@ -309,7 +321,9 @@ def test_kraus_error(backend, density_matrix, nshots):
     target_circuit.add(gates.Z(2))
     target_circuit.add(gates.M(0, 1, 2))
 
-    initial_psi = random_density_matrix(3) if density_matrix else random_state(3)
+    initial_psi = (
+        random_density_matrix(2**3) if density_matrix else random_statevector(2**3)
+    )
     backend.set_seed(123)
     final_state = backend.execute_circuit(
         noise.apply(circuit), initial_state=np.copy(initial_psi), nshots=nshots
