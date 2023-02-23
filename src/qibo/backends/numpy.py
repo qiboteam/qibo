@@ -459,7 +459,7 @@ class NumpyBackend(Backend):
         for i in np.nonzero(state)[0]:
             b = bin(i)[2:].zfill(nqubits)
             if np.abs(state[i]) >= cutoff:
-                x = round(state[i], decimals)
+                x = np.round(state[i], decimals)
                 terms.append(f"{x}|{b}>")
             if len(terms) >= max_terms:
                 terms.append("...")
@@ -476,7 +476,7 @@ class NumpyBackend(Backend):
             bi = bin(i)[2:].zfill(nqubits)
             bj = bin(j)[2:].zfill(nqubits)
             if np.abs(state[i, j]) >= cutoff:
-                x = round(state[i, j], decimals)
+                x = np.round(state[i, j], decimals)
                 terms.append(f"{x}|{bi}><{bj}|")
             if len(terms) >= max_terms:
                 terms.append("...")

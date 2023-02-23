@@ -22,9 +22,9 @@ def test_hamiltonian_init(backend):
 @pytest.mark.parametrize(
     "dtype",
     [
-        np.int,
-        np.float,
-        np.complex,
+        int,
+        float,
+        complex,
         np.int32,
         np.int64,
         np.float32,
