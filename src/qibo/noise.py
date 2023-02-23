@@ -271,8 +271,6 @@ class NoiseModel:
                 )
 
                 for condition, error, qubits in errors_list:
-                    # import pdb
-                    # pdb.set_trace()
                     if condition is None or condition(gate):
                         if qubits is None:
                             qubits = gate.qubits
