@@ -249,6 +249,7 @@ def test_hamiltonian_expectation_errors(backend):
 
 def test_hamiltonian_expectation_from_samples(backend):
     """Test Hamiltonian expectation value calculation."""
+    backend.set_seed(12)
     obs0 = 2 * Z(0) * Z(1) + Z(0) * Z(2)
     obs1 = 2 * Z(0) * Z(1) + Z(0) * Z(2) * I(3)
     h0 = hamiltonians.SymbolicHamiltonian(obs0, backend=backend)
