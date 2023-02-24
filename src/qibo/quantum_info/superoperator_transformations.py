@@ -287,7 +287,7 @@ def choi_to_kraus(
             eigenvalues, eigenvectors = np.linalg.eigh(choi_super_op)
             eigenvectors = np.transpose(eigenvectors)
 
-            non_cp = True if any(eigenvalues < -PRECISION_TOL) else False
+            non_cp = bool(any(eigenvalues < -PRECISION_TOL))
     else:
         non_cp = False
         # using eigh because, in this case, choi_super_op is

@@ -40,7 +40,7 @@ def random_gaussian_matrix(
     """
 
     if dims <= 0:
-        raise_error(ValueError, f"dims must be type int and positive.")
+        raise_error(ValueError, "dims must be type int and positive.")
 
     if rank is None:
         rank = dims
@@ -53,7 +53,7 @@ def random_gaussian_matrix(
             raise_error(ValueError, f"rank ({rank}) must be an int between 1 and dims.")
 
     if stddev is not None and stddev <= 0.0:
-        raise_error(ValueError, f"stddev must be a positive float.")
+        raise_error(ValueError, "stddev must be a positive float.")
 
     if (
         seed is not None
@@ -61,7 +61,7 @@ def random_gaussian_matrix(
         and not isinstance(seed, np.random.Generator)
     ):
         raise_error(
-            TypeError, f"seed must be either type int or numpy.random.Generator."
+            TypeError, "seed must be either type int or numpy.random.Generator."
         )
 
     local_state = (
@@ -104,7 +104,7 @@ def random_hermitian(
         raise_error(ValueError, f"dims ({dims}) must be type int and positive.")
 
     if not isinstance(semidefinite, bool) or not isinstance(normalize, bool):
-        raise_error(TypeError, f"semidefinite and normalize must be type bool.")
+        raise_error(TypeError, "semidefinite and normalize must be type bool.")
 
     matrix = random_gaussian_matrix(dims, dims, seed=seed)
 
@@ -139,7 +139,7 @@ def random_unitary(dims: int, measure: str = None, seed=None):
     """
 
     if dims <= 0:
-        raise_error(ValueError, f"dims must be type int and positive.")
+        raise_error(ValueError, "dims must be type int and positive.")
 
     if measure is not None:
         if not isinstance(measure, str):
@@ -201,7 +201,7 @@ def random_statevector(dims: int, haar: bool = False, seed=None):
         and not isinstance(seed, np.random.Generator)
     ):
         raise_error(
-            TypeError, f"seed must be either type int or numpy.random.Generator."
+            TypeError, "seed must be either type int or numpy.random.Generator."
         )
 
     local_state = (
@@ -246,7 +246,7 @@ def random_density_matrix(
     """
 
     if dims <= 0:
-        raise_error(ValueError, f"dims must be type int and positive.")
+        raise_error(ValueError, "dims must be type int and positive.")
 
     if rank is not None and rank > dims:
         raise_error(ValueError, f"rank ({rank}) cannot be greater than dims ({dims}).")
@@ -344,12 +344,10 @@ def random_clifford(
         )
 
     if isinstance(qubits, int) and qubits <= 0:
-        raise_error(ValueError, f"qubits must be a positive integer.")
+        raise_error(ValueError, "qubits must be a positive integer.")
 
-    if (isinstance(qubits, list) or isinstance(qubits, np.ndarray)) and any(
-        q < 0 for q in qubits
-    ):
-        raise_error(ValueError, f"qubit indexes must be non-negative integers.")
+    if isinstance(qubits, (list, np.ndarray)) and any(q < 0 for q in qubits):
+        raise_error(ValueError, "qubit indexes must be non-negative integers.")
 
     if not isinstance(return_circuit, bool):
         raise_error(
@@ -366,7 +364,7 @@ def random_clifford(
         and not isinstance(seed, np.random.Generator)
     ):
         raise_error(
-            TypeError, f"seed must be either type int or numpy.random.Generator."
+            TypeError, "seed must be either type int or numpy.random.Generator."
         )
 
     local_state = (
@@ -380,7 +378,7 @@ def random_clifford(
 
     unitaries = [_clifford_unitary(*ONEQUBIT_CLIFFORD_PARAMS[p]) for p in parameters]
 
-    if return_circuit == True:
+    if return_circuit is True:
         # tensor product of all gates generated
         unitaries = reduce(np.kron, unitaries)
 
@@ -440,16 +438,16 @@ def random_pauli(
         )
 
     if isinstance(qubits, int) and qubits < 0:
-        raise_error(ValueError, f"qubits must be a non-negative integer.")
+        raise_error(ValueError, "qubits must be a non-negative integer.")
 
-    if not isinstance(qubits, int) and any(q < 0 for q in qubits):
-        raise_error(ValueError, f"qubit indexes must be non-negative integers.")
+    if isinstance(qubits, int) is False and any(q < 0 for q in qubits):
+        raise_error(ValueError, "qubit indexes must be non-negative integers.")
 
     if isinstance(depth, int) and depth <= 0:
-        raise_error(ValueError, f"depth must be a positive integer.")
+        raise_error(ValueError, "depth must be a positive integer.")
 
     if isinstance(max_qubits, int) and max_qubits <= 0:
-        raise_error(ValueError, f"max_qubits must be a positive integer.")
+        raise_error(ValueError, "max_qubits must be a positive integer.")
 
     if max_qubits is not None:
         if isinstance(qubits, int) and qubits >= max_qubits:
@@ -458,7 +456,7 @@ def random_pauli(
                 f"qubit index ({qubits}) must be < max_qubits ({max_qubits}).",
             )
         elif not isinstance(qubits, int) and any(q >= max_qubits for q in qubits):
-            raise_error(ValueError, f"all qubit indexes must be < max_qubits.")
+            raise_error(ValueError, "all qubit indexes must be < max_qubits.")
 
     if not isinstance(return_circuit, bool):
         raise_error(
@@ -471,10 +469,10 @@ def random_pauli(
             TypeError, f"subset must be type list, but it is type {type(subset)}."
         )
 
-    if subset is not None and any(isinstance(item, str) == False for item in subset):
+    if subset is not None and any(isinstance(item, str) is False for item in subset):
         raise_error(
             TypeError,
-            f"subset argument must be a subset of strings in the set ['I', 'X', 'Y', 'Z'].",
+            "subset argument must be a subset of strings in the set ['I', 'X', 'Y', 'Z'].",
         )
 
     if (
@@ -483,7 +481,7 @@ def random_pauli(
         and not isinstance(seed, np.random.Generator)
     ):
         raise_error(
-            TypeError, f"seed must be either type int or numpy.random.Generator."
+            TypeError, "seed must be either type int or numpy.random.Generator."
         )
 
     local_state = (
@@ -556,7 +554,7 @@ def random_stochastic_matrix(
 
     """
     if dims <= 0:
-        raise_error(ValueError, f"dims must be type int and positive.")
+        raise_error(ValueError, "dims must be type int and positive.")
 
     if not isinstance(bistochastic, bool):
         raise_error(
@@ -571,7 +569,7 @@ def random_stochastic_matrix(
                 f"precision_tol must be type float, but it is type {type(precision_tol)}.",
             )
         if precision_tol < 0.0:
-            raise_error(ValueError, f"precision_tol must be non-negative.")
+            raise_error(ValueError, "precision_tol must be non-negative.")
 
     if max_iterations is not None:
         if not isinstance(max_iterations, int):
@@ -580,7 +578,7 @@ def random_stochastic_matrix(
                 f"max_iterations must be type int, but it is type {type(precision_tol)}.",
             )
         if max_iterations <= 0.0:
-            raise_error(ValueError, f"max_iterations must be a positive int.")
+            raise_error(ValueError, "max_iterations must be a positive int.")
 
     if (
         seed is not None
@@ -588,7 +586,7 @@ def random_stochastic_matrix(
         and not isinstance(seed, np.random.Generator)
     ):
         raise_error(
-            TypeError, f"seed must be either type int or numpy.random.Generator."
+            TypeError, "seed must be either type int or numpy.random.Generator."
         )
 
     local_state = (
