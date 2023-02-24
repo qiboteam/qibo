@@ -13,6 +13,7 @@ testpaths = ['src/qibo/tests/']
 filterwarnings = ['ignore::RuntimeWarning']
 addopts = [
   '--cov=qibo',
+  '--cov-append',
   '--cov-report=xml',
   '--cov-report=html',
   '--durations=60',
