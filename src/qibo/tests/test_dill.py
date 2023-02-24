@@ -9,7 +9,8 @@ def test_pickle_backend(backend):
     serial = pickle.dumps(backend)
     new_backend = pickle.loads(serial)
     assert type(new_backend) == type(backend)
-    assert new_backend.np is np
+    if hasattr(backend, "np"):
+        assert new_backend.np is backend.np
 
 
 def test_dill_backends(backend):
