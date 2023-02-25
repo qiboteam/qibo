@@ -206,9 +206,10 @@ def choi_to_kraus(
     .. math::
         \\Lambda = \\sum_{\\alpha} \\, \\lambda_{\\alpha}^{2} \\, |\\tilde{K}_{\\alpha}\\rangle\\rangle \\langle\\langle \\tilde{K}_{\\alpha}| \\, .
 
-    This is the spectral decomposition of :math:`\\Lambda`, Hence, the set :math:`\\{\\lambda_{\\alpha}, \\, \\tilde{K}_{\\alpha}\\}_{\\alpha}`
-    is found by diagonalization of :math:`\\Lambda`. The Kraus operators :math:`\\{K_{\\alpha}\\}_{\\alpha}`
-    are defined as
+    This is the spectral decomposition of :math:`\\Lambda`, Hence, the set
+    :math:`\\{\\lambda_{\\alpha}, \\, \\tilde{K}_{\\alpha}\\}_{\\alpha}`
+    is found by diagonalization of :math:`\\Lambda`. The Kraus operators
+    :math:`\\{K_{\\alpha}\\}_{\\alpha}` are defined as
 
     .. math::
         K_{\\alpha} = \\lambda_{\\alpha} \\, \\text{unvectorization}(|\\tilde{K}_{\\alpha}\\rangle\\rangle) \\, .

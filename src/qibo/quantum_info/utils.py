@@ -37,8 +37,9 @@ def shannon_entropy(probability_array, base: float = 2):
     .. math::
         H(\\mathbf{p}) = - \\sum_{k = 0}^{d^{2} - 1} \\, p_{k} \\, \\log_{b}(p_{k}) \\, ,
 
-    where :math:`d = \\text{dim}(\\mathcal{H})` is the dimension of the Hilbert space :math:`\\mathcal{H}`,
-    :math:`b` is the log base (default 2), and :math:`0 \\log_{b}(0) \\equiv 0`.
+    where :math:`d = \\text{dim}(\\mathcal{H})` is the dimension of the
+    Hilbert space :math:`\\mathcal{H}`, :math:`b` is the log base (default 2),
+    and :math:`0 \\log_{b}(0) \\equiv 0`.
 
     Args:
         probability_array: a probability array :math:`\\mathbf{p}`.
@@ -115,7 +116,8 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False):
     if (len(prob_dist_p.shape) != 1) or (len(prob_dist_q.shape) != 1):
         raise_error(
             TypeError,
-            f"Probability arrays must have dims (k,) but have dims {prob_dist_p.shape} and {prob_dist_q.shape}.",
+            "Probability arrays must have dims (k,) but have "
+            + f"dims {prob_dist_p.shape} and {prob_dist_q.shape}.",
         )
 
     if (len(prob_dist_p) == 0) or (len(prob_dist_q) == 0):

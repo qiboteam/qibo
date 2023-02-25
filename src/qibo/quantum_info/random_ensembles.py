@@ -27,7 +27,8 @@ def random_gaussian_matrix(
 
     Args:
         dims (int): dimension of the matrix.
-        rank (int, optional): rank of the matrix. If ``None``, then ``rank == dims``. Default: ``None``.
+        rank (int, optional): rank of the matrix. If ``None``, then
+            ``rank == dims``. Default: ``None``.
         mean (float, optional): mean of the Gaussian distribution. Default is 0.
         stddev (float, optional): standard deviation of the Gaussian distribution. Default is 1.
         seed (int or ``numpy.random.Generator``, optional): Either a generator of random numbers
@@ -177,12 +178,13 @@ def random_statevector(dims: int, haar: bool = False, seed=None):
 
     Args:
         dims (int): dimension of the matrix.
-        haar (bool, optional): if ``True``, statevector is created by sampling a Haar random unitary
-            :math:`U_{\\text{haar}}` and acting with it on a random computational basis state
-            :math:`\\ket{k}`, i.e. :math:`\\ket{\\psi} = U_{\\text{haar}} \\ket{k}`. Default: ``False``.
+        haar (bool, optional): if ``True``, statevector is created by sampling a Haar random
+            unitary :math:`U_{\\text{haar}}` and acting with it on a random computational basis
+            state :math:`\\ket{k}`, i.e. :math:`\\ket{\\psi} = U_{\\text{haar}} \\ket{k}`.
+            Default is ``False``.
         seed (int or ``numpy.random.Generator``, optional): Either a generator of random numbers
             or a fixed seed to initialize a generator. If ``None``, initializes a generator with
-            a random seed. Default: ``None``.
+            a random seed. Default is ``None``.
 
     Returns:
         (ndarray): Random statevector :math:`\\ket{\\psi}`.
@@ -232,13 +234,14 @@ def random_density_matrix(
 
     Args:
         dims (int): dimension of the matrix.
-        rank (int, optional): rank of the matrix. If ``None``, then ``rank == dims``. Default: ``None``.
-        pure (bool, optional): if ``True``, returns a pure state. Default: ``False``.
+        rank (int, optional): rank of the matrix. If ``None``, then ``rank == dims``.
+            Default is ``None``.
+        pure (bool, optional): if ``True``, returns a pure state. Default is ``False``.
         metric (str, optional): metric to sample the density matrix from. Options:
-            ``"Hilbert-Schmidt"`` and ``"Bures"``. Default: ``"Hilbert-Schmidt"``.
+            ``"Hilbert-Schmidt"`` and ``"Bures"``. Default is ``"Hilbert-Schmidt"``.
         seed (int or ``numpy.random.Generator``, optional): Either a generator of random numbers
             or a fixed seed to initialize a generator. If ``None``, initializes a generator with
-            a random seed. Default: ``None``.
+            a random seed. Default is ``None``.
 
     Returns:
         (ndarray): Random density matrix :math:`\\rho`.
@@ -320,13 +323,13 @@ def random_clifford(
         qubits (int or list or ndarray): if ``int``, the number of qubits for the Clifford.
             If ``list`` or ``ndarray``, indexes of the qubits for the Clifford to act on.
         return_circuit (bool, optional): if ``True``, returns a ``qibo.gates.Unitary`` object.
-            If ``False``, returns an ``ndarray`` object. Default: ``False``.
-        fuse (bool, optional): if ``False``, returns an ``ndarray`` with one Clifford gate per qubit.
-            If ``True``, returns the tensor product of the Clifford gates that were
-            sampled. Default: ``False``.
+            If ``False``, returns an ``ndarray`` object. Default is ``False``.
+        fuse (bool, optional): if ``False``, returns an ``ndarray`` with one Clifford
+            gate per qubit. If ``True``, returns the tensor product of the Clifford
+            gates that were sampled. Default is ``False``.
         seed (int or ``numpy.random.Generator``, optional): Either a generator of random numbers
             or a fixed seed to initialize a generator. If ``None``, initializes a generator with
-            a random seed. Default: ``None``.
+            a random seed. Default is ``None``.
 
     Returns:
         (ndarray or ``qibo.gates.Unitary``): Random Clifford operator(s).
@@ -407,9 +410,10 @@ def random_pauli(
     Pauli operators are sampled from the single-qubit Pauli set :math:`\\{I, X, Y, Z\\}`.
 
     Args:
-        qubits (int or list or ndarray): if ``int`` and ``max_qubits=None``, the number of qubits.
-            If ``int`` and ``max_qubits != None``, qubit index in which the Pauli sequence will act.
-            If ``list`` or ``ndarray``, indexes of the qubits for the Pauli sequence to act.
+        qubits (int or list or ndarray): if ``int`` and ``max_qubits=None``, the number of
+            qubits. If ``int`` and ``max_qubits != None``, qubit index in which the Pauli
+            sequence will act. If ``list`` or ``ndarray``, indexes of the qubits for the
+            Pauli sequence to act.
         depth (int): length of the sequence of Pauli gates.
         max_qubits (int, optional): total number of qubits in the circuit. If ``None``,
             ``max_qubits = max(qubits)``. Default: ``None``.
