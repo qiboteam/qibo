@@ -3,7 +3,6 @@ from itertools import product
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate
 from qibo.gates.gates import I, Unitary, X, Y, Z
-from qibo.gates.measurements import M
 from qibo.gates.special import FusedGate
 
 
@@ -101,13 +100,21 @@ class KrausChannel(Channel):
         self.coefficients = len(self.gates) * (1,)
         self.coefficient_sum = 1
 
-    def to_choi(self, backend=None):
-        """Returns the Choi representation of the Kraus channel.
+    def to_choi(self, order: str = "row", backend=None):
+        """Returns the Choi representation :math:`\\mathcal{E}`
+        of the Kraus channel :math:`\\{K_{\\alpha}\\}_{\\alpha}`.
+
+        .. math::
+            \\mathcal{E} = \\sum_{\\alpha} \\, |K_{\\alpha}\\rangle\\rangle \\langle\\langle K_{\\alpha}|
 
         Args:
-            backend (``qibo.backends.abstract.Backend``, optional): backend to be
-                used in the execution. If ``None``, it uses ``GlobalBackend()``.
-                Defaults to ``None``.
+            order (str, optional): If ``"row"``, vectorization of
+                Kraus operators is performed row-wise. If ``"column"``,
+                vectorization is done column-wise. If ``"system"``,
+                vectorization is done block-wise. Defaut is ``"row"``.
+            backend (``qibo.backends.abstract.Backend``, optional):
+                backend to be used in the execution. If ``None``,
+                it uses ``GlobalBackend()``. Defaults to ``None``.
 
         Returns:
             Choi representation of the Kraus channel.
@@ -135,7 +142,7 @@ class KrausChannel(Channel):
             kraus_op = FusedGate(*range(self.nqubits))
             kraus_op.append(gate)
             kraus_op = kraus_op.asmatrix(backend)
-            kraus_op = vectorization(kraus_op)
+            kraus_op = vectorization(kraus_op, order=order)
             super_op += coeff * np.outer(kraus_op, np.conj(kraus_op))
             del kraus_op
 
@@ -143,13 +150,17 @@ class KrausChannel(Channel):
 
         return super_op
 
-    def to_superop(self, backend=None):
+    def to_superop(self, order: str = "row", backend=None):
         """Returns the Liouville representation of the Kraus channel.
 
         Args:
-            backend (``qibo.backends.abstract.Backend``, optional): backend
-                to be used in the execution. If ``None``, it uses
-                ``GlobalBackend()``. Defaults to ``None``.
+            order (str, optional): If ``"row"``, vectorization of
+                Kraus operators is performed row-wise. If ``"column"``,
+                vectorization is done column-wise. If ``"system"``,
+                vectorization is done block-wise. Defaut is ``"row"``.
+            backend (``qibo.backends.abstract.Backend``, optional):
+                backend to be used in the execution. If ``None``,
+                it uses ``GlobalBackend()``. Defaults to ``None``.
 
         Returns:
             Liouville representation of the channel.
@@ -163,8 +174,8 @@ class KrausChannel(Channel):
 
             backend = GlobalBackend()
 
-        super_op = self.to_choi(backend=backend)
-        super_op = choi_to_liouville(super_op)
+        super_op = self.to_choi(order=order, backend=backend)
+        super_op = choi_to_liouville(super_op, order=order)
         super_op = backend.cast(super_op, dtype=super_op.dtype)
 
         return super_op
@@ -192,30 +203,16 @@ class KrausChannel(Channel):
 
             backend = GlobalBackend()
 
-        self.nqubits = 1 + max(self.target_qubits)
-
-        if self.name != "KrausChannel":
-            p0 = 1
-            for coeff in self.coefficients:
-                p0 = p0 - coeff
-            self.coefficients += (p0,)
-            self.gates += (I(*self.target_qubits),)
-
-        super_op = np.zeros((4**self.nqubits, 4**self.nqubits), dtype="complex")
-        super_op = backend.cast(super_op, dtype=super_op.dtype)
-        for coeff, gate in zip(self.coefficients, self.gates):
-            kraus_op = FusedGate(*range(self.nqubits))
-            kraus_op.append(gate)
-            kraus_op = kraus_op.asmatrix(backend)
-            kraus_op = coeff * np.kron(np.conj(kraus_op), kraus_op)
-            super_op += backend.cast(kraus_op, dtype=kraus_op.dtype)
+        super_op = self.to_superop(backend=backend)
 
         # unitary that transforms from comp basis to pauli basis
-        U = backend.cast(comp_basis_to_pauli(self.nqubits, normalize))
+        U = comp_basis_to_pauli(self.nqubits, normalize)
+        U = backend.cast(U, dtype=U.dtype)
 
         super_op = U @ super_op @ np.transpose(np.conj(U))
+        super_op = backend.cast(super_op, dtype=super_op.dtype)
 
-        return backend.cast(super_op, dtype=super_op.dtype)
+        return super_op
 
 
 class UnitaryChannel(KrausChannel):
@@ -254,8 +251,7 @@ class UnitaryChannel(KrausChannel):
             if p < 0 or p > 1:
                 raise_error(
                     ValueError,
-                    "Probabilities should be between 0 "
-                    "and 1 but {} was given.".format(p),
+                    f"Probabilities should be between 0 and 1 but {p} was given.",
                 )
         super().__init__(ops)
         self.name = "UnitaryChannel"
@@ -265,8 +261,7 @@ class UnitaryChannel(KrausChannel):
             raise_error(
                 ValueError,
                 "UnitaryChannel probability sum should be "
-                "between 0 and 1 but is {}."
-                "".format(self.coefficient_sum),
+                + f"between 0 and 1 but is {self.coefficient_sum}.",
             )
 
         self.init_args = [probabilities, self.gates]
@@ -338,7 +333,7 @@ class DepolarizingChannel(Channel):
         if lam < 0 or lam > max_param:
             raise_error(
                 ValueError,
-                "Depolarizing parameter must be in between 0 and {}.".format(max_param),
+                f"Depolarizing parameter must be in between 0 and {max_param}.",
             )
 
         self.name = "DepolarizingChannel"
@@ -450,11 +445,10 @@ class ThermalRelaxationChannel(Channel):
         # check given parameters
         if excited_population < 0 or excited_population > 1:
             raise_error(
-                ValueError,
-                "Invalid excited state population {}." "".format(excited_population),
+                ValueError, f"Invalid excited state population {excited_population}."
             )
         if time < 0:
-            raise_error(ValueError, "Invalid gate_time ({} < 0)".format(time))
+            raise_error(ValueError, "Invalid gate_time ({time} < 0)".)
         if t1 <= 0:
             raise_error(
                 ValueError, "Invalid T_1 relaxation time parameter: " "T_1 <= 0."

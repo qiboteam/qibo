@@ -335,7 +335,7 @@ def kraus_to_choi(kraus_ops, order: str = "row"):
     of quantum channel to its Choi representation :math:`\\Lambda`.
 
     .. math::
-        \\Lambda = \\sum_{\\alpha} \\, |K_{\\alpha}\\rangle\\rangle \\langle\\langle K_{\\alpha} |
+        \\Lambda = \\sum_{\\alpha} \\, |K_{\\alpha}\\rangle\\rangle \\langle\\langle K_{\\alpha}|
 
     Args:
         kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
