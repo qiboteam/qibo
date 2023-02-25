@@ -448,7 +448,7 @@ class ThermalRelaxationChannel(Channel):
                 ValueError, f"Invalid excited state population {excited_population}."
             )
         if time < 0:
-            raise_error(ValueError, "Invalid gate_time ({time} < 0)".)
+            raise_error(ValueError, "Invalid gate_time ({time} < 0).")
         if t1 <= 0:
             raise_error(
                 ValueError, "Invalid T_1 relaxation time parameter: " "T_1 <= 0."
