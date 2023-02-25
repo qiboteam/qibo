@@ -9,7 +9,7 @@ output-format = "colorized"
 
 [tool.pytest.ini_options]
 
-testpaths = ['src/qibo/tests/']
+testpaths = ['tests/']
 filterwarnings = ['ignore::RuntimeWarning']
 addopts = [
   '--cov=qibo',

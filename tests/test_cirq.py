@@ -6,7 +6,8 @@ import numpy as np
 import pytest
 
 from qibo import gates, models
-from qibo.tests.utils import random_state
+
+from .utils import random_state
 
 
 def random_unitary_matrix(nqubits, dtype=np.complex128):

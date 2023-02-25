@@ -62,12 +62,12 @@ def pytest_generate_tests(metafunc):
     module_name = metafunc.module.__name__
 
     if (
-        module_name == "qibo.tests.test_models_qgan"
+        module_name == "tests.test_models_qgan"
         and "tensorflow" not in AVAILABLE_BACKENDS
     ):  # pragma: no cover
         pytest.skip("Skipping QGAN tests because tensorflow is not available.")
 
-    if module_name == "qibo.tests.test_models_distcircuit_execution":
+    if module_name == "tests.test_models_distcircuit_execution":
         config = [(bk, acc) for acc in ACCELERATORS for bk in MULTIGPU_BACKENDS]
         metafunc.parametrize("backend_name,accelerators", config)
 

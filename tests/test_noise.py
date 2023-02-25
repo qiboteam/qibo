@@ -6,7 +6,8 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 from qibo.noise import *
-from qibo.tests.utils import random_density_matrix, random_state
+
+from .utils import random_density_matrix, random_state
 
 
 @pytest.mark.parametrize("density_matrix", [True])

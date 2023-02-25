@@ -4,7 +4,8 @@ import pytest
 
 from qibo import gates, matrices
 from qibo.config import PRECISION_TOL
-from qibo.tests.utils import random_density_matrix
+
+from .utils import random_density_matrix
 
 
 def test_general_channel(backend):
