@@ -7,10 +7,10 @@ Code at: [https://github.com/qiboteam/qibo/tree/master/examples/qcnn_classifier]
 This tutorial implements a simple Quantum Convolutional Neural Network (QCNN), which is a translationally invariant algorithm analogous to the classical convolutional neural network. This example demonstrates the use of the QCNN as a quantum classifier, which attempts to classify ground states of a translationally invariant quantum system, the transverse field Ising model, based on whether they are in the ordered or disordered phase. The (randomized) statevector data provided are those of a 4-qubit system. Accompanying each state is a label: +1 (ordered phase) or -1 (ordered phase).
 Through the sequential reduction of entanglement, this network is able to perform classification from the final measurement of a single qubit.
 
-Workflow of qcnn model:
+Workflow of QCNN model:
 ![workflow](images/workflow.PNG)
 
-Schematic of qcnn model:
+Schematic of QCNN model:
 ![schematic](images/structure.PNG)
 
 Convolutional layer for 4 qubits as an example:
