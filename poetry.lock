@@ -2236,6 +2236,21 @@ pytz = ">=2020.1"
 test = ["hypothesis (>=5.5.3)", "pytest (>=6.0)", "pytest-xdist (>=1.31)"]
 
 [[package]]
+name = "pandoc"
+version = "2.3"
+description = "Pandoc Documents for Python"
+category = "dev"
+optional = false
+python-versions = "*"
+files = [
+    {file = "pandoc-2.3.tar.gz", hash = "sha256:e772c2c6d871146894579828dbaf1efd538eb64fc7e71d4a6b3a11a18baef90d"},
+]
+
+[package.dependencies]
+plumbum = "*"
+ply = "*"
+
+[[package]]
 name = "pandocfilters"
 version = "1.5.0"
 description = "Utilities for writing pandoc filters in python"
@@ -2424,6 +2439,26 @@ files = [
 [package.extras]
 dev = ["pre-commit", "tox"]
 testing = ["pytest", "pytest-benchmark"]
+
+[[package]]
+name = "plumbum"
+version = "1.8.1"
+description = "Plumbum: shell combinators library"
+category = "dev"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "plumbum-1.8.1-py3-none-any.whl", hash = "sha256:07cf5f50bf739e91fb83ce304fc66b41dbd12db4d4546ff5266087dd9d148314"},
+    {file = "plumbum-1.8.1.tar.gz", hash = "sha256:88a40fc69247d0cd585e21ca169b3820f46c484535102e16455d2202727bb37b"},
+]
+
+[package.dependencies]
+pywin32 = {version = "*", markers = "platform_system == \"Windows\" and platform_python_implementation != \"PyPy\""}
+
+[package.extras]
+dev = ["paramiko", "psutil", "pytest (>=6.0)", "pytest-cov", "pytest-mock", "pytest-timeout"]
+docs = ["sphinx (>=4.0.0)", "sphinx-rtd-theme (>=1.0.0)"]
+ssh = ["paramiko"]
 
 [[package]]
 name = "ply"
@@ -4322,4 +4357,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.12"
-content-hash = "96102b352a3a4594a6eeecdb2375178be05b63823bac7d7c6c96ec10ec398de5"
+content-hash = "ba7e962da615bf21438c4dae8bb8acbbc301c1833b3528108eca9d359333720f"

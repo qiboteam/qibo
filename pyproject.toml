@@ -44,6 +44,7 @@ sphinxcontrib-bibtex = "^2.5.0"
 sphinx-markdown-tables = "^0.0.17"
 nbsphinx = "^0.8.12"
 ipython = "^8.10.0"
+pandoc = "^2.3"
 
 [tool.poetry.group.tests]
 optional = true
