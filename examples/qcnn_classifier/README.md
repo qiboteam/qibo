@@ -105,4 +105,4 @@ test.Accuracy(labels,predictions)
 ```
 ![result](images/result_confusion_matrix.PNG)
 
-In this example, we achieved an accuracy of 0.925. #0.969849.
+In this example, we achieved an accuracy of 0.925. 
