@@ -4,6 +4,7 @@ import pytest
 
 from qibo import hamiltonians
 from qibo.quantum_info import random_hermitian, random_statevector
+
 from .utils import random_complex
 
 
