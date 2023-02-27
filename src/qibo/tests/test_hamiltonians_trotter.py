@@ -3,7 +3,8 @@ import numpy as np
 import pytest
 
 from qibo import hamiltonians
-from qibo.tests.utils import random_complex, random_hermitian, random_state
+from qibo.quantum_info import random_hermitian, random_statevector
+from qibo.tests.utils import random_complex
 
 
 @pytest.mark.parametrize("nqubits", [3, 4])
@@ -100,9 +101,9 @@ def test_trotter_hamiltonian_three_qubit_term(backend):
 
     from qibo.hamiltonians.terms import HamiltonianTerm
 
-    m1 = random_hermitian(3)
-    m2 = random_hermitian(2)
-    m3 = random_hermitian(1)
+    m1 = random_hermitian(2**3)
+    m2 = random_hermitian(2**2)
+    m3 = random_hermitian(2**1)
 
     terms = [
         HamiltonianTerm(m1, 0, 1, 2),
@@ -121,7 +122,7 @@ def test_trotter_hamiltonian_three_qubit_term(backend):
     backend.assert_allclose(ham.matrix, target_ham.matrix)
 
     dt = 1e-2
-    initial_state = random_state(4)
+    initial_state = random_statevector(2**4)
     circuit = ham.circuit(dt=dt)
     final_state = backend.execute_circuit(circuit, np.copy(initial_state))
     u = [expm(-0.5j * dt * (mm1 + mm3)), expm(-0.5j * dt * mm2)]

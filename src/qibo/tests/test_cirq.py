@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from qibo import gates, models
-from qibo.tests.utils import random_state
+from qibo.quantum_info import random_statevector
 
 
 def random_unitary_matrix(nqubits, dtype=np.complex128):
@@ -53,7 +53,7 @@ def assert_gates_equivalent(
         nqubits: Total number of qubits in the circuit.
         atol: Absolute tolerance in state vector comparsion.
     """
-    initial_state = random_state(nqubits)
+    initial_state = random_statevector(2**nqubits)
     target_state, target_depth = execute_cirq(
         cirq_gates, nqubits, np.copy(initial_state)
     )
@@ -318,7 +318,7 @@ def test_unitary_matrix_gate_controlled_by(backend, nqubits, ntargets, ndevices)
 @pytest.mark.parametrize("nqubits", [5, 6, 7, 11, 12])
 def test_qft(backend, accelerators, nqubits):
     c = models.QFT(nqubits, accelerators=accelerators)
-    initial_state = random_state(nqubits)
+    initial_state = random_statevector(2**nqubits)
     final_state = backend.execute_circuit(c, np.copy(initial_state))
     cirq_gates = [(cirq.qft, list(range(nqubits)))]
     target_state, _ = execute_cirq(cirq_gates, nqubits, np.copy(initial_state))

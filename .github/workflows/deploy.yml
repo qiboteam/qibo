@@ -3,6 +3,7 @@ name: Build wheels and deploy
 
 on:
   push:
+  merge_group:
   release:
     types:
       - published

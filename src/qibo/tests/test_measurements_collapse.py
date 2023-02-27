@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 
 from qibo import gates, models
-from qibo.tests.utils import random_density_matrix, random_state
+from qibo.quantum_info import random_density_matrix, random_statevector
 
 
 @pytest.mark.parametrize(
@@ -11,7 +11,7 @@ from qibo.tests.utils import random_density_matrix, random_state
     [(2, [1]), (3, [1]), (4, [1, 3]), (5, [0, 3, 4]), (6, [1, 3]), (4, [0, 2])],
 )
 def test_measurement_collapse(backend, nqubits, targets):
-    initial_state = random_state(nqubits)
+    initial_state = random_statevector(2**nqubits)
     c = models.Circuit(nqubits)
     r = c.add(gates.M(*targets, collapse=True))
     final_state = backend.execute_circuit(c, np.copy(initial_state), nshots=1)[0]
@@ -32,7 +32,7 @@ def test_measurement_collapse(backend, nqubits, targets):
     "nqubits,targets", [(2, [1]), (3, [1]), (4, [1, 3]), (5, [0, 3, 4])]
 )
 def test_measurement_collapse_density_matrix(backend, nqubits, targets):
-    initial_rho = random_density_matrix(nqubits)
+    initial_rho = random_density_matrix(2**nqubits)
     c = models.Circuit(nqubits, density_matrix=True)
     r = c.add(gates.M(*targets, collapse=True))
     final_rho = backend.execute_circuit(c, np.copy(initial_rho), nshots=1)[0]
@@ -79,7 +79,7 @@ def test_measurement_result_parameters(backend, effect, density_matrix):
 
 
 def test_measurement_result_parameters_random(backend):
-    initial_state = random_state(4)
+    initial_state = random_statevector(2**4)
     backend.set_seed(123)
     c = models.Circuit(4)
     r = c.add(gates.M(1, collapse=True))
@@ -105,7 +105,7 @@ def test_measurement_result_parameters_random(backend):
 
 @pytest.mark.parametrize("use_loop", [True, False])
 def test_measurement_result_parameters_repeated_execution(backend, use_loop):
-    initial_state = random_state(4)
+    initial_state = random_statevector(2**4)
     backend.set_seed(123)
     c = models.Circuit(4)
     r = c.add(gates.M(1, collapse=True))
@@ -139,7 +139,7 @@ def test_measurement_result_parameters_repeated_execution(backend, use_loop):
 
 
 def test_measurement_result_parameters_repeated_execution_final_measurements(backend):
-    initial_state = random_state(4)
+    initial_state = random_statevector(2**4)
     backend.set_seed(123)
     c = models.Circuit(4)
     r = c.add(gates.M(1, collapse=True))
@@ -166,7 +166,7 @@ def test_measurement_result_parameters_repeated_execution_final_measurements(bac
 
 
 def test_measurement_result_parameters_multiple_qubits(backend):
-    initial_state = random_state(4)
+    initial_state = random_statevector(2**4)
     backend.set_seed(123)
     c = models.Circuit(4)
     r = c.add(gates.M(0, 1, 2, collapse=True))
@@ -189,7 +189,7 @@ def test_measurement_result_parameters_multiple_qubits(backend):
 
 @pytest.mark.parametrize("nqubits,targets", [(5, [2, 4]), (6, [3, 5])])
 def test_measurement_collapse_distributed(backend, accelerators, nqubits, targets):
-    initial_state = random_state(nqubits)
+    initial_state = random_statevector(2**nqubits)
     c = models.Circuit(nqubits, accelerators)
     m = c.add(gates.M(*targets, collapse=True))
     result = backend.execute_circuit(c, np.copy(initial_state), nshots=1)
