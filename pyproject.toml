@@ -51,6 +51,7 @@ ply = "^3.11"
 scikit-learn = "^1.2.1"
 dill = "^0.3.6"
 pytest-cov = "^4.0.0"
+pylint = "^2.16.2"
 
 [tool.poe.tasks]
 test = "pytest"
