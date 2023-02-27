@@ -22,7 +22,7 @@ Pooling layer for 4 qubits as an example:
 where $R(\theta_{i,j,k}) = RZ(\theta_k) RY(\theta_j) RX(\theta_i)$: 
 ![R](images/RxRyRz.PNG)
 
-$U(\theta_{i,j,k}) = RXX(\theta_k) RYY(\theta_j) RZZ(\theta_i):
+$U(\theta_{i,j,k}) = RXX(\theta_k) RYY(\theta_j) RZZ(\theta_i)$:
 ![U](images/U.PNG)
 
 $R^{\dagger}(\theta_{i,j,k}) = RX(-\theta_i) RY(-\theta_j) RZ(-\theta_k)$:
