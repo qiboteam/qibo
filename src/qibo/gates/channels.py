@@ -157,7 +157,7 @@ class KrausChannel(Channel):
             order (str, optional): If ``"row"``, vectorization of
                 Kraus operators is performed row-wise. If ``"column"``,
                 vectorization is done column-wise. If ``"system"``,
-                vectorization is done block-wise. Defaut is ``"row"``.
+                it raises ``NotImplementedError``. Defaut is ``"row"``.
             backend (``qibo.backends.abstract.Backend``, optional):
                 backend to be used in the execution. If ``None``,
                 it uses ``GlobalBackend()``. Defaults to ``None``.
