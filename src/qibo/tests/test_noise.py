@@ -559,7 +559,9 @@ def test_add_condition(backend, density_matrix):
     target_circuit.add(gates.ThermalRelaxationChannel(1, 2, 1, 0.3))
     target_circuit.add(gates.RX(1, 2 * np.pi / 3))
 
-    initial_psi = random_density_matrix(3) if density_matrix else random_state(3)
+    initial_psi = (
+        random_density_matrix(2**3) if density_matrix else random_statevector(2**3)
+    )
     backend.set_seed(123)
     final_state = backend.execute_circuit(noise.apply(circuit), np.copy(initial_psi))
     backend.set_seed(123)
@@ -593,7 +595,9 @@ def test_gate_independent_noise(backend, density_matrix):
     target_circuit.add(gates.PauliNoiseChannel(2, 0, 0.2, 0.3))
     target_circuit.add(gates.M(0, 1, 2))
 
-    initial_psi = random_density_matrix(3) if density_matrix else random_state(3)
+    initial_psi = (
+        random_density_matrix(2**3) if density_matrix else random_statevector(2**3)
+    )
     backend.set_seed(123)
     final_state = backend.execute_circuit(
         noise.apply(circuit), initial_state=np.copy(initial_psi)
