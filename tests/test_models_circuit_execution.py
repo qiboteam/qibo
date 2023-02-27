@@ -85,10 +85,9 @@ def test_final_state_property(backend):
 
 
 def test_density_matrix_circuit(backend):
-    from .utils import random_density_matrix
+    from qibo.quantum_info import random_density_matrix
 
-    theta = 0.1234
-    initial_rho = random_density_matrix(3)
+    initial_rho = random_density_matrix(2**3)
 
     c = Circuit(3, density_matrix=True)
     c.add(gates.H(0))

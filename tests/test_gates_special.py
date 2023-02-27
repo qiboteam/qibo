@@ -2,9 +2,6 @@ import numpy as np
 import pytest
 
 from qibo import gates
-from qibo.models import Circuit
-
-from .utils import random_state
 
 
 def test_callback_gate_errors():

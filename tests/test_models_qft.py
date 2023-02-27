@@ -5,8 +5,7 @@ import numpy as np
 import pytest
 
 from qibo import gates, models
-
-from .utils import random_state
+from qibo.quantum_info import random_statevector
 
 
 def qft_matrix(dimension: int, inverse: bool = False) -> np.ndarray:
@@ -54,7 +53,7 @@ def test_qft_matrix(backend, nqubits):
 def test_qft_execution(backend, accelerators, nqubits, random):
     c = models.QFT(nqubits)
     if random:
-        initial_state = random_state(nqubits)
+        initial_state = random_statevector(2**nqubits)
     else:
         initial_state = backend.zero_state(nqubits)
     final_state = backend.execute_circuit(c, np.copy(initial_state))

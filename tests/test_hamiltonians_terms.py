@@ -4,8 +4,7 @@ import pytest
 
 from qibo import gates, matrices, models
 from qibo.hamiltonians import terms
-
-from .utils import random_density_matrix, random_state
+from qibo.quantum_info import random_density_matrix, random_statevector
 
 
 def test_hamiltonian_term_initialization(backend):
@@ -47,7 +46,7 @@ def test_hamiltonian_term_gates(backend):
     assert gate.target_qubits == (1, 2)
     backend.assert_allclose(gate.asmatrix(backend), matrix)
 
-    initial_state = random_state(nqubits)
+    initial_state = random_statevector(2**nqubits)
     final_state = term(backend, np.copy(initial_state), nqubits)
     c = models.Circuit(nqubits)
     c.add(gates.Unitary(matrix, 1, 2))
@@ -64,7 +63,7 @@ def test_hamiltonian_term_exponentiation(backend):
     exp_matrix = expm(-0.5j * matrix)
     backend.assert_allclose(term.exp(0.5), exp_matrix)
 
-    initial_state = random_state(2)
+    initial_state = random_statevector(4)
     final_state = term(backend, np.copy(initial_state), 2, term.expgate(0.5))
     exp_gate = gates.Unitary(exp_matrix, 1)
     target_state = backend.apply_gate(exp_gate, np.copy(initial_state), 2)
@@ -180,7 +179,9 @@ def test_symbolic_term_call(backend, density_matrix):
         np.kron(np.kron(np.eye(2), matrices.X), np.eye(2)),
         np.kron(np.eye(4), matrices.Y),
     ]
-    initial_state = random_density_matrix(3) if density_matrix else random_state(3)
+    initial_state = (
+        random_density_matrix(2**3) if density_matrix else random_statevector(2**3)
+    )
     final_state = term(
         backend, np.copy(initial_state), 3, density_matrix=density_matrix
     )
