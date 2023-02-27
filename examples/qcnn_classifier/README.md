@@ -20,7 +20,7 @@ Pooling layer for 4 qubits as an example:
 ![pooling](images/pooling_4qubits.PNG)
 
 where $R(\theta_{i,j,k}) = RZ(\theta_k) RY(\theta_j) RX(\theta_i)$: 
-![R](images/RXRYRZ.PNG)
+![R](images/RxRyRz.PNG)
 
 $U(\theta_{i,j,k}) = RXX(\theta_k) RYY(\theta_j) RZZ(\theta_i):
 ![U](images/U.PNG)
