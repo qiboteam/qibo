@@ -28,7 +28,6 @@ $U(\theta_{i,j,k}) = RXX(\theta_k) RYY(\theta_j) RZZ(\theta_i):
 $R^{\dagger}(\theta_{i,j,k}) = RX(-\theta_i) RY(-\theta_j) RZ(-\theta_k)$:
 ![RT](images/RT.PNG)
 
-
 ## How to run an example
 To run a particular instance of the problem, we have to set up the variables:
 - `nqubits` (int): number of quantum bits. It must be larger than 1. 
