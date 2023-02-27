@@ -54,8 +54,8 @@ pytest-cov = "^4.0.0"
 
 [tool.poe.tasks]
 test = "pytest"
-lint = "pylint src/**/*.py -E"
-lint-warnings = "pylint src/**/*.py --exit-zero"
+lint = "pylint src --errors-only"
+lint-warnings = "pylint src --exit-zero"
 docs = "make -C doc html"
 docs-clean = "make -C doc clean"
 test-docs = "make -C doc doctest"
