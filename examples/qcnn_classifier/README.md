@@ -4,11 +4,8 @@ Code at: [https://github.com/qiboteam/qibo/tree/master/examples/qcnn_classifier]
 (https://github.com/qiboteam/qibo/tree/master/examples/qcnn_classifier).
 
 ## Problem overview
-This tutorial implements a simplified Quantum Convolutional Neural Network (QCNN), a proposed quantum analogue to a classical convolutional neural network that is also translationally invariant. This example demonstrates how to detect certain properties of a quantum data source, such as a quantum sensor or a complex simulation from a device. The quantum data source being a cluster state that may or may not have an excitation—what the QCNN will learn to detect. 
-You will prepare a cluster state and train a quantum classifier to detect if it is "excited" or not. The cluster state is highly entangled but not necessarily difficult for a classical computer. For this classification task you will implement a deep MERA-like QCNN architecture since:
-1. Like the QCNN, the cluster state on a ring is translationally invariant.
-2. The cluster state is highly entangled.
-This architecture should be effective at reducing entanglement, obtaining the classification by reading out a single qubit.
+This tutorial implements a simple Quantum Convolutional Neural Network (QCNN), which is a translationally invariant algorithm analogous to the classical convolutional neural network. This example demonstrates the use of the QCNN as a quantum classifier, which attempts to classify ground states of a translationally invariant quantum system, the transverse field Ising model, based on whether they are in the ordered or disordered phase. The (randomized) statevector data provided are those of a 4-qubit system. Accompanying each state is a label: +1 (ordered phase) or -1 (ordered phase).
+Through the sequential reduction of entanglement, this network is able to perform classification from the final measurement of a single qubit.
 
 Workflow of qcnn model:
 ![workflow](images/workflow.PNG)
