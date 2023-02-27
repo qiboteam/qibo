@@ -57,8 +57,8 @@ dill = "^0.3.6"
 pytest-cov = "^4.0.0"
 pylint = "^2.16.2"
 qibojit = {git = "https://github.com/qiboteam/qibojit"}
-tensorflow = "^2.11.0"
-tensorflow-intel = {version = "^2.11.0", platform = "windows"}
+tensorflow = {version = "^2.11.0", platform = "Linux"}
+tensorflow-intel = {version = "^2.11.0", platform = "Windows"}
 
 [tool.poe.tasks]
 test = "pytest"
