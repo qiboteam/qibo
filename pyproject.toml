@@ -50,6 +50,7 @@ cirq = "^1.1.0"
 ply = "^3.11"
 scikit-learn = "^1.2.1"
 dill = "^0.3.6"
+pytest-cov = "^4.0.0"
 
 [tool.poe.tasks]
 test = "pytest"
