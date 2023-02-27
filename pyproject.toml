@@ -56,8 +56,8 @@ scikit-learn = "^1.2.1"
 dill = "^0.3.6"
 pytest-cov = "^4.0.0"
 pylint = "^2.16.2"
-tensorflow = "^2.11.0"
 qibojit = {git = "https://github.com/qiboteam/qibojit"}
+tensorflow-intel = "^2.11.0"
 
 [tool.poe.tasks]
 test = "pytest"

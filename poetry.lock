@@ -3836,29 +3836,28 @@ files = [
 ]
 
 [[package]]
-name = "tensorflow"
+name = "tensorflow-estimator"
+version = "2.11.0"
+description = "TensorFlow Estimator."
+category = "dev"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "tensorflow_estimator-2.11.0-py2.py3-none-any.whl", hash = "sha256:ea3b64acfff3d9a244f06178c9bdedcbdd3f125b67d0888dba8229498d06468b"},
+]
+
+[[package]]
+name = "tensorflow-intel"
 version = "2.11.0"
 description = "TensorFlow is an open source machine learning framework for everyone."
 category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "tensorflow-2.11.0-cp310-cp310-macosx_10_14_x86_64.whl", hash = "sha256:6c049fec6c2040685d6f43a63e17ccc5d6b0abc16b70cc6f5e7d691262b5d2d0"},
-    {file = "tensorflow-2.11.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:bcc8380820cea8f68f6c90b8aee5432e8537e5bb9ec79ac61a98e6a9a02c7d40"},
-    {file = "tensorflow-2.11.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d973458241c8771bf95d4ba68ad5d67b094f72dd181c2d562ffab538c1b0dad7"},
-    {file = "tensorflow-2.11.0-cp310-cp310-win_amd64.whl", hash = "sha256:d470b772ee3c291a8c7be2331e7c379e0c338223c0bf532f5906d4556f17580d"},
-    {file = "tensorflow-2.11.0-cp37-cp37m-macosx_10_14_x86_64.whl", hash = "sha256:d29c1179149fa469ad68234c52c83081d037ead243f90e826074e2563a0f938a"},
-    {file = "tensorflow-2.11.0-cp37-cp37m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:2cdba2fce00d6c924470d4fb65d5e95a4b6571a863860608c0c13f0393f4ca0d"},
-    {file = "tensorflow-2.11.0-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4f2ab20f93d2b52a44b414ec6dcf82aa12110e90e0920039a27108de28ae2728"},
-    {file = "tensorflow-2.11.0-cp37-cp37m-win_amd64.whl", hash = "sha256:445510f092f7827e1f60f59b8bfb58e664aaf05d07daaa21c5735a7f76ca2b25"},
-    {file = "tensorflow-2.11.0-cp38-cp38-macosx_10_14_x86_64.whl", hash = "sha256:056d29f2212342536ce3856aa47910a2515eb97ec0a6cc29ed47fc4be1369ec8"},
-    {file = "tensorflow-2.11.0-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:17b29d6d360fad545ab1127db52592efd3f19ac55c1a45e5014da328ae867ab4"},
-    {file = "tensorflow-2.11.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:335ab5cccd7a1c46e3d89d9d46913f0715e8032df8d7438f9743b3fb97b39f69"},
-    {file = "tensorflow-2.11.0-cp38-cp38-win_amd64.whl", hash = "sha256:d48da37c8ae711eb38047a56a052ca8bb4ee018a91a479e42b7a8d117628c32e"},
-    {file = "tensorflow-2.11.0-cp39-cp39-macosx_10_14_x86_64.whl", hash = "sha256:d9cf25bca641f2e5c77caa3bfd8dd6b892a7aec0695c54d2a7c9f52a54a8d487"},
-    {file = "tensorflow-2.11.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:0d28f9691ebc48c0075e271023b3f147ae2bc29a3d3a7f42d45019c6b4a700d2"},
-    {file = "tensorflow-2.11.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:276a44210d956701899dc78ad0aa116a0071f22fb0bcc1ea6bb59f7646b08d11"},
-    {file = "tensorflow-2.11.0-cp39-cp39-win_amd64.whl", hash = "sha256:cc3444fe1d58c65a195a69656bf56015bf19dc2916da607d784b0a1e215ec008"},
+    {file = "tensorflow_intel-2.11.0-cp310-cp310-win_amd64.whl", hash = "sha256:d78927838b5482ffe2b6e340675fa74586ce832d32b689a15b52ccba949dc148"},
+    {file = "tensorflow_intel-2.11.0-cp37-cp37m-win_amd64.whl", hash = "sha256:9f783b63889a8cb294a3bd293b326b575146582afeba0580e1e9bead77f49bd1"},
+    {file = "tensorflow_intel-2.11.0-cp38-cp38-win_amd64.whl", hash = "sha256:12046e5cd459416bdeaefce643cb53cdd1971610bb8d14326fbc500442f5d595"},
+    {file = "tensorflow_intel-2.11.0-cp39-cp39-win_amd64.whl", hash = "sha256:d8cf977b2b0bcf0c54c0f8996c9074178107ae7aa6a67484e890bbba821b98e0"},
 ]
 
 [package.dependencies]
@@ -3883,17 +3882,6 @@ tensorflow-io-gcs-filesystem = {version = ">=0.23.1", markers = "platform_machin
 termcolor = ">=1.1.0"
 typing-extensions = ">=3.6.6"
 wrapt = ">=1.11.0"
-
-[[package]]
-name = "tensorflow-estimator"
-version = "2.11.0"
-description = "TensorFlow Estimator."
-category = "dev"
-optional = false
-python-versions = ">=3.7"
-files = [
-    {file = "tensorflow_estimator-2.11.0-py2.py3-none-any.whl", hash = "sha256:ea3b64acfff3d9a244f06178c9bdedcbdd3f125b67d0888dba8229498d06468b"},
-]
 
 [[package]]
 name = "tensorflow-io-gcs-filesystem"
@@ -4285,4 +4273,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.12"
-content-hash = "b4ca4210e8d70872028f981ebab1deab945a9cf457b9d45c4ddf90007e9f0f5d"
+content-hash = "7d124f929cc34d2d07d2c2a26f6bfe695919563412f6ec05db4028f3bcbd0cc9"
