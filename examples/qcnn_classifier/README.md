@@ -20,7 +20,7 @@ where $R(\theta_{i,j,k}) = RZ(\theta_k) RY(\theta_j) RX(\theta_i)$ and $U(\theta
 
 Pooling layer for 4 qubits as an example:
 ![pooling](images/pooling_4qubits.PNG)
-where $R^{T}(\theta_{i,j,k})$ stands for $RZ(\theta_i)$, $RY(\theta_j)$, $RX(\theta_k)$.
+where $R^{\dagger}(\theta_{i,j,k}) = RX(-\theta_i) RY(-\theta_j) RZ(-\theta_k)$.
 
 ## How to run an example
 To run a particular instance of the problem, we have to set up the variables:
