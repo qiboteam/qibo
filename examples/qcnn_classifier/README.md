@@ -16,7 +16,7 @@ Schematic of qcnn model:
 Convolutional layer for 4 qubits as an example:
 ![convolution](images/convolution_4qubits.PNG)
 
-where $R(\theta_{i,j,k}) = RX(\theta_i) RY(\theta_j) RZ(\theta_k)$ and $U(\theta_{i,j,k}) = RZZ(\theta_i) RYY(\theta_j) RXX(\theta_k)$. 
+where $R(\theta_{i,j,k}) = RZ(\theta_k) RY(\theta_j) RX(\theta_i)$ and $U(\theta_{i,j,k}) = RXX(\theta_k) RYY(\theta_j) RZZ(\theta_i)$. 
 
 Pooling layer for 4 qubits as an example:
 ![pooling](images/pooling_4qubits.PNG)
