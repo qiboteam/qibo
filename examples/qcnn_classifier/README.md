@@ -13,10 +13,10 @@ Workflow of qcnn model:
 Schematic of qcnn model:
 ![schematic](images/structure.PNG)
 
-Convolutional layer:
-
-Pooling layer:
-
+Convolutional layer for 4 qubits as an example:
+![convolution](images/convolution_4qubits.PNG)
+Pooling layer for 4 qubits as an example:
+![pooling](images/pooling_4qubits.PNG)
 
 ## How to run an example
 To run a particular instance of the problem, we have to set up the variables:
