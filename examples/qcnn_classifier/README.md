@@ -60,7 +60,7 @@ test = QuantumCNN(nqubits=4, nlayers=1, nclasses=2)
 testcircuit = test._circuit
 testcircuit.draw()
 ```
-draw() is to plot the circuit to see how it is constructed. 
+draw() is used to visualize the circuit construction.
 
 Initialize model parameters:
 ```
@@ -94,4 +94,4 @@ test.Accuracy(labels,predictions)
 ```
 ![result](images/result_confusion_matrix.PNG)
 
-In this example, we achieved a accuracy of 0.969849.
+In this example, we achieved an accuracy of 0.925. #0.969849.
