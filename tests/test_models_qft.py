@@ -5,7 +5,8 @@ import numpy as np
 import pytest
 
 from qibo import gates, models
-from qibo.tests.utils import random_state
+
+from .utils import random_state
 
 
 def qft_matrix(dimension: int, inverse: bool = False) -> np.ndarray:

@@ -4,7 +4,8 @@ import pytest
 
 from qibo import gates, matrices, models
 from qibo.hamiltonians import terms
-from qibo.tests.utils import random_density_matrix, random_state
+
+from .utils import random_density_matrix, random_state
 
 
 def test_hamiltonian_term_initialization(backend):

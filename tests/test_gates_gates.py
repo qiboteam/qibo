@@ -4,7 +4,8 @@ import pytest
 
 from qibo import gates
 from qibo.config import raise_error
-from qibo.tests.utils import random_state
+
+from .utils import random_state
 
 
 def apply_gates(backend, gatelist, nqubits=None, initial_state=None):
