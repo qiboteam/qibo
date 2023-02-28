@@ -2,6 +2,7 @@
 name: Build wheels and deploy
 
 on:
+  workflow_dispatch:
   push:
   merge_group:
   release:
