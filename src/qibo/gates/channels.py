@@ -1,12 +1,12 @@
 import warnings
 from itertools import product
+from typing import Tuple
 
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate
 from qibo.gates.gates import I, Unitary, X, Y, Z
 from qibo.gates.special import FusedGate
 
-from typing import Tuple
 
 class Channel(Gate):
     """Abstract class for channels."""
