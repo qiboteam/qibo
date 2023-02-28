@@ -1,3 +1,4 @@
+import warnings
 from itertools import product
 
 from qibo.config import PRECISION_TOL, raise_error
@@ -88,9 +89,8 @@ class KrausChannel(Channel):
                 if shape != (rank, rank):
                     raise_error(
                         ValueError,
-                        "Invalid Krauss operator shape {} for "
-                        "acting on {} qubits."
-                        "".format(shape, len(qubits)),
+                        f"Invalid Krauss operator shape {shape} for "
+                        + f"acting on {len(qubits)} qubits.",
                     )
                 qubitset.update(qubits)
                 gates.append(Unitary(matrix, *list(qubits)))
@@ -243,9 +243,8 @@ class UnitaryChannel(KrausChannel):
         if len(probabilities) != len(ops):
             raise_error(
                 ValueError,
-                "Probabilities list has length {} while "
-                "{} gates were given."
-                "".format(len(probabilities), len(ops)),
+                f"Probabilities list has length {len(probabilities)} while "
+                + f"{len(ops)} gates were given.",
             )
         for p in probabilities:
             if p < 0 or p > 1:
@@ -292,6 +291,12 @@ class PauliNoiseChannel(UnitaryChannel):
     """
 
     def __init__(self, q, px=0, py=0, pz=0):
+        warnings.warn(
+            DeprecationWarning,
+            "This channel will be removed in a later release. "
+            + "Use GeneralizedPauliNoiseChannel instead."
+        )
+
         probs, gates = [], []
         for p, gate in [(px, X), (py, Y), (pz, Z)]:
             if p > 0:
@@ -304,6 +309,79 @@ class PauliNoiseChannel(UnitaryChannel):
 
         self.init_args = [q]
         self.init_kwargs = {"px": px, "py": py, "pz": pz}
+
+
+class GeneralizedPauliNoiseChannel(UnitaryChannel):
+    """Multi-qubit noise channel that applies Pauli operators with given probabilities.
+
+    Implements the following transformation:
+
+    .. math::
+        \\mathcal{E}(\\rho ) = \\left (1 - \\sum _{k} p_{k} \\right ) \\, \\rho +
+                                \\sum_{k} \\, p_{k} \\, P_{k} \\, \\rho \\, P_{k}
+
+
+    where :math:`P_{k}` is the :math:`k`-th Pauli ``string`` and :math:`p_{k}` is
+    the probability associated to :math:`P_{k}`.
+
+    Example:
+        .. testcode::
+
+            import numpy as np
+
+            from itertools import product
+
+            qubits = (0, 2)
+            nqubits = len(qubits)
+            
+            paulis = list(product(["I", "X"], repeat=nqubits))[1:]
+            # this next line is optional
+            paulis = [''.join(pauli) for pauli in paulis]
+
+            probabilities = np.random.rand(len(paulis))
+            probabilities /= np.sum(probabilities)
+
+            channel = GeneralizedPauliNoiseChannel(
+                qubits, list(zip(probabilities, paulis))
+            )
+
+    This channel can be simulated using either density matrices or state vectors
+    and sampling with repeated execution.
+    See :ref:`How to perform noisy simulation? <noisy-example>` for more
+    information.
+
+    Args:
+        qubits (int or list or tuple): Qubits that the noise acts on.
+        operators (list): list of operators as pairs :math:`(p_{k}, P_{k})`, where 
+    """
+
+    def __init__(self, qubits: int | list | tuple, operators: list):
+        warnings.warn(
+            "The class GeneralizedPauliNoiseChannel will be renamed "
+            + "PauliNoiseChannel in a later release."
+        )
+
+        if isinstance(qubits, int) is True:
+            qubits = (qubits,)
+
+        probabilities, paulis = [], []
+        for probability, pauli in operators:
+            probabilities.append(probability)
+            paulis.append(pauli)
+
+        single_paulis = {"I": I, "X": X, "Y": Y, "Z": Z}
+
+        gates = []
+        for pauli in paulis:
+            fgate = FusedGate(*qubits)
+            for q, p in zip(qubits, pauli):
+                fgate.append(single_paulis[p](q))
+            gates.append(fgate)
+        self.gates = tuple(gates)
+        self.coefficients = tuple(probabilities)
+
+        super().__init__(probabilities, gates)
+        self.name = "GeneralizedPauliNoiseChannel"
 
 
 class DepolarizingChannel(Channel):
@@ -325,7 +403,7 @@ class DepolarizingChannel(Channel):
         lam (float): Depolarizing error parameter.
     """
 
-    def __init__(self, q, lam=0):
+    def __init__(self, q, lam: str = 0):
         super().__init__()
         num_qubits = len(q)
         num_terms = 4**num_qubits
@@ -344,9 +422,11 @@ class DepolarizingChannel(Channel):
 
     def apply_density_matrix(self, backend, state, nqubits):
         lam = self.init_kwargs["lam"]
-        return (1 - lam) * backend.cast(state) + lam / 2**nqubits * backend.cast(
-            I(*range(nqubits)).asmatrix(backend)
-        )
+        state_evolved = (1 - lam) * backend.cast(state) + (
+            lam / 2**nqubits
+        ) * backend.cast(I(*range(nqubits)).asmatrix(backend))
+
+        return state_evolved
 
     def apply(self, backend, state, nqubits):
         num_qubits = len(self.target_qubits)
@@ -355,12 +435,13 @@ class DepolarizingChannel(Channel):
         probs = (num_terms - 1) * [prob_pauli]
         gates = []
         for pauli_list in list(product([I, X, Y, Z], repeat=num_qubits))[1::]:
-            fgate = FusedGate(*range(num_qubits))
+            fgate = FusedGate(*self.target_qubits)
             for j, pauli in enumerate(pauli_list):
                 fgate.append(pauli(j))
-            gates.append(Unitary(backend.asmatrix_fused(fgate), *self.target_qubits))
+            gates.append(fgate)
         self.gates = tuple(gates)
         self.coefficients = tuple(probs)
+
         return backend.apply_channel(self, state, nqubits)
 
 
