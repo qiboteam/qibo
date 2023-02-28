@@ -159,6 +159,30 @@ def test_pauli_noise_channel(backend):
     assert norm < PRECISION_TOL
 
 
+def test_generalized_pauli_noise_channel(backend):
+    initial_rho = random_density_matrix(2**2)
+    qubits = (1,)
+    channel = gates.GeneralizedPauliNoiseChannel(qubits, [("X", 0.3)])
+    final_rho = backend.apply_channel_density_matrix(channel, np.copy(initial_rho), 2)
+    gate = gates.X(1)
+    target_rho = backend.apply_gate_density_matrix(gate, np.copy(initial_rho), 2)
+    target_rho = 0.3 * backend.to_numpy(target_rho)
+    target_rho += 0.7 * initial_rho
+    backend.assert_allclose(final_rho, target_rho)
+
+    basis = ["X", "Y", "Z"]
+    pnp = np.array([0.1, 0.02, 0.05])
+    a0 = 1
+    a1 = 1 - 2 * pnp[1] - 2 * pnp[2]
+    a2 = 1 - 2 * pnp[0] - 2 * pnp[2]
+    a3 = 1 - 2 * pnp[0] - 2 * pnp[1]
+    test_representation = np.diag([a0, a1, a2, a3])
+
+    liouville = gates.GeneralizedPauliNoiseChannel((0,), list(zip(basis, pnp))).to_pauli_liouville(True, backend)
+    norm = np.linalg.norm(backend.to_numpy(liouville) - test_representation)
+    assert norm < PRECISION_TOL
+
+    
 def test_depolarizing_channel(backend):
     initial_rho = random_density_matrix(2**3)
     lam = 0.3

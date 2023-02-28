@@ -292,9 +292,9 @@ class PauliNoiseChannel(UnitaryChannel):
 
     def __init__(self, q, px=0, py=0, pz=0):
         warnings.warn(
-            DeprecationWarning,
             "This channel will be removed in a later release. "
-            + "Use GeneralizedPauliNoiseChannel instead."
+            + "Use GeneralizedPauliNoiseChannel instead.",
+            DeprecationWarning
         )
 
         probs, gates = [], []
@@ -352,7 +352,7 @@ class GeneralizedPauliNoiseChannel(UnitaryChannel):
 
     Args:
         qubits (int or list or tuple): Qubits that the noise acts on.
-        operators (list): list of operators as pairs :math:`(p_{k}, P_{k})`, where 
+        operators (list): list of operators as pairs :math:`(P_{k}, p_{k})`.
     """
 
     def __init__(self, qubits: int | list | tuple, operators: list):
@@ -365,7 +365,7 @@ class GeneralizedPauliNoiseChannel(UnitaryChannel):
             qubits = (qubits,)
 
         probabilities, paulis = [], []
-        for probability, pauli in operators:
+        for pauli, probability in operators:
             probabilities.append(probability)
             paulis.append(pauli)
 
