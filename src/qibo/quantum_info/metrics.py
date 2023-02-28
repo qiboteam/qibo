@@ -313,7 +313,7 @@ def average_gate_fidelity(channel, target=None):
 
 
 def gate_error(channel, target=None):
-    """Gate error between two quantum channels (when at least one is unitary), which is 
+    """Gate error between two quantum channels (when at least one is unitary), which is
     defined as
 
     .. math::

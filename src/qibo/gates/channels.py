@@ -294,7 +294,7 @@ class PauliNoiseChannel(UnitaryChannel):
         warnings.warn(
             "This channel will be removed in a later release. "
             + "Use GeneralizedPauliNoiseChannel instead.",
-            DeprecationWarning
+            DeprecationWarning,
         )
 
         probs, gates = [], []
@@ -333,7 +333,7 @@ class GeneralizedPauliNoiseChannel(UnitaryChannel):
 
             qubits = (0, 2)
             nqubits = len(qubits)
-            
+
             paulis = list(product(["I", "X"], repeat=nqubits))[1:]
             # this next line is optional
             paulis = [''.join(pauli) for pauli in paulis]
