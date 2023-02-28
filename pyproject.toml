@@ -1,3 +1,7 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.poetry]
 name = "qibo"
 version = "0.1.12.dev0"
@@ -9,13 +13,11 @@ homepage = "https://qibo.science/"
 repository = "https://github.com/qiboteam/qibo/"
 documentation = "https://qibo.science/docs/qibo/stable"
 keywords = []
-classifiers=[
-    "Programming Language :: Python :: 3",
-    "Topic :: Scientific/Engineering :: Physics",
-    ]
-packages = [
-  { include = "qibo", from = "src" }
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering :: Physics",
 ]
+packages = [{ include = "qibo", from = "src" }]
 include = ["*.out", "*.yml"]
 
 [tool.setuptools.packages.find]
@@ -56,9 +58,9 @@ scikit-learn = "^1.2.1"
 dill = "^0.3.6"
 pytest-cov = "^4.0.0"
 pylint = "^2.16.2"
-qibojit = {git = "https://github.com/qiboteam/qibojit"}
-tensorflow = {version = "^2.11.0", markers = "sys_platform == 'linux' or sys_platform == 'darwin'" }
-tensorflow-intel = {version = "^2.11.0", markers = "sys_platform == 'win32'" }
+qibojit = { git = "https://github.com/qiboteam/qibojit" }
+tensorflow = { version = "^2.11.0", markers = "sys_platform == 'linux' or sys_platform == 'darwin'" }
+tensorflow-intel = { version = "^2.11.0", markers = "sys_platform == 'win32'" }
 
 [tool.poe.tasks]
 test = "pytest"
