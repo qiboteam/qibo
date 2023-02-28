@@ -337,6 +337,7 @@ class GeneralizedPauliNoiseChannel(UnitaryChannel):
             qubits = (0, 2)
             nqubits = len(qubits)
 
+            # excluding the Identity operator
             paulis = list(product(["I", "X"], repeat=nqubits))[1:]
             # this next line is optional
             paulis = [''.join(pauli) for pauli in paulis]
@@ -345,7 +346,7 @@ class GeneralizedPauliNoiseChannel(UnitaryChannel):
             probabilities /= np.sum(probabilities)
 
             channel = GeneralizedPauliNoiseChannel(
-                qubits, list(zip(probabilities, paulis))
+                qubits, list(zip(paulis, probabilities))
             )
 
     This channel can be simulated using either density matrices or state vectors
