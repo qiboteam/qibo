@@ -2,11 +2,11 @@
 name: Tests
 
 on:
+  workflow_dispatch:
   push:
   merge_group:
   pull_request:
     types: [labeled]
-
 
 jobs:
   build:
