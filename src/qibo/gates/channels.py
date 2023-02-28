@@ -6,6 +6,7 @@ from qibo.gates.abstract import Gate
 from qibo.gates.gates import I, Unitary, X, Y, Z
 from qibo.gates.special import FusedGate
 
+from typing import Tuple
 
 class Channel(Gate):
     """Abstract class for channels."""
@@ -355,7 +356,7 @@ class GeneralizedPauliNoiseChannel(UnitaryChannel):
         operators (list): list of operators as pairs :math:`(P_{k}, p_{k})`.
     """
 
-    def __init__(self, qubits: int | list | tuple, operators: list):
+    def __init__(self, qubits: Tuple[int, list, tuple], operators: list):
         warnings.warn(
             "The class GeneralizedPauliNoiseChannel will be renamed "
             + "PauliNoiseChannel in a later release."
