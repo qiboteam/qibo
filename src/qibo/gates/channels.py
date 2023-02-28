@@ -385,7 +385,7 @@ class GeneralizedPauliNoiseChannel(UnitaryChannel):
         self.name = "GeneralizedPauliNoiseChannel"
 
 
-class DepolarizingChannel(UnitaryChannel):
+class DepolarizingChannel(Channel):
     """:math:`n`-qubit Depolarizing quantum error channel,
 
     .. math::
