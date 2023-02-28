@@ -179,7 +179,7 @@ def test_generalized_pauli_noise_channel(backend):
     test_representation = np.diag([a0, a1, a2, a3])
 
     liouville = gates.GeneralizedPauliNoiseChannel(
-        (0,), list(zip(basis, pnp))
+        0, list(zip(basis, pnp))
     ).to_pauli_liouville(True, backend)
     norm = np.linalg.norm(backend.to_numpy(liouville) - test_representation)
     assert norm < PRECISION_TOL
