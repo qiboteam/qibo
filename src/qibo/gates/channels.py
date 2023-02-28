@@ -332,6 +332,8 @@ class GeneralizedPauliNoiseChannel(UnitaryChannel):
 
             from itertools import product
 
+            from qibo.gates.channels import GeneralizedPauliNoiseChannel
+
             qubits = (0, 2)
             nqubits = len(qubits)
 
