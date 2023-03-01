@@ -342,7 +342,7 @@ class GeneralizedPauliNoiseChannel(UnitaryChannel):
             # this next line is optional
             paulis = [''.join(pauli) for pauli in paulis]
 
-            probabilities = np.random.rand(len(paulis))
+            probabilities = np.random.rand(len(paulis) + 1)
             probabilities /= np.sum(probabilities)
             #Excluding probability of Identity operator
             probabilities = probabilities[1:]
