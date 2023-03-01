@@ -318,7 +318,7 @@ test_values = [
 @pytest.mark.parametrize(test_names, test_values)
 def test_scheduling_optimization(backend, method, options, messages, dense, filename):
     """Test optimization of s(t)."""
-    from qibo.tests.test_models_variational import assert_regression_fixture
+    from .test_models_variational import assert_regression_fixture
 
     h0 = hamiltonians.X(3, dense=dense, backend=backend)
     h1 = hamiltonians.TFIM(3, dense=dense, backend=backend)

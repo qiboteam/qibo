@@ -4,7 +4,8 @@ import pytest
 
 from qibo import hamiltonians
 from qibo.quantum_info import random_hermitian, random_statevector
-from qibo.tests.utils import random_complex
+
+from .utils import random_complex
 
 
 @pytest.mark.parametrize("nqubits", [3, 4])
