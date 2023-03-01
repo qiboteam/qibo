@@ -35,72 +35,6 @@ class Channel(Gate):
     def apply_density_matrix(self, backend, state, nqubits):
         return backend.apply_channel_density_matrix(self, state, nqubits)
 
-
-class KrausChannel(Channel):
-    """General channel defined by arbitrary Kraus operators.
-
-    Implements the following transformation:
-
-    .. math::
-        \\mathcal{E}(\\rho ) = \\sum _k A_k \\rho A_k^\\dagger
-
-    where A are arbitrary Kraus operators given by the user. Note that Kraus
-    operators set should be trace preserving, however this is not checked.
-    Simulation of this gate requires the use of density matrices.
-    For more information on channels and Kraus operators please check
-    `J. Preskill's notes <http://theory.caltech.edu/~preskill/ph219/chap3_15.pdf>`_.
-
-    Args:
-        ops (list): List of Kraus operators as pairs ``(qubits, Ak)`` where
-          ``qubits`` refers the qubit ids that ``Ak`` acts on and ``Ak`` is
-          the corresponding matrix as a ``np.ndarray`` or ``tf.Tensor``.
-
-    Example:
-        .. testcode::
-
-            import numpy as np
-            from qibo.models import Circuit
-            from qibo import gates
-            # initialize circuit with 3 qubits
-            c = Circuit(3, density_matrix=True)
-            # define a sqrt(0.4) * X gate
-            a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
-            # define a sqrt(0.6) * CNOT gate
-            a2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0],
-                                          [0, 0, 0, 1], [0, 0, 1, 0]])
-            # define the channel rho -> 0.4 X{1} rho X{1} + 0.6 CNOT{0, 2} rho CNOT{0, 2}
-            channel = gates.KrausChannel([((1,), a1), ((0, 2), a2)])
-            # add the channel to the circuit
-            c.add(channel)
-    """
-
-    def __init__(self, ops):
-        super().__init__()
-        self.name = "KrausChannel"
-        if isinstance(ops[0], Gate):
-            self.gates = tuple(ops)
-            self.target_qubits = tuple(
-                sorted({q for gate in ops for q in gate.target_qubits})
-            )
-        else:
-            gates, qubitset = [], set()
-            for qubits, matrix in ops:
-                rank = 2 ** len(qubits)
-                shape = tuple(matrix.shape)
-                if shape != (rank, rank):
-                    raise_error(
-                        ValueError,
-                        f"Invalid Krauss operator shape {shape} for "
-                        + f"acting on {len(qubits)} qubits.",
-                    )
-                qubitset.update(qubits)
-                gates.append(Unitary(matrix, *list(qubits)))
-            self.gates = tuple(gates)
-            self.target_qubits = tuple(sorted(qubitset))
-        self.init_args = [self.gates]
-        self.coefficients = len(self.gates) * (1,)
-        self.coefficient_sum = 1
-
     def to_choi(self, order: str = "row", backend=None):
         """Returns the Choi representation :math:`\\mathcal{E}`
         of the Kraus channel :math:`\\{K_{\\alpha}\\}_{\\alpha}`.
@@ -137,6 +71,20 @@ class KrausChannel(Channel):
                 p0 = p0 - coeff
             self.coefficients += (p0,)
             self.gates += (I(*self.target_qubits),)
+
+        if self.name == "DepolarizingChannel":
+            num_qubits = len(self.target_qubits)
+            num_terms = 4**num_qubits
+            prob_pauli = self.init_kwargs["lam"] / num_terms
+            probs = (num_terms - 1) * [prob_pauli]
+            gates = []
+            for pauli_list in list(product([I, X, Y, Z], repeat=num_qubits))[1::]:
+                fgate = FusedGate(*self.target_qubits)
+                for j, pauli in enumerate(pauli_list):
+                    fgate.append(pauli(j))
+                gates.append(fgate)
+            self.gates = tuple(gates)
+            self.coefficients = tuple(probs)
 
         super_op = np.zeros((4**self.nqubits, 4**self.nqubits), dtype="complex")
         for coeff, gate in zip(self.coefficients, self.gates):
@@ -214,6 +162,72 @@ class KrausChannel(Channel):
         super_op = backend.cast(super_op, dtype=super_op.dtype)
 
         return super_op
+
+
+class KrausChannel(Channel):
+    """General channel defined by arbitrary Kraus operators.
+
+    Implements the following transformation:
+
+    .. math::
+        \\mathcal{E}(\\rho ) = \\sum _k A_k \\rho A_k^\\dagger
+
+    where A are arbitrary Kraus operators given by the user. Note that Kraus
+    operators set should be trace preserving, however this is not checked.
+    Simulation of this gate requires the use of density matrices.
+    For more information on channels and Kraus operators please check
+    `J. Preskill's notes <http://theory.caltech.edu/~preskill/ph219/chap3_15.pdf>`_.
+
+    Args:
+        ops (list): List of Kraus operators as pairs ``(qubits, Ak)`` where
+          ``qubits`` refers the qubit ids that ``Ak`` acts on and ``Ak`` is
+          the corresponding matrix as a ``np.ndarray`` or ``tf.Tensor``.
+
+    Example:
+        .. testcode::
+
+            import numpy as np
+            from qibo.models import Circuit
+            from qibo import gates
+            # initialize circuit with 3 qubits
+            c = Circuit(3, density_matrix=True)
+            # define a sqrt(0.4) * X gate
+            a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
+            # define a sqrt(0.6) * CNOT gate
+            a2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0],
+                                          [0, 0, 0, 1], [0, 0, 1, 0]])
+            # define the channel rho -> 0.4 X{1} rho X{1} + 0.6 CNOT{0, 2} rho CNOT{0, 2}
+            channel = gates.KrausChannel([((1,), a1), ((0, 2), a2)])
+            # add the channel to the circuit
+            c.add(channel)
+    """
+
+    def __init__(self, ops):
+        super().__init__()
+        self.name = "KrausChannel"
+        if isinstance(ops[0], Gate):
+            self.gates = tuple(ops)
+            self.target_qubits = tuple(
+                sorted({q for gate in ops for q in gate.target_qubits})
+            )
+        else:
+            gates, qubitset = [], set()
+            for qubits, matrix in ops:
+                rank = 2 ** len(qubits)
+                shape = tuple(matrix.shape)
+                if shape != (rank, rank):
+                    raise_error(
+                        ValueError,
+                        f"Invalid Krauss operator shape {shape} for "
+                        + f"acting on {len(qubits)} qubits.",
+                    )
+                qubitset.update(qubits)
+                gates.append(Unitary(matrix, *list(qubits)))
+            self.gates = tuple(gates)
+            self.target_qubits = tuple(sorted(qubitset))
+        self.init_args = [self.gates]
+        self.coefficients = len(self.gates) * (1,)
+        self.coefficient_sum = 1
 
 
 class UnitaryChannel(KrausChannel):
