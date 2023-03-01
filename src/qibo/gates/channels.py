@@ -344,6 +344,8 @@ class GeneralizedPauliNoiseChannel(UnitaryChannel):
 
             probabilities = np.random.rand(len(paulis))
             probabilities /= np.sum(probabilities)
+            #Excluding probability of Identity operator
+            probabilities = probabilities[1:]
 
             channel = GeneralizedPauliNoiseChannel(
                 qubits, list(zip(paulis, probabilities))
