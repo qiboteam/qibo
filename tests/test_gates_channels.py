@@ -63,7 +63,7 @@ def test_kraus_channel_errors(backend):
         True,
     )
 
-    gates.DepolarizingChannel((0, 1), 1.2).to_choi()
+    gates.DepolarizingChannel((0, 1), 0.98).to_choi()
 
 
 def test_depolarizing_channel_errors():
