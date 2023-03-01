@@ -328,7 +328,6 @@ def gate_error(channel, target=None):
 
     Returns:
         float: Gate error between :math:`\\mathcal{E}` and :math:`\\mathcal{U}`.
-
     """
 
     return 1 - average_gate_fidelity(channel, target)
