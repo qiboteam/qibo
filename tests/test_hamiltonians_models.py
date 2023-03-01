@@ -23,7 +23,7 @@ models_config = [
 @pytest.mark.parametrize(("model", "kwargs", "filename"), models_config)
 def test_hamiltonian_models(backend, model, kwargs, filename):
     """Test pre-coded Hamiltonian models generate the proper matrices."""
-    from qibo.tests.test_models_variational import assert_regression_fixture
+    from .test_models_variational import assert_regression_fixture
 
     H = getattr(hamiltonians, model)(**kwargs, backend=backend)
     matrix = backend.to_numpy(H.matrix).flatten().real

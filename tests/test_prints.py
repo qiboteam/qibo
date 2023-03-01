@@ -4,6 +4,7 @@ import pathlib
 
 import pytest
 
+import qibo
 from qibo.config import raise_error
 
 
@@ -68,7 +69,7 @@ class CodeText:
 
 def python_files():
     """Iterator that yields all python files (`.py`) in `/src/qibo/`."""
-    basedir = pathlib.Path(os.path.realpath(__file__)).parent.parent
+    basedir = pathlib.Path(qibo.__file__).parent.absolute()
     for subdir, _, files in os.walk(basedir):
         for file in files:
             pieces = file.split(".")
