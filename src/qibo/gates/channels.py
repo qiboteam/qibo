@@ -396,7 +396,8 @@ class DepolarizingChannel(Channel):
     .. math::
         \\mathcal{E}(\\rho ) = (1 - \\lambda) \\rho +\\lambda \\text{Tr}_q[\\rho]\\otimes \\frac{I}{2^n}
 
-    where :math:`\\lambda` is the depolarizing error parameter and :math:`0 \\le \\lambda \\le 4^n / (4^n - 1)`.
+    where :math:`\\lambda` is the depolarizing error parameter
+    and :math:`0 \\le \\lambda \\le 4^n / (4^n - 1)`.
 
     * If :math:`\\lambda = 1` this is a completely depolarizing channel
       :math:`E(\\rho) = I / 2^n`
