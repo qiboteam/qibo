@@ -392,7 +392,7 @@ class DepolarizingChannel(Channel):
     """:math:`n`-qubit Depolarizing quantum error channel,
 
     .. math::
-        \\mathcal{E}(\\rho ) = (1 - \\lambda) \\rho +\\lambda \\text{Tr}[\\rho] \\frac{I}{2^n}
+        \\mathcal{E}(\\rho ) = (1 - \\lambda) \\rho +\\lambda \\text{Tr}_q[\\rho]\\otimes \\frac{I}{2^n}
 
     where :math:`\\lambda` is the depolarizing error parameter and :math:`0 \\le \\lambda \\le 4^n / (4^n - 1)`.
 
@@ -400,7 +400,7 @@ class DepolarizingChannel(Channel):
       :math:`E(\\rho) = I / 2^n`
     * If :math:`\\lambda = 4^n / (4^n - 1)` this is a uniform Pauli
       error channel: :math:`E(\\rho) = \\sum_j P_j \\rho P_j / (4^n - 1)` for
-      all :math:`P_j != I`.
+      all :math:`P_j \\neq I`.
 
     Args:
         q (tuple): Qubit ids that the noise acts on.
@@ -456,7 +456,7 @@ class ResetChannel(Channel):
 
     .. math::
         \\mathcal{E}(\\rho ) = (1 - p_0 - p_1) \\rho
-        +  \\mathrm{Tr}\\rho \\otimes (p_0|0\\rangle \\langle 0| + p_1|1\\rangle \\langle 1|)
+        +  \\mathrm{Tr}_q[\\rho] \\otimes (p_0|0\\rangle \\langle 0| + p_1|1\\rangle \\langle 1|),
 
     Args:
         q (int): Qubit id that the channel acts on.
@@ -485,7 +485,7 @@ class ThermalRelaxationChannel(Channel):
 
     .. math::
         \\mathcal{E} (\\rho ) = (1 - p_z - p_0 - p_1)\\rho + p_zZ\\rho Z
-        +  \\mathrm{Tr}\\rho \\otimes (p_0|0\\rangle \\langle 0| + p_1|1\\rangle \\langle 1|)
+        +  \\mathrm{Tr}_q[\\rho] \\otimes (p_0|0\\rangle \\langle 0| + p_1|1\\rangle \\langle 1|)
 
 
     while if :math:`T_1 < T_2`:
