@@ -28,7 +28,7 @@ def test_kraus_channel_errors(backend):
     a1 = np.sqrt(0.4) * matrices.X
     a2 = np.sqrt(0.6) * matrices.Z
     with pytest.raises(ValueError):
-        gate = gates.KrausChannel([((0, 1), a1)])
+        gates.KrausChannel([((0, 1), a1)])
 
     test_superop = np.array(
         [
@@ -63,10 +63,12 @@ def test_kraus_channel_errors(backend):
         True,
     )
 
+    gates.DepolarizingChannel((0, 1), 1.2).to_choi()
+
 
 def test_depolarizing_channel_errors():
     with pytest.raises(ValueError):
-        gate = gates.DepolarizingChannel((0, 1), 1.2)
+        gates.DepolarizingChannel((0, 1), 1.2)
 
 
 def test_controlled_by_channel_error():
