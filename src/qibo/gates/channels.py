@@ -65,7 +65,7 @@ class Channel(Gate):
 
         self.nqubits = 1 + max(self.target_qubits)
 
-        if self.name != "KrausChannel":
+        if self.name not in ["KrausChannel", "ThermalRelaxationChannel"]:
             p0 = 1
             for coeff in self.coefficients:
                 p0 = p0 - coeff
@@ -85,6 +85,12 @@ class Channel(Gate):
                 gates.append(fgate)
             self.gates = tuple(gates)
             self.coefficients = tuple(probs)
+
+        if self.name == "ThermalRelaxationChannel":
+            raise_error(
+                NotImplementedError,
+                "Superoperator representation not implemented for ThermalRelaxationChannel.",
+            )
 
         super_op = np.zeros((4**self.nqubits, 4**self.nqubits), dtype="complex")
         for coeff, gate in zip(self.coefficients, self.gates):
@@ -574,6 +580,7 @@ class ThermalRelaxationChannel(Channel):
             p_reset * (1 - excited_population),
             p_reset * excited_population,
         ]
+
         if t1 < t2:
             self.coefficients.append(np.exp(-time / t2))
         else:
@@ -582,9 +589,8 @@ class ThermalRelaxationChannel(Channel):
 
     def apply_density_matrix(self, backend, state, nqubits):
         q = self.target_qubits[0]
-        if self.t1 < self.t2:
-            from qibo.gates import Unitary
 
+        if self.t1 < self.t2:
             preset0, preset1, exp_t2 = self.coefficients
             matrix = [
                 [1 - preset1, 0, 0, preset0],
@@ -595,12 +601,12 @@ class ThermalRelaxationChannel(Channel):
 
             qubits = (q, q + nqubits)
             gate = Unitary(matrix, *qubits)
+
             return backend.thermal_error_density_matrix(gate, state, nqubits)
 
         else:
-            from qibo.gates import Z
-
             pz = self.coefficients[-1]
+
             return (
                 backend.reset_error_density_matrix(self, state, nqubits)
                 - pz * backend.cast(state)
