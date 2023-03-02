@@ -179,6 +179,7 @@ class NoiseModel:
         Args:
             error: quantum error to associate with the gate. Possible choices
                    are :class:`qibo.noise.PauliError`,
+                   :class:`qibo.noise.GeneralizedPauliError`,
                    :class:`qibo.noise.ThermalRelaxationError`,
                    :class:`qibo.noise.DepolarizingError` and
                    :class:`qibo.noise.ResetError`.
