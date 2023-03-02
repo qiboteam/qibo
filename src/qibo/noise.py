@@ -42,6 +42,18 @@ class PauliError:
         self.channel = gates.PauliNoiseChannel
 
 
+class GeneralizedPauliError:
+    """Quantum error associated with the :class:`qibo.gates.GeneralizedPauliNoiseChannel`.
+
+    Args:
+        options (tuple): see :class:`qibo.gates.GeneralizedPauliNoiseChannel`
+    """
+
+    def __init__(self, operators):
+        self.options = operators
+        self.channel = gates.GeneralizedPauliNoiseChannel
+
+
 class ThermalRelaxationError:
     """Quantum error associated with the :class:`qibo.gates.ThermalRelaxationChannel`.
 
