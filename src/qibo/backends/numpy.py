@@ -341,13 +341,24 @@ class NumpyBackend(Backend):
         trace = self.partial_trace_density_matrix(state, q, nqubits)
         trace = self.np.reshape(trace, 2 * (nqubits - len(q)) * (2,))
         identity = self.identity_density_matrix(len(q))
+        identity = self.np.reshape(identity, 2 * len(q) * (2,))
         identity = self.np.tensordot(trace, identity, axes=0)
-        order = list(range(2 * (nqubits - len(q))))
-        j = 0
-        for qq in q:
-            order.insert(qq, 2 * nqubits - 2 + j)
-            order.insert(qq + nqubits, 2 * nqubits - 1 + j)
-            j += 1
+        qubits = list(range(nqubits))
+        for j in q:
+            qubits.pop(qubits.index(j))
+        qubits.sort()
+        qubits += list(q)
+        qubit_1 = list(range(nqubits - len(q))) + list(
+            range(2 * (nqubits - len(q)), 2 * nqubits - len(q))
+        )
+        qubit_2 = list(range(nqubits - len(q), 2 * (nqubits - len(q)))) + list(
+            range(2 * nqubits - len(q), 2 * nqubits)
+        )
+        qs = [qubit_1, qubit_2]
+        order = []
+        for qj in qs:
+            qj = [qj[qubits.index(i)] for i in range(len(qubits))]
+            order += qj
         identity = self.np.reshape(self.np.transpose(identity, order), shape)
         state = (1 - lam) * state + lam * identity
         return state
