@@ -66,7 +66,11 @@ class Channel(Gate):
 
         self.nqubits = 1 + max(self.target_qubits)
 
-        if self.name not in ["KrausChannel", "ThermalRelaxationChannel", "ReadoutErrorChannel"]:
+        if self.name not in [
+            "KrausChannel",
+            "ThermalRelaxationChannel",
+            "ReadoutErrorChannel",
+        ]:
             p0 = 1
             for coeff in self.coefficients:
                 p0 = p0 - coeff
