@@ -1,5 +1,6 @@
 import warnings
 from itertools import product
+from math import exp, sqrt
 from typing import Tuple
 
 from qibo.config import PRECISION_TOL, raise_error
@@ -65,7 +66,7 @@ class Channel(Gate):
 
         self.nqubits = 1 + max(self.target_qubits)
 
-        if self.name not in ["KrausChannel", "ThermalRelaxationChannel"]:
+        if self.name not in ["KrausChannel", "ThermalRelaxationChannel", "ReadoutErrorChannel"]:
             p0 = 1
             for coeff in self.coefficients:
                 p0 = p0 - coeff
@@ -572,19 +573,17 @@ class ThermalRelaxationChannel(Channel):
             )
 
         # calculate probabilities
-        import numpy as np
-
         self.t1, self.t2 = t1, t2
-        p_reset = 1 - np.exp(-time / t1)
+        p_reset = 1 - exp(-time / t1)
         self.coefficients = [
             p_reset * (1 - excited_population),
             p_reset * excited_population,
         ]
 
         if t1 < t2:
-            self.coefficients.append(np.exp(-time / t2))
+            self.coefficients.append(exp(-time / t2))
         else:
-            pz = p_reset + np.exp(-time / t2) * (1 - np.exp(time / t1))
+            pz = p_reset + exp(-time / t2) * (1 - exp(time / t1))
             self.coefficients.append(pz)
 
     def apply_density_matrix(self, backend, state, nqubits):
@@ -612,3 +611,29 @@ class ThermalRelaxationChannel(Channel):
                 - pz * backend.cast(state)
                 + pz * backend.apply_gate_density_matrix(Z(0), state, nqubits)
             )
+
+
+class ReadoutErrorChannel(KrausChannel):
+    def __init__(self, q: Tuple[int, list, tuple], probabilities):
+        if any(sum(row) < 1 - PRECISION_TOL for row in probabilities) or any(
+            sum(row) > 1 + PRECISION_TOL for row in probabilities
+        ):
+            raise_error(ValueError, "all rows of probabilities must sum to 1.")
+
+        if isinstance(q, int) is True:
+            q = (q,)
+
+        import numpy as np
+
+        d = len(probabilities)
+        operators = []
+        for j in range(d):
+            for k in range(d):
+                operator = np.zeros((d, d))
+                operator[k, j] = sqrt(probabilities[k, j])
+                operators.append(operator)
+
+        operators = list(zip([q] * len(operators), operators))
+
+        super().__init__(ops=operators)
+        self.name = "ReadoutErrorChannel"
