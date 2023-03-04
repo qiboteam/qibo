@@ -477,33 +477,6 @@ class DepolarizingChannel(Channel):
         return backend.apply_channel(self, state, nqubits)
 
 
-class ResetChannel(Channel):
-    """Single-qubit reset channel.
-
-    Implements the following transformation:
-
-    .. math::
-        \\mathcal{E}(\\rho ) = (1 - p_0 - p_1) \\rho
-        +  \\mathrm{Tr}_q[\\rho] \\otimes (p_0|0\\rangle \\langle 0| + p_1|1\\rangle \\langle 1|),
-
-    Args:
-        q (int): Qubit id that the channel acts on.
-        p0 (float): Probability to reset to 0.
-        p1 (float): Probability to reset to 1.
-    """
-
-    def __init__(self, q, p0=0.0, p1=0.0):
-        super().__init__()
-        self.name = "ResetChannel"
-        self.target_qubits = (q,)
-        self.coefficients = (p0, p1)
-        self.init_args = [q]
-        self.init_kwargs = {"p0": p0, "p1": p1}
-
-    def apply_density_matrix(self, backend, state, nqubits):
-        return backend.reset_error_density_matrix(self, state, nqubits)
-
-
 class ThermalRelaxationChannel(Channel):
     """Single-qubit thermal relaxation error channel.
 
@@ -641,3 +614,30 @@ class ReadoutErrorChannel(KrausChannel):
 
         super().__init__(ops=operators)
         self.name = "ReadoutErrorChannel"
+
+
+class ResetChannel(Channel):
+    """Single-qubit reset channel.
+
+    Implements the following transformation:
+
+    .. math::
+        \\mathcal{E}(\\rho ) = (1 - p_0 - p_1) \\rho
+        +  \\mathrm{Tr}_q[\\rho] \\otimes (p_0|0\\rangle \\langle 0| + p_1|1\\rangle \\langle 1|),
+
+    Args:
+        q (int): Qubit id that the channel acts on.
+        p0 (float): Probability to reset to 0.
+        p1 (float): Probability to reset to 1.
+    """
+
+    def __init__(self, q, p0=0.0, p1=0.0):
+        super().__init__()
+        self.name = "ResetChannel"
+        self.target_qubits = (q,)
+        self.coefficients = (p0, p1)
+        self.init_args = [q]
+        self.init_kwargs = {"p0": p0, "p1": p1}
+
+    def apply_density_matrix(self, backend, state, nqubits):
+        return backend.reset_error_density_matrix(self, state, nqubits)
