@@ -3,93 +3,6 @@ from qibo.config import raise_error
 from qibo.noise_model import CompositeNoiseModel
 
 
-class CustomError:
-    """Quantum error associated with the :class:`qibo.gates.Channel`
-
-    Args:
-        channel (:class:`qibo.gates.Channel`): any channel
-
-    Example:
-
-    .. testcode::
-
-        import numpy as np
-        from qibo.gates import KrausChannel
-        from qibo.noise import CustomError
-
-        # define |0><0|
-        a1 = np.array([[1, 0], [0, 0]])
-        # define |0><1|
-        a2 = np.array([[0, 1], [0, 0]])
-
-        # Create an Error associated with Kraus Channel rho -> |0><0| rho |0><0| + |0><1| rho |0><1|
-        error = CustomError(gates.KrausChannel([((0,), a1), ((0,), a2)]))
-    """
-
-    def __init__(self, channel):
-        self.channel = channel
-
-
-class PauliError:
-    """Quantum error associated with the :class:`qibo.gates.PauliNoiseChannel`.
-
-    Args:
-        options (tuple): see :class:`qibo.gates.PauliNoiseChannel`
-    """
-
-    def __init__(self, px=0, py=0, pz=0):
-        self.options = px, py, pz
-        self.channel = gates.PauliNoiseChannel
-
-
-class GeneralizedPauliError:
-    """Quantum error associated with the :class:`qibo.gates.GeneralizedPauliNoiseChannel`.
-
-    Args:
-        options (tuple): see :class:`qibo.gates.GeneralizedPauliNoiseChannel`
-    """
-
-    def __init__(self, operators):
-        self.options = operators
-        self.channel = gates.GeneralizedPauliNoiseChannel
-
-
-class ThermalRelaxationError:
-    """Quantum error associated with the :class:`qibo.gates.ThermalRelaxationChannel`.
-
-    Args:
-        options (tuple): see :class:`qibo.gates.ThermalRelaxationChannel`
-    """
-
-    def __init__(self, t1, t2, time, excited_population=0):
-        self.options = t1, t2, time, excited_population
-        self.channel = gates.ThermalRelaxationChannel
-
-
-class DepolarizingError:
-    """Quantum error associated with the :class:`qibo.gates.DepolarizingChannel`.
-
-    Args:
-        options (float): see :class:`qibo.gates.DepolarizingChannel`
-    """
-
-    def __init__(self, lam):
-        self.options = (lam,)
-        self.channel = gates.DepolarizingChannel
-
-
-class ResetError:
-    """Quantum error associated with the `qibo.gates.ResetChannel`.
-
-    Args:
-        options (tuple): see :class:`qibo.gates.ResetChannel`
-    """
-
-    def __init__(self, p0, p1):
-        self.options = p0, p1
-        self.channel = gates.ResetChannel
-
-
 class KrausError:
     """Quantum error associated with the :class:`qibo.gates.KrausChannel`.
 
@@ -142,6 +55,105 @@ class UnitaryError:
     def channel(self, qubits):
         ops = [([*qubits], u) for u in self.unitaries]
         return gates.UnitaryChannel(self.probabilities, ops)
+
+
+class PauliError:
+    """Quantum error associated with the :class:`qibo.gates.PauliNoiseChannel`.
+
+    Args:
+        options (tuple): see :class:`qibo.gates.PauliNoiseChannel`
+    """
+
+    def __init__(self, px=0, py=0, pz=0):
+        self.options = px, py, pz
+        self.channel = gates.PauliNoiseChannel
+
+
+class GeneralizedPauliError:
+    """Quantum error associated with the :class:`qibo.gates.GeneralizedPauliNoiseChannel`.
+
+    Args:
+        options (tuple): see :class:`qibo.gates.GeneralizedPauliNoiseChannel`
+    """
+
+    def __init__(self, operators):
+        self.options = operators
+        self.channel = gates.GeneralizedPauliNoiseChannel
+
+
+class DepolarizingError:
+    """Quantum error associated with the :class:`qibo.gates.DepolarizingChannel`.
+
+    Args:
+        options (float): see :class:`qibo.gates.DepolarizingChannel`
+    """
+
+    def __init__(self, lam):
+        self.options = (lam,)
+        self.channel = gates.DepolarizingChannel
+
+
+class ThermalRelaxationError:
+    """Quantum error associated with the :class:`qibo.gates.ThermalRelaxationChannel`.
+
+    Args:
+        options (tuple): see :class:`qibo.gates.ThermalRelaxationChannel`
+    """
+
+    def __init__(self, t1, t2, time, excited_population=0):
+        self.options = t1, t2, time, excited_population
+        self.channel = gates.ThermalRelaxationChannel
+
+
+class ResetError:
+    """Quantum error associated with the `qibo.gates.ResetChannel`.
+
+    Args:
+        options (tuple): see :class:`qibo.gates.ResetChannel`
+    """
+
+    def __init__(self, p0, p1):
+        self.options = p0, p1
+        self.channel = gates.ResetChannel
+
+
+class ReadoutError:
+    """_summary_
+
+    Returns:
+        _type_: _description_
+    """
+
+    def __init__(self, probabilities):
+        self.options = probabilities
+        self.channel = gates.ReadoutErrorChannel
+
+
+class CustomError:
+    """Quantum error associated with the :class:`qibo.gates.Channel`
+
+    Args:
+        channel (:class:`qibo.gates.Channel`): any channel
+
+    Example:
+
+    .. testcode::
+
+        import numpy as np
+        from qibo.gates import KrausChannel
+        from qibo.noise import CustomError
+
+        # define |0><0|
+        a1 = np.array([[1, 0], [0, 0]])
+        # define |0><1|
+        a2 = np.array([[0, 1], [0, 0]])
+
+        # Create an Error associated with Kraus Channel rho -> |0><0| rho |0><0| + |0><1| rho |0><1|
+        error = CustomError(gates.KrausChannel([((0,), a1), ((0,), a2)]))
+    """
+
+    def __init__(self, channel):
+        self.channel = channel
 
 
 class NoiseModel:
