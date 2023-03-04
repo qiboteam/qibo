@@ -628,17 +628,24 @@ Depolarizing channel
     :members:
     :member-order: bysource
 
-Reset channel
-^^^^^^^^^^^^^
-
-.. autoclass:: qibo.gates.ResetChannel
-    :members:
-    :member-order: bysource
-
 Thermal relaxation channel
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: qibo.gates.ThermalRelaxationChannel
+    :members:
+    :member-order: bysource
+
+Readout error channel
+^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.gates.ReadoutErrorChannel
+    :members:
+    :member-order: bysource
+
+Reset channel
+^^^^^^^^^^^^^
+
+.. autoclass:: qibo.gates.ResetChannel
     :members:
     :member-order: bysource
 
@@ -668,6 +675,10 @@ The quantum errors available to build a noise model are the following:
     :member-order: bysource
 
 .. autoclass:: qibo.noise.PauliError
+    :members:
+    :member-order: bysource
+
+.. autoclass:: qibo.noise.GeneralizedPauliError
     :members:
     :member-order: bysource
 
