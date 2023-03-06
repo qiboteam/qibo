@@ -607,7 +607,7 @@ class ReadoutErrorChannel(KrausChannel):
         for j in range(d):
             for k in range(d):
                 operator = np.zeros((d, d))
-                operator[k, j] = sqrt(probabilities[k, j])
+                operator[j, k] = sqrt(probabilities[k, j])
                 operators.append(operator)
 
         operators = list(zip([q] * len(operators), operators))
