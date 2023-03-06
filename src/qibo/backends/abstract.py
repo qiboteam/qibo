@@ -18,6 +18,10 @@ class Backend(abc.ABC):
         self.supports_multigpu = False
         self.oom_error = MemoryError
 
+    def __reduce__(self):
+        """Allow pickling backend objects that have references to modules."""
+        return self.__class__, tuple()
+
     def __repr__(self):
         if self.platform is None:
             return self.name
