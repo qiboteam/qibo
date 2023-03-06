@@ -1,4 +1,5 @@
 import collections
+import copy
 from typing import Dict, List, Tuple, Union
 
 import numpy as np
@@ -350,8 +351,6 @@ class Circuit:
         Returns:
             The copied circuit object.
         """
-        import copy
-
         if deep:
             new_circuit = self.__class__(**self.init_kwargs)
             for gate in self.queue:
@@ -361,14 +360,7 @@ class Circuit:
                         NotImplementedError,
                         "Cannot create deep copy of fused circuit.",
                     )
-
-                new_gate = copy.copy(gate)
-                new_circuit.queue.append(new_gate)
-                if isinstance(gate, gates.ParametrizedGate):
-                    new_circuit.parametrized_gates.append(new_gate)
-                    if gate.trainable:
-                        new_circuit.trainable_gates.append(new_gate)
-            new_circuit.measurements = list(self.measurements)
+                new_circuit.add(copy.copy(gate))
         else:
             if self.accelerators:  # pragma: no cover
                 raise_error(
@@ -376,8 +368,9 @@ class Circuit:
                     "Non-deep copy is not allowed for distributed "
                     "circuits because they modify gate objects.",
                 )
-            new_circuit = self._shallow_copy()
-            new_circuit.queue = copy.copy(self.queue)
+            new_circuit = self.__class__(**self.init_kwargs)
+            for gate in self.queue:
+                new_circuit.add(gate)
         return new_circuit
 
     def invert(self):
