@@ -390,6 +390,8 @@ class Circuit:
         Returns:
             The circuit inverse.
         """
+        from qibo.gates import ParametrizedGate
+
         skip_measurements = True
         measurements = []
         new_circuit = self.__class__(**self.init_kwargs)
@@ -397,7 +399,10 @@ class Circuit:
             if isinstance(gate, gates.M) and skip_measurements:
                 measurements.append(gate)
             else:
-                new_circuit.add(gate.dagger())
+                new_gate = gate.dagger()
+                if isinstance(gate, ParametrizedGate):
+                    new_gate.trainable = gate.trainable
+                new_circuit.add(new_gate)
                 skip_measurements = False
         new_circuit.add(measurements[::-1])
         return new_circuit
