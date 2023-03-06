@@ -614,6 +614,13 @@ Pauli noise channel
     :members:
     :member-order: bysource
 
+Generalized Pauli noise channel
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.gates.GeneralizedPauliNoiseChannel
+    :members:
+    :member-order: bysource
+
 Depolarizing channel
 ^^^^^^^^^^^^^^^^^^^^
 

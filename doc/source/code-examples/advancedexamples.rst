@@ -995,19 +995,23 @@ Here is an example on how to use a noise model:
 
 .. testcode::
 
+      import numpy as np
       from qibo import models, gates
       from qibo.noise import NoiseModel, PauliError
 
-      # Build specific noise model with 2 quantum errors:
+      # Build specific noise model with 3 quantum errors:
       # - Pauli error on H only for qubit 1.
       # - Pauli error on CNOT for all the qubits.
+      # - Pauli error on RX(pi/2) for qubit 0.
       noise = NoiseModel()
       noise.add(PauliError(px = 0.5), gates.H, 1)
       noise.add(PauliError(py = 0.5), gates.CNOT)
+      is_sqrt_x = (lambda g: np.pi/2 in g.parameters)
+      noise.add(PauliError(px=0.5), gates.RX, qubits=0, condition=is_sqrt_x)
 
       # Generate noiseless circuit.
       c = models.Circuit(2)
-      c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
+      c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1), gates.RX(0, np.pi/2),  gates.RX(0, 3*np.pi/2), gates.RX(1, np.pi/2)])
 
       # Apply noise to the circuit according to the noise model.
       noisy_c = noise.apply(c)
@@ -1023,6 +1027,10 @@ The noisy circuit defined above will be equivalent to the following circuit:
       noisy_c2.add(gates.CNOT(0, 1))
       noisy_c2.add(gates.PauliNoiseChannel(0, py=0.5))
       noisy_c2.add(gates.PauliNoiseChannel(1, py=0.5))
+      noisy_c2.add(gates.RX(0, np.pi/2))
+      noisy_c2.add(gates.PauliNoiseChannel(0, px=0.5))
+      noisy_c2.add(gates.RX(0, 3*np.pi/2))
+      noisy_c2.add(gates.RX(1, np.pi/2))
 
 
 The :class:`qibo.noise.NoiseModel` class supports also density matrices,

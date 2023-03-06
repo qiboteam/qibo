@@ -1,6 +1,16 @@
+import pickle
+
 import dill
 import numpy as np
 import pytest
+
+
+def test_pickle_backend(backend):
+    serial = pickle.dumps(backend)
+    new_backend = pickle.loads(serial)
+    assert type(new_backend) == type(backend)
+    if hasattr(backend, "np"):
+        assert new_backend.np is backend.np
 
 
 def test_dill_backends(backend):
