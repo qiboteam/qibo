@@ -108,6 +108,25 @@ class Circuit:
 
     Args:
         nqubits (int): Total number of qubits in the circuit.
+        init_kwargs (dict): a dictionary with the following keys
+
+            - *nqubits*
+            - *accelerators*
+            - *density_matrix*.
+
+        queue (_Queue): List that holds the queue of gates of a circuit.
+        parametrized_gates (_ParametrizedGates): List of parametric gates.
+        trainable_gates (_ParametrizedGates): List of trainable gates.
+        measurements (list): List of non-collapsible measurements
+        _final_state (CircuitResult): Final state after full simulation of the circuit
+        compiled (CompiledExecutor): Circuit executor. Defaults to `None`.
+        repeated_execution (bool): If `True`, the circuit would be re-executed when sampling. Defaults to `False`.
+        density_matrix (bool): If `True`, the circuit would evolve density matrices. Defaults to `False`.
+        accelerators (dict): Dictionary that maps device names to the number of times each device will be used. Defaults to `None`.
+        ndevices (int): Total number of devices. Defaults to `None`.
+        nglobal (int): Base two logarithm of the number of devices. Defaults to `None`.
+        nlocal (int): Total number of available qubits in each device. Defaults to `None`.
+        queues (DistributedQueues): Gate queues for each accelerator device. Defaults to `None`.
     """
 
     def __init__(self, nqubits, accelerators=None, density_matrix=False):
@@ -142,7 +161,6 @@ class Circuit:
         # for distributed circuits
         self.accelerators = accelerators
         self.ndevices = None
-        self.nglobal = None
         self.nglobal = None
         self.nlocal = None
         self.queues = None

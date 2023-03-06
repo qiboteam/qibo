@@ -95,3 +95,16 @@ Conference Proceedings
 
 .. _`ICHEP2022`: https://www.ichep2022.it/
 .. _`arXiv:2210.10787`: https://arxiv.org/abs/2210.10787
+
+
+Authorship Guideline
+--------------------
+
+In order to appear as an author of a Qibo publication (paper, proceedings, etc)
+each author must fullfil the following requirements:
+
+* Participate to the official meetings.
+
+* Contribute to the code with documented commits.
+
+* Contribute to the manuscript elaboration.

@@ -193,17 +193,17 @@ def test_choi_to_liouville(order):
     assert np.linalg.norm(liouville - test_superop) < PRECISION_TOL, True
 
 
-@pytest.mark.parametrize("validate_CP", [False, True])
+@pytest.mark.parametrize("validate_cp", [False, True])
 @pytest.mark.parametrize("order", ["row", "column"])
-def test_choi_to_kraus(order, validate_CP):
+def test_choi_to_kraus(order, validate_cp):
     with pytest.raises(TypeError):
         choi_to_kraus(test_choi, "1e-8")
     with pytest.raises(ValueError):
         choi_to_kraus(test_choi, -1.0 * 1e-8)
     with pytest.raises(TypeError):
-        choi_to_kraus(test_choi, validate_CP="True")
+        choi_to_kraus(test_choi, validate_cp="True")
 
-    kraus_ops, _ = choi_to_kraus(test_choi, order=order, validate_CP=validate_CP)
+    kraus_ops, _ = choi_to_kraus(test_choi, order=order, validate_cp=validate_cp)
 
     a0 = kraus_ops[0]
     a1 = kraus_ops[1]
@@ -219,9 +219,9 @@ def test_choi_to_kraus(order, validate_CP):
     assert np.linalg.norm(evolution_a0 - test_evolution_a0) < 2 * PRECISION_TOL, True
     assert np.linalg.norm(evolution_a1 - test_evolution_a1) < 2 * PRECISION_TOL, True
 
-    if validate_CP and order == "row":
+    if validate_cp and order == "row":
         (kraus_left, kraus_right), _ = choi_to_kraus(
-            test_non_CP, order=order, validate_CP=validate_CP
+            test_non_CP, order=order, validate_cp=validate_cp
         )
 
         for test_left, left, test_right, right, test_coeff in zip(
