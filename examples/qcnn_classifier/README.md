@@ -19,13 +19,13 @@ Convolutional layer for 4 qubits as an example:
 Pooling layer for 4 qubits as an example:
 ![pooling](images/pooling_4qubits.PNG)
 
-where $R(\theta_{i,j,k}) = RZ(\theta_k) RY(\theta_j) RX(\theta_i)$: 
+where in the above, $R(\theta_{i,j,k}) = RZ(\theta_k) RY(\theta_j) RX(\theta_i)$:
 ![R](images/RxRyRz.PNG)
 
-$U(\theta_{i,j,k}) = RXX(\theta_k) RYY(\theta_j) RZZ(\theta_i)$:
+$U_{q_a, q_b}(\theta_{i,j,k}) = RXX(\theta_k) RYY(\theta_j) RZZ(\theta_i)$ is a two-qubit gate acting on qubits $q_a$ and $q_b$:
 ![U](images/U.PNG)
 
-$R^{\dagger}(\theta_{i,j,k}) = RX(-\theta_i) RY(-\theta_j) RZ(-\theta_k)$:
+and $R^{\dagger}(\theta_{i,j,k}) = RX(-\theta_i) RY(-\theta_j) RZ(-\theta_k)$:
 ![RT](images/RT.PNG)
 
 ## How to run an example
