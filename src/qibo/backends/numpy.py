@@ -331,6 +331,9 @@ class NumpyBackend(Backend):
     def execute_circuit(
         self, circuit, initial_state=None, nshots=None, return_array=False
     ):
+        if isinstance(initial_state, type(circuit)):
+            return self.execute_circuit(initial_state, None, nshots)
+
         if circuit.repeated_execution:
             return self.execute_circuit_repeated(circuit, initial_state, nshots)
 

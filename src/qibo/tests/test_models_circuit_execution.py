@@ -106,3 +106,18 @@ def test_density_matrix_circuit(backend):
     target_rho = m2.dot(target_rho).dot(m2.T.conj())
     target_rho = m3.dot(target_rho).dot(m3.T.conj())
     backend.assert_allclose(final_rho, target_rho)
+
+
+def test_circuit_initial_state(backend):
+    c = Circuit(2)
+    c.add(gates.H(0))
+    c.add(gates.X(1))
+
+    c1 = Circuit(2)
+    c1.add(gates.H(0))
+    c1.add(gates.H(1))
+
+    c_final_state = backend.execute_circuit(c, c1)
+    c1_final_state = backend.execute_circuit(c1)
+
+    backend.assert_allclose(c_final_state, c1_final_state)
