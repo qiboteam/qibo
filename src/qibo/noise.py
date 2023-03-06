@@ -18,7 +18,8 @@ class KrausError:
         if any(o.shape != shape for o in ops):
             raise_error(
                 ValueError,
-                "Kraus operators of different shapes." "Use qibo.noise.Error instead.",
+                "Kraus operators of different shapes."
+                "Use qibo.noise.CustomError instead.",
             )
 
         self.rank = shape[0]
@@ -47,7 +48,7 @@ class UnitaryError:
             raise_error(
                 ValueError,
                 "Unitary matrices have different shapes."
-                "Use qibo.noise.Error instead.",
+                "Use qibo.noise.CustomError instead.",
             )
 
         self.rank = shape[0]
@@ -105,18 +106,6 @@ class ThermalRelaxationError:
         self.channel = gates.ThermalRelaxationChannel
 
 
-class ResetError:
-    """Quantum error associated with the `qibo.gates.ResetChannel`.
-
-    Args:
-        options (tuple): see :class:`qibo.gates.ResetChannel`
-    """
-
-    def __init__(self, p0, p1):
-        self.options = p0, p1
-        self.channel = gates.ResetChannel
-
-
 class ReadoutError:
     """_summary_
 
@@ -127,6 +116,18 @@ class ReadoutError:
     def __init__(self, probabilities):
         self.options = probabilities
         self.channel = gates.ReadoutErrorChannel
+
+
+class ResetError:
+    """Quantum error associated with the `qibo.gates.ResetChannel`.
+
+    Args:
+        options (tuple): see :class:`qibo.gates.ResetChannel`
+    """
+
+    def __init__(self, p0, p1):
+        self.options = p0, p1
+        self.channel = gates.ResetChannel
 
 
 class CustomError:
