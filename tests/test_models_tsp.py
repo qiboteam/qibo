@@ -6,7 +6,8 @@ import pytest
 from qibo import gates
 from qibo.models import QAOA, Circuit
 from qibo.models.tsp import TSP
-from qibo.tests.test_models_variational import assert_regression_fixture
+
+from .test_models_variational import assert_regression_fixture
 
 
 def qaoa_function_of_layer(backend, layer):

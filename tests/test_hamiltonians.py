@@ -5,7 +5,8 @@ import pytest
 from qibo import gates, hamiltonians
 from qibo.models import Circuit
 from qibo.symbols import I, Z
-from qibo.tests.utils import random_complex, random_sparse_matrix
+
+from .utils import random_complex, random_sparse_matrix
 
 
 def test_hamiltonian_init(backend):
@@ -22,9 +23,9 @@ def test_hamiltonian_init(backend):
 @pytest.mark.parametrize(
     "dtype",
     [
-        np.int,
-        np.float,
-        np.complex,
+        int,
+        float,
+        complex,
         np.int32,
         np.int64,
         np.float32,
@@ -249,6 +250,7 @@ def test_hamiltonian_expectation_errors(backend):
 
 def test_hamiltonian_expectation_from_samples(backend):
     """Test Hamiltonian expectation value calculation."""
+    backend.set_seed(12)
     obs0 = 2 * Z(0) * Z(1) + Z(0) * Z(2)
     obs1 = 2 * Z(0) * Z(1) + Z(0) * Z(2) * I(3)
     h0 = hamiltonians.SymbolicHamiltonian(obs0, backend=backend)
@@ -261,12 +263,17 @@ def test_hamiltonian_expectation_from_samples(backend):
     c.add(gates.RX(3, np.random.rand()))
     c.add(gates.M(0, 1, 2, 3))
     nshots = 10**5
-    result = c(nshots=nshots)
+    # result = c(nshots=nshots)
+    result = backend.execute_circuit(c, nshots=nshots)
     freq = result.frequencies(binary=True)
-    Obs0 = hamiltonians.Hamiltonian(3, matrix).expectation_from_samples(
-        freq, qubit_map=None
-    )
+
+    Obs0 = hamiltonians.Hamiltonian(
+        3, matrix, backend=backend
+    ).expectation_from_samples(freq, qubit_map=None)
+    Obs0 = backend.cast(Obs0, dtype=Obs0.dtype)
+
     Obs1 = h1.expectation(result.state())
+    Obs1 = backend.cast(Obs1, dtype=Obs1.dtype)
 
     backend.assert_allclose(Obs0, Obs1, atol=10 / np.sqrt(nshots))
 
