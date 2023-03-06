@@ -332,7 +332,14 @@ class NumpyBackend(Backend):
         self, circuit, initial_state=None, nshots=None, return_array=False
     ):
         if isinstance(initial_state, type(circuit)):
-            return self.execute_circuit(initial_state, None, nshots)
+            if not initial_state.density_matrix == circuit.density_matrix:
+                raise_error(
+                    ValueError,
+                    f"""Cannot set circuit with density_matrix {initial_state.density_matrix} a
+                      initial state for circuit with density_matrix {circuit.density_matrix}.""",
+                )
+            else:
+                return self.execute_circuit(initial_state + circuit, None, nshots)
 
         if circuit.repeated_execution:
             return self.execute_circuit_repeated(circuit, initial_state, nshots)
