@@ -411,6 +411,9 @@ class DepolarizingChannel(Channel):
     """
 
     def __init__(self, q, lam: str = 0):
+        if isinstance(q, int) is True:
+            q = (q,)
+
         super().__init__()
         num_qubits = len(q)
         num_terms = 4**num_qubits
