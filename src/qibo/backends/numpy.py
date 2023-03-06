@@ -335,8 +335,14 @@ class NumpyBackend(Backend):
             if not initial_state.density_matrix == circuit.density_matrix:
                 raise_error(
                     ValueError,
-                    f"""Cannot set circuit with density_matrix {initial_state.density_matrix} a
+                    f"""Cannot set circuit with density_matrix {initial_state.density_matrix} as
                       initial state for circuit with density_matrix {circuit.density_matrix}.""",
+                )
+            elif not initial_state.accelerators == circuit.accelerators:
+                raise_error(
+                    ValueError,
+                    f"""Cannot set circuit with accelerators {initial_state.density_matrix} as
+                      initial state for circuit with accelerators {circuit.density_matrix}.""",
                 )
             else:
                 return self.execute_circuit(initial_state + circuit, None, nshots)
