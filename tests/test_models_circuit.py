@@ -2,7 +2,6 @@
 import pytest
 
 from qibo import gates
-from qibo.config import raise_error
 from qibo.models import Circuit
 
 
