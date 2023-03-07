@@ -591,6 +591,23 @@ class ThermalRelaxationChannel(Channel):
 
 
 class ReadoutErrorChannel(KrausChannel):
+    """Readout error channel implemented as a quantum-to-classical channel.
+
+    Args:
+        q (int or list or tuple): Qubit ids that the channel acts on.
+        probabilities (array): row-stochastic matrix :math:`P` with all
+            readout transition probabilities.
+
+            Example:
+                For 1 qubit, the transition matrix :math:`P` would be
+
+                .. math::
+                    P = \\begin{pmatrix}
+                        p(0 \\, | \\, 0) & p(1 \\, | \\, 0) \\\\
+                        p(0 \\, | \\, 1) & p(1 \\, | \\, 1)
+                    \\end{pmatrix} \\, .
+    """
+
     def __init__(self, q: Tuple[int, list, tuple], probabilities):
         if any(sum(row) < 1 - PRECISION_TOL for row in probabilities) or any(
             sum(row) > 1 + PRECISION_TOL for row in probabilities
