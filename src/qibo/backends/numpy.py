@@ -338,7 +338,9 @@ class NumpyBackend(Backend):
                     f"""Cannot set circuit with density_matrix {initial_state.density_matrix} as
                       initial state for circuit with density_matrix {circuit.density_matrix}.""",
                 )
-            elif not initial_state.accelerators == circuit.accelerators:
+            elif (
+                not initial_state.accelerators == circuit.accelerators
+            ):  # pragma: no cover
                 raise_error(
                     ValueError,
                     f"""Cannot set circuit with accelerators {initial_state.density_matrix} as
