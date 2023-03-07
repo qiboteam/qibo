@@ -106,3 +106,32 @@ def test_density_matrix_circuit(backend):
     target_rho = m2.dot(target_rho).dot(m2.T.conj())
     target_rho = m3.dot(target_rho).dot(m3.T.conj())
     backend.assert_allclose(final_rho, target_rho)
+
+
+@pytest.mark.parametrize("density_matrix", [True, False])
+def test_circuit_as_initial_state(backend, density_matrix):
+    nqubits = 10
+    c = Circuit(nqubits, density_matrix=density_matrix)
+    c.add(gates.X(i) for i in range(nqubits))
+
+    c1 = Circuit(nqubits, density_matrix=density_matrix)
+    c1.add(gates.H(i) for i in range(nqubits))
+
+    actual_circuit = c1 + c
+
+    output = backend.execute_circuit(c, c1)
+    target = backend.execute_circuit(actual_circuit)
+
+    backend.assert_allclose(target, output)
+
+
+def test_initial_state_error(backend):
+    nqubits = 10
+    c = Circuit(nqubits)
+    c.add(gates.X(i) for i in range(nqubits))
+
+    c1 = Circuit(nqubits, density_matrix=True)
+    c1.add(gates.H(i) for i in range(nqubits))
+
+    with pytest.raises(ValueError):
+        backend.execute_circuit(c, c1)
