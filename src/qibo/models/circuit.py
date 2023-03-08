@@ -575,9 +575,9 @@ class Circuit:
                         "".format(gate.target_qubits, self.nqubits),
                     )
 
-            self.queue.append(gate)
             if isinstance(gate, gates.M):
                 self.add(gate.basis)
+                self.queue.append(gate)
                 if gate.register_name is None:
                     # add default register name
                     nreg = self.queue.nmeasurements - 1
@@ -598,6 +598,7 @@ class Circuit:
                 return gate.result
 
             else:
+                self.queue.append(gate)
                 for measurement in list(self.measurements):
                     if set(measurement.qubits) & set(gate.qubits):
                         measurement.collapse = True
