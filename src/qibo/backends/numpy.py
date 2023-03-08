@@ -85,11 +85,6 @@ class NumpyBackend(Backend):
         state[0, 0] = 1
         return state
 
-    def identity_density_matrix(self, nqubits):
-        state = self.np.eye(2**nqubits, dtype=self.dtype)
-        state /= 2**nqubits
-        return state
-
     def plus_state(self, nqubits):
         state = self.np.ones(2**nqubits, dtype=self.dtype)
         state /= self.np.sqrt(2**nqubits)
@@ -332,36 +327,6 @@ class NumpyBackend(Backend):
         shape = state.shape
         state = self.apply_gate(gate, state.ravel(), 2 * nqubits)
         return self.np.reshape(state, shape)
-
-    def depolarizing_error_density_matrix(self, gate, state, nqubits):
-        state = self.cast(state)
-        shape = state.shape
-        q = gate.target_qubits
-        lam = gate.init_kwargs["lam"]
-        trace = self.partial_trace_density_matrix(state, q, nqubits)
-        trace = self.np.reshape(trace, 2 * (nqubits - len(q)) * (2,))
-        identity = self.identity_density_matrix(len(q))
-        identity = self.np.reshape(identity, 2 * len(q) * (2,))
-        identity = self.np.tensordot(trace, identity, axes=0)
-        qubits = list(range(nqubits))
-        for j in q:
-            qubits.pop(qubits.index(j))
-        qubits.sort()
-        qubits += list(q)
-        qubit_1 = list(range(nqubits - len(q))) + list(
-            range(2 * (nqubits - len(q)), 2 * nqubits - len(q))
-        )
-        qubit_2 = list(range(nqubits - len(q), 2 * (nqubits - len(q)))) + list(
-            range(2 * nqubits - len(q), 2 * nqubits)
-        )
-        qs = [qubit_1, qubit_2]
-        order = []
-        for qj in qs:
-            qj = [qj[qubits.index(i)] for i in range(len(qubits))]
-            order += qj
-        identity = self.np.reshape(self.np.transpose(identity, order), shape)
-        state = (1 - lam) * state + lam * identity
-        return state
 
     def execute_circuit(
         self, circuit, initial_state=None, nshots=None, return_array=False
