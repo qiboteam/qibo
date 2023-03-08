@@ -94,11 +94,6 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def identity_density_matrix(self, nqubits):  # pragma: no cover
-        r"""Generate :math:`\frac{1}{2^\text{nqubits}}\sum_{i=0}^{2^\text{nqubits}}|i\rangle\langle i|` density matrix as an array."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
     def plus_state(self, nqubits):  # pragma: no cover
         """Generate |+++...+> state vector as an array."""
         raise_error(NotImplementedError)

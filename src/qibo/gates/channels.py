@@ -411,9 +411,6 @@ class DepolarizingChannel(Channel):
     """
 
     def __init__(self, q, lam: str = 0):
-        if isinstance(q, int) is True:
-            q = (q,)
-
         super().__init__()
         num_qubits = len(q)
         num_terms = 4**num_qubits
@@ -431,7 +428,12 @@ class DepolarizingChannel(Channel):
         self.init_kwargs = {"lam": lam}
 
     def apply_density_matrix(self, backend, state, nqubits):
-        return backend.depolarizing_error_density_matrix(self, state, nqubits)
+        lam = self.init_kwargs["lam"]
+        state_evolved = (1 - lam) * backend.cast(state) + (
+            lam / 2**nqubits
+        ) * backend.cast(I(*range(nqubits)).asmatrix(backend))
+
+        return state_evolved
 
     def apply(self, backend, state, nqubits):
         num_qubits = len(self.target_qubits)

@@ -66,7 +66,7 @@ def test_kraus_channel_errors(backend):
 
 def test_depolarizing_channel_errors():
     with pytest.raises(ValueError):
-        gate = gates.DepolarizingChannel(0, 1.5)
+        gate = gates.DepolarizingChannel((0, 1), 1.2)
 
 
 def test_controlled_by_channel_error():
@@ -188,11 +188,13 @@ def test_generalized_pauli_noise_channel(backend):
 def test_depolarizing_channel(backend):
     initial_rho = random_density_matrix(2**3)
     lam = 0.3
-    initial_rho_r = backend.partial_trace_density_matrix(initial_rho, (2,), 3)
-    channel = gates.DepolarizingChannel((0, 1), lam)
+    initial_rho_r = np.einsum("ijik->jk", initial_rho.reshape([2, 4, 2, 4]))
+    channel = gates.DepolarizingChannel((1, 2), lam)
     final_rho = channel.apply_density_matrix(backend, np.copy(initial_rho), 3)
-    final_rho_r = backend.partial_trace_density_matrix(final_rho, (2,), 3)
-    target_rho_r = (1 - lam) * initial_rho_r + lam * backend.cast(np.identity(4)) / 4
+    final_rho_r = np.einsum("ijik->jk", final_rho.reshape([2, 4, 2, 4]))
+    target_rho_r = (1 - lam) * initial_rho_r + lam * np.trace(
+        initial_rho_r
+    ) * np.identity(4) / 4
     backend.assert_allclose(final_rho_r, target_rho_r)
 
 
