@@ -21,8 +21,11 @@ class M(Gate):
             performed. Can be used only for single shot measurements.
             If ``True`` the collapsed state vector is returned. If ``False``
             the measurement result is returned.
-        basis (:class:`qibo.gates.Gate`): Basis to measure. Can be a qibo gate
-            or a callable that accepts a qubit, for example: ``lambda q: gates.RX(q, 0.2)``
+        basis (:class:`qibo.gates.Gate`, list): Basis to measure.
+            Can be a qibo gate or a callable that accepts a qubit,
+            for example: ``lambda q: gates.RX(q, 0.2)``
+            or a list of these, if a different basis will be used for each
+            measurement qubit.
             Default is Z.
         p0 (dict): Optional bitflip probability map. Can be:
             A dictionary that maps each measured qubit to the probability
@@ -77,9 +80,11 @@ class M(Gate):
 
         # list of gates that will be added to the circuit before the
         # measurement, in order to rotate to the given basis
+        if not isinstance(basis, list):
+            basis = len(self.target_qubits) * [basis]
         self.basis = []
-        for q in self.target_qubits:
-            gate = basis(q).basis_rotation()
+        for qubit, basis_cls in zip(self.target_qubits, basis):
+            gate = basis_cls(qubit).basis_rotation()
             if gate is not None:
                 self.basis.append(gate)
 
