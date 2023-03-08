@@ -82,6 +82,12 @@ class M(Gate):
         # measurement, in order to rotate to the given basis
         if not isinstance(basis, list):
             basis = len(self.target_qubits) * [basis]
+        elif len(basis) != len(self.target_qubits):
+            raise_error(
+                ValueError,
+                f"Given basis list has length {len(basis)} while "
+                f"we are measuring {len(self.target_qubits)} qubits.",
+            )
         self.basis = []
         for qubit, basis_cls in zip(self.target_qubits, basis):
             gate = basis_cls(qubit).basis_rotation()

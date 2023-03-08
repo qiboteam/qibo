@@ -458,3 +458,9 @@ def test_measurement_basis_list(backend):
     c.add(gates.M(0, 1, 2, 3, basis=[gates.X, gates.Z, gates.X, gates.Z]))
     result = c(nshots=100)
     assert result.frequencies() == {"0011": 100}
+
+
+def test_measurement_basis_list_error(backend):
+    c = models.Circuit(4)
+    with pytest.raises(ValueError):
+        c.add(gates.M(0, 1, 2, 3, basis=[gates.X, gates.Z, gates.X]))
