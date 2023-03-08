@@ -330,9 +330,12 @@ def test_circuit_copy(deep):
     c1 = Circuit(2)
     c1.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
     c2 = c1.copy(deep)
-    assert c2.depth == c1.depth
-    assert c2.ngates == c1.ngates
-    assert c2.nqubits == c1.nqubits
+    assert c1.depth == 2
+    assert c2.depth == 2
+    assert c1.ngates == 3
+    assert c2.ngates == 3
+    assert c1.nqubits == 2
+    assert c2.nqubits == 2
     for g1, g2 in zip(c1.queue, c2.queue):
         if deep:
             assert g1.__class__ == g2.__class__
@@ -342,12 +345,19 @@ def test_circuit_copy(deep):
             assert g1 is g2
 
 
-def test_circuit_copy_with_measurements():
+@pytest.mark.parametrize("deep", [False, True])
+def test_circuit_copy_with_measurements(deep):
     c1 = Circuit(4)
     c1.add([gates.H(0), gates.H(3), gates.CNOT(0, 2)])
     c1.add(gates.M(0, 1, register_name="a"))
     c1.add(gates.M(3, register_name="b"))
-    c2 = c1.copy()
+    c2 = c1.copy(deep)
+    assert c1.nqubits == 4
+    assert c2.nqubits == 4
+    assert c1.depth == 3
+    assert c2.depth == 3
+    assert c1.ngates == 5
+    assert c2.ngates == 5
     assert c2.measurement_tuples == {"a": (0, 1), "b": (3,)}
 
 

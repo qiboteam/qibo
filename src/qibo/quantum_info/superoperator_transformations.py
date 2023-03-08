@@ -46,7 +46,7 @@ def vectorization(state, order: str = "row"):
             TypeError, f"order must be type str, but it is type {type(order)} instead."
         )
     else:
-        if (order != "row") and (order != "column") and (order != "system"):
+        if order not in ["row", "column", "system"]:
             raise_error(
                 ValueError,
                 f"order must be either 'row' or 'column' or 'system', but it is {order}.",
@@ -66,9 +66,10 @@ def vectorization(state, order: str = "row"):
         new_axis = []
         for x in range(nqubits):
             new_axis += [x + nqubits, x]
-        state = np.reshape(
-            np.transpose(np.reshape(state, [2] * 2 * nqubits), axes=new_axis), -1
-        )
+
+        state = np.reshape(state, [2] * 2 * nqubits)
+        state = np.transpose(state, axes=new_axis)
+        state = np.reshape(state, -1)
 
     return state
 
@@ -106,7 +107,7 @@ def unvectorization(state, order: str = "row"):
             TypeError, f"order must be type str, but it is type {type(order)} instead."
         )
     else:
-        if (order != "row") and (order != "column") and (order != "system"):
+        if order not in ["row", "column", "system"]:
             raise_error(
                 ValueError,
                 f"order must be either 'row' or 'column' or 'system', but it is {order}.",
@@ -114,19 +115,15 @@ def unvectorization(state, order: str = "row"):
 
     d = int(np.sqrt(len(state)))
 
-    if (order == "row") or (order == "column"):
+    if order in ["row", "column"]:
         order = "C" if order == "row" else "F"
         state = np.reshape(state, (d, d), order=order)
     else:
         nqubits = int(np.log2(d))
         axes_old = list(np.arange(0, 2 * nqubits))
-        state = np.reshape(
-            np.transpose(
-                np.reshape(state, [2] * 2 * nqubits),
-                axes=axes_old[1::2] + axes_old[0::2],
-            ),
-            [2**nqubits] * 2,
-        )
+        state = np.reshape(state, [2] * 2 * nqubits)
+        state = np.transpose(state, axes=axes_old[1::2] + axes_old[0::2])
+        state = np.reshape(state, [2**nqubits] * 2)
 
     return state
 
@@ -199,7 +196,7 @@ def choi_to_kraus(
     choi_super_op,
     precision_tol: float = None,
     order: str = "row",
-    validate_CP: bool = True,
+    validate_cp: bool = True,
 ):
     """Convert Choi representation :math:`\\Lambda` of a quantum channel :math:`\\mathcal{E}`
     into Kraus operators :math:`\\{ K_{\\alpha} \\}_{\\alpha}`.
@@ -209,9 +206,10 @@ def choi_to_kraus(
     .. math::
         \\Lambda = \\sum_{\\alpha} \\, \\lambda_{\\alpha}^{2} \\, |\\tilde{K}_{\\alpha}\\rangle\\rangle \\langle\\langle \\tilde{K}_{\\alpha}| \\, .
 
-    This is the spectral decomposition of :math:`\\Lambda`, Hence, the set :math:`\\{\\lambda_{\\alpha}, \\, \\tilde{K}_{\\alpha}\\}_{\\alpha}`
-    is found by diagonalization of :math:`\\Lambda`. The Kraus operators :math:`\\{K_{\\alpha}\\}_{\\alpha}`
-    are defined as
+    This is the spectral decomposition of :math:`\\Lambda`, Hence, the set
+    :math:`\\{\\lambda_{\\alpha}, \\, \\tilde{K}_{\\alpha}\\}_{\\alpha}`
+    is found by diagonalization of :math:`\\Lambda`. The Kraus operators
+    :math:`\\{K_{\\alpha}\\}_{\\alpha}` are defined as
 
     .. math::
         K_{\\alpha} = \\lambda_{\\alpha} \\, \\text{unvectorization}(|\\tilde{K}_{\\alpha}\\rangle\\rangle) \\, .
@@ -243,7 +241,7 @@ def choi_to_kraus(
             a representation based on row vectorization, reshuffled,
             and then converted back to its representation with
             respect to system-wise vectorization. Default is ``"row"``.
-        validate_CP (bool, optional): If ``True``, checks if ``choi_super_op``
+        validate_cp (bool, optional): If ``True``, checks if ``choi_super_op``
             is a completely positive map. If ``False``, it assumes that
             ``choi_super_op`` is completely positive (and Hermitian).
             Defaults to ``True``.
@@ -274,31 +272,31 @@ def choi_to_kraus(
 
         precision_tol = PRECISION_TOL
 
-    if not isinstance(validate_CP, bool):
+    if not isinstance(validate_cp, bool):
         raise_error(
             TypeError,
-            f"validate_CP must be type bool, but it is type {type(validate_CP)}.",
+            f"validate_cp must be type bool, but it is type {type(validate_cp)}.",
         )
 
-    if validate_CP:
+    if validate_cp:
         norm = np.linalg.norm(choi_super_op - np.transpose(np.conj(choi_super_op)))
         if norm > PRECISION_TOL:
-            non_CP = True
+            non_cp = True
         else:
             # using eigh because, in this case, choi_super_op is
             # *already confirmed* to be Hermitian
             eigenvalues, eigenvectors = np.linalg.eigh(choi_super_op)
             eigenvectors = np.transpose(eigenvectors)
 
-            non_CP = True if any(eigenvalues < -PRECISION_TOL) else False
+            non_cp = bool(any(eigenvalues < -PRECISION_TOL))
     else:
-        non_CP = False
+        non_cp = False
         # using eigh because, in this case, choi_super_op is
         # *assumed* to be Hermitian
         eigenvalues, eigenvectors = np.linalg.eigh(choi_super_op)
         eigenvectors = np.transpose(eigenvectors)
 
-    if non_CP:
+    if non_cp:
         from warnings import warn
 
         warn("Input choi_super_op is a non-completely positive map.")
@@ -309,7 +307,7 @@ def choi_to_kraus(
         coefficients = np.sqrt(coefficients)
         V = np.conj(V)
 
-        kraus_left, kraus_right = list(), list()
+        kraus_left, kraus_right = [], []
         for coeff, eigenvector_left, eigenvector_right in zip(coefficients, U, V):
             kraus_left.append(coeff * unvectorization(eigenvector_left, order=order))
             kraus_right.append(coeff * unvectorization(eigenvector_right, order=order))
@@ -320,7 +318,7 @@ def choi_to_kraus(
         kraus_ops = np.array([kraus_left, kraus_right])
     else:
         # when choi_super_op is CP
-        kraus_ops, coefficients = list(), list()
+        kraus_ops, coefficients = [], []
         for eig, kraus in zip(eigenvalues, eigenvectors):
             if np.abs(eig) > precision_tol:
                 eig = np.sqrt(eig)
@@ -338,7 +336,7 @@ def kraus_to_choi(kraus_ops, order: str = "row"):
     of quantum channel to its Choi representation :math:`\\Lambda`.
 
     .. math::
-        \\Lambda = \\sum_{\\alpha} \\, |K_{\\alpha}\\rangle\\rangle \\langle\\langle K_{\\alpha} |
+        \\Lambda = \\sum_{\\alpha} \\, |K_{\\alpha}\\rangle\\rangle \\langle\\langle K_{\\alpha}|
 
     Args:
         kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
@@ -528,9 +526,8 @@ def _set_gate_and_target_qubits(kraus_ops):  # pragma: no cover
             if shape != (rank, rank):
                 raise_error(
                     ValueError,
-                    "Invalid Krauss operator shape {} for "
-                    "acting on {} qubits."
-                    "".format(shape, len(qubits)),
+                    f"Invalid Kraus operator shape {shape} for "
+                    + f"acting on {len(qubits)} qubits.",
                 )
             qubitset.update(qubits)
             gates.append(Unitary(matrix, *list(qubits)))
