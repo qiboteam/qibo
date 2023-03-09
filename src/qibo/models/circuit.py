@@ -575,8 +575,9 @@ class Circuit:
                         "".format(gate.target_qubits, self.nqubits),
                     )
 
-            self.queue.append(gate)
             if isinstance(gate, gates.M):
+                self.add(gate.basis)
+                self.queue.append(gate)
                 if gate.register_name is None:
                     # add default register name
                     nreg = self.queue.nmeasurements - 1
@@ -597,6 +598,7 @@ class Circuit:
                 return gate.result
 
             else:
+                self.queue.append(gate)
                 for measurement in list(self.measurements):
                     if set(measurement.qubits) & set(gate.qubits):
                         measurement.collapse = True
@@ -982,8 +984,11 @@ class Circuit:
     def execute(self, initial_state=None, nshots=None):
         """Executes the circuit. Exact implementation depends on the backend.
 
-        See :meth:`qibo.core.circuit.Circuit.execute` for more
-        details.
+        Args:
+            initial_state (`np.ndarray` or :class:`qibo.models.circuit.Circuit`): Initial configuration.
+                Can be specified by the setting the state vector using an array or a circuit. If ``None``
+                the initial state is ``|000..00>``.
+            nshots (int): Number of shots.
         """
         if self.compiled:
             # pylint: disable=E1101

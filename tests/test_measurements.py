@@ -435,3 +435,40 @@ def test_measurement_result_vs_circuit_result(backend, accelerators):
     frequencies = result.frequencies(registers=True)
     assert ma_freq == frequencies.get("a")
     assert mb_freq == frequencies.get("b")
+
+
+@pytest.mark.parametrize("nqubits", [1, 4])
+@pytest.mark.parametrize("outcome", [0, 1])
+def test_measurement_basis(backend, nqubits, outcome):
+    c = models.Circuit(nqubits)
+    if outcome:
+        c.add(gates.X(q) for q in range(nqubits))
+    c.add(gates.H(q) for q in range(nqubits))
+    c.add(gates.M(*range(nqubits), basis=gates.X))
+    result = c(nshots=100)
+    assert result.frequencies() == {nqubits * str(outcome): 100}
+
+
+def test_measurement_basis_list(backend):
+    c = models.Circuit(4)
+    c.add(gates.H(0))
+    c.add(gates.X(2))
+    c.add(gates.H(2))
+    c.add(gates.X(3))
+    c.add(gates.M(0, 1, 2, 3, basis=[gates.X, gates.Z, gates.X, gates.Z]))
+    result = c(nshots=100)
+    assert result.frequencies() == {"0011": 100}
+    print(c.draw())
+    assert (
+        c.draw()
+        == """q0: ─H─H───M─
+q1: ───────M─
+q2: ─X─H─H─M─
+q3: ─X─────M─"""
+    )
+
+
+def test_measurement_basis_list_error(backend):
+    c = models.Circuit(4)
+    with pytest.raises(ValueError):
+        c.add(gates.M(0, 1, 2, 3, basis=[gates.X, gates.Z, gates.X]))
