@@ -226,7 +226,7 @@ def hellinger_shot_error(p, q, nshots):
     return hellinger_fid_e
 
 
-def loss(parameters, grad, args):
+def loss(parameters, *args):
     """The loss function used to be maximized in the fit method of the :class:`qibo.noise_model.CompositeNoiseModel`.
     It is the hellinger fidelity calculated between the probability distribution of the noise model and the experimental target distribution using the :func:`qibo.quantum_info.hellinger_fidelity`.
     It is possible to return also the finite shot error correction calculated with the :func:`qibo.noise_model.hellinger_shot_error`.
@@ -256,7 +256,7 @@ def loss(parameters, grad, args):
     parameters = np.array(parameters)
 
     if any(2 * parameters[0:qubits] - parameters[qubits : 2 * qubits] < 0):
-        return -np.inf
+        return np.inf
 
     params = {
         "t1": tuple(parameters[0:qubits]),
@@ -278,9 +278,9 @@ def loss(parameters, grad, args):
     hellinger_fid = hellinger_fidelity(target_prob, prob)
 
     if error == True:
-        return [hellinger_fid, hellinger_shot_error(target_prob, prob, nshots)]
+        return [-hellinger_fid, hellinger_shot_error(target_prob, prob, nshots)]
     else:
-        return hellinger_fid
+        return -hellinger_fid
 
 
 class CompositeNoiseModel:
@@ -312,7 +312,14 @@ class CompositeNoiseModel:
         self,
         target_result,
         bounds=True,
+        eps=1e-4,
+        maxfun=None,
+        maxiter=1000,
+        locally_biased=True,
         f_min_rtol=None,
+        vol_tol=1e-16,
+        len_tol=1e-6,
+        callback=None,
         backend=None,
     ):
         r"""Performs the fitting procedure of the noise model parameters, using the method nlopt.opt from the library NLopt. The fitting procedure is implemented to maximize the hellinger fidelity calculated using the :func:`qibo.noise_model.loss` between the probability distribution function estimated by the noise model and the one measured experimentally. Since, we are using probability distribution functions estimated using a finite number of shots, the hellinger fidelity is going to have an error caused by an imperfect estimation of the probabilities. This method takes into account this effect and stops when the fidelity reaches a corrected maximum $1-\epsilon$, with $\epsilon$=:func:`qibo.noise_model.hellinger_shot_error`.
@@ -320,17 +327,22 @@ class CompositeNoiseModel:
         Args:
             target_result (:class:`qibo.states.CircuitResult`): the circuit result with frequencies you want to emulate.
             bounds: if True are given the default bounds for the depolarizing and thermal relaxation channels' parameters.
-            Otherwise it's possible to pass a matrix of size (2, 4 * nqubits + 4), where bounds[0] and bounds[1]
-            will be respectively the lower and the upper bounds for the parameters. The first 2 * nqubit columns are related
-            to the :math:`T_1` and :math:`T_2` parameters; the subsequent 2 columns are related to the gate time parameters; the other subsequent 2 columns are related to depolarizing error parameters; the last 2 * nqubit columns are related to bitflips errors.
+                    Otherwise it's possible to pass a matrix of size (2, 4 * nqubits + 4), where bounds[0] and bounds[1]
+                    will be respectively the lower and the upper bounds for the parameters. The first 2 * nqubit columns are related
+                    to the :math:`T_1` and :math:`T_2` parameters; the subsequent 2 columns are related to the gate time parameters; the other subsequent 2 columns are related to depolarizing error parameters; the last 2 * nqubit columns are related to bitflips errors.
+            eps (float): Minimal required difference of the objective function values between the current best hyperrectangle and the next potentially optimal hyperrectangle to be divided.
+            maxfun (int or None): Approximate upper bound on objective function evaluations. If None, will be automatically set to :math:`1000N` where :math:`N` represents the number of dimensions.
+            maxiter (int): Maximum number of iterations.
+            locally_biased (bool): If True, use DIRECT_L. If False, use DIRECT.
             f_min_rtol (float): the tolerance of the optimization. The optimization will finish when the fidelity reaches the value
-            $1-f_min_rtol$, by default f_min_rtol is set to be the fidelity error caused by the finite number of shots and calculated by the :func:`qibo.noise_model.hellinger_shot_error`.
+                                :math:`1-f_min_rtol`, by default f_min_rtol is set to be the fidelity error caused by the finite number of shots and calculated by the :func:`qibo.noise_model.hellinger_shot_error`.
+            vol_tol (float): Stop the optimization process when the volume of the hyperrectangle that contains the lowest function value becomes smaller than vol_tol.
+            len_tol (float): When "locally_biased" is set to True, stop the optimization process if the length of the longest side of the hyperrectangle containing the lowest function value, normalized by the maximal side length, is less than half of "len_tol". If "locally_biased" is False, terminate the optimization process when half of the normalized diagonal of the hyperrectangle containing the lowest function value is smaller than "len_tol".
+            callback (callable): This function takes one parameter, `xk`, which represents the current best function value found by the algorithm.
             backend: you can specify your backend. If None qibo.backends.GlobalBackend is used.
         """
 
-        from functools import partial
-
-        import nlopt
+        from scipy.optimize import Bounds, direct
 
         if backend == None:  # pragma: no cover
             from qibo.backends import GlobalBackend
@@ -351,13 +363,14 @@ class CompositeNoiseModel:
         else:
             lb = bounds[0]
             ub = bounds[1]
+        bounds = Bounds(lb, ub)
 
         shot_error = True
         args = (circuit, nshots, target_prob, idle_qubits, backend, shot_error)
-        result = -np.inf
-        while result == -np.inf:
+        result = np.inf
+        while result == np.inf:
             initial_params = np.random.uniform(lb, ub)
-            result = loss(initial_params, 0, args)
+            result = loss(initial_params, *args)
 
         if f_min_rtol == None:
             f_min_rtol = result[1]
@@ -368,17 +381,22 @@ class CompositeNoiseModel:
 
         self.hellinger0 = {"fidelity": abs(result[0]), "shot_error": result[1]}
 
-        opt = nlopt.opt(nlopt.GN_DIRECT_L_RAND, len(initial_params))
-        f = partial(loss, args=args)
-        opt.set_max_objective(f)
-        opt.set_lower_bounds(lb)
-        opt.set_upper_bounds(ub)
-        opt.set_stopval(1 - f_min_rtol)
-        xopt = opt.optimize(list(initial_params))
-        maxf = opt.last_optimum_value()
-        result = opt.last_optimize_result()
+        res = direct(
+            loss,
+            bounds,
+            args=args,
+            eps=eps,
+            maxfun=maxfun,
+            maxiter=maxiter,
+            locally_biased=locally_biased,
+            f_min=-1,
+            f_min_rtol=f_min_rtol,
+            vol_tol=vol_tol,
+            len_tol=len_tol,
+            callback=callback,
+        )
 
-        parameters = xopt
+        parameters = res.x
         params = {
             "t1": tuple(parameters[0:qubits]),
             "t2": tuple(parameters[qubits : 2 * qubits]),
@@ -391,8 +409,11 @@ class CompositeNoiseModel:
             ),
             "idle_qubits": idle_qubits,
         }
-        self.hellinger = maxf
+        self.hellinger = abs(res.fun)
         self.params = params
         self.extra = {
-            "message": result,
+            "success": res.success,
+            "message": res.message,
+            "nfev": res.nfev,
+            "nit": res.nit,
         }

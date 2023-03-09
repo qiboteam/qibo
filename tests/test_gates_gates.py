@@ -787,6 +787,22 @@ def test_generalizedfsim_dagger(backend):
 
 ###############################################################################
 
+############################# Test basis rotation #############################
+
+
+def test_gate_basis_rotation(backend):
+    gate = gates.X(0).basis_rotation()
+    assert isinstance(gate, gates.H)
+    gate = gates.Y(0).basis_rotation()
+    assert isinstance(gate, gates.Unitary)
+    target_matrix = np.array([[1, -1j], [1j, -1]]) / np.sqrt(2)
+    backend.assert_allclose(gate.asmatrix(backend), target_matrix)
+    with pytest.raises(NotImplementedError):
+        gates.RX(0, np.pi / 2).basis_rotation()
+
+
+###############################################################################
+
 ########################### Test gate decomposition ###########################
 
 
