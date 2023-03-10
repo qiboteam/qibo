@@ -53,7 +53,7 @@ scikit-learn = "^1.2.1"
 dill = "^0.3.6"
 pytest-cov = "^4.0.0"
 pylint = "^2.16.2"
-qibojit = { git = "https://github.com/qiboteam/qibojit" }
+qibojit = {git = "https://github.com/qiboteam/qibojit.git"}
 tensorflow = { version = "^2.11.0", markers = "sys_platform == 'linux' or sys_platform == 'darwin'" }
 tensorflow-intel = { version = "^2.11.0", markers = "sys_platform == 'win32'" }
 
