@@ -270,6 +270,12 @@ class Gate:
             f"Generator eigenvalue is not implemented for {self.name}",
         )
 
+    def basis_rotation(self):
+        """Transformation required to rotate the basis for measuring the gate."""
+        raise_error(
+            NotImplementedError, f"Basis rotation is not implemented for {self.name}"
+        )
+
     @property
     def matrix(self):
         from qibo.backends import GlobalBackend

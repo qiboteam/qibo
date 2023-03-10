@@ -18,6 +18,10 @@ class Backend(abc.ABC):
         self.supports_multigpu = False
         self.oom_error = MemoryError
 
+    def __reduce__(self):
+        """Allow pickling backend objects that have references to modules."""
+        return self.__class__, tuple()
+
     def __repr__(self):
         if self.platform is None:
             return self.name
@@ -87,6 +91,11 @@ class Backend(abc.ABC):
     @abc.abstractmethod
     def zero_density_matrix(self, nqubits):  # pragma: no cover
         """Generate |000...0><000...0| density matrix as an array."""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def identity_density_matrix(self, nqubits):  # pragma: no cover
+        r"""Generate :math:`\frac{1}{2^\text{nqubits}}\sum_{i=0}^{2^\text{nqubits}}|i\rangle\langle i|` density matrix as an array."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
