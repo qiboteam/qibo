@@ -560,7 +560,7 @@ class GPI2(ParametrizedGate):
     Corresponds to the following unitary matrix
 
     .. math::
-        \\begin{pmatrix}
+        \\frac{1}{\\sqrt{2}} \\, \\begin{pmatrix}
         1 & -i e^{- i \\phi} \\\\
         -i e^{i \\phi} & 1 \\\\
         \\end{pmatrix}
@@ -1339,7 +1339,7 @@ class MS(ParametrizedGate):
     Corresponds to the following unitary matrix
 
     .. math::
-        \\begin{pmatrix}
+        \\frac{1}{\\sqrt{2}} \\, \\begin{pmatrix}
         1 & 0 & 0 & -i e^{-i( \\phi_0 +  \\phi_1)} \\\\
         0 & 1 & -i e^{-i( \\phi_0 -  \\phi_1)} \\\\
         0 & -i e^{i( \\phi_0 -  \\phi_1)} & 1 & 0 \\\\
