@@ -259,7 +259,11 @@ def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
         target_rho = pi * initial_rho + pz * z_rho
         target_rho += np.reshape(p0 * zeros + p1 * ones, initial_rho.shape)
 
-    backend.assert_allclose(final_rho, target_rho)
+    target_rho = backend.cast(target_rho, dtype=target_rho.dtype)
+
+    backend.assert_allclose(
+        np.linalg.norm(final_rho - target_rho) < PRECISION_TOL, True
+    )
 
 
 @pytest.mark.parametrize(
