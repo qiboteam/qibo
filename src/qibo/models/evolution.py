@@ -31,6 +31,7 @@ class StateEvolution:
         accelerators (dict): Dictionary of devices to use for distributed
             execution. This option is available only when the Trotter
             decomposition is used for the time evolution.
+        track_state (bool):
 
     Example:
         .. testcode::
@@ -47,7 +48,15 @@ class StateEvolution:
             final_state2 = evolve(final_time=2, initial_state=initial_state)
     """
 
-    def __init__(self, hamiltonian, dt, solver="exp", callbacks=[], accelerators=None):
+    def __init__(
+        self,
+        hamiltonian,
+        dt,
+        solver="exp",
+        callbacks=[],
+        accelerators=None,
+        track_state=False,
+    ):
         hamtypes = (AbstractHamiltonian, BaseAdiabaticHamiltonian)
         if isinstance(hamiltonian, hamtypes):
             ham = hamiltonian
@@ -78,6 +87,7 @@ class StateEvolution:
         self.accelerators = accelerators
         self.normalize_state = self._create_normalize_state(solver)
         self.calculate_callbacks = self._create_calculate_callbacks(accelerators)
+        self.track_state = track_state
 
     def _create_normalize_state(self, solver):
         if "rk" in solver:
@@ -120,6 +130,10 @@ class StateEvolution:
             raise_error(
                 ValueError, "StateEvolution cannot be used without " "initial state."
             )
+
+        if self.track_state:
+            state_hist = []
+
         state = self.backend.cast(initial_state)
         self.solver.t = start_time
         nsteps = int((final_time - start_time) / self.solver.dt)
@@ -129,8 +143,15 @@ class StateEvolution:
             if self.callbacks:
                 state = self.normalize_state(state)
                 self.calculate_callbacks(state)
+
+            if self.track_state:
+                state_hist.append(state)
+
         state = self.normalize_state(state)
-        return state
+        if self.track_state:
+            return state_hist
+        else:
+            return state
 
     def __call__(self, final_time, start_time=0.0, initial_state=None):
         """Equivalent to :meth:`qibo.models.StateEvolution.execute`."""
@@ -173,9 +194,21 @@ class AdiabaticEvolution(StateEvolution):
 
     ATOL = 1e-7  # Tolerance for checking s(0) = 0 and s(T) = 1.
 
-    def __init__(self, h0, h1, s, dt, solver="exp", callbacks=[], accelerators=None):
+    def __init__(
+        self,
+        h0,
+        h1,
+        s,
+        dt,
+        solver="exp",
+        callbacks=[],
+        accelerators=None,
+        track_state=False,
+    ):
         self.hamiltonian = AdiabaticHamiltonian(h0, h1)  # pylint: disable=E0110
-        super().__init__(self.hamiltonian, dt, solver, callbacks, accelerators)
+        super().__init__(
+            self.hamiltonian, dt, solver, callbacks, accelerators, track_state
+        )
 
         # Set evolution model to "Gap" callback if one exists
         for callback in self.callbacks:
