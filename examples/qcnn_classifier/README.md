@@ -28,21 +28,23 @@ $U_{q_a, q_b}(\theta_{i,j,k}) = RXX(\theta_k) RYY(\theta_j) RZZ(\theta_i)$ is a 
 and $R^{\dagger}(\theta_{i,j,k}) = RX(-\theta_i) RY(-\theta_j) RZ(-\theta_k)$:
 ![RT](images/RT.PNG)
 
-## How to run an example
-To run a particular instance of the problem, we have to set up the variables:
-- `nqubits` (int): number of quantum bits. It must be larger than 1. 
-- `nlayers` (int): number of layers of the varitional ansatz.
+## How to use the QCNN class
+For more details on the QuantumCNN class, please refer to the documentation. Here we recall some of the necessary arguments when instantiating a QuantumCNN object:
+- `nqubits` (int): number of quantum bits. It should be larger than 2 for the model to make sense. 
+- `nlayers` (int): number of layers of the QCNN variational ansatz.
 - `nclasses` (int): number of classes of the training set (default=2).
-- `params`
+- `params`: list to initialise the variational parameters (default=None).
+
+After creating the object, one can proceed to train the model. For this, the `QuantumCNN.minimize` method can be used with the following arguments (refer to the documentation for more details)"
 - `init_theta`: list or numpy.array with the angles to be used in the circuit
-- `data`
-- `labels`: numpy.array with the quantum state to be Schmidt-decomposed
+- `data`: the training data
+- `labels`: numpy.array containing the labels for the training data
 - `nshots` (int):number of runs of the circuit during the sampling process (default=10000)
 - `method` (string): str 'classical optimizer for the minimization'. All methods from scipy.optimize.minmize are suported (default='Powell').
 
 Here is how we create QuantumCNN object. The user should include necessary packages:
 
-```bash
+```python
 from qibo.models.qcnn import QuantumCNN
 from qibo import gates
 import random
