@@ -282,6 +282,9 @@ def test_thermal_relaxation_channel_errors(t1, t2, time, excpop):
 
 
 def test_readout_error_channel(backend):
+    with pytest.raises(ValueError):
+        gates.ReadoutErrorChannel(0, np.array([[1.1, 0], [0.5, 0.5]]))
+
     nqubits = 1
     d = 2**nqubits
 
