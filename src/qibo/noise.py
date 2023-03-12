@@ -305,7 +305,8 @@ class NoiseModel:
                         if isinstance(error, CustomError) and qubits:
                             noisy_circuit.add(error.channel)
                         elif isinstance(error, GeneralizedPauliError) and qubits:
-                            noisy_circuit.add(error.channel(qubits, error.options))
+                            for q in qubits:
+                                noisy_circuit.add(error.channel(q, error.options))
                         elif isinstance(error, DepolarizingError) and qubits:
                             noisy_circuit.add(error.channel(qubits, *error.options))
                         elif isinstance(error, UnitaryError) or isinstance(
