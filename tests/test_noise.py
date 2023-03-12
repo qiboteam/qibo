@@ -6,7 +6,11 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 from qibo.noise import *
-from qibo.quantum_info import random_density_matrix, random_statevector
+from qibo.quantum_info import (
+    random_density_matrix,
+    random_statevector,
+    random_stochastic_matrix,
+)
 
 
 @pytest.mark.parametrize("density_matrix", [True])
@@ -308,6 +312,40 @@ def test_thermal_error(backend, density_matrix):
     target_final_state = backend.execute_circuit(target_circuit, np.copy(initial_psi))
 
     backend.assert_allclose(final_state, target_final_state)
+
+
+@pytest.mark.parametrize("density_matrix", [False, True])
+def test_readout_error(backend, density_matrix):
+    if not density_matrix:
+        pytest.skip("Readout error is not implemented for state vectors.")
+
+    nqubits = 1
+    d = 2**nqubits
+
+    state = random_density_matrix(d, seed=1)
+    P = random_stochastic_matrix(d, seed=1)
+
+    readout = ReadoutError(P)
+    noise = NoiseModel()
+    noise.add(readout, gates.M, qubits=0)
+
+    circuit = Circuit(nqubits, density_matrix=density_matrix)
+    circuit.add(gates.M(0))
+    print(noise.apply(circuit).draw())
+    print()
+    final_state = backend.execute_circuit(
+        noise.apply(circuit), initial_state=np.copy(state)
+    )
+
+    target_state = gates.ReadoutErrorChannel(0, P).apply_density_matrix(
+        backend, np.copy(state), nqubits
+    )
+
+    print(final_state)
+    print()
+    print(target_state)
+
+    backend.assert_allclose(final_state, target_state)
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
