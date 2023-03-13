@@ -433,8 +433,7 @@ def liouville_to_kraus(super_op, precision_tol: float = None, order: str = "row"
             respect to system-wise vectorization. Default is ``"row"``.
 
     Returns:
-        (ndarray, ndarray): Kraus operators of quantum channel and their
-            respective coefficients.
+        (ndarray, ndarray): Kraus operators of quantum channel and their respective coefficients.
     """
     choi_super_op = liouville_to_choi(super_op, order=order)
     kraus_ops, coefficients = choi_to_kraus(choi_super_op, precision_tol, order=order)
@@ -443,6 +442,31 @@ def liouville_to_kraus(super_op, precision_tol: float = None, order: str = "row"
 
 
 def kraus_to_unitaries(kraus_ops, order: str = "row", precision_tol: float = None):
+    """Tries to convert Kraus operators into a probabilistc sum of unitaries.
+
+    Given a set of Kraus operators :math:`\\{K_{\\alpha}\\}_{\\alpha}`,
+    returns an ensemble :math:`\\{U_{\\alpha}, p_{\\alpha}\\}` that defines
+    an :class:`qibo.gates.channels.UnitaryChannel` that approximates the original
+    channel up to a precision tolerance in Frobenius norm.
+
+    Args:
+        kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
+            where ``qubits`` refers the qubit ids that :math:`A_k` acts on
+            and :math:`A_k` is the corresponding matrix as a ``np.ndarray``.
+        order (str, optional): _description_. Defaults to "row".
+        precision_tol (float, optional): Precision tolerance for the minimization
+            of the Frobenius norm :math:`\\| \\mathcal{E}_{K} - \\mathcal{E}_{U} \\|_{F}`,
+            where :math:`\\mathcal{E}_{K}` is the Liouville representation of the Kraus
+            channel :math:`\\{K_{\\alpha}\\}_{\\alpha}`, and :math:`\\mathcal{E}_{U}`
+            is the Liouville representaton of the :class:`qibo.gates.channels.UnitaryChannel`
+            that best approximates the original channel. If ``None``, ``precision_tol``
+            defaults to ``1e-7``. Default is ``None``.
+
+
+    Returns:
+        (ndarray, ndarray): Unitary operators and their associated probabilities.
+    """
+
     if precision_tol is None:
         precision_tol = 10 * PRECISION_TOL
     else:
@@ -468,7 +492,7 @@ def kraus_to_unitaries(kraus_ops, order: str = "row", precision_tol: float = Non
     unitaries = np.array(unitaries)
 
     # unitaries in Liouville representation
-    unitaries_liouville = _kraus_to_liouville_unitaries(
+    unitaries_liouville = _individual_kraus_to_liouville(
         list(zip(target_qubits, unitaries))
     )
 
@@ -499,7 +523,7 @@ def kraus_to_unitaries(kraus_ops, order: str = "row", precision_tol: float = Non
             Warning,
         )
 
-    return probabilities, unitaries
+    return unitaries, probabilities
 
 
 def _reshuffling(super_op, order: str = "row"):
@@ -600,7 +624,7 @@ def _set_gate_and_target_qubits(kraus_ops):  # pragma: no cover
     return gates, target_qubits
 
 
-def _kraus_to_liouville_unitaries(kraus_ops, order: str = "row"):
+def _individual_kraus_to_liouville(kraus_ops, order: str = "row"):  # pragma: no cover
     """Auxiliary, modified version of :func:`qibo.quantum_info.kraus_to_choi`
     to be used in :func:`qibo.quantum_info.kraus_to_unitaries`. In principle,
     this should be not be accessible to users.
