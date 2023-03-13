@@ -1271,6 +1271,17 @@ Liouville to Kraus
         K_{\alpha} \, \rho \, K_{\alpha}^{\dagger} = K_{\alpha}^{\text{(ideal)}} \, \rho \,\, (K_{\alpha}^{\text{(ideal)}})^{\dagger} \,\,\,\,\, , \,\, \forall \, \alpha
 
 
+Kraus operators as probabilistic sum of unitaries
+"""""""""""""""""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.kraus_to_unitaries
+
+.. note::
+    It is not guaranteed that a good approximation will be found or that any
+    approximation will be found at all. This functions will find good solutions
+    for a limited set of operators. We leave to the user to decide how to
+    best use this function.
+
 Utility Functions
 ^^^^^^^^^^^^^^^^^
 
