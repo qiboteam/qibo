@@ -338,3 +338,26 @@ def test_scheduling_optimization(backend, method, options, messages, dense, file
 
     if filename is not None:
         assert_regression_fixture(backend, params, filename)
+
+
+def test_track_states_adiabatic_evolution(backend):
+    """Test track state during adiabatic evolution."""
+
+    h0 = hamiltonians.X(1, backend=backend)
+    h1 = hamiltonians.Z(1, backend=backend)
+    dt = 0.1
+    final_time = 1
+
+    g0 = h0.ground_state()
+
+    tracked_evolution = models.AdiabaticEvolution(
+        h0, h1, lambda t: t, dt=dt, track_state=True
+    )
+    untracked_evolution = models.AdiabaticEvolution(
+        h0, h1, lambda t: t, dt=dt, track_state=False
+    )
+
+    state_history = tracked_evolution(final_time)
+    final_state = untracked_evolution(final_time)
+
+    backend.assert_allclose(state_history[-1], final_state, atol=1e-10)
