@@ -1,6 +1,9 @@
-import numpy as np
+import warnings
 
-from qibo.config import raise_error
+import numpy as np
+from scipy.optimize import minimize
+
+from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate
 from qibo.gates.gates import Unitary
 from qibo.gates.special import FusedGate
@@ -439,6 +442,66 @@ def liouville_to_kraus(super_op, precision_tol: float = None, order: str = "row"
     return kraus_ops, coefficients
 
 
+def kraus_to_unitaries(kraus_ops, order: str = "row", precision_tol: float = None):
+    if precision_tol is None:
+        precision_tol = 10 * PRECISION_TOL
+    else:
+        if not isinstance(precision_tol, float):
+            raise_error(
+                TypeError,
+                f"precision_tol must be type float, but it is type {type(precision_tol)}.",
+            )
+        if precision_tol < 0.0:
+            raise_error(ValueError, "precision_tol must be non-negative.")
+
+    target_qubits = [q for q, _ in kraus_ops]
+    nqubits = 1 + np.max(target_qubits)
+    d = 2**nqubits
+
+    target = kraus_to_liouville(kraus_ops, order=order)
+
+    # QR decomposition
+    unitaries = []
+    for _, kraus in kraus_ops:
+        Q, _ = np.linalg.qr(kraus)
+        unitaries.append(Q)
+    unitaries = np.array(unitaries)
+
+    # unitaries in Liouville representation
+    unitaries_liouville = _kraus_to_liouville_unitaries(
+        list(zip(target_qubits, unitaries))
+    )
+
+    # function to minimize
+    def f(x0, operators):
+        operator = (1 - np.sum(x0)) * np.eye(d**2, dtype=complex)
+        for prob, op in zip(x0, operators):
+            operator += prob * op
+
+        return np.linalg.norm(target - operator)
+
+    # initial parameters as flat distribution
+    x0 = [1.0 / (len(kraus_ops) + 1)] * len(kraus_ops)
+
+    # final parameters
+    probabilities = minimize(
+        f,
+        x0,
+        args=(unitaries_liouville),
+        options={"return_all": True},
+    )["x"]
+
+    final_norm = f(probabilities, unitaries_liouville)
+    if final_norm > precision_tol:
+        warnings.warn(
+            f"precision in Frobenius norm of {final_norm} is greater then set "
+            + f"precision_tol of {precision_tol}.",
+            Warning,
+        )
+
+    return probabilities, unitaries
+
+
 def _reshuffling(super_op, order: str = "row"):
     """Reshuffling operation used to convert Lioville representation
     of quantum channels to their Choi representation (and vice-versa).
@@ -535,3 +598,27 @@ def _set_gate_and_target_qubits(kraus_ops):  # pragma: no cover
         target_qubits = tuple(sorted(qubitset))
 
     return gates, target_qubits
+
+
+def _kraus_to_liouville_unitaries(kraus_ops, order: str = "row"):
+    """Auxiliary, modified version of :func:`qibo.quantum_info.kraus_to_choi`
+    to be used in :func:`qibo.quantum_info.kraus_to_unitaries`. In principle,
+    this should be not be accessible to users.
+    """
+    from qibo.backends import NumpyBackend
+
+    backend = NumpyBackend()
+
+    gates, target_qubits = _set_gate_and_target_qubits(kraus_ops)
+    nqubits = 1 + max(target_qubits)
+
+    super_ops = []
+    for gate in gates:
+        kraus_op = FusedGate(*range(nqubits))
+        kraus_op.append(gate)
+        kraus_op = kraus_op.asmatrix(backend)
+        kraus_op = vectorization(kraus_op, order=order)
+        kraus_op = np.outer(kraus_op, np.conj(kraus_op))
+        super_ops.append(choi_to_liouville(kraus_op, order=order))
+
+    return super_ops
