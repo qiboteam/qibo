@@ -86,7 +86,7 @@ class Channel(Gate):
             self.gates = tuple(gates)
             self.coefficients = tuple(probs)
 
-        if isinstance(self, (KrausChannel, ReadoutErrorChannel)) is False:
+        if type(self) not in [KrausChannel, ReadoutErrorChannel]:
             p0 = 1 - sum(self.coefficients)
             if p0 > PRECISION_TOL:
                 self.coefficients += (p0,)
