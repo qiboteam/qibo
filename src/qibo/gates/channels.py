@@ -1,5 +1,6 @@
 import warnings
 from itertools import product
+from math import exp, sqrt
 from typing import Tuple
 
 from qibo.config import PRECISION_TOL, raise_error
@@ -35,72 +36,6 @@ class Channel(Gate):
     def apply_density_matrix(self, backend, state, nqubits):
         return backend.apply_channel_density_matrix(self, state, nqubits)
 
-
-class KrausChannel(Channel):
-    """General channel defined by arbitrary Kraus operators.
-
-    Implements the following transformation:
-
-    .. math::
-        \\mathcal{E}(\\rho ) = \\sum _k A_k \\rho A_k^\\dagger
-
-    where A are arbitrary Kraus operators given by the user. Note that Kraus
-    operators set should be trace preserving, however this is not checked.
-    Simulation of this gate requires the use of density matrices.
-    For more information on channels and Kraus operators please check
-    `J. Preskill's notes <http://theory.caltech.edu/~preskill/ph219/chap3_15.pdf>`_.
-
-    Args:
-        ops (list): List of Kraus operators as pairs ``(qubits, Ak)`` where
-          ``qubits`` refers the qubit ids that ``Ak`` acts on and ``Ak`` is
-          the corresponding matrix as a ``np.ndarray`` or ``tf.Tensor``.
-
-    Example:
-        .. testcode::
-
-            import numpy as np
-            from qibo.models import Circuit
-            from qibo import gates
-            # initialize circuit with 3 qubits
-            c = Circuit(3, density_matrix=True)
-            # define a sqrt(0.4) * X gate
-            a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
-            # define a sqrt(0.6) * CNOT gate
-            a2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0],
-                                          [0, 0, 0, 1], [0, 0, 1, 0]])
-            # define the channel rho -> 0.4 X{1} rho X{1} + 0.6 CNOT{0, 2} rho CNOT{0, 2}
-            channel = gates.KrausChannel([((1,), a1), ((0, 2), a2)])
-            # add the channel to the circuit
-            c.add(channel)
-    """
-
-    def __init__(self, ops):
-        super().__init__()
-        self.name = "KrausChannel"
-        if isinstance(ops[0], Gate):
-            self.gates = tuple(ops)
-            self.target_qubits = tuple(
-                sorted({q for gate in ops for q in gate.target_qubits})
-            )
-        else:
-            gates, qubitset = [], set()
-            for qubits, matrix in ops:
-                rank = 2 ** len(qubits)
-                shape = tuple(matrix.shape)
-                if shape != (rank, rank):
-                    raise_error(
-                        ValueError,
-                        f"Invalid Krauss operator shape {shape} for "
-                        + f"acting on {len(qubits)} qubits.",
-                    )
-                qubitset.update(qubits)
-                gates.append(Unitary(matrix, *list(qubits)))
-            self.gates = tuple(gates)
-            self.target_qubits = tuple(sorted(qubitset))
-        self.init_args = [self.gates]
-        self.coefficients = len(self.gates) * (1,)
-        self.coefficient_sum = 1
-
     def to_choi(self, order: str = "row", backend=None):
         """Returns the Choi representation :math:`\\mathcal{E}`
         of the Kraus channel :math:`\\{K_{\\alpha}\\}_{\\alpha}`.
@@ -131,12 +66,36 @@ class KrausChannel(Channel):
 
         self.nqubits = 1 + max(self.target_qubits)
 
-        if self.name != "KrausChannel":
+        if self.name not in [
+            "KrausChannel",
+            "ThermalRelaxationChannel",
+            "ReadoutErrorChannel",
+        ]:
             p0 = 1
             for coeff in self.coefficients:
                 p0 = p0 - coeff
             self.coefficients += (p0,)
             self.gates += (I(*self.target_qubits),)
+
+        if self.name == "DepolarizingChannel":
+            num_qubits = len(self.target_qubits)
+            num_terms = 4**num_qubits
+            prob_pauli = self.init_kwargs["lam"] / num_terms
+            probs = (num_terms - 1) * [prob_pauli]
+            gates = []
+            for pauli_list in list(product([I, X, Y, Z], repeat=num_qubits))[1::]:
+                fgate = FusedGate(*self.target_qubits)
+                for j, pauli in enumerate(pauli_list):
+                    fgate.append(pauli(j))
+                gates.append(fgate)
+            self.gates = tuple(gates)
+            self.coefficients = tuple(probs)
+
+        if self.name == "ThermalRelaxationChannel":
+            raise_error(
+                NotImplementedError,
+                "Superoperator representation not implemented for ThermalRelaxationChannel.",
+            )
 
         super_op = np.zeros((4**self.nqubits, 4**self.nqubits), dtype="complex")
         for coeff, gate in zip(self.coefficients, self.gates):
@@ -214,6 +173,72 @@ class KrausChannel(Channel):
         super_op = backend.cast(super_op, dtype=super_op.dtype)
 
         return super_op
+
+
+class KrausChannel(Channel):
+    """General channel defined by arbitrary Kraus operators.
+
+    Implements the following transformation:
+
+    .. math::
+        \\mathcal{E}(\\rho ) = \\sum _k A_k \\rho A_k^\\dagger
+
+    where A are arbitrary Kraus operators given by the user. Note that Kraus
+    operators set should be trace preserving, however this is not checked.
+    Simulation of this gate requires the use of density matrices.
+    For more information on channels and Kraus operators please check
+    `J. Preskill's notes <http://theory.caltech.edu/~preskill/ph219/chap3_15.pdf>`_.
+
+    Args:
+        ops (list): List of Kraus operators as pairs ``(qubits, Ak)`` where
+          ``qubits`` refers the qubit ids that ``Ak`` acts on and ``Ak`` is
+          the corresponding matrix as a ``np.ndarray`` or ``tf.Tensor``.
+
+    Example:
+        .. testcode::
+
+            import numpy as np
+            from qibo.models import Circuit
+            from qibo import gates
+            # initialize circuit with 3 qubits
+            c = Circuit(3, density_matrix=True)
+            # define a sqrt(0.4) * X gate
+            a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
+            # define a sqrt(0.6) * CNOT gate
+            a2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0],
+                                          [0, 0, 0, 1], [0, 0, 1, 0]])
+            # define the channel rho -> 0.4 X{1} rho X{1} + 0.6 CNOT{0, 2} rho CNOT{0, 2}
+            channel = gates.KrausChannel([((1,), a1), ((0, 2), a2)])
+            # add the channel to the circuit
+            c.add(channel)
+    """
+
+    def __init__(self, ops):
+        super().__init__()
+        self.name = "KrausChannel"
+        if isinstance(ops[0], Gate):
+            self.gates = tuple(ops)
+            self.target_qubits = tuple(
+                sorted({q for gate in ops for q in gate.target_qubits})
+            )
+        else:
+            gates, qubitset = [], set()
+            for qubits, matrix in ops:
+                rank = 2 ** len(qubits)
+                shape = tuple(matrix.shape)
+                if shape != (rank, rank):
+                    raise_error(
+                        ValueError,
+                        f"Invalid Krauss operator shape {shape} for "
+                        + f"acting on {len(qubits)} qubits.",
+                    )
+                qubitset.update(qubits)
+                gates.append(Unitary(matrix, *list(qubits)))
+            self.gates = tuple(gates)
+            self.target_qubits = tuple(sorted(qubitset))
+        self.init_args = [self.gates]
+        self.coefficients = len(self.gates) * (1,)
+        self.coefficient_sum = 1
 
 
 class UnitaryChannel(KrausChannel):
@@ -388,6 +413,8 @@ class GeneralizedPauliNoiseChannel(UnitaryChannel):
 
         super().__init__(probabilities, gates)
         self.name = "GeneralizedPauliNoiseChannel"
+        self.init_args = qubits
+        self.init_kwargs = dict(operators)
 
 
 class DepolarizingChannel(Channel):
@@ -448,33 +475,6 @@ class DepolarizingChannel(Channel):
         self.coefficients = tuple(probs)
 
         return backend.apply_channel(self, state, nqubits)
-
-
-class ResetChannel(Channel):
-    """Single-qubit reset channel.
-
-    Implements the following transformation:
-
-    .. math::
-        \\mathcal{E}(\\rho ) = (1 - p_0 - p_1) \\rho
-        +  \\mathrm{Tr}_q[\\rho] \\otimes (p_0|0\\rangle \\langle 0| + p_1|1\\rangle \\langle 1|),
-
-    Args:
-        q (int): Qubit id that the channel acts on.
-        p0 (float): Probability to reset to 0.
-        p1 (float): Probability to reset to 1.
-    """
-
-    def __init__(self, q, p0=0.0, p1=0.0):
-        super().__init__()
-        self.name = "ResetChannel"
-        self.target_qubits = (q,)
-        self.coefficients = (p0, p1)
-        self.init_args = [q]
-        self.init_kwargs = {"p0": p0, "p1": p1}
-
-    def apply_density_matrix(self, backend, state, nqubits):
-        return backend.reset_error_density_matrix(self, state, nqubits)
 
 
 class ThermalRelaxationChannel(Channel):
@@ -550,25 +550,23 @@ class ThermalRelaxationChannel(Channel):
             )
 
         # calculate probabilities
-        import numpy as np
-
         self.t1, self.t2 = t1, t2
-        p_reset = 1 - np.exp(-time / t1)
+        p_reset = 1 - exp(-time / t1)
         self.coefficients = [
             p_reset * (1 - excited_population),
             p_reset * excited_population,
         ]
+
         if t1 < t2:
-            self.coefficients.append(np.exp(-time / t2))
+            self.coefficients.append(exp(-time / t2))
         else:
-            pz = p_reset + np.exp(-time / t2) * (1 - np.exp(time / t1))
+            pz = p_reset + exp(-time / t2) * (1 - exp(time / t1))
             self.coefficients.append(pz)
 
     def apply_density_matrix(self, backend, state, nqubits):
         q = self.target_qubits[0]
-        if self.t1 < self.t2:
-            from qibo.gates import Unitary
 
+        if self.t1 < self.t2:
             preset0, preset1, exp_t2 = self.coefficients
             matrix = [
                 [1 - preset1, 0, 0, preset0],
@@ -579,14 +577,84 @@ class ThermalRelaxationChannel(Channel):
 
             qubits = (q, q + nqubits)
             gate = Unitary(matrix, *qubits)
+
             return backend.thermal_error_density_matrix(gate, state, nqubits)
 
         else:
-            from qibo.gates import Z
-
             pz = self.coefficients[-1]
+
             return (
                 backend.reset_error_density_matrix(self, state, nqubits)
                 - pz * backend.cast(state)
                 + pz * backend.apply_gate_density_matrix(Z(0), state, nqubits)
             )
+
+
+class ReadoutErrorChannel(KrausChannel):
+    """Readout error channel implemented as a quantum-to-classical channel.
+
+    Args:
+        q (int or list or tuple): Qubit ids that the channel acts on.
+        probabilities (array): row-stochastic matrix :math:`P` with all
+            readout transition probabilities.
+
+            Example:
+                For 1 qubit, the transition matrix :math:`P` would be
+
+                .. math::
+                    P = \\begin{pmatrix}
+                        p(0 \\, | \\, 0) & p(1 \\, | \\, 0) \\\\
+                        p(0 \\, | \\, 1) & p(1 \\, | \\, 1)
+                    \\end{pmatrix} \\, .
+    """
+
+    def __init__(self, q: Tuple[int, list, tuple], probabilities):
+        if any(sum(row) < 1 - PRECISION_TOL for row in probabilities) or any(
+            sum(row) > 1 + PRECISION_TOL for row in probabilities
+        ):
+            raise_error(ValueError, "all rows of probabilities must sum to 1.")
+
+        if isinstance(q, int) is True:
+            q = (q,)
+
+        import numpy as np
+
+        d = len(probabilities)
+        operators = []
+        for j in range(d):
+            for k in range(d):
+                operator = np.zeros((d, d))
+                operator[j, k] = sqrt(probabilities[k, j])
+                operators.append(operator)
+
+        operators = list(zip([q] * len(operators), operators))
+
+        super().__init__(ops=operators)
+        self.name = "ReadoutErrorChannel"
+
+
+class ResetChannel(Channel):
+    """Single-qubit reset channel.
+
+    Implements the following transformation:
+
+    .. math::
+        \\mathcal{E}(\\rho ) = (1 - p_0 - p_1) \\rho
+        +  \\mathrm{Tr}_q[\\rho] \\otimes (p_0|0\\rangle \\langle 0| + p_1|1\\rangle \\langle 1|),
+
+    Args:
+        q (int): Qubit id that the channel acts on.
+        p0 (float): Probability to reset to 0.
+        p1 (float): Probability to reset to 1.
+    """
+
+    def __init__(self, q, p0=0.0, p1=0.0):
+        super().__init__()
+        self.name = "ResetChannel"
+        self.target_qubits = (q,)
+        self.coefficients = (p0, p1)
+        self.init_args = [q]
+        self.init_kwargs = {"p0": p0, "p1": p1}
+
+    def apply_density_matrix(self, backend, state, nqubits):
+        return backend.reset_error_density_matrix(self, state, nqubits)

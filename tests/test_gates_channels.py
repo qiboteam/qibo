@@ -4,7 +4,7 @@ import pytest
 
 from qibo import gates, matrices
 from qibo.config import PRECISION_TOL
-from qibo.quantum_info import random_density_matrix
+from qibo.quantum_info import random_density_matrix, random_stochastic_matrix
 
 
 def test_general_channel(backend):
@@ -28,7 +28,9 @@ def test_kraus_channel_errors(backend):
     a1 = np.sqrt(0.4) * matrices.X
     a2 = np.sqrt(0.6) * matrices.Z
     with pytest.raises(ValueError):
-        gate = gates.KrausChannel([((0, 1), a1)])
+        gates.KrausChannel([((0, 1), a1)])
+    with pytest.raises(NotImplementedError):
+        gates.ThermalRelaxationChannel(0, t1=0.5, t2=0.8, time=1.0).to_choi()
 
     test_superop = np.array(
         [
@@ -62,6 +64,8 @@ def test_kraus_channel_errors(backend):
         < PRECISION_TOL,
         True,
     )
+
+    gates.DepolarizingChannel((0, 1), 0.98).to_choi()
 
 
 def test_depolarizing_channel_errors():
@@ -106,7 +110,7 @@ def test_unitary_channel(backend):
     channel.to_choi(backend=backend)
 
 
-def test_unitary_channel_probability_tolerance(backend):
+def test_unitary_channel_probability_tolerance():
     """Create ``UnitaryChannel`` with probability sum within tolerance (see #562)."""
     nqubits = 2
     param = 0.006
@@ -117,7 +121,7 @@ def test_unitary_channel_probability_tolerance(backend):
     probs = [prob_identity] + [prob_pauli] * (num_terms - 1)
     probs = np.array(probs, dtype="float64")
     matrices_ = len(probs) * [((0, 1), np.random.random((4, 4)))]
-    gate = gates.UnitaryChannel(probs, matrices_)
+    gates.UnitaryChannel(probs, matrices_)
 
 
 def test_unitary_channel_errors():
@@ -156,6 +160,7 @@ def test_pauli_noise_channel(backend):
 
     liouville = gates.PauliNoiseChannel(0, *pnp).to_pauli_liouville(True, backend)
     norm = np.linalg.norm(backend.to_numpy(liouville) - test_representation)
+
     assert norm < PRECISION_TOL
 
 
@@ -182,6 +187,7 @@ def test_generalized_pauli_noise_channel(backend):
         0, list(zip(basis, pnp))
     ).to_pauli_liouville(True, backend)
     norm = np.linalg.norm(backend.to_numpy(liouville) - test_representation)
+
     assert norm < PRECISION_TOL
 
 
@@ -253,7 +259,11 @@ def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
         target_rho = pi * initial_rho + pz * z_rho
         target_rho += np.reshape(p0 * zeros + p1 * ones, initial_rho.shape)
 
-    backend.assert_allclose(final_rho, target_rho)
+    target_rho = backend.cast(target_rho, dtype=target_rho.dtype)
+
+    backend.assert_allclose(
+        np.linalg.norm(final_rho - target_rho) < PRECISION_TOL, True
+    )
 
 
 @pytest.mark.parametrize(
@@ -266,8 +276,24 @@ def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
         (1.0, 3.0, 1.5, 0.5),
     ],
 )
-def test_thermal_relaxation_channel_errors(backend, t1, t2, time, excpop):
+def test_thermal_relaxation_channel_errors(t1, t2, time, excpop):
     with pytest.raises(ValueError):
-        gate = gates.ThermalRelaxationChannel(
-            0, t1, t2, time, excited_population=excpop
-        )
+        gates.ThermalRelaxationChannel(0, t1, t2, time, excited_population=excpop)
+
+
+def test_readout_error_channel(backend):
+    with pytest.raises(ValueError):
+        gates.ReadoutErrorChannel(0, np.array([[1.1, 0], [0.5, 0.5]]))
+
+    nqubits = 1
+    d = 2**nqubits
+
+    rho = random_density_matrix(d, seed=1)
+    P = random_stochastic_matrix(d, seed=1)
+
+    probability_sum = gates.ReadoutErrorChannel(0, P).apply_density_matrix(
+        backend, rho, 1
+    )
+    probability_sum = np.diag(probability_sum).sum().real
+
+    backend.assert_allclose(probability_sum - 1 < PRECISION_TOL, True)
