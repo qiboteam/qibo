@@ -405,7 +405,7 @@ def random_pauli(
     return_circuit: bool = True,
     seed=None,
 ):
-    """Creates random Pauli operators.
+    """Creates random Pauli operator(s).
 
     Pauli operators are sampled from the single-qubit Pauli set :math:`\\{I, X, Y, Z\\}`.
 

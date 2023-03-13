@@ -383,10 +383,7 @@ def kraus_to_liouville(kraus_ops, order: str = "row"):
     It uses the Choi representation as an intermediate step.
 
     .. math::
-        \\begin{align}
-            \\mathcal{E} &= \\sum_{\\alpha} \\, K_{\\alpha}^{*} \\otimes K_{\\alpha} \\\\
-            &\\equiv \\text{choi_to_liouville}(\\text{kraus_to_choi}(\\{K_{\\alpha}\\}_{\\alpha}))
-        \\end{align}
+        \\mathcal{E} = \\text{choi_to_liouville}(\\text{kraus_to_choi}(\\{K_{\\alpha}\\}_{\\alpha}))
 
     Args:
         kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``

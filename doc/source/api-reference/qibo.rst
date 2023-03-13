@@ -1193,7 +1193,7 @@ Vectorization
 .. autofunction:: qibo.quantum_info.vectorization
 
 .. note::
-    Due to `numpy` limitations on handling transposition of tensors,
+    Due to ``numpy`` limitations on handling transposition of tensors,
     this function will not work when the number of qubits :math:`n`
     is such that :math:`n > 16`.
 
@@ -1204,7 +1204,7 @@ Unvectorization
 .. autofunction:: qibo.quantum_info.unvectorization
 
 .. note::
-    Due to `numpy` limitations on handling transposition of tensors,
+    Due to ``numpy`` limitations on handling transposition of tensors,
     this function will not work when the number of qubits :math:`n`
     is such that :math:`n > 16`.
 
