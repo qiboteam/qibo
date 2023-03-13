@@ -413,6 +413,8 @@ class GeneralizedPauliNoiseChannel(UnitaryChannel):
 
         super().__init__(probabilities, gates)
         self.name = "GeneralizedPauliNoiseChannel"
+        self.init_args = qubits
+        self.init_kwargs = dict(operators)
 
 
 class DepolarizingChannel(Channel):

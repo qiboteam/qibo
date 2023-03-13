@@ -109,10 +109,10 @@ class ThermalRelaxationError:
 
 
 class ReadoutError:
-    """_summary_
+    """Quantum error associated with :class:'qibo.gates;ReadoutErrorChannel'.
 
-    Returns:
-        _type_: _description_
+    Args:
+        options (tuple): see :class:'qibo.gates.ReadoutErrorChannel'
     """
 
     def __init__(self, probabilities):
@@ -196,7 +196,8 @@ class NoiseModel:
                    are :class:`qibo.noise.PauliError`,
                    :class:`qibo.noise.GeneralizedPauliError`,
                    :class:`qibo.noise.ThermalRelaxationError`,
-                   :class:`qibo.noise.DepolarizingError`
+                   :class:`qibo.noise.DepolarizingError`,
+                   :class:`qibo.noise.ReadoutError`,
                    :class:`qibo.noise.ResetError`,
                    :class:`qibo.noise.UnitaryError`,
                    :class:`qibo.noise.KrausError` and
@@ -288,23 +289,33 @@ class NoiseModel:
         else:
             noisy_circuit = circuit.__class__(**circuit.init_kwargs)
             for gate in circuit.queue:
-                noisy_circuit.add(gate)
                 errors_list = (
                     self.errors[gate.__class__]
                     if (isinstance(gate, gates.Channel) or isinstance(gate, gates.M))
                     else self.errors[gate.__class__] + self.errors[None]
                 )
-
+                if all(
+                    isinstance(error, ReadoutError) is False
+                    for _, error, _ in errors_list
+                ):
+                    noisy_circuit.add(gate)
                 for condition, error, qubits in errors_list:
                     if condition is None or condition(gate):
                         if qubits is None:
                             qubits = gate.qubits
                         else:
                             qubits = tuple(set(gate.qubits) & set(qubits))
+
                         if isinstance(error, CustomError) and qubits:
                             noisy_circuit.add(error.channel)
+                        elif isinstance(error, GeneralizedPauliError) and qubits:
+                            for q in qubits:
+                                noisy_circuit.add(error.channel(q, error.options))
                         elif isinstance(error, DepolarizingError) and qubits:
                             noisy_circuit.add(error.channel(qubits, *error.options))
+                        elif isinstance(error, ReadoutError) and qubits:
+                            noisy_circuit.add(error.channel(qubits, error.options))
+                            noisy_circuit.add(gate)
                         elif isinstance(error, UnitaryError) or isinstance(
                             error, KrausError
                         ):
