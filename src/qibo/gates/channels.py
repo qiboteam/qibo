@@ -66,19 +66,13 @@ class Channel(Gate):
 
         self.nqubits = 1 + max(self.target_qubits)
 
-        if self.name not in [
-            "KrausChannel",
-            "ThermalRelaxationChannel",
-            "ResetChannel",
-            "ReadoutErrorChannel",
-        ]:
-            p0 = 1
-            for coeff in self.coefficients:
-                p0 = p0 - coeff
-            self.coefficients += (p0,)
-            self.gates += (I(*self.target_qubits),)
+        if isinstance(self, (ThermalRelaxationChannel, ResetChannel)) is True:
+            raise_error(
+                NotImplementedError,
+                f"Superoperator representation not implemented for {self.name}.",
+            )
 
-        if self.name == "DepolarizingChannel":
+        if isinstance(self, DepolarizingChannel) is True:
             num_qubits = len(self.target_qubits)
             num_terms = 4**num_qubits
             prob_pauli = self.init_kwargs["lam"] / num_terms
@@ -92,11 +86,11 @@ class Channel(Gate):
             self.gates = tuple(gates)
             self.coefficients = tuple(probs)
 
-        if self.name in ["ThermalRelaxationChannel", "ResetChannel"]:
-            raise_error(
-                NotImplementedError,
-                f"Superoperator representation not implemented for {self.name}.",
-            )
+        if isinstance(self, (KrausChannel, ReadoutErrorChannel)) is False:
+            p0 = 1 - sum(self.coefficients)
+            if p0 > PRECISION_TOL:
+                self.coefficients += (p0,)
+                self.gates += (I(*self.target_qubits),)
 
         super_op = np.zeros((4**self.nqubits, 4**self.nqubits), dtype="complex")
         for coeff, gate in zip(self.coefficients, self.gates):
