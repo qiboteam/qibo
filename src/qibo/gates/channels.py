@@ -53,7 +53,7 @@ class Channel(Gate):
                 it uses ``GlobalBackend()``. Defaults to ``None``.
 
         Returns:
-            Choi representation of the Kraus channel.
+            Choi representation of the channel.
         """
         import numpy as np
 
@@ -69,6 +69,7 @@ class Channel(Gate):
         if self.name not in [
             "KrausChannel",
             "ThermalRelaxationChannel",
+            "ResetChannel",
             "ReadoutErrorChannel",
         ]:
             p0 = 1
@@ -91,10 +92,10 @@ class Channel(Gate):
             self.gates = tuple(gates)
             self.coefficients = tuple(probs)
 
-        if self.name == "ThermalRelaxationChannel":
+        if self.name in ["ThermalRelaxationChannel", "ResetChannel"]:
             raise_error(
                 NotImplementedError,
-                "Superoperator representation not implemented for ThermalRelaxationChannel.",
+                f"Superoperator representation not implemented for {self.name}.",
             )
 
         super_op = np.zeros((4**self.nqubits, 4**self.nqubits), dtype="complex")
@@ -111,7 +112,7 @@ class Channel(Gate):
         return super_op
 
     def to_superop(self, order: str = "row", backend=None):
-        """Returns the Liouville representation of the Kraus channel.
+        """Returns the Liouville representation of the channel.
 
         Args:
             order (str, optional): If ``"row"``, vectorization of
@@ -141,11 +142,11 @@ class Channel(Gate):
         return super_op
 
     def to_pauli_liouville(self, normalize: bool = False, backend=None):
-        """Returns the Liouville representation of the Kraus channel
+        """Returns the Liouville representation of the channel
         in the Pauli basis.
 
         Args:
-            normalize (bool, optional): If ``True``, normalized basis ir returned.
+            normalize (bool, optional): If ``True``, normalized basis is returned.
                 Defaults to False.
             backend (``qibo.backends.abstract.Backend``, optional): backend
                 to be used in the execution. If ``None``, it uses
