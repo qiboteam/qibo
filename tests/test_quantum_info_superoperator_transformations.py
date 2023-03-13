@@ -197,9 +197,9 @@ def test_choi_to_liouville(order):
 @pytest.mark.parametrize("order", ["row", "column"])
 def test_choi_to_kraus(order, validate_cp):
     with pytest.raises(TypeError):
-        choi_to_kraus(test_choi, "1e-8")
+        choi_to_kraus(test_choi, str(PRECISION_TOL))
     with pytest.raises(ValueError):
-        choi_to_kraus(test_choi, -1.0 * 1e-8)
+        choi_to_kraus(test_choi, -1.0 * PRECISION_TOL)
     with pytest.raises(TypeError):
         choi_to_kraus(test_choi, validate_cp="True")
 
@@ -254,7 +254,7 @@ def test_kraus_to_liouville(order):
 
 @pytest.mark.parametrize("order", ["row", "column"])
 def test_liouville_to_kraus(order):
-    kraus_ops, coefficients = liouville_to_kraus(test_superop, order=order)
+    kraus_ops, _ = liouville_to_kraus(test_superop, order=order)
 
     a0 = kraus_ops[0]
     a1 = kraus_ops[1]
@@ -269,6 +269,36 @@ def test_liouville_to_kraus(order):
 
     assert np.linalg.norm(evolution_a0 - test_evolution_a0) < PRECISION_TOL, True
     assert np.linalg.norm(evolution_a1 - test_evolution_a1) < PRECISION_TOL, True
+
+
+@pytest.mark.parametrize("order", ["row", "column"])
+def test_kraus_to_unitaries(order):
+    test_a0 = np.sqrt(0.4) * matrices.X
+    test_a1 = np.sqrt(0.6) * matrices.Y
+    test_kraus = [((0,), test_a0), ((0,), test_a1)]
+
+    with pytest.raises(TypeError):
+        kraus_to_unitaries(test_kraus, order, str(PRECISION_TOL))
+    with pytest.raises(ValueError):
+        kraus_to_unitaries(test_kraus, order, -1.0 * PRECISION_TOL)
+
+    target = kraus_to_liouville(test_kraus, order=order)
+
+    unitaries, probabilities = kraus_to_unitaries(test_kraus, order=order)
+    unitaries = np.array(
+        [np.sqrt(prob) * unitary for prob, unitary in zip(probabilities, unitaries)]
+    )
+    unitaries = list(zip([(0,)] * len(unitaries), unitaries))
+
+    operator = kraus_to_liouville(unitaries)
+
+    assert np.linalg.norm(target - operator) < 2 * PRECISION_TOL, True
+
+    # warning coverage
+    test_a0 = np.sqrt(0.4) * matrices.X
+    test_a1 = np.sqrt(0.6) * matrices.Z
+    test_kraus = [((0,), test_a0), ((0,), test_a1)]
+    kraus_to_unitaries(test_kraus, order=order)
 
 
 @pytest.mark.parametrize("order", ["row", "column"])
