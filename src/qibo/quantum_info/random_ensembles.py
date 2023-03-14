@@ -1,5 +1,6 @@
 from functools import reduce
 from itertools import product
+from typing import Union
 
 import numpy as np
 
@@ -536,7 +537,7 @@ def random_pauli(
 def random_pauli_hamiltonian(
     nqubits: int,
     sparsity: float = 1.0,
-    max_eigenvalue: int | float = None,
+    max_eigenvalue: Union[int, float] = None,
     normalize_gap: bool = False,
     seed=None,
 ):
