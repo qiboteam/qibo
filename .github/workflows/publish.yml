@@ -35,3 +35,4 @@ jobs:
       dependency-path: "**/poetry.lock"
       trigger-label: "${{needs.evaluate-label.outputs.label}}"
       project: qibo
+      poetry-extras: --with docs
