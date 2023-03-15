@@ -1,10 +1,9 @@
 from functools import reduce
-from itertools import product
 from typing import Union
 
 import numpy as np
 
-from qibo import gates, matrices
+from qibo import gates
 from qibo.config import MAX_ITERATIONS, PRECISION_TOL, raise_error
 from qibo.models import Circuit
 from qibo.quantum_info.basis import comp_basis_to_pauli
@@ -536,8 +535,7 @@ def random_pauli(
 
 def random_pauli_hamiltonian(
     nqubits: int,
-    sparsity: float = 1.0,
-    max_eigenvalue: Union[int, float] = 2.0,
+    max_eigenvalue: Union[int, float] = None,
     normalize: bool = False,
     seed=None,
 ):
@@ -545,8 +543,6 @@ def random_pauli_hamiltonian(
 
     Args:
         nqubits (int): number of qubits.
-        sparsity (float, optional): percentage of Paulis used to create the
-            original Hamiltoninan. Defaults to ``1.0``.
         max_eigenvalue (int or float, optional): fixes the value of the
             largest eigenvalue. Defaults to ``None``.
         normalize (bool, optional): If ``True``, fixes the gap of the
@@ -565,11 +561,6 @@ def random_pauli_hamiltonian(
         )
     elif nqubits <= 0:
         raise_error(ValueError, "nqubits must be a positive int.")
-
-    if isinstance(sparsity, float) is False:
-        raise_error(
-            TypeError, f"sparsity must be type float, but it is type {type(sparsity)}."
-        )
 
     if isinstance(max_eigenvalue, (int, float)) is False and normalize is True:
         raise_error(
@@ -596,36 +587,9 @@ def random_pauli_hamiltonian(
             "when normalize=True, gap is = 1, thus max_eigenvalue must be > 1.",
         )
 
-    if seed is not None and isinstance(seed, (int, np.random.Generator)) is False:
-        raise_error(
-            TypeError, "seed must be either type int or numpy.random.Generator."
-        )
-
-    local_state = (
-        np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
-    )
-
     d = 2**nqubits
-    num_paulis = int(sparsity * d**2)
 
-    if num_paulis < 1:
-        raise_error(ValueError, "sparsity is too low.")
-
-    pauli_indexes = list(local_state.choice(d**2, size=num_paulis, replace=False))
-
-    basis = list(product(["I", "X", "Y", "Z"], repeat=nqubits))
-    paulis = [basis[ind] for ind in pauli_indexes]
-    del basis
-    paulis = ["".join(pauli) for pauli in paulis]
-
-    coefficients = local_state.random(num_paulis)
-
-    hamiltonian = np.zeros((d, d), dtype=complex)
-    for coeff, pauli in zip(coefficients, paulis):
-        op = 1.0
-        for p in pauli:
-            op = np.kron(op, getattr(matrices, p))
-        hamiltonian += coeff * op
+    hamiltonian = random_hermitian(d, normalize=True, seed=seed)
 
     eigenvalues, eigenvectors = np.linalg.eigh(hamiltonian)
 
