@@ -224,7 +224,7 @@ class KrausChannel(Channel):
                 if shape != (rank, rank):
                     raise_error(
                         ValueError,
-                        f"Invalid Krauss operator shape {shape} for "
+                        f"Invalid Kraus operator shape {shape} for "
                         + f"acting on {len(qubits)} qubits.",
                     )
                 qubitset.update(qubits)
