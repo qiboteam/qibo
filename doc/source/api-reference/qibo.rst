@@ -1168,9 +1168,15 @@ Random Clifford
 
 
 Random Pauli
-""""""""""""""""""""""
+""""""""""""
 
 .. autofunction:: qibo.quantum_info.random_pauli
+
+
+Random Pauli Hamiltonian
+""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_pauli_hamiltonian
 
 
 Random stochastic matrix
