@@ -1,7 +1,6 @@
 import numpy as np
 import pytest
 
-from qibo import get_backend
 from qibo.config import PRECISION_TOL
 from qibo.quantum_info import *
 
@@ -369,6 +368,37 @@ def test_random_pauli(backend, qubits, depth, max_qubits, subset, return_circuit
             backend.assert_allclose(
                 backend.calculate_norm(matrix - result_subset) < PRECISION_TOL, True
             )
+
+
+@pytest.mark.parametrize("normalize", [False, True])
+@pytest.mark.parametrize("max_eigenvalue", [2, 3])
+@pytest.mark.parametrize("sparsity", [0.2, 0.5, 1.0])
+@pytest.mark.parametrize("nqubits", [2, 3, 4])
+def test_random_pauli_hamiltonian(nqubits, sparsity, max_eigenvalue, normalize):
+    with pytest.raises(TypeError):
+        random_pauli_hamiltonian(nqubits=[1])
+    with pytest.raises(ValueError):
+        random_pauli_hamiltonian(nqubits=0)
+    with pytest.raises(TypeError):
+        random_pauli_hamiltonian(nqubits=2, max_eigenvalue=[2])
+    with pytest.raises(TypeError):
+        random_pauli_hamiltonian(nqubits=2, normalize="True")
+    with pytest.raises(ValueError):
+        random_pauli_hamiltonian(nqubits=2, normalize=True, max_eigenvalue=1)
+    with pytest.raises(TypeError):
+        random_pauli_hamiltonian(nqubits=2, seed=0.1)
+    with pytest.raises(TypeError):
+        random_pauli_hamiltonian(nqubits, sparsity, max_eigenvalue=None, normalize=True)
+
+    hamiltonian, eigenvalues = random_pauli_hamiltonian(
+        nqubits, sparsity, max_eigenvalue, normalize
+    )
+
+    if normalize is True:
+        print(eigenvalues)
+        assert eigenvalues[0] - 0.0 < PRECISION_TOL
+        assert eigenvalues[1] - 1 < PRECISION_TOL
+        assert eigenvalues[-1] - max_eigenvalue < PRECISION_TOL
 
 
 def test_random_stochastic_matrix():

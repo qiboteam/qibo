@@ -537,8 +537,8 @@ def random_pauli(
 def random_pauli_hamiltonian(
     nqubits: int,
     sparsity: float = 1.0,
-    max_eigenvalue: Union[int, float] = None,
-    normalize_gap: bool = False,
+    max_eigenvalue: Union[int, float] = 2.0,
+    normalize: bool = False,
     seed=None,
 ):
     """Generates a random Hamiltonian in the Pauli basis.
@@ -549,7 +549,7 @@ def random_pauli_hamiltonian(
             original Hamiltoninan. Defaults to ``1.0``.
         max_eigenvalue (int or float, optional): fixes the value of the
             largest eigenvalue. Defaults to ``None``.
-        normalize_gap (bool, optional): If ``True``, fixes the gap of the
+        normalize (bool, optional): If ``True``, fixes the gap of the
             Hamiltonian as ``1.0``. Moreover, if ``True``, then ``max_eigenvalue``
             must be ``> 1.0``. Defaults to ``False``.
         seed (int or ``numpy.random.Generator``, optional): Either a generator of random numbers
@@ -566,28 +566,37 @@ def random_pauli_hamiltonian(
     elif nqubits <= 0:
         raise_error(ValueError, "nqubits must be a positive int.")
 
-    if isinstance(max_eigenvalue, (int, float)) is False:
+    if isinstance(sparsity, float) is False:
+        raise_error(
+            TypeError, f"sparsity must be type float, but it is type {type(sparsity)}."
+        )
+
+    if isinstance(max_eigenvalue, (int, float)) is False and normalize is True:
+        raise_error(
+            TypeError,
+            f"when normalize=True, max_eigenvalue must be type float, "
+            + f"but it is {type(max_eigenvalue)}.",
+        )
+    elif (
+        isinstance(max_eigenvalue, (int, float)) is False and max_eigenvalue is not None
+    ):
         raise_error(
             TypeError,
             f"max_eigenvalue must be type float, but it is {type(max_eigenvalue)}.",
         )
 
-    if isinstance(normalize_gap, bool) is False:
+    if isinstance(normalize, bool) is False:
         raise_error(
             TypeError,
-            f"normalize_gap must be type bool, but it is type {type(normalize_gap)}.",
+            f"normalize must be type bool, but it is type {type(normalize)}.",
         )
-    elif normalize_gap is True and max_eigenvalue <= 1.0:
+    elif normalize is True and max_eigenvalue <= 1.0:
         raise_error(
             ValueError,
-            "when normalize_gap=True, gap is = 1, thus max_eigenvalue must be > 1.",
+            "when normalize=True, gap is = 1, thus max_eigenvalue must be > 1.",
         )
 
-    if (
-        seed is not None
-        and not isinstance(seed, int)
-        and not isinstance(seed, np.random.Generator)
-    ):
+    if seed is not None and isinstance(seed, (int, np.random.Generator)) is False:
         raise_error(
             TypeError, "seed must be either type int or numpy.random.Generator."
         )
@@ -609,7 +618,7 @@ def random_pauli_hamiltonian(
     del basis
     paulis = ["".join(pauli) for pauli in paulis]
 
-    coefficients = local_state.rand(num_paulis)
+    coefficients = local_state.random(num_paulis)
 
     hamiltonian = np.zeros((d, d), dtype=complex)
     for coeff, pauli in zip(coefficients, paulis):
@@ -620,14 +629,16 @@ def random_pauli_hamiltonian(
 
     eigenvalues, eigenvectors = np.linalg.eigh(hamiltonian)
 
-    if normalize_gap:
+    if normalize is True:
         eigenvalues -= eigenvalues[0]
 
         eigenvalues /= eigenvalues[1]
 
-        if max_eigenvalue:
-            eigenvectors[:, 2:] = eigenvectors[:, 2:] * max_eigenvalue / eigenvalues[-1]
-            eigenvalues[2:] = eigenvalues[2:] * max_eigenvalue / eigenvalues[-1]
+        shift = 2
+        eigenvectors[:, shift:] = (
+            eigenvectors[:, shift:] * max_eigenvalue / eigenvalues[-1]
+        )
+        eigenvalues[shift:] = eigenvalues[shift:] * max_eigenvalue / eigenvalues[-1]
 
         hamiltonian = np.zeros((d, d), dtype=complex)
         # excluding the first eigenvector because first eigenvalue is zero
