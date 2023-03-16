@@ -98,9 +98,9 @@ def trace_distance(state, target, validate: bool = False):
     """Trace distance between two quantum states, :math:`\\rho` and :math:`\\sigma`:
 
     .. math::
-        T(\\rho, \\sigma) = \\frac{1}{2} \\, ||\\rho - \\sigma||_{1} = \\frac{1}{2} \\, \\text{Tr}\\left[ \\sqrt{(\\rho - \\sigma)^{\\dagger}(\\rho - \\sigma)} \\right] \\, ,
+        T(\\rho, \\sigma) = \\frac{1}{2} \\, \\|\\rho - \\sigma\\|_{1} = \\frac{1}{2} \\, \\text{Tr}\\left[ \\sqrt{(\\rho - \\sigma)^{\\dagger}(\\rho - \\sigma)} \\right] \\, ,
 
-    where :math:`||\\cdot||_{1}` is the Schatten 1-norm.
+    where :math:`\\|\\cdot\\|_{1}` is the Schatten 1-norm.
 
     Args:
         state: state vector or density matrix.
@@ -149,7 +149,7 @@ def hilbert_schmidt_distance(state, target):
     """Hilbert-Schmidt distance between two quantum states:
 
     .. math::
-        <\\rho \\, , \\, \\sigma>_{\\text{HS}} = \\text{Tr}\\left[(\\rho - \\sigma)^{2}\\right]
+        <\\rho \\, , \\, \\sigma>_{\\text{HS}} = \\text{Tr}\\left((\\rho - \\sigma)^{2}\\right)
 
     Args:
         state: state vector or density matrix.

@@ -1168,9 +1168,15 @@ Random Clifford
 
 
 Random Pauli
-""""""""""""""""""""""
+""""""""""""
 
 .. autofunction:: qibo.quantum_info.random_pauli
+
+
+Random Pauli Hamiltonian
+""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_pauli_hamiltonian
 
 
 Random stochastic matrix
@@ -1193,7 +1199,7 @@ Vectorization
 .. autofunction:: qibo.quantum_info.vectorization
 
 .. note::
-    Due to `numpy` limitations on handling transposition of tensors,
+    Due to ``numpy`` limitations on handling transposition of tensors,
     this function will not work when the number of qubits :math:`n`
     is such that :math:`n > 16`.
 
@@ -1204,7 +1210,7 @@ Unvectorization
 .. autofunction:: qibo.quantum_info.unvectorization
 
 .. note::
-    Due to `numpy` limitations on handling transposition of tensors,
+    Due to ``numpy`` limitations on handling transposition of tensors,
     this function will not work when the number of qubits :math:`n`
     is such that :math:`n > 16`.
 
@@ -1270,6 +1276,17 @@ Liouville to Kraus
     .. math::
         K_{\alpha} \, \rho \, K_{\alpha}^{\dagger} = K_{\alpha}^{\text{(ideal)}} \, \rho \,\, (K_{\alpha}^{\text{(ideal)}})^{\dagger} \,\,\,\,\, , \,\, \forall \, \alpha
 
+
+Kraus operators as probabilistic sum of unitaries
+"""""""""""""""""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.kraus_to_unitaries
+
+.. note::
+    It is not guaranteed that a good approximation will be found or that any
+    approximation will be found at all. This functions will find good solutions
+    for a limited set of operators. We leave to the user to decide how to
+    best use this function.
 
 Utility Functions
 ^^^^^^^^^^^^^^^^^

@@ -1,10 +1,13 @@
 from functools import reduce
+from typing import Union
 
 import numpy as np
 
 from qibo import gates
 from qibo.config import MAX_ITERATIONS, PRECISION_TOL, raise_error
 from qibo.models import Circuit
+from qibo.quantum_info.basis import comp_basis_to_pauli
+from qibo.quantum_info.superoperator_transformations import vectorization
 from qibo.quantum_info.utils import ONEQUBIT_CLIFFORD_PARAMS
 
 
@@ -87,14 +90,14 @@ def random_hermitian(
     Args:
         dims (int): dimension of the matrix.
         semidefinite (bool, optional): if ``True``, returns a Hermitian matrix that
-            is also positive semidefinite. Default: ``False``.
+            is also positive semidefinite. Default is ``False``.
         normalize (bool, optional): if ``True`` and ``semidefinite=False``, returns
             a Hermitian matrix with eigenvalues in the interval
-            :math:`[-1, \\,1]`. If ``True`` and ``semidefinite=True``,
-            interval is :math:`[0,\\,1]`. Default: ``False``.
+            :math:`[-1, \\, 1]`. If ``True`` and ``semidefinite=True``,
+            interval is :math:`[0, \\, 1]`. Default is ``False``.
         seed (int or ``numpy.random.Generator``, optional): Either a generator of random numbers
             or a fixed seed to initialize a generator. If ``None``, initializes a generator with
-            a random seed. Default: ``None``.
+            a random seed. Default is ``None``.
 
     Returns:
         (ndarray): Hermitian matrix :math:`H` with dimensions ``(dims, dims)``.
@@ -224,7 +227,7 @@ def random_statevector(dims: int, haar: bool = False, seed=None):
 
 
 def random_density_matrix(
-    dims,
+    dims: int,
     rank: int = None,
     pure: bool = False,
     metric: str = "Hilbert-Schmidt",
@@ -405,7 +408,7 @@ def random_pauli(
     return_circuit: bool = True,
     seed=None,
 ):
-    """Creates random Pauli operators.
+    """Creates random Pauli operator(s).
 
     Pauli operators are sampled from the single-qubit Pauli set :math:`\\{I, X, Y, Z\\}`.
 
@@ -528,6 +531,91 @@ def random_pauli(
         )
 
     return gate_grid
+
+
+def random_pauli_hamiltonian(
+    nqubits: int,
+    max_eigenvalue: Union[int, float] = None,
+    normalize: bool = False,
+    seed=None,
+):
+    """Generates a random Hamiltonian in the Pauli basis.
+
+    Args:
+        nqubits (int): number of qubits.
+        max_eigenvalue (int or float, optional): fixes the value of the
+            largest eigenvalue. Defaults to ``None``.
+        normalize (bool, optional): If ``True``, fixes the gap of the
+            Hamiltonian as ``1.0``. Moreover, if ``True``, then ``max_eigenvalue``
+            must be ``> 1.0``. Defaults to ``False``.
+        seed (int or ``numpy.random.Generator``, optional): Either a generator of random numbers
+            or a fixed seed to initialize a generator. If ``None``, initializes a generator with
+            a random seed. Default: ``None``.
+
+    Returns:
+        (ndarray, ndarray): Hamiltonian in the Pauli basis and its corresponding eigenvalues.
+    """
+    if isinstance(nqubits, int) is False:
+        raise_error(
+            TypeError, f"nqubits must be type int, but it is type {type(nqubits)}."
+        )
+    elif nqubits <= 0:
+        raise_error(ValueError, "nqubits must be a positive int.")
+
+    if isinstance(max_eigenvalue, (int, float)) is False and normalize is True:
+        raise_error(
+            TypeError,
+            f"when normalize=True, max_eigenvalue must be type float, "
+            + f"but it is {type(max_eigenvalue)}.",
+        )
+    elif (
+        isinstance(max_eigenvalue, (int, float)) is False and max_eigenvalue is not None
+    ):
+        raise_error(
+            TypeError,
+            f"max_eigenvalue must be type float, but it is {type(max_eigenvalue)}.",
+        )
+
+    if isinstance(normalize, bool) is False:
+        raise_error(
+            TypeError,
+            f"normalize must be type bool, but it is type {type(normalize)}.",
+        )
+    elif normalize is True and max_eigenvalue <= 1.0:
+        raise_error(
+            ValueError,
+            "when normalize=True, gap is = 1, thus max_eigenvalue must be > 1.",
+        )
+
+    d = 2**nqubits
+
+    hamiltonian = random_hermitian(d, normalize=True, seed=seed)
+
+    eigenvalues, eigenvectors = np.linalg.eigh(hamiltonian)
+
+    if normalize is True:
+        eigenvalues -= eigenvalues[0]
+
+        eigenvalues /= eigenvalues[1]
+
+        shift = 2
+        eigenvectors[:, shift:] = (
+            eigenvectors[:, shift:] * max_eigenvalue / eigenvalues[-1]
+        )
+        eigenvalues[shift:] = eigenvalues[shift:] * max_eigenvalue / eigenvalues[-1]
+
+        hamiltonian = np.zeros((d, d), dtype=complex)
+        # excluding the first eigenvector because first eigenvalue is zero
+        for eigenvalue, eigenvector in zip(
+            eigenvalues[1:], np.transpose(eigenvectors)[1:]
+        ):
+            hamiltonian += eigenvalue * np.outer(eigenvector, np.conj(eigenvector))
+
+    U = comp_basis_to_pauli(nqubits, normalize=True)
+
+    hamiltonian = np.real(U @ vectorization(hamiltonian))
+
+    return hamiltonian, eigenvalues
 
 
 def random_stochastic_matrix(

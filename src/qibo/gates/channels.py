@@ -53,7 +53,7 @@ class Channel(Gate):
                 it uses ``GlobalBackend()``. Defaults to ``None``.
 
         Returns:
-            Choi representation of the Kraus channel.
+            Choi representation of the channel.
         """
         import numpy as np
 
@@ -66,18 +66,13 @@ class Channel(Gate):
 
         self.nqubits = 1 + max(self.target_qubits)
 
-        if self.name not in [
-            "KrausChannel",
-            "ThermalRelaxationChannel",
-            "ReadoutErrorChannel",
-        ]:
-            p0 = 1
-            for coeff in self.coefficients:
-                p0 = p0 - coeff
-            self.coefficients += (p0,)
-            self.gates += (I(*self.target_qubits),)
+        if isinstance(self, (ThermalRelaxationChannel, ResetChannel)) is True:
+            raise_error(
+                NotImplementedError,
+                f"Superoperator representation not implemented for {self.name}.",
+            )
 
-        if self.name == "DepolarizingChannel":
+        if isinstance(self, DepolarizingChannel) is True:
             num_qubits = len(self.target_qubits)
             num_terms = 4**num_qubits
             prob_pauli = self.init_kwargs["lam"] / num_terms
@@ -91,11 +86,11 @@ class Channel(Gate):
             self.gates = tuple(gates)
             self.coefficients = tuple(probs)
 
-        if self.name == "ThermalRelaxationChannel":
-            raise_error(
-                NotImplementedError,
-                "Superoperator representation not implemented for ThermalRelaxationChannel.",
-            )
+        if type(self) not in [KrausChannel, ReadoutErrorChannel]:
+            p0 = 1 - sum(self.coefficients)
+            if p0 > PRECISION_TOL:
+                self.coefficients += (p0,)
+                self.gates += (I(*self.target_qubits),)
 
         super_op = np.zeros((4**self.nqubits, 4**self.nqubits), dtype="complex")
         for coeff, gate in zip(self.coefficients, self.gates):
@@ -111,7 +106,7 @@ class Channel(Gate):
         return super_op
 
     def to_superop(self, order: str = "row", backend=None):
-        """Returns the Liouville representation of the Kraus channel.
+        """Returns the Liouville representation of the channel.
 
         Args:
             order (str, optional): If ``"row"``, vectorization of
@@ -141,11 +136,11 @@ class Channel(Gate):
         return super_op
 
     def to_pauli_liouville(self, normalize: bool = False, backend=None):
-        """Returns the Liouville representation of the Kraus channel
+        """Returns the Liouville representation of the channel
         in the Pauli basis.
 
         Args:
-            normalize (bool, optional): If ``True``, normalized basis ir returned.
+            normalize (bool, optional): If ``True``, normalized basis is returned.
                 Defaults to False.
             backend (``qibo.backends.abstract.Backend``, optional): backend
                 to be used in the execution. If ``None``, it uses
@@ -229,7 +224,7 @@ class KrausChannel(Channel):
                 if shape != (rank, rank):
                     raise_error(
                         ValueError,
-                        f"Invalid Krauss operator shape {shape} for "
+                        f"Invalid Kraus operator shape {shape} for "
                         + f"acting on {len(qubits)} qubits.",
                     )
                 qubitset.update(qubits)
