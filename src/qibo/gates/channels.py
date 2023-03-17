@@ -673,13 +673,22 @@ class ResetChannel(KrausChannel):
     def __init__(self, q, p0=0.0, p1=0.0):
         import numpy as np
 
+        if p0 < 0:
+            raise_error(ValueError, "Invalid p0 ({p0} < 0).")
+        if p1 < 0:
+            raise_error(ValueError, "Invalid p1 ({p1} < 0).")
+        if p0 + p1 > 1:
+            raise_error(ValueError, f"Invalid probabilities (p0 + p1 = {p0+p1} > 1).")
+
         operators = [
             sqrt(p0) * np.array([[1, 0], [0, 0]]),
             sqrt(p0) * np.array([[0, 1], [0, 0]]),
             sqrt(p1) * np.array([[0, 0], [1, 0]]),
             sqrt(p1) * np.array([[0, 0], [0, 1]]),
-            sqrt(1 - p0 - p1) * np.eye(2),
         ]
+
+        if p0 + p1 < 1:
+            operators.append(sqrt(np.abs(1 - p0 - p1)) * np.eye(2))
 
         operators = list(zip([(q,)] * len(operators), operators))
         super().__init__(ops=operators)

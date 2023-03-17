@@ -215,6 +215,12 @@ def test_reset_channel(backend):
     backend.assert_allclose(final_rho, target_rho)
 
 
+@pytest.mark.parametrize("p0,p1", [(0, -0.1), (-0.1, 0), (0.5, 0.6), (0.8, 0.3)])
+def test_reset_channel_errors(p0, p1):
+    with pytest.raises(ValueError):
+        gates.ResetChannel(0, p0, p1)
+
+
 @pytest.mark.parametrize(
     "t1,t2,time,excpop", [(0.8, 0.5, 1.0, 0.4), (0.5, 0.8, 1.0, 0.4)]
 )
