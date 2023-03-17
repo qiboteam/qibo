@@ -68,7 +68,7 @@ def test_kraus_channel_errors(backend):
 
 def test_depolarizing_channel_errors():
     with pytest.raises(ValueError):
-        gate = gates.DepolarizingChannel(0, 1.5)
+        gates.DepolarizingChannel(0, 1.5)
 
 
 def test_controlled_by_channel_error():
