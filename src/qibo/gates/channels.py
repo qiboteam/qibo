@@ -565,11 +565,11 @@ class ThermalRelaxationChannel(KrausChannel):
             pz = (exp(-time / t1) - exp(-time / t2)) / 2
             operators = (
                 sqrt(preset0) * np.array([[1, 0], [0, 0]]),
-                sqrt(preset0) * np.array([[0,1], [0, 0]]),
+                sqrt(preset0) * np.array([[0, 1], [0, 0]]),
                 sqrt(preset1) * np.array([[0, 0], [1, 0]]),
                 sqrt(preset1) * np.array([[0, 0], [0, 1]]),
                 sqrt(pz) * np.array([[1, 0], [0, -1]]),
-                sqrt(1-preset0-preset1-pz) * np.eye(2)
+                sqrt(1 - preset0 - preset1 - pz) * np.eye(2),
             )
             operators = list(zip([(q,)] * len(operators), operators))
             super().__init__(ops=operators)
