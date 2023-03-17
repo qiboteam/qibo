@@ -227,7 +227,11 @@ def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
     final_rho = gate.apply_density_matrix(backend, np.copy(initial_rho), 3)
 
     if t2 > t1:
-        p0, p1, exp = gate.init_kwargs["p0"], gate.init_kwargs["p1"], gate.init_kwargs["exp_t2"]
+        p0, p1, exp = (
+            gate.init_kwargs["p0"],
+            gate.init_kwargs["p1"],
+            gate.init_kwargs["exp_t2"],
+        )
         matrix = np.diag([1 - p1, p1, p0, 1 - p0])
         matrix[0, -1], matrix[-1, 0] = exp, exp
         matrix = matrix.reshape(4 * (2,))
@@ -236,7 +240,11 @@ def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
         target_rho = np.einsum("abcd,aJKcjk->bJKdjk", matrix, target_rho)
         target_rho = target_rho.reshape(initial_rho.shape)
     else:
-        p0, p1, pz = gate.init_kwargs["p0"], gate.init_kwargs["p1"], gate.init_kwargs["pz"]
+        p0, p1, pz = (
+            gate.init_kwargs["p0"],
+            gate.init_kwargs["p1"],
+            gate.init_kwargs["pz"],
+        )
         mz = np.kron(np.array([[1, 0], [0, -1]]), np.eye(4))
         z_rho = mz.dot(initial_rho.dot(mz))
 
