@@ -677,7 +677,7 @@ class ResetChannel(KrausChannel):
             raise_error(ValueError, "Invalid p0 ({p0} < 0).")
         if p1 < 0:
             raise_error(ValueError, "Invalid p1 ({p1} < 0).")
-        if p0 + p1 > 1:
+        if p0 + p1 > 1 + PRECISION_TOL:
             raise_error(ValueError, f"Invalid probabilities (p0 + p1 = {p0+p1} > 1).")
 
         operators = [
