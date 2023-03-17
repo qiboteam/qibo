@@ -48,7 +48,7 @@ def test_kraus_channel_errors(backend):
     channel = gates.KrausChannel([((0,), a1), ((0,), a2)])
 
     backend.assert_allclose(
-        backend.calculate_norm(channel.to_superop(backend=backend) - test_superop)
+        backend.calculate_norm(channel.to_liouville(backend=backend) - test_superop)
         < PRECISION_TOL,
         True,
     )

@@ -99,7 +99,7 @@ class Channel(Gate):
 
         return super_op
 
-    def to_superop(self, order: str = "row", backend=None):
+    def to_liouville(self, order: str = "row", backend=None):
         """Returns the Liouville representation of the channel.
 
         Args:
@@ -152,7 +152,7 @@ class Channel(Gate):
 
             backend = GlobalBackend()
 
-        super_op = self.to_superop(backend=backend)
+        super_op = self.to_liouville(backend=backend)
 
         # unitary that transforms from comp basis to pauli basis
         U = comp_basis_to_pauli(self.nqubits, normalize)
