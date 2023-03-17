@@ -1277,6 +1277,42 @@ Liouville to Kraus
         K_{\alpha} \, \rho \, K_{\alpha}^{\dagger} = K_{\alpha}^{\text{(ideal)}} \, \rho \,\, (K_{\alpha}^{\text{(ideal)}})^{\dagger} \,\,\,\,\, , \,\, \forall \, \alpha
 
 
+Pauli-Liouville to Liouville
+""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.pauli_to_liouville
+
+
+Liouville to Pauli-Liouville
+""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.liouville_to_pauli
+
+
+Pauli-Liouville to Choi
+"""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.pauli_to_choi
+
+
+Choi to Pauli-Liouville
+"""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.choi_to_pauli
+
+
+Pauli-Liouville to Kraus
+""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.pauli_to_kraus
+
+
+Kraus to Pauli-Liouville
+""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.kraus_to_pauli
+
+
 Kraus operators as probabilistic sum of unitaries
 """""""""""""""""""""""""""""""""""""""""""""""""
 
