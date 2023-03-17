@@ -7,7 +7,6 @@ from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate
 from qibo.gates.gates import Unitary
 from qibo.gates.special import FusedGate
-from qibo.quantum_info.basis import comp_basis_to_pauli, pauli_to_comp_basis
 
 
 def vectorization(state, order: str = "row"):
@@ -456,6 +455,8 @@ def pauli_to_liouville(pauli_op, normalize: bool = False, order: str = "row"):
     Returns:
         ndarray: superoperator in the Liouville representation.
     """
+    from qibo.quantum_info.basis import pauli_to_comp_basis
+
     d = int(np.sqrt(len(pauli_op)))
     nqubits = int(np.log2(d))
 
@@ -480,6 +481,8 @@ def liouville_to_pauli(super_op, normalize: bool = False, order: str = "row"):
     Returns:
         ndarray: superoperator in the Pauli-Liouville representation.
     """
+    from qibo.quantum_info.basis import comp_basis_to_pauli
+
     d = int(np.sqrt(len(super_op)))
     nqubits = int(np.log2(d))
 
@@ -499,8 +502,7 @@ def pauli_to_choi(pauli_op, normalize: bool = False, order: str = "row"):
             Pauli basis. Defaults to ``False``.
         order (str, optional): If ``"row"``, returns Choi representation in
             row-vectorization. If ``"column"``, returns column-vectorized
-            superoperator. If ``"system"``, superoperator will be in
-            block-vectorization. Defaults to ``"row"``.
+            superoperator. Defaults to ``"row"``.
 
     Returns:
         ndarray: Choi representation of the superoperator.
@@ -522,7 +524,7 @@ def choi_to_pauli(choi_super_op, normalize: bool = False, order: str = "row"):
             in the unnormalized Pauli basis. Defaults to ``False``.
         order (str, optional): If ``"row"``, it assumes ``choi_super_op`` is in
             row-vectorization. If ``"column"``, it assumes column-vectorization.
-            If ``"system"``, it assumes block-vectorization. Defaults to ``"row"``.
+            Defaults to ``"row"``.
 
     Returns:
         ndarray: superoperator in the Pauli-Liouville representation.
@@ -547,7 +549,7 @@ def pauli_to_kraus(
         order (str, optional): vectorization order of the Liouville and Choi
             intermediate steps. If ``"row"``, row-vectorizationcis used for both
             representations. If ``"column"``, column-vectorization is used.
-            If ``"system"``, block-vectorization is used. Defaults to ``"row"``.
+            Defaults to ``"row"``.
         precision_tol (float, optional): Precision tolerance for eigenvalues
             found in the spectral decomposition problem. Any eigenvalue
             :math:`\\lambda <` ``precision_tol`` is set to 0 (zero).
