@@ -299,6 +299,9 @@ test_pauli = np.diag([2.0, -0.4, -2.0, 0.4])
 @pytest.mark.parametrize("order", ["row", "column", "system"])
 @pytest.mark.parametrize("normalize", [False, True])
 def test_pauli_to_liouville(normalize, order):
+    with pytest.raises(ValueError):
+        pauli_to_liouville(test_pauli[:-1, :-1], normalize, order)
+
     d = int(np.sqrt(test_superop.shape[0]))
     aux = d**2 if normalize == False else d
 
@@ -310,6 +313,9 @@ def test_pauli_to_liouville(normalize, order):
 @pytest.mark.parametrize("order", ["row", "column", "system"])
 @pytest.mark.parametrize("normalize", [False, True])
 def test_liouville_to_pauli(normalize, order):
+    with pytest.raises(ValueError):
+        liouville_to_pauli(test_superop[:-1, :-1], normalize, order)
+
     d = int(np.sqrt(test_pauli.shape[0]))
     aux = 1.0 if normalize == False else d
 
@@ -420,6 +426,8 @@ def test_reshuffling(order):
         _reshuffling(test_superop, "sustem")
     with pytest.raises(NotImplementedError):
         _reshuffling(test_superop, "system")
+    with pytest.raises(ValueError):
+        _reshuffling(test_superop[:-1, :-1], order)
 
     reshuffled = _reshuffling(test_superop, order)
     reshuffled = _reshuffling(reshuffled, order)

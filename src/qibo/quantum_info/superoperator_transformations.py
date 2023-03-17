@@ -455,12 +455,19 @@ def pauli_to_liouville(pauli_op, normalize: bool = False, order: str = "row"):
     Returns:
         ndarray: superoperator in the Liouville representation.
     """
+    d = np.sqrt(len(pauli_op))
+    nqubits = np.log2(int(d))
+
+    if (
+        pauli_op.shape[0] != pauli_op.shape[1]
+        or np.mod(d, 1) != 0
+        or np.mod(nqubits, 1) != 0
+    ):
+        raise_error(ValueError, "pauli_op must be of shape (4^n, 4^n)")
+
     from qibo.quantum_info.basis import pauli_to_comp_basis
 
-    d = int(np.sqrt(len(pauli_op)))
-    nqubits = int(np.log2(d))
-
-    U_p2c = pauli_to_comp_basis(nqubits, normalize, order)
+    U_p2c = pauli_to_comp_basis(int(nqubits), normalize, order)
 
     return U_p2c @ pauli_op @ np.conj(np.transpose(U_p2c))
 
@@ -481,12 +488,19 @@ def liouville_to_pauli(super_op, normalize: bool = False, order: str = "row"):
     Returns:
         ndarray: superoperator in the Pauli-Liouville representation.
     """
+    d = np.sqrt(len(super_op))
+    nqubits = np.log2(int(d))
+
+    if (
+        super_op.shape[0] != super_op.shape[1]
+        or np.mod(d, 1) != 0
+        or np.mod(nqubits, 1) != 0
+    ):
+        raise_error(ValueError, "super_op must be of shape (4^n, 4^n)")
+
     from qibo.quantum_info.basis import comp_basis_to_pauli
 
-    d = int(np.sqrt(len(super_op)))
-    nqubits = int(np.log2(d))
-
-    U_c2p = comp_basis_to_pauli(nqubits, normalize, order)
+    U_c2p = comp_basis_to_pauli(int(nqubits), normalize, order)
 
     return U_c2p @ super_op @ np.conj(np.transpose(U_c2p))
 
@@ -726,8 +740,16 @@ def _reshuffling(super_op, order: str = "row"):
             NotImplementedError, "reshuffling not implemented for system vectorization."
         )
 
-    d = int(np.sqrt(super_op.shape[0]))
+    d = np.sqrt(super_op.shape[0])
 
+    if (
+        super_op.shape[0] != super_op.shape[1]
+        or np.mod(d, 1) != 0
+        or np.mod(np.log2(int(d)), 1) != 0
+    ):
+        raise_error(ValueError, "super_op must be of shape (4^n, 4^n)")
+
+    d = int(d)
     super_op = np.reshape(super_op, [d] * 4)
 
     axes = [1, 2] if order == "row" else [0, 3]
