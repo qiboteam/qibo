@@ -66,12 +66,6 @@ class Channel(Gate):
 
         self.nqubits = 1 + max(self.target_qubits)
 
-        if isinstance(self, (ThermalRelaxationChannel, ResetChannel)) is True:
-            raise_error(
-                NotImplementedError,
-                f"Superoperator representation not implemented for {self.name}.",
-            )
-
         if isinstance(self, DepolarizingChannel) is True:
             num_qubits = len(self.target_qubits)
             num_terms = 4**num_qubits
@@ -105,7 +99,7 @@ class Channel(Gate):
 
         return super_op
 
-    def to_superop(self, order: str = "row", backend=None):
+    def to_liouville(self, order: str = "row", backend=None):
         """Returns the Liouville representation of the channel.
 
         Args:
@@ -158,7 +152,7 @@ class Channel(Gate):
 
             backend = GlobalBackend()
 
-        super_op = self.to_superop(backend=backend)
+        super_op = self.to_liouville(backend=backend)
 
         # unitary that transforms from comp basis to pauli basis
         U = comp_basis_to_pauli(self.nqubits, normalize)
@@ -472,7 +466,7 @@ class DepolarizingChannel(Channel):
         return backend.apply_channel(self, state, nqubits)
 
 
-class ThermalRelaxationChannel(Channel):
+class ThermalRelaxationChannel(KrausChannel):
     """Single-qubit thermal relaxation error channel.
 
     Implements the following transformation:
@@ -487,7 +481,7 @@ class ThermalRelaxationChannel(Channel):
     while if :math:`T_1 < T_2`:
 
     .. math::
-        \\mathcal{E}(\\rho ) = \\mathrm{Tr} _\\mathcal{X}\\left [\\Lambda _{\\mathcal{X}\\mathcal{Y}}(\\rho _\\mathcal{X} ^T \\otimes \\mathbb{I}_\\mathcal{Y})\\right ]
+        \\mathcal{E}(\\rho ) = \\mathrm{Tr} _\\mathcal{X}\\left [\\Lambda _{\\mathcal{X}\\mathcal{Y}}(\\rho _\\mathcal{X} ^T \\otimes I_\\mathcal{Y})\\right ]
 
     with
 
@@ -500,7 +494,7 @@ class ThermalRelaxationChannel(Channel):
         \\end{pmatrix}
 
     where :math:`p_0 = (1 - e^{-t / T_1})(1 - \\eta )` :math:`p_1 = (1 - e^{-t / T_1})\\eta`
-    and :math:`p_z = 1 - e^{-t / T_1} + e^{-t / T_2} - e^{t / T_1 - t / T_2}`.
+    and :math:`p_z = (e^{-t / T_1} - e^{-t / T_2})/2`.
     Here :math:`\\eta` is the ``excited_population``
     and :math:`t` is the ``time``, both controlled by the user.
     This gate is based on
@@ -517,11 +511,7 @@ class ThermalRelaxationChannel(Channel):
     """
 
     def __init__(self, q, t1, t2, time, excited_population=0):
-        super().__init__()
         self.name = "ThermalRelaxationChannel"
-        self.target_qubits = (q,)
-        self.init_args = [q, t1, t2, time]
-        self.init_kwargs = {"excited_population": excited_population}
 
         # check given parameters
         if excited_population < 0 or excited_population > 1:
@@ -547,22 +537,59 @@ class ThermalRelaxationChannel(Channel):
         # calculate probabilities
         self.t1, self.t2 = t1, t2
         p_reset = 1 - exp(-time / t1)
-        self.coefficients = [
-            p_reset * (1 - excited_population),
-            p_reset * excited_population,
-        ]
+        preset0 = p_reset * (1 - excited_population)
+        preset1 = p_reset * excited_population
+
+        import numpy as np
 
         if t1 < t2:
-            self.coefficients.append(exp(-time / t2))
+            exp_t2 = exp(-time / t2)
+
+            from qibo.quantum_info import choi_to_kraus
+
+            choi_matrix = np.array(
+                [
+                    [1 - preset1, 0, 0, exp_t2],
+                    [0, preset1, 0, 0],
+                    [0, 0, preset0, 0],
+                    [exp_t2, 0, 0, 1 - preset0],
+                ]
+            )
+
+            operators, _ = choi_to_kraus(choi_matrix)
+            operators = list(zip([(q,)] * len(operators), operators))
+            super().__init__(ops=operators)
+            self.init_kwargs["exp_t2"] = exp_t2
+
         else:
-            pz = p_reset + exp(-time / t2) * (1 - exp(time / t1))
-            self.coefficients.append(pz)
+            pz = (exp(-time / t1) - exp(-time / t2)) / 2
+            operators = (
+                sqrt(preset0) * np.array([[1, 0], [0, 0]]),
+                sqrt(preset0) * np.array([[0, 1], [0, 0]]),
+                sqrt(preset1) * np.array([[0, 0], [1, 0]]),
+                sqrt(preset1) * np.array([[0, 0], [0, 1]]),
+                sqrt(pz) * np.array([[1, 0], [0, -1]]),
+                sqrt(1 - preset0 - preset1 - pz) * np.eye(2),
+            )
+            operators = list(zip([(q,)] * len(operators), operators))
+            super().__init__(ops=operators)
+            self.init_kwargs["pz"] = pz
+
+        self.init_args = [q, t1, t2, time]
+        self.t1, self.t2 = t1, t2
+        self.init_kwargs["excited_population"] = excited_population
+        self.init_kwargs["p0"] = preset0
+        self.init_kwargs["p1"] = preset1
 
     def apply_density_matrix(self, backend, state, nqubits):
         q = self.target_qubits[0]
 
         if self.t1 < self.t2:
-            preset0, preset1, exp_t2 = self.coefficients
+            preset0, preset1, exp_t2 = (
+                self.init_kwargs["p0"],
+                self.init_kwargs["p1"],
+                self.init_kwargs["exp_t2"],
+            )
             matrix = [
                 [1 - preset1, 0, 0, preset0],
                 [0, exp_t2, 0, 0],
@@ -576,7 +603,7 @@ class ThermalRelaxationChannel(Channel):
             return backend.thermal_error_density_matrix(gate, state, nqubits)
 
         else:
-            pz = self.coefficients[-1]
+            pz = self.init_kwargs["pz"]
 
             return (
                 backend.reset_error_density_matrix(self, state, nqubits)
@@ -628,7 +655,7 @@ class ReadoutErrorChannel(KrausChannel):
         self.name = "ReadoutErrorChannel"
 
 
-class ResetChannel(Channel):
+class ResetChannel(KrausChannel):
     """Single-qubit reset channel.
 
     Implements the following transformation:
@@ -644,12 +671,29 @@ class ResetChannel(Channel):
     """
 
     def __init__(self, q, p0=0.0, p1=0.0):
-        super().__init__()
-        self.name = "ResetChannel"
-        self.target_qubits = (q,)
-        self.coefficients = (p0, p1)
-        self.init_args = [q]
+        import numpy as np
+
+        if p0 < 0:
+            raise_error(ValueError, "Invalid p0 ({p0} < 0).")
+        if p1 < 0:
+            raise_error(ValueError, "Invalid p1 ({p1} < 0).")
+        if p0 + p1 > 1 + PRECISION_TOL:
+            raise_error(ValueError, f"Invalid probabilities (p0 + p1 = {p0+p1} > 1).")
+
+        operators = [
+            sqrt(p0) * np.array([[1, 0], [0, 0]]),
+            sqrt(p0) * np.array([[0, 1], [0, 0]]),
+            sqrt(p1) * np.array([[0, 0], [1, 0]]),
+            sqrt(p1) * np.array([[0, 0], [0, 1]]),
+        ]
+
+        if p0 + p1 < 1:
+            operators.append(sqrt(np.abs(1 - p0 - p1)) * np.eye(2))
+
+        operators = list(zip([(q,)] * len(operators), operators))
+        super().__init__(ops=operators)
         self.init_kwargs = {"p0": p0, "p1": p1}
+        self.name = "ResetChannel"
 
     def apply_density_matrix(self, backend, state, nqubits):
         return backend.reset_error_density_matrix(self, state, nqubits)
