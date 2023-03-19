@@ -30,7 +30,7 @@ and $R^{\dagger}(\theta_{i,j,k}) = RX(-\theta_i) RY(-\theta_j) RZ(-\theta_k)$:
 
 ## How to use the QCNN class
 For more details on the QuantumCNN class, please refer to the documentation. Here we recall some of the necessary arguments when instantiating a QuantumCNN object:
-- `nqubits` (int): number of quantum bits. It should be larger than 2 for the model to make sense. 
+- `nqubits` (int): number of quantum bits. It should be larger than 2 for the model to make sense.
 - `nlayers` (int): number of layers of the QCNN variational ansatz.
 - `nclasses` (int): number of classes of the training set (default=2).
 - `params`: list to initialise the variational parameters (default=None).
@@ -106,4 +106,4 @@ test.Accuracy(labels,predictions)
 ```
 ![result](images/result_confusion_matrix.PNG)
 
-In this example, we achieved an accuracy of 0.925. 
+In this example, we achieved an accuracy of 0.925.
