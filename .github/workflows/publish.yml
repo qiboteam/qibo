@@ -31,7 +31,8 @@ jobs:
     uses: qiboteam/workflows/.github/workflows/deploy-ghpages-latest-stable.yml@main
     with:
       python-version: 3.9
-      package-manager: "pip"
-      dependency-path: "**/setup.py"
+      package-manager: "poetry"
+      dependency-path: "**/poetry.lock"
       trigger-label: "${{needs.evaluate-label.outputs.label}}"
       project: qibo
+      poetry-extras: --with docs

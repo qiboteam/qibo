@@ -67,10 +67,8 @@ def entropy(state, base: float = 2, validate: bool = False):
         ent = 0.0
     else:
         if validate:
-            hermitian = (
-                True
-                if np.linalg.norm(np.transpose(np.conj(state)) - state) <= PRECISION_TOL
-                else False
+            hermitian = bool(
+                np.linalg.norm(np.transpose(np.conj(state)) - state) <= PRECISION_TOL
             )
             eigenvalues, _ = (
                 np.linalg.eigh(state) if hermitian else np.linalg.eig(state)
@@ -100,9 +98,9 @@ def trace_distance(state, target, validate: bool = False):
     """Trace distance between two quantum states, :math:`\\rho` and :math:`\\sigma`:
 
     .. math::
-        T(\\rho, \\sigma) = \\frac{1}{2} \\, ||\\rho - \\sigma||_{1} = \\frac{1}{2} \\, \\text{Tr}\\left[ \\sqrt{(\\rho - \\sigma)^{\\dagger}(\\rho - \\sigma)} \\right] \\, ,
+        T(\\rho, \\sigma) = \\frac{1}{2} \\, \\|\\rho - \\sigma\\|_{1} = \\frac{1}{2} \\, \\text{Tr}\\left[ \\sqrt{(\\rho - \\sigma)^{\\dagger}(\\rho - \\sigma)} \\right] \\, ,
 
-    where :math:`||\\cdot||_{1}` is the Schatten 1-norm.
+    where :math:`\\|\\cdot\\|_{1}` is the Schatten 1-norm.
 
     Args:
         state: state vector or density matrix.
@@ -124,7 +122,8 @@ def trace_distance(state, target, validate: bool = False):
     if (len(state.shape) >= 3) or (len(state) == 0):
         raise_error(
             TypeError,
-            f"Both objects must have dims either (k,) or (k,l), but have dims {state.shape} and {target.shape}",
+            "Both objects must have dims either (k,) or (k,l), "
+            + f"but have dims {state.shape} and {target.shape}",
         )
 
     if len(state.shape) == 1:
@@ -133,11 +132,9 @@ def trace_distance(state, target, validate: bool = False):
 
     difference = state - target
     if validate:
-        hermitian = (
-            True
-            if np.linalg.norm(np.transpose(np.conj(difference)) - difference)
+        hermitian = bool(
+            np.linalg.norm(np.transpose(np.conj(difference)) - difference)
             <= PRECISION_TOL
-            else False
         )
         eigenvalues, _ = (
             np.linalg.eigh(difference) if hermitian else np.linalg.eig(difference)
@@ -152,7 +149,7 @@ def hilbert_schmidt_distance(state, target):
     """Hilbert-Schmidt distance between two quantum states:
 
     .. math::
-        <\\rho \\, , \\, \\sigma>_{\\text{HS}} = \\text{Tr}\\left[(\\rho - \\sigma)^{2}\\right]
+        <\\rho \\, , \\, \\sigma>_{\\text{HS}} = \\text{Tr}\\left((\\rho - \\sigma)^{2}\\right)
 
     Args:
         state: state vector or density matrix.
@@ -172,7 +169,8 @@ def hilbert_schmidt_distance(state, target):
     if (len(state.shape) >= 3) or (len(state) == 0):
         raise_error(
             TypeError,
-            f"Both objects must have dims either (k,) or (k,l), but have dims {state.shape} and {target.shape}",
+            "Both objects must have dims either (k,) or (k,l), "
+            + f"but have dims {state.shape} and {target.shape}",
         )
 
     if len(state.shape) == 1:
@@ -188,12 +186,14 @@ def fidelity(state, target, validate: bool = False):
     .. math::
         F(\\rho, \\sigma) = \\text{Tr}^{2}\\left( \\sqrt{\\sqrt{\\sigma} \\, \\rho^{\\dagger} \\, \\sqrt{\\sigma}} \\right) = \\text{Tr}(\\rho \\, \\sigma)
 
-    where the last equality holds because the ``target`` state :math:`\\sigma` is assumed to be pure.
+    where the last equality holds because the ``target`` state
+    :math:`\\sigma` is assumed to be pure.
 
     Args:
         state: state vector or density matrix.
         target: state vector or density matrix.
-        validate (bool, optional): if True, checks if one of the input states is pure. Default: False.
+        validate (bool, optional): if ``True``, checks if one of the
+            input states is pure. Default is ``False``.
 
     Returns:
         float: Fidelity between state :math:`\\rho` and target :math:`\\sigma`.
@@ -209,7 +209,8 @@ def fidelity(state, target, validate: bool = False):
     if len(state.shape) >= 3 or len(state.shape) == 0:
         raise_error(
             TypeError,
-            f"Both objects must have dims either (k,) or (k,l), but have dims {state.shape} and {target.shape}",
+            "Both objects must have dims either (k,) or (k,l), "
+            + f"but have dims {state.shape} and {target.shape}",
         )
 
     if validate:
@@ -223,7 +224,8 @@ def fidelity(state, target, validate: bool = False):
         ):
             raise_error(
                 ValueError,
-                f"Neither state is pure. Purity state: {purity_state} , Purity target: {purity_target}.",
+                f"Neither state is pure. Purity state: {purity_state} , "
+                + f"Purity target: {purity_target}.",
             )
 
     if len(state.shape) == 1 and len(target.shape) == 1:
@@ -244,11 +246,12 @@ def process_fidelity(channel, target=None, validate: bool = False):
         channel: quantum channel.
         target (optional): quantum channel. If None, target is the Identity channel.
             Default: ``None``.
-        validate (bool, optional): if True, checks if one of the input channels
-            is unitary. Default: ``False``.
+        validate (bool, optional): if True, checks if one of the
+            input channels is unitary. Default: ``False``.
 
     Returns:
-        float: Process fidelity between channels :math:`\\mathcal{E}` and target :math:`\\mathcal{U}`.
+        float: Process fidelity between channels :math:`\\mathcal{E}`
+            and target :math:`\\mathcal{U}`.
 
     """
 
@@ -266,21 +269,19 @@ def process_fidelity(channel, target=None, validate: bool = False):
             np.dot(np.conj(np.transpose(channel)), channel) - np.eye(d**2)
         )
         if target is None and norm_channel > PRECISION_TOL:
-            raise_error(TypeError, f"Channel is not unitary and Target is None.")
+            raise_error(TypeError, "Channel is not unitary and Target is None.")
         if target is not None:
             norm_target = np.linalg.norm(
                 np.dot(np.conj(np.transpose(target)), target) - np.eye(d**2)
             )
             if (norm_channel > PRECISION_TOL) and (norm_target > PRECISION_TOL):
-                raise_error(TypeError, f"Neither channel is unitary.")
+                raise_error(TypeError, "Neither channel is unitary.")
 
     if target is None:
         # With no target, return process fidelity with Identity channel
         return np.real(np.trace(channel)) / d**2
-    else:
-        return (
-            np.real(np.trace(np.dot(np.conj(np.transpose(channel)), target))) / d**2
-        )
+
+    return np.real(np.trace(np.dot(np.conj(np.transpose(channel)), target))) / d**2
 
 
 def average_gate_fidelity(channel, target=None):
@@ -289,17 +290,21 @@ def average_gate_fidelity(channel, target=None):
     .. math::
         F_{\\text{avg}}(\\mathcal{E}, \\mathcal{U}) = \\frac{d \\, F_{pro}(\\mathcal{E}, \\mathcal{U}) + 1}{d + 1}
 
-    where :math:`d` is the dimension of the channels and :math:`F_{pro}(\\mathcal{E}, \\mathcal{U})` is the
-    :meth:`~qibo.metrics.process_fidelily` of channel :math:`\\mathcal{E}` with respect to the unitary
+    where :math:`d` is the dimension of the channels and
+    :math:`F_{pro}(\\mathcal{E}, \\mathcal{U})` is the
+    :meth:`~qibo.metrics.process_fidelily` of channel
+    :math:`\\mathcal{E}` with respect to the unitary
     channel :math:`\\mathcal{U}`.
 
     Args:
         channel: quantum channel :math:`\\mathcal{E}`.
-        target (optional): quantum channel :math:`\\mathcal{U}`. If ``None``,
-            target is the Identity channel. Default: ``None``.
+        target (optional): quantum channel :math:`\\mathcal{U}`.
+            If ``None``, target is the Identity channel.
+            Default is ``None``.
 
     Returns:
-        float: Process fidelity between channel :math:`\\mathcal{E}` and target unitary channel :math:`\\mathcal{U}`.
+        float: Process fidelity between channel :math:`\\mathcal{E}`
+            and target unitary channel :math:`\\mathcal{U}`.
 
     """
 
@@ -313,17 +318,17 @@ def gate_error(channel, target=None):
 
     .. math::
         E(\\mathcal{E}, \\mathcal{U}) = 1 - F_{\\text{avg}}(\\mathcal{E}, \\mathcal{U}) \\, ,
+
     where :math:`F_{\\text{avg}}(\\mathcal{E}, \\mathcal{U})` is the ``average_gate_fidelity()``
     between channel :math:`\\mathcal{E}` and target :math:`\\mathcal{U}`.
 
     Args:
         channel: quantum channel :math:`\\mathcal{E}`.
         target (optional): quantum channel :math:`\\mathcal{U}`. If ``None``,
-            target is the Identity channel. Default: ``None``.
+            target is the Identity channel. Default is ``None``.
 
     Returns:
         float: Gate error between :math:`\\mathcal{E}` and :math:`\\mathcal{U}`.
-
     """
 
     return 1 - average_gate_fidelity(channel, target)

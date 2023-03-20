@@ -995,19 +995,23 @@ Here is an example on how to use a noise model:
 
 .. testcode::
 
+      import numpy as np
       from qibo import models, gates
       from qibo.noise import NoiseModel, PauliError
 
-      # Build specific noise model with 2 quantum errors:
+      # Build specific noise model with 3 quantum errors:
       # - Pauli error on H only for qubit 1.
       # - Pauli error on CNOT for all the qubits.
+      # - Pauli error on RX(pi/2) for qubit 0.
       noise = NoiseModel()
       noise.add(PauliError(px = 0.5), gates.H, 1)
       noise.add(PauliError(py = 0.5), gates.CNOT)
+      is_sqrt_x = (lambda g: np.pi/2 in g.parameters)
+      noise.add(PauliError(px=0.5), gates.RX, qubits=0, condition=is_sqrt_x)
 
       # Generate noiseless circuit.
       c = models.Circuit(2)
-      c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
+      c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1), gates.RX(0, np.pi/2),  gates.RX(0, 3*np.pi/2), gates.RX(1, np.pi/2)])
 
       # Apply noise to the circuit according to the noise model.
       noisy_c = noise.apply(c)
@@ -1023,6 +1027,10 @@ The noisy circuit defined above will be equivalent to the following circuit:
       noisy_c2.add(gates.CNOT(0, 1))
       noisy_c2.add(gates.PauliNoiseChannel(0, py=0.5))
       noisy_c2.add(gates.PauliNoiseChannel(1, py=0.5))
+      noisy_c2.add(gates.RX(0, np.pi/2))
+      noisy_c2.add(gates.PauliNoiseChannel(0, px=0.5))
+      noisy_c2.add(gates.RX(0, 3*np.pi/2))
+      noisy_c2.add(gates.RX(1, np.pi/2))
 
 
 The :class:`qibo.noise.NoiseModel` class supports also density matrices,
@@ -1112,6 +1120,71 @@ Similarly to ``p0``, ``p1`` can be a single float number or a dictionary and
 can be used both in :meth:`qibo.states.CircuitResult.apply_bitflips`
 and the measurement gate. If ``p1`` is not specified the value of ``p0`` will
 be used for both errors.
+
+.. _noise-hardware-example:
+
+Simulating quantum hardware
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Qibo can perform a simulation of a real quantum computer using the :meth:`qibo.noise.NoiseModel.composite` method of the :class:`qibo.noise.NoiseModel` class. This is possible by passing the circuit instance that we want to simulate and the noise channels' parameters as a dictionary.
+In this model, the user must set the relaxation times ``t1`` and ``t2`` for each qubit, an approximated `gate time` and `depolarizing error` for each one-qubit gate and two-qubits gate and bitflips probabilities for each qubit which is measured.
+
+.. testcode::
+
+      from qibo import gates, models
+      from qibo.noise import NoiseModel
+
+      c = models.Circuit(2,density_matrix=True)
+      c.add([gates.H(0), gates.X(1) ,gates.Z(0), gates.X(0), gates.CNOT(0,1),
+         gates.CNOT(1, 0),gates.X(1),gates.Z(1), gates.M(0,1)])
+
+      print("raw circuit:")
+      print(c.draw())
+
+      par = {"t1" : (250*1e-06, 240*1e-06),
+             "t2" : (150*1e-06, 160*1e-06),
+             "gate_time" : (200*1e-9, 400*1e-9),
+             "excited_population" : 0,
+             "depolarizing_error" : (4.000e-4, 1.500e-4),
+             "bitflips_error" : ([0.022, 0.015], [0.034, 0.041]),
+             "idle_qubits" : 1
+            }
+      noise= NoiseModel()
+      noise.composite(par)
+      noisy_circ=noise.apply(c)
+
+      print("noisy circuit:")
+      print(noisy_circ.draw())
+
+.. testoutput::
+   :hide:
+
+   ...
+
+``noisy_circ`` is the new circuit containing the error gate channels.
+
+It is possible to learn the parameters of the noise model that best describe a frequency distribution obtained by running a circuit on quantum hardware. To do this,
+assuming we have a ``result`` object after running a circuit with a certain number of shots,
+
+.. testcode::
+
+      noise= NoiseModel()
+      params = {"idle_qubits" : True}
+      noise.composite(params)
+
+      result =  noisy_circ(nshots=1000)
+
+      noise.noise_model.fit(result)
+
+      print(noise.noise_model.params)
+      print(noise.noise_model.hellinger)
+
+.. testoutput::
+   :hide:
+
+   ...
+
+where ``noise.params`` is a dictionary with the parameters obatined after the optimization and ``noise.hellinger`` is the corresponding Hellinger fidelity.
 
 
 How to perform error mitigation?

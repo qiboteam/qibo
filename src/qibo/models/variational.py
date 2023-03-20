@@ -167,7 +167,6 @@ class AAVQE:
         bounds_tolerance=1e-7,
         time_tolerance=1e-7,
     ):
-
         if nsteps <= 0:  # pragma: no cover
             raise_error(
                 ValueError,

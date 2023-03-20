@@ -85,6 +85,11 @@ class NumpyBackend(Backend):
         state[0, 0] = 1
         return state
 
+    def identity_density_matrix(self, nqubits):
+        state = self.np.eye(2**nqubits, dtype=self.dtype)
+        state /= 2**nqubits
+        return state
+
     def plus_state(self, nqubits):
         state = self.np.ones(2**nqubits, dtype=self.dtype)
         state /= self.np.sqrt(2**nqubits)
@@ -310,7 +315,7 @@ class NumpyBackend(Backend):
         state = self.cast(state)
         shape = state.shape
         q = gate.target_qubits[0]
-        p0, p1 = gate.coefficients[:2]
+        p0, p1 = gate.init_kwargs["p0"], gate.init_kwargs["p1"]
         trace = self.partial_trace_density_matrix(state, (q,), nqubits)
         trace = self.np.reshape(trace, 2 * (nqubits - 1) * (2,))
         zero = self.zero_density_matrix(1)
@@ -328,9 +333,57 @@ class NumpyBackend(Backend):
         state = self.apply_gate(gate, state.ravel(), 2 * nqubits)
         return self.np.reshape(state, shape)
 
+    def depolarizing_error_density_matrix(self, gate, state, nqubits):
+        state = self.cast(state)
+        shape = state.shape
+        q = gate.target_qubits
+        lam = gate.init_kwargs["lam"]
+        trace = self.partial_trace_density_matrix(state, q, nqubits)
+        trace = self.np.reshape(trace, 2 * (nqubits - len(q)) * (2,))
+        identity = self.identity_density_matrix(len(q))
+        identity = self.np.reshape(identity, 2 * len(q) * (2,))
+        identity = self.np.tensordot(trace, identity, axes=0)
+        qubits = list(range(nqubits))
+        for j in q:
+            qubits.pop(qubits.index(j))
+        qubits.sort()
+        qubits += list(q)
+        qubit_1 = list(range(nqubits - len(q))) + list(
+            range(2 * (nqubits - len(q)), 2 * nqubits - len(q))
+        )
+        qubit_2 = list(range(nqubits - len(q), 2 * (nqubits - len(q)))) + list(
+            range(2 * nqubits - len(q), 2 * nqubits)
+        )
+        qs = [qubit_1, qubit_2]
+        order = []
+        for qj in qs:
+            qj = [qj[qubits.index(i)] for i in range(len(qubits))]
+            order += qj
+        identity = self.np.reshape(self.np.transpose(identity, order), shape)
+        state = (1 - lam) * state + lam * identity
+        return state
+
     def execute_circuit(
         self, circuit, initial_state=None, nshots=None, return_array=False
     ):
+        if isinstance(initial_state, type(circuit)):
+            if not initial_state.density_matrix == circuit.density_matrix:
+                raise_error(
+                    ValueError,
+                    f"""Cannot set circuit with density_matrix {initial_state.density_matrix} as
+                      initial state for circuit with density_matrix {circuit.density_matrix}.""",
+                )
+            elif (
+                not initial_state.accelerators == circuit.accelerators
+            ):  # pragma: no cover
+                raise_error(
+                    ValueError,
+                    f"""Cannot set circuit with accelerators {initial_state.density_matrix} as
+                      initial state for circuit with accelerators {circuit.density_matrix}.""",
+                )
+            else:
+                return self.execute_circuit(initial_state + circuit, None, nshots)
+
         if circuit.repeated_execution:
             return self.execute_circuit_repeated(circuit, initial_state, nshots)
 
@@ -396,9 +449,10 @@ class NumpyBackend(Backend):
 
             else:
                 if circuit.accelerators:  # pragma: no cover
+                    # pylint: disable=E1111
                     state = self.execute_distributed_circuit(
                         circuit, initial_state, return_array=True
-                    )  # pylint: disable=E1111
+                    )
                 else:
                     if initial_state is None:
                         state = self.zero_state(nqubits)
@@ -458,7 +512,7 @@ class NumpyBackend(Backend):
         for i in np.nonzero(state)[0]:
             b = bin(i)[2:].zfill(nqubits)
             if np.abs(state[i]) >= cutoff:
-                x = round(state[i], decimals)
+                x = np.round(state[i], decimals)
                 terms.append(f"{x}|{b}>")
             if len(terms) >= max_terms:
                 terms.append("...")
@@ -475,7 +529,7 @@ class NumpyBackend(Backend):
             bi = bin(i)[2:].zfill(nqubits)
             bj = bin(j)[2:].zfill(nqubits)
             if np.abs(state[i, j]) >= cutoff:
-                x = round(state[i, j], decimals)
+                x = np.round(state[i, j], decimals)
                 terms.append(f"{x}|{bi}><{bj}|")
             if len(terms) >= max_terms:
                 terms.append("...")

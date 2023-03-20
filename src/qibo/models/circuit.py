@@ -1,4 +1,5 @@
 import collections
+import copy
 from typing import Dict, List, Tuple, Union
 
 import numpy as np
@@ -107,6 +108,25 @@ class Circuit:
 
     Args:
         nqubits (int): Total number of qubits in the circuit.
+        init_kwargs (dict): a dictionary with the following keys
+
+            - *nqubits*
+            - *accelerators*
+            - *density_matrix*.
+
+        queue (_Queue): List that holds the queue of gates of a circuit.
+        parametrized_gates (_ParametrizedGates): List of parametric gates.
+        trainable_gates (_ParametrizedGates): List of trainable gates.
+        measurements (list): List of non-collapsible measurements
+        _final_state (CircuitResult): Final state after full simulation of the circuit
+        compiled (CompiledExecutor): Circuit executor. Defaults to `None`.
+        repeated_execution (bool): If `True`, the circuit would be re-executed when sampling. Defaults to `False`.
+        density_matrix (bool): If `True`, the circuit would evolve density matrices. Defaults to `False`.
+        accelerators (dict): Dictionary that maps device names to the number of times each device will be used. Defaults to `None`.
+        ndevices (int): Total number of devices. Defaults to `None`.
+        nglobal (int): Base two logarithm of the number of devices. Defaults to `None`.
+        nlocal (int): Total number of available qubits in each device. Defaults to `None`.
+        queues (DistributedQueues): Gate queues for each accelerator device. Defaults to `None`.
     """
 
     def __init__(self, nqubits, accelerators=None, density_matrix=False):
@@ -141,7 +161,6 @@ class Circuit:
         # for distributed circuits
         self.accelerators = accelerators
         self.ndevices = None
-        self.nglobal = None
         self.nglobal = None
         self.nlocal = None
         self.queues = None
@@ -332,8 +351,6 @@ class Circuit:
         Returns:
             The copied circuit object.
         """
-        import copy
-
         if deep:
             new_circuit = self.__class__(**self.init_kwargs)
             for gate in self.queue:
@@ -343,14 +360,7 @@ class Circuit:
                         NotImplementedError,
                         "Cannot create deep copy of fused circuit.",
                     )
-
-                new_gate = copy.copy(gate)
-                new_circuit.queue.append(new_gate)
-                if isinstance(gate, gates.ParametrizedGate):
-                    new_circuit.parametrized_gates.append(new_gate)
-                    if gate.trainable:
-                        new_circuit.trainable_gates.append(new_gate)
-            new_circuit.measurements = list(self.measurements)
+                new_circuit.add(copy.copy(gate))
         else:
             if self.accelerators:  # pragma: no cover
                 raise_error(
@@ -358,8 +368,9 @@ class Circuit:
                     "Non-deep copy is not allowed for distributed "
                     "circuits because they modify gate objects.",
                 )
-            new_circuit = self._shallow_copy()
-            new_circuit.queue = copy.copy(self.queue)
+            new_circuit = self.__class__(**self.init_kwargs)
+            for gate in self.queue:
+                new_circuit.add(gate)
         return new_circuit
 
     def invert(self):
@@ -372,6 +383,8 @@ class Circuit:
         Returns:
             The circuit inverse.
         """
+        from qibo.gates import ParametrizedGate
+
         skip_measurements = True
         measurements = []
         new_circuit = self.__class__(**self.init_kwargs)
@@ -379,7 +392,10 @@ class Circuit:
             if isinstance(gate, gates.M) and skip_measurements:
                 measurements.append(gate)
             else:
-                new_circuit.add(gate.dagger())
+                new_gate = gate.dagger()
+                if isinstance(gate, ParametrizedGate):
+                    new_gate.trainable = gate.trainable
+                new_circuit.add(new_gate)
                 skip_measurements = False
         new_circuit.add(measurements[::-1])
         return new_circuit
@@ -559,8 +575,9 @@ class Circuit:
                         "".format(gate.target_qubits, self.nqubits),
                     )
 
-            self.queue.append(gate)
             if isinstance(gate, gates.M):
+                self.add(gate.basis)
+                self.queue.append(gate)
                 if gate.register_name is None:
                     # add default register name
                     nreg = self.queue.nmeasurements - 1
@@ -581,6 +598,7 @@ class Circuit:
                 return gate.result
 
             else:
+                self.queue.append(gate)
                 for measurement in list(self.measurements):
                     if set(measurement.qubits) & set(gate.qubits):
                         measurement.collapse = True
@@ -966,16 +984,16 @@ class Circuit:
     def execute(self, initial_state=None, nshots=None):
         """Executes the circuit. Exact implementation depends on the backend.
 
-        See :meth:`qibo.core.circuit.Circuit.execute` for more
-        details.
+        Args:
+            initial_state (`np.ndarray` or :class:`qibo.models.circuit.Circuit`): Initial configuration.
+                Can be specified by the setting the state vector using an array or a circuit. If ``None``
+                the initial state is ``|000..00>``.
+            nshots (int): Number of shots.
         """
         if self.compiled:
-            state = self.compiled.executor(
-                initial_state, nshots
-            )  # pylint: disable=E1101
-            self._final_state = self.compiled.result(
-                state, nshots
-            )  # pylint: disable=E1101
+            # pylint: disable=E1101
+            state = self.compiled.executor(initial_state, nshots)
+            self._final_state = self.compiled.result(state, nshots)
             return self._final_state
         else:
             from qibo.backends import GlobalBackend

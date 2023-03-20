@@ -614,6 +614,13 @@ Pauli noise channel
     :members:
     :member-order: bysource
 
+Generalized Pauli noise channel
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.gates.GeneralizedPauliNoiseChannel
+    :members:
+    :member-order: bysource
+
 Depolarizing channel
 ^^^^^^^^^^^^^^^^^^^^
 
@@ -621,17 +628,24 @@ Depolarizing channel
     :members:
     :member-order: bysource
 
-Reset channel
-^^^^^^^^^^^^^
-
-.. autoclass:: qibo.gates.ResetChannel
-    :members:
-    :member-order: bysource
-
 Thermal relaxation channel
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: qibo.gates.ThermalRelaxationChannel
+    :members:
+    :member-order: bysource
+
+Readout error channel
+^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.gates.ReadoutErrorChannel
+    :members:
+    :member-order: bysource
+
+Reset channel
+^^^^^^^^^^^^^
+
+.. autoclass:: qibo.gates.ResetChannel
     :members:
     :member-order: bysource
 
@@ -656,11 +670,19 @@ Quantum errors
 
 The quantum errors available to build a noise model are the following:
 
-.. autoclass:: qibo.noise.CustomError
+.. autoclass:: qibo.noise.KrausError
+    :members:
+    :member-order: bysource
+
+.. autoclass:: qibo.noise.UnitaryError
     :members:
     :member-order: bysource
 
 .. autoclass:: qibo.noise.PauliError
+    :members:
+    :member-order: bysource
+
+.. autoclass:: qibo.noise.GeneralizedPauliError
     :members:
     :member-order: bysource
 
@@ -672,17 +694,25 @@ The quantum errors available to build a noise model are the following:
     :members:
     :member-order: bysource
 
+.. autoclass:: qibo.noise.ReadoutErrorChannel
+    :members:
+    :member-order: bysource
+
 .. autoclass:: qibo.noise.ResetError
     :members:
     :member-order: bysource
 
-.. autoclass:: qibo.noise.UnitaryError
+.. autoclass:: qibo.noise.CustomError
     :members:
     :member-order: bysource
 
-.. autoclass:: qibo.noise.KrausError
-    :members:
-    :member-order: bysource
+
+Realistic noise model
+^^^^^^^^^^^^^^^^^^^^^
+
+In Qibo, it is possible to build a realistic noise model of a real quantum computer by using the :meth:`qibo.noise.NoiseModel.composite()` method. The noise model is built using a combination of the :class:`qibo.gates.ThermalRelaxationChannel` and :class:`qibo.gates.DepolarizingChannel` channels. After each gate of the original circuit, the function applies a depolarizing and a thermal relaxation channel. At the end of the circuit, if the qubit is measured, bitflips errors are set. Moreover, the model handles idle qubits by applying a thermal relaxation channel for the duration of the idle-time.
+
+For more information on the :meth:`qibo.noise.NoiseModel.composite()` method, see the example on :ref:`Simulating quantum hardware <noise-hardware-example>`.
 
 _______________________
 
@@ -1011,18 +1041,6 @@ Basis
 Set of functions related to basis and basis transformations.
 
 
-Vectorization
-"""""""""""""
-
-.. autofunction:: qibo.quantum_info.vectorization
-
-
-Unvectorization
-"""""""""""""""
-
-.. autofunction:: qibo.quantum_info.unvectorization
-
-
 Pauli basis
 """""""""""
 
@@ -1150,9 +1168,15 @@ Random Clifford
 
 
 Random Pauli
-""""""""""""""""""""""
+""""""""""""
 
 .. autofunction:: qibo.quantum_info.random_pauli
+
+
+Random Pauli Hamiltonian
+""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_pauli_hamiltonian
 
 
 Random stochastic matrix
@@ -1160,6 +1184,145 @@ Random stochastic matrix
 
 .. autofunction:: qibo.quantum_info.random_stochastic_matrix
 
+
+Superoperator Transformations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Functions used to convert superoperators among their possible representations.
+For more in-depth theoretical description of the representations and transformations,
+we direct the reader to `Wood, Biamonte, and Cory, Quant. Inf. Comp. 15, 0579-0811 (2015) <https://arxiv.org/abs/1111.6950>`_.
+
+
+Vectorization
+"""""""""""""
+
+.. autofunction:: qibo.quantum_info.vectorization
+
+.. note::
+    Due to ``numpy`` limitations on handling transposition of tensors,
+    this function will not work when the number of qubits :math:`n`
+    is such that :math:`n > 16`.
+
+
+Unvectorization
+"""""""""""""""
+
+.. autofunction:: qibo.quantum_info.unvectorization
+
+.. note::
+    Due to ``numpy`` limitations on handling transposition of tensors,
+    this function will not work when the number of qubits :math:`n`
+    is such that :math:`n > 16`.
+
+
+Liouville to Choi
+"""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.liouville_to_choi
+
+
+Choi to Liouville
+"""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.choi_to_liouville
+
+
+Choi to Kraus
+"""""""""""""
+
+.. autofunction:: qibo.quantum_info.superoperator_transformations.choi_to_kraus
+
+.. note::
+    Due to the spectral decomposition subroutine in this function, the resulting Kraus
+    operators :math:`\{K_{\alpha}\}_{\alpha}` might contain global phases. That
+    implies these operators are not exactly equal to the "true" Kraus operators
+    :math:`\{K_{\alpha}^{(\text{ideal})}\}_{\alpha}`. However, since these are
+    global phases, the operators' actions are the same, i.e.
+
+    .. math::
+        K_{\alpha} \, \rho \, K_{\alpha}^{\dagger} = K_{\alpha}^{\text{(ideal)}} \, \rho \,\, (K_{\alpha}^{\text{(ideal)}})^{\dagger} \,\,\,\,\, , \,\, \forall \, \alpha
+
+.. note::
+    User can set ``validate_CP=False`` in order to speed up execution by not checking if
+    input map ``choi_super_op`` is completely positive (CP) and Hermitian. However, that may
+    lead to erroneous outputs if ``choi_super_op`` is not guaranteed to be CP. We advise users
+    to either set this flag carefully or leave it in its default setting (``validate_CP=True``).
+
+
+Kraus to Choi
+"""""""""""""
+
+.. autofunction:: qibo.quantum_info.kraus_to_choi
+
+
+Kraus to Liouville
+""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.kraus_to_liouville
+
+
+Liouville to Kraus
+""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.liouville_to_kraus
+
+.. note::
+    Due to the spectral decomposition subroutine in this function, the resulting Kraus
+    operators :math:`\{K_{\alpha}\}_{\alpha}` might contain global phases. That
+    implies these operators are not exactly equal to the "true" Kraus operators
+    :math:`\{K_{\alpha}^{(\text{ideal})}\}_{\alpha}`. However, since these are
+    global phases, the operators' actions are the same, i.e.
+
+    .. math::
+        K_{\alpha} \, \rho \, K_{\alpha}^{\dagger} = K_{\alpha}^{\text{(ideal)}} \, \rho \,\, (K_{\alpha}^{\text{(ideal)}})^{\dagger} \,\,\,\,\, , \,\, \forall \, \alpha
+
+
+Pauli-Liouville to Liouville
+""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.pauli_to_liouville
+
+
+Liouville to Pauli-Liouville
+""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.liouville_to_pauli
+
+
+Pauli-Liouville to Choi
+"""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.pauli_to_choi
+
+
+Choi to Pauli-Liouville
+"""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.choi_to_pauli
+
+
+Pauli-Liouville to Kraus
+""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.pauli_to_kraus
+
+
+Kraus to Pauli-Liouville
+""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.kraus_to_pauli
+
+
+Kraus operators as probabilistic sum of unitaries
+"""""""""""""""""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.kraus_to_unitaries
+
+.. note::
+    It is not guaranteed that a good approximation will be found or that any
+    approximation will be found at all. This functions will find good solutions
+    for a limited set of operators. We leave to the user to decide how to
+    best use this function.
 
 Utility Functions
 ^^^^^^^^^^^^^^^^^

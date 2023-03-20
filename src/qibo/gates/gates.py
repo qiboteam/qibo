@@ -93,10 +93,12 @@ DRAW_LABELS = {
     "fswap": "fx",
     "ms": "MS",
     "PauliNoiseChannel": "PN",
+    "GeneralizedPauliNoiseChannel": "GPN",
     "KrausChannel": "K",
     "UnitaryChannel": "U",
     "ThermalRelaxationChannel": "TR",
     "DepolarizingChannel": "D",
+    "ReadoutErrorChannel": "RE",
     "ResetChannel": "R",
     "PartialTrace": "PT",
     "EntanglementEntropy": "EE",
@@ -215,6 +217,9 @@ class X(Gate):
         decomp_gates.extend(decomp_gates)
         return decomp_gates
 
+    def basis_rotation(self):
+        return H(self.target_qubits[0])
+
 
 class Y(Gate):
     """The Pauli Y gate.
@@ -228,6 +233,12 @@ class Y(Gate):
         self.name = "y"
         self.target_qubits = (q,)
         self.init_args = [q]
+
+    def basis_rotation(self):
+        from qibo import matrices
+
+        matrix = (matrices.Y + matrices.Z) / math.sqrt(2)
+        return Unitary(matrix, self.target_qubits[0], trainable=False)
 
 
 class Z(Gate):
@@ -251,6 +262,9 @@ class Z(Gate):
         else:
             gate = super().controlled_by(*q)
         return gate
+
+    def basis_rotation(self):
+        return None
 
 
 class S(Gate):
@@ -546,7 +560,7 @@ class GPI2(ParametrizedGate):
     Corresponds to the following unitary matrix
 
     .. math::
-        \\begin{pmatrix}
+        \\frac{1}{\\sqrt{2}} \\, \\begin{pmatrix}
         1 & -i e^{- i \\phi} \\\\
         -i e^{i \\phi} & 1 \\\\
         \\end{pmatrix}
@@ -1325,7 +1339,7 @@ class MS(ParametrizedGate):
     Corresponds to the following unitary matrix
 
     .. math::
-        \\begin{pmatrix}
+        \\frac{1}{\\sqrt{2}} \\, \\begin{pmatrix}
         1 & 0 & 0 & -i e^{-i( \\phi_0 +  \\phi_1)} \\\\
         0 & 1 & -i e^{-i( \\phi_0 -  \\phi_1)} \\\\
         0 & -i e^{i( \\phi_0 -  \\phi_1)} & 1 & 0 \\\\

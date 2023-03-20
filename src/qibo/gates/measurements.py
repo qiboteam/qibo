@@ -2,11 +2,12 @@ from typing import Dict, Optional, Tuple
 
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate
+from qibo.gates.gates import Z
 from qibo.states import MeasurementResult
 
 
 class M(Gate):
-    """The Measure Z gate.
+    """The measure gate.
 
     Args:
         *q (int): id numbers of the qubits to measure.
@@ -20,6 +21,12 @@ class M(Gate):
             performed. Can be used only for single shot measurements.
             If ``True`` the collapsed state vector is returned. If ``False``
             the measurement result is returned.
+        basis (:class:`qibo.gates.Gate`, list): Basis to measure.
+            Can be a qibo gate or a callable that accepts a qubit,
+            for example: ``lambda q: gates.RX(q, 0.2)``
+            or a list of these, if a different basis will be used for each
+            measurement qubit.
+            Default is Z.
         p0 (dict): Optional bitflip probability map. Can be:
             A dictionary that maps each measured qubit to the probability
             that it is flipped, a list or tuple that has the same length
@@ -37,6 +44,7 @@ class M(Gate):
         *q,
         register_name: Optional[str] = None,
         collapse: bool = False,
+        basis: Gate = Z,
         p0: Optional["ProbsType"] = None,
         p1: Optional["ProbsType"] = None,
     ):
@@ -69,6 +77,22 @@ class M(Gate):
         if p0 is None:
             p0 = p1
         self.bitflip_map = (self._get_bitflip_map(p0), self._get_bitflip_map(p1))
+
+        # list of gates that will be added to the circuit before the
+        # measurement, in order to rotate to the given basis
+        if not isinstance(basis, list):
+            basis = len(self.target_qubits) * [basis]
+        elif len(basis) != len(self.target_qubits):
+            raise_error(
+                ValueError,
+                f"Given basis list has length {len(basis)} while "
+                f"we are measuring {len(self.target_qubits)} qubits.",
+            )
+        self.basis = []
+        for qubit, basis_cls in zip(self.target_qubits, basis):
+            gate = basis_cls(qubit).basis_rotation()
+            if gate is not None:
+                self.basis.append(gate)
 
     @staticmethod
     def _get_bitflip_tuple(qubits: Tuple[int], probs: "ProbsType") -> Tuple[float]:

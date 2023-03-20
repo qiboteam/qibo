@@ -2,10 +2,11 @@
 name: Tests
 
 on:
+  workflow_dispatch:
   push:
+  merge_group:
   pull_request:
     types: [labeled]
-
 
 jobs:
   build:
@@ -13,44 +14,11 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: [3.7, 3.8, 3.9, '3.10']
-    runs-on: ${{ matrix.os }}
-    steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install package
-      run: |
-        python -m pip install --upgrade pip
-        pip install pytest-cov
-        pip install .[tests,docs]
-        pip install git+https://github.com/qiboteam/qibojit
-        pip install tensorflow
-    - name: Test with pylint
-      run: |
-        pip install pylint
-        pylint src/**/*.py -E -f colorized
-        pylint src/**/*.py --exit-zero -f colorized
-    - name: Test with pytest core
-      run: |
-        pytest src/qibo/tests/ --cov=qibo --cov-report=xml --pyargs qibo --durations=60
-    - name: Test documentation examples
-      if: startsWith(matrix.os, 'ubuntu')
-      run: |
-        sudo apt install pandoc
-        make -C doc doctest
-    - name: Test examples
-      if: startsWith(matrix.os, 'ubuntu') && matrix.python-version == '3.9'
-      run: |
-        OMP_NUM_THREADS=1 pytest examples/
-    - name: Upload coverage to Codecov
-      if: startsWith(matrix.os, 'ubuntu')
-      uses: codecov/codecov-action@v2
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        file: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: true
+        python-version: [ 3.8, 3.9, '3.10']
+    uses: qiboteam/workflows/.github/workflows/rules-poetry.yml@main
+    with:
+      os: ${{ matrix.os }}
+      python-version: ${{ matrix.python-version }}
+      doctests: ${{ matrix.os == 'ubuntu-latest'}}
+      poetry-extras: "--with tests,docs"
+    secrets: inherit

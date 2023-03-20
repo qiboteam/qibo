@@ -158,9 +158,9 @@ class SymbolicAdiabaticHamiltonian(BaseAdiabaticHamiltonian):
             self.trotter_circuit = TrotterCircuit(
                 self.groups, dt, self.nqubits, accelerators
             )
-        st = (
-            self.schedule(t / self.total_time) if t != 0 else 0
-        )  # pylint: disable=E1102
+        # pylint: disable=E1102
+        st = self.schedule(t / self.total_time) if t != 0 else 0
+        # pylint: enable=E1102
         coefficients = {self.h0: 1 - st, self.h1: st}
         self.trotter_circuit.set(dt, coefficients)
         return self.trotter_circuit.circuit
