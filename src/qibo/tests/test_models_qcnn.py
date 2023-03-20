@@ -19,9 +19,11 @@ def test_classifier_circuit2():
 
     qcnn = QuantumCNN(nqubits, nlayers, nclasses=2)  # , params=angles0)
 
-    angles = [0] + angles0
-
+    angles = [0] + angles0    
+    
     circuit = qcnn.Classifier_circuit(angles)
+    qcnn.set_circuit_params(angles, has_bias=True) #only to test line 209-210 in qcnn.py
+    
     # circuit = qcnn._circuit
     statevector = circuit(init_state).state()
     real_vector = get_real_vector2()
