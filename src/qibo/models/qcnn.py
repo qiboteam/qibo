@@ -19,6 +19,7 @@ class QuantumCNN:
             will be initialized to zero.
     Example:
         .. testcode::
+            import qibo
             from qibo.models.qcnn import QuantumCNN
             from qibo import gates, matrices
             from qibo.models import Circuit
@@ -26,9 +27,11 @@ class QuantumCNN:
             import numpy as np
             import random
 
+            qibo.set_backend("numpy")
             data = np.random.rand(16)
             data = data / np.linalg.norm(data)
-            labels = [[1], [-1]]
+            data = [data]
+            labels = [[1]]
             testbias = np.zeros(1)
             testangles = [random.uniform(0, 2 * np.pi) for i in range(21 * 2)]
             init_theta = np.concatenate((testbias, testangles))
