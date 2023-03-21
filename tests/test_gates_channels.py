@@ -29,8 +29,6 @@ def test_kraus_channel_errors(backend):
     a2 = np.sqrt(0.6) * matrices.Z
     with pytest.raises(ValueError):
         gates.KrausChannel([((0, 1), a1)])
-    with pytest.raises(NotImplementedError):
-        gates.ThermalRelaxationChannel(0, t1=0.5, t2=0.8, time=1.0).to_choi()
 
     test_superop = np.array(
         [
@@ -50,7 +48,7 @@ def test_kraus_channel_errors(backend):
     channel = gates.KrausChannel([((0,), a1), ((0,), a2)])
 
     backend.assert_allclose(
-        backend.calculate_norm(channel.to_superop(backend=backend) - test_superop)
+        backend.calculate_norm(channel.to_liouville(backend=backend) - test_superop)
         < PRECISION_TOL,
         True,
     )
@@ -70,7 +68,7 @@ def test_kraus_channel_errors(backend):
 
 def test_depolarizing_channel_errors():
     with pytest.raises(ValueError):
-        gate = gates.DepolarizingChannel(0, 1.5)
+        gates.DepolarizingChannel(0, 1.5)
 
 
 def test_controlled_by_channel_error():
@@ -217,6 +215,12 @@ def test_reset_channel(backend):
     backend.assert_allclose(final_rho, target_rho)
 
 
+@pytest.mark.parametrize("p0,p1", [(0, -0.1), (-0.1, 0), (0.5, 0.6), (0.8, 0.3)])
+def test_reset_channel_errors(p0, p1):
+    with pytest.raises(ValueError):
+        gates.ResetChannel(0, p0, p1)
+
+
 @pytest.mark.parametrize(
     "t1,t2,time,excpop", [(0.8, 0.5, 1.0, 0.4), (0.5, 0.8, 1.0, 0.4)]
 )
@@ -229,7 +233,11 @@ def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
     final_rho = gate.apply_density_matrix(backend, np.copy(initial_rho), 3)
 
     if t2 > t1:
-        p0, p1, exp = gate.coefficients
+        p0, p1, exp = (
+            gate.init_kwargs["p0"],
+            gate.init_kwargs["p1"],
+            gate.init_kwargs["exp_t2"],
+        )
         matrix = np.diag([1 - p1, p1, p0, 1 - p0])
         matrix[0, -1], matrix[-1, 0] = exp, exp
         matrix = matrix.reshape(4 * (2,))
@@ -238,7 +246,11 @@ def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
         target_rho = np.einsum("abcd,aJKcjk->bJKdjk", matrix, target_rho)
         target_rho = target_rho.reshape(initial_rho.shape)
     else:
-        p0, p1, pz = gate.coefficients
+        p0, p1, pz = (
+            gate.init_kwargs["p0"],
+            gate.init_kwargs["p1"],
+            gate.init_kwargs["pz"],
+        )
         mz = np.kron(np.array([[1, 0], [0, -1]]), np.eye(4))
         z_rho = mz.dot(initial_rho.dot(mz))
 

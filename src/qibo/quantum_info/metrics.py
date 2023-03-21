@@ -318,6 +318,7 @@ def gate_error(channel, target=None):
 
     .. math::
         E(\\mathcal{E}, \\mathcal{U}) = 1 - F_{\\text{avg}}(\\mathcal{E}, \\mathcal{U}) \\, ,
+
     where :math:`F_{\\text{avg}}(\\mathcal{E}, \\mathcal{U})` is the ``average_gate_fidelity()``
     between channel :math:`\\mathcal{E}` and target :math:`\\mathcal{U}`.
 

@@ -315,7 +315,7 @@ class NumpyBackend(Backend):
         state = self.cast(state)
         shape = state.shape
         q = gate.target_qubits[0]
-        p0, p1 = gate.coefficients[:2]
+        p0, p1 = gate.init_kwargs["p0"], gate.init_kwargs["p1"]
         trace = self.partial_trace_density_matrix(state, (q,), nqubits)
         trace = self.np.reshape(trace, 2 * (nqubits - 1) * (2,))
         zero = self.zero_density_matrix(1)

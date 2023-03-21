@@ -151,7 +151,6 @@ test_superop = np.array(
         [0.4 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.6 + 0.0j],
     ]
 )
-test_choi = np.reshape(test_superop, [2] * 4).swapaxes(0, 3).reshape([4, 4])
 test_non_CP = np.array(
     [
         [0.20031418, 0.37198771, 0.05642046, 0.37127765],
@@ -183,11 +182,17 @@ test_coefficients = np.array([1.002719, 0.65635444, 0.43548, 0.21124177])
 def test_liouville_to_choi(order):
     choi = liouville_to_choi(test_superop, order)
 
+    axes = [1, 2] if order == "row" else [0, 3]
+    test_choi = np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
+
     assert np.linalg.norm(choi - test_choi) < PRECISION_TOL, True
 
 
 @pytest.mark.parametrize("order", ["row", "column"])
 def test_choi_to_liouville(order):
+    axes = [1, 2] if order == "row" else [0, 3]
+    test_choi = np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
+
     liouville = choi_to_liouville(test_choi, order=order)
 
     assert np.linalg.norm(liouville - test_superop) < PRECISION_TOL, True
@@ -196,6 +201,9 @@ def test_choi_to_liouville(order):
 @pytest.mark.parametrize("validate_cp", [False, True])
 @pytest.mark.parametrize("order", ["row", "column"])
 def test_choi_to_kraus(order, validate_cp):
+    axes = [1, 2] if order == "row" else [0, 3]
+    test_choi = np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
+
     with pytest.raises(TypeError):
         choi_to_kraus(test_choi, str(PRECISION_TOL))
     with pytest.raises(ValueError):
@@ -242,6 +250,9 @@ def test_choi_to_kraus(order, validate_cp):
 def test_kraus_to_choi(order):
     choi = kraus_to_choi(test_kraus, order=order)
 
+    axes = [1, 2] if order == "row" else [0, 3]
+    test_choi = np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
+
     assert np.linalg.norm(choi - test_choi) < PRECISION_TOL, True
 
 
@@ -269,6 +280,110 @@ def test_liouville_to_kraus(order):
 
     assert np.linalg.norm(evolution_a0 - test_evolution_a0) < PRECISION_TOL, True
     assert np.linalg.norm(evolution_a1 - test_evolution_a1) < PRECISION_TOL, True
+
+
+a1 = np.sqrt(0.4) * matrices.X
+a2 = np.sqrt(0.6) * matrices.Z
+
+test_superop = np.array(
+    [
+        [0.6 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.4 + 0.0j],
+        [0.0 + 0.0j, -0.6 + 0.0j, 0.4 + 0.0j, 0.0 + 0.0j],
+        [0.0 + 0.0j, 0.4 + 0.0j, -0.6 + 0.0j, 0.0 + 0.0j],
+        [0.4 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.6 + 0.0j],
+    ]
+)
+test_pauli = np.diag([2.0, -0.4, -2.0, 0.4])
+
+
+@pytest.mark.parametrize("order", ["row", "column", "system"])
+@pytest.mark.parametrize("normalize", [False, True])
+def test_pauli_to_liouville(normalize, order):
+    with pytest.raises(ValueError):
+        pauli_to_liouville(test_pauli[:-1, :-1], normalize, order)
+
+    d = int(np.sqrt(test_superop.shape[0]))
+    aux = d**2 if normalize == False else d
+
+    super_op = pauli_to_liouville(test_pauli / aux, normalize, order)
+
+    assert np.linalg.norm(test_superop - super_op) < PRECISION_TOL, True
+
+
+@pytest.mark.parametrize("order", ["row", "column", "system"])
+@pytest.mark.parametrize("normalize", [False, True])
+def test_liouville_to_pauli(normalize, order):
+    with pytest.raises(ValueError):
+        liouville_to_pauli(test_superop[:-1, :-1], normalize, order)
+
+    d = int(np.sqrt(test_pauli.shape[0]))
+    aux = 1.0 if normalize == False else d
+
+    pauli_op = liouville_to_pauli(test_superop, normalize, order)
+
+    assert np.linalg.norm(test_pauli / aux - pauli_op) < PRECISION_TOL, True
+
+
+@pytest.mark.parametrize("order", ["row", "column"])
+@pytest.mark.parametrize("normalize", [False, True])
+def test_pauli_to_choi(normalize, order):
+    d = int(np.sqrt(test_pauli.shape[0]))
+    aux = d**2 if normalize == False else d
+
+    choi_super_op = pauli_to_choi(test_pauli / aux, normalize, order)
+
+    axes = [1, 2] if order == "row" else [0, 3]
+    test_choi = np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
+
+    assert np.linalg.norm(test_choi - choi_super_op) < PRECISION_TOL, True
+
+
+@pytest.mark.parametrize("order", ["row", "column"])
+@pytest.mark.parametrize("normalize", [False, True])
+def test_choi_to_pauli(normalize, order):
+    d = int(np.sqrt(test_pauli.shape[0]))
+    aux = 1 if normalize == False else d
+
+    axes = [1, 2] if order == "row" else [0, 3]
+    test_choi = np.reshape(test_superop * aux, [2] * 4).swapaxes(*axes).reshape([4, 4])
+
+    pauli_op = choi_to_pauli(test_choi, normalize, order)
+
+    assert np.linalg.norm(test_pauli - pauli_op) < PRECISION_TOL, True
+
+
+@pytest.mark.parametrize("order", ["row", "column"])
+@pytest.mark.parametrize("normalize", [False, True])
+def test_pauli_to_kraus(normalize, order):
+    d = int(np.sqrt(test_pauli.shape[0]))
+    aux = d**2 if normalize == False else d
+
+    kraus_ops, _ = pauli_to_kraus(test_pauli / aux, normalize, order=order)
+
+    a0 = kraus_ops[0]
+    a1 = kraus_ops[1]
+
+    state = random_density_matrix(2)
+
+    evolution_a0 = a0 @ state @ a0.T.conj()
+    evolution_a1 = a1 @ state @ a1.T.conj()
+
+    test_evolution_a0 = test_a0 @ state @ test_a0.T.conj()
+    test_evolution_a1 = test_a1 @ state @ test_a1.T.conj()
+
+    assert np.linalg.norm(evolution_a0 - test_evolution_a0) < 2 * PRECISION_TOL, True
+    assert np.linalg.norm(evolution_a1 - test_evolution_a1) < 2 * PRECISION_TOL, True
+
+
+@pytest.mark.parametrize("order", ["row", "column"])
+@pytest.mark.parametrize("normalize", [False, True])
+def test_kraus_to_pauli(normalize, order):
+    d = int(np.sqrt(test_pauli.shape[0]))
+    aux = 1.0 if normalize == False else d
+
+    pauli_op = kraus_to_pauli(test_kraus, normalize, order)
+
+    assert np.linalg.norm(test_pauli / aux - pauli_op) < PRECISION_TOL, True
 
 
 @pytest.mark.parametrize("order", ["row", "column"])
@@ -311,11 +426,16 @@ def test_reshuffling(order):
         _reshuffling(test_superop, "sustem")
     with pytest.raises(NotImplementedError):
         _reshuffling(test_superop, "system")
+    with pytest.raises(ValueError):
+        _reshuffling(test_superop[:-1, :-1], order)
 
     reshuffled = _reshuffling(test_superop, order)
     reshuffled = _reshuffling(reshuffled, order)
 
     assert np.linalg.norm(reshuffled - test_superop) < PRECISION_TOL, True
+
+    axes = [1, 2] if order == "row" else [0, 3]
+    test_choi = np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
 
     reshuffled = _reshuffling(test_choi, order)
     reshuffled = _reshuffling(reshuffled, order)
