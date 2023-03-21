@@ -10,6 +10,8 @@ def parameter_shift(
     parameter_index,
     initial_state=None,
     scale_factor=1,
+    nshots=None,
+    nruns=1,
 ):
     """In this method the parameter shift rule (PSR) is implemented.
     Given a circuit U and an observable H, the PSR allows to calculate the derivative
@@ -26,13 +28,23 @@ def parameter_shift(
     variational parameters we need to "free" this procedure from the x depencency.
     If the `scale_factor` is not provided, it is set equal to one and doesn't
     affect the calculation.
+    If the PSR is needed to be executed on a real quantum device, it is important
+    to set `nshots` to some integer value. This enables the execution on the
+    hardware by calling the proper methods.
 
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
         hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): target observable.
-        parameter_index (int): the index which identifies the target parameter in the circuit.get_parameters() list
+        if you want to execute on hardware, a symbolic hamiltonian must be provided
+        as follows (example with Pauli Z and `nqubits=1`): `SymbolicHamiltonian(np.prod([ Z(i) for i in range(1) ]))`.
+        parameter_index (int): the index which identifies the target parameter in the `circuit.get_parameters()` list.
         initial_state ((2**nqubits) vector): initial state on which the circuit acts (default None).
         scale_factor (float): parameter scale factor (default None).
+        nshots (int): number of shots if derivative is evaluated on hardware. If
+        `None`, the simulation mode is executed (default None).
+        nruns (int): number of times the derivative is evaluated on hardware for
+        a more stable evaluation. The final result is the mean of the values in this case
+        (default 1).
 
 
     Returns:
@@ -106,19 +118,49 @@ def parameter_shift(
     shifted[parameter_index] += s
     circuit.set_parameters(shifted)
 
-    forward = hamiltonian.expectation(
-        backend.execute_circuit(circuit=circuit, initial_state=initial_state).state()
-    )
+    forward = 0
+    backward = 0
 
-    # backward shift and evaluation
-    shifted[parameter_index] -= 2 * s
-    circuit.set_parameters(shifted)
+    if nshots == None:
+        forward = hamiltonian.expectation(
+            backend.execute_circuit(
+                circuit=circuit, initial_state=initial_state
+            ).state()
+        )
 
-    backward = hamiltonian.expectation(
-        backend.execute_circuit(circuit=circuit, initial_state=initial_state).state()
-    )
+        # backward shift and evaluation
+        shifted[parameter_index] -= 2 * s
+        circuit.set_parameters(shifted)
 
-    # restoring the original circuit
+        backward = hamiltonian.expectation(
+            backend.execute_circuit(
+                circuit=circuit, initial_state=initial_state
+            ).state()
+        )
+
+    else:
+        copied = shifted.copy()
+
+        for _ in range(nruns):
+            forward += backend.execute_circuit(
+                circuit=circuit, initial_state=initial_state, nshots=nshots
+            ).expectation_from_samples(hamiltonian)
+
+            # backward shift and evaluation
+            shifted[parameter_index] -= 2 * s
+            circuit.set_parameters(shifted)
+
+            backward += backend.execute_circuit(
+                circuit=circuit, initial_state=initial_state, nshots=nshots
+            ).expectation_from_samples(hamiltonian)
+
+            # restoring the original circuit
+            shifted = copied.copy()
+            circuit.set_parameters(copied)
+
+        forward /= nruns
+        backward /= nruns
+
     circuit.set_parameters(original)
 
     return generator_eigenval * (forward - backward) * scale_factor
