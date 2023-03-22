@@ -50,9 +50,6 @@ def test_pauli_basis(nqubits, normalize, vectorize, sparse, order):
         basis = pauli_basis(nqubits, normalize, vectorize, sparse, order)
 
         if vectorize and sparse:
-            # print(elements)
-            # print()
-            # print(basis[0])
             for elem_test, ind_test, elem, ind in zip(
                 elements, indexes, basis[0], basis[1]
             ):
