@@ -319,7 +319,7 @@ def test_liouville_to_pauli(normalize, order):
     d = int(np.sqrt(test_pauli.shape[0]))
     aux = 1.0 if normalize == False else d
 
-    pauli_op = liouville_to_pauli(test_superop, normalize, order)
+    pauli_op = liouville_to_pauli(test_superop, normalize=normalize, order=order)
 
     assert np.linalg.norm(test_pauli / aux - pauli_op) < PRECISION_TOL, True
 

@@ -613,6 +613,12 @@ def random_pauli_hamiltonian(
 
     U = comp_basis_to_pauli(nqubits, normalize=True)
 
+    print(U.shape)
+    print()
+    print(hamiltonian.shape)
+    print()
+    print(vectorization(hamiltonian).shape)
+
     hamiltonian = np.real(U @ vectorization(hamiltonian))
 
     return hamiltonian, eigenvalues

@@ -467,7 +467,7 @@ def pauli_to_liouville(pauli_op, normalize: bool = False, order: str = "row"):
 
     from qibo.quantum_info.basis import pauli_to_comp_basis
 
-    U_p2c = pauli_to_comp_basis(int(nqubits), normalize, order)
+    U_p2c = pauli_to_comp_basis(int(nqubits), normalize=normalize, order=order)
 
     return U_p2c @ pauli_op @ np.conj(np.transpose(U_p2c))
 
@@ -500,7 +500,7 @@ def liouville_to_pauli(super_op, normalize: bool = False, order: str = "row"):
 
     from qibo.quantum_info.basis import comp_basis_to_pauli
 
-    U_c2p = comp_basis_to_pauli(int(nqubits), normalize, order)
+    U_c2p = comp_basis_to_pauli(int(nqubits), normalize=normalize, order=order)
 
     return U_c2p @ super_op @ np.conj(np.transpose(U_c2p))
 
