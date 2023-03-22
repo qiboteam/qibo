@@ -20,6 +20,8 @@ def test_pauli_basis(nqubits, normalize, vectorize, sparse, order):
         pauli_basis(nqubits=1, normalize="True")
     with pytest.raises(TypeError):
         pauli_basis(nqubits=1, normalize=False, vectorize="True")
+    with pytest.raises(TypeError):
+        pauli_basis(nqubits=1, normalize=False, sparse="True")
     with pytest.raises(ValueError):
         pauli_basis(nqubits=1, normalize=False, vectorize=True, order=None)
 
