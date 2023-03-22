@@ -70,35 +70,24 @@ def pauli_basis(
 
     basis_single = [matrices.I, matrices.X, matrices.Y, matrices.Z]
 
-    if nqubits >= 2:
+    if nqubits > 1:
         basis_full = list(product(basis_single, repeat=nqubits))
-        basis, indexes = [], []
-        if vectorize and sparse:
-            for row in basis_full:
-                row = vectorization(reduce(np.kron, row), order=order)
-                row_indexes = list(np.flatnonzero(row))
-                indexes.append(row_indexes)
-                basis.append(row[row_indexes])
-                del row
-        elif vectorize and not sparse:
-            basis = [
-                vectorization(reduce(np.kron, row), order=order) for row in basis_full
-            ]
-        else:
-            basis = [reduce(np.kron, row) for row in basis]
+        basis_full = [reduce(np.kron, row) for row in basis_full]
     else:
-        if vectorize and sparse:
-            basis, indexes = [], []
-            for row in basis_single:
-                row = vectorization(row, order=order)
-                row_indexes = list(np.flatnonzero(row))
-                indexes.append(row_indexes)
-                basis.append(row[row_indexes])
-                del row
-        elif vectorize and not sparse:
-            basis = [vectorization(matrix, order=order) for matrix in basis_single]
-        else:
-            basis = basis_single
+        basis_full = basis_single
+
+    if vectorize and sparse:
+        basis, indexes = [], []
+        for row in basis_full:
+            row = vectorization(row, order=order)
+            row_indexes = list(np.flatnonzero(row))
+            indexes.append(row_indexes)
+            basis.append(row[row_indexes])
+            del row
+    elif vectorize and not sparse:
+        basis = [vectorization(matrix, order=order) for matrix in basis_full]
+    else:
+        basis = basis_full
 
     basis = np.array(basis)
 
