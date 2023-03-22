@@ -202,15 +202,19 @@ def pauli_to_comp_basis(
         Unitary matrix :math:`U`.
     """
 
+    unitary = pauli_basis(nqubits, normalize, vectorize=True, sparse=False, order=order)
+    unitary = np.transpose(unitary)
+
     if sparse:
-        elements, indexes = pauli_basis(
-            nqubits, normalize, vectorize=True, sparse=sparse, order=order
-        )
-        elements = np.transpose(elements)
+        elements, indexes = [], []
+        for row in unitary:
+            index_list = list(np.flatnonzero(row))
+            indexes.append(index_list)
+            elements.append(row[index_list])
+
+        elements = np.array(elements)
+        indexes = np.array(indexes)
 
         return elements, indexes
-
-    unitary = pauli_basis(nqubits, normalize, vectorize=True, order=order)
-    unitary = np.transpose(unitary)
 
     return unitary
