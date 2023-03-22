@@ -93,8 +93,10 @@ def pauli_basis(
                 indexes.append(row_indexes)
                 basis.append(row[row_indexes])
                 del row
+        elif vectorize and not sparse:
+            basis = [vectorization(matrix, order=order) for matrix in basis_single]
         else:
-            basis = [vectorization(matrix, order=order) for matrix in basis]
+            basis = basis_single
 
     basis = np.array(basis)
 
