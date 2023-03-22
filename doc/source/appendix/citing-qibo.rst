@@ -69,16 +69,33 @@ Peer-Reviewed Articles
 Software References in Zenodo
 -----------------------------
 
-* S. Efthymiou and S. Carrazza. (2021). qiboteam/qibojit: qibojit. Zenodo.
-  `https://doi.org/10.5281/zenodo.5248470`_.
-
-.. _`https://doi.org/10.5281/zenodo.5248470`: https://doi.org/10.5281/zenodo.5248470
-
 * S. Efthymiou, S. Ramos-Calderer, C. Bravo-Prieto, A.
   Pérez-Salinas, D. García-Martín, A. Garcia-Saez, J. I. Latorre, S. Carrazza.
   (2020). qiboteam/qibo: Qibo. Zenodo. `https://doi.org/10.5281/zenodo.3997194`_.
 
 .. _`https://doi.org/10.5281/zenodo.3997194`: https://doi.org/10.5281/zenodo.3997194
+
+* S. Efthymiou, M. Lazzarin, A. Pasquale and S. Carrazza. (2021). qiboteam/qibojit: Qibojit. Zenodo.
+  `https://doi.org/10.5281/zenodo.5248470`_.
+
+.. _`https://doi.org/10.5281/zenodo.5248470`: https://doi.org/10.5281/zenodo.5248470
+
+
+* S. Efthymiou, A. Orgaz, S. Carrazza, A. Pasquale, D.
+  Funtes Ruiz, M. Lazzarin, S. Bordoni, E. Pedicillo, P.
+  Tan and M. Hantute. (2023). qiboteam/qibolab: Qibolab. Zenodo.
+  `https://doi.org/10.5281/zenodo.7748527`_.
+
+.. _`https://doi.org/10.5281/zenodo.7748527`: https://doi.org/10.5281/zenodo.7748527
+
+* A. Pasquale, S. Efthymiou, D. Fuentes Ruiz, E. Pedicillo, S.
+  Carrazza, A. Orgaz, A. Sopena, A. Candido, M. Robbiati and M.
+  Hantute (2023). qiboteam/qibocal: Qibocal. Zenodo.
+  `https://doi.org/10.5281/zenodo.7662185`_.
+
+.. _`https://doi.org/10.5281/zenodo.7662185`: https://doi.org/10.5281/zenodo.7662185
+
+
 
 Conference Proceedings
 ----------------------
@@ -95,6 +112,12 @@ Conference Proceedings
 
 .. _`ICHEP2022`: https://www.ichep2022.it/
 .. _`arXiv:2210.10787`: https://arxiv.org/abs/2210.10787
+
+* A. Pasquale, S. Efthymiou, S. Ramos-Calderer, J. Wilkens, I, Roth, S. Carrazza.
+  Towards an open-source framework to perform quantum calibration and characterization. (2023) `ACAT22`_, (`arXiv:2303.10397`_).
+
+.. _`ACAT22`: https://indico.cern.ch/event/1106990/
+.. _`arXiv:2303.10397`: https://arxiv.org/pdf/2303.10397
 
 
 Authorship Guideline
