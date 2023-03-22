@@ -1,4 +1,3 @@
-# %%
 from functools import reduce
 from itertools import product
 
@@ -223,7 +222,3 @@ def pauli_to_comp_basis(
         return elements, indexes
 
     return unitary
-
-
-# %%
-comp_basis_to_pauli(2, True)
