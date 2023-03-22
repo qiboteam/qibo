@@ -621,6 +621,7 @@ def random_pauli_hamiltonian(
 def random_stochastic_matrix(
     dims: int,
     bistochastic: bool = False,
+    diagonally_dominant: bool = False,
     precision_tol: float = None,
     max_iterations: int = None,
     seed=None,
@@ -630,16 +631,18 @@ def random_stochastic_matrix(
     Args:
         dims (int): dimension of the matrix.
         bistochastic (bool, optional): if ``True``, matrix is row- and column-stochastic.
-            If ``False``, matrix is row-stochastic. Default: ``False``.
+            If ``False``, matrix is row-stochastic. Default is ``False``.
+        diagonally_dominant (bool, optional): if ``True``, matrix is strictly diagonally
+            dominant. Default is ``False``.
         precision_tol (float, optional): tolerance level for how much each probability
             distribution can deviate from summing up to ``1.0``. If ``None``,
-            it defaults to ``qibo.config.PRECISION_TOL``. Default: ``None``.
+            it defaults to ``qibo.config.PRECISION_TOL``. Default is ``None``.
         max_iterations (int, optional): when ``bistochastic=True``, maximum number of iterations
             used to normalize all rows and columns simultaneously. If ``None``,
-            defaults to ``qibo.config.MAX_ITERATIONS``. Default: ``None``.
+            defaults to ``qibo.config.MAX_ITERATIONS``. Default is ``None``.
         seed (int or ``numpy.random.Generator``, optional): Either a generator of random numbers
             or a fixed seed to initialize a generator. If ``None``, initializes a generator with
-            a random seed. Default: ``None``.
+            a random seed. Default is ``None``.
 
     Returns:
         (ndarray): a random stochastic matrix.
@@ -652,6 +655,12 @@ def random_stochastic_matrix(
         raise_error(
             TypeError,
             f"bistochastic must be type bool, but it is type {type(bistochastic)}.",
+        )
+
+    if not isinstance(diagonally_dominant, bool):
+        raise_error(
+            TypeError,
+            f"diagonally_dominant must be type bool, but it is type {type(diagonally_dominant)}.",
         )
 
     if precision_tol is not None:
@@ -691,6 +700,13 @@ def random_stochastic_matrix(
         max_iterations = MAX_ITERATIONS
 
     matrix = local_state.random(size=(dims, dims))
+    if diagonally_dominant:
+        matrix /= dims**2
+        for k, row in enumerate(matrix):
+            row = np.delete(row, obj=k)
+            matrix[k, k] = 1 - np.sum(row)
+    row_sum = np.sum(matrix, axis=1)
+
     row_sum = matrix.sum(axis=1)
 
     if bistochastic:
