@@ -1,3 +1,4 @@
+# %%
 from functools import reduce
 from itertools import product
 
@@ -81,7 +82,9 @@ def pauli_basis(
                 basis.append(row[row_indexes])
                 del row
         elif vectorize and not sparse:
-            basis = [vectorization(reduce(np.kron, row), order=order) for row in basis]
+            basis = [
+                vectorization(reduce(np.kron, row), order=order) for row in basis_full
+            ]
         else:
             basis = [reduce(np.kron, row) for row in basis]
     else:
@@ -220,3 +223,7 @@ def pauli_to_comp_basis(
         return elements, indexes
 
     return unitary
+
+
+# %%
+comp_basis_to_pauli(2, True)
