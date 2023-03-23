@@ -9,7 +9,11 @@ from qibo.quantum_info.superoperator_transformations import vectorization
 
 
 def pauli_basis(
-    nqubits: int, normalize: bool = False, vectorize: bool = False, order: str = None
+    nqubits: int,
+    normalize: bool = False,
+    vectorize: bool = False,
+    sparse: bool = False,
+    order: str = None,
 ):
     """Creates the ``nqubits``-qubit Pauli basis.
 
@@ -20,6 +24,8 @@ def pauli_basis(
         vectorize (bool, optional): If ``False``, returns a nested array with
             all Pauli matrices. If ``True``, retuns an array where every
             row is a vectorized Pauli matrix. Defaults to ``False``.
+        sparse (bool, optional) If ``True``, retuns Pauli basis in a sparse
+            representation. Default is ``False``.
         order (str, optional): If ``"row"``, vectorization of Pauli basis is
             performed row-wise. If ``"column"``, vectorization is performed
             column-wise. If ``"system"``, system-wise vectorization is
@@ -27,7 +33,9 @@ def pauli_basis(
             forced. Default is ``None``.
 
     Returns:
-        ndarray: all Pauli matrices forming the basis.
+        ndarray or tuple: all Pauli matrices forming the basis. If ``sparse=True``
+            and ``vectorize=True``, tuple is composed of an array of non-zero
+            elements and an array with their row-wise indexes.
     """
 
     if nqubits <= 0:
@@ -45,33 +53,58 @@ def pauli_basis(
             f"vectorize must be type bool, but it is type {type(vectorize)} instead.",
         )
 
+    if not isinstance(sparse, bool):
+        raise_error(
+            TypeError,
+            f"sparse must be type bool, but it is type {type(sparse)} instead.",
+        )
+
     if vectorize and order is None:
         raise_error(ValueError, "when vectorize=True, order must be specified.")
 
-    basis = [matrices.I, matrices.X, matrices.Y, matrices.Z]
+    if sparse and not vectorize:
+        raise_error(
+            NotImplementedError,
+            "sparse representation is not implemented for unvectorized Pauli basis.",
+        )
 
-    if nqubits >= 2:
-        basis = list(product(basis, repeat=nqubits))
-        if vectorize:
-            basis = [
-                vectorization(reduce(np.kron, matrices), order=order)
-                for matrices in basis
-            ]
-        else:
-            basis = [reduce(np.kron, matrices) for matrices in basis]
+    basis_single = [matrices.I, matrices.X, matrices.Y, matrices.Z]
+
+    if nqubits > 1:
+        basis_full = list(product(basis_single, repeat=nqubits))
+        basis_full = [reduce(np.kron, row) for row in basis_full]
     else:
-        if vectorize:
-            basis = [vectorization(matrix, order=order) for matrix in basis]
+        basis_full = basis_single
+
+    if vectorize and sparse:
+        basis, indexes = [], []
+        for row in basis_full:
+            row = vectorization(row, order=order)
+            row_indexes = list(np.flatnonzero(row))
+            indexes.append(row_indexes)
+            basis.append(row[row_indexes])
+            del row
+    elif vectorize and not sparse:
+        basis = [vectorization(matrix, order=order) for matrix in basis_full]
+    else:
+        basis = basis_full
 
     basis = np.array(basis)
 
     if normalize:
         basis /= np.sqrt(2**nqubits)
 
+    if vectorize and sparse:
+        indexes = np.array(indexes)
+
+        return basis, indexes
+
     return basis
 
 
-def comp_basis_to_pauli(nqubits: int, normalize: bool = False, order: str = "row"):
+def comp_basis_to_pauli(
+    nqubits: int, normalize: bool = False, sparse: bool = False, order: str = "row"
+):
     """Unitary matrix :math:`U` that converts operators from the Liouville
     representation in the computational basis to the Pauli-Liouville
     representation.
@@ -104,23 +137,40 @@ def comp_basis_to_pauli(nqubits: int, normalize: bool = False, order: str = "row
         nqubits (int): number of qubits.
         normalize (bool, optional): If ``True``, converts to the
             Pauli basis. Defaults to ``False``.
+        sparse (bool, optional): If ``True``, returns unitary matrix in
+            sparse representation. Default is ``False``.
         order (str, optional): If ``"row"``, vectorization of Pauli basis is
             performed row-wise. If ``"column"``, vectorization is performed
             column-wise. If ``"system"``, system-wise vectorization is
             performed. Default is ``"row"``.
 
     Returns:
-        Unitary matrix :math:`U`.
+        ndarray or tuple: Unitary matrix :math:`U`. If ``sparse=True``,
+            tuple is composed of array of non-zero elements and an
+            array with their row-wise indexes.
 
     """
 
-    unitary = pauli_basis(nqubits, normalize, vectorize=True, order=order)
+    if sparse:
+        elements, indexes = pauli_basis(
+            nqubits, normalize, vectorize=True, sparse=sparse, order=order
+        )
+        elements = np.conj(elements)
+
+        return elements, indexes
+
+    unitary = pauli_basis(
+        nqubits, normalize, vectorize=True, sparse=sparse, order=order
+    )
+
     unitary = np.conj(unitary)
 
     return unitary
 
 
-def pauli_to_comp_basis(nqubits: int, normalize: bool = False, order: str = "row"):
+def pauli_to_comp_basis(
+    nqubits: int, normalize: bool = False, sparse: bool = False, order: str = "row"
+):
     """Unitary matrix :math:`U` that converts operators from the
     Pauli-Liouville representation to the Liouville representation
     in the computational basis.
@@ -134,6 +184,8 @@ def pauli_to_comp_basis(nqubits: int, normalize: bool = False, order: str = "row
         nqubits (int): number of qubits.
         normalize (bool, optional): If ``True``, converts to the
             Pauli basis. Defaults to ``False``.
+        sparse (bool, optional): If ``True``, returns unitary matrix in
+            sparse representation. Default is ``False``.
         order (str, optional): If ``"row"``, vectorization of Pauli basis is
             performed row-wise. If ``"column"``, vectorization is performed
             column-wise. If ``"system"``, system-wise vectorization is
@@ -143,7 +195,19 @@ def pauli_to_comp_basis(nqubits: int, normalize: bool = False, order: str = "row
         Unitary matrix :math:`U`.
     """
 
-    unitary = pauli_basis(nqubits, normalize, vectorize=True, order=order)
+    unitary = pauli_basis(nqubits, normalize, vectorize=True, sparse=False, order=order)
     unitary = np.transpose(unitary)
+
+    if sparse:
+        elements, indexes = [], []
+        for row in unitary:
+            index_list = list(np.flatnonzero(row))
+            indexes.append(index_list)
+            elements.append(row[index_list])
+
+        elements = np.array(elements)
+        indexes = np.array(indexes)
+
+        return elements, indexes
 
     return unitary
