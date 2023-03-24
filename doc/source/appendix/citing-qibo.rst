@@ -120,6 +120,32 @@ Conference Proceedings
 .. _`arXiv:2303.10397`: https://arxiv.org/pdf/2303.10397
 
 
+
+Based on qibo
+-------------
+
+* A. Pérez-Salinas, J. M. Cruz-Martinez, Abdulla A. Alhajri, S. Carrazza.
+  Determining the proton content with a quantum computer. `Phys.Rev.D 103 (2021) 3, 034027`_,
+  (`arXiv:2011.13934`_).
+
+.. _`Phys.Rev.D 103 (2021) 3, 034027`: https://journals.aps.org/prd/abstract/10.1103/PhysRevD.103.034027
+.. _`arXiv:2011.13934`: https://arxiv.org/abs/2011.13934
+
+* C. Bravo-Prieto, J. Baglio, M. Cè, A. Francis, Dorota M. Grabowska, S. Carrazza.
+  Style-based quantum generative adversarial networks for Monte Carlo events.
+  `Quantum 6 (2022) 777`_, (`arXiv:2110.06933`_).
+
+.. _`Quantum 6 (2022) 777`: https://quantum-journal.org/papers/q-2022-08-17-777/
+.. _`arXiv:2110.06933`: https://arxiv.org/abs/2110.06933
+
+
+* M. Robbiati, J. M. Cruz-Martinez, S. Carrazza. Determining probability density
+  functions with adiabatic quantum computing. (2023), (`arXiv:2303.11346`_).
+
+.. _`arXiv:2303.11346`: https://arxiv.org/abs/2303.11346
+
+
+
 Authorship Guideline
 --------------------
 
