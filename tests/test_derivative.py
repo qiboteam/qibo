@@ -25,7 +25,7 @@ def circuit(nqubits=1):
     return c
 
 
-@pytest.mark.parametrize("nshots, atol", [(None, 1e-8), (10000, 1e-2)])
+@pytest.mark.parametrize("nshots, atol", [(None, 1e-8), (100000, 1e-2)])
 @pytest.mark.parametrize(
     "scale_factor, grads",
     [(1, [-8.51104358e-02, -5.20075970e-01, 0]), (0.5, [-0.02405061, -0.13560379, 0])],
