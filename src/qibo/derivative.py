@@ -11,7 +11,6 @@ def parameter_shift(
     initial_state=None,
     scale_factor=1,
     nshots=None,
-    nruns=1,
 ):
     """In this method the parameter shift rule (PSR) is implemented.
     Given a circuit U and an observable H, the PSR allows to calculate the derivative
@@ -42,10 +41,6 @@ def parameter_shift(
         scale_factor (float): parameter scale factor (default None).
         nshots (int): number of shots if derivative is evaluated on hardware. If
         `None`, the simulation mode is executed (default None).
-        nruns (int): number of times the derivative is evaluated on hardware for
-        a more stable evaluation. The final result is the mean of the values in this case
-        (default 1).
-
 
     Returns:
         np.float value of the derivative of the expectation value of the hamiltonian
@@ -114,14 +109,12 @@ def parameter_shift(
     original = np.asarray(circuit.get_parameters()).copy()
     shifted = original.copy()
 
-    # forward shift and evaluation
+    # forward shift
     shifted[parameter_index] += s
     circuit.set_parameters(shifted)
 
-    forward = 0
-    backward = 0
-
-    if nshots == None:
+    if nshots is None:
+        # forward evaluation
         forward = hamiltonian.expectation(
             backend.execute_circuit(
                 circuit=circuit, initial_state=initial_state
@@ -138,28 +131,18 @@ def parameter_shift(
             ).state()
         )
 
+    # same but using expectation from samples
     else:
-        copied = shifted.copy()
+        forward = backend.execute_circuit(
+            circuit=circuit, initial_state=initial_state, nshots=nshots
+        ).expectation_from_samples(hamiltonian)
 
-        for _ in range(nruns):
-            forward += backend.execute_circuit(
-                circuit=circuit, initial_state=initial_state, nshots=nshots
-            ).expectation_from_samples(hamiltonian)
+        shifted[parameter_index] -= 2 * s
+        circuit.set_parameters(shifted)
 
-            # backward shift and evaluation
-            shifted[parameter_index] -= 2 * s
-            circuit.set_parameters(shifted)
-
-            backward += backend.execute_circuit(
-                circuit=circuit, initial_state=initial_state, nshots=nshots
-            ).expectation_from_samples(hamiltonian)
-
-            # restoring the original circuit
-            shifted = copied.copy()
-            circuit.set_parameters(copied)
-
-        forward /= nruns
-        backward /= nruns
+        backward = backend.execute_circuit(
+            circuit=circuit, initial_state=initial_state, nshots=nshots
+        ).expectation_from_samples(hamiltonian)
 
     circuit.set_parameters(original)
 
