@@ -131,37 +131,6 @@ def unvectorization(state, order: str = "row"):
     return state
 
 
-def liouville_to_choi(super_op, order: str = "row"):
-    """Convert Liouville representation of quantum channel :math:`\\mathcal{E}`
-    to its Choi representation :math:`\\Lambda`. Indexing :math:`\\mathcal{E}` as
-    :math:`\\mathcal{E}_{\\alpha\\beta, \\, \\gamma\\delta} \\,\\,`, then
-
-    If ``order="row"``:
-
-    .. math::
-        \\Lambda = \\sum_{k, l} \\, \\ketbra{k}{l} \\otimes \\mathcal{E}(\\ketbra{k}{l}) \\equiv \\mathcal{E}_{\\alpha\\gamma, \\, \\beta\\delta}
-
-    If ``order="column"``, then:
-
-    .. math::
-            \\Lambda = \\sum_{k, l} \\, \\mathcal{E}(\\ketbra{k}{l}) \\otimes \\ketbra{k}{l} \\equiv \\mathcal{E}_{\\delta\\beta, \\, \\gamma\\alpha}
-
-    Args:
-        super_op: Liouville representation of quanutm channel.
-        order (str, optional): If ``"row"``, reshuffling is performed
-            with respect to row-wise vectorization. If ``"column"``,
-            reshuffling is performed with respect to column-wise
-            vectorization. If ``"system"``, operator is converted to
-            a representation based on row vectorization, reshuffled,
-            and then converted back to its representation with
-            respect to system-wise vectorization. Default is ``"row"``.
-    Returns:
-        ndarray: Choi representation of quantum channel.
-    """
-
-    return _reshuffling(super_op, order=order)
-
-
 def choi_to_liouville(choi_super_op, order: str = "row"):
     """Convert Choi representation :math:`\\Lambda` of quantum channel
     to its Liouville representation :math:`\\mathcal{E}`.
@@ -179,7 +148,7 @@ def choi_to_liouville(choi_super_op, order: str = "row"):
 
 
     Args:
-        choi_super_op: Choi representation of quanutm channel.
+        choi_super_op: Choi representation of quantum channel.
         order (str, optional): If ``"row"``, reshuffling is performed
             with respect to row-wise vectorization. If ``"column"``,
             reshuffling is performed with respect to column-wise
@@ -193,6 +162,28 @@ def choi_to_liouville(choi_super_op, order: str = "row"):
     """
 
     return _reshuffling(choi_super_op, order=order)
+
+
+def choi_to_pauli(choi_super_op, normalize: bool = False, order: str = "row"):
+    """Converts Choi representation :math:`\\Lambda` of a quantum channel
+    to its Pauli-Liouville representation.
+
+    Args:
+        choi_super_op (ndarray): superoperator in the Choi representation.
+        normalize (bool, optional): If ``True`` superoperator is returned
+            in the normalized Pauli basis. If ``False``, it is returned
+            in the unnormalized Pauli basis. Defaults to ``False``.
+        order (str, optional): If ``"row"``, it assumes ``choi_super_op`` is in
+            row-vectorization. If ``"column"``, it assumes column-vectorization.
+            Defaults to ``"row"``.
+
+    Returns:
+        ndarray: superoperator in the Pauli-Liouville representation.
+    """
+    super_op = choi_to_liouville(choi_super_op, order)
+    super_op = liouville_to_pauli(super_op, normalize, order)
+
+    return super_op
 
 
 def choi_to_kraus(
@@ -334,6 +325,33 @@ def choi_to_kraus(
     return kraus_ops, coefficients
 
 
+def choi_to_chi(choi_super_op, normalize: bool = False, order: str = "row"):
+    """Convert Choi representation :math:`\\Lambda` of quantum channel
+    to  its chi-matrix representation :math:`\\chi`.
+
+    .. math::
+        \\chi = \\text{liouville_to_pauli}(\\Lambda)
+
+    Args:
+        choi_super_op: Choi representation of a quantum channel.
+        normalize (bool, optional): If ``True`` assumes the normalized
+            Pauli basis. If ``False``, it assumes unnormalized
+            Pauli basis. Defaults to ``False``.
+        order (str, optional): If ``"row"``, reshuffling is performed
+            with respect to row-wise vectorization. If ``"column"``,
+            reshuffling is performed with respect to column-wise
+            vectorization. If ``"system"``, operator is converted to
+            a representation based on row vectorization, reshuffled,
+            and then converted back to its representation with
+            respect to system-wise vectorization. Default is ``"row"``.
+    Returns:
+        ndarray: Chi-matrix representation of the quantum channel.
+    """
+    process_matrix = liouville_to_pauli(choi_super_op, normalize=normalize, order=order)
+
+    return process_matrix
+
+
 def kraus_to_choi(kraus_ops, order: str = "row"):
     """Convert Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`
     of quantum channel to its Choi representation :math:`\\Lambda`.
@@ -406,21 +424,47 @@ def kraus_to_liouville(kraus_ops, order: str = "row"):
     return super_op
 
 
-def liouville_to_kraus(super_op, precision_tol: float = None, order: str = "row"):
-    """Convert Liouville representation :math:`\\mathcal{E}` of a quantum
-    channel to its Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`.
-    It uses the Choi representation as an intermediate step.
-
-    .. math::
-        \\{K_{\\alpha}, \\, \\lambda_{\\alpha}\\}_{\\alpha} = \\text{choi_to_kraus}(\\text{liouville_to_choi}(\\mathcal{E}))
+def kraus_to_pauli(kraus_ops, normalize: bool = False, order: str = "row"):
+    """Converts Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`of
+    a quantum channel to its Pauli-Liouville representation.
 
     Args:
-        super_op (ndarray): Liouville representation of quantum channel.
-        precision_tol (float, optional): Precision tolerance for eigenvalues
-            found in the spectral decomposition problem. Any eigenvalue
-            :math:`\\lambda < \\text{precision_tol}` is set to 0 (zero).
-            If ``None``, ``precision_tol`` defaults to
-            ``qibo.config.PRECISION_TOL=1e-8``. Defaults to None.
+        kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
+            where ``qubits`` refers the qubit ids that :math:`A_k` acts on
+            and :math:`A_k` is the corresponding matrix as a ``np.ndarray``.
+        normalize (bool, optional): If ``True`` superoperator is returned
+            in the normalized Pauli basis. If ``False``, it is returned
+            in the unnormalized Pauli basis. Defaults to ``False``.
+        order (str, optional): If ``"row"``, intermediate step for Choi
+            representation is done in row-vectorization. If ``"column"``,
+            step is done in column-vectorization. If ``"system"``,
+            block-vectorization is performed. Defaults to ``"row"``.
+
+    Returns:
+        ndarray: superoperator in the Pauli-Liouville representation.
+    """
+    super_op = kraus_to_choi(kraus_ops, order)
+    super_op = choi_to_pauli(super_op, normalize, order)
+
+    return super_op
+
+
+def kraus_to_chi(kraus_ops, normalize: bool = False, order: str = "row"):
+    """Convert Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`
+    of quantum channel to  its chi-matrix representation :math:`\\chi`.
+
+    .. math::
+        \\chi = \\sum_{\\alpha} \\, |c_{\\alpha}\\rangle\\rangle \\langle\\langle c_{\\alpha}|,
+
+    where :math:`|c_{\\alpha}\\rangle\\rangle \\cong |K_{\\alpha}\\rangle\\rangle` in Pauli-Liouville basis.
+
+    Args:
+        kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
+            where ``qubits`` refers the qubit ids that :math:`A_k`  acts on
+            and :math:`A_k` is the corresponding matrix as a ``np.ndarray``.
+        normalize (bool, optional): If ``True`` assumes the normalized
+            Pauli basis. If ``False``, it assumes unnormalized
+            Pauli basis. Defaults to ``False``.
         order (str, optional): If ``"row"``, reshuffling is performed
             with respect to row-wise vectorization. If ``"column"``,
             reshuffling is performed with respect to column-wise
@@ -430,46 +474,68 @@ def liouville_to_kraus(super_op, precision_tol: float = None, order: str = "row"
             respect to system-wise vectorization. Default is ``"row"``.
 
     Returns:
-        (ndarray, ndarray): Kraus operators of quantum channel and their respective coefficients.
+        ndarray: Chi-matrix representation of the Kraus channel.
     """
-    choi_super_op = liouville_to_choi(super_op, order=order)
-    kraus_ops, coefficients = choi_to_kraus(choi_super_op, precision_tol, order=order)
 
-    return kraus_ops, coefficients
+    from qibo.backends import NumpyBackend
+    from qibo.gates.special import FusedGate
+    from qibo.quantum_info import vectorization
+    from qibo.quantum_info.superoperator_transformations import (
+        _set_gate_and_target_qubits,
+    )
+
+    backend = NumpyBackend()
+
+    gates, target_qubits = _set_gate_and_target_qubits(kraus_ops)
+    nqubits = 1 + max(target_qubits)
+    d = 2**nqubits
+
+    from qibo.quantum_info.basis import comp_basis_to_pauli
+
+    U_c2p = comp_basis_to_pauli(int(nqubits), normalize=normalize, order=order)
+
+    super_op = np.zeros((d**2, d**2), dtype="complex")
+    for gate in gates:
+        kraus_op = FusedGate(*range(nqubits))
+        kraus_op.append(gate)
+        kraus_op = kraus_op.asmatrix(backend)
+        kraus_op = vectorization(kraus_op, order=order)
+        kraus_op = U_c2p @ kraus_op
+        super_op += np.outer(kraus_op, np.conj(kraus_op))
+        del kraus_op
+
+    return super_op
 
 
-def pauli_to_liouville(pauli_op, normalize: bool = False, order: str = "row"):
-    """Convert Pauli-Liouville representation of a quantum channel to its
-    Liouville representation :math:`\\mathcal{E}`.
+def liouville_to_choi(super_op, order: str = "row"):
+    """Convert Liouville representation of quantum channel :math:`\\mathcal{E}`
+    to its Choi representation :math:`\\Lambda`. Indexing :math:`\\mathcal{E}` as
+    :math:`\\mathcal{E}_{\\alpha\\beta, \\, \\gamma\\delta} \\,\\,`, then
+
+    If ``order="row"``:
+
+    .. math::
+        \\Lambda = \\sum_{k, l} \\, \\ketbra{k}{l} \\otimes \\mathcal{E}(\\ketbra{k}{l}) \\equiv \\mathcal{E}_{\\alpha\\gamma, \\, \\beta\\delta}
+
+    If ``order="column"``, then:
+
+    .. math::
+            \\Lambda = \\sum_{k, l} \\, \\mathcal{E}(\\ketbra{k}{l}) \\otimes \\ketbra{k}{l} \\equiv \\mathcal{E}_{\\delta\\beta, \\, \\gamma\\alpha}
 
     Args:
-        pauli_op (ndarray): Pauli-Liouville representation of a quantum channel._
-        normalize (bool, optional): If ``True`` assumes ``pauli_op`` is represented
-            in the normalized Pauli basis. If ``False``, it assumes unnormalized
-            Pauli basis. Defaults to ``False``.
-        order (str, optional): If ``"row"``, returns Liouville representation in
-            row-vectorization. If ``"column"``, returns column-vectorized
-            superoperator. If ``"system"``, superoperator will be in
-            block-vectorization. Defaults to ``"row"``.
-
+        super_op: Liouville representation of quantum channel.
+        order (str, optional): If ``"row"``, reshuffling is performed
+            with respect to row-wise vectorization. If ``"column"``,
+            reshuffling is performed with respect to column-wise
+            vectorization. If ``"system"``, operator is converted to
+            a representation based on row vectorization, reshuffled,
+            and then converted back to its representation with
+            respect to system-wise vectorization. Default is ``"row"``.
     Returns:
-        ndarray: superoperator in the Liouville representation.
+        ndarray: Choi representation of quantum channel.
     """
-    d = np.sqrt(len(pauli_op))
-    nqubits = np.log2(int(d))
 
-    if (
-        pauli_op.shape[0] != pauli_op.shape[1]
-        or np.mod(d, 1) != 0
-        or np.mod(nqubits, 1) != 0
-    ):
-        raise_error(ValueError, "pauli_op must be of shape (4^n, 4^n)")
-
-    from qibo.quantum_info.basis import pauli_to_comp_basis
-
-    U_p2c = pauli_to_comp_basis(int(nqubits), normalize=normalize, order=order)
-
-    return U_p2c @ pauli_op @ np.conj(np.transpose(U_p2c))
+    return _reshuffling(super_op, order=order)
 
 
 def liouville_to_pauli(super_op, normalize: bool = False, order: str = "row"):
@@ -505,6 +571,102 @@ def liouville_to_pauli(super_op, normalize: bool = False, order: str = "row"):
     return U_c2p @ super_op @ np.conj(np.transpose(U_c2p))
 
 
+def liouville_to_kraus(super_op, precision_tol: float = None, order: str = "row"):
+    """Convert Liouville representation :math:`\\mathcal{E}` of a quantum
+    channel to its Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`.
+    It uses the Choi representation as an intermediate step.
+
+    .. math::
+        \\{K_{\\alpha}, \\, \\lambda_{\\alpha}\\}_{\\alpha} = \\text{choi_to_kraus}(\\text{liouville_to_choi}(\\mathcal{E}))
+
+    Args:
+        super_op (ndarray): Liouville representation of quantum channel.
+        precision_tol (float, optional): Precision tolerance for eigenvalues
+            found in the spectral decomposition problem. Any eigenvalue
+            :math:`\\lambda < \\text{precision_tol}` is set to 0 (zero).
+            If ``None``, ``precision_tol`` defaults to
+            ``qibo.config.PRECISION_TOL=1e-8``. Defaults to None.
+        order (str, optional): If ``"row"``, reshuffling is performed
+            with respect to row-wise vectorization. If ``"column"``,
+            reshuffling is performed with respect to column-wise
+            vectorization. If ``"system"``, operator is converted to
+            a representation based on row vectorization, reshuffled,
+            and then converted back to its representation with
+            respect to system-wise vectorization. Default is ``"row"``.
+
+    Returns:
+        (ndarray, ndarray): Kraus operators of quantum channel and their respective coefficients.
+    """
+    choi_super_op = liouville_to_choi(super_op, order=order)
+    kraus_ops, coefficients = choi_to_kraus(choi_super_op, precision_tol, order=order)
+
+    return kraus_ops, coefficients
+
+
+def liouville_to_chi(super_op, normalize: bool = False, order: str = "row"):
+    """Convert Liouville representation of quantum channel :math:`\\mathcal{E}`
+    to its chi-matrix representation :math:`\\chi`.
+    It uses the Choi representation as an intermediate step.
+
+    .. math::
+        \\chi = \\text{liouville_to_pauli}(\\text{liouville_to_choi}(\\mathcal{E}))
+
+    Args:
+        super_op: Liouville representation of quantum channel.
+        normalize (bool, optional): If ``True`` assumes the normalized
+            Pauli basis. If ``False``, it assumes unnormalized
+            Pauli basis. Defaults to ``False``.
+        order (str, optional): If ``"row"``, reshuffling is performed
+            with respect to row-wise vectorization. If ``"column"``,
+            reshuffling is performed with respect to column-wise
+            vectorization. If ``"system"``, operator is converted to
+            a representation based on row vectorization, reshuffled,
+            and then converted back to its representation with
+            respect to system-wise vectorization. Default is ``"row"``.
+    Returns:
+        ndarray: Chi-matrix representation of quantum channel.
+    """
+
+    choi_super_op = liouville_to_choi(super_op, order=order)
+    process_matrix = liouville_to_pauli(choi_super_op, normalize=normalize, order=order)
+
+    return process_matrix
+
+
+def pauli_to_liouville(pauli_op, normalize: bool = False, order: str = "row"):
+    """Convert Pauli-Liouville representation of a quantum channel to its
+    Liouville representation :math:`\\mathcal{E}`.
+
+    Args:
+        pauli_op (ndarray): Pauli-Liouville representation of a quantum channel.
+        normalize (bool, optional): If ``True`` assumes ``pauli_op`` is represented
+            in the normalized Pauli basis. If ``False``, it assumes unnormalized
+            Pauli basis. Defaults to ``False``.
+        order (str, optional): If ``"row"``, returns Liouville representation in
+            row-vectorization. If ``"column"``, returns column-vectorized
+            superoperator. If ``"system"``, superoperator will be in
+            block-vectorization. Defaults to ``"row"``.
+
+    Returns:
+        ndarray: superoperator in the Liouville representation.
+    """
+    d = np.sqrt(len(pauli_op))
+    nqubits = np.log2(int(d))
+
+    if (
+        pauli_op.shape[0] != pauli_op.shape[1]
+        or np.mod(d, 1) != 0
+        or np.mod(nqubits, 1) != 0
+    ):
+        raise_error(ValueError, "pauli_op must be of shape (4^n, 4^n)")
+
+    from qibo.quantum_info.basis import pauli_to_comp_basis
+
+    U_p2c = pauli_to_comp_basis(int(nqubits), normalize=normalize, order=order)
+
+    return U_p2c @ pauli_op @ np.conj(np.transpose(U_p2c))
+
+
 def pauli_to_choi(pauli_op, normalize: bool = False, order: str = "row"):
     """Converts Pauli-Liouville representation of a quantum channel
     to its Choi representation :math:`\\Lambda`.
@@ -523,28 +685,6 @@ def pauli_to_choi(pauli_op, normalize: bool = False, order: str = "row"):
     """
     super_op = pauli_to_liouville(pauli_op, normalize, order)
     super_op = liouville_to_choi(super_op, order)
-
-    return super_op
-
-
-def choi_to_pauli(choi_super_op, normalize: bool = False, order: str = "row"):
-    """Converts Choi representation :math:`\\Lambda` of a quantum channel
-    to its Pauli-Liouville representation.
-
-    Args:
-        choi_super_op (ndarray): superoperator in the Choi representation.
-        normalize (bool, optional): If ``True`` superoperator is returned
-            in the normalized Pauli basis. If ``False``, it is returned
-            in the unnormalized Pauli basis. Defaults to ``False``.
-        order (str, optional): If ``"row"``, it assumes ``choi_super_op`` is in
-            row-vectorization. If ``"column"``, it assumes column-vectorization.
-            Defaults to ``"row"``.
-
-    Returns:
-        ndarray: superoperator in the Pauli-Liouville representation.
-    """
-    super_op = choi_to_liouville(choi_super_op, order)
-    super_op = liouville_to_pauli(super_op, normalize, order)
 
     return super_op
 
@@ -580,29 +720,154 @@ def pauli_to_kraus(
     return super_op
 
 
-def kraus_to_pauli(kraus_ops, normalize: bool = False, order: str = "row"):
-    """Converts Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`of
-    a quantum channel to its Pauli-Liouville representation.
+def pauli_to_chi(pauli_op, normalize: bool = False, order: str = "row"):
+    """Converts Pauli-Liouville representation of a quantum channel
+    to its chi-matrix representation :math:`\\chi`.
 
     Args:
-        kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
-            where ``qubits`` refers the qubit ids that :math:`A_k` acts on
-            and :math:`A_k` is the corresponding matrix as a ``np.ndarray``.
-        normalize (bool, optional): If ``True`` superoperator is returned
-            in the normalized Pauli basis. If ``False``, it is returned
-            in the unnormalized Pauli basis. Defaults to ``False``.
-        order (str, optional): If ``"row"``, intermediate step for Choi
-            representation is done in row-vectorization. If ``"column"``,
-            step is done in column-vectorization. If ``"system"``,
-            block-vectorization is performed. Defaults to ``"row"``.
+        pauli_op (ndarray): superoperator in the Pauli-Liouville representation.
+        normalize (bool, optional): If ``True`` assumes ``pauli_op`` is represented
+            in the normalized Pauli basis. If ``False``, it assumes unnormalized
+            Pauli basis. Defaults to ``False``.
+        order (str, optional): If ``"row"``, returns Choi representation in
+            row-vectorization. If ``"column"``, returns column-vectorized
+            superoperator. Defaults to ``"row"``.
 
     Returns:
-        ndarray: _description_
+        ndarray: Chi-matrix representation of the quantum channel.
     """
-    super_op = kraus_to_choi(kraus_ops, order)
-    super_op = choi_to_pauli(super_op, normalize, order)
+    super_op = pauli_to_liouville(pauli_op, normalize, order)
+    super_op = liouville_to_chi(super_op, normalize, order)
 
     return super_op
+
+
+def chi_to_choi(chi_matrix, normalize: bool = False, order: str = "row"):
+    """Convert the chi-matrix representation :math:`\\chi` of a quantum channel
+    to Choi representation :math:`\\Lambda`.
+
+    .. math::
+        \\Lambda = \\text{pauli_to_liouville}(\\chi)
+
+    Args:
+        chi_matrix: Chi-matrix representation of quantum channel.
+        normalize (bool, optional): If ``True`` assumes the normalized
+            Pauli basis. If ``False``, it assumes unnormalized
+            Pauli basis. Defaults to ``False``.
+        order (str, optional): If ``"row"``, reshuffling is performed
+            with respect to row-wise vectorization. If ``"column"``,
+            reshuffling is performed with respect to column-wise
+            vectorization. If ``"system"``, operator is converted to
+            a representation based on row vectorization, reshuffled,
+            and then converted back to its representation with
+            respect to system-wise vectorization. Default is ``"row"``.
+    Returns:
+        ndarray: Choi representation of quantum channel.
+    """
+    choi_super_op = pauli_to_liouville(chi_matrix, normalize=normalize, order=order)
+
+    return choi_super_op
+
+
+def chi_to_liouville(chi_matrix, normalize: bool = False, order: str = "row"):
+    """Convert the chi-matrix representation :math:`\\chi` of a quantum channel
+    to its Liouville representation :math:`\\mathcal{E}`.
+
+    .. math::
+        \\mathcal{E} = \\text{pauli_to_liouville}(\\text{choi_to_liouville}(\\chi))
+
+    Args:
+        chi_matrix: Chi-matrix representation of quantum channel.
+        normalize (bool, optional): If ``True`` assumes the normalized
+            Pauli basis. If ``False``, it assumes unnormalized
+            Pauli basis. Defaults to ``False``.
+        order (str, optional): If ``"row"``, reshuffling is performed
+            with respect to row-wise vectorization. If ``"column"``,
+            reshuffling is performed with respect to column-wise
+            vectorization. If ``"system"``, operator is converted to
+            a representation based on row vectorization, reshuffled,
+            and then converted back to its representation with
+            respect to system-wise vectorization. Default is ``"row"``.
+    Returns:
+        ndarray: Liouville representation of quantum channel.
+    """
+    choi_super_op = pauli_to_liouville(chi_matrix, normalize=normalize, order=order)
+    super_op = choi_to_liouville(choi_super_op, order=order)
+
+    return super_op
+
+
+def chi_to_pauli(chi_matrix, normalize: bool = False, order: str = "row"):
+    """Convert chi-matrix representation :math:`\\chi` of a quantum channel
+    to its Pauli-Liouville representation :math:`\\mathcal{E}_P`.
+
+    .. math::
+        \\mathcal{E}_P = \\text{choi_to_pauli}(\\text{chi_to_choi}(\\chi))
+
+    Args:
+        chi_matrix: Chi-matrix representation of quantum channel.
+        normalize (bool, optional): If ``True`` assumes the normalized
+            Pauli basis. If ``False``, it assumes unnormalized
+            Pauli basis. Defaults to ``False``.
+        order (str, optional): If ``"row"``, reshuffling is performed
+            with respect to row-wise vectorization. If ``"column"``,
+            reshuffling is performed with respect to column-wise
+            vectorization. If ``"system"``, operator is converted to
+            a representation based on row vectorization, reshuffled,
+            and then converted back to its representation with
+            respect to system-wise vectorization. Default is ``"row"``.
+    Returns:
+        ndarray: superoperator in the Pauli-Liouville representation.
+    """
+    choi_super_op = pauli_to_liouville(chi_matrix, normalize=normalize, order=order)
+    super_op = choi_to_pauli(choi_super_op, order=order)
+
+    return super_op
+
+
+def chi_to_kraus(
+    chi_matrix,
+    normalize: bool = False,
+    precision_tol: float = None,
+    order: str = "row",
+    validate_cp: bool = True,
+):
+    """Convert the chi-matrix representation :math:`\\chi` of a quantum channel
+    to its Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`.
+
+    .. math::
+        \\mathcal{E}_P = \\text{choi_to_kraus}(\\text{chi_to_choi}(\\chi))
+
+    Args:
+        chi_matrix: Chi-matrix representation of quantum channel.
+        normalize (bool, optional): If ``True`` assumes the normalized
+            Pauli basis. If ``False``, it assumes unnormalized
+            Pauli basis. Defaults to ``False``.
+        precision_tol (float, optional): Precision tolerance for eigenvalues
+            found in the spectral decomposition problem. Any eigenvalue
+            :math:`\\lambda <` ``precision_tol`` is set to 0 (zero).
+            If ``None``, ``precision_tol`` defaults to
+            ``qibo.config.PRECISION_TOL=1e-8``. Defaults to ``None``.
+        order (str, optional): If ``"row"``, reshuffling is performed
+            with respect to row-wise vectorization. If ``"column"``,
+            reshuffling is performed with respect to column-wise
+            vectorization. If ``"system"``, operator is converted to
+            a representation based on row vectorization, reshuffled,
+            and then converted back to its representation with
+            respect to system-wise vectorization. Default is ``"row"``.
+        validate_cp (bool, optional): If ``True``, checks if ``choi_super_op``
+            is a completely positive map. If ``False``, it assumes that
+            ``choi_super_op`` is completely positive (and Hermitian).
+            Defaults to ``True``.
+    Returns:
+        (ndarray, ndarray): Kraus operators and their coefficients.
+    """
+    choi_super_op = pauli_to_liouville(chi_matrix, normalize=normalize, order=order)
+    kraus_ops, coefficients = choi_to_kraus(
+        choi_super_op, precision_tol=precision_tol, order=order, validate_cp=validate_cp
+    )
+
+    return kraus_ops, coefficients
 
 
 def kraus_to_unitaries(kraus_ops, order: str = "row", precision_tol: float = None):
