@@ -462,8 +462,8 @@ def kraus_to_chi(kraus_ops, normalize: bool = False, order: str = "row"):
         kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
             where ``qubits`` refers the qubit ids that :math:`A_k`  acts on
             and :math:`A_k` is the corresponding matrix as a ``np.ndarray``.
-        normalize (bool, optional): If ``True`` assumes ``pauli_op`` is represented
-            in the normalized Pauli basis. If ``False``, it assumes unnormalized
+        normalize (bool, optional): If ``True`` assumes the normalized
+            Pauli basis. If ``False``, it assumes unnormalized
             Pauli basis. Defaults to ``False``.
         order (str, optional): If ``"row"``, reshuffling is performed
             with respect to row-wise vectorization. If ``"column"``,
@@ -726,8 +726,8 @@ def pauli_to_chi(pauli_op, normalize: bool = False, order: str = "row"):
 
     Args:
         pauli_op (ndarray): superoperator in the Pauli-Liouville representation.
-        normalize (bool, optional): If ``True`` assumes the normalized
-            Pauli basis. If ``False``, it assumes unnormalized
+        normalize (bool, optional): If ``True`` assumes ``pauli_op`` is represented
+            in the normalized Pauli basis. If ``False``, it assumes unnormalized
             Pauli basis. Defaults to ``False``.
         order (str, optional): If ``"row"``, returns Choi representation in
             row-vectorization. If ``"column"``, returns column-vectorized
@@ -745,6 +745,7 @@ def pauli_to_chi(pauli_op, normalize: bool = False, order: str = "row"):
 def chi_to_choi(chi_matrix, normalize: bool = False, order: str = "row"):
     """Convert the chi-matrix representation :math:`\\chi` of a quantum channel
     to Choi representation :math:`\\Lambda`.
+
     .. math::
         \\Lambda = \\text{pauli_to_liouville}(\\chi)
 
@@ -771,6 +772,7 @@ def chi_to_choi(chi_matrix, normalize: bool = False, order: str = "row"):
 def chi_to_liouville(chi_matrix, normalize: bool = False, order: str = "row"):
     """Convert the chi-matrix representation :math:`\\chi` of a quantum channel
     to its Liouville representation :math:`\\mathcal{E}`.
+
     .. math::
         \\mathcal{E} = \\text{pauli_to_liouville}(\\text{choi_to_liouville}(\\chi))
 
@@ -798,6 +800,7 @@ def chi_to_liouville(chi_matrix, normalize: bool = False, order: str = "row"):
 def chi_to_pauli(chi_matrix, normalize: bool = False, order: str = "row"):
     """Convert chi-matrix representation :math:`\\chi` of a quantum channel
     to its Pauli-Liouville representation :math:`\\mathcal{E}_P`.
+
     .. math::
         \\mathcal{E}_P = \\text{choi_to_pauli}(\\text{chi_to_choi}(\\chi))
 
@@ -831,6 +834,7 @@ def chi_to_kraus(
 ):
     """Convert the chi-matrix representation :math:`\\chi` of a quantum channel
     to its Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`.
+
     .. math::
         \\mathcal{E}_P = \\text{choi_to_kraus}(\\text{chi_to_choi}(\\chi))
 
