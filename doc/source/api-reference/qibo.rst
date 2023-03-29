@@ -1243,10 +1243,10 @@ Choi to Kraus
         K_{\alpha} \, \rho \, K_{\alpha}^{\dagger} = K_{\alpha}^{\text{(ideal)}} \, \rho \,\, (K_{\alpha}^{\text{(ideal)}})^{\dagger} \,\,\,\,\, , \,\, \forall \, \alpha
 
 .. note::
-    User can set ``validate_CP=False`` in order to speed up execution by not checking if
+    User can set ``validate_cp=False`` in order to speed up execution by not checking if
     input map ``choi_super_op`` is completely positive (CP) and Hermitian. However, that may
     lead to erroneous outputs if ``choi_super_op`` is not guaranteed to be CP. We advise users
-    to either set this flag carefully or leave it in its default setting (``validate_CP=True``).
+    to either set this flag carefully or leave it in its default setting (``validate_cp=True``).
 
 
 Choi to Chi-matrix
@@ -1372,10 +1372,10 @@ Chi-matrix to Kraus
         K_{\alpha} \, \rho \, K_{\alpha}^{\dagger} = K_{\alpha}^{\text{(ideal)}} \, \rho \,\, (K_{\alpha}^{\text{(ideal)}})^{\dagger} \,\,\,\,\, , \,\, \forall \, \alpha
 
 .. note::
-    User can set ``validate_CP=False`` in order to speed up execution by not checking if
+    User can set ``validate_cp=False`` in order to speed up execution by not checking if
     the Choi representation obtained from the input ``chi_matrix`` is completely positive (CP) and Hermitian.
     However, that may lead to erroneous outputs if ``choi_super_op`` is not guaranteed to be CP. We advise users
-    to either set this flag carefully or leave it in its default setting (``validate_CP=True``).
+    to either set this flag carefully or leave it in its default setting (``validate_cp=True``).
 
 
 Kraus operators as probabilistic sum of unitaries
