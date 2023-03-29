@@ -21,9 +21,8 @@ class QuantumCNN:
         .. testcode::
             import qibo
             from qibo.models.qcnn import QuantumCNN
-            from qibo import gates, matrices
-            from qibo.models import Circuit
             import math
+            import qibo
             import numpy as np
             import random
 
