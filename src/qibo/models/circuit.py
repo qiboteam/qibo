@@ -129,7 +129,14 @@ class Circuit:
         queues (DistributedQueues): Gate queues for each accelerator device. Defaults to `None`.
     """
 
-    def __init__(self, nqubits, accelerators=None, density_matrix=False, initialize = "Z", eigenstate = "+"):
+    def __init__(
+        self,
+        nqubits,
+        accelerators=None,
+        density_matrix=False,
+        initialize="Z",
+        eigenstate="+",
+    ):
         if not isinstance(nqubits, int):
             raise_error(
                 TypeError,
@@ -171,22 +178,20 @@ class Circuit:
                     "Distributed circuit is not implemented " "for density matrices.",
                 )
             self._distributed_init(nqubits, accelerators)
-        
+
         initial_queue = []
-        
-        if eigenstate =="-":
+
+        if eigenstate == "-":
             initial_queue.append(gates.X)
         if initialize == "X":
             initial_queue.append(gates.H)
         elif initialize == "Y":
             initial_queue.append(gates.H)
             initial_queue.append(gates.S)
-        
+
         for gate in initial_queue:
             for qubit in range(nqubits):
                 self.queue.append(gate(qubit))
-
-            
 
     def _distributed_init(self, nqubits, accelerators):  # pragma: no cover
         """Distributed implementation of :class:`qibo.models.circuit.Circuit`.
