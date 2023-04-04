@@ -127,6 +127,8 @@ class Circuit:
         nglobal (int): Base two logarithm of the number of devices. Defaults to `None`.
         nlocal (int): Total number of available qubits in each device. Defaults to `None`.
         queues (DistributedQueues): Gate queues for each accelerator device. Defaults to `None`.
+        initialize (str): Basis to define the circuit inizial state.
+        eigenstate (str): Eigenstates that will belong to the basis. 
     """
 
     def __init__(
