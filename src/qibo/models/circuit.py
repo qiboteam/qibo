@@ -185,12 +185,15 @@ class Circuit:
 
         if eigenstate == "-":
             initial_queue.append(gates.X)
+        elif eigenstate != "+":
+            raise NotImplementedError("Invalid eigenstate")
         if initialize == "X":
             initial_queue.append(gates.H)
         elif initialize == "Y":
             initial_queue.append(gates.H)
             initial_queue.append(gates.S)
-
+        elif initialize != "Z":
+            raise NotImplementedError("Invalid initialize")
         for gate in initial_queue:
             for qubit in range(nqubits):
                 self.queue.append(gate(qubit))
