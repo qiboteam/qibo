@@ -63,7 +63,7 @@ def test_initialize(nqubits):
     c = Circuit(nqubits, initialize="Z")
     assert not c.queue  # empty list
     with pytest.raises(NotImplementedError):
-        c = Circuit(nqubits, eigenstate="W")
+        c = Circuit(nqubits, initialize="W")
 
 
 @pytest.mark.parametrize("nqubits", [0, -10, 2.5])
