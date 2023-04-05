@@ -40,6 +40,32 @@ def test_circuit_init():
     assert c.nqubits == 2
 
 
+@pytest.mark.parametrize("nqubits", [1, 5])
+def test_eigenstate(nqubits):
+    c = Circuit(nqubits, eigenstate="-")
+    for gate in c.queue:
+        assert type(gate) == gates.X
+    c = Circuit(nqubits, eigenstate="+")
+    assert not c.queue  # empty list
+    with pytest.raises(NotImplementedError):
+        c = Circuit(nqubits, eigenstate="x")
+
+
+@pytest.mark.parametrize("nqubits", [1, 5])
+def test_initialize(nqubits):
+    c = Circuit(nqubits, initialize="X")
+    for gate in c.queue:
+        assert type(gate) == gates.H
+    c = Circuit(nqubits, initialize="Y")
+    check_gates = [gates.H] * nqubits + [gates.S] * nqubits
+    for i, gate in enumerate(c.queue):
+        assert type(gate) == check_gates[i]
+    c = Circuit(nqubits, initialize="Z")
+    assert not c.queue  # empty list
+    with pytest.raises(NotImplementedError):
+        c = Circuit(nqubits, eigenstate="W")
+
+
 @pytest.mark.parametrize("nqubits", [0, -10, 2.5])
 def test_circuit_init_errors(nqubits):
     with pytest.raises((ValueError, TypeError)):
