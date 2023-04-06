@@ -15,7 +15,7 @@ class TensorflowMatrices(NumpyMatrices):
     def __init__(self, dtype):
         super().__init__(dtype)
         import tensorflow as tf  # pylint: disable=import-error
-        import tensorflow.experimental.numpy as tnp  # pylint: disable=E0401,import-error
+        import tensorflow.experimental.numpy as tnp  # pylint: disable=import-error
 
         self.tf = tf
         self.np = tnp
@@ -167,7 +167,7 @@ class TensorflowBackend(NumpyBackend):
         self.name = "tensorflow"
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(TF_LOG_LEVEL)
         import tensorflow as tf  # pylint: disable=import-error
-        import tensorflow.experimental.numpy as tnp  # pylint: disable=E0401,import-error
+        import tensorflow.experimental.numpy as tnp  # pylint: disable=import-error
 
         tnp.experimental_enable_numpy_behavior()
         self.tf = tf
