@@ -20,7 +20,7 @@ jobs:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
       publish: ${{ github.event_name == 'release' && github.event.action == 'published' && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.9' }}
-      poetry-extras: "--with tests,docs"
+      poetry-extras: "--with tests,docs --all-extras"
     secrets: inherit
 
   deploy-docker-image:
