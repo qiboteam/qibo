@@ -92,7 +92,7 @@ class StyleQGAN:
 
     def define_discriminator(self, alpha=0.2, dropout=0.2):
         """Define the standalone discriminator model."""
-        from tensorflow.keras.layers import (  # pylint: disable=E0611,E0401
+        from tensorflow.keras.layers import (  # pylint: disable=E0611,E0401,import-error
             Conv2D,
             Dense,
             Dropout,
@@ -100,8 +100,12 @@ class StyleQGAN:
             LeakyReLU,
             Reshape,
         )
-        from tensorflow.keras.models import Sequential  # pylint: disable=E0611,E0401
-        from tensorflow.keras.optimizers import Adadelta  # pylint: disable=E0611,E0401
+        from tensorflow.keras.models import (  # pylint: disable=E0611,E0401,import-error
+            Sequential,
+        )
+        from tensorflow.keras.optimizers import (  # pylint: disable=E0611,E0401,import-error
+            Adadelta,
+        )
 
         model = Sequential()
         model.add(Dense(200, use_bias=False, input_dim=self.nqubits))
