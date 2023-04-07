@@ -186,7 +186,7 @@ class Circuit:
         if eigenstate == "-":
             initial_queue.append(gates.X)
         elif eigenstate != "+":
-            raise NotImplementedError("Invalid eigenstate")
+            raise NotImplementedError(f"Invalid eigenstate {eigenstate}")
         if initialize == "X":
             initial_queue.append(gates.H)
         elif initialize == "Y":
