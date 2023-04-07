@@ -1,4 +1,6 @@
 """Test :meth:`qibo.models.circuit.Circuit.get_parameters` and :meth:`qibo.models.circuit.Circuit.set_parameters`."""
+import sys
+
 import numpy as np
 import pytest
 
@@ -210,6 +212,10 @@ def test_set_parameters_with_light_cone(backend, trainable):
     backend.assert_allclose(final_state, target_state)
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="no tensorflow-io-0.32.0's wheel available for Windows",
+)
 def test_variable_theta():
     """Check that parametrized gates accept `tf.Variable` parameters."""
     try:
@@ -219,7 +225,7 @@ def test_variable_theta():
     except ModuleNotFoundError:  # pragma: no cover
         pytest.skip("Skipping variable test because tensorflow is not available.")
 
-    import tensorflow as tf
+    import tensorflow as tf  # pylint: disable=import-error
 
     theta1 = tf.Variable(0.1234, dtype="float64")
     theta2 = tf.Variable(0.4321, dtype="float64")
