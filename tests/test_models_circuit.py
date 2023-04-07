@@ -53,17 +53,17 @@ def test_eigenstate(nqubits):
 
 @pytest.mark.parametrize("nqubits", [1, 5])
 def test_initialize(nqubits):
-    c = Circuit(nqubits, initialize="X")
+    c = Circuit(nqubits, basis="X")
     for gate in c.queue:
         assert type(gate) == gates.H
-    c = Circuit(nqubits, initialize="Y")
+    c = Circuit(nqubits, basis="Y")
     check_gates = [gates.H] * nqubits + [gates.S] * nqubits
     for i, gate in enumerate(c.queue):
         assert type(gate) == check_gates[i]
-    c = Circuit(nqubits, initialize="Z")
+    c = Circuit(nqubits, basis="Z")
     assert not c.queue  # empty list
     with pytest.raises(NotImplementedError):
-        c = Circuit(nqubits, initialize="W")
+        c = Circuit(nqubits, basis="W")
 
 
 @pytest.mark.parametrize("nqubits", [0, -10, 2.5])
