@@ -193,7 +193,7 @@ class Circuit:
             initial_queue.append(gates.H)
             initial_queue.append(gates.S)
         elif initialize != "Z":
-            raise NotImplementedError("Invalid initialize")
+            raise NotImplementedError(f"Invalid initialize {initialize}")
         for gate in initial_queue:
             for qubit in range(nqubits):
                 self.queue.append(gate(qubit))
