@@ -136,7 +136,7 @@ class Circuit:
         nqubits,
         accelerators=None,
         density_matrix=False,
-        initialize="Z",
+        basis="Z",
         eigenstate="+",
     ):
         if not isinstance(nqubits, int):
@@ -181,21 +181,33 @@ class Circuit:
                 )
             self._distributed_init(nqubits, accelerators)
 
-        initial_queue = []
+        self._basis_initialization(basis, eigenstate)
 
+    def _basis_initialization(self, basis: str, eigenstate: str):
+        """This function appends some gates at the beginning of the
+        circuit's queue in order to initialize all the qubits in a specific
+        basis eigenstate.
+
+            - if eigenstate is  '+', no gate added
+            - if eigenstate is '-', add an X gate
+            - if basis is 'Z', no gate added
+            - if basis is 'X', add a Hadamard gate
+            - if basis is 'Y', add a Hadamard and an S gate
+        """
+        initial_queue = []
         if eigenstate == "-":
             initial_queue.append(gates.X)
         elif eigenstate != "+":
             raise NotImplementedError(f"Invalid eigenstate {eigenstate}")
-        if initialize == "X":
+        if basis == "X":
             initial_queue.append(gates.H)
-        elif initialize == "Y":
+        elif basis == "Y":
             initial_queue.append(gates.H)
             initial_queue.append(gates.S)
-        elif initialize != "Z":
-            raise NotImplementedError(f"Invalid initialize {initialize}")
+        elif basis != "Z":
+            raise NotImplementedError(f"Invalid basis {basis}")
         for gate in initial_queue:
-            for qubit in range(nqubits):
+            for qubit in range(self.nqubits):
                 self.queue.append(gate(qubit))
 
     def _distributed_init(self, nqubits, accelerators):  # pragma: no cover
