@@ -186,7 +186,7 @@ class Circuit:
     def _basis_initialization(self, basis: str, eigenstate: str):
         """This function appends some gates at the beginning of the
         circuit's queue in order to initialize all the qubits in a specific
-        basis eigenstate.
+        eigenstate of the operator defined in `basis`:
 
             - if eigenstate is  '+', no gate added
             - if eigenstate is '-', add an X gate
