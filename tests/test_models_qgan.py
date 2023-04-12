@@ -1,4 +1,6 @@
 """Test style-qGAN model defined in `qibo/models/qgan.py`."""
+import sys
+
 import numpy as np
 import pytest
 
@@ -93,9 +95,13 @@ def test_qgan_errors():
         qgan.fit(reference_distribution, initial_params=initial_params, save=False)
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="no tensorflow-io-0.32.0's wheel available for Windows",
+)
 def test_qgan_custom_discriminator():
-    from tensorflow.keras.layers import Dense  # pylint: disable=E0611,E0401
-    from tensorflow.keras.models import Sequential  # pylint: disable=E0611,E0401
+    from tensorflow.keras.layers import Dense  # pylint: disable=E0611,import-error
+    from tensorflow.keras.models import Sequential  # pylint: disable=E0611,import-error
 
     reference_distribution = generate_distribution(10)
     # use wrong number of qubits so that we capture the error

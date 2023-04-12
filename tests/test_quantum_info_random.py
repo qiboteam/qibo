@@ -407,6 +407,9 @@ def test_random_stochastic_matrix():
         random_stochastic_matrix(dims, bistochastic="True")
     with pytest.raises(TypeError):
         dims = 2
+        random_stochastic_matrix(dims, diagonally_dominant="True")
+    with pytest.raises(TypeError):
+        dims = 2
         random_stochastic_matrix(dims, precision_tol=1)
     with pytest.raises(ValueError):
         dims, precision_tol = 2, -0.1
@@ -427,18 +430,50 @@ def test_random_stochastic_matrix():
     dims = 4
     matrix = random_stochastic_matrix(dims)
     sum_rows = np.sum(matrix, axis=1)
+
     assert all(sum_rows < 1 + PRECISION_TOL)
     assert all(sum_rows > 1 - PRECISION_TOL)
+
+    # tests if matrix is diagonally dominant
+    dims = 4
+    matrix = random_stochastic_matrix(
+        dims, diagonally_dominant=True, max_iterations=1000
+    )
+    sum_rows = np.sum(matrix, axis=1)
+
+    assert all(sum_rows < 1 + PRECISION_TOL)
+    assert all(sum_rows > 1 - PRECISION_TOL)
+
+    assert all(2 * np.diag(matrix) - sum_rows > 0)
 
     # tests if matrix is bistochastic
     dims = 4
     matrix = random_stochastic_matrix(dims, bistochastic=True)
     sum_rows = np.sum(matrix, axis=1)
     column_rows = np.sum(matrix, axis=0)
+
     assert all(sum_rows < 1 + PRECISION_TOL)
     assert all(sum_rows > 1 - PRECISION_TOL)
+
     assert all(column_rows < 1 + PRECISION_TOL)
     assert all(column_rows > 1 - PRECISION_TOL)
+
+    # tests if matrix is bistochastic and diagonally dominant
+    dims = 4
+    matrix = random_stochastic_matrix(
+        dims, bistochastic=True, diagonally_dominant=True, max_iterations=1000
+    )
+    sum_rows = np.sum(matrix, axis=1)
+    column_rows = np.sum(matrix, axis=0)
+
+    assert all(sum_rows < 1 + PRECISION_TOL)
+    assert all(sum_rows > 1 - PRECISION_TOL)
+
+    assert all(column_rows < 1 + PRECISION_TOL)
+    assert all(column_rows > 1 - PRECISION_TOL)
+
+    assert all(2 * np.diag(matrix) - sum_rows > 0)
+    assert all(2 * np.diag(matrix) - column_rows > 0)
 
     # tests warning for max_iterations
     dims = 4

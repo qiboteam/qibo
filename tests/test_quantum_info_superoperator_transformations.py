@@ -176,6 +176,8 @@ test_kraus_right = np.array(
     ]
 )
 test_coefficients = np.array([1.002719, 0.65635444, 0.43548, 0.21124177])
+test_pauli = np.diag([2.0, -0.4, -2.0, 0.4])
+test_chi = np.diag([0, 1.6, 0, 2.4])
 
 
 @pytest.mark.parametrize("order", ["row", "column"])
@@ -282,20 +284,6 @@ def test_liouville_to_kraus(order):
     assert np.linalg.norm(evolution_a1 - test_evolution_a1) < PRECISION_TOL, True
 
 
-a1 = np.sqrt(0.4) * matrices.X
-a2 = np.sqrt(0.6) * matrices.Z
-
-test_superop = np.array(
-    [
-        [0.6 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.4 + 0.0j],
-        [0.0 + 0.0j, -0.6 + 0.0j, 0.4 + 0.0j, 0.0 + 0.0j],
-        [0.0 + 0.0j, 0.4 + 0.0j, -0.6 + 0.0j, 0.0 + 0.0j],
-        [0.4 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.6 + 0.0j],
-    ]
-)
-test_pauli = np.diag([2.0, -0.4, -2.0, 0.4])
-
-
 @pytest.mark.parametrize("order", ["row", "column", "system"])
 @pytest.mark.parametrize("normalize", [False, True])
 def test_pauli_to_liouville(normalize, order):
@@ -319,7 +307,7 @@ def test_liouville_to_pauli(normalize, order):
     d = int(np.sqrt(test_pauli.shape[0]))
     aux = 1.0 if normalize == False else d
 
-    pauli_op = liouville_to_pauli(test_superop, normalize, order)
+    pauli_op = liouville_to_pauli(test_superop, normalize=normalize, order=order)
 
     assert np.linalg.norm(test_pauli / aux - pauli_op) < PRECISION_TOL, True
 
@@ -384,6 +372,112 @@ def test_kraus_to_pauli(normalize, order):
     pauli_op = kraus_to_pauli(test_kraus, normalize, order)
 
     assert np.linalg.norm(test_pauli / aux - pauli_op) < PRECISION_TOL, True
+
+
+@pytest.mark.parametrize("order", ["row", "column"])
+@pytest.mark.parametrize("normalize", [False, True])
+def test_choi_to_chi(normalize, order):
+    d = int(np.sqrt(test_pauli.shape[0]))
+    aux = 1 if normalize == False else d
+
+    axes = [1, 2] if order == "row" else [0, 3]
+    test_choi = np.reshape(test_superop * aux, [2] * 4).swapaxes(*axes).reshape([4, 4])
+
+    chi_matrix = choi_to_chi(test_choi, normalize=normalize, order=order)
+    assert np.linalg.norm(test_chi - chi_matrix) < PRECISION_TOL, True
+
+
+@pytest.mark.parametrize("order", ["row", "column"])
+@pytest.mark.parametrize("normalize", [False, True])
+def test_kraus_to_chi(normalize, order):
+    d = int(np.sqrt(test_pauli.shape[0]))
+    aux = 1.0 if normalize == False else d
+
+    chi_matrix = kraus_to_chi(test_kraus, normalize, order)
+
+    assert np.linalg.norm(test_chi / aux - chi_matrix) < PRECISION_TOL, True
+
+
+@pytest.mark.parametrize("order", ["row", "column"])
+@pytest.mark.parametrize("normalize", [False, True])
+def test_liouville_to_chi(normalize, order):
+    d = int(np.sqrt(test_pauli.shape[0]))
+    aux = 1.0 if normalize == False else d
+
+    chi_matrix = liouville_to_chi(test_superop, normalize, order)
+
+    assert np.linalg.norm(test_chi / aux - chi_matrix) < PRECISION_TOL, True
+
+
+@pytest.mark.parametrize("order", ["row", "column"])
+@pytest.mark.parametrize("normalize", [False, True])
+def test_pauli_to_chi(normalize, order):
+    d = int(np.sqrt(test_pauli.shape[0]))
+    aux = d**2 if normalize == False else d
+
+    chi_matrix = pauli_to_chi(test_pauli / aux, normalize, order)
+
+    aux = 1.0 if normalize == False else d
+    assert np.linalg.norm(test_chi / aux - chi_matrix) < PRECISION_TOL, True
+
+
+@pytest.mark.parametrize("order", ["row", "column"])
+@pytest.mark.parametrize("normalize", [False, True])
+def test_chi_to_choi(normalize, order):
+    d = int(np.sqrt(test_pauli.shape[0]))
+    aux = d**2 if normalize == False else d
+
+    axes = [1, 2] if order == "row" else [0, 3]
+    test_choi = np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
+
+    choi_super_op = chi_to_choi(test_chi / aux, normalize, order)
+
+    assert np.linalg.norm(test_choi - choi_super_op) < PRECISION_TOL, True
+
+
+@pytest.mark.parametrize("order", ["row", "column"])
+@pytest.mark.parametrize("normalize", [False, True])
+def test_chi_to_liouville(normalize, order):
+    d = int(np.sqrt(test_pauli.shape[0]))
+    aux = d**2 if normalize == False else d
+
+    super_op = chi_to_liouville(test_chi / aux, normalize, order)
+
+    assert np.linalg.norm(test_superop - super_op) < PRECISION_TOL, True
+
+
+@pytest.mark.parametrize("order", ["row", "column"])
+@pytest.mark.parametrize("normalize", [False, True])
+def test_chi_to_pauli(normalize, order):
+    d = int(np.sqrt(test_pauli.shape[0]))
+    aux = d**2 if normalize == False else d
+
+    pauli_op = chi_to_pauli(test_chi / aux, normalize, order)
+
+    assert np.linalg.norm(test_pauli - pauli_op) < PRECISION_TOL, True
+
+
+@pytest.mark.parametrize("order", ["row", "column"])
+@pytest.mark.parametrize("normalize", [False, True])
+def test_chi_to_kraus(normalize, order):
+    d = int(np.sqrt(test_pauli.shape[0]))
+    aux = d**2 if normalize == False else d
+
+    kraus_ops, _ = chi_to_kraus(test_chi / aux, normalize, order=order)
+
+    a0 = kraus_ops[0]
+    a1 = kraus_ops[1]
+
+    state = random_density_matrix(2)
+
+    evolution_a0 = a0 @ state @ a0.T.conj()
+    evolution_a1 = a1 @ state @ a1.T.conj()
+
+    test_evolution_a0 = test_a0 @ state @ test_a0.T.conj()
+    test_evolution_a1 = test_a1 @ state @ test_a1.T.conj()
+
+    assert np.linalg.norm(evolution_a0 - test_evolution_a0) < 2 * PRECISION_TOL, True
+    assert np.linalg.norm(evolution_a1 - test_evolution_a1) < 2 * PRECISION_TOL, True
 
 
 @pytest.mark.parametrize("order", ["row", "column"])
