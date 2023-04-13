@@ -452,6 +452,7 @@ class QAOA:
         initial_state=None,
         method="Powell",
         mode=None,
+        mode_param=0.1,
         jac=None,
         hess=None,
         hessp=None,
@@ -477,6 +478,8 @@ class QAOA:
                 methods.
             mode (str): the desired loss function. The default is None. Alternatives are
              "cvar", and "gibbs".
+            mode_param (float): a positive parameter for the loss function. It is alpha for the cvar
+                 loss function and eta for the gibbs loss function
             jac (dict): Method for computing the gradient vector for scipy optimizers.
             hess (dict): Method for computing the hessian matrix for scipy optimizers.
             hessp (callable): Hessian of objective function times an arbitrary
@@ -528,11 +531,11 @@ class QAOA:
             elif mode == "cvar":
                 from qibo.models.utils import cvar
 
-                return cvar(hamiltonian, state)
+                return cvar(hamiltonian, state, mode_param)
             elif mode == "gibbs":
                 from qibo.models.utils import gibbs
 
-                return gibbs(hamiltonian, state)
+                return gibbs(hamiltonian, state, mode_param)
 
         if method == "sgd":
             loss = lambda p, c, h, s: _loss(self.hamiltonian.backend.cast(p), c, h, s)
