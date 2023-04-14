@@ -330,8 +330,8 @@ def test_aavqe(backend, method, options, compile, filename):
         assert_regression_fixture(backend, params, filename, rtol=1e-2)
 
 
-@pytest.mark.parametrize("test_input,expected", [("cvar", -0.5), ("gibbs", -2.08)])
-def test_custom_loss(test_input, expected):
+@pytest.mark.parametrize("test_input,expected", [("cvar", 0.1, -0.5), ("gibbs", 0.1, -2.08)])
+def test_custom_loss(test_input, test_param, expected):
     from qibo import hamiltonians
 
     h = hamiltonians.XXZ(3)

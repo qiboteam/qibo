@@ -478,7 +478,7 @@ class QAOA:
                 methods.
             mode (str): the desired loss function. The default is None. Alternatives are
              "cvar", and "gibbs".
-            mode_param (float): a positive parameter for the loss function. It is alpha for the cvar
+            mode_param (float): a positive parameter for the loss function. It is alpha < 1 for the cvar
                  loss function and eta for the gibbs loss function
             jac (dict): Method for computing the gradient vector for scipy optimizers.
             hess (dict): Method for computing the hessian matrix for scipy optimizers.
