@@ -18,6 +18,7 @@ class Gate:
         """
         Attributes:
             name (str): Name of the gate.
+            label (str): Optional label of the gate. Default is the same as name.
             is_controlled_by (bool): ``True`` if the gate was created using the
                 :meth:`qibo.gates.abstract.Gate.controlled_by` method,
                 otherwise ``False``.
@@ -30,6 +31,7 @@ class Gate:
         from qibo import config
 
         self.name = None
+        self.label = None
         self.is_controlled_by = False
         # args for creating gate
         self.init_args = []

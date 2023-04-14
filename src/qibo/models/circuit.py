@@ -1272,12 +1272,15 @@ class Circuit:
     def _update_draw_matrix(self, matrix, idx, gate, gate_symbol=None):
         """Helper method for :meth:`qibo.models.circuit.Circuit.draw`."""
         if gate_symbol is None:
-            if gate.name not in gates.DRAW_LABELS:  # pragma: no cover
+            if gate.label is not None and gate.label != gate.name:
+                gate_symbol = gate.label[:4]
+            elif gate.name in gates.DRAW_LABELS:  # pragma: no cover
+                gate_symbol = gates.DRAW_LABELS.get(gate.name)
+            else:
                 raise_error(
                     NotImplementedError,
                     f"{gate.name} gate is not supported by `circuit.draw`",
                 )
-            gate_symbol = gates.DRAW_LABELS.get(gate.name)
 
         if isinstance(gate, gates.CallbackGate):
             targets = list(range(self.nqubits))

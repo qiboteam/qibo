@@ -50,6 +50,7 @@ class M(Gate):
     ):
         super().__init__()
         self.name = "measure"
+        self.label = "measure"
         self.target_qubits = tuple(q)
         self.register_name = register_name
         self.collapse = collapse

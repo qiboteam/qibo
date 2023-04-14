@@ -205,6 +205,7 @@ class KrausChannel(Channel):
     def __init__(self, ops):
         super().__init__()
         self.name = "KrausChannel"
+        self.label = "KrausChannel"
         if isinstance(ops[0], Gate):
             self.gates = tuple(ops)
             self.target_qubits = tuple(
@@ -269,6 +270,7 @@ class UnitaryChannel(KrausChannel):
                 )
         super().__init__(ops)
         self.name = "UnitaryChannel"
+        self.label = "UnitaryChannel"
         self.coefficients = tuple(probabilities)
         self.coefficient_sum = sum(probabilities)
         if self.coefficient_sum > 1 + PRECISION_TOL or self.coefficient_sum <= 0:
@@ -320,6 +322,7 @@ class PauliNoiseChannel(UnitaryChannel):
 
         super().__init__(probs, gates)
         self.name = "PauliNoiseChannel"
+        self.label = "PauliNoiseChannel"
         assert self.target_qubits == (q,)
 
         self.init_args = [q]
@@ -402,6 +405,7 @@ class GeneralizedPauliNoiseChannel(UnitaryChannel):
 
         super().__init__(probabilities, gates)
         self.name = "GeneralizedPauliNoiseChannel"
+        self.label = "GeneralizedPauliNoiseChannel"
         self.init_args = qubits
         self.init_kwargs = dict(operators)
 
@@ -441,6 +445,7 @@ class DepolarizingChannel(Channel):
             )
 
         self.name = "DepolarizingChannel"
+        self.label = "DepolarizingChannel"
         self.target_qubits = q
 
         self.init_args = [q]
@@ -511,8 +516,6 @@ class ThermalRelaxationChannel(KrausChannel):
     """
 
     def __init__(self, q, t1, t2, time, excited_population=0):
-        self.name = "ThermalRelaxationChannel"
-
         # check given parameters
         if excited_population < 0 or excited_population > 1:
             raise_error(
@@ -580,6 +583,9 @@ class ThermalRelaxationChannel(KrausChannel):
         self.init_kwargs["excited_population"] = excited_population
         self.init_kwargs["p0"] = preset0
         self.init_kwargs["p1"] = preset1
+
+        self.name = "ThermalRelaxationChannel"
+        self.label = "ThermalRelaxationChannel"
 
     def apply_density_matrix(self, backend, state, nqubits):
         q = self.target_qubits[0]
@@ -653,6 +659,7 @@ class ReadoutErrorChannel(KrausChannel):
 
         super().__init__(ops=operators)
         self.name = "ReadoutErrorChannel"
+        self.label = "ReadoutErrorChannel"
 
 
 class ResetChannel(KrausChannel):
@@ -694,6 +701,7 @@ class ResetChannel(KrausChannel):
         super().__init__(ops=operators)
         self.init_kwargs = {"p0": p0, "p1": p1}
         self.name = "ResetChannel"
+        self.label = "ResetChannel"
 
     def apply_density_matrix(self, backend, state, nqubits):
         return backend.reset_error_density_matrix(self, state, nqubits)

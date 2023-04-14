@@ -681,3 +681,24 @@ def test_circuit_draw_callbacks(legend):
         )
 
     assert c.draw(legend=legend) == ref
+
+
+def test_circuit_draw_labels():
+    """Test circuit text draw."""
+    ref = (
+        "q0: ─H─G1─G2─G3─G4───────────────────────────x───\n"
+        "q1: ───o──|──|──|──H─G2─G3─G4────────────────|─x─\n"
+        "q2: ──────o──|──|────o──|──|──H─G3─G4────────|─|─\n"
+        "q3: ─────────o──|───────o──|────o──|──H─G4───|─x─\n"
+        "q4: ────────────o──────────o───────o────o──H─x───"
+    )
+    circuit = Circuit(5)
+    for i1 in range(5):
+        circuit.add(gates.H(i1))
+        for i2 in range(i1 + 1, 5):
+            gate = gates.CNOT(i2, i1)
+            gate.label = f"G{i2}"
+            circuit.add(gate)
+    circuit.add(gates.SWAP(0, 4))
+    circuit.add(gates.SWAP(1, 3))
+    assert circuit.draw() == ref
