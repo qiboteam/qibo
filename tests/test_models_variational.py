@@ -337,5 +337,5 @@ def test_custom_loss(test_input, test_param, expected):
     h = hamiltonians.XXZ(3)
     qaoa = models.QAOA(h)
     initial_p = [0.314, 0.22, 0.05, 0.59]
-    best, params, _ = qaoa.minimize(initial_p, mode=test_input)
+    best, params, _ = qaoa.minimize(initial_p, mode=test_input, mode_param=test_param)
     assert abs(best - expected) <= 0.01
