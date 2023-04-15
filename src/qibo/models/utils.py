@@ -44,7 +44,7 @@ def compute_cvar(probabilities, values, alpha):
     vals = np.array(values)[sorted_indices]
     cum_probs = np.cumsum(probs)
     exceed_index = np.searchsorted(cum_probs, alpha, side='right')
-    cvar = np.sum(probs[:exceed_index] * vals[:exceed_index]) / cum_probs[exceed_index - 1]
+    cvar = np.sum(probs[:exceed_index] * vals[:exceed_index]) / max(cum_probs[exceed_index - 1], 0.0001) # avodiing division by 0
     return cvar
 
 
