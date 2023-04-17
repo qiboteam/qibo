@@ -667,8 +667,8 @@ def test_circuit_draw_channels(legend):
             "\n\n Legend for callbacks and channels: \n"
             "| Gate                | Symbol   |\n"
             "|---------------------+----------|\n"
-            "| PauliNoiseChannel   | PN       |\n"
-            "| DepolarizingChannel | D        |"
+            "| DepolarizingChannel | D        |\n"
+            "| PauliNoiseChannel   | PN       |"
         )
 
     assert c.draw(legend=legend) == ref

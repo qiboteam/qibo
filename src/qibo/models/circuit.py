@@ -1373,14 +1373,14 @@ class Circuit:
         if legend:
             from tabulate import tabulate
 
-            legend_values = {
+            legend_rows = {
                 (i.name, i.draw_label)
                 for i in self.queue
                 if isinstance(i, (gates.SpecialGate, gates.Channel))
             }
 
             table = tabulate(
-                [list(l) for l in legend_values],
+                [list(l) for l in sorted(legend_rows)],
                 headers=["Gate", "Symbol"],
                 tablefmt="orgtbl",
             )
