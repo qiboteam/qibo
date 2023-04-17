@@ -18,7 +18,7 @@ class Gate:
         """
         Attributes:
             name (str): Name of the gate.
-            label (str): Optional label of the gate. Default is the same as name.
+            draw_label (str): Optional label for drawing the gate in a circuit with :func:`qibo.models.Circuit.draw`.
             is_controlled_by (bool): ``True`` if the gate was created using the
                 :meth:`qibo.gates.abstract.Gate.controlled_by` method,
                 otherwise ``False``.
@@ -31,7 +31,7 @@ class Gate:
         from qibo import config
 
         self.name = None
-        self.label = None
+        self.draw_label = None
         self.is_controlled_by = False
         # args for creating gate
         self.init_args = []
@@ -71,7 +71,7 @@ class Gate:
             raise_error(
                 ValueError,
                 "Target qubit {} was given twice for gate {}."
-                "".format(repeated, self.name),
+                "".format(repeated, __class__.__name__),
             )
 
     def _set_control_qubits(self, qubits: Sequence[int]):
@@ -82,7 +82,7 @@ class Gate:
             raise_error(
                 ValueError,
                 "Control qubit {} was given twice for gate {}."
-                "".format(repeated, self.name),
+                "".format(repeated, __class__.__name__),
             )
 
     @target_qubits.setter
@@ -126,7 +126,7 @@ class Gate:
             raise_error(
                 ValueError,
                 "{} qubits are both targets and controls for "
-                "gate {}.".format(common, self.name),
+                "gate {}.".format(common, __class__.__name__),
             )
 
     @property
@@ -269,13 +269,14 @@ class Gate:
 
         raise_error(
             NotImplementedError,
-            f"Generator eigenvalue is not implemented for {self.name}",
+            f"Generator eigenvalue is not implemented for {__class__.__name__}",
         )
 
     def basis_rotation(self):
         """Transformation required to rotate the basis for measuring the gate."""
         raise_error(
-            NotImplementedError, f"Basis rotation is not implemented for {self.name}"
+            NotImplementedError,
+            f"Basis rotation is not implemented for {__class__.__name__}",
         )
 
     @property

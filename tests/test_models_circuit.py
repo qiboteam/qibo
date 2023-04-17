@@ -166,9 +166,26 @@ def test_gate_types():
     c.add(gates.CNOT(0, 2))
     c.add(gates.CNOT(1, 2))
     c.add(gates.TOFFOLI(0, 1, 2))
-    target_counter = collections.Counter({"h": 2, "x": 1, "cx": 2, "ccx": 1})
+    target_counter = collections.Counter(
+        {gates.H: 2, gates.X: 1, gates.CNOT: 2, gates.TOFFOLI: 1}
+    )
     assert c.ngates == 6
     assert c.gate_types == target_counter
+
+
+def test_gate_names():
+    import collections
+
+    c = Circuit(3)
+    c.add(gates.H(0))
+    c.add(gates.H(1))
+    c.add(gates.X(2))
+    c.add(gates.CNOT(0, 2))
+    c.add(gates.CNOT(1, 2))
+    c.add(gates.TOFFOLI(0, 1, 2))
+    target_counter = collections.Counter({"h": 2, "x": 1, "cx": 2, "ccx": 1})
+    assert c.ngates == 6
+    assert c.gate_names == target_counter
 
 
 def test_gates_of_type():
@@ -697,8 +714,20 @@ def test_circuit_draw_labels():
         circuit.add(gates.H(i1))
         for i2 in range(i1 + 1, 5):
             gate = gates.CNOT(i2, i1)
-            gate.label = f"G{i2}"
+            gate.draw_label = f"G{i2}"
             circuit.add(gate)
     circuit.add(gates.SWAP(0, 4))
     circuit.add(gates.SWAP(1, 3))
     assert circuit.draw() == ref
+
+
+def test_circuit_draw_error():
+    """Test NotImplementedError in circuit draw"""
+    circuit = Circuit(1)
+    error_gate = gates.X(0)
+    error_gate.name = ""
+    error_gate.draw_label = ""
+    circuit.add(error_gate)
+
+    with pytest.raises(NotImplementedError):
+        circuit.draw()

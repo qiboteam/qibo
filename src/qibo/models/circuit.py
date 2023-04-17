@@ -629,17 +629,22 @@ class Circuit:
 
     @property
     def gate_types(self) -> collections.Counter:
-        """``collections.Counter`` with the number of appearances of each gate type.
+        """``collections.Counter`` with the number of appearances of each gate type."""
+        gatecounter = collections.Counter()
+        for gate in self.queue:
+            gatecounter[gate.__class__] += 1
+        return gatecounter
 
-        The QASM names are used as gate identifiers.
-        """
+    @property
+    def gate_names(self) -> collections.Counter:
+        """``collections.Counter`` with the number of appearances of each gate name."""
         gatecounter = collections.Counter()
         for gate in self.queue:
             gatecounter[gate.name] += 1
         return gatecounter
 
     def gates_of_type(self, gate: Union[str, type]) -> List[Tuple[int, gates.Gate]]:
-        """Finds all gate objects of specific type.
+        """Finds all gate objects of specific type or name.
 
         Args:
             gate (str, type): The QASM name of a gate or the corresponding gate class.
@@ -864,7 +869,7 @@ class Circuit:
             f"Number of qubits = {self.nqubits}",
             "Most common gates:",
         ]
-        common_gates = self.gate_types.most_common()
+        common_gates = self.gate_names.most_common()
         logs.extend("{}: {}".format(g, n) for g, n in common_gates)
         return "\n".join(logs)
 
@@ -1039,9 +1044,10 @@ class Circuit:
             if isinstance(gate, gates.M):
                 continue
 
-            if gate.name not in gates.QASM_GATES:
+            if not hasattr(gate, "qasm_label"):
                 raise_error(
-                    ValueError, f"Gate {gate.name} is not supported by OpenQASM."
+                    ValueError,
+                    f"Gate {gate.__class__.__name__} is not supported by OpenQASM.",
                 )
             if gate.is_controlled_by:
                 raise_error(
@@ -1049,11 +1055,11 @@ class Circuit:
                 )
 
             qubits = ",".join(f"q[{i}]" for i in gate.qubits)
-            if gate.name in gates.PARAMETRIZED_GATES:
+            if gate.qasm_label in gates.PARAMETRIZED_GATES:
                 params = (str(x) for x in gate.parameters)
-                name = "{}({})".format(gate.name, ", ".join(params))
+                name = "{}({})".format(gate.qasm_label, ", ".join(params))
             else:
-                name = gate.name
+                name = gate.qasm_label
             code.append(f"{name} {qubits};")
 
         # Add measurements
@@ -1272,14 +1278,14 @@ class Circuit:
     def _update_draw_matrix(self, matrix, idx, gate, gate_symbol=None):
         """Helper method for :meth:`qibo.models.circuit.Circuit.draw`."""
         if gate_symbol is None:
-            if gate.label is not None and gate.label != gate.name:
-                gate_symbol = gate.label[:4]
-            elif gate.name in gates.DRAW_LABELS:  # pragma: no cover
-                gate_symbol = gates.DRAW_LABELS.get(gate.name)
+            if hasattr(gate, "draw_label") and gate.draw_label:
+                gate_symbol = gate.draw_label[:4]
+            elif gate.name:
+                gate_symbol = gate.name[:4]
             else:
                 raise_error(
                     NotImplementedError,
-                    f"{gate.name} gate is not supported by `circuit.draw`",
+                    f"{gate.__class__.__name__} gate is not supported by `circuit.draw`",
                 )
 
         if isinstance(gate, gates.CallbackGate):
@@ -1367,14 +1373,14 @@ class Circuit:
         if legend:
             from tabulate import tabulate
 
-            names = [
-                i.name
+            legend_values = {
+                (i.name, i.draw_label)
                 for i in self.queue
-                if isinstance(i, gates.SpecialGate) or "Channel" in i.name
-            ]
-            names = list(dict.fromkeys(names))
+                if isinstance(i, (gates.SpecialGate, gates.Channel))
+            }
+
             table = tabulate(
-                [[i, gates.DRAW_LABELS[i]] for i in names],
+                [list(l) for l in legend_values],
                 headers=["Gate", "Symbol"],
                 tablefmt="orgtbl",
             )
