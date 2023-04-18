@@ -67,7 +67,8 @@ class Gate:
     def qasm_label(self):
         """String corresponding to OpenQASM operation of the gate."""
         raise_error(
-            NotImplementedError, f"{self.__class__.__name__} is not supported by OpenQASM"
+            NotImplementedError,
+            f"{self.__class__.__name__} is not supported by OpenQASM",
         )
 
     def _set_target_qubits(self, qubits: Sequence[int]):

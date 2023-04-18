@@ -1043,7 +1043,7 @@ class Circuit:
         for gate in self.queue:
             if isinstance(gate, gates.M):
                 continue
-                
+
             if gate.is_controlled_by:
                 raise_error(
                     ValueError, "OpenQASM does not support multi-controlled gates."
