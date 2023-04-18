@@ -1043,12 +1043,7 @@ class Circuit:
         for gate in self.queue:
             if isinstance(gate, gates.M):
                 continue
-
-            if not hasattr(gate, "qasm_label"):
-                raise_error(
-                    ValueError,
-                    f"Gate {gate.__class__.__name__} is not supported by OpenQASM.",
-                )
+                
             if gate.is_controlled_by:
                 raise_error(
                     ValueError, "OpenQASM does not support multi-controlled gates."
@@ -1278,7 +1273,7 @@ class Circuit:
     def _update_draw_matrix(self, matrix, idx, gate, gate_symbol=None):
         """Helper method for :meth:`qibo.models.circuit.Circuit.draw`."""
         if gate_symbol is None:
-            if hasattr(gate, "draw_label") and gate.draw_label:
+            if gate.draw_label:
                 gate_symbol = gate.draw_label[:4]
             elif gate.name:
                 gate_symbol = gate.name[:4]

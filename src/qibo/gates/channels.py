@@ -31,7 +31,7 @@ class Channel(Gate):
     def apply(self, backend, state, nqubits):  # pragma: no cover
         raise_error(
             NotImplementedError,
-            f"{__class__.__name__} cannot be applied to state vector.",
+            f"{self.__class__.__name__} cannot be applied to state vector.",
         )
 
     def apply_density_matrix(self, backend, state, nqubits):

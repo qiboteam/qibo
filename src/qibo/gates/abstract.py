@@ -63,6 +63,13 @@ class Gate:
         """Tuple with ids of all qubits (control and target) that the gate acts."""
         return self.control_qubits + self.target_qubits
 
+    @property
+    def qasm_label(self):
+        """String corresponding to OpenQASM operation of the gate."""
+        raise_error(
+            NotImplementedError, f"{self.__class__.__name__} is not supported by OpenQASM"
+        )
+
     def _set_target_qubits(self, qubits: Sequence[int]):
         """Helper method for setting target qubits."""
         self._target_qubits = tuple(qubits)
@@ -71,7 +78,7 @@ class Gate:
             raise_error(
                 ValueError,
                 "Target qubit {} was given twice for gate {}."
-                "".format(repeated, __class__.__name__),
+                "".format(repeated, self.__class__.__name__),
             )
 
     def _set_control_qubits(self, qubits: Sequence[int]):
@@ -82,7 +89,7 @@ class Gate:
             raise_error(
                 ValueError,
                 "Control qubit {} was given twice for gate {}."
-                "".format(repeated, __class__.__name__),
+                "".format(repeated, self.__class__.__name__),
             )
 
     @target_qubits.setter
@@ -126,7 +133,7 @@ class Gate:
             raise_error(
                 ValueError,
                 "{} qubits are both targets and controls for "
-                "gate {}.".format(common, __class__.__name__),
+                "gate {}.".format(common, self.__class__.__name__),
             )
 
     @property
@@ -269,14 +276,14 @@ class Gate:
 
         raise_error(
             NotImplementedError,
-            f"Generator eigenvalue is not implemented for {__class__.__name__}",
+            f"Generator eigenvalue is not implemented for {self.__class__.__name__}",
         )
 
     def basis_rotation(self):
         """Transformation required to rotate the basis for measuring the gate."""
         raise_error(
             NotImplementedError,
-            f"Basis rotation is not implemented for {__class__.__name__}",
+            f"Basis rotation is not implemented for {self.__class__.__name__}",
         )
 
     @property
