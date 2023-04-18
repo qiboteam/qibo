@@ -1274,7 +1274,7 @@ class Circuit:
         """Helper method for :meth:`qibo.models.circuit.Circuit.draw`."""
         if gate_symbol is None:
             if gate.draw_label:
-                gate_symbol = gate.draw_label[:4]
+                gate_symbol = gate.draw_label
             elif gate.name:
                 gate_symbol = gate.name[:4]
             else:

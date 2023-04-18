@@ -721,6 +721,27 @@ def test_circuit_draw_labels():
     assert circuit.draw() == ref
 
 
+def test_circuit_draw_names():
+    """Test circuit text draw."""
+    ref = (
+        "q0: ─H─cx─cx─cx─cx───────────────────────────x───\n"
+        "q1: ───o──|──|──|──H─cx─cx─cx────────────────|─x─\n"
+        "q2: ──────o──|──|────o──|──|──H─cx─cx────────|─|─\n"
+        "q3: ─────────o──|───────o──|────o──|──H─cx───|─x─\n"
+        "q4: ────────────o──────────o───────o────o──H─x───"
+    )
+    circuit = Circuit(5)
+    for i1 in range(5):
+        circuit.add(gates.H(i1))
+        for i2 in range(i1 + 1, 5):
+            gate = gates.CNOT(i2, i1)
+            gate.draw_label = ""
+            circuit.add(gate)
+    circuit.add(gates.SWAP(0, 4))
+    circuit.add(gates.SWAP(1, 3))
+    assert circuit.draw() == ref
+
+
 def test_circuit_draw_error():
     """Test NotImplementedError in circuit draw"""
     circuit = Circuit(1)
