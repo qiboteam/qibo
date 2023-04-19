@@ -328,7 +328,7 @@ class PauliNoiseChannel(UnitaryChannel):
         assert self.target_qubits == (q,)
 
         self.init_args = [q]
-        self.init_kwargs = {"px": px, "py": py, "p_z": pz}
+        self.init_kwargs = {"px": px, "py": py, "pz": pz}
 
 
 class GeneralizedPauliNoiseChannel(UnitaryChannel):
@@ -565,18 +565,18 @@ class ThermalRelaxationChannel(KrausChannel):
             self.init_kwargs["exp_t2"] = exp_t2
 
         else:
-            p_z = (exp(-time / t_1) - exp(-time / t_2)) / 2
+            pz = (exp(-time / t_1) - exp(-time / t_2)) / 2
             operators = (
                 sqrt(preset0) * np.array([[1, 0], [0, 0]]),
                 sqrt(preset0) * np.array([[0, 1], [0, 0]]),
                 sqrt(preset1) * np.array([[0, 0], [1, 0]]),
                 sqrt(preset1) * np.array([[0, 0], [0, 1]]),
-                sqrt(p_z) * np.array([[1, 0], [0, -1]]),
-                sqrt(1 - preset0 - preset1 - p_z) * np.eye(2),
+                sqrt(pz) * np.array([[1, 0], [0, -1]]),
+                sqrt(1 - preset0 - preset1 - pz) * np.eye(2),
             )
             operators = list(zip([(q,)] * len(operators), operators))
             super().__init__(ops=operators)
-            self.init_kwargs["p_z"] = p_z
+            self.init_kwargs["pz"] = pz
 
         self.init_args = [q, t_1, t_2, time]
         self.t_1, self.t_2 = t_1, t_2
@@ -605,12 +605,12 @@ class ThermalRelaxationChannel(KrausChannel):
 
             return backend.thermal_error_density_matrix(gate, state, nqubits)
 
-        p_z = self.init_kwargs["p_z"]
+        pz = self.init_kwargs["pz"]
 
         return (
             backend.reset_error_density_matrix(self, state, nqubits)
-            - p_z * backend.cast(state)
-            + p_z * backend.apply_gate_density_matrix(Z(0), state, nqubits)
+            - pz * backend.cast(state)
+            + pz * backend.apply_gate_density_matrix(Z(0), state, nqubits)
         )
 
 
