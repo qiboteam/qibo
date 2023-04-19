@@ -86,7 +86,7 @@ def gibbs(hamiltonian, state, eta=0.1):
     return -np.log(avg / sum_count)
 
 
-def initialize(nqubits: int, basis="Z", eigenstate="+"):
+def initialize(nqubits: int, basis: gates, eigenstate="+"):
     """This function appends some gates at the beginning of the
     circuit's queue in order to initialize all the qubits in a specific
     eigenstate of the operator defined in `basis`:
@@ -97,20 +97,17 @@ def initialize(nqubits: int, basis="Z", eigenstate="+"):
         - if basis is 'X', add a Hadamard gate
         - if basis is 'Y', add a Hadamard and an S gate
     """
-    circuit = Circuit(nqubits)
-    gates_list = []
+    circuit_basis = Circuit(nqubits)
+    circuit_eigenstate = Circuit(nqubits)
     if eigenstate == "-":
-        gates_list.append(gates.X)
+        for i in range(nqubits):
+            circuit_eigenstate.add(gates.X(i))
     elif eigenstate != "+":
         raise_error(NotImplementedError, f"Invalid eigenstate {eigenstate}")
-    if basis == "X":
-        gates_list.append(gates.H)
-    elif basis == "Y":
-        gates_list.append(gates.H)
-        gates_list.append(gates.S)
-    elif basis != "Z":
-        raise_error(NotImplementedError, f"Invalid basis {basis}")
-    for gate in gates_list:
-        for i in range(nqubits):
-            circuit.add(gate(i))
-    return circuit
+
+    for i in range(nqubits):
+        value = basis(i).basis_rotation()
+        if value is not None:
+            circuit_basis.add(value)
+    circuit_basis = circuit_basis.invert()
+    return circuit_eigenstate + circuit_basis

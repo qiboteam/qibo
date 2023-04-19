@@ -247,7 +247,10 @@ class Circuit:
         newcircuit = self.__class__(**self.init_kwargs)
         # Add gates from `self` to `newcircuit` (including measurements)
         for gate in self.queue:
-            newcircuit.add(gate)
+            if isinstance(gate, gates.M):
+                newcircuit.add(gates.M(*list(gate._target_qubits)))
+            else:
+                newcircuit.add(gate)
         # Add gates from `circuit` to `newcircuit` (including measurements)
         for gate in circuit.queue:
             if isinstance(gate, gates.M):
@@ -258,7 +261,6 @@ class Circuit:
         newcircuit.repeated_execution = (
             self.repeated_execution or circuit.repeated_execution
         )
-
         return newcircuit
 
     def on_qubits(self, *qubits):
