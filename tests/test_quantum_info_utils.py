@@ -1,7 +1,27 @@
+from re import finditer
+
 import numpy as np
 import pytest
 
 from qibo.quantum_info import *
+
+
+@pytest.mark.parametrize("bitstring", range(2**5))
+def test_hamming_weight(bitstring):
+    with pytest.raises(TypeError):
+        hamming_weight("0101", return_indexes="True")
+
+    weight = hamming_weight(bitstring, False)
+
+    bitstring = f"{bitstring:b}"
+
+    indexes = hamming_weight(list(bitstring), True)
+
+    weight_test = len(bitstring.replace("0", ""))
+    indexes_test = [item.start() for item in finditer("1", bitstring)]
+
+    assert weight == weight_test
+    assert indexes == indexes_test
 
 
 def test_shannon_entropy_errors(backend):
