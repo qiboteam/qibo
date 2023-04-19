@@ -55,7 +55,7 @@ def hamming_weight(bitstring, return_indexes: bool = False):
     if isinstance(bitstring, int):
         bitstring = f"{bitstring:b}"
     elif isinstance(bitstring, (list, tuple, np.ndarray)):
-        bitstring = "".join(bitstring)
+        bitstring = "".join([str(bit) for bit in bitstring])
 
     indexes = [item.start() for item in finditer("1", bitstring)]
 
