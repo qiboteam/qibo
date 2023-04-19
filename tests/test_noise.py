@@ -520,7 +520,7 @@ def test_noisy_circuit(backend, nshots, idle_qubits):
         backend.set_seed(123)
         target_state = backend.execute_circuit(target_circuit, nshots=nshots)
         target_samples = target_state.apply_bitflips(
-            p_0=[0.01, 0.02, 0.03], p1=[0.02, 0.03, 0.04]
+            p0=[0.01, 0.02, 0.03], p1=[0.02, 0.03, 0.04]
         )
 
         backend.assert_allclose(final_samples, target_samples)
