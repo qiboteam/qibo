@@ -127,8 +127,6 @@ class Circuit:
         nglobal (int): Base two logarithm of the number of devices. Defaults to `None`.
         nlocal (int): Total number of available qubits in each device. Defaults to `None`.
         queues (DistributedQueues): Gate queues for each accelerator device. Defaults to `None`.
-        initialize (str): Basis to define the circuit inizial state.
-        eigenstate (str): Eigenstates that will belong to the basis.
     """
 
     def __init__(
@@ -180,35 +178,6 @@ class Circuit:
                     "Distributed circuit is not implemented " "for density matrices.",
                 )
             self._distributed_init(nqubits, accelerators)
-
-        self._basis_initialization(basis, eigenstate)
-
-    def _basis_initialization(self, basis: str, eigenstate: str):
-        """This function appends some gates at the beginning of the
-        circuit's queue in order to initialize all the qubits in a specific
-        eigenstate of the operator defined in `basis`:
-
-            - if eigenstate is  '+', no gate added
-            - if eigenstate is '-', add an X gate
-            - if basis is 'Z', no gate added
-            - if basis is 'X', add a Hadamard gate
-            - if basis is 'Y', add a Hadamard and an S gate
-        """
-        initial_queue = []
-        if eigenstate == "-":
-            initial_queue.append(gates.X)
-        elif eigenstate != "+":
-            raise_error(NotImplementedError, f"Invalid eigenstate {eigenstate}")
-        if basis == "X":
-            initial_queue.append(gates.H)
-        elif basis == "Y":
-            initial_queue.append(gates.H)
-            initial_queue.append(gates.S)
-        elif basis != "Z":
-            raise_error(NotImplementedError, f"Invalid basis {basis}")
-        for gate in initial_queue:
-            for qubit in range(self.nqubits):
-                self.queue.append(gate(qubit))
 
     def _distributed_init(self, nqubits, accelerators):  # pragma: no cover
         """Distributed implementation of :class:`qibo.models.circuit.Circuit`.
@@ -281,8 +250,10 @@ class Circuit:
             newcircuit.add(gate)
         # Add gates from `circuit` to `newcircuit` (including measurements)
         for gate in circuit.queue:
-            newcircuit.add(gate)
-
+            if isinstance(gate, gates.M):
+                newcircuit.add(gates.M(*list(gate._target_qubits)))
+            else:
+                newcircuit.add(gate)
         # Re-execute full circuit when sampling if one of the circuit has repeated_execution ``True``
         newcircuit.repeated_execution = (
             self.repeated_execution or circuit.repeated_execution

@@ -382,6 +382,7 @@ class NumpyBackend(Backend):
                       initial state for circuit with accelerators {circuit.density_matrix}.""",
                 )
             else:
+                tot = initial_state + circuit
                 return self.execute_circuit(initial_state + circuit, None, nshots)
 
         if circuit.repeated_execution:

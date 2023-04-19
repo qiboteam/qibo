@@ -1,6 +1,7 @@
 import numpy as np
 
 from qibo import gates
+from qibo.config import raise_error
 from qibo.models.circuit import Circuit
 
 
@@ -83,3 +84,33 @@ def gibbs(hamiltonian, state, eta=0.1):
         avg += np.exp(-eta * obj)
         sum_count += count
     return -np.log(avg / sum_count)
+
+
+def initialize(nqubits: int, basis="Z", eigenstate="+"):
+    """This function appends some gates at the beginning of the
+    circuit's queue in order to initialize all the qubits in a specific
+    eigenstate of the operator defined in `basis`:
+
+        - if eigenstate is  '+', no gate added
+        - if eigenstate is '-', add an X gate
+        - if basis is 'Z', no gate added
+        - if basis is 'X', add a Hadamard gate
+        - if basis is 'Y', add a Hadamard and an S gate
+    """
+    circuit = Circuit(nqubits)
+    gates_list = []
+    if eigenstate == "-":
+        gates_list.append(gates.X)
+    elif eigenstate != "+":
+        raise_error(NotImplementedError, f"Invalid eigenstate {eigenstate}")
+    if basis == "X":
+        gates_list.append(gates.H)
+    elif basis == "Y":
+        gates_list.append(gates.H)
+        gates_list.append(gates.S)
+    elif basis != "Z":
+        raise_error(NotImplementedError, f"Invalid basis {basis}")
+    for gate in gates_list:
+        for i in range(nqubits):
+            circuit.add(gate(i))
+    return circuit
