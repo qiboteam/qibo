@@ -205,7 +205,7 @@ class Circuit:
             initial_queue.append(gates.H)
             initial_queue.append(gates.S)
         elif basis != "Z":
-            raise NotImplementedError(f"Invalid basis {basis}")
+            raise_error(NotImplementedError, f"Invalid basis {basis}")
         for gate in initial_queue:
             for qubit in range(self.nqubits):
                 self.queue.append(gate(qubit))
