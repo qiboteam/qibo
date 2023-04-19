@@ -86,16 +86,16 @@ def gibbs(hamiltonian, state, eta=0.1):
     return -np.log(avg / sum_count)
 
 
-def initialize(nqubits: int, basis: gates, eigenstate="+"):
-    """This function appends some gates at the beginning of the
-    circuit's queue in order to initialize all the qubits in a specific
-    eigenstate of the operator defined in `basis`:
+def initialize(nqubits: int, basis=gates.Z, eigenstate="+"):
+    """This function returns a circuit that prepeares all the
+    qubits in a specific state.
 
-        - if eigenstate is  '+', no gate added
-        - if eigenstate is '-', add an X gate
-        - if basis is 'Z', no gate added
-        - if basis is 'X', add a Hadamard gate
-        - if basis is 'Y', add a Hadamard and an S gate
+    Args:
+        - nqubits (int): Number of qubit in the circuit.
+        - baisis (gates): Can be a qibo gate or a callable that accepts a qubit,
+        the default value is `gates.Z`.
+        - eigenstate (str): Specify which eigenstate of the operator defined in
+        `basis` will be the qubits' state. The dafault value is "+".
     """
     circuit_basis = Circuit(nqubits)
     circuit_eigenstate = Circuit(nqubits)
