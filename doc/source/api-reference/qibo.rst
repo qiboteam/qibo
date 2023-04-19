@@ -1395,6 +1395,12 @@ Utility Functions
 Functions that can be used to calculate metrics and distance measures
 on classical probability arrays.
 
+Hamming weight
+""""""""""""""
+
+.. autofunction:: qibo.quantum_info.hamming_weight
+
+
 Shannon entropy
 """""""""""""""
 
