@@ -3,6 +3,7 @@ import pytest
 
 from qibo import gates
 from qibo.models import Circuit
+from qibo.models.utils import initialize
 
 
 def test_parametrizedgates_class():
@@ -40,30 +41,26 @@ def test_circuit_init():
     assert c.nqubits == 2
 
 
-@pytest.mark.parametrize("nqubits", [1, 5])
-def test_eigenstate(nqubits):
-    c = Circuit(nqubits, eigenstate="-")
-    for gate in c.queue:
-        assert type(gate) == gates.X
-    c = Circuit(nqubits, eigenstate="+")
-    assert not c.queue  # empty list
+def test_eigenstate():
+    nqubits = 3
+    c = Circuit(nqubits)
+    c.add(gates.M(*list(range(nqubits))))
+    c2 = initialize(nqubits, eigenstate="-")
+    assert c(nshots=100, initial_state=c2).frequencies() == {"111": 100}
+    c2 = initialize(nqubits, eigenstate="+")
+    assert c(nshots=100, initial_state=c2).frequencies() == {"000": 100}
+
     with pytest.raises(NotImplementedError):
-        c = Circuit(nqubits, eigenstate="x")
+        c2 = initialize(nqubits, eigenstate="x")
 
 
-@pytest.mark.parametrize("nqubits", [1, 5])
-def test_initialize(nqubits):
-    c = Circuit(nqubits, basis="X")
-    for gate in c.queue:
-        assert type(gate) == gates.H
-    c = Circuit(nqubits, basis="Y")
-    check_gates = [gates.H] * nqubits + [gates.S] * nqubits
-    for i, gate in enumerate(c.queue):
-        assert type(gate) == check_gates[i]
-    c = Circuit(nqubits, basis="Z")
-    assert not c.queue  # empty list
-    with pytest.raises(NotImplementedError):
-        c = Circuit(nqubits, basis="W")
+def test_initialize():
+    nqubits = 3
+    for gate in [gates.X, gates.Y, gates.Z]:
+        c = Circuit(nqubits)
+        c.add(gates.M(*list(range(nqubits)), basis=gate))
+        c2 = initialize(nqubits, basis=gate)
+        assert c(nshots=100, initial_state=c2).frequencies() == {"000": 100}
 
 
 @pytest.mark.parametrize("nqubits", [0, -10, 2.5])
