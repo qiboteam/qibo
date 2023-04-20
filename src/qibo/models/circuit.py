@@ -119,14 +119,18 @@ class Circuit:
         trainable_gates (_ParametrizedGates): List of trainable gates.
         measurements (list): List of non-collapsible measurements
         _final_state (CircuitResult): Final state after full simulation of the circuit
-        compiled (CompiledExecutor): Circuit executor. Defaults to `None`.
-        repeated_execution (bool): If `True`, the circuit would be re-executed when sampling. Defaults to `False`.
-        density_matrix (bool): If `True`, the circuit would evolve density matrices. Defaults to `False`.
-        accelerators (dict): Dictionary that maps device names to the number of times each device will be used. Defaults to `None`.
-        ndevices (int): Total number of devices. Defaults to `None`.
-        nglobal (int): Base two logarithm of the number of devices. Defaults to `None`.
-        nlocal (int): Total number of available qubits in each device. Defaults to `None`.
-        queues (DistributedQueues): Gate queues for each accelerator device. Defaults to `None`.
+        compiled (CompiledExecutor): Circuit executor. Defaults to ``None``.
+        repeated_execution (bool): If `True`, the circuit would be re-executed when sampling.
+            Defaults to ``False``.
+        density_matrix (bool): If `True`, the circuit would evolve density matrices.
+            Defaults to ``False``.
+        accelerators (dict): Dictionary that maps device names to the number of times each
+            device will be used. Defaults to ``None``.
+        ndevices (int): Total number of devices. Defaults to ``None``.
+        nglobal (int): Base two logarithm of the number of devices. Defaults to ``None``.
+        nlocal (int): Total number of available qubits in each device. Defaults to ``None``.
+        queues (DistributedQueues): Gate queues for each accelerator device.
+            Defaults to ``None``.
     """
 
     def __init__(self, nqubits, accelerators=None, density_matrix=False):
@@ -245,7 +249,8 @@ class Circuit:
         for gate in circuit.queue:
             newcircuit.add(gate)
 
-        # Re-execute full circuit when sampling if one of the circuit has repeated_execution ``True``
+        # Re-execute full circuit when sampling if one of the circuits
+        # has repeated_execution ``True``
         newcircuit.repeated_execution = (
             self.repeated_execution or circuit.repeated_execution
         )
@@ -312,21 +317,21 @@ class Circuit:
         # original qubits that are in the light cone
         qubits = set(qubits)
         # original gates that are in the light cone
-        gates = []
+        list_of_gates = []
         for gate in reversed(self.queue):
             gate_qubits = set(gate.qubits)
             if gate_qubits & qubits:
                 # if the gate involves any qubit included in the
                 # light cone, add all its qubits in the light cone
                 qubits |= gate_qubits
-                gates.append(gate)
+                list_of_gates.append(gate)
 
         # Create a new circuit ignoring gates that are not in the light cone
         qubit_map = {q: i for i, q in enumerate(sorted(qubits))}
         kwargs = dict(self.init_kwargs)
         kwargs["nqubits"] = len(qubits)
         circuit = self.__class__(**kwargs)
-        circuit.add(gate.on_qubits(qubit_map) for gate in reversed(gates))
+        circuit.add(gate.on_qubits(qubit_map) for gate in reversed(list_of_gates))
         return circuit, qubit_map
 
     def _shallow_copy(self):
@@ -467,8 +472,8 @@ class Circuit:
         Example:
             .. testcode::
 
-                from qibo.models import Circuit
                 from qibo import gates
+                from qibo.models import Circuit
                 # use density matrices for noise simulation
                 c = Circuit(2, density_matrix=True)
                 c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
@@ -487,7 +492,7 @@ class Circuit:
         if self.accelerators:  # pragma: no cover
             raise_error(
                 NotImplementedError,
-                "Distributed circuit does not support " "density matrices yet.",
+                "Distributed circuit does not support density matrices yet.",
             )
 
         noise_map = self._check_noise_map(noise_map)
@@ -541,7 +546,7 @@ class Circuit:
                 if isinstance(gate, gates.KrausChannel):
                     raise_error(
                         NotImplementedError,
-                        "Distributed circuits do not " "support channels.",
+                        "Distributed circuits do not support channels.",
                     )
                 elif self.nqubits - len(
                     gate.target_qubits
@@ -549,8 +554,7 @@ class Circuit:
                     # Check if there is sufficient number of local qubits
                     raise_error(
                         ValueError,
-                        "Insufficient qubits to use for global in "
-                        "distributed circuit.",
+                        "Insufficient qubits to use for global in distributed circuit.",
                     )
 
             if not isinstance(gate, gates.Gate):
@@ -702,8 +706,8 @@ class Circuit:
         Example:
             .. testcode::
 
-                from qibo.models import Circuit
                 from qibo import gates
+                from qibo.models import Circuit
                 # create a circuit with all parameters set to 0.
                 c = Circuit(3)
                 c.add(gates.RX(0, theta=0))
@@ -893,7 +897,7 @@ class Circuit:
         if self.accelerators:  # pragma: no cover
             raise_error(
                 NotImplementedError,
-                "Fusion is not implemented for " "distributed circuits.",
+                "Fusion is not implemented for distributed circuits.",
             )
 
         queue = self.queue.to_fused()
@@ -919,12 +923,12 @@ class Circuit:
         This is a ``(2 ** nqubits, 2 ** nqubits)`` matrix obtained by
         multiplying all circuit gates.
         """
-        from qibo import gates
 
         if backend is None:
             from qibo.backends import GlobalBackend
 
             backend = GlobalBackend()
+
         fgate = gates.FusedGate(*range(self.nqubits))
         for gate in self.queue:
             if not isinstance(gate, (gates.SpecialGate, gates.M)):
@@ -941,7 +945,7 @@ class Circuit:
         if self._final_state is None:
             raise_error(
                 RuntimeError,
-                "Cannot access final state before the " "circuit is executed.",
+                "Cannot access final state before the circuit is executed.",
             )
         return self._final_state
 
@@ -981,9 +985,10 @@ class Circuit:
         """Executes the circuit. Exact implementation depends on the backend.
 
         Args:
-            initial_state (`np.ndarray` or :class:`qibo.models.circuit.Circuit`): Initial configuration.
-                Can be specified by the setting the state vector using an array or a circuit. If ``None``
-                the initial state is ``|000..00>``.
+            initial_state (`np.ndarray` or :class:`qibo.models.circuit.Circuit`):
+                Initial configuration. It can be specified by the setting the state
+                vector using an array or a circuit. If ``None``, the initial state
+                is ``|000..00>``.
             nshots (int): Number of shots.
         """
         if self.compiled:
