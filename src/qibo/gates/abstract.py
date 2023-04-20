@@ -1,6 +1,4 @@
 import collections
-from abc import ABC, abstractmethod
-from collections.abc import Iterable
 from typing import List, Sequence, Tuple
 
 import sympy
@@ -18,7 +16,8 @@ class Gate:
         """
         Attributes:
             name (str): Name of the gate.
-            draw_label (str): Optional label for drawing the gate in a circuit with :func:`qibo.models.Circuit.draw`.
+            draw_label (str): Optional label for drawing the gate in a circuit
+                with :func:`qibo.models.Circuit.draw`.
             is_controlled_by (bool): ``True`` if the gate was created using the
                 :meth:`qibo.gates.abstract.Gate.controlled_by` method,
                 otherwise ``False``.
@@ -78,8 +77,7 @@ class Gate:
             repeated = self._find_repeated(qubits)
             raise_error(
                 ValueError,
-                "Target qubit {} was given twice for gate {}."
-                "".format(repeated, self.__class__.__name__),
+                f"Target qubit {repeated} was given twice for gate {self.__class__.__name__}.",
             )
 
     def _set_control_qubits(self, qubits: Sequence[int]):
@@ -89,8 +87,7 @@ class Gate:
             repeated = self._find_repeated(qubits)
             raise_error(
                 ValueError,
-                "Control qubit {} was given twice for gate {}."
-                "".format(repeated, self.__class__.__name__),
+                f"Control qubit {repeated} was given twice for gate {self.__class__.__name__}.",
             )
 
     @target_qubits.setter
@@ -133,8 +130,8 @@ class Gate:
         if common:
             raise_error(
                 ValueError,
-                "{} qubits are both targets and controls for "
-                "gate {}.".format(common, self.__class__.__name__),
+                f"{common} qubits are both targets and controls "
+                + f"for gate {self.__class__.__name__}.",
             )
 
     @property
@@ -223,9 +220,8 @@ class Gate:
                 raise_error(
                     RuntimeError,
                     "Cannot use `controlled_by` method "
-                    "on gate {} because it is already "
-                    "controlled by {}."
-                    "".format(self, self.control_qubits),
+                    + f"on gate {self} because it is already "
+                    + f"controlled by {self.control_qubits}.",
                 )
             return func(self, *args)  # pylint: disable=E1102
 
@@ -357,9 +353,8 @@ class ParametrizedGate(Gate):
         if len(x) != nparams:
             raise_error(
                 ValueError,
-                "Parametrized gate has {} parameters "
-                "but {} update values were given."
-                "".format(nparams, len(x)),
+                f"Parametrized gate has {nparams} parameters "
+                + f"but {len(x)} update values were given.",
             )
         for i, v in enumerate(x):
             if isinstance(v, sympy.Expr):
