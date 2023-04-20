@@ -70,7 +70,7 @@ class M(Gate):
             if p0 is not None or p1 is not None:
                 raise_error(
                     NotImplementedError,
-                    "Bitflip measurement noise is not " "available when collapsing.",
+                    "Bitflip measurement noise is not available when collapsing.",
                 )
 
         if p1 is None:
@@ -99,18 +99,15 @@ class M(Gate):
     def _get_bitflip_tuple(qubits: Tuple[int], probs: "ProbsType") -> Tuple[float]:
         if isinstance(probs, float):
             if probs < 0 or probs > 1:  # pragma: no cover
-                raise_error(
-                    ValueError, "Invalid bitflip probability {}." "".format(probs)
-                )
+                raise_error(ValueError, f"Invalid bitflip probability {probs}.")
             return len(qubits) * (probs,)
 
         if isinstance(probs, (tuple, list)):
             if len(probs) != len(qubits):
                 raise_error(
                     ValueError,
-                    "{} qubits were measured but the given "
-                    "bitflip probability list contains {} "
-                    "values.".format(len(qubits), len(probs)),
+                    f"{len(qubits)} qubits were measured but the given "
+                    + f"bitflip probability list contains {len(probs)} values.",
                 )
             return tuple(probs)
 
@@ -119,8 +116,7 @@ class M(Gate):
             if diff:
                 raise_error(
                     KeyError,
-                    "Bitflip map contains {} qubits that are "
-                    "not measured.".format(diff),
+                    f"Bitflip map contains {diff} qubits that are not measured.",
                 )
             return tuple(probs[q] if q in probs else 0.0 for q in qubits)
 
@@ -131,7 +127,7 @@ class M(Gate):
         if p is None:
             return {q: 0 for q in self.qubits}
         pt = self._get_bitflip_tuple(self.qubits, p)
-        return {q: p for q, p in zip(self.qubits, pt)}
+        return dict(zip(self.qubits, pt))
 
     def has_bitflip_noise(self):
         return (
