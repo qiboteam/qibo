@@ -1,5 +1,4 @@
-from qibo.config import raise_error
-from qibo.gates.abstract import Gate, ParametrizedGate, SpecialGate
+from qibo.gates.abstract import SpecialGate
 from qibo.gates.measurements import M
 
 
