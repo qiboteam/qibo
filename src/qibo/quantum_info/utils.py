@@ -1,5 +1,6 @@
+"""Utility functions for the Quantum Information module."""
+
 from re import finditer
-from typing import Union
 
 import numpy as np
 
@@ -134,7 +135,8 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False):
     It is defined as
 
     .. math::
-        H(\\mathbf{p} \\, , \\, \\mathbf{q}) = \\frac{1}{\\sqrt{2}} \\, \\| \\sqrt{\\mathbf{p}} - \\sqrt{\\mathbf{q}} \\|_{2}
+        H(\\mathbf{p} \\, , \\, \\mathbf{q}) = \\frac{1}{\\sqrt{2}} \\, \\|
+            \\sqrt{\\mathbf{p}} - \\sqrt{\\mathbf{q}} \\|_{2}
 
     where :math:`\\|\\cdot\\|_{2}` is the Euclidean norm.
 
