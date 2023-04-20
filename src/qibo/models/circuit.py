@@ -133,12 +133,12 @@ class Circuit:
         if not isinstance(nqubits, int):
             raise_error(
                 TypeError,
-                "Number of qubits must be an integer but " "is {}.".format(nqubits),
+                f"Number of qubits must be an integer but is {nqubits}.",
             )
         if nqubits < 1:
             raise_error(
                 ValueError,
-                "Number of qubits must be positive but is " "{}.".format(nqubits),
+                f"Number of qubits must be positive but is {nqubits}.",
             )
         self.nqubits = nqubits
         self.init_kwargs = {
@@ -168,7 +168,7 @@ class Circuit:
             if density_matrix:
                 raise_error(
                     NotImplementedError,
-                    "Distributed circuit is not implemented " "for density matrices.",
+                    "Distributed circuit is not implemented for density matrices.",
                 )
             self._distributed_init(nqubits, accelerators)
 
@@ -209,7 +209,7 @@ class Circuit:
             raise_error(
                 ValueError,
                 "Number of calculation devices should be a power "
-                "of 2 but is {}.".format(self.ndevices),
+                + f"of 2 but is {self.ndevices}.",
             )
         self.nglobal = int(self.nglobal)
         self.nlocal = self.nqubits - self.nglobal
@@ -233,8 +233,8 @@ class Circuit:
                 raise_error(
                     ValueError,
                     "Cannot add circuits with different kwargs. "
-                    "{} is {} for first circuit and {} for the "
-                    "second.".format(k, kwarg1, kwarg2),
+                    + f"{k} is {kwarg1} for first circuit and {kwarg2} "
+                    + "for the second.",
                 )
 
         newcircuit = self.__class__(**self.init_kwargs)
@@ -278,15 +278,13 @@ class Circuit:
         if len(qubits) != self.nqubits:
             raise_error(
                 ValueError,
-                "Cannot return gates on {} qubits because "
-                "the circuit contains {} qubits."
-                "".format(len(qubits), self.nqubits),
+                f"Cannot return gates on {len(qubits)} qubits because "
+                + f"the circuit contains {self.nqubits} qubits.",
             )
         if self.accelerators and self.queues.queues:  # pragma: no cover
             raise_error(
                 RuntimeError,
-                "Cannot use distributed circuit as a "
-                "subroutine after it was executed.",
+                "Cannot use distributed circuit as a subroutine after it was executed.",
             )
 
         qubit_map = {i: q for i, q in enumerate(qubits)}
@@ -406,28 +404,26 @@ class Circuit:
                 raise_error(
                     ValueError,
                     "Noise map expects three probabilities "
-                    "but received {}.".format(len(noise_map)),
+                    + f"but received {len(noise_map)}.",
                 )
             return {q: noise_map for q in range(self.nqubits)}
         elif isinstance(noise_map, dict):
             if len(noise_map) != self.nqubits:
                 raise_error(
                     ValueError,
-                    "Noise map has {} qubits while the circuit "
-                    "has {}.".format(len(noise_map), self.nqubits),
+                    f"Noise map has {len(noise_map)} qubits while the circuit has {self.nqubits}.",
                 )
             for v in noise_map.values():
                 if len(v) != 3:
                     raise_error(
                         ValueError,
-                        "Noise map expects three probabilities "
-                        "but received {}.".format(v),
+                        f"Noise map expects three probabilities but received {v}.",
                     )
             return noise_map
 
         raise_error(
             TypeError,
-            "Type {} of noise map is not recognized." "".format(type(noise_map)),
+            f"Type {type(noise_map)} of noise map is not recognized.",
         )
 
     def decompose(self, *free: int):
@@ -558,7 +554,7 @@ class Circuit:
                     )
 
             if not isinstance(gate, gates.Gate):
-                raise_error(TypeError, "Unknown gate type {}.".format(type(gate)))
+                raise_error(TypeError, f"Unknown gate type {type(gate)}.")
 
             if self._final_state is not None:
                 raise_error(
@@ -570,9 +566,8 @@ class Circuit:
                 if q >= self.nqubits:
                     raise_error(
                         ValueError,
-                        "Attempting to add gate with target qubits {} "
-                        "on a circuit of {} qubits."
-                        "".format(gate.target_qubits, self.nqubits),
+                        f"Attempting to add gate with target qubits {gate.target_qubits} "
+                        + f"on a circuit of {self.nqubits} qubits.",
                     )
 
             if isinstance(gate, gates.M):
@@ -658,7 +653,7 @@ class Circuit:
             return [(i, g) for i, g in enumerate(self.queue) if g.name == gate]
         if isinstance(gate, type) and issubclass(gate, gates.Gate):
             return [(i, g) for i, g in enumerate(self.queue) if isinstance(g, gate)]
-        raise_error(TypeError, "Gate identifier {} not recognized.".format(gate))
+        raise_error(TypeError, f"Gate identifier {gate} not recognized.")
 
     def _set_parameters_list(self, parameters, n):
         """Helper method for ``set_parameters`` when a list is given.
@@ -680,9 +675,8 @@ class Circuit:
         else:
             raise_error(
                 ValueError,
-                "Given list of parameters has length {} while "
-                "the circuit contains {} parametrized gates."
-                "".format(n, len(self.trainable_gates)),
+                f"Given list of parameters has length {n} while "
+                + f"the circuit contains {len(self.trainable_gates)} parametrized gates.",
             )
 
     def set_parameters(self, parameters):
@@ -736,9 +730,8 @@ class Circuit:
             if diff:
                 raise_error(
                     KeyError,
-                    "Dictionary contains gates {} which are "
-                    "not on the list of parametrized gates "
-                    "of the circuit.".format(diff),
+                    f"Dictionary contains gates {diff} which are "
+                    + "not on the list of parametrized gates of the circuit.",
                 )
             for gate, params in parameters.items():
                 gate.parameters = params
@@ -751,9 +744,7 @@ class Circuit:
                 nparams = len(parameters)
             self._set_parameters_list(parameters, nparams)
         else:
-            raise_error(
-                TypeError, "Invalid type of parameters {}." "".format(type(parameters))
-            )
+            raise_error(TypeError, f"Invalid type of parameters {type(parameters)}.")
 
     def get_parameters(
         self, format: str = "list", include_not_trainable: bool = False
@@ -803,7 +794,7 @@ class Circuit:
         else:
             raise_error(
                 ValueError,
-                "Unknown format {} given in " "``get_parameters``.".format(format),
+                f"Unknown format {format} given in ``get_parameters``.",
             )
         return params
 
@@ -831,8 +822,8 @@ class Circuit:
         Example:
             .. testcode::
 
-                from qibo.models import Circuit
                 from qibo import gates
+                from qibo.models import Circuit
                 c = Circuit(3)
                 c.add(gates.H(0))
                 c.add(gates.H(1))
@@ -870,7 +861,7 @@ class Circuit:
             "Most common gates:",
         ]
         common_gates = self.gate_names.most_common()
-        logs.extend("{}: {}".format(g, n) for g, n in common_gates)
+        logs.extend(f"{g}: {n}" for g, n in common_gates)
         return "\n".join(logs)
 
     def fuse(self, max_qubits=2):
@@ -889,7 +880,7 @@ class Circuit:
         Example:
             .. testcode::
 
-                from qibo import models, gates
+                from qibo import gates, models
                 c = models.Circuit(2)
                 c.add([gates.H(0), gates.H(1)])
                 c.add(gates.CNOT(0, 1))
@@ -1035,7 +1026,7 @@ class Circuit:
                 raise_error(
                     NameError,
                     "OpenQASM does not support capital letters in "
-                    "register names but {} was used".format(reg_name),
+                    + f"register names but {reg_name} was used",
                 )
             code.append(f"creg {reg_name}[{len(reg_qubits)}];")
 
@@ -1052,7 +1043,7 @@ class Circuit:
             qubits = ",".join(f"q[{i}]" for i in gate.qubits)
             if gate.qasm_label in gates.PARAMETRIZED_GATES:
                 params = (str(x) for x in gate.parameters)
-                name = "{}({})".format(gate.qasm_label, ", ".join(params))
+                name = f"{gate.qasm_label}({', '.join(params)})"
             else:
                 name = gate.qasm_label
             code.append(f"{name} {qubits};")
@@ -1080,7 +1071,7 @@ class Circuit:
 
             .. testcode::
 
-                from qibo import models, gates
+                from qibo import gates, models
                 qasm_code = '''OPENQASM 2.0;
                 include "qelib1.inc";
                 qreg q[2];
@@ -1178,29 +1169,26 @@ class Circuit:
                 if qubit not in qubits:
                     raise_error(
                         ValueError,
-                        "Qubit {} is not defined in QASM code." "".format(qubit),
+                        f"Qubit {qubit} is not defined in QASM code.",
                     )
 
                 register, idx = next(read_args(args[1]))
                 if register not in cregs_size:
                     raise_error(
                         ValueError,
-                        "Classical register name {} is not defined "
-                        "in QASM code.".format(register),
+                        f"Classical register name {register} is not defined in QASM code.",
                     )
                 if idx >= cregs_size[register]:
                     raise_error(
                         ValueError,
-                        "Cannot access index {} of register {} "
-                        "with {} qubits."
-                        "".format(idx, register, cregs_size[register]),
+                        f"Cannot access index {idx} of register {register} "
+                        + f"with {cregs_size[register]} qubits.",
                     )
                 if register in registers:
                     if idx in registers[register]:
                         raise_error(
                             KeyError,
-                            "Key {} of register {} has already "
-                            "been used.".format(idx, register),
+                            f"Key {idx} of register {register} has already been used.",
                         )
                     registers[register][idx] = qubits[qubit]
                 else:
@@ -1214,20 +1202,18 @@ class Circuit:
                     if gatename not in gates.QASM_GATES:
                         raise_error(
                             ValueError,
-                            "QASM command {} is not recognized." "".format(command),
+                            f"QASM command {command} is not recognized.",
                         )
                     if gatename in gates.PARAMETRIZED_GATES:
                         raise_error(
                             ValueError,
-                            "Missing parameters for QASM " "gate {}.".format(gatename),
+                            f"Missing parameters for QASM gate {gatename}.",
                         )
 
                 elif len(pieces) == 2:
                     gatename, params = pieces
                     if gatename not in gates.PARAMETRIZED_GATES:
-                        raise_error(
-                            ValueError, "Invalid QASM command {}." "".format(command)
-                        )
+                        raise_error(ValueError, f"Invalid QASM command {command}.")
                     params = params.replace(" ", "").split(",")
                     try:
                         for i, p in enumerate(params):
@@ -1241,13 +1227,13 @@ class Circuit:
                     except ValueError:
                         raise_error(
                             ValueError,
-                            "Invalid value {} for gate parameters." "".format(params),
+                            f"Invalid value {params} for gate parameters.",
                         )
 
                 else:
                     raise_error(
                         ValueError,
-                        "QASM command {} is not recognized." "".format(command),
+                        f"QASM command {command} is not recognized.",
                     )
 
                 # Add gate to gate list
@@ -1256,7 +1242,7 @@ class Circuit:
                     if qubit not in qubits:
                         raise_error(
                             ValueError,
-                            "Qubit {} is not defined in QASM " "code.".format(qubit),
+                            f"Qubit {qubit} is not defined in QASM code.",
                         )
                     qubit_list.append(qubits[qubit])
                 gate_list.append((gates.QASM_GATES[gatename], list(qubit_list), params))
