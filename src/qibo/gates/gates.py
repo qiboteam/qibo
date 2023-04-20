@@ -1,5 +1,5 @@
 import math
-from typing import Dict, List, Optional, Tuple
+from typing import List
 
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate, ParametrizedGate
@@ -169,7 +169,7 @@ class X(Gate):
             # impractical case
             raise_error(
                 NotImplementedError,
-                "X decomposition not implemented " "for zero free qubits.",
+                "X decomposition not implemented for zero free qubits.",
             )
 
         decomp_gates.extend(decomp_gates)
@@ -719,8 +719,10 @@ class U3(_Un_):
 
     .. math::
         \\begin{pmatrix}
-        e^{-i(\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) & -e^{-i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) \\\\
-        e^{i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) & e^{i (\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) \\\\
+        e^{-i(\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) &
+            -e^{-i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) \\\\
+        e^{i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) &
+            e^{i (\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) \\\\
         \\end{pmatrix}
 
     Args:
@@ -1070,8 +1072,10 @@ class CU3(_CUn_):
         \\begin{pmatrix}
         1 & 0 & 0 & 0 \\\\
         0 & 1 & 0 & 0 \\\\
-        0 & 0 & e^{-i(\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) & -e^{-i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) \\\\
-        0 & 0 & e^{i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) & e^{i (\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) \\\\
+        0 & 0 & e^{-i(\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) &
+            -e^{-i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) \\\\
+        0 & 0 & e^{i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) &
+            e^{i (\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) \\\\
         \\end{pmatrix}
 
     Args:
@@ -1517,8 +1521,6 @@ class TOFFOLI(Gate):
         """
         if use_toffolis:
             return self.decompose()
-
-        import importlib
 
         control0, control1 = self.control_qubits
         target = self.target_qubits[0]
