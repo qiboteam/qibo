@@ -1,3 +1,7 @@
+"""Utility functions for the Quantum Information module."""
+
+from re import finditer
+
 import numpy as np
 
 from qibo.config import PRECISION_TOL, raise_error
@@ -29,6 +33,39 @@ ONEQUBIT_CLIFFORD_PARAMS = [
     (2 * np.pi / 3, 1 / np.sqrt(3), 1 / np.sqrt(3), -1 / np.sqrt(3)),
     (-2 * np.pi / 3, 1 / np.sqrt(3), 1 / np.sqrt(3), -1 / np.sqrt(3)),
 ]
+
+
+def hamming_weight(bitstring, return_indexes: bool = False):
+    """Calculates the Hamming weight of a bitstring.
+
+    Args:
+        bitstring (int or str or tuple or list or ndarray): bitstring to calculate the
+            weight, either in binary or integer representation.
+        return_indexes (bool, optional): If ``True``, returns the indexes of the
+            non-zero elements. Defaults to ``False``.
+
+    Returns:
+        (int or list): Hamming weight of bitstring or list of indexes of non-zero elements.
+    """
+    if not isinstance(return_indexes, bool):
+        raise_error(
+            TypeError,
+            f"return_indexes must be type bool, but it is type {type(return_indexes)}",
+        )
+
+    if isinstance(bitstring, int):
+        bitstring = f"{bitstring:b}"
+    elif isinstance(bitstring, (list, tuple, np.ndarray)):
+        bitstring = "".join([str(bit) for bit in bitstring])
+
+    indexes = [item.start() for item in finditer("1", bitstring)]
+
+    if return_indexes:
+        return indexes
+
+    weight = len(indexes)
+
+    return weight
 
 
 def shannon_entropy(probability_array, base: float = 2):
@@ -98,7 +135,8 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False):
     It is defined as
 
     .. math::
-        H(\\mathbf{p} \\, , \\, \\mathbf{q}) = \\frac{1}{\\sqrt{2}} \\, \\| \\sqrt{\\mathbf{p}} - \\sqrt{\\mathbf{q}} \\|_{2}
+        H(\\mathbf{p} \\, , \\, \\mathbf{q}) = \\frac{1}{\\sqrt{2}} \\, \\|
+            \\sqrt{\\mathbf{p}} - \\sqrt{\\mathbf{q}} \\|_{2}
 
     where :math:`\\|\\cdot\\|_{2}` is the Euclidean norm.
 
