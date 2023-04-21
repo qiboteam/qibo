@@ -282,7 +282,6 @@ def test_choi_to_kraus(
         ):
             state = random_density_matrix(2, backend=backend)
             evolution = left @ state @ np.transpose(np.conj(right))
-            print(type(test_left), type(state), type(test_right))
             test_evolution = (
                 test_coeff**2 * test_left @ state @ np.transpose(np.conj(test_right))
             )
