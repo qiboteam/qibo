@@ -245,21 +245,28 @@ class Circuit:
                 )
 
         newcircuit = self.__class__(**self.init_kwargs)
-        # Add gates from `self` to `newcircuit` (including measurements)
-        for gate in self.queue:
-            if isinstance(gate, gates.M):
-                gate.basis = []
-            newcircuit.add(gate)
-        # Add gates from `circuit` to `newcircuit` (including measurements)
-        for gate in circuit.queue:
-            if isinstance(gate, gates.M):
-                gate.basis = []
-            newcircuit.add(gate)
-        # Re-execute full circuit when sampling if one of the circuit has repeated_execution ``True``
+        Circuit._fill_new_circuit(self, newcircuit)
+        Circuit._fill_new_circuit(circuit, newcircuit)
+        # Re-execute full circuit when sampling if one of the circuit has
+        # repeated_execution ``True``
         newcircuit.repeated_execution = (
             self.repeated_execution or circuit.repeated_execution
         )
         return newcircuit
+
+    @staticmethod
+    def _fill_new_circuit(circuit, newcircuit):
+        # this method appends all the `circuit`'s gate in new_circuit
+        excluded_gates = []
+        # all the gates in the basis of the measure gates should not
+        # be added to the new circuit, otherwise once the measure gate is added in the circuit
+        # there will be two of the same.
+        for gate in circuit.queue:
+            if isinstance(gate, gates.M):
+                excluded_gates.extend(gate.basis)
+        for gate in circuit.queue:
+            if gate not in excluded_gates:
+                newcircuit.add(gate)
 
     def on_qubits(self, *qubits):
         """Generator of gates contained in the circuit acting on specified qubits.
