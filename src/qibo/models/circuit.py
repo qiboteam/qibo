@@ -129,14 +129,7 @@ class Circuit:
         queues (DistributedQueues): Gate queues for each accelerator device. Defaults to `None`.
     """
 
-    def __init__(
-        self,
-        nqubits,
-        accelerators=None,
-        density_matrix=False,
-        basis="Z",
-        eigenstate="+",
-    ):
+    def __init__(self, nqubits, accelerators=None, density_matrix=False):
         if not isinstance(nqubits, int):
             raise_error(
                 TypeError,
