@@ -15,7 +15,7 @@ def purity(state, backend=None):
     Returns:
         float: Purity of quantum state :math:`\\rho`.
     """
-    if backend is None:
+    if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
     if (
@@ -57,7 +57,7 @@ def entropy(state, base: float = 2, validate: bool = False, backend=None):
     Returns:
         float: The von-Neumann entropy :math:`S(\\rho)`.
     """
-    if backend is None:
+    if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
     if base <= 0.0:
@@ -127,7 +127,7 @@ def trace_distance(state, target, validate: bool = False, backend=None):
     Returns:
         float: Trace distance between state :math:`\\rho` and target :math:`\\sigma`.
     """
-    if backend is None:
+    if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
     if state.shape != target.shape:
@@ -181,7 +181,7 @@ def hilbert_schmidt_distance(state, target, backend=None):
     Returns:
         float: Hilbert-Schmidt distance between state :math:`\\rho` and target :math:`\\sigma`.
     """
-    if backend is None:
+    if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
     if state.shape != target.shape:
@@ -228,7 +228,7 @@ def fidelity(state, target, validate: bool = False, backend=None):
     Returns:
         float: Fidelity between state :math:`\\rho` and target :math:`\\sigma`.
     """
-    if backend is None:
+    if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
     if state.shape != target.shape:
@@ -289,7 +289,7 @@ def process_fidelity(channel, target=None, validate: bool = False, backend=None)
         float: Process fidelity between channels :math:`\\mathcal{E}`
             and target :math:`\\mathcal{U}`.
     """
-    if backend is None:
+    if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
     if target is not None:
