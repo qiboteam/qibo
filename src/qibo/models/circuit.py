@@ -248,15 +248,13 @@ class Circuit:
         # Add gates from `self` to `newcircuit` (including measurements)
         for gate in self.queue:
             if isinstance(gate, gates.M):
-                newcircuit.add(gates.M(*list(gate._target_qubits)))
-            else:
-                newcircuit.add(gate)
+                gate.basis = []
+            newcircuit.add(gate)
         # Add gates from `circuit` to `newcircuit` (including measurements)
         for gate in circuit.queue:
             if isinstance(gate, gates.M):
-                newcircuit.add(gates.M(*list(gate._target_qubits)))
-            else:
-                newcircuit.add(gate)
+                gate.basis = []
+            newcircuit.add(gate)
         # Re-execute full circuit when sampling if one of the circuit has repeated_execution ``True``
         newcircuit.repeated_execution = (
             self.repeated_execution or circuit.repeated_execution
