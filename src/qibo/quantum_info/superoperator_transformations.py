@@ -3,13 +3,14 @@ import warnings
 import numpy as np
 from scipy.optimize import minimize
 
+from qibo.backends import GlobalBackend
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate
 from qibo.gates.gates import Unitary
 from qibo.gates.special import FusedGate
 
 
-def vectorization(state, order: str = "row"):
+def vectorization(state, order: str = "row", backend=None):
     """Returns state :math:`\\rho` in its Liouville
     representation :math:`|\\rho\\rangle\\rangle`.
 
@@ -29,11 +30,13 @@ def vectorization(state, order: str = "row"):
             row-wise. If ``"column"``, vectorization is performed
             column-wise. If ``"system"``, a block-vectorization is
             performed. Default is ``"row"``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend
+            to be used in the execution. If ``None``, it uses
+            ``GlobalBackend()``. Defaults to ``None``.
 
     Returns:
         ndarray: Liouville representation of ``state``.
     """
-
     if (
         (len(state.shape) >= 3)
         or (len(state) == 0)
@@ -55,6 +58,9 @@ def vectorization(state, order: str = "row"):
                 f"order must be either 'row' or 'column' or 'system', but it is {order}.",
             )
 
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
     if len(state.shape) == 1:
         state = np.outer(state, np.conj(state))
 
@@ -63,8 +69,8 @@ def vectorization(state, order: str = "row"):
     elif order == "column":
         state = np.reshape(state, (1, -1), order="F")[0]
     else:
-        d = len(state)
-        nqubits = int(np.log2(d))
+        dim = len(state)
+        nqubits = int(np.log2(dim))
 
         new_axis = []
         for x in range(nqubits):
@@ -74,10 +80,12 @@ def vectorization(state, order: str = "row"):
         state = np.transpose(state, axes=new_axis)
         state = np.reshape(state, -1)
 
+    state = backend.cast(state, dtype=state.dtype)
+
     return state
 
 
-def unvectorization(state, order: str = "row"):
+def unvectorization(state, order: str = "row", backend=None):
     """Returns state :math:`\\rho` from its Liouville
     representation :math:`|\\rho\\rangle\\rangle`. This operation is
     the inverse function of :func:`vectorization`, i.e.
@@ -94,6 +102,9 @@ def unvectorization(state, order: str = "row"):
             row-wise. If ``"column"``, unvectorization is performed
             column-wise. If ``"system"``, system-wise vectorization is
             performed. Default is ``"row"``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend
+            to be used in the execution. If ``None``, it uses
+            ``GlobalBackend()``. Defaults to ``None``.
 
     Returns:
         ndarray: Density matrix of ``state``.
@@ -116,22 +127,27 @@ def unvectorization(state, order: str = "row"):
                 f"order must be either 'row' or 'column' or 'system', but it is {order}.",
             )
 
-    d = int(np.sqrt(len(state)))
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    dim = int(np.sqrt(len(state)))
 
     if order in ["row", "column"]:
         order = "C" if order == "row" else "F"
-        state = np.reshape(state, (d, d), order=order)
+        state = np.reshape(state, (dim, dim), order=order)
     else:
-        nqubits = int(np.log2(d))
+        nqubits = int(np.log2(dim))
         axes_old = list(np.arange(0, 2 * nqubits))
         state = np.reshape(state, [2] * 2 * nqubits)
         state = np.transpose(state, axes=axes_old[1::2] + axes_old[0::2])
         state = np.reshape(state, [2**nqubits] * 2)
 
+    state = backend.cast(state, dtype=state.dtype)
+
     return state
 
 
-def choi_to_liouville(choi_super_op, order: str = "row"):
+def choi_to_liouville(choi_super_op, order: str = "row", backend=None):
     """Convert Choi representation :math:`\\Lambda` of quantum channel
     to its Liouville representation :math:`\\mathcal{E}`.
 
@@ -139,12 +155,14 @@ def choi_to_liouville(choi_super_op, order: str = "row"):
     If ``order="row"``, then:
 
     .. math::
-        \\Lambda_{\\alpha\\beta, \\, \\gamma\\delta} \\mapsto \\Lambda_{\\alpha\\gamma, \\, \\beta\\delta} \\equiv \\mathcal{E}
+        \\Lambda_{\\alpha\\beta, \\, \\gamma\\delta} \\mapsto
+            \\Lambda_{\\alpha\\gamma, \\, \\beta\\delta} \\equiv \\mathcal{E}
 
     If ``order="column"``, then:
 
     .. math::
-        \\Lambda_{\\alpha\\beta, \\, \\gamma\\delta} \\mapsto \\Lambda_{\\delta\\beta, \\, \\gamma\\alpha} \\equiv \\mathcal{E}
+        \\Lambda_{\\alpha\\beta, \\, \\gamma\\delta} \\mapsto
+            \\Lambda_{\\delta\\beta, \\, \\gamma\\alpha} \\equiv \\mathcal{E}
 
 
     Args:
@@ -156,15 +174,20 @@ def choi_to_liouville(choi_super_op, order: str = "row"):
             a representation based on row vectorization, reshuffled,
             and then converted back to its representation with
             respect to system-wise vectorization. Default is ``"row"``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend
+            to be used in the execution. If ``None``, it uses
+            ``GlobalBackend()``. Defaults to ``None``.
 
     Returns:
         ndarray: Liouville representation of quantum channel.
     """
 
-    return _reshuffling(choi_super_op, order=order)
+    return _reshuffling(choi_super_op, order=order, backend=backend)
 
 
-def choi_to_pauli(choi_super_op, normalize: bool = False, order: str = "row"):
+def choi_to_pauli(
+    choi_super_op, normalize: bool = False, order: str = "row", backend=None
+):
     """Converts Choi representation :math:`\\Lambda` of a quantum channel
     to its Pauli-Liouville representation.
 
@@ -176,12 +199,15 @@ def choi_to_pauli(choi_super_op, normalize: bool = False, order: str = "row"):
         order (str, optional): If ``"row"``, it assumes ``choi_super_op`` is in
             row-vectorization. If ``"column"``, it assumes column-vectorization.
             Defaults to ``"row"``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend
+            to be used in the execution. If ``None``, it uses
+            ``GlobalBackend()``. Defaults to ``None``.
 
     Returns:
         ndarray: superoperator in the Pauli-Liouville representation.
     """
-    super_op = choi_to_liouville(choi_super_op, order)
-    super_op = liouville_to_pauli(super_op, normalize, order)
+    super_op = choi_to_liouville(choi_super_op, order, backend=backend)
+    super_op = liouville_to_pauli(super_op, normalize, order, backend=backend)
 
     return super_op
 
@@ -191,6 +217,7 @@ def choi_to_kraus(
     precision_tol: float = None,
     order: str = "row",
     validate_cp: bool = True,
+    backend=None,
 ):
     """Convert Choi representation :math:`\\Lambda` of a quantum channel :math:`\\mathcal{E}`
     into Kraus operators :math:`\\{ K_{\\alpha} \\}_{\\alpha}`.
@@ -198,7 +225,8 @@ def choi_to_kraus(
     If :math:`\\mathcal{E}` is a completely positive (CP) map, then
 
     .. math::
-        \\Lambda = \\sum_{\\alpha} \\, \\lambda_{\\alpha}^{2} \\, |\\tilde{K}_{\\alpha}\\rangle\\rangle \\langle\\langle \\tilde{K}_{\\alpha}| \\, .
+        \\Lambda = \\sum_{\\alpha} \\, \\lambda_{\\alpha}^{2} \\,
+            |\\tilde{K}_{\\alpha}\\rangle\\rangle \\langle\\langle \\tilde{K}_{\\alpha}| \\, .
 
     This is the spectral decomposition of :math:`\\Lambda`, Hence, the set
     :math:`\\{\\lambda_{\\alpha}, \\, \\tilde{K}_{\\alpha}\\}_{\\alpha}`
@@ -206,7 +234,8 @@ def choi_to_kraus(
     :math:`\\{K_{\\alpha}\\}_{\\alpha}` are defined as
 
     .. math::
-        K_{\\alpha} = \\lambda_{\\alpha} \\, \\text{unvectorization}(|\\tilde{K}_{\\alpha}\\rangle\\rangle) \\, .
+        K_{\\alpha} = \\lambda_{\\alpha} \\,
+            \\text{unvectorization}(|\\tilde{K}_{\\alpha}\\rangle\\rangle) \\, .
 
     If :math:`\\mathcal{E}` is not CP, then spectral composition is replaced by
     a singular value decomposition (SVD), i.e.
@@ -239,6 +268,9 @@ def choi_to_kraus(
             is a completely positive map. If ``False``, it assumes that
             ``choi_super_op`` is completely positive (and Hermitian).
             Defaults to ``True``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend
+            to be used in the execution. If ``None``, it uses
+            ``GlobalBackend()``. Defaults to ``None``.
 
     Returns:
         (ndarray, ndarray): The set :math:`\\{K_{\\alpha}, \\, \\lambda_{\\alpha} \\}_{\\alpha}`
@@ -272,8 +304,13 @@ def choi_to_kraus(
             f"validate_cp must be type bool, but it is type {type(validate_cp)}.",
         )
 
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
     if validate_cp:
-        norm = np.linalg.norm(choi_super_op - np.transpose(np.conj(choi_super_op)))
+        norm = backend.calculate_norm(
+            choi_super_op - np.transpose(np.conj(choi_super_op))
+        )
         if norm > PRECISION_TOL:
             non_cp = True
         else:
@@ -291,9 +328,7 @@ def choi_to_kraus(
         eigenvectors = np.transpose(eigenvectors)
 
     if non_cp:
-        from warnings import warn
-
-        warn("Input choi_super_op is a non-completely positive map.")
+        warnings.warn("Input choi_super_op is a non-completely positive map.")
 
         # using singular value decomposition because choi_super_op is non-CP
         U, coefficients, V = np.linalg.svd(choi_super_op)
@@ -303,29 +338,33 @@ def choi_to_kraus(
 
         kraus_left, kraus_right = [], []
         for coeff, eigenvector_left, eigenvector_right in zip(coefficients, U, V):
-            kraus_left.append(coeff * unvectorization(eigenvector_left, order=order))
-            kraus_right.append(coeff * unvectorization(eigenvector_right, order=order))
-
-        kraus_left = np.array(kraus_left)
-        kraus_right = np.array(kraus_right)
-
-        kraus_ops = np.array([kraus_left, kraus_right])
+            kraus_left.append(
+                coeff * unvectorization(eigenvector_left, order=order, backend=backend)
+            )
+            kraus_right.append(
+                coeff * unvectorization(eigenvector_right, order=order, backend=backend)
+            )
+        kraus_ops = backend.cast([kraus_left, kraus_right])
     else:
         # when choi_super_op is CP
         kraus_ops, coefficients = [], []
         for eig, kraus in zip(eigenvalues, eigenvectors):
             if np.abs(eig) > precision_tol:
                 eig = np.sqrt(eig)
-                kraus_ops.append(eig * unvectorization(kraus, order=order))
+                kraus_ops.append(
+                    eig * unvectorization(kraus, order=order, backend=backend)
+                )
                 coefficients.append(eig)
 
-        kraus_ops = np.array(kraus_ops)
-        coefficients = np.array(coefficients)
+    kraus_ops = backend.cast(kraus_ops)
+    coefficients = backend.cast(coefficients)
 
     return kraus_ops, coefficients
 
 
-def choi_to_chi(choi_super_op, normalize: bool = False, order: str = "row"):
+def choi_to_chi(
+    choi_super_op, normalize: bool = False, order: str = "row", backend=None
+):
     """Convert Choi representation :math:`\\Lambda` of quantum channel
     to  its chi-matrix representation :math:`\\chi`.
 
@@ -347,12 +386,14 @@ def choi_to_chi(choi_super_op, normalize: bool = False, order: str = "row"):
     Returns:
         ndarray: Chi-matrix representation of the quantum channel.
     """
-    process_matrix = liouville_to_pauli(choi_super_op, normalize=normalize, order=order)
+    process_matrix = liouville_to_pauli(
+        choi_super_op, normalize=normalize, order=order, backend=backend
+    )
 
     return process_matrix
 
 
-def kraus_to_choi(kraus_ops, order: str = "row"):
+def kraus_to_choi(kraus_ops, order: str = "row", backend=None):
     """Convert Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`
     of quantum channel to its Choi representation :math:`\\Lambda`.
 
@@ -370,38 +411,41 @@ def kraus_to_choi(kraus_ops, order: str = "row"):
             a representation based on row vectorization, reshuffled,
             and then converted back to its representation with
             respect to system-wise vectorization. Default is ``"row"``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend
+            to be used in the execution. If ``None``, it uses
+            ``GlobalBackend()``. Defaults to ``None``.
 
     Returns:
         ndarray: Choi representation of the Kraus channel.
     """
-
-    from qibo.backends import NumpyBackend
-
-    backend = NumpyBackend()
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
 
     gates, target_qubits = _set_gate_and_target_qubits(kraus_ops)
     nqubits = 1 + max(target_qubits)
     d = 2**nqubits
 
-    super_op = np.zeros((d**2, d**2), dtype="complex")
+    super_op = np.zeros((d**2, d**2), dtype=complex)
+    super_op = backend.cast(super_op, dtype=super_op.dtype)
     for gate in gates:
         kraus_op = FusedGate(*range(nqubits))
         kraus_op.append(gate)
         kraus_op = kraus_op.asmatrix(backend)
-        kraus_op = vectorization(kraus_op, order=order)
+        kraus_op = vectorization(kraus_op, order=order, backend=backend)
         super_op += np.outer(kraus_op, np.conj(kraus_op))
         del kraus_op
 
     return super_op
 
 
-def kraus_to_liouville(kraus_ops, order: str = "row"):
+def kraus_to_liouville(kraus_ops, order: str = "row", backend=None):
     """Convert from Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`
     of quantum channel to its Liouville representation :math:`\\mathcal{E}`.
     It uses the Choi representation as an intermediate step.
 
     .. math::
-        \\mathcal{E} = \\text{choi_to_liouville}(\\text{kraus_to_choi}(\\{K_{\\alpha}\\}_{\\alpha}))
+        \\mathcal{E} = \\text{choi_to_liouville}(\\text{kraus_to_choi}
+            (\\{K_{\\alpha}\\}_{\\alpha}))
 
     Args:
         kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
@@ -414,17 +458,22 @@ def kraus_to_liouville(kraus_ops, order: str = "row"):
             a representation based on row vectorization, reshuffled,
             and then converted back to its representation with
             respect to system-wise vectorization. Default is ``"row"``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend
+            to be used in the execution. If ``None``, it uses
+            ``GlobalBackend()``. Defaults to ``None``.
 
     Returns:
         ndarray: Liouville representation of quantum channel.
     """
-    super_op = kraus_to_choi(kraus_ops, order=order)
-    super_op = choi_to_liouville(super_op, order=order)
+    super_op = kraus_to_choi(kraus_ops, order=order, backend=backend)
+    super_op = choi_to_liouville(super_op, order=order, backend=backend)
 
     return super_op
 
 
-def kraus_to_pauli(kraus_ops, normalize: bool = False, order: str = "row"):
+def kraus_to_pauli(
+    kraus_ops, normalize: bool = False, order: str = "row", backend=None
+):
     """Converts Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`of
     a quantum channel to its Pauli-Liouville representation.
 
@@ -439,17 +488,20 @@ def kraus_to_pauli(kraus_ops, normalize: bool = False, order: str = "row"):
             representation is done in row-vectorization. If ``"column"``,
             step is done in column-vectorization. If ``"system"``,
             block-vectorization is performed. Defaults to ``"row"``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend
+            to be used in the execution. If ``None``, it uses
+            ``GlobalBackend()``. Defaults to ``None``.
 
     Returns:
         ndarray: superoperator in the Pauli-Liouville representation.
     """
-    super_op = kraus_to_choi(kraus_ops, order)
-    super_op = choi_to_pauli(super_op, normalize, order)
+    super_op = kraus_to_choi(kraus_ops, order, backend=backend)
+    super_op = choi_to_pauli(super_op, normalize, order, backend=backend)
 
     return super_op
 
 
-def kraus_to_chi(kraus_ops, normalize: bool = False, order: str = "row"):
+def kraus_to_chi(kraus_ops, normalize: bool = False, order: str = "row", backend=None):
     """Convert Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`
     of quantum channel to  its chi-matrix representation :math:`\\chi`.
 
@@ -472,34 +524,34 @@ def kraus_to_chi(kraus_ops, normalize: bool = False, order: str = "row"):
             a representation based on row vectorization, reshuffled,
             and then converted back to its representation with
             respect to system-wise vectorization. Default is ``"row"``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend
+            to be used in the execution. If ``None``, it uses
+            ``GlobalBackend()``. Defaults to ``None``.
 
     Returns:
         ndarray: Chi-matrix representation of the Kraus channel.
     """
-
-    from qibo.backends import NumpyBackend
     from qibo.gates.special import FusedGate
-    from qibo.quantum_info import vectorization
-    from qibo.quantum_info.superoperator_transformations import (
-        _set_gate_and_target_qubits,
-    )
+    from qibo.quantum_info.basis import comp_basis_to_pauli
 
-    backend = NumpyBackend()
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
 
     gates, target_qubits = _set_gate_and_target_qubits(kraus_ops)
     nqubits = 1 + max(target_qubits)
-    d = 2**nqubits
+    dim = 2**nqubits
 
-    from qibo.quantum_info.basis import comp_basis_to_pauli
+    U_c2p = comp_basis_to_pauli(
+        int(nqubits), normalize=normalize, order=order, backend=backend
+    )
 
-    U_c2p = comp_basis_to_pauli(int(nqubits), normalize=normalize, order=order)
-
-    super_op = np.zeros((d**2, d**2), dtype="complex")
+    super_op = np.zeros((dim**2, dim**2), dtype=complex)
+    super_op = backend.cast(super_op, dtype=super_op.dtype)
     for gate in gates:
         kraus_op = FusedGate(*range(nqubits))
         kraus_op.append(gate)
         kraus_op = kraus_op.asmatrix(backend)
-        kraus_op = vectorization(kraus_op, order=order)
+        kraus_op = vectorization(kraus_op, order=order, backend=backend)
         kraus_op = U_c2p @ kraus_op
         super_op += np.outer(kraus_op, np.conj(kraus_op))
         del kraus_op
@@ -507,7 +559,7 @@ def kraus_to_chi(kraus_ops, normalize: bool = False, order: str = "row"):
     return super_op
 
 
-def liouville_to_choi(super_op, order: str = "row"):
+def liouville_to_choi(super_op, order: str = "row", backend=None):
     """Convert Liouville representation of quantum channel :math:`\\mathcal{E}`
     to its Choi representation :math:`\\Lambda`. Indexing :math:`\\mathcal{E}` as
     :math:`\\mathcal{E}_{\\alpha\\beta, \\, \\gamma\\delta} \\,\\,`, then
@@ -515,12 +567,14 @@ def liouville_to_choi(super_op, order: str = "row"):
     If ``order="row"``:
 
     .. math::
-        \\Lambda = \\sum_{k, l} \\, \\ketbra{k}{l} \\otimes \\mathcal{E}(\\ketbra{k}{l}) \\equiv \\mathcal{E}_{\\alpha\\gamma, \\, \\beta\\delta}
+        \\Lambda = \\sum_{k, l} \\, \\ketbra{k}{l} \\otimes \\mathcal{E}(\\ketbra{k}{l})
+            \\equiv \\mathcal{E}_{\\alpha\\gamma, \\, \\beta\\delta}
 
     If ``order="column"``, then:
 
     .. math::
-            \\Lambda = \\sum_{k, l} \\, \\mathcal{E}(\\ketbra{k}{l}) \\otimes \\ketbra{k}{l} \\equiv \\mathcal{E}_{\\delta\\beta, \\, \\gamma\\alpha}
+            \\Lambda = \\sum_{k, l} \\, \\mathcal{E}(\\ketbra{k}{l}) \\otimes \\ketbra{k}{l}
+                \\equiv \\mathcal{E}_{\\delta\\beta, \\, \\gamma\\alpha}
 
     Args:
         super_op: Liouville representation of quantum channel.
@@ -531,14 +585,20 @@ def liouville_to_choi(super_op, order: str = "row"):
             a representation based on row vectorization, reshuffled,
             and then converted back to its representation with
             respect to system-wise vectorization. Default is ``"row"``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend
+            to be used in the execution. If ``None``, it uses
+            ``GlobalBackend()``. Defaults to ``None``.
+
     Returns:
         ndarray: Choi representation of quantum channel.
     """
 
-    return _reshuffling(super_op, order=order)
+    return _reshuffling(super_op, order=order, backend=backend)
 
 
-def liouville_to_pauli(super_op, normalize: bool = False, order: str = "row"):
+def liouville_to_pauli(
+    super_op, normalize: bool = False, order: str = "row", backend=None
+):
     """Convert Liouville representation :math:`\\mathcal{E}` of a
     quantum channel to its Pauli-Liouville representation.
 
@@ -550,34 +610,45 @@ def liouville_to_pauli(super_op, normalize: bool = False, order: str = "row"):
         order (str, optional): If ``"row"``, it assumes ``super_op`` is in
             row-vectorization. If ``"column"``, it assumes column-vectorization.
             If ``"system"``, it assumes block-vectorization. Defaults to ``"row"``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend
+            to be used in the execution. If ``None``, it uses
+            ``GlobalBackend()``. Defaults to ``None``.
 
     Returns:
         ndarray: superoperator in the Pauli-Liouville representation.
     """
-    d = np.sqrt(len(super_op))
-    nqubits = np.log2(int(d))
+    from qibo.quantum_info.basis import comp_basis_to_pauli
+
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    dim = int(np.sqrt(len(super_op)))
+    nqubits = int(np.log2(dim))
 
     if (
         super_op.shape[0] != super_op.shape[1]
-        or np.mod(d, 1) != 0
+        or np.mod(dim, 1) != 0
         or np.mod(nqubits, 1) != 0
     ):
         raise_error(ValueError, "super_op must be of shape (4^n, 4^n)")
 
-    from qibo.quantum_info.basis import comp_basis_to_pauli
-
-    U_c2p = comp_basis_to_pauli(int(nqubits), normalize=normalize, order=order)
+    U_c2p = comp_basis_to_pauli(
+        nqubits, normalize=normalize, order=order, backend=backend
+    )
 
     return U_c2p @ super_op @ np.conj(np.transpose(U_c2p))
 
 
-def liouville_to_kraus(super_op, precision_tol: float = None, order: str = "row"):
+def liouville_to_kraus(
+    super_op, precision_tol: float = None, order: str = "row", backend=None
+):
     """Convert Liouville representation :math:`\\mathcal{E}` of a quantum
     channel to its Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`.
     It uses the Choi representation as an intermediate step.
 
     .. math::
-        \\{K_{\\alpha}, \\, \\lambda_{\\alpha}\\}_{\\alpha} = \\text{choi_to_kraus}(\\text{liouville_to_choi}(\\mathcal{E}))
+        \\{K_{\\alpha}, \\, \\lambda_{\\alpha}\\}_{\\alpha} =
+            \\text{choi_to_kraus}(\\text{liouville_to_choi}(\\mathcal{E}))
 
     Args:
         super_op (ndarray): Liouville representation of quantum channel.
@@ -593,17 +664,24 @@ def liouville_to_kraus(super_op, precision_tol: float = None, order: str = "row"
             a representation based on row vectorization, reshuffled,
             and then converted back to its representation with
             respect to system-wise vectorization. Default is ``"row"``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend
+            to be used in the execution. If ``None``, it uses
+            ``GlobalBackend()``. Defaults to ``None``.
 
     Returns:
         (ndarray, ndarray): Kraus operators of quantum channel and their respective coefficients.
     """
-    choi_super_op = liouville_to_choi(super_op, order=order)
-    kraus_ops, coefficients = choi_to_kraus(choi_super_op, precision_tol, order=order)
+    choi_super_op = liouville_to_choi(super_op, order=order, backend=backend)
+    kraus_ops, coefficients = choi_to_kraus(
+        choi_super_op, precision_tol, order=order, backend=backend
+    )
 
     return kraus_ops, coefficients
 
 
-def liouville_to_chi(super_op, normalize: bool = False, order: str = "row"):
+def liouville_to_chi(
+    super_op, normalize: bool = False, order: str = "row", backend=None
+):
     """Convert Liouville representation of quantum channel :math:`\\mathcal{E}`
     to its chi-matrix representation :math:`\\chi`.
     It uses the Choi representation as an intermediate step.
@@ -623,17 +701,25 @@ def liouville_to_chi(super_op, normalize: bool = False, order: str = "row"):
             a representation based on row vectorization, reshuffled,
             and then converted back to its representation with
             respect to system-wise vectorization. Default is ``"row"``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend
+            to be used in the execution. If ``None``, it uses
+            ``GlobalBackend()``. Defaults to ``None``.
+
     Returns:
         ndarray: Chi-matrix representation of quantum channel.
     """
 
-    choi_super_op = liouville_to_choi(super_op, order=order)
-    process_matrix = liouville_to_pauli(choi_super_op, normalize=normalize, order=order)
+    choi_super_op = liouville_to_choi(super_op, order=order, backend=backend)
+    process_matrix = liouville_to_pauli(
+        choi_super_op, normalize=normalize, order=order, backend=backend
+    )
 
     return process_matrix
 
 
-def pauli_to_liouville(pauli_op, normalize: bool = False, order: str = "row"):
+def pauli_to_liouville(
+    pauli_op, normalize: bool = False, order: str = "row", backend=None
+):
     """Convert Pauli-Liouville representation of a quantum channel to its
     Liouville representation :math:`\\mathcal{E}`.
 
@@ -646,28 +732,36 @@ def pauli_to_liouville(pauli_op, normalize: bool = False, order: str = "row"):
             row-vectorization. If ``"column"``, returns column-vectorized
             superoperator. If ``"system"``, superoperator will be in
             block-vectorization. Defaults to ``"row"``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend
+            to be used in the execution. If ``None``, it uses
+            ``GlobalBackend()``. Defaults to ``None``.
 
     Returns:
         ndarray: superoperator in the Liouville representation.
     """
-    d = np.sqrt(len(pauli_op))
-    nqubits = np.log2(int(d))
+    from qibo.quantum_info.basis import pauli_to_comp_basis
+
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    dim = int(np.sqrt(len(pauli_op)))
+    nqubits = int(np.log2(dim))
 
     if (
         pauli_op.shape[0] != pauli_op.shape[1]
-        or np.mod(d, 1) != 0
+        or np.mod(dim, 1) != 0
         or np.mod(nqubits, 1) != 0
     ):
         raise_error(ValueError, "pauli_op must be of shape (4^n, 4^n)")
 
-    from qibo.quantum_info.basis import pauli_to_comp_basis
-
-    U_p2c = pauli_to_comp_basis(int(nqubits), normalize=normalize, order=order)
+    U_p2c = pauli_to_comp_basis(
+        nqubits, normalize=normalize, order=order, backend=backend
+    )
 
     return U_p2c @ pauli_op @ np.conj(np.transpose(U_p2c))
 
 
-def pauli_to_choi(pauli_op, normalize: bool = False, order: str = "row"):
+def pauli_to_choi(pauli_op, normalize: bool = False, order: str = "row", backend=None):
     """Converts Pauli-Liouville representation of a quantum channel
     to its Choi representation :math:`\\Lambda`.
 
@@ -679,18 +773,25 @@ def pauli_to_choi(pauli_op, normalize: bool = False, order: str = "row"):
         order (str, optional): If ``"row"``, returns Choi representation in
             row-vectorization. If ``"column"``, returns column-vectorized
             superoperator. Defaults to ``"row"``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend
+            to be used in the execution. If ``None``, it uses
+            ``GlobalBackend()``. Defaults to ``None``.
 
     Returns:
         ndarray: Choi representation of the superoperator.
     """
-    super_op = pauli_to_liouville(pauli_op, normalize, order)
-    super_op = liouville_to_choi(super_op, order)
+    super_op = pauli_to_liouville(pauli_op, normalize, order, backend=backend)
+    super_op = liouville_to_choi(super_op, order, backend=backend)
 
     return super_op
 
 
 def pauli_to_kraus(
-    pauli_op, normalize: bool = False, order: str = "row", precision_tol: float = None
+    pauli_op,
+    normalize: bool = False,
+    order: str = "row",
+    precision_tol: float = None,
+    backend=None,
 ):
     """Converts Pauli-Liouville representation of a quantum channel
     to its Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`.
@@ -709,18 +810,20 @@ def pauli_to_kraus(
             :math:`\\lambda <` ``precision_tol`` is set to 0 (zero).
             If ``None``, ``precision_tol`` defaults to
             ``qibo.config.PRECISION_TOL=1e-8``. Defaults to ``None``.
-
+        backend (``qibo.backends.abstract.Backend``, optional): backend
+            to be used in the execution. If ``None``, it uses
+            ``GlobalBackend()``. Defaults to ``None``.
 
     Returns:
         (ndarray, ndarray): Kraus operators and their coefficients.
     """
-    super_op = pauli_to_liouville(pauli_op, normalize, order)
-    super_op = liouville_to_kraus(super_op, precision_tol, order)
+    super_op = pauli_to_liouville(pauli_op, normalize, order, backend=backend)
+    super_op = liouville_to_kraus(super_op, precision_tol, order, backend=backend)
 
     return super_op
 
 
-def pauli_to_chi(pauli_op, normalize: bool = False, order: str = "row"):
+def pauli_to_chi(pauli_op, normalize: bool = False, order: str = "row", backend=None):
     """Converts Pauli-Liouville representation of a quantum channel
     to its chi-matrix representation :math:`\\chi`.
 
@@ -732,17 +835,20 @@ def pauli_to_chi(pauli_op, normalize: bool = False, order: str = "row"):
         order (str, optional): If ``"row"``, returns Choi representation in
             row-vectorization. If ``"column"``, returns column-vectorized
             superoperator. Defaults to ``"row"``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend
+            to be used in the execution. If ``None``, it uses
+            ``GlobalBackend()``. Defaults to ``None``.
 
     Returns:
         ndarray: Chi-matrix representation of the quantum channel.
     """
-    super_op = pauli_to_liouville(pauli_op, normalize, order)
-    super_op = liouville_to_chi(super_op, normalize, order)
+    super_op = pauli_to_liouville(pauli_op, normalize, order, backend=backend)
+    super_op = liouville_to_chi(super_op, normalize, order, backend=backend)
 
     return super_op
 
 
-def chi_to_choi(chi_matrix, normalize: bool = False, order: str = "row"):
+def chi_to_choi(chi_matrix, normalize: bool = False, order: str = "row", backend=None):
     """Convert the chi-matrix representation :math:`\\chi` of a quantum channel
     to Choi representation :math:`\\Lambda`.
 
@@ -761,15 +867,23 @@ def chi_to_choi(chi_matrix, normalize: bool = False, order: str = "row"):
             a representation based on row vectorization, reshuffled,
             and then converted back to its representation with
             respect to system-wise vectorization. Default is ``"row"``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend
+            to be used in the execution. If ``None``, it uses
+            ``GlobalBackend()``. Defaults to ``None``.
+
     Returns:
         ndarray: Choi representation of quantum channel.
     """
-    choi_super_op = pauli_to_liouville(chi_matrix, normalize=normalize, order=order)
+    choi_super_op = pauli_to_liouville(
+        chi_matrix, normalize=normalize, order=order, backend=backend
+    )
 
     return choi_super_op
 
 
-def chi_to_liouville(chi_matrix, normalize: bool = False, order: str = "row"):
+def chi_to_liouville(
+    chi_matrix, normalize: bool = False, order: str = "row", backend=None
+):
     """Convert the chi-matrix representation :math:`\\chi` of a quantum channel
     to its Liouville representation :math:`\\mathcal{E}`.
 
@@ -788,16 +902,22 @@ def chi_to_liouville(chi_matrix, normalize: bool = False, order: str = "row"):
             a representation based on row vectorization, reshuffled,
             and then converted back to its representation with
             respect to system-wise vectorization. Default is ``"row"``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend
+            to be used in the execution. If ``None``, it uses
+            ``GlobalBackend()``. Defaults to ``None``.
+
     Returns:
         ndarray: Liouville representation of quantum channel.
     """
-    choi_super_op = pauli_to_liouville(chi_matrix, normalize=normalize, order=order)
-    super_op = choi_to_liouville(choi_super_op, order=order)
+    choi_super_op = pauli_to_liouville(
+        chi_matrix, normalize=normalize, order=order, backend=backend
+    )
+    super_op = choi_to_liouville(choi_super_op, order=order, backend=backend)
 
     return super_op
 
 
-def chi_to_pauli(chi_matrix, normalize: bool = False, order: str = "row"):
+def chi_to_pauli(chi_matrix, normalize: bool = False, order: str = "row", backend=None):
     """Convert chi-matrix representation :math:`\\chi` of a quantum channel
     to its Pauli-Liouville representation :math:`\\mathcal{E}_P`.
 
@@ -819,8 +939,10 @@ def chi_to_pauli(chi_matrix, normalize: bool = False, order: str = "row"):
     Returns:
         ndarray: superoperator in the Pauli-Liouville representation.
     """
-    choi_super_op = pauli_to_liouville(chi_matrix, normalize=normalize, order=order)
-    super_op = choi_to_pauli(choi_super_op, order=order)
+    choi_super_op = pauli_to_liouville(
+        chi_matrix, normalize=normalize, order=order, backend=backend
+    )
+    super_op = choi_to_pauli(choi_super_op, order=order, backend=backend)
 
     return super_op
 
@@ -831,6 +953,7 @@ def chi_to_kraus(
     precision_tol: float = None,
     order: str = "row",
     validate_cp: bool = True,
+    backend=None,
 ):
     """Convert the chi-matrix representation :math:`\\chi` of a quantum channel
     to its Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`.
@@ -859,18 +982,30 @@ def chi_to_kraus(
             is a completely positive map. If ``False``, it assumes that
             ``choi_super_op`` is completely positive (and Hermitian).
             Defaults to ``True``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend
+            to be used in the execution. If ``None``, it uses
+            ``GlobalBackend()``. Defaults to ``None``.
+
     Returns:
         (ndarray, ndarray): Kraus operators and their coefficients.
     """
-    choi_super_op = pauli_to_liouville(chi_matrix, normalize=normalize, order=order)
+    choi_super_op = pauli_to_liouville(
+        chi_matrix, normalize=normalize, order=order, backend=backend
+    )
     kraus_ops, coefficients = choi_to_kraus(
-        choi_super_op, precision_tol=precision_tol, order=order, validate_cp=validate_cp
+        choi_super_op,
+        precision_tol=precision_tol,
+        order=order,
+        validate_cp=validate_cp,
+        backend=backend,
     )
 
     return kraus_ops, coefficients
 
 
-def kraus_to_unitaries(kraus_ops, order: str = "row", precision_tol: float = None):
+def kraus_to_unitaries(
+    kraus_ops, order: str = "row", precision_tol: float = None, backend=None
+):
     """Tries to convert Kraus operators into a probabilistc sum of unitaries.
 
     Given a set of Kraus operators :math:`\\{K_{\\alpha}\\}_{\\alpha}`,
@@ -890,7 +1025,9 @@ def kraus_to_unitaries(kraus_ops, order: str = "row", precision_tol: float = Non
             is the Liouville representaton of the :class:`qibo.gates.channels.UnitaryChannel`
             that best approximates the original channel. If ``None``, ``precision_tol``
             defaults to ``1e-7``. Default is ``None``.
-
+        backend (``qibo.backends.abstract.Backend``, optional): backend
+            to be used in the execution. If ``None``, it uses
+            ``GlobalBackend()``. Defaults to ``None``.
 
     Returns:
         (ndarray, ndarray): Unitary operators and their associated probabilities.
@@ -907,31 +1044,36 @@ def kraus_to_unitaries(kraus_ops, order: str = "row", precision_tol: float = Non
         if precision_tol < 0.0:
             raise_error(ValueError, "precision_tol must be non-negative.")
 
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
     target_qubits = [q for q, _ in kraus_ops]
     nqubits = 1 + np.max(target_qubits)
-    d = 2**nqubits
+    dim = 2**nqubits
 
-    target = kraus_to_liouville(kraus_ops, order=order)
+    target = kraus_to_liouville(kraus_ops, order=order, backend=backend)
 
     # QR decomposition
     unitaries = []
     for _, kraus in kraus_ops:
         Q, _ = np.linalg.qr(kraus)
         unitaries.append(Q)
-    unitaries = np.array(unitaries)
+    # unitaries = np.array(unitaries)
+    # unitaries = backend.cast(unitaries)
 
     # unitaries in Liouville representation
     unitaries_liouville = _individual_kraus_to_liouville(
-        list(zip(target_qubits, unitaries))
+        list(zip(target_qubits, unitaries)), backend=backend
     )
 
     # function to minimize
     def f(x0, operators):
-        operator = (1 - np.sum(x0)) * np.eye(d**2, dtype=complex)
+        operator = (1 - np.sum(x0)) * np.eye(dim**2, dtype=complex)
+        operator = backend.cast(operator, dtype=operator.dtype)
         for prob, op in zip(x0, operators):
             operator += prob * op
 
-        return np.linalg.norm(target - operator)
+        return float(backend.calculate_norm(target - operator))
 
     # initial parameters as flat distribution
     x0 = [1.0 / (len(kraus_ops) + 1)] * len(kraus_ops)
@@ -955,24 +1097,28 @@ def kraus_to_unitaries(kraus_ops, order: str = "row", precision_tol: float = Non
     return unitaries, probabilities
 
 
-def _reshuffling(super_op, order: str = "row"):
+def _reshuffling(super_op, order: str = "row", backend=None):
     """Reshuffling operation used to convert Lioville representation
     of quantum channels to their Choi representation (and vice-versa).
 
-    For an operator :math:`A` with dimensions :math:`d^{2} \times d^{2}`,
+    For an operator :math:`A` with dimensions :math:`d^{2} \\times d^{2}`,
     the reshuffling operation consists of reshaping :math:`A` as a
     4-dimensional tensor, swapping two axes, and reshaping back to a
-    :math:`d^{2} \times d^{2}` matrix.
+    :math:`d^{2} \\times d^{2}` matrix.
 
     If ``order="row"``, then:
 
     .. math::
-        A_{\\alpha\\beta, \\, \\gamma\\delta} \\mapsto A_{\\alpha, \\, \\beta, \\, \\gamma, \\, \\delta} \\mapsto A_{\\alpha, \\, \\gamma, \\, \\beta, \\, \\delta} \\mapsto A_{\\alpha\\gamma, \\, \\beta\\delta}
+        A_{\\alpha\\beta, \\, \\gamma\\delta} \\mapsto A_{\\alpha, \\, \\beta, \\,
+            \\gamma, \\, \\delta} \\mapsto A_{\\alpha, \\, \\gamma, \\, \\beta, \\, \\delta}
+            \\mapsto A_{\\alpha\\gamma, \\, \\beta\\delta}
 
     If ``order="column"``, then:
 
     .. math::
-        A_{\\alpha\\beta, \\, \\gamma\\delta} \\mapsto A_{\\alpha, \\, \\beta, \\, \\gamma, \\, \\delta} \\mapsto A_{\\delta, \\, \\beta, \\, \\gamma, \\, \\alpha} \\mapsto A_{\\delta\\beta, \\, \\gamma\\alpha}
+        A_{\\alpha\\beta, \\, \\gamma\\delta} \\mapsto A_{\\alpha, \\, \\beta, \\,
+            \\gamma, \\, \\delta} \\mapsto A_{\\delta, \\, \\beta, \\, \\gamma, \\, \\alpha}
+            \\mapsto A_{\\delta\\beta, \\, \\gamma\\alpha}
 
     Args:
         super_op (ndarray): Liouville (Choi) representation of a
@@ -984,6 +1130,9 @@ def _reshuffling(super_op, order: str = "row"):
             a representation based on row vectorization, reshuffled,
             and then converted back to its representation with
             respect to system-wise vectorization. Default is ``"row"``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend
+            to be used in the execution. If ``None``, it uses
+            ``GlobalBackend()``. Defaults to ``None``.
 
     Returns:
         ndarray: Choi (Liouville) representation of the quantum channel.
@@ -1005,27 +1154,33 @@ def _reshuffling(super_op, order: str = "row"):
             NotImplementedError, "reshuffling not implemented for system vectorization."
         )
 
-    d = np.sqrt(super_op.shape[0])
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    dim = np.sqrt(super_op.shape[0])
 
     if (
         super_op.shape[0] != super_op.shape[1]
-        or np.mod(d, 1) != 0
-        or np.mod(np.log2(int(d)), 1) != 0
+        or np.mod(dim, 1) != 0
+        or np.mod(np.log2(int(dim)), 1) != 0
     ):
         raise_error(ValueError, "super_op must be of shape (4^n, 4^n)")
 
-    d = int(d)
-    super_op = np.reshape(super_op, [d] * 4)
+    dim = int(dim)
+    super_op = np.reshape(super_op, [dim] * 4)
 
     axes = [1, 2] if order == "row" else [0, 3]
     super_op = np.swapaxes(super_op, *axes)
 
-    super_op = np.reshape(super_op, [d**2, d**2])
+    super_op = np.reshape(super_op, [dim**2, dim**2])
+
+    if backend.__class__.__name__ == "TensorflowBackend":
+        super_op = backend.cast(super_op, dtype=super_op.dtype)
 
     return super_op
 
 
-def _set_gate_and_target_qubits(kraus_ops):  # pragma: no cover
+def _set_gate_and_target_qubits(kraus_ops, backend=None):  # pragma: no cover
     """Returns Kraus operators as a set of gates acting on
     their respective ``target qubits``.
 
@@ -1033,6 +1188,9 @@ def _set_gate_and_target_qubits(kraus_ops):  # pragma: no cover
         kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
             where ``qubits`` refers the qubit ids that :math:`A_k` acts on
             and :math:`A_k` is the corresponding matrix as a ``np.ndarray``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend
+            to be used in the execution. If ``None``, it uses
+            ``GlobalBackend()``. Defaults to ``None``.
 
     Returns:
         (tuple, tuple): gates and their respective target qubits.
@@ -1061,14 +1219,15 @@ def _set_gate_and_target_qubits(kraus_ops):  # pragma: no cover
     return gates, target_qubits
 
 
-def _individual_kraus_to_liouville(kraus_ops, order: str = "row"):  # pragma: no cover
+def _individual_kraus_to_liouville(
+    kraus_ops, order: str = "row", backend=None
+):  # pragma: no cover
     """Auxiliary, modified version of :func:`qibo.quantum_info.kraus_to_choi`
     to be used in :func:`qibo.quantum_info.kraus_to_unitaries`. In principle,
     this should be not be accessible to users.
     """
-    from qibo.backends import NumpyBackend
-
-    backend = NumpyBackend()
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
 
     gates, target_qubits = _set_gate_and_target_qubits(kraus_ops)
     nqubits = 1 + max(target_qubits)
@@ -1078,8 +1237,8 @@ def _individual_kraus_to_liouville(kraus_ops, order: str = "row"):  # pragma: no
         kraus_op = FusedGate(*range(nqubits))
         kraus_op.append(gate)
         kraus_op = kraus_op.asmatrix(backend)
-        kraus_op = vectorization(kraus_op, order=order)
+        kraus_op = vectorization(kraus_op, order=order, backend=backend)
         kraus_op = np.outer(kraus_op, np.conj(kraus_op))
-        super_ops.append(choi_to_liouville(kraus_op, order=order))
+        super_ops.append(choi_to_liouville(kraus_op, order=order, backend=backend))
 
     return super_ops
