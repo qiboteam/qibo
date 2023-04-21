@@ -67,8 +67,7 @@ def test_shannon_entropy_errors(backend):
 
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
 def test_shannon_entropy(backend, base):
-    prob_array = np.array([1.0, 0.0])
-    prob_array = backend.cast(prob_array, dtype=prob_array.dtype)
+    prob_array = [1.0, 0.0]
     result = shannon_entropy(prob_array, base, backend=backend)
     backend.assert_allclose(result, 0.0)
 
