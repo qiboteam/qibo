@@ -110,9 +110,7 @@ def test_hellinger(backend):
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
         hellinger_distance(prob, prob_q, validate=True, backend=backend)
 
-    prob = np.array([1.0, 0.0])
-    prob_q = np.array([1.0, 0.0])
-    prob = backend.cast(prob, dtype=prob.dtype)
-    prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+    prob = [1.0, 0.0]
+    prob_q = [1.0, 0.0]
     backend.assert_allclose(hellinger_distance(prob, prob_q, backend=backend), 0.0)
     backend.assert_allclose(hellinger_fidelity(prob, prob_q, backend=backend), 1.0)
