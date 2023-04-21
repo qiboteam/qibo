@@ -87,27 +87,25 @@ def pauli_basis(
     if vectorize and sparse:
         basis, indexes = [], []
         for row in basis_full:
-            row = vectorization(row, order=order)
+            row = vectorization(row, order=order, backend=backend)
             row_indexes = list(np.flatnonzero(row))
             indexes.append(row_indexes)
             basis.append(row[row_indexes])
             del row
     elif vectorize and not sparse:
-        basis = [vectorization(matrix, order=order) for matrix in basis_full]
+        basis = [
+            vectorization(matrix, order=order, backend=backend) for matrix in basis_full
+        ]
     else:
         basis = basis_full
 
-    basis = np.array(basis)
+    basis = backend.cast(basis)
 
     if normalize:
         basis /= np.sqrt(2**nqubits)
 
-    basis = backend.cast(basis, dtype=basis.dtype)
-
     if vectorize and sparse:
-        indexes = np.array(indexes)
-
-        indexes = backend.cast(indexes, dtype=indexes.dtype)
+        indexes = backend.cast(indexes)
 
         return basis, indexes
 
