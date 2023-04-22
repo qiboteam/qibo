@@ -3,10 +3,10 @@ import numpy as np
 import pytest
 
 from qibo import callbacks, gates
-from qibo.models import AdiabaticEvolution, Circuit
 
 # Absolute testing tolerance for the cases of zero entanglement entropy
-_atol = 1e-8
+from qibo.config import PRECISION_TOL
+from qibo.models import AdiabaticEvolution, Circuit
 
 
 def test_abstract_callback_properties():
@@ -52,7 +52,7 @@ def test_entropy_product_state(backend):
     entropy.nqubits = 2
     state = np.ones(4) / 2.0
     result = entropy.apply(backend, state)
-    backend.assert_allclose(result, 0, atol=_atol)
+    backend.assert_allclose(result, 0, atol=PRECISION_TOL)
 
 
 def test_entropy_singlet_state(backend):
@@ -148,11 +148,11 @@ def test_entropy_in_circuit(backend, density_matrix):
 
     target = [0, 0, 1.0]
     values = [backend.to_numpy(x) for x in entropy[:]]
-    backend.assert_allclose(values, target, atol=_atol)
+    backend.assert_allclose(values, target, atol=PRECISION_TOL)
 
     target_spectrum = [0, 0, np.log(2), np.log(2)]
     entropy_spectrum = np.concatenate(entropy.spectrum).ravel().tolist()
-    backend.assert_allclose(entropy_spectrum, target_spectrum, atol=_atol)
+    backend.assert_allclose(entropy_spectrum, target_spectrum, atol=PRECISION_TOL)
 
 
 @pytest.mark.parametrize(
@@ -186,7 +186,7 @@ def test_entropy_in_distributed_circuit(
     final_state = backend.execute_circuit(c)
     backend.assert_allclose(final_state, target_state)
     values = [backend.to_numpy(x) for x in entropy[:]]
-    backend.assert_allclose(values, target_entropy, atol=_atol)
+    backend.assert_allclose(values, target_entropy, atol=PRECISION_TOL)
 
 
 def test_entropy_multiple_executions(backend, accelerators):
@@ -223,7 +223,7 @@ def test_entropy_multiple_executions(backend, accelerators):
 
     target = [0, target_entropy(0.1234), 0, target_entropy(0.4321)]
     values = [backend.to_numpy(x) for x in entropy[:]]
-    backend.assert_allclose(values, target, atol=_atol)
+    backend.assert_allclose(values, target, atol=PRECISION_TOL)
 
     c = Circuit(8, accelerators)
     with pytest.raises(RuntimeError):
