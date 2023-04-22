@@ -90,16 +90,17 @@ class Channel(Gate):
                 self.coefficients += (p0,)
                 self.gates += (I(*self.target_qubits),)
 
-        super_op = np.zeros((4**self.nqubits, 4**self.nqubits), dtype="complex")
+        super_op = np.zeros((4**self.nqubits, 4**self.nqubits), dtype=complex)
+        super_op = backend.cast(super_op, dtype=super_op.dtype)
         for coeff, gate in zip(self.coefficients, self.gates):
             kraus_op = FusedGate(*range(self.nqubits))
             kraus_op.append(gate)
             kraus_op = kraus_op.asmatrix(backend)
-            kraus_op = vectorization(kraus_op, order=order)
+            kraus_op = vectorization(kraus_op, order=order, backend=backend)
             super_op += coeff * np.outer(kraus_op, np.conj(kraus_op))
             del kraus_op
 
-        super_op = backend.cast(super_op, dtype=super_op.dtype)
+        # super_op = backend.cast(super_op, dtype=super_op.dtype)
 
         return super_op
 
@@ -128,8 +129,8 @@ class Channel(Gate):
             backend = GlobalBackend()
 
         super_op = self.to_choi(order=order, backend=backend)
-        super_op = choi_to_liouville(super_op, order=order)
-        super_op = backend.cast(super_op, dtype=super_op.dtype)
+        super_op = choi_to_liouville(super_op, order=order, backend=backend)
+        # super_op = backend.cast(super_op, dtype=super_op.dtype)
 
         return super_op
 
@@ -159,11 +160,11 @@ class Channel(Gate):
         super_op = self.to_liouville(backend=backend)
 
         # unitary that transforms from comp basis to pauli basis
-        unitary = comp_basis_to_pauli(self.nqubits, normalize)
+        unitary = comp_basis_to_pauli(self.nqubits, normalize, backend=backend)
         unitary = backend.cast(unitary, dtype=unitary.dtype)
 
         super_op = unitary @ super_op @ np.transpose(np.conj(unitary))
-        super_op = backend.cast(super_op, dtype=super_op.dtype)
+        # super_op = backend.cast(super_op, dtype=super_op.dtype)
 
         return super_op
 
