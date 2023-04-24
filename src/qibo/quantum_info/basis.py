@@ -188,9 +188,7 @@ def comp_basis_to_pauli(
     )
 
     unitary = np.conj(unitary)
-
-    if backend.__class__.__name__ == "TensorflowBackend":
-        unitary = backend.cast(unitary, dtype=unitary.dtype)
+    unitary = backend.cast(unitary, dtype=unitary.dtype)
 
     return unitary
 

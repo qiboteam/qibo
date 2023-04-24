@@ -1173,9 +1173,7 @@ def _reshuffling(super_op, order: str = "row", backend=None):
     super_op = np.swapaxes(super_op, *axes)
 
     super_op = np.reshape(super_op, [dim**2, dim**2])
-
-    if backend.__class__.__name__ == "TensorflowBackend":
-        super_op = backend.cast(super_op, dtype=super_op.dtype)
+    super_op = backend.cast(super_op, dtype=super_op.dtype)
 
     return super_op
 

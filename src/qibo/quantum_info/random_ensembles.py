@@ -197,8 +197,7 @@ def random_unitary(dims: int, measure: str = None, seed=None, backend=None):
         H = random_hermitian(dims, seed=seed, backend=NumpyBackend())
         unitary = expm(-1.0j * H / 2)
 
-    if backend.__class__.__name__ in ["TensorflowBackend", "CupyBackend"]:
-        unitary = backend.cast(unitary, dtype=unitary.dtype)
+    unitary = backend.cast(unitary, dtype=unitary.dtype)
 
     return unitary
 
@@ -336,8 +335,7 @@ def random_statevector(dims: int, haar: bool = False, seed=None, backend=None):
         probabilities = probabilities / np.sum(probabilities)
         phases = 2 * np.pi * local_state.random(dims)
         state = np.sqrt(probabilities) * np.exp(1.0j * phases)
-        if backend.__class__.__name__ in ["TensorflowBackend", "CupyBackend"]:
-            state = backend.cast(state, dtype=state.dtype)
+        state = backend.cast(state, dtype=state.dtype)
     else:
         # select a random column of a haar random unitary
         k = local_state.integers(low=0, high=dims)
@@ -414,8 +412,7 @@ def random_density_matrix(
         else:
             raise_error(ValueError, f"metric {metric} not found.")
 
-    if backend.__class__.__name__ == "TensorflowBackend":
-        state = backend.cast(state, dtype=state.dtype)
+    state = backend.cast(state, dtype=state.dtype)
 
     return state
 
@@ -504,8 +501,7 @@ def random_clifford(
         elif not fuse:
             unitaries = np.array(unitaries)
 
-        if backend.__class__.__name__ in ["TensorflowBackend", "CupyBackend"]:
-            unitaries = backend.cast(unitaries, dtype=unitaries.dtype)
+        unitaries = backend.cast(unitaries, dtype=unitaries.dtype)
 
     return unitaries
 
@@ -647,9 +643,7 @@ def random_pauli(
                 for qubit, row in zip(qubits, indexes)
             ]
         )
-
-        if backend.__class__.__name__ in ["TensorflowBackend", "CupyBackend"]:
-            gate_grid = backend.cast(gate_grid, dtype=gate_grid.dtype)
+        gate_grid = backend.cast(gate_grid, dtype=gate_grid.dtype)
 
     return gate_grid
 
