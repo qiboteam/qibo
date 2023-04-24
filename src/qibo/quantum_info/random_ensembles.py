@@ -11,7 +11,13 @@ from qibo.backends import GlobalBackend, NumpyBackend
 from qibo.config import MAX_ITERATIONS, PRECISION_TOL, raise_error
 from qibo.models import Circuit
 from qibo.quantum_info.basis import comp_basis_to_pauli
-from qibo.quantum_info.superoperator_transformations import vectorization
+from qibo.quantum_info.superoperator_transformations import (
+    choi_to_chi,
+    choi_to_kraus,
+    choi_to_liouville,
+    choi_to_pauli,
+    vectorization,
+)
 from qibo.quantum_info.utils import ONEQUBIT_CLIFFORD_PARAMS
 
 
@@ -195,6 +201,70 @@ def random_unitary(dims: int, measure: str = None, seed=None, backend=None):
         unitary = backend.cast(unitary, dtype=unitary.dtype)
 
     return unitary
+
+
+def random_quantum_channel(
+    dims: int,
+    representation: str = "liouville",
+    measure: str = None,
+    order: str = "row",
+    normalize: bool = None,
+    precision_tol: float = None,
+    validate_cp: bool = None,
+    seed=None,
+    backend=None,
+):
+    """Creates a random superoperator from an unitary operator in one of the
+    supported superoperator representations.
+
+    Args:
+        dims (int): dimension of the matrix.
+        representation (str, optional): If ``"chi"``, returns a random channel in the
+            Chi representation. If ``"choi"``. Defaults to ``"liouville"``.
+        measure (str, optional): _description_. Defaults to None.
+        order (str, optional): _description_. Defaults to "row".
+        normalize (bool, optional): _description_. Defaults to None.
+        precision_tol (float, optional): _description_. Defaults to None.
+        validate_cp (bool, optional): _description_. Defaults to None.
+        seed (_type_, optional): _description_. Defaults to None.
+        backend (_type_, optional): _description_. Defaults to None.
+
+    Returns:
+        _type_: _description_
+    """
+    if not isinstance(representation, str):
+        raise_error(
+            TypeError,
+            f"representation must be type str, but it is type {type(representation)}",
+        )
+
+    if representation not in ["chi", "choi", "kraus", "liouville", "pauli"]:
+        raise_error(ValueError, f"representation {representation} not found.")
+
+    super_op = random_unitary(dims, measure, seed, backend)
+    super_op = vectorization(super_op, order=order, backend=backend)
+    super_op = np.outer(super_op, np.conj(super_op))
+
+    if representation == "chi":
+        super_op = choi_to_chi(
+            super_op, normalize=normalize, order=order, backend=backend
+        )
+    elif representation == "kraus":
+        super_op = choi_to_kraus(
+            super_op,
+            precision_tol=precision_tol,
+            order=order,
+            validate_cp=validate_cp,
+            backend=backend,
+        )
+    elif representation == "liouville":
+        super_op = choi_to_liouville(super_op, order=order, backend=backend)
+    elif representation == "pauli":
+        super_op = choi_to_pauli(
+            super_op, normalize=normalize, order=order, backend=backend
+        )
+
+    return super_op
 
 
 def random_statevector(dims: int, haar: bool = False, seed=None, backend=None):
