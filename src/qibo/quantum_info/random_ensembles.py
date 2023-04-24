@@ -660,7 +660,7 @@ def random_pauli_hamiltonian(
 
     U = comp_basis_to_pauli(nqubits, normalize=True, backend=backend)
 
-    hamiltonian = np.real(U @ vectorization(hamiltonian))
+    hamiltonian = np.real(U @ vectorization(hamiltonian, backend=backend))
 
     return hamiltonian, eigenvalues
 
