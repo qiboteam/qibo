@@ -8,19 +8,19 @@ def test_purity(backend):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
-        purity(state, backend=backend)
+        purity(state)
     state = np.array([1.0, 0.0, 0.0, 0.0])
     state = backend.cast(state, dtype=state.dtype)
-    backend.assert_allclose(purity(state, backend=backend), 1.0)
+    backend.assert_allclose(purity(state), 1.0)
 
     state = np.outer(np.conj(state), state)
     state = backend.cast(state, dtype=state.dtype)
-    backend.assert_allclose(purity(state, backend=backend), 1.0)
+    backend.assert_allclose(purity(state), 1.0)
 
     dim = 4
     state = backend.identity_density_matrix(2)
     state = backend.cast(state, dtype=state.dtype)
-    backend.assert_allclose(purity(state, backend=backend), 1.0 / dim)
+    backend.assert_allclose(purity(state), 1.0 / dim)
 
 
 def test_entropy_errors(backend):
@@ -129,43 +129,40 @@ def test_hilbert_schmidt_distance(backend):
         target = np.random.rand(4, 4)
         state = backend.cast(state, dtype=state.dtype)
         target = backend.cast(target, dtype=target.dtype)
-        hilbert_schmidt_distance(state, target, backend=backend)
+        hilbert_schmidt_distance(
+            state,
+            target,
+        )
     with pytest.raises(TypeError):
         state = np.random.rand(2, 2, 2)
         target = np.random.rand(2, 2, 2)
         state = backend.cast(state, dtype=state.dtype)
         target = backend.cast(target, dtype=target.dtype)
-        hilbert_schmidt_distance(state, target, backend=backend)
+        hilbert_schmidt_distance(state, target)
     with pytest.raises(TypeError):
         state = np.array([])
         target = np.array([])
         state = backend.cast(state, dtype=state.dtype)
         target = backend.cast(target, dtype=target.dtype)
-        hilbert_schmidt_distance(state, target, backend=backend)
+        hilbert_schmidt_distance(state, target)
 
     state = np.array([1.0, 0.0, 0.0, 0.0])
     target = np.array([1.0, 0.0, 0.0, 0.0])
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
-    backend.assert_allclose(
-        hilbert_schmidt_distance(state, target, backend=backend), 0.0
-    )
+    backend.assert_allclose(hilbert_schmidt_distance(state, target), 0.0)
 
     state = np.outer(np.conj(state), state)
     target = np.outer(np.conj(target), target)
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
-    backend.assert_allclose(
-        hilbert_schmidt_distance(state, target, backend=backend), 0.0
-    )
+    backend.assert_allclose(hilbert_schmidt_distance(state, target), 0.0)
 
     state = np.array([0.0, 1.0, 0.0, 0.0])
     target = np.array([1.0, 0.0, 0.0, 0.0])
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
-    backend.assert_allclose(
-        hilbert_schmidt_distance(state, target, backend=backend), 2.0
-    )
+    backend.assert_allclose(hilbert_schmidt_distance(state, target), 2.0)
 
 
 def test_fidelity(backend):
@@ -174,37 +171,37 @@ def test_fidelity(backend):
         target = np.random.rand(4, 4)
         state = backend.cast(state, dtype=state.dtype)
         target = backend.cast(target, dtype=target.dtype)
-        fidelity(state, target, backend=backend)
+        fidelity(state, target)
     with pytest.raises(TypeError):
         state = np.random.rand(2, 2, 2)
         target = np.random.rand(2, 2, 2)
         state = backend.cast(state, dtype=state.dtype)
         target = backend.cast(target, dtype=target.dtype)
-        fidelity(state, target, backend=backend)
+        fidelity(state, target)
     with pytest.raises(ValueError):
         state = np.random.rand(2, 2)
         target = np.random.rand(2, 2)
         state = backend.cast(state, dtype=state.dtype)
         target = backend.cast(target, dtype=target.dtype)
-        fidelity(state, target, validate=True, backend=backend)
+        fidelity(state, target, validate=True)
 
     state = np.array([0.0, 0.0, 0.0, 1.0])
     target = np.array([0.0, 0.0, 0.0, 1.0])
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
-    backend.assert_allclose(fidelity(state, target, backend=backend), 1.0)
+    backend.assert_allclose(fidelity(state, target), 1.0)
 
     state = np.outer(np.conj(state), state)
     target = np.outer(np.conj(target), target)
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
-    backend.assert_allclose(fidelity(state, target, backend=backend), 1.0)
+    backend.assert_allclose(fidelity(state, target), 1.0)
 
     state = np.array([0.0, 1.0, 0.0, 0.0])
     target = np.array([0.0, 0.0, 0.0, 1.0])
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
-    backend.assert_allclose(fidelity(state, target, backend=backend), 0.0)
+    backend.assert_allclose(fidelity(state, target), 0.0)
 
 
 def test_process_fidelity(backend):

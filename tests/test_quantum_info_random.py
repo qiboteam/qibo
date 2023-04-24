@@ -65,7 +65,7 @@ def test_random_hermitian(backend):
     norm = backend.calculate_norm(matrix - matrix_dagger)
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
-    eigenvalues, _ = np.linalg.eigh(matrix)
+    eigenvalues = np.linalg.eigvalsh(matrix)
     eigenvalues = np.real(eigenvalues)
     backend.assert_allclose(all(eigenvalues >= 0), True)
 
@@ -76,7 +76,7 @@ def test_random_hermitian(backend):
     norm = backend.calculate_norm(matrix - matrix_dagger)
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
-    eigenvalues, _ = np.linalg.eigh(matrix)
+    eigenvalues = np.linalg.eigvalsh(matrix)
     eigenvalues = np.real(eigenvalues)
     backend.assert_allclose(all(eigenvalues <= 1), True)
 
@@ -87,7 +87,7 @@ def test_random_hermitian(backend):
     norm = backend.calculate_norm(matrix - matrix_dagger)
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
-    eigenvalues, _ = np.linalg.eigh(matrix)
+    eigenvalues = np.linalg.eigvalsh(matrix)
     eigenvalues = np.real(eigenvalues)
     backend.assert_allclose(all(eigenvalues >= 0), True)
     backend.assert_allclose(all(eigenvalues <= 1), True)

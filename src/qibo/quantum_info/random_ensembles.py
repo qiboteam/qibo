@@ -495,10 +495,6 @@ def random_clifford(
     if return_circuit is True:
         # tensor product of all gates generated
         unitaries = reduce(np.kron, unitaries)
-
-        # if backend.__class__.__name__ in ["TensorflowBackend", "CupyBackend"]:
-        #     unitaries = backend.cast(unitaries, dtype=unitaries.dtype)
-
         unitaries = gates.Unitary(unitaries, *qubits)
     else:
         if len(unitaries) == 1:
