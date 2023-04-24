@@ -128,6 +128,21 @@ def test_random_unitary(backend):
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
 
+@pytest.mark.parametrize("measure", [None, "haar"])
+@pytest.mark.parametrize(
+    "representation", ["chi", "choi", "kraus", "liouville", "pauli"]
+)
+def test_random_quantum_channel(backend, representation, measure):
+    with pytest.raises(TypeError):
+        test = random_quantum_channel(4, representation=True, backend=backend)
+    with pytest.raises(ValueError):
+        test = random_quantum_channel(4, representation="Choi", backend=backend)
+
+    # All subroutines are already tested elsewhere,
+    # so here we only execute them once for coverage
+    random_quantum_channel(4, representation, measure)
+
+
 @pytest.mark.parametrize("haar", [False, True])
 @pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
 def test_random_statevector(backend, haar, seed):
