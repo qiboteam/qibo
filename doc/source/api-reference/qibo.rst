@@ -1149,6 +1149,12 @@ Random unitary matrix
 .. autofunction:: qibo.quantum_info.random_unitary
 
 
+Random quantum channel
+""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_quantum_channel
+
+
 Random statevector
 """"""""""""""""""
 
