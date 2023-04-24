@@ -353,7 +353,7 @@ def test_liouville_to_kraus(backend, order, test_a0, test_a1):
 @pytest.mark.parametrize("normalize", [False, True])
 def test_pauli_to_liouville(backend, normalize, order, test_pauli, test_superop):
     with pytest.raises(ValueError):
-        pauli_to_liouville(test_pauli[:-1, :-1], normalize, order, backend=backend)
+        pauli_to_liouville(test_pauli[:-1, :], normalize, order, backend=backend)
 
     dim = int(np.sqrt(test_superop.shape[0]))
     aux = dim**2 if normalize == False else dim
@@ -374,7 +374,7 @@ def test_pauli_to_liouville(backend, normalize, order, test_pauli, test_superop)
 @pytest.mark.parametrize("normalize", [False, True])
 def test_liouville_to_pauli(backend, normalize, order, test_pauli, test_superop):
     with pytest.raises(ValueError):
-        liouville_to_pauli(test_superop[:-1, :-1], normalize, order, backend=backend)
+        liouville_to_pauli(test_superop[:-1, :], normalize, order, backend=backend)
 
     dim = int(np.sqrt(test_pauli.shape[0]))
     aux = 1.0 if normalize == False else dim
