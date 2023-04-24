@@ -543,8 +543,6 @@ class ThermalRelaxationChannel(KrausChannel):
         preset0 = p_reset * (1 - excited_population)
         preset1 = p_reset * excited_population
 
-        # import numpy as np
-
         if t_1 < t_2:
             exp_t2 = exp(-time / t_2)
 
@@ -644,8 +642,6 @@ class ReadoutErrorChannel(KrausChannel):
         if isinstance(q, int) is True:
             q = (q,)
 
-        # import numpy as np
-
         dim = len(probabilities)
         operators = []
         for j in range(dim):
@@ -677,8 +673,6 @@ class ResetChannel(KrausChannel):
     """
 
     def __init__(self, q, p0=0.0, p1=0.0):
-        # import numpy as np
-
         if p0 < 0:
             raise_error(ValueError, "Invalid p0 ({p0} < 0).")
         if p1 < 0:
