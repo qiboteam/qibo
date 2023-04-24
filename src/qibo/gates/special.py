@@ -1,5 +1,4 @@
-from qibo.config import raise_error
-from qibo.gates.abstract import Gate, ParametrizedGate, SpecialGate
+from qibo.gates.abstract import SpecialGate
 from qibo.gates.measurements import M
 
 
@@ -15,6 +14,7 @@ class CallbackGate(SpecialGate):
     def __init__(self, callback: "Callback"):
         super().__init__()
         self.name = callback.__class__.__name__
+        self.draw_label = "".join([c for c in self.name if c.isupper()])
         self.callback = callback
         self.init_args = [callback]
 
@@ -39,6 +39,7 @@ class FusedGate(SpecialGate):
     def __init__(self, *q):
         super().__init__()
         self.name = "Fused Gate"
+        self.draw_label = "[]"
         self.target_qubits = tuple(sorted(q))
         self.init_args = list(q)
         self.qubit_set = set(q)
