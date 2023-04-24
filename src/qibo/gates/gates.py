@@ -4,38 +4,6 @@ from typing import List
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate, ParametrizedGate
 
-# TODO: Make these dictionaries gate properties
-QASM_GATES = {
-    "h": "H",
-    "x": "X",
-    "y": "Y",
-    "z": "Z",
-    "rx": "RX",
-    "ry": "RY",
-    "rz": "RZ",
-    "u1": "U1",
-    "u2": "U2",
-    "u3": "U3",
-    "cx": "CNOT",
-    "swap": "SWAP",
-    "iswap": "iSWAP",
-    "fswap": "FSWAP",
-    "rxx": "RXX",
-    "ryy": "RYY",
-    "rzz": "RZZ",
-    "cz": "CZ",
-    "crx": "CRX",
-    "cry": "CRY",
-    "crz": "CRZ",
-    "cu1": "CU1",
-    "cu3": "CU3",
-    "ccx": "TOFFOLI",
-    "id": "I",
-    "s": "S",
-    "sdg": "SDG",
-    "t": "T",
-    "tdg": "TDG",
-}
 PARAMETRIZED_GATES = {
     "rx",
     "ry",

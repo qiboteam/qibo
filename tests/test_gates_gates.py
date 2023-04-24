@@ -285,7 +285,7 @@ def test_cun(backend, name, params):
     final_state = apply_gates(backend, [gate], initial_state=initial_state)
     target_state = np.dot(gate.asmatrix(backend), initial_state)
     backend.assert_allclose(final_state, target_state)
-    if gate.name in gates.QASM_GATES:
+    if name != "CU2":
         assert gate.qasm_label == gate.name
     else:
         with pytest.raises(NotImplementedError):

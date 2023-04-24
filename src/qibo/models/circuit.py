@@ -1092,9 +1092,8 @@ class Circuit:
         """
         nqubits, gate_list = cls._parse_qasm(qasm_code)
         circuit = cls(nqubits, accelerators, density_matrix)
-        for gate_name, qubits, params in gate_list:
-            gate = getattr(gates, gate_name)
-            if gate_name == "M":
+        for gate, qubits, params in gate_list:
+            if gate == gates.M:
                 circuit.add(gate(*qubits, register_name=params))
             elif params is None:
                 circuit.add(gate(*qubits))
@@ -1198,17 +1197,12 @@ class Circuit:
                     registers[register][idx] = qubits[qubit]
                 else:
                     registers[register] = {idx: qubits[qubit]}
-                    gate_list.append(("M", register, None))
+                    gate_list.append((gates.M, register, None))
 
             else:
                 pieces = [x for x in re.split("[()]", command) if x]
                 if len(pieces) == 1:
                     gatename, params = pieces[0], None
-                    if gatename not in gates.QASM_GATES:
-                        raise_error(
-                            ValueError,
-                            f"QASM command {command} is not recognized.",
-                        )
                     if gatename in gates.PARAMETRIZED_GATES:
                         raise_error(
                             ValueError,
@@ -1240,6 +1234,21 @@ class Circuit:
                         ValueError,
                         f"QASM command {command} is not recognized.",
                     )
+                try:
+                    gatetype = (
+                        getattr(gates, gatename.upper())
+                        if gatename not in ["id", "cx", "ccx"]
+                        else {
+                            "id": gates.I,
+                            "cx": gates.CNOT,
+                            "ccx": gates.TOFFOLI,
+                        }[gatename]
+                    )
+                except:
+                    raise_error(
+                        ValueError,
+                        f"QASM command {command} is not recognized.",
+                    )
 
                 # Add gate to gate list
                 qubit_list = []
@@ -1250,14 +1259,14 @@ class Circuit:
                             f"Qubit {qubit} is not defined in QASM code.",
                         )
                     qubit_list.append(qubits[qubit])
-                gate_list.append((gates.QASM_GATES[gatename], list(qubit_list), params))
+                gate_list.append((gatetype, list(qubit_list), params))
 
         # Create measurement gate qubit lists from registers
-        for i, (gatename, register, _) in enumerate(gate_list):
-            if gatename == "M":
+        for i, (gatetype, register, _) in enumerate(gate_list):
+            if gatetype == gates.M:
                 qubit_list = registers[register]
                 qubit_list = [qubit_list[k] for k in sorted(qubit_list.keys())]
-                gate_list[i] = ("M", qubit_list, register)
+                gate_list[i] = (gates.M, qubit_list, register)
 
         return len(qubits), gate_list
 
