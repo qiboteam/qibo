@@ -4,19 +4,14 @@ from qibo.backends import GlobalBackend
 from qibo.config import PRECISION_TOL, raise_error
 
 
-def purity(state, backend=None):
+def purity(state):
     """Purity of a quantum state :math:`\\rho`, which is given by :math:`\\text{Tr}(\\rho^{2})`.
 
     Args:
         state: statevector or density matrix.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
-            in the execution. If ``None``, it uses ``GlobalBackend()``.
-            Defaults to ``None``.
     Returns:
         float: Purity of quantum state :math:`\\rho`.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
 
     if (
         (len(state.shape) >= 3)
@@ -81,11 +76,16 @@ def entropy(state, base: float = 2, validate: bool = False, backend=None):
                 backend.calculate_norm(np.transpose(np.conj(state)) - state)
                 <= PRECISION_TOL
             )
-            eigenvalues, _ = (
-                np.linalg.eigh(state) if hermitian else np.linalg.eig(state)
+            if not hermitian and backend.__class__.__name__ == "CupyBackend":
+                raise_error(
+                    NotImplementedError,
+                    f"CupyBackend does not support `np.linalg.eigvals` for non-Hermitian `state`.",
+                )
+            eigenvalues = (
+                np.linalg.eigvalsh(state) if hermitian else np.linalg.eigvals(state)
             )
         else:
-            eigenvalues, _ = np.linalg.eigh(state)
+            eigenvalues = np.linalg.eigvalsh(state)
 
         if base == 2:
             log_prob = np.where(eigenvalues != 0, np.log2(eigenvalues), 0.0)
@@ -153,11 +153,18 @@ def trace_distance(state, target, validate: bool = False, backend=None):
             backend.calculate_norm(np.transpose(np.conj(difference)) - difference)
             <= PRECISION_TOL
         )
-        eigenvalues, _ = (
-            np.linalg.eigh(difference) if hermitian else np.linalg.eig(difference)
+        if not hermitian and backend.__class__.__name__ == "CupyBackend":
+            raise_error(
+                NotImplementedError,
+                f"CupyBackend does not support `np.linalg.eigvals` for non-Hermitian `state - target`.",
+            )
+        eigenvalues = (
+            np.linalg.eigvalsh(difference)
+            if hermitian
+            else np.linalg.eigvals(difference)
         )
     else:
-        eigenvalues, _ = np.linalg.eigh(difference)
+        eigenvalues = np.linalg.eigvalsh(difference)
 
     distance = np.sum(np.absolute(eigenvalues)) / 2
     distance = float(distance)
@@ -165,7 +172,7 @@ def trace_distance(state, target, validate: bool = False, backend=None):
     return distance
 
 
-def hilbert_schmidt_distance(state, target, backend=None):
+def hilbert_schmidt_distance(state, target):
     """Hilbert-Schmidt distance between two quantum states:
 
     .. math::
@@ -174,15 +181,10 @@ def hilbert_schmidt_distance(state, target, backend=None):
     Args:
         state: state vector or density matrix.
         target: state vector or density matrix.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
-            in the execution. If ``None``, it uses ``GlobalBackend()``.
-            Defaults to ``None``.
 
     Returns:
         float: Hilbert-Schmidt distance between state :math:`\\rho` and target :math:`\\sigma`.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
 
     if state.shape != target.shape:
         raise_error(
@@ -207,7 +209,7 @@ def hilbert_schmidt_distance(state, target, backend=None):
     return distance
 
 
-def fidelity(state, target, validate: bool = False, backend=None):
+def fidelity(state, target, validate: bool = False):
     """Fidelity between two quantum states (when at least one state is pure).
 
     .. math::
@@ -221,15 +223,10 @@ def fidelity(state, target, validate: bool = False, backend=None):
         target: state vector or density matrix.
         validate (bool, optional): if ``True``, checks if one of the
             input states is pure. Default is ``False``.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
-            in the execution. If ``None``, it uses ``GlobalBackend()``.
-            Defaults to ``None``.
 
     Returns:
         float: Fidelity between state :math:`\\rho` and target :math:`\\sigma`.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
 
     if state.shape != target.shape:
         raise_error(
