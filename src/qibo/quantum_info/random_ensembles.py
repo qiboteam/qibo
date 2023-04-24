@@ -11,7 +11,13 @@ from qibo.backends import GlobalBackend, NumpyBackend
 from qibo.config import MAX_ITERATIONS, PRECISION_TOL, raise_error
 from qibo.models import Circuit
 from qibo.quantum_info.basis import comp_basis_to_pauli
-from qibo.quantum_info.superoperator_transformations import vectorization
+from qibo.quantum_info.superoperator_transformations import (
+    choi_to_chi,
+    choi_to_kraus,
+    choi_to_liouville,
+    choi_to_pauli,
+    vectorization,
+)
 from qibo.quantum_info.utils import ONEQUBIT_CLIFFORD_PARAMS
 
 
@@ -195,6 +201,86 @@ def random_unitary(dims: int, measure: str = None, seed=None, backend=None):
         unitary = backend.cast(unitary, dtype=unitary.dtype)
 
     return unitary
+
+
+def random_quantum_channel(
+    dims: int,
+    representation: str = "liouville",
+    measure: str = None,
+    order: str = "row",
+    normalize: bool = False,
+    precision_tol: float = None,
+    seed=None,
+    backend=None,
+):
+    """Creates a random superoperator from an unitary operator in one of the
+    supported superoperator representations.
+
+    Args:
+        dims (int): dimension of the matrix.
+        representation (str, optional): If ``"chi"``, returns a random channel in the
+            Chi representation. If ``"choi"``, returns channel in Choi representation.
+            If ``"kraus"``, returns Kraus representation of channel. If ``"liouville"``,
+            returns Liouville representation. If ``"pauli"``, returns Pauli-Liouville
+            representation. Defaults to ``"liouville"``.
+        measure (str, optional): probability measure in which to sample the unitary
+            from. If ``None``, functions returns :math:`\\exp{(-i \\, H)}`, where
+            :math:`H` is a Hermitian operator. If ``"haar"``, returns an Unitary
+            matrix sampled from the Haar measure. Defaults to ``None``.
+        order (str, optional): If ``"row"``, vectorization is performed row-wise.
+            If ``"column"``, vectorization is performed column-wise. If ``"system"``,
+            a block-vectorization is performed. Defaults to ``"row"``.
+        normalize (bool, optional): used when ``representation="chi"`` or
+            ``representation="pauli"``. If ``True`` assumes the normalized Pauli basis.
+            If ``False``, it assumes unnormalized Pauli basis. Defaults to ``False``.
+        precision_tol (float, optional): if ``representation="kraus"``, it is the
+            precision tolerance for eigenvalues found in the spectral decomposition
+            problem. Any eigenvalue :math:`\\lambda <` ``precision_tol`` is set
+            to 0 (zero). If ``None``, ``precision_tol`` defaults to
+            ``qibo.config.PRECISION_TOL=1e-8``. Defaults to ``None``.
+        seed (int or ``numpy.random.Generator``, optional): Either a generator of
+            random numbers or a fixed seed to initialize a generator. If ``None``,
+            initializes a generator with a random seed. Defaults to ``None``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
+            in the execution. If ``None``, it uses ``GlobalBackend()``.
+            Defaults to ``None``.
+
+    Returns:
+        ndarray: Superoperator representation of a random unitary gate.
+    """
+    if not isinstance(representation, str):
+        raise_error(
+            TypeError,
+            f"representation must be type str, but it is type {type(representation)}",
+        )
+
+    if representation not in ["chi", "choi", "kraus", "liouville", "pauli"]:
+        raise_error(ValueError, f"representation {representation} not found.")
+
+    super_op = random_unitary(dims, measure, seed, backend)
+    super_op = vectorization(super_op, order=order, backend=backend)
+    super_op = np.outer(super_op, np.conj(super_op))
+
+    if representation == "chi":
+        super_op = choi_to_chi(
+            super_op, normalize=normalize, order=order, backend=backend
+        )
+    elif representation == "kraus":
+        super_op = choi_to_kraus(
+            super_op,
+            precision_tol=precision_tol,
+            order=order,
+            validate_cp=False,
+            backend=backend,
+        )
+    elif representation == "liouville":
+        super_op = choi_to_liouville(super_op, order=order, backend=backend)
+    elif representation == "pauli":
+        super_op = choi_to_pauli(
+            super_op, normalize=normalize, order=order, backend=backend
+        )
+
+    return super_op
 
 
 def random_statevector(dims: int, haar: bool = False, seed=None, backend=None):
