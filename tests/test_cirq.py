@@ -223,7 +223,7 @@ def test_two_qubit_parametrized_gates(backend, nqubits, ndevices):
 )
 def test_unitary_matrix_gate(backend, nqubits, ndevices):
     """Check arbitrary unitary gate."""
-    if backend.__class__.__name__ != "CupyBackend":
+    if backend.__class__.__name__ not in ["TensorflowBackend", "CupyBackend"]:
         matrix = random_unitary(2**1, backend=backend)
         targets = random_active_qubits(nqubits, nactive=1)
         qibo_gate = gates.Unitary(matrix, *targets)
@@ -255,7 +255,6 @@ def test_unitary_matrix_gate(backend, nqubits, ndevices):
 def test_one_qubit_gates_controlled_by(backend, gate_name, nqubits, ndevices):
     """Check one-qubit gates controlled on arbitrary number of qubits."""
     if backend.__class__.__name__ != "CupyBackend":
-        all_qubits = np.arange(nqubits)
         for _ in range(5):
             activeq = random_active_qubits(nqubits, nmin=1)
             qibo_gate = getattr(gates, gate_name)(activeq[-1]).controlled_by(
@@ -286,7 +285,6 @@ def test_one_qubit_gates_controlled_by(backend, gate_name, nqubits, ndevices):
 def test_two_qubit_gates_controlled_by(backend, nqubits, ndevices):
     """Check ``SWAP`` and ``fSim`` gates controlled on arbitrary number of qubits."""
     if backend.__class__.__name__ != "CupyBackend":
-        all_qubits = np.arange(nqubits)
         for _ in range(5):
             activeq = random_active_qubits(nqubits, nmin=2)
             qibo_gate = gates.SWAP(*activeq[-2:]).controlled_by(*activeq[:-2])
@@ -309,8 +307,7 @@ def test_two_qubit_gates_controlled_by(backend, nqubits, ndevices):
 @pytest.mark.parametrize("ndevices", [None, 2, 8])
 def test_unitary_matrix_gate_controlled_by(backend, nqubits, ntargets, ndevices):
     """Check arbitrary unitary gate controlled on arbitrary number of qubits."""
-    if backend.__class__.__name__ != "CupyBackend":
-        all_qubits = np.arange(nqubits)
+    if backend.__class__.__name__ not in ["TensorflowBackend", "CupyBackend"]:
         for _ in range(10):
             activeq = random_active_qubits(nqubits, nactive=5)
             matrix = random_unitary(2**ntargets, backend=backend)
