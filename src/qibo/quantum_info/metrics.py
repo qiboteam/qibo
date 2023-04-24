@@ -76,7 +76,9 @@ def entropy(state, base: float = 2, validate: bool = False, backend=None):
                 backend.calculate_norm(np.transpose(np.conj(state)) - state)
                 <= PRECISION_TOL
             )
-            if not hermitian and backend.__class__.__name__ == "CupyBackend":
+            if (
+                not hermitian and backend.__class__.__name__ == "CupyBackend"
+            ):  # pragma: no cover
                 raise_error(
                     NotImplementedError,
                     f"CupyBackend does not support `np.linalg.eigvals` for non-Hermitian `state`.",
@@ -153,7 +155,9 @@ def trace_distance(state, target, validate: bool = False, backend=None):
             backend.calculate_norm(np.transpose(np.conj(difference)) - difference)
             <= PRECISION_TOL
         )
-        if not hermitian and backend.__class__.__name__ == "CupyBackend":
+        if (
+            not hermitian and backend.__class__.__name__ == "CupyBackend"
+        ):  # pragma: no cover
             raise_error(
                 NotImplementedError,
                 f"CupyBackend does not support `np.linalg.eigvals` for non-Hermitian `state - target`.",
