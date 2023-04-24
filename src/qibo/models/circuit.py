@@ -1046,7 +1046,9 @@ class Circuit:
                 )
 
             qubits = ",".join(f"q[{i}]" for i in gate.qubits)
-            if gate.qasm_label in gates.PARAMETRIZED_GATES:
+            if isinstance(gate, gates.ParametrizedGate) and not isinstance(
+                gate, gates.I
+            ):
                 params = (str(x) for x in gate.parameters)
                 name = f"{gate.qasm_label}({', '.join(params)})"
             else:
@@ -1201,19 +1203,41 @@ class Circuit:
 
             else:
                 pieces = [x for x in re.split("[()]", command) if x]
+
+                gatename = pieces[0]
+                try:
+                    gatetype = (
+                        getattr(gates, gatename.upper())
+                        if gatename not in ["id", "cx", "ccx"]
+                        else {
+                            "id": gates.I,
+                            "cx": gates.CNOT,
+                            "ccx": gates.TOFFOLI,
+                        }[gatename]
+                    )
+                except:
+                    raise_error(
+                        ValueError,
+                        f"QASM command {command} is not recognized.",
+                    )
+
                 if len(pieces) == 1:
-                    gatename, params = pieces[0], None
-                    if gatename in gates.PARAMETRIZED_GATES:
+                    params = None
+                    if gatetype != gates.I and issubclass(
+                        gatetype, gates.ParametrizedGate
+                    ):
                         raise_error(
                             ValueError,
                             f"Missing parameters for QASM gate {gatename}.",
                         )
 
                 elif len(pieces) == 2:
-                    gatename, params = pieces
-                    if gatename not in gates.PARAMETRIZED_GATES:
+                    if gatetype == gates.I or not issubclass(
+                        gatetype, gates.ParametrizedGate
+                    ):
                         raise_error(ValueError, f"Invalid QASM command {command}.")
-                    params = params.replace(" ", "").split(",")
+
+                    params = pieces[1].replace(" ", "").split(",")
                     try:
                         for i, p in enumerate(params):
                             if "pi" in p:
@@ -1230,21 +1254,6 @@ class Circuit:
                         )
 
                 else:
-                    raise_error(
-                        ValueError,
-                        f"QASM command {command} is not recognized.",
-                    )
-                try:
-                    gatetype = (
-                        getattr(gates, gatename.upper())
-                        if gatename not in ["id", "cx", "ccx"]
-                        else {
-                            "id": gates.I,
-                            "cx": gates.CNOT,
-                            "ccx": gates.TOFFOLI,
-                        }[gatename]
-                    )
-                except:
                     raise_error(
                         ValueError,
                         f"QASM command {command} is not recognized.",

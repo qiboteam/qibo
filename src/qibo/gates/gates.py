@@ -4,26 +4,6 @@ from typing import List
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate, ParametrizedGate
 
-PARAMETRIZED_GATES = {
-    "rx",
-    "ry",
-    "rz",
-    "gpi",
-    "gpi2",
-    "rxx",
-    "ryy",
-    "rzz",
-    "ms",
-    "u1",
-    "u2",
-    "u3",
-    "crx",
-    "cry",
-    "crz",
-    "cu1",
-    "cu3",
-}
-
 
 class H(Gate):
     """The Hadamard gate.
