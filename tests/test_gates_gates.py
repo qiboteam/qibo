@@ -295,6 +295,12 @@ def test_cun(backend, name, params):
 
     gate = getattr(gates, name)(0, 1, **params)
 
+    if name != "CU2":
+        assert gate.qasm_label == gate.name
+    else:
+        with pytest.raises(NotImplementedError):
+            gate.qasm_label
+
     final_state = apply_gates(backend, [gate], initial_state=initial_state)
 
     gate = backend.cast(gate.matrix, dtype=gate.matrix.dtype)
@@ -302,11 +308,6 @@ def test_cun(backend, name, params):
     target_state = np.dot(gate, initial_state)
 
     backend.assert_allclose(final_state, target_state)
-    if name != "CU2":
-        assert gate.qasm_label == gate.name
-    else:
-        with pytest.raises(NotImplementedError):
-            gate.qasm_label
 
 
 def test_swap(backend):
