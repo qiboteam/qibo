@@ -208,9 +208,8 @@ def random_quantum_channel(
     representation: str = "liouville",
     measure: str = None,
     order: str = "row",
-    normalize: bool = None,
+    normalize: bool = False,
     precision_tol: float = None,
-    validate_cp: bool = None,
     seed=None,
     backend=None,
 ):
@@ -220,17 +219,34 @@ def random_quantum_channel(
     Args:
         dims (int): dimension of the matrix.
         representation (str, optional): If ``"chi"``, returns a random channel in the
-            Chi representation. If ``"choi"``. Defaults to ``"liouville"``.
-        measure (str, optional): _description_. Defaults to None.
-        order (str, optional): _description_. Defaults to "row".
-        normalize (bool, optional): _description_. Defaults to None.
-        precision_tol (float, optional): _description_. Defaults to None.
-        validate_cp (bool, optional): _description_. Defaults to None.
-        seed (_type_, optional): _description_. Defaults to None.
-        backend (_type_, optional): _description_. Defaults to None.
+            Chi representation. If ``"choi"``, returns channel in Choi representation.
+            If ``"kraus"``, returns Kraus representation of channel. If ``"liouville"``,
+            returns Liouville representation. If ``"pauli"``, returns Pauli-Liouville
+            representation. Defaults to ``"liouville"``.
+        measure (str, optional): probability measure in which to sample the unitary
+            from. If ``None``, functions returns :math:`\\exp{(-i \\, H)}`, where
+            :math:`H` is a Hermitian operator. If ``"haar"``, returns an Unitary
+            matrix sampled from the Haar measure. Defaults to ``None``.
+        order (str, optional): If ``"row"``, vectorization is performed row-wise.
+            If ``"column"``, vectorization is performed column-wise. If ``"system"``,
+            a block-vectorization is performed. Defaults to ``"row"``.
+        normalize (bool, optional): used when ``representation="chi"`` or
+            ``representation="pauli"``. If ``True`` assumes the normalized Pauli basis.
+            If ``False``, it assumes unnormalized Pauli basis. Defaults to ``False``.
+        precision_tol (float, optional): if ``representation="kraus"``, it is the
+            precision tolerance for eigenvalues found in the spectral decomposition
+            problem. Any eigenvalue :math:`\\lambda <` ``precision_tol`` is set
+            to 0 (zero). If ``None``, ``precision_tol`` defaults to
+            ``qibo.config.PRECISION_TOL=1e-8``. Defaults to ``None``.
+        seed (int or ``numpy.random.Generator``, optional): Either a generator of
+            random numbers or a fixed seed to initialize a generator. If ``None``,
+            initializes a generator with a random seed. Defaults to ``None``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
+            in the execution. If ``None``, it uses ``GlobalBackend()``.
+            Defaults to ``None``.
 
     Returns:
-        _type_: _description_
+        ndarray: Superoperator representation of a random unitary gate.
     """
     if not isinstance(representation, str):
         raise_error(
@@ -254,7 +270,7 @@ def random_quantum_channel(
             super_op,
             precision_tol=precision_tol,
             order=order,
-            validate_cp=validate_cp,
+            validate_cp=False,
             backend=backend,
         )
     elif representation == "liouville":
