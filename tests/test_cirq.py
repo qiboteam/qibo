@@ -9,6 +9,8 @@ from qibo import gates, models
 from qibo.backends import NumpyBackend
 from qibo.quantum_info import random_statevector, random_unitary
 
+numpy_backend = NumpyBackend()
+
 
 def random_active_qubits(nqubits, nmin=None, nactive=None):
     """Generates random list of target and control qubits."""
@@ -45,10 +47,10 @@ def assert_gates_equivalent(
         nqubits: Total number of qubits in the circuit.
         atol: Absolute tolerance in state vector comparsion.
     """
-    initial_state = random_statevector(2**nqubits, backend=backend)
-    target_state, target_depth = execute_cirq(
-        cirq_gates, nqubits, np.copy(initial_state)
-    )
+    initial_state = random_statevector(2**nqubits, backend=numpy_backend)
+    copy = numpy_backend.cast(initial_state, copy=True)
+    target_state, target_depth = execute_cirq(cirq_gates, nqubits, copy)
+    target_state = backend.cast(target_state, dtype=target_state.dtype)
     accelerators = None
     if ndevices is not None:
         accelerators = {"/GPU:0": ndevices}
@@ -158,8 +160,7 @@ def test_one_qubit_gates(backend, gate_name, nqubits, ndevices):
     targets = random_active_qubits(nqubits, nactive=1)
     qibo_gate = getattr(gates, gate_name)(*targets)
     cirq_gate = [(getattr(cirq, gate_name), targets)]
-    if backend.__class__.__name__ != "CupyBackend":
-        assert_gates_equivalent(backend, qibo_gate, cirq_gate, nqubits, ndevices)
+    assert_gates_equivalent(backend, qibo_gate, cirq_gate, nqubits, ndevices)
 
 
 @pytest.mark.parametrize(
@@ -172,8 +173,7 @@ def test_one_qubit_parametrized_gates(backend, gate_name, nqubits, ndevices):
     targets = random_active_qubits(nqubits, nactive=1)
     qibo_gate = getattr(gates, gate_name)(*targets, theta)
     cirq_gate = [(getattr(cirq, gate_name.lower())(theta), targets)]
-    if backend.__class__.__name__ != "CupyBackend":
-        assert_gates_equivalent(backend, qibo_gate, cirq_gate, nqubits, ndevices)
+    assert_gates_equivalent(backend, qibo_gate, cirq_gate, nqubits, ndevices)
 
 
 @pytest.mark.parametrize(("nqubits", "ndevices"), [(2, None), (3, 4), (2, 2)])
@@ -183,8 +183,7 @@ def test_u1_gate(backend, nqubits, ndevices):
     targets = random_active_qubits(nqubits, nactive=1)
     qibo_gate = gates.U1(*targets, theta)
     cirq_gate = [(cirq.ZPowGate(exponent=theta / np.pi), targets)]
-    if backend.__class__.__name__ != "CupyBackend":
-        assert_gates_equivalent(backend, qibo_gate, cirq_gate, nqubits, ndevices)
+    assert_gates_equivalent(backend, qibo_gate, cirq_gate, nqubits, ndevices)
 
 
 @pytest.mark.parametrize("gate_name", ["CNOT", "SWAP", "CZ"])
@@ -195,8 +194,7 @@ def test_two_qubit_gates(backend, gate_name, nqubits, ndevices):
     targets = random_active_qubits(nqubits, nactive=2)
     qibo_gate = getattr(gates, gate_name)(*targets)
     cirq_gate = [(getattr(cirq, gate_name), targets)]
-    if backend.__class__.__name__ != "CupyBackend":
-        assert_gates_equivalent(backend, qibo_gate, cirq_gate, nqubits, ndevices)
+    assert_gates_equivalent(backend, qibo_gate, cirq_gate, nqubits, ndevices)
 
 
 @pytest.mark.parametrize(
@@ -206,16 +204,16 @@ def test_two_qubit_parametrized_gates(backend, nqubits, ndevices):
     """Check ``CU1`` and ``fSim`` gate."""
     theta = 0.1234
     phi = 0.4321
-    if backend.__class__.__name__ != "CupyBackend":
-        targets = random_active_qubits(nqubits, nactive=2)
-        qibo_gate = gates.CU1(*targets, np.pi * theta)
-        cirq_gate = [(cirq.CZPowGate(exponent=theta), targets)]
-        assert_gates_equivalent(backend, qibo_gate, cirq_gate, nqubits)
 
-        targets = random_active_qubits(nqubits, nactive=2)
-        qibo_gate = gates.fSim(*targets, theta, phi)
-        cirq_gate = [(cirq.FSimGate(theta=theta, phi=phi), targets)]
-        assert_gates_equivalent(backend, qibo_gate, cirq_gate, nqubits, ndevices)
+    targets = random_active_qubits(nqubits, nactive=2)
+    qibo_gate = gates.CU1(*targets, np.pi * theta)
+    cirq_gate = [(cirq.CZPowGate(exponent=theta), targets)]
+    assert_gates_equivalent(backend, qibo_gate, cirq_gate, nqubits)
+
+    targets = random_active_qubits(nqubits, nactive=2)
+    qibo_gate = gates.fSim(*targets, theta, phi)
+    cirq_gate = [(cirq.FSimGate(theta=theta, phi=phi), targets)]
+    assert_gates_equivalent(backend, qibo_gate, cirq_gate, nqubits, ndevices)
 
 
 @pytest.mark.parametrize(
@@ -223,19 +221,18 @@ def test_two_qubit_parametrized_gates(backend, nqubits, ndevices):
 )
 def test_unitary_matrix_gate(backend, nqubits, ndevices):
     """Check arbitrary unitary gate."""
-    if backend.__class__.__name__ not in ["TensorflowBackend", "CupyBackend"]:
-        matrix = random_unitary(2**1, backend=backend)
-        targets = random_active_qubits(nqubits, nactive=1)
+    matrix = random_unitary(2**1, backend=numpy_backend)
+    targets = random_active_qubits(nqubits, nactive=1)
+    qibo_gate = gates.Unitary(matrix, *targets)
+    cirq_gate = [(cirq.MatrixGate(matrix), targets)]
+    assert_gates_equivalent(backend, qibo_gate, cirq_gate, nqubits)
+
+    for _ in range(10):
+        matrix = random_unitary(2**2, backend=numpy_backend)
+        targets = random_active_qubits(nqubits, nactive=2)
         qibo_gate = gates.Unitary(matrix, *targets)
         cirq_gate = [(cirq.MatrixGate(matrix), targets)]
-        assert_gates_equivalent(backend, qibo_gate, cirq_gate, nqubits)
-
-        for _ in range(10):
-            matrix = random_unitary(2**2, backend=backend)
-            targets = random_active_qubits(nqubits, nactive=2)
-            qibo_gate = gates.Unitary(matrix, *targets)
-            cirq_gate = [(cirq.MatrixGate(matrix), targets)]
-            assert_gates_equivalent(backend, qibo_gate, cirq_gate, nqubits, ndevices)
+        assert_gates_equivalent(backend, qibo_gate, cirq_gate, nqubits, ndevices)
 
 
 @pytest.mark.parametrize(
@@ -254,16 +251,11 @@ def test_unitary_matrix_gate(backend, nqubits, ndevices):
 )
 def test_one_qubit_gates_controlled_by(backend, gate_name, nqubits, ndevices):
     """Check one-qubit gates controlled on arbitrary number of qubits."""
-    if backend.__class__.__name__ != "CupyBackend":
-        for _ in range(5):
-            activeq = random_active_qubits(nqubits, nmin=1)
-            qibo_gate = getattr(gates, gate_name)(activeq[-1]).controlled_by(
-                *activeq[:-1]
-            )
-            cirq_gate = [
-                (getattr(cirq, gate_name).controlled(len(activeq) - 1), activeq)
-            ]
-            assert_gates_equivalent(backend, qibo_gate, cirq_gate, nqubits, ndevices)
+    for _ in range(5):
+        activeq = random_active_qubits(nqubits, nmin=1)
+        qibo_gate = getattr(gates, gate_name)(activeq[-1]).controlled_by(*activeq[:-1])
+        cirq_gate = [(getattr(cirq, gate_name).controlled(len(activeq) - 1), activeq)]
+        assert_gates_equivalent(backend, qibo_gate, cirq_gate, nqubits, ndevices)
 
 
 @pytest.mark.parametrize(
@@ -284,22 +276,17 @@ def test_one_qubit_gates_controlled_by(backend, gate_name, nqubits, ndevices):
 )
 def test_two_qubit_gates_controlled_by(backend, nqubits, ndevices):
     """Check ``SWAP`` and ``fSim`` gates controlled on arbitrary number of qubits."""
-    if backend.__class__.__name__ != "CupyBackend":
-        for _ in range(5):
-            activeq = random_active_qubits(nqubits, nmin=2)
-            qibo_gate = gates.SWAP(*activeq[-2:]).controlled_by(*activeq[:-2])
-            cirq_gate = [(cirq.SWAP.controlled(len(activeq) - 2), activeq)]
-            assert_gates_equivalent(backend, qibo_gate, cirq_gate, nqubits, ndevices)
+    for _ in range(5):
+        activeq = random_active_qubits(nqubits, nmin=2)
+        qibo_gate = gates.SWAP(*activeq[-2:]).controlled_by(*activeq[:-2])
+        cirq_gate = [(cirq.SWAP.controlled(len(activeq) - 2), activeq)]
+        assert_gates_equivalent(backend, qibo_gate, cirq_gate, nqubits, ndevices)
 
-            theta = np.random.random()
-            phi = np.random.random()
-            qibo_gate = gates.fSim(*activeq[-2:], theta, phi).controlled_by(
-                *activeq[:-2]
-            )
-            cirq_gate = [
-                (cirq.FSimGate(theta, phi).controlled(len(activeq) - 2), activeq)
-            ]
-            assert_gates_equivalent(backend, qibo_gate, cirq_gate, nqubits, ndevices)
+        theta = np.random.random()
+        phi = np.random.random()
+        qibo_gate = gates.fSim(*activeq[-2:], theta, phi).controlled_by(*activeq[:-2])
+        cirq_gate = [(cirq.FSimGate(theta, phi).controlled(len(activeq) - 2), activeq)]
+        assert_gates_equivalent(backend, qibo_gate, cirq_gate, nqubits, ndevices)
 
 
 @pytest.mark.parametrize("nqubits", [5, 12, 13, 14])
@@ -307,25 +294,26 @@ def test_two_qubit_gates_controlled_by(backend, nqubits, ndevices):
 @pytest.mark.parametrize("ndevices", [None, 2, 8])
 def test_unitary_matrix_gate_controlled_by(backend, nqubits, ntargets, ndevices):
     """Check arbitrary unitary gate controlled on arbitrary number of qubits."""
-    if backend.__class__.__name__ not in ["TensorflowBackend", "CupyBackend"]:
-        for _ in range(10):
-            activeq = random_active_qubits(nqubits, nactive=5)
-            matrix = random_unitary(2**ntargets, backend=backend)
-            qibo_gate = gates.Unitary(matrix, *activeq[-ntargets:]).controlled_by(
-                *activeq[:-ntargets]
-            )
-            cirq_gate = [
-                (cirq.MatrixGate(matrix).controlled(len(activeq) - ntargets), activeq)
-            ]
-            assert_gates_equivalent(backend, qibo_gate, cirq_gate, nqubits, ndevices)
+    for _ in range(10):
+        activeq = random_active_qubits(nqubits, nactive=5)
+        matrix = random_unitary(2**ntargets, backend=numpy_backend)
+        qibo_gate = gates.Unitary(matrix, *activeq[-ntargets:]).controlled_by(
+            *activeq[:-ntargets]
+        )
+        cirq_gate = [
+            (cirq.MatrixGate(matrix).controlled(len(activeq) - ntargets), activeq)
+        ]
+        assert_gates_equivalent(backend, qibo_gate, cirq_gate, nqubits, ndevices)
 
 
 @pytest.mark.parametrize("nqubits", [5, 6, 7, 11, 12])
 def test_qft(backend, accelerators, nqubits):
-    if backend.__class__.__name__ != "CupyBackend":
-        c = models.QFT(nqubits, accelerators=accelerators)
-        initial_state = random_statevector(2**nqubits, backend=backend)
-        final_state = backend.execute_circuit(c, np.copy(initial_state))
-        cirq_gates = [(cirq.qft, list(range(nqubits)))]
-        target_state, _ = execute_cirq(cirq_gates, nqubits, np.copy(initial_state))
-        backend.assert_allclose(target_state, final_state, atol=1e-6)
+    c = models.QFT(nqubits, accelerators=accelerators)
+    initial_state = random_statevector(2**nqubits, backend=numpy_backend)
+    final_state = backend.execute_circuit(c, np.copy(initial_state))
+    final_state = final_state.state(numpy=True)
+    final_state = backend.cast(final_state, dtype=final_state.dtype)
+    cirq_gates = [(cirq.qft, list(range(nqubits)))]
+    target_state, _ = execute_cirq(cirq_gates, nqubits, np.copy(initial_state))
+    target_state = backend.cast(target_state, dtype=target_state.dtype)
+    backend.assert_allclose(target_state, final_state, atol=1e-6)
