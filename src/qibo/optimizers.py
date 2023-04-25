@@ -82,7 +82,7 @@ def optimize(
         if bounds is not None:
             raise_error(
                 RuntimeError,
-                "The keyword 'bounds' cannot be used with the cma optimizer. Please use 'options' instead as defined by the cma documentation.",
+                "The keyword 'bounds' cannot be used with the cma optimizer. Please use 'options' instead as defined by the cma documentation: ex. options["bounds"] = [0.0, 1.0].",
             )
         return cmaes(loss, initial_parameters, args, options)
     elif method == "sgd":
