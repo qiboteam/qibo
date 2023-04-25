@@ -299,7 +299,10 @@ class CircuitResult:
         return self.state(numpy=True)
 
     def probabilities(self, qubits=None):
-        """Calculates measurement probabilities by tracing out qubits. Please note that this method computes probabilities using the exact noise-free state vector output simulation therefore noise applied to circuits will not affect the computation.
+        """Calculates measurement probabilities by tracing out qubits. Please
+        note that this method computes probabilities using the exact
+        noise-free state vector output simulation therefore noise applied to
+        circuits will not have impact on the output.
 
         Args:
             qubits (list, set): Set of qubits that are measured.
