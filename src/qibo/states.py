@@ -362,9 +362,17 @@ class CircuitResult:
                     [gate.result.samples() for gate in self.measurements], axis=1
                 )
             else:
-                # generate new samples
-                probs = self.probabilities(qubits)
-                samples = self.backend.sample_shots(probs, self.nshots)
+                if self._frequencies is not None:
+                    # generate samples that respect the existing frequencies
+                    frequencies = self.frequencies(binary=False)
+                    samples = np.concatenate(
+                        [np.repeat(x, f) for x, f in frequencies.items()]
+                    )
+                    np.random.shuffle(samples)
+                else:
+                    # generate new samples
+                    probs = self.probabilities(qubits)
+                    samples = self.backend.sample_shots(probs, self.nshots)
                 samples = self.backend.samples_to_binary(samples, len(qubits))
                 if self.measurement_gate.has_bitflip_noise():
                     p0, p1 = self.measurement_gate.bitflip_map

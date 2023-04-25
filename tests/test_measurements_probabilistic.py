@@ -1,6 +1,4 @@
 """Test circuit measurements when outcome is probabilistic."""
-import sys
-
 import numpy as np
 import pytest
 
@@ -29,6 +27,23 @@ def test_probabilistic_measurement(backend, accelerators, use_samples):
     decimal_frequencies = backend.test_regressions("test_probabilistic_measurement")
     assert sum(result.frequencies().values()) == 1000
     assert_result(backend, result, decimal_frequencies=decimal_frequencies)
+
+
+def test_sample_frequency_agreement(backend):
+    # set single-thread to fix the random values generated from the frequency custom op
+    backend.set_threads(1)
+    c = models.Circuit(2)
+    c.add(gates.H(0))
+    c.add(gates.H(1))
+    c.add(gates.M(0, 1))
+    result = backend.execute_circuit(c, nshots=1000)
+
+    backend.set_seed(1234)
+    target_frequencies = result.frequencies(binary=False)
+    samples = result.samples(binary=False)
+    outcomes, counts = np.unique(samples, return_counts=True)
+    frequencies = dict(zip(outcomes, counts))
+    assert frequencies == target_frequencies
 
 
 @pytest.mark.parametrize("use_samples", [True, False])
