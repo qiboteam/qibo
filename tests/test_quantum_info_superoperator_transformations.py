@@ -8,21 +8,24 @@ from qibo.quantum_info import *
 
 @pytest.mark.parametrize("order", ["row", "column", "system"])
 @pytest.mark.parametrize("nqubits", [1, 2, 3])
-def test_vectorization(nqubits, order):
+def test_vectorization(backend, nqubits, order):
     with pytest.raises(TypeError):
-        vectorization(np.array([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]]))
+        vectorization(np.array([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]]), backend=backend)
     with pytest.raises(TypeError):
         vectorization(
-            np.array([[[0.0, 0.0], [0.0, 0.0]], [[0.0, 0.0]]], dtype="object")
+            np.array([[[0.0, 0.0], [0.0, 0.0]], [[0.0, 0.0]]], dtype="object"),
+            backend=backend,
         )
     with pytest.raises(TypeError):
-        vectorization(np.array([]))
+        vectorization(np.array([]), backend=backend)
     with pytest.raises(TypeError):
-        vectorization(random_statevector(4), order=1)
+        vectorization(random_statevector(4, backend=backend), order=1, backend=backend)
     with pytest.raises(ValueError):
-        vectorization(random_statevector(4), order="1")
+        vectorization(
+            random_statevector(4, backend=backend), order="1", backend=backend
+        )
 
-    d = 2**nqubits
+    dim = 2**nqubits
 
     if nqubits == 1:
         if order == "system" or order == "column":
@@ -31,19 +34,19 @@ def test_vectorization(nqubits, order):
             matrix_test = [0, 1, 2, 3]
     elif nqubits == 2:
         if order == "row":
-            matrix_test = np.arange(d**2)
+            matrix_test = np.arange(dim**2)
         elif order == "column":
-            matrix_test = np.arange(d**2)
-            matrix_test = np.reshape(matrix_test, (d, d))
+            matrix_test = np.arange(dim**2)
+            matrix_test = np.reshape(matrix_test, (dim, dim))
             matrix_test = np.reshape(matrix_test, (1, -1), order="F")[0]
         else:
             matrix_test = [0, 4, 1, 5, 8, 12, 9, 13, 2, 6, 3, 7, 10, 14, 11, 15]
     else:
         if order == "row":
-            matrix_test = np.arange(d**2)
+            matrix_test = np.arange(dim**2)
         elif order == "column":
-            matrix_test = np.arange(d**2)
-            matrix_test = np.reshape(matrix_test, (d, d))
+            matrix_test = np.arange(dim**2)
+            matrix_test = np.reshape(matrix_test, (dim, dim))
             matrix_test = np.reshape(matrix_test, (1, -1), order="F")[0]
         else:
             matrix_test = [
@@ -112,32 +115,42 @@ def test_vectorization(nqubits, order):
                 55,
                 63,
             ]
-    matrix_test = np.array(matrix_test)
+    matrix_test = backend.cast(matrix_test)
 
-    d = 2**nqubits
-    matrix = np.arange(d**2).reshape((d, d))
-    matrix = vectorization(matrix, order)
+    dim = 2**nqubits
+    matrix = np.arange(dim**2).reshape((dim, dim))
+    matrix = vectorization(matrix, order, backend=backend)
 
-    assert np.linalg.norm(matrix - matrix_test) < PRECISION_TOL
+    backend.assert_allclose(
+        backend.calculate_norm(matrix - matrix_test) < PRECISION_TOL, True
+    )
 
 
 @pytest.mark.parametrize("order", ["row", "column", "system"])
 @pytest.mark.parametrize("nqubits", [2, 3, 4, 5])
-def test_unvectorization(nqubits, order):
+def test_unvectorization(backend, nqubits, order):
     with pytest.raises(TypeError):
-        unvectorization(random_density_matrix(2**nqubits))
+        unvectorization(
+            random_density_matrix(2**nqubits, backend=backend), backend=backend
+        )
     with pytest.raises(TypeError):
-        unvectorization(random_statevector(4**nqubits), order=1)
+        unvectorization(
+            random_statevector(4**nqubits, backend=backend), order=1, backend=backend
+        )
     with pytest.raises(ValueError):
-        unvectorization(random_statevector(4**2), order="1")
+        unvectorization(
+            random_statevector(4**2, backend=backend), order="1", backend=backend
+        )
 
-    d = 2**nqubits
-    matrix_test = random_density_matrix(d)
+    dim = 2**nqubits
+    matrix_test = random_density_matrix(dim, backend=backend)
 
-    matrix = vectorization(matrix_test, order)
-    matrix = unvectorization(matrix, order)
+    matrix = vectorization(matrix_test, order, backend)
+    matrix = unvectorization(matrix, order, backend)
 
-    assert np.linalg.norm(matrix_test - matrix) < PRECISION_TOL
+    backend.assert_allclose(
+        backend.calculate_norm(matrix_test - matrix) < PRECISION_TOL, True
+    )
 
 
 test_a0 = np.sqrt(0.4) * matrices.X
@@ -181,57 +194,83 @@ test_chi = np.diag([0, 1.6, 0, 2.4])
 
 
 @pytest.mark.parametrize("order", ["row", "column"])
-def test_liouville_to_choi(order):
-    choi = liouville_to_choi(test_superop, order)
+def test_liouville_to_choi(backend, order):
+    choi = liouville_to_choi(test_superop, order, backend)
 
     axes = [1, 2] if order == "row" else [0, 3]
     test_choi = np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
 
-    assert np.linalg.norm(choi - test_choi) < PRECISION_TOL, True
+    backend.assert_allclose(
+        backend.calculate_norm(choi - test_choi) < PRECISION_TOL, True
+    )
 
 
 @pytest.mark.parametrize("order", ["row", "column"])
-def test_choi_to_liouville(order):
+def test_choi_to_liouville(backend, order):
     axes = [1, 2] if order == "row" else [0, 3]
     test_choi = np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
 
-    liouville = choi_to_liouville(test_choi, order=order)
+    liouville = choi_to_liouville(test_choi, order=order, backend=backend)
 
-    assert np.linalg.norm(liouville - test_superop) < PRECISION_TOL, True
+    backend.assert_allclose(
+        backend.calculate_norm(liouville - test_superop) < PRECISION_TOL, True
+    )
 
 
+@pytest.mark.parametrize("test_kraus_right", [test_kraus_right])
+@pytest.mark.parametrize("test_kraus_left", [test_kraus_left])
+@pytest.mark.parametrize("test_a1", [test_a1])
+@pytest.mark.parametrize("test_a0", [test_a0])
 @pytest.mark.parametrize("validate_cp", [False, True])
 @pytest.mark.parametrize("order", ["row", "column"])
-def test_choi_to_kraus(order, validate_cp):
+def test_choi_to_kraus(
+    backend, order, validate_cp, test_a0, test_a1, test_kraus_left, test_kraus_right
+):
     axes = [1, 2] if order == "row" else [0, 3]
     test_choi = np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
 
     with pytest.raises(TypeError):
-        choi_to_kraus(test_choi, str(PRECISION_TOL))
+        choi_to_kraus(test_choi, str(PRECISION_TOL), backend=backend)
     with pytest.raises(ValueError):
-        choi_to_kraus(test_choi, -1.0 * PRECISION_TOL)
+        choi_to_kraus(test_choi, -1.0 * PRECISION_TOL, backend=backend)
     with pytest.raises(TypeError):
-        choi_to_kraus(test_choi, validate_cp="True")
+        choi_to_kraus(test_choi, validate_cp="True", backend=backend)
 
-    kraus_ops, _ = choi_to_kraus(test_choi, order=order, validate_cp=validate_cp)
+    kraus_ops, _ = choi_to_kraus(
+        test_choi, order=order, validate_cp=validate_cp, backend=backend
+    )
 
     a0 = kraus_ops[0]
     a1 = kraus_ops[1]
+    a0 = backend.cast(a0, dtype=a0.dtype)
+    a1 = backend.cast(a1, dtype=a1.dtype)
 
-    state = random_density_matrix(2)
+    test_a0 = backend.cast(test_a0, dtype=test_a0.dtype)
+    test_a1 = backend.cast(test_a1, dtype=test_a1.dtype)
 
-    evolution_a0 = a0 @ state @ a0.T.conj()
-    evolution_a1 = a1 @ state @ a1.T.conj()
+    test_kraus_left = backend.cast(test_kraus_left, dtype=test_kraus_left.dtype)
+    test_kraus_right = backend.cast(test_kraus_right, dtype=test_kraus_right.dtype)
 
-    test_evolution_a0 = test_a0 @ state @ test_a0.T.conj()
-    test_evolution_a1 = test_a1 @ state @ test_a1.T.conj()
+    state = random_density_matrix(2, backend=backend)
 
-    assert np.linalg.norm(evolution_a0 - test_evolution_a0) < 2 * PRECISION_TOL, True
-    assert np.linalg.norm(evolution_a1 - test_evolution_a1) < 2 * PRECISION_TOL, True
+    evolution_a0 = a0 @ state @ np.transpose(np.conj(a0))
+    evolution_a1 = a1 @ state @ np.transpose(np.conj(a1))
+
+    test_evolution_a0 = test_a0 @ state @ np.transpose(np.conj(test_a0))
+    test_evolution_a1 = test_a1 @ state @ np.transpose(np.conj(test_a1))
+
+    backend.assert_allclose(
+        backend.calculate_norm(evolution_a0 - test_evolution_a0) < 2 * PRECISION_TOL,
+        True,
+    )
+    backend.assert_allclose(
+        backend.calculate_norm(evolution_a1 - test_evolution_a1) < 2 * PRECISION_TOL,
+        True,
+    )
 
     if validate_cp and order == "row":
         (kraus_left, kraus_right), _ = choi_to_kraus(
-            test_non_CP, order=order, validate_cp=validate_cp
+            test_non_CP, order=order, validate_cp=validate_cp, backend=backend
         )
 
         for test_left, left, test_right, right, test_coeff in zip(
@@ -241,297 +280,454 @@ def test_choi_to_kraus(order, validate_cp):
             kraus_right,
             test_coefficients,
         ):
-            state = random_density_matrix(2)
-            evolution = left @ state @ right.T.conj()
-            test_evolution = test_coeff**2 * test_left @ state @ test_right.T.conj()
+            state = random_density_matrix(2, backend=backend)
+            evolution = left @ state @ np.transpose(np.conj(right))
+            test_evolution = (
+                test_coeff**2 * test_left @ state @ np.transpose(np.conj(test_right))
+            )
 
-            assert np.linalg.norm(evolution - test_evolution) < 2 * PRECISION_TOL, True
+            backend.assert_allclose(
+                backend.calculate_norm(evolution - test_evolution) < 2 * PRECISION_TOL,
+                True,
+            )
 
 
 @pytest.mark.parametrize("order", ["row", "column"])
-def test_kraus_to_choi(order):
-    choi = kraus_to_choi(test_kraus, order=order)
+def test_kraus_to_choi(backend, order):
+    choi = kraus_to_choi(test_kraus, order=order, backend=backend)
 
     axes = [1, 2] if order == "row" else [0, 3]
     test_choi = np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
+    test_choi = backend.cast(test_choi)
 
-    assert np.linalg.norm(choi - test_choi) < PRECISION_TOL, True
+    backend.assert_allclose(
+        backend.calculate_norm(choi - test_choi) < PRECISION_TOL, True
+    )
 
 
+@pytest.mark.parametrize("test_superop", [test_superop])
 @pytest.mark.parametrize("order", ["row", "column"])
-def test_kraus_to_liouville(order):
-    liouville = kraus_to_liouville(test_kraus, order=order)
+def test_kraus_to_liouville(backend, order, test_superop):
+    test_superop = backend.cast(test_superop, dtype=test_superop.dtype)
 
-    assert np.linalg.norm(liouville - test_superop) < PRECISION_TOL, True
+    liouville = kraus_to_liouville(test_kraus, order=order, backend=backend)
+
+    backend.assert_allclose(
+        backend.calculate_norm(liouville - test_superop) < PRECISION_TOL, True
+    )
 
 
+@pytest.mark.parametrize("test_a1", [test_a1])
+@pytest.mark.parametrize("test_a0", [test_a0])
 @pytest.mark.parametrize("order", ["row", "column"])
-def test_liouville_to_kraus(order):
-    kraus_ops, _ = liouville_to_kraus(test_superop, order=order)
+def test_liouville_to_kraus(backend, order, test_a0, test_a1):
+    kraus_ops, _ = liouville_to_kraus(test_superop, order=order, backend=backend)
 
     a0 = kraus_ops[0]
     a1 = kraus_ops[1]
+    a0 = backend.cast(a0, dtype=a0.dtype)
+    a1 = backend.cast(a1, dtype=a1.dtype)
 
-    state = random_density_matrix(2)
+    test_a0 = backend.cast(test_a0, dtype=test_a0.dtype)
+    test_a1 = backend.cast(test_a1, dtype=test_a1.dtype)
 
-    evolution_a0 = a0 @ state @ a0.T.conj()
-    evolution_a1 = a1 @ state @ a1.T.conj()
+    state = random_density_matrix(2, backend=backend)
 
-    test_evolution_a0 = test_a0 @ state @ test_a0.T.conj()
-    test_evolution_a1 = test_a1 @ state @ test_a1.T.conj()
+    evolution_a0 = a0 @ state @ np.transpose(np.conj(a0))
+    evolution_a1 = a1 @ state @ np.transpose(np.conj(a1))
 
-    assert np.linalg.norm(evolution_a0 - test_evolution_a0) < PRECISION_TOL, True
-    assert np.linalg.norm(evolution_a1 - test_evolution_a1) < PRECISION_TOL, True
+    test_evolution_a0 = test_a0 @ state @ np.transpose(np.conj(test_a0))
+    test_evolution_a1 = test_a1 @ state @ np.transpose(np.conj(test_a1))
+
+    backend.assert_allclose(
+        backend.calculate_norm(evolution_a0 - test_evolution_a0) < PRECISION_TOL, True
+    )
+    backend.assert_allclose(
+        backend.calculate_norm(evolution_a1 - test_evolution_a1) < PRECISION_TOL, True
+    )
 
 
+@pytest.mark.parametrize("test_superop", [test_superop])
+@pytest.mark.parametrize("test_pauli", [test_pauli])
 @pytest.mark.parametrize("order", ["row", "column", "system"])
 @pytest.mark.parametrize("normalize", [False, True])
-def test_pauli_to_liouville(normalize, order):
+def test_pauli_to_liouville(backend, normalize, order, test_pauli, test_superop):
     with pytest.raises(ValueError):
-        pauli_to_liouville(test_pauli[:-1, :-1], normalize, order)
+        pauli_to_liouville(test_pauli[:-1, :], normalize, order, backend=backend)
 
-    d = int(np.sqrt(test_superop.shape[0]))
-    aux = d**2 if normalize == False else d
+    dim = int(np.sqrt(test_superop.shape[0]))
+    aux = dim**2 if normalize == False else dim
 
-    super_op = pauli_to_liouville(test_pauli / aux, normalize, order)
+    test_superop = backend.cast(test_superop, dtype=test_superop.dtype)
+    test_pauli = backend.cast(test_pauli)
 
-    assert np.linalg.norm(test_superop - super_op) < PRECISION_TOL, True
+    super_op = pauli_to_liouville(test_pauli / aux, normalize, order, backend=backend)
+
+    backend.assert_allclose(
+        backend.calculate_norm(test_superop - super_op) < PRECISION_TOL, True
+    )
 
 
+@pytest.mark.parametrize("test_superop", [test_superop])
+@pytest.mark.parametrize("test_pauli", [test_pauli])
 @pytest.mark.parametrize("order", ["row", "column", "system"])
 @pytest.mark.parametrize("normalize", [False, True])
-def test_liouville_to_pauli(normalize, order):
+def test_liouville_to_pauli(backend, normalize, order, test_pauli, test_superop):
     with pytest.raises(ValueError):
-        liouville_to_pauli(test_superop[:-1, :-1], normalize, order)
+        liouville_to_pauli(test_superop[:-1, :], normalize, order, backend=backend)
 
-    d = int(np.sqrt(test_pauli.shape[0]))
-    aux = 1.0 if normalize == False else d
+    dim = int(np.sqrt(test_pauli.shape[0]))
+    aux = 1.0 if normalize == False else dim
 
-    pauli_op = liouville_to_pauli(test_superop, normalize=normalize, order=order)
+    test_superop = backend.cast(test_superop, dtype=test_superop.dtype)
+    test_pauli = backend.cast(test_pauli)
 
-    assert np.linalg.norm(test_pauli / aux - pauli_op) < PRECISION_TOL, True
+    pauli_op = liouville_to_pauli(
+        test_superop, normalize=normalize, order=order, backend=backend
+    )
+
+    backend.assert_allclose(
+        backend.calculate_norm(test_pauli / aux - pauli_op) < PRECISION_TOL, True
+    )
 
 
+@pytest.mark.parametrize("test_superop", [test_superop])
+@pytest.mark.parametrize("test_pauli", [test_pauli])
 @pytest.mark.parametrize("order", ["row", "column"])
 @pytest.mark.parametrize("normalize", [False, True])
-def test_pauli_to_choi(normalize, order):
-    d = int(np.sqrt(test_pauli.shape[0]))
-    aux = d**2 if normalize == False else d
+def test_pauli_to_choi(backend, normalize, order, test_pauli, test_superop):
+    dim = int(np.sqrt(test_pauli.shape[0]))
+    aux = dim**2 if normalize == False else dim
 
-    choi_super_op = pauli_to_choi(test_pauli / aux, normalize, order)
+    test_pauli = backend.cast(test_pauli, dtype=test_pauli.dtype)
+    test_superop = backend.cast(test_superop, dtype=test_superop.dtype)
+    choi_super_op = pauli_to_choi(test_pauli / aux, normalize, order, backend=backend)
 
     axes = [1, 2] if order == "row" else [0, 3]
-    test_choi = np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
+    test_choi = np.swapaxes(np.reshape(test_superop, [2] * 4), *axes).reshape([4, 4])
 
-    assert np.linalg.norm(test_choi - choi_super_op) < PRECISION_TOL, True
+    backend.assert_allclose(
+        backend.calculate_norm(test_choi - choi_super_op) < PRECISION_TOL, True
+    )
 
 
+@pytest.mark.parametrize("test_superop", [test_superop])
+@pytest.mark.parametrize("test_pauli", [test_pauli])
 @pytest.mark.parametrize("order", ["row", "column"])
 @pytest.mark.parametrize("normalize", [False, True])
-def test_choi_to_pauli(normalize, order):
-    d = int(np.sqrt(test_pauli.shape[0]))
-    aux = 1 if normalize == False else d
+def test_choi_to_pauli(backend, normalize, order, test_pauli, test_superop):
+    dim = int(np.sqrt(test_pauli.shape[0]))
+    aux = 1 if normalize == False else dim
+
+    test_pauli = backend.cast(test_pauli, dtype=test_pauli.dtype)
+    test_superop = backend.cast(test_superop, dtype=test_superop.dtype)
 
     axes = [1, 2] if order == "row" else [0, 3]
-    test_choi = np.reshape(test_superop * aux, [2] * 4).swapaxes(*axes).reshape([4, 4])
+    test_choi = np.swapaxes(np.reshape(test_superop * aux, [2] * 4), *axes).reshape(
+        [4, 4]
+    )
 
-    pauli_op = choi_to_pauli(test_choi, normalize, order)
+    pauli_op = choi_to_pauli(test_choi, normalize, order, backend=backend)
 
-    assert np.linalg.norm(test_pauli - pauli_op) < PRECISION_TOL, True
+    backend.assert_allclose(
+        backend.calculate_norm(test_pauli - pauli_op) < PRECISION_TOL, True
+    )
 
 
+@pytest.mark.parametrize("test_a1", [test_a1])
+@pytest.mark.parametrize("test_a0", [test_a0])
+@pytest.mark.parametrize("test_pauli", [test_pauli])
 @pytest.mark.parametrize("order", ["row", "column"])
 @pytest.mark.parametrize("normalize", [False, True])
-def test_pauli_to_kraus(normalize, order):
-    d = int(np.sqrt(test_pauli.shape[0]))
-    aux = d**2 if normalize == False else d
+def test_pauli_to_kraus(backend, normalize, order, test_pauli, test_a0, test_a1):
+    dim = int(np.sqrt(test_pauli.shape[0]))
+    aux = dim**2 if normalize == False else dim
 
-    kraus_ops, _ = pauli_to_kraus(test_pauli / aux, normalize, order=order)
+    test_pauli = backend.cast(test_pauli, dtype=test_pauli.dtype)
+
+    kraus_ops, _ = pauli_to_kraus(
+        test_pauli / aux, normalize, order=order, backend=backend
+    )
 
     a0 = kraus_ops[0]
     a1 = kraus_ops[1]
+    a0 = backend.cast(a0, dtype=a0.dtype)
+    a1 = backend.cast(a1, dtype=a1.dtype)
 
-    state = random_density_matrix(2)
+    test_a0 = backend.cast(test_a0, dtype=test_a0.dtype)
+    test_a1 = backend.cast(test_a1, dtype=test_a1.dtype)
 
-    evolution_a0 = a0 @ state @ a0.T.conj()
-    evolution_a1 = a1 @ state @ a1.T.conj()
+    state = random_density_matrix(2, backend=backend)
 
-    test_evolution_a0 = test_a0 @ state @ test_a0.T.conj()
-    test_evolution_a1 = test_a1 @ state @ test_a1.T.conj()
+    evolution_a0 = a0 @ state @ np.transpose(np.conj(a0))
+    evolution_a1 = a1 @ state @ np.transpose(np.conj(a1))
 
-    assert np.linalg.norm(evolution_a0 - test_evolution_a0) < 2 * PRECISION_TOL, True
-    assert np.linalg.norm(evolution_a1 - test_evolution_a1) < 2 * PRECISION_TOL, True
+    test_evolution_a0 = test_a0 @ state @ np.transpose(np.conj(test_a0))
+    test_evolution_a1 = test_a1 @ state @ np.transpose(np.conj(test_a1))
+
+    backend.assert_allclose(
+        backend.calculate_norm(evolution_a0 - test_evolution_a0) < 2 * PRECISION_TOL,
+        True,
+    )
+    backend.assert_allclose(
+        backend.calculate_norm(evolution_a1 - test_evolution_a1) < 2 * PRECISION_TOL,
+        True,
+    )
 
 
+@pytest.mark.parametrize("test_pauli", [test_pauli])
+@pytest.mark.parametrize("test_kraus", [test_kraus])
 @pytest.mark.parametrize("order", ["row", "column"])
 @pytest.mark.parametrize("normalize", [False, True])
-def test_kraus_to_pauli(normalize, order):
-    d = int(np.sqrt(test_pauli.shape[0]))
-    aux = 1.0 if normalize == False else d
+def test_kraus_to_pauli(backend, normalize, order, test_kraus, test_pauli):
+    dim = int(np.sqrt(test_pauli.shape[0]))
+    aux = 1.0 if normalize == False else dim
 
-    pauli_op = kraus_to_pauli(test_kraus, normalize, order)
+    test_pauli = backend.cast(test_pauli, dtype=test_pauli.dtype)
 
-    assert np.linalg.norm(test_pauli / aux - pauli_op) < PRECISION_TOL, True
+    pauli_op = kraus_to_pauli(test_kraus, normalize, order, backend=backend)
+
+    backend.assert_allclose(
+        backend.calculate_norm(test_pauli / aux - pauli_op) < PRECISION_TOL, True
+    )
 
 
+@pytest.mark.parametrize("test_chi", [test_chi])
+@pytest.mark.parametrize("test_superop", [test_superop])
 @pytest.mark.parametrize("order", ["row", "column"])
 @pytest.mark.parametrize("normalize", [False, True])
-def test_choi_to_chi(normalize, order):
-    d = int(np.sqrt(test_pauli.shape[0]))
-    aux = 1 if normalize == False else d
+def test_choi_to_chi(backend, normalize, order, test_superop, test_chi):
+    dim = int(np.sqrt(test_pauli.shape[0]))
+    aux = 1 if normalize == False else dim
+
+    test_superop = backend.cast(test_superop, dtype=test_superop.dtype)
+    test_chi = backend.cast(test_chi, dtype=test_chi.dtype)
 
     axes = [1, 2] if order == "row" else [0, 3]
-    test_choi = np.reshape(test_superop * aux, [2] * 4).swapaxes(*axes).reshape([4, 4])
+    test_choi = np.swapaxes(np.reshape(test_superop * aux, [2] * 4), *axes).reshape(
+        [4, 4]
+    )
 
-    chi_matrix = choi_to_chi(test_choi, normalize=normalize, order=order)
-    assert np.linalg.norm(test_chi - chi_matrix) < PRECISION_TOL, True
+    chi_matrix = choi_to_chi(
+        test_choi, normalize=normalize, order=order, backend=backend
+    )
+    backend.assert_allclose(
+        backend.calculate_norm(test_chi - chi_matrix) < PRECISION_TOL, True
+    )
 
 
+@pytest.mark.parametrize("test_chi", [test_chi])
+@pytest.mark.parametrize("test_kraus", [test_kraus])
 @pytest.mark.parametrize("order", ["row", "column"])
 @pytest.mark.parametrize("normalize", [False, True])
-def test_kraus_to_chi(normalize, order):
-    d = int(np.sqrt(test_pauli.shape[0]))
-    aux = 1.0 if normalize == False else d
+def test_kraus_to_chi(backend, normalize, order, test_kraus, test_chi):
+    dim = int(np.sqrt(test_pauli.shape[0]))
+    aux = 1.0 if normalize == False else dim
 
-    chi_matrix = kraus_to_chi(test_kraus, normalize, order)
+    test_chi = backend.cast(test_chi, dtype=test_chi.dtype)
 
-    assert np.linalg.norm(test_chi / aux - chi_matrix) < PRECISION_TOL, True
+    chi_matrix = kraus_to_chi(test_kraus, normalize, order, backend=backend)
+
+    backend.assert_allclose(
+        backend.calculate_norm(test_chi / aux - chi_matrix) < PRECISION_TOL, True
+    )
 
 
+@pytest.mark.parametrize("test_chi", [test_chi])
+@pytest.mark.parametrize("test_superop", [test_superop])
 @pytest.mark.parametrize("order", ["row", "column"])
 @pytest.mark.parametrize("normalize", [False, True])
-def test_liouville_to_chi(normalize, order):
-    d = int(np.sqrt(test_pauli.shape[0]))
-    aux = 1.0 if normalize == False else d
+def test_liouville_to_chi(backend, normalize, order, test_superop, test_chi):
+    dim = int(np.sqrt(test_pauli.shape[0]))
+    aux = 1.0 if normalize == False else dim
 
-    chi_matrix = liouville_to_chi(test_superop, normalize, order)
+    test_chi = backend.cast(test_chi, dtype=test_chi.dtype)
+    test_superop = backend.cast(test_superop, dtype=test_superop.dtype)
 
-    assert np.linalg.norm(test_chi / aux - chi_matrix) < PRECISION_TOL, True
+    chi_matrix = liouville_to_chi(test_superop, normalize, order, backend=backend)
+
+    backend.assert_allclose(
+        backend.calculate_norm(test_chi / aux - chi_matrix) < PRECISION_TOL, True
+    )
 
 
+@pytest.mark.parametrize("test_chi", [test_chi])
+@pytest.mark.parametrize("test_pauli", [test_pauli])
 @pytest.mark.parametrize("order", ["row", "column"])
 @pytest.mark.parametrize("normalize", [False, True])
-def test_pauli_to_chi(normalize, order):
-    d = int(np.sqrt(test_pauli.shape[0]))
-    aux = d**2 if normalize == False else d
+def test_pauli_to_chi(backend, normalize, order, test_pauli, test_chi):
+    dim = int(np.sqrt(test_pauli.shape[0]))
+    aux = dim**2 if normalize == False else dim
 
-    chi_matrix = pauli_to_chi(test_pauli / aux, normalize, order)
+    test_chi = backend.cast(test_chi, dtype=test_chi.dtype)
+    test_pauli = backend.cast(test_pauli, dtype=test_pauli.dtype)
 
-    aux = 1.0 if normalize == False else d
-    assert np.linalg.norm(test_chi / aux - chi_matrix) < PRECISION_TOL, True
+    chi_matrix = pauli_to_chi(test_pauli / aux, normalize, order, backend=backend)
+
+    aux = 1.0 if normalize == False else dim
+    backend.assert_allclose(
+        backend.calculate_norm(test_chi / aux - chi_matrix) < PRECISION_TOL, True
+    )
 
 
+@pytest.mark.parametrize("test_superop", [test_superop])
+@pytest.mark.parametrize("test_chi", [test_chi])
 @pytest.mark.parametrize("order", ["row", "column"])
 @pytest.mark.parametrize("normalize", [False, True])
-def test_chi_to_choi(normalize, order):
-    d = int(np.sqrt(test_pauli.shape[0]))
-    aux = d**2 if normalize == False else d
+def test_chi_to_choi(backend, normalize, order, test_chi, test_superop):
+    dim = int(np.sqrt(test_pauli.shape[0]))
+    aux = dim**2 if normalize == False else dim
+
+    test_chi = backend.cast(test_chi, dtype=test_chi.dtype)
+    test_superop = backend.cast(test_superop, dtype=test_superop.dtype)
 
     axes = [1, 2] if order == "row" else [0, 3]
-    test_choi = np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
+    test_choi = np.swapaxes(np.reshape(test_superop, [2] * 4), *axes).reshape([4, 4])
 
-    choi_super_op = chi_to_choi(test_chi / aux, normalize, order)
+    choi_super_op = chi_to_choi(test_chi / aux, normalize, order, backend=backend)
 
-    assert np.linalg.norm(test_choi - choi_super_op) < PRECISION_TOL, True
+    backend.assert_allclose(
+        backend.calculate_norm(test_choi - choi_super_op) < PRECISION_TOL, True
+    )
 
 
+@pytest.mark.parametrize("test_superop", [test_superop])
+@pytest.mark.parametrize("test_chi", [test_chi])
 @pytest.mark.parametrize("order", ["row", "column"])
 @pytest.mark.parametrize("normalize", [False, True])
-def test_chi_to_liouville(normalize, order):
-    d = int(np.sqrt(test_pauli.shape[0]))
-    aux = d**2 if normalize == False else d
+def test_chi_to_liouville(backend, normalize, order, test_chi, test_superop):
+    dim = int(np.sqrt(test_pauli.shape[0]))
+    aux = dim**2 if normalize == False else dim
 
-    super_op = chi_to_liouville(test_chi / aux, normalize, order)
+    test_chi = backend.cast(test_chi, dtype=test_chi.dtype)
+    test_superop = backend.cast(test_superop, dtype=test_superop.dtype)
 
-    assert np.linalg.norm(test_superop - super_op) < PRECISION_TOL, True
+    super_op = chi_to_liouville(test_chi / aux, normalize, order, backend=backend)
+
+    backend.assert_allclose(
+        backend.calculate_norm(test_superop - super_op) < PRECISION_TOL, True
+    )
 
 
+@pytest.mark.parametrize("test_pauli", [test_pauli])
+@pytest.mark.parametrize("test_chi", [test_chi])
 @pytest.mark.parametrize("order", ["row", "column"])
 @pytest.mark.parametrize("normalize", [False, True])
-def test_chi_to_pauli(normalize, order):
-    d = int(np.sqrt(test_pauli.shape[0]))
-    aux = d**2 if normalize == False else d
+def test_chi_to_pauli(backend, normalize, order, test_chi, test_pauli):
+    dim = int(np.sqrt(test_pauli.shape[0]))
+    aux = dim**2 if normalize == False else dim
 
-    pauli_op = chi_to_pauli(test_chi / aux, normalize, order)
+    test_chi = backend.cast(test_chi, dtype=test_chi.dtype)
+    test_pauli = backend.cast(test_pauli, dtype=test_pauli.dtype)
 
-    assert np.linalg.norm(test_pauli - pauli_op) < PRECISION_TOL, True
+    pauli_op = chi_to_pauli(test_chi / aux, normalize, order, backend=backend)
+
+    backend.assert_allclose(
+        backend.calculate_norm(test_pauli - pauli_op) < PRECISION_TOL, True
+    )
 
 
+@pytest.mark.parametrize("test_a1", [test_a1])
+@pytest.mark.parametrize("test_a0", [test_a0])
+@pytest.mark.parametrize("test_chi", [test_chi])
 @pytest.mark.parametrize("order", ["row", "column"])
 @pytest.mark.parametrize("normalize", [False, True])
-def test_chi_to_kraus(normalize, order):
-    d = int(np.sqrt(test_pauli.shape[0]))
-    aux = d**2 if normalize == False else d
+def test_chi_to_kraus(backend, normalize, order, test_chi, test_a0, test_a1):
+    dim = int(np.sqrt(test_pauli.shape[0]))
+    aux = dim**2 if normalize == False else dim
 
-    kraus_ops, _ = chi_to_kraus(test_chi / aux, normalize, order=order)
+    test_chi = backend.cast(test_chi, dtype=test_chi.dtype)
+
+    kraus_ops, _ = chi_to_kraus(test_chi / aux, normalize, order=order, backend=backend)
 
     a0 = kraus_ops[0]
     a1 = kraus_ops[1]
+    a0 = backend.cast(a0, dtype=a0.dtype)
+    a1 = backend.cast(a1, dtype=a1.dtype)
 
-    state = random_density_matrix(2)
+    test_a0 = backend.cast(test_a0, dtype=test_a0.dtype)
+    test_a1 = backend.cast(test_a1, dtype=test_a1.dtype)
 
-    evolution_a0 = a0 @ state @ a0.T.conj()
-    evolution_a1 = a1 @ state @ a1.T.conj()
+    state = random_density_matrix(2, backend=backend)
 
-    test_evolution_a0 = test_a0 @ state @ test_a0.T.conj()
-    test_evolution_a1 = test_a1 @ state @ test_a1.T.conj()
+    evolution_a0 = a0 @ state @ np.transpose(np.conj(a0))
+    evolution_a1 = a1 @ state @ np.transpose(np.conj(a1))
 
-    assert np.linalg.norm(evolution_a0 - test_evolution_a0) < 2 * PRECISION_TOL, True
-    assert np.linalg.norm(evolution_a1 - test_evolution_a1) < 2 * PRECISION_TOL, True
+    test_evolution_a0 = test_a0 @ state @ np.transpose(np.conj(test_a0))
+    test_evolution_a1 = test_a1 @ state @ np.transpose(np.conj(test_a1))
+
+    backend.assert_allclose(
+        backend.calculate_norm(evolution_a0 - test_evolution_a0) < 2 * PRECISION_TOL,
+        True,
+    )
+    backend.assert_allclose(
+        backend.calculate_norm(evolution_a1 - test_evolution_a1) < 2 * PRECISION_TOL,
+        True,
+    )
 
 
 @pytest.mark.parametrize("order", ["row", "column"])
-def test_kraus_to_unitaries(order):
+def test_kraus_to_unitaries(backend, order):
     test_a0 = np.sqrt(0.4) * matrices.X
     test_a1 = np.sqrt(0.6) * matrices.Y
+    # test_a0 = backend.cast(test_a0, dtype=test_a0.dtype)
+    # test_a1 = backend.cast(test_a1, dtype=test_a1.dtype)
     test_kraus = [((0,), test_a0), ((0,), test_a1)]
 
     with pytest.raises(TypeError):
-        kraus_to_unitaries(test_kraus, order, str(PRECISION_TOL))
+        kraus_to_unitaries(test_kraus, order, str(PRECISION_TOL), backend=backend)
     with pytest.raises(ValueError):
-        kraus_to_unitaries(test_kraus, order, -1.0 * PRECISION_TOL)
+        kraus_to_unitaries(test_kraus, order, -1.0 * PRECISION_TOL, backend=backend)
 
-    target = kraus_to_liouville(test_kraus, order=order)
+    target = kraus_to_liouville(test_kraus, order=order, backend=backend)
 
-    unitaries, probabilities = kraus_to_unitaries(test_kraus, order=order)
+    unitaries, probabilities = kraus_to_unitaries(
+        test_kraus, order=order, backend=backend
+    )
     unitaries = np.array(
         [np.sqrt(prob) * unitary for prob, unitary in zip(probabilities, unitaries)]
     )
     unitaries = list(zip([(0,)] * len(unitaries), unitaries))
 
-    operator = kraus_to_liouville(unitaries)
+    operator = kraus_to_liouville(unitaries, backend=backend)
 
-    assert np.linalg.norm(target - operator) < 2 * PRECISION_TOL, True
+    backend.assert_allclose(
+        backend.calculate_norm(target - operator) < 2 * PRECISION_TOL, True
+    )
 
     # warning coverage
     test_a0 = np.sqrt(0.4) * matrices.X
     test_a1 = np.sqrt(0.6) * matrices.Z
     test_kraus = [((0,), test_a0), ((0,), test_a1)]
-    kraus_to_unitaries(test_kraus, order=order)
+    kraus_to_unitaries(test_kraus, order=order, backend=backend)
 
 
 @pytest.mark.parametrize("order", ["row", "column"])
-def test_reshuffling(order):
+def test_reshuffling(backend, order):
     from qibo.quantum_info.superoperator_transformations import _reshuffling
 
     with pytest.raises(TypeError):
-        _reshuffling(test_superop, True)
+        _reshuffling(test_superop, True, backend=backend)
     with pytest.raises(ValueError):
-        _reshuffling(test_superop, "sustem")
+        _reshuffling(test_superop, "sustem", backend=backend)
     with pytest.raises(NotImplementedError):
-        _reshuffling(test_superop, "system")
+        _reshuffling(test_superop, "system", backend=backend)
     with pytest.raises(ValueError):
-        _reshuffling(test_superop[:-1, :-1], order)
+        _reshuffling(test_superop[:-1, :-1], order, backend=backend)
 
-    reshuffled = _reshuffling(test_superop, order)
-    reshuffled = _reshuffling(reshuffled, order)
+    reshuffled = _reshuffling(test_superop, order, backend=backend)
+    reshuffled = _reshuffling(reshuffled, order, backend=backend)
 
-    assert np.linalg.norm(reshuffled - test_superop) < PRECISION_TOL, True
+    backend.assert_allclose(
+        np.linalg.norm(reshuffled - test_superop) < PRECISION_TOL, True
+    )
 
     axes = [1, 2] if order == "row" else [0, 3]
     test_choi = np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
 
-    reshuffled = _reshuffling(test_choi, order)
-    reshuffled = _reshuffling(reshuffled, order)
+    reshuffled = _reshuffling(test_choi, order, backend=backend)
+    reshuffled = _reshuffling(reshuffled, order, backend=backend)
 
-    assert np.linalg.norm(reshuffled - test_choi) < PRECISION_TOL, True
+    backend.assert_allclose(
+        np.linalg.norm(reshuffled - test_choi) < PRECISION_TOL, True
+    )

@@ -1,5 +1,6 @@
 import numpy as np
 
+from qibo.backends import GlobalBackend
 from qibo.config import PRECISION_TOL, raise_error
 
 
@@ -7,11 +8,9 @@ def purity(state):
     """Purity of a quantum state :math:`\\rho`, which is given by :math:`\\text{Tr}(\\rho^{2})`.
 
     Args:
-        state: state vector or density matrix.
-
+        state: statevector or density matrix.
     Returns:
         float: Purity of quantum state :math:`\\rho`.
-
     """
 
     if (
@@ -29,10 +28,12 @@ def purity(state):
     else:
         pur = np.real(np.trace(np.dot(state, state)))
 
+    pur = float(pur)
+
     return pur
 
 
-def entropy(state, base: float = 2, validate: bool = False):
+def entropy(state, base: float = 2, validate: bool = False, backend=None):
     """The von-Neumann entropy :math:`S(\\rho)` of a quantum state :math:`\\rho`, which
     is given by
 
@@ -44,11 +45,15 @@ def entropy(state, base: float = 2, validate: bool = False):
         base (float, optional): the base of the log. Default: 2.
         validate (bool, optional): if ``True``, checks if ``state`` is Hermitian. If ``False``,
             it assumes ``state`` is Hermitian . Default: ``False``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
+            in the execution. If ``None``, it uses ``GlobalBackend()``.
+            Defaults to ``None``.
 
     Returns:
         float: The von-Neumann entropy :math:`S(\\rho)`.
-
     """
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
 
     if base <= 0.0:
         raise_error(ValueError, "log base must be non-negative.")
@@ -68,13 +73,21 @@ def entropy(state, base: float = 2, validate: bool = False):
     else:
         if validate:
             hermitian = bool(
-                np.linalg.norm(np.transpose(np.conj(state)) - state) <= PRECISION_TOL
+                backend.calculate_norm(np.transpose(np.conj(state)) - state)
+                <= PRECISION_TOL
             )
-            eigenvalues, _ = (
-                np.linalg.eigh(state) if hermitian else np.linalg.eig(state)
+            if (
+                not hermitian and backend.__class__.__name__ == "CupyBackend"
+            ):  # pragma: no cover
+                raise_error(
+                    NotImplementedError,
+                    f"CupyBackend does not support `np.linalg.eigvals` for non-Hermitian `state`.",
+                )
+            eigenvalues = (
+                np.linalg.eigvalsh(state) if hermitian else np.linalg.eigvals(state)
             )
         else:
-            eigenvalues, _ = np.linalg.eigh(state)
+            eigenvalues = np.linalg.eigvalsh(state)
 
         if base == 2:
             log_prob = np.where(eigenvalues != 0, np.log2(eigenvalues), 0.0)
@@ -91,10 +104,12 @@ def entropy(state, base: float = 2, validate: bool = False):
         # absolute value if entropy == 0.0 to avoid returning -0.0
         ent = np.abs(ent) if ent == 0.0 else ent
 
+    ent = float(ent)
+
     return ent
 
 
-def trace_distance(state, target, validate: bool = False):
+def trace_distance(state, target, validate: bool = False, backend=None):
     """Trace distance between two quantum states, :math:`\\rho` and :math:`\\sigma`:
 
     .. math::
@@ -107,11 +122,15 @@ def trace_distance(state, target, validate: bool = False):
         target: state vector or density matrix.
         validate (bool, optional): if ``True``, checks if :math:`\\rho - \\sigma` is Hermitian.
             If ``False``, it assumes the difference is Hermitian. Default: ``False``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
+            in the execution. If ``None``, it uses ``GlobalBackend()``.
+            Defaults to ``None``.
 
     Returns:
         float: Trace distance between state :math:`\\rho` and target :math:`\\sigma`.
-
     """
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
 
     if state.shape != target.shape:
         raise_error(
@@ -133,16 +152,28 @@ def trace_distance(state, target, validate: bool = False):
     difference = state - target
     if validate:
         hermitian = bool(
-            np.linalg.norm(np.transpose(np.conj(difference)) - difference)
+            backend.calculate_norm(np.transpose(np.conj(difference)) - difference)
             <= PRECISION_TOL
         )
-        eigenvalues, _ = (
-            np.linalg.eigh(difference) if hermitian else np.linalg.eig(difference)
+        if (
+            not hermitian and backend.__class__.__name__ == "CupyBackend"
+        ):  # pragma: no cover
+            raise_error(
+                NotImplementedError,
+                f"CupyBackend does not support `np.linalg.eigvals` for non-Hermitian `state - target`.",
+            )
+        eigenvalues = (
+            np.linalg.eigvalsh(difference)
+            if hermitian
+            else np.linalg.eigvals(difference)
         )
     else:
-        eigenvalues, _ = np.linalg.eigh(difference)
+        eigenvalues = np.linalg.eigvalsh(difference)
 
-    return np.sum(np.absolute(eigenvalues)) / 2
+    distance = np.sum(np.absolute(eigenvalues)) / 2
+    distance = float(distance)
+
+    return distance
 
 
 def hilbert_schmidt_distance(state, target):
@@ -157,7 +188,6 @@ def hilbert_schmidt_distance(state, target):
 
     Returns:
         float: Hilbert-Schmidt distance between state :math:`\\rho` and target :math:`\\sigma`.
-
     """
 
     if state.shape != target.shape:
@@ -177,7 +207,10 @@ def hilbert_schmidt_distance(state, target):
         state = np.outer(np.conj(state), state)
         target = np.outer(np.conj(target), target)
 
-    return np.real(np.trace((state - target) ** 2))
+    distance = np.real(np.trace((state - target) ** 2))
+    distance = float(distance)
+
+    return distance
 
 
 def fidelity(state, target, validate: bool = False):
@@ -197,7 +230,6 @@ def fidelity(state, target, validate: bool = False):
 
     Returns:
         float: Fidelity between state :math:`\\rho` and target :math:`\\sigma`.
-
     """
 
     if state.shape != target.shape:
@@ -233,10 +265,12 @@ def fidelity(state, target, validate: bool = False):
     elif len(state.shape) == 2 and len(target.shape) == 2:
         fid = np.real(np.trace(np.dot(state, target)))
 
+    fid = float(fid)
+
     return fid
 
 
-def process_fidelity(channel, target=None, validate: bool = False):
+def process_fidelity(channel, target=None, validate: bool = False, backend=None):
     """Process fidelity between two quantum channels (when at least one channel is` unitary),
 
     .. math::
@@ -248,12 +282,16 @@ def process_fidelity(channel, target=None, validate: bool = False):
             Default: ``None``.
         validate (bool, optional): if True, checks if one of the
             input channels is unitary. Default: ``False``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
+            in the execution. If ``None``, it uses ``GlobalBackend()``.
+            Defaults to ``None``.
 
     Returns:
         float: Process fidelity between channels :math:`\\mathcal{E}`
             and target :math:`\\mathcal{U}`.
-
     """
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
 
     if target is not None:
         if channel.shape != target.shape:
@@ -262,29 +300,34 @@ def process_fidelity(channel, target=None, validate: bool = False):
                 f"Channels must have the same dims, but {channel.shape} != {target.shape}",
             )
 
-    d = int(np.sqrt(channel.shape[0]))
+    dim = int(np.sqrt(channel.shape[0]))
 
     if validate:
-        norm_channel = np.linalg.norm(
-            np.dot(np.conj(np.transpose(channel)), channel) - np.eye(d**2)
+        norm_channel = backend.calculate_norm(
+            np.dot(np.conj(np.transpose(channel)), channel) - np.eye(dim**2)
         )
         if target is None and norm_channel > PRECISION_TOL:
             raise_error(TypeError, "Channel is not unitary and Target is None.")
         if target is not None:
-            norm_target = np.linalg.norm(
-                np.dot(np.conj(np.transpose(target)), target) - np.eye(d**2)
+            norm_target = backend.calculate_norm(
+                np.dot(np.conj(np.transpose(target)), target) - np.eye(dim**2)
             )
             if (norm_channel > PRECISION_TOL) and (norm_target > PRECISION_TOL):
                 raise_error(TypeError, "Neither channel is unitary.")
 
     if target is None:
         # With no target, return process fidelity with Identity channel
-        return np.real(np.trace(channel)) / d**2
+        fid = np.real(np.trace(channel)) / dim**2
+        fid = float(fid)
+        return fid
 
-    return np.real(np.trace(np.dot(np.conj(np.transpose(channel)), target))) / d**2
+    fid = np.real(np.trace(np.dot(np.conj(np.transpose(channel)), target))) / dim**2
+    fid = float(fid)
+
+    return fid
 
 
-def average_gate_fidelity(channel, target=None):
+def average_gate_fidelity(channel, target=None, backend=None):
     """Average gate fidelity between two quantum channels (when at least one channel is unitary),
 
     .. math::
@@ -301,18 +344,24 @@ def average_gate_fidelity(channel, target=None):
         target (optional): quantum channel :math:`\\mathcal{U}`.
             If ``None``, target is the Identity channel.
             Default is ``None``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
+            in the execution. If ``None``, it uses ``GlobalBackend()``.
+            Defaults to ``None``.
 
     Returns:
         float: Process fidelity between channel :math:`\\mathcal{E}`
             and target unitary channel :math:`\\mathcal{U}`.
-
     """
 
-    d = channel.shape[0]
-    return (d * process_fidelity(channel, target) + 1) / (d + 1)
+    dim = channel.shape[0]
+
+    process_fid = process_fidelity(channel, target, backend=backend)
+    process_fid = (dim * process_fid + 1) / (dim + 1)
+
+    return process_fid
 
 
-def gate_error(channel, target=None):
+def gate_error(channel, target=None, backend=None):
     """Gate error between two quantum channels (when at least one is unitary), which is
     defined as
 
@@ -326,9 +375,13 @@ def gate_error(channel, target=None):
         channel: quantum channel :math:`\\mathcal{E}`.
         target (optional): quantum channel :math:`\\mathcal{U}`. If ``None``,
             target is the Identity channel. Default is ``None``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
+            in the execution. If ``None``, it uses ``GlobalBackend()``.
+            Defaults to ``None``.
 
     Returns:
         float: Gate error between :math:`\\mathcal{E}` and :math:`\\mathcal{U}`.
     """
+    error = 1 - average_gate_fidelity(channel, target, backend=backend)
 
-    return 1 - average_gate_fidelity(channel, target)
+    return error

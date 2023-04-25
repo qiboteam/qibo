@@ -60,7 +60,6 @@ class Channel(Gate):
         Returns:
             Choi representation of the channel.
         """
-        # import numpy as np
 
         from qibo.quantum_info.superoperator_transformations import vectorization
 
@@ -91,16 +90,15 @@ class Channel(Gate):
                 self.coefficients += (p0,)
                 self.gates += (I(*self.target_qubits),)
 
-        super_op = np.zeros((4**self.nqubits, 4**self.nqubits), dtype="complex")
+        super_op = np.zeros((4**self.nqubits, 4**self.nqubits), dtype=complex)
+        super_op = backend.cast(super_op, dtype=super_op.dtype)
         for coeff, gate in zip(self.coefficients, self.gates):
             kraus_op = FusedGate(*range(self.nqubits))
             kraus_op.append(gate)
             kraus_op = kraus_op.asmatrix(backend)
-            kraus_op = vectorization(kraus_op, order=order)
+            kraus_op = vectorization(kraus_op, order=order, backend=backend)
             super_op += coeff * np.outer(kraus_op, np.conj(kraus_op))
             del kraus_op
-
-        super_op = backend.cast(super_op, dtype=super_op.dtype)
 
         return super_op
 
@@ -119,7 +117,6 @@ class Channel(Gate):
         Returns:
             Liouville representation of the channel.
         """
-        # import numpy as np
 
         from qibo.quantum_info.superoperator_transformations import choi_to_liouville
 
@@ -129,8 +126,7 @@ class Channel(Gate):
             backend = GlobalBackend()
 
         super_op = self.to_choi(order=order, backend=backend)
-        super_op = choi_to_liouville(super_op, order=order)
-        super_op = backend.cast(super_op, dtype=super_op.dtype)
+        super_op = choi_to_liouville(super_op, order=order, backend=backend)
 
         return super_op
 
@@ -148,7 +144,6 @@ class Channel(Gate):
         Returns:
             Pauli-Liouville representation of the channel.
         """
-        # import numpy as np
 
         from qibo.quantum_info.basis import comp_basis_to_pauli
 
@@ -160,11 +155,10 @@ class Channel(Gate):
         super_op = self.to_liouville(backend=backend)
 
         # unitary that transforms from comp basis to pauli basis
-        unitary = comp_basis_to_pauli(self.nqubits, normalize)
+        unitary = comp_basis_to_pauli(self.nqubits, normalize, backend=backend)
         unitary = backend.cast(unitary, dtype=unitary.dtype)
 
         super_op = unitary @ super_op @ np.transpose(np.conj(unitary))
-        super_op = backend.cast(super_op, dtype=super_op.dtype)
 
         return super_op
 
@@ -549,8 +543,6 @@ class ThermalRelaxationChannel(KrausChannel):
         preset0 = p_reset * (1 - excited_population)
         preset1 = p_reset * excited_population
 
-        # import numpy as np
-
         if t_1 < t_2:
             exp_t2 = exp(-time / t_2)
 
@@ -650,8 +642,6 @@ class ReadoutErrorChannel(KrausChannel):
         if isinstance(q, int) is True:
             q = (q,)
 
-        # import numpy as np
-
         dim = len(probabilities)
         operators = []
         for j in range(dim):
@@ -683,8 +673,6 @@ class ResetChannel(KrausChannel):
     """
 
     def __init__(self, q, p0=0.0, p1=0.0):
-        # import numpy as np
-
         if p0 < 0:
             raise_error(ValueError, "Invalid p0 ({p0} < 0).")
         if p1 < 0:
