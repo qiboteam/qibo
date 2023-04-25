@@ -160,7 +160,7 @@ cu3(0.2, 0.3, 0.4) q[2],q[1];"""
 
     c = Circuit(2)
     c.add(gates.CU2(0, 1, 0.1, 0.2))
-    with pytest.raises(ValueError):
+    with pytest.raises(NotImplementedError):
         target = c.to_qasm()
 
 
@@ -182,7 +182,7 @@ cry(0.3) q[2],q[1];"""
 
     c = Circuit(2)
     c.add(gates.CU2(0, 1, 0.1, 0.2))
-    with pytest.raises(ValueError):
+    with pytest.raises(NotImplementedError):
         target = c.to_qasm()
 
 

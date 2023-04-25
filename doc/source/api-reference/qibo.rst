@@ -1149,6 +1149,12 @@ Random unitary matrix
 .. autofunction:: qibo.quantum_info.random_unitary
 
 
+Random quantum channel
+""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.random_quantum_channel
+
+
 Random statevector
 """"""""""""""""""
 
@@ -1394,6 +1400,12 @@ Utility Functions
 
 Functions that can be used to calculate metrics and distance measures
 on classical probability arrays.
+
+Hamming weight
+""""""""""""""
+
+.. autofunction:: qibo.quantum_info.hamming_weight
+
 
 Shannon entropy
 """""""""""""""

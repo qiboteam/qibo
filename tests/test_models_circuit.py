@@ -1,4 +1,6 @@
 """Test all methods defined in `qibo/models/circuit.py`."""
+from collections import Counter
+
 import pytest
 
 from qibo import gates
@@ -66,7 +68,7 @@ def test_initialize():
 @pytest.mark.parametrize("nqubits", [0, -10, 2.5])
 def test_circuit_init_errors(nqubits):
     with pytest.raises((ValueError, TypeError)):
-        c = Circuit(nqubits)
+        Circuit(nqubits)
 
 
 def test_circuit_constructor():
@@ -78,7 +80,7 @@ def test_circuit_constructor():
     assert c.density_matrix
     c = Circuit(5, accelerators={"/GPU:0": 2})
     with pytest.raises(NotImplementedError):
-        c = Circuit(5, accelerators={"/GPU:0": 2}, density_matrix=True)
+        Circuit(5, accelerators={"/GPU:0": 2}, density_matrix=True)
 
 
 def test_circuit_add():
@@ -180,8 +182,6 @@ def test_add_measurement_collapse():
 
 
 def test_gate_types():
-    import collections
-
     c = Circuit(3)
     c.add(gates.H(0))
     c.add(gates.H(1))
@@ -189,9 +189,22 @@ def test_gate_types():
     c.add(gates.CNOT(0, 2))
     c.add(gates.CNOT(1, 2))
     c.add(gates.TOFFOLI(0, 1, 2))
-    target_counter = collections.Counter({"h": 2, "x": 1, "cx": 2, "ccx": 1})
+    target_counter = Counter({gates.H: 2, gates.X: 1, gates.CNOT: 2, gates.TOFFOLI: 1})
     assert c.ngates == 6
     assert c.gate_types == target_counter
+
+
+def test_gate_names():
+    c = Circuit(3)
+    c.add(gates.H(0))
+    c.add(gates.H(1))
+    c.add(gates.X(2))
+    c.add(gates.CNOT(0, 2))
+    c.add(gates.CNOT(1, 2))
+    c.add(gates.TOFFOLI(0, 1, 2))
+    target_counter = Counter({"h": 2, "x": 1, "cx": 2, "ccx": 1})
+    assert c.ngates == 6
+    assert c.gate_names == target_counter
 
 
 def test_gates_of_type():
@@ -263,7 +276,7 @@ def test_circuit_addition_errors():
     c2.add(gates.X(0))
 
     with pytest.raises(ValueError):
-        c3 = c1 + c2
+        c1 + c2
 
 
 def test_circuit_on_qubits():
@@ -673,8 +686,8 @@ def test_circuit_draw_channels(legend):
             "\n\n Legend for callbacks and channels: \n"
             "| Gate                | Symbol   |\n"
             "|---------------------+----------|\n"
-            "| PauliNoiseChannel   | PN       |\n"
-            "| DepolarizingChannel | D        |"
+            "| DepolarizingChannel | D        |\n"
+            "| PauliNoiseChannel   | PN       |"
         )
 
     assert c.draw(legend=legend) == ref
@@ -704,3 +717,57 @@ def test_circuit_draw_callbacks(legend):
         )
 
     assert c.draw(legend=legend) == ref
+
+
+def test_circuit_draw_labels():
+    """Test circuit text draw."""
+    ref = (
+        "q0: ─H─G1─G2─G3─G4───────────────────────────x───\n"
+        "q1: ───o──|──|──|──H─G2─G3─G4────────────────|─x─\n"
+        "q2: ──────o──|──|────o──|──|──H─G3─G4────────|─|─\n"
+        "q3: ─────────o──|───────o──|────o──|──H─G4───|─x─\n"
+        "q4: ────────────o──────────o───────o────o──H─x───"
+    )
+    circuit = Circuit(5)
+    for i1 in range(5):
+        circuit.add(gates.H(i1))
+        for i2 in range(i1 + 1, 5):
+            gate = gates.CNOT(i2, i1)
+            gate.draw_label = f"G{i2}"
+            circuit.add(gate)
+    circuit.add(gates.SWAP(0, 4))
+    circuit.add(gates.SWAP(1, 3))
+    assert circuit.draw() == ref
+
+
+def test_circuit_draw_names():
+    """Test circuit text draw."""
+    ref = (
+        "q0: ─H─cx─cx─cx─cx───────────────────────────x───\n"
+        "q1: ───o──|──|──|──H─cx─cx─cx────────────────|─x─\n"
+        "q2: ──────o──|──|────o──|──|──H─cx─cx────────|─|─\n"
+        "q3: ─────────o──|───────o──|────o──|──H─cx───|─x─\n"
+        "q4: ────────────o──────────o───────o────o──H─x───"
+    )
+    circuit = Circuit(5)
+    for i1 in range(5):
+        circuit.add(gates.H(i1))
+        for i2 in range(i1 + 1, 5):
+            gate = gates.CNOT(i2, i1)
+            gate.draw_label = ""
+            circuit.add(gate)
+    circuit.add(gates.SWAP(0, 4))
+    circuit.add(gates.SWAP(1, 3))
+    assert circuit.draw() == ref
+
+
+def test_circuit_draw_error():
+    """Test NotImplementedError in circuit draw"""
+    circuit = Circuit(1)
+    error_gate = gates.X(0)
+    error_gate.name = ""
+    error_gate.draw_label = ""
+    circuit.add(error_gate)
+
+    with pytest.raises(NotImplementedError):
+        circuit.draw()

@@ -1,4 +1,7 @@
-__version__ = "0.1.13.dev0"
+import importlib.metadata as im
+
+__version__ = im.version(__package__)
+
 from qibo import callbacks, gates, hamiltonians, models, optimizers, parallel, solvers
 from qibo.backends import (
     get_backend,

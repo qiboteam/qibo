@@ -4,11 +4,14 @@ import pytest
 from qibo import gates, hamiltonians
 from qibo.derivative import parameter_shift
 from qibo.models import Circuit
+from qibo.symbols import Z
 
 
 # defining an observable
 def hamiltonian(nqubits, backend):
-    return (1 / nqubits) * hamiltonians.Z(nqubits, backend=backend)
+    return hamiltonians.hamiltonians.SymbolicHamiltonian(
+        np.prod([Z(i) for i in range(nqubits)])
+    )
 
 
 # defining a dummy circuit
@@ -22,11 +25,12 @@ def circuit(nqubits=1):
     return c
 
 
+@pytest.mark.parametrize("nshots, atol", [(None, 1e-8), (100000, 1e-2)])
 @pytest.mark.parametrize(
     "scale_factor, grads",
-    [(1, [8.51104358e-02, 5.20075970e-01, 0]), (0.5, [0.02405061, 0.13560379, 0])],
+    [(1, [-8.51104358e-02, -5.20075970e-01, 0]), (0.5, [-0.02405061, -0.13560379, 0])],
 )
-def test_derivative(backend, scale_factor, grads):
+def test_derivative(backend, nshots, atol, scale_factor, grads):
     # initializing the circuit
     c = circuit(nqubits=1)
 
@@ -46,7 +50,9 @@ def test_derivative(backend, scale_factor, grads):
 
     # testing hamiltonian type
     with pytest.raises(TypeError):
-        grad_0 = parameter_shift(circuit=c, hamiltonian=c, parameter_index=0)
+        grad_0 = parameter_shift(
+            circuit=c, hamiltonian=c, parameter_index=0, nshots=nshots
+        )
 
     # executing all the procedure
     grad_0 = parameter_shift(
@@ -54,22 +60,25 @@ def test_derivative(backend, scale_factor, grads):
         hamiltonian=test_hamiltonian,
         parameter_index=0,
         scale_factor=scale_factor,
+        nshots=nshots,
     )
     grad_1 = parameter_shift(
         circuit=c,
         hamiltonian=test_hamiltonian,
         parameter_index=1,
         scale_factor=scale_factor,
+        nshots=nshots,
     )
     grad_2 = parameter_shift(
         circuit=c,
         hamiltonian=test_hamiltonian,
         parameter_index=2,
         scale_factor=scale_factor,
+        nshots=nshots,
     )
 
     # check of known values
     # calculated using tf.GradientTape
-    backend.assert_allclose(grad_0, grads[0], atol=1e-8)
-    backend.assert_allclose(grad_1, grads[1], atol=1e-8)
-    backend.assert_allclose(grad_2, grads[2], atol=1e-8)
+    backend.assert_allclose(grad_0, grads[0], atol=atol)
+    backend.assert_allclose(grad_1, grads[1], atol=atol)
+    backend.assert_allclose(grad_2, grads[2], atol=atol)
