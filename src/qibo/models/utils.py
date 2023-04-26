@@ -95,7 +95,7 @@ def initialize(nqubits: int, basis=gates.Z, eigenstate="+"):
         - baisis (gates): Can be a qibo gate or a callable that accepts a qubit,
         the default value is `gates.Z`.
         - eigenstate (str): Specify which eigenstate of the operator defined in
-        `basis` will be the qubits' state. The dafault value is "+".
+        `basis` will be the qubits' state. The default value is "+".
     """
     circuit_basis = Circuit(nqubits)
     circuit_eigenstate = Circuit(nqubits)
