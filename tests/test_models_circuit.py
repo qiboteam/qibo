@@ -5,6 +5,7 @@ import pytest
 
 from qibo import gates
 from qibo.models import Circuit
+from qibo.models.utils import initialize
 
 
 def test_parametrizedgates_class():
@@ -40,6 +41,28 @@ def test_queue_class():
 def test_circuit_init():
     c = Circuit(2)
     assert c.nqubits == 2
+
+
+def test_eigenstate():
+    nqubits = 3
+    c = Circuit(nqubits)
+    c.add(gates.M(*list(range(nqubits))))
+    c2 = initialize(nqubits, eigenstate="-")
+    assert c(nshots=100, initial_state=c2).frequencies() == {"111": 100}
+    c2 = initialize(nqubits, eigenstate="+")
+    assert c(nshots=100, initial_state=c2).frequencies() == {"000": 100}
+
+    with pytest.raises(NotImplementedError):
+        c2 = initialize(nqubits, eigenstate="x")
+
+
+def test_initialize():
+    nqubits = 3
+    for gate in [gates.X, gates.Y, gates.Z]:
+        c = Circuit(nqubits)
+        c.add(gates.M(*list(range(nqubits)), basis=gate))
+        c2 = initialize(nqubits, basis=gate)
+        assert c(nshots=100, initial_state=c2).frequencies() == {"000": 100}
 
 
 @pytest.mark.parametrize("nqubits", [0, -10, 2.5])

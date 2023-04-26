@@ -254,7 +254,6 @@ class Circuit:
         newcircuit.repeated_execution = (
             self.repeated_execution or circuit.repeated_execution
         )
-
         return newcircuit
 
     def on_qubits(self, *qubits):
@@ -575,7 +574,15 @@ class Circuit:
                     )
 
             if isinstance(gate, gates.M):
-                self.add(gate.basis)
+                # The following loop is useful when two circuits are added together:
+                # all the gates in the basis of the measure gates should not
+                # be added to the new circuit, otherwise once the measure gate is added in the circuit
+                # there will be two of the same.
+
+                for base in gate.basis:
+                    if base not in self.queue:
+                        self.add(base)
+
                 self.queue.append(gate)
                 if gate.register_name is None:
                     # add default register name
