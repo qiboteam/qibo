@@ -5,6 +5,7 @@ from scipy.optimize import curve_fit
 
 from qibo import gates
 from qibo.config import raise_error
+from qibo.models import Circuit
 
 
 def get_gammas(c, solve=True):
@@ -267,6 +268,7 @@ def vnCDR(
     model=lambda x, *params: (x * np.array(params).reshape(-1, 1)).sum(0),
     n_training_samples=100,
     insertion_gate="CNOT",
+    calibration_matrix=None,
     full_output=False,
 ):
     """Runs the vnCDR error mitigation method.
@@ -330,3 +332,48 @@ def vnCDR(
         return mit_val, val, optimal_params, train_val
     else:
         return mit_val
+
+
+def get_calibration_matrix(nqubits, backend=None, nshots=1000, p0=None, p1=None):
+    """Computes the calibration matrix for readout mitigation.
+
+    Args:
+        nqubits (int): Total number of qubits.
+        backend (qibo.backends.abstract.Backend): Calculation engine.
+        nshots (int): Number of shots.
+        p0 (dict): Optional bitflip probability map passed to the measurement gate to simulate noisy measurament. Can be:
+            A dictionary that maps each measured qubit to the probability
+            that it is flipped, a list or tuple that has the same length
+            as the tuple of measured qubits or a single float number.
+            If a single float is given the same probability will be used
+            for all qubits.
+        p1 (dict): Optional bitflip probability map passed to the measurement gate to simulate noisy measurament for asymmetric bitflips. Same as ``p0`` but controls the 1->0 bitflip probability.
+            If ``p1`` is ``None`` then ``p0`` will be used both for 0->1 and
+            1->0 bitflips.
+
+    Returns:
+        np.ndarray : The computed (`nqubits`, `nqubits`) calibration matrix for readout mitigation.
+    """
+
+    if backend is None:  # pragma: no cover
+        from qibo.backends import GlobalBackend
+
+        backend = GlobalBackend()
+
+    matrix = np.zeros((2**nqubits, 2**nqubits))
+
+    string = "{0:0" + str(nqubits) + "b}"
+    for i in range(2**nqubits):
+        state = string.format(i)
+        circuit = Circuit(nqubits)
+        for q, bit in enumerate(state):
+            if bit == "1":
+                circuit.add(gates.X(q))
+        circuit.add(gates.M(*range(nqubits), p0=p0, p1=p1))
+        freq = backend.execute_circuit(circuit, nshots=nshots).frequencies()
+        column = np.zeros(2**nqubits)
+        for key in freq.keys():
+            f = freq[key] / nshots
+            column[int(key, 2)] = f
+        matrix[:, i] = column
+    return np.linalg.inv(matrix)
