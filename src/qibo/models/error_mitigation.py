@@ -90,6 +90,7 @@ def ZNE(
     nshots=10000,
     solve_for_gammas=False,
     insertion_gate="CNOT",
+    calibration_matrix=None,
 ):
     """Runs the Zero Noise Extrapolation method for error mitigation.
 
@@ -104,6 +105,7 @@ def ZNE(
         nshots (int): Number of shots.
         solve_for_gammas (bool): If ``true``, explicitely solve the equations to obtain the gamma coefficients.
         insertion_gate (str): Which gate to use for the insertion. Default value: 'CNOT', use 'RX' for the ``RX(pi/2)`` gate instead.
+        calibration_matrix (np.ndarray): If passed, the calibration matrix is used to mitigate the readout errors.
 
     Returns:
         numpy.ndarray: Estimate of the expected value of ``observable`` in the noise free condition.
@@ -377,3 +379,23 @@ def get_calibration_matrix(nqubits, backend=None, nshots=1000, p0=None, p1=None)
             column[int(key, 2)] = f
         matrix[:, i] = column
     return np.linalg.inv(matrix)
+
+
+def apply_readout_mitigation(state, calibration_matrix):
+    """Updates the frequencies of the input state with the mitigated ones obtained with `calibration_matrix`*`state.frequencies()`.
+
+    Args:
+        state (qibo.states.CircuitResult): Input state to be updated.
+        calibration_matrix (np.ndarray): Calibration matrix for readout mitigation.
+
+    Returns:
+        qibo.states.CircuitResult : The input state with the updated frequencies.
+    """
+    freq = np.zeros(state.nqubits)
+    for k, v in state.frequencies().items():
+        f = v / state.nshots
+        freq[int(k, 2)] = f
+    freq = freq.reshape(-1, 1)
+    for i, val in enumerate(calibration_matrix @ freq * state.nshots):
+        state._frequencies[i] = float(val)
+    return state
