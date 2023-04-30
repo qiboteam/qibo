@@ -121,6 +121,10 @@ def ZNE(
         if noise_model != None and backend.name != "qibolab":
             noisy_circuit = noise_model.apply(noisy_circuit)
         circuit_result = backend.execute_circuit(noisy_circuit, nshots=nshots)
+        if calibration_matrix is not None:
+            circuit_result = apply_readout_mitigation(
+                circuit_result, calibration_matrix
+            )
         expected_val.append(circuit_result.expectation_from_samples(observable))
     gamma = get_gammas(noise_levels, solve=solve_for_gammas)
     return (gamma * expected_val).sum()
@@ -205,6 +209,7 @@ def CDR(
     nshots=10000,
     model=lambda x, a, b: a * x + b,
     n_training_samples=100,
+    calibration_matrix=None,
     full_output=False,
 ):
     """Runs the CDR error mitigation method.
@@ -217,6 +222,7 @@ def CDR(
         nshots (int): Number of shots.
         model : Model used for fitting. This should be a callable function object ``f(x, *params)`` taking as input the predictor variable and the parameters. By default a simple linear model ``f(x,a,b) := a*x + b`` is used.
         n_training_samples (int): Number of training circuits to sample.
+        calibration_matrix (np.ndarray): If passed, the calibration matrix is used to mitigate the readout errors.
         full_output (bool): If True, this function returns additional information: `val`, `optimal_params`, `train_val`.
 
     Returns:
@@ -243,6 +249,10 @@ def CDR(
         if noise_model != None and backend.name != "qibolab":
             c = noise_model.apply(c)
         circuit_result = backend.execute_circuit(c, nshots=nshots)
+        if calibration_matrix is not None:
+            circuit_result = apply_readout_mitigation(
+                circuit_result, calibration_matrix
+            )
         val = circuit_result.expectation_from_samples(observable)
         train_val["noisy"].append(val)
     # Fit the model
@@ -251,6 +261,8 @@ def CDR(
     if noise_model != None and backend.name != "qibolab":
         noisy_circuit = noise_model.apply(circuit)
     circuit_result = backend.execute_circuit(noisy_circuit, nshots=nshots)
+    if calibration_matrix is not None:
+        circuit_result = apply_readout_mitigation(circuit_result, calibration_matrix)
     val = circuit_result.expectation_from_samples(observable)
     mit_val = model(val, *optimal_params)
     # Return data
@@ -285,6 +297,7 @@ def vnCDR(
         model : Model used for fitting. This should be a callable function object ``f(x, *params)`` taking as input the predictor variable and the parameters. By default a simple linear model ``f(x,a) := a*x`` is used, with ``a`` beeing the diagonal matrix containing the parameters.
         n_training_samples (int): Number of training circuits to sample.
         insertion_gate (str): Which gate to use for the insertion. Default value: 'CNOT', use 'RX' for the ``RX(pi/2)`` gate instead.
+        calibration_matrix (np.ndarray): If passed, the calibration matrix is used to mitigate the readout errors.
         full_output (bool): If True, this function returns additional information: `val`, `optimal_params`, `train_val`.
 
     Returns:
@@ -313,6 +326,10 @@ def vnCDR(
             if noise_model != None and backend.name != "qibolab":
                 noisy_c = noise_model.apply(c)
             circuit_result = backend.execute_circuit(noisy_c, nshots=nshots)
+            if calibration_matrix is not None:
+                circuit_result = apply_readout_mitigation(
+                    circuit_result, calibration_matrix
+                )
             val = circuit_result.expectation_from_samples(observable)
             train_val["noisy"].append(val)
     # Repeat noise-free values for each noise level
@@ -327,6 +344,10 @@ def vnCDR(
         if noise_model != None and backend.name != "qibolab":
             noisy_c = noise_model.apply(circuit)
         circuit_result = backend.execute_circuit(noisy_c, nshots=nshots)
+        if calibration_matrix is not None:
+            circuit_result = apply_readout_mitigation(
+                circuit_result, calibration_matrix
+            )
         val.append(circuit_result.expectation_from_samples(observable))
     mit_val = model(np.array(val).reshape(-1, 1), *optimal_params[0])[0]
     # Return data
