@@ -4,7 +4,14 @@ import pytest
 from qibo import gates
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.models import Circuit
-from qibo.models.error_mitigation import CDR, ZNE, sample_training_circuit, vnCDR
+from qibo.models.error_mitigation import (
+    CDR,
+    ZNE,
+    apply_readout_mitigation,
+    get_calibration_matrix,
+    sample_training_circuit,
+    vnCDR,
+)
 from qibo.noise import DepolarizingError, NoiseModel
 from qibo.symbols import Z
 
@@ -183,3 +190,30 @@ def test_vncdr(backend, nqubits, noise, full_output, insertion_gate):
     if full_output:
         estimate = estimate[0]
     assert np.abs(exact - estimate) <= np.abs(exact - noisy)
+
+
+def test_readout_mitigation(backend):
+    backend.set_threads(1)
+    nqubits = 3
+    nshots = 1000
+    p0 = [0.1, 0.2, 0.3]
+    p1 = [0.3, 0.1, 0.2]
+    calibration_matrix = get_calibration_matrix(nqubits, nshots=nshots, p0=p0, p1=p1)
+    # Define the observable
+    obs = np.prod([Z(i) for i in range(nqubits)])
+    obs = SymbolicHamiltonian(obs, backend=backend)
+    # get noise free expected val
+    c = Circuit(nqubits)
+    c.add(gates.X(0))
+    c.add(gates.M(*range(nqubits)))
+    true_state = backend.execute_circuit(c, nshots=nshots)
+    true_val = true_state.expectation_from_samples(obs)
+    # get noisy expected val
+    c = Circuit(nqubits)
+    c.add(gates.X(0))
+    c.add(gates.M(*range(nqubits), p0=p0, p1=p1))
+    state = backend.execute_circuit(c, nshots=nshots)
+    noisy_val = state.expectation_from_samples(obs)
+    mit_state = apply_readout_mitigation(state, calibration_matrix)
+    mit_val = mit_state.expectation_from_samples(obs)
+    assert np.abs(true_val - mit_val) <= np.abs(true_val - noisy_val)

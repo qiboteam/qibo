@@ -412,7 +412,7 @@ def apply_readout_mitigation(state, calibration_matrix):
     Returns:
         qibo.states.CircuitResult : The input state with the updated frequencies.
     """
-    freq = np.zeros(state.nqubits)
+    freq = np.zeros(2**state.nqubits)
     for k, v in state.frequencies().items():
         f = v / state.nshots
         freq[int(k, 2)] = f
