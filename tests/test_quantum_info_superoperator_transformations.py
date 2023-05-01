@@ -199,16 +199,20 @@ def test_liouville_to_choi(backend, order):
 
     axes = [1, 2] if order == "row" else [0, 3]
     test_choi = np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
+    test_choi = backend.cast(test_choi, dtype=test_choi.dtype)
 
     backend.assert_allclose(
         backend.calculate_norm(choi - test_choi) < PRECISION_TOL, True
     )
 
 
+@pytest.mark.parametrize("test_superop", [test_superop])
 @pytest.mark.parametrize("order", ["row", "column"])
-def test_choi_to_liouville(backend, order):
+def test_choi_to_liouville(backend, order, test_superop):
     axes = [1, 2] if order == "row" else [0, 3]
     test_choi = np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
+
+    test_superop = backend.cast(test_superop, dtype=test_superop.dtype)
 
     liouville = choi_to_liouville(test_choi, order=order, backend=backend)
 
@@ -702,8 +706,9 @@ def test_kraus_to_unitaries(backend, order):
     kraus_to_unitaries(test_kraus, order=order, backend=backend)
 
 
+@pytest.mark.parametrize("test_superop", [test_superop])
 @pytest.mark.parametrize("order", ["row", "column"])
-def test_reshuffling(backend, order):
+def test_reshuffling(backend, order, test_superop):
     from qibo.quantum_info.superoperator_transformations import _reshuffling
 
     with pytest.raises(TypeError):
@@ -718,12 +723,16 @@ def test_reshuffling(backend, order):
     reshuffled = _reshuffling(test_superop, order, backend=backend)
     reshuffled = _reshuffling(reshuffled, order, backend=backend)
 
+    test_superop = backend.cast(test_superop, dtype=test_superop.dtype)
+
     backend.assert_allclose(
         np.linalg.norm(reshuffled - test_superop) < PRECISION_TOL, True
     )
 
     axes = [1, 2] if order == "row" else [0, 3]
-    test_choi = np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
+    test_choi = np.reshape(
+        np.swapaxes(np.reshape(test_superop, [2] * 4), *axes), [4, 4]
+    )
 
     reshuffled = _reshuffling(test_choi, order, backend=backend)
     reshuffled = _reshuffling(reshuffled, order, backend=backend)

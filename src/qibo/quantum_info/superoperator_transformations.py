@@ -8,6 +8,7 @@ from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate
 from qibo.gates.gates import Unitary
 from qibo.gates.special import FusedGate
+from qibo.quantum_info.basis import comp_basis_to_pauli
 
 
 def vectorization(state, order: str = "row", backend=None):
@@ -531,9 +532,6 @@ def kraus_to_chi(kraus_ops, normalize: bool = False, order: str = "row", backend
     Returns:
         ndarray: Chi-matrix representation of the Kraus channel.
     """
-    from qibo.gates.special import FusedGate
-    from qibo.quantum_info.basis import comp_basis_to_pauli
-
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
@@ -557,6 +555,18 @@ def kraus_to_chi(kraus_ops, normalize: bool = False, order: str = "row", backend
         del kraus_op
 
     return super_op
+
+
+def kraus_to_stinespring(kraus_ops, initial_state_env=None, backend=None):
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    dims_env = len(kraus_ops)
+
+    if initial_state_env is None:
+        initial_state_env = np.zeros(dims_env)
+        initial_state_env[0] = 1.0
+        initial_state_env = backend.cast(initial_state_env)
 
 
 def liouville_to_choi(super_op, order: str = "row", backend=None):
@@ -617,8 +627,6 @@ def liouville_to_pauli(
     Returns:
         ndarray: superoperator in the Pauli-Liouville representation.
     """
-    from qibo.quantum_info.basis import comp_basis_to_pauli
-
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
