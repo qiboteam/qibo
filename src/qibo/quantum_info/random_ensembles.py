@@ -400,6 +400,8 @@ def random_density_matrix(
 
     if basis is not None and not isinstance(basis, str):
         raise_error(TypeError, f"basis must be type str, but it is type {type(basis)}.")
+    elif basis is not None and basis not in ["pauli"]:
+        raise_error(ValueError, f"basis {basis} nor recognized.")
 
     if not isinstance(normalize, bool):
         raise_error(

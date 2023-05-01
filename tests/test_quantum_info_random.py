@@ -190,6 +190,8 @@ def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
         test = random_density_matrix(dims=2, metric="gaussian", backend=backend)
     with pytest.raises(TypeError):
         test = random_density_matrix(dims=2, metric=metric, basis=True)
+    with pytest.raises(ValueError):
+        test = random_density_matrix(dims=2, metric=metric, basis="Pauli")
     with pytest.raises(TypeError):
         test = random_density_matrix(dims=2, metric=metric, normalize="True")
     with pytest.raises(TypeError):
