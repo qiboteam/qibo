@@ -149,7 +149,7 @@ def unvectorization(state, order: str = "row", backend=None):
 
 
 def choi_to_liouville(choi_super_op, order: str = "row", backend=None):
-    """Convert Choi representation :math:`\\Lambda` of quantum channel
+    """Converts Choi representation :math:`\\Lambda` of quantum channel
     to its Liouville representation :math:`\\mathcal{E}`.
 
 
@@ -220,7 +220,7 @@ def choi_to_kraus(
     validate_cp: bool = True,
     backend=None,
 ):
-    """Convert Choi representation :math:`\\Lambda` of a quantum channel :math:`\\mathcal{E}`
+    """Converts Choi representation :math:`\\Lambda` of a quantum channel :math:`\\mathcal{E}`
     into Kraus operators :math:`\\{ K_{\\alpha} \\}_{\\alpha}`.
 
     If :math:`\\mathcal{E}` is a completely positive (CP) map, then
@@ -366,7 +366,7 @@ def choi_to_kraus(
 def choi_to_chi(
     choi_super_op, normalize: bool = False, order: str = "row", backend=None
 ):
-    """Convert Choi representation :math:`\\Lambda` of quantum channel
+    """Converts Choi representation :math:`\\Lambda` of quantum channel
     to  its chi-matrix representation :math:`\\chi`.
 
     .. math::
@@ -395,7 +395,7 @@ def choi_to_chi(
 
 
 def kraus_to_choi(kraus_ops, order: str = "row", backend=None):
-    """Convert Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`
+    """Converts Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`
     of quantum channel to its Choi representation :math:`\\Lambda`.
 
     .. math::
@@ -440,7 +440,7 @@ def kraus_to_choi(kraus_ops, order: str = "row", backend=None):
 
 
 def kraus_to_liouville(kraus_ops, order: str = "row", backend=None):
-    """Convert from Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`
+    """Converts from Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`
     of quantum channel to its Liouville representation :math:`\\mathcal{E}`.
     It uses the Choi representation as an intermediate step.
 
@@ -503,8 +503,8 @@ def kraus_to_pauli(
 
 
 def kraus_to_chi(kraus_ops, normalize: bool = False, order: str = "row", backend=None):
-    """Convert Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`
-    of quantum channel to  its chi-matrix representation :math:`\\chi`.
+    """Converts Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`
+    of quantum channel to its chi-matrix representation :math:`\\chi`.
 
     .. math::
         \\chi = \\sum_{\\alpha} \\, |c_{\\alpha}\\rangle\\rangle \\langle\\langle c_{\\alpha}|,
@@ -558,19 +558,70 @@ def kraus_to_chi(kraus_ops, normalize: bool = False, order: str = "row", backend
 
 
 def kraus_to_stinespring(kraus_ops, initial_state_env=None, backend=None):
+    """Converts Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`
+    of quantum channel to its Stinespring representation :math:`U_{0}`, i.e.
+
+    .. math::
+        U_{0} = \\sum_{\\alpha} \\, K_{\\alpha} \\otimes \\ketbra{\\alpha}{\\v_{0}} \\, ,
+
+    where :math:`\\ket{v_{0}}` is the initial state of the environment
+    (``initial_state_env``), :math:`D` is the dimension of the environment's space,
+    and :math:`\\{\\ket{\\alpha} \\, : \\, 0, 1, \\cdots, D - 1 \\}
+    is an orthonormal basis for the environment's space.
+
+    Args:
+        kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
+            where ``qubits`` refers the qubit ids that :math:`A_k`  acts on
+            and :math:`A_k` is the corresponding matrix as a ``np.ndarray``.
+        initial_state_env (ndarray, optional): Initial state of the enviroment.
+            If ``None``, it assumes the environment in its ground state.
+            Defaults to ``None``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend
+            to be used in the execution. If ``None``, it uses
+            ``GlobalBackend()``. Defaults to ``None``.
+
+    Returns:
+        ndarray: Stinespring representation (restrited unitary) of the Kraus channel.
+    """
+    if len(initial_state_env) != len(kraus_op):
+        raise_error(
+            ValueError,
+            "dim of initial_state_env must be equal to the number of Kraus operators.",
+        )
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    dims_env = len(kraus_ops)
+    gates, target_qubits = _set_gate_and_target_qubits(kraus_ops)
+    nqubits = 1 + max(target_qubits)
+    dim = 2**nqubits
+    dim_env = len(kraus_ops)
+    dim_stinespring = dim * dim_env
 
     if initial_state_env is None:
-        initial_state_env = np.zeros(dims_env)
+        initial_state_env = np.zeros(dim_env, dtype=complex)
         initial_state_env[0] = 1.0
         initial_state_env = backend.cast(initial_state_env)
 
+    vector_alpha = np.zeros(dim_env, dtype=complex)
+    stinespring = np.zeros((dim_stinespring**2, dim_stinespring**2), dtype=complex)
+    stinespring = backend.cast(stinespring, dtype=stinespring.dtype)
+    for alpha, gate in enumerate(gates):
+        vector_alpha = np.zeros(dim_env, dtype=complex)
+        vector_alpha[alpha] = 1.0
+        kraus_op = FusedGate(*range(nqubits))
+        kraus_op.append(gate)
+        kraus_op = kraus_op.asmatrix(backend)
+        stinespring += np.kron(
+            kraus_op,
+            np.outer(vector_alpha, initial_state_env),
+        )
+        del kraus_op, vector_alpha
+
+    return stinespring
+
 
 def liouville_to_choi(super_op, order: str = "row", backend=None):
-    """Convert Liouville representation of quantum channel :math:`\\mathcal{E}`
+    """Converts Liouville representation of quantum channel :math:`\\mathcal{E}`
     to its Choi representation :math:`\\Lambda`. Indexing :math:`\\mathcal{E}` as
     :math:`\\mathcal{E}_{\\alpha\\beta, \\, \\gamma\\delta} \\,\\,`, then
 
@@ -609,7 +660,7 @@ def liouville_to_choi(super_op, order: str = "row", backend=None):
 def liouville_to_pauli(
     super_op, normalize: bool = False, order: str = "row", backend=None
 ):
-    """Convert Liouville representation :math:`\\mathcal{E}` of a
+    """Converts Liouville representation :math:`\\mathcal{E}` of a
     quantum channel to its Pauli-Liouville representation.
 
     Args:
@@ -650,7 +701,7 @@ def liouville_to_pauli(
 def liouville_to_kraus(
     super_op, precision_tol: float = None, order: str = "row", backend=None
 ):
-    """Convert Liouville representation :math:`\\mathcal{E}` of a quantum
+    """Converts Liouville representation :math:`\\mathcal{E}` of a quantum
     channel to its Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`.
     It uses the Choi representation as an intermediate step.
 
@@ -690,7 +741,7 @@ def liouville_to_kraus(
 def liouville_to_chi(
     super_op, normalize: bool = False, order: str = "row", backend=None
 ):
-    """Convert Liouville representation of quantum channel :math:`\\mathcal{E}`
+    """Converts Liouville representation of quantum channel :math:`\\mathcal{E}`
     to its chi-matrix representation :math:`\\chi`.
     It uses the Choi representation as an intermediate step.
 
@@ -728,7 +779,7 @@ def liouville_to_chi(
 def pauli_to_liouville(
     pauli_op, normalize: bool = False, order: str = "row", backend=None
 ):
-    """Convert Pauli-Liouville representation of a quantum channel to its
+    """Converts Pauli-Liouville representation of a quantum channel to its
     Liouville representation :math:`\\mathcal{E}`.
 
     Args:
@@ -857,7 +908,7 @@ def pauli_to_chi(pauli_op, normalize: bool = False, order: str = "row", backend=
 
 
 def chi_to_choi(chi_matrix, normalize: bool = False, order: str = "row", backend=None):
-    """Convert the chi-matrix representation :math:`\\chi` of a quantum channel
+    """Converts the chi-matrix representation :math:`\\chi` of a quantum channel
     to Choi representation :math:`\\Lambda`.
 
     .. math::
@@ -892,7 +943,7 @@ def chi_to_choi(chi_matrix, normalize: bool = False, order: str = "row", backend
 def chi_to_liouville(
     chi_matrix, normalize: bool = False, order: str = "row", backend=None
 ):
-    """Convert the chi-matrix representation :math:`\\chi` of a quantum channel
+    """Converts the chi-matrix representation :math:`\\chi` of a quantum channel
     to its Liouville representation :math:`\\mathcal{E}`.
 
     .. math::
@@ -926,7 +977,7 @@ def chi_to_liouville(
 
 
 def chi_to_pauli(chi_matrix, normalize: bool = False, order: str = "row", backend=None):
-    """Convert chi-matrix representation :math:`\\chi` of a quantum channel
+    """Converts chi-matrix representation :math:`\\chi` of a quantum channel
     to its Pauli-Liouville representation :math:`\\mathcal{E}_P`.
 
     .. math::
@@ -963,7 +1014,7 @@ def chi_to_kraus(
     validate_cp: bool = True,
     backend=None,
 ):
-    """Convert the chi-matrix representation :math:`\\chi` of a quantum channel
+    """Converts the chi-matrix representation :math:`\\chi` of a quantum channel
     to its Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`.
 
     .. math::
