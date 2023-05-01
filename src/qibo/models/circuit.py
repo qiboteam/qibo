@@ -403,7 +403,7 @@ class Circuit:
         return new_circuit
 
     def _check_noise_map(self, noise_map: NoiseMapType) -> NoiseMapType:
-        if not isinstance(noise_map, list) or not all(
+        if isinstance(noise_map, list) and not all(
             isinstance(n, (tuple, list)) for n in noise_map
         ):
             raise_error(
