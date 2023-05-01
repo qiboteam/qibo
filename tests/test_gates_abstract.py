@@ -1,7 +1,9 @@
 """Tests methods defined in `qibo/gates/abstract.py` and `qibo/gates/gates.py`."""
+import numpy as np
 import pytest
 
-from qibo import gates
+from qibo import gates, matrices
+from qibo.config import PRECISION_TOL
 
 
 @pytest.mark.parametrize(
@@ -225,9 +227,8 @@ def test_unitary_channel_init():
 def test_pauli_noise_channel_init():
     gate = gates.PauliNoiseChannel(0, list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.3])))
     assert gate.target_qubits == (0,)
-    assert isinstance(gate.gates[0], gates.X)
-    assert isinstance(gate.gates[1], gates.Y)
-    assert isinstance(gate.gates[2], gates.Z)
+    for g, p in zip(gate.gates, [matrices.X, matrices.Y, matrices.Z]):
+        assert np.linalg.norm(g.matrix - p) < PRECISION_TOL
 
 
 def test_reset_channel_init():
