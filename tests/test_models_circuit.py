@@ -435,7 +435,11 @@ def test_circuit_decompose(measurements):
 
 @pytest.mark.parametrize("measurements", [False, True])
 @pytest.mark.parametrize(
-    "noise_map", [(0.1, 0.2, 0.3), {0: (0.1, 0.0, 0.2), 1: (0.0, 0.2, 0.1)}]
+    "noise_map",
+    [
+        list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.3])),
+        {0: list(zip(["X", "Z"], [0.1, 0.2])), 1: list(zip(["Y", "Z"], [0.2, 0.1]))},
+    ],
 )
 def test_circuit_with_noise(measurements, noise_map):
     c = Circuit(2)
@@ -448,12 +452,12 @@ def test_circuit_with_noise(measurements, noise_map):
         noise_map = {0: noise_map, 1: noise_map}
     targetc = Circuit(2)
     targetc.add(gates.H(0))
-    targetc.add(gates.PauliNoiseChannel(0, *noise_map[0]))
+    targetc.add(gates.PauliNoiseChannel(0, noise_map[0]))
     targetc.add(gates.H(1))
-    targetc.add(gates.PauliNoiseChannel(1, *noise_map[1]))
+    targetc.add(gates.PauliNoiseChannel(1, noise_map[1]))
     targetc.add(gates.CNOT(0, 1))
-    targetc.add(gates.PauliNoiseChannel(0, *noise_map[0]))
-    targetc.add(gates.PauliNoiseChannel(1, *noise_map[1]))
+    targetc.add(gates.PauliNoiseChannel(0, noise_map[0]))
+    targetc.add(gates.PauliNoiseChannel(1, noise_map[1]))
     for g1, g2 in zip(noisyc.queue, targetc.queue):
         assert isinstance(g1, g2.__class__)
         assert g1.target_qubits == g2.target_qubits
@@ -666,12 +670,12 @@ def test_circuit_draw_channels(legend):
 
     c = circuit(2, density_matrix=True)
     c.add(gates.H(0))
-    c.add(gates.PauliNoiseChannel(0, 0.1, 0.0, 0.2))
+    c.add(gates.PauliNoiseChannel(0, list(zip(["X", "Z"], [0.1, 0.2]))))
     c.add(gates.H(1))
-    c.add(gates.PauliNoiseChannel(1, 0.0, 0.2, 0.1))
+    c.add(gates.PauliNoiseChannel(1, list(zip(["Y", "Z"], [0.2, 0.1]))))
     c.add(gates.CNOT(0, 1))
-    c.add(gates.PauliNoiseChannel(0, 0.1, 0.0, 0.2))
-    c.add(gates.PauliNoiseChannel(1, 0.0, 0.2, 0.1))
+    c.add(gates.PauliNoiseChannel(0, list(zip(["X", "Z"], [0.1, 0.2]))))
+    c.add(gates.PauliNoiseChannel(1, list(zip(["Y", "Z"], [0.2, 0.1]))))
     c.add(gates.CNOT(0, 1))
     c.add(gates.DepolarizingChannel((0, 1), 0.1))
     c.add(gates.CNOT(0, 1))
