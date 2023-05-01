@@ -481,12 +481,12 @@ class Circuit:
                 # ``noisy_c`` will be equivalent to the following circuit
                 c2 = Circuit(2, density_matrix=True)
                 c2.add(gates.H(0))
-                c2.add(gates.PauliNoiseChannel(0, 0.1, 0.0, 0.2))
+                c2.add(gates.PauliNoiseChannel(0, [("X", 0.1), ("Y", 0.0), ("Z", 0.2)]))
                 c2.add(gates.H(1))
-                c2.add(gates.PauliNoiseChannel(1, 0.0, 0.2, 0.1))
+                c2.add(gates.PauliNoiseChannel(1, [("X", 0.0), ("Y", 0.2), ("Z", 0.1)]))
                 c2.add(gates.CNOT(0, 1))
-                c2.add(gates.PauliNoiseChannel(0, 0.1, 0.0, 0.2))
-                c2.add(gates.PauliNoiseChannel(1, 0.0, 0.2, 0.1))
+                c2.add(gates.PauliNoiseChannel(0, [("X", 0.1), ("Y", 0.0), ("Z", 0.2)]))
+                c2.add(gates.PauliNoiseChannel(1, [("X", 0.0), ("Y", 0.2), ("Z", 0.1)]))
         """
         if self.accelerators:  # pragma: no cover
             raise_error(
@@ -511,7 +511,7 @@ class Circuit:
                     if q in noise_map and sum(noise_map[q]) > 0:
                         p = noise_map[q]
                         noise_gates[-1].append(
-                            gates.PauliNoiseChannel(q, px=p[0], py=p[1], pz=p[2])
+                            gates.PauliNoiseChannel(q, list(zip(["X", "Y", "Z"], p)))
                         )
 
         # Create new circuit with noise gates inside
