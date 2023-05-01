@@ -118,17 +118,13 @@ def test_circuit_with_noise_noise_map(backend):
 
 def test_circuit_with_noise_errors():
     c = Circuit(2, density_matrix=True)
-    c.add([gates.H(0), gates.H(1), gates.PauliNoiseChannel(0, px=0.2)])
+    c.add([gates.H(0), gates.H(1), gates.PauliNoiseChannel(0, [("X", 0.2)])])
     with pytest.raises(ValueError):
-        noisy_c = c.with_noise((0.2, 0.3, 0.0))
+        noisy_c = c.with_noise(list(zip(["X", "Y"], [0.2, 0.3])))
     c = Circuit(2, density_matrix=True)
     c.add([gates.H(0), gates.H(1)])
     with pytest.raises(ValueError):
-        noisy_c = c.with_noise((0.2, 0.3))
-    with pytest.raises(ValueError):
-        noisy_c = c.with_noise({0: (0.2, 0.3, 0.1), 1: (0.3, 0.1)})
-    with pytest.raises(ValueError):
-        noisy_c = c.with_noise({0: (0.2, 0.3, 0.1)})
+        noisy_c = c.with_noise({0: list(zip(["X", "Y", "Z"], [0.2, 0.3, 0.1]))})
     with pytest.raises(TypeError):
         noisy_c = c.with_noise({0, 1})
 
@@ -179,11 +175,11 @@ def test_circuit_add_sampling(backend):
 
     for _ in range(10):
         new_gate = np.random.choice(gates_set)(0)
-        circ.add(gates.PauliNoiseChannel(0, pz=0.01))
+        circ.add(gates.PauliNoiseChannel(0, [("Z", 0.01)]))
         circ.add(new_gate)
         circ_no_noise.add(new_gate)
 
-    circ.add(gates.PauliNoiseChannel(0, pz=0.01))
+    circ.add(gates.PauliNoiseChannel(0, [("Z", 0.01)]))
     circ += circ_no_noise.invert()
     circ.add(gates.M(0))
 
