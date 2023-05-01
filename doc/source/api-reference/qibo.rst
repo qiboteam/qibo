@@ -684,7 +684,7 @@ The quantum errors available to build a noise model are the following:
     :members:
     :member-order: bysource
 
-.. autoclass:: qibo.noise.ReadoutErrorChannel
+.. autoclass:: qibo.noise.ReadoutError
     :members:
     :member-order: bysource
 
