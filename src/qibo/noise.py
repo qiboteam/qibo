@@ -67,21 +67,9 @@ class PauliError:
         options (tuple): see :class:`qibo.gates.PauliNoiseChannel`
     """
 
-    def __init__(self, px=0, py=0, pz=0):
-        self.options = px, py, pz
-        self.channel = gates.PauliNoiseChannel
-
-
-class GeneralizedPauliError:
-    """Quantum error associated with the :class:`qibo.gates.GeneralizedPauliNoiseChannel`.
-
-    Args:
-        options (tuple): see :class:`qibo.gates.GeneralizedPauliNoiseChannel`
-    """
-
     def __init__(self, operators):
         self.options = operators
-        self.channel = gates.GeneralizedPauliNoiseChannel
+        self.channel = gates.PauliNoiseChannel
 
 
 class DepolarizingError:
@@ -194,7 +182,6 @@ class NoiseModel:
         Args:
             error: quantum error to associate with the gate. Possible choices
                    are :class:`qibo.noise.PauliError`,
-                   :class:`qibo.noise.GeneralizedPauliError`,
                    :class:`qibo.noise.ThermalRelaxationError`,
                    :class:`qibo.noise.DepolarizingError`,
                    :class:`qibo.noise.ReadoutError`,
@@ -308,7 +295,7 @@ class NoiseModel:
 
                         if isinstance(error, CustomError) and qubits:
                             noisy_circuit.add(error.channel)
-                        elif isinstance(error, GeneralizedPauliError) and qubits:
+                        elif isinstance(error, PauliError) and qubits:
                             for q in qubits:
                                 noisy_circuit.add(error.channel(q, error.options))
                         elif isinstance(error, DepolarizingError) and qubits:
