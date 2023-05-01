@@ -295,7 +295,7 @@ def test_repeated_execute_with_noise(backend):
     thetas = np.random.random(4)
     c = Circuit(4)
     c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
-    noisy_c = c.with_noise((0.2, 0.0, 0.1))
+    noisy_c = c.with_noise(list(zip(["X", "Z"], [0.2, 0.1])))
     backend.set_seed(1234)
     final_state = backend.execute_circuit(noisy_c, nshots=20)
 
