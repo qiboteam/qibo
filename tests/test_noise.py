@@ -50,7 +50,9 @@ def test_kraus_error(backend, density_matrix, nshots):
     target_circuit.add(gates.M(0, 1, 2))
 
     initial_psi = (
-        random_density_matrix(2**3) if density_matrix else random_statevector(2**3)
+        random_density_matrix(2**3, backend=backend)
+        if density_matrix
+        else random_statevector(2**3, backend=backend)
     )
     backend.set_seed(123)
     final_state = backend.execute_circuit(
@@ -104,7 +106,9 @@ def test_unitary_error(backend, density_matrix, nshots):
     target_circuit.add(gates.M(0, 1, 2))
 
     initial_psi = (
-        random_density_matrix(2**3) if density_matrix else random_statevector(2**3)
+        random_density_matrix(2**3, backend=backend)
+        if density_matrix
+        else random_statevector(2**3, backend=backend)
     )
     backend.set_seed(123)
     final_state = backend.execute_circuit(
@@ -157,7 +161,9 @@ def test_pauli_error(backend, density_matrix, nshots):
     target_circuit.add(gates.M(0, 1, 2))
 
     initial_psi = (
-        random_density_matrix(2**3) if density_matrix else random_statevector(2**3)
+        random_density_matrix(2**3, backend=backend)
+        if density_matrix
+        else random_statevector(2**3, backend=backend)
     )
     backend.set_seed(123)
     final_state = backend.execute_circuit(
@@ -205,7 +211,9 @@ def test_depolarizing_error(backend, density_matrix, nshots):
     target_circuit.add(gates.M(0, 1, 2))
 
     initial_psi = (
-        random_density_matrix(2**3) if density_matrix else random_statevector(2**3)
+        random_density_matrix(2**3, backend=backend)
+        if density_matrix
+        else random_statevector(2**3, backend=backend)
     )
     backend.set_seed(123)
     final_state = backend.execute_circuit(
@@ -255,7 +263,9 @@ def test_thermal_error(backend, density_matrix):
     target_circuit.add(gates.Z(2))
 
     initial_psi = (
-        random_density_matrix(2**3) if density_matrix else random_statevector(2**3)
+        random_density_matrix(2**3, backend=backend)
+        if density_matrix
+        else random_statevector(2**3, backend=backend)
     )
     backend.set_seed(123)
     final_state = backend.execute_circuit(noise.apply(circuit), np.copy(initial_psi))
@@ -273,8 +283,8 @@ def test_readout_error(backend, density_matrix):
     nqubits = 1
     d = 2**nqubits
 
-    state = random_density_matrix(d, seed=1)
-    P = random_stochastic_matrix(d, seed=1)
+    state = random_density_matrix(d, seed=1, backend=backend)
+    P = random_stochastic_matrix(d, seed=1, backend=backend)
 
     readout = ReadoutError(P)
     noise = NoiseModel()
@@ -321,7 +331,9 @@ def test_reset_error(backend, density_matrix):
     target_circuit.add(gates.ResetChannel(1, 0.8, 0.2))
 
     initial_psi = (
-        random_density_matrix(2**3) if density_matrix else random_statevector(2**3)
+        random_density_matrix(2**3, backend=backend)
+        if density_matrix
+        else random_statevector(2**3, backend=backend)
     )
     backend.set_seed(123)
     final_state = backend.execute_circuit(noise.apply(circuit), np.copy(initial_psi))
@@ -366,7 +378,9 @@ def test_custom_error(backend, density_matrix, nshots):
     target_circuit.add(gates.M(0, 1, 2))
 
     initial_psi = (
-        random_density_matrix(2**3) if density_matrix else random_statevector(2**3)
+        random_density_matrix(2**3, backend=backend)
+        if density_matrix
+        else random_statevector(2**3, backend=backend)
     )
     backend.set_seed(123)
     final_state = backend.execute_circuit(
@@ -604,7 +618,9 @@ def test_add_condition(backend, density_matrix):
     target_circuit.add(gates.RX(1, 2 * np.pi / 3))
 
     initial_psi = (
-        random_density_matrix(2**3) if density_matrix else random_statevector(2**3)
+        random_density_matrix(2**3, backend=backend)
+        if density_matrix
+        else random_statevector(2**3, backend=backend)
     )
     backend.set_seed(123)
     final_state = backend.execute_circuit(noise.apply(circuit), np.copy(initial_psi))
@@ -616,7 +632,7 @@ def test_add_condition(backend, density_matrix):
 
 @pytest.mark.parametrize("density_matrix", [False, True])
 def test_gate_independent_noise(backend, density_matrix):
-    pauli = PauliError(0, 0.2, 0.3)
+    pauli = PauliError(list(zip(["Y", "Z"], [0.2, 0.3])))
     depol = DepolarizingError(0.3)
     noise = NoiseModel()
     noise.add(pauli)
@@ -630,17 +646,19 @@ def test_gate_independent_noise(backend, density_matrix):
 
     target_circuit = Circuit(3, density_matrix=density_matrix)
     target_circuit.add(gates.CNOT(0, 1))
-    target_circuit.add(gates.PauliNoiseChannel(0, 0, 0.2, 0.3))
-    target_circuit.add(gates.PauliNoiseChannel(1, 0, 0.2, 0.3))
+    target_circuit.add(gates.PauliNoiseChannel(0, list(zip(["Y", "Z"], [0.2, 0.3]))))
+    target_circuit.add(gates.PauliNoiseChannel(1, list(zip(["Y", "Z"], [0.2, 0.3]))))
     target_circuit.add(gates.DepolarizingChannel((0,), 0.3))
     target_circuit.add(gates.X(1))
-    target_circuit.add(gates.PauliNoiseChannel(1, 0, 0.2, 0.3))
+    target_circuit.add(gates.PauliNoiseChannel(1, list(zip(["Y", "Z"], [0.2, 0.3]))))
     target_circuit.add(gates.Z(2))
-    target_circuit.add(gates.PauliNoiseChannel(2, 0, 0.2, 0.3))
+    target_circuit.add(gates.PauliNoiseChannel(2, list(zip(["Y", "Z"], [0.2, 0.3]))))
     target_circuit.add(gates.M(0, 1, 2))
 
     initial_psi = (
-        random_density_matrix(2**3) if density_matrix else random_statevector(2**3)
+        random_density_matrix(2**3, backend=backend)
+        if density_matrix
+        else random_statevector(2**3, backend=backend)
     )
     backend.set_seed(123)
     final_state = backend.execute_circuit(
