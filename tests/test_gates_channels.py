@@ -73,7 +73,7 @@ def test_depolarizing_channel_errors():
 
 def test_controlled_by_channel_error():
     with pytest.raises(ValueError):
-        gates.PauliNoiseChannel(0, px=0.5).controlled_by(1)
+        gates.PauliNoiseChannel(0, [("X", 0.5)]).controlled_by(1)
 
     a1 = np.sqrt(0.4) * matrices.X
     a2 = np.sqrt(0.6) * np.array(
