@@ -607,17 +607,11 @@ Unitary channel
     :members:
     :member-order: bysource
 
+
 Pauli noise channel
 ^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: qibo.gates.PauliNoiseChannel
-    :members:
-    :member-order: bysource
-
-Generalized Pauli noise channel
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. autoclass:: qibo.gates.GeneralizedPauliNoiseChannel
     :members:
     :member-order: bysource
 
