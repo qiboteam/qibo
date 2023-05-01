@@ -166,59 +166,70 @@ def test_random_statevector(backend, haar, seed):
     backend.assert_allclose(purity(state) >= 1.0 - PRECISION_TOL, True)
 
 
+@pytest.mark.parametrize("normalize", [False, True])
+@pytest.mark.parametrize("basis", [None, "pauli"])
 @pytest.mark.parametrize("metric", ["Hilbert-Schmidt", "Bures"])
-def test_random_density_matrix(backend, metric):
+@pytest.mark.parametrize("pure", [False, True])
+@pytest.mark.parametrize("dims", [2, 4])
+def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
     with pytest.raises(TypeError):
-        dims = np.array([1])
-        random_density_matrix(dims, backend=backend)
+        test = random_density_matrix(dims=np.array([1]), backend=backend)
     with pytest.raises(ValueError):
-        dims = 0
-        random_density_matrix(dims, backend=backend)
+        test = random_density_matrix(dims=0, backend=backend)
     with pytest.raises(TypeError):
-        dims = 2
-        rank = np.array([1])
-        random_density_matrix(dims, rank, backend=backend)
+        test = random_density_matrix(dims=2, rank=np.array([1]), backend=backend)
     with pytest.raises(ValueError):
-        dims, rank = 2, 3
-        random_density_matrix(dims, rank, backend=backend)
+        test = random_density_matrix(dims=2, rank=3, backend=backend)
     with pytest.raises(ValueError):
-        dims, rank = 2, 0
-        random_density_matrix(dims, rank, backend=backend)
+        test = random_density_matrix(dims=2, rank=0, backend=backend)
     with pytest.raises(TypeError):
-        dims = 2
-        random_density_matrix(dims, pure="True", backend=backend)
+        test = random_density_matrix(dims=2, pure="True", backend=backend)
     with pytest.raises(TypeError):
-        dims = 2
-        random_density_matrix(dims, metric=1, backend=backend)
+        test = random_density_matrix(dims=2, metric=1, backend=backend)
     with pytest.raises(ValueError):
-        dims = 2
-        random_density_matrix(dims, metric="gaussian", backend=backend)
+        test = random_density_matrix(dims=2, metric="gaussian", backend=backend)
     with pytest.raises(TypeError):
-        dims = 4
-        random_density_matrix(dims, seed=0.1, backend=backend)
+        test = random_density_matrix(dims=2, metric=metric, basis=True)
+    with pytest.raises(TypeError):
+        test = random_density_matrix(dims=2, metric=metric, normalize="True")
+    with pytest.raises(TypeError):
+        random_density_matrix(dims=4, seed=0.1, backend=backend)
 
-    # for pure=True, tests if it is a density matrix and if state is pure
-    dims = 4
-    state = random_density_matrix(dims, pure=True, metric=metric, backend=backend)
-    backend.assert_allclose(np.real(np.trace(state)) <= 1.0 + PRECISION_TOL, True)
-    backend.assert_allclose(np.real(np.trace(state)) >= 1.0 - PRECISION_TOL, True)
-    backend.assert_allclose(purity(state) <= 1.0 + PRECISION_TOL, True)
-    backend.assert_allclose(purity(state) >= 1.0 - PRECISION_TOL, True)
+    if basis is None and normalize is True:
+        with pytest.raises(ValueError):
+            test = random_density_matrix(dims=dims, normalize=True)
+    else:
+        state = random_density_matrix(
+            dims,
+            pure=pure,
+            metric=metric,
+            basis=basis,
+            normalize=normalize,
+            backend=backend,
+        )
+        if basis is None and normalize is False:
+            backend.assert_allclose(
+                np.real(np.trace(state)) <= 1.0 + PRECISION_TOL, True
+            )
+            backend.assert_allclose(
+                np.real(np.trace(state)) >= 1.0 - PRECISION_TOL, True
+            )
+            backend.assert_allclose(purity(state) <= 1.0 + PRECISION_TOL, True)
+            if pure is True:
+                backend.assert_allclose(purity(state) >= 1.0 - PRECISION_TOL, True)
 
-    state_dagger = np.transpose(np.conj(state))
-    norm = backend.calculate_norm(state - state_dagger)
-    backend.assert_allclose(norm < PRECISION_TOL, True)
-
-    # for pure=False, tests if it is a density matrix and if state is mixed
-    dims = 4
-    state = random_density_matrix(dims, metric=metric, backend=backend)
-    backend.assert_allclose(np.real(np.trace(state)) <= 1.0 + PRECISION_TOL, True)
-    backend.assert_allclose(np.real(np.trace(state)) >= 1.0 - PRECISION_TOL, True)
-    backend.assert_allclose(purity(state) <= 1.0 + PRECISION_TOL, True)
-
-    state_dagger = np.transpose(np.conj(state))
-    norm = backend.calculate_norm(state - state_dagger)
-    backend.assert_allclose(norm < PRECISION_TOL, True)
+            state_dagger = np.transpose(np.conj(state))
+            norm = backend.calculate_norm(state - state_dagger)
+            backend.assert_allclose(norm < PRECISION_TOL, True)
+        else:
+            normalization = 1.0 if normalize is False else 1.0 / np.sqrt(dims)
+            backend.assert_allclose(
+                backend.calculate_norm(state[0] - normalization) <= PRECISION_TOL, True
+            )
+            assert all(
+                backend.calculate_norm(exp_value) <= normalization
+                for exp_value in state[1:]
+            )
 
 
 @pytest.mark.parametrize("qubits", [1, 2, [0, 1], np.array([0, 1])])
