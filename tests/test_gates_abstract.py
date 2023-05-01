@@ -223,7 +223,7 @@ def test_unitary_channel_init():
 
 
 def test_pauli_noise_channel_init():
-    gate = gates.PauliNoiseChannel(0, 0.1, 0.2, 0.3)
+    gate = gates.PauliNoiseChannel(0, list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.3])))
     assert gate.target_qubits == (0,)
     assert isinstance(gate.gates[0], gates.X)
     assert isinstance(gate.gates[1], gates.Y)
