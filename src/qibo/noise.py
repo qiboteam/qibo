@@ -161,8 +161,8 @@ class NoiseModel:
         # - Pauli error on H only for qubit 1.
         # - Pauli error on CNOT for all the qubits.
         noise = NoiseModel()
-        noise.add(PauliError(px = 0.5), gates.H, 1)
-        noise.add(PauliError(py = 0.5), gates.CNOT)
+        noise.add(PauliError([("X", 0.5)]), gates.H, 1)
+        noise.add(PauliError([("Y", 0.5)]), gates.CNOT)
 
         # Generate noiseless circuit.
         c = models.Circuit(2)
@@ -209,9 +209,9 @@ class NoiseModel:
                 return np.pi/2 in gate.parameters
 
             # Build a noise model with a Pauli error on RX(pi/2) gates.
-            error = PauliError(0.01, 0.5, 0.1)
+            error = PauliError(list(zip(["X", "Y", "Z"], [0.01, 0.5, 0.1])))
             noise = NoiseModel()
-            noise.add(PauliError(px = 0.5), gates.RX, condition=is_sqrt_x)
+            noise.add(PauliError([("X", 0.5)]), gates.RX, condition=is_sqrt_x)
 
             # Generate a noiseless circuit.
             circuit = Circuit(1)
