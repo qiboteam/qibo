@@ -87,7 +87,7 @@ def test_final_state_property(backend):
 def test_density_matrix_circuit(backend):
     from qibo.quantum_info import random_density_matrix
 
-    initial_rho = random_density_matrix(2**3)
+    initial_rho = random_density_matrix(2**3, backend=backend)
 
     c = Circuit(3, density_matrix=True)
     c.add(gates.H(0))
@@ -101,9 +101,15 @@ def test_density_matrix_circuit(backend):
     m1 = np.kron(np.kron(h, h), np.eye(2))
     m2 = np.kron(cnot, np.eye(2))
     m3 = np.kron(np.eye(4), h)
-    target_rho = m1.dot(initial_rho).dot(m1.T.conj())
-    target_rho = m2.dot(target_rho).dot(m2.T.conj())
-    target_rho = m3.dot(target_rho).dot(m3.T.conj())
+
+    m1 = backend.cast(m1, dtype=m1.dtype)
+    m2 = backend.cast(m2, dtype=m2.dtype)
+    m3 = backend.cast(m3, dtype=m3.dtype)
+
+    target_rho = np.dot(m1, np.dot(initial_rho, np.transpose(np.conj(m1))))
+    target_rho = np.dot(m2, np.dot(target_rho, np.transpose(np.conj(m2))))
+    target_rho = np.dot(m3, np.dot(target_rho, np.transpose(np.conj(m3))))
+
     backend.assert_allclose(final_rho, target_rho)
 
 
