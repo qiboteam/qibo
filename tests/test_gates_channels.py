@@ -73,7 +73,7 @@ def test_depolarizing_channel_errors():
 
 def test_controlled_by_channel_error():
     with pytest.raises(ValueError):
-        gates.PauliNoiseChannel(0, px=0.5).controlled_by(1)
+        gates.PauliNoiseChannel(0, [("X", 0.5)]).controlled_by(1)
 
     a1 = np.sqrt(0.4) * matrices.X
     a2 = np.sqrt(0.6) * np.array(
@@ -143,30 +143,8 @@ def test_unitary_channel_errors():
 
 def test_pauli_noise_channel(backend):
     initial_rho = random_density_matrix(2**2, backend=backend)
-    channel = gates.PauliNoiseChannel(1, px=0.3)
-    final_rho = backend.apply_channel_density_matrix(channel, np.copy(initial_rho), 2)
-    gate = gates.X(1)
-    target_rho = backend.apply_gate_density_matrix(gate, np.copy(initial_rho), 2)
-    target_rho = 0.3 * target_rho + 0.7 * initial_rho
-    backend.assert_allclose(final_rho, target_rho)
-
-    pnp = np.array([0.1, 0.02, 0.05])
-    a0 = 1
-    a1 = 1 - 2 * pnp[1] - 2 * pnp[2]
-    a2 = 1 - 2 * pnp[0] - 2 * pnp[2]
-    a3 = 1 - 2 * pnp[0] - 2 * pnp[1]
-    test_representation = np.diag([a0, a1, a2, a3])
-
-    liouville = gates.PauliNoiseChannel(0, *pnp).to_pauli_liouville(True, backend)
-    norm = backend.calculate_norm(backend.to_numpy(liouville) - test_representation)
-
-    assert norm < PRECISION_TOL
-
-
-def test_generalized_pauli_noise_channel(backend):
-    initial_rho = random_density_matrix(2**2, backend=backend)
     qubits = (1,)
-    channel = gates.GeneralizedPauliNoiseChannel(qubits, [("X", 0.3)])
+    channel = gates.PauliNoiseChannel(qubits, [("X", 0.3)])
     final_rho = backend.apply_channel_density_matrix(channel, np.copy(initial_rho), 2)
     gate = gates.X(1)
     target_rho = backend.apply_gate_density_matrix(gate, np.copy(initial_rho), 2)
@@ -181,9 +159,9 @@ def test_generalized_pauli_noise_channel(backend):
     a3 = 1 - 2 * pnp[0] - 2 * pnp[1]
     test_representation = np.diag([a0, a1, a2, a3])
 
-    liouville = gates.GeneralizedPauliNoiseChannel(
-        0, list(zip(basis, pnp))
-    ).to_pauli_liouville(True, backend)
+    liouville = gates.PauliNoiseChannel(0, list(zip(basis, pnp))).to_pauli_liouville(
+        True, backend
+    )
     norm = backend.calculate_norm(backend.to_numpy(liouville) - test_representation)
 
     assert norm < PRECISION_TOL

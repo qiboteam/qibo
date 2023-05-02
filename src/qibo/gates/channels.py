@@ -1,6 +1,5 @@
 """Define quantum channels."""
 
-import warnings
 from itertools import product
 from math import exp, sqrt
 from typing import Tuple
@@ -286,50 +285,6 @@ class UnitaryChannel(KrausChannel):
 
 
 class PauliNoiseChannel(UnitaryChannel):
-    """Noise channel that applies Pauli operators with given probabilities.
-
-    Implements the following transformation:
-
-    .. math::
-        \\mathcal{E}(\\rho ) = (1 - p_x - p_y - p_z) \\rho +
-            p_x X\\rho X + p_y Y\\rho Y + p_z Z\\rho Z
-
-    which can be used to simulate phase flip and bit flip errors.
-    This channel can be simulated using either density matrices or state vectors
-    and sampling with repeated execution.
-    See :ref:`How to perform noisy simulation? <noisy-example>` for more
-    information.
-
-    Args:
-        q (int): Qubit id that the noise acts on.
-        px (float): Bit flip (X) error probability.
-        py (float): Y-error probability.
-        p_z (float): Phase flip (Z) error probability.
-    """
-
-    def __init__(self, q, px=0, py=0, pz=0):
-        warnings.warn(
-            "This channel will be removed in a later release. "
-            + "Use GeneralizedPauliNoiseChannel instead.",
-            DeprecationWarning,
-        )
-
-        probs, gates = [], []
-        for p, gate in [(px, X), (py, Y), (pz, Z)]:
-            if p > 0:
-                probs.append(p)
-                gates.append(gate(q))
-
-        super().__init__(probs, gates)
-        self.name = "PauliNoiseChannel"
-        self.draw_label = "PN"
-        assert self.target_qubits == (q,)
-
-        self.init_args = [q]
-        self.init_kwargs = {"px": px, "py": py, "pz": pz}
-
-
-class GeneralizedPauliNoiseChannel(UnitaryChannel):
     """Multi-qubit noise channel that applies Pauli operators with given probabilities.
 
     Implements the following transformation:
@@ -349,7 +304,7 @@ class GeneralizedPauliNoiseChannel(UnitaryChannel):
 
             from itertools import product
 
-            from qibo.gates.channels import GeneralizedPauliNoiseChannel
+            from qibo.gates.channels import PauliNoiseChannel
 
             qubits = (0, 2)
             nqubits = len(qubits)
@@ -364,7 +319,7 @@ class GeneralizedPauliNoiseChannel(UnitaryChannel):
             #Excluding probability of Identity operator
             probabilities = probabilities[1:]
 
-            channel = GeneralizedPauliNoiseChannel(
+            channel = PauliNoiseChannel(
                 qubits, list(zip(paulis, probabilities))
             )
 
@@ -379,11 +334,6 @@ class GeneralizedPauliNoiseChannel(UnitaryChannel):
     """
 
     def __init__(self, qubits: Tuple[int, list, tuple], operators: list):
-        warnings.warn(
-            "The class GeneralizedPauliNoiseChannel will be renamed "
-            + "PauliNoiseChannel in a later release."
-        )
-
         if isinstance(qubits, int) is True:
             qubits = (qubits,)
 
@@ -404,8 +354,8 @@ class GeneralizedPauliNoiseChannel(UnitaryChannel):
         self.coefficients = tuple(probabilities)
 
         super().__init__(probabilities, gates)
-        self.name = "GeneralizedPauliNoiseChannel"
-        self.draw_label = "GPN"
+        self.name = "PauliNoiseChannel"
+        self.draw_label = "PN"
         self.init_args = qubits
         self.init_kwargs = dict(operators)
 
