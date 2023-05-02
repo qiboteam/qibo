@@ -180,7 +180,9 @@ def test_symbolic_term_call(backend, density_matrix):
         np.kron(np.eye(4), matrices.Y),
     ]
     initial_state = (
-        random_density_matrix(2**3, backend=backend) if density_matrix else random_statevector(2**3, backend=backend)
+        random_density_matrix(2**3, backend=backend)
+        if density_matrix
+        else random_statevector(2**3, backend=backend)
     )
     final_state = term(
         backend, np.copy(initial_state), 3, density_matrix=density_matrix

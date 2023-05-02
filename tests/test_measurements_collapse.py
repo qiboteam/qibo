@@ -37,7 +37,7 @@ def test_measurement_collapse_density_matrix(backend, nqubits, targets):
             rho_numpy = rho.numpy()
             rho_numpy[index] = value
             return rho.__class__(rho_numpy, rho.device)
-        
+
         rho[index] = value
         return rho
 

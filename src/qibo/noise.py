@@ -9,7 +9,7 @@ class KrausError:
     """Quantum error associated with the :class:`qibo.gates.KrausChannel`.
 
     Args:
-        ops (list): List of Kraus operators 
+        ops (list): List of Kraus operators
         of type ``np.ndarray`` or ``tf.Tensor`` and of the same shape.
     """
 
@@ -24,11 +24,12 @@ class KrausError:
 
         self.rank = shape[0]
         self.options = ops
-        
+
     def channel(self, qubits, options):
         if self.rank != 2:
             return gates.KrausChannel(qubits, options)
         return [gates.KrausChannel(q, options) for q in qubits]
+
 
 class UnitaryError:
     """Quantum error associated with the :class:`qibo.gates.UnitaryChannel`.
@@ -41,7 +42,6 @@ class UnitaryError:
     """
 
     def __init__(self, probabilities, unitaries):
-
         shape = unitaries[0].shape
         if any(o.shape != shape for o in unitaries):
             raise_error(
@@ -297,7 +297,10 @@ class NoiseModel:
 
                         if isinstance(error, CustomError) and qubits:
                             noisy_circuit.add(error.channel)
-                        elif isinstance(error, (ThermalRelaxationError, ResetError)) and qubits:
+                        elif (
+                            isinstance(error, (ThermalRelaxationError, ResetError))
+                            and qubits
+                        ):
                             for q in qubits:
                                 noisy_circuit.add(error.channel(q, error.options))
                         elif isinstance(error, ReadoutError) and qubits:
