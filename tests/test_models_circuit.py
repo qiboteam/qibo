@@ -442,6 +442,11 @@ def test_circuit_decompose(measurements):
     ],
 )
 def test_circuit_with_noise(measurements, noise_map):
+    with pytest.raises(TypeError):
+        n_map = ["X", 0.2]
+        circuit = Circuit(1)
+        circuit.with_noise(n_map)
+
     c = Circuit(2)
     c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
     if measurements:
