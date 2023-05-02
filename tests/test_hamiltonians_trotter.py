@@ -123,7 +123,7 @@ def test_trotter_hamiltonian_three_qubit_term(backend):
     backend.assert_allclose(ham.matrix, target_ham.matrix)
 
     dt = 1e-2
-    initial_state = random_statevector(2**4)
+    initial_state = random_statevector(2**4, backend=backend)
     circuit = ham.circuit(dt=dt)
     final_state = backend.execute_circuit(circuit, np.copy(initial_state))
     u = [expm(-0.5j * dt * (mm1 + mm3)), expm(-0.5j * dt * mm2)]

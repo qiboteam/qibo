@@ -74,6 +74,11 @@ def test_entropy(backend, base):
             entropy(state, base, validate=True, backend=backend), 0.8613531161467861
         )
 
+    if backend.__class__.__name__ == "CupyBackend":
+        state = np.array([[1, 1e-3], [0, 0]])
+        with pytest.raises(NotImplementedError):
+            entropy(state, base, validate=True, backend=backend)
+
 
 def test_trace_distance(backend):
     with pytest.raises(TypeError):

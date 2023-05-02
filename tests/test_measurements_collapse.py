@@ -11,7 +11,7 @@ from qibo.quantum_info import random_density_matrix, random_statevector
     [(2, [1]), (3, [1]), (4, [1, 3]), (5, [0, 3, 4]), (6, [1, 3]), (4, [0, 2])],
 )
 def test_measurement_collapse(backend, nqubits, targets):
-    initial_state = random_statevector(2**nqubits)
+    initial_state = random_statevector(2**nqubits, backend=backend)
     c = models.Circuit(nqubits)
     r = c.add(gates.M(*targets, collapse=True))
     final_state = backend.execute_circuit(c, np.copy(initial_state), nshots=1)[0]
@@ -32,7 +32,16 @@ def test_measurement_collapse(backend, nqubits, targets):
     "nqubits,targets", [(2, [1]), (3, [1]), (4, [1, 3]), (5, [0, 3, 4])]
 )
 def test_measurement_collapse_density_matrix(backend, nqubits, targets):
-    initial_rho = random_density_matrix(2**nqubits)
+    def assign_value(rho, index, value):
+        if backend.name == "tensorflow":
+            rho_numpy = rho.numpy()
+            rho_numpy[index] = value
+            return rho.__class__(rho_numpy, rho.device)
+        
+        rho[index] = value
+        return rho
+
+    initial_rho = random_density_matrix(2**nqubits, backend=backend)
     c = models.Circuit(nqubits, density_matrix=True)
     r = c.add(gates.M(*targets, collapse=True))
     final_rho = backend.execute_circuit(c, np.copy(initial_rho), nshots=1)[0]
@@ -43,11 +52,11 @@ def test_measurement_collapse_density_matrix(backend, nqubits, targets):
         r = int(r)
         slicer = 2 * nqubits * [slice(None)]
         slicer[q], slicer[q + nqubits] = 1 - r, 1 - r
-        target_rho[tuple(slicer)] = 0
+        target_rho = assign_value(target_rho, tuple(slicer), 0)
         slicer[q], slicer[q + nqubits] = r, 1 - r
-        target_rho[tuple(slicer)] = 0
+        target_rho = assign_value(target_rho, tuple(slicer), 0)
         slicer[q], slicer[q + nqubits] = 1 - r, r
-        target_rho[tuple(slicer)] = 0
+        target_rho = assign_value(target_rho, tuple(slicer), 0)
     target_rho = np.reshape(target_rho, initial_rho.shape)
     target_rho = target_rho / np.trace(target_rho)
     backend.assert_allclose(final_rho, target_rho)
@@ -79,7 +88,7 @@ def test_measurement_result_parameters(backend, effect, density_matrix):
 
 
 def test_measurement_result_parameters_random(backend):
-    initial_state = random_statevector(2**4)
+    initial_state = random_statevector(2**4, backend=backend)
     backend.set_seed(123)
     c = models.Circuit(4)
     r = c.add(gates.M(1, collapse=True))
@@ -105,7 +114,7 @@ def test_measurement_result_parameters_random(backend):
 
 @pytest.mark.parametrize("use_loop", [True, False])
 def test_measurement_result_parameters_repeated_execution(backend, use_loop):
-    initial_state = random_statevector(2**4)
+    initial_state = random_statevector(2**4, backend=backend)
     backend.set_seed(123)
     c = models.Circuit(4)
     r = c.add(gates.M(1, collapse=True))
@@ -139,7 +148,7 @@ def test_measurement_result_parameters_repeated_execution(backend, use_loop):
 
 
 def test_measurement_result_parameters_repeated_execution_final_measurements(backend):
-    initial_state = random_statevector(2**4)
+    initial_state = random_statevector(2**4, backend=backend)
     backend.set_seed(123)
     c = models.Circuit(4)
     r = c.add(gates.M(1, collapse=True))
@@ -166,7 +175,7 @@ def test_measurement_result_parameters_repeated_execution_final_measurements(bac
 
 
 def test_measurement_result_parameters_multiple_qubits(backend):
-    initial_state = random_statevector(2**4)
+    initial_state = random_statevector(2**4, backend=backend)
     backend.set_seed(123)
     c = models.Circuit(4)
     r = c.add(gates.M(0, 1, 2, collapse=True))
@@ -189,7 +198,7 @@ def test_measurement_result_parameters_multiple_qubits(backend):
 
 @pytest.mark.parametrize("nqubits,targets", [(5, [2, 4]), (6, [3, 5])])
 def test_measurement_collapse_distributed(backend, accelerators, nqubits, targets):
-    initial_state = random_statevector(2**nqubits)
+    initial_state = random_statevector(2**nqubits, backend=backend)
     c = models.Circuit(nqubits, accelerators)
     m = c.add(gates.M(*targets, collapse=True))
     result = backend.execute_circuit(c, np.copy(initial_state), nshots=1)
