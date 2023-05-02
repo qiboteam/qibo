@@ -4,7 +4,11 @@ import pytest
 
 from qibo import gates, matrices
 from qibo.config import PRECISION_TOL
-from qibo.quantum_info import random_density_matrix, random_stochastic_matrix
+from qibo.quantum_info import (
+    random_density_matrix,
+    random_statevector,
+    random_stochastic_matrix,
+)
 
 
 def test_general_channel(backend):
@@ -13,7 +17,7 @@ def test_general_channel(backend):
         [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]]
     )
     initial_rho = random_density_matrix(2**2, backend=backend)
-    channel = gates.KrausChannel([((1,), a1), ((0, 1), a2)])
+    channel = gates.KrausChannel([(1,), (0, 1)], [a1, a2])
     assert channel.target_qubits == (0, 1)
     final_rho = backend.apply_channel_density_matrix(channel, np.copy(initial_rho), 2)
     m1 = np.kron(np.eye(2), backend.to_numpy(a1))
@@ -23,12 +27,24 @@ def test_general_channel(backend):
     target_rho += np.dot(np.dot(m2, initial_rho), np.transpose(np.conj(m2)))
     backend.assert_allclose(final_rho, target_rho)
 
+    with pytest.raises(NotImplementedError):
+        channel.on_qubits({})
+    with pytest.raises(NotImplementedError):
+        state = random_statevector(2**2, backend=backend)
+        channel.apply(backend, state, 2)
+
 
 def test_kraus_channel_errors(backend):
     a1 = np.sqrt(0.4) * matrices.X
     a2 = np.sqrt(0.6) * matrices.Z
     with pytest.raises(ValueError):
-        gates.KrausChannel([((0, 1), a1)])
+        gates.KrausChannel([((0,), a1)])
+    with pytest.raises(TypeError):
+        gates.KrausChannel("0", [a1])
+    with pytest.raises(TypeError):
+        gates.KrausChannel([0, 1], [a1, a2])
+    with pytest.raises(ValueError):
+        gates.KrausChannel((0, 1), [a1])
 
     test_superop = np.array(
         [
@@ -45,7 +61,7 @@ def test_kraus_channel_errors(backend):
     test_choi = backend.cast(test_choi, dtype=test_choi.dtype)
     test_pauli = backend.cast(test_pauli, dtype=test_pauli.dtype)
 
-    channel = gates.KrausChannel([((0,), a1), ((0,), a2)])
+    channel = gates.KrausChannel(0, [a1, a2])
 
     backend.assert_allclose(
         backend.calculate_norm(channel.to_liouville(backend=backend) - test_superop)
@@ -79,18 +95,18 @@ def test_controlled_by_channel_error():
     a2 = np.sqrt(0.6) * np.array(
         [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]]
     )
-    config = [((1,), a1), ((0, 1), a2)]
+    config = ([(1,), (0, 1)], [a1, a2])
     with pytest.raises(ValueError):
-        gates.KrausChannel(config).controlled_by(1)
+        gates.KrausChannel(*config).controlled_by(1)
 
 
 def test_unitary_channel(backend):
     a1 = matrices.X
     a2 = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
-    probs = [0.4, 0.3]
-    matrices_ = [((0,), a1), ((2, 3), a2)]
+    qubits = [(0,), (2, 3)]
+    matrices_ = [(0.4, a1), (0.3, a2)]
     initial_state = random_density_matrix(2**4, backend=backend)
-    channel = gates.UnitaryChannel(probs, matrices_)
+    channel = gates.UnitaryChannel(qubits, matrices_)
     final_state = backend.apply_channel_density_matrix(
         channel, np.copy(initial_state), 4
     )
@@ -118,27 +134,31 @@ def test_unitary_channel_probability_tolerance():
     max_param = num_terms / (num_terms - 1)
     prob_identity = 1 - param / max_param
     prob_pauli = param / num_terms
+    qubits = (0, 1)
     probs = [prob_identity] + [prob_pauli] * (num_terms - 1)
     probs = np.array(probs, dtype="float64")
-    matrices_ = len(probs) * [((0, 1), np.random.random((4, 4)))]
-    gates.UnitaryChannel(probs, matrices_)
+    matrices_ = [(p, np.random.random((4, 4))) for p in probs]
+    gates.UnitaryChannel(qubits, matrices_)
 
 
 def test_unitary_channel_errors():
     """Check errors raised by ``gates.UnitaryChannel``."""
     a1 = matrices.X
     a2 = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
-    probs = [0.4, 0.3]
-    matrices_ = [((0,), a1), ((2, 3), a2)]
-    # Invalid probability length
+
+    qubits = [(0,), (2, 3)]
+    # Invalid ops
+    with pytest.raises(TypeError):
+        gates.UnitaryChannel(qubits, [a1, (0.1, a2)])
+    # Invalid qubit length
     with pytest.raises(ValueError):
-        gate = gates.UnitaryChannel([0.1, 0.3, 0.2], matrices_)
+        gates.UnitaryChannel(qubits + [(0,)], [(0.4, a1), (0.3, a2)])
     # Probability > 1
     with pytest.raises(ValueError):
-        gate = gates.UnitaryChannel([1.1, 0.2], matrices_)
-    # Probability sum < 0
+        gates.UnitaryChannel(qubits, [(0.4, a1), (1.1, a2)])
+    # Probability sum > 1
     with pytest.raises(ValueError):
-        gate = gates.UnitaryChannel([0.0, 0.0], matrices_)
+        gates.UnitaryChannel(qubits, [(0.5, a1), (0.6, a2)])
 
 
 def test_pauli_noise_channel(backend):
@@ -180,7 +200,7 @@ def test_depolarizing_channel(backend):
 
 def test_reset_channel(backend):
     initial_rho = random_density_matrix(2**3, backend=backend)
-    gate = gates.ResetChannel(0, p0=0.2, p1=0.2)
+    gate = gates.ResetChannel(0, [0.2, 0.2])
     final_rho = backend.reset_error_density_matrix(gate, np.copy(initial_rho), 3)
 
     trace = backend.to_numpy(backend.partial_trace_density_matrix(initial_rho, (0,), 3))
@@ -201,7 +221,9 @@ def test_reset_channel(backend):
 @pytest.mark.parametrize("p0,p1", [(0, -0.1), (-0.1, 0), (0.5, 0.6), (0.8, 0.3)])
 def test_reset_channel_errors(p0, p1):
     with pytest.raises(ValueError):
-        gates.ResetChannel(0, p0, p1)
+        gates.ResetChannel(0, [p0])
+    with pytest.raises(ValueError):
+        gates.ResetChannel(0, [p0, p1])
 
 
 @pytest.mark.parametrize(
@@ -210,9 +232,7 @@ def test_reset_channel_errors(p0, p1):
 def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
     """Check ``gates.ThermalRelaxationChannel`` on a 3-qubit random density matrix."""
     initial_rho = random_density_matrix(2**3, backend=backend)
-    gate = gates.ThermalRelaxationChannel(
-        0, t1, t2, time=time, excited_population=excpop
-    )
+    gate = gates.ThermalRelaxationChannel(0, [t1, t2, time, excpop])
     final_rho = gate.apply_density_matrix(backend, np.copy(initial_rho), 3)
 
     if t2 > t1:
@@ -266,18 +286,20 @@ def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
 
 
 @pytest.mark.parametrize(
-    "t1,t2,time,excpop",
+    "params",
     [
-        (1.0, 0.5, 1.5, 1.5),
-        (1.0, 0.5, -0.5, 0.5),
-        (1.0, -0.5, 1.5, 0.5),
-        (-1.0, 0.5, 1.5, 0.5),
-        (1.0, 3.0, 1.5, 0.5),
+        [0.5],
+        [0.5, 0.5, 0.5, 0.5, 0.5],
+        [1.0, 0.5, 1.5, 1.5],
+        [1.0, 0.5, -0.5, 0.5],
+        [1.0, -0.5, 1.5, 0.5],
+        [-1.0, 0.5, 1.5, 0.5],
+        [1.0, 3.0, 1.5, 0.5],
     ],
 )
-def test_thermal_relaxation_channel_errors(t1, t2, time, excpop):
+def test_thermal_relaxation_channel_errors(params):
     with pytest.raises(ValueError):
-        gates.ThermalRelaxationChannel(0, t1, t2, time, excited_population=excpop)
+        gates.ThermalRelaxationChannel(0, params)
 
 
 def test_readout_error_channel(backend):

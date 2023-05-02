@@ -87,10 +87,12 @@ def noisy_circuit(circuit, params):
                             noisy_circ.add(
                                 gates.ThermalRelaxationChannel(
                                     q_min,
-                                    t1[q_min],
-                                    t2[q_min],
-                                    time_difference,
-                                    excited_population,
+                                    [
+                                        t1[q_min],
+                                        t2[q_min],
+                                        time_difference,
+                                        excited_population,
+                                    ],
                                 )
                             )
                             # update the qubit time
@@ -115,10 +117,7 @@ def noisy_circuit(circuit, params):
                 noisy_circ.add(
                     gates.ThermalRelaxationChannel(
                         qubit,
-                        t1[qubit],
-                        t2[qubit],
-                        time1,
-                        excited_population,
+                        [t1[qubit], t2[qubit], time1, excited_population],
                     )
                 )
                 # I update the qubit time
@@ -141,10 +140,7 @@ def noisy_circuit(circuit, params):
                     noisy_circ.add(
                         gates.ThermalRelaxationChannel(
                             q_min,
-                            t1[q_min],
-                            t2[q_min],
-                            time_difference,
-                            excited_population,
+                            [t1[q_min], t2[q_min], time_difference, excited_population],
                         )
                     )
                     # I update the qubit time
@@ -159,12 +155,12 @@ def noisy_circuit(circuit, params):
                 )
                 noisy_circ.add(
                     gates.ThermalRelaxationChannel(
-                        q1, t1[q1], t2[q1], time2, excited_population
+                        q1, [t1[q1], t2[q1], time2, excited_population]
                     )
                 )
                 noisy_circ.add(
                     gates.ThermalRelaxationChannel(
-                        q2, t1[q2], t2[q2], time2, excited_population
+                        q2, [t1[q2], t2[q2], time2, excited_population]
                     )
                 )
                 # I update the qubit time

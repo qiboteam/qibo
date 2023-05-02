@@ -9,13 +9,11 @@ class KrausError:
     """Quantum error associated with the :class:`qibo.gates.KrausChannel`.
 
     Args:
-        ops (list): List of Kraus operators as a ``np.ndarray`` or ``tf.Tensor``.
-        nqubits (int): Number of qubits each that Kraus operator acts on.
+        ops (list): List of Kraus operators 
+        of type ``np.ndarray`` or ``tf.Tensor`` and of the same shape.
     """
 
     def __init__(self, ops):
-        self.options = ops
-
         shape = ops[0].shape
         if any(o.shape != shape for o in ops):
             raise_error(
@@ -25,11 +23,12 @@ class KrausError:
             )
 
         self.rank = shape[0]
-
-    def channel(self, qubits):
-        ops = [([*qubits], o) for o in self.options]
-        return gates.KrausChannel(ops)
-
+        self.options = ops
+        
+    def channel(self, qubits, options):
+        if self.rank != 2:
+            return gates.KrausChannel(qubits, options)
+        return [gates.KrausChannel(q, options) for q in qubits]
 
 class UnitaryError:
     """Quantum error associated with the :class:`qibo.gates.UnitaryChannel`.
@@ -42,8 +41,6 @@ class UnitaryError:
     """
 
     def __init__(self, probabilities, unitaries):
-        self.probabilities = probabilities
-        self.unitaries = unitaries
 
         shape = unitaries[0].shape
         if any(o.shape != shape for o in unitaries):
@@ -52,24 +49,27 @@ class UnitaryError:
                 "Unitary matrices have different shapes."
                 "Use qibo.noise.CustomError instead.",
             )
-
         self.rank = shape[0]
+        self.options = list(zip(probabilities, unitaries))
 
-    def channel(self, qubits):
-        ops = [([*qubits], u) for u in self.unitaries]
-        return gates.UnitaryChannel(self.probabilities, ops)
+    def channel(self, qubits, options):
+        if self.rank != 2:
+            return gates.UnitaryChannel(qubits, options)
+        return [gates.UnitaryChannel(q, options) for q in qubits]
 
 
 class PauliError:
     """Quantum error associated with the :class:`qibo.gates.PauliNoiseChannel`.
 
     Args:
-        options (tuple): see :class:`qibo.gates.PauliNoiseChannel`
+        operators (list): see :class:`qibo.gates.PauliNoiseChannel`
     """
 
     def __init__(self, operators):
         self.options = operators
-        self.channel = gates.PauliNoiseChannel
+
+    def channel(self, qubits, options):
+        return [gates.PauliNoiseChannel(q, options) for q in qubits]
 
 
 class DepolarizingError:
@@ -80,7 +80,7 @@ class DepolarizingError:
     """
 
     def __init__(self, lam):
-        self.options = (lam,)
+        self.options = lam
         self.channel = gates.DepolarizingChannel
 
 
@@ -92,7 +92,7 @@ class ThermalRelaxationError:
     """
 
     def __init__(self, t1, t2, time, excited_population=0):
-        self.options = t1, t2, time, excited_population
+        self.options = [t1, t2, time, excited_population]
         self.channel = gates.ThermalRelaxationChannel
 
 
@@ -100,7 +100,7 @@ class ReadoutError:
     """Quantum error associated with :class:'qibo.gates;ReadoutErrorChannel'.
 
     Args:
-        options (tuple): see :class:'qibo.gates.ReadoutErrorChannel'
+        options (array): see :class:'qibo.gates.ReadoutErrorChannel'
     """
 
     def __init__(self, probabilities):
@@ -116,7 +116,7 @@ class ResetError:
     """
 
     def __init__(self, p0, p1):
-        self.options = p0, p1
+        self.options = [p0, p1]
         self.channel = gates.ResetChannel
 
 
@@ -140,7 +140,7 @@ class CustomError:
         a2 = np.array([[0, 1], [0, 0]])
 
         # Create an Error associated with Kraus Channel rho -> |0><0| rho |0><0| + |0><1| rho |0><1|
-        error = CustomError(gates.KrausChannel([((0,), a1), ((0,), a2)]))
+        error = CustomError(gates.KrausChannel((0,), [a1, a2]))
     """
 
     def __init__(self, channel):
@@ -292,27 +292,18 @@ class NoiseModel:
                             qubits = gate.qubits
                         else:
                             qubits = tuple(set(gate.qubits) & set(qubits))
+                        if len(qubits) == 0:
+                            continue
 
                         if isinstance(error, CustomError) and qubits:
                             noisy_circuit.add(error.channel)
-                        elif isinstance(error, PauliError) and qubits:
+                        elif isinstance(error, (ThermalRelaxationError, ResetError)) and qubits:
                             for q in qubits:
                                 noisy_circuit.add(error.channel(q, error.options))
-                        elif isinstance(error, DepolarizingError) and qubits:
-                            noisy_circuit.add(error.channel(qubits, *error.options))
                         elif isinstance(error, ReadoutError) and qubits:
                             noisy_circuit.add(error.channel(qubits, error.options))
                             noisy_circuit.add(gate)
-                        elif isinstance(error, UnitaryError) or isinstance(
-                            error, KrausError
-                        ):
-                            if error.rank == 2:
-                                for q in qubits:
-                                    noisy_circuit.add(error.channel([q]))
-                            elif error.rank == 2 ** len(qubits):
-                                noisy_circuit.add(error.channel(qubits))
                         else:
-                            for q in qubits:
-                                noisy_circuit.add(error.channel(q, *error.options))
+                            noisy_circuit.add(error.channel(qubits, error.options))
 
         return noisy_circuit
