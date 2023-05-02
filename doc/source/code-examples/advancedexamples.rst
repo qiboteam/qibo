@@ -942,7 +942,7 @@ triplets. For example, the following script
       c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
 
       # Define a noise map that maps qubit IDs to noise probabilities
-      noise_map = {0: (0.1, 0.0, 0.2), 1: (0.0, 0.2, 0.1)}
+      noise_map = {0: list(zip(["X", "Z"], [0.1, 0.2])), 1: list(zip(["Y", "Z"], [0.2, 0.1]))}
       noisy_c = c.with_noise(noise_map)
 
 will create a new circuit ``noisy_c`` that is equivalent to:
@@ -964,8 +964,8 @@ a new object.
 
 The user may use a single tuple instead of a dictionary as the noise map
 In this case the same probabilities will be applied to all qubits.
-That is ``noise_map = (0.1, 0.0, 0.1)`` is equivalent to
-``noise_map = {0: (0.1, 0.0, 0.1), 1: (0.1, 0.0, 0.1), ...}``.
+That is ``noise_map = list(zip(["X", "Z"], [0.1, 0.1]))`` is equivalent to
+``noise_map = {0: list(zip(["X", "Z"], [0.1, 0.1])), 1: list(zip(["X", "Z"], [0.1, 0.1])), ...}``.
 
 As described in the previous sections, if
 :meth:`qibo.models.circuit.Circuit.with_noise` is used in a circuit

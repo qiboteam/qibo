@@ -467,7 +467,10 @@ class Circuit:
                 # use density matrices for noise simulation
                 c = Circuit(2, density_matrix=True)
                 c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
-                noise_map = {0: (0.1, 0.0, 0.2), 1: (0.0, 0.2, 0.1)}
+                noise_map = {
+                    0: list(zip(["X", "Z"], [0.1, 0.2])),
+                    1: list(zip(["Y", "Z"], [0.2, 0.1]))
+                }
                 noisy_c = c.with_noise(noise_map)
                 # ``noisy_c`` will be equivalent to the following circuit
                 c2 = Circuit(2, density_matrix=True)
