@@ -436,6 +436,11 @@ class NumpyBackend(Backend):
 
         results = []
         nqubits = circuit.nqubits
+
+        if not circuit.density_matrix:
+            probabilities = np.zeros(2**nqubits, dtype=float)
+            probabilities = self.cast(probabilities, dtype=probabilities.dtype)
+
         for _ in range(nshots):
             if circuit.density_matrix:
                 if initial_state is None:
@@ -471,14 +476,24 @@ class NumpyBackend(Backend):
             else:
                 results.append(state)
 
+            if not circuit.density_matrix:
+                probabilities += result.probabilities()
+
+        if not circuit.density_matrix:
+            probabilities /= nshots
+
         if circuit.measurements:
             final_result = CircuitResult(self, circuit, state, nshots)
             final_result._samples = self.aggregate_shots(results)
+            if not circuit.density_matrix:
+                final_result.probabilities = \
+                    lambda: self._override_probabilities_repeated_execution(probabilities)
             circuit._final_state = final_result
             return final_result
-        else:
-            circuit._final_state = CircuitResult(self, circuit, results[-1], nshots)
-            return results
+
+        circuit._final_state = CircuitResult(self, circuit, results[-1], nshots)
+            
+        return results
 
     def execute_distributed_circuit(
         self, circuit, initial_state=None, nshots=None, return_array=False
@@ -546,6 +561,14 @@ class NumpyBackend(Backend):
             else:
                 unmeasured.append(i)
         return self.np.transpose(probs, [reduced.get(i) for i in qubits])
+
+    def _override_probabilities_repeated_execution(self, probabilities):
+        """Override `.probabilties()` method from CircuitResult object
+        with the cumulative average of `nshot` probabilities from
+        repeated execution when `circuit.density_matrix=False`.
+        """
+        # TODO: add qubits argument in order to get marginal probabilities
+        return probabilities
 
     def calculate_probabilities(self, state, qubits, nqubits):
         rtype = self.np.real(state).dtype
