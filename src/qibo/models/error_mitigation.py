@@ -414,9 +414,8 @@ def apply_readout_mitigation(state, calibration_matrix):
     """
     freq = np.zeros(2**state.nqubits)
     for k, v in state.frequencies().items():
-        f = v / state.nshots
-        freq[int(k, 2)] = f
+        freq[int(k, 2)] = v
     freq = freq.reshape(-1, 1)
-    for i, val in enumerate(calibration_matrix @ freq * state.nshots):
+    for i, val in enumerate(calibration_matrix @ freq):
         state._frequencies[i] = float(val)
     return state
