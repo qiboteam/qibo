@@ -507,8 +507,8 @@ class QAOA:
                 qaoa = models.QAOA(h)
                 initial_p = [0.314, 0.22, 0.05, 0.59]
                 best, params, _ = qaoa.minimize(initial_p)
-                best, params, _ = qaoa.minimize(initial_p, mode="gibbs")
-                best, params, _ = qaoa.minimize(initial_p, mode="cvar")
+                best, params, _ = qaoa.minimize(initial_p, loss_func=cvar, loss_func_param={'alpha':0.1})
+                best, params, _ = qaoa.minimize(initial_p, loss_func=gibbs, loss_func_param={'eta':0.1})
 
         """
         if len(initial_p) % 2 != 0:
