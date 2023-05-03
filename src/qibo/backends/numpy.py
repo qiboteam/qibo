@@ -486,13 +486,16 @@ class NumpyBackend(Backend):
             final_result = CircuitResult(self, circuit, state, nshots)
             final_result._samples = self.aggregate_shots(results)
             if not circuit.density_matrix:
-                final_result.probabilities = \
-                    lambda: self._override_probabilities_repeated_execution(probabilities)
+                final_result.probabilities = (
+                    lambda: self._override_probabilities_repeated_execution(
+                        probabilities
+                    )
+                )
             circuit._final_state = final_result
             return final_result
 
         circuit._final_state = CircuitResult(self, circuit, results[-1], nshots)
-            
+
         return results
 
     def execute_distributed_circuit(
