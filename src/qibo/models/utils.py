@@ -53,9 +53,6 @@ def cvar(hamiltonian, state, alpha=0.1):
     corresponding cvar function
     """
     counts = convert_state_to_count(state)
-    print(str(counts))
-    print(len(counts))
-    print("counts", counts)
     probabilities = np.zeros(len(counts))
     values = np.zeros(len(counts))
     m = int(np.log2(state.size))
