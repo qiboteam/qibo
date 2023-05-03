@@ -438,6 +438,7 @@ class NumpyBackend(Backend):
         nqubits = circuit.nqubits
 
         if not circuit.density_matrix:
+            frequencies = []
             probabilities = np.zeros(2**nqubits, dtype=float)
             probabilities = self.cast(probabilities, dtype=probabilities.dtype)
 
@@ -472,7 +473,9 @@ class NumpyBackend(Backend):
 
             if circuit.measurements:
                 result = CircuitResult(self, circuit, state, 1)
-                results.append(result.samples()[0])
+                sample = result.samples()[0]
+                results.append(sample)
+                frequencies.append(sample[0])
             else:
                 results.append(state)
 
@@ -482,14 +485,17 @@ class NumpyBackend(Backend):
         if not circuit.density_matrix:
             probabilities /= nshots
 
+            frequencies = self.calculate_frequencies(frequencies)
+
         if circuit.measurements:
             final_result = CircuitResult(self, circuit, state, nshots)
             final_result._samples = self.aggregate_shots(results)
             if not circuit.density_matrix:
                 final_result.probabilities = (
-                    lambda: self._override_probabilities_repeated_execution(
-                        probabilities
-                    )
+                    lambda: self._override_method_repeated_execution(probabilities)
+                )
+                final_result.frequencies = (
+                    lambda: self._override_method_repeated_execution(frequencies)
                 )
             circuit._final_state = final_result
             return final_result
@@ -565,10 +571,15 @@ class NumpyBackend(Backend):
                 unmeasured.append(i)
         return self.np.transpose(probs, [reduced.get(i) for i in qubits])
 
-    def _override_probabilities_repeated_execution(self, probabilities):
-        """Overrides `.probabilties()` method from CircuitResult object
-        with the cumulative average of `nshot` probabilities from
-        repeated execution when `circuit.density_matrix=False`.
+    def _override_method_repeated_execution(self, probabilities):
+        """Overrides methods from CircuitResult object.
+        Meant to be used to override either `.probabilties()` or
+        `.frequencies()` when `circuit.density_matrix=False`. If
+        overriding `.probabilities()`, replaces it with the
+        cumulative average of `nshot` probabilities from repeated
+        execution. When overriding `.frequencies()`, replaces it
+        with a dictionary with the correct sampled frequencies
+        instead of the last execution.
         """
         # TODO: add qubits argument in order to get marginal probabilities
         return probabilities
