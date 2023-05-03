@@ -285,7 +285,7 @@ def test_readout_mitigation(backend, nqubits, method):
     noise.add(ReadoutError(probabilities=p), gate=gates.M)
     if method == "cal_matrix":
         calibration_matrix = get_calibration_matrix(
-            nqubits, noise, backend, nshots=nshots
+            nqubits, backend, noise, nshots=nshots
         )
     # Define the observable
     obs = np.prod([Z(i) for i in range(nqubits)])
