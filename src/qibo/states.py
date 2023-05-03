@@ -299,7 +299,7 @@ class CircuitResult:
         return self.state(numpy=True)
 
     def probabilities(self, qubits=None):
-        """Calculates measurement probabilities by tracing out qubits. 
+        """Calculates measurement probabilities by tracing out qubits.
         When noisy model is applied to a circuit and `circuit.density_matrix=False`,
         this method returns the average probability resulting from
         repeated execution. This probability distribution approximates the
