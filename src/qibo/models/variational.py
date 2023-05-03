@@ -451,8 +451,8 @@ class QAOA:
         initial_p,
         initial_state=None,
         method="Powell",
-        mode=None,
-        mode_param=0.1,
+        loss_func=None,
+        loss_func_param=dict(),
         jac=None,
         hess=None,
         hessp=None,
@@ -476,10 +476,8 @@ class QAOA:
             method (str): the desired minimization method.
                 See :meth:`qibo.optimizers.optimize` for available optimization
                 methods.
-            mode (str): the desired loss function. The default is None. Alternatives are
-             "cvar", and "gibbs".
-            mode_param (float): a positive parameter for the loss function. It is alpha < 1 for the cvar
-                 loss function and eta for the gibbs loss function
+            loss_func (function): the desired loss function. If it is None, the expectation is used.
+            loss_func_param (dict): a dictionary to pass in the loss function parameters.
             jac (dict): Method for computing the gradient vector for scipy optimizers.
             hess (dict): Method for computing the hessian matrix for scipy optimizers.
             hessp (callable): Hessian of objective function times an arbitrary
@@ -526,16 +524,22 @@ class QAOA:
                 state = hamiltonian.backend.cast(state, copy=True)
             qaoa.set_parameters(params)
             state = qaoa(state)
-            if mode is None:
+            if loss_func is None:
                 return hamiltonian.expectation(state)
-            elif mode == "cvar":
-                from qibo.models.utils import cvar
+            else:
+                func_hyperparams = {key: loss_func_param[key] for key in loss_func_param if key in
+                                    loss_func.__code__.co_varnames}
+                param = {**func_hyperparams, 'hamiltonian': hamiltonian, 'state': state}
 
-                return cvar(hamiltonian, state, mode_param)
-            elif mode == "gibbs":
-                from qibo.models.utils import gibbs
+                return loss_func(**param)
+            #elif mode == "cvar":
+            #    from qibo.models.utils import cvar
 
-                return gibbs(hamiltonian, state, mode_param)
+            #    return cvar(hamiltonian, state, mode_param)
+            #elif mode == "gibbs":
+            #    from qibo.models.utils import gibbs
+
+            #    return gibbs(hamiltonian, state, mode_param)
 
         if method == "sgd":
             loss = lambda p, c, h, s: _loss(self.hamiltonian.backend.cast(p), c, h, s)

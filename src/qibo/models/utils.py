@@ -22,7 +22,6 @@ def convert_state_to_count(state):
     """
     This is a function that convert a quantum state to a dictionary keeping track of
     energy and its frequency.
-    d[energy] records the frequency
     """
     return np.abs(state) ** 2
 
@@ -54,6 +53,9 @@ def cvar(hamiltonian, state, alpha=0.1):
     corresponding cvar function
     """
     counts = convert_state_to_count(state)
+    print(str(counts))
+    print(len(counts))
+    print("counts", counts)
     probabilities = np.zeros(len(counts))
     values = np.zeros(len(counts))
     m = int(np.log2(state.size))
@@ -78,3 +80,4 @@ def gibbs(hamiltonian, state, eta=0.1):
         avg += np.exp(-eta * obj)
         sum_count += count
     return -np.log(avg / sum_count)
+
