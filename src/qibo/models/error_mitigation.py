@@ -419,3 +419,64 @@ def apply_readout_mitigation(state, calibration_matrix):
     for i, val in enumerate(calibration_matrix @ freq):
         state._frequencies[i] = float(val)
     return state
+
+
+def apply_temme_readout_mitigation(
+    circuit, backend=None, noise_model=None, nshots=1000, ncircuits=10
+):
+    """Implements the readout mitigation method proposed in https://arxiv.org/abs/2012.09738.
+
+    Args:
+        circuit (qibo.models.circuit.Circuit): Input circuit.
+        backend (qibo.backends.abstract.Backend): Calculation engine.
+        noise_model(qibo.noise.NoiseModel): Noise model used for simulating noisy computation. This matrix can be used to mitigate the effect of `qibo.noise.ReadoutError`.
+        nshots (int): Total number of shots.
+        ncircuits (int): Number of randomized circuits. Each of them uses `int(nshots/ncircuits)` shots.
+
+    Return:
+        qibo.states.CircuitResult : The state of the input circuit with mitigated frequencies.
+
+    """
+
+    from qibo.quantum_info import random_pauli
+
+    if backend is None:  # pragma: no cover
+        from qibo.backends import GlobalBackend
+
+        backend = GlobalBackend()
+
+    qubits = circuit.queue[-1].qubits
+    nshots_r = int(nshots / ncircuits)
+    freq = np.zeros((ncircuits, 2), object)
+    for k in range(ncircuits):
+        circuit_c = circuit.copy(True)
+        circuit_c.queue.pop()
+        cal_circuit = Circuit(circuit.nqubits, density_matrix=True)
+
+        x_gate = random_pauli(len(qubits), 1, subset=["I", "X"]).queue
+
+        error_map = {}
+        for gate in x_gate:
+            if gate.name == "x":
+                error_map[gate.qubits[0]] = 1
+
+        circuits = [circuit_c, cal_circuit]
+        results = []
+        freqs = []
+        for circ in circuits:
+            circ.add(x_gate)
+            circ.add(gates.M(*qubits))
+            if noise_model != None and backend.name != "qibolab":
+                circ = noise_model.apply(circ)
+            result = backend.execute_circuit(circ, nshots=nshots_r)
+            result._samples = result.apply_bitflips(error_map)
+            results.append(result)
+            freqs.append(result.frequencies(binary=False))
+        freq[k, :] = freqs
+    for j in range(2):
+        results[j].nshots = nshots
+        freq_sum = freq[0, j]
+        for f in freq[1::, j]:
+            freq_sum += f
+        results[j]._frequencies = freq_sum
+    return results
