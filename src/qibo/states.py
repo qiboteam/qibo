@@ -299,11 +299,11 @@ class CircuitResult:
         return self.state(numpy=True)
 
     def probabilities(self, qubits=None):
-        """Calculates measurement probabilities by tracing out qubits. When
-        a noise model is applied to the circuit this method will return the
-        probabilities from the last execution shot, which may or may not
-        correspond to the noise-free state depending on whether the noise was
-        applied or not in that specific execution.
+        """Calculates measurement probabilities by tracing out qubits. 
+        When noisy model is applied to a circuit and `circuit.density_matrix=False`,
+        this method returns the average probability resulting from
+        repeated execution. This probability distribution approximates the
+        exact probability distribution obtained when `circuit.density_matrix=True`.
 
         Args:
             qubits (list, set): Set of qubits that are measured.

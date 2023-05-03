@@ -566,7 +566,7 @@ class NumpyBackend(Backend):
         return self.np.transpose(probs, [reduced.get(i) for i in qubits])
 
     def _override_probabilities_repeated_execution(self, probabilities):
-        """Override `.probabilties()` method from CircuitResult object
+        """Overrides `.probabilties()` method from CircuitResult object
         with the cumulative average of `nshot` probabilities from
         repeated execution when `circuit.density_matrix=False`.
         """
