@@ -216,7 +216,7 @@ def random_quantum_channel(
     supported superoperator representations.
 
     Args:
-        dims (int): dimension of the matrix.
+        dims (int): dimension of the unitary operator.
         representation (str, optional): If ``"chi"``, returns a random channel in the
             Chi representation. If ``"choi"``, returns channel in Choi representation.
             If ``"kraus"``, returns Kraus representation of channel. If ``"liouville"``,

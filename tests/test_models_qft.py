@@ -53,7 +53,7 @@ def test_qft_matrix(backend, nqubits):
 def test_qft_execution(backend, accelerators, nqubits, random):
     c = models.QFT(nqubits)
     if random:
-        initial_state = random_statevector(2**nqubits)
+        initial_state = random_statevector(2**nqubits, backend=backend)
     else:
         initial_state = backend.zero_state(nqubits)
     final_state = backend.execute_circuit(c, np.copy(initial_state))

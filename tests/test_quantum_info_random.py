@@ -140,7 +140,7 @@ def test_random_quantum_channel(backend, representation, measure):
 
     # All subroutines are already tested elsewhere,
     # so here we only execute them once for coverage
-    random_quantum_channel(4, representation, measure)
+    random_quantum_channel(4, representation, measure, backend=backend)
 
 
 @pytest.mark.parametrize("haar", [False, True])
