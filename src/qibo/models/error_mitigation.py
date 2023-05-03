@@ -90,7 +90,7 @@ def ZNE(
     nshots=10000,
     solve_for_gammas=False,
     insertion_gate="CNOT",
-    calibration_matrix=None,
+    readout={},
 ):
     """Runs the Zero Noise Extrapolation method for error mitigation.
 
@@ -105,7 +105,7 @@ def ZNE(
         nshots (int): Number of shots.
         solve_for_gammas (bool): If ``true``, explicitely solve the equations to obtain the gamma coefficients.
         insertion_gate (str): Which gate to use for the insertion. Default value: 'CNOT', use 'RX' for the ``RX(pi/2)`` gate instead.
-        calibration_matrix (np.ndarray): If passed, the calibration matrix is used to mitigate the readout errors.
+        readout (dict): It has the structure {'calibration_matrix':np.ndarray, 'ncircuits': int}. If passed, the calibration matrix or the randomized method is used to mitigate the readout errors.
 
     Returns:
         numpy.ndarray: Estimate of the expected value of ``observable`` in the noise free condition.
@@ -118,14 +118,22 @@ def ZNE(
     expected_val = []
     for cj in noise_levels:
         noisy_circuit = get_noisy_circuit(circuit, cj, insertion_gate=insertion_gate)
-        if noise_model != None and backend.name != "qibolab":
-            noisy_circuit = noise_model.apply(noisy_circuit)
-        circuit_result = backend.execute_circuit(noisy_circuit, nshots=nshots)
-        if calibration_matrix is not None:
-            circuit_result = apply_readout_mitigation(
-                circuit_result, calibration_matrix
+        if "ncircuits" in readout.keys():
+            circuit_result, circuit_result_cal = apply_temme_readout_mitigation(
+                noisy_circuit, backend, noise_model, nshots, readout["ncircuits"]
             )
-        expected_val.append(circuit_result.expectation_from_samples(observable))
+        else:
+            if noise_model != None and backend.name != "qibolab":
+                noisy_circuit = noise_model.apply(noisy_circuit)
+            circuit_result = backend.execute_circuit(noisy_circuit, nshots=nshots)
+        if "calibration_matrix" in readout.keys() is not None:
+            circuit_result = apply_readout_mitigation(
+                circuit_result, readout["calibration_matrix"]
+            )
+        val = circuit_result.expectation_from_samples(observable)
+        if "ncircuits" in readout.keys():
+            val /= circuit_result_cal.expectation_from_samples(observable)
+        expected_val.append(val)
     gamma = get_gammas(noise_levels, solve=solve_for_gammas)
     return (gamma * expected_val).sum()
 
@@ -209,7 +217,7 @@ def CDR(
     nshots=10000,
     model=lambda x, a, b: a * x + b,
     n_training_samples=100,
-    calibration_matrix=None,
+    readout={},
     full_output=False,
 ):
     """Runs the CDR error mitigation method.
@@ -222,7 +230,7 @@ def CDR(
         nshots (int): Number of shots.
         model : Model used for fitting. This should be a callable function object ``f(x, *params)`` taking as input the predictor variable and the parameters. By default a simple linear model ``f(x,a,b) := a*x + b`` is used.
         n_training_samples (int): Number of training circuits to sample.
-        calibration_matrix (np.ndarray): If passed, the calibration matrix is used to mitigate the readout errors.
+        readout (dict): It has the structure {'calibration_matrix':np.ndarray, 'ncircuits': int}. If passed, the calibration matrix or the randomized method is used to mitigate the readout errors.
         full_output (bool): If True, this function returns additional information: `val`, `optimal_params`, `train_val`.
 
     Returns:
@@ -246,24 +254,40 @@ def CDR(
     for c in training_circuits:
         val = c(nshots=nshots).expectation_from_samples(observable)
         train_val["noise-free"].append(val)
-        if noise_model != None and backend.name != "qibolab":
-            c = noise_model.apply(c)
-        circuit_result = backend.execute_circuit(c, nshots=nshots)
-        if calibration_matrix is not None:
+        if "ncircuits" in readout.keys():
+            circuit_result, circuit_result_cal = apply_temme_readout_mitigation(
+                c, backend, noise_model, nshots, readout["ncircuits"]
+            )
+        else:
+            if noise_model != None and backend.name != "qibolab":
+                c = noise_model.apply(c)
+            circuit_result = backend.execute_circuit(c, nshots=nshots)
+        if "calibration_matrix" in readout.keys() is not None:
             circuit_result = apply_readout_mitigation(
-                circuit_result, calibration_matrix
+                circuit_result, readout["calibration_matrix"]
             )
         val = circuit_result.expectation_from_samples(observable)
+        if "ncircuits" in readout.keys():
+            val /= circuit_result_cal.expectation_from_samples(observable)
         train_val["noisy"].append(val)
     # Fit the model
     optimal_params = curve_fit(model, train_val["noisy"], train_val["noise-free"])[0]
     # Run the input circuit
-    if noise_model != None and backend.name != "qibolab":
-        noisy_circuit = noise_model.apply(circuit)
-    circuit_result = backend.execute_circuit(noisy_circuit, nshots=nshots)
-    if calibration_matrix is not None:
-        circuit_result = apply_readout_mitigation(circuit_result, calibration_matrix)
+    if "ncircuits" in readout.keys():
+        circuit_result, circuit_result_cal = apply_temme_readout_mitigation(
+            circuit, backend, noise_model, nshots, readout["ncircuits"]
+        )
+    else:
+        if noise_model != None and backend.name != "qibolab":
+            noisy_circuit = noise_model.apply(circuit)
+        circuit_result = backend.execute_circuit(noisy_circuit, nshots=nshots)
+    if "calibration_matrix" in readout.keys() is not None:
+        circuit_result = apply_readout_mitigation(
+            circuit_result, readout["calibration_matrix"]
+        )
     val = circuit_result.expectation_from_samples(observable)
+    if "ncircuits" in readout.keys():
+        val /= circuit_result_cal.expectation_from_samples(observable)
     mit_val = model(val, *optimal_params)
     # Return data
     if full_output == True:
@@ -275,14 +299,14 @@ def CDR(
 def vnCDR(
     circuit,
     observable,
-    backend,
     noise_levels,
+    backend,
     noise_model,
     nshots=10000,
     model=lambda x, *params: (x * np.array(params).reshape(-1, 1)).sum(0),
     n_training_samples=100,
     insertion_gate="CNOT",
-    calibration_matrix=None,
+    readout={},
     full_output=False,
 ):
     """Runs the vnCDR error mitigation method.
@@ -290,14 +314,14 @@ def vnCDR(
     Args:
         circuit (qibo.models.circuit.Circuit): Input circuit decomposed in the primitive gates: ``X``, ``CNOT``, ``RX(pi/2)``, ``RZ(theta)``.
         observable (numpy.ndarray): Observable to measure.
-        backend (qibo.backends.abstract.Backend): Calculation engine.
         noise_levels (numpy.ndarray): Sequence of noise levels.
+        backend (qibo.backends.abstract.Backend): Calculation engine.
         noise_model (qibo.noise.NoiseModel): Noise model used for simulating noisy computation.
         nshots (int): Number of shots.
         model : Model used for fitting. This should be a callable function object ``f(x, *params)`` taking as input the predictor variable and the parameters. By default a simple linear model ``f(x,a) := a*x`` is used, with ``a`` beeing the diagonal matrix containing the parameters.
         n_training_samples (int): Number of training circuits to sample.
         insertion_gate (str): Which gate to use for the insertion. Default value: 'CNOT', use 'RX' for the ``RX(pi/2)`` gate instead.
-        calibration_matrix (np.ndarray): If passed, the calibration matrix is used to mitigate the readout errors.
+        readout (dict): It has the structure {'calibration_matrix':np.ndarray, 'ncircuits': int}. If passed, the calibration matrix or the randomized method is used to mitigate the readout errors.
         full_output (bool): If True, this function returns additional information: `val`, `optimal_params`, `train_val`.
 
     Returns:
@@ -323,14 +347,21 @@ def vnCDR(
         train_val["noise-free"].append(val)
         for level in noise_levels:
             noisy_c = get_noisy_circuit(c, level, insertion_gate=insertion_gate)
-            if noise_model != None and backend.name != "qibolab":
-                noisy_c = noise_model.apply(c)
-            circuit_result = backend.execute_circuit(noisy_c, nshots=nshots)
-            if calibration_matrix is not None:
+            if "ncircuits" in readout.keys():
+                circuit_result, circuit_result_cal = apply_temme_readout_mitigation(
+                    noisy_c, backend, noise_model, nshots, readout["ncircuits"]
+                )
+            else:
+                if noise_model != None and backend.name != "qibolab":
+                    noisy_c = noise_model.apply(noisy_c)
+                circuit_result = backend.execute_circuit(noisy_c, nshots=nshots)
+            if "calibration_matrix" in readout.keys():
                 circuit_result = apply_readout_mitigation(
-                    circuit_result, calibration_matrix
+                    circuit_result, readout["calibration_matrix"]
                 )
             val = circuit_result.expectation_from_samples(observable)
+            if "ncircuits" in readout.keys():
+                val /= circuit_result_cal.expectation_from_samples(observable)
             train_val["noisy"].append(val)
     # Repeat noise-free values for each noise level
     noisy_array = np.array(train_val["noisy"]).reshape(-1, len(noise_levels))
@@ -341,14 +372,22 @@ def vnCDR(
     val = []
     for level in noise_levels:
         noisy_c = get_noisy_circuit(circuit, level, insertion_gate=insertion_gate)
-        if noise_model != None and backend.name != "qibolab":
-            noisy_c = noise_model.apply(circuit)
-        circuit_result = backend.execute_circuit(noisy_c, nshots=nshots)
-        if calibration_matrix is not None:
-            circuit_result = apply_readout_mitigation(
-                circuit_result, calibration_matrix
+        if "ncircuits" in readout.keys():
+            circuit_result, circuit_result_cal = apply_temme_readout_mitigation(
+                noisy_c, backend, noise_model, nshots, readout["ncircuits"]
             )
-        val.append(circuit_result.expectation_from_samples(observable))
+        else:
+            if noise_model != None and backend.name != "qibolab":
+                noisy_c = noise_model.apply(noisy_c)
+            circuit_result = backend.execute_circuit(noisy_c, nshots=nshots)
+        if "calibration_matrix" in readout.keys():
+            circuit_result = apply_readout_mitigation(
+                circuit_result, readout["calibration_matrix"]
+            )
+        expval = circuit_result.expectation_from_samples(observable)
+        if "ncircuits" in readout.keys():
+            expval /= circuit_result_cal.expectation_from_samples(observable)
+        val.append(expval)
     mit_val = model(np.array(val).reshape(-1, 1), *optimal_params[0])[0]
     # Return data
     if full_output == True:
@@ -357,22 +396,14 @@ def vnCDR(
         return mit_val
 
 
-def get_calibration_matrix(nqubits, backend=None, nshots=1000, p0=None, p1=None):
+def get_calibration_matrix(nqubits, backend=None, noise_model=None, nshots=1000):
     """Computes the calibration matrix for readout mitigation.
 
     Args:
         nqubits (int): Total number of qubits.
         backend (qibo.backends.abstract.Backend): Calculation engine.
+        noise_model (int): (qibo.noise.NoiseModel): Noise model used for simulating noisy computation. This matrix can be used to mitigate the effect of `qibo.noise.ReadoutError`.
         nshots (int): Number of shots.
-        p0 (dict): Optional bitflip probability map passed to the measurement gate to simulate noisy measurament. Can be:
-            A dictionary that maps each measured qubit to the probability
-            that it is flipped, a list or tuple that has the same length
-            as the tuple of measured qubits or a single float number.
-            If a single float is given the same probability will be used
-            for all qubits.
-        p1 (dict): Optional bitflip probability map passed to the measurement gate to simulate noisy measurament for asymmetric bitflips. Same as ``p0`` but controls the 1->0 bitflip probability.
-            If ``p1`` is ``None`` then ``p0`` will be used both for 0->1 and
-            1->0 bitflips.
 
     Returns:
         np.ndarray : The computed (`nqubits`, `nqubits`) calibration matrix for readout mitigation.
@@ -388,11 +419,13 @@ def get_calibration_matrix(nqubits, backend=None, nshots=1000, p0=None, p1=None)
     string = "{0:0" + str(nqubits) + "b}"
     for i in range(2**nqubits):
         state = string.format(i)
-        circuit = Circuit(nqubits)
+        circuit = Circuit(nqubits, density_matrix=True)
         for q, bit in enumerate(state):
             if bit == "1":
                 circuit.add(gates.X(q))
-        circuit.add(gates.M(*range(nqubits), p0=p0, p1=p1))
+        circuit.add(gates.M(*range(nqubits)))
+        if noise_model != None and backend.name != "qibolab":
+            circuit = noise_model.apply(circuit)
         freq = backend.execute_circuit(circuit, nshots=nshots).frequencies()
         column = np.zeros(2**nqubits)
         for key in freq.keys():
