@@ -3,7 +3,9 @@ import numpy as np
 import pytest
 
 from qibo import gates, matrices
+from qibo.config import PRECISION_TOL
 from qibo.models import Circuit
+from qibo.noise import NoiseModel, PauliError
 
 
 def test_circuit_unitary(backend):
@@ -314,3 +316,35 @@ def test_repeated_execute_with_noise(backend):
     target_state = np.stack(target_state)
     final_state = [backend.to_numpy(x) for x in final_state]
     backend.assert_allclose(final_state, target_state)
+
+
+def test_repeated_execute_probs_and_freqs(backend):
+    circuit = Circuit(1)
+    circuit.add(gates.X(0))
+    circuit.add(gates.M(0))
+
+    noise_map = list(zip(["X", "Y", "Z"], [0.1, 0.1, 0.1]))
+    noise_map = PauliError(noise_map)
+    noise = NoiseModel()
+    noise.add(noise_map, gates.X)
+    noisy_circuit = noise.apply(circuit)
+    backend.set_seed(1234)
+    # result = noisy_circuit(nshots=1024)
+    result = backend.execute_circuit_repeated(noisy_circuit, nshots=1024)
+
+    # Tensorflow seems to yield different results with same seed
+    if backend.__class__.__name__ == "TensorflowBackend":
+        test_probabilities = [0.171875, 0.828125]
+        test_frequencies = {1: 848, 0: 176}
+    else:
+        test_probabilities = [0.20117188, 0.79882812]
+        test_frequencies = {1: 818, 0: 206}
+    test_probabilities = backend.cast(test_probabilities, dtype=float)
+
+    print(result.frequencies())
+    backend.assert_allclose(
+        backend.calculate_norm(result.probabilities() - test_probabilities)
+        < PRECISION_TOL,
+        True,
+    )
+    assert dict(result.frequencies()) == test_frequencies
