@@ -109,6 +109,35 @@ def entropy(state, base: float = 2, validate: bool = False, backend=None):
     return ent
 
 
+def meyer_wallach(circuit, backend=None):
+    """Computes the Meyer-Wallach entanglement of the `circuit`,
+    .. math::
+        Ent = 1-\frac{1}{N}\\sum_{k}\text{Tr}\\left(\rho_k^2(\theta_i)\right)
+
+    Args:
+        circuit (qibo.models.Circuit): Parametrized circuit.
+        backend (qibo.backends.abstract.Backend): Calculation engine.
+
+    Return:
+        (int) : Meyer-Wallach entanglement.
+    """
+
+    if backend == None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    circuit.density_matrix = True
+    nqubits = circuit.nqubits
+    rho = backend.execute_circuit(circuit).state()
+    entropy = 0
+    for j in range(nqubits):
+        trace_q = list(range(nqubits))
+        trace_q.pop(j)
+        rho_r = backend.partial_trace_density_matrix(rho, trace_q, nqubits)
+        trace = np.trace(rho_r @ rho_r)
+        entropy += trace
+    return 1 - entropy / nqubits
+
+
 def trace_distance(state, target, validate: bool = False, backend=None):
     """Trace distance between two quantum states, :math:`\\rho` and :math:`\\sigma`:
 
