@@ -6,16 +6,10 @@ import numpy as np
 import pytest
 
 from qibo import gates, models
-from qibo.quantum_info import random_statevector
+from qibo.backends import NumpyBackend
+from qibo.quantum_info import random_statevector, random_unitary
 
-
-def random_unitary_matrix(nqubits, dtype=np.complex128):
-    """Generates a random unitary matrix of shape (2^nqubits, 2^nqubits)."""
-    from scipy.linalg import expm
-
-    shape = 2 * (2**nqubits,)
-    m = np.random.random(shape) + 1j * np.random.random(shape)
-    return expm(1j * (m + m.conj().T))
+numpy_backend = NumpyBackend()
 
 
 def random_active_qubits(nqubits, nmin=None, nactive=None):
@@ -53,10 +47,10 @@ def assert_gates_equivalent(
         nqubits: Total number of qubits in the circuit.
         atol: Absolute tolerance in state vector comparsion.
     """
-    initial_state = random_statevector(2**nqubits)
-    target_state, target_depth = execute_cirq(
-        cirq_gates, nqubits, np.copy(initial_state)
-    )
+    initial_state = random_statevector(2**nqubits, backend=numpy_backend)
+    copy = numpy_backend.cast(initial_state, copy=True)
+    target_state, target_depth = execute_cirq(cirq_gates, nqubits, copy)
+    target_state = backend.cast(target_state, dtype=target_state.dtype)
     accelerators = None
     if ndevices is not None:
         accelerators = {"/GPU:0": ndevices}
@@ -227,14 +221,14 @@ def test_two_qubit_parametrized_gates(backend, nqubits, ndevices):
 )
 def test_unitary_matrix_gate(backend, nqubits, ndevices):
     """Check arbitrary unitary gate."""
-    matrix = random_unitary_matrix(1)
+    matrix = random_unitary(2**1, backend=numpy_backend)
     targets = random_active_qubits(nqubits, nactive=1)
     qibo_gate = gates.Unitary(matrix, *targets)
     cirq_gate = [(cirq.MatrixGate(matrix), targets)]
     assert_gates_equivalent(backend, qibo_gate, cirq_gate, nqubits)
 
     for _ in range(10):
-        matrix = random_unitary_matrix(2)
+        matrix = random_unitary(2**2, backend=numpy_backend)
         targets = random_active_qubits(nqubits, nactive=2)
         qibo_gate = gates.Unitary(matrix, *targets)
         cirq_gate = [(cirq.MatrixGate(matrix), targets)]
@@ -257,7 +251,6 @@ def test_unitary_matrix_gate(backend, nqubits, ndevices):
 )
 def test_one_qubit_gates_controlled_by(backend, gate_name, nqubits, ndevices):
     """Check one-qubit gates controlled on arbitrary number of qubits."""
-    all_qubits = np.arange(nqubits)
     for _ in range(5):
         activeq = random_active_qubits(nqubits, nmin=1)
         qibo_gate = getattr(gates, gate_name)(activeq[-1]).controlled_by(*activeq[:-1])
@@ -283,7 +276,6 @@ def test_one_qubit_gates_controlled_by(backend, gate_name, nqubits, ndevices):
 )
 def test_two_qubit_gates_controlled_by(backend, nqubits, ndevices):
     """Check ``SWAP`` and ``fSim`` gates controlled on arbitrary number of qubits."""
-    all_qubits = np.arange(nqubits)
     for _ in range(5):
         activeq = random_active_qubits(nqubits, nmin=2)
         qibo_gate = gates.SWAP(*activeq[-2:]).controlled_by(*activeq[:-2])
@@ -302,10 +294,9 @@ def test_two_qubit_gates_controlled_by(backend, nqubits, ndevices):
 @pytest.mark.parametrize("ndevices", [None, 2, 8])
 def test_unitary_matrix_gate_controlled_by(backend, nqubits, ntargets, ndevices):
     """Check arbitrary unitary gate controlled on arbitrary number of qubits."""
-    all_qubits = np.arange(nqubits)
     for _ in range(10):
         activeq = random_active_qubits(nqubits, nactive=5)
-        matrix = random_unitary_matrix(ntargets)
+        matrix = random_unitary(2**ntargets, backend=numpy_backend)
         qibo_gate = gates.Unitary(matrix, *activeq[-ntargets:]).controlled_by(
             *activeq[:-ntargets]
         )
@@ -318,8 +309,11 @@ def test_unitary_matrix_gate_controlled_by(backend, nqubits, ntargets, ndevices)
 @pytest.mark.parametrize("nqubits", [5, 6, 7, 11, 12])
 def test_qft(backend, accelerators, nqubits):
     c = models.QFT(nqubits, accelerators=accelerators)
-    initial_state = random_statevector(2**nqubits)
+    initial_state = random_statevector(2**nqubits, backend=numpy_backend)
     final_state = backend.execute_circuit(c, np.copy(initial_state))
+    final_state = final_state.state(numpy=True)
+    final_state = backend.cast(final_state, dtype=final_state.dtype)
     cirq_gates = [(cirq.qft, list(range(nqubits)))]
     target_state, _ = execute_cirq(cirq_gates, nqubits, np.copy(initial_state))
+    target_state = backend.cast(target_state, dtype=target_state.dtype)
     backend.assert_allclose(target_state, final_state, atol=1e-6)

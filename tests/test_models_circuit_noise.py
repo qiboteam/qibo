@@ -13,8 +13,8 @@ def test_pauli_noise_channel(backend):
     c = Circuit(2, density_matrix=True)
     c.add(gates.H(0))
     c.add(gates.H(1))
-    c.add(gates.PauliNoiseChannel(0, px=0.5, pz=0.3))
-    c.add(gates.PauliNoiseChannel(1, py=0.1, pz=0.3))
+    c.add(gates.PauliNoiseChannel(0, list(zip(["X", "Z"], [0.5, 0.3]))))
+    c.add(gates.PauliNoiseChannel(1, list(zip(["Y", "Z"], [0.1, 0.3]))))
     final_rho = backend.execute_circuit(c)
 
     psi = np.ones(4) / 2
@@ -33,8 +33,8 @@ def test_noisy_circuit_reexecution(backend):
     c = Circuit(2, density_matrix=True)
     c.add(gates.H(0))
     c.add(gates.H(1))
-    c.add(gates.PauliNoiseChannel(0, px=0.5))
-    c.add(gates.PauliNoiseChannel(1, pz=0.3))
+    c.add(gates.PauliNoiseChannel(0, [("X", 0.5)]))
+    c.add(gates.PauliNoiseChannel(1, [("Z", 0.3)]))
     final_rho = backend.execute_circuit(c)
     final_rho2 = backend.execute_circuit(c)
     backend.assert_allclose(final_rho, final_rho2)
@@ -43,7 +43,7 @@ def test_noisy_circuit_reexecution(backend):
 def test_circuit_with_noise_gates():
     c = Circuit(2, density_matrix=True)
     c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
-    noisy_c = c.with_noise((0.1, 0.2, 0.3))
+    noisy_c = c.with_noise(list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.3])))
     assert noisy_c.depth == 4
     assert noisy_c.ngates == 7
     for i in [1, 3, 5, 6]:
@@ -53,14 +53,18 @@ def test_circuit_with_noise_gates():
 def test_circuit_with_noise_execution(backend):
     c = Circuit(2, density_matrix=True)
     c.add([gates.H(0), gates.H(1)])
-    noisy_c = c.with_noise((0.1, 0.2, 0.3))
+    noisy_c = c.with_noise(list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.3])))
     final_state = backend.execute_circuit(noisy_c)
 
     target_c = Circuit(2, density_matrix=True)
     target_c.add(gates.H(0))
-    target_c.add(gates.PauliNoiseChannel(0, 0.1, 0.2, 0.3))
+    target_c.add(
+        gates.PauliNoiseChannel(0, list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.3])))
+    )
     target_c.add(gates.H(1))
-    target_c.add(gates.PauliNoiseChannel(1, 0.1, 0.2, 0.3))
+    target_c.add(
+        gates.PauliNoiseChannel(1, list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.3])))
+    )
     target_state = backend.execute_circuit(target_c)
     backend.assert_allclose(final_state, target_state)
 
@@ -69,20 +73,28 @@ def test_circuit_with_noise_measurements(backend):
     c = Circuit(2, density_matrix=True)
     c.add([gates.H(0), gates.H(1)])
     c.add(gates.M(0))
-    noisy_c = c.with_noise(3 * (0.1,))
+    noisy_c = c.with_noise(list(zip(["X", "Y", "Z"], [0.1, 0.1, 0.1])))
     final_state = backend.execute_circuit(noisy_c)
 
     target_c = Circuit(2, density_matrix=True)
     target_c.add(gates.H(0))
-    target_c.add(gates.PauliNoiseChannel(0, 0.1, 0.1, 0.1))
+    target_c.add(
+        gates.PauliNoiseChannel(0, list(zip(["X", "Y", "Z"], [0.1, 0.1, 0.1])))
+    )
     target_c.add(gates.H(1))
-    target_c.add(gates.PauliNoiseChannel(1, 0.1, 0.1, 0.1))
+    target_c.add(
+        gates.PauliNoiseChannel(1, list(zip(["X", "Y", "Z"], [0.1, 0.1, 0.1])))
+    )
     target_state = backend.execute_circuit(target_c)
     backend.assert_allclose(final_state, target_state)
 
 
 def test_circuit_with_noise_noise_map(backend):
-    noise_map = {0: (0.1, 0.2, 0.1), 1: (0.2, 0.3, 0.0), 2: (0.0, 0.0, 0.0)}
+    noise_map = {
+        0: list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.1])),
+        1: list(zip(["X", "Y", "Z"], [0.2, 0.3, 0.0])),
+        2: list(zip(["X", "Y", "Z"], [0.0, 0.0, 0.0])),
+    }
 
     c = Circuit(3, density_matrix=True)
     c.add([gates.H(0), gates.H(1), gates.X(2)])
@@ -92,9 +104,13 @@ def test_circuit_with_noise_noise_map(backend):
 
     target_c = Circuit(3, density_matrix=True)
     target_c.add(gates.H(0))
-    target_c.add(gates.PauliNoiseChannel(0, 0.1, 0.2, 0.1))
+    target_c.add(
+        gates.PauliNoiseChannel(0, list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.1])))
+    )
     target_c.add(gates.H(1))
-    target_c.add(gates.PauliNoiseChannel(1, 0.2, 0.3, 0.0))
+    target_c.add(
+        gates.PauliNoiseChannel(1, list(zip(["X", "Y", "Z"], [0.2, 0.3, 0.0])))
+    )
     target_c.add(gates.X(2))
     target_state = backend.execute_circuit(target_c)
     backend.assert_allclose(final_state, target_state)
@@ -102,17 +118,13 @@ def test_circuit_with_noise_noise_map(backend):
 
 def test_circuit_with_noise_errors():
     c = Circuit(2, density_matrix=True)
-    c.add([gates.H(0), gates.H(1), gates.PauliNoiseChannel(0, px=0.2)])
+    c.add([gates.H(0), gates.H(1), gates.PauliNoiseChannel(0, [("X", 0.2)])])
     with pytest.raises(ValueError):
-        noisy_c = c.with_noise((0.2, 0.3, 0.0))
+        noisy_c = c.with_noise(list(zip(["X", "Y"], [0.2, 0.3])))
     c = Circuit(2, density_matrix=True)
     c.add([gates.H(0), gates.H(1)])
     with pytest.raises(ValueError):
-        noisy_c = c.with_noise((0.2, 0.3))
-    with pytest.raises(ValueError):
-        noisy_c = c.with_noise({0: (0.2, 0.3, 0.1), 1: (0.3, 0.1)})
-    with pytest.raises(ValueError):
-        noisy_c = c.with_noise({0: (0.2, 0.3, 0.1)})
+        noisy_c = c.with_noise({0: list(zip(["X", "Y", "Z"], [0.2, 0.3, 0.1]))})
     with pytest.raises(TypeError):
         noisy_c = c.with_noise({0, 1})
 
@@ -163,11 +175,11 @@ def test_circuit_add_sampling(backend):
 
     for _ in range(10):
         new_gate = np.random.choice(gates_set)(0)
-        circ.add(gates.PauliNoiseChannel(0, pz=0.01))
+        circ.add(gates.PauliNoiseChannel(0, [("Z", 0.01)]))
         circ.add(new_gate)
         circ_no_noise.add(new_gate)
 
-    circ.add(gates.PauliNoiseChannel(0, pz=0.01))
+    circ.add(gates.PauliNoiseChannel(0, [("Z", 0.01)]))
     circ += circ_no_noise.invert()
     circ.add(gates.M(0))
 

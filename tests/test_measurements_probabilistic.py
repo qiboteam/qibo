@@ -1,6 +1,4 @@
 """Test circuit measurements when outcome is probabilistic."""
-import sys
-
 import numpy as np
 import pytest
 
@@ -31,6 +29,23 @@ def test_probabilistic_measurement(backend, accelerators, use_samples):
     assert_result(backend, result, decimal_frequencies=decimal_frequencies)
 
 
+def test_sample_frequency_agreement(backend):
+    # set single-thread to fix the random values generated from the frequency custom op
+    backend.set_threads(1)
+    c = models.Circuit(2)
+    c.add(gates.H(0))
+    c.add(gates.H(1))
+    c.add(gates.M(0, 1))
+    result = backend.execute_circuit(c, nshots=1000)
+
+    backend.set_seed(1234)
+    target_frequencies = result.frequencies(binary=False)
+    samples = result.samples(binary=False)
+    outcomes, counts = np.unique(samples, return_counts=True)
+    frequencies = dict(zip(outcomes, counts))
+    assert frequencies == target_frequencies
+
+
 @pytest.mark.parametrize("use_samples", [True, False])
 def test_unbalanced_probabilistic_measurement(backend, use_samples):
     # set single-thread to fix the random values generated from the frequency custom op
@@ -58,7 +73,9 @@ def test_measurements_with_probabilistic_noise(backend):
     thetas = np.random.random(5)
     c = models.Circuit(5)
     c.add((gates.RX(i, t) for i, t in enumerate(thetas)))
-    c.add(gates.PauliNoiseChannel(i, px=0.0, py=0.2, pz=0.4) for i in range(5))
+    c.add(
+        gates.PauliNoiseChannel(i, list(zip(["Y", "Z"], [0.2, 0.4]))) for i in range(5)
+    )
     c.add(gates.M(*range(5)))
     backend.set_seed(123)
     result = backend.execute_circuit(c, nshots=20)

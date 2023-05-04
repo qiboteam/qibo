@@ -3,9 +3,9 @@ import numpy as np
 import pytest
 
 from qibo import gates
-from qibo.quantum_info import random_density_matrix
-
-_atol = 1e-8
+from qibo.config import PRECISION_TOL
+from qibo.models import Circuit
+from qibo.quantum_info import random_density_matrix, random_statevector
 
 
 def apply_gates(backend, gatelist, nqubits=None, initial_state=None):
@@ -17,28 +17,30 @@ def apply_gates(backend, gatelist, nqubits=None, initial_state=None):
 
 def test_hgate_density_matrix(backend):
     nqubits = 2
-    initial_rho = random_density_matrix(2**nqubits)
+    initial_rho = random_density_matrix(2**nqubits, backend=backend)
     gate = gates.H(1)
     final_rho = apply_gates(backend, [gate], 2, initial_rho)
 
     matrix = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
     matrix = np.kron(np.eye(2), matrix)
-    target_rho = matrix.dot(initial_rho).dot(matrix)
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
+    target_rho = np.dot(np.dot(matrix, initial_rho), matrix)
     backend.assert_allclose(final_rho, target_rho)
 
 
 def test_rygate_density_matrix(backend):
     theta = 0.1234
     nqubits = 1
-    initial_rho = random_density_matrix(2**nqubits)
+    initial_rho = random_density_matrix(2**nqubits, backend=backend)
     gate = gates.RY(0, theta=theta)
     final_rho = apply_gates(backend, [gate], 1, initial_rho)
 
     phase = np.exp(1j * theta / 2.0)
     matrix = phase * np.array([[phase.real, -phase.imag], [phase.imag, phase.real]])
-    target_rho = matrix.dot(initial_rho).dot(matrix.T.conj())
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
+    target_rho = np.dot(np.dot(matrix, initial_rho), np.transpose(np.conj(matrix)))
 
-    backend.assert_allclose(final_rho, target_rho, atol=_atol)
+    backend.assert_allclose(final_rho, target_rho, atol=PRECISION_TOL)
 
 
 @pytest.mark.parametrize(
@@ -65,7 +67,7 @@ def test_rygate_density_matrix(backend):
 def test_one_qubit_gates(backend, gatename, gatekwargs):
     """Check applying one qubit gates to one qubit density matrix."""
     nqubits = 1
-    initial_rho = random_density_matrix(2**nqubits)
+    initial_rho = random_density_matrix(2**nqubits, backend=backend)
     gate = getattr(gates, gatename)(0, **gatekwargs)
     final_rho = apply_gates(backend, [gate], 1, initial_rho)
 
@@ -77,7 +79,7 @@ def test_one_qubit_gates(backend, gatename, gatekwargs):
 @pytest.mark.parametrize("gatename", ["H", "X", "Y", "Z", "S", "SDG", "T", "TDG"])
 def test_controlled_by_one_qubit_gates(backend, gatename):
     nqubits = 2
-    initial_rho = random_density_matrix(2**nqubits)
+    initial_rho = random_density_matrix(2**nqubits, backend=backend)
     gate = getattr(gates, gatename)(1).controlled_by(0)
     final_rho = apply_gates(backend, [gate], 2, initial_rho)
 
@@ -106,19 +108,19 @@ def test_controlled_by_one_qubit_gates(backend, gatename):
 def test_two_qubit_gates(backend, gatename, gatekwargs):
     """Check applying two qubit gates to two qubit density matrix."""
     nqubits = 2
-    initial_rho = random_density_matrix(2**nqubits)
+    initial_rho = random_density_matrix(2**nqubits, backend=backend)
     gate = getattr(gates, gatename)(0, 1, **gatekwargs)
     final_rho = apply_gates(backend, [gate], 2, initial_rho)
 
     matrix = backend.to_numpy(gate.asmatrix(backend))
     target_rho = np.einsum("ab,bc,cd->ad", matrix, initial_rho, matrix.conj().T)
-    backend.assert_allclose(final_rho, target_rho, atol=_atol)
+    backend.assert_allclose(final_rho, target_rho, atol=PRECISION_TOL)
 
 
 def test_toffoli_gate(backend):
     """Check applying Toffoli to three qubit density matrix."""
     nqubits = 3
-    initial_rho = random_density_matrix(2**nqubits)
+    initial_rho = random_density_matrix(2**nqubits, backend=backend)
     gate = gates.TOFFOLI(0, 1, 2)
     final_rho = apply_gates(backend, [gate], 3, initial_rho)
 
@@ -132,7 +134,7 @@ def test_unitary_gate(backend, nqubits):
     """Check applying `gates.Unitary` to density matrix."""
     shape = 2 * (2**nqubits,)
     matrix = np.random.random(shape) + 1j * np.random.random(shape)
-    initial_rho = random_density_matrix(2**nqubits)
+    initial_rho = random_density_matrix(2**nqubits, backend=backend)
     gate = gates.Unitary(matrix, *range(nqubits))
     final_rho = apply_gates(backend, [gate], nqubits, initial_rho)
     target_rho = np.einsum("ab,bc,cd->ad", matrix, initial_rho, matrix.conj().T)
@@ -143,14 +145,15 @@ def test_cu1gate_application_twoqubit(backend):
     """Check applying two qubit gate to three qubit density matrix."""
     theta = 0.1234
     nqubits = 3
-    initial_rho = random_density_matrix(2**nqubits)
+    initial_rho = random_density_matrix(2**nqubits, backend=backend)
     gate = gates.CU1(0, 1, theta=theta)
     final_rho = apply_gates(backend, [gate], nqubits, initial_rho)
 
     matrix = np.eye(4, dtype=np.complex128)
     matrix[3, 3] = np.exp(1j * theta)
     matrix = np.kron(matrix, np.eye(2))
-    target_rho = matrix.dot(initial_rho).dot(matrix.T.conj())
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
+    target_rho = np.dot(np.dot(matrix, initial_rho), np.transpose(np.conj(matrix)))
     backend.assert_allclose(final_rho, target_rho)
 
 
@@ -196,11 +199,9 @@ def test_controlled_with_effect(backend):
 @pytest.mark.parametrize("nqubits", [4, 5])
 def test_controlled_by_random(backend, nqubits):
     """Check controlled_by method on gate."""
-    from qibo.models import Circuit
-    from qibo.quantum_info import random_statevector
 
-    initial_psi = random_statevector(2**nqubits)
-    initial_rho = np.outer(initial_psi, initial_psi.conj())
+    initial_psi = random_statevector(2**nqubits, backend=backend)
+    initial_rho = np.outer(initial_psi, np.conj(initial_psi))
     c = Circuit(nqubits, density_matrix=True)
     c.add(gates.RX(1, theta=0.789).controlled_by(2))
     c.add(gates.fSim(0, 2, theta=0.123, phi=0.321).controlled_by(1, 3))

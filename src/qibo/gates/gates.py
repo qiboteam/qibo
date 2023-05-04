@@ -1,112 +1,8 @@
 import math
-from typing import Dict, List, Optional, Tuple
+from typing import List
 
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate, ParametrizedGate
-
-# TODO: Make these dictionaries gate properties
-QASM_GATES = {
-    "h": "H",
-    "x": "X",
-    "y": "Y",
-    "z": "Z",
-    "rx": "RX",
-    "ry": "RY",
-    "rz": "RZ",
-    "u1": "U1",
-    "u2": "U2",
-    "u3": "U3",
-    "cx": "CNOT",
-    "swap": "SWAP",
-    "iswap": "iSWAP",
-    "fswap": "FSWAP",
-    "rxx": "RXX",
-    "ryy": "RYY",
-    "rzz": "RZZ",
-    "cz": "CZ",
-    "crx": "CRX",
-    "cry": "CRY",
-    "crz": "CRZ",
-    "cu1": "CU1",
-    "cu3": "CU3",
-    "ccx": "TOFFOLI",
-    "id": "I",
-    "s": "S",
-    "sdg": "SDG",
-    "t": "T",
-    "tdg": "TDG",
-}
-PARAMETRIZED_GATES = {
-    "rx",
-    "ry",
-    "rz",
-    "gpi",
-    "gpi2",
-    "rxx",
-    "ryy",
-    "rzz",
-    "ms",
-    "u1",
-    "u2",
-    "u3",
-    "crx",
-    "cry",
-    "crz",
-    "cu1",
-    "cu3",
-}
-DRAW_LABELS = {
-    "h": "H",
-    "x": "X",
-    "y": "Y",
-    "z": "Z",
-    "s": "S",
-    "sdg": "SDG",
-    "t": "T",
-    "tdg": "TDG",
-    "rx": "RX",
-    "ry": "RY",
-    "rz": "RZ",
-    "gpi": "GPI",
-    "gpi2": "GPI2",
-    "u1": "U1",
-    "u2": "U2",
-    "u3": "U3",
-    "cx": "X",
-    "swap": "x",
-    "iswap": "i",
-    "cz": "Z",
-    "crx": "RX",
-    "cry": "RY",
-    "crz": "RZ",
-    "cu1": "U1",
-    "cu3": "U3",
-    "ccx": "X",
-    "id": "I",
-    "measure": "M",
-    "fsim": "f",
-    "generalizedfsim": "gf",
-    "rxx": "RXX",
-    "ryy": "RYY",
-    "rzz": "RZZ",
-    "Unitary": "U",
-    "fswap": "fx",
-    "ms": "MS",
-    "PauliNoiseChannel": "PN",
-    "GeneralizedPauliNoiseChannel": "GPN",
-    "KrausChannel": "K",
-    "UnitaryChannel": "U",
-    "ThermalRelaxationChannel": "TR",
-    "DepolarizingChannel": "D",
-    "ReadoutErrorChannel": "RE",
-    "ResetChannel": "R",
-    "PartialTrace": "PT",
-    "EntanglementEntropy": "EE",
-    "Norm": "N",
-    "Overlap": "O",
-    "Energy": "E",
-    "Fused Gate": "[]",
-}
 
 
 class H(Gate):
@@ -119,8 +15,13 @@ class H(Gate):
     def __init__(self, q):
         super().__init__()
         self.name = "h"
+        self.draw_label = "H"
         self.target_qubits = (q,)
         self.init_args = [q]
+
+    @property
+    def qasm_label(self):
+        return "h"
 
 
 class X(Gate):
@@ -133,8 +34,13 @@ class X(Gate):
     def __init__(self, q):
         super().__init__()
         self.name = "x"
+        self.draw_label = "X"
         self.target_qubits = (q,)
         self.init_args = [q]
+
+    @property
+    def qasm_label(self):
+        return "x"
 
     @Gate.check_controls
     def controlled_by(self, *q):
@@ -211,7 +117,7 @@ class X(Gate):
             # impractical case
             raise_error(
                 NotImplementedError,
-                "X decomposition not implemented " "for zero free qubits.",
+                "X decomposition not implemented for zero free qubits.",
             )
 
         decomp_gates.extend(decomp_gates)
@@ -231,8 +137,13 @@ class Y(Gate):
     def __init__(self, q):
         super().__init__()
         self.name = "y"
+        self.draw_label = "Y"
         self.target_qubits = (q,)
         self.init_args = [q]
+
+    @property
+    def qasm_label(self):
+        return "y"
 
     def basis_rotation(self):
         from qibo import matrices
@@ -251,8 +162,13 @@ class Z(Gate):
     def __init__(self, q):
         super().__init__()
         self.name = "z"
+        self.draw_label = "Z"
         self.target_qubits = (q,)
         self.init_args = [q]
+
+    @property
+    def qasm_label(self):
+        return "z"
 
     @Gate.check_controls
     def controlled_by(self, *q):
@@ -285,8 +201,13 @@ class S(Gate):
     def __init__(self, q):
         super().__init__()
         self.name = "s"
+        self.draw_label = "S"
         self.target_qubits = (q,)
         self.init_args = [q]
+
+    @property
+    def qasm_label(self):
+        return "s"
 
     def _dagger(self):
         return SDG(*self.init_args)
@@ -310,8 +231,13 @@ class SDG(Gate):
     def __init__(self, q):
         super().__init__()
         self.name = "sdg"
+        self.draw_label = "SDG"
         self.target_qubits = (q,)
         self.init_args = [q]
+
+    @property
+    def qasm_label(self):
+        return "sdg"
 
     def _dagger(self):
         return S(*self.init_args)
@@ -335,8 +261,13 @@ class T(Gate):
     def __init__(self, q):
         super().__init__()
         self.name = "t"
+        self.draw_label = "T"
         self.target_qubits = (q,)
         self.init_args = [q]
+
+    @property
+    def qasm_label(self):
+        return "t"
 
     def _dagger(self):
         return TDG(*self.init_args)
@@ -360,8 +291,13 @@ class TDG(Gate):
     def __init__(self, q):
         super().__init__()
         self.name = "tdg"
+        self.draw_label = "TDG"
         self.target_qubits = (q,)
         self.init_args = [q]
+
+    @property
+    def qasm_label(self):
+        return "tdg"
 
     def _dagger(self):
         return T(*self.init_args)
@@ -377,17 +313,23 @@ class I(ParametrizedGate):
     def __init__(self, *q):
         super().__init__()
         self.name = "id"
+        self.draw_label = "I"
         self.target_qubits = tuple(q)
         self.init_args = q
         # save the number of target qubits as parameter
         # for proper identity matrix construction
         self.parameters = 2 ** len(self.target_qubits)
 
+    @property
+    def qasm_label(self):
+        return "id"
+
 
 class Align(ParametrizedGate):
     def __init__(self, *q):
         super().__init__()
         self.name = "align"
+        self.draw_label = "A"
         self.target_qubits = tuple(q)
         self.init_args = q
         # save the number of target qubits as parameter
@@ -458,7 +400,12 @@ class RX(_Rn_):
     def __init__(self, q, theta, trainable=True):
         super().__init__(q, theta, trainable)
         self.name = "rx"
+        self.draw_label = "RX"
         self._controlled_gate = CRX
+
+    @property
+    def qasm_label(self):
+        return "rx"
 
     def generator_eigenvalue(self):
         return 0.5
@@ -488,7 +435,12 @@ class RY(_Rn_):
     def __init__(self, q, theta, trainable=True):
         super().__init__(q, theta, trainable)
         self.name = "ry"
+        self.draw_label = "RY"
         self._controlled_gate = CRY
+
+    @property
+    def qasm_label(self):
+        return "ry"
 
     def generator_eigenvalue(self):
         return 0.5
@@ -516,7 +468,12 @@ class RZ(_Rn_):
     def __init__(self, q, theta, trainable=True):
         super().__init__(q, theta, trainable)
         self.name = "rz"
+        self.draw_label = "RZ"
         self._controlled_gate = CRZ
+
+    @property
+    def qasm_label(self):
+        return "rz"
 
     def generator_eigenvalue(self):
         return 0.5
@@ -544,6 +501,7 @@ class GPI(ParametrizedGate):
     def __init__(self, q, phi, trainable=True):
         super().__init__(trainable)
         self.name = "gpi"
+        self.draw_label = "GPI"
         self.target_qubits = (q,)
 
         self.parameter_names = "phi"
@@ -575,7 +533,8 @@ class GPI2(ParametrizedGate):
 
     def __init__(self, q, phi, trainable=True):
         super().__init__(trainable)
-        self.name = "gpi"
+        self.name = "gpi2"
+        self.draw_label = "GPI2"
         self.target_qubits = (q,)
 
         self.parameter_names = "phi"
@@ -643,10 +602,15 @@ class U1(_Un_):
     def __init__(self, q, theta, trainable=True):
         super().__init__(q, trainable=trainable)
         self.name = "u1"
+        self.draw_label = "U1"
         self._controlled_gate = CU1
         self.nparams = 1
         self.parameters = theta
         self.init_kwargs = {"theta": theta, "trainable": trainable}
+
+    @property
+    def qasm_label(self):
+        return "u1"
 
     def _dagger(self) -> "Gate":
         theta = -self.parameters[0]
@@ -677,12 +641,17 @@ class U2(_Un_):
     def __init__(self, q, phi, lam, trainable=True):
         super().__init__(q, trainable=trainable)
         self.name = "u2"
+        self.draw_label = "U2"
         self._controlled_gate = CU2
         self.nparams = 2
         self._phi, self._lam = None, None
         self.init_kwargs = {"phi": phi, "lam": lam, "trainable": trainable}
         self.parameter_names = ["phi", "lam"]
         self.parameters = phi, lam
+
+    @property
+    def qasm_label(self):
+        return "u2"
 
     def _dagger(self) -> "Gate":
         """"""
@@ -698,8 +667,10 @@ class U3(_Un_):
 
     .. math::
         \\begin{pmatrix}
-        e^{-i(\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) & -e^{-i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) \\\\
-        e^{i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) & e^{i (\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) \\\\
+        e^{-i(\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) &
+            -e^{-i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) \\\\
+        e^{i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) &
+            e^{i (\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) \\\\
         \\end{pmatrix}
 
     Args:
@@ -715,6 +686,7 @@ class U3(_Un_):
     def __init__(self, q, theta, phi, lam, trainable=True):
         super().__init__(q, trainable=trainable)
         self.name = "u3"
+        self.draw_label = "U3"
         self._controlled_gate = CU3
         self.nparams = 3
         self._theta, self._phi, self._lam = None, None, None
@@ -726,6 +698,10 @@ class U3(_Un_):
         }
         self.parameter_names = ["theta", "phi", "lam"]
         self.parameters = theta, phi, lam
+
+    @property
+    def qasm_label(self):
+        return "u3"
 
     def _dagger(self) -> "Gate":
         """"""
@@ -754,9 +730,14 @@ class CNOT(Gate):
     def __init__(self, q0, q1):
         super().__init__()
         self.name = "cx"
+        self.draw_label = "X"
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
+
+    @property
+    def qasm_label(self):
+        return "cx"
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
         q0, q1 = self.control_qubits[0], self.target_qubits[0]
@@ -784,9 +765,14 @@ class CZ(Gate):
     def __init__(self, q0, q1):
         super().__init__()
         self.name = "cz"
+        self.draw_label = "Z"
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
+
+    @property
+    def qasm_label(self):
+        return "cz"
 
 
 class _CRn_(ParametrizedGate):
@@ -844,6 +830,11 @@ class CRX(_CRn_):
     def __init__(self, q0, q1, theta, trainable=True):
         super().__init__(q0, q1, theta, trainable)
         self.name = "crx"
+        self.draw_label = "RX"
+
+    @property
+    def qasm_label(self):
+        return "crx"
 
 
 class CRY(_CRn_):
@@ -873,6 +864,11 @@ class CRY(_CRn_):
     def __init__(self, q0, q1, theta, trainable=True):
         super().__init__(q0, q1, theta, trainable)
         self.name = "cry"
+        self.draw_label = "RY"
+
+    @property
+    def qasm_label(self):
+        return "cry"
 
 
 class CRZ(_CRn_):
@@ -900,6 +896,11 @@ class CRZ(_CRn_):
     def __init__(self, q0, q1, theta, trainable=True):
         super().__init__(q0, q1, theta, trainable)
         self.name = "crz"
+        self.draw_label = "RZ"
+
+    @property
+    def qasm_label(self):
+        return "crz"
 
 
 class _CUn_(ParametrizedGate):
@@ -950,9 +951,14 @@ class CU1(_CUn_):
     def __init__(self, q0, q1, theta, trainable=True):
         super().__init__(q0, q1, trainable=trainable)
         self.name = "cu1"
+        self.draw_label = "U1"
         self.nparams = 1
         self.parameters = theta
         self.init_kwargs = {"theta": theta, "trainable": trainable}
+
+    @property
+    def qasm_label(self):
+        return "cu1"
 
     def _dagger(self) -> "Gate":
         """"""
@@ -989,6 +995,7 @@ class CU2(_CUn_):
     def __init__(self, q0, q1, phi, lam, trainable=True):
         super().__init__(q0, q1, trainable=trainable)
         self.name = "cu2"
+        self.draw_label = "U2"
         self.nparams = 2
         self.init_kwargs = {"phi": phi, "lam": lam, "trainable": trainable}
 
@@ -1013,8 +1020,10 @@ class CU3(_CUn_):
         \\begin{pmatrix}
         1 & 0 & 0 & 0 \\\\
         0 & 1 & 0 & 0 \\\\
-        0 & 0 & e^{-i(\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) & -e^{-i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) \\\\
-        0 & 0 & e^{i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) & e^{i (\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) \\\\
+        0 & 0 & e^{-i(\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) &
+            -e^{-i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) \\\\
+        0 & 0 & e^{i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) &
+            e^{i (\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) \\\\
         \\end{pmatrix}
 
     Args:
@@ -1031,6 +1040,7 @@ class CU3(_CUn_):
     def __init__(self, q0, q1, theta, phi, lam, trainable=True):
         super().__init__(q0, q1, trainable=trainable)
         self.name = "cu3"
+        self.draw_label = "U3"
         self.nparams = 3
         self._theta, self._phi, self._lam = None, None, None
         self.init_kwargs = {
@@ -1041,6 +1051,10 @@ class CU3(_CUn_):
         }
         self.parameter_names = ["theta", "phi", "lam"]
         self.parameters = theta, phi, lam
+
+    @property
+    def qasm_label(self):
+        return "cu3"
 
     def _dagger(self) -> "Gate":
         """"""
@@ -1071,8 +1085,13 @@ class SWAP(Gate):
     def __init__(self, q0, q1):
         super().__init__()
         self.name = "swap"
+        self.draw_label = "x"
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
+
+    @property
+    def qasm_label(self):
+        return "swap"
 
 
 class iSWAP(Gate):
@@ -1096,8 +1115,13 @@ class iSWAP(Gate):
     def __init__(self, q0, q1):
         super().__init__()
         self.name = "iswap"
+        self.draw_label = "i"
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
+
+    @property
+    def qasm_label(self):
+        return "iswap"
 
 
 class FSWAP(Gate):
@@ -1121,8 +1145,13 @@ class FSWAP(Gate):
     def __init__(self, q0, q1):
         super().__init__()
         self.name = "fswap"
+        self.draw_label = "fx"
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
+
+    @property
+    def qasm_label(self):
+        return "fswap"
 
 
 class fSim(ParametrizedGate):
@@ -1153,6 +1182,7 @@ class fSim(ParametrizedGate):
     def __init__(self, q0, q1, theta, phi, trainable=True):
         super().__init__(trainable)
         self.name = "fsim"
+        self.draw_label = "f"
         self.target_qubits = (q0, q1)
 
         self.parameter_names = ["theta", "phi"]
@@ -1195,6 +1225,7 @@ class GeneralizedfSim(ParametrizedGate):
     def __init__(self, q0, q1, unitary, phi, trainable=True):
         super().__init__(trainable)
         self.name = "generalizedfsim"
+        self.draw_label = "gf"
         self.target_qubits = (q0, q1)
 
         self.parameter_names = ["unitary", "phi"]
@@ -1278,6 +1309,11 @@ class RXX(_Rnn_):
     def __init__(self, q0, q1, theta, trainable=True):
         super().__init__(q0, q1, theta, trainable)
         self.name = "rxx"
+        self.draw_label = "RXX"
+
+    @property
+    def qasm_label(self):
+        return "rxx"
 
 
 class RYY(_Rnn_):
@@ -1304,6 +1340,11 @@ class RYY(_Rnn_):
     def __init__(self, q0, q1, theta, trainable=True):
         super().__init__(q0, q1, theta, trainable)
         self.name = "ryy"
+        self.draw_label = "RYY"
+
+    @property
+    def qasm_label(self):
+        return "ryy"
 
 
 class RZZ(_Rnn_):
@@ -1331,6 +1372,11 @@ class RZZ(_Rnn_):
     def __init__(self, q0, q1, theta, trainable=True):
         super().__init__(q0, q1, theta, trainable)
         self.name = "rzz"
+        self.draw_label = "RZZ"
+
+    @property
+    def qasm_label(self):
+        return "rzz"
 
 
 class MS(ParametrizedGate):
@@ -1361,6 +1407,7 @@ class MS(ParametrizedGate):
     def __init__(self, q0, q1, phi0, phi1, trainable=True):
         super().__init__(trainable)
         self.name = "ms"
+        self.draw_label = "MS"
         self.target_qubits = (q0, q1)
 
         self.parameter_names = ["phi0", "phi1"]
@@ -1389,9 +1436,14 @@ class TOFFOLI(Gate):
     def __init__(self, q0, q1, q2):
         super().__init__()
         self.name = "ccx"
+        self.draw_label = "X"
         self.control_qubits = (q0, q1)
         self.target_qubits = (q2,)
         self.init_args = [q0, q1, q2]
+
+    @property
+    def qasm_label(self):
+        return "ccx"
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
         c0, c1 = self.control_qubits
@@ -1417,8 +1469,6 @@ class TOFFOLI(Gate):
         """
         if use_toffolis:
             return self.decompose()
-
-        import importlib
 
         control0, control1 = self.control_qubits
         target = self.target_qubits[0]
@@ -1450,6 +1500,7 @@ class Unitary(ParametrizedGate):
     def __init__(self, unitary, *q, trainable=True, name=None):
         super().__init__(trainable)
         self.name = "Unitary" if name is None else name
+        self.draw_label = "U"
         self.target_qubits = tuple(q)
 
         # TODO: Check that given ``unitary`` has proper shape?

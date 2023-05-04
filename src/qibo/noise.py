@@ -67,21 +67,9 @@ class PauliError:
         options (tuple): see :class:`qibo.gates.PauliNoiseChannel`
     """
 
-    def __init__(self, px=0, py=0, pz=0):
-        self.options = px, py, pz
-        self.channel = gates.PauliNoiseChannel
-
-
-class GeneralizedPauliError:
-    """Quantum error associated with the :class:`qibo.gates.GeneralizedPauliNoiseChannel`.
-
-    Args:
-        options (tuple): see :class:`qibo.gates.GeneralizedPauliNoiseChannel`
-    """
-
     def __init__(self, operators):
         self.options = operators
-        self.channel = gates.GeneralizedPauliNoiseChannel
+        self.channel = gates.PauliNoiseChannel
 
 
 class DepolarizingError:
@@ -173,8 +161,8 @@ class NoiseModel:
         # - Pauli error on H only for qubit 1.
         # - Pauli error on CNOT for all the qubits.
         noise = NoiseModel()
-        noise.add(PauliError(px = 0.5), gates.H, 1)
-        noise.add(PauliError(py = 0.5), gates.CNOT)
+        noise.add(PauliError([("X", 0.5)]), gates.H, 1)
+        noise.add(PauliError([("Y", 0.5)]), gates.CNOT)
 
         # Generate noiseless circuit.
         c = models.Circuit(2)
@@ -194,7 +182,6 @@ class NoiseModel:
         Args:
             error: quantum error to associate with the gate. Possible choices
                    are :class:`qibo.noise.PauliError`,
-                   :class:`qibo.noise.GeneralizedPauliError`,
                    :class:`qibo.noise.ThermalRelaxationError`,
                    :class:`qibo.noise.DepolarizingError`,
                    :class:`qibo.noise.ReadoutError`,
@@ -222,9 +209,9 @@ class NoiseModel:
                 return np.pi/2 in gate.parameters
 
             # Build a noise model with a Pauli error on RX(pi/2) gates.
-            error = PauliError(0.01, 0.5, 0.1)
+            error = PauliError(list(zip(["X", "Y", "Z"], [0.01, 0.5, 0.1])))
             noise = NoiseModel()
-            noise.add(PauliError(px = 0.5), gates.RX, condition=is_sqrt_x)
+            noise.add(PauliError([("X", 0.5)]), gates.RX, condition=is_sqrt_x)
 
             # Generate a noiseless circuit.
             circuit = Circuit(1)
@@ -308,7 +295,7 @@ class NoiseModel:
 
                         if isinstance(error, CustomError) and qubits:
                             noisy_circuit.add(error.channel)
-                        elif isinstance(error, GeneralizedPauliError) and qubits:
+                        elif isinstance(error, PauliError) and qubits:
                             for q in qubits:
                                 noisy_circuit.add(error.channel(q, error.options))
                         elif isinstance(error, DepolarizingError) and qubits:

@@ -83,8 +83,7 @@ def test_state_probabilities(backend, density_matrix):
     backend.assert_allclose(final_probabilities, target_probabilities)
 
 
-@pytest.mark.parametrize("density_matrix", [False, True])
-def test_expectation_from_samples(backend, density_matrix):
+def test_expectation_from_samples(backend):
     # fix seed to use the same samples in every execution
     np.random.seed(123)
     obs0 = 2 * Z(0) * Z(1) + Z(0) * Z(2)

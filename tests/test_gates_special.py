@@ -4,13 +4,15 @@ import pytest
 from qibo import gates
 
 
-def test_callback_gate_errors():
+def test_callback_gate_errors(backend):
     from qibo import callbacks
 
     entropy = callbacks.EntanglementEntropy([0])
     gate = gates.CallbackGate(entropy)
     with pytest.raises(NotImplementedError):
         gate.on_qubits(2)
+    with pytest.raises(NotImplementedError):
+        gate.asmatrix(backend)
 
 
 @pytest.mark.parametrize("nqubits", [2, 3])

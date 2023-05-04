@@ -1,7 +1,10 @@
-import warnings
+"""Define quantum channels."""
+
 from itertools import product
 from math import exp, sqrt
 from typing import Tuple
+
+import numpy as np
 
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate
@@ -18,19 +21,19 @@ class Channel(Gate):
         self.gates = tuple()
 
     def controlled_by(self, *q):
-        """"""
-        raise_error(ValueError, "Noise channel cannot be controlled on qubits.")
+        raise_error(ValueError, f"Noise channel cannot be controlled on qubits {q}.")
 
     def on_qubits(self, qubit_map):  # pragma: no cover
         # future TODO
         raise_error(
             NotImplementedError,
-            "`on_qubits` method is not available " "for the `Channel` gate.",
+            "`on_qubits` method is not available for the `Channel` gate.",
         )
 
     def apply(self, backend, state, nqubits):  # pragma: no cover
         raise_error(
-            NotImplementedError, f"{self.name} cannot be applied to state vector."
+            NotImplementedError,
+            f"{self.__class__.__name__} cannot be applied to state vector.",
         )
 
     def apply_density_matrix(self, backend, state, nqubits):
@@ -41,7 +44,8 @@ class Channel(Gate):
         of the Kraus channel :math:`\\{K_{\\alpha}\\}_{\\alpha}`.
 
         .. math::
-            \\mathcal{E} = \\sum_{\\alpha} \\, |K_{\\alpha}\\rangle\\rangle \\langle\\langle K_{\\alpha}|
+            \\mathcal{E} = \\sum_{\\alpha} \\, |K_{\\alpha}\\rangle\\rangle
+                \\langle\\langle K_{\\alpha}|
 
         Args:
             order (str, optional): If ``"row"``, vectorization of
@@ -55,7 +59,6 @@ class Channel(Gate):
         Returns:
             Choi representation of the channel.
         """
-        import numpy as np
 
         from qibo.quantum_info.superoperator_transformations import vectorization
 
@@ -86,16 +89,15 @@ class Channel(Gate):
                 self.coefficients += (p0,)
                 self.gates += (I(*self.target_qubits),)
 
-        super_op = np.zeros((4**self.nqubits, 4**self.nqubits), dtype="complex")
+        super_op = np.zeros((4**self.nqubits, 4**self.nqubits), dtype=complex)
+        super_op = backend.cast(super_op, dtype=super_op.dtype)
         for coeff, gate in zip(self.coefficients, self.gates):
             kraus_op = FusedGate(*range(self.nqubits))
             kraus_op.append(gate)
             kraus_op = kraus_op.asmatrix(backend)
-            kraus_op = vectorization(kraus_op, order=order)
+            kraus_op = vectorization(kraus_op, order=order, backend=backend)
             super_op += coeff * np.outer(kraus_op, np.conj(kraus_op))
             del kraus_op
-
-        super_op = backend.cast(super_op, dtype=super_op.dtype)
 
         return super_op
 
@@ -114,7 +116,6 @@ class Channel(Gate):
         Returns:
             Liouville representation of the channel.
         """
-        import numpy as np
 
         from qibo.quantum_info.superoperator_transformations import choi_to_liouville
 
@@ -124,8 +125,7 @@ class Channel(Gate):
             backend = GlobalBackend()
 
         super_op = self.to_choi(order=order, backend=backend)
-        super_op = choi_to_liouville(super_op, order=order)
-        super_op = backend.cast(super_op, dtype=super_op.dtype)
+        super_op = choi_to_liouville(super_op, order=order, backend=backend)
 
         return super_op
 
@@ -143,7 +143,6 @@ class Channel(Gate):
         Returns:
             Pauli-Liouville representation of the channel.
         """
-        import numpy as np
 
         from qibo.quantum_info.basis import comp_basis_to_pauli
 
@@ -155,11 +154,10 @@ class Channel(Gate):
         super_op = self.to_liouville(backend=backend)
 
         # unitary that transforms from comp basis to pauli basis
-        U = comp_basis_to_pauli(self.nqubits, normalize)
-        U = backend.cast(U, dtype=U.dtype)
+        unitary = comp_basis_to_pauli(self.nqubits, normalize, backend=backend)
+        unitary = backend.cast(unitary, dtype=unitary.dtype)
 
-        super_op = U @ super_op @ np.transpose(np.conj(U))
-        super_op = backend.cast(super_op, dtype=super_op.dtype)
+        super_op = unitary @ super_op @ np.transpose(np.conj(unitary))
 
         return super_op
 
@@ -205,6 +203,7 @@ class KrausChannel(Channel):
     def __init__(self, ops):
         super().__init__()
         self.name = "KrausChannel"
+        self.draw_label = "K"
         if isinstance(ops[0], Gate):
             self.gates = tuple(ops)
             self.target_qubits = tuple(
@@ -261,14 +260,15 @@ class UnitaryChannel(KrausChannel):
                 f"Probabilities list has length {len(probabilities)} while "
                 + f"{len(ops)} gates were given.",
             )
-        for p in probabilities:
-            if p < 0 or p > 1:
+        for prob in probabilities:
+            if prob < 0 or prob > 1:
                 raise_error(
                     ValueError,
-                    f"Probabilities should be between 0 and 1 but {p} was given.",
+                    f"Probabilities should be between 0 and 1 but {prob} was given.",
                 )
         super().__init__(ops)
         self.name = "UnitaryChannel"
+        self.draw_label = "U"
         self.coefficients = tuple(probabilities)
         self.coefficient_sum = sum(probabilities)
         if self.coefficient_sum > 1 + PRECISION_TOL or self.coefficient_sum <= 0:
@@ -285,48 +285,6 @@ class UnitaryChannel(KrausChannel):
 
 
 class PauliNoiseChannel(UnitaryChannel):
-    """Noise channel that applies Pauli operators with given probabilities.
-
-    Implements the following transformation:
-
-    .. math::
-        \\mathcal{E}(\\rho ) = (1 - p_x - p_y - p_z) \\rho + p_x X\\rho X + p_y Y\\rho Y + p_z Z\\rho Z
-
-    which can be used to simulate phase flip and bit flip errors.
-    This channel can be simulated using either density matrices or state vectors
-    and sampling with repeated execution.
-    See :ref:`How to perform noisy simulation? <noisy-example>` for more
-    information.
-
-    Args:
-        q (int): Qubit id that the noise acts on.
-        px (float): Bit flip (X) error probability.
-        py (float): Y-error probability.
-        pz (float): Phase flip (Z) error probability.
-    """
-
-    def __init__(self, q, px=0, py=0, pz=0):
-        warnings.warn(
-            "This channel will be removed in a later release. "
-            + "Use GeneralizedPauliNoiseChannel instead.",
-            DeprecationWarning,
-        )
-
-        probs, gates = [], []
-        for p, gate in [(px, X), (py, Y), (pz, Z)]:
-            if p > 0:
-                probs.append(p)
-                gates.append(gate(q))
-
-        super().__init__(probs, gates)
-        self.name = "PauliNoiseChannel"
-        assert self.target_qubits == (q,)
-
-        self.init_args = [q]
-        self.init_kwargs = {"px": px, "py": py, "pz": pz}
-
-
-class GeneralizedPauliNoiseChannel(UnitaryChannel):
     """Multi-qubit noise channel that applies Pauli operators with given probabilities.
 
     Implements the following transformation:
@@ -346,7 +304,7 @@ class GeneralizedPauliNoiseChannel(UnitaryChannel):
 
             from itertools import product
 
-            from qibo.gates.channels import GeneralizedPauliNoiseChannel
+            from qibo.gates.channels import PauliNoiseChannel
 
             qubits = (0, 2)
             nqubits = len(qubits)
@@ -361,7 +319,7 @@ class GeneralizedPauliNoiseChannel(UnitaryChannel):
             #Excluding probability of Identity operator
             probabilities = probabilities[1:]
 
-            channel = GeneralizedPauliNoiseChannel(
+            channel = PauliNoiseChannel(
                 qubits, list(zip(paulis, probabilities))
             )
 
@@ -376,11 +334,6 @@ class GeneralizedPauliNoiseChannel(UnitaryChannel):
     """
 
     def __init__(self, qubits: Tuple[int, list, tuple], operators: list):
-        warnings.warn(
-            "The class GeneralizedPauliNoiseChannel will be renamed "
-            + "PauliNoiseChannel in a later release."
-        )
-
         if isinstance(qubits, int) is True:
             qubits = (qubits,)
 
@@ -401,7 +354,8 @@ class GeneralizedPauliNoiseChannel(UnitaryChannel):
         self.coefficients = tuple(probabilities)
 
         super().__init__(probabilities, gates)
-        self.name = "GeneralizedPauliNoiseChannel"
+        self.name = "PauliNoiseChannel"
+        self.draw_label = "PN"
         self.init_args = qubits
         self.init_kwargs = dict(operators)
 
@@ -410,7 +364,8 @@ class DepolarizingChannel(Channel):
     """:math:`n`-qubit Depolarizing quantum error channel,
 
     .. math::
-        \\mathcal{E}(\\rho ) = (1 - \\lambda) \\rho +\\lambda \\text{Tr}_q[\\rho]\\otimes \\frac{I}{2^n}
+        \\mathcal{E}(\\rho ) = (1 - \\lambda) \\rho +
+            \\lambda \\text{Tr}_q[\\rho]\\otimes \\frac{I}{2^n}
 
     where :math:`\\lambda` is the depolarizing error parameter
     and :math:`0 \\le \\lambda \\le 4^n / (4^n - 1)`.
@@ -441,6 +396,7 @@ class DepolarizingChannel(Channel):
             )
 
         self.name = "DepolarizingChannel"
+        self.draw_label = "D"
         self.target_qubits = q
 
         self.init_args = [q]
@@ -474,14 +430,15 @@ class ThermalRelaxationChannel(KrausChannel):
     If :math:`T_1 \\geq T_2`:
 
     .. math::
-        \\mathcal{E} (\\rho ) = (1 - p_z - p_0 - p_1)\\rho + p_zZ\\rho Z
-        +  \\mathrm{Tr}_q[\\rho] \\otimes (p_0|0\\rangle \\langle 0| + p_1|1\\rangle \\langle 1|)
+        \\mathcal{E} (\\rho ) = (1 - p_z - p0 - p_1)\\rho + p_zZ\\rho Z
+        +  \\mathrm{Tr}_q[\\rho] \\otimes (p0|0\\rangle \\langle 0| + p_1|1\\rangle \\langle 1|)
 
 
     while if :math:`T_1 < T_2`:
 
     .. math::
-        \\mathcal{E}(\\rho ) = \\mathrm{Tr} _\\mathcal{X}\\left [\\Lambda _{\\mathcal{X}\\mathcal{Y}}(\\rho _\\mathcal{X} ^T \\otimes I_\\mathcal{Y})\\right ]
+        \\mathcal{E}(\\rho ) = \\mathrm{Tr}_\\mathcal{X} \\left[\\Lambda_{\\mathcal{X}\\mathcal{Y}}
+            (\\rho_\\mathcal{X}^T \\otimes I_{\\mathcal{Y}}) \\right]
 
     with
 
@@ -489,28 +446,28 @@ class ThermalRelaxationChannel(KrausChannel):
         \\Lambda = \\begin{pmatrix}
         1 - p_1 & 0 & 0 & e^{-t / T_2} \\\\
         0 & p_1 & 0 & 0 \\\\
-        0 & 0 & p_0 & 0 \\\\
-        e^{-t / T_2} & 0 & 0 & 1 - p_0
+        0 & 0 & p0 & 0 \\\\
+        e^{-t / T_2} & 0 & 0 & 1 - p0
         \\end{pmatrix}
 
-    where :math:`p_0 = (1 - e^{-t / T_1})(1 - \\eta )` :math:`p_1 = (1 - e^{-t / T_1})\\eta`
+    where :math:`p0 = (1 - e^{-t / T_1})(1 - \\eta )` :math:`p_1 = (1 - e^{-t / T_1})\\eta`
     and :math:`p_z = (e^{-t / T_1} - e^{-t / T_2})/2`.
     Here :math:`\\eta` is the ``excited_population``
     and :math:`t` is the ``time``, both controlled by the user.
-    This gate is based on
-    `Qiskit's thermal relaxation error channel <https://qiskit.org/documentation/stubs/qiskit.providers.aer.noise.thermal_relaxation_error.html#qiskit.providers.aer.noise.thermal_relaxation_error>`_.
+    This gate is based on `Qiskit's thermal relaxation error channel
+    <https://qiskit.org/documentation/stubs/qiskit.providers.aer.noise.thermal_relaxation_error.html#qiskit.providers.aer.noise.thermal_relaxation_error>`_.
 
     Args:
         q (int): Qubit id that the noise channel acts on.
-        t1 (float): T1 relaxation time. Should satisfy ``t1 > 0``.
-        t2 (float): T2 dephasing time.
-            Should satisfy ``t1 > 0`` and ``t2 < 2 * t1``.
+        t_1 (float): T1 relaxation time. Should satisfy ``t_1 > 0``.
+        t_2 (float): T2 dephasing time.
+            Should satisfy ``t_1 > 0`` and ``t_2 < 2 * t_1``.
         time (float): the gate time for relaxation error.
         excited_population (float): the population of the excited state at
             equilibrium. Default is 0.
     """
 
-    def __init__(self, q, t1, t2, time, excited_population=0):
+    def __init__(self, q, t_1, t_2, time, excited_population=0):
         self.name = "ThermalRelaxationChannel"
 
         # check given parameters
@@ -520,30 +477,24 @@ class ThermalRelaxationChannel(KrausChannel):
             )
         if time < 0:
             raise_error(ValueError, "Invalid gate_time ({time} < 0).")
-        if t1 <= 0:
-            raise_error(
-                ValueError, "Invalid T_1 relaxation time parameter: " "T_1 <= 0."
-            )
-        if t2 <= 0:
-            raise_error(
-                ValueError, "Invalid T_2 relaxation time parameter: " "T_2 <= 0."
-            )
-        if t2 > 2 * t1:
+        if t_1 <= 0:
+            raise_error(ValueError, "Invalid t_1 relaxation time parameter: t_1 <= 0.")
+        if t_2 <= 0:
+            raise_error(ValueError, "Invalid t_2 relaxation time parameter: t_2 <= 0.")
+        if t_2 > 2 * t_1:
             raise_error(
                 ValueError,
-                "Invalid T_2 relaxation time parameter: " "T_2 greater than 2 * T_1.",
+                "Invalid t_2 relaxation time parameter: t_2 > 2 * t_1.",
             )
 
         # calculate probabilities
-        self.t1, self.t2 = t1, t2
-        p_reset = 1 - exp(-time / t1)
+        self.t_1, self.t_2 = t_1, t_2
+        p_reset = 1 - exp(-time / t_1)
         preset0 = p_reset * (1 - excited_population)
         preset1 = p_reset * excited_population
 
-        import numpy as np
-
-        if t1 < t2:
-            exp_t2 = exp(-time / t2)
+        if t_1 < t_2:
+            exp_t2 = exp(-time / t_2)
 
             from qibo.quantum_info import choi_to_kraus
 
@@ -562,7 +513,7 @@ class ThermalRelaxationChannel(KrausChannel):
             self.init_kwargs["exp_t2"] = exp_t2
 
         else:
-            pz = (exp(-time / t1) - exp(-time / t2)) / 2
+            pz = (exp(-time / t_1) - exp(-time / t_2)) / 2
             operators = (
                 sqrt(preset0) * np.array([[1, 0], [0, 0]]),
                 sqrt(preset0) * np.array([[0, 1], [0, 0]]),
@@ -575,16 +526,19 @@ class ThermalRelaxationChannel(KrausChannel):
             super().__init__(ops=operators)
             self.init_kwargs["pz"] = pz
 
-        self.init_args = [q, t1, t2, time]
-        self.t1, self.t2 = t1, t2
+        self.init_args = [q, t_1, t_2, time]
+        self.t_1, self.t_2 = t_1, t_2
         self.init_kwargs["excited_population"] = excited_population
         self.init_kwargs["p0"] = preset0
         self.init_kwargs["p1"] = preset1
 
-    def apply_density_matrix(self, backend, state, nqubits):
-        q = self.target_qubits[0]
+        self.name = "ThermalRelaxationChannel"
+        self.draw_label = "TR"
 
-        if self.t1 < self.t2:
+    def apply_density_matrix(self, backend, state, nqubits):
+        qubit = self.target_qubits[0]
+
+        if self.t_1 < self.t_2:
             preset0, preset1, exp_t2 = (
                 self.init_kwargs["p0"],
                 self.init_kwargs["p1"],
@@ -597,19 +551,18 @@ class ThermalRelaxationChannel(KrausChannel):
                 [preset1, 0, 0, 1 - preset0],
             ]
 
-            qubits = (q, q + nqubits)
+            qubits = (qubit, qubit + nqubits)
             gate = Unitary(matrix, *qubits)
 
             return backend.thermal_error_density_matrix(gate, state, nqubits)
 
-        else:
-            pz = self.init_kwargs["pz"]
+        pz = self.init_kwargs["pz"]
 
-            return (
-                backend.reset_error_density_matrix(self, state, nqubits)
-                - pz * backend.cast(state)
-                + pz * backend.apply_gate_density_matrix(Z(0), state, nqubits)
-            )
+        return (
+            backend.reset_error_density_matrix(self, state, nqubits)
+            - pz * backend.cast(state)
+            + pz * backend.apply_gate_density_matrix(Z(0), state, nqubits)
+        )
 
 
 class ReadoutErrorChannel(KrausChannel):
@@ -639,13 +592,11 @@ class ReadoutErrorChannel(KrausChannel):
         if isinstance(q, int) is True:
             q = (q,)
 
-        import numpy as np
-
-        d = len(probabilities)
+        dim = len(probabilities)
         operators = []
-        for j in range(d):
-            for k in range(d):
-                operator = np.zeros((d, d))
+        for j in range(dim):
+            for k in range(dim):
+                operator = np.zeros((dim, dim))
                 operator[j, k] = sqrt(probabilities[k, j])
                 operators.append(operator)
 
@@ -653,6 +604,7 @@ class ReadoutErrorChannel(KrausChannel):
 
         super().__init__(ops=operators)
         self.name = "ReadoutErrorChannel"
+        self.draw_label = "RE"
 
 
 class ResetChannel(KrausChannel):
@@ -661,8 +613,8 @@ class ResetChannel(KrausChannel):
     Implements the following transformation:
 
     .. math::
-        \\mathcal{E}(\\rho ) = (1 - p_0 - p_1) \\rho
-        +  \\mathrm{Tr}_q[\\rho] \\otimes (p_0|0\\rangle \\langle 0| + p_1|1\\rangle \\langle 1|),
+        \\mathcal{E}(\\rho ) = (1 - p0 - p_1) \\rho
+        +  \\mathrm{Tr}_q[\\rho] \\otimes (p0|0\\rangle \\langle 0| + p_1|1\\rangle \\langle 1|),
 
     Args:
         q (int): Qubit id that the channel acts on.
@@ -671,8 +623,6 @@ class ResetChannel(KrausChannel):
     """
 
     def __init__(self, q, p0=0.0, p1=0.0):
-        import numpy as np
-
         if p0 < 0:
             raise_error(ValueError, "Invalid p0 ({p0} < 0).")
         if p1 < 0:
@@ -694,6 +644,7 @@ class ResetChannel(KrausChannel):
         super().__init__(ops=operators)
         self.init_kwargs = {"p0": p0, "p1": p1}
         self.name = "ResetChannel"
+        self.draw_label = "R"
 
     def apply_density_matrix(self, backend, state, nqubits):
         return backend.reset_error_density_matrix(self, state, nqubits)

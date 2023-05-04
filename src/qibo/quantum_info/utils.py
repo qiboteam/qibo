@@ -1,5 +1,10 @@
+"""Utility functions for the Quantum Information module."""
+
+from re import finditer
+
 import numpy as np
 
+from qibo.backends import GlobalBackend
 from qibo.config import PRECISION_TOL, raise_error
 
 # Phases corresponding to all 24 single-qubit Clifford gates
@@ -31,7 +36,40 @@ ONEQUBIT_CLIFFORD_PARAMS = [
 ]
 
 
-def shannon_entropy(probability_array, base: float = 2):
+def hamming_weight(bitstring, return_indexes: bool = False):
+    """Calculates the Hamming weight of a bitstring.
+
+    Args:
+        bitstring (int or str or tuple or list or ndarray): bitstring to calculate the
+            weight, either in binary or integer representation.
+        return_indexes (bool, optional): If ``True``, returns the indexes of the
+            non-zero elements. Defaults to ``False``.
+
+    Returns:
+        (int or list): Hamming weight of bitstring or list of indexes of non-zero elements.
+    """
+    if not isinstance(return_indexes, bool):
+        raise_error(
+            TypeError,
+            f"return_indexes must be type bool, but it is type {type(return_indexes)}",
+        )
+
+    if isinstance(bitstring, int):
+        bitstring = f"{bitstring:b}"
+    elif isinstance(bitstring, (list, tuple, np.ndarray)):
+        bitstring = "".join([str(bit) for bit in bitstring])
+
+    indexes = [item.start() for item in finditer("1", bitstring)]
+
+    if return_indexes:
+        return indexes
+
+    weight = len(indexes)
+
+    return weight
+
+
+def shannon_entropy(probability_array, base: float = 2, backend=None):
     """Calculate the Shannon entropy of a probability array :math:`\\mathbf{p}`, which is given by
 
     .. math::
@@ -42,13 +80,20 @@ def shannon_entropy(probability_array, base: float = 2):
     and :math:`0 \\log_{b}(0) \\equiv 0`.
 
     Args:
-        probability_array: a probability array :math:`\\mathbf{p}`.
+        probability_array (array or list): a probability array :math:`\\mathbf{p}`.
         base (float): the base of the log. Default: 2.
+        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
+            in the execution. If ``None``, it uses ``GlobalBackend()``.
+            Defaults to ``None``.
 
     Returns:
         (float): The Shannon entropy :math:`H(\\mathcal{p})`.
-
     """
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    if isinstance(probability_array, list):
+        probability_array = backend.cast(probability_array, dtype=float)
 
     if base <= 0:
         raise_error(ValueError, "log base must be non-negative.")
@@ -74,7 +119,7 @@ def shannon_entropy(probability_array, base: float = 2):
         raise_error(ValueError, "Probability array must sum to 1.")
 
     if base == 2:
-        log_prob = np.where(probability_array != 0, np.log2(probability_array), 0.0)
+        log_prob = np.where(probability_array != 0.0, np.log2(probability_array), 0.0)
     elif base == 10:
         log_prob = np.where(probability_array != 0, np.log10(probability_array), 0.0)
     elif base == np.e:
@@ -89,16 +134,17 @@ def shannon_entropy(probability_array, base: float = 2):
     # absolute value if entropy == 0.0 to avoid returning -0.0
     entropy = np.abs(entropy) if entropy == 0.0 else entropy
 
-    return entropy
+    return complex(entropy).real
 
 
-def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False):
+def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend=None):
     """Calculate the Hellinger distance :math:`H(p, q)` between
     two discrete probability distributions, :math:`\\mathbf{p}` and :math:`\\mathbf{q}`.
     It is defined as
 
     .. math::
-        H(\\mathbf{p} \\, , \\, \\mathbf{q}) = \\frac{1}{\\sqrt{2}} \\, \\| \\sqrt{\\mathbf{p}} - \\sqrt{\\mathbf{q}} \\|_{2}
+        H(\\mathbf{p} \\, , \\, \\mathbf{q}) = \\frac{1}{\\sqrt{2}} \\, \\|
+            \\sqrt{\\mathbf{p}} - \\sqrt{\\mathbf{q}} \\|_{2}
 
     where :math:`\\|\\cdot\\|_{2}` is the Euclidean norm.
 
@@ -107,11 +153,20 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False):
         prob_dist_q: (discrete) probability distribution :math:`q`.
         validate (bool): if True, checks if :math:`p` and :math:`q` are proper
             probability distributions. Default: False.
+        backend (``qibo.backends.abstract.Backend``, optional): backend to be
+            used in the execution. If ``None``, it uses ``GlobalBackend()``.
+            Defaults to ``None``.
 
     Returns:
         (float): Hellinger distance :math:`H(p, q)`.
-
     """
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    if isinstance(prob_dist_p, list):
+        prob_dist_p = backend.cast(prob_dist_p, dtype=float)
+    if isinstance(prob_dist_q, list):
+        prob_dist_q = backend.cast(prob_dist_q, dtype=float)
 
     if (len(prob_dist_p.shape) != 1) or (len(prob_dist_q.shape) != 1):
         raise_error(
@@ -141,10 +196,16 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False):
         ):
             raise_error(ValueError, "Second probability array must sum to 1.")
 
-    return np.linalg.norm(np.sqrt(prob_dist_p) - np.sqrt(prob_dist_q)) / np.sqrt(2)
+    distance = backend.calculate_norm(
+        np.sqrt(prob_dist_p) - np.sqrt(prob_dist_q)
+    ) / np.sqrt(2)
+
+    distance = float(distance)
+
+    return distance
 
 
-def hellinger_fidelity(prob_dist_p, prob_dist_q, validate: bool = False):
+def hellinger_fidelity(prob_dist_p, prob_dist_q, validate: bool = False, backend=None):
     """Calculate the Hellinger fidelity between two discrete
     probability distributions, :math:`p` and :math:`q`. The fidelity is
     defined as :math:`(1 - H^{2}(p, q))^{2}`, where :math:`H(p, q)`
@@ -155,10 +216,14 @@ def hellinger_fidelity(prob_dist_p, prob_dist_q, validate: bool = False):
         prob_dist_q: (discrete) probability distribution :math:`q`.
         validate (bool): if True, checks if :math:`p` and :math:`q` are proper
             probability distributions. Default: False.
+        backend (``qibo.backends.abstract.Backend``, optional): backend to be
+            used in the execution. If ``None``, it uses ``GlobalBackend()``.
+            Defaults to ``None``.
 
     Returns:
         (float): Hellinger fidelity.
 
     """
+    distance = hellinger_distance(prob_dist_p, prob_dist_q, validate, backend=backend)
 
-    return (1 - hellinger_distance(prob_dist_p, prob_dist_q, validate) ** 2) ** 2
+    return (1 - distance**2) ** 2

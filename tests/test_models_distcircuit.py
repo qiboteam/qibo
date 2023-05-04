@@ -1,8 +1,6 @@
 """Test functions defined in `qibo/models/distcircuit.py`."""
-import numpy as np
 import pytest
 
-import qibo
 from qibo import gates
 from qibo.models import Circuit
 from qibo.models.distcircuit import DistributedQubits
@@ -36,7 +34,7 @@ def test_distributed_circuit_add_gate():
         c.add(gates.SWAP(0, 1))
     # Attempt adding noise channel
     with pytest.raises(NotImplementedError):
-        c.add(gates.PauliNoiseChannel(0, px=0.1, pz=0.1))
+        c.add(gates.PauliNoiseChannel(0, [("X", 0.1), ("Z", 0.1)]))
 
 
 def test_distributed_circuit_various_errors():
@@ -44,7 +42,7 @@ def test_distributed_circuit_various_errors():
     c = Circuit(5, devices)
     # Attempt to use ``.with_noise``
     with pytest.raises(NotImplementedError):
-        c.with_noise((0.1, 0.2, 0.1))
+        c.with_noise(list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.1])))
     # Attempt to compile
     with pytest.raises(RuntimeError):
         c.compile()

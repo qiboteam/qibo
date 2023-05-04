@@ -299,7 +299,11 @@ class CircuitResult:
         return self.state(numpy=True)
 
     def probabilities(self, qubits=None):
-        """Calculates measurement probabilities by tracing out qubits.
+        """Calculates measurement probabilities by tracing out qubits. When
+        a noise model is applied to the circuit this method will return the
+        probabilities from the last execution shot, which may or may not
+        correspond to the noise-free state depending on whether the noise was
+        applied or not in that specific execution.
 
         Args:
             qubits (list, set): Set of qubits that are measured.
@@ -362,9 +366,17 @@ class CircuitResult:
                     [gate.result.samples() for gate in self.measurements], axis=1
                 )
             else:
-                # generate new samples
-                probs = self.probabilities(qubits)
-                samples = self.backend.sample_shots(probs, self.nshots)
+                if self._frequencies is not None:
+                    # generate samples that respect the existing frequencies
+                    frequencies = self.frequencies(binary=False)
+                    samples = np.concatenate(
+                        [np.repeat(x, f) for x, f in frequencies.items()]
+                    )
+                    np.random.shuffle(samples)
+                else:
+                    # generate new samples
+                    probs = self.probabilities(qubits)
+                    samples = self.backend.sample_shots(probs, self.nshots)
                 samples = self.backend.samples_to_binary(samples, len(qubits))
                 if self.measurement_gate.has_bitflip_noise():
                     p0, p1 = self.measurement_gate.bitflip_map

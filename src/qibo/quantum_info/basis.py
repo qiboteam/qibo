@@ -4,6 +4,7 @@ from itertools import product
 import numpy as np
 
 from qibo import matrices
+from qibo.backends import GlobalBackend
 from qibo.config import raise_error
 from qibo.quantum_info.superoperator_transformations import vectorization
 
@@ -14,6 +15,7 @@ def pauli_basis(
     vectorize: bool = False,
     sparse: bool = False,
     order: str = None,
+    backend=None,
 ):
     """Creates the ``nqubits``-qubit Pauli basis.
 
@@ -31,6 +33,9 @@ def pauli_basis(
             column-wise. If ``"system"``, system-wise vectorization is
             performed. If ``vectorization=False``, then ``order=None`` is
             forced. Default is ``None``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend to be
+            used in the execution. If ``None``, it uses ``GlobalBackend()``.
+            Defaults to ``None``.
 
     Returns:
         ndarray or tuple: all Pauli matrices forming the basis. If ``sparse=True``
@@ -68,6 +73,9 @@ def pauli_basis(
             "sparse representation is not implemented for unvectorized Pauli basis.",
         )
 
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
     basis_single = [matrices.I, matrices.X, matrices.Y, matrices.Z]
 
     if nqubits > 1:
@@ -79,23 +87,25 @@ def pauli_basis(
     if vectorize and sparse:
         basis, indexes = [], []
         for row in basis_full:
-            row = vectorization(row, order=order)
+            row = vectorization(row, order=order, backend=backend)
             row_indexes = list(np.flatnonzero(row))
             indexes.append(row_indexes)
             basis.append(row[row_indexes])
             del row
     elif vectorize and not sparse:
-        basis = [vectorization(matrix, order=order) for matrix in basis_full]
+        basis = [
+            vectorization(matrix, order=order, backend=backend) for matrix in basis_full
+        ]
     else:
         basis = basis_full
 
-    basis = np.array(basis)
+    basis = backend.cast(basis)
 
     if normalize:
         basis /= np.sqrt(2**nqubits)
 
     if vectorize and sparse:
-        indexes = np.array(indexes)
+        indexes = backend.cast(indexes)
 
         return basis, indexes
 
@@ -103,7 +113,11 @@ def pauli_basis(
 
 
 def comp_basis_to_pauli(
-    nqubits: int, normalize: bool = False, sparse: bool = False, order: str = "row"
+    nqubits: int,
+    normalize: bool = False,
+    sparse: bool = False,
+    order: str = "row",
+    backend=None,
 ):
     """Unitary matrix :math:`U` that converts operators from the Liouville
     representation in the computational basis to the Pauli-Liouville
@@ -143,6 +157,9 @@ def comp_basis_to_pauli(
             performed row-wise. If ``"column"``, vectorization is performed
             column-wise. If ``"system"``, system-wise vectorization is
             performed. Default is ``"row"``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend to be
+            used in the execution. If ``None``, it uses ``GlobalBackend()``.
+            Defaults to ``None``.
 
     Returns:
         ndarray or tuple: Unitary matrix :math:`U`. If ``sparse=True``,
@@ -150,26 +167,38 @@ def comp_basis_to_pauli(
             array with their row-wise indexes.
 
     """
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
 
     if sparse:
         elements, indexes = pauli_basis(
-            nqubits, normalize, vectorize=True, sparse=sparse, order=order
+            nqubits,
+            normalize,
+            vectorize=True,
+            sparse=sparse,
+            order=order,
+            backend=backend,
         )
         elements = np.conj(elements)
 
         return elements, indexes
 
     unitary = pauli_basis(
-        nqubits, normalize, vectorize=True, sparse=sparse, order=order
+        nqubits, normalize, vectorize=True, sparse=sparse, order=order, backend=backend
     )
 
     unitary = np.conj(unitary)
+    unitary = backend.cast(unitary, dtype=unitary.dtype)
 
     return unitary
 
 
 def pauli_to_comp_basis(
-    nqubits: int, normalize: bool = False, sparse: bool = False, order: str = "row"
+    nqubits: int,
+    normalize: bool = False,
+    sparse: bool = False,
+    order: str = "row",
+    backend=None,
 ):
     """Unitary matrix :math:`U` that converts operators from the
     Pauli-Liouville representation to the Liouville representation
@@ -190,12 +219,19 @@ def pauli_to_comp_basis(
             performed row-wise. If ``"column"``, vectorization is performed
             column-wise. If ``"system"``, system-wise vectorization is
             performed. Default is ``"row"``.
+        backend (``qibo.backends.abstract.Backend``, optional): backend to be
+            used in the execution. If ``None``, it uses ``GlobalBackend()``.
+            Defaults to ``None``.
 
     Returns:
         Unitary matrix :math:`U`.
     """
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
 
-    unitary = pauli_basis(nqubits, normalize, vectorize=True, sparse=False, order=order)
+    unitary = pauli_basis(
+        nqubits, normalize, vectorize=True, sparse=False, order=order, backend=backend
+    )
     unitary = np.transpose(unitary)
 
     if sparse:
@@ -205,8 +241,8 @@ def pauli_to_comp_basis(
             indexes.append(index_list)
             elements.append(row[index_list])
 
-        elements = np.array(elements)
-        indexes = np.array(indexes)
+        elements = backend.cast(elements)
+        indexes = backend.cast(indexes)
 
         return elements, indexes
 

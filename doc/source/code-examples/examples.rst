@@ -104,9 +104,9 @@ For example
     ccx: 1
 
 
-The circuit property ``circuit.gate_types`` will also return a ``collections.Counter``
-that contains the gate types and the corresponding numbers of appearance. The
-method ``circuit.gates_of_type()`` can be used to access gate objects of specific type.
+The circuit property ``circuit.gate_types`` (or ``circuit.gate_names``) will return a ``collections.Counter``
+that contains the gate types (or names) and the corresponding numbers of appearance. The
+method ``circuit.gates_of_type()`` can be used to access gate objects of specific type or name.
 For example for the circuit of the previous example:
 
 .. testsetup::
@@ -124,13 +124,13 @@ For example for the circuit of the previous example:
 
 .. testcode::
 
-    common_gates = c.gate_types.most_common()
+    common_gates = c.gate_names.most_common()
     # returns the list [("h", 3), ("cx", 2), ("ccx", 1)]
 
     most_common_gate = common_gates[0][0]
     # returns "h"
 
-    all_h_gates = c.gates_of_type("h")
+    all_h_gates = c.gates_of_type(gates.H)
     # returns the list [(0, ref to H(0)), (1, ref to H(1)), (4, ref to H(2))]
 
 A circuit may contain multi-controlled or other gates that are not supported by

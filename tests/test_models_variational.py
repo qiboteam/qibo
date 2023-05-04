@@ -149,7 +149,7 @@ def test_qaoa_execution(backend, solver, dense, accel=None):
     m = hamiltonians.X(6, dense=dense, backend=backend)
     # Trotter and RK require small p's!
     params = 0.01 * (1 - 2 * np.random.random(4))
-    state = random_statevector(2**6)
+    state = random_statevector(2**6, backend=backend)
     # set absolute test tolerance according to solver
     if "rk" in solver:
         atol = 1e-2
@@ -186,7 +186,7 @@ def test_qaoa_callbacks(backend, accelerators):
     h = hamiltonians.Y(5, backend=backend)
     energy = callbacks.Energy(h)
     params = 0.1 * np.random.random(4)
-    state = random_statevector(2**5)
+    state = random_statevector(2**5, backend=backend)
 
     ham = hamiltonians.Y(5, dense=False, backend=backend)
     qaoa = models.QAOA(ham, callbacks=[energy], accelerators=accelerators)

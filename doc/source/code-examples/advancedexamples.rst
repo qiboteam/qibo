@@ -846,7 +846,7 @@ for example:
     c = models.Circuit(2, density_matrix=True) # starts with state |00><00|
     c.add(gates.X(1))
     # transforms |00><00| -> |01><01|
-    c.add(gates.PauliNoiseChannel(0, px=0.3))
+    c.add(gates.PauliNoiseChannel(0, [("X", 0.3)]))
     # transforms |01><01| -> (1 - px)|01><01| + px |11><11|
     result = c()
     # result.state() will be tf.Tensor(diag([0, 0.7, 0, 0.3]))
@@ -885,7 +885,7 @@ as follows:
     thetas = np.random.random(5)
     c.add((gates.RX(i, theta=t) for i, t in enumerate(thetas)))
     # Add noise channels to all qubits
-    c.add((gates.PauliNoiseChannel(i, px=0.2, py=0.0, pz=0.3)
+    c.add((gates.PauliNoiseChannel(i, [("X", 0.2), ("Y", 0.0), ("Z", 0.3)])
            for i in range(5)))
     # Add measurement of all qubits
     c.add(gates.M(*range(5)))
@@ -942,7 +942,7 @@ triplets. For example, the following script
       c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
 
       # Define a noise map that maps qubit IDs to noise probabilities
-      noise_map = {0: (0.1, 0.0, 0.2), 1: (0.0, 0.2, 0.1)}
+      noise_map = {0: list(zip(["X", "Z"], [0.1, 0.2])), 1: list(zip(["Y", "Z"], [0.2, 0.1]))}
       noisy_c = c.with_noise(noise_map)
 
 will create a new circuit ``noisy_c`` that is equivalent to:
@@ -951,12 +951,12 @@ will create a new circuit ``noisy_c`` that is equivalent to:
 
       noisy_c2 = models.Circuit(2)
       noisy_c2.add(gates.H(0))
-      noisy_c2.add(gates.PauliNoiseChannel(0, 0.1, 0.0, 0.2))
+      noisy_c2.add(gates.PauliNoiseChannel(0, [("X", 0.1), ("Y", 0.0), ("Z", 0.2)]))
       noisy_c2.add(gates.H(1))
-      noisy_c2.add(gates.PauliNoiseChannel(1, 0.0, 0.2, 0.1))
+      noisy_c2.add(gates.PauliNoiseChannel(1, [("X", 0.0), ("Y", 0.2), ("Z", 0.1)]))
       noisy_c2.add(gates.CNOT(0, 1))
-      noisy_c2.add(gates.PauliNoiseChannel(0, 0.1, 0.0, 0.2))
-      noisy_c2.add(gates.PauliNoiseChannel(1, 0.0, 0.2, 0.1))
+      noisy_c2.add(gates.PauliNoiseChannel(0, [("X", 0.1), ("Y", 0.0), ("Z", 0.2)]))
+      noisy_c2.add(gates.PauliNoiseChannel(1, [("X", 0.0), ("Y", 0.2), ("Z", 0.1)]))
 
 Note that ``noisy_c`` uses the gate objects of the original circuit ``c``
 (it is not a deep copy), while in ``noisy_c2`` each gate was created as
@@ -964,8 +964,8 @@ a new object.
 
 The user may use a single tuple instead of a dictionary as the noise map
 In this case the same probabilities will be applied to all qubits.
-That is ``noise_map = (0.1, 0.0, 0.1)`` is equivalent to
-``noise_map = {0: (0.1, 0.0, 0.1), 1: (0.1, 0.0, 0.1), ...}``.
+That is ``noise_map = list(zip(["X", "Z"], [0.1, 0.1]))`` is equivalent to
+``noise_map = {0: list(zip(["X", "Z"], [0.1, 0.1])), 1: list(zip(["X", "Z"], [0.1, 0.1])), ...}``.
 
 As described in the previous sections, if
 :meth:`qibo.models.circuit.Circuit.with_noise` is used in a circuit
@@ -1004,10 +1004,10 @@ Here is an example on how to use a noise model:
       # - Pauli error on CNOT for all the qubits.
       # - Pauli error on RX(pi/2) for qubit 0.
       noise = NoiseModel()
-      noise.add(PauliError(px = 0.5), gates.H, 1)
-      noise.add(PauliError(py = 0.5), gates.CNOT)
+      noise.add(PauliError([("X", 0.5)]), gates.H, 1)
+      noise.add(PauliError([("Y", 0.5)]), gates.CNOT)
       is_sqrt_x = (lambda g: np.pi/2 in g.parameters)
-      noise.add(PauliError(px=0.5), gates.RX, qubits=0, condition=is_sqrt_x)
+      noise.add(PauliError([("X", 0.5)]), gates.RX, qubits=0, condition=is_sqrt_x)
 
       # Generate noiseless circuit.
       c = models.Circuit(2)
@@ -1023,12 +1023,12 @@ The noisy circuit defined above will be equivalent to the following circuit:
       noisy_c2 = models.Circuit(2)
       noisy_c2.add(gates.H(0))
       noisy_c2.add(gates.H(1))
-      noisy_c2.add(gates.PauliNoiseChannel(1, px=0.5))
+      noisy_c2.add(gates.PauliNoiseChannel(1, [("X", 0.5)]))
       noisy_c2.add(gates.CNOT(0, 1))
-      noisy_c2.add(gates.PauliNoiseChannel(0, py=0.5))
-      noisy_c2.add(gates.PauliNoiseChannel(1, py=0.5))
+      noisy_c2.add(gates.PauliNoiseChannel(0, [("Y", 0.5)]))
+      noisy_c2.add(gates.PauliNoiseChannel(1, [("Y", 0.5)]))
       noisy_c2.add(gates.RX(0, np.pi/2))
-      noisy_c2.add(gates.PauliNoiseChannel(0, px=0.5))
+      noisy_c2.add(gates.PauliNoiseChannel(0, [("X", 0.5)]))
       noisy_c2.add(gates.RX(0, 3*np.pi/2))
       noisy_c2.add(gates.RX(1, np.pi/2))
 
