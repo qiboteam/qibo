@@ -491,12 +491,8 @@ class NumpyBackend(Backend):
             final_result = CircuitResult(self, circuit, state, nshots)
             final_result._samples = self.aggregate_shots(results)
             if not circuit.density_matrix:
-                final_result.probabilities = (
-                    lambda: self._override_method_repeated_execution(probabilities)
-                )
-                final_result.frequencies = (
-                    lambda: self._override_method_repeated_execution(frequencies)
-                )
+                final_result._repeated_execution_probabilities = probabilities
+                final_result._repeated_execution_frequencies = frequencies
             circuit._final_state = final_result
             return final_result
 
