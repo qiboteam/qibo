@@ -83,6 +83,7 @@ def gibbs(hamiltonian, state, eta=0.1):
 def initialize(nqubits: int, basis=gates.Z, eigenstate="+"):
     """This function returns a circuit that prepeares all the
     qubits in a specific state.
+
     Args:
         - nqubits (int): Number of qubit in the circuit.
         - baisis (gates): Can be a qibo gate or a callable that accepts a qubit,
