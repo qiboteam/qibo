@@ -567,19 +567,6 @@ class NumpyBackend(Backend):
                 unmeasured.append(i)
         return self.np.transpose(probs, [reduced.get(i) for i in qubits])
 
-    def _override_method_repeated_execution(self, probabilities):
-        """Overrides methods from CircuitResult object.
-        Meant to be used to override either `.probabilties()` or
-        `.frequencies()` when `circuit.density_matrix=False`. If
-        overriding `.probabilities()`, replaces it with the
-        cumulative average of `nshot` probabilities from repeated
-        execution. When overriding `.frequencies()`, replaces it
-        with a dictionary with the correct sampled frequencies
-        instead of the last execution.
-        """
-        # TODO: add qubits argument in order to get marginal probabilities
-        return probabilities
-
     def calculate_probabilities(self, state, qubits, nqubits):
         rtype = self.np.real(state).dtype
         unmeasured_qubits = tuple(i for i in range(nqubits) if i not in qubits)
