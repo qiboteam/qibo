@@ -502,6 +502,7 @@ class QAOA:
             .. testcode::
 
                 from qibo import hamiltonians
+                from qibo.models.utils import cvar, gibbs
 
                 h = hamiltonians.XXZ(3)
                 qaoa = models.QAOA(h)
