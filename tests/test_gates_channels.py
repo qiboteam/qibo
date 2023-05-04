@@ -157,7 +157,7 @@ def test_unitary_channel_errors():
     qubits = [(0,), (2, 3)]
     # Old version init
     with pytest.raises(ValueError):
-        gates.UnitaryChannel([(0.5,)], [(0, a1)])
+        gates.UnitaryChannel([0.5], [(0, a1)])
     # Invalid ops
     with pytest.raises(TypeError):
         gates.UnitaryChannel(qubits, [a1, (0.1, a2)])
