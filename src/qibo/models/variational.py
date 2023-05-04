@@ -536,14 +536,6 @@ class QAOA:
                 param = {**func_hyperparams, "hamiltonian": hamiltonian, "state": state}
 
                 return loss_func(**param)
-            # elif mode == "cvar":
-            #    from qibo.models.utils import cvar
-
-            #    return cvar(hamiltonian, state, mode_param)
-            # elif mode == "gibbs":
-            #    from qibo.models.utils import gibbs
-
-            #    return gibbs(hamiltonian, state, mode_param)
 
         if method == "sgd":
             loss = lambda p, c, h, s: _loss(self.hamiltonian.backend.cast(p), c, h, s)
