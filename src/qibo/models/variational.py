@@ -528,16 +528,19 @@ class QAOA:
             if loss_func is None:
                 return hamiltonian.expectation(state)
             else:
-                func_hyperparams = {key: loss_func_param[key] for key in loss_func_param if key in
-                                    loss_func.__code__.co_varnames}
-                param = {**func_hyperparams, 'hamiltonian': hamiltonian, 'state': state}
+                func_hyperparams = {
+                    key: loss_func_param[key]
+                    for key in loss_func_param
+                    if key in loss_func.__code__.co_varnames
+                }
+                param = {**func_hyperparams, "hamiltonian": hamiltonian, "state": state}
 
                 return loss_func(**param)
-            #elif mode == "cvar":
+            # elif mode == "cvar":
             #    from qibo.models.utils import cvar
 
             #    return cvar(hamiltonian, state, mode_param)
-            #elif mode == "gibbs":
+            # elif mode == "gibbs":
             #    from qibo.models.utils import gibbs
 
             #    return gibbs(hamiltonian, state, mode_param)
