@@ -438,7 +438,7 @@ class CircuitResult:
                 a single `Counter` is returned which contains samples from all
                 the measured qubits, independently of their registers.
         """
-        if self._repeated_execution_frequencies:
+        if self._repeated_execution_frequencies is not None:
             return self._repeated_execution_frequencies
 
         qubits = self.measurement_gate.qubits
