@@ -63,3 +63,28 @@ def pqc_integral(circuit, t, samples, backend=None):
         rho = backend.execute_circuit(circuit).state()
         randunit_density += ft.reduce(np.kron, [rho] * t)
     return randunit_density / samples
+
+
+def entangling_capability(circuit, samples, backend=None):
+    """Computes the Meyer-Wallach entanglement Q of the `circuit`,
+    .. math:: Ent = 1-\frac{1}{N}\\sum_{k}\text{Tr}\\left(\rho_k^2(\theta_i)\right)
+
+    Args:
+        circuit (qibo.models.Circuit): Parametrized circuit.
+        samples (int): number of samples to estimate the integral.
+        backend (qibo.backends.abstract.Backend): Calculation engine.
+
+    Return:
+        (int) : Entangling capability.
+    """
+
+    res = backend.cast(np.zeros(samples, dtype=complex))
+    nparams = 0
+    for gate in circuit.queue:
+        if hasattr(gate, "trainable") and gate.trainable:
+            nparams += len(gate.parameters)
+    for i in range(samples):
+        params = np.random.uniform(-np.pi, np.pi, nparams)
+        circuit.set_parameters(params)
+        res[i] = meyer_wallach(circuit, backend=None)
+    return 2 * np.sum(res).real / samples
