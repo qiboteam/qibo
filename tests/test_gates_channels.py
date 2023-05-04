@@ -30,7 +30,7 @@ def test_general_channel(backend):
 
     a1 = gates.Unitary(a1, 1)
     a2 = gates.Unitary(a2, 0, 1)
-    channel2 = gates.KrausChannel([], [a1, a2])
+    channel2 = gates.KrausChannel([(1,), (0, 1)], [a1, a2])
     assert channel2.target_qubits == (0, 1)
     final_rho = backend.apply_channel_density_matrix(channel2, np.copy(initial_rho), 2)
     backend.assert_allclose(final_rho, target_rho)
