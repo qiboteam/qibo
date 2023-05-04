@@ -475,12 +475,11 @@ class NumpyBackend(Backend):
                 result = CircuitResult(self, circuit, state, 1)
                 sample = result.samples()[0]
                 results.append(sample)
-                frequencies.append(sample[0])
+                if not circuit.density_matrix:
+                    probabilities += result.probabilities()
+                    frequencies.append(sample[0])
             else:
                 results.append(state)
-
-            if not circuit.density_matrix:
-                probabilities += result.probabilities()
 
         if not circuit.density_matrix:
             probabilities /= nshots
