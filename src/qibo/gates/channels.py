@@ -309,7 +309,9 @@ class UnitaryChannel(KrausChannel):
 
     def __init__(self, qubits, ops):
         # TODO remove this check in next version
-        if any(isinstance(q, float) for q in qubits):
+        if isinstance(qubits, list) is True and any(
+            isinstance(q, float) is True for q in qubits
+        ):
             raise_error(
                 ValueError,
                 "UnitaryChannel has to be initialised with `qubits` and `ops`.",

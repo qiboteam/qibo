@@ -83,8 +83,10 @@ def test_unitary_error(backend, density_matrix, nshots):
         UnitaryError([p1, p2], [u1, np.array([[1, 0], [0, 1]])])
 
     unitary_error = UnitaryError([p1, p2], [u1, u2])
+    unitary_error_1q = UnitaryError([0.1], [np.eye(2)])
 
     noise = NoiseModel()
+    noise.add(unitary_error_1q, qubits=[0])
     noise.add(unitary_error, gates.CNOT)
 
     circuit = Circuit(3, density_matrix=density_matrix)
@@ -98,6 +100,7 @@ def test_unitary_error(backend, density_matrix, nshots):
     target_circuit = Circuit(3, density_matrix=density_matrix)
     target_circuit.add(gates.CNOT(0, 1))
     target_circuit.add(gates.UnitaryChannel(qubits, [(p1, u1), (p2, u2)]))
+    target_circuit.add(gates.UnitaryChannel(0, [(0.1, np.eye(2))]))
     target_circuit.add(gates.Z(1))
     target_circuit.add(gates.X(1))
     target_circuit.add(gates.X(2))

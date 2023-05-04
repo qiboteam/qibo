@@ -1,4 +1,6 @@
 import collections
+from itertools import combinations
+from math import log2
 
 from qibo import gates
 from qibo.config import raise_error
@@ -26,9 +28,10 @@ class KrausError:
         self.options = ops
 
     def channel(self, qubits, options):
-        if self.rank != 2:
-            return gates.KrausChannel(qubits, options)
-        return [gates.KrausChannel(q, options) for q in qubits]
+        return [
+            gates.KrausChannel(q, options)
+            for q in combinations(qubits, int(log2(self.rank)))
+        ]
 
 
 class UnitaryError:
@@ -53,9 +56,10 @@ class UnitaryError:
         self.options = list(zip(probabilities, unitaries))
 
     def channel(self, qubits, options):
-        if self.rank != 2:
-            return gates.UnitaryChannel(qubits, options)
-        return [gates.UnitaryChannel(q, options) for q in qubits]
+        return [
+            gates.UnitaryChannel(q, options)
+            for q in combinations(qubits, int(log2(self.rank)))
+        ]
 
 
 class PauliError:

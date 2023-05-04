@@ -17,21 +17,29 @@ def test_general_channel(backend):
         [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]]
     )
     initial_rho = random_density_matrix(2**2, backend=backend)
-    channel = gates.KrausChannel([(1,), (0, 1)], [a1, a2])
-    assert channel.target_qubits == (0, 1)
-    final_rho = backend.apply_channel_density_matrix(channel, np.copy(initial_rho), 2)
     m1 = np.kron(np.eye(2), backend.to_numpy(a1))
     m1 = backend.cast(m1, dtype=m1.dtype)
     m2 = backend.cast(a2, dtype=a2.dtype)
     target_rho = np.dot(np.dot(m1, initial_rho), np.transpose(np.conj(m1)))
     target_rho += np.dot(np.dot(m2, initial_rho), np.transpose(np.conj(m2)))
+
+    channel1 = gates.KrausChannel([(1,), (0, 1)], [a1, a2])
+    assert channel1.target_qubits == (0, 1)
+    final_rho = backend.apply_channel_density_matrix(channel1, np.copy(initial_rho), 2)
+    backend.assert_allclose(final_rho, target_rho)
+
+    a1 = gates.Unitary(a1, 1)
+    a2 = gates.Unitary(a2, 0, 1)
+    channel2 = gates.KrausChannel([], [a1, a2])
+    assert channel2.target_qubits == (0, 1)
+    final_rho = backend.apply_channel_density_matrix(channel2, np.copy(initial_rho), 2)
     backend.assert_allclose(final_rho, target_rho)
 
     with pytest.raises(NotImplementedError):
-        channel.on_qubits({})
+        channel1.on_qubits({})
     with pytest.raises(NotImplementedError):
         state = random_statevector(2**2, backend=backend)
-        channel.apply(backend, state, 2)
+        channel1.apply(backend, state, 2)
 
 
 def test_kraus_channel_errors(backend):
@@ -147,6 +155,9 @@ def test_unitary_channel_errors():
     a2 = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
 
     qubits = [(0,), (2, 3)]
+    # Old version init
+    with pytest.raises(ValueError):
+        gates.KrausChannel([((0.5,), [(0, a1)])])
     # Invalid ops
     with pytest.raises(TypeError):
         gates.UnitaryChannel(qubits, [a1, (0.1, a2)])
