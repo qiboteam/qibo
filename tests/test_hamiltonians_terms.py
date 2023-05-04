@@ -179,6 +179,7 @@ def test_symbolic_term_call(backend, density_matrix):
         np.kron(np.kron(np.eye(2), matrices.X), np.eye(2)),
         np.kron(np.eye(4), matrices.Y),
     ]
+    matrixlist = backend.cast(matrixlist)
     initial_state = (
         random_density_matrix(2**3, backend=backend)
         if density_matrix
