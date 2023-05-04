@@ -47,8 +47,8 @@ def parameter_shift(
                 Default is ``None``.
     `
         Returns:
-            np.float value of the derivative of the expectation value of the hamiltonian
-            with respect to the target variational parameter.
+            (float): Value of the derivative of the expectation value of the hamiltonian
+                with respect to the target variational parameter.
 
         Example:
             .. testcode::
@@ -150,4 +150,7 @@ def parameter_shift(
 
     circuit.set_parameters(original)
 
-    return generator_eigenval * (forward - backward) * scale_factor
+    # float() necessary to not return a 0-dim ndarray
+    result = float(generator_eigenval * (forward - backward) * scale_factor)
+
+    return result
