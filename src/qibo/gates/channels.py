@@ -223,8 +223,9 @@ class KrausChannel(Channel):
 
         if len(ops) == 1:
             warnings.warn(
-                "KrausChannel initialisation has changed. Please check the documentation."
-                + "Previous initialisation will be removed in Release 1.15",
+                f"{self.__class__.__name__} initialisation has changed. "
+                + "Please check the documentation. Previous initialisation "
+                + "will be removed in Release 1.15.",
                 DeprecationWarning,
                 stacklevel=2,
             )
@@ -317,14 +318,21 @@ class UnitaryChannel(KrausChannel):
     """
 
     def __init__(self, qubits, ops):
-        # TODO remove this check in next version
         if isinstance(qubits, list) is True and any(
             isinstance(q, float) is True for q in qubits
         ):
-            raise_error(
-                ValueError,
-                "UnitaryChannel has to be initialised with `qubits` and `ops`.",
+            warnings.warn(
+                f"{self.__class__.__name__} initialisation has changed. "
+                + "Please check the documentation. Previous initialisation "
+                + "will be removed in Release 1.15.",
+                DeprecationWarning,
+                stacklevel=2,
             )
+            probabilities = np.copy(qubits)
+            qubits = [row[0] for row in ops]
+            print(qubits)
+            ops = [row[1] for row in ops]
+            ops = list(zip(probabilities, ops))
 
         if not all(isinstance(pair, (tuple)) for pair in ops):
             raise_error(TypeError, "``ops`` must be a list of tuples ``(pk, Uk)``.")
@@ -369,9 +377,9 @@ class PauliNoiseChannel(UnitaryChannel):
     Example:
         .. testcode::
 
-            import numpy as np
-
             from itertools import product
+
+            import numpy as np
 
             from qibo.gates.channels import PauliNoiseChannel
 
