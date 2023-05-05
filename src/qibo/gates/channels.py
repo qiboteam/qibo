@@ -1,5 +1,5 @@
 """Define quantum channels."""
-
+import warnings
 from itertools import product
 from math import exp, sqrt
 from typing import Tuple
@@ -178,11 +178,12 @@ class KrausChannel(Channel):
 
     Args:
         qubits (int or list or tuple or None): Qubits that the Kraus operators act on.
-        Type ``int`` and ``tuple`` will be considered as the same qubit ids for all operators.
-        A ``list`` should contain tuples of qubits corresponding to each operator.
-        Can be [] if ``ops`` are of type ``qibo.gates.Gate``.
+            Type ``int`` and ``tuple`` will be considered as the same qubit ids for
+            all operators. A ``list`` should contain tuples of qubits corresponding
+            to each operator. Can be an empty ``list`` if ``ops`` are of type
+            ``qibo.gates.Gate``.
         ops (list): List of Kraus operators ``Ak`` as matrices of type
-        ``np.ndarray | tf.Tensor`` or gates ``qibo.gates.Gate``.
+            ``np.ndarray | tf.Tensor`` or gates ``qibo.gates.Gate``.
 
     Example:
         .. testcode::
@@ -215,17 +216,25 @@ class KrausChannel(Channel):
             c.add(channel3)
     """
 
-    def __init__(self, qubits=None, ops=None):
+    def __init__(self, *ops):
         super().__init__()
         self.name = "KrausChannel"
         self.draw_label = "K"
 
-        # TODO remove this check in next version
-        if ops is None:
-            raise_error(
-                ValueError,
-                "KrausChannel has to be initialised with `qubits` and `ops`.",
+        if len(ops) == 1:
+            warnings.warn(
+                "KrausChannel initialisation has changed. Please check the documentation."
+                + "Previous initialisation will be removed in Release 1.15",
+                DeprecationWarning,
+                stacklevel=2,
             )
+
+            qubits = [row[0] for row in ops[0]]
+            ops = [row[1] for row in ops[0]]
+        else:
+            qubits = ops[0]
+            ops = ops[1]
+
         # Check qubits type
         if isinstance(qubits, int) is True:
             qubits = [(qubits,)] * len(ops)
