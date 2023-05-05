@@ -246,8 +246,8 @@ def CDR(
     optimal_params = curve_fit(model, train_val["noisy"], train_val["noise-free"])[0]
     # Run the input circuit
     if noise_model != None and backend.name != "qibolab":
-        noisy_circuit = noise_model.apply(circuit)
-    circuit_result = backend.execute_circuit(noisy_circuit, nshots=nshots)
+        circuit = noise_model.apply(circuit)
+    circuit_result = backend.execute_circuit(circuit, nshots=nshots)
     val = circuit_result.expectation_from_samples(observable)
     mit_val = model(val, *optimal_params)
     # Return data
