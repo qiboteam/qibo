@@ -42,11 +42,13 @@ def test_general_channel(backend):
         channel1.apply(backend, state, 2)
 
 
-def test_kraus_channel_errors(backend):
+def test_kraus_channel(backend):
     a1 = np.sqrt(0.4) * matrices.X
     a2 = np.sqrt(0.6) * matrices.Z
-    with pytest.raises(ValueError):
-        gates.KrausChannel([((0,), a1)])
+
+    # warning coverage
+    gates.KrausChannel([((0,), a1)])
+
     with pytest.raises(TypeError):
         gates.KrausChannel("0", [a1])
     with pytest.raises(TypeError):

@@ -721,7 +721,7 @@ class ResetChannel(KrausChannel):
         if p0 + p1 < 1:
             operators.append(sqrt(np.abs(1 - p0 - p1)) * np.eye(2))
 
-        super().__init__([(q,)] * len(operators), ops=operators)
+        super().__init__([(q,)] * len(operators), operators)
         self.init_kwargs = {"p0": p0, "p1": p1}
         self.name = "ResetChannel"
         self.draw_label = "R"
