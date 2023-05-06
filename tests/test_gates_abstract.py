@@ -188,40 +188,33 @@ def test_unitary_init(targets):
 def test_kraus_channel_init():
     import numpy as np
 
-    ops = [
-        ((0,), np.random.random((2, 2))),
-        ((0, 1), np.random.random((4, 4))),
-        ((0, 2), np.random.random((4, 4))),
-        ((3,), np.random.random((2, 2))),
-    ]
-    gate = gates.KrausChannel(ops)
+    qubits = [(0,), (0, 1), (0, 2), (3,)]
+    ops = [np.random.random((2 ** len(q), 2 ** len(q))) for q in qubits]
+    gate = gates.KrausChannel(qubits, ops)
     gate.target_qubits == (0, 1, 2, 3)
     for g in gate.gates:
         assert isinstance(g, gates.Unitary)
-
-    ops.append(((4,), np.random.random((4, 4))))
+    qubits.append((4,))
+    ops.append(np.random.random((4, 4)))
     with pytest.raises(ValueError):
-        gate = gates.KrausChannel(ops)
+        gate = gates.KrausChannel(qubits, ops)
 
 
 def test_unitary_channel_init():
     import numpy as np
 
-    ops = [
-        ((0,), np.random.random((2, 2))),
-        ((0, 1), np.random.random((4, 4))),
-        ((0, 2), np.random.random((4, 4))),
-        ((3,), np.random.random((2, 2))),
-    ]
-    gate = gates.UnitaryChannel(4 * [0.1], ops)
+    qubits = [(0,), (0, 1), (0, 2), (3,)]
+    ops = [(0.1, np.random.random((2 ** len(q), 2 ** len(q)))) for q in qubits]
+    gate = gates.UnitaryChannel(qubits, ops)
     gate.target_qubits == (0, 1, 2, 3)
     for g in gate.gates:
         assert isinstance(g, gates.Unitary)
 
     with pytest.raises(ValueError):
-        gate = gates.UnitaryChannel(2 * [0.1], ops)
+        gate = gates.UnitaryChannel(qubits[:2], ops)
     with pytest.raises(ValueError):
-        gate = gates.UnitaryChannel(4 * [-0.1], ops)
+        ops[0] = (-0.1, np.random.random((2, 2)))
+        gate = gates.UnitaryChannel(qubits, ops)
 
 
 def test_pauli_noise_channel_init():
@@ -232,7 +225,7 @@ def test_pauli_noise_channel_init():
 
 
 def test_reset_channel_init():
-    gate = gates.ResetChannel(0, 0.1, 0.2)
+    gate = gates.ResetChannel(0, [0.1, 0.2])
     assert gate.target_qubits == (0,)
 
 
