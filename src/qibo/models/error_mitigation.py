@@ -123,7 +123,7 @@ def ZNE(
                 noisy_circuit, backend, noise_model, nshots, readout["ncircuits"]
             )
         else:
-            if noise_model != None and backend.name != "qibolab":
+            if noise_model is not None and backend.name != "qibolab":
                 noisy_circuit = noise_model.apply(noisy_circuit)
             circuit_result = backend.execute_circuit(noisy_circuit, nshots=nshots)
         if "calibration_matrix" in readout.keys() is not None:
@@ -259,7 +259,7 @@ def CDR(
                 c, backend, noise_model, nshots, readout["ncircuits"]
             )
         else:
-            if noise_model != None and backend.name != "qibolab":
+            if noise_model is not None and backend.name != "qibolab":
                 c = noise_model.apply(c)
             circuit_result = backend.execute_circuit(c, nshots=nshots)
         if "calibration_matrix" in readout.keys() is not None:
@@ -278,7 +278,7 @@ def CDR(
             circuit, backend, noise_model, nshots, readout["ncircuits"]
         )
     else:
-        if noise_model != None and backend.name != "qibolab":
+        if noise_model is not None and backend.name != "qibolab":
             noisy_circuit = noise_model.apply(circuit)
         circuit_result = backend.execute_circuit(noisy_circuit, nshots=nshots)
     if "calibration_matrix" in readout.keys() is not None:
@@ -352,7 +352,7 @@ def vnCDR(
                     noisy_c, backend, noise_model, nshots, readout["ncircuits"]
                 )
             else:
-                if noise_model != None and backend.name != "qibolab":
+                if noise_model is not None and backend.name != "qibolab":
                     noisy_c = noise_model.apply(noisy_c)
                 circuit_result = backend.execute_circuit(noisy_c, nshots=nshots)
             if "calibration_matrix" in readout.keys():
@@ -377,7 +377,7 @@ def vnCDR(
                 noisy_c, backend, noise_model, nshots, readout["ncircuits"]
             )
         else:
-            if noise_model != None and backend.name != "qibolab":
+            if noise_model is not None and backend.name != "qibolab":
                 noisy_c = noise_model.apply(noisy_c)
             circuit_result = backend.execute_circuit(noisy_c, nshots=nshots)
         if "calibration_matrix" in readout.keys():
@@ -416,7 +416,7 @@ def get_calibration_matrix(nqubits, backend=None, noise_model=None, nshots=1000)
 
     matrix = np.zeros((2**nqubits, 2**nqubits))
 
-    string = "{0:0" + str(nqubits) + "b}"
+    string = f"{0:0{nqubits}b}"
     for i in range(2**nqubits):
         state = string.format(i)
         circuit = Circuit(nqubits, density_matrix=True)
@@ -424,7 +424,7 @@ def get_calibration_matrix(nqubits, backend=None, noise_model=None, nshots=1000)
             if bit == "1":
                 circuit.add(gates.X(q))
         circuit.add(gates.M(*range(nqubits)))
-        if noise_model != None and backend.name != "qibolab":
+        if noise_model is not None and backend.name != "qibolab":
             circuit = noise_model.apply(circuit)
         freq = backend.execute_circuit(circuit, nshots=nshots).frequencies()
         column = np.zeros(2**nqubits)
@@ -454,7 +454,7 @@ def apply_readout_mitigation(state, calibration_matrix):
     return state
 
 
-def apply_temme_readout_mitigation(
+def apply_randomized_readout_mitigation(
     circuit, backend=None, noise_model=None, nshots=1000, ncircuits=10
 ):
     """Implements the readout mitigation method proposed in https://arxiv.org/abs/2012.09738.
