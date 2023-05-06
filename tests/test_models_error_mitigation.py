@@ -7,8 +7,8 @@ from qibo.models import Circuit
 from qibo.models.error_mitigation import (
     CDR,
     ZNE,
+    apply_randomized_readout_mitigation,
     apply_readout_mitigation,
-    apply_temme_readout_mitigation,
     get_calibration_matrix,
     sample_training_circuit,
     vnCDR,
@@ -302,7 +302,7 @@ def test_readout_mitigation(backend, nqubits, method):
         mit_val = mit_state.expectation_from_samples(obs)
     elif method == "temme":
         ncircuits = 10
-        result, result_cal = apply_temme_readout_mitigation(
+        result, result_cal = apply_randomized_readout_mitigation(
             c, backend, noise, nshots, ncircuits
         )
         mit_val = result.expectation_from_samples(

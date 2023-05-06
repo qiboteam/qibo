@@ -119,7 +119,7 @@ def ZNE(
     for cj in noise_levels:
         noisy_circuit = get_noisy_circuit(circuit, cj, insertion_gate=insertion_gate)
         if "ncircuits" in readout.keys():
-            circuit_result, circuit_result_cal = apply_temme_readout_mitigation(
+            circuit_result, circuit_result_cal = apply_randomized_readout_mitigation(
                 noisy_circuit, backend, noise_model, nshots, readout["ncircuits"]
             )
         else:
@@ -255,7 +255,7 @@ def CDR(
         val = c(nshots=nshots).expectation_from_samples(observable)
         train_val["noise-free"].append(val)
         if "ncircuits" in readout.keys():
-            circuit_result, circuit_result_cal = apply_temme_readout_mitigation(
+            circuit_result, circuit_result_cal = apply_randomized_readout_mitigation(
                 c, backend, noise_model, nshots, readout["ncircuits"]
             )
         else:
@@ -274,7 +274,7 @@ def CDR(
     optimal_params = curve_fit(model, train_val["noisy"], train_val["noise-free"])[0]
     # Run the input circuit
     if "ncircuits" in readout.keys():
-        circuit_result, circuit_result_cal = apply_temme_readout_mitigation(
+        circuit_result, circuit_result_cal = apply_randomized_readout_mitigation(
             circuit, backend, noise_model, nshots, readout["ncircuits"]
         )
     else:
@@ -348,7 +348,10 @@ def vnCDR(
         for level in noise_levels:
             noisy_c = get_noisy_circuit(c, level, insertion_gate=insertion_gate)
             if "ncircuits" in readout.keys():
-                circuit_result, circuit_result_cal = apply_temme_readout_mitigation(
+                (
+                    circuit_result,
+                    circuit_result_cal,
+                ) = apply_randomized_readout_mitigation(
                     noisy_c, backend, noise_model, nshots, readout["ncircuits"]
                 )
             else:
@@ -373,7 +376,7 @@ def vnCDR(
     for level in noise_levels:
         noisy_c = get_noisy_circuit(circuit, level, insertion_gate=insertion_gate)
         if "ncircuits" in readout.keys():
-            circuit_result, circuit_result_cal = apply_temme_readout_mitigation(
+            circuit_result, circuit_result_cal = apply_randomized_readout_mitigation(
                 noisy_c, backend, noise_model, nshots, readout["ncircuits"]
             )
         else:
@@ -416,9 +419,8 @@ def get_calibration_matrix(nqubits, backend=None, noise_model=None, nshots=1000)
 
     matrix = np.zeros((2**nqubits, 2**nqubits))
 
-    string = f"{0:0{nqubits}b}"
     for i in range(2**nqubits):
-        state = string.format(i)
+        state = format(i, f"0{nqubits}b")
         circuit = Circuit(nqubits, density_matrix=True)
         for q, bit in enumerate(state):
             if bit == "1":
