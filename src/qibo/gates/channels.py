@@ -331,7 +331,7 @@ class UnitaryChannel(KrausChannel):
             )
             probabilities = np.copy(qubits)
             qubits = [row[0] for row in ops]
-            print(qubits)
+
             ops = [row[1] for row in ops]
             ops = list(zip(probabilities, ops))
 
