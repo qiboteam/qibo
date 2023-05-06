@@ -338,12 +338,13 @@ class UnitaryChannel(KrausChannel):
             raise_error(TypeError, "``ops`` must be a list of tuples ``(pk, Uk)``.")
 
         probabilities = [pair[0] for pair in ops]
+        ops = [pair[1] for pair in ops]
         if any((p < 0 or p > 1) for p in probabilities):
             raise_error(
                 ValueError,
                 "Probabilities should be between 0 and 1.",
             )
-        super().__init__(qubits, [pair[1] for pair in ops])
+        super().__init__(qubits, ops)
         self.name = "UnitaryChannel"
         self.draw_label = "U"
         self.coefficients = tuple(probabilities)
@@ -454,16 +455,16 @@ class DepolarizingChannel(Channel):
       all :math:`P_j \\neq I`.
 
     Args:
-        q (tuple): Qubit ids that the noise acts on.
+        qubits (tuple): Qubit ids that the noise acts on.
         lam (float): Depolarizing error parameter.
     """
 
-    def __init__(self, q, lam: float = 0):
-        if isinstance(q, int) is True:
-            q = (q,)
+    def __init__(self, qubits, lam: float = 0):
+        if isinstance(qubits, int) is True:
+            qubits = (qubits,)
 
         super().__init__()
-        num_qubits = len(q)
+        num_qubits = len(qubits)
         num_terms = 4**num_qubits
         max_param = num_terms / (num_terms - 1)
         if lam < 0 or lam > max_param:
@@ -474,9 +475,9 @@ class DepolarizingChannel(Channel):
 
         self.name = "DepolarizingChannel"
         self.draw_label = "D"
-        self.target_qubits = q
+        self.target_qubits = qubits
 
-        self.init_args = [q]
+        self.init_args = [qubits]
         self.init_kwargs = {"lam": lam}
 
     def apply_density_matrix(self, backend, state, nqubits):
@@ -508,14 +509,16 @@ class ThermalRelaxationChannel(KrausChannel):
 
     .. math::
         \\mathcal{E} (\\rho ) = (1 - p_z - p0 - p_1)\\rho + p_zZ\\rho Z
-        +  \\mathrm{Tr}_q[\\rho] \\otimes (p0|0\\rangle \\langle 0| + p_1|1\\rangle \\langle 1|)
+            + \\mathrm{Tr}_q[\\rho] \\otimes (p0|0\\rangle \\langle 0|
+            + p_1|1\\rangle \\langle 1|)
 
 
     while if :math:`T_1 < T_2`:
 
     .. math::
-        \\mathcal{E}(\\rho ) = \\mathrm{Tr}_\\mathcal{X} \\left[\\Lambda_{\\mathcal{X}\\mathcal{Y}}
-            (\\rho_\\mathcal{X}^T \\otimes I_{\\mathcal{Y}}) \\right]
+        \\mathcal{E}(\\rho ) = \\mathrm{Tr}_\\mathcal{X}
+            \\left[\\Lambda_{\\mathcal{X}\\mathcal{Y}} (\\rho_\\mathcal{X}^T
+            \\otimes I_{\\mathcal{Y}}) \\right]
 
     with
 
@@ -527,17 +530,18 @@ class ThermalRelaxationChannel(KrausChannel):
         e^{-t / T_2} & 0 & 0 & 1 - p0
         \\end{pmatrix}
 
-    where :math:`p0 = (1 - e^{-t / T_1})(1 - \\eta )` :math:`p_1 = (1 - e^{-t / T_1})\\eta`
-    and :math:`p_z = (e^{-t / T_1} - e^{-t / T_2})/2`.
+    where :math:`p0 = (1 - e^{-t / T_1})(1 - \\eta )`,
+    :math:`p_1 = (1 - e^{-t / T_1})\\eta`, and
+    :math:`p_z = (e^{-t / T_1} - e^{-t / T_2})/2`.
     Here :math:`\\eta` is the ``excited_population``
     and :math:`t` is the ``time``, both controlled by the user.
     This gate is based on `Qiskit's thermal relaxation error channel
     <https://qiskit.org/documentation/stubs/qiskit.providers.aer.noise.thermal_relaxation_error.html#qiskit.providers.aer.noise.thermal_relaxation_error>`_.
 
     Args:
-        q (int): Qubit id that the noise channel acts on.
+        qubit (int): Qubit id that the noise channel acts on.
         params (list): list of 3 or 4 parameters
-        (t_1, t_2, time, excited_population=0), where
+            (t_1, t_2, time, excited_population=0), where
             t_1 (float): T1 relaxation time. Should satisfy ``t_1 > 0``.
             t_2 (float): T2 dephasing time.
             Should satisfy ``t_1 > 0`` and ``t_2 < 2 * t_1``.
@@ -546,13 +550,14 @@ class ThermalRelaxationChannel(KrausChannel):
             equilibrium. Default is 0.
     """
 
-    def __init__(self, q, params):
+    def __init__(self, qubit, params):
         self.name = "ThermalRelaxationChannel"
         # check given parameters
         if len(params) not in [3, 4]:
             raise_error(
                 ValueError,
-                f"``params`` list must have 3 or 4 elements while {len(params)} were given.",
+                "``params`` list must have 3 or 4 elements "
+                + f"while {len(params)} were given.",
             )
 
         t_1, t_2, time = params[:3]
@@ -595,7 +600,7 @@ class ThermalRelaxationChannel(KrausChannel):
             )
 
             operators, _ = choi_to_kraus(choi_matrix)
-            super().__init__([(q,)] * len(operators), operators)
+            super().__init__([(qubit,)] * len(operators), operators)
             self.init_kwargs["exp_t2"] = exp_t2
 
         else:
@@ -608,10 +613,10 @@ class ThermalRelaxationChannel(KrausChannel):
                 sqrt(pz) * np.array([[1, 0], [0, -1]]),
                 sqrt(1 - preset0 - preset1 - pz) * np.eye(2),
             )
-            super().__init__([(q,)] * len(operators), operators)
+            super().__init__([(qubit,)] * len(operators), operators)
             self.init_kwargs["pz"] = pz
 
-        self.init_args = [q, t_1, t_2, time]
+        self.init_args = [qubit, t_1, t_2, time]
         self.t_1, self.t_2 = t_1, t_2
         self.init_kwargs["excited_population"] = excited_population
         self.init_kwargs["p0"] = preset0
@@ -654,7 +659,7 @@ class ReadoutErrorChannel(KrausChannel):
     """Readout error channel implemented as a quantum-to-classical channel.
 
     Args:
-        q (int or list or tuple): Qubit ids that the channel acts on.
+        qubits (int or list or tuple): Qubit ids that the channel acts on.
         probabilities (array): row-stochastic matrix :math:`P` with all
             readout transition probabilities.
 
@@ -668,14 +673,14 @@ class ReadoutErrorChannel(KrausChannel):
                     \\end{pmatrix} \\, .
     """
 
-    def __init__(self, q: Tuple[int, list, tuple], probabilities):
+    def __init__(self, qubits: Tuple[int, list, tuple], probabilities):
         if any(sum(row) < 1 - PRECISION_TOL for row in probabilities) or any(
             sum(row) > 1 + PRECISION_TOL for row in probabilities
         ):
             raise_error(ValueError, "all rows of probabilities must sum to 1.")
 
-        if isinstance(q, int) is True:
-            q = (q,)
+        if isinstance(qubits, int) is True:
+            qubits = (qubits,)
 
         dim = len(probabilities)
         operators = []
@@ -685,7 +690,7 @@ class ReadoutErrorChannel(KrausChannel):
                 operator[j, k] = sqrt(probabilities[k, j])
                 operators.append(operator)
 
-        super().__init__([q] * len(operators), operators)
+        super().__init__([qubits] * len(operators), operators)
         self.name = "ReadoutErrorChannel"
         self.draw_label = "RE"
 
@@ -705,7 +710,7 @@ class ResetChannel(KrausChannel):
         to reset to 0 and 1 correpondingly.
     """
 
-    def __init__(self, q, probabilities):
+    def __init__(self, qubit, probabilities):
         if len(probabilities) != 2:
             raise_error(
                 ValueError,
@@ -729,7 +734,7 @@ class ResetChannel(KrausChannel):
         if p0 + p1 < 1:
             operators.append(sqrt(np.abs(1 - p0 - p1)) * np.eye(2))
 
-        super().__init__([(q,)] * len(operators), operators)
+        super().__init__([(qubit,)] * len(operators), operators)
         self.init_kwargs = {"p0": p0, "p1": p1}
         self.name = "ResetChannel"
         self.draw_label = "R"
