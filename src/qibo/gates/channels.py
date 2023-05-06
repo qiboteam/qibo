@@ -308,10 +308,11 @@ class UnitaryChannel(KrausChannel):
     approach we refer to :ref:`Using repeated execution <repeatedexec-example>`.
 
     Args:
-        qubits (int or list or tuple or None): Qubits that the unitary operators act on.
-        Type ``int`` and ``tuple`` will be considered as the same qubit(s) for all unitaries.
-        A ``list`` should contain tuples of qubits corresponding to each operator.
-        Can be [] if ``ops`` are of type ``qibo.gates.Gate``.
+        qubits (int or list or tuple or None): Qubits that the unitary operators
+            act on. Types ``int`` and ``tuple`` will be considered as the same
+            qubit(s) for all unitaries. A ``list`` should contain tuples of
+            qubits corresponding to each operator. Can be [] if ``ops`` are of
+            type ``qibo.gates.Gate``.
         ops (list): List of  operators as pairs ``(pk, Uk)`` where
             ``pk`` is float probability corresponding to a unitary ``Uk``
             of type ``np.ndarray``/``tf.Tensor`` or gates ``qibo.gates.Gate``.
