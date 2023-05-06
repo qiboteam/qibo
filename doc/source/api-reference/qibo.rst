@@ -217,6 +217,33 @@ Error Mitigation
 
 Qibo allows for mitigating noise in circuits via error mitigation methods. Unlike error correction, error mitigation does not aim to correct qubit errors, but rather it provides the means to estimate the noise-free expected value of an observable measured at the end of a noisy circuit.
 
+Readout Mitigation
+""""""""""""""""""
+
+A common kind of error happening in quantum circuits is readout error, i.e. the error in the measurement of the qubits at the end of the computation. In Qibo there are currently two methods implemented for mitigating readout errors, and both can be used as standalone functions or in combination with the other general mitigation methods by setting the paramter `readout`.
+
+
+Calibration Matrix
+""""""""""""""""""
+Given :math:`n` qubits, all the possible :math:`2^n` states are constructed via the application of the corresponding sequence of :math:`X` gates :math:`X_0\otimes I_1\otimes\cdot\cdot\cdot\otimes X_{n-1}`. In the presence of readout errors, we will measure for each state :math:`i` some noisy frequencies :math:`F_i^{noisy}` different from the ideal ones :math:`F_i^{ideal}=\delta_{i,j}`.
+
+The effect of the error is modeled by the matrix composed of the noisy frequencies as columns :math:`M=\big(F_0^{noisy},...,F_{n-1}^{noisy}\big)`. We have indeed that:
+
+.. math::
+   F_i^{noisy} = M \cdot F_i^{ideal}
+
+and, therefore, the calibration matrix obtained as :math:`M_{cal}=M^{-1}` can be used to recover the noise-free frequencies.
+
+.. autofunction:: qibo.models.error_mitigation.get_calibration_matrix
+
+.. autofunction:: qibo.models.error_mitigation.apply_readout_mitigation
+
+
+Randomized
+""""""""""
+
+.. autofunction:: qibo.models.error_mitigation.apply_randomized_readout_mitigation
+
 Zero Noise Extrapolation (ZNE)
 """"""""""""""""""""""""""""""
 
