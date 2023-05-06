@@ -611,7 +611,6 @@ class ThermalRelaxationChannel(KrausChannel):
             operators, _ = choi_to_kraus(choi_matrix)
             super().__init__([(qubit,)] * len(operators), operators)
             self.init_kwargs["exp_t2"] = exp_t2
-
         else:
             pz = (exp(-time / t_1) - exp(-time / t_2)) / 2
             operators = (
@@ -711,12 +710,14 @@ class ResetChannel(KrausChannel):
 
     .. math::
         \\mathcal{E}(\\rho ) = (1 - p0 - p_1) \\rho
-        +  \\mathrm{Tr}_q[\\rho] \\otimes (p0|0\\rangle \\langle 0| + p_1|1\\rangle \\langle 1|),
+        + \\mathrm{Tr}_q[\\rho] \\otimes (p0|0\\rangle \\langle 0|
+        + p_1|1\\rangle \\langle 1|),
 
     Args:
         q (int): Qubit id that the channel acts on.
-        probabilities (list): list of 2 float probabilities
-        to reset to 0 and 1 correpondingly.
+        probabilities (list or ndarray): list :math:`[p_{0}, p_{1}]`,
+            where :math:`p_{0}` and `p_{1}` are the probabilities to
+            reset to 0 and 1, respectively.
     """
 
     def __init__(self, qubit, probabilities):
