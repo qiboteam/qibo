@@ -569,15 +569,22 @@ class ThermalRelaxationChannel(KrausChannel):
             params = args[1]
         del args
 
+        if len(params) not in [3, 4]:
+            raise_error(
+                ValueError,
+                "``params`` list must have 3 or 4 elements "
+                + f"while {len(params)} were given.",
+            )
+
         t_1, t_2, time = params[:3]
-        excited_population = params[-1] if len(params) == 4 else 0
+        excited_population = params[-1] if len(params) == 4 else 0.0
 
         if excited_population < 0 or excited_population > 1:
             raise_error(
                 ValueError, f"Invalid excited state population {excited_population}."
             )
         if time < 0:
-            raise_error(ValueError, "Invalid gate_time ({time} < 0).")
+            raise_error(ValueError, f"Invalid gate_time ({time} < 0).")
         if t_1 <= 0:
             raise_error(ValueError, "Invalid t_1 relaxation time parameter: t_1 <= 0.")
         if t_2 <= 0:
@@ -720,11 +727,26 @@ class ResetChannel(KrausChannel):
             reset to 0 and 1, respectively.
     """
 
-    def __init__(self, qubit, probabilities):
+    def __init__(self, *args):
+        if isinstance(args[1], float) is True:
+            warnings.warn(
+                f"{self.__class__.__name__} initialisation has changed. "
+                + "Please check the documentation. Previous initialisation "
+                + "will be removed in Release 1.15.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            qubit = args[0]
+            probabilities = list(args[1:])
+        else:
+            qubit = args[0]
+            probabilities = args[1]
+        del args
+
         if len(probabilities) != 2:
             raise_error(
                 ValueError,
-                f"ResetChannel need 2 probabilities, got {len(probabilities)} instead.",
+                f"ResetChannel needs 2 probabilities, got {len(probabilities)} instead.",
             )
         p0, p1 = probabilities
         if p0 < 0:
@@ -732,7 +754,7 @@ class ResetChannel(KrausChannel):
         if p1 < 0:
             raise_error(ValueError, "Invalid p1 ({p1} < 0).")
         if p0 + p1 > 1 + PRECISION_TOL:
-            raise_error(ValueError, f"Invalid probabilities (p0 + p1 = {p0+p1} > 1).")
+            raise_error(ValueError, f"Invalid probabilities (p0 + p1 = {p0 + p1} > 1).")
 
         operators = [
             sqrt(p0) * np.array([[1, 0], [0, 0]]),
