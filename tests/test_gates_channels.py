@@ -42,12 +42,22 @@ def test_general_channel(backend):
         channel1.apply(backend, state, 2)
 
 
+def test_controlled_by_channel_error():
+    with pytest.raises(ValueError):
+        gates.PauliNoiseChannel(0, [("X", 0.5)]).controlled_by(1)
+
+    a1 = np.sqrt(0.4) * matrices.X
+    a2 = np.sqrt(0.6) * np.array(
+        [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]]
+    )
+    config = ([(1,), (0, 1)], [a1, a2])
+    with pytest.raises(ValueError):
+        gates.KrausChannel(*config).controlled_by(1)
+
+
 def test_kraus_channel(backend):
     a1 = np.sqrt(0.4) * matrices.X
     a2 = np.sqrt(0.6) * matrices.Z
-
-    # warning coverage
-    gates.KrausChannel([((0,), a1)])
 
     with pytest.raises(TypeError):
         gates.KrausChannel("0", [a1])
@@ -55,6 +65,18 @@ def test_kraus_channel(backend):
         gates.KrausChannel([0, 1], [a1, a2])
     with pytest.raises(ValueError):
         gates.KrausChannel((0, 1), [a1])
+
+    # asserting that both initialisations
+    # yield the same channel
+    old = gates.KrausChannel([((0,), a1)])
+    new = gates.KrausChannel([(0,)], [a1])
+    backend.assert_allclose(
+        backend.calculate_norm(
+            old.to_choi(backend=backend) - new.to_choi(backend=backend)
+        )
+        < PRECISION_TOL,
+        True,
+    )
 
     test_superop = np.array(
         [
@@ -92,31 +114,16 @@ def test_kraus_channel(backend):
     gates.DepolarizingChannel((0, 1), 0.98).to_choi()
 
 
-def test_depolarizing_channel_errors():
-    with pytest.raises(ValueError):
-        gates.DepolarizingChannel(0, 1.5)
-
-
-def test_controlled_by_channel_error():
-    with pytest.raises(ValueError):
-        gates.PauliNoiseChannel(0, [("X", 0.5)]).controlled_by(1)
-
-    a1 = np.sqrt(0.4) * matrices.X
-    a2 = np.sqrt(0.6) * np.array(
-        [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]]
-    )
-    config = ([(1,), (0, 1)], [a1, a2])
-    with pytest.raises(ValueError):
-        gates.KrausChannel(*config).controlled_by(1)
-
-
 def test_unitary_channel(backend):
     a1 = matrices.X
     a2 = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
+
     qubits = [(0,), (2, 3)]
-    matrices_ = [(0.4, a1), (0.3, a2)]
-    initial_state = random_density_matrix(2**4, backend=backend)
+    probabilities = [0.4, 0.3]
+    matrices_ = list(zip(probabilities, [a1, a2]))
+
     channel = gates.UnitaryChannel(qubits, matrices_)
+    initial_state = random_density_matrix(2**4, backend=backend)
     final_state = backend.apply_channel_density_matrix(
         channel, np.copy(initial_state), 4
     )
@@ -134,6 +141,16 @@ def test_unitary_channel(backend):
     backend.assert_allclose(final_state, target_state)
 
     channel.to_choi(backend=backend)
+
+    # checking old initialisation
+    old = gates.UnitaryChannel(probabilities, list(zip(qubits, [a1, a2])))
+    backend.assert_allclose(
+        backend.calculate_norm(
+            channel.to_choi(backend=backend) - old.to_choi(backend=backend)
+        )
+        < PRECISION_TOL,
+        True,
+    )
 
 
 def test_unitary_channel_probability_tolerance():
@@ -197,6 +214,11 @@ def test_pauli_noise_channel(backend):
     assert norm < PRECISION_TOL
 
 
+def test_depolarizing_channel_errors():
+    with pytest.raises(ValueError):
+        gates.DepolarizingChannel(0, 1.5)
+
+
 def test_depolarizing_channel(backend):
     initial_rho = random_density_matrix(2**3, backend=backend)
     lam = 0.3
@@ -206,34 +228,6 @@ def test_depolarizing_channel(backend):
     final_rho_r = backend.partial_trace_density_matrix(final_rho, (2,), 3)
     target_rho_r = (1 - lam) * initial_rho_r + lam * backend.cast(np.identity(4)) / 4
     backend.assert_allclose(final_rho_r, target_rho_r)
-
-
-def test_reset_channel(backend):
-    initial_rho = random_density_matrix(2**3, backend=backend)
-    gate = gates.ResetChannel(0, [0.2, 0.2])
-    final_rho = backend.reset_error_density_matrix(gate, np.copy(initial_rho), 3)
-
-    trace = backend.to_numpy(backend.partial_trace_density_matrix(initial_rho, (0,), 3))
-    trace = np.reshape(trace, 4 * (2,))
-
-    zeros = np.tensordot(trace, np.array([[1, 0], [0, 0]], dtype=trace.dtype), axes=0)
-    ones = np.tensordot(trace, np.array([[0, 0], [0, 1]], dtype=trace.dtype), axes=0)
-    zeros = np.transpose(zeros, [4, 0, 1, 5, 2, 3])
-    ones = np.transpose(ones, [4, 0, 1, 5, 2, 3])
-    zeros = backend.cast(zeros, dtype=zeros.dtype)
-    ones = backend.cast(ones, dtype=ones.dtype)
-
-    target_rho = 0.6 * initial_rho + 0.2 * np.reshape(zeros + ones, initial_rho.shape)
-
-    backend.assert_allclose(final_rho, target_rho)
-
-
-@pytest.mark.parametrize("p0,p1", [(0, -0.1), (-0.1, 0), (0.5, 0.6), (0.8, 0.3)])
-def test_reset_channel_errors(p0, p1):
-    with pytest.raises(ValueError):
-        gates.ResetChannel(0, [p0])
-    with pytest.raises(ValueError):
-        gates.ResetChannel(0, [p0, p1])
 
 
 @pytest.mark.parametrize(
@@ -294,6 +288,17 @@ def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
         backend.calculate_norm(final_rho - target_rho) < PRECISION_TOL, True
     )
 
+    # checking old initialisation
+    old = gates.ThermalRelaxationChannel(0, t1, t2, time, excpop)
+    new = gates.ThermalRelaxationChannel(0, [t1, t2, time, excpop])
+    backend.assert_allclose(
+        backend.calculate_norm(
+            new.to_choi(backend=backend) - old.to_choi(backend=backend)
+        )
+        < PRECISION_TOL,
+        True,
+    )
+
 
 @pytest.mark.parametrize(
     "params",
@@ -328,3 +333,41 @@ def test_readout_error_channel(backend):
     probability_sum = np.diag(probability_sum).sum().real
 
     backend.assert_allclose(probability_sum - 1 < PRECISION_TOL, True)
+
+
+def test_reset_channel(backend):
+    initial_rho = random_density_matrix(2**3, backend=backend)
+    gate = gates.ResetChannel(0, [0.2, 0.2])
+    final_rho = backend.reset_error_density_matrix(gate, np.copy(initial_rho), 3)
+
+    trace = backend.to_numpy(backend.partial_trace_density_matrix(initial_rho, (0,), 3))
+    trace = np.reshape(trace, 4 * (2,))
+
+    zeros = np.tensordot(trace, np.array([[1, 0], [0, 0]], dtype=trace.dtype), axes=0)
+    ones = np.tensordot(trace, np.array([[0, 0], [0, 1]], dtype=trace.dtype), axes=0)
+    zeros = np.transpose(zeros, [4, 0, 1, 5, 2, 3])
+    ones = np.transpose(ones, [4, 0, 1, 5, 2, 3])
+    zeros = backend.cast(zeros, dtype=zeros.dtype)
+    ones = backend.cast(ones, dtype=ones.dtype)
+
+    target_rho = 0.6 * initial_rho + 0.2 * np.reshape(zeros + ones, initial_rho.shape)
+
+    backend.assert_allclose(final_rho, target_rho)
+
+    old = gates.ResetChannel(0, 0.2, 0.2)
+    new = gates.ResetChannel(0, [0.2, 0.2])
+    backend.assert_allclose(
+        backend.calculate_norm(
+            new.to_choi(backend=backend) - old.to_choi(backend=backend)
+        )
+        < PRECISION_TOL,
+        True,
+    )
+
+
+@pytest.mark.parametrize("p0,p1", [(0, -0.1), (-0.1, 0), (0.5, 0.6), (0.8, 0.3)])
+def test_reset_channel_errors(p0, p1):
+    with pytest.raises(ValueError):
+        gates.ResetChannel(0, [p0])
+    with pytest.raises(ValueError):
+        gates.ResetChannel(0, [p0, p1])
