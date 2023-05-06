@@ -551,15 +551,23 @@ class ThermalRelaxationChannel(KrausChannel):
             equilibrium. Default is 0.
     """
 
-    def __init__(self, qubit, params):
+    def __init__(self, *args):
         self.name = "ThermalRelaxationChannel"
         # check given parameters
-        if len(params) not in [3, 4]:
-            raise_error(
-                ValueError,
-                "``params`` list must have 3 or 4 elements "
-                + f"while {len(params)} were given.",
+        if len(args) in [4, 5]:
+            warnings.warn(
+                f"{self.__class__.__name__} initialisation has changed. "
+                + "Please check the documentation. Previous initialisation "
+                + "will be removed in Release 1.15.",
+                DeprecationWarning,
+                stacklevel=2,
             )
+            qubit = args[0]
+            params = args[1:]
+        else:
+            qubit = args[0]
+            params = args[1]
+        del args
 
         t_1, t_2, time = params[:3]
         excited_population = params[-1] if len(params) == 4 else 0
