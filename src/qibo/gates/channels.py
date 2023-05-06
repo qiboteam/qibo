@@ -615,7 +615,7 @@ class ThermalRelaxationChannel(KrausChannel):
                 ]
             )
 
-            operators, _ = choi_to_kraus(choi_matrix)
+            operators, _ = choi_to_kraus(choi_matrix, validate_cp=False)
             super().__init__([(qubit,)] * len(operators), operators)
             self.init_kwargs["exp_t2"] = exp_t2
         else:
