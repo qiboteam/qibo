@@ -224,7 +224,7 @@ class KrausChannel(Channel):
         if len(ops) == 1:
             warnings.warn(
                 f"{self.__class__.__name__} initialisation has changed. "
-                + "Please check the documentation. Previous initialisation "
+                + "Please check the latest documentation. Previous initialisation "
                 + "will be removed in Release 1.15.",
                 DeprecationWarning,
                 stacklevel=2,
@@ -324,7 +324,7 @@ class UnitaryChannel(KrausChannel):
         ):
             warnings.warn(
                 f"{self.__class__.__name__} initialisation has changed. "
-                + "Please check the documentation. Previous initialisation "
+                + "Please check the latest documentation. Previous initialisation "
                 + "will be removed in Release 1.15.",
                 DeprecationWarning,
                 stacklevel=2,
@@ -557,7 +557,7 @@ class ThermalRelaxationChannel(KrausChannel):
         if len(args) in [4, 5]:
             warnings.warn(
                 f"{self.__class__.__name__} initialisation has changed. "
-                + "Please check the documentation. Previous initialisation "
+                + "Please check the latest documentation. Previous initialisation "
                 + "will be removed in Release 1.15.",
                 DeprecationWarning,
                 stacklevel=2,
@@ -731,7 +731,7 @@ class ResetChannel(KrausChannel):
         if isinstance(args[1], float) is True:
             warnings.warn(
                 f"{self.__class__.__name__} initialisation has changed. "
-                + "Please check the documentation. Previous initialisation "
+                + "Please check the latest documentation. Previous initialisation "
                 + "will be removed in Release 1.15.",
                 DeprecationWarning,
                 stacklevel=2,
