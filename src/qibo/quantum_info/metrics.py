@@ -388,9 +388,10 @@ def gate_error(channel, target=None, backend=None):
 
 
 def meyer_wallach(circuit, backend=None):
-    """Computes the Meyer-Wallach entanglement of the `circuit`,
+    """Computes the Meyer-Wallach entanglement Q of the `circuit`,
+
     .. math::
-        Ent = 1-\frac{1}{N}\\sum_{k}\text{Tr}\\left(\rho_k^2(\theta_i)\right)
+        Q = 1-\\frac{1}{N}\\sum_{k}\\text{Tr}\\left(\\rho_k^2(\\theta_i)\\right) \\,
 
     Args:
         circuit (qibo.models.Circuit): Parametrized circuit.
@@ -417,8 +418,12 @@ def meyer_wallach(circuit, backend=None):
 
 
 def entangling_capability(circuit, samples, backend=None):
-    """Computes the Meyer-Wallach entanglement Q of the `circuit`,
-    .. math:: Ent = 1-\frac{1}{N}\\sum_{k}\text{Tr}\\left(\rho_k^2(\theta_i)\right)
+    """Computes the average Meyer-Wallach entanglement Q of the `circuit`,
+
+    .. math::
+        Ent = \\frac{2}{S}\\sum_{k}Q_k \\, ,
+
+    where :math:`S` is the number of samples.
 
     Args:
         circuit (qibo.models.Circuit): Parametrized circuit.
@@ -445,8 +450,10 @@ def entangling_capability(circuit, samples, backend=None):
 
 
 def expressibility(circuit, t, samples, backend=None):
-    """Computes the expressibility of the `circuit`, math:: ||A||\\_{HS} where
-    .. math:: A = \\int_{\text{Haar}}\\left(|\\psi\rangle\\langle\\psi|\right)^{\\otimes t}d\\psi - \\int_{\\Theta}\\left(|\\psi_{\theta}\rangle\\langle\\psi_{\theta}|\right)^{\\otimes t}d\\psi
+    """Computes the expressibility of the `circuit`, :math:`||A||_{HS}` where
+
+    .. math::
+        A = \\int_{\\text{Haar}}\\left(|\\psi\\rangle\\right.\\left.\\langle\\psi|\\right)^{\\otimes t}d\\psi - \\int_{\\Theta}\\left(|\\psi_{\\theta}\\rangle\\right.\\left.\\langle\\psi_{\\theta}|\\right)^{\\otimes t}d\\psi \\,
 
     Args:
         circuit (qibo.models.Circuit): Parametrized circuit.

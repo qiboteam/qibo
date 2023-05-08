@@ -1121,16 +1121,16 @@ Meyer-Wallach entanglement
 .. autofunction:: qibo.quantum_info.meyer_wallach
 
 
-Expressibility
-""""""""""""""
-
-.. autofunction:: qibo.quantum_info.expressibility
-
-
 Entanglement capability
 """""""""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.entangling_capability
+
+
+Expressibility
+""""""""""""""
+
+.. autofunction:: qibo.quantum_info.expressibility
 
 
 Random Ensembles
