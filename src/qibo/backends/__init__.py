@@ -96,6 +96,8 @@ class QiboMatrices:
         self.Y = self.matrices.Y
         self.Z = self.matrices.Z
         self.H = self.matrices.H
+        self.S = self.matrices.S
+        self.SDG = self.matrices.SDG
         self.CNOT = self.matrices.CNOT
 
 
