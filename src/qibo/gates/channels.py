@@ -587,35 +587,51 @@ class ThermalRelaxationChannel(KrausChannel):
         # calculate probabilities
         self.t_1, self.t_2 = t_1, t_2
         p_reset = 1 - exp(-time / t_1)
-        preset0 = p_reset * (1 - excited_population)
-        preset1 = p_reset * excited_population
+        p_0 = p_reset * (1 - excited_population)
+        p_1 = p_reset * excited_population
 
         if t_1 < t_2:
-            exp_t2 = exp(-time / t_2)
+            e_t2 = exp(-time / t_2)
 
-            from qibo.quantum_info import choi_to_kraus
+            operators = [
+                sqrt(p_0) * sqrt(p_0) * np.array([[0, 1], [0, 0]]),
+                sqrt(p_1) * np.array([[0, 0], [1, 0]]),
+            ]
 
-            choi_matrix = np.array(
-                [
-                    [1 - preset1, 0, 0, exp_t2],
-                    [0, preset1, 0, 0],
-                    [0, 0, preset0, 0],
-                    [exp_t2, 0, 0, 1 - preset0],
-                ]
+            k_term = sqrt(4 * e_t2**2 + (p_0 - p_1) ** 2)
+            kraus_coeff = sqrt(1 - (p_0 + p_1 + k_term) / 2)
+
+            operators.append(
+                kraus_coeff
+                * np.array(
+                    [
+                        [(p_0 - p_1 - k_term) / (2 * e_t2), 0],
+                        [0, 1],
+                    ]
+                )
             )
 
-            operators, _ = choi_to_kraus(choi_matrix, validate_cp=False)
+            operators.append(
+                kraus_coeff
+                * np.array(
+                    [
+                        [(p_0 - p_1 + k_term) / (2 * e_t2), 0],
+                        [0, 1],
+                    ]
+                )
+            )
+
             super().__init__([(qubit,)] * len(operators), operators)
-            self.init_kwargs["exp_t2"] = exp_t2
+            self.init_kwargs["e_t2"] = e_t2
         else:
             pz = (exp(-time / t_1) - exp(-time / t_2)) / 2
             operators = (
-                sqrt(preset0) * np.array([[1, 0], [0, 0]]),
-                sqrt(preset0) * np.array([[0, 1], [0, 0]]),
-                sqrt(preset1) * np.array([[0, 0], [1, 0]]),
-                sqrt(preset1) * np.array([[0, 0], [0, 1]]),
+                sqrt(p_0) * np.array([[1, 0], [0, 0]]),
+                sqrt(p_0) * np.array([[0, 1], [0, 0]]),
+                sqrt(p_1) * np.array([[0, 0], [1, 0]]),
+                sqrt(p_1) * np.array([[0, 0], [0, 1]]),
                 sqrt(pz) * np.array([[1, 0], [0, -1]]),
-                sqrt(1 - preset0 - preset1 - pz) * np.eye(2),
+                sqrt(1 - p_0 - p_1 - pz) * np.eye(2),
             )
             super().__init__([(qubit,)] * len(operators), operators)
             self.init_kwargs["pz"] = pz
@@ -623,8 +639,8 @@ class ThermalRelaxationChannel(KrausChannel):
         self.init_args = [qubit, t_1, t_2, time]
         self.t_1, self.t_2 = t_1, t_2
         self.init_kwargs["excited_population"] = excited_population
-        self.init_kwargs["p0"] = preset0
-        self.init_kwargs["p1"] = preset1
+        self.init_kwargs["p0"] = p_0
+        self.init_kwargs["p1"] = p_1
 
         self.name = "ThermalRelaxationChannel"
         self.draw_label = "TR"
@@ -633,15 +649,15 @@ class ThermalRelaxationChannel(KrausChannel):
         qubit = self.target_qubits[0]
 
         if self.t_1 < self.t_2:
-            preset0, preset1, exp_t2 = (
+            preset0, preset1, e_t2 = (
                 self.init_kwargs["p0"],
                 self.init_kwargs["p1"],
                 self.init_kwargs["exp_t2"],
             )
             matrix = [
                 [1 - preset1, 0, 0, preset0],
-                [0, exp_t2, 0, 0],
-                [0, 0, exp_t2, 0],
+                [0, e_t2, 0, 0],
+                [0, 0, e_t2, 0],
                 [preset1, 0, 0, 1 - preset0],
             ]
 
