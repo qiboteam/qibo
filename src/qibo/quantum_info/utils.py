@@ -7,7 +7,6 @@ import numpy as np
 
 from qibo.backends import GlobalBackend
 from qibo.config import PRECISION_TOL, raise_error
-from qibo.quantum_info import random_unitary
 
 # Phases corresponding to all 24 single-qubit Clifford gates
 ONEQUBIT_CLIFFORD_PARAMS = [
@@ -244,6 +243,8 @@ def haar_integral(nqubits, t, samples, backend=None):
     Return:
         (array) : Estimation of the Haar integral.
     """
+
+    from qibo.quantum_info import random_unitary
 
     if backend == None:
         backend = GlobalBackend()
