@@ -1115,6 +1115,24 @@ Gate error
 .. autofunction:: qibo.quantum_info.gate_error
 
 
+Meyer-Wallach entanglement
+""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.meyer_wallach
+
+
+Expressibility
+""""""""""""""
+
+.. autofunction:: qibo.quantum_info.expressibility
+
+
+Entanglement capability
+"""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.entangling_capability
+
+
 Random Ensembles
 ^^^^^^^^^^^^^^^^
 
@@ -1413,6 +1431,18 @@ Hellinger fidelity
 """"""""""""""""""
 
 .. autofunction:: qibo.quantum_info.hellinger_fidelity
+
+
+Haar integral
+"""""""""""""
+
+.. autofunction:: qibo.quantum_info.haar_integral
+
+
+Parameterized quantum circuit integral
+""""""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.pqc_integral
 
 
 .. _Parallel:
