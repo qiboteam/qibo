@@ -1,5 +1,7 @@
 # Anomaly detection with variational quantum circuits
 
+This tutorial presents a simplified version of ['Long-Lived Particles Anomaly Detection with Parametrized Quantum Circuits'](https://doi.org/10.3390/particles6010016).
+
 Code at: [https://github.com/qiboteam/qibo/tree/master/examples/anomaly_detection](https://github.com/qiboteam/qibo/tree/master/examples/anomaly_detection).
 
 ## Problem overview
