@@ -109,35 +109,6 @@ def entropy(state, base: float = 2, validate: bool = False, backend=None):
     return ent
 
 
-def meyer_wallach(circuit, backend=None):
-    """Computes the Meyer-Wallach entanglement of the `circuit`,
-    .. math::
-        Ent = 1-\frac{1}{N}\\sum_{k}\text{Tr}\\left(\rho_k^2(\theta_i)\right)
-
-    Args:
-        circuit (qibo.models.Circuit): Parametrized circuit.
-        backend (qibo.backends.abstract.Backend): Calculation engine.
-
-    Return:
-        (int) : Meyer-Wallach entanglement.
-    """
-
-    if backend == None:  # pragma: no cover
-        backend = GlobalBackend()
-
-    circuit.density_matrix = True
-    nqubits = circuit.nqubits
-    rho = backend.execute_circuit(circuit).state()
-    entropy = 0
-    for j in range(nqubits):
-        trace_q = list(range(nqubits))
-        trace_q.pop(j)
-        rho_r = backend.partial_trace_density_matrix(rho, trace_q, nqubits)
-        trace = np.trace(rho_r @ rho_r)
-        entropy += trace
-    return 1 - entropy / nqubits
-
-
 def trace_distance(state, target, validate: bool = False, backend=None):
     """Trace distance between two quantum states, :math:`\\rho` and :math:`\\sigma`:
 
@@ -414,3 +385,57 @@ def gate_error(channel, target=None, backend=None):
     error = 1 - average_gate_fidelity(channel, target, backend=backend)
 
     return error
+
+
+def meyer_wallach(circuit, backend=None):
+    """Computes the Meyer-Wallach entanglement of the `circuit`,
+    .. math::
+        Ent = 1-\frac{1}{N}\\sum_{k}\text{Tr}\\left(\rho_k^2(\theta_i)\right)
+
+    Args:
+        circuit (qibo.models.Circuit): Parametrized circuit.
+        backend (qibo.backends.abstract.Backend): Calculation engine.
+
+    Return:
+        (int) : Meyer-Wallach entanglement.
+    """
+
+    if backend == None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    circuit.density_matrix = True
+    nqubits = circuit.nqubits
+    rho = backend.execute_circuit(circuit).state()
+    entropy = 0
+    for j in range(nqubits):
+        trace_q = list(range(nqubits))
+        trace_q.pop(j)
+        rho_r = backend.partial_trace_density_matrix(rho, trace_q, nqubits)
+        trace = np.trace(rho_r @ rho_r)
+        entropy += trace
+    return 1 - entropy / nqubits
+
+
+def entangling_capability(circuit, samples, backend=None):
+    """Computes the Meyer-Wallach entanglement Q of the `circuit`,
+    .. math:: Ent = 1-\frac{1}{N}\\sum_{k}\text{Tr}\\left(\rho_k^2(\theta_i)\right)
+
+    Args:
+        circuit (qibo.models.Circuit): Parametrized circuit.
+        samples (int): number of samples to estimate the integral.
+        backend (qibo.backends.abstract.Backend): Calculation engine.
+
+    Return:
+        (int) : Entangling capability.
+    """
+
+    res = backend.cast(np.zeros(samples, dtype=complex))
+    nparams = 0
+    for gate in circuit.queue:
+        if hasattr(gate, "trainable") and gate.trainable:
+            nparams += len(gate.parameters)
+    for i in range(samples):
+        params = np.random.uniform(-np.pi, np.pi, nparams)
+        circuit.set_parameters(params)
+        res[i] = meyer_wallach(circuit, backend=None)
+    return 2 * np.sum(res).real / samples
