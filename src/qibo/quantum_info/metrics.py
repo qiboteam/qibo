@@ -429,7 +429,10 @@ def entangling_capability(circuit, samples, backend=None):
         (int) : Entangling capability.
     """
 
-    res = backend.cast(np.zeros(samples, dtype=complex))
+    if backend == None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    res = []
     nparams = 0
     for gate in circuit.queue:
         if hasattr(gate, "trainable") and gate.trainable:
@@ -437,5 +440,30 @@ def entangling_capability(circuit, samples, backend=None):
     for i in range(samples):
         params = np.random.uniform(-np.pi, np.pi, nparams)
         circuit.set_parameters(params)
-        res[i] = meyer_wallach(circuit, backend=None)
-    return 2 * np.sum(res).real / samples
+        res.append(meyer_wallach(circuit, backend))
+    return 2 * np.sum(backend.cast(res)).real / samples
+
+
+def expressibility(circuit, t, samples, backend=None):
+    """Computes the expressibility of the `circuit`, math:: ||A||\\_{HS} where
+    .. math:: A = \\int_{\text{Haar}}\\left(|\\psi\rangle\\langle\\psi|\right)^{\\otimes t}d\\psi - \\int_{\\Theta}\\left(|\\psi_{\theta}\rangle\\langle\\psi_{\theta}|\right)^{\\otimes t}d\\psi
+
+    Args:
+        circuit (qibo.models.Circuit): Parametrized circuit.
+        t (int): index t to define the t-design.
+        samples (int): number of samples to estimate the integral.
+        backend (qibo.backends.abstract.Backend): Calculation engine.
+
+    Return:
+        (int) : Entangling capability.
+    """
+
+    from qibo.quantum_info import haar_integral, pqc_integral
+
+    if backend == None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    expr = haar_integral(circuit.nqubits, t, samples, backend) - pqc_integral(
+        circuit, t, samples, backend
+    )
+    return fidelity(expr, expr)

@@ -253,7 +253,7 @@ def haar_integral(nqubits, t, samples, backend=None):
     randunit_density = backend.cast(np.zeros((dim**t, dim**t), dtype=complex))
     for _ in range(samples):
         haar_unit = random_unitary(dim, "haar", backend=backend)[:, 0].reshape(-1, 1)
-        rho = haar_unit @ haar_unit.conjugate().transpose()
+        rho = haar_unit @ np.conjugate(haar_unit.transpose())
         randunit_density += ft.reduce(np.kron, [rho] * t)
     return randunit_density / samples
 
