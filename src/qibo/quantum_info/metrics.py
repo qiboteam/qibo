@@ -396,7 +396,7 @@ def meyer_wallach(circuit, backend=None):
         circuit (qibo.models.Circuit): Parametrized circuit.
         backend (qibo.backends.abstract.Backend): Calculation engine.
 
-    Return:
+    Returns:
         (int) : Meyer-Wallach entanglement.
     """
 
@@ -425,7 +425,7 @@ def entangling_capability(circuit, samples, backend=None):
         samples (int): number of samples to estimate the integral.
         backend (qibo.backends.abstract.Backend): Calculation engine.
 
-    Return:
+    Returns:
         (int) : Entangling capability.
     """
 
@@ -454,7 +454,7 @@ def expressibility(circuit, t, samples, backend=None):
         samples (int): number of samples to estimate the integral.
         backend (qibo.backends.abstract.Backend): Calculation engine.
 
-    Return:
+    Returns:
         (int) : Entangling capability.
     """
 
