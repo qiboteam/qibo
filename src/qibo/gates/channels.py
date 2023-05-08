@@ -652,7 +652,7 @@ class ThermalRelaxationChannel(KrausChannel):
             preset0, preset1, e_t2 = (
                 self.init_kwargs["p0"],
                 self.init_kwargs["p1"],
-                self.init_kwargs["exp_t2"],
+                self.init_kwargs["e_t2"],
             )
             matrix = [
                 [1 - preset1, 0, 0, preset0],
