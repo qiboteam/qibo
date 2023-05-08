@@ -26,7 +26,7 @@ def get_noise_model(error, gate, cal_matrix=[False, None]):
     return noise
 
 
-def get_circuit(nqubits, p=None):
+def get_circuit(nqubits):
     # Define the circuit
     hz = 0.5
     hx = 0.5
@@ -43,14 +43,14 @@ def get_circuit(nqubits, p=None):
     c.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
     c.add(gates.RZ(q + 1, theta=-2 * dt) for q in range(1, nqubits, 2))
     c.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
-    c.add(gates.M(*range(nqubits), p0=p))
+    c.add(gates.M(*range(nqubits)))
     return c
 
 
 from qibo.backends import construct_backend
 
 backend = construct_backend("numpy")
-# # Precompute the calibration matrices
+# # Generate random calibration matrices
 cal_matrix_1q = random_stochastic_matrix(
     2, diagonally_dominant=True, seed=2, backend=backend
 )
