@@ -67,7 +67,7 @@ cal_matrix_3q = random_stochastic_matrix(
             3,
             get_noise_model(DepolarizingError(0.1), gates.CNOT),
             "CNOT",
-            {"calibration_matrix": np.eye(8)},
+            {"calibration_matrix": cal_matrix_3q},
         ),
         (
             3,
@@ -78,9 +78,9 @@ cal_matrix_3q = random_stochastic_matrix(
         (1, get_noise_model(DepolarizingError(0.1), gates.RX), "RX", {}),
         (
             1,
-            get_noise_model(DepolarizingError(0.1), gates.RX),
+            get_noise_model(DepolarizingError(0.3), gates.RX),
             "RX",
-            {"calibration_matrix": np.eye(2)},
+            {"calibration_matrix": cal_matrix_1q},
         ),
         (1, get_noise_model(DepolarizingError(0.1), gates.RX), "RX", {"ncircuits": 2}),
     ],

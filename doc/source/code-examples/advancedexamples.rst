@@ -1225,7 +1225,7 @@ Let's see how to use them. For starters, let's define a dummy circuit with some 
    c.add(gates.RZ(q + 1, theta=-2 * dt) for q in range(1, nqubits, 2))
    c.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
    # Include the measurements
-   c.add(gates.M(q) for q in range(nqubits))
+   c.add(gates.M(*range(nqubits)))
 
    # visualize the circuit
    print(c.draw())
@@ -1275,13 +1275,13 @@ the real quantum hardware, instead, we can use a noise model:
    # readout error
    # randomly initialize the bitflip probabilities
    prob = random_stochastic_matrix(
-       2, diagonally_dominant=True, seed=2, backend=backend
+       2**nqubits, diagonally_dominant=True, seed=2, backend=backend
    )
    noise.add(ReadoutError(probabilities=prob), gate=gates.M)
    # Noisy expected value without mitigation
    noisy = obs.expectation(backend.execute_circuit(noise.apply(c)).state())
    print(noisy)
-   # 0.3771847008790268
+   # 0.5647937721701448
 
 .. testoutput::
    :hide:
@@ -1313,6 +1313,7 @@ calibration matrix and use it modify the final state after the circuit execution
    mit_state = apply_readout_mitigation(state, calibration_matrix)
    mit_val = mit_state.expectation_from_samples(obs)
    print(mit_val)
+   # 0.5945794816381054
 
 .. testoutput::
    :hide:
@@ -1323,6 +1324,8 @@ Or use the randomized readout mitigation:
 
 .. testcode::
 
+   from qibo.models.error_mitigation import apply_randomized_readout_mitigation
+
    ncircuits = 10
    result, result_cal = apply_randomized_readout_mitigation(
        c, backend=backend, noise_model=noise, nshots=nshots, ncircuits=ncircuits
@@ -1331,6 +1334,7 @@ Or use the randomized readout mitigation:
        obs
    ) / result_cal.expectation_from_samples(obs)
    print(mit_val)
+   # 0.5860884499785314
 
 .. testoutput::
    :hide:
@@ -1377,7 +1381,7 @@ For example if we use the five levels ``[0,1,2,3,4]`` :
        insertion_gate='CNOT'
    )
    print(estimate)
-   # 0.538034375
+   # 0.8332843749999996
 
 .. testoutput::
    :hide:
@@ -1407,7 +1411,7 @@ combined with the readout mitigation:
        readout=readout,
    )
    print(estimate)
-   # 0.8859203125000003
+   # 0.8979124892467807
 
 .. testoutput::
    :hide:
@@ -1463,7 +1467,7 @@ caveat about the input circuit for CDR is valid here as well.
        noise_model=noise,
        nshots=10000,
        insertion_gate='CNOT',
-       readout=readdout,
+       readout=readout,
    )
    print(estimate)
    # 0.9085991439303123
