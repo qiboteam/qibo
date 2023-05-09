@@ -1118,7 +1118,7 @@ Gate error
 Meyer-Wallach entanglement
 """"""""""""""""""""""""""
 
-.. autofunction:: qibo.quantum_info.meyer_wallach
+.. autofunction:: qibo.quantum_info.meyer_wallach_entanglement
 
 
 Entanglement capability
@@ -1127,8 +1127,8 @@ Entanglement capability
 .. autofunction:: qibo.quantum_info.entangling_capability
 
 
-Expressibility
-""""""""""""""
+Expressibility of parameterized quantum circuits
+""""""""""""""""""""""""""""""""""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.expressibility
 

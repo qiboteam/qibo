@@ -387,7 +387,7 @@ def gate_error(channel, target=None, backend=None):
     return error
 
 
-def meyer_wallach(circuit, backend=None):
+def meyer_wallach_entanglement(circuit, backend=None):
     """Computes the Meyer-Wallach entanglement Q of the `circuit`,
 
     .. math::
@@ -398,10 +398,10 @@ def meyer_wallach(circuit, backend=None):
         backend (qibo.backends.abstract.Backend): Calculation engine.
 
     Returns:
-        (int) : Meyer-Wallach entanglement.
+        float: Meyer-Wallach entanglement.
     """
 
-    if backend == None:  # pragma: no cover
+    if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
     circuit.density_matrix = True
@@ -414,10 +414,11 @@ def meyer_wallach(circuit, backend=None):
         rho_r = backend.partial_trace_density_matrix(rho, trace_q, nqubits)
         trace = np.trace(rho_r @ rho_r)
         entropy += trace
+
     return 1 - entropy / nqubits
 
 
-def entangling_capability(circuit, samples, backend=None):
+def entangling_capability(circuit, samples: int, backend=None):
     """Computes the average Meyer-Wallach entanglement Q of the `circuit`,
 
     .. math::
@@ -431,10 +432,10 @@ def entangling_capability(circuit, samples, backend=None):
         backend (qibo.backends.abstract.Backend): Calculation engine.
 
     Returns:
-        (int) : Entangling capability.
+        float: Entangling capability.
     """
 
-    if backend == None:  # pragma: no cover
+    if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
     res = []
@@ -445,11 +446,12 @@ def entangling_capability(circuit, samples, backend=None):
     for i in range(samples):
         params = np.random.uniform(-np.pi, np.pi, nparams)
         circuit.set_parameters(params)
-        res.append(meyer_wallach(circuit, backend))
-    return 2 * np.sum(backend.cast(res)).real / samples
+        res.append(meyer_wallach_entanglement(circuit, backend))
+
+    return 2 * np.real(np.sum(backend.cast(res))) / samples
 
 
-def expressibility(circuit, t, samples, backend=None):
+def expressibility(circuit, t: int, samples: int, backend=None):
     """Computes the expressibility of the `circuit`, :math:`||A||_{HS}` where
 
     .. math::
@@ -462,15 +464,16 @@ def expressibility(circuit, t, samples, backend=None):
         backend (qibo.backends.abstract.Backend): Calculation engine.
 
     Returns:
-        (int) : Entangling capability.
+        float: Entangling capability.
     """
 
     from qibo.quantum_info import haar_integral, pqc_integral
 
-    if backend == None:  # pragma: no cover
+    if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
     expr = haar_integral(circuit.nqubits, t, samples, backend) - pqc_integral(
         circuit, t, samples, backend
     )
+
     return fidelity(expr, expr)
