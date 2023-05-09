@@ -1,4 +1,6 @@
 """Test how features defined in :class:`qibo.models.circuit.Circuit` work during circuit execution."""
+from collections import Counter
+
 import numpy as np
 import pytest
 
@@ -329,22 +331,21 @@ def test_repeated_execute_probs_and_freqs(backend):
     noise.add(noise_map, gates.X)
     noisy_circuit = noise.apply(circuit)
     backend.set_seed(1234)
-    # result = noisy_circuit(nshots=1024)
     result = backend.execute_circuit_repeated(noisy_circuit, nshots=1024)
 
     # Tensorflow seems to yield different results with same seed
     if backend.__class__.__name__ == "TensorflowBackend":
         test_probabilities = [0.171875, 0.828125]
-        test_frequencies = {1: 848, 0: 176}
+        test_frequencies = Counter({1: 848, 0: 176})
     else:
         test_probabilities = [0.20117188, 0.79882812]
-        test_frequencies = {1: 818, 0: 206}
+        test_frequencies = Counter({"1": 818, "0": 206})
     test_probabilities = backend.cast(test_probabilities, dtype=float)
 
-    print(result.frequencies())
     backend.assert_allclose(
         backend.calculate_norm(result.probabilities() - test_probabilities)
         < PRECISION_TOL,
         True,
     )
-    assert dict(result.frequencies()) == test_frequencies
+
+    assert result.frequencies() == test_frequencies
