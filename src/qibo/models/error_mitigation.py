@@ -321,7 +321,7 @@ def vnCDR(
     for level in noise_levels:
         noisy_c = get_noisy_circuit(circuit, level, insertion_gate=insertion_gate)
         if noise_model != None and backend.name != "qibolab":
-            noisy_c = noise_model.apply(circuit)
+            noisy_c = noise_model.apply(noisy_c)
         circuit_result = backend.execute_circuit(noisy_c, nshots=nshots)
         val.append(circuit_result.expectation_from_samples(observable))
     mit_val = model(np.array(val).reshape(-1, 1), *optimal_params[0])[0]
