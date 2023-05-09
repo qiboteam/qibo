@@ -39,18 +39,20 @@ def test_kraus_error(backend, density_matrix, nshots):
 
     target_circuit = Circuit(3, density_matrix=density_matrix)
     target_circuit.add(gates.CNOT(0, 1))
-    target_circuit.add(gates.KrausChannel([([0], k1), ([0], k2)]))
-    target_circuit.add(gates.KrausChannel([([1], k1), ([1], k2)]))
+    target_circuit.add(gates.KrausChannel(0, [k1, k2]))
+    target_circuit.add(gates.KrausChannel(1, [k1, k2]))
     target_circuit.add(gates.Z(1))
-    target_circuit.add(gates.KrausChannel([([1], k1), ([1], k2)]))
+    target_circuit.add(gates.KrausChannel(1, [k1, k2]))
     target_circuit.add(gates.X(1))
-    target_circuit.add(gates.KrausChannel([([1], k1), ([1], k2)]))
+    target_circuit.add(gates.KrausChannel(1, [k1, k2]))
     target_circuit.add(gates.X(2))
     target_circuit.add(gates.Z(2))
     target_circuit.add(gates.M(0, 1, 2))
 
     initial_psi = (
-        random_density_matrix(2**3) if density_matrix else random_statevector(2**3)
+        random_density_matrix(2**3, backend=backend)
+        if density_matrix
+        else random_statevector(2**3, backend=backend)
     )
     backend.set_seed(123)
     final_state = backend.execute_circuit(
@@ -74,14 +76,17 @@ def test_kraus_error(backend, density_matrix, nshots):
 def test_unitary_error(backend, density_matrix, nshots):
     u1 = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
     u2 = np.array([[0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
-    probabilities = [0.3, 0.7]
+    qubits = (0, 1)
+    p1, p2 = (0.3, 0.7)
 
     with pytest.raises(ValueError):
-        UnitaryError(probabilities, [u1, np.array([[1, 0], [0, 1]])])
+        UnitaryError([p1, p2], [u1, np.array([[1, 0], [0, 1]])])
 
-    unitary_error = UnitaryError(probabilities, [u1, u2])
+    unitary_error = UnitaryError([p1, p2], [u1, u2])
+    unitary_error_1q = UnitaryError([0.1], [np.eye(2)])
 
     noise = NoiseModel()
+    noise.add(unitary_error_1q, qubits=[0])
     noise.add(unitary_error, gates.CNOT)
 
     circuit = Circuit(3, density_matrix=density_matrix)
@@ -94,9 +99,8 @@ def test_unitary_error(backend, density_matrix, nshots):
 
     target_circuit = Circuit(3, density_matrix=density_matrix)
     target_circuit.add(gates.CNOT(0, 1))
-    target_circuit.add(
-        gates.UnitaryChannel(probabilities, [([0, 1], u1), ([0, 1], u2)])
-    )
+    target_circuit.add(gates.UnitaryChannel(qubits, [(p1, u1), (p2, u2)]))
+    target_circuit.add(gates.UnitaryChannel(0, [(0.1, np.eye(2))]))
     target_circuit.add(gates.Z(1))
     target_circuit.add(gates.X(1))
     target_circuit.add(gates.X(2))
@@ -104,7 +108,9 @@ def test_unitary_error(backend, density_matrix, nshots):
     target_circuit.add(gates.M(0, 1, 2))
 
     initial_psi = (
-        random_density_matrix(2**3) if density_matrix else random_statevector(2**3)
+        random_density_matrix(2**3, backend=backend)
+        if density_matrix
+        else random_statevector(2**3, backend=backend)
     )
     backend.set_seed(123)
     final_state = backend.execute_circuit(
@@ -126,60 +132,11 @@ def test_unitary_error(backend, density_matrix, nshots):
 @pytest.mark.parametrize("density_matrix", [False, True])
 @pytest.mark.parametrize("nshots", [None, 10, 100])
 def test_pauli_error(backend, density_matrix, nshots):
-    pauli = PauliError(0, 0.2, 0.3)
-    noise = NoiseModel()
-    noise.add(pauli, gates.X, 1)
-    noise.add(pauli, gates.CNOT)
-    noise.add(pauli, gates.Z, (0, 1))
-
-    circuit = Circuit(3, density_matrix=density_matrix)
-    circuit.add(gates.CNOT(0, 1))
-    circuit.add(gates.Z(1))
-    circuit.add(gates.X(1))
-    circuit.add(gates.X(2))
-    circuit.add(gates.Z(2))
-    circuit.add(gates.M(0, 1, 2))
-
-    target_circuit = Circuit(3, density_matrix=density_matrix)
-    target_circuit.add(gates.CNOT(0, 1))
-    target_circuit.add(gates.PauliNoiseChannel(0, 0, 0.2, 0.3))
-    target_circuit.add(gates.PauliNoiseChannel(1, 0, 0.2, 0.3))
-    target_circuit.add(gates.Z(1))
-    target_circuit.add(gates.PauliNoiseChannel(1, 0, 0.2, 0.3))
-    target_circuit.add(gates.X(1))
-    target_circuit.add(gates.PauliNoiseChannel(1, 0, 0.2, 0.3))
-    target_circuit.add(gates.X(2))
-    target_circuit.add(gates.Z(2))
-    target_circuit.add(gates.M(0, 1, 2))
-
-    initial_psi = (
-        random_density_matrix(2**3) if density_matrix else random_statevector(2**3)
-    )
-    backend.set_seed(123)
-    final_state = backend.execute_circuit(
-        noise.apply(circuit), initial_state=np.copy(initial_psi), nshots=nshots
-    )
-    final_state_samples = final_state.samples() if nshots else None
-    backend.set_seed(123)
-    target_final_state = backend.execute_circuit(
-        target_circuit, initial_state=np.copy(initial_psi), nshots=nshots
-    )
-    target_final_state_samples = target_final_state.samples() if nshots else None
-
-    if nshots is None:
-        backend.assert_allclose(final_state, target_final_state)
-    else:
-        backend.assert_allclose(final_state_samples, target_final_state_samples)
-
-
-@pytest.mark.parametrize("density_matrix", [False, True])
-@pytest.mark.parametrize("nshots", [None, 10, 100])
-def test_generalized_pauli_error(backend, density_matrix, nshots):
     list_paulis = ["X", "Y", "Z"]
     probabilities = np.array([0, 0.2, 0.3])
     zipped = list(zip(list_paulis, probabilities))
 
-    pauli = GeneralizedPauliError(zipped)
+    pauli = PauliError(zipped)
     noise = NoiseModel()
     noise.add(pauli, gates.X, 1)
     noise.add(pauli, gates.CNOT)
@@ -195,18 +152,20 @@ def test_generalized_pauli_error(backend, density_matrix, nshots):
 
     target_circuit = Circuit(3, density_matrix=density_matrix)
     target_circuit.add(gates.CNOT(0, 1))
-    target_circuit.add(gates.GeneralizedPauliNoiseChannel(0, zipped))
-    target_circuit.add(gates.GeneralizedPauliNoiseChannel(1, zipped))
+    target_circuit.add(gates.PauliNoiseChannel(0, zipped))
+    target_circuit.add(gates.PauliNoiseChannel(1, zipped))
     target_circuit.add(gates.Z(1))
-    target_circuit.add(gates.GeneralizedPauliNoiseChannel(1, zipped))
+    target_circuit.add(gates.PauliNoiseChannel(1, zipped))
     target_circuit.add(gates.X(1))
-    target_circuit.add(gates.GeneralizedPauliNoiseChannel(1, zipped))
+    target_circuit.add(gates.PauliNoiseChannel(1, zipped))
     target_circuit.add(gates.X(2))
     target_circuit.add(gates.Z(2))
     target_circuit.add(gates.M(0, 1, 2))
 
     initial_psi = (
-        random_density_matrix(2**3) if density_matrix else random_statevector(2**3)
+        random_density_matrix(2**3, backend=backend)
+        if density_matrix
+        else random_statevector(2**3, backend=backend)
     )
     backend.set_seed(123)
     final_state = backend.execute_circuit(
@@ -254,7 +213,9 @@ def test_depolarizing_error(backend, density_matrix, nshots):
     target_circuit.add(gates.M(0, 1, 2))
 
     initial_psi = (
-        random_density_matrix(2**3) if density_matrix else random_statevector(2**3)
+        random_density_matrix(2**3, backend=backend)
+        if density_matrix
+        else random_statevector(2**3, backend=backend)
     )
     backend.set_seed(123)
     final_state = backend.execute_circuit(
@@ -294,17 +255,19 @@ def test_thermal_error(backend, density_matrix):
 
     target_circuit = Circuit(3, density_matrix=density_matrix)
     target_circuit.add(gates.CNOT(0, 1))
-    target_circuit.add(gates.ThermalRelaxationChannel(0, 2, 1, 0.3))
-    target_circuit.add(gates.ThermalRelaxationChannel(1, 2, 1, 0.3))
+    target_circuit.add(gates.ThermalRelaxationChannel(0, [2, 1, 0.3]))
+    target_circuit.add(gates.ThermalRelaxationChannel(1, [2, 1, 0.3]))
     target_circuit.add(gates.Z(1))
-    target_circuit.add(gates.ThermalRelaxationChannel(1, 2, 1, 0.3))
+    target_circuit.add(gates.ThermalRelaxationChannel(1, [2, 1, 0.3]))
     target_circuit.add(gates.X(1))
-    target_circuit.add(gates.ThermalRelaxationChannel(1, 2, 1, 0.3))
+    target_circuit.add(gates.ThermalRelaxationChannel(1, [2, 1, 0.3]))
     target_circuit.add(gates.X(2))
     target_circuit.add(gates.Z(2))
 
     initial_psi = (
-        random_density_matrix(2**3) if density_matrix else random_statevector(2**3)
+        random_density_matrix(2**3, backend=backend)
+        if density_matrix
+        else random_statevector(2**3, backend=backend)
     )
     backend.set_seed(123)
     final_state = backend.execute_circuit(noise.apply(circuit), np.copy(initial_psi))
@@ -322,8 +285,8 @@ def test_readout_error(backend, density_matrix):
     nqubits = 1
     d = 2**nqubits
 
-    state = random_density_matrix(d, seed=1)
-    P = random_stochastic_matrix(d, seed=1)
+    state = random_density_matrix(d, seed=1, backend=backend)
+    P = random_stochastic_matrix(d, seed=1, backend=backend)
 
     readout = ReadoutError(P)
     noise = NoiseModel()
@@ -331,8 +294,6 @@ def test_readout_error(backend, density_matrix):
 
     circuit = Circuit(nqubits, density_matrix=density_matrix)
     circuit.add(gates.M(0))
-    print(noise.apply(circuit).draw())
-    print()
     final_state = backend.execute_circuit(
         noise.apply(circuit), initial_state=np.copy(state)
     )
@@ -340,10 +301,6 @@ def test_readout_error(backend, density_matrix):
     target_state = gates.ReadoutErrorChannel(0, P).apply_density_matrix(
         backend, np.copy(state), nqubits
     )
-
-    print(final_state)
-    print()
-    print(target_state)
 
     backend.assert_allclose(final_state, target_state)
 
@@ -364,13 +321,15 @@ def test_reset_error(backend, density_matrix):
 
     target_circuit = Circuit(3, density_matrix=density_matrix)
     target_circuit.add(gates.CNOT(0, 1))
-    target_circuit.add(gates.ResetChannel(0, 0.8, 0.2))
-    target_circuit.add(gates.ResetChannel(1, 0.8, 0.2))
+    target_circuit.add(gates.ResetChannel(0, [0.8, 0.2]))
+    target_circuit.add(gates.ResetChannel(1, [0.8, 0.2]))
     target_circuit.add(gates.Z(1))
-    target_circuit.add(gates.ResetChannel(1, 0.8, 0.2))
+    target_circuit.add(gates.ResetChannel(1, [0.8, 0.2]))
 
     initial_psi = (
-        random_density_matrix(2**3) if density_matrix else random_statevector(2**3)
+        random_density_matrix(2**3, backend=backend)
+        if density_matrix
+        else random_statevector(2**3, backend=backend)
     )
     backend.set_seed(123)
     final_state = backend.execute_circuit(noise.apply(circuit), np.copy(initial_psi))
@@ -387,7 +346,7 @@ def test_custom_error(backend, density_matrix, nshots):
     a2 = np.sqrt(0.6) * np.array(
         [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]]
     )
-    error_channel = gates.KrausChannel([([1], a1), ([0, 2], a2)])
+    error_channel = gates.KrausChannel([(1,), (0, 2)], [a1, a2])
     custom_error = CustomError(error_channel)
 
     noise = NoiseModel()
@@ -415,7 +374,9 @@ def test_custom_error(backend, density_matrix, nshots):
     target_circuit.add(gates.M(0, 1, 2))
 
     initial_psi = (
-        random_density_matrix(2**3) if density_matrix else random_statevector(2**3)
+        random_density_matrix(2**3, backend=backend)
+        if density_matrix
+        else random_statevector(2**3, backend=backend)
     )
     backend.set_seed(123)
     final_state = backend.execute_circuit(
@@ -476,43 +437,43 @@ def test_noisy_circuit(backend, nshots, idle_qubits):
         target_circuit = Circuit(3, density_matrix=True)
         target_circuit.add(gates.H(0))
         target_circuit.add(gates.DepolarizingChannel((0,), 0.5))
-        target_circuit.add(gates.ThermalRelaxationChannel(0, 1.0, 0.7, 1.5, 0))
+        target_circuit.add(gates.ThermalRelaxationChannel(0, [1.0, 0.7, 1.5, 0]))
         target_circuit.add(gates.CNOT(2, 1))
         target_circuit.add(gates.DepolarizingChannel((1, 2), 0.6))
-        target_circuit.add(gates.ThermalRelaxationChannel(1, 1.1, 0.8, 1.6, 0))
-        target_circuit.add(gates.ThermalRelaxationChannel(2, 1.2, 0.9, 1.6, 0))
+        target_circuit.add(gates.ThermalRelaxationChannel(1, [1.1, 0.8, 1.6, 0]))
+        target_circuit.add(gates.ThermalRelaxationChannel(2, [1.2, 0.9, 1.6, 0]))
         target_circuit.add(gates.X(0))
         target_circuit.add(gates.DepolarizingChannel((0,), 0.5))
-        target_circuit.add(gates.ThermalRelaxationChannel(0, 1.0, 0.7, 1.5, 0))
+        target_circuit.add(gates.ThermalRelaxationChannel(0, [1.0, 0.7, 1.5, 0]))
         target_circuit.add(gates.H(1))
         target_circuit.add(gates.DepolarizingChannel((1,), 0.5))
-        target_circuit.add(gates.ThermalRelaxationChannel(1, 1.1, 0.8, 1.5, 0))
+        target_circuit.add(gates.ThermalRelaxationChannel(1, [1.1, 0.8, 1.5, 0]))
         target_circuit.add(gates.Z(2))
         target_circuit.add(gates.DepolarizingChannel((2,), 0.5))
-        target_circuit.add(gates.ThermalRelaxationChannel(2, 1.2, 0.9, 1.5, 0))
+        target_circuit.add(gates.ThermalRelaxationChannel(2, [1.2, 0.9, 1.5, 0]))
         target_circuit.add(gates.Z(0))
         target_circuit.add(gates.DepolarizingChannel((0,), 0.5))
-        target_circuit.add(gates.ThermalRelaxationChannel(0, 1.0, 0.7, 1.5, 0))
+        target_circuit.add(gates.ThermalRelaxationChannel(0, [1.0, 0.7, 1.5, 0]))
         target_circuit.add(gates.H(2))
         target_circuit.add(gates.DepolarizingChannel((2,), 0.5))
-        target_circuit.add(gates.ThermalRelaxationChannel(2, 1.2, 0.9, 1.5, 0))
+        target_circuit.add(gates.ThermalRelaxationChannel(2, [1.2, 0.9, 1.5, 0]))
         target_circuit.add(gates.H(0))
         target_circuit.add(gates.DepolarizingChannel((0,), 0.5))
-        target_circuit.add(gates.ThermalRelaxationChannel(0, 1.0, 0.7, 1.5, 0))
+        target_circuit.add(gates.ThermalRelaxationChannel(0, [1.0, 0.7, 1.5, 0]))
         if idle_qubits == True:
             target_circuit.add(
-                gates.ThermalRelaxationChannel(1, 1.1, 0.8, 1.5, 0)
+                gates.ThermalRelaxationChannel(1, [1.1, 0.8, 1.5, 0])
             )  # dt
         target_circuit.add(gates.CNOT(2, 1))
         target_circuit.add(gates.DepolarizingChannel((1, 2), 0.6))
-        target_circuit.add(gates.ThermalRelaxationChannel(1, 1.1, 0.8, 1.6, 0))
-        target_circuit.add(gates.ThermalRelaxationChannel(2, 1.2, 0.9, 1.6, 0))
+        target_circuit.add(gates.ThermalRelaxationChannel(1, [1.1, 0.8, 1.6, 0]))
+        target_circuit.add(gates.ThermalRelaxationChannel(2, [1.2, 0.9, 1.6, 0]))
         target_circuit.add(gates.X(0))
         target_circuit.add(gates.DepolarizingChannel((0,), 0.5))
-        target_circuit.add(gates.ThermalRelaxationChannel(0, 1.0, 0.7, 1.5, 0))
+        target_circuit.add(gates.ThermalRelaxationChannel(0, [1.0, 0.7, 1.5, 0]))
         if idle_qubits == True:
             target_circuit.add(
-                gates.ThermalRelaxationChannel(1, 1.1, 0.8, 1.3, 0)
+                gates.ThermalRelaxationChannel(1, [1.1, 0.8, 1.3, 0])
             )  # dt
         target_circuit.add(gates.M(0, 1))
         target_circuit.add(gates.M(2))
@@ -645,15 +606,17 @@ def test_add_condition(backend, density_matrix):
     target_circuit = Circuit(3, density_matrix=density_matrix)
     target_circuit.add(gates.RX(0, np.pi))
     target_circuit.add(gates.RX(0, np.pi / 2))
-    target_circuit.add(gates.ResetChannel(0, 0.8, 0.2))
+    target_circuit.add(gates.ResetChannel(0, [0.8, 0.2]))
     target_circuit.add(gates.RX(0, np.pi / 3))
     target_circuit.add(gates.RX(1, np.pi))
     target_circuit.add(gates.RX(1, 3 * np.pi / 2))
-    target_circuit.add(gates.ThermalRelaxationChannel(1, 2, 1, 0.3))
+    target_circuit.add(gates.ThermalRelaxationChannel(1, [2, 1, 0.3]))
     target_circuit.add(gates.RX(1, 2 * np.pi / 3))
 
     initial_psi = (
-        random_density_matrix(2**3) if density_matrix else random_statevector(2**3)
+        random_density_matrix(2**3, backend=backend)
+        if density_matrix
+        else random_statevector(2**3, backend=backend)
     )
     backend.set_seed(123)
     final_state = backend.execute_circuit(noise.apply(circuit), np.copy(initial_psi))
@@ -665,7 +628,7 @@ def test_add_condition(backend, density_matrix):
 
 @pytest.mark.parametrize("density_matrix", [False, True])
 def test_gate_independent_noise(backend, density_matrix):
-    pauli = PauliError(0, 0.2, 0.3)
+    pauli = PauliError(list(zip(["Y", "Z"], [0.2, 0.3])))
     depol = DepolarizingError(0.3)
     noise = NoiseModel()
     noise.add(pauli)
@@ -679,17 +642,19 @@ def test_gate_independent_noise(backend, density_matrix):
 
     target_circuit = Circuit(3, density_matrix=density_matrix)
     target_circuit.add(gates.CNOT(0, 1))
-    target_circuit.add(gates.PauliNoiseChannel(0, 0, 0.2, 0.3))
-    target_circuit.add(gates.PauliNoiseChannel(1, 0, 0.2, 0.3))
+    target_circuit.add(gates.PauliNoiseChannel(0, list(zip(["Y", "Z"], [0.2, 0.3]))))
+    target_circuit.add(gates.PauliNoiseChannel(1, list(zip(["Y", "Z"], [0.2, 0.3]))))
     target_circuit.add(gates.DepolarizingChannel((0,), 0.3))
     target_circuit.add(gates.X(1))
-    target_circuit.add(gates.PauliNoiseChannel(1, 0, 0.2, 0.3))
+    target_circuit.add(gates.PauliNoiseChannel(1, list(zip(["Y", "Z"], [0.2, 0.3]))))
     target_circuit.add(gates.Z(2))
-    target_circuit.add(gates.PauliNoiseChannel(2, 0, 0.2, 0.3))
+    target_circuit.add(gates.PauliNoiseChannel(2, list(zip(["Y", "Z"], [0.2, 0.3]))))
     target_circuit.add(gates.M(0, 1, 2))
 
     initial_psi = (
-        random_density_matrix(2**3) if density_matrix else random_statevector(2**3)
+        random_density_matrix(2**3, backend=backend)
+        if density_matrix
+        else random_statevector(2**3, backend=backend)
     )
     backend.set_seed(123)
     final_state = backend.execute_circuit(

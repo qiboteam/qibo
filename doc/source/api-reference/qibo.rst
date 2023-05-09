@@ -634,17 +634,11 @@ Unitary channel
     :members:
     :member-order: bysource
 
+
 Pauli noise channel
 ^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: qibo.gates.PauliNoiseChannel
-    :members:
-    :member-order: bysource
-
-Generalized Pauli noise channel
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. autoclass:: qibo.gates.GeneralizedPauliNoiseChannel
     :members:
     :member-order: bysource
 
@@ -709,10 +703,6 @@ The quantum errors available to build a noise model are the following:
     :members:
     :member-order: bysource
 
-.. autoclass:: qibo.noise.GeneralizedPauliError
-    :members:
-    :member-order: bysource
-
 .. autoclass:: qibo.noise.ThermalRelaxationError
     :members:
     :member-order: bysource
@@ -721,7 +711,7 @@ The quantum errors available to build a noise model are the following:
     :members:
     :member-order: bysource
 
-.. autoclass:: qibo.noise.ReadoutErrorChannel
+.. autoclass:: qibo.noise.ReadoutError
     :members:
     :member-order: bysource
 

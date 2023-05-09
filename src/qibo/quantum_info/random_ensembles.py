@@ -216,7 +216,7 @@ def random_quantum_channel(
     supported superoperator representations.
 
     Args:
-        dims (int): dimension of the matrix.
+        dims (int): dimension of the unitary operator.
         representation (str, optional): If ``"chi"``, returns a random channel in the
             Chi representation. If ``"choi"``, returns channel in Choi representation.
             If ``"kraus"``, returns Kraus representation of channel. If ``"liouville"``,
@@ -349,6 +349,8 @@ def random_density_matrix(
     rank: int = None,
     pure: bool = False,
     metric: str = "Hilbert-Schmidt",
+    basis: str = None,
+    normalize: bool = False,
     seed=None,
     backend=None,
 ):
@@ -361,6 +363,13 @@ def random_density_matrix(
         pure (bool, optional): if ``True``, returns a pure state. Default is ``False``.
         metric (str, optional): metric to sample the density matrix from. Options:
             ``"Hilbert-Schmidt"`` and ``"Bures"``. Default is ``"Hilbert-Schmidt"``.
+        basis (str, optional): if ``"pauli"``, return random density matrix in the
+            Pauli basis. If ``None``, returns it in the computational basis.
+            Default is ``None``.
+        normalize(bool, optional): if ``True`` and ``basis="pauli"``, returns random
+            density matrix in the normalized Pauli basis. If ``False`` and
+            ``basis="pauli"``, returns state in the unnormalized Pauli basis.
+            Defaults to ``False``.
         seed (int or ``numpy.random.Generator``, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Default is ``None``.
@@ -389,6 +398,18 @@ def random_density_matrix(
             TypeError, f"metric must be type str, but it is type {type(metric)}."
         )
 
+    if basis is not None and not isinstance(basis, str):
+        raise_error(TypeError, f"basis must be type str, but it is type {type(basis)}.")
+    elif basis is not None and basis not in ["pauli"]:
+        raise_error(ValueError, f"basis {basis} nor recognized.")
+
+    if not isinstance(normalize, bool):
+        raise_error(
+            TypeError, f"normalize must be type bool, but it is type {type(normalize)}."
+        )
+    elif normalize is True and basis is None:
+        raise_error(ValueError, "normalize cannot be True when basis=None.")
+
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
@@ -413,6 +434,12 @@ def random_density_matrix(
             raise_error(ValueError, f"metric {metric} not found.")
 
     state = backend.cast(state, dtype=state.dtype)
+
+    if basis == "pauli":
+        unitary = comp_basis_to_pauli(
+            int(np.log2(dims)), normalize=normalize, backend=backend
+        )
+        state = unitary @ vectorization(state, backend=backend)
 
     return state
 

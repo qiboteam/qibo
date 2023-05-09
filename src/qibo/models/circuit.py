@@ -403,32 +403,23 @@ class Circuit:
         return new_circuit
 
     def _check_noise_map(self, noise_map: NoiseMapType) -> NoiseMapType:
-        if isinstance(noise_map, (tuple, list)):
-            if len(noise_map) != 3:
-                raise_error(
-                    ValueError,
-                    "Noise map expects three probabilities "
-                    + f"but received {len(noise_map)}.",
-                )
-            return {q: noise_map for q in range(self.nqubits)}
+        if isinstance(noise_map, list) and not all(
+            isinstance(n, (tuple, list)) for n in noise_map
+        ):
+            raise_error(
+                TypeError,
+                f"Type {type(noise_map)} of noise map is not recognized.",
+            )
         elif isinstance(noise_map, dict):
             if len(noise_map) != self.nqubits:
                 raise_error(
                     ValueError,
                     f"Noise map has {len(noise_map)} qubits while the circuit has {self.nqubits}.",
                 )
-            for v in noise_map.values():
-                if len(v) != 3:
-                    raise_error(
-                        ValueError,
-                        f"Noise map expects three probabilities but received {v}.",
-                    )
+
             return noise_map
 
-        raise_error(
-            TypeError,
-            f"Type {type(noise_map)} of noise map is not recognized.",
-        )
+        return {q: noise_map for q in range(self.nqubits)}
 
     def decompose(self, *free: int):
         """Decomposes circuit's gates to gates supported by OpenQASM.
@@ -476,17 +467,20 @@ class Circuit:
                 # use density matrices for noise simulation
                 c = Circuit(2, density_matrix=True)
                 c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
-                noise_map = {0: (0.1, 0.0, 0.2), 1: (0.0, 0.2, 0.1)}
+                noise_map = {
+                    0: list(zip(["X", "Z"], [0.1, 0.2])),
+                    1: list(zip(["Y", "Z"], [0.2, 0.1]))
+                }
                 noisy_c = c.with_noise(noise_map)
                 # ``noisy_c`` will be equivalent to the following circuit
                 c2 = Circuit(2, density_matrix=True)
                 c2.add(gates.H(0))
-                c2.add(gates.PauliNoiseChannel(0, 0.1, 0.0, 0.2))
+                c2.add(gates.PauliNoiseChannel(0, [("X", 0.1), ("Z", 0.2)]))
                 c2.add(gates.H(1))
-                c2.add(gates.PauliNoiseChannel(1, 0.0, 0.2, 0.1))
+                c2.add(gates.PauliNoiseChannel(1, [("Y", 0.2), ("Z", 0.1)]))
                 c2.add(gates.CNOT(0, 1))
-                c2.add(gates.PauliNoiseChannel(0, 0.1, 0.0, 0.2))
-                c2.add(gates.PauliNoiseChannel(1, 0.0, 0.2, 0.1))
+                c2.add(gates.PauliNoiseChannel(0, [("X", 0.1), ("Z", 0.2)]))
+                c2.add(gates.PauliNoiseChannel(1, [("Y", 0.2), ("Z", 0.1)]))
         """
         if self.accelerators:  # pragma: no cover
             raise_error(
@@ -502,17 +496,14 @@ class Circuit:
                 raise_error(
                     ValueError,
                     "`.with_noise` method is not available "
-                    "for circuits that already contain "
-                    "channels.",
+                    + "for circuits that already contain "
+                    + "channels.",
                 )
             noise_gates.append([])
             if not isinstance(gate, gates.M):
                 for q in gate.qubits:
-                    if q in noise_map and sum(noise_map[q]) > 0:
-                        p = noise_map[q]
-                        noise_gates[-1].append(
-                            gates.PauliNoiseChannel(q, px=p[0], py=p[1], pz=p[2])
-                        )
+                    if q in noise_map and sum([row[1] for row in noise_map[q]]) > 0:
+                        noise_gates[-1].append(gates.PauliNoiseChannel(q, noise_map[q]))
 
         # Create new circuit with noise gates inside
         noisy_circuit = self.__class__(**self.init_kwargs)
