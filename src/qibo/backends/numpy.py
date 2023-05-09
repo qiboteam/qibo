@@ -438,7 +438,7 @@ class NumpyBackend(Backend):
         nqubits = circuit.nqubits
 
         if not circuit.density_matrix:
-            frequencies = []
+            samples = []
             probabilities = np.zeros(2**nqubits, dtype=float)
             probabilities = self.cast(probabilities, dtype=probabilities.dtype)
 
@@ -477,21 +477,18 @@ class NumpyBackend(Backend):
                 results.append(sample)
                 if not circuit.density_matrix:
                     probabilities += result.probabilities()
-                    frequencies.append(sample[0])
+                    samples.append("".join([str(s) for s in sample]))
             else:
                 results.append(state)
-
-        if not circuit.density_matrix:
-            probabilities /= nshots
-
-            frequencies = self.calculate_frequencies(frequencies)
 
         if circuit.measurements:
             final_result = CircuitResult(self, circuit, state, nshots)
             final_result._samples = self.aggregate_shots(results)
             if not circuit.density_matrix:
-                final_result._repeated_execution_probabilities = probabilities
-                final_result._repeated_execution_frequencies = frequencies
+                final_result._repeated_execution_probabilities = probabilities / nshots
+                final_result._repeated_execution_frequencies = (
+                    self.calculate_frequencies(samples)
+                )
             circuit._final_state = final_result
             return final_result
 
