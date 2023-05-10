@@ -241,6 +241,10 @@ and, therefore, the calibration matrix obtained as :math:`M_{cal}=M^{-1}` can be
 
 Randomized
 """"""""""
+This approach converts the effect of any noise map :math:`A` into a single multiplication factor for each Pauli observable, that is, diagonalizes the measurement channel. The multiplication factor :math:`\lambda` can be directly measured even without the quantum circuit. Dividing the measured value :math:`\langle O\rangle_{noisy}` by these factor results in the mitigated Pauli expectation value :math:`\langle O\rangle_{ideal}`,
+
+.. math::
+   \langle O\rangle_{ideal} = \frac{\langle O\rangle_{noisy}}{\lambda}
 
 .. autofunction:: qibo.models.error_mitigation.apply_randomized_readout_mitigation
 
