@@ -243,7 +243,7 @@ def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
         p0, p1, exp = (
             gate.init_kwargs["p0"],
             gate.init_kwargs["p1"],
-            gate.init_kwargs["exp_t2"],
+            gate.init_kwargs["e_t2"],
         )
         matrix = np.diag([1 - p1, p1, p0, 1 - p0])
         matrix[0, -1], matrix[-1, 0] = exp, exp
