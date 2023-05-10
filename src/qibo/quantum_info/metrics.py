@@ -395,7 +395,9 @@ def meyer_wallach_entanglement(circuit, backend=None):
 
     Args:
         circuit (:class:`qibo.models.Circuit`): Parametrized circuit.
-        backend (:class:`qibo.backends.abstract.Backend`): Calculation engine. If ``None``, it uses ``GlobalBackend()``. Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses ``GlobalBackend()``.
+            Defaults to ``None``.
 
     Returns:
         float: Meyer-Wallach entanglement.
@@ -427,9 +429,11 @@ def entangling_capability(circuit, samples: int, backend=None):
     where :math:`S` is the number of samples.
 
     Args:
-        circuit (qibo.models.Circuit): Parametrized circuit.
+        circuit (:class:`qibo.models.Circuit`): Parametrized circuit.
         samples (int): number of samples to estimate the integral.
-        backend (qibo.backends.abstract.Backend): Calculation engine.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses ``GlobalBackend()``.
+            Defaults to ``None``.
 
     Returns:
         float: Entangling capability.
@@ -458,10 +462,12 @@ def expressibility(circuit, t: int, samples: int, backend=None):
         A = \\int_{\\text{Haar}}\\left(|\\psi\\rangle\\right.\\left.\\langle\\psi|\\right)^{\\otimes t}d\\psi - \\int_{\\Theta}\\left(|\\psi_{\\theta}\\rangle\\right.\\left.\\langle\\psi_{\\theta}|\\right)^{\\otimes t}d\\psi \\,
 
     Args:
-        circuit (qibo.models.Circuit): Parametrized circuit.
+        circuit (:class:`qibo.models.Circuit`): Parametrized circuit.
         t (int): index t to define the t-design.
         samples (int): number of samples to estimate the integral.
-        backend (qibo.backends.abstract.Backend): Calculation engine.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses ``GlobalBackend()``.
+            Defaults to ``None``.
 
     Returns:
         float: Entangling capability.

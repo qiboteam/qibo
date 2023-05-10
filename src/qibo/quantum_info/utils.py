@@ -240,7 +240,9 @@ def haar_integral(nqubits, t: int, samples: int, backend=None):
         nqubits (int): Number of qubits.
         t (int): index t to define the t-design.
         samples (int): number of samples to estimate the integral.
-        backend (qibo.backends.abstract.Backend): Calculation engine.
+        backend (``qibo.backends.abstract.Backend``, optional): backend to be
+            used in the execution. If ``None``, it uses ``GlobalBackend()``.
+            Defaults to ``None``.
 
     Returns:
         array: Estimation of the Haar integral.
@@ -272,10 +274,12 @@ def pqc_integral(circuit, t: int, samples: int, backend=None):
         \\int_{\\Theta}\\left(|\\psi_{\\theta}\\rangle\\right.\\left.\\langle\\psi_{\\theta}|\\right)^{\\otimes t}d\\psi \\,
 
     Args:
-        circuit (qibo.models.Circuit): Parametrized circuit.
+        circuit (:class:`qibo.models.Circuit`): Parametrized circuit.
         t (int): index t to define the t-design.
         samples (int): number of samples to estimate the integral.
-        backend (qibo.backends.abstract.Backend): Calculation engine.
+        backend (``qibo.backends.abstract.Backend``, optional): backend to be
+            used in the execution. If ``None``, it uses ``GlobalBackend()``.
+            Defaults to ``None``.
 
     Returns:
         array: Estimation of the integral.
