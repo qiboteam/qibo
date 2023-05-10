@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   build:
-    if: contains(github.event.pull_request.labels.*.name, 'run-on-gpu')
+    if: contains(github.event.pull_request.labels.*.name, 'run-on')
     uses: qiboteam/workflows/.github/workflows/selfhosted.yml@selfhosted
     with:
       used-labels: ${{ toJSON(github.event.pull_request.labels.*.name) }}
@@ -20,7 +20,6 @@ jobs:
       server-url: ${{ github.server_url }}
       repository: ${{ github.repository }}
       run-id: ${{ github.run_id }}
-      simulation: true
       poetry-extras: "--with tests"
 
     secrets:
