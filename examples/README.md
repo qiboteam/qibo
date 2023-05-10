@@ -7,6 +7,7 @@ physics problems.
 - [Grover’s Algorithm for solving Satisfiability Problems](grover3sat/README.md)
 - [Grover's Algorithm for solving a Toy Sponge Hash function](hash-grover/README.md)
 - [Variational Quantum Classifier](variational_classifier/README.md)
+- [Quantum Convolutional Neural Network classifier](qcnn_classifier/README.md)
 - [Data reuploading for a universal quantum classifier](reuploading_classifier/README.md)
 - [Parameter Shift Rule for an hardware-compatible Variational Quantum Regressor](vqregressor/README.md)
 - [Quantum autoenconder for data compression](autoencoder/README.md)
