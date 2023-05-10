@@ -134,10 +134,9 @@ def test_trotter_hamiltonian_three_qubit_term(backend):
     initial_state = random_statevector(2**4, backend=backend)
     circuit = ham.circuit(dt=dt)
     final_state = backend.execute_circuit(circuit, np.copy(initial_state))
-    if backend.__class__.__name__ == "CupyBackend":
-        mm1 = numpy_backend.cast(mm1.get(), dtype=mm1.dtype)
-        mm2 = numpy_backend.cast(mm2.get(), dtype=mm2.dtype)
-        mm3 = numpy_backend.cast(mm3.get(), dtype=mm3.dtype)
+    mm1 = backend.to_numpy(mm1)
+    mm2 = backend.to_numpy(mm2)
+    mm3 = backend.to_numpy(mm3)
     u = [expm(-0.5j * dt * (mm1 + mm3)), expm(-0.5j * dt * mm2)]
     u = backend.cast(u)
     target_state = np.dot(u[1], np.dot(u[0], initial_state))
