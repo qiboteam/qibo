@@ -15,7 +15,7 @@ jobs:
     uses: qiboteam/workflows/.github/workflows/selfhosted.yml@selfhosted
     with:
       used-labels: ${{ toJSON(github.event.pull_request.labels.*.name) }}
-      python-version: "3.8"
+      python-version: "3.10"
       slurm-job: "slurm-tests"
       server-url: ${{ github.server_url }}
       repository: ${{ github.repository }}
