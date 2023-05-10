@@ -37,6 +37,7 @@ def get_gammas(c, solve=True):
                 for i in c
             ]
         )
+
     return gammas
 
 
@@ -78,6 +79,7 @@ def get_noisy_circuit(circuit, cj, insertion_gate="CNOT"):
                 for i in range(cj):
                     noisy_circuit.add(gates.RX(qubit, theta=theta))
                     noisy_circuit.add(gates.RX(qubit, theta=-theta))
+
     return noisy_circuit
 
 
@@ -135,6 +137,7 @@ def ZNE(
             val /= circuit_result_cal.expectation_from_samples(observable)
         expected_val.append(val)
     gamma = get_gammas(noise_levels, solve=solve_for_gammas)
+
     return (gamma * expected_val).sum()
 
 
@@ -206,6 +209,7 @@ def sample_training_circuit(
             sampled_circuit.add(replacement[i])
         else:
             sampled_circuit.add(gate)
+
     return sampled_circuit
 
 
@@ -289,6 +293,7 @@ def CDR(
     if "ncircuits" in readout.keys():
         val /= circuit_result_cal.expectation_from_samples(observable)
     mit_val = model(val, *optimal_params)
+
     # Return data
     if full_output == True:
         return mit_val, val, optimal_params, train_val
@@ -392,6 +397,7 @@ def vnCDR(
             expval /= circuit_result_cal.expectation_from_samples(observable)
         val.append(expval)
     mit_val = model(np.array(val).reshape(-1, 1), *optimal_params[0])[0]
+
     # Return data
     if full_output == True:
         return mit_val, val, optimal_params, train_val
@@ -434,6 +440,7 @@ def get_calibration_matrix(nqubits, backend=None, noise_model=None, nshots=1000)
             f = freq[key] / nshots
             column[int(key, 2)] = f
         matrix[:, i] = column
+
     return np.linalg.inv(matrix)
 
 
@@ -453,6 +460,7 @@ def apply_readout_mitigation(state, calibration_matrix):
     freq = freq.reshape(-1, 1)
     for i, val in enumerate(calibration_matrix @ freq):
         state._frequencies[i] = float(val)
+
     return state
 
 
@@ -501,7 +509,7 @@ def apply_randomized_readout_mitigation(
         for circ in circuits:
             circ.add(x_gate)
             circ.add(gates.M(*qubits))
-            if noise_model != None and backend.name != "qibolab":
+            if noise_model is not None and backend.name != "qibolab":
                 circ = noise_model.apply(circ)
             result = backend.execute_circuit(circ, nshots=nshots_r)
             result._samples = result.apply_bitflips(error_map)
@@ -514,4 +522,5 @@ def apply_randomized_readout_mitigation(
         for f in freq[1::, j]:
             freq_sum += f
         results[j]._frequencies = freq_sum
+
     return results
