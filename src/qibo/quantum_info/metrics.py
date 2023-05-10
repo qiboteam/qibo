@@ -394,8 +394,8 @@ def meyer_wallach_entanglement(circuit, backend=None):
         Q = 1-\\frac{1}{N}\\sum_{k}\\text{Tr}\\left(\\rho_k^2(\\theta_i)\\right) \\,
 
     Args:
-        circuit (qibo.models.Circuit): Parametrized circuit.
-        backend (qibo.backends.abstract.Backend): Calculation engine.
+        circuit (:class:`qibo.models.Circuit`): Parametrized circuit.
+        backend (:class:`qibo.backends.abstract.Backend`): Calculation engine. If ``None``, it uses ``GlobalBackend()``. Defaults to ``None``.
 
     Returns:
         float: Meyer-Wallach entanglement.
