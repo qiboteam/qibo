@@ -1,0 +1,27 @@
+# CI workflow that runs on selfhosted GPU
+name: Tests with gpu
+
+on:
+  pull_request:
+    types: [labeled]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: contains(github.event.pull_request.labels.*.name, 'run-on-gpu')
+    uses: qiboteam/workflows/.github/workflows/selfhosted.yml@selfhosted
+    with:
+      used-labels: ${{ github.event.pull_request.labels.*.name }}
+      python-version: 3.8
+      slurm-job: slurm-tests
+      server-url: ${{ github.server_url }}
+      repository: ${{ github.repository }}
+      run-id: ${{ github.run_id }}
+      simulation: true
+      poetry-extras: "--with tests"
+
+    secrets:
+      repo_token: ${{ secrets.GITHUB_TOKEN }}
