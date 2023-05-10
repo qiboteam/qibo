@@ -279,8 +279,8 @@ def CDR(
         )
     else:
         if noise_model is not None and backend.name != "qibolab":
-            noisy_circuit = noise_model.apply(circuit)
-        circuit_result = backend.execute_circuit(noisy_circuit, nshots=nshots)
+            circuit = noise_model.apply(circuit)
+        circuit_result = backend.execute_circuit(circuit, nshots=nshots)
     if "calibration_matrix" in readout.keys() is not None:
         circuit_result = apply_readout_mitigation(
             circuit_result, readout["calibration_matrix"]
