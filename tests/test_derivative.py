@@ -8,9 +8,9 @@ from qibo.symbols import Z
 
 
 # defining an observable
-def hamiltonian(nqubits):
+def hamiltonian(nqubits, backend):
     return hamiltonians.hamiltonians.SymbolicHamiltonian(
-        np.prod([Z(i) for i in range(nqubits)])
+        np.prod([Z(i) for i in range(nqubits)]), backend=backend
     )
 
 
@@ -22,6 +22,7 @@ def circuit(nqubits=1):
     c.add(gates.RY(q=0, theta=0))
     c.add(gates.RZ(q=0, theta=0))
     c.add(gates.M(0))
+
     return c
 
 
@@ -31,8 +32,6 @@ def circuit(nqubits=1):
     [(1, [-8.51104358e-02, -5.20075970e-01, 0]), (0.5, [-0.02405061, -0.13560379, 0])],
 )
 def test_derivative(backend, nshots, atol, scale_factor, grads):
-    grads = backend.cast(grads, dtype=float)
-
     # initializing the circuit
     c = circuit(nqubits=1)
 
@@ -42,7 +41,7 @@ def test_derivative(backend, nshots, atol, scale_factor, grads):
     test_params *= scale_factor
     c.set_parameters(test_params)
 
-    test_hamiltonian = hamiltonian(nqubits=1)
+    test_hamiltonian = hamiltonian(nqubits=1, backend=backend)
 
     # testing parameter out of bounds
     with pytest.raises(ValueError):
