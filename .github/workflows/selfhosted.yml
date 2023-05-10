@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   build:
-    if: contains(github.event.pull_request.labels.*.name, 'run-on')
+    if: contains(join(github.event.pull_request.labels.*.name), 'run-on')
     uses: qiboteam/workflows/.github/workflows/selfhosted.yml@selfhosted
     with:
       used-labels: ${{ toJSON(github.event.pull_request.labels.*.name) }}
