@@ -42,4 +42,3 @@ After creating the object, one can proceed to train the model. For this, the `Qu
 - `labels`: numpy.array containing the labels for the training data
 - `nshots` (int):number of runs of the circuit during the sampling process (default=10000)
 - `method` (string): str 'classical optimizer for the minimization'. All methods from scipy.optimize.minmize are suported (default='Powell').
-
