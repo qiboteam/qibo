@@ -246,8 +246,8 @@ def CDR(
     optimal_params = curve_fit(model, train_val["noisy"], train_val["noise-free"])[0]
     # Run the input circuit
     if noise_model != None and backend.name != "qibolab":
-        noisy_circuit = noise_model.apply(circuit)
-    circuit_result = backend.execute_circuit(noisy_circuit, nshots=nshots)
+        circuit = noise_model.apply(circuit)
+    circuit_result = backend.execute_circuit(circuit, nshots=nshots)
     val = circuit_result.expectation_from_samples(observable)
     mit_val = model(val, *optimal_params)
     # Return data
@@ -307,7 +307,7 @@ def vnCDR(
         for level in noise_levels:
             noisy_c = get_noisy_circuit(c, level, insertion_gate=insertion_gate)
             if noise_model != None and backend.name != "qibolab":
-                noisy_c = noise_model.apply(c)
+                noisy_c = noise_model.apply(noisy_c)
             circuit_result = backend.execute_circuit(noisy_c, nshots=nshots)
             val = circuit_result.expectation_from_samples(observable)
             train_val["noisy"].append(val)
@@ -321,7 +321,7 @@ def vnCDR(
     for level in noise_levels:
         noisy_c = get_noisy_circuit(circuit, level, insertion_gate=insertion_gate)
         if noise_model != None and backend.name != "qibolab":
-            noisy_c = noise_model.apply(circuit)
+            noisy_c = noise_model.apply(noisy_c)
         circuit_result = backend.execute_circuit(noisy_c, nshots=nshots)
         val.append(circuit_result.expectation_from_samples(observable))
     mit_val = model(np.array(val).reshape(-1, 1), *optimal_params[0])[0]
