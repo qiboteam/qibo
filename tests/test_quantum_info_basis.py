@@ -60,7 +60,6 @@ def test_pauli_basis(backend, nqubits, normalize, vectorize, sparse, order):
             for elem_test, ind_test, elem, ind in zip(
                 elements, indexes, basis[0], basis[1]
             ):
-                print(type(elem_test), type(ind_test), type(elem), type(ind))
                 backend.assert_allclose(
                     np.linalg.norm(elem_test - elem) < PRECISION_TOL, True
                 )
