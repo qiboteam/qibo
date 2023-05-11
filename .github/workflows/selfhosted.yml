@@ -16,7 +16,7 @@ jobs:
     with:
       used-labels: ${{ toJSON(github.event.pull_request.labels.*.name) }}
       python-version: "3.10"
-      slurm-job: "tests-slurm"
+      slurm-job: "--gpus-per-node 1 tests-slurm"
       server-url: ${{ github.server_url }}
       repository: ${{ github.repository }}
       run-id: ${{ github.run_id }}
