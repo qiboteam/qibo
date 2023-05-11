@@ -104,7 +104,8 @@ class NumpyBackend(Backend):
     def asmatrix(self, gate):
         """Convert a gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
-        return getattr(self.matrices, name)
+        matrix = getattr(self.matrices, name)
+        return matrix(2 ** len(gate.target_qubits)) if callable(matrix) else matrix
 
     def asmatrix_parametrized(self, gate):
         """Convert a parametrized gate to its matrix representation in the computational basis."""
