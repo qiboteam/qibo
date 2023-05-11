@@ -1219,7 +1219,7 @@ class Circuit:
 
                 if len(pieces) == 1:
                     params = None
-                    issubclass(gatetype, gates.ParametrizedGate):
+                    if issubclass(gatetype, gates.ParametrizedGate):
                         raise_error(
                             ValueError,
                             f"Missing parameters for QASM gate {gatename}.",
