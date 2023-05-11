@@ -6,7 +6,7 @@
 cp -r tests /tmp/
 cp pyproject.toml /tmp/
 cd /tmp/tests
-source /nfs/users/github/actions-runner/_work/qibolab/qibolab/testenv/bin/activate
+source /nfs/users/github/actions-runner/_work/qibo/qibo/testenv/bin/activate
 pytest
 pytest_status=$?
 if [[ $pytest_status -ne 0 ]]
