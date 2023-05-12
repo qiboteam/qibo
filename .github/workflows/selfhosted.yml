@@ -16,9 +16,7 @@ jobs:
     with:
       used-labels: ${{ toJSON(github.event.pull_request.labels.*.name) }}
       python-version: "3.10"
-      server-url: ${{ github.server_url }}
-      repository: ${{ github.repository }}
-      run-id: ${{ github.run_id }}
+      artifact-url: "${{ github.server-url }}/${{ github.repository }}/actions/runs/${{ github.run-id }}"
       poetry-extras: "--with tests"
 
     secrets:
