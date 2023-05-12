@@ -8,12 +8,17 @@ from qibo.config import raise_error
 from qibo.models import Circuit
 
 
-def get_gammas(c, solve=True):
+def get_gammas(c, solve: bool = True):
     """Standalone function to compute the ZNE coefficients given the noise levels.
 
     Args:
-        c (numpy.ndarray): Array containing the different noise levels, note that in the CNOT insertion paradigm this corresponds to the number of CNOT pairs to be inserted. The canonical ZNE noise levels are obtained as 2*c + 1.
-        solve (bool): If ``True`` computes the coeffients by solving the linear system. Otherwise, use the analytical solution valid for the CNOT insertion method.
+        c (numpy.ndarray): array containing the different noise levels.
+            Note that in the CNOT insertion paradigm this corresponds to
+            the number of CNOT pairs to be inserted. The canonical ZNE
+            noise levels are obtained as ``2 * c + 1``.
+        solve (bool, optional): If ``True``, computes the coeffients by solving the
+            linear system. If ``False``, use the analytical solution valid
+            for the CNOT insertion method. Default is ``True``.
 
     Returns:
         numpy.ndarray: The computed coefficients.
@@ -41,13 +46,14 @@ def get_gammas(c, solve=True):
     return gammas
 
 
-def get_noisy_circuit(circuit, cj, insertion_gate="CNOT"):
+def get_noisy_circuit(circuit, cj: int, insertion_gate: str = "CNOT"):
     """Standalone function to generate the noisy circuit with the inverse gate pairs insertions.
 
     Args:
-        circuit (qibo.models.circuit.Circuit): Input circuit to modify.
+        circuit (:class:`qibo.models.circuit.Circuit`): Input circuit to modify.
         cj (int): Number of insertion gate pairs to add.
-        insertion_gate (str): Which gate to use for the insertion. Default value: 'CNOT', use 'RX' for the ``RX(pi/2)`` gate instead.
+        insertion_gate (str, optional): gate to be used in the insertion.
+            If ``insertion_gate="RX"``, the Default value: 'CNOT', use 'RX' for the ``RX(pi/2)`` gate instead.
 
     Returns:
         qibo.models.circuit.Circuit: The circuit with the inserted CNOT pairs.
