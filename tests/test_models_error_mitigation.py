@@ -9,7 +9,7 @@ from qibo.models.error_mitigation import (
     ZNE,
     apply_randomized_readout_mitigation,
     apply_readout_mitigation,
-    get_calibration_matrix,
+    calibration_matrix,
     sample_training_circuit,
     vnCDR,
 )
@@ -284,9 +284,7 @@ def test_readout_mitigation(backend, nqubits, method):
     noise = NoiseModel()
     noise.add(ReadoutError(probabilities=p), gate=gates.M)
     if method == "cal_matrix":
-        calibration_matrix = get_calibration_matrix(
-            nqubits, noise, nshots=nshots, backend=backend
-        )
+        calibration = calibration_matrix(nqubits, noise, nshots=nshots, backend=backend)
     # Define the observable
     obs = np.prod([Z(i) for i in range(nqubits)])
     obs = SymbolicHamiltonian(obs, backend=backend)
@@ -298,7 +296,7 @@ def test_readout_mitigation(backend, nqubits, method):
     state = backend.execute_circuit(noise.apply(c), nshots=nshots)
     noisy_val = state.expectation_from_samples(obs)
     if method == "cal_matrix":
-        mit_state = apply_readout_mitigation(state, calibration_matrix)
+        mit_state = apply_readout_mitigation(state, calibration)
         mit_val = mit_state.expectation_from_samples(obs)
     elif method == "temme":
         ncircuits = 10

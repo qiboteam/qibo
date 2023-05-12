@@ -1300,17 +1300,17 @@ calibration matrix and use it modify the final state after the circuit execution
 
 .. testcode::
 
-   from qibo.models.error_mitigation import apply_readout_mitigation, get_calibration_matrix
+   from qibo.models.error_mitigation import apply_readout_mitigation, calibration_matrix
 
    nshots = 10000
    # compute the calibration matrix
-   calibration_matrix = get_calibration_matrix(
+   calibration = calibration_matrix(
        nqubits, backend=backend, noise_model=noise, nshots=nshots
    )
    # execute the circuit
    state = backend.execute_circuit(noise.apply(c), nshots=nshots)
    # mitigate the readout errors
-   mit_state = apply_readout_mitigation(state, calibration_matrix)
+   mit_state = apply_readout_mitigation(state, calibration)
    mit_val = mit_state.expectation_from_samples(obs)
    print(mit_val)
    # 0.5945794816381054
@@ -1374,11 +1374,11 @@ For example if we use the five levels ``[0,1,2,3,4]`` :
    estimate = ZNE(
        circuit=c,
        observable=obs,
-       backend=backend,
        noise_levels=np.arange(5),
        noise_model=noise,
        nshots=10000,
        insertion_gate='CNOT'
+       backend=backend
    )
    print(estimate)
    # 0.8332843749999996
@@ -1395,7 +1395,7 @@ combined with the readout mitigation:
 
    # we can either use
    # the calibration matrix computed earlier
-   readout = {'calibration_matrix': calibration_matrix}
+   readout = {'calibration_matrix': calibration}
    # or the randomized readout
    readout = {'ncircuits': 10}
 
