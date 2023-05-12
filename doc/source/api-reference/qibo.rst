@@ -232,9 +232,10 @@ The effect of the error is modeled by the matrix composed of the noisy frequenci
 .. math::
    F_i^{noisy} = M \cdot F_i^{ideal}
 
-and, therefore, the calibration matrix obtained as :math:`M_{cal}=M^{-1}` can be used to recover the noise-free frequencies.
+and, therefore, the calibration matrix obtained as :math:`M_{\text{cal}}=M^{-1}` can be used to recover the noise-free frequencies.
 
-.. autofunction:: qibo.models.error_mitigation.get_calibration_matrix
+.. autofunction:: qibo.models.error_mitigation.calibration_matrix
+
 
 .. autofunction:: qibo.models.error_mitigation.apply_readout_mitigation
 
@@ -247,6 +248,7 @@ This approach converts the effect of any noise map :math:`A` into a single multi
    \langle O\rangle_{ideal} = \frac{\langle O\rangle_{noisy}}{\lambda}
 
 .. autofunction:: qibo.models.error_mitigation.apply_randomized_readout_mitigation
+
 
 Zero Noise Extrapolation (ZNE)
 """"""""""""""""""""""""""""""
@@ -267,7 +269,9 @@ This implementation of ZNE relies on the insertion of gate pairs (that resolve t
 
 .. autofunction:: qibo.models.error_mitigation.ZNE
 
+
 .. autofunction:: qibo.models.error_mitigation.get_gammas
+
 
 .. autofunction:: qibo.models.error_mitigation.get_noisy_circuit
 
@@ -287,6 +291,8 @@ and learn the mapping :math:`a^{noisy}\rightarrow a^{exact}`. The mitigated expe
 In this implementation the initial circuit is expected to be decomposed in the three Clifford gates :math:`RX(\frac{\pi}{2})`, :math:`CNOT`, :math:`X` and in :math:`RZ(\theta)` (which is Clifford only for :math:`\theta=\frac{n\pi}{2}`). By default the set of Clifford gates used for substitution is :math:`\{RZ(0),RZ(\frac{\pi}{2}),RZ(\pi),RZ(\frac{3}{2}\pi)\}`. See `Sopena et al <https://arxiv.org/abs/2103.12680>`_ for more details.
 
 .. autofunction:: qibo.models.error_mitigation.CDR
+
+
 .. autofunction:: qibo.models.error_mitigation.sample_training_circuit
 
 

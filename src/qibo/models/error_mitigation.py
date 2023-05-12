@@ -461,7 +461,7 @@ def vnCDR(
     return mit_val
 
 
-def get_calibration_matrix(nqubits, noise_model=None, nshots: int = 1000, backend=None):
+def calibration_matrix(nqubits, noise_model=None, nshots: int = 1000, backend=None):
     """Computes the calibration matrix for readout mitigation.
 
     Args:
