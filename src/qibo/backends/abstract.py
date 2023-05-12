@@ -103,7 +103,7 @@ class Backend(abc.ABC):
             \\rho = \\frac{1}{2^\\text{nqubits}} \\, \\sum_{k=0}^{2^\\text{nqubits} - 1} \\,
                 |k \\rangle \\langle k|
 
-        if ``normalize=True``. If ``normalize=False``, it return the unnormalized
+        if ``normalize=True``. If ``normalize=False``, returns the unnormalized
         Identity matrix, which is equivalent to :func:`numpy.eye`.
         """
         raise_error(NotImplementedError)
