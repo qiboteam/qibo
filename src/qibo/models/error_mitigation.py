@@ -145,7 +145,7 @@ def ZNE(
         )
         if "ncircuits" in readout.keys():
             circuit_result, circuit_result_cal = apply_randomized_readout_mitigation(
-                noisy_circuit, backend, noise_model, nshots, readout["ncircuits"]
+                noisy_circuit, noise_model, nshots, readout["ncircuits"], backend
             )
         else:
             if noise_model is not None and backend.name != "qibolab":
@@ -299,7 +299,7 @@ def CDR(
         train_val["noise-free"].append(val)
         if "ncircuits" in readout.keys():
             circuit_result, circuit_result_cal = apply_randomized_readout_mitigation(
-                c, backend, noise_model, nshots, readout["ncircuits"]
+                c, noise_model, nshots, readout["ncircuits"], backend
             )
         else:
             if noise_model is not None and backend.name != "qibolab":
@@ -318,7 +318,7 @@ def CDR(
     # Run the input circuit
     if "ncircuits" in readout.keys():
         circuit_result, circuit_result_cal = apply_randomized_readout_mitigation(
-            circuit, backend, noise_model, nshots, readout["ncircuits"]
+            circuit, noise_model, nshots, readout["ncircuits"], backend
         )
     else:
         if noise_model is not None and backend.name != "qibolab":
@@ -409,7 +409,7 @@ def vnCDR(
                     circuit_result,
                     circuit_result_cal,
                 ) = apply_randomized_readout_mitigation(
-                    noisy_c, backend, noise_model, nshots, readout["ncircuits"]
+                    noisy_c, noise_model, nshots, readout["ncircuits"], backend
                 )
             else:
                 if noise_model is not None and backend.name != "qibolab":
@@ -437,7 +437,7 @@ def vnCDR(
         noisy_c = get_noisy_circuit(circuit, level, insertion_gate=insertion_gate)
         if "ncircuits" in readout.keys():
             circuit_result, circuit_result_cal = apply_randomized_readout_mitigation(
-                noisy_c, backend, noise_model, nshots, readout["ncircuits"]
+                noisy_c, noise_model, nshots, readout["ncircuits"], backend
             )
         else:
             if noise_model is not None and backend.name != "qibolab":

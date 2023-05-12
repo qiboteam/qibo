@@ -109,13 +109,13 @@ def test_zne(backend, nqubits, noise, solve, insertion_gate, readout):
     estimate = ZNE(
         circuit=c,
         observable=obs,
-        backend=backend,
         noise_levels=np.array(range(4)),
         noise_model=noise,
         nshots=10000,
         solve_for_gammas=solve,
         insertion_gate=insertion_gate,
         readout=readout,
+        backend=backend,
     )
     assert np.abs(exact - estimate) <= np.abs(exact - noisy)
 
@@ -159,12 +159,12 @@ def test_cdr(backend, nqubits, noise, full_output, readout):
     estimate = CDR(
         circuit=c,
         observable=obs,
-        backend=backend,
         noise_model=noise,
         nshots=10000,
         n_training_samples=20,
-        readout=readout,
         full_output=full_output,
+        readout=readout,
+        backend=backend,
     )
     if full_output:
         estimate = estimate[0]
@@ -285,7 +285,7 @@ def test_readout_mitigation(backend, nqubits, method):
     noise.add(ReadoutError(probabilities=p), gate=gates.M)
     if method == "cal_matrix":
         calibration_matrix = get_calibration_matrix(
-            nqubits, backend, noise, nshots=nshots
+            nqubits, noise, nshots=nshots, backend=backend
         )
     # Define the observable
     obs = np.prod([Z(i) for i in range(nqubits)])
@@ -303,7 +303,7 @@ def test_readout_mitigation(backend, nqubits, method):
     elif method == "temme":
         ncircuits = 10
         result, result_cal = apply_randomized_readout_mitigation(
-            c, backend, noise, nshots, ncircuits
+            c, noise, nshots, ncircuits, backend
         )
         mit_val = result.expectation_from_samples(
             obs
