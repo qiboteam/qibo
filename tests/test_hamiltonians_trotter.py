@@ -3,6 +3,7 @@ import numpy as np
 import pytest
 
 from qibo import hamiltonians
+from qibo.backends import NumpyBackend
 from qibo.quantum_info import random_hermitian, random_statevector
 
 from .utils import random_complex
@@ -102,20 +103,27 @@ def test_trotter_hamiltonian_three_qubit_term(backend):
 
     from qibo.hamiltonians.terms import HamiltonianTerm
 
-    m1 = random_hermitian(2**3)
-    m2 = random_hermitian(2**2)
-    m3 = random_hermitian(2**1)
+    numpy_backend = NumpyBackend()
+
+    m1 = random_hermitian(2**3, backend=numpy_backend)
+    m2 = random_hermitian(2**2, backend=numpy_backend)
+    m3 = random_hermitian(2**1, backend=numpy_backend)
 
     terms = [
         HamiltonianTerm(m1, 0, 1, 2),
         HamiltonianTerm(m2, 2, 3),
         HamiltonianTerm(m3, 1),
     ]
+    m1 = backend.cast(m1, dtype=m1.dtype)
+    m2 = backend.cast(m2, dtype=m2.dtype)
+    m3 = backend.cast(m3, dtype=m3.dtype)
+
     ham = hamiltonians.SymbolicHamiltonian(backend=backend)
     ham.terms = terms
 
     # Test that the `TrotterHamiltonian` dense matrix is correct
-    eye = np.eye(2, dtype=m1.dtype)
+    eye = np.eye(2, dtype=complex)
+    eye = backend.cast(eye, dtype=eye.dtype)
     mm1 = np.kron(m1, eye)
     mm2 = np.kron(np.kron(eye, eye), m2)
     mm3 = np.kron(np.kron(eye, m3), np.kron(eye, eye))
@@ -126,9 +134,13 @@ def test_trotter_hamiltonian_three_qubit_term(backend):
     initial_state = random_statevector(2**4, backend=backend)
     circuit = ham.circuit(dt=dt)
     final_state = backend.execute_circuit(circuit, np.copy(initial_state))
+    mm1 = backend.to_numpy(mm1)
+    mm2 = backend.to_numpy(mm2)
+    mm3 = backend.to_numpy(mm3)
     u = [expm(-0.5j * dt * (mm1 + mm3)), expm(-0.5j * dt * mm2)]
-    target_state = u[1].dot(u[0].dot(initial_state))
-    target_state = u[0].dot(u[1].dot(target_state))
+    u = backend.cast(u)
+    target_state = np.dot(u[1], np.dot(u[0], initial_state))
+    target_state = np.dot(u[0], np.dot(u[1], target_state))
     backend.assert_allclose(final_state, target_state)
 
 

@@ -228,6 +228,8 @@ class CircuitResult:
         self._measurement_gate = None
         self._samples = None
         self._frequencies = None
+        self._repeated_execution_frequencies = None
+        self._repeated_execution_probabilities = None
         self._bitflip_p0 = None
         self._bitflip_p1 = None
         self._symbols = None
@@ -299,15 +301,18 @@ class CircuitResult:
         return self.state(numpy=True)
 
     def probabilities(self, qubits=None):
-        """Calculates measurement probabilities by tracing out qubits. When
-        a noise model is applied to the circuit this method will return the
-        probabilities from the last execution shot, which may or may not
-        correspond to the noise-free state depending on whether the noise was
-        applied or not in that specific execution.
+        """Calculates measurement probabilities by tracing out qubits.
+        When noisy model is applied to a circuit and `circuit.density_matrix=False`,
+        this method returns the average probability resulting from
+        repeated execution. This probability distribution approximates the
+        exact probability distribution obtained when `circuit.density_matrix=True`.
 
         Args:
             qubits (list, set): Set of qubits that are measured.
         """
+        if self._repeated_execution_probabilities is not None:
+            return self._repeated_execution_probabilities
+
         return self.backend.circuit_result_probabilities(self, qubits)
 
     def has_samples(self):
@@ -433,6 +438,9 @@ class CircuitResult:
                 a single `Counter` is returned which contains samples from all
                 the measured qubits, independently of their registers.
         """
+        if self._repeated_execution_frequencies is not None:
+            return self._repeated_execution_frequencies
+
         qubits = self.measurement_gate.qubits
         if self._frequencies is None:
             if self.measurement_gate.has_bitflip_noise() and not self.has_samples():
@@ -470,8 +478,8 @@ class CircuitResult:
 
         if binary:
             return frequencies_to_binary(self._frequencies, len(qubits))
-        else:
-            return self._frequencies
+
+        return self._frequencies
 
     def apply_bitflips(self, p0, p1=None):
         return apply_bitflips(self, p0, p1)
