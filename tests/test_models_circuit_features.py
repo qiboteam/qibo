@@ -1,9 +1,13 @@
 """Test how features defined in :class:`qibo.models.circuit.Circuit` work during circuit execution."""
+from collections import Counter
+
 import numpy as np
 import pytest
 
 from qibo import gates, matrices
+from qibo.config import PRECISION_TOL
 from qibo.models import Circuit
+from qibo.noise import NoiseModel, PauliError
 
 
 def test_circuit_unitary(backend):
@@ -314,3 +318,45 @@ def test_repeated_execute_with_noise(backend):
     target_state = np.stack(target_state)
     final_state = [backend.to_numpy(x) for x in final_state]
     backend.assert_allclose(final_state, target_state)
+
+
+@pytest.mark.parametrize("nqubits", [1, 2])
+def test_repeated_execute_probs_and_freqs(backend, nqubits):
+    circuit = Circuit(nqubits)
+    circuit.add(gates.X(q) for q in range(nqubits))
+    circuit.add(gates.M(q) for q in range(nqubits))
+
+    noise_map = list(zip(["X", "Y", "Z"], [0.1, 0.1, 0.1]))
+    noise_map = PauliError(noise_map)
+    noise = NoiseModel()
+    noise.add(noise_map, gates.X)
+    noisy_circuit = noise.apply(circuit)
+    backend.set_seed(1234)
+    result = backend.execute_circuit_repeated(noisy_circuit, nshots=1024)
+
+    # Tensorflow seems to yield different results with same seed
+    if backend.__class__.__name__ == "TensorflowBackend":
+        if nqubits == 1:
+            test_probabilities = [0.171875, 0.828125]
+            test_frequencies = Counter({1: 848, 0: 176})
+        else:
+            test_probabilities = [0.04101562, 0.12695312, 0.140625, 0.69140625]
+            test_frequencies = Counter({11: 708, 10: 144, 1: 130, 0: 42})
+    else:
+        if nqubits == 1:
+            test_probabilities = [0.20117188, 0.79882812]
+            test_frequencies = Counter({"1": 818, "0": 206})
+        else:
+            test_probabilities = [0.0390625, 0.16113281, 0.17382812, 0.62597656]
+            test_frequencies = Counter({"11": 641, "10": 178, "01": 165, "00": 40})
+
+    test_probabilities = backend.cast(test_probabilities, dtype=float)
+
+    print(result.probabilities())
+    backend.assert_allclose(
+        backend.calculate_norm(result.probabilities() - test_probabilities)
+        < PRECISION_TOL,
+        True,
+    )
+
+    assert result.frequencies() == test_frequencies

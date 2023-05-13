@@ -27,7 +27,8 @@ def test_state_representation(backend, target, density_matrix):
     bstring = target * "0" + "1" + (4 - target) * "0"
     if density_matrix:
         target_str = 3 * [
-            f"(0.5+0j)|00000><00000| + (0.5+0j)|00000><{bstring}| + (0.5+0j)|{bstring}><00000| + (0.5+0j)|{bstring}><{bstring}|"
+            f"(0.5+0j)|00000><00000| + (0.5+0j)|00000><{bstring}| + (0.5+0j)|{bstring}><00000|"
+            + f" + (0.5+0j)|{bstring}><{bstring}|"
         ]
     else:
         target_str = [
@@ -49,11 +50,14 @@ def test_state_representation_max_terms(backend, density_matrix):
     if density_matrix:
         assert (
             result.symbolic(max_terms=3)
-            == "(0.03125+0j)|00000><00000| + (0.03125+0j)|00000><00001| + (0.03125+0j)|00000><00010| + ..."
+            == "(0.03125+0j)|00000><00000| + (0.03125+0j)|00000><00001| + "
+            + "(0.03125+0j)|00000><00010| + ..."
         )
         assert (
             result.symbolic(max_terms=5)
-            == "(0.03125+0j)|00000><00000| + (0.03125+0j)|00000><00001| + (0.03125+0j)|00000><00010| + (0.03125+0j)|00000><00011| + (0.03125+0j)|00000><00100| + ..."
+            == "(0.03125+0j)|00000><00000| + (0.03125+0j)|00000><00001| + "
+            + "(0.03125+0j)|00000><00010| + (0.03125+0j)|00000><00011| + "
+            + "(0.03125+0j)|00000><00100| + ..."
         )
     else:
         assert (
@@ -62,7 +66,8 @@ def test_state_representation_max_terms(backend, density_matrix):
         )
         assert (
             result.symbolic(max_terms=5)
-            == "(0.17678+0j)|00000> + (0.17678+0j)|00001> + (0.17678+0j)|00010> + (0.17678+0j)|00011> + (0.17678+0j)|00100> + ..."
+            == "(0.17678+0j)|00000> + (0.17678+0j)|00001> + (0.17678+0j)|00010> + "
+            + "(0.17678+0j)|00011> + (0.17678+0j)|00100> + ..."
         )
 
 
