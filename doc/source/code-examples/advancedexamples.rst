@@ -1377,8 +1377,8 @@ For example if we use the five levels ``[0,1,2,3,4]`` :
        noise_levels=np.arange(5),
        noise_model=noise,
        nshots=10000,
-       insertion_gate='CNOT'
-       backend=backend
+       insertion_gate='CNOT',
+       backend=backend,
    )
    print(estimate)
    # 0.8332843749999996
