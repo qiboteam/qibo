@@ -474,8 +474,8 @@ def kraus_to_liouville(kraus_ops, order: str = "row", backend=None):
 def kraus_to_pauli(
     kraus_ops, normalize: bool = False, order: str = "row", backend=None
 ):
-    """Converts Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`of
-    a quantum channel to its Pauli-Liouville representation.
+    """Converts Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`
+    of a quantum channel to its Pauli-Liouville representation.
 
     Args:
         kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``

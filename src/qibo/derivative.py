@@ -34,19 +34,24 @@ def parameter_shift(
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
         hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): target observable.
-        if you want to execute on hardware, a symbolic hamiltonian must be provided
-        as follows (example with Pauli Z and `nqubits=1`): `SymbolicHamiltonian(np.prod([ Z(i) for i in range(1) ]))`.
-        parameter_index (int): the index which identifies the target parameter in the `circuit.get_parameters()` list.
-        initial_state ((2**nqubits) vector): initial state on which the circuit acts (default None).
-        scale_factor (float): parameter scale factor (default None).
-        nshots (int): number of shots if derivative is evaluated on hardware. If
-        `None`, the simulation mode is executed (default None).
+            if you want to execute on hardware, a symbolic hamiltonian must be
+            provided as follows (example with Pauli Z and ``nqubits=1``):
+            ``SymbolicHamiltonian(np.prod([ Z(i) for i in range(1) ]))``.
+        parameter_index (int): the index which identifies the target parameter
+            in the ``circuit.get_parameters()`` list.
+        initial_state (ndarray, optional): initial state on which the circuit
+            acts. Default is ``None``.
+        scale_factor (float, optional): parameter scale factor. Default is ``1``.
+        nshots (int, optional): number of shots if derivative is evaluated on
+            hardware. If ``None``, the simulation mode is executed.
+            Default is ``None``.
 
     Returns:
-        np.float value of the derivative of the expectation value of the hamiltonian
-        with respect to the target variational parameter.
+        (float): Value of the derivative of the expectation value of the hamiltonian
+            with respect to the target variational parameter.
 
     Example:
+
         .. testcode::
 
             import qibo
@@ -59,6 +64,7 @@ def parameter_shift(
             def hamiltonian(nqubits = 1):
                 m0 = (1/nqubits)*hamiltonians.Z(nqubits).matrix
                 ham = hamiltonians.Hamiltonian(nqubits, m0)
+
                 return ham
 
             # defining a dummy circuit
@@ -67,6 +73,7 @@ def parameter_shift(
                 c.add(gates.RY(q = 0, theta = 0))
                 c.add(gates.RX(q = 0, theta = 0))
                 c.add(gates.M(0))
+
                 return c
 
             # initializing the circuit
@@ -79,8 +86,9 @@ def parameter_shift(
             test_hamiltonian = hamiltonian()
 
             # running the psr with respect to the two parameters
-            grad_0 = parameter_shift(circuit = c, hamiltonian = test_hamiltonian, parameter_index = 0)
-            grad_1 = parameter_shift(circuit = c, hamiltonian = test_hamiltonian, parameter_index = 1)
+            grad_0 = parameter_shift(circuit=c, hamiltonian=test_hamiltonian, parameter_index=0)
+            grad_1 = parameter_shift(circuit=c, hamiltonian=test_hamiltonian, parameter_index=1)
+
     """
 
     # some raise_error
@@ -146,4 +154,7 @@ def parameter_shift(
 
     circuit.set_parameters(original)
 
-    return generator_eigenval * (forward - backward) * scale_factor
+    # float() necessary to not return a 0-dim ndarray
+    result = float(generator_eigenval * (forward - backward) * scale_factor)
+
+    return result
