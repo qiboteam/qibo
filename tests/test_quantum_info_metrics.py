@@ -247,9 +247,9 @@ def test_entangling_capability(backend):
     samples = 500
 
     c1 = Circuit(nqubits)
-    c1.add([gates.RX(0, 0, trainable=True) for i in range(nqubits)])
+    c1.add([gates.RX(q, 0, trainable=True) for q in range(nqubits)])
     c1.add(gates.CNOT(0, 1))
-    c1.add([gates.RX(0, 0, trainable=True) for i in range(nqubits)])
+    c1.add([gates.RX(q, 0, trainable=True) for q in range(nqubits)])
     ent_mw1 = entangling_capability(c1, samples, backend)
 
     c2 = Circuit(nqubits)
@@ -261,7 +261,7 @@ def test_entangling_capability(backend):
     c3 = Circuit(nqubits)
     ent_mw3 = entangling_capability(c3, samples, backend)
 
-    assert ent_mw3 < ent_mw1 < ent_mw2
+    backend.assert_allclose(ent_mw3 < ent_mw1 < ent_mw2, True)
 
 
 def test_expressibility(backend):
@@ -270,9 +270,9 @@ def test_expressibility(backend):
     t = 1
 
     c1 = Circuit(nqubits)
-    c1.add([gates.RX(0, 0, trainable=True) for i in range(nqubits)])
+    c1.add([gates.RX(q, 0, trainable=True) for q in range(nqubits)])
     c1.add(gates.CNOT(0, 1))
-    c1.add([gates.RX(0, 0, trainable=True) for i in range(nqubits)])
+    c1.add([gates.RX(q, 0, trainable=True) for q in range(nqubits)])
     expr_1 = expressibility(c1, t, samples, backend)
 
     c2 = Circuit(nqubits)
@@ -284,4 +284,4 @@ def test_expressibility(backend):
     c3 = Circuit(nqubits)
     expr_3 = expressibility(c3, t, samples, backend)
 
-    assert expr_1 < expr_2 < expr_3
+    backend.assert_allclose(expr_1 < expr_2 < expr_3, True)

@@ -414,7 +414,7 @@ def meyer_wallach_entanglement(circuit, backend=None):
         trace_q = list(range(nqubits))
         trace_q.pop(j)
         rho_r = backend.partial_trace_density_matrix(rho, trace_q, nqubits)
-        trace = np.trace(rho_r @ rho_r)
+        trace = purity(rho_r)
         entropy += trace
 
     return 1 - entropy / nqubits
@@ -439,20 +439,22 @@ def entangling_capability(circuit, samples: int, backend=None):
         float: Entangling capability.
     """
 
+    from qibo.gates import I
+
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
     res = []
-    nparams = 0
-    for gate in circuit.queue:
-        if hasattr(gate, "trainable") and gate.trainable:
-            nparams += len(gate.parameters)
-    for i in range(samples):
-        params = np.random.uniform(-np.pi, np.pi, nparams)
+    for _ in range(samples):
+        params = {
+            gate: np.random.uniform(-np.pi, np.pi, gate.nparams)
+            for gate in circuit.trainable_gates
+            if isinstance(gate, I) is False
+        }
         circuit.set_parameters(params)
         res.append(meyer_wallach_entanglement(circuit, backend))
 
-    return 2 * np.real(np.sum(backend.cast(res))) / samples
+    return 2 * np.real(np.sum(res)) / samples
 
 
 def expressibility(circuit, t: int, samples: int, backend=None):
@@ -473,7 +475,7 @@ def expressibility(circuit, t: int, samples: int, backend=None):
         float: Entangling capability.
     """
 
-    from qibo.quantum_info import haar_integral, pqc_integral
+    from qibo.quantum_info.utils import haar_integral, pqc_integral
 
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()

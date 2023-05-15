@@ -234,7 +234,7 @@ def haar_integral(nqubits, t: int, samples: int, backend=None):
     """Computes the integral over pure states over the Haar measure.
 
     .. math::
-        \\int_{\\text{Haar}}\\left(|\\psi\\rangle\\right.\\left.\\langle\\psi|\\right)^{\\otimes t}d\\psi \\,
+        \\int_{\\text{Haar}} d\\psi \\, \\left(|\\psi\\rangle\\right.\\left.\\langle\\psi|\\right)^{\\otimes t}
 
     Args:
         nqubits (int): Number of qubits.
@@ -271,7 +271,7 @@ def pqc_integral(circuit, t: int, samples: int, backend=None):
         parameter space described by the parameterized `circuit`.
 
     .. math::
-        \\int_{\\Theta}\\left(|\\psi_{\\theta}\\rangle\\right.\\left.\\langle\\psi_{\\theta}|\\right)^{\\otimes t}d\\psi \\,
+        \\int_{\\Theta} d\\psi \\, \\left(|\\psi_{\\theta}\\rangle\\right.\\left.\\langle\\psi_{\\theta}|\\right)^{\\otimes t}
 
     Args:
         circuit (:class:`qibo.models.Circuit`): Parametrized circuit.
@@ -285,6 +285,8 @@ def pqc_integral(circuit, t: int, samples: int, backend=None):
         array: Estimation of the integral.
     """
 
+    from qibo.gates import I
+
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
@@ -292,12 +294,13 @@ def pqc_integral(circuit, t: int, samples: int, backend=None):
     dim = 2**circuit.nqubits
     rand_unit_density = np.zeros((dim**t, dim**t), dtype=complex)
     rand_unit_density = backend.cast(rand_unit_density, dtype=rand_unit_density.dtype)
-    nparams = 0
-    for gate in circuit.queue:
-        if hasattr(gate, "trainable") and gate.trainable:
-            nparams += len(gate.parameters)
     for _ in range(samples):
-        params = np.random.uniform(-np.pi, np.pi, nparams)
+        params = {
+            gate: np.random.uniform(-np.pi, np.pi, gate.nparams)
+            for gate in circuit.trainable_gates
+            if isinstance(gate, I) is False
+        }
+        circuit.set_parameters(params)
         circuit.set_parameters(params)
         rho = backend.execute_circuit(circuit).state()
         rand_unit_density += reduce(np.kron, [rho] * t)
