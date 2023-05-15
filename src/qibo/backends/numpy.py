@@ -437,6 +437,12 @@ class NumpyBackend(Backend):
 
         results = []
         nqubits = circuit.nqubits
+
+        if not circuit.density_matrix:
+            samples = []
+            probabilities = np.zeros(2**nqubits, dtype=float)
+            probabilities = self.cast(probabilities, dtype=probabilities.dtype)
+
         for _ in range(nshots):
             if circuit.density_matrix:
                 if initial_state is None:
@@ -468,18 +474,28 @@ class NumpyBackend(Backend):
 
             if circuit.measurements:
                 result = CircuitResult(self, circuit, state, 1)
-                results.append(result.samples()[0])
+                sample = result.samples()[0]
+                results.append(sample)
+                if not circuit.density_matrix:
+                    probabilities += result.probabilities()
+                    samples.append("".join([str(s) for s in sample]))
             else:
                 results.append(state)
 
         if circuit.measurements:
             final_result = CircuitResult(self, circuit, state, nshots)
             final_result._samples = self.aggregate_shots(results)
+            if not circuit.density_matrix:
+                final_result._repeated_execution_probabilities = probabilities / nshots
+                final_result._repeated_execution_frequencies = (
+                    self.calculate_frequencies(samples)
+                )
             circuit._final_state = final_result
             return final_result
-        else:
-            circuit._final_state = CircuitResult(self, circuit, results[-1], nshots)
-            return results
+
+        circuit._final_state = CircuitResult(self, circuit, results[-1], nshots)
+
+        return results
 
     def execute_distributed_circuit(
         self, circuit, initial_state=None, nshots=None, return_array=False

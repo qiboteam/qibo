@@ -11,8 +11,9 @@ class KrausError:
     """Quantum error associated with the :class:`qibo.gates.KrausChannel`.
 
     Args:
-        ops (list): List of Kraus operators
-        of type ``np.ndarray`` or ``tf.Tensor`` and of the same shape.
+        ops (list): List of Kraus operators of type ``np.ndarray``
+            or ``tf.Tensor`` and of the same shape.
+
     """
 
     def __init__(self, ops):
@@ -40,8 +41,10 @@ class UnitaryError:
     Args:
         probabilities (list): List of floats that correspond to the probability
             that each unitary Uk is applied.
-        unitaries (list): List of unitary matrices as ``np.ndarray``/``tf.Tensor`` of the same shape.
-            Must have the same length as the given probabilities ``p``.
+        unitaries (list): List of unitary matrices as ``np.ndarray``/``tf.Tensor``
+            of the same shape. Must have the same length as the given
+            probabilities ``p``.
+
     """
 
     def __init__(self, probabilities, unitaries):
@@ -143,8 +146,10 @@ class CustomError:
         # define |0><1|
         a2 = np.array([[0, 1], [0, 0]])
 
-        # Create an Error associated with Kraus Channel rho -> |0><0| rho |0><0| + |0><1| rho |0><1|
+        # Create an Error associated with Kraus Channel
+        # rho -> |0><0| rho |0><0| + |0><1| rho |0><1|
         error = CustomError(gates.KrausChannel((0,), [a1, a2]))
+
     """
 
     def __init__(self, channel):
@@ -164,6 +169,7 @@ class NoiseModel:
         # Build specific noise model with 2 quantum errors:
         # - Pauli error on H only for qubit 1.
         # - Pauli error on CNOT for all the qubits.
+
         noise = NoiseModel()
         noise.add(PauliError([("X", 0.5)]), gates.H, 1)
         noise.add(PauliError([("Y", 0.5)]), gates.CNOT)
@@ -174,6 +180,7 @@ class NoiseModel:
 
         # Apply noise to the circuit according to the noise model.
         noisy_c = noise.apply(c)
+
     """
 
     def __init__(self):
@@ -185,28 +192,30 @@ class NoiseModel:
 
         Args:
             error: quantum error to associate with the gate. Possible choices
-                   are :class:`qibo.noise.PauliError`,
-                   :class:`qibo.noise.ThermalRelaxationError`,
-                   :class:`qibo.noise.DepolarizingError`,
-                   :class:`qibo.noise.ReadoutError`,
-                   :class:`qibo.noise.ResetError`,
-                   :class:`qibo.noise.UnitaryError`,
-                   :class:`qibo.noise.KrausError` and
-                   :class:`qibo.noise.CustomError`.
-            gate (:class:`qibo.gates.Gate`): gate after which the noise will be added, if None the noise
-                        will be added after each gate except :class:`qibo.gates.Channel` and :class:`qibo.gates.M`.
-            qubits (tuple): qubits where the noise will be applied, if None the noise
-                            will be added after every instance of the gate.
-            condition (callable): Optional function that takes :class:`qibo.gates.Gate` object as an input and returns True if noise should be added to it.
+                are :class:`qibo.noise.PauliError`,
+                :class:`qibo.noise.ThermalRelaxationError`,
+                :class:`qibo.noise.DepolarizingError`,
+                :class:`qibo.noise.ReadoutError`,
+                :class:`qibo.noise.ResetError`,
+                :class:`qibo.noise.UnitaryError`,
+                :class:`qibo.noise.KrausError` and
+                :class:`qibo.noise.CustomError`.
+            gate (:class:`qibo.gates.Gate`): gate after which the noise will be added.
+                If ``None``, the noise will be added after each gate except
+                :class:`qibo.gates.Channel` and :class:`qibo.gates.M`.
+            qubits (tuple): qubits where the noise will be applied. If ``None``,
+                the noise will be added after every instance of the gate.
+            condition (callable, optional): function that takes :class:`qibo.gates.Gate`
+                object as an input and returns ``True`` if noise should be added to it.
 
         Example:
 
         .. testcode::
 
-        import numpy as np
-        from qibo import gates
-        from qibo.models import Circuit
-        from qibo.noise import NoiseModel, PauliError
+            import numpy as np
+            from qibo import gates
+            from qibo.models import Circuit
+            from qibo.noise import NoiseModel, PauliError
 
             # Check if a gate is RX(pi/2).
             def is_sqrt_x(gate):
@@ -244,20 +253,23 @@ class NoiseModel:
 
         Args:
             params (dict): contains the parameters of the channels organized as follow \n
-                    {'t1' : (``t1``, ``t2``,..., ``tn``),
-                    't2' : (``t1``, ``t2``,..., ``tn``),
-                    'gate time' : (``time1``, ``time2``),
-                    'excited population' : 0,
-                    'depolarizing error' : (``lambda1``, ``lambda2``),
-                    'bitflips error' : ([``p1``, ``p2``,..., ``pm``], [``p1``, ``p2``,..., ``pm``]),
-                    'idle_qubits' : True}
+                {'t1' : (``t1``, ``t2``,..., ``tn``),
+                't2' : (``t1``, ``t2``,..., ``tn``),
+                'gate time' : (``time1``, ``time2``),
+                'excited population' : 0,
+                'depolarizing error' : (``lambda1``, ``lambda2``),
+                'bitflips error' : ([``p1``, ``p2``,..., ``pm``],[``p1``, ``p2``,..., ``pm``]),
+                'idle_qubits' : True}
                 where `n` is the number of qubits, and `m` the number of measurement gates.
-                The first four parameters are used by the thermal relaxation error. The first two  elements are the
-                tuple containing the :math:`T_1` and :math:`T_2` parameters; the third one is a tuple which contain the gate times,
+                The first four parameters are used by the thermal relaxation error.
+                The first two  elements are the tuple containing the :math:`T_1` and
+                :math:`T_2` parameters; the third one is a tuple which contain the gate times,
                 for single and two qubit gates; then we have the excited population parameter.
-                The fifth parameter is a tuple containing the depolaraziong errors for single and 2 qubit gate.
-                The sisxth parameter is a tuple containg the two arrays for bitflips probability errors: the first one implements 0->1 errors, the other one 1->0.
-                The last parameter is a boolean variable: if True the noise model takes into account idle qubits.
+                The fifth parameter is a tuple containing the depolaraziong errors for single
+                and 2 qubit gate. The sisxth parameter is a tuple containg the two arrays for
+                bitflips probability errors: the first one implements 0->1 errors, the other
+                one 1->0. The last parameter is a boolean variable: if ``True`` the noise
+                model takes into account idle qubits.
         """
 
         self.noise_model = CompositeNoiseModel(params)
