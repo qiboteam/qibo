@@ -85,27 +85,37 @@ class Backend(abc.ABC):
 
     @abc.abstractmethod
     def zero_state(self, nqubits):  # pragma: no cover
-        """Generate |000...0> state vector as an array."""
+        """Generate :math:`|000 \\cdots 0 \\rangle` state vector as an array."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
     def zero_density_matrix(self, nqubits):  # pragma: no cover
-        """Generate |000...0><000...0| density matrix as an array."""
+        """Generate :math:`|000\\cdots0\\rangle\\langle000\\cdots0|` density matrix as an array."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def identity_density_matrix(self, nqubits):  # pragma: no cover
-        r"""Generate :math:`\frac{1}{2^\text{nqubits}}\sum_{i=0}^{2^\text{nqubits}}|i\rangle\langle i|` density matrix as an array."""
+    def identity_density_matrix(
+        self, nqubits, normalize: bool = True
+    ):  # pragma: no cover
+        """Generate density matrix
+
+        .. math::
+            \\rho = \\frac{1}{2^\\text{nqubits}} \\, \\sum_{k=0}^{2^\\text{nqubits} - 1} \\,
+                |k \\rangle \\langle k|
+
+        if ``normalize=True``. If ``normalize=False``, returns the unnormalized
+        Identity matrix, which is equivalent to :func:`numpy.eye`.
+        """
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
     def plus_state(self, nqubits):  # pragma: no cover
-        """Generate |+++...+> state vector as an array."""
+        """Generate :math:`|+++\\cdots+\\rangle` state vector as an array."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
     def plus_density_matrix(self, nqubits):  # pragma: no cover
-        """Generate |+++...+><+++...+| density matrix as an array."""
+        """Generate :math:`|+++\\cdots+\\rangle\\langle+++\\cdots+|` density matrix as an array."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
