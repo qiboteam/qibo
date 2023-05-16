@@ -35,7 +35,7 @@ def compute_cvar(probabilities, values, alpha, threshold=0.001):
         probabilities (list): list/array of probabilities
         values (list): list/array of corresponding values
         alpha (float): confidence level
-        thres (float): a small positive number to avoid division by zero.
+        threshold (float): a small positive number to avoid division by zero.
 
     Returns:
         CVaR
