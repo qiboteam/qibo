@@ -324,12 +324,7 @@ def pqc_integral(circuit, t: int, samples: int, backend=None):
     rand_unit_density = np.zeros((dim**t, dim**t), dtype=complex)
     rand_unit_density = backend.cast(rand_unit_density, dtype=rand_unit_density.dtype)
     for _ in range(samples):
-        params = {
-            gate: np.random.uniform(-np.pi, np.pi, gate.nparams)
-            for gate in circuit.trainable_gates
-        }
-
-        circuit.set_parameters(params)
+        params = np.random.uniform(-np.pi, np.pi, circuit.trainable_gates.nparams)
         circuit.set_parameters(params)
 
         rho = backend.execute_circuit(circuit).state()

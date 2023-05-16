@@ -459,10 +459,7 @@ def entangling_capability(circuit, samples: int, backend=None):
 
     res = []
     for _ in range(samples):
-        params = {
-            gate: np.random.uniform(-np.pi, np.pi, size=gate.nparams)
-            for gate in circuit.trainable_gates
-        }
+        params = np.random.uniform(-np.pi, np.pi, circuit.trainable_gates.nparams)
         circuit.set_parameters(params)
         entanglement = meyer_wallach_entanglement(circuit, backend=backend)
         res.append(entanglement)
