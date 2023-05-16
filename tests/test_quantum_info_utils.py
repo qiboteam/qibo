@@ -4,9 +4,11 @@ import numpy as np
 import pytest
 
 from qibo.quantum_info.utils import (
+    haar_integral,
     hamming_weight,
     hellinger_distance,
     hellinger_fidelity,
+    pqc_integral,
     shannon_entropy,
 )
 
@@ -114,3 +116,53 @@ def test_hellinger(backend):
     prob_q = [1.0, 0.0]
     backend.assert_allclose(hellinger_distance(prob, prob_q, backend=backend), 0.0)
     backend.assert_allclose(hellinger_fidelity(prob, prob_q, backend=backend), 1.0)
+
+
+def test_haar_integral(backend):
+    from qibo.quantum_info.metrics import fidelity
+
+    with pytest.raises(TypeError):
+        nqubits = 0.5
+        t = 2
+        samples = 10
+        haar_integral(nqubits, t, samples, backend=backend)
+    with pytest.raises(TypeError):
+        nqubits = 2
+        t = 0.5
+        samples = 10
+        haar_integral(nqubits, t, samples, backend=backend)
+    with pytest.raises(TypeError):
+        nqubits = 2
+        t = 2
+        samples = 0.5
+        haar_integral(nqubits, t, samples, backend=backend)
+
+    nqubits = 2
+    t = 1
+    samples = 1000
+    haar_int = haar_integral(nqubits, t, samples, backend=backend)
+    fid = fidelity(haar_int, haar_int)
+    backend.assert_allclose(fid, 1 / nqubits**2, atol=10 / samples)
+
+
+def test_pqc_integral(backend):
+    from qibo.models import Circuit
+    from qibo.quantum_info.metrics import fidelity
+
+    with pytest.raises(TypeError):
+        circuit = Circuit(2)
+        t = 0.5
+        samples = 10
+        pqc_integral(circuit, t, samples, backend=backend)
+    with pytest.raises(TypeError):
+        circuit = Circuit(2)
+        t = 2
+        samples = 0.5
+        pqc_integral(circuit, t, samples, backend=backend)
+
+    circuit = Circuit(2)
+    t = 1
+    samples = 100
+    pqc_int = pqc_integral(circuit, t, samples, backend=backend)
+    fid = fidelity(pqc_int, pqc_int)
+    backend.assert_allclose(fid, 1)
