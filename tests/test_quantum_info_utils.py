@@ -3,6 +3,9 @@ from re import finditer
 import numpy as np
 import pytest
 
+from qibo.config import PRECISION_TOL
+from qibo.models import Circuit
+from qibo.quantum_info.metrics import fidelity
 from qibo.quantum_info.utils import (
     haar_integral,
     hamming_weight,
@@ -119,50 +122,41 @@ def test_hellinger(backend):
 
 
 def test_haar_integral(backend):
-    from qibo.quantum_info.metrics import fidelity
-
     with pytest.raises(TypeError):
-        nqubits = 0.5
-        t = 2
-        samples = 10
-        haar_integral(nqubits, t, samples, backend=backend)
+        nqubits, t, samples = 0.5, 2, 10
+        test = haar_integral(nqubits, t, samples, backend=backend)
     with pytest.raises(TypeError):
-        nqubits = 2
-        t = 0.5
-        samples = 10
-        haar_integral(nqubits, t, samples, backend=backend)
+        nqubits, t, samples = 2, 0.5, 10
+        test = haar_integral(nqubits, t, samples, backend=backend)
     with pytest.raises(TypeError):
-        nqubits = 2
-        t = 2
-        samples = 0.5
-        haar_integral(nqubits, t, samples, backend=backend)
+        nqubits, t, samples = 2, 2, 0.5
+        test = haar_integral(nqubits, t, samples, backend=backend)
 
     nqubits = 2
-    t = 1
-    samples = 1000
+    t, samples = 1, 1000
+
     haar_int = haar_integral(nqubits, t, samples, backend=backend)
+
     fid = fidelity(haar_int, haar_int)
+
     backend.assert_allclose(fid, 1 / nqubits**2, atol=10 / samples)
 
 
 def test_pqc_integral(backend):
-    from qibo.models import Circuit
-    from qibo.quantum_info.metrics import fidelity
-
     with pytest.raises(TypeError):
+        t, samples = 0.5, 10
         circuit = Circuit(2)
-        t = 0.5
-        samples = 10
         pqc_integral(circuit, t, samples, backend=backend)
     with pytest.raises(TypeError):
+        t = 2, 0.5
         circuit = Circuit(2)
-        t = 2
-        samples = 0.5
         pqc_integral(circuit, t, samples, backend=backend)
 
     circuit = Circuit(2)
-    t = 1
-    samples = 100
+    t, samples = 1, 100
+
     pqc_int = pqc_integral(circuit, t, samples, backend=backend)
+
     fid = fidelity(pqc_int, pqc_int)
-    backend.assert_allclose(fid, 1)
+
+    backend.assert_allclose(abs(fid - 1) < PRECISION_TOL, True)

@@ -243,17 +243,24 @@ def test_process_fidelity(backend):
 
 
 def test_meyer_wallach_entanglement(backend):
-    from qibo.gates import CNOT, RX
-    from qibo.models import Circuit
-
     nqubits = 2
+
     circuit1 = Circuit(nqubits)
-    circuit1.add([RX(0, np.pi / 4, trainable=True)] for _ in range(nqubits))
+    circuit1.add([gates.RX(0, np.pi / 4)] for _ in range(nqubits))
+
     circuit2 = Circuit(nqubits)
-    circuit2.add([RX(0, np.pi / 4, trainable=True)] for _ in range(nqubits))
-    circuit2.add(CNOT(0, 1))
-    backend.assert_allclose(meyer_wallach_entanglement(circuit1, backend=backend), 0)
-    backend.assert_allclose(meyer_wallach_entanglement(circuit2, backend=backend), 0.5)
+    circuit2.add([gates.RX(0, np.pi / 4)] for _ in range(nqubits))
+    circuit2.add(gates.CNOT(0, 1))
+
+    backend.assert_allclose(
+        meyer_wallach_entanglement(circuit1, backend=backend) < PRECISION_TOL, True
+    )
+
+    backend.assert_allclose(
+        abs(meyer_wallach_entanglement(circuit2, backend=backend) - 0.5)
+        < PRECISION_TOL,
+        True,
+    )
 
 
 def test_entangling_capability(backend):
