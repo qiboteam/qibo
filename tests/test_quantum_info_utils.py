@@ -148,7 +148,7 @@ def test_pqc_integral(backend):
         circuit = Circuit(2)
         pqc_integral(circuit, t, samples, backend=backend)
     with pytest.raises(TypeError):
-        t = 2, 0.5
+        t, samples = 2, 0.5
         circuit = Circuit(2)
         pqc_integral(circuit, t, samples, backend=backend)
 
