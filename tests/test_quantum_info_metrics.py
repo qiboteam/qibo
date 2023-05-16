@@ -1,6 +1,8 @@
 import numpy as np
 import pytest
 
+from qibo import gates
+from qibo.models import Circuit
 from qibo.quantum_info import *
 
 
@@ -238,3 +240,85 @@ def test_process_fidelity(backend):
     )
     backend.assert_allclose(gate_error(channel, backend=backend), 0.0)
     backend.assert_allclose(gate_error(channel, channel, backend=backend), 0.0)
+
+
+def test_meyer_wallach_entanglement(backend):
+    nqubits = 2
+
+    circuit1 = Circuit(nqubits)
+    circuit1.add([gates.RX(0, np.pi / 4)] for _ in range(nqubits))
+
+    circuit2 = Circuit(nqubits)
+    circuit2.add([gates.RX(0, np.pi / 4)] for _ in range(nqubits))
+    circuit2.add(gates.CNOT(0, 1))
+
+    backend.assert_allclose(
+        meyer_wallach_entanglement(circuit1, backend=backend) < PRECISION_TOL, True
+    )
+
+    backend.assert_allclose(
+        abs(meyer_wallach_entanglement(circuit2, backend=backend) - 0.5)
+        < PRECISION_TOL,
+        True,
+    )
+
+
+def test_entangling_capability(backend):
+    with pytest.raises(TypeError):
+        circuit = Circuit(1)
+        samples = 0.5
+        entangling_capability(circuit, samples, backend=backend)
+
+    nqubits = 2
+    samples = 500
+
+    c1 = Circuit(nqubits)
+    c1.add([gates.RX(q, 0, trainable=True) for q in range(nqubits)])
+    c1.add(gates.CNOT(0, 1))
+    c1.add([gates.RX(q, 0, trainable=True) for q in range(nqubits)])
+    ent_mw1 = entangling_capability(c1, samples, backend=backend)
+
+    c2 = Circuit(nqubits)
+    c2.add(gates.H(0))
+    c2.add(gates.CNOT(0, 1))
+    c2.add(gates.RX(0, 0, trainable=True))
+    ent_mw2 = entangling_capability(c2, samples, backend=backend)
+
+    c3 = Circuit(nqubits)
+    ent_mw3 = entangling_capability(c3, samples, backend=backend)
+
+    backend.assert_allclose(ent_mw3 < ent_mw1 < ent_mw2, True)
+
+
+def test_expressibility(backend):
+    with pytest.raises(TypeError):
+        circuit = Circuit(1)
+        t = 0.5
+        samples = 10
+        expressibility(circuit, t, samples, backend=backend)
+    with pytest.raises(TypeError):
+        circuit = Circuit(1)
+        t = 1
+        samples = 0.5
+        expressibility(circuit, t, samples, backend=backend)
+
+    nqubits = 2
+    samples = 500
+    t = 1
+
+    c1 = Circuit(nqubits)
+    c1.add([gates.RX(q, 0, trainable=True) for q in range(nqubits)])
+    c1.add(gates.CNOT(0, 1))
+    c1.add([gates.RX(q, 0, trainable=True) for q in range(nqubits)])
+    expr_1 = expressibility(c1, t, samples, backend=backend)
+
+    c2 = Circuit(nqubits)
+    c2.add(gates.H(0))
+    c2.add(gates.CNOT(0, 1))
+    c2.add(gates.RX(0, 0, trainable=True))
+    expr_2 = expressibility(c2, t, samples, backend=backend)
+
+    c3 = Circuit(nqubits)
+    expr_3 = expressibility(c3, t, samples, backend=backend)
+
+    backend.assert_allclose(expr_1 < expr_2 < expr_3, True)
