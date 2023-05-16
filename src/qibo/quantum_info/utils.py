@@ -327,7 +327,6 @@ def pqc_integral(circuit, t: int, samples: int, backend=None):
         params = {
             gate: np.random.uniform(-np.pi, np.pi, gate.nparams)
             for gate in circuit.trainable_gates
-            if isinstance(gate, I) is False
         }
 
         circuit.set_parameters(params)
