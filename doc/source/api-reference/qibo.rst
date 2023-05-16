@@ -217,6 +217,39 @@ Error Mitigation
 
 Qibo allows for mitigating noise in circuits via error mitigation methods. Unlike error correction, error mitigation does not aim to correct qubit errors, but rather it provides the means to estimate the noise-free expected value of an observable measured at the end of a noisy circuit.
 
+Readout Mitigation
+""""""""""""""""""
+
+A common kind of error happening in quantum circuits is readout error, i.e. the error in the measurement of the qubits at the end of the computation. In Qibo there are currently two methods implemented for mitigating readout errors, and both can be used as standalone functions or in combination with the other general mitigation methods by setting the paramter `readout`.
+
+
+Calibration Matrix
+""""""""""""""""""
+Given :math:`n` qubits, all the possible :math:`2^n` states are constructed via the application of the corresponding sequence of :math:`X` gates :math:`X_0\otimes I_1\otimes\cdot\cdot\cdot\otimes X_{n-1}`. In the presence of readout errors, we will measure for each state :math:`i` some noisy frequencies :math:`F_i^{noisy}` different from the ideal ones :math:`F_i^{ideal}=\delta_{i,j}`.
+
+The effect of the error is modeled by the matrix composed of the noisy frequencies as columns :math:`M=\big(F_0^{noisy},...,F_{n-1}^{noisy}\big)`. We have indeed that:
+
+.. math::
+   F_i^{noisy} = M \cdot F_i^{ideal}
+
+and, therefore, the calibration matrix obtained as :math:`M_{\text{cal}}=M^{-1}` can be used to recover the noise-free frequencies.
+
+.. autofunction:: qibo.models.error_mitigation.calibration_matrix
+
+
+.. autofunction:: qibo.models.error_mitigation.apply_readout_mitigation
+
+
+Randomized
+""""""""""
+This approach converts the effect of any noise map :math:`A` into a single multiplication factor for each Pauli observable, that is, diagonalizes the measurement channel. The multiplication factor :math:`\lambda` can be directly measured even without the quantum circuit. Dividing the measured value :math:`\langle O\rangle_{noisy}` by these factor results in the mitigated Pauli expectation value :math:`\langle O\rangle_{ideal}`,
+
+.. math::
+   \langle O\rangle_{ideal} = \frac{\langle O\rangle_{noisy}}{\lambda}
+
+.. autofunction:: qibo.models.error_mitigation.apply_randomized_readout_mitigation
+
+
 Zero Noise Extrapolation (ZNE)
 """"""""""""""""""""""""""""""
 
@@ -236,7 +269,9 @@ This implementation of ZNE relies on the insertion of gate pairs (that resolve t
 
 .. autofunction:: qibo.models.error_mitigation.ZNE
 
+
 .. autofunction:: qibo.models.error_mitigation.get_gammas
+
 
 .. autofunction:: qibo.models.error_mitigation.get_noisy_circuit
 
@@ -256,6 +291,8 @@ and learn the mapping :math:`a^{noisy}\rightarrow a^{exact}`. The mitigated expe
 In this implementation the initial circuit is expected to be decomposed in the three Clifford gates :math:`RX(\frac{\pi}{2})`, :math:`CNOT`, :math:`X` and in :math:`RZ(\theta)` (which is Clifford only for :math:`\theta=\frac{n\pi}{2}`). By default the set of Clifford gates used for substitution is :math:`\{RZ(0),RZ(\frac{\pi}{2}),RZ(\pi),RZ(\frac{3}{2}\pi)\}`. See `Sopena et al <https://arxiv.org/abs/2103.12680>`_ for more details.
 
 .. autofunction:: qibo.models.error_mitigation.CDR
+
+
 .. autofunction:: qibo.models.error_mitigation.sample_training_circuit
 
 
@@ -1115,6 +1152,24 @@ Gate error
 .. autofunction:: qibo.quantum_info.gate_error
 
 
+Meyer-Wallach entanglement
+""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.meyer_wallach_entanglement
+
+
+Entanglement capability
+"""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.entangling_capability
+
+
+Expressibility of parameterized quantum circuits
+""""""""""""""""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.expressibility
+
+
 Random Ensembles
 ^^^^^^^^^^^^^^^^
 
@@ -1413,6 +1468,18 @@ Hellinger fidelity
 """"""""""""""""""
 
 .. autofunction:: qibo.quantum_info.hellinger_fidelity
+
+
+Haar integral
+"""""""""""""
+
+.. autofunction:: qibo.quantum_info.haar_integral
+
+
+Parameterized quantum circuit integral
+""""""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.pqc_integral
 
 
 .. _Parallel:

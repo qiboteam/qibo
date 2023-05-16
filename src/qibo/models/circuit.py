@@ -1044,9 +1044,7 @@ class Circuit:
                 )
 
             qubits = ",".join(f"q[{i}]" for i in gate.qubits)
-            if isinstance(gate, gates.ParametrizedGate) and not isinstance(
-                gate, gates.I
-            ):
+            if isinstance(gate, gates.ParametrizedGate):
                 params = (str(x) for x in gate.parameters)
                 name = f"{gate.qasm_label}({', '.join(params)})"
             else:
@@ -1221,18 +1219,14 @@ class Circuit:
 
                 if len(pieces) == 1:
                     params = None
-                    if gatetype != gates.I and issubclass(
-                        gatetype, gates.ParametrizedGate
-                    ):
+                    if issubclass(gatetype, gates.ParametrizedGate):
                         raise_error(
                             ValueError,
                             f"Missing parameters for QASM gate {gatename}.",
                         )
 
                 elif len(pieces) == 2:
-                    if gatetype == gates.I or not issubclass(
-                        gatetype, gates.ParametrizedGate
-                    ):
+                    if not issubclass(gatetype, gates.ParametrizedGate):
                         raise_error(ValueError, f"Invalid QASM command {command}.")
 
                     params = pieces[1].replace(" ", "").split(",")

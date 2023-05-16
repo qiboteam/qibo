@@ -10,7 +10,7 @@ from qibo.symbols import Z
 # defining an observable
 def hamiltonian(nqubits, backend):
     return hamiltonians.hamiltonians.SymbolicHamiltonian(
-        np.prod([Z(i) for i in range(nqubits)])
+        np.prod([Z(i) for i in range(nqubits)]), backend=backend
     )
 
 
@@ -22,6 +22,7 @@ def circuit(nqubits=1):
     c.add(gates.RY(q=0, theta=0))
     c.add(gates.RZ(q=0, theta=0))
     c.add(gates.M(0))
+
     return c
 
 
