@@ -27,7 +27,7 @@ def convert_state_to_count(state):
     return np.abs(state) ** 2
 
 
-def compute_cvar(probabilities, values, alpha):
+def compute_cvar(probabilities, values, alpha, thres=0.001):
     """
     Auxilliary method to computes CVaR for given probabilities, values, and confidence level.
 
@@ -35,6 +35,7 @@ def compute_cvar(probabilities, values, alpha):
         probabilities (list): list/array of probabilities
         values (list): list/array of corresponding values
         alpha (float): confidence level
+        thres (float): a small positive number to avoid division by zero.
 
     Returns:
         CVaR
@@ -45,7 +46,7 @@ def compute_cvar(probabilities, values, alpha):
     cum_probs = np.cumsum(probs)
     exceed_index = np.searchsorted(cum_probs, alpha, side="right")
     cvar = np.sum(probs[:exceed_index] * vals[:exceed_index]) / max(
-        cum_probs[exceed_index - 1], 0.0001
+        cum_probs[exceed_index - 1], thres
     )  # avodiing division by 0
     return cvar
 
