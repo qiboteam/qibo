@@ -12,7 +12,7 @@ concurrency:
 jobs:
   build:
     if: contains(join(github.event.pull_request.labels.*.name), 'run-on')
-    uses: qiboteam/workflows/.github/workflows/selfhosted.yml@selfhosted
+    uses: qiboteam/workflows/.github/workflows/selfhosted.yml@main
     with:
       used-labels: ${{ toJSON(github.event.pull_request.labels.*.name) }}
       python-version: "3.10"
