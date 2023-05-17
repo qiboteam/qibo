@@ -8,6 +8,7 @@ import pytest
 from scipy.linalg import expm
 
 from qibo import gates, hamiltonians, models
+from qibo.models.utils import cvar, gibbs
 from qibo.quantum_info import random_statevector
 
 REGRESSION_FOLDER = pathlib.Path(__file__).with_name("regressions")
@@ -330,12 +331,17 @@ def test_aavqe(backend, method, options, compile, filename):
         assert_regression_fixture(backend, params, filename, rtol=1e-2)
 
 
-@pytest.mark.parametrize("test_input,expected", [("cvar", -0.5), ("gibbs", -2.08)])
-def test_custom_loss(test_input, expected):
+@pytest.mark.parametrize(
+    "test_input, test_param, expected",
+    [(cvar, {"alpha": 0.1}, -0.5), (gibbs, {"eta": 0.1}, -2.08)],
+)
+def test_custom_loss(test_input, test_param, expected):
     from qibo import hamiltonians
 
     h = hamiltonians.XXZ(3)
     qaoa = models.QAOA(h)
     initial_p = [0.314, 0.22, 0.05, 0.59]
-    best, params, _ = qaoa.minimize(initial_p, mode=test_input)
+    best, params, _ = qaoa.minimize(
+        initial_p, loss_func=test_input, loss_func_param=test_param
+    )
     assert abs(best - expected) <= 0.01
