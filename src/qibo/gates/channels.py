@@ -39,7 +39,7 @@ class Channel(Gate):
     def apply_density_matrix(self, backend, state, nqubits):
         return backend.apply_channel_density_matrix(self, state, nqubits)
 
-    def to_choi(self, order: str = "row", backend=None):
+    def to_choi(self, nqubits: int = None, order: str = "row", backend=None):
         """Returns the Choi representation :math:`\\mathcal{E}`
         of the Kraus channel :math:`\\{K_{\\alpha}\\}_{\\alpha}`.
 
@@ -48,7 +48,11 @@ class Channel(Gate):
                 \\langle\\langle K_{\\alpha}|
 
         Args:
-            order (str, optional): If ``"row"``, vectorization of
+            nqubits (int, optional): total number of qubits to be considered
+                in a channel. Must be equal or greater than ``target_qubits``.
+                If ``None``, defaults to the number of target qubits in the
+                channel. Default is ``None``.
+            order (str, optional): if ``"row"``, vectorization of
                 Kraus operators is performed row-wise. If ``"column"``,
                 vectorization is done column-wise. If ``"system"``,
                 vectorization is done block-wise. Defaut is ``"row"``.
@@ -60,6 +64,12 @@ class Channel(Gate):
             Choi representation of the channel.
         """
 
+        if nqubits is not None and nqubits < 1 + max(self.target_qubits):
+            raise_error(
+                ValueError,
+                f"nqubits={nqubits}, but channel acts on qubit with index {max(self.target_qubits)}.",
+            )
+
         from qibo.quantum_info.superoperator_transformations import vectorization
 
         if backend is None:  # pragma: no cover
@@ -67,10 +77,11 @@ class Channel(Gate):
 
             backend = GlobalBackend()
 
-        self.nqubits = 1 + max(self.target_qubits)
+        self.nqubits = 1 + max(self.target_qubits) if nqubits is None else nqubits
 
         if isinstance(self, DepolarizingChannel) is True:
-            num_qubits = len(self.target_qubits)
+            # num_qubits = len(self.target_qubits)
+            num_qubits = 1 + max(self.target_qubits)
             num_terms = 4**num_qubits
             prob_pauli = self.init_kwargs["lam"] / num_terms
             probs = (num_terms - 1) * [prob_pauli]
@@ -101,10 +112,14 @@ class Channel(Gate):
 
         return super_op
 
-    def to_liouville(self, order: str = "row", backend=None):
+    def to_liouville(self, nqubits: int = None, order: str = "row", backend=None):
         """Returns the Liouville representation of the channel.
 
         Args:
+            nqubits (int, optional): total number of qubits to be considered
+                in a channel. Must be equal or greater than ``target_qubits``.
+                If ``None``, defaults to the number of target qubits in the
+                channel. Default is ``None``.
             order (str, optional): If ``"row"``, vectorization of
                 Kraus operators is performed row-wise. If ``"column"``,
                 vectorization is done column-wise. If ``"system"``,
@@ -124,16 +139,22 @@ class Channel(Gate):
 
             backend = GlobalBackend()
 
-        super_op = self.to_choi(order=order, backend=backend)
+        super_op = self.to_choi(nqubits=nqubits, order=order, backend=backend)
         super_op = choi_to_liouville(super_op, order=order, backend=backend)
 
         return super_op
 
-    def to_pauli_liouville(self, normalize: bool = False, backend=None):
+    def to_pauli_liouville(
+        self, nqubits: int = None, normalize: bool = False, backend=None
+    ):
         """Returns the Liouville representation of the channel
         in the Pauli basis.
 
         Args:
+            nqubits (int, optional): total number of qubits to be considered
+                in a channel. Must be equal or greater than ``target_qubits``.
+                If ``None``, defaults to the number of target qubits in the
+                channel. Default is ``None``.
             normalize (bool, optional): If ``True``, normalized basis is returned.
                 Defaults to False.
             backend (``qibo.backends.abstract.Backend``, optional): backend
@@ -151,7 +172,7 @@ class Channel(Gate):
 
             backend = GlobalBackend()
 
-        super_op = self.to_liouville(backend=backend)
+        super_op = self.to_liouville(nqubits=nqubits, backend=backend)
 
         # unitary that transforms from comp basis to pauli basis
         unitary = comp_basis_to_pauli(self.nqubits, normalize, backend=backend)
