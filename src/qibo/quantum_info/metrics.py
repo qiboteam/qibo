@@ -385,3 +385,129 @@ def gate_error(channel, target=None, backend=None):
     error = 1 - average_gate_fidelity(channel, target, backend=backend)
 
     return error
+
+
+def meyer_wallach_entanglement(circuit, backend=None):
+    """Computes the Meyer-Wallach entanglement Q of the `circuit`,
+
+    .. math::
+        Q = 1-\\frac{1}{N}\\sum_{k}\\text{Tr}\\left(\\rho_k^2(\\theta_i)\\right) \\,
+
+    Args:
+        circuit (:class:`qibo.models.Circuit`): Parametrized circuit.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses ``GlobalBackend()``.
+            Defaults to ``None``.
+
+    Returns:
+        float: Meyer-Wallach entanglement.
+    """
+
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    circuit.density_matrix = True
+    nqubits = circuit.nqubits
+
+    rho = backend.execute_circuit(circuit).state()
+
+    entropy = 0
+    for j in range(nqubits):
+        trace_q = list(range(nqubits))
+        trace_q.pop(j)
+
+        rho_r = backend.partial_trace_density_matrix(rho, trace_q, nqubits)
+
+        trace = purity(rho_r)
+
+        entropy += trace
+
+    entanglement = 1 - entropy / nqubits
+
+    return entanglement
+
+
+def entangling_capability(circuit, samples: int, backend=None):
+    """Returns the entangling capability :math:`\\text{Ent}` of a parametrized
+    circuit, which is average Meyer-Wallach entanglement Q of the circuit, i.e.
+
+    .. math::
+        \\text{Ent} = \\frac{2}{S}\\sum_{k}Q_k \\, ,
+
+    where :math:`S` is the number of samples.
+
+    Args:
+        circuit (:class:`qibo.models.Circuit`): Parametrized circuit.
+        samples (int): number of samples to estimate the integral.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses ``GlobalBackend()``.
+            Defaults to ``None``.
+
+    Returns:
+        float: Entangling capability.
+    """
+
+    if isinstance(samples, int) is False:
+        raise_error(
+            TypeError, f"samples must be type int, but it is type {type(samples)}."
+        )
+
+    from qibo.gates import I
+
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    res = []
+    for _ in range(samples):
+        params = np.random.uniform(-np.pi, np.pi, circuit.trainable_gates.nparams)
+        circuit.set_parameters(params)
+        entanglement = meyer_wallach_entanglement(circuit, backend=backend)
+        res.append(entanglement)
+
+    capability = 2 * np.real(np.sum(res)) / samples
+
+    return capability
+
+
+def expressibility(circuit, t: int, samples: int, backend=None):
+    """Returns the expressibility :math:`\\|A\\|_{HS}` of a parametrized
+    circuit, where
+
+    .. math::
+        A = \\int_{\\text{Haar}} d\\psi \\, \\left(|\\psi\\rangle\\right.\\left.
+            \\langle\\psi|\\right)^{\\otimes t} - \\int_{\\Theta} d\\psi \\,
+            \\left(|\\psi_{\\theta}\\rangle\\right.\\left.
+            \\langle\\psi_{\\theta}|\\right)^{\\otimes t}
+
+    Args:
+        circuit (:class:`qibo.models.Circuit`): Parametrized circuit.
+        t (int): power that defines the :math:`t`-design.
+        samples (int): number of samples to estimate the integrals.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses ``GlobalBackend()``.
+            Defaults to ``None``.
+
+    Returns:
+        float: Entangling capability.
+    """
+
+    if isinstance(t, int) is False:
+        raise_error(TypeError, f"t must be type int, but it is type {type(t)}.")
+
+    if isinstance(samples, int) is False:
+        raise_error(
+            TypeError, f"samples must be type int, but it is type {type(samples)}."
+        )
+
+    from qibo.quantum_info.utils import haar_integral, pqc_integral
+
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    expr = haar_integral(circuit.nqubits, t, samples, backend=backend) - pqc_integral(
+        circuit, t, samples, backend=backend
+    )
+
+    fid = fidelity(expr, expr)
+
+    return fid
