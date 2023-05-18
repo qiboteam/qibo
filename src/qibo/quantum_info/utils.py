@@ -7,34 +7,33 @@ import numpy as np
 
 from qibo.backends import GlobalBackend
 from qibo.config import PRECISION_TOL, raise_error
-from qibo.gates import gates
 
 # Phases corresponding to all 24 single-qubit Clifford gates
-SINGLE_QUBIT_CLIFFORDS = [
-    (gates.I,),
-    (gates.X,),
-    (gates.Y,),
-    (gates.Z,),
-    (gates.RX, np.pi / 2),
-    (gates.RX, -np.pi / 2),
-    (gates.RY, np.pi / 2),
-    (gates.RY, -np.pi / 2),
-    (gates.RZ, np.pi / 2),
-    (gates.RZ, -np.pi / 2),
-    (gates.RZ, gates.X, np.pi / 2),
-    (gates.RZ, gates.X, -np.pi / 2),
-    (gates.H,),
-    (gates.RY, gates.X, -np.pi / 2),
-    (gates.RX, gates.Y, np.pi / 2),
-    (gates.RX, gates.Y, -np.pi / 2),
-    (gates.RX, gates.RY, np.pi / 2, np.pi / 2),
-    (gates.RY, gates.RX, np.pi / 2, np.pi / 2),
-    (gates.RY, gates.RX, -np.pi / 2, np.pi / 2),
-    (gates.RX, gates.RY, np.pi / 2, -np.pi / 2),
-    (gates.RY, gates.RX, np.pi / 2, -np.pi / 2),
-    (gates.RX, gates.RY, -np.pi / 2, np.pi / 2),
-    (gates.RX, gates.RY, -np.pi / 2, -np.pi / 2),
-    (gates.RY, gates.RX, -np.pi / 2, -np.pi / 2),
+ONEQUBIT_CLIFFORD_PARAMS = [
+    (0, 0, 0, 0),
+    (np.pi, 1, 0, 0),
+    (np.pi, 0, 1, 0),
+    (np.pi, 0, 0, 1),
+    (np.pi / 2, 1, 0, 0),
+    (-np.pi / 2, 1, 0, 0),
+    (np.pi / 2, 0, 1, 0),
+    (-np.pi / 2, 0, 1, 0),
+    (np.pi / 2, 0, 0, 1),
+    (-np.pi / 2, 0, 0, 1),
+    (np.pi, 1 / np.sqrt(2), 1 / np.sqrt(2), 0),
+    (np.pi, 1 / np.sqrt(2), 0, 1 / np.sqrt(2)),
+    (np.pi, 0, 1 / np.sqrt(2), 1 / np.sqrt(2)),
+    (np.pi, -1 / np.sqrt(2), 1 / np.sqrt(2), 0),
+    (np.pi, 1 / np.sqrt(2), 0, -1 / np.sqrt(2)),
+    (np.pi, 0, -1 / np.sqrt(2), 1 / np.sqrt(2)),
+    (2 * np.pi / 3, 1 / np.sqrt(3), 1 / np.sqrt(3), 1 / np.sqrt(3)),
+    (-2 * np.pi / 3, 1 / np.sqrt(3), 1 / np.sqrt(3), 1 / np.sqrt(3)),
+    (2 * np.pi / 3, -1 / np.sqrt(3), 1 / np.sqrt(3), 1 / np.sqrt(3)),
+    (-2 * np.pi / 3, -1 / np.sqrt(3), 1 / np.sqrt(3), 1 / np.sqrt(3)),
+    (2 * np.pi / 3, 1 / np.sqrt(3), -1 / np.sqrt(3), 1 / np.sqrt(3)),
+    (-2 * np.pi / 3, 1 / np.sqrt(3), -1 / np.sqrt(3), 1 / np.sqrt(3)),
+    (2 * np.pi / 3, 1 / np.sqrt(3), 1 / np.sqrt(3), -1 / np.sqrt(3)),
+    (-2 * np.pi / 3, 1 / np.sqrt(3), 1 / np.sqrt(3), -1 / np.sqrt(3)),
 ]
 
 
