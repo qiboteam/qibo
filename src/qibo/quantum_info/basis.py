@@ -133,6 +133,7 @@ def comp_basis_to_pauli(
     normalize: bool = False,
     sparse: bool = False,
     order: str = "row",
+    pauli_order: str = "IXYZ",
     backend=None,
 ):
     """Unitary matrix :math:`U` that converts operators from the Liouville
@@ -176,6 +177,8 @@ def comp_basis_to_pauli(
         backend (``qibo.backends.abstract.Backend``, optional): backend to be
             used in the execution. If ``None``, it uses ``GlobalBackend()``.
             Defaults to ``None``.
+        pauli_order (str, optional): corresponds to the order of 4 single-qubit
+            Pauli elements. Default is "IXYZ".
 
     Returns:
         ndarray or tuple: Unitary matrix :math:`U`. If ``sparse=True``,
@@ -200,7 +203,13 @@ def comp_basis_to_pauli(
         return elements, indexes
 
     unitary = pauli_basis(
-        nqubits, normalize, vectorize=True, sparse=sparse, order=order, backend=backend
+        nqubits,
+        normalize,
+        vectorize=True,
+        sparse=sparse,
+        order=order,
+        pauli_order=pauli_order,
+        backend=backend,
     )
 
     unitary = np.conj(unitary)
@@ -214,6 +223,7 @@ def pauli_to_comp_basis(
     normalize: bool = False,
     sparse: bool = False,
     order: str = "row",
+    pauli_order: str = "IXYZ",
     backend=None,
 ):
     """Unitary matrix :math:`U` that converts operators from the
@@ -235,6 +245,8 @@ def pauli_to_comp_basis(
             performed row-wise. If ``"column"``, vectorization is performed
             column-wise. If ``"system"``, system-wise vectorization is
             performed. Default is ``"row"``.
+        pauli_order (str, optional): corresponds to the order of 4 single-qubit
+            Pauli elements. Default is "IXYZ".
         backend (``qibo.backends.abstract.Backend``, optional): backend to be
             used in the execution. If ``None``, it uses ``GlobalBackend()``.
             Defaults to ``None``.
@@ -246,7 +258,13 @@ def pauli_to_comp_basis(
         backend = GlobalBackend()
 
     unitary = pauli_basis(
-        nqubits, normalize, vectorize=True, sparse=False, order=order, backend=backend
+        nqubits,
+        normalize,
+        vectorize=True,
+        sparse=False,
+        order=order,
+        pauli_order=pauli_order,
+        backend=backend,
     )
     unitary = np.transpose(unitary)
 

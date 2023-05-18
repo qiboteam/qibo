@@ -83,5 +83,5 @@ def test_pauli_basis(
                     np.linalg.norm(pauli - pauli_test) < PRECISION_TOL, True
                 )
 
-        comp_basis_to_pauli(nqubits, normalize, sparse, order, backend)
-        pauli_to_comp_basis(nqubits, normalize, sparse, order, backend)
+        comp_basis_to_pauli(nqubits, normalize, sparse, order, pauli_order, backend)
+        pauli_to_comp_basis(nqubits, normalize, sparse, order, pauli_order, backend)
