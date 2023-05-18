@@ -207,7 +207,7 @@ def test_pauli_noise_channel(backend):
     test_representation = np.diag([a0, a1, a2, a3])
 
     liouville = gates.PauliNoiseChannel(0, list(zip(basis, pnp))).to_pauli_liouville(
-        True, backend
+        normalize=True, backend=backend
     )
     norm = backend.calculate_norm(backend.to_numpy(liouville) - test_representation)
 
