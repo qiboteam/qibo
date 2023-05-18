@@ -15,6 +15,7 @@ def pauli_basis(
     vectorize: bool = False,
     sparse: bool = False,
     order: str = None,
+    pauli_order: str = "IXYZ",
     backend=None,
 ):
     """Creates the ``nqubits``-qubit Pauli basis.
@@ -33,6 +34,8 @@ def pauli_basis(
             column-wise. If ``"system"``, system-wise vectorization is
             performed. If ``vectorization=False``, then ``order=None`` is
             forced. Default is ``None``.
+        pauli_order (str, optional): corresponds to the order of 4 single-qubit
+            Pauli elements. Default is "IXYZ".
         backend (``qibo.backends.abstract.Backend``, optional): backend to be
             used in the execution. If ``None``, it uses ``GlobalBackend()``.
             Defaults to ``None``.
@@ -64,6 +67,18 @@ def pauli_basis(
             f"sparse must be type bool, but it is type {type(sparse)} instead.",
         )
 
+    if not isinstance(pauli_order, str):
+        raise_error(
+            TypeError,
+            f"pauli_order must be type str, but it is type {type(pauli_order)} instead.",
+        )
+
+    if set(pauli_order) != {"I", "X", "Y", "Z"}:
+        raise_error(
+            ValueError,
+            f"pauli_order has to contain 4 symbols: I, X, Y, Z. Got {pauli_order} instead.",
+        )
+
     if vectorize and order is None:
         raise_error(ValueError, "when vectorize=True, order must be specified.")
 
@@ -76,7 +91,8 @@ def pauli_basis(
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    basis_single = [matrices.I, matrices.X, matrices.Y, matrices.Z]
+    pauli_labels = {"I": matrices.I, "X": matrices.X, "Y": matrices.Y, "Z": matrices.Z}
+    basis_single = [pauli_labels[label] for label in pauli_order]
 
     if nqubits > 1:
         basis_full = list(product(basis_single, repeat=nqubits))
