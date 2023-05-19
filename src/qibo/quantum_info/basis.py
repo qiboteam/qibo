@@ -196,6 +196,7 @@ def comp_basis_to_pauli(
             vectorize=True,
             sparse=sparse,
             order=order,
+            pauli_order=pauli_order,
             backend=backend,
         )
         elements = np.conj(elements)

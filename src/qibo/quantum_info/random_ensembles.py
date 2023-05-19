@@ -363,9 +363,11 @@ def random_density_matrix(
         pure (bool, optional): if ``True``, returns a pure state. Default is ``False``.
         metric (str, optional): metric to sample the density matrix from. Options:
             ``"Hilbert-Schmidt"`` and ``"Bures"``. Default is ``"Hilbert-Schmidt"``.
-        basis (str, optional): if ``"pauli"``, return random density matrix in the
-            Pauli basis. If ``None``, returns it in the computational basis.
-            Default is ``None``.
+        basis (str, optional): if ``None``, returns random density matrix in the
+            computational basis. If ``"pauli"``, returns it in the Pauli basis.
+            If "pauli-<pauli_order>", (e.g. "pauli-IZXY"), returns it in the Pauli basis
+            with the corresponding order of single-qubit Pauli elements
+            (see :func:`qibo.quantum_info.pauli_basis`). Default is ``None``.
         normalize(bool, optional): if ``True`` and ``basis="pauli"``, returns random
             density matrix in the normalized Pauli basis. If ``False`` and
             ``basis="pauli"``, returns state in the unnormalized Pauli basis.
@@ -401,7 +403,12 @@ def random_density_matrix(
     if basis is not None and not isinstance(basis, str):
         raise_error(TypeError, f"basis must be type str, but it is type {type(basis)}.")
     elif basis is not None and basis not in ["pauli"]:
-        raise_error(ValueError, f"basis {basis} nor recognized.")
+        if (
+            "pauli-" not in basis
+            or len(basis.split("-")) != 2
+            or set(basis.split("-")[1]) != {"I", "X", "Y", "Z"}
+        ):
+            raise_error(ValueError, f"basis {basis} nor recognized.")
 
     if not isinstance(normalize, bool):
         raise_error(
@@ -435,9 +442,15 @@ def random_density_matrix(
 
     state = backend.cast(state, dtype=state.dtype)
 
-    if basis == "pauli":
+    if basis is not None:
+        pauli_order = "IXYZ"
+        if "-" in basis:
+            pauli_order = basis.split("-")[1]
         unitary = comp_basis_to_pauli(
-            int(np.log2(dims)), normalize=normalize, backend=backend
+            int(np.log2(dims)),
+            normalize=normalize,
+            pauli_order=pauli_order,
+            backend=backend,
         )
         state = unitary @ vectorization(state, backend=backend)
 
@@ -679,6 +692,7 @@ def random_pauli_hamiltonian(
     nqubits: int,
     max_eigenvalue: Union[int, float] = None,
     normalize: bool = False,
+    pauli_order: str = "IXYZ",
     seed=None,
     backend=None,
 ):
@@ -691,6 +705,8 @@ def random_pauli_hamiltonian(
         normalize (bool, optional): If ``True``, fixes the gap of the
             Hamiltonian as ``1.0``. Moreover, if ``True``, then ``max_eigenvalue``
             must be ``> 1.0``. Defaults to ``False``.
+        pauli_order (str, optional): corresponds to the order of 4 single-qubit
+            Pauli elements in the basis. Default is "IXYZ".
         seed (int or ``numpy.random.Generator``, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
@@ -761,7 +777,9 @@ def random_pauli_hamiltonian(
         ):
             hamiltonian += eigenvalue * np.outer(eigenvector, np.conj(eigenvector))
 
-    U = comp_basis_to_pauli(nqubits, normalize=True, backend=backend)
+    U = comp_basis_to_pauli(
+        nqubits, normalize=True, pauli_order=pauli_order, backend=backend
+    )
 
     hamiltonian = np.real(U @ vectorization(hamiltonian, backend=backend))
 
