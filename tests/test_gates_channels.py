@@ -216,7 +216,7 @@ def test_pauli_noise_channel(backend, pauli_order):
     test_representation = np.diag([noise_elements[p] for p in pauli_order])
 
     liouville = gates.PauliNoiseChannel(0, list(zip(basis, pnp))).to_pauli_liouville(
-        True, pauli_order, backend
+        normalize=True, backend=backend
     )
     norm = backend.calculate_norm(backend.to_numpy(liouville) - test_representation)
 
