@@ -174,11 +174,11 @@ def comp_basis_to_pauli(
             performed row-wise. If ``"column"``, vectorization is performed
             column-wise. If ``"system"``, system-wise vectorization is
             performed. Default is ``"row"``.
+        pauli_order (str, optional): corresponds to the order of 4 single-qubit
+            Pauli elements. Default is "IXYZ".
         backend (``qibo.backends.abstract.Backend``, optional): backend to be
             used in the execution. If ``None``, it uses ``GlobalBackend()``.
             Defaults to ``None``.
-        pauli_order (str, optional): corresponds to the order of 4 single-qubit
-            Pauli elements. Default is "IXYZ".
 
     Returns:
         ndarray or tuple: Unitary matrix :math:`U`. If ``sparse=True``,
