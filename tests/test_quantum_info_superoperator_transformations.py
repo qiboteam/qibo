@@ -608,7 +608,9 @@ def test_pauli_to_chi(backend, normalize, order, pauli_order):
     test_chi = backend.cast(test_chi, dtype=test_chi.dtype)
     test_pauli = backend.cast(test_pauli, dtype=test_pauli.dtype)
 
-    chi_matrix = pauli_to_chi(test_pauli / aux, normalize, order, backend=backend)
+    chi_matrix = pauli_to_chi(
+        test_pauli / aux, normalize, order, pauli_order, backend=backend
+    )
 
     aux = 1.0 if normalize == False else dim
     backend.assert_allclose(

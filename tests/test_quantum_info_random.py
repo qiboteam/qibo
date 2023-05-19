@@ -130,7 +130,8 @@ def test_random_unitary(backend):
 
 @pytest.mark.parametrize("measure", [None, "haar"])
 @pytest.mark.parametrize(
-    "representation", ["chi", "choi", "kraus", "liouville", "pauli"]
+    "representation",
+    ["chi", "chi-IZXY", "choi", "kraus", "liouville", "pauli", "pauli-IZXY"],
 )
 def test_random_quantum_channel(backend, representation, measure):
     with pytest.raises(TypeError):

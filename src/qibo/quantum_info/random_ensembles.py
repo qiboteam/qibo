@@ -221,7 +221,9 @@ def random_quantum_channel(
             Chi representation. If ``"choi"``, returns channel in Choi representation.
             If ``"kraus"``, returns Kraus representation of channel. If ``"liouville"``,
             returns Liouville representation. If ``"pauli"``, returns Pauli-Liouville
-            representation. Defaults to ``"liouville"``.
+            representation. If "pauli-<pauli_order>" or "chi-<pauli_order>", (e.g. "pauli-IZXY"),
+            returns it in the Pauli basis with the corresponding order of single-qubit Pauli elements
+            (see :func:`qibo.quantum_info.pauli_basis`). Defaults to ``"liouville"``.
         measure (str, optional): probability measure in which to sample the unitary
             from. If ``None``, functions returns :math:`\\exp{(-i \\, H)}`, where
             :math:`H` is a Hermitian operator. If ``"haar"``, returns an Unitary
@@ -254,15 +256,27 @@ def random_quantum_channel(
         )
 
     if representation not in ["chi", "choi", "kraus", "liouville", "pauli"]:
-        raise_error(ValueError, f"representation {representation} not found.")
+        if (
+            ("chi-" not in representation and "pauli-" not in representation)
+            or len(representation.split("-")) != 2
+            or set(representation.split("-")[1]) != {"I", "X", "Y", "Z"}
+        ):
+            raise_error(ValueError, f"representation {representation} not found.")
 
     super_op = random_unitary(dims, measure, seed, backend)
     super_op = vectorization(super_op, order=order, backend=backend)
     super_op = np.outer(super_op, np.conj(super_op))
 
-    if representation == "chi":
+    if "chi" in representation:
+        pauli_order = "IXYZ"
+        if "-" in representation:
+            pauli_order = representation.split("-")[1]
         super_op = choi_to_chi(
-            super_op, normalize=normalize, order=order, backend=backend
+            super_op,
+            normalize=normalize,
+            order=order,
+            pauli_order=pauli_order,
+            backend=backend,
         )
     elif representation == "kraus":
         super_op = choi_to_kraus(
@@ -274,9 +288,16 @@ def random_quantum_channel(
         )
     elif representation == "liouville":
         super_op = choi_to_liouville(super_op, order=order, backend=backend)
-    elif representation == "pauli":
+    elif "pauli" in representation:
+        pauli_order = "IXYZ"
+        if "-" in representation:
+            pauli_order = representation.split("-")[1]
         super_op = choi_to_pauli(
-            super_op, normalize=normalize, order=order, backend=backend
+            super_op,
+            normalize=normalize,
+            order=order,
+            pauli_order=pauli_order,
+            backend=backend,
         )
 
     return super_op
