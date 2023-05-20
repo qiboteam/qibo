@@ -45,7 +45,7 @@ def entropy(state, base: float = 2, validate: bool = False, backend=None):
         base (float, optional): the base of the log. Default: 2.
         validate (bool, optional): if ``True``, checks if ``state`` is Hermitian. If ``False``,
             it assumes ``state`` is Hermitian . Default: ``False``.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses ``GlobalBackend()``.
             Defaults to ``None``.
 
@@ -113,7 +113,9 @@ def trace_distance(state, target, validate: bool = False, backend=None):
     """Trace distance between two quantum states, :math:`\\rho` and :math:`\\sigma`:
 
     .. math::
-        T(\\rho, \\sigma) = \\frac{1}{2} \\, \\|\\rho - \\sigma\\|_{1} = \\frac{1}{2} \\, \\text{Tr}\\left[ \\sqrt{(\\rho - \\sigma)^{\\dagger}(\\rho - \\sigma)} \\right] \\, ,
+        T(\\rho, \\sigma) = \\frac{1}{2} \\, \\|\\rho - \\sigma\\|_{1} = \\frac{1}{2} \\,
+            \\text{Tr}\\left[ \\sqrt{(\\rho - \\sigma)^{\\dagger}(\\rho - \\sigma)}
+            \\right] \\, ,
 
     where :math:`\\|\\cdot\\|_{1}` is the Schatten 1-norm.
 
@@ -122,7 +124,7 @@ def trace_distance(state, target, validate: bool = False, backend=None):
         target: state vector or density matrix.
         validate (bool, optional): if ``True``, checks if :math:`\\rho - \\sigma` is Hermitian.
             If ``False``, it assumes the difference is Hermitian. Default: ``False``.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses ``GlobalBackend()``.
             Defaults to ``None``.
 
@@ -180,7 +182,8 @@ def hilbert_schmidt_distance(state, target):
     """Hilbert-Schmidt distance between two quantum states:
 
     .. math::
-        <\\rho \\, , \\, \\sigma>_{\\text{HS}} = \\text{Tr}\\left((\\rho - \\sigma)^{2}\\right)
+        \\langle \\rho \\, , \\, \\sigma \\rangle_{\\text{HS}} =
+            \\text{Tr}\\left((\\rho - \\sigma)^{2}\\right)
 
     Args:
         state: state vector or density matrix.
@@ -217,7 +220,9 @@ def fidelity(state, target, validate: bool = False):
     """Fidelity between two quantum states (when at least one state is pure).
 
     .. math::
-        F(\\rho, \\sigma) = \\text{Tr}^{2}\\left( \\sqrt{\\sqrt{\\sigma} \\, \\rho^{\\dagger} \\, \\sqrt{\\sigma}} \\right) = \\text{Tr}(\\rho \\, \\sigma)
+        F(\\rho, \\sigma) = \\text{Tr}^{2}\\left( \\sqrt{\\sqrt{\\sigma} \\,
+            \\rho^{\\dagger} \\, \\sqrt{\\sigma}} \\right) =
+            \\text{Tr}(\\rho \\, \\sigma)
 
     where the last equality holds because the ``target`` state
     :math:`\\sigma` is assumed to be pure.
@@ -274,7 +279,8 @@ def process_fidelity(channel, target=None, validate: bool = False, backend=None)
     """Process fidelity between two quantum channels (when at least one channel is` unitary),
 
     .. math::
-        F_{pro}(\\mathcal{E}, \\mathcal{U}) = \\frac{1}{d^{2}} \\, \\text{Tr}(\\mathcal{E}^{\\dagger} \\, \\mathcal{U})
+        F_{pro}(\\mathcal{E}, \\mathcal{U}) = \\frac{1}{d^{2}} \\,
+            \\text{Tr}(\\mathcal{E}^{\\dagger} \\, \\mathcal{U})
 
     Args:
         channel: quantum channel.
@@ -282,7 +288,7 @@ def process_fidelity(channel, target=None, validate: bool = False, backend=None)
             Default: ``None``.
         validate (bool, optional): if True, checks if one of the
             input channels is unitary. Default: ``False``.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses ``GlobalBackend()``.
             Defaults to ``None``.
 
@@ -331,7 +337,8 @@ def average_gate_fidelity(channel, target=None, backend=None):
     """Average gate fidelity between two quantum channels (when at least one channel is unitary),
 
     .. math::
-        F_{\\text{avg}}(\\mathcal{E}, \\mathcal{U}) = \\frac{d \\, F_{pro}(\\mathcal{E}, \\mathcal{U}) + 1}{d + 1}
+        F_{\\text{avg}}(\\mathcal{E}, \\mathcal{U}) = \\frac{d \\,
+            F_{pro}(\\mathcal{E}, \\mathcal{U}) + 1}{d + 1}
 
     where :math:`d` is the dimension of the channels and
     :math:`F_{pro}(\\mathcal{E}, \\mathcal{U})` is the
@@ -344,7 +351,7 @@ def average_gate_fidelity(channel, target=None, backend=None):
         target (optional): quantum channel :math:`\\mathcal{U}`.
             If ``None``, target is the Identity channel.
             Default is ``None``.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses ``GlobalBackend()``.
             Defaults to ``None``.
 
@@ -375,7 +382,7 @@ def gate_error(channel, target=None, backend=None):
         channel: quantum channel :math:`\\mathcal{E}`.
         target (optional): quantum channel :math:`\\mathcal{U}`. If ``None``,
             target is the Identity channel. Default is ``None``.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses ``GlobalBackend()``.
             Defaults to ``None``.
 

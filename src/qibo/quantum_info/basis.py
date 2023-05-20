@@ -1,5 +1,6 @@
 from functools import reduce
 from itertools import product
+from typing import Optional
 
 import numpy as np
 
@@ -14,7 +15,7 @@ def pauli_basis(
     normalize: bool = False,
     vectorize: bool = False,
     sparse: bool = False,
-    order: str = None,
+    order: Optional[str] = None,
     backend=None,
 ):
     """Creates the ``nqubits``-qubit Pauli basis.
@@ -33,8 +34,8 @@ def pauli_basis(
             column-wise. If ``"system"``, system-wise vectorization is
             performed. If ``vectorization=False``, then ``order=None`` is
             forced. Default is ``None``.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be
-            used in the execution. If ``None``, it uses ``GlobalBackend()``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses ``GlobalBackend()``.
             Defaults to ``None``.
 
     Returns:

@@ -2,7 +2,7 @@
 
 import warnings
 from functools import reduce
-from typing import Union
+from typing import Optional, Union
 
 import numpy as np
 
@@ -23,7 +23,7 @@ from qibo.quantum_info.utils import ONEQUBIT_CLIFFORD_PARAMS
 
 def random_gaussian_matrix(
     dims: int,
-    rank: int = None,
+    rank: Optional[int] = None,
     mean: float = 0,
     stddev: float = 1,
     seed=None,
@@ -49,7 +49,7 @@ def random_gaussian_matrix(
         seed (int or ``numpy.random.Generator``, optional): Either a generator of random
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses ``GlobalBackend()``.
             Defaults to ``None``.
 
@@ -119,7 +119,7 @@ def random_hermitian(
         seed (int or ``numpy.random.Generator``, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Default is ``None``.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses ``GlobalBackend()``.
             Defaults to ``None``.
 
@@ -149,7 +149,7 @@ def random_hermitian(
     return matrix
 
 
-def random_unitary(dims: int, measure: str = None, seed=None, backend=None):
+def random_unitary(dims: int, measure: Optional[str] = None, seed=None, backend=None):
     """Returns a random Unitary operator :math:`U`,, i.e.
     a random operator such that :math:`U^{-1} = U^{\\dagger}`.
 
@@ -162,7 +162,7 @@ def random_unitary(dims: int, measure: str = None, seed=None, backend=None):
         seed (int or ``numpy.random.Generator``, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses ``GlobalBackend()``.
             Defaults to ``None``.
 
@@ -205,10 +205,10 @@ def random_unitary(dims: int, measure: str = None, seed=None, backend=None):
 def random_quantum_channel(
     dims: int,
     representation: str = "liouville",
-    measure: str = None,
+    measure: Optional[str] = None,
     order: str = "row",
     normalize: bool = False,
-    precision_tol: float = None,
+    precision_tol: Optional[float] = None,
     seed=None,
     backend=None,
 ):
@@ -240,7 +240,7 @@ def random_quantum_channel(
         seed (int or ``numpy.random.Generator``, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses ``GlobalBackend()``.
             Defaults to ``None``.
 
@@ -300,7 +300,7 @@ def random_statevector(dims: int, haar: bool = False, seed=None, backend=None):
         seed (int or ``numpy.random.Generator``, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Default is ``None``.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses ``GlobalBackend()``.
             Defaults to ``None``.
 
@@ -346,10 +346,10 @@ def random_statevector(dims: int, haar: bool = False, seed=None, backend=None):
 
 def random_density_matrix(
     dims: int,
-    rank: int = None,
+    rank: Optional[int] = None,
     pure: bool = False,
     metric: str = "Hilbert-Schmidt",
-    basis: str = None,
+    basis: Optional[str] = None,
     normalize: bool = False,
     seed=None,
     backend=None,
@@ -373,7 +373,7 @@ def random_density_matrix(
         seed (int or ``numpy.random.Generator``, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Default is ``None``.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses ``GlobalBackend()``.
             Defaults to ``None``.
 
@@ -460,7 +460,7 @@ def random_clifford(
         seed (int or ``numpy.random.Generator``, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Default is ``None``.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses ``GlobalBackend()``.
             Defaults to ``None``.
 
@@ -536,8 +536,8 @@ def random_clifford(
 def random_pauli(
     qubits,
     depth: int,
-    max_qubits: int = None,
-    subset: list = None,
+    max_qubits: Optional[int] = None,
+    subset: Optional[list] = None,
     return_circuit: bool = True,
     seed=None,
     backend=None,
@@ -563,7 +563,7 @@ def random_pauli(
         seed (int or ``numpy.random.Generator``, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses ``GlobalBackend()``.
             Defaults to ``None``.
 
@@ -677,7 +677,7 @@ def random_pauli(
 
 def random_pauli_hamiltonian(
     nqubits: int,
-    max_eigenvalue: Union[int, float] = None,
+    max_eigenvalue: Optional[Union[int, float]] = None,
     normalize: bool = False,
     seed=None,
     backend=None,
@@ -694,7 +694,7 @@ def random_pauli_hamiltonian(
         seed (int or ``numpy.random.Generator``, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses ``GlobalBackend()``.
             Defaults to ``None``.
 
@@ -772,8 +772,8 @@ def random_stochastic_matrix(
     dims: int,
     bistochastic: bool = False,
     diagonally_dominant: bool = False,
-    precision_tol: float = None,
-    max_iterations: int = None,
+    precision_tol: Optional[float] = None,
+    max_iterations: Optional[int] = None,
     seed=None,
     backend=None,
 ):
@@ -795,7 +795,7 @@ def random_stochastic_matrix(
         seed (int or ``numpy.random.Generator``, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a statevectorgenerator with a random seed. Default is ``None``.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses ``GlobalBackend()``.
             Defaults to ``None``.
 
