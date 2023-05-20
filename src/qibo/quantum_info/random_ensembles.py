@@ -385,14 +385,14 @@ def random_density_matrix(
         metric (str, optional): metric to sample the density matrix from. Options:
             ``"Hilbert-Schmidt"`` and ``"Bures"``. Default is ``"Hilbert-Schmidt"``.
         basis (str, optional): if ``None``, returns random density matrix in the
-            computational basis. If ``"pauli"``, returns it in the Pauli basis.
-            If "pauli-<pauli_order>", (e.g. "pauli-IZXY"), returns it in the Pauli basis
-            with the corresponding order of single-qubit Pauli elements
-            (see :func:`qibo.quantum_info.pauli_basis`). Default is ``None``.
-        normalize(bool, optional): if ``True`` and ``basis="pauli"``, returns random
-            density matrix in the normalized Pauli basis. If ``False`` and
-            ``basis="pauli"``, returns state in the unnormalized Pauli basis.
-            Defaults to ``False``.
+            computational basis. If ``"pauli-<pauli_order>"``, (e.g. ``"pauli-IZXY"``),
+            returns it in the Pauli basis with the corresponding order of single-qubit
+            Pauli elements (see :func:`qibo.quantum_info.pauli_basis`).
+            Default is ``None``.
+        normalize(bool, optional): if ``True`` and ``basis="pauli-<pauli-order>"``,
+            returns random density matrix in the normalized Pauli basis. If ``False``
+            and ``basis="pauli-<pauli-order>"``, returns state in the unnormalized
+            Pauli basis. Defaults to ``False``.
         seed (int or ``numpy.random.Generator``, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Default is ``None``.
@@ -464,9 +464,7 @@ def random_density_matrix(
     state = backend.cast(state, dtype=state.dtype)
 
     if basis is not None:
-        pauli_order = "IXYZ"
-        if "-" in basis:
-            pauli_order = basis.split("-")[1]
+        pauli_order = basis.split("-")[1]
         unitary = comp_basis_to_pauli(
             int(np.log2(dims)),
             normalize=normalize,

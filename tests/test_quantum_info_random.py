@@ -168,7 +168,7 @@ def test_random_statevector(backend, haar, seed):
 
 
 @pytest.mark.parametrize("normalize", [False, True])
-@pytest.mark.parametrize("basis", [None, "pauli", "pauli-IZXY"])
+@pytest.mark.parametrize("basis", [None, "pauli-IXYZ", "pauli-IZXY"])
 @pytest.mark.parametrize("metric", ["Hilbert-Schmidt", "Bures"])
 @pytest.mark.parametrize("pure", [False, True])
 @pytest.mark.parametrize("dims", [2, 4])
