@@ -737,6 +737,7 @@ function.
             fidelity = tf.math.abs(tf.reduce_sum(tf.math.conj(target_state) * final_state))
             loss = 1 - fidelity
         grads = tape.gradient(loss, params)
+        # grads = tf.math.real(grads)
         optimizer.apply_gradients(zip([grads], [params]))
 
 
@@ -770,6 +771,7 @@ For example:
             fidelity = tf.math.abs(tf.reduce_sum(tf.math.conj(target_state) * final_state))
             loss = 1 - fidelity
         grads = tape.gradient(loss, params)
+        grads = tf.math.real(grads)
         optimizer.apply_gradients(zip([grads], [params]))
 
     for _ in range(nepochs):
