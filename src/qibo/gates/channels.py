@@ -460,7 +460,7 @@ class PauliNoiseChannel(UnitaryChannel):
         self.init_kwargs = dict(operators)
 
 
-class DepolarizingChannel(Channel):
+class DepolarizingChannel(PauliNoiseChannel):
     """:math:`n`-qubit Depolarizing quantum error channel,
 
     .. math::
@@ -485,7 +485,6 @@ class DepolarizingChannel(Channel):
         if isinstance(qubits, int) is True:
             qubits = (qubits,)
 
-        super().__init__()
         num_qubits = len(qubits)
         num_terms = 4**num_qubits
         max_param = num_terms / (num_terms - 1)
@@ -494,6 +493,12 @@ class DepolarizingChannel(Channel):
                 ValueError,
                 f"Depolarizing parameter must be in between 0 and {max_param}.",
             )
+
+        pauli_noise_params = list(product(["I", "X", "Y", "Z"], repeat=num_qubits))[1::]
+        pauli_noise_params = zip(
+            pauli_noise_params, [lam / num_terms] * (num_terms - 1)
+        )
+        super().__init__(qubits, pauli_noise_params)
 
         self.name = "DepolarizingChannel"
         self.draw_label = "D"
@@ -504,22 +509,6 @@ class DepolarizingChannel(Channel):
 
     def apply_density_matrix(self, backend, state, nqubits):
         return backend.depolarizing_error_density_matrix(self, state, nqubits)
-
-    def apply(self, backend, state, nqubits):
-        num_qubits = len(self.target_qubits)
-        num_terms = 4**num_qubits
-        prob_pauli = self.init_kwargs["lam"] / num_terms
-        probs = (num_terms - 1) * [prob_pauli]
-        gates = []
-        for pauli_list in list(product([I, X, Y, Z], repeat=num_qubits))[1::]:
-            fgate = FusedGate(*self.target_qubits)
-            for j, pauli in enumerate(pauli_list):
-                fgate.append(pauli(j))
-            gates.append(fgate)
-        self.gates = tuple(gates)
-        self.coefficients = tuple(probs)
-
-        return backend.apply_channel(self, state, nqubits)
 
 
 class ThermalRelaxationChannel(KrausChannel):
