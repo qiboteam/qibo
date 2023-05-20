@@ -79,21 +79,6 @@ class Channel(Gate):
 
         self.nqubits = 1 + max(self.target_qubits) if nqubits is None else nqubits
 
-        if isinstance(self, DepolarizingChannel) is True:
-            # num_qubits = len(self.target_qubits)
-            num_qubits = 1 + max(self.target_qubits)
-            num_terms = 4**num_qubits
-            prob_pauli = self.init_kwargs["lam"] / num_terms
-            probs = (num_terms - 1) * [prob_pauli]
-            gates = []
-            for pauli_list in list(product([I, X, Y, Z], repeat=num_qubits))[1::]:
-                fgate = FusedGate(*self.target_qubits)
-                for j, pauli in enumerate(pauli_list):
-                    fgate.append(pauli(j))
-                gates.append(fgate)
-            self.gates = tuple(gates)
-            self.coefficients = tuple(probs)
-
         if type(self) not in [KrausChannel, ReadoutErrorChannel]:
             p0 = 1 - sum(self.coefficients)
             if p0 > PRECISION_TOL:
