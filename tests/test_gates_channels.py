@@ -214,7 +214,9 @@ def test_pauli_noise_channel(backend):
 
 def test_depolarizing_channel_errors():
     with pytest.raises(ValueError):
-        gates.DepolarizingChannel(0, 1.5)
+        test = gates.DepolarizingChannel(0, 1.5)
+    with pytest.raises(ValueError):
+        test = gates.DepolarizingChannel([0, 1], 0.1).to_choi(nqubits=1)
 
 
 def test_depolarizing_channel(backend):
