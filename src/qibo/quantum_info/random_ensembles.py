@@ -452,7 +452,7 @@ def random_clifford(
     Args:
         qubits (int or list or ndarray): if ``int``, the number of qubits for the Clifford.
             If ``list`` or ``ndarray``, indexes of the qubits for the Clifford to act on.
-        return_circuit (bool, optional): if ``True``, returns a ``qibo.gates.Unitary``
+        return_circuit (bool, optional): if ``True``, returns a :class:`qibo.gates.Unitary`
             object. If ``False``, returns an ``ndarray`` object. Default is ``False``.
         fuse (bool, optional): if ``False``, returns an ``ndarray`` with one Clifford
             gate per qubit. If ``True``, returns the tensor product of the Clifford
@@ -465,7 +465,7 @@ def random_clifford(
             Defaults to ``None``.
 
     Returns:
-        (ndarray or ``qibo.gates.Unitary``): Random Clifford operator(s).
+        (ndarray or :class:`qibo.gates.Unitary`): Random Clifford operator(s).
     """
 
     if (
@@ -557,7 +557,7 @@ def random_pauli(
         subset (list, optional): list containing a subset of the 4 single-qubit
             Pauli operators. If ``None``, defaults to the complete set.
             Defaults to ``None``.
-        return_circuit (bool, optional): if ``True``, returns a ``qibo.models.Circuit``
+        return_circuit (bool, optional): if ``True``, returns a :class:`qibo.models.Circuit`
             object. If ``False``, returns an ``ndarray`` with shape (qubits, depth, 2, 2)
             that contains all Pauli matrices that were sampled. Defaults to ``True``.
         seed (int or ``numpy.random.Generator``, optional): Either a generator of
@@ -568,7 +568,7 @@ def random_pauli(
             Defaults to ``None``.
 
     Returns:
-        (ndarray or ``qibo.models.Circuit``): all sampled Pauli operators.
+        (ndarray or :class:`qibo.models.Circuit`): all sampled Pauli operators.
 
     """
 

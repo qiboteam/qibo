@@ -158,7 +158,7 @@ def comp_basis_to_pauli(
             performed row-wise. If ``"column"``, vectorization is performed
             column-wise. If ``"system"``, system-wise vectorization is
             performed. Default is ``"row"``.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses ``GlobalBackend()``.
             Defaults to ``None``.
 
@@ -220,7 +220,7 @@ def pauli_to_comp_basis(
             performed row-wise. If ``"column"``, vectorization is performed
             column-wise. If ``"system"``, system-wise vectorization is
             performed. Default is ``"row"``.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses ``GlobalBackend()``.
             Defaults to ``None``.
 
