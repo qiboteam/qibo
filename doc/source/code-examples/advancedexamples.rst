@@ -725,7 +725,7 @@ function.
     target_state = tf.ones(4, dtype=tf.complex128) / 2.0
 
     # Define circuit ansatz
-    params = tf.Variable(tf.random.uniform((2,), dtype=tf.complex128))
+    params = tf.Variable(tf.random.uniform((2,), dtype=tf.float64))
     c = models.Circuit(2)
     c.add(gates.RX(0, params[0]))
     c.add(gates.RY(1, params[1]))
@@ -759,7 +759,7 @@ For example:
     nepochs = 1000
     optimizer = tf.keras.optimizers.Adam()
     target_state = tf.ones(4, dtype=tf.complex128) / 2.0
-    params = tf.Variable(tf.random.uniform((2,), dtype=tf.complex128))
+    params = tf.Variable(tf.random.uniform((2,), dtype=tf.float64))
 
     @tf.function
     def optimize(params):
