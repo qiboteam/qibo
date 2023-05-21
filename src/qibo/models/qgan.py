@@ -257,10 +257,13 @@ class StyleQGAN:
         # determine half the size of one batch, for updating the discriminator
         half_samples = int(self.batch_samples / 2)
         if self.initial_params is not None:
-            initial_params = tf.Variable(self.initial_params)
+            initial_params = tf.Variable(self.initial_params, dtype=tf.complex128)
         else:
             n = 10 * self.layers * self.nqubits + 2 * self.nqubits
-            initial_params = tf.Variable(np.random.uniform(-0.15, 0.15, n))
+            initial_params = tf.Variable(
+                np.random.uniform(-0.15, 0.15, n), dtype=tf.complex128
+            )
+
         optimizer = tf.optimizers.Adadelta(learning_rate=self.lr)
         # prepare real samples
         s = self.reference
