@@ -46,8 +46,8 @@ def entropy(state, base: float = 2, validate: bool = False, backend=None):
         validate (bool, optional): if ``True``, checks if ``state`` is Hermitian. If ``False``,
             it assumes ``state`` is Hermitian . Default: ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses ``GlobalBackend()``.
-            Defaults to ``None``.
+            in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
     Returns:
         float: The von-Neumann entropy :math:`S(\\rho)`.
@@ -125,7 +125,7 @@ def trace_distance(state, target, validate: bool = False, backend=None):
         validate (bool, optional): if ``True``, checks if :math:`\\rho - \\sigma` is Hermitian.
             If ``False``, it assumes the difference is Hermitian. Default: ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses ``GlobalBackend()``.
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
 
     Returns:
@@ -284,12 +284,12 @@ def process_fidelity(channel, target=None, validate: bool = False, backend=None)
 
     Args:
         channel: quantum channel.
-        target (optional): quantum channel. If None, target is the Identity channel.
+        target (optional): quantum channel. If ``None``, target is the Identity channel.
             Default: ``None``.
         validate (bool, optional): if True, checks if one of the
             input channels is unitary. Default: ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses ``GlobalBackend()``.
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
 
     Returns:
@@ -349,10 +349,9 @@ def average_gate_fidelity(channel, target=None, backend=None):
     Args:
         channel: quantum channel :math:`\\mathcal{E}`.
         target (optional): quantum channel :math:`\\mathcal{U}`.
-            If ``None``, target is the Identity channel.
-            Default is ``None``.
+            If ``None``, target is the Identity channel. Default is ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses ``GlobalBackend()``.
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
 
     Returns:
@@ -383,7 +382,7 @@ def gate_error(channel, target=None, backend=None):
         target (optional): quantum channel :math:`\\mathcal{U}`. If ``None``,
             target is the Identity channel. Default is ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses ``GlobalBackend()``.
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
 
     Returns:
@@ -403,7 +402,7 @@ def meyer_wallach_entanglement(circuit, backend=None):
     Args:
         circuit (:class:`qibo.models.Circuit`): Parametrized circuit.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses ``GlobalBackend()``.
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
 
     Returns:
@@ -447,7 +446,7 @@ def entangling_capability(circuit, samples: int, backend=None):
         circuit (:class:`qibo.models.Circuit`): Parametrized circuit.
         samples (int): number of samples to estimate the integral.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses ``GlobalBackend()``.
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
 
     Returns:
@@ -491,7 +490,7 @@ def expressibility(circuit, t: int, samples: int, backend=None):
         t (int): power that defines the :math:`t`-design.
         samples (int): number of samples to estimate the integrals.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses ``GlobalBackend()``.
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
 
     Returns:

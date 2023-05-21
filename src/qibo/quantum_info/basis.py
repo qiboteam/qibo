@@ -35,8 +35,8 @@ def pauli_basis(
             performed. If ``vectorization=False``, then ``order=None`` is
             forced. Default is ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
-            to be used in the execution. If ``None``, it uses ``GlobalBackend()``.
-            Defaults to ``None``.
+            to be used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
     Returns:
         ndarray or tuple: all Pauli matrices forming the basis. If ``sparse=True``
@@ -159,8 +159,8 @@ def comp_basis_to_pauli(
             column-wise. If ``"system"``, system-wise vectorization is
             performed. Default is ``"row"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
-            used in the execution. If ``None``, it uses ``GlobalBackend()``.
-            Defaults to ``None``.
+            used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
     Returns:
         ndarray or tuple: Unitary matrix :math:`U`. If ``sparse=True``,
@@ -221,8 +221,8 @@ def pauli_to_comp_basis(
             column-wise. If ``"system"``, system-wise vectorization is
             performed. Default is ``"row"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
-            used in the execution. If ``None``, it uses ``GlobalBackend()``.
-            Defaults to ``None``.
+            used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
     Returns:
         Unitary matrix :math:`U`.
