@@ -146,8 +146,6 @@ def test_unitary_channel(backend):
     )
     backend.assert_allclose(final_state, target_state)
 
-    channel.to_choi(backend=backend)
-
     # checking old initialisation
     old = gates.UnitaryChannel(probabilities, list(zip(qubits, [a1, a2])))
     backend.assert_allclose(
@@ -225,7 +223,9 @@ def test_pauli_noise_channel(backend, pauli_order):
 
 def test_depolarizing_channel_errors():
     with pytest.raises(ValueError):
-        gates.DepolarizingChannel(0, 1.5)
+        test = gates.DepolarizingChannel(0, 1.5)
+    with pytest.raises(ValueError):
+        test = gates.DepolarizingChannel([0, 1], 0.1).to_choi(nqubits=1)
 
 
 def test_depolarizing_channel(backend):
