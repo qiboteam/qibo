@@ -215,24 +215,38 @@ Adiabatic evolution
 Error Mitigation
 ^^^^^^^^^^^^^^^^
 
-Qibo allows for mitigating noise in circuits via error mitigation methods. Unlike error correction, error mitigation does not aim to correct qubit errors, but rather it provides the means to estimate the noise-free expected value of an observable measured at the end of a noisy circuit.
+Qibo allows for mitigating noise in circuits via error mitigation methods.
+Unlike error correction, error mitigation does not aim to correct qubit errors,
+but rather it provides the means to estimate the noise-free expected value of
+an observable measured at the end of a noisy circuit.
 
 Readout Mitigation
 """"""""""""""""""
 
-A common kind of error happening in quantum circuits is readout error, i.e. the error in the measurement of the qubits at the end of the computation. In Qibo there are currently two methods implemented for mitigating readout errors, and both can be used as standalone functions or in combination with the other general mitigation methods by setting the paramter `readout`.
+A common kind of error happening in quantum circuits is readout error, i.e. the
+error in the measurement of the qubits at the end of the computation.
+In Qibo there are currently two methods implemented for mitigating readout errors,
+and both can be used as standalone functions or in combination with the other
+general mitigation methods by setting the paramter `readout`.
 
 
 Calibration Matrix
 """"""""""""""""""
-Given :math:`n` qubits, all the possible :math:`2^n` states are constructed via the application of the corresponding sequence of :math:`X` gates :math:`X_0\otimes I_1\otimes\cdot\cdot\cdot\otimes X_{n-1}`. In the presence of readout errors, we will measure for each state :math:`i` some noisy frequencies :math:`F_i^{noisy}` different from the ideal ones :math:`F_i^{ideal}=\delta_{i,j}`.
+Given :math:`n` qubits, all the possible :math:`2^n` states are constructed via the
+application of the corresponding sequence of :math:`X` gates
+:math:`X_0\otimes I_1\otimes\cdot\cdot\cdot\otimes X_{n-1}`.
+In the presence of readout errors, we will measure for each state :math:`i` some noisy
+frequencies :math:`F_i^{noisy}` different from the ideal ones
+:math:`F_i^{ideal}=\delta_{i,j}`.
 
-The effect of the error is modeled by the matrix composed of the noisy frequencies as columns :math:`M=\big(F_0^{noisy},...,F_{n-1}^{noisy}\big)`. We have indeed that:
+The effect of the error is modeled by the matrix composed of the noisy frequencies as
+columns :math:`M=\big(F_0^{noisy},...,F_{n-1}^{noisy}\big)`. We have indeed that:
 
 .. math::
    F_i^{noisy} = M \cdot F_i^{ideal}
 
-and, therefore, the calibration matrix obtained as :math:`M_{\text{cal}}=M^{-1}` can be used to recover the noise-free frequencies.
+and, therefore, the calibration matrix obtained as :math:`M_{\text{cal}}=M^{-1}`
+can be used to recover the noise-free frequencies.
 
 .. autofunction:: qibo.models.error_mitigation.calibration_matrix
 
@@ -242,7 +256,11 @@ and, therefore, the calibration matrix obtained as :math:`M_{\text{cal}}=M^{-1}`
 
 Randomized
 """"""""""
-This approach converts the effect of any noise map :math:`A` into a single multiplication factor for each Pauli observable, that is, diagonalizes the measurement channel. The multiplication factor :math:`\lambda` can be directly measured even without the quantum circuit. Dividing the measured value :math:`\langle O\rangle_{noisy}` by these factor results in the mitigated Pauli expectation value :math:`\langle O\rangle_{ideal}`,
+This approach converts the effect of any noise map :math:`A` into a single multiplication
+factor for each Pauli observable, that is, diagonalizes the measurement channel.
+The multiplication factor :math:`\lambda` can be directly measured even without
+the quantum circuit. Dividing the measured value :math:`\langle O\rangle_{noisy}` by these
+factor results in the mitigated Pauli expectation value :math:`\langle O\rangle_{ideal}`,
 
 .. math::
    \langle O\rangle_{ideal} = \frac{\langle O\rangle_{noisy}}{\lambda}
@@ -253,9 +271,13 @@ This approach converts the effect of any noise map :math:`A` into a single multi
 Zero Noise Extrapolation (ZNE)
 """"""""""""""""""""""""""""""
 
-Given a noisy circuit :math:`C` and an observable :math:`A`,  Zero Noise Extrapolation (ZNE) consists in running :math:`n+1` versions of the circuit with different noise levels :math:`\{c_j\}_{j=0..n}` and, for each of them, measuring the expected value of the observable :math:`E_j=\langle A\rangle_j`.
+Given a noisy circuit :math:`C` and an observable :math:`A`,  Zero Noise Extrapolation (ZNE)
+consists in running :math:`n+1` versions of the circuit with different noise levels
+:math:`\{c_j\}_{j=0..n}` and, for each of them, measuring the expected value of the observable
+:math:`E_j=\langle A\rangle_j`.
 
-Then, an estimate for the expected value of the observable in the noise-free condition is obtained as:
+Then, an estimate for the expected value of the observable in the noise-free condition
+is obtained as:
 
 .. math::
    \hat{E} = \sum_{j=0}^n \gamma_jE_j
@@ -265,7 +287,11 @@ with :math:`\gamma_j` satisfying:
 .. math::
    \sum_{j=0}^n \gamma_j = 1 \qquad \sum_{j=0}^n \gamma_j c_j^k = 0 \quad \text{for}\,\, k=1,..,n
 
-This implementation of ZNE relies on the insertion of gate pairs (that resolve to the identity in the noise-free case) to realize the different noise levels :math:`\{c_j\}`, see `He et al <https://journals.aps.org/pra/abstract/10.1103/PhysRevA.102.012426>`_ for more details. Hence, the canonical levels are mapped to the number of inserted pairs as :math:`c_j\rightarrow 2 c_j + 1`.
+This implementation of ZNE relies on the insertion of gate pairs (that resolve to the
+identity in the noise-free case) to realize the different noise levels :math:`\{c_j\}`,
+see `He et al <https://journals.aps.org/pra/abstract/10.1103/PhysRevA.102.012426>`_
+for more details. Hence, the canonical levels are mapped to the number of inserted pairs
+as :math:`c_j\rightarrow 2 c_j + 1`.
 
 .. autofunction:: qibo.models.error_mitigation.ZNE
 
@@ -279,16 +305,29 @@ This implementation of ZNE relies on the insertion of gate pairs (that resolve t
 Clifford Data Regression (CDR)
 """"""""""""""""""""""""""""""
 
-In the Clifford Data Regression (CDR) method, a set of :math:`n` circuits :math:`S_n=\{C_i\}_{i=1,..,n}` is generated starting from the original circuit :math:`C_0` by replacing some of the non-Clifford gates with Clifford ones. Given an observable :math:`A`, all the circuits of :math:`S_n` are both: simulated to obtain the correspondent expected values of :math:`A` in noise-free condition :math:`\{a_i^{exact}\}_{i=1,..,n}`, and run in noisy conditions to obtain the noisy expected values :math:`\{a_i^{noisy}\}_{i=1,..,n}`.
+In the Clifford Data Regression (CDR) method, a set of :math:`n` circuits
+:math:`S_n=\{C_i\}_{i=1,..,n}` is generated starting from the original circuit
+:math:`C_0` by replacing some of the non-Clifford gates with Clifford ones.
+Given an observable :math:`A`, all the circuits of :math:`S_n` are both simulated
+to obtain the correspondent expected values of :math:`A` in noise-free condition
+:math:`\{a_i^{exact}\}_{i=1,..,n}`, and run in noisy conditions to obtain the noisy
+expected values :math:`\{a_i^{noisy}\}_{i=1,..,n}`.
 
 Finally a model :math:`f` is trained to minimize the mean squared error:
 
 .. math::
    E = \sum_{i=1}^n \bigg(a_i^{exact}-f(a_i^{noisy})\bigg)^2
 
-and learn the mapping :math:`a^{noisy}\rightarrow a^{exact}`. The mitigated expected value of :math:`A` at the end of :math:`C_0` is then obtained simply with :math:`f(a_0^{noisy})`.
+and learn the mapping :math:`a^{noisy}\rightarrow a^{exact}`.
+The mitigated expected value of :math:`A` at the end of :math:`C_0` is then
+obtained simply with :math:`f(a_0^{noisy})`.
 
-In this implementation the initial circuit is expected to be decomposed in the three Clifford gates :math:`RX(\frac{\pi}{2})`, :math:`CNOT`, :math:`X` and in :math:`RZ(\theta)` (which is Clifford only for :math:`\theta=\frac{n\pi}{2}`). By default the set of Clifford gates used for substitution is :math:`\{RZ(0),RZ(\frac{\pi}{2}),RZ(\pi),RZ(\frac{3}{2}\pi)\}`. See `Sopena et al <https://arxiv.org/abs/2103.12680>`_ for more details.
+In this implementation the initial circuit is expected to be decomposed in the three
+Clifford gates :math:`RX(\frac{\pi}{2})`, :math:`CNOT`, :math:`X` and in :math:`RZ(\theta)`
+(which is Clifford only for :math:`\theta=\frac{n\pi}{2}`).
+By default the set of Clifford gates used for substitution is
+:math:`\{RZ(0),RZ(\frac{\pi}{2}),RZ(\pi),RZ(\frac{3}{2}\pi)\}`.
+See `Sopena et al <https://arxiv.org/abs/2103.12680>`_ for more details.
 
 .. autofunction:: qibo.models.error_mitigation.CDR
 
@@ -299,9 +338,15 @@ In this implementation the initial circuit is expected to be decomposed in the t
 Variable Noise CDR (vnCDR)
 """"""""""""""""""""""""""
 
-Variable Noise CDR (vnCDR) is an extension of the CDR method described above that factors in different noise levels as in ZNE. In detail, the set of circuits :math:`S_n=\{\mathbf{C}_i\}_{i=1,..,n}` is still generated as in CDR, but for each :math:`\mathbf{C}_i` we have :math:`k` different versions of it with increased noise :math:`\mathbf{C}_i=C_i^0,C_i^1,...,C_i^{k-1}`.
+Variable Noise CDR (vnCDR) is an extension of the CDR method described above that factors
+in different noise levels as in ZNE. In detail, the set of circuits
+:math:`S_n=\{\mathbf{C}_i\}_{i=1,..,n}` is still generated as in CDR, but for each
+:math:`\mathbf{C}_i` we have :math:`k` different versions of it with increased noise
+:math:`\mathbf{C}_i=C_i^0,C_i^1,...,C_i^{k-1}`.
 
-Therefore, in this case we have a :math:`k`-dimensional predictor variable :math:`\mathbf{a}_i^{noisy}=\big(a_i^0, a_i^1,..,a_i^{k-1}\big)^{noisy}` for the same noise-free targets :math:`a_i^{exact}`, and we want to learn the mapping:
+Therefore, in this case we have a :math:`k`-dimensional predictor variable
+:math:`\mathbf{a}_i^{noisy}=\big(a_i^0, a_i^1,..,a_i^{k-1}\big)^{noisy}` for the same
+noise-free targets :math:`a_i^{exact}`, and we want to learn the mapping:
 
 .. math::
    f:\mathbf{a}_i^{noisy}\rightarrow a_i^{exact}
@@ -311,11 +356,16 @@ via minimizing the same mean squared error:
 .. math::
    E = \sum_{i=1}^n \bigg(a_i^{exact}-f(\mathbf{a}_i^{noisy})\bigg)^2
 
-In particular, the default choice is to take :math:`f(\mathbf{x}):=\Gamma\cdot \mathbf{x}\;`, with :math:`\Gamma=\text{diag}(\gamma_0,\gamma_1,...,\gamma_{k-1})\;`, that corresponds to the ZNE calculation for the estimate of the expected value.
+In particular, the default choice is to take :math:`f(\mathbf{x}):=\Gamma\cdot \mathbf{x}\;`,
+with :math:`\Gamma=\text{diag}(\gamma_0,\gamma_1,...,\gamma_{k-1})\;`, that corresponds to the
+ZNE calculation for the estimate of the expected value.
 
-Here, as in the implementation of the CDR above, the circuit is supposed to be decomposed in the set of primitive gates :math:`{RX(\frac{\pi}{2}),CNOT,X,RZ(\theta)}`. See `Sopena et al <https://arxiv.org/abs/2103.12680>`_ for all the details.
+Here, as in the implementation of the CDR above, the circuit is supposed to be decomposed in
+the set of primitive gates :math:`{RX(\frac{\pi}{2}),CNOT,X,RZ(\theta)}`.
+See `Sopena et al <https://arxiv.org/abs/2103.12680>`_ for all the details.
 
 .. autofunction:: qibo.models.error_mitigation.vnCDR
+
 
 _______________________
 
@@ -737,9 +787,18 @@ The quantum errors available to build a noise model are the following:
 Realistic noise model
 ^^^^^^^^^^^^^^^^^^^^^
 
-In Qibo, it is possible to build a realistic noise model of a real quantum computer by using the :meth:`qibo.noise.NoiseModel.composite()` method. The noise model is built using a combination of the :class:`qibo.gates.ThermalRelaxationChannel` and :class:`qibo.gates.DepolarizingChannel` channels. After each gate of the original circuit, the function applies a depolarizing and a thermal relaxation channel. At the end of the circuit, if the qubit is measured, bitflips errors are set. Moreover, the model handles idle qubits by applying a thermal relaxation channel for the duration of the idle-time.
+In Qibo, it is possible to build a realistic noise model of a real quantum computer
+by using the :meth:`qibo.noise.NoiseModel.composite()` method.
+The noise model is built using a combination of the
+:class:`qibo.gates.ThermalRelaxationChannel` and :class:`qibo.gates.DepolarizingChannel`
+channels. After each gate of the original circuit, the function applies a depolarizing
+and a thermal relaxation channel. At the end of the circuit, if the qubit is measured,
+bitflips errors are set. Moreover, the model handles idle qubits by applying a thermal
+relaxation channel for the duration of the idle-time.
 
-For more information on the :meth:`qibo.noise.NoiseModel.composite()` method, see the example on :ref:`Simulating quantum hardware <noise-hardware-example>`.
+For more information on the :meth:`qibo.noise.NoiseModel.composite()` method, see the
+example on :ref:`Simulating quantum hardware <noise-hardware-example>`.
+
 
 _______________________
 
@@ -1104,10 +1163,11 @@ Entropy
 .. autofunction:: qibo.quantum_info.entropy
 
 .. note::
-    ``validate`` flag allows the user to choose if the function will check if input ``state`` is Hermitian or not.
-    Default option is ``validate=False``, i.e. the assumption of Hermiticity, because it is faster and, more importantly,
-    the functions are intended to be used on Hermitian inputs. When ``validate=True`` and
-    ``state`` is non-Hermitian, an error will be raised when using `cupy` backend.
+    ``validate`` flag allows the user to choose if the function will check if input
+    ``state`` is Hermitian or not. 1Default option is ``validate=False``, i.e. the
+    assumption of Hermiticity, because it is faster and, more importantly,
+    the functions are intended to be used on Hermitian inputs. When ``validate=True``
+    and ``state`` is non-Hermitian, an error will be raised when using `cupy` backend.
 
 
 Trace distance
@@ -1116,10 +1176,12 @@ Trace distance
 .. autofunction:: qibo.quantum_info.trace_distance
 
 .. note::
-    ``validate`` flag allows the user to choose if the function will check if difference between inputs,
-    ``state - target``, is Hermitian or not. Default option is ``validate=False``, i.e. the assumption of Hermiticity,
-    because it is faster and, more importantly, the functions are intended to be used on Hermitian inputs.
-    When ``validate=True`` and ``state - target`` is non-Hermitian, an error will be raised when using `cupy` backend.
+    ``validate`` flag allows the user to choose if the function will check if difference
+    between inputs, ``state - target``, is Hermitian or not. Default option is
+    ``validate=False``, i.e. the assumption of Hermiticity, because it is faster and,
+    more importantly, the functions are intended to be used on Hermitian inputs.
+    When ``validate=True`` and ``state - target`` is non-Hermitian, an error will be
+    raised when using `cupy` backend.
 
 
 Hilbert-Schmidt distance
@@ -1241,7 +1303,8 @@ Superoperator Transformations
 
 Functions used to convert superoperators among their possible representations.
 For more in-depth theoretical description of the representations and transformations,
-we direct the reader to `Wood, Biamonte, and Cory, Quant. Inf. Comp. 15, 0579-0811 (2015) <https://arxiv.org/abs/1111.6950>`_.
+we direct the reader to
+`Wood, Biamonte, and Cory, Quant. Inf. Comp. 15, 0579-0811 (2015) <https://arxiv.org/abs/1111.6950>`_.
 
 
 Vectorization
@@ -1291,7 +1354,8 @@ Choi to Kraus
     global phases, the operators' actions are the same, i.e.
 
     .. math::
-        K_{\alpha} \, \rho \, K_{\alpha}^{\dagger} = K_{\alpha}^{\text{(ideal)}} \, \rho \,\, (K_{\alpha}^{\text{(ideal)}})^{\dagger} \,\,\,\,\, , \,\, \forall \, \alpha
+        K_{\alpha} \, \rho \, K_{\alpha}^{\dagger} = K_{\alpha}^{\text{(ideal)}} \, \rho \,\,
+            (K_{\alpha}^{\text{(ideal)}})^{\dagger} \,\,\,\,\, , \,\, \forall \, \alpha
 
 .. note::
     User can set ``validate_cp=False`` in order to speed up execution by not checking if
@@ -1355,7 +1419,8 @@ Liouville to Kraus
     global phases, the operators' actions are the same, i.e.
 
     .. math::
-        K_{\alpha} \, \rho \, K_{\alpha}^{\dagger} = K_{\alpha}^{\text{(ideal)}} \, \rho \,\, (K_{\alpha}^{\text{(ideal)}})^{\dagger} \,\,\,\,\, , \,\, \forall \, \alpha
+        K_{\alpha} \, \rho \, K_{\alpha}^{\dagger} = K_{\alpha}^{\text{(ideal)}} \, \rho \,\,
+            (K_{\alpha}^{\text{(ideal)}})^{\dagger} \,\,\,\,\, , \,\, \forall \, \alpha
 
 
 Liouville to Chi-matrix
@@ -1420,13 +1485,15 @@ Chi-matrix to Kraus
     global phases, the operators' actions are the same, i.e.
 
     .. math::
-        K_{\alpha} \, \rho \, K_{\alpha}^{\dagger} = K_{\alpha}^{\text{(ideal)}} \, \rho \,\, (K_{\alpha}^{\text{(ideal)}})^{\dagger} \,\,\,\,\, , \,\, \forall \, \alpha
+        K_{\alpha} \, \rho \, K_{\alpha}^{\dagger} = K_{\alpha}^{\text{(ideal)}} \, \rho \,\,
+            (K_{\alpha}^{\text{(ideal)}})^{\dagger} \,\,\,\,\, , \,\, \forall \, \alpha
 
 .. note::
     User can set ``validate_cp=False`` in order to speed up execution by not checking if
-    the Choi representation obtained from the input ``chi_matrix`` is completely positive (CP) and Hermitian.
-    However, that may lead to erroneous outputs if ``choi_super_op`` is not guaranteed to be CP. We advise users
-    to either set this flag carefully or leave it in its default setting (``validate_cp=True``).
+    the Choi representation obtained from the input ``chi_matrix`` is completely positive
+    (CP) and Hermitian. However, that may lead to erroneous outputs if ``choi_super_op``
+    is not guaranteed to be CP. We advise users to either set this flag carefully or leave
+    it in its default setting (``validate_cp=True``).
 
 
 Kraus operators as probabilistic sum of unitaries
