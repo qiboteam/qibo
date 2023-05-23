@@ -1196,6 +1196,18 @@ Fidelity
 .. autofunction:: qibo.quantum_info.fidelity
 
 
+Bures angle
+"""""""""""
+
+.. autofunction:: qibo.quantum_info.bures_angle
+
+
+Bures distance
+""""""""""""""
+
+.. autofunction:: qibo.quantum_info.bures_distance
+
+
 Process fidelity
 """"""""""""""""
 
