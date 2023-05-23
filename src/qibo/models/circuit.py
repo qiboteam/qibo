@@ -450,9 +450,9 @@ class Circuit:
 
         Args:
             noise_map (dict): list of tuples :math:`(P_{k}, p_{k})`, where
-                :math:`P_{k}` is a ``str`` representing the :math:`k`-th Pauli
-                operator, and :math:`p_{k}` is the associated probability.
-                qubits.
+                :math:`P_{k}` is a ``str`` representing the :math:`k`-th
+                :math:`n`-qubit Pauli operator, and :math:`p_{k}` is the
+                associated probability.
 
         Returns:
             Circuit object that contains all the gates of the original circuit
