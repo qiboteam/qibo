@@ -449,11 +449,10 @@ class Circuit:
         :ref:`How to perform noisy simulation? <noisy-example>` example.
 
         Args:
-            noise_map (dict): Dictionary that maps qubit ids to noise
-                probabilities (px, py, pz).
-                If a tuple of probabilities (px, py, pz) is given instead of
-                a dictionary, then the same probabilities will be used for all
-                qubits.
+            noise_map (dict): list of tuples :math:`(P_{k}, p_{k})`, where
+                :math:`P_{k}` is a ``str`` representing the :math:`k`-th
+                :math:`n`-qubit Pauli operator, and :math:`p_{k}` is the
+                associated probability.
 
         Returns:
             Circuit object that contains all the gates of the original circuit
