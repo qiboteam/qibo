@@ -2,7 +2,7 @@
 
 import warnings
 from functools import reduce
-from typing import Union
+from typing import Optional, Union
 
 import numpy as np
 
@@ -23,7 +23,7 @@ from qibo.quantum_info.utils import ONEQUBIT_CLIFFORD_PARAMS
 
 def random_gaussian_matrix(
     dims: int,
-    rank: int = None,
+    rank: Optional[int] = None,
     mean: float = 0,
     stddev: float = 1,
     seed=None,
@@ -35,7 +35,8 @@ def random_gaussian_matrix(
     sampled from a Gaussian probability distribution
 
     .. math::"haar",
-        p(x) = \\frac{1}{\\sqrt{2 \\, \\pi} \\, \\sigma} \\, \\exp{\\left(-\\frac{(x - \\mu)^{2}}{2\\,\\sigma^{2}}\\right)}
+        p(x) = \\frac{1}{\\sqrt{2 \\, \\pi} \\, \\sigma} \\,
+            \\exp{\\left(-\\frac{(x - \\mu)^{2}}{2\\,\\sigma^{2}}\\right)}
 
     with mean :math:`\\mu` and standard deviation :math:`\\sigma`.
 
@@ -49,12 +50,12 @@ def random_gaussian_matrix(
         seed (int or ``numpy.random.Generator``, optional): Either a generator of random
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
-            in the execution. If ``None``, it uses ``GlobalBackend()``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
 
     Returns:
-        (ndarray): Random Gaussian matrix with dimensions ``(dims, rank)``.
+        ndarray: Random Gaussian matrix with dimensions ``(dims, rank)``.
     """
 
     if dims <= 0:
@@ -119,12 +120,12 @@ def random_hermitian(
         seed (int or ``numpy.random.Generator``, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Default is ``None``.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
-            in the execution. If ``None``, it uses ``GlobalBackend()``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
 
     Returns:
-        (ndarray): Hermitian matrix :math:`H` with dimensions ``(dims, dims)``.
+        ndarray: Hermitian matrix :math:`H` with dimensions ``(dims, dims)``.
     """
 
     if dims <= 0:
@@ -149,7 +150,7 @@ def random_hermitian(
     return matrix
 
 
-def random_unitary(dims: int, measure: str = None, seed=None, backend=None):
+def random_unitary(dims: int, measure: Optional[str] = None, seed=None, backend=None):
     """Returns a random Unitary operator :math:`U`,, i.e.
     a random operator such that :math:`U^{-1} = U^{\\dagger}`.
 
@@ -162,12 +163,12 @@ def random_unitary(dims: int, measure: str = None, seed=None, backend=None):
         seed (int or ``numpy.random.Generator``, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
-            in the execution. If ``None``, it uses ``GlobalBackend()``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
 
     Returns:
-        (ndarray): Unitary matrix :math:`U` with dimensions ``(dims, dims)``.
+        ndarray: Unitary matrix :math:`U` with dimensions ``(dims, dims)``.
     """
 
     if dims <= 0:
@@ -205,10 +206,10 @@ def random_unitary(dims: int, measure: str = None, seed=None, backend=None):
 def random_quantum_channel(
     dims: int,
     representation: str = "liouville",
-    measure: str = None,
+    measure: Optional[str] = None,
     order: str = "row",
     normalize: bool = False,
-    precision_tol: float = None,
+    precision_tol: Optional[float] = None,
     seed=None,
     backend=None,
 ):
@@ -221,7 +222,9 @@ def random_quantum_channel(
             Chi representation. If ``"choi"``, returns channel in Choi representation.
             If ``"kraus"``, returns Kraus representation of channel. If ``"liouville"``,
             returns Liouville representation. If ``"pauli"``, returns Pauli-Liouville
-            representation. Defaults to ``"liouville"``.
+            representation. If "pauli-<pauli_order>" or "chi-<pauli_order>", (e.g. "pauli-IZXY"),
+            returns it in the Pauli basis with the corresponding order of single-qubit Pauli elements
+            (see :func:`qibo.quantum_info.pauli_basis`). Defaults to ``"liouville"``.
         measure (str, optional): probability measure in which to sample the unitary
             from. If ``None``, functions returns :math:`\\exp{(-i \\, H)}`, where
             :math:`H` is a Hermitian operator. If ``"haar"``, returns an Unitary
@@ -240,8 +243,8 @@ def random_quantum_channel(
         seed (int or ``numpy.random.Generator``, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
-            in the execution. If ``None``, it uses ``GlobalBackend()``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
 
     Returns:
@@ -254,15 +257,27 @@ def random_quantum_channel(
         )
 
     if representation not in ["chi", "choi", "kraus", "liouville", "pauli"]:
-        raise_error(ValueError, f"representation {representation} not found.")
+        if (
+            ("chi-" not in representation and "pauli-" not in representation)
+            or len(representation.split("-")) != 2
+            or set(representation.split("-")[1]) != {"I", "X", "Y", "Z"}
+        ):
+            raise_error(ValueError, f"representation {representation} not found.")
 
     super_op = random_unitary(dims, measure, seed, backend)
     super_op = vectorization(super_op, order=order, backend=backend)
     super_op = np.outer(super_op, np.conj(super_op))
 
-    if representation == "chi":
+    if "chi" in representation:
+        pauli_order = "IXYZ"
+        if "-" in representation:
+            pauli_order = representation.split("-")[1]
         super_op = choi_to_chi(
-            super_op, normalize=normalize, order=order, backend=backend
+            super_op,
+            normalize=normalize,
+            order=order,
+            pauli_order=pauli_order,
+            backend=backend,
         )
     elif representation == "kraus":
         super_op = choi_to_kraus(
@@ -274,9 +289,16 @@ def random_quantum_channel(
         )
     elif representation == "liouville":
         super_op = choi_to_liouville(super_op, order=order, backend=backend)
-    elif representation == "pauli":
+    elif "pauli" in representation:
+        pauli_order = "IXYZ"
+        if "-" in representation:
+            pauli_order = representation.split("-")[1]
         super_op = choi_to_pauli(
-            super_op, normalize=normalize, order=order, backend=backend
+            super_op,
+            normalize=normalize,
+            order=order,
+            pauli_order=pauli_order,
+            backend=backend,
         )
 
     return super_op
@@ -286,7 +308,8 @@ def random_statevector(dims: int, haar: bool = False, seed=None, backend=None):
     """Creates a random statevector :math:`\\ket{\\psi}`.
 
     .. math::
-        \\ket{\\psi} = \\sum_{k = 0}^{d - 1} \\, \\sqrt{p_{k}} \\, e^{i \\phi_{k}} \\, \\ket{k} \\, ,
+        \\ket{\\psi} = \\sum_{k = 0}^{d - 1} \\, \\sqrt{p_{k}} \\,
+            e^{i \\phi_{k}} \\, \\ket{k} \\, ,
 
     where :math:`d` is ``dims``, and :math:`p_{k}` and :math:`\\phi_{k}` are, respectively,
     the probability and phase corresponding to the computational basis state :math:`\\ket{k}`.
@@ -300,12 +323,12 @@ def random_statevector(dims: int, haar: bool = False, seed=None, backend=None):
         seed (int or ``numpy.random.Generator``, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Default is ``None``.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
-            in the execution. If ``None``, it uses ``GlobalBackend()``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
 
     Returns:
-        (ndarray): Random statevector :math:`\\ket{\\psi}`.
+        ndarray: Random statevector :math:`\\ket{\\psi}`.
     """
 
     if dims <= 0:
@@ -346,10 +369,10 @@ def random_statevector(dims: int, haar: bool = False, seed=None, backend=None):
 
 def random_density_matrix(
     dims: int,
-    rank: int = None,
+    rank: Optional[int] = None,
     pure: bool = False,
     metric: str = "Hilbert-Schmidt",
-    basis: str = None,
+    basis: Optional[str] = None,
     normalize: bool = False,
     seed=None,
     backend=None,
@@ -363,22 +386,24 @@ def random_density_matrix(
         pure (bool, optional): if ``True``, returns a pure state. Default is ``False``.
         metric (str, optional): metric to sample the density matrix from. Options:
             ``"Hilbert-Schmidt"`` and ``"Bures"``. Default is ``"Hilbert-Schmidt"``.
-        basis (str, optional): if ``"pauli"``, return random density matrix in the
-            Pauli basis. If ``None``, returns it in the computational basis.
+        basis (str, optional): if ``None``, returns random density matrix in the
+            computational basis. If ``"pauli-<pauli_order>"``, (e.g. ``"pauli-IZXY"``),
+            returns it in the Pauli basis with the corresponding order of single-qubit
+            Pauli elements (see :func:`qibo.quantum_info.pauli_basis`).
             Default is ``None``.
-        normalize(bool, optional): if ``True`` and ``basis="pauli"``, returns random
-            density matrix in the normalized Pauli basis. If ``False`` and
-            ``basis="pauli"``, returns state in the unnormalized Pauli basis.
-            Defaults to ``False``.
+        normalize(bool, optional): if ``True`` and ``basis="pauli-<pauli-order>"``,
+            returns random density matrix in the normalized Pauli basis. If ``False``
+            and ``basis="pauli-<pauli-order>"``, returns state in the unnormalized
+            Pauli basis. Defaults to ``False``.
         seed (int or ``numpy.random.Generator``, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Default is ``None``.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
-            in the execution. If ``None``, it uses ``GlobalBackend()``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
 
     Returns:
-        (ndarray): Random density matrix :math:`\\rho`.
+        ndarray: Random density matrix :math:`\\rho`.
     """
 
     if dims <= 0:
@@ -401,7 +426,12 @@ def random_density_matrix(
     if basis is not None and not isinstance(basis, str):
         raise_error(TypeError, f"basis must be type str, but it is type {type(basis)}.")
     elif basis is not None and basis not in ["pauli"]:
-        raise_error(ValueError, f"basis {basis} nor recognized.")
+        if (
+            "pauli-" not in basis
+            or len(basis.split("-")) != 2
+            or set(basis.split("-")[1]) != {"I", "X", "Y", "Z"}
+        ):
+            raise_error(ValueError, f"basis {basis} nor recognized.")
 
     if not isinstance(normalize, bool):
         raise_error(
@@ -435,9 +465,13 @@ def random_density_matrix(
 
     state = backend.cast(state, dtype=state.dtype)
 
-    if basis == "pauli":
+    if basis is not None:
+        pauli_order = basis.split("-")[1]
         unitary = comp_basis_to_pauli(
-            int(np.log2(dims)), normalize=normalize, backend=backend
+            int(np.log2(dims)),
+            normalize=normalize,
+            pauli_order=pauli_order,
+            backend=backend,
         )
         state = unitary @ vectorization(state, backend=backend)
 
@@ -452,7 +486,7 @@ def random_clifford(
     Args:
         qubits (int or list or ndarray): if ``int``, the number of qubits for the Clifford.
             If ``list`` or ``ndarray``, indexes of the qubits for the Clifford to act on.
-        return_circuit (bool, optional): if ``True``, returns a ``qibo.gates.Unitary``
+        return_circuit (bool, optional): if ``True``, returns a :class:`qibo.gates.Unitary`
             object. If ``False``, returns an ``ndarray`` object. Default is ``False``.
         fuse (bool, optional): if ``False``, returns an ``ndarray`` with one Clifford
             gate per qubit. If ``True``, returns the tensor product of the Clifford
@@ -460,12 +494,12 @@ def random_clifford(
         seed (int or ``numpy.random.Generator``, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Default is ``None``.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
-            in the execution. If ``None``, it uses ``GlobalBackend()``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
 
     Returns:
-        (ndarray or ``qibo.gates.Unitary``): Random Clifford operator(s).
+        (ndarray or :class:`qibo.gates.Unitary`): Random Clifford operator(s).
     """
 
     if (
@@ -536,15 +570,16 @@ def random_clifford(
 def random_pauli(
     qubits,
     depth: int,
-    max_qubits: int = None,
-    subset: list = None,
+    max_qubits: Optional[int] = None,
+    subset: Optional[list] = None,
     return_circuit: bool = True,
     seed=None,
     backend=None,
 ):
     """Creates random Pauli operator(s).
 
-    Pauli operators are sampled from the single-qubit Pauli set :math:`\\{I, X, Y, Z\\}`.
+    Pauli operators are sampled from the single-qubit Pauli set
+    :math:`\\{I, \\, X, \\, Y, \\, Z\\}`.
 
     Args:
         qubits (int or list or ndarray): if ``int`` and ``max_qubits=None``, the
@@ -557,18 +592,18 @@ def random_pauli(
         subset (list, optional): list containing a subset of the 4 single-qubit
             Pauli operators. If ``None``, defaults to the complete set.
             Defaults to ``None``.
-        return_circuit (bool, optional): if ``True``, returns a ``qibo.models.Circuit``
+        return_circuit (bool, optional): if ``True``, returns a :class:`qibo.models.Circuit`
             object. If ``False``, returns an ``ndarray`` with shape (qubits, depth, 2, 2)
             that contains all Pauli matrices that were sampled. Defaults to ``True``.
         seed (int or ``numpy.random.Generator``, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
-            in the execution. If ``None``, it uses ``GlobalBackend()``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
 
     Returns:
-        (ndarray or ``qibo.models.Circuit``): all sampled Pauli operators.
+        (ndarray or :class:`qibo.models.Circuit`): all sampled Pauli operators.
 
     """
 
@@ -677,8 +712,9 @@ def random_pauli(
 
 def random_pauli_hamiltonian(
     nqubits: int,
-    max_eigenvalue: Union[int, float] = None,
+    max_eigenvalue: Optional[Union[int, float]] = None,
     normalize: bool = False,
+    pauli_order: str = "IXYZ",
     seed=None,
     backend=None,
 ):
@@ -691,15 +727,17 @@ def random_pauli_hamiltonian(
         normalize (bool, optional): If ``True``, fixes the gap of the
             Hamiltonian as ``1.0``. Moreover, if ``True``, then ``max_eigenvalue``
             must be ``> 1.0``. Defaults to ``False``.
+        pauli_order (str, optional): corresponds to the order of 4 single-qubit
+            Pauli elements in the basis. Default is "IXYZ".
         seed (int or ``numpy.random.Generator``, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
-            in the execution. If ``None``, it uses ``GlobalBackend()``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
 
     Returns:
-        (ndarray, ndarray): Hamiltonian in the Pauli basis and its corresponding eigenvalues.
+        tuple(ndarray, ndarray): Hamiltonian in the Pauli basis and its corresponding eigenvalues.
     """
     if isinstance(nqubits, int) is False:
         raise_error(
@@ -761,7 +799,9 @@ def random_pauli_hamiltonian(
         ):
             hamiltonian += eigenvalue * np.outer(eigenvector, np.conj(eigenvector))
 
-    U = comp_basis_to_pauli(nqubits, normalize=True, backend=backend)
+    U = comp_basis_to_pauli(
+        nqubits, normalize=True, pauli_order=pauli_order, backend=backend
+    )
 
     hamiltonian = np.real(U @ vectorization(hamiltonian, backend=backend))
 
@@ -772,8 +812,8 @@ def random_stochastic_matrix(
     dims: int,
     bistochastic: bool = False,
     diagonally_dominant: bool = False,
-    precision_tol: float = None,
-    max_iterations: int = None,
+    precision_tol: Optional[float] = None,
+    max_iterations: Optional[int] = None,
     seed=None,
     backend=None,
 ):
@@ -795,12 +835,12 @@ def random_stochastic_matrix(
         seed (int or ``numpy.random.Generator``, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a statevectorgenerator with a random seed. Default is ``None``.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
-            in the execution. If ``None``, it uses ``GlobalBackend()``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
 
     Returns:
-        (ndarray): a random stochastic matrix.
+        ndarray: a random stochastic matrix.
 
     """
     if dims <= 0:
@@ -907,7 +947,7 @@ def _clifford_unitary(phase, x, y, z):
         z (float) : prefactor.
 
     Returns:
-        (ndarray): Clifford unitary with dimensions (2, 2).
+        ndarray: Clifford unitary with dimensions (2, 2).
 
     """
 

@@ -449,11 +449,10 @@ class Circuit:
         :ref:`How to perform noisy simulation? <noisy-example>` example.
 
         Args:
-            noise_map (dict): Dictionary that maps qubit ids to noise
-                probabilities (px, py, pz).
-                If a tuple of probabilities (px, py, pz) is given instead of
-                a dictionary, then the same probabilities will be used for all
-                qubits.
+            noise_map (dict): list of tuples :math:`(P_{k}, p_{k})`, where
+                :math:`P_{k}` is a ``str`` representing the :math:`k`-th
+                :math:`n`-qubit Pauli operator, and :math:`p_{k}` is the
+                associated probability.
 
         Returns:
             Circuit object that contains all the gates of the original circuit
@@ -1044,9 +1043,7 @@ class Circuit:
                 )
 
             qubits = ",".join(f"q[{i}]" for i in gate.qubits)
-            if isinstance(gate, gates.ParametrizedGate) and not isinstance(
-                gate, gates.I
-            ):
+            if isinstance(gate, gates.ParametrizedGate):
                 params = (str(x) for x in gate.parameters)
                 name = f"{gate.qasm_label}({', '.join(params)})"
             else:
@@ -1221,18 +1218,14 @@ class Circuit:
 
                 if len(pieces) == 1:
                     params = None
-                    if gatetype != gates.I and issubclass(
-                        gatetype, gates.ParametrizedGate
-                    ):
+                    if issubclass(gatetype, gates.ParametrizedGate):
                         raise_error(
                             ValueError,
                             f"Missing parameters for QASM gate {gatename}.",
                         )
 
                 elif len(pieces) == 2:
-                    if gatetype == gates.I or not issubclass(
-                        gatetype, gates.ParametrizedGate
-                    ):
+                    if not issubclass(gatetype, gates.ParametrizedGate):
                         raise_error(ValueError, f"Invalid QASM command {command}.")
 
                     params = pieces[1].replace(" ", "").split(",")
