@@ -71,20 +71,22 @@ def entropy(state, base: float = 2, validate: bool = False, backend=None):
     if purity(state) == 1.0:
         ent = 0.0
     else:
-        if validate:
+        if validate is True:
             hermitian = bool(
                 backend.calculate_norm(np.transpose(np.conj(state)) - state)
-                <= PRECISION_TOL
+                < PRECISION_TOL
             )
             if (
-                not hermitian and backend.__class__.__name__ == "CupyBackend"
+                hermitian is False and backend.__class__.__name__ == "CupyBackend"
             ):  # pragma: no cover
                 raise_error(
                     NotImplementedError,
                     f"CupyBackend does not support `np.linalg.eigvals` for non-Hermitian `state`.",
                 )
             eigenvalues = (
-                np.linalg.eigvalsh(state) if hermitian else np.linalg.eigvals(state)
+                np.linalg.eigvalsh(state)
+                if hermitian is True
+                else np.linalg.eigvals(state)
             )
         else:
             eigenvalues = np.linalg.eigvalsh(state)
