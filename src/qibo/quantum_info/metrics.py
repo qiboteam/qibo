@@ -28,9 +28,113 @@ def purity(state):
     else:
         pur = np.real(np.trace(np.dot(state, state)))
 
+    # this is necessary to remove the float from inside
+    # a 0-dim ndarray
     pur = float(pur)
 
+    # this is necessary to upper bound purity by 1.0
+    # up to machine precision, which is important
+    # for concurrence and meyer_wallach_entanglement
+    if pur - 1.0 < PRECISION_TOL:
+        pur = 1.0
+
     return pur
+
+
+def concurrence(state, bipartition, backend=None):
+    """Calculates concurrence of a pure bipartite quantum state
+    :math:`\\rho \\in \\mathcal{H}_{A} \\otimes \\mathcal{H}_{B}` as
+
+    .. math::
+        C(\\rho) = \\sqrt{2 \\, (\\text{tr}^{2}(\\rho) - \\text{tr}(\\rho_{B}^{2}))} \\, ,
+
+    where :math:`\\rho_{B} = \\ext{tr}_{B}(\\rho)` is the reduced density operator
+    obtained by tracing out the qubits in the ``bipartition`` :math:`B`.
+
+    Args:
+        state (ndarray): statevector or density matrix.
+        bipartition (list or tuple or ndarray): qubits in the subsystem to be traced out.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
+
+    Returns:
+        float: Concurrence of :math:`\\rho`.
+    """
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    if (
+        (len(state.shape) not in [1, 2])
+        or (len(state) == 0)
+        or (len(state.shape) == 2 and state.shape[0] != state.shape[1])
+    ):
+        raise_error(
+            TypeError,
+            f"Object must have dims either (k,) or (k,k), but have dims {state.shape}.",
+        )
+
+    nqubits = int(np.log2(state.shape[0]))
+
+    purity_total_system = purity(state)
+    mixed = bool(abs(purity_total_system - 1.0) > PRECISION_TOL)
+
+    if mixed is True:
+        raise_error(
+            NotImplementedError, "concurrence only implemented for pure quantum states."
+        )
+
+    reduced_density_matrix = (
+        backend.partial_trace(state, bipartition, nqubits)
+        if len(state.shape) == 1
+        else backend.partial_trace_density_matrix(state, bipartition, nqubits)
+    )
+
+    concur = np.sqrt(2 * (1 - purity(reduced_density_matrix)))
+
+    return concur
+
+
+def entanglement_of_formation(state, bipartition, base: float = 2, backend=None):
+    """Calculates the entanglement of formation :math:`E_{f}` of a pure bipartite
+    quantum state :math:`\\rho`, which is given by
+
+    .. math::
+        E_{f} = H([1 - x, x]) \\, ,
+
+    where
+
+    .. math::
+        x = \\frac{1 + \\sqrt{1 - C^{2}(\\rho)}}{2} \\, ,
+
+    :math:`C(\\rho)` is the :func:`qibo.quantum_info.concurrence` of :math:`\\rho`,
+    and :math:`H` is the :func:`qibo.quantum_info.shannon_entropy`.
+
+    Args:
+        state (ndarray): statevector or density matrix.
+        bipartition (list or tuple or ndarray): qubits in the subsystem to be traced out.
+        base (float): the base of the log in :func:`qibo.quantum_info.shannon_entropy`.
+            Defaults to  :math:`2`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
+
+
+    Returns:
+        float: entanglement of formation of state :math:`\\rho`.
+    """
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    from qibo.quantum_info.utils import shannon_entropy
+
+    concur = concurrence(state, bipartition, backend)
+    concur = (1 + np.sqrt(1 - concur**2)) / 2
+    probabilities = [1 - concur, concur]
+
+    ent_of_form = shannon_entropy(probabilities, base=base, backend=backend)
+
+    return ent_of_form
 
 
 def entropy(state, base: float = 2, validate: bool = False, backend=None):
@@ -399,7 +503,7 @@ def meyer_wallach_entanglement(circuit, backend=None):
     """Computes the Meyer-Wallach entanglement Q of the `circuit`,
 
     .. math::
-        Q = 1-\\frac{1}{N}\\sum_{k}\\text{Tr}\\left(\\rho_k^2(\\theta_i)\\right) \\,
+        Q(\\theta) = 1 - \\frac{1}{N} \\, \\sum_{k} \\, \\text{tr}\\left(\\rho_{k^{2}}(\\theta)\\right) \\, .
 
     Args:
         circuit (:class:`qibo.models.Circuit`): Parametrized circuit.
