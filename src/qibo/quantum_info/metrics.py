@@ -318,7 +318,7 @@ def bures_distance(state, target, validate: bool = False):
     Returns:
         float: Bures distance between ``state`` and ``target``.
     """
-    distance = np.sqrt(2 * (1 - fidelity(state, target, validate=validate)))
+    distance = np.sqrt(2 * (1 - np.sqrt(fidelity(state, target, validate=validate))))
 
     return distance
 
