@@ -55,7 +55,8 @@ def test_controlled_by_channel_error():
         gates.KrausChannel(*config).controlled_by(1)
 
 
-def test_kraus_channel(backend):
+@pytest.mark.parametrize("pauli_order", ["IXYZ", "IZXY"])
+def test_kraus_channel(backend, pauli_order):
     a1 = np.sqrt(0.4) * matrices.X
     a2 = np.sqrt(0.6) * matrices.Z
 
@@ -87,7 +88,9 @@ def test_kraus_channel(backend):
         ]
     )
     test_choi = np.reshape(test_superop, [2] * 4).swapaxes(0, 3).reshape([4, 4])
-    test_pauli = np.diag([2.0, -0.4, -2.0, 0.4])
+
+    pauli_elements = {"I": 2.0, "X": -0.4, "Y": -2.0, "Z": 0.4}
+    test_pauli = np.diag([pauli_elements[p] for p in pauli_order])
 
     test_superop = backend.cast(test_superop, dtype=test_superop.dtype)
     test_choi = backend.cast(test_choi, dtype=test_choi.dtype)
@@ -106,7 +109,10 @@ def test_kraus_channel(backend):
         True,
     )
     backend.assert_allclose(
-        backend.calculate_norm(channel.to_pauli_liouville(backend=backend) - test_pauli)
+        backend.calculate_norm(
+            channel.to_pauli_liouville(pauli_order=pauli_order, backend=backend)
+            - test_pauli
+        )
         < PRECISION_TOL,
         True,
     )
@@ -186,7 +192,8 @@ def test_unitary_channel_errors():
         gates.UnitaryChannel(qubits, [(0.5, a1), (0.6, a2)])
 
 
-def test_pauli_noise_channel(backend):
+@pytest.mark.parametrize("pauli_order", ["IXYZ", "IZXY"])
+def test_pauli_noise_channel(backend, pauli_order):
     initial_rho = random_density_matrix(2**2, backend=backend)
     qubits = (1,)
     channel = gates.PauliNoiseChannel(qubits, [("X", 0.3)])
@@ -198,14 +205,16 @@ def test_pauli_noise_channel(backend):
 
     basis = ["X", "Y", "Z"]
     pnp = np.array([0.1, 0.02, 0.05])
-    a0 = 1
-    a1 = 1 - 2 * pnp[1] - 2 * pnp[2]
-    a2 = 1 - 2 * pnp[0] - 2 * pnp[2]
-    a3 = 1 - 2 * pnp[0] - 2 * pnp[1]
-    test_representation = np.diag([a0, a1, a2, a3])
+    noise_elements = {
+        "I": 1,
+        "X": 1 - 2 * pnp[1] - 2 * pnp[2],
+        "Y": 1 - 2 * pnp[0] - 2 * pnp[2],
+        "Z": 1 - 2 * pnp[0] - 2 * pnp[1],
+    }
+    test_representation = np.diag([noise_elements[p] for p in pauli_order])
 
     liouville = gates.PauliNoiseChannel(0, list(zip(basis, pnp))).to_pauli_liouville(
-        normalize=True, backend=backend
+        normalize=True, pauli_order=pauli_order, backend=backend
     )
     norm = backend.calculate_norm(backend.to_numpy(liouville) - test_representation)
 

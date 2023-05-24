@@ -130,7 +130,11 @@ class Channel(Gate):
         return super_op
 
     def to_pauli_liouville(
-        self, nqubits: int = None, normalize: bool = False, backend=None
+        self,
+        nqubits: int = None,
+        normalize: bool = False,
+        pauli_order: str = "IXYZ",
+        backend=None,
     ):
         """Returns the Liouville representation of the channel
         in the Pauli basis.
@@ -142,6 +146,8 @@ class Channel(Gate):
                 channel. Default is ``None``.
             normalize (bool, optional): If ``True``, normalized basis is returned.
                 Defaults to False.
+            pauli_order (str, optional): corresponds to the order of 4 single-qubit
+                Pauli elements in the basis. Default is "IXYZ".
             backend (``qibo.backends.abstract.Backend``, optional): backend
                 to be used in the execution. If ``None``, it uses
                 ``GlobalBackend()``. Defaults to ``None``.
@@ -160,7 +166,9 @@ class Channel(Gate):
         super_op = self.to_liouville(nqubits=nqubits, backend=backend)
 
         # unitary that transforms from comp basis to pauli basis
-        unitary = comp_basis_to_pauli(self.nqubits, normalize, backend=backend)
+        unitary = comp_basis_to_pauli(
+            self.nqubits, normalize, pauli_order=pauli_order, backend=backend
+        )
         unitary = backend.cast(unitary, dtype=unitary.dtype)
 
         super_op = unitary @ super_op @ np.transpose(np.conj(unitary))
