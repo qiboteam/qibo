@@ -16,6 +16,7 @@ def pauli_basis(
     vectorize: bool = False,
     sparse: bool = False,
     order: Optional[str] = None,
+    pauli_order: str = "IXYZ",
     backend=None,
 ):
     """Creates the ``nqubits``-qubit Pauli basis.
@@ -34,6 +35,8 @@ def pauli_basis(
             column-wise. If ``"system"``, system-wise vectorization is
             performed. If ``vectorization=False``, then ``order=None`` is
             forced. Default is ``None``.
+        pauli_order (str, optional): corresponds to the order of 4 single-qubit
+            Pauli elements. Default is "IXYZ".
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -65,6 +68,18 @@ def pauli_basis(
             f"sparse must be type bool, but it is type {type(sparse)} instead.",
         )
 
+    if not isinstance(pauli_order, str):
+        raise_error(
+            TypeError,
+            f"pauli_order must be type str, but it is type {type(pauli_order)} instead.",
+        )
+
+    if set(pauli_order) != {"I", "X", "Y", "Z"}:
+        raise_error(
+            ValueError,
+            f"pauli_order has to contain 4 symbols: I, X, Y, Z. Got {pauli_order} instead.",
+        )
+
     if vectorize and order is None:
         raise_error(ValueError, "when vectorize=True, order must be specified.")
 
@@ -77,7 +92,8 @@ def pauli_basis(
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    basis_single = [matrices.I, matrices.X, matrices.Y, matrices.Z]
+    pauli_labels = {"I": matrices.I, "X": matrices.X, "Y": matrices.Y, "Z": matrices.Z}
+    basis_single = [pauli_labels[label] for label in pauli_order]
 
     if nqubits > 1:
         basis_full = list(product(basis_single, repeat=nqubits))
@@ -118,6 +134,7 @@ def comp_basis_to_pauli(
     normalize: bool = False,
     sparse: bool = False,
     order: str = "row",
+    pauli_order: str = "IXYZ",
     backend=None,
 ):
     """Unitary matrix :math:`U` that converts operators from the Liouville
@@ -158,6 +175,8 @@ def comp_basis_to_pauli(
             performed row-wise. If ``"column"``, vectorization is performed
             column-wise. If ``"system"``, system-wise vectorization is
             performed. Default is ``"row"``.
+        pauli_order (str, optional): corresponds to the order of 4 single-qubit
+            Pauli elements. Default is "IXYZ".
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -178,6 +197,7 @@ def comp_basis_to_pauli(
             vectorize=True,
             sparse=sparse,
             order=order,
+            pauli_order=pauli_order,
             backend=backend,
         )
         elements = np.conj(elements)
@@ -185,7 +205,13 @@ def comp_basis_to_pauli(
         return elements, indexes
 
     unitary = pauli_basis(
-        nqubits, normalize, vectorize=True, sparse=sparse, order=order, backend=backend
+        nqubits,
+        normalize,
+        vectorize=True,
+        sparse=sparse,
+        order=order,
+        pauli_order=pauli_order,
+        backend=backend,
     )
 
     unitary = np.conj(unitary)
@@ -199,6 +225,7 @@ def pauli_to_comp_basis(
     normalize: bool = False,
     sparse: bool = False,
     order: str = "row",
+    pauli_order: str = "IXYZ",
     backend=None,
 ):
     """Unitary matrix :math:`U` that converts operators from the
@@ -220,18 +247,28 @@ def pauli_to_comp_basis(
             performed row-wise. If ``"column"``, vectorization is performed
             column-wise. If ``"system"``, system-wise vectorization is
             performed. Default is ``"row"``.
+        pauli_order (str, optional): corresponds to the order of 4 single-qubit
+            Pauli elements. Default is "IXYZ".
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
     Returns:
-        Unitary matrix :math:`U`.
+        ndarray or tuple: Unitary matrix :math:`U`. If ``sparse=True``,
+            tuple is composed of array of non-zero elements and an
+            array with their row-wise indexes.
     """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
     unitary = pauli_basis(
-        nqubits, normalize, vectorize=True, sparse=False, order=order, backend=backend
+        nqubits,
+        normalize,
+        vectorize=True,
+        sparse=False,
+        order=order,
+        pauli_order=pauli_order,
+        backend=backend,
     )
     unitary = np.transpose(unitary)
 
