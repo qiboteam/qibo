@@ -10,7 +10,8 @@ def test_purity(backend):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
-        purity(state)
+        test = purity(state)
+
     state = np.array([1.0, 0.0, 0.0, 0.0])
     state = backend.cast(state, dtype=state.dtype)
     backend.assert_allclose(purity(state), 1.0)
@@ -21,8 +22,41 @@ def test_purity(backend):
 
     dim = 4
     state = backend.identity_density_matrix(2)
-    state = backend.cast(state, dtype=state.dtype)
     backend.assert_allclose(purity(state), 1.0 / dim)
+
+
+@pytest.mark.parametrize("base", [2, 10, np.e, 5])
+@pytest.mark.parametrize("bipartition", [[0], [1]])
+def test_concurrence_and_formation(backend, bipartition, base):
+    with pytest.raises(TypeError):
+        state = np.random.rand(2, 3)
+        state = backend.cast(state, dtype=state.dtype)
+        test = concurrence(state, bipartition=bipartition, backend=backend)
+
+    with pytest.raises(NotImplementedError):
+        state = backend.identity_density_matrix(2, normalize=False)
+        test = concurrence(state, bipartition=bipartition, backend=backend)
+
+    nqubits = 2
+    dim = 2**nqubits
+    state = random_statevector(dim, backend=backend)
+    concur = concurrence(state, bipartition=bipartition, backend=backend)
+    ent_form = entanglement_of_formation(
+        state, bipartition=bipartition, base=base, backend=backend
+    )
+    backend.assert_allclose(0.0 <= concur <= np.sqrt(2), True)
+    backend.assert_allclose(0.0 <= ent_form <= 1.0, True)
+
+    state = np.kron(
+        random_density_matrix(2, pure=True, backend=backend),
+        random_density_matrix(2, pure=True, backend=backend),
+    )
+    concur = concurrence(state, bipartition, backend=backend)
+    ent_form = entanglement_of_formation(
+        state, bipartition=bipartition, base=base, backend=backend
+    )
+    backend.assert_allclose(concur, 0.0, atol=3 * PRECISION_TOL)
+    backend.assert_allclose(ent_form, 0.0, atol=PRECISION_TOL)
 
 
 def test_entropy_errors(backend):
