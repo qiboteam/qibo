@@ -29,15 +29,21 @@ def test_entropy_errors(backend):
     with pytest.raises(ValueError):
         state = np.array([1.0, 0.0])
         state = backend.cast(state, dtype=state.dtype)
-        entropy(state, 0, backend=backend)
+        test = entropy(state, 0, backend=backend)
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
-        entropy(state, backend=backend)
+        test = entropy(state, backend=backend)
+    if backend.__class__.__name__ == "CupyBackend":
+        with pytest.raises(NotImplementedError):
+            state = random_unitary(4)
+            state = backend.cast(state, dtype=state.dtype)
+            test = entropy(state, validate=True, backend=backend)
 
 
+@pytest.mark.parametrize("validate", [False, True])
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
-def test_entropy(backend, base):
+def test_entropy(backend, base, validate):
     state = np.array([1.0, 0.0])
     state = backend.cast(state, dtype=state.dtype)
     backend.assert_allclose(entropy(state, backend=backend), 0.0)
@@ -48,38 +54,22 @@ def test_entropy(backend, base):
 
     nqubits = 2
     state = backend.identity_density_matrix(nqubits)
-    state = backend.cast(state, dtype=state.dtype)
     if base == 2:
-        backend.assert_allclose(entropy(state, base, backend=backend), 2.0)
-        backend.assert_allclose(
-            entropy(state, base, validate=True, backend=backend), 2.0
-        )
+        test = 2.0
     elif base == 10:
-        backend.assert_allclose(
-            entropy(state, base, backend=backend), 0.6020599913279624
-        )
-        backend.assert_allclose(
-            entropy(state, base, validate=True, backend=backend), 0.6020599913279624
-        )
+        test = 0.6020599913279624
     elif base == np.e:
-        backend.assert_allclose(
-            entropy(state, base, backend=backend), 1.3862943611198906
-        )
-        backend.assert_allclose(
-            entropy(state, base, validate=True, backend=backend), 1.3862943611198906
-        )
+        test = 1.3862943611198906
     else:
-        backend.assert_allclose(
-            entropy(state, base, backend=backend), 0.8613531161467861
-        )
-        backend.assert_allclose(
-            entropy(state, base, validate=True, backend=backend), 0.8613531161467861
-        )
+        test = 0.8613531161467861
 
-    if backend.__class__.__name__ == "CupyBackend":
-        state = np.array([[1, 1e-3], [0, 0]])
-        with pytest.raises(NotImplementedError):
-            entropy(state, base, validate=True, backend=backend)
+    backend.assert_allclose(
+        backend.calculate_norm(
+            entropy(state, base, validate=validate, backend=backend) - test
+        )
+        < PRECISION_TOL,
+        True,
+    )
 
 
 def test_trace_distance(backend):
