@@ -25,24 +25,26 @@ def test_purity(backend):
     backend.assert_allclose(purity(state), 1.0 / dim)
 
 
+@pytest.mark.parametrize("validate", [True, False])
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
 @pytest.mark.parametrize("bipartition", [[0], [1]])
-def test_concurrence_and_formation(backend, bipartition, base):
+def test_concurrence_and_formation(backend, bipartition, base, validate):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
-        test = concurrence(state, bipartition=bipartition, backend=backend)
+        test = concurrence(state, bipartition=bipartition, validate=validate, backend=backend)
 
-    with pytest.raises(NotImplementedError):
-        state = backend.identity_density_matrix(2, normalize=False)
-        test = concurrence(state, bipartition=bipartition, backend=backend)
+    if validate:
+        with pytest.raises(NotImplementedError):
+            state = backend.identity_density_matrix(2, normalize=False)
+            test = concurrence(state, bipartition=bipartition, backend=backend)
 
     nqubits = 2
     dim = 2**nqubits
     state = random_statevector(dim, backend=backend)
-    concur = concurrence(state, bipartition=bipartition, backend=backend)
+    concur = concurrence(state, bipartition=bipartition, validate=validate, backend=backend)
     ent_form = entanglement_of_formation(
-        state, bipartition=bipartition, base=base, backend=backend
+        state, bipartition=bipartition, base=base, validate=validate, backend=backend
     )
     backend.assert_allclose(0.0 <= concur <= np.sqrt(2), True)
     backend.assert_allclose(0.0 <= ent_form <= 1.0, True)
@@ -51,9 +53,9 @@ def test_concurrence_and_formation(backend, bipartition, base):
         random_density_matrix(2, pure=True, backend=backend),
         random_density_matrix(2, pure=True, backend=backend),
     )
-    concur = concurrence(state, bipartition, backend=backend)
+    concur = concurrence(state, bipartition, validate=validate, backend=backend)
     ent_form = entanglement_of_formation(
-        state, bipartition=bipartition, base=base, backend=backend
+        state, bipartition=bipartition, base=base, validate=validate, backend=backend
     )
     backend.assert_allclose(concur, 0.0, atol=10 * PRECISION_TOL)
     backend.assert_allclose(ent_form, 0.0, atol=PRECISION_TOL)

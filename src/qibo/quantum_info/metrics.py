@@ -35,7 +35,7 @@ def purity(state):
     return pur
 
 
-def concurrence(state, bipartition, validate=True, backend=None):
+def concurrence(state, bipartition, validate: bool = True, backend=None):
     """Calculates concurrence of a pure bipartite quantum state
     :math:`\\rho \\in \\mathcal{H}_{A} \\otimes \\mathcal{H}_{B}` as
 
@@ -96,7 +96,7 @@ def concurrence(state, bipartition, validate=True, backend=None):
     return concur
 
 
-def entanglement_of_formation(state, bipartition, base: float = 2, backend=None):
+def entanglement_of_formation(state, bipartition, base: float = 2, validate: bool = True, backend=None):
     """Calculates the entanglement of formation :math:`E_{f}` of a pure bipartite
     quantum state :math:`\\rho`, which is given by
 
@@ -116,6 +116,8 @@ def entanglement_of_formation(state, bipartition, base: float = 2, backend=None)
         bipartition (list or tuple or ndarray): qubits in the subsystem to be traced out.
         base (float): the base of the log in :func:`qibo.quantum_info.shannon_entropy`.
             Defaults to  :math:`2`.
+        validate (bool, optional): if ``True``, checks if ``state`` is pure. If ``False``,
+            it assumes ``state`` is pure . Default: ``True``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -129,7 +131,7 @@ def entanglement_of_formation(state, bipartition, base: float = 2, backend=None)
 
     from qibo.quantum_info.utils import shannon_entropy
 
-    concur = concurrence(state, bipartition, backend)
+    concur = concurrence(state, bipartition, validate, backend)
     concur = (1 + np.sqrt(1 - concur**2)) / 2
     probabilities = [1 - concur, concur]
 
