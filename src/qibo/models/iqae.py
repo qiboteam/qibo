@@ -256,7 +256,7 @@ class IQAE:
 
             backend = GlobalBackend()
         # Initializing all parameters
-        K = [2]  
+        K = [2]
         k = [0]
         theta_u = 1 / 4
         theta_l = 0
