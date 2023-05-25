@@ -97,7 +97,9 @@ def concurrence(state, bipartition, validate: bool = True, backend=None):
     return concur
 
 
-def entanglement_of_formation(state, bipartition, base: float = 2, validate: bool = True, backend=None):
+def entanglement_of_formation(
+    state, bipartition, base: float = 2, validate: bool = True, backend=None
+):
     """Calculates the entanglement of formation :math:`E_{f}` of a pure bipartite
     quantum state :math:`\\rho`, which is given by
 

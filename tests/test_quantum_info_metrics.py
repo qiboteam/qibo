@@ -32,7 +32,9 @@ def test_concurrence_and_formation(backend, bipartition, base, validate):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
-        test = concurrence(state, bipartition=bipartition, validate=validate, backend=backend)
+        test = concurrence(
+            state, bipartition=bipartition, validate=validate, backend=backend
+        )
 
     if validate:
         with pytest.raises(NotImplementedError):
@@ -42,7 +44,9 @@ def test_concurrence_and_formation(backend, bipartition, base, validate):
     nqubits = 2
     dim = 2**nqubits
     state = random_statevector(dim, backend=backend)
-    concur = concurrence(state, bipartition=bipartition, validate=validate, backend=backend)
+    concur = concurrence(
+        state, bipartition=bipartition, validate=validate, backend=backend
+    )
     ent_form = entanglement_of_formation(
         state, bipartition=bipartition, base=base, validate=validate, backend=backend
     )
