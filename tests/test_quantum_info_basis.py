@@ -42,14 +42,14 @@ def test_pauli_basis(
         basis_test = [reduce(np.kron, matrices) for matrices in basis_test]
 
     if vectorize:
-        basis_test = [vectorization(matrix, order=order) for matrix in basis_test]
+        basis_test = [
+            vectorization(matrix, order=order, backend=backend) for matrix in basis_test
+        ]
 
-    basis_test = np.array(basis_test)
+    basis_test = backend.cast(basis_test)
 
     if normalize:
         basis_test /= np.sqrt(2**nqubits)
-
-    basis_test = backend.cast(basis_test, dtype=basis_test.dtype)
 
     if vectorize and sparse:
         elements, indexes = [], []
