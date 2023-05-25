@@ -440,8 +440,6 @@ class NumpyBackend(Backend):
 
         if not circuit.density_matrix:
             samples = []
-            probabilities = np.zeros(2**nqubits, dtype=float)
-            probabilities = self.cast(probabilities, dtype=probabilities.dtype)
 
         for _ in range(nshots):
             if circuit.density_matrix:
@@ -477,7 +475,8 @@ class NumpyBackend(Backend):
                 sample = result.samples()[0]
                 results.append(sample)
                 if not circuit.density_matrix:
-                    probabilities += result.probabilities()
+                    probabilities = result.probabilities()
+                    probabilities = self.cast(probabilities, dtype=probabilities.dtype)
                     samples.append("".join([str(s) for s in sample]))
             else:
                 results.append(state)
