@@ -443,7 +443,7 @@ class NumpyBackend(Backend):
             target_qubits = [
                 measurement.target_qubits for measurement in circuit.measurements
             ]
-            target_qubits = np.array(target_qubits).flatten()
+            target_qubits = sum(target_qubits, tuple())
             probabilities = np.zeros(2 ** len(target_qubits), dtype=float)
             probabilities = self.cast(probabilities, dtype=probabilities.dtype)
 
