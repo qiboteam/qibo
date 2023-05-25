@@ -35,8 +35,13 @@ def test_concurrence_and_formation(backend, bipartition, base, validate):
         test = concurrence(
             state, bipartition=bipartition, validate=validate, backend=backend
         )
+    with pytest.raises(TypeError):
+        state = random_statevector(4, backend=backend)
+        test = concurrence(
+            state, bipartition=bipartition, validate="True", backend=backend
+        )
 
-    if validate:
+    if validate is True:
         with pytest.raises(NotImplementedError):
             state = backend.identity_density_matrix(2, normalize=False)
             test = concurrence(state, bipartition=bipartition, backend=backend)
