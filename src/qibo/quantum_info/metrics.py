@@ -78,7 +78,8 @@ def concurrence(state, bipartition, validate=True, backend=None):
         mixed = bool(abs(purity_total_system - 1.0) > PRECISION_TOL)
         if mixed is True:
             raise_error(
-                NotImplementedError, "concurrence only implemented for pure quantum states."
+                NotImplementedError,
+                "concurrence only implemented for pure quantum states.",
             )
 
     reduced_density_matrix = (
