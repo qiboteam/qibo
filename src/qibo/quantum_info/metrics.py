@@ -35,19 +35,21 @@ def purity(state):
     return pur
 
 
-def concurrence(state, bipartition, backend=None):
+def concurrence(state, bipartition, validate=True, backend=None):
     """Calculates concurrence of a pure bipartite quantum state
     :math:`\\rho \\in \\mathcal{H}_{A} \\otimes \\mathcal{H}_{B}` as
 
     .. math::
         C(\\rho) = \\sqrt{2 \\, (\\text{tr}^{2}(\\rho) - \\text{tr}(\\rho_{B}^{2}))} \\, ,
 
-    where :math:`\\rho_{B} = \\ext{tr}_{B}(\\rho)` is the reduced density operator
+    where :math:`\\rho_{B} = \\text{tr}_{B}(\\rho)` is the reduced density operator
     obtained by tracing out the qubits in the ``bipartition`` :math:`B`.
 
     Args:
         state (ndarray): statevector or density matrix.
         bipartition (list or tuple or ndarray): qubits in the subsystem to be traced out.
+        validate (bool, optional): if ``True``, checks if ``state`` is pure. If ``False``,
+            it assumes ``state`` is pure . Default: ``True``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -70,13 +72,14 @@ def concurrence(state, bipartition, backend=None):
 
     nqubits = int(np.log2(state.shape[0]))
 
-    purity_total_system = purity(state)
+    if validate:
+        purity_total_system = purity(state)
 
-    mixed = bool(abs(purity_total_system - 1.0) > PRECISION_TOL)
-    if mixed is True:
-        raise_error(
-            NotImplementedError, "concurrence only implemented for pure quantum states."
-        )
+        mixed = bool(abs(purity_total_system - 1.0) > PRECISION_TOL)
+        if mixed is True:
+            raise_error(
+                NotImplementedError, "concurrence only implemented for pure quantum states."
+            )
 
     reduced_density_matrix = (
         backend.partial_trace(state, bipartition, nqubits)
