@@ -8,7 +8,7 @@ def purity(state):
     """Purity of a quantum state :math:`\\rho`, which is given by :math:`\\text{Tr}(\\rho^{2})`.
 
     Args:
-        state: statevector or density matrix.
+        state (ndarray): statevector or density matrix.
     Returns:
         float: Purity of quantum state :math:`\\rho`.
     """
@@ -41,7 +41,7 @@ def entropy(state, base: float = 2, validate: bool = False, backend=None):
         S(\\rho) = - \\text{Tr}\\left[\\rho \\, \\log(\\rho)\\right]
 
     Args:
-        state: state vector or density matrix.
+        state (ndarray): statevector or density matrix.
         base (float, optional): the base of the log. Default: 2.
         validate (bool, optional): if ``True``, checks if ``state`` is Hermitian. If ``False``,
             it assumes ``state`` is Hermitian . Default: ``False``.
@@ -122,8 +122,8 @@ def trace_distance(state, target, validate: bool = False, backend=None):
     where :math:`\\|\\cdot\\|_{1}` is the Schatten 1-norm.
 
     Args:
-        state: state vector or density matrix.
-        target: state vector or density matrix.
+        state (ndarray): statevector or density matrix.
+        target (ndarray): statevector or density matrix.
         validate (bool, optional): if ``True``, checks if :math:`\\rho - \\sigma` is Hermitian.
             If ``False``, it assumes the difference is Hermitian. Default: ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
@@ -188,8 +188,8 @@ def hilbert_schmidt_distance(state, target):
             \\text{Tr}\\left((\\rho - \\sigma)^{2}\\right)
 
     Args:
-        state: state vector or density matrix.
-        target: state vector or density matrix.
+        state (ndarray): statevector or density matrix.
+        target (ndarray): statevector or density matrix.
 
     Returns:
         float: Hilbert-Schmidt distance between state :math:`\\rho` and target :math:`\\sigma`.
@@ -230,10 +230,10 @@ def fidelity(state, target, validate: bool = False):
     :math:`\\sigma` is assumed to be pure.
 
     Args:
-        state: state vector or density matrix.
-        target: state vector or density matrix.
+        state (ndarray): statevector or density matrix.
+        target (ndarray): statevector or density matrix.
         validate (bool, optional): if ``True``, checks if one of the
-            input states is pure. Default is ``False``.
+            input states is pure. Defaults to ``False``.
 
     Returns:
         float: Fidelity between state :math:`\\rho` and target :math:`\\sigma`.
@@ -263,8 +263,8 @@ def fidelity(state, target, validate: bool = False):
         ):
             raise_error(
                 ValueError,
-                f"Neither state is pure. Purity state: {purity_state} , "
-                + f"Purity target: {purity_target}.",
+                f"Neither state is pure. Purity state (ndarray): {purity_state} , "
+                + f"Purity target (ndarray): {purity_target}.",
             )
 
     if len(state.shape) == 1 and len(target.shape) == 1:
@@ -275,6 +275,54 @@ def fidelity(state, target, validate: bool = False):
     fid = float(fid)
 
     return fid
+
+
+def bures_angle(state, target, validate: bool = False):
+    """Calculates the Bures angle :math:`D_{A}` between a ``state`` :math:`\\rho`
+    and a ``target`` state :math:`\\sigma`. This is given by
+
+    .. math::
+        D_{A}(\\rho, \\, \\sigma) = \\text{arccos}\\left(\\sqrt{F(\\rho, \\, \\sigma)}\\right) \\, ,
+
+    where :math:`F(\\rho, \\sigma)` is the :func:`qibo.quantum_info.fidelity`
+    between `state` and `target`.
+
+    Args:
+        state (ndarray): statevector or density matrix.
+        target (ndarray): statevector or density matrix.
+        validate (bool, optional): if ``True``, checks if one of the
+            input states is pure. Defaults to ``False``.
+
+    Returns:
+        float: Bures angle between ``state`` and ``target``.
+    """
+    angle = np.arccos(np.sqrt(fidelity(state, target, validate=validate)))
+
+    return angle
+
+
+def bures_distance(state, target, validate: bool = False):
+    """Calculates the Bures distance :math:`D_{B}` between a ``state`` :math:`\\rho`
+    and a ``target`` state :math:`\\sigma`. This is given by
+
+    .. math::
+        D_{B}(\\rho, \\, \\sigma) = \\sqrt{2 \\, (1 - \\sqrt{F(\\rho, \\, \\sigma)})}
+
+    where :math:`F(\\rho, \\sigma)` is the :func:`qibo.quantum_info.fidelity`
+    between `state` and `target`.
+
+    Args:
+        state (ndarray): statevector or density matrix.
+        target (ndarray): statevector or density matrix.
+        validate (bool, optional): if ``True``, checks if one of the
+            input states is pure. Defaults to ``False``.
+
+    Returns:
+        float: Bures distance between ``state`` and ``target``.
+    """
+    distance = np.sqrt(2 * (1 - np.sqrt(fidelity(state, target, validate=validate))))
+
+    return distance
 
 
 def process_fidelity(channel, target=None, validate: bool = False, backend=None):
@@ -351,7 +399,7 @@ def average_gate_fidelity(channel, target=None, backend=None):
     Args:
         channel: quantum channel :math:`\\mathcal{E}`.
         target (optional): quantum channel :math:`\\mathcal{U}`.
-            If ``None``, target is the Identity channel. Default is ``None``.
+            If ``None``, target is the Identity channel. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -382,7 +430,7 @@ def gate_error(channel, target=None, backend=None):
     Args:
         channel: quantum channel :math:`\\mathcal{E}`.
         target (optional): quantum channel :math:`\\mathcal{U}`. If ``None``,
-            target is the Identity channel. Default is ``None``.
+            target is the Identity channel. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
