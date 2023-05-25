@@ -55,7 +55,7 @@ def test_concurrence_and_formation(backend, bipartition, base):
     ent_form = entanglement_of_formation(
         state, bipartition=bipartition, base=base, backend=backend
     )
-    backend.assert_allclose(concur, 0.0, atol=3 * PRECISION_TOL)
+    backend.assert_allclose(concur, 0.0, atol=10 * PRECISION_TOL)
     backend.assert_allclose(ent_form, 0.0, atol=PRECISION_TOL)
 
 

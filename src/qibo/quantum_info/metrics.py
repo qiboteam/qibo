@@ -32,12 +32,6 @@ def purity(state):
     # a 0-dim ndarray
     pur = float(pur)
 
-    # this is necessary to upper bound purity by 1.0
-    # up to machine precision, which is important
-    # for concurrence and meyer_wallach_entanglement
-    if pur - 1.0 < PRECISION_TOL:
-        pur = 1.0
-
     return pur
 
 
@@ -77,8 +71,8 @@ def concurrence(state, bipartition, backend=None):
     nqubits = int(np.log2(state.shape[0]))
 
     purity_total_system = purity(state)
-    mixed = bool(abs(purity_total_system - 1.0) > PRECISION_TOL)
 
+    mixed = bool(abs(purity_total_system - 1.0) > PRECISION_TOL)
     if mixed is True:
         raise_error(
             NotImplementedError, "concurrence only implemented for pure quantum states."
@@ -90,7 +84,11 @@ def concurrence(state, bipartition, backend=None):
         else backend.partial_trace_density_matrix(state, bipartition, nqubits)
     )
 
-    concur = np.sqrt(2 * (1 - purity(reduced_density_matrix)))
+    purity_reduced = purity(reduced_density_matrix)
+    if purity_reduced - 1.0 > 0.0:
+        purity_reduced = round(purity_reduced, 7)
+
+    concur = np.sqrt(2 * (1 - purity_reduced))
 
     return concur
 
