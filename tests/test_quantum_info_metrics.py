@@ -196,7 +196,7 @@ def test_hilbert_schmidt_distance(backend):
     backend.assert_allclose(hilbert_schmidt_distance(state, target), 2.0)
 
 
-def test_fidelity(backend):
+def test_fidelity_and_bures(backend):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 2)
         target = np.random.rand(4, 4)
@@ -221,18 +221,24 @@ def test_fidelity(backend):
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
     backend.assert_allclose(fidelity(state, target), 1.0)
+    backend.assert_allclose(bures_angle(state, target), 0.0)
+    backend.assert_allclose(bures_distance(state, target), 0.0)
 
     state = np.outer(np.conj(state), state)
     target = np.outer(np.conj(target), target)
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
     backend.assert_allclose(fidelity(state, target), 1.0)
+    backend.assert_allclose(bures_angle(state, target), 0.0)
+    backend.assert_allclose(bures_distance(state, target), 0.0)
 
     state = np.array([0.0, 1.0, 0.0, 0.0])
     target = np.array([0.0, 0.0, 0.0, 1.0])
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
     backend.assert_allclose(fidelity(state, target), 0.0)
+    backend.assert_allclose(bures_angle(state, target), np.arccos(0.0))
+    backend.assert_allclose(bures_distance(state, target), np.sqrt(2))
 
 
 def test_process_fidelity(backend):
