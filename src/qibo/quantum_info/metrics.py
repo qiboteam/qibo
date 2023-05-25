@@ -49,7 +49,7 @@ def concurrence(state, bipartition, validate: bool = True, backend=None):
         state (ndarray): statevector or density matrix.
         bipartition (list or tuple or ndarray): qubits in the subsystem to be traced out.
         validate (bool, optional): if ``True``, checks if ``state`` is pure. If ``False``,
-            it assumes ``state`` is pure . Default: ``True``.
+            it assumes ``state`` is pure . Defaults to ``True``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -70,9 +70,14 @@ def concurrence(state, bipartition, validate: bool = True, backend=None):
             f"Object must have dims either (k,) or (k,k), but have dims {state.shape}.",
         )
 
+    if isinstance(validate, bool) is False:
+        raise_error(
+            TypeError, f"validate must be type bool, but it is type {type(validate)}."
+        )
+
     nqubits = int(np.log2(state.shape[0]))
 
-    if validate:
+    if validate is True:
         purity_total_system = purity(state)
 
         mixed = bool(abs(purity_total_system - 1.0) > PRECISION_TOL)
