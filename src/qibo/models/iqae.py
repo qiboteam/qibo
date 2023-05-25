@@ -174,7 +174,6 @@ class IQAE:
 
         def h_calc_CP(N_total_plus, N_total_shots, alpha, T):
             """Calculates the h function"""
-            # a_min, a_max = proportion_confint(N_total_plus, N_total_shots, method='beta', alpha=(alpha/T))
             a_min, a_max = self.clopper_pearson(
                 N_total_plus, N_total_shots, alpha=(alpha / T)
             )
@@ -256,8 +255,8 @@ class IQAE:
             from qibo.backends import GlobalBackend
 
             backend = GlobalBackend()
-        # intilialize all parameters
-        K = [2]  # = 4k+2 for k=0
+        # Initializing all parameters
+        K = [2]  
         k = [0]
         theta_u = 1 / 4
         theta_l = 0
@@ -307,14 +306,13 @@ class IQAE:
             else:
                 N_shots_i = self.N_shots
 
-            # QUANTUM CIRCUIT
+            # Calling the quantum circuit
             qc = self.construct_circuit(k_i)
             samples = self.run_circuit(qc, N_shots_i)
 
             samples_history.append(samples)
             n_shots_history.append(N_shots_i)
 
-            # track number of A oracle calls
             num_oracle_queries += N_shots_i * k_i
 
             l = 1
