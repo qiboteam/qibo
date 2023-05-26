@@ -111,6 +111,62 @@ def entropy(state, base: float = 2, validate: bool = False, backend=None):
     return ent
 
 
+def entanglement_entropy(
+    state, bipartition, base: float = 2, validate: bool = False, backend=None
+):
+    """Calculates the entanglement entropy :math:`S` of ``state`` :math:`\\rho`,
+    which is given by
+
+    .. math::
+        S(\\rho_{A}) = -\\tr(\\rho_{A} \\, \\log(\\rho_{A})) \\, ,
+
+    where :math:`\\rho_{A} = \\tr_{B}(\\rho)` is the reduced density matrix calculated
+    by tracing out the ``bipartition`` :math:`B`.
+
+    Args:
+        state (ndarray): statevector or density matrix.
+        bipartition (_type_): _description_
+        base (float, optional): the base of the log. Default: 2.
+        validate (bool, optional): if ``True``, checks if :math:`\\rho_{A}` is Hermitian.
+            If ``False``, it assumes ``state`` is Hermitian . Default: ``False``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        float: Entanglement entropy of ``state`` :math:`\\rho`.
+    """
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    if base <= 0.0:
+        raise_error(ValueError, "log base must be non-negative.")
+
+    if (
+        (len(state.shape) not in [1, 2])
+        or (len(state) == 0)
+        or (len(state.shape) == 2 and state.shape[0] != state.shape[1])
+    ):
+        raise_error(
+            TypeError,
+            f"Object must have dims either (k,) or (k,k), but have dims {state.shape}.",
+        )
+
+    nqubits = int(np.log2(state.shape[0]))
+
+    reduced_density_matrix = (
+        backend.partial_trace(state, bipartition, nqubits)
+        if len(state.shape) == 1
+        else backend.partial_trace_density_matrix(state, bipartition, nqubits)
+    )
+
+    entropy_entanglement = entropy(
+        reduced_density_matrix, base=base, validate=validate, backend=backend
+    )
+
+    return entropy_entanglement
+
+
 def trace_distance(state, target, validate: bool = False, backend=None):
     """Trace distance between two quantum states, :math:`\\rho` and :math:`\\sigma`:
 
