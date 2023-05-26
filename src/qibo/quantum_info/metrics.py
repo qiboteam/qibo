@@ -125,7 +125,7 @@ def entanglement_entropy(
 
     Args:
         state (ndarray): statevector or density matrix.
-        bipartition (_type_): _description_
+        bipartition (list or tuple or ndarray): qubits in the subsystem to be traced out.
         base (float, optional): the base of the log. Default: 2.
         validate (bool, optional): if ``True``, checks if :math:`\\rho_{A}` is Hermitian.
             If ``False``, it assumes ``state`` is Hermitian . Default: ``False``.
