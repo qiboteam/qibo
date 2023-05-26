@@ -42,9 +42,9 @@ def entropy(state, base: float = 2, validate: bool = False, backend=None):
 
     Args:
         state (ndarray): statevector or density matrix.
-        base (float, optional): the base of the log. Default: 2.
+        base (float, optional): the base of the log. Defaults to 2.
         validate (bool, optional): if ``True``, checks if ``state`` is Hermitian. If ``False``,
-            it assumes ``state`` is Hermitian . Default: ``False``.
+            it assumes ``state`` is Hermitian . Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -125,7 +125,7 @@ def trace_distance(state, target, validate: bool = False, backend=None):
         state (ndarray): statevector or density matrix.
         target (ndarray): statevector or density matrix.
         validate (bool, optional): if ``True``, checks if :math:`\\rho - \\sigma` is Hermitian.
-            If ``False``, it assumes the difference is Hermitian. Default: ``False``.
+            If ``False``, it assumes the difference is Hermitian. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -325,6 +325,59 @@ def bures_distance(state, target, validate: bool = False):
     return distance
 
 
+def entanglement_fidelity(channel, nqubits: int, state=None, backend=None):
+    """Entanglement fidelity of a ``channel`` :math:`\\mathcal{E}` on ``state``
+    :math:`\rho`, which is given by
+
+    .. math::
+        \\begin{align*}
+          F_{\\mathcal{E}} &= \\text{fidelity}(\\rho_{f}, \\rho) \\nonumber \\\\
+          &= \\tr(\\rho_{f} \\, \\rho)
+
+    where
+
+    .. math::
+        \\rho_{f} = \\mathcal{E}_{A} \\otimes I_{B}(\\rho)
+
+    is the state after the channel :math:`\\mathcal{E}` was applied to
+    partition :math:`A`.
+
+    Args:
+        channel (:class:`qibo.gates.channels.Channel`): quantum channel
+            acting on partition :math:`A`.
+        nqubits (int): total number of qubits in ``state``.
+        state (ndarray, optional): statevector or density matrix to be evolved
+            by ``channel``. If ``None``, defaults to the maximally entangled state
+            :math:`\\frac{1}{2^{n}} \\, \\sum_{k} \\, \\ket{k}\\ket{k}`, where
+            :math:`n` is ``nqubits``. Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
+
+    Returns:
+        float: Entanglement fidelity :math:`F_{\\mathcal{E}}`.
+    """
+    if backend is None:
+        backend = GlobalBackend()
+
+    dim = 2**nqubits
+
+    density_matrix = True if state is not None and len(state.shape) == 2 else False
+
+    if state is None:
+        state = np.ones(dim, dtype=complex) / np.sqrt(dim)
+        state = backend.cast(state, dtype=state.dtype)
+
+    if density_matrix is True:
+        state_final = backend.apply_channel_density_matrix(channel, state, nqubits)
+    else:
+        state_final = backend.apply_channel(channel, state, nqubits)
+
+    entang_fidelity = fidelity(state_final, state)
+
+    return entang_fidelity
+
+
 def process_fidelity(channel, target=None, validate: bool = False, backend=None):
     """Process fidelity between two quantum channels (when at least one channel is` unitary),
 
@@ -333,18 +386,18 @@ def process_fidelity(channel, target=None, validate: bool = False, backend=None)
             \\text{Tr}(\\mathcal{E}^{\\dagger} \\, \\mathcal{U})
 
     Args:
-        channel: quantum channel.
-        target (optional): quantum channel. If ``None``, target is the Identity channel.
-            Default: ``None``.
+        channel (ndarray): quantum channel.
+        target (ndarray, optional): quantum channel. If ``None``, target is the Identity
+            channel. Defaults to ``None``.
         validate (bool, optional): if True, checks if one of the
-            input channels is unitary. Default: ``False``.
+            input channels is unitary. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
 
     Returns:
         float: Process fidelity between channels :math:`\\mathcal{E}`
-            and target :math:`\\mathcal{U}`.
+        and target :math:`\\mathcal{U}`.
     """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
@@ -358,7 +411,7 @@ def process_fidelity(channel, target=None, validate: bool = False, backend=None)
 
     dim = int(np.sqrt(channel.shape[0]))
 
-    if validate:
+    if validate is True:
         norm_channel = backend.calculate_norm(
             np.dot(np.conj(np.transpose(channel)), channel) - np.eye(dim**2)
         )
@@ -373,14 +426,16 @@ def process_fidelity(channel, target=None, validate: bool = False, backend=None)
 
     if target is None:
         # With no target, return process fidelity with Identity channel
-        fid = np.real(np.trace(channel)) / dim**2
-        fid = float(fid)
-        return fid
+        fidelity = np.real(np.trace(channel)) / dim**2
+        fidelity = float(fidelity)
 
-    fid = np.real(np.trace(np.dot(np.conj(np.transpose(channel)), target))) / dim**2
-    fid = float(fid)
+        return fidelity
 
-    return fid
+    fidelity = np.dot(np.transpose(np.conj(channel)), target)
+    fidelity = np.real(np.trace(fidelity)) / dim**2
+    fidelity = float(fidelity)
+
+    return fidelity
 
 
 def average_gate_fidelity(channel, target=None, backend=None):
