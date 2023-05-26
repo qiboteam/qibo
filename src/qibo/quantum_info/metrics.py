@@ -92,14 +92,14 @@ def entropy(state, base: float = 2, validate: bool = False, backend=None):
             eigenvalues = np.linalg.eigvalsh(state)
 
         if base == 2:
-            log_prob = np.where(eigenvalues != 0, np.log2(eigenvalues), 0.0)
+            log_prob = np.where(eigenvalues > 0, np.log2(eigenvalues), 0.0)
         elif base == 10:
-            log_prob = np.where(eigenvalues != 0, np.log10(eigenvalues), 0.0)
+            log_prob = np.where(eigenvalues > 0, np.log10(eigenvalues), 0.0)
         elif base == np.e:
-            log_prob = np.where(eigenvalues != 0, np.log(eigenvalues), 0.0)
+            log_prob = np.where(eigenvalues > 0, np.log(eigenvalues), 0.0)
         else:
             log_prob = np.where(
-                eigenvalues != 0, np.log(eigenvalues) / np.log(base), 0.0
+                eigenvalues > 0, np.log(eigenvalues) / np.log(base), 0.0
             )
 
         ent = -np.sum(eigenvalues * log_prob)
@@ -112,7 +112,11 @@ def entropy(state, base: float = 2, validate: bool = False, backend=None):
 
 
 def entanglement_entropy(
-    state, bipartition, base: float = 2, validate: bool = False, backend=None
+    state,
+    bipartition,
+    base: float = 2,
+    validate: bool = False,
+    backend=None,
 ):
     """Calculates the entanglement entropy :math:`S` of ``state`` :math:`\\rho`,
     which is given by

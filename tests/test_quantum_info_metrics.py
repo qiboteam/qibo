@@ -102,6 +102,36 @@ def test_entanglement_entropy(backend, bipartition, base, validate):
                 backend=backend,
             )
 
+    # Bell state
+    state = np.array([1.0, 0.0, 0.0, 1.0]) / np.sqrt(2)
+    state = backend.cast(state, dtype=state.dtype)
+
+    entang_entrop = entanglement_entropy(
+        state, bipartition=bipartition, base=base, validate=validate, backend=backend
+    )
+
+    if base == 2:
+        test = 1.0
+    elif base == 10:
+        test = 0.30102999566398125
+    elif base == np.e:
+        test = 0.6931471805599454
+    else:
+        test = 0.4306765580733931
+
+    backend.assert_allclose(entang_entrop, test, atol=PRECISION_TOL)
+
+    # Product state
+    state = np.kron(
+        random_statevector(2, backend=backend), random_statevector(2, backend=backend)
+    )
+
+    entang_entrop = entanglement_entropy(
+        state, bipartition=bipartition, base=base, validate=validate, backend=backend
+    )
+
+    backend.assert_allclose(entang_entrop, 0.0, atol=PRECISION_TOL)
+
 
 def test_trace_distance(backend):
     with pytest.raises(TypeError):
