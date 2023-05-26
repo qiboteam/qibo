@@ -1164,10 +1164,25 @@ Entropy
 
 .. note::
     ``validate`` flag allows the user to choose if the function will check if input
-    ``state`` is Hermitian or not. 1Default option is ``validate=False``, i.e. the
+    ``state`` is Hermitian or not. Default option is ``validate=False``, i.e. the
     assumption of Hermiticity, because it is faster and, more importantly,
     the functions are intended to be used on Hermitian inputs. When ``validate=True``
     and ``state`` is non-Hermitian, an error will be raised when using `cupy` backend.
+
+
+Entanglement entropy
+""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.entanglement_entropy
+
+.. note::
+    ``validate`` flag allows the user to choose if the function will check if
+    the reduced density matrix resulting from tracing out ``bipartition`` from input
+    ``state`` is Hermitian or not. Default option is ``validate=False``, i.e. the
+    assumption of Hermiticity, because it is faster and, more importantly,
+    the functions are intended to be used on Hermitian inputs. When ``validate=True``
+    and the reduced density matrix is non-Hermitian, an error will be raised
+    when using `cupy` backend.
 
 
 Trace distance
