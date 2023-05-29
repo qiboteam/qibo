@@ -1,6 +1,7 @@
 # Quantum Convolutional Neural Network Classifier
 
 Code at: [https://github.com/qiboteam/qibo/tree/master/examples/qcnn_classifier](https://github.com/qiboteam/qibo/tree/master/examples/qcnn_classifier).
+Please note that [scikit-learn](https://scikit-learn.org/stable/install.html) is needed to visualize the results.
 
 ## Problem overview
 This tutorial implements a simple [Quantum Convolutional Neural Network](https://www.nature.com/articles/s41567-019-0648-8) (QCNN), which is a translationally invariant algorithm analogous to the classical [convolutional neural network](https://proceedings.neurips.cc/paper_files/paper/2012/file/c399862d3b9d6b76c8436e924a68c45b-Paper.pdf). This example demonstrates the use of the QCNN as a quantum classifier, which attempts to classify ground states of a translationally invariant quantum system, the transverse field Ising model, based on whether they are in the ordered or disordered phase. The (randomized) statevector data provided are those of a 4-qubit system. Accompanying each state is a label: +1 (disordered phase) or -1 (ordered phase).
