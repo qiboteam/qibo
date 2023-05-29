@@ -25,19 +25,23 @@ def test_purity(backend):
     backend.assert_allclose(purity(state), 1.0 / dim)
 
 
-def test_entropy_errors(backend):
+@pytest.mark.parametrize("validate", [False, True])
+@pytest.mark.parametrize("base", [2, 10, np.e, 5])
+def test_entropy(backend, base, validate):
     with pytest.raises(ValueError):
         state = np.array([1.0, 0.0])
         state = backend.cast(state, dtype=state.dtype)
-        entropy(state, 0, backend=backend)
+        test = entropy(state, 0, validate=validate, backend=backend)
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
-        entropy(state, backend=backend)
+        test = entropy(state, base=base, validate=validate, backend=backend)
+    if backend.__class__.__name__ == "CupyBackend":
+        with pytest.raises(NotImplementedError):
+            state = random_unitary(4)
+            state = backend.cast(state, dtype=state.dtype)
+            test = entropy(state, base=base, validate=True, backend=backend)
 
-
-@pytest.mark.parametrize("base", [2, 10, np.e, 5])
-def test_entropy(backend, base):
     state = np.array([1.0, 0.0])
     state = backend.cast(state, dtype=state.dtype)
     backend.assert_allclose(entropy(state, backend=backend), 0.0)
@@ -48,38 +52,85 @@ def test_entropy(backend, base):
 
     nqubits = 2
     state = backend.identity_density_matrix(nqubits)
-    state = backend.cast(state, dtype=state.dtype)
     if base == 2:
-        backend.assert_allclose(entropy(state, base, backend=backend), 2.0)
-        backend.assert_allclose(
-            entropy(state, base, validate=True, backend=backend), 2.0
-        )
+        test = 2.0
     elif base == 10:
-        backend.assert_allclose(
-            entropy(state, base, backend=backend), 0.6020599913279624
-        )
-        backend.assert_allclose(
-            entropy(state, base, validate=True, backend=backend), 0.6020599913279624
-        )
+        test = 0.6020599913279624
     elif base == np.e:
-        backend.assert_allclose(
-            entropy(state, base, backend=backend), 1.3862943611198906
-        )
-        backend.assert_allclose(
-            entropy(state, base, validate=True, backend=backend), 1.3862943611198906
-        )
+        test = 1.3862943611198906
     else:
-        backend.assert_allclose(
-            entropy(state, base, backend=backend), 0.8613531161467861
-        )
-        backend.assert_allclose(
-            entropy(state, base, validate=True, backend=backend), 0.8613531161467861
-        )
+        test = 0.8613531161467861
 
+    backend.assert_allclose(
+        backend.calculate_norm(
+            entropy(state, base, validate=validate, backend=backend) - test
+        )
+        < PRECISION_TOL,
+        True,
+    )
+
+
+@pytest.mark.parametrize("validate", [False, True])
+@pytest.mark.parametrize("base", [2, 10, np.e, 5])
+@pytest.mark.parametrize("bipartition", [[0], [1]])
+def test_entanglement_entropy(backend, bipartition, base, validate):
+    with pytest.raises(ValueError):
+        state = np.array([1.0, 0.0])
+        state = backend.cast(state, dtype=state.dtype)
+        test = entanglement_entropy(
+            state, bipartition=bipartition, base=0, validate=validate, backend=backend
+        )
+    with pytest.raises(TypeError):
+        state = np.random.rand(2, 3)
+        state = backend.cast(state, dtype=state.dtype)
+        test = entanglement_entropy(
+            state,
+            bipartition=bipartition,
+            base=base,
+            validate=validate,
+            backend=backend,
+        )
     if backend.__class__.__name__ == "CupyBackend":
-        state = np.array([[1, 1e-3], [0, 0]])
         with pytest.raises(NotImplementedError):
-            entropy(state, base, validate=True, backend=backend)
+            state = random_unitary(4)
+            state = backend.cast(state, dtype=state.dtype)
+            test = entanglement_entropy(
+                state,
+                bipartition=bipartition,
+                base=base,
+                validate=True,
+                backend=backend,
+            )
+
+    # Bell state
+    state = np.array([1.0, 0.0, 0.0, 1.0]) / np.sqrt(2)
+    state = backend.cast(state, dtype=state.dtype)
+
+    entang_entrop = entanglement_entropy(
+        state, bipartition=bipartition, base=base, validate=validate, backend=backend
+    )
+
+    if base == 2:
+        test = 1.0
+    elif base == 10:
+        test = 0.30102999566398125
+    elif base == np.e:
+        test = 0.6931471805599454
+    else:
+        test = 0.4306765580733931
+
+    backend.assert_allclose(entang_entrop, test, atol=PRECISION_TOL)
+
+    # Product state
+    state = np.kron(
+        random_statevector(2, backend=backend), random_statevector(2, backend=backend)
+    )
+
+    entang_entrop = entanglement_entropy(
+        state, bipartition=bipartition, base=base, validate=validate, backend=backend
+    )
+
+    backend.assert_allclose(entang_entrop, 0.0, atol=PRECISION_TOL)
 
 
 def test_trace_distance(backend):
@@ -172,7 +223,7 @@ def test_hilbert_schmidt_distance(backend):
     backend.assert_allclose(hilbert_schmidt_distance(state, target), 2.0)
 
 
-def test_fidelity(backend):
+def test_fidelity_and_bures(backend):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 2)
         target = np.random.rand(4, 4)
@@ -197,18 +248,24 @@ def test_fidelity(backend):
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
     backend.assert_allclose(fidelity(state, target), 1.0)
+    backend.assert_allclose(bures_angle(state, target), 0.0)
+    backend.assert_allclose(bures_distance(state, target), 0.0)
 
     state = np.outer(np.conj(state), state)
     target = np.outer(np.conj(target), target)
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
     backend.assert_allclose(fidelity(state, target), 1.0)
+    backend.assert_allclose(bures_angle(state, target), 0.0)
+    backend.assert_allclose(bures_distance(state, target), 0.0)
 
     state = np.array([0.0, 1.0, 0.0, 0.0])
     target = np.array([0.0, 0.0, 0.0, 1.0])
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
     backend.assert_allclose(fidelity(state, target), 0.0)
+    backend.assert_allclose(bures_angle(state, target), np.arccos(0.0))
+    backend.assert_allclose(bures_distance(state, target), np.sqrt(2))
 
 
 def test_process_fidelity(backend):
