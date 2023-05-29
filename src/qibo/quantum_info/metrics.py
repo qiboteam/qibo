@@ -144,9 +144,9 @@ def entanglement_entropy(
     Args:
         state (ndarray): statevector or density matrix.
         bipartition (list or tuple or ndarray): qubits in the subsystem to be traced out.
-        base (float, optional): the base of the log. Default: 2.
+        base (float, optional): the base of the log. Defaults to :math:`2`.
         validate (bool, optional): if ``True``, checks if :math:`\\rho_{A}` is Hermitian.
-            If ``False``, it assumes ``state`` is Hermitian . Default: ``False``.
+            If ``False``, it assumes ``state`` is Hermitian . Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -199,7 +199,7 @@ def trace_distance(state, target, validate: bool = False, backend=None):
         state (ndarray): statevector or density matrix.
         target (ndarray): statevector or density matrix.
         validate (bool, optional): if ``True``, checks if :math:`\\rho - \\sigma` is Hermitian.
-            If ``False``, it assumes the difference is Hermitian. Default: ``False``.
+            If ``False``, it assumes the difference is Hermitian. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
