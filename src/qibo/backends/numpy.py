@@ -440,7 +440,11 @@ class NumpyBackend(Backend):
 
         if not circuit.density_matrix:
             samples = []
-            probabilities = np.zeros(2**nqubits, dtype=float)
+            target_qubits = [
+                measurement.target_qubits for measurement in circuit.measurements
+            ]
+            target_qubits = sum(target_qubits, tuple())
+            probabilities = np.zeros(2 ** len(target_qubits), dtype=float)
             probabilities = self.cast(probabilities, dtype=probabilities.dtype)
 
         for _ in range(nshots):
