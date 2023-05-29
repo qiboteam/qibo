@@ -22,7 +22,7 @@ def test_variable_backpropagation():
     backend = construct_tensorflow_backend()
     import tensorflow as tf
 
-    theta = tf.Variable(0.1234, dtype="float64")
+    theta = tf.Variable(0.1234, dtype=tf.complex128)
     # TODO: Fix parametrized gates so that `Circuit` can be defined outside
     # of the gradient tape
     with tf.GradientTape() as tape:
@@ -32,6 +32,7 @@ def test_variable_backpropagation():
         result = backend.execute_circuit(c)
         loss = tf.math.real(result.state()[-1])
     grad = tape.gradient(loss, theta)
+    grad = tf.math.real(grad)
 
     target_loss = np.cos(theta / 2.0)
     backend.assert_allclose(loss, target_loss)
@@ -44,7 +45,7 @@ def test_two_variables_backpropagation():
     backend = construct_tensorflow_backend()
     import tensorflow as tf
 
-    theta = tf.Variable([0.1234, 0.4321], dtype="float64")
+    theta = tf.Variable([0.1234, 0.4321], dtype=tf.complex128)
     # TODO: Fix parametrized gates so that `Circuit` can be defined outside
     # of the gradient tape
     with tf.GradientTape() as tape:

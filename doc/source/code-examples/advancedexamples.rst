@@ -725,7 +725,9 @@ function.
     target_state = tf.ones(4, dtype=tf.complex128) / 2.0
 
     # Define circuit ansatz
-    params = tf.Variable(tf.random.uniform((2,), dtype=tf.float64))
+    params = tf.Variable(
+        tf.random.uniform((2,), dtype=tf.float64).astype(tf.complex128)
+    )
     c = models.Circuit(2)
     c.add(gates.RX(0, params[0]))
     c.add(gates.RY(1, params[1]))
@@ -737,6 +739,7 @@ function.
             fidelity = tf.math.abs(tf.reduce_sum(tf.math.conj(target_state) * final_state))
             loss = 1 - fidelity
         grads = tape.gradient(loss, params)
+        grads = tf.math.real(grads)
         optimizer.apply_gradients(zip([grads], [params]))
 
 
@@ -770,6 +773,7 @@ For example:
             fidelity = tf.math.abs(tf.reduce_sum(tf.math.conj(target_state) * final_state))
             loss = 1 - fidelity
         grads = tape.gradient(loss, params)
+        grads = tf.math.real(grads)
         optimizer.apply_gradients(zip([grads], [params]))
 
     for _ in range(nepochs):
