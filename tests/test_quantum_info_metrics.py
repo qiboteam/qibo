@@ -70,25 +70,23 @@ def test_concurrence_and_formation(backend, bipartition, base, validate):
     backend.assert_allclose(ent_form, 0.0, atol=PRECISION_TOL)
 
 
-def test_entropy_errors(backend):
+@pytest.mark.parametrize("validate", [False, True])
+@pytest.mark.parametrize("base", [2, 10, np.e, 5])
+def test_entropy(backend, base, validate):
     with pytest.raises(ValueError):
         state = np.array([1.0, 0.0])
         state = backend.cast(state, dtype=state.dtype)
-        test = entropy(state, 0, backend=backend)
+        test = entropy(state, 0, validate=validate, backend=backend)
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
-        test = entropy(state, backend=backend)
+        test = entropy(state, base=base, validate=validate, backend=backend)
     if backend.__class__.__name__ == "CupyBackend":
         with pytest.raises(NotImplementedError):
             state = random_unitary(4)
             state = backend.cast(state, dtype=state.dtype)
-            test = entropy(state, validate=True, backend=backend)
+            test = entropy(state, base=base, validate=True, backend=backend)
 
-
-@pytest.mark.parametrize("validate", [False, True])
-@pytest.mark.parametrize("base", [2, 10, np.e, 5])
-def test_entropy(backend, base, validate):
     state = np.array([1.0, 0.0])
     state = backend.cast(state, dtype=state.dtype)
     backend.assert_allclose(entropy(state, backend=backend), 0.0)
@@ -115,6 +113,69 @@ def test_entropy(backend, base, validate):
         < PRECISION_TOL,
         True,
     )
+
+
+@pytest.mark.parametrize("validate", [False, True])
+@pytest.mark.parametrize("base", [2, 10, np.e, 5])
+@pytest.mark.parametrize("bipartition", [[0], [1]])
+def test_entanglement_entropy(backend, bipartition, base, validate):
+    with pytest.raises(ValueError):
+        state = np.array([1.0, 0.0])
+        state = backend.cast(state, dtype=state.dtype)
+        test = entanglement_entropy(
+            state, bipartition=bipartition, base=0, validate=validate, backend=backend
+        )
+    with pytest.raises(TypeError):
+        state = np.random.rand(2, 3)
+        state = backend.cast(state, dtype=state.dtype)
+        test = entanglement_entropy(
+            state,
+            bipartition=bipartition,
+            base=base,
+            validate=validate,
+            backend=backend,
+        )
+    if backend.__class__.__name__ == "CupyBackend":
+        with pytest.raises(NotImplementedError):
+            state = random_unitary(4)
+            state = backend.cast(state, dtype=state.dtype)
+            test = entanglement_entropy(
+                state,
+                bipartition=bipartition,
+                base=base,
+                validate=True,
+                backend=backend,
+            )
+
+    # Bell state
+    state = np.array([1.0, 0.0, 0.0, 1.0]) / np.sqrt(2)
+    state = backend.cast(state, dtype=state.dtype)
+
+    entang_entrop = entanglement_entropy(
+        state, bipartition=bipartition, base=base, validate=validate, backend=backend
+    )
+
+    if base == 2:
+        test = 1.0
+    elif base == 10:
+        test = 0.30102999566398125
+    elif base == np.e:
+        test = 0.6931471805599454
+    else:
+        test = 0.4306765580733931
+
+    backend.assert_allclose(entang_entrop, test, atol=PRECISION_TOL)
+
+    # Product state
+    state = np.kron(
+        random_statevector(2, backend=backend), random_statevector(2, backend=backend)
+    )
+
+    entang_entrop = entanglement_entropy(
+        state, bipartition=bipartition, base=base, validate=validate, backend=backend
+    )
+
+    backend.assert_allclose(entang_entrop, 0.0, atol=PRECISION_TOL)
 
 
 def test_trace_distance(backend):
