@@ -227,8 +227,8 @@ def test_variable_theta():
 
     import tensorflow as tf  # pylint: disable=import-error
 
-    theta1 = tf.Variable(0.1234, dtype="float64")
-    theta2 = tf.Variable(0.4321, dtype="float64")
+    theta1 = tf.Variable(0.1234, dtype=tf.complex128)
+    theta2 = tf.Variable(0.4321, dtype=tf.complex128)
     cvar = Circuit(2)
     cvar.add(gates.RX(0, theta1))
     cvar.add(gates.RY(1, theta2))
