@@ -1,5 +1,4 @@
 import numpy as np
-import pennylane as qml
 
 from qibo import gates
 from qibo.config import raise_error
