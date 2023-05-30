@@ -141,7 +141,7 @@ class IQAE:
 
     # CLASSICAL POSTPROCESSING FOR THE IQAE
     def clopper_pearson(self, count, n, alpha=0.05):
-        """Calculates the confidence interval for the quantity to estimate a
+        """Calculates the confidence interval for the quantity to estimate `a'
         Args:
             count: number of successes
             nobs: total number of trials
