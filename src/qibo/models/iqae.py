@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.stats
+
 from qibo import gates
 from qibo.config import log, raise_error
 from qibo.models import Circuit
