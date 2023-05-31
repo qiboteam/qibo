@@ -3,8 +3,8 @@ import numpy as np
 import pytest
 
 from qibo import gates
-from qibo.models import IQAE, Circuit
-
+from qibo.models import Circuit
+from qibo.models.iqae import IQAE
 
 def test_iqae_init(backend=None):
     A = Circuit(3 + 1)
