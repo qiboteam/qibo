@@ -57,7 +57,7 @@ def test_iqae_execution(backend=None):
     nbit = 3
     A = A_circ(qx=list(range(nbit)), qx_measure=nbit, nbit=nbit, b_max=1, b_min=0)
     Q = Q_circ(qx=list(range(nbit)), qx_measure=nbit, nbit=nbit, b_max=1, b_min=0)
-    iqae = IQAE(A, Q, method="chernoff)
+    iqae = IQAE(A, Q, method="chernoff")
     results = iqae.execute(backend=backend)
     iqae = IQAE(A, Q, method="beta")
     results = iqae.execute(backend=backend)
