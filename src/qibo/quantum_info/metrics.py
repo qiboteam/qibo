@@ -508,7 +508,7 @@ def bures_distance(state, target, check_purity: bool = False):
     return distance
 
 
-def process_fidelity(channel, target=None, check_purity: bool = False, backend=None):
+def process_fidelity(channel, target=None, check_unitary: bool = False, backend=None):
     """Process fidelity between two quantum channels (when at least one channel is` unitary),
 
     .. math::
@@ -519,7 +519,7 @@ def process_fidelity(channel, target=None, check_purity: bool = False, backend=N
         channel: quantum channel.
         target (optional): quantum channel. If ``None``, target is the Identity channel.
             Default: ``None``.
-        check_purity (bool, optional): if True, checks if one of the
+        check_unitary (bool, optional): if True, checks if one of the
             input channels is unitary. Default: ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
@@ -541,7 +541,7 @@ def process_fidelity(channel, target=None, check_purity: bool = False, backend=N
 
     dim = int(np.sqrt(channel.shape[0]))
 
-    if check_purity is True:
+    if check_unitary is True:
         norm_channel = backend.calculate_norm(
             np.dot(np.conj(np.transpose(channel)), channel) - np.eye(dim**2)
         )
@@ -566,7 +566,9 @@ def process_fidelity(channel, target=None, check_purity: bool = False, backend=N
     return fid
 
 
-def average_gate_fidelity(channel, target=None, backend=None):
+def average_gate_fidelity(
+    channel, target=None, check_unitary: bool = False, backend=None
+):
     """Average gate fidelity between two quantum channels (when at least one channel is unitary),
 
     .. math::
@@ -583,6 +585,8 @@ def average_gate_fidelity(channel, target=None, backend=None):
         channel: quantum channel :math:`\\mathcal{E}`.
         target (optional): quantum channel :math:`\\mathcal{U}`.
             If ``None``, target is the Identity channel. Defaults to ``None``.
+        check_unitary (bool, optional): if True, checks if one of the
+            input channels is unitary. Default: ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -594,13 +598,15 @@ def average_gate_fidelity(channel, target=None, backend=None):
 
     dim = channel.shape[0]
 
-    process_fid = process_fidelity(channel, target, backend=backend)
+    process_fid = process_fidelity(
+        channel, target, check_unitary=check_unitary, backend=backend
+    )
     process_fid = (dim * process_fid + 1) / (dim + 1)
 
     return process_fid
 
 
-def gate_error(channel, target=None, backend=None):
+def gate_error(channel, target=None, check_unitary: bool = False, backend=None):
     """Gate error between two quantum channels (when at least one is unitary), which is
     defined as
 
@@ -614,6 +620,8 @@ def gate_error(channel, target=None, backend=None):
         channel: quantum channel :math:`\\mathcal{E}`.
         target (optional): quantum channel :math:`\\mathcal{U}`. If ``None``,
             target is the Identity channel. Defaults to ``None``.
+        check_unitary (bool, optional): if True, checks if one of the
+            input channels is unitary. Default: ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -621,7 +629,9 @@ def gate_error(channel, target=None, backend=None):
     Returns:
         float: Gate error between :math:`\\mathcal{E}` and :math:`\\mathcal{U}`.
     """
-    error = 1 - average_gate_fidelity(channel, target, backend=backend)
+    error = 1 - average_gate_fidelity(
+        channel, target, check_unitary=check_unitary, backend=backend
+    )
 
     return error
 
