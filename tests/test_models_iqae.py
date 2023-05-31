@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 
 from qibo import gates
-from qibo.models import Circuit, IQAE
+from qibo.models import IQAE, Circuit
 
 
 def test_iqae_init(backend=None):
