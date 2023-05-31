@@ -1,10 +1,9 @@
 """Test IQAE model defined in `qibo/models/iqae.py`."""
 import numpy as np
 import pytest
-from iqae import IQAE
 
 from qibo import gates
-from qibo.models import Circuit, Grover
+from qibo.models import Circuit, IQAE
 
 
 def test_iqae_init(backend=None):
