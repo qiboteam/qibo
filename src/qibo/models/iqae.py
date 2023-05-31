@@ -284,13 +284,7 @@ class IQAE:
 
         else:
             # Clopper-Pearson (beta) method
-            if self.method == "beta":
-                L_max, L_min = self.calc_L_range_CP(N_total_shots, T)
-            else:
-                raise_error(
-                    ValueError,
-                    "The method should be either 'chernoff' or 'beta' ",
-                )
+            L_max, L_min = self.calc_L_range_CP(N_total_shots, T)
 
         while theta_dif > 2 * eps:
             i = i + 1
