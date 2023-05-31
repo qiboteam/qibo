@@ -35,7 +35,7 @@ def purity(state):
     return pur
 
 
-def concurrence(state, bipartition, validate: bool = True, backend=None):
+def concurrence(state, bipartition, check_purity: bool = True, backend=None):
     """Calculates concurrence of a pure bipartite quantum state
     :math:`\\rho \\in \\mathcal{H}_{A} \\otimes \\mathcal{H}_{B}` as
 
@@ -48,7 +48,7 @@ def concurrence(state, bipartition, validate: bool = True, backend=None):
     Args:
         state (ndarray): statevector or density matrix.
         bipartition (list or tuple or ndarray): qubits in the subsystem to be traced out.
-        validate (bool, optional): if ``True``, checks if ``state`` is pure. If ``False``,
+        check_purity (bool, optional): if ``True``, checks if ``state`` is pure. If ``False``,
             it assumes ``state`` is pure . Defaults to ``True``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
@@ -70,14 +70,15 @@ def concurrence(state, bipartition, validate: bool = True, backend=None):
             f"Object must have dims either (k,) or (k,k), but have dims {state.shape}.",
         )
 
-    if isinstance(validate, bool) is False:
+    if isinstance(check_purity, bool) is False:
         raise_error(
-            TypeError, f"validate must be type bool, but it is type {type(validate)}."
+            TypeError,
+            f"check_purity must be type bool, but it is type {type(check_purity)}.",
         )
 
     nqubits = int(np.log2(state.shape[0]))
 
-    if validate is True:
+    if check_purity is True:
         purity_total_system = purity(state)
 
         mixed = bool(abs(purity_total_system - 1.0) > PRECISION_TOL)
@@ -103,7 +104,7 @@ def concurrence(state, bipartition, validate: bool = True, backend=None):
 
 
 def entanglement_of_formation(
-    state, bipartition, base: float = 2, validate: bool = True, backend=None
+    state, bipartition, base: float = 2, check_purity: bool = True, backend=None
 ):
     """Calculates the entanglement of formation :math:`E_{f}` of a pure bipartite
     quantum state :math:`\\rho`, which is given by
@@ -124,7 +125,7 @@ def entanglement_of_formation(
         bipartition (list or tuple or ndarray): qubits in the subsystem to be traced out.
         base (float): the base of the log in :func:`qibo.quantum_info.shannon_entropy`.
             Defaults to  :math:`2`.
-        validate (bool, optional): if ``True``, checks if ``state`` is pure. If ``False``,
+        check_purity (bool, optional): if ``True``, checks if ``state`` is pure. If ``False``,
             it assumes ``state`` is pure . Default: ``True``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
@@ -139,7 +140,9 @@ def entanglement_of_formation(
 
     from qibo.quantum_info.utils import shannon_entropy
 
-    concur = concurrence(state, bipartition, validate, backend)
+    concur = concurrence(
+        state, bipartition=bipartition, check_purity=check_purity, backend=backend
+    )
     concur = (1 + np.sqrt(1 - concur**2)) / 2
     probabilities = [1 - concur, concur]
 
@@ -148,7 +151,7 @@ def entanglement_of_formation(
     return ent_of_form
 
 
-def entropy(state, base: float = 2, validate: bool = False, backend=None):
+def entropy(state, base: float = 2, check_hermitian: bool = False, backend=None):
     """The von-Neumann entropy :math:`S(\\rho)` of a quantum state :math:`\\rho`, which
     is given by
 
@@ -158,7 +161,7 @@ def entropy(state, base: float = 2, validate: bool = False, backend=None):
     Args:
         state (ndarray): statevector or density matrix.
         base (float, optional): the base of the log. Default: 2.
-        validate (bool, optional): if ``True``, checks if ``state`` is Hermitian. If ``False``,
+        check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian. If ``False``,
             it assumes ``state`` is Hermitian . Default: ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses
@@ -186,7 +189,7 @@ def entropy(state, base: float = 2, validate: bool = False, backend=None):
     if purity(state) == 1.0:
         ent = 0.0
     else:
-        if validate is True:
+        if check_hermitian is True:
             hermitian = bool(
                 backend.calculate_norm(np.transpose(np.conj(state)) - state)
                 < PRECISION_TOL
@@ -230,7 +233,7 @@ def entanglement_entropy(
     state,
     bipartition,
     base: float = 2,
-    validate: bool = False,
+    check_hermitian: bool = False,
     backend=None,
 ):
     """Calculates the entanglement entropy :math:`S` of ``state`` :math:`\\rho`,
@@ -246,7 +249,7 @@ def entanglement_entropy(
         state (ndarray): statevector or density matrix.
         bipartition (list or tuple or ndarray): qubits in the subsystem to be traced out.
         base (float, optional): the base of the log. Default: 2.
-        validate (bool, optional): if ``True``, checks if :math:`\\rho_{A}` is Hermitian.
+        check_hermitian (bool, optional): if ``True``, checks if :math:`\\rho_{A}` is Hermitian.
             If ``False``, it assumes ``state`` is Hermitian . Default: ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses
@@ -280,13 +283,16 @@ def entanglement_entropy(
     )
 
     entropy_entanglement = entropy(
-        reduced_density_matrix, base=base, validate=validate, backend=backend
+        reduced_density_matrix,
+        base=base,
+        check_hermitian=check_hermitian,
+        backend=backend,
     )
 
     return entropy_entanglement
 
 
-def trace_distance(state, target, validate: bool = False, backend=None):
+def trace_distance(state, target, check_hermitian: bool = False, backend=None):
     """Trace distance between two quantum states, :math:`\\rho` and :math:`\\sigma`:
 
     .. math::
@@ -299,7 +305,7 @@ def trace_distance(state, target, validate: bool = False, backend=None):
     Args:
         state (ndarray): statevector or density matrix.
         target (ndarray): statevector or density matrix.
-        validate (bool, optional): if ``True``, checks if :math:`\\rho - \\sigma` is Hermitian.
+        check_hermitian (bool, optional): if ``True``, checks if :math:`\\rho - \\sigma` is Hermitian.
             If ``False``, it assumes the difference is Hermitian. Default: ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
@@ -329,7 +335,7 @@ def trace_distance(state, target, validate: bool = False, backend=None):
         target = np.outer(np.conj(target), target)
 
     difference = state - target
-    if validate:
+    if check_hermitian is True:
         hermitian = bool(
             backend.calculate_norm(np.transpose(np.conj(difference)) - difference)
             <= PRECISION_TOL
@@ -393,7 +399,7 @@ def hilbert_schmidt_distance(state, target):
     return distance
 
 
-def fidelity(state, target, validate: bool = False):
+def fidelity(state, target, check_purity: bool = False):
     """Fidelity between two quantum states (when at least one state is pure).
 
     .. math::
@@ -407,7 +413,7 @@ def fidelity(state, target, validate: bool = False):
     Args:
         state (ndarray): statevector or density matrix.
         target (ndarray): statevector or density matrix.
-        validate (bool, optional): if ``True``, checks if one of the
+        check_purity (bool, optional): if ``True``, checks if one of the
             input states is pure. Defaults to ``False``.
 
     Returns:
@@ -427,7 +433,7 @@ def fidelity(state, target, validate: bool = False):
             + f"but have dims {state.shape} and {target.shape}",
         )
 
-    if validate:
+    if check_purity is True:
         purity_state = purity(state)
         purity_target = purity(target)
         if (
@@ -452,7 +458,7 @@ def fidelity(state, target, validate: bool = False):
     return fid
 
 
-def bures_angle(state, target, validate: bool = False):
+def bures_angle(state, target, check_purity: bool = False):
     """Calculates the Bures angle :math:`D_{A}` between a ``state`` :math:`\\rho`
     and a ``target`` state :math:`\\sigma`. This is given by
 
@@ -465,18 +471,18 @@ def bures_angle(state, target, validate: bool = False):
     Args:
         state (ndarray): statevector or density matrix.
         target (ndarray): statevector or density matrix.
-        validate (bool, optional): if ``True``, checks if one of the
+        check_purity (bool, optional): if ``True``, checks if one of the
             input states is pure. Defaults to ``False``.
 
     Returns:
         float: Bures angle between ``state`` and ``target``.
     """
-    angle = np.arccos(np.sqrt(fidelity(state, target, validate=validate)))
+    angle = np.arccos(np.sqrt(fidelity(state, target, check_purity=check_purity)))
 
     return angle
 
 
-def bures_distance(state, target, validate: bool = False):
+def bures_distance(state, target, check_purity: bool = False):
     """Calculates the Bures distance :math:`D_{B}` between a ``state`` :math:`\\rho`
     and a ``target`` state :math:`\\sigma`. This is given by
 
@@ -489,18 +495,20 @@ def bures_distance(state, target, validate: bool = False):
     Args:
         state (ndarray): statevector or density matrix.
         target (ndarray): statevector or density matrix.
-        validate (bool, optional): if ``True``, checks if one of the
+        check_purity (bool, optional): if ``True``, checks if one of the
             input states is pure. Defaults to ``False``.
 
     Returns:
         float: Bures distance between ``state`` and ``target``.
     """
-    distance = np.sqrt(2 * (1 - np.sqrt(fidelity(state, target, validate=validate))))
+    distance = np.sqrt(
+        2 * (1 - np.sqrt(fidelity(state, target, check_purity=check_purity)))
+    )
 
     return distance
 
 
-def process_fidelity(channel, target=None, validate: bool = False, backend=None):
+def process_fidelity(channel, target=None, check_purity: bool = False, backend=None):
     """Process fidelity between two quantum channels (when at least one channel is` unitary),
 
     .. math::
@@ -511,7 +519,7 @@ def process_fidelity(channel, target=None, validate: bool = False, backend=None)
         channel: quantum channel.
         target (optional): quantum channel. If ``None``, target is the Identity channel.
             Default: ``None``.
-        validate (bool, optional): if True, checks if one of the
+        check_purity (bool, optional): if True, checks if one of the
             input channels is unitary. Default: ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
@@ -533,7 +541,7 @@ def process_fidelity(channel, target=None, validate: bool = False, backend=None)
 
     dim = int(np.sqrt(channel.shape[0]))
 
-    if validate:
+    if check_purity is True:
         norm_channel = backend.calculate_norm(
             np.dot(np.conj(np.transpose(channel)), channel) - np.eye(dim**2)
         )
