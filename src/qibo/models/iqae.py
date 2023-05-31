@@ -70,7 +70,7 @@ class IQAE:
                     ValueError,
                     "Cannot create IQAE model if the " "A circuit is not specified.",
                 )
-        if A_circuit:
+        if Q_circuit:
             self.Q_circuit = Q_circuit
         else:
             if not Q_circuit:
