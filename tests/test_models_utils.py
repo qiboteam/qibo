@@ -10,7 +10,7 @@ def test_fourier_coefficients_raising_errors():
     with pytest.raises(ValueError):
         # n_inputs!=len(degree)
         result = fourier_coefficients(
-            function, n_inputs=1, degree=[2,2], lowpass_filter=True
+            function, n_inputs=1, degree=[2, 2], lowpass_filter=True
         )
     with pytest.raises(ValueError):
         # n_inputs!=len(filter_threshold)
