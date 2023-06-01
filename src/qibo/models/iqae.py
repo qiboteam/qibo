@@ -64,7 +64,7 @@ class IQAE:
     ):
         self.circuit_a = circuit_a
         self.circuit_q = circuit_q
-        if circuit_q.nqubits > circuit_q.nqubits:
+        if circuit_a.nqubits > circuit_q.nqubits:
             raise_error(
                 ValueError,
                 "The number of qubits for Q must be greater or equal than the number"
