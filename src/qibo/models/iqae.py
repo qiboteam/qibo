@@ -25,8 +25,8 @@ class IQAE:
     Estimation. arXiv:quant-ph/0005055 <http://arxiv.org/abs/quant-ph/0005055>.
 
     Args:
-        circuit_A (:class:`qibo.circuit`): quantum circuit that specifies the QAE problem
-        circuit_Q (:class:`qibo.circuit`): quantum circuit of the Grover/Amplification operator
+        circuit_a (:class:`qibo.circuit`): quantum circuit that specifies the QAE problem
+        circuit_q (:class:`qibo.circuit`): quantum circuit of the Grover/Amplification operator
 
         alpha (float): confidence level, the target probability is 1 - `alpha', has values between 0 and 1
         epsilon (float): target precision for estimation target `a`, has values between 0 and 0.5
@@ -38,8 +38,7 @@ class IQAE:
         ValueError: If epsilon is not in (0, 0.5]
         ValueError: If alpha is not in (0, 1)
         ValueError: If method is not supported
-        ValueError: If circuit_A or circuit_Q are not provided or if the number of qubits in circuit_A is
-        greater than in circuit_Q
+        ValueError: If the number of qubits in circuit_a is greater than in circuit_q
 
     Example:
             import numpy as np
@@ -49,33 +48,23 @@ class IQAE:
             ...
             #Here the circuits A and Q are defined
             ...
-            iae = IQAE(circuit_A=A, circuit_Q=Q)
+            iae = IQAE(circuit_a=A, circuit_q=Q)
             results=iae.execute()
             print(results.estimation)
     """
 
     def __init__(
         self,
-        circuit_A=None,
-        circuit_Q=None,
+        circuit_a,
+        circuit_q,
         alpha=0.05,
         epsilon=0.005,
         n_shots=1024,
         method="chernoff",
     ):
-        self.circuit_A = circuit_A
-        if not circuit_A:
-            raise_error(
-                ValueError,
-                "Cannot create IQAE model if the A circuit is not specified.",
-            )
-        self.circuit_Q = circuit_Q
-        if not circuit_Q:
-            raise_error(
-                ValueError,
-                "Cannot create IQAE model if the Q circuit is not specified.",
-            )
-        if circuit_A.nqubits > circuit_Q.nqubits:
+        self.circuit_a = circuit_a
+        self.circuit_q = circuit_q
+        if circuit_q.nqubits > circuit_q.nqubits:
             raise_error(
                 ValueError,
                 "The number of qubits for Q must be greater or equal than the number"
@@ -116,19 +105,19 @@ class IQAE:
         Return:
             qc: quantum circuit of the QAE algorithm
         """
-        initialization_circuit_A = self.circuit_A
-        amplification_circuit_Q = self.circuit_Q
+        initialization_circuit_a = self.circuit_a
+        amplification_circuit_q = self.circuit_q
 
-        qc = Circuit(amplification_circuit_Q.nqubits)
+        qc = Circuit(amplification_circuit_q.nqubits)
 
         qc.add(
-            initialization_circuit_A.on_qubits(
-                *range(0, initialization_circuit_A.nqubits, 1)
+            initialization_circuit_a.on_qubits(
+                *range(0, initialization_circuit_a.nqubits, 1)
             )
         )
         for i in range(k):
-            qc = qc + amplification_circuit_Q
-        qc.add(gates.M(initialization_circuit_A.nqubits - 1))
+            qc = qc + amplification_circuit_q
+        qc.add(gates.M(initialization_circuit_a.nqubits - 1))
         return qc
 
     # CLASSICAL POSTPROCESSING FOR THE IQAE
@@ -150,27 +139,27 @@ class IQAE:
             a_max = 1
         return a_min, a_max
 
-    def h_calc_CP(self, n_successes, n_total_shots, upper_bound_T):
+    def h_calc_CP(self, n_successes, n_total_shots, upper_bound_t):
         """
         Calculates the h function
         Args:
             n_successes: number of successes
             n_total_shots: total number of trials
-            upper_bound_T: maximum number of rounds to achieve the desired absolute error
+            upper_bound_t: maximum number of rounds to achieve the desired absolute error
         Returns:
             The h function for the given inputs
         """
         a_min, a_max = self.clopper_pearson(
-            n_successes, n_total_shots, alpha=(self.alpha / upper_bound_T)
+            n_successes, n_total_shots, alpha=(self.alpha / upper_bound_t)
         )
         return np.abs(np.arccos(1 - 2 * a_max) - np.arccos(1 - 2 * a_min)) / 2
 
-    def calc_L_range_CP(self, n_shots, upper_bound_T):
+    def calc_L_range_CP(self, n_shots, upper_bound_t):
         """
         Calculate the confidence interval for the Clopper-Pearson method
         Args:
             n_shots: number of shots
-            upper_bound_T: maximum number of rounds to achieve the desired absolute error
+            upper_bound_t: maximum number of rounds to achieve the desired absolute error
         Returns:
             max_L, min_L: the maximum and minimum possible error which could be returned
             on a given iteration
@@ -178,26 +167,26 @@ class IQAE:
         x = np.linspace(0, np.pi, 10000)
         x_domain = [x <= 1.0 + 1 / 10 / n_shots]
         y = [
-            self.h_calc_CP(int(t * n_shots), n_shots, upper_bound_T)
+            self.h_calc_CP(int(t * n_shots), n_shots, upper_bound_t)
             for t in x[tuple(x_domain)]
         ]
         max_L = np.max(y) / (2 * np.pi)
         min_L = np.min(y) / (2 * np.pi)
         return max_L, min_L
 
-    def calc_L_range_CH(self, n_shots, upper_bound_T):
+    def calc_L_range_CH(self, n_shots, upper_bound_t):
         """
         Calculate the confidence interval for the Chernoff method
         Args:
             n_shots: number of shots
-            upper_bound_T: maximum number of rounds to achieve the desired absolute error
+            upper_bound_t: maximum number of rounds to achieve the desired absolute error
         Returns:
             max_L, min_L: the maximum and minimum possible error which could be returned
             on a given iteration
         """
         max_L = (
             np.arcsin(
-                (2 / (n_shots) * np.log(2 * upper_bound_T / self.alpha)) ** (1 / 4)
+                (2 / (n_shots) * np.log(2 * upper_bound_t / self.alpha)) ** (1 / 4)
             )
             / 2
             / np.pi
@@ -216,7 +205,7 @@ class IQAE:
                 upper half-circle [0, pi] or in the lower one [pi, 2pi]
             theta_l: the current lower limit of the confidence interval for the angle theta
             theta_u: the current upper limit of the confidence interval for the angle theta
-            r: lower bound for K
+            r: lower bound for uppercase_k
 
         Returns:
             The next power K_i, and boolean flag for the extrapolated interval
@@ -270,17 +259,17 @@ class IQAE:
         n_shots_history = []
 
         eps = self.epsilon / (2 * np.pi)
-        upper_bound_T = int(np.log2(np.pi / (8 * self.epsilon))) + 1
+        upper_bound_t = int(np.log2(np.pi / (8 * self.epsilon))) + 1
         n_total_shots = self.n_shots
         num_oracle_queries = 0
 
         if self.method == "chernoff":
             # Chernoff method
-            max_L, min_L = self.calc_L_range_CH(n_total_shots, upper_bound_T)
+            max_L, min_L = self.calc_L_range_CH(n_total_shots, upper_bound_t)
 
         else:
             # Clopper-Pearson (beta) method
-            max_L, min_L = self.calc_L_range_CP(n_total_shots, upper_bound_T)
+            max_L, min_L = self.calc_L_range_CP(n_total_shots, upper_bound_t)
 
         i = 0
         while theta_dif > 2 * eps:
@@ -292,8 +281,11 @@ class IQAE:
             uppercase_k.append(uppercase_k_i)
             up.append(up_i)
             k.append(k_i)
+            # Checking the no-overshooting condition
             if uppercase_k_i > int(max_L / eps):
+                # We ensure to not make unnecessary measurement shots at last iterations of the algorithm
                 n_shots_i = int((max_L / eps) * self.n_shots / uppercase_k_i / 10)
+                # To avoid having a null number of shots
                 if n_shots_i == 0:
                     n_shots_i = 1
             else:
@@ -323,13 +315,13 @@ class IQAE:
 
             if self.method == "chernoff":
                 delta_a = np.sqrt(
-                    np.log(2 * upper_bound_T / self.alpha) / 2 / n_total_shots
+                    np.log(2 * upper_bound_t / self.alpha) / 2 / n_total_shots
                 )
                 a_min_i = max(0, a - delta_a)
                 a_max_i = min(1, a + delta_a)
             else:
                 a_min_i, a_max_i = self.clopper_pearson(
-                    sum_total_samples, n_total_shots, alpha=self.alpha / upper_bound_T
+                    sum_total_samples, n_total_shots, alpha=self.alpha / upper_bound_t
                 )
             a_min.append(a_min_i)
             a_max.append(a_max_i)
