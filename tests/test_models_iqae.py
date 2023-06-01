@@ -19,7 +19,7 @@ def test_iqae_init(backend=None):
     assert iqae.circuit_Q == Q
     assert iqae.alpha == alpha
     assert iqae.epsilon == epsilon
-    assert iqae.n_shots == N_shots
+    assert iqae.n_shots == n_shots
     assert iqae.method == method
 
 
