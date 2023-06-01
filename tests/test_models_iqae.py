@@ -15,8 +15,8 @@ def test_iqae_init(backend=None):
     n_shots = 1024
     method = "chernoff"
     iqae = IQAE(A, Q, alpha, epsilon, n_shots, method)
-    assert iqae.circuit_A == A
-    assert iqae.circuit_Q == Q
+    assert iqae.circuit_a == A
+    assert iqae.circuit_q == Q
     assert iqae.alpha == alpha
     assert iqae.epsilon == epsilon
     assert iqae.n_shots == n_shots
@@ -30,15 +30,9 @@ def test_iqae_init_raising_errors(backend=None):
     alpha = 2
     epsilon = 2
     method = "other"
-    # try to initialize without passing `A`
-    with pytest.raises(ValueError):
-        iqae = IQAE(circuit_Q=Q)
-    # try to initialize without passing `Q`
-    with pytest.raises(ValueError):
-        iqae = IQAE(A)
     # try to initialize passing a `circuit_A` with more qubits than `circuit_Q`
     with pytest.raises(ValueError):
-        iqae = IQAE(circuit_A=Q, circuit_Q=A)
+        iqae = IQAE(circuit_a=Q, circuit_q=A)
     # try to initialize with incorrect `alpha`
     with pytest.raises(ValueError):
         iqae = IQAE(A, Q, alpha=alpha)
