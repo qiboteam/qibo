@@ -1,7 +1,6 @@
 """Test IQAE model defined in `qibo/models/iqae.py`."""
 import numpy as np
 import pytest
-
 from qibo import gates
 from qibo.models import Circuit
 from qibo.models.iqae import IQAE
@@ -64,6 +63,10 @@ def test_iqae_execution(backend=None):
 
     iqae = IQAE(A, Q, method="chernoff")
     results = iqae.execute(backend=backend)
+    # Check that we run in the lower half-plane
+    for i in range(10):
+        iqae = IQAE(A, Q, method="chernoff", alpha=0.05, epsilon=0.01, n_shots=100)
+        results = iqae.execute(backend=backend)
     iqae = IQAE(A, Q, method="beta")
     results = iqae.execute(backend=backend)
     true_result = 1 / 4 * (2 - np.sin(2))
