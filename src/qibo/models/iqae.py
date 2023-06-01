@@ -210,7 +210,7 @@ class IQAE:
         lies completely in [0, pi] or [pi, 2pi].
 
         Args:
-            uppercase_k_i: the current uppercase_k such uppercase_k=4k+2, where k is the power 
+            uppercase_k_i: the current uppercase_k such uppercase_k=4k+2, where k is the power
             of the Q operator
             up_i: boolean flag of whether theta_interval lies in the
                 upper half-circle [0, pi] or in the lower one [pi, 2pi]
@@ -252,9 +252,9 @@ class IQAE:
             backend = GlobalBackend()
         # Initializing all parameters
         k = [0]
-        #uppercase_k=4k+2
+        # uppercase_k=4k+2
         uppercase_k = [2]
-        
+
         theta_u = 1 / 4
         theta_l = 0
         theta_intervals = [theta_l, theta_u]
