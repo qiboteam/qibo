@@ -55,7 +55,6 @@ def test_iqae_init_raising_errors(backend=None):
         A_circuit=A, Q_circuit=Q, alpha=0.05, epsilon=0.24, N_shots=10, method="beta"
     )
     results = iqae.execute(backend=backend)
-    
 
 
 def test_iqae_execution(backend=None):
