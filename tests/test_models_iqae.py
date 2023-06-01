@@ -12,17 +12,15 @@ def test_iqae_init(backend=None):
     Q = Circuit(3 + 1)
     alpha = 0.05
     epsilon = 0.005
-    N_shots = 1024
+    n_shots = 1024
     method = "chernoff"
-    iqae = IQAE(A, Q, alpha, epsilon, N_shots, method)
-    assert iqae.A_circuit == A
-    assert iqae.Q_circuit == Q
+    iqae = IQAE(A, Q, alpha, epsilon, n_shots, method)
+    assert iqae.circuit_A == A
+    assert iqae.circuit_Q == Q
     assert iqae.alpha == alpha
     assert iqae.epsilon == epsilon
-    assert iqae.N_shots == N_shots
+    assert iqae.n_shots == N_shots
     assert iqae.method == method
-    assert iqae.nqubitsA == A.nqubits
-    assert iqae.nqubitsQ == Q.nqubits
 
 
 def test_iqae_init_raising_errors(backend=None):
@@ -34,13 +32,13 @@ def test_iqae_init_raising_errors(backend=None):
     method = "other"
     # try to initialize without passing `A`
     with pytest.raises(ValueError):
-        iqae = IQAE(Q_circuit=Q)
+        iqae = IQAE(circuit_Q=Q)
     # try to initialize without passing `Q`
     with pytest.raises(ValueError):
         iqae = IQAE(A)
-    # try to initialize passing a `A_circuit` with more qubits than `Q_circuit`
+    # try to initialize passing a `circuit_A` with more qubits than `circuit_Q`
     with pytest.raises(ValueError):
-        iqae = IQAE(A_circuit=Q, Q_circuit=A)
+        iqae = IQAE(circuit_A=Q, circuit_Q=A)
     # try to initialize with incorrect `alpha`
     with pytest.raises(ValueError):
         iqae = IQAE(A, Q, alpha=alpha)
@@ -50,10 +48,11 @@ def test_iqae_init_raising_errors(backend=None):
     # try to initialize with incorrect `method`
     with pytest.raises(ValueError):
         iqae = IQAE(A, Q, method=method)
-    # testing the line of code when N_shots_i==0
-    iqae = IQAE(
-        A_circuit=A, Q_circuit=Q, alpha=0.05, epsilon=0.24, N_shots=10, method="beta"
-    )
+    # try to initialize with incorrect `n_shots`
+    with pytest.raises(ValueError):
+        iqae = IQAE(A, Q, n_shots=0.5)
+    # testing the line of code when n_shots_i==0
+    iqae = IQAE(A, Q, method="beta", n_shots=10, alpha=0.05, epsilon=0.48)
     results = iqae.execute(backend=backend)
 
 
@@ -62,6 +61,7 @@ def test_iqae_execution(backend=None):
     nbit = 3
     A = A_circ(qx=list(range(nbit)), qx_measure=nbit, nbit=nbit, b_max=1, b_min=0)
     Q = Q_circ(qx=list(range(nbit)), qx_measure=nbit, nbit=nbit, b_max=1, b_min=0)
+
     iqae = IQAE(A, Q, method="chernoff")
     results = iqae.execute(backend=backend)
     iqae = IQAE(A, Q, method="beta")
@@ -103,7 +103,6 @@ def multi_control_NOT_qibo(qc, qx, qx_measure, qx_ancilla, nbit, b_max):
         b_max: upper limit of integral
         b_min: lower limit of integral
     """
-
     if nbit == 1:
         qc.add(gates.CZ(qx[0], qx_measure))
     elif nbit == 2:
