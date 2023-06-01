@@ -50,8 +50,11 @@ def test_iqae_init_raising_errors(backend=None):
     # try to initialize with incorrect `method`
     with pytest.raises(ValueError):
         iqae = IQAE(A, Q, method=method)
-    #testing the line of code when N_shots_i==0
-    iae = IQAE(A_circuit=A, Q_circuit=Q, alpha=0.05, epsilon=0.24, N_shots=10, method="beta")
+    # testing the line of code when N_shots_i==0
+    iae = IQAE(
+        A_circuit=A, Q_circuit=Q, alpha=0.05, epsilon=0.24, N_shots=10, method="beta"
+    )
+
 
 def test_iqae_execution(backend=None):
     # Let's check if we get the correct result for the integral of Sin(x)^2 from 0 to 1
