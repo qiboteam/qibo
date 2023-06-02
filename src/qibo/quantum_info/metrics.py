@@ -10,7 +10,7 @@ def purity(state):
     Args:
         state (ndarray): statevector or density matrix.
     Returns:
-        float: Purity of quantum state :math:`\\rho`.
+        float: Purity of quantum ``state`` :math:`\\rho`.
     """
 
     if (
@@ -33,6 +33,20 @@ def purity(state):
     pur = float(pur)
 
     return pur
+
+
+def impurity(state):
+    """Impurity of quantum state :math:`\\rho`, which is given by
+    :math:`1 - \\text{purity}(\\rho)`, where :math:`\\text{purity}`
+    is defined in :func:`qibo.quantum_info.purity`.
+
+    Args:
+        state (ndarray): statevector or density matrix.
+
+    Returns:
+        float: impurity of ``state`` :math:`\\rho`.
+    """
+    return 1 - purity(state)
 
 
 def concurrence(state, bipartition, check_purity: bool = True, backend=None):
@@ -160,7 +174,7 @@ def entropy(state, base: float = 2, check_hermitian: bool = False, backend=None)
 
     Args:
         state (ndarray): statevector or density matrix.
-        base (float, optional): the base of the log. Default: 2.
+        base (float, optional): the base of the log. Defaults to :math:`2`.
         check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian. If ``False``,
             it assumes ``state`` is Hermitian . Default: ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
@@ -168,7 +182,7 @@ def entropy(state, base: float = 2, check_hermitian: bool = False, backend=None)
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
     Returns:
-        float: The von-Neumann entropy :math:`S(\\rho)`.
+        float: The von-Neumann entropy :math:`S` of ``state`` :math:`\\rho`.
     """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
@@ -248,7 +262,7 @@ def entanglement_entropy(
     Args:
         state (ndarray): statevector or density matrix.
         bipartition (list or tuple or ndarray): qubits in the subsystem to be traced out.
-        base (float, optional): the base of the log. Default: 2.
+        base (float, optional): the base of the log. Defaults to :math: `2`.
         check_hermitian (bool, optional): if ``True``, checks if :math:`\\rho_{A}` is Hermitian.
             If ``False``, it assumes ``state`` is Hermitian . Default: ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
@@ -256,7 +270,7 @@ def entanglement_entropy(
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
     Returns:
-        float: Entanglement entropy of ``state`` :math:`\\rho`.
+        float: Entanglement entropy :math:`S` of ``state`` :math:`\\rho`.
     """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
@@ -306,13 +320,13 @@ def trace_distance(state, target, check_hermitian: bool = False, backend=None):
         state (ndarray): statevector or density matrix.
         target (ndarray): statevector or density matrix.
         check_hermitian (bool, optional): if ``True``, checks if :math:`\\rho - \\sigma` is Hermitian.
-            If ``False``, it assumes the difference is Hermitian. Default: ``False``.
+            If ``False``, it assumes the difference is Hermitian. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
 
     Returns:
-        float: Trace distance between state :math:`\\rho` and target :math:`\\sigma`.
+        float: Trace distance between ``state`` :math:`\\rho` and ``target`` :math:`\\sigma`.
     """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
@@ -373,7 +387,8 @@ def hilbert_schmidt_distance(state, target):
         target (ndarray): statevector or density matrix.
 
     Returns:
-        float: Hilbert-Schmidt distance between state :math:`\\rho` and target :math:`\\sigma`.
+        float: Hilbert-Schmidt distance between ``state`` :math:`\\rho`
+        and ``target`` :math:`\\sigma`.
     """
 
     if state.shape != target.shape:
@@ -417,7 +432,7 @@ def fidelity(state, target, check_purity: bool = False):
             input states is pure. Defaults to ``False``.
 
     Returns:
-        float: Fidelity between state :math:`\\rho` and target :math:`\\sigma`.
+        float: Fidelity between ``state`` :math:`\\rho` and ``target`` :math:`\\sigma`.
     """
 
     if state.shape != target.shape:
@@ -456,6 +471,28 @@ def fidelity(state, target, check_purity: bool = False):
     fid = float(fid)
 
     return fid
+
+
+def infidelity(state, target, check_purity: bool = False):
+    """Infidelity between ``state`` :math:`\\rho` and ``target`` state :math:`\\sigma`,
+    which is given by
+
+    .. math::
+        1 - F(\\rho, \\, \\sigma) \\, ,
+
+    where :math:`F(\\rho, \\, \\sigma)` is the :func:`qibo.quantum_info.fidelity`
+    between ``state`` and ``target``.
+
+    Args:
+        state (ndarray): statevector or density matrix.
+        target (ndarray): statevector or density matrix.
+        check_purity (bool, optional): if ``True``, checks if one of the
+            input states is pure. Defaults to ``False``.
+
+    Returns:
+        float: Infidelity between ``state`` :math:`\\rho` and ``target`` :math:`\\sigma`.
+    """
+    return 1 - fidelity(state, target, check_purity=check_purity)
 
 
 def bures_angle(state, target, check_purity: bool = False):
@@ -509,16 +546,17 @@ def bures_distance(state, target, check_purity: bool = False):
 
 
 def process_fidelity(channel, target=None, check_unitary: bool = False, backend=None):
-    """Process fidelity between two quantum channels (when at least one channel is` unitary),
+    """Process fidelity between a quantum ``channel`` :math:`\\mathcal{E}` and a
+    ``target`` unitary channel :math:`U`. The process fidelity is defined as
 
     .. math::
-        F_{pro}(\\mathcal{E}, \\mathcal{U}) = \\frac{1}{d^{2}} \\,
+        F_{\\text{pro}}(\\mathcal{E}, \\mathcal{U}) = \\frac{1}{d^{2}} \\,
             \\text{Tr}(\\mathcal{E}^{\\dagger} \\, \\mathcal{U})
 
     Args:
-        channel: quantum channel.
-        target (optional): quantum channel. If ``None``, target is the Identity channel.
-            Default: ``None``.
+        channel: quantum channel :math:`\\mathcal{E}`.
+        target (optional): quantum channel :math:`U`. If ``None``, target is the
+            Identity channel. Defaults to ``None``.
         check_unitary (bool, optional): if True, checks if one of the
             input channels is unitary. Default: ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
@@ -526,8 +564,7 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
             Defaults to ``None``.
 
     Returns:
-        float: Process fidelity between channels :math:`\\mathcal{E}`
-            and target :math:`\\mathcal{U}`.
+        float: Process fidelity between ``channel`` and ``target``.
     """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
@@ -566,10 +603,41 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
     return fid
 
 
+def process_infidelity(channel, target=None, check_unitary: bool = False, backend=None):
+    """Process infidelity between quantum channel :math:`\\mathcal{E}`
+    and a ``target`` unitary channel :math:`U`. The process infidelity is defined as
+
+    .. math::
+        1 - F_{\\text{pro}}(\\mathcal{E}, \\mathcal{U}) \\, ,
+
+    where :math:`F_{\\text{pro}}` is the :func:`qibo.quantum_info.process_fidelity`.
+
+    Args:
+        channel: quantum channel :math:`\\mathcal{E}`.
+        target (optional): quantum channel :math:`U`. If ``None``, target is the
+            Identity channel. Defaults to ``None``.
+        check_unitary (bool, optional): if True, checks if one of the
+            input channels is unitary. Defaults to ``False``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
+
+
+    Returns:
+        float: Process infidelity between ``channel`` :math:`\\mathcal{E}`
+        and ``target`` :math:`U`.
+    """
+    return 1 - process_fidelity(
+        channel, target=target, check_unitary=check_unitary, backend=backend
+    )
+
+
 def average_gate_fidelity(
     channel, target=None, check_unitary: bool = False, backend=None
 ):
-    """Average gate fidelity between two quantum channels (when at least one channel is unitary),
+    """Average gate fidelity between a quantum ``channel`` :math:`\\mathcal{E}`
+    and a ``target`` unitary channel :math:`U`. The average gate fidelity
+    is defined as
 
     .. math::
         F_{\\text{avg}}(\\mathcal{E}, \\mathcal{U}) = \\frac{d \\,
@@ -593,7 +661,7 @@ def average_gate_fidelity(
 
     Returns:
         float: Process fidelity between channel :math:`\\mathcal{E}`
-            and target unitary channel :math:`\\mathcal{U}`.
+        and target unitary channel :math:`\\mathcal{U}`.
     """
 
     dim = channel.shape[0]
@@ -607,14 +675,14 @@ def average_gate_fidelity(
 
 
 def gate_error(channel, target=None, check_unitary: bool = False, backend=None):
-    """Gate error between two quantum channels (when at least one is unitary), which is
-    defined as
+    """Gate error between a quantum ``channel`` :math:`\\mathcal{E}`
+    and a ``target`` unitary channel :math:`U`, which is defined as
 
     .. math::
         E(\\mathcal{E}, \\mathcal{U}) = 1 - F_{\\text{avg}}(\\mathcal{E}, \\mathcal{U}) \\, ,
 
-    where :math:`F_{\\text{avg}}(\\mathcal{E}, \\mathcal{U})` is the ``average_gate_fidelity()``
-    between channel :math:`\\mathcal{E}` and target :math:`\\mathcal{U}`.
+    where :math:`F_{\\text{avg}}(\\mathcal{E}, \\mathcal{U})` is the
+    :func:`qibo.quantum_info.average_gate_fidelity`.
 
     Args:
         channel: quantum channel :math:`\\mathcal{E}`.
@@ -627,7 +695,8 @@ def gate_error(channel, target=None, check_unitary: bool = False, backend=None):
             Defaults to ``None``.
 
     Returns:
-        float: Gate error between :math:`\\mathcal{E}` and :math:`\\mathcal{U}`.
+        float: Gate error between ``channel`` :math:`\\mathcal{E}`
+        and ``target`` :math:`\\mathcal{U}`.
     """
     error = 1 - average_gate_fidelity(
         channel, target, check_unitary=check_unitary, backend=backend
