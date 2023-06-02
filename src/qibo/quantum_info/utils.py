@@ -82,7 +82,7 @@ def shannon_entropy(probability_array, base: float = 2, backend=None):
 
     Args:
         probability_array (ndarray or list): a probability array :math:`\\mathbf{p}`.
-        base (float): the base of the log. Default: 2.
+        base (float): the base of the log. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.

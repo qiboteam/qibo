@@ -1163,6 +1163,18 @@ Impurity
 .. autofunction:: qibo.quantum_info.impurity
 
 
+Concurrence
+"""""""""""
+
+.. autofunction:: qibo.quantum_info.concurrence
+
+
+Entanglement of formation
+"""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.entanglement_of_formation
+
+
 Entropy
 """""""
 
