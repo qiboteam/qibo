@@ -445,10 +445,10 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
         purity_state = purity(state)
         purity_target = purity(target)
 
-        # if any of the states is mixed, default to full fidelity calculation
+        # if both states are mixed, default to full fidelity calculation
         if (
             abs(purity_state - 1) > PRECISION_TOL
-            or abs(purity_target - 1) > PRECISION_TOL
+            and abs(purity_target - 1) > PRECISION_TOL
         ):
             # using eigh since rho is supposed to be Hermitian
             if check_hermitian is False or _check_hermitian_or_not_cupy(state):
