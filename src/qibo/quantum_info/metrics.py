@@ -417,9 +417,10 @@ def hilbert_schmidt_distance(state, target):
 def fidelity(state, target, backend=None):
     """Fidelity :math:`F(\\rho, \\sigma)` between ``state`` :math:`\\rho`
     and ``target`` state :math:`\\sigma`. In general,
+
     .. math::
         F(\\rho, \\sigma) = \\text{Tr}^{2}\\left( \\sqrt{\\sqrt{\\sigma} \\,
-            \\rho^{\\dagger} \\, \\sqrt{\\sigma}} \\right) \\, .
+        \\rho^{\\dagger} \\, \\sqrt{\\sigma}} \\right) \\, .
 
     However, when at least one of the states is pure, then
 
