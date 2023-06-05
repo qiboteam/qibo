@@ -875,7 +875,7 @@ def _check_hermitian_or_not_cupy(matrix: np.ndarray, backend=None):
     Returns:
         bool: whether the matrix is Hermitian.
 
-    Raises: 
+    Raises:
         NotImplementedError: If `matrix` is not Hermitian and `backend` is not :class:`qibojit.backends.CupyBackend`
 
     """
