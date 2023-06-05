@@ -414,26 +414,30 @@ def hilbert_schmidt_distance(state, target):
     return distance
 
 
-def fidelity(state, target, check_purity: bool = False):
-    """Fidelity between two quantum states (when at least one state is pure).
-
+def fidelity(state, target, backend=None):
+    """Fidelity :math:`F(\\rho, \\sigma)` between ``state`` :math:`\\rho`
+    and ``target`` state :math:`\\sigma`. In general,
     .. math::
         F(\\rho, \\sigma) = \\text{Tr}^{2}\\left( \\sqrt{\\sqrt{\\sigma} \\,
-            \\rho^{\\dagger} \\, \\sqrt{\\sigma}} \\right) =
-            \\text{Tr}(\\rho \\, \\sigma)
+            \\rho^{\\dagger} \\, \\sqrt{\\sigma}} \\right) \\, .
 
-    where the last equality holds because the ``target`` state
-    :math:`\\sigma` is assumed to be pure.
+    However, when at least one of the states is pure, then
+
+    .. math::
+        F(\\rho, \\sigma) = \\text{Tr}(\\rho \\, \\sigma)
 
     Args:
         state (ndarray): statevector or density matrix.
         target (ndarray): statevector or density matrix.
-        check_purity (bool, optional): if ``True``, checks if one of the
-            input states is pure. Defaults to ``False``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
 
     Returns:
         float: Fidelity between ``state`` :math:`\\rho` and ``target`` :math:`\\sigma`.
     """
+    if backend is None:
+        backend = GlobalBackend()
 
     if state.shape != target.shape:
         raise_error(
@@ -448,21 +452,46 @@ def fidelity(state, target, check_purity: bool = False):
             + f"but have dims {state.shape} and {target.shape}",
         )
 
-    if check_purity is True:
+    # check purity if both states are density matrices
+    if len(state.shape) == 2 and len(target.shape) == 2:
         purity_state = purity(state)
         purity_target = purity(target)
+
+        # if any of the states is mixed, default to full fidelity calculation
         if (
             (purity_state < 1.0 - PRECISION_TOL) or (purity_state > 1.0 + PRECISION_TOL)
-        ) and (
+        ) or (
             (purity_target < 1.0 - PRECISION_TOL)
             or (purity_target > 1.0 + PRECISION_TOL)
         ):
-            raise_error(
-                ValueError,
-                f"Neither state is pure. Purity state (ndarray): {purity_state} , "
-                + f"Purity target (ndarray): {purity_target}.",
-            )
+            # using eigh since rho is supposed to be Hermitian
+            eigenvalues, eigenvectors = np.linalg.eigh(state)
+            state = np.zeros(state.shape, dtype=complex)
+            state = backend.cast(state, dtype=state.dtype)
+            for eig, eigvec in zip(eigenvalues, np.transpose(eigenvectors)):
+                matrix = np.sqrt(eig) * np.outer(eigvec, np.conj(eigvec))
+                matrix = backend.cast(matrix, dtype=matrix.dtype)
+                state += matrix
+                del matrix
 
+            fid = state @ target @ state
+
+            # since sqrt(rho) is Hermitian, we can use eigh again
+            eigenvalues, eigenvectors = np.linalg.eigh(fid)
+            fid = np.zeros(state.shape, dtype=complex)
+            fid = backend.cast(fid, dtype=fid.dtype)
+            for eig, eigvec in zip(eigenvalues, np.transpose(eigenvectors)):
+                if eig > PRECISION_TOL:
+                    matrix = np.sqrt(eig) * np.outer(eigvec, np.conj(eigvec))
+                    matrix = backend.cast(matrix, dtype=matrix.dtype)
+                    fid += matrix
+                    del matrix
+
+            fid = np.real(np.trace(fid)) ** 2
+
+            return fid
+
+    # if any of the states is pure, perform lighter calculation
     if len(state.shape) == 1 and len(target.shape) == 1:
         fid = np.abs(np.dot(np.conj(state), target)) ** 2
     elif len(state.shape) == 2 and len(target.shape) == 2:
@@ -473,7 +502,7 @@ def fidelity(state, target, check_purity: bool = False):
     return fid
 
 
-def infidelity(state, target, check_purity: bool = False):
+def infidelity(state, target, backend=None):
     """Infidelity between ``state`` :math:`\\rho` and ``target`` state :math:`\\sigma`,
     which is given by
 
@@ -486,16 +515,17 @@ def infidelity(state, target, check_purity: bool = False):
     Args:
         state (ndarray): statevector or density matrix.
         target (ndarray): statevector or density matrix.
-        check_purity (bool, optional): if ``True``, checks if one of the
-            input states is pure. Defaults to ``False``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
 
     Returns:
         float: Infidelity between ``state`` :math:`\\rho` and ``target`` :math:`\\sigma`.
     """
-    return 1 - fidelity(state, target, check_purity=check_purity)
+    return 1 - fidelity(state, target, backend=backend)
 
 
-def bures_angle(state, target, check_purity: bool = False):
+def bures_angle(state, target, backend=None):
     """Calculates the Bures angle :math:`D_{A}` between a ``state`` :math:`\\rho`
     and a ``target`` state :math:`\\sigma`. This is given by
 
@@ -508,18 +538,19 @@ def bures_angle(state, target, check_purity: bool = False):
     Args:
         state (ndarray): statevector or density matrix.
         target (ndarray): statevector or density matrix.
-        check_purity (bool, optional): if ``True``, checks if one of the
-            input states is pure. Defaults to ``False``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
 
     Returns:
         float: Bures angle between ``state`` and ``target``.
     """
-    angle = np.arccos(np.sqrt(fidelity(state, target, check_purity=check_purity)))
+    angle = np.arccos(np.sqrt(fidelity(state, target, backend=backend)))
 
     return angle
 
 
-def bures_distance(state, target, check_purity: bool = False):
+def bures_distance(state, target, backend=None):
     """Calculates the Bures distance :math:`D_{B}` between a ``state`` :math:`\\rho`
     and a ``target`` state :math:`\\sigma`. This is given by
 
@@ -532,15 +563,14 @@ def bures_distance(state, target, check_purity: bool = False):
     Args:
         state (ndarray): statevector or density matrix.
         target (ndarray): statevector or density matrix.
-        check_purity (bool, optional): if ``True``, checks if one of the
-            input states is pure. Defaults to ``False``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
 
     Returns:
         float: Bures distance between ``state`` and ``target``.
     """
-    distance = np.sqrt(
-        2 * (1 - np.sqrt(fidelity(state, target, check_purity=check_purity)))
-    )
+    distance = np.sqrt(2 * (1 - np.sqrt(fidelity(state, target, backend=backend))))
 
     return distance
 
