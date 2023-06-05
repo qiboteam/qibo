@@ -301,49 +301,69 @@ def test_fidelity_and_infidelity_and_bures(backend):
         target = np.random.rand(4, 4)
         state = backend.cast(state, dtype=state.dtype)
         target = backend.cast(target, dtype=target.dtype)
-        fidelity(state, target)
+        fidelity(state, target, backend=backend)
     with pytest.raises(TypeError):
         state = np.random.rand(2, 2, 2)
         target = np.random.rand(2, 2, 2)
         state = backend.cast(state, dtype=state.dtype)
         target = backend.cast(target, dtype=target.dtype)
-        fidelity(state, target)
-    with pytest.raises(ValueError):
-        state = np.random.rand(2, 2)
-        target = np.random.rand(2, 2)
-        state = backend.cast(state, dtype=state.dtype)
-        target = backend.cast(target, dtype=target.dtype)
-        fidelity(state, target, check_purity=True)
+        fidelity(state, target, backend=backend)
+
+    state = backend.identity_density_matrix(4)
+    target = backend.identity_density_matrix(4)
+    backend.assert_allclose(
+        fidelity(state, target, backend=backend), 1.0, atol=PRECISION_TOL
+    )
 
     state = np.array([0.0, 0.0, 0.0, 1.0])
     target = np.array([0.0, 0.0, 0.0, 1.0])
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
-    backend.assert_allclose(fidelity(state, target), 1.0, atol=PRECISION_TOL)
-    backend.assert_allclose(infidelity(state, target), 0.0, atol=PRECISION_TOL)
-    backend.assert_allclose(bures_angle(state, target), 0.0, atol=PRECISION_TOL)
-    backend.assert_allclose(bures_distance(state, target), 0.0, atol=PRECISION_TOL)
+    backend.assert_allclose(
+        fidelity(state, target, backend=backend), 1.0, atol=PRECISION_TOL
+    )
+    backend.assert_allclose(
+        infidelity(state, target, backend=backend), 0.0, atol=PRECISION_TOL
+    )
+    backend.assert_allclose(
+        bures_angle(state, target, backend=backend), 0.0, atol=PRECISION_TOL
+    )
+    backend.assert_allclose(
+        bures_distance(state, target, backend=backend), 0.0, atol=PRECISION_TOL
+    )
 
     state = np.outer(np.conj(state), state)
     target = np.outer(np.conj(target), target)
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
-    backend.assert_allclose(fidelity(state, target), 1.0, atol=PRECISION_TOL)
-    backend.assert_allclose(infidelity(state, target), 0.0, atol=PRECISION_TOL)
-    backend.assert_allclose(bures_angle(state, target), 0.0, atol=PRECISION_TOL)
-    backend.assert_allclose(bures_distance(state, target), 0.0, atol=PRECISION_TOL)
+    backend.assert_allclose(
+        fidelity(state, target, backend=backend), 1.0, atol=PRECISION_TOL
+    )
+    backend.assert_allclose(
+        infidelity(state, target, backend=backend), 0.0, atol=PRECISION_TOL
+    )
+    backend.assert_allclose(
+        bures_angle(state, target, backend=backend), 0.0, atol=PRECISION_TOL
+    )
+    backend.assert_allclose(
+        bures_distance(state, target, backend=backend), 0.0, atol=PRECISION_TOL
+    )
 
     state = np.array([0.0, 1.0, 0.0, 0.0])
     target = np.array([0.0, 0.0, 0.0, 1.0])
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
-    backend.assert_allclose(fidelity(state, target), 0.0, atol=PRECISION_TOL)
-    backend.assert_allclose(infidelity(state, target), 1.0, atol=PRECISION_TOL)
     backend.assert_allclose(
-        bures_angle(state, target), np.arccos(0.0), atol=PRECISION_TOL
+        fidelity(state, target, backend=backend), 0.0, atol=PRECISION_TOL
     )
     backend.assert_allclose(
-        bures_distance(state, target), np.sqrt(2), atol=PRECISION_TOL
+        infidelity(state, target, backend=backend), 1.0, atol=PRECISION_TOL
+    )
+    backend.assert_allclose(
+        bures_angle(state, target, backend=backend), np.arccos(0.0), atol=PRECISION_TOL
+    )
+    backend.assert_allclose(
+        bures_distance(state, target, backend=backend), np.sqrt(2), atol=PRECISION_TOL
     )
 
 
@@ -410,13 +430,11 @@ def test_meyer_wallach_entanglement(backend):
     circuit2.add(gates.CNOT(0, 1))
 
     backend.assert_allclose(
-        meyer_wallach_entanglement(circuit1, backend=backend) < PRECISION_TOL, True
+        meyer_wallach_entanglement(circuit1, backend=backend), 0.0, atol=PRECISION_TOL
     )
 
     backend.assert_allclose(
-        abs(meyer_wallach_entanglement(circuit2, backend=backend) - 0.5)
-        < PRECISION_TOL,
-        True,
+        meyer_wallach_entanglement(circuit2, backend=backend), 0.5, atol=PRECISION_TOL
     )
 
 
