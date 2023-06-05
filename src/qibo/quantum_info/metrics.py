@@ -856,6 +856,6 @@ def expressibility(circuit, t: int, samples: int, backend=None):
         circuit, t, samples, backend=backend
     )
 
-    fid = fidelity(expr, expr)
+    fid = np.trace(expr @ expr)
 
     return fid
