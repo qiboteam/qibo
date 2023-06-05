@@ -203,25 +203,10 @@ def entropy(state, base: float = 2, check_hermitian: bool = False, backend=None)
     if purity(state) == 1.0:
         ent = 0.0
     else:
-        if check_hermitian is True:
-            hermitian = bool(
-                backend.calculate_norm(np.transpose(np.conj(state)) - state)
-                < PRECISION_TOL
-            )
-            if (
-                hermitian is False and backend.__class__.__name__ == "CupyBackend"
-            ):  # pragma: no cover
-                raise_error(
-                    NotImplementedError,
-                    f"CupyBackend does not support `np.linalg.eigvals` for non-Hermitian `state`.",
-                )
-            eigenvalues = (
-                np.linalg.eigvalsh(state)
-                if hermitian is True
-                else np.linalg.eigvals(state)
-            )
-        else:
+        if check_hermitian is False or _check_hermitian_or_not_cupy(state):
             eigenvalues = np.linalg.eigvalsh(state)
+        else:
+            eigenvalues = np.linalg.eigvals(state)
 
         if base == 2:
             log_prob = np.where(eigenvalues > 0, np.log2(eigenvalues), 0.0)
@@ -414,7 +399,7 @@ def hilbert_schmidt_distance(state, target):
     return distance
 
 
-def fidelity(state, target, backend=None):
+def fidelity(state, target, check_hermitian: bool = False, backend=None):
     """Fidelity :math:`F(\\rho, \\sigma)` between ``state`` :math:`\\rho`
     and ``target`` state :math:`\\sigma`. In general,
 
@@ -430,6 +415,8 @@ def fidelity(state, target, backend=None):
     Args:
         state (ndarray): statevector or density matrix.
         target (ndarray): statevector or density matrix.
+        check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian.
+            Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -460,13 +447,14 @@ def fidelity(state, target, backend=None):
 
         # if any of the states is mixed, default to full fidelity calculation
         if (
-            (purity_state < 1.0 - PRECISION_TOL) or (purity_state > 1.0 + PRECISION_TOL)
-        ) or (
-            (purity_target < 1.0 - PRECISION_TOL)
-            or (purity_target > 1.0 + PRECISION_TOL)
+            abs(purity_state - 1) > PRECISION_TOL
+            or abs(purity_target - 1) > PRECISION_TOL
         ):
             # using eigh since rho is supposed to be Hermitian
-            eigenvalues, eigenvectors = np.linalg.eigh(state)
+            if check_hermitian is False or _check_hermitian_or_not_cupy(state):
+                eigenvalues, eigenvectors = np.linalg.eigh(state)
+            else:
+                eigenvalues, eigenvectors = np.linalg.eig(state)
             state = np.zeros(state.shape, dtype=complex)
             state = backend.cast(state, dtype=state.dtype)
             for eig, eigvec in zip(eigenvalues, np.transpose(eigenvectors)):
@@ -478,7 +466,10 @@ def fidelity(state, target, backend=None):
             fid = state @ target @ state
 
             # since sqrt(rho) is Hermitian, we can use eigh again
-            eigenvalues, eigenvectors = np.linalg.eigh(fid)
+            if check_hermitian is False or _check_hermitian_or_not_cupy(fid):
+                eigenvalues, eigenvectors = np.linalg.eigh(fid)
+            else:
+                eigenvalues, eigenvectors = np.linalg.eig(fid)
             fid = np.zeros(state.shape, dtype=complex)
             fid = backend.cast(fid, dtype=fid.dtype)
             for eig, eigvec in zip(eigenvalues, np.transpose(eigenvectors)):
@@ -493,9 +484,9 @@ def fidelity(state, target, backend=None):
             return fid
 
     # if any of the states is pure, perform lighter calculation
-    if len(state.shape) == 1 and len(target.shape) == 1:
+    if len(state.shape) == 1:
         fid = np.abs(np.dot(np.conj(state), target)) ** 2
-    elif len(state.shape) == 2 and len(target.shape) == 2:
+    else:
         fid = np.real(np.trace(np.dot(state, target)))
 
     fid = float(fid)
@@ -503,7 +494,7 @@ def fidelity(state, target, backend=None):
     return fid
 
 
-def infidelity(state, target, backend=None):
+def infidelity(state, target, check_hermitian: bool = False, backend=None):
     """Infidelity between ``state`` :math:`\\rho` and ``target`` state :math:`\\sigma`,
     which is given by
 
@@ -516,6 +507,8 @@ def infidelity(state, target, backend=None):
     Args:
         state (ndarray): statevector or density matrix.
         target (ndarray): statevector or density matrix.
+        check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian.
+            Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -523,10 +516,10 @@ def infidelity(state, target, backend=None):
     Returns:
         float: Infidelity between ``state`` :math:`\\rho` and ``target`` :math:`\\sigma`.
     """
-    return 1 - fidelity(state, target, backend=backend)
+    return 1 - fidelity(state, target, check_hermitian=check_hermitian, backend=backend)
 
 
-def bures_angle(state, target, backend=None):
+def bures_angle(state, target, check_hermitian: bool = False, backend=None):
     """Calculates the Bures angle :math:`D_{A}` between a ``state`` :math:`\\rho`
     and a ``target`` state :math:`\\sigma`. This is given by
 
@@ -539,6 +532,8 @@ def bures_angle(state, target, backend=None):
     Args:
         state (ndarray): statevector or density matrix.
         target (ndarray): statevector or density matrix.
+        check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian.
+            Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -546,12 +541,14 @@ def bures_angle(state, target, backend=None):
     Returns:
         float: Bures angle between ``state`` and ``target``.
     """
-    angle = np.arccos(np.sqrt(fidelity(state, target, backend=backend)))
+    angle = np.arccos(
+        np.sqrt(fidelity(state, target, check_hermitian, backend=backend))
+    )
 
     return angle
 
 
-def bures_distance(state, target, backend=None):
+def bures_distance(state, target, check_hermitian: bool = False, backend=None):
     """Calculates the Bures distance :math:`D_{B}` between a ``state`` :math:`\\rho`
     and a ``target`` state :math:`\\sigma`. This is given by
 
@@ -564,6 +561,8 @@ def bures_distance(state, target, backend=None):
     Args:
         state (ndarray): statevector or density matrix.
         target (ndarray): statevector or density matrix.
+        check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian.
+            Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -571,7 +570,9 @@ def bures_distance(state, target, backend=None):
     Returns:
         float: Bures distance between ``state`` and ``target``.
     """
-    distance = np.sqrt(2 * (1 - np.sqrt(fidelity(state, target, backend=backend))))
+    distance = np.sqrt(
+        2 * (1 - np.sqrt(fidelity(state, target, check_hermitian, backend=backend)))
+    )
 
     return distance
 
@@ -588,7 +589,7 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
         channel: quantum channel :math:`\\mathcal{E}`.
         target (optional): quantum channel :math:`U`. If ``None``, target is the
             Identity channel. Defaults to ``None``.
-        check_unitary (bool, optional): if True, checks if one of the
+        check_unitary (bool, optional): if ``True``, checks if one of the
             input channels is unitary. Default: ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
@@ -647,7 +648,7 @@ def process_infidelity(channel, target=None, check_unitary: bool = False, backen
         channel: quantum channel :math:`\\mathcal{E}`.
         target (optional): quantum channel :math:`U`. If ``None``, target is the
             Identity channel. Defaults to ``None``.
-        check_unitary (bool, optional): if True, checks if one of the
+        check_unitary (bool, optional): if ``True``, checks if one of the
             input channels is unitary. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
@@ -684,7 +685,7 @@ def average_gate_fidelity(
         channel: quantum channel :math:`\\mathcal{E}`.
         target (optional): quantum channel :math:`\\mathcal{U}`.
             If ``None``, target is the Identity channel. Defaults to ``None``.
-        check_unitary (bool, optional): if True, checks if one of the
+        check_unitary (bool, optional): if ``True``, checks if one of the
             input channels is unitary. Default: ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
@@ -719,7 +720,7 @@ def gate_error(channel, target=None, check_unitary: bool = False, backend=None):
         channel: quantum channel :math:`\\mathcal{E}`.
         target (optional): quantum channel :math:`\\mathcal{U}`. If ``None``,
             target is the Identity channel. Defaults to ``None``.
-        check_unitary (bool, optional): if True, checks if one of the
+        check_unitary (bool, optional): if ``True``, checks if one of the
             input channels is unitary. Default: ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
@@ -860,3 +861,36 @@ def expressibility(circuit, t: int, samples: int, backend=None):
     fid = np.trace(expr @ expr)
 
     return fid
+
+
+def _check_hermitian_or_not_cupy(matrix: np.ndarray, backend=None):
+    """Checks if a given matrix is Hermitian and whether the backend is not :class:`qibojit.backends.CupyBackend`.
+
+    Args:
+        matrix (np.ndarray): input array.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
+
+    Returns:
+        bool: whether the matrix is Hermitian.
+
+    Raises: 
+        NotImplementedError: If `matrix` is not Hermitian and `backend` is not :class:`qibojit.backends.CupyBackend`
+
+    """
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    hermitian = bool(
+        backend.calculate_norm(np.transpose(np.conj(matrix)) - matrix) < PRECISION_TOL
+    )
+    if (
+        hermitian is False and backend.__class__.__name__ == "CupyBackend"
+    ):  # pragma: no cover
+        raise_error(
+            NotImplementedError,
+            f"CupyBackend does not support `np.linalg.eig` or `np.linalg.eigvals` for non-Hermitian matrices.",
+        )
+
+    return hermitian

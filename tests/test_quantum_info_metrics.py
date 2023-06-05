@@ -295,24 +295,27 @@ def test_hilbert_schmidt_distance(backend):
     backend.assert_allclose(hilbert_schmidt_distance(state, target), 2.0)
 
 
-def test_fidelity_and_infidelity_and_bures(backend):
+@pytest.mark.parametrize("check_hermitian", [True, False])
+def test_fidelity_and_infidelity_and_bures(backend, check_hermitian):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 2)
         target = np.random.rand(4, 4)
         state = backend.cast(state, dtype=state.dtype)
         target = backend.cast(target, dtype=target.dtype)
-        fidelity(state, target, backend=backend)
+        fidelity(state, target, check_hermitian, backend=backend)
     with pytest.raises(TypeError):
         state = np.random.rand(2, 2, 2)
         target = np.random.rand(2, 2, 2)
         state = backend.cast(state, dtype=state.dtype)
         target = backend.cast(target, dtype=target.dtype)
-        fidelity(state, target, backend=backend)
+        fidelity(state, target, check_hermitian, backend=backend)
 
     state = backend.identity_density_matrix(4)
     target = backend.identity_density_matrix(4)
     backend.assert_allclose(
-        fidelity(state, target, backend=backend), 1.0, atol=PRECISION_TOL
+        fidelity(state, target, check_hermitian, backend=backend),
+        1.0,
+        atol=PRECISION_TOL,
     )
 
     state = np.array([0.0, 0.0, 0.0, 1.0])
@@ -320,16 +323,24 @@ def test_fidelity_and_infidelity_and_bures(backend):
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
     backend.assert_allclose(
-        fidelity(state, target, backend=backend), 1.0, atol=PRECISION_TOL
+        fidelity(state, target, check_hermitian, backend=backend),
+        1.0,
+        atol=PRECISION_TOL,
     )
     backend.assert_allclose(
-        infidelity(state, target, backend=backend), 0.0, atol=PRECISION_TOL
+        infidelity(state, target, check_hermitian, backend=backend),
+        0.0,
+        atol=PRECISION_TOL,
     )
     backend.assert_allclose(
-        bures_angle(state, target, backend=backend), 0.0, atol=PRECISION_TOL
+        bures_angle(state, target, check_hermitian, backend=backend),
+        0.0,
+        atol=PRECISION_TOL,
     )
     backend.assert_allclose(
-        bures_distance(state, target, backend=backend), 0.0, atol=PRECISION_TOL
+        bures_distance(state, target, check_hermitian, backend=backend),
+        0.0,
+        atol=PRECISION_TOL,
     )
 
     state = np.outer(np.conj(state), state)
@@ -337,16 +348,24 @@ def test_fidelity_and_infidelity_and_bures(backend):
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
     backend.assert_allclose(
-        fidelity(state, target, backend=backend), 1.0, atol=PRECISION_TOL
+        fidelity(state, target, check_hermitian, backend=backend),
+        1.0,
+        atol=PRECISION_TOL,
     )
     backend.assert_allclose(
-        infidelity(state, target, backend=backend), 0.0, atol=PRECISION_TOL
+        infidelity(state, target, check_hermitian, backend=backend),
+        0.0,
+        atol=PRECISION_TOL,
     )
     backend.assert_allclose(
-        bures_angle(state, target, backend=backend), 0.0, atol=PRECISION_TOL
+        bures_angle(state, target, check_hermitian, backend=backend),
+        0.0,
+        atol=PRECISION_TOL,
     )
     backend.assert_allclose(
-        bures_distance(state, target, backend=backend), 0.0, atol=PRECISION_TOL
+        bures_distance(state, target, check_hermitian, backend=backend),
+        0.0,
+        atol=PRECISION_TOL,
     )
 
     state = np.array([0.0, 1.0, 0.0, 0.0])
@@ -354,16 +373,24 @@ def test_fidelity_and_infidelity_and_bures(backend):
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
     backend.assert_allclose(
-        fidelity(state, target, backend=backend), 0.0, atol=PRECISION_TOL
+        fidelity(state, target, check_hermitian, backend=backend),
+        0.0,
+        atol=PRECISION_TOL,
     )
     backend.assert_allclose(
-        infidelity(state, target, backend=backend), 1.0, atol=PRECISION_TOL
+        infidelity(state, target, check_hermitian, backend=backend),
+        1.0,
+        atol=PRECISION_TOL,
     )
     backend.assert_allclose(
-        bures_angle(state, target, backend=backend), np.arccos(0.0), atol=PRECISION_TOL
+        bures_angle(state, target, check_hermitian, backend=backend),
+        np.arccos(0.0),
+        atol=PRECISION_TOL,
     )
     backend.assert_allclose(
-        bures_distance(state, target, backend=backend), np.sqrt(2), atol=PRECISION_TOL
+        bures_distance(state, target, check_hermitian, backend=backend),
+        np.sqrt(2),
+        atol=PRECISION_TOL,
     )
 
 
