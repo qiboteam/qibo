@@ -100,6 +100,10 @@ def test_entropy(backend, base, check_hermitian):
             state = random_unitary(4)
             state = backend.cast(state, dtype=state.dtype)
             test = entropy(state, base=base, check_hermitian=True, backend=backend)
+    else:
+        state = random_unitary(4)
+        state = backend.cast(state, dtype=state.dtype)
+        test = entropy(state, base=base, check_hermitian=True, backend=backend)
 
     state = np.array([1.0, 0.0])
     state = backend.cast(state, dtype=state.dtype)
@@ -392,6 +396,16 @@ def test_fidelity_and_infidelity_and_bures(backend, check_hermitian):
         np.sqrt(2),
         atol=PRECISION_TOL,
     )
+
+    state = random_unitary(4)
+    state = backend.cast(state, dtype=state.dtype)
+    target = random_unitary(4)
+    target = backend.cast(target, dtype=target.dtype)
+    if backend.__class__.__name__ == "CupyBackend":
+        with pytest.raises(NotImplementedError):
+            test = fidelity(state, target, check_hermitian=True, backend=backend)
+    else:
+        test = fidelity(state, target, check_hermitian=True, backend=backend)
 
 
 def test_process_fidelity_and_infidelity(backend):
