@@ -625,7 +625,7 @@ def kraus_to_stinespring(kraus_ops, initial_state_env=None, backend=None):
     Returns:
         ndarray: Stinespring representation (restrited unitary) of the Kraus channel.
     """
-    if len(initial_state_env) != len(kraus_op):
+    if len(initial_state_env) != len(kraus_ops):
         raise_error(
             ValueError,
             "dim of initial_state_env must be equal to the number of Kraus operators.",
