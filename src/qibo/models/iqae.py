@@ -7,49 +7,54 @@ from qibo.models import Circuit
 
 
 class IQAE:
-    """Model that performs the Iterative Quantum Ampltidue Estimation algorithm.
+    """Model that performs the Iterative Quantum Amplitude Estimation algorithm.
 
-    The implemented class in this code utilizes the Iterative Quantum Amplitude Estimation (IQAE)
-    algorithm, which was proposed in [1]. The algorithm provides an estimated output that, with a
-    probability `alpha', differs from the target value by `epsilon'. Both `alpha' and `epsilon' can
-    be specified.
+    The implemented class in this code utilizes the Iterative Quantum Amplitude
+    Estimation (IQAE) algorithm, which was proposed in `arxiv:1912.05559
+    <https://arxiv.org/abs/1912.05559>`_. The algorithm provides an estimated
+    output that, with a probability `alpha', differs from the target value by
+    `epsilon'. Both `alpha' and `epsilon' can be specified.
 
-    Unlike Brassard's original QAE algorithm [2], this implementation does not rely on Quantum Phase
-    Estimation but instead is based solely on Grover's algorithm. The IQAE algorithm employs a series
-    of carefully selected Grover iterations to determine an estimate for the target amplitude.
-
-    References:
-    [1]: Grinko, D., Gacon, J., Zoufal, C., & Woerner, S. (2019). Iterative Quantum Amplitude Estimation.
-    arXiv:1912.05559 <https://arxiv.org/abs/1912.05559>.
-    [2]: Brassard, G., Hoyer, P., Mosca, M., & Tapp, A. (2000). Quantum Amplitude Amplification and
-    Estimation. arXiv:quant-ph/0005055 <http://arxiv.org/abs/quant-ph/0005055>.
+    Unlike Brassard's original QAE algorithm `arxiv:quant-ph/0005055
+    <http://arxiv.org/abs/quant-ph/0005055>`_, this implementation does not rely
+    on Quantum Phase Estimation but instead is based solely on Grover's
+    algorithm. The IQAE algorithm employs a series of carefully selected Grover
+    iterations to determine an estimate for the target amplitude.
 
     Args:
-        circuit_a (:class:`qibo.circuit`): quantum circuit that specifies the QAE problem
-        circuit_q (:class:`qibo.circuit`): quantum circuit of the Grover/Amplification operator
+        circuit_a (:class:`qibo.models.circuit.Circuit`): quantum circuit that
+            specifies the QAE problem.
 
-        alpha (float): confidence level, the target probability is 1 - `alpha', has values between 0 and 1
-        epsilon (float): target precision for estimation target `a`, has values between 0 and 0.5
-        method (string): statistical method used to estimate the confidence intervals in
-                each iteration, can be either 'chernoff' (default) for the Chernoff intervals or 'beta' for the
-                Clopper-Pearson intervals
-        n_shots (int): number of shots
+        circuit_q (:class:`qibo.models.circuit.Circuit`): quantum circuit of the
+            Grover/Amplification operator.
+
+        alpha (float): confidence level, the target probability is 1 - ``alpha``,
+            has values between 0 and 1.
+
+        epsilon (float): target precision for estimation target `a`, has values
+            between 0 and 0.5.
+
+        method (string): statistical method used to estimate the confidence
+            intervals in each iteration, can be either ``chernoff`` (default) for
+            the Chernoff intervals or ``beta`` for the Clopper-Pearson intervals.
+
+        n_shots (int): number of shots.
+
     Raises:
-        ValueError: If epsilon is not in (0, 0.5]
-        ValueError: If alpha is not in (0, 1)
-        ValueError: If method is not supported
-        ValueError: If the number of qubits in circuit_a is greater than in circuit_q
+        ValueError: If epsilon is not in (0, 0.5].
+        ValueError: If alpha is not in (0, 1).
+        ValueError: If method is not supported.
+        ValueError: If the number of qubits in circuit_a is greater than in circuit_q.
 
     Example:
-            import numpy as np
-            from qibo import gates
-            from qibo.models import Circuit
-            from qibo.models.iqae import IQAE
-            ...
-            #Here the circuits A and Q are defined
-            ...
-            iae = IQAE(circuit_a=A, circuit_q=Q)
-            results=iae.execute()
+        .. testcode::
+
+            import numpy as np from qibo import gates from qibo.models import
+            Circuit from qibo.models.iqae import IQAE
+
+            # Here the circuits A and Q are defined
+
+            iae = IQAE(circuit_a=A, circuit_q=Q) results=iae.execute()
             print(results.estimation)
     """
 
@@ -68,27 +73,27 @@ class IQAE:
             raise_error(
                 ValueError,
                 "The number of qubits for Q must be greater or equal than the number"
-                "of qubits of A ",
+                "of qubits of A.",
             )
         if not isinstance(n_shots, int):
             raise_error(
                 ValueError,
-                "The number of shots must be an integer number",
+                "The number of shots must be an integer number.",
             )
         # validate ranges of input arguments
         if not 0 < epsilon <= 0.5:
-            raise_error(ValueError, f"Epsilon must be in (0, 0.5], but is {epsilon}")
+            raise_error(ValueError, f"Epsilon must be in (0, 0.5], but is {epsilon}.")
 
         if not 0 < alpha < 1:
             raise_error(
                 ValueError,
-                f"The confidence level alpha must be in (0, 1), but is {alpha}",
+                f"The confidence level alpha must be in (0, 1), but is {alpha}.",
             )
 
         if method not in {"chernoff", "beta"}:
             raise_error(
                 ValueError,
-                f"The confidence interval method must be chernoff or beta, but is {method}",
+                f"The confidence interval method must be chernoff or beta, but is {method}.",
             )
 
         self.alpha = alpha
@@ -96,14 +101,13 @@ class IQAE:
         self.n_shots = n_shots
         self.method = method
 
-    # QUANTUM CIRCUIT:
     def construct_qae_circuit(self, k):
-        """
-        Generates quantum circuit for QAE
+        """Generates quantum circuit for QAE.
+
         Args:
-            k: number of times the amplification operator Q is applied
-        Return:
-            qc: quantum circuit of the QAE algorithm
+            k (int): number of times the amplification operator Q is applied.
+        Returns:
+            The quantum circuit of the QAE algorithm.
         """
         initialization_circuit_a = self.circuit_a
         amplification_circuit_q = self.circuit_q
@@ -120,15 +124,16 @@ class IQAE:
         qc.add(gates.M(initialization_circuit_a.nqubits - 1))
         return qc
 
-    # CLASSICAL POSTPROCESSING FOR THE IQAE
     def clopper_pearson(self, count, n, alpha):
-        """Calculates the confidence interval for the quantity to estimate `a'
+        """Calculates the confidence interval for the quantity to estimate `a'.
+
         Args:
-            count: number of successes
-            n: total number of trials
-            alpha: significance level. Must be in (0, 0.5)
-        Returns
-            The confidence interval a_min,a_max
+            count (int): number of successes.
+            n (int): total number of trials.
+            alpha (float): significance level. Must be in (0, 0.5).
+
+        Return:
+            The confidence interval [a_min, a_max].
         """
         beta_prob_function = scipy.stats.beta.ppf
         a_min = beta_prob_function(alpha / 2, count, n - count + 1)
@@ -140,14 +145,15 @@ class IQAE:
         return a_min, a_max
 
     def h_calc_CP(self, n_successes, n_total_shots, upper_bound_t):
-        """
-        Calculates the h function
+        """Calculates the h function.
+
         Args:
-            n_successes: number of successes
-            n_total_shots: total number of trials
-            upper_bound_t: maximum number of rounds to achieve the desired absolute error
+            n_successes (int): number of successes.
+            n_total_shots (int): total number of trials.
+            upper_bound_t (int): maximum number of rounds to achieve the desired absolute error.
+
         Returns:
-            The h function for the given inputs
+            The h function for the given inputs.
         """
         a_min, a_max = self.clopper_pearson(
             n_successes, n_total_shots, alpha=(self.alpha / upper_bound_t)
@@ -155,14 +161,15 @@ class IQAE:
         return np.abs(np.arccos(1 - 2 * a_max) - np.arccos(1 - 2 * a_min)) / 2
 
     def calc_L_range_CP(self, n_shots, upper_bound_t):
-        """
-        Calculate the confidence interval for the Clopper-Pearson method
+        """Calculate the confidence interval for the Clopper-Pearson method.
+
         Args:
-            n_shots: number of shots
-            upper_bound_t: maximum number of rounds to achieve the desired absolute error
+            n_shots (int): number of shots.
+            upper_bound_t (int): maximum number of rounds to achieve the desired absolute error.
+
         Returns:
-            max_L, min_L: the maximum and minimum possible error which could be returned
-            on a given iteration
+            max_L, min_L (float, float): the maximum and minimum possible error which could be returned
+            on a given iteration.
         """
         x = np.linspace(0, np.pi, 10000)
         x_domain = [x <= 1.0 + 1 / 10 / n_shots]
@@ -175,14 +182,15 @@ class IQAE:
         return max_L, min_L
 
     def calc_L_range_CH(self, n_shots, upper_bound_t):
-        """
-        Calculate the confidence interval for the Chernoff method
+        """Calculate the confidence interval for the Chernoff method.
+
         Args:
-            n_shots: number of shots
-            upper_bound_t: maximum number of rounds to achieve the desired absolute error
+            n_shots (int): number of shots.
+            upper_bound_t (int): maximum number of rounds to achieve the desired absolute error.
+
         Returns:
-            max_L, min_L: the maximum and minimum possible error which could be returned
-            on a given iteration
+            max_L, min_L (float, float): the maximum and minimum possible error which could be returned
+            on a given iteration.
         """
         max_L = (
             np.arcsin(
@@ -199,16 +207,20 @@ class IQAE:
         lies completely in [0, pi] or [pi, 2pi].
 
         Args:
-            uppercase_k_i: the current uppercase_k such uppercase_k=4k+2, where k is the power
-            of the Q operator
-            up_i: boolean flag of whether theta_interval lies in the
-                upper half-circle [0, pi] or in the lower one [pi, 2pi]
-            theta_l: the current lower limit of the confidence interval for the angle theta
-            theta_u: the current upper limit of the confidence interval for the angle theta
-            r: lower bound for uppercase_k
+            uppercase_k_i (int): the current uppercase_k such uppercase_k=4k+2, where k is the power
+            of the Q operator.
+
+            up_i (bool): boolean flag of whether theta_interval lies in the
+                upper half-circle [0, pi] or in the lower one [pi, 2pi].
+
+            theta_l (float): the current lower limit of the confidence interval for the angle theta.
+
+            theta_u (float): the current upper limit of the confidence interval for the angle theta.
+
+            r (int): lower bound for uppercase_k.
 
         Returns:
-            The next power K_i, and boolean flag for the extrapolated interval
+            The next power K_i, and boolean flag for the extrapolated interval.
         """
         uppercase_k_max = int(1 / (2 * (theta_u - theta_l)))
         uppercase_k = uppercase_k_max - (uppercase_k_max - 2) % 4
@@ -225,7 +237,6 @@ class IQAE:
             uppercase_k -= 4
         return (uppercase_k_i, up_i)
 
-    # EXECUTING THE ALGORITHM
     def execute(self, backend=None):
         """Execute IQAE algorithm.
 
@@ -233,7 +244,7 @@ class IQAE:
             backend: the qibo backend.
 
         Returns:
-            An IterativeAmplitudeEstimation results object.
+            A :class:`qibo.models.iqae.IterativeAmplitudeEstimationResult` results object.
         """
         if backend is None:
             from qibo.backends import GlobalBackend
@@ -359,9 +370,8 @@ class IQAE:
         return result
 
 
-# THE CLASS WITH THE RESULTS
 class IterativeAmplitudeEstimationResult:
-    """The ``IterativeAmplitudeEstimation`` result object."""
+    """The ``IterativeAmplitudeEstimationResult`` result object."""
 
     def __init__(self):
         self._alpha = None
