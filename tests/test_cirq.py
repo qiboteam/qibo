@@ -1,5 +1,4 @@
 """Test that Qibo gate execution agrees with Cirq."""
-import sys
 
 import cirq
 import numpy as np

@@ -1,5 +1,4 @@
 """Test methods defined in `qibo/models/circuit.py`."""
-import sys
 
 import numpy as np
 import pytest
