@@ -1,3 +1,5 @@
+"""Submodule with distances, metrics, and measures for quantum states and channels."""
+
 import numpy as np
 
 from qibo.backends import GlobalBackend
@@ -175,8 +177,9 @@ def entropy(state, base: float = 2, check_hermitian: bool = False, backend=None)
     Args:
         state (ndarray): statevector or density matrix.
         base (float, optional): the base of the log. Defaults to :math:`2`.
-        check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian. If ``False``,
-            it assumes ``state`` is Hermitian . Default: ``False``.
+        check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian.
+            If ``False``, it assumes ``state`` is Hermitian .
+            Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -203,7 +206,9 @@ def entropy(state, base: float = 2, check_hermitian: bool = False, backend=None)
     if purity(state) == 1.0:
         ent = 0.0
     else:
-        if check_hermitian is False or _check_hermitian_or_not_cupy(state):
+        if check_hermitian is False or _check_hermitian_or_not_gpu(
+            state, backend=backend
+        ):
             eigenvalues = np.linalg.eigvalsh(state)
         else:
             eigenvalues = np.linalg.eigvals(state)
@@ -304,8 +309,10 @@ def trace_distance(state, target, check_hermitian: bool = False, backend=None):
     Args:
         state (ndarray): statevector or density matrix.
         target (ndarray): statevector or density matrix.
-        check_hermitian (bool, optional): if ``True``, checks if :math:`\\rho - \\sigma` is Hermitian.
-            If ``False``, it assumes the difference is Hermitian. Defaults to ``False``.
+        check_hermitian (bool, optional): if ``True``, checks if
+            :math:`\\rho - \\sigma` is Hermitian. If ``False``,
+            it assumes the difference is Hermitian.
+            Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -344,7 +351,8 @@ def trace_distance(state, target, check_hermitian: bool = False, backend=None):
         ):  # pragma: no cover
             raise_error(
                 NotImplementedError,
-                f"CupyBackend does not support `np.linalg.eigvals` for non-Hermitian `state - target`.",
+                "CupyBackend does not support `np.linalg.eigvals`"
+                + "for non-Hermitian `state - target`.",
             )
         eigenvalues = (
             np.linalg.eigvalsh(difference)
@@ -451,7 +459,9 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
             and abs(purity_target - 1) > PRECISION_TOL
         ):
             # using eigh since rho is supposed to be Hermitian
-            if check_hermitian is False or _check_hermitian_or_not_cupy(state):
+            if check_hermitian is False or _check_hermitian_or_not_gpu(
+                state, backend=backend
+            ):
                 eigenvalues, eigenvectors = np.linalg.eigh(state)
             else:
                 eigenvalues, eigenvectors = np.linalg.eig(state)
@@ -466,7 +476,9 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
             fid = state @ target @ state
 
             # since sqrt(rho) is Hermitian, we can use eigh again
-            if check_hermitian is False or _check_hermitian_or_not_cupy(fid):
+            if check_hermitian is False or _check_hermitian_or_not_gpu(
+                fid, backend=backend
+            ):
                 eigenvalues, eigenvectors = np.linalg.eigh(fid)
             else:
                 eigenvalues, eigenvectors = np.linalg.eig(fid)
@@ -484,10 +496,11 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
             return fid
 
     # if any of the states is pure, perform lighter calculation
-    if len(state.shape) == 1:
-        fid = np.abs(np.dot(np.conj(state), target)) ** 2
-    else:
-        fid = np.real(np.trace(np.dot(state, target)))
+    fid = (
+        np.abs(np.dot(np.conj(state), target)) ** 2
+        if len(state.shape) == 1
+        else np.real(np.trace(np.dot(state, target)))
+    )
 
     fid = float(fid)
 
@@ -741,7 +754,8 @@ def meyer_wallach_entanglement(circuit, backend=None):
     """Computes the Meyer-Wallach entanglement Q of the `circuit`,
 
     .. math::
-        Q(\\theta) = 1 - \\frac{1}{N} \\, \\sum_{k} \\, \\text{tr}\\left(\\rho_{k^{2}}(\\theta)\\right) \\, .
+        Q(\\theta) = 1 - \\frac{1}{N} \\, \\sum_{k} \\,
+            \\text{tr}\\left(\\rho_{k^{2}}(\\theta)\\right) \\, .
 
     Args:
         circuit (:class:`qibo.models.Circuit`): Parametrized circuit.
@@ -802,8 +816,6 @@ def entangling_capability(circuit, samples: int, backend=None):
             TypeError, f"samples must be type int, but it is type {type(samples)}."
         )
 
-    from qibo.gates import I
-
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
@@ -863,8 +875,10 @@ def expressibility(circuit, t: int, samples: int, backend=None):
     return fid
 
 
-def _check_hermitian_or_not_cupy(matrix: np.ndarray, backend=None):
-    """Checks if a given matrix is Hermitian and whether the backend is not :class:`qibojit.backends.CupyBackend`.
+def _check_hermitian_or_not_gpu(matrix: np.ndarray, backend=None):
+    """Checks if a given matrix is Hermitian and whether
+    the backend is neither :class:`qibojit.backends.CupyBackend`
+    nor :class:`qibojit.backends.CuQuantumBackend`.
 
     Args:
         matrix (np.ndarray): input array.
@@ -876,7 +890,8 @@ def _check_hermitian_or_not_cupy(matrix: np.ndarray, backend=None):
         bool: whether the matrix is Hermitian.
 
     Raises:
-        NotImplementedError: If `matrix` is not Hermitian and `backend` is not :class:`qibojit.backends.CupyBackend`
+        NotImplementedError: If `matrix` is not Hermitian and
+        `backend` is not :class:`qibojit.backends.CupyBackend`
 
     """
     if backend is None:  # pragma: no cover
@@ -885,12 +900,15 @@ def _check_hermitian_or_not_cupy(matrix: np.ndarray, backend=None):
     hermitian = bool(
         backend.calculate_norm(np.transpose(np.conj(matrix)) - matrix) < PRECISION_TOL
     )
-    if (
-        hermitian is False and backend.__class__.__name__ == "CupyBackend"
-    ):  # pragma: no cover
+    print(backend.__class__.__name__)
+    if hermitian is False and backend.__class__.__name__ in [
+        "CupyBackend",
+        "CuQuantumBackend",
+    ]:  # pragma: no cover
         raise_error(
             NotImplementedError,
-            f"CupyBackend does not support `np.linalg.eig` or `np.linalg.eigvals` for non-Hermitian matrices.",
+            "GPU backends do not support `np.linalg.eig` "
+            + "or `np.linalg.eigvals` for non-Hermitian matrices.",
         )
 
     return hermitian

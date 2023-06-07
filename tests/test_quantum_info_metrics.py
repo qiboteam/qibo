@@ -95,14 +95,12 @@ def test_entropy(backend, base, check_hermitian):
         test = entropy(
             state, base=base, check_hermitian=check_hermitian, backend=backend
         )
-    if backend.__class__.__name__ == "CupyBackend":
+    if backend.__class__.__name__ in ["CupyBackend", "CuQuantumBackend"]:
         with pytest.raises(NotImplementedError):
-            state = random_unitary(4)
-            state = backend.cast(state, dtype=state.dtype)
+            state = random_unitary(4, backend=backend)
             test = entropy(state, base=base, check_hermitian=True, backend=backend)
     else:
-        state = random_unitary(4)
-        state = backend.cast(state, dtype=state.dtype)
+        state = random_unitary(4, backend=backend)
         test = entropy(state, base=base, check_hermitian=True, backend=backend)
 
     state = np.array([1.0, 0.0])
@@ -160,8 +158,7 @@ def test_entanglement_entropy(backend, bipartition, base, check_hermitian):
         )
     if backend.__class__.__name__ == "CupyBackend":
         with pytest.raises(NotImplementedError):
-            state = random_unitary(4)
-            state = backend.cast(state, dtype=state.dtype)
+            state = random_unitary(4, backend=backend)
             test = entanglement_entropy(
                 state,
                 bipartition=bipartition,
@@ -397,11 +394,9 @@ def test_fidelity_and_infidelity_and_bures(backend, check_hermitian):
         atol=PRECISION_TOL,
     )
 
-    state = random_unitary(4)
-    state = backend.cast(state, dtype=state.dtype)
-    target = random_unitary(4)
-    target = backend.cast(target, dtype=target.dtype)
-    if backend.__class__.__name__ == "CupyBackend":
+    state = random_unitary(4, backend=backend)
+    target = random_unitary(4, backend=backend)
+    if backend.__class__.__name__ in ["CupyBackend", "CuQuantumBackend"]:
         with pytest.raises(NotImplementedError):
             test = fidelity(state, target, check_hermitian=True, backend=backend)
     else:
