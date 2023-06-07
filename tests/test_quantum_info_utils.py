@@ -137,9 +137,9 @@ def test_haar_integral(backend):
 
     haar_int = haar_integral(nqubits, t, samples, backend=backend)
 
-    fid = fidelity(haar_int, haar_int)
+    fid = fidelity(haar_int, haar_int, backend=backend)
 
-    backend.assert_allclose(fid, 1 / nqubits**2, atol=10 / samples)
+    backend.assert_allclose(fid, 1.0, atol=10 / samples)
 
 
 def test_pqc_integral(backend):
