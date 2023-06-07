@@ -625,15 +625,10 @@ def entanglement_fidelity(channel, nqubits: int, state=None, backend=None):
     if backend is None:
         backend = GlobalBackend()
 
-    dim = 2**nqubits
-
-    density_matrix = True if state is not None and len(state.shape) == 2 else False
-
     if state is None:
-        state = np.ones(dim, dtype=complex) / np.sqrt(dim)
-        state = backend.cast(state, dtype=state.dtype)
+        state = backend.plus_state(nqubits)
 
-    if density_matrix is True:
+    if len(state.shape) == 2:
         state_final = backend.apply_channel_density_matrix(channel, state, nqubits)
     else:
         state_final = backend.apply_channel(channel, state, nqubits)
