@@ -1157,6 +1157,24 @@ Purity
 .. autofunction:: qibo.quantum_info.purity
 
 
+Impurity
+""""""""
+
+.. autofunction:: qibo.quantum_info.impurity
+
+
+Concurrence
+"""""""""""
+
+.. autofunction:: qibo.quantum_info.concurrence
+
+
+Entanglement of formation
+"""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.entanglement_of_formation
+
+
 Entropy
 """""""
 
@@ -1211,6 +1229,12 @@ Fidelity
 .. autofunction:: qibo.quantum_info.fidelity
 
 
+Infidelity
+""""""""""
+
+.. autofunction:: qibo.quantum_info.infidelity
+
+
 Bures angle
 """""""""""
 
@@ -1233,6 +1257,12 @@ Process fidelity
 """"""""""""""""
 
 .. autofunction:: qibo.quantum_info.process_fidelity
+
+
+Process infidelity
+""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.process_infidelity
 
 
 Average gate fidelity

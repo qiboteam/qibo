@@ -383,7 +383,7 @@ def vnCDR(
         val (list): Expectation value of `observable` with increased noise levels.
         optimal_params (list): Optimal values for `params`.
         train_val (dict): Contains the noise-free and noisy expectation values obtained
-            with the training circuits.
+        with the training circuits.
     """
 
     # Set backend
