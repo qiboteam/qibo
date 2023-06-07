@@ -900,7 +900,7 @@ def _check_hermitian_or_not_gpu(matrix: np.ndarray, backend=None):
     hermitian = bool(
         backend.calculate_norm(np.transpose(np.conj(matrix)) - matrix) < PRECISION_TOL
     )
-    print(backend.__class__.__name__)
+
     if hermitian is False and backend.__class__.__name__ in [
         "CupyBackend",
         "CuQuantumBackend",
