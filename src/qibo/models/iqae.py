@@ -48,7 +48,7 @@ class IQAE:
 
     Example:
         .. testcode::
-        
+
             from qibo import gates
             from qibo.models import Circuit
             from qibo.models.iqae import IQAE
