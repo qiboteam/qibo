@@ -1,3 +1,4 @@
+# %%
 import numpy as np
 import pytest
 
@@ -189,6 +190,15 @@ test_kraus_right = np.array(
     ]
 )
 test_coefficients = np.array([1.002719, 0.65635444, 0.43548, 0.21124177])
+
+test_stinespring = np.array(
+    [
+        [0.0 + 0.0j, 0.0 + 0.0j, 0.63245553 + 0.0j, 0.0 + 0.0j],
+        [0.77459667 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
+        [0.63245553 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
+        [0.0 + 0.0j, 0.0 + 0.0j, -0.77459667 + 0.0j, 0.0 + 0.0j],
+    ]
+)
 
 
 def pauli_superop(pauli_order):
@@ -579,6 +589,34 @@ def test_kraus_to_chi(backend, normalize, order, pauli_order, test_kraus):
     )
 
 
+@pytest.mark.parametrize("nqubits", [1])
+def test_kraus_to_stinespring(backend, nqubits):
+    with pytest.raises(ValueError):
+        initial_state_env = random_statevector(4, backend=backend)
+        test = kraus_to_stinespring(
+            test_kraus,
+            nqubits=nqubits,
+            initial_state_env=initial_state_env,
+            backend=backend,
+        )
+    with pytest.raises(ValueError):
+        initial_state_env = random_density_matrix(2, pure=True, backend=backend)
+        test = kraus_to_stinespring(
+            test_kraus,
+            nqubits=nqubits,
+            initial_state_env=initial_state_env,
+            backend=backend,
+        )
+
+    stinespring = kraus_to_stinespring(
+        test_kraus,
+        nqubits=nqubits,
+        backend=backend,
+    )
+
+    backend.assert_allclose(stinespring, test_stinespring, atol=PRECISION_TOL)
+
+
 @pytest.mark.parametrize("test_superop", [test_superop])
 @pytest.mark.parametrize("pauli_order", ["IXYZ", "IZXY"])
 @pytest.mark.parametrize("order", ["row", "column"])
@@ -800,3 +838,13 @@ def test_reshuffling(backend, order, test_superop):
     backend.assert_allclose(
         np.linalg.norm(reshuffled - test_choi) < PRECISION_TOL, True
     )
+
+
+# %%
+test_a0 = np.sqrt(0.4) * matrices.X
+test_a1 = np.sqrt(0.6) * matrices.Z
+test_kraus = [((0,), test_a0), ((0,), test_a1)]
+
+from qibo.backends import NumpyBackend
+
+kraus_to_stinespring(test_kraus, backend=NumpyBackend())

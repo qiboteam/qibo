@@ -1,3 +1,5 @@
+"""Module with the most commom superoperator transformations."""
+
 import warnings
 from typing import Optional
 
@@ -74,8 +76,8 @@ def vectorization(state, order: str = "row", backend=None):
         nqubits = int(np.log2(dim))
 
         new_axis = []
-        for x in range(nqubits):
-            new_axis += [x + nqubits, x]
+        for qubit in range(nqubits):
+            new_axis += [qubit + nqubits, qubit]
 
         state = np.reshape(state, [2] * 2 * nqubits)
         state = np.transpose(state, axes=new_axis)
@@ -304,8 +306,6 @@ def choi_to_kraus(
         )
 
     if precision_tol is None:  # pragma: no cover
-        from qibo.config import PRECISION_TOL
-
         precision_tol = PRECISION_TOL
 
     if not isinstance(validate_cp, bool):
@@ -446,9 +446,9 @@ def kraus_to_choi(kraus_ops, order: str = "row", backend=None):
 
     gates, target_qubits = _set_gate_and_target_qubits(kraus_ops)
     nqubits = 1 + max(target_qubits)
-    d = 2**nqubits
+    dim = 2**nqubits
 
-    super_op = np.zeros((d**2, d**2), dtype=complex)
+    super_op = np.zeros((dim**2, dim**2), dtype=complex)
     super_op = backend.cast(super_op, dtype=super_op.dtype)
     for gate in gates:
         kraus_op = FusedGate(*range(nqubits))
@@ -543,7 +543,8 @@ def kraus_to_chi(
     .. math::
         \\chi = \\sum_{\\alpha} \\, |c_{\\alpha}\\rangle\\rangle \\langle\\langle c_{\\alpha}|,
 
-    where :math:`|c_{\\alpha}\\rangle\\rangle \\cong |K_{\\alpha}\\rangle\\rangle` in Pauli-Liouville basis.
+    where :math:`|c_{\\alpha}\\rangle\\rangle \\cong |K_{\\alpha}\\rangle\\rangle`
+    in Pauli-Liouville basis.
 
     Args:
         kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
@@ -577,7 +578,7 @@ def kraus_to_chi(
     nqubits = 1 + max(target_qubits)
     dim = 2**nqubits
 
-    U_c2p = comp_basis_to_pauli(
+    comp_to_pauli = comp_basis_to_pauli(
         int(nqubits),
         normalize=normalize,
         order=order,
@@ -592,14 +593,16 @@ def kraus_to_chi(
         kraus_op.append(gate)
         kraus_op = kraus_op.asmatrix(backend)
         kraus_op = vectorization(kraus_op, order=order, backend=backend)
-        kraus_op = U_c2p @ kraus_op
+        kraus_op = comp_to_pauli @ kraus_op
         super_op += np.outer(kraus_op, np.conj(kraus_op))
         del kraus_op
 
     return super_op
 
 
-def kraus_to_stinespring(kraus_ops, initial_state_env=None, backend=None):
+def kraus_to_stinespring(
+    kraus_ops, nqubits: Optional[int] = None, initial_state_env=None, backend=None
+):
     """Converts Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`
     of quantum channel to its Stinespring representation :math:`U_{0}`, i.e.
 
@@ -615,26 +618,39 @@ def kraus_to_stinespring(kraus_ops, initial_state_env=None, backend=None):
         kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
             where ``qubits`` refers the qubit ids that :math:`A_k`  acts on
             and :math:`A_k` is the corresponding matrix as a ``np.ndarray``.
-        initial_state_env (ndarray, optional): Initial state of the enviroment.
-            If ``None``, it assumes the environment in its ground state.
-            Defaults to ``None``.
-        backend (``qibo.backends.abstract.Backend``, optional): backend
+        nqubits (int, optional): total number of qubits in the system that is
+            interacting with the environment. Must be equal or greater than
+            the number of qubits ``kraus_ops`` acts on. If ``None``,
+            defaults to the number of qubits in ``kraus_ops``.
+            Defauts to ``None``.
+        initial_state_env (ndarray, optional): statevector representing the
+            initial state of the enviroment. If ``None``, it assumes the
+            environment in its ground state. Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             ``GlobalBackend()``. Defaults to ``None``.
 
     Returns:
         ndarray: Stinespring representation (restrited unitary) of the Kraus channel.
     """
-    if len(initial_state_env) != len(kraus_ops):
-        raise_error(
-            ValueError,
-            "dim of initial_state_env must be equal to the number of Kraus operators.",
-        )
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
+    if initial_state_env is not None:
+        if len(initial_state_env) != len(kraus_ops):
+            raise_error(
+                ValueError,
+                "dim of initial_state_env must be equal to the number of Kraus operators.",
+            )
+
+        if len(initial_state_env.shape) != 1:
+            raise_error(ValueError, "initial_state_env must be a statevector.")
+
     gates, target_qubits = _set_gate_and_target_qubits(kraus_ops)
-    nqubits = 1 + max(target_qubits)
+
+    if nqubits is None:
+        nqubits = 1 + max(target_qubits)
+
     dim = 2**nqubits
     dim_env = len(kraus_ops)
     dim_stinespring = dim * dim_env
@@ -642,17 +658,22 @@ def kraus_to_stinespring(kraus_ops, initial_state_env=None, backend=None):
     if initial_state_env is None:
         initial_state_env = np.zeros(dim_env, dtype=complex)
         initial_state_env[0] = 1.0
-        initial_state_env = backend.cast(initial_state_env)
+        initial_state_env = backend.cast(
+            initial_state_env, dtype=initial_state_env.dtype
+        )
 
-    vector_alpha = np.zeros(dim_env, dtype=complex)
-    stinespring = np.zeros((dim_stinespring**2, dim_stinespring**2), dtype=complex)
+    initial_state_env = np.conj(initial_state_env)
+
+    stinespring = np.zeros((dim_stinespring, dim_stinespring), dtype=complex)
     stinespring = backend.cast(stinespring, dtype=stinespring.dtype)
     for alpha, gate in enumerate(gates):
         vector_alpha = np.zeros(dim_env, dtype=complex)
         vector_alpha[alpha] = 1.0
+        vector_alpha = backend.cast(vector_alpha, dtype=vector_alpha.dtype)
         kraus_op = FusedGate(*range(nqubits))
         kraus_op.append(gate)
         kraus_op = kraus_op.asmatrix(backend)
+        kraus_op = backend.cast(kraus_op, dtype=kraus_op.dtype)
         stinespring += np.kron(
             kraus_op,
             np.outer(vector_alpha, initial_state_env),
@@ -741,7 +762,7 @@ def liouville_to_pauli(
     ):
         raise_error(ValueError, "super_op must be of shape (4^n, 4^n)")
 
-    U_c2p = comp_basis_to_pauli(
+    comp_to_pauli = comp_basis_to_pauli(
         nqubits,
         normalize=normalize,
         order=order,
@@ -749,7 +770,7 @@ def liouville_to_pauli(
         backend=backend,
     )
 
-    return U_c2p @ super_op @ np.conj(np.transpose(U_c2p))
+    return comp_to_pauli @ super_op @ np.conj(np.transpose(comp_to_pauli))
 
 
 def liouville_to_kraus(
@@ -883,7 +904,7 @@ def pauli_to_liouville(
     ):
         raise_error(ValueError, "pauli_op must be of shape (4^n, 4^n)")
 
-    U_p2c = pauli_to_comp_basis(
+    pauli_to_comp = pauli_to_comp_basis(
         nqubits,
         normalize=normalize,
         order=order,
@@ -891,7 +912,7 @@ def pauli_to_liouville(
         backend=backend,
     )
 
-    return U_p2c @ pauli_op @ np.conj(np.transpose(U_p2c))
+    return pauli_to_comp @ pauli_op @ np.conj(np.transpose(pauli_to_comp))
 
 
 def pauli_to_choi(
@@ -1274,11 +1295,11 @@ def kraus_to_unitaries(
     )
 
     # function to minimize
-    def f(x0, operators):
+    def function(x0, operators):
         operator = (1 - np.sum(x0)) * np.eye(dim**2, dtype=complex)
         operator = backend.cast(operator, dtype=operator.dtype)
-        for prob, op in zip(x0, operators):
-            operator += prob * op
+        for prob, oper in zip(x0, operators):
+            operator += prob * oper
 
         return float(backend.calculate_norm(target - operator))
 
@@ -1287,13 +1308,13 @@ def kraus_to_unitaries(
 
     # final parameters
     probabilities = minimize(
-        f,
+        function,
         x0,
         args=(unitaries_liouville),
         options={"return_all": True},
     )["x"]
 
-    final_norm = f(probabilities, unitaries_liouville)
+    final_norm = function(probabilities, unitaries_liouville)
     if final_norm > precision_tol:
         warnings.warn(
             f"precision in Frobenius norm of {final_norm} is greater then set "
@@ -1385,7 +1406,7 @@ def _reshuffling(super_op, order: str = "row", backend=None):
     return super_op
 
 
-def _set_gate_and_target_qubits(kraus_ops, backend=None):  # pragma: no cover
+def _set_gate_and_target_qubits(kraus_ops):  # pragma: no cover
     """Returns Kraus operators as a set of gates acting on
     their respective ``target qubits``.
 
@@ -1393,9 +1414,6 @@ def _set_gate_and_target_qubits(kraus_ops, backend=None):  # pragma: no cover
         kraus_ops (list): List of Kraus operators as pairs ``(qubits, Ak)``
             where ``qubits`` refers the qubit ids that :math:`A_k` acts on
             and :math:`A_k` is the corresponding matrix as a ``np.ndarray``.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
-            to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
     Returns:
         (tuple, tuple): gates and their respective target qubits.
