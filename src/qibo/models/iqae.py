@@ -48,14 +48,34 @@ class IQAE:
 
     Example:
         .. testcode::
+        
+            from qibo import gates
+            from qibo.models import Circuit
+            from qibo.models.iqae import IQAE
 
-            import numpy as np from qibo import gates from qibo.models import
-            Circuit from qibo.models.iqae import IQAE
+            # Defining circuit A to integrate sin(x)^2 from [0,1]
+            a_circuit = Circuit(2)
+            a_circuit.add(gates.H(0))
+            a_circuit.add(gates.RY(q = 1, theta = 1 / 2))
+            a_circuit.add(gates.CU3(0, 1, 1, 0, 0))
+            # Defining circuit Q = -A S_0 A^-1 S_X
+            q_circuit = Circuit(2)
+            # S_X
+            q_circuit.add(gates.Z(q = 1))
+            # A^-1
+            q_circuit = q_circuit + a_circuit.invert()
+            # S_0
+            q_circuit.add(gates.X(0))
+            q_circuit.add(gates.X(1))
+            q_circuit.add(gates.CZ(0, 1))
+            # A
+            q_circuit = q_circuit + a_circuit
 
-            # Here the circuits A and Q are defined
-
-            iae = IQAE(circuit_a=A, circuit_q=Q) results=iae.execute()
-            print(results.estimation)
+            # Executing IQAE and obtaining the result
+            iae = IQAE(a_circuit, q_circuit)
+            results = iae.execute()
+            integral_value = results.estimation
+            integral_error = results.epsilon_estimated
     """
 
     def __init__(
