@@ -618,7 +618,7 @@ def entanglement_fidelity(
             :math:`\\frac{1}{2^{n}} \\, \\sum_{k} \\, \\ket{k}\\ket{k}`, where
             :math:`n` is ``nqubits``. Defaults to ``None``.
         check_hermitian (bool, optional): if ``True``, checks if the final state
-            is Hermitian. If ``False``, it assumes it is Hermitian.
+            :math:`\\rho_{f}` is Hermitian. If ``False``, it assumes it is Hermitian.
             Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
@@ -633,10 +633,11 @@ def entanglement_fidelity(
     if state is None:
         state = backend.plus_state(nqubits)
 
-    if len(state.shape) == 2:
-        state_final = backend.apply_channel_density_matrix(channel, state, nqubits)
-    else:
-        state_final = backend.apply_channel(channel, state, nqubits)
+    # necessary because this function cannot support repeated execution
+    if len(state.shape) == 1:
+        state = np.outer(state, np.conj(state))
+
+    state_final = backend.apply_channel_density_matrix(channel, state, nqubits)
 
     entang_fidelity = fidelity(
         state_final, state, check_hermitian=check_hermitian, backend=backend
