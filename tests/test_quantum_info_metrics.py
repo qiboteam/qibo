@@ -85,16 +85,21 @@ def test_concurrence_and_formation(backend, bipartition, base, check_purity):
 @pytest.mark.parametrize("check_hermitian", [False, True])
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
 def test_entropy(backend, base, check_hermitian):
-    with pytest.raises(ValueError):
-        state = np.array([1.0, 0.0])
-        state = backend.cast(state, dtype=state.dtype)
-        test = entropy(state, 0, check_hermitian=check_hermitian, backend=backend)
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
         test = entropy(
             state, base=base, check_hermitian=check_hermitian, backend=backend
         )
+    with pytest.raises(ValueError):
+        state = np.array([1.0, 0.0])
+        state = backend.cast(state, dtype=state.dtype)
+        test = entropy(state, base=0, check_hermitian=check_hermitian, backend=backend)
+    with pytest.raises(TypeError):
+        state = np.array([1.0, 0.0])
+        state = backend.cast(state, dtype=state.dtype)
+        test = entropy(state, base=base, check_hermitian="False", backend=backend)
+
     if backend.__class__.__name__ in ["CupyBackend", "CuQuantumBackend"]:
         with pytest.raises(NotImplementedError):
             state = random_unitary(4, backend=backend)
@@ -105,7 +110,7 @@ def test_entropy(backend, base, check_hermitian):
 
     state = np.array([1.0, 0.0])
     state = backend.cast(state, dtype=state.dtype)
-    backend.assert_allclose(entropy(state, backend=backend), 0.0)
+    backend.assert_allclose(entropy(state, backend=backend), 0.0, atol=PRECISION_TOL)
 
     state = np.array([1.0, 0.0, 0.0, 0.0])
     state = np.outer(state, state)
@@ -136,16 +141,6 @@ def test_entropy(backend, base, check_hermitian):
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
 @pytest.mark.parametrize("bipartition", [[0], [1]])
 def test_entanglement_entropy(backend, bipartition, base, check_hermitian):
-    with pytest.raises(ValueError):
-        state = np.array([1.0, 0.0])
-        state = backend.cast(state, dtype=state.dtype)
-        test = entanglement_entropy(
-            state,
-            bipartition=bipartition,
-            base=0,
-            check_hermitian=check_hermitian,
-            backend=backend,
-        )
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
@@ -153,6 +148,16 @@ def test_entanglement_entropy(backend, bipartition, base, check_hermitian):
             state,
             bipartition=bipartition,
             base=base,
+            check_hermitian=check_hermitian,
+            backend=backend,
+        )
+    with pytest.raises(ValueError):
+        state = np.array([1.0, 0.0])
+        state = backend.cast(state, dtype=state.dtype)
+        test = entanglement_entropy(
+            state,
+            bipartition=bipartition,
+            base=0,
             check_hermitian=check_hermitian,
             backend=backend,
         )
@@ -206,60 +211,70 @@ def test_entanglement_entropy(backend, bipartition, base, check_hermitian):
     backend.assert_allclose(entang_entrop, 0.0, atol=PRECISION_TOL)
 
 
-def test_trace_distance(backend):
+@pytest.mark.parametrize("check_hermitian", [False, True])
+def test_trace_distance(backend, check_hermitian):
     with pytest.raises(TypeError):
-        state = np.random.rand(2, 2)
-        target = np.random.rand(4, 4)
-        state = backend.cast(state, dtype=state.dtype)
-        target = backend.cast(target, dtype=target.dtype)
-        trace_distance(state, target, backend=backend)
+        state = random_density_matrix(2, pure=True, backend=backend)
+        target = random_density_matrix(4, pure=True, backend=backend)
+        test = trace_distance(
+            state, target, check_hermitian=check_hermitian, backend=backend
+        )
     with pytest.raises(TypeError):
         state = np.random.rand(2, 2, 2)
         target = np.random.rand(2, 2, 2)
         state = backend.cast(state, dtype=state.dtype)
         target = backend.cast(target, dtype=target.dtype)
-        trace_distance(state, target, backend=backend)
+        test = trace_distance(
+            state, target, check_hermitian=check_hermitian, backend=backend
+        )
     with pytest.raises(TypeError):
         state = np.array([])
         target = np.array([])
         state = backend.cast(state, dtype=state.dtype)
         target = backend.cast(target, dtype=state.dtype)
-        trace_distance(state, target, backend=backend)
+        test = trace_distance(
+            state, target, check_hermitian=check_hermitian, backend=backend
+        )
+    with pytest.raises(TypeError):
+        state = random_density_matrix(2, pure=True, backend=backend)
+        target = random_density_matrix(2, pure=True, backend=backend)
+        test = trace_distance(state, target, check_hermitian="True", backend=backend)
 
     state = np.array([1.0, 0.0, 0.0, 0.0])
     target = np.array([1.0, 0.0, 0.0, 0.0])
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
-    backend.assert_allclose(trace_distance(state, target, backend=backend), 0.0)
     backend.assert_allclose(
-        trace_distance(state, target, check_hermitian=True, backend=backend), 0.0
+        trace_distance(state, target, check_hermitian=check_hermitian, backend=backend),
+        0.0,
+        atol=PRECISION_TOL,
     )
 
     state = np.outer(np.conj(state), state)
     target = np.outer(np.conj(target), target)
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
-    backend.assert_allclose(trace_distance(state, target, backend=backend), 0.0)
     backend.assert_allclose(
-        trace_distance(state, target, check_hermitian=True, backend=backend), 0.0
+        trace_distance(state, target, check_hermitian=check_hermitian, backend=backend),
+        0.0,
+        atol=PRECISION_TOL,
     )
 
     state = np.array([0.0, 1.0, 0.0, 0.0])
     target = np.array([1.0, 0.0, 0.0, 0.0])
     state = backend.cast(state, dtype=state.dtype)
     target = backend.cast(target, dtype=target.dtype)
-    backend.assert_allclose(trace_distance(state, target, backend=backend), 1.0)
     backend.assert_allclose(
-        trace_distance(state, target, check_hermitian=True, backend=backend), 1.0
+        trace_distance(state, target, check_hermitian=check_hermitian, backend=backend),
+        1.0,
+        atol=PRECISION_TOL,
     )
 
 
 def test_hilbert_schmidt_distance(backend):
     with pytest.raises(TypeError):
-        state = np.random.rand(2, 2)
-        target = np.random.rand(4, 4)
-        state = backend.cast(state, dtype=state.dtype)
-        target = backend.cast(target, dtype=target.dtype)
+        state = random_density_matrix(2, pure=True, backend=backend)
+        target = random_density_matrix(4, pure=True, backend=backend)
         hilbert_schmidt_distance(
             state,
             target,
@@ -299,17 +314,19 @@ def test_hilbert_schmidt_distance(backend):
 @pytest.mark.parametrize("check_hermitian", [True, False])
 def test_fidelity_and_infidelity_and_bures(backend, check_hermitian):
     with pytest.raises(TypeError):
-        state = np.random.rand(2, 2)
-        target = np.random.rand(4, 4)
-        state = backend.cast(state, dtype=state.dtype)
-        target = backend.cast(target, dtype=target.dtype)
-        fidelity(state, target, check_hermitian, backend=backend)
+        state = random_density_matrix(2, pure=True, backend=backend)
+        target = random_density_matrix(4, pure=True, backend=backend)
+        test = fidelity(state, target, check_hermitian=check_hermitian, backend=backend)
     with pytest.raises(TypeError):
         state = np.random.rand(2, 2, 2)
         target = np.random.rand(2, 2, 2)
         state = backend.cast(state, dtype=state.dtype)
         target = backend.cast(target, dtype=target.dtype)
-        fidelity(state, target, check_hermitian, backend=backend)
+        test = fidelity(state, target, check_hermitian, backend=backend)
+    with pytest.raises(TypeError):
+        state = random_density_matrix(2, pure=True, backend=backend)
+        target = random_density_matrix(2, pure=True, backend=backend)
+        test = fidelity(state, target, check_hermitian="True", backend=backend)
 
     state = backend.identity_density_matrix(4)
     target = backend.identity_density_matrix(4)
@@ -401,6 +418,49 @@ def test_fidelity_and_infidelity_and_bures(backend, check_hermitian):
             test = fidelity(state, target, check_hermitian=True, backend=backend)
     else:
         test = fidelity(state, target, check_hermitian=True, backend=backend)
+
+
+@pytest.mark.parametrize("check_hermitian", [False, True])
+@pytest.mark.parametrize("nqubits", [4, 6])
+@pytest.mark.parametrize("channel", [gates.DepolarizingChannel])
+def test_entanglement_fidelity(backend, channel, nqubits, check_hermitian):
+    with pytest.raises(TypeError):
+        test = entanglement_fidelity(
+            channel, nqubits=[0], check_hermitian=check_hermitian, backend=backend
+        )
+    with pytest.raises(ValueError):
+        test = entanglement_fidelity(
+            channel, nqubits=0, check_hermitian=check_hermitian, backend=backend
+        )
+    with pytest.raises(TypeError):
+        state = np.random.rand((2, 3), dtype=complex)
+        state = backend.cast(state, dtype=state.dtype)
+        test = entanglement_fidelity(
+            channel,
+            nqubits,
+            state=state,
+            check_hermitian=check_hermitian,
+            backend=backend,
+        )
+
+    channel = channel([0, 1], 0.5)
+
+    # test on maximally entangled state
+    ent_fid = entanglement_fidelity(
+        channel, nqubits=nqubits, check_hermitian=check_hermitian, backend=backend
+    )
+    backend.assert_allclose(ent_fid, 0.625, atol=PRECISION_TOL)
+
+    # test on maximally mixed state
+    state = backend.identity_density_matrix(nqubits)
+    ent_fid = entanglement_fidelity(
+        channel,
+        nqubits=nqubits,
+        state=state,
+        check_hermitian=check_hermitian,
+        backend=backend,
+    )
+    backend.assert_allclose(ent_fid, 1.0, atol=PRECISION_TOL)
 
 
 def test_process_fidelity_and_infidelity(backend):
