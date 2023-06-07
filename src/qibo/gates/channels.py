@@ -364,7 +364,7 @@ class UnitaryChannel(KrausChannel):
         self.draw_label = "U"
         self.coefficients = tuple(probabilities)
         self.coefficient_sum = sum(probabilities)
-        if self.coefficient_sum > 1 + PRECISION_TOL or self.coefficient_sum <= 0:
+        if self.coefficient_sum > 1 + PRECISION_TOL or self.coefficient_sum < 0:
             raise_error(
                 ValueError,
                 "UnitaryChannel probability sum should be "

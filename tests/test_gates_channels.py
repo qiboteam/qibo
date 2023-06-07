@@ -157,7 +157,7 @@ def test_unitary_channel(backend):
     )
 
 
-def test_unitary_channel_probability_tolerance():
+def test_unitary_channel_probability_tolerance(backend):
     """Create ``UnitaryChannel`` with probability sum within tolerance (see #562)."""
     nqubits = 2
     param = 0.006
@@ -170,6 +170,13 @@ def test_unitary_channel_probability_tolerance():
     probs = np.array(probs, dtype="float64")
     matrices_ = [(p, np.random.random((4, 4))) for p in probs]
     gates.UnitaryChannel(qubits, matrices_)
+
+    probs = np.zeros_like(probs)
+    matrices_ = [(p, np.random.random((4, 4))) for p in probs]
+    identity_channel = gates.UnitaryChannel(qubits, matrices_)
+    backend.assert_allclose(
+        identity_channel.to_liouville(backend=backend), np.eye(num_terms)
+    )
 
 
 def test_unitary_channel_errors():
