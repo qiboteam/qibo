@@ -590,7 +590,9 @@ def bures_distance(state, target, check_hermitian: bool = False, backend=None):
     return distance
 
 
-def entanglement_fidelity(channel, nqubits: int, state=None, backend=None):
+def entanglement_fidelity(
+    channel, nqubits: int, state=None, check_hermitian: bool = False, backend=None
+):
     """Entanglement fidelity of a ``channel`` :math:`\\mathcal{E}` on ``state``
     :math:`\\rho`, which is given by
 
@@ -615,6 +617,9 @@ def entanglement_fidelity(channel, nqubits: int, state=None, backend=None):
             by ``channel``. If ``None``, defaults to the maximally entangled state
             :math:`\\frac{1}{2^{n}} \\, \\sum_{k} \\, \\ket{k}\\ket{k}`, where
             :math:`n` is ``nqubits``. Defaults to ``None``.
+        check_hermitian (bool, optional): if ``True``, checks if the final state
+            is Hermitian. If ``False``, it assumes it is Hermitian.
+            Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -633,7 +638,9 @@ def entanglement_fidelity(channel, nqubits: int, state=None, backend=None):
     else:
         state_final = backend.apply_channel(channel, state, nqubits)
 
-    entang_fidelity = fidelity(state_final, state)
+    entang_fidelity = fidelity(
+        state_final, state, check_hermitian=check_hermitian, backend=backend
+    )
 
     return entang_fidelity
 
@@ -686,16 +693,16 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
 
     if target is None:
         # With no target, return process fidelity with Identity channel
-        fidelity = np.real(np.trace(channel)) / dim**2
-        fidelity = float(fidelity)
+        process_fid = np.real(np.trace(channel)) / dim**2
+        process_fid = float(process_fid)
 
-        return fidelity
+        return process_fid
 
-    fidelity = np.dot(np.transpose(np.conj(channel)), target)
-    fidelity = np.real(np.trace(fidelity)) / dim**2
-    fidelity = float(fidelity)
+    process_fid = np.dot(np.transpose(np.conj(channel)), target)
+    process_fid = np.real(np.trace(process_fid)) / dim**2
+    process_fid = float(process_fid)
 
-    return fidelity
+    return process_fid
 
 
 def process_infidelity(channel, target=None, check_unitary: bool = False, backend=None):
