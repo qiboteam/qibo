@@ -87,7 +87,7 @@ class NumpyBackend(Backend):
 
     def identity_density_matrix(self, nqubits, normalize: bool = True):
         state = self.np.eye(2**nqubits, dtype=self.dtype)
-        if normalize:
+        if normalize is True:
             state /= 2**nqubits
         return state
 
