@@ -592,7 +592,7 @@ def bures_distance(state, target, check_hermitian: bool = False, backend=None):
 
 def entanglement_fidelity(channel, nqubits: int, state=None, backend=None):
     """Entanglement fidelity of a ``channel`` :math:`\\mathcal{E}` on ``state``
-    :math:`\rho`, which is given by
+    :math:`\\rho`, which is given by
 
     .. math::
         \\begin{align*}
