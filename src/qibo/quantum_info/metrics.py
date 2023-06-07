@@ -169,10 +169,10 @@ def entanglement_of_formation(
 
 def entropy(state, base: float = 2, check_hermitian: bool = False, backend=None):
     """The von-Neumann entropy :math:`S(\\rho)` of a quantum state :math:`\\rho`, which
-        is given by
+    is given by
 
-        .. math::
-            S(\\rho) = - \\text{Tr}\\left[\\rho \\, \\log(\\rho)\\right]
+    .. math::
+        S(\\rho) = - \\text{Tr}\\left[\\rho \\, \\log(\\rho)\\right]
 
     Args:
         state (ndarray): statevector or density matrix.
@@ -184,8 +184,8 @@ def entropy(state, base: float = 2, check_hermitian: bool = False, backend=None)
             in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
-        Returns:
-            float: The von-Neumann entropy :math:`S` of ``state`` :math:`\\rho`.
+    Returns:
+        float: The von-Neumann entropy :math:`S` of ``state`` :math:`\\rho`.
     """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
@@ -305,12 +305,12 @@ def entanglement_entropy(
 def trace_distance(state, target, check_hermitian: bool = False, backend=None):
     """Trace distance between two quantum states, :math:`\\rho` and :math:`\\sigma`:
 
-        .. math::
-            T(\\rho, \\sigma) = \\frac{1}{2} \\, \\|\\rho - \\sigma\\|_{1} = \\frac{1}{2} \\,
-                \\text{Tr}\\left[ \\sqrt{(\\rho - \\sigma)^{\\dagger}(\\rho - \\sigma)}
-                \\right] \\, ,
+    .. math::
+        T(\\rho, \\sigma) = \\frac{1}{2} \\, \\|\\rho - \\sigma\\|_{1} = \\frac{1}{2} \\,
+            \\text{Tr}\\left[ \\sqrt{(\\rho - \\sigma)^{\\dagger}(\\rho - \\sigma)}
+            \\right] \\, ,
 
-        where :math:`\\|\\cdot\\|_{1}` is the Schatten 1-norm.
+    where :math:`\\|\\cdot\\|_{1}` is the Schatten 1-norm.
 
     Args:
         state (ndarray): statevector or density matrix.
@@ -323,8 +323,8 @@ def trace_distance(state, target, check_hermitian: bool = False, backend=None):
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
 
-        Returns:
-            float: Trace distance between ``state`` :math:`\\rho` and ``target`` :math:`\\sigma`.
+    Returns:
+        float: Trace distance between ``state`` :math:`\\rho` and ``target`` :math:`\\sigma`.
     """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
