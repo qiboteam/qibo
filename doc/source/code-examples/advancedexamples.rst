@@ -725,7 +725,9 @@ function.
     target_state = tf.ones(4, dtype=tf.complex128) / 2.0
 
     # Define circuit ansatz
-    params = tf.Variable(tf.random.uniform((2,), dtype=tf.float64))
+    params = tf.Variable(
+        tf.random.uniform((2,), dtype=tf.float64).astype(tf.complex128)
+    )
     c = models.Circuit(2)
     c.add(gates.RX(0, params[0]))
     c.add(gates.RY(1, params[1]))
@@ -737,6 +739,7 @@ function.
             fidelity = tf.math.abs(tf.reduce_sum(tf.math.conj(target_state) * final_state))
             loss = 1 - fidelity
         grads = tape.gradient(loss, params)
+        grads = tf.math.real(grads)
         optimizer.apply_gradients(zip([grads], [params]))
 
 
@@ -770,6 +773,7 @@ For example:
             fidelity = tf.math.abs(tf.reduce_sum(tf.math.conj(target_state) * final_state))
             loss = 1 - fidelity
         grads = tape.gradient(loss, params)
+        grads = tf.math.real(grads)
         optimizer.apply_gradients(zip([grads], [params]))
 
     for _ in range(nepochs):
@@ -1194,7 +1198,7 @@ Noise and errors in circuits are one of the biggest obstacles to face in quantum
 Say that you have a circuit :math:`C` and you want to measure an observable :math:`A` at the end of it,
 in general you are going to obtain an expected value :math:`\langle A \rangle_{noisy}` that
 can lie quiet far from the true one :math:`\langle A \rangle_{exact}`.
-In Qibo, three different methods are implemented for mitigating errors in circuits and obtaining
+In Qibo, different methods are implemented for mitigating errors in circuits and obtaining
 a better estimate of the noise-free expected value :math:`\langle A \rangle_{exact}`.
 
 
@@ -1225,7 +1229,7 @@ Let's see how to use them. For starters, let's define a dummy circuit with some 
    c.add(gates.RZ(q + 1, theta=-2 * dt) for q in range(1, nqubits, 2))
    c.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
    # Include the measurements
-   c.add(gates.M(q) for q in range(nqubits))
+   c.add(gates.M(*range(nqubits)))
 
    # visualize the circuit
    print(c.draw())
@@ -1255,7 +1259,7 @@ As observable we can simply take :math:`Z_0 Z_1 Z_2` :
    obs = np.prod([Z(i) for i in range(nqubits)])
    obs = SymbolicHamiltonian(obs, backend=backend)
 
-We can obtain the exact expected value by running the circuit on any simulation ``backend``, to mimic the execution on
+We can obtain the exact expected value by running the circuit on any simulation ``backend``. To mimic the execution on
 the real quantum hardware, instead, we can use a noise model:
 
 .. testcode::
@@ -1265,15 +1269,23 @@ the real quantum hardware, instead, we can use a noise model:
    print(exact)
    # 0.9096065335014379
 
-   from qibo.noise import DepolarizingError, NoiseModel
+   from qibo.noise import DepolarizingError, ReadoutError, NoiseModel
+   from qibo.quantum_info import random_stochastic_matrix
 
    # Define the noise model
    noise =  NoiseModel()
+   # depolarizing error after each CNOT
    noise.add(DepolarizingError(0.1), gates.CNOT)
+   # readout error
+   # randomly initialize the bitflip probabilities
+   prob = random_stochastic_matrix(
+       2**nqubits, diagonally_dominant=True, seed=2, backend=backend
+   )
+   noise.add(ReadoutError(probabilities=prob), gate=gates.M)
    # Noisy expected value without mitigation
    noisy = obs.expectation(backend.execute_circuit(noise.apply(c)).state())
    print(noisy)
-   # 0.5967928466302935
+   # 0.5647937721701448
 
 .. testoutput::
    :hide:
@@ -1285,11 +1297,64 @@ anymore, you will just have to change the backend to the appropriate one.
 
 Now let's check that error mitigation produces better estimates of the exact expected value.
 
+Readout Mitigation
+^^^^^^^^^^^^^^^^^^
+Firstly, let's try to mitigate the readout errors. To do this, we can either compute the
+calibration matrix and use it modify the final state after the circuit execution:
+
+.. testcode::
+
+   from qibo.models.error_mitigation import apply_readout_mitigation, calibration_matrix
+
+   nshots = 10000
+   # compute the calibration matrix
+   calibration = calibration_matrix(
+       nqubits, backend=backend, noise_model=noise, nshots=nshots
+   )
+   # execute the circuit
+   state = backend.execute_circuit(noise.apply(c), nshots=nshots)
+   # mitigate the readout errors
+   mit_state = apply_readout_mitigation(state, calibration)
+   mit_val = mit_state.expectation_from_samples(obs)
+   print(mit_val)
+   # 0.5945794816381054
+
+.. testoutput::
+   :hide:
+
+   ...
+
+Or use the randomized readout mitigation:
+
+.. testcode::
+
+   from qibo.models.error_mitigation import apply_randomized_readout_mitigation
+
+   ncircuits = 10
+   result, result_cal = apply_randomized_readout_mitigation(
+       c, backend=backend, noise_model=noise, nshots=nshots, ncircuits=ncircuits
+   )
+   mit_val = result.expectation_from_samples(
+       obs
+   ) / result_cal.expectation_from_samples(obs)
+   print(mit_val)
+   # 0.5860884499785314
+
+.. testoutput::
+   :hide:
+
+   ...
+
+Alright, the expected value is improving, but we are still far from the ideal one.
+Readout mitigation alone is not enough, let's try to use some more advanced methods
+to get rid of the depolarizing error we introduced in the CNOT gates.
+
 Zero Noise Extrapolation (ZNE)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 To run ZNE, we just need to define the noise levels to use. Each level corresponds to the
-number of CNOT pairs inserted in the circuit in correspondence to the original CNOTs::
+number of CNOT or RX pairs (depending on the value of ``insertion_gate``) inserted in the
+circuit in correspondence to the original ones. Since we decided to simulate noisy CNOTs::
 
    Level 1
    q0: ─X─  -->  q0: ─X───X──X─
@@ -1313,20 +1378,50 @@ For example if we use the five levels ``[0,1,2,3,4]`` :
    estimate = ZNE(
        circuit=c,
        observable=obs,
-       backend=backend,
        noise_levels=np.arange(5),
        noise_model=noise,
        nshots=10000,
+       insertion_gate='CNOT',
+       backend=backend,
    )
    print(estimate)
-   # 0.8859203125000003
+   # 0.8332843749999996
 
 .. testoutput::
    :hide:
 
    ...
 
-we get an expected value closer to the exact one.
+we get an expected value closer to the exact one. We can further improve by using ZNE
+combined with the readout mitigation:
+
+.. testcode::
+
+   # we can either use
+   # the calibration matrix computed earlier
+   readout = {'calibration_matrix': calibration}
+   # or the randomized readout
+   readout = {'ncircuits': 10}
+
+   # Mitigated expected value
+   estimate = ZNE(
+       circuit=c,
+       observable=obs,
+       backend=backend,
+       noise_levels=np.arange(5),
+       noise_model=noise,
+       nshots=10000,
+       insertion_gate='CNOT',
+       readout=readout,
+   )
+   print(estimate)
+   # 0.8979124892467807
+
+.. testoutput::
+   :hide:
+
+   ...
+
 
 Clifford Data Regression (CDR)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1345,6 +1440,7 @@ circuit is expected to be decomposed in the set of primitive gates :math:`RX(\fr
        backend=backend,
        noise_model=noise,
        nshots=10000,
+       readout=readout,
    )
    print(estimate)
    # 0.9090604794014961
@@ -1374,6 +1470,8 @@ caveat about the input circuit for CDR is valid here as well.
        noise_levels=np.arange(3),
        noise_model=noise,
        nshots=10000,
+       insertion_gate='CNOT',
+       readout=readout,
    )
    print(estimate)
    # 0.9085991439303123

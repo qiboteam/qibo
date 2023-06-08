@@ -87,7 +87,7 @@ class NumpyBackend(Backend):
 
     def identity_density_matrix(self, nqubits, normalize: bool = True):
         state = self.np.eye(2**nqubits, dtype=self.dtype)
-        if normalize:
+        if normalize is True:
             state /= 2**nqubits
         return state
 
@@ -104,7 +104,8 @@ class NumpyBackend(Backend):
     def asmatrix(self, gate):
         """Convert a gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
-        return getattr(self.matrices, name)
+        matrix = getattr(self.matrices, name)
+        return matrix(2 ** len(gate.target_qubits)) if callable(matrix) else matrix
 
     def asmatrix_parametrized(self, gate):
         """Convert a parametrized gate to its matrix representation in the computational basis."""
@@ -439,7 +440,11 @@ class NumpyBackend(Backend):
 
         if not circuit.density_matrix:
             samples = []
-            probabilities = np.zeros(2**nqubits, dtype=float)
+            target_qubits = [
+                measurement.target_qubits for measurement in circuit.measurements
+            ]
+            target_qubits = sum(target_qubits, tuple())
+            probabilities = np.zeros(2 ** len(target_qubits), dtype=float)
             probabilities = self.cast(probabilities, dtype=probabilities.dtype)
 
         for _ in range(nshots):
