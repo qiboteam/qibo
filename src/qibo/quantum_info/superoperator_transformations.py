@@ -610,8 +610,8 @@ def kraus_to_stinespring(
         U_{0} = \\sum_{\\alpha} \\, K_{\\alpha} \\otimes \\ketbra{\\alpha}{\\v_{0}} \\, ,
 
     where :math:`\\ket{v_{0}}` is the initial state of the environment
-    (``initial_state_env``), :math:`D` is the dimension of the environment's 
-    Hilbert space, and 
+    (``initial_state_env``), :math:`D` is the dimension of the environment's
+    Hilbert space, and
     :math:`\\{\\ket{\\alpha} \\, : \\, \\alpha = 0, 1, \\cdots, D - 1 \\}
     is an orthonormal basis for the environment's space.
 
@@ -1234,16 +1234,22 @@ def chi_to_kraus(
     return kraus_ops, coefficients
 
 
-def stinespring_to_kraus(stinespring, dim_env: int, initial_state_env=None, nqubits: Optional[int] = None, backend=None):
+def stinespring_to_kraus(
+    stinespring,
+    dim_env: int,
+    initial_state_env=None,
+    nqubits: Optional[int] = None,
+    backend=None,
+):
     """Converts the Stinespring representation :math:`U_{0}` of quantum channel
     to its Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`, i.e.
 
     .. math::
-        K_{\\alpha} \\coloneqq \\bra{\\alpha} \\, U_{0} \\, \\ket{v_{0}} \\, , 
+        K_{\\alpha} \\coloneqq \\bra{\\alpha} \\, U_{0} \\, \\ket{v_{0}} \\, ,
 
     where :math:`\\ket{v_{0}}` is the initial state of the environment
-    (``initial_state_env``), :math:`D` is the dimension of the environment's 
-    Hilbert space, and 
+    (``initial_state_env``), :math:`D` is the dimension of the environment's
+    Hilbert space, and
     :math:`\\{\\ket{\\alpha} \\, : \\, \\alpha = 0, 1, \\cdots, D - 1 \\}
     is an orthonormal basis for the environment's Hilbert space.
     Note that :math:`\\text{dim}(\\ket{\\alpha}) = \\text{dim}(\\ket{v_{0}}) = D`,
@@ -1267,8 +1273,10 @@ def stinespring_to_kraus(stinespring, dim_env: int, initial_state_env=None, nqub
         backend = GlobalBackend()
 
     if isinstance(dim_env, int) is False:
-        raise_error(TypeError, f"dim_env must be type int, but it is type {type(dim_env)}.")
-    
+        raise_error(
+            TypeError, f"dim_env must be type int, but it is type {type(dim_env)}."
+        )
+
     if dim_env <= 0:
         raise_error(ValueError, "dim_env must be a positive integer.")
 
@@ -1277,7 +1285,9 @@ def stinespring_to_kraus(stinespring, dim_env: int, initial_state_env=None, nqub
 
     if nqubits is not None:
         if isinstance(nqubits, int) is False:
-            raise_error(TypeError, f"nqubits must be type int, but it is type {type(nqubits)}.")
+            raise_error(
+                TypeError, f"nqubits must be type int, but it is type {type(nqubits)}."
+            )
         if nqubits <= 0:
             raise_error(ValueError, "nqubits must be a positive integer.")
 
@@ -1289,7 +1299,10 @@ def stinespring_to_kraus(stinespring, dim_env: int, initial_state_env=None, nqub
     dim = 2**nqubits
 
     if backend.assert_allclose(dim * dim_env, dim_stinespring) is False:
-        raise_error(ValueError, "Dimensions do not match. dim(`stinespring`) must be equal to `dim_env` * 2**nqubits.")
+        raise_error(
+            ValueError,
+            "Dimensions do not match. dim(`stinespring`) must be equal to `dim_env` * 2**nqubits.",
+        )
 
     if initial_state_env is None:
         initial_state_env = np.zeros(dim_env, dtype=complex)
