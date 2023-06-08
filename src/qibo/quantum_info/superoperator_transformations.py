@@ -1298,7 +1298,7 @@ def stinespring_to_kraus(
 
     dim = 2**nqubits
 
-    if backend.assert_allclose(dim * dim_env, dim_stinespring) is False:
+    if dim * dim_env != dim_stinespring:
         raise_error(
             ValueError,
             "Dimensions do not match. dim(`stinespring`) must be equal to `dim_env` * 2**nqubits.",
