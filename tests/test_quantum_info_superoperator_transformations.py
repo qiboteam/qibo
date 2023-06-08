@@ -3,7 +3,32 @@ import pytest
 
 from qibo import matrices
 from qibo.config import PRECISION_TOL
-from qibo.quantum_info import *
+from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
+from qibo.quantum_info.superoperator_transformations import (
+    chi_to_choi,
+    chi_to_kraus,
+    chi_to_liouville,
+    chi_to_pauli,
+    choi_to_chi,
+    choi_to_kraus,
+    choi_to_liouville,
+    choi_to_pauli,
+    kraus_to_chi,
+    kraus_to_choi,
+    kraus_to_liouville,
+    kraus_to_pauli,
+    kraus_to_unitaries,
+    liouville_to_chi,
+    liouville_to_choi,
+    liouville_to_kraus,
+    liouville_to_pauli,
+    pauli_to_chi,
+    pauli_to_choi,
+    pauli_to_kraus,
+    pauli_to_liouville,
+    unvectorization,
+    vectorization,
+)
 
 
 @pytest.mark.parametrize("order", ["row", "column", "system"])
