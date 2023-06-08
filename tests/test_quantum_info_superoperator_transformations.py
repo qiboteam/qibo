@@ -3,7 +3,6 @@ import pytest
 
 from qibo import matrices
 from qibo.config import PRECISION_TOL
-from qibo.quantum_info.basis import unvectorization, vectorization
 from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
 from qibo.quantum_info.superoperator_transformations import (
     chi_to_choi,
@@ -27,6 +26,8 @@ from qibo.quantum_info.superoperator_transformations import (
     pauli_to_choi,
     pauli_to_kraus,
     pauli_to_liouville,
+    unvectorization,
+    vectorization,
 )
 
 
