@@ -433,7 +433,7 @@ def test_entanglement_fidelity(backend, channel, nqubits, check_hermitian):
             channel, nqubits=0, check_hermitian=check_hermitian, backend=backend
         )
     with pytest.raises(TypeError):
-        state = np.random.rand((2, 3, 2), dtype=complex)
+        state = np.random.rand(2, 3, 2)
         state = backend.cast(state, dtype=state.dtype)
         test = entanglement_fidelity(
             channel,
@@ -453,6 +453,17 @@ def test_entanglement_fidelity(backend, channel, nqubits, check_hermitian):
     # test on maximally entangled state
     ent_fid = entanglement_fidelity(
         channel, nqubits=nqubits, check_hermitian=check_hermitian, backend=backend
+    )
+    backend.assert_allclose(ent_fid, 0.625, atol=PRECISION_TOL)
+
+    # test with a state vector
+    state = backend.plus_state(nqubits)
+    ent_fid = entanglement_fidelity(
+        channel,
+        nqubits=nqubits,
+        state=state,
+        check_hermitian=check_hermitian,
+        backend=backend,
     )
     backend.assert_allclose(ent_fid, 0.625, atol=PRECISION_TOL)
 
