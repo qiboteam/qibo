@@ -674,7 +674,7 @@ def entanglement_fidelity(
         )
 
     if state is None:
-        state = backend.plus_state(nqubits)
+        state = backend.plus_density_matrix(nqubits)
 
     # necessary because this function do support repeated execution,
     # so it has to default to density matrices
