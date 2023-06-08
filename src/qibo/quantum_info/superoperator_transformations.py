@@ -610,8 +610,9 @@ def kraus_to_stinespring(
         U_{0} = \\sum_{\\alpha} \\, K_{\\alpha} \\otimes \\ketbra{\\alpha}{\\v_{0}} \\, ,
 
     where :math:`\\ket{v_{0}}` is the initial state of the environment
-    (``initial_state_env``), :math:`D` is the dimension of the environment's space,
-    and :math:`\\{\\ket{\\alpha} \\, : \\, 0, 1, \\cdots, D - 1 \\}
+    (``initial_state_env``), :math:`D` is the dimension of the environment's 
+    Hilbert space, and 
+    :math:`\\{\\ket{\\alpha} \\, : \\, \\alpha = 0, 1, \\cdots, D - 1 \\}
     is an orthonormal basis for the environment's space.
 
     Args:
@@ -662,6 +663,8 @@ def kraus_to_stinespring(
             initial_state_env, dtype=initial_state_env.dtype
         )
 
+    # only utility is for outer product,
+    # so np.conj here to only do it once
     initial_state_env = np.conj(initial_state_env)
 
     stinespring = np.zeros((dim_stinespring, dim_stinespring), dtype=complex)
@@ -1229,6 +1232,86 @@ def chi_to_kraus(
     )
 
     return kraus_ops, coefficients
+
+
+def stinespring_to_kraus(stinespring, dim_env: int, initial_state_env=None, nqubits: Optional[int] = None, backend=None):
+    """Converts the Stinespring representation :math:`U_{0}` of quantum channel
+    to its Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`, i.e.
+
+    .. math::
+        K_{\\alpha} \\coloneqq \\bra{\\alpha} \\, U_{0} \\, \\ket{v_{0}} \\, , 
+
+    where :math:`\\ket{v_{0}}` is the initial state of the environment
+    (``initial_state_env``), :math:`D` is the dimension of the environment's 
+    Hilbert space, and 
+    :math:`\\{\\ket{\\alpha} \\, : \\, \\alpha = 0, 1, \\cdots, D - 1 \\}
+    is an orthonormal basis for the environment's Hilbert space.
+    Note that :math:`\\text{dim}(\\ket{\\alpha}) = \\text{dim}(\\ket{v_{0}}) = D`,
+    while :math:`\\text{dim}(U) = 2^{n} \\, D`, where :math:`n` is `nqubits`.
+
+    Args:
+        stinespring (ndarray): quantum channel in the Stinespring representation.
+        dim_env (int): dimension of the Hilbert space of the environment.
+        initial_state_env (ndarray, optional): statevector representing the
+            initial state of the enviroment. If ``None``, it assumes the
+            environment in its ground state. Defaults to ``None``.
+        nqubits (int, optional): number of qubits in the system. Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            ``GlobalBackend()``. Defaults to ``None``.
+
+    Returns:
+        ndarray: Kraus operators.
+    """
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    if isinstance(dim_env, int) is False:
+        raise_error(TypeError, f"dim_env must be type int, but it is type {type(dim_env)}.")
+    
+    if dim_env <= 0:
+        raise_error(ValueError, "dim_env must be a positive integer.")
+
+    if initial_state_env is not None and len(initial_state_env.shape) != 1:
+        raise_error(ValueError, "initial_state_env must be a statevector.")
+
+    if nqubits is not None:
+        if isinstance(nqubits, int) is False:
+            raise_error(TypeError, f"nqubits must be type int, but it is type {type(nqubits)}.")
+        if nqubits <= 0:
+            raise_error(ValueError, "nqubits must be a positive integer.")
+
+    dim_stinespring = stinespring.shape[0]
+
+    if nqubits is None:
+        nqubits = int(np.log2(dim_stinespring / dim_env))
+
+    dim = 2**nqubits
+
+    if backend.assert_allclose(dim * dim_env, dim_stinespring) is False:
+        raise_error(ValueError, "Dimensions do not match. dim(`stinespring`) must be equal to `dim_env` * 2**nqubits.")
+
+    if initial_state_env is None:
+        initial_state_env = np.zeros(dim_env, dtype=complex)
+        initial_state_env[0] = 1.0
+        initial_state_env = backend.cast(
+            initial_state_env, dtype=initial_state_env.dtype
+        )
+
+    stinespring = np.reshape(stinespring, (dim, dim_env, dim, dim_env))
+    stinespring = np.swapaxes(stinespring, 1, 2)
+
+    kraus_ops = []
+    for alpha in range(dim_env):
+        vector_alpha = np.zeros(dim_env, dtype=complex)
+        vector_alpha[alpha] = 1.0
+        vector_alpha = backend.cast(vector_alpha, dtype=vector_alpha.dtype)
+        kraus = np.conj(vector_alpha) @ stinespring @ initial_state_env
+        kraus_ops.append(kraus)
+
+    kraus_ops = backend.cast(kraus_ops)
+
+    return kraus_ops
 
 
 def kraus_to_unitaries(

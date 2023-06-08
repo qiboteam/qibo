@@ -1,4 +1,3 @@
-# %%
 import numpy as np
 import pytest
 
@@ -838,13 +837,3 @@ def test_reshuffling(backend, order, test_superop):
     backend.assert_allclose(
         np.linalg.norm(reshuffled - test_choi) < PRECISION_TOL, True
     )
-
-
-# %%
-test_a0 = np.sqrt(0.4) * matrices.X
-test_a1 = np.sqrt(0.6) * matrices.Z
-test_kraus = [((0,), test_a0), ((0,), test_a1)]
-
-from qibo.backends import NumpyBackend
-
-kraus_to_stinespring(test_kraus, backend=NumpyBackend())
