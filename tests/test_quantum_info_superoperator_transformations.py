@@ -767,6 +767,49 @@ def test_chi_to_kraus(backend, normalize, order, pauli_order, test_a0, test_a1):
     )
 
 
+@pytest.mark.parametrize("nqubits", [None, 1])
+@pytest.mark.parametrize("dim_env", [2])
+@pytest.mark.parametrize("stinespring", [test_stinespring])
+def test_stinespring_to_kraus(backend, stinespring, dim_env, nqubits):
+    with pytest.raises(TypeError):
+        test = stinespring_to_kraus(stinespring, dim_env=2.0, nqubits=nqubits)
+    with pytest.raises(ValueError):
+        test = stinespring_to_kraus(stinespring, dim_env=-1, nqubits=nqubits)
+    with pytest.raises(ValueError):
+        state = random_density_matrix(2, pure=True, backend=backend)
+        test = stinespring_to_kraus(
+            stinespring, 
+            dim_env=dim_env, 
+            initial_state_env=state, 
+            nqubits=nqubits, 
+            backend=backend,
+        )
+    with pytest.raises(TypeError):
+        test = stinespring_to_kraus(
+            stinespring, 
+            dim_env=dim_env, 
+            nqubits=1.0, 
+            backend=backend,
+        )
+    with pytest.raises(ValueError):
+        test = stinespring_to_kraus(
+            stinespring, 
+            dim_env=dim_env, 
+            nqubits=-1, 
+            backend=backend,
+        )
+    with pytest.raises(ValueError):
+        test = stinespring_to_kraus(
+            stinespring, dim_env=3, nqubits=2, backend=backend
+        )
+
+    stinespring = backend.cast(stinespring, dtype=stinespring.dtype)
+    test = stinespring_to_kraus(stinespring, dim_env, nqubits=nqubits, backend=backend)
+
+    for kraus, test_kraus in zip(test, [test_a0, test_a1]):
+        backend.assert_allclose(kraus, test_kraus, atol=PRECISION_TOL)
+
+
 @pytest.mark.parametrize("order", ["row", "column"])
 def test_kraus_to_unitaries(backend, order):
     test_a0 = np.sqrt(0.4) * matrices.X
