@@ -778,30 +778,28 @@ def test_stinespring_to_kraus(backend, stinespring, dim_env, nqubits):
     with pytest.raises(ValueError):
         state = random_density_matrix(2, pure=True, backend=backend)
         test = stinespring_to_kraus(
-            stinespring, 
-            dim_env=dim_env, 
-            initial_state_env=state, 
-            nqubits=nqubits, 
+            stinespring,
+            dim_env=dim_env,
+            initial_state_env=state,
+            nqubits=nqubits,
             backend=backend,
         )
     with pytest.raises(TypeError):
         test = stinespring_to_kraus(
-            stinespring, 
-            dim_env=dim_env, 
-            nqubits=1.0, 
+            stinespring,
+            dim_env=dim_env,
+            nqubits=1.0,
             backend=backend,
         )
     with pytest.raises(ValueError):
         test = stinespring_to_kraus(
-            stinespring, 
-            dim_env=dim_env, 
-            nqubits=-1, 
+            stinespring,
+            dim_env=dim_env,
+            nqubits=-1,
             backend=backend,
         )
     with pytest.raises(ValueError):
-        test = stinespring_to_kraus(
-            stinespring, dim_env=3, nqubits=2, backend=backend
-        )
+        test = stinespring_to_kraus(stinespring, dim_env=3, nqubits=2, backend=backend)
 
     stinespring = backend.cast(stinespring, dtype=stinespring.dtype)
     test = stinespring_to_kraus(stinespring, dim_env, nqubits=nqubits, backend=backend)
