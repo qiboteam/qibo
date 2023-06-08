@@ -433,7 +433,7 @@ def test_entanglement_fidelity(backend, channel, nqubits, check_hermitian):
             channel, nqubits=0, check_hermitian=check_hermitian, backend=backend
         )
     with pytest.raises(TypeError):
-        state = np.random.rand((2, 3), dtype=complex)
+        state = np.random.rand((2, 3, 2), dtype=complex)
         state = backend.cast(state, dtype=state.dtype)
         test = entanglement_fidelity(
             channel,
@@ -441,6 +441,11 @@ def test_entanglement_fidelity(backend, channel, nqubits, check_hermitian):
             state=state,
             check_hermitian=check_hermitian,
             backend=backend,
+        )
+    with pytest.raises(TypeError):
+        state = random_statevector(2, backend=backend)
+        test = entanglement_fidelity(
+            channel, nqubits, state=state, check_hermitian="False", backend=backend
         )
 
     channel = channel([0, 1], 0.5)
@@ -470,17 +475,17 @@ def test_process_fidelity_and_infidelity(backend):
         target = np.random.rand(d**2, d**2, 1)
         channel = backend.cast(channel, dtype=channel.dtype)
         target = backend.cast(target, dtype=target.dtype)
-        process_fidelity(channel, target, backend=backend)
+        test = process_fidelity(channel, target, backend=backend)
     with pytest.raises(TypeError):
         channel = np.random.rand(d**2, d**2)
         channel = backend.cast(channel, dtype=channel.dtype)
-        process_fidelity(channel, check_unitary=True, backend=backend)
+        test = process_fidelity(channel, check_unitary=True, backend=backend)
     with pytest.raises(TypeError):
         channel = np.random.rand(d**2, d**2)
         target = np.random.rand(d**2, d**2)
         channel = backend.cast(channel, dtype=channel.dtype)
         target = backend.cast(target, dtype=target.dtype)
-        process_fidelity(channel, target, check_unitary=True, backend=backend)
+        test = process_fidelity(channel, target, check_unitary=True, backend=backend)
 
     channel = np.eye(d**2)
     channel = backend.cast(channel, dtype=channel.dtype)
