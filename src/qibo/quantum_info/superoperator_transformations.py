@@ -938,6 +938,66 @@ def liouville_to_chi(
     return process_matrix
 
 
+def liouville_to_stinespring(
+    super_op,
+    order: str = "row",
+    precision_tol: Optional[float] = None,
+    validate_cp: bool = True,
+    nqubits: Optional[int] = None,
+    initial_state_env=None,
+    backend=None,
+):
+    """Converts Liouville representation :math:`\\mathcal{E}` of quantum channel
+    to its Stinespring representation :math:`U_{0}`.
+    It uses the Choi representation :math:`\\Lambda` as intermediate step.
+
+    Args:
+        super_op: Liouville representation of quantum channel.
+        order (str, optional): If ``"row"``, reshuffling is performed
+            with respect to row-wise vectorization. If ``"column"``,
+            reshuffling is performed with respect to column-wise
+            vectorization. If ``"system"``, operator is converted to
+            a representation based on row vectorization, reshuffled,
+            and then converted back to its representation with
+            respect to system-wise vectorization. Defaults to ``"row"``.
+        precision_tol (float, optional): Precision tolerance for eigenvalues
+            found in the spectral decomposition problem. Any eigenvalue
+            :math:`\\lambda <` ``precision_tol`` is set to 0 (zero).
+            If ``None``, ``precision_tol`` defaults to
+            ``qibo.config.PRECISION_TOL=1e-8``. Defaults to ``None``.
+        validate_cp (bool, optional): If ``True``, checks if ``choi_super_op``
+            is a completely positive map. If ``False``, it assumes that
+            ``choi_super_op`` is completely positive (and Hermitian).
+            Defaults to ``True``.
+        nqubits (int, optional): total number of qubits in the system that is
+            interacting with the environment. Must be equal or greater than
+            the number of qubits ``kraus_ops`` acts on. If ``None``,
+            defaults to the number of qubits in ``kraus_ops``.
+            Defauts to ``None``.
+        initial_state_env (ndarray, optional): statevector representing the
+            initial state of the enviroment. If ``None``, it assumes the
+            environment in its ground state. Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        ndarray: Stinespring representation of quantum channel.
+    """
+    choi_super_op = liouville_to_choi(super_op, order=order, backend=backend)
+    stinespring = choi_to_stinespring(
+        choi_super_op,
+        precision_tol=precision_tol,
+        order=order,
+        validate_cp=validate_cp,
+        nqubits=nqubits,
+        initial_state_env=initial_state_env,
+        backend=backend,
+    )
+
+    return stinespring
+
+
 def pauli_to_liouville(
     pauli_op,
     normalize: bool = False,
