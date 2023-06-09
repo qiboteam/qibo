@@ -1355,6 +1355,36 @@ def stinespring_to_pauli(
     pauli_order: str = "IXYZ",
     backend=None,
 ):
+    """Converts Stinespring representation :math:`U_{0}` of quantum channel
+    to its Pauli-Liouville representation :math:`\\mathcal{E}_{P}` via
+    Stinespring Dilation, i.e.
+
+    .. math::
+        \\mathcal{E}_{P} = \\text{kraus_to_pauli}(\\text{stinespring_to_kraus}(U_{0}))
+
+    Args:
+        stinespring (ndarray): quantum channel in the Stinespring representation.
+        dim_env (int): dimension of the Hilbert space of the environment.
+        initial_state_env (ndarray, optional): statevector representing the
+            initial state of the enviroment. If ``None``, it assumes the
+            environment in its ground state. Defaults to ``None``.
+        nqubits (int, optional): number of qubits in the system. Defaults to ``None``.
+        normalize (bool, optional): If ``True`` superoperator is returned
+            in the normalized Pauli basis. If ``False``, it is returned
+            in the unnormalized Pauli basis. Defaults to ``False``.
+        order (str, optional): If ``"row"``, intermediate step for Choi
+            representation is done in row-vectorization. If ``"column"``,
+            step is done in column-vectorization. If ``"system"``,
+            block-vectorization is performed. Defaults to ``"row"``.
+        pauli_order (str, optional): corresponds to the order of 4
+            single-qubit Pauli elements. Defaults to "IXYZ".
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        ndarray: Pauli-Liouville representation of quantum channel.
+    """
     kraus_ops = stinespring_to_kraus(
         stinespring,
         dim_env,
