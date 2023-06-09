@@ -380,7 +380,7 @@ def choi_to_chi(
     backend=None,
 ):
     """Converts Choi representation :math:`\\Lambda` of quantum channel
-    to  its chi-matrix representation :math:`\\chi`.
+    to  its :math:`\\chi`-matrix representation.
 
     .. math::
         \\chi = \\text{liouville_to_pauli}(\\Lambda)
@@ -538,7 +538,7 @@ def kraus_to_chi(
     backend=None,
 ):
     """Convert Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`
-    of quantum channel to  its chi-matrix representation :math:`\\chi`.
+    of quantum channel to  its :math:`\\chi`-matrix representation.
 
     .. math::
         \\chi = \\sum_{\\alpha} \\, |c_{\\alpha}\\rangle\\rangle \\langle\\langle c_{\\alpha}|,
@@ -824,7 +824,7 @@ def liouville_to_chi(
     backend=None,
 ):
     """Converts Liouville representation of quantum channel :math:`\\mathcal{E}`
-    to its chi-matrix representation :math:`\\chi`.
+    to its :math:`\\chi`-matrix representation.
     It uses the Choi representation as an intermediate step.
 
     .. math::
@@ -1003,7 +1003,7 @@ def pauli_to_chi(
     backend=None,
 ):
     """Converts Pauli-Liouville representation of a quantum channel
-    to its chi-matrix representation :math:`\\chi`.
+    to its :math:`\\chi`-matrix representation.
 
     Args:
         pauli_op (ndarray): superoperator in the Pauli-Liouville representation.
@@ -1039,8 +1039,8 @@ def chi_to_choi(
     pauli_order: str = "IXYZ",
     backend=None,
 ):
-    """Convert the chi-matrix representation :math:`\\chi` of a quantum channel
-    to Choi representation :math:`\\Lambda`.
+    """Convert the :math:`\\chi`-matrix representation of a quantum channel
+    to its Choi representation :math:`\\Lambda`.
 
     .. math::
         \\Lambda = \\text{pauli_to_liouville}(\\chi)
@@ -1084,7 +1084,7 @@ def chi_to_liouville(
     pauli_order: str = "IXYZ",
     backend=None,
 ):
-    """Converts the chi-matrix representation :math:`\\chi` of a quantum channel
+    """Converts the :math:`\\chi`-matrix representation of a quantum channel
     to its Liouville representation :math:`\\mathcal{E}`.
 
     .. math::
@@ -1130,7 +1130,7 @@ def chi_to_pauli(
     pauli_order: str = "IXYZ",
     backend=None,
 ):
-    """Convert chi-matrix representation :math:`\\chi` of a quantum channel
+    """Convert :math:`\\chi`-matrix representation of a quantum channel
     to its Pauli-Liouville representation :math:`\\mathcal{E}_P`.
 
     .. math::
@@ -1180,7 +1180,7 @@ def chi_to_kraus(
     validate_cp: bool = True,
     backend=None,
 ):
-    """Converts the chi-matrix representation :math:`\\chi` of a quantum channel
+    """Converts the :math:`\\chi`-matrix representation of a quantum channel
     to its Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`.
 
     .. math::
@@ -1512,6 +1512,38 @@ def stinespring_to_chi(
     pauli_order: str = "IXYZ",
     backend=None,
 ):
+    """Converts Stinespring representation :math:`U_{0}` of quantum channel
+    to its :math:`\\chi`-matrix representation via Stinespring Dilation, i.e.
+
+    .. math::
+        \\chi = \\text{kraus_to_chi}(\\text{stinespring_to_kraus}(U_{0}))
+
+    Args:
+        stinespring (ndarray): quantum channel in the Stinespring representation.
+        dim_env (int): dimension of the Hilbert space of the environment.
+        initial_state_env (ndarray, optional): statevector representing the
+            initial state of the enviroment. If ``None``, it assumes the
+            environment in its ground state. Defaults to ``None``.
+        nqubits (int, optional): number of qubits in the system. Defaults to ``None``.
+        normalize (bool, optional): If ``True`` assumes the normalized
+            Pauli basis. If ``False``, it assumes unnormalized
+            Pauli basis. Defaults to ``False``.
+        order (str, optional): If ``"row"``, reshuffling is performed
+            with respect to row-wise vectorization. If ``"column"``,
+            reshuffling is performed with respect to column-wise
+            vectorization. If ``"system"``, operator is converted to
+            a representation based on row vectorization, reshuffled,
+            and then converted back to its representation with
+            respect to system-wise vectorization. Defaults to ``"row"``.
+        pauli_order (str, optional): corresponds to the order of 4 single-qubit
+            Pauli elements in the Pauli basis. Defaults to "IXYZ".
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        ndarray: :math:`\\chi`-representation of quantum channel.
+    """
     kraus_ops = stinespring_to_kraus(
         stinespring,
         dim_env,
