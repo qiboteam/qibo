@@ -1,7 +1,5 @@
-import collections
 import copy
-import math
-from typing import Dict, List, Optional, Sequence, Set, Tuple, Union
+from typing import Dict, List, Sequence, Tuple
 
 from qibo import gates
 from qibo.config import raise_error

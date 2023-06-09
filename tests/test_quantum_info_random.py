@@ -1,8 +1,24 @@
+"""Tests for the quantum_info.random_ensembles module."""
+
+from functools import reduce
+
 import numpy as np
 import pytest
 
 from qibo.config import PRECISION_TOL
-from qibo.quantum_info import *
+from qibo.quantum_info.metrics import purity
+from qibo.quantum_info.random_ensembles import (
+    random_clifford,
+    random_density_matrix,
+    random_gaussian_matrix,
+    random_hermitian,
+    random_pauli,
+    random_pauli_hamiltonian,
+    random_quantum_channel,
+    random_statevector,
+    random_stochastic_matrix,
+    random_unitary,
+)
 
 
 @pytest.mark.parametrize("seed", [None, 10, np.random.Generator(np.random.MT19937(10))])

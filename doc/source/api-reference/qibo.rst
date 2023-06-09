@@ -191,6 +191,18 @@ Travelling Salesman Problem
     :member-order: bysource
 
 
+Iterative Quantum Amplitude Estimation (IQAE)
+"""""""""""""""""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.models.iqae.IQAE
+    :members:
+    :member-order: bysource
+
+.. autoclass:: qibo.models.iqae.IterativeAmplitudeEstimationResult
+    :members:
+    :member-order: bysource
+
+
 .. _timeevolution:
 
 Time evolution
