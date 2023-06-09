@@ -1166,6 +1166,77 @@ def pauli_to_chi(
     return super_op
 
 
+def pauli_to_stinespring(
+    pauli_op,
+    normalize: bool = False,
+    order: str = "row",
+    pauli_order: str = "IXYZ",
+    precision_tol: Optional[float] = None,
+    validate_cp: bool = True,
+    nqubits: Optional[int] = None,
+    initial_state_env=None,
+    backend=None,
+):
+    """Converts Pauli-Liouville representation :math:`\\mathcal{E}_{P}` of quantum channel
+    to its Stinespring representation :math:`U_{0}`.
+    It uses the Liouville representation :math:`\\mathcal{E}` as intermediate step.
+
+    Args:
+        pauli_op (ndarray): Pauli-Liouville representation of a quantum channel.
+        normalize (bool, optional): If ``True`` assumes ``pauli_op`` is represented
+            in the normalized Pauli basis. If ``False``, it assumes unnormalized
+            Pauli basis. Defaults to ``False``.
+        order (str, optional): If ``"row"``, returns Liouville representation in
+            row-vectorization. If ``"column"``, returns column-vectorized
+            superoperator. If ``"system"``, superoperator will be in
+            block-vectorization. Defaults to ``"row"``.
+        pauli_order (str, optional): corresponds to the order of 4 single-qubit
+            Pauli elements. Defaults to "IXYZ".
+        precision_tol (float, optional): Precision tolerance for eigenvalues
+            found in the spectral decomposition problem. Any eigenvalue
+            :math:`\\lambda <` ``precision_tol`` is set to 0 (zero).
+            If ``None``, ``precision_tol`` defaults to
+            ``qibo.config.PRECISION_TOL=1e-8``. Defaults to ``None``.
+        validate_cp (bool, optional): If ``True``, checks if ``choi_super_op``
+            is a completely positive map. If ``False``, it assumes that
+            ``choi_super_op`` is completely positive (and Hermitian).
+            Defaults to ``True``.
+        nqubits (int, optional): total number of qubits in the system that is
+            interacting with the environment. Must be equal or greater than
+            the number of qubits ``kraus_ops`` acts on. If ``None``,
+            defaults to the number of qubits in ``kraus_ops``.
+            Defauts to ``None``.
+        initial_state_env (ndarray, optional): statevector representing the
+            initial state of the enviroment. If ``None``, it assumes the
+            environment in its ground state. Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        ndarray: Stinestring representation of quantum channel.
+    """
+    super_op = pauli_to_liouville(
+        pauli_op,
+        normalize=normalize,
+        order=order,
+        pauli_order=pauli_order,
+        backend=backend,
+    )
+
+    stinespring = liouville_to_stinespring(
+        super_op,
+        order=order,
+        precision_tol=precision_tol,
+        validate_cp=validate_cp,
+        nqubits=nqubits,
+        initial_state_env=initial_state_env,
+        backend=backend,
+    )
+
+    return stinespring
+
+
 def chi_to_choi(
     chi_matrix,
     normalize: bool = False,
