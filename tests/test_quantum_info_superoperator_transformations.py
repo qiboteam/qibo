@@ -24,6 +24,7 @@ from qibo.quantum_info.superoperator_transformations import (
     liouville_to_choi,
     liouville_to_kraus,
     liouville_to_pauli,
+    liouville_to_stinespring,
     pauli_to_chi,
     pauli_to_choi,
     pauli_to_kraus,
@@ -600,6 +601,65 @@ def test_liouville_to_chi(backend, normalize, order, pauli_order, test_superop):
     )
 
     backend.assert_allclose(test_chi / aux, chi_matrix, atol=PRECISION_TOL)
+
+
+@pytest.mark.parametrize("test_a1", [test_a1])
+@pytest.mark.parametrize("test_a0", [test_a0])
+@pytest.mark.parametrize("test_superop", [test_superop])
+@pytest.mark.parametrize("test_stinespring", [test_stinespring])
+@pytest.mark.parametrize("nqubits", [1])
+@pytest.mark.parametrize("validate_cp", [False, True])
+@pytest.mark.parametrize("order", ["row", "column"])
+def test_liouville_to_stinespring(
+    backend,
+    order,
+    validate_cp,
+    nqubits,
+    test_stinespring,
+    test_superop,
+    test_a0,
+    test_a1,
+):
+    test_stinespring = backend.cast(test_stinespring, dtype=test_stinespring.dtype)
+    test_a0 = backend.cast(test_a0, dtype=test_a0.dtype)
+    test_a1 = backend.cast(test_a1, dtype=test_a1.dtype)
+
+    axes = [1, 2] if order == "row" else [0, 3]
+    test_choi = np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
+    test_choi = backend.cast(test_choi, dtype=test_choi.dtype)
+    stinespring = liouville_to_stinespring(
+        test_superop,
+        order=order,
+        validate_cp=validate_cp,
+        nqubits=nqubits,
+        backend=backend,
+    )
+
+    v_0 = np.array([1, 0], dtype=complex)
+
+    state = random_density_matrix(2**nqubits, backend=backend)
+
+    # action of Kraus channel on state
+    state_final_test = test_a0 @ state @ test_a0 + test_a1 @ state @ test_a1
+
+    # action of stinespring channel on state + environment
+    stinespring = (
+        stinespring
+        @ np.kron(state, np.outer(v_0, v_0))
+        @ np.transpose(np.conj(stinespring))
+    )
+
+    # partial trace of the environment
+    stinespring = np.reshape(stinespring, (2**nqubits, 2, 2**nqubits, 2))
+    stinespring = np.swapaxes(stinespring, 1, 2)
+    state_final = np.zeros((2**nqubits, 2**nqubits), dtype=complex)
+    for alpha in range(2):
+        vector_alpha = np.zeros(2, dtype=complex)
+        vector_alpha[alpha] = 1.0
+        vector_alpha = backend.cast(vector_alpha, dtype=vector_alpha.dtype)
+        state_final += np.conj(vector_alpha) @ stinespring @ vector_alpha
+
+    backend.assert_allclose(state_final, state_final_test, atol=PRECISION_TOL)
 
 
 @pytest.mark.parametrize("test_superop", [test_superop])
