@@ -10,6 +10,7 @@ from qibo.quantum_info.metrics import (
     bures_distance,
     concurrence,
     entanglement_entropy,
+    entanglement_fidelity,
     entanglement_of_formation,
     entangling_capability,
     entropy,
