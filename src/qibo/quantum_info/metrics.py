@@ -22,7 +22,7 @@ def purity(state):
     ):
         raise_error(
             TypeError,
-            f"Object must have dims either (k,) or (k,k), but have dims {state.shape}.",
+            f"state must have dims either (k,) or (k,k), but have dims {state.shape}.",
         )
 
     if len(state.shape) == 1:
@@ -83,7 +83,7 @@ def concurrence(state, bipartition, check_purity: bool = True, backend=None):
     ):
         raise_error(
             TypeError,
-            f"Object must have dims either (k,) or (k,k), but have dims {state.shape}.",
+            f"state must have dims either (k,) or (k,k), but have dims {state.shape}.",
         )
 
     if isinstance(check_purity, bool) is False:
@@ -190,9 +190,6 @@ def entropy(state, base: float = 2, check_hermitian: bool = False, backend=None)
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    if base <= 0.0:
-        raise_error(ValueError, "log base must be non-negative.")
-
     if (
         (len(state.shape) >= 3)
         or (len(state) == 0)
@@ -200,7 +197,16 @@ def entropy(state, base: float = 2, check_hermitian: bool = False, backend=None)
     ):
         raise_error(
             TypeError,
-            f"Object must have dims either (k,) or (k,k), but have dims {state.shape}.",
+            f"state must have dims either (k,) or (k,k), but have dims {state.shape}.",
+        )
+
+    if base <= 0.0:
+        raise_error(ValueError, "log base must be non-negative.")
+
+    if isinstance(check_hermitian, bool) is False:
+        raise_error(
+            TypeError,
+            f"check_hermitian must be type bool, but it is type {type(check_hermitian)}.",
         )
 
     if purity(state) == 1.0:
@@ -275,7 +281,7 @@ def entanglement_entropy(
     ):
         raise_error(
             TypeError,
-            f"Object must have dims either (k,) or (k,k), but have dims {state.shape}.",
+            f"state must have dims either (k,) or (k,k), but have dims {state.shape}.",
         )
 
     nqubits = int(np.log2(state.shape[0]))
@@ -334,6 +340,12 @@ def trace_distance(state, target, check_hermitian: bool = False, backend=None):
             TypeError,
             "Both objects must have dims either (k,) or (k,l), "
             + f"but have dims {state.shape} and {target.shape}",
+        )
+
+    if isinstance(check_hermitian, bool) is False:
+        raise_error(
+            TypeError,
+            f"check_hermitian must be type bool, but it is type {type(check_hermitian)}.",
         )
 
     if len(state.shape) == 1:
@@ -446,6 +458,11 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
             TypeError,
             "Both objects must have dims either (k,) or (k,l), "
             + f"but have dims {state.shape} and {target.shape}",
+        )
+    if isinstance(check_hermitian, bool) is False:
+        raise_error(
+            TypeError,
+            f"check_hermitian must be type bool, but it is type {type(check_hermitian)}.",
         )
 
     # check purity if both states are density matrices
@@ -590,6 +607,89 @@ def bures_distance(state, target, check_hermitian: bool = False, backend=None):
     return distance
 
 
+def entanglement_fidelity(
+    channel, nqubits: int, state=None, check_hermitian: bool = False, backend=None
+):
+    """Entanglement fidelity of a ``channel`` :math:`\\mathcal{E}` on ``state``
+    :math:`\\rho`, which is given by
+
+    .. math::
+        \\begin{align*}
+          F_{\\mathcal{E}} &= \\text{fidelity}(\\rho_{f}, \\rho) \\nonumber \\\\
+          &= \\tr(\\rho_{f} \\, \\rho)
+
+    where
+
+    .. math::
+        \\rho_{f} = \\mathcal{E}_{A} \\otimes I_{B}(\\rho)
+
+    is the state after the channel :math:`\\mathcal{E}` was applied to
+    partition :math:`A`.
+
+    Args:
+        channel (:class:`qibo.gates.channels.Channel`): quantum channel
+            acting on partition :math:`A`.
+        nqubits (int): total number of qubits in ``state``.
+        state (ndarray, optional): statevector or density matrix to be evolved
+            by ``channel``. If ``None``, defaults to the maximally entangled state
+            :math:`\\frac{1}{2^{n}} \\, \\sum_{k} \\, \\ket{k}\\ket{k}`, where
+            :math:`n` is ``nqubits``. Defaults to ``None``.
+        check_hermitian (bool, optional): if ``True``, checks if the final state
+            :math:`\\rho_{f}` is Hermitian. If ``False``, it assumes it is Hermitian.
+            Defaults to ``False``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
+
+    Returns:
+        float: Entanglement fidelity :math:`F_{\\mathcal{E}}`.
+    """
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    if isinstance(nqubits, int) is False:
+        raise_error(
+            TypeError, f"nqubits must be type int, but it is type {type(nqubits)}."
+        )
+
+    if nqubits <= 0:
+        raise_error(
+            ValueError, f"nqubits must be a positive integer, but it is {nqubits}."
+        )
+
+    if state is not None and (
+        (len(state.shape) not in [1, 2])
+        or (len(state) == 0)
+        or (len(state.shape) == 2 and state.shape[0] != state.shape[1])
+    ):
+        raise_error(
+            TypeError,
+            f"state must have dims either (k,) or (k,k), but have dims {state.shape}.",
+        )
+
+    if isinstance(check_hermitian, bool) is False:
+        raise_error(
+            TypeError,
+            f"check_hermitian must be type bool, but it is type {type(check_hermitian)}.",
+        )
+
+    if state is None:
+        state = backend.plus_density_matrix(nqubits)
+
+    # necessary because this function do support repeated execution,
+    # so it has to default to density matrices
+    if len(state.shape) == 1:
+        state = np.outer(state, np.conj(state))
+
+    state_final = backend.apply_channel_density_matrix(channel, state, nqubits)
+
+    entang_fidelity = fidelity(
+        state_final, state, check_hermitian=check_hermitian, backend=backend
+    )
+
+    return entang_fidelity
+
+
 def process_fidelity(channel, target=None, check_unitary: bool = False, backend=None):
     """Process fidelity between a quantum ``channel`` :math:`\\mathcal{E}` and a
     ``target`` unitary channel :math:`U`. The process fidelity is defined as
@@ -638,14 +738,16 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
 
     if target is None:
         # With no target, return process fidelity with Identity channel
-        fid = np.real(np.trace(channel)) / dim**2
-        fid = float(fid)
-        return fid
+        process_fid = np.real(np.trace(channel)) / dim**2
+        process_fid = float(process_fid)
 
-    fid = np.real(np.trace(np.dot(np.conj(np.transpose(channel)), target))) / dim**2
-    fid = float(fid)
+        return process_fid
 
-    return fid
+    process_fid = np.dot(np.transpose(np.conj(channel)), target)
+    process_fid = np.real(np.trace(process_fid)) / dim**2
+    process_fid = float(process_fid)
+
+    return process_fid
 
 
 def process_infidelity(channel, target=None, check_unitary: bool = False, backend=None):
@@ -875,13 +977,13 @@ def expressibility(circuit, t: int, samples: int, backend=None):
     return fid
 
 
-def _check_hermitian_or_not_gpu(matrix: np.ndarray, backend=None):
+def _check_hermitian_or_not_gpu(matrix, backend=None):
     """Checks if a given matrix is Hermitian and whether
     the backend is neither :class:`qibojit.backends.CupyBackend`
     nor :class:`qibojit.backends.CuQuantumBackend`.
 
     Args:
-        matrix (np.ndarray): input array.
+        matrix: input array.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
