@@ -375,7 +375,7 @@ def test_choi_to_chi(backend, normalize, order, pauli_order, test_superop):
 @pytest.mark.parametrize("test_a1", [test_a1])
 @pytest.mark.parametrize("test_a0", [test_a0])
 @pytest.mark.parametrize("test_stinespring", [test_stinespring])
-@pytest.mark.parametrize("nqubits", [1])
+@pytest.mark.parametrize("nqubits", [None, 1])
 @pytest.mark.parametrize("validate_cp", [False, True])
 @pytest.mark.parametrize("order", ["row", "column"])
 def test_choi_to_stinespring(
@@ -405,6 +405,8 @@ def test_choi_to_stinespring(
         nqubits=nqubits,
         backend=backend,
     )
+    if nqubits is None:
+        nqubits = 1
 
     v_0 = np.array([1, 0], dtype=complex)
 
@@ -490,7 +492,7 @@ def test_kraus_to_chi(backend, normalize, order, pauli_order, test_kraus):
     backend.assert_allclose(test_chi / aux, chi_matrix, atol=PRECISION_TOL)
 
 
-@pytest.mark.parametrize("nqubits", [1])
+@pytest.mark.parametrize("nqubits", [None, 1])
 def test_kraus_to_stinespring(backend, nqubits):
     with pytest.raises(ValueError):
         initial_state_env = random_statevector(4, backend=backend)
