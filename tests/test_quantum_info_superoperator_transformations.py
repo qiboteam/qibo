@@ -515,13 +515,17 @@ def test_kraus_to_stinespring(backend, nqubits):
     backend.assert_allclose(stinespring, test_stinespring, atol=PRECISION_TOL)
 
 
+@pytest.mark.parametrize("test_superop", [test_superop])
 @pytest.mark.parametrize("order", ["row", "column"])
-def test_liouville_to_choi(backend, order):
-    choi = liouville_to_choi(test_superop, order, backend)
+def test_liouville_to_choi(backend, order, test_superop):
+    test_superop = backend.cast(test_superop, dtype=test_superop.dtype)
+
+    choi = liouville_to_choi(test_superop, order=order, backend=backend)
 
     axes = [1, 2] if order == "row" else [0, 3]
-    test_choi = np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
-    test_choi = backend.cast(test_choi, dtype=test_choi.dtype)
+    test_choi = np.reshape(test_superop, [2] * 4)
+    test_choi = np.swapaxes(test_choi, *axes)
+    test_choi = np.reshape(test_choi, (4, 4))
 
     backend.assert_allclose(choi, test_choi, atol=PRECISION_TOL)
 
