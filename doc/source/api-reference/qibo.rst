@@ -1259,6 +1259,12 @@ Bures distance
 .. autofunction:: qibo.quantum_info.bures_distance
 
 
+Entanglement fidelity
+"""""""""""""""""""""
+
+.. autofunction::qibo.quantum_info.entanglement_fidelity
+
+
 Process fidelity
 """"""""""""""""
 
