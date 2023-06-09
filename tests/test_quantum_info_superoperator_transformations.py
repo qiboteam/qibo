@@ -121,9 +121,7 @@ def test_vectorization(backend, nqubits, order):
     matrix = np.arange(dim**2).reshape((dim, dim))
     matrix = vectorization(matrix, order, backend=backend)
 
-    backend.assert_allclose(
-        backend.calculate_norm(matrix - matrix_test) < PRECISION_TOL, True
-    )
+    backend.assert_allclose(matrix, matrix_test, atol=PRECISION_TOL)
 
 
 @pytest.mark.parametrize("order", ["row", "column", "system"])
@@ -148,9 +146,7 @@ def test_unvectorization(backend, nqubits, order):
     matrix = vectorization(matrix_test, order, backend)
     matrix = unvectorization(matrix, order, backend)
 
-    backend.assert_allclose(
-        backend.calculate_norm(matrix_test - matrix) < PRECISION_TOL, True
-    )
+    backend.assert_allclose(matrix_test, matrix, atol=PRECISION_TOL)
 
 
 test_a0 = np.sqrt(0.4) * matrices.X
@@ -218,9 +214,7 @@ def test_liouville_to_choi(backend, order):
     test_choi = np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
     test_choi = backend.cast(test_choi, dtype=test_choi.dtype)
 
-    backend.assert_allclose(
-        backend.calculate_norm(choi - test_choi) < PRECISION_TOL, True
-    )
+    backend.assert_allclose(choi, test_choi, atol=PRECISION_TOL)
 
 
 @pytest.mark.parametrize("test_superop", [test_superop])
@@ -233,9 +227,7 @@ def test_choi_to_liouville(backend, order, test_superop):
 
     liouville = choi_to_liouville(test_choi, order=order, backend=backend)
 
-    backend.assert_allclose(
-        backend.calculate_norm(liouville - test_superop) < PRECISION_TOL, True
-    )
+    backend.assert_allclose(liouville, test_superop, atol=PRECISION_TOL)
 
 
 @pytest.mark.parametrize("test_kraus_right", [test_kraus_right])
@@ -280,14 +272,8 @@ def test_choi_to_kraus(
     test_evolution_a0 = test_a0 @ state @ np.transpose(np.conj(test_a0))
     test_evolution_a1 = test_a1 @ state @ np.transpose(np.conj(test_a1))
 
-    backend.assert_allclose(
-        backend.calculate_norm(evolution_a0 - test_evolution_a0) < 2 * PRECISION_TOL,
-        True,
-    )
-    backend.assert_allclose(
-        backend.calculate_norm(evolution_a1 - test_evolution_a1) < 2 * PRECISION_TOL,
-        True,
-    )
+    backend.assert_allclose(evolution_a0, test_evolution_a0, atol=2 * PRECISION_TOL)
+    backend.assert_allclose(evolution_a1, test_evolution_a1, atol=2 * PRECISION_TOL)
 
     if validate_cp and order == "row":
         (kraus_left, kraus_right), _ = choi_to_kraus(
@@ -307,10 +293,7 @@ def test_choi_to_kraus(
                 test_coeff**2 * test_left @ state @ np.transpose(np.conj(test_right))
             )
 
-            backend.assert_allclose(
-                backend.calculate_norm(evolution - test_evolution) < 2 * PRECISION_TOL,
-                True,
-            )
+            backend.assert_allclose(evolution, test_evolution, atol=2 * PRECISION_TOL)
 
 
 @pytest.mark.parametrize("order", ["row", "column"])
@@ -331,9 +314,7 @@ def test_kraus_to_liouville(backend, order, test_superop):
 
     liouville = kraus_to_liouville(test_kraus, order=order, backend=backend)
 
-    backend.assert_allclose(
-        backend.calculate_norm(liouville - test_superop) < PRECISION_TOL, True
-    )
+    backend.assert_allclose(liouville, test_superop, atol=PRECISION_TOL)
 
 
 @pytest.mark.parametrize("test_a1", [test_a1])
@@ -358,12 +339,8 @@ def test_liouville_to_kraus(backend, order, test_a0, test_a1):
     test_evolution_a0 = test_a0 @ state @ np.transpose(np.conj(test_a0))
     test_evolution_a1 = test_a1 @ state @ np.transpose(np.conj(test_a1))
 
-    backend.assert_allclose(
-        backend.calculate_norm(evolution_a0 - test_evolution_a0) < PRECISION_TOL, True
-    )
-    backend.assert_allclose(
-        backend.calculate_norm(evolution_a1 - test_evolution_a1) < PRECISION_TOL, True
-    )
+    backend.assert_allclose(evolution_a0, test_evolution_a0, atol=PRECISION_TOL)
+    backend.assert_allclose(evolution_a1, test_evolution_a1, atol=PRECISION_TOL)
 
 
 @pytest.mark.parametrize("test_superop", [test_superop])
@@ -386,9 +363,7 @@ def test_pauli_to_liouville(backend, normalize, order, pauli_order, test_superop
         test_pauli / aux, normalize, order, pauli_order, backend=backend
     )
 
-    backend.assert_allclose(
-        backend.calculate_norm(test_superop - super_op) < PRECISION_TOL, True
-    )
+    backend.assert_allclose(test_superop, super_op, atol=PRECISION_TOL)
 
 
 @pytest.mark.parametrize("test_superop", [test_superop])
@@ -415,9 +390,7 @@ def test_liouville_to_pauli(backend, normalize, order, pauli_order, test_superop
         backend=backend,
     )
 
-    backend.assert_allclose(
-        backend.calculate_norm(test_pauli / aux - pauli_op) < PRECISION_TOL, True
-    )
+    backend.assert_allclose(test_pauli / aux, pauli_op, atol=PRECISION_TOL)
 
 
 @pytest.mark.parametrize("test_superop", [test_superop])
@@ -439,9 +412,7 @@ def test_pauli_to_choi(backend, normalize, order, pauli_order, test_superop):
     axes = [1, 2] if order == "row" else [0, 3]
     test_choi = np.swapaxes(np.reshape(test_superop, [2] * 4), *axes).reshape([4, 4])
 
-    backend.assert_allclose(
-        backend.calculate_norm(test_choi - choi_super_op) < PRECISION_TOL, True
-    )
+    backend.assert_allclose(test_choi, choi_super_op, atol=PRECISION_TOL)
 
 
 @pytest.mark.parametrize("test_superop", [test_superop])
@@ -465,9 +436,7 @@ def test_choi_to_pauli(backend, normalize, order, pauli_order, test_superop):
         test_choi, normalize, order, pauli_order=pauli_order, backend=backend
     )
 
-    backend.assert_allclose(
-        backend.calculate_norm(test_pauli - pauli_op) < PRECISION_TOL, True
-    )
+    backend.assert_allclose(test_pauli, pauli_op, atol=PRECISION_TOL)
 
 
 @pytest.mark.parametrize("test_a1", [test_a1])
@@ -506,14 +475,8 @@ def test_pauli_to_kraus(backend, normalize, order, pauli_order, test_a0, test_a1
     test_evolution_a0 = test_a0 @ state @ np.transpose(np.conj(test_a0))
     test_evolution_a1 = test_a1 @ state @ np.transpose(np.conj(test_a1))
 
-    backend.assert_allclose(
-        backend.calculate_norm(evolution_a0 - test_evolution_a0) < 2 * PRECISION_TOL,
-        True,
-    )
-    backend.assert_allclose(
-        backend.calculate_norm(evolution_a1 - test_evolution_a1) < 2 * PRECISION_TOL,
-        True,
-    )
+    backend.assert_allclose(evolution_a0, test_evolution_a0, atol=2 * PRECISION_TOL)
+    backend.assert_allclose(evolution_a1, test_evolution_a1, atol=2 * PRECISION_TOL)
 
 
 @pytest.mark.parametrize("test_kraus", [test_kraus])
@@ -531,9 +494,7 @@ def test_kraus_to_pauli(backend, normalize, order, pauli_order, test_kraus):
         test_kraus, normalize, order, pauli_order, backend=backend
     )
 
-    backend.assert_allclose(
-        backend.calculate_norm(test_pauli / aux - pauli_op) < PRECISION_TOL, True
-    )
+    backend.assert_allclose(test_pauli / aux, pauli_op, atol=PRECISION_TOL)
 
 
 @pytest.mark.parametrize("test_superop", [test_superop])
@@ -561,9 +522,7 @@ def test_choi_to_chi(backend, normalize, order, pauli_order, test_superop):
         backend=backend,
     )
 
-    backend.assert_allclose(
-        backend.calculate_norm(test_chi - chi_matrix) < PRECISION_TOL, True
-    )
+    backend.assert_allclose(test_chi, chi_matrix, atol=PRECISION_TOL)
 
 
 @pytest.mark.parametrize("test_kraus", [test_kraus])
@@ -581,9 +540,7 @@ def test_kraus_to_chi(backend, normalize, order, pauli_order, test_kraus):
         test_kraus, normalize, order, pauli_order, backend=backend
     )
 
-    backend.assert_allclose(
-        backend.calculate_norm(test_chi / aux - chi_matrix) < PRECISION_TOL, True
-    )
+    backend.assert_allclose(test_chi / aux, chi_matrix, atol=PRECISION_TOL)
 
 
 @pytest.mark.parametrize("nqubits", [1])
@@ -630,9 +587,7 @@ def test_liouville_to_chi(backend, normalize, order, pauli_order, test_superop):
         test_superop, normalize, order, pauli_order, backend=backend
     )
 
-    backend.assert_allclose(
-        backend.calculate_norm(test_chi / aux - chi_matrix) < PRECISION_TOL, True
-    )
+    backend.assert_allclose(test_chi / aux, chi_matrix, atol=PRECISION_TOL)
 
 
 @pytest.mark.parametrize("pauli_order", ["IXYZ", "IZXY"])
@@ -652,9 +607,7 @@ def test_pauli_to_chi(backend, normalize, order, pauli_order):
     )
 
     aux = 1.0 if normalize == False else dim
-    backend.assert_allclose(
-        backend.calculate_norm(test_chi / aux - chi_matrix) < PRECISION_TOL, True
-    )
+    backend.assert_allclose(test_chi / aux, chi_matrix, atol=PRECISION_TOL)
 
 
 @pytest.mark.parametrize("test_superop", [test_superop])
@@ -676,9 +629,7 @@ def test_chi_to_choi(backend, normalize, order, pauli_order, test_superop):
         test_chi / aux, normalize, order, pauli_order, backend=backend
     )
 
-    backend.assert_allclose(
-        backend.calculate_norm(test_choi - choi_super_op) < PRECISION_TOL, True
-    )
+    backend.assert_allclose(test_choi, choi_super_op, atol=PRECISION_TOL)
 
 
 @pytest.mark.parametrize("test_superop", [test_superop])
@@ -697,9 +648,7 @@ def test_chi_to_liouville(backend, normalize, order, pauli_order, test_superop):
         test_chi / aux, normalize, order, pauli_order, backend=backend
     )
 
-    backend.assert_allclose(
-        backend.calculate_norm(test_superop - super_op) < PRECISION_TOL, True
-    )
+    backend.assert_allclose(test_superop, super_op, atol=PRECISION_TOL)
 
 
 @pytest.mark.parametrize("pauli_order", ["IXYZ", "IZXY"])
@@ -718,9 +667,7 @@ def test_chi_to_pauli(backend, normalize, order, pauli_order):
         test_chi / aux, normalize, order, pauli_order, backend=backend
     )
 
-    backend.assert_allclose(
-        backend.calculate_norm(test_pauli - pauli_op) < PRECISION_TOL, True
-    )
+    backend.assert_allclose(test_pauli, pauli_op, atol=PRECISION_TOL)
 
 
 @pytest.mark.parametrize("test_a1", [test_a1])
@@ -755,14 +702,8 @@ def test_chi_to_kraus(backend, normalize, order, pauli_order, test_a0, test_a1):
     test_evolution_a0 = test_a0 @ state @ np.transpose(np.conj(test_a0))
     test_evolution_a1 = test_a1 @ state @ np.transpose(np.conj(test_a1))
 
-    backend.assert_allclose(
-        backend.calculate_norm(evolution_a0 - test_evolution_a0) < 2 * PRECISION_TOL,
-        True,
-    )
-    backend.assert_allclose(
-        backend.calculate_norm(evolution_a1 - test_evolution_a1) < 2 * PRECISION_TOL,
-        True,
-    )
+    backend.assert_allclose(evolution_a0, test_evolution_a0, atol=2 * PRECISION_TOL)
+    backend.assert_allclose(evolution_a1, test_evolution_a1, atol=2 * PRECISION_TOL)
 
 
 @pytest.mark.parametrize("test_superop", [test_superop])
@@ -804,6 +745,36 @@ def test_stinespring_to_liouville(
     test_superop = backend.cast(test_superop, dtype=test_superop.dtype)
 
     backend.assert_allclose(super_op, test_superop, atol=PRECISION_TOL)
+
+
+@pytest.mark.parametrize("test_superop", [test_superop])
+@pytest.mark.parametrize("pauli_order", ["IXYZ", "IZXY"])
+@pytest.mark.parametrize("order", ["row", "column"])
+@pytest.mark.parametrize("normalize", [False, True])
+@pytest.mark.parametrize("nqubits", [None, 1])
+@pytest.mark.parametrize("dim_env", [2])
+@pytest.mark.parametrize("stinespring", [test_stinespring])
+def test_stinespring_to_pauli(
+    backend, stinespring, dim_env, nqubits, normalize, order, pauli_order, test_superop
+):
+    test_pauli = pauli_superop(pauli_order)
+    dim = int(np.sqrt(test_pauli.shape[0]))
+    aux = 1.0 if normalize == False else dim
+
+    stinespring = backend.cast(stinespring, dtype=stinespring.dtype)
+    test_pauli = backend.cast(test_pauli / aux, dtype=test_pauli.dtype)
+
+    super_op_pauli = stinespring_to_pauli(
+        stinespring,
+        dim_env,
+        nqubits=nqubits,
+        normalize=normalize,
+        order=order,
+        pauli_order=pauli_order,
+        backend=backend,
+    )
+
+    backend.assert_allclose(super_op_pauli, test_pauli, atol=PRECISION_TOL)
 
 
 @pytest.mark.parametrize("nqubits", [None, 1])
@@ -851,8 +822,6 @@ def test_stinespring_to_kraus(backend, stinespring, dim_env, nqubits):
 def test_kraus_to_unitaries(backend, order):
     test_a0 = np.sqrt(0.4) * matrices.X
     test_a1 = np.sqrt(0.6) * matrices.Y
-    # test_a0 = backend.cast(test_a0, dtype=test_a0.dtype)
-    # test_a1 = backend.cast(test_a1, dtype=test_a1.dtype)
     test_kraus = [((0,), test_a0), ((0,), test_a1)]
 
     with pytest.raises(TypeError):
@@ -872,9 +841,7 @@ def test_kraus_to_unitaries(backend, order):
 
     operator = kraus_to_liouville(unitaries, backend=backend)
 
-    backend.assert_allclose(
-        backend.calculate_norm(target - operator) < 2 * PRECISION_TOL, True
-    )
+    backend.assert_allclose(target, operator, atol=2 * PRECISION_TOL)
 
     # warning coverage
     test_a0 = np.sqrt(0.4) * matrices.X
@@ -914,6 +881,4 @@ def test_reshuffling(backend, order, test_superop):
     reshuffled = _reshuffling(test_choi, order, backend=backend)
     reshuffled = _reshuffling(reshuffled, order, backend=backend)
 
-    backend.assert_allclose(
-        np.linalg.norm(reshuffled - test_choi) < PRECISION_TOL, True
-    )
+    backend.assert_allclose(reshuffled, test_choi, atol=PRECISION_TOL)

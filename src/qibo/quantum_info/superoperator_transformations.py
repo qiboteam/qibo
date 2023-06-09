@@ -1317,6 +1317,42 @@ def stinespring_to_liouville(
     return super_op
 
 
+def stinespring_to_pauli(
+    stinespring,
+    dim_env: int,
+    initial_state_env=None,
+    nqubits: Optional[int] = None,
+    normalize: bool = False,
+    order: str = "row",
+    pauli_order: str = "IXYZ",
+    backend=None,
+):
+    kraus_ops = stinespring_to_kraus(
+        stinespring,
+        dim_env,
+        initial_state_env=initial_state_env,
+        nqubits=nqubits,
+        backend=backend,
+    )
+
+    if nqubits is None:
+        nqubits = int(np.log2(kraus_ops[0].shape[0]))
+
+    nqubits = [tuple(range(nqubits)) for _ in range(len(kraus_ops))]
+
+    kraus_ops = list(zip(nqubits, kraus_ops))
+
+    super_op_pauli = kraus_to_pauli(
+        kraus_ops,
+        normalize=normalize,
+        order=order,
+        pauli_order=pauli_order,
+        backend=backend,
+    )
+
+    return super_op_pauli
+
+
 def stinespring_to_kraus(
     stinespring,
     dim_env: int,
