@@ -2,8 +2,34 @@ import numpy as np
 import pytest
 
 from qibo import gates
+from qibo.config import PRECISION_TOL
 from qibo.models import Circuit
-from qibo.quantum_info import *
+from qibo.quantum_info.metrics import (
+    average_gate_fidelity,
+    bures_angle,
+    bures_distance,
+    concurrence,
+    entanglement_entropy,
+    entanglement_of_formation,
+    entangling_capability,
+    entropy,
+    expressibility,
+    fidelity,
+    gate_error,
+    hilbert_schmidt_distance,
+    impurity,
+    infidelity,
+    meyer_wallach_entanglement,
+    process_fidelity,
+    process_infidelity,
+    purity,
+    trace_distance,
+)
+from qibo.quantum_info.random_ensembles import (
+    random_density_matrix,
+    random_statevector,
+    random_unitary,
+)
 
 
 def test_purity_and_impurity(backend):

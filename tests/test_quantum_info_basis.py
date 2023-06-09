@@ -1,9 +1,19 @@
+"""Tests for quantum_info.basis module."""
+
+from functools import reduce
+from itertools import product
+
 import numpy as np
 import pytest
 
 from qibo import matrices
 from qibo.config import PRECISION_TOL
-from qibo.quantum_info import *
+from qibo.quantum_info import (
+    comp_basis_to_pauli,
+    pauli_basis,
+    pauli_to_comp_basis,
+    vectorization,
+)
 
 
 @pytest.mark.parametrize("pauli_order", ["IXYZ", "IZXY"])
