@@ -765,11 +765,14 @@ def test_chi_to_kraus(backend, normalize, order, pauli_order, test_a0, test_a1):
     )
 
 
+@pytest.mark.parametrize("test_superop", [test_superop])
 @pytest.mark.parametrize("order", ["row", "column"])
 @pytest.mark.parametrize("nqubits", [None, 1])
 @pytest.mark.parametrize("dim_env", [2])
 @pytest.mark.parametrize("stinespring", [test_stinespring])
-def test_stinespring_to_choi(backend, stinespring, dim_env, nqubits, order):
+def test_stinespring_to_choi(
+    backend, stinespring, dim_env, nqubits, order, test_superop
+):
     stinespring = backend.cast(stinespring, dtype=stinespring.dtype)
     choi_super_op = stinespring_to_choi(
         stinespring, dim_env=dim_env, nqubits=nqubits, order=order, backend=backend
@@ -782,6 +785,25 @@ def test_stinespring_to_choi(backend, stinespring, dim_env, nqubits, order):
     test_choi = backend.cast(test_choi, dtype=test_choi.dtype)
 
     backend.assert_allclose(choi_super_op, test_choi, atol=PRECISION_TOL)
+
+
+@pytest.mark.parametrize("test_superop", [test_superop])
+@pytest.mark.parametrize("order", ["row", "column"])
+@pytest.mark.parametrize("nqubits", [None, 1])
+@pytest.mark.parametrize("dim_env", [2])
+@pytest.mark.parametrize("stinespring", [test_stinespring])
+def test_stinespring_to_liouville(
+    backend, stinespring, dim_env, nqubits, order, test_superop
+):
+    stinespring = backend.cast(stinespring, dtype=stinespring.dtype)
+
+    super_op = stinespring_to_liouville(
+        stinespring, dim_env, nqubits=nqubits, order=order, backend=backend
+    )
+
+    test_superop = backend.cast(test_superop, dtype=test_superop.dtype)
+
+    backend.assert_allclose(super_op, test_superop, atol=PRECISION_TOL)
 
 
 @pytest.mark.parametrize("nqubits", [None, 1])

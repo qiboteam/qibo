@@ -1272,12 +1272,14 @@ def stinespring_to_choi(
     kraus_ops = stinespring_to_kraus(
         stinespring,
         dim_env,
-        initial_state_env,
-        nqubits,
+        initial_state_env=initial_state_env,
+        nqubits=nqubits,
         backend=backend,
     )
 
-    nqubits = int(np.log2(kraus_ops[0].shape[0]))
+    if nqubits is None:
+        nqubits = int(np.log2(kraus_ops[0].shape[0]))
+
     nqubits = [tuple(range(nqubits)) for _ in range(len(kraus_ops))]
 
     kraus_ops = list(zip(nqubits, kraus_ops))
@@ -1285,6 +1287,34 @@ def stinespring_to_choi(
     choi_super_op = kraus_to_choi(kraus_ops, order=order, backend=backend)
 
     return choi_super_op
+
+
+def stinespring_to_liouville(
+    stinespring,
+    dim_env: int,
+    initial_state_env=None,
+    nqubits: Optional[int] = None,
+    order: str = "row",
+    backend=None,
+):
+    kraus_ops = stinespring_to_kraus(
+        stinespring,
+        dim_env,
+        initial_state_env=initial_state_env,
+        nqubits=nqubits,
+        backend=backend,
+    )
+
+    if nqubits is None:
+        nqubits = int(np.log2(kraus_ops[0].shape[0]))
+
+    nqubits = [tuple(range(nqubits)) for _ in range(len(kraus_ops))]
+
+    kraus_ops = list(zip(nqubits, kraus_ops))
+
+    super_op = kraus_to_liouville(kraus_ops, order=order, backend=backend)
+
+    return super_op
 
 
 def stinespring_to_kraus(
