@@ -337,6 +337,37 @@ def test_choi_to_chi(backend, normalize, order, pauli_order, test_superop):
     backend.assert_allclose(test_chi, chi_matrix, atol=PRECISION_TOL)
 
 
+@pytest.mark.parametrize("test_stinespring", [test_stinespring])
+@pytest.mark.parametrize("nqubits", [1])
+@pytest.mark.parametrize("validate_cp", [False, True])
+@pytest.mark.parametrize("order", ["row", "column"])
+def test_choi_to_stinespring(backend, order, validate_cp, nqubits, test_stinespring):
+    if validate_cp is True:
+        with pytest.raises(NotImplementedError):
+            test = choi_to_stinespring(
+                test_non_CP,
+                order=order,
+                validate_cp=validate_cp,
+                nqubits=nqubits,
+                backend=backend,
+            )
+
+    test_stinespring = backend.cast(test_stinespring, dtype=test_stinespring.dtype)
+
+    axes = [1, 2] if order == "row" else [0, 3]
+    test_choi = np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
+    test_choi = backend.cast(test_choi, dtype=test_choi.dtype)
+    stinespring = choi_to_stinespring(
+        test_choi,
+        order=order,
+        validate_cp=validate_cp,
+        nqubits=nqubits,
+        backend=backend,
+    )
+
+    backend.assert_allclose(stinespring, test_stinespring, atol=PRECISION_TOL)
+
+
 @pytest.mark.parametrize("order", ["row", "column"])
 def test_kraus_to_choi(backend, order):
     choi = kraus_to_choi(test_kraus, order=order, backend=backend)
