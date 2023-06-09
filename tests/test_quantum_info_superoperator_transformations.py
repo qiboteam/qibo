@@ -600,10 +600,10 @@ def test_pauli_to_chi(backend, normalize, order, pauli_order):
     aux = dim**2 if normalize == False else dim
 
     test_chi = backend.cast(test_chi, dtype=test_chi.dtype)
-    test_pauli = backend.cast(test_pauli, dtype=test_pauli.dtype)
+    test_pauli = backend.cast(test_pauli / aux, dtype=test_pauli.dtype)
 
     chi_matrix = pauli_to_chi(
-        test_pauli / aux, normalize, order, pauli_order, backend=backend
+        test_pauli, normalize, order, pauli_order, backend=backend
     )
 
     aux = 1.0 if normalize == False else dim
@@ -747,7 +747,6 @@ def test_stinespring_to_liouville(
     backend.assert_allclose(super_op, test_superop, atol=PRECISION_TOL)
 
 
-@pytest.mark.parametrize("test_superop", [test_superop])
 @pytest.mark.parametrize("pauli_order", ["IXYZ", "IZXY"])
 @pytest.mark.parametrize("order", ["row", "column"])
 @pytest.mark.parametrize("normalize", [False, True])
@@ -755,7 +754,7 @@ def test_stinespring_to_liouville(
 @pytest.mark.parametrize("dim_env", [2])
 @pytest.mark.parametrize("stinespring", [test_stinespring])
 def test_stinespring_to_pauli(
-    backend, stinespring, dim_env, nqubits, normalize, order, pauli_order, test_superop
+    backend, stinespring, dim_env, nqubits, normalize, order, pauli_order
 ):
     test_pauli = pauli_superop(pauli_order)
     dim = int(np.sqrt(test_pauli.shape[0]))
@@ -816,6 +815,35 @@ def test_stinespring_to_kraus(backend, stinespring, dim_env, nqubits):
 
     for kraus, test_kraus in zip(test, [test_a0, test_a1]):
         backend.assert_allclose(kraus, test_kraus, atol=PRECISION_TOL)
+
+
+@pytest.mark.parametrize("pauli_order", ["IXYZ", "IZXY"])
+@pytest.mark.parametrize("order", ["row", "column"])
+@pytest.mark.parametrize("normalize", [False, True])
+@pytest.mark.parametrize("nqubits", [None, 1])
+@pytest.mark.parametrize("dim_env", [2])
+@pytest.mark.parametrize("stinespring", [test_stinespring])
+def test_stinespring_to_chi(
+    backend, stinespring, dim_env, nqubits, normalize, order, pauli_order
+):
+    test_chi = chi_superop(pauli_order)
+    dim = int(np.sqrt(test_chi.shape[0]))
+    aux = 1.0 if normalize == False else dim
+
+    stinespring = backend.cast(stinespring, dtype=stinespring.dtype)
+    test_chi = backend.cast(test_chi, dtype=test_chi.dtype)
+
+    chi_matrix = stinespring_to_chi(
+        stinespring,
+        dim_env,
+        nqubits=nqubits,
+        normalize=normalize,
+        order=order,
+        pauli_order=pauli_order,
+        backend=backend,
+    )
+
+    backend.assert_allclose(test_chi / aux, chi_matrix, atol=PRECISION_TOL)
 
 
 @pytest.mark.parametrize("order", ["row", "column"])
