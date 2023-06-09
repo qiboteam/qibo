@@ -1445,6 +1445,12 @@ Choi to Chi-matrix
 .. autofunction:: qibo.quantum_info.choi_to_chi
 
 
+Choi to Stinespring
+"""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.choi_to_stinespring
+
+
 Kraus to Choi
 """""""""""""
 
@@ -1467,6 +1473,12 @@ Kraus to Chi-matrix
 """""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.kraus_to_chi
+
+
+Kraus to Stinespring
+""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.kraus_to_stinespring
 
 
 Liouville to Choi
@@ -1504,6 +1516,12 @@ Liouville to Chi-matrix
 .. autofunction:: qibo.quantum_info.liouville_to_chi
 
 
+Liouville to Stinespring
+""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.liouville_to_stinespring
+
+
 Pauli-Liouville to Liouville
 """"""""""""""""""""""""""""
 
@@ -1527,6 +1545,12 @@ Pauli-Liouville to Chi-matrix
 """""""""""""""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.pauli_to_chi
+
+
+Pauli-Liouville to Stinespring
+""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.pauli_to_stinespring
 
 
 Chi-matrix to Choi
@@ -1569,6 +1593,12 @@ Chi-matrix to Kraus
     (CP) and Hermitian. However, that may lead to erroneous outputs if ``choi_super_op``
     is not guaranteed to be CP. We advise users to either set this flag carefully or leave
     it in its default setting (``validate_cp=True``).
+
+
+Chi-matrix to Stinespring
+"""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.chi_to_stinespring
 
 
 Kraus operators as probabilistic sum of unitaries
