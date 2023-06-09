@@ -1297,6 +1297,34 @@ def stinespring_to_liouville(
     order: str = "row",
     backend=None,
 ):
+    """Converts Stinespring representation :math:`U_{0}` of quantum channel
+    to its Liouville representation :math:`\\mathcal{E}` via Stinespring Dilation,
+    i.e.
+
+    .. math::
+        \\mathcal{E} = \\text{kraus_to_liouville}(\\text{stinespring_to_kraus}(U_{0}))
+
+    Args:
+        stinespring (ndarray): quantum channel in the Stinespring representation.
+        dim_env (int): dimension of the Hilbert space of the environment.
+        initial_state_env (ndarray, optional): statevector representing the
+            initial state of the enviroment. If ``None``, it assumes the
+            environment in its ground state. Defaults to ``None``.
+        nqubits (int, optional): number of qubits in the system. Defaults to ``None``.
+        order (str, optional): If ``"row"``, reshuffling is performed
+            with respect to row-wise vectorization. If ``"column"``,
+            reshuffling is performed with respect to column-wise
+            vectorization. If ``"system"``, operator is converted to
+            a representation based on row vectorization, reshuffled,
+            and then converted back to its representation with
+            respect to system-wise vectorization. Defaults to ``"row"``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        ndarray: Liouville representation of quantum channel.
+    """
     kraus_ops = stinespring_to_kraus(
         stinespring,
         dim_env,
