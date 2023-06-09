@@ -1439,6 +1439,87 @@ def chi_to_kraus(
     return kraus_ops, coefficients
 
 
+def chi_to_stinespring(
+    chi_matrix,
+    normalize: bool = False,
+    order: str = "row",
+    pauli_order: str = "IXYZ",
+    precision_tol: Optional[float] = None,
+    validate_cp: bool = True,
+    nqubits: Optional[int] = None,
+    initial_state_env=None,
+    backend=None,
+):
+    """Converts :math:`\\chi`-representation of quantum channel
+    to its Stinespring representation :math:`U_{0}`.
+    It uses the Choi representation :math:`\\Lambda` as intermediate step.
+
+    Args:
+        chi_matrix: Chi-matrix representation of quantum channel.
+        normalize (bool, optional): If ``True`` assumes the normalized
+            Pauli basis. If ``False``, it assumes unnormalized
+            Pauli basis. Defaults to ``False``.
+        order (str, optional): If ``"row"``, reshuffling is performed
+            with respect to row-wise vectorization. If ``"column"``,
+            reshuffling is performed with respect to column-wise
+            vectorization. If ``"system"``, operator is converted to
+            a representation based on row vectorization, reshuffled,
+            and then converted back to its representation with
+            respect to system-wise vectorization. Defaults to ``"row"``.
+        pauli_order (str, optional): corresponds to the order of 4 single-qubit
+            Pauli elements. Defaults to "IXYZ".
+        precision_tol (float, optional): Precision tolerance for eigenvalues
+            found in the spectral decomposition problem. Any eigenvalue
+            :math:`\\lambda <` ``precision_tol`` is set to 0 (zero).
+            If ``None``, ``precision_tol`` defaults to
+            ``qibo.config.PRECISION_TOL=1e-8``. Defaults to ``None``.
+        order (str, optional): If ``"row"``, reshuffling is performed
+            with respect to row-wise vectorization. If ``"column"``,
+            reshuffling is performed with respect to column-wise
+            vectorization. If ``"system"``, operator is converted to
+            a representation based on row vectorization, reshuffled,
+            and then converted back to its representation with
+            respect to system-wise vectorization. Defaults to ``"row"``.
+        validate_cp (bool, optional): If ``True``, checks if ``choi_super_op``
+            is a completely positive map. If ``False``, it assumes that
+            ``choi_super_op`` is completely positive (and Hermitian).
+            Defaults to ``True``.
+        nqubits (int, optional): total number of qubits in the system that is
+            interacting with the environment. Must be equal or greater than
+            the number of qubits ``kraus_ops`` acts on. If ``None``,
+            defaults to the number of qubits in ``kraus_ops``.
+            Defauts to ``None``.
+        initial_state_env (ndarray, optional): statevector representing the
+            initial state of the enviroment. If ``None``, it assumes the
+            environment in its ground state. Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        ndarray: Stinespring representation of quantum channel.
+    """
+    choi_super_op = chi_to_choi(
+        chi_matrix,
+        normalize=normalize,
+        order=order,
+        pauli_order=pauli_order,
+        backend=backend,
+    )
+
+    stinespring = choi_to_stinespring(
+        choi_super_op,
+        precision_tol=precision_tol,
+        order=order,
+        validate_cp=validate_cp,
+        nqubits=nqubits,
+        initial_state_env=initial_state_env,
+        backend=backend,
+    )
+
+    return stinespring
+
+
 def stinespring_to_choi(
     stinespring,
     dim_env: int,
