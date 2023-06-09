@@ -5,7 +5,18 @@ import pytest
 
 from qibo import gates
 from qibo.models import Circuit
-from qibo.noise import *
+from qibo.noise import (
+    CompositeNoiseModel,
+    CustomError,
+    DepolarizingError,
+    KrausError,
+    NoiseModel,
+    PauliError,
+    ReadoutError,
+    ResetError,
+    ThermalRelaxationError,
+    UnitaryError,
+)
 from qibo.quantum_info import (
     random_density_matrix,
     random_statevector,
