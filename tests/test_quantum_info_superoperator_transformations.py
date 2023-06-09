@@ -319,11 +319,9 @@ def test_kraus_to_choi(backend, order):
 
     axes = [1, 2] if order == "row" else [0, 3]
     test_choi = np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
-    test_choi = backend.cast(test_choi)
+    test_choi = backend.cast(test_choi, dtype=test_choi.dtype)
 
-    backend.assert_allclose(
-        backend.calculate_norm(choi - test_choi) < PRECISION_TOL, True
-    )
+    backend.assert_allclose(choi, test_choi, atol=PRECISION_TOL)
 
 
 @pytest.mark.parametrize("test_superop", [test_superop])
@@ -765,6 +763,25 @@ def test_chi_to_kraus(backend, normalize, order, pauli_order, test_a0, test_a1):
         backend.calculate_norm(evolution_a1 - test_evolution_a1) < 2 * PRECISION_TOL,
         True,
     )
+
+
+@pytest.mark.parametrize("order", ["row", "column"])
+@pytest.mark.parametrize("nqubits", [None, 1])
+@pytest.mark.parametrize("dim_env", [2])
+@pytest.mark.parametrize("stinespring", [test_stinespring])
+def test_stinespring_to_choi(backend, stinespring, dim_env, nqubits, order):
+    stinespring = backend.cast(stinespring, dtype=stinespring.dtype)
+    choi_super_op = stinespring_to_choi(
+        stinespring, dim_env=dim_env, nqubits=nqubits, order=order, backend=backend
+    )
+
+    axes = [1, 2] if order == "row" else [0, 3]
+    test_choi = np.reshape(
+        np.swapaxes(np.reshape(test_superop, [2] * 4), *axes), [4, 4]
+    )
+    test_choi = backend.cast(test_choi, dtype=test_choi.dtype)
+
+    backend.assert_allclose(choi_super_op, test_choi, atol=PRECISION_TOL)
 
 
 @pytest.mark.parametrize("nqubits", [None, 1])

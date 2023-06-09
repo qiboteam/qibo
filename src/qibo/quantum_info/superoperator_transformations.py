@@ -32,7 +32,7 @@ def vectorization(state, order: str = "row", backend=None):
         order (str, optional): If ``"row"``, vectorization is performed
             row-wise. If ``"column"``, vectorization is performed
             column-wise. If ``"system"``, a block-vectorization is
-            performed. Default is ``"row"``.
+            performed. Defaults to ``"row"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -104,7 +104,7 @@ def unvectorization(state, order: str = "row", backend=None):
         order (str, optional): If ``"row"``, unvectorization is performed
             row-wise. If ``"column"``, unvectorization is performed
             column-wise. If ``"system"``, system-wise vectorization is
-            performed. Default is ``"row"``.
+            performed. Defaults to ``"row"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -176,7 +176,7 @@ def choi_to_liouville(choi_super_op, order: str = "row", backend=None):
             vectorization. If ``"system"``, operator is converted to
             a representation based on row vectorization, reshuffled,
             and then converted back to its representation with
-            respect to system-wise vectorization. Default is ``"row"``.
+            respect to system-wise vectorization. Defaults to ``"row"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -207,7 +207,7 @@ def choi_to_pauli(
             row-vectorization. If ``"column"``, it assumes column-vectorization.
             Defaults to ``"row"``.
         pauli_order (str, optional): corresponds to the order of 4 single-qubit
-            Pauli elements. Default is "IXYZ".
+            Pauli elements. Defaults to "IXYZ".
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -274,7 +274,7 @@ def choi_to_kraus(
             vectorization. If ``"system"``, operator is converted to
             a representation based on row vectorization, reshuffled,
             and then converted back to its representation with
-            respect to system-wise vectorization. Default is ``"row"``.
+            respect to system-wise vectorization. Defaults to ``"row"``.
         validate_cp (bool, optional): If ``True``, checks if ``choi_super_op``
             is a completely positive map. If ``False``, it assumes that
             ``choi_super_op`` is completely positive (and Hermitian).
@@ -396,9 +396,9 @@ def choi_to_chi(
             vectorization. If ``"system"``, operator is converted to
             a representation based on row vectorization, reshuffled,
             and then converted back to its representation with
-            respect to system-wise vectorization. Default is ``"row"``.
+            respect to system-wise vectorization. Defaults to ``"row"``.
         pauli_order (str, optional): corresponds to the order of 4
-            single-qubit Pauli elements. Default is "IXYZ".
+            single-qubit Pauli elements. Defaults to "IXYZ".
         backend (``qibo.backends.abstract.Backend``, optional): backend
             to be used in the execution. If ``None``, it uses
             ``GlobalBackend()``. Defaults to ``None``.
@@ -433,7 +433,7 @@ def kraus_to_choi(kraus_ops, order: str = "row", backend=None):
             vectorization. If ``"system"``, operator is converted to
             a representation based on row vectorization, reshuffled,
             and then converted back to its representation with
-            respect to system-wise vectorization. Default is ``"row"``.
+            respect to system-wise vectorization. Defaults to ``"row"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -480,7 +480,7 @@ def kraus_to_liouville(kraus_ops, order: str = "row", backend=None):
             vectorization. If ``"system"``, operator is converted to
             a representation based on row vectorization, reshuffled,
             and then converted back to its representation with
-            respect to system-wise vectorization. Default is ``"row"``.
+            respect to system-wise vectorization. Defaults to ``"row"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -516,7 +516,7 @@ def kraus_to_pauli(
             step is done in column-vectorization. If ``"system"``,
             block-vectorization is performed. Defaults to ``"row"``.
         pauli_order (str, optional): corresponds to the order of 4
-            single-qubit Pauli elements. Default is "IXYZ".
+            single-qubit Pauli elements. Defaults to "IXYZ".
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -559,9 +559,9 @@ def kraus_to_chi(
             vectorization. If ``"system"``, operator is converted to
             a representation based on row vectorization, reshuffled,
             and then converted back to its representation with
-            respect to system-wise vectorization. Default is ``"row"``.
+            respect to system-wise vectorization. Defaults to ``"row"``.
         pauli_order (str, optional): corresponds to the order of 4 single-qubit
-            Pauli elements in the Pauli basis. Default is "IXYZ".
+            Pauli elements in the Pauli basis. Defaults to "IXYZ".
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -711,7 +711,7 @@ def liouville_to_choi(super_op, order: str = "row", backend=None):
             vectorization. If ``"system"``, operator is converted to
             a representation based on row vectorization, reshuffled,
             and then converted back to its representation with
-            respect to system-wise vectorization. Default is ``"row"``.
+            respect to system-wise vectorization. Defaults to ``"row"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -742,7 +742,7 @@ def liouville_to_pauli(
             row-vectorization. If ``"column"``, it assumes column-vectorization.
             If ``"system"``, it assumes block-vectorization. Defaults to ``"row"``.
         pauli_order (str, optional): corresponds to the order of 4 single-qubit
-            Pauli elements in the basis. Default is "IXYZ".
+            Pauli elements in the basis. Defaults to "IXYZ".
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -800,7 +800,7 @@ def liouville_to_kraus(
             vectorization. If ``"system"``, operator is converted to
             a representation based on row vectorization, reshuffled,
             and then converted back to its representation with
-            respect to system-wise vectorization. Default is ``"row"``.
+            respect to system-wise vectorization. Defaults to ``"row"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -841,9 +841,9 @@ def liouville_to_chi(
             vectorization. If ``"system"``, operator is converted to
             a representation based on row vectorization, reshuffled,
             and then converted back to its representation with
-            respect to system-wise vectorization. Default is ``"row"``.
+            respect to system-wise vectorization. Defaults to ``"row"``.
         pauli_order (str, optional): corresponds to the order of 4 single-qubit
-            Pauli elements in the basis. Default is "IXYZ".
+            Pauli elements in the basis. Defaults to "IXYZ".
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -884,7 +884,7 @@ def pauli_to_liouville(
             superoperator. If ``"system"``, superoperator will be in
             block-vectorization. Defaults to ``"row"``.
         pauli_order (str, optional): corresponds to the order of 4 single-qubit
-            Pauli elements. Default is "IXYZ".
+            Pauli elements. Defaults to "IXYZ".
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -937,7 +937,7 @@ def pauli_to_choi(
             row-vectorization. If ``"column"``, returns column-vectorized
             superoperator. Defaults to ``"row"``.
         pauli_order (str, optional): corresponds to the order of 4 single-qubit
-            Pauli elements. Default is "IXYZ".
+            Pauli elements. Defaults to "IXYZ".
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -974,7 +974,7 @@ def pauli_to_kraus(
             representations. If ``"column"``, column-vectorization is used.
             Defaults to ``"row"``.
         pauli_order (str, optional): corresponds to the order of 4 single-qubit
-            Pauli elements. Default is "IXYZ".
+            Pauli elements. Defaults to "IXYZ".
         precision_tol (float, optional): Precision tolerance for eigenvalues
             found in the spectral decomposition problem. Any eigenvalue
             :math:`\\lambda <` ``precision_tol`` is set to 0 (zero).
@@ -1014,7 +1014,7 @@ def pauli_to_chi(
             row-vectorization. If ``"column"``, returns column-vectorized
             superoperator. Defaults to ``"row"``.
         pauli_order (str, optional): corresponds to the order of 4 single-qubit
-            Pauli elements. Default is "IXYZ".
+            Pauli elements. Defaults to "IXYZ".
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -1056,9 +1056,9 @@ def chi_to_choi(
             vectorization. If ``"system"``, operator is converted to
             a representation based on row vectorization, reshuffled,
             and then converted back to its representation with
-            respect to system-wise vectorization. Default is ``"row"``.
+            respect to system-wise vectorization. Defaults to ``"row"``.
         pauli_order (str, optional): corresponds to the order of 4 single-qubit
-            Pauli elements. Default is "IXYZ".
+            Pauli elements. Defaults to "IXYZ".
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -1100,10 +1100,10 @@ def chi_to_liouville(
             reshuffling is performed with respect to column-wise
             vectorization. If ``"system"``, operator is converted to
             a representation based on row vectorization, reshuffled,
-            and then converted back to its representation with
-            respect to system-wise vectorization. Default is ``"row"``.
+            and then_type_ converted back to its representation with
+            respect to system-wise vectorization. Defaults to ``"row"``.
         pauli_order (str, optional): corresponds to the order of 4 single-qubit
-            Pauli elements. Default is "IXYZ".
+            Pauli elements. Defaults to "IXYZ".
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -1147,9 +1147,9 @@ def chi_to_pauli(
             vectorization. If ``"system"``, operator is converted to
             a representation based on row vectorization, reshuffled,
             and then converted back to its representation with
-            respect to system-wise vectorization. Default is ``"row"``.
+            respect to system-wise vectorization. Defaults to ``"row"``.
         pauli_order (str, optional): corresponds to the order of 4 single-qubit
-            Pauli elements. Default is "IXYZ".
+            Pauli elements. Defaults to "IXYZ".
         backend (``qibo.backends.abstract.Backend``, optional): backend
             to be used in the execution. If ``None``, it uses
             ``GlobalBackend()``. Defaults to ``None``.
@@ -1202,9 +1202,9 @@ def chi_to_kraus(
             vectorization. If ``"system"``, operator is converted to
             a representation based on row vectorization, reshuffled,
             and then converted back to its representation with
-            respect to system-wise vectorization. Default is ``"row"``.
+            respect to system-wise vectorization. Defaults to ``"row"``.
         pauli_order (str, optional): corresponds to the order of 4 single-qubit
-            Pauli elements. Default is "IXYZ".
+            Pauli elements. Defaults to "IXYZ".
         validate_cp (bool, optional): If ``True``, checks if ``choi_super_op``
             is a completely positive map. If ``False``, it assumes that
             ``choi_super_op`` is completely positive (and Hermitian).
@@ -1232,6 +1232,59 @@ def chi_to_kraus(
     )
 
     return kraus_ops, coefficients
+
+
+def stinespring_to_choi(
+    stinespring,
+    dim_env: int,
+    initial_state_env=None,
+    nqubits: Optional[int] = None,
+    order: str = "row",
+    backend=None,
+):
+    """Converts Stinespring representation :math:`U_{0}` of quantum channel
+    to its Choi representation :math:`\\Lambda`.
+
+    .. math::
+        \\Lambda = \\text{kraus_to_choi}(\\text{stinespring_to_kraus}(U_{0}}))
+
+    Args:
+        stinespring (ndarray): quantum channel in the Stinespring representation.
+        dim_env (int): dimension of the Hilbert space of the environment.
+        initial_state_env (ndarray, optional): statevector representing the
+            initial state of the enviroment. If ``None``, it assumes the
+            environment in its ground state. Defaults to ``None``.
+        nqubits (int, optional): number of qubits in the system. Defaults to ``None``.
+        order (str, optional): If ``"row"``, reshuffling is performed
+            with respect to row-wise vectorization. If ``"column"``,
+            reshuffling is performed with respect to column-wise
+            vectorization. If ``"system"``, operator is converted to
+            a representation based on row vectorization, reshuffled,
+            and then converted back to its representation with
+            respect to system-wise vectorization. Defaults to ``"row"``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        ndarray: Choi representation of quantum channel.
+    """
+    kraus_ops = stinespring_to_kraus(
+        stinespring,
+        dim_env,
+        initial_state_env,
+        nqubits,
+        backend=backend,
+    )
+
+    nqubits = int(np.log2(kraus_ops[0].shape[0]))
+    nqubits = [tuple(range(nqubits)) for _ in range(len(kraus_ops))]
+
+    kraus_ops = list(zip(nqubits, kraus_ops))
+
+    choi_super_op = kraus_to_choi(kraus_ops, order=order, backend=backend)
+
+    return choi_super_op
 
 
 def stinespring_to_kraus(
@@ -1322,8 +1375,6 @@ def stinespring_to_kraus(
         kraus = np.conj(vector_alpha) @ stinespring @ initial_state_env
         kraus_ops.append(kraus)
 
-    kraus_ops = backend.cast(kraus_ops)
-
     return kraus_ops
 
 
@@ -1348,7 +1399,7 @@ def kraus_to_unitaries(
             channel :math:`\\{K_{\\alpha}\\}_{\\alpha}`, and :math:`\\mathcal{E}_{U}`
             is the Liouville representaton of the :class:`qibo.gates.channels.UnitaryChannel`
             that best approximates the original channel. If ``None``, ``precision_tol``
-            defaults to ``1e-7``. Default is ``None``.
+            defaults to ``1e-7``. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -1453,7 +1504,7 @@ def _reshuffling(super_op, order: str = "row", backend=None):
             vectorization. If ``"system"``, operator is converted to
             a representation based on row vectorization, reshuffled,
             and then converted back to its representation with
-            respect to system-wise vectorization. Default is ``"row"``.
+            respect to system-wise vectorization. Defaults to ``"row"``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
