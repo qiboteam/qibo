@@ -681,12 +681,12 @@ def kraus_to_stinespring(
     of quantum channel to its Stinespring representation :math:`U_{0}`, i.e.
 
     .. math::
-        U_{0} = \\sum_{\\alpha} \\, K_{\\alpha} \\otimes \\ketbra{\\alpha}{\\v_{0}} \\, ,
+        U_{0} = \\sum_{\\alpha} \\, K_{\\alpha} \\otimes \\ketbra{\\alpha}{v_{0}} \\, ,
 
     where :math:`\\ket{v_{0}}` is the initial state of the environment
     (``initial_state_env``), :math:`D` is the dimension of the environment's
     Hilbert space, and
-    :math:`\\{\\ket{\\alpha} \\, : \\, \\alpha = 0, 1, \\cdots, D - 1 \\}
+    :math:`\\{\\ket{\\alpha} \\, : \\, \\alpha = 0, 1, \\cdots, D - 1 \\}`
     is an orthonormal basis for the environment's space.
 
     Args:
@@ -1305,7 +1305,7 @@ def chi_to_liouville(
             reshuffling is performed with respect to column-wise
             vectorization. If ``"system"``, operator is converted to
             a representation based on row vectorization, reshuffled,
-            and then_type_ converted back to its representation with
+            and then converted back to its representation with
             respect to system-wise vectorization. Defaults to ``"row"``.
         pauli_order (str, optional): corresponds to the order of 4 single-qubit
             Pauli elements. Defaults to "IXYZ".
@@ -1708,12 +1708,12 @@ def stinespring_to_kraus(
     to its Kraus representation :math:`\\{K_{\\alpha}\\}_{\\alpha}`, i.e.
 
     .. math::
-        K_{\\alpha} \\coloneqq \\bra{\\alpha} \\, U_{0} \\, \\ket{v_{0}} \\, ,
+        K_{\\alpha} := \\bra{\\alpha} \\, U_{0} \\, \\ket{v_{0}} \\, ,
 
     where :math:`\\ket{v_{0}}` is the initial state of the environment
     (``initial_state_env``), :math:`D` is the dimension of the environment's
     Hilbert space, and
-    :math:`\\{\\ket{\\alpha} \\, : \\, \\alpha = 0, 1, \\cdots, D - 1 \\}
+    :math:`\\{\\ket{\\alpha} \\, : \\, \\alpha = 0, 1, \\cdots, D - 1 \\}`
     is an orthonormal basis for the environment's Hilbert space.
     Note that :math:`\\text{dim}(\\ket{\\alpha}) = \\text{dim}(\\ket{v_{0}}) = D`,
     while :math:`\\text{dim}(U) = 2^{n} \\, D`, where :math:`n` is `nqubits`.

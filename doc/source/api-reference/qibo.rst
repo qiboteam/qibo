@@ -1601,6 +1601,36 @@ Chi-matrix to Stinespring
 .. autofunction:: qibo.quantum_info.chi_to_stinespring
 
 
+Stinespring to Choi
+"""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.stinespring_to_choi
+
+
+Stinespring to Liouville
+""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.stinespring_to_liouville
+
+
+Stinespring to Pauli-Liouville
+""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.stinespring_to_pauli
+
+
+Stinespring to Kraus
+""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.stinespring_to_kraus
+
+
+Stinespring to Chi-matrix
+"""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.stinespring_to_chi
+
+
 Kraus operators as probabilistic sum of unitaries
 """""""""""""""""""""""""""""""""""""""""""""""""
 
