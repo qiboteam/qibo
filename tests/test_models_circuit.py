@@ -441,17 +441,17 @@ def test_circuit_decompose(measurements):
         {0: list(zip(["X", "Z"], [0.1, 0.2])), 1: list(zip(["Y", "Z"], [0.2, 0.1]))},
     ],
 )
-def test_circuit_with_noise(measurements, noise_map):
+def test_circuit_with_pauli_noise(measurements, noise_map):
     with pytest.raises(TypeError):
         n_map = ["X", 0.2]
         circuit = Circuit(1)
-        circuit.with_noise(n_map)
+        circuit.with_pauli_noise(n_map)
 
     c = Circuit(2)
     c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
     if measurements:
         c.add(gates.M(0, 1))
-    noisyc = c.with_noise(noise_map)
+    noisyc = c.with_pauli_noise(noise_map)
 
     if not isinstance(noise_map, dict):
         noise_map = {0: noise_map, 1: noise_map}

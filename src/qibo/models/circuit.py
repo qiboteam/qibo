@@ -438,13 +438,13 @@ class Circuit:
             decomp_circuit.add(gate.decompose(*free))
         return decomp_circuit
 
-    def with_noise(self, noise_map: NoiseMapType):
-        """Creates a copy of the circuit with noise gates after each gate.
+    def with_pauli_noise(self, noise_map: NoiseMapType):
+        """Creates a copy of the circuit with Pauli noise gates after each gate.
 
         If the original circuit uses state vectors then noise simulation will
         be done using sampling and repeated circuit execution.
         In order to use density matrices the original circuit should be created
-        using the ``density_matrix`` flag set to ``True``.
+        setting  the flag ``density_matrix=True``.
         For more information we refer to the
         :ref:`How to perform noisy simulation? <noisy-example>` example.
 
@@ -470,7 +470,7 @@ class Circuit:
                     0: list(zip(["X", "Z"], [0.1, 0.2])),
                     1: list(zip(["Y", "Z"], [0.2, 0.1]))
                 }
-                noisy_c = c.with_noise(noise_map)
+                noisy_c = c.with_pauli_noise(noise_map)
                 # ``noisy_c`` will be equivalent to the following circuit
                 c2 = Circuit(2, density_matrix=True)
                 c2.add(gates.H(0))
@@ -494,7 +494,7 @@ class Circuit:
             if isinstance(gate, gates.KrausChannel):
                 raise_error(
                     ValueError,
-                    "`.with_noise` method is not available "
+                    "`.with_pauli_noise` method is not available "
                     + "for circuits that already contain "
                     + "channels.",
                 )
