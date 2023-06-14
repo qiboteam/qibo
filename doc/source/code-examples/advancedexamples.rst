@@ -931,7 +931,7 @@ Adding noise after every gate
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In practical applications noise typically occurs after every gate.
-Qibo provides the :meth:`qibo.models.circuit.Circuit.with_noise` method
+Qibo provides the :meth:`qibo.models.circuit.Circuit.with_pauli_noise` method
 which automatically creates a new circuit that contains a
 :class:`qibo.gates.PauliNoiseChannel` after every gate.
 The user can control the probabilities of the noise channel using a noise map,
@@ -947,7 +947,7 @@ triplets. For example, the following script
 
       # Define a noise map that maps qubit IDs to noise probabilities
       noise_map = {0: list(zip(["X", "Z"], [0.1, 0.2])), 1: list(zip(["Y", "Z"], [0.2, 0.1]))}
-      noisy_c = c.with_noise(noise_map)
+      noisy_c = c.with_pauli_noise(noise_map)
 
 will create a new circuit ``noisy_c`` that is equivalent to:
 
@@ -972,11 +972,11 @@ That is ``noise_map = list(zip(["X", "Z"], [0.1, 0.1]))`` is equivalent to
 ``noise_map = {0: list(zip(["X", "Z"], [0.1, 0.1])), 1: list(zip(["X", "Z"], [0.1, 0.1])), ...}``.
 
 As described in the previous sections, if
-:meth:`qibo.models.circuit.Circuit.with_noise` is used in a circuit
+:meth:`qibo.models.circuit.Circuit.with_pauli_noise` is used in a circuit
 that uses state vectors then noise will be simulated with repeated execution.
 If the user wishes to use density matrices instead, this is possible by
 passing the ``density_matrix=True`` flag during the circuit initialization and call
-``.with_noise`` on the new circuit.
+``.with_pauli_noise`` on the new circuit.
 
 .. _noisemodel-example:
 

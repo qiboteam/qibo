@@ -40,9 +40,9 @@ def test_distributed_circuit_add_gate():
 def test_distributed_circuit_various_errors():
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c = Circuit(5, devices)
-    # Attempt to use ``.with_noise``
+    # Attempt to use ``.with_pauli_noise``
     with pytest.raises(NotImplementedError):
-        c.with_noise(list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.1])))
+        c.with_pauli_noise(list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.1])))
     # Attempt to compile
     with pytest.raises(RuntimeError):
         c.compile()
