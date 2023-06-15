@@ -483,6 +483,7 @@ def random_clifford(
     backend=None,
 ):
     """Generates a random :math:`n`-qubit Clifford operator, where :math:`n` is ``nqubits``.
+    For the mathematical details, see Reference [1].
 
     Args:
         nqubits (int): number of qubits.
@@ -497,6 +498,11 @@ def random_clifford(
 
     Returns:
         (ndarray or :class:`qibo.gates.Unitary`): Random Clifford operator.
+
+    Reference:
+        1. S. Bravyi and D. Maslov, *Hadamard-free circuits expose the
+           structure of the Clifford group*.
+           `arXiv:2003.09412 [quant-ph] <https://arxiv.org/abs/2003.09412>`.
     """
 
     if (
@@ -984,7 +990,7 @@ def random_stochastic_matrix(
 def _sample_from_quantum_mallows_distribution(nqubits: int, local_state):
     """Using the quantum Mallows distribution, samples a binary array
     representing a layer of Hadamard gates as well as an array with permutated
-    qubit indexes.
+    qubit indexes. For more details, see Reference [1].
 
     Args:
         nqubits (int): number of qubits.
@@ -993,6 +999,12 @@ def _sample_from_quantum_mallows_distribution(nqubits: int, local_state):
 
     Returns:
         (``ndarray``, ``ndarray`): tuple of binary ``ndarray`` and ``ndarray`` of indexes.
+
+    Reference:
+        1. S. Bravyi and D. Maslov, *Hadamard-free circuits expose the
+            structure of the Clifford group*.
+            `arXiv:2003.09412 [quant-ph] <https://arxiv.org/abs/2003.09412>`.
+
     """
     mute_index = list(range(nqubits))
 
@@ -1016,7 +1028,8 @@ def _sample_from_quantum_mallows_distribution(nqubits: int, local_state):
 
 def _operator_from_hadamard_free_group(gamma_matrix, delta_matrix, pauli_operator=None):
     """Calculates an element :math:`F` of the Hadamard-free group :math:`\\mathcal{F}_{n}`,
-    where :math:`n` is the number of qubits ``nqubits``.
+    where :math:`n` is the number of qubits ``nqubits``. For more details,
+    see Reference [1].
 
     Args:
         gamma_matrix (ndarray): :math:`\\, n \\times n \\,` binary matrix.
@@ -1027,6 +1040,11 @@ def _operator_from_hadamard_free_group(gamma_matrix, delta_matrix, pauli_operato
 
     Returns:
         :class:`qibo.models.Circuit`: element of the Hadamard-free group.
+
+    Reference:
+        1. S. Bravyi and D. Maslov, *Hadamard-free circuits expose the
+           structure of the Clifford group*.
+           `arXiv:2003.09412 [quant-ph] <https://arxiv.org/abs/2003.09412>`.
     """
     if gamma_matrix.shape != delta_matrix.shape:
         raise_error(
