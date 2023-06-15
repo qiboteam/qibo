@@ -1,7 +1,6 @@
 """Module with functions that create random quantum and classical objects."""
 
 import warnings
-from functools import reduce
 from typing import Optional, Union
 
 import numpy as np
@@ -18,7 +17,6 @@ from qibo.quantum_info.superoperator_transformations import (
     choi_to_pauli,
     vectorization,
 )
-from qibo.quantum_info.utils import ONEQUBIT_CLIFFORD_PARAMS
 
 
 def random_gaussian_matrix(
@@ -44,9 +42,9 @@ def random_gaussian_matrix(
         dims (int): dimension of the matrix.
         rank (int, optional): rank of the matrix. If ``None``, then
             ``rank == dims``. Default: ``None``.
-        mean (float, optional): mean of the Gaussian distribution. Default is 0.
+        mean (float, optional): mean of the Gaussian distribution. Defaults to 0.
         stddev (float, optional): standard deviation of the Gaussian distribution.
-            Default is ``1``.
+            Defaults to ``1``.
         seed (int or ``numpy.random.Generator``, optional): Either a generator of random
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
@@ -112,14 +110,14 @@ def random_hermitian(
     Args:
         dims (int): dimension of the matrix.
         semidefinite (bool, optional): if ``True``, returns a Hermitian matrix that
-            is also positive semidefinite. Default is ``False``.
+            is also positive semidefinite. Defaults to ``False``.
         normalize (bool, optional): if ``True`` and ``semidefinite=False``, returns
             a Hermitian matrix with eigenvalues in the interval
             :math:`[-1, \\, 1]`. If ``True`` and ``semidefinite=True``,
-            interval is :math:`[0, \\, 1]`. Default is ``False``.
+            interval is :math:`[0, \\, 1]`. Defaults to ``False``.
         seed (int or ``numpy.random.Generator``, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
-            initializes a generator with a random seed. Default is ``None``.
+            initializes a generator with a random seed. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -319,10 +317,10 @@ def random_statevector(dims: int, haar: bool = False, seed=None, backend=None):
         haar (bool, optional): if ``True``, statevector is created by sampling a
             Haar random unitary :math:`U_{\\text{haar}}` and acting with it on a
             random computational basis state :math:`\\ket{k}`, i.e.
-            :math:`\\ket{\\psi} = U_{\\text{haar}} \\ket{k}`. Default is ``False``.
+            :math:`\\ket{\\psi} = U_{\\text{haar}} \\ket{k}`. Defaults to ``False``.
         seed (int or ``numpy.random.Generator``, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
-            initializes a generator with a random seed. Default is ``None``.
+            initializes a generator with a random seed. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -382,22 +380,22 @@ def random_density_matrix(
     Args:
         dims (int): dimension of the matrix.
         rank (int, optional): rank of the matrix. If ``None``, then ``rank == dims``.
-            Default is ``None``.
-        pure (bool, optional): if ``True``, returns a pure state. Default is ``False``.
+            Defaults to ``None``.
+        pure (bool, optional): if ``True``, returns a pure state. Defaults to ``False``.
         metric (str, optional): metric to sample the density matrix from. Options:
-            ``"Hilbert-Schmidt"`` and ``"Bures"``. Default is ``"Hilbert-Schmidt"``.
+            ``"Hilbert-Schmidt"`` and ``"Bures"``. Defaults to ``"Hilbert-Schmidt"``.
         basis (str, optional): if ``None``, returns random density matrix in the
             computational basis. If ``"pauli-<pauli_order>"``, (e.g. ``"pauli-IZXY"``),
             returns it in the Pauli basis with the corresponding order of single-qubit
             Pauli elements (see :func:`qibo.quantum_info.pauli_basis`).
-            Default is ``None``.
+            Defaults to ``None``.
         normalize(bool, optional): if ``True`` and ``basis="pauli-<pauli-order>"``,
             returns random density matrix in the normalized Pauli basis. If ``False``
             and ``basis="pauli-<pauli-order>"``, returns state in the unnormalized
             Pauli basis. Defaults to ``False``.
         seed (int or ``numpy.random.Generator``, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
-            initializes a generator with a random seed. Default is ``None``.
+            initializes a generator with a random seed. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -479,21 +477,21 @@ def random_density_matrix(
 
 
 def random_clifford(
-    qubits, return_circuit: bool = False, fuse: bool = False, seed=None, backend=None
+    nqubits: int,
+    return_circuit: bool = True,
+    seed=None,
+    backend=None,
 ):
     """Generates random Clifford operator(s).
 
     Args:
-        qubits (int or list or ndarray): if ``int``, the number of qubits for the Clifford.
+        nqubits (int or list or ndarray): if ``int``, the number of qubits for the Clifford.
             If ``list`` or ``ndarray``, indexes of the qubits for the Clifford to act on.
-        return_circuit (bool, optional): if ``True``, returns a :class:`qibo.gates.Unitary`
-            object. If ``False``, returns an ``ndarray`` object. Default is ``False``.
-        fuse (bool, optional): if ``False``, returns an ``ndarray`` with one Clifford
-            gate per qubit. If ``True``, returns the tensor product of the Clifford
-            gates that were sampled. Default is ``False``.
+        return_circuit (bool, optional): if ``True``, returns a :class:`qibo.models.Circuit`
+            object. If ``False``, returns an ``ndarray`` object. Defaults to ``False``.
         seed (int or ``numpy.random.Generator``, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
-            initializes a generator with a random seed. Default is ``None``.
+            initializes a generator with a random seed. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -503,29 +501,23 @@ def random_clifford(
     """
 
     if (
-        not isinstance(qubits, int)
-        and not isinstance(qubits, list)
-        and not isinstance(qubits, np.ndarray)
+        not isinstance(nqubits, int)
+        and not isinstance(nqubits, list)
+        and not isinstance(nqubits, np.ndarray)
     ):
         raise_error(
             TypeError,
-            f"qubits must be either type int, list or ndarray, but it is type {type(qubits)}.",
+            f"nqubits must be type int, but it is type {type(nqubits)}.",
         )
 
-    if isinstance(qubits, int) and qubits <= 0:
-        raise_error(ValueError, "qubits must be a positive integer.")
-
-    if isinstance(qubits, (list, np.ndarray)) and any(q < 0 for q in qubits):
-        raise_error(ValueError, "qubit indexes must be non-negative integers.")
+    if nqubits <= 0:
+        raise_error(ValueError, "nqubits must be a positive integer.")
 
     if not isinstance(return_circuit, bool):
         raise_error(
             TypeError,
             f"return_circuit must be type bool, but it is type {type(return_circuit)}.",
         )
-
-    if not isinstance(fuse, bool):
-        raise_error(TypeError, f"fuse must be type bool, but it is type {type(fuse)}.")
 
     if (
         seed is not None
@@ -543,28 +535,87 @@ def random_clifford(
         np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
     )
 
-    if isinstance(qubits, int):
-        qubits = range(qubits)
+    hadamards, permutations = _sample_from_quantum_mallows_distribution(
+        nqubits, seed=seed, backend=backend
+    )
 
-    parameters = local_state.integers(0, len(ONEQUBIT_CLIFFORD_PARAMS), len(qubits))
+    delta_matrix = np.eye(nqubits, dtype=int)
+    delta_matrix = backend.cast(delta_matrix, dtype=delta_matrix.dtype)
+    delta_matrix_prime = np.copy(delta_matrix)
 
-    unitaries = [_clifford_unitary(*ONEQUBIT_CLIFFORD_PARAMS[p]) for p in parameters]
+    gamma_matrix_prime = local_state.integers(0, 2, size=nqubits)
+    gamma_matrix_prime = backend.cast(
+        gamma_matrix_prime, dtype=gamma_matrix_prime.dtype
+    )
+    gamma_matrix_prime = np.diag(gamma_matrix_prime)
 
-    if return_circuit is True:
-        # tensor product of all gates generated
-        unitaries = reduce(np.kron, unitaries)
-        unitaries = gates.Unitary(unitaries, *qubits)
-    else:
-        if len(unitaries) == 1:
-            unitaries = unitaries[0]
-        elif fuse:
-            unitaries = reduce(np.kron, unitaries)
-        elif not fuse:
-            unitaries = np.array(unitaries)
+    gamma_matrix = local_state.integers(0, 2, size=nqubits)
+    gamma_matrix = backend.cast(gamma_matrix, dtype=gamma_matrix.dtype)
+    gamma_matrix = hadamards * gamma_matrix
+    gamma_matrix = np.diag(gamma_matrix)
 
-        unitaries = backend.cast(unitaries, dtype=unitaries.dtype)
+    # filling off-diagonal elements of gammas and deltas matrices
+    for j in range(nqubits):
+        for k in range(j + 1, nqubits):
+            b = local_state.integers(0, 2)
+            gamma_matrix_prime[k, j] = b
+            gamma_matrix_prime[j, k] = b
 
-    return unitaries
+            b = local_state.integers(0, 2)
+            delta_matrix_prime[k, j] = b
+
+            if hadamards[k] == 1 and hadamards[j] == 1:
+                b = local_state.integers(0, 2)
+                gamma_matrix[k, j] = b
+                gamma_matrix[j, k] = b
+                if permutations[k] > permutations[j]:
+                    b = local_state.integers(0, 2)
+                    delta_matrix[k, j] = b
+
+            if hadamards[k] == 0 and hadamards[j] == 1:
+                b = local_state.integers(0, 2)
+                delta_matrix[k, j] = b
+                if permutations[k] > permutations[j]:
+                    b = local_state.integers(0, 2)
+                    gamma_matrix[k, j] = b
+                    gamma_matrix[j, k] = b
+
+            if (
+                hadamards[k] == 1
+                and hadamards[j] == 0
+                and permutations[k] < permutations[j]
+            ):
+                b = local_state.integers(0, 2)
+                gamma_matrix[k, j] = b
+                gamma_matrix[j, k] = b
+
+            if (
+                hadamards[k] == 0
+                and hadamards[j] == 0
+                and permutations[k] < permutations[j]
+            ):
+                b = local_state.integers(0, 2)
+                delta_matrix[k, j] = b
+
+    # get first element of the Borel group
+    clifford_circuit = _operator_from_borel_group(gamma_matrix, delta_matrix)
+
+    # Apply permutated Hadamard layer
+    for qubit, had in enumerate(hadamards):
+        if had == 1:
+            clifford_circuit.add(gates.H(int(permutations[qubit])))
+
+    # get second element of the Borel group
+    clifford_circuit += _operator_from_borel_group(
+        gamma_matrix_prime,
+        delta_matrix_prime,
+        random_pauli(nqubits, depth=1, return_circuit=True),
+    )
+
+    if return_circuit is False:
+        clifford_circuit = clifford_circuit.unitary(backend=backend)
+
+    return clifford_circuit
 
 
 def random_pauli(
@@ -697,7 +748,8 @@ def random_pauli(
         gate_grid = Circuit(max_qubits)
         for qubit, row in zip(qubits, indexes):
             for column_item in row:
-                gate_grid.add(subset[column_item](qubit))
+                if subset[column_item] != gates.I:
+                    gate_grid.add(subset[column_item](qubit))
     else:
         gate_grid = np.array(
             [
@@ -728,7 +780,7 @@ def random_pauli_hamiltonian(
             Hamiltonian as ``1.0``. Moreover, if ``True``, then ``max_eigenvalue``
             must be ``> 1.0``. Defaults to ``False``.
         pauli_order (str, optional): corresponds to the order of 4 single-qubit
-            Pauli elements in the basis. Default is "IXYZ".
+            Pauli elements in the basis. Defaults to "IXYZ".
         seed (int or ``numpy.random.Generator``, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
@@ -822,19 +874,19 @@ def random_stochastic_matrix(
     Args:
         dims (int): dimension of the matrix.
         bistochastic (bool, optional): if ``True``, matrix is row- and column-stochastic.
-            If ``False``, matrix is row-stochastic. Default is ``False``.
+            If ``False``, matrix is row-stochastic. Defaults to ``False``.
         diagonally_dominant (bool, optional): if ``True``, matrix is strictly diagonally
-            dominant. Default is ``False``.
+            dominant. Defaults to ``False``.
         precision_tol (float, optional): tolerance level for how much each probability
             distribution can deviate from summing up to ``1.0``. If ``None``,
-            it defaults to ``qibo.config.PRECISION_TOL``. Default is ``None``.
+            it defaults to ``qibo.config.PRECISION_TOL``. Defaults to ``None``.
         max_iterations (int, optional): when ``bistochastic=True``, maximum number
             of iterations used to normalize all rows and columns simultaneously.
             If ``None``, defaults to ``qibo.config.MAX_ITERATIONS``.
-            Default is ``None``.
+            Defaults to ``None``.
         seed (int or ``numpy.random.Generator``, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
-            initializes a statevectorgenerator with a random seed. Default is ``None``.
+            initializes a statevectorgenerator with a random seed. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -935,46 +987,7 @@ def random_stochastic_matrix(
     return matrix
 
 
-def _clifford_unitary(phase, x, y, z):
-    """Returns a parametrized single-qubit Clifford gate,
-    where possible parameters are defined in
-    ``qibo.quantum_info.utils.ONEQUBIT_CLIFFORD_PARAMS``.
-
-    Args:
-        phase (float) : An angle.
-        x (float) : prefactor.
-        y (float) : prefactor.
-        z (float) : prefactor.
-
-    Returns:
-        ndarray: Clifford unitary with dimensions (2, 2).
-
-    """
-
-    return np.array(
-        [
-            [
-                np.cos(phase / 2) - 1.0j * z * np.sin(phase / 2),
-                -y * np.sin(phase / 2) - 1.0j * x * np.sin(phase / 2),
-            ],
-            [
-                y * np.sin(phase / 2) - 1.0j * x * np.sin(phase / 2),
-                np.cos(phase / 2) + 1.0j * z * np.sin(phase / 2),
-            ],
-        ]
-    )
-
-
-def _sample_from_quantum_mallows_distribution(nqubits, seed=None, backend=None):
-    if (
-        seed is not None
-        and not isinstance(seed, int)
-        and not isinstance(seed, np.random.Generator)
-    ):
-        raise_error(
-            TypeError, "seed must be either type int or numpy.random.Generator."
-        )
-
+def _sample_from_quantum_mallows_distribution(nqubits: int, seed=None, backend=None):
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
@@ -1002,3 +1015,33 @@ def _sample_from_quantum_mallows_distribution(nqubits, seed=None, backend=None):
         del mute_index[k]
 
     return hadamards, permutations
+
+
+def _operator_from_borel_group(gamma_matrix, delta_matrix, pauli_operator=None):
+    if gamma_matrix.shape != delta_matrix.shape:
+        raise_error(
+            ValueError,
+            "gamma_matrix and delta_matrix must have shape (nqubits, nqubits), "
+            + f"but {gamma_matrix.shape} != {delta_matrix.shape}",
+        )
+    nqubits = len(gamma_matrix)
+    circuit = Circuit(nqubits)
+
+    if pauli_operator is not None:
+        circuit += pauli_operator
+
+    for qubit, gamma in enumerate(np.diag(gamma_matrix)):
+        if gamma == 1:
+            circuit.add(gates.S(qubit))
+
+    for j in range(nqubits):
+        for k in range(j + 1, nqubits):
+            if gamma_matrix[k, j] == 1:
+                circuit.add(gates.CZ(j, k))
+
+    for j in range(nqubits):
+        for k in range(j + 1, nqubits):
+            if delta_matrix[k, j] == 1:
+                circuit.add(gates.CNOT(j, k))
+
+    return circuit
