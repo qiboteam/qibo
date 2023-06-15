@@ -536,21 +536,16 @@ def random_clifford(
     )
 
     hadamards, permutations = _sample_from_quantum_mallows_distribution(
-        nqubits, seed=seed, backend=backend
+        nqubits, local_state=local_state
     )
 
     delta_matrix = np.eye(nqubits, dtype=int)
-    delta_matrix = backend.cast(delta_matrix, dtype=delta_matrix.dtype)
     delta_matrix_prime = np.copy(delta_matrix)
 
     gamma_matrix_prime = local_state.integers(0, 2, size=nqubits)
-    gamma_matrix_prime = backend.cast(
-        gamma_matrix_prime, dtype=gamma_matrix_prime.dtype
-    )
     gamma_matrix_prime = np.diag(gamma_matrix_prime)
 
     gamma_matrix = local_state.integers(0, 2, size=nqubits)
-    gamma_matrix = backend.cast(gamma_matrix, dtype=gamma_matrix.dtype)
     gamma_matrix = hadamards * gamma_matrix
     gamma_matrix = np.diag(gamma_matrix)
 
@@ -609,7 +604,7 @@ def random_clifford(
     clifford_circuit += _operator_from_borel_group(
         gamma_matrix_prime,
         delta_matrix_prime,
-        random_pauli(nqubits, depth=1, return_circuit=True),
+        random_pauli(nqubits, depth=1, return_circuit=True, seed=seed, backend=backend),
     )
 
     if return_circuit is False:
@@ -987,27 +982,18 @@ def random_stochastic_matrix(
     return matrix
 
 
-def _sample_from_quantum_mallows_distribution(nqubits: int, seed=None, backend=None):
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
-
-    local_state = (
-        np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
-    )
-
+def _sample_from_quantum_mallows_distribution(nqubits: int, local_state):
     mute_index = list(range(nqubits))
 
-    exponents = backend.cast(list(range(nqubits, 0, -1)), dtype=int)
+    exponents = np.arange(nqubits, 0, -1, dtype=int)
 
     r = local_state.uniform(0, 1, size=nqubits)
-    r = backend.cast(r, dtype=r.dtype)
 
     indexes = -1 * (np.ceil(np.log2(r + (1 - r) / 4**exponents)))
 
     hadamards = 1 * (indexes < exponents)
 
     permutations = np.zeros(nqubits, dtype=int)
-    permutations = backend.cast(permutations, dtype=permutations.dtype)
     for l, (index, m) in enumerate(zip(indexes, exponents)):
         k = index if index < m else 2 * m - index - 1
         k = int(k)
