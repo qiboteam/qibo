@@ -989,7 +989,7 @@ def _sample_from_quantum_mallows_distribution(nqubits, seed=None, backend=None):
     r = local_state.uniform(0, 1, size=nqubits)
     r = backend.cast(r, dtype=r.dtype)
 
-    indexes = -1 * (np.ceil(np.log2(r + (1 - r) / 4 ** exponents)))
+    indexes = -1 * (np.ceil(np.log2(r + (1 - r) / 4**exponents)))
 
     hadamards = 1 * (indexes < exponents)
 
