@@ -963,3 +963,42 @@ def _clifford_unitary(phase, x, y, z):
             ],
         ]
     )
+
+
+def _sample_from_quantum_mallows_distribution(nqubits, seed=None, backend=None):
+    if (
+        seed is not None
+        and not isinstance(seed, int)
+        and not isinstance(seed, np.random.Generator)
+    ):
+        raise_error(
+            TypeError, "seed must be either type int or numpy.random.Generator."
+        )
+
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    local_state = (
+        np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
+    )
+
+    mute_index = list(range(nqubits))
+
+    exponents = backend.cast(list(range(nqubits, 0, -1)), dtype=int)
+
+    r = local_state.uniform(0, 1, size=nqubits)
+    r = backend.cast(r, dtype=r.dtype)
+
+    indexes = -1 * (np.ceil(np.log2(r + (1 - r) / 4 ** exponents)))
+
+    hadamards = 1 * (indexes < exponents)
+
+    permutations = np.zeros(nqubits, dtype=int)
+    permutations = backend.cast(permutations, dtype=permutations.dtype)
+    for l, (index, m) in enumerate(zip(indexes, exponents)):
+        k = index if index < m else 2 * m - index - 1
+        k = int(k)
+        permutations[l] = mute_index[k]
+        del mute_index[k]
+
+    return hadamards, permutations
