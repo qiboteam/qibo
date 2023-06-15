@@ -45,7 +45,7 @@ def random_gaussian_matrix(
         mean (float, optional): mean of the Gaussian distribution. Defaults to 0.
         stddev (float, optional): standard deviation of the Gaussian distribution.
             Defaults to ``1``.
-        seed (int or ``numpy.random.Generator``, optional): Either a generator of random
+        seed (int or :class:`numpy.random.Generator`, optional): Either a generator of random
             numbers or a fixed seed to initialize a generator. If ``None``, initializes
             a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
@@ -115,7 +115,7 @@ def random_hermitian(
             a Hermitian matrix with eigenvalues in the interval
             :math:`[-1, \\, 1]`. If ``True`` and ``semidefinite=True``,
             interval is :math:`[0, \\, 1]`. Defaults to ``False``.
-        seed (int or ``numpy.random.Generator``, optional): Either a generator of
+        seed (int or :class:`numpy.random.Generator`, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
@@ -158,7 +158,7 @@ def random_unitary(dims: int, measure: Optional[str] = None, seed=None, backend=
             from. If ``None``, functions returns :math:`\\exp{(-i \\, H)}`, where
             :math:`H` is a Hermitian operator. If ``"haar"``, returns an Unitary
             matrix sampled from the Haar measure. Defaults to ``None``.
-        seed (int or ``numpy.random.Generator``, optional): Either a generator of
+        seed (int or :class:`numpy.random.Generator`, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
@@ -238,7 +238,7 @@ def random_quantum_channel(
             problem. Any eigenvalue :math:`\\lambda <` ``precision_tol`` is set
             to 0 (zero). If ``None``, ``precision_tol`` defaults to
             ``qibo.config.PRECISION_TOL=1e-8``. Defaults to ``None``.
-        seed (int or ``numpy.random.Generator``, optional): Either a generator of
+        seed (int or :class:`numpy.random.Generator`, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
@@ -318,7 +318,7 @@ def random_statevector(dims: int, haar: bool = False, seed=None, backend=None):
             Haar random unitary :math:`U_{\\text{haar}}` and acting with it on a
             random computational basis state :math:`\\ket{k}`, i.e.
             :math:`\\ket{\\psi} = U_{\\text{haar}} \\ket{k}`. Defaults to ``False``.
-        seed (int or ``numpy.random.Generator``, optional): Either a generator of
+        seed (int or :class:`numpy.random.Generator`, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
@@ -393,7 +393,7 @@ def random_density_matrix(
             returns random density matrix in the normalized Pauli basis. If ``False``
             and ``basis="pauli-<pauli-order>"``, returns state in the unnormalized
             Pauli basis. Defaults to ``False``.
-        seed (int or ``numpy.random.Generator``, optional): Either a generator of
+        seed (int or :class:`numpy.random.Generator`, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
@@ -482,14 +482,13 @@ def random_clifford(
     seed=None,
     backend=None,
 ):
-    """Generates random Clifford operator(s).
+    """Generates a random :math:`n`-qubit Clifford operator, where :math:`n` is ``nqubits``.
 
     Args:
-        nqubits (int or list or ndarray): if ``int``, the number of qubits for the Clifford.
-            If ``list`` or ``ndarray``, indexes of the qubits for the Clifford to act on.
+        nqubits (int): number of qubits.
         return_circuit (bool, optional): if ``True``, returns a :class:`qibo.models.Circuit`
             object. If ``False``, returns an ``ndarray`` object. Defaults to ``False``.
-        seed (int or ``numpy.random.Generator``, optional): Either a generator of
+        seed (int or :class:`numpy.random.Generator`, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
@@ -497,7 +496,7 @@ def random_clifford(
             Defaults to ``None``.
 
     Returns:
-        (ndarray or :class:`qibo.gates.Unitary`): Random Clifford operator(s).
+        (ndarray or :class:`qibo.gates.Unitary`): Random Clifford operator.
     """
 
     if (
@@ -593,7 +592,7 @@ def random_clifford(
                 delta_matrix[k, j] = b
 
     # get first element of the Borel group
-    clifford_circuit = _operator_from_borel_group(gamma_matrix, delta_matrix)
+    clifford_circuit = _operator_from_hadamard_free_group(gamma_matrix, delta_matrix)
 
     # Apply permutated Hadamard layer
     for qubit, had in enumerate(hadamards):
@@ -601,7 +600,7 @@ def random_clifford(
             clifford_circuit.add(gates.H(int(permutations[qubit])))
 
     # get second element of the Borel group
-    clifford_circuit += _operator_from_borel_group(
+    clifford_circuit += _operator_from_hadamard_free_group(
         gamma_matrix_prime,
         delta_matrix_prime,
         random_pauli(nqubits, depth=1, return_circuit=True, seed=seed, backend=backend),
@@ -641,7 +640,7 @@ def random_pauli(
         return_circuit (bool, optional): if ``True``, returns a :class:`qibo.models.Circuit`
             object. If ``False``, returns an ``ndarray`` with shape (qubits, depth, 2, 2)
             that contains all Pauli matrices that were sampled. Defaults to ``True``.
-        seed (int or ``numpy.random.Generator``, optional): Either a generator of
+        seed (int or :class:`numpy.random.Generator`, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
@@ -776,7 +775,7 @@ def random_pauli_hamiltonian(
             must be ``> 1.0``. Defaults to ``False``.
         pauli_order (str, optional): corresponds to the order of 4 single-qubit
             Pauli elements in the basis. Defaults to "IXYZ".
-        seed (int or ``numpy.random.Generator``, optional): Either a generator of
+        seed (int or :class:`numpy.random.Generator`, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
@@ -879,7 +878,7 @@ def random_stochastic_matrix(
             of iterations used to normalize all rows and columns simultaneously.
             If ``None``, defaults to ``qibo.config.MAX_ITERATIONS``.
             Defaults to ``None``.
-        seed (int or ``numpy.random.Generator``, optional): Either a generator of
+        seed (int or :class:`numpy.random.Generator`, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a statevectorgenerator with a random seed. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
@@ -983,6 +982,18 @@ def random_stochastic_matrix(
 
 
 def _sample_from_quantum_mallows_distribution(nqubits: int, local_state):
+    """Using the quantum Mallows distribution, samples a binary array
+    representing a layer of Hadamard gates as well as an array with permutated
+    qubit indexes.
+
+    Args:
+        nqubits (int): number of qubits.
+        local_state (:class:`numpy.random.Generator`): a generator of
+            random numbers
+
+    Returns:
+        (``ndarray``, ``ndarray`): tuple of binary ``ndarray`` and ``ndarray`` of indexes.
+    """
     mute_index = list(range(nqubits))
 
     exponents = np.arange(nqubits, 0, -1, dtype=int)
@@ -1003,7 +1014,20 @@ def _sample_from_quantum_mallows_distribution(nqubits: int, local_state):
     return hadamards, permutations
 
 
-def _operator_from_borel_group(gamma_matrix, delta_matrix, pauli_operator=None):
+def _operator_from_hadamard_free_group(gamma_matrix, delta_matrix, pauli_operator=None):
+    """Calculates an element :math:`F` of the Hadamard-free group :math:`\\mathcal{F}_{n}`,
+    where :math:`n` is the number of qubits ``nqubits``.
+
+    Args:
+        gamma_matrix (ndarray): :math:`\\, n \\times n \\,` binary matrix.
+        delta_matrix (ndarray): :math:`\\, n \\times n \\,` binary matrix.
+        pauli_operator (:class:`qibo.models.Circuit`, optional): a :math:`n`-qubit
+            Pauli operator. If ``None``, it is assumed to be the Identity.
+            Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.models.Circuit`: element of the Hadamard-free group.
+    """
     if gamma_matrix.shape != delta_matrix.shape:
         raise_error(
             ValueError,
