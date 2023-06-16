@@ -26,6 +26,10 @@ from qibo.quantum_info.superoperator_transformations import (
     pauli_to_choi,
     pauli_to_kraus,
     pauli_to_liouville,
+    to_chi,
+    to_choi,
+    to_liouville,
+    to_pauli_liouville,
     unvectorization,
     vectorization,
 )
@@ -224,6 +228,85 @@ def pauli_superop(pauli_order):
 def chi_superop(pauli_order):
     elements = {"I": 0, "X": 1.6, "Y": 0, "Z": 2.4}
     return np.diag([elements[p] for p in pauli_order])
+
+
+@pytest.mark.parametrize("order", ["row", "column"])
+def test_to_choi(backend, order):
+    choi_a0 = to_choi(test_a0, order=order, backend=backend)
+    choi_a1 = to_choi(test_a1, order=order, backend=backend)
+    choi = choi_a0 + choi_a1
+
+    axes = [1, 2] if order == "row" else [0, 3]
+    test_choi = np.reshape(test_superop, [2] * 4)
+    test_choi = np.swapaxes(test_choi, *axes)
+    test_choi = np.reshape(test_choi, (4, 4))
+
+    backend.assert_allclose(choi, test_choi, atol=PRECISION_TOL)
+
+
+@pytest.mark.parametrize("order", ["row", "column"])
+def test_to_liouville(backend, order):
+    liouville_a0 = to_liouville(test_a0, order=order, backend=backend)
+    liouville_a1 = to_liouville(test_a1, order=order, backend=backend)
+    liouville = liouville_a0 + liouville_a1
+
+    backend.assert_allclose(liouville, test_superop, atol=PRECISION_TOL)
+
+
+@pytest.mark.parametrize("pauli_order", ["IXYZ", "IZXY"])
+@pytest.mark.parametrize("order", ["row", "column"])
+@pytest.mark.parametrize("normalize", [False, True])
+def test_to_pauli_liouville(backend, normalize, order, pauli_order):
+    pauli_a0 = to_pauli_liouville(
+        test_a0,
+        normalize=normalize,
+        order=order,
+        pauli_order=pauli_order,
+        backend=backend,
+    )
+    pauli_a1 = to_pauli_liouville(
+        test_a1,
+        normalize=normalize,
+        order=order,
+        pauli_order=pauli_order,
+        backend=backend,
+    )
+    pauli = pauli_a0 + pauli_a1
+
+    test_pauli = pauli_superop(pauli_order)
+    dim = int(np.sqrt(test_pauli.shape[0]))
+    aux = 1 if normalize == False else dim
+    test_pauli = backend.cast(test_pauli / aux, dtype=test_pauli.dtype)
+
+    backend.assert_allclose(pauli, test_pauli, atol=PRECISION_TOL)
+
+
+@pytest.mark.parametrize("pauli_order", ["IXYZ", "IZXY"])
+@pytest.mark.parametrize("order", ["row", "column"])
+@pytest.mark.parametrize("normalize", [False, True])
+def test_to_chi(backend, normalize, order, pauli_order):
+    chi_a0 = to_chi(
+        test_a0,
+        normalize=normalize,
+        order=order,
+        pauli_order=pauli_order,
+        backend=backend,
+    )
+    chi_a1 = to_chi(
+        test_a1,
+        normalize=normalize,
+        order=order,
+        pauli_order=pauli_order,
+        backend=backend,
+    )
+    chi = chi_a0 + chi_a1
+
+    test_chi = chi_superop(pauli_order)
+    dim = int(np.sqrt(test_chi.shape[0]))
+    aux = 1.0 if normalize == False else dim
+    test_chi = backend.cast(test_chi / aux, dtype=test_chi.dtype)
+
+    backend.assert_allclose(chi, test_chi, atol=PRECISION_TOL)
 
 
 @pytest.mark.parametrize("order", ["row", "column"])
@@ -451,7 +534,8 @@ def test_pauli_to_choi(backend, normalize, order, pauli_order, test_superop):
     )
 
     axes = [1, 2] if order == "row" else [0, 3]
-    test_choi = np.swapaxes(np.reshape(test_superop, [2] * 4), *axes).reshape([4, 4])
+    test_choi = np.swapaxes(np.reshape(test_superop, [2] * 4), *axes)
+    test_choi = np.reshape(test_choi, (4, 4))
 
     backend.assert_allclose(
         backend.calculate_norm(test_choi - choi_super_op) < PRECISION_TOL, True
