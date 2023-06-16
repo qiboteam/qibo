@@ -154,7 +154,7 @@ def entanglement_of_formation(
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    from qibo.quantum_info.utils import shannon_entropy
+    from qibo.quantum_info.utils import shannon_entropy  # pylint: disable=C0415
 
     concur = concurrence(
         state, bipartition=bipartition, check_purity=check_purity, backend=backend
@@ -963,7 +963,10 @@ def expressibility(circuit, t: int, samples: int, backend=None):
             TypeError, f"samples must be type int, but it is type {type(samples)}."
         )
 
-    from qibo.quantum_info.utils import haar_integral, pqc_integral
+    from qibo.quantum_info.utils import (  # pylint: disable=C0415
+        haar_integral,
+        pqc_integral,
+    )
 
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
