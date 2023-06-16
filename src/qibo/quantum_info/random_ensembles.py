@@ -502,7 +502,7 @@ def random_clifford(
     Reference:
         1. S. Bravyi and D. Maslov, *Hadamard-free circuits expose the
            structure of the Clifford group*.
-           `arXiv:2003.09412 [quant-ph] <https://arxiv.org/abs/2003.09412>`.
+           `arXiv:2003.09412 [quant-ph] <https://arxiv.org/abs/2003.09412>`_.
     """
 
     if (
@@ -1003,7 +1003,7 @@ def _sample_from_quantum_mallows_distribution(nqubits: int, local_state):
     Reference:
         1. S. Bravyi and D. Maslov, *Hadamard-free circuits expose the
             structure of the Clifford group*.
-            `arXiv:2003.09412 [quant-ph] <https://arxiv.org/abs/2003.09412>`.
+            `arXiv:2003.09412 [quant-ph] <https://arxiv.org/abs/2003.09412>`_.
 
     """
     mute_index = list(range(nqubits))
@@ -1044,7 +1044,7 @@ def _operator_from_hadamard_free_group(gamma_matrix, delta_matrix, pauli_operato
     Reference:
         1. S. Bravyi and D. Maslov, *Hadamard-free circuits expose the
            structure of the Clifford group*.
-           `arXiv:2003.09412 [quant-ph] <https://arxiv.org/abs/2003.09412>`.
+           `arXiv:2003.09412 [quant-ph] <https://arxiv.org/abs/2003.09412>`_.
     """
     if gamma_matrix.shape != delta_matrix.shape:  # pragma: no cover
         raise_error(
