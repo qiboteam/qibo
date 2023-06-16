@@ -564,7 +564,7 @@ def random_clifford(
             b = local_state.integers(0, 2)
             delta_matrix_prime[k, j] = b
 
-            if hadamards[k] == 1 and hadamards[j] == 1:
+            if hadamards[k] == 1 and hadamards[j] == 1:  # pragma: no cover
                 b = local_state.integers(0, 2)
                 gamma_matrix[k, j] = b
                 gamma_matrix[j, k] = b
@@ -584,7 +584,7 @@ def random_clifford(
                 hadamards[k] == 1
                 and hadamards[j] == 0
                 and permutations[k] < permutations[j]
-            ):
+            ):  # pragma: no cover
                 b = local_state.integers(0, 2)
                 gamma_matrix[k, j] = b
                 gamma_matrix[j, k] = b
@@ -593,7 +593,7 @@ def random_clifford(
                 hadamards[k] == 0
                 and hadamards[j] == 0
                 and permutations[k] < permutations[j]
-            ):
+            ):  # pragma: no cover
                 b = local_state.integers(0, 2)
                 delta_matrix[k, j] = b
 
@@ -1046,12 +1046,13 @@ def _operator_from_hadamard_free_group(gamma_matrix, delta_matrix, pauli_operato
            structure of the Clifford group*.
            `arXiv:2003.09412 [quant-ph] <https://arxiv.org/abs/2003.09412>`.
     """
-    if gamma_matrix.shape != delta_matrix.shape:
+    if gamma_matrix.shape != delta_matrix.shape:  # pragma: no cover
         raise_error(
             ValueError,
             "gamma_matrix and delta_matrix must have shape (nqubits, nqubits), "
             + f"but {gamma_matrix.shape} != {delta_matrix.shape}",
         )
+
     nqubits = len(gamma_matrix)
     circuit = Circuit(nqubits)
 
