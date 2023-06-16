@@ -169,7 +169,6 @@ class Channel(Gate):
         unitary = comp_basis_to_pauli(
             self.nqubits, normalize, pauli_order=pauli_order, backend=backend
         )
-        unitary = backend.cast(unitary, dtype=unitary.dtype)
 
         super_op = unitary @ super_op @ np.transpose(np.conj(unitary))
 
