@@ -6,25 +6,24 @@ from qibo.models import Circuit
 from qibo.models.iqae import IQAE
 
 
-def fourier_series(coeffs, x_val, period=2 * np.pi):
-    """Computes the Fourier series for a given set of coefficients in exponencial form."""
+def fourier_series(coeffs, x_val, period = 2 * np.pi):
+    """Compute the Fourier series for a given set of coefficients in exponencial form."""
 
-    series = [complex(0, 0) for _ in range(len(x_val))]
+    xval_len = len(x_val)
     x_vals = x_val.reshape(len(x_val))
-    n = 0
-    series += coeffs[0] * np.exp(1j * n * x_vals * (2 * np.pi / period))
-    for i in range(1, int((len(coeffs) - 1) / 2) + 1):
-        n += 1
-        series += coeffs[i] * np.exp(1j * n * x_vals * (2 * np.pi / period))
-    for i in range(int((len(coeffs) - 1) / 2 + 1), len(coeffs), 1):
-        series += coeffs[i] * np.exp(1j * -n * x_vals * (2 * np.pi / period))
-        n -= 1
+    n=0
+    series = coeffs[0] * np.exp(1j * n * x_vals * (2 * np.pi / period))
+    for i in range(1, int((len(coeffs)) / 2) +1):
+        n += 1        
+        serie_i = coeffs[i] * np.exp(1j * n * x_vals * (2 * np.pi / period))
+        series += serie_i+np.conjugate(serie_i)
     y_vals = np.real(series)
     return y_vals
 
 
 def plot_data_fourier(function_test, xtest, y_fourier):
-    """Plots the Fourier representation alongside the function test and provides the efficiency of the fit."""
+    """Plot the Fourier representation alongside the function test and provides the efficiency of the fit."""
+
     SSE = 0
     SST = 0
     average = np.sum(function_test) / function_test.size
@@ -56,7 +55,7 @@ def plot_data_fourier(function_test, xtest, y_fourier):
 
 
 def exp_fourier_to_trig(fourier_coeffs):
-    """Converts the Fourier coefficients from exponential form to trigonometric form."""
+    """Convert the Fourier coefficients from exponential form to trigonometric form."""
 
     n = len(fourier_coeffs)
     c0 = fourier_coeffs[0]
@@ -66,7 +65,7 @@ def exp_fourier_to_trig(fourier_coeffs):
 
 
 def coeffs_array_to_class(fourier_coeffs):
-    """Converts the Fourier coefficients from array to a Class to be dealt in an easier way."""
+    """Convert the Fourier coefficients from array to a Class to be dealt in an easier way."""
 
     fourier_class = []
 
@@ -79,19 +78,19 @@ def coeffs_array_to_class(fourier_coeffs):
 
 
 def trig_to_final_array(trig_coeffs):
-    """Converts the array with the trigonometric coefficients into an array that tracks if a
+    """Convert the array with the trigonometric coefficients into an array that tracks if a
     coefficient corresponds to a Cosine (0) or to a Sine (1)."""
 
     array_list = np.zeros(shape=(len(trig_coeffs), 3))
     array_list[0, 0] = 0  # 0 means Cos
     array_list[0, 1] = 0
     array_list[0, 2] = np.real(trig_coeffs[0])
-    for i in range(1, int((len(trig_coeffs) - 1) / 2) + 1):
+    for i in range(1, int((len(trig_coeffs)) / 2) + 1):
         # cosine
         array_list[i, 0] = 0  # 0 means Cos
         array_list[i, 1] = i
         array_list[i, 2] = trig_coeffs[i]
-    for i in range(int((len(trig_coeffs) - 1) / 2) + 1, len(trig_coeffs)):
+    for i in range(int((len(trig_coeffs)) / 2) + 1, len(trig_coeffs)):
         # sine
         array_list[i, 0] = 1  # 1 means Sin
         array_list[i, 1] = i - (len(trig_coeffs) - 1) / 2

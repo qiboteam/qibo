@@ -6,9 +6,9 @@ from qibo.models import Circuit
 
 
 class VQRegressor_linear_ansatz:
-    def __init__(self, layers, ndata, function, xmax=np.pi, xmin=-np.pi, states=None):
+    def __init__(self, layers, ndata, function, xmax=np.pi, xmin=-np.pi):
         """
-        This class implement an Adam Descent optimization performed on a
+        This class implements an Adam Descent optimization performed on a
         1-qubit Variational Quantum Circuit defined by the linear_ansatz function.
         Args:
             layers: integer value representing the number of layers
@@ -16,9 +16,6 @@ class VQRegressor_linear_ansatz:
             function: target function f(x)
             xmax: upper limit in the x variable
             xmin: lower limit in the x variable
-            states: (2, N)-dim np.matrix containing the states on which we perform the training.
-                    You can prepare a state sample generating some point in [-1,1] and submitting them to
-                    VQRegressor.prepare_states()
         """
         self.xmin = xmin
         self.xmax = xmax
@@ -32,23 +29,26 @@ class VQRegressor_linear_ansatz:
 
     def S(self, circuit, x):
         """Data encoding circuit block."""
+
         circuit.add(gates.RZ(q=0, theta=x))
 
-    def A(self, circuit, theta0, theta1, theta2):
+    def A(self, circuit, theta_vec):
         """Trainable circuit block."""
-        circuit.add(gates.RZ(q=0, theta=theta0))
-        circuit.add(gates.RY(q=0, theta=theta1))
-        circuit.add(gates.RZ(q=0, theta=theta2))
+
+        circuit.add(gates.RZ(q=0, theta=theta_vec[0]))
+        circuit.add(gates.RY(q=0, theta=theta_vec[1]))
+        circuit.add(gates.RZ(q=0, theta=theta_vec[2]))
 
     def linear_ansatz(self, weights, x=None):
         """Variational Quantum Circuit of the Quantum Neural Network that performs the fit of f(x)."""
+
         c = Circuit(self.nqubits)
-        ## First unitary, Layer 0
-        self.A(c, weights[0], weights[1], weights[2])
-        ## Adding different layers
+        # First unitary, Layer 0
+        self.A(c, weights[0:3])
+        # Adding different layers
         for i in range(3, len(weights), 3):
             self.S(c, x)
-            self.A(c, weights[i], weights[i + 1], weights[i + 2])
+            self.A(c, weights[i:i+3])
         c.add(gates.M(0))
         return c
 
@@ -59,6 +59,7 @@ class VQRegressor_linear_ansatz:
             x: np.float64 array of input variables
         Returns: np.float64 array of output variables
         """
+
         y = self.f(x)
         # We normalize the labels
         ymax = np.max(np.abs(y))
@@ -72,6 +73,7 @@ class VQRegressor_linear_ansatz:
             n_sample: integer desired dataset cardinality
         Returns: the features, the labels and the normalization constant
         """
+
         x = np.random.uniform(self.xmin, self.xmax, n_sample)
         labels, norm = self.label_points(x)
         return x, labels, norm
@@ -86,6 +88,7 @@ class VQRegressor_linear_ansatz:
             features: np.matrix in the form (2**nqubits, n_sample) on which you desire to perform
                    the predictions. Default = None and it takes the training dataset
         """
+
         if features is None:
             features = self.features
 
@@ -126,6 +129,7 @@ class VQRegressor_linear_ansatz:
         Args:
             new_params: np.array of the new parameters; it has to be (3 * nlayers) long
         """
+
         self.params = new_params
 
     def one_prediction(self, this_feature):
@@ -135,6 +139,7 @@ class VQRegressor_linear_ansatz:
             this_feature: np.float64 array 2**nqubits long, containing a specific feature
         Returns: circuit's prediction of the output variable, evaluated as difference of probabilities
         """
+
         c = self.linear_ansatz(self.params, this_feature)
         results = c().probabilities(qubits=[0])
         res = results[0] - results[1]
@@ -148,6 +153,7 @@ class VQRegressor_linear_ansatz:
                       the opportune self.prepare_states function as an array with dim 2**nqubits)
         Returns: np.array of the predictions
         """
+
         if features is None:
             features = self.features
 
@@ -165,6 +171,7 @@ class VQRegressor_linear_ansatz:
             this_label: the associated label
         Returns: one target loss function's value
         """
+
         this_prediction = self.one_prediction(this_feature)
         cf = (this_prediction - this_label) ** 2
         return cf
@@ -178,6 +185,7 @@ class VQRegressor_linear_ansatz:
             labels: np.array of the labels related to features
         Returns: loss function evaluated by summing contributes of each data
         """
+
         if params is None:
             params = self.params
 
@@ -202,6 +210,7 @@ class VQRegressor_linear_ansatz:
             labels: np.array of the labels related to features
         Returns: np.array of length self.nparams containing the loss function's gradients
         """
+
         loss_gradients = np.zeros(self.nparams)
         loss = 0
 
@@ -224,39 +233,20 @@ class VQRegressor_linear_ansatz:
             this_feature: np.array 2**nqubits-long containing the state vector assciated to a data
         Returns: derivative of the observable (here the prediction) with respect to self.params[i]
         """
+
         original = self.params.copy()
         shifted = self.params.copy()
 
-        # customized parameter shift rule when x contributes to param's definition
-        if i % 3 == 0:
-            shifted[i] += np.pi / 2 / this_feature
+        shifted[i] += np.pi / 2
+        self.set_parameters(shifted)
+        forward = self.one_prediction(this_feature)
 
-            self.set_parameters(shifted)
-            forward = self.one_prediction(this_feature)
+        shifted[i] -= np.pi
+        self.set_parameters(shifted)
+        backward = self.one_prediction(this_feature)
 
-            shifted[i] -= np.pi / this_feature
-
-            self.set_parameters(shifted)
-            backward = self.one_prediction(this_feature)
-
-            self.set_parameters(original)
-
-            result = 0.5 * (forward - backward) * this_feature
-
-        else:
-            shifted[i] += np.pi / 2
-
-            self.set_parameters(shifted)
-            forward = self.one_prediction(this_feature)
-
-            shifted[i] -= np.pi
-
-            self.set_parameters(shifted)
-            backward = self.one_prediction(this_feature)
-
-            self.set_parameters(original)
-
-            result = 0.5 * (forward - backward)
+        self.set_parameters(original)
+        result = 0.5 * (forward - backward)
 
         return result
 
@@ -267,6 +257,7 @@ class VQRegressor_linear_ansatz:
             this_feature: np.array 2**nqubits-long containing the state vector assciated to a data
         Returns: np.array of the observable's gradients with respect to the variational parameters
         """
+        
         obs_gradients = np.zeros(self.nparams, dtype=np.float64)
         for ipar in range(self.nparams - 1):
             obs_gradients[ipar] = self.shift_a_parameter(ipar, this_feature)
