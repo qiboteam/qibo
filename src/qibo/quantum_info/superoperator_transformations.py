@@ -706,7 +706,7 @@ def kraus_to_stinespring(
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
     Returns:
-        ndarray: Stinespring representation (restrited unitary) of the Kraus channel.
+        ndarray: Stinespring representation (restricted unitary) of the Kraus channel.
     """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
