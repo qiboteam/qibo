@@ -497,7 +497,7 @@ def random_clifford(
             Defaults to ``None``.
 
     Returns:
-        (ndarray or :class:`qibo.gates.Unitary`): Random Clifford operator.
+        (ndarray or :class:`qibo.models.Circuit`): Random Clifford operator.
 
     Reference:
         1. S. Bravyi and D. Maslov, *Hadamard-free circuits expose the
