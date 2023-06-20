@@ -505,11 +505,7 @@ def random_clifford(
            `arXiv:2003.09412 [quant-ph] <https://arxiv.org/abs/2003.09412>`_.
     """
 
-    if (
-        not isinstance(nqubits, int)
-        and not isinstance(nqubits, list)
-        and not isinstance(nqubits, np.ndarray)
-    ):
+    if isinstance(nqubits, int) is False:
         raise_error(
             TypeError,
             f"nqubits must be type int, but it is type {type(nqubits)}.",
