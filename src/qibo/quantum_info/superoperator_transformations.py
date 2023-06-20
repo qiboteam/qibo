@@ -269,7 +269,7 @@ def to_chi(
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
     Returns:
-        ndarray: quantum channel in its :math:`\\chi`representation.
+        ndarray: quantum channel in its :math:`\\chi`-representation.
     """
     channel = to_choi(channel, order=order, backend=backend)
     channel = liouville_to_pauli(
