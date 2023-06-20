@@ -48,7 +48,7 @@ class VQRegressor_linear_ansatz:
         # Adding different layers
         for i in range(3, len(weights), 3):
             self.S(c, x)
-            self.A(c, weights[i:i+3])
+            self.A(c, weights[i : i + 3])
         c.add(gates.M(0))
         return c
 
@@ -257,7 +257,7 @@ class VQRegressor_linear_ansatz:
             this_feature: np.array 2**nqubits-long containing the state vector assciated to a data
         Returns: np.array of the observable's gradients with respect to the variational parameters
         """
-        
+
         obs_gradients = np.zeros(self.nparams, dtype=np.float64)
         for ipar in range(self.nparams - 1):
             obs_gradients[ipar] = self.shift_a_parameter(ipar, this_feature)

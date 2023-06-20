@@ -6,17 +6,17 @@ from qibo.models import Circuit
 from qibo.models.iqae import IQAE
 
 
-def fourier_series(coeffs, x_val, period = 2 * np.pi):
+def fourier_series(coeffs, x_val, period=2 * np.pi):
     """Compute the Fourier series for a given set of coefficients in exponencial form."""
 
     xval_len = len(x_val)
     x_vals = x_val.reshape(len(x_val))
-    n=0
+    n = 0
     series = coeffs[0] * np.exp(1j * n * x_vals * (2 * np.pi / period))
-    for i in range(1, int((len(coeffs)) / 2) +1):
-        n += 1        
+    for i in range(1, int((len(coeffs)) / 2) + 1):
+        n += 1
         serie_i = coeffs[i] * np.exp(1j * n * x_vals * (2 * np.pi / period))
-        series += serie_i+np.conjugate(serie_i)
+        series += serie_i + np.conjugate(serie_i)
     y_vals = np.real(series)
     return y_vals
 
