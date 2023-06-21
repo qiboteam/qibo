@@ -42,6 +42,40 @@ def hamming_weight(bitstring, return_indexes: bool = False):
     return weight
 
 
+def hadamard_transform(array, backend=None):
+    """Calculates the (fast) Hadamard Transform of a :math:`4^{n}`-dimensional
+    ``array``, where :math:`n` is the number of qubits.
+
+    Args:
+        array (ndarray): :math:`4^{n}`-dimensional ``ndarray``.
+
+    Returns:
+        ndarray: (Fast) Hadamard Transform of ``array``.
+    """
+    if backend is None:
+        backend = GlobalBackend()
+
+    if len(array.shape) != 1:
+        raise_error(
+            TypeError,
+            f"array must have shape (4**nqubits,), but it has shape {array.shape}.",
+        )
+
+    indexes = [2**k for k in range(int(np.log2(len(array))))]
+    for index in indexes:
+        for k in range(0, len(array), 2 * index):
+            for j in range(k, k + index):
+                elem_1 = array[j]
+                elem_2 = array[j + index]
+                array[j] = elem_1 + elem_2
+                array[j + index] = elem_1 - elem_2
+        array /= 2
+
+    array = backend.cast(array, dtype=array.dtype)
+
+    return array
+
+
 def shannon_entropy(probability_array, base: float = 2, backend=None):
     """Calculate the Shannon entropy of a probability array :math:`\\mathbf{p}`, which is given by
 
@@ -86,9 +120,7 @@ def shannon_entropy(probability_array, base: float = 2, backend=None):
             "All elements of the probability array must be between 0. and 1..",
         )
 
-    if (np.sum(probability_array) > 1.0 + PRECISION_TOL) or (
-        np.sum(probability_array) < 1.0 - PRECISION_TOL
-    ):
+    if np.abs(np.sum(probability_array) - 1.0) > PRECISION_TOL:
         raise_error(ValueError, "Probability array must sum to 1.")
 
     if base == 2:
@@ -159,14 +191,10 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend
                 ValueError,
                 "All elements of the probability array must be between 0. and 1..",
             )
-        if (np.sum(prob_dist_p) > 1.0 + PRECISION_TOL) or (
-            np.sum(prob_dist_p) < 1.0 - PRECISION_TOL
-        ):
+        if np.abs(np.sum(prob_dist_p) - 1.0) > PRECISION_TOL:
             raise_error(ValueError, "First probability array must sum to 1.")
 
-        if (np.sum(prob_dist_q) > 1.0 + PRECISION_TOL) or (
-            np.sum(prob_dist_q) < 1.0 - PRECISION_TOL
-        ):
+        if np.abs(np.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
             raise_error(ValueError, "Second probability array must sum to 1.")
 
     distance = backend.calculate_norm(
