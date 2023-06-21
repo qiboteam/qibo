@@ -85,15 +85,15 @@ def test_standard_parameter_shift(backend, nshots, atol, scale_factor, grads):
     backend.assert_allclose(grad_2, grads[2], atol=atol)
 
 
-@pytest.mark.parametrize("nshots, atol", [(None, 1e-8), (100000, 1e-2)])
-@pytest.mark.parametrize("grads", [-8.51104358e-02, -5.20075970e-01, 0])
-@pytest.mark.parametrize("step_size", [1e-5, 1e-6, 1e-7, 1e-8, 1e-9])
-def test_finite_differences(backend, nshots, atol, step_size, grads):
+@pytest.mark.parametrize("step_size", [10**-i for i in range(5, 10, 1)])
+def test_finite_differences(backend, step_size):
     # initializing the circuit
     c = circuit(nqubits=1)
 
     # some parameters
     test_params = np.linspace(0.1, 1, 3)
+    grads = [-8.51104358e-02, -5.20075970e-01, 0]
+    atol = 1e-7
     c.set_parameters(test_params)
 
     test_hamiltonian = hamiltonian(nqubits=1, backend=backend)
@@ -106,31 +106,17 @@ def test_finite_differences(backend, nshots, atol, step_size, grads):
 
     # testing hamiltonian type
     with pytest.raises(TypeError):
-        grad_0 = finite_differences(
-            circuit=c, hamiltonian=c, parameter_index=0, nshots=nshots
-        )
+        grad_0 = finite_differences(circuit=c, hamiltonian=c, parameter_index=0)
 
     # executing all the procedure
-    grad_0 = parameter_shift(
-        circuit=c,
-        hamiltonian=test_hamiltonian,
-        parameter_index=0,
-        step_size=step_size,
-        nshots=nshots,
+    grad_0 = finite_differences(
+        circuit=c, hamiltonian=test_hamiltonian, parameter_index=0, step_size=step_size
     )
-    grad_1 = parameter_shift(
-        circuit=c,
-        hamiltonian=test_hamiltonian,
-        parameter_index=1,
-        step_size=step_size,
-        nshots=nshots,
+    grad_1 = finite_differences(
+        circuit=c, hamiltonian=test_hamiltonian, parameter_index=1, step_size=step_size
     )
-    grad_2 = parameter_shift(
-        circuit=c,
-        hamiltonian=test_hamiltonian,
-        parameter_index=2,
-        step_size=step_size,
-        nshots=nshots,
+    grad_2 = finite_differences(
+        circuit=c, hamiltonian=test_hamiltonian, parameter_index=2, step_size=step_size
     )
 
     # check of known values
