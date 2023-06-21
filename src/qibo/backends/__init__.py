@@ -99,6 +99,7 @@ class QiboMatrices:
         self.S = self.matrices.S
         self.SDG = self.matrices.SDG
         self.CNOT = self.matrices.CNOT
+        self.CZ = self.matrices.CZ
 
 
 matrices = QiboMatrices()
