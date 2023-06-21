@@ -1618,6 +1618,12 @@ Hamming weight
 .. autofunction:: qibo.quantum_info.hamming_weight
 
 
+Hadamard Transform
+""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.hadamard_transform
+
+
 Shannon entropy
 """""""""""""""
 
