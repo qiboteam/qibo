@@ -245,6 +245,7 @@ def chi_superop(pauli_order):
     return np.diag([elements[p] for p in pauli_order])
 
 
+@pytest.mark.parametrize("order", ["row", "column"])
 def test_to_choi(backend, order):
     choi_a0 = to_choi(test_a0, order=order, backend=backend)
     choi_a1 = to_choi(test_a1, order=order, backend=backend)
