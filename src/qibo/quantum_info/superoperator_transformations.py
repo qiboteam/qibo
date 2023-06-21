@@ -150,6 +150,141 @@ def unvectorization(state, order: str = "row", backend=None):
     return state
 
 
+def to_choi(channel, order: str = "row", backend=None):
+    """Converts quantum ``channel`` :math:`U` to its Choi representation :math:`\\Lambda`.
+
+    .. math::
+        \\Lambda = | U \\rangle\\rangle \\langle\\langle U | \\, ,
+
+    where :math:`| \\cdot \\rangle\\rangle` is the :func:`qibo.quantum_info.vectorization`
+    operation.
+
+    Args:
+        channel (ndarray): quantum channel.
+        order (str, optional): If ``"row"``, vectorization is performed
+            row-wise. If ``"column"``, vectorization is performed
+            column-wise. If ``"system"``, a block-vectorization is
+            performed. Default is ``"row"``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        ndarray: quantum channel in its Choi representation.
+    """
+    channel = vectorization(channel, order=order, backend=backend)
+    channel = np.outer(channel, np.conj(channel))
+
+    return channel
+
+
+def to_liouville(channel, order: str = "row", backend=None):
+    """Converts quantum ``channel`` :math:`U` to its Liouville representation
+    :math:`\\mathcal{E}`. It uses the Choi representation as an
+    intermediate step.
+
+    Args:
+        channel (ndarray): quantum channel.
+        order (str, optional): If ``"row"``, vectorization is performed
+            row-wise. If ``"column"``, vectorization is performed
+            column-wise. If ``"system"``, a block-vectorization is
+            performed. Default is ``"row"``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        ndarray: quantum channel in its Liouville representation.
+    """
+    channel = to_choi(channel, order=order, backend=backend)
+    channel = _reshuffling(channel, order=order, backend=backend)
+
+    return channel
+
+
+def to_pauli_liouville(
+    channel,
+    normalize: bool = False,
+    order: str = "row",
+    pauli_order: str = "IXYZ",
+    backend=None,
+):
+    """Converts quantum ``channel`` :math:`U` to its Pauli-Liouville
+    representation :math:`\\mathcal{E}`. It uses the Liouville representation
+    as an intermediate step.
+
+    Args:
+        channel (ndarray): quantum channel.
+        normalize (bool, optional): If ``True`` superoperator is returned
+            in the normalized Pauli basis. If ``False``, it is returned
+            in the unnormalized Pauli basis. Defaults to ``False``.
+        order (str, optional): If ``"row"``, vectorization is performed
+            row-wise. If ``"column"``, vectorization is performed
+            column-wise. If ``"system"``, a block-vectorization is
+            performed. Default is ``"row"``.
+        pauli_order (str, optional): corresponds to the order of 4 single-qubit
+            Pauli elements. Default is "IXYZ".
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        ndarray: quantum channel in its Pauli-Liouville representation.
+    """
+    from qibo.quantum_info.basis import comp_basis_to_pauli
+
+    nqubits = int(np.log2(channel.shape[0]))
+
+    channel = to_liouville(channel, order=order, backend=backend)
+
+    unitary = comp_basis_to_pauli(
+        nqubits, normalize, pauli_order=pauli_order, backend=backend
+    )
+
+    channel = unitary @ channel @ np.transpose(np.conj(unitary))
+
+    return channel
+
+
+def to_chi(
+    channel,
+    normalize: bool = False,
+    order: str = "row",
+    pauli_order: str = "IXYZ",
+    backend=None,
+):
+    """Converts quantum ``channel`` :math:`U` to its :math:`\\chi`-representation.
+
+    Args:
+        channel (ndarray): quantum channel.
+        normalize (bool, optional): If ``True`` superoperator is returned
+            in the normalized Pauli basis. If ``False``, it is returned
+            in the unnormalized Pauli basis. Defaults to ``False``.
+        order (str, optional): If ``"row"``, vectorization is performed
+            row-wise. If ``"column"``, vectorization is performed
+            column-wise. If ``"system"``, a block-vectorization is
+            performed. Default is ``"row"``.
+        pauli_order (str, optional): corresponds to the order of 4 single-qubit
+            Pauli elements. Default is "IXYZ".
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        ndarray: quantum channel in its :math:`\\chi`-representation.
+    """
+    channel = to_choi(channel, order=order, backend=backend)
+    channel = liouville_to_pauli(
+        channel,
+        normalize=normalize,
+        order=order,
+        pauli_order=pauli_order,
+        backend=backend,
+    )
+
+    return channel
+
+
 def choi_to_liouville(choi_super_op, order: str = "row", backend=None):
     """Converts Choi representation :math:`\\Lambda` of quantum channel
     to its Liouville representation :math:`\\mathcal{E}`.
