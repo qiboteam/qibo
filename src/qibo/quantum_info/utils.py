@@ -8,34 +8,6 @@ import numpy as np
 from qibo.backends import GlobalBackend
 from qibo.config import PRECISION_TOL, raise_error
 
-# Phases corresponding to all 24 single-qubit Clifford gates
-ONEQUBIT_CLIFFORD_PARAMS = [
-    (0, 0, 0, 0),
-    (np.pi, 1, 0, 0),
-    (np.pi, 0, 1, 0),
-    (np.pi, 0, 0, 1),
-    (np.pi / 2, 1, 0, 0),
-    (-np.pi / 2, 1, 0, 0),
-    (np.pi / 2, 0, 1, 0),
-    (-np.pi / 2, 0, 1, 0),
-    (np.pi / 2, 0, 0, 1),
-    (-np.pi / 2, 0, 0, 1),
-    (np.pi, 1 / np.sqrt(2), 1 / np.sqrt(2), 0),
-    (np.pi, 1 / np.sqrt(2), 0, 1 / np.sqrt(2)),
-    (np.pi, 0, 1 / np.sqrt(2), 1 / np.sqrt(2)),
-    (np.pi, -1 / np.sqrt(2), 1 / np.sqrt(2), 0),
-    (np.pi, 1 / np.sqrt(2), 0, -1 / np.sqrt(2)),
-    (np.pi, 0, -1 / np.sqrt(2), 1 / np.sqrt(2)),
-    (2 * np.pi / 3, 1 / np.sqrt(3), 1 / np.sqrt(3), 1 / np.sqrt(3)),
-    (-2 * np.pi / 3, 1 / np.sqrt(3), 1 / np.sqrt(3), 1 / np.sqrt(3)),
-    (2 * np.pi / 3, -1 / np.sqrt(3), 1 / np.sqrt(3), 1 / np.sqrt(3)),
-    (-2 * np.pi / 3, -1 / np.sqrt(3), 1 / np.sqrt(3), 1 / np.sqrt(3)),
-    (2 * np.pi / 3, 1 / np.sqrt(3), -1 / np.sqrt(3), 1 / np.sqrt(3)),
-    (-2 * np.pi / 3, 1 / np.sqrt(3), -1 / np.sqrt(3), 1 / np.sqrt(3)),
-    (2 * np.pi / 3, 1 / np.sqrt(3), 1 / np.sqrt(3), -1 / np.sqrt(3)),
-    (-2 * np.pi / 3, 1 / np.sqrt(3), 1 / np.sqrt(3), -1 / np.sqrt(3)),
-]
-
 
 def hamming_weight(bitstring, return_indexes: bool = False):
     """Calculates the Hamming weight of a bitstring.
@@ -82,9 +54,9 @@ def shannon_entropy(probability_array, base: float = 2, backend=None):
 
     Args:
         probability_array (ndarray or list): a probability array :math:`\\mathbf{p}`.
-        base (float): the base of the log. Default: 2.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be used
-            in the execution. If ``None``, it uses ``GlobalBackend()``.
+        base (float): the base of the log. Defaults to  :math:`2`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
 
     Returns:
@@ -154,9 +126,9 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend
         prob_dist_q: (discrete) probability distribution :math:`q`.
         validate (bool): if True, checks if :math:`p` and :math:`q` are proper
             probability distributions. Default: False.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be
-            used in the execution. If ``None``, it uses ``GlobalBackend()``.
-            Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
+            used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
     Returns:
         (float): Hellinger distance :math:`H(p, q)`.
@@ -217,9 +189,9 @@ def hellinger_fidelity(prob_dist_p, prob_dist_q, validate: bool = False, backend
         prob_dist_q: (discrete) probability distribution :math:`q`.
         validate (bool): if True, checks if :math:`p` and :math:`q` are proper
             probability distributions. Default: False.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be
-            used in the execution. If ``None``, it uses ``GlobalBackend()``.
-            Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
+            used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
     Returns:
         (float): Hellinger fidelity.
@@ -241,9 +213,9 @@ def haar_integral(nqubits: int, t: int, samples: int, backend=None):
         nqubits (int): Number of qubits.
         t (int): power that defines the :math:`t`-design.
         samples (int): number of samples to estimate the integral.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be
-            used in the execution. If ``None``, it uses ``GlobalBackend()``.
-            Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
+            used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
     Returns:
         array: Estimation of the Haar integral.
@@ -297,9 +269,9 @@ def pqc_integral(circuit, t: int, samples: int, backend=None):
         circuit (:class:`qibo.models.Circuit`): Parametrized circuit.
         t (int): power that defines the :math:`t`-design.
         samples (int): number of samples to estimate the integral.
-        backend (``qibo.backends.abstract.Backend``, optional): backend to be
-            used in the execution. If ``None``, it uses ``GlobalBackend()``.
-            Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
+            used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
     Returns:
         ndarray: Estimation of the integral.

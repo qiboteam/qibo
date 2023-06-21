@@ -18,6 +18,11 @@ repos:
       - id: isort
         args: ["--profile", "black"]
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.4.0
+    rev: v3.7.0
     hooks:
       - id: pyupgrade
+  - repo: https://github.com/hadialqattan/pycln
+    rev: v2.1.5
+    hooks:
+      - id: pycln
+        args: [--config=pyproject.toml]

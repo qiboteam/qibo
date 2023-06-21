@@ -725,7 +725,9 @@ function.
     target_state = tf.ones(4, dtype=tf.complex128) / 2.0
 
     # Define circuit ansatz
-    params = tf.Variable(tf.random.uniform((2,), dtype=tf.float64))
+    params = tf.Variable(
+        tf.random.uniform((2,), dtype=tf.float64).astype(tf.complex128)
+    )
     c = models.Circuit(2)
     c.add(gates.RX(0, params[0]))
     c.add(gates.RY(1, params[1]))
@@ -737,6 +739,7 @@ function.
             fidelity = tf.math.abs(tf.reduce_sum(tf.math.conj(target_state) * final_state))
             loss = 1 - fidelity
         grads = tape.gradient(loss, params)
+        grads = tf.math.real(grads)
         optimizer.apply_gradients(zip([grads], [params]))
 
 
@@ -770,6 +773,7 @@ For example:
             fidelity = tf.math.abs(tf.reduce_sum(tf.math.conj(target_state) * final_state))
             loss = 1 - fidelity
         grads = tape.gradient(loss, params)
+        grads = tf.math.real(grads)
         optimizer.apply_gradients(zip([grads], [params]))
 
     for _ in range(nepochs):
@@ -927,7 +931,7 @@ Adding noise after every gate
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In practical applications noise typically occurs after every gate.
-Qibo provides the :meth:`qibo.models.circuit.Circuit.with_noise` method
+Qibo provides the :meth:`qibo.models.circuit.Circuit.with_pauli_noise` method
 which automatically creates a new circuit that contains a
 :class:`qibo.gates.PauliNoiseChannel` after every gate.
 The user can control the probabilities of the noise channel using a noise map,
@@ -943,7 +947,7 @@ triplets. For example, the following script
 
       # Define a noise map that maps qubit IDs to noise probabilities
       noise_map = {0: list(zip(["X", "Z"], [0.1, 0.2])), 1: list(zip(["Y", "Z"], [0.2, 0.1]))}
-      noisy_c = c.with_noise(noise_map)
+      noisy_c = c.with_pauli_noise(noise_map)
 
 will create a new circuit ``noisy_c`` that is equivalent to:
 
@@ -968,11 +972,11 @@ That is ``noise_map = list(zip(["X", "Z"], [0.1, 0.1]))`` is equivalent to
 ``noise_map = {0: list(zip(["X", "Z"], [0.1, 0.1])), 1: list(zip(["X", "Z"], [0.1, 0.1])), ...}``.
 
 As described in the previous sections, if
-:meth:`qibo.models.circuit.Circuit.with_noise` is used in a circuit
+:meth:`qibo.models.circuit.Circuit.with_pauli_noise` is used in a circuit
 that uses state vectors then noise will be simulated with repeated execution.
 If the user wishes to use density matrices instead, this is possible by
 passing the ``density_matrix=True`` flag during the circuit initialization and call
-``.with_noise`` on the new circuit.
+``.with_pauli_noise`` on the new circuit.
 
 .. _noisemodel-example:
 

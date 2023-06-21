@@ -1,8 +1,25 @@
+"""Tests for the quantum_info.random_ensembles module."""
+
+from functools import reduce
+
 import numpy as np
 import pytest
 
+from qibo import matrices
 from qibo.config import PRECISION_TOL
-from qibo.quantum_info import *
+from qibo.quantum_info.metrics import purity
+from qibo.quantum_info.random_ensembles import (
+    random_clifford,
+    random_density_matrix,
+    random_gaussian_matrix,
+    random_hermitian,
+    random_pauli,
+    random_pauli_hamiltonian,
+    random_quantum_channel,
+    random_statevector,
+    random_stochastic_matrix,
+    random_unitary,
+)
 
 
 @pytest.mark.parametrize("seed", [None, 10, np.random.Generator(np.random.MT19937(10))])
@@ -130,7 +147,8 @@ def test_random_unitary(backend):
 
 @pytest.mark.parametrize("measure", [None, "haar"])
 @pytest.mark.parametrize(
-    "representation", ["chi", "choi", "kraus", "liouville", "pauli"]
+    "representation",
+    ["chi", "chi-IZXY", "choi", "kraus", "liouville", "pauli", "pauli-IZXY"],
 )
 def test_random_quantum_channel(backend, representation, measure):
     with pytest.raises(TypeError):
@@ -167,7 +185,7 @@ def test_random_statevector(backend, haar, seed):
 
 
 @pytest.mark.parametrize("normalize", [False, True])
-@pytest.mark.parametrize("basis", [None, "pauli"])
+@pytest.mark.parametrize("basis", [None, "pauli-IXYZ", "pauli-IZXY"])
 @pytest.mark.parametrize("metric", ["Hilbert-Schmidt", "Bures"])
 @pytest.mark.parametrize("pure", [False, True])
 @pytest.mark.parametrize("dims", [2, 4])
@@ -234,72 +252,42 @@ def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
             )
 
 
-@pytest.mark.parametrize("qubits", [1, 2, [0, 1], np.array([0, 1])])
-@pytest.mark.parametrize("return_circuit", [False, True])
-@pytest.mark.parametrize("fuse", [False, True])
 @pytest.mark.parametrize("seed", [10])
-def test_random_clifford(backend, qubits, return_circuit, fuse, seed):
+@pytest.mark.parametrize("return_circuit", [True, False])
+@pytest.mark.parametrize("nqubits", [1, 2])
+def test_random_clifford(backend, nqubits, return_circuit, seed):
     with pytest.raises(TypeError):
-        q = "1"
-        random_clifford(q, backend=backend)
+        test = random_clifford(
+            nqubits="1", return_circuit=return_circuit, backend=backend
+        )
     with pytest.raises(ValueError):
-        q = -1
-        random_clifford(q, backend=backend)
-    with pytest.raises(ValueError):
-        q = [0, 1, -3]
-        random_clifford(q, backend=backend)
+        test = random_clifford(
+            nqubits=-1, return_circuit=return_circuit, backend=backend
+        )
     with pytest.raises(TypeError):
-        q = 1
-        random_clifford(q, return_circuit="True", backend=backend)
+        test = random_clifford(nqubits, return_circuit="True", backend=backend)
     with pytest.raises(TypeError):
-        q = 2
-        random_clifford(q, fuse="True", backend=backend)
-    with pytest.raises(TypeError):
-        q = 1
-        random_clifford(q, seed=0.1, backend=backend)
+        test = random_clifford(
+            nqubits, return_circuit=return_circuit, seed=0.1, backend=backend
+        )
 
-    result_single = np.array([[0.5 - 0.5j, -0.5 + 0.5j], [0.5 + 0.5j, 0.5 + 0.5j]])
+    result_single = matrices.Z @ matrices.H
 
-    result_two = np.array(
-        [
-            [0.5 + 0.0j, -0.5 - 0.0j, -0.5 + 0.0j, 0.5 + 0.0j],
-            [0.0 - 0.5j, 0.0 - 0.5j, 0.0 + 0.5j, 0.0 + 0.5j],
-            [0.0 + 0.5j, 0.0 - 0.5j, 0.0 + 0.5j, 0.0 - 0.5j],
-            [0.5 + 0.0j, 0.5 + 0.0j, 0.5 - 0.0j, 0.5 + 0.0j],
-        ]
-    )
+    result_two = np.kron(matrices.H, matrices.S) @ np.kron(matrices.S, matrices.Z)
+    result_two = np.kron(matrices.Z @ matrices.S, matrices.I) @ result_two
+    result_two = matrices.CNOT @ matrices.CZ @ result_two
 
-    result = result_single if (isinstance(qubits, int) and qubits == 1) else result_two
+    result = result_single if nqubits == 1 else result_two
     result = backend.cast(result, dtype=result.dtype)
 
     matrix = random_clifford(
-        qubits, return_circuit=return_circuit, fuse=fuse, seed=seed, backend=backend
+        nqubits, return_circuit=return_circuit, seed=seed, backend=backend
     )
 
     if return_circuit:
-        matrix = backend.cast(matrix.matrix, dtype=matrix.matrix.dtype)
-        backend.assert_allclose(
-            backend.calculate_norm(matrix - result) < PRECISION_TOL, True
-        )
+        matrix = matrix.unitary(backend)
 
-    if not return_circuit and fuse:
-        backend.assert_allclose(
-            backend.calculate_norm(matrix - result) < PRECISION_TOL, True
-        )
-
-    if not return_circuit and not fuse:
-        if isinstance(qubits, int) and qubits == 1:
-            backend.assert_allclose(
-                backend.calculate_norm(matrix - result) < PRECISION_TOL, True
-            )
-        else:
-            from functools import reduce
-
-            backend.assert_allclose(
-                backend.calculate_norm(reduce(np.kron, matrix) - result)
-                < PRECISION_TOL,
-                True,
-            )
+    backend.assert_allclose(matrix, result, atol=PRECISION_TOL)
 
 
 def test_random_pauli_errors(backend):
@@ -413,10 +401,13 @@ def test_random_pauli(backend, qubits, depth, max_qubits, subset, return_circuit
             )
 
 
+@pytest.mark.parametrize("pauli_order", ["IXYZ", "IZXY"])
 @pytest.mark.parametrize("normalize", [False, True])
 @pytest.mark.parametrize("max_eigenvalue", [2, 3])
 @pytest.mark.parametrize("nqubits", [2, 3, 4])
-def test_random_pauli_hamiltonian(backend, nqubits, max_eigenvalue, normalize):
+def test_random_pauli_hamiltonian(
+    backend, nqubits, max_eigenvalue, normalize, pauli_order
+):
     with pytest.raises(TypeError):
         random_pauli_hamiltonian(nqubits=[1], backend=backend)
     with pytest.raises(ValueError):
@@ -435,7 +426,7 @@ def test_random_pauli_hamiltonian(backend, nqubits, max_eigenvalue, normalize):
         )
 
     _, eigenvalues = random_pauli_hamiltonian(
-        nqubits, max_eigenvalue, normalize, backend=backend
+        nqubits, max_eigenvalue, normalize, pauli_order, backend=backend
     )
 
     if normalize is True:
