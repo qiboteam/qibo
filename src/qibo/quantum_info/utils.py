@@ -43,11 +43,10 @@ def hamming_weight(bitstring, return_indexes: bool = False):
 
 
 def hadamard_transform(array, backend=None):
-    """Calculates the (fast) Hadamard Transform of a :math:`4^{n}`-dimensional
-    ``array``, where :math:`n` is the number of qubits.
+    """Calculates the (fast) Hadamard Transform of an ``array``.
 
     Args:
-        array (ndarray): :math:`4^{n}`-dimensional ``ndarray``.
+        array (ndarray): an ``ndarray``.
 
     Returns:
         ndarray: (Fast) Hadamard Transform of ``array``.
@@ -69,7 +68,7 @@ def hadamard_transform(array, backend=None):
                 elem_2 = array[j + index]
                 array[j] = elem_1 + elem_2
                 array[j + index] = elem_1 - elem_2
-        array /= 2
+        array /= 2.0
 
     array = backend.cast(array, dtype=array.dtype)
 

@@ -1,14 +1,18 @@
 from re import finditer
+from functools import reduce
 
 import numpy as np
 import pytest
 
+from qibo import matrices
 from qibo.config import PRECISION_TOL
 from qibo.models import Circuit
 from qibo.quantum_info.metrics import fidelity
+from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
 from qibo.quantum_info.utils import (
     haar_integral,
     hamming_weight,
+    hadamard_transform,
     hellinger_distance,
     hellinger_fidelity,
     pqc_integral,
@@ -41,6 +45,25 @@ def test_hamming_weight(bitstring, kind):
 
     assert weight == weight_test
     assert indexes == indexes_test
+
+
+@pytest.mark.parametrize("nqubits", np.arange(3, 6 + 1))
+def test_hadamard_transform(backend, nqubits):
+    with pytest.raises(TypeError):
+        test = random_density_matrix(4**nqubits, pure=True, backend=backend)
+        test = hadamard_transform(test, backend=backend)
+
+    state = np.arange(2**nqubits, dtype=float)
+    state = backend.cast(state, dtype=state.dtype)
+
+    hadamards = reduce(np.kron, [matrices.H]*(nqubits))
+    hadamards = backend.cast(hadamards)
+
+    backend.assert_allclose(
+        hadamard_transform(state, backend), 
+        np.real(hadamards @ hadamards @ state), 
+        atol=PRECISION_TOL
+    )
 
 
 def test_shannon_entropy_errors(backend):
