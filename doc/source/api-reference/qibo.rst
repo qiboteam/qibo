@@ -1404,6 +1404,30 @@ Unvectorization
     is such that :math:`n > 16`.
 
 
+To Choi
+"""""""
+
+.. autofunction:: qibo.quantum_info.to_choi
+
+
+To Liouville
+""""""""""""
+
+.. autofunction:: qibo.quantum_info.to_liouville
+
+
+To Pauli-Liouville
+""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.to_pauli_liouville
+
+
+To Chi
+"""""""
+
+.. autofunction:: qibo.quantum_info.to_chi
+
+
 Choi to Liouville
 """""""""""""""""
 

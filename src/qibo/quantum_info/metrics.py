@@ -7,7 +7,7 @@ from qibo.config import PRECISION_TOL, raise_error
 
 
 def purity(state):
-    """Purity of a quantum state :math:`\\rho`, which is given by :math:`\\text{Tr}(\\rho^{2})`.
+    """Purity of a quantum state :math:`\\rho`, which is given by :math:`\\text{tr}(\\rho^{2})`.
 
     Args:
         state (ndarray): statevector or density matrix.
@@ -56,9 +56,9 @@ def concurrence(state, bipartition, check_purity: bool = True, backend=None):
     :math:`\\rho \\in \\mathcal{H}_{A} \\otimes \\mathcal{H}_{B}` as
 
     .. math::
-        C(\\rho) = \\sqrt{2 \\, (\\text{tr}^{2}(\\rho) - \\text{tr}(\\rho_{B}^{2}))} \\, ,
+        C(\\rho) = \\sqrt{2 \\, (\\text{tr}^{2}(\\rho) - \\text{tr}(\\rho_{A}^{2}))} \\, ,
 
-    where :math:`\\rho_{B} = \\text{tr}_{B}(\\rho)` is the reduced density operator
+    where :math:`\\rho_{A} = \\text{tr}_{B}(\\rho)` is the reduced density operator
     obtained by tracing out the qubits in the ``bipartition`` :math:`B`.
 
     Args:
@@ -154,7 +154,7 @@ def entanglement_of_formation(
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    from qibo.quantum_info.utils import shannon_entropy
+    from qibo.quantum_info.utils import shannon_entropy  # pylint: disable=C0415
 
     concur = concurrence(
         state, bipartition=bipartition, check_purity=check_purity, backend=backend
@@ -172,7 +172,7 @@ def entropy(state, base: float = 2, check_hermitian: bool = False, backend=None)
     is given by
 
     .. math::
-        S(\\rho) = - \\text{Tr}\\left[\\rho \\, \\log(\\rho)\\right]
+        S(\\rho) = - \\text{tr}\\left[\\rho \\, \\log(\\rho)\\right]
 
     Args:
         state (ndarray): statevector or density matrix.
@@ -250,9 +250,9 @@ def entanglement_entropy(
     which is given by
 
     .. math::
-        S(\\rho_{A}) = -\\tr(\\rho_{A} \\, \\log(\\rho_{A})) \\, ,
+        S(\\rho_{A}) = -\\text{tr}(\\rho_{A} \\, \\log(\\rho_{A})) \\, ,
 
-    where :math:`\\rho_{A} = \\tr_{B}(\\rho)` is the reduced density matrix calculated
+    where :math:`\\rho_{A} = \\text{tr}_{B}(\\rho)` is the reduced density matrix calculated
     by tracing out the ``bipartition`` :math:`B`.
 
     Args:
@@ -307,7 +307,7 @@ def trace_distance(state, target, check_hermitian: bool = False, backend=None):
 
     .. math::
         T(\\rho, \\sigma) = \\frac{1}{2} \\, \\|\\rho - \\sigma\\|_{1} = \\frac{1}{2} \\,
-            \\text{Tr}\\left[ \\sqrt{(\\rho - \\sigma)^{\\dagger}(\\rho - \\sigma)}
+            \\text{tr}\\left[ \\sqrt{(\\rho - \\sigma)^{\\dagger}(\\rho - \\sigma)}
             \\right] \\, ,
 
     where :math:`\\|\\cdot\\|_{1}` is the Schatten 1-norm.
@@ -385,7 +385,7 @@ def hilbert_schmidt_distance(state, target):
 
     .. math::
         \\langle \\rho \\, , \\, \\sigma \\rangle_{\\text{HS}} =
-            \\text{Tr}\\left((\\rho - \\sigma)^{2}\\right)
+            \\text{tr}\\left((\\rho - \\sigma)^{2}\\right)
 
     Args:
         state (ndarray): statevector or density matrix.
@@ -424,13 +424,13 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
     and ``target`` state :math:`\\sigma`. In general,
 
     .. math::
-        F(\\rho, \\sigma) = \\text{Tr}^{2}\\left( \\sqrt{\\sqrt{\\sigma} \\,
+        F(\\rho, \\sigma) = \\text{tr}^{2}\\left( \\sqrt{\\sqrt{\\sigma} \\,
         \\rho^{\\dagger} \\, \\sqrt{\\sigma}} \\right) \\, .
 
     However, when at least one of the states is pure, then
 
     .. math::
-        F(\\rho, \\sigma) = \\text{Tr}(\\rho \\, \\sigma)
+        F(\\rho, \\sigma) = \\text{tr}(\\rho \\, \\sigma)
 
     Args:
         state (ndarray): statevector or density matrix.
@@ -616,7 +616,7 @@ def entanglement_fidelity(
     .. math::
         \\begin{align*}
           F_{\\mathcal{E}} &= \\text{fidelity}(\\rho_{f}, \\rho) \\nonumber \\\\
-          &= \\tr(\\rho_{f} \\, \\rho)
+          &= \\text{tr}(\\rho_{f} \\, \\rho)
 
     where
 
@@ -696,7 +696,7 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
 
     .. math::
         F_{\\text{pro}}(\\mathcal{E}, \\mathcal{U}) = \\frac{1}{d^{2}} \\,
-            \\text{Tr}(\\mathcal{E}^{\\dagger} \\, \\mathcal{U})
+            \\text{tr}(\\mathcal{E}^{\\dagger} \\, \\mathcal{U})
 
     Args:
         channel: quantum channel :math:`\\mathcal{E}`.
@@ -963,7 +963,10 @@ def expressibility(circuit, t: int, samples: int, backend=None):
             TypeError, f"samples must be type int, but it is type {type(samples)}."
         )
 
-    from qibo.quantum_info.utils import haar_integral, pqc_integral
+    from qibo.quantum_info.utils import (  # pylint: disable=C0415
+        haar_integral,
+        pqc_integral,
+    )
 
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
