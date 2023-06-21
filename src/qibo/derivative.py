@@ -165,14 +165,14 @@ def finite_differences(
     hamiltonian,
     parameter_index,
     initial_state=None,
-    nshots=None,
     step_size=1e-7,
 ):
     """
-    Calculates derivative of the expectation value of `hamiltonian` on the
+    Calculate derivative of the expectation value of `hamiltonian` on the
     final state obtained by executing `circuit` on `initial_state` with
     respect to the variational parameter identified by `parameter_index`
-    in the circuit's parameters list.
+    in the circuit's parameters list. This method can be used only in
+    exact simulation mode.
 
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
@@ -184,9 +184,6 @@ def finite_differences(
             in the ``circuit.get_parameters()`` list.
         initial_state (ndarray, optional): initial state on which the circuit
             acts. Default is ``None``.
-        nshots (int, optional): number of shots if derivative is evaluated on
-            hardware. If ``None``, the simulation mode is executed.
-            Default is ``None``.
         step_size (float): step size used to evaluate the finite difference
             (default 1e-7).
 
@@ -214,35 +211,18 @@ def finite_differences(
     shifted[parameter_index] += step_size
     circuit.set_parameters(shifted)
 
-    if nshots is None:
-        # forward evaluation
-        forward = hamiltonian.expectation(
-            backend.execute_circuit(
-                circuit=circuit, initial_state=initial_state
-            ).state()
-        )
+    # forward evaluation
+    forward = hamiltonian.expectation(
+        backend.execute_circuit(circuit=circuit, initial_state=initial_state).state()
+    )
 
-        # backward shift and evaluation
-        shifted[parameter_index] -= 2 * step_size
-        circuit.set_parameters(shifted)
+    # backward shift and evaluation
+    shifted[parameter_index] -= 2 * step_size
+    circuit.set_parameters(shifted)
 
-        backward = hamiltonian.expectation(
-            backend.execute_circuit(
-                circuit=circuit, initial_state=initial_state
-            ).state()
-        )
-
-    else:
-        forward = backend.execute_circuit(
-            circuit=circuit, initial_state=initial_state, nshots=nshots
-        ).expectation_from_samples(hamiltonian)
-
-        shifted[parameter_index] -= 2 * step_size
-        circuit.set_parameters(shifted)
-
-        backward = backend.execute_circuit(
-            circuit=circuit, initial_state=initial_state, nshots=nshots
-        ).expectation_from_samples(hamiltonian)
+    backward = hamiltonian.expectation(
+        backend.execute_circuit(circuit=circuit, initial_state=initial_state).state()
+    )
 
     circuit.set_parameters(parameters)
 
