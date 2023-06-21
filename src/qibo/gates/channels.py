@@ -6,6 +6,7 @@ from typing import Tuple
 
 import numpy as np
 
+from qibo.backends import GlobalBackend
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate
 from qibo.gates.gates import I, Unitary, X, Y, Z
@@ -58,7 +59,8 @@ class Channel(Gate):
                 vectorization is done block-wise. Defaut is ``"row"``.
             backend (``qibo.backends.abstract.Backend``, optional):
                 backend to be used in the execution. If ``None``,
-                it uses ``GlobalBackend()``. Defaults to ``None``.
+                it uses :class:`qibo.backends.GlobalBackend`.
+                Defaults to ``None``.
 
         Returns:
             Choi representation of the channel.
@@ -67,28 +69,29 @@ class Channel(Gate):
         if nqubits is not None and nqubits < 1 + max(self.target_qubits):
             raise_error(
                 ValueError,
-                f"nqubits={nqubits}, but channel acts on qubit with index {max(self.target_qubits)}.",
+                f"nqubits={nqubits}, but channel acts on qubit "
+                + f"with index {max(self.target_qubits)}.",
             )
 
-        from qibo.quantum_info.superoperator_transformations import vectorization
+        from qibo.quantum_info.superoperator_transformations import (  # pylint: disable=C0415
+            vectorization,
+        )
 
         if backend is None:  # pragma: no cover
-            from qibo.backends import GlobalBackend
-
             backend = GlobalBackend()
 
-        self.nqubits = 1 + max(self.target_qubits) if nqubits is None else nqubits
+        nqubits = 1 + max(self.target_qubits) if nqubits is None else nqubits
 
         if type(self) not in [KrausChannel, ReadoutErrorChannel]:
-            p0 = 1 - sum(self.coefficients)
-            if p0 > PRECISION_TOL:
-                self.coefficients += (p0,)
+            p_0 = 1 - sum(self.coefficients)
+            if p_0 > PRECISION_TOL:
+                self.coefficients += (p_0,)
                 self.gates += (I(*self.target_qubits),)
 
-        super_op = np.zeros((4**self.nqubits, 4**self.nqubits), dtype=complex)
+        super_op = np.zeros((4**nqubits, 4**nqubits), dtype=complex)
         super_op = backend.cast(super_op, dtype=super_op.dtype)
         for coeff, gate in zip(self.coefficients, self.gates):
-            kraus_op = FusedGate(*range(self.nqubits))
+            kraus_op = FusedGate(*range(nqubits))
             kraus_op.append(gate)
             kraus_op = kraus_op.asmatrix(backend)
             kraus_op = vectorization(kraus_op, order=order, backend=backend)
@@ -111,17 +114,18 @@ class Channel(Gate):
                 it raises ``NotImplementedError``. Defaut is ``"row"``.
             backend (``qibo.backends.abstract.Backend``, optional):
                 backend to be used in the execution. If ``None``,
-                it uses ``GlobalBackend()``. Defaults to ``None``.
+                it uses :class:`qibo.backends.GlobalBackend`.
+                Defaults to ``None``.
 
         Returns:
             Liouville representation of the channel.
         """
 
-        from qibo.quantum_info.superoperator_transformations import choi_to_liouville
+        from qibo.quantum_info.superoperator_transformations import (  # pylint: disable=C0415
+            choi_to_liouville,
+        )
 
         if backend is None:  # pragma: no cover
-            from qibo.backends import GlobalBackend
-
             backend = GlobalBackend()
 
         super_op = self.to_choi(nqubits=nqubits, order=order, backend=backend)
@@ -150,24 +154,26 @@ class Channel(Gate):
                 Pauli elements in the basis. Default is "IXYZ".
             backend (``qibo.backends.abstract.Backend``, optional): backend
                 to be used in the execution. If ``None``, it uses
-                ``GlobalBackend()``. Defaults to ``None``.
+                :class:`qibo.backends.GlobalBackend`.
+                Defaults to ``None``.
 
         Returns:
             Pauli-Liouville representation of the channel.
         """
 
-        from qibo.quantum_info.basis import comp_basis_to_pauli
+        from qibo.quantum_info.basis import comp_basis_to_pauli  # pylint: disable=C0415
 
         if backend is None:  # pragma: no cover
-            from qibo.backends import GlobalBackend
-
             backend = GlobalBackend()
 
         super_op = self.to_liouville(nqubits=nqubits, backend=backend)
 
+        if nqubits is None:
+            nqubits = int(np.log2(np.sqrt(super_op.shape[0])))
+
         # unitary that transforms from comp basis to pauli basis
         unitary = comp_basis_to_pauli(
-            self.nqubits, normalize, pauli_order=pauli_order, backend=backend
+            nqubits, normalize, pauli_order=pauli_order, backend=backend
         )
         unitary = backend.cast(unitary, dtype=unitary.dtype)
 
@@ -194,10 +200,10 @@ class KrausChannel(Channel):
         qubits (int or list or tuple or None): Qubits that the Kraus operators act on.
             Type ``int`` and ``tuple`` will be considered as the same qubit ids for
             all operators. A ``list`` should contain tuples of qubits corresponding
-            to each operator. Can be an empty ``list`` if ``ops`` are of type
+            to each operator. Can be an empty ``list`` if ``operators`` are of type
             ``qibo.gates.Gate``.
-        ops (list): List of Kraus operators ``Ak`` as matrices of type
-            ``np.ndarray | tf.Tensor`` or gates ``qibo.gates.Gate``.
+        operators (list): List of Kraus operators ``Ak`` as matrices of type
+            ``ndarray | tf.Tensor`` or gates ``qibo.gates.Gate``.
 
     Example:
         .. testcode::
@@ -206,55 +212,40 @@ class KrausChannel(Channel):
             from qibo.models import Circuit
             from qibo import gates
             # initialize circuit with 3 qubits
-            c = Circuit(3, density_matrix=True)
+            circuit = Circuit(3, density_matrix=True)
             # define a sqrt(0.4) * X gate
-            a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
+            a_1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
             # define a sqrt(0.6) * CNOT gate
-            a2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0],
+            a_2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0],
                                           [0, 0, 0, 1], [0, 0, 1, 0]])
             # define the channel rho -> 0.4 X{1} rho X{1} + 0.6 CNOT{0, 2} rho CNOT{0, 2}
-            channel1 = gates.KrausChannel([(1,), (0, 2)], [a1, a2])
+            channel_1 = gates.KrausChannel([(1,), (0, 2)], [a_1, a_2])
             # add channel to the circuit
-            c.add(channel1)
+            circuit.add(channel_1)
 
             # define the same channel using qibo.gates.Unitary
-            a1 = gates.Unitary(a1, 1)
-            a2 = gates.Unitary(a2, 0, 2)
-            channel2 = gates.KrausChannel([], [a1, a2])
+            a_1 = gates.Unitary(a_1, 1)
+            a_2 = gates.Unitary(a_2, 0, 2)
+            channel_2 = gates.KrausChannel([], [a_1, a_2])
             # add channel to the circuit
-            c.add(channel2)
+            circuit.add(channel_2)
 
             # define the channel rho -> 0.4 X{0} rho X{0} + 0.6 CNOT{1, 2} rho CNOT{1, 2}
-            channel3 = gates.KrausChannel([(0,), (1, 2)], [a1, a2])
+            channel_3 = gates.KrausChannel([(0,), (1, 2)], [a_1, a_2])
             # add channel to the circuit
-            c.add(channel3)
+            circuit.add(channel_3)
     """
 
-    def __init__(self, *ops):
+    def __init__(self, qubits, operators):
         super().__init__()
         self.name = "KrausChannel"
         self.draw_label = "K"
 
-        if len(ops) == 1:
-            warnings.warn(
-                f"{self.__class__.__name__} initialisation has changed. "
-                + "Please check the latest documentation. Previous initialisation "
-                + "will be removed in Release 1.15.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-
-            qubits = [row[0] for row in ops[0]]
-            ops = [row[1] for row in ops[0]]
-        else:
-            qubits = ops[0]
-            ops = ops[1]
-
         # Check qubits type
         if isinstance(qubits, int) is True:
-            qubits = [(qubits,)] * len(ops)
+            qubits = [(qubits,)] * len(operators)
         elif isinstance(qubits, tuple) is True:
-            qubits = [qubits] * len(ops)
+            qubits = [qubits] * len(operators)
         elif isinstance(qubits, list) is False:
             raise_error(
                 TypeError,
@@ -264,31 +255,31 @@ class KrausChannel(Channel):
         elif not all(isinstance(q, (tuple)) for q in qubits):
             raise_error(TypeError, "All elements of ``qubits`` list must be tuples.")
 
-        if isinstance(ops[0], Gate) is True:
+        if isinstance(operators[0], Gate) is True:
             if qubits:
-                ops = [
-                    ops[k].on_qubits(
+                operators = [
+                    operators[k].on_qubits(
                         {
-                            ops[k].qubits[i]: qubits[k][i]
-                            for i in range(len(ops[k].qubits))
+                            operators[k].qubits[i]: qubits[k][i]
+                            for i in range(len(operators[k].qubits))
                         }
                     )
-                    for k in range(len(ops))
+                    for k in range(len(operators))
                 ]
-            self.gates = tuple(ops)
+            self.gates = tuple(operators)
             self.target_qubits = tuple(
-                sorted({q for gate in ops for q in gate.target_qubits})
+                sorted({q for gate in operators for q in gate.target_qubits})
             )
-        elif len(qubits) != len(ops):
+        elif len(qubits) != len(operators):
             raise_error(
                 ValueError,
                 f"``qubits`` list has length {len(qubits)} while "
-                + f"{len(ops)} operators were given.",
+                + f"{len(operators)} operators were given.",
             )
         else:
             gates, qubitset = [], set()
 
-            for qubit_tuple, matrix in zip(qubits, ops):
+            for qubit_tuple, matrix in zip(qubits, operators):
                 rank = 2 ** len(qubit_tuple)
                 shape = tuple(matrix.shape)
                 if shape != (rank, rank):
@@ -325,41 +316,27 @@ class UnitaryChannel(KrausChannel):
         qubits (int or list or tuple or None): Qubits that the unitary operators
             act on. Types ``int`` and ``tuple`` will be considered as the same
             qubit(s) for all unitaries. A ``list`` should contain tuples of
-            qubits corresponding to each operator. Can be [] if ``ops`` are of
+            qubits corresponding to each operator. Can be [] if ``operators`` are of
             type ``qibo.gates.Gate``.
-        ops (list): List of  operators as pairs ``(pk, Uk)`` where
+        operators (list): List of  operators as pairs ``(pk, Uk)`` where
             ``pk`` is float probability corresponding to a unitary ``Uk``
             of type ``np.ndarray``/``tf.Tensor`` or gates ``qibo.gates.Gate``.
     """
 
-    def __init__(self, qubits, ops):
-        if isinstance(qubits, list) is True and any(
-            isinstance(q, float) is True for q in qubits
-        ):
-            warnings.warn(
-                f"{self.__class__.__name__} initialisation has changed. "
-                + "Please check the latest documentation. Previous initialisation "
-                + "will be removed in Release 1.15.",
-                DeprecationWarning,
-                stacklevel=2,
+    def __init__(self, qubits, operators):
+        if not all(isinstance(pair, (tuple)) for pair in operators):
+            raise_error(
+                TypeError, "``operators`` must be a list of tuples ``(pk, Uk)``."
             )
-            probabilities = np.copy(qubits)
-            qubits = [row[0] for row in ops]
 
-            ops = [row[1] for row in ops]
-            ops = list(zip(probabilities, ops))
-
-        if not all(isinstance(pair, (tuple)) for pair in ops):
-            raise_error(TypeError, "``ops`` must be a list of tuples ``(pk, Uk)``.")
-
-        probabilities = [pair[0] for pair in ops]
-        ops = [pair[1] for pair in ops]
+        probabilities = [pair[0] for pair in operators]
+        operators = [pair[1] for pair in operators]
         if any((p < 0 or p > 1) for p in probabilities):
             raise_error(
                 ValueError,
                 "Probabilities should be between 0 and 1.",
             )
-        super().__init__(qubits, ops)
+        super().__init__(qubits, operators)
         self.name = "UnitaryChannel"
         self.draw_label = "U"
         self.coefficients = tuple(probabilities)
@@ -440,8 +417,8 @@ class PauliNoiseChannel(UnitaryChannel):
         gates = []
         for pauli in paulis:
             fgate = FusedGate(*qubits)
-            for q, p in zip(qubits, pauli):
-                fgate.append(single_paulis[p](q))
+            for qubit, pauli_single in zip(qubits, pauli):
+                fgate.append(single_paulis[pauli_single](qubit))
             gates.append(fgate)
         self.gates = tuple(gates)
         self.coefficients = tuple(probabilities)
@@ -638,17 +615,17 @@ class ThermalRelaxationChannel(KrausChannel):
             super().__init__([(qubit,)] * len(operators), operators)
             self.init_kwargs["e_t2"] = e_t2
         else:
-            pz = (exp(-time / t_1) - exp(-time / t_2)) / 2
+            p_z = (exp(-time / t_1) - exp(-time / t_2)) / 2
             operators = (
                 sqrt(p_0) * np.array([[1, 0], [0, 0]]),
                 sqrt(p_0) * np.array([[0, 1], [0, 0]]),
                 sqrt(p_1) * np.array([[0, 0], [1, 0]]),
                 sqrt(p_1) * np.array([[0, 0], [0, 1]]),
-                sqrt(pz) * np.array([[1, 0], [0, -1]]),
-                sqrt(1 - p_0 - p_1 - pz) * np.eye(2),
+                sqrt(p_z) * np.array([[1, 0], [0, -1]]),
+                sqrt(1 - p_0 - p_1 - p_z) * np.eye(2),
             )
             super().__init__([(qubit,)] * len(operators), operators)
-            self.init_kwargs["pz"] = pz
+            self.init_kwargs["pz"] = p_z
 
         self.init_args = [qubit, t_1, t_2, time]
         self.t_1, self.t_2 = t_1, t_2
@@ -680,12 +657,12 @@ class ThermalRelaxationChannel(KrausChannel):
 
             return backend.thermal_error_density_matrix(gate, state, nqubits)
 
-        pz = self.init_kwargs["pz"]
+        p_z = self.init_kwargs["pz"]
 
         return (
             backend.reset_error_density_matrix(self, state, nqubits)
-            - pz * backend.cast(state)
-            + pz * backend.apply_gate_density_matrix(Z(0), state, nqubits)
+            - p_z * backend.cast(state)
+            + p_z * backend.apply_gate_density_matrix(Z(0), state, nqubits)
         )
 
 
@@ -767,26 +744,28 @@ class ResetChannel(KrausChannel):
                 ValueError,
                 f"ResetChannel needs 2 probabilities, got {len(probabilities)} instead.",
             )
-        p0, p1 = probabilities
-        if p0 < 0:
+        p_0, p_1 = probabilities
+        if p_0 < 0:
             raise_error(ValueError, "Invalid p0 ({p0} < 0).")
-        if p1 < 0:
+        if p_1 < 0:
             raise_error(ValueError, "Invalid p1 ({p1} < 0).")
-        if p0 + p1 > 1 + PRECISION_TOL:
-            raise_error(ValueError, f"Invalid probabilities (p0 + p1 = {p0 + p1} > 1).")
+        if p_0 + p_1 > 1 + PRECISION_TOL:
+            raise_error(
+                ValueError, f"Invalid probabilities (p0 + p1 = {p_0 + p_1} > 1)."
+            )
 
         operators = [
-            sqrt(p0) * np.array([[1, 0], [0, 0]]),
-            sqrt(p0) * np.array([[0, 1], [0, 0]]),
-            sqrt(p1) * np.array([[0, 0], [1, 0]]),
-            sqrt(p1) * np.array([[0, 0], [0, 1]]),
+            sqrt(p_0) * np.array([[1, 0], [0, 0]]),
+            sqrt(p_0) * np.array([[0, 1], [0, 0]]),
+            sqrt(p_1) * np.array([[0, 0], [1, 0]]),
+            sqrt(p_1) * np.array([[0, 0], [0, 1]]),
         ]
 
-        if p0 + p1 < 1:
-            operators.append(sqrt(np.abs(1 - p0 - p1)) * np.eye(2))
+        if p_0 + p_1 < 1:
+            operators.append(sqrt(np.abs(1 - p_0 - p_1)) * np.eye(2))
 
         super().__init__([(qubit,)] * len(operators), operators)
-        self.init_kwargs = {"p0": p0, "p1": p1}
+        self.init_kwargs = {"p0": p_0, "p1": p_1}
         self.name = "ResetChannel"
         self.draw_label = "R"
 

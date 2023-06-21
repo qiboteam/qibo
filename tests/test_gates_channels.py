@@ -67,18 +67,6 @@ def test_kraus_channel(backend, pauli_order):
     with pytest.raises(ValueError):
         gates.KrausChannel((0, 1), [a1])
 
-    # asserting that both initialisations
-    # yield the same channel
-    old = gates.KrausChannel([((0,), a1)])
-    new = gates.KrausChannel([(0,)], [a1])
-    backend.assert_allclose(
-        backend.calculate_norm(
-            old.to_choi(backend=backend) - new.to_choi(backend=backend)
-        )
-        < PRECISION_TOL,
-        True,
-    )
-
     test_superop = np.array(
         [
             [0.6 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j, 0.4 + 0.0j],
@@ -145,16 +133,6 @@ def test_unitary_channel(backend):
         + 0.3 * np.dot(ma2, np.dot(initial_state, ma2))
     )
     backend.assert_allclose(final_state, target_state)
-
-    # checking old initialisation
-    old = gates.UnitaryChannel(probabilities, list(zip(qubits, [a1, a2])))
-    backend.assert_allclose(
-        backend.calculate_norm(
-            channel.to_choi(backend=backend) - old.to_choi(backend=backend)
-        )
-        < PRECISION_TOL,
-        True,
-    )
 
 
 def test_unitary_channel_probability_tolerance(backend):
