@@ -282,17 +282,6 @@ def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
         backend.calculate_norm(final_rho - target_rho) < PRECISION_TOL, True
     )
 
-    # checking old initialisation
-    old = gates.ThermalRelaxationChannel(0, t1, t2, time, excpop)
-    new = gates.ThermalRelaxationChannel(0, [t1, t2, time, excpop])
-    backend.assert_allclose(
-        backend.calculate_norm(
-            new.to_choi(backend=backend) - old.to_choi(backend=backend)
-        )
-        < PRECISION_TOL,
-        True,
-    )
-
 
 @pytest.mark.parametrize(
     "params",
@@ -347,16 +336,6 @@ def test_reset_channel(backend):
     target_rho = 0.6 * initial_rho + 0.2 * np.reshape(zeros + ones, initial_rho.shape)
 
     backend.assert_allclose(final_rho, target_rho)
-
-    old = gates.ResetChannel(0, 0.2, 0.2)
-    new = gates.ResetChannel(0, [0.2, 0.2])
-    backend.assert_allclose(
-        backend.calculate_norm(
-            new.to_choi(backend=backend) - old.to_choi(backend=backend)
-        )
-        < PRECISION_TOL,
-        True,
-    )
 
 
 @pytest.mark.parametrize("p0,p1", [(0, -0.1), (-0.1, 0), (0.5, 0.6), (0.8, 0.3)])

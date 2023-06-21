@@ -1,5 +1,4 @@
 """Define quantum channels."""
-import warnings
 from itertools import product
 from math import exp, sqrt
 from typing import Tuple
@@ -320,7 +319,7 @@ class UnitaryChannel(KrausChannel):
             type ``qibo.gates.Gate``.
         operators (list): List of  operators as pairs ``(pk, Uk)`` where
             ``pk`` is float probability corresponding to a unitary ``Uk``
-            of type ``np.ndarray``/``tf.Tensor`` or gates ``qibo.gates.Gate``.
+            of type ``ndarray``/``tf.Tensor`` or gates ``qibo.gates.Gate``.
     """
 
     def __init__(self, qubits, operators):
@@ -521,7 +520,7 @@ class ThermalRelaxationChannel(KrausChannel):
 
     Args:
         qubit (int): Qubit id that the noise channel acts on.
-        params (list): list of 3 or 4 parameters
+        parameters (list): list of 3 or 4 parameters
             (t_1, t_2, time, excited_population=0), where
             t_1 (float): T1 relaxation time. Should satisfy ``t_1 > 0``.
             t_2 (float): T2 dephasing time.
@@ -531,33 +530,17 @@ class ThermalRelaxationChannel(KrausChannel):
             equilibrium. Default is 0.
     """
 
-    def __init__(self, *args):
+    def __init__(self, qubit, parameters):
         self.name = "ThermalRelaxationChannel"
-        # check given parameters
-        if len(args) in [4, 5]:
-            warnings.warn(
-                f"{self.__class__.__name__} initialisation has changed. "
-                + "Please check the latest documentation. Previous initialisation "
-                + "will be removed in Release 1.15.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            qubit = args[0]
-            params = args[1:]
-        else:
-            qubit = args[0]
-            params = args[1]
-        del args
-
-        if len(params) not in [3, 4]:
+        if len(parameters) not in [3, 4]:
             raise_error(
                 ValueError,
-                "``params`` list must have 3 or 4 elements "
-                + f"while {len(params)} were given.",
+                "``parameters`` list must have 3 or 4 elements "
+                + f"while {len(parameters)} were given.",
             )
 
-        t_1, t_2, time = params[:3]
-        excited_population = params[-1] if len(params) == 4 else 0.0
+        t_1, t_2, time = parameters[:3]
+        excited_population = parameters[-1] if len(parameters) == 4 else 0.0
 
         if excited_population < 0 or excited_population > 1:
             raise_error(
@@ -674,14 +657,14 @@ class ReadoutErrorChannel(KrausChannel):
         probabilities (array): row-stochastic matrix :math:`P` with all
             readout transition probabilities.
 
-            Example:
-                For 1 qubit, the transition matrix :math:`P` would be
+    Example:
+        For 1 qubit, the transition matrix :math:`P` would be
 
-                .. math::
-                    P = \\begin{pmatrix}
-                        p(0 \\, | \\, 0) & p(1 \\, | \\, 0) \\\\
-                        p(0 \\, | \\, 1) & p(1 \\, | \\, 1)
-                    \\end{pmatrix} \\, .
+        .. math::
+            P = \\begin{pmatrix}
+                p(0 \\, | \\, 0) & p(1 \\, | \\, 0) \\\\
+                p(0 \\, | \\, 1) & p(1 \\, | \\, 1)
+            \\end{pmatrix} \\, .
     """
 
     def __init__(self, qubits: Tuple[int, list, tuple], probabilities):
@@ -712,33 +695,18 @@ class ResetChannel(KrausChannel):
     Implements the following transformation:
 
     .. math::
-        \\mathcal{E}(\\rho ) = (1 - p0 - p_1) \\rho
-        + \\mathrm{Tr}_q[\\rho] \\otimes (p0|0\\rangle \\langle 0|
-        + p_1|1\\rangle \\langle 1|),
+        \\mathcal{E}(\\rho ) = (1 - p_{0} - p_{1}) \\rho
+        + \\mathrm{Tr}_{q}[\\rho] \\otimes (p_{0} \\, |0\\rangle \\langle 0|
+        + p_{1} \\, |1\\rangle \\langle 1|),
 
     Args:
-        q (int): Qubit id that the channel acts on.
+        qubit (int): qubit id that the channel acts on.
         probabilities (list or ndarray): list :math:`[p_{0}, p_{1}]`,
-            where :math:`p_{0}` and `p_{1}` are the probabilities to
+            where :math:`p_{0}` and :math:`p_{1}` are the probabilities to
             reset to 0 and 1, respectively.
     """
 
-    def __init__(self, *args):
-        if isinstance(args[1], float) is True:
-            warnings.warn(
-                f"{self.__class__.__name__} initialisation has changed. "
-                + "Please check the latest documentation. Previous initialisation "
-                + "will be removed in Release 1.15.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            qubit = args[0]
-            probabilities = list(args[1:])
-        else:
-            qubit = args[0]
-            probabilities = args[1]
-        del args
-
+    def __init__(self, qubit, probabilities):
         if len(probabilities) != 2:
             raise_error(
                 ValueError,
