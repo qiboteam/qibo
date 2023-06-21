@@ -10,7 +10,7 @@ from qibo.models import Circuit
 
 
 def main(n_layers, train_size, filename, plot, save_loss):
-    """Implements performance evaluation of a trained circuit.
+    """Implements performance evaluation of a trained circuit, as described in https://doi.org/10.3390/particles6010016.
 
     Args:
         n_layers (int): number of ansatz circuit layers (default 6).
@@ -33,7 +33,7 @@ def main(n_layers, train_size, filename, plot, save_loss):
             q_compression (int): number of compressed qubits.
 
         Returns:
-            encoder (:class:`qibo.models.circuit.Circuit`): variational quantum circuit.
+            encoder (qibo.models.Circuit): variational quantum circuit.
         """
 
         index = 0
@@ -60,7 +60,7 @@ def main(n_layers, train_size, filename, plot, save_loss):
         """Evaluate loss function for one test sample.
 
         Args:
-            encoder (:class:`qibo.models.circuit.Circuit`): variational quantum circuit (trained).
+            encoder (qibo.models.Circuit): variational quantum circuit (trained).
             vector (tf.Tensor): test sample, in the form of 1d vector.
 
         Returns:
@@ -80,10 +80,10 @@ def main(n_layers, train_size, filename, plot, save_loss):
     q_compression = 3
 
     # Load and pre-process data
-    dataset_np_s = np.load("data/standard_data.npy")
+    dataset_np_s = np.load(f"data/standard_data.npy")
     dataset_np_s = dataset_np_s[train_size:]
     dataset_s = tf.convert_to_tensor(dataset_np_s)
-    dataset_np_a = np.load("data/anomalous_data.npy")
+    dataset_np_a = np.load(f"data/anomalous_data.npy")
     dataset_np_a = dataset_np_a[train_size:]
     dataset_a = tf.convert_to_tensor(dataset_np_a)
 
