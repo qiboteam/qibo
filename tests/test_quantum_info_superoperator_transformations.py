@@ -290,7 +290,7 @@ def test_to_pauli_liouville(backend, normalize, order, pauli_order):
 
     test_pauli = pauli_superop(pauli_order)
     dim = int(np.sqrt(test_pauli.shape[0]))
-    aux = 1 if normalize == False else dim
+    aux = 1.0 if normalize == False else dim
     test_pauli = backend.cast(test_pauli / aux, dtype=test_pauli.dtype)
 
     backend.assert_allclose(pauli, test_pauli, atol=PRECISION_TOL)
@@ -965,7 +965,7 @@ def test_chi_to_pauli(backend, normalize, order, pauli_order):
     test_pauli = pauli_superop(pauli_order)
     test_chi = chi_superop(pauli_order)
     dim = int(np.sqrt(test_pauli.shape[0]))
-    aux = dim**2 if normalize == False else dim
+    aux = 1.0 if normalize else dim**2
 
     test_chi = backend.cast(test_chi, dtype=test_chi.dtype)
     test_pauli = backend.cast(test_pauli, dtype=test_pauli.dtype)

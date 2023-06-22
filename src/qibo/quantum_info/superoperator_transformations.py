@@ -534,7 +534,7 @@ def choi_to_chi(
             respect to system-wise vectorization. Defaults to ``"row"``.
         pauli_order (str, optional): corresponds to the order of 4
             single-qubit Pauli elements. Defaults to "IXYZ".
-        backend (``qibo.backends.abstract.Backend``, optional): backend
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
     Returns:
@@ -1490,7 +1490,7 @@ def chi_to_pauli(
             respect to system-wise vectorization. Defaults to ``"row"``.
         pauli_order (str, optional): corresponds to the order of 4 single-qubit
             Pauli elements. Defaults to "IXYZ".
-        backend (``qibo.backends.abstract.Backend``, optional): backend
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend
             to be used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
@@ -1505,7 +1505,7 @@ def chi_to_pauli(
         backend=backend,
     )
     super_op = choi_to_pauli(
-        choi_super_op, order=order, pauli_order=pauli_order, backend=backend
+        choi_super_op, normalize=normalize, order=order, pauli_order=pauli_order, backend=backend
     )
 
     return super_op
