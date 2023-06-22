@@ -1,5 +1,6 @@
 import argparse
 import math
+from pathlib import Path
 
 import numpy as np
 from tensorflow.keras.optimizers import Adam, schedules
@@ -110,7 +111,7 @@ def main(n_layers, batch_size, nepochs, train_size, filename, lr_boundaries):
     q_compression = 3
 
     # Load and pre-process data
-    file_dataset = f"data/standard_data.npy"
+    file_dataset = Path(__file__).parent  / "data" / "standard_data.npy"
     dataset_np = np.load(file_dataset)
     dataset = tf.convert_to_tensor(dataset_np)
     train = dataset[0:train_size]
@@ -190,7 +191,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--filename",
-        default="parameters/trained_params.npy",
+        default=Path(__file__).parent  / "parameters" / "trained_params.npy",
         type=str,
         help="(str): location and file name where trained parameters are saved",
     )
