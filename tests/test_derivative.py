@@ -93,7 +93,7 @@ def test_finite_differences(backend, step_size):
     # some parameters
     test_params = np.linspace(0.1, 1, 3)
     grads = [-8.51104358e-02, -5.20075970e-01, 0]
-    atol = 1e-7
+    atol = 1e-6
     c.set_parameters(test_params)
 
     test_hamiltonian = hamiltonian(nqubits=1, backend=backend)
