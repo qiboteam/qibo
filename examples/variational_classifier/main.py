@@ -67,7 +67,11 @@ def main(nclasses, nqubits, nlayers, nshots, training, RxRzRx, method):
     if not training:
         if RY:
             try:
-                path_angles = Path(__file__).parent / "data" / "optimal_angles_ry_{}q_{}l.npy".format(nqubits, nlayers)
+                path_angles = (
+                    Path(__file__).parent
+                    / "data"
+                    / "optimal_angles_ry_{}q_{}l.npy".format(nqubits, nlayers)
+                )
                 optimal_angles = np.load(path_angles)
             except:
                 raise FileNotFoundError(
@@ -75,7 +79,11 @@ def main(nclasses, nqubits, nlayers, nshots, training, RxRzRx, method):
                 )
         else:
             try:
-                path_angles = Path(__file__).parent / "data" / "optimal_angles_rxrzrx_{}q_{}l.npy".format(nqubits, nlayers)
+                path_angles = (
+                    Path(__file__).parent
+                    / "data"
+                    / "optimal_angles_rxrzrx_{}q_{}l.npy".format(nqubits, nlayers)
+                )
                 optimal_angles = np.load(path_angles)
             except:
                 raise FileNotFoundError(
@@ -100,7 +108,11 @@ def main(nclasses, nqubits, nlayers, nshots, training, RxRzRx, method):
                 nshots=nshots,
                 method=method,
             )
-            path_angles = Path(__file__).parent / "data" / "optimal_angles_ry_{}q_{}l.npy".format(nqubits, nlayers)
+            path_angles = (
+                Path(__file__).parent
+                / "data"
+                / "optimal_angles_ry_{}q_{}l.npy".format(nqubits, nlayers)
+            )
             np.save(
                 path_angles,
                 optimal_angles,
@@ -121,7 +133,11 @@ def main(nclasses, nqubits, nlayers, nshots, training, RxRzRx, method):
                 nshots=nshots,
                 method=method,
             )
-            path_angles = Path(__file__).parent / "data" / "optimal_angles_rxrzrx_{}q_{}l.npy".format(nqubits, nlayers)
+            path_angles = (
+                Path(__file__).parent
+                / "data"
+                / "optimal_angles_rxrzrx_{}q_{}l.npy".format(nqubits, nlayers)
+            )
             np.save(
                 path_angles,
                 optimal_angles,
