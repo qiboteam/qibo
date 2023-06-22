@@ -70,7 +70,7 @@ def hadamard_transform(array, implementation: str = "fast", backend=None):
     Returns:
         ndarray: (Fast) Hadamard Transform of ``array``.
     """
-    if backend is None:
+    if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
     if (
