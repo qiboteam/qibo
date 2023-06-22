@@ -8,7 +8,7 @@ from qibo import matrices
 from qibo.config import PRECISION_TOL
 from qibo.models import Circuit
 from qibo.quantum_info.metrics import fidelity
-from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
+from qibo.quantum_info.random_ensembles import random_density_matrix
 from qibo.quantum_info.utils import (
     haar_integral,
     hadamard_transform,
@@ -34,7 +34,7 @@ from qibo.quantum_info.utils import (
 )
 def test_hamming_weight(bitstring, kind):
     with pytest.raises(TypeError):
-        hamming_weight("0101", return_indexes="True")
+        test = hamming_weight("0101", return_indexes="True")
 
     bitstring = f"{bitstring:b}"
     weight_test = len(bitstring.replace("0", ""))
@@ -70,27 +70,27 @@ def test_shannon_entropy_errors(backend):
     with pytest.raises(ValueError):
         prob = np.array([1.0, 0.0])
         prob = backend.cast(prob, dtype=prob.dtype)
-        shannon_entropy(prob, -2, backend=backend)
+        test = shannon_entropy(prob, -2, backend=backend)
     with pytest.raises(TypeError):
         prob = np.array([[1.0], [0.0]])
         prob = backend.cast(prob, dtype=prob.dtype)
-        shannon_entropy(prob, backend=backend)
+        test = shannon_entropy(prob, backend=backend)
     with pytest.raises(TypeError):
         prob = np.array([])
         prob = backend.cast(prob, dtype=prob.dtype)
-        shannon_entropy(prob, backend=backend)
+        test = shannon_entropy(prob, backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([1.0, -1.0])
         prob = backend.cast(prob, dtype=prob.dtype)
-        shannon_entropy(prob, backend=backend)
+        test = shannon_entropy(prob, backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([1.1, 0.0])
         prob = backend.cast(prob, dtype=prob.dtype)
-        shannon_entropy(prob, backend=backend)
+        test = shannon_entropy(prob, backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([0.5, 0.4999999])
         prob = backend.cast(prob, dtype=prob.dtype)
-        shannon_entropy(prob, backend=backend)
+        test = shannon_entropy(prob, backend=backend)
 
 
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
@@ -112,31 +112,31 @@ def test_hellinger(backend):
         prob_q = np.random.rand(1, 5)
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        hellinger_distance(prob, prob_q, backend=backend)
+        test = hellinger_distance(prob, prob_q, backend=backend)
     with pytest.raises(TypeError):
         prob = np.random.rand(1, 2)[0]
         prob_q = np.array([])
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        hellinger_distance(prob, prob_q, backend=backend)
+        test = hellinger_distance(prob, prob_q, backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([-1, 2.0])
         prob_q = np.random.rand(1, 5)[0]
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        hellinger_distance(prob, prob_q, validate=True, backend=backend)
+        test = hellinger_distance(prob, prob_q, validate=True, backend=backend)
     with pytest.raises(ValueError):
         prob = np.random.rand(1, 2)[0]
         prob_q = np.array([1.0, 0.0])
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        hellinger_distance(prob, prob_q, validate=True, backend=backend)
+        test = hellinger_distance(prob, prob_q, validate=True, backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([1.0, 0.0])
         prob_q = np.random.rand(1, 2)[0]
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        hellinger_distance(prob, prob_q, validate=True, backend=backend)
+        test = hellinger_distance(prob, prob_q, validate=True, backend=backend)
 
     prob = [1.0, 0.0]
     prob_q = [1.0, 0.0]
@@ -167,18 +167,18 @@ def test_haar_integral(backend):
 
 def test_pqc_integral(backend):
     with pytest.raises(TypeError):
-        t, samples = 0.5, 10
+        power_t, samples = 0.5, 10
         circuit = Circuit(2)
-        pqc_integral(circuit, t, samples, backend=backend)
+        test = pqc_integral(circuit, power_t, samples, backend=backend)
     with pytest.raises(TypeError):
-        t, samples = 2, 0.5
+        power_t, samples = 2, 0.5
         circuit = Circuit(2)
-        pqc_integral(circuit, t, samples, backend=backend)
+        test = pqc_integral(circuit, power_t, samples, backend=backend)
 
     circuit = Circuit(2)
-    t, samples = 1, 100
+    power_t, samples = 1, 100
 
-    pqc_int = pqc_integral(circuit, t, samples, backend=backend)
+    pqc_int = pqc_integral(circuit, power_t, samples, backend=backend)
 
     fid = fidelity(pqc_int, pqc_int)
 
