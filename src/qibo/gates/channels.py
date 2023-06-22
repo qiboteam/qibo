@@ -56,7 +56,7 @@ class Channel(Gate):
                 Kraus operators is performed row-wise. If ``"column"``,
                 vectorization is done column-wise. If ``"system"``,
                 vectorization is done block-wise. Defaut is ``"row"``.
-            backend (``qibo.backends.abstract.Backend``, optional):
+            backend (:class:`qibo.backends.abstract.Backend`, optional):
                 backend to be used in the execution. If ``None``,
                 it uses :class:`qibo.backends.GlobalBackend`.
                 Defaults to ``None``.
@@ -111,7 +111,7 @@ class Channel(Gate):
                 Kraus operators is performed row-wise. If ``"column"``,
                 vectorization is done column-wise. If ``"system"``,
                 it raises ``NotImplementedError``. Defaut is ``"row"``.
-            backend (``qibo.backends.abstract.Backend``, optional):
+            backend (:class:`qibo.backends.abstract.Backend`, optional):
                 backend to be used in the execution. If ``None``,
                 it uses :class:`qibo.backends.GlobalBackend`.
                 Defaults to ``None``.
@@ -151,7 +151,7 @@ class Channel(Gate):
                 Defaults to False.
             pauli_order (str, optional): corresponds to the order of 4 single-qubit
                 Pauli elements in the basis. Default is "IXYZ".
-            backend (``qibo.backends.abstract.Backend``, optional): backend
+            backend (:class:`qibo.backends.abstract.Backend`, optional): backend
                 to be used in the execution. If ``None``, it uses
                 :class:`qibo.backends.GlobalBackend`.
                 Defaults to ``None``.
@@ -195,13 +195,13 @@ class KrausChannel(Channel):
     `J. Preskill's notes <http://theory.caltech.edu/~preskill/ph219/chap3_15.pdf>`_.
 
     Args:
-        qubits (int or list or tuple or None): Qubits that the Kraus operators act on.
+        qubits (int or list or tuple): Qubits that the Kraus operators act on.
             Type ``int`` and ``tuple`` will be considered as the same qubit ids for
             all operators. A ``list`` should contain tuples of qubits corresponding
-            to each operator. Can be an empty ``list`` if ``operators`` are of type
-            ``qibo.gates.Gate``.
+            to each operator. Can be ``[]`` if ``operators`` are of type :class:`qibo.gates.Gate`,
+            otherwise adds given gates on specified qubits.
         operators (list): List of Kraus operators ``Ak`` as matrices of type
-            ``ndarray | tf.Tensor`` or gates ``qibo.gates.Gate``.
+            ``ndarray | tf.Tensor`` or gates :class:`qibo.gates.Gate`.
 
     Example:
         .. testcode::
@@ -311,14 +311,14 @@ class UnitaryChannel(KrausChannel):
     approach we refer to :ref:`Using repeated execution <repeatedexec-example>`.
 
     Args:
-        qubits (int or list or tuple or None): Qubits that the unitary operators
+        qubits (int or list or tuple): Qubits that the unitary operators
             act on. Types ``int`` and ``tuple`` will be considered as the same
             qubit(s) for all unitaries. A ``list`` should contain tuples of
-            qubits corresponding to each operator. Can be [] if ``operators`` are of
-            type ``qibo.gates.Gate``.
+            qubits corresponding to each operator. Can be ``[]`` if ``operators`` are of type
+            :class:`qibo.gates.Gate`, otherwise adds given gates on specified qubits.
         operators (list): List of  operators as pairs ``(pk, Uk)`` where
             ``pk`` is float probability corresponding to a unitary ``Uk``
-            of type ``ndarray``/``tf.Tensor`` or gates ``qibo.gates.Gate``.
+            of type ``ndarray``/``tf.Tensor`` or gates :class:`qibo.gates.Gate`.
     """
 
     def __init__(self, qubits, operators):
@@ -445,7 +445,7 @@ class DepolarizingChannel(PauliNoiseChannel):
       all :math:`P_j \\neq I`.
 
     Args:
-        qubits (tuple): Qubit ids that the noise acts on.
+        qubits (int or list or tuple): Qubit ids that the noise acts on.
         lam (float): Depolarizing error parameter.
     """
 
@@ -546,11 +546,15 @@ class ThermalRelaxationChannel(KrausChannel):
                 ValueError, f"Invalid excited state population {excited_population}."
             )
         if time < 0:
-            raise_error(ValueError, f"Invalid gate_time ({time} < 0).")
+            raise_error(ValueError, f"Invalid gate time: {time} < 0.")
         if t_1 <= 0:
-            raise_error(ValueError, "Invalid t_1 relaxation time parameter: t_1 <= 0.")
+            raise_error(
+                ValueError, f"Invalid t_1 relaxation time parameter: {t_1} <= 0."
+            )
         if t_2 <= 0:
-            raise_error(ValueError, "Invalid t_2 relaxation time parameter: t_2 <= 0.")
+            raise_error(
+                ValueError, f"Invalid t_2 relaxation time parameter: {t_2} <= 0."
+            )
         if t_2 > 2 * t_1:
             raise_error(
                 ValueError,
