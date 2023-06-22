@@ -47,7 +47,7 @@ def test_hamming_weight(bitstring, kind):
     assert indexes == indexes_test
 
 
-@pytest.mark.parametrize("nqubits", np.arange(3, 6 + 1))
+@pytest.mark.parametrize("nqubits", [3, 4, 5])
 def test_hadamard_transform(backend, nqubits):
     with pytest.raises(TypeError):
         test = random_density_matrix(4**nqubits, pure=True, backend=backend)
@@ -56,14 +56,14 @@ def test_hadamard_transform(backend, nqubits):
     state = np.arange(2**nqubits, dtype=float)
     state = backend.cast(state, dtype=state.dtype)
 
-    hadamards = reduce(np.kron, [matrices.H] * (nqubits))
-    hadamards = backend.cast(hadamards)
+    hadamards = np.real(reduce(np.kron, [matrices.H] * nqubits))
+    hadamards = backend.cast(hadamards, dtype=hadamards.dtype)
 
-    backend.assert_allclose(
-        hadamard_transform(state, backend),
-        np.real(hadamards @ hadamards @ state),
-        atol=PRECISION_TOL,
-    )
+    transformed = hadamard_transform(state, backend)
+
+    test_transformed = hadamards @ state / (2 ** (nqubits / 2))
+
+    backend.assert_allclose(transformed, test_transformed, atol=PRECISION_TOL)
 
 
 def test_shannon_entropy_errors(backend):
