@@ -1505,7 +1505,11 @@ def chi_to_pauli(
         backend=backend,
     )
     super_op = choi_to_pauli(
-        choi_super_op, normalize=normalize, order=order, pauli_order=pauli_order, backend=backend
+        choi_super_op,
+        normalize=normalize,
+        order=order,
+        pauli_order=pauli_order,
+        backend=backend,
     )
 
     return super_op
