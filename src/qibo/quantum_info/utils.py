@@ -5,6 +5,7 @@ from re import finditer
 
 import numpy as np
 
+from qibo import matrices
 from qibo.backends import GlobalBackend
 from qibo.config import PRECISION_TOL, raise_error
 
@@ -42,11 +43,29 @@ def hamming_weight(bitstring, return_indexes: bool = False):
     return weight
 
 
-def hadamard_transform(array, backend=None):
-    """Calculates the (fast) Hadamard Transform of an ``array``.
+def hadamard_transform(array, implementation: str = "fast", backend=None):
+    """Calculates the (fast) Hadamard Transform :math:`\\text{HT}` of a
+    :math:`2^{n}`-dimensional vector or :math:`2^{n} \times 2^{n}` matrix :math:`A`,
+    where :math:`n` is the number of qubits in the system. If :math:`A` is a vector, then
+
+    .. math::
+        \\text{HT}(A) = \\frac{1}{2**{n / 2}} \\, H^{\\otimes n} \\, A \\,
+
+    where :math:`H` is the :class:`qibo.gates.H` gate. If :math:`A` is a matrix, then
+
+    .. math::
+        \\text{HT}(A) = \\frac{1}{2**{n}} \\, H^{\\otimes n} \\, A \\, H^{\\otimes n} \\, .
 
     Args:
-        array (ndarray): an ``ndarray``.
+        array (ndarray): array or matrix.
+        implementation (str, optional): if ``"regular"``, it uses the straightforward
+            implementation of the algorithm with computational complexity of
+            :math:`\\mathcal{O}(2^{2n})` for vectors and :math:`\\mathcal{O}(2^{3n})`
+            for matrices. If ``"fast"``, computational complexity is
+            :math:`\\mathcal{O}(n \\, 2^{n})` in both cases.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
 
     Returns:
         ndarray: (Fast) Hadamard Transform of ``array``.
@@ -54,30 +73,57 @@ def hadamard_transform(array, backend=None):
     if backend is None:
         backend = GlobalBackend()
 
-    if len(array.shape) != 1:
+    if (
+        len(array.shape) not in [1, 2]
+        or (len(array.shape) == 1 and np.log2(array.shape[0]).is_integer() is False)
+        or (
+            len(array.shape) == 2
+            and (
+                np.log2(array.shape[0]).is_integer() is False
+                or np.log2(array.shape[1]).is_integer() is False
+            )
+        )
+    ):
         raise_error(
             TypeError,
-            f"array must have shape (k,), but it has shape {array.shape}.",
+            f"array must have shape (2**n,) or (2**n, 2**n), but it has shape {array.shape}.",
         )
 
-    # necessary because of tf.EagerTensor
-    # does not accept item assignment
-    array_copied = np.copy(array)
+    if isinstance(implementation, str) is False:
+        raise_error(
+            TypeError,
+            f"implementation must be type str, but it is type {type(implementation)}.",
+        )
 
-    indexes = [2**k for k in range(int(np.log2(len(array_copied))))]
-    for index in indexes:
-        for k in range(0, len(array_copied), 2 * index):
-            for j in range(k, k + index):
-                # copy necessary because of cupy backend
-                elem_1 = np.copy(array_copied[j])
-                elem_2 = np.copy(array_copied[j + index])
-                array_copied[j] = elem_1 + elem_2
-                array_copied[j + index] = elem_1 - elem_2
-        array_copied /= 2.0
+    if implementation not in ["fast", "regular"]:
+        raise_error(
+            ValueError,
+            f"implementation must be either `regular` or `fast`, but it is {implementation}.",
+        )
 
-    array_copied = backend.cast(array_copied, dtype=array_copied.dtype)
+    if implementation == "regular":
+        nqubits = int(np.log2(array.shape[0]))
+        hadamards = np.real(reduce(np.kron, [matrices.H] * nqubits))
+        hadamards /= 2 ** (nqubits / 2)
+        hadamards = backend.cast(hadamards, dtype=hadamards.dtype)
 
-    return array_copied
+        array = hadamards @ array
+
+        if len(array.shape) == 2:
+            array = array @ hadamards
+
+        return array
+
+    array = _hadamard_transform_1d(array)
+
+    if len(array.shape) == 2:
+        array = _hadamard_transform_1d(np.transpose(array))
+        array = np.transpose(array)
+
+    # needed for the tensorflow backend
+    array = backend.cast(array, dtype=array.dtype)
+
+    return array
 
 
 def shannon_entropy(probability_array, base: float = 2, backend=None):
@@ -342,3 +388,22 @@ def pqc_integral(circuit, power_t: int, samples: int, backend=None):
     integral = rand_unit_density / samples
 
     return integral
+
+
+def _hadamard_transform_1d(array):
+    # necessary because of tf.EagerTensor
+    # does not accept item assignment
+    array_copied = np.copy(array)
+
+    indexes = [2**k for k in range(int(np.log2(len(array_copied))))]
+    for index in indexes:
+        for k in range(0, len(array_copied), 2 * index):
+            for j in range(k, k + index):
+                # copy necessary because of cupy backend
+                elem_1 = np.copy(array_copied[j])
+                elem_2 = np.copy(array_copied[j + index])
+                array_copied[j] = elem_1 + elem_2
+                array_copied[j + index] = elem_1 - elem_2
+        array_copied /= 2.0
+
+    return array_copied

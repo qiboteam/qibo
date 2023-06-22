@@ -47,21 +47,47 @@ def test_hamming_weight(bitstring, kind):
     assert indexes == indexes_test
 
 
+@pytest.mark.parametrize("is_matrix", [False, True])
+@pytest.mark.parametrize("implementation", ["fast", "regular"])
 @pytest.mark.parametrize("nqubits", [3, 4, 5])
-def test_hadamard_transform(backend, nqubits):
+def test_hadamard_transform(backend, nqubits, implementation, is_matrix):
     with pytest.raises(TypeError):
-        test = random_density_matrix(4**nqubits, pure=True, backend=backend)
-        test = hadamard_transform(test, backend=backend)
+        test = np.random.rand((2, 2, 2))
+        test = backend.cast(test, dtype=test.dtype)
+        test = hadamard_transform(test, implementation=implementation, backend=backend)
+    with pytest.raises(TypeError):
+        test = np.random.rand((3,))
+        test = backend.cast(test, dtype=test.dtype)
+        test = hadamard_transform(test, implementation=implementation, backend=backend)
+    with pytest.raises(TypeError):
+        test = np.random.rand((2, 3))
+        test = backend.cast(test, dtype=test.dtype)
+        test = hadamard_transform(test, implementation=implementation, backend=backend)
+    with pytest.raises(TypeError):
+        test = np.random.rand(2**nqubits)
+        test = backend.cast(test, dtype=test.dtype)
+        test = hadamard_transform(test, implementation=True, backend=backend)
+    with pytest.raises(ValueError):
+        test = np.random.rand(2**nqubits)
+        test = backend.cast(test, dtype=test.dtype)
+        test = hadamard_transform(test, implementation="fas", backend=backend)
 
-    state = np.arange(2**nqubits, dtype=float)
+    dim = 2**nqubits
+
+    state = np.random.rand(dim, dim) if is_matrix else np.random.rand(dim)
     state = backend.cast(state, dtype=state.dtype)
 
     hadamards = np.real(reduce(np.kron, [matrices.H] * nqubits))
+    hadamards /= 2 ** (nqubits / 2)
     hadamards = backend.cast(hadamards, dtype=hadamards.dtype)
 
-    transformed = hadamard_transform(state, backend)
+    test_transformed = hadamards @ state
+    if is_matrix:
+        test_transformed = test_transformed @ hadamards
 
-    test_transformed = hadamards @ state / (2 ** (nqubits / 2))
+    transformed = hadamard_transform(
+        state, implementation=implementation, backend=backend
+    )
 
     backend.assert_allclose(transformed, test_transformed, atol=PRECISION_TOL)
 
