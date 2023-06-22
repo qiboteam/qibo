@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+from pathlib import Path
 
 import numpy as np
 from qclassifier import QuantumClassifer
@@ -39,7 +40,8 @@ def main(nclasses, nqubits, nlayers, nshots, training, RxRzRx, method):
     qc = QuantumClassifer(nclasses, nqubits, nlayers, RY=RY)
 
     # We load the iris data set
-    data = open("data/iris.data")
+    path_data = Path(__file__).parent / "data" / "iris.data"
+    data = open(path_data)
     data = data.readlines()
     data = [i.split(",") for i in data]
 
@@ -65,18 +67,16 @@ def main(nclasses, nqubits, nlayers, nshots, training, RxRzRx, method):
     if not training:
         if RY:
             try:
-                optimal_angles = np.load(
-                    "data/optimal_angles_ry_{}q_{}l.npy".format(nqubits, nlayers)
-                )
+                path_angles = Path(__file__).parent / "data" / "optimal_angles_ry_{}q_{}l.npy".format(nqubits, nlayers)
+                optimal_angles = np.load(path_angles)
             except:
                 raise FileNotFoundError(
                     "There are no pre-trained angles saved for this choice of nqubits, nlayers and type of ansatz."
                 )
         else:
             try:
-                optimal_angles = np.load(
-                    "data/optimal_angles_rxrzrx_{}q_{}l.npy".format(nqubits, nlayers)
-                )
+                path_angles = Path(__file__).parent / "data" / "optimal_angles_rxrzrx_{}q_{}l.npy".format(nqubits, nlayers)
+                optimal_angles = np.load(path_angles)
             except:
                 raise FileNotFoundError(
                     "There are no pre-trained angles saved for this choice of nqubits, nlayers and type of ansatz."
@@ -100,8 +100,9 @@ def main(nclasses, nqubits, nlayers, nshots, training, RxRzRx, method):
                 nshots=nshots,
                 method=method,
             )
+            path_angles = Path(__file__).parent / "data" / "optimal_angles_ry_{}q_{}l.npy".format(nqubits, nlayers)
             np.save(
-                "data/optimal_angles_ry_{}q_{}l.npy".format(nqubits, nlayers),
+                path_angles,
                 optimal_angles,
             )
         else:  # if RxRzRx rotations are employed in the ansatz
@@ -120,8 +121,9 @@ def main(nclasses, nqubits, nlayers, nshots, training, RxRzRx, method):
                 nshots=nshots,
                 method=method,
             )
+            path_angles = Path(__file__).parent / "data" / "optimal_angles_rxrzrx_{}q_{}l.npy".format(nqubits, nlayers)
             np.save(
-                "data/optimal_angles_rxrzrx_{}q_{}l.npy".format(nqubits, nlayers),
+                path_angles,
                 optimal_angles,
             )
 
