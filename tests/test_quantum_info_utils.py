@@ -8,7 +8,6 @@ from qibo import matrices
 from qibo.config import PRECISION_TOL
 from qibo.models import Circuit
 from qibo.quantum_info.metrics import fidelity
-from qibo.quantum_info.random_ensembles import random_density_matrix
 from qibo.quantum_info.utils import (
     haar_integral,
     hadamard_transform,
