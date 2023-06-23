@@ -459,6 +459,7 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
             "Both objects must have dims either (k,) or (k,l), "
             + f"but have dims {state.shape} and {target.shape}",
         )
+
     if isinstance(check_hermitian, bool) is False:
         raise_error(
             TypeError,
@@ -888,8 +889,8 @@ def diamond_norm(channel, target=None, **kwargs):
 
     """
     try:  # pragma: no cover
-        import cvxpy
-    except:  # pragma: no cover
+        import cvxpy  # pylint: disable=C0415
+    except ImportError:  # pragma: no cover
         raise_error(
             ModuleNotFoundError, "cvxpy module was not found. Please install it."
         )
@@ -1002,7 +1003,7 @@ def meyer_wallach_entanglement(circuit, backend=None):
 
     rho = backend.execute_circuit(circuit).state()
 
-    entropy = 0
+    ent = 0
     for j in range(nqubits):
         trace_q = list(range(nqubits))
         trace_q.pop(j)
@@ -1011,9 +1012,9 @@ def meyer_wallach_entanglement(circuit, backend=None):
 
         trace = purity(rho_r)
 
-        entropy += trace
+        ent += trace
 
-    entanglement = 1 - entropy / nqubits
+    entanglement = 1 - ent / nqubits
 
     return entanglement
 
