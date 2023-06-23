@@ -38,9 +38,7 @@ def hamming_weight(bitstring, return_indexes: bool = False):
     if return_indexes:
         return indexes
 
-    weight = len(indexes)
-
-    return weight
+    return len(indexes)
 
 
 def hadamard_transform(array, implementation: str = "fast", backend=None):
