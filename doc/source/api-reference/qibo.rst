@@ -1289,6 +1289,12 @@ Gate error
 .. autofunction:: qibo.quantum_info.gate_error
 
 
+Diamond Norm
+""""""""""""
+
+.. autofunction:: qibo.quantum_info.diamond_norm
+
+
 Meyer-Wallach entanglement
 """"""""""""""""""""""""""
 
