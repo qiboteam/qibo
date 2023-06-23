@@ -857,6 +857,21 @@ def diamond_norm(channel, target=None, **kwargs):
     ``channel`` :math:`\\mathcal{E}`. If a ``target`` channel :math:`\\Lambda`
     is specified, then it calculates :math:`\\| \\mathcal{E} - \\Lambda\\|_{\\diamond}`.
 
+    Example:
+        .. testcode::
+            from qibo.quantum_info import diamond_norm random_unitary, to_choi
+
+            nqubits = 1
+            dim = 2**nqubits
+
+            unitary = random_unitary(dim)
+            unitary = to_choi(unitary, order="row")
+
+            unitary_2 = random_unitary(dim)
+            unitary_2 = to_choi(unitary_2, order="row")
+
+            dnorm = diamond_norm(unitary, unitary_2)
+
     Args:
         channel (ndarray): row-vectorized Choi representation of a quantum channel.
         target (ndarray, optional): row-vectorized Choi representation of a target
