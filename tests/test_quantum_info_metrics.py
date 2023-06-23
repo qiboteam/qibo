@@ -9,6 +9,7 @@ from qibo.quantum_info.metrics import (
     bures_angle,
     bures_distance,
     concurrence,
+    diamond_norm,
     entanglement_entropy,
     entanglement_fidelity,
     entanglement_of_formation,
@@ -31,6 +32,7 @@ from qibo.quantum_info.random_ensembles import (
     random_statevector,
     random_unitary,
 )
+from qibo.quantum_info.superoperator_transformations import to_choi
 
 
 def test_purity_and_impurity(backend):
@@ -556,6 +558,27 @@ def test_process_fidelity_and_infidelity(backend):
     backend.assert_allclose(
         gate_error(channel, channel, backend=backend), 0.0, atol=PRECISION_TOL
     )
+
+
+@pytest.mark.parametrize("nqubits", [2])
+def test_diamond_norm(backend, nqubits):
+    with pytest.raises(TypeError):
+        test = random_unitary(2**nqubits, backend=backend)
+        test_2 = random_unitary(4**nqubits, backend=backend)
+        test = diamond_norm(test, test_2)
+
+    from qiskit.quantum_info.operators.measures import (
+        diamond_norm as diamond_norm_qiskit,  # pylint: disable=C0415
+    )
+
+    unitary = random_unitary(2**nqubits, backend=backend)
+    unitary = to_choi(unitary, order="row", backend=backend)
+
+    dnorm = diamond_norm(unitary)
+    print(type(backend.to_numpy(unitary)))
+    dnorm_qiskit = diamond_norm_qiskit(backend.to_numpy(unitary))
+
+    backend.assert_allclose(dnorm, dnorm_qiskit, atol=PRECISION_TOL)
 
 
 def test_meyer_wallach_entanglement(backend):
