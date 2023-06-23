@@ -1,17 +1,19 @@
 import argparse
 import math
+from pathlib import Path
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.optimizers import Adam, schedules
 
 import qibo
 from qibo import gates
 from qibo.models import Circuit
 
+LOCAL_FOLDER = Path(__file__).parent
+
 
 def main(n_layers, batch_size, nepochs, train_size, filename, lr_boundaries):
-    """Implements training of variational quantum circuit.
+    """Implements training of variational quantum circuit, as described in https://doi.org/10.3390/particles6010016.
 
     Args:
         n_layers (int): number of ansatz circuit layers (default 6).
@@ -35,7 +37,7 @@ def main(n_layers, batch_size, nepochs, train_size, filename, lr_boundaries):
             q_compression (int): number of compressed qubits.
 
         Returns:
-            encoder (:class:`qibo.models.circuit.Circuit`): variational quantum circuit.
+            encoder (qibo.models.Circuit): variational quantum circuit.
         """
 
         index = 0
@@ -63,7 +65,7 @@ def main(n_layers, batch_size, nepochs, train_size, filename, lr_boundaries):
         """Evaluate loss function for one train sample.
 
         Args:
-            encoder (:class:`qibo.models.circuit.Circuit`): variational quantum circuit.
+            encoder (qibo.models.Circuit): variational quantum circuit.
             params (tf.Variable): parameters of the circuit.
             vector (tf.Tensor): train sample, in the form of 1d vector.
 
@@ -88,7 +90,7 @@ def main(n_layers, batch_size, nepochs, train_size, filename, lr_boundaries):
 
         Args:
             batch_size (int): number of samples in one training batch.
-            encoder (:class:`qibo.models.circuit.Circuit`): variational quantum circuit.
+            encoder (qibo.models.Circuit): variational quantum circuit.
             params (tf.Variable): parameters of the circuit.
             vector (tf.Tensor): train sample, in the form of 1d vector.
 
@@ -110,7 +112,8 @@ def main(n_layers, batch_size, nepochs, train_size, filename, lr_boundaries):
     q_compression = 3
 
     # Load and pre-process data
-    dataset_np = np.load("data/standard_data.npy")
+    file_dataset = LOCAL_FOLDER / "data" / "standard_data.npy"
+    dataset_np = np.load(file_dataset)
     dataset = tf.convert_to_tensor(dataset_np)
     train = dataset[0:train_size]
 
@@ -189,7 +192,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--filename",
-        default="parameters/trained_params.npy",
+        default=LOCAL_FOLDER / "parameters" / "trained_params.npy",
         type=str,
         help="(str): location and file name where trained parameters are saved",
     )
