@@ -859,7 +859,9 @@ def diamond_norm(channel, target=None, **kwargs):
     is specified, then it calculates :math:`\\| \\mathcal{E} - \\Lambda\\|_{\\diamond}`.
 
     Example:
+
         .. testcode::
+
             from qibo.quantum_info import diamond_norm, random_unitary, to_choi
 
             nqubits = 1
