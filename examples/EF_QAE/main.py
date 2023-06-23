@@ -8,7 +8,6 @@ from sklearn.datasets import load_digits
 from qibo import gates, hamiltonians, models
 
 
-
 def main(layers, autoencoder, example, maxiter):
     def encoder_hamiltonian_simple(nqubits, ncompress):
         """Creates the encoding Hamiltonian.

@@ -114,12 +114,8 @@ def main(n_layers, train_size, filename, plot, save_loss):
         loss_a.append(compute_loss_test(encoder_test, dataset_a[i]).numpy())
 
     if save_loss:
-        file_loss_standard = (
-            LOCAL_FOLDER / "results" / "losses_standard_data.npy"
-        )
-        file_loss_anomalous = (
-            LOCAL_FOLDER / "results" / "losses_anomalous_data.npy"
-        )
+        file_loss_standard = LOCAL_FOLDER / "results" / "losses_standard_data.npy"
+        file_loss_anomalous = LOCAL_FOLDER / "results" / "losses_anomalous_data.npy"
         np.save(file_loss_standard, loss_s)
         np.save(file_loss_anomalous, loss_a)
 
