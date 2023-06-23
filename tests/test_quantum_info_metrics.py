@@ -560,7 +560,7 @@ def test_process_fidelity_and_infidelity(backend):
     )
 
 
-@pytest.mark.parametrize("nqubits", [2])
+@pytest.mark.parametrize("nqubits", [1, 2])
 def test_diamond_norm(backend, nqubits):
     with pytest.raises(TypeError):
         test = random_unitary(2**nqubits, backend=backend)
@@ -571,8 +571,10 @@ def test_diamond_norm(backend, nqubits):
     unitary = to_choi(unitary, order="row", backend=backend)
 
     dnorm = diamond_norm(unitary)
-
     backend.assert_allclose(dnorm, 1.0, atol=PRECISION_TOL)
+
+    dnorm = diamond_norm(unitary, unitary)
+    backend.assert_allclose(dnorm, 0.0, atol=PRECISION_TOL)
 
 
 def test_meyer_wallach_entanglement(backend):
