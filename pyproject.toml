@@ -48,8 +48,6 @@ optional = true
 [tool.poetry.group.tests.dependencies]
 pytest = "^7.2.1"
 cirq = "^1.1.0"
-qiskit = "^0.43.0"
-cvxpy = "^1.3.0"
 ply = "^3.11"
 scikit-learn = "^1.2.1"
 dill = "^0.3.6"
@@ -67,6 +65,11 @@ docs = "make -C doc html"
 docs-clean = "make -C doc clean"
 test-docs = "make -C doc doctest"
 
+
+
+
+
+
 [tool.poetry.group.cuda11]
 optional = true
 
@@ -74,6 +77,11 @@ optional = true
 cupy-cuda11x = "^12.0.0"
 cuquantum-python-cu11 = "^23.3.0"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
+
+
+
+
+
 
 [tool.poetry.group.cuda12]
 optional = true
