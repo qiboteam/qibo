@@ -852,6 +852,116 @@ def gate_error(channel, target=None, check_unitary: bool = False, backend=None):
     return error
 
 
+def diamond_norm(channel, target=None, **kwargs):
+    """Calculates the diamond norm :math:`\\|\\mathcal{E}\\|_{\\diamond}` of
+    ``channel`` :math:`\\mathcal{E}`. If a ``target`` channel :math:`\\Lambda`
+    is specified, then it calculates :math:`\\| \\mathcal{E} - \\Lambda\\|_{\\diamond}`.
+
+    Args:
+        channel (ndarray): row-vectorized Choi representation of a quantum channel.
+        target (ndarray, optional): row-vectorized Choi representation of a target
+            quantum channel. Defaults to ``None``.
+        kwargs: optional arguments to pass to CVXPY solver. For more information,
+            please visit CVXPY's API documentation
+            <https://www.cvxpy.org/api_reference/cvxpy.problems.html#problem>_.
+
+    Returns:
+        float: diamond norm of either ``channel`` or ``channel - target``.
+
+    .. note::
+        This function requires the optional CVXPY package to be installed.
+
+    """
+    try:  # pragma: no cover
+        import cvxpy
+    except:  # pragma: no cover
+        raise_error(
+            ModuleNotFoundError, "cvxpy module was not found. Please install it."
+        )
+
+    from scipy.sparse import eye as sp_eye  # pylint: disable=C0415
+
+    if target is not None:
+        if channel.shape != target.shape:
+            raise_error(
+                TypeError,
+                f"Channels must have the same dims, but {channel.shape} != {target.shape}",
+            )
+
+    if target is not None:
+        channel -= target
+
+    # `CVXPY` only works with `numpy`, so this function has to
+    # convert any channel to the `numpy` backend by default
+    backend = GlobalBackend()
+    channel = backend.to_numpy(channel)
+
+    channel = np.transpose(channel)
+    channel_real = np.real(channel)
+    channel_imag = np.imag(channel)
+
+    dim = int(np.sqrt(channel.shape[0]))
+
+    first_variables_real = cvxpy.Variable(shape=(dim, dim))
+    first_variables_imag = cvxpy.Variable(shape=(dim, dim))
+    first_variables = cvxpy.bmat(
+        [
+            [first_variables_real, -first_variables_imag],
+            [first_variables_imag, first_variables_real],
+        ]
+    )
+
+    second_variables_real = cvxpy.Variable(shape=(dim, dim))
+    second_variables_imag = cvxpy.Variable(shape=(dim, dim))
+    second_variables = cvxpy.bmat(
+        [
+            [second_variables_real, -second_variables_imag],
+            [second_variables_imag, second_variables_real],
+        ]
+    )
+
+    variables_real = cvxpy.Variable(shape=(dim**2, dim**2))
+    variables_imag = cvxpy.Variable(shape=(dim**2, dim**2))
+    identity = sp_eye(dim)
+
+    constraints_real = cvxpy.bmat(
+        [
+            [cvxpy.kron(identity, first_variables_real), variables_real],
+            [variables_real.T, cvxpy.kron(identity, second_variables_real)],
+        ]
+    )
+    constraints_imag = cvxpy.bmat(
+        [
+            [cvxpy.kron(identity, first_variables_imag), variables_imag],
+            [-variables_imag.T, cvxpy.kron(identity, second_variables_imag)],
+        ]
+    )
+    constraints_block = cvxpy.bmat(
+        [[constraints_real, -constraints_imag], [constraints_imag, constraints_real]]
+    )
+
+    constraints = [
+        first_variables >> 0,
+        first_variables_real == first_variables_real.T,
+        first_variables_imag == -first_variables_imag.T,
+        cvxpy.trace(first_variables_real) == 1,
+        second_variables >> 0,
+        second_variables_real == second_variables_real.T,
+        second_variables_imag == -second_variables_imag.T,
+        cvxpy.trace(second_variables_real) == 1,
+        constraints_block >> 0,
+    ]
+
+    objective_function = cvxpy.Maximize(
+        cvxpy.trace(channel_real @ variables_real)
+        + cvxpy.trace(channel_imag @ variables_imag)
+    )
+    problem = cvxpy.Problem(objective=objective_function, constraints=constraints)
+    solution = problem.solve(**kwargs)
+
+    return solution
+
+
 def meyer_wallach_entanglement(circuit, backend=None):
     """Computes the Meyer-Wallach entanglement Q of the `circuit`,
 
