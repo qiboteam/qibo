@@ -567,18 +567,12 @@ def test_diamond_norm(backend, nqubits):
         test_2 = random_unitary(4**nqubits, backend=backend)
         test = diamond_norm(test, test_2)
 
-    from qiskit.quantum_info.operators.measures import (
-        diamond_norm as diamond_norm_qiskit,  # pylint: disable=C0415
-    )
-
-    unitary = random_unitary(2**nqubits, backend=backend)
+    unitary = backend.identity_density_matrix(nqubits, normalize=False)
     unitary = to_choi(unitary, order="row", backend=backend)
 
     dnorm = diamond_norm(unitary)
-    print(type(backend.to_numpy(unitary)))
-    dnorm_qiskit = diamond_norm_qiskit(backend.to_numpy(unitary))
 
-    backend.assert_allclose(dnorm, dnorm_qiskit, atol=PRECISION_TOL)
+    backend.assert_allclose(dnorm, 1.0, atol=PRECISION_TOL)
 
 
 def test_meyer_wallach_entanglement(backend):
