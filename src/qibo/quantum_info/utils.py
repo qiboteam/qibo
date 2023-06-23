@@ -37,9 +37,7 @@ def hamming_weight(bitstring, return_indexes: bool = False):
     if return_indexes:
         return indexes
 
-    weight = len(indexes)
-
-    return weight
+    return len(indexes)
 
 
 def shannon_entropy(probability_array, base: float = 2, backend=None):
