@@ -5,6 +5,8 @@ from pathlib import Path
 import numpy as np
 from qclassifier import QuantumClassifer
 
+LOCAL_FOLDER = Path(__file__).parent
+
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "--nclasses", default=3, help="Number of classes to be classified", type=int
@@ -40,7 +42,7 @@ def main(nclasses, nqubits, nlayers, nshots, training, RxRzRx, method):
     qc = QuantumClassifer(nclasses, nqubits, nlayers, RY=RY)
 
     # We load the iris data set
-    path_data = Path(__file__).parent / "data" / "iris.data"
+    path_data = LOCAL_FOLDER / "data" / "iris.data"
     data = open(path_data)
     data = data.readlines()
     data = [i.split(",") for i in data]
@@ -68,7 +70,7 @@ def main(nclasses, nqubits, nlayers, nshots, training, RxRzRx, method):
         if RY:
             try:
                 path_angles = (
-                    Path(__file__).parent
+                    LOCAL_FOLDER
                     / "data"
                     / "optimal_angles_ry_{}q_{}l.npy".format(nqubits, nlayers)
                 )
@@ -80,7 +82,7 @@ def main(nclasses, nqubits, nlayers, nshots, training, RxRzRx, method):
         else:
             try:
                 path_angles = (
-                    Path(__file__).parent
+                    LOCAL_FOLDER
                     / "data"
                     / "optimal_angles_rxrzrx_{}q_{}l.npy".format(nqubits, nlayers)
                 )
@@ -109,7 +111,7 @@ def main(nclasses, nqubits, nlayers, nshots, training, RxRzRx, method):
                 method=method,
             )
             path_angles = (
-                Path(__file__).parent
+                LOCAL_FOLDER
                 / "data"
                 / "optimal_angles_ry_{}q_{}l.npy".format(nqubits, nlayers)
             )
@@ -134,7 +136,7 @@ def main(nclasses, nqubits, nlayers, nshots, training, RxRzRx, method):
                 method=method,
             )
             path_angles = (
-                Path(__file__).parent
+                LOCAL_FOLDER
                 / "data"
                 / "optimal_angles_rxrzrx_{}q_{}l.npy".format(nqubits, nlayers)
             )

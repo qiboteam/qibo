@@ -9,6 +9,8 @@ import qibo
 from qibo import gates
 from qibo.models import Circuit
 
+LOCAL_FOLDER = Path(__file__).parent
+
 
 def main(n_layers, train_size, filename, plot, save_loss):
     """Implements performance evaluation of a trained circuit, as described in https://doi.org/10.3390/particles6010016.
@@ -81,11 +83,11 @@ def main(n_layers, train_size, filename, plot, save_loss):
     q_compression = 3
 
     # Load and pre-process data
-    file_dataset_standard = Path(__file__).parent / "data" / "standard_data.npy"
+    file_dataset_standard = LOCAL_FOLDER / "data" / "standard_data.npy"
     dataset_np_s = np.load(file_dataset_standard)
     dataset_np_s = dataset_np_s[train_size:]
     dataset_s = tf.convert_to_tensor(dataset_np_s)
-    file_dataset_anomalous = Path(__file__).parent / "data" / "anomalous_data.npy"
+    file_dataset_anomalous = LOCAL_FOLDER / "data" / "anomalous_data.npy"
     dataset_np_a = np.load(file_dataset_anomalous)
     dataset_np_a = dataset_np_a[train_size:]
     dataset_a = tf.convert_to_tensor(dataset_np_a)
@@ -113,10 +115,10 @@ def main(n_layers, train_size, filename, plot, save_loss):
 
     if save_loss:
         file_loss_standard = (
-            Path(__file__).parent / "results" / "losses_standard_data.npy"
+            LOCAL_FOLDER / "results" / "losses_standard_data.npy"
         )
         file_loss_anomalous = (
-            Path(__file__).parent / "results" / "losses_anomalous_data.npy"
+            LOCAL_FOLDER / "results" / "losses_anomalous_data.npy"
         )
         np.save(file_loss_standard, loss_s)
         np.save(file_loss_anomalous, loss_a)
@@ -130,7 +132,7 @@ def main(n_layers, train_size, filename, plot, save_loss):
         plt.xlabel("Loss value")
         plt.title("Loss function distribution (MNIST dataset)")
         plt.legend()
-        file_plot = Path(__file__).parent / "results" / "loss_distribution.png"
+        file_plot = LOCAL_FOLDER / "results" / "loss_distribution.png"
         plt.savefig(file_plot)
         plt.close()
 
@@ -172,7 +174,7 @@ def main(n_layers, train_size, filename, plot, save_loss):
         plt.ylim([0, 1])
         plt.ylabel("True Positive Rate")
         plt.xlabel("False Positive Rate")
-        file_roc = Path(__file__).parent / "results" / "ROC.png"
+        file_roc = LOCAL_FOLDER / "results" / "ROC.png"
         plt.savefig(file_roc)
 
 
@@ -192,7 +194,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--filename",
-        default=Path(__file__).parent / "parameters" / "trained_params.npy",
+        default=LOCAL_FOLDER / "parameters" / "trained_params.npy",
         type=str,
         help="(str): location and file name of trained parameters to be tested",
     )

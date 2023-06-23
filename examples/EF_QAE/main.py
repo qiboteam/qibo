@@ -6,7 +6,7 @@ from scipy.optimize import minimize
 from sklearn.datasets import load_digits
 
 from qibo import gates, hamiltonians, models
-from qibo.hamiltonians import Hamiltonian
+
 
 
 def main(layers, autoencoder, example, maxiter):
