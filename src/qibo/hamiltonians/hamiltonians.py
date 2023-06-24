@@ -91,7 +91,9 @@ class Hamiltonian(AbstractHamiltonian):
             "deprecated. Please use `SymbolicHamiltonian` and Qibo symbols "
             "to construct Hamiltonians using symbols."
         )
-        return SymbolicHamiltonian(symbolic_hamiltonian, symbol_map, backend=backend)
+        return SymbolicHamiltonian(
+            symbolic_hamiltonian, symbol_map=symbol_map, backend=backend
+        )
 
     def eigenvalues(self, k=6):
         if self._eigenvalues is None:
