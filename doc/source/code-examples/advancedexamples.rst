@@ -1897,3 +1897,74 @@ constructing each symbol:
 
     form = Z(0, commutative=True) * Z(1, commutative=True) + Z(1, commutative=True) * Z(2, commutative=True)
     ham = hamiltonians.SymbolicHamiltonian(form)
+
+
+.. _hamexpectation-example:
+
+How to calculate expectation values using samples?
+--------------------------------------------------
+
+It is possible to calculate the expectation value of a :class:`qibo.hamiltonians.Hamiltonian`
+on a given state using the :meth:`qibo.hamiltonians.Hamiltonian.expectation` method,
+which can be called on a state or density matrix. For example
+
+
+.. testcode::
+
+    import numpy as np
+    from qibo.models import Circuit
+    from qibo.hamiltonians import XXZ
+
+    circuit = Circuit(4)
+    circuit.add(gates.H(i) for i in range(4))
+    c.add(gates.CNOT(0, 1))
+    c.add(gates.CNOT(1, 2))
+    c.add(gates.CNOT(2, 3))
+
+    hamiltonian = XXZ(4)
+
+    result = circuit()
+    expectation_value = hamiltonian.expectation(result.state())
+
+In this example, the circuit will be simulated to obtain the final state vector
+and the corresponding expectation value will be calculated through exact matrix
+multiplication with the Hamiltonian matrix.
+If a :class:`qibo.hamiltonians.SymbolicHamiltonian` is used instead, the expectation
+value will be calculated as a sum of expectation values of local terms, allowing
+calculations of more qubits with lower memory consumption. The calculation of each
+local term still requires the state vector.
+
+When executing a circuit on real hardware, usually only measurements of the state are
+available, not the state vector. Qibo provides :meth:`qibo.hamiltonians.Hamiltonian.expectation_from_samples`
+to allow calculation of expectation values directly from such samples:
+
+
+.. testcode::
+
+    import numpy as np
+    from qibo.models import Circuit
+    from qibo.hamiltonians import XXZ
+
+    circuit = Circuit(4)
+    circuit.add(gates.H(i) for i in range(4))
+    c.add(gates.CNOT(0, 1))
+    c.add(gates.CNOT(1, 2))
+    c.add(gates.CNOT(2, 3))
+
+    hamiltonian = XXZ(4)
+
+    result = circuit()
+    expectation_value = hamiltonian.expectation_from_samples(result.frequencies())
+
+
+This example simulates the circuit similarly to the previous one but calculates
+the expectation value using the frequencies of shots, instead of the exact state vector.
+This can also be invoked directly from the ``result`` object:
+
+.. testcode::
+
+    expectation_value = result.expectation_from_samples(hamiltonian)
+
+
+The expectation from samples currently works only for Hamiltonians that are diagonal in
+the computational basis.
