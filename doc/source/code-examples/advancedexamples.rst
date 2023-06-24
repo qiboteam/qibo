@@ -1953,7 +1953,7 @@ to allow calculation of expectation values directly from such samples:
 
     hamiltonian = XXZ(4)
 
-    result = circuit()
+    result = circuit(nshots=1024)
     expectation_value = hamiltonian.expectation_from_samples(result.frequencies())
 
 
