@@ -384,7 +384,7 @@ def test_trotter_hamiltonian_operation_errors(backend):
         h = h1 * "test"
     with pytest.raises(NotImplementedError):
         h = h1 @ "test"
-    with pytest.raises(ValueError):
+    with pytest.raises(NotImplementedError):
         h = h1 @ np.ones((2, 2, 2, 2))
     h2 = hamiltonians.XXZ(3, dense=False, backend=backend)
     with pytest.raises(NotImplementedError):

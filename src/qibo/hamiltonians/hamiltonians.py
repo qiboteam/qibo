@@ -414,9 +414,6 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                     terms.append(term)
                 else:
                     self.constant += term.coefficient
-            # assert (
-            #    self.nqubits == max(q for term in terms for q in term.target_qubits) + 1
-            # )
             self._terms = terms
         return self._terms
 
@@ -742,6 +739,11 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
         if isinstance(o, self.backend.tensor_types):
             rank = len(tuple(o.shape))
+            if rank not in (1, 2):
+                raise_error(
+                    NotImplementedError,
+                    "Cannot multiply Hamiltonian with " "rank-{} tensor.".format(rank),
+                )
             state_qubits = int(np.log2(int(o.shape[0])))
             if state_qubits != self.nqubits:
                 raise_error(
@@ -751,13 +753,8 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                 )
             if rank == 1:  # state vector
                 return self.apply_gates(o)
-            elif rank == 2:  # density matrix
+            else:  # density matrix
                 return self.apply_gates(o, density_matrix=True)
-            else:
-                raise_error(
-                    NotImplementedError,
-                    "Cannot multiply Hamiltonian with " "rank-{} tensor.".format(rank),
-                )
 
         raise_error(
             NotImplementedError,
