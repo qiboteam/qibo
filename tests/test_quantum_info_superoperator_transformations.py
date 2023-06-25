@@ -314,7 +314,9 @@ def test_liouville_to_choi(backend, order):
     choi = liouville_to_choi(test_superop, order, backend)
 
     axes = [1, 2] if order == "row" else [0, 3]
-    test_choi = np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
+    test_choi = backend.cast(
+        np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
+    )
 
     backend.assert_allclose(
         backend.calculate_norm(choi - test_choi) < PRECISION_TOL, True
@@ -324,12 +326,15 @@ def test_liouville_to_choi(backend, order):
 @pytest.mark.parametrize("order", ["row", "column"])
 def test_choi_to_liouville(backend, order):
     axes = [1, 2] if order == "row" else [0, 3]
-    test_choi = np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
+    test_choi = backend.cast(
+        np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
+    )
 
     liouville = choi_to_liouville(test_choi, order=order, backend=backend)
 
     backend.assert_allclose(
-        backend.calculate_norm(liouville - test_superop) < PRECISION_TOL, True
+        backend.calculate_norm(liouville - backend.cast(test_superop)) < PRECISION_TOL,
+        True,
     )
 
 
@@ -343,7 +348,9 @@ def test_choi_to_kraus(
     backend, order, validate_cp, test_a0, test_a1, test_kraus_left, test_kraus_right
 ):
     axes = [1, 2] if order == "row" else [0, 3]
-    test_choi = np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
+    test_choi = backend.cast(
+        np.reshape(test_superop, [2] * 4).swapaxes(*axes).reshape([4, 4])
+    )
 
     with pytest.raises(TypeError):
         choi_to_kraus(test_choi, str(PRECISION_TOL), backend=backend)
@@ -888,7 +895,7 @@ def test_reshuffling(backend, order):
     reshuffled = _reshuffling(reshuffled, order, backend=backend)
 
     backend.assert_allclose(
-        np.linalg.norm(reshuffled - test_superop) < PRECISION_TOL, True
+        np.linalg.norm(reshuffled - backend.cast(test_superop)) < PRECISION_TOL, True
     )
 
     axes = [1, 2] if order == "row" else [0, 3]
@@ -898,5 +905,5 @@ def test_reshuffling(backend, order):
     reshuffled = _reshuffling(reshuffled, order, backend=backend)
 
     backend.assert_allclose(
-        np.linalg.norm(reshuffled - test_choi) < PRECISION_TOL, True
+        np.linalg.norm(reshuffled - backend.cast(test_choi)) < PRECISION_TOL, True
     )

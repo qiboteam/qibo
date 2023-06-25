@@ -166,7 +166,7 @@ def test_qaoa_execution(backend, solver, dense, accel=None):
             u = expm(-1j * p * m_matrix)
         else:
             u = expm(-1j * p * h_matrix)
-        target_state = u @ target_state
+        target_state = backend.cast(u) @ target_state
 
     qaoa = models.QAOA(h, mixer=m, solver=solver, accelerators=accel)
     qaoa.set_parameters(params)
@@ -196,7 +196,7 @@ def test_qaoa_callbacks(backend, accelerators):
     h_matrix = backend.to_numpy(h.matrix)
     m_matrix = backend.to_numpy(qaoa.mixer.matrix)
     calc_energy = lambda s: (s.conj() * h_matrix.dot(s)).sum()
-    target_state = np.copy(state)
+    target_state = backend.to_numpy(state)
     target_energy = [calc_energy(target_state)]
     for i, p in enumerate(params):
         if i % 2:
