@@ -1911,7 +1911,7 @@ which can be called on a state or density matrix. For example
 
 .. testcode::
 
-    import numpy as np
+    from qibo import gates
     from qibo.models import Circuit
     from qibo.hamiltonians import XXZ
 
@@ -1941,9 +1941,9 @@ to allow calculation of expectation values directly from such samples:
 
 .. testcode::
 
-    import numpy as np
+    from qibo import gates
     from qibo.models import Circuit
-    from qibo.hamiltonians import XXZ
+    from qibo.hamiltonians import Z
 
     circuit = Circuit(4)
     circuit.add(gates.H(i) for i in range(4))
@@ -1951,7 +1951,7 @@ to allow calculation of expectation values directly from such samples:
     c.add(gates.CNOT(1, 2))
     c.add(gates.CNOT(2, 3))
 
-    hamiltonian = XXZ(4)
+    hamiltonian = Z(4)
 
     result = circuit(nshots=1024)
     expectation_value = hamiltonian.expectation_from_samples(result.frequencies())
