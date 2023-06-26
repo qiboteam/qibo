@@ -255,6 +255,16 @@ class NumpyMatrices:
             dtype=self.dtype,
         ) / self.np.sqrt(2)
 
+    def GIVENS(self, theta):
+        return self.np.array(
+            [
+                [1, 0, 0, 0],
+                [0, self.np.cos(theta), -self.np.sin(theta) ,0],
+                [0, self.np.sin(theta), self.np.cos(theta), 0],
+                [0, 0, 0, 1],
+            ]
+        )
+
     @cached_property
     def TOFFOLI(self):
         return self.np.array(
@@ -267,6 +277,35 @@ class NumpyMatrices:
                 [0, 0, 0, 0, 0, 1, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 1],
                 [0, 0, 0, 0, 0, 0, 1, 0],
+            ]
+        )
+
+    @cached_property
+    def PERES(self):
+        return self.np.array(
+            [
+                [1, 0, 0, 0, 0, 0, 0, 0],
+                [0, 1, 0, 0, 0, 0, 0, 0],
+                [0, 0, 1, 0, 0, 0, 0, 0],
+                [0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 1],
+                [0, 0, 0, 0, 0, 0, 1, 0],
+                [0, 0, 0, 0, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0],
+            ]
+        )
+
+    def DEUTSCH(self, theta):
+        return self.np.array(
+            [
+                [1, 0, 0, 0, 0, 0, 0, 0],
+                [0, 1, 0, 0, 0, 0, 0, 0],
+                [0, 0, 1, 0, 0, 0, 0, 0],
+                [0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 0, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0],
+                [0, 0, 0, 0, 0, 0, 1.0j * self.np.cos(theta), self.np.sin(theta)],
+                [0, 0, 0, 0, 0, 0, self.np.sin(theta), 1.0j * self.np.cos(theta)],
             ]
         )
 
