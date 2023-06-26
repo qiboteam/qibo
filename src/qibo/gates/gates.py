@@ -386,6 +386,8 @@ class _Rn_(ParametrizedGate):
         self.name = None
         self._controlled_gate = None
         self.target_qubits = (q,)
+        if any([theta % (mod * math.pi) == 0 for mod in [0.5, 1, 1.5, 2]]):
+            self._clifford = True
 
         self.parameters = theta
         self.init_args = [q]
