@@ -118,7 +118,8 @@ class NumpyBackend(Backend):
         for gate in fgate.gates:
             # transfer gate matrix to numpy as it is more efficient for
             # small tensor calculations
-            gmatrix = gate.asmatrix(self)
+            # explicit to_numpy see https://github.com/qiboteam/qibo/issues/928
+            gmatrix = self.to_numpy(gate.asmatrix(self))
             # Kronecker product with identity is needed to make the
             # original matrix have shape (2**rank x 2**rank)
             eye = np.eye(2 ** (rank - len(gate.qubits)), dtype=self.dtype)
