@@ -55,14 +55,6 @@ def test_hadamard_transform(backend, nqubits, implementation, is_matrix):
         test = backend.cast(test, dtype=test.dtype)
         test = hadamard_transform(test, implementation=implementation, backend=backend)
     with pytest.raises(TypeError):
-        test = np.random.rand((3,))
-        test = backend.cast(test, dtype=test.dtype)
-        test = hadamard_transform(test, implementation=implementation, backend=backend)
-    with pytest.raises(TypeError):
-        test = np.random.rand((2, 3))
-        test = backend.cast(test, dtype=test.dtype)
-        test = hadamard_transform(test, implementation=implementation, backend=backend)
-    with pytest.raises(TypeError):
         test = np.random.rand(2**nqubits)
         test = backend.cast(test, dtype=test.dtype)
         test = hadamard_transform(test, implementation=True, backend=backend)
