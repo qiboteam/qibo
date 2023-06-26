@@ -496,6 +496,7 @@ def test_choi_to_stinespring(
         nqubits = 1
 
     v_0 = np.array([1, 0], dtype=complex)
+    v_0 = backend.cast(v_0, dtype=v_0.dtype)
 
     state = random_density_matrix(2**nqubits, backend=backend)
 
@@ -513,6 +514,7 @@ def test_choi_to_stinespring(
     stinespring = np.reshape(stinespring, (2**nqubits, 2, 2**nqubits, 2))
     stinespring = np.swapaxes(stinespring, 1, 2)
     state_final = np.zeros((2**nqubits, 2**nqubits), dtype=complex)
+    state_final = backend.cast(state_final, dtype=state_final.dtype)
     for alpha in range(2):
         vector_alpha = np.zeros(2, dtype=complex)
         vector_alpha[alpha] = 1.0
@@ -642,6 +644,7 @@ def test_liouville_to_stinespring(
     )
 
     v_0 = np.array([1, 0], dtype=complex)
+    v_0 = backend.cast(v_0, dtype=v_0.dtype)
 
     state = random_density_matrix(2**nqubits, backend=backend)
 
@@ -659,6 +662,7 @@ def test_liouville_to_stinespring(
     stinespring = np.reshape(stinespring, (2**nqubits, 2, 2**nqubits, 2))
     stinespring = np.swapaxes(stinespring, 1, 2)
     state_final = np.zeros((2**nqubits, 2**nqubits), dtype=complex)
+    state_final = backend.cast(state_final, dtype=state_final.dtype)
     for alpha in range(2):
         vector_alpha = np.zeros(2, dtype=complex)
         vector_alpha[alpha] = 1.0
@@ -895,6 +899,7 @@ def test_pauli_to_stinespring(
     )
 
     v_0 = np.array([1, 0], dtype=complex)
+    v_0 = backend.cast(v_0, dtype=v_0.dtype)
 
     state = random_density_matrix(2**nqubits, backend=backend)
 
@@ -912,6 +917,7 @@ def test_pauli_to_stinespring(
     stinespring = np.reshape(stinespring, (2**nqubits, 2, 2**nqubits, 2))
     stinespring = np.swapaxes(stinespring, 1, 2)
     state_final = np.zeros((2**nqubits, 2**nqubits), dtype=complex)
+    state_final = backend.cast(state_final, dtype=state_final.dtype)
     for alpha in range(2):
         vector_alpha = np.zeros(2, dtype=complex)
         vector_alpha[alpha] = 1.0
@@ -1046,6 +1052,7 @@ def test_chi_to_stinespring(
     )
 
     v_0 = np.array([1, 0], dtype=complex)
+    v_0 = backend.cast(v_0, dtype=v_0.dtype)
 
     state = random_density_matrix(2**nqubits, backend=backend)
 
@@ -1063,6 +1070,7 @@ def test_chi_to_stinespring(
     stinespring = np.reshape(stinespring, (2**nqubits, 2, 2**nqubits, 2))
     stinespring = np.swapaxes(stinespring, 1, 2)
     state_final = np.zeros((2**nqubits, 2**nqubits), dtype=complex)
+    state_final = backend.cast(state_final, dtype=state_final.dtype)
     for alpha in range(2):
         vector_alpha = np.zeros(2, dtype=complex)
         vector_alpha[alpha] = 1.0
