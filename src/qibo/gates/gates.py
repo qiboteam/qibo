@@ -1411,7 +1411,7 @@ class MS(ParametrizedGate):
         if theta < 0.0 or theta > math.pi / 2:
             raise_error(
                 ValueError,
-                f"theta is defined in the interval 0 <= theta <= pi/2, but it is {theta}.",
+                f"Theta is defined in the interval 0 <= theta <= pi/2, but it is {theta}.",
             )
 
         self.parameter_names = ["phi0", "phi1", "theta"]
