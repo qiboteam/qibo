@@ -247,10 +247,20 @@ class NumpyMatrices:
 
         return self.np.array(
             [
-                [self.np.cos(theta/2), 0, 0, -1.0j * self.np.conj(plus) * self.np.sin(theta/2)],
-                [0, self.np.cos(theta/2), -1.0j * self.np.conj(minus) * self.np.sin(theta/2), 0],
-                [0, -1.0j * minus * self.np.sin(theta/2), self.np.cos(theta/2), 0],
-                [-1.0j * plus * self.np.sin(theta/2), 0, 0, self.np.cos(theta/2)],
+                [
+                    self.np.cos(theta / 2),
+                    0,
+                    0,
+                    -1.0j * self.np.conj(plus) * self.np.sin(theta / 2),
+                ],
+                [
+                    0,
+                    self.np.cos(theta / 2),
+                    -1.0j * self.np.conj(minus) * self.np.sin(theta / 2),
+                    0,
+                ],
+                [0, -1.0j * minus * self.np.sin(theta / 2), self.np.cos(theta / 2), 0],
+                [-1.0j * plus * self.np.sin(theta / 2), 0, 0, self.np.cos(theta / 2)],
             ],
             dtype=self.dtype,
         )

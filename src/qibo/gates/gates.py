@@ -1,5 +1,5 @@
 import math
-from typing import List, Optional
+from typing import List
 
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate, ParametrizedGate
@@ -1374,7 +1374,7 @@ class RZZ(_Rnn_):
 
 
 class MS(ParametrizedGate):
-    """The (partially entangling) Mølmer–Sørensen (MS) gate 
+    """The (partially entangling) Mølmer–Sørensen (MS) gate
     is a two qubit gate native to trapped ions.
 
     Corresponds to the following unitary matrix
@@ -1392,7 +1392,7 @@ class MS(ParametrizedGate):
         q1 (int): the second qubit to be swapped id number.
         phi0 (float): first qubit's phase.
         phi1 (float): second qubit's phase
-        theta (float, optional): arbitrary angle in the interval 
+        theta (float, optional): arbitrary angle in the interval
             :math:`0 \\leq \\theta \\leq \\pi /2`.  If :math:`\\theta \\rightarrow \\pi / 2`,
             the fully-entangling MS gate is defined. Defaults to :math:`\\pi / 2`.
         trainable (bool): whether gate parameters can be updated using
@@ -1410,8 +1410,8 @@ class MS(ParametrizedGate):
 
         if theta < 0.0 or theta > math.pi / 2:
             raise_error(
-                ValueError, 
-                f"theta is defined in the interval 0 <= theta <= pi/2, but it is {theta}."
+                ValueError,
+                f"theta is defined in the interval 0 <= theta <= pi/2, but it is {theta}.",
             )
 
         self.parameter_names = ["phi0", "phi1", "theta"]
@@ -1420,10 +1420,10 @@ class MS(ParametrizedGate):
 
         self.init_args = [q0, q1]
         self.init_kwargs = {
-            "phi0": phi0, 
-            "phi1": phi1, 
-            "theta": theta, 
-            "trainable": trainable
+            "phi0": phi0,
+            "phi1": phi1,
+            "theta": theta,
+            "trainable": trainable,
         }
 
     def _dagger(self) -> "Gate":
