@@ -647,6 +647,7 @@ class U1(_Un_):
         self.name = "u1"
         self.draw_label = "U1"
         self._controlled_gate = CU1
+        self._clifford = _check_clifford_label(theta)
         self.nparams = 1
         self.parameters = theta
         self.init_kwargs = {"theta": theta, "trainable": trainable}
