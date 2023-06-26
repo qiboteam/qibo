@@ -384,7 +384,7 @@ class _Rn_(ParametrizedGate):
         q (int): the qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`. 
+            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`.
             Defaults to ``True``.
     """
 
@@ -1408,12 +1408,12 @@ class RZZ(_Rnn_):
         0 & 0 & 0 & e^{-i \\theta / 2} \\\\
         \\end{pmatrix}
 
-    Args: 
+    Args:
         q0 (int): the first entangled qubit id number.
         q1 (int): the second entangled qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.Circuit.set_parameters`. 
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
             Defaults to ``True``.
     """
 
@@ -1446,7 +1446,7 @@ class MS(ParametrizedGate):
         phi0 (float): first qubit's phase.
         phi1 (float): second qubit's phase
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.Circuit.set_parameters`. 
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
             Defaults to ``True``.
     """
 
