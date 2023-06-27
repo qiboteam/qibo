@@ -370,13 +370,6 @@ class Align(Gate):
         self.init_args = q
 
 
-def _check_clifford_label(phase):
-    if any([phase % (mod * math.pi) == 0 for mod in [0.5, 1, 1.5, 2]]):
-        return True
-
-    return False
-
-
 class _Rn_(ParametrizedGate):
     """Abstract class for defining the RX, RY and RZ rotations.
 
@@ -393,7 +386,6 @@ class _Rn_(ParametrizedGate):
         self.name = None
         self._controlled_gate = None
         self.target_qubits = (q,)
-        self._clifford = _check_clifford_label(theta)
 
         self.parameters = theta
         self.init_args = [q]
@@ -544,7 +536,6 @@ class GPI(ParametrizedGate):
         self.name = "gpi"
         self.draw_label = "GPI"
         self.target_qubits = (q,)
-        self._clifford = _check_clifford_label(phi)
 
         self.parameter_names = "phi"
         self.parameters = phi
@@ -578,7 +569,6 @@ class GPI2(ParametrizedGate):
         self.name = "gpi2"
         self.draw_label = "GPI2"
         self.target_qubits = (q,)
-        self._clifford = _check_clifford_label(phi)
 
         self.parameter_names = "phi"
         self.parameters = phi
@@ -647,7 +637,7 @@ class U1(_Un_):
         self.name = "u1"
         self.draw_label = "U1"
         self._controlled_gate = CU1
-        self._clifford = _check_clifford_label(theta)
+
         self.nparams = 1
         self.parameters = theta
         self.init_kwargs = {"theta": theta, "trainable": trainable}
