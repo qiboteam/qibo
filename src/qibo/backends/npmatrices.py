@@ -281,50 +281,6 @@ class NumpyMatrices:
             ]
         )
 
-    @cached_property
-    def PERES(self):
-        return self.np.array(
-            [
-                [1, 0, 0, 0, 0, 0, 0, 0],
-                [0, 1, 0, 0, 0, 0, 0, 0],
-                [0, 0, 1, 0, 0, 0, 0, 0],
-                [0, 0, 0, 1, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 1],
-                [0, 0, 0, 0, 0, 0, 1, 0],
-                [0, 0, 0, 0, 1, 0, 0, 0],
-                [0, 0, 0, 0, 0, 1, 0, 0],
-            ]
-        )
-
-    @cached_property
-    def PERESDG(self):
-        return self.np.array(
-            [
-                [1, 0, 0, 0, 0, 0, 0, 0],
-                [0, 1, 0, 0, 0, 0, 0, 0],
-                [0, 0, 1, 0, 0, 0, 0, 0],
-                [0, 0, 0, 1, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 1, 0],
-                [0, 0, 0, 0, 0, 0, 0, 1],
-                [0, 0, 0, 0, 0, 1, 0, 0],
-                [0, 0, 0, 0, 1, 0, 0, 0],
-            ]
-        )
-
-    def DEUTSCH(self, theta):
-        return self.np.array(
-            [
-                [1, 0, 0, 0, 0, 0, 0, 0],
-                [0, 1, 0, 0, 0, 0, 0, 0],
-                [0, 0, 1, 0, 0, 0, 0, 0],
-                [0, 0, 0, 1, 0, 0, 0, 0],
-                [0, 0, 0, 0, 1, 0, 0, 0],
-                [0, 0, 0, 0, 0, 1, 0, 0],
-                [0, 0, 0, 0, 0, 0, 1.0j * self.np.cos(theta), self.np.sin(theta)],
-                [0, 0, 0, 0, 0, 0, self.np.sin(theta), 1.0j * self.np.cos(theta)],
-            ]
-        )
-
     def Unitary(self, u):
         return self.np.array(u, dtype=self.dtype, copy=False)
 
