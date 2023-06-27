@@ -1549,10 +1549,53 @@ class PERES(Gate):
         self.target_qubits = (q2,)
         self.init_args = [q0, q1, q2]
 
+    def _dagger(self) -> "Gate":
+        return PERESDG(*self.init_args)
+
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
         c0, c1 = self.control_qubits
         t = self.target_qubits[0]
         return [TOFFOLI(c0, c1, t), CNOT(c0, c1)]
+
+
+class PERESDG(Gate):
+    """The conjugate transpose of the Peres gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+            1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\\\
+            0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 \\\\
+            0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 \\\\
+            0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 \\\\
+            0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 \\\\
+            0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 \\\\
+            0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 \\\\
+            0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the first control qubit id number.
+        q1 (int): the second control qubit id number.
+        q2 (int): the target qubit id number.
+    """
+
+    def __init__(self, q0, q1, q2):
+        super().__init__()
+        self.name = "pgdg"
+        self.draw_label = "PGDG"
+        self.control_qubits = (q0, q1)
+        self.target_qubits = (q2,)
+        self.init_args = [q0, q1, q2]
+
+    def _dagger(self) -> "Gate":
+        return PERES(*self.init_args)
+
+    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
+        c0, c1 = self.control_qubits
+        t = self.target_qubits[0]
+        return [CNOT(c0, c1), TOFFOLI(c0, c1, t)]
 
 
 class DEUTSCH(ParametrizedGate):
@@ -1623,7 +1666,7 @@ class Unitary(ParametrizedGate):
         return gate
 
     def _dagger(self):
-        import numpy as np
+        import numpy as np  # pylint: disable=C0415
 
         ud = np.conj(np.transpose(self.parameters[0]))
         return self.__class__(ud, *self.target_qubits, **self.init_kwargs)

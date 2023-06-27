@@ -295,6 +295,21 @@ class NumpyMatrices:
             ]
         )
 
+    @cached_property
+    def PERESDG(self):
+        return self.np.array(
+            [
+                [1, 0, 0, 0, 0, 0, 0, 0],
+                [0, 1, 0, 0, 0, 0, 0, 0],
+                [0, 0, 1, 0, 0, 0, 0, 0],
+                [0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 1, 0],
+                [0, 0, 0, 0, 0, 0, 0, 1],
+                [0, 0, 0, 0, 0, 1, 0, 0],
+                [0, 0, 0, 0, 1, 0, 0, 0],
+            ]
+        )
+
     def DEUTSCH(self, theta):
         return self.np.array(
             [
