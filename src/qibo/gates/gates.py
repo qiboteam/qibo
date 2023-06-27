@@ -1435,7 +1435,7 @@ class GIVENS(ParametrizedGate):
     def _dagger(self) -> "Gate":
         """"""
         q = self.init_args[0]
-        theta = self.parametes
+        theta = self.parameters[0]
         return self.__class__(q, -theta)
 
 
