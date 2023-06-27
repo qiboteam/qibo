@@ -193,7 +193,7 @@ def finite_differences(
     """
 
     if parameter_index > len(circuit.get_parameters()):
-        raise_error(ValueError, """This index is out of bounds.""")
+        raise_error(ValueError, f"""Index {parameter_index} is out of bounds.""")
 
     if not isinstance(hamiltonian, AbstractHamiltonian):
         raise_error(
@@ -226,6 +226,6 @@ def finite_differences(
 
     circuit.set_parameters(parameters)
 
-    result = float((forward - backward) / (2 * step_size))
+    result = (forward - backward) / (2 * step_size)
 
     return result
