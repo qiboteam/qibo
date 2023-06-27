@@ -571,7 +571,7 @@ class GIVENS(ParametrizedGate):
         self.target_qubits = (q,)
 
         self.parameter_names = "theta"
-        self.parameters = theta
+        self.parameters = [theta]
         self.nparams = 1
 
         self.init_args = [q]
@@ -1632,7 +1632,7 @@ class DEUTSCH(ParametrizedGate):
         self.target_qubits = (q0, q1, q2)
 
         self.parameter_names = ["theta"]
-        self.parameters = theta
+        self.parameters = [theta]
         self.nparams = 1
 
         self.init_args = [q0, q1, q2]
@@ -1640,9 +1640,7 @@ class DEUTSCH(ParametrizedGate):
 
     def _dagger(self) -> "Gate":
         """"""
-        q0, q1, q2 = self.target_qubits[0]
-        theta = self.parameters[0]
-        return self.__class__(q0, q1, q2, math.pi - theta)
+        return self.__class__(*self.target_qubits, math.pi - self.parameters[0])
 
 
 class Unitary(ParametrizedGate):
