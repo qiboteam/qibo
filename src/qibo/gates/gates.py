@@ -571,7 +571,7 @@ class GIVENS(ParametrizedGate):
         self.target_qubits = (q,)
 
         self.parameter_names = "theta"
-        self.parameters = [theta]
+        self.parameters = theta
         self.nparams = 1
 
         self.init_args = [q]
