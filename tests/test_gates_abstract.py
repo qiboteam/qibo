@@ -217,11 +217,12 @@ def test_unitary_channel_init():
         gate = gates.UnitaryChannel(qubits, ops)
 
 
-def test_pauli_noise_channel_init():
+def test_pauli_noise_channel_init(backend):
     gate = gates.PauliNoiseChannel(0, list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.3])))
     assert gate.target_qubits == (0,)
     for g, p in zip(gate.gates, [matrices.X, matrices.Y, matrices.Z]):
-        assert np.linalg.norm(g.matrix - p) < PRECISION_TOL
+        p = backend.cast(p, dtype=p.dtype)
+        backend.assert_allclose(g.asmatrix(backend), p, atol=PRECISION_TOL)
 
 
 def test_reset_channel_init():
