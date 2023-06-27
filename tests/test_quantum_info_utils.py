@@ -51,7 +51,15 @@ def test_hamming_weight(bitstring, kind):
 @pytest.mark.parametrize("nqubits", [3, 4, 5])
 def test_hadamard_transform(backend, nqubits, implementation, is_matrix):
     with pytest.raises(TypeError):
-        test = np.random.rand((2, 2, 2))
+        test = np.random.rand(2, 2, 2)
+        test = backend.cast(test, dtype=test.dtype)
+        test = hadamard_transform(test, implementation=implementation, backend=backend)
+    with pytest.raises(TypeError):
+        test = np.random.rand(2, 3)
+        test = backend.cast(test, dtype=test.dtype)
+        test = hadamard_transform(test, implementation=implementation, backend=backend)
+    with pytest.raises(TypeError):
+        test = np.random.rand(3, 3)
         test = backend.cast(test, dtype=test.dtype)
         test = hadamard_transform(test, implementation=implementation, backend=backend)
     with pytest.raises(TypeError):
