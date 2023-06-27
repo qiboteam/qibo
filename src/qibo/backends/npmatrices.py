@@ -262,7 +262,8 @@ class NumpyMatrices:
                 [0, self.np.cos(theta), -self.np.sin(theta), 0],
                 [0, self.np.sin(theta), self.np.cos(theta), 0],
                 [0, 0, 0, 1],
-            ]
+            ],
+            dtype=self.dtype,
         )
 
     @cached_property

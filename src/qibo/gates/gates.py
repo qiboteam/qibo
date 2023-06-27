@@ -1374,7 +1374,7 @@ class RZZ(_Rnn_):
 
 
 class MS(ParametrizedGate):
-    """The Mølmer–Sørensen (MS) gate is a two qubit gate native to trapped ions.
+    """The Mølmer–Sørensen (MS) gate is a two-qubit gate native to trapped ions.
 
     Corresponds to the following unitary matrix
 
