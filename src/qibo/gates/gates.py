@@ -1626,7 +1626,7 @@ class DEUTSCH(ParametrizedGate):
     """
 
     def __init__(self, q0, q1, q2, theta, trainable=True):
-        super().__init__(q0, q1, theta, trainable)
+        super().__init__(trainable)
         self.name = "de"
         self.draw_label = "DE"
         self.target_qubits = (q0, q1, q2)
