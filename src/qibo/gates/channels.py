@@ -1,7 +1,7 @@
 """Define quantum channels."""
 from itertools import product
 from math import exp, sqrt
-from typing import Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 
@@ -39,7 +39,7 @@ class Channel(Gate):
     def apply_density_matrix(self, backend, state, nqubits):
         return backend.apply_channel_density_matrix(self, state, nqubits)
 
-    def to_choi(self, nqubits: int = None, order: str = "row", backend=None):
+    def to_choi(self, nqubits: Optional[int] = None, order: str = "row", backend=None):
         """Returns the Choi representation :math:`\\mathcal{E}`
         of the Kraus channel :math:`\\{K_{\\alpha}\\}_{\\alpha}`.
 
