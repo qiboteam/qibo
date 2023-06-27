@@ -867,8 +867,6 @@ class CRX(_CRn_):
         super().__init__(q0, q1, theta, trainable)
         self.name = "crx"
         self.draw_label = "RX"
-        if theta % (4 * math.pi) == 0:
-            self._clifford = True
 
     @property
     def qasm_label(self):
@@ -903,8 +901,6 @@ class CRY(_CRn_):
         super().__init__(q0, q1, theta, trainable)
         self.name = "cry"
         self.draw_label = "RY"
-        if theta % (4 * math.pi) == 0:
-            self._clifford = True
 
     @property
     def qasm_label(self):
@@ -937,8 +933,6 @@ class CRZ(_CRn_):
         super().__init__(q0, q1, theta, trainable)
         self.name = "crz"
         self.draw_label = "RZ"
-        if theta % (4 * math.pi) == 0:
-            self._clifford = True
 
     @property
     def qasm_label(self):
@@ -997,8 +991,6 @@ class CU1(_CUn_):
         self.nparams = 1
         self.parameters = theta
         self.init_kwargs = {"theta": theta, "trainable": trainable}
-        if theta % (2 * math.pi) == 0 or theta % math.pi == 0:
-            self._clifford = True
 
     @property
     def qasm_label(self):
