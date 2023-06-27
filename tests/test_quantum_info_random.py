@@ -341,7 +341,7 @@ def test_pauli_single(backend):
     result = np.array([[1.0 + 0.0j, 0.0 + 0.0j], [0.0 + 0.0j, -1.0 + 0.0j]])
     result = backend.cast(result, dtype=result.dtype)
 
-    matrix = random_pauli(0, 1, 1, seed=10, backend=backend).unitary()
+    matrix = random_pauli(0, 1, 1, seed=10, backend=backend).unitary(backend=backend)
     matrix = backend.cast(matrix, dtype=matrix.dtype)
 
     backend.assert_allclose(
@@ -374,7 +374,7 @@ def test_random_pauli(backend, qubits, depth, max_qubits, subset, return_circuit
     )
 
     if return_circuit:
-        matrix = matrix.unitary()
+        matrix = matrix.unitary(backend=backend)
         matrix = backend.cast(matrix, dtype=matrix.dtype)
         if subset is None:
             backend.assert_allclose(
