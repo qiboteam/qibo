@@ -134,7 +134,7 @@ class VQRegressor_linear_ansatz:
 
     def one_prediction(self, this_feature):
         """
-        This function execute one prediction
+        This function executes one prediction
         Args:
             this_feature: np.float64 array 2**nqubits long, containing a specific feature
         Returns: circuit's prediction of the output variable, evaluated as difference of probabilities

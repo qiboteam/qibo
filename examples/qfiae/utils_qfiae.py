@@ -28,12 +28,9 @@ def plot_data_fourier(function_test, xtest, y_fourier):
     SST = 0
     average = np.sum(function_test) / function_test.size
     N = len(function_test)
-    f_pred = np.zeros(N, dtype="complex")
 
     for i in range(N):
-        f_pred_x = y_fourier[i]
-        f_pred[i] = f_pred_x
-        SSE += (function_test[i] - f_pred_x) ** 2
+        SSE += (function_test[i] - y_fourier[i]) ** 2
         SST += (function_test[i] - average) ** 2
 
     R = 1 - SSE / SST
