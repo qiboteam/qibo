@@ -1418,6 +1418,27 @@ class MS(ParametrizedGate):
         return self.__class__(q0, q1, phi0 + math.pi, phi1)
 
 
+class GIVENS(ParametrizedGate):
+    def __init__(self, q, theta, trainable=True):
+        super().__init__(trainable)
+        self.name = "g"
+        self.draw_label = "G"
+        self.target_qubits = (q,)
+
+        self.parameter_names = "theta"
+        self.parameters = theta
+        self.nparams = 1
+
+        self.init_args = [q]
+        self.init_kwargs = {"theta": theta, "trainable": trainable}
+
+    def _dagger(self) -> "Gate":
+        """"""
+        q = self.init_args[0]
+        theta = self.parametes
+        return self.__class__(q, -theta)
+
+
 class TOFFOLI(Gate):
     """The Toffoli gate.
 
