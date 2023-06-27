@@ -1432,8 +1432,8 @@ class GIVENS(ParametrizedGate):
         \\end{pmatrix}
 
     Args:
-        q0 (int): the first qubit to be swapped id number.
-        q1 (int): the second qubit to be swapped id number.
+        q0 (int): the first qubit id number.
+        q1 (int): the second qubit id number.
         theta (float): the rotation angle.
         trainable (bool, optional): whether gate parameters can be updated using
             :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`.
