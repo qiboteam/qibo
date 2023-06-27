@@ -1615,7 +1615,34 @@ class DEUTSCH(ParametrizedGate):
             0 & 0 & 0 & 0 & 0 & 0 & \\sin(\\theta) & i \\cos(\\theta) \\\\
         \\end{pmatrix}
 
+    Args:
+        q0 (int): the first control qubit id number.
+        q1 (int): the second control qubit id number.
+        q2 (int): the target qubit id number.
+        theta (float): the rotation angle.
+        trainable (bool, optional): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`.
+            Defaults to ``True``.
     """
+
+    def __init__(self, q0, q1, q2, theta, trainable=True):
+        super().__init__(q0, q1, theta, trainable)
+        self.name = "de"
+        self.draw_label = "DE"
+        self.target_qubits = (q0, q1, q2)
+
+        self.parameter_names = ["theta"]
+        self.parameters = theta
+        self.nparams = 1
+
+        self.init_args = [q0, q1, q2]
+        self.init_kwargs = {"theta": theta, "trainable": trainable}
+
+    def _dagger(self) -> "Gate":
+        """"""
+        q0, q1, q2 = self.target_qubits[0]
+        theta = self.parameters[0]
+        return self.__class__(q0, q1, q2, math.pi - theta)
 
 
 class Unitary(ParametrizedGate):
