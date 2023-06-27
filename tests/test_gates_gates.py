@@ -26,7 +26,8 @@ def test_h(backend):
     final_state = apply_gates(backend, [gates.H(0), gates.H(1)], nqubits=2)
     target_state = np.ones_like(final_state) / 2
     backend.assert_allclose(final_state, target_state)
-    assert gates.H(1).qasm_label == "h"
+    assert gates.H(0).qasm_label == "h"
+    assert gates.H(0).clifford
 
 
 def test_x(backend):
@@ -35,6 +36,7 @@ def test_x(backend):
     target_state[2] = 1.0
     backend.assert_allclose(final_state, target_state)
     assert gates.X(0).qasm_label == "x"
+    assert gates.X(0).clifford
 
 
 def test_y(backend):
@@ -42,7 +44,8 @@ def test_y(backend):
     target_state = np.zeros_like(final_state)
     target_state[1] = 1j
     backend.assert_allclose(final_state, target_state)
-    assert gates.Y(1).qasm_label == "y"
+    assert gates.Y(0).qasm_label == "y"
+    assert gates.Y(0).clifford
 
 
 def test_z(backend):
@@ -52,13 +55,15 @@ def test_z(backend):
     target_state[3] *= -1.0
     backend.assert_allclose(final_state, target_state)
     assert gates.Z(0).qasm_label == "z"
+    assert gates.Z(0).clifford
 
 
 def test_s(backend):
     final_state = apply_gates(backend, [gates.H(0), gates.H(1), gates.S(1)], nqubits=2)
     target_state = np.array([0.5, 0.5j, 0.5, 0.5j])
     backend.assert_allclose(final_state, target_state)
-    assert gates.S(1).qasm_label == "s"
+    assert gates.S(0).qasm_label == "s"
+    assert gates.S(0).clifford
 
 
 def test_sdg(backend):
@@ -67,14 +72,15 @@ def test_sdg(backend):
     )
     target_state = np.array([0.5, -0.5j, 0.5, -0.5j])
     backend.assert_allclose(final_state, target_state)
-    assert gates.SDG(1).qasm_label == "sdg"
+    assert gates.SDG(0).qasm_label == "sdg"
+    assert gates.SDG(0).clifford
 
 
 def test_t(backend):
     final_state = apply_gates(backend, [gates.H(0), gates.H(1), gates.T(1)], nqubits=2)
     target_state = np.array([0.5, (1 + 1j) / np.sqrt(8), 0.5, (1 + 1j) / np.sqrt(8)])
     backend.assert_allclose(final_state, target_state)
-    assert gates.T(1).qasm_label == "t"
+    assert gates.T(0).qasm_label == "t"
 
 
 def test_tdg(backend):
@@ -83,7 +89,7 @@ def test_tdg(backend):
     )
     target_state = np.array([0.5, (1 - 1j) / np.sqrt(8), 0.5, (1 - 1j) / np.sqrt(8)])
     backend.assert_allclose(final_state, target_state)
-    assert gates.TDG(1).qasm_label == "tdg"
+    assert gates.TDG(0).qasm_label == "tdg"
 
 
 def test_identity(backend):
@@ -94,7 +100,8 @@ def test_identity(backend):
     gatelist = [gates.H(0), gates.H(1), gates.I(0, 1)]
     final_state = apply_gates(backend, gatelist, nqubits=2)
     backend.assert_allclose(final_state, target_state)
-    assert gates.I(1).qasm_label == "id"
+    assert gates.I(0).qasm_label == "id"
+    assert gates.I(0).clifford
 
 
 def test_align(backend):
@@ -253,6 +260,7 @@ def test_cnot(backend, applyx):
     target_state[3 * int(applyx)] = 1.0
     backend.assert_allclose(final_state, target_state)
     assert gates.CNOT(0, 1).qasm_label == "cx"
+    assert gates.CNOT(0, 1).clifford
 
 
 @pytest.mark.parametrize("controlled_by", [False, True])
@@ -276,6 +284,7 @@ def test_cz(backend, controlled_by):
 
     backend.assert_allclose(final_state, target_state)
     assert gates.CZ(0, 1).qasm_label == "cz"
+    assert gates.CZ(0, 1).clifford
 
 
 @pytest.mark.parametrize(
@@ -316,6 +325,7 @@ def test_swap(backend):
     target_state[2] = 1.0
     backend.assert_allclose(final_state, target_state)
     assert gates.SWAP(0, 1).qasm_label == "swap"
+    assert gates.SWAP(0, 1).clifford
 
 
 def test_iswap(backend):
@@ -324,6 +334,7 @@ def test_iswap(backend):
     target_state[2] = 1.0j
     backend.assert_allclose(final_state, target_state)
     assert gates.iSWAP(0, 1).qasm_label == "iswap"
+    assert gates.iSWAP(0, 1).clifford
 
 
 def test_fswap(backend):
@@ -335,6 +346,7 @@ def test_fswap(backend):
     target_state[3] = -1.0 / np.sqrt(2)
     backend.assert_allclose(final_state, target_state)
     assert gates.FSWAP(0, 1).qasm_label == "fswap"
+    assert gates.FSWAP(0, 1).clifford
 
 
 def test_multiple_swap(backend):
@@ -485,6 +497,7 @@ def test_toffoli(backend, applyx):
         target_state[2] = 1
     backend.assert_allclose(final_state, target_state)
     assert gatelist[-1].qasm_label == "ccx"
+    assert gates.TOFFOLI(0, 1, 2).clifford
 
 
 @pytest.mark.parametrize("nqubits", [2, 3])
