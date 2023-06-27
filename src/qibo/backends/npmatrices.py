@@ -92,16 +92,6 @@ class NumpyMatrices:
             [[1, -1.0j * self.np.conj(phase)], [-1.0j * phase, 1]], dtype=self.dtype
         ) / self.np.sqrt(2)
 
-    def GIVENS(self, theta):
-        return self.np.array(
-            [
-                [1, 0, 0, 0],
-                [0, self.np.cos(theta), -self.np.sin(theta), 0],
-                [0, self.np.sin(theta), self.np.cos(theta), 0],
-                [0, 0, 0, 1],
-            ]
-        )
-
     def U1(self, theta):
         phase = self.np.exp(1j * theta)
         return self.np.array([[1, 0], [0, phase]], dtype=self.dtype)
@@ -264,6 +254,16 @@ class NumpyMatrices:
             ],
             dtype=self.dtype,
         ) / self.np.sqrt(2)
+
+    def GIVENS(self, theta):
+        return self.np.array(
+            [
+                [1, 0, 0, 0],
+                [0, self.np.cos(theta), -self.np.sin(theta), 0],
+                [0, self.np.sin(theta), self.np.cos(theta), 0],
+                [0, 0, 0, 1],
+            ]
+        )
 
     @cached_property
     def TOFFOLI(self):

@@ -543,47 +543,6 @@ class GPI2(ParametrizedGate):
         return self.__class__(self.target_qubits[0], self.parameters[0] + math.pi)
 
 
-class GIVENS(ParametrizedGate):
-    """The Givens gate.
-
-    Corresponds to the following unitary matrix
-
-    .. math::
-        \\begin{pmatrix}
-            1 & 0 & 0 & 0 \\\\
-            0 & \\cos(\\theta) & -\\sin(\\theta) & 0 \\\\
-            0 & \\sin(\\theta) & \\cos(\\theta) & 0 \\\\
-            0 & 0 & 0 & 1 \\\\
-        \\end{pmatrix}
-
-    Args:
-        q (int): the qubit id number.
-        theta (float): the rotation angle.
-        trainable (bool, optional): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`.
-            Defaults to ``True``.
-    """
-
-    def __init__(self, q, theta, trainable=True):
-        super().__init__(trainable)
-        self.name = "g"
-        self.draw_label = "G"
-        self.target_qubits = (q,)
-
-        self.parameter_names = "theta"
-        self.parameters = theta
-        self.nparams = 1
-
-        self.init_args = [q]
-        self.init_kwargs = {"theta": theta, "trainable": trainable}
-
-    def _dagger(self) -> "Gate":
-        """"""
-        q = self.init_args[0]
-        theta = self.parameters[0]
-        return self.__class__(q, -theta)
-
-
 class _Un_(ParametrizedGate):
     """Abstract class for defining the U1, U2 and U3 gates.
 
@@ -1457,6 +1416,46 @@ class MS(ParametrizedGate):
         q0, q1 = self.target_qubits
         phi0, phi1 = self.parameters
         return self.__class__(q0, q1, phi0 + math.pi, phi1)
+
+
+class GIVENS(ParametrizedGate):
+    """The Givens gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+            1 & 0 & 0 & 0 \\\\
+            0 & \\cos(\\theta) & -\\sin(\\theta) & 0 \\\\
+            0 & \\sin(\\theta) & \\cos(\\theta) & 0 \\\\
+            0 & 0 & 0 & 1 \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the first qubit to be swapped id number.
+        q1 (int): the second qubit to be swapped id number.
+        theta (float): the rotation angle.
+        trainable (bool, optional): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`.
+            Defaults to ``True``.
+    """
+
+    def __init__(self, q0, q1, theta, trainable=True):
+        super().__init__(trainable)
+        self.name = "g"
+        self.draw_label = "G"
+        self.target_qubits = (q0, q1)
+
+        self.parameter_names = "theta"
+        self.parameters = theta
+        self.nparams = 1
+
+        self.init_args = [q0, q1]
+        self.init_kwargs = {"theta": theta, "trainable": trainable}
+
+    def _dagger(self) -> "Gate":
+        """"""
+        return self.__class__(*self.target_qubits, -self.parameters[0])
 
 
 class TOFFOLI(Gate):

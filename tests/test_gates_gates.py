@@ -188,28 +188,6 @@ def test_gpi2(backend):
         gates.GPI2(0, phi).qasm_label
 
 
-def test_givens(backend):
-    theta = 0.1234
-    nqubits = 3
-    initial_state = random_statevector(2**nqubits, backend=backend)
-    final_state = apply_gates(
-        backend, [gates.GIVENS(0, 1, theta)], initial_state=initial_state
-    )
-
-    matrix = np.array(
-        [
-            [1, 0, 0, 0],
-            [0, np.cos(theta), -np.sin(theta), 0],
-            [0, np.sin(theta), np.cos(theta), 0],
-            [0, 0, 0, 1],
-        ]
-    )
-    matrix = backend.cast(matrix, dtype=matrix)
-
-    target_state = np.dot(matrix, initial_state)
-    backend.assert_allclose(final_state, target_state)
-
-
 def test_u1(backend):
     theta = 0.1234
     final_state = apply_gates(backend, [gates.X(0), gates.U1(0, theta)], nqubits=1)
@@ -491,6 +469,31 @@ def test_ms(backend):
 
     with pytest.raises(NotImplementedError):
         gates.MS(0, 1, phi0=phi0, phi1=phi1).qasm_label
+
+
+def test_givens(backend):
+    theta = 0.1234
+    nqubits = 2
+    initial_state = random_statevector(2**nqubits, backend=backend)
+    final_state = apply_gates(
+        backend,
+        [gates.GIVENS(0, 1, theta)],
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+
+    matrix = np.array(
+        [
+            [1, 0, 0, 0],
+            [0, np.cos(theta), -np.sin(theta), 0],
+            [0, np.sin(theta), np.cos(theta), 0],
+            [0, 0, 0, 1],
+        ]
+    )
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
+
+    target_state = np.dot(matrix, initial_state)
+    backend.assert_allclose(final_state, target_state)
 
 
 @pytest.mark.parametrize("applyx", [False, True])
