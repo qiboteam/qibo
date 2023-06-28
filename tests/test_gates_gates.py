@@ -447,6 +447,13 @@ def test_rzz(backend):
 def test_ms(backend):
     phi0 = 0.1234
     phi1 = 0.4321
+    theta = np.pi / 2
+
+    with pytest.raises(NotImplementedError):
+        gates.MS(0, 1, phi0=phi0, phi1=phi1, theta=theta).qasm_label
+    with pytest.raises(ValueError):
+        gates.MS(0, 1, phi0=phi0, phi1=phi1, theta=np.pi)
+
     final_state = apply_gates(
         backend,
         [gates.H(0), gates.H(1), gates.MS(0, 1, phi0=phi0, phi1=phi1)],
@@ -466,9 +473,6 @@ def test_ms(backend):
     target_state = np.dot(matrix, target_state)
 
     backend.assert_allclose(final_state, target_state)
-
-    with pytest.raises(NotImplementedError):
-        gates.MS(0, 1, phi0=phi0, phi1=phi1).qasm_label
 
 
 @pytest.mark.parametrize("applyx", [False, True])
@@ -782,7 +786,7 @@ GATES = [
     ("RXX", (0, 1, 0.1)),
     ("RYY", (0, 1, 0.2)),
     ("RZZ", (0, 1, 0.3)),
-    ("MS", (0, 1, 0.1, 0.2)),
+    ("MS", (0, 1, 0.1, 0.2, 0.3)),
 ]
 
 
