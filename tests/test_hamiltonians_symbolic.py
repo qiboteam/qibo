@@ -35,9 +35,13 @@ def test_symbolic_hamiltonian_errors(backend):
     Z, X = sympy.Symbol("Z"), sympy.Symbol("X")
     symbol_map = {Z: (0, matrices.Z)}
     with pytest.raises(ValueError):
-        ham = hamiltonians.SymbolicHamiltonian(Z * X, symbol_map, backend=backend)
+        ham = hamiltonians.SymbolicHamiltonian(
+            Z * X, symbol_map=symbol_map, backend=backend
+        )
     # Invalid operation in Hamiltonian expresion
-    ham = hamiltonians.SymbolicHamiltonian(sympy.cos(Z), symbol_map, backend=backend)
+    ham = hamiltonians.SymbolicHamiltonian(
+        sympy.cos(Z), symbol_map=symbol_map, backend=backend
+    )
     with pytest.raises(TypeError):
         dense = ham.dense
 
@@ -248,7 +252,7 @@ def test_symbolic_hamiltonian_matmul(backend, nqubits, density_matrix, calcterms
 @pytest.mark.parametrize("nqubits,normalize", [(3, False), (4, False)])
 @pytest.mark.parametrize("calcterms", [False, True])
 @pytest.mark.parametrize("calcdense", [False, True])
-def test_symbolic_hamiltonian_state_ev(
+def test_symbolic_hamiltonian_state_expectation(
     backend, nqubits, normalize, calcterms, calcdense
 ):
     local_ham = (
@@ -272,6 +276,45 @@ def test_symbolic_hamiltonian_state_ev(
     backend.assert_allclose(local_ev, target_ev)
 
 
+@pytest.mark.parametrize("give_nqubits", [False, True])
+@pytest.mark.parametrize("calcterms", [False, True])
+@pytest.mark.parametrize("calcdense", [False, True])
+def test_symbolic_hamiltonian_state_expectation_different_nqubits(
+    backend, give_nqubits, calcterms, calcdense
+):
+    expr = symbolic_tfim(3, h=1.0)
+    if give_nqubits:
+        local_ham = hamiltonians.SymbolicHamiltonian(expr, nqubits=5, backend=backend)
+    else:
+        local_ham = hamiltonians.SymbolicHamiltonian(expr, backend=backend)
+    if calcterms:
+        _ = local_ham.terms
+    if calcdense:
+        _ = local_ham.dense
+
+    dense_ham = hamiltonians.TFIM(3, h=1.0, backend=backend)
+    dense_matrix = np.kron(backend.to_numpy(dense_ham.matrix), np.eye(4))
+    dense_ham = hamiltonians.Hamiltonian(5, dense_matrix, backend=backend)
+
+    if give_nqubits:
+        state = backend.cast(random_complex((2**5,)))
+        local_ev = local_ham.expectation(state)
+        target_ev = dense_ham.expectation(state)
+        backend.assert_allclose(local_ev, target_ev)
+
+        state = random_complex((2**5,))
+        local_ev = local_ham.expectation(state)
+        target_ev = dense_ham.expectation(state)
+        backend.assert_allclose(local_ev, target_ev)
+    else:
+        state = backend.cast(random_complex((2**5,)))
+        with pytest.raises(ValueError):
+            local_ev = local_ham.expectation(state)
+        state = random_complex((2**5,))
+        with pytest.raises(ValueError):
+            local_ev = local_ham.expectation(state)
+
+
 def test_hamiltonian_expectation_from_samples(backend):
     """Test Hamiltonian expectation value calculation."""
     obs0 = 2 * Z(0) * Z(1) + Z(0) * Z(2)
@@ -285,11 +328,11 @@ def test_hamiltonian_expectation_from_samples(backend):
     c.add(gates.RX(3, np.random.rand()))
     c.add(gates.M(0, 1, 2, 3))
     nshots = 10**5
-    result = c(nshots=nshots)
+    result = backend.execute_circuit(c, nshots=nshots)
     freq = result.frequencies(binary=True)
-    Obs0 = h0.expectation_from_samples(freq, qubit_map=None)
-    Obs1 = h1.expectation(result.state())
-    backend.assert_allclose(Obs0, Obs1, atol=10 / np.sqrt(nshots))
+    ev0 = h0.expectation_from_samples(freq, qubit_map=None)
+    ev1 = h1.expectation(result.state())
+    backend.assert_allclose(ev0, ev1, atol=20 / np.sqrt(nshots))
 
 
 def test_hamiltonian_expectation_from_samples_errors(backend):

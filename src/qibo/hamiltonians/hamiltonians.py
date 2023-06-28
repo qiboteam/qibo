@@ -1,3 +1,6 @@
+from itertools import chain
+
+import numpy as np
 import sympy
 
 from qibo.config import EINSUM_CHARS, log, raise_error
@@ -88,7 +91,9 @@ class Hamiltonian(AbstractHamiltonian):
             "deprecated. Please use `SymbolicHamiltonian` and Qibo symbols "
             "to construct Hamiltonians using symbols."
         )
-        return SymbolicHamiltonian(symbolic_hamiltonian, symbol_map, backend=backend)
+        return SymbolicHamiltonian(
+            symbolic_hamiltonian, symbol_map=symbol_map, backend=backend
+        )
 
     def eigenvalues(self, k=6):
         if self._eigenvalues is None:
@@ -135,8 +140,6 @@ class Hamiltonian(AbstractHamiltonian):
             )
 
     def expectation_from_samples(self, freq, qubit_map=None):
-        import numpy as np
-
         obs = self.matrix
         if np.count_nonzero(obs - np.diag(np.diagonal(obs))) != 0:
             raise_error(NotImplementedError, "Observable is not diagonal.")
@@ -318,7 +321,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             :meth:`qibo.hamiltonians.models.MaxCut` Hamiltonian.
     """
 
-    def __init__(self, form=None, symbol_map={}, backend=None):
+    def __init__(self, form=None, nqubits=None, symbol_map={}, backend=None):
         super().__init__()
         self._form = None
         self._terms = None
@@ -339,6 +342,8 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             self.backend = backend
         if form is not None:
             self.form = form
+        if nqubits is not None:
+            self.nqubits = nqubits
 
     @property
     def dense(self):
@@ -409,9 +414,6 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                     terms.append(term)
                 else:
                     self.constant += term.coefficient
-            assert (
-                self.nqubits == max(q for term in terms for q in term.target_qubits) + 1
-            )
             self._terms = terms
         return self._terms
 
@@ -454,8 +456,6 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             Numerical matrix corresponding to the given expression as a numpy
             array of size ``(2 ** self.nqubits, 2 ** self.nqubits).
         """
-        from numpy import eye
-
         if isinstance(term, sympy.Add):
             # symbolic op for addition
             result = sum(
@@ -492,7 +492,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
                 if not isinstance(matrix, self.backend.tensor_types):
                     # symbols that do not correspond to quantum operators
                     # for example parameters in the MaxCut Hamiltonian
-                    result = complex(matrix) * eye(2**self.nqubits)
+                    result = complex(matrix) * np.eye(2**self.nqubits)
                 else:
                     # if we do not have a Qibo symbol we construct one and use
                     # :meth:`qibo.core.terms.SymbolicTerm.full_matrix`.
@@ -502,7 +502,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
             # if the term is number we should return in the form of identity
             # matrix because in expressions like `1 + Z`, `1` is not correspond
             # to the float 1 but the identity operator (matrix)
-            result = complex(term) * eye(2**self.nqubits)
+            result = complex(term) * np.eye(2**self.nqubits)
 
         else:
             raise_error(
@@ -522,10 +522,6 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
     def _calculate_dense_from_terms(self):
         """Calculates equivalent :class:`qibo.core.hamiltonians.Hamiltonian` using the term representation."""
-        from itertools import chain
-
-        import numpy as np
-
         if 2 * self.nqubits > len(EINSUM_CHARS):  # pragma: no cover
             # case not tested because it only happens in large examples
             raise_error(NotImplementedError, "Not enough einsum characters.")
@@ -555,8 +551,6 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         return Hamiltonian.expectation(self, state, normalize)
 
     def expectation_from_samples(self, freq, qubit_map=None):
-        import numpy as np
-
         terms = self.terms
         for term in terms:
             # pylint: disable=E1101
@@ -745,15 +739,22 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
         if isinstance(o, self.backend.tensor_types):
             rank = len(tuple(o.shape))
-            if rank == 1:  # state vector
-                return self.apply_gates(o)
-            elif rank == 2:  # density matrix
-                return self.apply_gates(o, density_matrix=True)
-            else:
+            if rank not in (1, 2):
                 raise_error(
                     NotImplementedError,
                     "Cannot multiply Hamiltonian with " "rank-{} tensor.".format(rank),
                 )
+            state_qubits = int(np.log2(int(o.shape[0])))
+            if state_qubits != self.nqubits:
+                raise_error(
+                    ValueError,
+                    f"Cannot multiply Hamiltonian on {self.nqubits} qubits to "
+                    f"state of {state_qubits} qubits.",
+                )
+            if rank == 1:  # state vector
+                return self.apply_gates(o)
+            else:  # density matrix
+                return self.apply_gates(o, density_matrix=True)
 
         raise_error(
             NotImplementedError,
