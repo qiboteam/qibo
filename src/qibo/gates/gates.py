@@ -1379,11 +1379,11 @@ class MS(ParametrizedGate):
     Corresponds to the following unitary matrix
 
     .. math::
-        \\frac{1}{\\sqrt{2}} \\, \\begin{pmatrix}
-        1 & 0 & 0 & -i e^{-i( \\phi_0 +  \\phi_1)} \\\\
-        0 & 1 & -i e^{-i( \\phi_0 -  \\phi_1)} \\\\
-        0 & -i e^{i( \\phi_0 -  \\phi_1)} & 1 & 0 \\\\
-        -i e^{i( \\phi_0 +  \\phi_1)} & 0 & 0 & 1 \\\\
+        \\begin{pmatrix}
+        \\cos(\\theta / 2) & 0 & 0 & -i e^{-i( \\phi_0 +  \\phi_1)} \\sin(\\theta / 2) \\\\
+        0 & \\cos(\\theta / 2) & -i e^{-i( \\phi_0 -  \\phi_1)} \\sin(\\theta / 2) & 0 \\\\
+        0 & -i e^{i( \\phi_0 -  \\phi_1)} \\sin(\\theta / 2) & \\cos(\\theta / 2) & 0 \\\\
+        -i e^{i( \\phi_0 +  \\phi_1)} \\sin(\\theta / 2) & 0 & 0 & \\cos(\\theta / 2) \\\\
         \\end{pmatrix}
 
     Args:
@@ -1391,31 +1391,45 @@ class MS(ParametrizedGate):
         q1 (int): the second qubit to be swapped id number.
         phi0 (float): first qubit's phase.
         phi1 (float): second qubit's phase
+        theta (float, optional): arbitrary angle in the interval
+            :math:`0 \\leq \\theta \\leq \\pi /2`.  If :math:`\\theta \\rightarrow \\pi / 2`,
+            the fully-entangling MS gate is defined. Defaults to :math:`\\pi / 2`.
         trainable (bool, optional): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.Circuit.set_parameters`
-            (default is ``True``).
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
     """
 
     # TODO: Check how this works with QASM.
 
-    def __init__(self, q0, q1, phi0, phi1, trainable=True):
+    def __init__(self, q0, q1, phi0, phi1, theta: float = math.pi / 2, trainable=True):
         super().__init__(trainable)
         self.name = "ms"
         self.draw_label = "MS"
         self.target_qubits = (q0, q1)
 
-        self.parameter_names = ["phi0", "phi1"]
-        self.parameters = phi0, phi1
-        self.nparams = 2
+        if theta < 0.0 or theta > math.pi / 2:
+            raise_error(
+                ValueError,
+                f"Theta is defined in the interval 0 <= theta <= pi/2, but it is {theta}.",
+            )
+
+        self.parameter_names = ["phi0", "phi1", "theta"]
+        self.parameters = phi0, phi1, theta
+        self.nparams = 3
 
         self.init_args = [q0, q1]
-        self.init_kwargs = {"phi0": phi0, "phi1": phi1, "trainable": trainable}
+        self.init_kwargs = {
+            "phi0": phi0,
+            "phi1": phi1,
+            "theta": theta,
+            "trainable": trainable,
+        }
 
     def _dagger(self) -> "Gate":
         """"""
         q0, q1 = self.target_qubits
-        phi0, phi1 = self.parameters
-        return self.__class__(q0, q1, phi0 + math.pi, phi1)
+        phi0, phi1, theta = self.parameters
+        return self.__class__(q0, q1, phi0 + math.pi, phi1, theta)
 
 
 class GIVENS(ParametrizedGate):
