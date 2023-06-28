@@ -851,7 +851,6 @@ values using a sparse Hamiltonian matrix.
 .. autoclass:: qibo.hamiltonians.Hamiltonian
     :members:
     :member-order: bysource
-    :noindex:
 
 
 Symbolic Hamiltonian
@@ -866,7 +865,6 @@ For more information on constructing Hamiltonians using symbols we refer to the
 .. autoclass:: qibo.hamiltonians.SymbolicHamiltonian
     :members:
     :member-order: bysource
-    :noindex:
 
 
 When a :class:`qibo.hamiltonians.SymbolicHamiltonian` is used for time
@@ -1682,6 +1680,12 @@ Hamming weight
 """"""""""""""
 
 .. autofunction:: qibo.quantum_info.hamming_weight
+
+
+Hadamard Transform
+""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.hadamard_transform
 
 
 Shannon entropy
