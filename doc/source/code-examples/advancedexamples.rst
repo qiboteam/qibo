@@ -1917,9 +1917,9 @@ which can be called on a state or density matrix. For example
 
     circuit = Circuit(4)
     circuit.add(gates.H(i) for i in range(4))
-    c.add(gates.CNOT(0, 1))
-    c.add(gates.CNOT(1, 2))
-    c.add(gates.CNOT(2, 3))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add(gates.CNOT(2, 3))
 
     hamiltonian = XXZ(4)
 
@@ -1947,9 +1947,10 @@ to allow calculation of expectation values directly from such samples:
 
     circuit = Circuit(4)
     circuit.add(gates.H(i) for i in range(4))
-    c.add(gates.CNOT(0, 1))
-    c.add(gates.CNOT(1, 2))
-    c.add(gates.CNOT(2, 3))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add(gates.CNOT(2, 3))
+    circuit.add(gates.M(*range(4)))
 
     hamiltonian = Z(4)
 
