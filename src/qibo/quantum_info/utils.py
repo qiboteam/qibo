@@ -5,6 +5,7 @@ from re import finditer
 
 import numpy as np
 
+from qibo import matrices
 from qibo.backends import GlobalBackend
 from qibo.config import PRECISION_TOL, raise_error
 
@@ -37,9 +38,90 @@ def hamming_weight(bitstring, return_indexes: bool = False):
     if return_indexes:
         return indexes
 
-    weight = len(indexes)
+    return len(indexes)
 
-    return weight
+
+def hadamard_transform(array, implementation: str = "fast", backend=None):
+    """Calculates the (fast) Hadamard Transform :math:`\\text{HT}` of a
+    :math:`2^{n}`-dimensional vector or :math:`2^{n} \times 2^{n}` matrix :math:`A`,
+    where :math:`n` is the number of qubits in the system. If :math:`A` is a vector, then
+
+    .. math::
+        \\text{HT}(A) = \\frac{1}{2**{n / 2}} \\, H^{\\otimes n} \\, A \\,
+
+    where :math:`H` is the :class:`qibo.gates.H` gate. If :math:`A` is a matrix, then
+
+    .. math::
+        \\text{HT}(A) = \\frac{1}{2**{n}} \\, H^{\\otimes n} \\, A \\, H^{\\otimes n} \\, .
+
+    Args:
+        array (ndarray): array or matrix.
+        implementation (str, optional): if ``"regular"``, it uses the straightforward
+            implementation of the algorithm with computational complexity of
+            :math:`\\mathcal{O}(2^{2n})` for vectors and :math:`\\mathcal{O}(2^{3n})`
+            for matrices. If ``"fast"``, computational complexity is
+            :math:`\\mathcal{O}(n \\, 2^{n})` in both cases.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
+
+    Returns:
+        ndarray: (Fast) Hadamard Transform of ``array``.
+    """
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    if (
+        len(array.shape) not in [1, 2]
+        or (len(array.shape) == 1 and np.log2(array.shape[0]).is_integer() is False)
+        or (
+            len(array.shape) == 2
+            and (
+                np.log2(array.shape[0]).is_integer() is False
+                or np.log2(array.shape[1]).is_integer() is False
+            )
+        )
+    ):
+        raise_error(
+            TypeError,
+            f"array must have shape (2**n,) or (2**n, 2**n), but it has shape {array.shape}.",
+        )
+
+    if isinstance(implementation, str) is False:
+        raise_error(
+            TypeError,
+            f"implementation must be type str, but it is type {type(implementation)}.",
+        )
+
+    if implementation not in ["fast", "regular"]:
+        raise_error(
+            ValueError,
+            f"implementation must be either `regular` or `fast`, but it is {implementation}.",
+        )
+
+    if implementation == "regular":
+        nqubits = int(np.log2(array.shape[0]))
+        hadamards = np.real(reduce(np.kron, [matrices.H] * nqubits))
+        hadamards /= 2 ** (nqubits / 2)
+        hadamards = backend.cast(hadamards, dtype=hadamards.dtype)
+
+        array = hadamards @ array
+
+        if len(array.shape) == 2:
+            array = array @ hadamards
+
+        return array
+
+    array = _hadamard_transform_1d(array)
+
+    if len(array.shape) == 2:
+        array = _hadamard_transform_1d(np.transpose(array))
+        array = np.transpose(array)
+
+    # needed for the tensorflow backend
+    array = backend.cast(array, dtype=array.dtype)
+
+    return array
 
 
 def shannon_entropy(probability_array, base: float = 2, backend=None):
@@ -86,9 +168,7 @@ def shannon_entropy(probability_array, base: float = 2, backend=None):
             "All elements of the probability array must be between 0. and 1..",
         )
 
-    if (np.sum(probability_array) > 1.0 + PRECISION_TOL) or (
-        np.sum(probability_array) < 1.0 - PRECISION_TOL
-    ):
+    if np.abs(np.sum(probability_array) - 1.0) > PRECISION_TOL:
         raise_error(ValueError, "Probability array must sum to 1.")
 
     if base == 2:
@@ -159,14 +239,10 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend
                 ValueError,
                 "All elements of the probability array must be between 0. and 1..",
             )
-        if (np.sum(prob_dist_p) > 1.0 + PRECISION_TOL) or (
-            np.sum(prob_dist_p) < 1.0 - PRECISION_TOL
-        ):
+        if np.abs(np.sum(prob_dist_p) - 1.0) > PRECISION_TOL:
             raise_error(ValueError, "First probability array must sum to 1.")
 
-        if (np.sum(prob_dist_q) > 1.0 + PRECISION_TOL) or (
-            np.sum(prob_dist_q) < 1.0 - PRECISION_TOL
-        ):
+        if np.abs(np.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
             raise_error(ValueError, "Second probability array must sum to 1.")
 
     distance = backend.calculate_norm(
@@ -202,7 +278,7 @@ def hellinger_fidelity(prob_dist_p, prob_dist_q, validate: bool = False, backend
     return (1 - distance**2) ** 2
 
 
-def haar_integral(nqubits: int, t: int, samples: int, backend=None):
+def haar_integral(nqubits: int, power_t: int, samples: int, backend=None):
     """Returns the integral over pure states over the Haar measure.
 
     .. math::
@@ -211,7 +287,7 @@ def haar_integral(nqubits: int, t: int, samples: int, backend=None):
 
     Args:
         nqubits (int): Number of qubits.
-        t (int): power that defines the :math:`t`-design.
+        power_t (int): power that defines the :math:`t`-design.
         samples (int): number of samples to estimate the integral.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
@@ -226,22 +302,26 @@ def haar_integral(nqubits: int, t: int, samples: int, backend=None):
             TypeError, f"nqubits must be type int, but it is type {type(nqubits)}."
         )
 
-    if isinstance(t, int) is False:
-        raise_error(TypeError, f"t must be type int, but it is type {type(t)}.")
+    if isinstance(power_t, int) is False:
+        raise_error(
+            TypeError, f"power_t must be type int, but it is type {type(power_t)}."
+        )
 
     if isinstance(samples, int) is False:
         raise_error(
             TypeError, f"samples must be type int, but it is type {type(samples)}."
         )
 
-    from qibo.quantum_info.random_ensembles import random_statevector
+    from qibo.quantum_info.random_ensembles import (  # pylint: disable=C0415
+        random_statevector,
+    )
 
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
     dim = 2**nqubits
 
-    rand_unit_density = np.zeros((dim**t, dim**t), dtype=complex)
+    rand_unit_density = np.zeros((dim**power_t, dim**power_t), dtype=complex)
     rand_unit_density = backend.cast(rand_unit_density, dtype=rand_unit_density.dtype)
     for _ in range(samples):
         haar_state = np.reshape(
@@ -250,14 +330,14 @@ def haar_integral(nqubits: int, t: int, samples: int, backend=None):
 
         rho = haar_state @ np.conj(np.transpose(haar_state))
 
-        rand_unit_density += reduce(np.kron, [rho] * t)
+        rand_unit_density += reduce(np.kron, [rho] * power_t)
 
     integral = rand_unit_density / samples
 
     return integral
 
 
-def pqc_integral(circuit, t: int, samples: int, backend=None):
+def pqc_integral(circuit, power_t: int, samples: int, backend=None):
     """Returns the integral over pure states generated by uniformly sampling
     in the parameter space described by a parameterized circuit.
 
@@ -267,7 +347,7 @@ def pqc_integral(circuit, t: int, samples: int, backend=None):
 
     Args:
         circuit (:class:`qibo.models.Circuit`): Parametrized circuit.
-        t (int): power that defines the :math:`t`-design.
+        power_t (int): power that defines the :math:`t`-design.
         samples (int): number of samples to estimate the integral.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
@@ -277,15 +357,15 @@ def pqc_integral(circuit, t: int, samples: int, backend=None):
         ndarray: Estimation of the integral.
     """
 
-    if isinstance(t, int) is False:
-        raise_error(TypeError, f"t must be type int, but it is type {type(t)}.")
+    if isinstance(power_t, int) is False:
+        raise_error(
+            TypeError, f"power_t must be type int, but it is type {type(power_t)}."
+        )
 
     if isinstance(samples, int) is False:
         raise_error(
             TypeError, f"samples must be type int, but it is type {type(samples)}."
         )
-
-    from qibo.gates import I
 
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
@@ -293,7 +373,7 @@ def pqc_integral(circuit, t: int, samples: int, backend=None):
     circuit.density_matrix = True
     dim = 2**circuit.nqubits
 
-    rand_unit_density = np.zeros((dim**t, dim**t), dtype=complex)
+    rand_unit_density = np.zeros((dim**power_t, dim**power_t), dtype=complex)
     rand_unit_density = backend.cast(rand_unit_density, dtype=rand_unit_density.dtype)
     for _ in range(samples):
         params = np.random.uniform(-np.pi, np.pi, circuit.trainable_gates.nparams)
@@ -301,8 +381,27 @@ def pqc_integral(circuit, t: int, samples: int, backend=None):
 
         rho = backend.execute_circuit(circuit).state()
 
-        rand_unit_density += reduce(np.kron, [rho] * t)
+        rand_unit_density += reduce(np.kron, [rho] * power_t)
 
     integral = rand_unit_density / samples
 
     return integral
+
+
+def _hadamard_transform_1d(array):
+    # necessary because of tf.EagerTensor
+    # does not accept item assignment
+    array_copied = np.copy(array)
+
+    indexes = [2**k for k in range(int(np.log2(len(array_copied))))]
+    for index in indexes:
+        for k in range(0, len(array_copied), 2 * index):
+            for j in range(k, k + index):
+                # copy necessary because of cupy backend
+                elem_1 = np.copy(array_copied[j])
+                elem_2 = np.copy(array_copied[j + index])
+                array_copied[j] = elem_1 + elem_2
+                array_copied[j + index] = elem_1 - elem_2
+        array_copied /= 2.0
+
+    return array_copied
