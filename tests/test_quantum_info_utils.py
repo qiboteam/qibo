@@ -1,13 +1,16 @@
+from functools import reduce
 from re import finditer
 
 import numpy as np
 import pytest
 
+from qibo import matrices
 from qibo.config import PRECISION_TOL
 from qibo.models import Circuit
 from qibo.quantum_info.metrics import fidelity
 from qibo.quantum_info.utils import (
     haar_integral,
+    hadamard_transform,
     hamming_weight,
     hellinger_distance,
     hellinger_fidelity,
@@ -30,7 +33,7 @@ from qibo.quantum_info.utils import (
 )
 def test_hamming_weight(bitstring, kind):
     with pytest.raises(TypeError):
-        hamming_weight("0101", return_indexes="True")
+        test = hamming_weight("0101", return_indexes="True")
 
     bitstring = f"{bitstring:b}"
     weight_test = len(bitstring.replace("0", ""))
@@ -43,31 +46,76 @@ def test_hamming_weight(bitstring, kind):
     assert indexes == indexes_test
 
 
+@pytest.mark.parametrize("is_matrix", [False, True])
+@pytest.mark.parametrize("implementation", ["fast", "regular"])
+@pytest.mark.parametrize("nqubits", [3, 4, 5])
+def test_hadamard_transform(backend, nqubits, implementation, is_matrix):
+    with pytest.raises(TypeError):
+        test = np.random.rand(2, 2, 2)
+        test = backend.cast(test, dtype=test.dtype)
+        test = hadamard_transform(test, implementation=implementation, backend=backend)
+    with pytest.raises(TypeError):
+        test = np.random.rand(2, 3)
+        test = backend.cast(test, dtype=test.dtype)
+        test = hadamard_transform(test, implementation=implementation, backend=backend)
+    with pytest.raises(TypeError):
+        test = np.random.rand(3, 3)
+        test = backend.cast(test, dtype=test.dtype)
+        test = hadamard_transform(test, implementation=implementation, backend=backend)
+    with pytest.raises(TypeError):
+        test = np.random.rand(2**nqubits)
+        test = backend.cast(test, dtype=test.dtype)
+        test = hadamard_transform(test, implementation=True, backend=backend)
+    with pytest.raises(ValueError):
+        test = np.random.rand(2**nqubits)
+        test = backend.cast(test, dtype=test.dtype)
+        test = hadamard_transform(test, implementation="fas", backend=backend)
+
+    dim = 2**nqubits
+
+    state = np.random.rand(dim, dim) if is_matrix else np.random.rand(dim)
+    state = backend.cast(state, dtype=state.dtype)
+
+    hadamards = np.real(reduce(np.kron, [matrices.H] * nqubits))
+    hadamards /= 2 ** (nqubits / 2)
+    hadamards = backend.cast(hadamards, dtype=hadamards.dtype)
+
+    test_transformed = hadamards @ state
+    if is_matrix:
+        test_transformed = test_transformed @ hadamards
+
+    transformed = hadamard_transform(
+        state, implementation=implementation, backend=backend
+    )
+
+    backend.assert_allclose(transformed, test_transformed, atol=PRECISION_TOL)
+
+
 def test_shannon_entropy_errors(backend):
     with pytest.raises(ValueError):
         prob = np.array([1.0, 0.0])
         prob = backend.cast(prob, dtype=prob.dtype)
-        shannon_entropy(prob, -2, backend=backend)
+        test = shannon_entropy(prob, -2, backend=backend)
     with pytest.raises(TypeError):
         prob = np.array([[1.0], [0.0]])
         prob = backend.cast(prob, dtype=prob.dtype)
-        shannon_entropy(prob, backend=backend)
+        test = shannon_entropy(prob, backend=backend)
     with pytest.raises(TypeError):
         prob = np.array([])
         prob = backend.cast(prob, dtype=prob.dtype)
-        shannon_entropy(prob, backend=backend)
+        test = shannon_entropy(prob, backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([1.0, -1.0])
         prob = backend.cast(prob, dtype=prob.dtype)
-        shannon_entropy(prob, backend=backend)
+        test = shannon_entropy(prob, backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([1.1, 0.0])
         prob = backend.cast(prob, dtype=prob.dtype)
-        shannon_entropy(prob, backend=backend)
+        test = shannon_entropy(prob, backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([0.5, 0.4999999])
         prob = backend.cast(prob, dtype=prob.dtype)
-        shannon_entropy(prob, backend=backend)
+        test = shannon_entropy(prob, backend=backend)
 
 
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
@@ -89,31 +137,31 @@ def test_hellinger(backend):
         prob_q = np.random.rand(1, 5)
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        hellinger_distance(prob, prob_q, backend=backend)
+        test = hellinger_distance(prob, prob_q, backend=backend)
     with pytest.raises(TypeError):
         prob = np.random.rand(1, 2)[0]
         prob_q = np.array([])
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        hellinger_distance(prob, prob_q, backend=backend)
+        test = hellinger_distance(prob, prob_q, backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([-1, 2.0])
         prob_q = np.random.rand(1, 5)[0]
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        hellinger_distance(prob, prob_q, validate=True, backend=backend)
+        test = hellinger_distance(prob, prob_q, validate=True, backend=backend)
     with pytest.raises(ValueError):
         prob = np.random.rand(1, 2)[0]
         prob_q = np.array([1.0, 0.0])
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        hellinger_distance(prob, prob_q, validate=True, backend=backend)
+        test = hellinger_distance(prob, prob_q, validate=True, backend=backend)
     with pytest.raises(ValueError):
         prob = np.array([1.0, 0.0])
         prob_q = np.random.rand(1, 2)[0]
         prob = backend.cast(prob, dtype=prob.dtype)
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        hellinger_distance(prob, prob_q, validate=True, backend=backend)
+        test = hellinger_distance(prob, prob_q, validate=True, backend=backend)
 
     prob = [1.0, 0.0]
     prob_q = [1.0, 0.0]
@@ -123,19 +171,19 @@ def test_hellinger(backend):
 
 def test_haar_integral(backend):
     with pytest.raises(TypeError):
-        nqubits, t, samples = 0.5, 2, 10
-        test = haar_integral(nqubits, t, samples, backend=backend)
+        nqubits, power_t, samples = 0.5, 2, 10
+        test = haar_integral(nqubits, power_t, samples, backend=backend)
     with pytest.raises(TypeError):
-        nqubits, t, samples = 2, 0.5, 10
-        test = haar_integral(nqubits, t, samples, backend=backend)
+        nqubits, power_t, samples = 2, 0.5, 10
+        test = haar_integral(nqubits, power_t, samples, backend=backend)
     with pytest.raises(TypeError):
-        nqubits, t, samples = 2, 2, 0.5
-        test = haar_integral(nqubits, t, samples, backend=backend)
+        nqubits, power_t, samples = 2, 2, 0.5
+        test = haar_integral(nqubits, power_t, samples, backend=backend)
 
     nqubits = 2
-    t, samples = 1, 1000
+    power_t, samples = 1, 1000
 
-    haar_int = haar_integral(nqubits, t, samples, backend=backend)
+    haar_int = haar_integral(nqubits, power_t, samples, backend=backend)
 
     fid = fidelity(haar_int, haar_int, backend=backend)
 
@@ -144,19 +192,19 @@ def test_haar_integral(backend):
 
 def test_pqc_integral(backend):
     with pytest.raises(TypeError):
-        t, samples = 0.5, 10
+        power_t, samples = 0.5, 10
         circuit = Circuit(2)
-        pqc_integral(circuit, t, samples, backend=backend)
+        test = pqc_integral(circuit, power_t, samples, backend=backend)
     with pytest.raises(TypeError):
-        t, samples = 2, 0.5
+        power_t, samples = 2, 0.5
         circuit = Circuit(2)
-        pqc_integral(circuit, t, samples, backend=backend)
+        test = pqc_integral(circuit, power_t, samples, backend=backend)
 
     circuit = Circuit(2)
-    t, samples = 1, 100
+    power_t, samples = 1, 100
 
-    pqc_int = pqc_integral(circuit, t, samples, backend=backend)
+    pqc_int = pqc_integral(circuit, power_t, samples, backend=backend)
 
     fid = fidelity(pqc_int, pqc_int)
 
-    backend.assert_allclose(abs(fid - 1) < PRECISION_TOL, True)
+    backend.assert_allclose(fid, 1.0, atol=PRECISION_TOL)
