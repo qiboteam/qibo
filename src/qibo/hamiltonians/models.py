@@ -191,7 +191,7 @@ def MaxCut(nqubits, dense=True, backend=None):
     smap = {s: (i, matrices.Z) for i, s in enumerate(Z)}
     smap.update({s: (i, v[i]) for i, s in enumerate(V)})
 
-    ham = SymbolicHamiltonian(sham, smap, backend=backend)
+    ham = SymbolicHamiltonian(sham, symbol_map=smap, backend=backend)
     if dense:
         return ham.dense
     return ham
