@@ -1,6 +1,10 @@
 # Quantum k-medians clustering
 
-Implementation of QKmedians from the paper: [2301.10780](https://arxiv.org/abs/2301.10780).
+Implementation of QKmedians from the paper: [2301.10780](https://arxiv.org/abs/2301.10780).\
+\
+Before using install additional packages:
+  - `h5py`
+  - `matplotlib`
 
 ## Algorithm's pseudocode
 
@@ -11,6 +15,7 @@ Implementation of QKmedians from the paper: [2301.10780](https://arxiv.org/abs/2
 ![Distance circuit](figures/DistCirc.png)
 
 ## How to run an example?
+Scripts are using `qibojit` as default backend.
 
 ### Download dataset
 Dataset's dimensionality is reduced by passing it through autoencoder. If you are interested more, please refer to [[\*]](https://arxiv.org/abs/2301.10780).\
@@ -33,7 +38,7 @@ To run a training of quantum k-medians algorithm we need to provide arguments:
 - `save_dir` (str): path to save results
 
 ```python
-python train_qkmedians.py --train_size 600 --read_file 'data/latentrep_QCD_sig.h5' --k 2 --seed 123 --tolerance 1e-3 --min_type 'classic' --save_dir 'save_directory'
+python train_qkmedians.py --train_size 600 --read_file 'data/latentrep_QCD_sig.h5' --k 2 --seed 123 --tolerance 1e-3 --min_type 'classic' --save_dir 'output_dir'
 ```
 
 ### Run evaluation
@@ -51,5 +56,5 @@ To run an evaluation of quantum k-medians algorithm we need to provide arguments
 - `ylabel` (str): name of y-axis in ROC plot
 
 ```python
-python evaluate.py --centroids_file 'centroids.npy' --data_qcd_file 'latentrep_QCD_sig_testclustering.h5' --data_signal_file 'latentrep_RSGraviton_WW_NA_35.h5' --results_dir '~' --data_dir 'data' --save_dir_roc '~'
+python evaluate.py --centroids_file 'centroids.npy' --data_qcd_file 'latentrep_QCD_sig_testclustering.h5' --data_signal_file 'latentrep_RSGraviton_WW_NA_35.h5' --results_dir 'output_dir' --data_dir 'data' --save_dir_roc 'output_dir'
 ```

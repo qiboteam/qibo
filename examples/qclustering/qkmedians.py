@@ -49,7 +49,7 @@ def find_centroids(points, cluster_labels, clusters=2):
     return np.array(centroids)
 
 
-def find_nearest_neighbour(points, centroids, mintype="classic", shots_n=10000):
+def find_nearest_neighbour(points, centroids, mintype="classic", nshots=10000):
     """Find cluster assignments for points.
 
     Parameters
@@ -58,10 +58,10 @@ def find_nearest_neighbour(points, centroids, mintype="classic", shots_n=10000):
         Points represented as an array of shape ``(N, X)``, where `N` = number of samples, `X` = dimension of latent space.
     centroids : :class:`numpy.ndarray`
         Centroids of shape ``(k, X)``
-    device_name : str
-        Name of device for circuit execution
     mintype : str
         Minimization type for cluster assignment
+    nshots : int
+        Number of shots for executing a quantum circuit - to get frequencies
 
     Returns
     -------
@@ -81,7 +81,7 @@ def find_nearest_neighbour(points, centroids, mintype="classic", shots_n=10000):
         dist = []
         for j in range(k):  # distance of each training example to each centroid
             temp_dist, _ = distc.DistCalc(
-                points[i, :], centroids[j, :], shots_n=shots_n
+                points[i, :], centroids[j, :], nshots=nshots
             )  # returning back one number for all latent dimensions!
             dist.append(temp_dist)
         # assign cluster

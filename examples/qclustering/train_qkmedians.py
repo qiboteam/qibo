@@ -1,4 +1,5 @@
 import argparse
+import os
 
 import h5py
 import numpy as np
@@ -19,6 +20,8 @@ def train_qkmedians(
     min_type="classic",
     nshots=10000,
     save_dir=None,
+    verbose=False,
+    nprint=10,
 ):
     """Performs training of quantum k-medians.
 
@@ -40,6 +43,10 @@ def train_qkmedians(
         Number of shots for executing quantum circuit.
     save_dir : str
         Name of the file for saving results.
+    nprint : int
+        Print loss function value each `nprint` epochs if `verbose` is True
+    verbose : str
+        Print log messages if True
     """
 
     # read train data
@@ -56,6 +63,12 @@ def train_qkmedians(
     # Intialize centroids
     centroids = qkmed.initialize_centroids(data_train, k)
 
+    if verbose:
+        print("Training of quantum k-medians")
+        print(
+            f"The algorithm will automatically break after the target {tolerance} tolerance is reached"
+        )
+
     i = 0
     new_tol = 1
     loss = []
@@ -71,6 +84,10 @@ def train_qkmedians(
         loss_epoch = np.linalg.norm(centroids - new_centroids)
         loss.append(loss_epoch)
 
+        # if verbose
+        if (i % nprint == 0) and (verbose is True):
+            print(f"Loss at epoch {i+1}: {loss[-1]:.8}")
+
         if loss_epoch < tolerance:
             centroids = new_centroids
             print(f"Converged after {i+1} iterations.")
@@ -84,6 +101,10 @@ def train_qkmedians(
         centroids = new_centroids
 
     if save_dir:
+        # if save_dir doesn't exist it is created
+        if os.path.exists(save_dir) is False:
+            os.system(f"mkdir {save_dir}")
+
         np.save(
             f"{save_dir}/cluster_label.npy",
             cluster_label,
@@ -130,6 +151,20 @@ if __name__ == "__main__":
         default=10000,
         help="Number of shots for executing quantum circuit",
     )
+    parser.add_argument(
+        "--verbose",
+        dest="verbose",
+        type=bool,
+        default=False,
+        help="Verbose level during training",
+    )
+    parser.add_argument(
+        "--nprint",
+        dest="nprint",
+        type=int,
+        default=10,
+        help="Log messages are printed every nprint epochs",
+    )
 
     args = parser.parse_args()
 
@@ -137,12 +172,14 @@ if __name__ == "__main__":
         raise ValueError("Minimization is either classic or quantum procedure.")
 
     train_qkmedians(
-        args.train_size,
-        args.read_file,
-        args.seed,
-        args.k,
-        args.tolerance,
-        args.min_type,
-        args.nshots,
-        args.save_dir,
+        train_size=args.train_size,
+        read_file=args.read_file,
+        seed=args.seed,
+        k=args.k,
+        tolerance=args.tolerance,
+        min_type=args.min_type,
+        nshots=args.nshots,
+        save_dir=args.save_dir,
+        verbose=args.verbose,
+        nprint=args.nprint,
     )

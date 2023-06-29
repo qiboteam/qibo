@@ -1,7 +1,6 @@
 import math
 
 import numpy as np
-import tensorflow as tf
 import util as u
 
 from qibo import gates
@@ -28,7 +27,7 @@ def pad_input(X):
     return X
 
 
-def DistCalc(a, b, shots_n=10000):
+def DistCalc(a, b, nshots=10000):
     """Distance calculation using destructive interference.
 
     Parameters
@@ -39,7 +38,7 @@ def DistCalc(a, b, shots_n=10000):
         First point - shape = (latent space dimension,)
     device_name : str
         Name of device for executing a simulation of quantum circuit.
-    shots_n : int
+    nshots : int
         Number of shots for executing a quantum circuit - to get frequencies.
 
     Returns
@@ -64,9 +63,9 @@ def DistCalc(a, b, shots_n=10000):
     qc.add(gates.H(0))
     qc.add(gates.M(0))
 
-    result = qc.execute(initial_state=amplitudes, nshots=shots_n)
+    result = qc.execute(initial_state=amplitudes, nshots=nshots)
 
     counts = result.frequencies(binary=True)
-    distance = norm * math.sqrt(2) * math.sqrt(counts["1"] / shots_n)
+    distance = norm * math.sqrt(2) * math.sqrt(counts["1"] / nshots)
 
     return distance, qc
