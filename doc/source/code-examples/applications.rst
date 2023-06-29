@@ -83,6 +83,7 @@ Quantum Machine Learning
     tutorials/vqregressor/README.md
     tutorials/autoencoder/README.md
     tutorials/EF_QAE/README.md
+    tutorials/qfiae/qfiae_demo.ipynb
 
 _______________________
 
@@ -118,6 +119,7 @@ Grover's Algorithm
     tutorials/grover3sat/README.md
     tutorials/hash-grover/README.md
     tutorials/grover/README.md
+    tutorials/qfiae/qfiae_demo.ipynb
 
 
 Shor's Factorization Algorithms
