@@ -66,12 +66,6 @@ docs = "make -C doc html"
 docs-clean = "make -C doc clean"
 test-docs = "make -C doc doctest"
 
-
-
-
-
-
-
 [tool.poetry.group.cuda11]
 optional = true
 
@@ -79,12 +73,6 @@ optional = true
 cupy-cuda11x = "^12.0.0"
 cuquantum-python-cu11 = "^23.3.0"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
-
-
-
-
-
-
 
 [tool.poetry.group.cuda12]
 optional = true

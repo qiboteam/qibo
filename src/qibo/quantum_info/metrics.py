@@ -1,6 +1,7 @@
 """Submodule with distances, metrics, and measures for quantum states and channels."""
 
 import numpy as np
+from scipy import sparse
 
 from qibo.backends import GlobalBackend
 from qibo.config import PRECISION_TOL, raise_error
@@ -890,14 +891,7 @@ def diamond_norm(channel, target=None, **kwargs):
         This function requires the optional CVXPY package to be installed.
 
     """
-    try:  # pragma: no cover
-        import cvxpy  # pylint: disable=C0415
-    except ImportError:  # pragma: no cover
-        raise_error(
-            ModuleNotFoundError, "cvxpy module was not found. Please install it."
-        )
-
-    from scipy.sparse import eye as sp_eye  # pylint: disable=C0415
+    import cvxpy  # pylint: disable=C0415
 
     if target is not None:
         if channel.shape != target.shape:
@@ -940,7 +934,7 @@ def diamond_norm(channel, target=None, **kwargs):
 
     variables_real = cvxpy.Variable(shape=(dim**2, dim**2))
     variables_imag = cvxpy.Variable(shape=(dim**2, dim**2))
-    identity = sp_eye(dim)
+    identity = sparse.eye(dim)
 
     constraints_real = cvxpy.bmat(
         [
