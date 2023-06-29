@@ -26,7 +26,7 @@ class H(Gate):
         self.draw_label = "H"
         self.target_qubits = (q,)
         self.init_args = [q]
-        self._clifford = True
+        self.clifford = True
 
     @property
     def qasm_label(self):
@@ -54,7 +54,7 @@ class X(Gate):
         self.draw_label = "X"
         self.target_qubits = (q,)
         self.init_args = [q]
-        self._clifford = True
+        self.clifford = True
 
     @property
     def qasm_label(self):
@@ -166,7 +166,7 @@ class Y(Gate):
         self.draw_label = "Y"
         self.target_qubits = (q,)
         self.init_args = [q]
-        self._clifford = True
+        self.clifford = True
 
     @property
     def qasm_label(self):
@@ -200,7 +200,7 @@ class Z(Gate):
         self.draw_label = "Z"
         self.target_qubits = (q,)
         self.init_args = [q]
-        self._clifford = True
+        self.clifford = True
 
     @property
     def qasm_label(self):
@@ -240,7 +240,7 @@ class S(Gate):
         self.draw_label = "S"
         self.target_qubits = (q,)
         self.init_args = [q]
-        self._clifford = True
+        self.clifford = True
 
     @property
     def qasm_label(self):
@@ -271,7 +271,7 @@ class SDG(Gate):
         self.draw_label = "SDG"
         self.target_qubits = (q,)
         self.init_args = [q]
-        self._clifford = True
+        self.clifford = True
 
     @property
     def qasm_label(self):
@@ -354,7 +354,7 @@ class I(Gate):
         self.draw_label = "I"
         self.target_qubits = tuple(q)
         self.init_args = q
-        self._clifford = True
+        self.clifford = True
 
     @property
     def qasm_label(self):
@@ -768,7 +768,7 @@ class CNOT(Gate):
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
-        self._clifford = True
+        self.clifford = True
 
     @property
     def qasm_label(self):
@@ -804,7 +804,7 @@ class CZ(Gate):
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
-        self._clifford = True
+        self.clifford = True
 
     @property
     def qasm_label(self):
@@ -1124,7 +1124,7 @@ class SWAP(Gate):
         self.draw_label = "x"
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
-        self._clifford = True
+        self.clifford = True
 
     @property
     def qasm_label(self):
@@ -1155,7 +1155,7 @@ class iSWAP(Gate):
         self.draw_label = "i"
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
-        self._clifford = True
+        self.clifford = True
 
     @property
     def qasm_label(self):
@@ -1186,7 +1186,7 @@ class FSWAP(Gate):
         self.draw_label = "fx"
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
-        self._clifford = True
+        self.clifford = True
 
     @property
     def qasm_label(self):
@@ -1508,7 +1508,7 @@ class TOFFOLI(Gate):
         self.control_qubits = (q0, q1)
         self.target_qubits = (q2,)
         self.init_args = [q0, q1, q2]
-        self._clifford = True
+        self.clifford = True
 
     @property
     def qasm_label(self):

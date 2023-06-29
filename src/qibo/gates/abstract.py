@@ -36,7 +36,7 @@ class Gate:
         self.init_args = []
         self.init_kwargs = {}
 
-        self._clifford = False
+        self.clifford = False
         self._target_qubits = tuple()
         self._control_qubits = set()
         self._parameters = tuple()
@@ -290,11 +290,6 @@ class Gate:
 
         backend = GlobalBackend()
         return self.asmatrix(backend)
-
-    @property
-    def clifford(self) -> bool:
-        """Returns ``True`` if gate is a Clifford gate, else ``False``."""
-        return self._clifford
 
     def apply(self, backend, state, nqubits):
         return backend.apply_gate(self, state, nqubits)
