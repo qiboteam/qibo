@@ -12,8 +12,8 @@ class IQAE:
     The implemented class in this code utilizes the Iterative Quantum Amplitude
     Estimation (IQAE) algorithm, which was proposed in `arxiv:1912.05559
     <https://arxiv.org/abs/1912.05559>`_. The algorithm provides an estimated
-    output that, with a probability `alpha', differs from the target value by
-    `epsilon'. Both `alpha' and `epsilon' can be specified.
+    output that, with a probability ``alpha``, differs from the target value by
+    ``epsilon``. Both ``alpha`` and ``epsilon`` can be specified.
 
     Unlike Brassard's original QAE algorithm `arxiv:quant-ph/0005055
     <http://arxiv.org/abs/quant-ph/0005055>`_, this implementation does not rely
@@ -34,17 +34,17 @@ class IQAE:
         epsilon (float): target precision for estimation target `a`, has values
             between 0 and 0.5.
 
-        method (string): statistical method used to estimate the confidence
-            intervals in each iteration, can be either ``chernoff`` (default) for
-            the Chernoff intervals or ``beta`` for the Clopper-Pearson intervals.
+        method (str): statistical method used to estimate the confidence
+            intervals in each iteration, can be either `chernoff` (default) for
+            the Chernoff intervals or `beta` for the Clopper-Pearson intervals.
 
         n_shots (int): number of shots.
 
     Raises:
-        ValueError: If epsilon is not in (0, 0.5].
-        ValueError: If alpha is not in (0, 1).
-        ValueError: If method is not supported.
-        ValueError: If the number of qubits in circuit_a is greater than in circuit_q.
+        ValueError: If ``epsilon`` is not in (0, 0.5].
+        ValueError: If ``alpha`` is not in (0, 1).
+        ValueError: If ``method`` is not supported.
+        ValueError: If the number of qubits in ``circuit_a`` is greater than in ``circuit_q``.
 
     Example:
         .. testcode::
@@ -125,7 +125,7 @@ class IQAE:
         """Generates quantum circuit for QAE.
 
         Args:
-            k (int): number of times the amplification operator Q is applied.
+            k (int): number of times the amplification operator ``circuit_q`` is applied.
         Returns:
             The quantum circuit of the QAE algorithm.
         """
@@ -145,7 +145,7 @@ class IQAE:
         return qc
 
     def clopper_pearson(self, count, n, alpha):
-        """Calculates the confidence interval for the quantity to estimate `a'.
+        """Calculates the confidence interval for the quantity to estimate `a`.
 
         Args:
             count (int): number of successes.
@@ -165,7 +165,7 @@ class IQAE:
         return a_min, a_max
 
     def h_calc_CP(self, n_successes, n_total_shots, upper_bound_t):
-        """Calculates the h function.
+        """Calculates the `h` function.
 
         Args:
             n_successes (int): number of successes.
@@ -188,7 +188,7 @@ class IQAE:
             upper_bound_t (int): maximum number of rounds to achieve the desired absolute error.
 
         Returns:
-            max_L, min_L (float, float): the maximum and minimum possible error which could be returned
+            max_L, min_L (float, float): The maximum and minimum possible error which could be returned
             on a given iteration.
         """
         x = np.linspace(0, np.pi, 10000)
@@ -209,7 +209,7 @@ class IQAE:
             upper_bound_t (int): maximum number of rounds to achieve the desired absolute error.
 
         Returns:
-            max_L, min_L (float, float): the maximum and minimum possible error which could be returned
+            max_L, min_L (float, float): The maximum and minimum possible error which could be returned
             on a given iteration.
         """
         max_L = (
@@ -223,24 +223,24 @@ class IQAE:
         return max_L, min_L
 
     def find_next_k(self, uppercase_k_i, up_i, theta_l, theta_u, r=2):
-        """Find the largest integer uppercase_k such that the interval uppercase_k*[theta_l,theta_u]
-        lies completely in [0, pi] or [pi, 2pi].
+        r"""Find the largest integer ``uppercase_k`` such that the interval ``uppercase_k`` * [ ``theta_l`` , ``theta_u`` ]
+        lies completely in [0, `\pi`] or [`\pi`, 2 `\pi`].
 
         Args:
-            uppercase_k_i (int): the current uppercase_k such uppercase_k=4k+2, where k is the power
-            of the Q operator.
+            uppercase_k_i (int): the current ``uppercase_k`` such ``uppercase_k`` = 4 ``k`` + 2,
+                where ``k`` is the power of the operator ``circuit_q``.
 
             up_i (bool): boolean flag of whether theta_interval lies in the
-                upper half-circle [0, pi] or in the lower one [pi, 2pi].
+                upper half-circle [0, `\pi`] or in the lower one [`\pi`, 2 `\pi`].
 
             theta_l (float): the current lower limit of the confidence interval for the angle theta.
 
             theta_u (float): the current upper limit of the confidence interval for the angle theta.
 
-            r (int): lower bound for uppercase_k.
+            r (int): lower bound for ``uppercase_k``.
 
         Returns:
-            The next power K_i, and boolean flag for the extrapolated interval.
+            The next power `K_i`, and boolean flag for the extrapolated interval.
         """
         uppercase_k_max = int(1 / (2 * (theta_u - theta_l)))
         uppercase_k = uppercase_k_max - (uppercase_k_max - 2) % 4
