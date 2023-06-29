@@ -1,7 +1,10 @@
 import argparse
-import numpy as np
+
 import h5py
+import numpy as np
+
 import qibo
+
 qibo.set_backend("qibojit")
 
 import qkmedians as qkmed
@@ -13,7 +16,7 @@ def train_qkmedians(
     seed=None,
     k=2,
     tolerance=1.0e-3,
-    min_type='classic',
+    min_type="classic",
     nshots=10000,
     save_dir=None,
 ):
@@ -49,18 +52,21 @@ def train_qkmedians(
         if seed:
             np.random.seed(seed)  # matters for small data sizes
         np.random.shuffle(data_train)
-    
+
     # Intialize centroids
     centroids = qkmed.initialize_centroids(data_train, k)
 
-    i = 0; new_tol = 1
+    i = 0
+    new_tol = 1
     loss = []
     while True:
         # find nearest centroids
-        cluster_label, _ = qkmed.find_nearest_neighbour(data_train, centroids, min_type, nshots)
+        cluster_label, _ = qkmed.find_nearest_neighbour(
+            data_train, centroids, min_type, nshots
+        )
         # find new centroids
         new_centroids = qkmed.find_centroids(data_train, cluster_label, clusters=k)
-        
+
         # calculate loss -> distance old_centroids to new_centroids
         loss_epoch = np.linalg.norm(centroids - new_centroids)
         loss.append(loss_epoch)
@@ -69,7 +75,9 @@ def train_qkmedians(
             centroids = new_centroids
             print(f"Converged after {i+1} iterations.")
             break
-        elif (loss_epoch > tolerance and i > new_tol * 200):# if after 200*new_tol epochs, difference != 0, lower the tolerance
+        elif (
+            loss_epoch > tolerance and i > new_tol * 200
+        ):  # if after 200*new_tol epochs, difference != 0, lower the tolerance
             tolerance *= 10
             new_tol += 1
         i += 1
@@ -80,14 +88,11 @@ def train_qkmedians(
             f"{save_dir}/cluster_label.npy",
             cluster_label,
         )
-        np.save(
-            f"{save_dir}/centroids.npy", centroids
-        )
+        np.save(f"{save_dir}/centroids.npy", centroids)
         np.save(f"{save_dir}/loss.npy", loss)
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(
         description="read arguments for qkmedians training"
     )
@@ -100,26 +105,36 @@ if __name__ == "__main__":
     parser.add_argument(
         "--seed", dest="seed", type=int, help="seed for consistent results"
     )
+    parser.add_argument("--k", dest="k", type=int, default=2, help="number of classes")
     parser.add_argument(
-        "--k", dest="k", type=int, default=2, help="number of classes"
-    )
-    parser.add_argument(
-        "--tolerance", dest="tolerance", type=float, default=1.0e-3, help="convergence tolerance"
+        "--tolerance",
+        dest="tolerance",
+        type=float,
+        default=1.0e-3,
+        help="convergence tolerance",
     )
     parser.add_argument(
         "--save_dir", dest="save_dir", type=str, help="directory to save results"
     )
     parser.add_argument(
-        "--min_type", dest="min_type", type=str, default='classic', help="Type of minimization for distance calculation, classic or quantum"
+        "--min_type",
+        dest="min_type",
+        type=str,
+        default="classic",
+        help="Type of minimization for distance calculation, classic or quantum",
     )
     parser.add_argument(
-        "--nshots", dest="nshots", type=int, default=10000, help="Number of shots for executing quantum circuit"
+        "--nshots",
+        dest="nshots",
+        type=int,
+        default=10000,
+        help="Number of shots for executing quantum circuit",
     )
 
     args = parser.parse_args()
-    
-    if args.min_type not in ['classic', 'quantum']:
-        raise ValueError('Minimization is either classic or quantum procedure.')
+
+    if args.min_type not in ["classic", "quantum"]:
+        raise ValueError("Minimization is either classic or quantum procedure.")
 
     train_qkmedians(
         args.train_size,

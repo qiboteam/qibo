@@ -1,6 +1,6 @@
-import numpy as np
 import distance_calc as distc
 import minimization as m
+import numpy as np
 
 
 def initialize_centroids(points, k):
@@ -49,7 +49,7 @@ def find_centroids(points, cluster_labels, clusters=2):
     return np.array(centroids)
 
 
-def find_nearest_neighbour(points, centroids, mintype='classic', shots_n=10000):
+def find_nearest_neighbour(points, centroids, mintype="classic", shots_n=10000):
     """Find cluster assignments for points.
 
     Parameters
@@ -61,7 +61,7 @@ def find_nearest_neighbour(points, centroids, mintype='classic', shots_n=10000):
     device_name : str
         Name of device for circuit execution
     mintype : str
-        Minimization type for cluster assignment 
+        Minimization type for cluster assignment
 
     Returns
     -------
@@ -85,10 +85,10 @@ def find_nearest_neighbour(points, centroids, mintype='classic', shots_n=10000):
             )  # returning back one number for all latent dimensions!
             dist.append(temp_dist)
         # assign cluster
-        if mintype == 'classic':
-            cluster_index = np.argmin(dist) #classical minimization
+        if mintype == "classic":
+            cluster_index = np.argmin(dist)  # classical minimization
         else:
-            cluster_index = m.duerr_hoyer_algo(dist) #quantum minimization
+            cluster_index = m.duerr_hoyer_algo(dist)  # quantum minimization
         cluster_label.append(cluster_index)
         distances.append(dist)
     return np.asarray(cluster_label), np.asarray(distances)

@@ -1,8 +1,21 @@
 import argparse
+
 import util as u
 
-def evaluate_qkmedians(centroids_file, data_qcd_file, data_signal_file, k=2, test_size=10000, title='Anomaly detection results', results_dir=None, data_dir=None, save_dir_roc=None, xlabel='TPR', ylabel='1/FPR'):
-    
+
+def evaluate_qkmedians(
+    centroids_file,
+    data_qcd_file,
+    data_signal_file,
+    k=2,
+    test_size=10000,
+    title="Anomaly detection results",
+    results_dir=None,
+    data_dir=None,
+    save_dir_roc=None,
+    xlabel="TPR",
+    ylabel="1/FPR",
+):
     """Evaluation of quantum k-medians.
 
     Parameters
@@ -30,50 +43,89 @@ def evaluate_qkmedians(centroids_file, data_qcd_file, data_signal_file, k=2, tes
     ylabel : str
         Name of y-axis in ROC plot.
     """
-    
+
     # calculate anomaly detection scores
-    loss = u.calc_AD_scores(centroids_file, data_qcd_file, data_signal_file, k=k, test_size=test_size, results_dir=results_dir, data_dir=data_dir)
+    loss = u.calc_AD_scores(
+        centroids_file,
+        data_qcd_file,
+        data_signal_file,
+        k=k,
+        test_size=test_size,
+        results_dir=results_dir,
+        data_dir=data_dir,
+    )
     # plot roc curve
-    u.plot_ROCs_compare(loss, title=title, xlabel=xlabel, ylabel=ylabel, legend_loc='best', save_dir=save_dir_roc)
+    u.plot_ROCs_compare(
+        loss,
+        title=title,
+        xlabel=xlabel,
+        ylabel=ylabel,
+        legend_loc="best",
+        save_dir=save_dir_roc,
+    )
 
-    
+
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(
         description="read arguments for qkmedians evaluation"
     )
     parser.add_argument(
-        "--centroids_file", dest="centroids_file", type=str, help="name of the file for saved centroids coordinates"
+        "--centroids_file",
+        dest="centroids_file",
+        type=str,
+        help="name of the file for saved centroids coordinates",
     )
     parser.add_argument(
-        "--data_qcd_file", dest="data_qcd_file", type=str, help="name of the file for test QCD dataset"
+        "--data_qcd_file",
+        dest="data_qcd_file",
+        type=str,
+        help="name of the file for test QCD dataset",
     )
     parser.add_argument(
-        "--data_signal_file", dest="data_signal_file", type=str, help="name of the file for test signal dataset"
+        "--data_signal_file",
+        dest="data_signal_file",
+        type=str,
+        help="name of the file for test signal dataset",
     )
-    parser.add_argument(
-        "--k", dest="k", type=int, default=2, help="number of classes"
-    )
+    parser.add_argument("--k", dest="k", type=int, default=2, help="number of classes")
     parser.add_argument(
         "--test_size", dest="test_size", type=int, default=10000, help="test size"
     )
     parser.add_argument(
-        "--title", dest="title", type=str, default='Anomaly detection results', help="title of ROC curve plot"
+        "--title",
+        dest="title",
+        type=str,
+        default="Anomaly detection results",
+        help="title of ROC curve plot",
     )
     parser.add_argument(
-        "--results_dir", dest="results_dir", type=str, help="path to file with saved centroids"
+        "--results_dir",
+        dest="results_dir",
+        type=str,
+        help="path to file with saved centroids",
     )
     parser.add_argument(
         "--data_dir", dest="data_dir", type=str, help="path to file with test datasets"
     )
     parser.add_argument(
-        "--save_dir_roc", dest="save_dir_roc", type=str, help="path to directory for saving ROC plot"
+        "--save_dir_roc",
+        dest="save_dir_roc",
+        type=str,
+        help="path to directory for saving ROC plot",
     )
     parser.add_argument(
-        "--xlabel", dest="xlabel", type=str, default='TPR', help="name of x-axis in ROC plot"
+        "--xlabel",
+        dest="xlabel",
+        type=str,
+        default="TPR",
+        help="name of x-axis in ROC plot",
     )
     parser.add_argument(
-        "--ylabel", dest="ylabel", type=str, default='1/FPR', help="name of y-axis in ROC plot"
+        "--ylabel",
+        dest="ylabel",
+        type=str,
+        default="1/FPR",
+        help="name of y-axis in ROC plot",
     )
 
     args = parser.parse_args()
@@ -88,6 +140,6 @@ if __name__ == "__main__":
         args.results_dir,
         args.data_dir,
         args.save_dir_roc,
-        args.xlabel, 
-        args.ylabel
+        args.xlabel,
+        args.ylabel,
     )

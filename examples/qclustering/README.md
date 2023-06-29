@@ -14,7 +14,7 @@ Implementation of QKmedians from the paper: [2301.10780](https://arxiv.org/abs/2
 
 ### Download dataset
 Dataset's dimensionality is reduced by passing it through autoencoder. If you are interested more, please refer to [[\*]](https://arxiv.org/abs/2301.10780).\
-Reduced dataset can be downloaded from `Zenodo` : 
+Reduced dataset can be downloaded from `Zenodo` :
 [record/7673769](https://zenodo.org/record/7673769)\
 Small portion of dataset in `data` folder:
   - `latentrep_QCD_sig.h5` $\rightarrow$ train dataset (QCD)
