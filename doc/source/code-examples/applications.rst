@@ -84,6 +84,7 @@ Quantum Machine Learning
     tutorials/autoencoder/README.md
     tutorials/EF_QAE/README.md
     tutorials/qfiae/qfiae_demo.ipynb
+    tutorials/qclustering/README.md
 
 _______________________
 
