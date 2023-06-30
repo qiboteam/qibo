@@ -57,11 +57,11 @@ def find_nearest_neighbour(points, centroids, mintype="classic", nshots=10000):
     points : :class:`numpy.ndarray`
         Points represented as an array of shape ``(N, X)``, where `N` = number of samples, `X` = dimension of latent space.
     centroids : :class:`numpy.ndarray`
-        Centroids of shape ``(k, X)``
+        Centroids of shape ``(k, X)``.
     mintype : str
-        Minimization type for cluster assignment
+        Minimization type for cluster assignment.
     nshots : int
-        Number of shots for executing a quantum circuit - to get frequencies
+        Number of shots for executing a quantum circuit - to get frequencies.
 
     Returns
     -------
