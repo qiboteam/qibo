@@ -23,7 +23,7 @@ def train_qkmedians(
     verbose=False,
     nprint=10,
 ):
-    """Performs training of quantum k-medians.
+    """Perform training of quantum k-medians.
 
     Parameters
     ----------
