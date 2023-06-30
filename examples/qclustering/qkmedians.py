@@ -23,16 +23,16 @@ def initialize_centroids(points, k):
 
 
 def find_centroids(points, cluster_labels, clusters=2):
-    """Finds cluster centroids .
+    """Find cluster centroids .
 
     Parameters
     ----------
     points : :class:`numpy.ndarray`
         Points represented as an array of shape ``(N, X)``, where `N` = number of samples, `X` = dimension of latent space.
     cluster_labels : :class:`numpy.ndarray`
-        Cluster labels assigned to each data point - shape `(N,)`
+        Cluster labels assigned to each data point - shape `(N,)`.
     clusters : int
-        Number of clusters
+        Number of clusters.
 
     Returns
     -------
