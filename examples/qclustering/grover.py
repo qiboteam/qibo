@@ -5,9 +5,6 @@ import numpy as np
 from qibo import gates
 from qibo.models import Circuit
 
-# In Qiskit -> index of qubit corresponds to how significant it is: left most bit = q1 and it goes
-# |q1q0> ==> but in Qibo is other way around |q0q1> Right Most Significant bit
-
 
 def iam_operator(n):
     qc = Circuit(n)
