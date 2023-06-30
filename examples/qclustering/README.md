@@ -4,9 +4,8 @@ Code at: [https://github.com/qiboteam/qibo/tree/master/examples/qclustering](htt
 
 Implementation of QKmedians from the paper: [2301.10780](https://arxiv.org/abs/2301.10780).\
 \
-Before using install additional packages:
+Before using install additional package:
   - `h5py`
-  - `matplotlib`
 
 ## Algorithm's pseudocode
 
