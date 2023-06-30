@@ -9,20 +9,25 @@ def f(x, threshold):
 
 
 def create_oracle_circ(distances, threshold, n_qubits):
+    """Create circuit for oracle - for one solution --> I - 2*|i0><i0|.
+
+    Parameters
+    ----------
+    distances : :class:`numpy.ndarray` of shape (num_samples,)
+        Array of distances to be minimized.
+    threshold : int
+        Starting distance choosen randomly in array of distances.
+    n_qubits : int
+        Number of qubits Oracle circuit is applied on.
+
+    Returns
+    -------
+    :class:`qibo.models.Circuit`
+        Oracle quantum circuit.
+    int
+        Number of indices which are marked as lower than threshold.
     """
-    Create circuit for oracle - for one solution --> I - 2*|i0><i0| - extend to multi
-        Args:
-            distances: numpy.ndarray of shape (num_samples,)
-                - Distances to be minimized
-            threshold: int
-            n_qubits: int
-                - number of qubits oracle circuit is applied on.
-        Returns:
-            qc_oracle: Circuit()
-                - oracle circuit
-            marked_indices: int
-                - number of indices which are marked as lower than threshold
-    """
+
     solutions = []
     marked_indices = 0
     for index, d in enumerate(distances):

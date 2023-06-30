@@ -10,8 +10,18 @@ from qibo.models import Circuit
 
 
 def duerr_hoyer_algo(distances):
-    """
-    distance: [1, k] where k is number of cluster centers
+    """Perform Duerr-Hoyer algorithm.
+
+    Parameters
+    ----------
+    distance : :class:`numpy.ndarray`
+        Array of distances a point to each cluster.
+        Shape=(1, k) where k is number of cluster centers.
+
+    Returns
+    -------
+    int
+        New cluster assigned for that point.
     """
 
     k = len(distances)
