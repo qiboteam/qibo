@@ -15,7 +15,7 @@ class H(Gate):
         1 & 1 \\\\
         1 & -1 \\\\
         \\end{pmatrix}
-    
+
     Args:
         q (int): the qubit id number.
     """
