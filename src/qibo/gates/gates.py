@@ -8,6 +8,14 @@ from qibo.gates.abstract import Gate, ParametrizedGate
 class H(Gate):
     """The Hadamard gate.
 
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\frac{1}{\\sqrt{2}} \\, \\begin{pmatrix}
+        1 & 1 \\\\
+        1 & -1 \\\\
+        \\end{pmatrix}
+    
     Args:
         q (int): the qubit id number.
     """
@@ -26,6 +34,14 @@ class H(Gate):
 
 class X(Gate):
     """The Pauli X gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        0 & 1 \\\\
+        1 & 0 \\\\
+        \\end{pmatrix}
 
     Args:
         q (int): the qubit id number.
@@ -130,6 +146,14 @@ class X(Gate):
 class Y(Gate):
     """The Pauli Y gate.
 
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        0 & -i \\\\
+        i & 0 \\\\
+        \\end{pmatrix}
+
     Args:
         q (int): the qubit id number.
     """
@@ -154,6 +178,14 @@ class Y(Gate):
 
 class Z(Gate):
     """The Pauli Z gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 \\\\
+        0 & -1 \\\\
+        \\end{pmatrix}
 
     Args:
         q (int): the qubit id number.
