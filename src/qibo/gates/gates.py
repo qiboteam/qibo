@@ -1,7 +1,7 @@
-import numpy as np
-
 import math
 from typing import List
+
+import numpy as np
 
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate, ParametrizedGate
