@@ -10,7 +10,7 @@ def apply_gates(backend, gatelist, nqubits=None, initial_state=None):
     if initial_state is None:
         state = backend.zero_state(nqubits)
     else:
-        state = backend.cast(np.copy(initial_state))
+        state = backend.cast(initial_state, dtype=initial_state.dtype, copy=True)
         if nqubits is None:
             nqubits = int(np.log2(len(state)))
         else:  # pragma: no cover
@@ -509,6 +509,32 @@ def test_ms(backend):
     assert not gates.RXX(0, 1, phi0, phi1).clifford
 
 
+def test_givens(backend):
+    theta = 0.1234
+    nqubits = 2
+    initial_state = random_statevector(2**nqubits, backend=backend)
+    final_state = apply_gates(
+        backend,
+        [gates.GIVENS(0, 1, theta)],
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+
+    matrix = np.array(
+        [
+            [1, 0, 0, 0],
+            [0, np.cos(theta), -np.sin(theta), 0],
+            [0, np.sin(theta), np.cos(theta), 0],
+            [0, 0, 0, 1],
+        ],
+        dtype=backend.dtype,
+    )
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
+
+    target_state = matrix @ initial_state
+    backend.assert_allclose(final_state, target_state)
+
+
 @pytest.mark.parametrize("applyx", [False, True])
 def test_toffoli(backend, applyx):
     if applyx:
@@ -811,6 +837,7 @@ GATES = [
     ("RZ", (0, 0.3)),
     ("GPI", (0, 0.1)),
     ("GPI2", (0, 0.2)),
+    ("GIVENS", (0, 1, 0.1)),
     ("U1", (0, 0.1)),
     ("U2", (0, 0.2, 0.3)),
     ("U3", (0, 0.1, 0.2, 0.3)),
