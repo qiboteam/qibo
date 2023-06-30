@@ -1,3 +1,5 @@
+import numpy as np
+
 import math
 from typing import List
 
@@ -1611,7 +1613,5 @@ class Unitary(ParametrizedGate):
         return gate
 
     def _dagger(self):
-        import numpy as np  # pylint: disable=C0415
-
         ud = np.conj(np.transpose(self.parameters[0]))
         return self.__class__(ud, *self.target_qubits, **self.init_kwargs)
