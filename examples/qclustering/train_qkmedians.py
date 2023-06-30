@@ -44,9 +44,9 @@ def train_qkmedians(
     save_dir : str
         Name of the file for saving results.
     nprint : int
-        Print loss function value each `nprint` epochs if `verbose` is True
+        Print loss function value each `nprint` epochs if `verbose` is `True`.
     verbose : str
-        Print log messages if True
+        Print log messages if `True`.
     """
 
     # read train data
@@ -115,27 +115,27 @@ def train_qkmedians(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="read arguments for qkmedians training"
+        description="Read arguments for qkmedians training"
     )
     parser.add_argument(
-        "--train_size", dest="train_size", type=int, help="training data size"
+        "--train_size", dest="train_size", type=int, help="Training data size"
     )
     parser.add_argument(
-        "--read_file", dest="read_file", type=str, help="path to training data"
+        "--read_file", dest="read_file", type=str, help="Path to training data"
     )
     parser.add_argument(
-        "--seed", dest="seed", type=int, help="seed for consistent results"
+        "--seed", dest="seed", type=int, help="Seed for consistent results"
     )
-    parser.add_argument("--k", dest="k", type=int, default=2, help="number of classes")
+    parser.add_argument("--k", dest="k", type=int, default=2, help="Number of classes")
     parser.add_argument(
         "--tolerance",
         dest="tolerance",
         type=float,
         default=1.0e-3,
-        help="convergence tolerance",
+        help="Convergence tolerance",
     )
     parser.add_argument(
-        "--save_dir", dest="save_dir", type=str, help="directory to save results"
+        "--save_dir", dest="save_dir", type=str, help="Directory to save results"
     )
     parser.add_argument(
         "--min_type",
