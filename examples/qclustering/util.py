@@ -4,11 +4,7 @@ import h5py
 import matplotlib.pyplot as plt
 import numpy as np
 import qkmedians as qkmed
-from sklearn.metrics import auc, confusion_matrix, roc_curve
-
-
-def euclidean_dist(a, b):
-    return np.linalg.norm(a - b)
+from sklearn.metrics import auc, roc_curve
 
 
 def calc_norm(a, b):
