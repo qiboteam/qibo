@@ -35,7 +35,7 @@ def DistCalc(a, b, nshots=10000):
     a : :class:`numpy.ndarray`
         First point - shape = (latent space dimension,)
     b : :class:`numpy.ndarray`
-        First point - shape = (latent space dimension,)
+        Second point - shape = (latent space dimension,)
     device_name : str
         Name of device for executing a simulation of quantum circuit.
     nshots : int
