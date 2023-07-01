@@ -42,7 +42,8 @@ class VQRegressor:
         c.add(gates.H(q=0))
         for l in range(layers):
             c.add(gates.RY(q=0, theta=0))
-            c.add(gates.H(0))
+            print("GO")
+            #c.add(gates.H(0))
             c.add(gates.RZ(q=0, theta=0))
         c.add(gates.M(0))
         return c

@@ -1,6 +1,353 @@
+from scipy.optimize import basinhopping
 from qibo.config import log, raise_error
+from qibo.models import Circuit
+import numpy as np
+import random
+import tensorflow as tf
 
 
+class Optimizer:
+    """Parent optimizer"""
+    
+    def __init__(self, loss, args=(), method="sgd", options=None):
+        self.loss = loss
+        self.method = method
+        self.args = args
+        self.options = options #shift rule, epochs, J_iteration, fubini, ...
+        self.backend = None
+        self.use_fubini = False
+        self.shift_rule = "psr"
+
+        if not isinstance(args[0], np.ndarray):
+            raise("First argument to loss function must be a numpy array with circuit parameters")
+        
+        self.params = args[0]
+        self.nparams = len(self.params)
+        self.nparams_main = len(self.params)
+
+        if not isinstance(args[1], Circuit):
+            raise("Second argument to loss function must be a Circuit")
+        
+        self._circuit_main = args[1]
+        self._circuit = self._circuit_main
+
+
+    def fit(self, X, y):
+        """Performs the optimizations and returns f_best, x_best."""
+
+        if not isinstance(X, np.ndarray):
+            raise("X must be a numpy array")
+        
+        self.labels = X
+        self.nsample = len(self.labels)
+        
+        if not isinstance(y, np.ndarray):
+            raise("y must be a numpy array")
+        
+        self.features = y
+
+        if self.method == "cma":
+
+            cmaes(self.loss, self.params, self.args, self.options)
+
+        elif self.method == "sgd":
+
+            if self.backend is None:
+                from qibo.backends import GlobalBackend
+
+                self.backend = GlobalBackend()
+            return self.sgd(self.options)
+        
+        elif self.method == "basinhopping":
+            return
+        
+        else:
+            if self.backend is None:
+                from qibo.backends import GlobalBackend
+
+                self.backend = GlobalBackend()
+
+            return newtonian(
+                self.loss,
+                self.params,
+                self.args,
+                self.method,
+                self.options
+            )
+        
+    def one_prediction(self, feature):
+        results = tf.Variable(initial_value=np.zeros(2), dtype=tf.float64)
+        _ = self.loss(self.params, self._circuit, feature, 0, results)
+        return results[0]
+        
+    def set_parameters(self, new_params):
+        """
+        Function which set the new parameters into the circuit
+        Args:
+            new_params: np.array of the new parameters; it has to be (3 * nlayers) long
+        """
+        self.params = new_params
+    
+    def forward_psr(self, original, factor, **kwargs):
+        """
+        This function calculates the forward shifted parameter for the parameter shift rule (PSR).
+        Args:
+            original: original parameter value
+            factor: multiplicative factor which rescales based on size of data point
+        Returns: shifted parameter value
+        """
+
+        shifted = original + np.pi / 2 / factor
+
+        return shifted
+    
+    def backward_psr(self, original, factor, **kwargs):
+        """
+        This function calculates the backward shifted parameter for the parameter shift rule (PSR).
+        Args:
+            original: original parameter value
+            factor: multiplicative factor which rescales based on size of data point
+        Returns: shifted parameter value
+        """
+
+        shifted = original - np.pi / 2 / factor
+
+        return shifted
+    
+
+    def shift_parameter(self, i, this_feature, forward_func, backward_func, param):
+        """
+        Stochastic parameter shift's execution on a single parameter
+        Args:
+            i: integer index which identify the parameter into self.params
+            this_feature: np.array 2**nqubits-long containing the state vector assciated to a data
+        Returns: derivative of the observable (here the prediction) with respect to self.params[i]
+        """
+
+        original = self.params.copy()
+        shifted = self.params.copy()
+
+
+        # parameters multiplied by data input must be rescaled
+        if i % 2 == 0:
+            factor = this_feature
+        else:
+            factor = 1
+
+        # forward
+        shifted[i] = forward_func(original=original[i], factor=factor, param=param)
+
+        self.set_parameters(shifted)
+   
+        forward = self.one_prediction(this_feature)
+
+        # backward
+        self.set_parameters(original)
+
+        shifted[i] = backward_func(original=original[i], factor=factor, param=param)
+
+        self.set_parameters(shifted)
+
+        backward = self.one_prediction(this_feature)
+
+        # result
+        self.set_parameters(original)
+
+        result = (forward - backward) * factor / 2 ## factor 2 to make gradient equal to actual
+
+        return result
+    
+
+    def parameter_shift(self, this_feature):
+        """
+        Full parameter-shift rule's implementation
+        Args:
+            this_feature: np.array 2**nqubits-long containing the state vector assciated to a data
+        Returns: np.array of the observable's gradients with respect to the variational parameters
+        """
+
+        # parameter shift
+        if self.shift_rule == "psr":
+
+            param = 1
+            forward_func = self.forward_psr
+            backward_func = self.backward_psr
+            factor = 1
+
+        # stochastic parameter shift
+        elif self.shift_rule == "spsr":
+
+            param = random.random() # s
+            forward_func = self.forward_stoch
+            backward_func = self.backward_stoch
+            factor = 1
+
+        # numerical differentiation (central difference)
+        else:
+            
+            param = 0.05 # dtheta
+            forward_func = self.forward_diff
+            backward_func = self.backward_diff
+            factor = 2*param
+
+
+        obs_gradients = np.zeros(self.nparams, dtype=np.float64)
+        for ipar in range(self.nparams):
+            obs_gradients[ipar] = self.shift_parameter(ipar, this_feature, forward_func, backward_func, param=param) / factor
+        return obs_gradients
+        
+    def dloss(self, features, labels):
+        """
+        This function calculates the loss function's gradients with respect to self.params
+        Args:
+            features: np.matrix containig the n_sample-long vector of states
+            labels: np.array of the labels related to features
+        Returns: np.array of length self.nparams containing the loss function's gradients
+        """
+        loss_gradients = np.zeros(self.nparams)
+        loss = 0
+
+        if self.use_fubini:
+            fubini = np.zeros((self.nparams, self.nparams))
+
+        for feat, label in zip(features, labels):
+        
+            results = tf.Variable(initial_value=np.zeros(2), dtype=tf.float64)
+            with tf.GradientTape() as tape:
+                local_loss = self.loss(self.params, self._circuit, feat, label, results)
+
+            loss += local_loss
+            grads = tape.gradient(local_loss, results)
+
+            obs_gradients = self.parameter_shift(feat)  # d<B> N params, N label gradients
+
+            if self.use_fubini:
+                fubini += self.generate_fubini(feat)
+
+            for i in range(self.nparams):
+                loss_gradients[i] += obs_gradients[i] * grads[0]
+
+        # gradient average
+        loss_gradients /= len(features)
+
+        # Fubini-Study Metric renormalisation
+        if self.use_fubini:
+
+            fubini /= len(features)
+            loss_gradients = np.dot(np.linalg.inv(fubini), loss_gradients)
+
+        return loss_gradients, (loss.numpy() / len(features))
+        
+    def AdamDescent(
+        self,
+        learning_rate,
+        m,
+        v,
+        features,
+        labels,
+        iteration,
+        beta_1=0.85,
+        beta_2=0.99,
+        epsilon=1e-8,
+    ):
+        """
+        Implementation of the Adam optimizer: during a run of this function parameters are updated.
+        Furthermore, new values of m and v are calculated.
+        Args:
+            learning_rate: np.float value of the learning rate
+            m: momentum's value before the execution of the Adam descent
+            v: velocity's value before the execution of the Adam descent
+            features: np.matrix containig the n_sample-long vector of states
+            labels: np.array of the labels related to features
+            iteration: np.integer value corresponding to the current training iteration
+            beta_1: np.float value of the Adam's beta_1 parameter; default 0.85
+            beta_2: np.float value of the Adam's beta_2 parameter; default 0.99
+            epsilon: np.float value of the Adam's epsilon parameter; default 1e-8
+        Returns: np.float new values of momentum and velocity
+        """
+
+        grads, loss = self.dloss(features, labels)
+
+        for i in range(self.nparams):
+            m[i] = beta_1 * m[i] + (1 - beta_1) * grads[i]
+            v[i] = beta_2 * v[i] + (1 - beta_2) * grads[i] * grads[i]
+            mhat = m[i] / (1.0 - beta_1 ** (iteration + 1))
+            vhat = v[i] / (1.0 - beta_2 ** (iteration + 1))
+            self.params[i] -= learning_rate * mhat / (np.sqrt(vhat) + epsilon)
+
+        return m, v, loss
+        
+    def sgd(self, options):
+        """
+        This function performs the full Adam descent's procedure
+        Args:
+            epochs: np.integer value corresponding to the epochs of training
+            learning_rate: np.float value of the learning rate
+            batches: np.integer value of the number of batches which divide the dataset
+            J_treshold: np.float value of the desired loss function's treshold
+        Returns: list of loss values, one for each epoch
+        """
+        options = {
+            "epochs": 1000,
+            "learning_rate": 0.045,
+            "batches": 1,
+            "J_threshold": 1e-5,
+            "shift_rule": "psr"
+        }
+
+        losses = []
+        indices = []
+
+        # create index list
+        idx = np.arange(0, self.nsample)
+
+        m = np.zeros(self.nparams)
+        v = np.zeros(self.nparams)
+
+        # create index blocks on which we run
+        for ib in range(options["batches"]):
+            indices.append(np.arange(ib, self.nsample, options["batches"]))
+
+        iteration = 0
+
+
+        for epoch in range(options["epochs"]):
+            if epoch != 0 and losses[-1] < options["J_threshold"]:
+                print(
+                    "Desired sensibility is reached, here we stop: ",
+                    iteration,
+                    " iteration",
+                )
+                break
+            # shuffle index list
+            np.random.shuffle(idx)
+            # run over the batches
+            for ib in range(options["batches"]):
+                iteration += 1
+
+                features = self.features[idx[indices[ib]]]
+
+                labels = self.labels[idx[indices[ib]]]
+                # update parameters
+                m, v, this_loss = self.AdamDescent(
+                    options["learning_rate"], m, v, features, labels, iteration
+                )
+                # track the training
+                print(
+                    "Iteration ",
+                    iteration,
+                    " epoch ",
+                    epoch + 1,
+                    " | loss: ",
+                    this_loss,
+                )
+                # in case one wants to plot J as a function of the iterations
+                losses.append(this_loss)
+
+
+
+
+##############################################################
 def optimize(
     loss,
     initial_parameters,
@@ -234,41 +581,8 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False, backend=
             - ``'nmessage'`` (int, default: ``1e3``): Every how many epochs to print
               a message of the loss function.
     """
-    if not backend.name == "tensorflow":
-        raise_error(RuntimeError, "SGD optimizer requires Tensorflow backend.")
-
-    sgd_options = {
-        "nepochs": 1000000,
-        "nmessage": 1000,
-        "optimizer": "Adagrad",
-        "learning_rate": 0.001,
-    }
-    if options is not None:
-        sgd_options.update(options)
-
-    # proceed with the training
-    vparams = backend.tf.Variable(initial_parameters)
-    optimizer = getattr(backend.tf.optimizers, sgd_options["optimizer"])(
-        learning_rate=sgd_options["learning_rate"]
-    )
-
-    def opt_step():
-        with backend.tf.GradientTape() as tape:
-            l = loss(vparams, *args)
-        grads = tape.gradient(l, [vparams])
-        optimizer.apply_gradients(zip(grads, [vparams]))
-        return l
-
-    if compile:
-        loss = backend.compile(loss)
-        opt_step = backend.compile(opt_step)
-
-    for e in range(sgd_options["nepochs"]):
-        l = opt_step()
-        if e % sgd_options["nmessage"] == 1:
-            log.info("ite %d : loss %f", e, l.numpy())
-
-    return loss(vparams, *args).numpy(), vparams.numpy(), sgd_options
+    #if not backend.name == "tensorflow":
+    #    raise_error(RuntimeError, "SGD optimizer requires Tensorflow backend.")
 
 
 class ParallelBFGS:  # pragma: no cover
