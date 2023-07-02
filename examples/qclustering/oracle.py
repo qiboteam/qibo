@@ -32,7 +32,6 @@ def create_oracle_circ(distances, threshold, n_qubits):
     marked_indices = 0
     for index, d in enumerate(distances):
         if f(d, threshold):
-            # index_bin = np.binary_repr(index, width=n)
             ket_i0 = np.zeros((2**n_qubits, 1))
             ket_i0[index] = 1
             bra_i0 = np.conj(ket_i0).T
