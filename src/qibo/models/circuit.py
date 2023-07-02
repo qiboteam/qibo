@@ -725,7 +725,7 @@ class Circuit:
                 c.set_parameters(params)
         """
         from collections.abc import Iterable
-
+        print(parameters)
         if isinstance(parameters, dict):
             diff = set(parameters.keys()) - self.trainable_gates.set
             if diff:
@@ -1346,7 +1346,7 @@ class Circuit:
                 matrix, idx = self._update_draw_matrix(matrix, idx, gate, "]")
             else:
                 matrix, idx = self._update_draw_matrix(matrix, idx, gate)
-
+        print(matrix)
         # Add some spacers
         for col in range(len(matrix[0])):
             maxlen = max(len(matrix[l][col]) for l in range(self.nqubits))

@@ -1,6 +1,8 @@
 from scipy.optimize import basinhopping
+#from qibo.noise import NoiseModel
 from qibo.config import log, raise_error
 from qibo.models import Circuit
+from qibo import gates
 import numpy as np
 import random
 import tensorflow as tf
@@ -15,8 +17,12 @@ class Optimizer:
         self.args = args
         self.options = options #shift rule, epochs, J_iteration, fubini, ...
         self.backend = None
-        self.use_fubini = False
         self.shift_rule = "psr"
+
+        # natural gradient
+        self.natgrad = True
+        if self.natgrad:
+            print("Using Natural Gradient")
 
         if not isinstance(args[0], np.ndarray):
             raise("First argument to loss function must be a numpy array with circuit parameters")
@@ -30,6 +36,7 @@ class Optimizer:
         
         self._circuit_main = args[1]
         self._circuit = self._circuit_main
+        self.nqubits = self._circuit_main.nqubits
 
 
     def fit(self, X, y):
@@ -76,7 +83,7 @@ class Optimizer:
             )
         
     def one_prediction(self, feature):
-        results = tf.Variable(initial_value=np.zeros(2), dtype=tf.float64)
+        results = tf.Variable(initial_value=np.zeros(2**self.nqubits), dtype=tf.float64)
         _ = self.loss(self.params, self._circuit, feature, 0, results)
         return results[0]
         
@@ -195,6 +202,156 @@ class Optimizer:
         for ipar in range(self.nparams):
             obs_gradients[ipar] = self.shift_parameter(ipar, this_feature, forward_func, backward_func, param=param) / factor
         return obs_gradients
+    
+    def _update_layered_circuit(self, matrix, idx, gate, gate_symbol=None):
+        """Helper method for :meth:`qibo.models.circuit.Circuit.draw`."""
+
+        if isinstance(gate, gates.CallbackGate):
+            targets = list(range(self.nqubits))
+        else:
+            targets = list(gate.target_qubits)
+        controls = list(gate.control_qubits)
+
+        # identify boundaries
+        qubits = targets + controls
+        qubits.sort()
+        min_qubits_id = qubits[0]
+        max_qubits_id = qubits[-1]
+
+        # identify column
+        col = idx[targets[0]] if not controls and len(targets) == 1 else max(idx)
+
+        # extend matrix
+        for iq in range(self.nqubits):
+            matrix[iq].extend((1 + col - len(matrix[iq])) * [None])
+
+        # fill
+        for iq in range(min_qubits_id, max_qubits_id + 1):
+            if iq in targets:
+                matrix[iq][col] = gate
+            elif iq in controls:
+                matrix[iq][col] = None
+            else:
+                matrix[iq][col] = None
+
+        # update indexes
+        if not controls and len(targets) == 1:
+            idx[targets[0]] += 1
+        else:
+            idx = [col + 1] * self.nqubits
+
+        return matrix, idx
+    
+    def layered_circuit(self):
+        """Draw text circuit using unicode symbols.
+
+        Args:
+            line_wrap (int): maximum number of characters per line. This option
+                split the circuit text diagram in chunks of line_wrap characters.
+            legend (bool): If ``True`` prints a legend below the circuit for
+                callbacks and channels. Default is ``False``.
+
+        Return:
+            String containing text circuit diagram.
+        """
+        # build string representation of gates
+        matrix = [[] for _ in range(self.nqubits)]
+        idx = [0] * self.nqubits
+
+        for gate in self._circuit_main.queue:
+            if isinstance(gate, gates.FusedGate):
+                # start fused gate
+                matrix, idx = self._update_layered_circuit(matrix, idx, gate, "[")
+                # draw gates contained in the fused gate
+                for subgate in gate.gates:
+                    matrix, idx = self._update_layered_circuit(matrix, idx, subgate)
+                # end fused gate
+                matrix, idx = self._update_layered_circuit(matrix, idx, gate, "]")
+            else:
+                matrix, idx = self._update_layered_circuit(matrix, idx, gate)
+
+        return matrix
+    
+    def generate_fubini(self, feature, method="variance"):
+        """Generate the Fubini-Study metric tensor"""
+
+        fubini = np.zeros((self.nparams, self.nparams))
+        original = self.params.copy()
+
+        if method == "hessian":
+
+            shifted = self.params.copy()
+
+            phi = self.retrieve_state(feature)
+
+            for i in range(self.nparams):
+                if i % 2 == 0:
+                    factor = feature
+                else:
+                    factor = 1
+                shifted[i] = self.forward_diff(original=original[i], factor=factor, param=np.pi)
+                self.set_parameters(shifted)
+                phi_prime = self.retrieve_state(feature)
+
+                self.set_parameters(original)
+                fubini[i, i] = 1/4 * (1 - (np.abs(np.dot(phi, phi_prime)))**2)
+
+        elif method == "variance":
+
+            # trainable and non trainable should be separated into different columns! Not sure
+            matrix = self.layered_circuit()
+
+            # empty circuit
+            self.subcircuit = Circuit(self.nqubits, density_matrix=True)
+
+            for col in range(len(matrix[0])):
+
+                variational_flag = False
+
+                for gate in matrix[:, col]:
+                   
+                    if isinstance(gate, gates.ParametrizedGate):
+                        variational_flag = True
+
+                if variational_flag:
+
+                    for i in range(self.nqubits):
+                        self.subcircuit.add(gates.M(i), basis=gates.Z) # change basis
+
+                    #   3) remove measurement gate
+
+                    # add gate to circuit
+
+
+            # run through all layers one by one
+            for cparam in range(0, self.nparams, 2):
+
+                if cparam % 4 == 0:
+                    basis = gates.Z
+                else:
+                    basis = gates.Y
+
+
+                # build subcircuit
+                self._circuit = self.ansatz(self.layers, cparam, basis=basis)
+                self.nparams = cparam
+
+                if cparam > 0:
+                    self.set_parameters(self.params[:cparam])
+
+                state = self.retrieve_state(feature)
+
+                self.set_parameters(original)
+
+                fubini[cparam, cparam] = state[0] - state[0]**2
+                fubini[cparam + 1, cparam + 1] = state[0] - state[0]**2
+
+            # restore full circuit
+            self._circuit = self._circuit_main
+            self.nparams = self.nparams_main
+
+
+        return fubini
         
     def dloss(self, features, labels):
         """
@@ -207,12 +364,12 @@ class Optimizer:
         loss_gradients = np.zeros(self.nparams)
         loss = 0
 
-        if self.use_fubini:
+        if self.natgrad:
             fubini = np.zeros((self.nparams, self.nparams))
 
         for feat, label in zip(features, labels):
         
-            results = tf.Variable(initial_value=np.zeros(2), dtype=tf.float64)
+            results = tf.Variable(initial_value=np.zeros(2**self._circuit.nqubits), dtype=tf.float64)
             with tf.GradientTape() as tape:
                 local_loss = self.loss(self.params, self._circuit, feat, label, results)
 
@@ -221,7 +378,7 @@ class Optimizer:
 
             obs_gradients = self.parameter_shift(feat)  # d<B> N params, N label gradients
 
-            if self.use_fubini:
+            if self.natgrad:
                 fubini += self.generate_fubini(feat)
 
             for i in range(self.nparams):
@@ -231,7 +388,7 @@ class Optimizer:
         loss_gradients /= len(features)
 
         # Fubini-Study Metric renormalisation
-        if self.use_fubini:
+        if self.natgrad:
 
             fubini /= len(features)
             loss_gradients = np.dot(np.linalg.inv(fubini), loss_gradients)
@@ -343,6 +500,7 @@ class Optimizer:
                 )
                 # in case one wants to plot J as a function of the iterations
                 losses.append(this_loss)
+
 
 
 
