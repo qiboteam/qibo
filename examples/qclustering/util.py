@@ -14,9 +14,9 @@ def calc_norm(a, b):
     Parameters
     ----------
     a : :class:`numpy.ndarray`
-        First vector
+        First vector.
     b : :class:`numpy.ndarray`
-        Second vector
+        Second vector.
     Returns
     -------
     float
