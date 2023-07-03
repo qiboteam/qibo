@@ -448,13 +448,13 @@ class Circuit:
             Circuit object containing only Clifford gates.
         """
 
-        clifford_queue = []
+        clifford_circuit = self.__class__(**self.init_kwargs)
         # cycle on gates replacing non-clifford with clifford
         for gate in self.queue:
-            if gate.is_clifford():
-                clifford_queue.append(gate)
+            if gate.clifford:
+                clifford_circuit.add(gate)
             else:
-                clifford_queue.extend(gate.decompose_into_clifford())
+                clifford_circuit.add(gate.decompose_into_clifford())
 
         # building the clifford circuit
         clifford_circuit = self.__class__(**self.init_kwargs)
