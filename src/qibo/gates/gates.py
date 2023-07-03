@@ -1,12 +1,22 @@
 import math
 from typing import List
 
+import numpy as np
+
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate, ParametrizedGate
 
 
 class H(Gate):
     """The Hadamard gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\frac{1}{\\sqrt{2}} \\, \\begin{pmatrix}
+        1 & 1 \\\\
+        1 & -1 \\\\
+        \\end{pmatrix}
 
     Args:
         q (int): the qubit id number.
@@ -26,6 +36,14 @@ class H(Gate):
 
 class X(Gate):
     """The Pauli X gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        0 & 1 \\\\
+        1 & 0 \\\\
+        \\end{pmatrix}
 
     Args:
         q (int): the qubit id number.
@@ -126,9 +144,20 @@ class X(Gate):
     def basis_rotation(self):
         return H(self.target_qubits[0])
 
+    def is_clifford(self):
+        return True
+
 
 class Y(Gate):
     """The Pauli Y gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        0 & -i \\\\
+        i & 0 \\\\
+        \\end{pmatrix}
 
     Args:
         q (int): the qubit id number.
@@ -154,6 +183,14 @@ class Y(Gate):
 
 class Z(Gate):
     """The Pauli Z gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 \\\\
+        0 & -1 \\\\
+        \\end{pmatrix}
 
     Args:
         q (int): the qubit id number.
@@ -404,6 +441,22 @@ class RX(_Rn_):
     def generator_eigenvalue(self):
         return 0.5
 
+    def is_clifford(self):
+        if np.abs(self.parameters) == np.pi / 2:
+            clifford_condition = True
+        else:
+            clifford_condition = False
+        return clifford_condition
+
+    def decompose_into_clifford(self):
+        clifford_queue = [
+            RZ(q=self.qubits[0], theta=np.pi / 2, trainable=False),
+            RX(q=self.qubits[0], theta=-np.pi / 2, trainable=False),
+            RZ(q=self.qubits[0], theta=self.parameters),
+            RX(q=self.qubits[0], theta=np.pi / 2, trainable=False),
+        ]
+        return clifford_queue
+
 
 class RY(_Rn_):
     """Rotation around the Y-axis of the Bloch sphere.
@@ -439,6 +492,16 @@ class RY(_Rn_):
     def generator_eigenvalue(self):
         return 0.5
 
+    def decompose_into_clifford(self):
+        clifford_queue = [
+            RX(q=self.qubits[0], theta=np.pi / 2, trainable=False),
+            RZ(q=self.qubits[0], theta=self.parameters),
+            RZ(q=self.qubits[0], theta=np.pi, trainable=False),
+            RX(q=self.qubits[0], theta=np.pi / 2, trainable=False),
+            RZ(q=self.qubits[0], theta=np.pi, trainable=False),
+        ]
+        return clifford_queue
+
 
 class RZ(_Rn_):
     """Rotation around the Z-axis of the Bloch sphere.
@@ -471,6 +534,9 @@ class RZ(_Rn_):
 
     def generator_eigenvalue(self):
         return 0.5
+
+    def is_clifford(self):
+        return True
 
 
 class GPI(ParametrizedGate):
@@ -736,6 +802,9 @@ class CNOT(Gate):
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
         q0, q1 = self.control_qubits[0], self.target_qubits[0]
         return [self.__class__(q0, q1)]
+
+    def is_clifford(self):
+        return True
 
 
 class CZ(Gate):
@@ -1374,8 +1443,7 @@ class RZZ(_Rnn_):
 
 
 class MS(ParametrizedGate):
-    """The (partially entangling) Mølmer–Sørensen (MS) gate
-    is a two qubit gate native to trapped ions.
+    """The Mølmer–Sørensen (MS) gate is a two-qubit gate native to trapped ions.
 
     Corresponds to the following unitary matrix
 
@@ -1431,6 +1499,46 @@ class MS(ParametrizedGate):
         q0, q1 = self.target_qubits
         phi0, phi1, theta = self.parameters
         return self.__class__(q0, q1, phi0 + math.pi, phi1, theta)
+
+
+class GIVENS(ParametrizedGate):
+    """The Givens gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+            1 & 0 & 0 & 0 \\\\
+            0 & \\cos(\\theta) & -\\sin(\\theta) & 0 \\\\
+            0 & \\sin(\\theta) & \\cos(\\theta) & 0 \\\\
+            0 & 0 & 0 & 1 \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the first qubit id number.
+        q1 (int): the second qubit id number.
+        theta (float): the rotation angle.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`.
+            Defaults to ``True``.
+    """
+
+    def __init__(self, q0, q1, theta, trainable=True):
+        super().__init__(trainable)
+        self.name = "g"
+        self.draw_label = "G"
+        self.target_qubits = (q0, q1)
+
+        self.parameter_names = "theta"
+        self.parameters = theta
+        self.nparams = 1
+
+        self.init_args = [q0, q1]
+        self.init_kwargs = {"theta": theta, "trainable": trainable}
+
+    def _dagger(self) -> "Gate":
+        """"""
+        return self.__class__(*self.target_qubits, -self.parameters[0])
 
 
 class TOFFOLI(Gate):
@@ -1540,7 +1648,5 @@ class Unitary(ParametrizedGate):
         return gate
 
     def _dagger(self):
-        import numpy as np
-
         ud = np.conj(np.transpose(self.parameters[0]))
         return self.__class__(ud, *self.target_qubits, **self.init_kwargs)

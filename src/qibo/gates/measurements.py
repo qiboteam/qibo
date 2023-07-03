@@ -184,3 +184,7 @@ class M(Gate):
         shot = self.result.add_shot(probs)
         # collapse state
         return backend.collapse_density_matrix(state, qubits, shot, nqubits)
+
+    def is_clifford(self):
+        # this gate must be preserved if we decompose a circuit into Clifford's
+        return True
