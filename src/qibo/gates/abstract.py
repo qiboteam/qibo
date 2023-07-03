@@ -36,6 +36,7 @@ class Gate:
         self.init_args = []
         self.init_kwargs = {}
 
+        self.clifford = False
         self._target_qubits = tuple()
         self._control_qubits = set()
         self._parameters = tuple()
