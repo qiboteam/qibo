@@ -46,7 +46,7 @@ def train_qkmedians(
     nprint : int
         Print loss function value each `nprint` epochs if `verbose` is `True`.
     verbose : str
-        Print log messages if `True`.
+        Print log messages during the training if `True`.
     """
 
     # read train data
