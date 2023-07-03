@@ -65,4 +65,3 @@ python evaluate.py --centroids_file 'centroids.npy' --data_qcd_file 'latentrep_Q
 #### ROC curve plot
 - output of evaluation script
 ![ROC_curve](figures/roc_curve.pdf)
-
