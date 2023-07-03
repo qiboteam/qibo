@@ -281,7 +281,7 @@ class Gate:
         return False
 
     def decompose_into_clifford(self) -> List["Gate"]:
-        """Decompose a gate into a sequence of clifford gates."""
+        """Decompose a gate into a sequence of Clifford gates."""
         raise_error(
             NotImplementedError,
             f"Decomposition into Clifford gates is not implemented for {self.__class__.__name__}",
