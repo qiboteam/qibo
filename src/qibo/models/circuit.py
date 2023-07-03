@@ -451,15 +451,10 @@ class Circuit:
         clifford_circuit = self.__class__(**self.init_kwargs)
         # cycle on gates replacing non-clifford with clifford
         for gate in self.queue:
-            if gate.clifford:
+            if gate.is_clifford():
                 clifford_circuit.add(gate)
             else:
                 clifford_circuit.add(gate.decompose_into_clifford())
-
-        # building the clifford circuit
-        clifford_circuit = self.__class__(**self.init_kwargs)
-        for clifford_gate in clifford_queue:
-            clifford_circuit.add(clifford_gate)
 
         return clifford_circuit
 
