@@ -34,6 +34,14 @@ class H(Gate):
     def qasm_label(self):
         return "h"
 
+    def decompose_into_clifford(self):
+        clifford_queue = [
+            RZ(q=self.qubits[0], theta=np.pi / 2, trainable=False),
+            RX(q=self.qubits[0], theta=np.pi / 2, trainable=False),
+            RZ(q=self.qubits[0], theta=np.pi / 2, trainable=False),
+        ]
+        return clifford_queue
+
 
 class X(Gate):
     """The Pauli X gate.
