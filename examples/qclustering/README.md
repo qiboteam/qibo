@@ -37,10 +37,11 @@ To run a training of quantum k-medians algorithm we need to provide arguments:
 - `min_type` (str): minimization type for distance to cluster search (`default = 'classic'`)
 - `nshots` (int): number of shots for executing quantum circuit (`default = 10000`)
 - `save_dir` (str): path to save results
+- `verbose (bool)`:  print log messages during the training if `True`
+- `nprint (int)`: print loss function value each `nprint` epochs if `verbose` is `True`
 
 ```python
-python train_qkmedians.py --train_size 600 --read_file 'data/latentrep_QCD_sig.h5' --k 2 --seed 123 --tolerance 1e-3 --min_type 'classic' --save_dir 'output_dir'
-```
+python train_qkmedians.py --train_size 600 --read_file 'data/latentrep_QCD_sig.h5' --k 2 --seed 123 --tolerance 1e-3 --min_type 'classic' --save_dir 'output_dir' --verbose true --nprint 1
 
 ### Run evaluation
 To run an evaluation of quantum k-medians algorithm we need to provide arguments:
