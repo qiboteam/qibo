@@ -438,6 +438,24 @@ class Circuit:
             decomp_circuit.add(gate.decompose(*free))
         return decomp_circuit
 
+    def to_clifford(self):
+        """Decompose non Clifford gates of a circuit into Clifford gates."""
+
+        clifford_queue = []
+        # cycle on gates replacing non-clifford with clifford
+        for gate in self.queue:
+            if gate.is_clifford():
+                clifford_queue.append(gate)
+            else:
+                clifford_queue.extend(gate.decompose_into_clifford())
+
+        # initializing clifford circuit
+        clifford_circuit = self.__class__(**self.init_kwargs)
+        for clifford_gate in clifford_queue:
+            clifford_circuit.add(clifford_gate)
+
+        return clifford_circuit
+
     def with_pauli_noise(self, noise_map: NoiseMapType):
         """Creates a copy of the circuit with Pauli noise gates after each gate.
 
