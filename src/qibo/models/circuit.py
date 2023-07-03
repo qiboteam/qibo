@@ -725,7 +725,7 @@ class Circuit:
                 c.set_parameters(params)
         """
         from collections.abc import Iterable
-        print(parameters)
+
         if isinstance(parameters, dict):
             diff = set(parameters.keys()) - self.trainable_gates.set
             if diff:
