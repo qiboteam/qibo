@@ -359,7 +359,8 @@ def finite_differences(
     hamiltonian,
     parameter_index,
     initial_state=None,
-    step_size=1e-7,
+    step_size=1e-1,
+    nshots=None
 ):
     """
     Calculate derivative of the expectation value of `hamiltonian` on the
@@ -405,21 +406,41 @@ def finite_differences(
     shifted[parameter_index] += step_size
     circuit.set_parameters(shifted)
 
-    # forward evaluation
-    forward = hamiltonian.expectation(
-        backend.execute_circuit(circuit=circuit, initial_state=initial_state).state()
-    )
+    if nshots is None:
+        # forward evaluation
+        forward = hamiltonian.expectation(
+            backend.execute_circuit(
+                circuit=circuit, initial_state=initial_state
+            ).state()
+        )
 
-    # backward shift and evaluation
-    shifted[parameter_index] -= 2 * step_size
-    circuit.set_parameters(shifted)
+        # backward shift and evaluation
+        shifted[parameter_index] -= 2 * step_size
+        circuit.set_parameters(shifted)
 
-    backward = hamiltonian.expectation(
-        backend.execute_circuit(circuit=circuit, initial_state=initial_state).state()
-    )
+        backward = hamiltonian.expectation(
+            backend.execute_circuit(
+                circuit=circuit, initial_state=initial_state
+            ).state()
+        )
+
+    # same but using expectation from samples
+    else:
+        forward = backend.execute_circuit(
+            circuit=circuit, initial_state=initial_state, nshots=nshots
+        ).expectation_from_samples(hamiltonian)
+
+        shifted[parameter_index] -= 2 * step_size
+        circuit.set_parameters(shifted)
+
+        backward = backend.execute_circuit(
+            circuit=circuit, initial_state=initial_state, nshots=nshots
+        ).expectation_from_samples(hamiltonian)
 
     circuit.set_parameters(parameters)
 
     result = (forward - backward) / (2 * step_size)
+
+    print(nshots, result)
 
     return result
