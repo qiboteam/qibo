@@ -7,11 +7,126 @@ import numpy as np
 import random
 import tensorflow as tf
 
+class Node:
+    def __init__(self, gate, true_param_index, dummy_param):
+        self.gate = gate
+        self.true_param_index = true_param_index
+        self.dummy_param = dummy_param
+        self.prev = None
+        self.next = None
+
+class ConvergeNode(Node):
+    def __init__(self, gate, true_param_index, dummy_param):
+        super().__init__(gate, true_param_index, dummy_param)
+        self.prev_target = None
+        self.next_target = None
+        self.waiting = None
+
+class Graph:
+    def __init__(self, nqubits, gates, true_param_index, dummy_param):
+        self.gates = gates
+        self.true_param = true_param_index
+        self.dummy_param = dummy_param
+        self.nqubits = nqubits
+
+    def build_graph(self):
+        start = [None]*self.nqubits
+        ends = [None]*self.nqubits
+        depth = [0]*self.nqubits
+        nodes = list()
+
+        for i, gate in enumerate(self.gates):
+
+            n = len(gate.init_args) - 1
+
+            if n == 1:
+
+                node = ConvergeNode(gate, 0, 0)
+                control = gate.init_args[0]
+                target = gate.init_args[1]
+
+                if start[control] is None:
+                    start[control] = i
+                    ends[control] = i
+                else:
+                    nodes[ends[control]].next = i
+                    node.prev = ends[control]
+                    ends[control] = i
+
+                if start[target] is None:
+                    start[target] = i
+                    ends[target] = i
+                else:
+                    nodes[ends[target]].next = i
+                    node.prev = ends[target]
+                    ends[target] = i  
+
+                depth[control] += 1
+                depth[target] += 1                
+
+            else:
+                node = Node(gate, 0, 0)
+                qubit = gate.init_args[0]
+                if start[qubit] is None:
+                    start[qubit] = i
+                    ends[qubit] = i
+                else:
+                    nodes[ends[qubit]].next = i
+                    node.prev = ends[qubit]
+                    ends[qubit] = i
+
+                depth[qubit] += 1
+
+            nodes.append(node)
+
+        self.start = start
+        self.end = ends
+        self.nodes = nodes
+        self.depth = max(depth)
+
+    def run_layer(self, layer):
+
+        c = Circuit(self.nqubits, density_matrix=True)
+
+        current = self.start[:]
+
+        trainable_qubits = []
+
+        for iter in range(layer):
+
+            for q in range(self.nqubits):
+
+                node = self.nodes[current[q]]
+
+                if isinstance(node, ConvergeNode):
+
+                    if node.waiting is None:
+                        node.waiting = q
+                    elif node.waiting != q:
+                        c.add(node.gate)
+                        control = node.gate.init_args[0]
+                        target = node.gate.init_args[1]
+                        current[control] = node.next
+                        current[target] = node.next_target
+                        node.waiting = None
+                
+                elif iter == (layer - 1) and isinstance(node.gate, gates.ParametrizedGate):     
+                    c.add(gates.M(q))
+                    trainable_qubits.append(q)
+    
+                else:
+
+                    c.add(node.gate)
+                    if node.next:
+                        current[q] = node.next
+
+        return c, trainable_qubits
+
 
 class Optimizer:
     """Parent optimizer"""
     
-    def __init__(self, loss, args=(), method="sgd", options=None):
+    def __init__(self, loss, circuit, args=(), method="sgd", options=None):
         self.loss = loss
         self.method = method
         self.args = args
@@ -24,19 +139,20 @@ class Optimizer:
         if self.natgrad:
             print("Using Natural Gradient")
 
-        if not isinstance(args[0], np.ndarray):
+        if not isinstance(args, np.ndarray):
             raise("First argument to loss function must be a numpy array with circuit parameters")
         
-        self.params = args[0]
+        self.params = args
         self.nparams = len(self.params)
         self.nparams_main = len(self.params)
 
-        if not isinstance(args[1], Circuit):
-            raise("Second argument to loss function must be a Circuit")
+        if not isinstance(circuit, Circuit):
+            raise("Circuit is not of correct object type")
         
-        self._circuit_main = args[1]
+        self._circuit_main = circuit
         self._circuit = self._circuit_main
         self.nqubits = self._circuit_main.nqubits
+        self.full_params = None
 
 
     def fit(self, X, y):
@@ -82,10 +198,25 @@ class Optimizer:
                 self.options
             )
         
+    def run_circuit(self, parameters, nshots=1024):
+
+        param_values = []
+
+        for Param in parameters:
+            param_values.append(Param._value)
+
+        if self.natgrad:
+            self.full_params = parameters
+
+        self._circuit.set_parameters(param_values)
+
+        self.results.assign_add(self._circuit(nshots=nshots).probabilities(qubits=[0,1])) # CHANGE
+
+        return self.results
+        
     def one_prediction(self, feature):
-        results = tf.Variable(initial_value=np.zeros(2**self.nqubits), dtype=tf.float64)
-        _ = self.loss(self.params, self._circuit, feature, 0, results)
-        return results[0]
+        _ = self.loss(self, self.params, feature, 0)
+        return self.results[0]
         
     def set_parameters(self, new_params):
         """
@@ -203,74 +334,6 @@ class Optimizer:
             obs_gradients[ipar] = self.shift_parameter(ipar, this_feature, forward_func, backward_func, param=param) / factor
         return obs_gradients
     
-    def _update_layered_circuit(self, matrix, idx, gate, gate_symbol=None):
-        """Helper method for :meth:`qibo.models.circuit.Circuit.draw`."""
-
-        if isinstance(gate, gates.CallbackGate):
-            targets = list(range(self.nqubits))
-        else:
-            targets = list(gate.target_qubits)
-        controls = list(gate.control_qubits)
-
-        # identify boundaries
-        qubits = targets + controls
-        qubits.sort()
-        min_qubits_id = qubits[0]
-        max_qubits_id = qubits[-1]
-
-        # identify column
-        col = idx[targets[0]] if not controls and len(targets) == 1 else max(idx)
-
-        # extend matrix
-        for iq in range(self.nqubits):
-            matrix[iq].extend((1 + col - len(matrix[iq])) * [None])
-
-        # fill
-        for iq in range(min_qubits_id, max_qubits_id + 1):
-            if iq in targets:
-                matrix[iq][col] = gate
-            elif iq in controls:
-                matrix[iq][col] = None
-            else:
-                matrix[iq][col] = None
-
-        # update indexes
-        if not controls and len(targets) == 1:
-            idx[targets[0]] += 1
-        else:
-            idx = [col + 1] * self.nqubits
-
-        return matrix, idx
-    
-    def layered_circuit(self):
-        """Draw text circuit using unicode symbols.
-
-        Args:
-            line_wrap (int): maximum number of characters per line. This option
-                split the circuit text diagram in chunks of line_wrap characters.
-            legend (bool): If ``True`` prints a legend below the circuit for
-                callbacks and channels. Default is ``False``.
-
-        Return:
-            String containing text circuit diagram.
-        """
-        # build string representation of gates
-        matrix = [[] for _ in range(self.nqubits)]
-        idx = [0] * self.nqubits
-
-        for gate in self._circuit_main.queue:
-            if isinstance(gate, gates.FusedGate):
-                # start fused gate
-                matrix, idx = self._update_layered_circuit(matrix, idx, gate, "[")
-                # draw gates contained in the fused gate
-                for subgate in gate.gates:
-                    matrix, idx = self._update_layered_circuit(matrix, idx, subgate)
-                # end fused gate
-                matrix, idx = self._update_layered_circuit(matrix, idx, gate, "]")
-            else:
-                matrix, idx = self._update_layered_circuit(matrix, idx, gate)
-
-        return matrix
     
     def generate_fubini(self, feature, method="variance"):
         """Generate the Fubini-Study metric tensor"""
@@ -298,58 +361,24 @@ class Optimizer:
 
         elif method == "variance":
 
-            # trainable and non trainable should be separated into different columns! Not sure
-            matrix = self.layered_circuit()
+            # create graph
+            original_params = []
+            for Param in self.full_params:
+                original_params.append(Param._o_params)
 
-            # empty circuit
-            self.subcircuit = Circuit(self.nqubits, density_matrix=True)
+            gate_params = self._circuit.associate_gates_with_parameters()
 
-            for col in range(len(matrix[0])):
+            graph = Graph(self.nqubits, self._circuit.queue, original_params, gate_params)
 
-                variational_flag = False
+            graph.build_graph()
 
-                for gate in matrix[:, col]:
-                   
-                    if isinstance(gate, gates.ParametrizedGate):
-                        variational_flag = True
-
-                if variational_flag:
-
-                    for i in range(self.nqubits):
-                        self.subcircuit.add(gates.M(i), basis=gates.Z) # change basis
-
-                    #   3) remove measurement gate
-
-                    # add gate to circuit
-
-
-            # run through all layers one by one
-            for cparam in range(0, self.nparams, 2):
-
-                if cparam % 4 == 0:
-                    basis = gates.Z
-                else:
-                    basis = gates.Y
-
-
-                # build subcircuit
-                self._circuit = self.ansatz(self.layers, cparam, basis=basis)
-                self.nparams = cparam
-
-                if cparam > 0:
-                    self.set_parameters(self.params[:cparam])
-
-                state = self.retrieve_state(feature)
-
-                self.set_parameters(original)
-
-                fubini[cparam, cparam] = state[0] - state[0]**2
-                fubini[cparam + 1, cparam + 1] = state[0] - state[0]**2
+            for i in range(graph.depth):
+                c, qubits = graph.run_layer(i)
+                print(c.draw())
+            
 
             # restore full circuit
             self._circuit = self._circuit_main
-            self.nparams = self.nparams_main
-
 
         return fubini
         
@@ -369,12 +398,12 @@ class Optimizer:
 
         for feat, label in zip(features, labels):
         
-            results = tf.Variable(initial_value=np.zeros(2**self._circuit.nqubits), dtype=tf.float64)
+            self.results = tf.Variable(initial_value=np.zeros(2**self._circuit.nqubits), dtype=tf.float64)
             with tf.GradientTape() as tape:
-                local_loss = self.loss(self.params, self._circuit, feat, label, results)
+                local_loss = self.loss(self, self.params, feat, label)
 
             loss += local_loss
-            grads = tape.gradient(local_loss, results)
+            grads = tape.gradient(local_loss, self.results)
 
             obs_gradients = self.parameter_shift(feat)  # d<B> N params, N label gradients
 
@@ -502,121 +531,12 @@ class Optimizer:
                 losses.append(this_loss)
 
 
+class Parameter:
 
+    def __init__(self, value, original_params):
+        self._value = value
+        self._o_params = original_params
 
-
-##############################################################
-def optimize(
-    loss,
-    initial_parameters,
-    args=(),
-    method="Powell",
-    jac=None,
-    hess=None,
-    hessp=None,
-    bounds=None,
-    constraints=(),
-    tol=None,
-    callback=None,
-    options=None,
-    compile=False,
-    processes=None,
-    backend=None,
-):
-    """Main optimization method. Selects one of the following optimizers:
-        - :meth:`qibo.optimizers.cmaes`
-        - :meth:`qibo.optimizers.newtonian`
-        - :meth:`qibo.optimizers.sgd`
-
-    Args:
-        loss (callable): Loss as a function of ``parameters`` and optional extra
-            arguments. Make sure the loss function returns a tensor for ``method=sgd``
-            and numpy object for all the other methods.
-        initial_parameters (np.ndarray): Initial guess for the variational
-            parameters that are optimized.
-        args (tuple): optional arguments for the loss function.
-        method (str): Name of optimizer to use. Can be ``'cma'``, ``'sgd'`` or
-            one of the Newtonian methods supported by
-            :meth:`qibo.optimizers.newtonian` and ``'parallel_L-BFGS-B'``. ``sgd`` is
-            only available for backends based on tensorflow.
-        jac (dict): Method for computing the gradient vector for scipy optimizers.
-        hess (dict): Method for computing the hessian matrix for scipy optimizers.
-        hessp (callable): Hessian of objective function times an arbitrary
-            vector for scipy optimizers.
-        bounds (sequence or Bounds): Bounds on variables for scipy optimizers.
-        constraints (dict): Constraints definition for scipy optimizers.
-        tol (float): Tolerance of termination for scipy optimizers.
-        callback (callable): Called after each iteration for scipy optimizers.
-        options (dict): Dictionary with options. See the specific optimizer
-            bellow for a list of the supported options.
-        compile (bool): If ``True`` the Tensorflow optimization graph is compiled.
-            This is relevant only for the ``'sgd'`` optimizer.
-        processes (int): number of processes when using the parallel BFGS method.
-
-    Returns:
-        (float, float, custom): Final best loss value; best parameters obtained by the optimizer;         extra: optimizer-specific return object. For scipy methods it
-        returns the ``OptimizeResult``, for ``'cma'`` the ``CMAEvolutionStrategy.result``,
-        and for ``'sgd'`` the options used during the optimization.
-
-
-    Example:
-        .. testcode::
-
-            import numpy as np
-            from qibo import gates, models
-            from qibo.optimizers import optimize
-
-            # create custom loss function
-            # make sure the return type matches the optimizer requirements.
-            def myloss(parameters, circuit):
-                circuit.set_parameters(parameters)
-                return np.square(np.sum(circuit())) # returns numpy array
-
-            # create circuit ansatz for two qubits
-            circuit = models.Circuit(2)
-            circuit.add(gates.RY(0, theta=0))
-
-            # optimize using random initial variational parameters
-            initial_parameters = np.random.uniform(0, 2, 1)
-            best, params, extra = optimize(myloss, initial_parameters, args=(circuit))
-
-            # set parameters to circuit
-            circuit.set_parameters(params)
-    """
-    if method == "cma":
-        if bounds is not None:  # pragma: no cover
-            raise_error(
-                RuntimeError,
-                "The keyword 'bounds' cannot be used with the cma optimizer. Please use 'options' instead as defined by the cma documentation: ex. options['bounds'] = [0.0, 1.0].",
-            )
-        return cmaes(loss, initial_parameters, args, options)
-    elif method == "sgd":
-        if backend is None:
-            from qibo.backends import GlobalBackend
-
-            backend = GlobalBackend()
-        return sgd(loss, initial_parameters, args, options, compile, backend)
-    else:
-        if backend is None:
-            from qibo.backends import GlobalBackend
-
-            backend = GlobalBackend()
-        return newtonian(
-            loss,
-            initial_parameters,
-            args,
-            method,
-            jac,
-            hess,
-            hessp,
-            bounds,
-            constraints,
-            tol,
-            callback,
-            options,
-            processes,
-            backend,
-        )
 
 
 def cmaes(loss, initial_parameters, args=(), options=None):
