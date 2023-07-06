@@ -121,6 +121,16 @@ class Graph:
         self.nodes = nodes
         self.depth = max(depth)
 
+    def _determine_basis(self, gate):
+        gname = gate.name
+
+        if gname == "rx":
+            return gates.X
+        elif gname == "ry":
+            return gates.Y
+        else:
+            return gates.Z
+
     def run_layer(self, layer):
         """Runs through one layer of the circuit parameters
         Args:
@@ -140,7 +150,7 @@ class Graph:
         affected_params = []
 
         # run through layer up to N
-        for iter in range(layer):
+        for iter in range(layer+1):
 
             # run through all qubits
             for q in range(self.nqubits):
@@ -163,9 +173,9 @@ class Graph:
                         node.waiting = None
                 
                 # replace last layer by M gate
-                elif iter == (layer - 1) and isinstance(node.gate, gates.ParametrizedGate):     
+                elif iter == layer and isinstance(node.gate, gates.ParametrizedGate):     
 
-                    c.add(gates.M(q))
+                    c.add(gates.M(q, basis=self._determine_basis(node.gate)))
                     trainable_qubits.append(q)
                     affected_params.append(node.trainable_params)
     
@@ -190,6 +200,7 @@ class Optimizer:
         self.backend = None
         self.shift_rule = "psr"
 
+
         # natural gradient
         self.natgrad = True
         if self.natgrad:
@@ -209,6 +220,8 @@ class Optimizer:
         self._circuit = self._circuit_main
         self.nqubits = self._circuit_main.nqubits
         self.Parameters = None
+        self.results = tf.Variable(initial_value=np.zeros(2**self._circuit.nqubits), dtype=tf.float64)
+
 
 
     def fit(self, X, y):
@@ -273,7 +286,7 @@ class Optimizer:
 
         self._circuit.set_parameters(param_values)
 
-        self.results.assign_add(self._circuit(nshots=nshots).probabilities(qubits=[0,1])) # CHANGE
+        self.results.assign_add(self._circuit(nshots=nshots).probabilities(qubits=[0])) # CHANGE
 
         return self.results
         
@@ -469,18 +482,25 @@ class Optimizer:
             # run through layers
             for i in range(graph.depth):
                 c, qubits, affected_param = graph.run_layer(i)
+                if len(qubits) == 0:
+                    continue
 
                 state = c().state()
+                print(c.draw())
+                print("state", i, state)
 
                 # run through parametrized gate
                 for qubit, params in zip(qubits, affected_param):
                     hamiltonian = self._create_hamiltonian(qubit, self.nqubits)
+                    print(hamiltonian.matrix)
 
                     result = hamiltonian.expectation(state)
 
                     for p in params:
                         # update Fubini-Study matrix
-                        fubini[p, p] = result
+                        fubini[p, p] = result - result**2
+                print("result: ", result - result**2)
+                #exit(0)
 
         return fubini
         
@@ -499,7 +519,6 @@ class Optimizer:
             fubini = np.zeros((self.nparams, self.nparams))
 
         for feat, label in zip(features, labels):
-        
             self.results = tf.Variable(initial_value=np.zeros(2**self._circuit.nqubits), dtype=tf.float64)
             with tf.GradientTape() as tape:
                 local_loss = self.loss(self, self.params, feat, label)
