@@ -2,60 +2,91 @@ from scipy.optimize import basinhopping
 #from qibo.noise import NoiseModel
 from qibo.config import log, raise_error
 from qibo.models import Circuit
+from qibo import backends
+from qibo.symbols import Symbol
+from qibo.hamiltonians import SymbolicHamiltonian
 from qibo import gates
 import numpy as np
 import random
 import tensorflow as tf
 
 class Node:
-    def __init__(self, gate, true_param_index, dummy_param):
+    """Parent class to create gate nodes"""
+
+    def __init__(self, gate, trainable_params, gate_params):
         self.gate = gate
-        self.true_param_index = true_param_index
-        self.dummy_param = dummy_param
+        self.trainable_params = trainable_params # index of optimisable parameters
+        self.gate_params = gate_params # gate parameters
         self.prev = None
         self.next = None
 
 class ConvergeNode(Node):
-    def __init__(self, gate, true_param_index, dummy_param):
-        super().__init__(gate, true_param_index, dummy_param)
+    """Node for two-qubit gates"""
+    def __init__(self, gate, trainable_params, gate_params):
+        super().__init__(gate, trainable_params, gate_params)
         self.prev_target = None
         self.next_target = None
         self.waiting = None
 
 class Graph:
-    def __init__(self, nqubits, gates, true_param_index, dummy_param):
+    """Creates a graph representation of a circuit"""
+
+    def __init__(self, nqubits, gates, trainable_params, gate_params):
         self.gates = gates
-        self.true_param = true_param_index
-        self.dummy_param = dummy_param
+        self.trainable_params = trainable_params
+        self.gate_params = gate_params
         self.nqubits = nqubits
 
     def build_graph(self):
+        """
+        Builds graph based on the circuit gates and associates parameters to each gate.
+        """
+
+        # setup
         start = [None]*self.nqubits
         ends = [None]*self.nqubits
         depth = [0]*self.nqubits
         nodes = list()
 
+        count = 0
+        # run through each gate in circuit queue
         for i, gate in enumerate(self.gates):
 
             n = len(gate.init_args) - 1
+            
+            # store parameters for ParametrizedGate
+            if isinstance(gate, gates.ParametrizedGate):
+                trainp = self.trainable_params[count]
+                gatep = self.gate_params[count]
+                count += 1
+            else:
+                trainp = None
+                gatep = None
 
+            # two-qubit gates
             if n == 1:
 
-                node = ConvergeNode(gate, 0, 0)
+                node = ConvergeNode(gate, trainp, gatep)
                 control = gate.init_args[0]
                 target = gate.init_args[1]
 
+                # control qubit
+                # start of graph
                 if start[control] is None:
                     start[control] = i
                     ends[control] = i
+                # link to existing graph node
                 else:
                     nodes[ends[control]].next = i
                     node.prev = ends[control]
                     ends[control] = i
 
+                # target qubit
+                # start of graph
                 if start[target] is None:
                     start[target] = i
                     ends[target] = i
+                # link to existing graph node
                 else:
                     nodes[ends[target]].next = i
                     node.prev = ends[target]
@@ -64,12 +95,17 @@ class Graph:
                 depth[control] += 1
                 depth[target] += 1                
 
+            # one-qubit gate
             else:
-                node = Node(gate, 0, 0)
+
+                node = Node(gate, trainp, gatep)
                 qubit = gate.init_args[0]
+
+                # start of graph
                 if start[qubit] is None:
                     start[qubit] = i
                     ends[qubit] = i
+                # link to existing graph node
                 else:
                     nodes[ends[qubit]].next = i
                     node.prev = ends[qubit]
@@ -77,6 +113,7 @@ class Graph:
 
                 depth[qubit] += 1
 
+            # add node to list
             nodes.append(node)
 
         self.start = start
@@ -85,23 +122,38 @@ class Graph:
         self.depth = max(depth)
 
     def run_layer(self, layer):
+        """Runs through one layer of the circuit parameters
+        Args:
+            layer: int, layer number N
+        Returns: 
+            c: circuit up to nth layer
+            trainable_qubits: qubits on which we find trainable gates
+            affected_params: which trainable parameters are linked to the trainable gates
+        """
 
+        # empty circuit
         c = Circuit(self.nqubits, density_matrix=True)
 
         current = self.start[:]
 
         trainable_qubits = []
+        affected_params = []
 
+        # run through layer up to N
         for iter in range(layer):
 
+            # run through all qubits
             for q in range(self.nqubits):
 
                 node = self.nodes[current[q]]
 
+                # wait for both qubits to reach two-qubit node
                 if isinstance(node, ConvergeNode):
 
+                    # first arrived
                     if node.waiting is None:
                         node.waiting = q
+                    # second arrived
                     elif node.waiting != q:
                         c.add(node.gate)
                         control = node.gate.init_args[0]
@@ -110,17 +162,21 @@ class Graph:
                         current[target] = node.next_target
                         node.waiting = None
                 
+                # replace last layer by M gate
                 elif iter == (layer - 1) and isinstance(node.gate, gates.ParametrizedGate):     
+
                     c.add(gates.M(q))
                     trainable_qubits.append(q)
+                    affected_params.append(node.trainable_params)
     
+                # simple one-qubit node
                 else:
 
                     c.add(node.gate)
                     if node.next:
                         current[q] = node.next
 
-        return c, trainable_qubits
+        return c, trainable_qubits, affected_params
 
 
 class Optimizer:
@@ -152,7 +208,7 @@ class Optimizer:
         self._circuit_main = circuit
         self._circuit = self._circuit_main
         self.nqubits = self._circuit_main.nqubits
-        self.full_params = None
+        self.Parameters = None
 
 
     def fit(self, X, y):
@@ -199,14 +255,21 @@ class Optimizer:
             )
         
     def run_circuit(self, parameters, nshots=1024):
-
+        """
+        User-facing function which runs the circuit with given parameters and returns the result
+        Args:
+            parameters: trainable parameters of type Parameter
+            nshots: number of shots to average circuit expectation values
+        Return:
+            results
+        """
         param_values = []
 
         for Param in parameters:
-            param_values.append(Param._value)
+            param_values.append(Param._gatep)
 
         if self.natgrad:
-            self.full_params = parameters
+            self.Parameters = parameters
 
         self._circuit.set_parameters(param_values)
 
@@ -215,6 +278,14 @@ class Optimizer:
         return self.results
         
     def one_prediction(self, feature):
+        """
+        Runs the user loss function and returns the result of the measurements for gradient calculation
+        Args:
+            feature: feature value given to loss function
+        Return:
+            float, circuit expectation result
+        """
+        # label value is insignificant
         _ = self.loss(self, self.params, feature, 0)
         return self.results[0]
         
@@ -334,6 +405,30 @@ class Optimizer:
             obs_gradients[ipar] = self.shift_parameter(ipar, this_feature, forward_func, backward_func, param=param) / factor
         return obs_gradients
     
+    def _create_hamiltonian(self, qubit, nqubit):
+        """
+        Creates appropriate Hamiltonian for Fubini-Matrix generation
+        Args:
+            qubit: qubit number whose state we are interested in
+            nqubit: total number of qubits, which determines size of Hamiltonian
+        Return:
+            hamiltonian: SymbolicHamiltonian
+        """
+        standard = np.array([[1, 0], [0, 1]])
+        target = np.array([[1, 0], [0, 0]])
+        hams = []
+
+        for i in range(nqubit):
+            if i == qubit:
+                hams.append(Symbol(i, target))
+            else:
+                hams.append(Symbol(i, standard))
+
+        # create Hamiltonian
+        obs = np.prod(hams)
+        hamiltonian = SymbolicHamiltonian(obs)
+
+        return hamiltonian
     
     def generate_fubini(self, feature, method="variance"):
         """Generate the Fubini-Study metric tensor"""
@@ -361,24 +456,31 @@ class Optimizer:
 
         elif method == "variance":
 
-            # create graph
-            original_params = []
-            for Param in self.full_params:
-                original_params.append(Param._o_params)
-
+            # trainable and gate parameters
             gate_params = self._circuit.associate_gates_with_parameters()
+            trainable_params = []
+            for Param in self.Parameters:
+                trainable_params.append(Param._trainablep)
 
-            graph = Graph(self.nqubits, self._circuit.queue, original_params, gate_params)
-
+            # build graph from circuit gates
+            graph = Graph(self.nqubits, self._circuit.queue, trainable_params, gate_params)
             graph.build_graph()
 
+            # run through layers
             for i in range(graph.depth):
-                c, qubits = graph.run_layer(i)
-                print(c.draw())
-            
+                c, qubits, affected_param = graph.run_layer(i)
 
-            # restore full circuit
-            self._circuit = self._circuit_main
+                state = c().state()
+
+                # run through parametrized gate
+                for qubit, params in zip(qubits, affected_param):
+                    hamiltonian = self._create_hamiltonian(qubit, self.nqubits)
+
+                    result = hamiltonian.expectation(state)
+
+                    for p in params:
+                        # update Fubini-Study matrix
+                        fubini[p, p] = result
 
         return fubini
         
@@ -533,10 +635,9 @@ class Optimizer:
 
 class Parameter:
 
-    def __init__(self, value, original_params):
-        self._value = value
-        self._o_params = original_params
-
+    def __init__(self, value, trainablep):
+        self._gatep = value
+        self._trainablep = trainablep
 
 
 def cmaes(loss, initial_parameters, args=(), options=None):
