@@ -1240,6 +1240,40 @@ class fSim(ParametrizedGate):
         return self.__class__(q0, q1, *params)
 
 
+class SYC(Gate):
+    """The Sycamore gate, defined in the Supplementary Information
+    of `Quantum supremacy using a programmable superconducting processor
+    <https://www.nature.com/articles/s41586-019-1666-5>`_.
+
+    Corresponding to the following unitary matrix
+
+    .. math::
+        \\text{fSim}(\\pi / 2, \\, \\pi / 6) = \\beging{pmatrix}
+            1 & 0 & 0 & 0 \\\\
+            0 & 0 & -i & 0 \\\\
+            0 & -i & 0 & 0 \\\\
+            0 & 0 & 0 & e^{-i \\pi / 6} \\\\
+        \\end{pmatrix} \\, ,
+
+    where :math:`\\text{fSim}` is the :class:`qibo.gates.fSim` gate.
+
+    Args:
+        q0 (int): the first qubit to be swapped id number.
+        q1 (int): the second qubit to be swapped id number.
+    """
+
+    def __init__(self, q0, q1):
+        super().__init__()
+        self.name = "syc"
+        self.draw_label = "SYC"
+        self.target_qubits = (q0, q1)
+        self.init_args = [q0, q1]
+
+    # def _dagger(self) -> "Gate":
+    #     """"""
+    #     return fSim(*self.target_qubits, -np.pi / 2, -np.pi / 6)
+
+
 class GeneralizedfSim(ParametrizedGate):
     """The fSim gate with a general rotation.
 
@@ -1277,8 +1311,6 @@ class GeneralizedfSim(ParametrizedGate):
         self.init_kwargs = {"unitary": unitary, "phi": phi, "trainable": trainable}
 
     def _dagger(self):
-        import numpy as np
-
         q0, q1 = self.target_qubits
         u, phi = self.parameters
         init_kwargs = dict(self.init_kwargs)
@@ -1771,8 +1803,6 @@ class Unitary(ParametrizedGate):
 
     @Gate.parameters.setter
     def parameters(self, x):
-        import numpy as np
-
         shape = self.parameters[0].shape
         self._parameters = (np.reshape(x, shape),)
         for gate in self.device_gates:  # pragma: no cover
