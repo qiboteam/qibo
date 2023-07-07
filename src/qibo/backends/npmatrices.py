@@ -276,6 +276,9 @@ class NumpyMatrices:
             dtype=self.dtype,
         )
 
+    def RBS(self, theta):
+        return self.GIVENS(-theta)
+
     @cached_property
     def TOFFOLI(self):
         return self.np.array(
