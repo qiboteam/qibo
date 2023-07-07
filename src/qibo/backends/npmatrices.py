@@ -191,6 +191,21 @@ class NumpyMatrices:
             dtype=self.dtype,
         )
 
+    @cached_property
+    def SYC(self):
+        cost = self.np.cos(self.np.pi / 2) + 0j
+        isint = -1j * self.np.sin(self.np.pi / 2)
+        phase = self.np.exp(-1j * self.np.pi / 6)
+        return self.np.array(
+            [
+                [1, 0, 0, 0],
+                [0, cost, isint, 0],
+                [0, isint, cost, 0],
+                [0, 0, 0, phase],
+            ],
+            dtype=self.dtype,
+        )
+
     def GeneralizedfSim(self, u, phi):
         phase = self.np.exp(-1j * phi)
         return self.np.array(
