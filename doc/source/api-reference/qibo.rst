@@ -591,6 +591,13 @@ fSim
     :members:
     :member-order: bysource
 
+Sycamore gate
+"""""""""""""
+
+.. autoclass:: qibo.gates.SYC
+    :members:
+    :member-order: bysource
+
 fSim with general rotation
 """"""""""""""""""""""""""
 
