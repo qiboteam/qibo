@@ -619,6 +619,13 @@ Parametric ZZ interaction (RZZ)
     :members:
     :member-order: bysource
 
+Parametric ZX interaction (RZX)
+"""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.RZX
+    :members:
+    :member-order: bysource
+
 Givens gate
 """""""""""
 
@@ -626,10 +633,17 @@ Givens gate
     :members:
     :member-order: bysource
 
-RBS gate
-""""""""
+Reconfigurable Beam Splitter gate (RBS)
+"""""""""""""""""""""""""""""""""""""""
 
 .. autoclass:: qibo.gates.RBS
+    :members:
+    :member-order: bysource
+
+Echo Cross-Ressonance gate (ECR)
+""""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.ECR
     :members:
     :member-order: bysource
 
