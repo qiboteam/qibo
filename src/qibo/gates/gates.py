@@ -1547,7 +1547,7 @@ class RBS(ParametrizedGate):
     def __init__(self, q0, q1, theta, trainable=True):
         super().__init__(trainable)
         self.name = "rbs"
-        self.draw_label = "BS"
+        self.draw_label = "RBS"
         self.target_qubits = (q0, q1)
 
         self.parameter_names = "theta"
