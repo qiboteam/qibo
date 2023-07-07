@@ -1552,6 +1552,21 @@ class GIVENS(ParametrizedGate):
         """"""
         return self.__class__(*self.target_qubits, -self.parameters[0])
 
+    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
+        """Decomposition of Givens gate according to
+        ArXiv:2106.13839 <https://arxiv.org/abs/2106.13839>_.
+        """
+        q0, q1 = self.target_qubits
+        theta = self.init_kwargs["theta"]
+        return [
+            CNOT(q0, q1),
+            RY(q0, theta / 2),
+            CNOT(q1, q0),
+            RY(q0, -theta / 2),
+            CNOT(q1, q0),
+            CNOT(q0, q1),
+        ]
+
 
 class RBS(ParametrizedGate):
     """The Reconfigurable Beam Splitter gate.
