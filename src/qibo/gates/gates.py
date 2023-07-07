@@ -1623,7 +1623,8 @@ class ECR(Gate):
         \\end{pmatrix}
 
     Args:
-        Gate (_type_): _description_
+        q0 (int): the first qubit id number.
+        q1 (int): the second qubit id number.
     """
 
     def __init__(self, q0, q1):
