@@ -1608,6 +1608,36 @@ class RBS(ParametrizedGate):
         ]
 
 
+class ECR(Gate):
+    """THe Echo Cross-Resonance gate.
+
+    Corresponds ot the following matrix
+
+    .. math::
+        \\frac{1}{\\sqrt{2}} \\left( X \\, I - Y \\, X \\right) =
+        \\frac{1}{\\sqrt{2}} \\, \\begin{pmatrix}
+            0 & 0 & 1 & i \\\\
+            0 & 0 & i & 1 \\\\
+            1 & -i & 0 & 0 \\\\
+            -i & 1 & 0 & 0 \\\\
+        \\end{pmatrix}
+
+    Args:
+        Gate (_type_): _description_
+    """
+
+    def __init__(self, q0, q1):
+        super().__init__()
+        self.name = "ecr"
+        self.draw_label = "ECR"
+        self.target_qubits = (q0, q1)
+        self.init_args = [q0, q1]
+
+    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
+        q0, q1 = self.target_qubits
+        return [RZX(q0, q1, np.pi / 4), RX(q1, np.pi), RZX(q0, q1, -np.pi / 4)]
+
+
 class TOFFOLI(Gate):
     """The Toffoli gate.
 
