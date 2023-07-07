@@ -382,10 +382,43 @@ def test_fsim(backend):
     matrix[3, 3] = np.exp(-1j * phi)
     matrix = backend.cast(matrix, dtype=matrix.dtype)
     target_state = np.dot(matrix, target_state)
+
     backend.assert_allclose(final_state, target_state)
+
     with pytest.raises(NotImplementedError):
         gates.fSim(0, 1, theta, phi).qasm_label
+
     assert not gates.fSim(0, 1, theta, phi).clifford
+
+
+def test_sycamore(backend):
+    nqubits = 2
+    initial_state = random_statevector(2**nqubits, backend=backend)
+    final_state = apply_gates(
+        backend,
+        [gates.SYC(0, 1)],
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+
+    matrix = np.array(
+        [
+            [1, 0, 0, 0],
+            [0, 0, -1j, 0],
+            [0, -1j, 0, 0],
+            [0, 0, 0, np.exp(-1j * np.pi / 6)],
+        ],
+        dtype=backend.dtype,
+    )
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
+    target_state = matrix @ initial_state
+
+    backend.assert_allclose(final_state, target_state)
+
+    with pytest.raises(NotImplementedError):
+        gates.SYC(0, 1).qasm_label
+
+    assert not gates.SYC(0, 1).clifford
 
 
 def test_generalized_fsim(backend):
