@@ -1453,6 +1453,12 @@ class RZX(_Rnn_):
         self.name = "rzx"
         self.draw_label = "RZX"
 
+    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
+        """"""
+        q0, q1 = self.target_qubits
+        theta = self.init_kwargs["theta"]
+        return [H(q1), CNOT(q0, q1), RZ(q1, theta), CNOT(q0, q1), H(q1)]
+
 
 class MS(ParametrizedGate):
     """The Mølmer–Sørensen (MS) gate is a two-qubit gate native to trapped ions.
