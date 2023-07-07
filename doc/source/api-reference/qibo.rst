@@ -626,6 +626,13 @@ Givens gate
     :members:
     :member-order: bysource
 
+RBS gate
+""""""""
+
+.. autoclass:: qibo.gates.RBS
+    :members:
+    :member-order: bysource
+
 Special gates
 ^^^^^^^^^^^^^
 
