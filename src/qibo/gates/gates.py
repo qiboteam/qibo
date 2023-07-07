@@ -1519,6 +1519,66 @@ class GIVENS(ParametrizedGate):
         return self.__class__(*self.target_qubits, -self.parameters[0])
 
 
+class RBS(ParametrizedGate):
+    """The Reconfigurable Beam Splitter gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+            1 & 0 & 0 & 0 \\\\
+            0 & \\cos(\\theta) & \\sin(\\theta) & 0 \\\\
+            0 & -\\sin(\\theta) & \\cos(\\theta) & 0 \\\\
+            0 & 0 & 0 & 1 \\\\
+        \\end{pmatrix}
+
+    Note that, in our implementation, :math:`\\text{RBS}(\\theta) = \\text{Givens}(-\\theta)`.
+    However, this definition is not unique.
+
+    Args:
+        q0 (int): the first qubit id number.
+        q1 (int): the second qubit id number.
+        theta (float): the rotation angle.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`.
+            Defaults to ``True``.
+    """
+
+    def __init__(self, q0, q1, theta, trainable=True):
+        super().__init__(trainable)
+        self.name = "rbs"
+        self.draw_label = "BS"
+        self.target_qubits = (q0, q1)
+
+        self.parameter_names = "theta"
+        self.parameters = theta
+        self.nparams = 1
+
+        self.init_args = [q0, q1]
+        self.init_kwargs = {"theta": theta, "trainable": trainable}
+
+    def _dagger(self) -> "Gate":
+        """"""
+        return self.__class__(*self.target_qubits, -self.parameters[0])
+
+    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
+        """Decomposition of RBS gate according to
+        ArXiv:2109.09685 <https://arxiv.org/abs/2109.09685>_.
+        """
+        q0, q1 = self.target_qubits
+        theta = self.init_kwargs["theta"]
+        return [
+            H(q0),
+            CNOT(q0, q1),
+            H(q1),
+            RY(q0, theta / 2),
+            RY(q1, -theta / 2),
+            H(q1),
+            CNOT(q0, q1),
+            H(q0),
+        ]
+
+
 class TOFFOLI(Gate):
     """The Toffoli gate.
 
