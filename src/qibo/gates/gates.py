@@ -1298,7 +1298,7 @@ class GeneralizedfSim(ParametrizedGate):
 
 
 class _Rnn_(ParametrizedGate):
-    """Abstract class for defining the RXX, RYY and RZZ rotations.
+    """Abstract class for defining the RXX, RYY, RZZ, and RZX rotations.
 
     Args:
         q0 (int): the first entangled qubit id number.
@@ -1420,6 +1420,34 @@ class RZZ(_Rnn_):
         return "rzz"
 
 
+class RZX(_Rnn_):
+    """Parametric 2-qubit ZX interaction, or rotation about ZX-axis.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+            \\text{RX}(\\theta) & 0 \\\\
+            0 & \\text{RX}(-\\theta) \\\\
+        \\end{pamtrix} \\, ,
+
+    where :math:`\\text{RX}` is the :class:`qibo.gates.RX` gate.
+
+    Args:
+        q0 (int): the first entangled qubit id number.
+        q1 (int): the second entangled qubit id number.
+        theta (float): the rotation angle.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
+    """
+
+    def __init__(self, q0, q1, theta, trainable=True):
+        super().__init__(q0, q1, theta, trainable)
+        self.name = "rzx"
+        self.draw_label = "RZX"
+
+
 class MS(ParametrizedGate):
     """The Mølmer–Sørensen (MS) gate is a two-qubit gate native to trapped ions.
 
@@ -1532,8 +1560,9 @@ class RBS(ParametrizedGate):
             0 & 0 & 0 & 1 \\\\
         \\end{pmatrix}
 
-    Note that, in our implementation, :math:`\\text{RBS}(\\theta) = \\text{Givens}(-\\theta)`.
-    However, this definition is not unique.
+    Note that, in our implementation, :math:`\\text{RBS}(\\theta) = \\text{Givens}(-\\theta)`,
+    where :math:`\\text{Givens}` is the :class:`qibo.gates.GIVENS` gate.
+    However, we point out that this definition is not unique.
 
     Args:
         q0 (int): the first qubit id number.
