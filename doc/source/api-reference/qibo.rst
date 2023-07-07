@@ -640,7 +640,7 @@ Reconfigurable Beam Splitter gate (RBS)
     :members:
     :member-order: bysource
 
-Echo Cross-Ressonance gate (ECR)
+Echo Cross-Resonance gate (ECR)
 """"""""""""""""""""""""""""""""
 
 .. autoclass:: qibo.gates.ECR
