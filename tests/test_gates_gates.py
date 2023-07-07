@@ -473,6 +473,38 @@ def test_rzz(backend):
     assert not gates.RZZ(0, 1, theta).clifford
 
 
+def test_rzx(backend):
+    theta = 0.1234
+    nqubits = 2
+    initial_state = random_statevector(2**nqubits, backend=backend)
+    final_state = apply_gates(
+        backend,
+        [gates.RZX(0, 1, theta)],
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+
+    cos, sin = np.cos(theta / 2), np.sin(theta / 2)
+    matrix = np.array(
+        [
+            [cos, -1j * sin, 0, 0],
+            [-1j * sin, cos, 0, 0],
+            [0, 0, cos, 1j * sin],
+            [0, 0, 1j * sin, cos],
+        ],
+        dtype=backend.dtype,
+    )
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
+    target_state = matrix @ initial_state
+
+    backend.assert_allclose(final_state, target_state)
+
+    with pytest.raises(NotImplementedError):
+        gates.RZX(0, 1, theta).qasm_label
+
+    assert not gates.RZX(0, 1, theta).clifford
+
+
 def test_ms(backend):
     phi0 = 0.1234
     phi1 = 0.4321
@@ -569,6 +601,36 @@ def test_rbs(backend):
         gates.RBS(0, 1, theta).qasm_label
 
     assert not gates.RBS(0, 1, theta).clifford
+
+
+def test_ecr(backend):
+    nqubits = 2
+    initial_state = random_statevector(2**nqubits, backend=backend)
+    final_state = apply_gates(
+        backend,
+        [gates.ECR(0, 1)],
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+
+    matrix = np.array(
+        [
+            [0, 0, 1, 1j],
+            [0, 0, 1j, 1],
+            [1, -1j, 0, 0],
+            [-1j, 1, 0, 0],
+        ],
+        dtype=backend.dtype,
+    ) / np.sqrt(2)
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
+
+    target_state = matrix @ initial_state
+    backend.assert_allclose(final_state, target_state)
+
+    with pytest.raises(NotImplementedError):
+        gates.ECR(0, 1).qasm_label
+
+    assert not gates.ECR(0, 1).clifford
 
 
 @pytest.mark.parametrize("applyx", [False, True])
