@@ -1429,7 +1429,7 @@ class RZX(_Rnn_):
         \\begin{pmatrix}
             \\text{RX}(\\theta) & 0 \\\\
             0 & \\text{RX}(-\\theta) \\\\
-        \\end{pamtrix} \\, ,
+        \\end{pmatrix} \\, ,
 
     where :math:`\\text{RX}` is the :class:`qibo.gates.RX` gate.
 
