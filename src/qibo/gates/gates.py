@@ -1429,6 +1429,12 @@ class RZX(_Rnn_):
         \\begin{pmatrix}
             \\text{RX}(\\theta) & 0 \\\\
             0 & \\text{RX}(-\\theta) \\\\
+        \\end{pmatrix} =
+        \\begin{pmatrix}
+            \\cos(\\frac{\\theta}{2}) & -i \\sin(\\frac{\\theta}{2}) & 0 & 0 \\\\
+            -i \\sin(\\frac{\\theta}{2}) & \\cos(\\frac{\\theta}{2}) & 0 & 0 \\\\
+            0 & 0 & \\cos(\\frac{\\theta}{2}) & i \\sin(\\frac{\\theta}{2}) \\\\
+            0 & 0 & i \\sin(\\frac{\\theta}{2}) & \\cos(\\frac{\\theta}{2}) \\\\
         \\end{pmatrix} \\, ,
 
     where :math:`\\text{RX}` is the :class:`qibo.gates.RX` gate.
