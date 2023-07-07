@@ -242,10 +242,16 @@ class NumpyMatrices:
         )
 
     def RZX(self, theta):
-        matrix = self.np.eye(4, dtype=self.dtype)
-        matrix[:2, :2] = self.RX(theta)
-        matrix[2:, 2:] = self.RX(-theta)
-        return matrix
+        cos, sin = self.np.cos(theta / 2), self.np.sin(theta / 2)
+        return self.np.array(
+            [
+                [cos, -1j * sin, 0, 0],
+                [-1j * sin, cos, 0, 0],
+                [0, 0, cos, 1j * sin],
+                [0, 0, 1j * sin, cos],
+            ],
+            dtype=self.dtype,
+        )
 
     def MS(self, phi0, phi1, theta):
         plus = self.np.exp(1.0j * (phi0 + phi1))
@@ -285,6 +291,7 @@ class NumpyMatrices:
     def RBS(self, theta):
         return self.GIVENS(-theta)
 
+    @cached_property
     def ECR(self):
         return self.np.array(
             [[0, 0, 1, 1j], [0, 0, 1j, 1], [1, -1j, 0, 0], [-1j, 1, 0, 0]],
