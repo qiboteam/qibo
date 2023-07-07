@@ -241,6 +241,12 @@ class NumpyMatrices:
             dtype=self.dtype,
         )
 
+    def RZX(self, theta):
+        matrix = self.np.eye(4, dtype=self.dtype)
+        matrix[:2, :2] = self.RX(theta)
+        matrix[2:, 2:] = self.RX(-theta)
+        return matrix
+
     def MS(self, phi0, phi1, theta):
         plus = self.np.exp(1.0j * (phi0 + phi1))
         minus = self.np.exp(1.0j * (phi0 - phi1))
