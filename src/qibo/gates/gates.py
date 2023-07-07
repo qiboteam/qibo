@@ -1554,7 +1554,7 @@ class GIVENS(ParametrizedGate):
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
         """Decomposition of Givens gate according to
-        `ArXiv:2106.13839 <https://arxiv.org/abs/2106.13839>_`.
+        `ArXiv:2106.13839 <https://arxiv.org/abs/2106.13839>`_.
         """
         q0, q1 = self.target_qubits
         theta = self.init_kwargs["theta"]
@@ -1613,7 +1613,7 @@ class RBS(ParametrizedGate):
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
         """Decomposition of RBS gate according to
-        `ArXiv:2109.09685 <https://arxiv.org/abs/2109.09685>_`.
+        `ArXiv:2109.09685 <https://arxiv.org/abs/2109.09685>`_.
         """
         q0, q1 = self.target_qubits
         theta = self.init_kwargs["theta"]
@@ -1656,6 +1656,7 @@ class ECR(Gate):
         self.init_args = [q0, q1]
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
+        """"""
         q0, q1 = self.target_qubits
         return [RZX(q0, q1, np.pi / 4), RX(q1, np.pi), RZX(q0, q1, -np.pi / 4)]
 

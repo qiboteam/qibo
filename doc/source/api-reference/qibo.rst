@@ -864,9 +864,9 @@ only when number of qubits is small.
 Alternatively, the user can construct this Hamiltonian using a sparse matrices.
 Sparse matrices from the
 `scipy.sparse <https://docs.scipy.org/doc/scipy/reference/sparse.html>`_
-module are supported by the numpy and qibojit backends while the
-`tf.sparse <https://www.tensorflow.org/api_docs/python/tf/sparse>_` can be
-used for tensorflow. Scipy sparse matrices support algebraic
+module are supported by the ``numpy`` and ``qibojit`` backends while the
+`tensorflow.sparse <https://www.tensorflow.org/api_docs/python/tf/sparse>`_ can be
+used for ``tensorflow``. Scipy sparse matrices support algebraic
 operations (addition, subtraction, scalar multiplication), linear algebra
 operations (eigenvalues, eigenvectors, matrix exponentiation) and
 multiplication to dense or other sparse matrices. All these properties are
