@@ -534,6 +534,11 @@ def test_givens(backend):
     target_state = matrix @ initial_state
     backend.assert_allclose(final_state, target_state)
 
+    with pytest.raises(NotImplementedError):
+        gates.GIVENS(0, 1, theta).qasm_label
+
+    assert not gates.GIVENS(0, 1, theta).clifford
+
 
 def test_rbs(backend):
     theta = 0.1234
@@ -559,6 +564,11 @@ def test_rbs(backend):
 
     target_state = matrix @ initial_state
     backend.assert_allclose(final_state, target_state)
+
+    with pytest.raises(NotImplementedError):
+        gates.RBS(0, 1, theta).qasm_label
+
+    assert not gates.RBS(0, 1, theta).clifford
 
 
 @pytest.mark.parametrize("applyx", [False, True])
@@ -863,8 +873,6 @@ GATES = [
     ("RZ", (0, 0.3)),
     ("GPI", (0, 0.1)),
     ("GPI2", (0, 0.2)),
-    ("GIVENS", (0, 1, 0.1)),
-    ("RBS", (0, 1, 0.2)),
     ("U1", (0, 0.1)),
     ("U2", (0, 0.2, 0.3)),
     ("U3", (0, 0.1, 0.2, 0.3)),
@@ -878,7 +886,11 @@ GATES = [
     ("RXX", (0, 1, 0.1)),
     ("RYY", (0, 1, 0.2)),
     ("RZZ", (0, 1, 0.3)),
+    ("RZX", (0, 1, 0.4)),
     ("MS", (0, 1, 0.1, 0.2, 0.3)),
+    ("GIVENS", (0, 1, 0.1)),
+    ("RBS", (0, 1, 0.2)),
+    ("ECR", (0, 1)),
 ]
 
 
