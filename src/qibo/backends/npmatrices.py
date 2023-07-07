@@ -285,6 +285,12 @@ class NumpyMatrices:
     def RBS(self, theta):
         return self.GIVENS(-theta)
 
+    def ECR(self):
+        return self.np.array(
+            [[0, 0, 1, 1j], [0, 0, 1j, 1], [1, -1j, 0, 0], [-1j, 1, 0, 0]],
+            dtype=self.dtype,
+        ) / self.np.sqrt(2)
+
     @cached_property
     def TOFFOLI(self):
         return self.np.array(
