@@ -1269,9 +1269,9 @@ class SYC(Gate):
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
 
-    # def _dagger(self) -> "Gate":
-    #     """"""
-    #     return fSim(*self.target_qubits, -np.pi / 2, -np.pi / 6)
+    def _dagger(self) -> "Gate":
+        """"""
+        return fSim(*self.target_qubits, -np.pi / 2, -np.pi / 6)
 
 
 class GeneralizedfSim(ParametrizedGate):
