@@ -518,7 +518,7 @@ def test_rzx(backend):
     )
     # test decomposition
     final_state_decompose = apply_gates(
-        backend, 
+        backend,
         gates.RZX(0, 1, theta).decompose(),
         nqubits=nqubits,
         initial_state=initial_state,
@@ -543,7 +543,7 @@ def test_rzx(backend):
     with pytest.raises(NotImplementedError):
         gates.RZX(0, 1, theta).qasm_label
 
-    assert not gates.RZX(0, 1, theta).clifford    
+    assert not gates.RZX(0, 1, theta).clifford
 
 
 def test_ms(backend):
@@ -631,7 +631,7 @@ def test_rbs(backend):
         nqubits=nqubits,
         initial_state=initial_state,
     )
-    #test decomposition
+    # test decomposition
     final_state_decompose = apply_gates(
         backend,
         gates.RBS(0, 1, theta).decompose(),

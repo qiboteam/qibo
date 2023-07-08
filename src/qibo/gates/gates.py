@@ -1696,7 +1696,7 @@ class ECR(Gate):
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
         """"""
         q0, q1 = self.target_qubits
-        return [RZX(q0, q1, np.pi / 2), RX(q1, 2*np.pi), RZX(q0, q1, -np.pi / 2)]
+        return [RZX(q0, q1, np.pi / 2), RX(q1, 2 * np.pi), RZX(q0, q1, -np.pi / 2)]
 
 
 class TOFFOLI(Gate):
