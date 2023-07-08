@@ -1598,9 +1598,9 @@ class GIVENS(ParametrizedGate):
         theta = self.init_kwargs["theta"]
         return [
             CNOT(q0, q1),
-            RY(q0, theta / 2),
+            RY(q0, theta),
             CNOT(q1, q0),
-            RY(q0, -theta / 2),
+            RY(q0, -theta),
             CNOT(q1, q0),
             CNOT(q0, q1),
         ]
@@ -1659,8 +1659,8 @@ class RBS(ParametrizedGate):
             H(q0),
             CNOT(q0, q1),
             H(q1),
-            RY(q0, theta / 2),
-            RY(q1, -theta / 2),
+            RY(q0, theta),
+            RY(q1, -theta),
             H(q1),
             CNOT(q0, q1),
             H(q0),
@@ -1696,7 +1696,7 @@ class ECR(Gate):
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
         """"""
         q0, q1 = self.target_qubits
-        return [RZX(q0, q1, np.pi / 4), RX(q1, np.pi), RZX(q0, q1, -np.pi / 4)]
+        return [RZX(q0, q1, np.pi / 2), RX(q1, 2*np.pi), RZX(q0, q1, -np.pi / 2)]
 
 
 class TOFFOLI(Gate):

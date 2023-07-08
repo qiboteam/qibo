@@ -516,6 +516,13 @@ def test_rzx(backend):
         nqubits=nqubits,
         initial_state=initial_state,
     )
+    # test decomposition
+    final_state_decompose = apply_gates(
+        backend, 
+        gates.RZX(0, 1, theta).decompose(),
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
 
     cos, sin = np.cos(theta / 2), np.sin(theta / 2)
     matrix = np.array(
@@ -531,11 +538,12 @@ def test_rzx(backend):
     target_state = matrix @ initial_state
 
     backend.assert_allclose(final_state, target_state)
+    backend.assert_allclose(final_state, final_state_decompose)
 
     with pytest.raises(NotImplementedError):
         gates.RZX(0, 1, theta).qasm_label
 
-    assert not gates.RZX(0, 1, theta).clifford
+    assert not gates.RZX(0, 1, theta).clifford    
 
 
 def test_ms(backend):
@@ -584,6 +592,13 @@ def test_givens(backend):
         nqubits=nqubits,
         initial_state=initial_state,
     )
+    # test decomposition
+    final_state_decompose = apply_gates(
+        backend,
+        gates.GIVENS(0, 1, theta).decompose(),
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
 
     matrix = np.array(
         [
@@ -598,6 +613,7 @@ def test_givens(backend):
 
     target_state = matrix @ initial_state
     backend.assert_allclose(final_state, target_state)
+    backend.assert_allclose(final_state, final_state_decompose)
 
     with pytest.raises(NotImplementedError):
         gates.GIVENS(0, 1, theta).qasm_label
@@ -615,6 +631,13 @@ def test_rbs(backend):
         nqubits=nqubits,
         initial_state=initial_state,
     )
+    #test decomposition
+    final_state_decompose = apply_gates(
+        backend,
+        gates.RBS(0, 1, theta).decompose(),
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
 
     matrix = np.array(
         [
@@ -629,6 +652,7 @@ def test_rbs(backend):
 
     target_state = matrix @ initial_state
     backend.assert_allclose(final_state, target_state)
+    backend.assert_allclose(final_state, final_state_decompose)
 
     with pytest.raises(NotImplementedError):
         gates.RBS(0, 1, theta).qasm_label
@@ -642,6 +666,13 @@ def test_ecr(backend):
     final_state = apply_gates(
         backend,
         [gates.ECR(0, 1)],
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+    # test decomposition
+    final_state_decompose = apply_gates(
+        backend,
+        gates.ECR(0, 1).decompose(),
         nqubits=nqubits,
         initial_state=initial_state,
     )
@@ -659,6 +690,7 @@ def test_ecr(backend):
 
     target_state = matrix @ initial_state
     backend.assert_allclose(final_state, target_state)
+    backend.assert_allclose(final_state, final_state_decompose)
 
     with pytest.raises(NotImplementedError):
         gates.ECR(0, 1).qasm_label
