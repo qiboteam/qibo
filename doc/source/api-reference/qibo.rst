@@ -434,6 +434,13 @@ Pauli Z (Z)
     :members:
     :member-order: bysource
 
+Square-root of Pauli X (SX)
+"""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.SX
+    :members:
+    :member-order: bysource
+
 S gate (S)
 """""""""""
 
