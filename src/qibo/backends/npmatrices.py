@@ -42,6 +42,10 @@ class NumpyMatrices:
         return self.np.array([[1, 0], [0, -1]], dtype=self.dtype)
 
     @cached_property
+    def SX(self):
+        return self.np.array([[1 + 1j, 1 - 1j], [1 - 1j, 1 + 1j]], dtype=self.dtype) / 2
+
+    @cached_property
     def S(self):
         return self.np.array([[1, 0], [0, 1j]], dtype=self.dtype)
 
