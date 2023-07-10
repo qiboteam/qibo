@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 
 from qibo import gates
-from qibo.quantum_info import random_statevector
+from qibo.quantum_info import random_hermitian, random_statevector
 
 
 def apply_gates(backend, gatelist, nqubits=None, initial_state=None):
@@ -56,6 +56,42 @@ def test_z(backend):
     backend.assert_allclose(final_state, target_state)
     assert gates.Z(0).qasm_label == "z"
     assert gates.Z(0).clifford
+
+
+def test_sx(backend):
+    nqubits = 1
+    initial_state = random_statevector(2**nqubits, backend=backend)
+    final_state = apply_gates(
+        backend,
+        [gates.SX(0)],
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+    # test decomposition
+    final_state_decompose = apply_gates(
+        backend,
+        gates.SX(0).decompose(),
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+
+    matrix = np.array([[1 + 1j, 1 - 1j], [1 - 1j, 1 + 1j]]) / 2
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
+    target_state = matrix @ initial_state
+
+    observable = random_hermitian(2**nqubits, backend=backend)
+
+    backend.assert_allclose(final_state, target_state)
+    # testing random expectation value due to global phase difference
+    backend.assert_allclose(
+        np.transpose(np.conj(final_state_decompose))
+        @ observable
+        @ final_state_decompose,
+        np.transpose(np.conj(target_state)) @ observable @ target_state,
+    )
+
+    assert gates.SX(0).qasm_label == "sx"
+    assert gates.SX(0).clifford
 
 
 def test_s(backend):
@@ -538,7 +574,7 @@ def test_rzx(backend):
     target_state = matrix @ initial_state
 
     backend.assert_allclose(final_state, target_state)
-    backend.assert_allclose(final_state, final_state_decompose)
+    backend.assert_allclose(final_state_decompose, target_state)
 
     with pytest.raises(NotImplementedError):
         gates.RZX(0, 1, theta).qasm_label
@@ -613,7 +649,7 @@ def test_givens(backend):
 
     target_state = matrix @ initial_state
     backend.assert_allclose(final_state, target_state)
-    backend.assert_allclose(final_state, final_state_decompose)
+    backend.assert_allclose(final_state_decompose, target_state)
 
     with pytest.raises(NotImplementedError):
         gates.GIVENS(0, 1, theta).qasm_label
@@ -652,7 +688,7 @@ def test_rbs(backend):
 
     target_state = matrix @ initial_state
     backend.assert_allclose(final_state, target_state)
-    backend.assert_allclose(final_state, final_state_decompose)
+    backend.assert_allclose(final_state_decompose, target_state)
 
     with pytest.raises(NotImplementedError):
         gates.RBS(0, 1, theta).qasm_label
@@ -690,7 +726,7 @@ def test_ecr(backend):
 
     target_state = matrix @ initial_state
     backend.assert_allclose(final_state, target_state)
-    backend.assert_allclose(final_state, final_state_decompose)
+    backend.assert_allclose(final_state_decompose, target_state)
 
     with pytest.raises(NotImplementedError):
         gates.ECR(0, 1).qasm_label
@@ -991,6 +1027,7 @@ GATES = [
     ("X", (0,)),
     ("Y", (0,)),
     ("Z", (0,)),
+    ("SX", (0,)),
     ("S", (0,)),
     ("SDG", (0,)),
     ("T", (0,)),
