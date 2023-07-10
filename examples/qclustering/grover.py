@@ -25,18 +25,12 @@ def iam_operator(n):
         qc.add(gates.H(qubit))  # apply H-gate
         qc.add(gates.X(qubit))  # apply X-gate
 
-    imaginary_I = np.matrix(np.identity(2), dtype=np.cfloat)
-
-        imaginary_I *= 1j
-
-    qc.add(gates.Unitary(imaginary_I, 0))
     # apply H-gate to last qubit
     qc.add(gates.H(n - 1))
     # apply multi-controlled toffoli gate to last qubit controlled by the ones before it (less significant)
     qc.add(gates.X(n - 1).controlled_by(*list(range(0, n - 1))))
     # apply H-gate to last qubit
     qc.add(gates.H(n - 1))
-    qc.add(gates.Unitary(imaginary_I, 0))
 
     for qubit in range(n):
         qc.add(gates.X(qubit))

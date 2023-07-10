@@ -48,7 +48,7 @@ def DistCalc(a, b, nshots=10000):
 
     """
     num_features = len(a)
-    norm = u.calc_norm(a, b)
+    norm = np.linalg.norm(a - b)
     a_norm = a / norm
     b_norm = b / norm
 
