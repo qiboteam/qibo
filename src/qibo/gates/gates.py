@@ -222,6 +222,20 @@ class Z(Gate):
 
 
 class SX(Gate):
+    """The square root of the Pauli-:math:`X` gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\frac{1}{2} \\, \\begin{pmatrix}
+        1 + i & 1 - i \\\\
+        1 - i & 1 + i \\\\
+        \\end{pmatrix}
+
+    Args:
+        q (int): the qubit id number.
+    """
+
     def __init__(self, q):
         super().__init__()
         self.name = "sx"
