@@ -26,7 +26,7 @@ def iam_operator(n):
         qc.add(gates.X(qubit))  # apply X-gate
 
     imaginary_I = np.matrix(np.identity(2), dtype=np.cfloat)
-    
+
         imaginary_I *= 1j
 
     qc.add(gates.Unitary(imaginary_I, 0))
