@@ -28,7 +28,7 @@ def duerr_hoyer_algo(distances):
     n = int(math.floor(math.log2(k)) + 1)
 
     # choose random threshold
-    index_rand = np.random.choice(list(range(k)))
+    index_rand = np.random.choice(k)
     threshold = distances[index_rand]
     max_iters = int(math.ceil(np.sqrt(2**n)))
 
