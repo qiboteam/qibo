@@ -222,7 +222,7 @@ class Z(Gate):
 
 
 class SX(Gate):
-    """The square root of the Pauli-:math:`X` gate.
+    """The :math:`\\sqrt{X}` gate.
 
     Corresponds to the following unitary matrix
 
@@ -250,13 +250,17 @@ class SX(Gate):
 
     def decompose(self):
         """A global phase difference exists between the definitions of
-        :math:`\\sqrt{X}` and :math:`\\text{RX}(\\pi / 2)`.
+        :math:`\\sqrt{X}` and :math:`\\text{RX}(\\pi / 2)`, with :math:`\\text{RX}`
+        being the :class:`qibo.gates.RX` gate. More precisely,
+        :math:`\\sqrt{X} = e^{i \\pi / 4} \\, \\text{RX}(\\pi / 2)`.
         """
         return [RX(self.init_args[0], np.pi / 2, trainable=False)]
 
     def _dagger(self):
         """A global phase difference exists between the definitions of
-        :math:`\\sqrt{X}` and :math:`\\text{RX}(-\\pi / 2)`.
+        :math:`(\\sqrt{X})^{\\dagger}` and :math:`\\text{RX}(-\\pi / 2)`,
+        with :math:`\\text{RX}` being the :class:`qibo.gates.RX` gate.
+        More precisely, :math:`\\sqrt{X} = e^{-i \\pi / 4} \\, \\text{RX}(- \\pi / 2)`.
         """
         return RX(self.init_args[0], -np.pi / 2, trainable=False)
 
