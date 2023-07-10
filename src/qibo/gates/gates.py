@@ -36,7 +36,7 @@ class H(Gate):
 
 
 class X(Gate):
-    """The Pauli X gate.
+    """The Pauli-:math:`X` gate.
 
     Corresponds to the following unitary matrix
 
@@ -148,7 +148,7 @@ class X(Gate):
 
 
 class Y(Gate):
-    """The Pauli Y gate.
+    """The Pauli-:math:`Y` gate.
 
     Corresponds to the following unitary matrix
 
@@ -175,14 +175,14 @@ class Y(Gate):
         return "y"
 
     def basis_rotation(self):
-        from qibo import matrices
+        from qibo import matrices  # pylint: disable=C0415
 
         matrix = (matrices.Y + matrices.Z) / math.sqrt(2)
         return Unitary(matrix, self.target_qubits[0], trainable=False)
 
 
 class Z(Gate):
-    """The Pauli Z gate.
+    """The Pauli-:math:`Z` gate.
 
     Corresponds to the following unitary matrix
 
@@ -221,8 +221,34 @@ class Z(Gate):
         return None
 
 
+class SX(Gate):
+    def __init__(self, q):
+        super().__init__()
+        self.name = "sx"
+        self.draw_label = "SX"
+        self.target_qubits = (q,)
+        self.init_args = [q]
+        self.clifford = True
+
+    @property
+    def qasm_label(self):
+        return "sx"
+
+    def decompose(self):
+        """A global phase difference exists between the definitions of
+        :math:`\\sqrt{X}` and :math:`\\text{RX}(\\pi / 2)`.
+        """
+        return [RX(self.init_args[0], np.pi / 2, trainable=False)]
+
+    def _dagger(self):
+        """A global phase difference exists between the definitions of
+        :math:`\\sqrt{X}` and :math:`\\text{RX}(-\\pi / 2)`.
+        """
+        return RX(self.init_args[0], -np.pi / 2, trainable=False)
+
+
 class S(Gate):
-    """The S gate.
+    """The :math:`S` gate.
 
     Corresponds to the following unitary matrix
 
