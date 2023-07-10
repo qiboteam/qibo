@@ -26,8 +26,8 @@ def iam_operator(n):
         qc.add(gates.X(qubit))  # apply X-gate
 
     imaginary_I = np.matrix(np.identity(2), dtype=np.cfloat)
-    for ix in range(imaginary_I.shape[0]):
-        imaginary_I[ix, ix] = 1j
+    
+        imaginary_I *= 1j
 
     qc.add(gates.Unitary(imaginary_I, 0))
     # apply H-gate to last qubit
