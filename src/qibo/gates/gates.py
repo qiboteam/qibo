@@ -36,7 +36,7 @@ class H(Gate):
 
 
 class X(Gate):
-    """The Pauli X gate.
+    """The Pauli-:math:`X` gate.
 
     Corresponds to the following unitary matrix
 
@@ -148,7 +148,7 @@ class X(Gate):
 
 
 class Y(Gate):
-    """The Pauli Y gate.
+    """The Pauli-:math:`Y` gate.
 
     Corresponds to the following unitary matrix
 
@@ -175,14 +175,14 @@ class Y(Gate):
         return "y"
 
     def basis_rotation(self):
-        from qibo import matrices
+        from qibo import matrices  # pylint: disable=C0415
 
         matrix = (matrices.Y + matrices.Z) / math.sqrt(2)
         return Unitary(matrix, self.target_qubits[0], trainable=False)
 
 
 class Z(Gate):
-    """The Pauli Z gate.
+    """The Pauli-:math:`Z` gate.
 
     Corresponds to the following unitary matrix
 
@@ -221,8 +221,52 @@ class Z(Gate):
         return None
 
 
+class SX(Gate):
+    """The :math:`\\sqrt{X}` gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\frac{1}{2} \\, \\begin{pmatrix}
+        1 + i & 1 - i \\\\
+        1 - i & 1 + i \\\\
+        \\end{pmatrix}
+
+    Args:
+        q (int): the qubit id number.
+    """
+
+    def __init__(self, q):
+        super().__init__()
+        self.name = "sx"
+        self.draw_label = "SX"
+        self.target_qubits = (q,)
+        self.init_args = [q]
+        self.clifford = True
+
+    @property
+    def qasm_label(self):
+        return "sx"
+
+    def decompose(self):
+        """A global phase difference exists between the definitions of
+        :math:`\\sqrt{X}` and :math:`\\text{RX}(\\pi / 2)`, with :math:`\\text{RX}`
+        being the :class:`qibo.gates.RX` gate. More precisely,
+        :math:`\\sqrt{X} = e^{i \\pi / 4} \\, \\text{RX}(\\pi / 2)`.
+        """
+        return [RX(self.init_args[0], np.pi / 2, trainable=False)]
+
+    def _dagger(self):
+        """A global phase difference exists between the definitions of
+        :math:`(\\sqrt{X})^{\\dagger}` and :math:`\\text{RX}(-\\pi / 2)`,
+        with :math:`\\text{RX}` being the :class:`qibo.gates.RX` gate.
+        More precisely, :math:`\\sqrt{X} = e^{-i \\pi / 4} \\, \\text{RX}(- \\pi / 2)`.
+        """
+        return RX(self.init_args[0], -np.pi / 2, trainable=False)
+
+
 class S(Gate):
-    """The S gate.
+    """The :math:`S` gate.
 
     Corresponds to the following unitary matrix
 
@@ -1240,6 +1284,40 @@ class fSim(ParametrizedGate):
         return self.__class__(q0, q1, *params)
 
 
+class SYC(Gate):
+    """The Sycamore gate, defined in the Supplementary Information
+    of `Quantum supremacy using a programmable superconducting processor
+    <https://www.nature.com/articles/s41586-019-1666-5>`_.
+
+    Corresponding to the following unitary matrix
+
+    .. math::
+        \\text{fSim}(\\pi / 2, \\, \\pi / 6) = \\beging{pmatrix}
+            1 & 0 & 0 & 0 \\\\
+            0 & 0 & -i & 0 \\\\
+            0 & -i & 0 & 0 \\\\
+            0 & 0 & 0 & e^{-i \\pi / 6} \\\\
+        \\end{pmatrix} \\, ,
+
+    where :math:`\\text{fSim}` is the :class:`qibo.gates.fSim` gate.
+
+    Args:
+        q0 (int): the first qubit to be swapped id number.
+        q1 (int): the second qubit to be swapped id number.
+    """
+
+    def __init__(self, q0, q1):
+        super().__init__()
+        self.name = "syc"
+        self.draw_label = "SYC"
+        self.target_qubits = (q0, q1)
+        self.init_args = [q0, q1]
+
+    def _dagger(self) -> "Gate":
+        """"""
+        return fSim(*self.target_qubits, -np.pi / 2, -np.pi / 6)
+
+
 class GeneralizedfSim(ParametrizedGate):
     """The fSim gate with a general rotation.
 
@@ -1277,8 +1355,6 @@ class GeneralizedfSim(ParametrizedGate):
         self.init_kwargs = {"unitary": unitary, "phi": phi, "trainable": trainable}
 
     def _dagger(self):
-        import numpy as np
-
         q0, q1 = self.target_qubits
         u, phi = self.parameters
         init_kwargs = dict(self.init_kwargs)
@@ -1298,7 +1374,7 @@ class GeneralizedfSim(ParametrizedGate):
 
 
 class _Rnn_(ParametrizedGate):
-    """Abstract class for defining the RXX, RYY and RZZ rotations.
+    """Abstract class for defining the RXX, RYY, RZZ, and RZX rotations.
 
     Args:
         q0 (int): the first entangled qubit id number.
@@ -1420,6 +1496,46 @@ class RZZ(_Rnn_):
         return "rzz"
 
 
+class RZX(_Rnn_):
+    """Parametric 2-qubit ZX interaction, or rotation about ZX-axis.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+            \\text{RX}(\\theta) & 0 \\\\
+            0 & \\text{RX}(-\\theta) \\\\
+        \\end{pmatrix} =
+        \\begin{pmatrix}
+            \\cos(\\frac{\\theta}{2}) & -i \\sin(\\frac{\\theta}{2}) & 0 & 0 \\\\
+            -i \\sin(\\frac{\\theta}{2}) & \\cos(\\frac{\\theta}{2}) & 0 & 0 \\\\
+            0 & 0 & \\cos(\\frac{\\theta}{2}) & i \\sin(\\frac{\\theta}{2}) \\\\
+            0 & 0 & i \\sin(\\frac{\\theta}{2}) & \\cos(\\frac{\\theta}{2}) \\\\
+        \\end{pmatrix} \\, ,
+
+    where :math:`\\text{RX}` is the :class:`qibo.gates.RX` gate.
+
+    Args:
+        q0 (int): the first entangled qubit id number.
+        q1 (int): the second entangled qubit id number.
+        theta (float): the rotation angle.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
+    """
+
+    def __init__(self, q0, q1, theta, trainable=True):
+        super().__init__(q0, q1, theta, trainable)
+        self.name = "rzx"
+        self.draw_label = "RZX"
+
+    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
+        """"""
+        q0, q1 = self.target_qubits
+        theta = self.init_kwargs["theta"]
+        return [H(q1), CNOT(q0, q1), RZ(q1, theta), CNOT(q0, q1), H(q1)]
+
+
 class MS(ParametrizedGate):
     """The Mølmer–Sørensen (MS) gate is a two-qubit gate native to trapped ions.
 
@@ -1517,6 +1633,114 @@ class GIVENS(ParametrizedGate):
     def _dagger(self) -> "Gate":
         """"""
         return self.__class__(*self.target_qubits, -self.parameters[0])
+
+    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
+        """Decomposition of Givens gate according to
+        `ArXiv:2106.13839 <https://arxiv.org/abs/2106.13839>`_.
+        """
+        q0, q1 = self.target_qubits
+        theta = self.init_kwargs["theta"]
+        return [
+            CNOT(q0, q1),
+            RY(q0, theta),
+            CNOT(q1, q0),
+            RY(q0, -theta),
+            CNOT(q1, q0),
+            CNOT(q0, q1),
+        ]
+
+
+class RBS(ParametrizedGate):
+    """The Reconfigurable Beam Splitter gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+            1 & 0 & 0 & 0 \\\\
+            0 & \\cos(\\theta) & \\sin(\\theta) & 0 \\\\
+            0 & -\\sin(\\theta) & \\cos(\\theta) & 0 \\\\
+            0 & 0 & 0 & 1 \\\\
+        \\end{pmatrix}
+
+    Note that, in our implementation, :math:`\\text{RBS}(\\theta) = \\text{Givens}(-\\theta)`,
+    where :math:`\\text{Givens}` is the :class:`qibo.gates.GIVENS` gate.
+    However, we point out that this definition is not unique.
+
+    Args:
+        q0 (int): the first qubit id number.
+        q1 (int): the second qubit id number.
+        theta (float): the rotation angle.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`.
+            Defaults to ``True``.
+    """
+
+    def __init__(self, q0, q1, theta, trainable=True):
+        super().__init__(trainable)
+        self.name = "rbs"
+        self.draw_label = "RBS"
+        self.target_qubits = (q0, q1)
+
+        self.parameter_names = "theta"
+        self.parameters = theta
+        self.nparams = 1
+
+        self.init_args = [q0, q1]
+        self.init_kwargs = {"theta": theta, "trainable": trainable}
+
+    def _dagger(self) -> "Gate":
+        """"""
+        return self.__class__(*self.target_qubits, -self.parameters[0])
+
+    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
+        """Decomposition of RBS gate according to
+        `ArXiv:2109.09685 <https://arxiv.org/abs/2109.09685>`_.
+        """
+        q0, q1 = self.target_qubits
+        theta = self.init_kwargs["theta"]
+        return [
+            H(q0),
+            CNOT(q0, q1),
+            H(q1),
+            RY(q0, theta),
+            RY(q1, -theta),
+            H(q1),
+            CNOT(q0, q1),
+            H(q0),
+        ]
+
+
+class ECR(Gate):
+    """THe Echo Cross-Resonance gate.
+
+    Corresponds ot the following matrix
+
+    .. math::
+        \\frac{1}{\\sqrt{2}} \\left( X \\, I - Y \\, X \\right) =
+        \\frac{1}{\\sqrt{2}} \\, \\begin{pmatrix}
+            0 & 0 & 1 & i \\\\
+            0 & 0 & i & 1 \\\\
+            1 & -i & 0 & 0 \\\\
+            -i & 1 & 0 & 0 \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the first qubit id number.
+        q1 (int): the second qubit id number.
+    """
+
+    def __init__(self, q0, q1):
+        super().__init__()
+        self.name = "ecr"
+        self.draw_label = "ECR"
+        self.target_qubits = (q0, q1)
+        self.init_args = [q0, q1]
+
+    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
+        """"""
+        q0, q1 = self.target_qubits
+        return [RZX(q0, q1, np.pi / 4), X(q0), RZX(q0, q1, -np.pi / 4)]
 
 
 class TOFFOLI(Gate):
@@ -1623,8 +1847,6 @@ class Unitary(ParametrizedGate):
 
     @Gate.parameters.setter
     def parameters(self, x):
-        import numpy as np
-
         shape = self.parameters[0].shape
         self._parameters = (np.reshape(x, shape),)
         for gate in self.device_gates:  # pragma: no cover

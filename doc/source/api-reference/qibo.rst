@@ -434,6 +434,13 @@ Pauli Z (Z)
     :members:
     :member-order: bysource
 
+Square-root of Pauli X (SX)
+"""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.SX
+    :members:
+    :member-order: bysource
+
 S gate (S)
 """""""""""
 
@@ -591,6 +598,13 @@ fSim
     :members:
     :member-order: bysource
 
+Sycamore gate
+"""""""""""""
+
+.. autoclass:: qibo.gates.SYC
+    :members:
+    :member-order: bysource
+
 fSim with general rotation
 """"""""""""""""""""""""""
 
@@ -619,10 +633,31 @@ Parametric ZZ interaction (RZZ)
     :members:
     :member-order: bysource
 
+Parametric ZX interaction (RZX)
+"""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.RZX
+    :members:
+    :member-order: bysource
+
 Givens gate
 """""""""""
 
 .. autoclass:: qibo.gates.GIVENS
+    :members:
+    :member-order: bysource
+
+Reconfigurable Beam Splitter gate (RBS)
+"""""""""""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.RBS
+    :members:
+    :member-order: bysource
+
+Echo Cross-Resonance gate (ECR)
+""""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.ECR
     :members:
     :member-order: bysource
 
@@ -843,9 +878,9 @@ only when number of qubits is small.
 Alternatively, the user can construct this Hamiltonian using a sparse matrices.
 Sparse matrices from the
 `scipy.sparse <https://docs.scipy.org/doc/scipy/reference/sparse.html>`_
-module are supported by the numpy and qibojit backends while the
-`tf.sparse <https://www.tensorflow.org/api_docs/python/tf/sparse>_` can be
-used for tensorflow. Scipy sparse matrices support algebraic
+module are supported by the ``numpy`` and ``qibojit`` backends while the
+`tensorflow.sparse <https://www.tensorflow.org/api_docs/python/tf/sparse>`_ can be
+used for ``tensorflow``. Scipy sparse matrices support algebraic
 operations (addition, subtraction, scalar multiplication), linear algebra
 operations (eigenvalues, eigenvectors, matrix exponentiation) and
 multiplication to dense or other sparse matrices. All these properties are
