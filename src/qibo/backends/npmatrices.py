@@ -42,6 +42,10 @@ class NumpyMatrices:
         return self.np.array([[1, 0], [0, -1]], dtype=self.dtype)
 
     @cached_property
+    def SX(self):
+        return self.np.array([[1 + 1j, 1 - 1j], [1 - 1j, 1 + 1j]], dtype=self.dtype) / 2
+
+    @cached_property
     def S(self):
         return self.np.array([[1, 0], [0, 1j]], dtype=self.dtype)
 
@@ -191,6 +195,21 @@ class NumpyMatrices:
             dtype=self.dtype,
         )
 
+    @cached_property
+    def SYC(self):
+        cost = self.np.cos(self.np.pi / 2) + 0j
+        isint = -1j * self.np.sin(self.np.pi / 2)
+        phase = self.np.exp(-1j * self.np.pi / 6)
+        return self.np.array(
+            [
+                [1, 0, 0, 0],
+                [0, cost, isint, 0],
+                [0, isint, cost, 0],
+                [0, 0, 0, phase],
+            ],
+            dtype=self.dtype,
+        )
+
     def GeneralizedfSim(self, u, phi):
         phase = self.np.exp(-1j * phi)
         return self.np.array(
@@ -241,6 +260,18 @@ class NumpyMatrices:
             dtype=self.dtype,
         )
 
+    def RZX(self, theta):
+        cos, sin = self.np.cos(theta / 2), self.np.sin(theta / 2)
+        return self.np.array(
+            [
+                [cos, -1j * sin, 0, 0],
+                [-1j * sin, cos, 0, 0],
+                [0, 0, cos, 1j * sin],
+                [0, 0, 1j * sin, cos],
+            ],
+            dtype=self.dtype,
+        )
+
     def MS(self, phi0, phi1, theta):
         plus = self.np.exp(1.0j * (phi0 + phi1))
         minus = self.np.exp(1.0j * (phi0 - phi1))
@@ -275,6 +306,16 @@ class NumpyMatrices:
             ],
             dtype=self.dtype,
         )
+
+    def RBS(self, theta):
+        return self.GIVENS(-theta)
+
+    @cached_property
+    def ECR(self):
+        return self.np.array(
+            [[0, 0, 1, 1j], [0, 0, 1j, 1], [1, -1j, 0, 0], [-1j, 1, 0, 0]],
+            dtype=self.dtype,
+        ) / self.np.sqrt(2)
 
     @cached_property
     def TOFFOLI(self):

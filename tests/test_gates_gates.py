@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 
 from qibo import gates
-from qibo.quantum_info import random_statevector
+from qibo.quantum_info import random_hermitian, random_statevector
 
 
 def apply_gates(backend, gatelist, nqubits=None, initial_state=None):
@@ -56,6 +56,56 @@ def test_z(backend):
     backend.assert_allclose(final_state, target_state)
     assert gates.Z(0).qasm_label == "z"
     assert gates.Z(0).clifford
+
+
+def test_sx(backend):
+    nqubits = 1
+    initial_state = random_statevector(2**nqubits, backend=backend)
+    final_state = apply_gates(
+        backend,
+        [gates.SX(0)],
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+    # test dagger
+    final_state_dagger = apply_gates(
+        backend,
+        [gates.SX(0).dagger()],
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+    # test decomposition
+    final_state_decompose = apply_gates(
+        backend,
+        gates.SX(0).decompose(),
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+
+    matrix = np.array([[1 + 1j, 1 - 1j], [1 - 1j, 1 + 1j]]) / 2
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
+    matrix_dagger = np.transpose(np.conj(matrix))
+    target_state = matrix @ initial_state
+    target_state_dagger = matrix_dagger @ initial_state
+
+    observable = random_hermitian(2**nqubits, backend=backend)
+
+    backend.assert_allclose(final_state, target_state)
+    # testing random expectation value due to global phase difference
+    backend.assert_allclose(
+        np.transpose(np.conj(final_state_dagger)) @ observable @ final_state_dagger,
+        np.transpose(np.conj(target_state_dagger)) @ observable @ target_state_dagger,
+    )
+    # testing random expectation value due to global phase difference
+    backend.assert_allclose(
+        np.transpose(np.conj(final_state_decompose))
+        @ observable
+        @ final_state_decompose,
+        np.transpose(np.conj(target_state)) @ observable @ target_state,
+    )
+
+    assert gates.SX(0).qasm_label == "sx"
+    assert gates.SX(0).clifford
 
 
 def test_s(backend):
@@ -382,10 +432,43 @@ def test_fsim(backend):
     matrix[3, 3] = np.exp(-1j * phi)
     matrix = backend.cast(matrix, dtype=matrix.dtype)
     target_state = np.dot(matrix, target_state)
+
     backend.assert_allclose(final_state, target_state)
+
     with pytest.raises(NotImplementedError):
         gates.fSim(0, 1, theta, phi).qasm_label
+
     assert not gates.fSim(0, 1, theta, phi).clifford
+
+
+def test_sycamore(backend):
+    nqubits = 2
+    initial_state = random_statevector(2**nqubits, backend=backend)
+    final_state = apply_gates(
+        backend,
+        [gates.SYC(0, 1)],
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+
+    matrix = np.array(
+        [
+            [1, 0, 0, 0],
+            [0, 0, -1j, 0],
+            [0, -1j, 0, 0],
+            [0, 0, 0, np.exp(-1j * np.pi / 6)],
+        ],
+        dtype=backend.dtype,
+    )
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
+    target_state = matrix @ initial_state
+
+    backend.assert_allclose(final_state, target_state)
+
+    with pytest.raises(NotImplementedError):
+        gates.SYC(0, 1).qasm_label
+
+    assert not gates.SYC(0, 1).clifford
 
 
 def test_generalized_fsim(backend):
@@ -473,6 +556,46 @@ def test_rzz(backend):
     assert not gates.RZZ(0, 1, theta).clifford
 
 
+def test_rzx(backend):
+    theta = 0.1234
+    nqubits = 2
+    initial_state = random_statevector(2**nqubits, backend=backend)
+    final_state = apply_gates(
+        backend,
+        [gates.RZX(0, 1, theta)],
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+    # test decomposition
+    final_state_decompose = apply_gates(
+        backend,
+        gates.RZX(0, 1, theta).decompose(),
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+
+    cos, sin = np.cos(theta / 2), np.sin(theta / 2)
+    matrix = np.array(
+        [
+            [cos, -1j * sin, 0, 0],
+            [-1j * sin, cos, 0, 0],
+            [0, 0, cos, 1j * sin],
+            [0, 0, 1j * sin, cos],
+        ],
+        dtype=backend.dtype,
+    )
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
+    target_state = matrix @ initial_state
+
+    backend.assert_allclose(final_state, target_state)
+    backend.assert_allclose(final_state_decompose, target_state)
+
+    with pytest.raises(NotImplementedError):
+        gates.RZX(0, 1, theta).qasm_label
+
+    assert not gates.RZX(0, 1, theta).clifford
+
+
 def test_ms(backend):
     phi0 = 0.1234
     phi1 = 0.4321
@@ -519,6 +642,13 @@ def test_givens(backend):
         nqubits=nqubits,
         initial_state=initial_state,
     )
+    # test decomposition
+    final_state_decompose = apply_gates(
+        backend,
+        gates.GIVENS(0, 1, theta).decompose(),
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
 
     matrix = np.array(
         [
@@ -533,6 +663,89 @@ def test_givens(backend):
 
     target_state = matrix @ initial_state
     backend.assert_allclose(final_state, target_state)
+    backend.assert_allclose(final_state_decompose, target_state)
+
+    with pytest.raises(NotImplementedError):
+        gates.GIVENS(0, 1, theta).qasm_label
+
+    assert not gates.GIVENS(0, 1, theta).clifford
+
+
+def test_rbs(backend):
+    theta = 0.1234
+    nqubits = 2
+    initial_state = random_statevector(2**nqubits, backend=backend)
+    final_state = apply_gates(
+        backend,
+        [gates.RBS(0, 1, theta)],
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+    # test decomposition
+    final_state_decompose = apply_gates(
+        backend,
+        gates.RBS(0, 1, theta).decompose(),
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+
+    matrix = np.array(
+        [
+            [1, 0, 0, 0],
+            [0, np.cos(theta), np.sin(theta), 0],
+            [0, -np.sin(theta), np.cos(theta), 0],
+            [0, 0, 0, 1],
+        ],
+        dtype=backend.dtype,
+    )
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
+
+    target_state = matrix @ initial_state
+    backend.assert_allclose(final_state, target_state)
+    backend.assert_allclose(final_state_decompose, target_state)
+
+    with pytest.raises(NotImplementedError):
+        gates.RBS(0, 1, theta).qasm_label
+
+    assert not gates.RBS(0, 1, theta).clifford
+
+
+def test_ecr(backend):
+    nqubits = 2
+    initial_state = random_statevector(2**nqubits, backend=backend)
+    final_state = apply_gates(
+        backend,
+        [gates.ECR(0, 1)],
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+    # test decomposition
+    final_state_decompose = apply_gates(
+        backend,
+        gates.ECR(0, 1).decompose(),
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+
+    matrix = np.array(
+        [
+            [0, 0, 1, 1j],
+            [0, 0, 1j, 1],
+            [1, -1j, 0, 0],
+            [-1j, 1, 0, 0],
+        ],
+        dtype=backend.dtype,
+    ) / np.sqrt(2)
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
+
+    target_state = matrix @ initial_state
+    backend.assert_allclose(final_state, target_state)
+    backend.assert_allclose(final_state_decompose, target_state)
+
+    with pytest.raises(NotImplementedError):
+        gates.ECR(0, 1).qasm_label
+
+    assert not gates.ECR(0, 1).clifford
 
 
 @pytest.mark.parametrize("applyx", [False, True])
@@ -837,7 +1050,6 @@ GATES = [
     ("RZ", (0, 0.3)),
     ("GPI", (0, 0.1)),
     ("GPI2", (0, 0.2)),
-    ("GIVENS", (0, 1, 0.1)),
     ("U1", (0, 0.1)),
     ("U2", (0, 0.2, 0.3)),
     ("U3", (0, 0.1, 0.2, 0.3)),
@@ -848,10 +1060,15 @@ GATES = [
     ("CU2", (0, 1, 0.2, 0.3)),
     ("CU3", (0, 1, 0.1, 0.2, 0.3)),
     ("fSim", (0, 1, 0.1, 0.2)),
+    ("SYC", (0, 1)),
     ("RXX", (0, 1, 0.1)),
     ("RYY", (0, 1, 0.2)),
     ("RZZ", (0, 1, 0.3)),
+    ("RZX", (0, 1, 0.4)),
     ("MS", (0, 1, 0.1, 0.2, 0.3)),
+    ("GIVENS", (0, 1, 0.1)),
+    ("RBS", (0, 1, 0.2)),
+    ("ECR", (0, 1)),
 ]
 
 
