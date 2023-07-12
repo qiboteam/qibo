@@ -147,7 +147,6 @@ class SGD(Optimizer):
                     trainablep = self.params[count : count + Param.nparams]
                     count += Param.nparams
                     params.append(Param.get_params(trainablep, feature=feature))
-
             return params
 
     def run_loss(self, feature, label):
@@ -214,8 +213,6 @@ class SGD(Optimizer):
             for i in range(self.nparams):
                 loss_gradients[i] += obs_gradients[i] * loss_grad
 
-            print(loss_gradients)
-
         # gradient average
         loss_gradients /= len(features)
         loss /= len(features)
@@ -263,7 +260,6 @@ class SGD(Optimizer):
             mhat = m[i] / (1.0 - beta_1 ** (iteration + 1))
             vhat = v[i] / (1.0 - beta_2 ** (iteration + 1))
             self.params[i] -= learning_rate * mhat / (np.sqrt(vhat) + epsilon)
-
         return m, v, loss
 
     def sgd(self, options):
@@ -325,7 +321,7 @@ class SGD(Optimizer):
                 # in case one wants to plot J as a function of the iterations
                 losses.append(this_loss)
 
-        # return losses
+        return losses
 
     def fit(self, X, y):
         """Performs the optimizations and returns f_best, x_best."""
