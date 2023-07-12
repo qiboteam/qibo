@@ -1,20 +1,20 @@
-from scipy.optimize import basinhopping
-#from qibo.noise import NoiseModel
-from qibo.config import log, raise_error
-from qibo.models import Circuit
-from qibo import backends
-from qibo.symbols import Symbol
-from qibo.hamiltonians import SymbolicHamiltonian
-from qibo.derivative import calculate_gradients
-
 import numpy as np
-import random
 import tensorflow as tf
+from scipy.optimize import basinhopping
+
+from qibo import backends
+
+# from qibo.noise import NoiseModel
+from qibo.config import log, raise_error
+from qibo.derivative import calculate_gradients
+from qibo.hamiltonians import SymbolicHamiltonian
+from qibo.models import Circuit
+from qibo.symbols import Symbol
 
 
 class Optimizer:
     """Parent optimizer"""
-    
+
     def __init__(self, initial_parameters, args=(), loss=None, **kwargs):
         if not loss:
             self.loss_function = self.base_loss
@@ -22,36 +22,92 @@ class Optimizer:
             self.loss_function = loss
         self.args = args
         self.backend = None
-        self.inital_parameters = initial_parameters
+        self.initial_parameters = initial_parameters
+        self.args = args
 
-        # natural gradient
-        self.natgrad = False
-        if self.natgrad:
-            print("Using Natural Gradient")
-
-        if not isinstance(initial_parameters, list) and not isinstance(initial_parameters, np.ndarray):
-            raise("Parameters must be a list of Parameter objects or a numpy array")
-
+        if not isinstance(initial_parameters, list) and not isinstance(
+            initial_parameters, np.ndarray
+        ):
+            raise ("Parameters must be a list of Parameter objects or a numpy array")
 
     def base_loss(self, result, label):
-        """Standard squared error loss"""
+        """Standard squared error loss function"""
         loss = (result - label) ** 2
 
         return loss
 
     def set_options(self, updates):
+        """Updates options dictionary"""
         self.options.update(updates)
+
+    def create_hamiltonian(self, qubit, nqubit):
+        """
+        Creates appropriate Hamiltonian for a given list of qubits
+        Args:
+            qubit: qubit numbers whose states we are interested in
+            nqubit: total number of qubits, which determines size of Hamiltonian
+        Return:
+            hamiltonian: SymbolicHamiltonian
+        """
+        standard = np.array([[1, 0], [0, 1]])
+        target = np.array([[1, 0], [0, 0]])
+        hams = []
+        if not isinstance(qubit, list):
+            qubit = [qubit]
+
+        for i in range(nqubit):
+            if i in qubit:
+                hams.append(Symbol(i, target))
+            else:
+                hams.append(Symbol(i, standard))
+
+        # create Hamiltonian
+        obs = np.prod(hams)
+        hamiltonian = SymbolicHamiltonian(obs)
+
+        return hamiltonian
 
 
 class SGD(Optimizer):
+    """Stochastic Gradient Descent object to optimise function parameters.
 
-    def __init__(self, circuit, parameters, args=(), loss=None, **kwargs):
+    Example:
+    .. code-block:: python
+
+        from qibo import Circuit
+        from qibo import gates
+
+        circuit = Circuit(nqubits=1)
+        c.add(gates.RY(q=0, theta=0))
+        c.add(gates.RZ(q=0, theta=0))
+        c.add(gates.M(q=0))
+
+        parameters = []
+        for _ in range(2):
+            parameters.append(Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=True))
+
+        optimizer = SGD(circuit=circuit, parameters=parameters)
+        X = np.array([0.1, 0.2, 0.3])
+        y = np.array([0.2, 0.5, 0.7])
+        losses = optimizer.fit(X, y)
+
+    Args:
+        circuit (Circuit): the circuit whose parameters will be optimised
+        parameters (np.ndarray or list of Parameter objects): initial gate parameters
+        hamiltonian (SymbolicHamiltonian): hamiltonian applied to final circuit state
+        args (list): additional loss function arguments
+        loss (lambda): loss function applied between
+    """
+
+    def __init__(
+        self, circuit, parameters, hamiltonian=None, args=(), loss=None, **kwargs
+    ):
         super().__init__(parameters, args, loss=loss, **kwargs)
 
         # circuit
         if not isinstance(circuit, Circuit):
-            raise("Circuit is not of correct object type")
-        
+            raise ("Circuit is not of correct object type")
+
         self._circuit = circuit
         self.nqubits = self._circuit.nqubits
 
@@ -60,13 +116,20 @@ class SGD(Optimizer):
         self.params = self._get_params(trainable=True)
         self.nparams = len(self.params)
 
+        # hamiltonian
+        if not hamiltonian:
+            self.hamiltonian = self.create_hamiltonian(0, self.nqubits)
+        else:
+            self.hamiltonian = hamiltonian
+
         # options
         self.options = {
             "epochs": 1000,
             "learning_rate": 0.045,
             "batches": 1,
             "J_threshold": 1e-3,
-            "shift_rule": "psr"
+            "shift_rule": "psr",
+            "natgrad": False,
         }
         self.set_options(kwargs)
 
@@ -81,46 +144,27 @@ class SGD(Optimizer):
                 if trainable:
                     params += Param._trainablep
                 else:
-                    trainablep = self.params[count:count+Param.nparams]
+                    trainablep = self.params[count : count + Param.nparams]
                     count += Param.nparams
-                    params.append(Param.get_params(trainablep, feature=feature)) 
+                    params.append(Param.get_params(trainablep, feature=feature))
 
             return params
 
-    def loss(self, feature, label):
-        """Calculates loss and its derivative"""
+    def run_loss(self, feature, label):
+        """
+        Calculates loss and its derivative
+        Args:
+            feature: input value
+            label: the value of y_exact which is approximated with the circuit
+        """
         params = self._get_params(trainable=False, feature=feature)
         result = tf.Variable(self.run_circuit(params, nshots=1024))
         with tf.GradientTape() as tape:
             loss = self.loss_function(result, label)
+        # gradient of loss function
         loss_grad = tape.gradient(loss, result)
         return loss.numpy(), loss_grad
-    
-    def create_hamiltonian(self, qubit, nqubit):
-        """
-        Creates appropriate Hamiltonian for Fubini-Matrix generation
-        Args:
-            qubit: qubit number whose state we are interested in
-            nqubit: total number of qubits, which determines size of Hamiltonian
-        Return:
-            hamiltonian: SymbolicHamiltonian
-        """
-        standard = np.array([[1, 0], [0, 1]])
-        target = np.array([[1, 0], [0, 0]])
-        hams = []
 
-        for i in range(nqubit):
-            if i == qubit:
-                hams.append(Symbol(i, target))
-            else:
-                hams.append(Symbol(i, standard))
-
-        # create Hamiltonian
-        obs = np.prod(hams)
-        hamiltonian = SymbolicHamiltonian(obs)
-
-        return hamiltonian
-        
     def run_circuit(self, parameters, nshots=1024):
         """
         User-facing function which runs the circuit with given parameters and returns the result
@@ -134,13 +178,10 @@ class SGD(Optimizer):
 
         state = self._circuit().state()
 
-        # run through parametrized gate
-        hamiltonian = self.create_hamiltonian(0, self.nqubits)
-
-        results = hamiltonian.expectation(state)
+        results = self.hamiltonian.expectation(state)
 
         return results
-        
+
     def dloss(self, features, labels):
         """
         This function calculates the loss function's gradients with respect to self.params
@@ -152,21 +193,23 @@ class SGD(Optimizer):
         loss_gradients = np.zeros(self.nparams)
         loss = 0
 
-        if self.natgrad:
+        # setup fubini matrix for natural gradient
+        if self.options["natgrad"]:
             fubini = np.zeros((self.nparams, self.nparams))
 
+        # iterate through all data points
         for feat, label in zip(features, labels):
-
-            local_loss, loss_grad = self.loss(feat, label)
+            local_loss, loss_grad = self.run_loss(feat, label)
 
             loss += local_loss
 
-            obs_gradients = calculate_gradients(self, feature=feat)  # d<B> N params, N label gradients
+            obs_gradients = calculate_gradients(
+                self, feature=feat
+            )  # d<B> N params, N label gradients
 
-            if self.natgrad:
+            if self.options["natgrad"]:
                 fubini = None
-            #    fubini += generate_fubini(self, feat)
-            
+            #    fubini += generate_fubini(self, feat) # separate pull request
 
             for i in range(self.nparams):
                 loss_gradients[i] += obs_gradients[i] * loss_grad
@@ -176,13 +219,12 @@ class SGD(Optimizer):
         loss /= len(features)
 
         # Fubini-Study Metric renormalisation
-        if self.natgrad:
-
+        if self.options["natgrad"]:
             fubini /= len(features)
             loss_gradients = np.dot(np.linalg.inv(fubini), loss_gradients)
 
         return loss_gradients, loss
-           
+
     def AdamDescent(
         self,
         learning_rate,
@@ -221,7 +263,7 @@ class SGD(Optimizer):
             self.params[i] -= learning_rate * mhat / (np.sqrt(vhat) + epsilon)
 
         return m, v, loss
-        
+
     def sgd(self, options):
         """
         This function performs the full Adam descent's procedure
@@ -248,7 +290,6 @@ class SGD(Optimizer):
 
         iteration = 0
 
-
         for epoch in range(options["epochs"]):
             if epoch != 0 and losses[-1] < options["J_threshold"]:
                 print(
@@ -258,7 +299,7 @@ class SGD(Optimizer):
                 )
                 break
             # shuffle index list
-            #np.random.shuffle(idx)
+            # np.random.shuffle(idx)
             # run over the batches
             for ib in range(options["batches"]):
                 iteration += 1
@@ -282,33 +323,35 @@ class SGD(Optimizer):
                 # in case one wants to plot J as a function of the iterations
                 losses.append(this_loss)
 
+        return losses
+
     def fit(self, X, y):
         """Performs the optimizations and returns f_best, x_best."""
 
         if not isinstance(X, np.ndarray):
-            raise("X must be a numpy array")
-        
+            raise ("X must be a numpy array")
+
+        if not isinstance(y, np.ndarray):
+            raise ("y must be a numpy array")
+
+        self.features = X
+
         self.labels = y
         self.nsample = len(self.labels)
-        
-        self.features = X
-        
-        if not isinstance(y, np.ndarray):
-            raise("y must be a numpy array")
-        
+
         if self.backend is None:
             from qibo.backends import GlobalBackend
 
             self.backend = GlobalBackend()
 
         return self.sgd(self.options)
-    
+
 
 class CMAES(Optimizer):
     def __init__(self, initial_parameters, args=(), loss=None, **kwargs):
         super().__init__(initial_parameters, args, loss, **kwargs)
 
-    def fit(loss, initial_parameters, args=(), options=None):
+    def fit(self):
         """Genetic optimizer based on `pycma <https://github.com/CMA-ES/pycma>`_.
 
         Args:
@@ -323,26 +366,28 @@ class CMAES(Optimizer):
         """
         import cma
 
-        r = cma.fmin2(loss, initial_parameters, 1.7, options=options, args=args)
+        r = cma.fmin2(self.loss_function, self.initial_parameters, 1.7, args=self.args)
         return r[1].result.fbest, r[1].result.xbest, r
-    
+
 
 class Newtonian(Optimizer):
     def __init__(self, initial_parameters, args=(), loss=None, **kwargs):
         super().__init__(initial_parameters, args, loss, **kwargs)
 
-    def fit(self,
-            method="Powell",
-            jac=None,
-            hess=None,
-            hessp=None,
-            bounds=None,
-            constraints=(),
-            tol=None,
-            callback=None,
-            options=None,
-            processes=None,
-            backend=None):
+    def fit(
+        self,
+        method="Powell",
+        jac=None,
+        hess=None,
+        hessp=None,
+        bounds=None,
+        constraints=(),
+        tol=None,
+        callback=None,
+        options=None,
+        processes=None,
+        backend=None,
+    ):
         """Newtonian optimization approaches based on ``scipy.optimize.minimize``.
 
         For more details check the `scipy documentation <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
