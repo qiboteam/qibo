@@ -272,6 +272,18 @@ class NumpyMatrices:
             dtype=self.dtype,
         )
 
+    def RXY(self, theta):
+        cos, sin = self.np.cos(theta / 2), self.np.sin(theta / 2)
+        return self.np.array(
+            [
+                [1, 0, 0, 0],
+                [0, cos, -1j * sin, 0],
+                [0, -1j * sin, cos, 0],
+                [0, 0, 0, 1],
+            ],
+            dtype=self.dtype,
+        )
+
     def MS(self, phi0, phi1, theta):
         plus = self.np.exp(1.0j * (phi0 + phi1))
         minus = self.np.exp(1.0j * (phi0 - phi1))
