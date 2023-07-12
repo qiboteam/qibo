@@ -73,7 +73,7 @@ def ansatz(layers, nqubits):
     return c
 
 
-def sgd_optimizer():
+def test_sgd_optimizer():
     circuit = ansatz(3, 1)
     parameters = []
     for _ in range(6):
@@ -138,3 +138,7 @@ def test_cma_optimizer():
     fbest, xbest, r = optimizer.fit()
 
     assert fbest < 1e-5
+
+
+if __name__ == "__main__":
+    test_sgd_optimizer()

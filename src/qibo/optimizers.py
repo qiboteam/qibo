@@ -323,7 +323,7 @@ class SGD(Optimizer):
                 # in case one wants to plot J as a function of the iterations
                 losses.append(this_loss)
 
-        return losses
+        # return losses
 
     def fit(self, X, y):
         """Performs the optimizations and returns f_best, x_best."""
