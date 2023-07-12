@@ -641,7 +641,7 @@ Parametric ZX interaction (RZX)
     :member-order: bysource
 
 Parametric XX-YY interaction (RXY)
-"""""""""""""""""""""""""""""""
+""""""""""""""""""""""""""""""""""
 
 .. autoclass:: qibo.gates.RZX
     :members:
