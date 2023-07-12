@@ -214,6 +214,8 @@ class SGD(Optimizer):
             for i in range(self.nparams):
                 loss_gradients[i] += obs_gradients[i] * loss_grad
 
+            print(loss_gradients)
+
         # gradient average
         loss_gradients /= len(features)
         loss /= len(features)
