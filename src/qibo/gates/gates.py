@@ -1507,10 +1507,10 @@ class RZX(_Rnn_):
             0 & \\text{RX}(-\\theta) \\\\
         \\end{pmatrix} =
         \\begin{pmatrix}
-            \\cos(\\frac{\\theta}{2}) & -i \\sin(\\frac{\\theta}{2}) & 0 & 0 \\\\
-            -i \\sin(\\frac{\\theta}{2}) & \\cos(\\frac{\\theta}{2}) & 0 & 0 \\\\
-            0 & 0 & \\cos(\\frac{\\theta}{2}) & i \\sin(\\frac{\\theta}{2}) \\\\
-            0 & 0 & i \\sin(\\frac{\\theta}{2}) & \\cos(\\frac{\\theta}{2}) \\\\
+            \\cos{\\frac{\\theta}{2}} & -i \\sin{\\frac{\\theta}{2}} & 0 & 0 \\\\
+            -i \\sin{\\frac{\\theta}{2}} & \\cos{\\frac{\\theta}{2}} & 0 & 0 \\\\
+            0 & 0 & \\cos{\\frac{\\theta}{2}} & i \\sin{\\frac{\\theta}{2}} \\\\
+            0 & 0 & i \\sin{\\frac{\\theta}{2}} & \\cos{\\frac{\\theta}{2}} \\\\
         \\end{pmatrix} \\, ,
 
     where :math:`\\text{RX}` is the :class:`qibo.gates.RX` gate.
@@ -1542,11 +1542,11 @@ class RXY(_Rnn_):
     Corresponds to the following unitary matrix
 
     .. math::
-        \\exp(-i \\frac{\\theta}{4}(XX + YY)) =
+        \\exp\\left(-i \\frac{\\theta}{4}(XX + YY)\\right) =
         \\begin{pmatrix}
             1 & 0 & 0 & 0 \\\\
-            0 & \\cos(\\frac{\\theta}{2}) & -i \\sin(\\frac{\\theta}{2}) & 0 \\\\
-            0 & -i \\sin(\\frac{\\theta}{2}) & \\cos(\\frac{\\theta}{2}) & 0 \\\\
+            0 & \\cos{\\frac{\\theta}{2}} & -i \\sin{\\frac{\\theta}{2}} & 0 \\\\
+            0 & -i \\sin{\\frac{\\theta}{2}} & \\cos{\\frac{\\theta}{2}} & 0 \\\\
             0 & 0 & 0 & 1 \\\\
         \\end{pmatrix} \\, ,
 
