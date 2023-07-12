@@ -627,8 +627,16 @@ def test_rxy(backend):
     matrix = backend.cast(matrix, dtype=matrix.dtype)
     target_state = matrix @ initial_state
 
+    observable = random_hermitian(2**nqubits, backend=backend)
+
     backend.assert_allclose(final_state, target_state)
-    backend.assert_allclose(final_state_decompose, target_state)
+    # testing random expectation value due to global phase difference
+    backend.assert_allclose(
+        np.transpose(np.conj(final_state_decompose))
+        @ observable
+        @ final_state_decompose,
+        np.transpose(np.conj(target_state)) @ observable @ target_state,
+    )
 
     with pytest.raises(NotImplementedError):
         gates.RXY(0, 1, theta).qasm_label
@@ -1105,6 +1113,7 @@ GATES = [
     ("RYY", (0, 1, 0.2)),
     ("RZZ", (0, 1, 0.3)),
     ("RZX", (0, 1, 0.4)),
+    ("RXY", (0, 1, 0.5)),
     ("MS", (0, 1, 0.1, 0.2, 0.3)),
     ("GIVENS", (0, 1, 0.1)),
     ("RBS", (0, 1, 0.2)),
