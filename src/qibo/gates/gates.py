@@ -1536,6 +1536,56 @@ class RZX(_Rnn_):
         return [H(q1), CNOT(q0, q1), RZ(q1, theta), CNOT(q0, q1), H(q1)]
 
 
+class RXY(_Rnn_):
+    """Parametric 2-qubit :math:`XX + YY` interaction, or rotation about :math:`XX + YY`-axis.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\exp(-i \\frac{\\theta}{4}(XX + YY)) =
+        \\begin{pmatrix}
+            1 & 0 & 0 & 0 \\\\
+            0 & \\cos(\\frac{\\theta}{2}) & -i \\sin(\\frac{\\theta}{2}) & 0 \\\\
+            0 & -i \\sin(\\frac{\\theta}{2}) & \\cos(\\frac{\\theta}{2}) & 0 \\\\
+            0 & 0 & 0 & 1 \\\\
+        \\end{pmatrix} \\, ,
+
+    Args:
+        q0 (int): the first entangled qubit id number.
+        q1 (int): the second entangled qubit id number.
+        theta (float): the rotation angle.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
+    """
+
+    def __init__(self, q0, q1, theta, trainable=True):
+        super().__init__(q0, q1, theta, trainable)
+        self.name = "rxy"
+        self.draw_label = "RXY"
+
+    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
+        """This decomposition has a global phase difference with respect to the
+        original gate due to a phase difference in :math:`\\left(\\sqrt{X}\\right)^{\\dagger}`.
+        """
+        q0, q1 = self.target_qubits
+        theta = self.init_kwargs["theta"]
+        return [
+            RZ(q1, -np.pi / 2),
+            S(q0),
+            SX(q1),
+            RZ(np.pi / 2),
+            CNOT(q1, q0),
+            RY(q0, -theta / 2),
+            RY(-theta / 2),
+            CNOT(q1, q0),
+            SDG(q0),
+            RZ(q1, -np.pi / 2),
+            SX(q1).dagger(),
+            RZ(q1, np.pi / 2),
+        ]
+
+
 class MS(ParametrizedGate):
     """The Mølmer–Sørensen (MS) gate is a two-qubit gate native to trapped ions.
 
