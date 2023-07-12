@@ -596,6 +596,46 @@ def test_rzx(backend):
     assert not gates.RZX(0, 1, theta).clifford
 
 
+def test_rxy(backend):
+    theta = 0.1234
+    nqubits = 2
+    initial_state = random_statevector(2**nqubits, backend=backend)
+    final_state = apply_gates(
+        backend,
+        [gates.RXY(0, 1, theta)],
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+    # test decomposition
+    final_state_decompose = apply_gates(
+        backend,
+        gates.RXY(0, 1, theta).decompose(),
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+
+    cos, sin = np.cos(theta / 2), np.sin(theta / 2)
+    matrix = np.array(
+        [
+            [1, 0, 0, 0],
+            [0, cos, -1j * sin, 0],
+            [0, -1j * sin, cos, 0],
+            [0, 0, 0, 1],
+        ],
+        dtype=backend.dtype,
+    )
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
+    target_state = matrix @ initial_state
+
+    backend.assert_allclose(final_state, target_state)
+    backend.assert_allclose(final_state_decompose, target_state)
+
+    with pytest.raises(NotImplementedError):
+        gates.RXY(0, 1, theta).qasm_label
+
+    assert not gates.RXY(0, 1, theta).clifford
+
+
 def test_ms(backend):
     phi0 = 0.1234
     phi1 = 0.4321
