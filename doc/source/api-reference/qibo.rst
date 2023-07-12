@@ -643,7 +643,7 @@ Parametric ZX interaction (RZX)
 Parametric XX-YY interaction (RXY)
 """"""""""""""""""""""""""""""""""
 
-.. autoclass:: qibo.gates.RZX
+.. autoclass:: qibo.gates.RXY
     :members:
     :member-order: bysource
 
