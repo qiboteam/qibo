@@ -95,12 +95,6 @@ def test_derivative(backend, nshots, atol, scale_factor, grads):
     backend.assert_allclose(grad_2, grads[2], atol=atol)
 
 
-def hamiltonian2(nqubits):
-    return hamiltonians.hamiltonians.SymbolicHamiltonian(
-        np.prod([Z(i) for i in range(nqubits)]), backend=GlobalBackend()
-    )
-
-
 def gradient_exact():
     backend = GlobalBackend()
 
@@ -110,7 +104,7 @@ def gradient_exact():
         c = circuit(nqubits=1)
         c.set_parameters(test_params)
 
-        ham = hamiltonian2(1)
+        ham = hamiltonian(1)
         results = ham.expectation(
             backend.execute_circuit(circuit=c, initial_state=None).state()
         )
