@@ -370,6 +370,76 @@ def test_cz(backend, controlled_by):
     assert gates.CZ(0, 1).clifford
 
 
+def test_csx(backend):
+    nqubits = 2
+    initial_state = random_statevector(2**nqubits, backend=backend)
+    final_state = apply_gates(
+        backend,
+        [gates.CSX(0, 1)],
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+    # test decomposition
+    final_state_decompose = apply_gates(
+        backend,
+        gates.CSX(0, 1).decompose(),
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+
+    matrix = np.array(
+        [
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, (1 + 1j) / 2, (1 - 1j) / 2],
+            [0, 0, (1 - 1j) / 2, (1 + 1j) / 2],
+        ]
+    )
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
+    target_state = matrix @ initial_state
+
+    backend.assert_allclose(final_state, target_state)
+    backend.assert_allclose(final_state_decompose, target_state)
+
+    assert gates.CSX(0, 1).qasm_label == "csx"
+    assert gates.CSX(0, 1).clifford
+
+
+def test_csxdg(backend):
+    nqubits = 2
+    initial_state = random_statevector(2**nqubits, backend=backend)
+    final_state = apply_gates(
+        backend,
+        [gates.CSXDG(0, 1)],
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+    # test decomposition
+    final_state_decompose = apply_gates(
+        backend,
+        gates.CSXDG(0, 1).decompose(),
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+
+    matrix = np.array(
+        [
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, (1 - 1j) / 2, (1 + 1j) / 2],
+            [0, 0, (1 + 1j) / 2, (1 - 1j) / 2],
+        ]
+    )
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
+    target_state = matrix @ initial_state
+
+    backend.assert_allclose(final_state, target_state)
+    backend.assert_allclose(final_state_decompose, target_state)
+
+    assert gates.CSXDG(0, 1).qasm_label == "csxdg"
+    assert gates.CSXDG(0, 1).clifford
+
+
 @pytest.mark.parametrize(
     "name,params",
     [
@@ -1126,6 +1196,9 @@ GATES = [
     ("U2", (0, 0.2, 0.3)),
     ("U3", (0, 0.1, 0.2, 0.3)),
     ("CNOT", (0, 1)),
+    ("CZ", (0, 1)),
+    ("CSX", (0, 1)),
+    ("CSXDG", (0, 1)),
     ("CRX", (0, 1, 0.1)),
     ("CRZ", (0, 1, 0.3)),
     ("CU1", (0, 1, 0.1)),
