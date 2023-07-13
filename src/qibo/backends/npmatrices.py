@@ -46,6 +46,10 @@ class NumpyMatrices:
         return self.np.array([[1 + 1j, 1 - 1j], [1 - 1j, 1 + 1j]], dtype=self.dtype) / 2
 
     @cached_property
+    def SXDG(self):
+        return self.np.transpose(self.np.conj(self.SX))
+
+    @cached_property
     def S(self):
         return self.np.array([[1, 0], [0, 1j]], dtype=self.dtype)
 
