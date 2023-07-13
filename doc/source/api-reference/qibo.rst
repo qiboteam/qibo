@@ -528,6 +528,13 @@ Controlled-phase (CZ)
     :members:
     :member-order: bysource
 
+Controlled-Square Root of X (CSX)
+"""""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.CSX
+    :members:
+    :member-order: bysource
+
 Controlled-rotation X-axis (CRX)
 """"""""""""""""""""""""""""""""
 
