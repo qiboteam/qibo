@@ -257,12 +257,48 @@ class SX(Gate):
         return [RX(self.init_args[0], np.pi / 2, trainable=False)]
 
     def _dagger(self):
+        """"""
+        return SXDG(self.init_args[0])
+
+
+class SXDG(Gate):
+    """The conjugate transpose of the :math:`\\sqrt{X}` gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\frac{1}{2} \\, \\begin{pmatrix}
+        1 - i & 1 + i \\\\
+        1 + i & 1 - i \\\\
+        \\end{pmatrix}
+
+    Args:
+        q (int): the qubit id number.
+    """
+
+    def __init__(self, q):
+        super().__init__()
+        self.name = "sxdg"
+        self.draw_label = "SXDG"
+        self.target_qubits = (q,)
+        self.init_args = [q]
+        self.clifford = True
+
+    @property
+    def qasm_label(self):
+        return "sxdg"
+
+    def decompose(self):
         """A global phase difference exists between the definitions of
-        :math:`(\\sqrt{X})^{\\dagger}` and :math:`\\text{RX}(-\\pi / 2)`,
-        with :math:`\\text{RX}` being the :class:`qibo.gates.RX` gate.
-        More precisely, :math:`\\sqrt{X} = e^{-i \\pi / 4} \\, \\text{RX}(- \\pi / 2)`.
+        :math:`\\sqrt{X}` and :math:`\\text{RX}(\\pi / 2)`, with :math:`\\text{RX}`
+        being the :class:`qibo.gates.RX` gate. More precisely,
+        :math:`(\\sqrt{X})^{\\dagger} = e^{-i \\pi / 4} \\, \\text{RX}(-\\pi / 2)`.
         """
-        return RX(self.init_args[0], -np.pi / 2, trainable=False)
+        return [RX(self.init_args[0], -np.pi / 2, trainable=False)]
+
+    def _dagger(self):
+        """"""
+        return SX(self.init_args[0])
 
 
 class S(Gate):
@@ -297,7 +333,7 @@ class S(Gate):
 
 
 class SDG(Gate):
-    """The conjugate transpose of the S gate.
+    """The conjugate transpose of the :math:`S` gate.
 
     Corresponds to the following unitary matrix
 
