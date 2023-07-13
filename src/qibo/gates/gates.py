@@ -893,6 +893,88 @@ class CZ(Gate):
         return "cz"
 
 
+class CSX(Gate):
+    """The Controlled-:math:`\\sqrt{X}` gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 & 0 & 0 \\\\
+        0 & 1 & 0 & 0 \\\\
+        0 & 0 & e^{i\\pi/4} & e^{-i\\pi/4} \\\\
+        0 & 0 & e^{-i\\pi/4} & e^{i\\pi/4} \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the control qubit id number.
+        q1 (int): the target qubit id number.
+    """
+
+    def __init__(self, q0, q1):
+        super().__init__()
+        self.name = "csx"
+        self.draw_label = "CSX"
+        self.control_qubits = (q0,)
+        self.target_qubits = (q1,)
+        self.init_args = [q0, q1]
+        self.clifford = True
+
+    @property
+    def qasm_label(self):
+        return "csx"
+
+    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
+        """"""
+        q0, q1 = self.init_args
+        return [H(q1), CU1(q0, q1, np.pi / 2), H(q1)]
+
+    def _dagger(self):
+        """"""
+        return CSXDG(*self.init_args)
+
+
+class CSXDG(Gate):
+    """The transpose conjugate of the Controlled-:math:`\\sqrt{X}` gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 & 0 & 0 \\\\
+        0 & 1 & 0 & 0 \\\\
+        0 & 0 & e^{-i\\pi/4} & e^{i\\pi/4} \\\\
+        0 & 0 & e^{i\\pi/4} & e^{-i\\pi/4} \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the control qubit id number.
+        q1 (int): the target qubit id number.
+    """
+
+    def __init__(self, q0, q1):
+        super().__init__()
+        self.name = "csxdg"
+        self.draw_label = "CSXDG"
+        self.control_qubits = (q0,)
+        self.target_qubits = (q1,)
+        self.init_args = [q0, q1]
+        self.clifford = True
+
+    @property
+    def qasm_label(self):
+        return "csxdg"
+
+    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
+        """"""
+        q0, q1 = self.init_args
+        return [H(q1), CU1(q0, q1, -np.pi / 2), H(q1)]
+
+    def _dagger(self):
+        """"""
+        return CSX(*self.init_args)
+
+
 class _CRn_(ParametrizedGate):
     """Abstract method for defining the CRX, CRY and CRZ gates.
 
