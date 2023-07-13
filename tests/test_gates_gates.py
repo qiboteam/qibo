@@ -67,13 +67,6 @@ def test_sx(backend):
         nqubits=nqubits,
         initial_state=initial_state,
     )
-    # test dagger
-    final_state_dagger = apply_gates(
-        backend,
-        [gates.SX(0).dagger()],
-        nqubits=nqubits,
-        initial_state=initial_state,
-    )
     # test decomposition
     final_state_decompose = apply_gates(
         backend,
@@ -84,19 +77,12 @@ def test_sx(backend):
 
     matrix = np.array([[1 + 1j, 1 - 1j], [1 - 1j, 1 + 1j]]) / 2
     matrix = backend.cast(matrix, dtype=matrix.dtype)
-    matrix_dagger = np.transpose(np.conj(matrix))
     target_state = matrix @ initial_state
-    target_state_dagger = matrix_dagger @ initial_state
-
-    observable = random_hermitian(2**nqubits, backend=backend)
 
     backend.assert_allclose(final_state, target_state)
+
     # testing random expectation value due to global phase difference
-    backend.assert_allclose(
-        np.transpose(np.conj(final_state_dagger)) @ observable @ final_state_dagger,
-        np.transpose(np.conj(target_state_dagger)) @ observable @ target_state_dagger,
-    )
-    # testing random expectation value due to global phase difference
+    observable = random_hermitian(2**nqubits, backend=backend)
     backend.assert_allclose(
         np.transpose(np.conj(final_state_decompose))
         @ observable
@@ -106,6 +92,42 @@ def test_sx(backend):
 
     assert gates.SX(0).qasm_label == "sx"
     assert gates.SX(0).clifford
+
+
+def test_sxdg(backend):
+    nqubits = 1
+    initial_state = random_statevector(2**nqubits, backend=backend)
+    final_state = apply_gates(
+        backend,
+        [gates.SXDG(0)],
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+    # test decomposition
+    final_state_decompose = apply_gates(
+        backend,
+        gates.SXDG(0).decompose(),
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+
+    matrix = np.array([[1 - 1j, 1 + 1j], [1 + 1j, 1 - 1j]]) / 2
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
+    target_state = matrix @ initial_state
+
+    backend.assert_allclose(final_state, target_state)
+
+    # testing random expectation value due to global phase difference
+    observable = random_hermitian(2**nqubits, backend=backend)
+    backend.assert_allclose(
+        np.transpose(np.conj(final_state_decompose))
+        @ observable
+        @ final_state_decompose,
+        np.transpose(np.conj(target_state)) @ observable @ target_state,
+    )
+
+    assert gates.SXDG(0).qasm_label == "sxdg"
+    assert gates.SXDG(0).clifford
 
 
 def test_s(backend):
@@ -1089,6 +1111,8 @@ GATES = [
     ("X", (0,)),
     ("Y", (0,)),
     ("Z", (0,)),
+    ("SX", (0,)),
+    ("SXDG", (0,)),
     ("S", (0,)),
     ("SDG", (0,)),
     ("T", (0,)),
