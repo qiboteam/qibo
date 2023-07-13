@@ -91,7 +91,7 @@ def calculate_gradients(optimizer, feature):
                         nshots=None,
                     )
                     count += 1
-
+    """
     # stochastic parameter shift
     elif optimizer.options["shift_rule"] == "spsr":
         for ipar, Param in enumerate(optimizer.parameters):
@@ -116,7 +116,7 @@ def calculate_gradients(optimizer, feature):
                 scale_factor=1,
                 nshots=None,
             )
-
+    """
     return obs_gradients
 
 
