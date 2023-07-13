@@ -137,6 +137,24 @@ class NumpyMatrices:
             [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, -1]], dtype=self.dtype
         )
 
+    @cached_property
+    def CSX(self):
+        a = (1 + 1j) / 2
+        b = self.np.conj(a)
+        return self.np.array(
+            [
+                [1, 0, 0, 0],
+                [0, 1, 0, 0],
+                [0, 0, a, b],
+                [0, 0, b, a],
+            ],
+            dtype=self.dtype,
+        )
+
+    @cached_property
+    def CSXDG(self):
+        return self.np.transpose(self.np.conj(self.CSX))
+
     def CRX(self, theta):
         m = self.np.eye(4, dtype=self.dtype)
         m[2:, 2:] = self.RX(theta)
