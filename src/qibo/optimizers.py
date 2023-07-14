@@ -159,12 +159,12 @@ class SGD(Optimizer):
             label: the value of y_exact which is approximated with the circuit
         """
         params = self._get_params(trainable=False, feature=feature)
-        result = tf.Variable(self.run_circuit(params, nshots=10000))
-        with tf.GradientTape() as tape:
-            loss = self.loss_function(result, label)
-        # gradient of loss function
-        loss_grad = tape.gradient(loss, result)
-        return loss.numpy(), loss_grad
+        result = self.run_circuit(params, nshots=10000)
+        loss = self.loss_function(result, label)
+        forward = self.loss_function(result + 0.001, label)
+        backward = self.loss_function(result - 0.001, label)
+
+        return loss, (forward - backward) / 0.002
 
     def run_circuit(self, parameters, nshots=10000):
         """
