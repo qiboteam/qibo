@@ -6,10 +6,10 @@ from qibo import backends
 
 # from qibo.noise import NoiseModel
 from qibo.config import log, raise_error
-from qibo.derivative import calculate_gradients
+from qibo.derivative import calculate_gradients, generate_fubini
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.models import Circuit
-from qibo.symbols import Symbol
+from qibo.symbols import Symbol, Z
 
 
 class Optimizer:
@@ -24,6 +24,7 @@ class Optimizer:
         self.backend = None
         self.initial_parameters = initial_parameters
         self.args = args
+        self.backend = backends.GlobalBackend()
 
         if not isinstance(initial_parameters, list) and not isinstance(
             initial_parameters, np.ndarray
@@ -32,6 +33,7 @@ class Optimizer:
 
     def base_loss(self, result, label):
         """Standard squared error loss function"""
+
         loss = (result - label) ** 2
 
         return loss
@@ -63,7 +65,7 @@ class Optimizer:
 
         # create Hamiltonian
         obs = np.prod(hams)
-        hamiltonian = SymbolicHamiltonian(obs)
+        hamiltonian = SymbolicHamiltonian(obs, backend=self.backend)
 
         return hamiltonian
 
@@ -157,14 +159,14 @@ class SGD(Optimizer):
             label: the value of y_exact which is approximated with the circuit
         """
         params = self._get_params(trainable=False, feature=feature)
-        result = tf.Variable(self.run_circuit(params, nshots=1024))
+        result = tf.Variable(self.run_circuit(params, nshots=10000))
         with tf.GradientTape() as tape:
             loss = self.loss_function(result, label)
         # gradient of loss function
         loss_grad = tape.gradient(loss, result)
         return loss.numpy(), loss_grad
 
-    def run_circuit(self, parameters, nshots=1024):
+    def run_circuit(self, parameters, nshots=10000):
         """
         User-facing function which runs the circuit with given parameters and returns the result
         Args:
@@ -174,10 +176,18 @@ class SGD(Optimizer):
             results
         """
         self._circuit.set_parameters(parameters)
+        obs = np.prod([Z(i) for i in range(1)])
+        obs = SymbolicHamiltonian(obs, backend=self.backend)
+        results = self.backend.execute_circuit(
+            circuit=self._circuit, nshots=nshots
+        ).expectation_from_samples(obs)
 
-        state = self._circuit().state()
+        # test = self.hamiltonian.expectation(results)
+        # print(test, results)
 
-        results = self.hamiltonian.expectation(state)
+        # state = self._circuit().state()
+
+        # results = self.hamiltonian.expectation(state)
 
         return results
 
@@ -207,8 +217,13 @@ class SGD(Optimizer):
             )  # d<B> N params, N label gradients
 
             if self.options["natgrad"]:
-                fubini = None
-            #    fubini += generate_fubini(self, feat) # separate pull request
+                fubini += generate_fubini(
+                    self._circuit,
+                    self.nqubits,
+                    self.paramInputs,
+                    feat,
+                    params=self.params,
+                )  # separate pull request
 
             for i in range(self.nparams):
                 loss_gradients[i] += obs_gradients[i] * loss_grad

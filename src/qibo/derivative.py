@@ -6,7 +6,7 @@ from qibo.config import raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.hamiltonians.hamiltonians import SymbolicHamiltonian
 from qibo.models import Circuit
-from qibo.symbols import Z
+from qibo.symbols import Symbol, Z
 
 
 class Parameter:
@@ -455,66 +455,117 @@ class Graph:
         return c, trainable_qubits, affected_params
 
 
-def generate_fubini(optimizer, feature, method="variance"):
+def create_hamiltonian(qubit, nqubit):
+    """
+    Creates appropriate Hamiltonian for a given list of qubits
+    Args:
+        qubit: qubit numbers whose states we are interested in
+        nqubit: total number of qubits, which determines size of Hamiltonian
+    Return:
+        hamiltonian: SymbolicHamiltonian
+    """
+    standard = np.array([[1, 0], [0, 1]])
+    target = np.array([[1, 0], [0, 0]])
+    hams = []
+    if not isinstance(qubit, list):
+        qubit = [qubit]
+
+    for i in range(nqubit):
+        if i in qubit:
+            hams.append(Symbol(i, target))
+        else:
+            hams.append(Symbol(i, standard))
+
+    # create Hamiltonian
+    obs = np.prod(hams)
+    hamiltonian = SymbolicHamiltonian(obs)
+
+    return hamiltonian
+
+
+import pennylane as qml
+
+dev = qml.device("default.qubit", wires=1)
+
+
+@qml.qnode(dev, interface="autograd")
+def ansatz_pdf(params, feature):
+    qml.Hadamard(wires=0)
+
+    qml.RZ(params[0] * feature + params[1], wires=0)
+
+    qml.RY(params[2] * feature + params[3], wires=0)
+
+    qml.RZ(params[4] * feature + params[5], wires=0)
+
+    qml.RY(params[6] * feature + params[7], wires=0)
+
+    qml.RZ(params[8] * feature + params[9], wires=0)
+
+    qml.RY(params[10] * feature + params[11], wires=0)
+
+    qml.RZ(params[12] * feature + params[13], wires=0)
+
+    qml.RY(params[14] * feature + params[15], wires=0)
+
+    qml.RZ(params[16] * feature + params[17], wires=0)
+
+    qml.RY(params[18] * feature + params[19], wires=0)
+
+    return qml.expval(qml.PauliZ(0))
+
+
+def generate_fubini(
+    circuit, nqubits, paramInputs, feature, pennylane=False, params=None
+):
     """Generate the Fubini-Study metric tensor"""
 
-    fubini = np.zeros((optimizer.nparams, optimizer.nparams))
-    original = optimizer.params.copy()
-
-    if method == "hessian":
-        shifted = optimizer.params.copy()
-
-        phi = optimizer.retrieve_state(feature)
-
-        for i in range(optimizer.nparams):
-            if i % 2 == 0:
-                factor = feature
-            else:
-                factor = 1
-            shifted[i] = optimizer.forward_diff(
-                original=original[i], factor=factor, param=np.pi
-            )
-            optimizer.set_parameters(shifted)
-            phi_prime = optimizer.retrieve_state(feature)
-
-            optimizer.set_parameters(original)
-            fubini[i, i] = 1 / 4 * (1 - (np.abs(np.dot(phi, phi_prime))) ** 2)
-
-    elif method == "variance":
-        # trainable and gate parameters
-        gate_params = optimizer._circuit.associate_gates_with_parameters()
-
-        if isinstance(optimizer.paramInputs, list):
-            trainable_params = []
-            count = 0
-            for Param in optimizer.paramInputs:
-                indices = Param.get_indices(count)
-                count += len(indices)
-                trainable_params.append(indices)
-        else:
-            trainable_params = [[i] for i in range(optimizer.nparams)]
-        # build graph from circuit gates
-        graph = Graph(
-            optimizer.nqubits, optimizer._circuit.queue, trainable_params, gate_params
+    if pennylane:
+        fubini = qml.metric_tensor(ansatz_pdf, approx="diag")(
+            qml.numpy.asarray(params), feature
         )
-        graph.build_graph()
+        # diag = np.diag(fubini)
+        # fubini = np.diag(diag)
+        return fubini
 
-        # run through layers
-        for i in range(graph.depth):
-            c, qubits, affected_param = graph.run_layer(i)
-            if len(qubits) == 0:
-                continue
+    if isinstance(paramInputs, list):
+        nparams = sum([param.nparams for param in paramInputs])
+    else:
+        nparams = len(paramInputs)
+    fubini = np.zeros((nparams, nparams))
 
-            state = c().state()
+    # trainable and gate parameters
+    gate_params = circuit.associate_gates_with_parameters()
 
-            # run through parametrized gate
-            for qubit, params in zip(qubits, affected_param):
-                hamiltonian = optimizer.create_hamiltonian(qubit, optimizer.nqubits)
+    if isinstance(paramInputs, list):
+        trainable_params = []
+        count = 0
+        for Param in paramInputs:
+            indices = Param.get_indices(count)
+            count += len(indices)
+            trainable_params.append(indices)
+    else:
+        trainable_params = [[i] for i in range(nparams)]
+    # build graph from circuit gates
+    graph = Graph(nqubits, circuit.queue, trainable_params, gate_params)
+    graph.build_graph()
 
-                result = hamiltonian.expectation(state)
+    # run through layers
+    for i in range(graph.depth):
+        c, qubits, affected_param = graph.run_layer(i)
+        if len(qubits) == 0:
+            continue
 
-                for p in params:
-                    # update Fubini-Study matrix
-                    fubini[p, p] = result - result**2
+        state = c().state()
+
+        # run through parametrized gate
+        for qubit, params in zip(qubits, affected_param):
+            hamiltonian = create_hamiltonian(qubit, nqubits)
+
+            result = hamiltonian.expectation(state)
+
+            for p in params:
+                # update Fubini-Study matrix
+                fubini[p, p] = result - result**2
 
     return fubini
