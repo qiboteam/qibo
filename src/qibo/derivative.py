@@ -74,7 +74,7 @@ def calculate_gradients(optimizer, feature):
                     ipar,
                     initial_state=None,
                     scale_factor=1,
-                    nshots=None,
+                    nshots=1024,
                 )
         else:
             count = 0
@@ -88,7 +88,7 @@ def calculate_gradients(optimizer, feature):
                         ipar,
                         initial_state=None,
                         scale_factor=scaling,
-                        nshots=None,
+                        nshots=1024,
                     )
                     count += 1
 
