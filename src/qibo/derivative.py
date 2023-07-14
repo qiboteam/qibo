@@ -549,6 +549,7 @@ def generate_fubini(
     # build graph from circuit gates
     graph = Graph(nqubits, circuit.queue, trainable_params, gate_params)
     graph.build_graph()
+    backend = GlobalBackend()
 
     # run through layers
     for i in range(graph.depth):
@@ -556,13 +557,11 @@ def generate_fubini(
         if len(qubits) == 0:
             continue
 
-        state = c().state()
+        probabilities = backend.execute_circuit(circuit=c, nshots=1024).probabilities()
 
         # run through parametrized gate
         for qubit, params in zip(qubits, affected_param):
-            hamiltonian = create_hamiltonian(qubit, nqubits)
-
-            result = hamiltonian.expectation(state)
+            result = probabilities[0]
 
             for p in params:
                 # update Fubini-Study matrix
