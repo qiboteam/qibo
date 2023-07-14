@@ -1,5 +1,4 @@
 import numpy as np
-import tensorflow as tf
 from scipy.optimize import basinhopping
 
 from qibo import backends
