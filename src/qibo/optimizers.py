@@ -302,6 +302,7 @@ class SGD(Optimizer):
             indices.append(np.arange(ib, self.nsample, options["batches"]))
 
         iteration = 0
+        file = open("results.txt", "w")
 
         for epoch in range(options["epochs"]):
             if epoch != 0 and losses[-1] < options["J_threshold"]:
@@ -333,8 +334,15 @@ class SGD(Optimizer):
                     " | loss: ",
                     this_loss,
                 )
+                file.write(
+                    f"Iteration {iteration}, epoch {epoch + 1} | loss: {this_loss}\n"
+                )
+
                 # in case one wants to plot J as a function of the iterations
                 losses.append(this_loss)
+
+        np.savetxt(file, self.params, fmt="%.15f")
+        file.close()
 
         return losses
 
