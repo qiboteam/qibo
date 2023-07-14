@@ -483,51 +483,11 @@ def create_hamiltonian(qubit, nqubit):
     return hamiltonian
 
 
-import pennylane as qml
-
-dev = qml.device("default.qubit", wires=1)
-
-
-@qml.qnode(dev, interface="autograd")
-def ansatz_pdf(params, feature):
-    qml.Hadamard(wires=0)
-
-    qml.RZ(params[0] * feature + params[1], wires=0)
-
-    qml.RY(params[2] * feature + params[3], wires=0)
-
-    qml.RZ(params[4] * feature + params[5], wires=0)
-
-    qml.RY(params[6] * feature + params[7], wires=0)
-
-    qml.RZ(params[8] * feature + params[9], wires=0)
-
-    qml.RY(params[10] * feature + params[11], wires=0)
-
-    qml.RZ(params[12] * feature + params[13], wires=0)
-
-    qml.RY(params[14] * feature + params[15], wires=0)
-
-    qml.RZ(params[16] * feature + params[17], wires=0)
-
-    qml.RY(params[18] * feature + params[19], wires=0)
-
-    return qml.expval(qml.PauliZ(0))
-
 
 def generate_fubini(
     circuit, nqubits, paramInputs, feature, pennylane=False, params=None
 ):
     """Generate the Fubini-Study metric tensor"""
-
-    if pennylane:
-        fubini = qml.metric_tensor(ansatz_pdf, approx="diag")(
-            qml.numpy.asarray(params), feature
-        )
-        # diag = np.diag(fubini)
-        # fubini = np.diag(diag)
-        return fubini
-
     if isinstance(paramInputs, list):
         nparams = sum([param.nparams for param in paramInputs])
     else:

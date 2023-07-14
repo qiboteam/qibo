@@ -126,7 +126,7 @@ class SGD(Optimizer):
 
         # options
         self.options = {
-            "epochs": 1000,
+            "epochs": 2,
             "learning_rate": 0.045,
             "batches": 1,
             "J_threshold": 1e-3,
