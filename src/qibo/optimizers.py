@@ -1,4 +1,5 @@
 import numpy as np
+import tensorflow as tf
 from scipy.optimize import basinhopping
 
 from qibo import backends
@@ -150,22 +151,28 @@ class SGD(Optimizer):
                     params.append(Param.get_params(trainablep, feature=feature))
             return params
 
-    def run_loss(self, feature, label):
+    def run_loss(self, results, labels, delta=0.001):
         """
         Calculates loss and its derivative
         Args:
             feature: input value
             label: the value of y_exact which is approximated with the circuit
         """
-        params = self._get_params(trainable=False, feature=feature)
-        result = self.run_circuit(params, nshots=10000)
-        loss = self.loss_function(result, label)
-        forward = self.loss_function(result + 0.001, label)
-        backward = self.loss_function(result - 0.001, label)
+        loss = self.loss_function(results, labels, self.args)
+        loss_func_grad = 0
 
-        return loss, (forward - backward) / 0.002
+        shifted = results.copy()
+        for i in range(len(results)):
+            shifted = results.copy()
+            shifted[i] += delta
+            forward = self.loss_function(shifted, labels, self.args)
+            shifted[i] -= 2 * delta
+            backward = self.loss_function(shifted, labels, self.args)
+            loss_func_grad += (forward - backward) / (2 * delta)
 
-    def run_circuit(self, parameters, nshots=10000):
+        return loss, loss_func_grad / len(results)
+
+    def run_circuit(self, feature, nshots=10000):
         """
         User-facing function which runs the circuit with given parameters and returns the result
         Args:
@@ -174,19 +181,13 @@ class SGD(Optimizer):
         Return:
             results
         """
+        parameters = self._get_params(trainable=False, feature=feature)
         self._circuit.set_parameters(parameters)
         obs = np.prod([Z(i) for i in range(1)])
         obs = SymbolicHamiltonian(obs, backend=self.backend)
         results = self.backend.execute_circuit(
             circuit=self._circuit, nshots=nshots
         ).expectation_from_samples(obs)
-
-        # test = self.hamiltonian.expectation(results)
-        # print(test, results)
-
-        # state = self._circuit().state()
-
-        # results = self.hamiltonian.expectation(state)
 
         return results
 
@@ -198,7 +199,8 @@ class SGD(Optimizer):
             labels: np.array of the labels related to features
         Returns: np.array of length self.nparams containing the loss function's gradients
         """
-        loss_gradients = np.zeros(self.nparams)
+        circ_grads = np.zeros(self.nparams)
+        results = np.zeros(len(features))
         loss = 0
 
         # setup fubini matrix for natural gradient
@@ -206,14 +208,14 @@ class SGD(Optimizer):
             fubini = np.zeros((self.nparams, self.nparams))
 
         # iterate through all data points
-        for feat, label in zip(features, labels):
-            local_loss, loss_grad = self.run_loss(feat, label)
-
-            loss += local_loss
+        for i, feat in enumerate(features):
+            results[i] = self.run_circuit(feat)
 
             obs_gradients = calculate_gradients(
                 self, feature=feat
             )  # d<B> N params, N label gradients
+
+            circ_grads += obs_gradients
 
             if self.options["natgrad"]:
                 fubini += generate_fubini(
@@ -224,12 +226,9 @@ class SGD(Optimizer):
                     params=self.params,
                 )  # separate pull request
 
-            for i in range(self.nparams):
-                loss_gradients[i] += obs_gradients[i] * loss_grad
-
         # gradient average
-        loss_gradients /= len(features)
-        loss /= len(features)
+        loss, loss_func_grad = self.run_loss(results, labels)
+        loss_gradients = circ_grads / len(features) * loss_func_grad
 
         # Fubini-Study Metric renormalisation
         if self.options["natgrad"]:
