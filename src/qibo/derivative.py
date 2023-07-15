@@ -10,6 +10,10 @@ from qibo.symbols import Symbol, Z
 
 
 class Parameter:
+    """Object which allows complex gate parameters. Several trainable parameter
+    and possibly features are linked through a lambda function which returns the
+    final gate parameter"""
+
     def __init__(self, func, trainablep, featurep=None):
         self._trainablep = trainablep
         self._featurep = featurep
@@ -17,6 +21,7 @@ class Parameter:
         self.lambdaf = func
 
     def _apply_func(self, fixed_params=None):
+        """Applies lambda function and returns final gate parameter"""
         params = []
         if self._featurep is not None:
             params.append(self._featurep)
@@ -27,24 +32,30 @@ class Parameter:
         return self.lambdaf(*params)
 
     def _update_params(self, trainablep=None, feature=None):
+        """Update gate trainable parameter and feature values"""
         if trainablep:
             self._trainablep = trainablep
         if feature:
             self._featurep = feature
 
     def get_params(self, trainablep=None, feature=None):
+        """Update values with trainable parameter and calculate current gate parameter"""
         self._update_params(trainablep=trainablep, feature=feature)
         return self._apply_func()
 
     def get_indices(self, start_index):
+        """Return list of respective indices of trainable parameters within
+        the optimizer's trainable parameter list"""
         return [start_index + i for i in range(self.nparams)]
 
     def get_fixed_part(self, trainablep_idx):
+        """Retrieve parameter constant unaffected by a specific trainable parameter"""
         params = [0] * self.nparams
         params[trainablep_idx] = self._trainablep[trainablep_idx]
         return self._apply_func(fixed_params=params)
 
     def get_scaling_factor(self, trainablep_idx):
+        """Get scaling factor multiplying a specific trainable parameter"""
         params = [0] * self.nparams
         params[trainablep_idx] = 1.0
         return self._apply_func(fixed_params=params)

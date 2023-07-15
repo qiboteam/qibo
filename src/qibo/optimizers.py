@@ -172,24 +172,49 @@ class SGD(Optimizer):
 
         return loss, loss_func_grad / len(results)
 
-    def run_circuit(self, feature, nshots=10000):
-        """
-        User-facing function which runs the circuit with given parameters and returns the result
+    def run_circuit(self, feature, nshots):
+        """Backend function which runs the circuit for one feature
         Args:
-            parameters: trainable parameters of type Parameter
-            nshots: number of shots to average circuit expectation values
+            feature: single input value to the system
+            nshots: number of circuit shots to calculate expectation value
         Return:
-            results
-        """
+            results: expectation value"""
+
+        # set parameters
         parameters = self._get_params(trainable=False, feature=feature)
         self._circuit.set_parameters(parameters)
+
+        # hamiltonian
         obs = np.prod([Z(i) for i in range(1)])
         obs = SymbolicHamiltonian(obs, backend=self.backend)
-        results = self.backend.execute_circuit(
+
+        # run circuit
+        """exp_v = self.backend.execute_circuit(
             circuit=self._circuit, nshots=nshots
-        ).expectation_from_samples(obs)
+        ).probabilities()[0]"""
+
+        state = self._circuit().state()
+
+        results = self.hamiltonian.expectation(state)
 
         return results
+
+    def predict(self, feature, nshots=10000):
+        """
+         User-facing function which runs the circuit for given input features returns the result
+         Args:
+             feature: input values which are run through the circuit
+        Return:
+             results
+        """
+
+        if isinstance(feature, np.ndarray):
+            results = np.zeros(len(feature))
+            for i, feat in enumerate(feature):
+                results[i] = self.run_circuit(feat, nshots)
+            return results
+        else:
+            return self.run_circuit(feature, nshots)
 
     def dloss(self, features, labels):
         """
@@ -209,7 +234,7 @@ class SGD(Optimizer):
 
         # iterate through all data points
         for i, feat in enumerate(features):
-            results[i] = self.run_circuit(feat)
+            results[i] = self.predict(feat)
 
             obs_gradients = calculate_gradients(
                 self, feature=feat
