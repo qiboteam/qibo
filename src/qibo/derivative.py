@@ -527,7 +527,7 @@ def ansatz_pdf(params, feature):
 
 
 def generate_fubini(
-    circuit, nqubits, paramInputs, feature, pennylane=False, params=None
+    circuit, nqubits, paramInputs, feature, pennylane=True, params=None
 ):
     """Generate the Fubini-Study metric tensor"""
 
@@ -535,8 +535,8 @@ def generate_fubini(
         fubini = qml.metric_tensor(ansatz_pdf, approx="diag")(
             qml.numpy.asarray(params), feature
         )
-        # diag = np.diag(fubini)
-        # fubini = np.diag(diag)
+        diag = np.diag(fubini)
+        fubini = np.diag(diag)
         return fubini
 
     if isinstance(paramInputs, list):

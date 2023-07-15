@@ -189,17 +189,17 @@ class SGD(Optimizer):
         obs = SymbolicHamiltonian(obs, backend=self.backend)
 
         # run circuit
-        """exp_v = self.backend.execute_circuit(
+        exp_v = self.backend.execute_circuit(
             circuit=self._circuit, nshots=nshots
-        ).probabilities()[0]"""
+        ).expectation_from_samples(obs)
 
-        state = self._circuit().state()
+        # state = self._circuit().state()
 
-        results = self.hamiltonian.expectation(state)
+        # exp_v = self.hamiltonian.expectation(state)
 
-        return results
+        return exp_v
 
-    def predict(self, feature, nshots=10000):
+    def predict(self, feature, nshots=100000):
         """
          User-facing function which runs the circuit for given input features returns the result
          Args:
@@ -233,14 +233,21 @@ class SGD(Optimizer):
             fubini = np.zeros((self.nparams, self.nparams))
 
         # iterate through all data points
-        for i, feat in enumerate(features):
+        for i, (feat, label) in enumerate(zip(features, labels)):
             results[i] = self.predict(feat)
 
             obs_gradients = calculate_gradients(
                 self, feature=feat
             )  # d<B> N params, N label gradients
 
-            circ_grads += obs_gradients
+            delta = 0.000001
+            shifted = results.copy()
+            shifted[i] += delta
+            forward = self.loss_function(shifted, labels, self.args)
+            shifted[i] -= 2 * delta
+            backward = self.loss_function(shifted, labels, self.args)
+            loss_func_grad = (forward - backward) / (2 * delta)
+            circ_grads += loss_func_grad * obs_gradients
 
             if self.options["natgrad"]:
                 fubini += generate_fubini(
@@ -253,14 +260,14 @@ class SGD(Optimizer):
 
         # gradient average
         loss, loss_func_grad = self.run_loss(results, labels)
-        loss_gradients = circ_grads / len(features) * loss_func_grad
+        loss_gradients = circ_grads / len(features)
 
         # Fubini-Study Metric renormalisation
         if self.options["natgrad"]:
             fubini /= len(features)
             loss_gradients = np.dot(np.linalg.inv(fubini), loss_gradients)
 
-        return loss_gradients, loss
+        return loss_gradients, loss / len(features)
 
     def AdamDescent(
         self,
@@ -291,14 +298,20 @@ class SGD(Optimizer):
         """
 
         grads, loss = self.dloss(features, labels)
+        adam = False
+        if adam:
+            for i in range(self.nparams):
+                m[i] = beta_1 * m[i] + (1 - beta_1) * grads[i]
+                v[i] = beta_2 * v[i] + (1 - beta_2) * grads[i] * grads[i]
+                mhat = m[i] / (1.0 - beta_1 ** (iteration + 1))
+                vhat = v[i] / (1.0 - beta_2 ** (iteration + 1))
+                self.params[i] -= learning_rate * mhat / (np.sqrt(vhat) + epsilon)
+            return m, v, loss
 
-        for i in range(self.nparams):
-            m[i] = beta_1 * m[i] + (1 - beta_1) * grads[i]
-            v[i] = beta_2 * v[i] + (1 - beta_2) * grads[i] * grads[i]
-            mhat = m[i] / (1.0 - beta_1 ** (iteration + 1))
-            vhat = v[i] / (1.0 - beta_2 ** (iteration + 1))
-            self.params[i] -= learning_rate * mhat / (np.sqrt(vhat) + epsilon)
-        return m, v, loss
+        else:
+            for i in range(self.nparams):
+                self.params[i] -= learning_rate * grads[i]
+            return 0, 0, loss
 
     def sgd(self, options):
         """
