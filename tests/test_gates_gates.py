@@ -905,6 +905,42 @@ def test_toffoli(backend, applyx):
     assert gates.TOFFOLI(0, 1, 2).clifford
 
 
+def test_deutsch(backend):
+    theta = 0.1234
+    nqubits = 3
+    initial_state = random_statevector(2**nqubits, backend=backend)
+    final_state = apply_gates(
+        backend,
+        [gates.DEUTSCH(0, 1, 2, theta)],
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+
+    sin, cos = np.sin(theta), np.cos(theta)
+    matrix = np.array(
+        [
+            [1, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0],
+            [0, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 0, 1j * cos, sin],
+            [0, 0, 0, 0, 0, 0, sin, 1j * cos],
+        ],
+        dtype=backend.dtype,
+    )
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
+
+    target_state = matrix @ initial_state
+    backend.assert_allclose(final_state, target_state)
+
+    with pytest.raises(NotImplementedError):
+        gates.DEUTSCH(0, 1, 2, theta).qasm_label
+
+    assert not gates.DEUTSCH(0, 1, 2, theta).clifford
+
+
 @pytest.mark.parametrize("nqubits", [2, 3])
 def test_unitary(backend, nqubits):
     initial_state = np.ones(2**nqubits) / np.sqrt(2**nqubits)
