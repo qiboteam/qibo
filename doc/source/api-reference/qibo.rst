@@ -685,6 +685,13 @@ Toffoli
     :members:
     :member-order: bysource
 
+Deutsch
+"""""""
+
+.. autoclass:: qibo.gates.DEUTSCH
+    :members:
+    :member-order: bysource
+
 Arbitrary unitary
 """""""""""""""""
 
