@@ -366,6 +366,23 @@ class NumpyMatrices:
             ]
         )
 
+    def DEUTSCH(self, theta):
+        sin = self.np.sin(theta) + 0j  # 0j necessary for right tensorflow dtype
+        cos = self.np.cos(theta)
+        return self.np.array(
+            [
+                [1, 0, 0, 0, 0, 0, 0, 0],
+                [0, 1, 0, 0, 0, 0, 0, 0],
+                [0, 0, 1, 0, 0, 0, 0, 0],
+                [0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 0, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0],
+                [0, 0, 0, 0, 0, 0, 1j * cos, sin],
+                [0, 0, 0, 0, 0, 0, sin, 1j * cos],
+            ],
+            dtype=self.dtype,
+        )
+
     def Unitary(self, u):
         return self.np.array(u, dtype=self.dtype, copy=False)
 
