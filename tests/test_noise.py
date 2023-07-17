@@ -292,7 +292,7 @@ def test_thermal_error(backend, density_matrix):
 @pytest.mark.parametrize("density_matrix", [True])
 @pytest.mark.parametrize("nshots", [None, 10, 100])
 def test_amplitude_damping_error(backend, density_matrix, nshots):
-    damping = AmpliduteDampingError(0.3)
+    damping = AmplitudeDampingError(0.3)
     noise = NoiseModel()
     noise.add(damping, gates.X, 1)
     noise.add(damping, gates.CNOT)

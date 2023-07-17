@@ -331,7 +331,7 @@ class NoiseModel:
                                 error,
                                 (
                                     ThermalRelaxationError,
-                                    AmpliduteDampingError,
+                                    AmplitudeDampingError,
                                     ResetError,
                                 ),
                             )
