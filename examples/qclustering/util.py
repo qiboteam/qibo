@@ -1,4 +1,3 @@
-import math
 import os
 
 import h5py
@@ -6,23 +5,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import qkmedians as qkmed
 from sklearn.metrics import auc, roc_curve
-
-
-def calc_norm(a, b):
-    """Calculate norm of two vectors.
-
-    Parameters
-    ----------
-    a : :class:`numpy.ndarray`
-        First vector.
-    b : :class:`numpy.ndarray`
-        Second vector.
-    Returns
-    -------
-    float
-
-    """
-    return math.sqrt(np.sum(a**2) + np.sum(b**2))
 
 
 def combine_loss_min(loss):
