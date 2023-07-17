@@ -205,8 +205,9 @@ class NoiseModel:
         Args:
             error: quantum error to associate with the gate. Possible choices
                 are :class:`qibo.noise.PauliError`,
-                :class:`qibo.noise.ThermalRelaxationError`,
                 :class:`qibo.noise.DepolarizingError`,
+                :class:`qibo.noise.ThermalRelaxationError`,
+                :class:`qibo.noise.AmplitudeDampingError`,
                 :class:`qibo.noise.ReadoutError`,
                 :class:`qibo.noise.ResetError`,
                 :class:`qibo.noise.UnitaryError`,
@@ -326,7 +327,14 @@ class NoiseModel:
                         if isinstance(error, CustomError) and qubits:
                             noisy_circuit.add(error.channel)
                         elif (
-                            isinstance(error, (ThermalRelaxationError, ResetError))
+                            isinstance(
+                                error,
+                                (
+                                    ThermalRelaxationError,
+                                    AmpliduteDampingError,
+                                    ResetError,
+                                ),
+                            )
                             and qubits
                         ):
                             for q in qubits:
