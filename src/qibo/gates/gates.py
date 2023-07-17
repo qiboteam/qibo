@@ -1052,7 +1052,6 @@ class CRX(_CRn_):
         super().__init__(q0, q1, theta, trainable)
         self.name = "crx"
         self.draw_label = "RX"
-        self.unitary = True
 
     @property
     def qasm_label(self):
@@ -1143,6 +1142,7 @@ class _CUn_(ParametrizedGate):
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
+        self.unitary = True
         self.init_kwargs = {"trainable": trainable}
 
 
@@ -2063,16 +2063,21 @@ class Unitary(ParametrizedGate):
 
     Args:
         unitary: Unitary matrix as a tensor supported by the backend.
-            Note that there is no check that the matrix passed is actually
-            unitary. This allows the user to create non-unitary gates.
         *q (int): Qubit id numbers that the gate acts on.
         trainable (bool): whether gate parameters can be updated using
             :meth:`qibo.models.circuit.Circuit.set_parameters`.
             Defaults to ``True``.
         name (str): Optional name for the gate.
+        check_unitary (bool): if ``True``, checks if ``unitary`` is an unitary operator.
+            If ``False``, check is not performed and ``unitary`` attribute
+            defaults to ``False``. Note that, even when the check is performed,
+            there is no enforcement. This allows the user to create
+            non-unitary gates. Default is ``True``.
     """
 
-    def __init__(self, unitary, *q, trainable=True, name=None):
+    def __init__(
+        self, unitary, *q, trainable=True, name: str = None, check_unitary: bool = True
+    ):
         super().__init__(trainable)
         self.name = "Unitary" if name is None else name
         self.draw_label = "U"
@@ -2084,17 +2089,20 @@ class Unitary(ParametrizedGate):
         self.nparams = 4 ** len(self.target_qubits)
 
         self.init_args = [unitary] + list(q)
-        self.init_kwargs = {"name": name, "trainable": trainable}
+        self.init_kwargs = {
+            "name": name,
+            "check_unitary": check_unitary,
+            "trainable": trainable,
+        }
 
-        self.unitary = (
-            True
-            if np.linalg.norm(
-                np.transpose(np.conj(unitary)) @ unitary
-                - np.eye(2 ** len(self.target_qubits), dtype=complex)
-            )
-            < PRECISION_TOL
-            else False
-        )
+        # checking unitarity without invoking any backend
+        if check_unitary:
+            product = np.transpose(np.conj(unitary)) @ unitary
+            sums = all(np.abs(1 - np.sum(product, axis=1)) < PRECISION_TOL)
+            diagonal = all(np.abs(1 - np.diag(product)) < PRECISION_TOL)
+
+            self.unitary = True if sums and diagonal else False
+            del sums, diagonal, product
 
     @Gate.parameters.setter
     def parameters(self, x):
