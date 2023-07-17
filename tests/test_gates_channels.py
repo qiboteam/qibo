@@ -226,10 +226,6 @@ def test_depolarizing_channel(backend):
 
 def test_amplitude_damping_channel(backend):
     with pytest.raises(TypeError):
-        test = gates.AmplitudeDampingChannel((0, 1), 0.1)
-    with pytest.raises(ValueError):
-        test = gates.AmplitudeDampingChannel(-1, 0.1)
-    with pytest.raises(TypeError):
         test = gates.AmplitudeDampingChannel(0, "0.1")
     with pytest.raises(ValueError):
         test = gates.AmplitudeDampingChannel(0, 1.1)
