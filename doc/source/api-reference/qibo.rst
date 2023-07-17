@@ -528,6 +528,13 @@ Controlled-phase (CZ)
     :members:
     :member-order: bysource
 
+Controlled-Square Root of X (CSX)
+"""""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.CSX
+    :members:
+    :member-order: bysource
+
 Controlled-rotation X-axis (CRX)
 """"""""""""""""""""""""""""""""
 
@@ -640,6 +647,13 @@ Parametric ZX interaction (RZX)
     :members:
     :member-order: bysource
 
+Parametric XX-YY interaction (RXY)
+""""""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.RXY
+    :members:
+    :member-order: bysource
+
 Givens gate
 """""""""""
 
@@ -668,6 +682,13 @@ Toffoli
 """""""
 
 .. autoclass:: qibo.gates.TOFFOLI
+    :members:
+    :member-order: bysource
+
+Deutsch
+"""""""
+
+.. autoclass:: qibo.gates.DEUTSCH
     :members:
     :member-order: bysource
 

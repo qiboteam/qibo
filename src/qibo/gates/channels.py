@@ -268,6 +268,7 @@ class KrausChannel(Channel):
             self.target_qubits = tuple(
                 sorted({q for gate in operators for q in gate.target_qubits})
             )
+            unitary_check = [gate.unitary for gate in self.gates]
         elif len(qubits) != len(operators):
             raise_error(
                 ValueError,
@@ -275,7 +276,7 @@ class KrausChannel(Channel):
                 + f"{len(operators)} operators were given.",
             )
         else:
-            gates, qubitset = [], set()
+            gates, qubitset, unitary_check = [], set(), []
 
             for qubit_tuple, matrix in zip(qubits, operators):
                 rank = 2 ** len(qubit_tuple)
@@ -286,13 +287,17 @@ class KrausChannel(Channel):
                         f"Invalid Kraus operator shape {shape} for "
                         + f"acting on {len(qubit_tuple)} qubits.",
                     )
+                gate = Unitary(matrix, *list(qubit_tuple))
+
                 qubitset.update(qubit_tuple)
-                gates.append(Unitary(matrix, *list(qubit_tuple)))
+                gates.append(gate)
+                unitary_check.append(gate.unitary)
             self.gates = tuple(gates)
             self.target_qubits = tuple(sorted(qubitset))
         self.init_args = [self.gates]
         self.coefficients = len(self.gates) * (1,)
         self.coefficient_sum = 1
+        self.all_unitary_operators = True if all(unitary_check) else False
 
 
 class UnitaryChannel(KrausChannel):
