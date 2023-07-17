@@ -535,8 +535,8 @@ def generate_fubini(
         fubini = qml.metric_tensor(ansatz_pdf, approx="diag")(
             qml.numpy.asarray(params), feature
         )
-        diag = np.diag(fubini)
-        fubini = np.diag(diag)
+        # diag = np.diag(fubini)
+        # fubini = np.diag(diag)
         return fubini
 
     if isinstance(paramInputs, list):

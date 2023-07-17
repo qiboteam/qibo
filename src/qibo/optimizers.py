@@ -259,7 +259,7 @@ class SGD(Optimizer):
                 )  # separate pull request
 
         # gradient average
-        loss, loss_func_grad = self.run_loss(results, labels)
+        loss = self.loss_function(results, labels, self.args)
         loss_gradients = circ_grads / len(features)
 
         # Fubini-Study Metric renormalisation
