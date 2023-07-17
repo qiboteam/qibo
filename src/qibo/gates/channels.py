@@ -671,17 +671,10 @@ class AmplitudeDampingChannel(KrausChannel):
 
     Args:
         qubit (int): Qubit id that the noise channel acts on.
-        gamma (float, optional): amplitude damping strength.
+        gamma (float): amplitude damping strength.
     """
 
     def __init__(self, qubit, gamma: float):
-        if not isinstance(qubit, int):
-            raise_error(
-                TypeError, f"qubit must be type int, but it is type {type(qubit)}."
-            )
-        if qubit < 0:
-            raise_error(ValueError, "qubit index must be a non-negative integer.")
-
         if not isinstance(gamma, float):
             raise_error(
                 TypeError, f"gamma must be type float, but it is type {type(gamma)}."
