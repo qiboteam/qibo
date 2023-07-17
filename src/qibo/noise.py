@@ -103,7 +103,7 @@ class ThermalRelaxationError:
         self.channel = gates.ThermalRelaxationChannel
 
 
-class AmpliduteDampingError:
+class AmplitudeDampingError:
     """Quantum error associated with the :class:`qibo.gates.AmplitudeDampingChannel`.
 
     Args:
