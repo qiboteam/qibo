@@ -6,7 +6,7 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 from qibo.noise import (
-    AmpliduteDampingError,
+    AmplitudeDampingError,
     CompositeNoiseModel,
     CustomError,
     DepolarizingError,
