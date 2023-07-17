@@ -103,6 +103,18 @@ class ThermalRelaxationError:
         self.channel = gates.ThermalRelaxationChannel
 
 
+class AmpliduteDampingError:
+    """Quantum error associated with the :class:`qibo.gates.AmplitudeDampingChannel`.
+
+    Args:
+        options (float): see :class:`qibo.gates.AmplitudeDampingChannel`
+    """
+
+    def __init__(self, gamma):
+        self.options = gamma
+        self.channel = gates.AmplitudeDampingChannel
+
+
 class ReadoutError:
     """Quantum error associated with :class:'qibo.gates;ReadoutErrorChannel'.
 
