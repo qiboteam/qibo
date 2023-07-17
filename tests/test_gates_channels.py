@@ -257,12 +257,12 @@ def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
     final_rho = gate.apply_density_matrix(backend, np.copy(initial_rho), 3)
 
     if t2 > t1:
-        p0, p1, exp = (
-            gate.init_kwargs["p0"],
-            gate.init_kwargs["p1"],
+        p_0, p_1, exp = (
+            gate.init_kwargs["p_0"],
+            gate.init_kwargs["p_1"],
             gate.init_kwargs["e_t2"],
         )
-        matrix = np.diag([1 - p1, p1, p0, 1 - p0])
+        matrix = np.diag([1 - p_1, p_1, p_0, 1 - p_0])
         matrix[0, -1], matrix[-1, 0] = exp, exp
         matrix = matrix.reshape(4 * (2,))
         # Apply matrix using Eq. (3.28) from arXiv:1111.6950
@@ -270,10 +270,10 @@ def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
         target_rho = np.einsum("abcd,aJKcjk->bJKdjk", matrix, target_rho)
         target_rho = target_rho.reshape(initial_rho.shape)
     else:
-        p0, p1, pz = (
-            gate.init_kwargs["p0"],
-            gate.init_kwargs["p1"],
-            gate.init_kwargs["pz"],
+        p_0, p_1, p_z = (
+            gate.init_kwargs["p_0"],
+            gate.init_kwargs["p_1"],
+            gate.init_kwargs["p_z"],
         )
         mz = np.kron(np.array([[1, 0], [0, -1]]), np.eye(4))
         mz = backend.cast(mz, dtype=mz.dtype)
@@ -295,9 +295,9 @@ def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
         zeros = backend.cast(zeros, dtype=zeros.dtype)
         ones = backend.cast(ones, dtype=ones.dtype)
 
-        pi = 1 - p0 - p1 - pz
-        target_rho = pi * initial_rho + pz * z_rho
-        target_rho += np.reshape(p0 * zeros + p1 * ones, initial_rho.shape)
+        pi = 1 - p_0 - p_1 - p_z
+        target_rho = pi * initial_rho + p_z * z_rho
+        target_rho += np.reshape(p_0 * zeros + p_1 * ones, initial_rho.shape)
 
     target_rho = backend.cast(target_rho, dtype=target_rho.dtype)
 
@@ -361,9 +361,9 @@ def test_reset_channel(backend):
     backend.assert_allclose(final_rho, target_rho)
 
 
-@pytest.mark.parametrize("p0,p1", [(0, -0.1), (-0.1, 0), (0.5, 0.6), (0.8, 0.3)])
-def test_reset_channel_errors(p0, p1):
+@pytest.mark.parametrize("p_0,p_1", [(0, -0.1), (-0.1, 0), (0.5, 0.6), (0.8, 0.3)])
+def test_reset_channel_errors(p_0, p_1):
     with pytest.raises(ValueError):
-        gates.ResetChannel(0, [p0])
+        gates.ResetChannel(0, [p_0])
     with pytest.raises(ValueError):
-        gates.ResetChannel(0, [p0, p1])
+        gates.ResetChannel(0, [p_0, p_1])

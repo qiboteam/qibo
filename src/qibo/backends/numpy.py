@@ -318,7 +318,7 @@ class NumpyBackend(Backend):
         state = self.cast(state)
         shape = state.shape
         q = gate.target_qubits[0]
-        p0, p1 = gate.init_kwargs["p0"], gate.init_kwargs["p1"]
+        p_0, p_0 = gate.init_kwargs["p_0"], gate.init_kwargs["p_0"]
         trace = self.partial_trace_density_matrix(state, (q,), nqubits)
         trace = self.np.reshape(trace, 2 * (nqubits - 1) * (2,))
         zero = self.zero_density_matrix(1)
@@ -327,8 +327,8 @@ class NumpyBackend(Backend):
         order.insert(q, 2 * nqubits - 2)
         order.insert(q + nqubits, 2 * nqubits - 1)
         zero = self.np.reshape(self.np.transpose(zero, order), shape)
-        state = (1 - p0 - p1) * state + p0 * zero
-        return state + p1 * self.apply_gate_density_matrix(X(q), zero, nqubits)
+        state = (1 - p_0 - p_0) * state + p_0 * zero
+        return state + p_0 * self.apply_gate_density_matrix(X(q), zero, nqubits)
 
     def thermal_error_density_matrix(self, gate, state, nqubits):
         state = self.cast(state)
@@ -633,10 +633,10 @@ class NumpyBackend(Backend):
     def apply_bitflips(self, noiseless_samples, bitflip_probabilities):
         fprobs = self.np.array(bitflip_probabilities, dtype="float64")
         sprobs = self.np.random.random(noiseless_samples.shape)
-        flip0 = self.np.array(sprobs < fprobs[0], dtype=noiseless_samples.dtype)
-        flip1 = self.np.array(sprobs < fprobs[1], dtype=noiseless_samples.dtype)
-        noisy_samples = noiseless_samples + (1 - noiseless_samples) * flip0
-        noisy_samples = noisy_samples - noiseless_samples * flip1
+        flip_0 = self.np.array(sprobs < fprobs[0], dtype=noiseless_samples.dtype)
+        flip_0 = self.np.array(sprobs < fprobs[1], dtype=noiseless_samples.dtype)
+        noisy_samples = noiseless_samples + (1 - noiseless_samples) * flip_0
+        noisy_samples = noisy_samples - noiseless_samples * flip_0
         return noisy_samples
 
     def partial_trace(self, state, qubits, nqubits):
