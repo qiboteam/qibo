@@ -224,6 +224,33 @@ def test_depolarizing_channel(backend):
     backend.assert_allclose(final_rho_r, target_rho_r)
 
 
+def test_amplitude_damping_channel(backend):
+    with pytest.raises(TypeError):
+        test = gates.AmplitudeDampingChannel((0, 1), 0.1)
+    with pytest.raises(ValueError):
+        test = gates.AmplitudeDampingChannel(-1, 0.1)
+    with pytest.raises(TypeError):
+        test = gates.AmplitudeDampingChannel(0, "0.1")
+    with pytest.raises(ValueError):
+        test = gates.AmplitudeDampingChannel(0, 1.1)
+
+    gamma = np.random.rand()
+    kraus_0 = np.array([[1, 0], [0, np.sqrt(1 - gamma)]], dtype=complex)
+    kraus_1 = np.array([[0, np.sqrt(gamma)], [0, 0]], dtype=complex)
+    kraus_0 = backend.cast(kraus_0, dtype=kraus_0.dtype)
+    kraus_1 = backend.cast(kraus_1, dtype=kraus_1.dtype)
+
+    channel = gates.AmplitudeDampingChannel(0, gamma)
+
+    initial_state = random_density_matrix(2**1, backend=backend)
+    final_state = channel.apply_density_matrix(backend, np.copy(initial_state), 1)
+    target_state = kraus_0 @ initial_state @ np.transpose(
+        np.conj(kraus_0)
+    ) + kraus_1 @ initial_state @ np.transpose(np.conj(kraus_1))
+
+    backend.assert_allclose(final_state, target_state)
+
+
 @pytest.mark.parametrize(
     "t1,t2,time,excpop", [(0.8, 0.5, 1.0, 0.4), (0.5, 0.8, 1.0, 0.4)]
 )

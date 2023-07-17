@@ -6,6 +6,7 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 from qibo.noise import (
+    AmpliduteDampingError,
     CompositeNoiseModel,
     CustomError,
     DepolarizingError,
@@ -286,6 +287,59 @@ def test_thermal_error(backend, density_matrix):
     target_final_state = backend.execute_circuit(target_circuit, np.copy(initial_psi))
 
     backend.assert_allclose(final_state, target_final_state)
+
+
+@pytest.mark.parametrize("density_matrix", [False, True])
+@pytest.mark.parametrize("nshots", [None, 10, 100])
+def test_amplitude_damping_error(backend, density_matrix, nshots):
+    depol = AmpliduteDampingError(0.3)
+    noise = NoiseModel()
+    noise.add(depol, gates.X, 1)
+    noise.add(depol, gates.CNOT)
+    noise.add(depol, gates.Z, (0, 1))
+
+    circuit = Circuit(3, density_matrix=density_matrix)
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.Z(1))
+    circuit.add(gates.X(1))
+    circuit.add(gates.X(2))
+    circuit.add(gates.Z(2))
+    circuit.add(gates.M(0, 1, 2))
+
+    target_circuit = Circuit(3, density_matrix=density_matrix)
+    target_circuit.add(gates.CNOT(0, 1))
+    target_circuit.add(gates.AmplitudeDampingChannel(0, 0.3))
+    target_circuit.add(gates.AmplitudeDampingChannel(1, 0.3))
+    target_circuit.add(gates.Z(1))
+    target_circuit.add(gates.AmplitudeDampingChannel((1,), 0.3))
+    target_circuit.add(gates.X(1))
+    target_circuit.add(gates.AmplitudeDampingChannel((1,), 0.3))
+    target_circuit.add(gates.X(2))
+    target_circuit.add(gates.Z(2))
+    target_circuit.add(gates.M(0, 1, 2))
+
+    initial_psi = (
+        random_density_matrix(2**3, backend=backend)
+        if density_matrix
+        else random_statevector(2**3, backend=backend)
+    )
+    backend.set_seed(123)
+    final_state = backend.execute_circuit(
+        noise.apply(circuit),
+        initial_state=backend.cast(initial_psi, copy=True, dtype=initial_psi.dtype),
+        nshots=nshots,
+    )
+    final_state_samples = final_state.samples() if nshots else None
+    backend.set_seed(123)
+    target_final_state = backend.execute_circuit(
+        target_circuit, initial_state=np.copy(initial_psi), nshots=nshots
+    )
+    target_final_state_samples = target_final_state.samples() if nshots else None
+
+    if nshots is None:
+        backend.assert_allclose(final_state, target_final_state)
+    else:
+        backend.assert_allclose(final_state_samples, target_final_state_samples)
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
