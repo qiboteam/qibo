@@ -37,6 +37,7 @@ class Gate:
         self.init_kwargs = {}
 
         self.clifford = False
+        self.unitary = False
         self._target_qubits = tuple()
         self._control_qubits = set()
         self._parameters = tuple()

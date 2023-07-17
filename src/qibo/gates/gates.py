@@ -3,7 +3,7 @@ from typing import List
 
 import numpy as np
 
-from qibo.config import raise_error
+from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate, ParametrizedGate
 
 
@@ -29,6 +29,7 @@ class H(Gate):
         self.target_qubits = (q,)
         self.init_args = [q]
         self.clifford = True
+        self.unitary = True
 
     @property
     def qasm_label(self):
@@ -57,6 +58,7 @@ class X(Gate):
         self.target_qubits = (q,)
         self.init_args = [q]
         self.clifford = True
+        self.unitary = True
 
     @property
     def qasm_label(self):
@@ -169,6 +171,7 @@ class Y(Gate):
         self.target_qubits = (q,)
         self.init_args = [q]
         self.clifford = True
+        self.unitary = True
 
     @property
     def qasm_label(self):
@@ -203,6 +206,7 @@ class Z(Gate):
         self.target_qubits = (q,)
         self.init_args = [q]
         self.clifford = True
+        self.unitary = True
 
     @property
     def qasm_label(self):
@@ -243,6 +247,7 @@ class SX(Gate):
         self.target_qubits = (q,)
         self.init_args = [q]
         self.clifford = True
+        self.unitary = True
 
     @property
     def qasm_label(self):
@@ -283,6 +288,7 @@ class SXDG(Gate):
         self.target_qubits = (q,)
         self.init_args = [q]
         self.clifford = True
+        self.unitary = True
 
     @property
     def qasm_label(self):
@@ -323,6 +329,7 @@ class S(Gate):
         self.target_qubits = (q,)
         self.init_args = [q]
         self.clifford = True
+        self.unitary = True
 
     @property
     def qasm_label(self):
@@ -354,6 +361,7 @@ class SDG(Gate):
         self.target_qubits = (q,)
         self.init_args = [q]
         self.clifford = True
+        self.unitary = True
 
     @property
     def qasm_label(self):
@@ -384,6 +392,7 @@ class T(Gate):
         self.draw_label = "T"
         self.target_qubits = (q,)
         self.init_args = [q]
+        self.unitary = True
 
     @property
     def qasm_label(self):
@@ -414,6 +423,7 @@ class TDG(Gate):
         self.draw_label = "TDG"
         self.target_qubits = (q,)
         self.init_args = [q]
+        self.unitary = True
 
     @property
     def qasm_label(self):
@@ -437,6 +447,7 @@ class I(Gate):
         self.target_qubits = tuple(q)
         self.init_args = q
         self.clifford = True
+        self.unitary = True
 
     @property
     def qasm_label(self):
@@ -468,6 +479,7 @@ class _Rn_(ParametrizedGate):
         self.name = None
         self._controlled_gate = None
         self.target_qubits = (q,)
+        self.unitary = True
 
         self.parameters = theta
         self.init_args = [q]
@@ -618,6 +630,7 @@ class GPI(ParametrizedGate):
         self.name = "gpi"
         self.draw_label = "GPI"
         self.target_qubits = (q,)
+        self.unitary = True
 
         self.parameter_names = "phi"
         self.parameters = phi
@@ -651,6 +664,7 @@ class GPI2(ParametrizedGate):
         self.name = "gpi2"
         self.draw_label = "GPI2"
         self.target_qubits = (q,)
+        self.unitary = True
 
         self.parameter_names = "phi"
         self.parameters = phi
@@ -681,6 +695,8 @@ class _Un_(ParametrizedGate):
         self.nparams = 0
         self.target_qubits = (q,)
         self.init_args = [q]
+        self.unitary = True
+
         self.init_kwargs = {"trainable": trainable}
 
     @Gate.check_controls
@@ -851,6 +867,7 @@ class CNOT(Gate):
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
         self.clifford = True
+        self.unitary = True
 
     @property
     def qasm_label(self):
@@ -887,6 +904,7 @@ class CZ(Gate):
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
         self.clifford = True
+        self.unitary = True
 
     @property
     def qasm_label(self):
@@ -919,6 +937,7 @@ class CSX(Gate):
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
         self.clifford = True
+        self.unitary = True
 
     @property
     def qasm_label(self):
@@ -960,6 +979,7 @@ class CSXDG(Gate):
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
         self.clifford = True
+        self.unitary = True
 
     @property
     def qasm_label(self):
@@ -993,6 +1013,7 @@ class _CRn_(ParametrizedGate):
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.parameters = theta
+        self.unitary = True
 
         self.init_args = [q0, q1]
         self.init_kwargs = {"theta": theta, "trainable": trainable}
@@ -1121,6 +1142,7 @@ class _CUn_(ParametrizedGate):
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
+        self.unitary = True
         self.init_kwargs = {"trainable": trainable}
 
 
@@ -1289,6 +1311,7 @@ class SWAP(Gate):
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
         self.clifford = True
+        self.unitary = True
 
     @property
     def qasm_label(self):
@@ -1320,6 +1343,7 @@ class iSWAP(Gate):
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
         self.clifford = True
+        self.unitary = True
 
     @property
     def qasm_label(self):
@@ -1351,6 +1375,7 @@ class FSWAP(Gate):
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
         self.clifford = True
+        self.unitary = True
 
     @property
     def qasm_label(self):
@@ -1387,6 +1412,7 @@ class fSim(ParametrizedGate):
         self.name = "fsim"
         self.draw_label = "f"
         self.target_qubits = (q0, q1)
+        self.unitary = True
 
         self.parameter_names = ["theta", "phi"]
         self.parameters = theta, phi
@@ -1430,6 +1456,7 @@ class SYC(Gate):
         self.draw_label = "SYC"
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
+        self.unitary = True
 
     def _dagger(self) -> "Gate":
         """"""
@@ -1464,6 +1491,7 @@ class GeneralizedfSim(ParametrizedGate):
         self.name = "generalizedfsim"
         self.draw_label = "gf"
         self.target_qubits = (q0, q1)
+        self.unitary = True
 
         self.parameter_names = ["unitary", "phi"]
         self.parameters = unitary, phi
@@ -1508,6 +1536,7 @@ class _Rnn_(ParametrizedGate):
         self.name = None
         self._controlled_gate = None
         self.target_qubits = (q0, q1)
+        self.unitary = True
 
         self.parameters = theta
         self.init_args = [q0, q1]
@@ -1737,6 +1766,7 @@ class MS(ParametrizedGate):
         self.name = "ms"
         self.draw_label = "MS"
         self.target_qubits = (q0, q1)
+        self.unitary = True
 
         if theta < 0.0 or theta > math.pi / 2:
             raise_error(
@@ -1790,6 +1820,7 @@ class GIVENS(ParametrizedGate):
         self.name = "g"
         self.draw_label = "G"
         self.target_qubits = (q0, q1)
+        self.unitary = True
 
         self.parameter_names = "theta"
         self.parameters = theta
@@ -1849,6 +1880,7 @@ class RBS(ParametrizedGate):
         self.name = "rbs"
         self.draw_label = "RBS"
         self.target_qubits = (q0, q1)
+        self.unitary = True
 
         self.parameter_names = "theta"
         self.parameters = theta
@@ -1904,6 +1936,7 @@ class ECR(Gate):
         self.draw_label = "ECR"
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
+        self.unitary = True
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
         """"""
@@ -1942,6 +1975,7 @@ class TOFFOLI(Gate):
         self.target_qubits = (q2,)
         self.init_args = [q0, q1, q2]
         self.clifford = True
+        self.unitary = True
 
     @property
     def qasm_label(self):
@@ -2014,6 +2048,7 @@ class DEUTSCH(ParametrizedGate):
         self.draw_label = "DE"
         self.control_qubits = (q0, q1)
         self.target_qubits = (q2,)
+        self.unitary = True
 
         self.parameter_names = "theta"
         self.parameters = theta
@@ -2028,16 +2063,21 @@ class Unitary(ParametrizedGate):
 
     Args:
         unitary: Unitary matrix as a tensor supported by the backend.
-            Note that there is no check that the matrix passed is actually
-            unitary. This allows the user to create non-unitary gates.
         *q (int): Qubit id numbers that the gate acts on.
         trainable (bool): whether gate parameters can be updated using
             :meth:`qibo.models.circuit.Circuit.set_parameters`.
             Defaults to ``True``.
         name (str): Optional name for the gate.
+        check_unitary (bool): if ``True``, checks if ``unitary`` is an unitary operator.
+            If ``False``, check is not performed and ``unitary`` attribute
+            defaults to ``False``. Note that, even when the check is performed,
+            there is no enforcement. This allows the user to create
+            non-unitary gates. Default is ``True``.
     """
 
-    def __init__(self, unitary, *q, trainable=True, name=None):
+    def __init__(
+        self, unitary, *q, trainable=True, name: str = None, check_unitary: bool = True
+    ):
         super().__init__(trainable)
         self.name = "Unitary" if name is None else name
         self.draw_label = "U"
@@ -2049,7 +2089,20 @@ class Unitary(ParametrizedGate):
         self.nparams = 4 ** len(self.target_qubits)
 
         self.init_args = [unitary] + list(q)
-        self.init_kwargs = {"name": name, "trainable": trainable}
+        self.init_kwargs = {
+            "name": name,
+            "check_unitary": check_unitary,
+            "trainable": trainable,
+        }
+
+        # checking unitarity without invoking any backend
+        if check_unitary:
+            product = np.transpose(np.conj(unitary)) @ unitary
+            sums = all(np.abs(1 - np.sum(product, axis=1)) < PRECISION_TOL)
+            diagonal = all(np.abs(1 - np.diag(product)) < PRECISION_TOL)
+
+            self.unitary = True if sums and diagonal else False
+            del sums, diagonal, product
 
     @Gate.parameters.setter
     def parameters(self, x):
