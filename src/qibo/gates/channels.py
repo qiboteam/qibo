@@ -657,7 +657,7 @@ class ThermalRelaxationChannel(KrausChannel):
 
 
 class AmplitudeDampingChannel(KrausChannel):
-    """Single-qubit amplidute damping channel in its Kraus representation, i.e.
+    """Single-qubit amplitude damping channel in its Kraus representation, i.e.
 
     .. math::
         K_{0} = \\begin{pmatrix}
