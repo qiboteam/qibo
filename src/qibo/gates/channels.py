@@ -510,11 +510,11 @@ class ThermalRelaxationChannel(KrausChannel):
         \\Lambda = \\begin{pmatrix}
         1 - p_1 & 0 & 0 & e^{-t / T_2} \\\\
         0 & p_1 & 0 & 0 \\\\
-        0 & 0 & p0 & 0 \\\\
-        e^{-t / T_2} & 0 & 0 & 1 - p0
+        0 & 0 & p_0 & 0 \\\\
+        e^{-t / T_2} & 0 & 0 & 1 - p_0
         \\end{pmatrix}
 
-    where :math:`p0 = (1 - e^{-t / T_1})(1 - \\eta )`,
+    where :math:`p_0 = (1 - e^{-t / T_1})(1 - \\eta )`,
     :math:`p_1 = (1 - e^{-t / T_1})\\eta`, and
     :math:`p_z = (e^{-t / T_1} - e^{-t / T_2})/2`.
     Here :math:`\\eta` is the ``excited_population``
@@ -615,13 +615,13 @@ class ThermalRelaxationChannel(KrausChannel):
                 sqrt(1 - p_0 - p_1 - p_z) * np.eye(2),
             )
             super().__init__([(qubit,)] * len(operators), operators)
-            self.init_kwargs["pz"] = p_z
+            self.init_kwargs["p_z"] = p_z
 
         self.init_args = [qubit, t_1, t_2, time]
         self.t_1, self.t_2 = t_1, t_2
         self.init_kwargs["excited_population"] = excited_population
-        self.init_kwargs["p0"] = p_0
-        self.init_kwargs["p1"] = p_1
+        self.init_kwargs["p_0"] = p_0
+        self.init_kwargs["p_1"] = p_1
 
         self.name = "ThermalRelaxationChannel"
         self.draw_label = "TR"
@@ -631,8 +631,8 @@ class ThermalRelaxationChannel(KrausChannel):
 
         if self.t_1 < self.t_2:
             preset0, preset1, e_t2 = (
-                self.init_kwargs["p0"],
-                self.init_kwargs["p1"],
+                self.init_kwargs["p_0"],
+                self.init_kwargs["p_1"],
                 self.init_kwargs["e_t2"],
             )
             matrix = [
@@ -647,7 +647,7 @@ class ThermalRelaxationChannel(KrausChannel):
 
             return backend.thermal_error_density_matrix(gate, state, nqubits)
 
-        p_z = self.init_kwargs["pz"]
+        p_z = self.init_kwargs["p_z"]
 
         return (
             backend.reset_error_density_matrix(self, state, nqubits)
@@ -756,12 +756,12 @@ class ResetChannel(KrausChannel):
             )
         p_0, p_1 = probabilities
         if p_0 < 0:
-            raise_error(ValueError, "Invalid p0 ({p0} < 0).")
+            raise_error(ValueError, "Invalid p_0 ({p_0} < 0).")
         if p_1 < 0:
-            raise_error(ValueError, "Invalid p1 ({p1} < 0).")
+            raise_error(ValueError, "Invalid p_1 ({p_1} < 0).")
         if p_0 + p_1 > 1 + PRECISION_TOL:
             raise_error(
-                ValueError, f"Invalid probabilities (p0 + p1 = {p_0 + p_1} > 1)."
+                ValueError, f"Invalid probabilities (p_0 + p_1 = {p_0 + p_1} > 1)."
             )
 
         operators = [
@@ -775,7 +775,7 @@ class ResetChannel(KrausChannel):
             operators.append(sqrt(np.abs(1 - p_0 - p_1)) * np.eye(2))
 
         super().__init__([(qubit,)] * len(operators), operators)
-        self.init_kwargs = {"p0": p_0, "p1": p_1}
+        self.init_kwargs = {"p_0": p_0, "p_1": p_1}
         self.name = "ResetChannel"
         self.draw_label = "R"
 
