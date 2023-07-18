@@ -316,7 +316,9 @@ def test_thermal_relaxation_channel(backend, t_1, t_2, time, excpop):
 
     target_state = backend.cast(target_state, dtype=target_state.dtype)
 
-    backend.assert_allclose(final_state, target_state)
+    backend.assert_allclose(
+        backend.calculate_norm(final_state - target_state) < PRECISION_TOL, True
+    )
 
 
 @pytest.mark.parametrize(
