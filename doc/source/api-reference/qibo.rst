@@ -790,6 +790,13 @@ Thermal relaxation channel
     :members:
     :member-order: bysource
 
+Amplitude damping channel
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.gates.AmplitudeDampingChannel
+    :members:
+    :member-order: bysource
+
 Readout error channel
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -837,11 +844,15 @@ The quantum errors available to build a noise model are the following:
     :members:
     :member-order: bysource
 
+.. autoclass:: qibo.noise.DepolarizingError
+    :members:
+    :member-order: bysource
+
 .. autoclass:: qibo.noise.ThermalRelaxationError
     :members:
     :member-order: bysource
 
-.. autoclass:: qibo.noise.DepolarizingError
+.. autoclass:: qibo.noise.AmplitudeDampingError
     :members:
     :member-order: bysource
 

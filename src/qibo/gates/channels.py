@@ -297,7 +297,7 @@ class KrausChannel(Channel):
         self.init_args = [self.gates]
         self.coefficients = len(self.gates) * (1,)
         self.coefficient_sum = 1
-        self.all_unitary_operators = True if all(unitary_check) else False
+        self._all_unitary_operators = True if all(unitary_check) else False
 
 
 class UnitaryChannel(KrausChannel):
@@ -454,7 +454,7 @@ class DepolarizingChannel(PauliNoiseChannel):
         lam (float): Depolarizing error parameter.
     """
 
-    def __init__(self, qubits, lam: float = 0):
+    def __init__(self, qubits, lam: float):
         if isinstance(qubits, int) is True:
             qubits = (qubits,)
 
@@ -492,8 +492,8 @@ class ThermalRelaxationChannel(KrausChannel):
     If :math:`T_1 \\geq T_2`:
 
     .. math::
-        \\mathcal{E} (\\rho ) = (1 - p_z - p0 - p_1)\\rho + p_zZ\\rho Z
-            + \\mathrm{Tr}_q[\\rho] \\otimes (p0|0\\rangle \\langle 0|
+        \\mathcal{E} (\\rho ) = (1 - p_z - p_0 - p_1) \\rho + p_z \\, Z\\rho Z
+            + \\mathrm{Tr}_{q}[\\rho] \\otimes (p_0 | 0\\rangle \\langle 0|
             + p_1|1\\rangle \\langle 1|)
 
 
@@ -510,11 +510,11 @@ class ThermalRelaxationChannel(KrausChannel):
         \\Lambda = \\begin{pmatrix}
         1 - p_1 & 0 & 0 & e^{-t / T_2} \\\\
         0 & p_1 & 0 & 0 \\\\
-        0 & 0 & p0 & 0 \\\\
-        e^{-t / T_2} & 0 & 0 & 1 - p0
+        0 & 0 & p_0 & 0 \\\\
+        e^{-t / T_2} & 0 & 0 & 1 - p_0
         \\end{pmatrix}
 
-    where :math:`p0 = (1 - e^{-t / T_1})(1 - \\eta )`,
+    where :math:`p_0 = (1 - e^{-t / T_1})(1 - \\eta )`,
     :math:`p_1 = (1 - e^{-t / T_1})\\eta`, and
     :math:`p_z = (e^{-t / T_1} - e^{-t / T_2})/2`.
     Here :math:`\\eta` is the ``excited_population``
@@ -534,8 +534,7 @@ class ThermalRelaxationChannel(KrausChannel):
             equilibrium. Default is 0.
     """
 
-    def __init__(self, qubit, parameters):
-        self.name = "ThermalRelaxationChannel"
+    def __init__(self, qubit: int, parameters: list):
         if len(parameters) not in [3, 4]:
             raise_error(
                 ValueError,
@@ -616,13 +615,13 @@ class ThermalRelaxationChannel(KrausChannel):
                 sqrt(1 - p_0 - p_1 - p_z) * np.eye(2),
             )
             super().__init__([(qubit,)] * len(operators), operators)
-            self.init_kwargs["pz"] = p_z
+            self.init_kwargs["p_z"] = p_z
 
         self.init_args = [qubit, t_1, t_2, time]
         self.t_1, self.t_2 = t_1, t_2
         self.init_kwargs["excited_population"] = excited_population
-        self.init_kwargs["p0"] = p_0
-        self.init_kwargs["p1"] = p_1
+        self.init_kwargs["p_0"] = p_0
+        self.init_kwargs["p_1"] = p_1
 
         self.name = "ThermalRelaxationChannel"
         self.draw_label = "TR"
@@ -632,8 +631,8 @@ class ThermalRelaxationChannel(KrausChannel):
 
         if self.t_1 < self.t_2:
             preset0, preset1, e_t2 = (
-                self.init_kwargs["p0"],
-                self.init_kwargs["p1"],
+                self.init_kwargs["p_0"],
+                self.init_kwargs["p_1"],
                 self.init_kwargs["e_t2"],
             )
             matrix = [
@@ -648,13 +647,48 @@ class ThermalRelaxationChannel(KrausChannel):
 
             return backend.thermal_error_density_matrix(gate, state, nqubits)
 
-        p_z = self.init_kwargs["pz"]
+        p_z = self.init_kwargs["p_z"]
 
         return (
             backend.reset_error_density_matrix(self, state, nqubits)
             - p_z * backend.cast(state)
             + p_z * backend.apply_gate_density_matrix(Z(0), state, nqubits)
         )
+
+
+class AmplitudeDampingChannel(KrausChannel):
+    """Single-qubit amplitude damping channel in its Kraus representation, i.e.
+
+    .. math::
+        K_{0} = \\begin{pmatrix}
+            1 & 0 \\\\
+            0 & \\sqrt{1 - \\gamma} \\\\
+        \\end{pmatrix} \\,\\, , \\,\\,
+        K_{1} = \\begin{pmatrix}
+            0 & \\sqrt{\\gamma} \\\\
+            0 & 0 \\\\
+        \\end{pmatrix}
+
+    Args:
+        qubit (int): Qubit id that the noise channel acts on.
+        gamma (float): amplitude damping strength.
+    """
+
+    def __init__(self, qubit, gamma: float):
+        if not isinstance(gamma, float):
+            raise_error(
+                TypeError, f"gamma must be type float, but it is type {type(gamma)}."
+            )
+        if gamma < 0.0 or gamma > 1.0:
+            raise_error(ValueError, "gamma must be a float between 0 and 1.")
+
+        operators = []
+        operators.append(np.array([[1, 0], [0, sqrt(1 - gamma)]], dtype=complex))
+        operators.append(np.array([[0, sqrt(gamma)], [0, 0]], dtype=complex))
+
+        super().__init__([(qubit,)] * len(operators), operators)
+        self.name = "AmplitudeDampingChannel"
+        self.draw_label = "AD"
 
 
 class ReadoutErrorChannel(KrausChannel):
@@ -722,12 +756,12 @@ class ResetChannel(KrausChannel):
             )
         p_0, p_1 = probabilities
         if p_0 < 0:
-            raise_error(ValueError, "Invalid p0 ({p0} < 0).")
+            raise_error(ValueError, "Invalid p_0 ({p_0} < 0).")
         if p_1 < 0:
-            raise_error(ValueError, "Invalid p1 ({p1} < 0).")
+            raise_error(ValueError, "Invalid p_1 ({p_1} < 0).")
         if p_0 + p_1 > 1 + PRECISION_TOL:
             raise_error(
-                ValueError, f"Invalid probabilities (p0 + p1 = {p_0 + p_1} > 1)."
+                ValueError, f"Invalid probabilities (p_0 + p_1 = {p_0 + p_1} > 1)."
             )
 
         operators = [
@@ -741,7 +775,7 @@ class ResetChannel(KrausChannel):
             operators.append(sqrt(np.abs(1 - p_0 - p_1)) * np.eye(2))
 
         super().__init__([(qubit,)] * len(operators), operators)
-        self.init_kwargs = {"p0": p_0, "p1": p_1}
+        self.init_kwargs = {"p_0": p_0, "p_1": p_1}
         self.name = "ResetChannel"
         self.draw_label = "R"
 
