@@ -2,8 +2,7 @@
 import numpy as np
 import pytest
 
-from qibo import gates, hamiltonians
-from qibo.models import Circuit
+from qibo import Circuit, gates, hamiltonians
 from qibo.symbols import I, Z
 
 from .utils import random_complex, random_sparse_matrix

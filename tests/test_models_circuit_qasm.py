@@ -2,8 +2,7 @@
 import pytest
 
 import qibo
-from qibo import __version__, gates
-from qibo.models import Circuit
+from qibo import __version__, Circuit, gates
 
 
 def assert_strings_equal(a, b):
