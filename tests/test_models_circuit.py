@@ -671,7 +671,6 @@ def test_circuit_draw_line_wrap():
 def test_circuit_draw_channels(legend):
     """Check that channels are drawn correctly"""
 
-
     circuit = Circuit(2, density_matrix=True)
     circuit.add(gates.H(0))
     circuit.add(gates.PauliNoiseChannel(0, list(zip(["X", "Z"], [0.1, 0.2]))))
