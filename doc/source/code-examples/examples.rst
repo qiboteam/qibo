@@ -11,8 +11,7 @@ Here is an example of a circuit with 2 qubits:
 .. testcode::
 
     import numpy as np
-    from qibo.models import Circuit
-    from qibo import gates
+    from qibo import Circuit, gates
 
     # Construct the circuit
     c = Circuit(2)
@@ -42,8 +41,7 @@ evaluation performance, e.g.:
     # switch backend to "tensorflow"
     import qibo
     qibo.set_backend("tensorflow")
-    from qibo.models import Circuit
-    from qibo import gates
+    from qibo import Circuit, gates
 
     c = Circuit(2)
     c.add(gates.X(0))
@@ -71,8 +69,7 @@ For example
 
 .. testcode::
 
-    from qibo.models import Circuit
-    from qibo import gates
+    from qibo import Circuit, gates
 
     c = Circuit(3)
     c.add(gates.H(0))
@@ -111,8 +108,7 @@ For example for the circuit of the previous example:
 
 .. testsetup::
 
-    from qibo.models import Circuit
-    from qibo import gates
+    from qibo import Circuit, gates
 
     c = Circuit(3)
     c.add(gates.H(0))
@@ -159,8 +155,7 @@ information about the measured samples. For example
 
 .. testcode::
 
-    from qibo.models import Circuit
-    from qibo import gates
+    from qibo import Circuit, gates
 
     c = Circuit(2)
     c.add(gates.X(0))
@@ -187,8 +182,7 @@ during the addition of measurement gates in the circuit. For example
 
 .. testcode::
 
-    from qibo.models import Circuit
-    from qibo import gates
+    from qibo import Circuit, gates
 
     c = Circuit(5)
     c.add(gates.X(0))
