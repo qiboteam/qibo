@@ -3,9 +3,8 @@
 import numpy as np
 from scipy.optimize import curve_fit
 
-from qibo import gates
+from qibo import Circuit, gates
 from qibo.config import raise_error
-from qibo.models import Circuit
 
 
 def get_gammas(c, solve: bool = True):

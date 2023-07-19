@@ -5,10 +5,9 @@ from typing import Optional, Union
 
 import numpy as np
 
-from qibo import gates
+from qibo import Circuit, gates
 from qibo.backends import GlobalBackend, NumpyBackend
 from qibo.config import MAX_ITERATIONS, PRECISION_TOL, raise_error
-from qibo.models import Circuit
 from qibo.quantum_info.basis import comp_basis_to_pauli
 from qibo.quantum_info.superoperator_transformations import (
     choi_to_chi,
