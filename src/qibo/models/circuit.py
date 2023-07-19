@@ -379,6 +379,10 @@ class Circuit:
         """Creates a new ``Circuit`` that is the inverse of the original.
 
         Inversion is obtained by taking the dagger of all gates in reverse order.
+        If the original circuit contains parametrized gates, dagger will change
+        their parameters. This action is not persistent, so if the parameters
+        are updated afterwards, for example using :meth:`qibo.models.circuit.Circuit.set_parameters`,
+        the action of dagger will be overwritten.
         If the original circuit contains measurement gates, these are included
         in the inverted circuit.
 
