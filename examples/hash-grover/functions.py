@@ -1,7 +1,6 @@
 import numpy as np
 
-from qibo import gates
-from qibo.models import Circuit
+from qibo import Circuit, gates
 
 
 def n_mCNOT(controls, target, work):
