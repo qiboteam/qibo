@@ -1,9 +1,9 @@
+"""Module defining Hamiltonian classes."""
 from itertools import chain
 
 import numpy as np
 import sympy
 
-from qibo import Circuit
 from qibo.config import EINSUM_CHARS, log, raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.symbols import Z
@@ -23,7 +23,9 @@ class Hamiltonian(AbstractHamiltonian):
 
     def __init__(self, nqubits, matrix=None, backend=None):
         if backend is None:  # pragma: no cover
-            from qibo.backends import GlobalBackend
+            from qibo.backends import (  # pylint: disable=import-outside-toplevel
+                GlobalBackend,
+            )
 
             self.backend = GlobalBackend()
         else:
@@ -35,9 +37,7 @@ class Hamiltonian(AbstractHamiltonian):
         ):
             raise_error(
                 TypeError,
-                "Matrix of invalid type {} given during "
-                "Hamiltonian initialization"
-                "".format(type(matrix)),
+                f"Matrix of invalid type {type(matrix)} given during Hamiltonian initialization",
             )
         matrix = self.backend.cast(matrix)
 
@@ -58,22 +58,22 @@ class Hamiltonian(AbstractHamiltonian):
         return self._matrix
 
     @matrix.setter
-    def matrix(self, m):
-        shape = tuple(m.shape)
+    def matrix(self, mat):
+        shape = tuple(mat.shape)
         if shape != 2 * (2**self.nqubits,):
             raise_error(
                 ValueError,
-                "The Hamiltonian is defined for {} qubits "
-                "while the given matrix has shape {}."
-                "".format(self.nqubits, shape),
+                f"The Hamiltonian is defined for {self.nqubits} qubits "
+                + f"while the given matrix has shape {shape}.",
             )
-        self._matrix = m
+        self._matrix = mat
 
     @classmethod
     def from_symbolic(cls, symbolic_hamiltonian, symbol_map, backend=None):
         """Creates a ``Hamiltonian`` from a symbolic Hamiltonian.
 
-        We refer to the :ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>`
+        We refer to the
+        :ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>`
         example for more details.
 
         Args:
@@ -121,24 +121,23 @@ class Hamiltonian(AbstractHamiltonian):
             shape = tuple(state.shape)
             if len(shape) == 1:  # state vector
                 return self.backend.calculate_expectation_state(self, state, normalize)
-            elif len(shape) == 2:  # density matrix
+
+            if len(shape) == 2:  # density matrix
                 return self.backend.calculate_expectation_density_matrix(
                     self, state, normalize
                 )
-            else:
-                raise_error(
-                    ValueError,
-                    "Cannot calculate Hamiltonian "
-                    "expectation value for state of shape "
-                    "{}.".format(shape),
-                )
-        else:
+
             raise_error(
-                TypeError,
-                "Cannot calculate Hamiltonian expectation "
-                "value for state of type {}."
-                "".format(type(state)),
+                ValueError,
+                "Cannot calculate Hamiltonian expectation value "
+                + f"for state of shape {shape}",
             )
+
+        raise_error(
+            TypeError,
+            "Cannot calculate Hamiltonian expectation "
+            + f"value for state of type {type(state)}",
+        )
 
     def expectation_from_samples(self, freq, qubit_map=None):
         obs = self.matrix
@@ -149,11 +148,11 @@ class Hamiltonian(AbstractHamiltonian):
             qubit_map = list(range(int(np.log2(len(obs)))))
         counts = np.array(list(freq.values())) / sum(freq.values())
         expval = 0
-        kl = len(qubit_map)
+        size = len(qubit_map)
         for j, k in enumerate(keys):
             index = 0
             for i in qubit_map:
-                index += int(k[qubit_map.index(i)]) * 2 ** (kl - 1 - i)
+                index += int(k[qubit_map.index(i)]) * 2 ** (size - 1 - i)
             expval += obs[index, index] * counts[j]
         return expval
 
@@ -167,7 +166,7 @@ class Hamiltonian(AbstractHamiltonian):
             if self.nqubits != o.nqubits:
                 raise_error(
                     RuntimeError,
-                    "Only hamiltonians with the same " "number of qubits can be added.",
+                    "Only hamiltonians with the same number of qubits can be added.",
                 )
             new_matrix = self.matrix + o.matrix
         elif isinstance(o, self.backend.numeric_types):
@@ -203,7 +202,7 @@ class Hamiltonian(AbstractHamiltonian):
             if self.nqubits != o.nqubits:
                 raise_error(
                     RuntimeError,
-                    "Only hamiltonians with the same " "number of qubits can be added.",
+                    "Only hamiltonians with the same number of qubits can be added.",
                 )
             new_matrix = o.matrix - self.matrix
         elif isinstance(o, self.backend.numeric_types):
@@ -272,7 +271,7 @@ class TrotterCircuit:
     """
 
     def __init__(self, groups, dt, nqubits, accelerators):
-        from itertools import chain
+        from qibo import Circuit
 
         self.gates = {}
         self.dt = dt
@@ -400,7 +399,9 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
     @property
     def terms(self):
-        """List of :class:`qibo.core.terms.HamiltonianTerm` objects of which the Hamiltonian is a sum of."""
+        """List of :class:`qibo.core.terms.HamiltonianTerm` objects
+        of which the Hamiltonian is a sum of.
+        """
         if self._terms is None:
             # Calculate terms based on ``self.form``
             from qibo.hamiltonians.terms import SymbolicTerm
@@ -520,7 +521,9 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         return Hamiltonian(self.nqubits, matrix, backend=self.backend)
 
     def _calculate_dense_from_terms(self):
-        """Calculates equivalent :class:`qibo.core.hamiltonians.Hamiltonian` using the term representation."""
+        """Calculates equivalent :class:`qibo.core.hamiltonians.Hamiltonian`
+        using the term representation.
+        """
         if 2 * self.nqubits > len(EINSUM_CHARS):  # pragma: no cover
             # case not tested because it only happens in large examples
             raise_error(NotImplementedError, "Not enough einsum characters.")
@@ -761,7 +764,9 @@ class SymbolicHamiltonian(AbstractHamiltonian):
         )
 
     def circuit(self, dt, accelerators=None):
-        """Circuit that implements a Trotter step of this Hamiltonian for a given time step ``dt``."""
+        """Circuit that implements a Trotter step of this Hamiltonian
+        for a given time step ``dt``.
+        """
         if self.trotter_circuit is None:
             from qibo.hamiltonians.terms import TermGroup
 

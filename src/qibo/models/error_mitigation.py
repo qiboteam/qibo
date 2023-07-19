@@ -3,7 +3,7 @@
 import numpy as np
 from scipy.optimize import curve_fit
 
-from qibo import Circuit, gates
+from qibo import gates
 from qibo.config import raise_error
 
 
@@ -475,6 +475,8 @@ def calibration_matrix(nqubits, noise_model=None, nshots: int = 1000, backend=No
         numpy.ndarray : The computed (`nqubits`, `nqubits`) calibration matrix for
             readout mitigation.
     """
+
+    from qibo import Circuit  # pylint: disable=import-outside-toplevel
 
     if backend is None:  # pragma: no cover
         from qibo.backends import GlobalBackend
