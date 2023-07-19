@@ -56,8 +56,7 @@ def parameter_shift(
 
             import qibo
             import numpy as np
-            from qibo import hamiltonians, gates
-            from qibo.models import Circuit
+            from qibo import Circuit, gates, hamiltonians
             from qibo.derivative import parameter_shift
 
             # defining an observable
