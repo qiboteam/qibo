@@ -542,6 +542,15 @@ def error_mitigation(circuit, hamiltonian, backend, noise_model):
     return optimal_params
 
 
+def execute_circuit(backend, c, obs, nshots, cdr_params=(1, 0)):
+    result = backend.execute_circuit(circuit=c, nshots=nshots).expectation_from_samples(
+        obs
+    )
+
+    a, b = cdr_params
+    return a * result + b
+
+
 def generate_fubini(
     circuit, nqubits, paramInputs, feature, obs, pennylane=True, params=None
 ):
@@ -589,10 +598,11 @@ def generate_fubini(
         if len(qubits) == 0:
             continue
 
-        precise = True
+        precise = False
+
         if not precise:
             result = backend.execute_circuit(
-                circuit=c, nshots=10024
+                circuit=c, nshots=1024
             ).expectation_from_samples(obs)
 
             result = (1 - result) / 2
@@ -607,6 +617,7 @@ def generate_fubini(
                     ps = scale_factors[p]
                     ts = scale_factors[t]
                     fubini[p, t] = ps * ts * (result - result**2)
+
     # print(fubini, fubini_pennylane)
     # assert np.allclose(fubini, fubini_pennylane)
     return fubini

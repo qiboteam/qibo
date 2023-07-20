@@ -134,26 +134,22 @@ class SGD(Optimizer):
                     params.append(Param.get_params(trainablep, feature=feature))
             return params
 
-    def run_loss(self, results, labels, delta=0.001):
+    def calculate_loss_func_grad(self, results, labels, idx, delta=1e-6):
         """
-        Calculates loss and its derivative
+        Calculates loss function derivative with respect to parameter idx
         Args:
-            feature: input value
-            label: the value of y_exact which is approximated with the circuit
+            result: predicted values
+            labels: true values
+            idx: parameter number with respect to which we calculate the gradient
+            delta: size of the finite difference perturbation
         """
-        loss = self.loss_function(results, labels, self.args)
-        loss_func_grad = 0
 
         shifted = results.copy()
-        for i in range(len(results)):
-            shifted = results.copy()
-            shifted[i] += delta
-            forward = self.loss_function(shifted, labels, self.args)
-            shifted[i] -= 2 * delta
-            backward = self.loss_function(shifted, labels, self.args)
-            loss_func_grad += (forward - backward) / (2 * delta)
-
-        return loss, loss_func_grad / len(results)
+        shifted[idx] += delta
+        forward = self.loss_function(shifted, labels, self.args)
+        shifted[idx] -= 2 * delta
+        backward = self.loss_function(shifted, labels, self.args)
+        return (forward - backward) / (2 * delta)
 
     def run_circuit(self, feature, nshots):
         """Backend function which runs the circuit for one feature
@@ -234,13 +230,7 @@ class SGD(Optimizer):
                 self, feature=feat
             )  # d<B> N params, N label gradients
 
-            delta = 0.000001
-            shifted = results.copy()
-            shifted[i] += delta
-            forward = self.loss_function(shifted, labels, self.args)
-            shifted[i] -= 2 * delta
-            backward = self.loss_function(shifted, labels, self.args)
-            loss_func_grad = (forward - backward) / (2 * delta)
+            loss_func_grad = self.calculate_loss_func_grad(results, labels, i)
             circ_grads += loss_func_grad * obs_gradients
 
             if self.options["natgrad"]:
