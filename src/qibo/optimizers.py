@@ -6,10 +6,15 @@ from qibo import backends
 
 # from qibo.noise import NoiseModel
 from qibo.config import log, raise_error
-from qibo.derivative import calculate_gradients, generate_fubini
+from qibo.derivative import (
+    calculate_gradients,
+    create_hamiltonian,
+    error_mitigation,
+    generate_fubini,
+)
 from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.models import Circuit
-from qibo.symbols import Symbol, Z
+from qibo.symbols import I, Symbol, Z
 
 
 class Optimizer:
@@ -41,33 +46,6 @@ class Optimizer:
     def set_options(self, updates):
         """Updates options dictionary"""
         self.options.update(updates)
-
-    def create_hamiltonian(self, qubit, nqubit):
-        """
-        Creates appropriate Hamiltonian for a given list of qubits
-        Args:
-            qubit: qubit numbers whose states we are interested in
-            nqubit: total number of qubits, which determines size of Hamiltonian
-        Return:
-            hamiltonian: SymbolicHamiltonian
-        """
-        standard = np.array([[1, 0], [0, 1]])
-        target = np.array([[1, 0], [0, 0]])
-        hams = []
-        if not isinstance(qubit, list):
-            qubit = [qubit]
-
-        for i in range(nqubit):
-            if i in qubit:
-                hams.append(Symbol(i, target))
-            else:
-                hams.append(Symbol(i, standard))
-
-        # create Hamiltonian
-        obs = np.prod(hams)
-        hamiltonian = SymbolicHamiltonian(obs, backend=self.backend)
-
-        return hamiltonian
 
 
 class SGD(Optimizer):
@@ -120,9 +98,12 @@ class SGD(Optimizer):
 
         # hamiltonian
         if not hamiltonian:
-            self.hamiltonian = self.create_hamiltonian(0, self.nqubits)
+            self.hamiltonian = create_hamiltonian(0, self.nqubits, self.backend)
         else:
             self.hamiltonian = hamiltonian
+
+        # error mitigation
+        self.cdr_params = None
 
         # options
         self.options = {
@@ -132,6 +113,8 @@ class SGD(Optimizer):
             "J_threshold": 1e-3,
             "shift_rule": "psr",
             "natgrad": False,
+            "mitigation": False,
+            "noise_model": None,
         }
         self.set_options(kwargs)
 
@@ -184,14 +167,14 @@ class SGD(Optimizer):
         parameters = self._get_params(trainable=False, feature=feature)
         self._circuit.set_parameters(parameters)
 
-        # hamiltonian
-        obs = np.prod([Z(i) for i in range(1)])
-        obs = SymbolicHamiltonian(obs, backend=self.backend)
-
         # run circuit
         exp_v = self.backend.execute_circuit(
             circuit=self._circuit, nshots=nshots
-        ).expectation_from_samples(obs)
+        ).expectation_from_samples(self.hamiltonian)
+
+        if self.options["mitigation"]:
+            a, b = self.cdr_params
+            exp_v = a * exp_v + b
 
         # state = self._circuit().state()
 
@@ -232,6 +215,17 @@ class SGD(Optimizer):
         if self.options["natgrad"]:
             fubini = np.zeros((self.nparams, self.nparams))
 
+        # calculate CDR parameters anew at each epoch
+        if self.options["mitigation"]:
+            parameters = self._get_params(trainable=False, feature=1.0)
+            self._circuit.set_parameters(parameters)
+            self.cdr_params = error_mitigation(
+                self._circuit,
+                self.hamiltonian,
+                self.backend,
+                self.options["noise_model"],
+            )
+
         # iterate through all data points
         for i, (feat, label) in enumerate(zip(features, labels)):
             results[i] = self.predict(feat)
@@ -255,6 +249,7 @@ class SGD(Optimizer):
                     self.nqubits,
                     self.paramInputs,
                     feat,
+                    self.hamiltonian,
                     params=self.params,
                 )  # separate pull request
 

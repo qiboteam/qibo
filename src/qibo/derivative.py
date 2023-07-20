@@ -6,7 +6,8 @@ from qibo.config import raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.hamiltonians.hamiltonians import SymbolicHamiltonian
 from qibo.models import Circuit
-from qibo.symbols import Symbol, Z
+from qibo.models.error_mitigation import CDR, calibration_matrix
+from qibo.symbols import I, Symbol, Z
 
 
 class Parameter:
@@ -336,7 +337,7 @@ class Graph:
         count = 0
         # run through each gate in circuit queue
         for i, gate in enumerate(self.gates):
-            n = len(gate.init_args) - 1
+            n = len(gate.target_qubits) - 1
 
             # store parameters for ParametrizedGate
             if isinstance(gate, gates.ParametrizedGate):
@@ -381,7 +382,7 @@ class Graph:
             # one-qubit gate
             else:
                 node = Node(gate, trainp, gatep)
-                qubit = gate.init_args[0]
+                qubit = gate.target_qubits[0]
 
                 # start of graph
                 if start[qubit] is None:
@@ -466,7 +467,7 @@ class Graph:
         return c, trainable_qubits, affected_params
 
 
-def create_hamiltonian(qubit, nqubit):
+def create_hamiltonian(qubit, nqubit, backend):
     """
     Creates appropriate Hamiltonian for a given list of qubits
     Args:
@@ -475,21 +476,20 @@ def create_hamiltonian(qubit, nqubit):
     Return:
         hamiltonian: SymbolicHamiltonian
     """
-    standard = np.array([[1, 0], [0, 1]])
-    target = np.array([[1, 0], [0, 0]])
-    hams = []
     if not isinstance(qubit, list):
         qubit = [qubit]
 
+    hams = []
+
     for i in range(nqubit):
         if i in qubit:
-            hams.append(Symbol(i, target))
+            hams.append(Z(i))
         else:
-            hams.append(Symbol(i, standard))
+            hams.append(I(i))
 
     # create Hamiltonian
-    obs = np.prod(hams)
-    hamiltonian = SymbolicHamiltonian(obs)
+    obs = np.prod([Z(i) for i in range(1)])
+    hamiltonian = SymbolicHamiltonian(obs, backend=backend)
 
     return hamiltonian
 
@@ -526,18 +526,36 @@ def ansatz_pdf(params, feature):
     return qml.expval(qml.PauliZ(0))
 
 
+def error_mitigation(circuit, hamiltonian, backend, noise_model):
+    calibration = calibration_matrix(nqubits=1, backend=backend, nshots=10000)
+
+    _, _, optimal_params, _ = CDR(
+        circuit=circuit,
+        observable=hamiltonian,
+        backend=backend,
+        nshots=10000,
+        noise_model=noise_model,
+        full_output=True,
+        readout={"calibration_matrix": calibration},
+    )
+
+    return optimal_params
+
+
 def generate_fubini(
-    circuit, nqubits, paramInputs, feature, pennylane=True, params=None
+    circuit, nqubits, paramInputs, feature, obs, pennylane=True, params=None
 ):
     """Generate the Fubini-Study metric tensor"""
 
     if pennylane:
-        fubini = qml.metric_tensor(ansatz_pdf, approx="diag")(
+        fubini_pennylane = qml.metric_tensor(ansatz_pdf, approx="diag")(
             qml.numpy.asarray(params), feature
         )
+        # print(fubini)
+
         # diag = np.diag(fubini)
         # fubini = np.diag(diag)
-        return fubini
+        # return fubini
 
     if isinstance(paramInputs, list):
         nparams = sum([param.nparams for param in paramInputs])
@@ -547,6 +565,7 @@ def generate_fubini(
 
     # trainable and gate parameters
     gate_params = circuit.associate_gates_with_parameters()
+    scale_factors = []
 
     if isinstance(paramInputs, list):
         trainable_params = []
@@ -555,6 +574,8 @@ def generate_fubini(
             indices = Param.get_indices(count)
             count += len(indices)
             trainable_params.append(indices)
+            for idx in range(len(indices)):
+                scale_factors.append(Param.get_scaling_factor(idx))
     else:
         trainable_params = [[i] for i in range(nparams)]
     # build graph from circuit gates
@@ -568,14 +589,24 @@ def generate_fubini(
         if len(qubits) == 0:
             continue
 
-        probabilities = backend.execute_circuit(circuit=c, nshots=1024).probabilities()
+        precise = True
+        if not precise:
+            result = backend.execute_circuit(
+                circuit=c, nshots=10024
+            ).expectation_from_samples(obs)
+
+            result = (1 - result) / 2
+        else:
+            result = backend.execute_circuit(circuit=c, nshots=1024).probabilities()[0]
 
         # run through parametrized gate
         for qubit, params in zip(qubits, affected_param):
-            result = probabilities[0]
-
             for p in params:
                 # update Fubini-Study matrix
-                fubini[p, p] = result - result**2
-
+                for t in params:
+                    ps = scale_factors[p]
+                    ts = scale_factors[t]
+                    fubini[p, t] = ps * ts * (result - result**2)
+    # print(fubini, fubini_pennylane)
+    # assert np.allclose(fubini, fubini_pennylane)
     return fubini
