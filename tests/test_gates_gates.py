@@ -215,8 +215,8 @@ def test_align(backend, delay):
     with pytest.raises(NotImplementedError):
         gate.qasm_label
 
-        assert not gates.Align(0, 1, delay=delay).clifford
-        assert not gates.Align(0, 1, delay=delay).unitary
+    assert not gates.Align(0, 1, delay=delay).clifford
+    assert not gates.Align(0, 1, delay=delay).unitary
 
 
 # :class:`qibo.core.cgates.M` is tested seperately in `test_measurement_gate.py`
