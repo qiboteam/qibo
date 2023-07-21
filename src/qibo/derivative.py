@@ -36,7 +36,7 @@ class Parameter:
         """Update gate trainable parameter and feature values"""
         if trainablep:
             self._trainablep = trainablep
-        if feature:
+        if feature and self._featurep:
             self._featurep = feature
 
     def get_params(self, trainablep=None, feature=None):
@@ -243,7 +243,7 @@ def parameter_shift(
     generator_eigenval = gate.generator_eigenvalue()
 
     # defining the shift according to the psr
-    s = np.pi / (4 * generator_eigenval) / scale_factor
+    s = np.pi / (4 * generator_eigenval)
 
     # saving original parameters and making a copy
     original = np.asarray(circuit.get_parameters()).copy()
@@ -563,7 +563,7 @@ def generate_fubini(
     paramInputs,
     feature,
     obs,
-    pennylane=True,
+    pennylane=False,
     params=None,
     mitigation=False,
     noise_model=None,
@@ -601,6 +601,7 @@ def generate_fubini(
                 scale_factors.append(Param.get_scaling_factor(idx))
     else:
         trainable_params = [[i] for i in range(nparams)]
+        scale_factors = [1] * nparams
     # build graph from circuit gates
     graph = Graph(nqubits, circuit.queue, trainable_params, gate_params)
     graph.build_graph()
@@ -612,7 +613,7 @@ def generate_fubini(
         if len(qubits) == 0:
             continue
 
-        precise = False
+        precise = True
         cdr_params = None
         if mitigation and False:
             cdr_params = error_mitigation(c.to_clifford(), obs, backend, noise_model)

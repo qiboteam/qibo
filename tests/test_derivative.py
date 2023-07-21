@@ -6,7 +6,13 @@ import tensorflow as tf
 import qibo
 from qibo import gates, hamiltonians
 from qibo.backends import GlobalBackend
-from qibo.derivative import Graph, Parameter, generate_fubini, parameter_shift
+from qibo.derivative import (
+    Graph,
+    Parameter,
+    create_hamiltonian,
+    generate_fubini,
+    parameter_shift,
+)
 from qibo.models import Circuit
 from qibo.symbols import Z
 
@@ -194,7 +200,7 @@ def test_psr(backend, nshots, atol):
 )
 def test_graph(layer_num, trainable_qubits_correct, affected_params_correct):
     circuit = ansatz_2qubit(3, 2)
-
+    print(circuit.draw())
     nqubits = circuit.nqubits
     gates = circuit.queue
     trainable_params = np.linspace(0.1, 1, 18)
@@ -213,30 +219,50 @@ def test_graph(layer_num, trainable_qubits_correct, affected_params_correct):
     assert np.allclose(affected_params, affected_params_correct)
 
 
+def loss_func(ypred, ytrue, other_args=None):
+    loss = 0
+    for i in range(len(ypred)):
+        loss += (ytrue[i] - ypred[i]) ** 2
+
+    return loss
+
+
 def test_natural_gradient():
     params = qml.numpy.asarray([0.1] * 12)
+    obs = create_hamiltonian(0, 1, GlobalBackend())
 
     # create circuit ansatz for two qubits
     circuit = ansatz(3, 1)
 
     # initialize optimiser with Parameter objects
-    initial_parameters = [Parameter(lambda th: th, [0.1]) for i in range(12)]
-    optimiser = qibo.optimizers.SGD(circuit=circuit, parameters=initial_parameters)
+    initial_parameters = [Parameter(lambda th1: th1, [0.1]) for i in range(12)]
+    optimiser = qibo.optimizers.SGD(
+        circuit=circuit, parameters=initial_parameters, loss=loss_func
+    )
 
-    _ = optimiser.run_circuit(optimiser.params)
+    _ = optimiser.run_circuit(0.1, nshots=1024)
 
-    fubini = generate_fubini(circuit, 1, initial_parameters, 1.0)
+    fubini = generate_fubini(circuit, 1, initial_parameters, 1.0, obs)
     # initialize optimiser with numpy array
     initial_parameters2 = np.full(12, 0.1)
-    optimiser2 = qibo.optimizers.SGD(circuit=circuit, parameters=initial_parameters2)
+    optimiser2 = qibo.optimizers.SGD(
+        circuit=circuit, parameters=initial_parameters, loss=loss_func
+    )
 
-    _ = optimiser2.run_circuit(optimiser.params)
+    _ = optimiser2.run_circuit(0.1, nshots=1024)
 
-    fubini2 = generate_fubini(circuit, 1, initial_parameters2, 1.0)
+    fubini2 = generate_fubini(circuit, 1, initial_parameters2, 1.0, obs)
 
     assert np.allclose(optimiser.params, params)
 
     metric_tensor = qml.metric_tensor(ansatz_pdf, approx="diag")(params, 1.0)
 
+    print(fubini)
+    print(metric_tensor)
+    print(fubini2)
     assert np.allclose(fubini, metric_tensor)
     assert np.allclose(fubini2, metric_tensor)
+
+
+if __name__ == "__main__":
+    test_graph(6, [1], [16, 17])

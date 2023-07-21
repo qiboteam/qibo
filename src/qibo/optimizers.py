@@ -18,10 +18,7 @@ class Optimizer:
     """Parent optimizer"""
 
     def __init__(self, initial_parameters, args=(), loss=None, **kwargs):
-        if not loss:
-            self.loss_function = self.base_loss
-        else:
-            self.loss_function = loss
+        self.loss_function = loss
         self.args = args
         self.backend = None
         self.initial_parameters = initial_parameters
