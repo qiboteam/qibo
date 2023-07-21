@@ -881,8 +881,8 @@ def diamond_norm(channel, target=None, **kwargs):
         target (ndarray, optional): row-vectorized Choi representation of a target
             quantum channel. Defaults to ``None``.
         kwargs: optional arguments to pass to CVXPY solver. For more information,
-            please visit CVXPY's API documentation
-            <https://www.cvxpy.org/api_reference/cvxpy.problems.html#problem>_.
+            please visit `CVXPY's API documentation
+            <https://www.cvxpy.org/api_reference/cvxpy.problems.html#problem>`_.
 
     Returns:
         float: diamond norm of either ``channel`` or ``channel - target``.

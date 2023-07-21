@@ -1,274 +1,490 @@
+import numpy as np
+import tensorflow as tf
+from scipy.optimize import basinhopping
+
+from qibo import backends
+
+# from qibo.noise import NoiseModel
 from qibo.config import log, raise_error
+from qibo.derivative import (
+    calculate_gradients,
+    create_hamiltonian,
+    error_mitigation,
+    execute_circuit,
+    generate_fubini,
+)
+from qibo.hamiltonians import SymbolicHamiltonian
+from qibo.models import Circuit
+from qibo.symbols import I, Symbol, Z
 
 
-def optimize(
-    loss,
-    initial_parameters,
-    args=(),
-    method="Powell",
-    jac=None,
-    hess=None,
-    hessp=None,
-    bounds=None,
-    constraints=(),
-    tol=None,
-    callback=None,
-    options=None,
-    compile=False,
-    processes=None,
-    backend=None,
-):
-    """Main optimization method. Selects one of the following optimizers:
-        - :meth:`qibo.optimizers.cmaes`
-        - :meth:`qibo.optimizers.newtonian`
-        - :meth:`qibo.optimizers.sgd`
+class Optimizer:
+    """Parent optimizer"""
 
-    Args:
-        loss (callable): Loss as a function of ``parameters`` and optional extra
-            arguments. Make sure the loss function returns a tensor for ``method=sgd``
-            and numpy object for all the other methods.
-        initial_parameters (np.ndarray): Initial guess for the variational
-            parameters that are optimized.
-        args (tuple): optional arguments for the loss function.
-        method (str): Name of optimizer to use. Can be ``'cma'``, ``'sgd'`` or
-            one of the Newtonian methods supported by
-            :meth:`qibo.optimizers.newtonian` and ``'parallel_L-BFGS-B'``. ``sgd`` is
-            only available for backends based on tensorflow.
-        jac (dict): Method for computing the gradient vector for scipy optimizers.
-        hess (dict): Method for computing the hessian matrix for scipy optimizers.
-        hessp (callable): Hessian of objective function times an arbitrary
-            vector for scipy optimizers.
-        bounds (sequence or Bounds): Bounds on variables for scipy optimizers.
-        constraints (dict): Constraints definition for scipy optimizers.
-        tol (float): Tolerance of termination for scipy optimizers.
-        callback (callable): Called after each iteration for scipy optimizers.
-        options (dict): Dictionary with options. See the specific optimizer
-            bellow for a list of the supported options.
-        compile (bool): If ``True`` the Tensorflow optimization graph is compiled.
-            This is relevant only for the ``'sgd'`` optimizer.
-        processes (int): number of processes when using the parallel BFGS method.
+    def __init__(self, initial_parameters, args=(), loss=None, **kwargs):
+        if not loss:
+            self.loss_function = self.base_loss
+        else:
+            self.loss_function = loss
+        self.args = args
+        self.backend = None
+        self.initial_parameters = initial_parameters
+        self.args = args
+        self.backend = backends.GlobalBackend()
 
-    Returns:
-        (float, float, custom): Final best loss value; best parameters obtained by the optimizer;         extra: optimizer-specific return object. For scipy methods it
-        returns the ``OptimizeResult``, for ``'cma'`` the ``CMAEvolutionStrategy.result``,
-        and for ``'sgd'`` the options used during the optimization.
+        if not isinstance(initial_parameters, list) and not isinstance(
+            initial_parameters, np.ndarray
+        ):
+            raise ("Parameters must be a list of Parameter objects or a numpy array")
 
+    def set_options(self, updates):
+        """Updates options dictionary"""
+        self.options.update(updates)
+
+
+class SGD(Optimizer):
+    """Stochastic Gradient Descent object to optimise function parameters.
 
     Example:
-        .. testcode::
+    .. code-block:: python
 
-            import numpy as np
-            from qibo import gates, models
-            from qibo.optimizers import optimize
+        from qibo import Circuit
+        from qibo import gates
 
-            # create custom loss function
-            # make sure the return type matches the optimizer requirements.
-            def myloss(parameters, circuit):
-                circuit.set_parameters(parameters)
-                return np.square(np.sum(circuit())) # returns numpy array
+        circuit = Circuit(nqubits=1)
+        c.add(gates.RY(q=0, theta=0))
+        c.add(gates.RZ(q=0, theta=0))
+        c.add(gates.M(q=0))
 
-            # create circuit ansatz for two qubits
-            circuit = models.Circuit(2)
-            circuit.add(gates.RY(0, theta=0))
+        parameters = []
+        for _ in range(2):
+            parameters.append(Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=True))
 
-            # optimize using random initial variational parameters
-            initial_parameters = np.random.uniform(0, 2, 1)
-            best, params, extra = optimize(myloss, initial_parameters, args=(circuit))
+        optimizer = SGD(circuit=circuit, parameters=parameters)
+        X = np.array([0.1, 0.2, 0.3])
+        y = np.array([0.2, 0.5, 0.7])
+        losses = optimizer.fit(X, y)
 
-            # set parameters to circuit
-            circuit.set_parameters(params)
+    Args:
+        circuit (Circuit): the circuit whose parameters will be optimised
+        parameters (np.ndarray or list of Parameter objects): initial gate parameters
+        hamiltonian (SymbolicHamiltonian): hamiltonian applied to final circuit state
+        args (list): additional loss function arguments
+        loss (lambda): loss function applied between
     """
-    if method == "cma":
-        if bounds is not None:  # pragma: no cover
-            raise_error(
-                RuntimeError,
-                "The keyword 'bounds' cannot be used with the cma optimizer. Please use 'options' instead as defined by the cma documentation: ex. options['bounds'] = [0.0, 1.0].",
+
+    def __init__(
+        self, circuit, parameters, hamiltonian=None, args=(), loss=None, **kwargs
+    ):
+        super().__init__(parameters, args, loss=loss, **kwargs)
+
+        # circuit
+        if not isinstance(circuit, Circuit):
+            raise ("Circuit is not of correct object type")
+
+        self._circuit = circuit
+        self.nqubits = self._circuit.nqubits
+
+        # parameters
+        self.paramInputs = parameters
+        self.params = self._get_params(trainable=True)
+        self.nparams = len(self.params)
+
+        # hamiltonian
+        if not hamiltonian:
+            self.hamiltonian = create_hamiltonian(0, self.nqubits, self.backend)
+        else:
+            self.hamiltonian = hamiltonian
+
+        # error mitigation
+        self.cdr_params = None
+
+        # options
+        self.options = {
+            "epochs": 1000,
+            "learning_rate": 0.045,
+            "batches": 1,
+            "J_threshold": 1e-3,
+            "shift_rule": "psr",
+            "natgrad": False,
+            "mitigation": False,
+            "noise_model": None,
+            "adam": True,
+        }
+        self.set_options(kwargs)
+
+    def _get_params(self, trainable=False, feature=None):
+        """Creates an array with the trainable parameters"""
+        if isinstance(self.paramInputs, np.ndarray):
+            return self.paramInputs
+        else:
+            params = []
+            count = 0
+            for Param in self.paramInputs:
+                if trainable:
+                    params += Param._trainablep
+                else:
+                    trainablep = self.params[count : count + Param.nparams]
+                    count += Param.nparams
+                    params.append(Param.get_params(trainablep, feature=feature))
+            return params
+
+    def calculate_loss_func_grad(self, results, labels, idx, delta=1e-6):
+        """
+        Calculates loss function derivative with respect to parameter idx
+        Args:
+            result: predicted values
+            labels: true values
+            idx: parameter number with respect to which we calculate the gradient
+            delta: size of the finite difference perturbation
+        """
+
+        shifted = results.copy()
+        shifted[idx] += delta
+        forward = self.loss_function(shifted, labels, self.args)
+        shifted[idx] -= 2 * delta
+        backward = self.loss_function(shifted, labels, self.args)
+        return (forward - backward) / (2 * delta)
+
+    def run_circuit(self, feature, nshots):
+        """Backend function which runs the circuit for one feature
+        Args:
+            feature: single input value to the system
+            nshots: number of circuit shots to calculate expectation value
+        Return:
+            results: expectation value"""
+
+        # set parameters
+        parameters = self._get_params(trainable=False, feature=feature)
+        self._circuit.set_parameters(parameters)
+
+        # run circuit
+        exp_v = execute_circuit(
+            self.backend, self._circuit, self.hamiltonian, nshots, self.cdr_params
+        )
+
+        # state = self._circuit().state()
+
+        # exp_v = self.hamiltonian.expectation(state)
+
+        return exp_v
+
+    def predict(self, feature, nshots=100000):
+        """
+         User-facing function which runs the circuit for given input features returns the result
+         Args:
+             feature: input values which are run through the circuit
+        Return:
+             results
+        """
+
+        if isinstance(feature, np.ndarray):
+            results = np.zeros(len(feature))
+            for i, feat in enumerate(feature):
+                results[i] = self.run_circuit(feat, nshots)
+            return results
+        else:
+            return self.run_circuit(feature, nshots)
+
+    def dloss(self, features, labels):
+        """
+        This function calculates the loss function's gradients with respect to self.params
+        Args:
+            features: np.matrix containig the n_sample-long vector of states
+            labels: np.array of the labels related to features
+        Returns: np.array of length self.nparams containing the loss function's gradients
+        """
+        circ_grads = np.zeros(self.nparams)
+        results = np.zeros(len(features))
+        loss = 0
+
+        # setup fubini matrix for natural gradient
+        if self.options["natgrad"]:
+            fubini = np.zeros((self.nparams, self.nparams))
+
+        # calculate CDR parameters anew at each epoch
+        if self.options["mitigation"]:
+            # parameters = self._get_params(trainable=False, feature=1.0)
+            # self._circuit.set_parameters(parameters)
+            self.cdr_params = error_mitigation(
+                self._circuit,
+                self.hamiltonian,
+                self.backend,
+                self.options["noise_model"],
             )
-        return cmaes(loss, initial_parameters, args, options)
-    elif method == "sgd":
-        if backend is None:
+
+        # iterate through all data points
+        for i, (feat, label) in enumerate(zip(features, labels)):
+            results[i] = self.predict(feat)
+
+            obs_gradients = calculate_gradients(
+                self, self.cdr_params
+            )  # d<B> N params, N label gradients
+
+            loss_func_grad = self.calculate_loss_func_grad(results, labels, i)
+            circ_grads += loss_func_grad * obs_gradients
+
+            if self.options["natgrad"]:
+                fubini += generate_fubini(
+                    self._circuit,
+                    self.nqubits,
+                    self.paramInputs,
+                    feat,
+                    self.hamiltonian,
+                    params=self.params,
+                    mitigation=self.options["mitigation"],
+                    noise_model=self.options["noise_model"],
+                )  # separate pull request
+
+        # gradient average
+        loss = self.loss_function(results, labels, self.args)
+        loss_gradients = circ_grads / len(features)
+
+        # Fubini-Study Metric renormalisation
+        if self.options["natgrad"]:
+            fubini /= len(features)
+            loss_gradients = np.dot(np.linalg.inv(fubini), loss_gradients)
+
+        return loss_gradients, loss / len(features)
+
+    def AdamDescent(
+        self,
+        learning_rate,
+        m,
+        v,
+        features,
+        labels,
+        iteration,
+        beta_1=0.85,
+        beta_2=0.99,
+        epsilon=1e-8,
+    ):
+        """
+        Implementation of the Adam optimizer: during a run of this function parameters are updated.
+        Furthermore, new values of m and v are calculated.
+        Args:
+            learning_rate: np.float value of the learning rate
+            m: momentum's value before the execution of the Adam descent
+            v: velocity's value before the execution of the Adam descent
+            features: np.matrix containig the n_sample-long vector of states
+            labels: np.array of the labels related to features
+            iteration: np.integer value corresponding to the current training iteration
+            beta_1: np.float value of the Adam's beta_1 parameter; default 0.85
+            beta_2: np.float value of the Adam's beta_2 parameter; default 0.99
+            epsilon: np.float value of the Adam's epsilon parameter; default 1e-8
+        Returns: np.float new values of momentum and velocity
+        """
+
+        grads, loss = self.dloss(features, labels)
+
+        if self.options["adam"]:
+            for i in range(self.nparams):
+                m[i] = beta_1 * m[i] + (1 - beta_1) * grads[i]
+                v[i] = beta_2 * v[i] + (1 - beta_2) * grads[i] * grads[i]
+                mhat = m[i] / (1.0 - beta_1 ** (iteration + 1))
+                vhat = v[i] / (1.0 - beta_2 ** (iteration + 1))
+                self.params[i] -= learning_rate * mhat / (np.sqrt(vhat) + epsilon)
+            return m, v, loss
+
+        else:
+            for i in range(self.nparams):
+                self.params[i] -= learning_rate * grads[i]
+            return 0, 0, loss
+
+    def sgd(self, options):
+        """
+        This function performs the full Adam descent's procedure
+        Args:
+            epochs: np.integer value corresponding to the epochs of training
+            learning_rate: np.float value of the learning rate
+            batches: np.integer value of the number of batches which divide the dataset
+            J_treshold: np.float value of the desired loss function's treshold
+        Returns: list of loss values, one for each epoch
+        """
+
+        losses = []
+        indices = []
+
+        # create index list
+        idx = np.arange(0, self.nsample)
+
+        m = np.zeros(self.nparams)
+        v = np.zeros(self.nparams)
+
+        # create index blocks on which we run
+        for ib in range(options["batches"]):
+            indices.append(np.arange(ib, self.nsample, options["batches"]))
+
+        iteration = 0
+        file = open("results.txt", "w")
+
+        for epoch in range(options["epochs"]):
+            if epoch != 0 and losses[-1] < options["J_threshold"]:
+                print(
+                    "Desired sensibility is reached, here we stop: ",
+                    iteration,
+                    " iteration",
+                )
+                break
+            # shuffle index list
+            # np.random.shuffle(idx)
+            # run over the batches
+            for ib in range(options["batches"]):
+                iteration += 1
+
+                features = self.features[idx[indices[ib]]]
+
+                labels = self.labels[idx[indices[ib]]]
+                # update parameters
+                m, v, this_loss = self.AdamDescent(
+                    options["learning_rate"], m, v, features, labels, iteration
+                )
+                # track the training
+                print(
+                    "Iteration ",
+                    iteration,
+                    " epoch ",
+                    epoch + 1,
+                    " | loss: ",
+                    this_loss,
+                )
+                file.write(
+                    f"Iteration {iteration}, epoch {epoch + 1} | loss: {this_loss}\n"
+                )
+
+                # in case one wants to plot J as a function of the iterations
+                losses.append(this_loss)
+
+        np.savetxt(file, self.params, fmt="%.15f")
+        file.close()
+
+        return losses
+
+    def fit(self, X, y):
+        """Performs the optimizations and returns f_best, x_best."""
+
+        if not isinstance(X, np.ndarray):
+            raise ("X must be a numpy array")
+
+        if not isinstance(y, np.ndarray):
+            raise ("y must be a numpy array")
+
+        self.features = X
+
+        self.labels = y
+        self.nsample = len(self.labels)
+
+        if self.backend is None:
             from qibo.backends import GlobalBackend
 
-            backend = GlobalBackend()
-        return sgd(loss, initial_parameters, args, options, compile, backend)
-    else:
-        if backend is None:
-            from qibo.backends import GlobalBackend
+            self.backend = GlobalBackend()
 
-            backend = GlobalBackend()
-        return newtonian(
-            loss,
-            initial_parameters,
-            args,
-            method,
-            jac,
-            hess,
-            hessp,
-            bounds,
-            constraints,
-            tol,
-            callback,
-            options,
-            processes,
-            backend,
-        )
+        return self.sgd(self.options)
 
 
-def cmaes(loss, initial_parameters, args=(), options=None):
-    """Genetic optimizer based on `pycma <https://github.com/CMA-ES/pycma>`_.
+class CMAES(Optimizer):
+    def __init__(self, initial_parameters, args=(), loss=None, **kwargs):
+        super().__init__(initial_parameters, args, loss, **kwargs)
 
-    Args:
-        loss (callable): Loss as a function of variational parameters to be
-            optimized.
-        initial_parameters (np.ndarray): Initial guess for the variational
-            parameters.
-        args (tuple): optional arguments for the loss function.
-        options (dict): Dictionary with options accepted by the ``cma``
-            optimizer. The user can use ``import cma; cma.CMAOptions()`` to view the
-            available options.
-    """
-    import cma
+    def fit(self):
+        """Genetic optimizer based on `pycma <https://github.com/CMA-ES/pycma>`_.
 
-    r = cma.fmin2(loss, initial_parameters, 1.7, options=options, args=args)
-    return r[1].result.fbest, r[1].result.xbest, r
+        Args:
+            loss (callable): Loss as a function of variational parameters to be
+                optimized.
+            initial_parameters (np.ndarray): Initial guess for the variational
+                parameters.
+            args (tuple): optional arguments for the loss function.
+            options (dict): Dictionary with options accepted by the ``cma``
+                optimizer. The user can use ``import cma; cma.CMAOptions()`` to view the
+                available options.
+        """
+        import cma
 
-
-def newtonian(
-    loss,
-    initial_parameters,
-    args=(),
-    method="Powell",
-    jac=None,
-    hess=None,
-    hessp=None,
-    bounds=None,
-    constraints=(),
-    tol=None,
-    callback=None,
-    options=None,
-    processes=None,
-    backend=None,
-):
-    """Newtonian optimization approaches based on ``scipy.optimize.minimize``.
-
-    For more details check the `scipy documentation <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
-
-    .. note::
-        When using the method ``parallel_L-BFGS-B`` the ``processes`` option controls the
-        number of processes used by the parallel L-BFGS-B algorithm through the ``multiprocessing`` library.
-        By default ``processes=None``, in this case the total number of logical cores are used.
-        Make sure to select the appropriate number of processes for your computer specification,
-        taking in consideration memory and physical cores. In order to obtain optimal results
-        you can control the number of threads used by each process with the ``qibo.set_threads`` method.
-        For example, for small-medium size circuits you may benefit from single thread per process, thus set
-        ``qibo.set_threads(1)`` before running the optimization.
-
-    Args:
-        loss (callable): Loss as a function of variational parameters to be
-            optimized.
-        initial_parameters (np.ndarray): Initial guess for the variational
-            parameters.
-        args (tuple): optional arguments for the loss function.
-        method (str): Name of method supported by ``scipy.optimize.minimize`` and ``'parallel_L-BFGS-B'`` for
-            a parallel version of L-BFGS-B algorithm.
-        jac (dict): Method for computing the gradient vector for scipy optimizers.
-        hess (dict): Method for computing the hessian matrix for scipy optimizers.
-        hessp (callable): Hessian of objective function times an arbitrary
-            vector for scipy optimizers.
-        bounds (sequence or Bounds): Bounds on variables for scipy optimizers.
-        constraints (dict): Constraints definition for scipy optimizers.
-        tol (float): Tolerance of termination for scipy optimizers.
-        callback (callable): Called after each iteration for scipy optimizers.
-        options (dict): Dictionary with options accepted by
-            ``scipy.optimize.minimize``.
-        processes (int): number of processes when using the parallel BFGS method.
-    """
-    if method == "parallel_L-BFGS-B":  # pragma: no cover
-        o = ParallelBFGS(
-            loss,
-            args=args,
-            processes=processes,
-            bounds=bounds,
-            callback=callback,
-            options=options,
-        )
-        m = o.run(initial_parameters)
-    else:
-        from scipy.optimize import minimize
-
-        m = minimize(
-            loss,
-            initial_parameters,
-            args=args,
-            method=method,
-            jac=jac,
-            hess=hess,
-            hessp=hessp,
-            bounds=bounds,
-            constraints=constraints,
-            tol=tol,
-            callback=callback,
-            options=options,
-        )
-    return m.fun, m.x, m
+        r = cma.fmin2(self.loss_function, self.initial_parameters, 1.7, args=self.args)
+        return r[1].result.fbest, r[1].result.xbest, r
 
 
-def sgd(loss, initial_parameters, args=(), options=None, compile=False, backend=None):
-    """Stochastic Gradient Descent (SGD) optimizer using Tensorflow backpropagation.
+class Newtonian(Optimizer):
+    def __init__(self, initial_parameters, args=(), loss=None, **kwargs):
+        super().__init__(initial_parameters, args, loss, **kwargs)
 
-    See `tf.keras.Optimizers <https://www.tensorflow.org/api_docs/python/tf/keras/optimizers>`_
-    for a list of the available optimizers.
+    def fit(
+        self,
+        method="Powell",
+        jac=None,
+        hess=None,
+        hessp=None,
+        bounds=None,
+        constraints=(),
+        tol=None,
+        callback=None,
+        options=None,
+        processes=None,
+        backend=None,
+    ):
+        """Newtonian optimization approaches based on ``scipy.optimize.minimize``.
 
-    Args:
-        loss (callable): Loss as a function of variational parameters to be
-            optimized.
-        initial_parameters (np.ndarray): Initial guess for the variational
-            parameters.
-        args (tuple): optional arguments for the loss function.
-        options (dict): Dictionary with options for the SGD optimizer. Supports
-            the following keys:
+        For more details check the `scipy documentation <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
 
-            - ``'optimizer'`` (str, default: ``'Adagrad'``): Name of optimizer.
-            - ``'learning_rate'`` (float, default: ``'1e-3'``): Learning rate.
-            - ``'nepochs'`` (int, default: ``1e6``): Number of epochs for optimization.
-            - ``'nmessage'`` (int, default: ``1e3``): Every how many epochs to print
-              a message of the loss function.
-    """
-    if not backend.name == "tensorflow":
-        raise_error(RuntimeError, "SGD optimizer requires Tensorflow backend.")
+        .. note::
+            When using the method ``parallel_L-BFGS-B`` the ``processes`` option controls the
+            number of processes used by the parallel L-BFGS-B algorithm through the ``multiprocessing`` library.
+            By default ``processes=None``, in this case the total number of logical cores are used.
+            Make sure to select the appropriate number of processes for your computer specification,
+            taking in consideration memory and physical cores. In order to obtain optimal results
+            you can control the number of threads used by each process with the ``qibo.set_threads`` method.
+            For example, for small-medium size circuits you may benefit from single thread per process, thus set
+            ``qibo.set_threads(1)`` before running the optimization.
 
-    sgd_options = {
-        "nepochs": 1000000,
-        "nmessage": 1000,
-        "optimizer": "Adagrad",
-        "learning_rate": 0.001,
-    }
-    if options is not None:
-        sgd_options.update(options)
+        Args:
+            loss (callable): Loss as a function of variational parameters to be
+                optimized.
+            initial_parameters (np.ndarray): Initial guess for the variational
+                parameters.
+            args (tuple): optional arguments for the loss function.
+            method (str): Name of method supported by ``scipy.optimize.minimize`` and ``'parallel_L-BFGS-B'`` for
+                a parallel version of L-BFGS-B algorithm.
+            jac (dict): Method for computing the gradient vector for scipy optimizers.
+            hess (dict): Method for computing the hessian matrix for scipy optimizers.
+            hessp (callable): Hessian of objective function times an arbitrary
+                vector for scipy optimizers.
+            bounds (sequence or Bounds): Bounds on variables for scipy optimizers.
+            constraints (dict): Constraints definition for scipy optimizers.
+            tol (float): Tolerance of termination for scipy optimizers.
+            callback (callable): Called after each iteration for scipy optimizers.
+            options (dict): Dictionary with options accepted by
+                ``scipy.optimize.minimize``.
+            processes (int): number of processes when using the parallel BFGS method.
+        """
+        if method == "parallel_L-BFGS-B":  # pragma: no cover
+            o = ParallelBFGS(
+                self.loss,
+                args=self.args,
+                processes=processes,
+                bounds=bounds,
+                callback=callback,
+                options=options,
+            )
+            m = o.run(self.initial_parameters)
+        else:
+            from scipy.optimize import minimize
 
-    # proceed with the training
-    vparams = backend.tf.Variable(initial_parameters)
-    optimizer = getattr(backend.tf.optimizers, sgd_options["optimizer"])(
-        learning_rate=sgd_options["learning_rate"]
-    )
-
-    def opt_step():
-        with backend.tf.GradientTape() as tape:
-            l = loss(vparams, *args)
-        grads = tape.gradient(l, [vparams])
-        optimizer.apply_gradients(zip(grads, [vparams]))
-        return l
-
-    if compile:
-        loss = backend.compile(loss)
-        opt_step = backend.compile(opt_step)
-
-    for e in range(sgd_options["nepochs"]):
-        l = opt_step()
-        if e % sgd_options["nmessage"] == 1:
-            log.info("ite %d : loss %f", e, l.numpy())
-
-    return loss(vparams, *args).numpy(), vparams.numpy(), sgd_options
+            m = minimize(
+                self.loss,
+                self.initial_parameters,
+                args=self.args,
+                method=method,
+                jac=jac,
+                hess=hess,
+                hessp=hessp,
+                bounds=bounds,
+                constraints=constraints,
+                tol=tol,
+                callback=callback,
+                options=options,
+            )
+        return m.fun, m.x, m
 
 
 class ParallelBFGS:  # pragma: no cover
