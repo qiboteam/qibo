@@ -3,13 +3,14 @@ import tensorflow as tf
 from scipy.optimize import basinhopping
 
 from qibo import backends
-
-# from qibo.noise import NoiseModel
 from qibo.config import log, raise_error
-from qibo.derivative import calculate_gradients
-from qibo.hamiltonians import SymbolicHamiltonian
+from qibo.derivative import (
+    calculate_gradients,
+    create_hamiltonian,
+    error_mitigation,
+    execute_circuit,
+)
 from qibo.models import Circuit
-from qibo.symbols import Symbol
 
 
 class Optimizer:
@@ -24,48 +25,16 @@ class Optimizer:
         self.backend = None
         self.initial_parameters = initial_parameters
         self.args = args
+        self.backend = backends.GlobalBackend()
 
         if not isinstance(initial_parameters, list) and not isinstance(
             initial_parameters, np.ndarray
         ):
             raise ("Parameters must be a list of Parameter objects or a numpy array")
 
-    def base_loss(self, result, label):
-        """Standard squared error loss function"""
-        loss = (result - label) ** 2
-
-        return loss
-
     def set_options(self, updates):
         """Updates options dictionary"""
         self.options.update(updates)
-
-    def create_hamiltonian(self, qubit, nqubit):
-        """
-        Creates appropriate Hamiltonian for a given list of qubits
-        Args:
-            qubit: qubit numbers whose states we are interested in
-            nqubit: total number of qubits, which determines size of Hamiltonian
-        Return:
-            hamiltonian: SymbolicHamiltonian
-        """
-        standard = np.array([[1, 0], [0, 1]])
-        target = np.array([[1, 0], [0, 0]])
-        hams = []
-        if not isinstance(qubit, list):
-            qubit = [qubit]
-
-        for i in range(nqubit):
-            if i in qubit:
-                hams.append(Symbol(i, target))
-            else:
-                hams.append(Symbol(i, standard))
-
-        # create Hamiltonian
-        obs = np.prod(hams)
-        hamiltonian = SymbolicHamiltonian(obs)
-
-        return hamiltonian
 
 
 class SGD(Optimizer):
@@ -118,9 +87,12 @@ class SGD(Optimizer):
 
         # hamiltonian
         if not hamiltonian:
-            self.hamiltonian = self.create_hamiltonian(0, self.nqubits)
+            self.hamiltonian = create_hamiltonian(0, self.nqubits, self.backend)
         else:
             self.hamiltonian = hamiltonian
+
+        # error mitigation
+        self.cdr_params = None
 
         # options
         self.options = {
@@ -130,6 +102,9 @@ class SGD(Optimizer):
             "J_threshold": 1e-3,
             "shift_rule": "psr",
             "natgrad": False,
+            "mitigation": False,
+            "noise_model": None,
+            "adam": True,
         }
         self.set_options(kwargs)
 
@@ -149,37 +124,67 @@ class SGD(Optimizer):
                     params.append(Param.get_params(trainablep, feature=feature))
             return params
 
-    def run_loss(self, feature, label):
+    def calculate_loss_func_grad(self, results, labels, idx, delta=1e-6):
         """
-        Calculates loss and its derivative
+        Calculates loss function derivative with respect to parameter idx
         Args:
-            feature: input value
-            label: the value of y_exact which is approximated with the circuit
+            result: predicted values
+            labels: true values
+            idx: parameter number with respect to which we calculate the gradient
+            delta: size of the finite difference perturbation
         """
-        params = self._get_params(trainable=False, feature=feature)
-        result = tf.Variable(self.run_circuit(params, nshots=1024))
-        with tf.GradientTape() as tape:
-            loss = self.loss_function(result, label)
-        # gradient of loss function
-        loss_grad = tape.gradient(loss, result)
-        return loss.numpy(), loss_grad
 
-    def run_circuit(self, parameters, nshots=1024):
-        """
-        User-facing function which runs the circuit with given parameters and returns the result
+        shifted = results.copy()
+        shifted[idx] += delta
+        forward = self.loss_function(shifted, labels, self.args)
+        shifted[idx] -= 2 * delta
+        backward = self.loss_function(shifted, labels, self.args)
+        return (forward - backward) / (2 * delta)
+
+    def run_circuit(self, feature, nshots):
+        """Backend function which runs the circuit for one feature
         Args:
-            parameters: trainable parameters of type Parameter
-            nshots: number of shots to average circuit expectation values
+            feature: single input value to the system
+            nshots: number of circuit shots to calculate expectation value
         Return:
-            results
-        """
+            results: expectation value"""
+
+        # set parameters
+        parameters = self._get_params(trainable=False, feature=feature)
         self._circuit.set_parameters(parameters)
 
-        state = self._circuit().state()
+        # run circuit
+        exp_v = execute_circuit(
+            self.backend,
+            self._circuit,
+            self.hamiltonian,
+            nshots,
+            initial_state=None,
+            cdr_params=self.cdr_params,
+        )
 
-        results = self.hamiltonian.expectation(state)
+        # state = self._circuit().state()
 
-        return results
+        # exp_v = self.hamiltonian.expectation(state)
+
+        return exp_v
+
+    def predict(self, feature, nshots=100000):
+        """
+         User-facing function which runs the circuit for given input features returns the result
+         Args:
+             feature: input values which are run through the circuit
+        Return:
+             results
+        """
+
+        if isinstance(feature, np.ndarray):
+            results = np.zeros(len(feature))
+            for i, feat in enumerate(feature):
+                results[i] = self.run_circuit(feat, nshots)
+            return results
+        else:
+            return self.run_circuit(feature, nshots)
 
     def dloss(self, features, labels):
         """
@@ -189,40 +194,49 @@ class SGD(Optimizer):
             labels: np.array of the labels related to features
         Returns: np.array of length self.nparams containing the loss function's gradients
         """
-        loss_gradients = np.zeros(self.nparams)
+        circ_grads = np.zeros(self.nparams)
+        results = np.zeros(len(features))
         loss = 0
 
         # setup fubini matrix for natural gradient
         if self.options["natgrad"]:
             fubini = np.zeros((self.nparams, self.nparams))
 
-        # iterate through all data points
-        for feat, label in zip(features, labels):
-            local_loss, loss_grad = self.run_loss(feat, label)
+        # calculate CDR parameters anew at each epoch
+        if self.options["mitigation"]:
+            parameters = self._get_params(trainable=False, feature=1.0)
+            self._circuit.set_parameters(parameters)
+            self.cdr_params = error_mitigation(
+                self._circuit.to_clifford(),
+                self.hamiltonian,
+                self.backend,
+                self.options["noise_model"],
+            )
 
-            loss += local_loss
+        # iterate through all data points
+        for i, feat in enumerate(features):
+            results[i] = self.predict(feat)
 
             obs_gradients = calculate_gradients(
-                self, feature=feat
+                self, self.cdr_params
             )  # d<B> N params, N label gradients
 
-            if self.options["natgrad"]:
-                fubini = None
-            #    fubini += generate_fubini(self, feat) # separate pull request
+            loss_func_grad = self.calculate_loss_func_grad(results, labels, i)
+            circ_grads += loss_func_grad * obs_gradients
 
-            for i in range(self.nparams):
-                loss_gradients[i] += obs_gradients[i] * loss_grad
+            if self.options["natgrad"]:
+                continue
 
         # gradient average
-        loss_gradients /= len(features)
-        loss /= len(features)
+        loss = self.loss_function(results, labels, self.args)
+        loss_gradients = circ_grads / len(features)
 
         # Fubini-Study Metric renormalisation
         if self.options["natgrad"]:
             fubini /= len(features)
             loss_gradients = np.dot(np.linalg.inv(fubini), loss_gradients)
 
-        return loss_gradients, loss
+        return loss_gradients, loss / len(features)
 
     def AdamDescent(
         self,
@@ -254,13 +268,19 @@ class SGD(Optimizer):
 
         grads, loss = self.dloss(features, labels)
 
-        for i in range(self.nparams):
-            m[i] = beta_1 * m[i] + (1 - beta_1) * grads[i]
-            v[i] = beta_2 * v[i] + (1 - beta_2) * grads[i] * grads[i]
-            mhat = m[i] / (1.0 - beta_1 ** (iteration + 1))
-            vhat = v[i] / (1.0 - beta_2 ** (iteration + 1))
-            self.params[i] -= learning_rate * mhat / (np.sqrt(vhat) + epsilon)
-        return m, v, loss
+        if self.options["adam"]:
+            for i in range(self.nparams):
+                m[i] = beta_1 * m[i] + (1 - beta_1) * grads[i]
+                v[i] = beta_2 * v[i] + (1 - beta_2) * grads[i] * grads[i]
+                mhat = m[i] / (1.0 - beta_1 ** (iteration + 1))
+                vhat = v[i] / (1.0 - beta_2 ** (iteration + 1))
+                self.params[i] -= learning_rate * mhat / (np.sqrt(vhat) + epsilon)
+            return m, v, loss
+
+        else:
+            for i in range(self.nparams):
+                self.params[i] -= learning_rate * grads[i]
+            return 0, 0, loss
 
     def sgd(self, options):
         """
@@ -287,6 +307,7 @@ class SGD(Optimizer):
             indices.append(np.arange(ib, self.nsample, options["batches"]))
 
         iteration = 0
+        file = open("results.txt", "w")
 
         for epoch in range(options["epochs"]):
             if epoch != 0 and losses[-1] < options["J_threshold"]:
@@ -318,8 +339,15 @@ class SGD(Optimizer):
                     " | loss: ",
                     this_loss,
                 )
+                file.write(
+                    f"Iteration {iteration}, epoch {epoch + 1} | loss: {this_loss}\n"
+                )
+
                 # in case one wants to plot J as a function of the iterations
                 losses.append(this_loss)
+
+        np.savetxt(file, self.params, fmt="%.15f")
+        file.close()
 
         return losses
 

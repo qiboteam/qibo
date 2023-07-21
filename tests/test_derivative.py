@@ -80,6 +80,7 @@ def test_derivative(backend, nshots, atol, scale_factor, grads):
 
     # check of known values
     # calculated using tf.GradientTape
+    print(scale_factor, grad_0, grads[0], grad_1, grads[1], grad_2, grads[2])
     backend.assert_allclose(grad_0, grads[0], atol=atol)
     backend.assert_allclose(grad_1, grads[1], atol=atol)
     backend.assert_allclose(grad_2, grads[2], atol=atol)

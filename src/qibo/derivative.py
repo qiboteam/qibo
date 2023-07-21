@@ -5,11 +5,15 @@ from qibo.backends import GlobalBackend
 from qibo.config import raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.hamiltonians.hamiltonians import SymbolicHamiltonian
-from qibo.models import Circuit
-from qibo.symbols import Z
+from qibo.models.error_mitigation import CDR, calibration_matrix
+from qibo.symbols import I, Symbol, Z
 
 
 class Parameter:
+    """Object which allows complex gate parameters. Several trainable parameter
+    and possibly features are linked through a lambda function which returns the
+    final gate parameter"""
+
     def __init__(self, func, trainablep, featurep=None):
         self._trainablep = trainablep
         self._featurep = featurep
@@ -17,6 +21,7 @@ class Parameter:
         self.lambdaf = func
 
     def _apply_func(self, fixed_params=None):
+        """Applies lambda function and returns final gate parameter"""
         params = []
         if self._featurep is not None:
             params.append(self._featurep)
@@ -27,30 +32,79 @@ class Parameter:
         return self.lambdaf(*params)
 
     def _update_params(self, trainablep=None, feature=None):
+        """Update gate trainable parameter and feature values"""
         if trainablep:
             self._trainablep = trainablep
         if feature:
             self._featurep = feature
 
     def get_params(self, trainablep=None, feature=None):
+        """Update values with trainable parameter and calculate current gate parameter"""
         self._update_params(trainablep=trainablep, feature=feature)
         return self._apply_func()
 
     def get_indices(self, start_index):
+        """Return list of respective indices of trainable parameters within
+        the optimizer's trainable parameter list"""
         return [start_index + i for i in range(self.nparams)]
 
     def get_fixed_part(self, trainablep_idx):
+        """Retrieve parameter constant unaffected by a specific trainable parameter"""
         params = [0] * self.nparams
         params[trainablep_idx] = self._trainablep[trainablep_idx]
         return self._apply_func(fixed_params=params)
 
     def get_scaling_factor(self, trainablep_idx):
+        """Get scaling factor multiplying a specific trainable parameter"""
         params = [0] * self.nparams
         params[trainablep_idx] = 1.0
         return self._apply_func(fixed_params=params)
 
 
-def calculate_gradients(optimizer, feature):
+def create_hamiltonian(qubit, nqubit, backend):
+    """
+    Creates appropriate Hamiltonian for a given list of qubits
+    Args:
+        qubit: qubit numbers whose states we are interested in
+        nqubit: total number of qubits, which determines size of Hamiltonian
+    Return:
+        hamiltonian: SymbolicHamiltonian
+    """
+    if not isinstance(qubit, list):
+        qubit = [qubit]
+
+    hams = []
+
+    for i in range(nqubit):
+        if i in qubit:
+            hams.append(Z(i))
+        else:
+            hams.append(I(i))
+
+    # create Hamiltonian
+    obs = np.prod([Z(i) for i in range(1)])
+    hamiltonian = SymbolicHamiltonian(obs, backend=backend)
+
+    return hamiltonian
+
+
+def error_mitigation(circuit, hamiltonian, backend, noise_model):
+    calibration = calibration_matrix(nqubits=1, backend=backend, nshots=10000)
+
+    _, _, optimal_params, _ = CDR(
+        circuit=circuit,
+        observable=hamiltonian,
+        backend=backend,
+        nshots=10000,
+        noise_model=noise_model,
+        full_output=True,
+        readout={"calibration_matrix": calibration},
+    )
+
+    return optimal_params
+
+
+def calculate_gradients(optimizer, cdr_params):
     """
     Full parameter-shift rule's implementation
     Args:
@@ -74,7 +128,8 @@ def calculate_gradients(optimizer, feature):
                     ipar,
                     initial_state=None,
                     scale_factor=1,
-                    nshots=None,
+                    nshots=1024,
+                    cdr_params=cdr_params,
                 )
         else:
             count = 0
@@ -88,11 +143,13 @@ def calculate_gradients(optimizer, feature):
                         ipar,
                         initial_state=None,
                         scale_factor=scaling,
-                        nshots=None,
+                        nshots=1024,
+                        cdr_params=cdr_params,
                     )
                     count += 1
-    """
+
     # stochastic parameter shift
+    """
     elif optimizer.options["shift_rule"] == "spsr":
         for ipar, Param in enumerate(optimizer.parameters):
             ntrainable_params = Param.nparams
@@ -115,8 +172,8 @@ def calculate_gradients(optimizer, feature):
                 initial_state=None,
                 scale_factor=1,
                 nshots=None,
-            )
-    """
+            )"""
+
     return obs_gradients
 
 
@@ -127,6 +184,7 @@ def parameter_shift(
     initial_state=None,
     scale_factor=1,
     nshots=None,
+    cdr_params=None,
 ):
     """In this method the parameter shift rule (PSR) is implemented.
     Given a circuit U and an observable H, the PSR allows to calculate the derivative
@@ -257,19 +315,31 @@ def parameter_shift(
 
     # same but using expectation from samples
     else:
-        forward = backend.execute_circuit(
-            circuit=circuit, initial_state=initial_state, nshots=nshots
-        ).expectation_from_samples(hamiltonian)
+        forward = execute_circuit(
+            backend, circuit, hamiltonian, nshots, initial_state, cdr_params
+        )
 
         shifted[parameter_index] -= 2 * s
         circuit.set_parameters(shifted)
 
-        backward = backend.execute_circuit(
-            circuit=circuit, initial_state=initial_state, nshots=nshots
-        ).expectation_from_samples(hamiltonian)
+        backward = execute_circuit(
+            backend, circuit, hamiltonian, nshots, initial_state, cdr_params
+        )
 
     circuit.set_parameters(original)
 
     # float() necessary to not return a 0-dim ndarray
     result = float(generator_eigenval * (forward - backward) * scale_factor)
+    return result
+
+
+def execute_circuit(backend, c, obs, nshots, initial_state=None, cdr_params=None):
+    result = backend.execute_circuit(
+        circuit=c, nshots=nshots, initial_state=initial_state
+    ).expectation_from_samples(obs)
+
+    if cdr_params is not None:
+        a, b = cdr_params
+        result = a * result + b
+
     return result
