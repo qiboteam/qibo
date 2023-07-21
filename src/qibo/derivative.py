@@ -270,16 +270,12 @@ def parameter_shift(
 
     # same but using expectation from samples
     else:
-        forward = backend.execute_circuit(
-            circuit=circuit, initial_state=initial_state, nshots=nshots
-        ).expectation_from_samples(hamiltonian)
+        forward = execute_circuit(backend, circuit, hamiltonian, nshots, initial_state)
 
         shifted[parameter_index] -= 2 * s
         circuit.set_parameters(shifted)
 
-        backward = backend.execute_circuit(
-            circuit=circuit, initial_state=initial_state, nshots=nshots
-        ).expectation_from_samples(hamiltonian)
+        backward = execute_circuit(backend, circuit, hamiltonian, nshots, initial_state)
 
     circuit.set_parameters(original)
 
@@ -542,13 +538,12 @@ def error_mitigation(circuit, hamiltonian, backend, noise_model):
     return optimal_params
 
 
-def execute_circuit(backend, c, obs, nshots, cdr_params=(1, 0)):
-    result = backend.execute_circuit(circuit=c, nshots=nshots).expectation_from_samples(
-        obs
-    )
+def execute_circuit(backend, c, obs, nshots, initial_state=None, cdr_params=(1, 0)):
+    result = backend.execute_circuit(
+        circuit=c, nshots=nshots, initial_state=initial_state
+    ).expectation_from_samples(obs)
 
-    a, b = cdr_params
-    return a * result + b
+    return result
 
 
 def generate_fubini(
@@ -598,12 +593,10 @@ def generate_fubini(
         if len(qubits) == 0:
             continue
 
-        precise = False
+        precise = True
 
         if not precise:
-            result = backend.execute_circuit(
-                circuit=c, nshots=1024
-            ).expectation_from_samples(obs)
+            result = execute_circuit(backend, c, obs, nshots=1024)
 
             result = (1 - result) / 2
         else:

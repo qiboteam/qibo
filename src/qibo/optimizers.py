@@ -10,6 +10,7 @@ from qibo.derivative import (
     calculate_gradients,
     create_hamiltonian,
     error_mitigation,
+    execute_circuit,
     generate_fubini,
 )
 from qibo.hamiltonians import SymbolicHamiltonian
@@ -164,13 +165,7 @@ class SGD(Optimizer):
         self._circuit.set_parameters(parameters)
 
         # run circuit
-        exp_v = self.backend.execute_circuit(
-            circuit=self._circuit, nshots=nshots
-        ).expectation_from_samples(self.hamiltonian)
-
-        if self.options["mitigation"]:
-            a, b = self.cdr_params
-            exp_v = a * exp_v + b
+        exp_v = execute_circuit(self.backend, self._circuit, self.hamiltonian, nshots)
 
         # state = self._circuit().state()
 
