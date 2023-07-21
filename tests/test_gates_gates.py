@@ -197,8 +197,8 @@ def test_identity(backend):
     assert gates.I(0).clifford
     assert gates.I(0).unitary
 
-
-def test_align(backend):
+@pytest.mark.parametrize("delay", [0, 1])
+def test_align(backend, delay):
     for delay in [0, 1]:
         gate = gates.Align(0, 1, delay=delay)
         gatelist = [gates.H(0), gates.H(1), gate]
