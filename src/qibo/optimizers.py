@@ -3,8 +3,6 @@ import tensorflow as tf
 from scipy.optimize import basinhopping
 
 from qibo import backends
-
-# from qibo.noise import NoiseModel
 from qibo.config import log, raise_error
 from qibo.derivative import (
     calculate_gradients,
@@ -13,9 +11,7 @@ from qibo.derivative import (
     execute_circuit,
     generate_fubini,
 )
-from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.models import Circuit
-from qibo.symbols import I, Symbol, Z
 
 
 class Optimizer:
@@ -160,7 +156,12 @@ class SGD(Optimizer):
 
         # run circuit
         exp_v = execute_circuit(
-            self.backend, self._circuit, self.hamiltonian, nshots, self.cdr_params
+            self.backend,
+            self._circuit,
+            self.hamiltonian,
+            nshots,
+            initial_state=None,
+            cdr_params=self.cdr_params,
         )
 
         # state = self._circuit().state()
@@ -204,17 +205,17 @@ class SGD(Optimizer):
 
         # calculate CDR parameters anew at each epoch
         if self.options["mitigation"]:
-            # parameters = self._get_params(trainable=False, feature=1.0)
-            # self._circuit.set_parameters(parameters)
+            parameters = self._get_params(trainable=False, feature=1.0)
+            self._circuit.set_parameters(parameters)
             self.cdr_params = error_mitigation(
-                self._circuit,
+                self._circuit.to_clifford(),
                 self.hamiltonian,
                 self.backend,
                 self.options["noise_model"],
             )
 
         # iterate through all data points
-        for i, (feat, label) in enumerate(zip(features, labels)):
+        for i, feat in enumerate(features):
             results[i] = self.predict(feat)
 
             obs_gradients = calculate_gradients(

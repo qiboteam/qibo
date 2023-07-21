@@ -554,7 +554,7 @@ class RY(_Rn_):
     def decompose_into_clifford(self):
         clifford_queue = [
             RX(q=self.qubits[0], theta=np.pi / 2, trainable=False),
-            RZ(q=self.qubits[0], theta=self.parameters),
+            RZ(q=self.qubits[0], theta=self.parameters[0]),
             RZ(q=self.qubits[0], theta=np.pi, trainable=False),
             RX(q=self.qubits[0], theta=np.pi / 2, trainable=False),
             RZ(q=self.qubits[0], theta=np.pi, trainable=False),

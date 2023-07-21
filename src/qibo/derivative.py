@@ -550,8 +550,7 @@ def execute_circuit(backend, c, obs, nshots, initial_state=None, cdr_params=None
         circuit=c, nshots=nshots, initial_state=initial_state
     ).expectation_from_samples(obs)
 
-    print("cdr params", cdr_params)
-    if cdr_params:
+    if cdr_params is not None:
         a, b = cdr_params
         result = a * result + b
 
@@ -615,8 +614,8 @@ def generate_fubini(
 
         precise = True
         cdr_params = None
-        if mitigation:
-            cdr_params = error_mitigation(c, obs, backend, noise_model)
+        if mitigation and False:
+            cdr_params = error_mitigation(c.to_clifford(), obs, backend, noise_model)
 
         if not precise:
             result = execute_circuit(backend, c, obs, 1024, cdr_params)
