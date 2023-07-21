@@ -550,6 +550,7 @@ def execute_circuit(backend, c, obs, nshots, initial_state=None, cdr_params=None
         circuit=c, nshots=nshots, initial_state=initial_state
     ).expectation_from_samples(obs)
 
+    print("cdr params", cdr_params)
     if cdr_params:
         a, b = cdr_params
         result = a * result + b

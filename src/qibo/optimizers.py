@@ -109,6 +109,7 @@ class SGD(Optimizer):
             "natgrad": False,
             "mitigation": False,
             "noise_model": None,
+            "adam": True,
         }
         self.set_options(kwargs)
 
@@ -203,8 +204,8 @@ class SGD(Optimizer):
 
         # calculate CDR parameters anew at each epoch
         if self.options["mitigation"]:
-            parameters = self._get_params(trainable=False, feature=1.0)
-            self._circuit.set_parameters(parameters)
+            # parameters = self._get_params(trainable=False, feature=1.0)
+            # self._circuit.set_parameters(parameters)
             self.cdr_params = error_mitigation(
                 self._circuit,
                 self.hamiltonian,
@@ -275,8 +276,8 @@ class SGD(Optimizer):
         """
 
         grads, loss = self.dloss(features, labels)
-        adam = False
-        if adam:
+
+        if self.options["adam"]:
             for i in range(self.nparams):
                 m[i] = beta_1 * m[i] + (1 - beta_1) * grads[i]
                 v[i] = beta_2 * v[i] + (1 - beta_2) * grads[i] * grads[i]
