@@ -37,13 +37,6 @@ class Optimizer:
         ):
             raise ("Parameters must be a list of Parameter objects or a numpy array")
 
-    def base_loss(self, result, label):
-        """Standard squared error loss function"""
-
-        loss = (result - label) ** 2
-
-        return loss
-
     def set_options(self, updates):
         """Updates options dictionary"""
         self.options.update(updates)
@@ -165,7 +158,9 @@ class SGD(Optimizer):
         self._circuit.set_parameters(parameters)
 
         # run circuit
-        exp_v = execute_circuit(self.backend, self._circuit, self.hamiltonian, nshots)
+        exp_v = execute_circuit(
+            self.backend, self._circuit, self.hamiltonian, nshots, self.cdr_params
+        )
 
         # state = self._circuit().state()
 
@@ -222,7 +217,7 @@ class SGD(Optimizer):
             results[i] = self.predict(feat)
 
             obs_gradients = calculate_gradients(
-                self, feature=feat
+                self, self.cdr_params
             )  # d<B> N params, N label gradients
 
             loss_func_grad = self.calculate_loss_func_grad(results, labels, i)
@@ -236,6 +231,8 @@ class SGD(Optimizer):
                     feat,
                     self.hamiltonian,
                     params=self.params,
+                    mitigation=self.options["mitigation"],
+                    noise_model=self.options["noise_model"],
                 )  # separate pull request
 
         # gradient average

@@ -62,7 +62,7 @@ class Parameter:
         return self._apply_func(fixed_params=params)
 
 
-def calculate_gradients(optimizer, feature):
+def calculate_gradients(optimizer, cdr_params):
     """
     Full parameter-shift rule's implementation
     Args:
@@ -87,6 +87,7 @@ def calculate_gradients(optimizer, feature):
                     initial_state=None,
                     scale_factor=1,
                     nshots=1024,
+                    cdr_params=cdr_params,
                 )
         else:
             count = 0
@@ -101,6 +102,7 @@ def calculate_gradients(optimizer, feature):
                         initial_state=None,
                         scale_factor=scaling,
                         nshots=1024,
+                        cdr_params=cdr_params,
                     )
                     count += 1
 
@@ -140,6 +142,7 @@ def parameter_shift(
     initial_state=None,
     scale_factor=1,
     nshots=None,
+    cdr_params=None,
 ):
     """In this method the parameter shift rule (PSR) is implemented.
     Given a circuit U and an observable H, the PSR allows to calculate the derivative
@@ -270,12 +273,16 @@ def parameter_shift(
 
     # same but using expectation from samples
     else:
-        forward = execute_circuit(backend, circuit, hamiltonian, nshots, initial_state)
+        forward = execute_circuit(
+            backend, circuit, hamiltonian, nshots, initial_state, cdr_params
+        )
 
         shifted[parameter_index] -= 2 * s
         circuit.set_parameters(shifted)
 
-        backward = execute_circuit(backend, circuit, hamiltonian, nshots, initial_state)
+        backward = execute_circuit(
+            backend, circuit, hamiltonian, nshots, initial_state, cdr_params
+        )
 
     circuit.set_parameters(original)
 
@@ -538,16 +545,28 @@ def error_mitigation(circuit, hamiltonian, backend, noise_model):
     return optimal_params
 
 
-def execute_circuit(backend, c, obs, nshots, initial_state=None, cdr_params=(1, 0)):
+def execute_circuit(backend, c, obs, nshots, initial_state=None, cdr_params=None):
     result = backend.execute_circuit(
         circuit=c, nshots=nshots, initial_state=initial_state
     ).expectation_from_samples(obs)
+
+    if cdr_params:
+        a, b = cdr_params
+        result = a * result + b
 
     return result
 
 
 def generate_fubini(
-    circuit, nqubits, paramInputs, feature, obs, pennylane=True, params=None
+    circuit,
+    nqubits,
+    paramInputs,
+    feature,
+    obs,
+    pennylane=True,
+    params=None,
+    mitigation=False,
+    noise_model=None,
 ):
     """Generate the Fubini-Study metric tensor"""
 
@@ -594,9 +613,12 @@ def generate_fubini(
             continue
 
         precise = True
+        cdr_params = None
+        if mitigation:
+            cdr_params = error_mitigation(c, obs, backend, noise_model)
 
         if not precise:
-            result = execute_circuit(backend, c, obs, nshots=1024)
+            result = execute_circuit(backend, c, obs, 1024, cdr_params)
 
             result = (1 - result) / 2
         else:
