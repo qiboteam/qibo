@@ -340,7 +340,7 @@ class Graph:
         count = 0
         # run through each gate in circuit queue
         for i, gate in enumerate(self.gates):
-            n = len(gate.target_qubits) - 1
+            n = len(gate.init_args) - 1
 
             # store parameters for ParametrizedGate
             if isinstance(gate, gates.ParametrizedGate):
