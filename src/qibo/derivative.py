@@ -612,7 +612,7 @@ def generate_fubini(
         if len(qubits) == 0:
             continue
 
-        precise = True
+        precise = False
         cdr_params = None
         if mitigation and False:
             cdr_params = error_mitigation(c.to_clifford(), obs, backend, noise_model)
