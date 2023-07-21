@@ -197,13 +197,14 @@ def test_identity(backend):
     assert gates.I(0).clifford
     assert gates.I(0).unitary
 
+
 @pytest.mark.parametrize("delay", [0, 1])
 def test_align(backend, delay):
     nqubits = 2
 
     gate = gates.Align(0, 1, delay=delay)
     gatelist = [gates.H(0), gates.H(1), gate]
-    
+
     final_state = apply_gates(backend, gatelist, nqubits=nqubits)
     target_state = backend.plus_state(nqubits)
     backend.assert_allclose(final_state, target_state)
