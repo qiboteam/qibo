@@ -212,8 +212,8 @@ def test_align(backend, delay):
     identity = backend.identity_density_matrix(nqubits, normalize=False)
     backend.assert_allclose(gate_matrix, identity)
 
-        with pytest.raises(NotImplementedError):
-            gate.qasm_label
+    with pytest.raises(NotImplementedError):
+        gate.qasm_label
 
         assert not gates.Align(0, 1, delay=delay).clifford
         assert not gates.Align(0, 1, delay=delay).unitary
