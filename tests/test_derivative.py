@@ -242,7 +242,7 @@ def test_natural_gradient():
 
     _ = optimiser.run_circuit(0.1, nshots=1024)
 
-    fubini = generate_fubini(circuit, 1, initial_parameters, 1.0, obs)
+    fubini = generate_fubini(circuit, 1, initial_parameters, 1.0, obs, stochastic=False)
     # initialize optimiser with numpy array
     initial_parameters2 = np.full(12, 0.1)
     optimiser2 = qibo.optimizers.SGD(
@@ -251,7 +251,9 @@ def test_natural_gradient():
 
     _ = optimiser2.run_circuit(0.1, nshots=1024)
 
-    fubini2 = generate_fubini(circuit, 1, initial_parameters2, 1.0, obs)
+    fubini2 = generate_fubini(
+        circuit, 1, initial_parameters2, 1.0, obs, stochastic=False
+    )
 
     assert np.allclose(optimiser.params, params)
 

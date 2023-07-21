@@ -6,7 +6,11 @@ from qibo.config import raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.hamiltonians.hamiltonians import SymbolicHamiltonian
 from qibo.models import Circuit
-from qibo.models.error_mitigation import CDR, calibration_matrix
+from qibo.models.error_mitigation import (
+    CDR,
+    apply_readout_mitigation,
+    calibration_matrix,
+)
 from qibo.symbols import I, Symbol, Z
 
 
@@ -545,11 +549,24 @@ def error_mitigation(circuit, hamiltonian, backend, noise_model):
     return optimal_params
 
 
-def execute_circuit(backend, c, obs, nshots, initial_state=None, cdr_params=None):
-    result = backend.execute_circuit(
-        circuit=c, nshots=nshots, initial_state=initial_state
-    ).expectation_from_samples(obs)
+def execute_circuit(
+    backend, c, obs, nshots, initial_state=None, cdr_params=None, calibration=None
+):
+    """Probabilistic circuit execution with possibilities for error mitigation"""
 
+    # retrieve state
+    state = backend.execute_circuit(
+        circuit=c, nshots=nshots, initial_state=initial_state
+    )
+
+    # apply readout mitigation
+    if calibration is not None:
+        state = apply_readout_mitigation(state, calibration)
+
+    # get expectation value
+    result = state.expectation_from_samples(obs)
+
+    # apply CDR correction
     if cdr_params is not None:
         a, b = cdr_params
         result = a * result + b
@@ -567,6 +584,7 @@ def generate_fubini(
     params=None,
     mitigation=False,
     noise_model=None,
+    stochastic=True,
 ):
     """Generate the Fubini-Study metric tensor"""
 
@@ -607,20 +625,23 @@ def generate_fubini(
     graph.build_graph()
     backend = GlobalBackend()
 
+    calibration = calibration_matrix(
+        1, backend=backend, noise_model=noise_model, nshots=1024
+    )
+
     # run through layers
     for i in range(graph.depth):
         c, qubits, affected_param = graph.run_layer(i)
+        if noise_model is not None:
+            c = noise_model.apply(c)
         if len(qubits) == 0:
             continue
 
-        precise = True
-        cdr_params = None
-        if mitigation and False:
-            cdr_params = error_mitigation(c.to_clifford(), obs, backend, noise_model)
+        if stochastic:
+            # execute circuit with readout mitigation
+            result = execute_circuit(backend, c, obs, 1024)
 
-        if not precise:
-            result = execute_circuit(backend, c, obs, 1024, cdr_params)
-
+            # expectation value -> state |0> probability
             result = (1 - result) / 2
         else:
             result = backend.execute_circuit(circuit=c, nshots=1024).probabilities()[0]
