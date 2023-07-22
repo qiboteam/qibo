@@ -546,9 +546,19 @@ def error_mitigation(circuit, hamiltonian, backend, noise_model):
 
 
 def execute_circuit(
-    backend, c, obs, nshots, initial_state=None, cdr_params=None, calibration=None
+    backend,
+    c,
+    obs,
+    nshots,
+    initial_state=None,
+    cdr_params=None,
+    calibration=None,
+    precise=True,
 ):
     """Probabilistic circuit execution with possibilities for error mitigation"""
+    if precise:
+        state = c().state()
+        return obs.expectation(state)
 
     # retrieve state
     state = backend.execute_circuit(

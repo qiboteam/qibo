@@ -113,7 +113,7 @@ def create_hamiltonian(qubit, nqubit, backend):
             hams.append(I(i))
 
     # create Hamiltonian
-    obs = np.prod([Z(i) for i in range(1)])
+    obs = np.prod(hams)
     hamiltonian = SymbolicHamiltonian(obs, backend=backend)
 
     return hamiltonian
@@ -145,5 +145,5 @@ def test_cma_optimizer():
 
 
 if __name__ == "__main__":
-    # test_multiqubit_sgd_optimizer()
-    test_sgd_optimizer()
+    test_multiqubit_sgd_optimizer()
+    # test_sgd_optimizer()

@@ -131,13 +131,15 @@ class SGD(Optimizer):
             idx: parameter number with respect to which we calculate the gradient
             delta: size of the finite difference perturbation
         """
-
-        shifted = results.copy()
-        shifted[idx] += delta
-        forward = self.loss_function(shifted, labels, self.args)
-        shifted[idx] -= 2 * delta
-        backward = self.loss_function(shifted, labels, self.args)
-        return (forward - backward) / (2 * delta)
+        grads = np.empty(self.nlabels)
+        for lab in range(self.nlabels):
+            shifted = results.copy()
+            shifted[idx][lab] += delta
+            forward = self.loss_function(shifted, labels, self.args)
+            shifted[idx][lab] -= 2 * delta
+            backward = self.loss_function(shifted, labels, self.args)
+            grads[lab] = (forward - backward) / (2 * delta)
+        return grads
 
     def run_circuit(self, feature, nshots):
         """Backend function which runs the circuit for one feature
@@ -173,10 +175,6 @@ class SGD(Optimizer):
                 initial_state=None,
                 cdr_params=self.cdr_params,
             )
-
-        # state = self._circuit().state()
-
-        # exp_v = self.hamiltonian.expectation(state)
 
         return exp_v
 
@@ -229,13 +227,13 @@ class SGD(Optimizer):
             results[i] = self.predict(feat)
 
             obs_gradients = np.empty((self.nlabels, self.nparams))
-            loss_func_grad = np.empty(self.nlabels)
 
             for h, ham in enumerate(self.hamiltonian):
                 obs_gradients[h] = calculate_gradients(
                     self, self.cdr_params, ham
                 )  # d<B> N params, N label gradients
-                loss_func_grad[h] = self.calculate_loss_func_grad(results, labels, i)
+
+            loss_func_grad = self.calculate_loss_func_grad(results, labels, i)
 
             circ_grads += np.dot(loss_func_grad.T, obs_gradients)
 
@@ -253,7 +251,7 @@ class SGD(Optimizer):
 
         # gradient average
         loss = self.loss_function(results, labels, self.args)
-        loss_gradients = circ_grads / (self.nsample * self.nlabels)
+        loss_gradients = circ_grads / (self.nsample)
 
         # Fubini-Study Metric renormalisation
         if self.options["natgrad"]:
