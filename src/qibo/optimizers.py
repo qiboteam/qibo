@@ -85,7 +85,7 @@ class SGD(Optimizer):
 
         # hamiltonian
         if not hamiltonian:
-            self.hamiltonian = create_hamiltonian(0, self.nqubits, self.backend)
+            self.hamiltonian = [create_hamiltonian(0, self.nqubits, self.backend)]
         else:
             self.hamiltonian = hamiltonian
 
@@ -206,7 +206,7 @@ class SGD(Optimizer):
         Returns: np.array of length self.nparams containing the loss function's gradients
         """
         circ_grads = np.zeros(self.nparams)
-        results = np.zeros((len(features), len(self.hamiltonian)))
+        results = np.zeros((self.nsample, self.nlabels))
         loss = 0
 
         # setup fubini matrix for natural gradient
@@ -228,14 +228,13 @@ class SGD(Optimizer):
         for i, feat in enumerate(features):
             results[i] = self.predict(feat)
 
-            obs_gradients = np.empty(len(self.hamiltonian))
-            loss_func_grad = np.empty(len(self.hamiltonian))
+            obs_gradients = np.empty((self.nlabels, self.nparams))
+            loss_func_grad = np.empty(self.nlabels)
 
             for h, ham in enumerate(self.hamiltonian):
                 obs_gradients[h] = calculate_gradients(
                     self, self.cdr_params, ham
                 )  # d<B> N params, N label gradients
-
                 loss_func_grad[h] = self.calculate_loss_func_grad(results, labels, i)
 
             circ_grads += np.dot(loss_func_grad.T, obs_gradients)
@@ -254,7 +253,7 @@ class SGD(Optimizer):
 
         # gradient average
         loss = self.loss_function(results, labels, self.args)
-        loss_gradients = circ_grads / len(features)
+        loss_gradients = circ_grads / (self.nsample * self.nlabels)
 
         # Fubini-Study Metric renormalisation
         if self.options["natgrad"]:
@@ -386,9 +385,12 @@ class SGD(Optimizer):
             raise ("y must be a numpy array")
 
         self.features = X
+        self.nsample = len(self.features)
 
         self.labels = y
-        self.nsample = len(self.features)
+        self.nlabels = 1
+        if isinstance(y[0], np.ndarray):
+            self.nlabels = len(y[0])
 
         if self.backend is None:
             from qibo.backends import GlobalBackend

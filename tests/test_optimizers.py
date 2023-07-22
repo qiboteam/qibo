@@ -78,7 +78,7 @@ def test_multiqubit_sgd_optimizer():
             Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=True)
         )
 
-    hamiltonians = [create_hamiltonian(i, 2, GlobalBackend) for i in range(2)]
+    hamiltonians = [create_hamiltonian(i, 2, GlobalBackend()) for i in range(2)]
     optimizer = SGD(
         circuit=circuit,
         parameters=parameters,
@@ -86,7 +86,7 @@ def test_multiqubit_sgd_optimizer():
         hamiltonian=hamiltonians,
     )
     X = np.array([0.1, 0.2, 0.3])
-    y = np.array([[0.1, 0.2, 0.4], [0.3, 0.5, 0.8]])
+    y = np.array([[0.1, 0.2], [0.3, 0.5], [0.4, 0.5]])
     losses = optimizer.fit(X, y)
 
     assert losses[-1] < 0.001
@@ -145,4 +145,5 @@ def test_cma_optimizer():
 
 
 if __name__ == "__main__":
-    test_multiqubit_sgd_optimizer()
+    # test_multiqubit_sgd_optimizer()
+    test_sgd_optimizer()
