@@ -152,14 +152,27 @@ class SGD(Optimizer):
         self._circuit.set_parameters(parameters)
 
         # run circuit
-        exp_v = execute_circuit(
-            self.backend,
-            self._circuit,
-            self.hamiltonian,
-            nshots,
-            initial_state=None,
-            cdr_params=self.cdr_params,
-        )
+        if isinstance(self.hamiltonian, list):
+            exp_v = np.empty(len(self.hamiltonian))
+            for i, hamiltonian in enumerate(self.hamiltonian):
+                exp_v[i] = execute_circuit(
+                    self.backend,
+                    self._circuit,
+                    hamiltonian,
+                    nshots,
+                    initial_state=None,
+                    cdr_params=self.cdr_params,
+                )
+
+        else:
+            exp_v = execute_circuit(
+                self.backend,
+                self._circuit,
+                self.hamiltonian,
+                nshots,
+                initial_state=None,
+                cdr_params=self.cdr_params,
+            )
 
         # state = self._circuit().state()
 
@@ -167,7 +180,7 @@ class SGD(Optimizer):
 
         return exp_v
 
-    def predict(self, feature, nshots=100000):
+    def predict(self, feature, nshots=1024):
         """
          User-facing function which runs the circuit for given input features returns the result
          Args:
@@ -193,7 +206,7 @@ class SGD(Optimizer):
         Returns: np.array of length self.nparams containing the loss function's gradients
         """
         circ_grads = np.zeros(self.nparams)
-        results = np.zeros(len(features))
+        results = np.zeros((len(features), len(self.hamiltonian)))
         loss = 0
 
         # setup fubini matrix for natural gradient
@@ -215,12 +228,17 @@ class SGD(Optimizer):
         for i, feat in enumerate(features):
             results[i] = self.predict(feat)
 
-            obs_gradients = calculate_gradients(
-                self, self.cdr_params
-            )  # d<B> N params, N label gradients
+            obs_gradients = np.empty(len(self.hamiltonian))
+            loss_func_grad = np.empty(len(self.hamiltonian))
 
-            loss_func_grad = self.calculate_loss_func_grad(results, labels, i)
-            circ_grads += loss_func_grad * obs_gradients
+            for h, ham in enumerate(self.hamiltonian):
+                obs_gradients[h] = calculate_gradients(
+                    self, self.cdr_params, ham
+                )  # d<B> N params, N label gradients
+
+                loss_func_grad[h] = self.calculate_loss_func_grad(results, labels, i)
+
+            circ_grads += np.dot(loss_func_grad.T, obs_gradients)
 
             if self.options["natgrad"]:
                 fubini += generate_fubini(
@@ -370,7 +388,7 @@ class SGD(Optimizer):
         self.features = X
 
         self.labels = y
-        self.nsample = len(self.labels)
+        self.nsample = len(self.features)
 
         if self.backend is None:
             from qibo.backends import GlobalBackend

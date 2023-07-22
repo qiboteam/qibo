@@ -66,7 +66,7 @@ class Parameter:
         return self._apply_func(fixed_params=params)
 
 
-def calculate_gradients(optimizer, cdr_params):
+def calculate_gradients(optimizer, cdr_params, ham):
     """
     Full parameter-shift rule's implementation
     Args:
@@ -75,10 +75,6 @@ def calculate_gradients(optimizer, cdr_params):
     """
 
     obs_gradients = np.zeros(optimizer.nparams, dtype=np.float64)
-
-    ham = SymbolicHamiltonian(
-        np.prod([Z(i) for i in range(1)]), backend=GlobalBackend()
-    )
 
     # parameter shift
     if optimizer.options["shift_rule"] == "psr":
