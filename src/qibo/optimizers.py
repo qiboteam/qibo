@@ -368,9 +368,9 @@ class SGD(Optimizer):
             raise ("y must be a numpy array")
 
         self.features = X
+        self.nsample = len(self.features)
 
         self.labels = y
-        self.nsample = len(self.labels)
 
         if self.backend is None:
             from qibo.backends import GlobalBackend
