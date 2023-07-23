@@ -362,7 +362,7 @@ def test_phase_damping_error(backend, density_matrix, nshots):
     target_circuit = Circuit(3, density_matrix=density_matrix)
     target_circuit.add(gates.CNOT(0, 1))
     target_circuit.add(gates.PhaseDampingChannel(0, 0.3))
-    target_circuit.add(gates.PhaseeDampingChannel(1, 0.3))
+    target_circuit.add(gates.PhaseDampingChannel(1, 0.3))
     target_circuit.add(gates.Z(1))
     target_circuit.add(gates.PhaseDampingChannel(1, 0.3))
     target_circuit.add(gates.X(1))
