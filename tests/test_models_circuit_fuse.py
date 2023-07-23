@@ -1,8 +1,7 @@
 import numpy as np
 import pytest
 
-from qibo import gates
-from qibo.models import Circuit
+from qibo import Circuit, gates
 
 
 @pytest.mark.parametrize("nqubits", [2, 3])

@@ -1,9 +1,8 @@
 import numpy as np
 import pytest
 
-from qibo import gates, hamiltonians
+from qibo import Circuit, gates, hamiltonians
 from qibo.derivative import finite_differences, parameter_shift
-from qibo.models import Circuit
 from qibo.symbols import Z
 
 

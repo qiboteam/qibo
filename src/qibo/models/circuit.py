@@ -193,7 +193,7 @@ class Circuit:
         Example:
             .. code-block:: python
 
-                from qibo.models import Circuit
+                from qibo import Circuit
                 # The system has two GPUs and we would like to use each GPU twice
                 # resulting to four total logical accelerators
                 accelerators = {'/GPU:0': 2, '/GPU:1': 2}
@@ -465,8 +465,7 @@ class Circuit:
         Example:
             .. testcode::
 
-                from qibo import gates
-                from qibo.models import Circuit
+                from qibo import Circuit, gates
                 # use density matrices for noise simulation
                 c = Circuit(2, density_matrix=True)
                 c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
@@ -707,8 +706,7 @@ class Circuit:
         Example:
             .. testcode::
 
-                from qibo import gates
-                from qibo.models import Circuit
+                from qibo import Circuit, gates
                 # create a circuit with all parameters set to 0.
                 c = Circuit(3)
                 c.add(gates.RX(0, theta=0))
@@ -827,8 +825,8 @@ class Circuit:
         Example:
             .. testcode::
 
-                from qibo import gates
-                from qibo.models import Circuit
+                from qibo import Circuit, gates
+
                 c = Circuit(3)
                 c.add(gates.H(0))
                 c.add(gates.H(1))
@@ -836,6 +834,7 @@ class Circuit:
                 c.add(gates.CNOT(1, 2))
                 c.add(gates.H(2))
                 c.add(gates.TOFFOLI(0, 1, 2))
+
                 print(c.summary())
                 # Prints
                 '''

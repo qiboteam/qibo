@@ -34,8 +34,7 @@ Here another example with more gates and shots simulation:
 
 ```python
 import numpy as np
-from qibo.models import Circuit
-from qibo import gates
+from qibo import Circuit, gates
 
 c = Circuit(2)
 c.add(gates.X(0))

@@ -38,8 +38,7 @@ Here an example of adding gates and measurements:
 .. testcode::
 
     import numpy as np
-    from qibo.models import Circuit
-    from qibo import gates
+    from qibo import Circuit, gates
 
     c = Circuit(2)
     c.add(gates.X(0))

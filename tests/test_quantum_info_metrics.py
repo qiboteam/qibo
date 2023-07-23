@@ -1,9 +1,8 @@
 import numpy as np
 import pytest
 
-from qibo import gates
+from qibo import Circuit, gates
 from qibo.config import PRECISION_TOL
-from qibo.models import Circuit
 from qibo.quantum_info.metrics import (
     average_gate_fidelity,
     bures_angle,
