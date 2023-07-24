@@ -462,6 +462,13 @@ Identity (I)
     :members:
     :member-order: bysource
 
+Align (A)
+"""""""""
+
+.. autoclass:: qibo.gates.Align
+    :members:
+    :member-order: bysource
+
 Measurement (M)
 """""""""""""""
 
