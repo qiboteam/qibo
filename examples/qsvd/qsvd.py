@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 import numpy as np
 
-from qibo import gates
-from qibo.models import Circuit
+from qibo import Circuit, gates
 
 
 class QSVD:

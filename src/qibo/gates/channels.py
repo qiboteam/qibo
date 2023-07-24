@@ -207,8 +207,9 @@ class KrausChannel(Channel):
         .. testcode::
 
             import numpy as np
-            from qibo.models import Circuit
-            from qibo import gates
+
+            from qibo import Circuit, gates
+
             # initialize circuit with 3 qubits
             circuit = Circuit(3, density_matrix=True)
             # define a sqrt(0.4) * X gate

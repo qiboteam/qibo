@@ -226,8 +226,7 @@ class NoiseModel:
         .. testcode::
 
             import numpy as np
-            from qibo import gates
-            from qibo.models import Circuit
+            from qibo import Circuit, gates
             from qibo.noise import NoiseModel, PauliError
 
             # Check if a gate is RX(pi/2).
