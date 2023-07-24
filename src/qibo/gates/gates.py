@@ -460,7 +460,7 @@ class Align(Gate):
     Args:
         *q (int): The qubit ID numbers.
         delay (int, optional): The time (in ns) for which to delay circuit execution on the specified qubits.
-            Defaults to ``0`` (zero).        
+            Defaults to ``0`` (zero).
     """
 
     def __init__(self, *q, delay: int = 0):
