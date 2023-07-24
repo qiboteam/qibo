@@ -198,26 +198,20 @@ def test_identity(backend):
     assert gates.I(0).unitary
 
 
-@pytest.mark.parametrize("delay", [0, 1])
-def test_align(backend, delay):
-    nqubits = 2
-
-    gate = gates.Align(0, 1, delay=delay)
+def test_align(backend):
+    gate = gates.Align(0, 1)
     gatelist = [gates.H(0), gates.H(1), gate]
-
-    final_state = apply_gates(backend, gatelist, nqubits=nqubits)
-    target_state = backend.plus_state(nqubits)
+    final_state = apply_gates(backend, gatelist, nqubits=2)
+    target_state = np.ones_like(final_state) / 2.0
     backend.assert_allclose(final_state, target_state)
-
     gate_matrix = gate.asmatrix(backend)
-    identity = backend.identity_density_matrix(nqubits, normalize=False)
-    backend.assert_allclose(gate_matrix, identity)
+    backend.assert_allclose(gate_matrix, np.eye(4))
 
     with pytest.raises(NotImplementedError):
         gate.qasm_label
 
-    assert not gates.Align(0, 1, delay=delay).clifford
-    assert not gates.Align(0, 1, delay=delay).unitary
+    assert not gates.Align(0, 1).clifford
+    assert not gates.Align(0, 1).unitary
 
 
 # :class:`qibo.core.cgates.M` is tested seperately in `test_measurement_gate.py`

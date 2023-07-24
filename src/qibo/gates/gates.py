@@ -465,12 +465,10 @@ class Align(Gate):
     def __init__(self, *q, delay=0):
         super().__init__()
         self.name = "align"
-        self.draw_label = "A"
-        if delay != 0:
-            self.draw_label += f"({delay})"
+        self.delay = delay
+        self.draw_label = f"A({delay})"
         self.init_kwargs = {"delay": delay}
         self.target_qubits = tuple(q)
-        self.init_args = (*q, delay)
 
 
 class _Rn_(ParametrizedGate):
