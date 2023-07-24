@@ -199,13 +199,24 @@ def test_identity(backend):
 
 
 def test_align(backend):
+    with pytest.raises(TypeError):
+        gates.Align(0, "0.1")
+    with pytest.raises(ValueError):
+        gates.Align(0, -1)
+
+    nqubits = 2
+
     gate = gates.Align(0, 1)
-    gatelist = [gates.H(0), gates.H(1), gate]
-    final_state = apply_gates(backend, gatelist, nqubits=2)
-    target_state = np.ones_like(final_state) / 2.0
+    gate_list = [gates.H(0), gates.H(1), gate]
+
+    final_state = apply_gates(backend, gate_list, nqubits=2)
+    target_state = backend.plus_state(nqubits)
+
     backend.assert_allclose(final_state, target_state)
+
     gate_matrix = gate.asmatrix(backend)
-    backend.assert_allclose(gate_matrix, np.eye(4))
+    identity = backend.identity_density_matrix(nqubits, normalize=False)
+    backend.assert_allclose(gate_matrix, identity)
 
     with pytest.raises(NotImplementedError):
         gate.qasm_label

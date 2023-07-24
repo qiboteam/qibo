@@ -464,11 +464,12 @@ class Align(Gate):
     """
 
     def __init__(self, *q, delay: int = 0):
-        if delay < 0.0:
+        if not isinstance(delay, int):
             raise_error(
-                ValueError,
-                "Delay must not be negative.",
+                TypeError, f"delay must be type int, but it is type {type(delay)}."
             )
+        if delay < 0.0:
+            raise_error(ValueError, "Delay must not be negative.")
 
         super().__init__()
         self.name = "align"
