@@ -200,9 +200,9 @@ def test_identity(backend):
 
 def test_align(backend):
     with pytest.raises(TypeError):
-        gates.Align(0, "0.1")
+        gates.Align(0, delay="0.1")
     with pytest.raises(ValueError):
-        gates.Align(0, -1)
+        gates.Align(0, delay=-1)
 
     nqubits = 2
 
