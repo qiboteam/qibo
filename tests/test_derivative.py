@@ -284,7 +284,7 @@ def test_natural_gradient():
     # initialize optimiser with numpy array
     initial_parameters2 = np.full(12, 0.1)
     optimiser2 = qibo.optimizers.SGD(
-        circuit=circuit, parameters=initial_parameters, loss=loss_func
+        circuit=circuit, parameters=initial_parameters2, loss=loss_func
     )
 
     _ = optimiser2.run_circuit(0.1, nshots=1024)
@@ -294,8 +294,7 @@ def test_natural_gradient():
     assert np.allclose(optimiser.params, params)
 
     metric_tensor = qml.metric_tensor(ansatz_pdf, approx="diag")(1, params, 1.0)
-    print(fubini2)
-    print(metric_tensor)
+
     assert np.allclose(fubini, metric_tensor)
     assert np.allclose(fubini2, metric_tensor)
 
