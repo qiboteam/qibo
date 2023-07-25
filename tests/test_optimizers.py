@@ -1,11 +1,9 @@
 import numpy as np
 import pennylane as qml
-import pytest
 
 import qibo
 from qibo.backends import GlobalBackend
-from qibo.derivative import Parameter
-from qibo.hamiltonians import SymbolicHamiltonian
+from qibo.derivative import Parameter, create_hamiltonian
 from qibo.optimizers import CMAES, SGD
 from qibo.symbols import I, Z
 
@@ -91,33 +89,6 @@ def test_multiqubit_sgd_optimizer():
     losses = optimizer.fit(X, y)
 
     assert losses[-1] < 0.001
-
-
-def create_hamiltonian(qubit, nqubit, backend):
-    """
-    Creates appropriate Hamiltonian for a given list of qubits
-    Args:
-        qubit: qubit numbers whose states we are interested in
-        nqubit: total number of qubits, which determines size of Hamiltonian
-    Return:
-        hamiltonian: SymbolicHamiltonian
-    """
-    if not isinstance(qubit, list):
-        qubit = [qubit]
-
-    hams = []
-
-    for i in range(nqubit):
-        if i in qubit:
-            hams.append(Z(i))
-        else:
-            hams.append(I(i))
-
-    # create Hamiltonian
-    obs = np.prod(hams)
-    hamiltonian = SymbolicHamiltonian(obs, backend=backend)
-
-    return hamiltonian
 
 
 def cma_loss(params, circuit, hamiltonian):

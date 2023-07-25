@@ -12,18 +12,12 @@ from qibo.derivative import (
     create_hamiltonian,
     generate_fubini,
     parameter_shift,
+    run_subcircuit_measure,
 )
 from qibo.models import Circuit
 from qibo.symbols import Z
 
 qibo.set_backend("tensorflow")
-
-
-# defining an observable
-def hamiltonian(nqubits):
-    return hamiltonians.hamiltonians.SymbolicHamiltonian(
-        np.prod([Z(i) for i in range(nqubits)]), backend=GlobalBackend()
-    )
 
 
 dev = qml.device("default.qubit", wires=2)
@@ -110,6 +104,7 @@ def ansatz_2qubit(layers, nqubits):
 def circuit(nqubits=1):
     c = Circuit(nqubits)
     # all gates for which generator eigenvalue is implemented
+    c.add(gates.H(q=0))
     c.add(gates.RX(q=0, theta=0))
     c.add(gates.RY(q=0, theta=0))
     c.add(gates.RZ(q=0, theta=0))
@@ -128,7 +123,7 @@ def gradient_exact():
         c = circuit(nqubits=1)
         c.set_parameters(test_params)
 
-        ham = hamiltonian(1)
+        ham = create_hamiltonian(0, 1, GlobalBackend())
         results = ham.expectation(
             backend.execute_circuit(circuit=c, initial_state=None).state()
         )
@@ -136,6 +131,47 @@ def gradient_exact():
     gradients = tape.gradient(results, test_params)
 
     return gradients
+
+
+def test_parameter():
+    # single feature
+    param = Parameter(
+        lambda x, th1, th2, th3: x**2 * th1 + th2 * th3, [1.5, 2.0, 3.0], featurep=7.0
+    )
+
+    indices = param.get_indices(10)
+    assert indices == [10, 11, 12]
+
+    fixed = param.get_fixed_part(1)
+    assert fixed == 73.5
+
+    factor = param.get_scaling_factor(2)
+    assert factor == 2.0
+
+    gate_value = param.get_params(trainablep=[15.0, 10.0, 7.0], feature=5.0)
+    assert gate_value == 445
+
+    # multiple features
+    param = Parameter(
+        lambda x1, x2, th1, th2, th3: x1**2 * th1 + x2 * th2 * th3,
+        [1.5, 2.0, 3.0],
+        featurep=[7.0, 4.0],
+    )
+
+    fixed = param.get_fixed_part(1)
+    assert fixed == 73.5
+
+    factor = param.get_scaling_factor(2)
+    assert factor == 8.0
+
+    gate_value = param.get_params(trainablep=[15.0, 10.0, 7.0], feature=[5.0, 3.0])
+    assert gate_value == 585
+
+
+def test_run_subcircuit_measure():
+    c = circuit(nqubits=1)
+    value = run_subcircuit_measure(c, 0, 1, GlobalBackend(), stochastic=False)
+    assert value == 0.5
 
 
 @pytest.mark.parametrize("nshots, atol", [(None, 1e-8), (100000, 1e-2)])
@@ -152,7 +188,7 @@ def test_psr(backend, nshots, atol):
     test_params *= scale_factor
     c.set_parameters(test_params)
 
-    test_hamiltonian = hamiltonian(nqubits=1)
+    test_hamiltonian = create_hamiltonian(0, 1, GlobalBackend())
 
     # testing parameter out of bounds
     with pytest.raises(ValueError):
@@ -258,7 +294,8 @@ def test_natural_gradient():
     assert np.allclose(optimiser.params, params)
 
     metric_tensor = qml.metric_tensor(ansatz_pdf, approx="diag")(1, params, 1.0)
-
+    print(fubini2)
+    print(metric_tensor)
     assert np.allclose(fubini, metric_tensor)
     assert np.allclose(fubini2, metric_tensor)
 
@@ -288,5 +325,5 @@ def test_multiqubit_natural_gradient():
 
 
 if __name__ == "__main__":
-    # test_natural_gradient()
-    test_multiqubit_natural_gradient()
+    test_natural_gradient()
+    # test_multiqubit_natural_gradient()

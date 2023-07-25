@@ -29,7 +29,10 @@ class Parameter:
         """Applies lambda function and returns final gate parameter"""
         params = []
         if self._featurep is not None:
-            params.append(self._featurep)
+            if isinstance(self._featurep, list):
+                params.extend(self._featurep)
+            else:
+                params.append(self._featurep)
         if fixed_params:
             params.extend(fixed_params)
         else:
@@ -55,15 +58,17 @@ class Parameter:
 
     def get_fixed_part(self, trainablep_idx):
         """Retrieve parameter constant unaffected by a specific trainable parameter"""
-        params = [0] * self.nparams
-        params[trainablep_idx] = self._trainablep[trainablep_idx]
+        params = self._trainablep.copy()
+        params[trainablep_idx] = 0.0
         return self._apply_func(fixed_params=params)
 
     def get_scaling_factor(self, trainablep_idx):
         """Get scaling factor multiplying a specific trainable parameter"""
-        params = [0] * self.nparams
-        params[trainablep_idx] = 1.0
-        return self._apply_func(fixed_params=params)
+        fixed = self.get_fixed_part(trainablep_idx)
+        trainablep = self._trainablep
+        trainablep[trainablep_idx] = 1.0
+        gate_value = self.get_params(trainablep=trainablep)
+        return gate_value - fixed
 
 
 def calculate_gradients(optimizer, cdr_params, ham):
@@ -584,6 +589,7 @@ def generate_fubini(
     else:
         trainable_params = [[i] for i in range(nparams)]
         scale_factors = [1] * nparams
+
     # build graph from circuit gates
     graph = Graph(nqubits, circuit.queue, trainable_params, gate_params)
     graph.build_graph()
@@ -612,8 +618,6 @@ def generate_fubini(
                     ts = scale_factors[t]
                     fubini[p, t] = ps * ts * (result - result**2)
 
-    # print(fubini, fubini_pennylane)
-    # assert np.allclose(fubini, fubini_pennylane)
     return fubini
 
 

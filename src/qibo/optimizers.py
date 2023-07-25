@@ -252,8 +252,6 @@ class SGD(Optimizer):
 
         # gradient average
         loss = self.loss_function(results, labels, self.args)
-        if len(loss) == 1:
-            loss = loss[0]
         loss_gradients = circ_grads / (self.nsample)
 
         # Fubini-Study Metric renormalisation
