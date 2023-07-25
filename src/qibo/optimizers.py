@@ -85,7 +85,7 @@ class SGD(Optimizer):
 
         # hamiltonian
         if not hamiltonian:
-            self.hamiltonian = create_hamiltonian(0, self.nqubits, self.backend)
+            self.hamiltonian = [create_hamiltonian(0, self.nqubits, self.backend)]
         else:
             self.hamiltonian = hamiltonian
 
@@ -103,6 +103,7 @@ class SGD(Optimizer):
             "mitigation": False,
             "noise_model": None,
             "adam": True,
+            "filename": "results.txt",
         }
         self.set_options(kwargs)
 
@@ -244,7 +245,6 @@ class SGD(Optimizer):
                     self.nqubits,
                     self.paramInputs,
                     feat,
-                    self.hamiltonian,
                     params=self.params,
                     mitigation=self.options["mitigation"],
                     noise_model=self.options["noise_model"],
@@ -252,6 +252,8 @@ class SGD(Optimizer):
 
         # gradient average
         loss = self.loss_function(results, labels, self.args)
+        if len(loss) == 1:
+            loss = loss[0]
         loss_gradients = circ_grads / (self.nsample)
 
         # Fubini-Study Metric renormalisation
@@ -300,6 +302,7 @@ class SGD(Optimizer):
                 self.params[i] -= learning_rate * mhat / (np.sqrt(vhat) + epsilon)
             return m, v, loss
 
+        # standard gradient descent
         else:
             for i in range(self.nparams):
                 self.params[i] -= learning_rate * grads[i]
@@ -330,7 +333,7 @@ class SGD(Optimizer):
             indices.append(np.arange(ib, self.nsample, options["batches"]))
 
         iteration = 0
-        file = open("results.txt", "w")
+        file = open(self.options["filename"], "w")
 
         for epoch in range(options["epochs"]):
             if epoch != 0 and losses[-1] < options["J_threshold"]:

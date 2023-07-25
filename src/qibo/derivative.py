@@ -11,7 +11,7 @@ from qibo.models.error_mitigation import (
     apply_readout_mitigation,
     calibration_matrix,
 )
-from qibo.symbols import I, Symbol, Z
+from qibo.symbols import I, Z
 
 
 class Parameter:
@@ -497,61 +497,9 @@ def create_hamiltonian(qubit, nqubit, backend):
     return hamiltonian
 
 
-import pennylane as qml
-
-dev = qml.device("default.qubit", wires=1)
-
-
-@qml.qnode(dev, interface="autograd")
-def ansatz_pdf(params, feature):
-    qml.Hadamard(wires=0)
-
-    qml.RZ(params[0] * feature + params[1], wires=0)
-
-    qml.RY(params[2] * feature + params[3], wires=0)
-
-    qml.RZ(params[4] * feature + params[5], wires=0)
-
-    qml.RY(params[6] * feature + params[7], wires=0)
-
-    qml.RZ(params[8] * feature + params[9], wires=0)
-
-    qml.RY(params[10] * feature + params[11], wires=0)
-
-    qml.RZ(params[12] * feature + params[13], wires=0)
-
-    qml.RY(params[14] * feature + params[15], wires=0)
-
-    qml.RZ(params[16] * feature + params[17], wires=0)
-
-    qml.RY(params[18] * feature + params[19], wires=0)
-
-    qml.Hadamard(wires=1)
-
-    qml.RZ(params[0] * feature + params[1], wires=1)
-
-    qml.RY(params[2] * feature + params[3], wires=1)
-
-    qml.RZ(params[4] * feature + params[5], wires=1)
-
-    qml.RY(params[6] * feature + params[7], wires=1)
-
-    qml.RZ(params[8] * feature + params[9], wires=1)
-
-    qml.RY(params[10] * feature + params[11], wires=1)
-
-    qml.RZ(params[12] * feature + params[13], wires=1)
-
-    qml.RY(params[14] * feature + params[15], wires=1)
-
-    qml.RZ(params[16] * feature + params[17], wires=1)
-
-    qml.RY(params[18] * feature + params[19], wires=1)
-
-    return qml.expval(qml.PauliZ(0))
-
-
 def error_mitigation(circuit, hamiltonian, backend, noise_model):
+    """Fit CDR regression model to noisy states"""
+
     calibration = calibration_matrix(nqubits=1, backend=backend, nshots=10000)
 
     _, _, optimal_params, _ = CDR(
@@ -607,23 +555,12 @@ def generate_fubini(
     nqubits,
     paramInputs,
     feature,
-    pennylane=False,
     params=None,
     mitigation=False,
     noise_model=None,
     stochastic=True,
 ):
     """Generate the Fubini-Study metric tensor"""
-
-    if pennylane:
-        fubini_pennylane = qml.metric_tensor(ansatz_pdf, approx="diag")(
-            qml.numpy.asarray(params), feature
-        )
-        # print(fubini)
-
-        # diag = np.diag(fubini)
-        # fubini = np.diag(diag)
-        # return fubini
 
     if isinstance(paramInputs, list):
         nparams = sum([param.nparams for param in paramInputs])
@@ -652,14 +589,14 @@ def generate_fubini(
     graph.build_graph()
     backend = GlobalBackend()
 
-    calibration = calibration_matrix(
+    """calibration = calibration_matrix(
         1, backend=backend, noise_model=noise_model, nshots=1024
-    )
+    )"""
 
     # run through layers
     for i in range(graph.depth):
         c, qubits, affected_param = graph.run_layer(i)
-        if noise_model is not None:
+        if noise_model:
             c = noise_model.apply(c)
         if len(qubits) == 0:
             continue
