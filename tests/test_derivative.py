@@ -277,7 +277,7 @@ def test_natural_gradient():
         circuit=circuit, parameters=initial_parameters, loss=loss_func
     )
 
-    _ = optimiser.run_circuit(0.1, nshots=1024)
+    _ = optimiser.run_circuit(0.1)
 
     fubini = generate_fubini(circuit, 1, initial_parameters, 1.0, stochastic=False)
 
@@ -287,7 +287,7 @@ def test_natural_gradient():
         circuit=circuit, parameters=initial_parameters2, loss=loss_func
     )
 
-    _ = optimiser2.run_circuit(0.1, nshots=1024)
+    _ = optimiser2.run_circuit(0.1)
 
     fubini2 = generate_fubini(circuit, 1, initial_parameters2, 1.0, stochastic=False)
 
@@ -314,15 +314,10 @@ def test_multiqubit_natural_gradient():
         circuit=circuit, parameters=initial_parameters, loss=loss_func
     )
 
-    _ = optimiser.run_circuit(0.1, nshots=1024)
+    _ = optimiser.run_circuit(0.1)
 
     fubini = generate_fubini(
         circuit, nqubits, initial_parameters, 1.0, stochastic=False
     )
 
     assert np.allclose(fubini, metric_tensor)
-
-
-if __name__ == "__main__":
-    test_natural_gradient()
-    # test_multiqubit_natural_gradient()

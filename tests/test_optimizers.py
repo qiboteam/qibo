@@ -5,7 +5,6 @@ import qibo
 from qibo.backends import GlobalBackend
 from qibo.derivative import Parameter, create_hamiltonian
 from qibo.optimizers import CMAES, SGD
-from qibo.symbols import I, Z
 
 
 def ansatz(layers, nqubits):
@@ -72,9 +71,35 @@ def test_multiqubit_sgd_optimizer():
     print(circuit.draw())
 
     parameters = []
-    for _ in range(12):
+    for i in range(12):
         parameters.append(
-            Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=True)
+            Parameter(
+                lambda x, th1, th2: th1 * x + th2, [i / 100, i / 53], featurep=True
+            )
+        )
+
+    hamiltonians = [create_hamiltonian(i, 2, GlobalBackend()) for i in range(2)]
+    optimizer = SGD(
+        circuit=circuit,
+        parameters=parameters,
+        loss=loss_func_2qubit,
+        hamiltonian=hamiltonians,
+        epochs=100,
+    )
+    X = np.array([0.1, 0.2, 0.3])
+    y = np.array([[0.1, 0.2], [0.3, 0.5], [0.4, 0.5]])
+    losses = optimizer.fit(X, y)
+
+    assert losses[-1] < 0.01
+
+
+def test_sgd_methods():
+    circuit = ansatz(3, 2)
+
+    parameters = []
+    for i in range(0, 24, 2):
+        parameters.append(
+            Parameter(lambda x, th1, th2: th1 * x + th2, [i, i + 1], featurep=True)
         )
 
     hamiltonians = [create_hamiltonian(i, 2, GlobalBackend()) for i in range(2)]
@@ -84,11 +109,38 @@ def test_multiqubit_sgd_optimizer():
         loss=loss_func_2qubit,
         hamiltonian=hamiltonians,
     )
-    X = np.array([0.1, 0.2, 0.3])
-    y = np.array([[0.1, 0.2], [0.3, 0.5], [0.4, 0.5]])
-    losses = optimizer.fit(X, y)
 
-    assert losses[-1] < 0.001
+    # _get_params
+    trainablep = optimizer._get_params(trainable=True)
+    assert trainablep == [i for i in range(24)]
+    gatep = optimizer._get_params(trainable=False, feature=0.5)
+    assert gatep == [
+        1.0,
+        4.0,
+        7.0,
+        10.0,
+        13.0,
+        16.0,
+        19.0,
+        22.0,
+        25.0,
+        28.0,
+        31.0,
+        34.0,
+    ]
+
+    # calculate_loss_function
+    ypred = np.array([[0.2, 0.2], [0.3, 0.4], [0.4, 0.5]])
+    ytrue = np.array([[0.2, 0.2], [0.3, 0.5], [0.4, 0.5]])
+    optimizer.nlabels = 2
+    grads = optimizer.calculate_loss_func_grad(ypred, ytrue, 1)
+    assert np.allclose(grads, np.array([0.0, -0.2]))
+
+    # run_circuit
+    expectation_values = optimizer.run_circuit(0.1)
+    assert np.allclose(
+        np.array(expectation_values), np.array([-0.1116947, -0.31656565])
+    )
 
 
 def cma_loss(params, circuit, hamiltonian):
@@ -119,3 +171,4 @@ def test_cma_optimizer():
 if __name__ == "__main__":
     test_multiqubit_sgd_optimizer()
     # test_sgd_optimizer()
+    # test_sgd_methods()

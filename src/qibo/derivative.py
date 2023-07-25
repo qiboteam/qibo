@@ -71,7 +71,7 @@ class Parameter:
         return gate_value - fixed
 
 
-def calculate_gradients(optimizer, cdr_params, ham):
+def calculate_gradients(optimizer, cdr_params, ham, nshots):
     """
     Full parameter-shift rule's implementation
     Args:
@@ -91,7 +91,7 @@ def calculate_gradients(optimizer, cdr_params, ham):
                     ipar,
                     initial_state=None,
                     scale_factor=1,
-                    nshots=1024,
+                    nshots=nshots,
                     cdr_params=cdr_params,
                 )
         else:
@@ -106,7 +106,7 @@ def calculate_gradients(optimizer, cdr_params, ham):
                         ipar,
                         initial_state=None,
                         scale_factor=scaling,
-                        nshots=1024,
+                        nshots=nshots,
                         cdr_params=cdr_params,
                     )
                     count += 1
@@ -502,16 +502,16 @@ def create_hamiltonian(qubit, nqubit, backend):
     return hamiltonian
 
 
-def error_mitigation(circuit, hamiltonian, backend, noise_model):
+def error_mitigation(circuit, hamiltonian, backend, noise_model, nshots):
     """Fit CDR regression model to noisy states"""
 
-    calibration = calibration_matrix(nqubits=1, backend=backend, nshots=10000)
+    calibration = calibration_matrix(nqubits=1, backend=backend, nshots=nshots)
 
     _, _, optimal_params, _ = CDR(
         circuit=circuit,
         observable=hamiltonian,
         backend=backend,
-        nshots=10000,
+        nshots=nshots,
         noise_model=noise_model,
         full_output=True,
         readout={"calibration_matrix": calibration},

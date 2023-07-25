@@ -99,6 +99,7 @@ class SGD(Optimizer):
             "batches": 1,
             "J_threshold": 1e-3,
             "shift_rule": "psr",
+            "nshots": 1024,
             "natgrad": False,
             "mitigation": False,
             "noise_model": None,
@@ -120,6 +121,7 @@ class SGD(Optimizer):
                 else:
                     trainablep = self.params[count : count + Param.nparams]
                     count += Param.nparams
+                    # update trainable params and retrieve gate param
                     params.append(Param.get_params(trainablep, feature=feature))
             return params
 
@@ -142,11 +144,10 @@ class SGD(Optimizer):
             grads[lab] = (forward - backward) / (2 * delta)
         return grads
 
-    def run_circuit(self, feature, nshots):
+    def run_circuit(self, feature):
         """Backend function which runs the circuit for one feature
         Args:
             feature: single input value to the system
-            nshots: number of circuit shots to calculate expectation value
         Return:
             results: expectation value"""
 
@@ -163,7 +164,7 @@ class SGD(Optimizer):
                     self.backend,
                     self._circuit,
                     hamiltonian,
-                    nshots,
+                    self.options["nshots"],
                     initial_state=None,
                     cdr_params=self.cdr_params,
                 )
@@ -173,14 +174,14 @@ class SGD(Optimizer):
                 self.backend,
                 self._circuit,
                 self.hamiltonian,
-                nshots,
+                self.options["nshots"],
                 initial_state=None,
                 cdr_params=self.cdr_params,
             )
 
         return exp_v
 
-    def predict(self, feature, nshots=1024):
+    def predict(self, feature):
         """
          User-facing function which runs the circuit for given input features returns the result
          Args:
@@ -192,10 +193,10 @@ class SGD(Optimizer):
         if isinstance(feature, np.ndarray):
             results = np.zeros(len(feature))
             for i, feat in enumerate(feature):
-                results[i] = self.run_circuit(feat, nshots)
+                results[i] = self.run_circuit(feat)
             return results
         else:
-            return self.run_circuit(feature, nshots)
+            return self.run_circuit(feature)
 
     def dloss(self, features, labels):
         """
@@ -222,6 +223,7 @@ class SGD(Optimizer):
                 self.hamiltonian,
                 self.backend,
                 self.options["noise_model"],
+                self.options["nshots"],
             )
 
         # iterate through all data points
@@ -232,7 +234,7 @@ class SGD(Optimizer):
 
             for h, ham in enumerate(self.hamiltonian):
                 obs_gradients[h] = calculate_gradients(
-                    self, self.cdr_params, ham
+                    self, self.cdr_params, ham, self.options["nshots"]
                 )  # d<B> N params, N label gradients
 
             loss_func_grad = self.calculate_loss_func_grad(results, labels, i)
