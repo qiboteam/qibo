@@ -491,7 +491,7 @@ def create_hamiltonian(qubit, nqubit, backend):
             hams.append(I(i))
 
     # create Hamiltonian
-    obs = np.prod([Z(i) for i in range(1)])
+    obs = np.prod(hams)
     hamiltonian = SymbolicHamiltonian(obs, backend=backend)
 
     return hamiltonian
@@ -525,6 +525,28 @@ def ansatz_pdf(params, feature):
     qml.RZ(params[16] * feature + params[17], wires=0)
 
     qml.RY(params[18] * feature + params[19], wires=0)
+
+    qml.Hadamard(wires=1)
+
+    qml.RZ(params[0] * feature + params[1], wires=1)
+
+    qml.RY(params[2] * feature + params[3], wires=1)
+
+    qml.RZ(params[4] * feature + params[5], wires=1)
+
+    qml.RY(params[6] * feature + params[7], wires=1)
+
+    qml.RZ(params[8] * feature + params[9], wires=1)
+
+    qml.RY(params[10] * feature + params[11], wires=1)
+
+    qml.RZ(params[12] * feature + params[13], wires=1)
+
+    qml.RY(params[14] * feature + params[15], wires=1)
+
+    qml.RZ(params[16] * feature + params[17], wires=1)
+
+    qml.RY(params[18] * feature + params[19], wires=1)
 
     return qml.expval(qml.PauliZ(0))
 
@@ -585,7 +607,6 @@ def generate_fubini(
     nqubits,
     paramInputs,
     feature,
-    obs,
     pennylane=False,
     params=None,
     mitigation=False,
@@ -643,17 +664,10 @@ def generate_fubini(
         if len(qubits) == 0:
             continue
 
-        if stochastic:
-            # execute circuit with readout mitigation
-            result = execute_circuit(backend, c, obs, 1024)
-
-            # expectation value -> state |0> probability
-            result = (1 - result) / 2
-        else:
-            result = backend.execute_circuit(circuit=c, nshots=1024).probabilities()[0]
-
         # run through parametrized gate
         for qubit, params in zip(qubits, affected_param):
+            result = run_subcircuit_measure(c, qubit, nqubits, backend, stochastic)
+
             for p in params:
                 # update Fubini-Study matrix
                 for t in params:
@@ -664,3 +678,31 @@ def generate_fubini(
     # print(fubini, fubini_pennylane)
     # assert np.allclose(fubini, fubini_pennylane)
     return fubini
+
+
+def run_subcircuit_measure(c, qubit, nqubits, backend, stochastic):
+    """Run variance measurement on specific qubit of subcircuit
+    Args:
+        c: subcircuit ending with measurement gates in appropriate basis
+        qubit: circuit qubit at which variance is evaluated
+        nqubits: total number of circuit qubits
+        backend: simulation backend used to run circuit
+        stochastic (bool): flag to set precise or stochastic state evaluations
+    Return:
+        Probability of a specific qubit to be in state |0> in a measured basis"""
+
+    obs = create_hamiltonian(qubit, nqubits, backend)
+
+    if stochastic:
+        # execute circuit with readout mitigation
+        result = execute_circuit(backend, c, obs, 1024)
+
+    else:
+        # probs = backend.execute_circuit(circuit=c, nshots=1024).probabilities()
+        # result = np.sum(np.dot(obs.matrix, probs))
+        result = obs.expectation(backend.execute_circuit(c).state())
+
+    # expectation value -> state |0> probability
+    result = (1 - result) / 2
+
+    return result

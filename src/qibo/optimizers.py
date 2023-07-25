@@ -85,7 +85,7 @@ class SGD(Optimizer):
 
         # hamiltonian
         if not hamiltonian:
-            self.hamiltonian = [create_hamiltonian(0, self.nqubits, self.backend)]
+            self.hamiltonian = create_hamiltonian(0, self.nqubits, self.backend)
         else:
             self.hamiltonian = hamiltonian
 
@@ -154,6 +154,7 @@ class SGD(Optimizer):
         self._circuit.set_parameters(parameters)
 
         # run circuit
+
         if isinstance(self.hamiltonian, list):
             exp_v = np.empty(len(self.hamiltonian))
             for i, hamiltonian in enumerate(self.hamiltonian):

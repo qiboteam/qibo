@@ -71,6 +71,7 @@ def test_multiqubit_sgd_optimizer():
     """Test 2-qubit, 2-hamiltonian ansatz with SGD Optimiser"""
 
     circuit = ansatz(3, 2)
+    print(circuit.draw())
 
     parameters = []
     for _ in range(12):
