@@ -1,4 +1,4 @@
-![](doc/source/qibo_logo.svg)
+![](doc/source/_static/qibo_logo_dark.svg)
 
 ![Tests](https://github.com/qiboteam/qibo/workflows/Tests/badge.svg)
 [![codecov](https://codecov.io/gh/qiboteam/qibo/branch/master/graph/badge.svg?token=1EKZKVEVX0)](https://codecov.io/gh/qiboteam/qibo)

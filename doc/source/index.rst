@@ -48,6 +48,15 @@ Contents
 
     appendix/citing-qibo
 
+.. toctree::
+    :maxdepth: 1
+    :caption: Documentation links
+
+    Qibo docs <https://qibo.science/qibo/stable/>
+    Qibolab docs <https://qibo.science/qibolab/stable/>
+    Qibocal docs <https://qibo.science/qibocal/stable/>
+    Qibosoq docs <https://qibo.science/qibosoq/stable/>
+
 
 Indices and tables
 ==================

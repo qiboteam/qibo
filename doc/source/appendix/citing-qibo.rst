@@ -42,8 +42,8 @@ Peer-Reviewed Articles
 .. _`arXiv:2009.01845`: https://arxiv.org/abs/2009.01845
 
 * S. Efthymiou, M. Lazzarin, A. Pasquale, S. Carrazza, *Quantum simulation with
-     just-in-time compilation*, Quantum (6) (2022).
-     `doi:10.22331/q-2022-09-22-814`_, (`arXiv:2203.08826`_).
+  just-in-time compilation*, Quantum (6) (2022).
+  `doi:10.22331/q-2022-09-22-814`_, (`arXiv:2203.08826`_).
 
   In *BibTeX* format:
 
@@ -101,14 +101,13 @@ Conference Proceedings
 ----------------------
 
 * S. Carrazza, S. Efthymiou, M. Lazzarin, A. Pasquale. An open-source modular
-     framework for quantum computing. (2022) `ACAT2021`_,
-     (`arXiv:2202.07017`_).
+  framework for quantum computing. (2022) `ACAT2021`_, (`arXiv:2202.07017`_).
 
 .. _`ACAT2021`: https://indico.cern.ch/event/855454/
 .. _`arXiv:2202.07017`: https://arxiv.org/abs/2202.07017
 
-* M. Robbiati, S. Efthymiou, A. Pasquale, S. Carrazza. A quantum analytical Adam descent through parameter shift rule using Qibo. (2022) `ICHEP2022`_,
-     (`arXiv:2210.10787`_).
+* M. Robbiati, S. Efthymiou, A. Pasquale, S. Carrazza.
+  A quantum analytical Adam descent through parameter shift rule using Qibo. (2022) `ICHEP2022`_, (`arXiv:2210.10787`_).
 
 .. _`ICHEP2022`: https://www.ichep2022.it/
 .. _`arXiv:2210.10787`: https://arxiv.org/abs/2210.10787
