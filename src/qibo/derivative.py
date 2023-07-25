@@ -584,7 +584,7 @@ def generate_fubini(
     params=None,
     mitigation=False,
     noise_model=None,
-    stochastic=True,
+    stochastic=False,
 ):
     """Generate the Fubini-Study metric tensor"""
 
@@ -625,14 +625,10 @@ def generate_fubini(
     graph.build_graph()
     backend = GlobalBackend()
 
-    calibration = calibration_matrix(
-        1, backend=backend, noise_model=noise_model, nshots=1024
-    )
-
     # run through layers
     for i in range(graph.depth):
         c, qubits, affected_param = graph.run_layer(i)
-        if noise_model is not None:
+        if noise_model:
             c = noise_model.apply(c)
         if len(qubits) == 0:
             continue
