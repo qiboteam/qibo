@@ -959,7 +959,7 @@ def test_ecr(backend):
     with pytest.raises(NotImplementedError):
         gates.ECR(0, 1).qasm_label
 
-    assert not gates.ECR(0, 1).clifford
+    assert gates.ECR(0, 1).clifford
     assert gates.ECR(0, 1).unitary
 
 

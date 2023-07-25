@@ -1936,6 +1936,7 @@ class ECR(Gate):
         self.draw_label = "ECR"
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
+        self.clifford = True
         self.unitary = True
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
