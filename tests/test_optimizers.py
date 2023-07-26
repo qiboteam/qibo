@@ -4,7 +4,7 @@ import pennylane as qml
 import qibo
 from qibo.backends import GlobalBackend
 from qibo.derivative import Parameter, create_hamiltonian
-from qibo.optimizers import CMAES, SGD
+from qibo.optimizers import CMAES, SGD, Newtonian, ParallelBFGS
 
 
 def ansatz(layers, nqubits):
@@ -168,7 +168,41 @@ def test_cma_optimizer():
     assert fbest < 1e-5
 
 
+def test_newtonian_optimizer():
+    circuit = ansatz(3, 1)
+
+    hamiltonian = create_hamiltonian(0, 1, GlobalBackend())
+
+    parameters = np.array([0.1] * 6)
+
+    optimizer = Newtonian(
+        initial_parameters=parameters, args=(circuit, hamiltonian), loss=cma_loss
+    )
+
+    fbest, xbest, r = optimizer.fit()
+
+    assert fbest < 1e-5
+
+
+def test_parallel_bfgs_optimizer():
+    circuit = ansatz(3, 1)
+
+    hamiltonian = create_hamiltonian(0, 1, GlobalBackend())
+
+    parameters = np.array([0.1] * 6)
+
+    optimizer = ParallelBFGS(
+        initial_parameters=parameters, args=(circuit, hamiltonian), loss=cma_loss
+    )
+
+    fbest, xbest, r = optimizer.fit()
+
+    assert fbest < 1e-5
+
+
 if __name__ == "__main__":
-    test_multiqubit_sgd_optimizer()
+    test_parallel_bfgs_optimizer()
+    # test_newtonian_optimizer()
+    # test_multiqubit_sgd_optimizer()
     # test_sgd_optimizer()
     # test_sgd_methods()

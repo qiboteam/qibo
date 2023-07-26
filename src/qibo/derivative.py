@@ -590,7 +590,6 @@ def generate_fubini(
         trainable_params = [[i] for i in range(nparams)]
         scale_factors = [1] * nparams
 
-    print(trainable_params, gate_params)
     # build graph from circuit gates
     graph = Graph(nqubits, circuit.queue, trainable_params, gate_params)
     graph.build_graph()

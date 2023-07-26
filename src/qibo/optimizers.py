@@ -17,12 +17,10 @@ from qibo.models import Circuit
 class Optimizer:
     """Parent optimizer"""
 
-    def __init__(self, initial_parameters, args=(), loss=None, **kwargs):
+    def __init__(self, initial_parameters, args=(), loss=None):
         self.loss_function = loss
         self.args = args
-        self.backend = None
         self.initial_parameters = initial_parameters
-        self.args = args
         self.backend = backends.GlobalBackend()
 
         if not isinstance(initial_parameters, list) and not isinstance(
@@ -69,7 +67,7 @@ class SGD(Optimizer):
     def __init__(
         self, circuit, parameters, hamiltonian=None, args=(), loss=None, **kwargs
     ):
-        super().__init__(parameters, args, loss=loss, **kwargs)
+        super().__init__(parameters, args, loss=loss)
 
         # circuit
         if not isinstance(circuit, Circuit):
@@ -427,36 +425,7 @@ class CMAES(Optimizer):
 
 class Newtonian(Optimizer):
     def __init__(self, initial_parameters, args=(), loss=None, **kwargs):
-        super().__init__(initial_parameters, args, loss, **kwargs)
-
-    def fit(
-        self,
-        method="Powell",
-        jac=None,
-        hess=None,
-        hessp=None,
-        bounds=None,
-        constraints=(),
-        tol=None,
-        callback=None,
-        options=None,
-        processes=None,
-        backend=None,
-    ):
-        """Newtonian optimization approaches based on ``scipy.optimize.minimize``.
-
-        For more details check the `scipy documentation <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
-
-        .. note::
-            When using the method ``parallel_L-BFGS-B`` the ``processes`` option controls the
-            number of processes used by the parallel L-BFGS-B algorithm through the ``multiprocessing`` library.
-            By default ``processes=None``, in this case the total number of logical cores are used.
-            Make sure to select the appropriate number of processes for your computer specification,
-            taking in consideration memory and physical cores. In order to obtain optimal results
-            you can control the number of threads used by each process with the ``qibo.set_threads`` method.
-            For example, for small-medium size circuits you may benefit from single thread per process, thus set
-            ``qibo.set_threads(1)`` before running the optimization.
-
+        """
         Args:
             loss (callable): Loss as a function of variational parameters to be
                 optimized.
@@ -477,37 +446,70 @@ class Newtonian(Optimizer):
                 ``scipy.optimize.minimize``.
             processes (int): number of processes when using the parallel BFGS method.
         """
-        if method == "parallel_L-BFGS-B":  # pragma: no cover
+        super().__init__(initial_parameters, args, loss, **kwargs)
+        self.options = {
+            "method": "Powell",
+            "jac": None,
+            "hess": None,
+            "hessp": None,
+            "bounds": None,
+            "constraints": (),
+            "tol": None,
+            "callback": None,
+            "options": None,
+            "processes": None,
+            "backend": None,
+        }
+        self.set_options(kwargs)
+
+    def fit(self):
+        """Newtonian optimization approaches based on ``scipy.optimize.minimize``.
+
+        For more details check the `scipy documentation <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
+
+        .. note::
+            When using the method ``parallel_L-BFGS-B`` the ``processes`` option controls the
+            number of processes used by the parallel L-BFGS-B algorithm through the ``multiprocessing`` library.
+            By default ``processes=None``, in this case the total number of logical cores are used.
+            Make sure to select the appropriate number of processes for your computer specification,
+            taking in consideration memory and physical cores. In order to obtain optimal results
+            you can control the number of threads used by each process with the ``qibo.set_threads`` method.
+            For example, for small-medium size circuits you may benefit from single thread per process, thus set
+            ``qibo.set_threads(1)`` before running the optimization.
+
+
+        """
+        if self.options["method"] == "parallel_L-BFGS-B":  # pragma: no cover
             o = ParallelBFGS(
-                self.loss,
+                self.loss_function,
                 args=self.args,
-                processes=processes,
-                bounds=bounds,
-                callback=callback,
-                options=options,
+                processes=self.options["processes"],
+                bounds=self.options["bounds"],
+                callback=self.options["callback"],
+                options=self.options["options"],
             )
             m = o.run(self.initial_parameters)
         else:
             from scipy.optimize import minimize
 
             m = minimize(
-                self.loss,
+                self.loss_function,
                 self.initial_parameters,
                 args=self.args,
-                method=method,
-                jac=jac,
-                hess=hess,
-                hessp=hessp,
-                bounds=bounds,
-                constraints=constraints,
-                tol=tol,
-                callback=callback,
-                options=options,
+                method=self.options["method"],
+                jac=self.options["jac"],
+                hess=self.options["hess"],
+                hessp=self.options["hessp"],
+                bounds=self.options["bounds"],
+                constraints=self.options["constraints"],
+                tol=self.options["tol"],
+                callback=self.options["callback"],
+                options=self.options["options"],
             )
         return m.fun, m.x, m
 
 
-class ParallelBFGS:  # pragma: no cover
+class ParallelBFGS(Optimizer):  # pragma: no cover
     """Computes the L-BFGS-B using parallel evaluation using multiprocessing.
     This implementation here is based on https://doi.org/10.32614/RJ-2019-030.
 
@@ -522,30 +524,24 @@ class ParallelBFGS:  # pragma: no cover
 
     import numpy as np
 
-    def __init__(
-        self,
-        function,
-        args=(),
-        bounds=None,
-        callback=None,
-        options=None,
-        processes=None,
-    ):
-        self.function = function
-        self.args = args
-        self.xval = None
+    def __init__(self, initial_parameters, loss, args=(), **kwargs):
+        super().__init__(initial_parameters, args, loss=loss)
         self.function_value = None
         self.jacobian_value = None
-        self.precision = self.np.finfo("float64").eps
-        self.bounds = bounds
-        self.callback = callback
-        self.options = options
-        self.processes = processes
 
-    def run(self, x0):
+        self.options = {
+            "xval": None,
+            "precision": self.np.finfo("float64").eps,
+            "bounds": None,
+            "callback": None,
+            "options": None,
+            "processes": None,
+        }
+
+        self.set_options(kwargs)
+
+    def fit(self):
         """Executes parallel L-BFGS-B minimization.
-        Args:
-            x0 (numpy.array): guess for initial solution.
 
         Returns:
             scipy.minimize result object
@@ -554,15 +550,15 @@ class ParallelBFGS:  # pragma: no cover
 
         out = minimize(
             fun=self.fun,
-            x0=x0,
+            x0=self.initial_parameters,
             jac=self.jac,
             method="L-BFGS-B",
-            bounds=self.bounds,
-            callback=self.callback,
-            options=self.options,
+            bounds=self.options["bounds"],
+            callback=self.options["callback"],
+            options=self.options["options"],
         )
-        out.hess_inv = out.hess_inv * self.np.identity(len(x0))
-        return out
+        out.hess_inv = out.hess_inv * self.np.identity(len(self.initial_parameters))
+        return out.fun, out.x, out
 
     @staticmethod
     def _eval_approx(eps_at, fun, x, eps):
@@ -578,19 +574,20 @@ class ParallelBFGS:  # pragma: no cover
 
     def evaluate(self, x, eps=1e-8):
         if not (
-            self.xval is not None and all(abs(self.xval - x) <= self.precision * 2)
+            self.options["xval"] is not None
+            and all(abs(self.options["xval"] - x) <= self.options["precision"] * 2)
         ):
             eps_at = range(len(x) + 1)
-            self.xval = x.copy()
+            self.options["xval"] = x.copy()
 
             def operation(epsi):
                 return self._eval_approx(
-                    epsi, lambda y: self.function(y, *self.args), x, eps
+                    epsi, lambda y: self.loss_function(y, *self.args), x, eps
                 )
 
             from joblib import Parallel, delayed
 
-            ret = Parallel(self.processes, prefer="threads")(
+            ret = Parallel(self.options["processes"], prefer="threads")(
                 delayed(operation)(epsi) for epsi in eps_at
             )
             self.function_value = ret[0]
