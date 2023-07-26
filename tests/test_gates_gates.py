@@ -515,8 +515,11 @@ def test_csxdg(backend):
     "name,params",
     [
         ("CRX", {"theta": 0.1}),
+        ("CRX", {"theta": np.random.randint(-5, 5) * np.pi / 2}),
         ("CRY", {"theta": 0.2}),
+        ("CRY", {"theta": np.random.randint(-5, 5) * np.pi / 2}),
         ("CRZ", {"theta": 0.3}),
+        ("CRZ", {"theta": np.random.randint(-5, 5) * np.pi / 2}),
         ("CU1", {"theta": 0.1}),
         ("CU2", {"phi": 0.1, "lam": 0.2}),
         ("CU3", {"theta": 0.1, "phi": 0.2, "lam": 0.3}),
@@ -535,6 +538,13 @@ def test_cun(backend, name, params):
     else:
         with pytest.raises(NotImplementedError):
             gate.qasm_label
+
+    if name in ["CRX", "CRY", "CRZ"]:
+        theta = params["theta"]
+        if (theta % (np.pi / 2)).is_integer():
+            assert gate.clifford
+        else:
+            assert not gate.clifford
 
     final_state = apply_gates(backend, [gate], initial_state=initial_state)
 

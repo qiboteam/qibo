@@ -1018,6 +1018,9 @@ class _CRn_(ParametrizedGate):
         self.parameters = theta
         self.unitary = True
 
+        if (theta % (np.pi / 2)).is_integer():
+            self.clifford = True
+
         self.init_args = [q0, q1]
         self.init_kwargs = {"theta": theta, "trainable": trainable}
 
