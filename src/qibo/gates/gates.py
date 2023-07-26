@@ -481,7 +481,7 @@ class _Rn_(ParametrizedGate):
         self.target_qubits = (q,)
         self.unitary = True
 
-        if (theta % (np.pi / 2)).is_integer():
+        if isinstance(theta, (float, int)) and (theta % (np.pi / 2)).is_integer():
             self.clifford = True
 
         self.parameters = theta
@@ -1018,7 +1018,7 @@ class _CRn_(ParametrizedGate):
         self.parameters = theta
         self.unitary = True
 
-        if (theta % (np.pi / 2)).is_integer():
+        if isinstance(theta, (float, int)) and (theta % (np.pi / 2)).is_integer():
             self.clifford = True
 
         self.init_args = [q0, q1]
