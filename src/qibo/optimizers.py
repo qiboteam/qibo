@@ -121,6 +121,7 @@ class SGD(Optimizer):
                     count += Param.nparams
                     # update trainable params and retrieve gate param
                     params.append(Param.get_params(trainablep, feature=feature))
+
             return params
 
     def calculate_loss_func_grad(self, results, labels, idx, delta=1e-6):
@@ -132,14 +133,16 @@ class SGD(Optimizer):
             idx: parameter number with respect to which we calculate the gradient
             delta: size of the finite difference perturbation
         """
+
         grads = np.empty(self.nlabels)
         for lab in range(self.nlabels):
-            shifted = results.copy()
-            shifted[idx][lab] += delta
-            forward = self.loss_function(shifted, labels, self.args)
-            shifted[idx][lab] -= 2 * delta
-            backward = self.loss_function(shifted, labels, self.args)
+            shifted = results[idx : idx + 1, :]
+            shifted[0][lab] += delta
+            forward = self.loss_function(shifted, labels[idx : idx + 1, :], self.args)
+            shifted[0][lab] -= 2 * delta
+            backward = self.loss_function(shifted, labels[idx : idx + 1, :], self.args)
             grads[lab] = (forward - backward) / (2 * delta)
+
         return grads
 
     def run_circuit(self, feature):
@@ -189,9 +192,9 @@ class SGD(Optimizer):
         """
 
         if isinstance(feature, np.ndarray):
-            results = np.zeros(len(feature))
+            results = np.zeros((len(feature), self.nlabels))
             for i, feat in enumerate(feature):
-                results[i] = self.run_circuit(feat)
+                results[i, :] = self.run_circuit(feat)
             return results
         else:
             return self.run_circuit(feature)
@@ -235,6 +238,7 @@ class SGD(Optimizer):
                     self, self.cdr_params, ham, self.options["nshots"]
                 )  # d<B> N params, N label gradients
 
+            # print("grads", obs_gradients)
             loss_func_grad = self.calculate_loss_func_grad(results, labels, i)
 
             circ_grads += np.dot(loss_func_grad.T, obs_gradients)
@@ -255,10 +259,15 @@ class SGD(Optimizer):
         loss_gradients = circ_grads / (self.nsample)
 
         # Fubini-Study Metric renormalisation
+        # print("before natgrad", loss_gradients)
         if self.options["natgrad"]:
             fubini /= len(features)
+            # original_norm = np.linalg.norm(loss_gradients)
             loss_gradients = np.dot(np.linalg.inv(fubini), loss_gradients)
-
+            # new_norm = np.linalg.norm(loss_gradients)
+            # loss_gradients = loss_gradients / new_norm * original_norm
+        # print("after natgrad", loss_gradients)
+        # exit(0)
         return loss_gradients, loss / len(features)
 
     def AdamDescent(
@@ -387,7 +396,7 @@ class SGD(Optimizer):
         self.features = X
         self.nsample = len(self.features)
 
-        self.labels = y
+        self.labels = y  # .reshape(-1, 1)
         self.nlabels = 1
         if isinstance(y[0], np.ndarray):
             self.nlabels = len(y[0])

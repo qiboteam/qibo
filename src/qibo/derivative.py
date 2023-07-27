@@ -591,6 +591,10 @@ def generate_fubini(
         scale_factors = [1] * nparams
 
     # build graph from circuit gates
+    print(trainable_params)
+    print(gate_params)
+    print(circuit.queue)
+    exit(0)
     graph = Graph(nqubits, circuit.queue, trainable_params, gate_params)
     graph.build_graph()
     backend = GlobalBackend()
