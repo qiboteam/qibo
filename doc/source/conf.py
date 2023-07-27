@@ -82,11 +82,11 @@ html_theme_options = {
     "light_logo": "qibo_logo_dark.svg",
     "dark_logo": "qibo_logo_light.svg",
     "light_css_variables": {
-        "color-brand-primary": "#6400FF",
-        "color-brand-secondary": "#6400FF",
-        "color-brand-content": "#6400FF",
+        "font-stack": "Ubuntu, Arial, sans-serif",
     },
 }
+
+html_theme_options = {}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
