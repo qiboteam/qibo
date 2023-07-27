@@ -23,9 +23,9 @@ Dataset's dimensionality is reduced by passing it through autoencoder. If you ar
 Reduced dataset can be downloaded from `Zenodo` :
 [record/7673769](https://zenodo.org/record/7673769)\
 Small portion of dataset in `data` folder:
-  - `latentrep_QCD_sig.h5` $\rightarrow$ train dataset (QCD)
-  - `latentrep_QCD_sig_testclustering.h5` $\rightarrow$ test dataset (QCD)
-  - `latentrep_RSGraviton_WW_NA_35.h5` $\rightarrow$ test dataset (Signal)
+  - `latentrep_QCD_sig.h5`: train dataset (QCD)
+  - `latentrep_QCD_sig_testclustering.h5`: test dataset (QCD)
+  - `latentrep_RSGraviton_WW_NA_35.h5`: test dataset (Signal)
 
 ### Run training
 To run a training of quantum k-medians algorithm we need to provide arguments:
@@ -63,5 +63,6 @@ python evaluate.py --centroids_file 'centroids.npy' --data_qcd_file 'latentrep_Q
 ```
 
 #### ROC curve plot
-$\rightarrow$ output of evaluation script
+
+Output of evaluation script
 ![ROC_curve](figures/roc_curve.png)
