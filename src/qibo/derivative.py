@@ -245,7 +245,10 @@ def parameter_shift(
     gate = circuit.associate_gates_with_parameters()[parameter_index]
 
     # getting the generator_eigenvalue
-    generator_eigenval = gate.generator_eigenvalue()
+    if isinstance(gate, gates.CU1):
+        generator_eigenval = 0.5
+    else:
+        generator_eigenval = gate.generator_eigenvalue()
 
     # defining the shift according to the psr
     s = np.pi / (4 * generator_eigenval)
@@ -528,7 +531,7 @@ def execute_circuit(
     initial_state=None,
     cdr_params=None,
     calibration=None,
-    precise=True,
+    precise=False,
 ):
     """Probabilistic circuit execution with possibilities for error mitigation"""
     if precise:
@@ -591,10 +594,6 @@ def generate_fubini(
         scale_factors = [1] * nparams
 
     # build graph from circuit gates
-    print(trainable_params)
-    print(gate_params)
-    print(circuit.queue)
-    exit(0)
     graph = Graph(nqubits, circuit.queue, trainable_params, gate_params)
     graph.build_graph()
     backend = GlobalBackend()

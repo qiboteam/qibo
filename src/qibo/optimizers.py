@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 import tensorflow as tf
 from scipy.optimize import basinhopping
@@ -22,6 +24,8 @@ class Optimizer:
         self.args = args
         self.initial_parameters = initial_parameters
         self.backend = backends.GlobalBackend()
+        self.ftime = None
+        self.etime = None
 
         if not isinstance(initial_parameters, list) and not isinstance(
             initial_parameters, np.ndarray
@@ -229,6 +233,9 @@ class SGD(Optimizer):
 
         # iterate through all data points
         for i, feat in enumerate(features):
+            ftime = time.time()
+            self.file.write(f"Feature {feat}, duration {ftime-self.ftime}\n")
+            self.ftime = ftime
             results[i] = self.predict(feat)
 
             obs_gradients = np.empty((self.nlabels, self.nparams))
@@ -340,7 +347,9 @@ class SGD(Optimizer):
             indices.append(np.arange(ib, self.nsample, options["batches"]))
 
         iteration = 0
-        file = open(self.options["filename"], "w")
+        self.file = open(self.options["filename"], "w")
+        self.ftime = time.time()
+        self.etime = time.time()
 
         for epoch in range(options["epochs"]):
             if epoch != 0 and losses[-1] < options["J_threshold"]:
@@ -372,15 +381,18 @@ class SGD(Optimizer):
                     " | loss: ",
                     this_loss,
                 )
-                file.write(
-                    f"Iteration {iteration}, epoch {epoch + 1} | loss: {this_loss}\n"
+
+                etime = time.time()
+                self.file.write(
+                    f"Iteration {iteration}, epoch {epoch + 1} | loss: {this_loss} | duration: {etime-self.etime}\n"
                 )
+                self.etime = etime
 
                 # in case one wants to plot J as a function of the iterations
                 losses.append(this_loss)
 
-        np.savetxt(file, self.params, fmt="%.15f")
-        file.close()
+        np.savetxt(self.file, self.params, fmt="%.15f")
+        self.file.close()
 
         return losses
 
@@ -396,10 +408,11 @@ class SGD(Optimizer):
         self.features = X
         self.nsample = len(self.features)
 
-        self.labels = y  # .reshape(-1, 1)
-        self.nlabels = 1
-        if isinstance(y[0], np.ndarray):
-            self.nlabels = len(y[0])
+        self.labels = y
+        if y.ndim == 1:
+            self.labels = self.labels.reshape(-1, 1)
+
+        self.nlabels = self.labels.shape[1]
 
         if self.backend is None:
             from qibo.backends import GlobalBackend
