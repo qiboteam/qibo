@@ -39,6 +39,7 @@ furo = "^2022.12.7"
 recommonmark = "^0.7.1"
 sphinxcontrib-bibtex = "^2.5.0"
 sphinx-markdown-tables = "^0.0.17"
+sphinx-copybutton = "^0.5.2"
 nbsphinx = "^0.8.12"
 ipython = "^8.10.0"
 
