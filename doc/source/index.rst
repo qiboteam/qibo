@@ -20,7 +20,7 @@ Qibo aims to contribute as a community driven quantum middleware software with
 Components
 ----------
 
-.. image:: qibo_ecosystem.png
+.. image:: qibo_ecosystem.svg
 
 Key features
 ------------

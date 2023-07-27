@@ -8,7 +8,7 @@ Qibo provides backends for quantum simulation on classical
 hardware and quantum hardware management and control. In the image below we
 present a schematic view of the currently supported backends.
 
-.. image:: backends.png
+.. image:: backends.svg
 
 Quantum simulation is proposed through dedicated backends for single node
 multi-GPU and multi-threading CPU setups. Quantum hardware control is supported
