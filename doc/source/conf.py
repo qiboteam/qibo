@@ -76,7 +76,7 @@ html_theme = "furo"
 html_favicon = "favicon.ico"
 
 # custom title
-html_title = "Qibo docs · v" + release
+html_title = "Qibo · v" + release
 
 html_theme_options = {
     "light_logo": "qibo_logo_dark.svg",
