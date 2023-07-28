@@ -141,17 +141,12 @@ class SGD(Optimizer):
 
         grads = np.empty(self.nlabels)
         for lab in range(self.nlabels):
-            print(results)
             shifted = results[idx : idx + 1, :]
-            print(shifted)
             shifted[0][lab] += delta
-            print(shifted)
             forward = self.loss_function(shifted, labels[idx : idx + 1, :], self.args)
             shifted[0][lab] -= 2 * delta
             backward = self.loss_function(shifted, labels[idx : idx + 1, :], self.args)
             grads[lab] = (forward - backward) / (2 * delta)
-        print(grads)
-        exit(0)
         return grads
 
     def run_circuit(self, feature):
@@ -163,9 +158,9 @@ class SGD(Optimizer):
 
         # set parameters
         parameters = self._get_params(trainable=False, feature=feature)
-        print("params", parameters)
+        # print("params", parameters)
         self._circuit.set_parameters(parameters)
-        print(self._circuit.draw(), self._circuit.get_parameters())
+        # print(self._circuit.draw(), self._circuit.get_parameters())
 
         # run circuit
 
@@ -244,18 +239,18 @@ class SGD(Optimizer):
             self.file.write(f"Feature {feat}, duration {ftime-self.ftime}\n")
             self.ftime = ftime
             results[i] = self.predict(feat)
-            print("results", results)
+            # print("results", results)
             obs_gradients = np.empty((self.nlabels, self.nparams))
-            print("obs_gradients", obs_gradients)
+            # print("obs_gradients", obs_gradients)
             for h, ham in enumerate(self.hamiltonian):
                 obs_gradients[h] = calculate_gradients(
                     self, self.cdr_params, ham, self.options["nshots"]
                 )  # d<B> N params, N label gradients
-            print("OBS_GRADIENTS", obs_gradients)
+            # print("OBS_GRADIENTS", obs_gradients)
             loss_func_grad = self.calculate_loss_func_grad(results, labels, i)
-            print("loss_func_grad", loss_func_grad)
+            # print("loss_func_grad", loss_func_grad)
             circ_grads += np.dot(loss_func_grad.T, obs_gradients)
-            print("circ_grad", circ_grads)
+            # print("circ_grad", circ_grads)
             if self.options["natgrad"]:
                 fubini += generate_fubini(
                     self._circuit,
@@ -266,17 +261,18 @@ class SGD(Optimizer):
                     mitigation=self.options["mitigation"],
                     noise_model=self.options["noise_model"],
                 )  # separate pull request
-            print("fub", fubini)
-            exit(0)
+            # print("fub", fubini)
+            # exit(0)
         # gradient average
         loss = self.loss_function(results, labels, self.args)
         loss_gradients = circ_grads / (self.nsample)
-
+        print("loss", loss)
+        print("grads", loss_gradients)
         # Fubini-Study Metric renormalisation
         if self.options["natgrad"]:
             fubini /= len(features)
             loss_gradients = np.dot(np.linalg.inv(fubini), loss_gradients)
-
+        print("grads fub", loss_gradients)
         return loss_gradients, loss / len(features)
 
     def AdamDescent(
@@ -314,6 +310,8 @@ class SGD(Optimizer):
         )
 
         if self.options["adam"]:
+            print("adam")
+            exit(0)
             for i in range(self.nparams):
                 m[i] = beta_1 * m[i] + (1 - beta_1) * grads[i]
                 v[i] = beta_2 * v[i] + (1 - beta_2) * grads[i] * grads[i]
@@ -324,6 +322,8 @@ class SGD(Optimizer):
 
         # standard gradient descent
         else:
+            print("standard")
+            exit(0)
             for i in range(self.nparams):
                 self.params[i] -= learning_rate * grads[i]
             return 0, 0, loss
