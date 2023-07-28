@@ -141,13 +141,17 @@ class SGD(Optimizer):
 
         grads = np.empty(self.nlabels)
         for lab in range(self.nlabels):
+            print(results)
             shifted = results[idx : idx + 1, :]
+            print(shifted)
             shifted[0][lab] += delta
+            print(shifted)
             forward = self.loss_function(shifted, labels[idx : idx + 1, :], self.args)
             shifted[0][lab] -= 2 * delta
             backward = self.loss_function(shifted, labels[idx : idx + 1, :], self.args)
             grads[lab] = (forward - backward) / (2 * delta)
-
+        print(grads)
+        exit(0)
         return grads
 
     def run_circuit(self, feature):
