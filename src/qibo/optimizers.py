@@ -1,4 +1,5 @@
 import time
+from datetime import datetime
 
 import numpy as np
 from scipy.optimize import basinhopping
@@ -25,6 +26,7 @@ class Optimizer:
         self.backend = backends.GlobalBackend()
         self.ftime = None
         self.etime = None
+        self.name = f'Run_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
 
         if not isinstance(initial_parameters, list) and not isinstance(
             initial_parameters, np.ndarray
@@ -105,7 +107,7 @@ class SGD(Optimizer):
             "mitigation": False,
             "noise_model": None,
             "adam": True,
-            "filename": "QuantumFit/results/results.txt",
+            "filename": f"QuantumFit/results/{self.name}.txt",
         }
         self.set_options(kwargs)
 
@@ -388,7 +390,7 @@ class SGD(Optimizer):
                 # in case one wants to plot J as a function of the iterations
                 losses.append(this_loss)
 
-        np.savetxt(self.file, self.params, fmt="%.15f")
+        self.file.write(f"Params {self.params}\n")
         self.file.close()
 
         return losses
