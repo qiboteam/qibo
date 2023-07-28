@@ -240,18 +240,18 @@ class SGD(Optimizer):
             self.file.write(f"Feature {feat}, duration {ftime-self.ftime}\n")
             self.ftime = ftime
             results[i] = self.predict(feat)
-
+            print("results", results)
             obs_gradients = np.empty((self.nlabels, self.nparams))
-            print(obs_gradients)
+            print("obs_gradients", obs_gradients)
             for h, ham in enumerate(self.hamiltonian):
                 obs_gradients[h] = calculate_gradients(
                     self, self.cdr_params, ham, self.options["nshots"]
                 )  # d<B> N params, N label gradients
-
+            print("OBS_GRADIENTS", obs_gradients)
             loss_func_grad = self.calculate_loss_func_grad(results, labels, i)
-            print(loss_func_grad)
+            print("loss_func_grad", loss_func_grad)
             circ_grads += np.dot(loss_func_grad.T, obs_gradients)
-            print(circ_grads)
+            print("circ_grad", circ_grads)
             if self.options["natgrad"]:
                 fubini += generate_fubini(
                     self._circuit,
@@ -262,7 +262,7 @@ class SGD(Optimizer):
                     mitigation=self.options["mitigation"],
                     noise_model=self.options["noise_model"],
                 )  # separate pull request
-            print(fubini)
+            print("fub", fubini)
             exit(0)
         # gradient average
         loss = self.loss_function(results, labels, self.args)

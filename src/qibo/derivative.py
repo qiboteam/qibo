@@ -536,9 +536,7 @@ def execute_circuit(
     """Probabilistic circuit execution with possibilities for error mitigation"""
     if precise:
         state = c().state()
-        print(state)
         res = obs.expectation(state)
-        print(res)
         return res
 
     # retrieve state
