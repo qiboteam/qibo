@@ -105,7 +105,7 @@ class SGD(Optimizer):
             "mitigation": False,
             "noise_model": None,
             "adam": True,
-            "filename": "results.txt",
+            "filename": "QuantumFit/results/results.txt",
         }
         self.set_options(kwargs)
 
@@ -244,7 +244,6 @@ class SGD(Optimizer):
                     self, self.cdr_params, ham, self.options["nshots"]
                 )  # d<B> N params, N label gradients
 
-            # print("grads", obs_gradients)
             loss_func_grad = self.calculate_loss_func_grad(results, labels, i)
 
             circ_grads += np.dot(loss_func_grad.T, obs_gradients)
@@ -265,15 +264,10 @@ class SGD(Optimizer):
         loss_gradients = circ_grads / (self.nsample)
 
         # Fubini-Study Metric renormalisation
-        # print("before natgrad", loss_gradients)
         if self.options["natgrad"]:
             fubini /= len(features)
-            # original_norm = np.linalg.norm(loss_gradients)
             loss_gradients = np.dot(np.linalg.inv(fubini), loss_gradients)
-            # new_norm = np.linalg.norm(loss_gradients)
-            # loss_gradients = loss_gradients / new_norm * original_norm
-        # print("after natgrad", loss_gradients)
-        # exit(0)
+
         return loss_gradients, loss / len(features)
 
     def AdamDescent(
@@ -305,6 +299,10 @@ class SGD(Optimizer):
         """
 
         grads, loss = self.dloss(features, labels)
+
+        self.file.write(
+            f"Grads (absolute value: {np.linalg.norm(grads)}): {grads.tolist()}\nParams {self.params}\n"
+        )
 
         if self.options["adam"]:
             for i in range(self.nparams):

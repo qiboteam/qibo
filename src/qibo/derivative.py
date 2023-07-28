@@ -1,10 +1,10 @@
 import numpy as np
 
 from qibo import gates
-from qibo.backends import GlobalBackend
+from qibo.backends import GlobalBackend, matrices
 from qibo.config import raise_error
+from qibo.hamiltonians import Hamiltonian, SymbolicHamiltonian
 from qibo.hamiltonians.abstract import AbstractHamiltonian
-from qibo.hamiltonians.hamiltonians import SymbolicHamiltonian
 from qibo.models import Circuit
 from qibo.models.error_mitigation import (
     CDR,
