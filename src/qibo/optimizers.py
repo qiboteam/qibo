@@ -319,7 +319,7 @@ class SGD(Optimizer):
         # standard gradient descent
         else:
             for i in range(self.nparams):
-                self.params[i] -= learning_rate / 100 * grads[i]
+                self.params[i] -= learning_rate * grads[i]
             return 0, 0, loss
 
     def sgd(self, options):
