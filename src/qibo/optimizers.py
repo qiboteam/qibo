@@ -159,7 +159,9 @@ class SGD(Optimizer):
 
         # set parameters
         parameters = self._get_params(trainable=False, feature=feature)
+        print("params", parameters)
         self._circuit.set_parameters(parameters)
+        print(self._circuit.draw(), self._circuit.get_parameters())
 
         # run circuit
 
@@ -238,6 +240,7 @@ class SGD(Optimizer):
             self.file.write(f"Feature {feat}, duration {ftime-self.ftime}\n")
             self.ftime = ftime
             results[i] = self.predict(feat)
+            exit(0)
 
             obs_gradients = np.empty((self.nlabels, self.nparams))
 

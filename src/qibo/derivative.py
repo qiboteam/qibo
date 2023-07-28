@@ -531,12 +531,15 @@ def execute_circuit(
     initial_state=None,
     cdr_params=None,
     calibration=None,
-    precise=False,
+    precise=True,
 ):
     """Probabilistic circuit execution with possibilities for error mitigation"""
     if precise:
         state = c().state()
-        return obs.expectation(state)
+        print(state)
+        res = obs.expectation(state)
+        print(res)
+        return res
 
     # retrieve state
     state = backend.execute_circuit(
