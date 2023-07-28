@@ -107,7 +107,7 @@ class SGD(Optimizer):
             "mitigation": False,
             "noise_model": None,
             "adam": True,
-            "filename": f"QuantumFit/results/{self.name}.txt",
+            "filename": f"{self.name}.txt",
         }
         self.set_options(kwargs)
 
