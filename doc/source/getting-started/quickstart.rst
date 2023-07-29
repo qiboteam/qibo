@@ -1,12 +1,12 @@
 Quick start
 -----------
 
-To quickly install Qibo and a high performance simulator for CPU, open a
-terminal with python >= 3.7 and type:
+To quickly install Qibo and a lightweight simulator for CPU, open a
+terminal with ``python >= 3.8`` and type:
 
 .. code-block:: bash
 
-      pip install qibo qibojit
+      pip install qibo
 
 This will install the basic primitives to start coding quantum applications.
 
@@ -14,9 +14,9 @@ Instead, if you use `conda <https://anaconda.org/>`_ type:
 
 .. code-block:: bash
 
-      conda install -c conda-forge qibo qibojit
+      conda install -c conda-forge qibo
 
-.. warning::
+.. note::
     The ``qibo`` package alone includes a lightweight ``numpy`` simulator for
     single-thread CPU. Please visit the `backends <backend-drivers>`_
     documentation for more details about simulation backends.

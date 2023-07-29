@@ -455,12 +455,28 @@ class I(Gate):
 
 
 class Align(Gate):
-    def __init__(self, *q):
+    """Aligns proceeding qubit operations and (optionally) waits ``delay`` amount of time.
+
+    Args:
+        *q (int): The qubit ID numbers.
+        delay (int, optional): The time (in ns) for which to delay circuit execution on the specified qubits.
+            Defaults to ``0`` (zero).
+    """
+
+    def __init__(self, *q, delay: int = 0):
+        if not isinstance(delay, int):
+            raise_error(
+                TypeError, f"delay must be type int, but it is type {type(delay)}."
+            )
+        if delay < 0.0:
+            raise_error(ValueError, "Delay must not be negative.")
+
         super().__init__()
         self.name = "align"
-        self.draw_label = "A"
+        self.delay = delay
+        self.draw_label = f"A({delay})"
+        self.init_kwargs = {"delay": delay}
         self.target_qubits = tuple(q)
-        self.init_args = q
 
 
 class _Rn_(ParametrizedGate):
