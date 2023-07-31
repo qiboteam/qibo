@@ -3,54 +3,12 @@ import random
 
 import numpy as np
 
-from qibo import gates
 from qibo.backends import GlobalBackend
 from qibo.config import raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.hamiltonians.hamiltonians import SymbolicHamiltonian
-from qibo.models import Circuit
+from qibo.models.parameter import Parameter
 from qibo.symbols import Z
-
-
-class Parameter:
-    def __init__(self, func, trainablep, featurep=None):
-        self._trainablep = trainablep
-        self._featurep = featurep
-        self.nparams = len(trainablep)
-        self.lambdaf = func
-
-    def _apply_func(self, fixed_params=None):
-        params = []
-        if self._featurep is not None:
-            params.append(self._featurep)
-        if fixed_params:
-            params.extend(fixed_params)
-        else:
-            params.extend(self._trainablep)
-        return self.lambdaf(*params)
-
-    def _update_params(self, trainablep=None, feature=None):
-        if trainablep:
-            self._trainablep = trainablep
-        if feature:
-            self._featurep = feature
-
-    def get_params(self, trainablep=None, feature=None):
-        self._update_params(trainablep=trainablep, feature=feature)
-        return self._apply_func()
-
-    def get_indices(self, start_index):
-        return [start_index + i for i in range(self.nparams)]
-
-    def get_fixed_part(self, trainablep_idx):
-        params = [0] * self.nparams
-        params[trainablep_idx] = self._trainablep[trainablep_idx]
-        return self._apply_func(fixed_params=params)
-
-    def get_scaling_factor(self, trainablep_idx):
-        params = [0] * self.nparams
-        params[trainablep_idx] = 1.0
-        return self._apply_func(fixed_params=params)
 
 
 def calculate_gradients(optimizer, feature):
@@ -282,7 +240,7 @@ def generate_new_stochastic_params(Param, ipar):
     """Generates the three-gate parameters needed for the stochastic parameter-shift rule"""
 
     sampling = random.random()
-    trainable_param = Param._trainablep[ipar]
+    trainable_param = Param._variational_parameters[ipar]
     F = Param.get_fixed_part(ipar)
     scaling = Param.get_scaling_factor(ipar)
 
