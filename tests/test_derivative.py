@@ -6,12 +6,12 @@ import qibo
 from qibo import gates, hamiltonians
 from qibo.backends import GlobalBackend
 from qibo.derivative import (
-    Parameter,
     finite_differences,
     parameter_shift,
     stochastic_parameter_shift,
 )
 from qibo.models import Circuit
+from qibo.models.parameter import Parameter
 from qibo.symbols import Z
 
 qibo.set_backend("tensorflow")
