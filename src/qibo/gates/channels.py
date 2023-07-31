@@ -692,6 +692,41 @@ class AmplitudeDampingChannel(KrausChannel):
         self.draw_label = "AD"
 
 
+class PhaseDampingChannel(KrausChannel):
+    """Single-qubit phase damping channel in its Kraus representation, i.e.
+
+    .. math::
+        K_{0} = \\begin{pmatrix}
+            1 & 0 \\\\
+            0 & \\sqrt{1 - \\gamma} \\\\
+        \\end{pmatrix} \\,\\, , \\,\\,
+        K_{1} = \\begin{pmatrix}
+            0 & 0 \\\\
+            0 & \\sqrt{\\gamma} \\\\
+        \\end{pmatrix}
+
+    Args:
+        qubit (int): Qubit id that the noise channel acts on.
+        gamma (float): phase damping strength.
+    """
+
+    def __init__(self, qubit, gamma: float):
+        if not isinstance(gamma, float):
+            raise_error(
+                TypeError, f"gamma must be type float, but it is type {type(gamma)}."
+            )
+        if gamma < 0.0 or gamma > 1.0:
+            raise_error(ValueError, "gamma must be a float between 0 and 1.")
+
+        operators = []
+        operators.append(np.array([[1, 0], [0, sqrt(1 - gamma)]], dtype=complex))
+        operators.append(np.array([[0, 0], [0, sqrt(gamma)]], dtype=complex))
+
+        super().__init__([(qubit,)] * len(operators), operators)
+        self.name = "PhaseDampingChannel"
+        self.draw_label = "PD"
+
+
 class ReadoutErrorChannel(KrausChannel):
     """Readout error channel implemented as a quantum-to-classical channel.
 

@@ -115,6 +115,18 @@ class AmplitudeDampingError:
         self.channel = gates.AmplitudeDampingChannel
 
 
+class PhaseDampingError:
+    """Quantum error associated with the :class:`qibo.gates.PhaseDampingChannel`.
+
+    Args:
+        options (float): see :class:`qibo.gates.PhaseDampingChannel`
+    """
+
+    def __init__(self, gamma):
+        self.options = gamma
+        self.channel = gates.PhaseDampingChannel
+
+
 class ReadoutError:
     """Quantum error associated with :class:'qibo.gates;ReadoutErrorChannel'.
 
@@ -208,6 +220,7 @@ class NoiseModel:
                 :class:`qibo.noise.DepolarizingError`,
                 :class:`qibo.noise.ThermalRelaxationError`,
                 :class:`qibo.noise.AmplitudeDampingError`,
+                :class:`qibo.noise.PhaseDampingError`,
                 :class:`qibo.noise.ReadoutError`,
                 :class:`qibo.noise.ResetError`,
                 :class:`qibo.noise.UnitaryError`,
@@ -331,6 +344,7 @@ class NoiseModel:
                                 (
                                     ThermalRelaxationError,
                                     AmplitudeDampingError,
+                                    PhaseDampingError,
                                     ResetError,
                                 ),
                             )
