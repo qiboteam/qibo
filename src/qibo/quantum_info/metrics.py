@@ -1,13 +1,14 @@
 """Submodule with distances, metrics, and measures for quantum states and channels."""
 
 import numpy as np
+from scipy import sparse
 
 from qibo.backends import GlobalBackend
 from qibo.config import PRECISION_TOL, raise_error
 
 
 def purity(state):
-    """Purity of a quantum state :math:`\\rho`, which is given by :math:`\\text{Tr}(\\rho^{2})`.
+    """Purity of a quantum state :math:`\\rho`, which is given by :math:`\\text{tr}(\\rho^{2})`.
 
     Args:
         state (ndarray): statevector or density matrix.
@@ -56,9 +57,9 @@ def concurrence(state, bipartition, check_purity: bool = True, backend=None):
     :math:`\\rho \\in \\mathcal{H}_{A} \\otimes \\mathcal{H}_{B}` as
 
     .. math::
-        C(\\rho) = \\sqrt{2 \\, (\\text{tr}^{2}(\\rho) - \\text{tr}(\\rho_{B}^{2}))} \\, ,
+        C(\\rho) = \\sqrt{2 \\, (\\text{tr}^{2}(\\rho) - \\text{tr}(\\rho_{A}^{2}))} \\, ,
 
-    where :math:`\\rho_{B} = \\text{tr}_{B}(\\rho)` is the reduced density operator
+    where :math:`\\rho_{A} = \\text{tr}_{B}(\\rho)` is the reduced density operator
     obtained by tracing out the qubits in the ``bipartition`` :math:`B`.
 
     Args:
@@ -154,7 +155,7 @@ def entanglement_of_formation(
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    from qibo.quantum_info.utils import shannon_entropy
+    from qibo.quantum_info.utils import shannon_entropy  # pylint: disable=C0415
 
     concur = concurrence(
         state, bipartition=bipartition, check_purity=check_purity, backend=backend
@@ -172,7 +173,7 @@ def entropy(state, base: float = 2, check_hermitian: bool = False, backend=None)
     is given by
 
     .. math::
-        S(\\rho) = - \\text{Tr}\\left[\\rho \\, \\log(\\rho)\\right]
+        S(\\rho) = - \\text{tr}\\left[\\rho \\, \\log(\\rho)\\right]
 
     Args:
         state (ndarray): statevector or density matrix.
@@ -250,9 +251,9 @@ def entanglement_entropy(
     which is given by
 
     .. math::
-        S(\\rho_{A}) = -\\tr(\\rho_{A} \\, \\log(\\rho_{A})) \\, ,
+        S(\\rho_{A}) = -\\text{tr}(\\rho_{A} \\, \\log(\\rho_{A})) \\, ,
 
-    where :math:`\\rho_{A} = \\tr_{B}(\\rho)` is the reduced density matrix calculated
+    where :math:`\\rho_{A} = \\text{tr}_{B}(\\rho)` is the reduced density matrix calculated
     by tracing out the ``bipartition`` :math:`B`.
 
     Args:
@@ -307,7 +308,7 @@ def trace_distance(state, target, check_hermitian: bool = False, backend=None):
 
     .. math::
         T(\\rho, \\sigma) = \\frac{1}{2} \\, \\|\\rho - \\sigma\\|_{1} = \\frac{1}{2} \\,
-            \\text{Tr}\\left[ \\sqrt{(\\rho - \\sigma)^{\\dagger}(\\rho - \\sigma)}
+            \\text{tr}\\left[ \\sqrt{(\\rho - \\sigma)^{\\dagger}(\\rho - \\sigma)}
             \\right] \\, ,
 
     where :math:`\\|\\cdot\\|_{1}` is the Schatten 1-norm.
@@ -385,7 +386,7 @@ def hilbert_schmidt_distance(state, target):
 
     .. math::
         \\langle \\rho \\, , \\, \\sigma \\rangle_{\\text{HS}} =
-            \\text{Tr}\\left((\\rho - \\sigma)^{2}\\right)
+            \\text{tr}\\left((\\rho - \\sigma)^{2}\\right)
 
     Args:
         state (ndarray): statevector or density matrix.
@@ -424,13 +425,13 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
     and ``target`` state :math:`\\sigma`. In general,
 
     .. math::
-        F(\\rho, \\sigma) = \\text{Tr}^{2}\\left( \\sqrt{\\sqrt{\\sigma} \\,
+        F(\\rho, \\sigma) = \\text{tr}^{2}\\left( \\sqrt{\\sqrt{\\sigma} \\,
         \\rho^{\\dagger} \\, \\sqrt{\\sigma}} \\right) \\, .
 
     However, when at least one of the states is pure, then
 
     .. math::
-        F(\\rho, \\sigma) = \\text{Tr}(\\rho \\, \\sigma)
+        F(\\rho, \\sigma) = \\text{tr}(\\rho \\, \\sigma)
 
     Args:
         state (ndarray): statevector or density matrix.
@@ -459,6 +460,7 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
             "Both objects must have dims either (k,) or (k,l), "
             + f"but have dims {state.shape} and {target.shape}",
         )
+
     if isinstance(check_hermitian, bool) is False:
         raise_error(
             TypeError,
@@ -616,7 +618,7 @@ def entanglement_fidelity(
     .. math::
         \\begin{align*}
           F_{\\mathcal{E}} &= \\text{fidelity}(\\rho_{f}, \\rho) \\nonumber \\\\
-          &= \\tr(\\rho_{f} \\, \\rho)
+          &= \\text{tr}(\\rho_{f} \\, \\rho)
 
     where
 
@@ -696,7 +698,7 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
 
     .. math::
         F_{\\text{pro}}(\\mathcal{E}, \\mathcal{U}) = \\frac{1}{d^{2}} \\,
-            \\text{Tr}(\\mathcal{E}^{\\dagger} \\, \\mathcal{U})
+            \\text{tr}(\\mathcal{E}^{\\dagger} \\, \\mathcal{U})
 
     Args:
         channel: quantum channel :math:`\\mathcal{E}`.
@@ -852,6 +854,126 @@ def gate_error(channel, target=None, check_unitary: bool = False, backend=None):
     return error
 
 
+def diamond_norm(channel, target=None, **kwargs):
+    """Calculates the diamond norm :math:`\\|\\mathcal{E}\\|_{\\diamond}` of
+    ``channel`` :math:`\\mathcal{E}`. If a ``target`` channel :math:`\\Lambda`
+    is specified, then it calculates :math:`\\| \\mathcal{E} - \\Lambda\\|_{\\diamond}`.
+
+    Example:
+
+        .. testcode::
+
+            from qibo.quantum_info import diamond_norm, random_unitary, to_choi
+
+            nqubits = 1
+            dim = 2**nqubits
+
+            unitary = random_unitary(dim)
+            unitary = to_choi(unitary, order="row")
+
+            unitary_2 = random_unitary(dim)
+            unitary_2 = to_choi(unitary_2, order="row")
+
+            dnorm = diamond_norm(unitary, unitary_2)
+
+    Args:
+        channel (ndarray): row-vectorized Choi representation of a quantum channel.
+        target (ndarray, optional): row-vectorized Choi representation of a target
+            quantum channel. Defaults to ``None``.
+        kwargs: optional arguments to pass to CVXPY solver. For more information,
+            please visit `CVXPY's API documentation
+            <https://www.cvxpy.org/api_reference/cvxpy.problems.html#problem>`_.
+
+    Returns:
+        float: diamond norm of either ``channel`` or ``channel - target``.
+
+    .. note::
+        This function requires the optional CVXPY package to be installed.
+
+    """
+    import cvxpy  # pylint: disable=C0415
+
+    if target is not None:
+        if channel.shape != target.shape:
+            raise_error(
+                TypeError,
+                f"Channels must have the same dims, but {channel.shape} != {target.shape}",
+            )
+
+    if target is not None:
+        channel -= target
+
+    # `CVXPY` only works with `numpy`, so this function has to
+    # convert any channel to the `numpy` backend by default
+    backend = GlobalBackend()
+    channel = backend.to_numpy(channel)
+
+    channel = np.transpose(channel)
+    channel_real = np.real(channel)
+    channel_imag = np.imag(channel)
+
+    dim = int(np.sqrt(channel.shape[0]))
+
+    first_variables_real = cvxpy.Variable(shape=(dim, dim))
+    first_variables_imag = cvxpy.Variable(shape=(dim, dim))
+    first_variables = cvxpy.bmat(
+        [
+            [first_variables_real, -first_variables_imag],
+            [first_variables_imag, first_variables_real],
+        ]
+    )
+
+    second_variables_real = cvxpy.Variable(shape=(dim, dim))
+    second_variables_imag = cvxpy.Variable(shape=(dim, dim))
+    second_variables = cvxpy.bmat(
+        [
+            [second_variables_real, -second_variables_imag],
+            [second_variables_imag, second_variables_real],
+        ]
+    )
+
+    variables_real = cvxpy.Variable(shape=(dim**2, dim**2))
+    variables_imag = cvxpy.Variable(shape=(dim**2, dim**2))
+    identity = sparse.eye(dim)
+
+    constraints_real = cvxpy.bmat(
+        [
+            [cvxpy.kron(identity, first_variables_real), variables_real],
+            [variables_real.T, cvxpy.kron(identity, second_variables_real)],
+        ]
+    )
+    constraints_imag = cvxpy.bmat(
+        [
+            [cvxpy.kron(identity, first_variables_imag), variables_imag],
+            [-variables_imag.T, cvxpy.kron(identity, second_variables_imag)],
+        ]
+    )
+    constraints_block = cvxpy.bmat(
+        [[constraints_real, -constraints_imag], [constraints_imag, constraints_real]]
+    )
+
+    constraints = [
+        first_variables >> 0,
+        first_variables_real == first_variables_real.T,
+        first_variables_imag == -first_variables_imag.T,
+        cvxpy.trace(first_variables_real) == 1,
+        second_variables >> 0,
+        second_variables_real == second_variables_real.T,
+        second_variables_imag == -second_variables_imag.T,
+        cvxpy.trace(second_variables_real) == 1,
+        constraints_block >> 0,
+    ]
+
+    objective_function = cvxpy.Maximize(
+        cvxpy.trace(channel_real @ variables_real)
+        + cvxpy.trace(channel_imag @ variables_imag)
+    )
+    problem = cvxpy.Problem(objective=objective_function, constraints=constraints)
+    solution = problem.solve(**kwargs)
+
+    return solution
+
+
 def meyer_wallach_entanglement(circuit, backend=None):
     """Computes the Meyer-Wallach entanglement Q of the `circuit`,
 
@@ -877,7 +999,7 @@ def meyer_wallach_entanglement(circuit, backend=None):
 
     rho = backend.execute_circuit(circuit).state()
 
-    entropy = 0
+    ent = 0
     for j in range(nqubits):
         trace_q = list(range(nqubits))
         trace_q.pop(j)
@@ -886,9 +1008,9 @@ def meyer_wallach_entanglement(circuit, backend=None):
 
         trace = purity(rho_r)
 
-        entropy += trace
+        ent += trace
 
-    entanglement = 1 - entropy / nqubits
+    entanglement = 1 - ent / nqubits
 
     return entanglement
 
@@ -963,7 +1085,10 @@ def expressibility(circuit, t: int, samples: int, backend=None):
             TypeError, f"samples must be type int, but it is type {type(samples)}."
         )
 
-    from qibo.quantum_info.utils import haar_integral, pqc_integral
+    from qibo.quantum_info.utils import (  # pylint: disable=C0415
+        haar_integral,
+        pqc_integral,
+    )
 
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()

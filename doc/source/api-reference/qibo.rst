@@ -434,6 +434,13 @@ Pauli Z (Z)
     :members:
     :member-order: bysource
 
+Square-root of Pauli X (SX)
+"""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.SX
+    :members:
+    :member-order: bysource
+
 S gate (S)
 """""""""""
 
@@ -452,6 +459,13 @@ Identity (I)
 """"""""""""
 
 .. autoclass:: qibo.gates.I
+    :members:
+    :member-order: bysource
+
+Align (A)
+"""""""""
+
+.. autoclass:: qibo.gates.Align
     :members:
     :member-order: bysource
 
@@ -518,6 +532,13 @@ Controlled-phase (CZ)
 """""""""""""""""""""
 
 .. autoclass:: qibo.gates.CZ
+    :members:
+    :member-order: bysource
+
+Controlled-Square Root of X (CSX)
+"""""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.CSX
     :members:
     :member-order: bysource
 
@@ -591,6 +612,13 @@ fSim
     :members:
     :member-order: bysource
 
+Sycamore gate
+"""""""""""""
+
+.. autoclass:: qibo.gates.SYC
+    :members:
+    :member-order: bysource
+
 fSim with general rotation
 """"""""""""""""""""""""""
 
@@ -619,6 +647,40 @@ Parametric ZZ interaction (RZZ)
     :members:
     :member-order: bysource
 
+Parametric ZX interaction (RZX)
+"""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.RZX
+    :members:
+    :member-order: bysource
+
+Parametric XX-YY interaction (RXY)
+""""""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.RXY
+    :members:
+    :member-order: bysource
+
+Givens gate
+"""""""""""
+
+.. autoclass:: qibo.gates.GIVENS
+    :members:
+    :member-order: bysource
+
+Reconfigurable Beam Splitter gate (RBS)
+"""""""""""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.RBS
+    :members:
+    :member-order: bysource
+
+Echo Cross-Resonance gate (ECR)
+""""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.ECR
+    :members:
+    :member-order: bysource
 
 Special gates
 ^^^^^^^^^^^^^
@@ -627,6 +689,13 @@ Toffoli
 """""""
 
 .. autoclass:: qibo.gates.TOFFOLI
+    :members:
+    :member-order: bysource
+
+Deutsch
+"""""""
+
+.. autoclass:: qibo.gates.DEUTSCH
     :members:
     :member-order: bysource
 
@@ -728,6 +797,20 @@ Thermal relaxation channel
     :members:
     :member-order: bysource
 
+Amplitude damping channel
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.gates.AmplitudeDampingChannel
+    :members:
+    :member-order: bysource
+
+Phase damping channel
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.gates.PhaseDampingChannel
+    :members:
+    :member-order: bysource
+
 Readout error channel
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -775,11 +858,19 @@ The quantum errors available to build a noise model are the following:
     :members:
     :member-order: bysource
 
+.. autoclass:: qibo.noise.DepolarizingError
+    :members:
+    :member-order: bysource
+
 .. autoclass:: qibo.noise.ThermalRelaxationError
     :members:
     :member-order: bysource
 
-.. autoclass:: qibo.noise.DepolarizingError
+.. autoclass:: qibo.noise.AmplitudeDampingError
+    :members:
+    :member-order: bysource
+
+.. autoclass:: qibo.noise.PhaseDampingError
     :members:
     :member-order: bysource
 
@@ -837,9 +928,9 @@ only when number of qubits is small.
 Alternatively, the user can construct this Hamiltonian using a sparse matrices.
 Sparse matrices from the
 `scipy.sparse <https://docs.scipy.org/doc/scipy/reference/sparse.html>`_
-module are supported by the numpy and qibojit backends while the
-`tf.sparse <https://www.tensorflow.org/api_docs/python/tf/sparse>_` can be
-used for tensorflow. Scipy sparse matrices support algebraic
+module are supported by the ``numpy`` and ``qibojit`` backends while the
+`tensorflow.sparse <https://www.tensorflow.org/api_docs/python/tf/sparse>`_ can be
+used for ``tensorflow``. Scipy sparse matrices support algebraic
 operations (addition, subtraction, scalar multiplication), linear algebra
 operations (eigenvalues, eigenvectors, matrix exponentiation) and
 multiplication to dense or other sparse matrices. All these properties are
@@ -851,7 +942,6 @@ values using a sparse Hamiltonian matrix.
 .. autoclass:: qibo.hamiltonians.Hamiltonian
     :members:
     :member-order: bysource
-    :noindex:
 
 
 Symbolic Hamiltonian
@@ -866,7 +956,6 @@ For more information on constructing Hamiltonians using symbols we refer to the
 .. autoclass:: qibo.hamiltonians.SymbolicHamiltonian
     :members:
     :member-order: bysource
-    :noindex:
 
 
 When a :class:`qibo.hamiltonians.SymbolicHamiltonian` is used for time
@@ -1289,6 +1378,12 @@ Gate error
 .. autofunction:: qibo.quantum_info.gate_error
 
 
+Diamond Norm
+""""""""""""
+
+.. autofunction:: qibo.quantum_info.diamond_norm
+
+
 Meyer-Wallach entanglement
 """"""""""""""""""""""""""
 
@@ -1404,6 +1499,30 @@ Unvectorization
     is such that :math:`n > 16`.
 
 
+To Choi
+"""""""
+
+.. autofunction:: qibo.quantum_info.to_choi
+
+
+To Liouville
+""""""""""""
+
+.. autofunction:: qibo.quantum_info.to_liouville
+
+
+To Pauli-Liouville
+""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.to_pauli_liouville
+
+
+To Chi
+"""""""
+
+.. autofunction:: qibo.quantum_info.to_chi
+
+
 Choi to Liouville
 """""""""""""""""
 
@@ -1445,6 +1564,12 @@ Choi to Chi-matrix
 .. autofunction:: qibo.quantum_info.choi_to_chi
 
 
+Choi to Stinespring
+"""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.choi_to_stinespring
+
+
 Kraus to Choi
 """""""""""""
 
@@ -1467,6 +1592,12 @@ Kraus to Chi-matrix
 """""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.kraus_to_chi
+
+
+Kraus to Stinespring
+""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.kraus_to_stinespring
 
 
 Liouville to Choi
@@ -1504,6 +1635,12 @@ Liouville to Chi-matrix
 .. autofunction:: qibo.quantum_info.liouville_to_chi
 
 
+Liouville to Stinespring
+""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.liouville_to_stinespring
+
+
 Pauli-Liouville to Liouville
 """"""""""""""""""""""""""""
 
@@ -1527,6 +1664,12 @@ Pauli-Liouville to Chi-matrix
 """""""""""""""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.pauli_to_chi
+
+
+Pauli-Liouville to Stinespring
+""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.pauli_to_stinespring
 
 
 Chi-matrix to Choi
@@ -1571,6 +1714,42 @@ Chi-matrix to Kraus
     it in its default setting (``validate_cp=True``).
 
 
+Chi-matrix to Stinespring
+"""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.chi_to_stinespring
+
+
+Stinespring to Choi
+"""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.stinespring_to_choi
+
+
+Stinespring to Liouville
+""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.stinespring_to_liouville
+
+
+Stinespring to Pauli-Liouville
+""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.stinespring_to_pauli
+
+
+Stinespring to Kraus
+""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.stinespring_to_kraus
+
+
+Stinespring to Chi-matrix
+"""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.stinespring_to_chi
+
+
 Kraus operators as probabilistic sum of unitaries
 """""""""""""""""""""""""""""""""""""""""""""""""
 
@@ -1592,6 +1771,12 @@ Hamming weight
 """"""""""""""
 
 .. autofunction:: qibo.quantum_info.hamming_weight
+
+
+Hadamard Transform
+""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.hadamard_transform
 
 
 Shannon entropy

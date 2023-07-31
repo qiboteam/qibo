@@ -36,6 +36,8 @@ class Gate:
         self.init_args = []
         self.init_kwargs = {}
 
+        self.clifford = False
+        self.unitary = False
         self._target_qubits = tuple()
         self._control_qubits = set()
         self._parameters = tuple()
@@ -204,6 +206,13 @@ class Gate:
 
     def dagger(self) -> "Gate":
         """Returns the dagger (conjugate transpose) of the gate.
+
+        Note that dagger is not persistent for parametrized gates.
+        For example, applying a dagger to an :class:`qibo.gates.gates.RX` gate
+        will change the sign of its parameter at the time of application.
+        However, if the parameter is updated after that, for example using
+        :meth:`qibo.models.circuit.Circuit.set_parameters`, then the
+        action of dagger will be lost.
 
         Returns:
             A :class:`qibo.gates.Gate` object representing the dagger of

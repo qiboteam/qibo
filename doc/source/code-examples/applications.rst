@@ -6,8 +6,6 @@ Applications
 In this section we present some examples of quantum circuits applied to specific
 problems.
 
-_______________________
-
 Applications by topic
 ---------------------
 
@@ -84,8 +82,8 @@ Quantum Machine Learning
     tutorials/autoencoder/README.md
     tutorials/EF_QAE/README.md
     tutorials/qfiae/qfiae_demo.ipynb
-
-_______________________
+    tutorials/qcnn_classifier/qcnn_demo.ipynb
+    tutorials/qclustering/README.md
 
 Applications by algorithm
 -------------------------
@@ -108,7 +106,7 @@ Variational Quantum Circuits
     tutorials/bell-variational/README.md
     tutorials/qPDF/qPDF.ipynb
     tutorials/anomaly_detection/README.md
-
+    tutorials/qcnn_classifier/qcnn_demo.ipynb
 
 Grover's Algorithm
 ^^^^^^^^^^^^^^^^^^
@@ -148,3 +146,11 @@ FALQON
     :maxdepth: 1
 
     tutorials/falqon/README.md
+
+Clustering
+^^^^^^^^^^
+
+.. toctree::
+    :maxdepth: 1
+
+    tutorials/qclustering/README.md

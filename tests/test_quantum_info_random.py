@@ -5,6 +5,7 @@ from functools import reduce
 import numpy as np
 import pytest
 
+from qibo import matrices
 from qibo.config import PRECISION_TOL
 from qibo.quantum_info.metrics import purity
 from qibo.quantum_info.random_ensembles import (
@@ -251,72 +252,42 @@ def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
             )
 
 
-@pytest.mark.parametrize("qubits", [1, 2, [0, 1], np.array([0, 1])])
-@pytest.mark.parametrize("return_circuit", [False, True])
-@pytest.mark.parametrize("fuse", [False, True])
 @pytest.mark.parametrize("seed", [10])
-def test_random_clifford(backend, qubits, return_circuit, fuse, seed):
+@pytest.mark.parametrize("return_circuit", [True, False])
+@pytest.mark.parametrize("nqubits", [1, 2])
+def test_random_clifford(backend, nqubits, return_circuit, seed):
     with pytest.raises(TypeError):
-        q = "1"
-        random_clifford(q, backend=backend)
+        test = random_clifford(
+            nqubits="1", return_circuit=return_circuit, backend=backend
+        )
     with pytest.raises(ValueError):
-        q = -1
-        random_clifford(q, backend=backend)
-    with pytest.raises(ValueError):
-        q = [0, 1, -3]
-        random_clifford(q, backend=backend)
+        test = random_clifford(
+            nqubits=-1, return_circuit=return_circuit, backend=backend
+        )
     with pytest.raises(TypeError):
-        q = 1
-        random_clifford(q, return_circuit="True", backend=backend)
+        test = random_clifford(nqubits, return_circuit="True", backend=backend)
     with pytest.raises(TypeError):
-        q = 2
-        random_clifford(q, fuse="True", backend=backend)
-    with pytest.raises(TypeError):
-        q = 1
-        random_clifford(q, seed=0.1, backend=backend)
+        test = random_clifford(
+            nqubits, return_circuit=return_circuit, seed=0.1, backend=backend
+        )
 
-    result_single = np.array([[0.5 - 0.5j, -0.5 + 0.5j], [0.5 + 0.5j, 0.5 + 0.5j]])
+    result_single = matrices.Z @ matrices.H
 
-    result_two = np.array(
-        [
-            [0.5 + 0.0j, -0.5 - 0.0j, -0.5 + 0.0j, 0.5 + 0.0j],
-            [0.0 - 0.5j, 0.0 - 0.5j, 0.0 + 0.5j, 0.0 + 0.5j],
-            [0.0 + 0.5j, 0.0 - 0.5j, 0.0 + 0.5j, 0.0 - 0.5j],
-            [0.5 + 0.0j, 0.5 + 0.0j, 0.5 - 0.0j, 0.5 + 0.0j],
-        ]
-    )
+    result_two = np.kron(matrices.H, matrices.S) @ np.kron(matrices.S, matrices.Z)
+    result_two = np.kron(matrices.Z @ matrices.S, matrices.I) @ result_two
+    result_two = matrices.CNOT @ matrices.CZ @ result_two
 
-    result = result_single if (isinstance(qubits, int) and qubits == 1) else result_two
+    result = result_single if nqubits == 1 else result_two
     result = backend.cast(result, dtype=result.dtype)
 
     matrix = random_clifford(
-        qubits, return_circuit=return_circuit, fuse=fuse, seed=seed, backend=backend
+        nqubits, return_circuit=return_circuit, seed=seed, backend=backend
     )
 
     if return_circuit:
-        matrix = backend.cast(matrix.matrix, dtype=matrix.matrix.dtype)
-        backend.assert_allclose(
-            backend.calculate_norm(matrix - result) < PRECISION_TOL, True
-        )
+        matrix = matrix.unitary(backend)
 
-    if not return_circuit and fuse:
-        backend.assert_allclose(
-            backend.calculate_norm(matrix - result) < PRECISION_TOL, True
-        )
-
-    if not return_circuit and not fuse:
-        if isinstance(qubits, int) and qubits == 1:
-            backend.assert_allclose(
-                backend.calculate_norm(matrix - result) < PRECISION_TOL, True
-            )
-        else:
-            from functools import reduce
-
-            backend.assert_allclose(
-                backend.calculate_norm(reduce(np.kron, matrix) - result)
-                < PRECISION_TOL,
-                True,
-            )
+    backend.assert_allclose(matrix, result, atol=PRECISION_TOL)
 
 
 def test_random_pauli_errors(backend):
@@ -370,7 +341,7 @@ def test_pauli_single(backend):
     result = np.array([[1.0 + 0.0j, 0.0 + 0.0j], [0.0 + 0.0j, -1.0 + 0.0j]])
     result = backend.cast(result, dtype=result.dtype)
 
-    matrix = random_pauli(0, 1, 1, seed=10, backend=backend).unitary()
+    matrix = random_pauli(0, 1, 1, seed=10, backend=backend).unitary(backend=backend)
     matrix = backend.cast(matrix, dtype=matrix.dtype)
 
     backend.assert_allclose(
@@ -403,7 +374,7 @@ def test_random_pauli(backend, qubits, depth, max_qubits, subset, return_circuit
     )
 
     if return_circuit:
-        matrix = matrix.unitary()
+        matrix = matrix.unitary(backend=backend)
         matrix = backend.cast(matrix, dtype=matrix.dtype)
         if subset is None:
             backend.assert_allclose(

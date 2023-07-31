@@ -24,6 +24,7 @@ physics problems.
 - [Feedback-based ALgorithm for Quantum OptimizatioN - FALQON](falqon/README.md)
 - [A general Grover model](grover/README.md)
 - [Quantum anomaly detection](anomaly_detection/README.md)
+- [Quantum k-medians clustering](qclustering/README.md)
 
 In the `benchmarks` folder we have included examples concerning:
 - A generic benchmark script for multiple circuits (`benchmarks/main.py`)

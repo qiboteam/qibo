@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "qibo"
-version = "0.1.15"
+version = "0.1.17"
 description = "A framework for quantum computing with hardware acceleration."
 authors = ["The Qibo team"]
 license = "Apache License 2.0"
@@ -39,6 +39,7 @@ furo = "^2022.12.7"
 recommonmark = "^0.7.1"
 sphinxcontrib-bibtex = "^2.5.0"
 sphinx-markdown-tables = "^0.0.17"
+sphinx-copybutton = "^0.5.2"
 nbsphinx = "^0.8.12"
 ipython = "^8.10.0"
 
@@ -48,6 +49,7 @@ optional = true
 [tool.poetry.group.tests.dependencies]
 pytest = "^7.2.1"
 cirq = "^1.1.0"
+cvxpy = "^1.3.1"
 ply = "^3.11"
 scikit-learn = "^1.2.1"
 dill = "^0.3.6"

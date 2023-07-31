@@ -95,10 +95,12 @@ class QiboMatrices:
         self.X = self.matrices.X
         self.Y = self.matrices.Y
         self.Z = self.matrices.Z
+        self.SX = self.matrices.SX
         self.H = self.matrices.H
         self.S = self.matrices.S
         self.SDG = self.matrices.SDG
         self.CNOT = self.matrices.CNOT
+        self.CZ = self.matrices.CZ
 
 
 matrices = QiboMatrices()

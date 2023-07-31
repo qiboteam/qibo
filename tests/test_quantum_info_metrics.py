@@ -1,14 +1,14 @@
 import numpy as np
 import pytest
 
-from qibo import gates
+from qibo import Circuit, gates
 from qibo.config import PRECISION_TOL
-from qibo.models import Circuit
 from qibo.quantum_info.metrics import (
     average_gate_fidelity,
     bures_angle,
     bures_distance,
     concurrence,
+    diamond_norm,
     entanglement_entropy,
     entanglement_fidelity,
     entanglement_of_formation,
@@ -31,6 +31,7 @@ from qibo.quantum_info.random_ensembles import (
     random_statevector,
     random_unitary,
 )
+from qibo.quantum_info.superoperator_transformations import to_choi
 
 
 def test_purity_and_impurity(backend):
@@ -556,6 +557,23 @@ def test_process_fidelity_and_infidelity(backend):
     backend.assert_allclose(
         gate_error(channel, channel, backend=backend), 0.0, atol=PRECISION_TOL
     )
+
+
+@pytest.mark.parametrize("nqubits", [1, 2])
+def test_diamond_norm(backend, nqubits):
+    with pytest.raises(TypeError):
+        test = random_unitary(2**nqubits, backend=backend)
+        test_2 = random_unitary(4**nqubits, backend=backend)
+        test = diamond_norm(test, test_2)
+
+    unitary = backend.identity_density_matrix(nqubits, normalize=False)
+    unitary = to_choi(unitary, order="row", backend=backend)
+
+    dnorm = diamond_norm(unitary)
+    backend.assert_allclose(dnorm, 1.0, atol=PRECISION_TOL)
+
+    dnorm = diamond_norm(unitary, unitary)
+    backend.assert_allclose(dnorm, 0.0, atol=PRECISION_TOL)
 
 
 def test_meyer_wallach_entanglement(backend):

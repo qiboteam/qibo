@@ -33,8 +33,7 @@ def test_dill_global_backend():
 
 
 def test_dill_circuit(accelerators):
-    from qibo import gates
-    from qibo.models import Circuit
+    from qibo import Circuit, gates
 
     circuit = Circuit(5, accelerators=accelerators)
     circuit.add(gates.H(i) for i in range(5))
@@ -72,8 +71,7 @@ def test_dill_symbols():
 
 
 def test_dill_measurement_symbol(backend):
-    from qibo import gates
-    from qibo.models import Circuit
+    from qibo import Circuit, gates
 
     circuit = Circuit(1)
     circuit.add(gates.H(0))

@@ -5,7 +5,6 @@ from scipy.optimize import curve_fit
 
 from qibo import gates
 from qibo.config import raise_error
-from qibo.models import Circuit
 
 
 def get_gammas(c, solve: bool = True):
@@ -477,8 +476,12 @@ def calibration_matrix(nqubits, noise_model=None, nshots: int = 1000, backend=No
             readout mitigation.
     """
 
+    from qibo import Circuit  # pylint: disable=import-outside-toplevel
+
     if backend is None:  # pragma: no cover
-        from qibo.backends import GlobalBackend
+        from qibo.backends import (  # pylint: disable=import-outside-toplevel
+            GlobalBackend,
+        )
 
         backend = GlobalBackend()
 
@@ -550,8 +553,10 @@ def apply_randomized_readout_mitigation(
             mitigated frequencies.
 
     """
-
-    from qibo.quantum_info import random_pauli
+    from qibo import Circuit  # pylint: disable=import-outside-toplevel
+    from qibo.quantum_info import (  # pylint: disable=import-outside-toplevel
+        random_pauli,
+    )
 
     if backend is None:  # pragma: no cover
         from qibo.backends import GlobalBackend

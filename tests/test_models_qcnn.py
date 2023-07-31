@@ -3,8 +3,7 @@ import math
 import numpy as np
 import pytest
 
-from qibo import gates, matrices
-from qibo.models import Circuit
+from qibo import Circuit, gates
 from qibo.models.qcnn import QuantumCNN
 
 num_angles = 21
