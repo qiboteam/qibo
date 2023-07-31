@@ -7,6 +7,7 @@ from scipy.optimize import basinhopping
 from qibo import backends
 from qibo.config import log, raise_error
 from qibo.derivative import (
+    build_graph,
     calculate_gradients,
     create_hamiltonian,
     error_mitigation,
@@ -221,6 +222,7 @@ class SGD(Optimizer):
         # setup fubini matrix for natural gradient
         if self.options["natgrad"]:
             fubini = np.zeros((self.nparams, self.nparams))
+            nparams, graph = build_graph(self._circuit, self.nqubits, self.paramInputs)
 
         # calculate CDR parameters anew at each epoch
         if self.options["mitigation"]:
@@ -233,7 +235,7 @@ class SGD(Optimizer):
                 self.options["noise_model"],
                 self.options["nshots"],
             )
-        self.grad = 0
+
         # iterate through all data points
         for i, feat in enumerate(features):
             ftime = time.time()
@@ -252,13 +254,13 @@ class SGD(Optimizer):
             circ_grads += np.dot(loss_func_grad.T, obs_gradients)
 
             if self.options["natgrad"]:
+                graph.update_parameters(self._circuit.get_parameters())
+
                 fubini += generate_fubini(
-                    self._circuit,
+                    graph,
+                    nparams,
                     self.nqubits,
                     self.paramInputs,
-                    feat,
-                    params=self.params,
-                    mitigation=self.options["mitigation"],
                     noise_model=self.options["noise_model"],
                 )  # separate pull request
 

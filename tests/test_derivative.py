@@ -9,6 +9,7 @@ from qibo.backends import GlobalBackend
 from qibo.derivative import (
     Graph,
     Parameter,
+    build_graph,
     create_hamiltonian,
     generate_fubini,
     parameter_shift,
@@ -257,6 +258,28 @@ def test_graph(layer_num, trainable_qubits_correct, affected_params_correct):
     assert np.allclose(affected_params, affected_params_correct)
 
 
+def graph_improvements(layer_num, trainable_qubits_correct, affected_params_correct):
+    circuit = ansatz_2qubit(3, 2)
+    print(circuit.draw())
+    nqubits = circuit.nqubits
+    gates = circuit.queue
+    trainable_params = np.linspace(0.1, 1, 18)
+    gate_params = [
+        trainable_params[i] + trainable_params[i + 1] for i in range(0, 18, 2)
+    ]
+    trainable_params_index = [[i, i + 1] for i in range(0, 18, 2)]
+
+    print(gates, trainable_params_index, gate_params)
+    graph = Graph(nqubits, gates, trainable_params_index, gate_params)
+
+    graph.build_graph()
+
+    new_circuit, trainable_qubits, affected_params = graph.run_layer(layer_num)
+
+    assert np.allclose(trainable_qubits, trainable_qubits_correct)
+    assert np.allclose(affected_params, affected_params_correct)
+
+
 def loss_func(ypred, ytrue, other_args=None):
     loss = 0
     for i in range(len(ypred)):
@@ -279,7 +302,16 @@ def test_natural_gradient():
 
     _ = optimiser.run_circuit(0.1)
 
-    fubini = generate_fubini(circuit, 1, initial_parameters, 1.0, stochastic=False)
+    nparams, graph = build_graph(
+        optimiser._circuit, optimiser.nqubits, optimiser.paramInputs
+    )
+    fubini = generate_fubini(
+        graph,
+        nparams,
+        1,
+        optimiser.paramInputs,
+        noise_model=optimiser.options["noise_model"],
+    )
 
     # initialize optimiser with numpy array
     initial_parameters2 = np.full(12, 0.1)
@@ -289,7 +321,16 @@ def test_natural_gradient():
 
     _ = optimiser2.run_circuit(0.1)
 
-    fubini2 = generate_fubini(circuit, 1, initial_parameters2, 1.0, stochastic=False)
+    nparams, graph = build_graph(
+        optimiser2._circuit, optimiser2.nqubits, optimiser2.paramInputs
+    )
+    fubini2 = generate_fubini(
+        graph,
+        nparams,
+        1,
+        optimiser2.paramInputs,
+        noise_model=optimiser2.options["noise_model"],
+    )
 
     assert np.allclose(optimiser.params, params)
 
@@ -316,8 +357,20 @@ def test_multiqubit_natural_gradient():
 
     _ = optimiser.run_circuit(0.1)
 
+    nparams, graph = build_graph(
+        optimiser._circuit, optimiser.nqubits, optimiser.paramInputs
+    )
     fubini = generate_fubini(
-        circuit, nqubits, initial_parameters, 1.0, stochastic=False
+        graph,
+        nparams,
+        nqubits,
+        optimiser.paramInputs,
+        noise_model=optimiser.options["noise_model"],
     )
 
     assert np.allclose(fubini, metric_tensor)
+
+
+if __name__ == "__main__":
+    # graph_improvements(1, [0, 1], [[0, 1], [2, 3]])
+    test_multiqubit_natural_gradient()

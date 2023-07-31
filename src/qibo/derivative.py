@@ -307,20 +307,18 @@ def parameter_shift(
 class Node:
     """Parent class to create gate nodes"""
 
-    def __init__(self, gate, trainable_params, gate_params):
+    def __init__(self, gate, trainable_params, ID):
         self.gate = gate
         self.trainable_params = trainable_params  # index of optimisable parameters
-        self.gate_params = gate_params  # gate parameters
-        self.prev = None
         self.next = None
+        self.id = ID
 
 
 class ConvergeNode(Node):
     """Node for two-qubit gates"""
 
-    def __init__(self, gate, trainable_params, gate_params):
-        super().__init__(gate, trainable_params, gate_params)
-        self.prev_target = None
+    def __init__(self, gate, trainable_params, ID):
+        super().__init__(gate, trainable_params, ID)
         self.next_target = None
         self.waiting = None
 
@@ -353,15 +351,15 @@ class Graph:
             # store parameters for ParametrizedGate
             if isinstance(gate, gates.ParametrizedGate):
                 trainp = self.trainable_params[count]
-                gatep = self.gate_params[count]
+                gateid = count
                 count += 1
             else:
                 trainp = None
-                gatep = None
+                gateid = None
 
             # two-qubit gates
             if n == 1:
-                node = ConvergeNode(gate, trainp, gatep)
+                node = ConvergeNode(gate, trainp, gateid)
                 control = gate.init_args[0]
                 target = gate.init_args[1]
 
@@ -373,7 +371,6 @@ class Graph:
                 # link to existing graph node
                 else:
                     nodes[ends[control]].next = i
-                    node.prev = ends[control]
                     ends[control] = i
 
                 # target qubit
@@ -384,7 +381,6 @@ class Graph:
                 # link to existing graph node
                 else:
                     nodes[ends[target]].next = i
-                    node.prev = ends[target]
                     ends[target] = i
 
                 depth[control] += 1
@@ -392,7 +388,7 @@ class Graph:
 
             # one-qubit gate
             else:
-                node = Node(gate, trainp, gatep)
+                node = Node(gate, trainp, gateid)
                 qubit = gate.target_qubits[0]
 
                 # start of graph
@@ -402,7 +398,6 @@ class Graph:
                 # link to existing graph node
                 else:
                     nodes[ends[qubit]].next = i
-                    node.prev = ends[qubit]
                     ends[qubit] = i
 
                 depth[qubit] += 1
@@ -425,6 +420,9 @@ class Graph:
         else:
             return gates.Z
 
+    def update_parameters(self, params):
+        self.gate_params = params
+
     def run_layer(self, layer):
         """Runs through one layer of the circuit parameters
         Args:
@@ -442,6 +440,7 @@ class Graph:
 
         trainable_qubits = []
         affected_params = []
+        gate_order = []
 
         # run through layer up to N
         for iter in range(layer + 1):
@@ -457,6 +456,7 @@ class Graph:
                     # second arrived
                     elif node.waiting != q:
                         c.add(node.gate)
+                        gate_order.append(node.id)
                         control = node.gate.init_args[0]
                         target = node.gate.init_args[1]
                         current[control] = node.next
@@ -472,8 +472,15 @@ class Graph:
                 # simple one-qubit node
                 else:
                     c.add(node.gate)
+                    gate_order.append(node.id)
                     if node.next:
                         current[q] = node.next
+
+        # set parameters
+        numgates = c.trainable_gates.nparams
+        # Update the list_to_update based on the placement order
+        updated_list = [self.gate_params[i] for i in gate_order if i is not None]
+        c.set_parameters(updated_list[:numgates])
 
         return c, trainable_qubits, affected_params
 
@@ -559,27 +566,13 @@ def execute_circuit(
     return result
 
 
-def generate_fubini(
-    circuit,
-    nqubits,
-    paramInputs,
-    feature,
-    params=None,
-    mitigation=False,
-    noise_model=None,
-    stochastic=True,
-):
-    """Generate the Fubini-Study metric tensor"""
-
+def build_graph(circuit, nqubits, paramInputs):
     if isinstance(paramInputs, list):
         nparams = sum([param.nparams for param in paramInputs])
     else:
         nparams = len(paramInputs)
-    fubini = np.zeros((nparams, nparams))
 
     # trainable and gate parameters
-    gate_params = circuit.associate_gates_with_parameters()
-    scale_factors = []
 
     if isinstance(paramInputs, list):
         trainable_params = []
@@ -588,24 +581,49 @@ def generate_fubini(
             indices = Param.get_indices(count)
             count += len(indices)
             trainable_params.append(indices)
+
+    else:
+        trainable_params = [[i] for i in range(nparams)]
+
+    # build graph from circuit gates
+    graph = Graph(nqubits, circuit.queue, trainable_params, circuit.get_parameters())
+    graph.build_graph()
+
+    return nparams, graph
+
+
+def generate_fubini(
+    graph,
+    nparams,
+    nqubits,
+    paramInputs,
+    noise_model=None,
+    stochastic=True,
+):
+    """Generate the Fubini-Study metric tensor"""
+    fubini = np.zeros((nparams, nparams))
+    backend = GlobalBackend()
+
+    scale_factors = []
+
+    if isinstance(paramInputs, list):
+        count = 0
+        for Param in paramInputs:
+            indices = Param.get_indices(count)
+            count += len(indices)
             for idx in range(len(indices)):
                 scale_factors.append(Param.get_scaling_factor(idx))
     else:
-        trainable_params = [[i] for i in range(nparams)]
         scale_factors = [1] * nparams
-
-    # build graph from circuit gates
-    graph = Graph(nqubits, circuit.queue, trainable_params, gate_params)
-    graph.build_graph()
-    backend = GlobalBackend()
 
     """calibration = calibration_matrix(
         1, backend=backend, noise_model=noise_model, nshots=1024
     )"""
-
     # run through layers
+
     for i in range(graph.depth):
         c, qubits, affected_param = graph.run_layer(i)
+
         if noise_model:
             c = noise_model.apply(c)
         if len(qubits) == 0:
