@@ -9,7 +9,6 @@ What is Qibo?
    :target: https://doi.org/10.5281/zenodo.3997195
 
 Qibo is an open-source full stack API for quantum simulation and quantum hardware control.
-
 Qibo aims to contribute as a community driven quantum middleware software with
 
 1. *Simplicity:* agnostic design to quantum primitives.
@@ -18,7 +17,13 @@ Qibo aims to contribute as a community driven quantum middleware software with
 4. *Documentation:* describe all steps required to support new quantum devices or simulators.
 5. *Applications:* maintain a large ecosystem of applications, quantum models and algorithms.
 
-Qibo key features:
+Components
+----------
+
+.. image:: qibo_ecosystem.svg
+
+Key features
+------------
 
 * Definition of a standard language for the construction and execution of quantum circuits with device agnostic approach to simulation and quantum hardware control based on plug and play backend drivers.
 * A continuously growing code-base of quantum algorithms applications presented with examples and tutorials.
@@ -47,6 +52,15 @@ Contents
     :caption: Appendix
 
     appendix/citing-qibo
+
+.. toctree::
+    :maxdepth: 1
+    :caption: Documentation links
+
+    Qibo docs <https://qibo.science/qibo/stable/>
+    Qibolab docs <https://qibo.science/qibolab/stable/>
+    Qibocal docs <https://qibo.science/qibocal/stable/>
+    Qibosoq docs <https://qibo.science/qibosoq/stable/>
 
 
 Indices and tables

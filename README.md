@@ -1,4 +1,4 @@
-![](doc/source/qibo_logo.svg)
+![Logo](https://github.com/qiboteam/qibo/blob/master/doc/source/_static/qibo_logo_dark.svg)
 
 ![Tests](https://github.com/qiboteam/qibo/workflows/Tests/badge.svg)
 [![codecov](https://codecov.io/gh/qiboteam/qibo/branch/master/graph/badge.svg?token=1EKZKVEVX0)](https://codecov.io/gh/qiboteam/qibo)
@@ -34,8 +34,7 @@ Here another example with more gates and shots simulation:
 
 ```python
 import numpy as np
-from qibo.models import Circuit
-from qibo import gates
+from qibo import Circuit, gates
 
 c = Circuit(2)
 c.add(gates.X(0))

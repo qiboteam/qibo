@@ -1,9 +1,8 @@
 import numpy as np
 import pytest
 
-from qibo import gates
+from qibo import Circuit, gates
 from qibo.hamiltonians import SymbolicHamiltonian
-from qibo.models import Circuit
 from qibo.models.error_mitigation import (
     CDR,
     ZNE,

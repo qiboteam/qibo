@@ -21,7 +21,7 @@ import qibo
 # -- Project information -----------------------------------------------------
 
 project = "qibo"
-copyright = "2020-2022 by the Qibo team"
+copyright = "The Qibo team"
 author = "The Qibo team"
 
 # The full version, including alpha/beta/rc tags
@@ -42,6 +42,7 @@ extensions = [
     "sphinx.ext.coverage",
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
+    "sphinx_copybutton",
     "recommonmark",
     "nbsphinx",
 ]
@@ -72,16 +73,19 @@ exclude_patterns = []
 # a list of builtin themes.
 
 html_theme = "furo"
+html_favicon = "favicon.ico"
 
 # custom title
-html_title = "Version " + release
+html_title = "Qibo · v" + release
 
 html_theme_options = {
+    "light_logo": "qibo_logo_dark.svg",
+    "dark_logo": "qibo_logo_light.svg",
     "light_css_variables": {
         "color-brand-primary": "#6400FF",
         "color-brand-secondary": "#6400FF",
         "color-brand-content": "#6400FF",
-    }
+    },
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
