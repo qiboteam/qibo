@@ -108,6 +108,7 @@ class SGD(Optimizer):
             "mitigation": False,
             "noise_model": None,
             "adam": True,
+            "save": False,
             "filename": f"results/{self.name}.txt",
         }
         self.set_options(kwargs)
@@ -243,9 +244,13 @@ class SGD(Optimizer):
 
         # iterate through all data points
         for i, feat in enumerate(features):
-            ftime = time.time()
-            self.file.write(f"Feature {feat}, duration {ftime-self.ftime}\n")
-            self.ftime = ftime
+            # duration measurement
+            if self.options["save"]:
+                ftime = time.time()
+                self.file.write(f"Feature {feat}, duration {ftime-self.ftime}\n")
+                self.ftime = ftime
+
+            # predict current output
             results[i] = self.predict(feat)
 
             obs_gradients = np.zeros((self.nlabels, self.nparams))
@@ -310,9 +315,10 @@ class SGD(Optimizer):
 
         grads, loss = self.dloss(features, labels)
 
-        self.file.write(
-            f"Grads (absolute value: {np.linalg.norm(grads)}): {grads.tolist()}\nParams {self.params}\n"
-        )
+        if self.options["save"]:
+            self.file.write(
+                f"Grads (absolute value: {np.linalg.norm(grads)}): {grads.tolist()}\nParams {self.params}\n"
+            )
 
         if self.options["adam"]:
             for i in range(self.nparams):
@@ -354,18 +360,20 @@ class SGD(Optimizer):
             indices.append(np.arange(ib, self.nsample, options["batches"]))
 
         iteration = 0
-        self.file = open(self.options["filename"], "w")
-        self.file.write(
-            f"Epochs: {self.options['epochs']}, \
-                          learning rate: {self.options['learning_rate']}, \
-                          nshots: {self.options['nshots']}, \
-                          natgrad: {self.options['natgrad']}, \
-                          mitigation: {self.options['mitigation']}, \
-                          noise_model: {self.options['noise_model']}, \
-                          adam: {self.options['adam']}\n"
-        )
-        self.ftime = time.time()
-        self.etime = time.time()
+
+        if self.options["save"]:
+            self.file = open(self.options["filename"], "w")
+            self.file.write(
+                f"Epochs: {self.options['epochs']}, \
+                            learning rate: {self.options['learning_rate']}, \
+                            nshots: {self.options['nshots']}, \
+                            natgrad: {self.options['natgrad']}, \
+                            mitigation: {self.options['mitigation']}, \
+                            noise_model: {self.options['noise_model']}, \
+                            adam: {self.options['adam']}\n"
+            )
+            self.ftime = time.time()
+            self.etime = time.time()
 
         for epoch in range(options["epochs"]):
             if epoch != 0 and losses[-1] < options["J_threshold"]:
@@ -398,17 +406,19 @@ class SGD(Optimizer):
                     this_loss,
                 )
 
-                etime = time.time()
-                self.file.write(
-                    f"Iteration {iteration}, epoch {epoch + 1} | loss: {this_loss} | duration: {etime-self.etime}\n"
-                )
-                self.etime = etime
+                if self.options["save"]:
+                    etime = time.time()
+                    self.file.write(
+                        f"Iteration {iteration}, epoch {epoch + 1} | loss: {this_loss} | duration: {etime-self.etime}\n"
+                    )
+                    self.etime = etime
 
                 # in case one wants to plot J as a function of the iterations
                 losses.append(this_loss)
 
-        self.file.write(f"Params {self.params}\n")
-        self.file.close()
+        if self.options["save"]:
+            self.file.write(f"Params {self.params}\n")
+            self.file.close()
 
         return losses
 

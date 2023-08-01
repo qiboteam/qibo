@@ -487,7 +487,41 @@ class Graph:
         return c, trainable_qubits, affected_params
 
 
-def create_hamiltonian(qubit, nqubit, backend):
+def create_hamiltonian(qubit=0, nqubits=1, backend=None):
+    """Precomputes Hamiltonian.
+
+    Args:
+        nqubits (int): number of qubits.
+        z_qubit (int): qubit where the Z measurement is applied, must be z_qubit < nqubits
+        backend (:class:`qibo.backends.abstract.Backend`): Backend object to use for execution.
+            If ``None`` the currently active global backend is used.
+            Default is ``None``.
+
+    Returns:
+        An Hamiltonian object.
+    """
+    eye = matrices.I
+    if qubit == 0:
+        h = matrices.Z
+        for _ in range(nqubits - 1):
+            h = np.kron(h, eye)
+
+    elif qubit == nqubits - 1:
+        h = eye
+        for _ in range(nqubits - 2):
+            h = np.kron(eye, h)
+        h = np.kron(h, matrices.Z)
+    else:
+        h = eye
+        for _ in range(nqubits - 1):
+            if _ + 1 == qubit:
+                h = np.kron(matrices.Z, h)
+            else:
+                h = np.kron(eye, h)
+    return Hamiltonian(nqubits, h, backend=backend)
+
+
+def create_hamiltoniawn(qubit, nqubit, backend):
     """
     Creates appropriate Hamiltonian for a given list of qubits
     Args:
@@ -647,7 +681,9 @@ def generate_fubini(
     return fubini
 
 
-def run_subcircuit_measure(c, qubit, nqubits, backend, calibration, stochastic):
+def run_subcircuit_measure(
+    c, qubit, nqubits, backend, calibration=None, stochastic=True
+):
     """Run variance measurement on specific qubit of subcircuit
     Args:
         c: subcircuit ending with measurement gates in appropriate basis

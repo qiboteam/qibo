@@ -302,15 +302,16 @@ def test_natural_gradient():
 
     _ = optimiser.run_circuit(0.1)
 
-    nparams, graph = build_graph(
-        optimiser._circuit, optimiser.nqubits, optimiser.paramInputs
+    graph = build_graph(
+        optimiser._circuit, 12, optimiser.nqubits, optimiser.paramInputs
     )
     fubini = generate_fubini(
         graph,
-        nparams,
+        12,
         1,
         optimiser.paramInputs,
         noise_model=optimiser.options["noise_model"],
+        stochastic=False,
     )
 
     # initialize optimiser with numpy array
@@ -321,15 +322,16 @@ def test_natural_gradient():
 
     _ = optimiser2.run_circuit(0.1)
 
-    nparams, graph = build_graph(
-        optimiser2._circuit, optimiser2.nqubits, optimiser2.paramInputs
+    graph = build_graph(
+        optimiser2._circuit, 12, optimiser2.nqubits, optimiser2.paramInputs
     )
     fubini2 = generate_fubini(
         graph,
-        nparams,
+        12,
         1,
         optimiser2.paramInputs,
         noise_model=optimiser2.options["noise_model"],
+        stochastic=False,
     )
 
     assert np.allclose(optimiser.params, params)
@@ -351,21 +353,27 @@ def test_multiqubit_natural_gradient():
         3, nqubits
     )  # 2 qubits x 3 layers x 2 gates x 2 parameters = 24 params
     initial_parameters = [Parameter(lambda th1: th1, [0.1]) for i in range(24)]
+
+    hamiltonians = [create_hamiltonian(i, 2, GlobalBackend()) for i in range(2)]
     optimiser = qibo.optimizers.SGD(
-        circuit=circuit, parameters=initial_parameters, loss=loss_func
+        circuit=circuit,
+        parameters=initial_parameters,
+        hamiltonian=hamiltonians,
+        loss=loss_func,
     )
 
     _ = optimiser.run_circuit(0.1)
 
-    nparams, graph = build_graph(
-        optimiser._circuit, optimiser.nqubits, optimiser.paramInputs
+    graph = build_graph(
+        optimiser._circuit, 24, optimiser.nqubits, optimiser.paramInputs
     )
     fubini = generate_fubini(
         graph,
-        nparams,
+        24,
         nqubits,
         optimiser.paramInputs,
         noise_model=optimiser.options["noise_model"],
+        stochastic=False,
     )
 
     assert np.allclose(fubini, metric_tensor)
