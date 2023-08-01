@@ -17,6 +17,29 @@ from qibo.derivative import (
 from qibo.models import Circuit
 
 
+class VariationalCircuit(Circuit):
+    """
+    Circuit architecture used in Quantum Machine Learning and Quantum Optimisation
+    procedures
+    """
+
+    def optimize(
+        self,
+        X,
+        y,
+        initial_parameters,
+        loss,
+        args=(),
+        method="sgd",
+        hamiltonian=None,
+        **kwargs,
+    ):
+        if method == "sgd":
+            optimizer = SGD(self, initial_parameters, hamiltonian, args, loss, **kwargs)
+
+        return optimizer.fit(X, y)
+
+
 class Optimizer:
     """Parent optimizer"""
 

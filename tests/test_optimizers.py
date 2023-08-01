@@ -7,15 +7,17 @@ from qibo.derivative import Parameter, create_hamiltonian
 from qibo.optimizers import CMAES, SGD, Newtonian, ParallelBFGS
 
 
-def ansatz(layers, nqubits):
+def ansatz(layers, nqubits, variational=False):
     """
     The circuit's ansatz: a sequence of RZ and RY with a beginning H gate
     Args:
         layers: integer, number of layers which compose the circuit
     Returns: abstract qibo circuit
     """
-
-    c = qibo.models.Circuit(nqubits, density_matrix=True)
+    if variational:
+        c = qibo.optimizers.VariationalCircuit(nqubits, density_matrix=True)
+    else:
+        c = qibo.models.Circuit(nqubits, density_matrix=True)
 
     for i in range(nqubits):
         c.add(qibo.gates.H(q=i))
@@ -51,6 +53,23 @@ def test_sgd_optimizer():
     X = np.array([0.1, 0.2, 0.3])
     y = np.array([0.2, 0.5, 0.7])
     losses = optimizer.fit(X, y)
+
+    assert losses[-1] < 0.001
+
+    return losses
+
+
+def test_variational_circuit():
+    VC = ansatz(3, 1, variational=True)
+    parameters = []
+    for _ in range(6):
+        parameters.append(
+            Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=True)
+        )
+
+    X = np.array([0.1, 0.2, 0.3])
+    y = np.array([0.2, 0.5, 0.7])
+    losses = VC.optimize(X, y, parameters, loss_func_1qubit, method="sgd")
 
     assert losses[-1] < 0.001
 
@@ -201,8 +220,9 @@ def test_parallel_bfgs_optimizer():
 
 
 if __name__ == "__main__":
-    test_parallel_bfgs_optimizer()
+    # test_parallel_bfgs_optimizer()
     # test_newtonian_optimizer()
     # test_multiqubit_sgd_optimizer()
     # test_sgd_optimizer()
     # test_sgd_methods()
+    test_variational_circuit()
