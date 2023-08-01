@@ -1,3 +1,5 @@
+import random
+
 import numpy as np
 
 from qibo import gates
@@ -512,14 +514,16 @@ def create_hamiltonian(qubit, nqubit, backend):
     return hamiltonian
 
 
-def error_mitigation(circuit, hamiltonian, backend, noise_model, nshots):
+def error_mitigation(circuit, nqubits, hamiltonian, backend, noise_model, nshots):
     """Fit CDR regression model to noisy states"""
 
-    calibration = calibration_matrix(nqubits=1, backend=backend, nshots=nshots)
+    calibration = calibration_matrix(nqubits=nqubits, backend=backend, nshots=nshots)
+
+    montecarlo = random.randrange(len(hamiltonian))
 
     _, _, optimal_params, _ = CDR(
         circuit=circuit,
-        observable=hamiltonian,
+        observable=hamiltonian[montecarlo],
         backend=backend,
         nshots=nshots,
         noise_model=noise_model,
@@ -538,7 +542,7 @@ def execute_circuit(
     initial_state=None,
     cdr_params=None,
     calibration=None,
-    precise=True,
+    precise=False,
 ):
     """Probabilistic circuit execution with possibilities for error mitigation"""
     if precise:
@@ -566,12 +570,7 @@ def execute_circuit(
     return result
 
 
-def build_graph(circuit, nqubits, paramInputs):
-    if isinstance(paramInputs, list):
-        nparams = sum([param.nparams for param in paramInputs])
-    else:
-        nparams = len(paramInputs)
-
+def build_graph(circuit, nparams, nqubits, paramInputs):
     # trainable and gate parameters
 
     if isinstance(paramInputs, list):
@@ -589,7 +588,7 @@ def build_graph(circuit, nqubits, paramInputs):
     graph = Graph(nqubits, circuit.queue, trainable_params, circuit.get_parameters())
     graph.build_graph()
 
-    return nparams, graph
+    return graph
 
 
 def generate_fubini(
@@ -598,6 +597,7 @@ def generate_fubini(
     nqubits,
     paramInputs,
     noise_model=None,
+    mitigation=False,
     stochastic=True,
 ):
     """Generate the Fubini-Study metric tensor"""
@@ -616,9 +616,11 @@ def generate_fubini(
     else:
         scale_factors = [1] * nparams
 
-    """calibration = calibration_matrix(
-        1, backend=backend, noise_model=noise_model, nshots=1024
-    )"""
+    calibration = None
+    if mitigation:
+        calibration = calibration_matrix(
+            nqubits, backend=backend, noise_model=noise_model, nshots=1024
+        )
     # run through layers
 
     for i in range(graph.depth):
@@ -631,7 +633,9 @@ def generate_fubini(
 
         # run through parametrized gate
         for qubit, params in zip(qubits, affected_param):
-            result = run_subcircuit_measure(c, qubit, nqubits, backend, stochastic)
+            result = run_subcircuit_measure(
+                c, qubit, nqubits, backend, calibration, stochastic
+            )
 
             for p in params:
                 # update Fubini-Study matrix
@@ -643,7 +647,7 @@ def generate_fubini(
     return fubini
 
 
-def run_subcircuit_measure(c, qubit, nqubits, backend, stochastic):
+def run_subcircuit_measure(c, qubit, nqubits, backend, calibration, stochastic):
     """Run variance measurement on specific qubit of subcircuit
     Args:
         c: subcircuit ending with measurement gates in appropriate basis
@@ -658,7 +662,7 @@ def run_subcircuit_measure(c, qubit, nqubits, backend, stochastic):
 
     if stochastic:
         # execute circuit with readout mitigation
-        result = execute_circuit(backend, c, obs, 1024)
+        result = execute_circuit(backend, c, obs, 1024, calibration=calibration)
 
     else:
         # probs = backend.execute_circuit(circuit=c, nshots=1024).probabilities()

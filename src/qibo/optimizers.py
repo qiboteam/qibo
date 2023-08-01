@@ -108,9 +108,14 @@ class SGD(Optimizer):
             "mitigation": False,
             "noise_model": None,
             "adam": True,
-            "filename": f"{self.name}.txt",
+            "filename": f"results/{self.name}.txt",
         }
         self.set_options(kwargs)
+
+        if self.options["natgrad"]:
+            self.NGgraph = build_graph(
+                self._circuit, self.nparams, self.nqubits, self.paramInputs
+            )
 
     def _get_params(self, trainable=False, feature=None):
         """Creates an array with the trainable parameters"""
@@ -222,7 +227,6 @@ class SGD(Optimizer):
         # setup fubini matrix for natural gradient
         if self.options["natgrad"]:
             fubini = np.zeros((self.nparams, self.nparams))
-            nparams, graph = build_graph(self._circuit, self.nqubits, self.paramInputs)
 
         # calculate CDR parameters anew at each epoch
         if self.options["mitigation"]:
@@ -230,6 +234,7 @@ class SGD(Optimizer):
             self._circuit.set_parameters(parameters)
             self.cdr_params = error_mitigation(
                 self._circuit.to_clifford(),
+                self.nqubits,
                 self.hamiltonian,
                 self.backend,
                 self.options["noise_model"],
@@ -254,11 +259,11 @@ class SGD(Optimizer):
             circ_grads += np.dot(loss_func_grad.T, obs_gradients)
 
             if self.options["natgrad"]:
-                graph.update_parameters(self._circuit.get_parameters())
+                self.NGgraph.update_parameters(self._circuit.get_parameters())
 
                 fubini += generate_fubini(
-                    graph,
-                    nparams,
+                    self.NGgraph,
+                    self.nparams,
                     self.nqubits,
                     self.paramInputs,
                     noise_model=self.options["noise_model"],
@@ -350,6 +355,15 @@ class SGD(Optimizer):
 
         iteration = 0
         self.file = open(self.options["filename"], "w")
+        self.file.write(
+            f"Epochs: {self.options['epochs']}, \
+                          learning rate: {self.options['learning_rate']}, \
+                          nshots: {self.options['nshots']}, \
+                          natgrad: {self.options['natgrad']}, \
+                          mitigation: {self.options['mitigation']}, \
+                          noise_model: {self.options['noise_model']}, \
+                          adam: {self.options['adam']}\n"
+        )
         self.ftime = time.time()
         self.etime = time.time()
 
