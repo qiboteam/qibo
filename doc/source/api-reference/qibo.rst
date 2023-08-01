@@ -804,6 +804,13 @@ Amplitude damping channel
     :members:
     :member-order: bysource
 
+Phase damping channel
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.gates.PhaseDampingChannel
+    :members:
+    :member-order: bysource
+
 Readout error channel
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -860,6 +867,10 @@ The quantum errors available to build a noise model are the following:
     :member-order: bysource
 
 .. autoclass:: qibo.noise.AmplitudeDampingError
+    :members:
+    :member-order: bysource
+
+.. autoclass:: qibo.noise.PhaseDampingError
     :members:
     :member-order: bysource
 
