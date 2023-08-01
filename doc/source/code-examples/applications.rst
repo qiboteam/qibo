@@ -84,6 +84,7 @@ Quantum Machine Learning
     tutorials/qfiae/qfiae_demo.ipynb
     tutorials/qcnn_classifier/qcnn_demo.ipynb
     tutorials/qclustering/README.md
+    tutorials/adiabatic_qml/adiabatic-qml.ipynb
 
 Applications by algorithm
 -------------------------
