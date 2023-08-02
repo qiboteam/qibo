@@ -122,7 +122,7 @@ class SGD(Optimizer):
                     trainablep = self.params[count : count + Param.nparams]
                     count += Param.nparams
                     # update trainable params and retrieve gate param
-                    params.append(Param.get_params(trainablep, feature=feature))
+                    params.append(Param.get_gate_params(trainablep, feature=feature))
 
             return params
 

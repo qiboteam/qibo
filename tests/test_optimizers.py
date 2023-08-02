@@ -8,16 +8,23 @@ from qibo.optimizers import CMAES, SGD, Newtonian, ParallelBFGS
 
 
 class Parameter:
-    def __init__(self, func, variational_parameters, features=None):
-        self._variational_parameters = variational_parameters
+    """Trainable parameters and possibly features are linked through a lambda function
+    which returns the final gate parameter"""
+
+    def __init__(self, func, trainablep, features=None):
+        self._variational_parameters = trainablep
         self._featurep = features
-        self.nparams = len(variational_parameters)
+        self.nparams = len(trainablep)
         self.lambdaf = func
 
     def _apply_func(self, fixed_params=None):
+        """Apply lambda function and return final gate parameter"""
         params = []
         if self._featurep is not None:
-            params.append(self._featurep)
+            if isinstance(self._featurep, list):
+                params.extend(self._featurep)
+            else:
+                params.append(self._featurep)
         if fixed_params:
             params.extend(fixed_params)
         else:
@@ -25,27 +32,35 @@ class Parameter:
         return self.lambdaf(*params)
 
     def _update_params(self, trainablep=None, feature=None):
+        """Update gate trainable parameter and feature values"""
         if trainablep:
             self._variational_parameters = trainablep
-        if feature:
+        if feature and self._featurep:
             self._featurep = feature
 
-    def get_params(self, trainablep=None, feature=None):
+    def get_gate_params(self, trainablep=None, feature=None):
+        """Update values with trainable parameter and calculate current gate parameter"""
         self._update_params(trainablep=trainablep, feature=feature)
         return self._apply_func()
 
     def get_indices(self, start_index):
+        """Return list of respective indices of trainable parameters within
+        the optimizer's trainable parameter list"""
         return [start_index + i for i in range(self.nparams)]
 
     def get_fixed_part(self, trainablep_idx):
-        params = [0] * self.nparams
-        params[trainablep_idx] = self._variational_parameters[trainablep_idx]
+        """Retrieve parameter constant unaffected by a specific trainable parameter"""
+        params = self._variational_parameters.copy()
+        params[trainablep_idx] = 0.0
         return self._apply_func(fixed_params=params)
 
     def get_scaling_factor(self, trainablep_idx):
-        params = [0] * self.nparams
-        params[trainablep_idx] = 1.0
-        return self._apply_func(fixed_params=params)
+        """Get scaling factor multiplying a specific trainable parameter"""
+        fixed = self.get_fixed_part(trainablep_idx)
+        trainablep = self._variational_parameters
+        trainablep[trainablep_idx] = 1.0
+        gate_value = self.get_params(trainablep=trainablep)
+        return gate_value - fixed
 
 
 def ansatz(layers, nqubits):
