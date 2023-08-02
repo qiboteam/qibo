@@ -235,6 +235,7 @@ def parameter_shift(
 
     # float() necessary to not return a 0-dim ndarray
     result = float(generator_eigenval * (forward - backward) * scale_factor)
+
     return result
 
 
