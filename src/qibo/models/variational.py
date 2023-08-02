@@ -1,13 +1,14 @@
 from qibo.config import raise_error
 from qibo.models import Circuit
 from qibo.models.evolution import StateEvolution
+from qibo.optimizers import SGD
 
 
 class VariationalCircuit(Circuit):
-    def __init__(self):
+    def __init__(self, nqubits, density_matrix):
         # self.parameters of the circuit: gates' parameters as collection of
         # can be composed of floats or `Parameters`
-
+        super().__init__(nqubits=nqubits, density_matrix=density_matrix)
         self.gates_parameters = None
         self.trainable_parameters = None
         self.features = None
@@ -21,7 +22,7 @@ class VariationalCircuit(Circuit):
         """Return trainable parameters."""
         pass
 
-    def add(self):
+    def add_gate(self):
         """Update circuit, parameters and variational parameters."""
         # IN THIS CLASS CAN BE USEFUL TO CACHE PARAMS AND TRAINABLE PARAMS
 
@@ -33,9 +34,21 @@ class VariationalCircuit(Circuit):
         """Build the loss function."""
         pass
 
-    def optimize(self):
-        """Compute the optimization."""
-        pass
+    def optimize(
+        self,
+        X,
+        y,
+        initial_parameters,
+        loss,
+        args=(),
+        method="sgd",
+        hamiltonian=None,
+        **kwargs,
+    ):
+        if method == "sgd":
+            optimizer = SGD(self, initial_parameters, hamiltonian, args, loss, **kwargs)
+
+        return optimizer.fit(X, y)
 
     def data_preprocessing(self):
         """Adapt data to the chosen quantum setup."""

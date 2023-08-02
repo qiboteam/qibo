@@ -15,7 +15,7 @@ def ansatz(layers, nqubits, variational=False):
     Returns: abstract qibo circuit
     """
     if variational:
-        c = qibo.optimizers.VariationalCircuit(nqubits, density_matrix=True)
+        c = qibo.models.variational.VariationalCircuit(nqubits, density_matrix=True)
     else:
         c = qibo.models.Circuit(nqubits, density_matrix=True)
 
