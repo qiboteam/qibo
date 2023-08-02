@@ -1,110 +1,16 @@
 import numpy as np
 
 from qibo import gates
-from qibo.backends import GlobalBackend
+from qibo.backends import matrices
 from qibo.config import raise_error
+from qibo.hamiltonians import Hamiltonian
 from qibo.hamiltonians.abstract import AbstractHamiltonian
-from qibo.hamiltonians.hamiltonians import SymbolicHamiltonian
-from qibo.models.error_mitigation import CDR, calibration_matrix
-from qibo.symbols import I, Symbol, Z
+from qibo.models.error_mitigation import apply_readout_mitigation
 
 
-class Parameter:
-    """Object which allows complex gate parameters. Several trainable parameter
-    and possibly features are linked through a lambda function which returns the
-    final gate parameter"""
-
-    def __init__(self, func, trainablep, featurep=None):
-        self._trainablep = trainablep
-        self._featurep = featurep
-        self.nparams = len(trainablep)
-        self.lambdaf = func
-
-    def _apply_func(self, fixed_params=None):
-        """Applies lambda function and returns final gate parameter"""
-        params = []
-        if self._featurep is not None:
-            params.append(self._featurep)
-        if fixed_params:
-            params.extend(fixed_params)
-        else:
-            params.extend(self._trainablep)
-        return self.lambdaf(*params)
-
-    def _update_params(self, trainablep=None, feature=None):
-        """Update gate trainable parameter and feature values"""
-        if trainablep:
-            self._trainablep = trainablep
-        if feature:
-            self._featurep = feature
-
-    def get_params(self, trainablep=None, feature=None):
-        """Update values with trainable parameter and calculate current gate parameter"""
-        self._update_params(trainablep=trainablep, feature=feature)
-        return self._apply_func()
-
-    def get_indices(self, start_index):
-        """Return list of respective indices of trainable parameters within
-        the optimizer's trainable parameter list"""
-        return [start_index + i for i in range(self.nparams)]
-
-    def get_fixed_part(self, trainablep_idx):
-        """Retrieve parameter constant unaffected by a specific trainable parameter"""
-        params = [0] * self.nparams
-        params[trainablep_idx] = self._trainablep[trainablep_idx]
-        return self._apply_func(fixed_params=params)
-
-    def get_scaling_factor(self, trainablep_idx):
-        """Get scaling factor multiplying a specific trainable parameter"""
-        params = [0] * self.nparams
-        params[trainablep_idx] = 1.0
-        return self._apply_func(fixed_params=params)
-
-
-def create_hamiltonian(qubit, nqubit, backend):
-    """
-    Creates appropriate Hamiltonian for a given list of qubits
-    Args:
-        qubit: qubit numbers whose states we are interested in
-        nqubit: total number of qubits, which determines size of Hamiltonian
-    Return:
-        hamiltonian: SymbolicHamiltonian
-    """
-    if not isinstance(qubit, list):
-        qubit = [qubit]
-
-    hams = []
-
-    for i in range(nqubit):
-        if i in qubit:
-            hams.append(Z(i))
-        else:
-            hams.append(I(i))
-
-    # create Hamiltonian
-    obs = np.prod([Z(i) for i in range(1)])
-    hamiltonian = SymbolicHamiltonian(obs, backend=backend)
-
-    return hamiltonian
-
-
-def error_mitigation(circuit, hamiltonian, backend, noise_model):
-    calibration = calibration_matrix(nqubits=1, backend=backend, nshots=10000)
-
-    _, _, optimal_params, _ = CDR(
-        circuit=circuit,
-        observable=hamiltonian,
-        backend=backend,
-        nshots=10000,
-        noise_model=noise_model,
-        full_output=True,
-        readout={"calibration_matrix": calibration},
-    )
-
-    return optimal_params
-
-
-def calculate_gradients(optimizer, cdr_params):
+def calculate_gradients(
+    circuit, shift_rule, nparams, paramInputs, cdr_params, ham, nshots
+):
     """
     Full parameter-shift rule's implementation
     Args:
@@ -112,38 +18,34 @@ def calculate_gradients(optimizer, cdr_params):
     Returns: np.array of the observable's gradients with respect to the variational parameters
     """
 
-    obs_gradients = np.zeros(optimizer.nparams, dtype=np.float64)
-
-    ham = SymbolicHamiltonian(
-        np.prod([Z(i) for i in range(1)]), backend=GlobalBackend()
-    )
+    obs_gradients = np.zeros(nparams, dtype=np.float64)
 
     # parameter shift
-    if optimizer.options["shift_rule"] == "psr":
-        if isinstance(optimizer.paramInputs, np.ndarray):
-            for ipar in range(optimizer.nparams):
+    if shift_rule == "psr":
+        if isinstance(paramInputs, np.ndarray):
+            for ipar in range(nparams):
                 obs_gradients[ipar] = parameter_shift(
-                    optimizer._circuit,
+                    circuit,
                     ham,
                     ipar,
                     initial_state=None,
                     scale_factor=1,
-                    nshots=1024,
+                    nshots=nshots,
                     cdr_params=cdr_params,
                 )
         else:
             count = 0
-            for ipar, Param in enumerate(optimizer.paramInputs):
+            for ipar, Param in enumerate(paramInputs):
                 for nparam in range(Param.nparams):
                     scaling = Param.get_scaling_factor(nparam)
 
                     obs_gradients[count] = parameter_shift(
-                        optimizer._circuit,
+                        circuit,
                         ham,
                         ipar,
                         initial_state=None,
                         scale_factor=scaling,
-                        nshots=1024,
+                        nshots=nshots,
                         cdr_params=cdr_params,
                     )
                     count += 1
@@ -282,7 +184,10 @@ def parameter_shift(
     gate = circuit.associate_gates_with_parameters()[parameter_index]
 
     # getting the generator_eigenvalue
-    generator_eigenval = gate.generator_eigenvalue()
+    if isinstance(gate, gates.CU1):
+        generator_eigenval = 0.5
+    else:
+        generator_eigenval = gate.generator_eigenvalue()
 
     # defining the shift according to the psr
     s = np.pi / (4 * generator_eigenval)
@@ -333,11 +238,69 @@ def parameter_shift(
     return result
 
 
-def execute_circuit(backend, c, obs, nshots, initial_state=None, cdr_params=None):
-    result = backend.execute_circuit(
-        circuit=c, nshots=nshots, initial_state=initial_state
-    ).expectation_from_samples(obs)
+def create_hamiltonian(qubit=0, nqubits=1, backend=None):
+    """Precomputes Hamiltonian.
 
+    Args:
+        nqubits (int): number of qubits.
+        z_qubit (int): qubit where the Z measurement is applied, must be z_qubit < nqubits
+        backend (:class:`qibo.backends.abstract.Backend`): Backend object to use for execution.
+            If ``None`` the currently active global backend is used.
+            Default is ``None``.
+
+    Returns:
+        An Hamiltonian object.
+    """
+    eye = matrices.I
+    if qubit == 0:
+        h = matrices.Z
+        for _ in range(nqubits - 1):
+            h = np.kron(h, eye)
+
+    elif qubit == nqubits - 1:
+        h = eye
+        for _ in range(nqubits - 2):
+            h = np.kron(eye, h)
+        h = np.kron(h, matrices.Z)
+    else:
+        h = eye
+        for _ in range(nqubits - 1):
+            if _ + 1 == qubit:
+                h = np.kron(matrices.Z, h)
+            else:
+                h = np.kron(eye, h)
+    return Hamiltonian(nqubits, h, backend=backend)
+
+
+def execute_circuit(
+    backend,
+    c,
+    obs,
+    nshots,
+    initial_state=None,
+    cdr_params=None,
+    calibration=None,
+    precise=False,
+):
+    """Probabilistic circuit execution with possibilities for error mitigation"""
+    if precise:
+        state = c().state()
+        res = obs.expectation(state)
+        return res
+
+    # retrieve state
+    state = backend.execute_circuit(
+        circuit=c, nshots=nshots, initial_state=initial_state
+    )
+
+    # apply readout mitigation
+    if calibration is not None:
+        state = apply_readout_mitigation(state, calibration)
+
+    # get expectation value
+    result = state.expectation_from_samples(obs)
+
+    # apply CDR correction
     if cdr_params is not None:
         a, b = cdr_params
         result = a * result + b
