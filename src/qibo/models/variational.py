@@ -1,5 +1,45 @@
 from qibo.config import raise_error
+from qibo.models import Circuit
 from qibo.models.evolution import StateEvolution
+
+
+class VariationalCircuit(Circuit):
+    def __init__(self):
+        # self.parameters of the circuit: gates' parameters as collection of
+        # can be composed of floats or `Parameters`
+
+        self.gates_parameters = None
+        self.trainable_parameters = None
+        self.features = None
+
+        self.loss_function = None
+        self.optimizer = None
+
+        pass
+
+    def _get_trainable_params(self):
+        """Return trainable parameters."""
+        pass
+
+    def add(self):
+        """Update circuit, parameters and variational parameters."""
+        # IN THIS CLASS CAN BE USEFUL TO CACHE PARAMS AND TRAINABLE PARAMS
+
+        # when add a new gate
+        #   update self.gates_parameters
+        #   update self.trainable_parameters
+
+    def loss_function(self):
+        """Build the loss function."""
+        pass
+
+    def optimize(self):
+        """Compute the optimization."""
+        pass
+
+    def data_preprocessing(self):
+        """Adapt data to the chosen quantum setup."""
+        pass
 
 
 class VQE:
