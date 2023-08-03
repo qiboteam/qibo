@@ -306,13 +306,6 @@ class Gate:
             f"Basis rotation is not implemented for {self.__class__.__name__}",
         )
 
-    @property
-    def matrix(self):
-        from qibo.backends import GlobalBackend
-
-        backend = GlobalBackend()
-        return self.asmatrix(backend)
-
     def apply(self, backend, state, nqubits):
         return backend.apply_gate(self, state, nqubits)
 
