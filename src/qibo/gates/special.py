@@ -96,7 +96,7 @@ class FusedGate(SpecialGate):
             return False
         return True
 
-    def asmatrix(self, backend):
+    def asmatrix(self, backend=None):
         if backend is None:  # pragma : no cover
             backend = GlobalBackend()
 
