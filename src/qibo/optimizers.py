@@ -267,12 +267,6 @@ class SGD(Optimizer):
 
         # iterate through all data points
         for i, feat in enumerate(features):
-            # duration measurement
-            if self.options["save"]:
-                ftime = time.time()
-                self.file.write(f"Feature {feat}, duration {ftime-self.ftime}\n")
-                self.ftime = ftime
-
             # predict current output
             results[i] = self.predict(feat)
 
@@ -387,15 +381,16 @@ class SGD(Optimizer):
         if self.options["save"]:
             self.file = open(self.options["filename"], "w")
             self.file.write(
-                f"Epochs: {self.options['epochs']}, \
-                            learning rate: {self.options['learning_rate']}, \
-                            nshots: {self.options['nshots']}, \
-                            natgrad: {self.options['natgrad']}, \
-                            mitigation: {self.options['mitigation']}, \
-                            noise_model: {self.options['noise_model']}, \
-                            adam: {self.options['adam']}\n"
+                f"Epochs: {self.options['epochs']}\n"
+                f"learning rate: {self.options['learning_rate']}\n"
+                f"nshots: {self.options['nshots']}\n"
+                f"natgrad: {self.options['natgrad']}\n"
+                f"mitigation: {self.options['mitigation']}\n"
+                f"noise_model: {self.options['noise_model']}\n"
+                f"adam: {self.options['adam']}\n\n\n"
             )
             self.ftime = time.time()
+            simulation_start = time.time()
             self.etime = time.time()
 
         for epoch in range(options["epochs"]):
@@ -432,15 +427,20 @@ class SGD(Optimizer):
                 if self.options["save"]:
                     etime = time.time()
                     self.file.write(
-                        f"Iteration {iteration}, epoch {epoch + 1} | loss: {this_loss} | duration: {etime-self.etime}\n"
+                        f"Iteration {iteration}, epoch {epoch + 1} | loss: {this_loss} | duration: {etime-self.etime}\n\n"
                     )
                     self.etime = etime
 
                 # in case one wants to plot J as a function of the iterations
                 losses.append(this_loss)
 
+            plot(self, self.features, self.labels)
+
         if self.options["save"]:
             self.file.write(f"Params {self.params}\n")
+            self.file.write(
+                f"\n\n##### Total simulation time: {time.time()-simulation_start}"
+            )
             self.file.close()
 
         return losses
@@ -671,3 +671,36 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
     def jac(self, x):
         self.evaluate(x)
         return self.jacobian_value
+
+
+scaler = lambda x: x
+import matplotlib.pyplot as plt
+
+
+def plot(optimizer, xtrain, ytrain):
+    # new predictions
+    yprediction = optimizer.predict(xtrain)
+
+    cols = yprediction.shape[1]
+    # new plot
+    fig, ax = plt.subplots(nrows=1, ncols=cols, figsize=(8, 6))
+    # ax.set(title=f'$\chi^2 = $ {chi2:.2f}', xlabel='x', ylabel='PDF',
+    #           xscale='log')
+
+    for col in range(cols):
+        if cols > 1:
+            train = ytrain[:, col]
+            pred = yprediction[:, col]
+            pred = scaler(pred)
+            ax[col].plot(xtrain, train, label="Classical PDF", color="black")
+            ax[col].plot(xtrain, pred, label=r"Quantum PDF model", zorder=10)
+            ax[col].legend()
+
+        else:
+            yprediction = scaler(yprediction)
+            ax.plot(xtrain, ytrain, label="Classical PDF", color="black")
+            ax.plot(xtrain, yprediction, label=r"Quantum PDF model", zorder=10)
+            ax.legend()
+
+    plt.savefig("Plot.png")
+    plt.close()
