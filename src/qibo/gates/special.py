@@ -97,6 +97,16 @@ class FusedGate(SpecialGate):
         return True
 
     def asmatrix(self, backend=None):
+        """Returns matrix representation of special gate.
+
+        Args:
+            backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+        Returns:
+            ndarray: Matrix representation of special gate.
+        """
         if backend is None:  # pragma : no cover
             backend = GlobalBackend()
 
