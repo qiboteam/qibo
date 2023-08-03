@@ -560,6 +560,7 @@ def error_mitigation(circuit, nqubits, hamiltonian, backend, noise_model, nshots
         observable=hamiltonian[montecarlo],
         backend=backend,
         nshots=nshots,
+        n_training_samples=10,
         noise_model=noise_model,
         full_output=True,
         readout={"calibration_matrix": calibration},
