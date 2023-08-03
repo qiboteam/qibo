@@ -3,6 +3,7 @@ from typing import List, Sequence, Tuple
 
 import sympy
 
+from qibo.backends import GlobalBackend
 from qibo.config import raise_error
 
 
@@ -269,7 +270,10 @@ class Gate:
         # of the same gate.
         return [self.__class__(*self.init_args, **self.init_kwargs)]
 
-    def asmatrix(self, backend):
+    def asmatrix(self, backend=None):
+        if backend is None:  # pragma: no cover
+            backend = GlobalBackend()
+
         return backend.asmatrix(self)
 
     def generator_eigenvalue(self):
