@@ -406,7 +406,7 @@ class ParametrizedGate(Gate):
         self.parameters = tuple(params)
 
     def asmatrix(self, backend=None):
-        if backend is None:  # pragma : no cover
+        if backend is None:  # pragma: no cover
             backend = GlobalBackend()
 
         return backend.asmatrix_parametrized(self)

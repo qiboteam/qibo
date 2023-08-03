@@ -107,7 +107,7 @@ class FusedGate(SpecialGate):
         Returns:
             ndarray: Matrix representation of special gate.
         """
-        if backend is None:  # pragma : no cover
+        if backend is None:  # pragma: no cover
             backend = GlobalBackend()
 
         return backend.asmatrix_fused(self)
