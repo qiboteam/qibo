@@ -271,6 +271,16 @@ class Gate:
         return [self.__class__(*self.init_args, **self.init_kwargs)]
 
     def asmatrix(self, backend=None):
+        """Returns the matrix representation of the gate.
+
+        Args:
+            backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+        Returns:
+            ndarray: Matrix representation of gate.
+        """
         if backend is None:  # pragma: no cover
             backend = GlobalBackend()
 
@@ -395,5 +405,8 @@ class ParametrizedGate(Gate):
             params[i] = float(param)
         self.parameters = tuple(params)
 
-    def asmatrix(self, backend):
+    def asmatrix(self, backend=None):
+        if backend is None:  # pragma : no cover
+            backend = GlobalBackend()
+
         return backend.asmatrix_parametrized(self)
