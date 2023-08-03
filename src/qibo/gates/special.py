@@ -1,3 +1,4 @@
+from qibo.backends import GlobalBackend
 from qibo.gates.abstract import SpecialGate
 from qibo.gates.measurements import M
 
@@ -96,6 +97,9 @@ class FusedGate(SpecialGate):
         return True
 
     def asmatrix(self, backend):
+        if backend is None:  # pragma : no cover
+            backend = GlobalBackend()
+
         return backend.asmatrix_fused(self)
 
     def fuse(self, gate):
