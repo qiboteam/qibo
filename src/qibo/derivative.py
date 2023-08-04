@@ -1,15 +1,26 @@
+import random
+
 import numpy as np
 
 from qibo import gates
-from qibo.backends import GlobalBackend
+from qibo.backends import GlobalBackend, matrices
 from qibo.config import raise_error
+from qibo.hamiltonians import Hamiltonian, SymbolicHamiltonian
 from qibo.hamiltonians.abstract import AbstractHamiltonian
-from qibo.hamiltonians.hamiltonians import SymbolicHamiltonian
 from qibo.models import Circuit
-from qibo.symbols import Symbol, Z
+from qibo.models.error_mitigation import (
+    CDR,
+    apply_readout_mitigation,
+    calibration_matrix,
+)
+from qibo.symbols import I, Z
 
 
 class Parameter:
+    """Object which allows complex gate parameters. Several trainable parameter
+    and possibly features are linked through a lambda function which returns the
+    final gate parameter"""
+
     def __init__(self, func, trainablep, featurep=None):
         self._trainablep = trainablep
         self._featurep = featurep
@@ -17,9 +28,13 @@ class Parameter:
         self.lambdaf = func
 
     def _apply_func(self, fixed_params=None):
+        """Applies lambda function and returns final gate parameter"""
         params = []
         if self._featurep is not None:
-            params.append(self._featurep)
+            if isinstance(self._featurep, list):
+                params.extend(self._featurep)
+            else:
+                params.append(self._featurep)
         if fixed_params:
             params.extend(fixed_params)
         else:
@@ -27,30 +42,38 @@ class Parameter:
         return self.lambdaf(*params)
 
     def _update_params(self, trainablep=None, feature=None):
+        """Update gate trainable parameter and feature values"""
         if trainablep:
             self._trainablep = trainablep
-        if feature:
+        if feature and self._featurep:
             self._featurep = feature
 
     def get_params(self, trainablep=None, feature=None):
+        """Update values with trainable parameter and calculate current gate parameter"""
         self._update_params(trainablep=trainablep, feature=feature)
         return self._apply_func()
 
     def get_indices(self, start_index):
+        """Return list of respective indices of trainable parameters within
+        the optimizer's trainable parameter list"""
         return [start_index + i for i in range(self.nparams)]
 
     def get_fixed_part(self, trainablep_idx):
-        params = [0] * self.nparams
-        params[trainablep_idx] = self._trainablep[trainablep_idx]
+        """Retrieve parameter constant unaffected by a specific trainable parameter"""
+        params = self._trainablep.copy()
+        params[trainablep_idx] = 0.0
         return self._apply_func(fixed_params=params)
 
     def get_scaling_factor(self, trainablep_idx):
-        params = [0] * self.nparams
-        params[trainablep_idx] = 1.0
-        return self._apply_func(fixed_params=params)
+        """Get scaling factor multiplying a specific trainable parameter"""
+        fixed = self.get_fixed_part(trainablep_idx)
+        trainablep = self._trainablep
+        trainablep[trainablep_idx] = 1.0
+        gate_value = self.get_params(trainablep=trainablep)
+        return gate_value - fixed
 
 
-def calculate_gradients(optimizer, feature):
+def calculate_gradients(optimizer, cdr_params, ham, nshots):
     """
     Full parameter-shift rule's implementation
     Args:
@@ -59,10 +82,6 @@ def calculate_gradients(optimizer, feature):
     """
 
     obs_gradients = np.zeros(optimizer.nparams, dtype=np.float64)
-
-    ham = SymbolicHamiltonian(
-        np.prod([Z(i) for i in range(1)]), backend=GlobalBackend()
-    )
 
     # parameter shift
     if optimizer.options["shift_rule"] == "psr":
@@ -74,7 +93,8 @@ def calculate_gradients(optimizer, feature):
                     ipar,
                     initial_state=None,
                     scale_factor=1,
-                    nshots=1024,
+                    nshots=nshots,
+                    cdr_params=cdr_params,
                 )
         else:
             count = 0
@@ -88,7 +108,8 @@ def calculate_gradients(optimizer, feature):
                         ipar,
                         initial_state=None,
                         scale_factor=scaling,
-                        nshots=1024,
+                        nshots=nshots,
+                        cdr_params=cdr_params,
                     )
                     count += 1
 
@@ -128,6 +149,7 @@ def parameter_shift(
     initial_state=None,
     scale_factor=1,
     nshots=None,
+    cdr_params=None,
 ):
     """In this method the parameter shift rule (PSR) is implemented.
     Given a circuit U and an observable H, the PSR allows to calculate the derivative
@@ -225,10 +247,13 @@ def parameter_shift(
     gate = circuit.associate_gates_with_parameters()[parameter_index]
 
     # getting the generator_eigenvalue
-    generator_eigenval = gate.generator_eigenvalue()
+    if isinstance(gate, gates.CU1):
+        generator_eigenval = 0.5
+    else:
+        generator_eigenval = gate.generator_eigenvalue()
 
     # defining the shift according to the psr
-    s = np.pi / (4 * generator_eigenval) / scale_factor
+    s = np.pi / (4 * generator_eigenval)
 
     # saving original parameters and making a copy
     original = np.asarray(circuit.get_parameters()).copy()
@@ -258,16 +283,16 @@ def parameter_shift(
 
     # same but using expectation from samples
     else:
-        forward = backend.execute_circuit(
-            circuit=circuit, initial_state=initial_state, nshots=nshots
-        ).expectation_from_samples(hamiltonian)
+        forward = execute_circuit(
+            backend, circuit, hamiltonian, nshots, initial_state, cdr_params
+        )
 
         shifted[parameter_index] -= 2 * s
         circuit.set_parameters(shifted)
 
-        backward = backend.execute_circuit(
-            circuit=circuit, initial_state=initial_state, nshots=nshots
-        ).expectation_from_samples(hamiltonian)
+        backward = execute_circuit(
+            backend, circuit, hamiltonian, nshots, initial_state, cdr_params
+        )
 
     circuit.set_parameters(original)
 
@@ -284,20 +309,18 @@ def parameter_shift(
 class Node:
     """Parent class to create gate nodes"""
 
-    def __init__(self, gate, trainable_params, gate_params):
+    def __init__(self, gate, trainable_params, ID):
         self.gate = gate
         self.trainable_params = trainable_params  # index of optimisable parameters
-        self.gate_params = gate_params  # gate parameters
-        self.prev = None
         self.next = None
+        self.id = ID
 
 
 class ConvergeNode(Node):
     """Node for two-qubit gates"""
 
-    def __init__(self, gate, trainable_params, gate_params):
-        super().__init__(gate, trainable_params, gate_params)
-        self.prev_target = None
+    def __init__(self, gate, trainable_params, ID):
+        super().__init__(gate, trainable_params, ID)
         self.next_target = None
         self.waiting = None
 
@@ -330,15 +353,15 @@ class Graph:
             # store parameters for ParametrizedGate
             if isinstance(gate, gates.ParametrizedGate):
                 trainp = self.trainable_params[count]
-                gatep = self.gate_params[count]
+                gateid = count
                 count += 1
             else:
                 trainp = None
-                gatep = None
+                gateid = None
 
             # two-qubit gates
             if n == 1:
-                node = ConvergeNode(gate, trainp, gatep)
+                node = ConvergeNode(gate, trainp, gateid)
                 control = gate.init_args[0]
                 target = gate.init_args[1]
 
@@ -350,7 +373,6 @@ class Graph:
                 # link to existing graph node
                 else:
                     nodes[ends[control]].next = i
-                    node.prev = ends[control]
                     ends[control] = i
 
                 # target qubit
@@ -361,7 +383,6 @@ class Graph:
                 # link to existing graph node
                 else:
                     nodes[ends[target]].next = i
-                    node.prev = ends[target]
                     ends[target] = i
 
                 depth[control] += 1
@@ -369,8 +390,8 @@ class Graph:
 
             # one-qubit gate
             else:
-                node = Node(gate, trainp, gatep)
-                qubit = gate.init_args[0]
+                node = Node(gate, trainp, gateid)
+                qubit = gate.target_qubits[0]
 
                 # start of graph
                 if start[qubit] is None:
@@ -379,7 +400,6 @@ class Graph:
                 # link to existing graph node
                 else:
                     nodes[ends[qubit]].next = i
-                    node.prev = ends[qubit]
                     ends[qubit] = i
 
                 depth[qubit] += 1
@@ -402,6 +422,9 @@ class Graph:
         else:
             return gates.Z
 
+    def update_parameters(self, params):
+        self.gate_params = params
+
     def run_layer(self, layer):
         """Runs through one layer of the circuit parameters
         Args:
@@ -419,6 +442,7 @@ class Graph:
 
         trainable_qubits = []
         affected_params = []
+        gate_order = []
 
         # run through layer up to N
         for iter in range(layer + 1):
@@ -434,6 +458,7 @@ class Graph:
                     # second arrived
                     elif node.waiting != q:
                         c.add(node.gate)
+                        gate_order.append(node.id)
                         control = node.gate.init_args[0]
                         target = node.gate.init_args[1]
                         current[control] = node.next
@@ -449,13 +474,54 @@ class Graph:
                 # simple one-qubit node
                 else:
                     c.add(node.gate)
+                    gate_order.append(node.id)
                     if node.next:
                         current[q] = node.next
+
+        # set parameters
+        numgates = c.trainable_gates.nparams
+        # Update the list_to_update based on the placement order
+        updated_list = [self.gate_params[i] for i in gate_order if i is not None]
+        c.set_parameters(updated_list[:numgates])
 
         return c, trainable_qubits, affected_params
 
 
-def create_hamiltonian(qubit, nqubit):
+def create_hamiltonian(qubit=0, nqubits=1, backend=None):
+    """Precomputes Hamiltonian.
+
+    Args:
+        nqubits (int): number of qubits.
+        z_qubit (int): qubit where the Z measurement is applied, must be z_qubit < nqubits
+        backend (:class:`qibo.backends.abstract.Backend`): Backend object to use for execution.
+            If ``None`` the currently active global backend is used.
+            Default is ``None``.
+
+    Returns:
+        An Hamiltonian object.
+    """
+    eye = matrices.I
+    if qubit == 0:
+        h = matrices.Z
+        for _ in range(nqubits - 1):
+            h = np.kron(h, eye)
+
+    elif qubit == nqubits - 1:
+        h = eye
+        for _ in range(nqubits - 2):
+            h = np.kron(eye, h)
+        h = np.kron(h, matrices.Z)
+    else:
+        h = eye
+        for _ in range(nqubits - 1):
+            if _ + 1 == qubit:
+                h = np.kron(matrices.Z, h)
+            else:
+                h = np.kron(eye, h)
+    return Hamiltonian(nqubits, h, backend=backend)
+
+
+def create_hamiltoniawn(qubit, nqubit, backend):
     """
     Creates appropriate Hamiltonian for a given list of qubits
     Args:
@@ -464,38 +530,82 @@ def create_hamiltonian(qubit, nqubit):
     Return:
         hamiltonian: SymbolicHamiltonian
     """
-    standard = np.array([[1, 0], [0, 1]])
-    target = np.array([[1, 0], [0, 0]])
-    hams = []
     if not isinstance(qubit, list):
         qubit = [qubit]
 
+    hams = []
+
     for i in range(nqubit):
         if i in qubit:
-            hams.append(Symbol(i, target))
+            hams.append(Z(i))
         else:
-            hams.append(Symbol(i, standard))
+            hams.append(I(i))
 
     # create Hamiltonian
     obs = np.prod(hams)
-    hamiltonian = SymbolicHamiltonian(obs)
+    hamiltonian = SymbolicHamiltonian(obs, backend=backend)
 
     return hamiltonian
 
 
+def error_mitigation(circuit, nqubits, hamiltonian, backend, noise_model, nshots):
+    """Fit CDR regression model to noisy states"""
 
-def generate_fubini(
-    circuit, nqubits, paramInputs, feature, pennylane=False, params=None
+    calibration = calibration_matrix(nqubits=nqubits, backend=backend, nshots=nshots)
+
+    montecarlo = random.randrange(len(hamiltonian))
+
+    _, _, optimal_params, _ = CDR(
+        circuit=circuit,
+        observable=hamiltonian[montecarlo],
+        backend=backend,
+        nshots=nshots,
+        noise_model=noise_model,
+        full_output=True,
+        readout={"calibration_matrix": calibration},
+    )
+
+    return optimal_params
+
+
+def execute_circuit(
+    backend,
+    c,
+    obs,
+    nshots,
+    initial_state=None,
+    cdr_params=None,
+    calibration=None,
+    precise=False,
 ):
-    """Generate the Fubini-Study metric tensor"""
-    if isinstance(paramInputs, list):
-        nparams = sum([param.nparams for param in paramInputs])
-    else:
-        nparams = len(paramInputs)
-    fubini = np.zeros((nparams, nparams))
+    """Probabilistic circuit execution with possibilities for error mitigation"""
+    if precise:
+        state = c().state()
+        res = obs.expectation(state)
+        return res
 
+    # retrieve state
+    state = backend.execute_circuit(
+        circuit=c, nshots=nshots, initial_state=initial_state
+    )
+
+    # apply readout mitigation
+    if calibration is not None:
+        state = apply_readout_mitigation(state, calibration)
+
+    # get expectation value
+    result = state.expectation_from_samples(obs)
+
+    # apply CDR correction
+    if cdr_params is not None:
+        a, b = cdr_params
+        result = a * result + b
+
+    return result
+
+
+def build_graph(circuit, nparams, nqubits, paramInputs):
     # trainable and gate parameters
-    gate_params = circuit.associate_gates_with_parameters()
 
     if isinstance(paramInputs, list):
         trainable_params = []
@@ -504,27 +614,98 @@ def generate_fubini(
             indices = Param.get_indices(count)
             count += len(indices)
             trainable_params.append(indices)
+
     else:
         trainable_params = [[i] for i in range(nparams)]
+
     # build graph from circuit gates
-    graph = Graph(nqubits, circuit.queue, trainable_params, gate_params)
+    graph = Graph(nqubits, circuit.queue, trainable_params, circuit.get_parameters())
     graph.build_graph()
+
+    return graph
+
+
+def generate_fubini(
+    graph,
+    nparams,
+    nqubits,
+    paramInputs,
+    noise_model=None,
+    mitigation=False,
+    stochastic=True,
+):
+    """Generate the Fubini-Study metric tensor"""
+    fubini = np.zeros((nparams, nparams))
     backend = GlobalBackend()
 
+    scale_factors = []
+
+    if isinstance(paramInputs, list):
+        count = 0
+        for Param in paramInputs:
+            indices = Param.get_indices(count)
+            count += len(indices)
+            for idx in range(len(indices)):
+                scale_factors.append(Param.get_scaling_factor(idx))
+    else:
+        scale_factors = [1] * nparams
+
+    calibration = None
+    if mitigation:
+        calibration = calibration_matrix(
+            nqubits, backend=backend, noise_model=noise_model, nshots=1024
+        )
     # run through layers
+
     for i in range(graph.depth):
         c, qubits, affected_param = graph.run_layer(i)
+
+        if noise_model:
+            c = noise_model.apply(c)
         if len(qubits) == 0:
             continue
 
-        probabilities = backend.execute_circuit(circuit=c, nshots=1024).probabilities()
-
         # run through parametrized gate
         for qubit, params in zip(qubits, affected_param):
-            result = probabilities[0]
+            result = run_subcircuit_measure(
+                c, qubit, nqubits, backend, calibration, stochastic
+            )
 
             for p in params:
                 # update Fubini-Study matrix
-                fubini[p, p] = result - result**2
+                for t in params:
+                    ps = scale_factors[p]
+                    ts = scale_factors[t]
+                    fubini[p, t] = ps * ts * (result - result**2)
 
     return fubini
+
+
+def run_subcircuit_measure(
+    c, qubit, nqubits, backend, calibration=None, stochastic=True
+):
+    """Run variance measurement on specific qubit of subcircuit
+    Args:
+        c: subcircuit ending with measurement gates in appropriate basis
+        qubit: circuit qubit at which variance is evaluated
+        nqubits: total number of circuit qubits
+        backend: simulation backend used to run circuit
+        stochastic (bool): flag to set precise or stochastic state evaluations
+    Return:
+        Probability of a specific qubit to be in state |0> in a measured basis"""
+
+    obs = create_hamiltonian(qubit, nqubits, backend)
+
+    if stochastic:
+        # execute circuit with readout mitigation
+        result = execute_circuit(backend, c, obs, 1024, calibration=calibration)
+
+    else:
+        # probs = backend.execute_circuit(circuit=c, nshots=1024).probabilities()
+        # result = np.sum(np.dot(obs.matrix, probs))
+        result = obs.expectation(backend.execute_circuit(c).state())
+
+    # expectation value -> state |0> probability
+    result = (1 - result) / 2
+
+    return result

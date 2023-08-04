@@ -1,72 +1,65 @@
+import time
+from datetime import datetime
+
 import numpy as np
 from scipy.optimize import basinhopping
 
 from qibo import backends
-
-# from qibo.noise import NoiseModel
 from qibo.config import log, raise_error
-from qibo.derivative import calculate_gradients, generate_fubini
-from qibo.hamiltonians import SymbolicHamiltonian
+from qibo.derivative import (
+    build_graph,
+    calculate_gradients,
+    create_hamiltonian,
+    error_mitigation,
+    execute_circuit,
+    generate_fubini,
+)
 from qibo.models import Circuit
-from qibo.symbols import Symbol, Z
+
+
+class VariationalCircuit(Circuit):
+    """
+    Circuit architecture used in Quantum Machine Learning and Quantum Optimisation
+    procedures
+    """
+
+    def optimize(
+        self,
+        X,
+        y,
+        initial_parameters,
+        loss,
+        args=(),
+        method="sgd",
+        hamiltonian=None,
+        **kwargs,
+    ):
+        if method == "sgd":
+            optimizer = SGD(self, initial_parameters, hamiltonian, args, loss, **kwargs)
+
+        return optimizer.fit(X, y)
 
 
 class Optimizer:
     """Parent optimizer"""
 
-    def __init__(self, initial_parameters, args=(), loss=None, **kwargs):
-        if not loss:
-            self.loss_function = self.base_loss
-        else:
-            self.loss_function = loss
+    def __init__(self, initial_parameters, args=(), loss=None):
+        self.loss_function = loss
         self.args = args
-        self.backend = None
         self.initial_parameters = initial_parameters
-        self.args = args
         self.backend = backends.GlobalBackend()
+        self.ftime = None
+        self.etime = None
+        self.name = f'Run_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
 
         if not isinstance(initial_parameters, list) and not isinstance(
             initial_parameters, np.ndarray
         ):
             raise ("Parameters must be a list of Parameter objects or a numpy array")
 
-    def base_loss(self, result, label):
-        """Standard squared error loss function"""
-
-        loss = (result - label) ** 2
-
-        return loss
-
     def set_options(self, updates):
         """Updates options dictionary"""
         self.options.update(updates)
-
-    def create_hamiltonian(self, qubit, nqubit):
-        """
-        Creates appropriate Hamiltonian for a given list of qubits
-        Args:
-            qubit: qubit numbers whose states we are interested in
-            nqubit: total number of qubits, which determines size of Hamiltonian
-        Return:
-            hamiltonian: SymbolicHamiltonian
-        """
-        standard = np.array([[1, 0], [0, 1]])
-        target = np.array([[1, 0], [0, 0]])
-        hams = []
-        if not isinstance(qubit, list):
-            qubit = [qubit]
-
-        for i in range(nqubit):
-            if i in qubit:
-                hams.append(Symbol(i, target))
-            else:
-                hams.append(Symbol(i, standard))
-
-        # create Hamiltonian
-        obs = np.prod(hams)
-        hamiltonian = SymbolicHamiltonian(obs, backend=self.backend)
-
-        return hamiltonian
 
 
 class SGD(Optimizer):
@@ -103,7 +96,7 @@ class SGD(Optimizer):
     def __init__(
         self, circuit, parameters, hamiltonian=None, args=(), loss=None, **kwargs
     ):
-        super().__init__(parameters, args, loss=loss, **kwargs)
+        super().__init__(parameters, args, loss=loss)
 
         # circuit
         if not isinstance(circuit, Circuit):
@@ -119,9 +112,12 @@ class SGD(Optimizer):
 
         # hamiltonian
         if not hamiltonian:
-            self.hamiltonian = self.create_hamiltonian(0, self.nqubits)
+            self.hamiltonian = [create_hamiltonian(0, self.nqubits, self.backend)]
         else:
             self.hamiltonian = hamiltonian
+
+        # error mitigation
+        self.cdr_params = None
 
         # options
         self.options = {
@@ -130,9 +126,20 @@ class SGD(Optimizer):
             "batches": 1,
             "J_threshold": 1e-3,
             "shift_rule": "psr",
+            "nshots": 1024,
             "natgrad": False,
+            "mitigation": False,
+            "noise_model": None,
+            "adam": True,
+            "save": False,
+            "filename": f"results/{self.name}.txt",
         }
         self.set_options(kwargs)
+
+        if self.options["natgrad"]:
+            self.NGgraph = build_graph(
+                self._circuit, self.nparams, self.nqubits, self.paramInputs
+            )
 
     def _get_params(self, trainable=False, feature=None):
         """Creates an array with the trainable parameters"""
@@ -147,48 +154,87 @@ class SGD(Optimizer):
                 else:
                     trainablep = self.params[count : count + Param.nparams]
                     count += Param.nparams
+                    # update trainable params and retrieve gate param
                     params.append(Param.get_params(trainablep, feature=feature))
+
             return params
 
-    def run_loss(self, feature, label):
+    def calculate_loss_func_grad(self, results, labels, idx, delta=1e-6):
         """
-        Calculates loss and its derivative
+        Calculates loss function derivative with respect to parameter idx
         Args:
-            feature: input value
-            label: the value of y_exact which is approximated with the circuit
+            result: predicted values
+            labels: true values
+            idx: parameter number with respect to which we calculate the gradient
+            delta: size of the finite difference perturbation
         """
-        params = self._get_params(trainable=False, feature=feature)
-        result = self.run_circuit(params, nshots=10000)
-        loss = self.loss_function(result, label)
-        forward = self.loss_function(result + 0.001, label)
-        backward = self.loss_function(result - 0.001, label)
 
-        return loss, (forward - backward) / 0.002
+        grads = np.empty(self.nlabels)
+        for lab in range(self.nlabels):
+            shifted = results[idx : idx + 1, :]
+            shifted[0][lab] += delta
+            forward = self.loss_function(
+                np.copy(shifted), labels[idx : idx + 1, :], self.args
+            )
+            shifted[0][lab] -= 2 * delta
+            backward = self.loss_function(
+                np.copy(shifted), labels[idx : idx + 1, :], self.args
+            )
+            grads[lab] = (forward - backward) / (2 * delta)
+        return grads
 
-    def run_circuit(self, parameters, nshots=10000):
-        """
-        User-facing function which runs the circuit with given parameters and returns the result
+    def run_circuit(self, feature):
+        """Backend function which runs the circuit for one feature
         Args:
-            parameters: trainable parameters of type Parameter
-            nshots: number of shots to average circuit expectation values
+            feature: single input value to the system
         Return:
-            results
-        """
+            results: expectation value"""
+
+        # set parameters
+        parameters = self._get_params(trainable=False, feature=feature)
         self._circuit.set_parameters(parameters)
-        obs = np.prod([Z(i) for i in range(1)])
-        obs = SymbolicHamiltonian(obs, backend=self.backend)
-        results = self.backend.execute_circuit(
-            circuit=self._circuit, nshots=nshots
-        ).expectation_from_samples(obs)
 
-        # test = self.hamiltonian.expectation(results)
-        # print(test, results)
+        # run circuit
+        if isinstance(self.hamiltonian, list):
+            exp_v = np.empty(len(self.hamiltonian))
+            for i, hamiltonian in enumerate(self.hamiltonian):
+                exp_v[i] = execute_circuit(
+                    self.backend,
+                    self._circuit,
+                    hamiltonian,
+                    self.options["nshots"],
+                    initial_state=None,
+                    cdr_params=self.cdr_params,
+                )
 
-        # state = self._circuit().state()
+        else:
+            exp_v = execute_circuit(
+                self.backend,
+                self._circuit,
+                self.hamiltonian,
+                self.options["nshots"],
+                initial_state=None,
+                cdr_params=self.cdr_params,
+            )
 
-        # results = self.hamiltonian.expectation(state)
+        return exp_v
 
-        return results
+    def predict(self, feature):
+        """
+         User-facing function which runs the circuit for given input features returns the result
+         Args:
+             feature: input values which are run through the circuit
+        Return:
+             results
+        """
+
+        if isinstance(feature, np.ndarray):
+            results = np.zeros((len(feature), self.nlabels))
+            for i, feat in enumerate(feature):
+                results[i, :] = self.run_circuit(feat)
+            return results
+        else:
+            return self.run_circuit(feature)
 
     def dloss(self, features, labels):
         """
@@ -198,45 +244,63 @@ class SGD(Optimizer):
             labels: np.array of the labels related to features
         Returns: np.array of length self.nparams containing the loss function's gradients
         """
-        loss_gradients = np.zeros(self.nparams)
+        circ_grads = np.zeros(self.nparams)
+        results = np.zeros((self.nsample, self.nlabels))
         loss = 0
 
         # setup fubini matrix for natural gradient
         if self.options["natgrad"]:
             fubini = np.zeros((self.nparams, self.nparams))
 
+        # calculate CDR parameters anew at each epoch
+        if self.options["mitigation"]:
+            parameters = self._get_params(trainable=False, feature=1.0)
+            self._circuit.set_parameters(parameters)
+            self.cdr_params = error_mitigation(
+                self._circuit.to_clifford(),
+                self.nqubits,
+                self.hamiltonian,
+                self.backend,
+                self.options["noise_model"],
+                self.options["nshots"],
+            )
+
         # iterate through all data points
-        for feat, label in zip(features, labels):
-            local_loss, loss_grad = self.run_loss(feat, label)
+        for i, feat in enumerate(features):
+            # predict current output
+            results[i] = self.predict(feat)
 
-            loss += local_loss
+            obs_gradients = np.zeros((self.nlabels, self.nparams))
+            for h, ham in enumerate(self.hamiltonian):
+                obs_gradients[h] = calculate_gradients(
+                    self, self.cdr_params, ham, self.options["nshots"]
+                )  # d<B> N params, N label gradients
 
-            obs_gradients = calculate_gradients(
-                self, feature=feat
-            )  # d<B> N params, N label gradients
+            loss_func_grad = self.calculate_loss_func_grad(results, labels, i)
+
+            circ_grads += np.dot(loss_func_grad.T, obs_gradients)
 
             if self.options["natgrad"]:
+                self.NGgraph.update_parameters(self._circuit.get_parameters())
+
                 fubini += generate_fubini(
-                    self._circuit,
+                    self.NGgraph,
+                    self.nparams,
                     self.nqubits,
                     self.paramInputs,
-                    feat,
-                    params=self.params,
+                    noise_model=self.options["noise_model"],
                 )  # separate pull request
 
-            for i in range(self.nparams):
-                loss_gradients[i] += obs_gradients[i] * loss_grad
-
         # gradient average
-        loss_gradients /= len(features)
-        loss /= len(features)
+        loss = self.loss_function(results, labels, self.args)
+        loss_gradients = circ_grads / (self.nsample)
 
         # Fubini-Study Metric renormalisation
         if self.options["natgrad"]:
             fubini /= len(features)
             loss_gradients = np.dot(np.linalg.inv(fubini), loss_gradients)
 
-        return loss_gradients, loss
+        return loss_gradients, loss / len(features)
 
     def AdamDescent(
         self,
@@ -268,13 +332,25 @@ class SGD(Optimizer):
 
         grads, loss = self.dloss(features, labels)
 
-        for i in range(self.nparams):
-            m[i] = beta_1 * m[i] + (1 - beta_1) * grads[i]
-            v[i] = beta_2 * v[i] + (1 - beta_2) * grads[i] * grads[i]
-            mhat = m[i] / (1.0 - beta_1 ** (iteration + 1))
-            vhat = v[i] / (1.0 - beta_2 ** (iteration + 1))
-            self.params[i] -= learning_rate * mhat / (np.sqrt(vhat) + epsilon)
-        return m, v, loss
+        if self.options["save"]:
+            self.file.write(
+                f"Grads (absolute value: {np.linalg.norm(grads)}): {grads.tolist()}\nParams {self.params}\n"
+            )
+
+        if self.options["adam"]:
+            for i in range(self.nparams):
+                m[i] = beta_1 * m[i] + (1 - beta_1) * grads[i]
+                v[i] = beta_2 * v[i] + (1 - beta_2) * grads[i] * grads[i]
+                mhat = m[i] / (1.0 - beta_1 ** (iteration + 1))
+                vhat = v[i] / (1.0 - beta_2 ** (iteration + 1))
+                self.params[i] -= learning_rate * mhat / (np.sqrt(vhat) + epsilon)
+            return m, v, loss
+
+        # standard gradient descent
+        else:
+            for i in range(self.nparams):
+                self.params[i] -= learning_rate * grads[i]
+            return 0, 0, loss
 
     def sgd(self, options):
         """
@@ -301,7 +377,21 @@ class SGD(Optimizer):
             indices.append(np.arange(ib, self.nsample, options["batches"]))
 
         iteration = 0
-        file = open("results.txt", "w")
+
+        if self.options["save"]:
+            self.file = open(self.options["filename"], "w")
+            self.file.write(
+                f"Epochs: {self.options['epochs']}\n"
+                f"learning rate: {self.options['learning_rate']}\n"
+                f"nshots: {self.options['nshots']}\n"
+                f"natgrad: {self.options['natgrad']}\n"
+                f"mitigation: {self.options['mitigation']}\n"
+                f"noise_model: {self.options['noise_model']}\n"
+                f"adam: {self.options['adam']}\n\n\n"
+            )
+            self.ftime = time.time()
+            simulation_start = time.time()
+            self.etime = time.time()
 
         for epoch in range(options["epochs"]):
             if epoch != 0 and losses[-1] < options["J_threshold"]:
@@ -333,15 +423,25 @@ class SGD(Optimizer):
                     " | loss: ",
                     this_loss,
                 )
-                file.write(
-                    f"Iteration {iteration}, epoch {epoch + 1} | loss: {this_loss}\n"
-                )
+
+                if self.options["save"]:
+                    etime = time.time()
+                    self.file.write(
+                        f"Iteration {iteration}, epoch {epoch + 1} | loss: {this_loss} | duration: {etime-self.etime}\n\n"
+                    )
+                    self.etime = etime
 
                 # in case one wants to plot J as a function of the iterations
                 losses.append(this_loss)
 
-        np.savetxt(file, self.params, fmt="%.15f")
-        file.close()
+            plot(self, self.features, self.labels)
+
+        if self.options["save"]:
+            self.file.write(f"Params {self.params}\n")
+            self.file.write(
+                f"\n\n##### Total simulation time: {time.time()-simulation_start}"
+            )
+            self.file.close()
 
         return losses
 
@@ -355,9 +455,13 @@ class SGD(Optimizer):
             raise ("y must be a numpy array")
 
         self.features = X
+        self.nsample = len(self.features)
 
         self.labels = y
-        self.nsample = len(self.labels)
+        if y.ndim == 1:
+            self.labels = self.labels.reshape(-1, 1)
+
+        self.nlabels = self.labels.shape[1]
 
         if self.backend is None:
             from qibo.backends import GlobalBackend
@@ -392,36 +496,7 @@ class CMAES(Optimizer):
 
 class Newtonian(Optimizer):
     def __init__(self, initial_parameters, args=(), loss=None, **kwargs):
-        super().__init__(initial_parameters, args, loss, **kwargs)
-
-    def fit(
-        self,
-        method="Powell",
-        jac=None,
-        hess=None,
-        hessp=None,
-        bounds=None,
-        constraints=(),
-        tol=None,
-        callback=None,
-        options=None,
-        processes=None,
-        backend=None,
-    ):
-        """Newtonian optimization approaches based on ``scipy.optimize.minimize``.
-
-        For more details check the `scipy documentation <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
-
-        .. note::
-            When using the method ``parallel_L-BFGS-B`` the ``processes`` option controls the
-            number of processes used by the parallel L-BFGS-B algorithm through the ``multiprocessing`` library.
-            By default ``processes=None``, in this case the total number of logical cores are used.
-            Make sure to select the appropriate number of processes for your computer specification,
-            taking in consideration memory and physical cores. In order to obtain optimal results
-            you can control the number of threads used by each process with the ``qibo.set_threads`` method.
-            For example, for small-medium size circuits you may benefit from single thread per process, thus set
-            ``qibo.set_threads(1)`` before running the optimization.
-
+        """
         Args:
             loss (callable): Loss as a function of variational parameters to be
                 optimized.
@@ -442,37 +517,70 @@ class Newtonian(Optimizer):
                 ``scipy.optimize.minimize``.
             processes (int): number of processes when using the parallel BFGS method.
         """
-        if method == "parallel_L-BFGS-B":  # pragma: no cover
+        super().__init__(initial_parameters, args, loss, **kwargs)
+        self.options = {
+            "method": "Powell",
+            "jac": None,
+            "hess": None,
+            "hessp": None,
+            "bounds": None,
+            "constraints": (),
+            "tol": None,
+            "callback": None,
+            "options": None,
+            "processes": None,
+            "backend": None,
+        }
+        self.set_options(kwargs)
+
+    def fit(self):
+        """Newtonian optimization approaches based on ``scipy.optimize.minimize``.
+
+        For more details check the `scipy documentation <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
+
+        .. note::
+            When using the method ``parallel_L-BFGS-B`` the ``processes`` option controls the
+            number of processes used by the parallel L-BFGS-B algorithm through the ``multiprocessing`` library.
+            By default ``processes=None``, in this case the total number of logical cores are used.
+            Make sure to select the appropriate number of processes for your computer specification,
+            taking in consideration memory and physical cores. In order to obtain optimal results
+            you can control the number of threads used by each process with the ``qibo.set_threads`` method.
+            For example, for small-medium size circuits you may benefit from single thread per process, thus set
+            ``qibo.set_threads(1)`` before running the optimization.
+
+
+        """
+        if self.options["method"] == "parallel_L-BFGS-B":  # pragma: no cover
             o = ParallelBFGS(
-                self.loss,
+                self.loss_function,
                 args=self.args,
-                processes=processes,
-                bounds=bounds,
-                callback=callback,
-                options=options,
+                processes=self.options["processes"],
+                bounds=self.options["bounds"],
+                callback=self.options["callback"],
+                options=self.options["options"],
             )
             m = o.run(self.initial_parameters)
         else:
             from scipy.optimize import minimize
 
             m = minimize(
-                self.loss,
+                self.loss_function,
                 self.initial_parameters,
                 args=self.args,
-                method=method,
-                jac=jac,
-                hess=hess,
-                hessp=hessp,
-                bounds=bounds,
-                constraints=constraints,
-                tol=tol,
-                callback=callback,
-                options=options,
+                method=self.options["method"],
+                jac=self.options["jac"],
+                hess=self.options["hess"],
+                hessp=self.options["hessp"],
+                bounds=self.options["bounds"],
+                constraints=self.options["constraints"],
+                tol=self.options["tol"],
+                callback=self.options["callback"],
+                options=self.options["options"],
             )
         return m.fun, m.x, m
 
 
-class ParallelBFGS:  # pragma: no cover
+class ParallelBFGS(Optimizer):  # pragma: no cover
     """Computes the L-BFGS-B using parallel evaluation using multiprocessing.
     This implementation here is based on https://doi.org/10.32614/RJ-2019-030.
 
@@ -487,30 +595,24 @@ class ParallelBFGS:  # pragma: no cover
 
     import numpy as np
 
-    def __init__(
-        self,
-        function,
-        args=(),
-        bounds=None,
-        callback=None,
-        options=None,
-        processes=None,
-    ):
-        self.function = function
-        self.args = args
-        self.xval = None
+    def __init__(self, initial_parameters, loss, args=(), **kwargs):
+        super().__init__(initial_parameters, args, loss=loss)
         self.function_value = None
         self.jacobian_value = None
-        self.precision = self.np.finfo("float64").eps
-        self.bounds = bounds
-        self.callback = callback
-        self.options = options
-        self.processes = processes
 
-    def run(self, x0):
+        self.options = {
+            "xval": None,
+            "precision": self.np.finfo("float64").eps,
+            "bounds": None,
+            "callback": None,
+            "options": None,
+            "processes": None,
+        }
+
+        self.set_options(kwargs)
+
+    def fit(self):
         """Executes parallel L-BFGS-B minimization.
-        Args:
-            x0 (numpy.array): guess for initial solution.
 
         Returns:
             scipy.minimize result object
@@ -519,15 +621,15 @@ class ParallelBFGS:  # pragma: no cover
 
         out = minimize(
             fun=self.fun,
-            x0=x0,
+            x0=self.initial_parameters,
             jac=self.jac,
             method="L-BFGS-B",
-            bounds=self.bounds,
-            callback=self.callback,
-            options=self.options,
+            bounds=self.options["bounds"],
+            callback=self.options["callback"],
+            options=self.options["options"],
         )
-        out.hess_inv = out.hess_inv * self.np.identity(len(x0))
-        return out
+        out.hess_inv = out.hess_inv * self.np.identity(len(self.initial_parameters))
+        return out.fun, out.x, out
 
     @staticmethod
     def _eval_approx(eps_at, fun, x, eps):
@@ -543,19 +645,20 @@ class ParallelBFGS:  # pragma: no cover
 
     def evaluate(self, x, eps=1e-8):
         if not (
-            self.xval is not None and all(abs(self.xval - x) <= self.precision * 2)
+            self.options["xval"] is not None
+            and all(abs(self.options["xval"] - x) <= self.options["precision"] * 2)
         ):
             eps_at = range(len(x) + 1)
-            self.xval = x.copy()
+            self.options["xval"] = x.copy()
 
             def operation(epsi):
                 return self._eval_approx(
-                    epsi, lambda y: self.function(y, *self.args), x, eps
+                    epsi, lambda y: self.loss_function(y, *self.args), x, eps
                 )
 
             from joblib import Parallel, delayed
 
-            ret = Parallel(self.processes, prefer="threads")(
+            ret = Parallel(self.options["processes"], prefer="threads")(
                 delayed(operation)(epsi) for epsi in eps_at
             )
             self.function_value = ret[0]
@@ -568,3 +671,36 @@ class ParallelBFGS:  # pragma: no cover
     def jac(self, x):
         self.evaluate(x)
         return self.jacobian_value
+
+
+scaler = lambda x: x
+import matplotlib.pyplot as plt
+
+
+def plot(optimizer, xtrain, ytrain):
+    # new predictions
+    yprediction = optimizer.predict(xtrain)
+
+    cols = yprediction.shape[1]
+    # new plot
+    fig, ax = plt.subplots(nrows=1, ncols=cols, figsize=(8, 6))
+    # ax.set(title=f'$\chi^2 = $ {chi2:.2f}', xlabel='x', ylabel='PDF',
+    #           xscale='log')
+
+    for col in range(cols):
+        if cols > 1:
+            train = ytrain[:, col]
+            pred = yprediction[:, col]
+            pred = scaler(pred)
+            ax[col].plot(xtrain, train, label="Classical PDF", color="black")
+            ax[col].plot(xtrain, pred, label=r"Quantum PDF model", zorder=10)
+            ax[col].legend()
+
+        else:
+            yprediction = scaler(yprediction)
+            ax.plot(xtrain, ytrain, label="Classical PDF", color="black")
+            ax.plot(xtrain, yprediction, label=r"Quantum PDF model", zorder=10)
+            ax.legend()
+
+    plt.savefig("Plot.png")
+    plt.close()

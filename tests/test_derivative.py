@@ -6,46 +6,48 @@ import tensorflow as tf
 import qibo
 from qibo import gates, hamiltonians
 from qibo.backends import GlobalBackend
-from qibo.derivative import Graph, Parameter, generate_fubini, parameter_shift
+from qibo.derivative import (
+    Graph,
+    Parameter,
+    build_graph,
+    create_hamiltonian,
+    generate_fubini,
+    parameter_shift,
+    run_subcircuit_measure,
+)
 from qibo.models import Circuit
 from qibo.symbols import Z
 
 qibo.set_backend("tensorflow")
 
 
-# defining an observable
-def hamiltonian(nqubits):
-    return hamiltonians.hamiltonians.SymbolicHamiltonian(
-        np.prod([Z(i) for i in range(nqubits)]), backend=GlobalBackend()
-    )
-
-
-dev = qml.device("default.qubit", wires=1)
+dev = qml.device("default.qubit", wires=2)
 
 
 @qml.qnode(dev, interface="autograd")
-def ansatz_pdf(params, feature):
-    qml.Hadamard(wires=0)
+def ansatz_pdf(layers, params, feature):
+    for i in range(layers):
+        qml.Hadamard(wires=i)
 
-    qml.RZ(params[0] * feature, wires=0)
-    qml.RZ(params[1], wires=0)
+        qml.RZ(params[12 * i + 0] * feature, wires=i)
+        qml.RZ(params[12 * i + 1], wires=i)
 
-    qml.RY(params[2] * feature, wires=0)
-    qml.RY(params[3], wires=0)
+        qml.RY(params[12 * i + 2] * feature, wires=i)
+        qml.RY(params[12 * i + 3], wires=i)
 
-    qml.RZ(params[4] * feature, wires=0)
-    qml.RZ(params[5], wires=0)
+        qml.RZ(params[12 * i + 4] * feature, wires=i)
+        qml.RZ(params[12 * i + 5], wires=i)
 
-    qml.RY(params[6] * feature, wires=0)
-    qml.RY(params[7], wires=0)
+        qml.RY(params[12 * i + 6] * feature, wires=i)
+        qml.RY(params[12 * i + 7], wires=i)
 
-    qml.RZ(params[8] * feature, wires=0)
-    qml.RZ(params[9], wires=0)
+        qml.RZ(params[12 * i + 8] * feature, wires=i)
+        qml.RZ(params[12 * i + 9], wires=i)
 
-    qml.RY(params[10] * feature, wires=0)
-    qml.RY(params[11], wires=0)
+        qml.RY(params[12 * i + 10] * feature, wires=i)
+        qml.RY(params[12 * i + 11], wires=i)
 
-    return qml.expval(qml.PauliZ(0))
+    return qml.expval(qml.PauliZ([1]))
 
 
 def ansatz(layers, nqubits):
@@ -58,15 +60,16 @@ def ansatz(layers, nqubits):
 
     c = qibo.models.Circuit(nqubits, density_matrix=True)
 
-    c.add(qibo.gates.H(q=0))
+    for qubit in range(nqubits):
+        c.add(qibo.gates.H(q=qubit))
 
-    for _ in range(layers):
-        c.add(qibo.gates.RZ(q=0, theta=0))
-        c.add(qibo.gates.RZ(q=0, theta=0))
-        c.add(qibo.gates.RY(q=0, theta=0))
-        c.add(qibo.gates.RY(q=0, theta=0))
+        for _ in range(layers):
+            c.add(qibo.gates.RZ(q=qubit, theta=0))
+            c.add(qibo.gates.RZ(q=qubit, theta=0))
+            c.add(qibo.gates.RY(q=qubit, theta=0))
+            c.add(qibo.gates.RY(q=qubit, theta=0))
 
-    c.add(qibo.gates.M(0))
+        c.add(qibo.gates.M(qubit))
 
     return c
 
@@ -102,6 +105,7 @@ def ansatz_2qubit(layers, nqubits):
 def circuit(nqubits=1):
     c = Circuit(nqubits)
     # all gates for which generator eigenvalue is implemented
+    c.add(gates.H(q=0))
     c.add(gates.RX(q=0, theta=0))
     c.add(gates.RY(q=0, theta=0))
     c.add(gates.RZ(q=0, theta=0))
@@ -120,7 +124,7 @@ def gradient_exact():
         c = circuit(nqubits=1)
         c.set_parameters(test_params)
 
-        ham = hamiltonian(1)
+        ham = create_hamiltonian(0, 1, GlobalBackend())
         results = ham.expectation(
             backend.execute_circuit(circuit=c, initial_state=None).state()
         )
@@ -128,6 +132,47 @@ def gradient_exact():
     gradients = tape.gradient(results, test_params)
 
     return gradients
+
+
+def test_parameter():
+    # single feature
+    param = Parameter(
+        lambda x, th1, th2, th3: x**2 * th1 + th2 * th3, [1.5, 2.0, 3.0], featurep=7.0
+    )
+
+    indices = param.get_indices(10)
+    assert indices == [10, 11, 12]
+
+    fixed = param.get_fixed_part(1)
+    assert fixed == 73.5
+
+    factor = param.get_scaling_factor(2)
+    assert factor == 2.0
+
+    gate_value = param.get_params(trainablep=[15.0, 10.0, 7.0], feature=5.0)
+    assert gate_value == 445
+
+    # multiple features
+    param = Parameter(
+        lambda x1, x2, th1, th2, th3: x1**2 * th1 + x2 * th2 * th3,
+        [1.5, 2.0, 3.0],
+        featurep=[7.0, 4.0],
+    )
+
+    fixed = param.get_fixed_part(1)
+    assert fixed == 73.5
+
+    factor = param.get_scaling_factor(2)
+    assert factor == 8.0
+
+    gate_value = param.get_params(trainablep=[15.0, 10.0, 7.0], feature=[5.0, 3.0])
+    assert gate_value == 585
+
+
+def test_run_subcircuit_measure():
+    c = circuit(nqubits=1)
+    value = run_subcircuit_measure(c, 0, 1, GlobalBackend(), stochastic=False)
+    assert value == 0.5
 
 
 @pytest.mark.parametrize("nshots, atol", [(None, 1e-8), (100000, 1e-2)])
@@ -144,7 +189,7 @@ def test_psr(backend, nshots, atol):
     test_params *= scale_factor
     c.set_parameters(test_params)
 
-    test_hamiltonian = hamiltonian(nqubits=1)
+    test_hamiltonian = create_hamiltonian(0, 1, GlobalBackend())
 
     # testing parameter out of bounds
     with pytest.raises(ValueError):
@@ -194,7 +239,7 @@ def test_psr(backend, nshots, atol):
 )
 def test_graph(layer_num, trainable_qubits_correct, affected_params_correct):
     circuit = ansatz_2qubit(3, 2)
-
+    print(circuit.draw())
     nqubits = circuit.nqubits
     gates = circuit.queue
     trainable_params = np.linspace(0.1, 1, 18)
@@ -213,6 +258,36 @@ def test_graph(layer_num, trainable_qubits_correct, affected_params_correct):
     assert np.allclose(affected_params, affected_params_correct)
 
 
+def graph_improvements(layer_num, trainable_qubits_correct, affected_params_correct):
+    circuit = ansatz_2qubit(3, 2)
+    print(circuit.draw())
+    nqubits = circuit.nqubits
+    gates = circuit.queue
+    trainable_params = np.linspace(0.1, 1, 18)
+    gate_params = [
+        trainable_params[i] + trainable_params[i + 1] for i in range(0, 18, 2)
+    ]
+    trainable_params_index = [[i, i + 1] for i in range(0, 18, 2)]
+
+    print(gates, trainable_params_index, gate_params)
+    graph = Graph(nqubits, gates, trainable_params_index, gate_params)
+
+    graph.build_graph()
+
+    new_circuit, trainable_qubits, affected_params = graph.run_layer(layer_num)
+
+    assert np.allclose(trainable_qubits, trainable_qubits_correct)
+    assert np.allclose(affected_params, affected_params_correct)
+
+
+def loss_func(ypred, ytrue, other_args=None):
+    loss = 0
+    for i in range(len(ypred)):
+        loss += (ytrue[i] - ypred[i]) ** 2
+
+    return loss
+
+
 def test_natural_gradient():
     params = qml.numpy.asarray([0.1] * 12)
 
@@ -220,23 +295,90 @@ def test_natural_gradient():
     circuit = ansatz(3, 1)
 
     # initialize optimiser with Parameter objects
-    initial_parameters = [Parameter(lambda th: th, [0.1]) for i in range(12)]
-    optimiser = qibo.optimizers.SGD(circuit=circuit, parameters=initial_parameters)
+    initial_parameters = [Parameter(lambda th1: th1, [0.1]) for i in range(12)]
+    optimiser = qibo.optimizers.SGD(
+        circuit=circuit, parameters=initial_parameters, loss=loss_func
+    )
 
-    _ = optimiser.run_circuit(optimiser.params)
+    _ = optimiser.run_circuit(0.1)
 
-    fubini = generate_fubini(circuit, 1, initial_parameters, 1.0)
+    graph = build_graph(
+        optimiser._circuit, 12, optimiser.nqubits, optimiser.paramInputs
+    )
+    fubini = generate_fubini(
+        graph,
+        12,
+        1,
+        optimiser.paramInputs,
+        noise_model=optimiser.options["noise_model"],
+        stochastic=False,
+    )
+
     # initialize optimiser with numpy array
     initial_parameters2 = np.full(12, 0.1)
-    optimiser2 = qibo.optimizers.SGD(circuit=circuit, parameters=initial_parameters2)
+    optimiser2 = qibo.optimizers.SGD(
+        circuit=circuit, parameters=initial_parameters2, loss=loss_func
+    )
 
-    _ = optimiser2.run_circuit(optimiser.params)
+    _ = optimiser2.run_circuit(0.1)
 
-    fubini2 = generate_fubini(circuit, 1, initial_parameters2, 1.0)
+    graph = build_graph(
+        optimiser2._circuit, 12, optimiser2.nqubits, optimiser2.paramInputs
+    )
+    fubini2 = generate_fubini(
+        graph,
+        12,
+        1,
+        optimiser2.paramInputs,
+        noise_model=optimiser2.options["noise_model"],
+        stochastic=False,
+    )
 
     assert np.allclose(optimiser.params, params)
 
-    metric_tensor = qml.metric_tensor(ansatz_pdf, approx="diag")(params, 1.0)
+    metric_tensor = qml.metric_tensor(ansatz_pdf, approx="diag")(1, params, 1.0)
 
     assert np.allclose(fubini, metric_tensor)
     assert np.allclose(fubini2, metric_tensor)
+
+
+def test_multiqubit_natural_gradient():
+    # pennylane baseline
+    params = qml.numpy.asarray([0.1] * 24)
+    metric_tensor = qml.metric_tensor(ansatz_pdf, approx="diag")(2, params, 1.0)
+
+    # local implementation
+    nqubits = 2
+    circuit = ansatz(
+        3, nqubits
+    )  # 2 qubits x 3 layers x 2 gates x 2 parameters = 24 params
+    initial_parameters = [Parameter(lambda th1: th1, [0.1]) for i in range(24)]
+
+    hamiltonians = [create_hamiltonian(i, 2, GlobalBackend()) for i in range(2)]
+    optimiser = qibo.optimizers.SGD(
+        circuit=circuit,
+        parameters=initial_parameters,
+        hamiltonian=hamiltonians,
+        loss=loss_func,
+    )
+
+    _ = optimiser.run_circuit(0.1)
+
+    graph = build_graph(
+        optimiser._circuit, 24, optimiser.nqubits, optimiser.paramInputs
+    )
+    fubini = generate_fubini(
+        graph,
+        24,
+        nqubits,
+        optimiser.paramInputs,
+        noise_model=optimiser.options["noise_model"],
+        stochastic=False,
+    )
+
+    assert np.allclose(fubini, metric_tensor)
+
+
+if __name__ == "__main__":
+    # graph_improvements(1, [0, 1], [[0, 1], [2, 3]])
+    test_multiqubit_natural_gradient()
