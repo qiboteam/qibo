@@ -1,6 +1,7 @@
 import random
 
 import numpy as np
+import sympy as sp
 
 from qibo import gates
 from qibo.backends import GlobalBackend, matrices
@@ -21,13 +22,19 @@ class Parameter:
     and possibly features are linked through a lambda function which returns the
     final gate parameter"""
 
-    def __init__(self, func, trainablep, featurep=None):
+    def __init__(self, func, trainablep, featurep=[]):
         self._trainablep = trainablep
         self._featurep = featurep
         self.nparams = len(trainablep)
-        self.lambdaf = func
 
-    def _apply_func(self, fixed_params=None):
+        if isinstance(featurep, list):
+            self.nfeat = len(featurep)
+        else:
+            self.nfeat = 1
+        self.lambdaf = func
+        self.derivatives = self.calculate_derivatives()
+
+    def _apply_func(self, function, fixed_params=None):
         """Applies lambda function and returns final gate parameter"""
         params = []
         if self._featurep is not None:
@@ -39,7 +46,7 @@ class Parameter:
             params.extend(fixed_params)
         else:
             params.extend(self._trainablep)
-        return self.lambdaf(*params)
+        return function(*params)
 
     def _update_params(self, trainablep=None, feature=None):
         """Update gate trainable parameter and feature values"""
@@ -51,7 +58,7 @@ class Parameter:
     def get_params(self, trainablep=None, feature=None):
         """Update values with trainable parameter and calculate current gate parameter"""
         self._update_params(trainablep=trainablep, feature=feature)
-        return self._apply_func()
+        return self._apply_func(self.lambdaf)
 
     def get_indices(self, start_index):
         """Return list of respective indices of trainable parameters within
@@ -62,15 +69,28 @@ class Parameter:
         """Retrieve parameter constant unaffected by a specific trainable parameter"""
         params = self._trainablep.copy()
         params[trainablep_idx] = 0.0
-        return self._apply_func(fixed_params=params)
+        return self._apply_func(self.lambdaf, fixed_params=params)
+
+    def calculate_derivatives(self):
+        vars = []
+        for i in range(self.nfeat):
+            vars.append(sp.Symbol(f"x{i}"))
+        for i in range(self.nparams):
+            vars.append(sp.Symbol(f"th{i}"))
+
+        expr = sp.sympify(self.lambdaf(*vars))
+
+        derivatives = []
+        for i in range(self.nfeat, len(vars)):
+            derivative_expr = sp.diff(expr, vars[i])
+            derivatives.append(sp.lambdify(vars, derivative_expr))
+
+        return derivatives
 
     def get_scaling_factor(self, trainablep_idx):
         """Get scaling factor multiplying a specific trainable parameter"""
-        fixed = self.get_fixed_part(trainablep_idx)
-        trainablep = self._trainablep
-        trainablep[trainablep_idx] = 1.0
-        gate_value = self.get_params(trainablep=trainablep)
-        return gate_value - fixed
+        deriv = self.derivatives[trainablep_idx]
+        return self._apply_func(deriv)
 
 
 def calculate_gradients(optimizer, cdr_params, ham, nshots):

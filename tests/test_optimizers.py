@@ -4,7 +4,7 @@ import pennylane as qml
 import qibo
 from qibo.backends import GlobalBackend
 from qibo.derivative import Parameter, create_hamiltonian
-from qibo.optimizers import CMAES, SGD, Newtonian, ParallelBFGS
+from qibo.optimizers import CMAES, SGD, BasinHopping, Newtonian, ParallelBFGS
 
 
 def ansatz(layers, nqubits, variational=False):
@@ -46,7 +46,7 @@ def test_sgd_optimizer():
     parameters = []
     for _ in range(6):
         parameters.append(
-            Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=True)
+            Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=[0.1])
         )
 
     optimizer = SGD(circuit=circuit, parameters=parameters, loss=loss_func_1qubit)
@@ -64,7 +64,7 @@ def test_variational_circuit():
     parameters = []
     for _ in range(6):
         parameters.append(
-            Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=True)
+            Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=[0.1])
         )
 
     X = np.array([0.1, 0.2, 0.3])
@@ -93,7 +93,7 @@ def test_multiqubit_sgd_optimizer():
     for i in range(12):
         parameters.append(
             Parameter(
-                lambda x, th1, th2: th1 * x + th2, [i / 100, i / 53], featurep=True
+                lambda x, th1, th2: th1 * x + th2, [i / 100, i / 53], featurep=[0.1]
             )
         )
 
@@ -118,7 +118,7 @@ def test_sgd_methods():
     parameters = []
     for i in range(0, 24, 2):
         parameters.append(
-            Parameter(lambda x, th1, th2: th1 * x + th2, [i, i + 1], featurep=True)
+            Parameter(lambda x, th1, th2: th1 * x + th2, [i, i + 1], featurep=[0.1])
         )
 
     hamiltonians = [create_hamiltonian(i, 2, GlobalBackend()) for i in range(2)]
@@ -219,10 +219,33 @@ def test_parallel_bfgs_optimizer():
     assert fbest < 1e-5
 
 
+def test_loss(x):
+    return np.sum(x**2 + 6 * x - 1000)
+
+
+def test_basin_hopping_optimizer():
+    circuit = ansatz(3, 1)
+
+    hamiltonian = create_hamiltonian(0, 1, GlobalBackend())
+
+    parameters = np.array([0.1] * 6)
+
+    optimizer = BasinHopping(
+        initial_parameters=parameters,
+        minimizer_kwargs=(circuit, hamiltonian),
+        loss=test_loss,
+    )
+
+    fbest, xbest, r = optimizer.fit()
+
+    assert fbest < 1e-5
+
+
 if __name__ == "__main__":
     # test_parallel_bfgs_optimizer()
     # test_newtonian_optimizer()
     # test_multiqubit_sgd_optimizer()
     # test_sgd_optimizer()
     # test_sgd_methods()
-    test_variational_circuit()
+    # test_variational_circuit()
+    test_basin_hopping_optimizer()

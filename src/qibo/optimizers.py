@@ -2,7 +2,6 @@ import time
 from datetime import datetime
 
 import numpy as np
-from scipy.optimize import basinhopping
 
 from qibo import backends
 from qibo.config import log, raise_error
@@ -156,7 +155,7 @@ class SGD(Optimizer):
                     count += Param.nparams
                     # update trainable params and retrieve gate param
                     params.append(Param.get_params(trainablep, feature=feature))
-
+            print(params)
             return params
 
     def calculate_loss_func_grad(self, results, labels, idx, delta=1e-6):
@@ -704,3 +703,29 @@ def plot(optimizer, xtrain, ytrain):
 
     plt.savefig("Plot.png")
     plt.close()
+
+
+class BasinHopping(Optimizer):
+    def __init__(self, initial_parameters, args=(), loss=None, **kwargs):
+        super().__init__(initial_parameters, args, loss)
+
+        self.options = kwargs
+
+    def fit(self):
+        """Genetic optimizer based on `pycma <https://github.com/CMA-ES/pycma>`_.
+
+        Args:
+            loss (callable): Loss as a function of variational parameters to be
+                optimized.
+            initial_parameters (np.ndarray): Initial guess for the variational
+                parameters.
+            args (tuple): optional arguments for the loss function.
+            options (dict): Dictionary with options accepted by the ``cma``
+                optimizer. The user can use ``import cma; cma.CMAOptions()`` to view the
+                available options.
+        """
+        from scipy.optimize import basinhopping
+
+        r = basinhopping(self.loss_function, self.initial_parameters)
+        print(r)
+        return r.x

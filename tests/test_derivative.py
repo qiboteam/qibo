@@ -1,6 +1,7 @@
 import numpy as np
 import pennylane as qml
 import pytest
+import sympy as sp
 import tensorflow as tf
 
 import qibo
@@ -137,7 +138,9 @@ def gradient_exact():
 def test_parameter():
     # single feature
     param = Parameter(
-        lambda x, th1, th2, th3: x**2 * th1 + th2 * th3, [1.5, 2.0, 3.0], featurep=7.0
+        lambda x, th1, th2, th3: x**2 * th1 + th2 * th3,
+        [1.5, 2.0, 3.0],
+        featurep=[7.0],
     )
 
     indices = param.get_indices(10)
@@ -149,7 +152,7 @@ def test_parameter():
     factor = param.get_scaling_factor(2)
     assert factor == 2.0
 
-    gate_value = param.get_params(trainablep=[15.0, 10.0, 7.0], feature=5.0)
+    gate_value = param.get_params(trainablep=[15.0, 10.0, 7.0], feature=[5.0])
     assert gate_value == 445
 
     # multiple features
@@ -337,7 +340,7 @@ def test_natural_gradient():
     assert np.allclose(optimiser.params, params)
 
     metric_tensor = qml.metric_tensor(ansatz_pdf, approx="diag")(1, params, 1.0)
-
+    print(metric_tensor)
     assert np.allclose(fubini, metric_tensor)
     assert np.allclose(fubini2, metric_tensor)
 
@@ -381,4 +384,5 @@ def test_multiqubit_natural_gradient():
 
 if __name__ == "__main__":
     # graph_improvements(1, [0, 1], [[0, 1], [2, 3]])
-    test_multiqubit_natural_gradient()
+    # test_multiqubit_natural_gradient()
+    test_parameter()
