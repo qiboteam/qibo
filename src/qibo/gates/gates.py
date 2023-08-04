@@ -497,6 +497,9 @@ class _Rn_(ParametrizedGate):
         self.target_qubits = (q,)
         self.unitary = True
 
+        if isinstance(theta, (float, int)) and (theta % (np.pi / 2)).is_integer():
+            self.clifford = True
+
         self.parameters = theta
         self.init_args = [q]
         self.init_kwargs = {"theta": theta, "trainable": trainable}
@@ -1030,6 +1033,9 @@ class _CRn_(ParametrizedGate):
         self.target_qubits = (q1,)
         self.parameters = theta
         self.unitary = True
+
+        if isinstance(theta, (float, int)) and (theta % (np.pi / 2)).is_integer():
+            self.clifford = True
 
         self.init_args = [q0, q1]
         self.init_kwargs = {"theta": theta, "trainable": trainable}
@@ -1952,6 +1958,7 @@ class ECR(Gate):
         self.draw_label = "ECR"
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
+        self.clifford = True
         self.unitary = True
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:

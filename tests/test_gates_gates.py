@@ -228,53 +228,79 @@ def test_align(backend):
 # :class:`qibo.core.cgates.M` is tested seperately in `test_measurement_gate.py`
 
 
-def test_rx(backend):
-    theta = 0.1234
+@pytest.mark.parametrize("theta", [np.random.rand(), np.pi / 2, -np.pi / 2, np.pi])
+def test_rx(backend, theta):
+    nqubits = 1
+    initial_state = random_statevector(2**nqubits, backend=backend)
     final_state = apply_gates(
-        backend, [gates.H(0), gates.RX(0, theta=theta)], nqubits=1
+        backend,
+        [gates.RX(0, theta=theta)],
+        nqubits=nqubits,
+        initial_state=initial_state,
     )
+
     phase = np.exp(1j * theta / 2.0)
     gate = np.array([[phase.real, -1j * phase.imag], [-1j * phase.imag, phase.real]])
-    target_state = gate.dot(np.ones(2)) / np.sqrt(2)
+    gate = backend.cast(gate, dtype=gate.dtype)
+    target_state = gate @ initial_state
+
     backend.assert_allclose(final_state, target_state)
 
     assert gates.RX(0, theta=theta).qasm_label == "rx"
-    assert not gates.RX(0, theta=theta).clifford
     assert gates.RX(0, theta=theta).unitary
+    if (theta % (np.pi / 2)).is_integer():
+        assert gates.RX(0, theta=theta).clifford
+    else:
+        assert not gates.RX(0, theta=theta).clifford
 
 
-def test_ry(backend):
-    theta = 0.1234
+@pytest.mark.parametrize("theta", [np.random.rand(), np.pi / 2, -np.pi / 2, np.pi])
+def test_ry(backend, theta):
+    nqubits = 1
+    initial_state = random_statevector(2**nqubits, backend=backend)
     final_state = apply_gates(
-        backend, [gates.H(0), gates.RY(0, theta=theta)], nqubits=1
+        backend,
+        [gates.RY(0, theta=theta)],
+        nqubits=nqubits,
+        initial_state=initial_state,
     )
+
     phase = np.exp(1j * theta / 2.0)
     gate = np.array([[phase.real, -phase.imag], [phase.imag, phase.real]])
-    target_state = gate.dot(np.ones(2)) / np.sqrt(2)
+    gate = backend.cast(gate, dtype=gate.dtype)
+    target_state = gate @ initial_state
+
     backend.assert_allclose(final_state, target_state)
 
     assert gates.RY(0, theta=theta).qasm_label == "ry"
-    assert not gates.RY(0, theta=theta).clifford
     assert gates.RY(0, theta=theta).unitary
+    if (theta % (np.pi / 2)).is_integer():
+        assert gates.RY(0, theta=theta).clifford
+    else:
+        assert not gates.RY(0, theta=theta).clifford
 
 
-@pytest.mark.parametrize("applyx", [True, False])
-def test_rz(backend, applyx):
-    theta = 0.1234
-    if applyx:
+@pytest.mark.parametrize("apply_x", [True, False])
+@pytest.mark.parametrize("theta", [np.random.rand(), np.pi / 2, -np.pi / 2, np.pi])
+def test_rz(backend, theta, apply_x):
+    nqubits = 1
+    if apply_x:
         gatelist = [gates.X(0)]
     else:
         gatelist = []
     gatelist.append(gates.RZ(0, theta))
-    final_state = apply_gates(backend, gatelist, nqubits=1)
+    final_state = apply_gates(backend, gatelist, nqubits=nqubits)
     target_state = np.zeros_like(final_state)
-    p = int(applyx)
+    p = int(apply_x)
     target_state[p] = np.exp((2 * p - 1) * 1j * theta / 2.0)
     backend.assert_allclose(final_state, target_state)
 
     assert gates.RZ(0, theta).qasm_label == "rz"
-    assert not gates.RZ(0, theta=theta).clifford
     assert gates.RZ(0, theta=theta).unitary
+    if (theta % (np.pi / 2)).is_integer():
+        assert gates.RZ(0, theta=theta).clifford
+    else:
+        assert not gates.RZ(0, theta=theta).clifford
 
 
 def test_gpi(backend):
@@ -500,8 +526,11 @@ def test_csxdg(backend):
     "name,params",
     [
         ("CRX", {"theta": 0.1}),
+        ("CRX", {"theta": np.random.randint(-5, 5) * np.pi / 2}),
         ("CRY", {"theta": 0.2}),
+        ("CRY", {"theta": np.random.randint(-5, 5) * np.pi / 2}),
         ("CRZ", {"theta": 0.3}),
+        ("CRZ", {"theta": np.random.randint(-5, 5) * np.pi / 2}),
         ("CU1", {"theta": 0.1}),
         ("CU2", {"phi": 0.1, "lam": 0.2}),
         ("CU3", {"theta": 0.1, "phi": 0.2, "lam": 0.3}),
@@ -520,6 +549,13 @@ def test_cun(backend, name, params):
     else:
         with pytest.raises(NotImplementedError):
             gate.qasm_label
+
+    if name in ["CRX", "CRY", "CRZ"]:
+        theta = params["theta"]
+        if (theta % (np.pi / 2)).is_integer():
+            assert gate.clifford
+        else:
+            assert not gate.clifford
 
     final_state = apply_gates(backend, [gate], initial_state=initial_state)
 
@@ -970,7 +1006,7 @@ def test_ecr(backend):
     with pytest.raises(NotImplementedError):
         gates.ECR(0, 1).qasm_label
 
-    assert not gates.ECR(0, 1).clifford
+    assert gates.ECR(0, 1).clifford
     assert gates.ECR(0, 1).unitary
 
 
