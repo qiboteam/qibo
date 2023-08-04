@@ -105,8 +105,6 @@ class EntanglementEntropy(Callback):
 
     @Callback.nqubits.setter
     def nqubits(self, n: int):
-        from qibo import gates
-
         if self._nqubits is not None and self._nqubits != n:
             raise_error(
                 RuntimeError,
@@ -115,10 +113,11 @@ class EntanglementEntropy(Callback):
         self._nqubits = n
         if self.partition is None:
             self.partition = list(range(n // 2 + n % 2))
-        if len(self.partition) <= self.nqubits // 2:
+        if len(self.partition) <= self._nqubits // 2:
             self.partition = [
-                i for i in range(self.nqubits) if i not in set(self.partition)
+                i for i in range(self._nqubits) if i not in set(self.partition)
             ]
+        return self._nqubits
 
     def apply(self, backend, state):
         rho = backend.partial_trace(state, self.partition, self.nqubits)
@@ -175,10 +174,14 @@ class Norm(Callback):
     """
 
     def apply(self, backend, state):
-        return backend.calculate_norm(state)
+        norm = backend.calculate_norm(state)
+        self.append(norm)
+        return norm
 
     def apply_density_matrix(self, backend, state):
-        return backend.calculate_norm_density_matrix(state)
+        norm = backend.calculate_norm(state)
+        self.append(norm)
+        return norm
 
 
 class Overlap(Callback):
@@ -200,10 +203,14 @@ class Overlap(Callback):
         self.state = state
 
     def apply(self, backend, state):
-        return backend.calculate_overlap(self.state, state)
+        overlap = backend.calculate_overlap(self.state, state)
+        self.append(overlap)
+        return overlap
 
     def apply_density_matrix(self, backend, state):
-        return backend.calculate_overlap_density_matrix(self.state, state)
+        overlap = backend.calculate_overlap_density_matrix(self.state, state)
+        self.append(overlap)
+        return overlap
 
 
 class Energy(Callback):
@@ -229,11 +236,15 @@ class Energy(Callback):
 
     def apply(self, backend, state):
         assert type(self.hamiltonian.backend) == type(backend)
-        return self.hamiltonian.expectation(state)
+        expectation = self.hamiltonian.expectation(state)
+        self.append(expectation)
+        return expectation
 
     def apply_density_matrix(self, backend, state):
         assert type(self.hamiltonian.backend) == type(backend)
-        return self.hamiltonian.expectation(state)
+        expectation = self.hamiltonian.expectation(state)
+        self.append(expectation)
+        return expectation
 
 
 class Gap(Callback):
@@ -330,6 +341,7 @@ class Gap(Callback):
                 "The Hamiltonian is degenerate. Using eigenvalue {} "
                 "to calculate gap.".format(excited)
             )
+        self.append(gap)
         return gap
 
     def apply_density_matrix(self, backend, state):
