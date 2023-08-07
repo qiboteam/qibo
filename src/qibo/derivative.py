@@ -3,7 +3,7 @@ import random
 import numpy as np
 import sympy as sp
 
-from qibo import gates
+from qibo import gates, hamiltonians
 from qibo.backends import GlobalBackend, matrices
 from qibo.config import raise_error
 from qibo.hamiltonians import Hamiltonian, SymbolicHamiltonian
@@ -46,7 +46,7 @@ class Parameter:
             params.extend(fixed_params)
         else:
             params.extend(self._trainablep)
-        return function(*params)
+        return float(function(*params))
 
     def _update_params(self, trainablep=None, feature=None):
         """Update gate trainable parameter and feature values"""
@@ -522,7 +522,7 @@ def create_hamiltonian(qubit=0, nqubits=1, backend=None):
     """
     eye = matrices.I
     if qubit == 0:
-        h = matrices.Z
+        h = hamiltonians.Z(1).matrix
         for _ in range(nqubits - 1):
             h = np.kron(h, eye)
 
@@ -596,7 +596,7 @@ def execute_circuit(
     initial_state=None,
     cdr_params=None,
     calibration=None,
-    precise=False,
+    precise=True,
 ):
     """Probabilistic circuit execution with possibilities for error mitigation"""
     if precise:

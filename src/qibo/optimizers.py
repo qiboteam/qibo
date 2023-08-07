@@ -113,7 +113,7 @@ class SGD(Optimizer):
         if not hamiltonian:
             self.hamiltonian = [create_hamiltonian(0, self.nqubits, self.backend)]
         else:
-            self.hamiltonian = hamiltonian
+            self.hamiltonian = [hamiltonian]
 
         # error mitigation
         self.cdr_params = None
@@ -155,7 +155,7 @@ class SGD(Optimizer):
                     count += Param.nparams
                     # update trainable params and retrieve gate param
                     params.append(Param.get_params(trainablep, feature=feature))
-            print(params)
+
             return params
 
     def calculate_loss_func_grad(self, results, labels, idx, delta=1e-6):
@@ -278,6 +278,7 @@ class SGD(Optimizer):
             loss_func_grad = self.calculate_loss_func_grad(results, labels, i)
 
             circ_grads += np.dot(loss_func_grad.T, obs_gradients)
+            # print("feat", feat, results[i], obs_gradients, circ_grads)
 
             if self.options["natgrad"]:
                 self.NGgraph.update_parameters(self._circuit.get_parameters())
@@ -292,14 +293,14 @@ class SGD(Optimizer):
 
         # gradient average
         loss = self.loss_function(results, labels, self.args)
-        loss_gradients = circ_grads / (self.nsample)
+        loss_gradients = circ_grads
 
         # Fubini-Study Metric renormalisation
         if self.options["natgrad"]:
             fubini /= len(features)
             loss_gradients = np.dot(np.linalg.inv(fubini), loss_gradients)
 
-        return loss_gradients, loss / len(features)
+        return loss_gradients / self.nsample, loss / self.nsample
 
     def AdamDescent(
         self,
@@ -328,7 +329,6 @@ class SGD(Optimizer):
             epsilon: np.float value of the Adam's epsilon parameter; default 1e-8
         Returns: np.float new values of momentum and velocity
         """
-
         grads, loss = self.dloss(features, labels)
 
         if self.options["save"]:
@@ -337,12 +337,12 @@ class SGD(Optimizer):
             )
 
         if self.options["adam"]:
-            for i in range(self.nparams):
-                m[i] = beta_1 * m[i] + (1 - beta_1) * grads[i]
-                v[i] = beta_2 * v[i] + (1 - beta_2) * grads[i] * grads[i]
-                mhat = m[i] / (1.0 - beta_1 ** (iteration + 1))
-                vhat = v[i] / (1.0 - beta_2 ** (iteration + 1))
-                self.params[i] -= learning_rate * mhat / (np.sqrt(vhat) + epsilon)
+            m = beta_1 * m + (1 - beta_1) * grads
+            v = beta_2 * v + (1 - beta_2) * grads * grads
+            mhat = m / (1.0 - beta_1 ** (iteration + 1))
+            vhat = v / (1.0 - beta_2 ** (iteration + 1))
+            self.params -= learning_rate * mhat / (np.sqrt(vhat) + epsilon)
+
             return m, v, loss
 
         # standard gradient descent
@@ -393,6 +393,8 @@ class SGD(Optimizer):
             self.etime = time.time()
 
         for epoch in range(options["epochs"]):
+            iteration = 0
+
             if epoch != 0 and losses[-1] < options["J_threshold"]:
                 print(
                     "Desired sensibility is reached, here we stop: ",
@@ -400,6 +402,7 @@ class SGD(Optimizer):
                     " iteration",
                 )
                 break
+
             # shuffle index list
             # np.random.shuffle(idx)
             # run over the batches
@@ -696,6 +699,7 @@ def plot(optimizer, xtrain, ytrain):
             ax[col].legend()
 
         else:
+            ax.set_xscale("log")
             yprediction = scaler(yprediction)
             ax.plot(xtrain, ytrain, label="Classical PDF", color="black")
             ax.plot(xtrain, yprediction, label=r"Quantum PDF model", zorder=10)
