@@ -278,7 +278,6 @@ class SGD(Optimizer):
             loss_func_grad = self.calculate_loss_func_grad(results, labels, i)
 
             circ_grads += np.dot(loss_func_grad.T, obs_gradients)
-            # print("feat", feat, results[i], obs_gradients, circ_grads)
 
             if self.options["natgrad"]:
                 self.NGgraph.update_parameters(self._circuit.get_parameters())
