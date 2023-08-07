@@ -47,7 +47,8 @@ class Optimizer:
         self.args = args
         self.initial_parameters = initial_parameters
         self.backend = backends.GlobalBackend()
-        self.ftime = None
+        self.simulation_start = time.time()
+        self.ftime = time.time()
         self.etime = None
         self.name = f'Run_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
         self.filename = f"results/{self.name}.txt"
@@ -65,9 +66,20 @@ class Optimizer:
 
     def fun(self, x):
         val = self.loss_function(x, *self.args)
-        self.file.write(f"Iteration {self.iteration} | loss: {val}\n")
+        self.etime = time.time()
+        duration = self.etime - self.ftime
+        self.ftime = self.etime
+        self.file.write(
+            f"Iteration {self.iteration} | loss: {val} | duration: {duration}\n"
+        )
         self.iteration += 1
         return val
+
+    def cleanup():
+        self.file.write(
+            f"Iteration {self.iteration} | loss: {val} | duration: {duration}\n"
+        )
+        self.file.close()
 
 
 class SGD(Optimizer):
