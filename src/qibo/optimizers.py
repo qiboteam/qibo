@@ -112,8 +112,10 @@ class SGD(Optimizer):
         # hamiltonian
         if not hamiltonian:
             self.hamiltonian = [create_hamiltonian(0, self.nqubits, self.backend)]
-        else:
+        elif not isinstance(hamiltonian, list):
             self.hamiltonian = [hamiltonian]
+        else:
+            self.hamiltonian = hamiltonian
 
         # error mitigation
         self.cdr_params = None
@@ -695,16 +697,32 @@ def plot(optimizer, xtrain, ytrain, epoch, loss):
             pred = yprediction[:, col]
             pred = scaler(pred)
             ax[col].plot(xtrain, train, label="Classical PDF", color="black")
-            ax[col].plot(xtrain, pred, label="Quantum PDF model", zorder=10, marker=".", markersize=12, alpha=0.7)
+            ax[col].plot(
+                xtrain,
+                pred,
+                label="Quantum PDF model",
+                zorder=10,
+                marker=".",
+                markersize=12,
+                alpha=0.7,
+            )
             ax[col].legend()
 
         else:
             ax.set_xscale("log")
             yprediction = scaler(yprediction)
             ax.plot(xtrain, ytrain, label="Classical PDF", color="black")
-            ax.plot(xtrain, yprediction, label="Quantum PDF model", zorder=10, marker=".", markersize=12, alpha=0.7)
+            ax.plot(
+                xtrain,
+                yprediction,
+                label="Quantum PDF model",
+                zorder=10,
+                marker=".",
+                markersize=12,
+                alpha=0.7,
+            )
             ax.legend()
-            
+
     plt.xscale("log")
     plt.savefig("Plot.png")
     plt.close()
