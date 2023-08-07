@@ -120,7 +120,7 @@ class SGD(Optimizer):
 
         # options
         self.options = {
-            "epochs": 1000,
+            "epochs": 2,
             "learning_rate": 0.045,
             "batches": 1,
             "J_threshold": 1e-3,
@@ -435,7 +435,7 @@ class SGD(Optimizer):
                 # in case one wants to plot J as a function of the iterations
                 losses.append(this_loss)
 
-            plot(self, self.features, self.labels)
+            plot(self, self.features, self.labels, epoch, this_loss)
 
         if self.options["save"]:
             self.file.write(f"Params {self.params}\n")
@@ -678,13 +678,14 @@ scaler = lambda x: x
 import matplotlib.pyplot as plt
 
 
-def plot(optimizer, xtrain, ytrain):
+def plot(optimizer, xtrain, ytrain, epoch, loss):
     # new predictions
     yprediction = optimizer.predict(xtrain)
 
     cols = yprediction.shape[1]
     # new plot
     fig, ax = plt.subplots(nrows=1, ncols=cols, figsize=(8, 6))
+    ax.set_title(f"Epoch {epoch}, J={loss:.4}")
     # ax.set(title=f'$\chi^2 = $ {chi2:.2f}', xlabel='x', ylabel='PDF',
     #           xscale='log')
 
@@ -694,16 +695,17 @@ def plot(optimizer, xtrain, ytrain):
             pred = yprediction[:, col]
             pred = scaler(pred)
             ax[col].plot(xtrain, train, label="Classical PDF", color="black")
-            ax[col].plot(xtrain, pred, label=r"Quantum PDF model", zorder=10)
+            ax[col].plot(xtrain, pred, label="Quantum PDF model", zorder=10, marker=".", markersize=12, alpha=0.7)
             ax[col].legend()
 
         else:
             ax.set_xscale("log")
             yprediction = scaler(yprediction)
             ax.plot(xtrain, ytrain, label="Classical PDF", color="black")
-            ax.plot(xtrain, yprediction, label=r"Quantum PDF model", zorder=10)
+            ax.plot(xtrain, yprediction, label="Quantum PDF model", zorder=10, marker=".", markersize=12, alpha=0.7)
             ax.legend()
-
+            
+    plt.xscale("log")
     plt.savefig("Plot.png")
     plt.close()
 
