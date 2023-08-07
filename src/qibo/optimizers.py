@@ -50,6 +50,9 @@ class Optimizer:
         self.ftime = None
         self.etime = None
         self.name = f'Run_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
+        self.filename = f"results/{self.name}.txt"
+        self.iteration = 0
+        self.file = open(self.filename, "w")
 
         if not isinstance(initial_parameters, list) and not isinstance(
             initial_parameters, np.ndarray
@@ -59,6 +62,12 @@ class Optimizer:
     def set_options(self, updates):
         """Updates options dictionary"""
         self.options.update(updates)
+
+    def fun(self, x):
+        val = self.loss_function(x, *self.args)
+        self.file.write(f"Iteration {self.iteration} | loss: {val}\n")
+        self.iteration += 1
+        return val
 
 
 class SGD(Optimizer):
@@ -133,7 +142,6 @@ class SGD(Optimizer):
             "noise_model": None,
             "adam": True,
             "save": False,
-            "filename": f"results/{self.name}.txt",
         }
         self.set_options(kwargs)
 
@@ -379,7 +387,6 @@ class SGD(Optimizer):
         iteration = 0
 
         if self.options["save"]:
-            self.file = open(self.options["filename"], "w")
             self.file.write(
                 f"Epochs: {self.options['epochs']}\n"
                 f"learning rate: {self.options['learning_rate']}\n"
@@ -448,9 +455,7 @@ class SGD(Optimizer):
 
         return losses
 
-    def fit(self, X, y):
-        """Performs the optimizations and returns f_best, x_best."""
-
+    def setup(self, X, y):
         if not isinstance(X, np.ndarray):
             raise ("X must be a numpy array")
 
@@ -471,12 +476,19 @@ class SGD(Optimizer):
 
             self.backend = GlobalBackend()
 
+    def fit(self, X, y):
+        """Performs the optimizations and returns f_best, x_best."""
+
+        self.setup(X, y)
+
         return self.sgd(self.options)
 
 
 class CMAES(Optimizer):
     def __init__(self, initial_parameters, args=(), loss=None, **kwargs):
-        super().__init__(initial_parameters, args, loss, **kwargs)
+        super().__init__(initial_parameters, args, loss)
+        self.options = {}
+        self.set_options(kwargs)
 
     def fit(self):
         """Genetic optimizer based on `pycma <https://github.com/CMA-ES/pycma>`_.
@@ -493,7 +505,7 @@ class CMAES(Optimizer):
         """
         import cma
 
-        r = cma.fmin2(self.loss_function, self.initial_parameters, 1.7, args=self.args)
+        r = cma.fmin2(self.fun, self.initial_parameters, 1.7)
         return r[1].result.fbest, r[1].result.xbest, r
 
 
@@ -530,7 +542,7 @@ class Newtonian(Optimizer):
             "constraints": (),
             "tol": None,
             "callback": None,
-            "options": None,
+            "options": {"disp": True, "maxiter": 100},
             "processes": None,
             "backend": None,
         }
@@ -555,8 +567,7 @@ class Newtonian(Optimizer):
         """
         if self.options["method"] == "parallel_L-BFGS-B":  # pragma: no cover
             o = ParallelBFGS(
-                self.loss_function,
-                args=self.args,
+                self.fun,
                 processes=self.options["processes"],
                 bounds=self.options["bounds"],
                 callback=self.options["callback"],
@@ -566,6 +577,7 @@ class Newtonian(Optimizer):
         else:
             from scipy.optimize import minimize
 
+            print("minimize")
             m = minimize(
                 self.loss_function,
                 self.initial_parameters,
@@ -610,6 +622,7 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
             "callback": None,
             "options": None,
             "processes": None,
+            "save": False,
         }
 
         self.set_options(kwargs)
@@ -669,6 +682,8 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
 
     def fun(self, x):
         self.evaluate(x)
+        self.file.write(f"Iteration {self.iteration} | loss: {self.function_value}\n")
+        self.iteration += 1
         return self.function_value
 
     def jac(self, x):
@@ -687,7 +702,7 @@ def plot(optimizer, xtrain, ytrain, epoch, loss):
     cols = yprediction.shape[1]
     # new plot
     fig, ax = plt.subplots(nrows=1, ncols=cols, figsize=(8, 6))
-    ax.set_title(f"Epoch {epoch}, J={loss:.4}")
+    fig.suptitle(f"Epoch {epoch}, J={loss:.4}")
     # ax.set(title=f'$\chi^2 = $ {chi2:.2f}', xlabel='x', ylabel='PDF',
     #           xscale='log')
 
@@ -731,7 +746,7 @@ def plot(optimizer, xtrain, ytrain, epoch, loss):
 class BasinHopping(Optimizer):
     def __init__(self, initial_parameters, args=(), loss=None, **kwargs):
         super().__init__(initial_parameters, args, loss)
-
+        self.args = args
         self.options = kwargs
 
     def fit(self):
@@ -749,6 +764,6 @@ class BasinHopping(Optimizer):
         """
         from scipy.optimize import basinhopping
 
-        r = basinhopping(self.loss_function, self.initial_parameters)
+        r = basinhopping(self.fun, self.initial_parameters)
         print(r)
         return r.x
