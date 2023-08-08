@@ -13,6 +13,7 @@ from qibo.derivative import (
     execute_circuit,
     generate_fubini,
 )
+from qibo.gates import gates
 from qibo.models import Circuit
 
 
@@ -42,7 +43,7 @@ class VariationalCircuit(Circuit):
 class Optimizer:
     """Parent optimizer"""
 
-    def __init__(self, initial_parameters, args=(), loss=None):
+    def __init__(self, initial_parameters, args=(), loss=None, save=False):
         self.loss_function = loss
         self.args = args
         self.initial_parameters = initial_parameters
@@ -53,7 +54,9 @@ class Optimizer:
         self.name = f'Run_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
         self.filename = f"results/{self.name}.txt"
         self.iteration = 0
-        self.file = open(self.filename, "w")
+        self.save = save
+        if save:
+            self.file = open(self.filename, "w")
 
         if not isinstance(initial_parameters, list) and not isinstance(
             initial_parameters, np.ndarray
@@ -75,9 +78,9 @@ class Optimizer:
         self.iteration += 1
         return val
 
-    def cleanup():
+    def cleanup(self):
         self.file.write(
-            f"Iteration {self.iteration} | loss: {val} | duration: {duration}\n"
+            f"#### Total simulation time {time.time() - self.simulation_start}"
         )
         self.file.close()
 
@@ -114,9 +117,16 @@ class SGD(Optimizer):
     """
 
     def __init__(
-        self, circuit, parameters, hamiltonian=None, args=(), loss=None, **kwargs
+        self,
+        circuit,
+        parameters,
+        hamiltonian=None,
+        args=(),
+        loss=None,
+        save=False,
+        **kwargs,
     ):
-        super().__init__(parameters, args, loss=loss)
+        super().__init__(parameters, args, loss=loss, save=save)
 
         # circuit
         if not isinstance(circuit, Circuit):
@@ -126,8 +136,8 @@ class SGD(Optimizer):
         self.nqubits = self._circuit.nqubits
 
         # parameters
-        self.paramInputs = parameters
-        self.params = self._get_params(trainable=True)
+        self.paramInputs = self._get_paramInit()
+        self.params = parameters
         self.nparams = len(self.params)
 
         # hamiltonian
@@ -153,7 +163,6 @@ class SGD(Optimizer):
             "mitigation": False,
             "noise_model": None,
             "adam": True,
-            "save": False,
         }
         self.set_options(kwargs)
 
@@ -162,7 +171,18 @@ class SGD(Optimizer):
                 self._circuit, self.nparams, self.nqubits, self.paramInputs
             )
 
-    def _get_params(self, trainable=False, feature=None):
+    def _get_paramInit(self):
+        params = []
+        for gate in self._circuit.queue:
+            if isinstance(gate, gates._Rn_):
+                params.append(gate.paramInit)
+
+        if isinstance(params[0], float):
+            params = np.array(params)
+
+        return params
+
+    def _get_params(self, feature=None):
         """Creates an array with the trainable parameters"""
         if isinstance(self.paramInputs, np.ndarray):
             return self.paramInputs
@@ -170,13 +190,10 @@ class SGD(Optimizer):
             params = []
             count = 0
             for Param in self.paramInputs:
-                if trainable:
-                    params += Param._trainablep
-                else:
-                    trainablep = self.params[count : count + Param.nparams]
-                    count += Param.nparams
-                    # update trainable params and retrieve gate param
-                    params.append(Param.get_params(trainablep, feature=feature))
+                trainablep = self.params[count : count + Param.nparams]
+                count += Param.nparams
+                # update trainable params and retrieve gate param
+                params.append(Param.get_params(trainablep, feature=feature))
 
             return params
 
@@ -212,7 +229,7 @@ class SGD(Optimizer):
             results: expectation value"""
 
         # set parameters
-        parameters = self._get_params(trainable=False, feature=feature)
+        parameters = self._get_params(feature=feature)
         self._circuit.set_parameters(parameters)
 
         # run circuit
@@ -275,7 +292,7 @@ class SGD(Optimizer):
 
         # calculate CDR parameters anew at each epoch
         if self.options["mitigation"]:
-            parameters = self._get_params(trainable=False, feature=1.0)
+            parameters = self._get_params(feature=1.0)
             self._circuit.set_parameters(parameters)
             self.cdr_params = error_mitigation(
                 self._circuit.to_clifford(),
@@ -352,7 +369,7 @@ class SGD(Optimizer):
         """
         grads, loss = self.dloss(features, labels)
 
-        if self.options["save"]:
+        if self.save:
             self.file.write(
                 f"Grads (absolute value: {np.linalg.norm(grads)}): {grads.tolist()}\nParams {self.params}\n"
             )
@@ -398,7 +415,7 @@ class SGD(Optimizer):
 
         iteration = 0
 
-        if self.options["save"]:
+        if self.save:
             self.file.write(
                 f"Epochs: {self.options['epochs']}\n"
                 f"learning rate: {self.options['learning_rate']}\n"
@@ -446,7 +463,7 @@ class SGD(Optimizer):
                     this_loss,
                 )
 
-                if self.options["save"]:
+                if self.save:
                     etime = time.time()
                     self.file.write(
                         f"Iteration {iteration}, epoch {epoch + 1} | loss: {this_loss} | duration: {etime-self.etime}\n\n"
@@ -458,7 +475,7 @@ class SGD(Optimizer):
 
             plot(self, self.features, self.labels, epoch, this_loss)
 
-        if self.options["save"]:
+        if self.save:
             self.file.write(f"Params {self.params}\n")
             self.file.write(
                 f"\n\n##### Total simulation time: {time.time()-simulation_start}"
@@ -497,8 +514,8 @@ class SGD(Optimizer):
 
 
 class CMAES(Optimizer):
-    def __init__(self, initial_parameters, args=(), loss=None, **kwargs):
-        super().__init__(initial_parameters, args, loss)
+    def __init__(self, initial_parameters, args=(), loss=None, save=False, **kwargs):
+        super().__init__(initial_parameters, args, loss, save)
         self.options = {}
         self.set_options(kwargs)
 
@@ -522,7 +539,7 @@ class CMAES(Optimizer):
 
 
 class Newtonian(Optimizer):
-    def __init__(self, initial_parameters, args=(), loss=None, **kwargs):
+    def __init__(self, initial_parameters, args=(), loss=None, save=False, **kwargs):
         """
         Args:
             loss (callable): Loss as a function of variational parameters to be
@@ -544,7 +561,7 @@ class Newtonian(Optimizer):
                 ``scipy.optimize.minimize``.
             processes (int): number of processes when using the parallel BFGS method.
         """
-        super().__init__(initial_parameters, args, loss, **kwargs)
+        super().__init__(initial_parameters, args, loss, save)
         self.options = {
             "method": "Powell",
             "jac": None,
@@ -622,8 +639,8 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
 
     import numpy as np
 
-    def __init__(self, initial_parameters, loss, args=(), **kwargs):
-        super().__init__(initial_parameters, args, loss=loss)
+    def __init__(self, initial_parameters, loss, args=(), save=False, **kwargs):
+        super().__init__(initial_parameters, args, loss, save)
         self.function_value = None
         self.jacobian_value = None
 
@@ -714,7 +731,7 @@ def plot(optimizer, xtrain, ytrain, epoch, loss):
     cols = yprediction.shape[1]
     # new plot
     fig, ax = plt.subplots(nrows=1, ncols=cols, figsize=(8, 6))
-    fig.suptitle(f"Epoch {epoch}, J={loss:.4}")
+    fig.suptitle(f"Epoch {epoch}, J={loss[0]:.4}")
     # ax.set(title=f'$\chi^2 = $ {chi2:.2f}', xlabel='x', ylabel='PDF',
     #           xscale='log')
 
@@ -756,8 +773,8 @@ def plot(optimizer, xtrain, ytrain, epoch, loss):
 
 
 class BasinHopping(Optimizer):
-    def __init__(self, initial_parameters, args=(), loss=None, **kwargs):
-        super().__init__(initial_parameters, args, loss)
+    def __init__(self, initial_parameters, args=(), loss=None, save=False, **kwargs):
+        super().__init__(initial_parameters, args, loss, save)
         self.args = args
         self.options = kwargs
 

@@ -6,6 +6,7 @@ import sympy as sp
 from qibo import gates, hamiltonians
 from qibo.backends import GlobalBackend, matrices
 from qibo.config import raise_error
+from qibo.gates.gates import Parameter
 from qibo.hamiltonians import Hamiltonian, SymbolicHamiltonian
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.models import Circuit
@@ -15,82 +16,6 @@ from qibo.models.error_mitigation import (
     calibration_matrix,
 )
 from qibo.symbols import I, Z
-
-
-class Parameter:
-    """Object which allows complex gate parameters. Several trainable parameter
-    and possibly features are linked through a lambda function which returns the
-    final gate parameter"""
-
-    def __init__(self, func, trainablep, featurep=[]):
-        self._trainablep = trainablep
-        self._featurep = featurep
-        self.nparams = len(trainablep)
-
-        if isinstance(featurep, list):
-            self.nfeat = len(featurep)
-        else:
-            self.nfeat = 1
-        self.lambdaf = func
-        self.derivatives = self.calculate_derivatives()
-
-    def _apply_func(self, function, fixed_params=None):
-        """Applies lambda function and returns final gate parameter"""
-        params = []
-        if self._featurep is not None:
-            if isinstance(self._featurep, list):
-                params.extend(self._featurep)
-            else:
-                params.append(self._featurep)
-        if fixed_params:
-            params.extend(fixed_params)
-        else:
-            params.extend(self._trainablep)
-        return float(function(*params))
-
-    def _update_params(self, trainablep=None, feature=None):
-        """Update gate trainable parameter and feature values"""
-        if trainablep:
-            self._trainablep = trainablep
-        if feature and self._featurep:
-            self._featurep = feature
-
-    def get_params(self, trainablep=None, feature=None):
-        """Update values with trainable parameter and calculate current gate parameter"""
-        self._update_params(trainablep=trainablep, feature=feature)
-        return self._apply_func(self.lambdaf)
-
-    def get_indices(self, start_index):
-        """Return list of respective indices of trainable parameters within
-        the optimizer's trainable parameter list"""
-        return [start_index + i for i in range(self.nparams)]
-
-    def get_fixed_part(self, trainablep_idx):
-        """Retrieve parameter constant unaffected by a specific trainable parameter"""
-        params = self._trainablep.copy()
-        params[trainablep_idx] = 0.0
-        return self._apply_func(self.lambdaf, fixed_params=params)
-
-    def calculate_derivatives(self):
-        vars = []
-        for i in range(self.nfeat):
-            vars.append(sp.Symbol(f"x{i}"))
-        for i in range(self.nparams):
-            vars.append(sp.Symbol(f"th{i}"))
-
-        expr = sp.sympify(self.lambdaf(*vars))
-
-        derivatives = []
-        for i in range(self.nfeat, len(vars)):
-            derivative_expr = sp.diff(expr, vars[i])
-            derivatives.append(sp.lambdify(vars, derivative_expr))
-
-        return derivatives
-
-    def get_scaling_factor(self, trainablep_idx):
-        """Get scaling factor multiplying a specific trainable parameter"""
-        deriv = self.derivatives[trainablep_idx]
-        return self._apply_func(deriv)
 
 
 def calculate_gradients(optimizer, cdr_params, ham, nshots):
@@ -596,7 +521,7 @@ def execute_circuit(
     initial_state=None,
     cdr_params=None,
     calibration=None,
-    precise=True,
+    precise=False,
 ):
     """Probabilistic circuit execution with possibilities for error mitigation"""
     if precise:
@@ -696,13 +621,14 @@ def generate_fubini(
                 for t in params:
                     ps = scale_factors[p]
                     ts = scale_factors[t]
-                    fubini[p, t] = ps * ts * (result - result**2)
+                    val = ps * ts * (result - result**2)
+                    fubini[p, t] = val if val > 1e-3 else 1e-3
 
     return fubini
 
 
 def run_subcircuit_measure(
-    c, qubit, nqubits, backend, calibration=None, stochastic=True
+    c, qubit, nqubits, backend, calibration=None, stochastic=False
 ):
     """Run variance measurement on specific qubit of subcircuit
     Args:

@@ -59,6 +59,43 @@ def test_sgd_optimizer():
     return losses
 
 
+def test_optimizer_parameter():
+    c = qibo.models.Circuit(1, density_matrix=True)
+
+    for i in range(1):
+        c.add(qibo.gates.H(q=i))
+
+        for _ in range(3):
+            c.add(
+                qibo.gates.RZ(
+                    q=i,
+                    theta=Parameter(
+                        lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=[0.1]
+                    ),
+                )
+            )
+            c.add(
+                qibo.gates.RY(
+                    q=i,
+                    theta=Parameter(
+                        lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=[0.1]
+                    ),
+                )
+            )
+        c.add(qibo.gates.M(i))
+
+    parameters = np.random.rand(20)
+
+    optimizer = SGD(circuit=c, parameters=parameters, loss=loss_func_1qubit)
+    X = np.array([0.1, 0.2, 0.3])
+    y = np.array([0.2, 0.5, 0.7])
+    losses = optimizer.fit(X, y)
+
+    assert losses[-1] < 0.001
+
+    return losses
+
+
 def test_variational_circuit():
     VC = ansatz(3, 1, variational=True)
     parameters = []
@@ -248,4 +285,5 @@ if __name__ == "__main__":
     # test_sgd_optimizer()
     # test_sgd_methods()
     # test_variational_circuit()
-    test_basin_hopping_optimizer()
+    # test_basin_hopping_optimizer()
+    test_optimizer_parameter()
