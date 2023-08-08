@@ -117,7 +117,6 @@ class EntanglementEntropy(Callback):
             self.partition = [
                 i for i in range(self._nqubits) if i not in set(self.partition)
             ]
-        return self._nqubits
 
     def apply(self, backend, state):
         rho = backend.partial_trace(state, self.partition, self.nqubits)
@@ -179,7 +178,7 @@ class Norm(Callback):
         return norm
 
     def apply_density_matrix(self, backend, state):
-        norm = backend.calculate_norm(state)
+        norm = backend.calculate_norm_density_matrix(state)
         self.append(norm)
         return norm
 
