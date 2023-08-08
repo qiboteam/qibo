@@ -47,12 +47,12 @@ def hadamard_transform(array, implementation: str = "fast", backend=None):
     where :math:`n` is the number of qubits in the system. If :math:`A` is a vector, then
 
     .. math::
-        \\text{HT}(A) = \\frac{1}{2**{n / 2}} \\, H^{\\otimes n} \\, A \\,
+        \\text{HT}(A) = \\frac{1}{2^{n / 2}} \\, H^{\\otimes n} \\, A \\,
 
     where :math:`H` is the :class:`qibo.gates.H` gate. If :math:`A` is a matrix, then
 
     .. math::
-        \\text{HT}(A) = \\frac{1}{2**{n}} \\, H^{\\otimes n} \\, A \\, H^{\\otimes n} \\, .
+        \\text{HT}(A) = \\frac{1}{2^{n}} \\, H^{\\otimes n} \\, A \\, H^{\\otimes n} \\, .
 
     Args:
         array (ndarray): array or matrix.

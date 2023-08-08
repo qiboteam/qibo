@@ -84,6 +84,7 @@ Quantum Machine Learning
     tutorials/qfiae/qfiae_demo.ipynb
     tutorials/qcnn_classifier/qcnn_demo.ipynb
     tutorials/qclustering/README.md
+    tutorials/adiabatic_qml/adiabatic-qml.ipynb
 
 Applications by algorithm
 -------------------------
@@ -107,6 +108,7 @@ Variational Quantum Circuits
     tutorials/qPDF/qPDF.ipynb
     tutorials/anomaly_detection/README.md
     tutorials/qcnn_classifier/qcnn_demo.ipynb
+    tutorials/adiabatic_qml/adiabatic-qml.ipynb
 
 Grover's Algorithm
 ^^^^^^^^^^^^^^^^^^

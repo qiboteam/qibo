@@ -25,6 +25,7 @@ physics problems.
 - [A general Grover model](grover/README.md)
 - [Quantum anomaly detection](anomaly_detection/README.md)
 - [Quantum k-medians clustering](qclustering/README.md)
+- [Determining probability density functions with adiabatic quantum computing](adiabatic_qml/adiabatic-qml.ipynb)
 
 In the `benchmarks` folder we have included examples concerning:
 - A generic benchmark script for multiple circuits (`benchmarks/main.py`)
