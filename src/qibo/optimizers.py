@@ -367,7 +367,9 @@ class SGD(Optimizer):
             epsilon: np.float value of the Adam's epsilon parameter; default 1e-8
         Returns: np.float new values of momentum and velocity
         """
+        print("before", self.params, self.paramInputs)
         grads, loss = self.dloss(features, labels)
+        print("after", self.params, self.paramInputs)
 
         if self.save:
             self.file.write(
