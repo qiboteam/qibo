@@ -138,9 +138,6 @@ class SGD(Optimizer):
         # parameters
         self.paramInputs = self._get_paramInit()
         self.params = parameters
-        print("params", self.params)
-        for p in self.paramInputs:
-            print(p._trainablep)
         self.nparams = len(self.params)
 
         # hamiltonian
@@ -234,7 +231,7 @@ class SGD(Optimizer):
         # set parameters
         parameters = self._get_params(feature=feature)
         self._circuit.set_parameters(parameters)
-        print("RUN", parameters, self.hamiltonian[0].matrix)
+
         # run circuit
         if isinstance(self.hamiltonian, list):
             exp_v = np.empty(len(self.hamiltonian))
@@ -370,9 +367,8 @@ class SGD(Optimizer):
             epsilon: np.float value of the Adam's epsilon parameter; default 1e-8
         Returns: np.float new values of momentum and velocity
         """
-        print("before", self.params, self.paramInputs)
+
         grads, loss = self.dloss(features, labels)
-        print("after", self.params, self.paramInputs)
 
         if self.save:
             self.file.write(
@@ -611,7 +607,6 @@ class Newtonian(Optimizer):
         else:
             from scipy.optimize import minimize
 
-            print("minimize")
             m = minimize(
                 self.loss_function,
                 self.initial_parameters,
