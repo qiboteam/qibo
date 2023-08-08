@@ -137,6 +137,9 @@ class SGD(Optimizer):
         # parameters
         self.paramInputs = parameters
         self.params = self._get_params(trainable=True)
+        print("params", self.params)
+        for p in parameters:
+            print(p._trainablep)
         self.nparams = len(self.params)
 
         # hamiltonian
@@ -321,7 +324,8 @@ class SGD(Optimizer):
                 )  # separate pull request
 
         # gradient average
-        loss = self.loss_function(results, labels, self.args)
+        print("HERE", results, labels)
+        loss = self.loss_function(results, labels, *self.args)
         loss_gradients = circ_grads
 
         # Fubini-Study Metric renormalisation
@@ -419,7 +423,7 @@ class SGD(Optimizer):
                 f"adam: {self.options['adam']}\n\n\n"
             )
             self.ftime = time.time()
-            simulation_start = time.time()
+            self.simulation_start = time.time()
             self.etime = time.time()
 
         for epoch in range(options["epochs"]):

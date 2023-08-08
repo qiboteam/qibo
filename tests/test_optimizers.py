@@ -48,6 +48,7 @@ def test_sgd_optimizer():
         parameters.append(
             Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=[0.1])
         )
+    np.random.seed(42)
 
     optimizer = SGD(circuit=circuit, parameters=parameters, loss=loss_func_1qubit)
     X = np.array([0.1, 0.2, 0.3])
