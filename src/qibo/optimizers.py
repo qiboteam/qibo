@@ -225,6 +225,7 @@ class SGD(Optimizer):
         # set parameters
         parameters = self._get_params(trainable=False, feature=feature)
         self._circuit.set_parameters(parameters)
+        print("RUN", parameters, self.hamiltonian[0].matrix)
 
         # run circuit
         if isinstance(self.hamiltonian, list):

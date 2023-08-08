@@ -602,6 +602,7 @@ def execute_circuit(
     if precise:
         state = c().state()
         res = obs.expectation(state)
+        print(res)
         return res
 
     # retrieve state
