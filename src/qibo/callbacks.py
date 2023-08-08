@@ -329,7 +329,9 @@ class Gap(Callback):
         # case: self.mode == "gap"
         excited = 1
         gap = backend.np.real(eigvals[excited] - eigvals[0])
+
         if not self.check_degenerate:
+            self.append(gap)
             return gap
 
         while backend.np.less(gap, EIGVAL_CUTOFF):
