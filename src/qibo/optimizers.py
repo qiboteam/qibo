@@ -72,9 +72,10 @@ class Optimizer:
         self.etime = time.time()
         duration = self.etime - self.ftime
         self.ftime = self.etime
-        self.file.write(
-            f"Iteration {self.iteration} | loss: {val} | duration: {duration}\n"
-        )
+        if self.save:
+            self.file.write(
+                f"Iteration {self.iteration} | loss: {val} | duration: {duration}\n"
+            )
         self.iteration += 1
         return val
 
@@ -478,10 +479,7 @@ class SGD(Optimizer):
 
         if self.save:
             self.file.write(f"Params {self.params}\n")
-            self.file.write(
-                f"\n\n##### Total simulation time: {time.time()-simulation_start}"
-            )
-            self.file.close()
+            self.cleanup()
 
         return losses
 
@@ -711,8 +709,11 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
 
     def fun(self, x):
         self.evaluate(x)
-        self.file.write(f"Iteration {self.iteration} | loss: {self.function_value}\n")
-        self.iteration += 1
+        if self.save:
+            self.file.write(
+                f"Iteration {self.iteration} | loss: {self.function_value}\n"
+            )
+            self.iteration += 1
         return self.function_value
 
     def jac(self, x):
@@ -731,7 +732,7 @@ def plot(optimizer, xtrain, ytrain, epoch, loss):
     cols = yprediction.shape[1]
     # new plot
     fig, ax = plt.subplots(nrows=1, ncols=cols, figsize=(8, 6))
-    fig.suptitle(f"Epoch {epoch}, J={loss[0]:.4}")
+    # fig.suptitle(f"Epoch {epoch}, J={loss[0]:.4}")
     # ax.set(title=f'$\chi^2 = $ {chi2:.2f}', xlabel='x', ylabel='PDF',
     #           xscale='log')
 

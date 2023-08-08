@@ -65,10 +65,10 @@ def ansatz(layers, nqubits):
         c.add(qibo.gates.H(q=qubit))
 
         for _ in range(layers):
-            c.add(qibo.gates.RZ(q=qubit, theta=0))
-            c.add(qibo.gates.RZ(q=qubit, theta=0))
-            c.add(qibo.gates.RY(q=qubit, theta=0))
-            c.add(qibo.gates.RY(q=qubit, theta=0))
+            c.add(qibo.gates.RZ(q=qubit, theta=Parameter(lambda th1: th1, [0.1])))
+            c.add(qibo.gates.RZ(q=qubit, theta=Parameter(lambda th1: th1, [0.1])))
+            c.add(qibo.gates.RY(q=qubit, theta=Parameter(lambda th1: th1, [0.1])))
+            c.add(qibo.gates.RY(q=qubit, theta=Parameter(lambda th1: th1, [0.1])))
 
         c.add(qibo.gates.M(qubit))
 
@@ -392,7 +392,7 @@ def test_natural_gradient():
     circuit = ansatz(3, 1)
 
     # initialize optimiser with Parameter objects
-    initial_parameters = [Parameter(lambda th1: th1, [0.1]) for i in range(12)]
+    initial_parameters = [0.1] * 12
     optimiser = qibo.optimizers.SGD(
         circuit=circuit, parameters=initial_parameters, loss=loss_func
     )
@@ -449,7 +449,7 @@ def test_multiqubit_natural_gradient():
     circuit = ansatz(
         3, nqubits
     )  # 2 qubits x 3 layers x 2 gates x 2 parameters = 24 params
-    initial_parameters = [Parameter(lambda th1: th1, [0.1]) for i in range(24)]
+    initial_parameters = [0.1] * 24
 
     hamiltonians = [create_hamiltonian(i, 2, GlobalBackend()) for i in range(2)]
     optimiser = qibo.optimizers.SGD(

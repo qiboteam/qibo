@@ -7,7 +7,7 @@ from qibo.derivative import Parameter, create_hamiltonian
 from qibo.optimizers import CMAES, SGD, BasinHopping, Newtonian, ParallelBFGS
 
 
-def ansatz(layers, nqubits, variational=False):
+def ansatz(layers, nqubits, variational=False, theta=0):
     """
     The circuit's ansatz: a sequence of RZ and RY with a beginning H gate
     Args:
@@ -23,8 +23,8 @@ def ansatz(layers, nqubits, variational=False):
         c.add(qibo.gates.H(q=i))
 
         for _ in range(layers):
-            c.add(qibo.gates.RZ(q=i, theta=0))
-            c.add(qibo.gates.RY(q=i, theta=0))
+            c.add(qibo.gates.RZ(q=i, theta=theta))
+            c.add(qibo.gates.RY(q=i, theta=theta))
 
         c.add(qibo.gates.M(i))
 
@@ -42,12 +42,12 @@ def loss_func_1qubit(ypred, ytrue, other_args=None):
 def test_sgd_optimizer():
     """Test single qubit SGD optimizer"""
 
-    circuit = ansatz(3, 1)
-    parameters = []
-    for _ in range(6):
-        parameters.append(
-            Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=[0.1])
-        )
+    circuit = ansatz(
+        3,
+        1,
+        theta=Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=[0.1]),
+    )
+    parameters = [0.1] * 12
 
     optimizer = SGD(circuit=circuit, parameters=parameters, loss=loss_func_1qubit)
     X = np.array([0.1, 0.2, 0.3])
@@ -59,52 +59,14 @@ def test_sgd_optimizer():
     return losses
 
 
-def test_optimizer_parameter():
-    c = qibo.models.Circuit(1, density_matrix=True)
-
-    for i in range(1):
-        c.add(qibo.gates.H(q=i))
-
-        for _ in range(3):
-            c.add(
-                qibo.gates.RZ(
-                    q=i,
-                    theta=Parameter(
-                        lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=[0.1]
-                    ),
-                )
-            )
-            c.add(
-                qibo.gates.RY(
-                    q=i,
-                    theta=Parameter(
-                        lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=[0.1]
-                    ),
-                )
-            )
-        c.add(qibo.gates.M(i))
-
-    np.random.seed(42)
-    # parameters = np.random.rand(12)
-    parameters = [0.1] * 12
-
-    optimizer = SGD(circuit=c, parameters=parameters, loss=loss_func_1qubit)
-    X = np.array([0.1, 0.2, 0.3])
-    y = np.array([0.2, 0.5, 0.7])
-    losses = optimizer.fit(X, y)
-
-    assert losses[-1] < 0.001
-
-    return losses
-
-
 def test_variational_circuit():
-    VC = ansatz(3, 1, variational=True)
-    parameters = []
-    for _ in range(6):
-        parameters.append(
-            Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=[0.1])
-        )
+    VC = ansatz(
+        3,
+        1,
+        variational=True,
+        theta=Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=[0.1]),
+    )
+    parameters = [0.1] * 12
 
     X = np.array([0.1, 0.2, 0.3])
     y = np.array([0.2, 0.5, 0.7])
@@ -125,20 +87,43 @@ def loss_func_2qubit(ypred, ytrue, other_args=None):
 def test_multiqubit_sgd_optimizer():
     """Test 2-qubit, 2-hamiltonian ansatz with SGD Optimiser"""
 
-    circuit = ansatz(3, 2)
-    print(circuit.draw())
+    nqubits = 2
+    layers = 3
 
-    parameters = []
-    for i in range(12):
-        parameters.append(
-            Parameter(
-                lambda x, th1, th2: th1 * x + th2, [i / 100, i / 53], featurep=[0.1]
+    c = qibo.models.Circuit(nqubits, density_matrix=True)
+
+    for i in range(nqubits):
+        c.add(qibo.gates.H(q=i))
+
+        for _ in range(layers):
+            c.add(
+                qibo.gates.RZ(
+                    q=i,
+                    theta=Parameter(
+                        lambda x, th1, th2: th1 * x + th2,
+                        [i / 100, i / 53],
+                        featurep=[0.1],
+                    ),
+                )
             )
-        )
+            c.add(
+                qibo.gates.RY(
+                    q=i,
+                    theta=Parameter(
+                        lambda x, th1, th2: th1 * x + th2,
+                        [i / 100, i / 53],
+                        featurep=[0.1],
+                    ),
+                )
+            )
+
+        c.add(qibo.gates.M(i))
+
+    parameters = [0.1] * 24
 
     hamiltonians = [create_hamiltonian(i, 2, GlobalBackend()) for i in range(2)]
     optimizer = SGD(
-        circuit=circuit,
+        circuit=c,
         parameters=parameters,
         loss=loss_func_2qubit,
         hamiltonian=hamiltonians,
@@ -152,26 +137,50 @@ def test_multiqubit_sgd_optimizer():
 
 
 def test_sgd_methods():
-    circuit = ansatz(3, 2)
+    nqubits = 2
+    layers = 3
 
-    parameters = []
-    for i in range(0, 24, 2):
-        parameters.append(
-            Parameter(lambda x, th1, th2: th1 * x + th2, [i, i + 1], featurep=[0.1])
-        )
+    c = qibo.models.Circuit(nqubits, density_matrix=True)
+
+    for i in range(nqubits):
+        c.add(qibo.gates.H(q=i))
+
+        for _ in range(layers):
+            c.add(
+                qibo.gates.RZ(
+                    q=i,
+                    theta=Parameter(
+                        lambda x, th1, th2: th1 * x + th2,
+                        [i / 100, i / 53],
+                        featurep=[0.1],
+                    ),
+                )
+            )
+            c.add(
+                qibo.gates.RY(
+                    q=i,
+                    theta=Parameter(
+                        lambda x, th1, th2: th1 * x + th2,
+                        [i / 100, i / 53],
+                        featurep=[0.1],
+                    ),
+                )
+            )
+
+        c.add(qibo.gates.M(i))
+
+    parameters = [i for i in range(24)]
 
     hamiltonians = [create_hamiltonian(i, 2, GlobalBackend()) for i in range(2)]
     optimizer = SGD(
-        circuit=circuit,
+        circuit=c,
         parameters=parameters,
         loss=loss_func_2qubit,
         hamiltonian=hamiltonians,
     )
 
     # _get_params
-    trainablep = optimizer._get_params(trainable=True)
-    assert trainablep == [i for i in range(24)]
-    gatep = optimizer._get_params(trainable=False, feature=0.5)
+    gatep = optimizer._get_params(feature=0.5)
     assert gatep == [
         1.0,
         4.0,
@@ -258,7 +267,7 @@ def test_parallel_bfgs_optimizer():
     assert fbest < 1e-5
 
 
-def test_loss(x):
+def loss_test(x):
     return np.sum(x**2 + 6 * x - 1000)
 
 
@@ -272,12 +281,12 @@ def test_basin_hopping_optimizer():
     optimizer = BasinHopping(
         initial_parameters=parameters,
         minimizer_kwargs=(circuit, hamiltonian),
-        loss=test_loss,
+        loss=loss_test,
     )
 
-    fbest, xbest, r = optimizer.fit()
-
-    assert fbest < 1e-5
+    fbest = optimizer.fit()
+    print(fbest)
+    assert fbest[0] < 1e-5
 
 
 if __name__ == "__main__":
@@ -287,5 +296,4 @@ if __name__ == "__main__":
     # test_sgd_optimizer()
     # test_sgd_methods()
     # test_variational_circuit()
-    # test_basin_hopping_optimizer()
-    test_optimizer_parameter()
+    test_basin_hopping_optimizer()
