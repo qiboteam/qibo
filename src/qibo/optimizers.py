@@ -138,6 +138,9 @@ class SGD(Optimizer):
         # parameters
         self.paramInputs = self._get_paramInit()
         self.params = parameters
+        print("params", self.params)
+        for p in self.paramInputs:
+            print(p._trainablep)
         self.nparams = len(self.params)
 
         # hamiltonian
@@ -231,7 +234,7 @@ class SGD(Optimizer):
         # set parameters
         parameters = self._get_params(feature=feature)
         self._circuit.set_parameters(parameters)
-
+        print("RUN", parameters, self.hamiltonian[0].matrix)
         # run circuit
         if isinstance(self.hamiltonian, list):
             exp_v = np.empty(len(self.hamiltonian))
