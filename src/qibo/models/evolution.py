@@ -89,6 +89,7 @@ class StateEvolution:
     def _create_calculate_callbacks(self, accelerators):
         def calculate_callbacks(state):
             for callback in self.callbacks:
+                callback.nqubits = self.nqubits
                 # by executing callbacks.apply we also append the object to history
                 # see callbacks module for this
                 callback.apply(self.backend, state)
