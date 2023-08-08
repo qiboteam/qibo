@@ -84,7 +84,8 @@ def test_optimizer_parameter():
             )
         c.add(qibo.gates.M(i))
 
-    parameters = np.random.rand(20)
+    np.random.seed(42)
+    parameters = np.random.rand(12)
 
     optimizer = SGD(circuit=c, parameters=parameters, loss=loss_func_1qubit)
     X = np.array([0.1, 0.2, 0.3])
