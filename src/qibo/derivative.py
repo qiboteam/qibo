@@ -42,7 +42,7 @@ class Parameter:
                 params.extend(self._featurep)
             else:
                 params.append(self._featurep)
-        if fixed_params:
+        if fixed_params is not None:
             params.extend(fixed_params)
         else:
             params.extend(self._trainablep)
@@ -50,9 +50,9 @@ class Parameter:
 
     def _update_params(self, trainablep=None, feature=None):
         """Update gate trainable parameter and feature values"""
-        if trainablep:
+        if trainablep is not None:
             self._trainablep = trainablep
-        if feature and self._featurep:
+        if feature is not None and self._featurep is not None:
             self._featurep = feature
 
     def get_params(self, trainablep=None, feature=None):

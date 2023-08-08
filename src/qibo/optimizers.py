@@ -42,7 +42,7 @@ class VariationalCircuit(Circuit):
 class Optimizer:
     """Parent optimizer"""
 
-    def __init__(self, initial_parameters, args=(), loss=None):
+    def __init__(self, initial_parameters, args=(), loss=None, save=False):
         self.loss_function = loss
         self.args = args
         self.initial_parameters = initial_parameters
@@ -53,7 +53,9 @@ class Optimizer:
         self.name = f'Run_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
         self.filename = f"results/{self.name}.txt"
         self.iteration = 0
-        self.file = open(self.filename, "w")
+        self.save = save
+        if self.save:
+            self.file = open(self.filename, "w")
 
         if not isinstance(initial_parameters, list) and not isinstance(
             initial_parameters, np.ndarray
@@ -75,9 +77,9 @@ class Optimizer:
         self.iteration += 1
         return val
 
-    def cleanup():
+    def cleanup(self):
         self.file.write(
-            f"Iteration {self.iteration} | loss: {val} | duration: {duration}\n"
+            f"##### Total simulation time: {time.time()-self.simulation_start}\n"
         )
         self.file.close()
 
@@ -114,7 +116,14 @@ class SGD(Optimizer):
     """
 
     def __init__(
-        self, circuit, parameters, hamiltonian=None, args=(), loss=None, **kwargs
+        self,
+        circuit,
+        parameters,
+        hamiltonian=None,
+        args=(),
+        loss=None,
+        save=False,
+        **kwargs,
     ):
         super().__init__(parameters, args, loss=loss)
 
@@ -153,7 +162,6 @@ class SGD(Optimizer):
             "mitigation": False,
             "noise_model": None,
             "adam": True,
-            "save": False,
         }
         self.set_options(kwargs)
 
@@ -352,7 +360,7 @@ class SGD(Optimizer):
         """
         grads, loss = self.dloss(features, labels)
 
-        if self.options["save"]:
+        if self.save:
             self.file.write(
                 f"Grads (absolute value: {np.linalg.norm(grads)}): {grads.tolist()}\nParams {self.params}\n"
             )
@@ -398,7 +406,7 @@ class SGD(Optimizer):
 
         iteration = 0
 
-        if self.options["save"]:
+        if self.save:
             self.file.write(
                 f"Epochs: {self.options['epochs']}\n"
                 f"learning rate: {self.options['learning_rate']}\n"
@@ -446,7 +454,7 @@ class SGD(Optimizer):
                     this_loss,
                 )
 
-                if self.options["save"]:
+                if self.save:
                     etime = time.time()
                     self.file.write(
                         f"Iteration {iteration}, epoch {epoch + 1} | loss: {this_loss} | duration: {etime-self.etime}\n\n"
@@ -458,12 +466,9 @@ class SGD(Optimizer):
 
             plot(self, self.features, self.labels, epoch, this_loss)
 
-        if self.options["save"]:
+        if self.save:
             self.file.write(f"Params {self.params}\n")
-            self.file.write(
-                f"\n\n##### Total simulation time: {time.time()-simulation_start}"
-            )
-            self.file.close()
+            self.cleanup()
 
         return losses
 
@@ -714,7 +719,7 @@ def plot(optimizer, xtrain, ytrain, epoch, loss):
     cols = yprediction.shape[1]
     # new plot
     fig, ax = plt.subplots(nrows=1, ncols=cols, figsize=(8, 6))
-    fig.suptitle(f"Epoch {epoch}, J={loss:.4}")
+    fig.suptitle(f"Epoch {epoch}, J={loss[0]:.4}")
     # ax.set(title=f'$\chi^2 = $ {chi2:.2f}', xlabel='x', ylabel='PDF',
     #           xscale='log')
 
