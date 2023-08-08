@@ -324,7 +324,9 @@ class Gap(Callback):
         hamiltonian.eigenvectors()
         eigvals = hamiltonian.eigenvalues()
         if isinstance(self.mode, int):
-            return backend.np.real(eigvals[self.mode])
+            gap = backend.np.real(eigvals[self.mode])
+            self.append(gap)
+            return gap
 
         # case: self.mode == "gap"
         excited = 1
