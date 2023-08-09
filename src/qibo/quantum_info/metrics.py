@@ -250,8 +250,8 @@ def entanglement_entropy(
     check_hermitian: bool = False,
     backend=None,
 ):
-    """Calculates the entanglement entropy :math:`S` of ``state`` :math:`\\rho`,
-    which is given by
+    """Calculates the entanglement entropy :math:`S` of bipartition :math:`A`
+    of``state`` :math:`\\rho`. This is given by
 
     .. math::
         S(\\rho_{A}) = -\\text{tr}(\\rho_{A} \\, \\log(\\rho_{A})) \\, ,
