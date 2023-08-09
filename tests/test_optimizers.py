@@ -49,7 +49,9 @@ def test_sgd_optimizer():
     )
     parameters = [0.1] * 12
 
-    optimizer = SGD(circuit=circuit, parameters=parameters, loss=loss_func_1qubit)
+    optimizer = SGD(
+        circuit=circuit, parameters=parameters, loss=loss_func_1qubit, epochs=100
+    )
     X = np.array([0.1, 0.2, 0.3])
     y = np.array([0.2, 0.5, 0.7])
     losses = optimizer.fit(X, y)
@@ -206,7 +208,7 @@ def test_sgd_methods():
     # run_circuit
     expectation_values = optimizer.run_circuit(0.1)
     assert np.allclose(
-        np.array(expectation_values), np.array([-0.1116947, -0.31656565]), atol=0.08
+        np.array(expectation_values), np.array([0.1116947, -0.31656565]), atol=0.08
     )
 
 
@@ -294,6 +296,6 @@ if __name__ == "__main__":
     # test_newtonian_optimizer()
     # test_multiqubit_sgd_optimizer()
     # test_sgd_optimizer()
-    # test_sgd_methods()
+    test_sgd_methods()
     # test_variational_circuit()
-    test_basin_hopping_optimizer()
+    # test_basin_hopping_optimizer()

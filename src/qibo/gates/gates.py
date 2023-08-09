@@ -13,7 +13,7 @@ class Parameter:
     and possibly features are linked through a lambda function which returns the
     final gate parameter"""
 
-    def __init__(self, func, trainablep, featurep=[]):
+    def __init__(self, func, trainablep, featurep=None):
         self._trainablep = trainablep
         self._featurep = featurep
         self.nparams = len(trainablep)
@@ -21,7 +21,7 @@ class Parameter:
         if isinstance(featurep, list):
             self.nfeat = len(featurep)
         else:
-            self.nfeat = 1
+            self.nfeat = 0
         self.lambdaf = func
         self.derivatives = self.calculate_derivatives()
 

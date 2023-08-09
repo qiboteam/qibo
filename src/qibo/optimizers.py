@@ -154,7 +154,7 @@ class SGD(Optimizer):
 
         # options
         self.options = {
-            "epochs": 2,
+            "epochs": 100,
             "learning_rate": 0.045,
             "batches": 1,
             "J_threshold": 1e-3,
@@ -428,7 +428,7 @@ class SGD(Optimizer):
                 f"adam: {self.options['adam']}\n\n\n"
             )
             self.ftime = time.time()
-            simulation_start = time.time()
+            self.simulation_start = time.time()
             self.etime = time.time()
 
         for epoch in range(options["epochs"]):
