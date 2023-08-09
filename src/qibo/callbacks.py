@@ -208,7 +208,6 @@ class Overlap(Callback):
 
     def apply_density_matrix(self, backend, state):
         overlap = backend.calculate_overlap_density_matrix(self.state, state)
-        self.append(overlap)
         return overlap
 
 
