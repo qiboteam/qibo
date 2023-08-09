@@ -383,7 +383,7 @@ def random_density_matrix(
     If ``pure=False``, then
 
     .. math::
-        \\rho = \\sum_{k} \\, p_{k} \\, \\ketbra{\\psi_{k}} \\, .
+        \\rho = \\sum_{k} \\, p_{k} \\, \\ketbra{\\psi_{k}}{\\psi_{k}} \\, .
 
     is a mixed state.
 
