@@ -588,7 +588,7 @@ def bures_distance(state, target, check_hermitian: bool = False, backend=None):
     and a ``target`` state :math:`\\sigma`. This is given by
 
     .. math::
-        D_{B}(\\rho, \\, \\sigma) = \\sqrt{2 \\, (1 - \\sqrt{F(\\rho, \\, \\sigma)})}
+        D_{B}(\\rho, \\, \\sigma) = \\sqrt{2 \\, \\left(1 - \\sqrt{F(\\rho, \\, \\sigma)}\\right)}
 
     where :math:`F(\\rho, \\sigma)` is the :func:`qibo.quantum_info.fidelity`
     between `state` and `target`.
