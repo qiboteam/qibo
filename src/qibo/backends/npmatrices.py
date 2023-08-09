@@ -96,6 +96,21 @@ class NumpyMatrices:
             [[1, -1.0j * self.np.conj(phase)], [-1.0j * phase, 1]], dtype=self.dtype
         ) / self.np.sqrt(2)
 
+    def G(self, phi):
+        import numpy as np
+
+        # RY
+        cos = self.np.cos(phi / 2.0) + 0j
+        sin = self.np.sin(phi / 2.0)
+        V = np.array([[cos, -sin], [sin, cos]])
+        # RX
+        theta = 30.0
+        cos = self.np.cos(theta / 2.0) + 0j
+        isin = -1j * self.np.sin(theta / 2.0)
+        H = np.array([[cos, isin], [isin, cos]])
+        A = (V + H) / 2
+        return self.np.array(A, dtype=self.dtype)
+
     def U1(self, theta):
         phase = self.np.exp(1j * theta)
         return self.np.array([[1, 0], [0, phase]], dtype=self.dtype)

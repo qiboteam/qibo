@@ -9,13 +9,13 @@ from qibo import gates, hamiltonians
 from qibo.backends import GlobalBackend
 from qibo.derivative import (
     Graph,
-    Parameter,
     build_graph,
     create_hamiltonian,
     generate_fubini,
     parameter_shift,
     run_subcircuit_measure,
 )
+from qibo.gates.gates import Parameter
 from qibo.models import Circuit
 from qibo.symbols import Z
 
@@ -65,10 +65,10 @@ def ansatz(layers, nqubits):
         c.add(qibo.gates.H(q=qubit))
 
         for _ in range(layers):
-            c.add(qibo.gates.RZ(q=qubit, theta=0))
-            c.add(qibo.gates.RZ(q=qubit, theta=0))
-            c.add(qibo.gates.RY(q=qubit, theta=0))
-            c.add(qibo.gates.RY(q=qubit, theta=0))
+            c.add(qibo.gates.RZ(q=qubit, theta=Parameter(lambda th1: th1, [0.1])))
+            c.add(qibo.gates.RZ(q=qubit, theta=Parameter(lambda th1: th1, [0.1])))
+            c.add(qibo.gates.RY(q=qubit, theta=Parameter(lambda th1: th1, [0.1])))
+            c.add(qibo.gates.RY(q=qubit, theta=Parameter(lambda th1: th1, [0.1])))
 
         c.add(qibo.gates.M(qubit))
 
@@ -176,6 +176,100 @@ def test_run_subcircuit_measure():
     c = circuit(nqubits=1)
     value = run_subcircuit_measure(c, 0, 1, GlobalBackend(), stochastic=False)
     assert value == 0.5
+
+
+def test_psr_commuting_gate():
+    # hyperparameters
+    scale_factor = 0.5
+    nshots = 1024
+    test_hamiltonian = create_hamiltonian(0, 1, GlobalBackend())
+
+    # separating gates
+    c = Circuit(1)
+    c.add(gates.H(q=0))
+    c.add(gates.RY(q=0, theta=0))
+    c.add(gates.RY(q=0, theta=0))
+    c.add(gates.M(0))
+
+    params = np.array([0.1, 0.2])
+    c.set_parameters(params)
+
+    grad_0 = parameter_shift(
+        circuit=c,
+        hamiltonian=test_hamiltonian,
+        parameter_index=0,
+        scale_factor=scale_factor,
+        nshots=nshots,
+    )
+
+    grad_1 = parameter_shift(
+        circuit=c,
+        hamiltonian=test_hamiltonian,
+        parameter_index=1,
+        scale_factor=scale_factor,
+        nshots=nshots,
+    )
+
+    # single gate
+    c2 = Circuit(1)
+    c2.add(gates.H(q=0))
+    c2.add(gates.RY(q=0, theta=0))
+    c2.add(gates.M(0))
+
+    params = np.array([0.3])
+    c2.set_parameters(params)
+
+    grad_2 = parameter_shift(
+        circuit=c2,
+        hamiltonian=test_hamiltonian,
+        parameter_index=0,
+        scale_factor=scale_factor,
+        nshots=nshots,
+    )
+
+    assert np.isclose(grad_0, grad_1, atol=1e-5)
+    assert np.isclose(grad_1, grad_2, atol=1e-5)
+
+
+def test_spsr_non_commuting_gates():
+    c1 = Circuit(nqubits=1)
+    c1.add(gates.RX(q=0, theta=10))
+    c1.add(gates.RX(q=0, theta=40))
+    c1.add(gates.RY(q=0, theta=40))
+    c1.add(gates.M(0))
+
+    print(c1.execute().state())
+
+    c2 = Circuit(nqubits=1)
+    c2.add(gates.RX(q=0, theta=10))
+    c2.add(gates.RY(q=0, theta=40))
+    c2.add(gates.RX(q=0, theta=40))
+    c2.add(gates.M(0))
+
+    print(c2.execute().state())
+
+    c3 = Circuit(nqubits=1)
+    c3.add(gates.RX(q=0, theta=10))
+    c3.add(gates.G(q=0, phi=40))
+    c3.add(gates.M(0))
+
+    print(c3.execute().state())
+
+    c4 = Circuit(nqubits=1)
+    c4.add(gates.RX(q=0, theta=10))
+    c4.add(gates.G(q=0, phi=10))
+    c4.add(gates.G(q=0, phi=30))
+    c4.add(gates.M(0))
+
+    print(c4.execute().state())
+
+    c5 = Circuit(nqubits=1)
+    c5.add(gates.RX(q=0, theta=10))
+    c5.add(gates.G(q=0, phi=30))
+    c5.add(gates.G(q=0, phi=10))
+    c5.add(gates.M(0))
+
+    print(c5.execute().state())
 
 
 @pytest.mark.parametrize("nshots, atol", [(None, 1e-8), (100000, 1e-2)])
@@ -298,7 +392,7 @@ def test_natural_gradient():
     circuit = ansatz(3, 1)
 
     # initialize optimiser with Parameter objects
-    initial_parameters = [Parameter(lambda th1: th1, [0.1]) for i in range(12)]
+    initial_parameters = [0.1] * 12
     optimiser = qibo.optimizers.SGD(
         circuit=circuit, parameters=initial_parameters, loss=loss_func
     )
@@ -355,7 +449,7 @@ def test_multiqubit_natural_gradient():
     circuit = ansatz(
         3, nqubits
     )  # 2 qubits x 3 layers x 2 gates x 2 parameters = 24 params
-    initial_parameters = [Parameter(lambda th1: th1, [0.1]) for i in range(24)]
+    initial_parameters = [0.1] * 24
 
     hamiltonians = [create_hamiltonian(i, 2, GlobalBackend()) for i in range(2)]
     optimiser = qibo.optimizers.SGD(
@@ -385,4 +479,6 @@ def test_multiqubit_natural_gradient():
 if __name__ == "__main__":
     # graph_improvements(1, [0, 1], [[0, 1], [2, 3]])
     # test_multiqubit_natural_gradient()
-    test_parameter()
+    # test_parameter()
+    # test_psr_commuting_gate()
+    test_spsr_non_commuting_gates()
