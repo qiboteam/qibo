@@ -377,7 +377,7 @@ def random_density_matrix(
     """Creates a random density matrix :math:`\\rho`. If ``pure=True``,
 
     .. math::
-        \\rho = \\ketbra{\\psi} \\, ,
+        \\rho = \\ketbra{\\psi}{\\psi} \\, ,
 
     where :math:`\\ket{\\psi}` is a :func:`qibo.quantum_info.random_statevector`.
     If ``pure=False``, then
