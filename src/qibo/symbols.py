@@ -1,16 +1,12 @@
-# -*- coding: utf-8 -*-
-import numpy as np
 import sympy
-
-from qibo import gates
-from qibo.backends import matrices
+from qibo import gates, matrices, K
 from qibo.config import raise_error
 
 
 class Symbol(sympy.Symbol):
     """Qibo specialization for ``sympy`` symbols.
 
-    These symbols can be used to create :class:`qibo.hamiltonians.hamiltonians.SymbolicHamiltonian`.
+    These symbols can be used to create :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
     See :ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>`
     for more details.
 
@@ -38,49 +34,18 @@ class Symbol(sympy.Symbol):
             (for example when the Hamiltonian consists of Z terms only).
     """
 
-    def __new__(cls, q, matrix=None, name="Symbol", commutative=False, **assumptions):
+    def __new__(cls, q, matrix=None, name="Symbol", commutative=False):
         name = "{}{}".format(name, q)
-        assumptions["commutative"] = commutative
-        return super().__new__(cls=cls, name=name, **assumptions)
+        return super().__new__(cls=cls, name=name, commutative=commutative)
 
     def __init__(self, q, matrix=None, name="Symbol", commutative=False):
         self.target_qubit = q
         self._gate = None
-        if not (
-            matrix is None
-            or isinstance(matrix, np.ndarray)
-            or isinstance(
-                matrix,
-                (
-                    np.int,
-                    np.float,
-                    np.complex,
-                    np.int32,
-                    np.int64,
-                    np.float32,
-                    np.float64,
-                    np.complex64,
-                    np.complex128,
-                ),
-            )
-        ):
-            raise_error(
-                TypeError, "Invalid type {} of symbol matrix." "".format(type(matrix))
-            )
+        if not (matrix is None or isinstance(matrix, K.qnp.numeric_types) or
+                isinstance(matrix, K.qnp.tensor_types)):
+            raise_error(TypeError, "Invalid type {} of symbol matrix."
+                                   "".format(type(matrix)))
         self.matrix = matrix
-
-    def __getstate__(self):
-        return {
-            "target_qubit": self.target_qubit,
-            "matrix": self.matrix,
-            "name": self.name,
-        }
-
-    def __setstate__(self, data):
-        self.target_qubit = data.get("target_qubit")
-        self.matrix = data.get("matrix")
-        self.name = data.get("name")
-        self._gate = None
 
     @property
     def gate(self):
@@ -89,7 +54,7 @@ class Symbol(sympy.Symbol):
             self._gate = self.calculate_gate()
         return self._gate
 
-    def calculate_gate(self):  # pragma: no cover
+    def calculate_gate(self):
         return gates.Unitary(self.matrix, self.target_qubit)
 
     def full_matrix(self, nqubits):
@@ -102,8 +67,7 @@ class Symbol(sympy.Symbol):
             Matrix of dimension (2^nqubits, 2^nqubits) composed of the Kronecker
             product between identities and the symbol's single-qubit matrix.
         """
-        from qibo.hamiltonians.models import multikron
-
+        from qibo.hamiltonians import multikron
         matrix_list = self.target_qubit * [matrices.I]
         matrix_list.append(self.matrix)
         n = nqubits - self.target_qubit - 1
@@ -112,9 +76,10 @@ class Symbol(sympy.Symbol):
 
 
 class PauliSymbol(Symbol):
-    def __new__(cls, q, commutative=False, **assumptions):
+
+    def __new__(cls, q, commutative=False):
         matrix = getattr(matrices, cls.__name__)
-        return super().__new__(cls, q, matrix, cls.__name__, commutative, **assumptions)
+        return super().__new__(cls, q, matrix, cls.__name__, commutative)
 
     def __init__(self, q, commutative=False):
         name = self.__class__.__name__
@@ -132,7 +97,6 @@ class I(PauliSymbol):
     Args:
         q (int): Target qubit id.
     """
-
     pass
 
 
@@ -142,7 +106,6 @@ class X(PauliSymbol):
     Args:
         q (int): Target qubit id.
     """
-
     pass
 
 
@@ -152,7 +115,6 @@ class Y(PauliSymbol):
     Args:
         q (int): Target qubit id.
     """
-
     pass
 
 
@@ -162,5 +124,4 @@ class Z(PauliSymbol):
     Args:
         q (int): Target qubit id.
     """
-
     pass

@@ -1,13 +1,10 @@
-# -*- coding: utf-8 -*-
-import os
-
 import numpy as np
+from qibo.models import Circuit
+from qibo import gates, K
 from datasets import create_dataset, create_target, fig_template, world_map_template
 from matplotlib.cm import get_cmap
 from matplotlib.colors import Normalize
-
-from qibo import gates
-from qibo.models import Circuit
+import os
 
 
 class single_qubit_classifier:
@@ -36,7 +33,7 @@ class single_qubit_classifier:
         self.params = np.random.randn(layers * 4)
         self._circuit = self._initialize_circuit()
         try:
-            os.makedirs("results/" + self.name + "/%s_layers" % self.layers)
+            os.makedirs('results/'+self.name+'/%s_layers' % self.layers)
         except:
             pass
 
@@ -84,8 +81,8 @@ class single_qubit_classifier:
             float with the cost function.
         """
         C = self.circuit(x)
-        state = C.execute().state()
-        cf = 0.5 * (1 - fidelity(state, self.target[y])) ** 2
+        state = C.execute()
+        cf = .5 * (1 - fidelity(state, self.target[y])) ** 2
         return cf
 
     def cost_function_fidelity(self, params=None):
@@ -107,46 +104,45 @@ class single_qubit_classifier:
         cf /= len(self.training_set[0])
         return cf
 
-    def minimize(self, method="BFGS", options=None, compile=True):
+    def minimize(self, method='BFGS', options=None, compile=True):
         loss = self.cost_function_fidelity
 
-        if method == "cma":
+        if method == 'cma':
             # Genetic optimizer
             import cma
-
-            r = cma.fmin2(lambda p: loss(p), self.params, 2)
+            r = cma.fmin2(lambda p: K.to_numpy(loss(p)), self.params, 2)
             result = r[1].result.fbest
             parameters = r[1].result.xbest
 
-        elif method == "sgd":
-            import tensorflow as tf
-
+        elif method == 'sgd':
             circuit = self.circuit(self.training_set[0])
+            for gate in circuit.queue:
+                if not K.supports_gradients:
+                    from qibo.config import raise_error
+                    raise_error(RuntimeError,
+                                'Use tensorflow backend in order to compute gradients.')
 
-            sgd_options = {
-                "nepochs": 5001,
-                "nmessage": 1000,
-                "optimizer": "Adamax",
-                "learning_rate": 0.5,
-            }
+            sgd_options = {"nepochs": 5001,
+                           "nmessage": 1000,
+                           "optimizer": "Adamax",
+                           "learning_rate": 0.5}
             if options is not None:
                 sgd_options.update(options)
 
             # proceed with the training
-            vparams = tf.Variable(self.params)
-            optimizer = getattr(tf.optimizers, sgd_options["optimizer"])(
-                learning_rate=sgd_options["learning_rate"]
-            )
+            vparams = K.Variable(self.params)
+            optimizer = getattr(K.optimizers, sgd_options["optimizer"])(
+                learning_rate=sgd_options["learning_rate"])
 
             def opt_step():
-                with tf.GradientTape() as tape:
+                with K.GradientTape() as tape:
                     l = loss(vparams)
                 grads = tape.gradient(l, [vparams])
                 optimizer.apply_gradients(zip(grads, [vparams]))
                 return l, vparams
 
             if compile:
-                opt_step = tf.function(opt_step)
+                opt_step = K.function(opt_step)
 
             l_optimal, params_optimal = 10, self.params
             for e in range(sgd_options["nepochs"]):
@@ -154,16 +150,16 @@ class single_qubit_classifier:
                 if l < l_optimal:
                     l_optimal, params_optimal = l, vparams
                 if e % sgd_options["nmessage"] == 0:
-                    print("ite %d : loss %f" % (e, l))
+                    print('ite %d : loss %f' % (e, K.to_numpy(l)))
 
-            result = np.array(self.cost_function(params_optimal))
-            parameters = np.array(params_optimal)
+            result = K.to_numpy(self.cost_function(params_optimal))
+            parameters = K.to_numpy(params_optimal)
 
         else:
             import numpy as np
             from scipy.optimize import minimize
-
-            m = minimize(lambda p: loss(p), self.params, method=method, options=options)
+            m = minimize(lambda p: K.to_numpy(loss(p)), self.params,
+                         method=method, options=options)
             result = m.fun
             parameters = m.x
 
@@ -178,7 +174,7 @@ class single_qubit_classifier:
         labels = [[0]] * len(self.test_set[0])
         for j, x in enumerate(self.test_set[0]):
             C = self.circuit(x)
-            state = C.execute().state()
+            state = C.execute()
             fids = np.empty(len(self.target))
             for i, t in enumerate(self.target):
                 fids[i] = fidelity(state, t)
@@ -194,27 +190,23 @@ class single_qubit_classifier:
         """
         fig, axs = fig_template(self.name)
         guess_labels = self.eval_test_set_fidelity()
-        colors_classes = get_cmap("tab10")
+        colors_classes = get_cmap('tab10')
         norm_class = Normalize(vmin=0, vmax=10)
         x = self.test_set[0]
         x_0, x_1 = x[:, 0], x[:, 1]
-        axs[0].scatter(
-            x_0, x_1, c=guess_labels, s=2, cmap=colors_classes, norm=norm_class
-        )
-        colors_rightwrong = get_cmap("RdYlGn")
-        norm_rightwrong = Normalize(vmin=-0.1, vmax=1.1)
+        axs[0].scatter(x_0, x_1, c=guess_labels, s=2,
+                       cmap=colors_classes, norm=norm_class)
+        colors_rightwrong = get_cmap('RdYlGn')
+        norm_rightwrong = Normalize(vmin=-.1, vmax=1.1)
 
         checks = [int(g == l) for g, l in zip(guess_labels, self.test_set[1])]
-        axs[1].scatter(
-            x_0, x_1, c=checks, s=2, cmap=colors_rightwrong, norm=norm_rightwrong
-        )
-        print(
-            "The accuracy for this classification is %.2f"
-            % (100 * np.sum(checks) / len(checks)),
-            "%",
-        )
+        axs[1].scatter(x_0, x_1, c=checks, s=2,
+                       cmap=colors_rightwrong, norm=norm_rightwrong)
+        print('The accuracy for this classification is %.2f' %
+              (100 * np.sum(checks) / len(checks)), '%')
 
-        fig.savefig("results/" + self.name + "/%s_layers/test_set.pdf" % self.layers)
+        fig.savefig('results/'+self.name +
+                    '/%s_layers/test_set.pdf' % self.layers)
 
     def paint_world_map(self):
         """Method for plotting the proper labels on the Bloch sphere.
@@ -224,26 +216,18 @@ class single_qubit_classifier:
         """
         angles = np.zeros((len(self.test_set[0]), 2))
         from datasets import laea_x, laea_y
-
         fig, ax = world_map_template()
-        colors_classes = get_cmap("tab10")
+        colors_classes = get_cmap('tab10')
         norm_class = Normalize(vmin=0, vmax=10)
         for i, x in enumerate(self.test_set[0]):
             C = self.circuit(x)
-            state = C.execute().state()
-            angles[i, 0] = np.pi / 2 - np.arccos(
-                np.abs(state[0]) ** 2 - np.abs(state[1]) ** 2
-            )
+            state = C.execute()
+            angles[i, 0] = np.pi / 2 - \
+                np.arccos(np.abs(state[0]) ** 2 - np.abs(state[1]) ** 2)
             angles[i, 1] = np.angle(state[1] / state[0])
 
-        ax.scatter(
-            laea_x(angles[:, 1], angles[:, 0]),
-            laea_y(angles[:, 1], angles[:, 0]),
-            c=self.test_set[1],
-            cmap=colors_classes,
-            s=15,
-            norm=norm_class,
-        )
+        ax.scatter(laea_x(angles[:, 1], angles[:, 0]), laea_y(angles[:, 1], angles[:, 0]), c=self.test_set[1],
+                   cmap=colors_classes, s=15, norm=norm_class)
 
         if len(self.target) == 2:
             angles_0 = np.zeros(len(self.target))
@@ -267,27 +251,19 @@ class single_qubit_classifier:
             angles_0 = np.zeros(len(self.target))
             angles_1 = np.zeros(len(self.target))
             for i, state in enumerate(self.target):
-                angles_0[i] = np.pi / 2 - np.arccos(
-                    np.abs(state[0]) ** 2 - np.abs(state[1]) ** 2
-                )
+                angles_0[i] = np.pi / 2 - \
+                    np.arccos(np.abs(state[0]) ** 2 - np.abs(state[1]) ** 2)
                 angles_1[i] = np.angle(state[1] / state[0])
             col = list(range(len(self.target)))
 
-        ax.scatter(
-            laea_x(angles_1, angles_0),
-            laea_y(angles_1, angles_0),
-            c=col,
-            cmap=colors_classes,
-            s=500,
-            norm=norm_class,
-            marker="P",
-            zorder=11,
-        )
+        ax.scatter(laea_x(angles_1, angles_0), laea_y(angles_1, angles_0), c=col,
+                   cmap=colors_classes, s=500, norm=norm_class, marker='P', zorder=11)
 
-        ax.axis("off")
+        ax.axis('off')
 
-        fig.savefig("results/" + self.name + "/%s_layers/world_map.pdf" % self.layers)
+        fig.savefig('results/'+self.name +
+                    '/%s_layers/world_map.pdf' % self.layers)
 
 
 def fidelity(state1, state2):
-    return np.abs(np.sum(np.conj(state2) * state1)) ** 2
+    return K.abs(K.sum(K.qnp.conj(state2) * state1)) ** 2

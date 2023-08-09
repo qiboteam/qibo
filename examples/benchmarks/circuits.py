@@ -1,7 +1,5 @@
-# -*- coding: utf-8 -*-
 import numpy as np
-
-from qibo import gates, models
+from qibo import models, gates
 
 
 def VariationalCircuit(nqubits, nlayers=1, theta_values=None):
@@ -17,6 +15,22 @@ def VariationalCircuit(nqubits, nlayers=1, theta_values=None):
             yield gates.CZ(i, i + 1)
         for i in range(nqubits):
             yield gates.RY(i, next(theta))
+        for i in range(1, nqubits - 2, 2):
+          yield gates.CZ(i, i + 1)
+        yield gates.CZ(0, nqubits - 1)
+
+
+def OptimizedVariationalCircuit(nqubits, nlayers=1, theta_values=None):
+    if theta_values is None:
+        theta = 2 * np.pi * np.random.random((2 * nlayers, nqubits))
+    else:
+        theta = theta_values.reshape((2 * nlayers, nqubits))
+
+    pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
+    for l in range(nlayers):
+        yield gates.VariationalLayer(range(nqubits), pairs,
+                                     gates.RY, gates.CZ,
+                                     theta[2 * l], theta[2 * l + 1])
         for i in range(1, nqubits - 2, 2):
             yield gates.CZ(i, i + 1)
         yield gates.CZ(0, nqubits - 1)
@@ -54,13 +68,12 @@ def PrepareGHZ(nqubits):
         yield gates.CNOT(i, i + 1)
 
 
-_CIRCUITS = {
-    "variational": VariationalCircuit,
-    "one-qubit-gate": OneQubitGate,
-    "two-qubit-gate": TwoQubitGate,
-    "toffoli-gate": ToffoliGate,
-    "ghz": PrepareGHZ,
-}
+_CIRCUITS = {"variational": VariationalCircuit,
+             "opt-variational": OptimizedVariationalCircuit,
+             "one-qubit-gate": OneQubitGate,
+             "two-qubit-gate": TwoQubitGate,
+             "toffoli-gate": ToffoliGate,
+             "ghz": PrepareGHZ}
 
 
 def CircuitFactory(nqubits, circuit_name, accelerators=None, **kwargs):
@@ -68,7 +81,8 @@ def CircuitFactory(nqubits, circuit_name, accelerators=None, **kwargs):
         circuit = models.QFT(nqubits, accelerators=accelerators)
     else:
         if circuit_name not in _CIRCUITS:
-            raise KeyError("Unknown benchmark circuit type {}." "".format(circuit_name))
+            raise KeyError("Unknown benchmark circuit type {}."
+                           "".format(circuit_name))
         circuit = models.Circuit(nqubits, accelerators=accelerators)
         circuit.add(_CIRCUITS.get(circuit_name)(nqubits, **kwargs))
     return circuit

@@ -59,3 +59,4 @@ Hardware backends
 We provide the following hardware control backends for Qibo:
 
 * qibolab (*under development*): a module for laboratories.
+

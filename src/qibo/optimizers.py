@@ -1,21 +1,9 @@
-# -*- coding: utf-8 -*-
-def optimize(
-    loss,
-    initial_parameters,
-    args=(),
-    method="Powell",
-    jac=None,
-    hess=None,
-    hessp=None,
-    bounds=None,
-    constraints=(),
-    tol=None,
-    callback=None,
-    options=None,
-    compile=False,
-    processes=None,
-    backend=None,
-):
+from qibo.parallel import ParallelResources, _executor
+
+
+def optimize(loss, initial_parameters, args=(), method='Powell',
+             jac=None, hess=None, hessp=None, bounds=None, constraints=(),
+             tol=None, callback=None, options=None, compile=False, processes=None):
     """Main optimization method. Selects one of the following optimizers:
         - :meth:`qibo.optimizers.cmaes`
         - :meth:`qibo.optimizers.newtonian`
@@ -79,32 +67,11 @@ def optimize(
     if method == "cma":
         return cmaes(loss, initial_parameters, args, options)
     elif method == "sgd":
-        if backend is None:
-            from qibo.backends import GlobalBackend
-
-            backend = GlobalBackend()
-        return sgd(loss, initial_parameters, args, options, compile, backend)
+        return sgd(loss, initial_parameters, args, options, compile)
     else:
-        if backend is None:
-            from qibo.backends import GlobalBackend
-
-            backend = GlobalBackend()
-        return newtonian(
-            loss,
-            initial_parameters,
-            args,
-            method,
-            jac,
-            hess,
-            hessp,
-            bounds,
-            constraints,
-            tol,
-            callback,
-            options,
-            processes,
-            backend,
-        )
+        return newtonian(loss, initial_parameters, args, method,
+                         jac, hess, hessp, bounds, constraints, tol,
+                         callback, options, processes)
 
 
 def cmaes(loss, initial_parameters, args=(), options=None):
@@ -121,27 +88,13 @@ def cmaes(loss, initial_parameters, args=(), options=None):
             available options.
     """
     import cma
-
     r = cma.fmin2(loss, initial_parameters, 1.7, options=options, args=args)
     return r[1].result.fbest, r[1].result.xbest, r
 
 
-def newtonian(
-    loss,
-    initial_parameters,
-    args=(),
-    method="Powell",
-    jac=None,
-    hess=None,
-    hessp=None,
-    bounds=None,
-    constraints=(),
-    tol=None,
-    callback=None,
-    options=None,
-    processes=None,
-    backend=None,
-):
+def newtonian(loss, initial_parameters, args=(), method='Powell',
+              jac=None, hess=None, hessp=None, bounds=None, constraints=(),
+              tol=None, callback=None, options=None, processes=None):
     """Newtonian optimization approaches based on ``scipy.optimize.minimize``.
 
     For more details check the `scipy documentation <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
@@ -176,37 +129,21 @@ def newtonian(
             ``scipy.optimize.minimize``.
         processes (int): number of processes when using the parallel BFGS method.
     """
-    if method == "parallel_L-BFGS-B":  # pragma: no cover
-        o = ParallelBFGS(
-            loss,
-            args=args,
-            processes=processes,
-            bounds=bounds,
-            callback=callback,
-            options=options,
-        )
+    if method == 'parallel_L-BFGS-B':  # pragma: no cover
+        from qibo.parallel import _check_parallel_configuration
+        _check_parallel_configuration(processes)
+        o = ParallelBFGS(loss, args=args, processes=processes,
+                         bounds=bounds, callback=callback, options=options)
         m = o.run(initial_parameters)
     else:
         from scipy.optimize import minimize
-
-        m = minimize(
-            loss,
-            initial_parameters,
-            args=args,
-            method=method,
-            jac=jac,
-            hess=hess,
-            hessp=hessp,
-            bounds=bounds,
-            constraints=constraints,
-            tol=tol,
-            callback=callback,
-            options=options,
-        )
+        m = minimize(loss, initial_parameters, args=args, method=method,
+                     jac=jac, hess=hess, hessp=hessp, bounds=bounds, constraints=constraints,
+                     tol=tol, callback=callback, options=options)
     return m.fun, m.x, m
 
 
-def sgd(loss, initial_parameters, args=(), options=None, compile=False, backend=None):
+def sgd(loss, initial_parameters, args=(), options=None, compile=False):
     """Stochastic Gradient Descent (SGD) optimizer using Tensorflow backpropagation.
 
     See `tf.keras.Optimizers <https://www.tensorflow.org/api_docs/python/tf/keras/optimizers>`_
@@ -227,41 +164,38 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False, backend=
             - ``'nmessage'`` (int, default: ``1e3``): Every how many epochs to print
               a message of the loss function.
     """
+    from qibo import K
     from qibo.config import log, raise_error
-
-    if not backend.name == "tensorflow":
+    if not K.supports_gradients:
         raise_error(RuntimeError, "SGD optimizer requires Tensorflow backend.")
 
-    sgd_options = {
-        "nepochs": 1000000,
-        "nmessage": 1000,
-        "optimizer": "Adagrad",
-        "learning_rate": 0.001,
-    }
+    sgd_options = {"nepochs": 1000000,
+                   "nmessage": 1000,
+                   "optimizer": "Adagrad",
+                   "learning_rate": 0.001}
     if options is not None:
         sgd_options.update(options)
 
     # proceed with the training
-    vparams = backend.tf.Variable(initial_parameters)
-    optimizer = getattr(backend.tf.optimizers, sgd_options["optimizer"])(
-        learning_rate=sgd_options["learning_rate"]
-    )
+    vparams = K.optimization.Variable(initial_parameters)
+    optimizer = getattr(K.optimization.optimizers, sgd_options["optimizer"])(
+        learning_rate=sgd_options["learning_rate"])
 
     def opt_step():
-        with backend.tf.GradientTape() as tape:
+        with K.optimization.GradientTape() as tape:
             l = loss(vparams, *args)
         grads = tape.gradient(l, [vparams])
         optimizer.apply_gradients(zip(grads, [vparams]))
         return l
 
     if compile:
-        loss = backend.compile(loss)
-        opt_step = backend.compile(opt_step)
+        loss = K.compile(loss)
+        opt_step = K.compile(opt_step)
 
     for e in range(sgd_options["nepochs"]):
         l = opt_step()
         if e % sgd_options["nmessage"] == 1:
-            log.info("ite %d : loss %f", e, l.numpy())
+            log.info('ite %d : loss %f', e, l.numpy())
 
     return loss(vparams, *args).numpy(), vparams.numpy(), sgd_options
 
@@ -278,24 +212,19 @@ class ParallelBFGS:  # pragma: no cover
         options (dict): follows ``scipy.optimize.minimize`` syntax for L-BFGS-B.
         processes (int): number of processes when using the paralle BFGS method.
     """
+    import multiprocessing as mp
+    import functools
+    import itertools
+    from qibo import K
 
-    import numpy as np
-
-    def __init__(
-        self,
-        function,
-        args=(),
-        bounds=None,
-        callback=None,
-        options=None,
-        processes=None,
-    ):
-        self.function = function
-        self.args = args
+    def __init__(self, function, args=(), bounds=None,
+                 callback=None, options=None, processes=None):
+        ParallelResources().arguments = args
+        ParallelResources().custom_function = function
         self.xval = None
         self.function_value = None
         self.jacobian_value = None
-        self.precision = self.np.finfo("float64").eps
+        self.precision = self.K.np.finfo(self.K.qnp.dtypes("DTYPE")).eps
         self.bounds = bounds
         self.callback = callback
         self.options = options
@@ -309,18 +238,13 @@ class ParallelBFGS:  # pragma: no cover
         Returns:
             scipy.minimize result object
         """
-        from scipy.optimize import minimize
-
-        out = minimize(
-            fun=self.fun,
-            x0=x0,
-            jac=self.jac,
-            method="L-BFGS-B",
-            bounds=self.bounds,
-            callback=self.callback,
-            options=self.options,
-        )
-        out.hess_inv = out.hess_inv * self.np.identity(len(x0))
+        ParallelResources().lock = self.mp.Lock()
+        with self.mp.Pool(processes=self.processes) as self.pool:
+            from scipy.optimize import minimize
+            out = minimize(fun=self.fun, x0=x0, jac=self.jac, method='L-BFGS-B',
+                           bounds=self.bounds, callback=self.callback, options=self.options)
+        ParallelResources().reset()
+        out.hess_inv = out.hess_inv * self.K.np.identity(len(x0))
         return out
 
     @staticmethod
@@ -330,30 +254,22 @@ class ParallelBFGS:  # pragma: no cover
         else:
             x_ = x.copy()
             if eps_at <= len(x):
-                x_[eps_at - 1] += eps
+                x_[eps_at-1] += eps
             else:
-                x_[eps_at - 1 - len(x)] -= eps
+                x_[eps_at-1-len(x)] -= eps
         return fun(x_)
 
     def evaluate(self, x, eps=1e-8):
-        if not (
-            self.xval is not None and all(abs(self.xval - x) <= self.precision * 2)
-        ):
-            eps_at = range(len(x) + 1)
+        if not (self.xval is not None and all(abs(self.xval - x) <= self.precision*2)):
+            eps_at = range(len(x)+1)
             self.xval = x.copy()
-
-            def operation(epsi):
-                return self._eval_approx(
-                    epsi, lambda y: self.function(y, *self.args), x, eps
-                )
-
-            from joblib import Parallel, delayed
-
-            ret = Parallel(self.processes, prefer="threads")(
-                delayed(operation)(epsi) for epsi in eps_at
-            )
+            ret = self.pool.starmap(self._eval_approx, zip(eps_at,
+                                    self.itertools.repeat(_executor),
+                                    self.itertools.repeat(x),
+                                    self.itertools.repeat(eps)))
             self.function_value = ret[0]
-            self.jacobian_value = (ret[1 : (len(x) + 1)] - self.function_value) / eps
+            self.jacobian_value = (
+                ret[1:(len(x)+1)] - self.function_value) / eps
 
     def fun(self, x):
         self.evaluate(x)

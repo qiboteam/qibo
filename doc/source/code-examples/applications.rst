@@ -79,7 +79,6 @@ Quantum Machine Learning
 
     tutorials/variational_classifier/README.md
     tutorials/reuploading_classifier/README.md
-    tutorials/vqregressor/README.md
     tutorials/autoencoder/README.md
     tutorials/EF_QAE/README.md
 
@@ -97,7 +96,6 @@ Variational Quantum Circuits
     tutorials/aavqe/README.md
     tutorials/variational_classifier/README.md
     tutorials/reuploading_classifier/README.md
-    tutorials/vqregressor/README.md
     tutorials/autoencoder/README.md
     tutorials/qsvd/README.md
     tutorials/3_tangle/README.md
@@ -144,3 +142,4 @@ FALQON
     :maxdepth: 1
 
     tutorials/falqon/README.md
+
