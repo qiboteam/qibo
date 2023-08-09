@@ -859,8 +859,16 @@ def gate_error(channel, target=None, check_unitary: bool = False, backend=None):
 
 def diamond_norm(channel, target=None, **kwargs):
     """Calculates the diamond norm :math:`\\|\\mathcal{E}\\|_{\\diamond}` of
-    ``channel`` :math:`\\mathcal{E}`. If a ``target`` channel :math:`\\Lambda`
-    is specified, then it calculates :math:`\\| \\mathcal{E} - \\Lambda\\|_{\\diamond}`.
+    ``channel`` :math:`\\mathcal{E}`, which is given by
+
+    .. math::
+        \\|\\mathcal{E}\\|_{\\diamond} = \\max_{\\rho} \\, \\| \\left(\\mathcal{E} \\bigotimes I_{d^{2}}\\right)(\\rho) \\| \\, ,
+
+    where :math:`I_{d^{2}}` is the :math:`d^{2} \times d^{2}` Identity operator,
+    :math:`d = 2^{n}`, and :math:`n` is the number of qubits.
+
+    If a ``target`` channel :math:`\\Lambda` is specified,
+    then it calculates :math:`\\| \\mathcal{E} - \\Lambda\\|_{\\diamond}`.
 
     Example:
 
