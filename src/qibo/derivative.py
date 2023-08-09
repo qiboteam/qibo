@@ -521,13 +521,12 @@ def execute_circuit(
     initial_state=None,
     cdr_params=None,
     calibration=None,
-    precise=True,
+    precise=False,
 ):
     """Probabilistic circuit execution with possibilities for error mitigation"""
     if precise:
         state = c().state()
         res = obs.expectation(state)
-        print(res)
         return res
 
     # retrieve state
@@ -623,7 +622,7 @@ def generate_fubini(
                     ps = scale_factors[p]
                     ts = scale_factors[t]
                     val = ps * ts * (result - result**2)
-                    fubini[p, t] = val if val > 1e-3 else 1e-3
+                    fubini[p, t] = val if val > 1e-6 else 1e-6
 
     return fubini
 

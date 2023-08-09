@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 import pennylane as qml
 import pytest
@@ -30,19 +32,19 @@ def ansatz_pdf(layers, params, feature):
     for i in range(layers):
         qml.Hadamard(wires=i)
 
-        qml.RZ(params[12 * i + 0] * feature, wires=i)
+        qml.RZ(params[12 * i + 0] * math.log(feature), wires=i)
         qml.RZ(params[12 * i + 1], wires=i)
 
         qml.RY(params[12 * i + 2] * feature, wires=i)
         qml.RY(params[12 * i + 3], wires=i)
 
-        qml.RZ(params[12 * i + 4] * feature, wires=i)
+        qml.RZ(params[12 * i + 4] * math.log(feature), wires=i)
         qml.RZ(params[12 * i + 5], wires=i)
 
         qml.RY(params[12 * i + 6] * feature, wires=i)
         qml.RY(params[12 * i + 7], wires=i)
 
-        qml.RZ(params[12 * i + 8] * feature, wires=i)
+        qml.RZ(params[12 * i + 8] * math.log(feature), wires=i)
         qml.RZ(params[12 * i + 9], wires=i)
 
         qml.RY(params[12 * i + 10] * feature, wires=i)
@@ -65,9 +67,21 @@ def ansatz(layers, nqubits):
         c.add(qibo.gates.H(q=qubit))
 
         for _ in range(layers):
+            c.add(
+                qibo.gates.RZ(
+                    q=qubit,
+                    theta=Parameter(
+                        lambda x, th1: th1 * sp.log(x), [0.1], featurep=[0.1]
+                    ),
+                )
+            )
             c.add(qibo.gates.RZ(q=qubit, theta=Parameter(lambda th1: th1, [0.1])))
-            c.add(qibo.gates.RZ(q=qubit, theta=Parameter(lambda th1: th1, [0.1])))
-            c.add(qibo.gates.RY(q=qubit, theta=Parameter(lambda th1: th1, [0.1])))
+            c.add(
+                qibo.gates.RY(
+                    q=qubit,
+                    theta=Parameter(lambda x, th1: th1 * x, [0.1], featurep=[0.1]),
+                )
+            )
             c.add(qibo.gates.RY(q=qubit, theta=Parameter(lambda th1: th1, [0.1])))
 
         c.add(qibo.gates.M(qubit))
@@ -433,8 +447,10 @@ def test_natural_gradient():
 
     assert np.allclose(optimiser.params, params)
 
-    metric_tensor = qml.metric_tensor(ansatz_pdf, approx="diag")(1, params, 1.0)
+    metric_tensor = qml.metric_tensor(ansatz_pdf, approx="diag")(1, params, 0.1)
     print(metric_tensor)
+
+    print(fubini)
     assert np.allclose(fubini, metric_tensor)
     assert np.allclose(fubini2, metric_tensor)
 
@@ -481,4 +497,5 @@ if __name__ == "__main__":
     # test_multiqubit_natural_gradient()
     # test_parameter()
     # test_psr_commuting_gate()
-    test_spsr_non_commuting_gates()
+    # test_spsr_non_commuting_gates()
+    test_natural_gradient()

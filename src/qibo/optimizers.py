@@ -68,7 +68,7 @@ class Optimizer:
         self.options.update(updates)
 
     def fun(self, x):
-        val = self.loss_function(x, *self.args)
+        val = self.loss_function(x, self.args)
         self.etime = time.time()
         duration = self.etime - self.ftime
         self.ftime = self.etime
@@ -173,6 +173,8 @@ class SGD(Optimizer):
             )
 
     def _get_paramInit(self):
+        """Retrieve parameter values or objects directly from gates"""
+
         params = []
         for gate in self._circuit.queue:
             if isinstance(gate, gates._Rn_):
@@ -184,9 +186,15 @@ class SGD(Optimizer):
         return params
 
     def _get_params(self, feature=None):
-        """Creates an array with the trainable parameters"""
+        """Retrieve gate parameters
+        Args:
+            feature: input feature if embedded in Parameter lambda function"""
+
+        # for array
         if isinstance(self.paramInputs, np.ndarray):
             return self.paramInputs
+
+        # for Parameter objects
         else:
             params = []
             count = 0
@@ -232,7 +240,6 @@ class SGD(Optimizer):
         # set parameters
         parameters = self._get_params(feature=feature)
         self._circuit.set_parameters(parameters)
-        print("RUN", parameters, self.hamiltonian[0].matrix)
 
         # run circuit
         if isinstance(self.hamiltonian, list):
@@ -332,8 +339,7 @@ class SGD(Optimizer):
                 )  # separate pull request
 
         # gradient average
-        print("HERE", results, labels)
-        loss = self.loss_function(results, labels, *self.args)
+        loss = self.loss_function(results, labels, self.args)
         loss_gradients = circ_grads
 
         # Fubini-Study Metric renormalisation
@@ -371,11 +377,10 @@ class SGD(Optimizer):
         Returns: np.float new values of momentum and velocity
         """
         grads, loss = self.dloss(features, labels)
-        print("after", self.params, self.paramInputs)
 
         if self.save:
             self.file.write(
-                f"Grads (absolute value: {np.linalg.norm(grads)}): {grads.tolist()}\nParams {self.params}\n"
+                f"Grads (absolute value: {np.linalg.norm(grads)}): {grads.tolist()}\nParams {self.params.tolist()}\n"
             )
 
         if self.options["adam"]:
@@ -480,7 +485,8 @@ class SGD(Optimizer):
             plot(self, self.features, self.labels, epoch, this_loss)
 
         if self.save:
-            self.file.write(f"Params {self.params}\n")
+            self.file.write(f"Params {self.params.tolist()}\n")
+            self.file.write(f"Best J: {min(losses)}\n")
             self.cleanup()
 
         return losses
@@ -734,7 +740,7 @@ def plot(optimizer, xtrain, ytrain, epoch, loss):
     cols = yprediction.shape[1]
     # new plot
     fig, ax = plt.subplots(nrows=1, ncols=cols, figsize=(8, 6))
-    # fig.suptitle(f"Epoch {epoch}, J={loss[0]:.4}")
+    fig.suptitle(f"Epoch {epoch}, J={loss:.4}")
     # ax.set(title=f'$\chi^2 = $ {chi2:.2f}', xlabel='x', ylabel='PDF',
     #           xscale='log')
 
