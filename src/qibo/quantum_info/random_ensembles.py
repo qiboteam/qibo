@@ -374,7 +374,18 @@ def random_density_matrix(
     seed=None,
     backend=None,
 ):
-    """Creates a random density matrix :math:`\\rho`.
+    """Creates a random density matrix :math:`\\rho`. If ``pure=True``,
+
+    .. math::
+        \\rho = \\ketbra{\\psi} \\, ,
+
+    where :math:`\\ket{\\psi}` is a :func:`qibo.quantum_info.random_statevector`.
+    If ``pure=False``, then
+
+    .. math::
+        \\rho = \\sum_{k} \\, p_{k} \\, \\ketbra{\\psi_{k}} \\, .
+
+    is a mixed state.
 
     Args:
         dims (int): dimension of the matrix.
