@@ -148,7 +148,7 @@ def random_hermitian(
 
 
 def random_unitary(dims: int, measure: Optional[str] = None, seed=None, backend=None):
-    """Returns a random Unitary operator :math:`U`,, i.e.
+    """Returns a random Unitary operator :math:`U`, i.e.
     a random operator such that :math:`U^{-1} = U^{\\dagger}`.
 
     Args:

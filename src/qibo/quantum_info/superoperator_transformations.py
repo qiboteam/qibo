@@ -1671,7 +1671,7 @@ def stinespring_to_choi(
     to its Choi representation :math:`\\Lambda`.
 
     .. math::
-        \\Lambda = \\text{kraus_to_choi}(\\text{stinespring_to_kraus}(U_{0}}))
+        \\Lambda = \\text{kraus_to_choi}(\\text{stinespring_to_kraus}(U_{0}))
 
     Args:
         stinespring (ndarray): quantum channel in the Stinespring representation.

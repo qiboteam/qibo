@@ -619,9 +619,10 @@ def entanglement_fidelity(
     :math:`\\rho`, which is given by
 
     .. math::
-        \\begin{align*}
+        \\begin{align}
           F_{\\mathcal{E}} &= \\text{fidelity}(\\rho_{f}, \\rho) \\nonumber \\\\
-          &= \\text{tr}(\\rho_{f} \\, \\rho)
+                           &= \\text{tr}(\\rho_{f} \\, \\rho) \\nonumber
+        \\end{align}
 
     where
 
