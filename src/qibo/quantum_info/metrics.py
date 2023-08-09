@@ -8,7 +8,10 @@ from qibo.config import PRECISION_TOL, raise_error
 
 
 def purity(state):
-    """Purity of a quantum state :math:`\\rho`, which is given by :math:`\\text{tr}(\\rho^{2})`.
+    """Purity of a quantum state :math:`\\rho`, which is given by
+
+    .. math::
+        \\text{purity}(\\rho) = \\text{tr}(\\rho^{2}) \\, .
 
     Args:
         state (ndarray): statevector or density matrix.
