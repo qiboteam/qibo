@@ -364,7 +364,7 @@ def test_qap():
     os.chdir(path)
     run_script(args)
 
-    
+
 @pytest.mark.parametrize("n_layers", [6])
 @pytest.mark.parametrize("batch_size", [20])
 @pytest.mark.parametrize("nepochs", [7])

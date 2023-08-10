@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Quadratic Assignment Problem"""
 
 import argparse
@@ -24,7 +23,7 @@ def load_qap(filename):
 
     """
 
-    with open(filename, "r") as fh:
+    with open(filename) as fh:
         n = int(fh.readline())
 
         numbers = [float(n) for n in fh.read().split()]
@@ -41,7 +40,6 @@ def load_qap(filename):
 
 
 def main(filename: str = "./tiny04a.dat"):
-
     print(f"Load flow and distance matrices from {filename} and make a QUBO")
     F, D = load_qap(filename)
     penalty = qubo_qap_penalty((F, D))

@@ -1,14 +1,7 @@
-# -*- coding: utf-8 -*-
 from typing import (
     Any,
     Dict,
-    Generator,
-    Hashable,
-    Iterator,
-    List,
-    Optional,
     Tuple,
-    Union,
 )
 
 import numpy as np
