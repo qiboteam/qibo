@@ -172,7 +172,7 @@ def entanglement_of_formation(
 
 
 def entropy(state, base: float = 2, check_hermitian: bool = False, backend=None):
-    """The von-Neumann entropy :math:`S(\\rho)` of a quantum state :math:`\\rho`, which
+    """The von-Neumann entropy :math:`S(\\rho)` of a quantum ``state`` :math:`\\rho`, which
     is given by
 
     .. math::
@@ -251,7 +251,7 @@ def entanglement_entropy(
     backend=None,
 ):
     """Calculates the entanglement entropy :math:`S` of bipartition :math:`A`
-    of``state`` :math:`\\rho`. This is given by
+    of ``state`` :math:`\\rho`. This is given by
 
     .. math::
         S(\\rho_{A}) = -\\text{tr}(\\rho_{A} \\, \\log(\\rho_{A})) \\, ,
