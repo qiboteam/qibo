@@ -96,7 +96,7 @@ class FusedGate(SpecialGate):
             return False
         return True
 
-    def asmatrix(self, backend=None):
+    def matrix(self, backend=None):
         """Returns matrix representation of special gate.
 
         Args:
@@ -110,7 +110,7 @@ class FusedGate(SpecialGate):
         if backend is None:  # pragma: no cover
             backend = GlobalBackend()
 
-        return backend.asmatrix_fused(self)
+        return backend.matrix_fused(self)
 
     def fuse(self, gate):
         """Fuses two gates."""

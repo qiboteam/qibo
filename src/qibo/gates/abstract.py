@@ -270,7 +270,7 @@ class Gate:
         # of the same gate.
         return [self.__class__(*self.init_args, **self.init_kwargs)]
 
-    def asmatrix(self, backend=None):
+    def matrix(self, backend=None):
         """Returns the matrix representation of the gate.
 
         Args:
@@ -284,7 +284,7 @@ class Gate:
         if backend is None:  # pragma: no cover
             backend = GlobalBackend()
 
-        return backend.asmatrix(self)
+        return backend.matrix(self)
 
     def generator_eigenvalue(self):
         """
@@ -306,13 +306,6 @@ class Gate:
             f"Basis rotation is not implemented for {self.__class__.__name__}",
         )
 
-    @property
-    def matrix(self):
-        from qibo.backends import GlobalBackend
-
-        backend = GlobalBackend()
-        return self.asmatrix(backend)
-
     def apply(self, backend, state, nqubits):
         return backend.apply_gate(self, state, nqubits)
 
@@ -329,7 +322,7 @@ class SpecialGate(Gate):
     def on_qubits(self, qubit_map):
         raise_error(NotImplementedError, "Cannot use special gates on subroutines.")
 
-    def asmatrix(self, backend):  # pragma: no cover
+    def matrix(self, backend=None):  # pragma: no cover
         raise_error(
             NotImplementedError, "Special gates do not have matrix representation."
         )
@@ -405,8 +398,8 @@ class ParametrizedGate(Gate):
             params[i] = float(param)
         self.parameters = tuple(params)
 
-    def asmatrix(self, backend=None):
+    def matrix(self, backend=None):
         if backend is None:  # pragma: no cover
             backend = GlobalBackend()
 
-        return backend.asmatrix_parametrized(self)
+        return backend.matrix_parametrized(self)

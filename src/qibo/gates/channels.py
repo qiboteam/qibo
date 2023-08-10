@@ -92,7 +92,7 @@ class Channel(Gate):
         for coeff, gate in zip(self.coefficients, self.gates):
             kraus_op = FusedGate(*range(nqubits))
             kraus_op.append(gate)
-            kraus_op = kraus_op.asmatrix(backend)
+            kraus_op = kraus_op.matrix(backend)
             kraus_op = vectorization(kraus_op, order=order, backend=backend)
             super_op += coeff * np.outer(kraus_op, np.conj(kraus_op))
             del kraus_op
