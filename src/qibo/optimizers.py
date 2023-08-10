@@ -343,15 +343,21 @@ class SGD(Optimizer):
                 )  # separate pull request
 
         # gradient average
-        loss = self.loss_function(results, labels, self.args)
-        loss_gradients = circ_grads
+        loss = self.loss_function(results, labels, self.args) / self.nsample
+        loss_gradients = circ_grads / self.nsample
 
         # Fubini-Study Metric renormalisation
         if self.options["natgrad"]:
             fubini /= scount
             loss_gradients = np.dot(np.linalg.inv(fubini), loss_gradients)
 
-        return loss_gradients / self.nsample, loss / self.nsample
+        # save data
+        if self.save:
+            self.file.write(
+                f"Grads (absolute value: {np.linalg.norm(loss_gradients)}): {loss_gradients.tolist()}\nParams {self.params.tolist()}\nypred: {results.tolist()}\n"
+            )
+
+        return loss_gradients, loss
 
     def AdamDescent(
         self,
@@ -381,11 +387,6 @@ class SGD(Optimizer):
         Returns: np.float new values of momentum and velocity
         """
         grads, loss = self.dloss(features, labels)
-
-        if self.save:
-            self.file.write(
-                f"Grads (absolute value: {np.linalg.norm(grads)}): {grads.tolist()}\nParams {self.params.tolist()}\n"
-            )
 
         if self.options["adam"]:
             m = beta_1 * m + (1 - beta_1) * grads
