@@ -141,6 +141,7 @@ class SGD(Optimizer):
         self.paramInputs = self._get_paramInit()
         self.params = parameters
         self.nparams = len(self.params)
+        print(self.paramInputs, self.params, self.nparams)
 
         # hamiltonian
         if not hamiltonian:
@@ -169,6 +170,8 @@ class SGD(Optimizer):
             "beta_2": 0.99,
         }
         self.set_options(kwargs)
+
+        self.param_history = np.zeros((self.options["epochs"], self.nparams))
 
         if self.options["natgrad"]:
             self.NGgraph = build_graph(
@@ -357,6 +360,8 @@ class SGD(Optimizer):
                 f"Grads (absolute value: {np.linalg.norm(loss_gradients)}): {loss_gradients.tolist()}\nParams {self.params.tolist()}\nypred: {results.tolist()}\n"
             )
 
+        plot(results, self.features, self.labels, self.epoch, loss)
+
         return loss_gradients, loss
 
     def AdamDescent(
@@ -432,8 +437,6 @@ class SGD(Optimizer):
         for ib in range(options["batches"]):
             indices.append(np.arange(ib, self.nsample, options["batches"]))
 
-        iteration = 0
-
         if self.save:
             self.file.write(
                 f"Number of features: {self.nsample}\n"
@@ -452,10 +455,10 @@ class SGD(Optimizer):
             self.simulation_start = time.time()
             self.etime = time.time()
 
-        for epoch in range(options["epochs"]):
+        for self.epoch in range(options["epochs"]):
             iteration = 0
 
-            if epoch != 0 and losses[-1] < options["J_threshold"]:
+            if self.epoch != 0 and losses[-1] < options["J_threshold"]:
                 print(
                     "Desired sensibility is reached, here we stop: ",
                     iteration,
@@ -488,7 +491,7 @@ class SGD(Optimizer):
                     "Iteration ",
                     iteration,
                     " epoch ",
-                    epoch + 1,
+                    self.epoch + 1,
                     " | loss: ",
                     this_loss,
                 )
@@ -496,14 +499,19 @@ class SGD(Optimizer):
                 if self.save:
                     etime = time.time()
                     self.file.write(
-                        f"Iteration {iteration}, epoch {epoch + 1} | loss: {this_loss} | duration: {etime-self.etime}\n\n"
+                        f"Iteration {iteration}, epoch {self.epoch + 1} | loss: {this_loss} | duration: {etime-self.etime}\n\n"
                     )
                     self.etime = etime
 
                 # in case one wants to plot J as a function of the iterations
                 losses.append(this_loss)
+                self.param_history[self.epoch] = self.params
 
-            plot(self, self.features, self.labels, epoch, this_loss)
+        value = min(losses)
+        idx = losses.index(value)
+        self.parameters = self.param_history[idx]
+        ypred, ysigma = get_error(self, self.features)
+        plot(ypred, self.features, self.labels, idx, value, ysigma, self.name)
 
         if self.save:
             self.file.write(f"Params {self.params.tolist()}\n")
@@ -750,15 +758,26 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
         return self.jacobian_value
 
 
+def get_error(optimizer, xtrain):
+    N = 100
+    yprediction = np.zeros((N, len(xtrain)))
+    for i in range(N):
+        yprediction[i] = optimizer.predict(xtrain).T
+
+    np.save(f"predictions/{optimizer.name}.dat", yprediction)
+    ypred = np.mean(yprediction, axis=0).flatten()
+    ysigma = np.std(yprediction, axis=0).flatten()
+
+    return ypred, ysigma
+
+
 scaler = lambda x: x
 import matplotlib.pyplot as plt
 
 
-def plot(optimizer, xtrain, ytrain, epoch, loss):
+def plot(yprediction, xtrain, ytrain, epoch, loss, ysigma=None, name=None, params=None):
     # new predictions
-    yprediction = optimizer.predict(xtrain)
-
-    cols = yprediction.shape[1]
+    cols = 1  # yprediction.shape[1]
     # new plot
     fig, ax = plt.subplots(nrows=1, ncols=cols, figsize=(8, 6))
     fig.suptitle(f"Epoch {epoch+1}, J={loss:.4}")
@@ -767,9 +786,16 @@ def plot(optimizer, xtrain, ytrain, epoch, loss):
 
     for col in range(cols):
         if cols > 1:
+            ax[col].set_xscale("log")
             train = ytrain[:, col]
             pred = yprediction[:, col]
             pred = scaler(pred)
+            if ysigma is not None:
+                sigma = ysigma[:, col]
+                ax[col].fill_between(
+                    xtrain, train + sigma, train - sigma, alpha=0.3, color="black"
+                )
+
             ax[col].plot(xtrain, train, label="Classical PDF", color="black")
             ax[col].plot(
                 xtrain,
@@ -780,11 +806,20 @@ def plot(optimizer, xtrain, ytrain, epoch, loss):
                 markersize=12,
                 alpha=0.7,
             )
+
             ax[col].legend()
 
         else:
             ax.set_xscale("log")
             yprediction = scaler(yprediction)
+            if ysigma is not None:
+                ax.fill_between(
+                    xtrain,
+                    yprediction + ysigma,
+                    yprediction - ysigma,
+                    alpha=0.3,
+                    color="black",
+                )
             ax.plot(xtrain, ytrain, label="Classical PDF", color="black")
             ax.plot(
                 xtrain,
@@ -798,7 +833,11 @@ def plot(optimizer, xtrain, ytrain, epoch, loss):
             ax.legend()
 
     plt.xscale("log")
-    plt.savefig("Plot.png")
+    if name is not None:
+        plt.savefig(f"results/{name}.png")
+        plt.show()
+    else:
+        plt.savefig("Plot.png")
     plt.close()
 
 
