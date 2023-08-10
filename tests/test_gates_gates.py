@@ -214,7 +214,7 @@ def test_align(backend):
 
     backend.assert_allclose(final_state, target_state)
 
-    gate_matrix = gate.asmatrix(backend)
+    gate_matrix = gate.matrix(backend)
     identity = backend.identity_density_matrix(nqubits, normalize=False)
     backend.assert_allclose(gate_matrix, identity)
 
@@ -559,7 +559,8 @@ def test_cun(backend, name, params):
 
     final_state = apply_gates(backend, [gate], initial_state=initial_state)
 
-    gate = backend.cast(gate.matrix, dtype=gate.matrix.dtype)
+    _matrix = gate.matrix(backend)
+    gate = backend.cast(_matrix, dtype=_matrix.dtype)
 
     target_state = np.dot(gate, initial_state)
 
@@ -1472,7 +1473,7 @@ def test_gate_basis_rotation(backend):
     gate = gates.Y(0).basis_rotation()
     assert isinstance(gate, gates.Unitary)
     target_matrix = np.array([[1, -1j], [1j, -1]]) / np.sqrt(2)
-    backend.assert_allclose(gate.asmatrix(backend), target_matrix)
+    backend.assert_allclose(gate.matrix(backend), target_matrix)
     with pytest.raises(NotImplementedError):
         gates.RX(0, np.pi / 2).basis_rotation()
 
