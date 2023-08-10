@@ -43,7 +43,7 @@ def hamming_weight(bitstring, return_indexes: bool = False):
 
 def hadamard_transform(array, implementation: str = "fast", backend=None):
     """Calculates the (fast) Hadamard Transform :math:`\\text{HT}` of a
-    :math:`2^{n}`-dimensional vector or :math:`2^{n} \times 2^{n}` matrix :math:`A`,
+    :math:`2^{n}`-dimensional vector or :math:`2^{n} \\times 2^{n}` matrix :math:`A`,
     where :math:`n` is the number of qubits in the system. If :math:`A` is a vector, then
 
     .. math::

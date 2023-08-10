@@ -1351,7 +1351,7 @@ Bures distance
 Entanglement fidelity
 """""""""""""""""""""
 
-.. autofunction::qibo.quantum_info.entanglement_fidelity
+.. autofunction:: qibo.quantum_info.entanglement_fidelity
 
 
 Process fidelity

@@ -148,7 +148,7 @@ def random_hermitian(
 
 
 def random_unitary(dims: int, measure: Optional[str] = None, seed=None, backend=None):
-    """Returns a random Unitary operator :math:`U`,, i.e.
+    """Returns a random Unitary operator :math:`U`, i.e.
     a random operator such that :math:`U^{-1} = U^{\\dagger}`.
 
     Args:
@@ -374,7 +374,18 @@ def random_density_matrix(
     seed=None,
     backend=None,
 ):
-    """Creates a random density matrix :math:`\\rho`.
+    """Creates a random density matrix :math:`\\rho`. If ``pure=True``,
+
+    .. math::
+        \\rho = \\ketbra{\\psi}{\\psi} \\, ,
+
+    where :math:`\\ket{\\psi}` is a :func:`qibo.quantum_info.random_statevector`.
+    If ``pure=False``, then
+
+    .. math::
+        \\rho = \\sum_{k} \\, p_{k} \\, \\ketbra{\\psi_{k}}{\\psi_{k}} \\, .
+
+    is a mixed state.
 
     Args:
         dims (int): dimension of the matrix.
