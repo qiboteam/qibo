@@ -206,8 +206,10 @@ class Overlap(Callback):
         self.append(overlap)
         return overlap
 
-    def apply_density_matrix(self, backend, state):
-        return backend.calculate_overlap_density_matrix(self.state, state)
+    def apply_density_matrix(self, backend, state):  # pragma: no cover
+        overlap = backend.calculate_overlap_density_matrix(self.state, state)
+        self.append(overlap)
+        return overlap
 
 
 class Energy(Callback):
