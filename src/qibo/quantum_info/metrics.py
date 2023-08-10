@@ -8,7 +8,10 @@ from qibo.config import PRECISION_TOL, raise_error
 
 
 def purity(state):
-    """Purity of a quantum state :math:`\\rho`, which is given by :math:`\\text{tr}(\\rho^{2})`.
+    """Purity of a quantum state :math:`\\rho`, which is given by
+
+    .. math::
+        \\text{purity}(\\rho) = \\text{tr}(\\rho^{2}) \\, .
 
     Args:
         state (ndarray): statevector or density matrix.
@@ -247,8 +250,8 @@ def entanglement_entropy(
     check_hermitian: bool = False,
     backend=None,
 ):
-    """Calculates the entanglement entropy :math:`S` of ``state`` :math:`\\rho`,
-    which is given by
+    """Calculates the entanglement entropy :math:`S` of bipartition :math:`A`
+    of``state`` :math:`\\rho`. This is given by
 
     .. math::
         S(\\rho_{A}) = -\\text{tr}(\\rho_{A} \\, \\log(\\rho_{A})) \\, ,
@@ -585,7 +588,7 @@ def bures_distance(state, target, check_hermitian: bool = False, backend=None):
     and a ``target`` state :math:`\\sigma`. This is given by
 
     .. math::
-        D_{B}(\\rho, \\, \\sigma) = \\sqrt{2 \\, (1 - \\sqrt{F(\\rho, \\, \\sigma)})}
+        D_{B}(\\rho, \\, \\sigma) = \\sqrt{2 \\, \\left(1 - \\sqrt{F(\\rho, \\, \\sigma)}\\right)}
 
     where :math:`F(\\rho, \\sigma)` is the :func:`qibo.quantum_info.fidelity`
     between `state` and `target`.
@@ -616,9 +619,10 @@ def entanglement_fidelity(
     :math:`\\rho`, which is given by
 
     .. math::
-        \\begin{align*}
+        \\begin{align}
           F_{\\mathcal{E}} &= \\text{fidelity}(\\rho_{f}, \\rho) \\nonumber \\\\
-          &= \\text{tr}(\\rho_{f} \\, \\rho)
+                           &= \\text{tr}(\\rho_{f} \\, \\rho) \\nonumber
+        \\end{align}
 
     where
 
@@ -856,8 +860,16 @@ def gate_error(channel, target=None, check_unitary: bool = False, backend=None):
 
 def diamond_norm(channel, target=None, **kwargs):
     """Calculates the diamond norm :math:`\\|\\mathcal{E}\\|_{\\diamond}` of
-    ``channel`` :math:`\\mathcal{E}`. If a ``target`` channel :math:`\\Lambda`
-    is specified, then it calculates :math:`\\| \\mathcal{E} - \\Lambda\\|_{\\diamond}`.
+    ``channel`` :math:`\\mathcal{E}`, which is given by
+
+    .. math::
+        \\|\\mathcal{E}\\|_{\\diamond} = \\max_{\\rho} \\, \\| \\left(\\mathcal{E} \\bigotimes I_{d^{2}}\\right)(\\rho) \\| \\, ,
+
+    where :math:`I_{d^{2}}` is the :math:`d^{2} \\times d^{2}` Identity operator,
+    :math:`d = 2^{n}`, and :math:`n` is the number of qubits.
+
+    If a ``target`` channel :math:`\\Lambda` is specified,
+    then it calculates :math:`\\| \\mathcal{E} - \\Lambda\\|_{\\diamond}`.
 
     Example:
 
