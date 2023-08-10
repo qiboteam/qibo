@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from itertools import product
 
 import matplotlib.pyplot as plt
@@ -92,7 +91,7 @@ def fig_template(name):
     elif name == "3_circles":
         centers = np.array([[-1, 1], [1, 0], [-0.5, -0.5]])
         radii = np.array([1, np.sqrt(6 / np.pi - 1), 1 / 2])
-        for (c, r) in zip(centers, radii):
+        for c, r in zip(centers, radii):
             for ax in axs:
                 circle = plt.Circle(c, r, color="black", fill=False, zorder=10)
                 ax.add_artist(circle)
@@ -110,7 +109,7 @@ def fig_template(name):
     elif name == "crown" or name == "tricrown":
         centers = [[0, 0], [0, 0]]
         radii = [np.sqrt(0.8), np.sqrt(0.8 - 2 / np.pi)]
-        for (c, r) in zip(centers, radii):
+        for c, r in zip(centers, radii):
             for ax in axs:
                 circle = plt.Circle(c, r, color="black", fill=False, zorder=10)
                 ax.add_artist(circle)

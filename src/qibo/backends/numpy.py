@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import collections
 
 import numpy as np
@@ -8,8 +7,6 @@ from qibo.backends import einsum_utils
 from qibo.backends.abstract import Backend
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.config import log, raise_error
-from qibo.gates import FusedGate
-from qibo.gates.abstract import ParametrizedGate, SpecialGate
 from qibo.states import CircuitResult
 
 
@@ -88,6 +85,12 @@ class NumpyBackend(Backend):
         state[0, 0] = 1
         return state
 
+    def identity_density_matrix(self, nqubits, normalize: bool = True):
+        state = self.np.eye(2**nqubits, dtype=self.dtype)
+        if normalize is True:
+            state /= 2**nqubits
+        return state
+
     def plus_state(self, nqubits):
         state = self.np.ones(2**nqubits, dtype=self.dtype)
         state /= self.np.sqrt(2**nqubits)
@@ -101,7 +104,8 @@ class NumpyBackend(Backend):
     def asmatrix(self, gate):
         """Convert a gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
-        return getattr(self.matrices, name)
+        matrix = getattr(self.matrices, name)
+        return matrix(2 ** len(gate.target_qubits)) if callable(matrix) else matrix
 
     def asmatrix_parametrized(self, gate):
         """Convert a parametrized gate to its matrix representation in the computational basis."""
@@ -114,7 +118,8 @@ class NumpyBackend(Backend):
         for gate in fgate.gates:
             # transfer gate matrix to numpy as it is more efficient for
             # small tensor calculations
-            gmatrix = gate.asmatrix(self)
+            # explicit to_numpy see https://github.com/qiboteam/qibo/issues/928
+            gmatrix = self.to_numpy(gate.asmatrix(self))
             # Kronecker product with identity is needed to make the
             # original matrix have shape (2**rank x 2**rank)
             eye = np.eye(2 ** (rank - len(gate.qubits)), dtype=self.dtype)
@@ -313,7 +318,7 @@ class NumpyBackend(Backend):
         state = self.cast(state)
         shape = state.shape
         q = gate.target_qubits[0]
-        p0, p1 = gate.coefficients[:2]
+        p_0, p_1 = gate.init_kwargs["p_0"], gate.init_kwargs["p_1"]
         trace = self.partial_trace_density_matrix(state, (q,), nqubits)
         trace = self.np.reshape(trace, 2 * (nqubits - 1) * (2,))
         zero = self.zero_density_matrix(1)
@@ -322,8 +327,8 @@ class NumpyBackend(Backend):
         order.insert(q, 2 * nqubits - 2)
         order.insert(q + nqubits, 2 * nqubits - 1)
         zero = self.np.reshape(self.np.transpose(zero, order), shape)
-        state = (1 - p0 - p1) * state + p0 * zero
-        return state + p1 * self.apply_gate_density_matrix(X(q), zero, nqubits)
+        state = (1 - p_0 - p_1) * state + p_0 * zero
+        return state + p_1 * self.apply_gate_density_matrix(X(q), zero, nqubits)
 
     def thermal_error_density_matrix(self, gate, state, nqubits):
         state = self.cast(state)
@@ -331,9 +336,57 @@ class NumpyBackend(Backend):
         state = self.apply_gate(gate, state.ravel(), 2 * nqubits)
         return self.np.reshape(state, shape)
 
+    def depolarizing_error_density_matrix(self, gate, state, nqubits):
+        state = self.cast(state)
+        shape = state.shape
+        q = gate.target_qubits
+        lam = gate.init_kwargs["lam"]
+        trace = self.partial_trace_density_matrix(state, q, nqubits)
+        trace = self.np.reshape(trace, 2 * (nqubits - len(q)) * (2,))
+        identity = self.identity_density_matrix(len(q))
+        identity = self.np.reshape(identity, 2 * len(q) * (2,))
+        identity = self.np.tensordot(trace, identity, axes=0)
+        qubits = list(range(nqubits))
+        for j in q:
+            qubits.pop(qubits.index(j))
+        qubits.sort()
+        qubits += list(q)
+        qubit_1 = list(range(nqubits - len(q))) + list(
+            range(2 * (nqubits - len(q)), 2 * nqubits - len(q))
+        )
+        qubit_2 = list(range(nqubits - len(q), 2 * (nqubits - len(q)))) + list(
+            range(2 * nqubits - len(q), 2 * nqubits)
+        )
+        qs = [qubit_1, qubit_2]
+        order = []
+        for qj in qs:
+            qj = [qj[qubits.index(i)] for i in range(len(qubits))]
+            order += qj
+        identity = self.np.reshape(self.np.transpose(identity, order), shape)
+        state = (1 - lam) * state + lam * identity
+        return state
+
     def execute_circuit(
         self, circuit, initial_state=None, nshots=None, return_array=False
     ):
+        if isinstance(initial_state, type(circuit)):
+            if not initial_state.density_matrix == circuit.density_matrix:
+                raise_error(
+                    ValueError,
+                    f"""Cannot set circuit with density_matrix {initial_state.density_matrix} as
+                      initial state for circuit with density_matrix {circuit.density_matrix}.""",
+                )
+            elif (
+                not initial_state.accelerators == circuit.accelerators
+            ):  # pragma: no cover
+                raise_error(
+                    ValueError,
+                    f"""Cannot set circuit with accelerators {initial_state.density_matrix} as
+                      initial state for circuit with accelerators {circuit.density_matrix}.""",
+                )
+            else:
+                return self.execute_circuit(initial_state + circuit, None, nshots)
+
         if circuit.repeated_execution:
             return self.execute_circuit_repeated(circuit, initial_state, nshots)
 
@@ -385,6 +438,16 @@ class NumpyBackend(Backend):
 
         results = []
         nqubits = circuit.nqubits
+
+        if not circuit.density_matrix:
+            samples = []
+            target_qubits = [
+                measurement.target_qubits for measurement in circuit.measurements
+            ]
+            target_qubits = sum(target_qubits, tuple())
+            probabilities = np.zeros(2 ** len(target_qubits), dtype=float)
+            probabilities = self.cast(probabilities, dtype=probabilities.dtype)
+
         for _ in range(nshots):
             if circuit.density_matrix:
                 if initial_state is None:
@@ -399,9 +462,10 @@ class NumpyBackend(Backend):
 
             else:
                 if circuit.accelerators:  # pragma: no cover
+                    # pylint: disable=E1111
                     state = self.execute_distributed_circuit(
                         circuit, initial_state, return_array=True
-                    )  # pylint: disable=E1111
+                    )
                 else:
                     if initial_state is None:
                         state = self.zero_state(nqubits)
@@ -413,20 +477,30 @@ class NumpyBackend(Backend):
                             gate.substitute_symbols()
                         state = gate.apply(self, state, nqubits)
 
-            if circuit.measurement_gate:
+            if circuit.measurements:
                 result = CircuitResult(self, circuit, state, 1)
-                results.append(result.samples(binary=False)[0])
+                sample = result.samples()[0]
+                results.append(sample)
+                if not circuit.density_matrix:
+                    probabilities += result.probabilities()
+                    samples.append("".join([str(s) for s in sample]))
             else:
                 results.append(state)
 
-        if circuit.measurement_gate:
+        if circuit.measurements:
             final_result = CircuitResult(self, circuit, state, nshots)
             final_result._samples = self.aggregate_shots(results)
+            if not circuit.density_matrix:
+                final_result._repeated_execution_probabilities = probabilities / nshots
+                final_result._repeated_execution_frequencies = (
+                    self.calculate_frequencies(samples)
+                )
             circuit._final_state = final_result
             return final_result
-        else:
-            circuit._final_state = CircuitResult(self, circuit, results[-1], nshots)
-            return results
+
+        circuit._final_state = CircuitResult(self, circuit, results[-1], nshots)
+
+        return results
 
     def execute_distributed_circuit(
         self, circuit, initial_state=None, nshots=None, return_array=False
@@ -442,8 +516,8 @@ class NumpyBackend(Backend):
         return result.execution_result
 
     def circuit_result_probabilities(self, result, qubits=None):
-        if qubits is None:  # pragma: no cover
-            qubits = result.circuit.measurement_gate.qubits
+        if qubits is None:
+            qubits = result.measurement_gate.qubits
 
         state = self.circuit_result_tensor(result)
         if result.density_matrix:
@@ -461,7 +535,7 @@ class NumpyBackend(Backend):
         for i in np.nonzero(state)[0]:
             b = bin(i)[2:].zfill(nqubits)
             if np.abs(state[i]) >= cutoff:
-                x = round(state[i], decimals)
+                x = np.round(state[i], decimals)
                 terms.append(f"{x}|{b}>")
             if len(terms) >= max_terms:
                 terms.append("...")
@@ -478,7 +552,7 @@ class NumpyBackend(Backend):
             bi = bin(i)[2:].zfill(nqubits)
             bj = bin(j)[2:].zfill(nqubits)
             if np.abs(state[i, j]) >= cutoff:
-                x = round(state[i, j], decimals)
+                x = np.round(state[i, j], decimals)
                 terms.append(f"{x}|{bi}><{bj}|")
             if len(terms) >= max_terms:
                 terms.append("...")
@@ -503,14 +577,13 @@ class NumpyBackend(Backend):
         return self._order_probabilities(probs, qubits, nqubits).ravel()
 
     def calculate_probabilities_density_matrix(self, state, qubits, nqubits):
-        rtype = self.np.real(state).dtype
         order = tuple(sorted(qubits))
         order += tuple(i for i in range(nqubits) if i not in qubits)
         order = order + tuple(i + nqubits for i in order)
         shape = 2 * (2 ** len(qubits), 2 ** (nqubits - len(qubits)))
         state = self.np.reshape(state, 2 * nqubits * (2,))
         state = self.np.reshape(self.np.transpose(state, order), shape)
-        probs = self.np.einsum("abab->a", state).astype(rtype)
+        probs = self.np.abs(self.np.einsum("abab->a", state))
         probs = self.np.reshape(probs, len(qubits) * (2,))
         return self._order_probabilities(probs, qubits, nqubits).ravel()
 
@@ -560,10 +633,10 @@ class NumpyBackend(Backend):
     def apply_bitflips(self, noiseless_samples, bitflip_probabilities):
         fprobs = self.np.array(bitflip_probabilities, dtype="float64")
         sprobs = self.np.random.random(noiseless_samples.shape)
-        flip0 = self.np.array(sprobs < fprobs[0], dtype=noiseless_samples.dtype)
-        flip1 = self.np.array(sprobs < fprobs[1], dtype=noiseless_samples.dtype)
-        noisy_samples = noiseless_samples + (1 - noiseless_samples) * flip0
-        noisy_samples = noisy_samples - noiseless_samples * flip1
+        flip_0 = self.np.array(sprobs < fprobs[0], dtype=noiseless_samples.dtype)
+        flip_1 = self.np.array(sprobs < fprobs[1], dtype=noiseless_samples.dtype)
+        noisy_samples = noiseless_samples + (1 - noiseless_samples) * flip_0
+        noisy_samples = noisy_samples - noiseless_samples * flip_1
         return noisy_samples
 
     def partial_trace(self, state, qubits, nqubits):

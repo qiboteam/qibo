@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from qibo.config import raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.hamiltonians.adiabatic import BaseAdiabaticHamiltonian

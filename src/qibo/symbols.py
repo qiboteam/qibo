@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import numpy as np
 import sympy
 
@@ -52,9 +51,9 @@ class Symbol(sympy.Symbol):
             or isinstance(
                 matrix,
                 (
-                    np.int,
-                    np.float,
-                    np.complex,
+                    int,
+                    float,
+                    complex,
                     np.int32,
                     np.int64,
                     np.float32,

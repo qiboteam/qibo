@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import abc
 
 from qibo.config import raise_error
@@ -18,6 +17,10 @@ class Backend(abc.ABC):
         self.nthreads = 1
         self.supports_multigpu = False
         self.oom_error = MemoryError
+
+    def __reduce__(self):
+        """Allow pickling backend objects that have references to modules."""
+        return self.__class__, tuple()
 
     def __repr__(self):
         if self.platform is None:
@@ -82,22 +85,37 @@ class Backend(abc.ABC):
 
     @abc.abstractmethod
     def zero_state(self, nqubits):  # pragma: no cover
-        """Generate |000...0> state vector as an array."""
+        """Generate :math:`|000 \\cdots 0 \\rangle` state vector as an array."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
     def zero_density_matrix(self, nqubits):  # pragma: no cover
-        """Generate |000...0><000...0| density matrix as an array."""
+        """Generate :math:`|000\\cdots0\\rangle\\langle000\\cdots0|` density matrix as an array."""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
+    def identity_density_matrix(
+        self, nqubits, normalize: bool = True
+    ):  # pragma: no cover
+        """Generate density matrix
+
+        .. math::
+            \\rho = \\frac{1}{2^\\text{nqubits}} \\, \\sum_{k=0}^{2^\\text{nqubits} - 1} \\,
+                |k \\rangle \\langle k|
+
+        if ``normalize=True``. If ``normalize=False``, returns the unnormalized
+        Identity matrix, which is equivalent to :func:`numpy.eye`.
+        """
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
     def plus_state(self, nqubits):  # pragma: no cover
-        """Generate |+++...+> state vector as an array."""
+        """Generate :math:`|+++\\cdots+\\rangle` state vector as an array."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
     def plus_density_matrix(self, nqubits):  # pragma: no cover
-        """Generate |+++...+><+++...+| density matrix as an array."""
+        """Generate :math:`|+++\\cdots+\\rangle\\langle+++\\cdots+|` density matrix as an array."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod

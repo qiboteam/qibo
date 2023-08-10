@@ -1,4 +1,4 @@
-![](doc/source/qibo_logo.svg)
+![Logo](https://github.com/qiboteam/qibo/blob/master/doc/source/_static/qibo_logo_dark.svg)
 
 ![Tests](https://github.com/qiboteam/qibo/workflows/Tests/badge.svg)
 [![codecov](https://codecov.io/gh/qiboteam/qibo/branch/master/graph/badge.svg?token=1EKZKVEVX0)](https://codecov.io/gh/qiboteam/qibo)
@@ -15,12 +15,7 @@ Some of the key features of Qibo are:
 
 ## Documentation
 
-Qibo documentation is available at [qibo.readthedocs.io](https://qibo.readthedocs.io).
-
-- [Overview and installation](https://qibo.readthedocs.io/en/stable/getting-started/index.html)
-- [Examples](https://qibo.readthedocs.io/en/stable/code-examples/index.html)
-- [API reference](https://qibo.readthedocs.io/en/stable/api-reference/index.html)
-- [Benchmarks](https://qibo.readthedocs.io/en/stable/appendix/benchmarks.html)
+Qibo documentation is available [here](https://qibo.science).
 
 ## Minimum Working Examples
 
@@ -39,8 +34,7 @@ Here another example with more gates and shots simulation:
 
 ```python
 import numpy as np
-from qibo.models import Circuit
-from qibo import gates
+from qibo import Circuit, gates
 
 c = Circuit(2)
 c.add(gates.X(0))
@@ -56,7 +50,7 @@ In both cases, the simulation will run in a single device CPU or GPU in double p
 
 ## Citation policy
 
-If you use the package please refer to [the documentation](https://qibo.readthedocs.io/en/stable/appendix/citing-qibo.html) for citation instructions.
+If you use the package please refer to [the documentation](https://qibo.science/qibo/stable/appendix/citing-qibo.html#publications) for citation instructions.
 
 ## Supporters and collaborators
 

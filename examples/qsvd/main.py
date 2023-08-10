@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 import argparse
 
 import numpy as np
@@ -36,7 +35,6 @@ parser.add_argument(
 
 
 def main(nqubits, subsize, nlayers, nshots, RY, method, maxiter):
-
     # We initialize the QSVD
     Qsvd = QSVD(nqubits, subsize, nlayers, RY=RY)
 

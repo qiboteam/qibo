@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from qibo.backends import matrices
 from qibo.config import raise_error
 from qibo.hamiltonians.hamiltonians import Hamiltonian, SymbolicHamiltonian
@@ -51,6 +50,8 @@ def XXZ(nqubits, delta=0.5, dense=True, backend=None):
             from qibo.hamiltonians import XXZ
             h = XXZ(3) # initialized XXZ model with 3 qubits
     """
+    if nqubits < 2:
+        raise_error(ValueError, "Number of qubits must be larger than one.")
     if dense:
         condition = lambda i, j: i in {j % nqubits, (j + 1) % nqubits}
         hx = _build_spin_model(nqubits, matrices.X, condition)
@@ -142,6 +143,8 @@ def TFIM(nqubits, h=0.0, dense=True, backend=None):
             :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
     """
+    if nqubits < 2:
+        raise_error(ValueError, "Number of qubits must be larger than one.")
     if dense:
         condition = lambda i, j: i in {j % nqubits, (j + 1) % nqubits}
         ham = -_build_spin_model(nqubits, matrices.Z, condition)
@@ -188,7 +191,7 @@ def MaxCut(nqubits, dense=True, backend=None):
     smap = {s: (i, matrices.Z) for i, s in enumerate(Z)}
     smap.update({s: (i, v[i]) for i, s in enumerate(V)})
 
-    ham = SymbolicHamiltonian(sham, smap, backend=backend)
+    ham = SymbolicHamiltonian(sham, symbol_map=smap, backend=backend)
     if dense:
         return ham.dense
     return ham

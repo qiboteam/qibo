@@ -1,60 +1,22 @@
-# -*- coding: utf-8 -*-
 import math
-from typing import Dict, List, Optional, Tuple
+from typing import List
 
-from qibo.config import raise_error
+import numpy as np
+
+from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate, ParametrizedGate
-
-QASM_GATES = {
-    "h": "H",
-    "x": "X",
-    "y": "Y",
-    "z": "Z",
-    "rx": "RX",
-    "ry": "RY",
-    "rz": "RZ",
-    "u1": "U1",
-    "u2": "U2",
-    "u3": "U3",
-    "cx": "CNOT",
-    "swap": "SWAP",
-    "fswap": "FSWAP",
-    "rxx": "RXX",
-    "ryy": "RYY",
-    "rzz": "RZZ",
-    "cz": "CZ",
-    "crx": "CRX",
-    "cry": "CRY",
-    "crz": "CRZ",
-    "cu1": "CU1",
-    "cu3": "CU3",
-    "ccx": "TOFFOLI",
-    "id": "I",
-    "s": "S",
-    "sdg": "SDG",
-    "t": "T",
-    "tdg": "TDG",
-}
-PARAMETRIZED_GATES = {
-    "rx",
-    "ry",
-    "rz",
-    "rxx",
-    "ryy",
-    "rzz",
-    "u1",
-    "u2",
-    "u3",
-    "crx",
-    "cry",
-    "crz",
-    "cu1",
-    "cu3",
-}
 
 
 class H(Gate):
     """The Hadamard gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\frac{1}{\\sqrt{2}} \\, \\begin{pmatrix}
+        1 & 1 \\\\
+        1 & -1 \\\\
+        \\end{pmatrix}
 
     Args:
         q (int): the qubit id number.
@@ -63,12 +25,27 @@ class H(Gate):
     def __init__(self, q):
         super().__init__()
         self.name = "h"
+        self.draw_label = "H"
         self.target_qubits = (q,)
         self.init_args = [q]
+        self.clifford = True
+        self.unitary = True
+
+    @property
+    def qasm_label(self):
+        return "h"
 
 
 class X(Gate):
-    """The Pauli X gate.
+    """The Pauli-:math:`X` gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        0 & 1 \\\\
+        1 & 0 \\\\
+        \\end{pmatrix}
 
     Args:
         q (int): the qubit id number.
@@ -77,8 +54,15 @@ class X(Gate):
     def __init__(self, q):
         super().__init__()
         self.name = "x"
+        self.draw_label = "X"
         self.target_qubits = (q,)
         self.init_args = [q]
+        self.clifford = True
+        self.unitary = True
+
+    @property
+    def qasm_label(self):
+        return "x"
 
     @Gate.check_controls
     def controlled_by(self, *q):
@@ -155,15 +139,26 @@ class X(Gate):
             # impractical case
             raise_error(
                 NotImplementedError,
-                "X decomposition not implemented " "for zero free qubits.",
+                "X decomposition not implemented for zero free qubits.",
             )
 
         decomp_gates.extend(decomp_gates)
         return decomp_gates
 
+    def basis_rotation(self):
+        return H(self.target_qubits[0])
+
 
 class Y(Gate):
-    """The Pauli Y gate.
+    """The Pauli-:math:`Y` gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        0 & -i \\\\
+        i & 0 \\\\
+        \\end{pmatrix}
 
     Args:
         q (int): the qubit id number.
@@ -172,12 +167,33 @@ class Y(Gate):
     def __init__(self, q):
         super().__init__()
         self.name = "y"
+        self.draw_label = "Y"
         self.target_qubits = (q,)
         self.init_args = [q]
+        self.clifford = True
+        self.unitary = True
+
+    @property
+    def qasm_label(self):
+        return "y"
+
+    def basis_rotation(self):
+        from qibo import matrices  # pylint: disable=C0415
+
+        matrix = (matrices.Y + matrices.Z) / math.sqrt(2)
+        return Unitary(matrix, self.target_qubits[0], trainable=False)
 
 
 class Z(Gate):
-    """The Pauli Z gate.
+    """The Pauli-:math:`Z` gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 \\\\
+        0 & -1 \\\\
+        \\end{pmatrix}
 
     Args:
         q (int): the qubit id number.
@@ -186,8 +202,15 @@ class Z(Gate):
     def __init__(self, q):
         super().__init__()
         self.name = "z"
+        self.draw_label = "Z"
         self.target_qubits = (q,)
         self.init_args = [q]
+        self.clifford = True
+        self.unitary = True
+
+    @property
+    def qasm_label(self):
+        return "z"
 
     @Gate.check_controls
     def controlled_by(self, *q):
@@ -198,9 +221,94 @@ class Z(Gate):
             gate = super().controlled_by(*q)
         return gate
 
+    def basis_rotation(self):
+        return None
+
+
+class SX(Gate):
+    """The :math:`\\sqrt{X}` gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\frac{1}{2} \\, \\begin{pmatrix}
+        1 + i & 1 - i \\\\
+        1 - i & 1 + i \\\\
+        \\end{pmatrix}
+
+    Args:
+        q (int): the qubit id number.
+    """
+
+    def __init__(self, q):
+        super().__init__()
+        self.name = "sx"
+        self.draw_label = "SX"
+        self.target_qubits = (q,)
+        self.init_args = [q]
+        self.clifford = True
+        self.unitary = True
+
+    @property
+    def qasm_label(self):
+        return "sx"
+
+    def decompose(self):
+        """A global phase difference exists between the definitions of
+        :math:`\\sqrt{X}` and :math:`\\text{RX}(\\pi / 2)`, with :math:`\\text{RX}`
+        being the :class:`qibo.gates.RX` gate. More precisely,
+        :math:`\\sqrt{X} = e^{i \\pi / 4} \\, \\text{RX}(\\pi / 2)`.
+        """
+        return [RX(self.init_args[0], np.pi / 2, trainable=False)]
+
+    def _dagger(self):
+        """"""
+        return SXDG(self.init_args[0])
+
+
+class SXDG(Gate):
+    """The conjugate transpose of the :math:`\\sqrt{X}` gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\frac{1}{2} \\, \\begin{pmatrix}
+        1 - i & 1 + i \\\\
+        1 + i & 1 - i \\\\
+        \\end{pmatrix}
+
+    Args:
+        q (int): the qubit id number.
+    """
+
+    def __init__(self, q):
+        super().__init__()
+        self.name = "sxdg"
+        self.draw_label = "SXDG"
+        self.target_qubits = (q,)
+        self.init_args = [q]
+        self.clifford = True
+        self.unitary = True
+
+    @property
+    def qasm_label(self):
+        return "sxdg"
+
+    def decompose(self):
+        """A global phase difference exists between the definitions of
+        :math:`\\sqrt{X}` and :math:`\\text{RX}(\\pi / 2)`, with :math:`\\text{RX}`
+        being the :class:`qibo.gates.RX` gate. More precisely,
+        :math:`(\\sqrt{X})^{\\dagger} = e^{-i \\pi / 4} \\, \\text{RX}(-\\pi / 2)`.
+        """
+        return [RX(self.init_args[0], -np.pi / 2, trainable=False)]
+
+    def _dagger(self):
+        """"""
+        return SX(self.init_args[0])
+
 
 class S(Gate):
-    """The S gate.
+    """The :math:`S` gate.
 
     Corresponds to the following unitary matrix
 
@@ -217,15 +325,22 @@ class S(Gate):
     def __init__(self, q):
         super().__init__()
         self.name = "s"
+        self.draw_label = "S"
         self.target_qubits = (q,)
         self.init_args = [q]
+        self.clifford = True
+        self.unitary = True
+
+    @property
+    def qasm_label(self):
+        return "s"
 
     def _dagger(self):
         return SDG(*self.init_args)
 
 
 class SDG(Gate):
-    """The conjugate transpose of the S gate.
+    """The conjugate transpose of the :math:`S` gate.
 
     Corresponds to the following unitary matrix
 
@@ -242,8 +357,15 @@ class SDG(Gate):
     def __init__(self, q):
         super().__init__()
         self.name = "sdg"
+        self.draw_label = "SDG"
         self.target_qubits = (q,)
         self.init_args = [q]
+        self.clifford = True
+        self.unitary = True
+
+    @property
+    def qasm_label(self):
+        return "sdg"
 
     def _dagger(self):
         return S(*self.init_args)
@@ -267,8 +389,14 @@ class T(Gate):
     def __init__(self, q):
         super().__init__()
         self.name = "t"
+        self.draw_label = "T"
         self.target_qubits = (q,)
         self.init_args = [q]
+        self.unitary = True
+
+    @property
+    def qasm_label(self):
+        return "t"
 
     def _dagger(self):
         return TDG(*self.init_args)
@@ -292,14 +420,20 @@ class TDG(Gate):
     def __init__(self, q):
         super().__init__()
         self.name = "tdg"
+        self.draw_label = "TDG"
         self.target_qubits = (q,)
         self.init_args = [q]
+        self.unitary = True
+
+    @property
+    def qasm_label(self):
+        return "tdg"
 
     def _dagger(self):
         return T(*self.init_args)
 
 
-class I(ParametrizedGate):
+class I(Gate):
     """The identity gate.
 
     Args:
@@ -309,22 +443,40 @@ class I(ParametrizedGate):
     def __init__(self, *q):
         super().__init__()
         self.name = "id"
+        self.draw_label = "I"
         self.target_qubits = tuple(q)
         self.init_args = q
-        # save the number of target qubits as parameter
-        # for proper identity matrix construction
-        self.parameters = 2 ** len(self.target_qubits)
+        self.clifford = True
+        self.unitary = True
+
+    @property
+    def qasm_label(self):
+        return "id"
 
 
-class Align(ParametrizedGate):
-    def __init__(self, *q):
+class Align(Gate):
+    """Aligns proceeding qubit operations and (optionally) waits ``delay`` amount of time.
+
+    Args:
+        *q (int): The qubit ID numbers.
+        delay (int, optional): The time (in ns) for which to delay circuit execution on the specified qubits.
+            Defaults to ``0`` (zero).
+    """
+
+    def __init__(self, *q, delay: int = 0):
+        if not isinstance(delay, int):
+            raise_error(
+                TypeError, f"delay must be type int, but it is type {type(delay)}."
+            )
+        if delay < 0.0:
+            raise_error(ValueError, "Delay must not be negative.")
+
         super().__init__()
         self.name = "align"
+        self.delay = delay
+        self.draw_label = f"A({delay})"
+        self.init_kwargs = {"delay": delay}
         self.target_qubits = tuple(q)
-        self.init_args = q
-        # save the number of target qubits as parameter
-        # for proper identity matrix construction
-        self.parameters = 2 ** len(self.target_qubits)
 
 
 class _Rn_(ParametrizedGate):
@@ -334,8 +486,8 @@ class _Rn_(ParametrizedGate):
         q (int): the qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`
-            (default is ``True``).
+            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`.
+            Defaults to ``True``.
     """
 
     def __init__(self, q, theta, trainable=True):
@@ -343,6 +495,10 @@ class _Rn_(ParametrizedGate):
         self.name = None
         self._controlled_gate = None
         self.target_qubits = (q,)
+        self.unitary = True
+
+        if isinstance(theta, (float, int)) and (theta % (np.pi / 2)).is_integer():
+            self.clifford = True
 
         self.parameters = theta
         self.init_args = [q]
@@ -383,14 +539,22 @@ class RX(_Rn_):
         q (int): the qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`
-            (default is ``True``).
+            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`.
+            Defaults to ``True``.
     """
 
     def __init__(self, q, theta, trainable=True):
         super().__init__(q, theta, trainable)
         self.name = "rx"
+        self.draw_label = "RX"
         self._controlled_gate = CRX
+
+    @property
+    def qasm_label(self):
+        return "rx"
+
+    def generator_eigenvalue(self):
+        return 0.5
 
 
 class RY(_Rn_):
@@ -410,14 +574,22 @@ class RY(_Rn_):
         q (int): the qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.Circuit.set_parameters`
-            (default is ``True``).
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
     """
 
     def __init__(self, q, theta, trainable=True):
         super().__init__(q, theta, trainable)
         self.name = "ry"
+        self.draw_label = "RY"
         self._controlled_gate = CRY
+
+    @property
+    def qasm_label(self):
+        return "ry"
+
+    def generator_eigenvalue(self):
+        return 0.5
 
 
 class RZ(_Rn_):
@@ -435,14 +607,94 @@ class RZ(_Rn_):
         q (int): the qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.Circuit.set_parameters`
-            (default is ``True``).
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
     """
 
     def __init__(self, q, theta, trainable=True):
         super().__init__(q, theta, trainable)
         self.name = "rz"
+        self.draw_label = "RZ"
         self._controlled_gate = CRZ
+
+    @property
+    def qasm_label(self):
+        return "rz"
+
+    def generator_eigenvalue(self):
+        return 0.5
+
+
+class GPI(ParametrizedGate):
+    """The GPI gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        0 & e^{- i \\phi} \\\\
+        e^{i \\phi} & 0 \\\\
+        \\end{pmatrix}
+
+    Args:
+        q (int): the qubit id number.
+        phi (float): phase.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`.
+            Defaults to ``True``.
+    """
+
+    def __init__(self, q, phi, trainable=True):
+        super().__init__(trainable)
+        self.name = "gpi"
+        self.draw_label = "GPI"
+        self.target_qubits = (q,)
+        self.unitary = True
+
+        self.parameter_names = "phi"
+        self.parameters = phi
+        self.nparams = 1
+
+        self.init_args = [q]
+        self.init_kwargs = {"phi": phi, "trainable": trainable}
+
+
+class GPI2(ParametrizedGate):
+    """The GPI2 gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\frac{1}{\\sqrt{2}} \\, \\begin{pmatrix}
+        1 & -i e^{- i \\phi} \\\\
+        -i e^{i \\phi} & 1 \\\\
+        \\end{pmatrix}
+
+    Args:
+        q (int): the qubit id number.
+        phi (float): phase.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`.
+            Defaults to ``True``.
+    """
+
+    def __init__(self, q, phi, trainable=True):
+        super().__init__(trainable)
+        self.name = "gpi2"
+        self.draw_label = "GPI2"
+        self.target_qubits = (q,)
+        self.unitary = True
+
+        self.parameter_names = "phi"
+        self.parameters = phi
+        self.nparams = 1
+
+        self.init_args = [q]
+        self.init_kwargs = {"phi": phi, "trainable": trainable}
+
+    def _dagger(self) -> "Gate":
+        """"""
+        return self.__class__(self.target_qubits[0], self.parameters[0] + math.pi)
 
 
 class _Un_(ParametrizedGate):
@@ -451,8 +703,8 @@ class _Un_(ParametrizedGate):
     Args:
         q (int): the qubit id number.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.Circuit.set_parameters`
-            (default is ``True``).
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
     """
 
     def __init__(self, q, trainable=True):
@@ -462,6 +714,8 @@ class _Un_(ParametrizedGate):
         self.nparams = 0
         self.target_qubits = (q,)
         self.init_args = [q]
+        self.unitary = True
+
         self.init_kwargs = {"trainable": trainable}
 
     @Gate.check_controls
@@ -491,17 +745,23 @@ class U1(_Un_):
         q (int): the qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`
-            (default is ``True``).
+            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`.
+            Defaults to ``True``.
     """
 
     def __init__(self, q, theta, trainable=True):
         super().__init__(q, trainable=trainable)
         self.name = "u1"
+        self.draw_label = "U1"
         self._controlled_gate = CU1
+
         self.nparams = 1
         self.parameters = theta
         self.init_kwargs = {"theta": theta, "trainable": trainable}
+
+    @property
+    def qasm_label(self):
+        return "u1"
 
     def _dagger(self) -> "Gate":
         theta = -self.parameters[0]
@@ -525,19 +785,24 @@ class U2(_Un_):
         phi (float): first rotation angle.
         lamb (float): second rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.Circuit.set_parameters`
-            (default is ``True``).
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
     """
 
     def __init__(self, q, phi, lam, trainable=True):
         super().__init__(q, trainable=trainable)
         self.name = "u2"
+        self.draw_label = "U2"
         self._controlled_gate = CU2
         self.nparams = 2
         self._phi, self._lam = None, None
         self.init_kwargs = {"phi": phi, "lam": lam, "trainable": trainable}
         self.parameter_names = ["phi", "lam"]
         self.parameters = phi, lam
+
+    @property
+    def qasm_label(self):
+        return "u2"
 
     def _dagger(self) -> "Gate":
         """"""
@@ -553,8 +818,10 @@ class U3(_Un_):
 
     .. math::
         \\begin{pmatrix}
-        e^{-i(\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) & -e^{-i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) \\\\
-        e^{i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) & e^{i (\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) \\\\
+        e^{-i(\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) &
+            -e^{-i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) \\\\
+        e^{i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) &
+            e^{i (\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) \\\\
         \\end{pmatrix}
 
     Args:
@@ -563,13 +830,14 @@ class U3(_Un_):
         phi (float): second rotation angle.
         lamb (float): third rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.Circuit.set_parameters`
-            (default is ``True``).
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
     """
 
     def __init__(self, q, theta, phi, lam, trainable=True):
         super().__init__(q, trainable=trainable)
         self.name = "u3"
+        self.draw_label = "U3"
         self._controlled_gate = CU3
         self.nparams = 3
         self._theta, self._phi, self._lam = None, None, None
@@ -581,6 +849,10 @@ class U3(_Un_):
         }
         self.parameter_names = ["theta", "phi", "lam"]
         self.parameters = theta, phi, lam
+
+    @property
+    def qasm_label(self):
+        return "u3"
 
     def _dagger(self) -> "Gate":
         """"""
@@ -609,9 +881,16 @@ class CNOT(Gate):
     def __init__(self, q0, q1):
         super().__init__()
         self.name = "cx"
+        self.draw_label = "X"
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
+        self.clifford = True
+        self.unitary = True
+
+    @property
+    def qasm_label(self):
+        return "cx"
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
         q0, q1 = self.control_qubits[0], self.target_qubits[0]
@@ -639,9 +918,100 @@ class CZ(Gate):
     def __init__(self, q0, q1):
         super().__init__()
         self.name = "cz"
+        self.draw_label = "Z"
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
+        self.clifford = True
+        self.unitary = True
+
+    @property
+    def qasm_label(self):
+        return "cz"
+
+
+class CSX(Gate):
+    """The Controlled-:math:`\\sqrt{X}` gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 & 0 & 0 \\\\
+        0 & 1 & 0 & 0 \\\\
+        0 & 0 & e^{i\\pi/4} & e^{-i\\pi/4} \\\\
+        0 & 0 & e^{-i\\pi/4} & e^{i\\pi/4} \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the control qubit id number.
+        q1 (int): the target qubit id number.
+    """
+
+    def __init__(self, q0, q1):
+        super().__init__()
+        self.name = "csx"
+        self.draw_label = "CSX"
+        self.control_qubits = (q0,)
+        self.target_qubits = (q1,)
+        self.init_args = [q0, q1]
+        self.clifford = True
+        self.unitary = True
+
+    @property
+    def qasm_label(self):
+        return "csx"
+
+    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
+        """"""
+        q0, q1 = self.init_args
+        return [H(q1), CU1(q0, q1, np.pi / 2), H(q1)]
+
+    def _dagger(self):
+        """"""
+        return CSXDG(*self.init_args)
+
+
+class CSXDG(Gate):
+    """The transpose conjugate of the Controlled-:math:`\\sqrt{X}` gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 & 0 & 0 \\\\
+        0 & 1 & 0 & 0 \\\\
+        0 & 0 & e^{-i\\pi/4} & e^{i\\pi/4} \\\\
+        0 & 0 & e^{i\\pi/4} & e^{-i\\pi/4} \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the control qubit id number.
+        q1 (int): the target qubit id number.
+    """
+
+    def __init__(self, q0, q1):
+        super().__init__()
+        self.name = "csxdg"
+        self.draw_label = "CSXDG"
+        self.control_qubits = (q0,)
+        self.target_qubits = (q1,)
+        self.init_args = [q0, q1]
+        self.clifford = True
+        self.unitary = True
+
+    @property
+    def qasm_label(self):
+        return "csxdg"
+
+    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
+        """"""
+        q0, q1 = self.init_args
+        return [H(q1), CU1(q0, q1, -np.pi / 2), H(q1)]
+
+    def _dagger(self):
+        """"""
+        return CSX(*self.init_args)
 
 
 class _CRn_(ParametrizedGate):
@@ -652,8 +1022,8 @@ class _CRn_(ParametrizedGate):
         q1 (int): the target qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.Circuit.set_parameters`
-            (default is ``True``).
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
     """
 
     def __init__(self, q0, q1, theta, trainable=True):
@@ -662,6 +1032,10 @@ class _CRn_(ParametrizedGate):
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.parameters = theta
+        self.unitary = True
+
+        if isinstance(theta, (float, int)) and (theta % (np.pi / 2)).is_integer():
+            self.clifford = True
 
         self.init_args = [q0, q1]
         self.init_kwargs = {"theta": theta, "trainable": trainable}
@@ -692,13 +1066,18 @@ class CRX(_CRn_):
         q1 (int): the target qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.Circuit.set_parameters`
-            (default is ``True``).
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
     """
 
     def __init__(self, q0, q1, theta, trainable=True):
         super().__init__(q0, q1, theta, trainable)
         self.name = "crx"
+        self.draw_label = "RX"
+
+    @property
+    def qasm_label(self):
+        return "crx"
 
 
 class CRY(_CRn_):
@@ -721,13 +1100,18 @@ class CRY(_CRn_):
         q1 (int): the target qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.Circuit.set_parameters`
-            (default is ``True``).
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
     """
 
     def __init__(self, q0, q1, theta, trainable=True):
         super().__init__(q0, q1, theta, trainable)
         self.name = "cry"
+        self.draw_label = "RY"
+
+    @property
+    def qasm_label(self):
+        return "cry"
 
 
 class CRZ(_CRn_):
@@ -748,13 +1132,18 @@ class CRZ(_CRn_):
         q1 (int): the target qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.Circuit.set_parameters`
-            (default is ``True``).
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
     """
 
     def __init__(self, q0, q1, theta, trainable=True):
         super().__init__(q0, q1, theta, trainable)
         self.name = "crz"
+        self.draw_label = "RZ"
+
+    @property
+    def qasm_label(self):
+        return "crz"
 
 
 class _CUn_(ParametrizedGate):
@@ -764,8 +1153,8 @@ class _CUn_(ParametrizedGate):
         q0 (int): the control qubit id number.
         q1 (int): the target qubit id number.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.Circuit.set_parameters`
-            (default is ``True``).
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
     """
 
     def __init__(self, q0, q1, trainable=True):
@@ -775,6 +1164,7 @@ class _CUn_(ParametrizedGate):
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
+        self.unitary = True
         self.init_kwargs = {"trainable": trainable}
 
 
@@ -798,16 +1188,21 @@ class CU1(_CUn_):
         q1 (int): the target qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.Circuit.set_parameters`
-            (default is ``True``).
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
     """
 
     def __init__(self, q0, q1, theta, trainable=True):
         super().__init__(q0, q1, trainable=trainable)
         self.name = "cu1"
+        self.draw_label = "U1"
         self.nparams = 1
         self.parameters = theta
         self.init_kwargs = {"theta": theta, "trainable": trainable}
+
+    @property
+    def qasm_label(self):
+        return "cu1"
 
     def _dagger(self) -> "Gate":
         """"""
@@ -837,13 +1232,14 @@ class CU2(_CUn_):
         phi (float): first rotation angle.
         lamb (float): second rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.Circuit.set_parameters`
-            (default is ``True``).
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
     """
 
     def __init__(self, q0, q1, phi, lam, trainable=True):
         super().__init__(q0, q1, trainable=trainable)
         self.name = "cu2"
+        self.draw_label = "U2"
         self.nparams = 2
         self.init_kwargs = {"phi": phi, "lam": lam, "trainable": trainable}
 
@@ -868,8 +1264,10 @@ class CU3(_CUn_):
         \\begin{pmatrix}
         1 & 0 & 0 & 0 \\\\
         0 & 1 & 0 & 0 \\\\
-        0 & 0 & e^{-i(\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) & -e^{-i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) \\\\
-        0 & 0 & e^{i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) & e^{i (\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) \\\\
+        0 & 0 & e^{-i(\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) &
+            -e^{-i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) \\\\
+        0 & 0 & e^{i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) &
+            e^{i (\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) \\\\
         \\end{pmatrix}
 
     Args:
@@ -879,13 +1277,14 @@ class CU3(_CUn_):
         phi (float): second rotation angle.
         lamb (float): third rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.Circuit.set_parameters`
-            (default is ``True``).
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
     """
 
     def __init__(self, q0, q1, theta, phi, lam, trainable=True):
         super().__init__(q0, q1, trainable=trainable)
         self.name = "cu3"
+        self.draw_label = "U3"
         self.nparams = 3
         self._theta, self._phi, self._lam = None, None, None
         self.init_kwargs = {
@@ -896,6 +1295,10 @@ class CU3(_CUn_):
         }
         self.parameter_names = ["theta", "phi", "lam"]
         self.parameters = theta, phi, lam
+
+    @property
+    def qasm_label(self):
+        return "cu3"
 
     def _dagger(self) -> "Gate":
         """"""
@@ -926,8 +1329,47 @@ class SWAP(Gate):
     def __init__(self, q0, q1):
         super().__init__()
         self.name = "swap"
+        self.draw_label = "x"
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
+        self.clifford = True
+        self.unitary = True
+
+    @property
+    def qasm_label(self):
+        return "swap"
+
+
+class iSWAP(Gate):
+    """The iswap gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 & 0 & 0 \\\\
+        0 & 0 & i & 0 \\\\
+        0 & i & 0 & 0 \\\\
+        0 & 0 & 0 & 1 \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the first qubit to be swapped id number.
+        q1 (int): the second qubit to be swapped id number.
+    """
+
+    def __init__(self, q0, q1):
+        super().__init__()
+        self.name = "iswap"
+        self.draw_label = "i"
+        self.target_qubits = (q0, q1)
+        self.init_args = [q0, q1]
+        self.clifford = True
+        self.unitary = True
+
+    @property
+    def qasm_label(self):
+        return "iswap"
 
 
 class FSWAP(Gate):
@@ -951,8 +1393,15 @@ class FSWAP(Gate):
     def __init__(self, q0, q1):
         super().__init__()
         self.name = "fswap"
+        self.draw_label = "fx"
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
+        self.clifford = True
+        self.unitary = True
+
+    @property
+    def qasm_label(self):
+        return "fswap"
 
 
 class fSim(ParametrizedGate):
@@ -974,8 +1423,8 @@ class fSim(ParametrizedGate):
         theta (float): Angle for the one-qubit rotation.
         phi (float): Angle for the ``|11>`` phase.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.Circuit.set_parameters`
-            (default is ``True``).
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
     """
 
     # TODO: Check how this works with QASM.
@@ -983,7 +1432,9 @@ class fSim(ParametrizedGate):
     def __init__(self, q0, q1, theta, phi, trainable=True):
         super().__init__(trainable)
         self.name = "fsim"
+        self.draw_label = "f"
         self.target_qubits = (q0, q1)
+        self.unitary = True
 
         self.parameter_names = ["theta", "phi"]
         self.parameters = theta, phi
@@ -997,6 +1448,41 @@ class fSim(ParametrizedGate):
         q0, q1 = self.target_qubits
         params = (-x for x in self.parameters)  # pylint: disable=E1130
         return self.__class__(q0, q1, *params)
+
+
+class SYC(Gate):
+    """The Sycamore gate, defined in the Supplementary Information
+    of `Quantum supremacy using a programmable superconducting processor
+    <https://www.nature.com/articles/s41586-019-1666-5>`_.
+
+    Corresponding to the following unitary matrix
+
+    .. math::
+        \\text{fSim}(\\pi / 2, \\, \\pi / 6) = \\beging{pmatrix}
+            1 & 0 & 0 & 0 \\\\
+            0 & 0 & -i & 0 \\\\
+            0 & -i & 0 & 0 \\\\
+            0 & 0 & 0 & e^{-i \\pi / 6} \\\\
+        \\end{pmatrix} \\, ,
+
+    where :math:`\\text{fSim}` is the :class:`qibo.gates.fSim` gate.
+
+    Args:
+        q0 (int): the first qubit to be swapped id number.
+        q1 (int): the second qubit to be swapped id number.
+    """
+
+    def __init__(self, q0, q1):
+        super().__init__()
+        self.name = "syc"
+        self.draw_label = "SYC"
+        self.target_qubits = (q0, q1)
+        self.init_args = [q0, q1]
+        self.unitary = True
+
+    def _dagger(self) -> "Gate":
+        """"""
+        return fSim(*self.target_qubits, -np.pi / 2, -np.pi / 6)
 
 
 class GeneralizedfSim(ParametrizedGate):
@@ -1018,16 +1504,18 @@ class GeneralizedfSim(ParametrizedGate):
         unitary (np.ndarray): Unitary that corresponds to the one-qubit rotation.
         phi (float): Angle for the ``|11>`` phase.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.Circuit.set_parameters`
-            (default is ``True``).
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
     """
 
     def __init__(self, q0, q1, unitary, phi, trainable=True):
         super().__init__(trainable)
         self.name = "generalizedfsim"
+        self.draw_label = "gf"
         self.target_qubits = (q0, q1)
+        self.unitary = True
 
-        self.parameter_names = ["u", "phi"]
+        self.parameter_names = ["unitary", "phi"]
         self.parameters = unitary, phi
         self.nparams = 5
 
@@ -1035,8 +1523,6 @@ class GeneralizedfSim(ParametrizedGate):
         self.init_kwargs = {"unitary": unitary, "phi": phi, "trainable": trainable}
 
     def _dagger(self):
-        import numpy as np
-
         q0, q1 = self.target_qubits
         u, phi = self.parameters
         init_kwargs = dict(self.init_kwargs)
@@ -1056,15 +1542,15 @@ class GeneralizedfSim(ParametrizedGate):
 
 
 class _Rnn_(ParametrizedGate):
-    """Abstract class for defining the RXX, RYY and RZZ rotations.
+    """Abstract class for defining the RXX, RYY, RZZ, and RZX rotations.
 
     Args:
         q0 (int): the first entangled qubit id number.
         q1 (int): the second entangled qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`
-            (default is ``True``).
+            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`.
+            Defaults to ``True``.
     """
 
     def __init__(self, q0, q1, theta, trainable=True):
@@ -1072,6 +1558,7 @@ class _Rnn_(ParametrizedGate):
         self.name = None
         self._controlled_gate = None
         self.target_qubits = (q0, q1)
+        self.unitary = True
 
         self.parameters = theta
         self.init_args = [q0, q1]
@@ -1084,9 +1571,7 @@ class _Rnn_(ParametrizedGate):
 
 
 class RXX(_Rnn_):
-    """Parametric 2-qubit X \\otimes X interaction, or rotation about XX.
-
-    This is a symmetric gate.
+    """Parametric 2-qubit XX interaction, or rotation about XX-axis.
 
     Corresponds to the following unitary matrix
 
@@ -1103,17 +1588,22 @@ class RXX(_Rnn_):
         q1 (int): the second entangled qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`
-            (default is ``True``).
+            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`.
+            Defaults to ``True``.
     """
 
     def __init__(self, q0, q1, theta, trainable=True):
         super().__init__(q0, q1, theta, trainable)
         self.name = "rxx"
+        self.draw_label = "RXX"
+
+    @property
+    def qasm_label(self):
+        return "rxx"
 
 
 class RYY(_Rnn_):
-    """Parametric 2-qubit Y \\otimes Y interaction, or rotation about YY.
+    """Parametric 2-qubit YY interaction, or rotation about YY-axis.
 
     Corresponds to the following unitary matrix
 
@@ -1129,17 +1619,22 @@ class RYY(_Rnn_):
         q0 (int): the first entangled qubit id number.
         q1 (int): the second entangled qubit id number.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.Circuit.set_parameters`
-            (default is ``True``).
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
     """
 
     def __init__(self, q0, q1, theta, trainable=True):
         super().__init__(q0, q1, theta, trainable)
         self.name = "ryy"
+        self.draw_label = "RYY"
+
+    @property
+    def qasm_label(self):
+        return "ryy"
 
 
 class RZZ(_Rnn_):
-    """Parametric 2-qubit Z \\otimes Z interaction, or rotation about ZZ.
+    """Parametric 2-qubit ZZ interaction, or rotation about ZZ-axis.
 
     Corresponds to the following unitary matrix
 
@@ -1156,17 +1651,338 @@ class RZZ(_Rnn_):
         q1 (int): the second entangled qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.Circuit.set_parameters`
-            (default is ``True``).
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
     """
 
     def __init__(self, q0, q1, theta, trainable=True):
         super().__init__(q0, q1, theta, trainable)
         self.name = "rzz"
+        self.draw_label = "RZZ"
+
+    @property
+    def qasm_label(self):
+        return "rzz"
+
+
+class RZX(_Rnn_):
+    """Parametric 2-qubit ZX interaction, or rotation about ZX-axis.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+            \\text{RX}(\\theta) & 0 \\\\
+            0 & \\text{RX}(-\\theta) \\\\
+        \\end{pmatrix} =
+        \\begin{pmatrix}
+            \\cos{\\frac{\\theta}{2}} & -i \\sin{\\frac{\\theta}{2}} & 0 & 0 \\\\
+            -i \\sin{\\frac{\\theta}{2}} & \\cos{\\frac{\\theta}{2}} & 0 & 0 \\\\
+            0 & 0 & \\cos{\\frac{\\theta}{2}} & i \\sin{\\frac{\\theta}{2}} \\\\
+            0 & 0 & i \\sin{\\frac{\\theta}{2}} & \\cos{\\frac{\\theta}{2}} \\\\
+        \\end{pmatrix} \\, ,
+
+    where :math:`\\text{RX}` is the :class:`qibo.gates.RX` gate.
+
+    Args:
+        q0 (int): the first entangled qubit id number.
+        q1 (int): the second entangled qubit id number.
+        theta (float): the rotation angle.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
+    """
+
+    def __init__(self, q0, q1, theta, trainable=True):
+        super().__init__(q0, q1, theta, trainable)
+        self.name = "rzx"
+        self.draw_label = "RZX"
+
+    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
+        """"""
+        q0, q1 = self.target_qubits
+        theta = self.init_kwargs["theta"]
+        return [H(q1), CNOT(q0, q1), RZ(q1, theta), CNOT(q0, q1), H(q1)]
+
+
+class RXY(_Rnn_):
+    """Parametric 2-qubit :math:`XX + YY` interaction, or rotation about :math:`XX + YY`-axis.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\exp\\left(-i \\frac{\\theta}{4}(XX + YY)\\right) =
+        \\begin{pmatrix}
+            1 & 0 & 0 & 0 \\\\
+            0 & \\cos{\\frac{\\theta}{2}} & -i \\sin{\\frac{\\theta}{2}} & 0 \\\\
+            0 & -i \\sin{\\frac{\\theta}{2}} & \\cos{\\frac{\\theta}{2}} & 0 \\\\
+            0 & 0 & 0 & 1 \\\\
+        \\end{pmatrix} \\, ,
+
+    Args:
+        q0 (int): the first entangled qubit id number.
+        q1 (int): the second entangled qubit id number.
+        theta (float): the rotation angle.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
+    """
+
+    def __init__(self, q0, q1, theta, trainable=True):
+        super().__init__(q0, q1, theta, trainable)
+        self.name = "rxy"
+        self.draw_label = "RXY"
+
+    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
+        """This decomposition has a global phase difference with respect to the
+        original gate due to a phase difference in :math:`\\left(\\sqrt{X}\\right)^{\\dagger}`.
+        """
+        q0, q1 = self.target_qubits
+        theta = self.init_kwargs["theta"]
+        return [
+            RZ(q1, -np.pi / 2),
+            S(q0),
+            SX(q1),
+            RZ(q1, np.pi / 2),
+            CNOT(q1, q0),
+            RY(q0, -theta / 2),
+            RY(q1, -theta / 2),
+            CNOT(q1, q0),
+            SDG(q0),
+            RZ(q1, -np.pi / 2),
+            SX(q1).dagger(),
+            RZ(q1, np.pi / 2),
+        ]
+
+
+class MS(ParametrizedGate):
+    """The Mølmer–Sørensen (MS) gate is a two-qubit gate native to trapped ions.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        \\cos(\\theta / 2) & 0 & 0 & -i e^{-i( \\phi_0 +  \\phi_1)} \\sin(\\theta / 2) \\\\
+        0 & \\cos(\\theta / 2) & -i e^{-i( \\phi_0 -  \\phi_1)} \\sin(\\theta / 2) & 0 \\\\
+        0 & -i e^{i( \\phi_0 -  \\phi_1)} \\sin(\\theta / 2) & \\cos(\\theta / 2) & 0 \\\\
+        -i e^{i( \\phi_0 +  \\phi_1)} \\sin(\\theta / 2) & 0 & 0 & \\cos(\\theta / 2) \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the first qubit to be swapped id number.
+        q1 (int): the second qubit to be swapped id number.
+        phi0 (float): first qubit's phase.
+        phi1 (float): second qubit's phase
+        theta (float, optional): arbitrary angle in the interval
+            :math:`0 \\leq \\theta \\leq \\pi /2`.  If :math:`\\theta \\rightarrow \\pi / 2`,
+            the fully-entangling MS gate is defined. Defaults to :math:`\\pi / 2`.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
+    """
+
+    # TODO: Check how this works with QASM.
+
+    def __init__(self, q0, q1, phi0, phi1, theta: float = math.pi / 2, trainable=True):
+        super().__init__(trainable)
+        self.name = "ms"
+        self.draw_label = "MS"
+        self.target_qubits = (q0, q1)
+        self.unitary = True
+
+        if theta < 0.0 or theta > math.pi / 2:
+            raise_error(
+                ValueError,
+                f"Theta is defined in the interval 0 <= theta <= pi/2, but it is {theta}.",
+            )
+
+        self.parameter_names = ["phi0", "phi1", "theta"]
+        self.parameters = phi0, phi1, theta
+        self.nparams = 3
+
+        self.init_args = [q0, q1]
+        self.init_kwargs = {
+            "phi0": phi0,
+            "phi1": phi1,
+            "theta": theta,
+            "trainable": trainable,
+        }
+
+    def _dagger(self) -> "Gate":
+        """"""
+        q0, q1 = self.target_qubits
+        phi0, phi1, theta = self.parameters
+        return self.__class__(q0, q1, phi0 + math.pi, phi1, theta)
+
+
+class GIVENS(ParametrizedGate):
+    """The Givens gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+            1 & 0 & 0 & 0 \\\\
+            0 & \\cos(\\theta) & -\\sin(\\theta) & 0 \\\\
+            0 & \\sin(\\theta) & \\cos(\\theta) & 0 \\\\
+            0 & 0 & 0 & 1 \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the first qubit id number.
+        q1 (int): the second qubit id number.
+        theta (float): the rotation angle.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`.
+            Defaults to ``True``.
+    """
+
+    def __init__(self, q0, q1, theta, trainable=True):
+        super().__init__(trainable)
+        self.name = "g"
+        self.draw_label = "G"
+        self.target_qubits = (q0, q1)
+        self.unitary = True
+
+        self.parameter_names = "theta"
+        self.parameters = theta
+        self.nparams = 1
+
+        self.init_args = [q0, q1]
+        self.init_kwargs = {"theta": theta, "trainable": trainable}
+
+    def _dagger(self) -> "Gate":
+        """"""
+        return self.__class__(*self.target_qubits, -self.parameters[0])
+
+    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
+        """Decomposition of Givens gate according to
+        `ArXiv:2106.13839 <https://arxiv.org/abs/2106.13839>`_.
+        """
+        q0, q1 = self.target_qubits
+        theta = self.init_kwargs["theta"]
+        return [
+            CNOT(q0, q1),
+            RY(q0, theta),
+            CNOT(q1, q0),
+            RY(q0, -theta),
+            CNOT(q1, q0),
+            CNOT(q0, q1),
+        ]
+
+
+class RBS(ParametrizedGate):
+    """The Reconfigurable Beam Splitter gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+            1 & 0 & 0 & 0 \\\\
+            0 & \\cos(\\theta) & \\sin(\\theta) & 0 \\\\
+            0 & -\\sin(\\theta) & \\cos(\\theta) & 0 \\\\
+            0 & 0 & 0 & 1 \\\\
+        \\end{pmatrix}
+
+    Note that, in our implementation, :math:`\\text{RBS}(\\theta) = \\text{Givens}(-\\theta)`,
+    where :math:`\\text{Givens}` is the :class:`qibo.gates.GIVENS` gate.
+    However, we point out that this definition is not unique.
+
+    Args:
+        q0 (int): the first qubit id number.
+        q1 (int): the second qubit id number.
+        theta (float): the rotation angle.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`.
+            Defaults to ``True``.
+    """
+
+    def __init__(self, q0, q1, theta, trainable=True):
+        super().__init__(trainable)
+        self.name = "rbs"
+        self.draw_label = "RBS"
+        self.target_qubits = (q0, q1)
+        self.unitary = True
+
+        self.parameter_names = "theta"
+        self.parameters = theta
+        self.nparams = 1
+
+        self.init_args = [q0, q1]
+        self.init_kwargs = {"theta": theta, "trainable": trainable}
+
+    def _dagger(self) -> "Gate":
+        """"""
+        return self.__class__(*self.target_qubits, -self.parameters[0])
+
+    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
+        """Decomposition of RBS gate according to
+        `ArXiv:2109.09685 <https://arxiv.org/abs/2109.09685>`_.
+        """
+        q0, q1 = self.target_qubits
+        theta = self.init_kwargs["theta"]
+        return [
+            H(q0),
+            CNOT(q0, q1),
+            H(q1),
+            RY(q0, theta),
+            RY(q1, -theta),
+            H(q1),
+            CNOT(q0, q1),
+            H(q0),
+        ]
+
+
+class ECR(Gate):
+    """THe Echo Cross-Resonance gate.
+
+    Corresponds ot the following matrix
+
+    .. math::
+        \\frac{1}{\\sqrt{2}} \\left( X \\, I - Y \\, X \\right) =
+        \\frac{1}{\\sqrt{2}} \\, \\begin{pmatrix}
+            0 & 0 & 1 & i \\\\
+            0 & 0 & i & 1 \\\\
+            1 & -i & 0 & 0 \\\\
+            -i & 1 & 0 & 0 \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the first qubit id number.
+        q1 (int): the second qubit id number.
+    """
+
+    def __init__(self, q0, q1):
+        super().__init__()
+        self.name = "ecr"
+        self.draw_label = "ECR"
+        self.target_qubits = (q0, q1)
+        self.init_args = [q0, q1]
+        self.clifford = True
+        self.unitary = True
+
+    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
+        """"""
+        q0, q1 = self.target_qubits
+        return [RZX(q0, q1, np.pi / 4), X(q0), RZX(q0, q1, -np.pi / 4)]
 
 
 class TOFFOLI(Gate):
     """The Toffoli gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+            1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\\\
+            0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 \\\\
+            0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 \\\\
+            0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 \\\\
+            0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 \\\\
+            0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 \\\\
+            0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 \\\\
+            0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 \\\\
+        \\end{pmatrix}
 
     Args:
         q0 (int): the first control qubit id number.
@@ -1177,9 +1993,16 @@ class TOFFOLI(Gate):
     def __init__(self, q0, q1, q2):
         super().__init__()
         self.name = "ccx"
+        self.draw_label = "X"
         self.control_qubits = (q0, q1)
         self.target_qubits = (q2,)
         self.init_args = [q0, q1, q2]
+        self.clifford = True
+        self.unitary = True
+
+    @property
+    def qasm_label(self):
+        return "ccx"
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
         c0, c1 = self.control_qubits
@@ -1206,8 +2029,6 @@ class TOFFOLI(Gate):
         if use_toffolis:
             return self.decompose()
 
-        import importlib
-
         control0, control1 = self.control_qubits
         target = self.target_qubits[0]
         return [
@@ -1221,23 +2042,68 @@ class TOFFOLI(Gate):
         ]
 
 
+class DEUTSCH(ParametrizedGate):
+    """The Deutsch gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+            1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\\\
+            0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 \\\\
+            0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 \\\\
+            0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 \\\\
+            0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 \\\\
+            0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 \\\\
+            0 & 0 & 0 & 0 & 0 & 0 & i \\cos{\\theta} & \\sin{\\theta} \\\\
+            0 & 0 & 0 & 0 & 0 & 0 & \\sin{\\theta} & i \\cos{\\theta} \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the first control qubit id number.
+        q1 (int): the second control qubit id number.
+        q2 (int): the target qubit id number.
+    """
+
+    def __init__(self, q0, q1, q2, theta, trainable=True):
+        super().__init__(trainable)
+        self.name = "deutsch"
+        self.draw_label = "DE"
+        self.control_qubits = (q0, q1)
+        self.target_qubits = (q2,)
+        self.unitary = True
+
+        self.parameter_names = "theta"
+        self.parameters = theta
+        self.nparams = 1
+
+        self.init_args = [q0, q1, q2]
+        self.init_kwargs = {"theta": theta, "trainable": trainable}
+
+
 class Unitary(ParametrizedGate):
     """Arbitrary unitary gate.
 
     Args:
         unitary: Unitary matrix as a tensor supported by the backend.
-            Note that there is no check that the matrix passed is actually
-            unitary. This allows the user to create non-unitary gates.
         *q (int): Qubit id numbers that the gate acts on.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.Circuit.set_parameters`
-            (default is ``True``).
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
         name (str): Optional name for the gate.
+        check_unitary (bool): if ``True``, checks if ``unitary`` is an unitary operator.
+            If ``False``, check is not performed and ``unitary`` attribute
+            defaults to ``False``. Note that, even when the check is performed,
+            there is no enforcement. This allows the user to create
+            non-unitary gates. Default is ``True``.
     """
 
-    def __init__(self, unitary, *q, trainable=True, name=None):
+    def __init__(
+        self, unitary, *q, trainable=True, name: str = None, check_unitary: bool = True
+    ):
         super().__init__(trainable)
         self.name = "Unitary" if name is None else name
+        self.draw_label = "U"
         self.target_qubits = tuple(q)
 
         # TODO: Check that given ``unitary`` has proper shape?
@@ -1246,12 +2112,23 @@ class Unitary(ParametrizedGate):
         self.nparams = 4 ** len(self.target_qubits)
 
         self.init_args = [unitary] + list(q)
-        self.init_kwargs = {"name": name, "trainable": trainable}
+        self.init_kwargs = {
+            "name": name,
+            "check_unitary": check_unitary,
+            "trainable": trainable,
+        }
+
+        # checking unitarity without invoking any backend
+        if check_unitary:
+            product = np.transpose(np.conj(unitary)) @ unitary
+            sums = all(np.abs(1 - np.sum(product, axis=1)) < PRECISION_TOL)
+            diagonal = all(np.abs(1 - np.diag(product)) < PRECISION_TOL)
+
+            self.unitary = True if sums and diagonal else False
+            del sums, diagonal, product
 
     @Gate.parameters.setter
     def parameters(self, x):
-        import numpy as np
-
         shape = self.parameters[0].shape
         self._parameters = (np.reshape(x, shape),)
         for gate in self.device_gates:  # pragma: no cover
@@ -1268,7 +2145,5 @@ class Unitary(ParametrizedGate):
         return gate
 
     def _dagger(self):
-        import numpy as np
-
         ud = np.conj(np.transpose(self.parameters[0]))
         return self.__class__(ud, *self.target_qubits, **self.init_kwargs)

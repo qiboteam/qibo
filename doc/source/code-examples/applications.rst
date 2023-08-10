@@ -6,8 +6,6 @@ Applications
 In this section we present some examples of quantum circuits applied to specific
 problems.
 
-_______________________
-
 Applications by topic
 ---------------------
 
@@ -55,6 +53,7 @@ High-Energy Physics
     :maxdepth: 1
 
     tutorials/qPDF/qPDF.ipynb
+    tutorials/anomaly_detection/README.md
 
 
 Quantum Physics
@@ -82,8 +81,10 @@ Quantum Machine Learning
     tutorials/vqregressor/README.md
     tutorials/autoencoder/README.md
     tutorials/EF_QAE/README.md
-
-_______________________
+    tutorials/qfiae/qfiae_demo.ipynb
+    tutorials/qcnn_classifier/qcnn_demo.ipynb
+    tutorials/qclustering/README.md
+    tutorials/adiabatic_qml/adiabatic-qml.ipynb
 
 Applications by algorithm
 -------------------------
@@ -105,7 +106,9 @@ Variational Quantum Circuits
     tutorials/unary/README.md
     tutorials/bell-variational/README.md
     tutorials/qPDF/qPDF.ipynb
-
+    tutorials/anomaly_detection/README.md
+    tutorials/qcnn_classifier/qcnn_demo.ipynb
+    tutorials/adiabatic_qml/adiabatic-qml.ipynb
 
 Grover's Algorithm
 ^^^^^^^^^^^^^^^^^^
@@ -116,6 +119,7 @@ Grover's Algorithm
     tutorials/grover3sat/README.md
     tutorials/hash-grover/README.md
     tutorials/grover/README.md
+    tutorials/qfiae/qfiae_demo.ipynb
 
 
 Shor's Factorization Algorithms
@@ -144,3 +148,11 @@ FALQON
     :maxdepth: 1
 
     tutorials/falqon/README.md
+
+Clustering
+^^^^^^^^^^
+
+.. toctree::
+    :maxdepth: 1
+
+    tutorials/qclustering/README.md

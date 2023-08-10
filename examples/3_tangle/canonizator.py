@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 import numpy as np
 from scipy.optimize import minimize
 
-from qibo import gates
-from qibo.models import Circuit
+from qibo import Circuit, gates
 
 
 def ansatz(p=0):
@@ -21,10 +19,12 @@ def ansatz(p=0):
         C.add(gates.RY(i, theta=0))
         C.add(gates.RZ(i, theta=0))
         if p > 0:
-            C.add(gates.PauliNoiseChannel(i, px=p / 3, py=p / 3, pz=p / 3))
+            C.add(
+                gates.PauliNoiseChannel(i, [("X", p / 3), ("Y", p / 3), ("Z", p / 3)])
+            )
     for i in range(3):
         if p > 0:
-            C.add(gates.PauliNoiseChannel(i, px=10 * p))
+            C.add(gates.PauliNoiseChannel(i, [("X", 10 * p)]))
         C.add(gates.M(i))
     return C
 

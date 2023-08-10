@@ -1,62 +1,13 @@
-# -*- coding: utf-8 -*-
 from typing import Dict, Optional, Tuple
-
-import sympy
 
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate
-
-
-class MeasurementResult:
-    def __init__(self, qubits):
-        self.qubits = qubits
-        self.samples = []
-
-    def append(self, shot):
-        self.samples.append(shot)
-
-
-class MeasurementSymbol(sympy.Symbol):
-    """``sympy.Symbol`` connected to measurement results.
-
-    Used by :class:`qibo.gates.measurements.M` with ``collapse=True`` to allow
-    controlling subsequent gates from the measurement results.
-    """
-
-    _counter = 0
-
-    def __new__(cls, *args, **kwargs):
-        name = "m{}".format(cls._counter)
-        cls._counter += 1
-        return super().__new__(cls=cls, name=name)
-
-    def __init__(self, index, result):
-        self.index = index
-        self.result = result
-
-    def __getstate__(self):
-        return {"index": self.index, "result": self.result, "name": self.name}
-
-    def __setstate__(self, data):
-        self.index = data.get("index")
-        self.result = data.get("result")
-        self.name = data.get("name")
-
-    def outcome(self):
-        return self.result.samples[-1][self.index]
-
-    def evaluate(self, expr):
-        """Substitutes the symbol's value in the given expression.
-
-        Args:
-            expr (sympy.Expr): Sympy expression that involves the current
-                measurement symbol.
-        """
-        return expr.subs(self, self.outcome())
+from qibo.gates.gates import Z
+from qibo.states import MeasurementResult
 
 
 class M(Gate):
-    """The Measure Z gate.
+    """The measure gate.
 
     Args:
         *q (int): id numbers of the qubits to measure.
@@ -70,6 +21,12 @@ class M(Gate):
             performed. Can be used only for single shot measurements.
             If ``True`` the collapsed state vector is returned. If ``False``
             the measurement result is returned.
+        basis (:class:`qibo.gates.Gate`, list): Basis to measure.
+            Can be a qibo gate or a callable that accepts a qubit,
+            for example: ``lambda q: gates.RX(q, 0.2)``
+            or a list of these, if a different basis will be used for each
+            measurement qubit.
+            Default is Z.
         p0 (dict): Optional bitflip probability map. Can be:
             A dictionary that maps each measured qubit to the probability
             that it is flipped, a list or tuple that has the same length
@@ -87,15 +44,20 @@ class M(Gate):
         *q,
         register_name: Optional[str] = None,
         collapse: bool = False,
+        basis: Gate = Z,
         p0: Optional["ProbsType"] = None,
         p1: Optional["ProbsType"] = None,
     ):
         super().__init__()
         self.name = "measure"
+        self.draw_label = "M"
         self.target_qubits = tuple(q)
         self.register_name = register_name
         self.collapse = collapse
-        self.result = None
+        self.result = MeasurementResult(self)
+        # list of measurement pulses implementing the gate
+        # relevant for experiments only
+        self.pulses = None
 
         self.init_args = q
         self.init_kwargs = {
@@ -108,9 +70,8 @@ class M(Gate):
             if p0 is not None or p1 is not None:
                 raise_error(
                     NotImplementedError,
-                    "Bitflip measurement noise is not " "available when collapsing.",
+                    "Bitflip measurement noise is not available when collapsing.",
                 )
-            self.result = MeasurementResult(self.target_qubits)
 
         if p1 is None:
             p1 = p0
@@ -118,31 +79,35 @@ class M(Gate):
             p0 = p1
         self.bitflip_map = (self._get_bitflip_map(p0), self._get_bitflip_map(p1))
 
-    def get_symbols(self):
-        symbols = []
-        for i, q in enumerate(self.target_qubits):
-            symbols.append(MeasurementSymbol(i, self.result))
-        if len(self.target_qubits) > 1:
-            return symbols
-        else:
-            return symbols[0]
+        # list of gates that will be added to the circuit before the
+        # measurement, in order to rotate to the given basis
+        if not isinstance(basis, list):
+            basis = len(self.target_qubits) * [basis]
+        elif len(basis) != len(self.target_qubits):
+            raise_error(
+                ValueError,
+                f"Given basis list has length {len(basis)} while "
+                f"we are measuring {len(self.target_qubits)} qubits.",
+            )
+        self.basis = []
+        for qubit, basis_cls in zip(self.target_qubits, basis):
+            gate = basis_cls(qubit).basis_rotation()
+            if gate is not None:
+                self.basis.append(gate)
 
     @staticmethod
     def _get_bitflip_tuple(qubits: Tuple[int], probs: "ProbsType") -> Tuple[float]:
         if isinstance(probs, float):
             if probs < 0 or probs > 1:  # pragma: no cover
-                raise_error(
-                    ValueError, "Invalid bitflip probability {}." "".format(probs)
-                )
+                raise_error(ValueError, f"Invalid bitflip probability {probs}.")
             return len(qubits) * (probs,)
 
         if isinstance(probs, (tuple, list)):
             if len(probs) != len(qubits):
                 raise_error(
                     ValueError,
-                    "{} qubits were measured but the given "
-                    "bitflip probability list contains {} "
-                    "values.".format(len(qubits), len(probs)),
+                    f"{len(qubits)} qubits were measured but the given "
+                    + f"bitflip probability list contains {len(probs)} values.",
                 )
             return tuple(probs)
 
@@ -151,8 +116,7 @@ class M(Gate):
             if diff:
                 raise_error(
                     KeyError,
-                    "Bitflip map contains {} qubits that are "
-                    "not measured.".format(diff),
+                    f"Bitflip map contains {diff} qubits that are not measured.",
                 )
             return tuple(probs[q] if q in probs else 0.0 for q in qubits)
 
@@ -163,52 +127,13 @@ class M(Gate):
         if p is None:
             return {q: 0 for q in self.qubits}
         pt = self._get_bitflip_tuple(self.qubits, p)
-        return {q: p for q, p in zip(self.qubits, pt)}
+        return dict(zip(self.qubits, pt))
 
     def has_bitflip_noise(self):
         return (
             sum(self.bitflip_map[0].values()) > 0
             or sum(self.bitflip_map[1].values()) > 0
         )
-
-    @staticmethod
-    def einsum_string(qubits, nqubits, measuring=False):
-        """Generates einsum string for partial trace of density matrices.
-
-        Args:
-            qubits (list): Set of qubit ids that are traced out.
-            nqubits (int): Total number of qubits in the state.
-            measuring (bool): If True non-traced-out indices are multiplied and
-                the output has shape (nqubits - len(qubits),).
-                If False the output has shape 2 * (nqubits - len(qubits),).
-
-        Returns:
-            String to use in einsum for performing partial density of a
-            density matrix.
-        """
-        # TODO: Move this somewhere else (if it is needed at all)
-        from qibo.config import EINSUM_CHARS
-
-        if (2 - int(measuring)) * nqubits > len(EINSUM_CHARS):  # pragma: no cover
-            # case not tested because it requires large instance
-            raise_error(NotImplementedError, "Not enough einsum characters.")
-
-        left_in, right_in, left_out, right_out = [], [], [], []
-        for i in range(nqubits):
-            left_in.append(EINSUM_CHARS[i])
-            if i in qubits:
-                right_in.append(EINSUM_CHARS[i])
-            else:
-                left_out.append(EINSUM_CHARS[i])
-                if measuring:
-                    right_in.append(EINSUM_CHARS[i])
-                else:
-                    right_in.append(EINSUM_CHARS[i + nqubits])
-                    right_out.append(EINSUM_CHARS[i + nqubits])
-
-        left_in, left_out = "".join(left_in), "".join(left_out)
-        right_in, right_out = "".join(right_in), "".join(right_out)
-        return f"{left_in}{right_in}->{left_out}{right_out}"
 
     def add(self, gate):
         """Adds target qubits to a measurement gate.
@@ -230,33 +155,32 @@ class M(Gate):
         """"""
         raise_error(NotImplementedError, "Measurement gates cannot be controlled.")
 
-    @property
-    def matrix(self):
+    def asmatrix(self, backend):
         """"""
         raise_error(
             NotImplementedError, "Measurement gates do not have matrix representation."
         )
 
     def apply(self, backend, state, nqubits):
+        self.result.backend = backend
+        if not self.collapse:
+            return state
+
         qubits = sorted(self.target_qubits)
         # measure and get result
         probs = backend.calculate_probabilities(state, qubits, nqubits)
-        shot = backend.sample_shots(probs, 1)
-        # update the gate's result with the measurement outcome
-        binshot = backend.samples_to_binary(shot, len(qubits))[0]
-        self.result.backend = backend
-        self.result.append(binshot)
+        shot = self.result.add_shot(probs)
         # collapse state
         return backend.collapse_state(state, qubits, shot, nqubits)
 
     def apply_density_matrix(self, backend, state, nqubits):
+        self.result.backend = backend
+        if not self.collapse:
+            return state
+
         qubits = sorted(self.target_qubits)
         # measure and get result
         probs = backend.calculate_probabilities_density_matrix(state, qubits, nqubits)
-        shot = backend.sample_shots(probs, 1)
-        binshot = backend.samples_to_binary(shot, len(qubits))[0]
-        # update the gate's result with the measurement outcome
-        self.result.backend = backend
-        self.result.append(binshot)
+        shot = self.result.add_shot(probs)
         # collapse state
         return backend.collapse_density_matrix(state, qubits, shot, nqubits)

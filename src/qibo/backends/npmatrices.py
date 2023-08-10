@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import sys
 
 from qibo.config import raise_error
@@ -43,6 +42,14 @@ class NumpyMatrices:
         return self.np.array([[1, 0], [0, -1]], dtype=self.dtype)
 
     @cached_property
+    def SX(self):
+        return self.np.array([[1 + 1j, 1 - 1j], [1 - 1j, 1 + 1j]], dtype=self.dtype) / 2
+
+    @cached_property
+    def SXDG(self):
+        return self.np.transpose(self.np.conj(self.SX))
+
+    @cached_property
     def S(self):
         return self.np.array([[1, 0], [0, 1j]], dtype=self.dtype)
 
@@ -83,6 +90,16 @@ class NumpyMatrices:
         phase = self.np.exp(0.5j * theta)
         return self.np.array([[self.np.conj(phase), 0], [0, phase]], dtype=self.dtype)
 
+    def GPI(self, phi):
+        phase = self.np.exp(1.0j * phi)
+        return self.np.array([[0, self.np.conj(phase)], [phase, 0]], dtype=self.dtype)
+
+    def GPI2(self, phi):
+        phase = self.np.exp(1.0j * phi)
+        return self.np.array(
+            [[1, -1.0j * self.np.conj(phase)], [-1.0j * phase, 1]], dtype=self.dtype
+        ) / self.np.sqrt(2)
+
     def U1(self, theta):
         phase = self.np.exp(1j * theta)
         return self.np.array([[1, 0], [0, phase]], dtype=self.dtype)
@@ -119,6 +136,24 @@ class NumpyMatrices:
         return self.np.array(
             [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, -1]], dtype=self.dtype
         )
+
+    @cached_property
+    def CSX(self):
+        a = (1 + 1j) / 2
+        b = self.np.conj(a)
+        return self.np.array(
+            [
+                [1, 0, 0, 0],
+                [0, 1, 0, 0],
+                [0, 0, a, b],
+                [0, 0, b, a],
+            ],
+            dtype=self.dtype,
+        )
+
+    @cached_property
+    def CSXDG(self):
+        return self.np.transpose(self.np.conj(self.CSX))
 
     def CRX(self, theta):
         m = self.np.eye(4, dtype=self.dtype)
@@ -157,6 +192,12 @@ class NumpyMatrices:
         )
 
     @cached_property
+    def iSWAP(self):
+        return self.np.array(
+            [[1, 0, 0, 0], [0, 0, 1j, 0], [0, 1j, 0, 0], [0, 0, 0, 1]], dtype=self.dtype
+        )
+
+    @cached_property
     def FSWAP(self):
         return self.np.array(
             [[1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, -1]], dtype=self.dtype
@@ -166,6 +207,21 @@ class NumpyMatrices:
         cost = self.np.cos(theta) + 0j
         isint = -1j * self.np.sin(theta)
         phase = self.np.exp(-1j * phi)
+        return self.np.array(
+            [
+                [1, 0, 0, 0],
+                [0, cost, isint, 0],
+                [0, isint, cost, 0],
+                [0, 0, 0, phase],
+            ],
+            dtype=self.dtype,
+        )
+
+    @cached_property
+    def SYC(self):
+        cost = self.np.cos(self.np.pi / 2) + 0j
+        isint = -1j * self.np.sin(self.np.pi / 2)
+        phase = self.np.exp(-1j * self.np.pi / 6)
         return self.np.array(
             [
                 [1, 0, 0, 0],
@@ -226,6 +282,75 @@ class NumpyMatrices:
             dtype=self.dtype,
         )
 
+    def RZX(self, theta):
+        cos, sin = self.np.cos(theta / 2), self.np.sin(theta / 2)
+        return self.np.array(
+            [
+                [cos, -1j * sin, 0, 0],
+                [-1j * sin, cos, 0, 0],
+                [0, 0, cos, 1j * sin],
+                [0, 0, 1j * sin, cos],
+            ],
+            dtype=self.dtype,
+        )
+
+    def RXY(self, theta):
+        cos, sin = self.np.cos(theta / 2), self.np.sin(theta / 2)
+        return self.np.array(
+            [
+                [1, 0, 0, 0],
+                [0, cos, -1j * sin, 0],
+                [0, -1j * sin, cos, 0],
+                [0, 0, 0, 1],
+            ],
+            dtype=self.dtype,
+        )
+
+    def MS(self, phi0, phi1, theta):
+        plus = self.np.exp(1.0j * (phi0 + phi1))
+        minus = self.np.exp(1.0j * (phi0 - phi1))
+
+        return self.np.array(
+            [
+                [
+                    self.np.cos(theta / 2),
+                    0,
+                    0,
+                    -1.0j * self.np.conj(plus) * self.np.sin(theta / 2),
+                ],
+                [
+                    0,
+                    self.np.cos(theta / 2),
+                    -1.0j * self.np.conj(minus) * self.np.sin(theta / 2),
+                    0,
+                ],
+                [0, -1.0j * minus * self.np.sin(theta / 2), self.np.cos(theta / 2), 0],
+                [-1.0j * plus * self.np.sin(theta / 2), 0, 0, self.np.cos(theta / 2)],
+            ],
+            dtype=self.dtype,
+        )
+
+    def GIVENS(self, theta):
+        return self.np.array(
+            [
+                [1, 0, 0, 0],
+                [0, self.np.cos(theta), -self.np.sin(theta), 0],
+                [0, self.np.sin(theta), self.np.cos(theta), 0],
+                [0, 0, 0, 1],
+            ],
+            dtype=self.dtype,
+        )
+
+    def RBS(self, theta):
+        return self.GIVENS(-theta)
+
+    @cached_property
+    def ECR(self):
+        return self.np.array(
+            [[0, 0, 1, 1j], [0, 0, 1j, 1], [1, -1j, 0, 0], [-1j, 1, 0, 0]],
+            dtype=self.dtype,
+        ) / self.np.sqrt(2)
+
     @cached_property
     def TOFFOLI(self):
         return self.np.array(
@@ -239,6 +364,23 @@ class NumpyMatrices:
                 [0, 0, 0, 0, 0, 0, 0, 1],
                 [0, 0, 0, 0, 0, 0, 1, 0],
             ]
+        )
+
+    def DEUTSCH(self, theta):
+        sin = self.np.sin(theta) + 0j  # 0j necessary for right tensorflow dtype
+        cos = self.np.cos(theta)
+        return self.np.array(
+            [
+                [1, 0, 0, 0, 0, 0, 0, 0],
+                [0, 1, 0, 0, 0, 0, 0, 0],
+                [0, 0, 1, 0, 0, 0, 0, 0],
+                [0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 0, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0],
+                [0, 0, 0, 0, 0, 0, 1j * cos, sin],
+                [0, 0, 0, 0, 0, 0, sin, 1j * cos],
+            ],
+            dtype=self.dtype,
         )
 
     def Unitary(self, u):

@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
 from qibo.config import raise_error
-from qibo.models.circuit import Circuit
 from qibo.models.evolution import StateEvolution
 
 
@@ -169,7 +167,6 @@ class AAVQE:
         bounds_tolerance=1e-7,
         time_tolerance=1e-7,
     ):
-
         if nsteps <= 0:  # pragma: no cover
             raise_error(
                 ValueError,
@@ -454,6 +451,8 @@ class QAOA:
         initial_p,
         initial_state=None,
         method="Powell",
+        loss_func=None,
+        loss_func_param=dict(),
         jac=None,
         hess=None,
         hessp=None,
@@ -465,7 +464,11 @@ class QAOA:
         compile=False,
         processes=None,
     ):
-        """Optimizes the variational parameters of the QAOA.
+        """Optimizes the variational parameters of the QAOA. A few loss functions are
+        provided for QAOA optimizations such as expected value (default), CVar which is introduced in
+        `Quantum 4, 256 <https://quantum-journal.org/papers/q-2020-04-20-256/>`_, and
+        Gibbs loss function which is introduced in
+        `PRR 2, 023074 (2020) <https://journals.aps.org/prresearch/abstract/10.1103/PhysRevResearch.2.023074>`_.
 
         Args:
             initial_p (np.ndarray): initial guess for the parameters.
@@ -473,6 +476,8 @@ class QAOA:
             method (str): the desired minimization method.
                 See :meth:`qibo.optimizers.optimize` for available optimization
                 methods.
+            loss_func (function): the desired loss function. If it is None, the expectation is used.
+            loss_func_param (dict): a dictionary to pass in the loss function parameters.
             jac (dict): Method for computing the gradient vector for scipy optimizers.
             hess (dict): Method for computing the hessian matrix for scipy optimizers.
             hessp (callable): Hessian of objective function times an arbitrary
@@ -492,6 +497,20 @@ class QAOA:
             returns the ``OptimizeResult``, for ``'cma'`` the
             ``CMAEvolutionStrategy.result``, and for ``'sgd'``
             the options used during the optimization.
+
+        Example:
+            .. testcode::
+
+                from qibo import hamiltonians
+                from qibo.models.utils import cvar, gibbs
+
+                h = hamiltonians.XXZ(3)
+                qaoa = models.QAOA(h)
+                initial_p = [0.314, 0.22, 0.05, 0.59]
+                best, params, _ = qaoa.minimize(initial_p)
+                best, params, _ = qaoa.minimize(initial_p, loss_func=cvar, loss_func_param={'alpha':0.1})
+                best, params, _ = qaoa.minimize(initial_p, loss_func=gibbs, loss_func_param={'eta':0.1})
+
         """
         if len(initial_p) % 2 != 0:
             raise_error(
@@ -506,7 +525,17 @@ class QAOA:
                 state = hamiltonian.backend.cast(state, copy=True)
             qaoa.set_parameters(params)
             state = qaoa(state)
-            return hamiltonian.expectation(state)
+            if loss_func is None:
+                return hamiltonian.expectation(state)
+            else:
+                func_hyperparams = {
+                    key: loss_func_param[key]
+                    for key in loss_func_param
+                    if key in loss_func.__code__.co_varnames
+                }
+                param = {**func_hyperparams, "hamiltonian": hamiltonian, "state": state}
+
+                return loss_func(**param)
 
         if method == "sgd":
             loss = lambda p, c, h, s: _loss(self.hamiltonian.backend.cast(p), c, h, s)

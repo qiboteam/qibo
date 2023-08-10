@@ -1,6 +1,6 @@
-# -*- coding: utf-8 -*-
 """Adiabatic evolution scheduling optimization for the Ising Hamiltonian."""
 import argparse
+from pathlib import Path
 
 import numpy as np
 
@@ -43,13 +43,14 @@ def main(nqubits, hfield, params, dt, solver, method, maxiter, save):
     """
     h0 = hamiltonians.X(nqubits)
     h1 = hamiltonians.TFIM(nqubits, h=hfield)
+    bac = h1.backend
 
     # Calculate target values (H1 ground state)
     target_state = h1.ground_state()
-    target_energy = h1.eigenvalues()[0].numpy().real
+    target_energy = bac.to_numpy(h1.eigenvalues()[0]).real
 
     # Check ground state
-    state_energy = callbacks.Energy(h1)(target_state).numpy()
+    state_energy = bac.to_numpy(h1.expectation(target_state)).real
     np.testing.assert_allclose(state_energy.real, target_energy)
 
     evolution = models.AdiabaticEvolution(h0, h1, spolynomial, dt=dt, solver=solver)
@@ -62,15 +63,17 @@ def main(nqubits, hfield, params, dt, solver, method, maxiter, save):
     print("Final parameters:", parameters)
 
     final_state = evolution(parameters[-1])
-    overlap = callbacks.Overlap(target_state)(final_state).numpy()
+    overlap = bac.to_numpy(callbacks.Overlap(target_state).apply(bac, final_state)).real
     print("Target energy:", target_energy)
     print("Overlap:", overlap)
 
     if save:
+        out_fol = Path("optparams")
+        out_fol.mkdir(exist_ok=True)
         evolution.opt_history["loss"].append(target_energy)
-        np.save(f"optparams/{save}_n{nqubits}_loss.npy", evolution.opt_history["loss"])
+        np.save(out_fol / f"{save}_n{nqubits}_loss.npy", evolution.opt_history["loss"])
         np.save(
-            f"optparams/{save}_n{nqubits}_params.npy", evolution.opt_history["params"]
+            out_fol / f"{save}_n{nqubits}_params.npy", evolution.opt_history["params"]
         )
 
 

@@ -100,8 +100,7 @@ be used as follows:
 
 .. code-block:: python
 
-    from qibo.models import Circuit
-    from qibo import gates
+    from qibo import Circuit, gates
 
     # Define GPU configuration
     accelerators = {"/GPU:0": 3, "/GPU:1": 1}
@@ -239,8 +238,7 @@ such gates are added in a circuit their parameters can be updated using the
 
 .. testcode::
 
-    from qibo.models import Circuit
-    from qibo import gates
+    from qibo import Circuit, gates
     # create a circuit with all parameters set to 0.
     c = Circuit(3)
     c.add(gates.RX(0, theta=0))
@@ -261,8 +259,7 @@ the circuit. For example:
 
 .. testsetup::
 
-    from qibo.models import Circuit
-    from qibo import gates
+    from qibo import Circuit, gates
 
 .. testcode::
 
@@ -310,8 +307,7 @@ the ``trainable=False`` during gate creation. For example:
 
 .. testsetup::
 
-    from qibo.models import Circuit
-    from qibo import gates
+    from qibo import Circuit, gates
 
 .. testcode::
 
@@ -350,8 +346,7 @@ of the :class:`qibo.gates.M` gate. For example
 
 .. testcode::
 
-    from qibo.models import Circuit
-    from qibo import gates
+    from qibo import Circuit, gates
 
     c = Circuit(1)
     c.add(gates.H(0))
@@ -382,8 +377,7 @@ a loop:
 
 .. testsetup::
 
-    from qibo.models import Circuit
-    from qibo import gates
+    from qibo import Circuit, gates
 
     c = Circuit(1)
     c.add(gates.H(0))
@@ -407,8 +401,7 @@ also possible:
 
 .. testcode::
 
-    from qibo.models import Circuit
-    from qibo import gates
+    from qibo import Circuit, gates
 
     c = Circuit(2)
     c.add(gates.H(0))
@@ -430,36 +423,35 @@ any parametrized gate as follows:
 .. testcode::
 
     import numpy as np
-    from qibo.models import Circuit
-    from qibo import gates
+    from qibo import Circuit, gates
 
     c = Circuit(2)
     c.add(gates.H(0))
     output = c.add(gates.M(0, collapse=True))
-    c.add(gates.RX(1, theta=np.pi * output / 4))
+    c.add(gates.RX(1, theta=np.pi * output.symbols[0] / 4))
     result = c()
 
 In this case the first qubit will be measured and if 1 is found a pi/4 X-rotation
 will be applied to the second qubit, otherwise no rotation. Qibo allows to
-use ``output`` as a parameter during circuit creation by representing it using
-a ``sympy.Symbol``. The symbol acquires a numerical value later during execution
-when the measurement is performed. As explained above, if a ``nshots > 1`` is
-given during circuit execution the execution is repeated using a loop.
+use ``output`` as a parameter during circuit creation through the use of
+``sympy.Symbol`` objects. These symbols can be accessed through the ``output.symbols``
+list and they acquire a numerical value during execution when the measurement
+is performed. As explained above, if ``nshots > 1`` is given during circuit
+execution the execution is repeated using a loop.
 
 If more than one qubits are used in a ``collapse=True`` measurement gate the
-``output`` can be indexed accordingly:
+``output.symbols`` list can be indexed accordingly:
 
 .. testcode::
 
     import numpy as np
-    from qibo.models import Circuit
-    from qibo import gates
+    from qibo import Circuit, gates
 
     c = Circuit(3)
     c.add(gates.H(0))
     output = c.add(gates.M(0, 1, collapse=True))
-    c.add(gates.RX(1, theta=np.pi * output[0] / 4))
-    c.add(gates.RY(2, theta=np.pi * (output[0] + output[1]) / 5))
+    c.add(gates.RX(1, theta=np.pi * output.symbols[0] / 4))
+    c.add(gates.RY(2, theta=np.pi * (output.symbols[0] + output.symbols[1]) / 5))
     result = c()
 
 
@@ -475,8 +467,7 @@ for example:
 
 .. testcode::
 
-    from qibo.models import Circuit
-    from qibo import gates
+    from qibo import Circuit, gates
 
     # Create a subroutine
     subroutine = Circuit(6)
@@ -724,7 +715,9 @@ function.
     target_state = tf.ones(4, dtype=tf.complex128) / 2.0
 
     # Define circuit ansatz
-    params = tf.Variable(tf.random.uniform((2,), dtype=tf.float64))
+    params = tf.Variable(
+        tf.random.uniform((2,), dtype=tf.float64).astype(tf.complex128)
+    )
     c = models.Circuit(2)
     c.add(gates.RX(0, params[0]))
     c.add(gates.RY(1, params[1]))
@@ -736,6 +729,7 @@ function.
             fidelity = tf.math.abs(tf.reduce_sum(tf.math.conj(target_state) * final_state))
             loss = 1 - fidelity
         grads = tape.gradient(loss, params)
+        grads = tf.math.real(grads)
         optimizer.apply_gradients(zip([grads], [params]))
 
 
@@ -769,6 +763,7 @@ For example:
             fidelity = tf.math.abs(tf.reduce_sum(tf.math.conj(target_state) * final_state))
             loss = 1 - fidelity
         grads = tape.gradient(loss, params)
+        grads = tf.math.real(grads)
         optimizer.apply_gradients(zip([grads], [params]))
 
     for _ in range(nepochs):
@@ -845,7 +840,7 @@ for example:
     c = models.Circuit(2, density_matrix=True) # starts with state |00><00|
     c.add(gates.X(1))
     # transforms |00><00| -> |01><01|
-    c.add(gates.PauliNoiseChannel(0, px=0.3))
+    c.add(gates.PauliNoiseChannel(0, [("X", 0.3)]))
     # transforms |01><01| -> (1 - px)|01><01| + px |11><11|
     result = c()
     # result.state() will be tf.Tensor(diag([0, 0.7, 0, 0.3]))
@@ -884,7 +879,7 @@ as follows:
     thetas = np.random.random(5)
     c.add((gates.RX(i, theta=t) for i, t in enumerate(thetas)))
     # Add noise channels to all qubits
-    c.add((gates.PauliNoiseChannel(i, px=0.2, py=0.0, pz=0.3)
+    c.add((gates.PauliNoiseChannel(i, [("X", 0.2), ("Y", 0.0), ("Z", 0.3)])
            for i in range(5)))
     # Add measurement of all qubits
     c.add(gates.M(*range(5)))
@@ -926,7 +921,7 @@ Adding noise after every gate
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In practical applications noise typically occurs after every gate.
-Qibo provides the :meth:`qibo.models.circuit.Circuit.with_noise` method
+Qibo provides the :meth:`qibo.models.circuit.Circuit.with_pauli_noise` method
 which automatically creates a new circuit that contains a
 :class:`qibo.gates.PauliNoiseChannel` after every gate.
 The user can control the probabilities of the noise channel using a noise map,
@@ -941,8 +936,8 @@ triplets. For example, the following script
       c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
 
       # Define a noise map that maps qubit IDs to noise probabilities
-      noise_map = {0: (0.1, 0.0, 0.2), 1: (0.0, 0.2, 0.1)}
-      noisy_c = c.with_noise(noise_map)
+      noise_map = {0: list(zip(["X", "Z"], [0.1, 0.2])), 1: list(zip(["Y", "Z"], [0.2, 0.1]))}
+      noisy_c = c.with_pauli_noise(noise_map)
 
 will create a new circuit ``noisy_c`` that is equivalent to:
 
@@ -950,12 +945,12 @@ will create a new circuit ``noisy_c`` that is equivalent to:
 
       noisy_c2 = models.Circuit(2)
       noisy_c2.add(gates.H(0))
-      noisy_c2.add(gates.PauliNoiseChannel(0, 0.1, 0.0, 0.2))
+      noisy_c2.add(gates.PauliNoiseChannel(0, [("X", 0.1), ("Y", 0.0), ("Z", 0.2)]))
       noisy_c2.add(gates.H(1))
-      noisy_c2.add(gates.PauliNoiseChannel(1, 0.0, 0.2, 0.1))
+      noisy_c2.add(gates.PauliNoiseChannel(1, [("X", 0.0), ("Y", 0.2), ("Z", 0.1)]))
       noisy_c2.add(gates.CNOT(0, 1))
-      noisy_c2.add(gates.PauliNoiseChannel(0, 0.1, 0.0, 0.2))
-      noisy_c2.add(gates.PauliNoiseChannel(1, 0.0, 0.2, 0.1))
+      noisy_c2.add(gates.PauliNoiseChannel(0, [("X", 0.1), ("Y", 0.0), ("Z", 0.2)]))
+      noisy_c2.add(gates.PauliNoiseChannel(1, [("X", 0.0), ("Y", 0.2), ("Z", 0.1)]))
 
 Note that ``noisy_c`` uses the gate objects of the original circuit ``c``
 (it is not a deep copy), while in ``noisy_c2`` each gate was created as
@@ -963,15 +958,15 @@ a new object.
 
 The user may use a single tuple instead of a dictionary as the noise map
 In this case the same probabilities will be applied to all qubits.
-That is ``noise_map = (0.1, 0.0, 0.1)`` is equivalent to
-``noise_map = {0: (0.1, 0.0, 0.1), 1: (0.1, 0.0, 0.1), ...}``.
+That is ``noise_map = list(zip(["X", "Z"], [0.1, 0.1]))`` is equivalent to
+``noise_map = {0: list(zip(["X", "Z"], [0.1, 0.1])), 1: list(zip(["X", "Z"], [0.1, 0.1])), ...}``.
 
 As described in the previous sections, if
-:meth:`qibo.models.circuit.Circuit.with_noise` is used in a circuit
+:meth:`qibo.models.circuit.Circuit.with_pauli_noise` is used in a circuit
 that uses state vectors then noise will be simulated with repeated execution.
 If the user wishes to use density matrices instead, this is possible by
 passing the ``density_matrix=True`` flag during the circuit initialization and call
-``.with_noise`` on the new circuit.
+``.with_pauli_noise`` on the new circuit.
 
 .. _noisemodel-example:
 
@@ -994,19 +989,23 @@ Here is an example on how to use a noise model:
 
 .. testcode::
 
+      import numpy as np
       from qibo import models, gates
       from qibo.noise import NoiseModel, PauliError
 
-      # Build specific noise model with 2 quantum errors:
+      # Build specific noise model with 3 quantum errors:
       # - Pauli error on H only for qubit 1.
       # - Pauli error on CNOT for all the qubits.
+      # - Pauli error on RX(pi/2) for qubit 0.
       noise = NoiseModel()
-      noise.add(PauliError(px = 0.5), gates.H, 1)
-      noise.add(PauliError(py = 0.5), gates.CNOT)
+      noise.add(PauliError([("X", 0.5)]), gates.H, 1)
+      noise.add(PauliError([("Y", 0.5)]), gates.CNOT)
+      is_sqrt_x = (lambda g: np.pi/2 in g.parameters)
+      noise.add(PauliError([("X", 0.5)]), gates.RX, qubits=0, condition=is_sqrt_x)
 
       # Generate noiseless circuit.
       c = models.Circuit(2)
-      c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
+      c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1), gates.RX(0, np.pi/2),  gates.RX(0, 3*np.pi/2), gates.RX(1, np.pi/2)])
 
       # Apply noise to the circuit according to the noise model.
       noisy_c = noise.apply(c)
@@ -1018,10 +1017,14 @@ The noisy circuit defined above will be equivalent to the following circuit:
       noisy_c2 = models.Circuit(2)
       noisy_c2.add(gates.H(0))
       noisy_c2.add(gates.H(1))
-      noisy_c2.add(gates.PauliNoiseChannel(1, px=0.5))
+      noisy_c2.add(gates.PauliNoiseChannel(1, [("X", 0.5)]))
       noisy_c2.add(gates.CNOT(0, 1))
-      noisy_c2.add(gates.PauliNoiseChannel(0, py=0.5))
-      noisy_c2.add(gates.PauliNoiseChannel(1, py=0.5))
+      noisy_c2.add(gates.PauliNoiseChannel(0, [("Y", 0.5)]))
+      noisy_c2.add(gates.PauliNoiseChannel(1, [("Y", 0.5)]))
+      noisy_c2.add(gates.RX(0, np.pi/2))
+      noisy_c2.add(gates.PauliNoiseChannel(0, [("X", 0.5)]))
+      noisy_c2.add(gates.RX(0, 3*np.pi/2))
+      noisy_c2.add(gates.RX(1, np.pi/2))
 
 
 The :class:`qibo.noise.NoiseModel` class supports also density matrices,
@@ -1112,6 +1115,366 @@ can be used both in :meth:`qibo.states.CircuitResult.apply_bitflips`
 and the measurement gate. If ``p1`` is not specified the value of ``p0`` will
 be used for both errors.
 
+.. _noise-hardware-example:
+
+Simulating quantum hardware
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Qibo can perform a simulation of a real quantum computer using the :meth:`qibo.noise.NoiseModel.composite` method of the :class:`qibo.noise.NoiseModel` class. This is possible by passing the circuit instance that we want to simulate and the noise channels' parameters as a dictionary.
+In this model, the user must set the relaxation times ``t1`` and ``t2`` for each qubit, an approximated `gate time` and `depolarizing error` for each one-qubit gate and two-qubits gate and bitflips probabilities for each qubit which is measured.
+
+.. testcode::
+
+      from qibo import gates, models
+      from qibo.noise import NoiseModel
+
+      c = models.Circuit(2,density_matrix=True)
+      c.add([gates.H(0), gates.X(1) ,gates.Z(0), gates.X(0), gates.CNOT(0,1),
+         gates.CNOT(1, 0),gates.X(1),gates.Z(1), gates.M(0,1)])
+
+      print("raw circuit:")
+      print(c.draw())
+
+      par = {"t1" : (250*1e-06, 240*1e-06),
+             "t2" : (150*1e-06, 160*1e-06),
+             "gate_time" : (200*1e-9, 400*1e-9),
+             "excited_population" : 0,
+             "depolarizing_error" : (4.000e-4, 1.500e-4),
+             "bitflips_error" : ([0.022, 0.015], [0.034, 0.041]),
+             "idle_qubits" : 1
+            }
+      noise= NoiseModel()
+      noise.composite(par)
+      noisy_circ=noise.apply(c)
+
+      print("noisy circuit:")
+      print(noisy_circ.draw())
+
+.. testoutput::
+   :hide:
+
+   ...
+
+``noisy_circ`` is the new circuit containing the error gate channels.
+
+It is possible to learn the parameters of the noise model that best describe a frequency distribution obtained by running a circuit on quantum hardware. To do this,
+assuming we have a ``result`` object after running a circuit with a certain number of shots,
+
+.. testcode::
+
+      noise= NoiseModel()
+      params = {"idle_qubits" : True}
+      noise.composite(params)
+
+      result =  noisy_circ(nshots=1000)
+
+      noise.noise_model.fit(result)
+
+      print(noise.noise_model.params)
+      print(noise.noise_model.hellinger)
+
+.. testoutput::
+   :hide:
+
+   ...
+
+where ``noise.params`` is a dictionary with the parameters obatined after the optimization and ``noise.hellinger`` is the corresponding Hellinger fidelity.
+
+
+How to perform error mitigation?
+--------------------------------
+
+Noise and errors in circuits are one of the biggest obstacles to face in quantum computing.
+Say that you have a circuit :math:`C` and you want to measure an observable :math:`A` at the end of it,
+in general you are going to obtain an expected value :math:`\langle A \rangle_{noisy}` that
+can lie quiet far from the true one :math:`\langle A \rangle_{exact}`.
+In Qibo, different methods are implemented for mitigating errors in circuits and obtaining
+a better estimate of the noise-free expected value :math:`\langle A \rangle_{exact}`.
+
+
+Let's see how to use them. For starters, let's define a dummy circuit with some RZ, RX and CNOT gates:
+
+.. testcode::
+
+   import numpy as np
+
+   from qibo import Circuit, gates
+
+   # Define the circuit
+   nqubits = 3
+   hz = 0.5
+   hx = 0.5
+   dt = 0.25
+   c = Circuit(nqubits, density_matrix=True)
+   c.add(gates.RZ(q, theta=-2 * hz * dt - np.pi / 2) for q in range(nqubits))
+   c.add(gates.RX(q, theta=np.pi / 2) for q in range(nqubits))
+   c.add(gates.RZ(q, theta=-2 * hx * dt + np.pi) for q in range(nqubits))
+   c.add(gates.RX(q, theta=np.pi / 2) for q in range(nqubits))
+   c.add(gates.RZ(q, theta=-np.pi / 2) for q in range(nqubits))
+   c.add(gates.CNOT(q, q + 1) for q in range(0, nqubits - 1, 2))
+   c.add(gates.RZ(q + 1, theta=-2 * dt) for q in range(0, nqubits - 1, 2))
+   c.add(gates.CNOT(q, q + 1) for q in range(0, nqubits - 1, 2))
+   c.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
+   c.add(gates.RZ(q + 1, theta=-2 * dt) for q in range(1, nqubits, 2))
+   c.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
+   # Include the measurements
+   c.add(gates.M(*range(nqubits)))
+
+   # visualize the circuit
+   print(c.draw())
+
+   #  q0: ─RZ─RX─RZ─RX─RZ─o────o────────M─
+   #  q1: ─RZ─RX─RZ─RX─RZ─X─RZ─X─o────o─M─
+   #  q2: ─RZ─RX─RZ─RX─RZ────────X─RZ─X─M─
+
+.. testoutput::
+   :hide:
+
+   ...
+
+remember to initialize the circuit with ``density_matrix=True`` and to include the measuerement gates at the end for expectation value calculation.
+
+As observable we can simply take :math:`Z_0 Z_1 Z_2` :
+
+.. testcode::
+
+   from qibo.symbols import Z
+   from qibo.hamiltonians import SymbolicHamiltonian
+   from qibo.backends import GlobalBackend
+
+   backend = GlobalBackend()
+
+   # Define the observable
+   obs = np.prod([Z(i) for i in range(nqubits)])
+   obs = SymbolicHamiltonian(obs, backend=backend)
+
+We can obtain the exact expected value by running the circuit on any simulation ``backend``. To mimic the execution on
+the real quantum hardware, instead, we can use a noise model:
+
+.. testcode::
+
+   # Noise-free expected value
+   exact = obs.expectation(backend.execute_circuit(c).state())
+   print(exact)
+   # 0.9096065335014379
+
+   from qibo.noise import DepolarizingError, ReadoutError, NoiseModel
+   from qibo.quantum_info import random_stochastic_matrix
+
+   # Define the noise model
+   noise =  NoiseModel()
+   # depolarizing error after each CNOT
+   noise.add(DepolarizingError(0.1), gates.CNOT)
+   # readout error
+   # randomly initialize the bitflip probabilities
+   prob = random_stochastic_matrix(
+       2**nqubits, diagonally_dominant=True, seed=2, backend=backend
+   )
+   noise.add(ReadoutError(probabilities=prob), gate=gates.M)
+   # Noisy expected value without mitigation
+   noisy = obs.expectation(backend.execute_circuit(noise.apply(c)).state())
+   print(noisy)
+   # 0.5647937721701448
+
+.. testoutput::
+   :hide:
+
+   ...
+
+Note that when running on the quantum hardware, you won't need to use a noise model
+anymore, you will just have to change the backend to the appropriate one.
+
+Now let's check that error mitigation produces better estimates of the exact expected value.
+
+Readout Mitigation
+^^^^^^^^^^^^^^^^^^
+Firstly, let's try to mitigate the readout errors. To do this, we can either compute the
+calibration matrix and use it modify the final state after the circuit execution:
+
+.. testcode::
+
+   from qibo.models.error_mitigation import apply_readout_mitigation, calibration_matrix
+
+   nshots = 10000
+   # compute the calibration matrix
+   calibration = calibration_matrix(
+       nqubits, backend=backend, noise_model=noise, nshots=nshots
+   )
+   # execute the circuit
+   state = backend.execute_circuit(noise.apply(c), nshots=nshots)
+   # mitigate the readout errors
+   mit_state = apply_readout_mitigation(state, calibration)
+   mit_val = mit_state.expectation_from_samples(obs)
+   print(mit_val)
+   # 0.5945794816381054
+
+.. testoutput::
+   :hide:
+
+   ...
+
+Or use the randomized readout mitigation:
+
+.. testcode::
+
+   from qibo.models.error_mitigation import apply_randomized_readout_mitigation
+
+   ncircuits = 10
+   result, result_cal = apply_randomized_readout_mitigation(
+       c, backend=backend, noise_model=noise, nshots=nshots, ncircuits=ncircuits
+   )
+   mit_val = result.expectation_from_samples(
+       obs
+   ) / result_cal.expectation_from_samples(obs)
+   print(mit_val)
+   # 0.5860884499785314
+
+.. testoutput::
+   :hide:
+
+   ...
+
+Alright, the expected value is improving, but we are still far from the ideal one.
+Readout mitigation alone is not enough, let's try to use some more advanced methods
+to get rid of the depolarizing error we introduced in the CNOT gates.
+
+Zero Noise Extrapolation (ZNE)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To run ZNE, we just need to define the noise levels to use. Each level corresponds to the
+number of CNOT or RX pairs (depending on the value of ``insertion_gate``) inserted in the
+circuit in correspondence to the original ones. Since we decided to simulate noisy CNOTs::
+
+   Level 1
+   q0: ─X─  -->  q0: ─X───X──X─
+   q1: ─o─  -->  q1: ─o───o──o─
+
+   Level 2
+   q0: ─X─  -->  q0: ─X───X──X───X──X─
+   q1: ─o─  -->  q1: ─o───o──o───o──o─
+
+   .
+   .
+   .
+
+For example if we use the five levels ``[0,1,2,3,4]`` :
+
+.. testcode::
+
+   from qibo.models.error_mitigation import ZNE
+
+   # Mitigated expected value
+   estimate = ZNE(
+       circuit=c,
+       observable=obs,
+       noise_levels=np.arange(5),
+       noise_model=noise,
+       nshots=10000,
+       insertion_gate='CNOT',
+       backend=backend,
+   )
+   print(estimate)
+   # 0.8332843749999996
+
+.. testoutput::
+   :hide:
+
+   ...
+
+we get an expected value closer to the exact one. We can further improve by using ZNE
+combined with the readout mitigation:
+
+.. testcode::
+
+   # we can either use
+   # the calibration matrix computed earlier
+   readout = {'calibration_matrix': calibration}
+   # or the randomized readout
+   readout = {'ncircuits': 10}
+
+   # Mitigated expected value
+   estimate = ZNE(
+       circuit=c,
+       observable=obs,
+       backend=backend,
+       noise_levels=np.arange(5),
+       noise_model=noise,
+       nshots=10000,
+       insertion_gate='CNOT',
+       readout=readout,
+   )
+   print(estimate)
+   # 0.8979124892467807
+
+.. testoutput::
+   :hide:
+
+   ...
+
+
+Clifford Data Regression (CDR)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For CDR instead, you don't need to define anything additional. However, keep in mind that the input
+circuit is expected to be decomposed in the set of primitive gates :math:`RX(\frac{\pi}{2}), CNOT, X` and :math:`RZ(\theta)`.
+
+.. testcode::
+
+   from qibo.models.error_mitigation import CDR
+
+   # Mitigated expected value
+   estimate = CDR(
+       circuit=c,
+       observable=obs,
+       backend=backend,
+       noise_model=noise,
+       nshots=10000,
+       readout=readout,
+   )
+   print(estimate)
+   # 0.9090604794014961
+
+.. testoutput::
+   :hide:
+
+   ...
+
+Again, the mitigated expected value improves over the noisy one and is also slightly better compared to ZNE.
+
+Variable Noise CDR (vnCDR)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Being a combination of ZNE and CDR, vnCDR requires you to define the noise levels as done in ZNE, and the same
+caveat about the input circuit for CDR is valid here as well.
+
+.. testcode::
+
+   from qibo.models.error_mitigation import vnCDR
+
+   # Mitigated expected value
+   estimate = vnCDR(
+       circuit=c,
+       observable=obs,
+       backend=backend,
+       noise_levels=np.arange(3),
+       noise_model=noise,
+       nshots=10000,
+       insertion_gate='CNOT',
+       readout=readout,
+   )
+   print(estimate)
+   # 0.9085991439303123
+
+.. testoutput::
+   :hide:
+
+   ...
+
+The result is similar to the one obtained by CDR. Usually, one would expect slightly better results for vnCDR,
+however, this can substantially vary depending on the circuit and the observable considered and, therefore, it is hard to tell
+a priori.
+
+This was just a basic example usage of the three methods, for all the details about them you should check the API-reference page :ref:`Error Mitigation <error-mitigation>`.
 
 .. _timeevol-example:
 
@@ -1523,3 +1886,73 @@ constructing each symbol:
 
     form = Z(0, commutative=True) * Z(1, commutative=True) + Z(1, commutative=True) * Z(2, commutative=True)
     ham = hamiltonians.SymbolicHamiltonian(form)
+
+
+.. _hamexpectation-example:
+
+How to calculate expectation values using samples?
+--------------------------------------------------
+
+It is possible to calculate the expectation value of a :class:`qibo.hamiltonians.Hamiltonian`
+on a given state using the :meth:`qibo.hamiltonians.Hamiltonian.expectation` method,
+which can be called on a state or density matrix. For example
+
+
+.. testcode::
+
+    from qibo import Circuit, gates
+    from qibo.hamiltonians import XXZ
+
+    circuit = Circuit(4)
+    circuit.add(gates.H(i) for i in range(4))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add(gates.CNOT(2, 3))
+
+    hamiltonian = XXZ(4)
+
+    result = circuit()
+    expectation_value = hamiltonian.expectation(result.state())
+
+In this example, the circuit will be simulated to obtain the final state vector
+and the corresponding expectation value will be calculated through exact matrix
+multiplication with the Hamiltonian matrix.
+If a :class:`qibo.hamiltonians.SymbolicHamiltonian` is used instead, the expectation
+value will be calculated as a sum of expectation values of local terms, allowing
+calculations of more qubits with lower memory consumption. The calculation of each
+local term still requires the state vector.
+
+When executing a circuit on real hardware, usually only measurements of the state are
+available, not the state vector. Qibo provides :meth:`qibo.hamiltonians.Hamiltonian.expectation_from_samples`
+to allow calculation of expectation values directly from such samples:
+
+
+.. testcode::
+
+    from qibo import Circuit, gates
+    from qibo.hamiltonians import Z
+
+    circuit = Circuit(4)
+    circuit.add(gates.H(i) for i in range(4))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add(gates.CNOT(2, 3))
+    circuit.add(gates.M(*range(4)))
+
+    hamiltonian = Z(4)
+
+    result = circuit(nshots=1024)
+    expectation_value = hamiltonian.expectation_from_samples(result.frequencies())
+
+
+This example simulates the circuit similarly to the previous one but calculates
+the expectation value using the frequencies of shots, instead of the exact state vector.
+This can also be invoked directly from the ``result`` object:
+
+.. testcode::
+
+    expectation_value = result.expectation_from_samples(hamiltonian)
+
+
+The expectation from samples currently works only for Hamiltonians that are diagonal in
+the computational basis.

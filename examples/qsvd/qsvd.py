@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 import numpy as np
 
-from qibo import gates
-from qibo.models import Circuit
+from qibo import Circuit, gates
 
 
 class QSVD:
@@ -15,8 +13,8 @@ class QSVD:
             nqubits: number of qubits
             subsize: size of the subsystem with qubits 0,1,...,sub_size-1
             nlayers: number of layers of the varitional ansatz
-            RY: if True, parameterized Rx,Rz,Rx gates are used in the circuit
-                if False, parameterized Ry gates are used in the circuit (default=False)
+            RY: if True, parameterized Ry gates are used in the circuit
+                if False, parameterized Rx,Rz,Rx gates are used in the circuit (default=False)
         """
         self.nqubits = nqubits
         self.subsize = subsize
@@ -159,7 +157,6 @@ class QSVD:
 
         Schmidt = []
         for i in range(2**small):
-
             bit_string = bin(i)[2:].zfill(small)
             Schmidt.append(result[2 * bit_string])
 

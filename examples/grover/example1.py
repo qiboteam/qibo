@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 import argparse
 
-from qibo import gates
-from qibo.models import Circuit
+from qibo import Circuit, gates
 from qibo.models.grover import Grover
 
 

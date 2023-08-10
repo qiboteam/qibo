@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 import collections
+import copy
 from typing import Dict, List, Tuple, Union
 
 import numpy as np
 
 from qibo import gates
-from qibo import gates as gate_module
 from qibo.config import raise_error
 
 NoiseMapType = Union[Tuple[int, int, int], Dict[int, Tuple[int, int, int]]]
@@ -42,14 +41,20 @@ class _Queue(list):
         self.nqubits = nqubits
         self.moments = [nqubits * [None]]
         self.moment_index = nqubits * [0]
+        self.nmeasurements = 0
 
     def to_fused(self):
         """Transforms all gates in queue to :class:`qibo.gates.FusedGate`."""
         last_gate = {}
         queue = self.__class__(self.nqubits)
         for gate in self:
-            fgate = gate_module.FusedGate.from_gate(gate)
-            for q in gate.qubits:
+            fgate = gates.FusedGate.from_gate(gate)
+            if isinstance(gate, gates.SpecialGate):
+                fgate.qubit_set = set(range(self.nqubits))
+                fgate.init_args = sorted(fgate.qubit_set)
+                fgate.target_qubits = tuple(fgate.init_args)
+
+            for q in fgate.qubits:
                 if q in last_gate:
                     neighbor = last_gate.get(q)
                     fgate.left_neighbors[q] = neighbor
@@ -59,7 +64,7 @@ class _Queue(list):
         return queue
 
     def from_fused(self):
-        """Creates the fused circuit queue by removing gatest that have been fused to others."""
+        """Creates the fused circuit queue by removing gates that have been fused to others."""
         queue = self.__class__(self.nqubits)
         for gate in self:
             if not gate.marked:
@@ -69,7 +74,7 @@ class _Queue(list):
                     queue.append(gate.gates[0])
                 else:
                     queue.append(gate)
-            elif not gate.qubits:
+            elif isinstance(gate.gates[0], (gates.SpecialGate, gates.M)):
                 # special gates are marked by default so we need
                 # to add them manually
                 queue.append(gate.gates[0])
@@ -81,6 +86,9 @@ class _Queue(list):
             qubits = gate.qubits
         else:  # special gate acting on all qubits
             qubits = tuple(range(self.nqubits))
+
+        if isinstance(gate, gates.M):
+            self.nmeasurements += 1
 
         # calculate moment index for this gate
         idx = max(self.moment_index[q] for q in qubits)
@@ -100,18 +108,41 @@ class Circuit:
 
     Args:
         nqubits (int): Total number of qubits in the circuit.
+        init_kwargs (dict): a dictionary with the following keys
+
+            - *nqubits*
+            - *accelerators*
+            - *density_matrix*.
+
+        queue (_Queue): List that holds the queue of gates of a circuit.
+        parametrized_gates (_ParametrizedGates): List of parametric gates.
+        trainable_gates (_ParametrizedGates): List of trainable gates.
+        measurements (list): List of non-collapsible measurements
+        _final_state (CircuitResult): Final state after full simulation of the circuit
+        compiled (CompiledExecutor): Circuit executor. Defaults to ``None``.
+        repeated_execution (bool): If `True`, the circuit would be re-executed when sampling.
+            Defaults to ``False``.
+        density_matrix (bool): If `True`, the circuit would evolve density matrices.
+            Defaults to ``False``.
+        accelerators (dict): Dictionary that maps device names to the number of times each
+            device will be used. Defaults to ``None``.
+        ndevices (int): Total number of devices. Defaults to ``None``.
+        nglobal (int): Base two logarithm of the number of devices. Defaults to ``None``.
+        nlocal (int): Total number of available qubits in each device. Defaults to ``None``.
+        queues (DistributedQueues): Gate queues for each accelerator device.
+            Defaults to ``None``.
     """
 
     def __init__(self, nqubits, accelerators=None, density_matrix=False):
         if not isinstance(nqubits, int):
             raise_error(
                 TypeError,
-                "Number of qubits must be an integer but " "is {}.".format(nqubits),
+                f"Number of qubits must be an integer but is {nqubits}.",
             )
         if nqubits < 1:
             raise_error(
                 ValueError,
-                "Number of qubits must be positive but is " "{}.".format(nqubits),
+                f"Number of qubits must be positive but is {nqubits}.",
             )
         self.nqubits = nqubits
         self.init_kwargs = {
@@ -123,10 +154,7 @@ class Circuit:
         # Keep track of parametrized gates for the ``set_parameters`` method
         self.parametrized_gates = _ParametrizedGates()
         self.trainable_gates = _ParametrizedGates()
-
-        self.measurement_tuples = dict()
-        self.measurement_gate = None
-        self.measurement_gate_result = None
+        self.measurements = []  # list of non-collapsible measurements
 
         self._final_state = None
         self.compiled = None
@@ -138,14 +166,13 @@ class Circuit:
         self.accelerators = accelerators
         self.ndevices = None
         self.nglobal = None
-        self.nglobal = None
         self.nlocal = None
         self.queues = None
         if accelerators:  # pragma: no cover
             if density_matrix:
                 raise_error(
                     NotImplementedError,
-                    "Distributed circuit is not implemented " "for density matrices.",
+                    "Distributed circuit is not implemented for density matrices.",
                 )
             self._distributed_init(nqubits, accelerators)
 
@@ -166,7 +193,7 @@ class Circuit:
         Example:
             .. code-block:: python
 
-                from qibo.models import Circuit
+                from qibo import Circuit
                 # The system has two GPUs and we would like to use each GPU twice
                 # resulting to four total logical accelerators
                 accelerators = {'/GPU:0': 2, '/GPU:1': 2}
@@ -186,7 +213,7 @@ class Circuit:
             raise_error(
                 ValueError,
                 "Number of calculation devices should be a power "
-                "of 2 but is {}.".format(self.ndevices),
+                + f"of 2 but is {self.ndevices}.",
             )
         self.nglobal = int(self.nglobal)
         self.nlocal = self.nqubits - self.nglobal
@@ -210,48 +237,23 @@ class Circuit:
                 raise_error(
                     ValueError,
                     "Cannot add circuits with different kwargs. "
-                    "{} is {} for first circuit and {} for the "
-                    "second.".format(k, kwarg1, kwarg2),
+                    + f"{k} is {kwarg1} for first circuit and {kwarg2} "
+                    + "for the second.",
                 )
 
         newcircuit = self.__class__(**self.init_kwargs)
         # Add gates from `self` to `newcircuit` (including measurements)
         for gate in self.queue:
-            newcircuit.queue.append(gate)
-            if isinstance(gate, gates.ParametrizedGate):
-                newcircuit.parametrized_gates.append(gate)
-                if gate.trainable:
-                    newcircuit.trainable_gates.append(gate)
-        newcircuit.measurement_gate = self.measurement_gate
-        newcircuit.measurement_tuples = self.measurement_tuples
+            newcircuit.add(gate)
         # Add gates from `circuit` to `newcircuit` (including measurements)
         for gate in circuit.queue:
-            newcircuit.check_measured(gate.qubits)
-            newcircuit.queue.append(gate)
-            if isinstance(gate, gates.ParametrizedGate):
-                newcircuit.parametrized_gates.append(gate)
-                if gate.trainable:
-                    newcircuit.trainable_gates.append(gate)
+            newcircuit.add(gate)
 
-        if newcircuit.measurement_gate is None:
-            newcircuit.measurement_gate = circuit.measurement_gate
-            newcircuit.measurement_tuples = circuit.measurement_tuples
-        elif circuit.measurement_gate is not None:
-            for k, v in circuit.measurement_tuples.items():
-                if k in newcircuit.measurement_tuples:
-                    raise_error(
-                        KeyError,
-                        "Register name {} already exists in " "circuit.".format(k),
-                    )
-                newcircuit.check_measured(v)
-                newcircuit.measurement_tuples[k] = v
-            newcircuit.measurement_gate.add(circuit.measurement_gate)
-
-        # Re-execute full circuit when sampling if one of the circuit has repeated_execution True
+        # Re-execute full circuit when sampling if one of the circuits
+        # has repeated_execution ``True``
         newcircuit.repeated_execution = (
             self.repeated_execution or circuit.repeated_execution
         )
-
         return newcircuit
 
     def on_qubits(self, *qubits):
@@ -280,15 +282,13 @@ class Circuit:
         if len(qubits) != self.nqubits:
             raise_error(
                 ValueError,
-                "Cannot return gates on {} qubits because "
-                "the circuit contains {} qubits."
-                "".format(len(qubits), self.nqubits),
+                f"Cannot return gates on {len(qubits)} qubits because "
+                + f"the circuit contains {self.nqubits} qubits.",
             )
         if self.accelerators and self.queues.queues:  # pragma: no cover
             raise_error(
                 RuntimeError,
-                "Cannot use distributed circuit as a "
-                "subroutine after it was executed.",
+                "Cannot use distributed circuit as a subroutine after it was executed.",
             )
 
         qubit_map = {i: q for i, q in enumerate(qubits)}
@@ -316,21 +316,21 @@ class Circuit:
         # original qubits that are in the light cone
         qubits = set(qubits)
         # original gates that are in the light cone
-        gates = []
+        list_of_gates = []
         for gate in reversed(self.queue):
             gate_qubits = set(gate.qubits)
             if gate_qubits & qubits:
                 # if the gate involves any qubit included in the
                 # light cone, add all its qubits in the light cone
                 qubits |= gate_qubits
-                gates.append(gate)
+                list_of_gates.append(gate)
 
         # Create a new circuit ignoring gates that are not in the light cone
         qubit_map = {q: i for i, q in enumerate(sorted(qubits))}
         kwargs = dict(self.init_kwargs)
         kwargs["nqubits"] = len(qubits)
         circuit = self.__class__(**kwargs)
-        circuit.add(gate.on_qubits(qubit_map) for gate in reversed(gates))
+        circuit.add(gate.on_qubits(qubit_map) for gate in reversed(list_of_gates))
         return circuit, qubit_map
 
     def _shallow_copy(self):
@@ -339,8 +339,7 @@ class Circuit:
         new_circuit = self.__class__(**self.init_kwargs)
         new_circuit.parametrized_gates = _ParametrizedGates(self.parametrized_gates)
         new_circuit.trainable_gates = _ParametrizedGates(self.trainable_gates)
-        new_circuit.measurement_gate = self.measurement_gate
-        new_circuit.measurement_tuples = dict(self.measurement_tuples)
+        new_circuit.measurements = self.measurements
         return new_circuit
 
     def copy(self, deep: bool = False):
@@ -354,8 +353,6 @@ class Circuit:
         Returns:
             The copied circuit object.
         """
-        import copy
-
         if deep:
             new_circuit = self.__class__(**self.init_kwargs)
             for gate in self.queue:
@@ -363,17 +360,9 @@ class Circuit:
                     # impractical case
                     raise_error(
                         NotImplementedError,
-                        "Cannot create deep copy " "of fused circuit.",
+                        "Cannot create deep copy of fused circuit.",
                     )
-
-                new_gate = copy.copy(gate)
-                new_circuit.queue.append(new_gate)
-                if isinstance(gate, gates.ParametrizedGate):
-                    new_circuit.parametrized_gates.append(new_gate)
-                    if gate.trainable:
-                        new_circuit.trainable_gates.append(new_gate)
-            new_circuit.measurement_gate = copy.copy(self.measurement_gate)
-            new_circuit.measurement_tuples = dict(self.measurement_tuples)
+                new_circuit.add(copy.copy(gate))
         else:
             if self.accelerators:  # pragma: no cover
                 raise_error(
@@ -381,58 +370,60 @@ class Circuit:
                     "Non-deep copy is not allowed for distributed "
                     "circuits because they modify gate objects.",
                 )
-            new_circuit = self._shallow_copy()
-            new_circuit.queue = copy.copy(self.queue)
+            new_circuit = self.__class__(**self.init_kwargs)
+            for gate in self.queue:
+                new_circuit.add(gate)
         return new_circuit
 
     def invert(self):
         """Creates a new ``Circuit`` that is the inverse of the original.
 
         Inversion is obtained by taking the dagger of all gates in reverse order.
+        If the original circuit contains parametrized gates, dagger will change
+        their parameters. This action is not persistent, so if the parameters
+        are updated afterwards, for example using :meth:`qibo.models.circuit.Circuit.set_parameters`,
+        the action of dagger will be overwritten.
         If the original circuit contains measurement gates, these are included
         in the inverted circuit.
 
         Returns:
             The circuit inverse.
         """
-        import copy
+        from qibo.gates import ParametrizedGate
 
+        skip_measurements = True
+        measurements = []
         new_circuit = self.__class__(**self.init_kwargs)
         for gate in self.queue[::-1]:
-            new_circuit.add(gate.dagger())
-        new_circuit.measurement_gate = copy.copy(self.measurement_gate)
-        new_circuit.measurement_tuples = dict(self.measurement_tuples)
+            if isinstance(gate, gates.M) and skip_measurements:
+                measurements.append(gate)
+            else:
+                new_gate = gate.dagger()
+                if isinstance(gate, ParametrizedGate):
+                    new_gate.trainable = gate.trainable
+                new_circuit.add(new_gate)
+                skip_measurements = False
+        new_circuit.add(measurements[::-1])
         return new_circuit
 
     def _check_noise_map(self, noise_map: NoiseMapType) -> NoiseMapType:
-        if isinstance(noise_map, (tuple, list)):
-            if len(noise_map) != 3:
-                raise_error(
-                    ValueError,
-                    "Noise map expects three probabilities "
-                    "but received {}.".format(len(noise_map)),
-                )
-            return {q: noise_map for q in range(self.nqubits)}
+        if isinstance(noise_map, list) and not all(
+            isinstance(n, (tuple, list)) for n in noise_map
+        ):
+            raise_error(
+                TypeError,
+                f"Type {type(noise_map)} of noise map is not recognized.",
+            )
         elif isinstance(noise_map, dict):
             if len(noise_map) != self.nqubits:
                 raise_error(
                     ValueError,
-                    "Noise map has {} qubits while the circuit "
-                    "has {}.".format(len(noise_map), self.nqubits),
+                    f"Noise map has {len(noise_map)} qubits while the circuit has {self.nqubits}.",
                 )
-            for v in noise_map.values():
-                if len(v) != 3:
-                    raise_error(
-                        ValueError,
-                        "Noise map expects three probabilities "
-                        "but received {}.".format(v),
-                    )
+
             return noise_map
 
-        raise_error(
-            TypeError,
-            "Type {} of noise map is not recognized." "".format(type(noise_map)),
-        )
+        return {q: noise_map for q in range(self.nqubits)}
 
     def decompose(self, *free: int):
         """Decomposes circuit's gates to gates supported by OpenQASM.
@@ -449,26 +440,23 @@ class Circuit:
         decomp_circuit = self.__class__(self.nqubits)
         for gate in self.queue:
             decomp_circuit.add(gate.decompose(*free))
-        decomp_circuit.measurement_tuples = dict(self.measurement_tuples)
-        decomp_circuit.measurement_gate = self.measurement_gate
         return decomp_circuit
 
-    def with_noise(self, noise_map: NoiseMapType):
-        """Creates a copy of the circuit with noise gates after each gate.
+    def with_pauli_noise(self, noise_map: NoiseMapType):
+        """Creates a copy of the circuit with Pauli noise gates after each gate.
 
         If the original circuit uses state vectors then noise simulation will
         be done using sampling and repeated circuit execution.
         In order to use density matrices the original circuit should be created
-        using the ``density_matrix`` flag set to ``True``.
+        setting  the flag ``density_matrix=True``.
         For more information we refer to the
         :ref:`How to perform noisy simulation? <noisy-example>` example.
 
         Args:
-            noise_map (dict): Dictionary that maps qubit ids to noise
-                probabilities (px, py, pz).
-                If a tuple of probabilities (px, py, pz) is given instead of
-                a dictionary, then the same probabilities will be used for all
-                qubits.
+            noise_map (dict): list of tuples :math:`(P_{k}, p_{k})`, where
+                :math:`P_{k}` is a ``str`` representing the :math:`k`-th
+                :math:`n`-qubit Pauli operator, and :math:`p_{k}` is the
+                associated probability.
 
         Returns:
             Circuit object that contains all the gates of the original circuit
@@ -477,27 +465,29 @@ class Circuit:
         Example:
             .. testcode::
 
-                from qibo.models import Circuit
-                from qibo import gates
+                from qibo import Circuit, gates
                 # use density matrices for noise simulation
                 c = Circuit(2, density_matrix=True)
                 c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
-                noise_map = {0: (0.1, 0.0, 0.2), 1: (0.0, 0.2, 0.1)}
-                noisy_c = c.with_noise(noise_map)
+                noise_map = {
+                    0: list(zip(["X", "Z"], [0.1, 0.2])),
+                    1: list(zip(["Y", "Z"], [0.2, 0.1]))
+                }
+                noisy_c = c.with_pauli_noise(noise_map)
                 # ``noisy_c`` will be equivalent to the following circuit
                 c2 = Circuit(2, density_matrix=True)
                 c2.add(gates.H(0))
-                c2.add(gates.PauliNoiseChannel(0, 0.1, 0.0, 0.2))
+                c2.add(gates.PauliNoiseChannel(0, [("X", 0.1), ("Z", 0.2)]))
                 c2.add(gates.H(1))
-                c2.add(gates.PauliNoiseChannel(1, 0.0, 0.2, 0.1))
+                c2.add(gates.PauliNoiseChannel(1, [("Y", 0.2), ("Z", 0.1)]))
                 c2.add(gates.CNOT(0, 1))
-                c2.add(gates.PauliNoiseChannel(0, 0.1, 0.0, 0.2))
-                c2.add(gates.PauliNoiseChannel(1, 0.0, 0.2, 0.1))
+                c2.add(gates.PauliNoiseChannel(0, [("X", 0.1), ("Z", 0.2)]))
+                c2.add(gates.PauliNoiseChannel(1, [("Y", 0.2), ("Z", 0.1)]))
         """
         if self.accelerators:  # pragma: no cover
             raise_error(
                 NotImplementedError,
-                "Distributed circuit does not support " "density matrices yet.",
+                "Distributed circuit does not support density matrices yet.",
             )
 
         noise_map = self._check_noise_map(noise_map)
@@ -507,17 +497,15 @@ class Circuit:
             if isinstance(gate, gates.KrausChannel):
                 raise_error(
                     ValueError,
-                    "`.with_noise` method is not available "
-                    "for circuits that already contain "
-                    "channels.",
+                    "`.with_pauli_noise` method is not available "
+                    + "for circuits that already contain "
+                    + "channels.",
                 )
             noise_gates.append([])
-            for q in gate.qubits:
-                if q in noise_map and sum(noise_map[q]) > 0:
-                    p = noise_map[q]
-                    noise_gates[-1].append(
-                        gate_module.PauliNoiseChannel(q, px=p[0], py=p[1], pz=p[2])
-                    )
+            if not isinstance(gate, gates.M):
+                for q in gate.qubits:
+                    if q in noise_map and sum([row[1] for row in noise_map[q]]) > 0:
+                        noise_gates[-1].append(gates.PauliNoiseChannel(q, noise_map[q]))
 
         # Create new circuit with noise gates inside
         noisy_circuit = self.__class__(**self.init_kwargs)
@@ -525,27 +513,7 @@ class Circuit:
             noisy_circuit.add(gate)
             for noise_gate in noise_gates[i]:
                 noisy_circuit.add(noise_gate)
-        noisy_circuit.measurement_tuples = dict(self.measurement_tuples)
-        noisy_circuit.measurement_gate = self.measurement_gate
         return noisy_circuit
-
-    def check_measured(self, gate_qubits: Tuple[int]):
-        """Helper method for `add`.
-
-        Checks if the qubits that a gate acts are already measured and raises
-        a `NotImplementedError` if they are because currently we do not allow
-        measured qubits to be reused.
-        """
-        for qubit in gate_qubits:
-            if (
-                self.measurement_gate is not None
-                and qubit in self.measurement_gate.target_qubits
-            ):
-                raise_error(
-                    ValueError,
-                    "Cannot reuse qubit {} because it is already "
-                    "measured".format(qubit),
-                )
 
     def add(self, gate):
         """Add a gate to a given queue.
@@ -570,7 +538,7 @@ class Circuit:
                 if isinstance(gate, gates.KrausChannel):
                     raise_error(
                         NotImplementedError,
-                        "Distributed circuits do not " "support channels.",
+                        "Distributed circuits do not support channels.",
                     )
                 elif self.nqubits - len(
                     gate.target_qubits
@@ -578,70 +546,75 @@ class Circuit:
                     # Check if there is sufficient number of local qubits
                     raise_error(
                         ValueError,
-                        "Insufficient qubits to use for global in "
-                        "distributed circuit.",
+                        "Insufficient qubits to use for global in distributed circuit.",
                     )
 
             if not isinstance(gate, gates.Gate):
-                raise_error(TypeError, "Unknown gate type {}.".format(type(gate)))
+                raise_error(TypeError, f"Unknown gate type {type(gate)}.")
 
             if self._final_state is not None:
                 raise_error(
                     RuntimeError,
-                    "Cannot add gates to a circuit after it is " "executed.",
+                    "Cannot add gates to a circuit after it is executed.",
                 )
 
             for q in gate.target_qubits:
                 if q >= self.nqubits:
                     raise_error(
                         ValueError,
-                        "Attempting to add gate with target qubits {} "
-                        "on a circuit of {} qubits."
-                        "".format(gate.target_qubits, self.nqubits),
+                        f"Attempting to add gate with target qubits {gate.target_qubits} "
+                        + f"on a circuit of {self.nqubits} qubits.",
                     )
 
-            self.check_measured(gate.qubits)
-            if isinstance(gate, gates.M) and not gate.collapse:
-                return self._add_measurement(gate)
+            if isinstance(gate, gates.M):
+                # The following loop is useful when two circuits are added together:
+                # all the gates in the basis of the measure gates should not
+                # be added to the new circuit, otherwise once the measure gate is added in the circuit
+                # there will be two of the same.
+
+                for base in gate.basis:
+                    if base not in self.queue:
+                        self.add(base)
+
+                self.queue.append(gate)
+                if gate.register_name is None:
+                    # add default register name
+                    nreg = self.queue.nmeasurements - 1
+                    gate.register_name = f"register{nreg}"
+                else:
+                    name = gate.register_name
+                    for mgate in self.measurements:
+                        if name == mgate.register_name:
+                            raise_error(
+                                KeyError, f"Register {name} already exists in circuit."
+                            )
+
+                gate.result.circuit = self
+                if gate.collapse:
+                    self.repeated_execution = True
+                else:
+                    self.measurements.append(gate)
+                return gate.result
+
             else:
-                return self._add_gate(gate)
+                self.queue.append(gate)
+                for measurement in list(self.measurements):
+                    if set(measurement.qubits) & set(gate.qubits):
+                        measurement.collapse = True
+                        self.repeated_execution = True
+                        self.measurements.remove(measurement)
 
-    def _add_gate(self, gate):
-        self.queue.append(gate)
-        if isinstance(gate, gates.M):
-            self.repeated_execution = True
-            return gate.get_symbols()
-        if isinstance(gate, gates.UnitaryChannel):
-            self.repeated_execution = not self.density_matrix
-        if isinstance(gate, gates.ParametrizedGate):
-            self.parametrized_gates.append(gate)
-            if gate.trainable:
-                self.trainable_gates.append(gate)
+            if isinstance(gate, gates.UnitaryChannel):
+                self.repeated_execution = not self.density_matrix
+            if isinstance(gate, gates.ParametrizedGate):
+                self.parametrized_gates.append(gate)
+                if gate.trainable:
+                    self.trainable_gates.append(gate)
 
-    def _add_measurement(self, gate: gates.Gate):
-        """Called automatically by `add` when `gate` is measurement.
-
-        This is because measurement gates (`gates.M`) are treated differently
-        than all other gates.
-        The user is not supposed to use the `_add_measurement` method.
-        """
-        # Set register's name and log the set of qubits in `self.measurement_tuples`
-        name = gate.register_name
-        if name is None:
-            name = "register{}".format(len(self.measurement_tuples))
-            gate.register_name = name
-        elif name in self.measurement_tuples:
-            raise_error(
-                KeyError, "Register name {} has already been used." "".format(name)
-            )
-
-        # Update circuit's global measurement gate
-        if self.measurement_gate is None:
-            self.measurement_gate = gate
-            self.measurement_tuples[name] = tuple(gate.target_qubits)
-        else:
-            self.measurement_gate.add(gate)
-            self.measurement_tuples[name] = gate.target_qubits
+    @property
+    def measurement_tuples(self):
+        # used for testing only
+        return {m.register_name: m.target_qubits for m in self.measurements}
 
     @property
     def ngates(self) -> int:
@@ -655,17 +628,22 @@ class Circuit:
 
     @property
     def gate_types(self) -> collections.Counter:
-        """``collections.Counter`` with the number of appearances of each gate type.
+        """``collections.Counter`` with the number of appearances of each gate type."""
+        gatecounter = collections.Counter()
+        for gate in self.queue:
+            gatecounter[gate.__class__] += 1
+        return gatecounter
 
-        The QASM names are used as gate identifiers.
-        """
+    @property
+    def gate_names(self) -> collections.Counter:
+        """``collections.Counter`` with the number of appearances of each gate name."""
         gatecounter = collections.Counter()
         for gate in self.queue:
             gatecounter[gate.name] += 1
         return gatecounter
 
     def gates_of_type(self, gate: Union[str, type]) -> List[Tuple[int, gates.Gate]]:
-        """Finds all gate objects of specific type.
+        """Finds all gate objects of specific type or name.
 
         Args:
             gate (str, type): The QASM name of a gate or the corresponding gate class.
@@ -679,7 +657,7 @@ class Circuit:
             return [(i, g) for i, g in enumerate(self.queue) if g.name == gate]
         if isinstance(gate, type) and issubclass(gate, gates.Gate):
             return [(i, g) for i, g in enumerate(self.queue) if isinstance(g, gate)]
-        raise_error(TypeError, "Gate identifier {} not recognized.".format(gate))
+        raise_error(TypeError, f"Gate identifier {gate} not recognized.")
 
     def _set_parameters_list(self, parameters, n):
         """Helper method for ``set_parameters`` when a list is given.
@@ -701,9 +679,8 @@ class Circuit:
         else:
             raise_error(
                 ValueError,
-                "Given list of parameters has length {} while "
-                "the circuit contains {} parametrized gates."
-                "".format(n, len(self.trainable_gates)),
+                f"Given list of parameters has length {n} while "
+                + f"the circuit contains {len(self.trainable_gates)} parametrized gates.",
             )
 
     def set_parameters(self, parameters):
@@ -729,8 +706,7 @@ class Circuit:
         Example:
             .. testcode::
 
-                from qibo.models import Circuit
-                from qibo import gates
+                from qibo import Circuit, gates
                 # create a circuit with all parameters set to 0.
                 c = Circuit(3)
                 c.add(gates.RX(0, theta=0))
@@ -757,9 +733,8 @@ class Circuit:
             if diff:
                 raise_error(
                     KeyError,
-                    "Dictionary contains gates {} which are "
-                    "not on the list of parametrized gates "
-                    "of the circuit.".format(diff),
+                    f"Dictionary contains gates {diff} which are "
+                    + "not on the list of parametrized gates of the circuit.",
                 )
             for gate, params in parameters.items():
                 gate.parameters = params
@@ -772,9 +747,7 @@ class Circuit:
                 nparams = len(parameters)
             self._set_parameters_list(parameters, nparams)
         else:
-            raise_error(
-                TypeError, "Invalid type of parameters {}." "".format(type(parameters))
-            )
+            raise_error(TypeError, f"Invalid type of parameters {type(parameters)}.")
 
     def get_parameters(
         self, format: str = "list", include_not_trainable: bool = False
@@ -824,9 +797,24 @@ class Circuit:
         else:
             raise_error(
                 ValueError,
-                "Unknown format {} given in " "``get_parameters``.".format(format),
+                f"Unknown format {format} given in ``get_parameters``.",
             )
         return params
+
+    def associate_gates_with_parameters(self):
+        """Associates to each parameter its gate.
+
+        Returns:
+            A nparams-long flatlist whose i-th element is the gate parameterized
+            by the i-th parameter.
+        """
+
+        parameter_to_gate = []
+        for gate in self.parametrized_gates:
+            npar = len(gate.parameters)
+            parameter_to_gate.extend([gate] * npar)
+
+        return parameter_to_gate
 
     def summary(self) -> str:
         """Generates a summary of the circuit.
@@ -837,8 +825,8 @@ class Circuit:
         Example:
             .. testcode::
 
-                from qibo.models import Circuit
-                from qibo import gates
+                from qibo import Circuit, gates
+
                 c = Circuit(3)
                 c.add(gates.H(0))
                 c.add(gates.H(1))
@@ -846,6 +834,7 @@ class Circuit:
                 c.add(gates.CNOT(1, 2))
                 c.add(gates.H(2))
                 c.add(gates.TOFFOLI(0, 1, 2))
+
                 print(c.summary())
                 # Prints
                 '''
@@ -875,8 +864,8 @@ class Circuit:
             f"Number of qubits = {self.nqubits}",
             "Most common gates:",
         ]
-        common_gates = self.gate_types.most_common()
-        logs.extend("{}: {}".format(g, n) for g, n in common_gates)
+        common_gates = self.gate_names.most_common()
+        logs.extend(f"{g}: {n}" for g, n in common_gates)
         return "\n".join(logs)
 
     def fuse(self, max_qubits=2):
@@ -895,7 +884,7 @@ class Circuit:
         Example:
             .. testcode::
 
-                from qibo import models, gates
+                from qibo import gates, models
                 c = models.Circuit(2)
                 c.add([gates.H(0), gates.H(1)])
                 c.add(gates.CNOT(0, 1))
@@ -908,7 +897,7 @@ class Circuit:
         if self.accelerators:  # pragma: no cover
             raise_error(
                 NotImplementedError,
-                "Fusion is not implemented for " "distributed circuits.",
+                "Fusion is not implemented for distributed circuits.",
             )
 
         queue = self.queue.to_fused()
@@ -934,15 +923,16 @@ class Circuit:
         This is a ``(2 ** nqubits, 2 ** nqubits)`` matrix obtained by
         multiplying all circuit gates.
         """
-        from qibo import gates
 
         if backend is None:
             from qibo.backends import GlobalBackend
 
             backend = GlobalBackend()
+
         fgate = gates.FusedGate(*range(self.nqubits))
         for gate in self.queue:
-            fgate.append(gate)
+            if not isinstance(gate, (gates.SpecialGate, gates.M)):
+                fgate.append(gate)
         return fgate.asmatrix(backend)
 
     @property
@@ -955,7 +945,7 @@ class Circuit:
         if self._final_state is None:
             raise_error(
                 RuntimeError,
-                "Cannot access final state before the " "circuit is executed.",
+                "Cannot access final state before the circuit is executed.",
             )
         return self._final_state
 
@@ -994,16 +984,17 @@ class Circuit:
     def execute(self, initial_state=None, nshots=None):
         """Executes the circuit. Exact implementation depends on the backend.
 
-        See :meth:`qibo.core.circuit.Circuit.execute` for more
-        details.
+        Args:
+            initial_state (`np.ndarray` or :class:`qibo.models.circuit.Circuit`):
+                Initial configuration. It can be specified by the setting the state
+                vector using an array or a circuit. If ``None``, the initial state
+                is ``|000..00>``.
+            nshots (int): Number of shots.
         """
         if self.compiled:
-            state = self.compiled.executor(
-                initial_state, nshots
-            )  # pylint: disable=E1101
-            self._final_state = self.compiled.result(
-                state, nshots
-            )  # pylint: disable=E1101
+            # pylint: disable=E1101
+            state = self.compiled.executor(initial_state, nshots)
+            self._final_state = self.compiled.result(state, nshots)
             return self._final_state
         else:
             from qibo.backends import GlobalBackend
@@ -1033,37 +1024,39 @@ class Circuit:
         code += [f"qreg q[{self.nqubits}];"]
 
         # Set measurements
-        for reg_name, reg_qubits in self.measurement_tuples.items():
+        for measurement in self.measurements:
+            reg_name = measurement.register_name
+            reg_qubits = measurement.target_qubits
             if not reg_name.islower():
                 raise_error(
                     NameError,
                     "OpenQASM does not support capital letters in "
-                    "register names but {} was used".format(reg_name),
+                    + f"register names but {reg_name} was used",
                 )
             code.append(f"creg {reg_name}[{len(reg_qubits)}];")
 
         # Add gates
         for gate in self.queue:
-            if gate.name not in gates.QASM_GATES:
-                raise_error(
-                    ValueError, f"Gate {gate.name} is not supported by OpenQASM."
-                )
+            if isinstance(gate, gates.M):
+                continue
+
             if gate.is_controlled_by:
                 raise_error(
                     ValueError, "OpenQASM does not support multi-controlled gates."
                 )
 
             qubits = ",".join(f"q[{i}]" for i in gate.qubits)
-            if gate.name in gates.PARAMETRIZED_GATES:
+            if isinstance(gate, gates.ParametrizedGate):
                 params = (str(x) for x in gate.parameters)
-                name = "{}({})".format(gate.name, ", ".join(params))
+                name = f"{gate.qasm_label}({', '.join(params)})"
             else:
-                name = gate.name
+                name = gate.qasm_label
             code.append(f"{name} {qubits};")
 
         # Add measurements
-        for reg_name, reg_qubits in self.measurement_tuples.items():
-            for i, q in enumerate(reg_qubits):
+        for measurement in self.measurements:
+            reg_name = measurement.register_name
+            for i, q in enumerate(measurement.target_qubits):
                 code.append(f"measure q[{q}] -> {reg_name}[{i}];")
 
         return "\n".join(code)
@@ -1083,7 +1076,7 @@ class Circuit:
 
             .. testcode::
 
-                from qibo import models, gates
+                from qibo import gates, models
                 qasm_code = '''OPENQASM 2.0;
                 include "qelib1.inc";
                 qreg q[2];
@@ -1099,9 +1092,8 @@ class Circuit:
         """
         nqubits, gate_list = cls._parse_qasm(qasm_code)
         circuit = cls(nqubits, accelerators, density_matrix)
-        for gate_name, qubits, params in gate_list:
-            gate = getattr(gate_module, gate_name)
-            if gate_name == "M":
+        for gate, qubits, params in gate_list:
+            if gate == gates.M:
                 circuit.add(gate(*qubits, register_name=params))
             elif params is None:
                 circuit.add(gate(*qubits))
@@ -1181,57 +1173,65 @@ class Circuit:
                 if qubit not in qubits:
                     raise_error(
                         ValueError,
-                        "Qubit {} is not defined in QASM code." "".format(qubit),
+                        f"Qubit {qubit} is not defined in QASM code.",
                     )
 
                 register, idx = next(read_args(args[1]))
                 if register not in cregs_size:
                     raise_error(
                         ValueError,
-                        "Classical register name {} is not defined "
-                        "in QASM code.".format(register),
+                        f"Classical register name {register} is not defined in QASM code.",
                     )
                 if idx >= cregs_size[register]:
                     raise_error(
                         ValueError,
-                        "Cannot access index {} of register {} "
-                        "with {} qubits."
-                        "".format(idx, register, cregs_size[register]),
+                        f"Cannot access index {idx} of register {register} "
+                        + f"with {cregs_size[register]} qubits.",
                     )
                 if register in registers:
                     if idx in registers[register]:
                         raise_error(
                             KeyError,
-                            "Key {} of register {} has already "
-                            "been used.".format(idx, register),
+                            f"Key {idx} of register {register} has already been used.",
                         )
                     registers[register][idx] = qubits[qubit]
                 else:
                     registers[register] = {idx: qubits[qubit]}
-                    gate_list.append(("M", register, None))
+                    gate_list.append((gates.M, register, None))
 
             else:
                 pieces = [x for x in re.split("[()]", command) if x]
+
+                gatename = pieces[0]
+                try:
+                    gatetype = (
+                        getattr(gates, gatename.upper())
+                        if gatename not in ["id", "cx", "ccx"]
+                        else {
+                            "id": gates.I,
+                            "cx": gates.CNOT,
+                            "ccx": gates.TOFFOLI,
+                        }[gatename]
+                    )
+                except:
+                    raise_error(
+                        ValueError,
+                        f"QASM command {command} is not recognized.",
+                    )
+
                 if len(pieces) == 1:
-                    gatename, params = pieces[0], None
-                    if gatename not in gates.QASM_GATES:
+                    params = None
+                    if issubclass(gatetype, gates.ParametrizedGate):
                         raise_error(
                             ValueError,
-                            "QASM command {} is not recognized." "".format(command),
-                        )
-                    if gatename in gates.PARAMETRIZED_GATES:
-                        raise_error(
-                            ValueError,
-                            "Missing parameters for QASM " "gate {}.".format(gatename),
+                            f"Missing parameters for QASM gate {gatename}.",
                         )
 
                 elif len(pieces) == 2:
-                    gatename, params = pieces
-                    if gatename not in gates.PARAMETRIZED_GATES:
-                        raise_error(
-                            ValueError, "Invalid QASM command {}." "".format(command)
-                        )
-                    params = params.replace(" ", "").split(",")
+                    if not issubclass(gatetype, gates.ParametrizedGate):
+                        raise_error(ValueError, f"Invalid QASM command {command}.")
+
+                    params = pieces[1].replace(" ", "").split(",")
                     try:
                         for i, p in enumerate(params):
                             if "pi" in p:
@@ -1244,13 +1244,13 @@ class Circuit:
                     except ValueError:
                         raise_error(
                             ValueError,
-                            "Invalid value {} for gate parameters." "".format(params),
+                            f"Invalid value {params} for gate parameters.",
                         )
 
                 else:
                     raise_error(
                         ValueError,
-                        "QASM command {} is not recognized." "".format(command),
+                        f"QASM command {command} is not recognized.",
                     )
 
                 # Add gate to gate list
@@ -1259,19 +1259,68 @@ class Circuit:
                     if qubit not in qubits:
                         raise_error(
                             ValueError,
-                            "Qubit {} is not defined in QASM " "code.".format(qubit),
+                            f"Qubit {qubit} is not defined in QASM code.",
                         )
                     qubit_list.append(qubits[qubit])
-                gate_list.append((gates.QASM_GATES[gatename], list(qubit_list), params))
+                gate_list.append((gatetype, list(qubit_list), params))
 
         # Create measurement gate qubit lists from registers
-        for i, (gatename, register, _) in enumerate(gate_list):
-            if gatename == "M":
+        for i, (gatetype, register, _) in enumerate(gate_list):
+            if gatetype == gates.M:
                 qubit_list = registers[register]
                 qubit_list = [qubit_list[k] for k in sorted(qubit_list.keys())]
-                gate_list[i] = ("M", qubit_list, register)
+                gate_list[i] = (gates.M, qubit_list, register)
 
         return len(qubits), gate_list
+
+    def _update_draw_matrix(self, matrix, idx, gate, gate_symbol=None):
+        """Helper method for :meth:`qibo.models.circuit.Circuit.draw`."""
+        if gate_symbol is None:
+            if gate.draw_label:
+                gate_symbol = gate.draw_label
+            elif gate.name:
+                gate_symbol = gate.name[:4]
+            else:
+                raise_error(
+                    NotImplementedError,
+                    f"{gate.__class__.__name__} gate is not supported by `circuit.draw`",
+                )
+
+        if isinstance(gate, gates.CallbackGate):
+            targets = list(range(self.nqubits))
+        else:
+            targets = list(gate.target_qubits)
+        controls = list(gate.control_qubits)
+
+        # identify boundaries
+        qubits = targets + controls
+        qubits.sort()
+        min_qubits_id = qubits[0]
+        max_qubits_id = qubits[-1]
+
+        # identify column
+        col = idx[targets[0]] if not controls and len(targets) == 1 else max(idx)
+
+        # extend matrix
+        for iq in range(self.nqubits):
+            matrix[iq].extend((1 + col - len(matrix[iq])) * [""])
+
+        # fill
+        for iq in range(min_qubits_id, max_qubits_id + 1):
+            if iq in targets:
+                matrix[iq][col] = gate_symbol
+            elif iq in controls:
+                matrix[iq][col] = "o"
+            else:
+                matrix[iq][col] = "|"
+
+        # update indexes
+        if not controls and len(targets) == 1:
+            idx[targets[0]] += 1
+        else:
+            idx = [col + 1] * self.nqubits
+
+        return matrix, idx
 
     def draw(self, line_wrap=70, legend=False) -> str:
         """Draw text circuit using unicode symbols.
@@ -1285,102 +1334,21 @@ class Circuit:
         Return:
             String containing text circuit diagram.
         """
-        labels = {
-            "h": "H",
-            "x": "X",
-            "y": "Y",
-            "z": "Z",
-            "s": "S",
-            "sdg": "SDG",
-            "t": "T",
-            "tdg": "TDG",
-            "rx": "RX",
-            "ry": "RY",
-            "rz": "RZ",
-            "u1": "U1",
-            "u2": "U2",
-            "u3": "U3",
-            "cx": "X",
-            "swap": "x",
-            "cz": "Z",
-            "crx": "RX",
-            "cry": "RY",
-            "crz": "RZ",
-            "cu1": "U1",
-            "cu3": "U3",
-            "ccx": "X",
-            "id": "I",
-            "measure": "M",
-            "fsim": "f",
-            "generalizedfsim": "gf",
-            "rxx": "RXX",
-            "ryy": "RYY",
-            "rzz": "RZZ",
-            "Unitary": "U",
-            "fswap": "fx",
-            "PauliNoiseChannel": "PN",
-            "KrausChannel": "K",
-            "UnitaryChannel": "U",
-            "ThermalRelaxationChannel": "TR",
-            "ResetChannel": "R",
-            "PartialTrace": "PT",
-            "EntanglementEntropy": "EE",
-            "Norm": "N",
-            "Overlap": "O",
-            "Energy": "E",
-        }
-
         # build string representation of gates
         matrix = [[] for _ in range(self.nqubits)]
         idx = [0] * self.nqubits
 
         for gate in self.queue:
-            if gate.name not in labels:  # pragma: no cover
-                raise_error(
-                    NotImplementedError,
-                    f"{gate.name} gate is not supported by `circuit.draw`",
-                )
-            gate_name = labels.get(gate.name)
-            if isinstance(gate, gates.CallbackGate):
-                targets = list(range(self.nqubits))
+            if isinstance(gate, gates.FusedGate):
+                # start fused gate
+                matrix, idx = self._update_draw_matrix(matrix, idx, gate, "[")
+                # draw gates contained in the fused gate
+                for subgate in gate.gates:
+                    matrix, idx = self._update_draw_matrix(matrix, idx, subgate)
+                # end fused gate
+                matrix, idx = self._update_draw_matrix(matrix, idx, gate, "]")
             else:
-                targets = list(gate.target_qubits)
-            controls = list(gate.control_qubits)
-
-            # identify boundaries
-            qubits = targets + controls
-            qubits.sort()
-            min_qubits_id = qubits[0]
-            max_qubits_id = qubits[-1]
-
-            # identify column
-            col = idx[targets[0]] if not controls and len(targets) == 1 else max(idx)
-
-            # extend matrix
-            for iq in range(self.nqubits):
-                matrix[iq].extend((1 + col - len(matrix[iq])) * [""])
-
-            # fill
-            for iq in range(min_qubits_id, max_qubits_id + 1):
-                if iq in targets:
-                    matrix[iq][col] = gate_name
-                elif iq in controls:
-                    matrix[iq][col] = "o"
-                else:
-                    matrix[iq][col] = "|"
-
-            # update indexes
-            if not controls and len(targets) == 1:
-                idx[targets[0]] += 1
-            else:
-                idx = [col + 1] * self.nqubits
-
-        # Include measurement gates
-        if self.measurement_gate:
-            for iq in range(self.nqubits):
-                matrix[iq].append(
-                    "M" if iq in self.measurement_gate.target_qubits else ""
-                )
+                matrix, idx = self._update_draw_matrix(matrix, idx, gate)
 
         # Add some spacers
         for col in range(len(matrix[0])):
@@ -1403,14 +1371,14 @@ class Circuit:
         if legend:
             from tabulate import tabulate
 
-            names = [
-                i.name
+            legend_rows = {
+                (i.name, i.draw_label)
                 for i in self.queue
-                if isinstance(i, gates.CallbackGate) or "Channel" in i.name
-            ]
-            names = list(dict.fromkeys(names))
+                if isinstance(i, (gates.SpecialGate, gates.Channel))
+            }
+
             table = tabulate(
-                [[i, labels[i]] for i in names],
+                [list(l) for l in sorted(legend_rows)],
                 headers=["Gate", "Symbol"],
                 tablefmt="orgtbl",
             )

@@ -1,5 +1,7 @@
-# -*- coding: utf-8 -*-
-__version__ = "0.1.9.dev0"
+import importlib.metadata as im
+
+__version__ = im.version(__package__)
+
 from qibo import callbacks, gates, hamiltonians, models, optimizers, parallel, solvers
 from qibo.backends import (
     get_backend,
@@ -18,3 +20,4 @@ from qibo.config import (
     set_batch_size,
     set_metropolis_threshold,
 )
+from qibo.models.circuit import Circuit

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import numpy as np
 from numpy.random import randn
 
@@ -93,7 +92,7 @@ class StyleQGAN:
 
     def define_discriminator(self, alpha=0.2, dropout=0.2):
         """Define the standalone discriminator model."""
-        from tensorflow.keras.layers import (  # pylint: disable=E0611,E0401
+        from tensorflow.keras.layers import (  # pylint: disable=E0611,import-error
             Conv2D,
             Dense,
             Dropout,
@@ -101,8 +100,12 @@ class StyleQGAN:
             LeakyReLU,
             Reshape,
         )
-        from tensorflow.keras.models import Sequential  # pylint: disable=E0611,E0401
-        from tensorflow.keras.optimizers import Adadelta  # pylint: disable=E0611,E0401
+        from tensorflow.keras.models import (  # pylint: disable=E0611,import-error
+            Sequential,
+        )
+        from tensorflow.keras.optimizers import (  # pylint: disable=E0611,import-error
+            Adadelta,
+        )
 
         model = Sequential()
         model.add(Dense(200, use_bias=False, input_dim=self.nqubits))
@@ -196,7 +199,7 @@ class StyleQGAN:
         return x_input
 
     def generate_fake_samples(self, params, samples, circuit, hamiltonians_list):
-        import tensorflow as tf
+        import tensorflow as tf  # pylint: disable=import-error
 
         """Use the generator to generate fake examples, with class labels."""
         # generate points in latent space
@@ -221,7 +224,7 @@ class StyleQGAN:
     def define_cost_gan(
         self, params, discriminator, samples, circuit, hamiltonians_list
     ):
-        import tensorflow as tf
+        import tensorflow as tf  # pylint: disable=import-error
 
         """Define the combined generator and discriminator model, for updating the generator."""
         # generate fake samples
@@ -238,7 +241,7 @@ class StyleQGAN:
 
     def train(self, d_model, circuit, hamiltonians_list, save=True):
         """Train the quantum generator and classical discriminator."""
-        import tensorflow as tf
+        import tensorflow as tf  # pylint: disable=import-error
 
         def generate_real_samples(samples, distribution, real_samples):
             """Generate real samples with class labels."""
@@ -254,10 +257,13 @@ class StyleQGAN:
         # determine half the size of one batch, for updating the discriminator
         half_samples = int(self.batch_samples / 2)
         if self.initial_params is not None:
-            initial_params = tf.Variable(self.initial_params)
+            initial_params = tf.Variable(self.initial_params, dtype=tf.complex128)
         else:
             n = 10 * self.layers * self.nqubits + 2 * self.nqubits
-            initial_params = tf.Variable(np.random.uniform(-0.15, 0.15, n))
+            initial_params = tf.Variable(
+                np.random.uniform(-0.15, 0.15, n), dtype=tf.complex128
+            )
+
         optimizer = tf.optimizers.Adadelta(learning_rate=self.lr)
         # prepare real samples
         s = self.reference

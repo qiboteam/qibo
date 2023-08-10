@@ -1,4 +1,6 @@
-# -*- coding: utf-8 -*-
+from qibo.config import log, raise_error
+
+
 def optimize(
     loss,
     initial_parameters,
@@ -77,6 +79,11 @@ def optimize(
             circuit.set_parameters(params)
     """
     if method == "cma":
+        if bounds is not None:  # pragma: no cover
+            raise_error(
+                RuntimeError,
+                "The keyword 'bounds' cannot be used with the cma optimizer. Please use 'options' instead as defined by the cma documentation: ex. options['bounds'] = [0.0, 1.0].",
+            )
         return cmaes(loss, initial_parameters, args, options)
     elif method == "sgd":
         if backend is None:
@@ -227,8 +234,6 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False, backend=
             - ``'nmessage'`` (int, default: ``1e3``): Every how many epochs to print
               a message of the loss function.
     """
-    from qibo.config import log, raise_error
-
     if not backend.name == "tensorflow":
         raise_error(RuntimeError, "SGD optimizer requires Tensorflow backend.")
 

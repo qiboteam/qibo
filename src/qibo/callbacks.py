@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-from typing import List, Optional, Set, Union
+from typing import List, Optional, Union
 
 from qibo.config import raise_error
 

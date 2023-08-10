@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Models for time evolution of state vectors."""
 from qibo import optimizers, solvers
 from qibo.callbacks import Gap, Norm
@@ -237,7 +236,9 @@ class AdiabaticEvolution(StateEvolution):
             )
         self.hamiltonian.total_time = final_time - start_time
         if initial_state is None:
-            initial_state = self.hamiltonian.ground_state()
+            initial_state = self.backend.cast(
+                self.hamiltonian.ground_state(), copy=True
+            )
         return super().execute(final_time, start_time, initial_state)
 
     @staticmethod

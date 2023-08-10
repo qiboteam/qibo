@@ -1,8 +1,5 @@
-# -*- coding: utf-8 -*-
-import collections
 import copy
-import math
-from typing import Dict, List, Optional, Sequence, Set, Tuple, Union
+from typing import Dict, List, Sequence, Tuple
 
 from qibo import gates
 from qibo.config import raise_error
@@ -118,6 +115,9 @@ class DistributedQueues:
         This method also creates the ``DistributedQubits`` object holding the
         global qubits list.
         """
+        queue = [
+            gate for gate in queue if not isinstance(gate, gates.M) or gate.collapse
+        ]
         counter = self.count(queue, self.nqubits)
         if self.qubits is None:
             self.qubits = DistributedQubits(

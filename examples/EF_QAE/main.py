@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 import argparse
 
 import numpy as np
@@ -7,7 +6,6 @@ from scipy.optimize import minimize
 from sklearn.datasets import load_digits
 
 from qibo import gates, hamiltonians, models
-from qibo.hamiltonians import Hamiltonian
 
 
 def main(layers, autoencoder, example, maxiter):

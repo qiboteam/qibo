@@ -1,7 +1,4 @@
-# -*- coding: utf-8 -*-
 import collections
-from abc import ABC, abstractmethod
-from collections.abc import Iterable
 from typing import List, Sequence, Tuple
 
 import sympy
@@ -19,6 +16,8 @@ class Gate:
         """
         Attributes:
             name (str): Name of the gate.
+            draw_label (str): Optional label for drawing the gate in a circuit
+                with :func:`qibo.models.Circuit.draw`.
             is_controlled_by (bool): ``True`` if the gate was created using the
                 :meth:`qibo.gates.abstract.Gate.controlled_by` method,
                 otherwise ``False``.
@@ -31,11 +30,14 @@ class Gate:
         from qibo import config
 
         self.name = None
+        self.draw_label = None
         self.is_controlled_by = False
         # args for creating gate
         self.init_args = []
         self.init_kwargs = {}
 
+        self.clifford = False
+        self.unitary = False
         self._target_qubits = tuple()
         self._control_qubits = set()
         self._parameters = tuple()
@@ -62,6 +64,14 @@ class Gate:
         """Tuple with ids of all qubits (control and target) that the gate acts."""
         return self.control_qubits + self.target_qubits
 
+    @property
+    def qasm_label(self):
+        """String corresponding to OpenQASM operation of the gate."""
+        raise_error(
+            NotImplementedError,
+            f"{self.__class__.__name__} is not supported by OpenQASM",
+        )
+
     def _set_target_qubits(self, qubits: Sequence[int]):
         """Helper method for setting target qubits."""
         self._target_qubits = tuple(qubits)
@@ -69,8 +79,7 @@ class Gate:
             repeated = self._find_repeated(qubits)
             raise_error(
                 ValueError,
-                "Target qubit {} was given twice for gate {}."
-                "".format(repeated, self.name),
+                f"Target qubit {repeated} was given twice for gate {self.__class__.__name__}.",
             )
 
     def _set_control_qubits(self, qubits: Sequence[int]):
@@ -80,8 +89,7 @@ class Gate:
             repeated = self._find_repeated(qubits)
             raise_error(
                 ValueError,
-                "Control qubit {} was given twice for gate {}."
-                "".format(repeated, self.name),
+                f"Control qubit {repeated} was given twice for gate {self.__class__.__name__}.",
             )
 
     @target_qubits.setter
@@ -124,8 +132,8 @@ class Gate:
         if common:
             raise_error(
                 ValueError,
-                "{} qubits are both targets and controls for "
-                "gate {}.".format(common, self.name),
+                f"{common} qubits are both targets and controls "
+                + f"for gate {self.__class__.__name__}.",
             )
 
     @property
@@ -199,6 +207,13 @@ class Gate:
     def dagger(self) -> "Gate":
         """Returns the dagger (conjugate transpose) of the gate.
 
+        Note that dagger is not persistent for parametrized gates.
+        For example, applying a dagger to an :class:`qibo.gates.gates.RX` gate
+        will change the sign of its parameter at the time of application.
+        However, if the parameter is updated after that, for example using
+        :meth:`qibo.models.circuit.Circuit.set_parameters`, then the
+        action of dagger will be lost.
+
         Returns:
             A :class:`qibo.gates.Gate` object representing the dagger of
             the original gate.
@@ -214,9 +229,8 @@ class Gate:
                 raise_error(
                     RuntimeError,
                     "Cannot use `controlled_by` method "
-                    "on gate {} because it is already "
-                    "controlled by {}."
-                    "".format(self, self.control_qubits),
+                    + f"on gate {self} because it is already "
+                    + f"controlled by {self.control_qubits}.",
                 )
             return func(self, *args)  # pylint: disable=E1102
 
@@ -257,6 +271,26 @@ class Gate:
 
     def asmatrix(self, backend):
         return backend.asmatrix(self)
+
+    def generator_eigenvalue(self):
+        """
+        This function returns the eigenvalues of the gate's generator.
+
+        Returns:
+            np.float generator's eigenvalue or raise an error if not implemented.
+        """
+
+        raise_error(
+            NotImplementedError,
+            f"Generator eigenvalue is not implemented for {self.__class__.__name__}",
+        )
+
+    def basis_rotation(self):
+        """Transformation required to rotate the basis for measuring the gate."""
+        raise_error(
+            NotImplementedError,
+            f"Basis rotation is not implemented for {self.__class__.__name__}",
+        )
 
     @property
     def matrix(self):
@@ -304,6 +338,7 @@ class ParametrizedGate(Gate):
         """Updates the values of gate's parameters."""
         if isinstance(self.parameter_names, str):
             nparams = 1
+            names = [self.parameter_names]
             if not isinstance(x, collections.abc.Iterable):
                 x = [x]
             else:
@@ -318,6 +353,7 @@ class ParametrizedGate(Gate):
                         x = [x]
         else:
             nparams = len(self.parameter_names)
+            names = self.parameter_names
 
         if not self._parameters:
             params = nparams * [None]
@@ -326,15 +362,17 @@ class ParametrizedGate(Gate):
         if len(x) != nparams:
             raise_error(
                 ValueError,
-                "Parametrized gate has {} parameters "
-                "but {} update values were given."
-                "".format(nparams, len(x)),
+                f"Parametrized gate has {nparams} parameters "
+                + f"but {len(x)} update values were given.",
             )
         for i, v in enumerate(x):
             if isinstance(v, sympy.Expr):
                 self.symbolic_parameters[i] = v
             params[i] = v
         self._parameters = tuple(params)
+        self.init_kwargs.update(
+            {n: v for n, v in zip(names, self._parameters) if n in self.init_kwargs}
+        )
 
         # set parameters in device gates
         for gate in self.device_gates:  # pragma: no cover

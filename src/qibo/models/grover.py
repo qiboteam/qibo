@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import numpy as np
 
 from qibo import gates
@@ -41,15 +40,18 @@ class Grover:
         .. testcode::
 
             import numpy as np
-            from qibo import gates
-            from qibo.models import Circuit
+
+            from qibo import Circuit, gates
             from qibo.models.grover import Grover
+
             # Create an oracle. Ex: Oracle that detects state |11111>
             oracle = Circuit(5 + 1)
             oracle.add(gates.X(5).controlled_by(*range(5)))
+
             # Create superoposition circuit. Ex: Full superposition over 5 qubits.
             superposition = Circuit(5)
             superposition.add([gates.H(i) for i in range(5)])
+
             # Generate and execute Grover class
             grover = Grover(oracle, superposition_circuit=superposition, number_solutions=1)
             solution, iterations = grover()
@@ -68,7 +70,6 @@ class Grover:
         check_args=(),
         iterative=False,
     ):
-
         self.oracle = oracle
         self.initial_state_circuit = initial_state_circuit
 
