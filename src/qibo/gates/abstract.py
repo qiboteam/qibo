@@ -275,11 +275,16 @@ class Gate:
 
         Args:
             backend (:class:`qibo.backends.abstract.Backend`, optional): backend
-            to be used in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+                to be used in the execution. If ``None``, it uses
+                :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
         Returns:
             ndarray: Matrix representation of gate.
+
+        .. note::
+            ``Gate.matrix`` was an defined as an atribute in ``qibo`` versions prior to  ``0.2.0``.
+            From ``0.2.0`` on, it has been converted into a method and has replaced the ``asmatrix`` method.
+
         """
         if backend is None:  # pragma: no cover
             backend = GlobalBackend()

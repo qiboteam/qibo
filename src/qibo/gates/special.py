@@ -32,7 +32,6 @@ class CallbackGate(SpecialGate):
 
 class FusedGate(SpecialGate):
     """Collection of gates that will be fused and applied as single gate during simulation.
-
     This gate is constructed automatically by :meth:`qibo.models.circuit.Circuit.fuse`
     and should not be used by user.
     """
