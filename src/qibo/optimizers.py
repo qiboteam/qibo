@@ -1,3 +1,4 @@
+import random
 import time
 from datetime import datetime
 
@@ -164,6 +165,8 @@ class SGD(Optimizer):
             "mitigation": False,
             "noise_model": None,
             "adam": True,
+            "beta_1": 0.85,
+            "beta_2": 0.99,
         }
         self.set_options(kwargs)
 
@@ -312,6 +315,8 @@ class SGD(Optimizer):
                 self.options["nshots"],
             )
 
+        scount = int(0.2 * self.nsample)
+        sample = random.sample([i for i in range(self.nsample)], scount)
         # iterate through all data points
         for i, feat in enumerate(features):
             # predict current output
@@ -327,9 +332,8 @@ class SGD(Optimizer):
 
             circ_grads += np.dot(loss_func_grad.T, obs_gradients)
 
-            if self.options["natgrad"]:
+            if self.options["natgrad"] and i in sample:
                 self.NGgraph.update_parameters(self._circuit.get_parameters())
-
                 fubini += generate_fubini(
                     self.NGgraph,
                     self.nparams,
@@ -344,7 +348,7 @@ class SGD(Optimizer):
 
         # Fubini-Study Metric renormalisation
         if self.options["natgrad"]:
-            fubini /= len(features)
+            fubini /= scount
             loss_gradients = np.dot(np.linalg.inv(fubini), loss_gradients)
 
         return loss_gradients / self.nsample, loss / self.nsample
@@ -394,9 +398,14 @@ class SGD(Optimizer):
 
         # standard gradient descent
         else:
-            for i in range(self.nparams):
-                self.params[i] -= learning_rate * grads[i]
-            return 0, 0, loss
+            beta_1 /= self.iteration + 1
+            beta_2 /= self.iteration + 1
+            m = beta_1 * m + (1 - beta_1) * grads
+            v = beta_2 * v + (1 - beta_2) * grads * grads
+
+            self.params -= learning_rate * m / (np.sqrt(v) + epsilon)
+
+            return m, v, loss
 
     def sgd(self, options):
         """
@@ -426,13 +435,17 @@ class SGD(Optimizer):
 
         if self.save:
             self.file.write(
+                f"Number of features: {self.nsample}\n"
+                f"Number of parameters: {len(self.params)}\n"
                 f"Epochs: {self.options['epochs']}\n"
                 f"learning rate: {self.options['learning_rate']}\n"
                 f"nshots: {self.options['nshots']}\n"
                 f"natgrad: {self.options['natgrad']}\n"
                 f"mitigation: {self.options['mitigation']}\n"
                 f"noise_model: {self.options['noise_model']}\n"
-                f"adam: {self.options['adam']}\n\n\n"
+                f"adam: {self.options['adam']}\n"
+                f"beta_1: {self.options['beta_1']}\n"
+                f"beta_2: {self.options['beta_2']}\n\n\n"
             )
             self.ftime = time.time()
             self.simulation_start = time.time()
@@ -460,7 +473,14 @@ class SGD(Optimizer):
                 labels = self.labels[idx[indices[ib]]]
                 # update parameters
                 m, v, this_loss = self.AdamDescent(
-                    options["learning_rate"], m, v, features, labels, iteration
+                    options["learning_rate"],
+                    m,
+                    v,
+                    features,
+                    labels,
+                    iteration,
+                    beta_1=options["beta_1"],
+                    beta_2=options["beta_2"],
                 )
                 # track the training
                 print(
@@ -740,7 +760,7 @@ def plot(optimizer, xtrain, ytrain, epoch, loss):
     cols = yprediction.shape[1]
     # new plot
     fig, ax = plt.subplots(nrows=1, ncols=cols, figsize=(8, 6))
-    fig.suptitle(f"Epoch {epoch}, J={loss:.4}")
+    fig.suptitle(f"Epoch {epoch+1}, J={loss:.4}")
     # ax.set(title=f'$\chi^2 = $ {chi2:.2f}', xlabel='x', ylabel='PDF',
     #           xscale='log')
 

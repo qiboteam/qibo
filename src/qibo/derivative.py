@@ -622,7 +622,7 @@ def generate_fubini(
                     ps = scale_factors[p]
                     ts = scale_factors[t]
                     val = ps * ts * (result - result**2)
-                    fubini[p, t] = val if val > 1e-6 else 1e-6
+                    fubini[p, t] = val if val > 1e-3 else 1e-3
 
     return fubini
 
