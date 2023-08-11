@@ -852,16 +852,16 @@ def plot(
                     yprediction + ysigma,
                     yprediction - ysigma,
                     alpha=0.3,
-                    color="black",
+                    color="royalblue",
                 )
             ax.plot(xtrain, ytrain, label="Classical PDF", color="black")
             ax.plot(
                 xtrain,
                 yprediction,
                 label="Quantum PDF model",
-                zorder=10,
-                marker=".",
-                markersize=12,
+                # zorder=10,
+                # marker=".",
+                # markersize=12,
                 color="royalblue",
                 lw=2,
                 alpha=0.7,
