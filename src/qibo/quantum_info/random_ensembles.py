@@ -759,7 +759,7 @@ def random_pauli(
     else:
         gate_grid = np.array(
             [
-                [subset[column_item](qubit).matrix for column_item in row]
+                [subset[column_item](qubit).matrix(backend) for column_item in row]
                 for qubit, row in zip(qubits, indexes)
             ]
         )

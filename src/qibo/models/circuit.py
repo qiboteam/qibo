@@ -933,7 +933,7 @@ class Circuit:
         for gate in self.queue:
             if not isinstance(gate, (gates.SpecialGate, gates.M)):
                 fgate.append(gate)
-        return fgate.asmatrix(backend)
+        return fgate.matrix(backend)
 
     @property
     def final_state(self):
