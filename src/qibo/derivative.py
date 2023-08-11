@@ -521,10 +521,10 @@ def execute_circuit(
     initial_state=None,
     cdr_params=None,
     calibration=None,
-    precise=False,
+    deterministic=False,
 ):
     """Probabilistic circuit execution with possibilities for error mitigation"""
-    if precise:
+    if deterministic:
         state = c().state()
         res = obs.expectation(state)
         return res
@@ -577,7 +577,7 @@ def generate_fubini(
     paramInputs,
     noise_model=None,
     mitigation=False,
-    stochastic=True,
+    deterministic=False,
 ):
     """Generate the Fubini-Study metric tensor"""
     fubini = np.zeros((nparams, nparams))
@@ -613,7 +613,7 @@ def generate_fubini(
         # run through parametrized gate
         for qubit, params in zip(qubits, affected_param):
             result = run_subcircuit_measure(
-                c, qubit, nqubits, backend, calibration, stochastic
+                c, qubit, nqubits, backend, calibration, deterministic
             )
 
             for p in params:
@@ -629,7 +629,7 @@ def generate_fubini(
 
 
 def run_subcircuit_measure(
-    c, qubit, nqubits, backend, calibration=None, stochastic=False
+    c, qubit, nqubits, backend, calibration=None, deterministic=False
 ):
     """Run variance measurement on specific qubit of subcircuit
     Args:
@@ -643,14 +643,11 @@ def run_subcircuit_measure(
 
     obs = create_hamiltonian(qubit, nqubits, backend)
 
-    if stochastic:
+    if deterministic:
+        result = obs.expectation(backend.execute_circuit(c).state())
+    else:
         # execute circuit with readout mitigation
         result = execute_circuit(backend, c, obs, 1024, calibration=calibration)
-
-    else:
-        # probs = backend.execute_circuit(circuit=c, nshots=1024).probabilities()
-        # result = np.sum(np.dot(obs.matrix, probs))
-        result = obs.expectation(backend.execute_circuit(c).state())
 
     # expectation value -> state |0> probability
     result = (1 - result) / 2

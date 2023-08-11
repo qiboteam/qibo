@@ -56,8 +56,6 @@ class Optimizer:
         self.filename = f"results/{self.name}.txt"
         self.iteration = 0
         self.save = save
-        if save:
-            self.file = open(self.filename, "w")
 
         if not isinstance(initial_parameters, list) and not isinstance(
             initial_parameters, np.ndarray
@@ -165,12 +163,24 @@ class SGD(Optimizer):
             "mitigation": False,
             "noise_model": None,
             "adam": True,
+            "deterministic": False,
             "beta_1": 0.85,
             "beta_2": 0.99,
         }
         self.set_options(kwargs)
 
         self.param_history = np.zeros((self.options["epochs"], self.nparams))
+
+        # name
+        self.name_appendix = ""
+        if self.options["adam"]:
+            self.name_appendix += "adam"
+        if self.options["natgrad"]:
+            self.name_appendix += "natgrad"
+
+        self.filename = f"results/{self.name}_{self.name_appendix}.txt"
+        if save:
+            self.file = open(self.filename, "w")
 
         if self.options["natgrad"]:
             self.NGgraph = build_graph(
@@ -257,6 +267,7 @@ class SGD(Optimizer):
                     self.options["nshots"],
                     initial_state=None,
                     cdr_params=self.cdr_params,
+                    deterministic=self.options["deterministic"],
                 )
 
         else:
@@ -267,6 +278,7 @@ class SGD(Optimizer):
                 self.options["nshots"],
                 initial_state=None,
                 cdr_params=self.cdr_params,
+                deterministic=self.options["deterministic"],
             )
 
         return exp_v
@@ -342,6 +354,7 @@ class SGD(Optimizer):
                     self.nqubits,
                     self.paramInputs,
                     noise_model=self.options["noise_model"],
+                    deterministic=self.options["deterministic"],
                 )  # separate pull request
 
         # gradient average
@@ -510,7 +523,16 @@ class SGD(Optimizer):
         idx = losses.index(value)
         self.parameters = self.param_history[idx]
         ypred, ysigma = get_error(self, self.features)
-        plot(ypred, self.features, self.labels, idx, value, ysigma, self.name)
+        plot(
+            ypred,
+            self.features,
+            self.labels,
+            idx,
+            value,
+            ysigma,
+            self.name,
+            self.name_appendix,
+        )
 
         if self.save:
             self.file.write(f"Params {self.params.tolist()}\n")
@@ -774,7 +796,18 @@ scaler = lambda x: x
 import matplotlib.pyplot as plt
 
 
-def plot(yprediction, xtrain, ytrain, epoch, loss, ysigma=None, name=None, params=None, xscale="log"):
+def plot(
+    yprediction,
+    xtrain,
+    ytrain,
+    epoch,
+    loss,
+    ysigma=None,
+    name=None,
+    name_appendix=None,
+    params=None,
+    xscale="log",
+):
     # new predictions
     cols = 1  # yprediction.shape[1]
     # new plot
@@ -805,7 +838,7 @@ def plot(yprediction, xtrain, ytrain, epoch, loss, ysigma=None, name=None, param
                 # markersize=12,
                 alpha=0.7,
                 color="royalblue",
-                lw=2
+                lw=2,
             )
 
             ax[col].legend()
@@ -838,12 +871,12 @@ def plot(yprediction, xtrain, ytrain, epoch, loss, ysigma=None, name=None, param
     plt.xscale(xscale)
     plt.xlabel("x")
     plt.ylabel("y")
-    
+
     if name is not None:
-        plt.savefig(f"results/{name}.png", bbox_inches='tight')
+        plt.savefig(f"results/{name}_{name_appendix}.png", bbox_inches="tight")
         plt.show()
     else:
-        plt.savefig("Plot.png", bbox_inches='tight')
+        plt.savefig("Plot.png", bbox_inches="tight")
     plt.close()
 
 
