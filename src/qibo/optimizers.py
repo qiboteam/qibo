@@ -522,7 +522,7 @@ class SGD(Optimizer):
         value = min(losses)
         idx = losses.index(value)
         self.parameters = self.param_history[idx]
-        ypred, ysigma = get_error(self, self.features)
+        ypred, ysigma = get_error(self, self.features, self.name_appendix)
         plot(
             ypred,
             self.features,
@@ -779,13 +779,13 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
         return self.jacobian_value
 
 
-def get_error(optimizer, xtrain):
+def get_error(optimizer, xtrain, name_appendix):
     N = 100
     yprediction = np.zeros((N, len(xtrain)))
     for i in range(N):
         yprediction[i] = optimizer.predict(xtrain).T
 
-    np.save(f"predictions/{optimizer.name}.dat", yprediction)
+    np.save(f"predictions/{optimizer.name}_{name_appendix}.dat", yprediction)
     ypred = np.mean(yprediction, axis=0).flatten()
     ysigma = np.std(yprediction, axis=0).flatten()
 
