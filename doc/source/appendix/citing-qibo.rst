@@ -66,6 +66,11 @@ Peer-Reviewed Articles
 .. _`doi:10.22331/q-2022-09-22-814`: https://doi.org/10.22331/q-2022-09-22-814
 .. _`arXiv:2203.08826`: https://arxiv.org/abs/2203.08826
 
+* S. Efthymiou, A. Orgaz-Fuertes, R. Carobene, J. Cereijo, A. Pasquale, S.
+  Ramos-Calderer, S. Bordoni, D. Fuentes-Ruiz, A. Candido, E. Pedicillo, M.
+  Robbiati, Y.P. Tan, J. Wilkens, I. Roth, J.I. Latorre, S. Carrazza, *Qibolab:
+  an open-source hybrid quantum operating system* (2023).
+
 Software References in Zenodo
 -----------------------------
 
@@ -82,7 +87,7 @@ Software References in Zenodo
 
 
 * S. Efthymiou, A. Orgaz, S. Carrazza, A. Pasquale, D.
-  Funtes Ruiz, M. Lazzarin, S. Bordoni, E. Pedicillo, P.
+  Fuentes Ruiz, M. Lazzarin, S. Bordoni, E. Pedicillo, P.
   Tan and M. Hantute. (2023). qiboteam/qibolab: Qibolab. Zenodo.
   `https://doi.org/10.5281/zenodo.7748527`_.
 
