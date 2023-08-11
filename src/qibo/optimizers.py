@@ -775,7 +775,7 @@ scaler = lambda x: x
 import matplotlib.pyplot as plt
 
 
-def plot(yprediction, xtrain, ytrain, epoch, loss, ysigma=None, name=None, params=None):
+def plot(yprediction, xtrain, ytrain, epoch, loss, ysigma=None, name=None, params=None, xscale="log"):
     # new predictions
     cols = 1  # yprediction.shape[1]
     # new plot
@@ -786,14 +786,14 @@ def plot(yprediction, xtrain, ytrain, epoch, loss, ysigma=None, name=None, param
 
     for col in range(cols):
         if cols > 1:
-            ax[col].set_xscale("log")
+            ax[col].set_xscale(xscale)
             train = ytrain[:, col]
             pred = yprediction[:, col]
             pred = scaler(pred)
             if ysigma is not None:
                 sigma = ysigma[:, col]
                 ax[col].fill_between(
-                    xtrain, train + sigma, train - sigma, alpha=0.3, color="black"
+                    xtrain, train + sigma, train - sigma, alpha=0.3, color="royalblue"
                 )
 
             ax[col].plot(xtrain, train, label="Classical PDF", color="black")
@@ -801,16 +801,18 @@ def plot(yprediction, xtrain, ytrain, epoch, loss, ysigma=None, name=None, param
                 xtrain,
                 pred,
                 label="Quantum PDF model",
-                zorder=10,
-                marker=".",
-                markersize=12,
+                # zorder=10,
+                # marker=".",
+                # markersize=12,
                 alpha=0.7,
+                color="royalblue",
+                lw=2
             )
 
             ax[col].legend()
 
         else:
-            ax.set_xscale("log")
+            ax.set_xscale(xscale)
             yprediction = scaler(yprediction)
             if ysigma is not None:
                 ax.fill_between(
@@ -828,16 +830,21 @@ def plot(yprediction, xtrain, ytrain, epoch, loss, ysigma=None, name=None, param
                 zorder=10,
                 marker=".",
                 markersize=12,
+                color="royalblue",
+                lw=2,
                 alpha=0.7,
             )
             ax.legend()
 
-    plt.xscale("log")
+    plt.xscale(xscale)
+    plt.xlabel("x")
+    plt.ylabel("y")
+    
     if name is not None:
-        plt.savefig(f"results/{name}.png")
+        plt.savefig(f"results/{name}.png", bbox_inches='tight')
         plt.show()
     else:
-        plt.savefig("Plot.png")
+        plt.savefig("Plot.png", bbox_inches='tight')
     plt.close()
 
 
