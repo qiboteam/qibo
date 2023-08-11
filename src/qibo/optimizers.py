@@ -141,7 +141,6 @@ class SGD(Optimizer):
         self.paramInputs = self._get_paramInit()
         self.params = parameters
         self.nparams = len(self.params)
-        print(self.paramInputs, self.params, self.nparams)
 
         # hamiltonian
         if not hamiltonian:
