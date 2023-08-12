@@ -351,8 +351,8 @@ def random_statevector(dims: int, haar: bool = False, seed=None, backend=None):
     )
 
     if not haar:
-        state = local_state.random(dims)
-        state += local_state.random(dims, dtype=complex)
+        state = 2 * local_state.random(dims, dtype=complex) - 1
+        state += 1j * (2 * local_state.random(dims, dtype=complex) - 1)
         state /= np.linalg.norm(state)
         state = backend.cast(state, dtype=state.dtype)
     else:
