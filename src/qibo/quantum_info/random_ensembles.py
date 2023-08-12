@@ -351,10 +351,9 @@ def random_statevector(dims: int, haar: bool = False, seed=None, backend=None):
     )
 
     if not haar:
-        probabilities = local_state.random(dims)
-        probabilities = probabilities / np.sum(probabilities)
-        phases = 2 * np.pi * local_state.random(dims)
-        state = np.sqrt(probabilities) * np.exp(1.0j * phases)
+        state = local_state.random(dims)
+        state += local_state.random(dims, dtype=complex)
+        state /= np.linalg.norm(state)
         state = backend.cast(state, dtype=state.dtype)
     else:
         # select a random column of a haar random unitary
