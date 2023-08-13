@@ -148,6 +148,11 @@ Based on qibo
 
 .. _`arXiv:2303.11346`: https://arxiv.org/abs/2303.11346
 
+* J. M. Cruz-Martinez, M. Robbiati, S. Carrazza, Multi-variable integration with
+  a variational quantum circuit. (2023), (`arXiv:2308.05657`_).
+
+.. _`arXiv:2308.05657`: https://arxiv.org/abs/2308.05657
+
 
 
 Authorship Guideline
