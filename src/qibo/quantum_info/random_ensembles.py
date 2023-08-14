@@ -4,8 +4,6 @@ import warnings
 from typing import Optional, Union
 
 import numpy as np
-from scipy import stats
-from scipy.linalg import expm
 
 from qibo import Circuit, gates
 from qibo.backends import GlobalBackend, NumpyBackend
@@ -16,7 +14,6 @@ from qibo.quantum_info.superoperator_transformations import (
     choi_to_kraus,
     choi_to_liouville,
     choi_to_pauli,
-    choi_to_stinespring,
     vectorization,
 )
 
@@ -186,8 +183,15 @@ def random_unitary(dims: int, measure: Optional[str] = None, seed=None, backend=
         backend = GlobalBackend()
 
     if measure == "haar":
-        unitary = stats.unitary_group.rvs(dims, random_state=seed)
+        gaussian_matrix = random_gaussian_matrix(dims, dims, seed=seed, backend=backend)
+        Q, R = np.linalg.qr(gaussian_matrix)
+        D = np.diag(R)
+        D = D / np.abs(D)
+        R = np.diag(D)
+        unitary = np.dot(Q, R)
     elif measure is None:
+        from scipy.linalg import expm
+
         H = random_hermitian(dims, seed=seed, backend=NumpyBackend())
         unitary = expm(-1.0j * H / 2)
 
@@ -203,9 +207,6 @@ def random_quantum_channel(
     order: str = "row",
     normalize: bool = False,
     precision_tol: Optional[float] = None,
-    validate_cp: bool = True,
-    nqubits: Optional[int] = None,
-    initial_state_env=None,
     seed=None,
     backend=None,
 ):
@@ -220,8 +221,7 @@ def random_quantum_channel(
             returns Liouville representation. If ``"pauli"``, returns Pauli-Liouville
             representation. If "pauli-<pauli_order>" or "chi-<pauli_order>", (e.g. "pauli-IZXY"),
             returns it in the Pauli basis with the corresponding order of single-qubit Pauli elements
-            (see :func:`qibo.quantum_info.pauli_basis`). If ``"stinespring"``,
-            returns random channel in the Stinespring representation. Defaults to ``"liouville"``.
+            (see :func:`qibo.quantum_info.pauli_basis`). Defaults to ``"liouville"``.
         measure (str, optional): probability measure in which to sample the unitary
             from. If ``None``, functions returns :math:`\\exp{(-i \\, H)}`, where
             :math:`H` is a Hermitian operator. If ``"haar"``, returns an Unitary
@@ -237,21 +237,6 @@ def random_quantum_channel(
             problem. Any eigenvalue :math:`\\lambda <` ``precision_tol`` is set
             to 0 (zero). If ``None``, ``precision_tol`` defaults to
             ``qibo.config.PRECISION_TOL=1e-8``. Defaults to ``None``.
-        validate_cp (bool, optional): used when ``representation="stinespring"``.
-            If ``True``, checks if the Choi representation of superoperator
-            used as intermediate step is a completely positive map.
-            If ``False``, it assumes that it is completely positive (and Hermitian).
-            Defaults to ``True``.
-        nqubits (int, optional): used when ``representation="stinespring"``.
-            Total number of qubits in the system that is interacting with
-            the environment. Must be equal or greater than the number of
-            qubits that Kraus representation of the system superoperator acts on.
-            If ``None``, defaults to the number of qubits in the Kraus operators.
-            Defauts to ``None``.
-        initial_state_env (ndarray, optional): used when ``representation="stinespring"``.
-            Statevector representing the initial state of the enviroment.
-            If ``None``, it assumes the environment in its ground state.
-            Defaults to ``None``.
         seed (int or :class:`numpy.random.Generator`, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
@@ -268,14 +253,7 @@ def random_quantum_channel(
             f"representation must be type str, but it is type {type(representation)}",
         )
 
-    if representation not in [
-        "chi",
-        "choi",
-        "kraus",
-        "liouville",
-        "pauli",
-        "stinespring",
-    ]:
+    if representation not in ["chi", "choi", "kraus", "liouville", "pauli"]:
         if (
             ("chi-" not in representation and "pauli-" not in representation)
             or len(representation.split("-")) != 2
@@ -317,15 +295,6 @@ def random_quantum_channel(
             normalize=normalize,
             order=order,
             pauli_order=pauli_order,
-            backend=backend,
-        )
-    elif representation == "stinespring":
-        super_op = choi_to_stinespring(
-            super_op,
-            precision_tol=precision_tol,
-            order=order,
-            validate_cp=validate_cp,
-            initial_state_env=initial_state_env,
             backend=backend,
         )
 
@@ -382,10 +351,10 @@ def random_statevector(dims: int, haar: bool = False, seed=None, backend=None):
     )
 
     if not haar:
-        # sample real and imag parts of complex amplitude in [-1, 1]
-        state = (2 * local_state.random(dims) - 1).astype(complex)
-        state += 1j * (2 * local_state.random(dims) - 1)
-        state /= np.linalg.norm(state)
+        probabilities = local_state.random(dims)
+        probabilities = probabilities / np.sum(probabilities)
+        phases = 2 * np.pi * local_state.random(dims)
+        state = np.sqrt(probabilities) * np.exp(1.0j * phases)
         state = backend.cast(state, dtype=state.dtype)
     else:
         # select a random column of a haar random unitary
