@@ -22,7 +22,8 @@ from qibo.models import Circuit
 from qibo.symbols import Z
 
 qibo.set_backend("tensorflow")
-
+tf.get_logger().setLevel("ERROR")
+import matplotlib.pyplot as plt
 
 dev = qml.device("default.qubit", wires=2)
 
@@ -245,124 +246,76 @@ def test_psr_commuting_gate():
     assert np.isclose(grad_1, grad_2, atol=1e-5)
 
 
-def test_spsr_non_commuting_gates():
-    c1 = Circuit(nqubits=1)
-    c1.add(gates.RX(q=0, theta=10))
-    c1.add(gates.RX(q=0, theta=40))
-    c1.add(gates.RY(q=0, theta=40))
+def spsr_circuit(theta1, theta2, theta3, s, sign):
+    ham = create_hamiltonian(0, 2, GlobalBackend())
+
+    c1 = Circuit(nqubits=2)
+    c1.add(gates.GG(0, 1, s, theta1, theta2, theta3))
+    c1.add(gates.G(0, sign))
+    c1.add(gates.GG(0, 1, (1 - s), theta1, theta2, theta3))
     c1.add(gates.M(0))
 
-    print(c1.execute().state())
-
-    c2 = Circuit(nqubits=1)
-    c2.add(gates.RX(q=0, theta=10))
-    c2.add(gates.RY(q=0, theta=40))
-    c2.add(gates.RX(q=0, theta=40))
-    c2.add(gates.M(0))
-
-    print(c2.execute().state())
-
-    c3 = Circuit(nqubits=1)
-    c3.add(gates.RX(q=0, theta=10))
-    c3.add(gates.G(q=0, phi=40))
-    c3.add(gates.M(0))
-
-    # non commuting
-    print(c3.execute().state())
-
-    c4 = Circuit(nqubits=1)
-    c4.add(gates.RX(q=0, theta=10))
-    c4.add(gates.G(q=0, phi=10))
-    c4.add(gates.G(q=0, phi=30))
-    c4.add(gates.M(0))
-
-    print(c4.execute().state())
-
-    c5 = Circuit(nqubits=1)
-    c5.add(gates.RX(q=0, theta=10))
-    c5.add(gates.G(q=0, phi=30))
-    c5.add(gates.G(q=0, phi=10))
-    c5.add(gates.M(0))
-
-    print(c5.execute().state())
-
-    # spsr
-    c6 = Circuit(nqubits=1)
-    c6.add(gates.RX(q=0, theta=10))
-    c6.add(gates.G(q=0, phi=0.2 * 40))
-    c6.add(gates.RY(q=0, theta=np.pi / 4))
-    c6.add(gates.G(q=0, phi=0.8 * 40))
-    c6.add(gates.M(0))
-
-    c7 = Circuit(nqubits=1)
-    c7.add(gates.RX(q=0, theta=10))
-    c7.add(gates.G(q=0, phi=0.2 * 40))
-    c7.add(gates.RY(q=0, theta=-np.pi / 4))
-    c7.add(gates.G(q=0, phi=0.8 * 40))
-    c7.add(gates.M(0))
-
-    c8 = Circuit(nqubits=1)
-    c8.add(gates.RX(q=0, theta=10))
-    c8.add(gates.G(q=0, phi=40))
-    c8.add(gates.M(0))
-
-    print(gates.X(q=0).matrix)
-    print("gere", gates.RZ(q=0, theta=90).matrix)
-    U = tf.linalg.expm(gates.X(q=0).matrix)
-    # print(U)
-
-    exit(0)
-
-    ham = create_hamiltonian(0, 1, GlobalBackend())
     backend = GlobalBackend()
-    vals = []
-    derivs = []
-    derivs2 = []
-    derivs3 = []
-    for n in np.linspace(0, 2 * np.pi, 100):
-        params6 = [10, 0.2 * n, np.pi / 4, 0.8 * n]
-        params7 = [10, 0.2 * n, -np.pi / 4, 0.8 * n]
-        params9 = [10, n + np.pi / 4]
-        params10 = [10, n - np.pi / 4]
-        c6.set_parameters(params6)
-        c7.set_parameters(params7)
 
-        params8 = tf.Variable([10, n])
+    val = ham.expectation(
+        backend.execute_circuit(circuit=c1, initial_state=None).state()
+    )
 
-        with tf.GradientTape() as tape:
-            c8.set_parameters(params8)
-            val = ham.expectation(
-                backend.execute_circuit(circuit=c8, initial_state=None).state()
-            )
+    return val
 
-            derivs.append(tape.gradient(val, params8))
 
-        vals.append(val)
+def crossres_circuit(theta1, theta2, theta3):
+    ham = create_hamiltonian(0, 2, GlobalBackend())
 
-        forward = ham.expectation(c6.execute().state())
-        backward = ham.expectation(c7.execute().state())
-        derivs3.append((forward - backward) / 2)
+    c1 = Circuit(nqubits=2)
+    c1.add(gates.GG(0, 1, 1.0, theta1, theta2, theta3))
+    print(c1.draw())
 
-        c8.set_parameters(params9)
-        forward = ham.expectation(c8.execute().state())
-        c8.set_parameters(params10)
-        backward = ham.expectation(c8.execute().state())
-        derivs2.append((forward - backward) / 2)
+    backend = GlobalBackend()
+    state = backend.execute_circuit(circuit=c1, initial_state=None).state()
+    print(state)
+    val = ham.expectation(
+        backend.execute_circuit(circuit=c1, initial_state=None).state()
+    )
 
-    import matplotlib.pyplot as plt
+    print(val)
+    return val
 
-    plt.plot(np.linspace(0, 2 * np.pi, 100), vals, label="Vals")
-    plt.plot(np.linspace(0, 2 * np.pi, 100), derivs, label="Derivatives")
-    plt.plot(np.linspace(0, 2 * np.pi, 100), derivs2, label="PSR")
-    plt.plot(np.linspace(0, 2 * np.pi, 100), derivs3, label="SPSR")
 
-    # Add labels and a legend
-    plt.xlabel("X Axis")
-    plt.ylabel("Y Axis")
-    plt.title("Two Lists Plot")
-    plt.legend()
+def test_spsr_non_commuting_gates():
+    qibo.set_backend("qibojit")
+    theta2, theta3 = -0.15, 1.6
+    np.random.seed(143)
+    angles = np.linspace(0, 2 * np.pi, 10)
 
-    # Display the plot
+    evals = [crossres_circuit(theta1, theta2, theta3) for theta1 in angles]
+
+    print(evals)
+    exit(0)
+    # spsr
+    pos_vals = np.array(
+        [
+            [
+                spsr_circuit(theta1, theta2, theta3, s=s, sign=+1)
+                for s in np.random.uniform(size=10)
+            ]
+            for theta1 in angles
+        ]
+    )
+
+    neg_vals = np.array(
+        [
+            [
+                spsr_circuit(theta1, theta2, theta3, s=s, sign=-1)
+                for s in np.random.uniform(size=10)
+            ]
+            for theta1 in angles
+        ]
+    )
+
+    spsr_vals = (pos_vals - neg_vals).mean(axis=1)
+    plt.plot(angles, evals, "b", label="Expectation Value")
+    plt.plot(angles, spsr_vals, "r", label="Stochastic parameter-shift rule")
     plt.show()
 
 

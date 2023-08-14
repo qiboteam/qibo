@@ -750,36 +750,18 @@ class GPI2(ParametrizedGate):
 
 
 class G(ParametrizedGate):
-    """The GPI gate.
-
-    Corresponds to the following unitary matrix
-
-    .. math::
-        \\begin{pmatrix}
-        0 & e^{- i \\phi} \\\\
-        e^{i \\phi} & 0 \\\\
-        \\end{pmatrix}
-
-    Args:
-        q (int): the qubit id number.
-        phi (float): phase.
-        trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.models.circuit.AbstractCircuit.set_parameters`.
-            Defaults to ``True``.
-    """
-
-    def __init__(self, q, phi, trainable=True):
+    def __init__(self, q, sign, trainable=True):
         super().__init__(trainable)
         self.name = "g"
         self.draw_label = "G"
         self.target_qubits = (q,)
 
-        self.parameter_names = "phi"
-        self.parameters = phi
+        self.parameter_names = "sign"
+        self.parameters = sign
         self.nparams = 1
 
         self.init_args = [q]
-        self.init_kwargs = {"phi": phi, "trainable": trainable}
+        self.init_kwargs = {"sign": sign, "trainable": trainable}
 
 
 class _Un_(ParametrizedGate):
@@ -1161,6 +1143,23 @@ class _CUn_(ParametrizedGate):
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
         self.init_kwargs = {"trainable": trainable}
+
+
+class GG(_CUn_):
+    def __init__(self, q0, q1, s, theta1, theta2, theta3, trainable=True):
+        super().__init__(q0, q1, trainable=trainable)
+        self.name = "gg"
+        self.draw_label = "GG"
+        self.nparams = 4
+        self.parameter_names = ["s", "theta1", "theta2", "theta3"]
+        self.parameters = s, theta1, theta2, theta3
+        self.init_kwargs = {
+            "s": s,
+            "theta1": theta1,
+            "theta2": theta2,
+            "theta3": theta3,
+            "trainable": trainable,
+        }
 
 
 class CU1(_CUn_):
