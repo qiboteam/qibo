@@ -346,6 +346,7 @@ def random_statevector(dims: int, haar: bool = False, seed=None, backend=None):
     )
 
     if not haar:
+        # sample real and imag parts of complex amplitude in [-1, 1]
         state = (2 * local_state.random(dims) - 1).astype(complex)
         state += 1j * (2 * local_state.random(dims) - 1)
         state /= np.linalg.norm(state)
