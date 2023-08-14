@@ -371,6 +371,7 @@ def random_density_matrix(
     metric: str = "Hilbert-Schmidt",
     basis: Optional[str] = None,
     normalize: bool = False,
+    order: str = "row",
     seed=None,
     backend=None,
 ):
@@ -393,16 +394,21 @@ def random_density_matrix(
             Defaults to ``None``.
         pure (bool, optional): if ``True``, returns a pure state. Defaults to ``False``.
         metric (str, optional): metric to sample the density matrix from. Options:
-            ``"Hilbert-Schmidt"`` and ``"Bures"``. Defaults to ``"Hilbert-Schmidt"``.
+            ``"hilbert-schmidt"``, ``"ginibre"``, and ``"bures"``.
+            Note that, by definition, ``rank`` defaults to ``None``
+            when ``metric=="hilbert-schmidt"``. Defaults to ``"hilbert-schmidt"``.
         basis (str, optional): if ``None``, returns random density matrix in the
             computational basis. If ``"pauli-<pauli_order>"``, (e.g. ``"pauli-IZXY"``),
             returns it in the Pauli basis with the corresponding order of single-qubit
             Pauli elements (see :func:`qibo.quantum_info.pauli_basis`).
             Defaults to ``None``.
-        normalize(bool, optional): if ``True`` and ``basis="pauli-<pauli-order>"``,
-            returns random density matrix in the normalized Pauli basis. If ``False``
-            and ``basis="pauli-<pauli-order>"``, returns state in the unnormalized
-            Pauli basis. Defaults to ``False``.
+        normalize(bool, optional): used when ``basis="pauli-<pauli-order>"``. If ``True``
+            returns random density matrix in the normalized Pauli basis. If ``False``,
+            returns state in the unnormalized Pauli basis. Defaults to ``False``.
+        order (str, optional): used when ``basis="pauli-<pauli-order>"``. If ``"row"``,
+            vectorization of Pauli basis is performed row-wise. If ``"column"``,
+            vectorization is performed column-wise. If ``"system"``, system-wise
+            vectorization is performed. Default is ``"row"``.
         seed (int or :class:`numpy.random.Generator`, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
@@ -430,6 +436,8 @@ def random_density_matrix(
         raise_error(
             TypeError, f"metric must be type str, but it is type {type(metric)}."
         )
+    if metric not in ["hilbert-schmidt", "ginibre", "bures"]:
+        raise_error(ValueError, f"metric {metric} not implemented.")
 
     if basis is not None and not isinstance(basis, str):
         raise_error(TypeError, f"basis must be type str, but it is type {type(basis)}.")
@@ -451,15 +459,20 @@ def random_density_matrix(
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
+    if metric == "hilbert-schmidt":
+        rank = None
+
     if pure:
         state = random_statevector(dims, seed=seed, backend=backend)
         state = np.outer(state, np.transpose(np.conj(state)))
     else:
-        if metric == "Hilbert-Schmidt":
-            state = random_gaussian_matrix(dims, rank, seed=seed, backend=backend)
+        if metric in ["hilbert-schmidt", "ginibre"]:
+            state = random_gaussian_matrix(
+                dims, rank, mean=0, stddev=1, seed=seed, backend=backend
+            )
             state = np.dot(state, np.transpose(np.conj(state)))
             state = state / np.trace(state)
-        elif metric == "Bures":
+        else:
             nqubits = int(np.log2(dims))
             state = backend.identity_density_matrix(nqubits, normalize=False)
             state += random_unitary(dims, seed=seed, backend=backend)
@@ -468,8 +481,6 @@ def random_density_matrix(
             )
             state = np.dot(state, np.transpose(np.conj(state)))
             state = state / np.trace(state)
-        else:
-            raise_error(ValueError, f"metric {metric} not found.")
 
     state = backend.cast(state, dtype=state.dtype)
 
@@ -478,10 +489,11 @@ def random_density_matrix(
         unitary = comp_basis_to_pauli(
             int(np.log2(dims)),
             normalize=normalize,
+            order=order,
             pauli_order=pauli_order,
             backend=backend,
         )
-        state = unitary @ vectorization(state, backend=backend)
+        state = unitary @ vectorization(state, order=order, backend=backend)
 
     return state
 
