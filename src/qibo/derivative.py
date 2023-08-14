@@ -18,7 +18,7 @@ from qibo.models.error_mitigation import (
 from qibo.symbols import I, Z
 
 
-def calculate_gradients(optimizer, cdr_params, ham, nshots):
+def calculate_gradients(optimizer, cdr_params, ham, nshots, deterministic):
     """
     Full parameter-shift rule's implementation
     Args:
@@ -27,7 +27,8 @@ def calculate_gradients(optimizer, cdr_params, ham, nshots):
     """
 
     obs_gradients = np.zeros(optimizer.nparams, dtype=np.float64)
-
+    if deterministic:
+        nshots = None
     # parameter shift
     if optimizer.options["shift_rule"] == "psr":
         if isinstance(optimizer.paramInputs, np.ndarray):
@@ -455,7 +456,7 @@ def create_hamiltonian(qubit=0, nqubits=1, backend=None):
         h = eye
         for _ in range(nqubits - 2):
             h = np.kron(eye, h)
-        h = np.kron(h, matrices.Z)
+        h = np.kron(h, hamiltonians.Z(1).matrix)
     else:
         h = eye
         for _ in range(nqubits - 1):

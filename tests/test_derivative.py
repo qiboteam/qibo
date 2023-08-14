@@ -267,6 +267,7 @@ def test_spsr_non_commuting_gates():
     c3.add(gates.G(q=0, phi=40))
     c3.add(gates.M(0))
 
+    # non commuting
     print(c3.execute().state())
 
     c4 = Circuit(nqubits=1)
@@ -284,6 +285,85 @@ def test_spsr_non_commuting_gates():
     c5.add(gates.M(0))
 
     print(c5.execute().state())
+
+    # spsr
+    c6 = Circuit(nqubits=1)
+    c6.add(gates.RX(q=0, theta=10))
+    c6.add(gates.G(q=0, phi=0.2 * 40))
+    c6.add(gates.RY(q=0, theta=np.pi / 4))
+    c6.add(gates.G(q=0, phi=0.8 * 40))
+    c6.add(gates.M(0))
+
+    c7 = Circuit(nqubits=1)
+    c7.add(gates.RX(q=0, theta=10))
+    c7.add(gates.G(q=0, phi=0.2 * 40))
+    c7.add(gates.RY(q=0, theta=-np.pi / 4))
+    c7.add(gates.G(q=0, phi=0.8 * 40))
+    c7.add(gates.M(0))
+
+    c8 = Circuit(nqubits=1)
+    c8.add(gates.RX(q=0, theta=10))
+    c8.add(gates.G(q=0, phi=40))
+    c8.add(gates.M(0))
+
+    print(gates.X(q=0).matrix)
+    print("gere", gates.RZ(q=0, theta=90).matrix)
+    U = tf.linalg.expm(gates.X(q=0).matrix)
+    # print(U)
+
+    exit(0)
+
+    ham = create_hamiltonian(0, 1, GlobalBackend())
+    backend = GlobalBackend()
+    vals = []
+    derivs = []
+    derivs2 = []
+    derivs3 = []
+    for n in np.linspace(0, 2 * np.pi, 100):
+        params6 = [10, 0.2 * n, np.pi / 4, 0.8 * n]
+        params7 = [10, 0.2 * n, -np.pi / 4, 0.8 * n]
+        params9 = [10, n + np.pi / 4]
+        params10 = [10, n - np.pi / 4]
+        c6.set_parameters(params6)
+        c7.set_parameters(params7)
+
+        params8 = tf.Variable([10, n])
+
+        with tf.GradientTape() as tape:
+            c8.set_parameters(params8)
+            val = ham.expectation(
+                backend.execute_circuit(circuit=c8, initial_state=None).state()
+            )
+
+            derivs.append(tape.gradient(val, params8))
+
+        vals.append(val)
+
+        forward = ham.expectation(c6.execute().state())
+        backward = ham.expectation(c7.execute().state())
+        derivs3.append((forward - backward) / 2)
+
+        c8.set_parameters(params9)
+        forward = ham.expectation(c8.execute().state())
+        c8.set_parameters(params10)
+        backward = ham.expectation(c8.execute().state())
+        derivs2.append((forward - backward) / 2)
+
+    import matplotlib.pyplot as plt
+
+    plt.plot(np.linspace(0, 2 * np.pi, 100), vals, label="Vals")
+    plt.plot(np.linspace(0, 2 * np.pi, 100), derivs, label="Derivatives")
+    plt.plot(np.linspace(0, 2 * np.pi, 100), derivs2, label="PSR")
+    plt.plot(np.linspace(0, 2 * np.pi, 100), derivs3, label="SPSR")
+
+    # Add labels and a legend
+    plt.xlabel("X Axis")
+    plt.ylabel("Y Axis")
+    plt.title("Two Lists Plot")
+    plt.legend()
+
+    # Display the plot
+    plt.show()
 
 
 @pytest.mark.parametrize("nshots, atol", [(None, 1e-8), (100000, 1e-2)])
@@ -497,5 +577,5 @@ if __name__ == "__main__":
     # test_multiqubit_natural_gradient()
     # test_parameter()
     # test_psr_commuting_gate()
-    # test_spsr_non_commuting_gates()
-    test_natural_gradient()
+    test_spsr_non_commuting_gates()
+    # test_natural_gradient()

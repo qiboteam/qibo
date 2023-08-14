@@ -56,6 +56,9 @@ class Optimizer:
         self.filename = f"results/{self.name}.txt"
         self.iteration = 0
         self.save = save
+        if save:
+            self.file = open(self.filename, "w")
+        self.paramInputs = self._get_paramInit()
 
         if not isinstance(initial_parameters, list) and not isinstance(
             initial_parameters, np.ndarray
@@ -66,15 +69,59 @@ class Optimizer:
         """Updates options dictionary"""
         self.options.update(updates)
 
-    def fun(self, x):
-        val = self.loss_function(x, self.args)
+    def _get_paramInit(self):
+        """Retrieve parameter values or objects directly from gates"""
+
+        params = []
+        for gate in self._circuit.queue:
+            if isinstance(gate, gates._Rn_):
+                params.append(gate.paramInit)
+
+        if isinstance(params[0], float):
+            params = np.array(params)
+
+        return params
+
+    def _get_params(self, feature=None):
+        """Retrieve gate parameters
+        Args:
+            feature: input feature if embedded in Parameter lambda function"""
+
+        # for array
+        if isinstance(self.paramInputs, np.ndarray):
+            return self.paramInputs
+
+        # for Parameter objects
+        else:
+            params = []
+            count = 0
+            for Param in self.paramInputs:
+                trainablep = self.params[count : count + Param.nparams]
+                count += Param.nparams
+                # update trainable params and retrieve gate param
+                params.append(Param.get_params(trainablep, feature=feature))
+
+            return params
+
+    def fun(self, x, args):
+        """Wrapper function to save and preprocess gate parameters"""
+
+        if isinstance(self.paramInputs[0], (float, int)):
+            val = self.loss_function(x, *args)
+        else:
+            val = self.loss_function(x, self.paramInputs, *args)
+
+        # timing
         self.etime = time.time()
         duration = self.etime - self.ftime
         self.ftime = self.etime
+
+        # saving
         if self.save:
             self.file.write(
                 f"Iteration {self.iteration} | loss: {val} | duration: {duration}\n"
             )
+
         self.iteration += 1
         return val
 
@@ -187,40 +234,6 @@ class SGD(Optimizer):
                 self._circuit, self.nparams, self.nqubits, self.paramInputs
             )
 
-    def _get_paramInit(self):
-        """Retrieve parameter values or objects directly from gates"""
-
-        params = []
-        for gate in self._circuit.queue:
-            if isinstance(gate, gates._Rn_):
-                params.append(gate.paramInit)
-
-        if isinstance(params[0], float):
-            params = np.array(params)
-
-        return params
-
-    def _get_params(self, feature=None):
-        """Retrieve gate parameters
-        Args:
-            feature: input feature if embedded in Parameter lambda function"""
-
-        # for array
-        if isinstance(self.paramInputs, np.ndarray):
-            return self.paramInputs
-
-        # for Parameter objects
-        else:
-            params = []
-            count = 0
-            for Param in self.paramInputs:
-                trainablep = self.params[count : count + Param.nparams]
-                count += Param.nparams
-                # update trainable params and retrieve gate param
-                params.append(Param.get_params(trainablep, feature=feature))
-
-            return params
-
     def calculate_loss_func_grad(self, results, labels, idx, delta=1e-6):
         """
         Calculates loss function derivative with respect to parameter idx
@@ -245,7 +258,7 @@ class SGD(Optimizer):
             grads[lab] = (forward - backward) / (2 * delta)
         return grads
 
-    def run_circuit(self, feature):
+    def run_circuit(self, feature, N=1):
         """Backend function which runs the circuit for one feature
         Args:
             feature: single input value to the system
@@ -258,17 +271,18 @@ class SGD(Optimizer):
 
         # run circuit
         if isinstance(self.hamiltonian, list):
-            exp_v = np.empty(len(self.hamiltonian))
+            exp_v = np.zeros((len(self.hamiltonian), N))
             for i, hamiltonian in enumerate(self.hamiltonian):
-                exp_v[i] = execute_circuit(
-                    self.backend,
-                    self._circuit,
-                    hamiltonian,
-                    self.options["nshots"],
-                    initial_state=None,
-                    cdr_params=self.cdr_params,
-                    deterministic=self.options["deterministic"],
-                )
+                for n in range(N):
+                    exp_v[i, n] = execute_circuit(
+                        self.backend,
+                        self._circuit,
+                        hamiltonian,
+                        self.options["nshots"],
+                        initial_state=None,
+                        cdr_params=self.cdr_params,
+                        deterministic=self.options["deterministic"],
+                    )
 
         else:
             exp_v = execute_circuit(
@@ -283,7 +297,7 @@ class SGD(Optimizer):
 
         return exp_v
 
-    def predict(self, feature):
+    def predict(self, feature, N=1):
         """
          User-facing function which runs the circuit for given input features returns the result
          Args:
@@ -293,12 +307,12 @@ class SGD(Optimizer):
         """
 
         if isinstance(feature, np.ndarray):
-            results = np.zeros((len(feature), self.nlabels))
+            results = np.zeros((len(feature), self.nlabels, N))
             for i, feat in enumerate(feature):
-                results[i, :] = self.run_circuit(feat)
-            return results
+                results[i] = self.run_circuit(feat, N)
+            return np.squeeze(results)
         else:
-            return self.run_circuit(feature)
+            return np.squeeze(self.run_circuit(feature))
 
     def dloss(self, features, labels):
         """
@@ -311,6 +325,7 @@ class SGD(Optimizer):
         circ_grads = np.zeros(self.nparams)
         results = np.zeros((self.nsample, self.nlabels))
         loss = 0
+        print(self.params)
 
         # setup fubini matrix for natural gradient
         if self.options["natgrad"]:
@@ -339,7 +354,11 @@ class SGD(Optimizer):
             obs_gradients = np.zeros((self.nlabels, self.nparams))
             for h, ham in enumerate(self.hamiltonian):
                 obs_gradients[h] = calculate_gradients(
-                    self, self.cdr_params, ham, self.options["nshots"]
+                    self,
+                    self.cdr_params,
+                    ham,
+                    self.options["nshots"],
+                    self.options["deterministic"],
                 )  # d<B> N params, N label gradients
 
             loss_func_grad = self.calculate_loss_func_grad(results, labels, i)
@@ -444,6 +463,7 @@ class SGD(Optimizer):
 
         m = np.zeros(self.nparams)
         v = np.zeros(self.nparams)
+        print("start", datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
 
         # create index blocks on which we run
         for ib in range(options["batches"]):
@@ -522,7 +542,10 @@ class SGD(Optimizer):
         value = min(losses)
         idx = losses.index(value)
         self.parameters = self.param_history[idx]
+        print("before get error", datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
         ypred, ysigma = get_error(self, self.features, self.name_appendix)
+        print("after get error", datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+
         plot(
             ypred,
             self.features,
@@ -572,6 +595,7 @@ class SGD(Optimizer):
 
 class CMAES(Optimizer):
     def __init__(self, initial_parameters, args=(), loss=None, save=False, **kwargs):
+        self._circuit = args[0]
         super().__init__(initial_parameters, args, loss, save)
         self.options = {}
         self.set_options(kwargs)
@@ -591,7 +615,14 @@ class CMAES(Optimizer):
         """
         import cma
 
-        r = cma.fmin2(self.fun, self.initial_parameters, 1.7)
+        r = cma.fmin2(
+            self.fun,
+            self.initial_parameters,
+            sigma0=1.7,
+            args=[self.args],
+            **self.options,
+        )
+
         return r[1].result.fbest, r[1].result.xbest, r
 
 
@@ -780,14 +811,11 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
 
 
 def get_error(optimizer, xtrain, name_appendix):
-    N = 100
-    yprediction = np.zeros((N, len(xtrain)))
-    for i in range(N):
-        yprediction[i] = optimizer.predict(xtrain).T
+    ypredictions = optimizer.predict(xtrain, N=10)
 
-    np.save(f"predictions/{optimizer.name}_{name_appendix}.dat", yprediction)
-    ypred = np.mean(yprediction, axis=0).flatten()
-    ysigma = np.std(yprediction, axis=0).flatten()
+    np.save(f"predictions/{optimizer.name}_{name_appendix}.dat", ypredictions)
+    ypred = np.mean(ypredictions, axis=2)
+    ysigma = np.std(ypredictions, axis=2)
 
     return ypred, ysigma
 
@@ -809,12 +837,13 @@ def plot(
     xscale="log",
 ):
     # new predictions
-    cols = 1  # yprediction.shape[1]
+    if yprediction.ndim == 2:
+        cols = yprediction.shape[1]
+    else:
+        cols = 1
     # new plot
     fig, ax = plt.subplots(nrows=1, ncols=cols, figsize=(8, 6))
     fig.suptitle(f"Epoch {epoch+1}, J={loss:.4}")
-    # ax.set(title=f'$\chi^2 = $ {chi2:.2f}', xlabel='x', ylabel='PDF',
-    #           xscale='log')
 
     for col in range(cols):
         if cols > 1:
@@ -825,7 +854,7 @@ def plot(
             if ysigma is not None:
                 sigma = ysigma[:, col]
                 ax[col].fill_between(
-                    xtrain, train + sigma, train - sigma, alpha=0.3, color="royalblue"
+                    xtrain, pred + sigma, pred - sigma, alpha=0.3, color="royalblue"
                 )
 
             ax[col].plot(xtrain, train, label="Classical PDF", color="black")

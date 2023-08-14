@@ -221,6 +221,10 @@ def cma_loss(params, circuit, hamiltonian):
     return (results - 0.4) ** 2
 
 
+def cma_callable(parameters):
+    print("hello", parameters)
+
+
 def test_cma_optimizer():
     circuit = ansatz(3, 1)
 
@@ -229,7 +233,9 @@ def test_cma_optimizer():
     parameters = np.array([0.1] * 6)
 
     optimizer = CMAES(
-        initial_parameters=parameters, args=(circuit, hamiltonian), loss=cma_loss
+        initial_parameters=parameters,
+        args=(circuit, hamiltonian),
+        loss=cma_loss,  # , callback=cma_callable
     )
 
     fbest, xbest, r = optimizer.fit()
@@ -296,6 +302,7 @@ if __name__ == "__main__":
     # test_newtonian_optimizer()
     # test_multiqubit_sgd_optimizer()
     # test_sgd_optimizer()
-    test_sgd_methods()
+    # test_sgd_methods()
     # test_variational_circuit()
     # test_basin_hopping_optimizer()
+    test_cma_optimizer()
