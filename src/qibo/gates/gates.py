@@ -764,6 +764,36 @@ class G(ParametrizedGate):
         self.init_kwargs = {"sign": sign, "trainable": trainable}
 
 
+class GNew(ParametrizedGate):
+    def __init__(self, q, phi, s, trainable=True):
+        super().__init__(trainable)
+        self.name = "gnew"
+        self.draw_label = "GNew"
+        self.target_qubits = (q,)
+
+        self.parameter_names = ["phi", "s"]
+        self.parameters = phi, s
+        self.nparams = 2
+
+        self.init_args = [q]
+        self.init_kwargs = {"phi": phi, "s": s, "trainable": trainable}
+
+
+class GNewMiddle(ParametrizedGate):
+    def __init__(self, q, sign, trainable=True):
+        super().__init__(trainable)
+        self.name = "gnew"
+        self.draw_label = "GNew"
+        self.target_qubits = (q,)
+
+        self.parameter_names = "sign"
+        self.parameters = sign
+        self.nparams = 1
+
+        self.init_args = [q]
+        self.init_kwargs = {"sign": sign, "trainable": trainable}
+
+
 class _Un_(ParametrizedGate):
     """Abstract class for defining the U1, U2 and U3 gates.
 
@@ -1145,14 +1175,18 @@ class _CUn_(ParametrizedGate):
         self.init_kwargs = {"trainable": trainable}
 
 
-class GG(_CUn_):
+class GG(ParametrizedGate):
     def __init__(self, q0, q1, s, theta1, theta2, theta3, trainable=True):
-        super().__init__(q0, q1, trainable=trainable)
+        super().__init__(trainable)
         self.name = "gg"
-        self.draw_label = "GG"
-        self.nparams = 4
+        self.draw_label = "g"
+        self.target_qubits = (q0, q1)
+
         self.parameter_names = ["s", "theta1", "theta2", "theta3"]
         self.parameters = s, theta1, theta2, theta3
+        self.nparams = 4
+
+        self.init_args = [q0, q1]
         self.init_kwargs = {
             "s": s,
             "theta1": theta1,

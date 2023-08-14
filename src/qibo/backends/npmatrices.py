@@ -100,12 +100,24 @@ class NumpyMatrices:
             [[1, -1.0j * self.np.conj(phase)], [-1.0j * phase, 1]], dtype=self.dtype
         ) / self.np.sqrt(2)
 
+    def GNew(self, phi, s):
+        X = np.array([[0, 1], [1, 0]])
+        Y = np.array([[0, -1j], [1j, 0.0]])
+        matrix = scipy.linalg.expm(-1j * s * (0.3 * X - phi * Y))
+
+        return matrix
+
+    def GNewMiddle(self, sign):
+        Y = np.array([[0, -1j], [1j, 0]])
+
+        return scipy.linalg.expm(1j * sign * np.pi / 4 * Y)
+
     def G(self, sign):
         import numpy as np
 
         X = np.array([[0, 1], [1, 0]])
 
-        return np.exp(1j * sign * np.pi / 4 * X)
+        return np.exp(-1j * sign * np.pi / 4 * X)
 
     def Gen(self, theta1, theta2, theta3):
         import numpy as np
@@ -113,13 +125,17 @@ class NumpyMatrices:
         I = np.eye(2)
         X = np.array([[0, 1], [1, 0]])
         Z = np.array([[1, 0], [0, -1]])
-        G = theta1 * np.kron(X, I) - theta2 * np.kron(Z, X) + theta3 * np.kron(I, X)
-
+        # print(np.kron(X, I))
+        G = (
+            theta1.item() * np.kron(X, I)
+            - theta2 * np.kron(Z, X)
+            + theta3 * np.kron(I, X)
+        )
+        # print(G)
         return G
 
     def GG(self, s, theta1, theta2, theta3):
         G = self.Gen(theta1, theta2, theta3)
-        print("h", np.dot(scipy.linalg.expm(-1j * s * G), [1.0, 0.0, 0.0, 0.0]))
         return scipy.linalg.expm(-1j * s * G)
 
     def U1(self, theta):

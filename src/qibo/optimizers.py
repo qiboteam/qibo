@@ -58,7 +58,7 @@ class Optimizer:
         self.save = save
         if save:
             self.file = open(self.filename, "w")
-        self.paramInputs = self._get_paramInit()
+        self.paramInputs = None
 
         if not isinstance(initial_parameters, list) and not isinstance(
             initial_parameters, np.ndarray
@@ -68,6 +68,9 @@ class Optimizer:
     def set_options(self, updates):
         """Updates options dictionary"""
         self.options.update(updates)
+
+    def set_params(self):
+        self.paramInputs = self._get_paramInit()
 
     def _get_paramInit(self):
         """Retrieve parameter values or objects directly from gates"""

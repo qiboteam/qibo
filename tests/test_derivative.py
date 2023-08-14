@@ -189,14 +189,14 @@ def test_parameter():
 
 def test_run_subcircuit_measure():
     c = circuit(nqubits=1)
-    value = run_subcircuit_measure(c, 0, 1, GlobalBackend(), stochastic=False)
+    value = run_subcircuit_measure(c, 0, 1, GlobalBackend(), deterministic=True)
     assert value == 0.5
 
 
 def test_psr_commuting_gate():
     # hyperparameters
     scale_factor = 0.5
-    nshots = 1024
+    nshots = None
     test_hamiltonian = create_hamiltonian(0, 1, GlobalBackend())
 
     # separating gates
@@ -246,6 +246,82 @@ def test_psr_commuting_gate():
     assert np.isclose(grad_1, grad_2, atol=1e-5)
 
 
+def spsr_circuit2(phi, s, sign):
+    ham = create_hamiltonian(0, 1, GlobalBackend())
+
+    c1 = Circuit(nqubits=1)
+    c1.add(gates.GNew(0, phi, s))
+    c1.add(gates.GNewMiddle(0, sign))
+    c1.add(gates.GNew(0, phi, (1 - s)))
+    c1.add(gates.M(0))
+
+    backend = GlobalBackend()
+
+    val = ham.expectation(
+        backend.execute_circuit(circuit=c1, initial_state=None).state()
+    )
+
+    return val
+
+
+def basic_circuit(phi):
+    ham = create_hamiltonian(0, 1, GlobalBackend())
+    c1 = Circuit(nqubits=1)
+    c1.add(gates.GNew(0, phi, 1.0))
+    c1.add(gates.M(0))
+
+    backend = GlobalBackend()
+
+    val = ham.expectation(
+        backend.execute_circuit(circuit=c1, initial_state=None).state()
+    )
+
+    c1.set_parameters([phi + 0.001, 1.0])
+    forward = ham.expectation(
+        backend.execute_circuit(circuit=c1, initial_state=None).state()
+    )
+
+    c1.set_parameters([phi - 0.001, 1.0])
+    backward = ham.expectation(
+        backend.execute_circuit(circuit=c1, initial_state=None).state()
+    )
+
+    diff = (forward - backward) / 0.002
+
+    return val, diff
+
+
+def rtest_spsr():
+    qibo.set_backend("qibojit")
+
+    np.random.seed(1430)
+    angles = np.linspace(0, 2 * np.pi, 50)
+
+    evals = [basic_circuit(theta1) for theta1 in angles]
+    print(evals)
+
+    # spsr
+    pos_vals = np.array(
+        [
+            [spsr_circuit2(theta1, s=s, sign=+1) for s in np.random.uniform(size=10)]
+            for theta1 in angles
+        ]
+    )
+
+    neg_vals = np.array(
+        [
+            [spsr_circuit2(theta1, s=s, sign=-1) for s in np.random.uniform(size=10)]
+            for theta1 in angles
+        ]
+    )
+
+    spsr_vals = (pos_vals - neg_vals).mean(axis=1)
+    plt.plot(angles, evals, "b", label="Expectation Value")
+    plt.plot(angles, spsr_vals, "r", label="Stochastic parameter-shift rule")
+    plt.legend()
+    plt.show()
+
+
 def spsr_circuit(theta1, theta2, theta3, s, sign):
     ham = create_hamiltonian(0, 2, GlobalBackend())
 
@@ -266,32 +342,42 @@ def spsr_circuit(theta1, theta2, theta3, s, sign):
 
 def crossres_circuit(theta1, theta2, theta3):
     ham = create_hamiltonian(0, 2, GlobalBackend())
-
     c1 = Circuit(nqubits=2)
     c1.add(gates.GG(0, 1, 1.0, theta1, theta2, theta3))
-    print(c1.draw())
+    c1.add(gates.M(0))
+    c1.add(gates.M(1))
 
     backend = GlobalBackend()
-    state = backend.execute_circuit(circuit=c1, initial_state=None).state()
-    print(state)
+
     val = ham.expectation(
         backend.execute_circuit(circuit=c1, initial_state=None).state()
     )
 
-    print(val)
-    return val
+    c1.set_parameters([1.0, theta1 + 0.001, theta2, theta3])
+    forward = ham.expectation(
+        backend.execute_circuit(circuit=c1, initial_state=None).state()
+    )
+
+    c1.set_parameters([1.0, theta1 - 0.001, theta2, theta3])
+    backward = ham.expectation(
+        backend.execute_circuit(circuit=c1, initial_state=None).state()
+    )
+
+    diff = (forward - backward) / 0.002
+
+    return val, diff
 
 
-def test_spsr_non_commuting_gates():
+def rtest_spsr_non_commuting_gates():
     qibo.set_backend("qibojit")
     theta2, theta3 = -0.15, 1.6
     np.random.seed(143)
-    angles = np.linspace(0, 2 * np.pi, 10)
+    angles = np.linspace(0, 2 * np.pi, 50)
 
     evals = [crossres_circuit(theta1, theta2, theta3) for theta1 in angles]
 
     print(evals)
-    exit(0)
+
     # spsr
     pos_vals = np.array(
         [
@@ -455,7 +541,7 @@ def test_natural_gradient():
         1,
         optimiser.paramInputs,
         noise_model=optimiser.options["noise_model"],
-        stochastic=False,
+        deterministic=True,
     )
 
     # initialize optimiser with numpy array
@@ -475,7 +561,7 @@ def test_natural_gradient():
         1,
         optimiser2.paramInputs,
         noise_model=optimiser2.options["noise_model"],
-        stochastic=False,
+        deterministic=True,
     )
 
     assert np.allclose(optimiser.params, params)
@@ -519,7 +605,7 @@ def test_multiqubit_natural_gradient():
         nqubits,
         optimiser.paramInputs,
         noise_model=optimiser.options["noise_model"],
-        stochastic=False,
+        deterministic=True,
     )
 
     assert np.allclose(fubini, metric_tensor)
@@ -530,5 +616,6 @@ if __name__ == "__main__":
     # test_multiqubit_natural_gradient()
     # test_parameter()
     # test_psr_commuting_gate()
-    test_spsr_non_commuting_gates()
+    # rtest_spsr_non_commuting_gates()
     # test_natural_gradient()
+    rtest_spsr()
