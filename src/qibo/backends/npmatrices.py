@@ -107,10 +107,10 @@ class NumpyMatrices:
 
         return matrix
 
-    def GNewMiddle(self, sign):
+    def GNewMiddle(self, phi):
         Y = np.array([[0, -1j], [1j, 0]])
 
-        return scipy.linalg.expm(1j * sign * np.pi / 4 * Y)
+        return scipy.linalg.expm(1j * phi * Y)
 
     def G(self, sign):
         import numpy as np

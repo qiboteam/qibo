@@ -212,6 +212,7 @@ class SGD(Optimizer):
             "batches": 1,
             "J_threshold": 1e-3,
             "shift_rule": "psr",
+            "var_gates": None,
             "nshots": 1024,
             "natgrad": False,
             "mitigation": False,
@@ -348,11 +349,15 @@ class SGD(Optimizer):
             obs_gradients = np.zeros((self.nlabels, self.nparams))
             for h, ham in enumerate(self.hamiltonian):
                 obs_gradients[h] = calculate_gradients(
-                    self,
+                    self.nparams,
+                    self.options["shift_rule"],
+                    self.paramInputs,
+                    self._circuit,
                     self.cdr_params,
                     ham,
                     self.options["nshots"],
                     self.options["deterministic"],
+                    var_gates=self.options["var_gates"],
                 )  # d<B> N params, N label gradients
 
             loss_func_grad = self.calculate_loss_func_grad(results, labels, i)

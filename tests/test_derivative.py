@@ -12,10 +12,12 @@ from qibo.backends import GlobalBackend
 from qibo.derivative import (
     Graph,
     build_graph,
+    calculate_gradients,
     create_hamiltonian,
     generate_fubini,
     parameter_shift,
     run_subcircuit_measure,
+    stochastic_parameter_shift,
 )
 from qibo.gates.gates import Parameter
 from qibo.models import Circuit
@@ -295,7 +297,7 @@ def rtest_spsr():
     qibo.set_backend("qibojit")
 
     np.random.seed(1430)
-    angles = np.linspace(0, 2 * np.pi, 50)
+    angles = np.linspace(0.1, 2 * np.pi, 50)
 
     evals = [basic_circuit(theta1) for theta1 in angles]
     print(evals)
@@ -316,6 +318,7 @@ def rtest_spsr():
     )
 
     spsr_vals = (pos_vals - neg_vals).mean(axis=1)
+    print(spsr_vals)
     plt.plot(angles, evals, "b", label="Expectation Value")
     plt.plot(angles, spsr_vals, "r", label="Stochastic parameter-shift rule")
     plt.legend()
@@ -611,11 +614,35 @@ def test_multiqubit_natural_gradient():
     assert np.allclose(fubini, metric_tensor)
 
 
+def test_spsr():
+    ham = create_hamiltonian(0, 1, GlobalBackend())
+    c1 = Circuit(nqubits=1)
+    c1.add(gates.GNew(0, 0.1, 1.0))
+    c1.add(gates.M(0))
+
+    test = stochastic_parameter_shift(c1, ham, 0, 0, gates.GNewMiddle(q=0, phi=0.0))
+    print(test)
+
+    grads = calculate_gradients(
+        2,
+        "spsr",
+        np.array([0.1, 1.0]),
+        c1,
+        None,
+        ham,
+        None,
+        True,
+        var_gates=[gates.GNewMiddle(q=0, phi=0.0)],
+    )
+    print(grads)
+
+
 if __name__ == "__main__":
     # graph_improvements(1, [0, 1], [[0, 1], [2, 3]])
-    test_multiqubit_natural_gradient()
+    # test_multiqubit_natural_gradient()
     # test_parameter()
     # test_psr_commuting_gate()
     # rtest_spsr_non_commuting_gates()
     # test_natural_gradient()
     # rtest_spsr()
+    test_spsr()

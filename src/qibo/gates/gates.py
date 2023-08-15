@@ -765,7 +765,7 @@ class G(ParametrizedGate):
 
 
 class GNew(ParametrizedGate):
-    def __init__(self, q, phi, s, trainable=True):
+    def __init__(self, q, phi, s=1.0, trainable=True):
         super().__init__(trainable)
         self.name = "gnew"
         self.draw_label = "GNew"
@@ -780,18 +780,18 @@ class GNew(ParametrizedGate):
 
 
 class GNewMiddle(ParametrizedGate):
-    def __init__(self, q, sign, trainable=True):
+    def __init__(self, q, phi, trainable=True):
         super().__init__(trainable)
         self.name = "gnew"
         self.draw_label = "GNew"
         self.target_qubits = (q,)
 
-        self.parameter_names = "sign"
-        self.parameters = sign
+        self.parameter_names = "phi"
+        self.parameters = phi
         self.nparams = 1
 
         self.init_args = [q]
-        self.init_kwargs = {"sign": sign, "trainable": trainable}
+        self.init_kwargs = {"phi": phi, "trainable": trainable}
 
 
 class _Un_(ParametrizedGate):
