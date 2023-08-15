@@ -265,7 +265,7 @@ def random_quantum_channel(
         ):
             raise_error(ValueError, f"representation {representation} not implemented.")
 
-    if measure == "bcsz" and order == "system":
+    if measure == "bcsz" and order not in ["row", "column"]:
         raise_error(
             NotImplementedError, f"order {order} not implemented for measure {measure}."
         )
