@@ -270,16 +270,20 @@ def random_quantum_channel(
             NotImplementedError, f"order {order} not implemented for measure {measure}."
         )
 
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
     if measure == "bcsz":
         # this uses the del function a lot because implementation can be resource-intensive
         nqubits = int(np.log2(dims))
 
         super_op = random_gaussian_matrix(
-            dims, rank=rank, mean=0, stddev=1, seed=seed, backend=backend
+            dims**2, rank=rank, mean=0, stddev=1, seed=seed, backend=backend
         )
         super_op = super_op @ np.transpose(np.conj(super_op))
 
-        super_op_reduced = backend.partial_trace_density_matrix(super_op, (0,), nqubits)
+        # partial trace implemented with einsum
+        super_op_reduced = np.einsum("ijik->jk", np.reshape(super_op, (dims,) * 4))
 
         eigenvalues, eigenvectors = np.linalg.eigh(super_op_reduced)
         del super_op_reduced
@@ -287,6 +291,7 @@ def random_quantum_channel(
         eigenvalues = np.sqrt(1.0 / eigenvalues)
 
         operator = np.zeros((dims, dims), dtype=complex)
+        operator = backend.cast(operator, dtype=operator.dtype)
         for eigenvalue, eigenvector in zip(eigenvalues, np.transpose(eigenvectors)):
             operator += eigenvalue * np.outer(eigenvector, np.conj(eigenvector))
         del eigenvectors, eigenvector, eigenvalues, eigenvalue
