@@ -204,6 +204,7 @@ def random_quantum_channel(
     dims: int,
     representation: str = "liouville",
     measure: Optional[str] = None,
+    rank: Optional[int] = None,
     order: str = "row",
     normalize: bool = False,
     precision_tol: Optional[float] = None,
@@ -214,7 +215,7 @@ def random_quantum_channel(
     supported superoperator representations.
 
     Args:
-        dims (int): dimension of the unitary operator.
+        dims (int): dimension of the :math:`n`-qubit operator, i.e. :math:`\\text{dims}=2^{n}`.
         representation (str, optional): If ``"chi"``, returns a random channel in the
             Chi representation. If ``"choi"``, returns channel in Choi representation.
             If ``"kraus"``, returns Kraus representation of channel. If ``"liouville"``,
@@ -226,6 +227,8 @@ def random_quantum_channel(
             from. If ``None``, functions returns :math:`\\exp{(-i \\, H)}`, where
             :math:`H` is a Hermitian operator. If ``"haar"``, returns an Unitary
             matrix sampled from the Haar measure. Defaults to ``None``.
+        rank (int, optional): used when ``measure=="bcsz"``. Rank of the matrix. 
+            If ``None``, then ``rank==dims``. Defaults to ``None``.
         order (str, optional): If ``"row"``, vectorization is performed row-wise.
             If ``"column"``, vectorization is performed column-wise. If ``"system"``,
             a block-vectorization is performed. Defaults to ``"row"``.
@@ -259,11 +262,41 @@ def random_quantum_channel(
             or len(representation.split("-")) != 2
             or set(representation.split("-")[1]) != {"I", "X", "Y", "Z"}
         ):
-            raise_error(ValueError, f"representation {representation} not found.")
+            raise_error(ValueError, f"representation {representation} not implemented.")
+    
+    if measure == "bcsz" and order == "system":
+        raise_error(NotImplementedError, f"order {order} not implemented for measure {measure}.")
 
-    super_op = random_unitary(dims, measure, seed, backend)
-    super_op = vectorization(super_op, order=order, backend=backend)
-    super_op = np.outer(super_op, np.conj(super_op))
+    if measure == "bcsz":
+        # this uses the del function a lot because implementation can be resource-intensive
+        nqubits = int(np.log2(dims))
+
+        super_op = random_gaussian_matrix(dims, rand=rank, mean=0, stddev=1, seed=seed, backend=backend)
+        super_op = super_op @ np.transpose(np.conj(super_op))
+
+        super_op_reduced = backend.partial_trace_density_matrix(super_op, (0,), nqubits)
+
+        eigenvalues, eigenvectors = np.linalg.eigh(super_op_reduced)
+        del super_op_reduced
+
+        eigenvalues = np.sqrt(1.0 / eigenvalues)
+
+        operator = np.zeros((dims, dims), dtype=complex)
+        for eigenvalue, eigenvector in zip(eigenvalues, np.transpose(eigenvectors)):
+            operator += eigenvalue * np.outer(eigenvector, np.conj(eigenvector))
+        del eigenvectors, eigenvector, eigenvalues, eigenvalue
+
+        if order == "row":
+            operator = np.kron(backend.identity_density_matrix(nqubits, normalize=False), operator)
+        if order == "column":
+            operator = np.kron(operator, backend.identity_density_matrix(nqubits, normalize=False))
+        
+        super_op = operator @ super_op @ operator
+        del operator
+    else:
+        super_op = random_unitary(dims, measure, seed, backend)
+        super_op = vectorization(super_op, order=order, backend=backend)
+        super_op = np.outer(super_op, np.conj(super_op))
 
     if "chi" in representation:
         pauli_order = "IXYZ"
