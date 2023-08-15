@@ -227,7 +227,7 @@ def random_quantum_channel(
             from. If ``None``, functions returns :math:`\\exp{(-i \\, H)}`, where
             :math:`H` is a Hermitian operator. If ``"haar"``, returns an Unitary
             matrix sampled from the Haar measure. Defaults to ``None``.
-        rank (int, optional): used when ``measure=="bcsz"``. Rank of the matrix. 
+        rank (int, optional): used when ``measure=="bcsz"``. Rank of the matrix.
             If ``None``, then ``rank==dims``. Defaults to ``None``.
         order (str, optional): If ``"row"``, vectorization is performed row-wise.
             If ``"column"``, vectorization is performed column-wise. If ``"system"``,
@@ -263,15 +263,19 @@ def random_quantum_channel(
             or set(representation.split("-")[1]) != {"I", "X", "Y", "Z"}
         ):
             raise_error(ValueError, f"representation {representation} not implemented.")
-    
+
     if measure == "bcsz" and order == "system":
-        raise_error(NotImplementedError, f"order {order} not implemented for measure {measure}.")
+        raise_error(
+            NotImplementedError, f"order {order} not implemented for measure {measure}."
+        )
 
     if measure == "bcsz":
         # this uses the del function a lot because implementation can be resource-intensive
         nqubits = int(np.log2(dims))
 
-        super_op = random_gaussian_matrix(dims, rand=rank, mean=0, stddev=1, seed=seed, backend=backend)
+        super_op = random_gaussian_matrix(
+            dims, rand=rank, mean=0, stddev=1, seed=seed, backend=backend
+        )
         super_op = super_op @ np.transpose(np.conj(super_op))
 
         super_op_reduced = backend.partial_trace_density_matrix(super_op, (0,), nqubits)
@@ -287,10 +291,14 @@ def random_quantum_channel(
         del eigenvectors, eigenvector, eigenvalues, eigenvalue
 
         if order == "row":
-            operator = np.kron(backend.identity_density_matrix(nqubits, normalize=False), operator)
+            operator = np.kron(
+                backend.identity_density_matrix(nqubits, normalize=False), operator
+            )
         if order == "column":
-            operator = np.kron(operator, backend.identity_density_matrix(nqubits, normalize=False))
-        
+            operator = np.kron(
+                operator, backend.identity_density_matrix(nqubits, normalize=False)
+            )
+
         super_op = operator @ super_op @ operator
         del operator
     else:
