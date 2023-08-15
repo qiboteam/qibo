@@ -1,19 +1,6 @@
-import sys
+from functools import cached_property
 
 from qibo.config import raise_error
-
-if sys.version_info.minor >= 8:
-    from functools import cached_property  # pylint: disable=E0611
-else:  # pragma: no cover
-    # Custom ``cached_property`` because it is not available for Python < 3.8
-    from functools import lru_cache
-
-    def cached_property(func):
-        @property
-        def wrapper(self):
-            return lru_cache()(func)(self)
-
-        return wrapper
 
 
 class NumpyMatrices:
