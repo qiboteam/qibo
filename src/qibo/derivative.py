@@ -56,19 +56,20 @@ def calculate_gradients(
         else:
             count = 0
             for ipar, Param in enumerate(paramInputs):
+                scaling = []
                 for nparam in range(Param.nparams):
-                    scaling = Param.get_scaling_factor(nparam)
+                    scaling.append(Param.get_scaling_factor(nparam))
 
-                    obs_gradients[count] = parameter_shift(
-                        circuit,
-                        ham,
-                        ipar,
-                        initial_state=None,
-                        scale_factor=scaling,
-                        nshots=nshots,
-                        cdr_params=cdr_params,
-                    )
-                    count += 1
+                obs_gradients[count : count + len(scaling)] = parameter_shift(
+                    circuit,
+                    ham,
+                    ipar,
+                    initial_state=None,
+                    scale_factor=np.array(scaling),
+                    nshots=nshots,
+                    cdr_params=cdr_params,
+                )
+                count += len(scaling)
 
     # stochastic parameter shift
     elif shift_rule == "spsr":
@@ -85,11 +86,38 @@ def calculate_gradients(
                         count + ipar,
                         gate_index_start=count,
                         variable_gate=var_gates[count + ipar],
+                        scale_factor=1.0,
                         initial_state=None,
                         nshots=None,
                     )
 
                 count += gate.nparams
+
+        else:
+            count = 0
+            for gate in circuit.queue:
+                if not isinstance(gate, gates.ParametrizedGate):
+                    continue
+                # -1 for s
+                for ipar in range(gate.nparams - 1):
+                    Param = paramInputs(count + ipar)
+                    scaling = []
+                    for nparam in range(Param.nparams):
+                        scaling.append(Param.get_scaling_factor(nparam))
+
+                    obs_gradients[ipar] = stochastic_parameter_shift(
+                        circuit,
+                        ham,
+                        count + ipar,
+                        gate_index_start=count,
+                        variable_gate=var_gates[count + ipar],
+                        scale_factor=scaling,
+                        initial_state=None,
+                        nshots=None,
+                    )
+
+                count += gate.nparams
+
     """
     # finite differences (central difference)
     else:
@@ -261,7 +289,8 @@ def parameter_shift(
     circuit.set_parameters(original)
 
     # float() necessary to not return a 0-dim ndarray
-    result = float(generator_eigenval * (forward - backward) * scale_factor)
+    print(scale_factor)
+    result = float(generator_eigenval * (forward - backward)) * scale_factor
     return result
 
 
@@ -282,6 +311,7 @@ def stochastic_parameter_shift(
     parameter_index,
     gate_index_start,
     variable_gate,
+    scale_factor=1.0,
     initial_state=None,
     nshots=None,
 ):
@@ -434,7 +464,7 @@ def stochastic_parameter_shift(
     circuit.remove(ancilla_gate)
     circuit.set_parameters(original)
 
-    return grads.mean()
+    return grads.mean() * scale_factor
 
 
 ##################################################################################################
