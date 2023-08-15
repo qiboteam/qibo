@@ -471,6 +471,9 @@ def random_density_matrix(
     if rank is not None and rank <= 0:
         raise_error(ValueError, f"rank ({rank}) must be an int between 1 and dims.")
 
+    if rank is not None and not isinstance(rank, int):
+        raise_error(TypeError, f"rank must be type int, but it is type {type(rank)}.")
+
     if not isinstance(pure, bool):
         raise_error(TypeError, f"pure must be type bool, but it is type {type(pure)}.")
 
