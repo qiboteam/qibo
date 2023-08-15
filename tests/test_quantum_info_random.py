@@ -160,6 +160,8 @@ def test_random_quantum_channel(backend, representation, measure):
     # so here we only execute them once for coverage
     random_quantum_channel(4, representation, measure, backend=backend)
 
+    # TODO: implement comprehensive test for measure=="bcsz"
+
 
 @pytest.mark.parametrize("haar", [False, True])
 @pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
