@@ -577,7 +577,7 @@ def test_natural_gradient():
 def test_multiqubit_natural_gradient():
     # pennylane baseline
     params = qml.numpy.asarray([0.1] * 24)
-    metric_tensor = qml.metric_tensor(ansatz_pdf, approx="diag")(2, params, 1.0)
+    metric_tensor = qml.metric_tensor(ansatz_pdf, approx="diag")(2, params, 0.1)
 
     # local implementation
     nqubits = 2
@@ -613,9 +613,9 @@ def test_multiqubit_natural_gradient():
 
 if __name__ == "__main__":
     # graph_improvements(1, [0, 1], [[0, 1], [2, 3]])
-    # test_multiqubit_natural_gradient()
+    test_multiqubit_natural_gradient()
     # test_parameter()
     # test_psr_commuting_gate()
     # rtest_spsr_non_commuting_gates()
     # test_natural_gradient()
-    rtest_spsr()
+    # rtest_spsr()

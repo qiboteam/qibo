@@ -117,7 +117,7 @@ class NumpyMatrices:
 
         X = np.array([[0, 1], [1, 0]])
 
-        return np.exp(-1j * sign * np.pi / 4 * X)
+        return scipy.linalg.expm(-1j * sign * np.pi / 4 * X)
 
     def Gen(self, theta1, theta2, theta3):
         import numpy as np

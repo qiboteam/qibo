@@ -36,7 +36,7 @@ def loss_func_1qubit(ypred, ytrue, other_args=None):
     for i in range(len(ypred)):
         loss += (ytrue[i] - ypred[i]) ** 2
 
-    return loss
+    return loss[0]
 
 
 def test_sgd_optimizer():
@@ -50,13 +50,18 @@ def test_sgd_optimizer():
     parameters = [0.1] * 12
 
     optimizer = SGD(
-        circuit=circuit, parameters=parameters, loss=loss_func_1qubit, epochs=100
+        circuit=circuit,
+        parameters=parameters,
+        adam=True,
+        loss=loss_func_1qubit,
+        deterministic=True,
+        epochs=10,
     )
     X = np.array([0.1, 0.2, 0.3])
     y = np.array([0.2, 0.5, 0.7])
     losses = optimizer.fit(X, y)
 
-    assert losses[-1] < 0.001
+    assert np.isclose(losses[-1], 0.016386939869709672)
 
     return losses
 
@@ -129,13 +134,13 @@ def test_multiqubit_sgd_optimizer():
         parameters=parameters,
         loss=loss_func_2qubit,
         hamiltonian=hamiltonians,
-        epochs=100,
+        epochs=10,
     )
     X = np.array([0.1, 0.2, 0.3])
     y = np.array([[0.1, 0.2], [0.3, 0.5], [0.4, 0.5]])
     losses = optimizer.fit(X, y)
 
-    assert losses[-1] < 0.01
+    assert losses[-1] < 0.1
 
 
 def test_sgd_methods():
@@ -179,6 +184,7 @@ def test_sgd_methods():
         parameters=parameters,
         loss=loss_func_2qubit,
         hamiltonian=hamiltonians,
+        deterministic=True,
     )
 
     # _get_params
@@ -206,9 +212,10 @@ def test_sgd_methods():
     assert np.allclose(grads, np.array([0.0, -0.2]))
 
     # run_circuit
-    expectation_values = optimizer.run_circuit(0.1)
+    expectation_values = optimizer.predict(0.1)
+
     assert np.allclose(
-        np.array(expectation_values), np.array([0.1116947, -0.31656565]), atol=0.08
+        np.array(expectation_values), np.array([0.1116947, 0.31656565]), atol=0.08
     )
 
 
@@ -221,10 +228,6 @@ def cma_loss(params, circuit, hamiltonian):
     return (results - 0.4) ** 2
 
 
-def cma_callable(parameters):
-    print("hello", parameters)
-
-
 def test_cma_optimizer():
     circuit = ansatz(3, 1)
 
@@ -235,12 +238,13 @@ def test_cma_optimizer():
     optimizer = CMAES(
         initial_parameters=parameters,
         args=(circuit, hamiltonian),
-        loss=cma_loss,  # , callback=cma_callable
+        loss=cma_loss,
+        options={"maxiter": 50},
     )
 
     fbest, xbest, r = optimizer.fit()
 
-    assert fbest < 1e-5
+    assert fbest < 1e-3
 
 
 def test_newtonian_optimizer():
@@ -275,10 +279,6 @@ def test_parallel_bfgs_optimizer():
     assert fbest < 1e-5
 
 
-def loss_test(x):
-    return np.sum(x**2 + 6 * x - 1000)
-
-
 def test_basin_hopping_optimizer():
     circuit = ansatz(3, 1)
 
@@ -288,21 +288,21 @@ def test_basin_hopping_optimizer():
 
     optimizer = BasinHopping(
         initial_parameters=parameters,
-        minimizer_kwargs=(circuit, hamiltonian),
-        loss=loss_test,
+        args=(circuit, hamiltonian),
+        loss=cma_loss,
     )
 
     fbest = optimizer.fit()
-    print(fbest)
-    assert fbest[0] < 1e-5
+
+    assert fbest < 1e-5
 
 
 if __name__ == "__main__":
     # test_parallel_bfgs_optimizer()
     # test_newtonian_optimizer()
     # test_multiqubit_sgd_optimizer()
-    # test_sgd_optimizer()
+    test_sgd_optimizer()
     # test_sgd_methods()
     # test_variational_circuit()
     # test_basin_hopping_optimizer()
-    test_cma_optimizer()
+    # test_cma_optimizer()

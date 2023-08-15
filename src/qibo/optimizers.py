@@ -47,7 +47,7 @@ class Optimizer:
     def __init__(self, initial_parameters, args=(), loss=None, save=False):
         self.loss_function = loss
         self.args = args
-        self.initial_parameters = initial_parameters
+        self.params = initial_parameters
         self.backend = backends.GlobalBackend()
         self.simulation_start = time.time()
         self.ftime = time.time()
@@ -60,10 +60,12 @@ class Optimizer:
             self.file = open(self.filename, "w")
         self.paramInputs = None
 
-        if not isinstance(initial_parameters, list) and not isinstance(
-            initial_parameters, np.ndarray
+        if not isinstance(initial_parameters, np.ndarray) and not isinstance(
+            initial_parameters, list
         ):
-            raise ("Parameters must be a list of Parameter objects or a numpy array")
+            raise TypeError(
+                "Parameters must be a list of Parameter objects or a numpy array"
+            )
 
     def set_options(self, updates):
         """Updates options dictionary"""
@@ -71,6 +73,7 @@ class Optimizer:
 
     def set_params(self):
         self.paramInputs = self._get_paramInit()
+        print(self.paramInputs)
 
     def _get_paramInit(self):
         """Retrieve parameter values or objects directly from gates"""
@@ -80,8 +83,9 @@ class Optimizer:
             if isinstance(gate, gates._Rn_):
                 params.append(gate.paramInit)
 
-        if isinstance(params[0], float):
-            params = np.array(params)
+        if isinstance(params[0], (float, int)):
+            print(self.params)
+            params = self.params
 
         return params
 
@@ -106,13 +110,13 @@ class Optimizer:
 
             return params
 
-    def fun(self, x, args):
+    def fun(self, x):
         """Wrapper function to save and preprocess gate parameters"""
 
         if isinstance(self.paramInputs[0], (float, int)):
-            val = self.loss_function(x, *args)
+            val = self.loss_function(x, *self.args)
         else:
-            val = self.loss_function(x, self.paramInputs, *args)
+            val = self.loss_function(x, self.paramInputs, *self.args)
 
         # timing
         self.etime = time.time()
@@ -262,7 +266,7 @@ class SGD(Optimizer):
         return grads
 
     def run_circuit(self, feature, N=1):
-        """Backend function which runs the circuit for one feature
+        """Backend function which runs the circuit for one feature N times
         Args:
             feature: single input value to the system
         Return:
@@ -273,30 +277,18 @@ class SGD(Optimizer):
         self._circuit.set_parameters(parameters)
 
         # run circuit
-        if isinstance(self.hamiltonian, list):
-            exp_v = np.zeros((len(self.hamiltonian), N))
-            for i, hamiltonian in enumerate(self.hamiltonian):
-                for n in range(N):
-                    exp_v[i, n] = execute_circuit(
-                        self.backend,
-                        self._circuit,
-                        hamiltonian,
-                        self.options["nshots"],
-                        initial_state=None,
-                        cdr_params=self.cdr_params,
-                        deterministic=self.options["deterministic"],
-                    )
-
-        else:
-            exp_v = execute_circuit(
-                self.backend,
-                self._circuit,
-                self.hamiltonian,
-                self.options["nshots"],
-                initial_state=None,
-                cdr_params=self.cdr_params,
-                deterministic=self.options["deterministic"],
-            )
+        exp_v = np.zeros((len(self.hamiltonian), N))
+        for i, hamiltonian in enumerate(self.hamiltonian):
+            for n in range(N):
+                exp_v[i, n] = execute_circuit(
+                    self.backend,
+                    self._circuit,
+                    hamiltonian,
+                    self.options["nshots"],
+                    initial_state=None,
+                    cdr_params=self.cdr_params,
+                    deterministic=self.options["deterministic"],
+                )
 
         return exp_v
 
@@ -328,7 +320,6 @@ class SGD(Optimizer):
         circ_grads = np.zeros(self.nparams)
         results = np.zeros((self.nsample, self.nlabels))
         loss = 0
-        print(self.params)
 
         # setup fubini matrix for natural gradient
         if self.options["natgrad"]:
@@ -466,7 +457,6 @@ class SGD(Optimizer):
 
         m = np.zeros(self.nparams)
         v = np.zeros(self.nparams)
-        print("start", datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
 
         # create index blocks on which we run
         for ib in range(options["batches"]):
@@ -542,25 +532,23 @@ class SGD(Optimizer):
                 losses.append(this_loss)
                 self.param_history[self.epoch] = self.params
 
-        value = min(losses)
-        idx = losses.index(value)
-        self.parameters = self.param_history[idx]
-        print("before get error", datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
-        ypred, ysigma = get_error(self, self.features, self.name_appendix)
-        print("after get error", datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
-
-        plot(
-            ypred,
-            self.features,
-            self.labels,
-            idx,
-            value,
-            ysigma,
-            self.name,
-            self.name_appendix,
-        )
-
         if self.save:
+            value = min(losses)
+            idx = losses.index(value)
+            self.parameters = self.param_history[idx]
+            ypred, ysigma = get_error(self, self.features, self.name_appendix)
+
+            plot(
+                ypred,
+                self.features,
+                self.labels,
+                idx,
+                value,
+                ysigma,
+                self.name,
+                self.name_appendix,
+            )
+
             self.file.write(f"Params {self.params.tolist()}\n")
             self.file.write(f"Best J: {min(losses)}\n")
             self.cleanup()
@@ -602,6 +590,7 @@ class CMAES(Optimizer):
         super().__init__(initial_parameters, args, loss, save)
         self.options = {}
         self.set_options(kwargs)
+        self.set_params()
 
     def fit(self):
         """Genetic optimizer based on `pycma <https://github.com/CMA-ES/pycma>`_.
@@ -620,9 +609,8 @@ class CMAES(Optimizer):
 
         r = cma.fmin2(
             self.fun,
-            self.initial_parameters,
+            self.params,
             sigma0=1.7,
-            args=[self.args],
             **self.options,
         )
 
@@ -693,13 +681,13 @@ class Newtonian(Optimizer):
                 callback=self.options["callback"],
                 options=self.options["options"],
             )
-            m = o.run(self.initial_parameters)
+            m = o.run(self.params)
         else:
             from scipy.optimize import minimize
 
             m = minimize(
                 self.loss_function,
-                self.initial_parameters,
+                self.params,
                 args=self.args,
                 method=self.options["method"],
                 jac=self.options["jac"],
@@ -756,14 +744,14 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
 
         out = minimize(
             fun=self.fun,
-            x0=self.initial_parameters,
+            x0=self.params,
             jac=self.jac,
             method="L-BFGS-B",
             bounds=self.options["bounds"],
             callback=self.options["callback"],
             options=self.options["options"],
         )
-        out.hess_inv = out.hess_inv * self.np.identity(len(self.initial_parameters))
+        out.hess_inv = out.hess_inv * self.np.identity(len(self.params))
         return out.fun, out.x, out
 
     @staticmethod
@@ -817,8 +805,8 @@ def get_error(optimizer, xtrain, name_appendix):
     ypredictions = optimizer.predict(xtrain, N=10)
 
     np.save(f"predictions/{optimizer.name}_{name_appendix}.dat", ypredictions)
-    ypred = np.mean(ypredictions, axis=2)
-    ysigma = np.std(ypredictions, axis=2)
+    ypred = np.mean(ypredictions, axis=ypredictions.ndim - 1)
+    ysigma = np.std(ypredictions, axis=ypredictions.ndim - 1)
 
     return ypred, ysigma
 
@@ -917,6 +905,8 @@ class BasinHopping(Optimizer):
         super().__init__(initial_parameters, args, loss, save)
         self.args = args
         self.options = kwargs
+        self._circuit = args[0]
+        self.set_params()
 
     def fit(self):
         """Genetic optimizer based on `pycma <https://github.com/CMA-ES/pycma>`_.
@@ -933,6 +923,6 @@ class BasinHopping(Optimizer):
         """
         from scipy.optimize import basinhopping
 
-        r = basinhopping(self.fun, self.initial_parameters)
-        print(r)
-        return r.x
+        r = basinhopping(self.fun, self.params, **self.options)
+
+        return r.fun
