@@ -145,7 +145,7 @@ def test_random_unitary(backend):
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
 
-@pytest.mark.parametrize("measure", [None, "haar"])
+@pytest.mark.parametrize("measure", [None, "haar", "bcsz"])
 @pytest.mark.parametrize(
     "representation",
     ["chi", "chi-IZXY", "choi", "kraus", "liouville", "pauli", "pauli-IZXY"],
