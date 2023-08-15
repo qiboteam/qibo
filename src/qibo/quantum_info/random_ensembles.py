@@ -226,7 +226,8 @@ def random_quantum_channel(
         measure (str, optional): probability measure in which to sample the unitary
             from. If ``None``, functions returns :math:`\\exp{(-i \\, H)}`, where
             :math:`H` is a Hermitian operator. If ``"haar"``, returns an Unitary
-            matrix sampled from the Haar measure. Defaults to ``None``.
+            matrix sampled from the Haar measure. If ``"bcsz"``, it samples an unitary
+            from the BCSZ distribution with Kraus ``rank``. Defaults to ``None``.
         rank (int, optional): used when ``measure=="bcsz"``. Rank of the matrix.
             If ``None``, then ``rank==dims``. Defaults to ``None``.
         order (str, optional): If ``"row"``, vectorization is performed row-wise.
@@ -409,7 +410,7 @@ def random_density_matrix(
     dims: int,
     rank: Optional[int] = None,
     pure: bool = False,
-    metric: str = "Hilbert-Schmidt",
+    metric: str = "hilbert-schmidt",
     basis: Optional[str] = None,
     normalize: bool = False,
     order: str = "row",
