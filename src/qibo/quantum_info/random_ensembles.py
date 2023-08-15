@@ -274,7 +274,7 @@ def random_quantum_channel(
         nqubits = int(np.log2(dims))
 
         super_op = random_gaussian_matrix(
-            dims, rand=rank, mean=0, stddev=1, seed=seed, backend=backend
+            dims, rank=rank, mean=0, stddev=1, seed=seed, backend=backend
         )
         super_op = super_op @ np.transpose(np.conj(super_op))
 
