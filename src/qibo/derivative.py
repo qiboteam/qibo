@@ -15,6 +15,240 @@ from qibo.models.error_mitigation import (
 )
 
 
+def execute_circuit(
+    backend,
+    c,
+    obs,
+    nshots,
+    initial_state=None,
+    cdr_params=None,
+    calibration=None,
+    deterministic=False,
+):
+    """
+    Probabilistic circuit execution with possibilities for error mitigation
+
+    Args:
+        backend (:class:`qibo.backends.abstract.Backend`): backend to execute circuit on
+        c (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
+        obs (:class:`qibo.hamiltonians.Hamiltonian`): target observable.
+            if you want to execute on hardware, a symbolic hamiltonian must be
+            provided as follows (example with Pauli Z and ``nqubits=1``):
+            ``SymbolicHamiltonian(np.prod([ Z(i) for i in range(1) ]))``.
+        parameter_index (int): the index which identifies the target parameter
+            in the ``circuit.get_parameters()`` list.
+        initial_state (ndarray, optional): initial state on which the circuit
+            acts. Default is ``None``.
+        scale_factor (float, optional): parameter scale factor. Default is ``1``.
+        nshots (int, optional): number of shots if derivative is evaluated on
+            hardware. If ``None``, the simulation mode is executed.
+            Default is ``None``.
+    """
+    if deterministic:
+        state = c().state()
+        res = obs.expectation(state)
+        return res
+
+    # retrieve state
+    state = backend.execute_circuit(
+        circuit=c, nshots=nshots, initial_state=initial_state
+    )
+
+    # apply readout mitigation
+    if calibration is not None:
+        state = apply_readout_mitigation(state, calibration)
+
+    # get expectation value
+    result = state.expectation_from_samples(obs)
+
+    # apply CDR correction
+    if cdr_params is not None:
+        a, b = cdr_params
+        result = a * result + b
+
+    return result
+
+
+def create_hamiltonian(qubit=0, nqubits=1, backend=None):
+    """Precomputes Hamiltonian.
+
+    Args:
+        nqubits (int): number of qubits.
+        z_qubit (int): qubit where the Z measurement is applied, must be z_qubit < nqubits
+        backend (:class:`qibo.backends.abstract.Backend`): Backend object to use for execution.
+            If ``None`` the currently active global backend is used.
+            Default is ``None``.
+
+    Returns:
+        An Hamiltonian object.
+    """
+    eye = matrices.I
+    if qubit == 0:
+        h = hamiltonians.Z(1).matrix
+        for _ in range(nqubits - 1):
+            h = np.kron(h, eye)
+
+    elif qubit == nqubits - 1:
+        h = eye
+        for _ in range(nqubits - 2):
+            h = np.kron(eye, h)
+        h = np.kron(h, hamiltonians.Z(1).matrix)
+    else:
+        h = eye
+        for _ in range(nqubits - 1):
+            if _ + 1 == qubit:
+                h = np.kron(matrices.Z, h)
+            else:
+                h = np.kron(eye, h)
+    return Hamiltonian(nqubits, h, backend=backend)
+
+
+def error_mitigation(circuit, nqubits, hamiltonian, backend, noise_model, nshots):
+    """Fit CDR regression model to noisy states"""
+
+    calibration = calibration_matrix(nqubits=nqubits, backend=backend, nshots=nshots)
+
+    montecarlo = random.randrange(len(hamiltonian))
+
+    _, _, optimal_params, _ = CDR(
+        circuit=circuit,
+        observable=hamiltonian[montecarlo],
+        backend=backend,
+        nshots=nshots,
+        noise_model=noise_model,
+        full_output=True,
+        readout={"calibration_matrix": calibration},
+    )
+
+    return optimal_params
+
+
+def calculate_circuit_gradients(
+    circuit,
+    ham,
+    initparams,
+    nparams,
+    shift_rule,
+    cdr_params,
+    nshots,
+    deterministic,
+    var_gates=None,
+):
+    """
+    Full gradient calculation over all circuit parameters, using specific gradient calculation method
+    Args:
+        circuit: Circuit object whose parameters are trainable
+        ham: Hamiltonian applied to final state
+        initparams: initial parameter values given to circuit. This is mostly useful for using
+                    Parameter object lambda functions
+        nparams: number of trainable parameters
+        shift-rule: gradient calculation method ("psr", "spsr", or "fdiff")
+        cdr_params: error mitigation parameters
+        nshots: number of shots for circuit execution
+        deterministic: flag to calculate final state deterministically
+        var_gates: for a gate generator (H + theta V}, this gate implements V alone. Useful for SPSR.
+    Returns: np.array of the observable's gradients with respect to the variational parameters
+    """
+
+    obs_gradients = np.zeros(nparams, dtype=np.float64)
+    if deterministic:
+        nshots = None
+
+    # parameter shift
+    if shift_rule == "psr":
+        if isinstance(initparams, np.ndarray):
+            for ipar in range(nparams):
+                obs_gradients[ipar] = parameter_shift(
+                    circuit,
+                    ham,
+                    ipar,
+                    initial_state=None,
+                    scale_factor=1,
+                    nshots=nshots,
+                    cdr_params=cdr_params,
+                )
+        else:
+            count = 0
+            for ipar, Param in enumerate(initparams):
+                scaling = []
+                for nparam in range(Param.nparams):
+                    scaling.append(Param.get_scaling_factor(nparam))
+
+                obs_gradients[count : count + len(scaling)] = parameter_shift(
+                    circuit,
+                    ham,
+                    ipar,
+                    initial_state=None,
+                    scale_factor=np.array(scaling),
+                    nshots=nshots,
+                    cdr_params=cdr_params,
+                )
+                count += len(scaling)
+
+    # stochastic parameter shift
+    """
+    elif shift_rule == "spsr":
+        if isinstance(initparams, np.ndarray):
+            count = 0
+            for gate in circuit.queue:
+                if not isinstance(gate, gates.ParametrizedGate):
+                    continue
+                # -1 for s
+                for ipar in range(gate.nparams - 1):
+                    obs_gradients[ipar] = stochastic_parameter_shift(
+                        circuit,
+                        ham,
+                        count + ipar,
+                        gate_index_start=count,
+                        variable_gate=var_gates[count + ipar],
+                        scale_factor=1.0,
+                        initial_state=None,
+                        nshots=None,
+                    )
+
+                count += gate.nparams
+
+        else:
+            count = 0
+            for gate in circuit.queue:
+                if not isinstance(gate, gates.ParametrizedGate):
+                    continue
+                # -1 for s
+                for ipar in range(gate.nparams - 1):
+                    Param = initparams(count + ipar)
+                    scaling = []
+                    for nparam in range(Param.nparams):
+                        scaling.append(Param.get_scaling_factor(nparam))
+
+                    obs_gradients[ipar] = stochastic_parameter_shift(
+                        circuit,
+                        ham,
+                        count + ipar,
+                        gate_index_start=count,
+                        variable_gate=var_gates[count + ipar],
+                        scale_factor=scaling,
+                        initial_state=None,
+                        nshots=None,
+                    )
+
+                count += gate.nparams
+
+
+    # finite differences (central difference)
+    else:
+        for ipar in range(optimizer.nparams):
+            obs_gradients[ipar] = finite_differences(
+                optimizer._circuit,
+                ham,
+                ipar,
+                initial_state=None,
+                scale_factor=1,
+                nshots=None,
+            )"""
+
+    return obs_gradients
+
+
 def calculate_circuit_gradients(
     circuit,
     ham,
