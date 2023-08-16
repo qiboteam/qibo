@@ -16,6 +16,114 @@ from qibo.models.error_mitigation import (
 )
 
 
+def execute_circuit(
+    backend,
+    c,
+    obs,
+    nshots,
+    initial_state=None,
+    cdr_params=None,
+    calibration=None,
+    deterministic=False,
+):
+    """
+    Probabilistic circuit execution with possibilities for error mitigation
+
+    Args:
+        backend (:class:`qibo.backends.abstract.Backend`): backend to execute circuit on
+        c (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
+        obs (:class:`qibo.hamiltonians.Hamiltonian`): target observable.
+            if you want to execute on hardware, a symbolic hamiltonian must be
+            provided as follows (example with Pauli Z and ``nqubits=1``):
+            ``SymbolicHamiltonian(np.prod([ Z(i) for i in range(1) ]))``.
+        parameter_index (int): the index which identifies the target parameter
+            in the ``circuit.get_parameters()`` list.
+        initial_state (ndarray, optional): initial state on which the circuit
+            acts. Default is ``None``.
+        scale_factor (float, optional): parameter scale factor. Default is ``1``.
+        nshots (int, optional): number of shots if derivative is evaluated on
+            hardware. If ``None``, the simulation mode is executed.
+            Default is ``None``.
+    """
+    if deterministic:
+        state = c().state()
+        res = obs.expectation(state)
+        return res
+
+    # retrieve state
+    state = backend.execute_circuit(
+        circuit=c, nshots=nshots, initial_state=initial_state
+    )
+
+    # apply readout mitigation
+    if calibration is not None:
+        state = apply_readout_mitigation(state, calibration)
+
+    # get expectation value
+    result = state.expectation_from_samples(obs)
+
+    # apply CDR correction
+    if cdr_params is not None:
+        a, b = cdr_params
+        result = a * result + b
+
+    return result
+
+
+def create_hamiltonian(qubit=0, nqubits=1, backend=None):
+    """Precomputes Hamiltonian.
+
+    Args:
+        nqubits (int): number of qubits.
+        z_qubit (int): qubit where the Z measurement is applied, must be z_qubit < nqubits
+        backend (:class:`qibo.backends.abstract.Backend`): Backend object to use for execution.
+            If ``None`` the currently active global backend is used.
+            Default is ``None``.
+
+    Returns:
+        An Hamiltonian object.
+    """
+    eye = matrices.I
+    if qubit == 0:
+        h = hamiltonians.Z(1).matrix
+        for _ in range(nqubits - 1):
+            h = np.kron(h, eye)
+
+    elif qubit == nqubits - 1:
+        h = eye
+        for _ in range(nqubits - 2):
+            h = np.kron(eye, h)
+        h = np.kron(h, hamiltonians.Z(1).matrix)
+    else:
+        h = eye
+        for _ in range(nqubits - 1):
+            if _ + 1 == qubit:
+                h = np.kron(matrices.Z, h)
+            else:
+                h = np.kron(eye, h)
+    return Hamiltonian(nqubits, h, backend=backend)
+
+
+def error_mitigation(circuit, nqubits, hamiltonian, backend, noise_model, nshots):
+    """Fit CDR regression model to noisy states"""
+
+    calibration = calibration_matrix(nqubits=nqubits, backend=backend, nshots=nshots)
+
+    montecarlo = random.randrange(len(hamiltonian))
+
+    _, _, optimal_params, _ = CDR(
+        circuit=circuit,
+        observable=hamiltonian[montecarlo],
+        backend=backend,
+        nshots=nshots,
+        noise_model=noise_model,
+        full_output=True,
+        readout={"calibration_matrix": calibration},
+    )
+
+    return optimal_params
+
+
 def calculate_circuit_gradients(
     circuit,
     ham,
@@ -299,6 +407,96 @@ def parameter_shift(
     return result
 
 
+def finite_differences(
+    circuit,
+    hamiltonian,
+    parameter_index,
+    initial_state=None,
+    step_size=1e-1,
+    nshots=None,
+):
+    """
+    Calculate derivative of the expectation value of `hamiltonian` on the
+    final state obtained by executing `circuit` on `initial_state` with
+    respect to the variational parameter identified by `parameter_index`
+    in the circuit's parameters list. This method can be used only in
+    exact simulation mode.
+
+    Args:
+        circuit (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
+        hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): target observable.
+            if you want to execute on hardware, a symbolic hamiltonian must be
+            provided as follows (example with Pauli Z and ``nqubits=1``):
+            ``SymbolicHamiltonian(np.prod([ Z(i) for i in range(1) ]))``.
+        parameter_index (int): the index which identifies the target parameter
+            in the ``circuit.get_parameters()`` list.
+        initial_state (ndarray, optional): initial state on which the circuit
+            acts. Default is ``None``.
+        step_size (float): step size used to evaluate the finite difference
+            (default 1e-7).
+
+    Returns:
+        (float): Value of the derivative of the expectation value of the hamiltonian
+            with respect to the target variational parameter.
+    """
+
+    if parameter_index > len(circuit.get_parameters()):
+        raise_error(ValueError, f"""Index {parameter_index} is out of bounds.""")
+
+    if not isinstance(hamiltonian, AbstractHamiltonian):
+        raise_error(
+            TypeError,
+            "hamiltonian must be a qibo.hamiltonians.Hamiltonian or qibo.hamiltonians.SymbolicHamiltonian object",
+        )
+
+    backend = hamiltonian.backend
+
+    # parameters copies
+    parameters = np.asarray(circuit.get_parameters()).copy()
+    shifted = parameters.copy()
+
+    # shift the parameter_index element
+    shifted[parameter_index] += step_size
+    circuit.set_parameters(shifted)
+
+    if nshots is None:
+        # forward evaluation
+        forward = hamiltonian.expectation(
+            backend.execute_circuit(
+                circuit=circuit, initial_state=initial_state
+            ).state()
+        )
+
+        # backward shift and evaluation
+        shifted[parameter_index] -= 2 * step_size
+        circuit.set_parameters(shifted)
+
+        backward = hamiltonian.expectation(
+            backend.execute_circuit(
+                circuit=circuit, initial_state=initial_state
+            ).state()
+        )
+
+    # same but using expectation from samples
+    else:
+        forward = backend.execute_circuit(
+            circuit=circuit, initial_state=initial_state, nshots=nshots
+        ).expectation_from_samples(hamiltonian)
+
+        shifted[parameter_index] -= 2 * step_size
+        circuit.set_parameters(shifted)
+
+        backward = backend.execute_circuit(
+            circuit=circuit, initial_state=initial_state, nshots=nshots
+        ).expectation_from_samples(hamiltonian)
+
+    circuit.set_parameters(parameters)
+
+    result = (forward - backward) / (2 * step_size)
+
+    return result
+
+
 def generate_new_stochastic_params(params, s):
     """Generate the three-gate parameters needed for the stochastic parameter-shift rule.
     Args:
@@ -484,9 +682,9 @@ def stochastic_parameter_shift(
     return grads.mean() * scale_factor
 
 
-##################################################################################################
+####################
 ### Natural Gradient
-##################################################################################################
+####################
 
 
 class Node:
@@ -670,114 +868,6 @@ class Graph:
         return c, trainable_qubits, affected_params
 
 
-def create_hamiltonian(qubit=0, nqubits=1, backend=None):
-    """Precomputes Hamiltonian.
-
-    Args:
-        nqubits (int): number of qubits.
-        z_qubit (int): qubit where the Z measurement is applied, must be z_qubit < nqubits
-        backend (:class:`qibo.backends.abstract.Backend`): Backend object to use for execution.
-            If ``None`` the currently active global backend is used.
-            Default is ``None``.
-
-    Returns:
-        An Hamiltonian object.
-    """
-    eye = matrices.I
-    if qubit == 0:
-        h = hamiltonians.Z(1).matrix
-        for _ in range(nqubits - 1):
-            h = np.kron(h, eye)
-
-    elif qubit == nqubits - 1:
-        h = eye
-        for _ in range(nqubits - 2):
-            h = np.kron(eye, h)
-        h = np.kron(h, hamiltonians.Z(1).matrix)
-    else:
-        h = eye
-        for _ in range(nqubits - 1):
-            if _ + 1 == qubit:
-                h = np.kron(matrices.Z, h)
-            else:
-                h = np.kron(eye, h)
-    return Hamiltonian(nqubits, h, backend=backend)
-
-
-def error_mitigation(circuit, nqubits, hamiltonian, backend, noise_model, nshots):
-    """Fit CDR regression model to noisy states"""
-
-    calibration = calibration_matrix(nqubits=nqubits, backend=backend, nshots=nshots)
-
-    montecarlo = random.randrange(len(hamiltonian))
-
-    _, _, optimal_params, _ = CDR(
-        circuit=circuit,
-        observable=hamiltonian[montecarlo],
-        backend=backend,
-        nshots=nshots,
-        noise_model=noise_model,
-        full_output=True,
-        readout={"calibration_matrix": calibration},
-    )
-
-    return optimal_params
-
-
-def execute_circuit(
-    backend,
-    c,
-    obs,
-    nshots,
-    initial_state=None,
-    cdr_params=None,
-    calibration=None,
-    deterministic=False,
-):
-    """
-    Probabilistic circuit execution with possibilities for error mitigation
-
-    Args:
-        backend (:class:`qibo.backends.abstract.Backend`): backend to execute circuit on
-        c (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
-        obs (:class:`qibo.hamiltonians.Hamiltonian`): target observable.
-            if you want to execute on hardware, a symbolic hamiltonian must be
-            provided as follows (example with Pauli Z and ``nqubits=1``):
-            ``SymbolicHamiltonian(np.prod([ Z(i) for i in range(1) ]))``.
-        parameter_index (int): the index which identifies the target parameter
-            in the ``circuit.get_parameters()`` list.
-        initial_state (ndarray, optional): initial state on which the circuit
-            acts. Default is ``None``.
-        scale_factor (float, optional): parameter scale factor. Default is ``1``.
-        nshots (int, optional): number of shots if derivative is evaluated on
-            hardware. If ``None``, the simulation mode is executed.
-            Default is ``None``.
-    """
-    if deterministic:
-        state = c().state()
-        res = obs.expectation(state)
-        return res
-
-    # retrieve state
-    state = backend.execute_circuit(
-        circuit=c, nshots=nshots, initial_state=initial_state
-    )
-
-    # apply readout mitigation
-    if calibration is not None:
-        state = apply_readout_mitigation(state, calibration)
-
-    # get expectation value
-    result = state.expectation_from_samples(obs)
-
-    # apply CDR correction
-    if cdr_params is not None:
-        a, b = cdr_params
-        result = a * result + b
-
-    return result
-
-
 def build_graph(circuit, nparams, nqubits, initparams):
     """
     Builds Graph needed for Natural Gradient
@@ -907,76 +997,5 @@ def run_subcircuit_measure(
 
     # expectation value -> state |0> probability
     result = (1 - result) / 2
-
-    return result
-
-
-def finite_differences(
-    circuit,
-    hamiltonian,
-    parameter_index,
-    initial_state=None,
-    step_size=1e-7,
-):
-    """
-    Calculate derivative of the expectation value of `hamiltonian` on the
-    final state obtained by executing `circuit` on `initial_state` with
-    respect to the variational parameter identified by `parameter_index`
-    in the circuit's parameters list. This method can be used only in
-    exact simulation mode.
-
-    Args:
-        circuit (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
-        hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): target observable.
-            if you want to execute on hardware, a symbolic hamiltonian must be
-            provided as follows (example with Pauli Z and ``nqubits=1``):
-            ``SymbolicHamiltonian(np.prod([ Z(i) for i in range(1) ]))``.
-        parameter_index (int): the index which identifies the target parameter
-            in the ``circuit.get_parameters()`` list.
-        initial_state (ndarray, optional): initial state on which the circuit
-            acts. Default is ``None``.
-        step_size (float): step size used to evaluate the finite difference
-            (default 1e-7).
-
-    Returns:
-        (float): Value of the derivative of the expectation value of the hamiltonian
-            with respect to the target variational parameter.
-    """
-
-    if parameter_index > len(circuit.get_parameters()):
-        raise_error(ValueError, f"""Index {parameter_index} is out of bounds.""")
-
-    if not isinstance(hamiltonian, AbstractHamiltonian):
-        raise_error(
-            TypeError,
-            "hamiltonian must be a qibo.hamiltonians.Hamiltonian or qibo.hamiltonians.SymbolicHamiltonian object",
-        )
-
-    backend = hamiltonian.backend
-
-    # parameters copies
-    parameters = np.asarray(circuit.get_parameters()).copy()
-    shifted = parameters.copy()
-
-    # shift the parameter_index element
-    shifted[parameter_index] += step_size
-    circuit.set_parameters(shifted)
-
-    # forward evaluation
-    forward = hamiltonian.expectation(
-        backend.execute_circuit(circuit=circuit, initial_state=initial_state).state()
-    )
-
-    # backward shift and evaluation
-    shifted[parameter_index] -= 2 * step_size
-    circuit.set_parameters(shifted)
-
-    backward = hamiltonian.expectation(
-        backend.execute_circuit(circuit=circuit, initial_state=initial_state).state()
-    )
-
-    circuit.set_parameters(parameters)
-
-    result = (forward - backward) / (2 * step_size)
 
     return result

@@ -90,42 +90,38 @@ class NumpyMatrices:
             [[1, -1.0j * self.np.conj(phase)], [-1.0j * phase, 1]], dtype=self.dtype
         ) / self.np.sqrt(2)
 
-    def GNew(self, phi, s):
+    def RXRY_Variable(self, phi):
+        Y = np.array([[0, -1j], [1j, 0]])
+
+        return scipy.linalg.expm(1j * phi * Y)
+
+    def RXRY(self, phi, s):
         X = np.array([[0, 1], [1, 0]])
         Y = np.array([[0, -1j], [1j, 0.0]])
         matrix = scipy.linalg.expm(-1j * s * (0.3 * X - phi * Y))
 
         return matrix
 
-    def GNewMiddle(self, phi):
-        Y = np.array([[0, -1j], [1j, 0]])
-
-        return scipy.linalg.expm(1j * phi * Y)
-
-    def G(self, sign):
-        import numpy as np
-
+    def CrossRes_Variable(self, sign):
         X = np.array([[0, 1], [1, 0]])
 
         return scipy.linalg.expm(-1j * sign * np.pi / 4 * X)
 
-    def Gen(self, theta1, theta2, theta3):
-        import numpy as np
-
+    def generate_crossres(self, theta1, theta2, theta3):
         I = np.eye(2)
         X = np.array([[0, 1], [1, 0]])
         Z = np.array([[1, 0], [0, -1]])
-        # print(np.kron(X, I))
+
         G = (
             theta1.item() * np.kron(X, I)
             - theta2 * np.kron(Z, X)
             + theta3 * np.kron(I, X)
         )
-        # print(G)
+
         return G
 
-    def GG(self, s, theta1, theta2, theta3):
-        G = self.Gen(theta1, theta2, theta3)
+    def CrossRes(self, s, theta1, theta2, theta3):
+        G = self.generate_crossres(theta1, theta2, theta3)
         return scipy.linalg.expm(-1j * s * G)
 
     def U1(self, theta):

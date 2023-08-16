@@ -14,6 +14,7 @@ from qibo.derivative import (
     build_graph,
     calculate_circuit_gradients,
     create_hamiltonian,
+    finite_differences,
     generate_fubini,
     parameter_shift,
     run_subcircuit_measure,
@@ -248,13 +249,13 @@ def test_psr_commuting_gate():
     assert np.isclose(grad_1, grad_2, atol=1e-5)
 
 
-def spsr_circuit2(phi, s, sign):
+def spsr_circuit_RXRY_decomposed(phi, s, shift):
     ham = create_hamiltonian(0, 1, GlobalBackend())
 
     c1 = Circuit(nqubits=1)
-    c1.add(gates.GNew(0, phi, s))
-    c1.add(gates.GNewMiddle(0, sign))
-    c1.add(gates.GNew(0, phi, (1 - s)))
+    c1.add(gates.RXRY(0, phi, s))
+    c1.add(gates.RXRY_Variable(0, shift))
+    c1.add(gates.RXRY(0, phi, (1 - s)))
     c1.add(gates.M(0))
 
     backend = GlobalBackend()
@@ -266,10 +267,10 @@ def spsr_circuit2(phi, s, sign):
     return val
 
 
-def basic_circuit(phi):
+def spsr_circuit_RXRY(phi):
     ham = create_hamiltonian(0, 1, GlobalBackend())
     c1 = Circuit(nqubits=1)
-    c1.add(gates.GNew(0, phi, 1.0))
+    c1.add(gates.RXRY(0, phi, 1.0))
     c1.add(gates.M(0))
 
     backend = GlobalBackend()
@@ -293,45 +294,78 @@ def basic_circuit(phi):
     return val, diff
 
 
-def rtest_spsr():
-    qibo.set_backend("qibojit")
-
+def test_spsr_RXRY():
     np.random.seed(1430)
     angles = np.linspace(0.1, 2 * np.pi, 50)
 
-    evals = [basic_circuit(theta1) for theta1 in angles]
-    print(evals)
+    evals = [spsr_circuit_RXRY(theta1) for theta1 in angles]
+    fdiff = [res[1] for res in evals]
+    evals = [res[0] for res in evals]
 
     # spsr
     pos_vals = np.array(
         [
-            [spsr_circuit2(theta1, s=s, sign=+1) for s in np.random.uniform(size=10)]
+            [
+                spsr_circuit_RXRY_decomposed(theta1, s=s, shift=np.pi / 4)
+                for s in np.random.uniform(size=10)
+            ]
             for theta1 in angles
         ]
     )
 
     neg_vals = np.array(
         [
-            [spsr_circuit2(theta1, s=s, sign=-1) for s in np.random.uniform(size=10)]
+            [
+                spsr_circuit_RXRY_decomposed(theta1, s=s, shift=-np.pi / 4)
+                for s in np.random.uniform(size=10)
+            ]
             for theta1 in angles
         ]
     )
 
     spsr_vals = (pos_vals - neg_vals).mean(axis=1)
-    print(spsr_vals)
+
+    """
     plt.plot(angles, evals, "b", label="Expectation Value")
+    plt.plot(angles, fdiff, "g", label="Finite differences")
     plt.plot(angles, spsr_vals, "r", label="Stochastic parameter-shift rule")
     plt.legend()
     plt.show()
+    """
+
+    assert np.allclose(fdiff, spsr_vals, atol=0.05)
 
 
-def spsr_circuit(theta1, theta2, theta3, s, sign):
+def test_spsr_calculate_gradients():
+    ham = create_hamiltonian(0, 1, GlobalBackend())
+    c1 = Circuit(nqubits=1)
+    c1.add(gates.RXRY(0, 0.1, 1.0))
+    c1.add(gates.M(0))
+
+    test = stochastic_parameter_shift(c1, ham, 0, 0, gates.RXRY_Variable(q=0, phi=0.0))
+
+    grads = calculate_circuit_gradients(
+        c1,
+        ham,
+        np.array([0.1, 1.0]),
+        2,
+        "spsr",
+        None,
+        None,
+        True,
+        var_gates=[gates.RXRY_Variable(q=0, phi=0.0)],
+    )
+
+    assert np.allclose(grads, np.array([0.37, 0.0]), atol=0.02)
+
+
+def spsr_circuit_crossres_decomposed(theta1, theta2, theta3, s, sign):
     ham = create_hamiltonian(0, 2, GlobalBackend())
 
     c1 = Circuit(nqubits=2)
-    c1.add(gates.GG(0, 1, s, theta1, theta2, theta3))
-    c1.add(gates.G(0, sign))
-    c1.add(gates.GG(0, 1, (1 - s), theta1, theta2, theta3))
+    c1.add(gates.CrossRes(0, 1, s, theta1, theta2, theta3))
+    c1.add(gates.CrossRes_Variable(0, sign))
+    c1.add(gates.CrossRes(0, 1, (1 - s), theta1, theta2, theta3))
     c1.add(gates.M(0))
 
     backend = GlobalBackend()
@@ -343,10 +377,10 @@ def spsr_circuit(theta1, theta2, theta3, s, sign):
     return val
 
 
-def crossres_circuit(theta1, theta2, theta3):
+def spsr_circuit_crossres(theta1, theta2, theta3):
     ham = create_hamiltonian(0, 2, GlobalBackend())
     c1 = Circuit(nqubits=2)
-    c1.add(gates.GG(0, 1, 1.0, theta1, theta2, theta3))
+    c1.add(gates.CrossRes(0, 1, 1.0, theta1, theta2, theta3))
     c1.add(gates.M(0))
     c1.add(gates.M(1))
 
@@ -371,21 +405,18 @@ def crossres_circuit(theta1, theta2, theta3):
     return val, diff
 
 
-def rtest_spsr_non_commuting_gates():
-    qibo.set_backend("qibojit")
+def test_spsr_crossres():
     theta2, theta3 = -0.15, 1.6
     np.random.seed(143)
     angles = np.linspace(0, 2 * np.pi, 50)
 
-    evals = [crossres_circuit(theta1, theta2, theta3) for theta1 in angles]
-
-    print(evals)
+    evals = [spsr_circuit_crossres(theta1, theta2, theta3) for theta1 in angles]
 
     # spsr
     pos_vals = np.array(
         [
             [
-                spsr_circuit(theta1, theta2, theta3, s=s, sign=+1)
+                spsr_circuit_crossres_decomposed(theta1, theta2, theta3, s=s, sign=+1)
                 for s in np.random.uniform(size=10)
             ]
             for theta1 in angles
@@ -395,7 +426,7 @@ def rtest_spsr_non_commuting_gates():
     neg_vals = np.array(
         [
             [
-                spsr_circuit(theta1, theta2, theta3, s=s, sign=-1)
+                spsr_circuit_crossres_decomposed(theta1, theta2, theta3, s=s, sign=-1)
                 for s in np.random.uniform(size=10)
             ]
             for theta1 in angles
@@ -403,9 +434,67 @@ def rtest_spsr_non_commuting_gates():
     )
 
     spsr_vals = (pos_vals - neg_vals).mean(axis=1)
+
+    """
     plt.plot(angles, evals, "b", label="Expectation Value")
     plt.plot(angles, spsr_vals, "r", label="Stochastic parameter-shift rule")
     plt.show()
+    """
+    res = np.array(
+        [
+            -3.64291930e-18,
+            5.03841782e-01,
+            9.73885841e-01,
+            1.38185501e00,
+            1.69649933e00,
+            1.90157392e00,
+            1.98116025e00,
+            1.93349749e00,
+            1.75871260e00,
+            1.46393956e00,
+            1.07875868e00,
+            6.17535241e-01,
+            1.22410924e-01,
+            -3.85462412e-01,
+            -8.68766960e-01,
+            -1.29837344e00,
+            -1.63259669e00,
+            -1.86389153e00,
+            -1.97147143e00,
+            -1.95591789e00,
+            -1.81082722e00,
+            -1.54331266e00,
+            -1.17736354e00,
+            -7.34096811e-01,
+            -2.42107926e-01,
+            2.68287293e-01,
+            7.58880954e-01,
+            1.20287446e00,
+            1.56840347e00,
+            1.83007221e00,
+            1.97225039e00,
+            1.98603490e00,
+            1.86955600e00,
+            1.63230981e00,
+            1.28616042e00,
+            8.57174121e-01,
+            3.74380259e-01,
+            -1.37062287e-01,
+            -6.37496216e-01,
+            -1.09616643e00,
+            -1.48391894e00,
+            -1.77428751e00,
+            -1.94997151e00,
+            -1.99698582e00,
+            -1.91254232e00,
+            -1.70513493e00,
+            -1.38456757e00,
+            -9.74146855e-01,
+            -4.99956865e-01,
+            7.30461288e-03,
+        ]
+    )
+    assert np.allclose(spsr_vals, res)
 
 
 @pytest.mark.parametrize("nshots, atol", [(None, 1e-8), (100000, 1e-2)])
@@ -466,13 +555,67 @@ def test_psr(backend, nshots, atol):
     backend.assert_allclose(grad_2, grads[2], atol=atol)
 
 
+@pytest.mark.parametrize("nshots, atol", [(None, 1e-1), (100000, 1e-1)])
+def test_finite_differences(backend, nshots, atol):
+    # exact gradients
+    grads = gradient_exact()
+
+    # initializing the circuit
+    c = circuit(nqubits=1)
+
+    # some parameters
+    # we know the derivative's values with these params
+    test_params = np.linspace(0.1, 1, 3)
+    c.set_parameters(test_params)
+
+    test_hamiltonian = create_hamiltonian(0, 1, GlobalBackend())
+
+    # testing parameter out of bounds
+    with pytest.raises(ValueError):
+        grad_0 = finite_differences(
+            circuit=c, hamiltonian=test_hamiltonian, parameter_index=5
+        )
+
+    # testing hamiltonian type
+    with pytest.raises(TypeError):
+        grad_0 = finite_differences(
+            circuit=c, hamiltonian=c, parameter_index=0, nshots=nshots
+        )
+
+    # executing all the procedure
+    grad_0 = finite_differences(
+        circuit=c,
+        hamiltonian=test_hamiltonian,
+        parameter_index=0,
+        nshots=nshots,
+    )
+    grad_1 = finite_differences(
+        circuit=c,
+        hamiltonian=test_hamiltonian,
+        parameter_index=1,
+        nshots=nshots,
+    )
+    grad_2 = finite_differences(
+        circuit=c,
+        hamiltonian=test_hamiltonian,
+        parameter_index=2,
+        nshots=nshots,
+    )
+
+    # check of known values
+    # calculated using tf.GradientTape
+    backend.assert_allclose(grad_0, grads[0], atol=atol)
+    backend.assert_allclose(grad_1, grads[1], atol=atol)
+    backend.assert_allclose(grad_2, grads[2], atol=atol)
+
+
 @pytest.mark.parametrize(
     "layer_num, trainable_qubits_correct, affected_params_correct",
     [(1, [0, 1], [[0, 1], [2, 3]]), (2, [0, 1], [[6, 7], [4, 5]]), (6, [1], [16, 17])],
 )
 def test_graph(layer_num, trainable_qubits_correct, affected_params_correct):
     circuit = ansatz_2qubit(3, 2)
-    print(circuit.draw())
+
     nqubits = circuit.nqubits
     gates = circuit.queue
     trainable_params = np.linspace(0.1, 1, 18)
@@ -493,7 +636,7 @@ def test_graph(layer_num, trainable_qubits_correct, affected_params_correct):
 
 def graph_improvements(layer_num, trainable_qubits_correct, affected_params_correct):
     circuit = ansatz_2qubit(3, 2)
-    print(circuit.draw())
+
     nqubits = circuit.nqubits
     gates = circuit.queue
     trainable_params = np.linspace(0.1, 1, 18)
@@ -502,7 +645,6 @@ def graph_improvements(layer_num, trainable_qubits_correct, affected_params_corr
     ]
     trainable_params_index = [[i, i + 1] for i in range(0, 18, 2)]
 
-    print(gates, trainable_params_index, gate_params)
     graph = Graph(nqubits, gates, trainable_params_index, gate_params)
 
     graph.build_graph()
@@ -568,9 +710,7 @@ def test_natural_gradient():
     assert np.allclose(optimiser.params, params)
 
     metric_tensor = qml.metric_tensor(ansatz_pdf, approx="diag")(1, params, 0.1)
-    print(metric_tensor)
 
-    print(fubini)
     assert np.allclose(fubini, metric_tensor)
     assert np.allclose(fubini2, metric_tensor)
 
@@ -610,34 +750,13 @@ def test_multiqubit_natural_gradient():
     assert np.allclose(fubini, metric_tensor)
 
 
-def test_spsr():
-    ham = create_hamiltonian(0, 1, GlobalBackend())
-    c1 = Circuit(nqubits=1)
-    c1.add(gates.GNew(0, 0.1, 1.0))
-    c1.add(gates.M(0))
-
-    test = stochastic_parameter_shift(c1, ham, 0, 0, gates.GNewMiddle(q=0, phi=0.0))
-
-    grads = calculate_circuit_gradients(
-        c1,
-        ham,
-        np.array([0.1, 1.0]),
-        2,
-        "spsr",
-        None,
-        None,
-        True,
-        var_gates=[gates.GNewMiddle(q=0, phi=0.0)],
-    )
-    print(grads)
-
-
 if __name__ == "__main__":
     # graph_improvements(1, [0, 1], [[0, 1], [2, 3]])
     # test_multiqubit_natural_gradient()
-    test_parameter()
+    # test_parameter()
     # test_psr_commuting_gate()
     # rtest_spsr_non_commuting_gates()
     # test_natural_gradient()
-    # rtest_spsr()
+    # test_spsr()
+    test_spsr_calculate_gradients()
     # test_spsr()

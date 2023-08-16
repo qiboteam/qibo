@@ -819,11 +819,11 @@ class GPI2(ParametrizedGate):
         return self.__class__(self.target_qubits[0], self.parameters[0] + math.pi)
 
 
-class G(ParametrizedGate):
+class CrossRes_Variable(ParametrizedGate):
     def __init__(self, q, sign, trainable=True):
         super().__init__(trainable)
-        self.name = "g"
-        self.draw_label = "G"
+        self.name = "cross_variable"
+        self.draw_label = "crv"
         self.target_qubits = (q,)
 
         self.parameter_names = "sign"
@@ -834,11 +834,11 @@ class G(ParametrizedGate):
         self.init_kwargs = {"sign": sign, "trainable": trainable}
 
 
-class GNew(ParametrizedGate):
+class RXRY(ParametrizedGate):
     def __init__(self, q, phi, s=1.0, trainable=True):
         super().__init__(trainable)
-        self.name = "gnew"
-        self.draw_label = "GNew"
+        self.name = "rxry"
+        self.draw_label = "rxry"
         self.target_qubits = (q,)
 
         self.parameter_names = ["phi", "s"]
@@ -849,11 +849,11 @@ class GNew(ParametrizedGate):
         self.init_kwargs = {"phi": phi, "s": s, "trainable": trainable}
 
 
-class GNewMiddle(ParametrizedGate):
+class RXRY_Variable(ParametrizedGate):
     def __init__(self, q, phi, trainable=True):
         super().__init__(trainable)
-        self.name = "gnew"
-        self.draw_label = "GNew"
+        self.name = "rxry_variable"
+        self.draw_label = "rxryv"
         self.target_qubits = (q,)
 
         self.parameter_names = "phi"
@@ -1338,11 +1338,11 @@ class _CUn_(ParametrizedGate):
         self.init_kwargs = {"trainable": trainable}
 
 
-class GG(ParametrizedGate):
+class CrossRes(ParametrizedGate):
     def __init__(self, q0, q1, s, theta1, theta2, theta3, trainable=True):
         super().__init__(trainable)
-        self.name = "gg"
-        self.draw_label = "g"
+        self.name = "crossres"
+        self.draw_label = "cr"
         self.target_qubits = (q0, q1)
 
         self.parameter_names = ["s", "theta1", "theta2", "theta3"]
