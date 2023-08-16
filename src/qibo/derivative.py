@@ -710,3 +710,317 @@ def finite_differences(
     result = (forward - backward) / (2 * step_size)
 
     return result
+
+
+class Node:
+    """Parent class to create gate nodes"""
+
+    def __init__(self, gate, trainable_params, ID):
+        self.gate = gate
+        self.trainable_params = trainable_params  # index of optimisable parameters
+        self.next = None
+        self.id = ID
+
+
+class ConvergeNode(Node):
+    """Node for two-qubit gates"""
+
+    def __init__(self, gate, trainable_params, ID):
+        super().__init__(gate, trainable_params, ID)
+        self.next_target = None
+        self.waiting = None
+
+
+class Graph:
+    """Creates a graph representation of a circuit"""
+
+    def __init__(self, nqubits, gates, trainable_params, gate_params):
+        self.gates = gates
+        self.trainable_params = trainable_params
+        self.gate_params = gate_params
+        self.nqubits = nqubits
+
+    def build_graph(self):
+        """
+        Builds graph based on the circuit gates and associates parameters to each gate.
+        """
+
+        # setup
+        start = [None] * self.nqubits
+        ends = [None] * self.nqubits
+        depth = [0] * self.nqubits
+        nodes = list()
+
+        count = 0
+        # run through each gate in circuit queue
+        for i, gate in enumerate(self.gates):
+            n = len(gate.init_args) - 1
+
+            # store parameters for ParametrizedGate
+            if isinstance(gate, gates.ParametrizedGate):
+                trainp = self.trainable_params[count]
+                gateid = count
+                count += 1
+            else:
+                trainp = None
+                gateid = None
+
+            # two-qubit gates
+            if n == 1:
+                node = ConvergeNode(gate, trainp, gateid)
+                control = gate.init_args[0]
+                target = gate.init_args[1]
+
+                # control qubit
+                # start of graph
+                if start[control] is None:
+                    start[control] = i
+                    ends[control] = i
+                # link to existing graph node
+                else:
+                    nodes[ends[control]].next = i
+                    ends[control] = i
+
+                # target qubit
+                # start of graph
+                if start[target] is None:
+                    start[target] = i
+                    ends[target] = i
+                # link to existing graph node
+                else:
+                    nodes[ends[target]].next = i
+                    ends[target] = i
+
+                depth[control] += 1
+                depth[target] += 1
+
+            # one-qubit gate
+            else:
+                node = Node(gate, trainp, gateid)
+                qubit = gate.target_qubits[0]
+
+                # start of graph
+                if start[qubit] is None:
+                    start[qubit] = i
+                    ends[qubit] = i
+                # link to existing graph node
+                else:
+                    nodes[ends[qubit]].next = i
+                    ends[qubit] = i
+
+                depth[qubit] += 1
+
+            # add node to list
+            nodes.append(node)
+
+        self.start = start
+        self.end = ends
+        self.nodes = nodes
+        self.depth = max(depth)
+
+    def _determine_basis(self, gate):
+        gname = gate.name
+
+        if gname == "rx":
+            return gates.X
+        elif gname == "ry":
+            return gates.Y
+        else:
+            return gates.Z
+
+    def update_parameters(self, params):
+        self.gate_params = params
+
+    def run_layer(self, layer):
+        """Runs through one layer of the circuit parameters
+        Args:
+            layer: int, layer number N
+        Returns:
+            c: circuit up to nth layer
+            trainable_qubits: qubits on which we find trainable gates
+            affected_params: which trainable parameters are linked to the trainable gates
+        """
+
+        # empty circuit
+        c = Circuit(self.nqubits, density_matrix=True)
+
+        current = self.start[:]
+
+        trainable_qubits = []
+        affected_params = []
+        gate_order = []
+
+        # run through layer up to N
+        for iter in range(layer + 1):
+            # run through all qubits
+            for q in range(self.nqubits):
+                node = self.nodes[current[q]]
+
+                # wait for both qubits to reach two-qubit node
+                if isinstance(node, ConvergeNode):
+                    # first arrived
+                    if node.waiting is None:
+                        node.waiting = q
+                    # second arrived
+                    elif node.waiting != q:
+                        c.add(node.gate)
+                        gate_order.append(node.id)
+                        control = node.gate.init_args[0]
+                        target = node.gate.init_args[1]
+                        current[control] = node.next
+                        current[target] = node.next_target
+                        node.waiting = None
+
+                # replace last layer by M gate
+                elif iter == layer and isinstance(node.gate, gates.ParametrizedGate):
+                    c.add(gates.M(q, basis=self._determine_basis(node.gate)))
+                    trainable_qubits.append(q)
+                    affected_params.append(node.trainable_params)
+
+                # simple one-qubit node
+                else:
+                    c.add(node.gate)
+                    gate_order.append(node.id)
+                    if node.next:
+                        current[q] = node.next
+
+        # set parameters
+        numgates = c.trainable_gates.nparams
+        # Update the list_to_update based on the placement order
+        updated_list = [self.gate_params[i] for i in gate_order if i is not None]
+        c.set_parameters(updated_list[:numgates])
+
+        return c, trainable_qubits, affected_params
+
+
+def build_graph(circuit, nparams, nqubits, initparams):
+    """
+    Builds Graph needed for Natural Gradient
+    Args:
+        circuit (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
+        nparams (int): number of trainable parameters
+        nqubits (int): number of qubits in circuit
+        initparams (list or np.ndarray): initial circuit parameters
+
+    Returns:
+        (:class:`qibo.derivative.Graph`) initialised graph representation of circuit
+    """
+    # trainable and gate parameters
+
+    if isinstance(initparams, list):
+        trainable_params = []
+        count = 0
+        for Param in initparams:
+            indices = Param.get_indices(count)
+            count += len(indices)
+            trainable_params.append(indices)
+
+    else:
+        trainable_params = [[i] for i in range(nparams)]
+
+    # build graph from circuit gates
+    graph = Graph(nqubits, circuit.queue, trainable_params, circuit.get_parameters())
+    graph.build_graph()
+
+    return graph
+
+
+def generate_fubini(
+    graph,
+    nparams,
+    nqubits,
+    initparams,
+    noise_model=None,
+    mitigation=False,
+    deterministic=False,
+):
+    """
+    Generates the Fubini-Study metric tensor
+
+    Args:
+        graph (:class:`qibo.derivative.Graph`): graph representation of circuit
+        nparams (int): number of trainable parameters
+        nqubits (int): number of qubits in circuit
+        initparams (list or np.ndarray): initial circuit parameters
+        noise_model (:class:`qibo.noise.NoiseModel`): noise model to apply to circuit
+        mitigation (bool): flag to set error mitigation
+        deterministic (bool): flag to calculate final state deterministically
+
+    Returns
+        (np.ndarray) fubini-study matrix
+    """
+    fubini = np.zeros((nparams, nparams))
+    backend = GlobalBackend()
+
+    scale_factors = []
+
+    if isinstance(initparams, list):
+        count = 0
+        for Param in initparams:
+            indices = Param.get_indices(count)
+            count += len(indices)
+            for idx in range(len(indices)):
+                scale_factors.append(Param.get_scaling_factor(idx))
+    else:
+        scale_factors = [1] * nparams
+
+    calibration = None
+    if mitigation:
+        calibration = calibration_matrix(
+            nqubits, backend=backend, noise_model=noise_model, nshots=1024
+        )
+    # run through layers
+
+    for i in range(graph.depth):
+        c, qubits, affected_param = graph.run_layer(i)
+
+        if noise_model:
+            c = noise_model.apply(c)
+        if len(qubits) == 0:
+            continue
+
+        # run through parametrized gate
+        for qubit, params in zip(qubits, affected_param):
+            result = run_subcircuit_measure(
+                c, qubit, nqubits, backend, calibration, deterministic
+            )
+
+            for p in params:
+                # update Fubini-Study matrix
+                for t in params:
+                    if t == p:  # CHANGE
+                        ps = scale_factors[p]
+                        ts = scale_factors[t]
+                        val = ps * ts * (result - result**2)
+                        fubini[p, t] = val if val > 1e-3 else 1e-3
+
+    return fubini
+
+
+def run_subcircuit_measure(
+    c, qubit, nqubits, backend, calibration=None, deterministic=False
+):
+    """
+    Run variance measurement on specific qubit of subcircuit
+
+    Args:
+        c (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
+        qubit (int): circuit qubit at which variance is evaluated
+        nqubits (int): total number of circuit qubits
+        backend (:class:`qibo.backends.abstract.Backend`): simulation backend used to run circuit
+        deterministic (bool): flag to calculate final state deterministically
+    Return:
+        Probability of a specific qubit to be in state |0> in a measured basis"""
+
+    obs = create_hamiltonian(qubit, nqubits, backend)
+
+    if deterministic:
+        result = obs.expectation(backend.execute_circuit(c).state())
+    else:
+        # execute circuit with readout mitigation
+        result = execute_circuit(backend, c, obs, 1024, calibration=calibration)
+
+    # expectation value -> state |0> probability
+    result = (1 - result) / 2
+
+    return result
