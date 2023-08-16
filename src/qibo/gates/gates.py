@@ -63,6 +63,7 @@ class Parameter:
         return self._apply_func(self.lambdaf, fixed_params=params)
 
     def calculate_derivatives(self):
+        """Calculates derivatives w.r.t to all trainable parameters"""
         vars = []
         for i in range(self.nfeat):
             vars.append(sp.Symbol(f"x{i}"))
@@ -79,7 +80,7 @@ class Parameter:
         return derivatives
 
     def get_scaling_factor(self, trainablep_idx):
-        """Get scaling factor multiplying a specific trainable parameter"""
+        """Get derivative w.r.t a trainable parameter"""
         deriv = self.derivatives[trainablep_idx]
         return self._apply_func(deriv)
 
@@ -521,7 +522,7 @@ class _Rn_(ParametrizedGate):
         self._controlled_gate = None
         self.target_qubits = (q,)
 
-        self.paramInit = theta
+        self.initparams = theta
         if isinstance(theta, Parameter):
             self.parameters = theta.get_params()
         else:

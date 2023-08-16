@@ -12,7 +12,7 @@ from qibo.backends import GlobalBackend
 from qibo.derivative import (
     Graph,
     build_graph,
-    calculate_gradients,
+    calculate_circuit_gradients,
     create_hamiltonian,
     generate_fubini,
     parameter_shift,
@@ -155,7 +155,7 @@ def gradient_exact():
 def test_parameter():
     # single feature
     param = Parameter(
-        lambda x, th1, th2, th3: x**2 * th1 + th2 * th3,
+        lambda x, th1, th2, th3: x**2 * th1 + th2 * th3**2,
         [1.5, 2.0, 3.0],
         featurep=[7.0],
     )
@@ -167,10 +167,10 @@ def test_parameter():
     assert fixed == 73.5
 
     factor = param.get_scaling_factor(2)
-    assert factor == 2.0
+    assert factor == 12.0
 
     gate_value = param.get_params(trainablep=[15.0, 10.0, 7.0], feature=[5.0])
-    assert gate_value == 445
+    assert gate_value == 865
 
     # multiple features
     param = Parameter(
@@ -535,14 +535,12 @@ def test_natural_gradient():
 
     _ = optimiser.run_circuit(0.1)
 
-    graph = build_graph(
-        optimiser._circuit, 12, optimiser.nqubits, optimiser.paramInputs
-    )
+    graph = build_graph(optimiser._circuit, 12, optimiser.nqubits, optimiser.initparams)
     fubini = generate_fubini(
         graph,
         12,
         1,
-        optimiser.paramInputs,
+        optimiser.initparams,
         noise_model=optimiser.options["noise_model"],
         deterministic=True,
     )
@@ -556,13 +554,13 @@ def test_natural_gradient():
     _ = optimiser2.run_circuit(0.1)
 
     graph = build_graph(
-        optimiser2._circuit, 12, optimiser2.nqubits, optimiser2.paramInputs
+        optimiser2._circuit, 12, optimiser2.nqubits, optimiser2.initparams
     )
     fubini2 = generate_fubini(
         graph,
         12,
         1,
-        optimiser2.paramInputs,
+        optimiser2.initparams,
         noise_model=optimiser2.options["noise_model"],
         deterministic=True,
     )
@@ -599,14 +597,12 @@ def test_multiqubit_natural_gradient():
 
     _ = optimiser.run_circuit(0.1)
 
-    graph = build_graph(
-        optimiser._circuit, 24, optimiser.nqubits, optimiser.paramInputs
-    )
+    graph = build_graph(optimiser._circuit, 24, optimiser.nqubits, optimiser.initparams)
     fubini = generate_fubini(
         graph,
         24,
         nqubits,
-        optimiser.paramInputs,
+        optimiser.initparams,
         noise_model=optimiser.options["noise_model"],
         deterministic=True,
     )
@@ -621,15 +617,14 @@ def test_spsr():
     c1.add(gates.M(0))
 
     test = stochastic_parameter_shift(c1, ham, 0, 0, gates.GNewMiddle(q=0, phi=0.0))
-    print(test)
 
-    grads = calculate_gradients(
+    grads = calculate_circuit_gradients(
+        c1,
+        ham,
+        np.array([0.1, 1.0]),
         2,
         "spsr",
-        np.array([0.1, 1.0]),
-        c1,
         None,
-        ham,
         None,
         True,
         var_gates=[gates.GNewMiddle(q=0, phi=0.0)],
@@ -640,9 +635,9 @@ def test_spsr():
 if __name__ == "__main__":
     # graph_improvements(1, [0, 1], [[0, 1], [2, 3]])
     # test_multiqubit_natural_gradient()
-    # test_parameter()
+    test_parameter()
     # test_psr_commuting_gate()
     # rtest_spsr_non_commuting_gates()
     # test_natural_gradient()
     # rtest_spsr()
-    test_spsr()
+    # test_spsr()

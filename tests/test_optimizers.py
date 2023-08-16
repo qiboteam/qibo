@@ -3,7 +3,8 @@ import pennylane as qml
 
 import qibo
 from qibo.backends import GlobalBackend
-from qibo.derivative import Parameter, create_hamiltonian
+from qibo.derivative import create_hamiltonian
+from qibo.gates import Parameter
 from qibo.optimizers import CMAES, SGD, BasinHopping, Newtonian, ParallelBFGS
 
 
@@ -188,7 +189,7 @@ def test_sgd_methods():
     )
 
     # _get_params
-    gatep = optimizer._get_params(feature=0.5)
+    gatep = optimizer._get_gate_params(feature=0.5)
     assert gatep == [
         1.0,
         4.0,

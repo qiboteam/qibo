@@ -8,7 +8,7 @@ from qibo import backends
 from qibo.config import log, raise_error
 from qibo.derivative import (
     build_graph,
-    calculate_gradients,
+    calculate_circuit_gradients,
     create_hamiltonian,
     error_mitigation,
     execute_circuit,
@@ -45,20 +45,24 @@ class Optimizer:
     """Parent optimizer"""
 
     def __init__(self, initial_parameters, args=(), loss=None, save=False):
+        # saving to class objects
         self.loss_function = loss
         self.args = args
         self.params = initial_parameters
         self.backend = backends.GlobalBackend()
+
+        # logging
         self.simulation_start = time.time()
         self.ftime = time.time()
         self.etime = None
         self.name = f'Run_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
-        self.filename = f"results/{self.name}.txt"
         self.iteration = 0
+        self.filename = f"results/{self.name}.txt"
         self.save = save
         if save:
             self.file = open(self.filename, "w")
-        self.paramInputs = None
+
+        self.initparams = None
 
         if not isinstance(initial_parameters, np.ndarray) and not isinstance(
             initial_parameters, list
@@ -72,37 +76,39 @@ class Optimizer:
         self.options.update(updates)
 
     def set_params(self):
-        self.paramInputs = self._get_paramInit()
-        print(self.paramInputs)
+        self.initparams = self._get_initparams()
 
-    def _get_paramInit(self):
+    def _get_initparams(self):
         """Retrieve parameter values or objects directly from gates"""
 
         params = []
         for gate in self._circuit.queue:
             if isinstance(gate, gates._Rn_):
-                params.append(gate.paramInit)
+                params.append(gate.initparams)
 
         if isinstance(params[0], (float, int)):
-            print(self.params)
             params = self.params
 
         return params
 
-    def _get_params(self, feature=None):
-        """Retrieve gate parameters
+    def _get_gate_params(self, feature=None):
+        """Retrieve gate parameters based on initial parameter values given to gates
         Args:
-            feature: input feature if embedded in Parameter lambda function"""
+            feature (int or np.ndarray): input feature if embedded in Parameter lambda function
+
+        Returns:
+            (list) gate parameters
+        """
 
         # for array
-        if isinstance(self.paramInputs, np.ndarray):
-            return self.paramInputs
+        if isinstance(self.initparams, np.ndarray):
+            return self.initparams
 
         # for Parameter objects
         else:
             params = []
             count = 0
-            for Param in self.paramInputs:
+            for Param in self.initparams:
                 trainablep = self.params[count : count + Param.nparams]
                 count += Param.nparams
                 # update trainable params and retrieve gate param
@@ -113,10 +119,10 @@ class Optimizer:
     def fun(self, x):
         """Wrapper function to save and preprocess gate parameters"""
 
-        if isinstance(self.paramInputs[0], (float, int)):
+        if isinstance(self.initparams[0], (float, int)):
             val = self.loss_function(x, *self.args)
         else:
-            val = self.loss_function(x, self.paramInputs, *self.args)
+            val = self.loss_function(x, self.initparams, *self.args)
 
         # timing
         self.etime = time.time()
@@ -133,6 +139,8 @@ class Optimizer:
         return val
 
     def cleanup(self):
+        """Cleans up log file and closes it"""
+
         self.file.write(
             f"##### Total simulation time: {time.time()-self.simulation_start}\n"
         )
@@ -190,7 +198,7 @@ class SGD(Optimizer):
         self.nqubits = self._circuit.nqubits
 
         # parameters
-        self.paramInputs = self._get_paramInit()
+        self.initparams = self._get_initparams()
         self.params = parameters
         self.nparams = len(self.params)
 
@@ -224,8 +232,6 @@ class SGD(Optimizer):
         }
         self.set_options(kwargs)
 
-        self.param_history = np.zeros((self.options["epochs"], self.nparams))
-
         # name
         self.name_appendix = ""
         if self.options["adam"]:
@@ -233,13 +239,16 @@ class SGD(Optimizer):
         if self.options["natgrad"]:
             self.name_appendix += "natgrad"
 
+        # logging
+        self.param_history = np.zeros((self.options["epochs"], self.nparams))
         self.filename = f"results/{self.name}_{self.name_appendix}.txt"
         if save:
             self.file = open(self.filename, "w")
 
+        # natural gradient graph initialisation
         if self.options["natgrad"]:
             self.NGgraph = build_graph(
-                self._circuit, self.nparams, self.nqubits, self.paramInputs
+                self._circuit, self.nparams, self.nqubits, self.initparams
             )
 
     def calculate_loss_func_grad(self, results, labels, idx, delta=1e-6):
@@ -274,7 +283,7 @@ class SGD(Optimizer):
             results: expectation value"""
 
         # set parameters
-        parameters = self._get_params(feature=feature)
+        parameters = self._get_gate_params(feature=feature)
         self._circuit.set_parameters(parameters)
 
         # run circuit
@@ -295,7 +304,7 @@ class SGD(Optimizer):
 
     def predict(self, feature, N=1):
         """
-         User-facing function which runs the circuit for given input features returns the result
+         User-facing function which runs the circuit for given input features and returns the result.
          Args:
              feature: input values which are run through the circuit
         Return:
@@ -312,23 +321,28 @@ class SGD(Optimizer):
 
     def dloss(self, features, labels):
         """
-        This function calculates the loss function's gradients with respect to self.params
+        This function calculates the loss function's gradients with respect to self.params,
+        as well as the loss per feature.
         Args:
             features: np.matrix containig the n_sample-long vector of states
             labels: np.array of the labels related to features
-        Returns: np.array of length self.nparams containing the loss function's gradients
+        Returns:
+            np.array of length self.nparams containing the loss function's gradients
+            float of mean loss per feature
         """
         circ_grads = np.zeros(self.nparams)
         results = np.zeros((self.nsample, self.nlabels))
         loss = 0
 
-        # setup fubini matrix for natural gradient
+        # natural gradient setup
         if self.options["natgrad"]:
             fubini = np.zeros((self.nparams, self.nparams))
+            scount = int(0.2 * self.nsample)
+            sample = random.sample([i for i in range(self.nsample)], scount)
 
         # calculate CDR parameters anew at each epoch
         if self.options["mitigation"]:
-            parameters = self._get_params(feature=1.0)
+            parameters = self._get_gate_params(feature=1.0)
             self._circuit.set_parameters(parameters)
             self.cdr_params = error_mitigation(
                 self._circuit.to_clifford(),
@@ -339,8 +353,6 @@ class SGD(Optimizer):
                 self.options["nshots"],
             )
 
-        scount = int(0.2 * self.nsample)
-        sample = random.sample([i for i in range(self.nsample)], scount)
         # iterate through all data points
         for i, feat in enumerate(features):
             # predict current output
@@ -348,13 +360,13 @@ class SGD(Optimizer):
 
             obs_gradients = np.zeros((self.nlabels, self.nparams))
             for h, ham in enumerate(self.hamiltonian):
-                obs_gradients[h] = calculate_gradients(
+                obs_gradients[h] = calculate_circuit_gradients(
+                    self._circuit,
+                    ham,
+                    self.initparams,
                     self.nparams,
                     self.options["shift_rule"],
-                    self.paramInputs,
-                    self._circuit,
                     self.cdr_params,
-                    ham,
                     self.options["nshots"],
                     self.options["deterministic"],
                     var_gates=self.options["var_gates"],
@@ -370,7 +382,7 @@ class SGD(Optimizer):
                     self.NGgraph,
                     self.nparams,
                     self.nqubits,
-                    self.paramInputs,
+                    self.initparams,
                     noise_model=self.options["noise_model"],
                     deterministic=self.options["deterministic"],
                 )  # separate pull request
@@ -394,7 +406,7 @@ class SGD(Optimizer):
 
         return loss_gradients, loss
 
-    def AdamDescent(
+    def GradientDescent(
         self,
         learning_rate,
         m,
@@ -407,7 +419,7 @@ class SGD(Optimizer):
         epsilon=1e-8,
     ):
         """
-        Implementation of the Adam optimizer: during a run of this function parameters are updated.
+        Implementation of the gradient descent: during a run of this function parameters are updated.
         Furthermore, new values of m and v are calculated.
         Args:
             learning_rate: np.float value of the learning rate
@@ -432,8 +444,8 @@ class SGD(Optimizer):
 
             return m, v, loss
 
-        # standard gradient descent
-        else:
+        # QADAM
+        elif self.options["natgrad"]:
             beta_1 /= self.iteration + 1
             beta_2 /= self.iteration + 1
             m = beta_1 * m + (1 - beta_1) * grads
@@ -443,9 +455,14 @@ class SGD(Optimizer):
 
             return m, v, loss
 
+        # vanilla gradient descent
+        else:
+            self.params -= learning_rate * grads
+            return 0, 0, loss
+
     def sgd(self, options):
         """
-        This function performs the full Adam descent's procedure
+        This function performs the full gradient descent's procedure
         Args:
             epochs: np.integer value corresponding to the epochs of training
             learning_rate: np.float value of the learning rate
@@ -506,7 +523,7 @@ class SGD(Optimizer):
 
                 labels = self.labels[idx[indices[ib]]]
                 # update parameters
-                m, v, this_loss = self.AdamDescent(
+                m, v, this_loss = self.GradientDescent(
                     options["learning_rate"],
                     m,
                     v,

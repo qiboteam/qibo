@@ -2,13 +2,11 @@ import copy
 import random
 
 import numpy as np
-import sympy as sp
 
 from qibo import gates, hamiltonians
 from qibo.backends import GlobalBackend, matrices
 from qibo.config import raise_error
-from qibo.gates.gates import Parameter
-from qibo.hamiltonians import Hamiltonian, SymbolicHamiltonian
+from qibo.hamiltonians import Hamiltonian
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.models import Circuit
 from qibo.models.error_mitigation import (
@@ -16,33 +14,42 @@ from qibo.models.error_mitigation import (
     apply_readout_mitigation,
     calibration_matrix,
 )
-from qibo.symbols import I, Z
 
 
-def calculate_gradients(
+def calculate_circuit_gradients(
+    circuit,
+    ham,
+    initparams,
     nparams,
     shift_rule,
-    paramInputs,
-    circuit,
     cdr_params,
-    ham,
     nshots,
     deterministic,
     var_gates=None,
 ):
     """
-    Full parameter-shift rule's implementation
+    Full gradient calculation over all circuit parameters, using specific gradient calculation method
     Args:
-        this_feature: np.array 2**nqubits-long containing the state vector assciated to a data
+        circuit: Circuit object whose parameters are trainable
+        ham: Hamiltonian applied to final state
+        initparams: initial parameter values given to circuit. This is mostly useful for using
+                    Parameter object lambda functions
+        nparams: number of trainable parameters
+        shift-rule: gradient calculation method ("psr", "spsr", or "fdiff")
+        cdr_params: error mitigation parameters
+        nshots: number of shots for circuit execution
+        deterministic: flag to calculate final state deterministically
+        var_gates: for a gate generator (H + theta V}, this gate implements V alone. Useful for SPSR.
     Returns: np.array of the observable's gradients with respect to the variational parameters
     """
 
     obs_gradients = np.zeros(nparams, dtype=np.float64)
     if deterministic:
         nshots = None
+
     # parameter shift
     if shift_rule == "psr":
-        if isinstance(paramInputs, np.ndarray):
+        if isinstance(initparams, np.ndarray):
             for ipar in range(nparams):
                 obs_gradients[ipar] = parameter_shift(
                     circuit,
@@ -55,7 +62,7 @@ def calculate_gradients(
                 )
         else:
             count = 0
-            for ipar, Param in enumerate(paramInputs):
+            for ipar, Param in enumerate(initparams):
                 scaling = []
                 for nparam in range(Param.nparams):
                     scaling.append(Param.get_scaling_factor(nparam))
@@ -73,7 +80,7 @@ def calculate_gradients(
 
     # stochastic parameter shift
     elif shift_rule == "spsr":
-        if isinstance(paramInputs, np.ndarray):
+        if isinstance(initparams, np.ndarray):
             count = 0
             for gate in circuit.queue:
                 if not isinstance(gate, gates.ParametrizedGate):
@@ -100,7 +107,7 @@ def calculate_gradients(
                     continue
                 # -1 for s
                 for ipar in range(gate.nparams - 1):
-                    Param = paramInputs(count + ipar)
+                    Param = initparams(count + ipar)
                     scaling = []
                     for nparam in range(Param.nparams):
                         scaling.append(Param.get_scaling_factor(nparam))
@@ -289,19 +296,24 @@ def parameter_shift(
     circuit.set_parameters(original)
 
     # float() necessary to not return a 0-dim ndarray
-    print(scale_factor)
     result = float(generator_eigenval * (forward - backward)) * scale_factor
     return result
 
 
 def generate_new_stochastic_params(params, s):
-    """Generate the three-gate parameters needed for the stochastic parameter-shift rule."""
+    """Generate the three-gate parameters needed for the stochastic parameter-shift rule.
+    Args:
+        params: first-gate parameters, already known
+        s: random initialiser between 0 and 1
+    """
     idx = len(params)
     new_params = np.zeros(2 * idx + 1)
+
     new_params[:idx] = params
     new_params[idx - 1] = s
     new_params[idx + 1 :] = params
     new_params[-1] = 1 - s
+
     return new_params
 
 
@@ -326,10 +338,10 @@ def stochastic_parameter_shift(
     Machine Learning problem. For example, performing a re-uploading strategy
     to embed some data into a circuit, we apply to the quantum state rotations
     whose angles are in the form: theta' = theta * x, where theta is a variational
-    parameter and x an input variable. The PSR allows to calculate the derivative
-    with respect of theta' but, if we want to optimize a system with respect its
+    parameter and x an input variable. The SPSR allows to calculate the derivative
+    with respect to theta, but if we want to optimize a system with respect its
     variational parameters we need to "free" this procedure from the x depencency.
-    If the PSR is needed to be executed on a real quantum device, it is important
+    If the SPSR is needed to be executed on a real quantum device, it is important
     to set `nshots` to some integer value. This enables the execution on the
     hardware by calling the proper methods.
     Args:
@@ -340,6 +352,11 @@ def stochastic_parameter_shift(
             ``SymbolicHamiltonian(np.prod([ Z(i) for i in range(1) ]))``.
         parameter_index (int): the index which identifies the target parameter
             in the ``circuit.get_parameters()`` list.
+        gate_index_start (int): the index which identifies the first parameter of
+            the gate associated with the target parameter.
+        variable_gate (list of :class:`qibo.gate.abstract.Gate`): to each parameter
+            of a complex gate is associated a dependent variable gate, which needs to
+            be isolated as the second gate in the SPSR methodology.
         initial_state (ndarray, optional): initial state on which the circuit
             acts. Default is ``None``.
         nshots (int, optional): number of shots if derivative is evaluated on
@@ -413,6 +430,7 @@ def stochastic_parameter_shift(
     N = 10
     grads = np.zeros(N)
 
+    # stochastic sampling
     for i, s in enumerate(np.random.uniform(size=N)):
         new_params = generate_new_stochastic_params(gate.parameters, s)
         new_params[ancilla_gate.nparams] += shift
@@ -687,33 +705,6 @@ def create_hamiltonian(qubit=0, nqubits=1, backend=None):
     return Hamiltonian(nqubits, h, backend=backend)
 
 
-def create_hamiltoniawn(qubit, nqubit, backend):
-    """
-    Creates appropriate Hamiltonian for a given list of qubits
-    Args:
-        qubit: qubit numbers whose states we are interested in
-        nqubit: total number of qubits, which determines size of Hamiltonian
-    Return:
-        hamiltonian: SymbolicHamiltonian
-    """
-    if not isinstance(qubit, list):
-        qubit = [qubit]
-
-    hams = []
-
-    for i in range(nqubit):
-        if i in qubit:
-            hams.append(Z(i))
-        else:
-            hams.append(I(i))
-
-    # create Hamiltonian
-    obs = np.prod(hams)
-    hamiltonian = SymbolicHamiltonian(obs, backend=backend)
-
-    return hamiltonian
-
-
 def error_mitigation(circuit, nqubits, hamiltonian, backend, noise_model, nshots):
     """Fit CDR regression model to noisy states"""
 
@@ -744,7 +735,25 @@ def execute_circuit(
     calibration=None,
     deterministic=False,
 ):
-    """Probabilistic circuit execution with possibilities for error mitigation"""
+    """
+    Probabilistic circuit execution with possibilities for error mitigation
+
+    Args:
+        backend (:class:`qibo.backends.abstract.Backend`): backend to execute circuit on
+        c (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
+        obs (:class:`qibo.hamiltonians.Hamiltonian`): target observable.
+            if you want to execute on hardware, a symbolic hamiltonian must be
+            provided as follows (example with Pauli Z and ``nqubits=1``):
+            ``SymbolicHamiltonian(np.prod([ Z(i) for i in range(1) ]))``.
+        parameter_index (int): the index which identifies the target parameter
+            in the ``circuit.get_parameters()`` list.
+        initial_state (ndarray, optional): initial state on which the circuit
+            acts. Default is ``None``.
+        scale_factor (float, optional): parameter scale factor. Default is ``1``.
+        nshots (int, optional): number of shots if derivative is evaluated on
+            hardware. If ``None``, the simulation mode is executed.
+            Default is ``None``.
+    """
     if deterministic:
         state = c().state()
         res = obs.expectation(state)
@@ -770,13 +779,24 @@ def execute_circuit(
     return result
 
 
-def build_graph(circuit, nparams, nqubits, paramInputs):
+def build_graph(circuit, nparams, nqubits, initparams):
+    """
+    Builds Graph needed for Natural Gradient
+    Args:
+        circuit (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
+        nparams (int): number of trainable parameters
+        nqubits (int): number of qubits in circuit
+        initparams (list or np.ndarray): initial circuit parameters
+
+    Returns:
+        (:class:`qibo.derivative.Graph`) initialised graph representation of circuit
+    """
     # trainable and gate parameters
 
-    if isinstance(paramInputs, list):
+    if isinstance(initparams, list):
         trainable_params = []
         count = 0
-        for Param in paramInputs:
+        for Param in initparams:
             indices = Param.get_indices(count)
             count += len(indices)
             trainable_params.append(indices)
@@ -795,20 +815,34 @@ def generate_fubini(
     graph,
     nparams,
     nqubits,
-    paramInputs,
+    initparams,
     noise_model=None,
     mitigation=False,
     deterministic=False,
 ):
-    """Generate the Fubini-Study metric tensor"""
+    """
+    Generates the Fubini-Study metric tensor
+
+    Args:
+        graph (:class:`qibo.derivative.Graph`): graph representation of circuit
+        nparams (int): number of trainable parameters
+        nqubits (int): number of qubits in circuit
+        initparams (list or np.ndarray): initial circuit parameters
+        noise_model (:class:`qibo.noise.NoiseModel`): noise model to apply to circuit
+        mitigation (bool): flag to set error mitigation
+        deterministic (bool): flag to calculate final state deterministically
+
+    Returns
+        (np.ndarray) fubini-study matrix
+    """
     fubini = np.zeros((nparams, nparams))
     backend = GlobalBackend()
 
     scale_factors = []
 
-    if isinstance(paramInputs, list):
+    if isinstance(initparams, list):
         count = 0
-        for Param in paramInputs:
+        for Param in initparams:
             indices = Param.get_indices(count)
             count += len(indices)
             for idx in range(len(indices)):
@@ -852,13 +886,15 @@ def generate_fubini(
 def run_subcircuit_measure(
     c, qubit, nqubits, backend, calibration=None, deterministic=False
 ):
-    """Run variance measurement on specific qubit of subcircuit
+    """
+    Run variance measurement on specific qubit of subcircuit
+
     Args:
-        c: subcircuit ending with measurement gates in appropriate basis
-        qubit: circuit qubit at which variance is evaluated
-        nqubits: total number of circuit qubits
-        backend: simulation backend used to run circuit
-        stochastic (bool): flag to set precise or stochastic state evaluations
+        c (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
+        qubit (int): circuit qubit at which variance is evaluated
+        nqubits (int): total number of circuit qubits
+        backend (:class:`qibo.backends.abstract.Backend`): simulation backend used to run circuit
+        deterministic (bool): flag to calculate final state deterministically
     Return:
         Probability of a specific qubit to be in state |0> in a measured basis"""
 
