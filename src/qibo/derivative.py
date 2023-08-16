@@ -987,12 +987,9 @@ def generate_fubini(
 
             for p in params:
                 # update Fubini-Study matrix
-                for t in params:
-                    if t == p:  # CHANGE
-                        ps = scale_factors[p]
-                        ts = scale_factors[t]
-                        val = ps * ts * (result - result**2)
-                        fubini[p, t] = val if val > 1e-3 else 1e-3
+                ps = scale_factors[p]
+                val = ps**2 * (result - result**2)
+                fubini[p, p] = val if val > 1e-3 else 1e-3
 
     return fubini
 
