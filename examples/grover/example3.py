@@ -3,8 +3,8 @@ import argparse
 import numpy as np
 from scipy.special import binom as binomial
 
-from qibo import gates
-from qibo.models import Circuit, Grover
+from qibo import Circuit, gates
+from qibo.models import Grover
 
 
 def set_ancillas_to_num(ancillas, num):

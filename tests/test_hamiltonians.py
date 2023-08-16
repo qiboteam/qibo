@@ -2,8 +2,7 @@
 import numpy as np
 import pytest
 
-from qibo import gates, hamiltonians
-from qibo.models import Circuit
+from qibo import Circuit, gates, hamiltonians
 from qibo.symbols import I, Z
 
 from .utils import random_complex, random_sparse_matrix
@@ -194,7 +193,7 @@ def test_hamiltonian_matmul_states(backend, sparse_type):
     m = random_complex((2**nqubits, 2**nqubits), dtype=hm.dtype)
     Hv = H @ backend.cast(v)
     Hm = H @ backend.cast(m)
-    backend.assert_allclose(Hv, hm.dot(v))
+    backend.assert_allclose(Hv, hm.dot(v), atol=1e-7)  # needs atol for cuquantum
     backend.assert_allclose(Hm, (hm @ m))
 
     Hstate = H @ backend.cast(v)

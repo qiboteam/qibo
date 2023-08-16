@@ -3,8 +3,7 @@ from collections import Counter
 
 import pytest
 
-from qibo import gates
-from qibo.models import Circuit
+from qibo import Circuit, gates
 from qibo.models.utils import initialize
 
 
@@ -671,22 +670,21 @@ def test_circuit_draw_line_wrap():
 @pytest.mark.parametrize("legend", [True, False])
 def test_circuit_draw_channels(legend):
     """Check that channels are drawn correctly"""
-    from qibo.models import Circuit as circuit
 
-    c = circuit(2, density_matrix=True)
-    c.add(gates.H(0))
-    c.add(gates.PauliNoiseChannel(0, list(zip(["X", "Z"], [0.1, 0.2]))))
-    c.add(gates.H(1))
-    c.add(gates.PauliNoiseChannel(1, list(zip(["Y", "Z"], [0.2, 0.1]))))
-    c.add(gates.CNOT(0, 1))
-    c.add(gates.PauliNoiseChannel(0, list(zip(["X", "Z"], [0.1, 0.2]))))
-    c.add(gates.PauliNoiseChannel(1, list(zip(["Y", "Z"], [0.2, 0.1]))))
-    c.add(gates.CNOT(0, 1))
-    c.add(gates.DepolarizingChannel((0, 1), 0.1))
-    c.add(gates.CNOT(0, 1))
-    c.add(gates.DepolarizingChannel((0,), 0.1))
-    c.add(gates.CNOT(0, 1))
-    c.add(gates.DepolarizingChannel((1,), 0.1))
+    circuit = Circuit(2, density_matrix=True)
+    circuit.add(gates.H(0))
+    circuit.add(gates.PauliNoiseChannel(0, list(zip(["X", "Z"], [0.1, 0.2]))))
+    circuit.add(gates.H(1))
+    circuit.add(gates.PauliNoiseChannel(1, list(zip(["Y", "Z"], [0.2, 0.1]))))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.PauliNoiseChannel(0, list(zip(["X", "Z"], [0.1, 0.2]))))
+    circuit.add(gates.PauliNoiseChannel(1, list(zip(["Y", "Z"], [0.2, 0.1]))))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.DepolarizingChannel((0, 1), 0.1))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.DepolarizingChannel((0,), 0.1))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.DepolarizingChannel((1,), 0.1))
 
     ref = "q0: ─H─PN─o─PN─o─D─o─D─o───\n" "q1: ─H─PN─X─PN─X─D─X───X─D─"
 
@@ -699,7 +697,7 @@ def test_circuit_draw_channels(legend):
             "| PauliNoiseChannel   | PN       |"
         )
 
-    assert c.draw(legend=legend) == ref
+    assert circuit.draw(legend=legend) == ref
 
 
 @pytest.mark.parametrize("legend", [True, False])

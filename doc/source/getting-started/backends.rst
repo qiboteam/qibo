@@ -8,7 +8,7 @@ Qibo provides backends for quantum simulation on classical
 hardware and quantum hardware management and control. In the image below we
 present a schematic view of the currently supported backends.
 
-.. image:: backends.png
+.. image:: backends.svg
 
 Quantum simulation is proposed through dedicated backends for single node
 multi-GPU and multi-threading CPU setups. Quantum hardware control is supported
@@ -53,9 +53,21 @@ default value is 1 allowing all messages to appear.
 
 .. _hardware-backends:
 
-Hardware backends
-^^^^^^^^^^^^^^^^^
+Hardware backends & tools
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 We provide the following hardware control backends for Qibo:
 
-* qibolab (*under development*): a module for laboratories.
+* `qibolab <https://qibo.science/qibolab/stable/>`_: a dedicated Qibo backend
+  for the automatic deployment of quantum circuits on self-hosted quantum
+  hardware. It includes: an API for arbitrary pulse sequence generation, drivers
+  for multiple commercial and open-hardware control devices, and circuit to
+  pulse transpilation software.
+
+* `qibocal <https://qibo.science/qibocal/stable/>`_: is a python library that
+  implements Quantum Characterization Validation and Verification using Qibo and
+  Qibolab.
+
+* `qibosoq <https://qibo.science/qibosoq/stable/>`_: is the server that
+  integrates `Qick <https://github.com/openquantumhardware/qick>`_ in the
+  Qibolab ecosystem for executing arbitrary circuits and pulse sequences.

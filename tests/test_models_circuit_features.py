@@ -4,9 +4,8 @@ from collections import Counter
 import numpy as np
 import pytest
 
-from qibo import gates, matrices
+from qibo import Circuit, gates, matrices
 from qibo.config import PRECISION_TOL
-from qibo.models import Circuit
 from qibo.noise import NoiseModel, PauliError
 
 

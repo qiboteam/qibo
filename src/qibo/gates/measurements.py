@@ -155,7 +155,7 @@ class M(Gate):
         """"""
         raise_error(NotImplementedError, "Measurement gates cannot be controlled.")
 
-    def asmatrix(self, backend):
+    def matrix(self, backend=None):
         """"""
         raise_error(
             NotImplementedError, "Measurement gates do not have matrix representation."

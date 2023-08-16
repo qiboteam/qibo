@@ -1,8 +1,7 @@
 import numpy as np
 import pytest
 
-from qibo import gates
-from qibo.models import Circuit
+from qibo import Circuit, gates
 
 
 def test_eager_execute(backend, accelerators):

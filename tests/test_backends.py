@@ -3,7 +3,7 @@ import pytest
 
 from qibo import gates
 
-####################### Test `asmatrix` #######################
+####################### Test `matrix` #######################
 GATES = [
     ("H", (0,), np.array([[1, 1], [1, -1]]) / np.sqrt(2)),
     ("X", (0,), np.array([[0, 1], [1, 0]])),
@@ -47,9 +47,9 @@ GATES = [
 
 
 @pytest.mark.parametrize("gate,qubits,target_matrix", GATES)
-def test_asmatrix(backend, gate, qubits, target_matrix):
+def test_matrix(backend, gate, qubits, target_matrix):
     gate = getattr(gates, gate)(*qubits)
-    backend.assert_allclose(gate.asmatrix(backend), target_matrix)
+    backend.assert_allclose(gate.matrix(backend), target_matrix)
 
 
 GATES = [
@@ -75,15 +75,15 @@ GATES = [
 
 
 @pytest.mark.parametrize("gate,target_matrix", GATES)
-def test_asmatrix_rotations(backend, gate, target_matrix):
+def test_matrix_rotations(backend, gate, target_matrix):
     """Check that `_construct_unitary` method constructs the proper matrix."""
     theta = 0.1234
     if gate == "CU1":
         gate = getattr(gates, gate)(0, 1, theta)
     else:
         gate = getattr(gates, gate)(0, theta)
-    backend.assert_allclose(gate.asmatrix(backend), target_matrix(theta))
-    backend.assert_allclose(gate.asmatrix(backend), target_matrix(theta))
+    backend.assert_allclose(gate.matrix(backend), target_matrix(theta))
+    backend.assert_allclose(gate.matrix(backend), target_matrix(theta))
 
 
 def test_control_matrix(backend):
@@ -97,7 +97,7 @@ def test_control_matrix(backend):
     target_matrix = np.eye(4, dtype=rotation.dtype)
     target_matrix[2:, 2:] = rotation
     gate = gates.RY(0, theta).controlled_by(1)
-    backend.assert_allclose(gate.asmatrix(backend), target_matrix)
+    backend.assert_allclose(gate.matrix(backend), target_matrix)
 
     gate = gates.RY(0, theta).controlled_by(1, 2)
     with pytest.raises(NotImplementedError):

@@ -1,8 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from qibo import gates
-from qibo.models import Circuit
+from qibo import Circuit, gates
 
 
 class VQRegressor_linear_ansatz:

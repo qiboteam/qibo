@@ -101,25 +101,25 @@ class NumpyBackend(Backend):
         state /= 2**nqubits
         return state
 
-    def asmatrix(self, gate):
+    def matrix(self, gate):
         """Convert a gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
-        matrix = getattr(self.matrices, name)
-        return matrix(2 ** len(gate.target_qubits)) if callable(matrix) else matrix
+        _matrix = getattr(self.matrices, name)
+        return _matrix(2 ** len(gate.target_qubits)) if callable(_matrix) else _matrix
 
-    def asmatrix_parametrized(self, gate):
+    def matrix_parametrized(self, gate):
         """Convert a parametrized gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
         return getattr(self.matrices, name)(*gate.parameters)
 
-    def asmatrix_fused(self, fgate):
+    def matrix_fused(self, fgate):
         rank = len(fgate.target_qubits)
         matrix = np.eye(2**rank, dtype=self.dtype)
         for gate in fgate.gates:
             # transfer gate matrix to numpy as it is more efficient for
             # small tensor calculations
             # explicit to_numpy see https://github.com/qiboteam/qibo/issues/928
-            gmatrix = self.to_numpy(gate.asmatrix(self))
+            gmatrix = self.to_numpy(gate.matrix(self))
             # Kronecker product with identity is needed to make the
             # original matrix have shape (2**rank x 2**rank)
             eye = np.eye(2 ** (rank - len(gate.qubits)), dtype=self.dtype)
@@ -147,7 +147,7 @@ class NumpyBackend(Backend):
                 "unitary for more than two "
                 "control qubits.",
             )
-        matrix = gate.asmatrix(self)
+        matrix = gate.matrix(self)
         shape = matrix.shape
         if shape != (2, 2):
             raise_error(
@@ -163,7 +163,7 @@ class NumpyBackend(Backend):
     def apply_gate(self, gate, state, nqubits):
         state = self.cast(state)
         state = self.np.reshape(state, nqubits * (2,))
-        matrix = gate.asmatrix(self)
+        matrix = gate.matrix(self)
         if gate.is_controlled_by:
             matrix = self.np.reshape(matrix, 2 * len(gate.target_qubits) * (2,))
             ncontrol = len(gate.control_qubits)
@@ -190,7 +190,7 @@ class NumpyBackend(Backend):
     def apply_gate_density_matrix(self, gate, state, nqubits):
         state = self.cast(state)
         state = self.np.reshape(state, 2 * nqubits * (2,))
-        matrix = gate.asmatrix(self)
+        matrix = gate.matrix(self)
         if gate.is_controlled_by:
             matrix = self.np.reshape(matrix, 2 * len(gate.target_qubits) * (2,))
             matrixc = self.np.conj(matrix)
@@ -239,7 +239,7 @@ class NumpyBackend(Backend):
     def apply_gate_half_density_matrix(self, gate, state, nqubits):
         state = self.cast(state)
         state = np.reshape(state, 2 * nqubits * (2,))
-        matrix = gate.asmatrix(self)
+        matrix = gate.matrix(self)
         if gate.is_controlled_by:  # pragma: no cover
             raise_error(
                 NotImplementedError,
@@ -318,7 +318,7 @@ class NumpyBackend(Backend):
         state = self.cast(state)
         shape = state.shape
         q = gate.target_qubits[0]
-        p0, p1 = gate.init_kwargs["p0"], gate.init_kwargs["p1"]
+        p_0, p_1 = gate.init_kwargs["p_0"], gate.init_kwargs["p_1"]
         trace = self.partial_trace_density_matrix(state, (q,), nqubits)
         trace = self.np.reshape(trace, 2 * (nqubits - 1) * (2,))
         zero = self.zero_density_matrix(1)
@@ -327,8 +327,8 @@ class NumpyBackend(Backend):
         order.insert(q, 2 * nqubits - 2)
         order.insert(q + nqubits, 2 * nqubits - 1)
         zero = self.np.reshape(self.np.transpose(zero, order), shape)
-        state = (1 - p0 - p1) * state + p0 * zero
-        return state + p1 * self.apply_gate_density_matrix(X(q), zero, nqubits)
+        state = (1 - p_0 - p_1) * state + p_0 * zero
+        return state + p_1 * self.apply_gate_density_matrix(X(q), zero, nqubits)
 
     def thermal_error_density_matrix(self, gate, state, nqubits):
         state = self.cast(state)
@@ -633,10 +633,10 @@ class NumpyBackend(Backend):
     def apply_bitflips(self, noiseless_samples, bitflip_probabilities):
         fprobs = self.np.array(bitflip_probabilities, dtype="float64")
         sprobs = self.np.random.random(noiseless_samples.shape)
-        flip0 = self.np.array(sprobs < fprobs[0], dtype=noiseless_samples.dtype)
-        flip1 = self.np.array(sprobs < fprobs[1], dtype=noiseless_samples.dtype)
-        noisy_samples = noiseless_samples + (1 - noiseless_samples) * flip0
-        noisy_samples = noisy_samples - noiseless_samples * flip1
+        flip_0 = self.np.array(sprobs < fprobs[0], dtype=noiseless_samples.dtype)
+        flip_1 = self.np.array(sprobs < fprobs[1], dtype=noiseless_samples.dtype)
+        noisy_samples = noiseless_samples + (1 - noiseless_samples) * flip_0
+        noisy_samples = noisy_samples - noiseless_samples * flip_1
         return noisy_samples
 
     def partial_trace(self, state, qubits, nqubits):

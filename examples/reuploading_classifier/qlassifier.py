@@ -5,8 +5,7 @@ from datasets import create_dataset, create_target, fig_template, world_map_temp
 from matplotlib.cm import get_cmap
 from matplotlib.colors import Normalize
 
-from qibo import gates
-from qibo.models import Circuit
+from qibo import Circuit, gates
 
 
 class single_qubit_classifier:

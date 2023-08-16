@@ -3,8 +3,7 @@ import numpy as np
 import pytest
 import sympy
 
-from qibo import gates, hamiltonians
-from qibo.models import Circuit
+from qibo import Circuit, gates, hamiltonians
 from qibo.symbols import I, Y, Z
 
 from .utils import random_complex

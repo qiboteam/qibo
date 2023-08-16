@@ -3,8 +3,7 @@ import numpy as np
 import pytest
 
 import qibo
-from qibo import gates
-from qibo.models import Circuit
+from qibo import Circuit, gates
 
 
 def test_pauli_noise_channel(backend):

@@ -4,9 +4,8 @@ from re import finditer
 import numpy as np
 import pytest
 
-from qibo import matrices
+from qibo import Circuit, matrices
 from qibo.config import PRECISION_TOL
-from qibo.models import Circuit
 from qibo.quantum_info.metrics import fidelity
 from qibo.quantum_info.utils import (
     haar_integral,

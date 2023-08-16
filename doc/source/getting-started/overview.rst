@@ -16,7 +16,7 @@ which automates all aspects of a quantum computation.
 
 In the picture below, we summarize the major components of the Qibo "ecosystem".
 
-.. image:: overview.png
+.. image:: overview.svg
 
 The first component is the language API, based on Python 3, which defines the
 interface for the development of quantum applications, models and new

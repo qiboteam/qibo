@@ -96,7 +96,7 @@ def test_measurement_gate_errors(backend):
         gate.controlled_by(1)
     # attempting to construct unitary
     with pytest.raises(NotImplementedError):
-        matrix = gate.matrix
+        matrix = gate.matrix(backend)
 
 
 def test_measurement_circuit(backend, accelerators):

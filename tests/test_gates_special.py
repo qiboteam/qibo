@@ -12,7 +12,7 @@ def test_callback_gate_errors(backend):
     with pytest.raises(NotImplementedError):
         gate.on_qubits(2)
     with pytest.raises(NotImplementedError):
-        gate.asmatrix(backend)
+        gate.matrix(backend)
 
 
 @pytest.mark.parametrize("nqubits", [2, 3])
@@ -29,4 +29,4 @@ def test_fused_gate_construct_unitary(backend, nqubits):
         toffoli = np.eye(8)
         toffoli[-2:, -2:] = np.array([[0, 1], [1, 0]])
         target_matrix = toffoli @ np.kron(target_matrix, np.eye(2))
-    backend.assert_allclose(gate.asmatrix(backend), target_matrix)
+    backend.assert_allclose(gate.matrix(backend), target_matrix)

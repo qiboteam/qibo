@@ -462,6 +462,13 @@ Identity (I)
     :members:
     :member-order: bysource
 
+Align (A)
+"""""""""
+
+.. autoclass:: qibo.gates.Align
+    :members:
+    :member-order: bysource
+
 Measurement (M)
 """""""""""""""
 
@@ -525,6 +532,13 @@ Controlled-phase (CZ)
 """""""""""""""""""""
 
 .. autoclass:: qibo.gates.CZ
+    :members:
+    :member-order: bysource
+
+Controlled-Square Root of X (CSX)
+"""""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.CSX
     :members:
     :member-order: bysource
 
@@ -640,6 +654,13 @@ Parametric ZX interaction (RZX)
     :members:
     :member-order: bysource
 
+Parametric XX-YY interaction (RXY)
+""""""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.RXY
+    :members:
+    :member-order: bysource
+
 Givens gate
 """""""""""
 
@@ -668,6 +689,13 @@ Toffoli
 """""""
 
 .. autoclass:: qibo.gates.TOFFOLI
+    :members:
+    :member-order: bysource
+
+Deutsch
+"""""""
+
+.. autoclass:: qibo.gates.DEUTSCH
     :members:
     :member-order: bysource
 
@@ -769,6 +797,20 @@ Thermal relaxation channel
     :members:
     :member-order: bysource
 
+Amplitude damping channel
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.gates.AmplitudeDampingChannel
+    :members:
+    :member-order: bysource
+
+Phase damping channel
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.gates.PhaseDampingChannel
+    :members:
+    :member-order: bysource
+
 Readout error channel
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -816,11 +858,19 @@ The quantum errors available to build a noise model are the following:
     :members:
     :member-order: bysource
 
+.. autoclass:: qibo.noise.DepolarizingError
+    :members:
+    :member-order: bysource
+
 .. autoclass:: qibo.noise.ThermalRelaxationError
     :members:
     :member-order: bysource
 
-.. autoclass:: qibo.noise.DepolarizingError
+.. autoclass:: qibo.noise.AmplitudeDampingError
+    :members:
+    :member-order: bysource
+
+.. autoclass:: qibo.noise.PhaseDampingError
     :members:
     :member-order: bysource
 
@@ -1301,7 +1351,7 @@ Bures distance
 Entanglement fidelity
 """""""""""""""""""""
 
-.. autofunction::qibo.quantum_info.entanglement_fidelity
+.. autofunction:: qibo.quantum_info.entanglement_fidelity
 
 
 Process fidelity
