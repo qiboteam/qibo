@@ -1,8 +1,4 @@
-from typing import (
-    Any,
-    Dict,
-    Tuple,
-)
+from typing import Any, Dict, Tuple
 
 import numpy as np
 from qubo_utils import binary2spin, spin2QiboHamiltonian
