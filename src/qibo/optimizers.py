@@ -3,35 +3,146 @@ import time
 from datetime import datetime
 
 import numpy as np
-from scipy.optimize import basinhopping
 
 from qibo import backends
 from qibo.config import log, raise_error
-from qibo.derivative import calculate_gradients, create_hamiltonian, execute_circuit
+from qibo.derivative import (
+    calculate_circuit_gradients,
+    create_hamiltonian,
+    error_mitigation,
+    execute_circuit,
+)
+from qibo.gates import gates
 from qibo.models import Circuit
-from qibo.models.error_mitigation import CDR, calibration_matrix
+
+
+class VariationalCircuit(Circuit):
+    """
+    Circuit architecture used in Quantum Machine Learning and Quantum Optimisation
+    procedures
+    """
+
+    def optimize(
+        self,
+        X,
+        y,
+        initial_parameters,
+        loss,
+        args=(),
+        method="sgd",
+        hamiltonian=None,
+        **kwargs,
+    ):
+        if method == "sgd":
+            optimizer = SGD(self, initial_parameters, hamiltonian, args, loss, **kwargs)
+
+        return optimizer.fit(X, y)
 
 
 class Optimizer:
     """Parent optimizer"""
 
-    def __init__(self, initial_parameters, args=(), loss=None):
+    def __init__(self, initial_parameters, args=(), loss=None, save=False):
+        # saving to class objects
         self.loss_function = loss
         self.args = args
-        self.initial_parameters = initial_parameters
+        self.params = initial_parameters
         self.backend = backends.GlobalBackend()
-        self.ftime = None
+
+        # logging
+        self.simulation_start = time.time()
+        self.ftime = time.time()
         self.etime = None
         self.name = f'Run_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
+        self.iteration = 0
+        self.filename = f"results/{self.name}.txt"
+        self.save = save
+        if save:
+            self.file = open(self.filename, "w")
 
-        if not isinstance(initial_parameters, list) and not isinstance(
-            initial_parameters, np.ndarray
+        self.initparams = None
+
+        if not isinstance(initial_parameters, np.ndarray) and not isinstance(
+            initial_parameters, list
         ):
-            raise ("Parameters must be a list of Parameter objects or a numpy array")
+            raise TypeError(
+                "Parameters must be a list of Parameter objects or a numpy array"
+            )
 
     def set_options(self, updates):
         """Updates options dictionary"""
         self.options.update(updates)
+
+    def set_params(self):
+        self.initparams = self._get_initparams()
+
+    def _get_initparams(self):
+        """Retrieve parameter values or objects directly from gates"""
+
+        params = []
+        for gate in self._circuit.queue:
+            if isinstance(gate, gates._Rn_):
+                params.append(gate.initparams)
+
+        if isinstance(params[0], (float, int)):
+            params = self.params
+
+        return params
+
+    def _get_gate_params(self, feature=None):
+        """Retrieve gate parameters based on initial parameter values given to gates
+        Args:
+            feature (int or np.ndarray): input feature if embedded in Parameter lambda function
+
+        Returns:
+            (list) gate parameters
+        """
+
+        # for array
+        if isinstance(self.initparams, np.ndarray):
+            return self.initparams
+
+        # for Parameter objects
+        else:
+            params = []
+            count = 0
+            for Param in self.initparams:
+                trainablep = self.params[count : count + Param.nparams]
+                count += Param.nparams
+                # update trainable params and retrieve gate param
+                params.append(Param.get_params(trainablep, feature=feature))
+
+            return params
+
+    def fun(self, x):
+        """Wrapper function to save and preprocess gate parameters"""
+
+        if isinstance(self.initparams[0], (float, int)):
+            val = self.loss_function(x, *self.args)
+        else:
+            val = self.loss_function(x, self.initparams, *self.args)
+
+        # timing
+        self.etime = time.time()
+        duration = self.etime - self.ftime
+        self.ftime = self.etime
+
+        # saving
+        if self.save:
+            self.file.write(
+                f"Iteration {self.iteration} | loss: {val} | duration: {duration}\n"
+            )
+
+        self.iteration += 1
+        return val
+
+    def cleanup(self):
+        """Cleans up log file and closes it"""
+
+        self.file.write(
+            f"##### Total simulation time: {time.time()-self.simulation_start}\n"
+        )
+        self.file.close()
 
 
 class SGD(Optimizer):
@@ -66,9 +177,16 @@ class SGD(Optimizer):
     """
 
     def __init__(
-        self, circuit, parameters, hamiltonian=None, args=(), loss=None, **kwargs
+        self,
+        circuit,
+        parameters,
+        hamiltonian=None,
+        args=(),
+        loss=None,
+        save=False,
+        **kwargs,
     ):
-        super().__init__(parameters, args, loss=loss)
+        super().__init__(parameters, args, loss=loss, save=save)
 
         # circuit
         if not isinstance(circuit, Circuit):
@@ -78,13 +196,15 @@ class SGD(Optimizer):
         self.nqubits = self._circuit.nqubits
 
         # parameters
-        self.paramInputs = parameters
-        self.params = self._get_params(trainable=True)
+        self.initparams = self._get_initparams()
+        self.params = parameters
         self.nparams = len(self.params)
 
         # hamiltonian
         if not hamiltonian:
             self.hamiltonian = [create_hamiltonian(0, self.nqubits, self.backend)]
+        elif not isinstance(hamiltonian, list):
+            self.hamiltonian = [hamiltonian]
         else:
             self.hamiltonian = hamiltonian
 
@@ -93,38 +213,43 @@ class SGD(Optimizer):
 
         # options
         self.options = {
-            "epochs": 1000,
+            "epochs": 100,
             "learning_rate": 0.045,
             "batches": 1,
             "J_threshold": 1e-3,
             "shift_rule": "psr",
+            "var_gates": None,
             "nshots": 1024,
             "natgrad": False,
             "mitigation": False,
             "noise_model": None,
             "adam": True,
-            "save": False,
-            "filename": f"results/{self.name}.txt",
+            "deterministic": False,
+            "beta_1": 0.85,
+            "beta_2": 0.99,
         }
         self.set_options(kwargs)
 
-    def _get_params(self, trainable=False, feature=None):
-        """Creates an array with the trainable parameters"""
-        if isinstance(self.paramInputs, np.ndarray):
-            return self.paramInputs
-        else:
-            params = []
-            count = 0
-            for Param in self.paramInputs:
-                if trainable:
-                    params += Param._variational_parameters
-                else:
-                    trainablep = self.params[count : count + Param.nparams]
-                    count += Param.nparams
-                    # update trainable params and retrieve gate param
-                    params.append(Param.get_gate_params(trainablep, feature=feature))
+        # name
+        self.name_appendix = ""
+        if self.options["adam"]:
+            self.name_appendix += "adam"
+        if self.options["natgrad"]:
+            self.name_appendix += "natgrad"
 
-            return params
+        # logging
+        self.param_history = np.zeros((self.options["epochs"], self.nparams))
+        self.filename = f"results/{self.name}_{self.name_appendix}.txt"
+        if save:
+            self.file = open(self.filename, "w")
+
+        # natural gradient graph initialisation
+        if self.options["natgrad"]:
+            """
+            self.NGgraph = build_graph(
+                self._circuit, self.nparams, self.nqubits, self.initparams
+            )
+            """
 
     def calculate_loss_func_grad(self, results, labels, idx, delta=1e-6):
         """
@@ -150,45 +275,36 @@ class SGD(Optimizer):
             grads[lab] = (forward - backward) / (2 * delta)
         return grads
 
-    def run_circuit(self, feature):
-        """Backend function which runs the circuit for one feature
+    def run_circuit(self, feature, N=1):
+        """Backend function which runs the circuit for one feature N times
         Args:
             feature: single input value to the system
         Return:
             results: expectation value"""
 
         # set parameters
-        parameters = self._get_params(trainable=False, feature=feature)
+        parameters = self._get_gate_params(feature=feature)
         self._circuit.set_parameters(parameters)
 
         # run circuit
-        if isinstance(self.hamiltonian, list):
-            exp_v = np.empty(len(self.hamiltonian))
-            for i, hamiltonian in enumerate(self.hamiltonian):
-                exp_v[i] = execute_circuit(
+        exp_v = np.zeros((len(self.hamiltonian), N))
+        for i, hamiltonian in enumerate(self.hamiltonian):
+            for n in range(N):
+                exp_v[i, n] = execute_circuit(
                     self.backend,
                     self._circuit,
                     hamiltonian,
                     self.options["nshots"],
                     initial_state=None,
                     cdr_params=self.cdr_params,
+                    deterministic=self.options["deterministic"],
                 )
-
-        else:
-            exp_v = execute_circuit(
-                self.backend,
-                self._circuit,
-                self.hamiltonian,
-                self.options["nshots"],
-                initial_state=None,
-                cdr_params=self.cdr_params,
-            )
 
         return exp_v
 
-    def predict(self, feature):
+    def predict(self, feature, N=1):
         """
-         User-facing function which runs the circuit for given input features returns the result
+         User-facing function which runs the circuit for given input features and returns the result.
          Args:
              feature: input values which are run through the circuit
         Return:
@@ -196,51 +312,39 @@ class SGD(Optimizer):
         """
 
         if isinstance(feature, np.ndarray):
-            results = np.zeros((len(feature), self.nlabels))
+            results = np.zeros((len(feature), self.nlabels, N))
             for i, feat in enumerate(feature):
-                results[i, :] = self.run_circuit(feat)
-            return results
+                results[i] = self.run_circuit(feat, N)
+            return np.squeeze(results)
         else:
-            return self.run_circuit(feature)
-
-    def error_mitigation(self, circuit):
-        """Fit CDR regression model to noisy states"""
-
-        calibration = calibration_matrix(
-            nqubits=self.nqubits, backend=self.backend, nshots=self.options["nshots"]
-        )
-
-        montecarlo = random.randrange(len(self.hamiltonian))
-
-        _, _, optimal_params, _ = CDR(
-            circuit=circuit,
-            observable=self.hamiltonian[montecarlo],
-            backend=self.backend,
-            nshots=self.options["nshots"],
-            noise_model=self.options["noise_model"],
-            full_output=True,
-            readout={"calibration_matrix": calibration},
-        )
-
-        return optimal_params
+            return np.squeeze(self.run_circuit(feature))
 
     def dloss(self, features, labels):
         """
-        This function calculates the loss function's gradients with respect to self.params
+        This function calculates the loss function's gradients with respect to self.params,
+        as well as the loss per feature.
         Args:
             features: np.matrix containig the n_sample-long vector of states
             labels: np.array of the labels related to features
-        Returns: np.array of length self.nparams containing the loss function's gradients
+        Returns:
+            np.array of length self.nparams containing the loss function's gradients
+            float of mean loss per feature
         """
         circ_grads = np.zeros(self.nparams)
         results = np.zeros((self.nsample, self.nlabels))
         loss = 0
 
+        # natural gradient setup
+        if self.options["natgrad"]:
+            fubini = np.zeros((self.nparams, self.nparams))
+            scount = int(0.2 * self.nsample)
+            sample = random.sample([i for i in range(self.nsample)], scount)
+
         # calculate CDR parameters anew at each epoch
         if self.options["mitigation"]:
-            parameters = self._get_params(trainable=False, feature=1.0)
+            parameters = self._get_gate_params(feature=1.0)
             self._circuit.set_parameters(parameters)
-            self.cdr_params = self.error_mitigation(
+            self.cdr_params = error_mitigation(
                 self._circuit.to_clifford(),
                 self.nqubits,
                 self.hamiltonian,
@@ -251,38 +355,59 @@ class SGD(Optimizer):
 
         # iterate through all data points
         for i, feat in enumerate(features):
-            # duration measurement
-            if self.options["save"]:
-                ftime = time.time()
-                self.file.write(f"Feature {feat}, duration {ftime-self.ftime}\n")
-                self.ftime = ftime
-
             # predict current output
             results[i] = self.predict(feat)
 
             obs_gradients = np.zeros((self.nlabels, self.nparams))
             for h, ham in enumerate(self.hamiltonian):
-                obs_gradients[h] = calculate_gradients(
+                obs_gradients[h] = calculate_circuit_gradients(
                     self._circuit,
-                    self.options["shift_rule"],
-                    self.nparams,
-                    self.paramInputs,
-                    self.cdr_params,
                     ham,
+                    self.initparams,
+                    self.nparams,
+                    self.options["shift_rule"],
+                    self.cdr_params,
                     self.options["nshots"],
+                    self.options["deterministic"],
+                    var_gates=self.options["var_gates"],
                 )  # d<B> N params, N label gradients
 
             loss_func_grad = self.calculate_loss_func_grad(results, labels, i)
 
             circ_grads += np.dot(loss_func_grad.T, obs_gradients)
 
+            if self.options["natgrad"] and i in sample:
+                print("ok")
+                """
+                self.NGgraph.update_parameters(self._circuit.get_parameters())
+                fubini += generate_fubini(
+                    self.NGgraph,
+                    self.nparams,
+                    self.nqubits,
+                    self.initparams,
+                    noise_model=self.options["noise_model"],
+                    deterministic=self.options["deterministic"],
+                )  # separate pull request
+                """
+
         # gradient average
-        loss = self.loss_function(results, labels, self.args)
-        loss_gradients = circ_grads / (self.nsample)
+        loss = self.loss_function(results, labels, self.args) / self.nsample
+        loss_gradients = circ_grads / self.nsample
 
-        return loss_gradients, loss / len(features)
+        # Fubini-Study Metric renormalisation
+        if self.options["natgrad"]:
+            fubini /= scount
+            loss_gradients = np.dot(np.linalg.inv(fubini), loss_gradients)
 
-    def AdamDescent(
+        # save data
+        if self.save:
+            self.file.write(
+                f"Grads (absolute value: {np.linalg.norm(loss_gradients)}): {loss_gradients.tolist()}\nParams {self.params.tolist()}\nypred: {results.tolist()}\n"
+            )
+
+        return loss_gradients, loss
+
+    def GradientDescent(
         self,
         learning_rate,
         m,
@@ -295,7 +420,7 @@ class SGD(Optimizer):
         epsilon=1e-8,
     ):
         """
-        Implementation of the Adam optimizer: during a run of this function parameters are updated.
+        Implementation of the gradient descent: during a run of this function parameters are updated.
         Furthermore, new values of m and v are calculated.
         Args:
             learning_rate: np.float value of the learning rate
@@ -309,32 +434,36 @@ class SGD(Optimizer):
             epsilon: np.float value of the Adam's epsilon parameter; default 1e-8
         Returns: np.float new values of momentum and velocity
         """
-
         grads, loss = self.dloss(features, labels)
 
-        if self.options["save"]:
-            self.file.write(
-                f"Grads (absolute value: {np.linalg.norm(grads)}): {grads.tolist()}\nParams {self.params}\n"
-            )
-
         if self.options["adam"]:
-            for i in range(self.nparams):
-                m[i] = beta_1 * m[i] + (1 - beta_1) * grads[i]
-                v[i] = beta_2 * v[i] + (1 - beta_2) * grads[i] * grads[i]
-                mhat = m[i] / (1.0 - beta_1 ** (iteration + 1))
-                vhat = v[i] / (1.0 - beta_2 ** (iteration + 1))
-                self.params[i] -= learning_rate * mhat / (np.sqrt(vhat) + epsilon)
+            m = beta_1 * m + (1 - beta_1) * grads
+            v = beta_2 * v + (1 - beta_2) * grads * grads
+            mhat = m / (1.0 - beta_1 ** (iteration + 1))
+            vhat = v / (1.0 - beta_2 ** (iteration + 1))
+            self.params -= learning_rate * mhat / (np.sqrt(vhat) + epsilon)
+
             return m, v, loss
 
-        # standard gradient descent
+        # QADAM
+        elif self.options["natgrad"]:
+            beta_1 /= self.iteration + 1
+            beta_2 /= self.iteration + 1
+            m = beta_1 * m + (1 - beta_1) * grads
+            v = beta_2 * v + (1 - beta_2) * grads * grads
+
+            self.params -= learning_rate * m / (np.sqrt(v) + epsilon)
+
+            return m, v, loss
+
+        # vanilla gradient descent
         else:
-            for i in range(self.nparams):
-                self.params[i] -= learning_rate * grads[i]
+            self.params -= learning_rate * grads
             return 0, 0, loss
 
     def sgd(self, options):
         """
-        This function performs the full Adam descent's procedure
+        This function performs the full gradient descent's procedure
         Args:
             epochs: np.integer value corresponding to the epochs of training
             learning_rate: np.float value of the learning rate
@@ -356,30 +485,35 @@ class SGD(Optimizer):
         for ib in range(options["batches"]):
             indices.append(np.arange(ib, self.nsample, options["batches"]))
 
-        iteration = 0
-
-        if self.options["save"]:
-            self.file = open(self.options["filename"], "w")
+        if self.save:
             self.file.write(
-                f"Epochs: {self.options['epochs']}, \
-                            learning rate: {self.options['learning_rate']}, \
-                            nshots: {self.options['nshots']}, \
-                            natgrad: {self.options['natgrad']}, \
-                            mitigation: {self.options['mitigation']}, \
-                            noise_model: {self.options['noise_model']}, \
-                            adam: {self.options['adam']}\n"
+                f"Number of features: {self.nsample}\n"
+                f"Number of parameters: {len(self.params)}\n"
+                f"Epochs: {self.options['epochs']}\n"
+                f"learning rate: {self.options['learning_rate']}\n"
+                f"nshots: {self.options['nshots']}\n"
+                f"natgrad: {self.options['natgrad']}\n"
+                f"mitigation: {self.options['mitigation']}\n"
+                f"noise_model: {self.options['noise_model']}\n"
+                f"adam: {self.options['adam']}\n"
+                f"beta_1: {self.options['beta_1']}\n"
+                f"beta_2: {self.options['beta_2']}\n\n\n"
             )
             self.ftime = time.time()
+            self.simulation_start = time.time()
             self.etime = time.time()
 
-        for epoch in range(options["epochs"]):
-            if epoch != 0 and losses[-1] < options["J_threshold"]:
+        for self.epoch in range(options["epochs"]):
+            iteration = 0
+
+            if self.epoch != 0 and losses[-1] < options["J_threshold"]:
                 print(
                     "Desired sensibility is reached, here we stop: ",
                     iteration,
                     " iteration",
                 )
                 break
+
             # shuffle index list
             # np.random.shuffle(idx)
             # run over the batches
@@ -390,38 +524,49 @@ class SGD(Optimizer):
 
                 labels = self.labels[idx[indices[ib]]]
                 # update parameters
-                m, v, this_loss = self.AdamDescent(
-                    options["learning_rate"], m, v, features, labels, iteration
+                m, v, this_loss = self.GradientDescent(
+                    options["learning_rate"],
+                    m,
+                    v,
+                    features,
+                    labels,
+                    iteration,
+                    beta_1=options["beta_1"],
+                    beta_2=options["beta_2"],
                 )
                 # track the training
                 print(
                     "Iteration ",
                     iteration,
                     " epoch ",
-                    epoch + 1,
+                    self.epoch + 1,
                     " | loss: ",
                     this_loss,
                 )
 
-                if self.options["save"]:
+                if self.save:
                     etime = time.time()
                     self.file.write(
-                        f"Iteration {iteration}, epoch {epoch + 1} | loss: {this_loss} | duration: {etime-self.etime}\n"
+                        f"Iteration {iteration}, epoch {self.epoch + 1} | loss: {this_loss} | duration: {etime-self.etime}\n\n"
                     )
                     self.etime = etime
 
                 # in case one wants to plot J as a function of the iterations
                 losses.append(this_loss)
+                self.param_history[self.epoch] = self.params
 
-        if self.options["save"]:
-            self.file.write(f"Params {self.params}\n")
-            self.file.close()
+        if self.save:
+            value = min(losses)
+            idx = losses.index(value)
+            self.parameters = self.param_history[idx]
+
+            self.file.write(f"Params {self.params.tolist()}\n")
+            self.file.write(f"Best J: {min(losses)}\n")
+            self.cleanup()
 
         return losses
 
-    def fit(self, X, y):
-        """Performs the optimizations and returns f_best, x_best."""
-
+    def setup(self, X, y):
         if not isinstance(X, np.ndarray):
             raise ("X must be a numpy array")
 
@@ -442,12 +587,21 @@ class SGD(Optimizer):
 
             self.backend = GlobalBackend()
 
+    def fit(self, X, y):
+        """Performs the optimizations and returns f_best, x_best."""
+
+        self.setup(X, y)
+
         return self.sgd(self.options)
 
 
 class CMAES(Optimizer):
-    def __init__(self, initial_parameters, args=(), loss=None, **kwargs):
-        super().__init__(initial_parameters, args, loss, **kwargs)
+    def __init__(self, initial_parameters, args=(), loss=None, save=False, **kwargs):
+        self._circuit = args[0]
+        super().__init__(initial_parameters, args, loss, save)
+        self.options = {}
+        self.set_options(kwargs)
+        self.set_params()
 
     def fit(self):
         """Genetic optimizer based on `pycma <https://github.com/CMA-ES/pycma>`_.
@@ -464,12 +618,18 @@ class CMAES(Optimizer):
         """
         import cma
 
-        r = cma.fmin2(self.loss_function, self.initial_parameters, 1.7, args=self.args)
+        r = cma.fmin2(
+            self.fun,
+            self.params,
+            sigma0=1.7,
+            **self.options,
+        )
+
         return r[1].result.fbest, r[1].result.xbest, r
 
 
 class Newtonian(Optimizer):
-    def __init__(self, initial_parameters, args=(), loss=None, **kwargs):
+    def __init__(self, initial_parameters, args=(), loss=None, save=False, **kwargs):
         """
         Args:
             loss (callable): Loss as a function of variational parameters to be
@@ -491,7 +651,7 @@ class Newtonian(Optimizer):
                 ``scipy.optimize.minimize``.
             processes (int): number of processes when using the parallel BFGS method.
         """
-        super().__init__(initial_parameters, args, loss, **kwargs)
+        super().__init__(initial_parameters, args, loss, save)
         self.options = {
             "method": "Powell",
             "jac": None,
@@ -501,7 +661,7 @@ class Newtonian(Optimizer):
             "constraints": (),
             "tol": None,
             "callback": None,
-            "options": None,
+            "options": {"disp": True, "maxiter": 100},
             "processes": None,
             "backend": None,
         }
@@ -526,20 +686,19 @@ class Newtonian(Optimizer):
         """
         if self.options["method"] == "parallel_L-BFGS-B":  # pragma: no cover
             o = ParallelBFGS(
-                self.loss_function,
-                args=self.args,
+                self.fun,
                 processes=self.options["processes"],
                 bounds=self.options["bounds"],
                 callback=self.options["callback"],
                 options=self.options["options"],
             )
-            m = o.run(self.initial_parameters)
+            m = o.run(self.params)
         else:
             from scipy.optimize import minimize
 
             m = minimize(
                 self.loss_function,
-                self.initial_parameters,
+                self.params,
                 args=self.args,
                 method=self.options["method"],
                 jac=self.options["jac"],
@@ -569,8 +728,8 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
 
     import numpy as np
 
-    def __init__(self, initial_parameters, loss, args=(), **kwargs):
-        super().__init__(initial_parameters, args, loss=loss)
+    def __init__(self, initial_parameters, loss, args=(), save=False, **kwargs):
+        super().__init__(initial_parameters, args, loss, save)
         self.function_value = None
         self.jacobian_value = None
 
@@ -581,6 +740,7 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
             "callback": None,
             "options": None,
             "processes": None,
+            "save": False,
         }
 
         self.set_options(kwargs)
@@ -595,14 +755,14 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
 
         out = minimize(
             fun=self.fun,
-            x0=self.initial_parameters,
+            x0=self.params,
             jac=self.jac,
             method="L-BFGS-B",
             bounds=self.options["bounds"],
             callback=self.options["callback"],
             options=self.options["options"],
         )
-        out.hess_inv = out.hess_inv * self.np.identity(len(self.initial_parameters))
+        out.hess_inv = out.hess_inv * self.np.identity(len(self.params))
         return out.fun, out.x, out
 
     @staticmethod
@@ -640,8 +800,41 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
 
     def fun(self, x):
         self.evaluate(x)
+        if self.save:
+            self.file.write(
+                f"Iteration {self.iteration} | loss: {self.function_value}\n"
+            )
+            self.iteration += 1
         return self.function_value
 
     def jac(self, x):
         self.evaluate(x)
         return self.jacobian_value
+
+
+class BasinHopping(Optimizer):
+    def __init__(self, initial_parameters, args=(), loss=None, save=False, **kwargs):
+        super().__init__(initial_parameters, args, loss, save)
+        self.args = args
+        self.options = kwargs
+        self._circuit = args[0]
+        self.set_params()
+
+    def fit(self):
+        """Genetic optimizer based on `pycma <https://github.com/CMA-ES/pycma>`_.
+
+        Args:
+            loss (callable): Loss as a function of variational parameters to be
+                optimized.
+            initial_parameters (np.ndarray): Initial guess for the variational
+                parameters.
+            args (tuple): optional arguments for the loss function.
+            options (dict): Dictionary with options accepted by the ``cma``
+                optimizer. The user can use ``import cma; cma.CMAOptions()`` to view the
+                available options.
+        """
+        from scipy.optimize import basinhopping
+
+        r = basinhopping(self.fun, self.params, **self.options)
+
+        return r.fun
