@@ -6,8 +6,7 @@ import numpy as np
 import tensorflow as tf
 
 import qibo
-from qibo import gates
-from qibo.models import Circuit
+from qibo import Circuit, gates
 
 LOCAL_FOLDER = Path(__file__).parent
 

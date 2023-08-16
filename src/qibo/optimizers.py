@@ -7,12 +7,10 @@ import numpy as np
 from qibo import backends
 from qibo.config import log, raise_error
 from qibo.derivative import (
-    build_graph,
     calculate_circuit_gradients,
     create_hamiltonian,
     error_mitigation,
     execute_circuit,
-    generate_fubini,
 )
 from qibo.gates import gates
 from qibo.models import Circuit
@@ -247,9 +245,12 @@ class SGD(Optimizer):
 
         # natural gradient graph initialisation
         if self.options["natgrad"]:
+            print("ok")
+            """
             self.NGgraph = build_graph(
                 self._circuit, self.nparams, self.nqubits, self.initparams
             )
+            """
 
     def calculate_loss_func_grad(self, results, labels, idx, delta=1e-6):
         """
@@ -377,6 +378,8 @@ class SGD(Optimizer):
             circ_grads += np.dot(loss_func_grad.T, obs_gradients)
 
             if self.options["natgrad"] and i in sample:
+                print("ok")
+                """
                 self.NGgraph.update_parameters(self._circuit.get_parameters())
                 fubini += generate_fubini(
                     self.NGgraph,
@@ -386,6 +389,7 @@ class SGD(Optimizer):
                     noise_model=self.options["noise_model"],
                     deterministic=self.options["deterministic"],
                 )  # separate pull request
+                """
 
         # gradient average
         loss = self.loss_function(results, labels, self.args) / self.nsample

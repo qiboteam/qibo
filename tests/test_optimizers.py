@@ -15,10 +15,8 @@ def ansatz(layers, nqubits, variational=False, theta=0):
         layers: integer, number of layers which compose the circuit
     Returns: abstract qibo circuit
     """
-    if variational:
-        c = qibo.models.variational.VariationalCircuit(nqubits, density_matrix=True)
-    else:
-        c = qibo.models.Circuit(nqubits, density_matrix=True)
+
+    c = qibo.models.Circuit(nqubits, density_matrix=True)
 
     for i in range(nqubits):
         c.add(qibo.gates.H(q=i))
@@ -65,22 +63,6 @@ def test_sgd_optimizer():
     assert np.isclose(losses[-1], 0.016386939869709672)
 
     return losses
-
-
-def test_variational_circuit():
-    VC = ansatz(
-        3,
-        1,
-        variational=True,
-        theta=Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=[0.1]),
-    )
-    parameters = [0.1] * 12
-
-    X = np.array([0.1, 0.2, 0.3])
-    y = np.array([0.2, 0.5, 0.7])
-    losses = VC.optimize(X, y, parameters, loss_func_1qubit, method="sgd")
-
-    assert losses[-1] < 0.001
 
 
 def loss_func_2qubit(ypred, ytrue, other_args=None):

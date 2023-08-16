@@ -4,6 +4,7 @@ import pytest
 import sympy
 
 from qibo import hamiltonians, matrices
+from qibo.backends import NumpyBackend
 from qibo.quantum_info import random_hermitian
 from qibo.symbols import I, Symbol, X, Y, Z
 
@@ -42,8 +43,9 @@ def test_tfim_hamiltonian_from_symbols(backend, nqubits, hamtype, calcterms):
 @pytest.mark.parametrize("calcterms", [False, True])
 def test_from_symbolic_with_power(backend, hamtype, calcterms):
     """Check ``from_symbolic`` when the expression contains powers."""
+    npbackend = NumpyBackend()
     if hamtype == "symbolic":
-        matrix = random_hermitian(2)
+        matrix = random_hermitian(2, backend=npbackend)
         symham = (
             Symbol(0, matrix) ** 2
             - Symbol(1, matrix) ** 2
@@ -55,12 +57,13 @@ def test_from_symbolic_with_power(backend, hamtype, calcterms):
     else:
         z = sympy.symbols(" ".join(f"Z{i}" for i in range(3)))
         symham = z[0] ** 2 - z[1] ** 2 + 3 * z[1] - 2 * z[0] * z[2] + 1
-        matrix = random_hermitian(2)
+        matrix = random_hermitian(2, backend=npbackend)
         symmap = {x: (i, matrix) for i, x in enumerate(z)}
         ham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap, backend=backend)
 
     if calcterms:
         _ = ham.terms
+
     final_matrix = ham.matrix
     matrix2 = matrix.dot(matrix)
     eye = np.eye(2, dtype=matrix.dtype)

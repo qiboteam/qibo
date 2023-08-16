@@ -194,8 +194,7 @@ def parameter_shift(
 
             import qibo
             import numpy as np
-            from qibo import hamiltonians, gates
-            from qibo.models import Circuit
+            from qibo import Circuit, gates, hamiltonians
             from qibo.derivative import parameter_shift
 
             # defining an observable
@@ -404,5 +403,76 @@ def execute_circuit(
     if cdr_params is not None:
         a, b = cdr_params
         result = a * result + b
+
+    return result
+
+
+def finite_differences(
+    circuit,
+    hamiltonian,
+    parameter_index,
+    initial_state=None,
+    step_size=1e-7,
+):
+    """
+    Calculate derivative of the expectation value of `hamiltonian` on the
+    final state obtained by executing `circuit` on `initial_state` with
+    respect to the variational parameter identified by `parameter_index`
+    in the circuit's parameters list. This method can be used only in
+    exact simulation mode.
+
+    Args:
+        circuit (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
+        hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): target observable.
+            if you want to execute on hardware, a symbolic hamiltonian must be
+            provided as follows (example with Pauli Z and ``nqubits=1``):
+            ``SymbolicHamiltonian(np.prod([ Z(i) for i in range(1) ]))``.
+        parameter_index (int): the index which identifies the target parameter
+            in the ``circuit.get_parameters()`` list.
+        initial_state (ndarray, optional): initial state on which the circuit
+            acts. Default is ``None``.
+        step_size (float): step size used to evaluate the finite difference
+            (default 1e-7).
+
+    Returns:
+        (float): Value of the derivative of the expectation value of the hamiltonian
+            with respect to the target variational parameter.
+    """
+
+    if parameter_index > len(circuit.get_parameters()):
+        raise_error(ValueError, f"""Index {parameter_index} is out of bounds.""")
+
+    if not isinstance(hamiltonian, AbstractHamiltonian):
+        raise_error(
+            TypeError,
+            "hamiltonian must be a qibo.hamiltonians.Hamiltonian or qibo.hamiltonians.SymbolicHamiltonian object",
+        )
+
+    backend = hamiltonian.backend
+
+    # parameters copies
+    parameters = np.asarray(circuit.get_parameters()).copy()
+    shifted = parameters.copy()
+
+    # shift the parameter_index element
+    shifted[parameter_index] += step_size
+    circuit.set_parameters(shifted)
+
+    # forward evaluation
+    forward = hamiltonian.expectation(
+        backend.execute_circuit(circuit=circuit, initial_state=initial_state).state()
+    )
+
+    # backward shift and evaluation
+    shifted[parameter_index] -= 2 * step_size
+    circuit.set_parameters(shifted)
+
+    backward = hamiltonian.expectation(
+        backend.execute_circuit(circuit=circuit, initial_state=initial_state).state()
+    )
+
+    circuit.set_parameters(parameters)
+
+    result = (forward - backward) / (2 * step_size)
 
     return result

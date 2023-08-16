@@ -1,19 +1,6 @@
-import sys
+from functools import cached_property
 
 from qibo.config import raise_error
-
-if sys.version_info.minor >= 8:
-    from functools import cached_property  # pylint: disable=E0611
-else:  # pragma: no cover
-    # Custom ``cached_property`` because it is not available for Python < 3.8
-    from functools import lru_cache
-
-    def cached_property(func):
-        @property
-        def wrapper(self):
-            return lru_cache()(func)(self)
-
-        return wrapper
 
 
 class NumpyMatrices:
@@ -44,6 +31,10 @@ class NumpyMatrices:
     @cached_property
     def SX(self):
         return self.np.array([[1 + 1j, 1 - 1j], [1 - 1j, 1 + 1j]], dtype=self.dtype) / 2
+
+    @cached_property
+    def SXDG(self):
+        return self.np.transpose(self.np.conj(self.SX))
 
     @cached_property
     def S(self):
@@ -132,6 +123,24 @@ class NumpyMatrices:
         return self.np.array(
             [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, -1]], dtype=self.dtype
         )
+
+    @cached_property
+    def CSX(self):
+        a = (1 + 1j) / 2
+        b = self.np.conj(a)
+        return self.np.array(
+            [
+                [1, 0, 0, 0],
+                [0, 1, 0, 0],
+                [0, 0, a, b],
+                [0, 0, b, a],
+            ],
+            dtype=self.dtype,
+        )
+
+    @cached_property
+    def CSXDG(self):
+        return self.np.transpose(self.np.conj(self.CSX))
 
     def CRX(self, theta):
         m = self.np.eye(4, dtype=self.dtype)
@@ -272,6 +281,18 @@ class NumpyMatrices:
             dtype=self.dtype,
         )
 
+    def RXY(self, theta):
+        cos, sin = self.np.cos(theta / 2), self.np.sin(theta / 2)
+        return self.np.array(
+            [
+                [1, 0, 0, 0],
+                [0, cos, -1j * sin, 0],
+                [0, -1j * sin, cos, 0],
+                [0, 0, 0, 1],
+            ],
+            dtype=self.dtype,
+        )
+
     def MS(self, phi0, phi1, theta):
         plus = self.np.exp(1.0j * (phi0 + phi1))
         minus = self.np.exp(1.0j * (phi0 - phi1))
@@ -330,6 +351,23 @@ class NumpyMatrices:
                 [0, 0, 0, 0, 0, 0, 0, 1],
                 [0, 0, 0, 0, 0, 0, 1, 0],
             ]
+        )
+
+    def DEUTSCH(self, theta):
+        sin = self.np.sin(theta) + 0j  # 0j necessary for right tensorflow dtype
+        cos = self.np.cos(theta)
+        return self.np.array(
+            [
+                [1, 0, 0, 0, 0, 0, 0, 0],
+                [0, 1, 0, 0, 0, 0, 0, 0],
+                [0, 0, 1, 0, 0, 0, 0, 0],
+                [0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 0, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0],
+                [0, 0, 0, 0, 0, 0, 1j * cos, sin],
+                [0, 0, 0, 0, 0, 0, sin, 1j * cos],
+            ],
+            dtype=self.dtype,
         )
 
     def Unitary(self, u):
