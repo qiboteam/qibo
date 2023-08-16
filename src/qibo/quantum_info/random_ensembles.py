@@ -185,7 +185,12 @@ def random_unitary(dims: int, measure: Optional[str] = None, seed=None, backend=
         backend = GlobalBackend()
 
     if measure == "haar":
-        unitary = stats.unitary_group.rvs(dims, random_state=seed)
+        unitary = random_gaussian_matrix(dims, dims, seed=seed, backend=backend)
+        Q, R = np.linalg.qr(unitary)
+        D = np.diag(R)
+        D = D / np.abs(D)
+        R = np.diag(D)
+        unitary = np.dot(Q, R)
     elif measure is None:
         H = random_hermitian(dims, seed=seed, backend=NumpyBackend())
         unitary = expm(-1.0j * H / 2)
