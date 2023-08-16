@@ -194,8 +194,7 @@ def random_unitary(dims: int, measure: Optional[str] = None, seed=None, backend=
     elif measure is None:
         H = random_hermitian(dims, seed=seed, backend=NumpyBackend())
         unitary = expm(-1.0j * H / 2)
-
-    unitary = backend.cast(unitary, dtype=unitary.dtype)
+        unitary = backend.cast(unitary, dtype=unitary.dtype)
 
     return unitary
 
