@@ -7,10 +7,12 @@ import numpy as np
 from qibo import backends
 from qibo.config import log, raise_error
 from qibo.derivative import (
+    build_graph,
     calculate_circuit_gradients,
     create_hamiltonian,
     error_mitigation,
     execute_circuit,
+    generate_fubini,
 )
 from qibo.gates import gates
 from qibo.models import Circuit
@@ -245,11 +247,9 @@ class SGD(Optimizer):
 
         # natural gradient graph initialisation
         if self.options["natgrad"]:
-            """
             self.NGgraph = build_graph(
                 self._circuit, self.nparams, self.nqubits, self.initparams
             )
-            """
 
     def calculate_loss_func_grad(self, results, labels, idx, delta=1e-6):
         """
@@ -377,8 +377,6 @@ class SGD(Optimizer):
             circ_grads += np.dot(loss_func_grad.T, obs_gradients)
 
             if self.options["natgrad"] and i in sample:
-                print("ok")
-                """
                 self.NGgraph.update_parameters(self._circuit.get_parameters())
                 fubini += generate_fubini(
                     self.NGgraph,
@@ -388,7 +386,6 @@ class SGD(Optimizer):
                     noise_model=self.options["noise_model"],
                     deterministic=self.options["deterministic"],
                 )  # separate pull request
-                """
 
         # gradient average
         loss = self.loss_function(results, labels, self.args) / self.nsample
@@ -404,6 +401,8 @@ class SGD(Optimizer):
             self.file.write(
                 f"Grads (absolute value: {np.linalg.norm(loss_gradients)}): {loss_gradients.tolist()}\nParams {self.params.tolist()}\nypred: {results.tolist()}\n"
             )
+
+        plot(results, self.features, self.labels, self.epoch, loss)
 
         return loss_gradients, loss
 
@@ -559,6 +558,18 @@ class SGD(Optimizer):
             value = min(losses)
             idx = losses.index(value)
             self.parameters = self.param_history[idx]
+            ypred, ysigma = get_error(self, self.features, self.name_appendix)
+
+            plot(
+                ypred,
+                self.features,
+                self.labels,
+                idx,
+                value,
+                ysigma,
+                self.name,
+                self.name_appendix,
+            )
 
             self.file.write(f"Params {self.params.tolist()}\n")
             self.file.write(f"Best J: {min(losses)}\n")
@@ -810,6 +821,105 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
     def jac(self, x):
         self.evaluate(x)
         return self.jacobian_value
+
+
+def get_error(optimizer, xtrain, name_appendix):
+    ypredictions = optimizer.predict(xtrain, N=10)
+
+    np.save(f"predictions/{optimizer.name}_{name_appendix}.dat", ypredictions)
+    ypred = np.mean(ypredictions, axis=ypredictions.ndim - 1)
+    ysigma = np.std(ypredictions, axis=ypredictions.ndim - 1)
+
+    return ypred, ysigma
+
+
+scaler = lambda x: x
+import matplotlib.pyplot as plt
+
+
+def plot(
+    yprediction,
+    xtrain,
+    ytrain,
+    epoch,
+    loss,
+    ysigma=None,
+    name=None,
+    name_appendix=None,
+    params=None,
+    xscale="log",
+):
+    # new predictions
+    if yprediction.ndim == 2:
+        cols = yprediction.shape[1]
+    else:
+        cols = 1
+    # new plot
+    fig, ax = plt.subplots(nrows=1, ncols=cols, figsize=(8, 6))
+    fig.suptitle(f"Epoch {epoch+1}, J={loss:.4}")
+
+    for col in range(cols):
+        if cols > 1:
+            ax[col].set_xscale(xscale)
+            train = ytrain[:, col]
+            pred = yprediction[:, col]
+            pred = scaler(pred)
+            if ysigma is not None:
+                sigma = ysigma[:, col]
+                ax[col].fill_between(
+                    xtrain, pred + sigma, pred - sigma, alpha=0.3, color="royalblue"
+                )
+
+            ax[col].plot(xtrain, train, label="Classical PDF", color="black")
+            ax[col].plot(
+                xtrain,
+                pred,
+                label="Quantum PDF model",
+                # zorder=10,
+                # marker=".",
+                # markersize=12,
+                alpha=0.7,
+                color="royalblue",
+                lw=2,
+            )
+
+            ax[col].legend()
+
+        else:
+            ax.set_xscale(xscale)
+            yprediction = scaler(yprediction)
+            if ysigma is not None:
+                ax.fill_between(
+                    xtrain,
+                    yprediction + ysigma,
+                    yprediction - ysigma,
+                    alpha=0.3,
+                    color="royalblue",
+                )
+            ax.plot(xtrain, ytrain, label="Classical PDF", color="black")
+            ax.plot(
+                xtrain,
+                yprediction,
+                label="Quantum PDF model",
+                # zorder=10,
+                # marker=".",
+                # markersize=12,
+                color="royalblue",
+                lw=2,
+                alpha=0.7,
+            )
+            ax.legend()
+
+    plt.xscale(xscale)
+    plt.xlabel("x")
+    plt.ylabel("y")
+
+    if name is not None:
+        plt.savefig(f"results/{name}_{name_appendix}.png", bbox_inches="tight")
+        plt.show()
+    else:
+        plt.savefig("Plot.png", bbox_inches="tight")
+    plt.close()
 
 
 class BasinHopping(Optimizer):
