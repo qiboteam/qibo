@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import networkx as nx
 from qubo_utils import binary2spin, spin2QiboHamiltonian
 
@@ -24,7 +23,6 @@ def qubo_mvc(g: nx.Graph, penalty=None):
         penalty = qubo_mvc_penalty(g)
 
     for s, d in g.edges:
-
         q[(s, s)] -= penalty
         q[(d, d)] -= penalty
 

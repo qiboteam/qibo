@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Minimum Vertex Cover"""
 import argparse
 import csv
@@ -22,7 +21,7 @@ parser.add_argument("--filename", default="./mvc.csv", type=str)
 
 def load_csv(filename: str):
     """Load graph from csv file"""
-    with open(filename, "r", newline="") as f:
+    with open(filename, newline="") as f:
         reader = csv.reader(f)
         data = [[int(row[0]), int(row[1]), float(row[2])] for row in reader]
 
@@ -43,7 +42,6 @@ def load_csv(filename: str):
 
 
 def main(filename: str = "./mvc.csv"):
-
     print(f"Load a graph from {filename} and make it a QUBO")
     g = load_csv(filename)
     penalty = qubo_mvc_penalty(g)
