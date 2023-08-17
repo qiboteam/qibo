@@ -329,6 +329,7 @@ def random_quantum_channel(
             precision_tol=precision_tol,
             order=order,
             validate_cp=validate_cp,
+            nqubits=nqubits,
             initial_state_env=initial_state_env,
             backend=backend,
         )
