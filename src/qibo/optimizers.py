@@ -663,6 +663,8 @@ class Newtonian(Optimizer):
             processes (int): number of processes when using the parallel BFGS method.
         """
         super().__init__(initial_parameters, args, loss, save)
+        self._circuit = args[0]
+
         self.options = {
             "method": "Powell",
             "jac": None,
@@ -672,11 +674,12 @@ class Newtonian(Optimizer):
             "constraints": (),
             "tol": None,
             "callback": None,
-            "options": {"disp": True, "maxiter": 100},
+            "options": {"disp": True, "maxfevals": 100},
             "processes": None,
             "backend": None,
         }
         self.set_options(kwargs)
+        self.set_params()
 
     def fit(self):
         """Newtonian optimization approaches based on ``scipy.optimize.minimize``.
@@ -708,9 +711,8 @@ class Newtonian(Optimizer):
             from scipy.optimize import minimize
 
             m = minimize(
-                self.loss_function,
+                self.fun,
                 self.params,
-                args=self.args,
                 method=self.options["method"],
                 jac=self.options["jac"],
                 hess=self.options["hess"],
@@ -721,7 +723,7 @@ class Newtonian(Optimizer):
                 callback=self.options["callback"],
                 options=self.options["options"],
             )
-        return m.fun, m.x, m
+        return m.fun, m.x, m, self.iteration
 
 
 class ParallelBFGS(Optimizer):  # pragma: no cover
@@ -743,6 +745,7 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
         super().__init__(initial_parameters, args, loss, save)
         self.function_value = None
         self.jacobian_value = None
+        self._circuit = args[0]
 
         self.options = {
             "xval": None,
@@ -755,6 +758,9 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
         }
 
         self.set_options(kwargs)
+        self.set_params()
+        if not isinstance(self.initparams[0], (float, int)):
+            self.args = (self.initparams,) + self.args
 
     def fit(self):
         """Executes parallel L-BFGS-B minimization.
@@ -774,7 +780,7 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
             options=self.options["options"],
         )
         out.hess_inv = out.hess_inv * self.np.identity(len(self.params))
-        return out.fun, out.x, out
+        return out.fun, out.x, out, self.iteration
 
     @staticmethod
     def _eval_approx(eps_at, fun, x, eps):
@@ -945,6 +951,14 @@ class BasinHopping(Optimizer):
         """
         from scipy.optimize import basinhopping
 
-        r = basinhopping(self.fun, self.params, **self.options)
+        if "options" in self.options:
+            options = self.options.pop("options")
 
-        return r.fun
+        r = basinhopping(
+            self.fun,
+            self.params,
+            niter=1,
+            minimizer_kwargs={"options": {"maxfev": 100}},
+        )
+
+        return r.fun, r.x, r, self.iteration
