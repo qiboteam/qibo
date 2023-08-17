@@ -1,7 +1,4 @@
-from typing import (
-    Dict,
-    Tuple,
-)
+from typing import Dict, Tuple
 
 
 def binary2spin(
