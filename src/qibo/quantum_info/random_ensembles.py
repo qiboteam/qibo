@@ -4,6 +4,8 @@ import warnings
 from typing import Optional, Union
 
 import numpy as np
+from scipy import stats
+from scipy.linalg import expm
 
 from qibo import Circuit, gates
 from qibo.backends import GlobalBackend, NumpyBackend
@@ -183,19 +185,16 @@ def random_unitary(dims: int, measure: Optional[str] = None, seed=None, backend=
         backend = GlobalBackend()
 
     if measure == "haar":
-        gaussian_matrix = random_gaussian_matrix(dims, dims, seed=seed, backend=backend)
-        Q, R = np.linalg.qr(gaussian_matrix)
+        unitary = random_gaussian_matrix(dims, dims, seed=seed, backend=backend)
+        Q, R = np.linalg.qr(unitary)
         D = np.diag(R)
         D = D / np.abs(D)
         R = np.diag(D)
         unitary = np.dot(Q, R)
     elif measure is None:
-        from scipy.linalg import expm
-
         H = random_hermitian(dims, seed=seed, backend=NumpyBackend())
         unitary = expm(-1.0j * H / 2)
-
-    unitary = backend.cast(unitary, dtype=unitary.dtype)
+        unitary = backend.cast(unitary, dtype=unitary.dtype)
 
     return unitary
 
@@ -398,10 +397,10 @@ def random_statevector(dims: int, haar: bool = False, seed=None, backend=None):
     )
 
     if not haar:
-        probabilities = local_state.random(dims)
-        probabilities = probabilities / np.sum(probabilities)
-        phases = 2 * np.pi * local_state.random(dims)
-        state = np.sqrt(probabilities) * np.exp(1.0j * phases)
+        # sample real and imag parts of complex amplitude in [-1, 1]
+        state = 1j * (2 * local_state.random(dims) - 1)
+        state += 2 * local_state.random(dims) - 1
+        state /= np.linalg.norm(state)
         state = backend.cast(state, dtype=state.dtype)
     else:
         # select a random column of a haar random unitary
