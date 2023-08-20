@@ -1201,7 +1201,11 @@ class _CRn_(ParametrizedGate):
         self.name = None
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
-        self.parameters = theta
+        self.initparams = theta
+        if isinstance(theta, Parameter):
+            self.parameters = theta.get_params()
+        else:
+            self.parameters = theta
         self.unitary = True
 
         if isinstance(theta, (float, int)) and (theta % (np.pi / 2)).is_integer():
@@ -1388,7 +1392,11 @@ class CU1(_CUn_):
         self.name = "cu1"
         self.draw_label = "U1"
         self.nparams = 1
-        self.parameters = theta
+        self.initparams = theta
+        if isinstance(theta, Parameter):
+            self.parameters = theta.get_params()
+        else:
+            self.parameters = theta
         self.init_kwargs = {"theta": theta, "trainable": trainable}
 
     @property

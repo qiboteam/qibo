@@ -32,8 +32,8 @@ dev = qml.device("default.qubit", wires=2)
 
 
 @qml.qnode(dev, interface="autograd")
-def ansatz_pdf(layers, params, feature):
-    for i in range(layers):
+def ansatz_pdf(nqubits, params, feature):
+    for i in range(nqubits):
         qml.Hadamard(wires=i)
 
         qml.RZ(params[12 * i + 0] * math.log(feature), wires=i)
@@ -53,6 +53,29 @@ def ansatz_pdf(layers, params, feature):
 
         qml.RY(params[12 * i + 10] * feature, wires=i)
         qml.RY(params[12 * i + 11], wires=i)
+
+    return qml.expval(qml.PauliZ([1]))
+
+
+@qml.qnode(dev, interface="autograd")
+def ansatz_pdf_entangled(nqubits, params, feature):
+    qml.Hadamard(wires=0)
+    qml.Hadamard(wires=1)
+
+    j = 0
+
+    for i in range(3):
+        for w in range(nqubits):
+            qml.RZ(params[j] * math.log(feature), wires=w)
+            qml.RZ(params[j + 1], wires=w)
+
+            qml.RY(params[j + 2] * feature, wires=w)
+            qml.RY(params[j + 3], wires=w)
+
+            j += 4
+
+        qml.CRZ(j, wires=[0, 1])
+        j += 1
 
     return qml.expval(qml.PauliZ([1]))
 
@@ -89,6 +112,46 @@ def ansatz(layers, nqubits):
             c.add(qibo.gates.RY(q=qubit, theta=Parameter(lambda th1: th1, [0.1])))
 
         c.add(qibo.gates.M(qubit))
+
+    return c
+
+
+def ansatz_entangled(layers, nqubits):
+    """
+    The circuit's ansatz: a sequence of RZ and RY with a beginning H gate
+    Args:
+        layers: integer, number of layers which compose the circuit
+    Returns: abstract qibo circuit
+    """
+
+    c = qibo.models.Circuit(nqubits, density_matrix=True)
+
+    c.add(qibo.gates.H(q=0))
+    c.add(qibo.gates.H(q=1))
+
+    for _ in range(layers):
+        for qubit in range(nqubits):
+            c.add(
+                qibo.gates.RZ(
+                    q=qubit,
+                    theta=Parameter(
+                        lambda x, th1: th1 * sp.log(x), [0.1], featurep=[0.1]
+                    ),
+                )
+            )
+            c.add(qibo.gates.RZ(q=qubit, theta=Parameter(lambda th1: th1, [0.1])))
+            c.add(
+                qibo.gates.RY(
+                    q=qubit,
+                    theta=Parameter(lambda x, th1: th1 * x, [0.1], featurep=[0.1]),
+                )
+            )
+            c.add(qibo.gates.RY(q=qubit, theta=Parameter(lambda th1: th1, [0.1])))
+
+        c.add(qibo.gates.CRZ(0, 1, theta=Parameter(lambda th1: th1, [0.1])))
+
+    c.add(qibo.gates.M(0))
+    c.add(qibo.gates.M(1))
 
     return c
 
@@ -750,13 +813,56 @@ def test_multiqubit_natural_gradient():
     assert np.allclose(fubini, metric_tensor)
 
 
+def test_multiqubit_natural_gradient_entangled():
+    # pennylane baseline
+    params = qml.numpy.asarray([0.1] * 27)
+    metric_tensor = qml.metric_tensor(ansatz_pdf_entangled, approx="diag")(
+        2, params, 0.1
+    )
+
+    # local implementation
+    nqubits = 2
+    circuit = ansatz_entangled(
+        3,
+        nqubits,
+    )  # 2 qubits x 3 layers x 2 gates x 2 parameters + 3 CU1 = 27 params
+
+    initial_parameters = [0.1] * 27
+
+    hamiltonians = [create_hamiltonian(i, 2, GlobalBackend()) for i in range(2)]
+    optimiser = qibo.optimizers.SGD(
+        circuit=circuit,
+        parameters=initial_parameters,
+        hamiltonian=hamiltonians,
+        loss=loss_func,
+    )
+
+    _ = optimiser.run_circuit(0.1)
+
+    graph = build_graph(optimiser._circuit, 27, optimiser.nqubits, optimiser.initparams)
+    fubini = generate_fubini(
+        graph,
+        27,
+        nqubits,
+        optimiser.initparams,
+        noise_model=optimiser.options["noise_model"],
+        deterministic=True,
+    )
+
+    print(fubini)
+    print(metric_tensor)
+
+    assert np.allclose(fubini, metric_tensor)
+
+
 if __name__ == "__main__":
     # graph_improvements(1, [0, 1], [[0, 1], [2, 3]])
     # test_multiqubit_natural_gradient()
+    test_multiqubit_natural_gradient_entangled()
     # test_parameter()
     # test_psr_commuting_gate()
     # rtest_spsr_non_commuting_gates()
     # test_natural_gradient()
     # test_spsr()
-    test_spsr_calculate_gradients()
+    # test_spsr_calculate_gradients()
     # test_spsr()

@@ -662,7 +662,7 @@ def stochastic_parameter_shift(
             )
 
             shifted[parameter_index + ancilla_gate.nparams] -= shift * 2
-            print(shifted)
+
             circuit.set_parameters(shifted)
 
             backward = backend.execute_circuit(
@@ -702,7 +702,7 @@ class ConvergeNode(Node):
 
     def __init__(self, gate, trainable_params, ID):
         super().__init__(gate, trainable_params, ID)
-        self.next_target = None
+        self.next = [None, None]
         self.waiting = None
 
 
@@ -753,7 +753,14 @@ class Graph:
                     ends[control] = i
                 # link to existing graph node
                 else:
-                    nodes[ends[control]].next = i
+                    nxt = nodes[ends[control]].next
+                    if isinstance(nxt, list):
+                        if nxt[0] is None:
+                            nodes[ends[control]].next[0] = i
+                        else:
+                            nodes[ends[control]].next[1] = i
+                    else:
+                        nodes[ends[control]].next = i
                     ends[control] = i
 
                 # target qubit
@@ -763,7 +770,14 @@ class Graph:
                     ends[target] = i
                 # link to existing graph node
                 else:
-                    nodes[ends[target]].next = i
+                    nxt = nodes[ends[target]].next
+                    if isinstance(nxt, list):
+                        if nxt[0] is None:
+                            nodes[ends[target]].next[0] = i
+                        else:
+                            nodes[ends[target]].next[1] = i
+                    else:
+                        nodes[ends[target]].next = i
                     ends[target] = i
 
                 depth[control] += 1
@@ -780,7 +794,14 @@ class Graph:
                     ends[qubit] = i
                 # link to existing graph node
                 else:
-                    nodes[ends[qubit]].next = i
+                    nxt = nodes[ends[qubit]].next
+                    if isinstance(nxt, list):
+                        if nxt[0] is None:
+                            nodes[ends[qubit]].next[0] = i
+                        else:
+                            nodes[ends[qubit]].next[1] = i
+                    else:
+                        nodes[ends[qubit]].next = i
                     ends[qubit] = i
 
                 depth[qubit] += 1
@@ -828,11 +849,18 @@ class Graph:
         # run through layer up to N
         for iter in range(layer + 1):
             # run through all qubits
+
             for q in range(self.nqubits):
                 node = self.nodes[current[q]]
 
+                # replace last layer by M gate
+                if iter == layer and isinstance(node.gate, gates.ParametrizedGate):
+                    c.add(gates.M(q, basis=self._determine_basis(node.gate)))
+                    trainable_qubits.append(q)
+                    affected_params.append(node.trainable_params)
+
                 # wait for both qubits to reach two-qubit node
-                if isinstance(node, ConvergeNode):
+                elif isinstance(node, ConvergeNode):
                     # first arrived
                     if node.waiting is None:
                         node.waiting = q
@@ -842,15 +870,9 @@ class Graph:
                         gate_order.append(node.id)
                         control = node.gate.init_args[0]
                         target = node.gate.init_args[1]
-                        current[control] = node.next
-                        current[target] = node.next_target
+                        current[control] = node.next[0]
+                        current[target] = node.next[1]
                         node.waiting = None
-
-                # replace last layer by M gate
-                elif iter == layer and isinstance(node.gate, gates.ParametrizedGate):
-                    c.add(gates.M(q, basis=self._determine_basis(node.gate)))
-                    trainable_qubits.append(q)
-                    affected_params.append(node.trainable_params)
 
                 # simple one-qubit node
                 else:

@@ -83,7 +83,7 @@ class Optimizer:
 
         params = []
         for gate in self._circuit.queue:
-            if isinstance(gate, gates._Rn_):
+            if isinstance(gate, (gates.ParametrizedGate)):
                 params.append(gate.initparams)
 
         if isinstance(params[0], (float, int)):
@@ -390,13 +390,12 @@ class SGD(Optimizer):
         # gradient average
         loss = self.loss_function(results, labels, self.args) / self.nsample
         loss_gradients = circ_grads / self.nsample
-        print(loss_gradients)
 
         # Fubini-Study Metric renormalisation
         if self.options["natgrad"]:
             fubini /= scount
             loss_gradients = np.dot(np.linalg.inv(fubini), loss_gradients)
-        print(loss_gradients)
+
         # save data
         if self.save:
             self.file.write(
@@ -845,7 +844,7 @@ def get_error(optimizer, xtrain, name_appendix):
     return ypred, ysigma
 
 
-scaler = lambda x: x
+scaler = lambda x: (1 - x) / (1 + x)
 import matplotlib.pyplot as plt
 
 
