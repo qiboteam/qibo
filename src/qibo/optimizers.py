@@ -390,12 +390,13 @@ class SGD(Optimizer):
         # gradient average
         loss = self.loss_function(results, labels, self.args) / self.nsample
         loss_gradients = circ_grads / self.nsample
+        print(loss_gradients)
 
         # Fubini-Study Metric renormalisation
         if self.options["natgrad"]:
             fubini /= scount
             loss_gradients = np.dot(np.linalg.inv(fubini), loss_gradients)
-
+        print(loss_gradients)
         # save data
         if self.save:
             self.file.write(
@@ -446,11 +447,14 @@ class SGD(Optimizer):
 
         # QADAM
         elif self.options["natgrad"]:
+            # print(grads)
+
             beta_1 /= self.iteration + 1
             beta_2 /= self.iteration + 1
             m = beta_1 * m + (1 - beta_1) * grads
             v = beta_2 * v + (1 - beta_2) * grads * grads
 
+            # print(m / (np.sqrt(v) + epsilon))
             self.params -= learning_rate * m / (np.sqrt(v) + epsilon)
 
             return m, v, loss
@@ -600,6 +604,8 @@ class SGD(Optimizer):
 
     def fit(self, X, y):
         """Performs the optimizations and returns f_best, x_best."""
+
+        random.seed(42)
 
         self.setup(X, y)
 
