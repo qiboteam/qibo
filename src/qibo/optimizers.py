@@ -389,8 +389,8 @@ class SGD(Optimizer):
 
         # gradient average
         loss = self.loss_function(results, labels, self.args) / self.nsample
-        loss_gradients = circ_grads / self.nsample
-
+        loss_gradients = circ_grads / self.nsample * len(labels[0])
+        print(loss_gradients)
         # Fubini-Study Metric renormalisation
         if self.options["natgrad"]:
             fubini /= scount
@@ -434,6 +434,7 @@ class SGD(Optimizer):
         Returns: np.float new values of momentum and velocity
         """
         grads, loss = self.dloss(features, labels)
+        # print(grads)
 
         if self.options["adam"]:
             m = beta_1 * m + (1 - beta_1) * grads
@@ -455,7 +456,8 @@ class SGD(Optimizer):
 
             # print(m / (np.sqrt(v) + epsilon))
             self.params -= learning_rate * m / (np.sqrt(v) + epsilon)
-
+            # print(self.params)
+            # exit(0)
             return m, v, loss
 
         # vanilla gradient descent
