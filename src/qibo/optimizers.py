@@ -236,6 +236,8 @@ class SGD(Optimizer):
             self.name_appendix += "adam"
         if self.options["natgrad"]:
             self.name_appendix += "natgrad"
+        if self.options["qadam"]:
+            self.name_appendix += "qadam"
 
         # logging
         self.param_history = np.zeros((self.options["epochs"], self.nparams))
@@ -261,16 +263,17 @@ class SGD(Optimizer):
 
         grads = np.empty(self.nlabels)
         for lab in range(self.nlabels):
-            shifted = results[idx : idx + 1, :]
-            shifted[0][lab] += delta
+            shifted = np.copy(results)
+            shifted[idx][lab] += delta
             forward = self.loss_function(
-                np.copy(shifted), labels[idx : idx + 1, :], *self.args
+                np.copy(shifted).squeeze(), labels.squeeze(), *self.args
             )
-            shifted[0][lab] -= 2 * delta
+            shifted[idx][lab] -= 2 * delta
             backward = self.loss_function(
-                np.copy(shifted), labels[idx : idx + 1, :], *self.args
+                np.copy(shifted).squeeze(), labels.squeeze(), *self.args
             )
             grads[lab] = (forward - backward) / (2 * delta)
+
         return grads
 
     def run_circuit(self, feature, N=1):
@@ -386,7 +389,10 @@ class SGD(Optimizer):
                 )  # separate pull request
 
         # gradient average
-        loss = self.loss_function(results, labels, *self.args) / self.nsample
+        loss = (
+            self.loss_function(results.squeeze(), labels.squeeze(), *self.args)
+            / self.nsample
+        )
         loss_gradients = circ_grads / self.nsample * len(labels[0])
 
         # Fubini-Study Metric renormalisation
@@ -444,6 +450,7 @@ class SGD(Optimizer):
 
         # QADAM
         elif self.options["qadam"]:
+            print("qadam")
             it = self.iteration + 1
             beta_1 /= it
             beta_2 /= it
@@ -973,7 +980,7 @@ def plot(
 
     if name is not None:
         plt.savefig(f"results/{name}_{name_appendix}.png", bbox_inches="tight")
-        plt.show()
+        # plt.show()
     else:
         plt.savefig("Plot.png", bbox_inches="tight")
     plt.close()
