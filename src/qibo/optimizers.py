@@ -57,10 +57,7 @@ class Optimizer:
         self.etime = None
         self.name = f'Run_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
         self.iteration = 0
-        self.filename = f"results/{self.name}.txt"
         self.save = save
-        if save:
-            self.file = open(self.filename, "w")
 
         self.initparams = None
 
@@ -229,6 +226,7 @@ class SGD(Optimizer):
             "deterministic": False,
             "beta_1": 0.85,
             "beta_2": 0.99,
+            "vanilla": False,
         }
         self.set_options(kwargs)
 
@@ -266,11 +264,11 @@ class SGD(Optimizer):
             shifted = results[idx : idx + 1, :]
             shifted[0][lab] += delta
             forward = self.loss_function(
-                np.copy(shifted), labels[idx : idx + 1, :], self.args
+                np.copy(shifted), labels[idx : idx + 1, :], *self.args
             )
             shifted[0][lab] -= 2 * delta
             backward = self.loss_function(
-                np.copy(shifted), labels[idx : idx + 1, :], self.args
+                np.copy(shifted), labels[idx : idx + 1, :], *self.args
             )
             grads[lab] = (forward - backward) / (2 * delta)
         return grads
@@ -388,12 +386,12 @@ class SGD(Optimizer):
                 )  # separate pull request
 
         # gradient average
-        loss = self.loss_function(results, labels, self.args) / self.nsample
+        loss = self.loss_function(results, labels, *self.args) / self.nsample
         loss_gradients = circ_grads / self.nsample * len(labels[0])
-        print(loss_gradients)
+
         # Fubini-Study Metric renormalisation
         if self.options["natgrad"]:
-            fubini /= scount
+            fubini /= scount  # len(features)
             loss_gradients = np.dot(np.linalg.inv(fubini), loss_gradients)
 
         # save data
@@ -434,7 +432,6 @@ class SGD(Optimizer):
         Returns: np.float new values of momentum and velocity
         """
         grads, loss = self.dloss(features, labels)
-        # print(grads)
 
         if self.options["adam"]:
             m = beta_1 * m + (1 - beta_1) * grads
@@ -446,18 +443,15 @@ class SGD(Optimizer):
             return m, v, loss
 
         # QADAM
-        elif self.options["natgrad"]:
-            # print(grads)
-
-            beta_1 /= self.iteration + 1
-            beta_2 /= self.iteration + 1
+        elif self.options["qadam"]:
+            it = self.iteration + 1
+            beta_1 /= it
+            beta_2 /= it
             m = beta_1 * m + (1 - beta_1) * grads
             v = beta_2 * v + (1 - beta_2) * grads * grads
 
-            # print(m / (np.sqrt(v) + epsilon))
             self.params -= learning_rate * m / (np.sqrt(v) + epsilon)
-            # print(self.params)
-            # exit(0)
+
             return m, v, loss
 
         # vanilla gradient descent
@@ -500,6 +494,7 @@ class SGD(Optimizer):
                 f"mitigation: {self.options['mitigation']}\n"
                 f"noise_model: {self.options['noise_model']}\n"
                 f"adam: {self.options['adam']}\n"
+                f"qadam: {self.options['qadam']}\n"
                 f"beta_1: {self.options['beta_1']}\n"
                 f"beta_2: {self.options['beta_2']}\n\n\n"
             )
@@ -620,6 +615,9 @@ class CMAES(Optimizer):
         self.options = {}
         self.set_options(kwargs)
         self.set_params()
+        self.filename = f"results/cma_{self.name}.txt"
+        if self.save:
+            self.file = open(self.filename, "w")
 
     def fit(self):
         """Genetic optimizer based on `pycma <https://github.com/CMA-ES/pycma>`_.
@@ -687,6 +685,9 @@ class Newtonian(Optimizer):
         }
         self.set_options(kwargs)
         self.set_params()
+        self.filename = f"results/newtonian_{self.name}.txt"
+        if self.save:
+            self.file = open(self.filename, "w")
 
     def fit(self):
         """Newtonian optimization approaches based on ``scipy.optimize.minimize``.
@@ -769,6 +770,10 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
         if not isinstance(self.initparams[0], (float, int)):
             self.args = (self.initparams,) + self.args
 
+        self.filename = f"results/bfgs_{self.name}.txt"
+        if self.save:
+            self.file = open(self.filename, "w")
+
     def fit(self):
         """Executes parallel L-BFGS-B minimization.
 
@@ -836,6 +841,45 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
         return self.jacobian_value
 
 
+class BasinHopping(Optimizer):
+    def __init__(self, initial_parameters, args=(), loss=None, save=False, **kwargs):
+        super().__init__(initial_parameters, args, loss, save)
+        self.args = args
+        self.options = kwargs
+        self._circuit = args[0]
+        self.set_params()
+        self.filename = f"results/basin_{self.name}.txt"
+        if self.save:
+            self.file = open(self.filename, "w")
+
+    def fit(self):
+        """Genetic optimizer based on `pycma <https://github.com/CMA-ES/pycma>`_.
+
+        Args:
+            loss (callable): Loss as a function of variational parameters to be
+                optimized.
+            initial_parameters (np.ndarray): Initial guess for the variational
+                parameters.
+            args (tuple): optional arguments for the loss function.
+            options (dict): Dictionary with options accepted by the ``cma``
+                optimizer. The user can use ``import cma; cma.CMAOptions()`` to view the
+                available options.
+        """
+        from scipy.optimize import basinhopping
+
+        if "options" in self.options:
+            options = self.options.pop("options")
+
+        r = basinhopping(
+            self.fun,
+            self.params,
+            niter=1,
+            minimizer_kwargs={"options": {"maxfev": 100}},
+        )
+
+        return r.fun, r.x, r, self.iteration
+
+
 def get_error(optimizer, xtrain, name_appendix):
     ypredictions = optimizer.predict(xtrain, N=10)
 
@@ -846,7 +890,7 @@ def get_error(optimizer, xtrain, name_appendix):
     return ypred, ysigma
 
 
-scaler = lambda x: (1 - x) / (1 + x)
+scaler = lambda x: x  # (1 - x) / (1 + x)
 import matplotlib.pyplot as plt
 
 
@@ -933,39 +977,3 @@ def plot(
     else:
         plt.savefig("Plot.png", bbox_inches="tight")
     plt.close()
-
-
-class BasinHopping(Optimizer):
-    def __init__(self, initial_parameters, args=(), loss=None, save=False, **kwargs):
-        super().__init__(initial_parameters, args, loss, save)
-        self.args = args
-        self.options = kwargs
-        self._circuit = args[0]
-        self.set_params()
-
-    def fit(self):
-        """Genetic optimizer based on `pycma <https://github.com/CMA-ES/pycma>`_.
-
-        Args:
-            loss (callable): Loss as a function of variational parameters to be
-                optimized.
-            initial_parameters (np.ndarray): Initial guess for the variational
-                parameters.
-            args (tuple): optional arguments for the loss function.
-            options (dict): Dictionary with options accepted by the ``cma``
-                optimizer. The user can use ``import cma; cma.CMAOptions()`` to view the
-                available options.
-        """
-        from scipy.optimize import basinhopping
-
-        if "options" in self.options:
-            options = self.options.pop("options")
-
-        r = basinhopping(
-            self.fun,
-            self.params,
-            niter=1,
-            minimizer_kwargs={"options": {"maxfev": 100}},
-        )
-
-        return r.fun, r.x, r, self.iteration
