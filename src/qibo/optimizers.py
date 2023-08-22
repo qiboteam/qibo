@@ -18,28 +18,6 @@ from qibo.gates import gates
 from qibo.models import Circuit
 
 
-class VariationalCircuit(Circuit):
-    """Circuit architecture used in Quantum Machine Learning and Quantum Optimisation
-    procedures
-    """
-
-    def optimize(
-        self,
-        X,
-        y,
-        initial_parameters,
-        loss,
-        args=(),
-        method="sgd",
-        hamiltonian=None,
-        **kwargs,
-    ):
-        if method == "sgd":
-            optimizer = SGD(self, initial_parameters, hamiltonian, args, loss, **kwargs)
-
-        return optimizer.fit(X, y)
-
-
 class Optimizer:
     """Parent optimizer class
 
@@ -126,10 +104,11 @@ class Optimizer:
             params = []
             count = 0
             for Param in self.initparams:
-                trainablep = self.params[count : count + Param.nparams]
+                trainable = self.params[count : count + Param.nparams]
                 count += Param.nparams
                 # update trainable params and retrieve gate param
-                params.append(Param.get_params(trainablep, feature=feature))
+                Param.update_parameters(trainable, feature)
+                params.append(Param.get_gate_parameters())
 
             return params
 
@@ -180,8 +159,8 @@ class SGD(Optimizer):
         from qibo import gates
 
         circuit = Circuit(nqubits=1)
-        c.add(gates.RY(q=0, theta=Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=[0.1])))
-        c.add(gates.RZ(q=0, theta=Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=[0.1])))
+        c.add(gates.RY(q=0, theta=Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], feature=[0.1])))
+        c.add(gates.RZ(q=0, theta=Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], feature=[0.1])))
         c.add(gates.M(q=0))
 
         parameters = [0.2, 0.4, 0.2, 0.9]
@@ -220,7 +199,6 @@ class SGD(Optimizer):
         self.nqubits = self._circuit.nqubits
 
         # parameters
-        self.initparams = self._get_initparams()
         self.params = parameters
         self.nparams = len(self.params)
 
@@ -273,9 +251,7 @@ class SGD(Optimizer):
 
         # natural gradient graph initialisation
         if self.options["natgrad"]:
-            self.NGgraph = build_graph(
-                self._circuit, self.nparams, self.nqubits, self.initparams
-            )
+            self.NGgraph = build_graph(self._circuit, self.nparams, self.nqubits)
 
     def _gate_expectation_dependence(self):
         """Returns the amount of hamiltonians that depend on a given parameter.
@@ -289,7 +265,6 @@ class SGD(Optimizer):
             obs_gradients[h] = calculate_circuit_gradients(
                 self._circuit,
                 ham,
-                self.initparams,
                 self.nparams,
                 "psr",
                 self.cdr_params,
@@ -351,8 +326,9 @@ class SGD(Optimizer):
             (np.ndarray): array of expectation values"""
 
         # set parameters
-        parameters = self._get_gate_params(feature=feature)
-        self._circuit.set_parameters(parameters)
+        # parameters = self._get_gate_params(feature=feature)
+        # self._circuit.set_parameters(parameters)
+        self._circuit.set_variational_parameters(self.params, feature)
 
         # run circuit
         exp_v = np.zeros((len(self.hamiltonian), N))
@@ -439,7 +415,6 @@ class SGD(Optimizer):
                 obs_gradients[h] = calculate_circuit_gradients(
                     self._circuit,
                     ham,
-                    self.initparams,
                     self.nparams,
                     self.options["shift_rule"],
                     self.cdr_params,
@@ -458,7 +433,7 @@ class SGD(Optimizer):
                     self.NGgraph,
                     self.nparams,
                     self.nqubits,
-                    self.initparams,
+                    self._circuit.initparams,
                     noise_model=self.options["noise_model"],
                     deterministic=self.options["deterministic"],
                 )  # separate pull request
@@ -714,8 +689,8 @@ class CMAES(Optimizer):
         from qibo import gates
 
         circuit = Circuit(nqubits=1)
-        c.add(gates.RY(q=0, theta=Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=[0.1])))
-        c.add(gates.RZ(q=0, theta=Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=[0.1])))
+        c.add(gates.RY(q=0, theta=Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], feature=[0.1])))
+        c.add(gates.RZ(q=0, theta=Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], feature=[0.1])))
         c.add(gates.M(q=0))
 
         parameters = [0.2, 0.4, 0.2, 0.9]
@@ -873,6 +848,8 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
         processes (int): number of processes when using the paralle BFGS method.
     """
 
+    import numpy as np
+
     def __init__(self, initial_parameters, loss, args=(), save=False, **kwargs):
         super().__init__(initial_parameters, args, loss, save)
         self.function_value = None
@@ -1013,8 +990,8 @@ class BasinHopping(Optimizer):
         from qibo import gates
 
         circuit = Circuit(nqubits=1)
-        c.add(gates.RY(q=0, theta=Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=[0.1])))
-        c.add(gates.RZ(q=0, theta=Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=[0.1])))
+        c.add(gates.RY(q=0, theta=Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], feature=[0.1])))
+        c.add(gates.RZ(q=0, theta=Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], feature=[0.1])))
         c.add(gates.M(q=0))
 
         parameters = [0.2, 0.4, 0.2, 0.9]

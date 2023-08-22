@@ -8,17 +8,15 @@ from qibo.gates import Parameter
 from qibo.optimizers import CMAES, SGD, BasinHopping, Newtonian, ParallelBFGS
 
 
-def ansatz(layers, nqubits, variational=False, theta=0):
+def ansatz(layers, nqubits, theta=0):
     """
     The circuit's ansatz: a sequence of RZ and RY with a beginning H gate
     Args:
         layers: integer, number of layers which compose the circuit
     Returns: abstract qibo circuit
     """
-    if variational:
-        c = qibo.models.variational.VariationalCircuit(nqubits, density_matrix=True)
-    else:
-        c = qibo.models.Circuit(nqubits, density_matrix=True)
+
+    c = qibo.models.circuit.VariationalCircuit(nqubits, density_matrix=True)
 
     for i in range(nqubits):
         c.add(qibo.gates.H(q=i))
@@ -33,11 +31,9 @@ def ansatz(layers, nqubits, variational=False, theta=0):
 
 
 def loss_func_1qubit(ypred, ytrue, other_args=None):
-    loss = 0
-    for i in range(len(ypred)):
-        loss += (ytrue[i] - ypred[i]) ** 2
+    loss = np.sum(np.square(ytrue - ypred))
 
-    return loss[0]
+    return loss
 
 
 def test_sgd_optimizer():
@@ -46,7 +42,7 @@ def test_sgd_optimizer():
     circuit = ansatz(
         3,
         1,
-        theta=Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=[0.1]),
+        theta=Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], feature=[0.1]),
     )
     parameters = [0.1] * 12
 
@@ -67,22 +63,6 @@ def test_sgd_optimizer():
     return losses
 
 
-def test_variational_circuit():
-    VC = ansatz(
-        3,
-        1,
-        variational=True,
-        theta=Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=[0.1]),
-    )
-    parameters = [0.1] * 12
-
-    X = np.array([0.1, 0.2, 0.3])
-    y = np.array([0.2, 0.5, 0.7])
-    losses = VC.optimize(X, y, parameters, loss_func_1qubit, method="sgd")
-
-    assert losses[-1] < 0.001
-
-
 def loss_func_2qubit(ypred, ytrue, other_args=None):
     loss = 0
     for i in range(len(ypred)):
@@ -98,7 +78,7 @@ def test_multiqubit_sgd_optimizer():
     nqubits = 2
     layers = 3
 
-    c = qibo.models.Circuit(nqubits, density_matrix=True)
+    c = qibo.models.circuit.VariationalCircuit(nqubits, density_matrix=True)
 
     for i in range(nqubits):
         c.add(qibo.gates.H(q=i))
@@ -110,7 +90,7 @@ def test_multiqubit_sgd_optimizer():
                     theta=Parameter(
                         lambda x, th1, th2: th1 * x + th2,
                         [i / 100, i / 53],
-                        featurep=[0.1],
+                        feature=[0.1],
                     ),
                 )
             )
@@ -120,7 +100,7 @@ def test_multiqubit_sgd_optimizer():
                     theta=Parameter(
                         lambda x, th1, th2: th1 * x + th2,
                         [i / 100, i / 53],
-                        featurep=[0.1],
+                        feature=[0.1],
                     ),
                 )
             )
@@ -148,7 +128,7 @@ def test_sgd_methods():
     nqubits = 2
     layers = 3
 
-    c = qibo.models.Circuit(nqubits, density_matrix=True)
+    c = qibo.models.circuit.VariationalCircuit(nqubits, density_matrix=True)
 
     for i in range(nqubits):
         c.add(qibo.gates.H(q=i))
@@ -160,7 +140,7 @@ def test_sgd_methods():
                     theta=Parameter(
                         lambda x, th1, th2: th1 * x + th2,
                         [i / 100, i / 53],
-                        featurep=[0.1],
+                        feature=[0.1],
                     ),
                 )
             )
@@ -170,7 +150,7 @@ def test_sgd_methods():
                     theta=Parameter(
                         lambda x, th1, th2: th1 * x + th2,
                         [i / 100, i / 53],
-                        featurep=[0.1],
+                        feature=[0.1],
                     ),
                 )
             )
@@ -189,7 +169,10 @@ def test_sgd_methods():
     )
 
     # _get_params
-    gatep = optimizer._get_gate_params(feature=0.5)
+    optimizer._circuit.set_variational_parameters(optimizer.params, feature=0.5)
+    gatep = optimizer._circuit.get_parameters()
+    gatep = [v[0] for v in gatep]
+
     assert gatep == [
         1.0,
         4.0,
@@ -259,7 +242,7 @@ def test_newtonian_optimizer():
         initial_parameters=parameters, args=(circuit, hamiltonian), loss=cma_loss
     )
 
-    fbest, xbest, r = optimizer.fit()
+    fbest, xbest, r, it = optimizer.fit()
 
     assert fbest < 1e-5
 
@@ -275,7 +258,7 @@ def test_parallel_bfgs_optimizer():
         initial_parameters=parameters, args=(circuit, hamiltonian), loss=cma_loss
     )
 
-    fbest, xbest, r = optimizer.fit()
+    fbest, xbest, r, it = optimizer.fit()
 
     assert fbest < 1e-5
 
@@ -293,7 +276,7 @@ def test_basin_hopping_optimizer():
         loss=cma_loss,
     )
 
-    fbest = optimizer.fit()
+    fbest, xbest, r, it = optimizer.fit()
 
     assert fbest < 1e-5
 
@@ -302,8 +285,8 @@ if __name__ == "__main__":
     # test_parallel_bfgs_optimizer()
     # test_newtonian_optimizer()
     # test_multiqubit_sgd_optimizer()
-    test_sgd_optimizer()
-    # test_sgd_methods()
+    # test_sgd_optimizer()
+    test_sgd_methods()
     # test_variational_circuit()
     # test_basin_hopping_optimizer()
     # test_cma_optimizer()

@@ -127,7 +127,6 @@ def error_mitigation(circuit, nqubits, hamiltonian, backend, noise_model, nshots
 def calculate_circuit_gradients(
     circuit,
     ham,
-    initparams,
     nparams,
     shift_rule,
     cdr_params,
@@ -155,6 +154,9 @@ def calculate_circuit_gradients(
     obs_gradients = np.zeros(nparams, dtype=np.float64)
     if deterministic:
         nshots = None
+
+    initparams = circuit.initparams
+    print(initparams)
 
     # parameter shift
     if shift_rule == "psr":
@@ -896,7 +898,7 @@ class Graph:
         return c, trainable_qubits, affected_params
 
 
-def build_graph(circuit, nparams, nqubits, initparams):
+def build_graph(circuit, nparams, nqubits):
     """
     Builds Graph needed for Natural Gradient
     Args:
@@ -909,6 +911,8 @@ def build_graph(circuit, nparams, nqubits, initparams):
         (:class:`qibo.derivative.Graph`) initialised graph representation of circuit
     """
     # trainable and gate parameters
+
+    initparams = circuit.initparams
 
     if isinstance(initparams, list):
         trainable_params = []
