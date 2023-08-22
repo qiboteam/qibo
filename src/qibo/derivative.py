@@ -156,7 +156,6 @@ def calculate_circuit_gradients(
         nshots = None
 
     initparams = circuit.initparams
-    print(initparams)
 
     # parameter shift
     if shift_rule == "psr":

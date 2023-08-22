@@ -56,8 +56,6 @@ class Optimizer:
         self.iteration = 0
         self.save = save
 
-        self.initparams = None
-
         if not isinstance(initial_parameters, np.ndarray) and not isinstance(
             initial_parameters, list
         ):
@@ -69,49 +67,6 @@ class Optimizer:
         """Updates self.options dictionary"""
         self.options.update(updates)
 
-    def set_params(self):
-        """Sets the initial parameters np.ndarray based on circuit parameters"""
-        self.initparams = self._get_initparams()
-
-    def _get_initparams(self):
-        """Retrieve parameter values or objects directly from gates"""
-
-        params = []
-        for gate in self._circuit.queue:
-            if isinstance(gate, (gates.ParametrizedGate)):
-                params.append(gate.initparams)
-
-        if isinstance(params[0], (float, int)):
-            params = self.params
-
-        return params
-
-    def _get_gate_params(self, feature=None):
-        """Retrieve gate parameters based on initial parameter values given to gates
-        Args:
-            feature (int or list): input feature if embedded in Parameter lambda function
-
-        Returns:
-            (list or np.ndarray) gate parameters
-        """
-
-        # for array
-        if isinstance(self.initparams, np.ndarray):
-            return self.initparams
-
-        # for Parameter objects
-        else:
-            params = []
-            count = 0
-            for Param in self.initparams:
-                trainable = self.params[count : count + Param.nparams]
-                count += Param.nparams
-                # update trainable params and retrieve gate param
-                Param.update_parameters(trainable, feature)
-                params.append(Param.get_gate_parameters())
-
-            return params
-
     def fun(self, x):
         """Wrapper function to save and preprocess gate parameters
 
@@ -121,10 +76,7 @@ class Optimizer:
         Returns:
             (float): loss value"""
 
-        if isinstance(self.initparams[0], (float, int)):
-            val = self.loss_function(x, *self.args)
-        else:
-            val = self.loss_function(x, self.initparams, *self.args)
+        val = self.loss_function(x, *self.args)
 
         # timing
         self.etime = time.time()
@@ -223,6 +175,7 @@ class SGD(Optimizer):
             "var_gates": None,
             "nshots": 1024,
             "natgrad": False,
+            "fubini_freq": 0.2,
             "mitigation": False,
             "noise_model": None,
             "adam": True,
@@ -389,13 +342,13 @@ class SGD(Optimizer):
         # natural gradient setup
         if self.options["natgrad"]:
             fubini = np.zeros((self.nparams, self.nparams))
-            scount = int(0.2 * self.nsample)
+            scount = int(self.options["fubini_freq"] * self.nsample)
             sample = random.sample([i for i in range(self.nsample)], scount)
 
         # calculate CDR parameters anew at each epoch
         if self.options["mitigation"]:
-            parameters = self._get_gate_params(feature=1.0)
-            self._circuit.set_parameters(parameters)
+            self._circuit.set_variational_parameters(self.params)
+
             self.cdr_params = error_mitigation(
                 self._circuit.to_clifford(),
                 self.nqubits,
@@ -524,7 +477,7 @@ class SGD(Optimizer):
         """This function performs the full Gradient Descent
 
         Args:
-            options (dict): gradient descnet options
+            options (dict): gradient descent options
         Returns:
             (list) history of loss values, one for each epoch
         """
@@ -713,7 +666,6 @@ class CMAES(Optimizer):
         super().__init__(initial_parameters, args, loss, save)
         self.options = {}
         self.set_options(kwargs)
-        self.set_params()
         self.filename = f"results/cma_{self.name}.txt"
         if self.save:
             self.file = open(self.filename, "w")
@@ -792,7 +744,6 @@ class Newtonian(Optimizer):
             "backend": None,
         }
         self.set_options(kwargs)
-        self.set_params()
         self.filename = f"results/newtonian_{self.name}.txt"
         if self.save:
             self.file = open(self.filename, "w")
@@ -867,9 +818,6 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
         }
 
         self.set_options(kwargs)
-        self.set_params()
-        if not isinstance(self.initparams[0], (float, int)):
-            self.args = (self.initparams,) + self.args
 
         self.filename = f"results/bfgs_{self.name}.txt"
         if self.save:
@@ -1016,7 +964,6 @@ class BasinHopping(Optimizer):
         self.args = args
         self.options = kwargs
         self._circuit = args[0]
-        self.set_params()
         self.filename = f"results/basin_{self.name}.txt"
         if self.save:
             self.file = open(self.filename, "w")
