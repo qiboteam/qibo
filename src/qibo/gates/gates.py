@@ -9,17 +9,23 @@ from qibo.gates.abstract import Gate, ParametrizedGate
 
 
 class Parameter:
-    """Object which allows complex gate parameters. Several trainable parameter
+    """Object which allows for variational gate parameters. Several trainable parameter
     and possibly features are linked through a lambda function which returns the
-    final gate parameter"""
+    final gate parameter
 
-    def __init__(self, func, trainablep, featurep=None):
-        self._trainablep = trainablep
-        self._featurep = featurep
-        self.nparams = len(trainablep)
+    Args:
+        func (function): lambda function describing the gate parameter
+        trainable (list or np.ndarray): array with initial trainable parameters theta
+        feature (list or np.ndarray): array containing possible input features x
+    """
 
-        if isinstance(featurep, list):
-            self.nfeat = len(featurep)
+    def __init__(self, func, trainable, feature=None):
+        self._trainable = trainable
+        self._feature = feature
+        self.nparams = len(trainable)
+
+        if isinstance(feature, list):
+            self.nfeat = len(feature)
         else:
             self.nfeat = 0
         self.lambdaf = func
@@ -28,27 +34,34 @@ class Parameter:
     def _apply_func(self, function, fixed_params=None):
         """Applies lambda function and returns final gate parameter"""
         params = []
-        if self._featurep is not None:
-            if isinstance(self._featurep, list):
-                params.extend(self._featurep)
+        if self._feature is not None:
+            if isinstance(self._feature, list):
+                params.extend(self._feature)
             else:
-                params.append(self._featurep)
+                params.append(self._feature)
         if fixed_params:
             params.extend(fixed_params)
         else:
-            params.extend(self._trainablep)
+            params.extend(self._trainable)
         return float(function(*params))
 
-    def _update_params(self, trainablep=None, feature=None):
+    def update_parameters(self, trainable=None, feature=None):
         """Update gate trainable parameter and feature values"""
-        if trainablep is not None:
-            self._trainablep = trainablep
-        if feature and self._featurep:
-            self._featurep = feature
+        if not isinstance(trainable, (list, np.ndarray)):
+            raise_error(
+                ValueError, "Trainable parameters must be given as list or numpy array"
+            )
 
-    def get_params(self, trainablep=None, feature=None):
+        if not isinstance(trainable, (list, np.ndarray)):
+            raise_error(ValueError, "Features must be given as list or numpy array")
+
+        if trainable is not None:
+            self._trainable = trainable
+        if feature and self._feature:
+            self._feature = feature
+
+    def get_gate_parameters(self):
         """Update values with trainable parameter and calculate current gate parameter"""
-        self._update_params(trainablep=trainablep, feature=feature)
         return self._apply_func(self.lambdaf)
 
     def get_indices(self, start_index):
@@ -56,10 +69,10 @@ class Parameter:
         the optimizer's trainable parameter list"""
         return [start_index + i for i in range(self.nparams)]
 
-    def get_fixed_part(self, trainablep_idx):
+    def get_fixed_part(self, trainable_idx):
         """Retrieve parameter constant unaffected by a specific trainable parameter"""
-        params = self._trainablep.copy()
-        params[trainablep_idx] = 0.0
+        params = self._trainable.copy()
+        params[trainable_idx] = 0.0
         return self._apply_func(self.lambdaf, fixed_params=params)
 
     def calculate_derivatives(self):
@@ -79,9 +92,9 @@ class Parameter:
 
         return derivatives
 
-    def get_scaling_factor(self, trainablep_idx):
+    def get_scaling_factor(self, trainable_idx):
         """Get derivative w.r.t a trainable parameter"""
-        deriv = self.derivatives[trainablep_idx]
+        deriv = self.derivatives[trainable_idx]
         return self._apply_func(deriv)
 
 
@@ -576,7 +589,7 @@ class _Rn_(ParametrizedGate):
 
         self.initparams = theta
         if isinstance(theta, Parameter):
-            self.parameters = theta.get_params()
+            self.parameters = theta.get_gate_parameters()
         else:
             self.parameters = theta
         self.init_args = [q]

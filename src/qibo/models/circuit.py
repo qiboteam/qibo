@@ -1423,3 +1423,71 @@ class Circuit:
             output += table
 
         return output.rstrip("\n")
+
+
+class VariationalCircuit(Circuit):
+    def __init__(self, nqubits, accelerators=None, density_matrix=False):
+        super().__init__(nqubits, accelerators, density_matrix)
+
+    def _get_initparams(self):
+        """Retrieve parameter values or objects directly from gates"""
+
+        params = []
+        for gate in self.queue:
+            if isinstance(gate, (gates.ParametrizedGate)):
+                try:
+                    params.append(gate.initparams)
+                except Exception as e:
+                    params.append(gate.parameters)
+
+        if isinstance(params[0], (float, int, tuple)):
+            params = self.get_parameters()
+            if isinstance(params[0], tuple):
+                params = np.array([val for t in params for val in t])
+
+        return params
+
+    def _get_train_params(self):
+        # for array
+        if isinstance(self.initparams, np.ndarray):
+            return self.initparams
+
+        # for Parameter objects
+        else:
+            params = []
+            for Param in self.initparams:
+                # update trainable params and retrieve gate param
+                params.extend(Param._trainable)
+
+            return params
+
+    def set_variational_parameters(self, input_params, feature=None):
+        """Retrieve gate parameters based on initial parameter values given to gates
+        Args:
+            feature (int or list): input feature if embedded in Parameter lambda function
+
+        Returns:
+            (list or np.ndarray) gate parameters
+        """
+
+        # for array
+        if isinstance(self.initparams, np.ndarray):
+            gate_params = self.initparams
+
+        # for Parameter objects
+        else:
+            gate_params = []
+            count = 0
+            for Param in self.initparams:
+                trainable = input_params[count : count + Param.nparams]
+                count += Param.nparams
+                # update trainable params and retrieve gate param
+                Param.update_parameters(trainable, feature)
+                gate_params.append(Param.get_gate_parameters())
+
+        self.set_parameters(gate_params)
+
+    def add(self, gate):
+        super().add(gate)
+        if isinstance(gate, gates.ParametrizedGate):
+            self.initparams = self._get_initparams()
