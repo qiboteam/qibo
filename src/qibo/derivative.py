@@ -81,7 +81,7 @@ def create_hamiltonian(qubit=0, nqubits=1, backend=None):
             Default is ``None``.
 
     Returns:
-        An Hamiltonian object.
+        (:class:`qibo.hamiltonians.Hamiltonian`: hamiltonian object.
     """
     eye = matrices.I
     if qubit == 0:
@@ -148,6 +148,7 @@ def calculate_circuit_gradients(
         nshots: number of shots for circuit execution
         deterministic: flag to calculate final state deterministically
         var_gates: for a gate generator (H + theta V}, this gate implements V alone. Useful for SPSR.
+
     Returns: np.array of the observable's gradients with respect to the variational parameters
     """
 

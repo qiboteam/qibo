@@ -19,8 +19,7 @@ from qibo.models import Circuit
 
 
 class VariationalCircuit(Circuit):
-    """
-    Circuit architecture used in Quantum Machine Learning and Quantum Optimisation
+    """Circuit architecture used in Quantum Machine Learning and Quantum Optimisation
     procedures
     """
 
@@ -42,7 +41,23 @@ class VariationalCircuit(Circuit):
 
 
 class Optimizer:
-    """Parent optimizer"""
+    """Parent optimizer class
+
+    Args:
+        initial_parameters (np.ndarray): array with initial values for gate parameters
+        args (tuple): tuple containing loss function arguments
+        loss (function): loss function to train on
+        save (bool): Flag to set logging on
+        loss_function (function): loss function to train on
+        params (np.ndarray): array with current values for gate parameters
+        backend (qibo.backends.GlobalBackend): backend on which to run circuit
+        simulation_start (time.time): simulation start time
+        ftime (time.time): start time variable for timing internal processes
+        etime (time.time): end time variable for timing internal processes
+        name (str): name of current optimisation process
+        iteration (int): training iteration number
+        initparams (np.ndarray or list): initial parameters
+    """
 
     def __init__(self, initial_parameters, args=(), loss=None, save=False):
         # saving to class objects
@@ -73,10 +88,11 @@ class Optimizer:
             )
 
     def set_options(self, updates):
-        """Updates options dictionary"""
+        """Updates self.options dictionary"""
         self.options.update(updates)
 
     def set_params(self):
+        """Sets the initial parameters np.ndarray based on circuit parameters"""
         self.initparams = self._get_initparams()
 
     def _get_initparams(self):
@@ -95,10 +111,10 @@ class Optimizer:
     def _get_gate_params(self, feature=None):
         """Retrieve gate parameters based on initial parameter values given to gates
         Args:
-            feature (int or np.ndarray): input feature if embedded in Parameter lambda function
+            feature (int or list): input feature if embedded in Parameter lambda function
 
         Returns:
-            (list) gate parameters
+            (list or np.ndarray) gate parameters
         """
 
         # for array
@@ -118,7 +134,13 @@ class Optimizer:
             return params
 
     def fun(self, x):
-        """Wrapper function to save and preprocess gate parameters"""
+        """Wrapper function to save and preprocess gate parameters
+
+        Args:
+            x (np.array): circuit parameters
+
+        Returns:
+            (float): loss value"""
 
         if isinstance(self.initparams[0], (float, int)):
             val = self.loss_function(x, *self.args)
@@ -158,13 +180,11 @@ class SGD(Optimizer):
         from qibo import gates
 
         circuit = Circuit(nqubits=1)
-        c.add(gates.RY(q=0, theta=0))
-        c.add(gates.RZ(q=0, theta=0))
+        c.add(gates.RY(q=0, theta=Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=[0.1])))
+        c.add(gates.RZ(q=0, theta=Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=[0.1])))
         c.add(gates.M(q=0))
 
-        parameters = []
-        for _ in range(2):
-            parameters.append(Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=True))
+        parameters = [0.2, 0.4, 0.2, 0.9]
 
         optimizer = SGD(circuit=circuit, parameters=parameters)
         X = np.array([0.1, 0.2, 0.3])
@@ -173,10 +193,11 @@ class SGD(Optimizer):
 
     Args:
         circuit (Circuit): the circuit whose parameters will be optimised
-        parameters (np.ndarray or list of Parameter objects): initial gate parameters
-        hamiltonian (SymbolicHamiltonian): hamiltonian applied to final circuit state
-        args (list): additional loss function arguments
-        loss (lambda): loss function applied between
+        parameters (np.ndarray): array with initial values for gate parameters
+        hamiltonian (qibo.hamiltonians.SymbolicHamiltonian): hamiltonian applied to final circuit state
+        args (tuple): tuple containing loss function arguments
+        loss (function): loss function to train on
+        save (bool): Flag to set logging on
     """
 
     def __init__(
@@ -257,8 +278,7 @@ class SGD(Optimizer):
             )
 
     def _gate_expectation_dependence(self):
-        """
-        Returns the amount of hamiltonians that depend on a given parameter.
+        """Returns the amount of hamiltonians that depend on a given parameter.
 
         Returns:
             np.ndarray: integer counts of hamiltonian dependencies"""
@@ -287,36 +307,48 @@ class SGD(Optimizer):
         return ncount
 
     def calculate_loss_func_grad(self, results, labels, idx, delta=1e-6):
-        """
-        Calculates loss function derivative with respect to parameter idx
+        """Calculates loss function derivative with respect to parameter idx
+
         Args:
-            result: predicted values
-            labels: true values
-            idx: parameter number with respect to which we calculate the gradient
-            delta: size of the finite difference perturbation
+            results (np.ndarray): predicted values
+            labels (np.ndarray): true values
+            idx (int): parameter number with respect to which we calculate the gradient
+            delta (float): size of the finite difference perturbation
+
+        Returns:
+            (np.ndarray): gradients of loss function w.r.t to feature idx
         """
 
         grads = np.empty(self.nlabels)
+
         for lab in range(self.nlabels):
             shifted = np.copy(results)
+
+            # forward
             shifted[idx][lab] += delta
             forward = self.loss_function(
                 np.copy(shifted).squeeze(), labels.squeeze(), *self.args
             )
+
+            # backward
             shifted[idx][lab] -= 2 * delta
             backward = self.loss_function(
                 np.copy(shifted).squeeze(), labels.squeeze(), *self.args
             )
+
+            # grad
             grads[lab] = (forward - backward) / (2 * delta)
 
         return grads
 
     def run_circuit(self, feature, N=1):
         """Backend function which runs the circuit for one feature N times
+
         Args:
-            feature: single input value to the system
+            feature (int or np.ndarray): single input to the circuit
+            N (int): number of runs
         Return:
-            results: expectation value"""
+            (np.ndarray): array of expectation values"""
 
         # set parameters
         parameters = self._get_gate_params(feature=feature)
@@ -339,12 +371,15 @@ class SGD(Optimizer):
         return exp_v
 
     def predict(self, feature, N=1):
-        """
-         User-facing function which runs the circuit for given input features and returns the result.
-         Args:
-             feature: input values which are run through the circuit
+        """User-facing function which runs the circuit for given input
+        features and returns the result.
+
+        Args:
+            feature (int or np.ndarray): single input to the circuit
+            N (int): number of runs
+
         Return:
-             results
+            (np.ndarray): array of expectation values
         """
 
         if isinstance(feature, np.ndarray):
@@ -352,20 +387,23 @@ class SGD(Optimizer):
             for i, feat in enumerate(feature):
                 results[i] = self.run_circuit(feat, N)
             return np.squeeze(results)
+
         else:
             return np.squeeze(self.run_circuit(feature))
 
     def dloss(self, features, labels):
-        """
-        This function calculates the loss function's gradients with respect to self.params,
+        """This function calculates the loss function's gradients with respect to self.params,
         as well as the loss per feature.
+
         Args:
-            features: np.matrix containig the n_sample-long vector of states
-            labels: np.array of the labels related to features
+            features (np.ndarray): array containing all possible input states
+            labels (np.ndarray): array of the true labels
         Returns:
-            np.array of length self.nparams containing the loss function's gradients
-            float of mean loss per feature
+            (np.array): loss function's gradients
+            (float): mean loss
         """
+
+        # setup
         circ_grads = np.zeros(self.nparams)
         results = np.zeros((self.nsample, self.nlabels))
         loss = 0
@@ -459,20 +497,25 @@ class SGD(Optimizer):
         beta_2=0.99,
         epsilon=1e-8,
     ):
-        """
-        Implementation of the gradient descent: during a run of this function parameters are updated.
+        """Implementation of one iteration of Gradient Descent.
+
+        During a run of this function parameters are updated.
         Furthermore, new values of m and v are calculated.
+
         Args:
-            learning_rate: np.float value of the learning rate
-            m: momentum's value before the execution of the Adam descent
-            v: velocity's value before the execution of the Adam descent
-            features: np.matrix containig the n_sample-long vector of states
-            labels: np.array of the labels related to features
-            iteration: np.integer value corresponding to the current training iteration
-            beta_1: np.float value of the Adam's beta_1 parameter; default 0.85
-            beta_2: np.float value of the Adam's beta_2 parameter; default 0.99
-            epsilon: np.float value of the Adam's epsilon parameter; default 1e-8
-        Returns: np.float new values of momentum and velocity
+            learning_rate (float): np.float value of the learning rate
+            m (np.ndarray): momentum's value before the execution of the Adam descent
+            v (np.ndarray): velocity's value before the execution of the Adam descent
+            features (np.ndarray): array containing the n_sample-long vector of states
+            labels (np.ndarray): np.array of the labels related to features
+            iteration (int): current training iteration
+            beta_1 (float): beta_1 parameter; default 0.85
+            beta_2 (flaot): beta_2 parameter; default 0.99
+            epsilon (float): epsilon parameter; default 1e-8
+        Returns:
+            (float) new momentum
+            (float) new velocity
+            (float) new loss
         """
         grads, loss = self.dloss(features, labels)
 
@@ -503,14 +546,12 @@ class SGD(Optimizer):
             return 0, 0, loss
 
     def sgd(self, options):
-        """
-        This function performs the full gradient descent's procedure
+        """This function performs the full Gradient Descent
+
         Args:
-            epochs: np.integer value corresponding to the epochs of training
-            learning_rate: np.float value of the learning rate
-            batches: np.integer value of the number of batches which divide the dataset
-            J_treshold: np.float value of the desired loss function's treshold
-        Returns: list of loss values, one for each epoch
+            options (dict): gradient descnet options
+        Returns:
+            (list) history of loss values, one for each epoch
         """
 
         losses = []
@@ -557,7 +598,7 @@ class SGD(Optimizer):
                 break
 
             # shuffle index list
-            # np.random.shuffle(idx)
+            np.random.shuffle(idx)
             # run over the batches
             for ib in range(options["batches"]):
                 iteration += 1
@@ -621,6 +662,13 @@ class SGD(Optimizer):
         return losses
 
     def setup(self, X, y):
+        """Input and output setup
+
+        Args:
+            X (np.ndarray): array containing input values
+            y (np.ndarray): array containing true output values
+        """
+
         if not isinstance(X, np.ndarray):
             raise ("X must be a numpy array")
 
@@ -642,9 +690,14 @@ class SGD(Optimizer):
             self.backend = GlobalBackend()
 
     def fit(self, X, y):
-        """Performs the optimizations and returns f_best, x_best."""
+        """Performs the optimizations and returns f_best, x_best.
 
-        random.seed(42)
+        Args:
+            X (np.ndarray): array containing input values
+            y (np.ndarray): array containing true output values
+        """
+
+        random.seed(42)  # CHANGE
 
         self.setup(X, y)
 
@@ -652,6 +705,34 @@ class SGD(Optimizer):
 
 
 class CMAES(Optimizer):
+    """Genetic optimizer based on `pycma <https://github.com/CMA-ES/pycma>`_.
+
+    Example:
+    .. code-block:: python
+
+        from qibo import Circuit
+        from qibo import gates
+
+        circuit = Circuit(nqubits=1)
+        c.add(gates.RY(q=0, theta=Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=[0.1])))
+        c.add(gates.RZ(q=0, theta=Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=[0.1])))
+        c.add(gates.M(q=0))
+
+        parameters = [0.2, 0.4, 0.2, 0.9]
+
+        optimizer = SGD(circuit=circuit, parameters=parameters)
+        X = np.array([0.1, 0.2, 0.3])
+        y = np.array([0.2, 0.5, 0.7])
+        losses = optimizer.fit(X, y)
+
+    Args:
+        intial_parameters (np.ndarray): array with initial values for gate parameters
+        hamiltonian (qibo.hamiltonians.SymbolicHamiltonian): hamiltonian applied to final circuit state
+        args (tuple): tuple containing loss function arguments. Circuit must be first argument.
+        loss (function): loss function to train on
+        save (bool): Flag to set logging on
+    """
+
     def __init__(self, initial_parameters, args=(), loss=None, save=False, **kwargs):
         self._circuit = args[0]
         super().__init__(initial_parameters, args, loss, save)
@@ -663,18 +744,14 @@ class CMAES(Optimizer):
             self.file = open(self.filename, "w")
 
     def fit(self):
-        """Genetic optimizer based on `pycma <https://github.com/CMA-ES/pycma>`_.
+        """Performs the optimizations.
 
-        Args:
-            loss (callable): Loss as a function of variational parameters to be
-                optimized.
-            initial_parameters (np.ndarray): Initial guess for the variational
-                parameters.
-            args (tuple): optional arguments for the loss function.
-            options (dict): Dictionary with options accepted by the ``cma``
-                optimizer. The user can use ``import cma; cma.CMAOptions()`` to view the
-                available options.
+        Returns:
+            (float): best loss value
+            (np.ndarray): best parameter values
+            (cma.evolution_strategy.CMAEvolutionStrategy): full CMA Evolution Strategy object
         """
+
         import cma
 
         r = cma.fmin2(
@@ -689,7 +766,20 @@ class CMAES(Optimizer):
 
 class Newtonian(Optimizer):
     def __init__(self, initial_parameters, args=(), loss=None, save=False, **kwargs):
-        """
+        """Newtonian optimization approaches based on ``scipy.optimize.minimize``.
+
+        For more details check the `scipy documentation <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
+
+        .. note::
+            When using the method ``parallel_L-BFGS-B`` the ``processes`` option controls the
+            number of processes used by the parallel L-BFGS-B algorithm through the ``multiprocessing`` library.
+            By default ``processes=None``, in this case the total number of logical cores are used.
+            Make sure to select the appropriate number of processes for your computer specification,
+            taking in consideration memory and physical cores. In order to obtain optimal results
+            you can control the number of threads used by each process with the ``qibo.set_threads`` method.
+            For example, for small-medium size circuits you may benefit from single thread per process, thus set
+            ``qibo.set_threads(1)`` before running the optimization.
+
         Args:
             loss (callable): Loss as a function of variational parameters to be
                 optimized.
@@ -733,22 +823,15 @@ class Newtonian(Optimizer):
             self.file = open(self.filename, "w")
 
     def fit(self):
-        """Newtonian optimization approaches based on ``scipy.optimize.minimize``.
+        """Performs the optimizations.
 
-        For more details check the `scipy documentation <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
-
-        .. note::
-            When using the method ``parallel_L-BFGS-B`` the ``processes`` option controls the
-            number of processes used by the parallel L-BFGS-B algorithm through the ``multiprocessing`` library.
-            By default ``processes=None``, in this case the total number of logical cores are used.
-            Make sure to select the appropriate number of processes for your computer specification,
-            taking in consideration memory and physical cores. In order to obtain optimal results
-            you can control the number of threads used by each process with the ``qibo.set_threads`` method.
-            For example, for small-medium size circuits you may benefit from single thread per process, thus set
-            ``qibo.set_threads(1)`` before running the optimization.
-
-
+        Returns:
+            (float): best loss value
+            (np.ndarray): best parameter values
+            (scipy.optimize.OptimizeResult): full scipy OptimizeResult object
+            (int): iteration number
         """
+
         if self.options["method"] == "parallel_L-BFGS-B":  # pragma: no cover
             o = ParallelBFGS(
                 self.fun,
@@ -790,8 +873,6 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
         processes (int): number of processes when using the paralle BFGS method.
     """
 
-    import numpy as np
-
     def __init__(self, initial_parameters, loss, args=(), save=False, **kwargs):
         super().__init__(initial_parameters, args, loss, save)
         self.function_value = None
@@ -818,11 +899,15 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
             self.file = open(self.filename, "w")
 
     def fit(self):
-        """Executes parallel L-BFGS-B minimization.
+        """Performs the optimizations.
 
         Returns:
-            scipy.minimize result object
+            (float): best loss value
+            (np.ndarray): best parameter values
+            (scipy.optimize.OptimizeResult): full scipy OptimizeResult object
+            (int): iteration number
         """
+
         from scipy.optimize import minimize
 
         out = minimize(
@@ -839,6 +924,16 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
 
     @staticmethod
     def _eval_approx(eps_at, fun, x, eps):
+        """Approximate evaluation
+
+        Args:
+            eps_at (int): parameter index where approximation occurs
+            fun (function): loss function
+            x (np.ndarray): circuit parameters
+            eps (float): approximation delta
+        Returns:
+            (float): approximated loss value
+        """
         if eps_at == 0:
             x_ = x
         else:
@@ -850,6 +945,14 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
         return fun(x_)
 
     def evaluate(self, x, eps=1e-8):
+        """Handles function evaluation
+
+        Args:
+            x (np.ndarray): circuit parameters
+            eps (float): approximation delta
+        Returns
+            (float): loss value
+        """
         if not (
             self.options["xval"] is not None
             and all(abs(self.options["xval"] - x) <= self.options["precision"] * 2)
@@ -871,6 +974,14 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
             self.jacobian_value = (ret[1 : (len(x) + 1)] - self.function_value) / eps
 
     def fun(self, x):
+        """Saves and returns loss function value
+
+        Args:
+            x (np.ndarray): circuit parameters
+        Returns
+            (float): loss value
+        """
+
         self.evaluate(x)
         if self.save:
             self.file.write(
@@ -880,11 +991,49 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
         return self.function_value
 
     def jac(self, x):
+        """Evaluates the Jacobian
+
+        Args:
+            x (np.ndarray): circuit parameters
+        Returns
+            (float): jacobian value
+        """
+
         self.evaluate(x)
         return self.jacobian_value
 
 
 class BasinHopping(Optimizer):
+    """Global optimizer based on `scipy.optimize.basinhopping <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.basinhopping.html>`_.
+
+    Example:
+    .. code-block:: python
+
+        from qibo import Circuit
+        from qibo import gates
+
+        circuit = Circuit(nqubits=1)
+        c.add(gates.RY(q=0, theta=Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=[0.1])))
+        c.add(gates.RZ(q=0, theta=Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], featurep=[0.1])))
+        c.add(gates.M(q=0))
+
+        parameters = [0.2, 0.4, 0.2, 0.9]
+
+        optimizer = BasinHopping(
+            initial_parameters=parameters,
+            args=(circuit, hamiltonian),
+            loss=cma_loss,
+        )
+
+        fbest = optimizer.fit()
+
+    Args:
+        intial_parameters (np.ndarray): array with initial values for gate parameters
+        args (tuple): tuple containing loss function arguments. Circuit must be first argument.
+        loss (function): loss function to train on
+        save (bool): Flag to set logging on
+    """
+
     def __init__(self, initial_parameters, args=(), loss=None, save=False, **kwargs):
         super().__init__(initial_parameters, args, loss, save)
         self.args = args
@@ -896,17 +1045,13 @@ class BasinHopping(Optimizer):
             self.file = open(self.filename, "w")
 
     def fit(self):
-        """Genetic optimizer based on `pycma <https://github.com/CMA-ES/pycma>`_.
+        """Performs the optimizations.
 
-        Args:
-            loss (callable): Loss as a function of variational parameters to be
-                optimized.
-            initial_parameters (np.ndarray): Initial guess for the variational
-                parameters.
-            args (tuple): optional arguments for the loss function.
-            options (dict): Dictionary with options accepted by the ``cma``
-                optimizer. The user can use ``import cma; cma.CMAOptions()`` to view the
-                available options.
+        Returns:
+            (float): best loss value
+            (np.ndarray): best parameter values
+            (scipy.optimize.OptimizeResult): full scipy OptimizeResult object
+            (int): iteration number
         """
         from scipy.optimize import basinhopping
 
