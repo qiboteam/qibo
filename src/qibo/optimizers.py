@@ -47,7 +47,11 @@ class Optimizer:
     def __init__(self, initial_parameters, args=(), loss=None, save=False):
         # saving to class objects
         self.loss_function = loss
-        self.args = args
+        if not isinstance(args, tuple):
+            self.args = (args,)
+        else:
+            self.args = args
+
         self.params = initial_parameters
         self.backend = backends.GlobalBackend()
 
@@ -227,6 +231,7 @@ class SGD(Optimizer):
             "beta_1": 0.85,
             "beta_2": 0.99,
             "vanilla": False,
+            "qadam": False,
         }
         self.set_options(kwargs)
 
@@ -250,6 +255,36 @@ class SGD(Optimizer):
             self.NGgraph = build_graph(
                 self._circuit, self.nparams, self.nqubits, self.initparams
             )
+
+    def _gate_expectation_dependence(self):
+        """
+        Returns the amount of hamiltonians that depend on a given parameter.
+
+        Returns:
+            np.ndarray: integer counts of hamiltonian dependencies"""
+
+        obs_gradients = np.zeros((self.nlabels, self.nparams))
+
+        for h, ham in enumerate(self.hamiltonian):
+            obs_gradients[h] = calculate_circuit_gradients(
+                self._circuit,
+                ham,
+                self.initparams,
+                self.nparams,
+                "psr",
+                self.cdr_params,
+                self.options["nshots"],
+                deterministic=True,
+                var_gates=self.options["var_gates"],
+            )
+
+        result = np.where(abs(obs_gradients) <= 1e-10, 0, 1)
+
+        result = np.sum(result, axis=0)
+
+        ncount = np.where(result == 0, 1, result)
+
+        return ncount
 
     def calculate_loss_func_grad(self, results, labels, idx, delta=1e-6):
         """
@@ -335,6 +370,8 @@ class SGD(Optimizer):
         results = np.zeros((self.nsample, self.nlabels))
         loss = 0
 
+        ncount = self._gate_expectation_dependence()
+
         # natural gradient setup
         if self.options["natgrad"]:
             fubini = np.zeros((self.nparams, self.nparams))
@@ -393,7 +430,7 @@ class SGD(Optimizer):
             self.loss_function(results.squeeze(), labels.squeeze(), *self.args)
             / self.nsample
         )
-        loss_gradients = circ_grads / self.nsample * len(labels[0])
+        loss_gradients = circ_grads / self.nsample / ncount
 
         # Fubini-Study Metric renormalisation
         if self.options["natgrad"]:
@@ -450,7 +487,6 @@ class SGD(Optimizer):
 
         # QADAM
         elif self.options["qadam"]:
-            print("qadam")
             it = self.iteration + 1
             beta_1 /= it
             beta_2 /= it

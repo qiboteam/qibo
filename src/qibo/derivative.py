@@ -168,6 +168,7 @@ def calculate_circuit_gradients(
                     nshots=nshots,
                     cdr_params=cdr_params,
                 )
+
         else:
             count = 0
             for ipar, Param in enumerate(initparams):
@@ -855,9 +856,13 @@ class Graph:
 
                 # replace last layer by M gate
                 if iter == layer and isinstance(node.gate, gates.ParametrizedGate):
-                    c.add(gates.M(q, basis=self._determine_basis(node.gate)))
-                    trainable_qubits.append(q)
-                    affected_params.append(node.trainable_params)
+                    if isinstance(node.next, int) or (
+                        isinstance(node, ConvergeNode)
+                        and q == node.gate.target_qubits[0]
+                    ):
+                        c.add(gates.M(q, basis=self._determine_basis(node.gate)))
+                        trainable_qubits.append(q)
+                        affected_params.append(node.trainable_params)
 
                 # wait for both qubits to reach two-qubit node
                 elif isinstance(node, ConvergeNode):
@@ -989,6 +994,7 @@ def generate_fubini(
                         ps = scale_factors[p]
                         ts = scale_factors[t]
                         val = ps * ts * (result - result**2)
+                        # avoid singular matrix
                         fubini[p, t] = val if val > 1e-3 else 1e-3
 
     return fubini
