@@ -2,9 +2,8 @@
 import numpy as np
 import pytest
 
-from qibo import gates
+from qibo import Circuit, gates
 from qibo.config import PRECISION_TOL
-from qibo.models import Circuit
 from qibo.quantum_info import random_density_matrix, random_statevector
 
 
@@ -71,7 +70,7 @@ def test_one_qubit_gates(backend, gatename, gatekwargs):
     gate = getattr(gates, gatename)(0, **gatekwargs)
     final_rho = apply_gates(backend, [gate], 1, initial_rho)
 
-    matrix = backend.to_numpy(gate.asmatrix(backend))
+    matrix = backend.to_numpy(gate.matrix(backend))
     target_rho = np.einsum("ab,bc,cd->ad", matrix, initial_rho, matrix.conj().T)
     backend.assert_allclose(final_rho, target_rho)
 
@@ -83,7 +82,7 @@ def test_controlled_by_one_qubit_gates(backend, gatename):
     gate = getattr(gates, gatename)(1).controlled_by(0)
     final_rho = apply_gates(backend, [gate], 2, initial_rho)
 
-    matrix = backend.to_numpy(backend.asmatrix(getattr(gates, gatename)(1)))
+    matrix = backend.to_numpy(backend.matrix(getattr(gates, gatename)(1)))
     cmatrix = np.eye(4, dtype=matrix.dtype)
     cmatrix[2:, 2:] = matrix
     target_rho = np.einsum("ab,bc,cd->ad", cmatrix, initial_rho, cmatrix.conj().T)
@@ -112,7 +111,7 @@ def test_two_qubit_gates(backend, gatename, gatekwargs):
     gate = getattr(gates, gatename)(0, 1, **gatekwargs)
     final_rho = apply_gates(backend, [gate], 2, initial_rho)
 
-    matrix = backend.to_numpy(gate.asmatrix(backend))
+    matrix = backend.to_numpy(gate.matrix(backend))
     target_rho = np.einsum("ab,bc,cd->ad", matrix, initial_rho, matrix.conj().T)
     backend.assert_allclose(final_rho, target_rho, atol=PRECISION_TOL)
 
@@ -124,7 +123,7 @@ def test_toffoli_gate(backend):
     gate = gates.TOFFOLI(0, 1, 2)
     final_rho = apply_gates(backend, [gate], 3, initial_rho)
 
-    matrix = backend.to_numpy(gate.asmatrix(backend))
+    matrix = backend.to_numpy(gate.matrix(backend))
     target_rho = np.einsum("ab,bc,cd->ad", matrix, initial_rho, matrix.conj().T)
     backend.assert_allclose(final_rho, target_rho)
 
@@ -159,7 +158,6 @@ def test_cu1gate_application_twoqubit(backend):
 
 def test_controlled_by_no_effect(backend):
     """Check controlled_by SWAP that should not be applied."""
-    from qibo.models import Circuit
 
     initial_rho = np.zeros((16, 16))
     initial_rho[0, 0] = 1
@@ -177,7 +175,6 @@ def test_controlled_by_no_effect(backend):
 
 def test_controlled_with_effect(backend):
     """Check controlled_by SWAP that should be applied."""
-    from qibo.models import Circuit
 
     initial_rho = np.zeros((16, 16))
     initial_rho[0, 0] = 1

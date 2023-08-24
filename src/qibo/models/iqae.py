@@ -1,9 +1,8 @@
 import numpy as np
 import scipy.stats
 
-from qibo import gates
+from qibo import Circuit, gates
 from qibo.config import raise_error
-from qibo.models import Circuit
 
 
 class IQAE:
@@ -49,8 +48,7 @@ class IQAE:
     Example:
         .. testcode::
 
-            from qibo import gates
-            from qibo.models import Circuit
+            from qibo import Circuit, gates
             from qibo.models.iqae import IQAE
 
             # Defining circuit A to integrate sin(x)^2 from [0,1]

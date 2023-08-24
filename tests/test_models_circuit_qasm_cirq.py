@@ -4,8 +4,7 @@ import numpy as np
 import pytest
 from cirq.contrib.qasm_import import circuit_from_qasm, exception
 
-from qibo import gates
-from qibo.models import Circuit
+from qibo import Circuit, gates
 
 # Absolute testing tolerance for cirq-qibo comparison
 _atol = 1e-7

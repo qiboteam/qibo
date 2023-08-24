@@ -42,8 +42,8 @@ Peer-Reviewed Articles
 .. _`arXiv:2009.01845`: https://arxiv.org/abs/2009.01845
 
 * S. Efthymiou, M. Lazzarin, A. Pasquale, S. Carrazza, *Quantum simulation with
-     just-in-time compilation*, Quantum (6) (2022).
-     `doi:10.22331/q-2022-09-22-814`_, (`arXiv:2203.08826`_).
+  just-in-time compilation*, Quantum (6) (2022).
+  `doi:10.22331/q-2022-09-22-814`_, (`arXiv:2203.08826`_).
 
   In *BibTeX* format:
 
@@ -66,6 +66,11 @@ Peer-Reviewed Articles
 .. _`doi:10.22331/q-2022-09-22-814`: https://doi.org/10.22331/q-2022-09-22-814
 .. _`arXiv:2203.08826`: https://arxiv.org/abs/2203.08826
 
+* S. Efthymiou, A. Orgaz-Fuertes, R. Carobene, J. Cereijo, A. Pasquale, S.
+  Ramos-Calderer, S. Bordoni, D. Fuentes-Ruiz, A. Candido, E. Pedicillo, M.
+  Robbiati, Y.P. Tan, J. Wilkens, I. Roth, J.I. Latorre, S. Carrazza, *Qibolab:
+  an open-source hybrid quantum operating system* (2023).
+
 Software References in Zenodo
 -----------------------------
 
@@ -82,7 +87,7 @@ Software References in Zenodo
 
 
 * S. Efthymiou, A. Orgaz, S. Carrazza, A. Pasquale, D.
-  Funtes Ruiz, M. Lazzarin, S. Bordoni, E. Pedicillo, P.
+  Fuentes Ruiz, M. Lazzarin, S. Bordoni, E. Pedicillo, P.
   Tan and M. Hantute. (2023). qiboteam/qibolab: Qibolab. Zenodo.
   `https://doi.org/10.5281/zenodo.7748527`_.
 
@@ -101,14 +106,13 @@ Conference Proceedings
 ----------------------
 
 * S. Carrazza, S. Efthymiou, M. Lazzarin, A. Pasquale. An open-source modular
-     framework for quantum computing. (2022) `ACAT2021`_,
-     (`arXiv:2202.07017`_).
+  framework for quantum computing. (2022) `ACAT2021`_, (`arXiv:2202.07017`_).
 
 .. _`ACAT2021`: https://indico.cern.ch/event/855454/
 .. _`arXiv:2202.07017`: https://arxiv.org/abs/2202.07017
 
-* M. Robbiati, S. Efthymiou, A. Pasquale, S. Carrazza. A quantum analytical Adam descent through parameter shift rule using Qibo. (2022) `ICHEP2022`_,
-     (`arXiv:2210.10787`_).
+* M. Robbiati, S. Efthymiou, A. Pasquale, S. Carrazza.
+  A quantum analytical Adam descent through parameter shift rule using Qibo. (2022) `ICHEP2022`_, (`arXiv:2210.10787`_).
 
 .. _`ICHEP2022`: https://www.ichep2022.it/
 .. _`arXiv:2210.10787`: https://arxiv.org/abs/2210.10787
@@ -143,6 +147,11 @@ Based on qibo
   functions with adiabatic quantum computing. (2023), (`arXiv:2303.11346`_).
 
 .. _`arXiv:2303.11346`: https://arxiv.org/abs/2303.11346
+
+* J. M. Cruz-Martinez, M. Robbiati, S. Carrazza, Multi-variable integration with
+  a variational quantum circuit. (2023), (`arXiv:2308.05657`_).
+
+.. _`arXiv:2308.05657`: https://arxiv.org/abs/2308.05657
 
 
 

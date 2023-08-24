@@ -119,17 +119,17 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def asmatrix(self, gate):  # pragma: no cover
+    def matrix(self, gate):  # pragma: no cover
         """Convert a :class:`qibo.gates.Gate` to the corresponding matrix."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def asmatrix_parametrized(self, gate):  # pragma: no cover
-        """Equivalent to :meth:`qibo.backends.abstract.Backend.asmatrix` for parametrized gates."""
+    def matrix_parametrized(self, gate):  # pragma: no cover
+        """Equivalent to :meth:`qibo.backends.abstract.Backend.matrix` for parametrized gates."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def asmatrix_fused(self, gate):  # pragma: no cover
+    def matrix_fused(self, gate):  # pragma: no cover
         """Fuse matrices of multiple gates."""
         raise_error(NotImplementedError)
 

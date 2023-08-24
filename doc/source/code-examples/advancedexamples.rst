@@ -100,8 +100,7 @@ be used as follows:
 
 .. code-block:: python
 
-    from qibo.models import Circuit
-    from qibo import gates
+    from qibo import Circuit, gates
 
     # Define GPU configuration
     accelerators = {"/GPU:0": 3, "/GPU:1": 1}
@@ -239,8 +238,7 @@ such gates are added in a circuit their parameters can be updated using the
 
 .. testcode::
 
-    from qibo.models import Circuit
-    from qibo import gates
+    from qibo import Circuit, gates
     # create a circuit with all parameters set to 0.
     c = Circuit(3)
     c.add(gates.RX(0, theta=0))
@@ -261,8 +259,7 @@ the circuit. For example:
 
 .. testsetup::
 
-    from qibo.models import Circuit
-    from qibo import gates
+    from qibo import Circuit, gates
 
 .. testcode::
 
@@ -310,8 +307,7 @@ the ``trainable=False`` during gate creation. For example:
 
 .. testsetup::
 
-    from qibo.models import Circuit
-    from qibo import gates
+    from qibo import Circuit, gates
 
 .. testcode::
 
@@ -350,8 +346,7 @@ of the :class:`qibo.gates.M` gate. For example
 
 .. testcode::
 
-    from qibo.models import Circuit
-    from qibo import gates
+    from qibo import Circuit, gates
 
     c = Circuit(1)
     c.add(gates.H(0))
@@ -382,8 +377,7 @@ a loop:
 
 .. testsetup::
 
-    from qibo.models import Circuit
-    from qibo import gates
+    from qibo import Circuit, gates
 
     c = Circuit(1)
     c.add(gates.H(0))
@@ -407,8 +401,7 @@ also possible:
 
 .. testcode::
 
-    from qibo.models import Circuit
-    from qibo import gates
+    from qibo import Circuit, gates
 
     c = Circuit(2)
     c.add(gates.H(0))
@@ -430,8 +423,7 @@ any parametrized gate as follows:
 .. testcode::
 
     import numpy as np
-    from qibo.models import Circuit
-    from qibo import gates
+    from qibo import Circuit, gates
 
     c = Circuit(2)
     c.add(gates.H(0))
@@ -453,8 +445,7 @@ If more than one qubits are used in a ``collapse=True`` measurement gate the
 .. testcode::
 
     import numpy as np
-    from qibo.models import Circuit
-    from qibo import gates
+    from qibo import Circuit, gates
 
     c = Circuit(3)
     c.add(gates.H(0))
@@ -476,8 +467,7 @@ for example:
 
 .. testcode::
 
-    from qibo.models import Circuit
-    from qibo import gates
+    from qibo import Circuit, gates
 
     # Create a subroutine
     subroutine = Circuit(6)
@@ -1208,8 +1198,7 @@ Let's see how to use them. For starters, let's define a dummy circuit with some 
 
    import numpy as np
 
-   from qibo import gates
-   from qibo.models import Circuit
+   from qibo import Circuit, gates
 
    # Define the circuit
    nqubits = 3
@@ -1911,8 +1900,7 @@ which can be called on a state or density matrix. For example
 
 .. testcode::
 
-    from qibo import gates
-    from qibo.models import Circuit
+    from qibo import Circuit, gates
     from qibo.hamiltonians import XXZ
 
     circuit = Circuit(4)
@@ -1941,8 +1929,7 @@ to allow calculation of expectation values directly from such samples:
 
 .. testcode::
 
-    from qibo import gates
-    from qibo.models import Circuit
+    from qibo import Circuit, gates
     from qibo.hamiltonians import Z
 
     circuit = Circuit(4)

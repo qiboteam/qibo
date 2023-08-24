@@ -3,8 +3,7 @@ import argparse
 import numpy as np
 from scipy.special import binom
 
-from qibo import gates
-from qibo.models import Circuit
+from qibo import Circuit, gates
 from qibo.models.grover import Grover
 
 
