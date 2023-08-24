@@ -226,7 +226,7 @@ def test_cma_optimizer():
         options={"maxiter": 50},
     )
 
-    fbest, xbest, r = optimizer.fit()
+    fbest, xbest, r, it = optimizer.fit()
 
     assert fbest < 1e-3
 

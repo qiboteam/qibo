@@ -139,6 +139,7 @@ class SGD(Optimizer):
         hamiltonian=None,
         args=(),
         loss=None,
+        loss_derivative=None,
         save=False,
         **kwargs,
     ):
@@ -154,6 +155,9 @@ class SGD(Optimizer):
         # parameters
         self.params = parameters
         self.nparams = len(self.params)
+
+        # loss function derivative
+        self.loss_func_deriv = loss_derivative
 
         # hamiltonian
         if not hamiltonian:
@@ -359,7 +363,6 @@ class SGD(Optimizer):
 
         # iterate through all data points
         for i, feat in enumerate(features):
-            # predict current output
             results[i] = self.predict(feat)
 
             obs_gradients = np.zeros((self.nlabels, self.nparams))
@@ -375,7 +378,15 @@ class SGD(Optimizer):
                     var_gates=self.options["var_gates"],
                 )  # d<B> N params, N label gradients
 
-            loss_func_grad = self.calculate_loss_func_grad(np.copy(results), labels, i)
+            if self.loss_func_deriv is not None:
+                loss_func_grad = self.calculate_loss_func_grad(
+                    np.copy(results), labels, i
+                )
+            else:
+                grad = self.loss_func_deriv(
+                    results.squeeze(), labels.squeeze(), *self.args
+                )
+                loss_func_grad = np.array([grad[i]])
 
             circ_grads += np.dot(loss_func_grad.T, obs_gradients)
 
@@ -407,7 +418,7 @@ class SGD(Optimizer):
             self.file.write(
                 f"Grads (absolute value: {np.linalg.norm(loss_gradients)}): {loss_gradients.tolist()}\nParams {self.params.tolist()}\nypred: {results.tolist()}\n"
             )
-        print(self.params)
+
         plot(
             results, self.features, self.labels, self.epoch, loss, name_prependix="sgd"
         )
