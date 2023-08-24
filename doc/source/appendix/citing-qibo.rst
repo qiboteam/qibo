@@ -69,7 +69,9 @@ Peer-Reviewed Articles
 * S. Efthymiou, A. Orgaz-Fuertes, R. Carobene, J. Cereijo, A. Pasquale, S.
   Ramos-Calderer, S. Bordoni, D. Fuentes-Ruiz, A. Candido, E. Pedicillo, M.
   Robbiati, Y.P. Tan, J. Wilkens, I. Roth, J.I. Latorre, S. Carrazza, *Qibolab:
-  an open-source hybrid quantum operating system* (2023).
+  an open-source hybrid quantum operating system* (2023), (`arXiv:2308.06313`_).
+
+.. _`arXiv:2308.06313`: https://arxiv.org/abs/2308.06313
 
 Software References in Zenodo
 -----------------------------
