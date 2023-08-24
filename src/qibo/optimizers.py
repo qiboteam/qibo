@@ -375,7 +375,7 @@ class SGD(Optimizer):
                     var_gates=self.options["var_gates"],
                 )  # d<B> N params, N label gradients
 
-            loss_func_grad = self.calculate_loss_func_grad(results, labels, i)
+            loss_func_grad = self.calculate_loss_func_grad(np.copy(results), labels, i)
 
             circ_grads += np.dot(loss_func_grad.T, obs_gradients)
 
@@ -392,9 +392,7 @@ class SGD(Optimizer):
 
         # gradient average
         loss = (
-            self.loss_function(
-                results.squeeze(), labels.squeeze(), *self.args, prin=True
-            )
+            self.loss_function(results.squeeze(), labels.squeeze(), *self.args)
             / self.nsample
         )
         loss_gradients = circ_grads / self.nsample / ncount
@@ -410,7 +408,9 @@ class SGD(Optimizer):
                 f"Grads (absolute value: {np.linalg.norm(loss_gradients)}): {loss_gradients.tolist()}\nParams {self.params.tolist()}\nypred: {results.tolist()}\n"
             )
 
-        plot(results, self.features, self.labels, self.epoch, loss)
+        plot(
+            results, self.features, self.labels, self.epoch, loss, name_prependix="sgd"
+        )
 
         return loss_gradients, loss
 
@@ -527,7 +527,7 @@ class SGD(Optimizer):
                 break
 
             # shuffle index list
-            np.random.shuffle(idx)
+            # np.random.shuffle(idx)
             # run over the batches
             for ib in range(options["batches"]):
                 iteration += 1
@@ -571,6 +571,7 @@ class SGD(Optimizer):
             value = min(losses)
             idx = losses.index(value)
             self.parameters = self.param_history[idx]
+
             ypred, ysigma = get_error(self, self.features, "sgd", self.name_appendix)
 
             plot(
@@ -581,7 +582,8 @@ class SGD(Optimizer):
                 value,
                 ysigma,
                 self.name,
-                self.name_appendix,
+                name_appendix=self.name_appendix,
+                name_prependix="sgd",
             )
 
             self.file.write(f"Params {self.params.tolist()}\n")
@@ -1019,6 +1021,7 @@ def plot(
     loss,
     ysigma=None,
     name=None,
+    name_prependix=None,
     name_appendix=None,
     params=None,
     xscale="log",
@@ -1061,9 +1064,9 @@ def plot(
 
         else:
             ax.set_xscale(xscale)
-            print("plot before", yprediction)
+
             yprediction = scaler(yprediction)
-            print("plot after", yprediction)
+
             if ysigma is not None:
                 ax.fill_between(
                     xtrain,
@@ -1089,9 +1092,114 @@ def plot(
     plt.xscale(xscale)
     plt.xlabel("x")
     plt.ylabel("y")
-
-    plt.savefig(f"results/{name}_{name_appendix}.png", bbox_inches="tight")
-    plt.show()
-
-    plt.savefig("Plot.png", bbox_inches="tight")
+    if name is not None:
+        plt.savefig(
+            f"results/{name_prependix}_{name}_{name_appendix}.png", bbox_inches="tight"
+        )
+        plt.show()
+    else:
+        plt.savefig("Plot.png", bbox_inches="tight")
     plt.close()
+
+
+class BFGS(Optimizer):  # pragma: no cover
+    """Computes the L-BFGS-B using parallel evaluation using multiprocessing.
+    This implementation here is based on https://doi.org/10.32614/RJ-2019-030.
+
+    Args:
+        function (function): loss function which returns a numpy object.
+        args (tuple): optional arguments for the loss function.
+        bounds (list): list of bound values for ``scipy.optimize.minimize`` L-BFGS-B.
+        callback (function): function callback ``scipy.optimize.minimize`` L-BFGS-B.
+        options (dict): follows ``scipy.optimize.minimize`` syntax for L-BFGS-B.
+        processes (int): number of processes when using the paralle BFGS method.
+    """
+
+    import numpy as np
+
+    def __init__(
+        self,
+        function,
+        args=(),
+        bounds=None,
+        callback=None,
+        options=None,
+        processes=None,
+    ):
+        super().__init__(np.random.randn(12), loss=function, save=True)
+        self.filename = f"results/Scipy_bfgs_{self.name}.txt"
+        if self.save:
+            self.file = open(self.filename, "w")
+        self.function = function
+        self.args = args
+        self.xval = None
+        self.function_value = None
+        self.jacobian_value = None
+        self.precision = self.np.finfo("float64").eps
+        self.bounds = bounds
+        self.callback = callback
+        self.options = options
+        self.processes = processes
+
+    def run(self, x0):
+        """Executes parallel L-BFGS-B minimization.
+        Args:
+            x0 (numpy.array): guess for initial solution.
+
+        Returns:
+            scipy.minimize result object
+        """
+        from scipy.optimize import minimize
+
+        print(x0)
+        out = minimize(
+            fun=self.fun,
+            x0=x0,
+            jac=None,
+            method="BFGS",
+            bounds=self.bounds,
+            callback=self.callback,
+            options={"ftol": 1e-60, "xtol": 1e-40, "maxiter": 100},
+        )
+        # out.hess_inv = out.hess_inv * self.np.identity(len(x0))
+        return out
+
+    @staticmethod
+    def _eval_approx(eps_at, fun, x, eps):
+        if eps_at == 0:
+            x_ = x
+        else:
+            x_ = x.copy()
+            if eps_at <= len(x):
+                x_[eps_at - 1] += eps
+            else:
+                x_[eps_at - 1 - len(x)] -= eps
+        return fun(x_)
+
+    def evaluate(self, x, eps=1e-8):
+        if not (
+            self.xval is not None and all(abs(self.xval - x) <= self.precision * 2)
+        ):
+            eps_at = range(len(x) + 1)
+            self.xval = x.copy()
+
+            def operation(epsi):
+                return self._eval_approx(
+                    epsi, lambda y: self.function(y, *self.args), x, eps
+                )
+
+            from joblib import Parallel, delayed
+
+            ret = Parallel(self.processes, prefer="threads")(
+                delayed(operation)(epsi) for epsi in eps_at
+            )
+            self.function_value = ret[0]
+            self.jacobian_value = (ret[1 : (len(x) + 1)] - self.function_value) / eps
+
+    def fund(self, x):
+        self.evaluate(x)
+        return self.function_value
+
+    def jac(self, x):
+        self.evaluate(x)
+        return self.jacobian_value
