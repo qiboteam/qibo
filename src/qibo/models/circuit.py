@@ -1437,7 +1437,7 @@ class VariationalCircuit(Circuit):
             if isinstance(gate, (gates.ParametrizedGate)):
                 try:
                     params.append(gate.initparams)
-                except Exception as e:
+                except AttributeError:
                     params.append(gate.parameters)
 
         if isinstance(params[0], (float, int, tuple)):
@@ -1455,9 +1455,9 @@ class VariationalCircuit(Circuit):
         # for Parameter objects
         else:
             params = []
-            for Param in self.initparams:
+            for param_object in self.initparams:
                 # update trainable params and retrieve gate param
-                params.extend(Param._trainable)
+                params.extend(param_object._trainable)
 
             return params
 
@@ -1478,12 +1478,12 @@ class VariationalCircuit(Circuit):
         else:
             gate_params = []
             count = 0
-            for Param in self.initparams:
-                trainable = input_params[count : count + Param.nparams]
-                count += Param.nparams
+            for param_object in self.initparams:
+                trainable = input_params[count : count + param_object.nparams]
+                count += param_object.nparams
                 # update trainable params and retrieve gate param
-                Param.update_parameters(trainable, feature)
-                gate_params.append(Param.get_gate_parameters())
+                param_object.update_parameters(trainable, feature)
+                gate_params.append(param_object())
 
         self.set_parameters(gate_params)
 
