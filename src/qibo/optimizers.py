@@ -407,7 +407,7 @@ class SGD(Optimizer):
             self.file.write(
                 f"Grads (absolute value: {np.linalg.norm(loss_gradients)}): {loss_gradients.tolist()}\nParams {self.params.tolist()}\nypred: {results.tolist()}\n"
             )
-
+        print(self.params)
         plot(
             results, self.features, self.labels, self.epoch, loss, name_prependix="sgd"
         )
@@ -447,6 +447,9 @@ class SGD(Optimizer):
             (float) new loss
         """
         grads, loss = self.dloss(features, labels)
+        # in case one wants to plot J as a function of the iterations
+        self.losses.append(loss)
+        self.param_history[self.epoch] = self.params
 
         if self.options["adam"]:
             m = beta_1 * m + (1 - beta_1) * grads
@@ -483,7 +486,7 @@ class SGD(Optimizer):
             (list) history of loss values, one for each epoch
         """
 
-        losses = []
+        self.losses = []
         indices = []
 
         # create index list
@@ -518,7 +521,7 @@ class SGD(Optimizer):
         for self.epoch in range(options["epochs"]):
             iteration = 0
 
-            if self.epoch != 0 and losses[-1] < options["J_threshold"]:
+            if self.epoch != 0 and self.losses[-1] < options["J_threshold"]:
                 print(
                     "Desired sensibility is reached, here we stop: ",
                     iteration,
@@ -563,17 +566,12 @@ class SGD(Optimizer):
                     )
                     self.etime = etime
 
-                # in case one wants to plot J as a function of the iterations
-                losses.append(this_loss)
-                self.param_history[self.epoch] = self.params
-
         if self.save:
-            value = min(losses)
-            idx = losses.index(value)
-            self.parameters = self.param_history[idx]
-
+            value = min(self.losses)
+            idx = self.losses.index(value)
+            self.params = self.param_history[idx]
             ypred, ysigma = get_error(self, self.features, "sgd", self.name_appendix)
-
+            print(self.params)
             plot(
                 ypred,
                 self.features,
@@ -587,10 +585,10 @@ class SGD(Optimizer):
             )
 
             self.file.write(f"Params {self.params.tolist()}\n")
-            self.file.write(f"Best J: {min(losses)}\n")
+            self.file.write(f"Best J: {min(self.losses)}\n")
             self.cleanup()
 
-        return losses
+        return self.losses
 
     def setup(self, X, y):
         """Input and output setup
@@ -1009,7 +1007,7 @@ def get_error(optimizer, xtrain, name_prependix, name_appendix):
     return ypred, ysigma
 
 
-scaler = lambda x: x  # (1 - x) / (1 + x)
+scaler = lambda x: (1 - x) / (1 + x)
 import matplotlib.pyplot as plt
 
 
