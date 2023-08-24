@@ -53,6 +53,7 @@ class Optimizer:
         self.ftime = time.time()
         self.etime = None
         self.name = f'Run_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
+
         self.iteration = 0
         self.save = save
 
@@ -279,8 +280,6 @@ class SGD(Optimizer):
             (np.ndarray): array of expectation values"""
 
         # set parameters
-        # parameters = self._get_gate_params(feature=feature)
-        # self._circuit.set_parameters(parameters)
         self._circuit.set_variational_parameters(self.params, feature)
 
         # run circuit
@@ -393,7 +392,9 @@ class SGD(Optimizer):
 
         # gradient average
         loss = (
-            self.loss_function(results.squeeze(), labels.squeeze(), *self.args)
+            self.loss_function(
+                results.squeeze(), labels.squeeze(), *self.args, prin=True
+            )
             / self.nsample
         )
         loss_gradients = circ_grads / self.nsample / ncount
@@ -570,7 +571,7 @@ class SGD(Optimizer):
             value = min(losses)
             idx = losses.index(value)
             self.parameters = self.param_history[idx]
-            ypred, ysigma = get_error(self, self.features, self.name_appendix)
+            ypred, ysigma = get_error(self, self.features, "sgd", self.name_appendix)
 
             plot(
                 ypred,
@@ -688,7 +689,7 @@ class CMAES(Optimizer):
             **self.options,
         )
 
-        return r[1].result.fbest, r[1].result.xbest, r
+        return r[1].result.fbest, r[1].result.xbest, r, self.iteration
 
 
 class Newtonian(Optimizer):
@@ -744,6 +745,7 @@ class Newtonian(Optimizer):
             "backend": None,
         }
         self.set_options(kwargs)
+
         self.filename = f"results/newtonian_{self.name}.txt"
         if self.save:
             self.file = open(self.filename, "w")
@@ -992,10 +994,13 @@ class BasinHopping(Optimizer):
         return r.fun, r.x, r, self.iteration
 
 
-def get_error(optimizer, xtrain, name_appendix):
+def get_error(optimizer, xtrain, name_prependix, name_appendix):
     ypredictions = optimizer.predict(xtrain, N=10)
 
-    np.save(f"predictions/{optimizer.name}_{name_appendix}.dat", ypredictions)
+    np.save(
+        f"predictions/{name_prependix}_{optimizer.name}_{name_appendix}.dat",
+        ypredictions,
+    )
     ypred = np.mean(ypredictions, axis=ypredictions.ndim - 1)
     ysigma = np.std(ypredictions, axis=ypredictions.ndim - 1)
 
@@ -1056,7 +1061,9 @@ def plot(
 
         else:
             ax.set_xscale(xscale)
+            print("plot before", yprediction)
             yprediction = scaler(yprediction)
+            print("plot after", yprediction)
             if ysigma is not None:
                 ax.fill_between(
                     xtrain,
@@ -1083,9 +1090,8 @@ def plot(
     plt.xlabel("x")
     plt.ylabel("y")
 
-    if name is not None:
-        plt.savefig(f"results/{name}_{name_appendix}.png", bbox_inches="tight")
-        # plt.show()
-    else:
-        plt.savefig("Plot.png", bbox_inches="tight")
+    plt.savefig(f"results/{name}_{name_appendix}.png", bbox_inches="tight")
+    plt.show()
+
+    plt.savefig("Plot.png", bbox_inches="tight")
     plt.close()

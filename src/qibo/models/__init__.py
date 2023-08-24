@@ -1,5 +1,5 @@
 from qibo.models import hep, tsp
-from qibo.models.circuit import Circuit
+from qibo.models.circuit import Circuit, VariationalCircuit
 from qibo.models.error_mitigation import (
     CDR,
     ZNE,
