@@ -227,7 +227,7 @@ class SGD(Optimizer):
                 "psr",
                 self.cdr_params,
                 self.options["nshots"],
-                deterministic=True,
+                deterministic=False,
                 var_gates=self.options["var_gates"],
             )
 
