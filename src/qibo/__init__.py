@@ -2,7 +2,16 @@ import importlib.metadata as im
 
 __version__ = im.version(__package__)
 
-from qibo import callbacks, gates, hamiltonians, models, optimizers, parallel, solvers
+from qibo import (
+    callbacks,
+    gates,
+    hamiltonians,
+    models,
+    optimizers,
+    parallel,
+    parameter,
+    solvers,
+)
 from qibo.backends import (
     get_backend,
     get_device,

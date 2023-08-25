@@ -1,4 +1,8 @@
+import numpy as np
+
 from qibo.config import raise_error
+from qibo.gates import gates
+from qibo.models import Circuit
 from qibo.models.evolution import StateEvolution
 
 
@@ -659,3 +663,100 @@ class FALQON(QAOA):
         final_loss = _loss(parameters, self, self.hamiltonian)
         extra = {"energies": energy, "callbacks": callback_result}
         return final_loss, parameters, extra
+
+
+class VariationalCircuit(Circuit):
+    """Circuit configuration for use cases with variational
+    circuit parameters of the Parameter class.
+
+    This circuit is symbolic and cannot perform calculations.
+    A specific backend has to be used for performing calculations.
+
+    Args:
+        nqubits (int): Total number of qubits in the circuit.
+        density_matrix (bool): If `True`, the circuit would evolve density matrices.
+            Defaults to ``False``.
+        accelerators (dict): Dictionary that maps device names to the number of times each
+            device will be used. Defaults to ``None``.
+    """
+
+    def __init__(self, nqubits, accelerators=None, density_matrix=False):
+        super().__init__(nqubits, accelerators, density_matrix)
+
+    def _get_initparams(self):
+        """Retrieve parameter values or objects directly from gates"""
+
+        params = []
+        for gate in self.queue:
+            if isinstance(gate, (gates.ParametrizedGate)):
+                try:
+                    params.append(gate.initparams)
+                except AttributeError:
+                    params.append(gate.parameters)
+
+        if isinstance(params[0], (float, int, tuple)):
+            params = self.get_parameters()
+            if isinstance(params[0], tuple):
+                params = np.array([val for t in params for val in t])
+
+        return params
+
+    def _get_train_params(self):
+        # for array
+        if isinstance(self.initparams, np.ndarray):
+            return self.initparams
+
+        # for Parameter objects
+        else:
+            params = []
+            for param_object in self.initparams:
+                # update trainable params and retrieve gate param
+                params.extend(param_object._trainable)
+
+            return params
+
+    def set_variational_parameters(self, input_params, feature=None):
+        """Retrieve gate parameters based on initial parameter values given to gates
+        Args:
+            feature (int or list): input feature if embedded in Parameter lambda function
+
+        Returns:
+            (list or np.ndarray) gate parameters
+        """
+
+        # for array
+        if isinstance(self.initparams, np.ndarray):
+            gate_params = self.initparams
+
+        # for Parameter objects
+        else:
+            gate_params = []
+            count = 0
+            for param_object in self.initparams:
+                trainable = input_params[count : count + param_object.nparams]
+                count += param_object.nparams
+                # update trainable params and retrieve gate param
+                print(trainable, feature)
+                param_object.update_parameters(trainable, feature)
+                gate_params.append(param_object())
+
+        self.set_parameters(gate_params)
+
+    def add(self, gate):
+        """Add a gate to a given queue.
+
+        Args:
+            gate (:class:`qibo.gates.Gate`): the gate object to add.
+                See :ref:`Gates` for a list of available gates.
+                `gate` can also be an iterable or generator of gates.
+                In this case all gates in the iterable will be added in the
+                circuit.
+
+        Returns:
+            If the circuit contains measurement gates with ``collapse=True``
+            a ``sympy.Symbol`` that parametrizes the corresponding outcome.
+        """
+        res = super().add(gate)
+        if isinstance(gate, gates.ParametrizedGate):
+            self.initparams = self._get_initparams()
+        return res
