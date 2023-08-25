@@ -237,6 +237,8 @@ class SGD(Optimizer):
 
         ncount = np.where(result == 0, 1, result)
 
+        print(ncount)
+
         return ncount
 
     def calculate_loss_func_grad(self, results, labels, idx, delta=1e-6):
@@ -1129,6 +1131,7 @@ class BFGS(Optimizer):  # pragma: no cover
     def __init__(
         self,
         function,
+        jacobian,
         args=(),
         bounds=None,
         callback=None,
@@ -1140,6 +1143,7 @@ class BFGS(Optimizer):  # pragma: no cover
         if self.save:
             self.file = open(self.filename, "w")
         self.function = function
+        self.jacobian = jacobian
         self.args = args
         self.xval = None
         self.function_value = None
@@ -1160,55 +1164,22 @@ class BFGS(Optimizer):  # pragma: no cover
         """
         from scipy.optimize import minimize
 
-        print(x0)
         out = minimize(
             fun=self.fun,
             x0=x0,
-            jac=None,
+            jac=self.jac,
             method="BFGS",
             bounds=self.bounds,
             callback=self.callback,
-            options={"ftol": 1e-60, "xtol": 1e-40, "maxiter": 100},
+            options={"gtol": 1e-7, "ftol": 1e-10, "xtol": 1e-10, "maxiter": 10000},
         )
-        # out.hess_inv = out.hess_inv * self.np.identity(len(x0))
+
         return out
 
-    @staticmethod
-    def _eval_approx(eps_at, fun, x, eps):
-        if eps_at == 0:
-            x_ = x
-        else:
-            x_ = x.copy()
-            if eps_at <= len(x):
-                x_[eps_at - 1] += eps
-            else:
-                x_[eps_at - 1 - len(x)] -= eps
-        return fun(x_)
-
-    def evaluate(self, x, eps=1e-8):
-        if not (
-            self.xval is not None and all(abs(self.xval - x) <= self.precision * 2)
-        ):
-            eps_at = range(len(x) + 1)
-            self.xval = x.copy()
-
-            def operation(epsi):
-                return self._eval_approx(
-                    epsi, lambda y: self.function(y, *self.args), x, eps
-                )
-
-            from joblib import Parallel, delayed
-
-            ret = Parallel(self.processes, prefer="threads")(
-                delayed(operation)(epsi) for epsi in eps_at
-            )
-            self.function_value = ret[0]
-            self.jacobian_value = (ret[1 : (len(x) + 1)] - self.function_value) / eps
-
-    def fund(self, x):
-        self.evaluate(x)
-        return self.function_value
+    def fun(self, x):
+        res = self.loss_function(x, *self.args)
+        return res
 
     def jac(self, x):
-        self.evaluate(x)
-        return self.jacobian_value
+        res = self.jacobian(x, *self.args)
+        return res.T

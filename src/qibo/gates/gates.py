@@ -1407,7 +1407,7 @@ class CU1(_CUn_):
         self.nparams = 1
         self.initparams = theta
         if isinstance(theta, Parameter):
-            self.parameters = theta.get_params()
+            self.parameters = theta.get_gate_parameters()
         else:
             self.parameters = theta
         self.init_kwargs = {"theta": theta, "trainable": trainable}

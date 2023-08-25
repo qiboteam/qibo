@@ -129,9 +129,9 @@ def calculate_circuit_gradients(
     ham,
     nparams,
     shift_rule,
-    cdr_params,
-    nshots,
-    deterministic,
+    cdr_params=None,
+    nshots=False,
+    deterministic=False,
     var_gates=None,
 ):
     """
