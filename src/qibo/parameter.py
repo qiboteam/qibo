@@ -9,7 +9,8 @@ from qibo.config import raise_error
 class Parameter:
     """Object which allows for variational gate parameters. Several trainable parameter
     and possibly features are linked through a lambda function which returns the
-    final gate parameter
+    final gate parameter. All possible analytical derivatives of the lambda function are
+    calculated at the object initialisation using Sympy.
 
     Args:
         func (function): lambda function which builds the gate parameter. If both features and trainable parameters
@@ -28,8 +29,10 @@ class Parameter:
             self.nfeat = len(feature)
         else:
             self.nfeat = 0
+
+        # lambda function
         self.lambdaf = func
-        self._check_inputs(func, trainable, feature)
+        self._check_inputs(func)
 
         self.derivatives = self._calculate_derivatives()
 
@@ -37,7 +40,7 @@ class Parameter:
         """Update values with trainable parameter and calculate current gate parameter"""
         return self._apply_func(self.lambdaf)
 
-    def _check_inputs(self, func, trainable, feature):
+    def _check_inputs(self, func):
         """Verifies that the inputs are correct"""
         parameters = inspect.signature(func).parameters
 
@@ -54,7 +57,7 @@ class Parameter:
             if x[0][0] != "x":
                 raise_error(
                     ValueError,
-                    f"The {i}th parameter in the lambda function should be a feature starting with x",
+                    f"Parameter #{i} in the lambda function should be a feature starting with `x`",
                 )
 
         for i in range(self.nparams):
@@ -62,7 +65,7 @@ class Parameter:
             if x[0][:2] != "th":
                 raise_error(
                     ValueError,
-                    f"The {i}th parameter in the lambda function should be a trainable parameter starting with th",
+                    f"Parameter #{self.nfeat+i} in the lambda function should be a trainable parameter starting with `th`",
                 )
 
     def _apply_func(self, function, fixed_params=None):
@@ -103,8 +106,17 @@ class Parameter:
                 ValueError, "Trainable parameters must be given as list or numpy array"
             )
 
-        if not isinstance(trainable, (list, np.ndarray)):
+        if self.nparams != len(trainable):
+            raise_error(
+                ValueError,
+                f"{len(trainable)} trainable parameters given, need {self.nparams}",
+            )
+
+        if not isinstance(feature, (list, np.ndarray)) and self._feature != feature:
             raise_error(ValueError, "Features must be given as list or numpy array")
+
+        if self._feature is not None and self.nfeat != len(feature):
+            raise_error(ValueError, f"{len(feature)} features given, need {self.nfeat}")
 
         if trainable is not None:
             self._trainable = trainable

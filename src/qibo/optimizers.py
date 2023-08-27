@@ -257,7 +257,7 @@ class SGD(Optimizer):
             (np.ndarray): array of expectation values"""
 
         # set parameters
-        self._circuit.set_variational_parameters(self.params, feature)
+        self._circuit.set_variational_parameters(self.params, [feature])
 
         # run circuit
         exp_v = np.zeros((len(self.hamiltonian), N))

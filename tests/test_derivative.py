@@ -21,9 +21,8 @@ from qibo.derivative import (
     parameter_shift,
     run_subcircuit_measure,
 )
-from qibo.gates.gates import Parameter
-from qibo.models.circuit import Circuit, VariationalCircuit
-from qibo.symbols import Z
+from qibo.models.variational import VariationalCircuit
+from qibo.parameter import Parameter
 
 qibo.set_backend("tensorflow")
 tf.get_logger().setLevel("ERROR")
@@ -75,7 +74,7 @@ def ansatz_pdf_entangled(nqubits, params, feature):
 
             j += 4
 
-        qml.CRZ(j, wires=[0, 1])
+        qml.CRZ(params[j], wires=[0, 1])
         j += 1
 
     return qml.expval(qml.PauliZ([1]))
@@ -261,45 +260,6 @@ two_qubit = tf.constant(
 def test_create_hamiltonian(qubit, nqubits, matrix):
     ham = create_hamiltonian(qubit, nqubits, GlobalBackend())
     assert np.allclose(ham.matrix, matrix)
-
-
-def test_parameter():
-    # single feature
-    param = Parameter(
-        lambda x, th1, th2, th3: x**2 * th1 + th2 * th3**2,
-        [1.5, 2.0, 3.0],
-        feature=[7.0],
-    )
-
-    indices = param.get_indices(10)
-    assert indices == [10, 11, 12]
-
-    fixed = param.get_fixed_part(1)
-    assert fixed == 73.5
-
-    factor = param.get_scaling_factor(2)
-    assert factor == 12.0
-
-    param.update_parameters(trainable=[15.0, 10.0, 7.0], feature=[5.0])
-    gate_value = param.get_gate_parameters()
-    assert gate_value == 865
-
-    # multiple features
-    param = Parameter(
-        lambda x1, x2, th1, th2, th3: x1**2 * th1 + x2 * th2 * th3,
-        [1.5, 2.0, 3.0],
-        feature=[7.0, 4.0],
-    )
-
-    fixed = param.get_fixed_part(1)
-    assert fixed == 73.5
-
-    factor = param.get_scaling_factor(2)
-    assert factor == 8.0
-
-    param.update_parameters(trainable=np.array([15.0, 10.0, 7.0]), feature=[5.0, 3.0])
-    gate_value = param.get_gate_parameters()
-    assert gate_value == 585
 
 
 def test_run_subcircuit_measure():
@@ -928,12 +888,29 @@ def test_variational_circuit():
     assert circuit_params == true
 
 
+def etest_block_diag():
+    params = qml.numpy.asarray([0.1] * 27)
+    drawer = qml.draw(ansatz_pdf_entangled)
+    print(drawer(2, params, 0.1))
+
+    metric_tensor = qml.metric_tensor(ansatz_pdf, approx="block-diag")(2, params, 0.1)
+    print(metric_tensor)
+
+    params = qml.numpy.asarray([0.1] * 27)
+    metric_tensor = qml.metric_tensor(ansatz_pdf_entangled, approx="block-diag")(
+        2, params, 0.1
+    )
+
+    print(metric_tensor)
+
+
 if __name__ == "__main__":
     # graph_improvements(1, [0, 1], [[0, 1], [2, 3]])
     # test_multiqubit_natural_gradient()
     # test_multiqubit_natural_gradient_entangled()
     # test_create_hamiltonian(0, 1, one_qubit)
-    rtest_execute_circuit()
+    # test_execute_circuit()
+    test_block_diag()
     # test_spsr_calculate_gradients()
     # test_parameter()
     # test_psr_commuting_gate()

@@ -1,7 +1,6 @@
 import numpy as np
+import pytest
 
-from qibo import gates
-from qibo.models.circuit import VariationalCircuit
 from qibo.parameter import Parameter
 
 
@@ -44,30 +43,56 @@ def test_parameter():
     assert gate_value == 585
 
 
-def test_variational_circuit():
-    c = VariationalCircuit(1)
-    c.add(gates.RX(q=0, theta=Parameter(lambda th1, th2: th1**2 + th2, [0.1, 0.1])))
-    c.add(gates.RY(q=0, theta=Parameter(lambda th1, th2: th1**2 + th2, [0.4, 0.1])))
-    c.add(gates.RZ(q=0, theta=Parameter(lambda th1, th2: th1**2 + th2, [0.3, 0.1])))
-    c.add(gates.M(0))
+def test_parameter_errors():
+    with pytest.raises(ValueError) as e_info:
+        param = Parameter(
+            lambda x, t1, th2, th3: x**2 * t1 + th2 * th3**2,
+            [1.5, 2.0, 3.0],
+            feature=[7.0],
+        )
 
-    # _get_initparams
-    true = np.array([0.1, 0.1, 0.4, 0.1, 0.3, 0.1])
-    Params = c._get_initparams()
-    check = []
-    for Param in Params:
-        check.extend(Param._trainable)
+    with pytest.raises(ValueError) as e_info:
+        param = Parameter(
+            lambda x, th1, th2, th3: x**2 * th1 + th2 * th3**2,
+            [1.5, 2.0],
+            feature=[3.0, 7.0],
+        )
 
-    assert np.allclose(check, true)
+    with pytest.raises(ValueError) as e_info:
+        param = Parameter(
+            lambda j, th1, th2, th3: j**2 * th1 + th2 * th3**2,
+            [1.5, 2.0, 3.0],
+            feature=[7.0],
+        )
 
-    # _get_train_params
-    train_params = c._get_train_params()
+    with pytest.raises(ValueError) as e_info:
+        param = Parameter(
+            lambda x, th1, th2, th3: x**2 * th1 + th2 * th3**2,
+            [1.5, 2.0, 3.0],
+            feature=[7.0],
+        )
+        param.update_parameters((1, 1, 1), [1])
 
-    assert np.allclose(check, train_params)
+    with pytest.raises(ValueError) as e_info:
+        param = Parameter(
+            lambda x, th1, th2, th3: x**2 * th1 + th2 * th3**2,
+            [1.5, 2.0, 3.0],
+            feature=[7.0],
+        )
+        param.update_parameters([1, 1, 1], (1))
 
-    # set_variational_parameters
-    true = [(120.0,), (10010.0,), (420.0,)]
-    c.set_variational_parameters([10.0, 20, 100, 10, 20, 20])
-    circuit_params = c.get_parameters()
+    with pytest.raises(ValueError) as e_info:
+        param = Parameter(
+            lambda x, th1, th2, th3: x**2 * th1 + th2 * th3**2,
+            [1.5, 2.0, 3.0],
+            feature=[7.0],
+        )
+        param.update_parameters([1, 1], [1])
 
-    assert circuit_params == true
+    with pytest.raises(ValueError) as e_info:
+        param = Parameter(
+            lambda x, th1, th2, th3: x**2 * th1 + th2 * th3**2,
+            [1.5, 2.0, 3.0],
+            feature=[7.0],
+        )
+        param.update_parameters([1, 1, 1], [1, 1])

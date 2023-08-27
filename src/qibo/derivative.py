@@ -197,7 +197,7 @@ def calculate_circuit_gradients(
             for ipar, Param in enumerate(initparams):
                 scaling = []
                 for nparam in range(Param.nparams):
-                    scaling.append(Param.get_scaling_factor(nparam))
+                    scaling.append(Param.get_partial_derivative(nparam))
 
                 obs_gradients[count : count + len(scaling)] = parameter_shift(
                     circuit,
@@ -243,7 +243,7 @@ def calculate_circuit_gradients(
                     Param = initparams(count + ipar)
                     scaling = []
                     for nparam in range(Param.nparams):
-                        scaling.append(Param.get_scaling_factor(nparam))
+                        scaling.append(Param.get_partial_derivative(nparam))
 
                     obs_gradients[ipar] = stochastic_parameter_shift(
                         circuit,
@@ -1003,7 +1003,7 @@ def generate_fubini(
             indices = Param.get_indices(count)
             count += len(indices)
             for idx in range(len(indices)):
-                scale_factors.append(Param.get_scaling_factor(idx))
+                scale_factors.append(Param.get_partial_derivative(idx))
     else:
         scale_factors = [1] * nparams
 
