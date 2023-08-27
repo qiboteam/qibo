@@ -14,7 +14,6 @@ from qibo.derivative import (
     execute_circuit,
     generate_fubini,
 )
-from qibo.gates import gates
 from qibo.models import Circuit
 
 

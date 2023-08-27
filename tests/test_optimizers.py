@@ -4,8 +4,9 @@ import pennylane as qml
 import qibo
 from qibo.backends import GlobalBackend
 from qibo.derivative import create_hamiltonian
-from qibo.gates import Parameter
+from qibo.models.variational import VariationalCircuit
 from qibo.optimizers import CMAES, SGD, BasinHopping, Newtonian, ParallelBFGS
+from qibo.parameter import Parameter
 
 
 def ansatz(layers, nqubits, theta=0):
@@ -16,7 +17,7 @@ def ansatz(layers, nqubits, theta=0):
     Returns: abstract qibo circuit
     """
 
-    c = qibo.models.circuit.VariationalCircuit(nqubits, density_matrix=True)
+    c = VariationalCircuit(nqubits, density_matrix=True)
 
     for i in range(nqubits):
         c.add(qibo.gates.H(q=i))
@@ -78,7 +79,7 @@ def test_multiqubit_sgd_optimizer():
     nqubits = 2
     layers = 3
 
-    c = qibo.models.circuit.VariationalCircuit(nqubits, density_matrix=True)
+    c = VariationalCircuit(nqubits, density_matrix=True)
 
     for i in range(nqubits):
         c.add(qibo.gates.H(q=i))
@@ -128,7 +129,7 @@ def test_sgd_methods():
     nqubits = 2
     layers = 3
 
-    c = qibo.models.circuit.VariationalCircuit(nqubits, density_matrix=True)
+    c = VariationalCircuit(nqubits, density_matrix=True)
 
     for i in range(nqubits):
         c.add(qibo.gates.H(q=i))
@@ -169,7 +170,7 @@ def test_sgd_methods():
     )
 
     # _get_params
-    optimizer._circuit.set_variational_parameters(optimizer.params, feature=0.5)
+    optimizer._circuit.set_variational_parameters(optimizer.params, feature=[0.5])
     gatep = optimizer._circuit.get_parameters()
     gatep = [v[0] for v in gatep]
 

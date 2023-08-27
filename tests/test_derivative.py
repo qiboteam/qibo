@@ -7,7 +7,7 @@ import sympy as sp
 import tensorflow as tf
 
 import qibo
-from qibo import gates, hamiltonians
+from qibo import gates
 from qibo.backends import GlobalBackend
 from qibo.derivative import (
     Graph,
@@ -910,7 +910,7 @@ if __name__ == "__main__":
     # test_multiqubit_natural_gradient_entangled()
     # test_create_hamiltonian(0, 1, one_qubit)
     # test_execute_circuit()
-    test_block_diag()
+    etest_block_diag()
     # test_spsr_calculate_gradients()
     # test_parameter()
     # test_psr_commuting_gate()
