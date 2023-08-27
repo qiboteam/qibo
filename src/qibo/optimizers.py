@@ -169,6 +169,7 @@ class SGD(Optimizer):
 
         # error mitigation
         self.cdr_params = None
+        self.calibration = None
 
         # options
         self.options = {
@@ -210,36 +211,6 @@ class SGD(Optimizer):
         # natural gradient graph initialisation
         if self.options["natgrad"]:
             self.NGgraph = build_graph(self._circuit, self.nparams, self.nqubits)
-
-    def _gate_expectation_dependence(self):
-        """Returns the amount of hamiltonians that depend on a given parameter.
-
-        Returns:
-            np.ndarray: integer counts of hamiltonian dependencies"""
-
-        obs_gradients = np.zeros((self.nlabels, self.nparams))
-
-        for h, ham in enumerate(self.hamiltonian):
-            obs_gradients[h] = calculate_circuit_gradients(
-                self._circuit,
-                ham,
-                self.nparams,
-                "psr",
-                self.cdr_params,
-                self.options["nshots"],
-                deterministic=False,
-                var_gates=self.options["var_gates"],
-            )
-
-        result = np.where(abs(obs_gradients) <= 1e-10, 0, 1)
-
-        result = np.sum(result, axis=0)
-
-        ncount = np.where(result == 0, 1, result)
-
-        print(ncount)
-
-        return ncount
 
     def calculate_loss_func_grad(self, results, labels, idx, delta=1e-6):
         """Calculates loss function derivative with respect to parameter idx
@@ -297,8 +268,9 @@ class SGD(Optimizer):
                     self._circuit,
                     hamiltonian,
                     self.options["nshots"],
+                    calibration=self.calibration,
                     initial_state=None,
-                    cdr_params=self.cdr_params,
+                    cdr_params=None,
                     deterministic=self.options["deterministic"],
                 )
 
@@ -342,8 +314,6 @@ class SGD(Optimizer):
         results = np.zeros((self.nsample, self.nlabels))
         loss = 0
 
-        ncount = self._gate_expectation_dependence()
-
         # natural gradient setup
         if self.options["natgrad"]:
             fubini = np.zeros((self.nparams, self.nparams))
@@ -354,7 +324,7 @@ class SGD(Optimizer):
         if self.options["mitigation"]:
             self._circuit.set_variational_parameters(self.params)
 
-            self.cdr_params = error_mitigation(
+            self.cdr_params, self.calibration = error_mitigation(
                 self._circuit.to_clifford(),
                 self.nqubits,
                 self.hamiltonian,
@@ -362,6 +332,7 @@ class SGD(Optimizer):
                 self.options["noise_model"],
                 self.options["nshots"],
             )
+            self.cdr_params = (1, 0)
 
         # iterate through all data points
         for i, feat in enumerate(features):
@@ -370,17 +341,18 @@ class SGD(Optimizer):
             obs_gradients = np.zeros((self.nlabels, self.nparams))
             for h, ham in enumerate(self.hamiltonian):
                 obs_gradients[h] = calculate_circuit_gradients(
-                    self._circuit,
-                    ham,
-                    self.nparams,
-                    self.options["shift_rule"],
-                    self.cdr_params,
-                    self.options["nshots"],
-                    self.options["deterministic"],
+                    circuit=self._circuit,
+                    ham=ham,
+                    nparams=self.nparams,
+                    shift_rule=self.options["shift_rule"],
+                    cdr_params=self.cdr_params,
+                    calibration=self.calibration,
+                    nshots=self.options["nshots"],
+                    deterministic=self.options["deterministic"],
                     var_gates=self.options["var_gates"],
                 )  # d<B> N params, N label gradients
 
-            if self.loss_func_deriv is not None:
+            if self.loss_func_deriv is None:
                 loss_func_grad = self.calculate_loss_func_grad(
                     np.copy(results), labels, i
                 )
@@ -398,17 +370,20 @@ class SGD(Optimizer):
                     self.NGgraph,
                     self.nparams,
                     self.nqubits,
-                    self._circuit.initparams,
+                    initparams=self._circuit.initparams,
+                    nshots=self.options["nshots"],
+                    mitigation=self.options["mitigation"],
                     noise_model=self.options["noise_model"],
                     deterministic=self.options["deterministic"],
                 )  # separate pull request
 
         # gradient average
+
         loss = (
             self.loss_function(results.squeeze(), labels.squeeze(), *self.args)
             / self.nsample
         )
-        loss_gradients = circ_grads / self.nsample / ncount
+        loss_gradients = circ_grads / self.nsample
 
         # Fubini-Study Metric renormalisation
         if self.options["natgrad"]:
@@ -584,7 +559,7 @@ class SGD(Optimizer):
             idx = self.losses.index(value)
             self.params = self.param_history[idx]
             ypred, ysigma = get_error(self, self.features, "sgd", self.name_appendix)
-            print(self.params)
+
             plot(
                 ypred,
                 self.features,
@@ -1020,7 +995,7 @@ def get_error(optimizer, xtrain, name_prependix, name_appendix):
     return ypred, ysigma
 
 
-scaler = lambda x: (1 - x) / (1 + x)
+scaler = lambda x: (1 - x + 0.1) / (1 + x + 0.1)
 import matplotlib.pyplot as plt
 
 

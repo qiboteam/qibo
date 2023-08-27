@@ -14,11 +14,12 @@ from qibo.derivative import (
     build_graph,
     calculate_circuit_gradients,
     create_hamiltonian,
+    error_mitigation,
+    execute_circuit,
     finite_differences,
     generate_fubini,
     parameter_shift,
     run_subcircuit_measure,
-    stochastic_parameter_shift,
 )
 from qibo.gates.gates import Parameter
 from qibo.models.circuit import Circuit, VariationalCircuit
@@ -216,6 +217,52 @@ def gradient_exact():
     return gradients
 
 
+def rtest_execute_circuit():
+    circuit = ansatz(3, 1)
+    obs = create_hamiltonian(0, 1, GlobalBackend())
+    exp_v = execute_circuit(GlobalBackend(), circuit, obs, deterministic=True)
+
+    assert np.isclose(exp_v, 0.311255)
+
+    exp_v_scaled = execute_circuit(
+        GlobalBackend(), circuit, obs, cdr_params=(5, 0.1), nshots=1024
+    )
+
+    assert np.isclose(exp_v_scaled, 5 * exp_v + 0.1, atol=0.3)
+
+    # double qubit
+    obs = []
+    circuit2q = ansatz(3, 2)
+    obs.append(create_hamiltonian(1, 2, GlobalBackend()))
+    obs.append(create_hamiltonian(0, 2, GlobalBackend()))
+    exp_v = execute_circuit(GlobalBackend(), circuit2q, obs, deterministic=True)
+
+    assert np.allclose(exp_v[0], exp_v[1])
+
+
+one_qubit = tf.constant(
+    [[-1.0 - 0.0j, 0.0 - 0.0j], [0.0 - 0.0j, 1.0 + 0.0j]], dtype=tf.complex128
+)
+
+two_qubit = tf.constant(
+    [
+        [-1.0 - 0.0j, 0.0 - 0.0j, 0.0 - 0.0j, 0.0 - 0.0j],
+        [0.0 - 0.0j, 1.0 + 0.0j, 0.0 - 0.0j, 0.0 + 0.0j],
+        [0.0 - 0.0j, 0.0 - 0.0j, -1.0 - 0.0j, 0.0 - 0.0j],
+        [0.0 - 0.0j, 0.0 + 0.0j, 0.0 - 0.0j, 1.0 + 0.0j],
+    ],
+    dtype=tf.complex128,
+)
+
+
+@pytest.mark.parametrize(
+    "qubit, nqubits, matrix", [(0, 1, one_qubit), (1, 2, two_qubit)]
+)
+def test_create_hamiltonian(qubit, nqubits, matrix):
+    ham = create_hamiltonian(qubit, nqubits, GlobalBackend())
+    assert np.allclose(ham.matrix, matrix)
+
+
 def test_parameter():
     # single feature
     param = Parameter(
@@ -257,8 +304,8 @@ def test_parameter():
 
 def test_run_subcircuit_measure():
     c = circuit(nqubits=1)
-    value = run_subcircuit_measure(c, 0, 1, GlobalBackend(), deterministic=True)
-    assert value == 0.5
+    value = run_subcircuit_measure(c, [0], 1, GlobalBackend(), deterministic=True)
+    assert value[0] == 0.5
 
 
 def test_psr_commuting_gate():
@@ -884,7 +931,9 @@ def test_variational_circuit():
 if __name__ == "__main__":
     # graph_improvements(1, [0, 1], [[0, 1], [2, 3]])
     # test_multiqubit_natural_gradient()
-    test_multiqubit_natural_gradient_entangled()
+    # test_multiqubit_natural_gradient_entangled()
+    # test_create_hamiltonian(0, 1, one_qubit)
+    rtest_execute_circuit()
     # test_spsr_calculate_gradients()
     # test_parameter()
     # test_psr_commuting_gate()

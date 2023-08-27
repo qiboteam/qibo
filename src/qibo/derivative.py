@@ -20,7 +20,7 @@ def execute_circuit(
     backend,
     c,
     obs,
-    nshots,
+    nshots=None,
     initial_state=None,
     cdr_params=None,
     calibration=None,
@@ -45,9 +45,14 @@ def execute_circuit(
             hardware. If ``None``, the simulation mode is executed.
             Default is ``None``.
     """
-    if deterministic:
+    if deterministic or nshots is None:
         state = c().state()
-        res = obs.expectation(state)
+        if isinstance(obs, list):
+            res = []
+            for o in obs:
+                res.append(o.expectation(state))
+        else:
+            res = obs.expectation(state)
         return res
 
     # retrieve state
@@ -59,13 +64,26 @@ def execute_circuit(
     if calibration is not None:
         state = apply_readout_mitigation(state, calibration)
 
-    # get expectation value
-    result = state.expectation_from_samples(obs)
+    # get expectation values
+    if isinstance(obs, list):
+        result = []
+        for o in obs:
+            exp = state.expectation_from_samples(o)
 
-    # apply CDR correction
-    if cdr_params is not None:
-        a, b = cdr_params
-        result = a * result + b
+            # apply CDR correction
+            if cdr_params is not None:
+                a, b = cdr_params
+                exp = a * exp + b
+
+            result.append(exp)
+
+    else:
+        result = state.expectation_from_samples(obs)
+
+        # apply CDR correction
+        if cdr_params is not None:
+            a, b = cdr_params
+            result = a * result + b
 
     return result
 
@@ -107,7 +125,9 @@ def create_hamiltonian(qubit=0, nqubits=1, backend=None):
 def error_mitigation(circuit, nqubits, hamiltonian, backend, noise_model, nshots):
     """Fit CDR regression model to noisy states"""
 
-    calibration = calibration_matrix(nqubits=nqubits, backend=backend, nshots=nshots)
+    calibration = calibration_matrix(
+        nqubits=nqubits, noise_model=noise_model, backend=backend, nshots=nshots
+    )
 
     montecarlo = random.randrange(len(hamiltonian))
 
@@ -118,10 +138,9 @@ def error_mitigation(circuit, nqubits, hamiltonian, backend, noise_model, nshots
         nshots=nshots,
         noise_model=noise_model,
         full_output=True,
-        readout={"calibration_matrix": calibration},
     )
 
-    return optimal_params
+    return optimal_params, calibration
 
 
 def calculate_circuit_gradients(
@@ -130,6 +149,7 @@ def calculate_circuit_gradients(
     nparams,
     shift_rule,
     cdr_params=None,
+    calibration=None,
     nshots=False,
     deterministic=False,
     var_gates=None,
@@ -169,6 +189,7 @@ def calculate_circuit_gradients(
                     scale_factor=1,
                     nshots=nshots,
                     cdr_params=cdr_params,
+                    calibration=calibration,
                 )
 
         else:
@@ -186,6 +207,7 @@ def calculate_circuit_gradients(
                     scale_factor=np.array(scaling),
                     nshots=nshots,
                     cdr_params=cdr_params,
+                    calibration=calibration,
                 )
                 count += len(scaling)
 
@@ -260,6 +282,7 @@ def parameter_shift(
     scale_factor=1,
     nshots=None,
     cdr_params=None,
+    calibration=None,
 ):
     """In this method the parameter shift rule (PSR) is implemented.
     Given a circuit U and an observable H, the PSR allows to calculate the derivative
@@ -393,14 +416,26 @@ def parameter_shift(
     # same but using expectation from samples
     else:
         forward = execute_circuit(
-            backend, circuit, hamiltonian, nshots, initial_state, cdr_params
+            backend,
+            circuit,
+            hamiltonian,
+            nshots,
+            initial_state,
+            cdr_params,
+            calibration,
         )
 
         shifted[parameter_index] -= 2 * s
         circuit.set_parameters(shifted)
 
         backward = execute_circuit(
-            backend, circuit, hamiltonian, nshots, initial_state, cdr_params
+            backend,
+            circuit,
+            hamiltonian,
+            nshots,
+            initial_state,
+            cdr_params,
+            calibration,
         )
 
     circuit.set_parameters(original)
@@ -936,6 +971,7 @@ def generate_fubini(
     nparams,
     nqubits,
     initparams,
+    nshots=None,
     noise_model=None,
     mitigation=False,
     deterministic=False,
@@ -955,6 +991,7 @@ def generate_fubini(
     Returns
         (np.ndarray) fubini-study matrix
     """
+
     fubini = np.zeros((nparams, nparams))
     backend = GlobalBackend()
 
@@ -971,9 +1008,10 @@ def generate_fubini(
         scale_factors = [1] * nparams
 
     calibration = None
+
     if mitigation:
         calibration = calibration_matrix(
-            nqubits, backend=backend, noise_model=noise_model, nshots=1024
+            nqubits, backend=backend, noise_model=noise_model, nshots=nshots
         )
     # run through layers
 
@@ -986,18 +1024,18 @@ def generate_fubini(
             continue
 
         # run through parametrized gate
-        for qubit, params in zip(qubits, affected_param):
-            result = run_subcircuit_measure(
-                c, qubit, nqubits, backend, calibration, deterministic
-            )
+        result = run_subcircuit_measure(
+            c, qubits, nqubits, backend, nshots, calibration, deterministic
+        )
 
+        for res, params in zip(result, affected_param):
             for p in params:
                 # update Fubini-Study matrix
                 for t in params:
                     if t == p:  # CHANGE
                         ps = scale_factors[p]
                         ts = scale_factors[t]
-                        val = ps * ts * (result - result**2)
+                        val = ps * ts * (res - res**2)
                         # avoid singular matrix
                         fubini[p, t] = val if val > 1e-3 else 1e-3
 
@@ -1005,7 +1043,7 @@ def generate_fubini(
 
 
 def run_subcircuit_measure(
-    c, qubit, nqubits, backend, calibration=None, deterministic=False
+    c, qubits, nqubits, backend, nshots=None, calibration=None, deterministic=False
 ):
     """
     Run variance measurement on specific qubit of subcircuit
@@ -1019,15 +1057,20 @@ def run_subcircuit_measure(
     Return:
         Probability of a specific qubit to be in state |0> in a measured basis"""
 
-    obs = create_hamiltonian(qubit, nqubits, backend)
+    observables = []
 
-    if deterministic:
-        result = obs.expectation(backend.execute_circuit(c).state())
-    else:
-        # execute circuit with readout mitigation
-        result = execute_circuit(backend, c, obs, 1024, calibration=calibration)
+    for q in qubits:
+        observables.append(create_hamiltonian(q, nqubits, backend))
 
-    # expectation value -> state |0> probability
-    result = (1 - result) / 2
+    exp = execute_circuit(
+        backend,
+        c,
+        observables,
+        nshots,
+        calibration=calibration,
+        deterministic=deterministic,
+    )
 
-    return result
+    exp = [(1 - val) / 2 for val in exp]
+
+    return exp
