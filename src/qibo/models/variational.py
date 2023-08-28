@@ -726,7 +726,7 @@ class VariationalCircuit(Circuit):
 
         # for array
         if isinstance(self.initparams, np.ndarray):
-            gate_params = self.initparams
+            gate_params = input_params
 
         # for Parameter objects
         else:
@@ -736,7 +736,7 @@ class VariationalCircuit(Circuit):
                 trainable = input_params[count : count + param_object.nparams]
                 count += param_object.nparams
                 # update trainable params and retrieve gate param
-                print(trainable, feature)
+
                 param_object.update_parameters(trainable, feature)
                 gate_params.append(param_object())
 
