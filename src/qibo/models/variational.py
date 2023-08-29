@@ -727,6 +727,7 @@ class VariationalCircuit(Circuit):
         # for array
         if isinstance(self.initparams, np.ndarray):
             gate_params = input_params
+            self.initparams = input_params
 
         # for Parameter objects
         else:

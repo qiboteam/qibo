@@ -4,6 +4,7 @@ import pennylane as qml
 import qibo
 from qibo.backends import GlobalBackend
 from qibo.derivative import create_hamiltonian
+from qibo.models.circuit import Circuit
 from qibo.models.variational import VariationalCircuit
 from qibo.optimizers import CMAES, SGD, BasinHopping, Newtonian, ParallelBFGS
 from qibo.parameter import Parameter
@@ -57,7 +58,7 @@ def test_sgd_optimizer():
     )
     X = np.array([0.1, 0.2, 0.3])
     y = np.array([0.2, 0.5, 0.7])
-    losses = optimizer.fit(X, y)
+    losses = optimizer.fit(y, X)
 
     assert np.isclose(losses[-1], 0.016386939869709672)
 
@@ -120,7 +121,7 @@ def test_multiqubit_sgd_optimizer():
     )
     X = np.array([0.1, 0.2, 0.3])
     y = np.array([[0.1, 0.2], [0.3, 0.5], [0.4, 0.5]])
-    losses = optimizer.fit(X, y)
+    losses = optimizer.fit(y, X)
 
     assert losses[-1] < 0.1
 
@@ -282,12 +283,32 @@ def test_basin_hopping_optimizer():
     assert fbest < 1e-5
 
 
+def loss_simple(ypred, ytrue):
+    return (ypred - ytrue) ** 2
+
+
+def test_single_output_optimizer():
+    c = VariationalCircuit(1, density_matrix=True)
+    c.add(qibo.gates.RX(q=0, theta=30.0))
+    c.add(qibo.gates.RY(q=0, theta=30.0))
+    c.add(qibo.gates.M(0))
+
+    np.random.seed(42)
+    pv = [30, 30]
+
+    sgd = SGD(c, pv, loss=loss_simple, natgrad=True)
+    losses = sgd.fit(y=np.array([0.3]))
+
+    assert np.allclose(losses, [0.1058, 0.0630, 0.0062, 0.00060], atol=0.01)
+
+
 if __name__ == "__main__":
     # test_parallel_bfgs_optimizer()
     # test_newtonian_optimizer()
     # test_multiqubit_sgd_optimizer()
     # test_sgd_optimizer()
-    test_sgd_methods()
+    # test_sgd_methods()
+    test_single_output_optimizer()
     # test_variational_circuit()
     # test_basin_hopping_optimizer()
     # test_cma_optimizer()

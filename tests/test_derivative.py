@@ -480,6 +480,12 @@ def test_spsr_crossres():
     angles = np.linspace(0, 2 * np.pi, 50)
 
     evals = [spsr_circuit_crossres(theta1, theta2, theta3) for theta1 in angles]
+    assert len(evals) == 50
+    yval = []
+    fdiff = []
+    for y_val, diff in evals:
+        yval.append(y_val)
+        fdiff.append(diff)
 
     # spsr
     pos_vals = np.array(
@@ -504,11 +510,6 @@ def test_spsr_crossres():
 
     spsr_vals = (pos_vals - neg_vals).mean(axis=1)
 
-    """
-    plt.plot(angles, evals, "b", label="Expectation Value")
-    plt.plot(angles, spsr_vals, "r", label="Stochastic parameter-shift rule")
-    plt.show()
-    """
     res = np.array(
         [
             -3.64291930e-18,
@@ -910,7 +911,7 @@ if __name__ == "__main__":
     # test_multiqubit_natural_gradient_entangled()
     # test_create_hamiltonian(0, 1, one_qubit)
     # test_execute_circuit()
-    etest_block_diag()
+    # etest_block_diag()
     # test_spsr_calculate_gradients()
     # test_parameter()
     # test_psr_commuting_gate()
@@ -919,3 +920,4 @@ if __name__ == "__main__":
     # test_spsr()
     # test_spsr_calculate_gradients()
     # test_spsr()
+    test_spsr_crossres()

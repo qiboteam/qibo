@@ -148,11 +148,20 @@ class SGD(Optimizer):
         if not isinstance(circuit, Circuit):
             raise ("Circuit is not of correct object type")
 
+        if isinstance(parameters, list):
+            parameters = np.array(parameters)
+
+        if not isinstance(parameters, np.ndarray):
+            raise ("Parameters must be a numpy array")
+
+        if not loss:
+            raise ("You must provide a loss function")
+
         self._circuit = circuit
         self.nqubits = self._circuit.nqubits
 
         # parameters
-        self.params = parameters
+        self.params = parameters.astype(np.float64)
         self.nparams = len(self.params)
 
         # loss function derivative
@@ -183,7 +192,7 @@ class SGD(Optimizer):
             "fubini_freq": 0.2,
             "mitigation": False,
             "noise_model": None,
-            "adam": True,
+            "adam": False,
             "deterministic": False,
             "beta_1": 0.85,
             "beta_2": 0.99,
@@ -317,6 +326,7 @@ class SGD(Optimizer):
         if self.options["natgrad"]:
             fubini = np.zeros((self.nparams, self.nparams))
             scount = int(self.options["fubini_freq"] * self.nsample)
+            scount = min(max(scount, 5), self.nsample)
             sample = random.sample([i for i in range(self.nsample)], scount)
 
         # calculate CDR parameters anew at each epoch
@@ -511,8 +521,8 @@ class SGD(Optimizer):
             if self.epoch != 0 and self.losses[-1] < options["J_threshold"]:
                 print(
                     "Desired sensibility is reached, here we stop: ",
-                    iteration,
-                    " iteration",
+                    self.epoch,
+                    " epochs",
                 )
                 break
 
@@ -525,6 +535,7 @@ class SGD(Optimizer):
                 features = self.features[idx[indices[ib]]]
 
                 labels = self.labels[idx[indices[ib]]]
+
                 # update parameters
                 m, v, this_loss = self.GradientDescent(
                     options["learning_rate"],
@@ -536,6 +547,7 @@ class SGD(Optimizer):
                     beta_1=options["beta_1"],
                     beta_2=options["beta_2"],
                 )
+
                 # track the training
                 print(
                     "Iteration ",
@@ -585,14 +597,15 @@ class SGD(Optimizer):
             y (np.ndarray): array containing true output values
         """
 
-        if not isinstance(X, np.ndarray):
-            raise ("X must be a numpy array")
-
         if not isinstance(y, np.ndarray):
             raise ("y must be a numpy array")
 
         self.features = X
-        self.nsample = len(self.features)
+        if X is None:
+            self.nsample = 1
+            self.features = np.array([1.0])
+        else:
+            self.nsample = len(self.features)
 
         self.labels = y
         if y.ndim == 1:
@@ -605,7 +618,7 @@ class SGD(Optimizer):
 
             self.backend = GlobalBackend()
 
-    def fit(self, X, y):
+    def fit(self, y=None, X=None):
         """Performs the optimizations and returns f_best, x_best.
 
         Args:
@@ -614,7 +627,6 @@ class SGD(Optimizer):
         """
 
         random.seed(42)  # CHANGE
-
         self.setup(X, y)
 
         return self.sgd(self.options)
@@ -994,7 +1006,7 @@ def get_error(optimizer, xtrain, name_prependix, name_appendix):
     return ypred, ysigma
 
 
-scaler = lambda x: (1 - x + 0.1) / (1 + x + 0.1)
+scaler = lambda x: x  # (1 - x + 0.1) / (1 + x + 0.1)
 import matplotlib.pyplot as plt
 
 
@@ -1022,6 +1034,12 @@ def plot(
 
     for col in range(cols):
         if cols > 1:
+            if col == 0:
+                ax[col].set_ylabel("y")
+            else:
+                ax[col].set_ylabel("")
+            ax[col].set_xlabel("x")
+
             ax[col].set_xscale(xscale)
             train = ytrain[:, col]
             pred = yprediction[:, col]
@@ -1074,9 +1092,9 @@ def plot(
             )
             ax.legend()
 
-    plt.xscale(xscale)
-    plt.xlabel("x")
-    plt.ylabel("y")
+            plt.xscale(xscale)
+            plt.xlabel("x")
+            plt.ylabel("y")
     if name is not None:
         plt.savefig(
             f"results/{name_prependix}_{name}_{name_appendix}.png", bbox_inches="tight"

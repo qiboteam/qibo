@@ -85,7 +85,7 @@ def execute_circuit(
             a, b = cdr_params
             result = a * result + b
 
-    return result
+    return np.real(result)
 
 
 def create_hamiltonian(qubit=0, nqubits=1, backend=None):
