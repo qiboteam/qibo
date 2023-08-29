@@ -130,7 +130,7 @@ def error_mitigation(circuit, nqubits, hamiltonian, backend, noise_model, nshots
     )
 
     montecarlo = random.randrange(len(hamiltonian))
-
+    print(circuit.get_parameters())
     _, _, optimal_params, _ = CDR(
         circuit=circuit,
         observable=hamiltonian[montecarlo],

@@ -715,7 +715,7 @@ class VariationalCircuit(Circuit):
 
             return params
 
-    def set_variational_parameters(self, input_params, feature=None):
+    def set_variational_parameters(self, input_params, feature=[]):
         """Retrieve gate parameters based on initial parameter values given to gates
         Args:
             feature (int or list): input feature if embedded in Parameter lambda function

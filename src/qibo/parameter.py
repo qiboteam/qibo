@@ -99,7 +99,7 @@ class Parameter:
 
         return derivatives
 
-    def update_parameters(self, trainable=None, feature=None):
+    def update_parameters(self, trainable=None, feature=[]):
         """Update gate trainable parameter and feature values"""
         if not isinstance(trainable, (list, np.ndarray)):
             raise_error(

@@ -331,7 +331,7 @@ class SGD(Optimizer):
 
         # calculate CDR parameters anew at each epoch
         if self.options["mitigation"]:
-            self._circuit.set_variational_parameters(self.params)
+            self._circuit.set_variational_parameters(self.params, [1.0])
 
             self.cdr_params, self.calibration = error_mitigation(
                 self._circuit.to_clifford(),
@@ -1006,7 +1006,7 @@ def get_error(optimizer, xtrain, name_prependix, name_appendix):
     return ypred, ysigma
 
 
-scaler = lambda x: x  # (1 - x + 0.1) / (1 + x + 0.1)
+scaler = lambda x: (1 - x - 0.1) / (1 + x + 0.1)
 import matplotlib.pyplot as plt
 
 
