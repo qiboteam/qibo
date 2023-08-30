@@ -341,7 +341,6 @@ class SGD(Optimizer):
                 self.options["noise_model"],
                 self.options["nshots"],
             )
-            self.cdr_params = (1, 0)
 
         # iterate through all data points
         for i, feat in enumerate(features):

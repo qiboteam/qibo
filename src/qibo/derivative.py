@@ -130,7 +130,7 @@ def error_mitigation(circuit, nqubits, hamiltonian, backend, noise_model, nshots
     )
 
     montecarlo = random.randrange(len(hamiltonian))
-    print(circuit.get_parameters())
+
     _, _, optimal_params, _ = CDR(
         circuit=circuit,
         observable=hamiltonian[montecarlo],
@@ -532,7 +532,7 @@ def finite_differences(
 
     circuit.set_parameters(parameters)
 
-    result = (forward - backward) / (2 * step_size)
+    result = (np.real(forward) - np.real(backward)) / (2 * step_size)
 
     return result
 
@@ -563,6 +563,7 @@ def stochastic_parameter_shift(
     scale_factor=1.0,
     initial_state=None,
     nshots=None,
+    stochastic_executions=10,
 ):
     """In this method the stochastic parameter shift rule (SPSR) is implemented.
     Given a circuit U and an observable H, the SPSR allows to calculate the derivative
@@ -664,11 +665,10 @@ def stochastic_parameter_shift(
     new_param_count = variable_gate.nparams + ancilla_gate.nparams
     shifted = np.insert(shifted, gate_index_start + gate.nparams, [0] * new_param_count)
 
-    N = 10
-    grads = np.zeros(N)
+    grads = np.zeros(stochastic_executions)
 
     # stochastic sampling
-    for i, s in enumerate(np.random.uniform(size=N)):
+    for i, s in enumerate(np.random.uniform(size=stochastic_executions)):
         new_params = generate_new_stochastic_params(gate.parameters, s)
         new_params[ancilla_gate.nparams] += shift
 
@@ -699,7 +699,7 @@ def stochastic_parameter_shift(
         else:
             forward = backend.execute_circuit(
                 circuit=circuit, initial_state=initial_state, nshots=nshots
-            )
+            ).expectation_from_samples(hamiltonian)
 
             shifted[parameter_index + ancilla_gate.nparams] -= shift * 2
 
@@ -710,7 +710,7 @@ def stochastic_parameter_shift(
             ).expectation_from_samples(hamiltonian)
 
         # float() necessary to not return a 0-dim ndarray
-        result = float(forward - backward)
+        result = float(np.real(forward) - np.real(backward))
 
         grads[i] = result
 
