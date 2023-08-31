@@ -212,7 +212,7 @@ class SGD(Optimizer):
 
         # logging
         self.param_history = np.zeros((self.options["epochs"], self.nparams))
-        self.filename = f"results/{self.name}_{self.name_appendix}.txt"
+        self.filename = f"results/sgd_{self.name}_{self.name_appendix}.txt"
         if save:
             self.file = open(self.filename, "w")
 
@@ -1098,7 +1098,7 @@ def plot(
         plt.savefig(
             f"results/{name_prependix}_{name}_{name_appendix}.png", bbox_inches="tight"
         )
-        plt.show()
+        # plt.show()
     else:
         plt.savefig("Plot.png", bbox_inches="tight")
     plt.close()
@@ -1121,19 +1121,20 @@ class BFGS(Optimizer):  # pragma: no cover
 
     def __init__(
         self,
-        function,
-        jacobian,
+        initial_parameters,
         args=(),
+        loss=None,
+        jacobian=None,
         bounds=None,
         callback=None,
         options=None,
         processes=None,
     ):
-        super().__init__(np.random.randn(12), loss=function, save=True)
+        super().__init__(initial_parameters, loss=loss, save=True)
         self.filename = f"results/Scipy_bfgs_{self.name}.txt"
         if self.save:
             self.file = open(self.filename, "w")
-        self.function = function
+        self.loss_function = loss
         self.jacobian = jacobian
         self.args = args
         self.xval = None
@@ -1145,7 +1146,7 @@ class BFGS(Optimizer):  # pragma: no cover
         self.options = options
         self.processes = processes
 
-    def run(self, x0):
+    def fit(self):
         """Executes parallel L-BFGS-B minimization.
         Args:
             x0 (numpy.array): guess for initial solution.
@@ -1155,9 +1156,9 @@ class BFGS(Optimizer):  # pragma: no cover
         """
         from scipy.optimize import minimize
 
-        out = minimize(
+        m = minimize(
             fun=self.fun,
-            x0=x0,
+            x0=self.params,
             jac=self.jac,
             method="BFGS",
             bounds=self.bounds,
@@ -1165,11 +1166,24 @@ class BFGS(Optimizer):  # pragma: no cover
             options={"gtol": 1e-7, "ftol": 1e-10, "xtol": 1e-10, "maxiter": 10000},
         )
 
-        return out
+        return m.fun, m.x, m, self.iteration
 
     def fun(self, x):
-        res = self.loss_function(x, *self.args)
-        return res
+        val = self.loss_function(x, *self.args)
+
+        # timing
+        self.etime = time.time()
+        duration = self.etime - self.ftime
+        self.ftime = self.etime
+
+        # saving
+        if self.save:
+            self.file.write(
+                f"Iteration {self.iteration} | loss: {val} | duration: {duration}\n"
+            )
+
+        self.iteration += 1
+        return val
 
     def jac(self, x):
         res = self.jacobian(x, *self.args)

@@ -4,6 +4,7 @@ from qibo.config import raise_error
 from qibo.gates import gates
 from qibo.models import Circuit
 from qibo.models.evolution import StateEvolution
+from qibo.parameter import Parameter
 
 
 class VQE:
@@ -682,6 +683,22 @@ class VariationalCircuit(Circuit):
 
     def __init__(self, nqubits, accelerators=None, density_matrix=False):
         super().__init__(nqubits, accelerators, density_matrix)
+        self.variational = False
+
+    def _check_type(self, obj_list, typeof, all=False):
+        count = 0
+
+        for obj in obj_list:
+            if isinstance(obj, typeof):
+                if not all:
+                    return True
+                else:
+                    count += 1
+
+        if all and count == len(obj_list):
+            return True
+
+        return False
 
     def _get_initparams(self):
         """Retrieve parameter values or objects directly from gates"""
@@ -694,10 +711,14 @@ class VariationalCircuit(Circuit):
                 except AttributeError:
                     params.append(gate.parameters)
 
-        if isinstance(params[0], (float, int, tuple)):
-            params = self.get_parameters()
-            if isinstance(params[0], tuple):
-                params = np.array([val for t in params for val in t])
+                if self._check_type(params, Parameter):
+                    self.variational = True
+
+        if self._check_type(params, tuple):
+            params = np.array([val for t in params for val in t])
+
+        if self._check_type(params, float):
+            params = np.array(params)
 
         return params
 
@@ -723,6 +744,16 @@ class VariationalCircuit(Circuit):
         Returns:
             (list or np.ndarray) gate parameters
         """
+        if not isinstance(input_params, (np.ndarray, list)):
+            raise_error("Only lists and numpy arrays are allowed.")
+
+        if isinstance(input_params[0], tuple):
+            params = []
+            for tpl in input_params:
+                params.extend(tpl)
+
+        if isinstance(input_params, list):
+            input_params = np.array(input_params)
 
         # for array
         if isinstance(self.initparams, np.ndarray):
@@ -737,7 +768,6 @@ class VariationalCircuit(Circuit):
                 trainable = input_params[count : count + param_object.nparams]
                 count += param_object.nparams
                 # update trainable params and retrieve gate param
-
                 param_object.update_parameters(trainable, feature)
                 gate_params.append(param_object())
 

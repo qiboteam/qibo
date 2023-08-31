@@ -25,14 +25,21 @@ from qibo.models.variational import VariationalCircuit
 from qibo.parameter import Parameter
 
 qibo.set_backend("tensorflow")
-tf.get_logger().setLevel("ERROR")
 import matplotlib.pyplot as plt
 
 dev = qml.device("default.qubit", wires=2)
 
 
 @qml.qnode(dev, interface="autograd")
-def ansatz_pdf(nqubits, params, feature):
+def ansatz_pennylane(nqubits, params, feature):
+    """
+    The circuit's pennylane ansatz: a sequence of RZ and RY with a beginning H gate
+    Args:
+        nqubits (int): number of qubits in circuit
+        nqubits (np.ndarray): array of initial parameters
+        feature (float): feature used in reuploading strategy
+    Returns: abstract pennylane circuit
+    """
     for i in range(nqubits):
         qml.Hadamard(wires=i)
 
@@ -58,18 +65,24 @@ def ansatz_pdf(nqubits, params, feature):
 
 
 @qml.qnode(dev, interface="autograd")
-def ansatz_pdf_entangled(nqubits, params, feature):
-    qml.Hadamard(wires=0)
-    qml.Hadamard(wires=1)
+def ansatz_pennylane_entangled(nqubits, params, feature):
+    """
+    The circuit's pennylane entangled ansatz: a sequence of RZ and RY with a beginning H gate
+    Args:
+        nqubits (int): number of qubits in circuit
+        nqubits (np.ndarray): array of initial parameters
+        feature (float): feature used in reuploading strategy
+    Returns: abstract pennylane circuit
+    """
 
     j = 0
 
-    for i in range(3):
+    for i in range(1):
         for w in range(nqubits):
-            qml.RZ(params[j] * math.log(feature), wires=w)
+            qml.RZ(params[j], wires=w)
             qml.RZ(params[j + 1], wires=w)
 
-            qml.RY(params[j + 2] * feature, wires=w)
+            qml.RY(params[j + 2], wires=w)
             qml.RY(params[j + 3], wires=w)
 
             j += 4
@@ -84,7 +97,8 @@ def ansatz(layers, nqubits):
     """
     The circuit's ansatz: a sequence of RZ and RY with a beginning H gate
     Args:
-        layers: integer, number of layers which compose the circuit
+        layers (int): number of layers which compose the circuit
+        nqubits (int): number of qubits in circuit
     Returns: abstract qibo circuit
     """
 
@@ -116,11 +130,40 @@ def ansatz(layers, nqubits):
     return c
 
 
+def ansatz_2qubit(layers, nqubits):
+    """
+    The circuit's 2 qubit ansatz: a sequence of RZ and RY with a beginning H gate
+    Args:
+        layers (int): number of layers which compose the circuit
+        nqubits (int): number of qubits in circuit
+    Returns: abstract qibo circuit
+    """
+
+    c = VariationalCircuit(nqubits, density_matrix=True)
+
+    c.add(qibo.gates.H(q=0))
+    c.add(qibo.gates.H(q=1))
+
+    for _ in range(layers):
+        c.add(qibo.gates.RY(q=0, theta=0))
+        c.add(qibo.gates.RZ(q=1, theta=0))
+        c.add(qibo.gates.RY(q=1, theta=0))
+
+    c.add(qibo.gates.CNOT(0, 1))
+
+    c.add(qibo.gates.M(0))
+
+    c.add(qibo.gates.M(1))
+
+    return c
+
+
 def ansatz_entangled(layers, nqubits):
     """
-    The circuit's ansatz: a sequence of RZ and RY with a beginning H gate
+    The circuit's entangled ansatz: a sequence of RZ and RY with a beginning H gate
     Args:
-        layers: integer, number of layers which compose the circuit
+        layers (int): number of layers which compose the circuit
+        nqubits (int): number of qubits in circuit
     Returns: abstract qibo circuit
     """
 
@@ -156,34 +199,6 @@ def ansatz_entangled(layers, nqubits):
     return c
 
 
-def ansatz_2qubit(layers, nqubits):
-    """
-    The circuit's ansatz: a sequence of RZ and RY with a beginning H gate
-    Args:
-        layers: integer, number of layers which compose the circuit
-    Returns: abstract qibo circuit
-    """
-
-    c = VariationalCircuit(nqubits, density_matrix=True)
-
-    c.add(qibo.gates.H(q=0))
-    c.add(qibo.gates.H(q=1))
-
-    for _ in range(layers):
-        c.add(qibo.gates.RY(q=0, theta=0))
-        c.add(qibo.gates.RZ(q=1, theta=0))
-        c.add(qibo.gates.RY(q=1, theta=0))
-
-    c.add(qibo.gates.CNOT(0, 1))
-
-    c.add(qibo.gates.M(0))
-
-    c.add(qibo.gates.M(1))
-
-    return c
-
-
-# defining a dummy circuit
 def circuit(nqubits=1):
     c = VariationalCircuit(nqubits)
     # all gates for which generator eigenvalue is implemented
@@ -196,8 +211,9 @@ def circuit(nqubits=1):
     return c
 
 
-# calculate the exact gradients
 def gradient_exact():
+    """Calculates exact gradient of a circuit"""
+
     backend = GlobalBackend()
 
     test_params = tf.Variable(np.linspace(0.1, 1, 3))
@@ -216,7 +232,9 @@ def gradient_exact():
     return gradients
 
 
-def rtest_execute_circuit():
+def test_execute_circuit():
+    """Test the `execute_circuit` function"""
+
     circuit = ansatz(3, 1)
     obs = create_hamiltonian(0, 1, GlobalBackend())
     exp_v = execute_circuit(GlobalBackend(), circuit, obs, deterministic=True)
@@ -258,17 +276,168 @@ two_qubit = tf.constant(
     "qubit, nqubits, matrix", [(0, 1, one_qubit), (1, 2, two_qubit)]
 )
 def test_create_hamiltonian(qubit, nqubits, matrix):
+    """Test the `create_hamiltonian` function"""
+
     ham = create_hamiltonian(qubit, nqubits, GlobalBackend())
     assert np.allclose(ham.matrix, matrix)
 
 
 def test_run_subcircuit_measure():
+    """Test the `run_subcircuit_measure` function"""
+
     c = circuit(nqubits=1)
     value = run_subcircuit_measure(c, [0], 1, GlobalBackend(), deterministic=True)
     assert value[0] == 0.5
 
 
+def test_error_mitigation():
+    """Test the `error_mitigation` function"""
+
+    c = ansatz(3, 1)
+
+    c.set_variational_parameters(c.get_parameters(), [1.0])
+
+    backend = GlobalBackend()
+    ham = [create_hamiltonian(0, 1, backend)]
+
+    optimal_params, calibration = error_mitigation(
+        c.to_clifford(), 1, ham, backend=backend, noise_model=None, nshots=1000000
+    )
+
+    # no noise, so are cdr parameters should be (1, 0)
+    assert np.allclose(optimal_params, [1.0, 0.0], atol=0.1)
+    assert np.allclose(calibration, np.array([[1.0, 0.0], [0.0, 1.0]]))
+
+
+@pytest.mark.parametrize("nshots, atol", [(None, 1e-8), (100000, 1e-2)])
+def test_psr(backend, nshots, atol):
+    """Test PSR gradient calculation
+    Args:
+        backend (:class:`qibo.backends.abstract.Backend`): simulation backend used to run circuit
+        nshots (int): number of shots executed at each circuit run
+        atol (float): absolute tolerance allowed on parameter shift rule derivatives compared to ground truth
+    """
+
+    grads = gradient_exact()
+    scale_factor = 1
+
+    # initializing the circuit
+    c = circuit(nqubits=1)
+
+    # some parameters
+    # we know the derivative's values with these params
+    test_params = np.linspace(0.1, 1, 3)
+    test_params *= scale_factor
+    c.set_parameters(test_params)
+
+    test_hamiltonian = create_hamiltonian(0, 1, GlobalBackend())
+
+    # testing parameter out of bounds
+    with pytest.raises(ValueError):
+        grad_0 = parameter_shift(
+            circuit=c, hamiltonian=test_hamiltonian, parameter_index=5
+        )
+
+    # testing hamiltonian type
+    with pytest.raises(TypeError):
+        grad_0 = parameter_shift(
+            circuit=c, hamiltonian=c, parameter_index=0, nshots=nshots
+        )
+
+    # executing all the procedure
+    grad_0 = parameter_shift(
+        circuit=c,
+        hamiltonian=test_hamiltonian,
+        parameter_index=0,
+        scale_factor=scale_factor,
+        nshots=nshots,
+    )
+    grad_1 = parameter_shift(
+        circuit=c,
+        hamiltonian=test_hamiltonian,
+        parameter_index=1,
+        scale_factor=scale_factor,
+        nshots=nshots,
+    )
+    grad_2 = parameter_shift(
+        circuit=c,
+        hamiltonian=test_hamiltonian,
+        parameter_index=2,
+        scale_factor=scale_factor,
+        nshots=nshots,
+    )
+
+    # check of known values
+    # calculated using tf.GradientTape
+    backend.assert_allclose(grad_0, grads[0], atol=atol)
+    backend.assert_allclose(grad_1, grads[1], atol=atol)
+    backend.assert_allclose(grad_2, grads[2], atol=atol)
+
+
+@pytest.mark.parametrize("nshots, atol", [(None, 1e-1), (100000, 1e-1)])
+def test_finite_differences(backend, nshots, atol):
+    """Test Finite Difference gradient calculation
+    Args:
+        backend (:class:`qibo.backends.abstract.Backend`): simulation backend used to run circuit
+        nshots (int): number of shots executed at each circuit run
+        atol (float): absolute tolerance allowed on parameter shift rule derivatives compared to ground truth
+    """
+
+    # exact gradients
+    grads = gradient_exact()
+
+    # initializing the circuit
+    c = circuit(nqubits=1)
+
+    # some parameters
+    # we know the derivative's values with these params
+    test_params = np.linspace(0.1, 1, 3)
+    c.set_parameters(test_params)
+
+    test_hamiltonian = create_hamiltonian(0, 1, GlobalBackend())
+
+    # testing parameter out of bounds
+    with pytest.raises(ValueError):
+        grad_0 = finite_differences(
+            circuit=c, hamiltonian=test_hamiltonian, parameter_index=5
+        )
+
+    # testing hamiltonian type
+    with pytest.raises(TypeError):
+        grad_0 = finite_differences(
+            circuit=c, hamiltonian=c, parameter_index=0, nshots=nshots
+        )
+
+    # executing all the procedure
+    grad_0 = finite_differences(
+        circuit=c,
+        hamiltonian=test_hamiltonian,
+        parameter_index=0,
+        nshots=nshots,
+    )
+    grad_1 = finite_differences(
+        circuit=c,
+        hamiltonian=test_hamiltonian,
+        parameter_index=1,
+        nshots=nshots,
+    )
+    grad_2 = finite_differences(
+        circuit=c,
+        hamiltonian=test_hamiltonian,
+        parameter_index=2,
+        nshots=nshots,
+    )
+
+    # check of known values
+    # calculated using tf.GradientTape
+    backend.assert_allclose(grad_0, grads[0], atol=atol)
+    backend.assert_allclose(grad_1, grads[1], atol=atol)
+    backend.assert_allclose(grad_2, grads[2], atol=atol)
+
+
 def test_psr_commuting_gate():
+    """Test PSR with commuting gates, i.e. [X, Y]=0"""
+
     # hyperparameters
     scale_factor = 0.5
     nshots = None
@@ -322,6 +491,8 @@ def test_psr_commuting_gate():
 
 
 def spsr_circuit_RXRY_decomposed(phi, s, shift):
+    """RXRY decomposed into its 3 constituents for SPSR"""
+
     ham = create_hamiltonian(0, 1, GlobalBackend())
 
     c1 = VariationalCircuit(nqubits=1)
@@ -340,6 +511,8 @@ def spsr_circuit_RXRY_decomposed(phi, s, shift):
 
 
 def spsr_circuit_RXRY(phi):
+    """RXRY gate and circuit used for SPSR"""
+
     ham = create_hamiltonian(0, 1, GlobalBackend())
     c1 = VariationalCircuit(nqubits=1)
     c1.add(gates.RXRY(0, phi, 1.0))
@@ -367,6 +540,8 @@ def spsr_circuit_RXRY(phi):
 
 
 def test_spsr_RXRY():
+    """Test `stochastic_parameter_shift` decomposed into its constituents on RXRY"""
+
     np.random.seed(1430)
     angles = np.linspace(0.1, 2 * np.pi, 50)
 
@@ -397,18 +572,12 @@ def test_spsr_RXRY():
 
     spsr_vals = (pos_vals - neg_vals).mean(axis=1)
 
-    """
-    plt.plot(angles, evals, "b", label="Expectation Value")
-    plt.plot(angles, fdiff, "g", label="Finite differences")
-    plt.plot(angles, spsr_vals, "r", label="Stochastic parameter-shift rule")
-    plt.legend()
-    plt.show()
-    """
-
     assert np.allclose(fdiff, spsr_vals, atol=0.05)
 
 
 def test_spsr_calculate_gradients():
+    """Test `calculate_circuit_gradients` using SPSR on RXRY"""
+
     ham = create_hamiltonian(0, 1, GlobalBackend())
     c1 = VariationalCircuit(nqubits=1)
     c1.add(gates.RXRY(0, 0.1, 1.0))
@@ -429,6 +598,8 @@ def test_spsr_calculate_gradients():
 
 
 def spsr_circuit_crossres_decomposed(theta1, theta2, theta3, s, sign):
+    """RXRY decomposed into its 3 constituents for SPSR"""
+
     ham = create_hamiltonian(0, 2, GlobalBackend())
 
     c1 = VariationalCircuit(nqubits=2)
@@ -447,6 +618,8 @@ def spsr_circuit_crossres_decomposed(theta1, theta2, theta3, s, sign):
 
 
 def spsr_circuit_crossres(theta1, theta2, theta3):
+    """Crossres gate and circuit used for SPSR"""
+
     ham = create_hamiltonian(0, 2, GlobalBackend())
     c1 = VariationalCircuit(nqubits=2)
     c1.add(gates.CrossRes(0, 1, 1.0, theta1, theta2, theta3))
@@ -475,6 +648,8 @@ def spsr_circuit_crossres(theta1, theta2, theta3):
 
 
 def test_spsr_crossres():
+    """Test `stochastic_parameter_shift` decomposed into its constituents on Crossres gate"""
+
     theta2, theta3 = -0.15, 1.6
     np.random.seed(143)
     angles = np.linspace(0, 2 * np.pi, 50)
@@ -567,123 +742,13 @@ def test_spsr_crossres():
     assert np.allclose(spsr_vals, res)
 
 
-@pytest.mark.parametrize("nshots, atol", [(None, 1e-8), (100000, 1e-2)])
-def test_psr(backend, nshots, atol):
-    grads = gradient_exact()
-    scale_factor = 1
-
-    # initializing the circuit
-    c = circuit(nqubits=1)
-
-    # some parameters
-    # we know the derivative's values with these params
-    test_params = np.linspace(0.1, 1, 3)
-    test_params *= scale_factor
-    c.set_parameters(test_params)
-
-    test_hamiltonian = create_hamiltonian(0, 1, GlobalBackend())
-
-    # testing parameter out of bounds
-    with pytest.raises(ValueError):
-        grad_0 = parameter_shift(
-            circuit=c, hamiltonian=test_hamiltonian, parameter_index=5
-        )
-
-    # testing hamiltonian type
-    with pytest.raises(TypeError):
-        grad_0 = parameter_shift(
-            circuit=c, hamiltonian=c, parameter_index=0, nshots=nshots
-        )
-
-    # executing all the procedure
-    grad_0 = parameter_shift(
-        circuit=c,
-        hamiltonian=test_hamiltonian,
-        parameter_index=0,
-        scale_factor=scale_factor,
-        nshots=nshots,
-    )
-    grad_1 = parameter_shift(
-        circuit=c,
-        hamiltonian=test_hamiltonian,
-        parameter_index=1,
-        scale_factor=scale_factor,
-        nshots=nshots,
-    )
-    grad_2 = parameter_shift(
-        circuit=c,
-        hamiltonian=test_hamiltonian,
-        parameter_index=2,
-        scale_factor=scale_factor,
-        nshots=nshots,
-    )
-
-    # check of known values
-    # calculated using tf.GradientTape
-    backend.assert_allclose(grad_0, grads[0], atol=atol)
-    backend.assert_allclose(grad_1, grads[1], atol=atol)
-    backend.assert_allclose(grad_2, grads[2], atol=atol)
-
-
-@pytest.mark.parametrize("nshots, atol", [(None, 1e-1), (100000, 1e-1)])
-def test_finite_differences(backend, nshots, atol):
-    # exact gradients
-    grads = gradient_exact()
-
-    # initializing the circuit
-    c = circuit(nqubits=1)
-
-    # some parameters
-    # we know the derivative's values with these params
-    test_params = np.linspace(0.1, 1, 3)
-    c.set_parameters(test_params)
-
-    test_hamiltonian = create_hamiltonian(0, 1, GlobalBackend())
-
-    # testing parameter out of bounds
-    with pytest.raises(ValueError):
-        grad_0 = finite_differences(
-            circuit=c, hamiltonian=test_hamiltonian, parameter_index=5
-        )
-
-    # testing hamiltonian type
-    with pytest.raises(TypeError):
-        grad_0 = finite_differences(
-            circuit=c, hamiltonian=c, parameter_index=0, nshots=nshots
-        )
-
-    # executing all the procedure
-    grad_0 = finite_differences(
-        circuit=c,
-        hamiltonian=test_hamiltonian,
-        parameter_index=0,
-        nshots=nshots,
-    )
-    grad_1 = finite_differences(
-        circuit=c,
-        hamiltonian=test_hamiltonian,
-        parameter_index=1,
-        nshots=nshots,
-    )
-    grad_2 = finite_differences(
-        circuit=c,
-        hamiltonian=test_hamiltonian,
-        parameter_index=2,
-        nshots=nshots,
-    )
-
-    # check of known values
-    # calculated using tf.GradientTape
-    backend.assert_allclose(grad_0, grads[0], atol=atol)
-    backend.assert_allclose(grad_1, grads[1], atol=atol)
-    backend.assert_allclose(grad_2, grads[2], atol=atol)
-
-
 @pytest.mark.parametrize(
     "layer_num, trainable_qubits_correct, affected_params_correct",
     [(1, [0, 1], [[0, 1], [2, 3]]), (2, [0, 1], [[6, 7], [4, 5]]), (6, [1], [16, 17])],
 )
 def test_graph(layer_num, trainable_qubits_correct, affected_params_correct):
+    """Test graph representation of circuit, used in Natural Gradient"""
+
     circuit = ansatz_2qubit(3, 2)
 
     nqubits = circuit.nqubits
@@ -694,6 +759,7 @@ def test_graph(layer_num, trainable_qubits_correct, affected_params_correct):
     ]
     trainable_params_index = [[i, i + 1] for i in range(0, 18, 2)]
 
+    # build graph
     graph = Graph(nqubits, gates, trainable_params_index, gate_params)
 
     graph.build_graph()
@@ -704,37 +770,16 @@ def test_graph(layer_num, trainable_qubits_correct, affected_params_correct):
     assert np.allclose(affected_params, affected_params_correct)
 
 
-def graph_improvements(layer_num, trainable_qubits_correct, affected_params_correct):
-    circuit = ansatz_2qubit(3, 2)
+def loss_func(ypred, ytrue):
+    """Simple Least-Squares Error loss function"""
 
-    nqubits = circuit.nqubits
-    gates = circuit.queue
-    trainable_params = np.linspace(0.1, 1, 18)
-    gate_params = [
-        trainable_params[i] + trainable_params[i + 1] for i in range(0, 18, 2)
-    ]
-    trainable_params_index = [[i, i + 1] for i in range(0, 18, 2)]
-
-    graph = Graph(nqubits, gates, trainable_params_index, gate_params)
-
-    graph.build_graph()
-
-    new_circuit, trainable_qubits, affected_params = graph.run_layer(layer_num)
-
-    assert np.allclose(trainable_qubits, trainable_qubits_correct)
-    assert np.allclose(affected_params, affected_params_correct)
-
-
-def loss_func(ypred, ytrue, other_args=None):
-    loss = 0
-    for i in range(len(ypred)):
-        loss += (ytrue[i] - ypred[i]) ** 2
+    loss = np.sum(np.square(ytrue - ypred))
 
     return loss
 
 
 def test_natural_gradient():
-    params = qml.numpy.asarray([0.1] * 12)
+    """Test Fubini Matrix calculation used for Natural Gradient"""
 
     # create circuit ansatz for two qubits
     circuit = ansatz(3, 1)
@@ -775,18 +820,22 @@ def test_natural_gradient():
         deterministic=True,
     )
 
-    assert np.allclose(optimiser.params, params)
+    # pennylane ground truth
+    params = qml.numpy.asarray([0.1] * 12)
+    metric_tensor = qml.metric_tensor(ansatz_pennylane, approx="diag")(1, params, 0.1)
 
-    metric_tensor = qml.metric_tensor(ansatz_pdf, approx="diag")(1, params, 0.1)
+    assert np.allclose(optimiser.params, params)
 
     assert np.allclose(fubini, metric_tensor)
     assert np.allclose(fubini2, metric_tensor)
 
 
 def test_multiqubit_natural_gradient():
+    """Test Fubini Matrix calculation used for Natural Gradient, on a multiqubit circuit"""
+
     # pennylane baseline
     params = qml.numpy.asarray([0.1] * 24)
-    metric_tensor = qml.metric_tensor(ansatz_pdf, approx="diag")(2, params, 0.1)
+    metric_tensor = qml.metric_tensor(ansatz_pennylane, approx="diag")(2, params, 0.1)
 
     # local implementation
     nqubits = 2
@@ -819,20 +868,25 @@ def test_multiqubit_natural_gradient():
 
 
 def test_multiqubit_natural_gradient_entangled():
+    """Test Fubini Matrix calculation used for Natural Gradient, on a multiqubit entangled circuit"""
+
     # pennylane baseline
-    params = qml.numpy.asarray([0.1] * 27)
-    metric_tensor = qml.metric_tensor(ansatz_pdf_entangled, approx="diag")(
+    params = qml.numpy.asarray([0, 0, 0, np.pi / 2 * 1.5, 0, 0, 0, np.pi, 0])
+    metric_tensor = qml.metric_tensor(ansatz_pennylane_entangled, approx="diag")(
         2, params, 0.1
     )
+
+    drawer = qml.draw(ansatz_pennylane_entangled)
+    print(drawer(2, params, 0.1))
 
     # local implementation
     nqubits = 2
     circuit = ansatz_entangled(
-        3,
+        1,
         nqubits,
     )  # 2 qubits x 3 layers x 2 gates x 2 parameters + 3 CU1 = 27 params
 
-    initial_parameters = [0.1] * 27
+    initial_parameters = [0.1] * 9
 
     hamiltonians = [create_hamiltonian(i, 2, GlobalBackend()) for i in range(2)]
     optimiser = qibo.optimizers.SGD(
@@ -844,10 +898,11 @@ def test_multiqubit_natural_gradient_entangled():
 
     _ = optimiser.run_circuit(0.1)
 
-    graph = build_graph(optimiser._circuit, 27, optimiser.nqubits)
+    print(optimiser._circuit.get_parameters())
+    graph = build_graph(optimiser._circuit, 9, optimiser.nqubits)
     fubini = generate_fubini(
         graph,
-        27,
+        9,
         nqubits,
         optimiser._circuit.initparams,
         noise_model=optimiser.options["noise_model"],
@@ -856,59 +911,13 @@ def test_multiqubit_natural_gradient_entangled():
 
     print(fubini)
     print(metric_tensor)
-
-    # assert np.allclose(fubini, metric_tensor)
-
-
-def test_variational_circuit():
-    c = VariationalCircuit(1)
-    c.add(gates.RX(q=0, theta=Parameter(lambda th1, th2: th1**2 + th2, [0.1, 0.1])))
-    c.add(gates.RY(q=0, theta=Parameter(lambda th1, th2: th1**2 + th2, [0.4, 0.1])))
-    c.add(gates.RZ(q=0, theta=Parameter(lambda th1, th2: th1**2 + th2, [0.3, 0.1])))
-    c.add(gates.M(0))
-
-    # _get_initparams
-    true = np.array([0.1, 0.1, 0.4, 0.1, 0.3, 0.1])
-    Params = c._get_initparams()
-    check = []
-    for Param in Params:
-        check.extend(Param._trainable)
-
-    assert np.allclose(check, true)
-
-    # _get_train_params
-    train_params = c._get_train_params()
-
-    assert np.allclose(check, train_params)
-
-    # set_variational_parameters
-    true = [(120.0,), (10010.0,), (420.0,)]
-    c.set_variational_parameters([10.0, 20, 100, 10, 20, 20])
-    circuit_params = c.get_parameters()
-
-    assert circuit_params == true
-
-
-def etest_block_diag():
-    params = qml.numpy.asarray([0.1] * 27)
-    drawer = qml.draw(ansatz_pdf_entangled)
-    print(drawer(2, params, 0.1))
-
-    metric_tensor = qml.metric_tensor(ansatz_pdf, approx="block-diag")(2, params, 0.1)
-    print(metric_tensor)
-
-    params = qml.numpy.asarray([0.1] * 27)
-    metric_tensor = qml.metric_tensor(ansatz_pdf_entangled, approx="block-diag")(
-        2, params, 0.1
-    )
-
-    print(metric_tensor)
+    assert np.allclose(fubini, metric_tensor)
 
 
 if __name__ == "__main__":
     # graph_improvements(1, [0, 1], [[0, 1], [2, 3]])
     # test_multiqubit_natural_gradient()
-    # test_multiqubit_natural_gradient_entangled()
+    test_multiqubit_natural_gradient_entangled()
     # test_create_hamiltonian(0, 1, one_qubit)
     # test_execute_circuit()
     # etest_block_diag()
@@ -920,4 +929,5 @@ if __name__ == "__main__":
     # test_spsr()
     # test_spsr_calculate_gradients()
     # test_spsr()
-    test_spsr_crossres()
+    # test_spsr_crossres()
+    # test_error_mitigation()

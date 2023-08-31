@@ -950,7 +950,7 @@ def build_graph(circuit, nparams, nqubits):
 
     initparams = circuit.initparams
 
-    if isinstance(initparams, list):
+    if circuit.variational:
         trainable_params = []
         count = 0
         for Param in initparams:
