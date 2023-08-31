@@ -1,10 +1,8 @@
 import numpy as np
-import pennylane as qml
 
 import qibo
 from qibo.backends import GlobalBackend
 from qibo.derivative import create_hamiltonian
-from qibo.models.circuit import Circuit
 from qibo.models.variational import VariationalCircuit
 from qibo.optimizers import CMAES, SGD, BasinHopping, Newtonian, ParallelBFGS
 from qibo.parameter import Parameter

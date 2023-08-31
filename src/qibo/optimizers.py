@@ -2,6 +2,7 @@ import random
 import time
 from datetime import datetime
 
+import matplotlib.pyplot as plt
 import numpy as np
 
 from qibo import backends
@@ -625,7 +626,6 @@ class SGD(Optimizer):
             y (np.ndarray): array containing true output values
         """
 
-        random.seed(42)  # CHANGE
         self.setup(X, y)
 
         return self.sgd(self.options)
@@ -637,20 +637,38 @@ class CMAES(Optimizer):
     Example:
     .. code-block:: python
 
-        from qibo import Circuit
+        from qibo.models.variationa import VariationalCircuit
         from qibo import gates
+        from qibo.derivative import create_hamiltonian
+        from qibo.optimizers import CMAES
 
-        circuit = Circuit(nqubits=1)
-        c.add(gates.RY(q=0, theta=Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], feature=[0.1])))
-        c.add(gates.RZ(q=0, theta=Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], feature=[0.1])))
-        c.add(gates.M(q=0))
+        def black_box_loss(params, circuit, hamiltonian):
+            circuit.set_parameters(params)
+            state = circuit().state()
 
-        parameters = [0.2, 0.4, 0.2, 0.9]
+            results = hamiltonian.expectation(state)
 
-        optimizer = SGD(circuit=circuit, parameters=parameters)
-        X = np.array([0.1, 0.2, 0.3])
-        y = np.array([0.2, 0.5, 0.7])
-        losses = optimizer.fit(X, y)
+            return (results - 0.4) ** 2
+
+        c = VariationalCircuit(1, density_matrix=True)
+
+        c.add(gates.H(q=0))
+        for _ in range(3):
+            c.add(gates.RZ(q=0, theta=theta))
+            c.add(gates.RY(q=0, theta=theta))
+        c.add(gates.M(0))
+
+        hamiltonian = create_hamiltonian(0, 1, GlobalBackend())
+
+        parameters = np.array([0.1] * 6)
+
+        optimizer = CMAES(
+            initial_parameters=parameters,
+            args=(circuit, hamiltonian),
+            loss=simple_loss
+        )
+
+        fbest, xbest, r, it = optimizer.fit()
 
     Args:
         intial_parameters (np.ndarray): array with initial values for gate parameters
@@ -694,7 +712,7 @@ class Newtonian(Optimizer):
     def __init__(self, initial_parameters, args=(), loss=None, save=False, **kwargs):
         """Newtonian optimization approaches based on ``scipy.optimize.minimize``.
 
-        For more details check the `scipy documentation <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
+        For more details check the `scipy` documentation <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
 
         .. note::
             When using the method ``parallel_L-BFGS-B`` the ``processes`` option controls the
@@ -705,6 +723,42 @@ class Newtonian(Optimizer):
             you can control the number of threads used by each process with the ``qibo.set_threads`` method.
             For example, for small-medium size circuits you may benefit from single thread per process, thus set
             ``qibo.set_threads(1)`` before running the optimization.
+
+        Example:
+        .. code-block:: python
+
+            from qibo.models.variationa import VariationalCircuit
+            from qibo import gates
+            from qibo.derivative import create_hamiltonian
+            from qibo.optimizers import Newtonian
+
+            def black_box_loss(params, circuit, hamiltonian):
+                circuit.set_parameters(params)
+                state = circuit().state()
+
+                results = hamiltonian.expectation(state)
+
+                return (results - 0.4) ** 2
+
+            c = VariationalCircuit(1, density_matrix=True)
+
+            c.add(gates.H(q=0))
+            for _ in range(3):
+                c.add(gates.RZ(q=0, theta=theta))
+                c.add(gates.RY(q=0, theta=theta))
+            c.add(gates.M(0))
+
+            hamiltonian = create_hamiltonian(0, 1, GlobalBackend())
+
+            parameters = np.array([0.1] * 6)
+
+            optimizer = Newtonian(
+                initial_parameters=parameters,
+                args=(circuit, hamiltonian),
+                loss=simple_loss
+            )
+
+            fbest, xbest, r, it = optimizer.fit()
 
         Args:
             loss (callable): Loss as a function of variational parameters to be
@@ -789,6 +843,43 @@ class Newtonian(Optimizer):
 class ParallelBFGS(Optimizer):  # pragma: no cover
     """Computes the L-BFGS-B using parallel evaluation using multiprocessing.
     This implementation here is based on https://doi.org/10.32614/RJ-2019-030.
+
+
+        Example:
+    .. code-block:: python
+
+        from qibo.models.variationa import VariationalCircuit
+        from qibo import gates
+        from qibo.derivative import create_hamiltonian
+        from qibo.optimizers import ParallelBFGS
+
+        def black_box_loss(params, circuit, hamiltonian):
+            circuit.set_parameters(params)
+            state = circuit().state()
+
+            results = hamiltonian.expectation(state)
+
+            return (results - 0.4) ** 2
+
+        c = VariationalCircuit(1, density_matrix=True)
+
+        c.add(gates.H(q=0))
+        for _ in range(3):
+            c.add(gates.RZ(q=0, theta=theta))
+            c.add(gates.RY(q=0, theta=theta))
+        c.add(gates.M(0))
+
+        hamiltonian = create_hamiltonian(0, 1, GlobalBackend())
+
+        parameters = np.array([0.1] * 6)
+
+        optimizer = ParallelBFGS(
+            initial_parameters=parameters,
+            args=(circuit, hamiltonian),
+            loss=simple_loss
+        )
+
+        fbest, xbest, r, it = optimizer.fit()
 
     Args:
         function (function): loss function which returns a numpy object.
@@ -934,23 +1025,38 @@ class BasinHopping(Optimizer):
     Example:
     .. code-block:: python
 
-        from qibo import Circuit
+        from qibo.models.variationa import VariationalCircuit
         from qibo import gates
+        from qibo.derivative import create_hamiltonian
+        from qibo.optimizers import BasinHopping
 
-        circuit = Circuit(nqubits=1)
-        c.add(gates.RY(q=0, theta=Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], feature=[0.1])))
-        c.add(gates.RZ(q=0, theta=Parameter(lambda x, th1, th2: th1 * x + th2, [0.1, 0.1], feature=[0.1])))
-        c.add(gates.M(q=0))
+        def black_box_loss(params, circuit, hamiltonian):
+            circuit.set_parameters(params)
+            state = circuit().state()
 
-        parameters = [0.2, 0.4, 0.2, 0.9]
+            results = hamiltonian.expectation(state)
+
+            return (results - 0.4) ** 2
+
+        c = VariationalCircuit(1, density_matrix=True)
+
+        c.add(gates.H(q=0))
+        for _ in range(3):
+            c.add(gates.RZ(q=0, theta=theta))
+            c.add(gates.RY(q=0, theta=theta))
+        c.add(gates.M(0))
+
+        hamiltonian = create_hamiltonian(0, 1, GlobalBackend())
+
+        parameters = np.array([0.1] * 6)
 
         optimizer = BasinHopping(
             initial_parameters=parameters,
             args=(circuit, hamiltonian),
-            loss=cma_loss,
+            loss=simple_loss
         )
 
-        fbest = optimizer.fit()
+        fbest, xbest, r, it = optimizer.fit()
 
     Args:
         intial_parameters (np.ndarray): array with initial values for gate parameters
@@ -992,121 +1098,46 @@ class BasinHopping(Optimizer):
         return r.fun, r.x, r, self.iteration
 
 
-def get_error(optimizer, xtrain, name_prependix, name_appendix):
-    ypredictions = optimizer.predict(xtrain, N=10)
-
-    np.save(
-        f"predictions/{name_prependix}_{optimizer.name}_{name_appendix}.dat",
-        ypredictions,
-    )
-    ypred = np.mean(ypredictions, axis=ypredictions.ndim - 1)
-    ysigma = np.std(ypredictions, axis=ypredictions.ndim - 1)
-
-    return ypred, ysigma
-
-
-scaler = lambda x: (1 - x - 0.1) / (1 + x + 0.1)
-import matplotlib.pyplot as plt
-
-
-def plot(
-    yprediction,
-    xtrain,
-    ytrain,
-    epoch,
-    loss,
-    ysigma=None,
-    name=None,
-    name_prependix=None,
-    name_appendix=None,
-    params=None,
-    xscale="log",
-):
-    # new predictions
-    if yprediction.ndim == 2:
-        cols = yprediction.shape[1]
-    else:
-        cols = 1
-    # new plot
-    fig, ax = plt.subplots(nrows=1, ncols=cols, figsize=(8, 6))
-    fig.suptitle(f"Epoch {epoch+1}, J={loss:.4}")
-
-    for col in range(cols):
-        if cols > 1:
-            if col == 0:
-                ax[col].set_ylabel("y")
-            else:
-                ax[col].set_ylabel("")
-            ax[col].set_xlabel("x")
-
-            ax[col].set_xscale(xscale)
-            train = ytrain[:, col]
-            pred = yprediction[:, col]
-            pred = scaler(pred)
-            if ysigma is not None:
-                sigma = ysigma[:, col]
-                ax[col].fill_between(
-                    xtrain, pred + sigma, pred - sigma, alpha=0.3, color="royalblue"
-                )
-
-            ax[col].plot(xtrain, train, label="Classical PDF", color="black")
-            ax[col].plot(
-                xtrain,
-                pred,
-                label="Quantum PDF model",
-                # zorder=10,
-                # marker=".",
-                # markersize=12,
-                alpha=0.7,
-                color="royalblue",
-                lw=2,
-            )
-
-            ax[col].legend()
-
-        else:
-            ax.set_xscale(xscale)
-
-            yprediction = scaler(yprediction)
-
-            if ysigma is not None:
-                ax.fill_between(
-                    xtrain,
-                    yprediction + ysigma,
-                    yprediction - ysigma,
-                    alpha=0.3,
-                    color="royalblue",
-                )
-            ax.plot(xtrain, ytrain, label="Classical PDF", color="black")
-            ax.plot(
-                xtrain,
-                yprediction,
-                label="Quantum PDF model",
-                # zorder=10,
-                # marker=".",
-                # markersize=12,
-                color="royalblue",
-                lw=2,
-                alpha=0.7,
-            )
-            ax.legend()
-
-            plt.xscale(xscale)
-            plt.xlabel("x")
-            plt.ylabel("y")
-    if name is not None:
-        plt.savefig(
-            f"results/{name_prependix}_{name}_{name_appendix}.png", bbox_inches="tight"
-        )
-        # plt.show()
-    else:
-        plt.savefig("Plot.png", bbox_inches="tight")
-    plt.close()
-
-
 class BFGS(Optimizer):  # pragma: no cover
-    """Computes the L-BFGS-B using parallel evaluation using multiprocessing.
-    This implementation here is based on https://doi.org/10.32614/RJ-2019-030.
+    """BFGS optimization approach based on ``scipy.optimize.minimize``.
+
+    For more details check the `scipy` documentation <https://docs.scipy.org/doc/scipy/reference/optimize.minimize-bfgs.html>`_.
+
+    Example:
+    .. code-block:: python
+
+        from qibo.models.variationa import VariationalCircuit
+        from qibo import gates
+        from qibo.derivative import create_hamiltonian
+        from qibo.optimizers import BFGS
+
+        def black_box_loss(params, circuit, hamiltonian):
+            circuit.set_parameters(params)
+            state = circuit().state()
+
+            results = hamiltonian.expectation(state)
+
+            return (results - 0.4) ** 2
+
+        c = VariationalCircuit(1, density_matrix=True)
+
+        c.add(gates.H(q=0))
+        for _ in range(3):
+            c.add(gates.RZ(q=0, theta=theta))
+            c.add(gates.RY(q=0, theta=theta))
+        c.add(gates.M(0))
+
+        hamiltonian = create_hamiltonian(0, 1, GlobalBackend())
+
+        parameters = np.array([0.1] * 6)
+
+        optimizer = BFGS(
+            initial_parameters=parameters,
+            args=(circuit, hamiltonian),
+            loss=simple_loss
+        )
+
+        fbest, xbest, r, it = optimizer.fit()
 
     Args:
         function (function): loss function which returns a numpy object.
@@ -1188,3 +1219,140 @@ class BFGS(Optimizer):  # pragma: no cover
     def jac(self, x):
         res = self.jacobian(x, *self.args)
         return res.T
+
+
+def get_error(optimizer, bestx, name_prependix, name_appendix):
+    """For a given set of parameters and SGD optimizer, runs N predictions
+    and calculates mean and standard deviation
+
+    Args:
+        optimizer (`class:qibo.optimizers.SGD`): Stochastic Gradient Descent object
+        bestx (np.ndarray): optimal parameters
+        name_prependix (str): string to preprend to optimizer name when saving
+        name_appendix (str): string to apprend to optimizer name when saving
+
+    Returns:
+        (np.ndarray): array containing mean prediction values
+        (np.ndarray): array containing standard deviation of prediction values
+    """
+
+    # predict
+    ypredictions = optimizer.predict(bestx, N=10)
+
+    # save
+    np.save(
+        f"predictions/{name_prependix}_{optimizer.name}_{name_appendix}.dat",
+        ypredictions,
+    )
+
+    # mean and standard deviation
+    ypred = np.mean(ypredictions, axis=ypredictions.ndim - 1)
+    ysigma = np.std(ypredictions, axis=ypredictions.ndim - 1)
+
+    return ypred, ysigma
+
+
+def plot(
+    yprediction,
+    states,
+    labels,
+    epoch,
+    loss,
+    ysigma=None,
+    name=None,
+    name_prependix=None,
+    name_appendix=None,
+    xscale="log",
+):
+    """Plots intermediate and fit results
+
+    Args:
+        yprediction (np.ndarray): predicted y values
+        states (np.ndarray): input values X
+        labels (np.ndarray): true output values y
+        epoch (int): the epoch number of the predictions we want to plot
+        loss (float): loss value related to the predicted values
+        ysigma
+
+    """
+    # scaler used in loss function
+    scaler = lambda x: (1 - x - 0.1) / (1 + x + 0.1)
+
+    # single-plot or multi-plot
+    if yprediction.ndim == 2:
+        cols = yprediction.shape[1]
+    else:
+        cols = 1
+
+    # new plot
+    fig, ax = plt.subplots(nrows=1, ncols=cols, figsize=(8, 6))
+    fig.suptitle(f"Epoch {epoch+1}, J={loss:.4}")
+
+    for col in range(cols):
+        # Multiple hamiltonians -> multiple plots
+        if cols > 1:
+            if col == 0:
+                ax[col].set_ylabel("y")
+            else:
+                ax[col].set_ylabel("")
+            ax[col].set_xlabel("x")
+            ax[col].set_xscale(xscale)
+            train = labels[:, col]
+            pred = yprediction[:, col]
+            pred = scaler(pred)
+            if ysigma is not None:
+                sigma = ysigma[:, col]
+                ax[col].fill_between(
+                    states, pred + sigma, pred - sigma, alpha=0.3, color="royalblue"
+                )
+
+            ax[col].plot(states, train, label="Classical PDF", color="black")
+            ax[col].plot(
+                states,
+                pred,
+                label="Quantum PDF model",
+                alpha=0.7,
+                color="royalblue",
+                lw=2,
+            )
+
+            ax[col].legend()
+
+        # single Hamiltonian -> single plot
+        else:
+            ax.set_xscale(xscale)
+
+            yprediction = scaler(yprediction)
+
+            if ysigma is not None:
+                ax.fill_between(
+                    states,
+                    yprediction + ysigma,
+                    yprediction - ysigma,
+                    alpha=0.3,
+                    color="royalblue",
+                )
+            ax.plot(states, labels, label="Classical PDF", color="black")
+            ax.plot(
+                states,
+                yprediction,
+                label="Quantum PDF model",
+                color="royalblue",
+                lw=2,
+                alpha=0.7,
+            )
+            ax.legend()
+
+            plt.xscale(xscale)
+            plt.xlabel("x")
+            plt.ylabel("y")
+
+    # save and show
+    if name is not None:
+        plt.savefig(
+            f"results/{name_prependix}_{name}_{name_appendix}.png", bbox_inches="tight"
+        )
+        # plt.show()
+    else:
+        plt.savefig("Plot.png", bbox_inches="tight")
+    plt.close()
