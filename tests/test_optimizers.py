@@ -4,7 +4,7 @@ import qibo
 from qibo.backends import GlobalBackend
 from qibo.derivative import create_hamiltonian
 from qibo.models.variational import VariationalCircuit
-from qibo.optimizers import CMAES, SGD, BasinHopping, ParallelBFGS, Powell
+from qibo.optimizers import BFGS, CMAES, SGD, BasinHopping, ParallelBFGS, Powell
 from qibo.parameter import Parameter
 
 
@@ -299,6 +299,27 @@ def test_parallel_bfgs_optimizer():
     parameters = np.array([0.1] * 6)
 
     optimizer = ParallelBFGS(
+        initial_parameters=parameters, args=(circuit, hamiltonian), loss=black_box_loss
+    )
+
+    fbest, xbest, r, it = optimizer.fit()
+
+    assert fbest < 1e-5
+
+
+def test_bfgs_optimizer():
+    """Test BFGS optimizer
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+    """
+
+    circuit = ansatz(3, 1)
+
+    hamiltonian = create_hamiltonian(0, 1, GlobalBackend())
+
+    parameters = np.array([0.1] * 6)
+
+    optimizer = BFGS(
         initial_parameters=parameters, args=(circuit, hamiltonian), loss=black_box_loss
     )
 

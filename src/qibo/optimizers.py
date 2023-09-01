@@ -197,6 +197,7 @@ class SGD(Optimizer):
             "fubini_freq": 0.2,
             "mitigation": False,
             "noise_model": None,
+            "shuffle": False,
             "adam": False,
             "deterministic": False,
             "beta_1": 0.85,
@@ -543,7 +544,8 @@ class SGD(Optimizer):
                 break
 
             # shuffle index list
-            # np.random.shuffle(idx)
+            if self.options["shuffle"]:
+                np.random.shuffle(idx)
             # run over the batches
             for ib in range(options["batches"]):
                 iteration += 1
@@ -701,10 +703,12 @@ class CMAES(Optimizer):
     """
 
     def __init__(self, initial_parameters, args=(), loss=None, save=False, **kwargs):
-        self._circuit = args[0]
         super().__init__(initial_parameters, args, loss, save)
+
         self.options = {}
         self.set_options(kwargs)
+
+        # logging
         self.filename = f"results/cma_{self.name}.txt"
         if self.save:
             self.file = open(self.filename, "w")
@@ -797,7 +801,6 @@ class Powell(Optimizer):
             processes (int): number of processes when using the parallel BFGS method.
         """
         super().__init__(initial_parameters, args, loss, save)
-        self._circuit = args[0]
 
         self.options = {
             "method": "Powell",
@@ -814,6 +817,7 @@ class Powell(Optimizer):
         }
         self.set_options(kwargs)
 
+        # logging
         self.filename = f"results/powell_{self.name}.txt"
         if self.save:
             self.file = open(self.filename, "w")
@@ -906,7 +910,6 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
         super().__init__(initial_parameters, args, loss, save)
         self.function_value = None
         self.jacobian_value = None
-        self._circuit = args[0]
 
         self.options = {
             "xval": None,
@@ -920,6 +923,7 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
 
         self.set_options(kwargs)
 
+        # logging
         self.filename = f"results/bfgs_{self.name}.txt"
         if self.save:
             self.file = open(self.filename, "w")
@@ -1087,7 +1091,8 @@ class BasinHopping(Optimizer):
         super().__init__(initial_parameters, args, loss, save)
         self.args = args
         self.options = kwargs
-        self._circuit = args[0]
+
+        # logging
         self.filename = f"results/basin_{self.name}.txt"
         if self.save:
             self.file = open(self.filename, "w")
@@ -1118,7 +1123,7 @@ class BasinHopping(Optimizer):
         return r.fun, r.x, r, self.iteration
 
 
-class BFGS(Optimizer):  # pragma: no cover
+class BFGS(Optimizer):
     """BFGS optimization approach based on ``scipy.optimize.minimize``.
 
     For more details check the `scipy` documentation <https://docs.scipy.org/doc/scipy/reference/optimize.minimize-bfgs.html>`_.
@@ -1178,26 +1183,31 @@ class BFGS(Optimizer):  # pragma: no cover
         args=(),
         loss=None,
         jacobian=None,
-        bounds=None,
-        callback=None,
-        options=None,
-        processes=None,
+        save=False,
+        **kwargs,
     ):
         super().__init__(initial_parameters, loss=loss, save=True)
-        self.filename = f"results/Scipy_bfgs_{self.name}.txt"
-        if self.save:
-            self.file = open(self.filename, "w")
-        self.loss_function = loss
+
+        self.save = save
         self.jacobian = jacobian
         self.args = args
-        self.xval = None
+
+        self.options = {
+            "xval": None,
+            "bounds": None,
+            "callback": None,
+            "options": {"gtol": 1e-7, "maxiter": 10000},
+        }
+
+        self.set_options(kwargs)
+
         self.function_value = None
         self.jacobian_value = None
-        self.precision = self.np.finfo("float64").eps
-        self.bounds = bounds
-        self.callback = callback
-        self.options = options
-        self.processes = processes
+
+        # logging
+        self.filename = f"results/bfgs_{self.name}.txt"
+        if self.save:
+            self.file = open(self.filename, "w")
 
     def fit(self):
         """Executes parallel L-BFGS-B minimization.
@@ -1213,9 +1223,9 @@ class BFGS(Optimizer):  # pragma: no cover
             fun=self.fun,
             x0=self.params,
             method="BFGS",
-            bounds=self.bounds,
-            callback=self.callback,
-            options={"gtol": 1e-7, "ftol": 1e-10, "xtol": 1e-10, "maxiter": 10000},
+            bounds=self.options["bounds"],
+            callback=self.options["callback"],
+            options=self.options["options"],
         )
 
         return r.fun, r.x, r, self.iteration

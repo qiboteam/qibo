@@ -903,7 +903,3 @@ def test_multiqubit_natural_gradient():
     )
 
     assert np.allclose(fubini, metric_tensor)
-
-
-if __name__ == "__main__":
-    test_spsr_calculate_gradients()
