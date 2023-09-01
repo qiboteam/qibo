@@ -5,6 +5,11 @@ from qibo.parameter import Parameter
 
 
 def test_parameter():
+    """Test the Parameter object functions
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+    """
+
     # single feature
     param = Parameter(
         lambda x, th1, th2, th3: x**2 * th1 + th2 * th3**2,

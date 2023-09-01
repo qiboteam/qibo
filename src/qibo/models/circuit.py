@@ -29,11 +29,13 @@ class _ParametrizedGates(list):
         self.nparams += gate.nparams
 
     def insert(self, pos, gate):
+        """Enhanced by Michael Tsesmelis (ACSE-mct22)"""
         super().insert(pos, gate)
         self.set.add(gate)
         self.nparams += gate.nparams
 
     def remove(self, gate):
+        """Enhanced by Michael Tsesmelis (ACSE-mct22)"""
         super().remove(gate)
         self.set.remove(gate)
         self.nparams -= gate.nparams
@@ -110,6 +112,7 @@ class _Queue(list):
             self.moment_index[q] = idx + 1
 
     def insert(self, pos, gate: gates.Gate):
+        """Enhanced by Michael Tsesmelis (ACSE-mct22)"""
         super().insert(pos, gate)
         if gate.qubits:
             qubits = gate.qubits
@@ -129,6 +132,7 @@ class _Queue(list):
             self.moment_index[q] = idx + 1
 
     def remove(self, gate):
+        """Enhanced by Michael Tsesmelis (ACSE-mct22)"""
         pos = super().index(gate)
         super().remove(gate)
 
@@ -586,6 +590,8 @@ class Circuit:
     def add(self, gate, position=-1):
         """Add a gate to a given queue.
 
+        Enhanced by Michael Tsesmelis (ACSE-mct22)
+
         Args:
             gate (:class:`qibo.gates.Gate`): the gate object to add.
                 See :ref:`Gates` for a list of available gates.
@@ -708,6 +714,20 @@ class Circuit:
                         self.trainable_gates.append(gate)
 
     def remove(self, gate, replacement_gates=[]):
+        """Remove and replace a gate from given queue.
+
+        Developed by Michael Tsesmelis (ACSE-mct22)
+
+        Args:
+            gate (:class:`qibo.gates.Gate`): the gate object to add.
+                See :ref:`Gates` for a list of available gates.
+                `gate` can also be an iterable or generator of gates.
+                In this case all gates in the iterable will be added in the
+                circuit.
+            replacement_gates (list of (:class:`qibo.gates.Gate`)): gates to
+                replace with
+        """
+
         if isinstance(gate, list):
             for g in gate:
                 self.remove(g)

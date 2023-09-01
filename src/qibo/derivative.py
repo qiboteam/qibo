@@ -29,6 +29,8 @@ def execute_circuit(
     """
     Probabilistic circuit execution with possibilities for error mitigation
 
+    Developed by Michael Tsesmelis (ACSE-mct22)
+
     Args:
         backend (:class:`qibo.backends.abstract.Backend`): backend to execute circuit on
         c (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
@@ -91,6 +93,8 @@ def execute_circuit(
 def create_hamiltonian(qubit=0, nqubits=1, backend=None):
     """Precomputes Hamiltonian.
 
+    Enhanced by Michael Tsesmelis (ACSE-mct22)
+
     Args:
         nqubits (int): number of qubits.
         z_qubit (int): qubit where the Z measurement is applied, must be z_qubit < nqubits
@@ -99,7 +103,7 @@ def create_hamiltonian(qubit=0, nqubits=1, backend=None):
             Default is ``None``.
 
     Returns:
-        (:class:`qibo.hamiltonians.Hamiltonian`: hamiltonian object.
+        (:class:`qibo.hamiltonians.Hamiltonian`): hamiltonian object.
     """
     eye = matrices.I
     if qubit == 0:
@@ -123,7 +127,10 @@ def create_hamiltonian(qubit=0, nqubits=1, backend=None):
 
 
 def error_mitigation(circuit, nqubits, hamiltonian, backend, noise_model, nshots):
-    """Fit CDR regression model to noisy states"""
+    """Fit CDR regression model to noisy states
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+    """
 
     calibration = calibration_matrix(
         nqubits=nqubits, noise_model=noise_model, backend=backend, nshots=nshots
@@ -156,6 +163,9 @@ def calculate_circuit_gradients(
 ):
     """
     Full gradient calculation over all circuit parameters, using specific gradient calculation method
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+
     Args:
         circuit: Circuit object whose parameters are trainable
         ham: Hamiltonian applied to final state
@@ -228,7 +238,7 @@ def calculate_circuit_gradients(
                         variable_gate=var_gates[count + ipar],
                         scale_factor=1.0,
                         initial_state=None,
-                        nshots=None,
+                        nshots=nshots,
                     )
 
                 count += gate.nparams
@@ -255,23 +265,22 @@ def calculate_circuit_gradients(
                         variable_gate=var_gates[count + ipar],
                         scale_factor=scaling,
                         initial_state=None,
-                        nshots=None,
+                        nshots=nshots,
                     )
 
                 count += gate.nparams
 
-    """
     # finite differences (central difference)
     else:
-        for ipar in range(optimizer.nparams):
+        for ipar in range(initparams):
             obs_gradients[ipar] = finite_differences(
-                optimizer._circuit,
+                circuit,
                 ham,
                 ipar,
                 initial_state=None,
                 scale_factor=1,
-                nshots=None,
-            )"""
+                nshots=nshots,
+            )
 
     return obs_gradients
 
@@ -304,6 +313,8 @@ def parameter_shift(
     If the PSR is needed to be executed on a real quantum device, it is important
     to set `nshots` to some integer value. This enables the execution on the
     hardware by calling the proper methods.
+
+    Enhanced by Michael Tsesmelis (ACSE-mct22)
 
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
@@ -462,6 +473,8 @@ def finite_differences(
     in the circuit's parameters list. This method can be used only in
     exact simulation mode.
 
+    Enhanced by Michael Tsesmelis (ACSE-mct22)
+
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
         hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): target observable.
@@ -539,6 +552,9 @@ def finite_differences(
 
 def generate_new_stochastic_params(params, s):
     """Generate the three-gate parameters needed for the stochastic parameter-shift rule.
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+
     Args:
         params: first-gate parameters, already known
         s: random initialiser between 0 and 1
@@ -582,6 +598,9 @@ def stochastic_parameter_shift(
     If the SPSR is needed to be executed on a real quantum device, it is important
     to set `nshots` to some integer value. This enables the execution on the
     hardware by calling the proper methods.
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
         hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): target observable.
@@ -728,7 +747,10 @@ def stochastic_parameter_shift(
 
 
 class Node:
-    """Parent class to create gate nodes"""
+    """Parent class to create gate nodes
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+    """
 
     def __init__(self, gate, trainable_params, ID):
         self.gate = gate
@@ -738,7 +760,10 @@ class Node:
 
 
 class ConvergeNode(Node):
-    """Node for two-qubit gates"""
+    """Node for two-qubit gates
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+    """
 
     def __init__(self, gate, trainable_params, ID):
         super().__init__(gate, trainable_params, ID)
@@ -747,7 +772,18 @@ class ConvergeNode(Node):
 
 
 class Graph:
-    """Creates a graph representation of a circuit"""
+    """Creates a graph representation of a circuit
+
+    Currently, only one or two-qubit single-axis rotational gates are accepted.
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+
+    Args:
+        nqubits (int): number of qubits in circuit
+        gates (list of :class:`qibo.gates.Gate`): gate queue of the circuit
+        trainable_params (list): list containing indices in global trainable parameter array of the gate trainable parameters
+        gate_params (list): list of current gate parameters
+    """
 
     def __init__(self, nqubits, gates, trainable_params, gate_params):
         self.gates = gates
@@ -855,6 +891,16 @@ class Graph:
         self.depth = max(depth)
 
     def _determine_basis(self, gate):
+        """Determines in which basis the variance is measured
+
+        Developed by Michael Tsesmelis (ACSE-mct22)
+
+        Args:
+            gate (:class:`qibo.src.gate.Gate`): qibo gate
+
+        Returns
+            (:class:`qibo.src.gate.Gate`) measurement axis as gate
+        """
         gname = gate.name
 
         if gname == "rx":
@@ -865,10 +911,17 @@ class Graph:
             return gates.Z
 
     def update_parameters(self, params):
+        """Updates graph parameters
+
+        Developed by Michael Tsesmelis (ACSE-mct22)
+        """
         self.gate_params = params
 
     def run_layer(self, layer):
         """Runs through one layer of the circuit parameters
+
+        Developed by Michael Tsesmelis (ACSE-mct22)
+
         Args:
             layer: int, layer number N
         Returns:
@@ -937,6 +990,9 @@ class Graph:
 def build_graph(circuit, nparams, nqubits):
     """
     Builds Graph needed for Natural Gradient
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
         nparams (int): number of trainable parameters
@@ -980,6 +1036,8 @@ def generate_fubini(
 ):
     """
     Generates the Fubini-Study metric tensor
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
 
     Args:
         graph (:class:`qibo.derivative.Graph`): graph representation of circuit
@@ -1049,6 +1107,8 @@ def run_subcircuit_measure(
 ):
     """
     Run variance measurement on specific qubit of subcircuit
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
 
     Args:
         c (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.

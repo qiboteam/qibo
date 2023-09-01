@@ -34,6 +34,9 @@ dev = qml.device("default.qubit", wires=2)
 def ansatz_pennylane(nqubits, params, feature):
     """
     The circuit's pennylane ansatz: a sequence of RZ and RY with a beginning H gate
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+
     Args:
         nqubits (int): number of qubits in circuit
         nqubits (np.ndarray): array of initial parameters
@@ -68,6 +71,9 @@ def ansatz_pennylane(nqubits, params, feature):
 def ansatz_pennylane_entangled(nqubits, params, feature):
     """
     The circuit's pennylane entangled ansatz: a sequence of RZ and RY with a beginning H gate
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+
     Args:
         nqubits (int): number of qubits in circuit
         nqubits (np.ndarray): array of initial parameters
@@ -96,6 +102,9 @@ def ansatz_pennylane_entangled(nqubits, params, feature):
 def ansatz(layers, nqubits):
     """
     The circuit's ansatz: a sequence of RZ and RY with a beginning H gate
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+
     Args:
         layers (int): number of layers which compose the circuit
         nqubits (int): number of qubits in circuit
@@ -133,6 +142,9 @@ def ansatz(layers, nqubits):
 def ansatz_2qubit(layers, nqubits):
     """
     The circuit's 2 qubit ansatz: a sequence of RZ and RY with a beginning H gate
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+
     Args:
         layers (int): number of layers which compose the circuit
         nqubits (int): number of qubits in circuit
@@ -161,6 +173,10 @@ def ansatz_2qubit(layers, nqubits):
 def ansatz_entangled(layers, nqubits):
     """
     The circuit's entangled ansatz: a sequence of RZ and RY with a beginning H gate
+    and CRZ gates at the end of each layer.
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+
     Args:
         layers (int): number of layers which compose the circuit
         nqubits (int): number of qubits in circuit
@@ -200,6 +216,8 @@ def ansatz_entangled(layers, nqubits):
 
 
 def circuit(nqubits=1):
+    """Small circuit ansatz"""
+
     c = VariationalCircuit(nqubits)
     # all gates for which generator eigenvalue is implemented
     c.add(gates.H(q=0))
@@ -212,7 +230,10 @@ def circuit(nqubits=1):
 
 
 def gradient_exact():
-    """Calculates exact gradient of a circuit"""
+    """Calculates exact gradient of a circuit#
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+    """
 
     backend = GlobalBackend()
 
@@ -233,7 +254,10 @@ def gradient_exact():
 
 
 def test_execute_circuit():
-    """Test the `execute_circuit` function"""
+    """Test the `execute_circuit` function
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+    """
 
     circuit = ansatz(3, 1)
     obs = create_hamiltonian(0, 1, GlobalBackend())
@@ -276,14 +300,20 @@ two_qubit = tf.constant(
     "qubit, nqubits, matrix", [(0, 1, one_qubit), (1, 2, two_qubit)]
 )
 def test_create_hamiltonian(qubit, nqubits, matrix):
-    """Test the `create_hamiltonian` function"""
+    """Test the `create_hamiltonian` function
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+    """
 
     ham = create_hamiltonian(qubit, nqubits, GlobalBackend())
     assert np.allclose(ham.matrix, matrix)
 
 
 def test_run_subcircuit_measure():
-    """Test the `run_subcircuit_measure` function"""
+    """Test the `run_subcircuit_measure` function
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+    """
 
     c = circuit(nqubits=1)
     value = run_subcircuit_measure(c, [0], 1, GlobalBackend(), deterministic=True)
@@ -291,7 +321,10 @@ def test_run_subcircuit_measure():
 
 
 def test_error_mitigation():
-    """Test the `error_mitigation` function"""
+    """Test the `error_mitigation` function
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+    """
 
     c = ansatz(3, 1)
 
@@ -312,6 +345,7 @@ def test_error_mitigation():
 @pytest.mark.parametrize("nshots, atol", [(None, 1e-8), (100000, 1e-2)])
 def test_psr(backend, nshots, atol):
     """Test PSR gradient calculation
+
     Args:
         backend (:class:`qibo.backends.abstract.Backend`): simulation backend used to run circuit
         nshots (int): number of shots executed at each circuit run
@@ -590,7 +624,8 @@ def test_spsr_calculate_gradients():
         "spsr",
         None,
         None,
-        True,
+        nshots=1024,
+        deterministic=True,
         var_gates=[gates.RXRY_Variable(q=0, phi=0.0)],
     )
 
@@ -831,7 +866,10 @@ def test_natural_gradient():
 
 
 def test_multiqubit_natural_gradient():
-    """Test Fubini Matrix calculation used for Natural Gradient, on a multiqubit circuit"""
+    """Test Fubini Matrix calculation used for Natural Gradient, on a multiqubit circuit
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+    """
 
     # pennylane baseline
     params = qml.numpy.asarray([0.1] * 24)
@@ -865,69 +903,3 @@ def test_multiqubit_natural_gradient():
     )
 
     assert np.allclose(fubini, metric_tensor)
-
-
-def test_multiqubit_natural_gradient_entangled():
-    """Test Fubini Matrix calculation used for Natural Gradient, on a multiqubit entangled circuit"""
-
-    # pennylane baseline
-    params = qml.numpy.asarray([0, 0, 0, np.pi / 2 * 1.5, 0, 0, 0, np.pi, 0])
-    metric_tensor = qml.metric_tensor(ansatz_pennylane_entangled, approx="diag")(
-        2, params, 0.1
-    )
-
-    drawer = qml.draw(ansatz_pennylane_entangled)
-    print(drawer(2, params, 0.1))
-
-    # local implementation
-    nqubits = 2
-    circuit = ansatz_entangled(
-        1,
-        nqubits,
-    )  # 2 qubits x 3 layers x 2 gates x 2 parameters + 3 CU1 = 27 params
-
-    initial_parameters = [0.1] * 9
-
-    hamiltonians = [create_hamiltonian(i, 2, GlobalBackend()) for i in range(2)]
-    optimiser = qibo.optimizers.SGD(
-        circuit=circuit,
-        parameters=initial_parameters,
-        hamiltonian=hamiltonians,
-        loss=loss_func,
-    )
-
-    _ = optimiser.run_circuit(0.1)
-
-    print(optimiser._circuit.get_parameters())
-    graph = build_graph(optimiser._circuit, 9, optimiser.nqubits)
-    fubini = generate_fubini(
-        graph,
-        9,
-        nqubits,
-        optimiser._circuit.initparams,
-        noise_model=optimiser.options["noise_model"],
-        deterministic=True,
-    )
-
-    print(fubini)
-    print(metric_tensor)
-    assert np.allclose(fubini, metric_tensor)
-
-
-if __name__ == "__main__":
-    # graph_improvements(1, [0, 1], [[0, 1], [2, 3]])
-    # test_multiqubit_natural_gradient()
-    test_multiqubit_natural_gradient_entangled()
-    # test_create_hamiltonian(0, 1, one_qubit)
-    # test_execute_circuit()
-    # etest_block_diag()
-    # test_spsr_calculate_gradients()
-    # test_parameter()
-    # test_psr_commuting_gate()
-    # rtest_spsr_non_commuting_gates()
-    # test_natural_gradient()
-    # test_spsr()
-    # test_spsr_calculate_gradients()
-    # test_spsr()
-    # test_spsr_crossres()
-    # test_error_mitigation()

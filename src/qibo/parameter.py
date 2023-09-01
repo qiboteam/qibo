@@ -12,6 +12,8 @@ class Parameter:
     final gate parameter. All possible analytical derivatives of the lambda function are
     calculated at the object initialisation using Sympy.
 
+    Fully developed by Michael Tsesmelis (ACSE-mct22)
+
     Args:
         func (function): lambda function which builds the gate parameter. If both features and trainable parameters
         compose the function, it must be passed by first providing the features and then the parameters, as

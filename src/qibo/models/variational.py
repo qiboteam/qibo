@@ -673,6 +673,8 @@ class VariationalCircuit(Circuit):
     This circuit is symbolic and cannot perform calculations.
     A specific backend has to be used for performing calculations.
 
+    Fully developed by Michael Tsesmelis (ACSE-mct22)
+
     Args:
         nqubits (int): Total number of qubits in the circuit.
         density_matrix (bool): If `True`, the circuit would evolve density matrices.

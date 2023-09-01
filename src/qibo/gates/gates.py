@@ -494,6 +494,8 @@ class Align(Gate):
 class _Rn_(ParametrizedGate):
     """Abstract class for defining the RX, RY and RZ rotations.
 
+    Enhanced by Michael Tsesmelis (ACSE-mct22)
+
     Args:
         q (int): the qubit id number.
         theta (float): the rotation angle.
@@ -743,6 +745,16 @@ class GPI2(ParametrizedGate):
 
 
 class CrossRes_Variable(ParametrizedGate):
+    """Variable part of the Cross-Resonance gate.
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+
+    Args:
+        q (int): qubit index on which the gate acts
+        sign (int): sign multiplier for forward and backward differencing
+        trainable (bool): flag, if set the gate parameters are trainable
+    """
+
     def __init__(self, q, sign, trainable=True):
         super().__init__(trainable)
         self.name = "cross_variable"
@@ -758,6 +770,12 @@ class CrossRes_Variable(ParametrizedGate):
 
 
 class RXRY(ParametrizedGate):
+    r"""Single gate RX=RY rotation of type:
+
+    \exp^{i(30 X + \phi Y)}
+
+    Developed by Michael Tsesmelis (ACSE-mct22)"""
+
     def __init__(self, q, phi, s=1.0, trainable=True):
         super().__init__(trainable)
         self.name = "rxry"
@@ -773,6 +791,8 @@ class RXRY(ParametrizedGate):
 
 
 class RXRY_Variable(ParametrizedGate):
+    """Developed by Michael Tsesmelis (ACSE-mct22)"""
+
     def __init__(self, q, phi, trainable=True):
         super().__init__(trainable)
         self.name = "rxry_variable"
@@ -992,6 +1012,8 @@ class CNOT(Gate):
 
 class CZ(Gate):
     """The Controlled-Phase gate.
+
+    Enhanced by Michael Tsesmelis (ACSE-mct22)
 
     Corresponds to the following unitary matrix
 
@@ -1266,6 +1288,22 @@ class _CUn_(ParametrizedGate):
 
 
 class CrossRes(ParametrizedGate):
+    """Cross-Resonance gate of type:
+
+    \\exp^{-i(\theta_1 X \\otimes \\mathbb{I} + \theta_2 Z \\otimes X + \theta_2 \\mathbb{I} \\otimes X)}
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+
+    Args:
+        q0 (int): control qubit index
+        q1 (int): target qubit index
+        s (float): stochastic paramter for stochastic parameter shift
+        theta1 (float): first parameter
+        theta2 (float): second parameter
+        theta3 (float): third parameter
+        trainable (bool): flag, if set the gate parameters are trainable
+    """
+
     def __init__(self, q0, q1, s, theta1, theta2, theta3, trainable=True):
         super().__init__(trainable)
         self.name = "crossres"
@@ -1300,6 +1338,8 @@ class CU1(_CUn_):
         \\end{pmatrix}
 
     Note that this differs from the :class:`qibo.gates.CRZ` gate.
+
+    Enhanced by Michael Tsesmelis (ACSE-mct22)
 
     Args:
         q0 (int): the control qubit id number.

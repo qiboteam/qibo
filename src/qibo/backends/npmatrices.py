@@ -91,11 +91,15 @@ class NumpyMatrices:
         ) / self.np.sqrt(2)
 
     def RXRY_Variable(self, phi):
+        """Developed by Michael Tsesmelis (ACSE-mct22)"""
+
         Y = np.array([[0, -1j], [1j, 0]])
 
         return scipy.linalg.expm(1j * phi * Y)
 
     def RXRY(self, phi, s):
+        """Developed by Michael Tsesmelis (ACSE-mct22)"""
+
         X = np.array([[0, 1], [1, 0]])
         Y = np.array([[0, -1j], [1j, 0.0]])
         matrix = scipy.linalg.expm(-1j * s * (0.3 * X - phi * Y))
@@ -103,11 +107,15 @@ class NumpyMatrices:
         return matrix
 
     def CrossRes_Variable(self, sign):
+        """Developed by Michael Tsesmelis (ACSE-mct22)"""
+
         X = np.array([[0, 1], [1, 0]])
 
         return scipy.linalg.expm(-1j * sign * np.pi / 4 * X)
 
     def generate_crossres(self, theta1, theta2, theta3):
+        """Developed by Michael Tsesmelis (ACSE-mct22)"""
+
         I = np.eye(2)
         X = np.array([[0, 1], [1, 0]])
         Z = np.array([[1, 0], [0, -1]])
@@ -121,6 +129,8 @@ class NumpyMatrices:
         return G
 
     def CrossRes(self, s, theta1, theta2, theta3):
+        """Developed by Michael Tsesmelis (ACSE-mct22)"""
+
         G = self.generate_crossres(theta1, theta2, theta3)
         return scipy.linalg.expm(-1j * s * G)
 

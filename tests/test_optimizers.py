@@ -4,13 +4,16 @@ import qibo
 from qibo.backends import GlobalBackend
 from qibo.derivative import create_hamiltonian
 from qibo.models.variational import VariationalCircuit
-from qibo.optimizers import CMAES, SGD, BasinHopping, Newtonian, ParallelBFGS
+from qibo.optimizers import CMAES, SGD, BasinHopping, ParallelBFGS, Powell
 from qibo.parameter import Parameter
 
 
 def ansatz(layers, nqubits, theta=0):
     """
     The circuit's ansatz: a sequence of RZ and RY with a beginning H gate
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+
     Args:
         layers (int): number of layers which compose the circuit
         nqubits (int): number of qubits in circuit
@@ -33,7 +36,10 @@ def ansatz(layers, nqubits, theta=0):
 
 
 def loss_func_1qubit(ypred, ytrue):
-    """Simple Least-Squared Errors loss function"""
+    """Simple Least-Squared Errors loss function
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+    """
 
     loss = np.sum(np.square(ytrue - ypred))
 
@@ -41,7 +47,10 @@ def loss_func_1qubit(ypred, ytrue):
 
 
 def test_sgd_optimizer():
-    """Test single qubit SGD optimizer"""
+    """Test single qubit SGD optimizer
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+    """
 
     circuit = ansatz(
         3,
@@ -68,7 +77,10 @@ def test_sgd_optimizer():
 
 
 def loss_func_2qubit(ypred, ytrue):
-    """Simple Least-Squares Error for 2 qubits"""
+    """Simple Least-Squares Error for 2 qubits
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+    """
 
     loss = np.sum(np.square(ytrue - ypred))
 
@@ -76,7 +88,10 @@ def loss_func_2qubit(ypred, ytrue):
 
 
 def test_multiqubit_sgd_optimizer():
-    """Test 2-qubit, 2-hamiltonian ansatz with SGD Optimiser"""
+    """Test 2-qubit, 2-hamiltonian ansatz with SGD Optimiser
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+    """
 
     nqubits = 2
     layers = 3
@@ -129,7 +144,10 @@ def test_multiqubit_sgd_optimizer():
 
 
 def test_sgd_methods():
-    """Test built-in SGD functions"""
+    """Test built-in SGD functions
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+    """
 
     nqubits = 2
     layers = 3
@@ -210,7 +228,10 @@ def test_sgd_methods():
 
 
 def black_box_loss(params, circuit, hamiltonian):
-    """Simple black-box optimizer loss function"""
+    """Simple black-box optimizer loss function
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+    """
 
     circuit.set_parameters(params)
     state = circuit().state()
@@ -221,7 +242,10 @@ def black_box_loss(params, circuit, hamiltonian):
 
 
 def test_cma_optimizer():
-    """Test CMA global optimizer"""
+    """Test CMA global optimizer
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+    """
 
     circuit = ansatz(3, 1)
 
@@ -241,8 +265,11 @@ def test_cma_optimizer():
     assert fbest < 1e-3
 
 
-def test_newtonian_optimizer():
-    """Test Newtonian optimizer"""
+def test_powell_optimizer():
+    """Test Powell optimizer
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+    """
 
     circuit = ansatz(3, 1)
 
@@ -250,7 +277,7 @@ def test_newtonian_optimizer():
 
     parameters = np.array([0.1] * 6)
 
-    optimizer = Newtonian(
+    optimizer = Powell(
         initial_parameters=parameters, args=(circuit, hamiltonian), loss=black_box_loss
     )
 
@@ -260,7 +287,10 @@ def test_newtonian_optimizer():
 
 
 def test_parallel_bfgs_optimizer():
-    """Test parallel BFGS optimizer"""
+    """Test parallel BFGS optimizer
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+    """
 
     circuit = ansatz(3, 1)
 
@@ -278,7 +308,10 @@ def test_parallel_bfgs_optimizer():
 
 
 def test_basin_hopping_optimizer():
-    """Test BasinHopping optimizer"""
+    """Test BasinHopping optimizer
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+    """
 
     circuit = ansatz(3, 1)
 
@@ -298,7 +331,10 @@ def test_basin_hopping_optimizer():
 
 
 def test_single_output_optimizer():
-    """Test SGD with single label, no feature"""
+    """Test SGD with single label, no feature
+
+    Developed by Michael Tsesmelis (ACSE-mct22)
+    """
 
     c = VariationalCircuit(1, density_matrix=True)
     c.add(qibo.gates.RX(q=0, theta=30.0))
@@ -312,15 +348,3 @@ def test_single_output_optimizer():
     losses = sgd.fit(y=np.array([0.3]))
 
     assert np.allclose(losses, [0.1058, 0.0630, 0.0062, 0.00060], atol=0.01)
-
-
-if __name__ == "__main__":
-    # test_parallel_bfgs_optimizer()
-    # test_newtonian_optimizer()
-    # test_multiqubit_sgd_optimizer()
-    # test_sgd_optimizer()
-    # test_sgd_methods()
-    test_single_output_optimizer()
-    # test_variational_circuit()
-    # test_basin_hopping_optimizer()
-    # test_cma_optimizer()
