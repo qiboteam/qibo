@@ -719,7 +719,7 @@ class VariationalCircuit(Circuit):
         if self._check_type(params, tuple):
             params = np.array([val for t in params for val in t])
 
-        if self._check_type(params, float):
+        if self._check_type(params, (float, int)):
             params = np.array(params)
 
         return params

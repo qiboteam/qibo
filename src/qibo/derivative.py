@@ -272,15 +272,33 @@ def calculate_circuit_gradients(
 
     # finite differences (central difference)
     else:
-        for ipar in range(initparams):
-            obs_gradients[ipar] = finite_differences(
-                circuit,
-                ham,
-                ipar,
-                initial_state=None,
-                scale_factor=1,
-                nshots=nshots,
-            )
+        if isinstance(initparams, np.ndarray):
+            for ipar in range(nparams):
+                obs_gradients[ipar] = finite_differences(
+                    circuit,
+                    ham,
+                    ipar,
+                    initial_state=None,
+                    scale_factor=1.0,
+                    nshots=nshots,
+                )
+
+        else:
+            count = 0
+            for ipar, Param in enumerate(initparams):
+                scaling = []
+                for nparam in range(Param.nparams):
+                    scaling.append(Param.get_partial_derivative(Param.nfeat + nparam))
+
+                obs_gradients[count : count + len(scaling)] = finite_differences(
+                    circuit,
+                    ham,
+                    ipar,
+                    initial_state=None,
+                    scale_factor=np.array(scaling),
+                    nshots=nshots,
+                )
+                count += len(scaling)
 
     return obs_gradients
 
@@ -463,6 +481,7 @@ def finite_differences(
     hamiltonian,
     parameter_index,
     initial_state=None,
+    scale_factor=1.0,
     step_size=1e-1,
     nshots=None,
 ):
@@ -547,7 +566,7 @@ def finite_differences(
 
     result = (np.real(forward) - np.real(backward)) / (2 * step_size)
 
-    return result
+    return result * scale_factor
 
 
 def generate_new_stochastic_params(params, s):
