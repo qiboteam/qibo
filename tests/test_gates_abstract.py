@@ -222,7 +222,7 @@ def test_pauli_noise_channel_init(backend):
     assert gate.target_qubits == (0,)
     for g, p in zip(gate.gates, [matrices.X, matrices.Y, matrices.Z]):
         p = backend.cast(p, dtype=p.dtype)
-        backend.assert_allclose(g.asmatrix(backend), p, atol=PRECISION_TOL)
+        backend.assert_allclose(g.matrix(backend), p, atol=PRECISION_TOL)
 
 
 def test_reset_channel_init():

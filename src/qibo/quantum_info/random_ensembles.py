@@ -4,11 +4,12 @@ import warnings
 from typing import Optional, Union
 
 import numpy as np
+from scipy import stats
+from scipy.linalg import expm
 
-from qibo import gates
+from qibo import Circuit, gates
 from qibo.backends import GlobalBackend, NumpyBackend
 from qibo.config import MAX_ITERATIONS, PRECISION_TOL, raise_error
-from qibo.models import Circuit
 from qibo.quantum_info.basis import comp_basis_to_pauli
 from qibo.quantum_info.superoperator_transformations import (
     choi_to_chi,
@@ -149,7 +150,7 @@ def random_hermitian(
 
 
 def random_unitary(dims: int, measure: Optional[str] = None, seed=None, backend=None):
-    """Returns a random Unitary operator :math:`U`,, i.e.
+    """Returns a random Unitary operator :math:`U`, i.e.
     a random operator such that :math:`U^{-1} = U^{\\dagger}`.
 
     Args:
@@ -184,19 +185,16 @@ def random_unitary(dims: int, measure: Optional[str] = None, seed=None, backend=
         backend = GlobalBackend()
 
     if measure == "haar":
-        gaussian_matrix = random_gaussian_matrix(dims, dims, seed=seed, backend=backend)
-        Q, R = np.linalg.qr(gaussian_matrix)
+        unitary = random_gaussian_matrix(dims, dims, seed=seed, backend=backend)
+        Q, R = np.linalg.qr(unitary)
         D = np.diag(R)
         D = D / np.abs(D)
         R = np.diag(D)
         unitary = np.dot(Q, R)
     elif measure is None:
-        from scipy.linalg import expm
-
         H = random_hermitian(dims, seed=seed, backend=NumpyBackend())
         unitary = expm(-1.0j * H / 2)
-
-    unitary = backend.cast(unitary, dtype=unitary.dtype)
+        unitary = backend.cast(unitary, dtype=unitary.dtype)
 
     return unitary
 
@@ -352,10 +350,10 @@ def random_statevector(dims: int, haar: bool = False, seed=None, backend=None):
     )
 
     if not haar:
-        probabilities = local_state.random(dims)
-        probabilities = probabilities / np.sum(probabilities)
-        phases = 2 * np.pi * local_state.random(dims)
-        state = np.sqrt(probabilities) * np.exp(1.0j * phases)
+        # sample real and imag parts of complex amplitude in [-1, 1]
+        state = 1j * (2 * local_state.random(dims) - 1)
+        state += 2 * local_state.random(dims) - 1
+        state /= np.linalg.norm(state)
         state = backend.cast(state, dtype=state.dtype)
     else:
         # select a random column of a haar random unitary
@@ -375,7 +373,18 @@ def random_density_matrix(
     seed=None,
     backend=None,
 ):
-    """Creates a random density matrix :math:`\\rho`.
+    """Creates a random density matrix :math:`\\rho`. If ``pure=True``,
+
+    .. math::
+        \\rho = \\ketbra{\\psi}{\\psi} \\, ,
+
+    where :math:`\\ket{\\psi}` is a :func:`qibo.quantum_info.random_statevector`.
+    If ``pure=False``, then
+
+    .. math::
+        \\rho = \\sum_{k} \\, p_{k} \\, \\ketbra{\\psi_{k}}{\\psi_{k}} \\, .
+
+    is a mixed state.
 
     Args:
         dims (int): dimension of the matrix.
@@ -749,7 +758,7 @@ def random_pauli(
     else:
         gate_grid = np.array(
             [
-                [subset[column_item](qubit).matrix for column_item in row]
+                [subset[column_item](qubit).matrix(backend) for column_item in row]
                 for qubit, row in zip(qubits, indexes)
             ]
         )

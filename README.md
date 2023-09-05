@@ -1,8 +1,7 @@
-![](doc/source/qibo_logo.svg)
+![Logo](https://github.com/qiboteam/qibo/blob/master/doc/source/_static/qibo_logo_dark.svg)
 
 ![Tests](https://github.com/qiboteam/qibo/workflows/Tests/badge.svg)
 [![codecov](https://codecov.io/gh/qiboteam/qibo/branch/master/graph/badge.svg?token=1EKZKVEVX0)](https://codecov.io/gh/qiboteam/qibo)
-[![Documentation Status](https://readthedocs.org/projects/qibo/badge/?version=latest)](https://qibo.readthedocs.io/en/latest/?badge=latest)
 [![DOI](https://zenodo.org/badge/241307936.svg)](https://zenodo.org/badge/latestdoi/241307936)
 
 Qibo is an open-source full stack API for quantum simulation and quantum hardware control.
@@ -34,8 +33,7 @@ Here another example with more gates and shots simulation:
 
 ```python
 import numpy as np
-from qibo.models import Circuit
-from qibo import gates
+from qibo import Circuit, gates
 
 c = Circuit(2)
 c.add(gates.X(0))
@@ -58,6 +56,7 @@ If you use the package please refer to [the documentation](https://qibo.science/
 - Quantum Research Center, Technology Innovation Institute (TII), United Arab Emirates
 - Università degli Studi di Milano (UNIMI), Italy.
 - Istituto Nazionale di Fisica Nucleare (INFN), Italy.
+- Università degli Studi di Milano-Bicocca (UNIMIB), Italy.
 - European Organization for Nuclear research (CERN), Switzerland.
 - Universitat de Barcelona (UB), Spain.
 - Barcelona Supercomputing Center (BSC), Spain.

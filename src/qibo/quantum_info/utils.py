@@ -43,16 +43,16 @@ def hamming_weight(bitstring, return_indexes: bool = False):
 
 def hadamard_transform(array, implementation: str = "fast", backend=None):
     """Calculates the (fast) Hadamard Transform :math:`\\text{HT}` of a
-    :math:`2^{n}`-dimensional vector or :math:`2^{n} \times 2^{n}` matrix :math:`A`,
+    :math:`2^{n}`-dimensional vector or :math:`2^{n} \\times 2^{n}` matrix :math:`A`,
     where :math:`n` is the number of qubits in the system. If :math:`A` is a vector, then
 
     .. math::
-        \\text{HT}(A) = \\frac{1}{2**{n / 2}} \\, H^{\\otimes n} \\, A \\,
+        \\text{HT}(A) = \\frac{1}{2^{n / 2}} \\, H^{\\otimes n} \\, A \\,
 
     where :math:`H` is the :class:`qibo.gates.H` gate. If :math:`A` is a matrix, then
 
     .. math::
-        \\text{HT}(A) = \\frac{1}{2**{n}} \\, H^{\\otimes n} \\, A \\, H^{\\otimes n} \\, .
+        \\text{HT}(A) = \\frac{1}{2^{n}} \\, H^{\\otimes n} \\, A \\, H^{\\otimes n} \\, .
 
     Args:
         array (ndarray): array or matrix.

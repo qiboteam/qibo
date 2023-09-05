@@ -244,16 +244,16 @@ class TensorflowBackend(NumpyBackend):
         state = self.tf.tensor_scatter_nd_update(state, idx, update)
         return state
 
-    def asmatrix(self, gate):
-        npmatrix = super().asmatrix(gate)
+    def matrix(self, gate):
+        npmatrix = super().matrix(gate)
         return self.tf.cast(npmatrix, dtype=self.dtype)
 
-    def asmatrix_parametrized(self, gate):
-        npmatrix = super().asmatrix_parametrized(gate)
+    def matrix_parametrized(self, gate):
+        npmatrix = super().matrix_parametrized(gate)
         return self.tf.cast(npmatrix, dtype=self.dtype)
 
-    def asmatrix_fused(self, gate):
-        npmatrix = super().asmatrix_fused(gate)
+    def matrix_fused(self, gate):
+        npmatrix = super().matrix_fused(gate)
         return self.tf.cast(npmatrix, dtype=self.dtype)
 
     def execute_circuit(

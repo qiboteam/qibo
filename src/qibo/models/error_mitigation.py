@@ -4,8 +4,8 @@ import numpy as np
 from scipy.optimize import curve_fit
 
 from qibo import gates
+from qibo.backends import GlobalBackend
 from qibo.config import raise_error
-from qibo.models import Circuit
 
 
 def get_gammas(c, solve: bool = True):
@@ -133,9 +133,7 @@ def ZNE(
         numpy.ndarray: Estimate of the expected value of ``observable`` in the noise free condition.
     """
 
-    if backend == None:  # pragma: no cover
-        from qibo.backends import GlobalBackend
-
+    if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
     expected_val = []
@@ -169,6 +167,7 @@ def sample_training_circuit(
     circuit,
     replacement_gates: list = None,
     sigma: float = 0.5,
+    backend=None,
 ):
     """Samples a training circuit for CDR by susbtituting some of the non-Clifford gates.
 
@@ -180,10 +179,14 @@ def sample_training_circuit(
             form (``gates.XYZ``, ``kwargs``). For example, phase gates are used by default:
             ``list((RZ, {'theta':0}), (RZ, {'theta':pi/2}), (RZ, {'theta':pi}), (RZ, {'theta':3*pi/2}))``.
         sigma (float, optional): standard devation of the Gaussian distribution used for sampling.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): Calculation engine.
 
     Returns:
         :class:`qibo.models.Circuit`: The sampled circuit.
     """
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
     if replacement_gates is None:
         replacement_gates = [(gates.RZ, {"theta": n * np.pi / 2}) for n in range(4)]
 
@@ -208,7 +211,8 @@ def sample_training_circuit(
         replacement.append(rep_gates)
         distance.append(
             np.linalg.norm(
-                gate.matrix - [rep_gate.matrix for rep_gate in rep_gates],
+                gate.matrix(backend)
+                - [rep_gate.matrix(backend) for rep_gate in rep_gates],
                 ord="fro",
                 axis=(1, 2),
             )
@@ -284,9 +288,7 @@ def CDR(
     """
 
     # Set backend
-    if backend == None:  # pragma: no cover
-        from qibo.backends import GlobalBackend
-
+    if backend is None:  # pragma: no cover
         backend = GlobalBackend()
     # Sample the training set
     training_circuits = [
@@ -387,9 +389,7 @@ def vnCDR(
     """
 
     # Set backend
-    if backend == None:  # pragma: no cover
-        from qibo.backends import GlobalBackend
-
+    if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
     # Sample the training circuits
@@ -477,9 +477,9 @@ def calibration_matrix(nqubits, noise_model=None, nshots: int = 1000, backend=No
             readout mitigation.
     """
 
-    if backend is None:  # pragma: no cover
-        from qibo.backends import GlobalBackend
+    from qibo import Circuit  # pylint: disable=import-outside-toplevel
 
+    if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
     matrix = np.zeros((2**nqubits, 2**nqubits))
@@ -550,12 +550,12 @@ def apply_randomized_readout_mitigation(
             mitigated frequencies.
 
     """
-
-    from qibo.quantum_info import random_pauli
+    from qibo import Circuit  # pylint: disable=import-outside-toplevel
+    from qibo.quantum_info import (  # pylint: disable=import-outside-toplevel
+        random_pauli,
+    )
 
     if backend is None:  # pragma: no cover
-        from qibo.backends import GlobalBackend
-
         backend = GlobalBackend()
 
     qubits = circuit.queue[-1].qubits

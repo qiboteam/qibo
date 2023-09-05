@@ -1,8 +1,7 @@
 import numpy as np
 import pytest
 
-from qibo import gates
-from qibo.models import Circuit
+from qibo import Circuit, gates
 
 
 @pytest.mark.parametrize("nqubits", [2, 3])
@@ -19,7 +18,7 @@ def test_fused_gate_construct_unitary(backend, nqubits):
         toffoli = np.eye(8)
         toffoli[-2:, -2:] = np.array([[0, 1], [1, 0]])
         target_matrix = toffoli @ np.kron(target_matrix, np.eye(2))
-    backend.assert_allclose(gate.asmatrix(backend), target_matrix)
+    backend.assert_allclose(gate.matrix(backend), target_matrix)
 
 
 def test_single_fusion_gate():
@@ -67,7 +66,7 @@ def test_fusedgate_matrix_calculation(backend):
     h = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
     cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
     target_matrix = np.kron(x, x) @ cnot @ np.kron(h, h)
-    fused_matrix = fused_gate.asmatrix(backend)
+    fused_matrix = fused_gate.matrix(backend)
     backend.assert_allclose(fused_matrix, target_matrix)
 
 

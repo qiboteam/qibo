@@ -1,9 +1,9 @@
 """Tests creating abstract Qibo circuits from OpenQASM code."""
+import numpy as np
 import pytest
 
 import qibo
-from qibo import __version__, gates
-from qibo.models import Circuit
+from qibo import Circuit, __version__, gates
 
 
 def assert_strings_equal(a, b):
@@ -364,6 +364,16 @@ cu1(0.567) q[0],q[1];"""
     assert c.queue[0].parameters == (0.1234,)
     assert c.queue[1].parameters == (0.4321,)
     assert c.queue[2].parameters == (0.567,)
+
+
+def test_from_qasm_pi_half():
+    target = """OPENQASM 2.0;
+include "qelib1.inc";
+qreg q[1];
+rx(pi/2) q[0];"""
+    c = Circuit.from_qasm(target)
+    assert c.depth == 1
+    assert c.queue[0].parameters == (np.pi / 2,)
 
 
 def test_from_qasm_invalid_script():

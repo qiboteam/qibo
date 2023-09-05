@@ -434,6 +434,13 @@ Pauli Z (Z)
     :members:
     :member-order: bysource
 
+Square-root of Pauli X (SX)
+"""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.SX
+    :members:
+    :member-order: bysource
+
 S gate (S)
 """""""""""
 
@@ -452,6 +459,13 @@ Identity (I)
 """"""""""""
 
 .. autoclass:: qibo.gates.I
+    :members:
+    :member-order: bysource
+
+Align (A)
+"""""""""
+
+.. autoclass:: qibo.gates.Align
     :members:
     :member-order: bysource
 
@@ -518,6 +532,13 @@ Controlled-phase (CZ)
 """""""""""""""""""""
 
 .. autoclass:: qibo.gates.CZ
+    :members:
+    :member-order: bysource
+
+Controlled-Square Root of X (CSX)
+"""""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.CSX
     :members:
     :member-order: bysource
 
@@ -591,6 +612,13 @@ fSim
     :members:
     :member-order: bysource
 
+Sycamore gate
+"""""""""""""
+
+.. autoclass:: qibo.gates.SYC
+    :members:
+    :member-order: bysource
+
 fSim with general rotation
 """"""""""""""""""""""""""
 
@@ -619,10 +647,38 @@ Parametric ZZ interaction (RZZ)
     :members:
     :member-order: bysource
 
+Parametric ZX interaction (RZX)
+"""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.RZX
+    :members:
+    :member-order: bysource
+
+Parametric XX-YY interaction (RXY)
+""""""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.RXY
+    :members:
+    :member-order: bysource
+
 Givens gate
 """""""""""
 
 .. autoclass:: qibo.gates.GIVENS
+    :members:
+    :member-order: bysource
+
+Reconfigurable Beam Splitter gate (RBS)
+"""""""""""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.RBS
+    :members:
+    :member-order: bysource
+
+Echo Cross-Resonance gate (ECR)
+""""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.ECR
     :members:
     :member-order: bysource
 
@@ -633,6 +689,13 @@ Toffoli
 """""""
 
 .. autoclass:: qibo.gates.TOFFOLI
+    :members:
+    :member-order: bysource
+
+Deutsch
+"""""""
+
+.. autoclass:: qibo.gates.DEUTSCH
     :members:
     :member-order: bysource
 
@@ -734,6 +797,20 @@ Thermal relaxation channel
     :members:
     :member-order: bysource
 
+Amplitude damping channel
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.gates.AmplitudeDampingChannel
+    :members:
+    :member-order: bysource
+
+Phase damping channel
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.gates.PhaseDampingChannel
+    :members:
+    :member-order: bysource
+
 Readout error channel
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -781,11 +858,19 @@ The quantum errors available to build a noise model are the following:
     :members:
     :member-order: bysource
 
+.. autoclass:: qibo.noise.DepolarizingError
+    :members:
+    :member-order: bysource
+
 .. autoclass:: qibo.noise.ThermalRelaxationError
     :members:
     :member-order: bysource
 
-.. autoclass:: qibo.noise.DepolarizingError
+.. autoclass:: qibo.noise.AmplitudeDampingError
+    :members:
+    :member-order: bysource
+
+.. autoclass:: qibo.noise.PhaseDampingError
     :members:
     :member-order: bysource
 
@@ -843,9 +928,9 @@ only when number of qubits is small.
 Alternatively, the user can construct this Hamiltonian using a sparse matrices.
 Sparse matrices from the
 `scipy.sparse <https://docs.scipy.org/doc/scipy/reference/sparse.html>`_
-module are supported by the numpy and qibojit backends while the
-`tf.sparse <https://www.tensorflow.org/api_docs/python/tf/sparse>_` can be
-used for tensorflow. Scipy sparse matrices support algebraic
+module are supported by the ``numpy`` and ``qibojit`` backends while the
+`tensorflow.sparse <https://www.tensorflow.org/api_docs/python/tf/sparse>`_ can be
+used for ``tensorflow``. Scipy sparse matrices support algebraic
 operations (addition, subtraction, scalar multiplication), linear algebra
 operations (eigenvalues, eigenvectors, matrix exponentiation) and
 multiplication to dense or other sparse matrices. All these properties are
@@ -1266,7 +1351,7 @@ Bures distance
 Entanglement fidelity
 """""""""""""""""""""
 
-.. autofunction::qibo.quantum_info.entanglement_fidelity
+.. autofunction:: qibo.quantum_info.entanglement_fidelity
 
 
 Process fidelity

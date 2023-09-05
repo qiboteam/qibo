@@ -193,7 +193,7 @@ class Circuit:
         Example:
             .. code-block:: python
 
-                from qibo.models import Circuit
+                from qibo import Circuit
                 # The system has two GPUs and we would like to use each GPU twice
                 # resulting to four total logical accelerators
                 accelerators = {'/GPU:0': 2, '/GPU:1': 2}
@@ -379,6 +379,10 @@ class Circuit:
         """Creates a new ``Circuit`` that is the inverse of the original.
 
         Inversion is obtained by taking the dagger of all gates in reverse order.
+        If the original circuit contains parametrized gates, dagger will change
+        their parameters. This action is not persistent, so if the parameters
+        are updated afterwards, for example using :meth:`qibo.models.circuit.Circuit.set_parameters`,
+        the action of dagger will be overwritten.
         If the original circuit contains measurement gates, these are included
         in the inverted circuit.
 
@@ -481,8 +485,7 @@ class Circuit:
         Example:
             .. testcode::
 
-                from qibo import gates
-                from qibo.models import Circuit
+                from qibo import Circuit, gates
                 # use density matrices for noise simulation
                 c = Circuit(2, density_matrix=True)
                 c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
@@ -723,8 +726,7 @@ class Circuit:
         Example:
             .. testcode::
 
-                from qibo import gates
-                from qibo.models import Circuit
+                from qibo import Circuit, gates
                 # create a circuit with all parameters set to 0.
                 c = Circuit(3)
                 c.add(gates.RX(0, theta=0))
@@ -843,8 +845,8 @@ class Circuit:
         Example:
             .. testcode::
 
-                from qibo import gates
-                from qibo.models import Circuit
+                from qibo import Circuit, gates
+
                 c = Circuit(3)
                 c.add(gates.H(0))
                 c.add(gates.H(1))
@@ -852,6 +854,7 @@ class Circuit:
                 c.add(gates.CNOT(1, 2))
                 c.add(gates.H(2))
                 c.add(gates.TOFFOLI(0, 1, 2))
+
                 print(c.summary())
                 # Prints
                 '''
@@ -950,7 +953,7 @@ class Circuit:
         for gate in self.queue:
             if not isinstance(gate, (gates.SpecialGate, gates.M)):
                 fgate.append(gate)
-        return fgate.asmatrix(backend)
+        return fgate.matrix(backend)
 
     @property
     def final_state(self):
@@ -1251,13 +1254,16 @@ class Circuit:
                     params = pieces[1].replace(" ", "").split(",")
                     try:
                         for i, p in enumerate(params):
+                            denominator = 1
+                            if "/" in p:
+                                p, denominator = p.split("/")
                             if "pi" in p:
                                 from functools import reduce
                                 from operator import mul
 
                                 s = p.replace("pi", str(np.pi)).split("*")
                                 p = reduce(mul, [float(j) for j in s], 1)
-                            params[i] = float(p)
+                            params[i] = float(p) / float(denominator)
                     except ValueError:
                         raise_error(
                             ValueError,
