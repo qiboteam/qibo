@@ -506,7 +506,6 @@ class _Rn_(ParametrizedGate):
         self.init_kwargs = {"theta": theta, "trainable": trainable}
 
     def _dagger(self) -> "Gate":
-        """"""
         return self.__class__(
             self.target_qubits[0], -self.parameters[0]
         )  # pylint: disable=E1130

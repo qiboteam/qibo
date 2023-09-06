@@ -674,89 +674,65 @@ class VariationalCircuit(Circuit):
 
     Args:
         nqubits (int): Total number of qubits in the circuit.
-        density_matrix (bool): If `True`, the circuit would evolve density matrices.
-            Defaults to ``False``.
         accelerators (dict): Dictionary that maps device names to the number of times each
             device will be used. Defaults to ``None``.
+        density_matrix (bool): If `True`, the circuit would evolve density matrices.
+            Defaults to ``False``.
     """
 
     def __init__(self, nqubits, accelerators=None, density_matrix=False):
         super().__init__(nqubits, accelerators, density_matrix)
 
-    def _get_initparams(self):
+    @property
+    def gate_parameters(self):
         """Retrieve parameter values or objects directly from gates"""
 
-        params = []
+        gate_parameters = []
         for gate in self.queue:
             if isinstance(gate, (gates.ParametrizedGate)):
-                try:
-                    params.append(gate.initparams)
-                except AttributeError:
-                    params.append(gate.parameters)
+                gate_parameters.append(gate.initparams)
 
-        if isinstance(params[0], (float, int, tuple)):
-            params = self.get_parameters()
-            if isinstance(params[0], tuple):
-                params = np.array([val for t in params for val in t])
+        return gate_parameters
 
-        return params
-
-    def _get_train_params(self):
-        # for array
-        if isinstance(self.initparams, np.ndarray):
-            return self.initparams
+    @property
+    def trainable_parameters(self):
+        """Retrieve the full array of trainable parameters"""
 
         # for Parameter objects
-        else:
-            params = []
-            for param_object in self.initparams:
-                # update trainable params and retrieve gate param
-                params.extend(param_object._trainable)
+        trainable_params = []
+        for param_object in self.gate_parameters:
+            # update trainable params and retrieve gate param
+            trainable_params.extend(param_object._trainable)
 
-            return params
+        return trainable_params
 
-    def set_variational_parameters(self, input_params, feature=None):
-        """Retrieve gate parameters based on initial parameter values given to gates
+    def set_variational_parameters(self, trainable_params, feature=[]):
+        """Set new trainable parameters and feature values within the Parameter objects of a circuit
         Args:
             feature (int or list): input feature if embedded in Parameter lambda function
 
         Returns:
             (list or np.ndarray) gate parameters
         """
+        if not isinstance(trainable_params, list):
+            raise_error("Only lists are allowed.")
 
-        # for array
-        if isinstance(self.initparams, np.ndarray):
-            gate_params = self.initparams
+        if isinstance(trainable_params[0], tuple):
+            params = []
+            for tpl in trainable_params:
+                params.extend(tpl)
+
+        if isinstance(trainable_params, list):
+            trainable_params = np.array(trainable_params)
 
         # for Parameter objects
-        else:
-            gate_params = []
-            count = 0
-            for param_object in self.initparams:
-                trainable = input_params[count : count + param_object.nparams]
-                count += param_object.nparams
-                # update trainable params and retrieve gate param
-                print(trainable, feature)
-                param_object.update_parameters(trainable, feature)
-                gate_params.append(param_object())
+        gate_params = []
+        count = 0
+        for param_object in self.gate_parameters:
+            trainable = trainable_params[count : count + param_object.nparams]
+            count += param_object.nparams
+            # update trainable params and retrieve gate param
+            param_object.update_parameters(trainable, feature)
+            gate_params.append(param_object())
 
         self.set_parameters(gate_params)
-
-    def add(self, gate):
-        """Add a gate to a given queue.
-
-        Args:
-            gate (:class:`qibo.gates.Gate`): the gate object to add.
-                See :ref:`Gates` for a list of available gates.
-                `gate` can also be an iterable or generator of gates.
-                In this case all gates in the iterable will be added in the
-                circuit.
-
-        Returns:
-            If the circuit contains measurement gates with ``collapse=True``
-            a ``sympy.Symbol`` that parametrizes the corresponding outcome.
-        """
-        res = super().add(gate)
-        if isinstance(gate, gates.ParametrizedGate):
-            self.initparams = self._get_initparams()
-        return res

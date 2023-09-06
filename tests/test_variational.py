@@ -12,9 +12,11 @@ def test_variational_circuit():
     c.add(gates.RZ(q=0, theta=Parameter(lambda th1, th2: th1**2 + th2, [0.3, 0.1])))
     c.add(gates.M(0))
 
+    c()
+
     # _get_initparams
     true = np.array([0.1, 0.1, 0.4, 0.1, 0.3, 0.1])
-    Params = c._get_initparams()
+    Params = c.gate_parameters
     check = []
     for Param in Params:
         check.extend(Param._trainable)
@@ -22,7 +24,7 @@ def test_variational_circuit():
     assert np.allclose(check, true)
 
     # _get_train_params
-    train_params = c._get_train_params()
+    train_params = c.trainable_parameters
 
     assert np.allclose(check, train_params)
 
@@ -32,3 +34,7 @@ def test_variational_circuit():
     circuit_params = c.get_parameters()
 
     assert circuit_params == true
+
+
+if __name__ == "__main__":
+    test_variational_circuit()
