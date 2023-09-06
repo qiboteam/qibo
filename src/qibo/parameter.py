@@ -12,6 +12,22 @@ class Parameter:
     final gate parameter. All possible analytical derivatives of the lambda function are
     calculated at the object initialisation using Sympy.
 
+    Example:
+        .. code-block:: python
+
+            from qibo.parameter import Parameter
+            param = Parameter(
+                    lambda x, th1, th2, th3: x**2 * th1 + th2 * th3**2,
+                    [1.5, 2.0, 3.0],
+                    feature=[7.0],
+                )
+
+            partial_derivative = param.get_partial_derivative(3)
+
+            param.update_parameters(trainable=[15.0, 10.0, 7.0], feature=[5.0])
+            gate_value = param()
+
+
     Args:
         func (function): lambda function which builds the gate parameter. If both features and trainable parameters
         compose the function, it must be passed by first providing the features and then the parameters, as
@@ -23,12 +39,6 @@ class Parameter:
     def __init__(self, func, trainable, feature=None):
         self._trainable = trainable
         self._feature = feature
-        self.nparams = len(trainable)
-
-        if isinstance(feature, list):
-            self.nfeat = len(feature)
-        else:
-            self.nfeat = 0
 
         # lambda function
         self.lambdaf = func
@@ -39,6 +49,14 @@ class Parameter:
     def __call__(self):
         """Update values with trainable parameter and calculate current gate parameter"""
         return self._apply_func(self.lambdaf)
+
+    @property
+    def nparams(self):
+        return len(self._trainable)
+
+    @property
+    def nfeat(self):
+        return len(self._feature) if isinstance(self._feature, list) else 0
 
     def _check_inputs(self, func):
         """Verifies that the inputs are correct"""

@@ -496,12 +496,20 @@ class _Rn_(ParametrizedGate):
         self.name = None
         self._controlled_gate = None
         self.target_qubits = (q,)
+        self.unitary = True
 
         self.initparams = theta
         if isinstance(theta, Parameter):
             self.parameters = theta()
         else:
             self.parameters = theta
+
+        if (
+            isinstance(self.parameters, (float, int))
+            and (theta % (np.pi / 2)).is_integer()
+        ):
+            self.clifford = True
+
         self.init_args = [q]
         self.init_kwargs = {"theta": theta, "trainable": trainable}
 

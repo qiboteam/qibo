@@ -34,7 +34,3 @@ def test_variational_circuit():
     circuit_params = c.get_parameters()
 
     assert circuit_params == true
-
-
-if __name__ == "__main__":
-    test_variational_circuit()
