@@ -500,16 +500,12 @@ class _Rn_(ParametrizedGate):
 
         self.initparams = theta
         if isinstance(theta, Parameter):
-            self.parameters = theta()
-        else:
-            self.parameters = theta
+            theta = theta()
 
-        if (
-            isinstance(self.parameters, (float, int))
-            and (theta % (np.pi / 2)).is_integer()
-        ):
+        if isinstance(theta, (float, int)) and (theta % (np.pi / 2)).is_integer():
             self.clifford = True
 
+        self.parameters = theta
         self.init_args = [q]
         self.init_kwargs = {"theta": theta, "trainable": trainable}
 

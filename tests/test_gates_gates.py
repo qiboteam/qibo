@@ -1509,3 +1509,9 @@ def test_x_decomposition_execution(backend, target, controls, free, use_toffolis
 
 
 ###############################################################################
+
+
+if __name__ == "__main__":
+    from qibo.backends import GlobalBackend
+
+    test_rx(backend=GlobalBackend(), theta=np.pi / 2)
