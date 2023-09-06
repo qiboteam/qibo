@@ -1,8 +1,4 @@
-import numpy as np
-
 from qibo.config import raise_error
-from qibo.gates import gates
-from qibo.models import Circuit
 from qibo.models.evolution import StateEvolution
 
 
