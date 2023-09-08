@@ -25,6 +25,16 @@ def test_parameter():
     gate_value = param()
     assert gate_value == 865
 
+    # single feature, no list
+    param2 = Parameter(
+        lambda x, th1, th2, th3: x**2 * th1 + th2 * th3**2,
+        [1.5, 2.0, 3.0],
+        feature=[7.0],
+    )
+
+    gate_value2 = param2()
+    assert gate_value2 == 91.5
+
     # multiple features
     param = Parameter(
         lambda x1, x2, th1, th2, th3: x1**2 * th1 + x2 * th2 * th3,
@@ -96,3 +106,14 @@ def test_parameter_errors():
             feature=[7.0],
         )
         param.update_parameters([1, 1, 1], [1, 1])
+
+    with pytest.raises(ValueError) as e_info:
+        param = Parameter(
+            lambda x, th1, th2, th3: x**2 * th1 + th2 * th3**2,
+            [1.5, 2.0],
+            feature=[7.0],
+        )
+
+
+if __name__ == "__main__":
+    test_parameter()

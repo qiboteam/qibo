@@ -3,6 +3,7 @@ import numpy as np
 import pytest
 
 from qibo import gates
+from qibo.parameter import Parameter
 from qibo.quantum_info import random_hermitian, random_statevector, random_unitary
 
 
@@ -252,6 +253,14 @@ def test_rx(backend, theta):
         assert gates.RX(0, theta=theta).clifford
     else:
         assert not gates.RX(0, theta=theta).clifford
+
+    # test Parameter
+    assert (
+        gates.RX(
+            0, theta=Parameter(lambda x, th1: 10 * th1 + x, [0.2], feature=[40])
+        ).init_kwargs["theta"]
+        == 42
+    )
 
 
 @pytest.mark.parametrize("theta", [np.random.rand(), np.pi / 2, -np.pi / 2, np.pi])
