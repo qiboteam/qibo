@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from qibo import gates
 from qibo.models.variational import VariationalCircuit
@@ -34,3 +35,11 @@ def test_variational_circuit():
     circuit_params = c.get_parameters()
 
     assert circuit_params == true
+
+    c.set_variational_parameters([(10.0,), (20,), (100,), (10,), (20,), (20,)])
+    circuit_params = c.get_parameters()
+
+    assert circuit_params == true
+
+    with pytest.raises(ValueError) as e_info:
+        c.set_variational_parameters((10.0, 20, 100, 10, 20, 20))

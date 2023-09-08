@@ -715,7 +715,7 @@ class VariationalCircuit(Circuit):
             (list or np.ndarray) gate parameters
         """
         if not isinstance(trainable_params, list):
-            raise_error("Only lists are allowed.")
+            raise_error(ValueError, "Only lists are allowed.")
 
         if isinstance(trainable_params[0], tuple):
             params = []
