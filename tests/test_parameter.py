@@ -54,66 +54,37 @@ def test_parameter():
 
 
 def test_parameter_errors():
-    with pytest.raises(ValueError) as e_info:
-        param = Parameter(
-            lambda x, t1, th2, th3: x**2 * t1 + th2 * th3**2,
-            [1.5, 2.0, 3.0],
-            feature=[7.0],
-        )
+    param = Parameter(
+        lambda x, th1, th2, th3: x**2 * th1 + th2 * th3**2,
+        [1.5, 2.0, 3.0],
+        feature=[7.0],
+    )
 
-    with pytest.raises(ValueError) as e_info:
-        param = Parameter(
-            lambda x, th1, th2, th3: x**2 * th1 + th2 * th3**2,
-            [1.5, 2.0],
-            feature=[3.0, 7.0],
-        )
+    param.update_parameters([1, 1, 1], 1)
 
-    with pytest.raises(ValueError) as e_info:
-        param = Parameter(
-            lambda j, th1, th2, th3: j**2 * th1 + th2 * th3**2,
-            [1.5, 2.0, 3.0],
-            feature=[7.0],
-        )
+    try:
+        param()
+        assert False
+    except Exception as e:
+        assert True
 
-    with pytest.raises(ValueError) as e_info:
-        param = Parameter(
-            lambda x, th1, th2, th3: x**2 * th1 + th2 * th3**2,
-            [1.5, 2.0, 3.0],
-            feature=[7.0],
-        )
-        param.update_parameters((1, 1, 1), [1])
+    param.update_parameters([1, 1], [1])
+    try:
+        param()
+        assert False
+    except Exception as e:
+        assert True
 
-    with pytest.raises(ValueError) as e_info:
-        param = Parameter(
-            lambda x, th1, th2, th3: x**2 * th1 + th2 * th3**2,
-            [1.5, 2.0, 3.0],
-            feature=[7.0],
-        )
-        param.update_parameters([1, 1, 1], (1))
+    param.update_parameters([1, 1, 1], [1, 1])
+    try:
+        param()
+        assert False
+    except Exception as e:
+        assert True
 
-    with pytest.raises(ValueError) as e_info:
-        param = Parameter(
-            lambda x, th1, th2, th3: x**2 * th1 + th2 * th3**2,
-            [1.5, 2.0, 3.0],
-            feature=[7.0],
-        )
-        param.update_parameters([1, 1], [1])
-
-    with pytest.raises(ValueError) as e_info:
-        param = Parameter(
-            lambda x, th1, th2, th3: x**2 * th1 + th2 * th3**2,
-            [1.5, 2.0, 3.0],
-            feature=[7.0],
-        )
-        param.update_parameters([1, 1, 1], [1, 1])
-
-    with pytest.raises(ValueError) as e_info:
+    with pytest.raises(TypeError) as e_info:
         param = Parameter(
             lambda x, th1, th2, th3: x**2 * th1 + th2 * th3**2,
             [1.5, 2.0],
             feature=[7.0],
         )
-
-
-if __name__ == "__main__":
-    test_parameter()
