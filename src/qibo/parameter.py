@@ -88,22 +88,23 @@ class Parameter:
 
         return derivatives
 
-    def gettrainable(self):
+    @property
+    def trainable(self):
+        """I'm the trainable parameters property."""
         return self._trainable
 
-    def settrainable(self, value):
+    @trainable.setter
+    def trainable(self, value):
         self._trainable = value
 
-    def getfeatures(self):
+    @property
+    def features(self):
+        """I'm the features property."""
         return self._features
 
-    def setfeatures(self, value):
+    @features.setter
+    def features(self, value):
         self._features = value if not self._nofeatures else None
-
-    trainable = property(
-        gettrainable, settrainable, doc="I'm the trainable parameters property."
-    )
-    features = property(getfeatures, setfeatures, doc="I'm the features property.")
 
     def trainable_parameter_indices(self, start_index):
         """Return list of respective indices of trainable parameters within

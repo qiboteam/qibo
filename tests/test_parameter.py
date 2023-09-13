@@ -93,3 +93,7 @@ def test_parameter_errors():
         assert False
     except Exception as e:
         assert True
+
+
+if __name__ == "__main__":
+    test_parameter()
