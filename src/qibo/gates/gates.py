@@ -2,100 +2,10 @@ import math
 from typing import List
 
 import numpy as np
-import sympy as sp
 
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate, ParametrizedGate
-
-
-class Parameter:
-    """Object which allows for variational gate parameters. Several trainable parameter
-    and possibly features are linked through a lambda function which returns the
-    final gate parameter
-
-    Args:
-        func (function): lambda function describing the gate parameter
-        trainable (list or np.ndarray): array with initial trainable parameters theta
-        feature (list or np.ndarray): array containing possible input features x
-    """
-
-    def __init__(self, func, trainable, feature=None):
-        self._trainable = trainable
-        self._feature = feature
-        self.nparams = len(trainable)
-
-        if isinstance(feature, list):
-            self.nfeat = len(feature)
-        else:
-            self.nfeat = 0
-        self.lambdaf = func
-        self.derivatives = self.calculate_derivatives()
-
-    def _apply_func(self, function, fixed_params=None):
-        """Applies lambda function and returns final gate parameter"""
-        params = []
-        if self._feature is not None:
-            if isinstance(self._feature, list):
-                params.extend(self._feature)
-            else:
-                params.append(self._feature)
-        if fixed_params:
-            params.extend(fixed_params)
-        else:
-            params.extend(self._trainable)
-        return float(function(*params))
-
-    def update_parameters(self, trainable=None, feature=None):
-        """Update gate trainable parameter and feature values"""
-        if not isinstance(trainable, (list, np.ndarray)):
-            raise_error(
-                ValueError, "Trainable parameters must be given as list or numpy array"
-            )
-
-        if not isinstance(trainable, (list, np.ndarray)):
-            raise_error(ValueError, "Features must be given as list or numpy array")
-
-        if trainable is not None:
-            self._trainable = trainable
-        if feature and self._feature:
-            self._feature = feature
-
-    def get_gate_parameters(self):
-        """Update values with trainable parameter and calculate current gate parameter"""
-        return self._apply_func(self.lambdaf)
-
-    def get_indices(self, start_index):
-        """Return list of respective indices of trainable parameters within
-        the optimizer's trainable parameter list"""
-        return [start_index + i for i in range(self.nparams)]
-
-    def get_fixed_part(self, trainable_idx):
-        """Retrieve parameter constant unaffected by a specific trainable parameter"""
-        params = self._trainable.copy()
-        params[trainable_idx] = 0.0
-        return self._apply_func(self.lambdaf, fixed_params=params)
-
-    def calculate_derivatives(self):
-        """Calculates derivatives w.r.t to all trainable parameters"""
-        vars = []
-        for i in range(self.nfeat):
-            vars.append(sp.Symbol(f"x{i}"))
-        for i in range(self.nparams):
-            vars.append(sp.Symbol(f"th{i}"))
-
-        expr = sp.sympify(self.lambdaf(*vars))
-
-        derivatives = []
-        for i in range(self.nfeat, len(vars)):
-            derivative_expr = sp.diff(expr, vars[i])
-            derivatives.append(sp.lambdify(vars, derivative_expr))
-
-        return derivatives
-
-    def get_scaling_factor(self, trainable_idx):
-        """Get derivative w.r.t a trainable parameter"""
-        deriv = self.derivatives[trainable_idx]
-        return self._apply_func(deriv)
+from qibo.parameter import Parameter
 
 
 class H(Gate):
@@ -586,12 +496,16 @@ class _Rn_(ParametrizedGate):
         self.name = None
         self._controlled_gate = None
         self.target_qubits = (q,)
+        self.unitary = True
 
         self.initparams = theta
         if isinstance(theta, Parameter):
-            self.parameters = theta.get_gate_parameters()
-        else:
-            self.parameters = theta
+            theta = theta()
+
+        if isinstance(theta, (float, int)) and (theta % (np.pi / 2)).is_integer():
+            self.clifford = True
+
+        self.parameters = theta
         self.init_args = [q]
         self.init_kwargs = {"theta": theta, "trainable": trainable}
 
