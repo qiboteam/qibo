@@ -15,14 +15,14 @@ class Parameter:
         from qibo.parameter import Parameter
         param = Parameter(
                 lambda x, th1, th2, th3: x**2 * th1 + th2 * th3**2,
-                [1.5, 2.0, 3.0],
-                feature=[7.0],
+                features=[7.0],
+                trainable=[1.5, 2.0, 3.0],
             )
 
         partial_derivative = param.get_partial_derivative(3)
 
         param.update_parameters(trainable=[15.0, 10.0, 7.0], feature=[5.0])
-        gate_value = param()
+        param_value = param()
 
 
     Args:
