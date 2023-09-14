@@ -257,7 +257,10 @@ def test_rx(backend, theta):
     # test Parameter
     assert (
         gates.RX(
-            0, theta=Parameter(lambda x, th1: 10 * th1 + x, [0.2], feature=[40])
+            0,
+            theta=Parameter(
+                lambda x, th1: 10 * th1 + x, trainable=[0.2], features=[40]
+            ),
         ).init_kwargs["theta"]
         == 42
     )

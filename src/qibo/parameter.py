@@ -5,7 +5,7 @@ from qibo.config import raise_error
 
 
 class Parameter:
-    """Object which allows for variational gate parameters. Several trainable parameter
+    """Object which allows for variational gate parameters. Several trainable parameters
     and possibly features are linked through a lambda function which returns the
     final gate parameter. All possible analytical derivatives of the lambda function are
     calculated at the object initialisation using Sympy.
@@ -30,12 +30,14 @@ class Parameter:
         compose the function, it must be passed by first providing the features and then the parameters, as
         described in the code example above.
         trainable (list or np.ndarray): array with initial trainable parameters theta
-        feature (list or np.ndarray): array containing possible input features x
+        features (list or np.ndarray): array containing possible input features x
+        nofeatures (bool): flag to explicitly ban the updating of the features. This simplifies the task of updating Parameter objects simultaneously when some have embedded features and some do not.
     """
 
-    def __init__(self, func, trainable, feature=None):
+    def __init__(self, func, features=None, trainable=None, nofeatures=False):
         self._trainable = trainable
-        self._feature = feature
+        self._features = features
+        self._nofeatures = nofeatures
 
         # lambda function
         self.lambdaf = func
@@ -48,21 +50,32 @@ class Parameter:
 
     @property
     def nparams(self):
-        return len(self._trainable)
+        """Returns the number of trainable parameters"""
+        try:
+            return len(self._trainable)
+        except TypeError:
+            return 0
 
     @property
     def nfeat(self):
-        return len(self._feature) if isinstance(self._feature, list) else 0
+        """Returns the number of features"""
+        return len(self._features) if isinstance(self._features, list) else 0
 
     def _apply_func(self, function, fixed_params=None):
         """Applies lambda function and returns final gate parameter"""
         params = []
-        if self._feature is not None:
-            params.extend(self._feature)
-        if fixed_params:
-            params.extend(fixed_params)
+
+        if self._trainable is None:
+            parameter_count = function.__code__.co_argcount
+            params = [0.0] * parameter_count
+
         else:
-            params.extend(self._trainable)
+            if self._features is not None:
+                params.extend(self._features)
+            if fixed_params is not None:
+                params.extend(fixed_params)
+            else:
+                params.extend(self._trainable)
 
         # run function
         return float(function(*params))
@@ -70,10 +83,8 @@ class Parameter:
     def _calculate_derivatives(self):
         """Calculates derivatives w.r.t to all trainable parameters"""
         vars = []
-        for i in range(self.nfeat):
-            vars.append(sp.Symbol(f"x{i}"))
-        for i in range(self.nparams):
-            vars.append(sp.Symbol(f"th{i}"))
+        for i in range(self.lambdaf.__code__.co_argcount):
+            vars.append(sp.Symbol(f"p{i}"))
 
         expr = sp.sympify(self.lambdaf(*vars))
 
@@ -84,26 +95,36 @@ class Parameter:
 
         return derivatives
 
-    def update_parameters(self, trainable=None, feature=None):
-        """Update gate trainable parameter and feature values"""
-        if trainable is not None:
-            self._trainable = trainable
+    @property
+    def trainable(self):
+        """Trainable parameters property."""
+        return self._trainable
 
-        if feature is not None and self._feature is not None:
-            self._feature = feature
+    @trainable.setter
+    def trainable(self, value):
+        self._trainable = value
 
-    def get_indices(self, start_index):
+    @property
+    def features(self):
+        """Features property."""
+        return self._features
+
+    @features.setter
+    def features(self, value):
+        self._features = value if not self._nofeatures else None
+
+    def trainable_parameter_indices(self, start_index):
         """Return list of respective indices of trainable parameters within
-        a larger trainable parameter list"""
+        the larger trainable parameter list of a circuit for example"""
         return (np.arange(self.nparams) + start_index).tolist()
 
-    def get_fixed_part(self, trainable_idx):
+    def unaffected_by(self, trainable_idx):
         """Retrieve constant term of lambda function with regard to a specific trainable parameter"""
         params = self._trainable.copy()
         params[trainable_idx] = 0.0
         return self._apply_func(self.lambdaf, fixed_params=params)
 
-    def get_partial_derivative(self, trainable_idx):
+    def partial_derivative(self, trainable_idx):
         """Get derivative w.r.t a trainable parameter"""
         deriv = self.derivatives[trainable_idx]
         return self._apply_func(deriv)
