@@ -61,6 +61,10 @@ def test_parameter():
     assert param() == 9.0
     assert param.features == None
 
+    param = Parameter(lambda th1, th2, th3: 3 + th1 + th2 * th3)
+
+    assert param() == 3.0
+
 
 def test_parameter_errors():
     param = Parameter(

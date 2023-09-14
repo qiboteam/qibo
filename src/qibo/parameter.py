@@ -30,7 +30,8 @@ class Parameter:
         compose the function, it must be passed by first providing the features and then the parameters, as
         described in the code example above.
         trainable (list or np.ndarray): array with initial trainable parameters theta
-        feature (list or np.ndarray): array containing possible input features x
+        features (list or np.ndarray): array containing possible input features x
+        nofeatures (bool): flag to explicitly ban the updating of the features. This simplifies the task of updating Parameter objects simultaneously when some have embedded features and some do not.
     """
 
     def __init__(self, func, features=None, trainable=None, nofeatures=False):
@@ -63,12 +64,18 @@ class Parameter:
     def _apply_func(self, function, fixed_params=None):
         """Applies lambda function and returns final gate parameter"""
         params = []
-        if self._features is not None:
-            params.extend(self._features)
-        if fixed_params is not None:
-            params.extend(fixed_params)
+
+        if self._trainable is None:
+            parameter_count = function.__code__.co_argcount
+            params = [0.0] * parameter_count
+
         else:
-            params.extend(self._trainable)
+            if self._features is not None:
+                params.extend(self._features)
+            if fixed_params is not None:
+                params.extend(fixed_params)
+            else:
+                params.extend(self._trainable)
 
         # run function
         return float(function(*params))
@@ -90,7 +97,7 @@ class Parameter:
 
     @property
     def trainable(self):
-        """I'm the trainable parameters property."""
+        """Trainable parameters property."""
         return self._trainable
 
     @trainable.setter
@@ -99,7 +106,7 @@ class Parameter:
 
     @property
     def features(self):
-        """I'm the features property."""
+        """Features property."""
         return self._features
 
     @features.setter
