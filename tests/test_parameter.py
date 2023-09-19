@@ -45,6 +45,8 @@ def test_parameter():
 
     fixed = param.unaffected_by(1)
     assert fixed == 73.5
+    assert param.nparams == 3
+    assert param.nfeat == 2
 
     factor = param.partial_derivative(4)
     assert factor == 8.0
@@ -55,11 +57,18 @@ def test_parameter():
     assert gate_value == 585
 
     param = Parameter(lambda th1, th2, th3: th1 + th2 * th3, nofeatures=True)
+
+    assert param.nparams == 0
+    assert param.nfeat == 0
+
     param.trainable = [1.0, 2.0, 4.0]
     param.features = [22.0]
 
+    assert param.nparams == 3
+    assert param.nfeat == 0
     assert param() == 9.0
     assert param.features == None
+    assert param.trainable == [1.0, 2.0, 4.0]
 
     param = Parameter(lambda th1, th2, th3: 3 + th1 + th2 * th3)
 
@@ -97,7 +106,3 @@ def test_parameter_errors():
         assert False
     except Exception as e:
         assert True
-
-
-if __name__ == "__main__":
-    test_parameter()
