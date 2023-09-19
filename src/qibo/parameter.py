@@ -34,14 +34,20 @@ class Parameter:
         nofeatures (bool): flag to explicitly ban the updating of the features. This simplifies the task of updating Parameter objects simultaneously when some have embedded features and some do not.
     """
 
-    def __init__(self, func, features=None, trainable=None, nofeatures=False):
+    def __init__(self, func, trainable=None, features=None):
         self._trainable = trainable
         self._features = features
-        self._nofeatures = nofeatures
 
+        if self.nfeat + self.nparams != func.__code__.co_argcount:
+            raise_error(
+                TypeError,
+                f"{self.nfeat + self.nparams} parameters are provided, but {func.__code__.co_argcount} are required, please initialize features and trainable according to the defined function.",
+            )
         # lambda function
         self.lambdaf = func
 
+        # calculate derivatives
+        # maybe here use JAX ?
         self.derivatives = self._calculate_derivatives()
 
     def __call__(self):
@@ -60,6 +66,11 @@ class Parameter:
     def nfeat(self):
         """Returns the number of features"""
         return len(self._features) if isinstance(self._features, list) else 0
+
+    @property
+    def ncomponents(self):
+        """Returns the number of elements which compose the Parameter"""
+        return self.nparams + self.nfeat
 
     def _apply_func(self, function, fixed_params=None):
         """Applies lambda function and returns final gate parameter"""
@@ -111,7 +122,7 @@ class Parameter:
 
     @features.setter
     def features(self, value):
-        self._features = value if not self._nofeatures else None
+        self._features = value
 
     def trainable_parameter_indices(self, start_index):
         """Return list of respective indices of trainable parameters within
