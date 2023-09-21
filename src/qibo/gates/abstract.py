@@ -1,4 +1,5 @@
 import collections
+import json
 from typing import List, Sequence, Tuple
 
 import sympy
@@ -49,6 +50,26 @@ class Gate:
         # for distributed circuits
         self.device_gates = set()
         self.original_gate = None
+
+    def toJSON(self):
+        encoded = self.__dict__
+
+        required_fields = ["name", "init_kwargs", "_target_qubits", "_control_qubits"]
+        encoded_simple = {
+            key: value for key, value in encoded.items() if key in required_fields
+        }
+
+        required_fields_init_kwargs = ["theta", "phi", "lam"]
+        encoded_simple["init_kwargs"] = {
+            key: value
+            for key, value in encoded_simple["init_kwargs"].items()
+            if key in required_fields_init_kwargs
+        }
+
+        for value in encoded_simple:
+            if isinstance(encoded[value], set):
+                encoded_simple[value] = list(encoded_simple[value])
+        return json.dumps(encoded_simple)
 
     @property
     def target_qubits(self) -> Tuple[int]:
