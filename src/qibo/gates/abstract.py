@@ -51,7 +51,7 @@ class Gate:
         self.device_gates = set()
         self.original_gate = None
 
-    def toJSON(self):
+    def to_json(self):
         encoded = self.__dict__
 
         required_fields = ["name", "init_kwargs", "_target_qubits", "_control_qubits"]

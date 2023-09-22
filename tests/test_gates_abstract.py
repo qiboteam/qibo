@@ -1,6 +1,7 @@
 """Tests methods defined in `qibo/gates/abstract.py` and `qibo/gates/gates.py`."""
 import numpy as np
 import pytest
+import json
 
 from qibo import gates, matrices
 from qibo.config import PRECISION_TOL
@@ -13,6 +14,19 @@ def test_one_qubit_gates_init(gatename):
     gate = getattr(gates, gatename)(0)
     assert gate.target_qubits == (0,)
 
+@pytest.mark.parametrize(
+    "gatename", ["H", "X", "Y", "Z", "S", "SDG", "T", "TDG", "I", "Align"]
+)
+def test_one_qubit_gates_to_json(gatename):
+    gate = getattr(gates, gatename)(0)
+    
+    json_general = '{"name": {}, "init_kwargs": {}, "_target_qubits": [0], "_control_qubits": []}'
+    
+    json_gate = json.loads(json_general)
+    json_gate["name"] = gate.name
+
+    assert gate.to_json() == json.dumps(json_gate)
+    
 
 @pytest.mark.parametrize(
     "controls,instance", [((1,), "CNOT"), ((1, 2), "TOFFOLI"), ((1, 2, 4), "X")]
@@ -92,6 +106,29 @@ def test_one_qubit_rotations_init(gatename, params):
     assert gate.target_qubits == (0,)
     assert gate.parameters == params
 
+@pytest.mark.parametrize(
+    "gatename,params",
+    [
+        ("RX", (0.1234,)),
+        ("RY", (0.1234,)),
+        ("RZ", (0.1234,)),
+        ("U1", (0.1234,)),
+        ("U2", (0.1234, 0.4321)),
+        ("U3", (0.1234, 0.4321, 0.5678)),
+    ],
+)
+def test_one_qubit_rotations_to_json(gatename, params):
+    gate = getattr(gates, gatename)(0, *params)
+    
+    json_general = '{"name": {}, "init_kwargs": {}, "_target_qubits": [0], "_control_qubits": []}'
+    
+    json_gate = json.loads(json_general)
+    json_gate["name"] = gate.name
+    json_gate["init_kwargs"] = gate.init_kwargs
+    del(json_gate["init_kwargs"]["trainable"])
+
+    assert gate.to_json() == json.dumps(json_gate)
+    
 
 @pytest.mark.parametrize(
     "gatename,params",
