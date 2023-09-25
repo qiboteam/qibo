@@ -35,8 +35,8 @@ class Parameter:
     """
 
     def __init__(self, func, trainable=None, features=None):
-        self._trainable = trainable
-        self._features = features
+        self.trainable = trainable
+        self.features = features
 
         if self.nfeat + self.nparams != func.__code__.co_argcount:
             raise_error(
@@ -58,14 +58,14 @@ class Parameter:
     def nparams(self):
         """Returns the number of trainable parameters"""
         try:
-            return len(self._trainable)
+            return len(self.trainable)
         except TypeError:
             return 0
 
     @property
     def nfeat(self):
         """Returns the number of features"""
-        return len(self._features) if isinstance(self._features, list) else 0
+        return len(self.features) if isinstance(self.features, list) else 0
 
     @property
     def ncomponents(self):
@@ -76,17 +76,17 @@ class Parameter:
         """Applies lambda function and returns final gate parameter"""
         params = []
 
-        if self._trainable is None:
+        if self.trainable is None:
             parameter_count = function.__code__.co_argcount
             params = [0.0] * parameter_count
 
         else:
-            if self._features is not None:
-                params.extend(self._features)
+            if self.features is not None:
+                params.extend(self.features)
             if fixed_params is not None:
                 params.extend(fixed_params)
             else:
-                params.extend(self._trainable)
+                params.extend(self.trainable)
 
         # run function
         return float(function(*params))
@@ -106,24 +106,6 @@ class Parameter:
 
         return derivatives
 
-    @property
-    def trainable(self):
-        """Trainable parameters property."""
-        return self._trainable
-
-    @trainable.setter
-    def trainable(self, value):
-        self._trainable = value
-
-    @property
-    def features(self):
-        """Features property."""
-        return self._features
-
-    @features.setter
-    def features(self, value):
-        self._features = value
-
     def trainable_parameter_indices(self, start_index):
         """Return list of respective indices of trainable parameters within
         the larger trainable parameter list of a circuit for example"""
@@ -131,7 +113,7 @@ class Parameter:
 
     def unaffected_by(self, trainable_idx):
         """Retrieve constant term of lambda function with regard to a specific trainable parameter"""
-        params = self._trainable.copy()
+        params = self.trainable.copy()
         params[trainable_idx] = 0.0
         return self._apply_func(self.lambdaf, fixed_params=params)
 
