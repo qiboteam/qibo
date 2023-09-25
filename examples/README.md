@@ -27,6 +27,7 @@ physics problems.
 - [Quantum k-medians clustering](qclustering/README.md)
 - [Determining probability density functions with adiabatic quantum computing](adiabatic_qml/adiabatic-qml.ipynb)
 - [Quadratic assignment problem (QAP)](qap/README.md)
+- [Minimum Vertex Cover (MVC)](mvc/README.md)
 
 In the `benchmarks` folder we have included examples concerning:
 - A generic benchmark script for multiple circuits (`benchmarks/main.py`)

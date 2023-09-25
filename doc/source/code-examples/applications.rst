@@ -93,6 +93,7 @@ Combinatorics
     :maxdepth: 1
 
     tutorials/qap/README.md
+    tutorials/mvc/README.md
 
 
 Applications by algorithm
