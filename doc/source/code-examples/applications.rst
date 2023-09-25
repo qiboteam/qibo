@@ -86,6 +86,15 @@ Quantum Machine Learning
     tutorials/qclustering/README.md
     tutorials/adiabatic_qml/adiabatic-qml.ipynb
 
+Combinatorics
+^^^^^^^^^^^^^
+
+.. toctree::
+    :maxdepth: 1
+
+    tutorials/qap/README.md
+
+
 Applications by algorithm
 -------------------------
 
