@@ -1234,13 +1234,16 @@ class Circuit:
                     params = pieces[1].replace(" ", "").split(",")
                     try:
                         for i, p in enumerate(params):
+                            denominator = 1
+                            if "/" in p:
+                                p, denominator = p.split("/")
                             if "pi" in p:
                                 from functools import reduce
                                 from operator import mul
 
                                 s = p.replace("pi", str(np.pi)).split("*")
                                 p = reduce(mul, [float(j) for j in s], 1)
-                            params[i] = float(p)
+                            params[i] = float(p) / float(denominator)
                     except ValueError:
                         raise_error(
                             ValueError,
