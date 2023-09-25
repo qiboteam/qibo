@@ -662,7 +662,7 @@ def kraus_to_choi(kraus_ops, order: str = "row", backend=None):
     for gate in gates:
         kraus_op = FusedGate(*range(nqubits))
         kraus_op.append(gate)
-        kraus_op = kraus_op.asmatrix(backend)
+        kraus_op = kraus_op.matrix(backend)
         kraus_op = vectorization(kraus_op, order=order, backend=backend)
         super_op += np.outer(kraus_op, np.conj(kraus_op))
         del kraus_op
@@ -800,7 +800,7 @@ def kraus_to_chi(
     for gate in gates:
         kraus_op = FusedGate(*range(nqubits))
         kraus_op.append(gate)
-        kraus_op = kraus_op.asmatrix(backend)
+        kraus_op = kraus_op.matrix(backend)
         kraus_op = vectorization(kraus_op, order=order, backend=backend)
         kraus_op = comp_to_pauli @ kraus_op
         super_op += np.outer(kraus_op, np.conj(kraus_op))
@@ -884,7 +884,7 @@ def kraus_to_stinespring(
         vector_alpha = backend.cast(vector_alpha, dtype=vector_alpha.dtype)
         kraus_op = FusedGate(*range(nqubits))
         kraus_op.append(gate)
-        kraus_op = kraus_op.asmatrix(backend)
+        kraus_op = kraus_op.matrix(backend)
         kraus_op = backend.cast(kraus_op, dtype=kraus_op.dtype)
         stinespring += np.kron(
             kraus_op,
@@ -2223,7 +2223,7 @@ def _individual_kraus_to_liouville(
     for gate in gates:
         kraus_op = FusedGate(*range(nqubits))
         kraus_op.append(gate)
-        kraus_op = kraus_op.asmatrix(backend)
+        kraus_op = kraus_op.matrix(backend)
         kraus_op = vectorization(kraus_op, order=order, backend=backend)
         kraus_op = np.outer(kraus_op, np.conj(kraus_op))
         super_ops.append(choi_to_liouville(kraus_op, order=order, backend=backend))

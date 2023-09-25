@@ -172,7 +172,7 @@ def entanglement_of_formation(
 
 
 def entropy(state, base: float = 2, check_hermitian: bool = False, backend=None):
-    """The von-Neumann entropy :math:`S(\\rho)` of a quantum state :math:`\\rho`, which
+    """The von-Neumann entropy :math:`S(\\rho)` of a quantum ``state`` :math:`\\rho`, which
     is given by
 
     .. math::
@@ -251,7 +251,7 @@ def entanglement_entropy(
     backend=None,
 ):
     """Calculates the entanglement entropy :math:`S` of bipartition :math:`A`
-    of``state`` :math:`\\rho`. This is given by
+    of ``state`` :math:`\\rho`. This is given by
 
     .. math::
         S(\\rho_{A}) = -\\text{tr}(\\rho_{A} \\, \\log(\\rho_{A})) \\, ,
@@ -615,20 +615,14 @@ def bures_distance(state, target, check_hermitian: bool = False, backend=None):
 def entanglement_fidelity(
     channel, nqubits: int, state=None, check_hermitian: bool = False, backend=None
 ):
-    """Entanglement fidelity of a ``channel`` :math:`\\mathcal{E}` on ``state``
-    :math:`\\rho`, which is given by
+    """Entanglement fidelity :math:`F_{\\mathcal{E}}` of a ``channel`` :math:`\\mathcal{E}`
+    on ``state`` :math:`\\rho` is given by
 
     .. math::
-        \\begin{align}
-          F_{\\mathcal{E}} &= \\text{fidelity}(\\rho_{f}, \\rho) \\nonumber \\\\
-                           &= \\text{tr}(\\rho_{f} \\, \\rho) \\nonumber
-        \\end{align}
+        F_{\\mathcal{E}}(\\rho) = F(\\rho_{f}, \\rho)
 
-    where
-
-    .. math::
-        \\rho_{f} = \\mathcal{E}_{A} \\otimes I_{B}(\\rho)
-
+    where :math:`F` is the :func:`qibo.quantum_info.fidelity` function for states,
+    and :math:`\\rho_{f} = \\mathcal{E}_{A} \\otimes I_{B}(\\rho)`
     is the state after the channel :math:`\\mathcal{E}` was applied to
     partition :math:`A`.
 
@@ -863,10 +857,11 @@ def diamond_norm(channel, target=None, **kwargs):
     ``channel`` :math:`\\mathcal{E}`, which is given by
 
     .. math::
-        \\|\\mathcal{E}\\|_{\\diamond} = \\max_{\\rho} \\, \\| \\left(\\mathcal{E} \\bigotimes I_{d^{2}}\\right)(\\rho) \\| \\, ,
+        \\|\\mathcal{E}\\|_{\\diamond} = \\max_{\\rho} \\, \\| \\left(\\mathcal{E} \\otimes I_{d^{2}}\\right)(\\rho) \\|_{1} \\, ,
 
     where :math:`I_{d^{2}}` is the :math:`d^{2} \\times d^{2}` Identity operator,
-    :math:`d = 2^{n}`, and :math:`n` is the number of qubits.
+    :math:`d = 2^{n}`, :math:`n` is the number of qubits,
+    and :math:`\\|\\cdot\\|_{1}` denotes the trace norm.
 
     If a ``target`` channel :math:`\\Lambda` is specified,
     then it calculates :math:`\\| \\mathcal{E} - \\Lambda\\|_{\\diamond}`.

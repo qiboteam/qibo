@@ -1,3 +1,4 @@
+from qibo.backends import GlobalBackend
 from qibo.gates.abstract import SpecialGate
 from qibo.gates.measurements import M
 
@@ -31,7 +32,6 @@ class CallbackGate(SpecialGate):
 
 class FusedGate(SpecialGate):
     """Collection of gates that will be fused and applied as single gate during simulation.
-
     This gate is constructed automatically by :meth:`qibo.models.circuit.Circuit.fuse`
     and should not be used by user.
     """
@@ -95,8 +95,21 @@ class FusedGate(SpecialGate):
             return False
         return True
 
-    def asmatrix(self, backend):
-        return backend.asmatrix_fused(self)
+    def matrix(self, backend=None):
+        """Returns matrix representation of special gate.
+
+        Args:
+            backend (:class:`qibo.backends.abstract.Backend`, optional): backend
+            to be used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+        Returns:
+            ndarray: Matrix representation of special gate.
+        """
+        if backend is None:  # pragma: no cover
+            backend = GlobalBackend()
+
+        return backend.matrix_fused(self)
 
     def fuse(self, gate):
         """Fuses two gates."""

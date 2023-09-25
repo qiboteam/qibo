@@ -44,7 +44,7 @@ def test_hamiltonian_term_gates(backend):
     term = terms.HamiltonianTerm(matrix, 1, 2)
     gate = term.gate
     assert gate.target_qubits == (1, 2)
-    backend.assert_allclose(gate.asmatrix(backend), matrix)
+    backend.assert_allclose(gate.matrix(backend), matrix)
 
     initial_state = random_statevector(2**nqubits, backend=backend)
     final_state = term(backend, np.copy(initial_state), nqubits)
