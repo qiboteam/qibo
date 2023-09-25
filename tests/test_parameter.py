@@ -56,24 +56,6 @@ def test_parameter():
     gate_value = param()
     assert gate_value == 585
 
-    param = Parameter(lambda th1, th2, th3: th1 + th2 * th3, nofeatures=True)
-
-    assert param.nparams == 0
-    assert param.nfeat == 0
-
-    param.trainable = [1.0, 2.0, 4.0]
-    param.features = [22.0]
-
-    assert param.nparams == 3
-    assert param.nfeat == 0
-    assert param() == 9.0
-    assert param.features == None
-    assert param.trainable == [1.0, 2.0, 4.0]
-
-    param = Parameter(lambda th1, th2, th3: 3 + th1 + th2 * th3)
-
-    assert param() == 3.0
-
 
 def test_parameter_errors():
     param = Parameter(
@@ -106,3 +88,7 @@ def test_parameter_errors():
         assert False
     except Exception as e:
         assert True
+
+    # test type error due to wrong initialization
+    with pytest.raises(TypeError):
+        param = Parameter(func=lambda x, y: x + y**2)
