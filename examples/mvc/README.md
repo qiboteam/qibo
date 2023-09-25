@@ -1,21 +1,22 @@
+# Minimum Vertex Cover (MVC)
+
+Code at: [https://github.com/qiboteam/qibo/tree/master/examples/mvc](https://github.com/qiboteam/qibo/tree/master/examples/mvc)
+
+Given an undirected graph with a set of nodes V and edges E, A vertex cover of a graph is a set of nodes that includes at
+least one endpoint of every edge of the graph. The Minimum Vertex Cover (MVC) problem is an optimisation problem
+that find smallest vertex cover of a given graph.
+
+## Load graph from csv
+
+
 ```python
 import networkx as nx
 import csv
 import matplotlib.pyplot as plt
 
 from mvc import qubo_mvc, qubo_mvc_penalty, mvc_feasibility, mvc_easy_fix, mvc_energy
-```
-
-# MVC Definition
-
-Given an undirected graph with a set of nodes V and edges E, A vertex cover of a graph is a set of nodes that includes at
-least one endpoint of every edge of the graph. The Minimum Vertex Cover (MVC) problem is an optimisation problem
-that find smallest vertex cover of a given graph.
-
-# Load graph from csv
 
 
-```python
 def load_csv(filename:str):
     """ Load graph from csv file
     """
@@ -88,9 +89,9 @@ print(f'Number of edge is {len(g.edges)}')
     Number of edge is 9
 
 
-# QUBO formulation
+## QUBO formulation
 
-## Estimate penalty
+### Estimate penalty
 
 
 ```python
@@ -101,7 +102,7 @@ print(f'The penalty is {penalty}')
     The penalty is 1.6548482220717595
 
 
-## Formulate QUBO (weighted minimum vertex cover)
+### Formulate QUBO (weighted minimum vertex cover)
 
 
 ```python
@@ -115,7 +116,7 @@ print(f'Number of quadratic terms: {len(quadratic)}\n')
 
 
 
-## Generate random solutions
+### Generate random solutions
 
 
 ```python
@@ -129,7 +130,7 @@ print(f'The random solution is {random_solution}\n')
 
 
 
-## Check feasibility
+### Check feasibility
 
 
 ```python
@@ -141,7 +142,7 @@ print(f'The feasibility is {feasibility}\n')
 
 
 
-## Fix broken constraints
+### Fix broken constraints
 
 
 ```python
@@ -163,7 +164,7 @@ print(f'The feasibility is {feasibility}\n')
 
 
 
-## Visualisation
+### Visualisation
 
 
 ```python
@@ -189,7 +190,7 @@ ax1.set_title(f'Vertex cover in orange after fix')
 
 
 
-## Calculate energy
+### Calculate energy
 
 
 ```python
@@ -200,7 +201,7 @@ print(f'The energy is {energy}')
     The energy is 3.2102004750256556
 
 
-#  Hamiltonian of the MVC problem
+##  Hamiltonian of the MVC problem
 
 
 ```python
