@@ -4,6 +4,22 @@ import sympy as sp
 from qibo.config import raise_error
 
 
+def calculate_derivatives(func):
+    """Calculates derivatives w.r.t to all parameters of a target function `func`."""
+    vars = []
+    for i in range(func.__code__.co_argcount):
+        vars.append(sp.Symbol(f"p{i}"))
+
+    expr = sp.sympify(func(*vars))
+
+    derivatives = []
+    for i in range(len(vars)):
+        derivative_expr = sp.diff(expr, vars[i])
+        derivatives.append(sp.lambdify(vars, derivative_expr))
+
+    return derivatives
+
+
 class Parameter:
     """Object which allows for variational gate parameters. Several trainable parameters
     and possibly features are linked through a lambda function which returns the
@@ -29,12 +45,12 @@ class Parameter:
         func (function): lambda function which builds the gate parameter. If both features and trainable parameters
         compose the function, it must be passed by first providing the features and then the parameters, as
         described in the code example above.
-        trainable (list or np.ndarray): array with initial trainable parameters theta
-        features (list or np.ndarray): array containing possible input features x
+        features (list or np.ndarray): array containing possible input features x.
+        trainable (list or np.ndarray): array with initial trainable parameters theta.
         nofeatures (bool): flag to explicitly ban the updating of the features. This simplifies the task of updating Parameter objects simultaneously when some have embedded features and some do not.
     """
 
-    def __init__(self, func, trainable=None, features=None):
+    def __init__(self, func, trainable=[], features=[]):
         self.trainable = trainable
         self.features = features
 
@@ -48,11 +64,35 @@ class Parameter:
 
         # calculate derivatives
         # maybe here use JAX ?
-        self.derivatives = self._calculate_derivatives()
+        self.derivatives = calculate_derivatives(func=self.lambdaf)
 
-    def __call__(self):
-        """Update values with trainable parameter and calculate current gate parameter"""
-        return self._apply_func(self.lambdaf)
+    def __call__(self, features=None, trainable=None):
+        """Return parameter value with given features and/or trainable."""
+
+        params = []
+
+        if features is None:
+            params.extend(self.features)
+        else:
+            if len(features) != self.nfeat:
+                raise_error(
+                    TypeError,
+                    f"The number of features provided is not compatible with the problem's dimensionality, which is {self.nfeat}.",
+                )
+            else:
+                params.extend(features)
+        if trainable is None:
+            params.extend(self.trainable)
+        else:
+            if len(trainable) != self.nparams:
+                raise_error(
+                    TypeError,
+                    f"The number of trainable provided is different from the number of required parameters, which is {self.nparams}.",
+                )
+            else:
+                params.extend(trainable)
+
+        return self.lambdaf(*params)
 
     @property
     def nparams(self):
@@ -72,40 +112,6 @@ class Parameter:
         """Returns the number of elements which compose the Parameter"""
         return self.nparams + self.nfeat
 
-    def _apply_func(self, function, fixed_params=None):
-        """Applies lambda function and returns final gate parameter"""
-        params = []
-
-        if self.trainable is None:
-            parameter_count = function.__code__.co_argcount
-            params = [0.0] * parameter_count
-
-        else:
-            if self.features is not None:
-                params.extend(self.features)
-            if fixed_params is not None:
-                params.extend(fixed_params)
-            else:
-                params.extend(self.trainable)
-
-        # run function
-        return float(function(*params))
-
-    def _calculate_derivatives(self):
-        """Calculates derivatives w.r.t to all trainable parameters"""
-        vars = []
-        for i in range(self.lambdaf.__code__.co_argcount):
-            vars.append(sp.Symbol(f"p{i}"))
-
-        expr = sp.sympify(self.lambdaf(*vars))
-
-        derivatives = []
-        for i in range(len(vars)):
-            derivative_expr = sp.diff(expr, vars[i])
-            derivatives.append(sp.lambdify(vars, derivative_expr))
-
-        return derivatives
-
     def trainable_parameter_indices(self, start_index):
         """Return list of respective indices of trainable parameters within
         the larger trainable parameter list of a circuit for example"""
@@ -115,9 +121,14 @@ class Parameter:
         """Retrieve constant term of lambda function with regard to a specific trainable parameter"""
         params = self.trainable.copy()
         params[trainable_idx] = 0.0
-        return self._apply_func(self.lambdaf, fixed_params=params)
+        return self.__call__(trainable=params)
 
     def partial_derivative(self, trainable_idx):
         """Get derivative w.r.t a trainable parameter"""
         deriv = self.derivatives[trainable_idx]
-        return self._apply_func(deriv)
+
+        params = []
+        params.extend(self.features)
+        params.extend(self.trainable)
+
+        return deriv(*params)
