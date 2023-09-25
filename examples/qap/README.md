@@ -1,15 +1,14 @@
+# Quadratic assignment problem (QAP)
+
+Code at: [https://github.com/qiboteam/qibo/tree/master/examples/qap](https://github.com/qiboteam/qibo/tree/master/examples/qap)
+
+The quadratic assignment problem (QAP) is an important combinatorial optimization problems that was first introduced by Koopmans and Beckmann. The objective of the problem is to assign a set of facilities to a set of locations in such a way as to minimize the total assignment cost. The assignment cost for a pair of facilities is a function of the flow between the facilities and the distance between the locations of the facilities.
+
 ```python
 import numpy as np
 
 from qap import qubo_qap, qubo_qap_penalty, qubo_qap_feasibility, qubo_qap_energy, hamiltonian_qap
-```
 
-# QAP
-
-The quadratic assignment problem (QAP) is an important combinatorial optimization problems that was first introduced by Koopmans and Beckmann. The objective of the problem is to assign a set of facilities to a set of locations in such a way as to minimize the total assignment cost. The assignment cost for a pair of facilities is a function of the flow between the facilities and the distance between the locations of the facilities.
-
-
-```python
 def load_qap(filename):
     """Load qap problem from a file
 
@@ -33,7 +32,7 @@ def load_qap(filename):
     return f, d
 ```
 
-## Load qap problem from a file
+## Load QAP problem from a file
 
 
 ```python
@@ -146,7 +145,7 @@ print(f'The energy of the feasible solution is {energy}')
     The energy of the feasible solution is 2.7219091992575177
 
 
-# Hamiltonian
+## Hamiltonian
 
 
 ```python
@@ -156,7 +155,7 @@ ham = hamiltonian_qap((F, D), dense=False)
     [Qibo 0.1.6|INFO|2022-05-31 14:47:26]: Using qibojit backend on /GPU:0
 
 
-# Solve the Hamiltonian with QAOA
+## Solve the Hamiltonian with QAOA
 
 QAP of size 4 is too large for Qibo QAOA. Let's reduce the size to 3
 
