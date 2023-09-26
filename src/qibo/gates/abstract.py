@@ -7,6 +7,9 @@ import sympy
 from qibo.backends import GlobalBackend
 from qibo.config import raise_error
 
+REQUIRED_FIELDS = ["name", "init_kwargs", "_target_qubits", "_control_qubits"]
+REQUIRED_FIELDS_INIT_KWARGS = ["theta", "phi", "lam"]
+
 
 class Gate:
     """The base class for gate implementation.
@@ -54,16 +57,14 @@ class Gate:
     def to_json(self):
         encoded = self.__dict__
 
-        required_fields = ["name", "init_kwargs", "_target_qubits", "_control_qubits"]
         encoded_simple = {
-            key: value for key, value in encoded.items() if key in required_fields
+            key: value for key, value in encoded.items() if key in REQUIRED_FIELDS
         }
 
-        required_fields_init_kwargs = ["theta", "phi", "lam"]
         encoded_simple["init_kwargs"] = {
             key: value
             for key, value in encoded_simple["init_kwargs"].items()
-            if key in required_fields_init_kwargs
+            if key in REQUIRED_FIELDS_INIT_KWARGS
         }
 
         for value in encoded_simple:
