@@ -50,9 +50,9 @@ class Parameter:
         nofeatures (bool): flag to explicitly ban the updating of the features. This simplifies the task of updating Parameter objects simultaneously when some have embedded features and some do not.
     """
 
-    def __init__(self, func, trainable=[], features=[]):
-        self.trainable = trainable
-        self.features = features
+    def __init__(self, func, trainable=None, features=None):
+        self.trainable = trainable if trainable is not None else []
+        self.features = features if features is not None else []
 
         if self.nfeat + self.nparams != func.__code__.co_argcount:
             raise_error(
@@ -105,7 +105,10 @@ class Parameter:
     @property
     def nfeat(self):
         """Returns the number of features"""
-        return len(self.features) if isinstance(self.features, list) else 0
+        try:
+            return len(self.features)
+        except TypeError:
+            return 0
 
     @property
     def ncomponents(self):
@@ -121,7 +124,7 @@ class Parameter:
         """Retrieve constant term of lambda function with regard to a specific trainable parameter"""
         params = self.trainable.copy()
         params[trainable_idx] = 0.0
-        return self.__call__(trainable=params)
+        return self(trainable=params)
 
     def partial_derivative(self, trainable_idx):
         """Get derivative w.r.t a trainable parameter"""
