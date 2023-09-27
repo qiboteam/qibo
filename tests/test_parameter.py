@@ -60,6 +60,20 @@ def test_parameter():
     executed = param(features=[0.5, 2.0], trainable=[2.0, 0.1, 4.0])
     assert executed == 1.3
 
+    # injecting only trainable
+    param = Parameter(lambda x: x, trainable=[0.8])
+    nparams = param.nparams
+    nfeat = param.nfeat
+    assert nparams == 1
+    assert nfeat == 0
+
+    # injecting only features
+    param = Parameter(lambda x: x, features=[0.8])
+    nparams = param.nparams
+    nfeat = param.nfeat
+    assert nparams == 0
+    assert nfeat == 1
+
 
 def test_parameter_errors():
     param = Parameter(
