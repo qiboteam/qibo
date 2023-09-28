@@ -64,8 +64,10 @@ def test_parameter():
     param = Parameter(lambda x: x, trainable=[0.8])
     nparams = param.nparams
     nfeat = param.nfeat
+    ncomponents = param.ncomponents
     assert nparams == 1
     assert nfeat == 0
+    assert ncomponents == 1
 
     # injecting only features
     param = Parameter(lambda x: x, features=[0.8])
