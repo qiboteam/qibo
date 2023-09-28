@@ -256,9 +256,13 @@ class NumpyBackend(Backend):
         return np.reshape(state, 2 * (2**nqubits,))
 
     def apply_channel(self, channel, state, nqubits):
-        for coeff, gate in zip(channel.coefficients, channel.gates):
-            if self.np.random.random() < coeff:
-                state = self.apply_gate(gate, state, nqubits)
+        index = np.random.choice(
+            range(len(channel.gates) + 1),
+            p=channel.coefficients + (1 - np.sum(channel.coefficients),),
+        )
+        if index != len(channel.gates):
+            gate = channel.gates[index]
+            state = self.apply_gate(gate, state, nqubits)
         return state
 
     def apply_channel_density_matrix(self, channel, state, nqubits):
