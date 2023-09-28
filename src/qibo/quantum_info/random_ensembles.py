@@ -300,39 +300,9 @@ def random_quantum_channel(
         backend = GlobalBackend()
 
     if measure == "bcsz":
-        # this uses the del function a lot because implementation can be resource-intensive
-        nqubits = int(np.log2(dims))
-
-        super_op = random_gaussian_matrix(
-            dims**2, rank=rank, mean=0, stddev=1, seed=seed, backend=backend
+        super_op = _super_op_from_bcsz_measure(
+            dims=dims, rank=rank, order=order, seed=seed, backend=backend
         )
-        super_op = super_op @ np.transpose(np.conj(super_op))
-
-        # partial trace implemented with einsum
-        super_op_reduced = np.einsum("ijik->jk", np.reshape(super_op, (dims,) * 4))
-
-        eigenvalues, eigenvectors = np.linalg.eigh(super_op_reduced)
-        del super_op_reduced
-
-        eigenvalues = np.sqrt(1.0 / eigenvalues)
-
-        operator = np.zeros((dims, dims), dtype=complex)
-        operator = backend.cast(operator, dtype=operator.dtype)
-        for eigenvalue, eigenvector in zip(eigenvalues, np.transpose(eigenvectors)):
-            operator += eigenvalue * np.outer(eigenvector, np.conj(eigenvector))
-        del eigenvectors, eigenvector, eigenvalues, eigenvalue
-
-        if order == "row":
-            operator = np.kron(
-                backend.identity_density_matrix(nqubits, normalize=False), operator
-            )
-        if order == "column":
-            operator = np.kron(
-                operator, backend.identity_density_matrix(nqubits, normalize=False)
-            )
-
-        super_op = operator @ super_op @ operator
-        del operator
     else:
         super_op = random_unitary(dims, measure, seed, backend)
         super_op = vectorization(super_op, order=order, backend=backend)
@@ -1178,3 +1148,54 @@ def _operator_from_hadamard_free_group(gamma_matrix, delta_matrix, pauli_operato
                 circuit.add(gates.CNOT(j, k))
 
     return circuit
+
+
+def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend):
+    """Helper function for :func:qibo.quantum_info.random_ensembles.random_quantum_channel.
+    Generates a channel from the BCSZ measure.
+
+    Args:
+        dims (int): dimension of the :math:`n`-qubit operator, i.e. :math:`\\text{dims}=2^{n}`.
+        rank (int, optional): used when ``measure=="bcsz"``. Rank of the matrix.
+            If ``None``, then ``rank==dims``. Defaults to ``None``.
+        order (str, optional): If ``"row"``, vectorization is performed row-wise.
+            If ``"column"``, vectorization is performed column-wise. Defaults to ``"row"``.
+        seed (int or :class:`numpy.random.Generator`, optional): Either a generator of
+            random numbers or a fixed seed to initialize a generator. If ``None``,
+            initializes a generator with a random seed. Defaults to ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
+    """
+    nqubits = int(np.log2(dims))
+
+    super_op = random_gaussian_matrix(
+        dims**2, rank=rank, mean=0, stddev=1, seed=seed, backend=backend
+    )
+    super_op = super_op @ np.transpose(np.conj(super_op))
+
+    # partial trace implemented with einsum
+    super_op_reduced = np.einsum("ijik->jk", np.reshape(super_op, (dims,) * 4))
+
+    eigenvalues, eigenvectors = np.linalg.eigh(super_op_reduced)
+
+    eigenvalues = np.sqrt(1.0 / eigenvalues)
+
+    operator = np.zeros((dims, dims), dtype=complex)
+    operator = backend.cast(operator, dtype=operator.dtype)
+    for eigenvalue, eigenvector in zip(eigenvalues, np.transpose(eigenvectors)):
+        operator += eigenvalue * np.outer(eigenvector, np.conj(eigenvector))
+    del eigenvectors, eigenvector, eigenvalues, eigenvalue
+
+    if order == "row":
+        operator = np.kron(
+            backend.identity_density_matrix(nqubits, normalize=False), operator
+        )
+    if order == "column":
+        operator = np.kron(
+            operator, backend.identity_density_matrix(nqubits, normalize=False)
+        )
+
+    super_op = operator @ super_op @ operator
+
+    return super_op
