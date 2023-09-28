@@ -97,18 +97,12 @@ class Parameter:
     @property
     def nparams(self):
         """Returns the number of trainable parameters"""
-        try:
-            return len(self.trainable)
-        except TypeError:
-            return 0
+        return len(self.trainable)
 
     @property
     def nfeat(self):
         """Returns the number of features"""
-        try:
-            return len(self.features)
-        except TypeError:
-            return 0
+        return len(self.features)
 
     @property
     def ncomponents(self):
