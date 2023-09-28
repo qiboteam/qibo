@@ -145,7 +145,9 @@ def test_random_unitary(backend):
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
 
-@pytest.mark.parametrize("measure", [None, "haar"])
+@pytest.mark.parametrize("order", ["row", "column"])
+@pytest.mark.parametrize("rank", [None, 4])
+@pytest.mark.parametrize("measure", [None, "haar", "bcsz"])
 @pytest.mark.parametrize(
     "representation",
     [
@@ -159,15 +161,24 @@ def test_random_unitary(backend):
         "stinespring",
     ],
 )
-def test_random_quantum_channel(backend, representation, measure):
+def test_random_quantum_channel(backend, representation, measure, rank, order):
     with pytest.raises(TypeError):
         test = random_quantum_channel(4, representation=True, backend=backend)
     with pytest.raises(ValueError):
         test = random_quantum_channel(4, representation="Choi", backend=backend)
+    with pytest.raises(NotImplementedError):
+        test = random_quantum_channel(4, measure="bcsz", order="system")
 
     # All subroutines are already tested elsewhere,
     # so here we only execute them once for coverage
-    random_quantum_channel(4, representation, measure, backend=backend)
+    random_quantum_channel(
+        4,
+        rank=rank,
+        representation=representation,
+        measure=measure,
+        order=order,
+        backend=backend,
+    )
 
 
 @pytest.mark.parametrize("haar", [False, True])
@@ -195,7 +206,7 @@ def test_random_statevector(backend, haar, seed):
 
 @pytest.mark.parametrize("normalize", [False, True])
 @pytest.mark.parametrize("basis", [None, "pauli-IXYZ", "pauli-IZXY"])
-@pytest.mark.parametrize("metric", ["Hilbert-Schmidt", "Bures"])
+@pytest.mark.parametrize("metric", ["hilbert-schmidt", "ginibre", "bures"])
 @pytest.mark.parametrize("pure", [False, True])
 @pytest.mark.parametrize("dims", [2, 4])
 def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
