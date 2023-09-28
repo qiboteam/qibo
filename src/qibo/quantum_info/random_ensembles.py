@@ -1185,7 +1185,6 @@ def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend)
     operator = backend.cast(operator, dtype=operator.dtype)
     for eigenvalue, eigenvector in zip(eigenvalues, np.transpose(eigenvectors)):
         operator += eigenvalue * np.outer(eigenvector, np.conj(eigenvector))
-    del eigenvectors, eigenvector, eigenvalues, eigenvalue
 
     if order == "row":
         operator = np.kron(
