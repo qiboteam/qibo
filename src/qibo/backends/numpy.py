@@ -256,10 +256,8 @@ class NumpyBackend(Backend):
         return np.reshape(state, 2 * (2**nqubits,))
 
     def apply_channel(self, channel, state, nqubits):
-        index = np.random.choice(
-            range(len(channel.gates) + 1),
-            p=channel.coefficients + (1 - np.sum(channel.coefficients),),
-        )
+        probabilities = channel.coefficients + (1 - np.sum(channel.coefficients),)
+        index = self.sample_shots(probabilities, 1)[0]
         if index != len(channel.gates):
             gate = channel.gates[index]
             state = self.apply_gate(gate, state, nqubits)
