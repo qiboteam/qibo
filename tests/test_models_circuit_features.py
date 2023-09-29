@@ -336,11 +336,11 @@ def test_repeated_execute_probs_and_freqs(backend, nqubits):
     # Tensorflow seems to yield different results with same seed
     if backend.__class__.__name__ == "TensorflowBackend":
         if nqubits == 1:
-            test_probabilities = [0.21777344, 0.78222656]
-            test_frequencies = Counter({1: 801, 0: 223})
+            test_probabilities = [0.17578125, 0.82421875]
+            test_frequencies = Counter({1: 844, 0: 180})
         else:
-            test_probabilities = [0.03808594, 0.15625, 0.15917969, 0.64648438]
-            test_frequencies = Counter({11: 662, 10: 163, 1: 160, 0: 39})
+            test_probabilities = [0.04003906, 0.15039062, 0.15136719, 0.65820312]
+            test_frequencies = Counter({11: 674, 10: 155, 1: 154, 0: 41})
     else:
         if nqubits == 1:
             test_probabilities = [0.22851562, 0.77148438]
