@@ -277,16 +277,15 @@ def test_repeated_execute_pauli_noise_channel(backend):
 
     backend.set_seed(1234)
     target_state = []
+    channel_gates = [gates.X, gates.Y, gates.Z]
+    probs = [0.1, 0.2, 0.3, 0.4]
     for _ in range(20):
         noiseless_c = Circuit(4)
         noiseless_c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
         for i in range(4):
-            if backend.np.random.random() < 0.1:
-                noiseless_c.add(gates.X(i))
-            if backend.np.random.random() < 0.2:
-                noiseless_c.add(gates.Y(i))
-            if backend.np.random.random() < 0.3:
-                noiseless_c.add(gates.Z(i))
+            index = backend.sample_shots(probs, 1)[0]
+            if index != len(channel_gates):
+                noiseless_c.add(channel_gates[index](i))
         result = backend.execute_circuit(noiseless_c)
         target_state.append(result.state(numpy=True))
     final_state = [backend.to_numpy(x) for x in final_state]
@@ -304,14 +303,15 @@ def test_repeated_execute_with_pauli_noise(backend):
 
     backend.set_seed(1234)
     target_state = []
+    channel_gates = [gates.X, gates.Z]
+    probs = [0.2, 0.1, 0.7]
     for _ in range(20):
         noiseless_c = Circuit(4)
         for i, t in enumerate(thetas):
             noiseless_c.add(gates.RY(i, theta=t))
-            if backend.np.random.random() < 0.2:
-                noiseless_c.add(gates.X(i))
-            if backend.np.random.random() < 0.1:
-                noiseless_c.add(gates.Z(i))
+            index = backend.sample_shots(probs, 1)[0]
+            if index != len(channel_gates):
+                noiseless_c.add(channel_gates[index](i))
         result = backend.execute_circuit(noiseless_c)
         target_state.append(result.state(numpy=True))
     target_state = np.stack(target_state)
@@ -336,21 +336,20 @@ def test_repeated_execute_probs_and_freqs(backend, nqubits):
     # Tensorflow seems to yield different results with same seed
     if backend.__class__.__name__ == "TensorflowBackend":
         if nqubits == 1:
-            test_probabilities = [0.171875, 0.828125]
-            test_frequencies = Counter({1: 848, 0: 176})
+            test_probabilities = [0.17578125, 0.82421875]
+            test_frequencies = Counter({1: 844, 0: 180})
         else:
-            test_probabilities = [0.04101562, 0.12695312, 0.140625, 0.69140625]
-            test_frequencies = Counter({11: 708, 10: 144, 1: 130, 0: 42})
+            test_probabilities = [0.04003906, 0.15039062, 0.15136719, 0.65820312]
+            test_frequencies = Counter({11: 674, 10: 155, 1: 154, 0: 41})
     else:
         if nqubits == 1:
-            test_probabilities = [0.20117188, 0.79882812]
-            test_frequencies = Counter({"1": 818, "0": 206})
+            test_probabilities = [0.22851562, 0.77148438]
+            test_frequencies = Counter({"1": 790, "0": 234})
         else:
-            test_probabilities = [0.0390625, 0.16113281, 0.17382812, 0.62597656]
-            test_frequencies = Counter({"11": 641, "10": 178, "01": 165, "00": 40})
+            test_probabilities = [0.05078125, 0.18066406, 0.16503906, 0.60351562]
+            test_frequencies = Counter({"11": 618, "10": 169, "01": 185, "00": 52})
 
     test_probabilities = backend.cast(test_probabilities, dtype=float)
-
     print(result.probabilities())
     backend.assert_allclose(
         backend.calculate_norm(result.probabilities() - test_probabilities)
