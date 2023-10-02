@@ -557,6 +557,7 @@ def random_density_matrix(
 def random_clifford(
     nqubits: int,
     return_circuit: bool = True,
+    density_matrix: bool = False,
     seed=None,
     backend=None,
 ):
@@ -567,6 +568,8 @@ def random_clifford(
         nqubits (int): number of qubits.
         return_circuit (bool, optional): if ``True``, returns a :class:`qibo.models.Circuit`
             object. If ``False``, returns an ``ndarray`` object. Defaults to ``False``.
+        density_matrix (bool, optional): used when ``return_circuit=True``. If `True`,
+            the circuit would evolve density matrices. Defaults to ``False``.
         seed (int or :class:`numpy.random.Generator`, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
@@ -685,6 +688,8 @@ def random_clifford(
         delta_matrix_prime,
         random_pauli(nqubits, depth=1, return_circuit=True, seed=seed, backend=backend),
     )
+
+    clifford_circuit.density_matrix = density_matrix
 
     if return_circuit is False:
         clifford_circuit = clifford_circuit.unitary(backend=backend)
