@@ -2,8 +2,9 @@
 import numpy as np
 import pytest
 
-import qibo
 from qibo import Circuit, gates
+from qibo.config import PRECISION_TOL
+from qibo.quantum_info import random_clifford, random_statevector, random_unitary
 
 
 def test_pauli_noise_channel(backend):
@@ -198,3 +199,38 @@ def test_circuit_add_sampling(backend):
     target_samples = np.stack(target_samples)
 
     backend.assert_allclose(samples, target_samples[:, 0])
+
+
+@pytest.mark.parametrize("nqubits", [2, 4, 6])
+def test_probabilities_repeated_execution(backend, nqubits):
+    probabilities = list(np.random.rand(nqubits + 1)) + [1.0]
+    probabilities /= np.sum(probabilities)
+
+    unitaries = [random_unitary(2**1, backend=backend) for _ in range(nqubits)]
+    unitaries += [random_unitary(2**nqubits, backend=backend)]
+
+    qubits_list = [(q,) for q in range(nqubits)]
+    qubits_list += [tuple(q for q in range(nqubits))]
+
+    circuit = random_clifford(nqubits, return_circuit=True, backend=backend)
+    circuit.add(gates.UnitaryChannel(qubits_list, list(zip(probabilities, unitaries))))
+    circuit.add(gates.M(*range(nqubits)))
+
+    circuit_density_matrix = circuit.copy(deep=True)
+    circuit_density_matrix.density_matrix = True
+
+    statevector = random_statevector(2**nqubits, backend=backend)
+
+    result = backend.execute_circuit_repeated(
+        circuit, initial_state=statevector, nshots=int(1e4)
+    )
+    result = result.probabilities()
+
+    result_density_matrix = backend.execute_circuit(
+        circuit_density_matrix,
+        initial_state=np.outer(statevector, np.conj(statevector)),
+        nshots=int(1e4),
+    )
+    result_density_matrix = result_density_matrix.probabilities()
+
+    backend.assert_allclose(result, result_density_matrix, rtol=2e-2, atol=5e-3)
