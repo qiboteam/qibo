@@ -273,9 +273,10 @@ def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
 
 
 @pytest.mark.parametrize("seed", [10])
+@pytest.mark.parametrize("density_matrix", [False, True])
 @pytest.mark.parametrize("return_circuit", [True, False])
 @pytest.mark.parametrize("nqubits", [1, 2])
-def test_random_clifford(backend, nqubits, return_circuit, seed):
+def test_random_clifford(backend, nqubits, return_circuit, density_matrix, seed):
     with pytest.raises(TypeError):
         test = random_clifford(
             nqubits="1", return_circuit=return_circuit, backend=backend
@@ -301,7 +302,11 @@ def test_random_clifford(backend, nqubits, return_circuit, seed):
     result = backend.cast(result, dtype=result.dtype)
 
     matrix = random_clifford(
-        nqubits, return_circuit=return_circuit, seed=seed, backend=backend
+        nqubits,
+        return_circuit=return_circuit,
+        density_matrix=density_matrix,
+        seed=seed,
+        backend=backend,
     )
 
     if return_circuit:
