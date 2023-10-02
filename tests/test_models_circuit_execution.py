@@ -64,7 +64,7 @@ def test_repeated_execute(backend, accelerators):
     c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
     target_state = backend.execute_circuit(c).state(numpy=True)
     target_state = np.array(20 * [target_state])
-    c.repeated_execution = True
+    c.has_collapse = True
     final_state = backend.execute_circuit(c, nshots=20)
     final_state = [backend.to_numpy(x) for x in final_state]
     backend.assert_allclose(final_state, target_state)
