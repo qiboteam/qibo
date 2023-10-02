@@ -158,8 +158,9 @@ class Circuit:
 
         self._final_state = None
         self.compiled = None
-        self.repeated_execution = False
 
+        self.has_collapse = False
+        self.has_unitary_channel = False
         self.density_matrix = density_matrix
 
         # for distributed circuits
@@ -249,12 +250,13 @@ class Circuit:
         for gate in circuit.queue:
             newcircuit.add(gate)
 
-        # Re-execute full circuit when sampling if one of the circuits
-        # has repeated_execution ``True``
-        newcircuit.repeated_execution = (
-            self.repeated_execution or circuit.repeated_execution
-        )
         return newcircuit
+
+    @property
+    def repeated_execution(self):
+        return self.has_collapse or (
+            self.has_unitary_channel and not self.density_matrix
+        )
 
     def on_qubits(self, *qubits):
         """Generator of gates contained in the circuit acting on specified qubits.
@@ -591,7 +593,7 @@ class Circuit:
 
                 gate.result.circuit = self
                 if gate.collapse:
-                    self.repeated_execution = True
+                    self.has_collapse = True
                 else:
                     self.measurements.append(gate)
                 return gate.result
@@ -601,11 +603,11 @@ class Circuit:
                 for measurement in list(self.measurements):
                     if set(measurement.qubits) & set(gate.qubits):
                         measurement.collapse = True
-                        self.repeated_execution = True
+                        self.has_collapse = True
                         self.measurements.remove(measurement)
 
             if isinstance(gate, gates.UnitaryChannel):
-                self.repeated_execution = not self.density_matrix
+                self.has_unitary_channel = True
             if isinstance(gate, gates.ParametrizedGate):
                 self.parametrized_gates.append(gate)
                 if gate.trainable:
