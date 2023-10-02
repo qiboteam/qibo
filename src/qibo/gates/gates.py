@@ -5,6 +5,7 @@ import numpy as np
 
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate, ParametrizedGate
+from qibo.parameter import Parameter
 
 
 class H(Gate):
@@ -496,6 +497,10 @@ class _Rn_(ParametrizedGate):
         self._controlled_gate = None
         self.target_qubits = (q,)
         self.unitary = True
+
+        self.initparams = theta
+        if isinstance(theta, Parameter):
+            theta = theta()
 
         if isinstance(theta, (float, int)) and (theta % (np.pi / 2)).is_integer():
             self.clifford = True
