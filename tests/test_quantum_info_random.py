@@ -379,8 +379,11 @@ def test_pauli_single(backend):
 @pytest.mark.parametrize("max_qubits", [None])
 @pytest.mark.parametrize("subset", [None, ["I", "X"]])
 @pytest.mark.parametrize("return_circuit", [True, False])
+@pytest.mark.parametrize("density_matrix", [False, True])
 @pytest.mark.parametrize("seed", [10])
-def test_random_pauli(backend, qubits, depth, max_qubits, subset, return_circuit, seed):
+def test_random_pauli(
+    backend, qubits, depth, max_qubits, subset, return_circuit, density_matrix, seed
+):
     result_complete_set = np.array(
         [
             [0.0 + 0.0j, 1.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
@@ -395,7 +398,7 @@ def test_random_pauli(backend, qubits, depth, max_qubits, subset, return_circuit
     result_subset = backend.identity_density_matrix(2, normalize=False)
 
     matrix = random_pauli(
-        qubits, depth, max_qubits, subset, return_circuit, seed, backend
+        qubits, depth, max_qubits, subset, return_circuit, density_matrix, seed, backend
     )
 
     if return_circuit:
