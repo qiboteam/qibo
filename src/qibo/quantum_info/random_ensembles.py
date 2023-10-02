@@ -675,7 +675,9 @@ def random_clifford(
                 delta_matrix[k, j] = b
 
     # get first element of the Borel group
-    clifford_circuit = _operator_from_hadamard_free_group(gamma_matrix, delta_matrix)
+    clifford_circuit = _operator_from_hadamard_free_group(
+        gamma_matrix, delta_matrix, density_matrix
+    )
 
     # Apply permutated Hadamard layer
     for qubit, had in enumerate(hadamards):
@@ -686,10 +688,9 @@ def random_clifford(
     clifford_circuit += _operator_from_hadamard_free_group(
         gamma_matrix_prime,
         delta_matrix_prime,
+        density_matrix,
         random_pauli(nqubits, depth=1, return_circuit=True, seed=seed, backend=backend),
     )
-
-    clifford_circuit.density_matrix = density_matrix
 
     if return_circuit is False:
         clifford_circuit = clifford_circuit.unitary(backend=backend)
@@ -703,6 +704,7 @@ def random_pauli(
     max_qubits: Optional[int] = None,
     subset: Optional[list] = None,
     return_circuit: bool = True,
+    density_matrix: bool = False,
     seed=None,
     backend=None,
 ):
@@ -725,6 +727,8 @@ def random_pauli(
         return_circuit (bool, optional): if ``True``, returns a :class:`qibo.models.Circuit`
             object. If ``False``, returns an ``ndarray`` with shape (qubits, depth, 2, 2)
             that contains all Pauli matrices that were sampled. Defaults to ``True``.
+        density_matrix (bool, optional): used when ``return_circuit=True``. If `True`,
+            the circuit would evolve density matrices. Defaults to ``False``.
         seed (int or :class:`numpy.random.Generator`, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
@@ -824,7 +828,7 @@ def random_pauli(
     indexes = [[keys[item] for item in row] for row in indexes]
 
     if return_circuit:
-        gate_grid = Circuit(max_qubits)
+        gate_grid = Circuit(max_qubits, density_matrix=density_matrix)
         for qubit, row in zip(qubits, indexes):
             for column_item in row:
                 if subset[column_item] != gates.I:
@@ -1105,7 +1109,9 @@ def _sample_from_quantum_mallows_distribution(nqubits: int, local_state):
     return hadamards, permutations
 
 
-def _operator_from_hadamard_free_group(gamma_matrix, delta_matrix, pauli_operator=None):
+def _operator_from_hadamard_free_group(
+    gamma_matrix, delta_matrix, density_matrix: bool = False, pauli_operator=None
+):
     """Calculates an element :math:`F` of the Hadamard-free group :math:`\\mathcal{F}_{n}`,
     where :math:`n` is the number of qubits ``nqubits``. For more details,
     see Reference [1].
@@ -1113,6 +1119,8 @@ def _operator_from_hadamard_free_group(gamma_matrix, delta_matrix, pauli_operato
     Args:
         gamma_matrix (ndarray): :math:`\\, n \\times n \\,` binary matrix.
         delta_matrix (ndarray): :math:`\\, n \\times n \\,` binary matrix.
+        density_matrix (bool, optional): used when ``return_circuit=True``. If `True`,
+            the circuit would evolve density matrices. Defaults to ``False``.
         pauli_operator (:class:`qibo.models.Circuit`, optional): a :math:`n`-qubit
             Pauli operator. If ``None``, it is assumed to be the Identity.
             Defaults to ``None``.
@@ -1133,7 +1141,7 @@ def _operator_from_hadamard_free_group(gamma_matrix, delta_matrix, pauli_operato
         )
 
     nqubits = len(gamma_matrix)
-    circuit = Circuit(nqubits)
+    circuit = Circuit(nqubits, density_matrix=density_matrix)
 
     if pauli_operator is not None:
         circuit += pauli_operator
