@@ -689,7 +689,14 @@ def random_clifford(
         gamma_matrix_prime,
         delta_matrix_prime,
         density_matrix,
-        random_pauli(nqubits, depth=1, return_circuit=True, seed=seed, backend=backend),
+        random_pauli(
+            nqubits,
+            depth=1,
+            return_circuit=True,
+            density_matrix=density_matrix,
+            seed=seed,
+            backend=backend,
+        ),
     )
 
     if return_circuit is False:
