@@ -1012,6 +1012,19 @@ class Circuit:
         """Equivalent to ``circuit.execute``."""
         return self.execute(initial_state=initial_state, nshots=nshots)
 
+    @property
+    def raw(self):
+        return {"queue": [gate.raw for gate in self.queue], "nqubits": self.nqubits}
+
+    @classmethod
+    def load(cls, raw):
+        circ = cls(raw["nqubits"])
+
+        for gate in raw["queue"]:
+            circ.add(Gate.load(gate))
+
+        return circ
+
     def to_qasm(self):
         """Convert circuit to QASM.
 
