@@ -1,33 +1,27 @@
-import time
-from datetime import datetime
-
 import numpy as np
 
+import cma
+from scipy.optimize import minimize
+from scipy.optimize import basinhopping
+
 from qibo import backends
+from qibo.config import log, raise_error
 
 
 class Optimizer:
-    """Parent optimizer class
+    """
+    Agnostic optimizer class, on top of which specific optimizers are built.
 
     Args:
-        initial_parameters (np.ndarray): array with initial values for gate parameters
-        args (tuple): tuple containing loss function arguments
-        loss (function): loss function to train on
-        save (bool): Flag to set logging on
-        loss_function (function): loss function to train on
-        params (np.ndarray): array with current values for gate parameters
-        backend (qibo.backends.GlobalBackend): backend on which to run circuit
-        simulation_start (time.time): simulation start time
-        ftime (time.time): start time variable for timing internal processes
-        etime (time.time): end time variable for timing internal processes
-        name (str): name of current optimisation process
-        iteration (int): training iteration number
-        initparams (np.ndarray or list): initial parameters
+        initial_parameters (np.ndarray or list): array with initial values 
+            for gate parameters.
+        loss (callable): loss function to train on.
+        args (tuple): tuple containing loss function arguments.
     """
 
-    def __init__(self, initial_parameters, args=(), loss=None, save=False):
+    def __init__(self, initial_parameters, args=(), loss=None):
         # saving to class objects
-        self.loss_function = loss
+        self.loss = loss
         if not isinstance(args, tuple):
             self.args = (args,)
         else:
@@ -36,115 +30,40 @@ class Optimizer:
         self.params = initial_parameters
         self.backend = backends.GlobalBackend()
 
-        # logging
-        self.simulation_start = time.time()
-        self.ftime = time.time()
-        self.etime = None
-        self.name = f'Run_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
-
-        self.iteration = 0
-        self.save = save
+        self.options = {}
 
         if not isinstance(initial_parameters, np.ndarray) and not isinstance(
             initial_parameters, list
         ):
-            raise TypeError(
-                "Parameters must be a list of Parameter objects or a numpy array"
+            raise_error(
+                TypeError,
+                "Parameters must be a list of Parameter objects or a numpy array."
             )
 
     def set_options(self, updates):
-        """Updates self.options dictionary"""
+        """Update self.options dictionary"""
         self.options.update(updates)
 
-    def fun(self, x):
-        """Wrapper function to save and preprocess gate parameters
-
-        Args:
-            x (np.array): circuit parameters
-
-        Returns:
-            (float): loss value"""
-
-        val = self.loss_function(x, *self.args)
-
-        # timing
-        self.etime = time.time()
-        duration = self.etime - self.ftime
-        self.ftime = self.etime
-
-        # saving
-        if self.save:
-            self.file.write(
-                f"Iteration {self.iteration} | loss: {val} | duration: {duration}\n"
-            )
-
-        self.iteration += 1
-        return val
-
-    def cleanup(self):
-        """Cleans up log file and closes it"""
-
-        self.file.write(f"Total simulation time: {time.time()-self.simulation_start}\n")
-        self.file.close()
+    def fit(self):
+        """Compute the optimization strategy."""
+        raise_error(
+            NotImplementedError,
+            "fit method is not implemented in the parent Optimizer class."
+        )
 
 
 class CMAES(Optimizer):
-    """Genetic optimizer based on `pycma <https://github.com/CMA-ES/pycma>`_.
+    """Genetic optimizer based on `pycma <https://github.com/CMA-ES/pycma>`_."""
 
-    Example:
-    .. code-block:: python
+    def __init__(self, initial_parameters, args=(), options={}, loss=None):
+        """
 
-        from qibo.models.variational import VariationalCircuit
-        from qibo import gates
-        from qibo.derivative import create_hamiltonian
-        from qibo.optimizers import CMAES
-
-        def black_box_loss(params, circuit, hamiltonian):
-            circuit.set_parameters(params)
-            state = circuit().state()
-
-            results = hamiltonian.expectation(state)
-
-            return (results - 0.4) ** 2
-
-        c = VariationalCircuit(1, density_matrix=True)
-
-        c.add(gates.H(q=0))
-        for _ in range(3):
-            c.add(gates.RZ(q=0, theta=theta))
-            c.add(gates.RY(q=0, theta=theta))
-        c.add(gates.M(0))
-
-        hamiltonian = create_hamiltonian(0, 1, GlobalBackend())
-
-        parameters = np.array([0.1] * 6)
-
-        optimizer = CMAES(
-            initial_parameters=parameters,
-            args=(circuit, hamiltonian),
-            loss=simple_loss
-        )
-
-        fbest, xbest, r, it = optimizer.fit()
-
-    Args:
-        intial_parameters (np.ndarray): array with initial values for gate parameters
-        hamiltonian (qibo.hamiltonians.SymbolicHamiltonian): hamiltonian applied to final circuit state
-        args (tuple): tuple containing loss function arguments. Circuit must be first argument.
-        loss (function): loss function to train on
-        save (bool): Flag to set logging on
-    """
-
-    def __init__(self, initial_parameters, args=(), loss=None, save=False, **kwargs):
-        super().__init__(initial_parameters, args, loss, save)
+        Args:
+        """
+        super().__init__(initial_parameters, args, loss)
 
         self.options = {}
-        self.set_options(kwargs)
-
-        # logging
-        self.filename = f"results/cma_{self.name}.txt"
-        if self.save:
-            self.file = open(self.filename, "w")
+        self.set_options(options)
 
     def fit(self):
         """Performs the optimizations.
@@ -155,20 +74,21 @@ class CMAES(Optimizer):
             (cma.evolution_strategy.CMAEvolutionStrategy): full CMA Evolution Strategy object
         """
 
-        import cma
+        log.info(f"Optimization is performed using the optimizer: {type(self).__name__}")
 
         r = cma.fmin2(
-            self.fun,
-            self.params,
+            objective_function=self.loss,
+            x0=self.params,
+            args=self.args,
             sigma0=1.7,
             **self.options,
         )
 
-        return r[1].result.fbest, r[1].result.xbest, r, self.iteration
+        return r[1].result.fbest, r[1].result.xbest, r
 
 
-class Powell(Optimizer):
-    def __init__(self, initial_parameters, args=(), loss=None, save=False, **kwargs):
+class ScipyMinimizer(Optimizer):
+    def __init__(self, initial_parameters, args=(), loss=None, options={}, method="Powell", **kwargs):
         """Powell optimization approaches based on ``scipy.optimize.minimize``.
 
         For more details check the `scipy` documentation <https://docs.scipy.org/doc/scipy/reference/optimize.minimize-powell.html>`_.
@@ -229,10 +149,11 @@ class Powell(Optimizer):
                 ``scipy.optimize.minimize``.
             processes (int): number of processes when using the parallel BFGS method.
         """
-        super().__init__(initial_parameters, args, loss, save)
+        super().__init__(initial_parameters, args, loss)
+        self.method = method 
 
         self.options = {
-            "method": "Powell",
+            "method": self.method,
             "jac": None,
             "hess": None,
             "hessp": None,
@@ -240,16 +161,11 @@ class Powell(Optimizer):
             "constraints": (),
             "tol": None,
             "callback": None,
-            "options": {"disp": True, "maxfevals": 100},
+            "options": options,
             "processes": None,
             "backend": None,
         }
         self.set_options(kwargs)
-
-        # logging
-        self.filename = f"results/powell_{self.name}.txt"
-        if self.save:
-            self.file = open(self.filename, "w")
 
     def fit(self):
         """Performs the optimizations.
@@ -261,11 +177,12 @@ class Powell(Optimizer):
             (int): iteration number
         """
 
-        from scipy.optimize import minimize
+        log.info(f"Optimization is performed using the optimizer: {type(self).__name__}.{self.method}")
 
         r = minimize(
-            self.fun,
+            self.loss,
             self.params,
+            args=self.args,
             method=self.options["method"],
             jac=self.options["jac"],
             hess=self.options["hess"],
@@ -277,7 +194,7 @@ class Powell(Optimizer):
             options=self.options["options"],
         )
 
-        return r.fun, r.x, r, self.iteration
+        return r.fun, r.x, r
 
 
 class ParallelBFGS(Optimizer):  # pragma: no cover
@@ -329,29 +246,23 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
         processes (int): number of processes when using the paralle BFGS method.
     """
 
-    import numpy as np
-
-    def __init__(self, initial_parameters, loss, args=(), save=False, **kwargs):
-        super().__init__(initial_parameters, args, loss, save)
+    def __init__(self, initial_parameters, loss, args=(), **kwargs):
+        super().__init__(initial_parameters, args, loss)
+        
         self.function_value = None
         self.jacobian_value = None
 
         self.options = {
             "xval": None,
-            "precision": self.np.finfo("float64").eps,
+            "precision": np.finfo("float64").eps,
             "bounds": None,
             "callback": None,
             "options": None,
             "processes": None,
-            "save": False,
         }
 
         self.set_options(kwargs)
 
-        # logging
-        self.filename = f"results/bfgs_{self.name}.txt"
-        if self.save:
-            self.file = open(self.filename, "w")
 
     def fit(self):
         """Performs the optimizations.
@@ -363,7 +274,7 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
             (int): iteration number
         """
 
-        from scipy.optimize import minimize
+        log.info(f"Optimization is performed using the optimizer: {type(self).__name__}")
 
         out = minimize(
             fun=self.fun,
@@ -374,8 +285,8 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
             callback=self.options["callback"],
             options=self.options["options"],
         )
-        out.hess_inv = out.hess_inv * self.np.identity(len(self.params))
-        return out.fun, out.x, out, self.iteration
+        out.hess_inv = out.hess_inv * np.identity(len(self.params))
+        return out.fun, out.x, out
 
     @staticmethod
     def _eval_approx(eps_at, fun, x, eps):
@@ -417,7 +328,7 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
 
             def operation(epsi):
                 return self._eval_approx(
-                    epsi, lambda y: self.loss_function(y, *self.args), x, eps
+                    epsi, lambda y: self.loss(y, *self.args), x, eps
                 )
 
             from joblib import Parallel, delayed
@@ -438,11 +349,6 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
         """
 
         self.evaluate(x)
-        if self.save:
-            self.file.write(
-                f"Iteration {self.iteration} | loss: {self.function_value}\n"
-            )
-            self.iteration += 1
         return self.function_value
 
     def jac(self, x):
@@ -459,60 +365,15 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
 
 
 class BasinHopping(Optimizer):
-    """Global optimizer based on `scipy.optimize.basinhopping <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.basinhopping.html>`_.
-
-    Example:
-    .. code-block:: python
-
-        from qibo.models.variational import VariationalCircuit
-        from qibo import gates
-        from qibo.derivative import create_hamiltonian
-        from qibo.optimizers import BasinHopping
-
-        def black_box_loss(params, circuit, hamiltonian):
-            circuit.set_parameters(params)
-            state = circuit().state()
-
-            results = hamiltonian.expectation(state)
-
-            return (results - 0.4) ** 2
-
-        c = VariationalCircuit(1, density_matrix=True)
-
-        c.add(gates.H(q=0))
-        for _ in range(3):
-            c.add(gates.RZ(q=0, theta=theta))
-            c.add(gates.RY(q=0, theta=theta))
-        c.add(gates.M(0))
-
-        hamiltonian = create_hamiltonian(0, 1, GlobalBackend())
-
-        parameters = np.array([0.1] * 6)
-
-        optimizer = BasinHopping(
-            initial_parameters=parameters,
-            args=(circuit, hamiltonian),
-            loss=simple_loss
-        )
-
-        fbest, xbest, r, it = optimizer.fit()
-
-    Args:
-        intial_parameters (np.ndarray): array with initial values for gate parameters
-        args (tuple): tuple containing loss function arguments. Circuit must be first argument.
-        loss (function): loss function to train on
-        save (bool): Flag to set logging on
+    """
+    Global optimizer based on `scipy.optimize.basinhopping <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.basinhopping.html>`_.
     """
 
-    def __init__(self, initial_parameters, args=(), loss=None, save=False, **kwargs):
-        super().__init__(initial_parameters, args, loss, save)
+    def __init__(self, initial_parameters, args=(), loss=None, **kwargs):
+        super().__init__(initial_parameters, args, loss)
+
         self.args = args
         self.options = kwargs
-
-        # logging
-        self.filename = f"results/basin_{self.name}.txt"
-        if self.save:
-            self.file = open(self.filename, "w")
 
     def fit(self):
         """Performs the optimizations.
@@ -523,145 +384,17 @@ class BasinHopping(Optimizer):
             (scipy.optimize.OptimizeResult): full scipy OptimizeResult object
             (int): iteration number
         """
-        from scipy.optimize import basinhopping
+
+        log.info(f"Optimization is performed using the optimizer: {type(self).__name__}")
 
         if "options" in self.options:
             options = self.options.pop("options")
 
         r = basinhopping(
-            self.fun,
+            self.loss,
             self.params,
             niter=1,
-            minimizer_kwargs={"options": {"maxfev": 100}},
+            minimizer_kwargs={"args": self.args},
         )
 
-        return r.fun, r.x, r, self.iteration
-
-
-class BFGS(Optimizer):
-    """BFGS optimization approach based on ``scipy.optimize.minimize``.
-
-    For more details check the `scipy` documentation <https://docs.scipy.org/doc/scipy/reference/optimize.minimize-bfgs.html>`_.
-
-    Example:
-    .. code-block:: python
-
-        from qibo.models.variational import VariationalCircuit
-        from qibo import gates
-        from qibo.derivative import create_hamiltonian
-        from qibo.optimizers import BFGS
-
-        def black_box_loss(params, circuit, hamiltonian):
-            circuit.set_parameters(params)
-            state = circuit().state()
-
-            results = hamiltonian.expectation(state)
-
-            return (results - 0.4) ** 2
-
-        c = VariationalCircuit(1, density_matrix=True)
-
-        c.add(gates.H(q=0))
-        for _ in range(3):
-            c.add(gates.RZ(q=0, theta=theta))
-            c.add(gates.RY(q=0, theta=theta))
-        c.add(gates.M(0))
-
-        hamiltonian = create_hamiltonian(0, 1, GlobalBackend())
-
-        parameters = np.array([0.1] * 6)
-
-        optimizer = BFGS(
-            initial_parameters=parameters,
-            args=(circuit, hamiltonian),
-            loss=simple_loss
-        )
-
-        fbest, xbest, r, it = optimizer.fit()
-
-    Args:
-        function (function): loss function which returns a numpy object.
-        args (tuple): optional arguments for the loss function.
-        bounds (list): list of bound values for ``scipy.optimize.minimize`` L-BFGS-B.
-        callback (function): function callback ``scipy.optimize.minimize`` L-BFGS-B.
-        options (dict): follows ``scipy.optimize.minimize`` syntax for L-BFGS-B.
-        processes (int): number of processes when using the paralle BFGS method.
-    """
-
-    import numpy as np
-
-    def __init__(
-        self,
-        initial_parameters,
-        args=(),
-        loss=None,
-        jacobian=None,
-        save=False,
-        **kwargs,
-    ):
-        super().__init__(initial_parameters, loss=loss, save=True)
-
-        self.save = save
-        self.jacobian = jacobian
-        self.args = args
-
-        self.options = {
-            "xval": None,
-            "bounds": None,
-            "callback": None,
-            "options": {"gtol": 1e-7, "maxiter": 10000},
-        }
-
-        self.set_options(kwargs)
-
-        self.function_value = None
-        self.jacobian_value = None
-
-        # logging
-        self.filename = f"results/bfgs_{self.name}.txt"
-        if self.save:
-            self.file = open(self.filename, "w")
-
-    def fit(self):
-        """Executes parallel L-BFGS-B minimization.
-        Args:
-            x0 (numpy.array): guess for initial solution.
-
-        Returns:
-            scipy.minimize result object
-        """
-        from scipy.optimize import minimize
-
-        r = minimize(
-            fun=self.fun,
-            x0=self.params,
-            method="BFGS",
-            bounds=self.options["bounds"],
-            callback=self.options["callback"],
-            options=self.options["options"],
-        )
-
-        return r.fun, r.x, r, self.iteration
-
-    def fun(self, x):
-        val = self.loss_function(x, *self.args)
-
-        # timing
-        self.etime = time.time()
-        duration = self.etime - self.ftime
-        self.ftime = self.etime
-
-        # saving
-        if self.save:
-            self.file.write(
-                f"Iteration {self.iteration} | loss: {val} | duration: {duration}\n"
-            )
-
-        self.iteration += 1
-        return val
-
-    def jac(self, x):
-        if self.jacobian is None:
-            return None
-        res = self.jacobian(x, *self.args)
-        return res.T
+        return r.fun, r.x, r
