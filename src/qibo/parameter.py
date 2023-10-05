@@ -5,7 +5,7 @@ from qibo.config import raise_error
 
 
 def calculate_derivatives(func):
-    """Calculates derivatives w.r.t to all parameters of a target function `func`."""
+    """Calculates derivatives w.r.t. to all parameters of a target function `func`."""
     vars = []
     for i in range(func.__code__.co_argcount):
         vars.append(sp.Symbol(f"p{i}"))
@@ -47,7 +47,6 @@ class Parameter:
         described in the code example above.
         features (list or np.ndarray): array containing possible input features x.
         trainable (list or np.ndarray): array with initial trainable parameters theta.
-        nofeatures (bool): flag to explicitly ban the updating of the features. This simplifies the task of updating Parameter objects simultaneously when some have embedded features and some do not.
     """
 
     def __init__(self, func, trainable=None, features=None):
@@ -106,7 +105,7 @@ class Parameter:
 
     @property
     def ncomponents(self):
-        """Returns the number of elements which compose the Parameter"""
+        """Return the number of elements which compose the Parameter"""
         return self.nparams + self.nfeat
 
     def trainable_parameter_indices(self, start_index):
