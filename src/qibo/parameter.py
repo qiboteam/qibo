@@ -43,8 +43,8 @@ class Parameter:
 
     Args:
         func (function): lambda function which builds the gate parameter. If both features and trainable parameters
-        compose the function, it must be passed by first providing the features and then the parameters, as
-        described in the code example above.
+            compose the function, it must be passed by first providing the features and then the parameters, as
+            described in the code example above.
         features (list or np.ndarray): array containing possible input features x.
         trainable (list or np.ndarray): array with initial trainable parameters theta.
     """
