@@ -1199,7 +1199,7 @@ example, the rotational angles which encodes information in a Quantum Neural Net
 are usually built as a combination of features and trainable parameters. For
 doing this, the :class:`qibo.parameter.Parameter` class can be used. It allows
 to define custom parameters which can be inserted into a :class:`qibo.models.circuit.Circuit`.
-Moreover, it automatically precompute the analytical derivative of the parameter
+Moreover, it automatically precomputes the analytical derivative of the parameter
 function, which can be used to calculate the derivatives of a variational model
 with respect to its parameters.
 
