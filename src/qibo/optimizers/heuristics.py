@@ -3,24 +3,24 @@
 import cma
 from scipy.optimize import basinhopping
 
-from qibo.optimizers.abstract import Optimizer, check_options
 from qibo.config import log
+from qibo.optimizers.abstract import Optimizer, check_options
+
 
 class CMAES(Optimizer):
-
     def __init__(self, initial_parameters, args=(), loss=None, options={"sigma0": 0.5}):
         """
-        Covariance Matrix Adaptation Evolution Strategy based on 
+        Covariance Matrix Adaptation Evolution Strategy based on
         `pycma <https://github.com/CMA-ES/pycma>`_.
-        
+
         Args:
-            initial_parameters (np.ndarray or list): array with initial values 
+            initial_parameters (np.ndarray or list): array with initial values
                 for gate parameters.
             loss (callable): loss function to train on.
             args (tuple): tuple containing loss function arguments.
             options (dict): options which can be set into the `cma.fmin2` method.
-                To have a look to all possible options the command 
-                `cma.CMAOptions()` can be used. 
+                To have a look to all possible options the command
+                `cma.CMAOptions()` can be used.
         """
         super().__init__(initial_parameters, args, loss)
 
@@ -37,7 +37,9 @@ class CMAES(Optimizer):
             (cma.evolution_strategy.CMAEvolutionStrategy): full CMA Evolution Strategy object
         """
 
-        log.info(f"Optimization is performed using the optimizer: {type(self).__name__}")
+        log.info(
+            f"Optimization is performed using the optimizer: {type(self).__name__}"
+        )
 
         r = cma.fmin2(
             objective_function=self.loss,
@@ -48,21 +50,28 @@ class CMAES(Optimizer):
 
         return r[1].result.fbest, r[1].result.xbest, r
 
-class BasinHopping(Optimizer):
 
-    def __init__(self, initial_parameters, args=(), loss=None, options={"niter":10}, minimizer_kwargs={}):
+class BasinHopping(Optimizer):
+    def __init__(
+        self,
+        initial_parameters,
+        args=(),
+        loss=None,
+        options={"niter": 10},
+        minimizer_kwargs={},
+    ):
         """
-        Global optimizer based on 
+        Global optimizer based on
         `scipy.optimize.basinhopping <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.basinhopping.html>`_.
 
         Args:
-            initial_parameters (np.ndarray or list): array with initial values 
+            initial_parameters (np.ndarray or list): array with initial values
                 for gate parameters.
             loss (callable): loss function to train on.
             args (tuple): tuple containing loss function arguments.
-            options (dict): additional information compatible with the 
+            options (dict): additional information compatible with the
                 `scipy.optimize.basinhopping` optimizer.
-            minimizer_kwargs (dict): extra keyword arguments to be passed to the 
+            minimizer_kwargs (dict): extra keyword arguments to be passed to the
                 local minimizer. See `scipy.optimize.basinhopping` documentation.
         """
         super().__init__(initial_parameters, args, loss)
@@ -71,10 +80,10 @@ class BasinHopping(Optimizer):
         # check if options are compatible with the function and update class options
         check_options(function=basinhopping, options=options)
         self.options = options
-        
+
         self.minimizer_kwargs = minimizer_kwargs
         self.minimizer_kwargs.update({"args": args})
-        self.set_options({"minimizer_kwargs":self.minimizer_kwargs})
+        self.set_options({"minimizer_kwargs": self.minimizer_kwargs})
 
     def fit(self):
         """Perform the optimizations via Basin-Hopping strategy.
@@ -85,7 +94,9 @@ class BasinHopping(Optimizer):
             (scipy.optimize.OptimizeResult): full scipy OptimizeResult object
         """
 
-        log.info(f"Optimization is performed using the optimizer: {type(self).__name__}")
+        log.info(
+            f"Optimization is performed using the optimizer: {type(self).__name__}"
+        )
 
         r = basinhopping(
             self.loss,
