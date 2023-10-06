@@ -86,7 +86,7 @@ class Gate:
 
         Essentially the counter-part of :meth:`raw`.
         """
-        args = tuple((raw[name] for name in REQUIRED_FIELDS))
+        args = tuple(raw[name] for name in REQUIRED_FIELDS)
         return cls(*args, **raw["init_kwargs"])
 
     def to_json(self):
