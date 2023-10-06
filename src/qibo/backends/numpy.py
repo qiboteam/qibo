@@ -7,7 +7,8 @@ from qibo.backends import einsum_utils
 from qibo.backends.abstract import Backend
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.config import log, raise_error
-from qibo.states import CircuitResult
+from qibo.measurements import CircuitResult, MeasurementOutcomes
+from qibo.states import QuantumState
 
 
 class NumpyBackend(Backend):
@@ -368,9 +369,7 @@ class NumpyBackend(Backend):
         state = (1 - lam) * state + lam * identity
         return state
 
-    def execute_circuit(
-        self, circuit, initial_state=None, nshots=None, return_array=False
-    ):
+    def execute_circuit(self, circuit, initial_state=None, nshots=1000):
         if isinstance(initial_state, type(circuit)):
             if not initial_state.density_matrix == circuit.density_matrix:
                 raise_error(
@@ -397,7 +396,7 @@ class NumpyBackend(Backend):
 
         try:
             nqubits = circuit.nqubits
-            if isinstance(initial_state, CircuitResult):
+            if isinstance(initial_state, QuantumState):
                 initial_state = initial_state.state()
 
             if circuit.density_matrix:
@@ -420,11 +419,26 @@ class NumpyBackend(Backend):
                 for gate in circuit.queue:
                     state = gate.apply(self, state, nqubits)
 
-            if return_array:
-                return state
+            is_noisy = self.circuit_is_noisy(circuit)
+            is_measured = self.circuit_is_measured(circuit)
+
+            if is_noisy:
+                if is_measured:
+                    return MeasurementOutcomes(circuit, self, nshots)
+                else:
+                    if density_matrix:
+                        return QuantumState(state)
+                    else:
+                        raise AssertionError(
+                            "Attempting to perform noisy simulation with `density_matrix=False` and no Measurement gate in the Circuit. Please either include measurements in the circuit if you wish to retrieve the statistics of the outcomes or set `density_matrix=True` to recover the final state."
+                        )
             else:
-                circuit._final_state = CircuitResult(self, circuit, state, nshots)
-                return circuit._final_state
+                if is_measured:
+                    return QuantumState(state), MeasurementOutcomes(
+                        circuit, self, nshots
+                    )
+                else:
+                    return QuantumState(state)
 
         except self.oom_error:
             raise_error(
@@ -510,6 +524,19 @@ class NumpyBackend(Backend):
         raise_error(
             NotImplementedError, f"{self} does not support distributed execution."
         )
+
+    def circuit_is_noisy(self, circuit) -> bool:
+        from qibo.gates import UnitaryChannel
+
+        for gate in circuit.queue:
+            if isinstance(gate, UnitaryChannel):
+                return True
+        return False
+
+    def circuit_is_measured(self, circuit) -> bool:
+        if len(circuit.measurements) > 0:
+            return True
+        return False
 
     def circuit_result_representation(self, result):
         return result.symbolic()

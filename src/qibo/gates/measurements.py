@@ -3,7 +3,7 @@ from typing import Dict, Optional, Tuple
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate
 from qibo.gates.gates import Z
-from qibo.states import MeasurementResult
+from qibo.measurements import MeasurementResult
 
 
 class M(Gate):
