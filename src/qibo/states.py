@@ -7,20 +7,23 @@ from tensorflow import Tensor
 class QuantumState:
     """Data structure to represent the final state after circuit execution."""
 
-    def __init__(self, state: Union[np.ndarray, Tensor]):
+    def __init__(self, state: Union[np.ndarray, Tensor], backend):
         self.state = state
-        if isinstance(state, np.ndarray):
-            from qibo.backends import NumpyBackend
+        # if isinstance(state, np.ndarray):
+        #    from qibo.backends import NumpyBackend
 
-            self.backend = NumpyBackend()
-        elif isinstance(state, Tensor):
-            from qibo.backends import TensorflowBackend
+        #    self.backend = NumpyBackend()
+        # elif isinstance(state, Tensor):
+        #    from qibo.backends import TensorflowBackend
 
-            self.backend = TensorflowBackend()
-        else:
-            raise AssertionError(f"Unsupported state data type: {type(state)}.")
+        #    self.backend = TensorflowBackend()
+        # else:
+        #    raise AssertionError(f"Unsupported state data type: {type(state)}.")
+        self.backend = backend
         self.density_matrix = len(state.shape) == 2
         self.nqubits = int(np.log2(len(state)))
+        self.qubits = tuple(range(self.nqubits))
+        self._repeated_execution_probabilities = None
 
     def symbolic(self, decimals=5, cutoff=1e-10, max_terms=20):
         """Dirac notation representation of the state in the computational basis.
@@ -75,3 +78,18 @@ class QuantumState:
             return self.symbolic(decimals, cutoff, max_terms)
         else:
             return self.state
+
+    def probabilities(self, qubits=None):
+        """Calculates measurement probabilities by tracing out qubits.
+        When noisy model is applied to a circuit and `circuit.density_matrix=False`,
+        this method returns the average probability resulting from
+        repeated execution. This probability distribution approximates the
+        exact probability distribution obtained when `circuit.density_matrix=True`.
+
+        Args:
+            qubits (list, set): Set of qubits that are measured.
+        """
+        if self._repeated_execution_probabilities is not None:
+            return self._repeated_execution_probabilities
+
+        return self.backend.circuit_result_probabilities(self, qubits)

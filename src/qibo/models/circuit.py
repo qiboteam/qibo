@@ -1008,7 +1008,7 @@ class Circuit:
             else:
                 return GlobalBackend().execute_circuit(self, initial_state, nshots)
 
-    def __call__(self, initial_state=None, nshots=None):
+    def __call__(self, initial_state=None, nshots=1000):
         """Equivalent to ``circuit.execute``."""
         return self.execute(initial_state=initial_state, nshots=nshots)
 
