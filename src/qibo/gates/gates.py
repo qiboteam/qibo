@@ -864,6 +864,27 @@ class U3(_Un_):
         theta, lam, phi = tuple(-x for x in self.parameters)  # pylint: disable=E1130
         return self.__class__(self.target_qubits[0], theta, phi, lam)
 
+    def decompose(self) -> List[Gate]:
+        """A global phase difference exists between the definitions of
+        :math:`U3` and this decomposition. More precisely,
+
+        .. math::
+            U_{3}(\\theta, \\phi, \\lambda) = e^{i \\, \\frac{3 \\pi}{2}}
+                \\, \\text{RZ}(\\phi + \\pi) \\, \\sqrt{X} \\, \\text{RZ}(\\theta + \\pi)
+                \\, \\sqrt{X} \\, \\text{RZ}(\\lambda) \\, ,
+
+        where :math:`\\text{RZ}` and :math:`\\sqrt{X}` are, respectively,
+        :class:`qibo.gates.RZ` and :class`qibo.gates.SX`.
+        """
+        q = self.init_args[0]
+        return [
+            RZ(q, self.init_kwargs["lam"]),
+            SX(q),
+            RZ(q, self.init_kwargs["theta"] + math.pi),
+            SX(q),
+            RZ(q, self.init_kwargs["phi"] + math.pi),
+        ]
+
 
 class CNOT(Gate):
     """The Controlled-NOT gate.
