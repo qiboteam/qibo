@@ -955,6 +955,13 @@ class CZ(Gate):
     def qasm_label(self):
         return "cz"
 
+    def decompose(self) -> List[Gate]:
+        """Decompose :math:`\\text{CZ}` gate into :class:`qibo.gates.H` in the target qubit,
+        followed by :class:`qibo.gates.CNOT`, followed by another :class:`qibo.gates.H`
+        in the target qubit"""
+        q0, q1 = self.init_args
+        return [H(q1), CNOT(q0, q1), H(q1)]
+
 
 class CSX(Gate):
     """The Controlled-:math:`\\sqrt{X}` gate.

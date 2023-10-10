@@ -461,6 +461,13 @@ def test_cz(backend, controlled_by):
     matrix = backend.cast(matrix, dtype=matrix.dtype)
 
     target_state = np.dot(matrix, initial_state)
+    # test decomposition
+    final_state_decompose = apply_gates(
+        backend,
+        gates.CZ(0, 1).decompose(),
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
 
     if controlled_by:
         gate = gates.Z(1).controlled_by(0)
@@ -472,6 +479,15 @@ def test_cz(backend, controlled_by):
     assert gate.name == "cz"
 
     backend.assert_allclose(final_state, target_state)
+
+    # testing random expectation value due to global phase difference
+    observable = random_hermitian(2**nqubits, backend=backend)
+    backend.assert_allclose(
+        np.transpose(np.conj(final_state_decompose))
+        @ observable
+        @ final_state_decompose,
+        np.transpose(np.conj(target_state)) @ observable @ target_state,
+    )
 
     assert gates.CZ(0, 1).qasm_label == "cz"
     assert gates.CZ(0, 1).clifford
