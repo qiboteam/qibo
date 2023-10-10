@@ -972,18 +972,22 @@ class Circuit:
 
             backend = GlobalBackend()
 
-        from qibo.states import CircuitResult
+        from qibo.measurements import CircuitResult
+        from qibo.states import QuantumState
 
         executor = lambda state, nshots: backend.execute_circuit(
-            self, state, nshots, return_array=True
-        )
+            self, state, nshots
+        )._state
         self.compiled = type("CompiledExecutor", (), {})()
         self.compiled.executor = backend.compile(executor)
-        self.compiled.result = lambda state, nshots: CircuitResult(
-            backend, self, state, nshots
-        )
+        if self.measurements:
+            self.compiled.result = lambda state, nshots: CircuitResult(
+                state, self, backend, nshots
+            )
+        else:
+            self.compiled.result = lambda state, nshots: QuantumState(state, backend)
 
-    def execute(self, initial_state=None, nshots=None):
+    def execute(self, initial_state=None, nshots=1000):
         """Executes the circuit. Exact implementation depends on the backend.
 
         Args:

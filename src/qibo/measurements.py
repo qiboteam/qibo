@@ -399,5 +399,6 @@ class MeasurementOutcomes:
 class CircuitResult(QuantumState, MeasurementOutcomes):
     def __init__(self, final_state, circuit, backend, nshots=1000):
         QuantumState.__init__(self, final_state, backend)
-        probs = self.probabilities([m.target_qubits[0] for m in circuit.measurements])
+        qubits = [q for m in circuit.measurements for q in m.target_qubits]
+        probs = self.probabilities(qubits)
         MeasurementOutcomes.__init__(self, circuit.measurements, probs, backend, nshots)

@@ -196,7 +196,7 @@ class Backend(abc.ABC):
 
     @abc.abstractmethod
     def execute_circuit_repeated(
-        self, circuit, initial_state=None, nshots=None
+        self, circuit, nshots, initial_state=None
     ):  # pragma: no cover
         """Execute a :class:`qibo.models.circuit.Circuit` multiple times.
 

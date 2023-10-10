@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates, hamiltonians
-from qibo.states import MeasurementResult
+from qibo.measurements import MeasurementResult
 from qibo.symbols import I, Z
 
 

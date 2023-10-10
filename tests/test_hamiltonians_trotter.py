@@ -133,7 +133,7 @@ def test_trotter_hamiltonian_three_qubit_term(backend):
     dt = 1e-2
     initial_state = random_statevector(2**4, backend=backend)
     circuit = ham.circuit(dt=dt)
-    final_state = backend.execute_circuit(circuit, np.copy(initial_state))
+    final_state = backend.execute_circuit(circuit, np.copy(initial_state))._state
     mm1 = backend.to_numpy(mm1)
     mm2 = backend.to_numpy(mm2)
     mm3 = backend.to_numpy(mm3)

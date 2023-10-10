@@ -8,22 +8,12 @@ class QuantumState:
     """Data structure to represent the final state after circuit execution."""
 
     def __init__(self, state: Union[np.ndarray, Tensor], backend):
-        self.state = state
-        # if isinstance(state, np.ndarray):
-        #    from qibo.backends import NumpyBackend
-
-        #    self.backend = NumpyBackend()
-        # elif isinstance(state, Tensor):
-        #    from qibo.backends import TensorflowBackend
-
-        #    self.backend = TensorflowBackend()
-        # else:
-        #    raise AssertionError(f"Unsupported state data type: {type(state)}.")
         self.backend = backend
         self.density_matrix = len(state.shape) == 2
-        self.nqubits = int(np.log2(len(state)))
+        self.nqubits = int(np.log2(state.shape[0]))
         self.qubits = tuple(range(self.nqubits))
         self._repeated_execution_probabilities = None
+        self._state = state
 
     def symbolic(self, decimals=5, cutoff=1e-10, max_terms=20):
         """Dirac notation representation of the state in the computational basis.
@@ -43,15 +33,15 @@ class QuantumState:
         """
         if self.density_matrix:
             terms = self.backend.calculate_symbolic_density_matrix(
-                self.state, self.nqubits, decimals, cutoff, max_terms
+                self._state, self.nqubits, decimals, cutoff, max_terms
             )
         else:
             terms = self.backend.calculate_symbolic(
-                self.state, self.nqubits, decimals, cutoff, max_terms
+                self._state, self.nqubits, decimals, cutoff, max_terms
             )
         return " + ".join(terms)
 
-    def __call__(self, dirac=True, decimals=5, cutoff=1e-10, max_terms=20):
+    def state(self, dirac=False, decimals=5, cutoff=1e-10, max_terms=20):
         """State's tensor representation as an backend tensor.
 
         Args:
@@ -77,7 +67,7 @@ class QuantumState:
         if dirac:
             return self.symbolic(decimals, cutoff, max_terms)
         else:
-            return self.state
+            return self._state
 
     def probabilities(self, qubits=None):
         """Calculates measurement probabilities by tracing out qubits.

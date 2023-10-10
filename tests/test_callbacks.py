@@ -172,7 +172,7 @@ def test_entropy_in_distributed_circuit(
     """Check that various entropy configurations work in distributed circuit."""
     target_c = Circuit(4)
     target_c.add([gates.H(0), gates.CNOT(0, 1)])
-    target_state = backend.execute_circuit(target_c)
+    target_state = backend.execute_circuit(target_c)._state
 
     entropy = callbacks.EntanglementEntropy([0])
     c = Circuit(4, accelerators)
@@ -183,7 +183,7 @@ def test_entropy_in_distributed_circuit(
             c.add(gates.CNOT(0, 1))
         elif gate == "entropy":
             c.add(gates.CallbackGate(entropy))
-    final_state = backend.execute_circuit(c)
+    final_state = backend.execute_circuit(c)._state
     backend.assert_allclose(final_state, target_state)
     values = [backend.to_numpy(x) for x in entropy[:]]
     backend.assert_allclose(values, target_entropy, atol=PRECISION_TOL)
@@ -193,7 +193,7 @@ def test_entropy_multiple_executions(backend, accelerators):
     """Check entropy calculation when the callback is used in multiple executions."""
     target_c = Circuit(4)
     target_c.add([gates.RY(0, 0.1234), gates.CNOT(0, 1)])
-    target_state = backend.execute_circuit(target_c)
+    target_state = backend.execute_circuit(target_c)._state
 
     entropy = callbacks.EntanglementEntropy([0])
     c = Circuit(4, accelerators)
@@ -201,19 +201,19 @@ def test_entropy_multiple_executions(backend, accelerators):
     c.add(gates.CallbackGate(entropy))
     c.add(gates.CNOT(0, 1))
     c.add(gates.CallbackGate(entropy))
-    state = backend.execute_circuit(c)
+    state = backend.execute_circuit(c)._state
     backend.assert_allclose(state, target_state)
 
     target_c = Circuit(4)
     target_c.add([gates.RY(0, 0.4321), gates.CNOT(0, 1)])
-    target_state = backend.execute_circuit(target_c)
+    target_state = backend.execute_circuit(target_c)._state
 
     c = Circuit(4, accelerators)
     c.add(gates.RY(0, 0.4321))
     c.add(gates.CallbackGate(entropy))
     c.add(gates.CNOT(0, 1))
     c.add(gates.CallbackGate(entropy))
-    state = backend.execute_circuit(c)
+    state = backend.execute_circuit(c)._state
     backend.assert_allclose(state, target_state)
 
     def target_entropy(t):
@@ -228,7 +228,7 @@ def test_entropy_multiple_executions(backend, accelerators):
     c = Circuit(8, accelerators)
     with pytest.raises(RuntimeError):
         c.add(gates.CallbackGate(entropy))
-        state = backend.execute_circuit(c)
+        state = backend.execute_circuit(c)._state
 
 
 def test_entropy_large_circuit(backend, accelerators):
@@ -268,7 +268,7 @@ def test_entropy_large_circuit(backend, accelerators):
     c.add(gates.RY(i, thetas[2, i]) for i in range(8))
     c.add(gates.CZ(i, i + 1) for i in range(0, 7, 2))
     c.add(gates.CallbackGate(entropy))
-    state = backend.execute_circuit(c)
+    state = backend.execute_circuit(c)._state
 
     backend.assert_allclose(state3, state)
     values = [backend.to_numpy(x) for x in entropy[:]]

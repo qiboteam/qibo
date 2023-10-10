@@ -52,7 +52,7 @@ def test_dill_circuit_result(backend):
     serial = dill.dumps(result)
     new_result = dill.loads(serial)
     assert type(new_result) == type(result)
-    assert str(new_result) == str(result)
+    assert str(new_result.state(dirac=True)) == str(result.state(dirac=True))
     backend.assert_allclose(new_result.state(), result.state())
 
 

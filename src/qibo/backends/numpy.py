@@ -389,7 +389,7 @@ class NumpyBackend(Backend):
                 return self.execute_circuit(initial_state + circuit, None, nshots)
 
         if circuit.repeated_execution:
-            if circuit.measurements:
+            if circuit.measurements or circuit.has_collapse:
                 return self.execute_circuit_repeated(circuit, nshots, initial_state)
             else:
                 raise AssertionError(
@@ -424,6 +424,8 @@ class NumpyBackend(Backend):
                 for gate in circuit.queue:
                     state = gate.apply(self, state, nqubits)
 
+            # set the circuit _final_state??
+
             if circuit.has_unitary_channel:
                 # here we necessarily have `density_matrix=True`, otherwise
                 # execute_circuit_repeated would have been called
@@ -450,9 +452,9 @@ class NumpyBackend(Backend):
         """
         Execute the circuit `nshots` times to retrieve probabilities, frequencies
         and samples. Note that this method is called only if a unitary channel
-        is present in the circuit (i.e. noisy simulation) and `density_matrix=False`.
-        Therefore, measurements must be present in the circuit and a `MeasurementOutcome`
-        object is returned every time.
+        is present in the circuit (i.e. noisy simulation) and `density_matrix=False`, or
+        if some collapsing measuremnt is performed. Therefore, measurements must be
+        present in the circuit and a `MeasurementOutcome` object is returned every time.
         """
 
         results = []
@@ -465,6 +467,15 @@ class NumpyBackend(Backend):
         target_qubits = sum(target_qubits, tuple())
         probabilities = np.zeros(2 ** len(target_qubits), dtype=float)
         probabilities = self.cast(probabilities, dtype=probabilities.dtype)
+
+        # we have to decide how to handle collapse measurements
+        # one possibility might be:
+        # - only collapse measurements present
+        #      --> QuantumState if density_matrix=True
+        #      --> raise Error if density_matrix=False
+        # - both collapse and standard measurements present
+        #      --> CircuitResult if density_matrix=True
+        #      --> MeasurementOutcomes if density_matrix=False
 
         for _ in range(nshots):
             if circuit.accelerators:  # pragma: no cover
@@ -498,11 +509,10 @@ class NumpyBackend(Backend):
         final_result._repeated_execution_frequencies = self.calculate_frequencies(
             samples
         )
+        # set the circuit _final_state??
         return final_result
 
-    def execute_distributed_circuit(
-        self, circuit, initial_state=None, nshots=None, return_array=False
-    ):
+    def execute_distributed_circuit(self, circuit, initial_state=None, nshots=None):
         raise_error(
             NotImplementedError, f"{self} does not support distributed execution."
         )
@@ -517,7 +527,7 @@ class NumpyBackend(Backend):
         if qubits is None:
             qubits = state.qubits
 
-        state_tensor = state.state
+        state_tensor = state._state
         if state.density_matrix:
             return self.calculate_probabilities_density_matrix(
                 state_tensor, qubits, state.nqubits
