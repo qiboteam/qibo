@@ -395,14 +395,21 @@ def test_u2(backend):
 
 
 def test_u3(backend):
-    theta = 0.1111
-    phi = 0.1234
-    lam = 0.4321
     nqubits = 1
+    theta, phi, lam = np.random.rand(3)
+
     initial_state = random_statevector(2**nqubits, backend=backend)
     final_state = apply_gates(
         backend, [gates.U3(0, theta, phi, lam)], initial_state=initial_state
     )
+    # test decomposition
+    final_state_decompose = apply_gates(
+        backend,
+        gates.U3(0, theta, phi, lam).decompose(),
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+
     cost, sint = np.cos(theta / 2), np.sin(theta / 2)
     ep = np.exp(1j * (phi + lam) / 2)
     em = np.exp(1j * (phi - lam) / 2)
@@ -413,6 +420,15 @@ def test_u3(backend):
     target_state = np.dot(matrix, initial_state)
 
     backend.assert_allclose(final_state, target_state)
+
+    # testing random expectation value due to global phase difference
+    observable = random_hermitian(2**nqubits, backend=backend)
+    backend.assert_allclose(
+        np.transpose(np.conj(final_state_decompose))
+        @ observable
+        @ final_state_decompose,
+        np.transpose(np.conj(target_state)) @ observable @ target_state,
+    )
 
     assert gates.U3(0, theta, phi, lam).qasm_label == "u3"
     assert not gates.U3(0, theta, phi, lam).clifford
