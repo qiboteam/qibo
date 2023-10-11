@@ -930,8 +930,8 @@ class U1q(_Un_):
 
     def _dagger(self) -> "Gate":
         """"""
-        theta, phi = self.parameters
-        return self.__class__(self.target_qubits[0], -theta, phi)
+        theta, phi = self.init_kwargs["theta"], self.init_kwargs["phi"]
+        return self.__class__(self.init_args[0], -theta, phi)
 
 
 class CNOT(Gate):
