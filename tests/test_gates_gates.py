@@ -394,11 +394,13 @@ def test_u2(backend):
     assert gates.U2(0, phi, lam).unitary
 
 
-def test_u3(backend):
+@pytest.mark.parametrize("seed_observable", list(range(1, 10 + 1)))
+@pytest.mark.parametrize("seed_state", list(range(1, 10 + 1)))
+def test_u3(backend, seed_state, seed_observable):
     nqubits = 1
     theta, phi, lam = np.random.rand(3)
 
-    initial_state = random_statevector(2**nqubits, backend=backend)
+    initial_state = random_statevector(2**nqubits, seed=seed_state, backend=backend)
     final_state = apply_gates(
         backend, [gates.U3(0, theta, phi, lam)], initial_state=initial_state
     )
@@ -422,7 +424,7 @@ def test_u3(backend):
     backend.assert_allclose(final_state, target_state)
 
     # testing random expectation value due to global phase difference
-    observable = random_hermitian(2**nqubits, backend=backend)
+    observable = random_hermitian(2**nqubits, seed=seed_observable, backend=backend)
     backend.assert_allclose(
         np.transpose(np.conj(final_state_decompose))
         @ observable
@@ -452,10 +454,12 @@ def test_cnot(backend, applyx):
     assert gates.CNOT(0, 1).unitary
 
 
+@pytest.mark.parametrize("seed_observable", list(range(1, 10 + 1)))
+@pytest.mark.parametrize("seed_state", list(range(1, 10 + 1)))
 @pytest.mark.parametrize("controlled_by", [False, True])
-def test_cz(backend, controlled_by):
+def test_cz(backend, controlled_by, seed_state, seed_observable):
     nqubits = 2
-    initial_state = random_statevector(2**nqubits, backend=backend)
+    initial_state = random_statevector(2**nqubits, seed=seed_state, backend=backend)
     matrix = np.eye(4)
     matrix[3, 3] = -1
     matrix = backend.cast(matrix, dtype=matrix.dtype)
@@ -481,7 +485,7 @@ def test_cz(backend, controlled_by):
     backend.assert_allclose(final_state, target_state)
 
     # testing random expectation value due to global phase difference
-    observable = random_hermitian(2**nqubits, backend=backend)
+    observable = random_hermitian(2**nqubits, seed=seed_observable, backend=backend)
     backend.assert_allclose(
         np.transpose(np.conj(final_state_decompose))
         @ observable
