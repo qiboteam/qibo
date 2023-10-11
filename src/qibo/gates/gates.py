@@ -1505,7 +1505,7 @@ class SYC(Gate):
     Corresponding to the following unitary matrix
 
     .. math::
-        \\text{fSim}(\\pi / 2, \\, \\pi / 6) = \\beging{pmatrix}
+        \\text{fSim}(\\pi / 2, \\, \\pi / 6) = \\begin{pmatrix}
             1 & 0 & 0 & 0 \\\\
             0 & 0 & -i & 0 \\\\
             0 & -i & 0 & 0 \\\\
