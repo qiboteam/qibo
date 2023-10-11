@@ -281,7 +281,7 @@ class NumpyMatrices:
             dtype=self.dtype,
         )
 
-    def RXY(self, theta):
+    def RXXYY(self, theta):
         cos, sin = self.np.cos(theta / 2), self.np.sin(theta / 2)
         return self.np.array(
             [
