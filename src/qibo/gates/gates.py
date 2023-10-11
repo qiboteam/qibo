@@ -865,6 +865,23 @@ class U3(_Un_):
         return self.__class__(self.target_qubits[0], theta, phi, lam)
 
 
+class U1q(_Un_):
+    def __init__(self, q, theta, phi, trainable=True):
+        super().__init__(q, trainable=trainable)
+        self.name = "u1q"
+        self.draw_label = "U1q"
+        self.nparams = 2
+        self._theta, self._phi = None, None
+        self.init_kwargs = {"theta": theta, "phi": phi, "trainable": trainable}
+        self.parameter_names = ["theta", "phi"]
+        self.parameters = theta, phi
+
+    def _dagger(self) -> "Gate":
+        """"""
+        theta, phi = tuple(-x for x in self.parameters)  # pylint: disable=E1130
+        return self.__class__(self.target_qubits[0], theta, phi)
+
+
 class CNOT(Gate):
     """The Controlled-NOT gate.
 
