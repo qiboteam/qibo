@@ -255,7 +255,9 @@ class SX(Gate):
         return "sx"
 
     def decompose(self):
-        """A global phase difference exists between the definitions of
+        """Decomposition of :math:`\\sqrt{X}` up to global phase.
+
+        A global phase difference exists between the definitions of
         :math:`\\sqrt{X}` and :math:`\\text{RX}(\\pi / 2)`, with :math:`\\text{RX}`
         being the :class:`qibo.gates.RX` gate. More precisely,
         :math:`\\sqrt{X} = e^{i \\pi / 4} \\, \\text{RX}(\\pi / 2)`.
@@ -296,7 +298,9 @@ class SXDG(Gate):
         return "sxdg"
 
     def decompose(self):
-        """A global phase difference exists between the definitions of
+        """Decomposition of :math:`(\\sqrt{X})^{\\dagger}` up to global phase.
+
+        A global phase difference exists between the definitions of
         :math:`\\sqrt{X}` and :math:`\\text{RX}(\\pi / 2)`, with :math:`\\text{RX}`
         being the :class:`qibo.gates.RX` gate. More precisely,
         :math:`(\\sqrt{X})^{\\dagger} = e^{-i \\pi / 4} \\, \\text{RX}(-\\pi / 2)`.
@@ -865,7 +869,9 @@ class U3(_Un_):
         return self.__class__(self.target_qubits[0], theta, phi, lam)
 
     def decompose(self) -> List[Gate]:
-        """A global phase difference exists between the definitions of
+        """Decomposition of :math:`U_{3}` up to global phase.
+
+        A global phase difference exists between the definitions of
         :math:`U3` and this decomposition. More precisely,
 
         .. math::
@@ -956,7 +962,9 @@ class CZ(Gate):
         return "cz"
 
     def decompose(self) -> List[Gate]:
-        """Decompose :math:`\\text{CZ}` gate into :class:`qibo.gates.H` in the target qubit,
+        """Decomposition of :math:`\\text{CZ}` gate.
+
+        Decompose :math:`\\text{CZ}` gate into :class:`qibo.gates.H` in the target qubit,
         followed by :class:`qibo.gates.CNOT`, followed by another :class:`qibo.gates.H`
         in the target qubit"""
         q0, q1 = self.init_args
@@ -1767,7 +1775,9 @@ class RXY(_Rnn_):
         self.draw_label = "RXY"
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
-        """This decomposition has a global phase difference with respect to the
+        """Decomposition of :math:`\\text{R_{XY}}` up to global phase.
+
+        This decomposition has a global phase difference with respect to the
         original gate due to a phase difference in :math:`\\left(\\sqrt{X}\\right)^{\\dagger}`.
         """
         q0, q1 = self.target_qubits
