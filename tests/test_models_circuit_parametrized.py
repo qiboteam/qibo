@@ -205,9 +205,9 @@ def test_set_parameters_with_light_cone(backend, trainable):
         c.set_parameters(np.random.random(4))
     else:
         c.set_parameters(np.random.random(2))
-    target_state = backend.execute_circuit(c)
+    target_state = backend.execute_circuit(c)._state
     lc, _ = c.light_cone(1, 2)
-    final_state = backend.execute_circuit(lc)
+    final_state = backend.execute_circuit(lc)._state
     backend.assert_allclose(final_state, target_state)
 
 
@@ -231,10 +231,10 @@ def test_variable_theta():
     cvar = Circuit(2)
     cvar.add(gates.RX(0, theta1))
     cvar.add(gates.RY(1, theta2))
-    final_state = backend.execute_circuit(cvar)
+    final_state = backend.execute_circuit(cvar)._state
 
     c = Circuit(2)
     c.add(gates.RX(0, 0.1234))
     c.add(gates.RY(1, 0.4321))
-    target_state = backend.execute_circuit(c)
+    target_state = backend.execute_circuit(c)._state
     backend.assert_allclose(final_state, target_state)

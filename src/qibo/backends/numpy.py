@@ -1,4 +1,5 @@
 import collections
+from typing import Union
 
 import numpy as np
 
@@ -453,64 +454,86 @@ class NumpyBackend(Backend):
         Execute the circuit `nshots` times to retrieve probabilities, frequencies
         and samples. Note that this method is called only if a unitary channel
         is present in the circuit (i.e. noisy simulation) and `density_matrix=False`, or
-        if some collapsing measuremnt is performed. Therefore, measurements must be
-        present in the circuit and a `MeasurementOutcome` object is returned every time.
+        if some collapsing measuremnt is performed.
         """
 
-        results = []
+        if (
+            circuit.has_collapse
+            and not circuit.measurements
+            and not circuit.density_matrix
+        ):
+            raise AssertionError(
+                "The circuit contains only collapsing measurements (`collapse=True`) but `density_matrix=False`. Please set `density_matrix=True` to retrieve the final state after execution."
+            )
+
+        results, final_states = [], []
         nqubits = circuit.nqubits
 
-        samples = []
-        target_qubits = [
-            measurement.target_qubits for measurement in circuit.measurements
-        ]
-        target_qubits = sum(target_qubits, tuple())
-        probabilities = np.zeros(2 ** len(target_qubits), dtype=float)
-        probabilities = self.cast(probabilities, dtype=probabilities.dtype)
-
-        # we have to decide how to handle collapse measurements
-        # one possibility might be:
-        # - only collapse measurements present
-        #      --> QuantumState if density_matrix=True
-        #      --> raise Error if density_matrix=False
-        # - both collapse and standard measurements present
-        #      --> CircuitResult if density_matrix=True
-        #      --> MeasurementOutcomes if density_matrix=False
+        if not circuit.density_matrix:
+            samples = []
+            target_qubits = [
+                measurement.target_qubits for measurement in circuit.measurements
+            ]
+            target_qubits = sum(target_qubits, tuple())
+            probabilities = np.zeros(2 ** len(target_qubits), dtype=float)
+            probabilities = self.cast(probabilities, dtype=probabilities.dtype)
 
         for _ in range(nshots):
-            if circuit.accelerators:  # pragma: no cover
-                # pylint: disable=E1111
-                state = self.execute_distributed_circuit(
-                    circuit, initial_state, return_array=True
-                )
-            else:
+            if circuit.density_matrix:
                 if initial_state is None:
-                    state = self.zero_state(nqubits)
+                    state = self.zero_density_matrix(nqubits)
                 else:
                     state = self.cast(initial_state, copy=True)
 
                 for gate in circuit.queue:
                     if gate.symbolic_parameters:
                         gate.substitute_symbols()
-                    state = gate.apply(self, state, nqubits)
+                    state = gate.apply_density_matrix(self, state, nqubits)
+            else:
+                if circuit.accelerators:  # pragma: no cover
+                    # pylint: disable=E1111
+                    state = self.execute_distributed_circuit(
+                        circuit, initial_state, return_array=True
+                    )
+                else:
+                    if initial_state is None:
+                        state = self.zero_state(nqubits)
+                    else:
+                        state = self.cast(initial_state, copy=True)
 
-            result = CircuitResult(state, circuit, self, 1)
-            sample = result.samples()[0]
-            results.append(sample)
-            probabilities += result.probabilities()
-            samples.append("".join([str(s) for s in sample]))
+                    for gate in circuit.queue:
+                        if gate.symbolic_parameters:
+                            gate.substitute_symbols()
+                        state = gate.apply(self, state, nqubits)
 
-        probabilities = probabilities / nshots
-        final_result = MeasurementOutcomes(
-            circuit.measurements, probabilities, self, nshots
-        )
-        final_result._samples = self.aggregate_shots(results)
-        final_result._repeated_execution_probabilities = probabilities
-        final_result._repeated_execution_frequencies = self.calculate_frequencies(
-            samples
-        )
-        # set the circuit _final_state??
-        return final_result
+            if circuit.density_matrix:
+                final_states.append(state)
+            if circuit.measurements:
+                result = CircuitResult(state, circuit, self, 1)
+                sample = result.samples()[0]
+                results.append(sample)
+                if not circuit.density_matrix:
+                    probabilities += result.probabilities()
+                    samples.append("".join([str(s) for s in sample]))
+
+        if circuit.density_matrix:  # this implies also it has_collapse
+            final_state = np.asarray(final_states).mean(0)
+            if circuit.measurements:
+                return CircuitResult(final_state, circuit, self, nshots)
+            else:
+                return QuantumState(final_state, self)
+        else:
+            probabilities = probabilities / nshots
+            final_result = MeasurementOutcomes(
+                circuit.measurements, probabilities, self, nshots
+            )
+            final_result._samples = self.aggregate_shots(results)
+            final_result._repeated_execution_probabilities = probabilities
+            final_result._repeated_execution_frequencies = self.calculate_frequencies(
+                samples
+            )
+            # set the circuit _final_state??
+            return final_result
 
     def execute_distributed_circuit(self, circuit, initial_state=None, nshots=None):
         raise_error(
@@ -759,6 +782,10 @@ class NumpyBackend(Backend):
             )
 
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
+        if isinstance(value, Union[CircuitResult, QuantumState]):
+            value = value._state
+        if isinstance(target, Union[CircuitResult, QuantumState]):
+            target = target._state
         value = self.to_numpy(value)
         target = self.to_numpy(target)
         np.testing.assert_allclose(value, target, rtol=rtol, atol=atol)

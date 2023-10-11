@@ -381,6 +381,9 @@ class MeasurementOutcomes:
 
         return self._measurement_gate
 
+    def apply_bitflips(self, p0, p1=None):
+        return apply_bitflips(self, p0, p1)
+
     def expectation_from_samples(self, observable):
         """Computes the real expectation value of a diagonal observable from frequencies.
 
@@ -398,7 +401,12 @@ class MeasurementOutcomes:
 
 class CircuitResult(QuantumState, MeasurementOutcomes):
     def __init__(self, final_state, circuit, backend, nshots=1000):
+        self.circuit = circuit
         QuantumState.__init__(self, final_state, backend)
         qubits = [q for m in circuit.measurements for q in m.target_qubits]
+        if len(qubits) == 0:
+            raise ValueError(
+                "Circuit does not contain measurements. Use a `QuantumState` instead."
+            )
         probs = self.probabilities(qubits)
         MeasurementOutcomes.__init__(self, circuit.measurements, probs, backend, nshots)

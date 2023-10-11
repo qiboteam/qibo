@@ -15,7 +15,7 @@ def test_pauli_noise_channel(backend):
     c.add(gates.H(1))
     c.add(gates.PauliNoiseChannel(0, list(zip(["X", "Z"], [0.5, 0.3]))))
     c.add(gates.PauliNoiseChannel(1, list(zip(["Y", "Z"], [0.1, 0.3]))))
-    final_rho = backend.execute_circuit(c)
+    final_rho = backend.execute_circuit(c)._state
 
     psi = np.ones(4) / 2
     rho = np.outer(psi, psi.conj())
@@ -35,8 +35,8 @@ def test_noisy_circuit_reexecution(backend):
     c.add(gates.H(1))
     c.add(gates.PauliNoiseChannel(0, [("X", 0.5)]))
     c.add(gates.PauliNoiseChannel(1, [("Z", 0.3)]))
-    final_rho = backend.execute_circuit(c)
-    final_rho2 = backend.execute_circuit(c)
+    final_rho = backend.execute_circuit(c)._state
+    final_rho2 = backend.execute_circuit(c)._state
     backend.assert_allclose(final_rho, final_rho2)
 
 
@@ -54,7 +54,7 @@ def test_circuit_with_pauli_noise_execution(backend):
     c = Circuit(2, density_matrix=True)
     c.add([gates.H(0), gates.H(1)])
     noisy_c = c.with_pauli_noise(list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.3])))
-    final_state = backend.execute_circuit(noisy_c)
+    final_state = backend.execute_circuit(noisy_c)._state
 
     target_c = Circuit(2, density_matrix=True)
     target_c.add(gates.H(0))
@@ -65,7 +65,7 @@ def test_circuit_with_pauli_noise_execution(backend):
     target_c.add(
         gates.PauliNoiseChannel(1, list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.3])))
     )
-    target_state = backend.execute_circuit(target_c)
+    target_state = backend.execute_circuit(target_c)._state
     backend.assert_allclose(final_state, target_state)
 
 
@@ -74,7 +74,7 @@ def test_circuit_with_pauli_noise_measurements(backend):
     c.add([gates.H(0), gates.H(1)])
     c.add(gates.M(0))
     noisy_c = c.with_pauli_noise(list(zip(["X", "Y", "Z"], [0.1, 0.1, 0.1])))
-    final_state = backend.execute_circuit(noisy_c)
+    final_state = backend.execute_circuit(noisy_c)._state
 
     target_c = Circuit(2, density_matrix=True)
     target_c.add(gates.H(0))
@@ -85,7 +85,7 @@ def test_circuit_with_pauli_noise_measurements(backend):
     target_c.add(
         gates.PauliNoiseChannel(1, list(zip(["X", "Y", "Z"], [0.1, 0.1, 0.1])))
     )
-    target_state = backend.execute_circuit(target_c)
+    target_state = backend.execute_circuit(target_c)._state
     backend.assert_allclose(final_state, target_state)
 
 
@@ -100,7 +100,7 @@ def test_circuit_with_pauli_noise_noise_map(backend):
     c.add([gates.H(0), gates.H(1), gates.X(2)])
     c.add(gates.M(2))
     noisy_c = c.with_pauli_noise(noise_map)
-    final_state = backend.execute_circuit(noisy_c)
+    final_state = backend.execute_circuit(noisy_c)._state
 
     target_c = Circuit(3, density_matrix=True)
     target_c.add(gates.H(0))
@@ -112,7 +112,7 @@ def test_circuit_with_pauli_noise_noise_map(backend):
         gates.PauliNoiseChannel(1, list(zip(["X", "Y", "Z"], [0.2, 0.3, 0.0])))
     )
     target_c.add(gates.X(2))
-    target_state = backend.execute_circuit(target_c)
+    target_state = backend.execute_circuit(target_c)._state
     backend.assert_allclose(final_state, target_state)
 
 

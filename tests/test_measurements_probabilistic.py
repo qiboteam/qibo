@@ -140,11 +140,15 @@ def test_post_measurement_bitflips_on_circuit_result(backend):
     ],
 )
 def test_measurementresult_apply_bitflips(backend, i, p0, p1):
-    from qibo.states import CircuitResult
+    from qibo.measurements import CircuitResult
 
     c = models.Circuit(3)
     c.add(gates.M(*range(3)))
-    result = CircuitResult(backend, c, None)
+    state = np.zeros(
+        8,
+    )
+    state[0] = 1.0
+    result = CircuitResult(state, c, backend)
     result._samples = np.zeros((10, 3), dtype="int32")
     backend.set_seed(123)
     noisy_samples = result.apply_bitflips(p0, p1)

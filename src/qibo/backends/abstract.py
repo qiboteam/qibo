@@ -397,8 +397,8 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     def assert_circuitclose(self, circuit, target_circuit, rtol=1e-7, atol=0.0):
-        value = self.execute_circuit(circuit)
-        target = self.execute_circuit(target_circuit)
+        value = self.execute_circuit(circuit)._state
+        target = self.execute_circuit(target_circuit)._state
         self.assert_allclose(value, target, rtol=rtol, atol=atol)
 
     @abc.abstractmethod
