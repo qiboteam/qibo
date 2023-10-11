@@ -394,15 +394,24 @@ def test_u2(backend):
     assert gates.U2(0, phi, lam).unitary
 
 
-def test_u3(backend):
-    theta = 0.1111
-    phi = 0.1234
-    lam = 0.4321
+@pytest.mark.parametrize("seed_observable", list(range(1, 10 + 1)))
+@pytest.mark.parametrize("seed_state", list(range(1, 10 + 1)))
+def test_u3(backend, seed_state, seed_observable):
     nqubits = 1
-    initial_state = random_statevector(2**nqubits, backend=backend)
+    theta, phi, lam = np.random.rand(3)
+
+    initial_state = random_statevector(2**nqubits, seed=seed_state, backend=backend)
     final_state = apply_gates(
         backend, [gates.U3(0, theta, phi, lam)], initial_state=initial_state
     )
+    # test decomposition
+    final_state_decompose = apply_gates(
+        backend,
+        gates.U3(0, theta, phi, lam).decompose(),
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+
     cost, sint = np.cos(theta / 2), np.sin(theta / 2)
     ep = np.exp(1j * (phi + lam) / 2)
     em = np.exp(1j * (phi - lam) / 2)
@@ -413,6 +422,15 @@ def test_u3(backend):
     target_state = np.dot(matrix, initial_state)
 
     backend.assert_allclose(final_state, target_state)
+
+    # testing random expectation value due to global phase difference
+    observable = random_hermitian(2**nqubits, seed=seed_observable, backend=backend)
+    backend.assert_allclose(
+        np.transpose(np.conj(final_state_decompose))
+        @ observable
+        @ final_state_decompose,
+        np.transpose(np.conj(target_state)) @ observable @ target_state,
+    )
 
     assert gates.U3(0, theta, phi, lam).qasm_label == "u3"
     assert not gates.U3(0, theta, phi, lam).clifford
@@ -460,15 +478,24 @@ def test_cnot(backend, applyx):
     assert gates.CNOT(0, 1).unitary
 
 
+@pytest.mark.parametrize("seed_observable", list(range(1, 10 + 1)))
+@pytest.mark.parametrize("seed_state", list(range(1, 10 + 1)))
 @pytest.mark.parametrize("controlled_by", [False, True])
-def test_cz(backend, controlled_by):
+def test_cz(backend, controlled_by, seed_state, seed_observable):
     nqubits = 2
-    initial_state = random_statevector(2**nqubits, backend=backend)
+    initial_state = random_statevector(2**nqubits, seed=seed_state, backend=backend)
     matrix = np.eye(4)
     matrix[3, 3] = -1
     matrix = backend.cast(matrix, dtype=matrix.dtype)
 
     target_state = np.dot(matrix, initial_state)
+    # test decomposition
+    final_state_decompose = apply_gates(
+        backend,
+        gates.CZ(0, 1).decompose(),
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
 
     if controlled_by:
         gate = gates.Z(1).controlled_by(0)
@@ -480,6 +507,15 @@ def test_cz(backend, controlled_by):
     assert gate.name == "cz"
 
     backend.assert_allclose(final_state, target_state)
+
+    # testing random expectation value due to global phase difference
+    observable = random_hermitian(2**nqubits, seed=seed_observable, backend=backend)
+    backend.assert_allclose(
+        np.transpose(np.conj(final_state_decompose))
+        @ observable
+        @ final_state_decompose,
+        np.transpose(np.conj(target_state)) @ observable @ target_state,
+    )
 
     assert gates.CZ(0, 1).qasm_label == "cz"
     assert gates.CZ(0, 1).clifford
