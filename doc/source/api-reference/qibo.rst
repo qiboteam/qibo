@@ -744,6 +744,23 @@ Mølmer–Sørensen (MS)
     :members:
     :member-order: bysource
 
+Quantinuum native gates
+^^^^^^^^^^^^^^^^^^^^^^^
+
+U1q
+"""
+
+.. autoclass:: qibo.gates.U1q
+    :members:
+    :member-order: bysource
+
+.. note::
+    Note that the other Quantinuum single-qubit and two-qubit native gates are
+    implemented in Qibo as:
+        - Pauli-:math:`Z` rotation: :class:`qibo.gates.RZ`
+        - Arbitrary :math:`ZZ` rotation: :class:`qibo.gates.RZZ`
+        - Fully-entangling :math:`ZZ`-interaction: :math:`R_{ZZ}(\\pi/2)`
+
 
 _______________________
 
