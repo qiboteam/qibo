@@ -930,8 +930,8 @@ class U1q(_Un_):
 
     def _dagger(self) -> "Gate":
         """"""
-        theta, phi = tuple(-x for x in self.parameters)  # pylint: disable=E1130
-        return self.__class__(self.target_qubits[0], theta, phi)
+        theta, phi = self.parameters
+        return self.__class__(self.target_qubits[0], -theta, phi)
 
 
 class CNOT(Gate):
