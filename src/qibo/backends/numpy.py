@@ -687,7 +687,9 @@ class NumpyBackend(Backend):
         return self.np.abs(self.np.sum(self.np.conj(state1) * state2))
 
     def calculate_overlap_density_matrix(self, state1, state2):
-        raise_error(NotImplementedError)
+        state1 = self.cast(state1)
+        state2 = self.cast(state2)
+        return self.np.trace(self.np.transpose(self.np.conj(state1)) @ state2)
 
     def calculate_eigenvalues(self, matrix, k=6):
         if self.issparse(matrix):
