@@ -362,7 +362,7 @@ def test_overlap(backend, nqubits, density_matrix, seed):
         target_overlap = np.trace(np.transpose(np.conj(state0)) @ state1)
     else:
         final_overlap = overlap.apply(backend, state1)
-        target_overlap = np.abs((state0.conj() * state1).sum())
+        target_overlap = np.abs(np.sum(np.conj(state0) * state1))
 
     backend.assert_allclose(final_overlap, target_overlap)
 
