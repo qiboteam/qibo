@@ -674,7 +674,6 @@ class NumpyBackend(Backend):
         return entropy, spectrum
 
     def calculate_norm(self, state, order=None):
-        """"""
         state = self.cast(state)
         return self.np.linalg.norm(state, ord=order)
 
