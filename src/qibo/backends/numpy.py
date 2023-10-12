@@ -523,11 +523,18 @@ class NumpyBackend(Backend):
         if circuit.density_matrix:  # this implies also it has_collapse
             final_state = np.asarray(final_states).mean(0)
             if circuit.measurements:
-                circuit._final_state = CircuitResult(final_state, circuit, self, nshots)
-                return circuit._final_state
+                qubits = [q for m in circuit.measurements for q in m.target_qubits]
+                final_result = CircuitResult(final_state, circuit, self, nshots)
+                probabilities = final_result.probabilities(qubits)
+                final_result._repeated_execution_probabilities = probabilities
+                circuit._final_state = final_result
+                return final_result
             else:
-                circuit._final_state = QuantumState(final_state, self)
-                return circuit._final_state
+                final_result = QuantumState(final_state, self)
+                probabilities = final_result.probabilities()
+                final_result._repeated_execution_probabilities = probabilities
+                circuit._final_state = final_result
+                return final_result
         else:
             probabilities = probabilities / nshots
             final_result = MeasurementOutcomes(
