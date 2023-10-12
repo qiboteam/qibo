@@ -7,6 +7,7 @@ from qibo import callbacks, gates
 # Absolute testing tolerance for the cases of zero entanglement entropy
 from qibo.config import PRECISION_TOL
 from qibo.models import AdiabaticEvolution, Circuit
+from qibo.quantum_info.random_ensembles import random_density_matrix, random_statevector
 
 
 def test_abstract_callback_properties():
@@ -341,19 +342,29 @@ def test_norm(backend, density_matrix):
     backend.assert_allclose(final_norm, target_norm)
 
 
+@pytest.mark.parametrize("seed", list(range(1, 5 + 1)))
 @pytest.mark.parametrize("density_matrix", [False, True])
-def test_overlap(backend, density_matrix):
-    state0 = np.random.random(4) + 1j * np.random.random(4)
-    state1 = np.random.random(4) + 1j * np.random.random(4)
-    overlap = callbacks.Overlap(state0)
-    overlap.nqubits = 2
+@pytest.mark.parametrize("nqubits", list(range(2, 6 + 1, 2)))
+def test_overlap(backend, nqubits, density_matrix, seed):
+    dims = 2**nqubits
     if density_matrix:
-        with pytest.raises(NotImplementedError):
-            overlap.apply_density_matrix(backend, state1)
+        state0 = random_density_matrix(dims, seed=seed, backend=backend)
+        state1 = random_density_matrix(dims, seed=seed + 1, backend=backend)
+    else:
+        state0 = random_statevector(dims, seed=seed, backend=backend)
+        state1 = random_statevector(dims, seed=seed + 1, backend=backend)
+
+    overlap = callbacks.Overlap(state0)
+    overlap.nqubits = nqubits
+
+    if density_matrix:
+        final_overlap = overlap.apply_density_matrix(backend, state1)
+        target_overlap = np.trace(np.transpose(np.conj(state0)) @ state1)
     else:
         final_overlap = overlap.apply(backend, state1)
         target_overlap = np.abs((state0.conj() * state1).sum())
-        backend.assert_allclose(final_overlap, target_overlap)
+
+    backend.assert_allclose(final_overlap, target_overlap)
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
