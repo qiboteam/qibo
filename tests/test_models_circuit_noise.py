@@ -4,7 +4,12 @@ import pytest
 
 from qibo import Circuit, gates
 from qibo.config import PRECISION_TOL
-from qibo.quantum_info import random_clifford, random_statevector, random_unitary
+from qibo.quantum_info import (
+    random_clifford,
+    random_density_matrix,
+    random_statevector,
+    random_unitary,
+)
 
 
 def test_pauli_noise_channel(backend):
@@ -219,16 +224,23 @@ def test_probabilities_repeated_execution(backend, nqubits):
     circuit_density_matrix = circuit.copy(deep=True)
     circuit_density_matrix.density_matrix = True
 
-    statevector = random_statevector(2**nqubits, backend=backend)
+    state = random_density_matrix(2**nqubits, backend=backend)
+
+    # set has_collapse=True just to trigger the repeated execution
+    # with density_matrix=True
+    circuit.has_collapse = True
+    # if we don't set density_matrix=True a MeasurementOutcomes object
+    # is returned, which doesn't have any probabilities() method.
+    circuit.density_matrix = True
 
     result = backend.execute_circuit_repeated(
-        circuit, initial_state=statevector, nshots=int(1e4)
+        circuit, initial_state=state, nshots=int(1e4)
     )
     result = result.probabilities()
 
     result_density_matrix = backend.execute_circuit(
         circuit_density_matrix,
-        initial_state=np.outer(statevector, np.conj(statevector)),
+        initial_state=state,
         nshots=int(1e4),
     )
     result_density_matrix = result_density_matrix.probabilities()

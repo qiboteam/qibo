@@ -59,14 +59,13 @@ def test_memory_error(backend, accelerators):
 
 
 def test_repeated_execute(backend, accelerators):
-    c = Circuit(4, accelerators)
+    c = Circuit(4, accelerators, density_matrix=True)
     thetas = np.random.random(4)
     c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
     target_state = backend.execute_circuit(c).state()
-    target_state = np.array(20 * [target_state])
+    target_state = target_state
     c.has_collapse = True
     final_state = backend.execute_circuit(c, nshots=20)._state
-    final_state = [backend.to_numpy(x) for x in final_state]
     backend.assert_allclose(final_state, target_state)
 
 

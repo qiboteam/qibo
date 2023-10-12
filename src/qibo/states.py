@@ -83,3 +83,6 @@ class QuantumState:
             return self._repeated_execution_probabilities
 
         return self.backend.circuit_result_probabilities(self, qubits)
+
+    def __str__(self):
+        return self.symbolic()

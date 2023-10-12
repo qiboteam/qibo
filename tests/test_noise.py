@@ -84,7 +84,7 @@ def test_kraus_error(backend, density_matrix, nshots):
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
-@pytest.mark.parametrize("nshots", [None, 10, 100])
+@pytest.mark.parametrize("nshots", [10, 100])
 def test_unitary_error(backend, density_matrix, nshots):
     u1 = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
     u2 = np.array([[0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
@@ -142,7 +142,7 @@ def test_unitary_error(backend, density_matrix, nshots):
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
-@pytest.mark.parametrize("nshots", [None, 10, 100])
+@pytest.mark.parametrize("nshots", [10, 100])
 def test_pauli_error(backend, density_matrix, nshots):
     list_paulis = ["X", "Y", "Z"]
     probabilities = np.array([0, 0.2, 0.3])
@@ -197,7 +197,7 @@ def test_pauli_error(backend, density_matrix, nshots):
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
-@pytest.mark.parametrize("nshots", [None, 10, 100])
+@pytest.mark.parametrize("nshots", [10, 100])
 def test_depolarizing_error(backend, density_matrix, nshots):
     depol = DepolarizingError(0.3)
     noise = NoiseModel()
@@ -418,12 +418,10 @@ def test_readout_error(backend, density_matrix):
     circuit.add(gates.M(0))
     final_state = backend.execute_circuit(
         noise.apply(circuit), initial_state=np.copy(state)
-    )._state
+    )
 
-    target_state = (
-        gates.ReadoutErrorChannel(0, P)
-        .apply_density_matrix(backend, np.copy(state), nqubits)
-        ._state
+    target_state = gates.ReadoutErrorChannel(0, P).apply_density_matrix(
+        backend, np.copy(state), nqubits
     )
 
     backend.assert_allclose(final_state, target_state)

@@ -431,15 +431,19 @@ class NumpyBackend(Backend):
                 # here we necessarily have `density_matrix=True`, otherwise
                 # execute_circuit_repeated would have been called
                 if circuit.measurements:
-                    return CircuitResult(state, circuit, self, nshots)
+                    circuit._final_state = CircuitResult(state, circuit, self, nshots)
+                    return circuit._final_state
                 else:
-                    return QuantumState(state, self)
+                    circuit._final_state = QuantumState(state, self)
+                    return circuit._final_state
 
             else:
                 if circuit.measurements:
-                    return CircuitResult(state, circuit, self, nshots)
+                    circuit._final_state = CircuitResult(state, circuit, self, nshots)
+                    return circuit._final_state
                 else:
-                    return QuantumState(state, self)
+                    circuit._final_state = QuantumState(state, self)
+                    return circuit._final_state
 
         except self.oom_error:
             raise_error(
@@ -519,9 +523,11 @@ class NumpyBackend(Backend):
         if circuit.density_matrix:  # this implies also it has_collapse
             final_state = np.asarray(final_states).mean(0)
             if circuit.measurements:
-                return CircuitResult(final_state, circuit, self, nshots)
+                circuit._final_state = CircuitResult(final_state, circuit, self, nshots)
+                return circuit._final_state
             else:
-                return QuantumState(final_state, self)
+                circuit._final_state = QuantumState(final_state, self)
+                return circuit._final_state
         else:
             probabilities = probabilities / nshots
             final_result = MeasurementOutcomes(
@@ -533,6 +539,7 @@ class NumpyBackend(Backend):
                 samples
             )
             # set the circuit _final_state??
+            circuit._final_state = final_result
             return final_result
 
     def execute_distributed_circuit(self, circuit, initial_state=None, nshots=None):

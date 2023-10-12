@@ -73,7 +73,7 @@ def test_dill_symbols():
 def test_dill_measurement_symbol(backend):
     from qibo import Circuit, gates
 
-    circuit = Circuit(1)
+    circuit = Circuit(1, density_matrix=True)
     circuit.add(gates.H(0))
     cresult = circuit.add(gates.M(0, collapse=True))
     result = backend.execute_circuit(circuit, nshots=1)
