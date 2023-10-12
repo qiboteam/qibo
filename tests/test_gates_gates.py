@@ -878,20 +878,20 @@ def test_rzx(backend):
     assert gates.RZX(0, 1, theta).unitary
 
 
-def test_rxy(backend):
+def test_rxxyy(backend):
     theta = 0.1234
     nqubits = 2
     initial_state = random_statevector(2**nqubits, backend=backend)
     final_state = apply_gates(
         backend,
-        [gates.RXY(0, 1, theta)],
+        [gates.RXXYY(0, 1, theta)],
         nqubits=nqubits,
         initial_state=initial_state,
     )
     # test decomposition
     final_state_decompose = apply_gates(
         backend,
-        gates.RXY(0, 1, theta).decompose(),
+        gates.RXXYY(0, 1, theta).decompose(),
         nqubits=nqubits,
         initial_state=initial_state,
     )
@@ -921,10 +921,10 @@ def test_rxy(backend):
     )
 
     with pytest.raises(NotImplementedError):
-        gates.RXY(0, 1, theta).qasm_label
+        gates.RXXYY(0, 1, theta).qasm_label
 
-    assert not gates.RXY(0, 1, theta).clifford
-    assert gates.RXY(0, 1, theta).unitary
+    assert not gates.RXXYY(0, 1, theta).clifford
+    assert gates.RXXYY(0, 1, theta).unitary
 
 
 def test_ms(backend):
@@ -1448,7 +1448,7 @@ GATES = [
     ("RYY", (0, 1, 0.2)),
     ("RZZ", (0, 1, 0.3)),
     ("RZX", (0, 1, 0.4)),
-    ("RXY", (0, 1, 0.5)),
+    ("RXXYY", (0, 1, 0.5)),
     ("MS", (0, 1, 0.1, 0.2, 0.3)),
     ("GIVENS", (0, 1, 0.1)),
     ("RBS", (0, 1, 0.2)),

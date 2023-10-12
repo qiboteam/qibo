@@ -1541,7 +1541,7 @@ class SYC(Gate):
     Corresponding to the following unitary matrix
 
     .. math::
-        \\text{fSim}(\\pi / 2, \\, \\pi / 6) = \\beging{pmatrix}
+        \\text{fSim}(\\pi / 2, \\, \\pi / 6) = \\begin{pmatrix}
             1 & 0 & 0 & 0 \\\\
             0 & 0 & -i & 0 \\\\
             0 & -i & 0 & 0 \\\\
@@ -1788,7 +1788,7 @@ class RZX(_Rnn_):
         return [H(q1), CNOT(q0, q1), RZ(q1, theta), CNOT(q0, q1), H(q1)]
 
 
-class RXY(_Rnn_):
+class RXXYY(_Rnn_):
     """Parametric 2-qubit :math:`XX + YY` interaction, or rotation about :math:`XX + YY`-axis.
 
     Corresponds to the following unitary matrix
@@ -1813,11 +1813,11 @@ class RXY(_Rnn_):
 
     def __init__(self, q0, q1, theta, trainable=True):
         super().__init__(q0, q1, theta, trainable)
-        self.name = "rxy"
-        self.draw_label = "RXY"
+        self.name = "rxxyy"
+        self.draw_label = "RXXYY"
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
-        """Decomposition of :math:`\\text{R_{XY}}` up to global phase.
+        """Decomposition of :math:`\\text{R_{XX-YY}}` up to global phase.
 
         This decomposition has a global phase difference with respect to the
         original gate due to a phase difference in :math:`\\left(\\sqrt{X}\\right)^{\\dagger}`.
