@@ -755,7 +755,7 @@ U1q
     :member-order: bysource
 
 .. note::
-    Note that the other Quantinuum single-qubit and two-qubit native gates are
+    The other Quantinuum single-qubit and two-qubit native gates are
     implemented in Qibo as:
         - Pauli-:math:`Z` rotation: :class:`qibo.gates.RZ`
         - Arbitrary :math:`ZZ` rotation: :class:`qibo.gates.RZZ`
