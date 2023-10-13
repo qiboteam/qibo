@@ -1,5 +1,4 @@
 import collections
-from typing import Union
 
 import numpy as np
 
@@ -794,9 +793,9 @@ class NumpyBackend(Backend):
             )
 
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
-        if isinstance(value, Union[CircuitResult, QuantumState]):
+        if isinstance(value, CircuitResult) or isinstance(value, QuantumState):
             value = value._state
-        if isinstance(target, Union[CircuitResult, QuantumState]):
+        if isinstance(target, CircuitResult) or isinstance(target, QuantumState):
             target = target._state
         value = self.to_numpy(value)
         target = self.to_numpy(target)
