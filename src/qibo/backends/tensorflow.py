@@ -306,19 +306,15 @@ class TensorflowBackend(NumpyBackend):
         entropy = self.np.sum(masked_eigvals * spectrum) / self.np.log(2.0)
         return entropy, spectrum
 
-    def calculate_norm(self, state, order=None):
+    def calculate_norm(self, state, order=2):
         state = self.cast(state)
-        # It is necessary to use np instead of self.np
-        # because tensorflow.experimental.numpy does not
-        # have a norm function
-        return np.linalg.norm(state, ord=order)
+        return self.tf.norm(state, ord=order)
 
     def calculate_norm_density_matrix(self, state, order="nuc"):
         state = self.cast(state)
-        # It is necessary to use np instead of self.np
-        # because tensorflow.experimental.numpy does not
-        # have a norm function
-        return np.linalg.norm(self.to_numpy(state), ord=order)
+        if order == "nuc":
+            return self.np.trace(state)
+        return self.tf.norm(state, ord=order)
 
     def calculate_eigenvalues(self, matrix, k=6):
         return self.tf.linalg.eigvalsh(matrix)
