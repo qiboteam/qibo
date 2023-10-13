@@ -996,6 +996,10 @@ class Circuit:
                 vector using an array or a circuit. If ``None``, the initial state
                 is ``|000..00>``.
             nshots (int): Number of shots.
+
+        Returns:
+            either a ``qibo.states.QuantumState``, ``qibo.measurements.MeasurementOutcomes``
+            or ``qibo.measurements.CircuitResult`` depending on the circuit's configuration.
         """
         if self.compiled:
             # pylint: disable=E1101

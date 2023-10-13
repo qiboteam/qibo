@@ -24,7 +24,7 @@ Here is an example of a circuit with 2 qubits:
     result = c(initial_state) # c.execute(initial_state) also works
     print(result.state())
     # should print `tf.Tensor([1, 0, 0, 0])`
-    print(result.state(numpy=True))
+    print(result.state())
     # should print `np.array([1, 0, 0, 0])`
 .. testoutput::
     :hide:

@@ -68,7 +68,7 @@ class MeasurementSymbol(sympy.Symbol):
 class MeasurementResult:
     """Data structure for holding measurement outcomes.
 
-    :class:`qibo.states.MeasurementResult` objects can be obtained
+    :class:`qibo.measurements.MeasurementResult` objects can be obtained
     when adding measurement gates to a circuit.
 
     Args:
@@ -400,6 +400,8 @@ class MeasurementOutcomes:
 
 
 class CircuitResult(QuantumState, MeasurementOutcomes):
+    """Object to store both the outcomes of measurements and the final state after circuit execution."""
+
     def __init__(self, final_state, circuit, backend, nshots=1000):
         self.circuit = circuit
         QuantumState.__init__(self, final_state, backend)

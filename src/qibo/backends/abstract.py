@@ -217,7 +217,7 @@ class Backend(abc.ABC):
         """Represent a quantum state based on circuit execution results.
 
         Args:
-            result (:class:`qibo.states.CircuitResult`): Result object that contains
+            result (:class:`qibo.measurements.CircuitResult`): Result object that contains
                 the data required to represent the state.
         """
         raise_error(NotImplementedError)
@@ -227,7 +227,7 @@ class Backend(abc.ABC):
         """State vector or density matrix representing a quantum state as an array.
 
         Args:
-            result (:class:`qibo.states.CircuitResult`): Result object that contains
+            result (:class:`qibo.measurements.CircuitResult`): Result object that contains
                 the data required to represent the state.
         """
         raise_error(NotImplementedError)
@@ -237,7 +237,7 @@ class Backend(abc.ABC):
         """Calculates measurement probabilities by tracing out qubits.
 
         Args:
-            result (:class:`qibo.states.CircuitResult`): Result object that contains
+            result (:class:`qibo.measurements.CircuitResult`): Result object that contains
                 the data required to represent the state.
             qubits (list, set): Set of qubits that are measured.
         """

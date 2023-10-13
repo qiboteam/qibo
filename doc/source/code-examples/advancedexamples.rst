@@ -348,14 +348,14 @@ of the :class:`qibo.gates.M` gate. For example
 
     from qibo import Circuit, gates
 
-    c = Circuit(1)
+    c = Circuit(1, density_matrix=True)
     c.add(gates.H(0))
     output = c.add(gates.M(0, collapse=True))
     c.add(gates.H(0))
-    result = c()
+    result = c(nshots=1)
     print(result)
-    # prints [0.7071, 0.7071] if 0 is measured
-    # or [0.7071, -0.7071] if 1 is measured
+    # prints |+><+| if 0 is measured
+    # or |-><-| if 1 is measured
 .. testoutput::
     :hide:
 
@@ -379,7 +379,7 @@ a loop:
 
     from qibo import Circuit, gates
 
-    c = Circuit(1)
+    c = Circuit(1, density_matrix=True)
     c.add(gates.H(0))
     output = c.add(gates.M(0, collapse=True))
     c.add(gates.H(0))
@@ -425,7 +425,7 @@ any parametrized gate as follows:
     import numpy as np
     from qibo import Circuit, gates
 
-    c = Circuit(2)
+    c = Circuit(2, density_matrix=True)
     c.add(gates.H(0))
     output = c.add(gates.M(0, collapse=True))
     c.add(gates.RX(1, theta=np.pi * output.symbols[0] / 4))
@@ -600,7 +600,7 @@ Here is a simple example using a custom loss function:
     # custom loss function, computes fidelity
     def myloss(parameters, circuit, target):
         circuit.set_parameters(parameters)
-        final_state = circuit().state(numpy=True)
+        final_state = circuit().state()
         return 1 - np.abs(np.conj(target).dot(final_state))
 
     nqubits = 6
