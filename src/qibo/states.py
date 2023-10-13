@@ -1,13 +1,10 @@
-from typing import Union
-
 import numpy as np
-from tensorflow import Tensor
 
 
 class QuantumState:
     """Data structure to represent the final state after circuit execution."""
 
-    def __init__(self, state: Union[np.ndarray, Tensor], backend):
+    def __init__(self, state, backend):
         self.backend = backend
         self.density_matrix = len(state.shape) == 2
         self.nqubits = int(np.log2(state.shape[0]))
