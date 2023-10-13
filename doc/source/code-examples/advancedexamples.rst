@@ -447,7 +447,7 @@ If more than one qubits are used in a ``collapse=True`` measurement gate the
     import numpy as np
     from qibo import Circuit, gates
 
-    c = Circuit(3)
+    c = Circuit(3, density_matrix=True)
     c.add(gates.H(0))
     output = c.add(gates.M(0, 1, collapse=True))
     c.add(gates.RX(1, theta=np.pi * output.symbols[0] / 4))
