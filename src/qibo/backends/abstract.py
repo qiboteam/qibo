@@ -326,19 +326,27 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def calculate_norm(self, state, ord=None):  # pragma: no cover
+    def calculate_norm(self, state, order=2):  # pragma: no cover
         """Calculate norm of a state vector.
 
-        For specifications on possible values of the parameter `ord`, please refer to
+        For specifications on possible values of the parameter ``order``
+        for the ``tensorflow`` backend, please refer to
+        `tensorflow.norm <https://www.tensorflow.org/api_docs/python/tf/norm>`_.
+        For all other backends, please refer to
         `numpy.linalg.norm <https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html>`_.
         """
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def calculate_norm_density_matrix(self, state, ord="nuc"):  # pragma: no cover
+    def calculate_norm_density_matrix(self, state, order="nuc"):  # pragma: no cover
         """Calculate norm (trace) of a density matrix.
 
-        For specifications on possible values of the parameter `ord`, please refer to
+        If ``order="nuc"``, it returns the nuclear norm os ``state``,
+        assuming ``state`` is Hermitian. For specifications on the other
+        possible values of the parameter ``order`` for the ``tensorflow`` backend,
+        please refer to
+        `tensorflow.norm <https://www.tensorflow.org/api_docs/python/tf/norm>`_.
+        For all other backends, please refer to
         `numpy.linalg.norm <https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html>`_.
         """
         raise_error(NotImplementedError)
