@@ -1036,7 +1036,7 @@ it is sufficient to pass a circuit which was initialized with ``density_matrix=T
 Measurement errors
 ^^^^^^^^^^^^^^^^^^
 
-:class:`qibo.states.CircuitResult` provides :meth:`qibo.states.CircuitResult.apply_bitflips`
+:class:`qibo.measurements.CircuitResult` provides :meth:`qibo.measurements.CircuitResult.apply_bitflips`
 which allows adding bit-flip errors to the sampled bit-strings without having to
 re-execute the simulation. For example:
 
@@ -1059,7 +1059,7 @@ re-execute the simulation. For example:
 The corresponding noisy samples and frequencies can then be obtained as described
 in the :ref:`How to perform measurements? <measurement-examples>` example.
 
-Note that :meth:`qibo.states.CircuitResult.apply_bitflips` modifies
+Note that :meth:`qibo.measurements.CircuitResult.apply_bitflips` modifies
 the measurement samples contained in the corresponding state and therefore the
 original noiseless measurement samples are no longer accessible. It is possible
 to keep the original samples by creating a copy of the states before applying
@@ -1111,7 +1111,7 @@ Moreover, it is possible to simulate asymmetric bit-flips using the ``p1``
 argument as ``result.apply_bitflips(p0=0.2, p1=0.1)``. In this case a
 probability of 0.2 will be used for 0->1 errors but 0.1 for 1->0 errors.
 Similarly to ``p0``, ``p1`` can be a single float number or a dictionary and
-can be used both in :meth:`qibo.states.CircuitResult.apply_bitflips`
+can be used both in :meth:`qibo.measurements.CircuitResult.apply_bitflips`
 and the measurement gate. If ``p1`` is not specified the value of ``p0`` will
 be used for both errors.
 

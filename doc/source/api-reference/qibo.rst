@@ -1065,20 +1065,20 @@ _______________________
 States
 ------
 
-Qibo circuits return :class:`qibo.states.CircuitResult` objects
+Qibo circuits return :class:`qibo.measurements.CircuitResult` objects
 when executed. By default, Qibo works as a wave function simulator in the sense
 that propagates the state vector through the circuit applying the
 corresponding gates. In this default usage the result of a circuit execution
-is the full final state vector which can be accessed via :meth:`qibo.states.CircuitResult.state`.
+is the full final state vector which can be accessed via :meth:`qibo.measurements.CircuitResult.state`.
 However, for specific applications it is useful to have measurement samples
 from the final wave function, instead of its full vector form.
-To that end, :class:`qibo.states.CircuitResult` provides the
-:meth:`qibo.states.CircuitResult.samples` and
-:meth:`qibo.states.CircuitResult.frequencies` methods.
+To that end, :class:`qibo.measurements.CircuitResult` provides the
+:meth:`qibo.measurements.CircuitResult.samples` and
+:meth:`qibo.measurements.CircuitResult.frequencies` methods.
 
 The state vector (or density matrix) is saved in memory as a tensor supported
 by the currently active backend (see :ref:`Backends <Backends>` for more information).
-A copy of the state can be created using :meth:`qibo.states.CircuitResult.copy`.
+A copy of the state can be created using :meth:`qibo.measurements.CircuitResult.copy`.
 The new state will point to the same tensor in memory as the original one unless
 the ``deep=True`` option was used during the ``copy`` call.
 Note that the qibojit backend performs in-place updates
@@ -1089,7 +1089,7 @@ we recommend creating a deep copy before using it as input to a qibo model.
 
 In order to perform measurements the user has to add the measurement gate
 :class:`qibo.gates.M` to the circuit and then execute providing a number
-of shots. If this is done, the :class:`qibo.states.CircuitResult`
+of shots. If this is done, the :class:`qibo.measurements.CircuitResult`
 returned by the circuit will contain the measurement samples.
 
 For more information on measurements we refer to the
@@ -1098,7 +1098,7 @@ For more information on measurements we refer to the
 Circuit result
 ^^^^^^^^^^^^^^
 
-.. autoclass:: qibo.states.CircuitResult
+.. autoclass:: qibo.measurements.CircuitResult
     :members:
     :member-order: bysource
 
