@@ -453,10 +453,11 @@ def choi_to_kraus(
         backend = GlobalBackend()
 
     if validate_cp:
-        norm = float(backend.calculate_norm_density_matrix(
-            choi_super_op - np.transpose(np.conj(choi_super_op)),
-            order=2
-        ))
+        norm = float(
+            backend.calculate_norm_density_matrix(
+                choi_super_op - np.transpose(np.conj(choi_super_op)), order=2
+            )
+        )
         if norm > PRECISION_TOL:
             non_cp = True
         else:

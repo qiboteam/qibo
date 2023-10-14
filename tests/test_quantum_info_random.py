@@ -133,7 +133,9 @@ def test_random_unitary(backend):
     matrix = random_unitary(dims, backend=backend)
     matrix_dagger = np.transpose(np.conj(matrix))
     matrix_inv = np.linalg.inv(matrix)
-    norm = float(backend.calculate_norm_density_matrix(matrix_inv - matrix_dagger, order=2))
+    norm = float(
+        backend.calculate_norm_density_matrix(matrix_inv - matrix_dagger, order=2)
+    )
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
     # tests if operator is unitary (measure == None)
@@ -239,7 +241,11 @@ def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
         with pytest.raises(ValueError):
             test = random_density_matrix(dims=dims, normalize=True)
     else:
-        norm_function = backend.calculate_norm_density_matrix if basis is None else backend.calculate_norm
+        norm_function = (
+            backend.calculate_norm_density_matrix
+            if basis is None
+            else backend.calculate_norm
+        )
         state = random_density_matrix(
             dims,
             pure=pure,
@@ -367,7 +373,9 @@ def test_pauli_single(backend):
     matrix = backend.cast(matrix, dtype=matrix.dtype)
 
     backend.assert_allclose(
-        float(backend.calculate_norm_density_matrix(matrix - result, order=2)) < PRECISION_TOL, True
+        float(backend.calculate_norm_density_matrix(matrix - result, order=2))
+        < PRECISION_TOL,
+        True,
     )
 
 
@@ -403,12 +411,23 @@ def test_random_pauli(
         matrix = backend.cast(matrix, dtype=matrix.dtype)
         if subset is None:
             backend.assert_allclose(
-                float(backend.calculate_norm_density_matrix(matrix - result_complete_set, order=2)) < PRECISION_TOL,
+                float(
+                    backend.calculate_norm_density_matrix(
+                        matrix - result_complete_set, order=2
+                    )
+                )
+                < PRECISION_TOL,
                 True,
             )
         else:
             backend.assert_allclose(
-                float(backend.calculate_norm_density_matrix(matrix - result_subset, order=2)) < PRECISION_TOL, True
+                float(
+                    backend.calculate_norm_density_matrix(
+                        matrix - result_subset, order=2
+                    )
+                )
+                < PRECISION_TOL,
+                True,
             )
     else:
         matrix = np.transpose(matrix, (1, 0, 2, 3))
@@ -417,12 +436,23 @@ def test_random_pauli(
 
         if subset is None:
             backend.assert_allclose(
-                float(backend.calculate_norm_density_matrix(matrix - result_complete_set, order=2)) < PRECISION_TOL,
+                float(
+                    backend.calculate_norm_density_matrix(
+                        matrix - result_complete_set, order=2
+                    )
+                )
+                < PRECISION_TOL,
                 True,
             )
         else:
             backend.assert_allclose(
-                float(backend.calculate_norm_density_matrix(matrix - result_subset, order=2)) < PRECISION_TOL, True
+                float(
+                    backend.calculate_norm_density_matrix(
+                        matrix - result_subset, order=2
+                    )
+                )
+                < PRECISION_TOL,
+                True,
             )
 
 

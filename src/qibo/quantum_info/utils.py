@@ -245,9 +245,9 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend
         if np.abs(np.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
             raise_error(ValueError, "Second probability array must sum to 1.")
 
-    distance = float(backend.calculate_norm(
-        np.sqrt(prob_dist_p) - np.sqrt(prob_dist_q)
-    ) / np.sqrt(2))
+    distance = float(
+        backend.calculate_norm(np.sqrt(prob_dist_p) - np.sqrt(prob_dist_q)) / np.sqrt(2)
+    )
 
     return distance
 
