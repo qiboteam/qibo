@@ -3,6 +3,7 @@ import numpy as np
 import pytest
 
 from qibo import gates, models
+from qibo.measurements import CircuitResult
 
 
 def assert_result(
@@ -473,3 +474,14 @@ def test_measurement_basis_list_error(backend):
     c = models.Circuit(4)
     with pytest.raises(ValueError):
         c.add(gates.M(0, 1, 2, 3, basis=[gates.X, gates.Z, gates.X]))
+
+
+def test_CircuitResult_error(backend):
+    c = models.Circuit(1)
+    state = np.array([1, 0])
+    with pytest.raises(Exception) as exc_info:
+        CircuitResult(state, c, backend)
+    assert (
+        str(exc_info.value)
+        == "Circuit does not contain measurements. Use a `QuantumState` instead."
+    )

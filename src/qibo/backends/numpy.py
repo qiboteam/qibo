@@ -401,8 +401,6 @@ class NumpyBackend(Backend):
 
         try:
             nqubits = circuit.nqubits
-            if isinstance(initial_state, QuantumState):
-                initial_state = initial_state.state
 
             if circuit.density_matrix:
                 if initial_state is None:
@@ -514,7 +512,7 @@ class NumpyBackend(Backend):
                 sample = result.samples()[0]
                 results.append(sample)
                 if not circuit.density_matrix:
-                    probabilities += result.probabilities()
+                    probabilities += result.probabilities(target_qubits)
                     samples.append("".join([str(s) for s in sample]))
 
         if circuit.density_matrix:  # this implies also it has_collapse

@@ -6,7 +6,7 @@ from qibo import gates, models
 from qibo.quantum_info import random_density_matrix, random_statevector
 
 
-@pytest.mark.skip(reason="no way of currently testing this")
+# @pytest.mark.skip(reason="no way of currently testing this")
 @pytest.mark.parametrize(
     "nqubits,targets",
     [(2, [1]), (3, [1]), (4, [1, 3]), (5, [0, 3, 4]), (6, [1, 3]), (4, [0, 2])],
@@ -15,18 +15,21 @@ def test_measurement_collapse(backend, nqubits, targets):
     initial_state = random_statevector(2**nqubits, backend=backend)
     c = models.Circuit(nqubits)
     r = c.add(gates.M(*targets, collapse=True))
-    final_state = backend.execute_circuit(c, np.copy(initial_state), nshots=1)[0]
+    c.add(gates.M(*targets))
+    # final_state = backend.execute_circuit(c, np.copy(initial_state), nshots=1)[0]
+    outcome = backend.execute_circuit(c, np.copy(initial_state), nshots=1)
     samples = r.samples()[0]
-    slicer = nqubits * [slice(None)]
-    for t, r in zip(targets, samples):
-        slicer[t] = int(r)
-    slicer = tuple(slicer)
-    initial_state = initial_state.reshape(nqubits * (2,))
-    target_state = np.zeros_like(initial_state)
-    target_state[slicer] = initial_state[slicer]
-    norm = (np.abs(target_state) ** 2).sum()
-    target_state = target_state.ravel() / np.sqrt(norm)
-    backend.assert_allclose(final_state, target_state)
+    backend.assert_allclose(samples, outcome.samples()[0])
+    # slicer = nqubits * [slice(None)]
+    # for t, r in zip(targets, samples):
+    #    slicer[t] = int(r)
+    # slicer = tuple(slicer)
+    # initial_state = initial_state.reshape(nqubits * (2,))
+    # target_state = np.zeros_like(initial_state)
+    # target_state[slicer] = initial_state[slicer]
+    # norm = (np.abs(target_state) ** 2).sum()
+    # target_state = target_state.ravel() / np.sqrt(norm)
+    # backend.assert_allclose(final_state, target_state)
 
 
 @pytest.mark.parametrize(
@@ -246,3 +249,14 @@ def test_collapse_after_measurement(backend):
     ct.add(gates.H(i) for i in qubits)
     target_state = backend.execute_circuit(ct)
     backend.assert_allclose(final_state, target_state, atol=1e-15)
+
+
+def test_collapse_error(backend):
+    c = models.Circuit(1)
+    m = c.add(gates.M(0, collapse=True))
+    with pytest.raises(Exception) as exc_info:
+        c()
+    assert (
+        str(exc_info.value)
+        == "The circuit contains only collapsing measurements (`collapse=True`) but `density_matrix=False`. Please set `density_matrix=True` to retrieve the final state after execution."
+    )
