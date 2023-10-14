@@ -341,7 +341,7 @@ class Backend(abc.ABC):
     def calculate_norm_density_matrix(self, state, order="nuc"):  # pragma: no cover
         """Calculate norm (trace) of a density matrix.
 
-        If ``order="nuc"``, it returns the nuclear norm os ``state``,
+        If ``order="nuc"``, it returns the nuclear norm of ``state``,
         assuming ``state`` is Hermitian. For specifications on the other
         possible values of the parameter ``order`` for the ``tensorflow`` backend,
         please refer to
