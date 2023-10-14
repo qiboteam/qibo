@@ -327,7 +327,7 @@ class Backend(abc.ABC):
 
     @abc.abstractmethod
     def calculate_norm(self, state, order=2):  # pragma: no cover
-        """Calculate norm of a state vector.
+        """Calculate norm of a state vector. Default is :math:`2`-norm.
 
         For specifications on possible values of the parameter ``order``
         for the ``tensorflow`` backend, please refer to
@@ -339,12 +339,12 @@ class Backend(abc.ABC):
 
     @abc.abstractmethod
     def calculate_norm_density_matrix(self, state, order="nuc"):  # pragma: no cover
-        """Calculate norm (trace) of a density matrix.
+        """Calculate norm of a density matrix. Default is the ``nuclear`` norm.
 
         If ``order="nuc"``, it returns the nuclear norm of ``state``,
-        assuming ``state`` is Hermitian. For specifications on the other
-        possible values of the parameter ``order`` for the ``tensorflow`` backend,
-        please refer to
+        assuming ``state`` is Hermitian (also known as trace norm). 
+        For specifications on the other  possible values of the 
+        parameter ``order`` for the ``tensorflow`` backend, please refer to
         `tensorflow.norm <https://www.tensorflow.org/api_docs/python/tf/norm>`_.
         For all other backends, please refer to
         `numpy.linalg.norm <https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html>`_.
