@@ -342,8 +342,8 @@ class Backend(abc.ABC):
         """Calculate norm of a density matrix. Default is the ``nuclear`` norm.
 
         If ``order="nuc"``, it returns the nuclear norm of ``state``,
-        assuming ``state`` is Hermitian (also known as trace norm). 
-        For specifications on the other  possible values of the 
+        assuming ``state`` is Hermitian (also known as trace norm).
+        For specifications on the other  possible values of the
         parameter ``order`` for the ``tensorflow`` backend, please refer to
         `tensorflow.norm <https://www.tensorflow.org/api_docs/python/tf/norm>`_.
         For all other backends, please refer to
