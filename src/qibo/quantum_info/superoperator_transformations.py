@@ -453,9 +453,10 @@ def choi_to_kraus(
         backend = GlobalBackend()
 
     if validate_cp:
-        norm = backend.calculate_norm(
-            choi_super_op - np.transpose(np.conj(choi_super_op))
-        )
+        norm = float(backend.calculate_norm_density_matrix(
+            choi_super_op - np.transpose(np.conj(choi_super_op)),
+            order=2
+        ))
         if norm > PRECISION_TOL:
             non_cp = True
         else:
@@ -2065,7 +2066,7 @@ def kraus_to_unitaries(
         for prob, oper in zip(x0, operators):
             operator += prob * oper
 
-        return float(backend.calculate_norm(target - operator))
+        return float(backend.calculate_norm_density_matrix(target - operator, order=2))
 
     # initial parameters as flat distribution
     x0 = [1.0 / (len(kraus_ops) + 1)] * len(kraus_ops)

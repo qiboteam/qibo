@@ -359,7 +359,9 @@ def trace_distance(state, target, check_hermitian: bool = False, backend=None):
     difference = state - target
     if check_hermitian is True:
         hermitian = bool(
-            backend.calculate_norm(np.transpose(np.conj(difference)) - difference)
+            float(backend.calculate_norm_density_matrix(
+                np.transpose(np.conj(difference)) - difference, order=2
+            ))
             <= PRECISION_TOL
         )
         if (
@@ -724,15 +726,15 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
     dim = int(np.sqrt(channel.shape[0]))
 
     if check_unitary is True:
-        norm_channel = backend.calculate_norm(
+        norm_channel = float(backend.calculate_norm_density_matrix(
             np.dot(np.conj(np.transpose(channel)), channel) - np.eye(dim**2)
-        )
+        ))
         if target is None and norm_channel > PRECISION_TOL:
             raise_error(TypeError, "Channel is not unitary and Target is None.")
         if target is not None:
-            norm_target = backend.calculate_norm(
+            norm_target = float(backend.calculate_norm(
                 np.dot(np.conj(np.transpose(target)), target) - np.eye(dim**2)
-            )
+            ))
             if (norm_channel > PRECISION_TOL) and (norm_target > PRECISION_TOL):
                 raise_error(TypeError, "Neither channel is unitary.")
 
@@ -1131,9 +1133,11 @@ def _check_hermitian_or_not_gpu(matrix, backend=None):
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    hermitian = bool(
-        backend.calculate_norm(np.transpose(np.conj(matrix)) - matrix) < PRECISION_TOL
+    norm = backend.calculate_norm_density_matrix(
+        np.transpose(np.conj(matrix)) - matrix, order=2
     )
+
+    hermitian = bool(float(norm) <= PRECISION_TOL)
 
     if hermitian is False and backend.__class__.__name__ in [
         "CupyBackend",
