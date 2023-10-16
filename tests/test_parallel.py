@@ -36,7 +36,8 @@ def test_parallel_states_evaluation(backend):
 
 
 @pytest.mark.skipif(sys.platform == "darwin", reason="Mac tests")
-def test_parallel_circuit_evaluation(backend):
+@pytest.mark.parametrize("use_execute_circuits", [False, True])
+def test_parallel_circuit_evaluation(backend, use_execute_circuits):
     """Evaluate multiple circuits in parallel."""
     circuits = [QFT(n) for n in range(1, 11)]
 
@@ -44,7 +45,11 @@ def test_parallel_circuit_evaluation(backend):
     for circuit in circuits:
         r1.append(backend.execute_circuit(circuit))
 
-    r2 = parallel_circuits_execution(circuits, processes=2, backend=backend)
+    if use_execute_circuits:
+        r2 = backend.execute_circuits(circuits, processes=2)
+    else:
+        r2 = parallel_circuits_execution(circuits, processes=2, backend=backend)
+
     for x, y in zip(r1, r2):
         target = x.state(numpy=True)
         final = y.state(numpy=True)
