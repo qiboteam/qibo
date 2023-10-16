@@ -1062,46 +1062,69 @@ _______________________
 
 .. _States:
 
-States
-------
+Execution Outcomes
+------------------
 
-Qibo circuits return :class:`qibo.measurements.CircuitResult` objects
-when executed. By default, Qibo works as a wave function simulator in the sense
-that propagates the state vector through the circuit applying the
-corresponding gates. In this default usage the result of a circuit execution
-is the full final state vector which can be accessed via :meth:`qibo.measurements.CircuitResult.state`.
-However, for specific applications it is useful to have measurement samples
-from the final wave function, instead of its full vector form.
-To that end, :class:`qibo.measurements.CircuitResult` provides the
-:meth:`qibo.measurements.CircuitResult.samples` and
-:meth:`qibo.measurements.CircuitResult.frequencies` methods.
+Qibo circuits return different objects when executed depending on what the
+circuit contains and on the settings of the simulation. The Following table
+summarizes which outcomes to expect depending on whether:
 
-The state vector (or density matrix) is saved in memory as a tensor supported
-by the currently active backend (see :ref:`Backends <Backends>` for more information).
-A copy of the state can be created using :meth:`qibo.measurements.CircuitResult.copy`.
-The new state will point to the same tensor in memory as the original one unless
-the ``deep=True`` option was used during the ``copy`` call.
-Note that the qibojit backend performs in-place updates
-state is used as input to a circuit or time evolution. This will modify the
-state's tensor and the tensor of all shallow copies and the current state vector
-values will be lost. If you intend to keep the current state values,
-we recommend creating a deep copy before using it as input to a qibo model.
+* the circuit contains noise channels
+* the qubits are measured at the end of the execution
+* some collapse measurement is present in the circuit
+* ``density_matrix`` is set to ``True`` in simulation
 
-In order to perform measurements the user has to add the measurement gate
-:class:`qibo.gates.M` to the circuit and then execute providing a number
-of shots. If this is done, the :class:`qibo.measurements.CircuitResult`
-returned by the circuit will contain the measurement samples.
+.. table::
+   
+   +----------+--------------+----------+----------------+-------------------------+
+   | Noise    | Measurements | Collapse | Density Matrix |      Outcome            |
+   +==========+==============+==========+================+=========================+
+   |    ❌    |      ❌      |    ❌    |   ❌ / ✅      | ``QuantumState``        |
+   +----------+--------------+----------+----------------+-------------------------+
+   |    ❌    |      ✅      |    ❌    |   ❌ / ✅      | ``CircuitResult``       |
+   +----------+--------------+----------+----------------+-------------------------+
+   | ❌ / ✅  |      ❌      | ❌ / ✅  |       ✅       | ``QuantumState``        |
+   +----------+--------------+----------+----------------+-------------------------+
+   | ❌ / ✅  |      ✅      | ❌ / ✅  |       ❌       | ``MeasurementOutcomes`` |
+   +----------+--------------+----------+----------------+-------------------------+
+   | ❌ / ✅  |      ✅      | ❌ / ✅  |       ✅       | ``CircuitResult``       |
+   +----------+--------------+----------+----------------+-------------------------+
 
-For more information on measurements we refer to the
-:ref:`How to perform measurements? <measurement-examples>` example.
+Therefore, one of the three objects :class:`qibo.states.QuantumState`,
+:class:`qibo.measurements.MeasurementOutcomes` or :class:`qibo.measurements.CircuitResult`
+is going to be returned by the circuit execution. The first gives acces to the final
+state and probabilities via the :meth:`qibo.states.QuantumState.state` and
+:meth:`qibo.states.QuantumState.probabilities` methods, whereas the second
+allows to retrieve the final samples and frequencies with the
+:meth:`qibo.measurements.MeasurementOutcomes.samples` and
+:meth:`qibo.measurements.MeasurementOutcomes.frequencies` methods. The
+third includes all the above instead.
 
-Circuit result
-^^^^^^^^^^^^^^
+Every time some measurement is performed at the end of the execution, the result
+will be a ``CircuitResult`` unless the final state could not be represented with the
+current simulation settings, i.e. if some stochasticity is present in the ciruit
+(via noise channels or collapse measurements) and ``density_matrix=False``. In that
+case a simple ``MeasurementOutcomes`` object is returned.
+
+If no measurement is appended at the end of the circuit, the final ``QuantumState``
+is going to be provided as output. However, if the circuit is stochastic,
+``density_matrix`` should be set to ``True`` in order to recover the final state,
+otherwise an error is raised.
+
+
+.. autoclass:: qibo.states.QuantumState
+    :members:
+    :member-order: bysource
+
+.. autoclass:: qibo.measurements.MeasurementOutcomes
+    :members:
+    :member-order: bysource
 
 .. autoclass:: qibo.measurements.CircuitResult
     :members:
     :member-order: bysource
 
+		   
 
 .. _Callbacks:
 
