@@ -321,11 +321,6 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def entanglement_entropy(self, rho):  # pragma: no cover
-        """Calculate entangelement entropy of a reduced density matrix."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
     def calculate_norm(self, state):  # pragma: no cover
         """Calculate norm of a state vector."""
         raise_error(NotImplementedError)

@@ -662,17 +662,6 @@ class NumpyBackend(Backend):
         state = self.np.reshape(state, shape)
         return self.np.einsum("abac->bc", state)
 
-    def entanglement_entropy(self, rho):
-        from qibo.config import EIGVAL_CUTOFF
-
-        # Diagonalize
-        eigvals = self.np.linalg.eigvalsh(rho).real
-        # Treating zero and negative eigenvalues
-        masked_eigvals = eigvals[eigvals > EIGVAL_CUTOFF]
-        spectrum = -1 * self.np.log(masked_eigvals)
-        entropy = self.np.sum(masked_eigvals * spectrum) / self.np.log(2.0)
-        return entropy, spectrum
-
     def calculate_norm(self, state):
         state = self.cast(state)
         return self.np.sqrt(self.np.sum(self.np.abs(state) ** 2))

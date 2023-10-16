@@ -294,18 +294,6 @@ class TensorflowBackend(NumpyBackend):
         )
         return frequencies
 
-    def entanglement_entropy(self, rho):
-        # redefining this because ``tnp.linalg`` is not available
-        from qibo.config import EIGVAL_CUTOFF
-
-        # Diagonalize
-        eigvals = self.np.real(self.tf.linalg.eigvalsh(rho))
-        # Treating zero and negative eigenvalues
-        masked_eigvals = eigvals[eigvals > EIGVAL_CUTOFF]
-        spectrum = -1 * self.np.log(masked_eigvals)
-        entropy = self.np.sum(masked_eigvals * spectrum) / self.np.log(2.0)
-        return entropy, spectrum
-
     def calculate_eigenvalues(self, matrix, k=6):
         return self.tf.linalg.eigvalsh(matrix)
 

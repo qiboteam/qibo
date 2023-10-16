@@ -96,11 +96,17 @@ class EntanglementEntropy(Callback):
     """
 
     def __init__(
-        self, partition: Optional[List[int]] = None, compute_spectrum: bool = False
+        self,
+        partition: Optional[List[int]] = None,
+        compute_spectrum: bool = False,
+        base: float = 2,
+        check_hermitian: bool = False,
     ):
         super().__init__()
         self.partition = partition
         self.compute_spectrum = compute_spectrum
+        self.base = base
+        self.check_hermitian = check_hermitian
         self.spectrum = list()
 
     @Callback.nqubits.setter
@@ -119,20 +125,23 @@ class EntanglementEntropy(Callback):
             ]
 
     def apply(self, backend, state):
-        rho = backend.partial_trace(state, self.partition, self.nqubits)
-        entropy, spectrum = backend.entanglement_entropy(rho)
+        from qibo.quantum_info.metrics import entanglement_entropy
+
+        entropy, spectrum = entanglement_entropy(
+            state,
+            bipartition=self.partition,
+            base=self.base,
+            check_hermitian=self.check_hermitian,
+            return_spectrum=True,
+            backend=backend,
+        )
         self.append(entropy)
         if self.compute_spectrum:
             self.spectrum.append(spectrum)
         return entropy
 
     def apply_density_matrix(self, backend, state):
-        rho = backend.partial_trace_density_matrix(state, self.partition, self.nqubits)
-        entropy, spectrum = backend.entanglement_entropy(rho)
-        self.append(entropy)
-        if self.compute_spectrum:
-            self.spectrum.append(spectrum)
-        return entropy
+        return self.apply(backend, state)
 
 
 class State(Callback):
