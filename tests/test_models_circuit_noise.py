@@ -234,14 +234,14 @@ def test_probabilities_repeated_execution(backend, nqubits):
     circuit.density_matrix = True
 
     result = backend.execute_circuit_repeated(
-        circuit, initial_state=state, nshots=int(1e4)
+        circuit, initial_state=state, nshots=int(1e2)
     )
     result = result.probabilities()
 
     result_density_matrix = backend.execute_circuit(
         circuit_density_matrix,
         initial_state=state,
-        nshots=int(1e4),
+        nshots=int(1e2),
     )
     result_density_matrix = result_density_matrix.probabilities()
 

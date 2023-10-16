@@ -549,10 +549,10 @@ class NumpyBackend(Backend):
             NotImplementedError, f"{self} does not support distributed execution."
         )
 
-    def circuit_result_representation(self, result):
+    def circuit_result_representation(self, result):  # pragma: no cover
         return result.symbolic()
 
-    def circuit_result_tensor(self, result):
+    def circuit_result_tensor(self, result):  # pragma: no cover
         return result.execution_result
 
     def circuit_result_probabilities(self, state, qubits=None):

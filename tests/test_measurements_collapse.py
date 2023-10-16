@@ -72,7 +72,7 @@ def test_measurement_collapse_bitflip_noise(backend):
         output = c.add(gates.M(0, 1, p0=0.2, collapse=True))
 
 
-@pytest.mark.parametrize("density_matrix", [True])
+@pytest.mark.parametrize("density_matrix", [True, False])
 @pytest.mark.parametrize("effect", [False, True])
 def test_measurement_result_parameters(backend, effect, density_matrix):
     c = models.Circuit(4, density_matrix=density_matrix)
@@ -80,14 +80,24 @@ def test_measurement_result_parameters(backend, effect, density_matrix):
         c.add(gates.X(0))
     r = c.add(gates.M(0, collapse=True))
     c.add(gates.RX(1, theta=np.pi * r.symbols[0] / 4))
+    if not density_matrix:
+        c.add(gates.M(0))
 
     target_c = models.Circuit(4, density_matrix=density_matrix)
     if effect:
         target_c.add(gates.X(0))
         target_c.add(gates.RX(1, theta=np.pi / 4))
+    if not density_matrix:
+        target_c.add(gates.M(0))
 
-    final_state = backend.execute_circuit(c, nshots=1).state()
+    final_state = backend.execute_circuit(c, nshots=1)
     target_state = backend.execute_circuit(target_c)
+    if density_matrix:
+        final_state = final_state.state()
+        target_state = target_state.state()
+    else:
+        final_state = final_state.samples()[0]
+        target_state = target_state.samples()[0]
     backend.assert_allclose(final_state, target_state)
 
 
