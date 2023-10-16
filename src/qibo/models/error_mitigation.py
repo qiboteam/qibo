@@ -1,5 +1,7 @@
 """Error Mitigation Methods."""
 
+from itertools import product
+
 import numpy as np
 from scipy.optimize import curve_fit
 
@@ -595,3 +597,178 @@ def apply_randomized_readout_mitigation(
         results[j]._frequencies = freq_sum
 
     return results
+
+
+def sample_clifford_training_circuit(
+    circuit,
+    backend=None,
+):
+    """Samples a training circuit for CDR by susbtituting some of the non-Clifford gates.
+
+    Args:
+        circuit (:class:`qibo.models.Circuit`): circuit to sample from,
+            decomposed in ``RX(pi/2)``, ``X``, ``CNOT`` and ``RZ`` gates.
+        replacement_gates (list, optional): candidates for the substitution of the
+            non-Clifford gates. The ``list`` should be composed by ``tuples`` of the
+            form (``gates.XYZ``, ``kwargs``). For example, phase gates are used by default:
+            ``list((RZ, {'theta':0}), (RZ, {'theta':pi/2}), (RZ, {'theta':pi}), (RZ, {'theta':3*pi/2}))``.
+        sigma (float, optional): standard devation of the Gaussian distribution used for sampling.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): Calculation engine.
+
+    Returns:
+        :class:`qibo.models.Circuit`: The sampled circuit.
+    """
+    from qibo.quantum_info import random_clifford
+
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    # Find all the non-Clifford gates
+    gates_to_replace = []
+    for i, gate in enumerate(circuit.queue):
+        if gate.clifford is False and isinstance(gate, gates.M) is False:
+            gates_to_replace.append([i, gate])
+    gates_to_replace = np.array(gates_to_replace, dtype=object)
+
+    if len(gates_to_replace) == 0:
+        raise_error(ValueError, "No non-Clifford gate found, no circuit sampled.")
+
+    # Build the training circuit by substituting the sampled gates
+    sampled_circuit = circuit.__class__(**circuit.init_kwargs)
+
+    for i, gate in enumerate(circuit.queue):
+        if isinstance(gate, gates.M):
+            gate_rand = gates.Unitary(
+                random_clifford(1, backend=backend, return_circuit=False),
+                gate.qubits[0],
+            )
+            gate_rand.clifford = True
+
+            sampled_circuit.add(gate_rand)
+            sampled_circuit.add(gate)
+
+        else:
+            if i in gates_to_replace[:, 0]:
+                gate = gates.Unitary(
+                    random_clifford(1, backend=backend, return_circuit=False),
+                    gate.qubits[0],
+                )
+                gate.clifford = True
+            sampled_circuit.add(gate)
+
+    return sampled_circuit
+
+
+def escircuit(circuit, obs, backend=None):
+    from qibo.quantum_info import comp_basis_to_pauli, random_clifford, vectorization
+
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    circ_cliff = sample_clifford_training_circuit(circuit, backend=backend)
+
+    c_unitary = circ_cliff.unitary(backend=backend)
+    nqubits = circ_cliff.nqubits
+    U_c2p = comp_basis_to_pauli(nqubits, backend=backend)
+    obs_liouville = vectorization(
+        np.transpose(np.conjugate(c_unitary)) @ obs.matrix @ c_unitary, order="row"
+    )
+    obs_pauli_liouville = U_c2p @ obs_liouville
+    index = np.where(abs(obs_pauli_liouville) >= 1e-5)[0][0]
+    obs1 = list(product(["I", "X", "Y", "Z"], repeat=nqubits))[index]
+
+    paulis = {
+        "I": gates.I(0).matrix(),
+        "X": gates.X(0).matrix(),
+        "Y": gates.Y(0).matrix(),
+        "Z": gates.Z(0).matrix(),
+    }
+
+    adjust_gates = []
+    for i in range(nqubits):
+        obs_i = paulis[obs1[i]]
+        R = paulis["I"]
+        while np.any(abs(obs_i - paulis["Z"]) > 1e-5) and np.any(
+            abs(obs_i - paulis["I"]) > 1e-5
+        ):
+            R = random_clifford(1, backend=backend, return_circuit=False)
+            obs_i = np.conjugate(np.transpose(R)) @ paulis[obs1[i]] @ R
+
+        adjust_gate = gates.Unitary(R, i)
+        adjust_gate.clifford = True
+        adjust_gates.append(adjust_gate)
+
+    circ_cliff1 = circ_cliff.__class__(**circ_cliff.init_kwargs)
+
+    for gate in adjust_gates:
+        circ_cliff1.add(gate)
+
+    for gate in circ_cliff.queue:
+        circ_cliff1.add(gate)
+
+    return circ_cliff1.fuse(max_qubits=1), circ_cliff, adjust_gates
+
+
+def mit_obs(
+    circuit,
+    observable,
+    noise_model,
+    nshots=int(1e4),
+    n_training_samples=10,
+    backend=None,
+):
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    training_circs = [
+        escircuit(circuit, observable, backend=backend)[0]
+        for _ in range(n_training_samples)
+    ]
+
+    data = {"exact": {"-1": [], "1": []}, "noisy": {"-1": [], "1": []}}
+
+    a_list = {"-1": [], "1": []}
+    for c in training_circs:
+        exp = c(nshots=nshots).expectation_from_samples(observable)
+        # state = c().state()
+        # exp = obs.expectation(state)
+        if noise_model is not None and backend.name != "qibolab":
+            c = noise_model.apply(c)
+            c.density_matrix = True
+        circuit_result = backend.execute_circuit(c, nshots=nshots)
+        exp_noisy = circuit_result.expectation_from_samples(observable)
+        # state = c_noisy().state()
+        # exp_noisy = obs.expectation(state)
+
+        if exp > 0:
+            data["exact"]["1"].append(exp)
+            data["noisy"]["1"].append(exp_noisy)
+            a_list["1"].append(1 - exp_noisy / exp)
+        else:
+            data["exact"]["-1"].append(exp)
+            data["noisy"]["-1"].append(exp_noisy)
+            a_list["-1"].append(1 - exp_noisy / exp)
+
+    a_std_1 = np.std(a_list["1"])
+    a_std_m1 = np.std(a_list["-1"])
+    a = (np.sum(a_list["1"]) + np.sum(a_list["-1"])) / n_training_samples
+    a_std = np.sqrt(
+        (a_std_1**2 * len(a_list["1"]) + a_std_m1**2 * len(a_list["-1"]))
+        / n_training_samples
+    )
+
+    if noise_model is not None and backend.name != "qibolab":
+        circuit = noise_model.apply(circuit)
+        circuit.density_matrix = True
+    circuit_result = backend.execute_circuit(circuit, nshots=nshots)
+    exp_noisy = circuit_result.expectation_from_samples(observable)
+    # exp_noisy = obs.expectation(c_noisy().state())
+    exp_mit = (1 - a) * exp_noisy / ((1 - a) ** 2 + a_std**2)
+    exp_mit_std = (
+        a_std
+        * abs(exp_noisy)
+        * abs((1 - a) ** 2 - a_std**2)
+        / ((1 - a) ** 2 + a_std**2) ** 2
+    )
+
+    return exp_mit, exp_mit_std, a, a_std, a_list, data
