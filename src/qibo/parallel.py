@@ -1,6 +1,12 @@
 """
 Resources for parallel circuit evaluation.
 """
+from typing import Iterable
+
+from joblib import Parallel, delayed
+
+from qibo.backends import GlobalBackend
+from qibo.config import raise_error
 
 
 def parallel_execution(circuit, states, processes=None, backend=None):
@@ -35,23 +41,47 @@ def parallel_execution(circuit, states, processes=None, backend=None):
         Circuit evaluation for input states.
     """
     if backend is None:  # pragma: no cover
-        from qibo.backends import GlobalBackend
-
         backend = GlobalBackend()
 
     if states is None or not isinstance(states, list):  # pragma: no cover
-        from qibo.config import raise_error
-
-        raise_error(RuntimeError, "states must be a list.")
+        raise_error(TypeError, "states must be a list.")
 
     def operation(state, circuit):
         return backend.execute_circuit(circuit, state)
 
-    from joblib import Parallel, delayed
-
     results = Parallel(n_jobs=processes, prefer="threads")(
         delayed(operation)(state, circuit) for state in states
     )
+
+    return results
+
+
+def parallel_circuits_execution(
+    circuits, states=None, nshots=1000, processes=None, backend=None
+):
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    if not isinstance(circuits, Iterable):  # pragma: no cover
+        raise_error(TypeError, "circuits must be iterable.")
+
+    if isinstance(states, (list, tuple)) and len(states) != len(circuits):
+        raise_error(ValueError, "states must have the same length as circuits.")
+    elif states is not None and not isinstance(states, Iterable):
+        raise_error(TypeError, "states must be iterable.")
+
+    def operation(circuit, state):
+        return backend.execute_circuit(circuit, state, nshots)
+
+    if states is None or isinstance(states, backend.tensor_types):
+        results = Parallel(n_jobs=processes, prefer="threads")(
+            delayed(operation)(circuit, states) for circuit in circuits
+        )
+    else:
+        results = Parallel(n_jobs=processes, prefer="threads")(
+            delayed(operation)(circuit, state)
+            for circuit, state in zip(circuits, states)
+        )
 
     return results
 
@@ -100,22 +130,16 @@ def parallel_parametrized_execution(
         Circuit evaluation for input parameters.
     """
     if backend is None:  # pragma: no cover
-        from qibo.backends import GlobalBackend
-
         backend = GlobalBackend()
 
     if not isinstance(parameters, list):  # pragma: no cover
-        from qibo.config import raise_error
-
-        raise_error(RuntimeError, "parameters must be a list.")
+        raise_error(TypeError, "parameters must be a list.")
 
     def operation(params, circuit, state):
         if state is not None:
             state = backend.cast(state, copy=True)
         circuit.set_parameters(params)
         return backend.execute_circuit(circuit, state)
-
-    from joblib import Parallel, delayed
 
     results = Parallel(n_jobs=processes, prefer="threads")(
         delayed(operation)(param, circuit.copy(deep=True), initial_state)
