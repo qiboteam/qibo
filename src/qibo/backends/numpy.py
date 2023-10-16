@@ -682,13 +682,13 @@ class NumpyBackend(Backend):
         entropy = self.np.sum(masked_eigvals * spectrum) / self.np.log(2.0)
         return entropy, spectrum
 
-    def calculate_norm(self, state):
+    def calculate_norm(self, state, order=2):
         state = self.cast(state)
-        return self.np.sqrt(self.np.sum(self.np.abs(state) ** 2))
+        return self.np.linalg.norm(state, ord=order)
 
-    def calculate_norm_density_matrix(self, state):
+    def calculate_norm_density_matrix(self, state, order="nuc"):
         state = self.cast(state)
-        return self.np.trace(state)
+        return self.np.linalg.norm(state, ord=order)
 
     def calculate_overlap(self, state1, state2):
         state1 = self.cast(state1)
