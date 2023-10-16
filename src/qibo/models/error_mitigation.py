@@ -655,11 +655,10 @@ def sample_clifford_training_circuit(
                 )
                 gate.clifford = True
             sampled_circuit.add(gate)
-
     return sampled_circuit
 
 
-def escircuit(circuit, obs, backend=None):
+def escircuit(circuit, obs, fuse=True, backend=None):
     from qibo.quantum_info import comp_basis_to_pauli, random_clifford, vectorization
 
     if backend is None:  # pragma: no cover
@@ -706,7 +705,10 @@ def escircuit(circuit, obs, backend=None):
     for gate in circ_cliff.queue:
         circ_cliff1.add(gate)
 
-    return circ_cliff1.fuse(max_qubits=1), circ_cliff, adjust_gates
+    if fuse:
+        circ_cliff1 = circ_cliff1.fuse(max_qubits=1)
+
+    return circ_cliff1, circ_cliff, adjust_gates
 
 
 def mit_obs(
@@ -715,6 +717,7 @@ def mit_obs(
     noise_model,
     nshots=int(1e4),
     n_training_samples=10,
+    full_output=False,
     backend=None,
 ):
     if backend is None:  # pragma: no cover
@@ -725,7 +728,7 @@ def mit_obs(
         for _ in range(n_training_samples)
     ]
 
-    data = {"exact": {"-1": [], "1": []}, "noisy": {"-1": [], "1": []}}
+    data = {"noise-free": {"-1": [], "1": []}, "noisy": {"-1": [], "1": []}}
 
     a_list = {"-1": [], "1": []}
     for c in training_circs:
@@ -741,11 +744,11 @@ def mit_obs(
         # exp_noisy = obs.expectation(state)
 
         if exp > 0:
-            data["exact"]["1"].append(exp)
+            data["noise-free"]["1"].append(exp)
             data["noisy"]["1"].append(exp_noisy)
             a_list["1"].append(1 - exp_noisy / exp)
         else:
-            data["exact"]["-1"].append(exp)
+            data["noise-free"]["-1"].append(exp)
             data["noisy"]["-1"].append(exp_noisy)
             a_list["-1"].append(1 - exp_noisy / exp)
 
@@ -771,4 +774,7 @@ def mit_obs(
         / ((1 - a) ** 2 + a_std**2) ** 2
     )
 
-    return exp_mit, exp_mit_std, a, a_std, a_list, data
+    if full_output:
+        return exp_mit, exp_mit_std, a, a_std, a_list, data
+
+    return exp_mit
