@@ -325,17 +325,18 @@ def test_state_callback(backend, density_matrix, copy):
     backend.assert_allclose(statec[1], target_state1)
 
 
+@pytest.mark.parametrize("seed", list(range(1, 5 + 1)))
 @pytest.mark.parametrize("density_matrix", [False, True])
-def test_norm(backend, density_matrix):
+def test_norm(backend, density_matrix, seed):
     norm = callbacks.Norm()
     if density_matrix:
         norm.nqubits = 1
-        state = np.random.random((2, 2)) + 1j * np.random.random((2, 2))
+        state = random_density_matrix(2**norm.nqubits, seed=seed, backend=backend)
         target_norm = np.trace(state)
         final_norm = norm.apply_density_matrix(backend, state)
     else:
         norm.nqubits = 2
-        state = np.random.random(4) + 1j * np.random.random(4)
+        state = random_statevector(2**norm.nqubits, seed=seed, backend=backend)
         target_norm = np.sqrt((np.abs(state) ** 2).sum())
         final_norm = norm.apply(backend, state)
 
