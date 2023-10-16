@@ -1075,7 +1075,7 @@ summarizes which outcomes to expect depending on whether:
 * ``density_matrix`` is set to ``True`` in simulation
 
 .. table::
-   
+
    +----------+--------------+----------+----------------+-------------------------+
    | Noise    | Measurements | Collapse | Density Matrix |      Outcome            |
    +==========+==============+==========+================+=========================+
@@ -1124,7 +1124,7 @@ otherwise an error is raised.
     :members:
     :member-order: bysource
 
-		   
+
 
 .. _Callbacks:
 
