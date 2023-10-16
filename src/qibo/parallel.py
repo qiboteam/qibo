@@ -16,7 +16,6 @@ def parallel_execution(circuit, states, processes=None, backend=None):
         .. code-block:: python
 
             import qibo
-            original_backend = qibo.get_backend()
             qibo.set_backend('qibojit')
             from qibo import models, set_threads
             from qibo.parallel import parallel_execution
@@ -30,7 +29,6 @@ def parallel_execution(circuit, states, processes=None, backend=None):
             set_threads(1)
             # execute in parallel
             results = parallel_execution(circuit, states, processes=2)
-            qibo.set_backend(original_backend)
 
     Args:
         circuit (qibo.models.Circuit): the input circuit.
@@ -59,6 +57,35 @@ def parallel_execution(circuit, states, processes=None, backend=None):
 def parallel_circuits_execution(
     circuits, states=None, nshots=1000, processes=None, backend=None
 ):
+    """Execute multiple circuits
+
+    Example:
+        .. code-block:: python
+
+            import qibo
+            qibo.set_backend('qibojit')
+            from qibo import models, set_threads
+            from qibo.parallel import parallel_execution
+            import numpy as np
+            # create different circuits
+            circuits = [models.QFT(n) for n in range(5, 16)]
+            # set threads to 1 per process (optional, requires tuning)
+            set_threads(1)
+            # execute in parallel
+            results = parallel_circuits_execution(circuit, processes=2)
+
+    Args:
+        circuits (list): list of circuits to execute.
+        states (optional, list): list of states to use as initial for each circuit.
+            Must have the same length as ``circuits``.
+            If one state is given it is used on all circuits.
+            If not given the default initial state on all circuits.
+        nshots (int): Number of shots when performing measurements, same for all circuits.
+        processes (int): number of processes for parallel evaluation.
+
+    Returns:
+        Circuit evaluation for input states.
+    """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
@@ -95,7 +122,6 @@ def parallel_parametrized_execution(
         .. code-block:: python
 
             import qibo
-            original_backend = qibo.get_backend()
             qibo.set_backend('qibojit')
             from qibo import models, gates, set_threads
             from qibo.parallel import parallel_parametrized_execution
@@ -118,7 +144,6 @@ def parallel_parametrized_execution(
             set_threads(1)
             # execute in parallel
             results = parallel_parametrized_execution(circuit, parameters, processes=2)
-            qibo.set_backend(original_backend)
 
     Args:
         circuit (qibo.models.Circuit): the input circuit.
