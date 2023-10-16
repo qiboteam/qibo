@@ -92,7 +92,11 @@ def parallel_circuits_execution(
     if not isinstance(circuits, Iterable):  # pragma: no cover
         raise_error(TypeError, "circuits must be iterable.")
 
-    if isinstance(states, (list, tuple)) and len(states) != len(circuits):
+    if (
+        isinstance(states, (list, tuple))
+        and isinstance(circuits, (list, tuple))
+        and len(states) != len(circuits)
+    ):
         raise_error(ValueError, "states must have the same length as circuits.")
     elif states is not None and not isinstance(states, Iterable):
         raise_error(TypeError, "states must be iterable.")
