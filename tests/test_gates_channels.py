@@ -94,19 +94,29 @@ def test_kraus_channel(backend, pauli_order):
     channel = gates.KrausChannel(0, [a_1, a_2])
 
     backend.assert_allclose(
-        backend.calculate_norm(channel.to_liouville(backend=backend) - test_superop)
+        float(
+            backend.calculate_norm_density_matrix(
+                channel.to_liouville(backend=backend) - test_superop, order=2
+            )
+        )
         < PRECISION_TOL,
         True,
     )
     backend.assert_allclose(
-        backend.calculate_norm(channel.to_choi(backend=backend) - test_choi)
+        float(
+            backend.calculate_norm_density_matrix(
+                channel.to_choi(backend=backend) - test_choi, order=2
+            )
+        )
         < PRECISION_TOL,
         True,
     )
     backend.assert_allclose(
-        backend.calculate_norm(
-            channel.to_pauli_liouville(pauli_order=pauli_order, backend=backend)
-            - test_pauli
+        float(
+            backend.calculate_norm(
+                channel.to_pauli_liouville(pauli_order=pauli_order, backend=backend)
+                - test_pauli
+            )
         )
         < PRECISION_TOL,
         True,
@@ -212,7 +222,11 @@ def test_pauli_noise_channel(backend, pauli_order):
     liouville = gates.PauliNoiseChannel(0, list(zip(basis, pnp))).to_pauli_liouville(
         normalize=True, pauli_order=pauli_order, backend=backend
     )
-    norm = backend.calculate_norm(backend.to_numpy(liouville) - test_representation)
+    norm = float(
+        backend.calculate_norm_density_matrix(
+            backend.to_numpy(liouville) - test_representation, order=2
+        )
+    )
 
     assert norm < PRECISION_TOL
 
@@ -341,7 +355,11 @@ def test_thermal_relaxation_channel(backend, t_1, t_2, time, excpop):
     target_state = backend.cast(target_state, dtype=target_state.dtype)
 
     backend.assert_allclose(
-        backend.calculate_norm(final_state - target_state) < PRECISION_TOL, True
+        float(
+            backend.calculate_norm_density_matrix(final_state - target_state, order=2)
+        )
+        < PRECISION_TOL,
+        True,
     )
 
 
