@@ -156,12 +156,7 @@ def test_entropy(backend, base, check_hermitian):
         test = 0.8613531161467861
 
     backend.assert_allclose(
-        backend.calculate_norm(
-            entropy(state, base, check_hermitian=check_hermitian, backend=backend)
-            - test
-        )
-        < PRECISION_TOL,
-        True,
+        entropy(state, base, check_hermitian=check_hermitian, backend=backend), test
     )
 
 
@@ -520,8 +515,8 @@ def test_process_fidelity_and_infidelity(backend):
         channel = backend.cast(channel, dtype=channel.dtype)
         test = process_fidelity(channel, check_unitary=True, backend=backend)
     with pytest.raises(TypeError):
-        channel = np.random.rand(d**2, d**2)
-        target = np.random.rand(d**2, d**2)
+        channel = 10 * np.random.rand(d**2, d**2)
+        target = 10 * np.random.rand(d**2, d**2)
         channel = backend.cast(channel, dtype=channel.dtype)
         target = backend.cast(target, dtype=target.dtype)
         test = process_fidelity(channel, target, check_unitary=True, backend=backend)

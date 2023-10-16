@@ -352,7 +352,7 @@ def test_repeated_execute_probs_and_freqs(backend, nqubits):
     test_probabilities = backend.cast(test_probabilities, dtype=float)
     print(result.probabilities())
     backend.assert_allclose(
-        backend.calculate_norm(result.probabilities() - test_probabilities)
+        float(backend.calculate_norm(result.probabilities() - test_probabilities))
         < PRECISION_TOL,
         True,
     )
