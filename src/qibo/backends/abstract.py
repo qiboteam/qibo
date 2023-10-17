@@ -358,7 +358,7 @@ class Backend(abc.ABC):
 
     @abc.abstractmethod
     def calculate_overlap_density_matrix(self, state1, state2):  # pragma: no cover
-        """Calculate norm of two density matrices."""
+        """Calculate overlap of two density matrices."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
