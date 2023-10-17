@@ -422,7 +422,6 @@ class NumpyBackend(Backend):
                 for gate in circuit.queue:
                     state = gate.apply(self, state, nqubits)
 
-            # set the circuit _final_state??
 
             if circuit.has_unitary_channel:
                 # here we necessarily have `density_matrix=True`, otherwise
