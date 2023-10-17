@@ -759,7 +759,7 @@ def mit_obs(
         / n_training_samples
     )
 
-    circuit.fuse(max_qubits=1)
+    circuit = circuit.fuse(max_qubits=1)
     if noise_model is not None and backend.name != "qibolab":
         circuit = noise_model.apply(circuit)
     circuit_result = backend.execute_circuit(circuit, nshots=nshots)
