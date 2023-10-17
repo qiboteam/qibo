@@ -144,9 +144,7 @@ def test_measurementresult_apply_bitflips(backend, i, p0, p1):
 
     c = models.Circuit(3)
     c.add(gates.M(*range(3)))
-    state = np.zeros(
-        8,
-    )
+    state = np.zeros(8)
     state[0] = 1.0
     result = CircuitResult(state, c, backend)
     result._samples = np.zeros((10, 3), dtype="int32")
