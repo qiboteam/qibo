@@ -393,7 +393,7 @@ class NumpyBackend(Backend):
                 return self.execute_circuit_repeated(circuit, nshots, initial_state)
             else:
                 raise AssertionError(
-                    "Attempting to perform noisy simulation with `density_matrix=False` and no Measurement gate in the Circuit. Please either include measurements in the circuit if you wish to retrieve the statistics of the outcomes or set `density_matrix=True` to recover the final state."
+                    "Attempting to perform noisy simulation with `density_matrix=False` and no Measurement gate in the Circuit. If you wish to retrieve the statistics of the outcomes please include measurements in the circuit, otherwise set `density_matrix=True` to recover the final state."
                 )
 
         if circuit.accelerators:  # pragma: no cover
