@@ -24,10 +24,9 @@ class ScipyMinimizer(Optimizer):
                 for gate parameters.
             loss (callable): loss function to train on.
             args (tuple): tuple containing loss function arguments.
-            method (str): optimization method, which can be selected between the
-                ones allowed by ``scipy.optimize.minimize`` [default "Powell"].
             options (dict): options which can be provided to the general
                 Scipy's minimizer. See `scipy.optimize.minimize` documentation.
+                By default, the `"method"` option is set to `"Powell"`.
             minimizer_kwargs (dict): extra options to customize the selected
                 minimizer. This arguments correspond to Scipy's "options".
 
