@@ -476,7 +476,7 @@ def test_measurement_basis_list_error(backend):
         c.add(gates.M(0, 1, 2, 3, basis=[gates.X, gates.Z, gates.X]))
 
 
-def test_CircuitResult_error(backend):
+def test_circuit_result_error(backend):
     c = models.Circuit(1)
     state = np.array([1, 0])
     with pytest.raises(Exception) as exc_info:
