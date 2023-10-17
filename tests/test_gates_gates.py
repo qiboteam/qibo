@@ -437,6 +437,30 @@ def test_u3(backend, seed_state, seed_observable):
     assert gates.U3(0, theta, phi, lam).unitary
 
 
+@pytest.mark.parametrize("seed_state", list(range(1, 10 + 1)))
+def test_u1q(backend, seed_state):
+    nqubits = 1
+    theta, phi = np.random.rand(2)
+
+    initial_state = random_statevector(2**nqubits, seed=seed_state, backend=backend)
+    final_state = apply_gates(
+        backend, [gates.U1q(0, theta, phi)], initial_state=initial_state
+    )
+    cost, sint = np.cos(theta / 2), np.sin(theta / 2)
+
+    matrix = np.array(
+        [[cost, -1j * np.exp(-1j * phi) * sint], [-1j * np.exp(1j * phi) * sint, cost]]
+    )
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
+
+    target_state = np.dot(matrix, initial_state)
+
+    backend.assert_allclose(final_state, target_state)
+
+    assert not gates.U1q(0, theta, phi).clifford
+    assert gates.U1q(0, theta, phi).unitary
+
+
 @pytest.mark.parametrize("applyx", [False, True])
 def test_cnot(backend, applyx):
     if applyx:
@@ -1408,6 +1432,7 @@ GATES = [
     ("U1", (0, 0.1)),
     ("U2", (0, 0.2, 0.3)),
     ("U3", (0, 0.1, 0.2, 0.3)),
+    ("U1q", (0, 0.1, 0.2)),
     ("CNOT", (0, 1)),
     ("CZ", (0, 1)),
     ("CSX", (0, 1)),

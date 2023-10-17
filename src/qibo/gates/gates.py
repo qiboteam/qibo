@@ -892,6 +892,48 @@ class U3(_Un_):
         ]
 
 
+class U1q(_Un_):
+    """Native single-qubit gate in the Quantinuum platform.
+
+    Corresponds to the following unitary matrix:
+
+    .. math::
+        \\begin{pmatrix}
+            \\cos\\left(\\frac{\\theta}{2}\\right) &
+                -i \\, e^{-i \\, \\phi} \\, \\sin\\left(\\frac{\\theta}{2}\\right) \\\\
+            -i \\, e^{i \\, \\phi} \\, \\sin\\left(\\frac{\\theta}{2}\\right) &
+                \\cos\\left(\\frac{\\theta}{2}\\right) \\\\
+        \\end{pmatrix}
+
+    Note that
+    :math:`U_{1q}(\\theta, \\phi) = U_{3}(\\theta, \\phi - \\frac{\\pi}{2}, \\frac{\\pi}{2} - \\phi)`,
+    where :math:`U_{3}` is :class:`qibo.gates.U3`.
+
+    Args:
+        q (int): the qubit id number.
+        theta (float): first rotation angle.
+        phi (float): second rotation angle.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
+    """
+
+    def __init__(self, q, theta, phi, trainable=True):
+        super().__init__(q, trainable=trainable)
+        self.name = "u1q"
+        self.draw_label = "U1q"
+        self.nparams = 2
+        self._theta, self._phi = None, None
+        self.init_kwargs = {"theta": theta, "phi": phi, "trainable": trainable}
+        self.parameter_names = ["theta", "phi"]
+        self.parameters = theta, phi
+
+    def _dagger(self) -> "Gate":
+        """"""
+        theta, phi = self.init_kwargs["theta"], self.init_kwargs["phi"]
+        return self.__class__(self.init_args[0], -theta, phi)
+
+
 class CNOT(Gate):
     """The Controlled-NOT gate.
 
