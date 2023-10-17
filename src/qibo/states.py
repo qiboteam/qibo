@@ -8,8 +8,6 @@ class QuantumState:
         self.backend = backend
         self.density_matrix = len(state.shape) == 2
         self.nqubits = int(np.log2(state.shape[0]))
-        self.qubits = tuple(range(self.nqubits))
-        self._repeated_execution_probabilities = None
         self._state = state
 
     def symbolic(self, decimals=5, cutoff=1e-10, max_terms=20):
@@ -39,7 +37,7 @@ class QuantumState:
         return " + ".join(terms)
 
     def state(self, numpy=False):
-        """State's tensor representation as an backend tensor.
+        """State's tensor representation as a backend tensor.
 
         Args:
             numpy (bool): If ``True`` the returned tensor will be a numpy array,
@@ -64,10 +62,18 @@ class QuantumState:
         Args:
             qubits (list, set): Set of qubits that are measured.
         """
-        if self._repeated_execution_probabilities is not None:
-            return self._repeated_execution_probabilities
 
-        return self.backend.circuit_result_probabilities(self, qubits)
+        if qubits is None:
+            qubits = tuple(range(self.nqubits))
+
+        if self.density_matrix:
+            return self.backend.calculate_probabilities_density_matrix(
+                self._state, qubits, self.nqubits
+            )
+        else:
+            return self.backend.calculate_probabilities(
+                self._state, qubits, self.nqubits
+            )
 
     def __str__(self):
         return self.symbolic()

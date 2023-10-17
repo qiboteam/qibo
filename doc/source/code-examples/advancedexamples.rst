@@ -1162,13 +1162,13 @@ assuming we have a ``result`` object after running a circuit with a certain numb
 
 .. testcode::
 
-      noise= NoiseModel()
+      noise = NoiseModel()
       params = {"idle_qubits" : True}
       noise.composite(params)
 
       result =  noisy_circ(nshots=1000)
 
-      noise.noise_model.fit(result)
+      noise.noise_model.fit(c, result)
 
       print(noise.noise_model.params)
       print(noise.noise_model.hellinger)

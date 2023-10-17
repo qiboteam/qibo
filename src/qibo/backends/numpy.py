@@ -525,27 +525,19 @@ class NumpyBackend(Backend):
                 final_result = CircuitResult(
                     final_state, circuit.measurements, self, nshots
                 )
-                probabilities = final_result.probabilities(qubits)
-                final_result._repeated_execution_probabilities = probabilities
-                circuit._final_state = final_result
-                return final_result
             else:
                 final_result = QuantumState(final_state, self)
-                probabilities = final_result.probabilities()
-                final_result._repeated_execution_probabilities = probabilities
-                circuit._final_state = final_result
-                return final_result
+            circuit._final_state = final_result
+            return final_result
         else:
             probabilities = probabilities / nshots
             final_result = MeasurementOutcomes(
                 circuit.measurements, probabilities, self, nshots
             )
             final_result._samples = self.aggregate_shots(results)
-            final_result._repeated_execution_probabilities = probabilities
             final_result._repeated_execution_frequencies = self.calculate_frequencies(
                 samples
             )
-            # set the circuit _final_state??
             circuit._final_state = final_result
             return final_result
 
@@ -553,18 +545,6 @@ class NumpyBackend(Backend):
         raise_error(
             NotImplementedError, f"{self} does not support distributed execution."
         )
-
-    def circuit_result_probabilities(self, state, qubits=None):
-        if qubits is None:
-            qubits = state.qubits
-
-        state_tensor = state._state
-        if state.density_matrix:
-            return self.calculate_probabilities_density_matrix(
-                state_tensor, qubits, state.nqubits
-            )
-        else:
-            return self.calculate_probabilities(state_tensor, qubits, state.nqubits)
 
     def calculate_symbolic(
         self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20
