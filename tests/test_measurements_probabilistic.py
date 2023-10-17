@@ -146,7 +146,7 @@ def test_measurementresult_apply_bitflips(backend, i, p0, p1):
     c.add(gates.M(*range(3)))
     state = np.zeros(8)
     state[0] = 1.0
-    result = CircuitResult(state, c, backend)
+    result = CircuitResult(state, c.measurements, backend)
     result._samples = np.zeros((10, 3), dtype="int32")
     backend.set_seed(123)
     noisy_samples = result.apply_bitflips(p0, p1)

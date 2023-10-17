@@ -480,7 +480,7 @@ def test_circuit_result_error(backend):
     c = models.Circuit(1)
     state = np.array([1, 0])
     with pytest.raises(Exception) as exc_info:
-        CircuitResult(state, c, backend)
+        CircuitResult(state, c.measurements, backend)
     assert (
         str(exc_info.value)
         == "Circuit does not contain measurements. Use a `QuantumState` instead."

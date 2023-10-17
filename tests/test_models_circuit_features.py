@@ -273,11 +273,11 @@ def test_repeated_execute_pauli_noise_channel(backend):
         gates.PauliNoiseChannel(i, list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.3])))
         for i in range(4)
     )
-    with pytest.raises(AssertionError) as excinfo:
+    with pytest.raises(RuntimeError) as excinfo:
         final_state = backend.execute_circuit(c, nshots=20)
     assert (
         str(excinfo.value)
-        == "Attempting to perform noisy simulation with `density_matrix=False` and no Measurement gate in the Circuit. Please either include measurements in the circuit if you wish to retrieve the statistics of the outcomes or set `density_matrix=True` to recover the final state."
+        == "Attempting to perform noisy simulation with `density_matrix=False` and no Measurement gate in the Circuit. If you wish to retrieve the statistics of the outcomes please include measurements in the circuit, otherwise set `density_matrix=True` to recover the final state."
     )
 
 
@@ -287,11 +287,11 @@ def test_repeated_execute_with_pauli_noise(backend):
     c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
     noisy_c = c.with_pauli_noise(list(zip(["X", "Z"], [0.2, 0.1])))
     backend.set_seed(1234)
-    with pytest.raises(AssertionError) as excinfo:
+    with pytest.raises(RuntimeError) as excinfo:
         final_state = backend.execute_circuit(noisy_c, nshots=20)
     assert (
         str(excinfo.value)
-        == "Attempting to perform noisy simulation with `density_matrix=False` and no Measurement gate in the Circuit. Please either include measurements in the circuit if you wish to retrieve the statistics of the outcomes or set `density_matrix=True` to recover the final state."
+        == "Attempting to perform noisy simulation with `density_matrix=False` and no Measurement gate in the Circuit. If you wish to retrieve the statistics of the outcomes please include measurements in the circuit, otherwise set `density_matrix=True` to recover the final state."
     )
 
 
@@ -312,25 +312,13 @@ def test_repeated_execute_probs_and_freqs(backend, nqubits):
     # Tensorflow seems to yield different results with same seed
     if backend.__class__.__name__ == "TensorflowBackend":
         if nqubits == 1:
-            test_probabilities = [0.17578125, 0.82421875]
             test_frequencies = Counter({1: 844, 0: 180})
         else:
-            test_probabilities = [0.04003906, 0.15039062, 0.15136719, 0.65820312]
             test_frequencies = Counter({11: 674, 10: 155, 1: 154, 0: 41})
     else:
         if nqubits == 1:
-            test_probabilities = [0.22851562, 0.77148438]
             test_frequencies = Counter({"1": 790, "0": 234})
         else:
-            test_probabilities = [0.05078125, 0.18066406, 0.16503906, 0.60351562]
             test_frequencies = Counter({"11": 618, "10": 169, "01": 185, "00": 52})
-
-    test_probabilities = backend.cast(test_probabilities, dtype=float)
-    # print(result.probabilities())
-    # backend.assert_allclose(
-    #    backend.calculate_norm(result.probabilities() - test_probabilities)
-    #    < PRECISION_TOL,
-    #    True,
-    # )
 
     assert result.frequencies() == test_frequencies

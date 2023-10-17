@@ -3,6 +3,7 @@ import collections
 import numpy as np
 import sympy
 
+from qibo import gates
 from qibo.config import raise_error
 from qibo.states import QuantumState
 
@@ -366,11 +367,6 @@ class MeasurementOutcomes:
         Useful for sampling all measured qubits at once when simulating.
         """
         if self._measurement_gate is None:
-            from qibo import gates
-
-            if not self.measurements:  # pragma: no cover
-                raise_error(ValueError, "Circuit does not contain measurements.")
-
             for gate in self.measurements:
                 if self._measurement_gate is None:
                     self._measurement_gate = gates.M(
@@ -402,13 +398,12 @@ class MeasurementOutcomes:
 class CircuitResult(QuantumState, MeasurementOutcomes):
     """Object to store both the outcomes of measurements and the final state after circuit execution."""
 
-    def __init__(self, final_state, circuit, backend, nshots=1000):
-        self.circuit = circuit
+    def __init__(self, final_state, measurements, backend, nshots=1000):
         QuantumState.__init__(self, final_state, backend)
-        qubits = [q for m in circuit.measurements for q in m.target_qubits]
+        qubits = [q for m in measurements for q in m.target_qubits]
         if len(qubits) == 0:
             raise ValueError(
                 "Circuit does not contain measurements. Use a `QuantumState` instead."
             )
         probs = self.probabilities(qubits)
-        MeasurementOutcomes.__init__(self, circuit.measurements, probs, backend, nshots)
+        MeasurementOutcomes.__init__(self, measurements, probs, backend, nshots)

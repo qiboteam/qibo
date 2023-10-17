@@ -37,7 +37,7 @@ def test_measurement_collapse_density_matrix(backend, nqubits, targets):
     initial_rho = random_density_matrix(2**nqubits, backend=backend)
     c = models.Circuit(nqubits, density_matrix=True)
     r = c.add(gates.M(*targets, collapse=True))
-    final_rho = backend.execute_circuit(c, np.copy(initial_rho), nshots=1).state()
+    final_rho = backend.execute_circuit(c, np.copy(initial_rho), nshots=1)
 
     samples = r.samples()[0]
     target_rho = np.reshape(initial_rho, 2 * nqubits * (2,))
@@ -81,10 +81,7 @@ def test_measurement_result_parameters(backend, effect, density_matrix):
 
     final_state = backend.execute_circuit(c, nshots=1)
     target_state = backend.execute_circuit(target_c)
-    if density_matrix:
-        final_state = final_state.state()
-        target_state = target_state.state()
-    else:
+    if not density_matrix:
         final_state = final_state.samples()[0]
         target_state = target_state.samples()[0]
     backend.assert_allclose(final_state, target_state)
@@ -99,7 +96,7 @@ def test_measurement_result_parameters_random(backend):
     c.add(gates.RX(2, theta=np.pi * r.symbols[0] / 4))
     final_state = backend.execute_circuit(
         c, initial_state=np.copy(initial_state), nshots=1
-    ).state()
+    )
 
     backend.set_seed(123)
     c = models.Circuit(4, density_matrix=True)
@@ -111,7 +108,7 @@ def test_measurement_result_parameters_random(backend):
         c = models.Circuit(4, density_matrix=True)
         c.add(gates.RY(0, theta=np.pi / 5))
         c.add(gates.RX(2, theta=np.pi / 4))
-        target_state = backend.execute_circuit(c, initial_state=target_state).state()
+        target_state = backend.execute_circuit(c, initial_state=target_state)
     backend.assert_allclose(final_state, target_state)
 
 
@@ -193,7 +190,7 @@ def test_measurement_result_parameters_multiple_qubits(backend):
     r = c.add(gates.M(0, 1, 2, collapse=True))
     c.add(gates.RY(1, theta=np.pi * r.symbols[0] / 5))
     c.add(gates.RX(3, theta=np.pi * r.symbols[2] / 3))
-    final_state = backend.execute_circuit(c, np.copy(initial_state), nshots=1).state()
+    final_state = backend.execute_circuit(c, np.copy(initial_state), nshots=1)
 
     backend.set_seed(123)
     c = models.Circuit(4, density_matrix=True)

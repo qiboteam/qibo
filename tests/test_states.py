@@ -36,7 +36,7 @@ def test_state_representation(backend, target, density_matrix):
             f"(0.71+0j)|00000> + (0.71+0j)|{bstring}>",
         ]
     assert str(result) == target_str[0]
-    assert result.state(dirac=True, decimals=5) == target_str[0]
+    assert result.symbolic(decimals=5) == target_str[0]
     assert result.symbolic(decimals=1) == target_str[1]
     assert result.symbolic(decimals=2) == target_str[2]
 
@@ -108,3 +108,9 @@ def test_expectation_from_samples(backend):
     expval = h1.expectation(result.state())
     backend.assert_allclose(expval_sym, expval_dense)
     backend.assert_allclose(expval_sym, expval, atol=10 / np.sqrt(nshots))
+
+
+def test_state_numpy(backend):
+    c = Circuit(1)
+    result = c()
+    assert isinstance(result.state(numpy=True), np.ndarray)
