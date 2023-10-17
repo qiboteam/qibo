@@ -226,7 +226,8 @@ def test_circuit_on_qubits_with_unitary_execution(backend, accelerators, control
         smallc.add(gates.Unitary(unitaries[0], 0).controlled_by(1))
         smallc.add(gates.Unitary(unitaries[1], 1).controlled_by(0))
     else:
-        smallc.add(gates.Unitary(unitaries[0], 0))
+        smallc.add(gates.Unitary(unitaries[0], 0))  92%   29, 50
+src/qibo/symbols.py                                         54      0   100%
         smallc.add(gates.Unitary(unitaries[1], 1))
     smallc.add(gates.CNOT(0, 1))
 

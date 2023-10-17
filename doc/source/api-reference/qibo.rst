@@ -654,10 +654,10 @@ Parametric ZX interaction (RZX)
     :members:
     :member-order: bysource
 
-Parametric XX-YY interaction (RXY)
-""""""""""""""""""""""""""""""""""
+Parametric XX-YY interaction (RXXYY)
+""""""""""""""""""""""""""""""""""""
 
-.. autoclass:: qibo.gates.RXY
+.. autoclass:: qibo.gates.RXXYY
     :members:
     :member-order: bysource
 
@@ -743,6 +743,23 @@ Mølmer–Sørensen (MS)
 .. autoclass:: qibo.gates.MS
     :members:
     :member-order: bysource
+
+Quantinuum native gates
+^^^^^^^^^^^^^^^^^^^^^^^
+
+U1q
+"""
+
+.. autoclass:: qibo.gates.U1q
+    :members:
+    :member-order: bysource
+
+.. note::
+    The other Quantinuum single-qubit and two-qubit native gates are
+    implemented in Qibo as:
+        - Pauli-:math:`Z` rotation: :class:`qibo.gates.RZ`
+        - Arbitrary :math:`ZZ` rotation: :class:`qibo.gates.RZZ`
+        - Fully-entangling :math:`ZZ`-interaction: :math:`R_{ZZ}(\\pi/2)`
 
 
 _______________________
@@ -1211,6 +1228,24 @@ variational model.
    :member-order: bysource
    :exclude-members: ParallelBFGS
 
+
+.. _Parameter:
+
+Parameter
+---------
+
+It can be useful to define custom parameters in an optimization context. For
+example, the rotational angles which encodes information in a Quantum Neural Network
+are usually built as a combination of features and trainable parameters. For
+doing this, the :class:`qibo.parameter.Parameter` class can be used. It allows
+to define custom parameters which can be inserted into a :class:`qibo.models.circuit.Circuit`.
+Moreover, it automatically precomputes the analytical derivative of the parameter
+function, which can be used to calculate the derivatives of a variational model
+with respect to its parameters.
+
+.. automodule:: qibo.parameter
+    :members:
+    :member-order: bysource
 
 .. _Gradients:
 
