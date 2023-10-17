@@ -6,7 +6,6 @@ from qibo import gates, models
 from qibo.quantum_info import random_density_matrix, random_statevector
 
 
-# @pytest.mark.skip(reason="no way of currently testing this")
 @pytest.mark.parametrize(
     "nqubits,targets",
     [(2, [1]), (3, [1]), (4, [1, 3]), (5, [0, 3, 4]), (6, [1, 3]), (4, [0, 2])],
