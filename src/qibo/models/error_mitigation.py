@@ -737,7 +737,6 @@ def mit_obs(
         # exp = obs.expectation(state)
         if noise_model is not None and backend.name != "qibolab":
             c = noise_model.apply(c)
-            c.density_matrix = True
         circuit_result = backend.execute_circuit(c, nshots=nshots)
         exp_noisy = circuit_result.expectation_from_samples(observable)
         # state = c_noisy().state()
@@ -760,9 +759,9 @@ def mit_obs(
         / n_training_samples
     )
 
+    circuit.fuse(max_qubits=1)
     if noise_model is not None and backend.name != "qibolab":
         circuit = noise_model.apply(circuit)
-        circuit.density_matrix = True
     circuit_result = backend.execute_circuit(circuit, nshots=nshots)
     exp_noisy = circuit_result.expectation_from_samples(observable)
     # exp_noisy = obs.expectation(c_noisy().state())
