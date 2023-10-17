@@ -4,6 +4,7 @@ import numpy as np
 import sympy
 
 from qibo import gates
+from qibo.backends import Backend
 from qibo.config import raise_error
 from qibo.states import QuantumState
 
