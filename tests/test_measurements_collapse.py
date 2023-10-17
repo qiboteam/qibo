@@ -19,16 +19,6 @@ def test_measurement_collapse(backend, nqubits, targets):
     outcome = backend.execute_circuit(c, np.copy(initial_state), nshots=1)
     samples = r.samples()[0]
     backend.assert_allclose(samples, outcome.samples()[0])
-    # slicer = nqubits * [slice(None)]
-    # for t, r in zip(targets, samples):
-    #    slicer[t] = int(r)
-    # slicer = tuple(slicer)
-    # initial_state = initial_state.reshape(nqubits * (2,))
-    # target_state = np.zeros_like(initial_state)
-    # target_state[slicer] = initial_state[slicer]
-    # norm = (np.abs(target_state) ** 2).sum()
-    # target_state = target_state.ravel() / np.sqrt(norm)
-    # backend.assert_allclose(final_state, target_state)
 
 
 @pytest.mark.parametrize(
