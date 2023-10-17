@@ -791,9 +791,9 @@ class NumpyBackend(Backend):
 
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
         if isinstance(value, CircuitResult) or isinstance(value, QuantumState):
-            value = value._state
+            value = value.state()
         if isinstance(target, CircuitResult) or isinstance(target, QuantumState):
-            target = target._state
+            target = target.state()
         value = self.to_numpy(value)
         target = self.to_numpy(target)
         np.testing.assert_allclose(value, target, rtol=rtol, atol=atol)
