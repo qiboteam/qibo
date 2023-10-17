@@ -698,7 +698,7 @@ def test_noisy_circuit(backend, nshots, idle_qubits):
         ]
         for bound in bounds:
             noise_model = CompositeNoiseModel(params)
-            noise_model.fit(result, bounds=bound, backend=backend)
+            noise_model.fit(circuit, result, bounds=bound, backend=backend)
             backend.assert_allclose(
                 noise_model.hellinger, 1, rtol=noise_model.hellinger0["shot_error"]
             )

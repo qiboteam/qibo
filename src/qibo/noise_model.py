@@ -306,6 +306,7 @@ class CompositeNoiseModel:
 
     def fit(
         self,
+        circuit,
         target_result,
         bounds=True,
         eps=1e-4,
@@ -345,7 +346,6 @@ class CompositeNoiseModel:
 
             backend = GlobalBackend()
 
-        circuit = target_result.circuit
         nshots = target_result.nshots
         target_prob = freq_to_prob(target_result.frequencies())
 
