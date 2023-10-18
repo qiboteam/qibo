@@ -1,5 +1,7 @@
 import numpy as np
 
+from qibo import backends
+
 
 class QuantumState:
     """Data structure to represent the final state after circuit execution."""
@@ -77,3 +79,19 @@ class QuantumState:
 
     def __str__(self):
         return self.symbolic()
+
+    def dumps(self):
+        return {
+            "state": self.state(numpy=True),
+            "backend": self.backend.name,
+            "platform": self.backend.platform,
+        }
+
+    def dump(self, filename):
+        np.save(filename, self.dumps())
+
+    @classmethod
+    def load(cls, filename):
+        load = np.load(filename, allow_pickle=True).item()
+        backend = backends.construct_backend(load.get("backend"), load.get("platform"))
+        return cls(load.get("state"), backend)

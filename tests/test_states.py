@@ -3,6 +3,7 @@ import pytest
 
 from qibo import Circuit, gates, hamiltonians
 from qibo.measurements import MeasurementResult
+from qibo.states import QuantumState
 from qibo.symbols import I, Z
 
 
@@ -112,5 +113,17 @@ def test_expectation_from_samples(backend):
 
 def test_state_numpy(backend):
     c = Circuit(1)
-    result = c()
+    result = backend.execute_circuit(c)
     assert isinstance(result.state(numpy=True), np.ndarray)
+
+
+def test_state_dump_load(backend):
+    from os import remove
+
+    c = Circuit(1)
+    c.add(gates.H(0))
+    state = backend.execute_circuit(c)
+    state.dump("tmp")
+    loaded_state = QuantumState.load("tmp.npy")
+    assert str(state) == str(loaded_state)
+    remove("tmp.npy")

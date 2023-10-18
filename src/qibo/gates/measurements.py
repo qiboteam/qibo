@@ -1,3 +1,4 @@
+import json
 from typing import Dict, Optional, Tuple
 
 from qibo.config import raise_error
@@ -58,6 +59,8 @@ class M(Gate):
         # list of measurement pulses implementing the gate
         # relevant for experiments only
         self.pulses = None
+        # saving basis for __repr__ ans save to file
+        self.basis_gate = basis
 
         self.init_args = q
         self.init_kwargs = {
@@ -184,3 +187,9 @@ class M(Gate):
         shot = self.result.add_shot(probs)
         # collapse state
         return backend.collapse_density_matrix(state, qubits, shot, nqubits)
+
+    def to_json(self):
+        encoding = json.loads(super().to_json())
+        encoding.pop("_control_qubits")
+        encoding.update({"basis": self.basis_gate.draw_label})
+        return json.dumps(encoding)

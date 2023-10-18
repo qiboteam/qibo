@@ -406,6 +406,38 @@ class MeasurementOutcomes:
         qubit_map = self.measurement_gate.qubits
         return observable.expectation_from_samples(freq, qubit_map)
 
+    def dumps(self):
+        args = {
+            "measurements": [m.to_json for m in self.measurements],
+            "backend": self.backend.name,
+            "platform": self.backend.platform,
+            "probabilities": self._probs,
+            "samples": self._samples,
+            "nshots": self.nshots,
+        }
+        return args
+
+    def dump(self, filename):
+        np.save(filename, self.dump())
+
+    @classmethod
+    def load(cls, filename):
+        load = np.load(filename, allow_pickle=True).item()
+        backend = backends.construct_backend(load.get("backend"), load.get("platform"))
+        mesaurements = []
+        for m in load.get("measurements"):
+            args = json.loads(m)
+            qubits = m.pop("_target_qubits")
+            args["basis"] = getattr(gates, args["basis"])
+            measurements.append(gates.M(*qubits, **args))
+        return cls(
+            measurements,
+            backend,
+            probabilities=load.get("probabilities"),
+            samples=load.get("samples"),
+            nshots=load.get("nshots"),
+        )
+
 
 class CircuitResult(QuantumState, MeasurementOutcomes):
     """Object to store both the outcomes of measurements and the final state after circuit execution."""
