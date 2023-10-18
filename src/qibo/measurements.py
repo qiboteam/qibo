@@ -4,7 +4,6 @@ import numpy as np
 import sympy
 
 from qibo import gates
-from qibo.backends import Backend
 from qibo.config import raise_error
 from qibo.states import QuantumState
 
@@ -203,14 +202,25 @@ class MeasurementResult:
 class MeasurementOutcomes:
     """Object to store the outcomes of measurements after circuit execution."""
 
-    def __init__(self, measurements, probabilities, backend, nshots=1000):
+    def __init__(
+        self, measurements, backend, probabilities=None, samples=None, nshots=1000
+    ):
+        if probabilities is None and samples is None:
+            raise RuntimeError(
+                "You have to provide either the `probabilities` or the `samples` to build a `MeasurementOutcomes` object."
+            )
+        if probabilities is not None and samples is not None:
+            raise RuntimeError(
+                "Both the `probabilities` and the `samples` were provided to build the `MeasurementOutcomes` object. Don't know which one to use."
+            )
+
         self.backend = backend
         self.measurements = measurements
         self.nshots = nshots
-        self.probs = probabilities
 
         self._measurement_gate = None
-        self._samples = None
+        self._probs = probabilities
+        self._samples = samples
         self._frequencies = None
         self._repeated_execution_frequencies = None
 
@@ -251,7 +261,7 @@ class MeasurementOutcomes:
             if not self.has_samples():
                 # generate new frequencies
                 self._frequencies = self.backend.sample_frequencies(
-                    self.probs, self.nshots
+                    self._probs, self.nshots
                 )
                 # register frequencies to individual gate ``MeasurementResult``
                 qubit_map = {q: i for i, q in enumerate(qubits)}
@@ -286,8 +296,9 @@ class MeasurementOutcomes:
         return self._frequencies
 
     def has_samples(self):
-        if self.measurements:
-            return self.measurements[0].result.has_samples()
+        if self._samples is not None:
+            assert self.measurements[0].result.has_samples()
+            return True
         else:  # pragma: no cover
             return False
 
@@ -328,7 +339,7 @@ class MeasurementOutcomes:
                     np.random.shuffle(samples)
                 else:
                     # generate new samples
-                    samples = self.backend.sample_shots(self.probs, self.nshots)
+                    samples = self.backend.sample_shots(self._probs, self.nshots)
                 samples = self.backend.samples_to_binary(samples, len(qubits))
                 if self.measurement_gate.has_bitflip_noise():
                     p0, p1 = self.measurement_gate.bitflip_map
@@ -407,4 +418,6 @@ class CircuitResult(QuantumState, MeasurementOutcomes):
                 "Circuit does not contain measurements. Use a `QuantumState` instead."
             )
         probs = self.probabilities(qubits)
-        MeasurementOutcomes.__init__(self, measurements, probs, backend, nshots)
+        MeasurementOutcomes.__init__(
+            self, measurements, backend, probabilities=probs, nshots=nshots
+        )

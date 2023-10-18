@@ -478,8 +478,6 @@ class NumpyBackend(Backend):
                 measurement.target_qubits for measurement in circuit.measurements
             ]
             target_qubits = sum(target_qubits, tuple())
-            probabilities = np.zeros(2 ** len(target_qubits), dtype=float)
-            probabilities = self.cast(probabilities, dtype=probabilities.dtype)
 
         for _ in range(nshots):
             if circuit.density_matrix:
@@ -514,7 +512,6 @@ class NumpyBackend(Backend):
                 sample = result.samples()[0]
                 results.append(sample)
                 if not circuit.density_matrix:
-                    probabilities += result.probabilities(target_qubits)
                     samples.append("".join([str(s) for s in sample]))
 
         if circuit.density_matrix:  # this implies also it has_collapse
@@ -530,11 +527,12 @@ class NumpyBackend(Backend):
             circuit._final_state = final_result
             return final_result
         else:
-            probabilities = probabilities / nshots
             final_result = MeasurementOutcomes(
-                circuit.measurements, probabilities, self, nshots
+                circuit.measurements,
+                self,
+                samples=self.aggregate_shots(results),
+                nshots=nshots,
             )
-            final_result._samples = self.aggregate_shots(results)
             final_result._repeated_execution_frequencies = self.calculate_frequencies(
                 samples
             )
