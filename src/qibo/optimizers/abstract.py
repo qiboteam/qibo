@@ -37,8 +37,6 @@ class Optimizer:
             self.args = args
 
         self.params = initial_parameters
-        # can be useful to execute circuits directly from the backend
-        self.backend = backends.GlobalBackend()
 
         self.options = {}
 
