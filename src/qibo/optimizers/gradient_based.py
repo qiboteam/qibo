@@ -1,7 +1,5 @@
 """Gradient descent strategies to optimize quantum models."""
 
-import tensorflow as tf
-
 from qibo import set_backend
 from qibo.backends import TensorflowBackend
 from qibo.config import log, raise_error
@@ -99,7 +97,9 @@ class TensorFlowSGD(Optimizer):
             (list): loss function history
         """
 
-        vparams = self.backend.tf.Variable(self.params, dtype=tf.complex128)
+        vparams = self.backend.tf.Variable(
+            self.params, dtype=self.backend.tf.complex128
+        )
         loss_history = []
 
         def sgd_step():
