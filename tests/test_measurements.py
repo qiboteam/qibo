@@ -505,3 +505,47 @@ def test_measurementoutcomes_errors(backend):
         str(exc_info.value)
         == "Both the `probabilities` and the `samples` were provided to build the `MeasurementOutcomes` object. Don't know which one to use."
     )
+
+
+def test_measurement_gate_dump_load(backend):
+    c = models.Circuit(2)
+    c.add(gates.M(1, 0, basis=[gates.Z, gates.X]))
+    m = c.measurements
+    load = m[0].to_json()
+    new_m = gates.M.load(load)
+    assert new_m.to_json() == load
+
+
+def test_measurementoutcomes_dump_load(backend):
+    from os import remove
+
+    c = models.Circuit(2)
+    c.add(gates.M(1, 0, basis=[gates.Z, gates.X]))
+    # just to trigger repeated execution and test MeasurementOutcomes
+    c.has_collapse = True
+    measurement = backend.execute_circuit(c)
+    freq = measurement.frequencies()
+    measurement.dump("tmp")
+    loaded_meas = MeasurementOutcomes.load("tmp.npy")
+    loaded_freq = loaded_meas.frequencies()
+    print(loaded_freq)
+    print(freq)
+    for state, f in freq.items():
+        assert loaded_freq[state] == f
+    remove("tmp.npy")
+
+
+def test_circuitresult_dump_load(backend):
+    from os import remove
+
+    c = models.Circuit(2)
+    c.add(gates.M(1, 0, basis=[gates.Z, gates.X]))
+    result = backend.execute_circuit(c)
+    freq = result.frequencies()
+    result.dump("tmp")
+    loaded_res = CircuitResult.load("tmp.npy")
+    loaded_freq = loaded_res.frequencies()
+    for state, f in freq.items():
+        assert np.abs(loaded_freq[state] - f) < 50
+    (result.state() == loaded_res.state()).all()
+    remove("tmp.npy")

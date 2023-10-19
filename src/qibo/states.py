@@ -84,14 +84,17 @@ class QuantumState:
         return {
             "state": self.state(numpy=True),
             "backend": self.backend.name,
-            "platform": self.backend.platform,
         }
 
     def dump(self, filename):
         np.save(filename, self.dumps())
 
     @classmethod
+    def loads(cls, payload):
+        backend = backends.construct_backend(payload.get("backend"))
+        return cls(payload.get("state"), backend)
+
+    @classmethod
     def load(cls, filename):
-        load = np.load(filename, allow_pickle=True).item()
-        backend = backends.construct_backend(load.get("backend"), load.get("platform"))
-        return cls(load.get("state"), backend)
+        payload = np.load(filename, allow_pickle=True).item()
+        return cls.loads(payload)

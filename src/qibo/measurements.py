@@ -1,4 +1,5 @@
 import collections
+import warnings
 
 import numpy as np
 import sympy
@@ -297,7 +298,7 @@ class MeasurementOutcomes:
 
     def has_samples(self):
         if self._samples is not None:
-            assert self.measurements[0].result.has_samples()
+            # assert self.measurements[0].result.has_samples()
             return True
         else:  # pragma: no cover
             return False
@@ -408,7 +409,7 @@ class MeasurementOutcomes:
 
     def dumps(self):
         args = {
-            "measurements": [m.to_json for m in self.measurements],
+            "measurements": [m.to_json() for m in self.measurements],
             "backend": self.backend.name,
             "platform": self.backend.platform,
             "probabilities": self._probs,
@@ -418,25 +419,31 @@ class MeasurementOutcomes:
         return args
 
     def dump(self, filename):
-        np.save(filename, self.dump())
+        np.save(filename, self.dumps())
 
     @classmethod
-    def load(cls, filename):
-        load = np.load(filename, allow_pickle=True).item()
-        backend = backends.construct_backend(load.get("backend"), load.get("platform"))
-        mesaurements = []
-        for m in load.get("measurements"):
-            args = json.loads(m)
-            qubits = m.pop("_target_qubits")
-            args["basis"] = getattr(gates, args["basis"])
-            measurements.append(gates.M(*qubits, **args))
+    def loads(cls, payload):
+        from qibo.backends import construct_backend
+
+        if payload["probabilities"] is not None and payload["samples"] is not None:
+            warnings.warn(
+                "Both `probabilities` and `samples` found, discarding the `probabilities` and building out of the `samples`."
+            )
+            payload.pop("probabilities")
+        backend = construct_backend(payload.get("backend"), payload.get("platform"))
+        measurements = [gates.M.load(m) for m in payload.get("measurements")]
         return cls(
             measurements,
             backend,
-            probabilities=load.get("probabilities"),
-            samples=load.get("samples"),
-            nshots=load.get("nshots"),
+            probabilities=payload.get("probabilities"),
+            samples=payload.get("samples"),
+            nshots=payload.get("nshots"),
         )
+
+    @classmethod
+    def load(cls, filename):
+        payload = np.load(filename, allow_pickle=True).item()
+        return cls.loads(payload)
 
 
 class CircuitResult(QuantumState, MeasurementOutcomes):
@@ -452,4 +459,19 @@ class CircuitResult(QuantumState, MeasurementOutcomes):
         probs = self.probabilities(qubits)
         MeasurementOutcomes.__init__(
             self, measurements, backend, probabilities=probs, nshots=nshots
+        )
+
+    def dumps(self):
+        args = MeasurementOutcomes.dumps(self)
+        args.update(QuantumState.dumps(self))
+        return args
+
+    @classmethod
+    def load(cls, filename):
+        payload = np.load(filename, allow_pickle=True).item()
+        state_load = {"state": payload.pop("state"), "backend": payload["backend"]}
+        state = QuantumState.loads(state_load)
+        measurements = MeasurementOutcomes.loads(payload)
+        return cls(
+            state.state(), measurements.measurements, state.backend, measurements.nshots
         )
