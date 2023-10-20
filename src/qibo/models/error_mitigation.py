@@ -773,7 +773,6 @@ def mit_obs(
             c = noise_model.apply(c)
 
         c = transpile_circ(c, qubit_map, backend)
-        print(c.draw())
         circuit_result = backend.execute_circuit(c, nshots=nshots)
         exp_noisy = observable.expectation_from_samples(circuit_result.frequencies())
         # state = c_noisy().state()
@@ -797,7 +796,6 @@ def mit_obs(
     )
 
     circuit = circuit.fuse(max_qubits=1)
-    print(circuit.draw())
     if noise_model is not None and backend.name != "qibolab":
         circuit = noise_model.apply(circuit)
     circuit = transpile_circ(circuit, qubit_map, backend)
