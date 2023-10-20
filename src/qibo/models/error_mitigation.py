@@ -637,7 +637,7 @@ def sample_clifford_training_circuit(
     sampled_circuit = circuit.__class__(**circuit.init_kwargs)
 
     for i, gate in enumerate(circuit.queue):
-        if isinstance(gate, gates.M):
+        if gate.name == "id_end":  # isinstance(gate, gates.M):
             gate_rand = gates.Unitary(
                 random_clifford(1, backend=backend, return_circuit=False),
                 gate.qubits[0],
@@ -660,6 +660,7 @@ def sample_clifford_training_circuit(
 
 def transpile_circ(circuit, qubit_map, backend):
     from qibolab.transpilers.unitary_decompositions import u3_decomposition
+
     if backend.name == "qibolab":
         new_c = circuit.__class__(backend.platform.nqubits)
         for gate in circuit.queue:
@@ -719,11 +720,19 @@ def escircuit(circuit, obs, fuse=True, backend=None):
 
     circ_cliff1 = circ_cliff.__class__(**circ_cliff.init_kwargs)
 
-    for gate in adjust_gates:
-        circ_cliff1.add(gate)
+    # for gate in adjust_gates:
+    #     circ_cliff1.add(gate)
 
+    # for gate in circ_cliff.queue:
+    #     circ_cliff1.add(gate)
+    j = 0
     for gate in circ_cliff.queue:
-        circ_cliff1.add(gate)
+        if gate.name == "id_init":
+            circ_cliff1.add(gate)
+            circ_cliff1.add(adjust_gates[j])
+            j += 1
+        else:
+            circ_cliff1.add(gate)
 
     if fuse:
         circ_cliff1 = circ_cliff1.fuse(max_qubits=1)
@@ -764,6 +773,7 @@ def mit_obs(
             c = noise_model.apply(c)
 
         c = transpile_circ(c, qubit_map, backend)
+        print(c.draw())
         circuit_result = backend.execute_circuit(c, nshots=nshots)
         exp_noisy = observable.expectation_from_samples(circuit_result.frequencies())
         # state = c_noisy().state()
@@ -787,6 +797,7 @@ def mit_obs(
     )
 
     circuit = circuit.fuse(max_qubits=1)
+    print(circuit.draw())
     if noise_model is not None and backend.name != "qibolab":
         circuit = noise_model.apply(circuit)
     circuit = transpile_circ(circuit, qubit_map, backend)
