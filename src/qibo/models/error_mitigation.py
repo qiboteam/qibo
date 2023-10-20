@@ -659,6 +659,7 @@ def sample_clifford_training_circuit(
 
 
 def transpile_circ(circuit, qubit_map, backend):
+    from qibolab.transpilers.unitary_decompositions import u3_decomposition
     if backend.name == "qibolab":
         new_c = circuit.__class__(backend.platform.nqubits)
         for gate in circuit.queue:
@@ -671,7 +672,7 @@ def transpile_circ(circuit, qubit_map, backend):
                 new_c.add(gate.__class__(*tuple(qubits), **gate.init_kwargs))
             else:
                 matrix = gate.matrix()
-                new_c.add(gates.Unitary(matrix, *tuple(qubits), **gate.init_kwargs))
+                new_c.add(gates.U3(qubits[0], *u3_decomposition(matrix)))
         return new_c
     else:
         return circuit
