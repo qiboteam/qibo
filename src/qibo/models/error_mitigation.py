@@ -658,6 +658,25 @@ def sample_clifford_training_circuit(
     return sampled_circuit
 
 
+def transpile_circ(circuit, qubit_map, backend):
+    if backend.name == "qibolab":
+        new_c = circuit.__class__(5)
+        for gate in circuit.queue:
+            qubits = [qubit_map[j] for j in gate.qubits]
+            if isinstance(gate, gates.M):
+                new_gate = gates.M(*tuple(qubits), **gate.init_kwargs)
+                new_gate.result = gate.result
+                new_c.add(new_gate)
+            elif isinstance(gate, gates.I):
+                new_c.add(gate.__class__(*tuple(qubits), **gate.init_kwargs))
+            else:
+                matrix = gate.matrix()
+                new_c.add(gates.Unitary(matrix, *tuple(qubits), **gate.init_kwargs))
+        return new_c
+    else:
+        return circuit
+
+
 def escircuit(circuit, obs, fuse=True, backend=None):
     from qibo.quantum_info import comp_basis_to_pauli, random_clifford, vectorization
 
@@ -714,7 +733,8 @@ def escircuit(circuit, obs, fuse=True, backend=None):
 def mit_obs(
     circuit,
     observable,
-    noise_model,
+    qubit_map=None,
+    noise_model=None,
     nshots=int(1e4),
     n_training_samples=10,
     full_output=False,
@@ -722,6 +742,9 @@ def mit_obs(
 ):
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
+
+    if qubit_map is None:
+        qubit_map = list(range(circuit.nqubits))
 
     training_circs = [
         escircuit(circuit, observable, backend=backend)[0]
@@ -732,13 +755,16 @@ def mit_obs(
 
     a_list = {"-1": [], "1": []}
     for c in training_circs:
-        exp = c(nshots=nshots).expectation_from_samples(observable)
+        circuit_result = c(nshots=nshots)
+        exp = observable.expectation_from_samples(circuit_result.frequencies())
         # state = c().state()
         # exp = obs.expectation(state)
         if noise_model is not None and backend.name != "qibolab":
             c = noise_model.apply(c)
+
+        c = transpile_circ(c, qubit_map, backend)
         circuit_result = backend.execute_circuit(c, nshots=nshots)
-        exp_noisy = circuit_result.expectation_from_samples(observable)
+        exp_noisy = observable.expectation_from_samples(circuit_result.frequencies())
         # state = c_noisy().state()
         # exp_noisy = obs.expectation(state)
 
@@ -762,8 +788,9 @@ def mit_obs(
     circuit = circuit.fuse(max_qubits=1)
     if noise_model is not None and backend.name != "qibolab":
         circuit = noise_model.apply(circuit)
+    circuit = transpile_circ(circuit, qubit_map, backend)
     circuit_result = backend.execute_circuit(circuit, nshots=nshots)
-    exp_noisy = circuit_result.expectation_from_samples(observable)
+    exp_noisy = observable.expectation_from_samples(circuit_result.frequencies())
     # exp_noisy = obs.expectation(c_noisy().state())
     exp_mit = (1 - a) * exp_noisy / ((1 - a) ** 2 + a_std**2)
     exp_mit_std = (
