@@ -660,7 +660,7 @@ def sample_clifford_training_circuit(
 
 def transpile_circ(circuit, qubit_map, backend):
     if backend.name == "qibolab":
-        new_c = circuit.__class__(5)
+        new_c = circuit.__class__(backend.platform.nqubits)
         for gate in circuit.queue:
             qubits = [qubit_map[j] for j in gate.qubits]
             if isinstance(gate, gates.M):
