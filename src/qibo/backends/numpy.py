@@ -427,7 +427,7 @@ class NumpyBackend(Backend):
                 # execute_circuit_repeated would have been called
                 if circuit.measurements:
                     circuit._final_state = CircuitResult(
-                        state, circuit.measurements, self, nshots
+                        state, circuit.measurements, self, nshots=nshots
                     )
                     return circuit._final_state
                 else:
@@ -437,7 +437,7 @@ class NumpyBackend(Backend):
             else:
                 if circuit.measurements:
                     circuit._final_state = CircuitResult(
-                        state, circuit.measurements, self, nshots
+                        state, circuit.measurements, self, nshots=nshots
                     )
                     return circuit._final_state
                 else:
@@ -508,7 +508,7 @@ class NumpyBackend(Backend):
             if circuit.density_matrix:
                 final_states.append(state)
             if circuit.measurements:
-                result = CircuitResult(state, circuit.measurements, self, 1)
+                result = CircuitResult(state, circuit.measurements, self, nshots=1)
                 sample = result.samples()[0]
                 results.append(sample)
                 if not circuit.density_matrix:
@@ -520,7 +520,11 @@ class NumpyBackend(Backend):
             if circuit.measurements:
                 qubits = [q for m in circuit.measurements for q in m.target_qubits]
                 final_result = CircuitResult(
-                    final_state, circuit.measurements, self, nshots
+                    final_state,
+                    circuit.measurements,
+                    self,
+                    samples=self.aggregate_shots(results),
+                    nshots=nshots,
                 )
             else:
                 final_result = QuantumState(final_state, self)

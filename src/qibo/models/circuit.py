@@ -117,8 +117,8 @@ class Circuit:
         queue (_Queue): List that holds the queue of gates of a circuit.
         parametrized_gates (_ParametrizedGates): List of parametric gates.
         trainable_gates (_ParametrizedGates): List of trainable gates.
-        measurements (list): List of non-collapsible measurements
-        _final_state (CircuitResult): Final state after full simulation of the circuit
+        measurements (list): List of non-collapsible measurements.
+        _final_state : Final result after full simulation of the circuit.
         compiled (CompiledExecutor): Circuit executor. Defaults to ``None``.
         repeated_execution (bool): If `True`, the circuit would be re-executed when sampling.
             Defaults to ``False``.
@@ -982,7 +982,7 @@ class Circuit:
         self.compiled.executor = backend.compile(executor)
         if self.measurements:
             self.compiled.result = lambda state, nshots: CircuitResult(
-                state, self.measurements, backend, nshots
+                state, self.measurements, backend, nshots=nshots
             )
         else:
             self.compiled.result = lambda state, nshots: QuantumState(state, backend)

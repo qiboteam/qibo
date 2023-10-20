@@ -523,13 +523,11 @@ def test_measurementoutcomes_dump_load(backend):
     c.add(gates.M(1, 0, basis=[gates.Z, gates.X]))
     # just to trigger repeated execution and test MeasurementOutcomes
     c.has_collapse = True
-    measurement = backend.execute_circuit(c)
+    measurement = backend.execute_circuit(c, nshots=100)
     freq = measurement.frequencies()
     measurement.dump("tmp")
     loaded_meas = MeasurementOutcomes.load("tmp.npy")
     loaded_freq = loaded_meas.frequencies()
-    print(loaded_freq)
-    print(freq)
     for state, f in freq.items():
         assert loaded_freq[state] == f
     remove("tmp.npy")
@@ -538,14 +536,17 @@ def test_measurementoutcomes_dump_load(backend):
 def test_circuitresult_dump_load(backend):
     from os import remove
 
-    c = models.Circuit(2)
+    c = models.Circuit(2, density_matrix=True)
     c.add(gates.M(1, 0, basis=[gates.Z, gates.X]))
+    # trigger repeated execution to build the CircuitResult object
+    # from samples and recover the same exact frequencies
+    c.has_collapse = True
     result = backend.execute_circuit(c)
     freq = result.frequencies()
     result.dump("tmp")
     loaded_res = CircuitResult.load("tmp.npy")
     loaded_freq = loaded_res.frequencies()
     for state, f in freq.items():
-        assert np.abs(loaded_freq[state] - f) < 50
-    (result.state() == loaded_res.state()).all()
+        assert loaded_freq[state] == f
+    assert np.sum(result.state() - loaded_res.state()) == 0
     remove("tmp.npy")

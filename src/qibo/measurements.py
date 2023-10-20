@@ -449,16 +449,21 @@ class MeasurementOutcomes:
 class CircuitResult(QuantumState, MeasurementOutcomes):
     """Object to store both the outcomes of measurements and the final state after circuit execution."""
 
-    def __init__(self, final_state, measurements, backend, nshots=1000):
+    def __init__(self, final_state, measurements, backend, samples=None, nshots=1000):
         QuantumState.__init__(self, final_state, backend)
         qubits = [q for m in measurements for q in m.target_qubits]
         if len(qubits) == 0:
             raise ValueError(
                 "Circuit does not contain measurements. Use a `QuantumState` instead."
             )
-        probs = self.probabilities(qubits)
+        probs = self.probabilities(qubits) if samples is None else None
         MeasurementOutcomes.__init__(
-            self, measurements, backend, probabilities=probs, nshots=nshots
+            self,
+            measurements,
+            backend,
+            probabilities=probs,
+            samples=samples,
+            nshots=nshots,
         )
 
     def dumps(self):
@@ -473,5 +478,9 @@ class CircuitResult(QuantumState, MeasurementOutcomes):
         state = QuantumState.loads(state_load)
         measurements = MeasurementOutcomes.loads(payload)
         return cls(
-            state.state(), measurements.measurements, state.backend, measurements.nshots
+            state.state(),
+            measurements.measurements,
+            state.backend,
+            samples=measurements.samples(),
+            nshots=measurements.nshots,
         )

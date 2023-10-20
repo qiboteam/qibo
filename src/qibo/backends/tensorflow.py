@@ -281,7 +281,11 @@ class TensorflowBackend(NumpyBackend):
         # redefining this because ``tnp.unique`` is not available
         res, _, counts = self.tf.unique_with_counts(samples, out_idx="int64")
         res, counts = self.np.array(res), self.np.array(counts)
-        return collections.Counter({int(k): int(v) for k, v in zip(res, counts)})
+        if res.dtype == "string":
+            res = [r.numpy().decode("utf8") for r in res]
+        else:
+            res = [int(r) for r in res]
+        return collections.Counter({k: int(v) for k, v in zip(res, counts)})
 
     def update_frequencies(self, frequencies, probabilities, nsamples):
         # redefining this because ``tnp.unique`` and tensor update is not available
