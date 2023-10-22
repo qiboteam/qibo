@@ -774,7 +774,7 @@ def mit_obs(
 
         c = transpile_circ(c, qubit_map, backend)
         circuit_result = backend.execute_circuit(c, nshots=nshots)
-        exp_noisy = observable.expectation_from_samples(circuit_result.frequencies())
+        exp_noisy = observable.expectation_from_samples(circuit_result.frequencies()) #Add minus for iqm
         # state = c_noisy().state()
         # exp_noisy = obs.expectation(state)
 
@@ -800,7 +800,7 @@ def mit_obs(
         circuit = noise_model.apply(circuit)
     circuit = transpile_circ(circuit, qubit_map, backend)
     circuit_result = backend.execute_circuit(circuit, nshots=nshots)
-    exp_noisy = observable.expectation_from_samples(circuit_result.frequencies())
+    exp_noisy = observable.expectation_from_samples(circuit_result.frequencies()) # Add - for iqm
     # exp_noisy = obs.expectation(c_noisy().state())
     exp_mit = (1 - a) * exp_noisy / ((1 - a) ** 2 + a_std**2)
     exp_mit_std = (
