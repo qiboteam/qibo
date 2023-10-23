@@ -6,7 +6,7 @@ from qibo.config import log, raise_error
 from qibo.optimizers.abstract import Optimizer, check_options
 
 
-class TensorFlowSGD(Optimizer):
+class TensorflowSGD(Optimizer):
     def __init__(
         self,
         initial_parameters,
