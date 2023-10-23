@@ -1128,6 +1128,26 @@ is going to be provided as output. However, if the circuit is stochastic,
 ``density_matrix`` should be set to ``True`` in order to recover the final state,
 otherwise an error is raised.
 
+The final result of the circuit execution can also be saved to disk and loaded back:
+
+.. testsetup::
+
+   from qibo import gates, Circuit
+
+.. testcode::
+
+   c = Circuit(2)
+   c.add(gates.M(0,1))
+   # this will be a CircuitResult object
+   result = c()
+   # save it to final_result.npy
+   result.dump('final_result')
+   # can be loaded back
+   from qibo.measurements import CircuitResult
+
+   loaded_result = CircuitResult.load('final_result.npy')
+
+just make sure to load from the correct object out of the three.
 
 .. autoclass:: qibo.states.QuantumState
     :members:
