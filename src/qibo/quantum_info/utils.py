@@ -305,6 +305,10 @@ def haar_integral(
 
     Returns:
         array: Estimation of the Haar integral.
+
+    .. note::
+        The ``exact=True`` method is implemented using Lemma 34 of
+        `Kliesch and Roth (2020) <https://arxiv.org/abs/2010.05925>`_.
     """
 
     if isinstance(nqubits, int) is False:
