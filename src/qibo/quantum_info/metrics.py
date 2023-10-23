@@ -1070,7 +1070,7 @@ def entangling_capability(circuit, samples: int, backend=None):
     return capability
 
 
-def expressibility(circuit, t: int, samples: int, backend=None):
+def expressibility(circuit, power_t: int, samples: int, backend=None):
     """Returns the expressibility :math:`\\|A\\|_{HS}` of a parametrized
     circuit, where
 
@@ -1082,7 +1082,7 @@ def expressibility(circuit, t: int, samples: int, backend=None):
 
     Args:
         circuit (:class:`qibo.models.Circuit`): Parametrized circuit.
-        t (int): power that defines the :math:`t`-design.
+        power_t (int): power that defines the :math:`t`-design.
         samples (int): number of samples to estimate the integrals.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
@@ -1092,8 +1092,8 @@ def expressibility(circuit, t: int, samples: int, backend=None):
         float: Entangling capability.
     """
 
-    if isinstance(t, int) is False:
-        raise_error(TypeError, f"t must be type int, but it is type {type(t)}.")
+    if isinstance(power_t, int) is False:
+        raise_error(TypeError, f"t must be type int, but it is type {type(power_t)}.")
 
     if isinstance(samples, int) is False:
         raise_error(
@@ -1108,11 +1108,11 @@ def expressibility(circuit, t: int, samples: int, backend=None):
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    expr = haar_integral(circuit.nqubits, t, samples, backend=backend) - pqc_integral(
-        circuit, t, samples, backend=backend
-    )
+    deviation = haar_integral(
+        circuit.nqubits, power_t, exact=True, backend=backend
+    ) - pqc_integral(circuit, power_t, samples, backend=backend)
 
-    fid = np.trace(expr @ expr)
+    fid = float(backend.calculate_norm(deviation, order=2))
 
     return fid
 
