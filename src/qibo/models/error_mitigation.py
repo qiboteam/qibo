@@ -1,5 +1,7 @@
 """Error Mitigation Methods."""
 
+from math import factorial
+
 import numpy as np
 from scipy.optimize import curve_fit
 
@@ -34,11 +36,11 @@ def get_gammas(c, solve: bool = True):
         gammas = np.array(
             [
                 1
-                / (2 ** (2 * cmax) * np.math.factorial(i))
+                / (2 ** (2 * cmax) * factorial(i))
                 * (-1) ** i
                 / (1 + 2 * i)
-                * np.math.factorial(1 + 2 * cmax)
-                / (np.math.factorial(cmax) * np.math.factorial(cmax - i))
+                * factorial(1 + 2 * cmax)
+                / (factorial(cmax) * factorial(cmax - i))
                 for i in c
             ]
         )
