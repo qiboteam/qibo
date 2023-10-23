@@ -2,6 +2,7 @@
 
 from functools import reduce
 from itertools import permutations
+from math import factorial
 from re import finditer
 from typing import Optional
 
@@ -358,7 +359,7 @@ def haar_integral(
 
         return integral
 
-    normalization = np.math.factorial(dim - 1) / np.math.factorial(dim - 1 + power_t)
+    normalization = factorial(dim - 1) / factorial(dim - 1 + power_t)
 
     permutations_list = list(permutations(np.arange(power_t) + power_t))
     permutations_list = [
