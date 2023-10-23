@@ -168,7 +168,7 @@ def test_hellinger(backend):
     backend.assert_allclose(hellinger_fidelity(prob, prob_q, backend=backend), 1.0)
 
 
-def test_haar_integral(backend):
+def test_haar_integral_errors(backend):
     with pytest.raises(TypeError):
         nqubits, power_t, samples = 0.5, 2, 10
         test = haar_integral(nqubits, power_t, samples, backend=backend)
@@ -176,17 +176,27 @@ def test_haar_integral(backend):
         nqubits, power_t, samples = 2, 0.5, 10
         test = haar_integral(nqubits, power_t, samples, backend=backend)
     with pytest.raises(TypeError):
+        nqubits, power_t, samples = 2, 0.5, 10
+        test = haar_integral()
+    with pytest.raises(TypeError):
         nqubits, power_t, samples = 2, 2, 0.5
         test = haar_integral(nqubits, power_t, samples, backend=backend)
 
-    nqubits = 2
-    power_t, samples = 1, 1000
 
-    haar_int = haar_integral(nqubits, power_t, samples, backend=backend)
+@pytest.mark.parametrize("power_t", [1, 2, 3])
+@pytest.mark.parametrize("nqubits", [2, 3, 4])
+def test_haar_integral(backend, nqubits, power_t):
+    samples = int(1e4)
 
-    fid = fidelity(haar_int, haar_int, backend=backend)
+    haar_int_exact = haar_integral(
+        nqubits, power_t, exact=True, samples=samples, backend=backend
+    )
 
-    backend.assert_allclose(fid, 1.0, atol=10 / samples)
+    haar_int_sampled = haar_integral(
+        nqubits, power_t, exact=False, samples=samples, backend=backend
+    )
+
+    backend.assert_allclose(haar_int_sampled, haar_int_exact, atol=1e-2)
 
 
 def test_pqc_integral(backend):

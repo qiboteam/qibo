@@ -1,7 +1,9 @@
 """Utility functions for the Quantum Information module."""
 
 from functools import reduce
+from itertools import permutations
 from re import finditer
+from typing import Optional
 
 import numpy as np
 
@@ -276,7 +278,13 @@ def hellinger_fidelity(prob_dist_p, prob_dist_q, validate: bool = False, backend
     return (1 - distance**2) ** 2
 
 
-def haar_integral(nqubits: int, power_t: int, samples: int, backend=None):
+def haar_integral(
+    nqubits: int,
+    power_t: int,
+    exact: bool = True,
+    samples: Optional[int] = None,
+    backend=None,
+):
     """Returns the integral over pure states over the Haar measure.
 
     .. math::
@@ -286,7 +294,11 @@ def haar_integral(nqubits: int, power_t: int, samples: int, backend=None):
     Args:
         nqubits (int): Number of qubits.
         power_t (int): power that defines the :math:`t`-design.
-        samples (int): number of samples to estimate the integral.
+        exact (bool, optional): if ``True``, calculates the Haar integram
+            exactly. If ``False``, calculates the integral via Monte Carlo sampling.
+            Defaults to ``True``.
+        samples (int, optional): number of samples to estimate the integral
+            if ``exact=False``. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -305,32 +317,58 @@ def haar_integral(nqubits: int, power_t: int, samples: int, backend=None):
             TypeError, f"power_t must be type int, but it is type {type(power_t)}."
         )
 
-    if isinstance(samples, int) is False:
+    if isinstance(exact, bool) is False:
+        raise_error(
+            TypeError, f"exact must be type bool, but it is type {type(exact)}."
+        )
+
+    if not exact and isinstance(samples, int) is False:
         raise_error(
             TypeError, f"samples must be type int, but it is type {type(samples)}."
         )
-
-    from qibo.quantum_info.random_ensembles import (  # pylint: disable=C0415
-        random_statevector,
-    )
 
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
     dim = 2**nqubits
 
-    rand_unit_density = np.zeros((dim**power_t, dim**power_t), dtype=complex)
-    rand_unit_density = backend.cast(rand_unit_density, dtype=rand_unit_density.dtype)
-    for _ in range(samples):
-        haar_state = np.reshape(
-            random_statevector(dim, haar=True, backend=backend), (-1, 1)
+    if not exact:
+        from qibo.quantum_info.random_ensembles import (  # pylint: disable=C0415
+            random_statevector,
         )
 
-        rho = haar_state @ np.conj(np.transpose(haar_state))
+        rand_unit_density = np.zeros((dim**power_t, dim**power_t), dtype=complex)
+        rand_unit_density = backend.cast(
+            rand_unit_density, dtype=rand_unit_density.dtype
+        )
+        for _ in range(samples):
+            haar_state = np.reshape(
+                random_statevector(dim, haar=True, backend=backend), (-1, 1)
+            )
 
-        rand_unit_density += reduce(np.kron, [rho] * power_t)
+            rho = haar_state @ np.conj(np.transpose(haar_state))
 
-    integral = rand_unit_density / samples
+            rand_unit_density += reduce(np.kron, [rho] * power_t)
+
+        integral = rand_unit_density / samples
+
+        return integral
+
+    normalization = np.math.factorial(dim - 1) / np.math.factorial(dim - 1 + power_t)
+
+    permutations_list = list(permutations(np.arange(power_t) + power_t))
+    permutations_list = [
+        tuple(np.arange(power_t)) + indices for indices in permutations_list
+    ]
+
+    identity = np.eye(dim**power_t, dtype=float)
+    identity = backend.cast(identity, dtype=identity.dtype)
+    identity = np.reshape(identity, (dim,) * (2 * power_t))
+
+    integral = np.zeros((dim**power_t, dim**power_t), dtype=float)
+    for indices in permutations_list:
+        integral += np.reshape(np.transpose(identity, indices), (-1, dim**power_t))
+    integral *= normalization
 
     return integral
 
