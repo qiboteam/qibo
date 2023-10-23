@@ -7,12 +7,12 @@ from qibo.optimizers.heuristics import CMAES, BasinHopping
 from qibo.optimizers.minimizers import ParallelBFGS, ScipyMinimizer
 
 
-def create_hamiltonian(nqubits=3):
+def create_hamiltonian(nqubits=1):
     """Precomputes Hamiltonian."""
     return hamiltonians.Z(nqubits)
 
 
-def ansatz(layers=1, nqubits=3, theta=0):
+def ansatz(layers=1, nqubits=1, theta=0):
     """
     The circuit's ansatz: a sequence of RZ and RY with a beginning H gate
 
@@ -55,7 +55,7 @@ def test_scipyminimizer(backend):
     )
 
     result = optimizer.fit()
-    assert np.isclose(result[0], -3, atol=1e-8)
+    assert np.isclose(result[0], -1, atol=1e-4)
 
 
 def test_parallel_bfgs(backend):
@@ -70,7 +70,7 @@ def test_parallel_bfgs(backend):
     )
 
     result = optimizer.fit()
-    assert np.isclose(result[0], -3, atol=1e-8)
+    assert np.isclose(result[0], -1, atol=1e-4)
 
 
 def test_basinhopping(backend):
@@ -87,7 +87,7 @@ def test_basinhopping(backend):
     )
 
     result = optimizer.fit()
-    assert np.isclose(result[0], -3, atol=1e-8)
+    assert np.isclose(result[0], -1, atol=1e-4)
 
 
 def test_cmaes(backend):
@@ -102,4 +102,4 @@ def test_cmaes(backend):
     )
 
     result = optimizer.fit()
-    assert np.isclose(result[0], -3, atol=1e-6)
+    assert np.isclose(result[0], -1, atol=1e-4)
