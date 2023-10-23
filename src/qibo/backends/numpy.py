@@ -510,6 +510,7 @@ class NumpyBackend(Backend):
             if circuit.measurements:
                 result = CircuitResult(state, circuit.measurements, self, nshots=1)
                 sample = result.samples()[0]
+                print(sample)
                 results.append(sample)
                 if not circuit.density_matrix:
                     samples.append("".join([str(s) for s in sample]))

@@ -543,6 +543,8 @@ def test_circuitresult_dump_load(backend):
     c.has_collapse = True
     result = backend.execute_circuit(c)
     freq = result.frequencies()
+    # set probabilities to trigger the warning
+    result._probs = result.probabilities()
     result.dump("tmp")
     loaded_res = CircuitResult.load("tmp.npy")
     loaded_freq = loaded_res.frequencies()
