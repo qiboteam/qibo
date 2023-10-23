@@ -1,5 +1,7 @@
 """Submodule with distances, metrics, and measures for quantum states and channels."""
 
+from typing import Optional, Union
+
 import numpy as np
 from scipy import sparse
 
@@ -1070,8 +1072,14 @@ def entangling_capability(circuit, samples: int, backend=None):
     return capability
 
 
-def expressibility(circuit, power_t: int, samples: int, backend=None):
-    """Returns the expressibility :math:`\\|A\\|_{HS}` of a parametrized
+def expressibility(
+    circuit,
+    power_t: int,
+    samples: int,
+    order: Optional[Union[int, float, str]] = 2,
+    backend=None,
+):
+    """Returns the expressibility :math:`\\|A\\|` of a parametrized
     circuit, where
 
     .. math::
@@ -1084,6 +1092,9 @@ def expressibility(circuit, power_t: int, samples: int, backend=None):
         circuit (:class:`qibo.models.Circuit`): Parametrized circuit.
         power_t (int): power that defines the :math:`t`-design.
         samples (int): number of samples to estimate the integrals.
+        order (int or float or str, optional): order of the norm :math:`\\|A\\|`.
+            For specifications, see :meth:`qibo.backends.abstract.calculate_norm`.
+            Defaults to :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -1093,7 +1104,9 @@ def expressibility(circuit, power_t: int, samples: int, backend=None):
     """
 
     if isinstance(power_t, int) is False:
-        raise_error(TypeError, f"t must be type int, but it is type {type(power_t)}.")
+        raise_error(
+            TypeError, f"power_t must be type int, but it is type {type(power_t)}."
+        )
 
     if isinstance(samples, int) is False:
         raise_error(
@@ -1112,7 +1125,7 @@ def expressibility(circuit, power_t: int, samples: int, backend=None):
         circuit.nqubits, power_t, exact=True, backend=backend
     ) - pqc_integral(circuit, power_t, samples, backend=backend)
 
-    fid = float(backend.calculate_norm(deviation, order=2))
+    fid = float(backend.calculate_norm(deviation, order=order))
 
     return fid
 
