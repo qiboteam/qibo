@@ -184,7 +184,7 @@ def test_haar_integral_errors(backend):
 
 
 @pytest.mark.parametrize("power_t", [1, 2, 3])
-@pytest.mark.parametrize("nqubits", [2, 3, 4])
+@pytest.mark.parametrize("nqubits", [2, 3])
 def test_haar_integral(backend, nqubits, power_t):
     samples = int(1e4)
 

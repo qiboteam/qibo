@@ -371,6 +371,7 @@ def haar_integral(
     identity = np.reshape(identity, (dim,) * (2 * power_t))
 
     integral = np.zeros((dim**power_t, dim**power_t), dtype=float)
+    integral = backend.cast(integral, dtype=integral.dtype)
     for indices in permutations_list:
         integral += np.reshape(np.transpose(identity, indices), (-1, dim**power_t))
     integral *= normalization
