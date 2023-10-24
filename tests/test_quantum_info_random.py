@@ -9,6 +9,7 @@ from qibo import Circuit, gates, matrices
 from qibo.config import PRECISION_TOL
 from qibo.quantum_info.metrics import purity
 from qibo.quantum_info.random_ensembles import (
+    _probability_distribution_sin,
     random_clifford,
     random_density_matrix,
     random_gaussian_matrix,
@@ -20,7 +21,6 @@ from qibo.quantum_info.random_ensembles import (
     random_stochastic_matrix,
     random_unitary,
     uniform_sampling_U3,
-    _probability_distribution_sin,
 )
 
 
@@ -63,6 +63,7 @@ def test_uniform_sampling_U3(backend, seed):
     sampler = _probability_distribution_sin(a=0, b=np.pi, seed=seed)
     sampler.pdf(1)
     sampler.cdf(1)
+
 
 @pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
 def test_random_gaussian_matrix(backend, seed):
