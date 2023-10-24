@@ -1,5 +1,7 @@
 """Submodule with distances, metrics, and measures for quantum states and channels."""
 
+from math import factorial
+
 import numpy as np
 from scipy import sparse
 
@@ -1115,6 +1117,28 @@ def expressibility(circuit, t: int, samples: int, backend=None):
     fid = np.trace(expr @ expr)
 
     return fid
+
+
+def frame_potential(
+    nqubits: int,
+    power_t: int,
+    haar: bool = True,
+    circuit=None,
+    samples: int = None,
+    backend=None,
+):
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    if circuit is not None and nqubits != circuit.nqubits:
+        raise_error(
+            ValueError, f"nqubits ({nqubits}) != circuit.nqubits ({circuit.nqubits})"
+        )
+
+    dim = 2**nqubits
+
+    if haar:
+        return factorial(power_t) * factorial(dim - 1) / factorial(power_t + dim - 1)
 
 
 def _check_hermitian_or_not_gpu(matrix, backend=None):
