@@ -65,14 +65,14 @@ def parallel_circuits_execution(
             import qibo
             qibo.set_backend('qibojit')
             from qibo import models, set_threads
-            from qibo.parallel import parallel_execution
+            from qibo.parallel import parallel_circuits_execution
             import numpy as np
             # create different circuits
             circuits = [models.QFT(n) for n in range(5, 16)]
             # set threads to 1 per process (optional, requires tuning)
             set_threads(1)
             # execute in parallel
-            results = parallel_circuits_execution(circuit, processes=2)
+            results = parallel_circuits_execution(circuits, processes=2)
 
     Args:
         circuits (list): list of circuits to execute.
