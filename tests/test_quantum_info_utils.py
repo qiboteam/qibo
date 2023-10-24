@@ -176,8 +176,10 @@ def test_haar_integral_errors(backend):
         nqubits, power_t, samples = 2, 0.5, 10
         test = haar_integral(nqubits, power_t, samples, backend=backend)
     with pytest.raises(TypeError):
-        nqubits, power_t, samples = 2, 0.5, 10
-        test = haar_integral()
+        nqubits, power_t, exact, samples = 2, 1, False, 1.2
+        test = haar_integral(
+            nqubits, power_t, exact=exact, samples=samples, backend=backend
+        )
     with pytest.raises(TypeError):
         nqubits, power_t, samples = 2, 2, 0.5
         test = haar_integral(nqubits, power_t, samples, backend=backend)
