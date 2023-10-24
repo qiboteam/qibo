@@ -20,6 +20,7 @@ from qibo.quantum_info.random_ensembles import (
     random_stochastic_matrix,
     random_unitary,
     uniform_sampling_U3,
+    _probability_distribution_sin,
 )
 
 
@@ -39,6 +40,7 @@ def test_uniform_sampling_U3(backend, seed):
     ngates = int(1e4)
     phases = uniform_sampling_U3(ngates, seed=seed, backend=backend)
 
+    # expectation values in the 3 directions should be the same
     expectation_values = []
     for row in phases:
         circuit = Circuit(1)
@@ -57,6 +59,10 @@ def test_uniform_sampling_U3(backend, seed):
     backend.assert_allclose(expectation_values[0], expectation_values[1], atol=1e-1)
     backend.assert_allclose(expectation_values[0], expectation_values[2], atol=1e-1)
 
+    # execution for coverage
+    sampler = _probability_distribution_sin(a=0, b=np.pi, seed=seed)
+    sampler.pdf(1)
+    sampler.cdf(1)
 
 @pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
 def test_random_gaussian_matrix(backend, seed):
