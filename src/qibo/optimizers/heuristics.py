@@ -8,7 +8,7 @@ from qibo.optimizers.abstract import Optimizer, check_options
 
 
 class CMAES(Optimizer):
-    def __init__(self, initial_parameters, args=(), loss=None, options={"sigma0": 0.5}):
+    def __init__(self, initial_parameters, loss=None, args=(), options={"sigma0": 0.5}):
         """
         Covariance Matrix Adaptation Evolution Strategy based on
         `pycma <https://github.com/CMA-ES/pycma>`_.
@@ -55,8 +55,8 @@ class BasinHopping(Optimizer):
     def __init__(
         self,
         initial_parameters,
-        args=(),
         loss=None,
+        args=(),
         options={"niter": 10},
         minimizer_kwargs={},
     ):

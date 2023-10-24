@@ -11,8 +11,8 @@ class ScipyMinimizer(Optimizer):
     def __init__(
         self,
         initial_parameters,
-        args=(),
         loss=None,
+        args=(),
         options={"method": "Powell"},
         minimizer_kwargs={},
     ):
@@ -81,6 +81,7 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
             initial_parameters (np.ndarray or list): array with initial values
                 for gate parameters.
             loss (callable): loss function to train on.
+            processes (int): number of parallel processes used to evaluate functions.
             args (tuple): tuple containing loss function arguments.
             options (dict): possible arguments accepted by
                 `scipy.optimize.minimize` class.

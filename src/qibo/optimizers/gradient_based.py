@@ -10,8 +10,8 @@ class TensorflowSGD(Optimizer):
     def __init__(
         self,
         initial_parameters,
-        args=(),
         loss=None,
+        args=(),
         optimizer="Adagrad",
         options={"learning_rate": 0.001},
     ):
