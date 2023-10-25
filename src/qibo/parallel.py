@@ -154,6 +154,10 @@ def parallel_parametrized_execution(
         parameters (list): list of parameters for the circuit evaluation.
         initial_state (np.array): initial state for the circuit evaluation.
         processes (int): number of processes for parallel evaluation.
+            This corresponds to the number of threads, if a single thread is used
+            for each circuit evaluation. If more threads are used for each circuit
+            evaluation then some tuning may be required to obtain optimal performance.
+            Default is ``None`` which corresponds to a single thread.
 
     Returns:
         Circuit evaluation for input parameters.
