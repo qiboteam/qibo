@@ -59,7 +59,7 @@ def assert_gates_equivalent(
     assert c.depth == target_depth
     if accelerators and not backend.supports_multigpu:
         with pytest.raises(NotImplementedError):
-            final_state = backend.execute_circuit(c, np.copy(initial_state))._state
+            final_state = backend.execute_circuit(c, np.copy(initial_state)).state()
     else:
         final_state = backend.execute_circuit(c, np.copy(initial_state))._state
         backend.assert_allclose(final_state, target_state, atol=atol)
