@@ -162,7 +162,6 @@ def test_measurement_result_parameters_repeated_execution_final_measurements(bac
     c.add(gates.M(0, 1, 2, 3))
     result = backend.execute_circuit(c, initial_state=np.copy(initial_state), nshots=30)
     final_samples = result.samples(binary=False)
-    print(final_samples)
 
     backend.set_seed(123)
     target_samples = []
