@@ -7,8 +7,7 @@ from qibo.backends import einsum_utils
 from qibo.backends.abstract import Backend
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.config import log, raise_error
-from qibo.measurements import CircuitResult, MeasurementOutcomes
-from qibo.states import QuantumState
+from qibo.result import CircuitResult, MeasurementOutcomes, QuantumState
 
 
 class NumpyBackend(Backend):

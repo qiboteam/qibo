@@ -72,7 +72,7 @@ class TSP:
             from collections import defaultdict
             from qibo import gates
             from qibo.models import QAOA
-            from qibo.measurements import CircuitResult
+            from qibo.result import CircuitResult
 
 
             def convert_to_standard_Cauchy(config):

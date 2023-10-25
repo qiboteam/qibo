@@ -972,8 +972,7 @@ class Circuit:
 
             backend = GlobalBackend()
 
-        from qibo.measurements import CircuitResult
-        from qibo.states import QuantumState
+        from qibo.result import CircuitResult, QuantumState
 
         executor = lambda state, nshots: backend.execute_circuit(
             self, state, nshots
@@ -998,8 +997,8 @@ class Circuit:
             nshots (int): Number of shots.
 
         Returns:
-            either a ``qibo.states.QuantumState``, ``qibo.measurements.MeasurementOutcomes``
-            or ``qibo.measurements.CircuitResult`` depending on the circuit's configuration.
+            either a ``qibo.result.QuantumState``, ``qibo.result.MeasurementOutcomes``
+            or ``qibo.result.CircuitResult`` depending on the circuit's configuration.
         """
         if self.compiled:
             # pylint: disable=E1101

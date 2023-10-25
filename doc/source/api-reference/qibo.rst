@@ -1107,14 +1107,14 @@ summarizes which outcomes to expect depending on whether:
    | ❌ / ✅  |      ✅      | ❌ / ✅  |       ✅       | ``CircuitResult``       |
    +----------+--------------+----------+----------------+-------------------------+
 
-Therefore, one of the three objects :class:`qibo.states.QuantumState`,
-:class:`qibo.measurements.MeasurementOutcomes` or :class:`qibo.measurements.CircuitResult`
+Therefore, one of the three objects :class:`qibo.result.QuantumState`,
+:class:`qibo.result.MeasurementOutcomes` or :class:`qibo.result.CircuitResult`
 is going to be returned by the circuit execution. The first gives acces to the final
-state and probabilities via the :meth:`qibo.states.QuantumState.state` and
-:meth:`qibo.states.QuantumState.probabilities` methods, whereas the second
+state and probabilities via the :meth:`qibo.result.QuantumState.state` and
+:meth:`qibo.result.QuantumState.probabilities` methods, whereas the second
 allows to retrieve the final samples and frequencies with the
-:meth:`qibo.measurements.MeasurementOutcomes.samples` and
-:meth:`qibo.measurements.MeasurementOutcomes.frequencies` methods. The
+:meth:`qibo.result.MeasurementOutcomes.samples` and
+:meth:`qibo.result.MeasurementOutcomes.frequencies` methods. The
 third includes all the above instead.
 
 Every time some measurement is performed at the end of the execution, the result
@@ -1143,21 +1143,21 @@ The final result of the circuit execution can also be saved to disk and loaded b
    # save it to final_result.npy
    result.dump('final_result')
    # can be loaded back
-   from qibo.measurements import CircuitResult
+   from qibo.result import load_result
 
-   loaded_result = CircuitResult.load('final_result.npy')
+   loaded_result = load_result('final_result.npy')
 
 just make sure to load from the correct object out of the three.
 
-.. autoclass:: qibo.states.QuantumState
+.. autoclass:: qibo.result.QuantumState
     :members:
     :member-order: bysource
 
-.. autoclass:: qibo.measurements.MeasurementOutcomes
+.. autoclass:: qibo.result.MeasurementOutcomes
     :members:
     :member-order: bysource
 
-.. autoclass:: qibo.measurements.CircuitResult
+.. autoclass:: qibo.result.CircuitResult
     :members:
     :member-order: bysource
 

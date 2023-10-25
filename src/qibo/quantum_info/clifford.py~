@@ -1,0 +1,49 @@
+import numpy as np
+
+from qibo import Circuit
+from dataclasses import dataclass
+
+
+@dataclass
+class Clifford:
+
+    circuit: Circuit
+    nqubits: int = None
+    _tableau: np.ndarray = None
+
+    def __post_init__(self,):
+        for gate in self.circuit.queue:
+            if not gate.__name__ in ('H', 'CNOT', 'S', 'M'):
+                raise RuntimeError('Unsupported gates.')
+        self.nqubits = self.circuit.nqubits
+        I = np.eye(self.nqubits)
+        self._tableau = np.zeros((2 * self.nqubits, 2 * self.nqubits + 1))
+        self._tableau[:self.nqubits, :self.nqubits] = I
+        self._tableau[self.nqubits:, self.nqubits: 2 * self.nqubits] = I
+
+    def __call__(self,):
+        pass
+
+    def apply_gate(self, gate):
+        return getattr(self, f"apply_{gate.__name__}")(*gate.init_args)
+
+    def apply_H(self, *args):
+        q = args[0]
+        self.r  = self.r ^ self.x[:,q] * self.z[:,q]
+        self._tableau[:, [q, self.nqubits + q]] = self._tableau[:, [self.nqubits + q, q]]
+
+    def apply_S(self, *args):
+        q = args[0]
+
+
+    @property
+    def r(self):
+        return self._tableau[:,-1]
+
+    @property
+    def x(self):
+        return self._tableau[:,:self.nqubits]
+
+    @property
+    def z(self):
+        return self._tableau[:,self.nqubits:-1]

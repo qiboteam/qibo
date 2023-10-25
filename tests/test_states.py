@@ -3,7 +3,7 @@ import pytest
 
 from qibo import Circuit, gates, hamiltonians
 from qibo.measurements import MeasurementResult
-from qibo.states import QuantumState
+from qibo.result import QuantumState, load_result
 from qibo.symbols import I, Z
 
 
@@ -117,13 +117,17 @@ def test_state_numpy(backend):
     assert isinstance(result.state(numpy=True), np.ndarray)
 
 
-def test_state_dump_load(backend):
+@pytest.mark.parametrize("agnostic_load", [False, True])
+def test_state_dump_load(backend, agnostic_load):
     from os import remove
 
     c = Circuit(1)
     c.add(gates.H(0))
     state = backend.execute_circuit(c)
     state.dump("tmp")
-    loaded_state = QuantumState.load("tmp.npy")
+    if agnostic_load:
+        loaded_state = load_result("tmp.npy")
+    else:
+        loaded_state = QuantumState.load("tmp.npy")
     assert str(state) == str(loaded_state)
     remove("tmp.npy")

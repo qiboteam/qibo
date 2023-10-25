@@ -140,7 +140,7 @@ def test_post_measurement_bitflips_on_circuit_result(backend):
     ],
 )
 def test_measurementresult_apply_bitflips(backend, i, p0, p1):
-    from qibo.measurements import CircuitResult
+    from qibo.result import CircuitResult
 
     c = models.Circuit(3)
     c.add(gates.M(*range(3)))
