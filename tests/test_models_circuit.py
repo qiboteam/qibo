@@ -309,6 +309,18 @@ def test_circuit_on_qubits_errors():
         next(smallc.on_qubits(0, 1, 2, 3))
 
 
+def test_circuit_serialization():
+    c = Circuit(4)
+    c.add(gates.RY(2, theta=0).controlled_by(0, 1))
+    c.add(gates.RX(3, theta=0))
+    c.add(gates.CNOT(1, 3))
+    c.add(gates.RZ(2, theta=0).controlled_by(0, 3))
+
+    raw = c.raw
+    assert isinstance(raw, dict)
+    assert Circuit.load(raw).raw == raw
+
+
 def test_circuit_light_cone():
     from qibo import __version__
 
@@ -669,7 +681,7 @@ def test_circuit_draw_line_wrap():
 
 @pytest.mark.parametrize("legend", [True, False])
 def test_circuit_draw_channels(legend):
-    """Check that channels are drawn correctly"""
+    """Check that channels are drawn correctly."""
 
     circuit = Circuit(2, density_matrix=True)
     circuit.add(gates.H(0))
@@ -702,7 +714,7 @@ def test_circuit_draw_channels(legend):
 
 @pytest.mark.parametrize("legend", [True, False])
 def test_circuit_draw_callbacks(legend):
-    """Check that callbacks are drawn correcly"""
+    """Check that callbacks are drawn correcly."""
     from qibo.callbacks import EntanglementEntropy
 
     entropy = EntanglementEntropy([0])
@@ -769,7 +781,7 @@ def test_circuit_draw_names():
 
 
 def test_circuit_draw_error():
-    """Test NotImplementedError in circuit draw"""
+    """Test NotImplementedError in circuit draw."""
     circuit = Circuit(1)
     error_gate = gates.X(0)
     error_gate.name = ""
