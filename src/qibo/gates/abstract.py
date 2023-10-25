@@ -97,7 +97,11 @@ class Gate:
         from qibo.gates import gates
 
         cls = getattr(gates, raw["_class"])
-        return cls(*raw["init_args"], **raw["init_kwargs"])
+        gate = cls(*raw["init_args"], **raw["init_kwargs"])
+        try:
+            return gate.controlled_by(*raw["_control_qubits"])
+        except RuntimeError:
+            return gate
 
     def to_json(self):
         """Dump gate to JSON.
