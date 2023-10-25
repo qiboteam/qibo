@@ -7,7 +7,13 @@ import sympy
 from qibo.backends import GlobalBackend
 from qibo.config import raise_error
 
-REQUIRED_FIELDS = ["name", "init_kwargs", "_target_qubits", "_control_qubits"]
+REQUIRED_FIELDS = [
+    "name",
+    "init_args",
+    "init_kwargs",
+    "_target_qubits",
+    "_control_qubits",
+]
 REQUIRED_FIELDS_INIT_KWARGS = ["theta", "phi", "lam"]
 
 
@@ -78,16 +84,20 @@ class Gate:
             if isinstance(encoded[value], set):
                 encoded_simple[value] = list(encoded_simple[value])
 
+        encoded_simple["_class"] = type(self).__name__
+
         return encoded_simple
 
-    @classmethod
-    def load(cls, raw: dict):
+    @staticmethod
+    def load(raw: dict):
         """Load from serialization.
 
         Essentially the counter-part of :meth:`raw`.
         """
-        args = tuple(raw[name] for name in REQUIRED_FIELDS)
-        return cls(*args, **raw["init_kwargs"])
+        from qibo.gates import gates
+
+        cls = getattr(gates, raw["_class"])
+        return cls(*raw["init_args"], **raw["init_kwargs"])
 
     def to_json(self):
         """Dump gate to JSON.
