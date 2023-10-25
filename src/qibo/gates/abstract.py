@@ -100,8 +100,10 @@ class Gate:
         gate = cls(*raw["init_args"], **raw["init_kwargs"])
         try:
             return gate.controlled_by(*raw["_control_qubits"])
-        except RuntimeError:
-            return gate
+        except RuntimeError as e:
+            if "controlled" in e.args[0]:
+                return gate
+            raise e
 
     def to_json(self):
         """Dump gate to JSON.
