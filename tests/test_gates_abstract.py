@@ -1,7 +1,7 @@
-"""Tests methods defined in `qibo/gates/abstract.py` and `qibo/gates/gates.py`."""
+"""Tests methods defined in `qibo/gates/abstract.py` and
+`qibo/gates/gates.py`."""
 import json
 
-import numpy as np
 import pytest
 
 from qibo import gates, matrices
@@ -19,17 +19,32 @@ def test_one_qubit_gates_init(gatename):
 @pytest.mark.parametrize(
     "gatename", ["H", "X", "Y", "Z", "S", "SDG", "T", "TDG", "I", "Align"]
 )
-def test_one_qubit_gates_to_json(gatename):
+def test_one_qubit_gates_serialization(gatename):
     gate = getattr(gates, gatename)(0)
 
-    json_general = (
-        '{"name": {}, "init_kwargs": {}, "_target_qubits": [0], "_control_qubits": []}'
-    )
+    json_general = """
+    {
+        "name": {},
+        "init_args": [0],
+        "init_kwargs": {},
+        "_target_qubits": [0],
+        "_control_qubits": []
+    }
+    """
 
     json_gate = json.loads(json_general)
     json_gate["name"] = gate.name
 
-    assert gate.to_json() == json.dumps(json_gate)
+    raw = gate.raw
+
+    assert isinstance(raw, dict)
+    assert gate.to_json() == json.dumps(raw)
+
+    del raw["_class"]
+
+    # raw may contain some objects later converted by JSON (e.g. tuples)
+    assert json.loads(json.dumps(raw)) == json_gate
+    assert gates.Gate.load(gate.raw).raw == gate.raw
 
 
 @pytest.mark.parametrize(
@@ -122,19 +137,37 @@ def test_one_qubit_rotations_init(gatename, params):
         ("U3", (0.1234, 0.4321, 0.5678)),
     ],
 )
-def test_one_qubit_rotations_to_json(gatename, params):
+def test_one_qubit_rotations_serialization(gatename, params):
     gate = getattr(gates, gatename)(0, *params)
 
-    json_general = (
-        '{"name": {}, "init_kwargs": {}, "_target_qubits": [0], "_control_qubits": []}'
-    )
+    json_general = """
+    {
+        "name": {},
+        "init_args": [0],
+        "init_kwargs": {},
+        "_target_qubits": [0],
+        "_control_qubits": []
+    }
+    """
 
     json_gate = json.loads(json_general)
     json_gate["name"] = gate.name
     json_gate["init_kwargs"] = gate.init_kwargs
     del json_gate["init_kwargs"]["trainable"]
 
-    assert gate.to_json() == json.dumps(json_gate)
+    raw = gate.raw
+    del raw["_class"]
+
+    raw = gate.raw
+
+    assert isinstance(raw, dict)
+    assert gate.to_json() == json.dumps(raw)
+
+    del raw["_class"]
+
+    # raw may contain some objects later converted by JSON (e.g. tuples)
+    assert json.loads(json.dumps(raw)) == json_gate
+    assert gates.Gate.load(gate.raw).raw == gate.raw
 
 
 @pytest.mark.parametrize(
