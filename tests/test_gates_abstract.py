@@ -1,6 +1,7 @@
 """Tests methods defined in `qibo/gates/abstract.py` and
 `qibo/gates/gates.py`."""
 import json
+from typing import Optional
 
 import pytest
 
@@ -16,25 +17,32 @@ def test_one_qubit_gates_init(gatename):
     assert gate.target_qubits == (0,)
 
 
-@pytest.mark.parametrize(
-    "gatename", ["H", "X", "Y", "Z", "S", "SDG", "T", "TDG", "I", "Align"]
-)
-def test_one_qubit_gates_serialization(gatename):
+def gate_from_json(gatename: str, control: Optional[list] = None):
     gate = getattr(gates, gatename)(0)
 
-    json_general = """
-    {
-        "name": {},
+    control = [] if control is None else control
+
+    json_general = f"""
+    {{
+        "name": {{}},
         "init_args": [0],
-        "init_kwargs": {},
+        "init_kwargs": {{}},
         "_target_qubits": [0],
-        "_control_qubits": []
-    }
+        "_control_qubits": {control}
+    }}
     """
 
     json_gate = json.loads(json_general)
     json_gate["name"] = gate.name
 
+    return gate, json_gate
+
+
+@pytest.mark.parametrize(
+    "gatename", ["H", "X", "Y", "Z", "S", "SDG", "T", "TDG", "I", "Align"]
+)
+def test_one_qubit_gates_serialization(gatename):
+    gate, json_gate = gate_from_json(gatename)
     raw = gate.raw
 
     assert isinstance(raw, dict)
@@ -44,6 +52,16 @@ def test_one_qubit_gates_serialization(gatename):
 
     # raw may contain some objects later converted by JSON (e.g. tuples)
     assert json.loads(json.dumps(raw)) == json_gate
+    assert gates.Gate.load(gate.raw).raw == gate.raw
+
+
+@pytest.mark.parametrize(
+    "gatename", ["H", "X", "Y", "Z", "S", "SDG", "T", "TDG", "I", "Align"]
+)
+def test_controlled_gates_serialization(gatename):
+    gate, _ = gate_from_json(gatename, control=[1, 4])
+
+    assert isinstance(gate.raw, dict)
     assert gates.Gate.load(gate.raw).raw == gate.raw
 
 
