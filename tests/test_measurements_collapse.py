@@ -178,7 +178,6 @@ def test_measurement_result_parameters_repeated_execution_final_measurements(bac
         c.add(gates.M(0, 1, 2, 3))
         result = backend.execute_circuit(c, target_state, nshots=1)
         target_samples.append(result.samples(binary=False)[0])
-    print(np.asarray(target_samples))
     backend.assert_allclose(final_samples, target_samples)
 
 

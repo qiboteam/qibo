@@ -231,10 +231,10 @@ def test_variable_theta():
     cvar = Circuit(2)
     cvar.add(gates.RX(0, theta1))
     cvar.add(gates.RY(1, theta2))
-    final_state = backend.execute_circuit(cvar)._state
+    final_state = backend.execute_circuit(cvar).state()
 
     c = Circuit(2)
     c.add(gates.RX(0, 0.1234))
     c.add(gates.RY(1, 0.4321))
-    target_state = backend.execute_circuit(c)._state
+    target_state = backend.execute_circuit(c).state()
     backend.assert_allclose(final_state, target_state)

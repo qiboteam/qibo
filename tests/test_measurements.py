@@ -262,7 +262,7 @@ def test_measurement_compiled_circuit(backend):
         {"10": 100},
     )
 
-    target_state = np.zeros_like(c.final_state._state)
+    target_state = np.zeros_like(c.final_state.state())
     target_state[2] = 1
     backend.assert_allclose(c.final_state._state, target_state)
 
