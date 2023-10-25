@@ -205,9 +205,9 @@ def test_set_parameters_with_light_cone(backend, trainable):
         c.set_parameters(np.random.random(4))
     else:
         c.set_parameters(np.random.random(2))
-    target_state = backend.execute_circuit(c)._state
+    target_state = backend.execute_circuit(c).state()
     lc, _ = c.light_cone(1, 2)
-    final_state = backend.execute_circuit(lc)._state
+    final_state = backend.execute_circuit(lc).state()
     backend.assert_allclose(final_state, target_state)
 
 
