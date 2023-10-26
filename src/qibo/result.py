@@ -9,7 +9,7 @@ from qibo.measurements import apply_bitflips, frequencies_to_binary
 
 def load_result(filename):
     payload = np.load(filename, allow_pickle=True).item()
-    return globals()[payload.pop("dtype")].loads(payload)
+    return globals()[payload.pop("dtype")].from_dict(payload)
 
 
 class QuantumState:
@@ -101,14 +101,14 @@ class QuantumState:
             np.save(f, self.to_dict())
 
     @classmethod
-    def loads(cls, payload):
+    def from_dict(cls, payload):
         backend = backends.construct_backend("numpy")
         return cls(payload.get("state"), backend)
 
     @classmethod
     def load(cls, filename):
         payload = np.load(filename, allow_pickle=True).item()
-        return cls.loads(payload)
+        return cls.from_dict(payload)
 
 
 class MeasurementOutcomes:
@@ -333,7 +333,7 @@ class MeasurementOutcomes:
             np.save(f, self.to_dict())
 
     @classmethod
-    def loads(cls, payload):
+    def from_dict(cls, payload):
         from qibo.backends import construct_backend
 
         if payload["probabilities"] is not None and payload["samples"] is not None:
@@ -354,7 +354,7 @@ class MeasurementOutcomes:
     @classmethod
     def load(cls, filename):
         payload = np.load(filename, allow_pickle=True).item()
-        return cls.loads(payload)
+        return cls.from_dict(payload)
 
 
 class CircuitResult(QuantumState, MeasurementOutcomes):
@@ -384,10 +384,10 @@ class CircuitResult(QuantumState, MeasurementOutcomes):
         return args
 
     @classmethod
-    def loads(cls, payload):
+    def from_dict(cls, payload):
         state_load = {"state": payload.pop("state")}
-        state = QuantumState.loads(state_load)
-        measurements = MeasurementOutcomes.loads(payload)
+        state = QuantumState.from_dict(state_load)
+        measurements = MeasurementOutcomes.from_dict(payload)
         return cls(
             state.state(),
             measurements.measurements,
