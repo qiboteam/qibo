@@ -228,10 +228,18 @@ Adiabatic evolution
 Data Encoders
 ^^^^^^^^^^^^^
 
+We provide a family of algorithms that encode classical data into quantum circuits.
+
 Unary Encoder
 """""""""""""
 
 .. autofunction:: qibo.models.encodings.unary_encoder
+
+
+Unary Encoder of Random Gaussian States
+"""""""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.models.encodings.unary_encoder_random_gaussian
 
 
 .. _error-mitigation:
