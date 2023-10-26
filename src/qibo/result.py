@@ -97,7 +97,8 @@ class QuantumState:
         }
 
     def dump(self, filename):
-        np.save(filename, self.dumps())
+        with open(filename, "wb") as f:
+            np.save(f, self.dumps())
 
     @classmethod
     def loads(cls, payload):
@@ -328,7 +329,8 @@ class MeasurementOutcomes:
         return args
 
     def dump(self, filename):
-        np.save(filename, self.dumps())
+        with open(filename, "wb") as f:
+            np.save(f, self.dumps())
 
     @classmethod
     def loads(cls, payload):

@@ -55,7 +55,7 @@ def test_measurementoutcomes_dump_load(backend, agnostic_load):
     c.has_collapse = True
     measurement = backend.execute_circuit(c, nshots=100)
     freq = measurement.frequencies()
-    measurement.dump("tmp")
+    measurement.dump("tmp.npy")
     if agnostic_load:
         loaded_meas = load_result("tmp.npy")
     else:
@@ -79,7 +79,7 @@ def test_circuitresult_dump_load(backend, agnostic_load):
     freq = result.frequencies()
     # set probabilities to trigger the warning
     result._probs = result.probabilities()
-    result.dump("tmp")
+    result.dump("tmp.npy")
     if agnostic_load:
         loaded_res = load_result("tmp.npy")
     else:
