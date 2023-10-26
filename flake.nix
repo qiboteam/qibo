@@ -63,6 +63,7 @@
                   enable = true;
                   install.enable = true;
                   install.allExtras = true;
+                  install.groups = ["dev"];
                 };
                 version = "3.11";
               };
