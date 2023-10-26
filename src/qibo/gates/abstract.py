@@ -4,7 +4,7 @@ from typing import List, Sequence, Tuple
 
 import sympy
 
-from qibo.backends import GlobalBackend
+from qibo.backends import CliffordBackend, GlobalBackend
 from qibo.config import raise_error
 
 REQUIRED_FIELDS = ["name", "init_kwargs", "_target_qubits", "_control_qubits"]
@@ -312,6 +312,9 @@ class Gate:
             backend = GlobalBackend()
 
         return backend.matrix(self)
+
+    def clifford_operation(self, backend=CliffordBackend()):
+        return backend.clifford_operation(self)
 
     def generator_eigenvalue(self):
         """
