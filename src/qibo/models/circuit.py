@@ -1053,7 +1053,7 @@ class Circuit:
         circ = cls(raw["nqubits"], density_matrix=raw["density_matrix"])
 
         for gate in raw["queue"]:
-            circ.add(Gate.load(gate))
+            circ.add(Gate.from_dict(gate))
 
         return circ
 
@@ -1064,7 +1064,7 @@ class Circuit:
     @classmethod
     def load_json(cls, stream):
         """Dump json representation to the given stream."""
-        return cls.load(json.load(stream))
+        return cls.from_dict(json.load(stream))
 
     def to_qasm(self):
         """Convert circuit to QASM.
