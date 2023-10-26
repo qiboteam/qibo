@@ -3,7 +3,7 @@ import warnings
 
 import numpy as np
 
-from qibo import __version__, backends, gates
+from qibo import backends, gates
 from qibo.measurements import apply_bitflips, frequencies_to_binary
 
 
@@ -92,8 +92,8 @@ class QuantumState:
     def dumps(self):
         return {
             "state": self.state(numpy=True),
+            "backend": self.backend.name,
             "dtype": self.__class__.__name__,
-            "qibo": __version__,
         }
 
     def dump(self, filename):
@@ -101,7 +101,7 @@ class QuantumState:
 
     @classmethod
     def loads(cls, payload):
-        backend = backends.construct_backend("numpy")
+        backend = backends.construct_backend(payload.get("backend"))
         return cls(payload.get("state"), backend)
 
     @classmethod
@@ -282,6 +282,20 @@ class MeasurementOutcomes:
         else:
             return self.backend.samples_to_decimal(self._samples, len(qubits))
 
+    def probabilities(self, qubits=None):
+        """Return the probabilities for the specified set of qubits, if not specified returns
+           the probabilities for all the qubits.
+        """
+        if qubits is None:
+            qubits = range(self.nqubits)
+        if self._probs is not None:
+
+        else:
+            freqs = self.frequencies()
+            probs = [ for k,v in freqs:
+
+
+
     @property
     def measurement_gate(self):
         """Single measurement gate containing all measured qubits.
@@ -319,11 +333,12 @@ class MeasurementOutcomes:
     def dumps(self):
         args = {
             "measurements": [m.to_json() for m in self.measurements],
+            "backend": self.backend.name,
+            "platform": self.backend.platform,
             "probabilities": self._probs,
             "samples": self._samples,
             "nshots": self.nshots,
             "dtype": self.__class__.__name__,
-            "qibo": __version__,
         }
         return args
 
@@ -339,7 +354,7 @@ class MeasurementOutcomes:
                 "Both `probabilities` and `samples` found, discarding the `probabilities` and building out of the `samples`."
             )
             payload.pop("probabilities")
-        backend = construct_backend("numpy")
+        backend = construct_backend(payload.get("backend"), payload.get("platform"))
         measurements = [gates.M.load(m) for m in payload.get("measurements")]
         return cls(
             measurements,
@@ -383,7 +398,7 @@ class CircuitResult(QuantumState, MeasurementOutcomes):
 
     @classmethod
     def loads(cls, payload):
-        state_load = {"state": payload.pop("state")}
+        state_load = {"state": payload.pop("state"), "backend": payload["backend"]}
         state = QuantumState.loads(state_load)
         measurements = MeasurementOutcomes.loads(payload)
         return cls(
