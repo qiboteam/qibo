@@ -1141,7 +1141,7 @@ The final result of the circuit execution can also be saved to disk and loaded b
    # this will be a CircuitResult object
    result = c()
    # save it to final_result.npy
-   result.dump('final_result')
+   result.dump('final_result.npy')
    # can be loaded back
    from qibo.result import load_result
 
