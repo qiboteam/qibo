@@ -4,9 +4,10 @@ import math
 
 import numpy as np
 
-from qibo import Circuit, gates
+from qibo import gates
 from qibo.backends import GlobalBackend
 from qibo.config import raise_error
+from qibo.models.circuit import Circuit
 
 
 def unary_encoder(data):
@@ -41,9 +42,6 @@ def unary_encoder(data):
             f"``data`` must be a 1-dimensional array, but it has dimensions {data.shape}.",
         )
 
-    if any(type(elem) not in [float, int] for elem in data):
-        raise_error(ValueError, "``data`` must be an array or real numbers.")
-
     nqubits = len(data)
     j_max = int(nqubits / 2)
 
@@ -71,7 +69,7 @@ def unary_encoder(data):
         r_array[j_max + j - 2] = math.sqrt(data[2 * j - 1] ** 2 + data[2 * j - 2] ** 2)
         theta = math.acos(data[2 * j - 2] / r_array[j_max + j - 2])
         if data[2 * j - 1] < 0.0:
-            theta = 2 * np.pi - theta
+            theta = 2 * math.pi - theta
         phases[j_max + j - 2] = theta
 
     for j in range(j_max - 1, 0, -1):
