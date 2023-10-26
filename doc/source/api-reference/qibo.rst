@@ -222,6 +222,18 @@ Adiabatic evolution
     :members:
     :member-order: bysource
 
+
+.. _data-encoders:
+
+Data Encoders
+^^^^^^^^^^^^^
+
+Unary Encoder
+"""""""""""""
+
+.. autofunction:: qibo.models.encodings.unary_encoder
+
+
 .. _error-mitigation:
 
 Error Mitigation
