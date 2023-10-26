@@ -72,14 +72,14 @@ def test_random_hermitian(backend):
     dims = 4
     matrix = random_hermitian(dims, backend=backend)
     matrix_dagger = np.transpose(np.conj(matrix))
-    norm = backend.calculate_norm(matrix - matrix_dagger)
+    norm = float(backend.calculate_norm_density_matrix(matrix - matrix_dagger, order=2))
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
     # test if function returns semidefinite Hermitian operator
     dims = 4
     matrix = random_hermitian(dims, semidefinite=True, backend=backend)
     matrix_dagger = np.transpose(np.conj(matrix))
-    norm = backend.calculate_norm(matrix - matrix_dagger)
+    norm = float(backend.calculate_norm_density_matrix(matrix - matrix_dagger, order=2))
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
     eigenvalues = np.linalg.eigvalsh(matrix)
@@ -90,7 +90,7 @@ def test_random_hermitian(backend):
     dims = 4
     matrix = random_hermitian(dims, normalize=True, backend=backend)
     matrix_dagger = np.transpose(np.conj(matrix))
-    norm = backend.calculate_norm(matrix - matrix_dagger)
+    norm = float(backend.calculate_norm_density_matrix(matrix - matrix_dagger, order=2))
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
     eigenvalues = np.linalg.eigvalsh(matrix)
@@ -101,7 +101,7 @@ def test_random_hermitian(backend):
     dims = 4
     matrix = random_hermitian(dims, semidefinite=True, normalize=True, backend=backend)
     matrix_dagger = np.transpose(np.conj(matrix))
-    norm = backend.calculate_norm(matrix - matrix_dagger)
+    norm = float(backend.calculate_norm(matrix - matrix_dagger, order=2))
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
     eigenvalues = np.linalg.eigvalsh(matrix)
@@ -133,7 +133,9 @@ def test_random_unitary(backend):
     matrix = random_unitary(dims, backend=backend)
     matrix_dagger = np.transpose(np.conj(matrix))
     matrix_inv = np.linalg.inv(matrix)
-    norm = backend.calculate_norm(matrix_inv - matrix_dagger)
+    norm = float(
+        backend.calculate_norm_density_matrix(matrix_inv - matrix_dagger, order=2)
+    )
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
     # tests if operator is unitary (measure == None)
@@ -141,7 +143,7 @@ def test_random_unitary(backend):
     matrix = random_unitary(dims, measure, backend=backend)
     matrix_dagger = np.transpose(np.conj(matrix))
     matrix_inv = np.linalg.inv(matrix)
-    norm = backend.calculate_norm(matrix_inv - matrix_dagger)
+    norm = float(backend.calculate_norm(matrix_inv - matrix_dagger, order=2))
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
 
@@ -239,6 +241,11 @@ def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
         with pytest.raises(ValueError):
             test = random_density_matrix(dims=dims, normalize=True)
     else:
+        norm_function = (
+            backend.calculate_norm_density_matrix
+            if basis is None
+            else backend.calculate_norm
+        )
         state = random_density_matrix(
             dims,
             pure=pure,
@@ -259,17 +266,13 @@ def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
                 backend.assert_allclose(purity(state) >= 1.0 - PRECISION_TOL, True)
 
             state_dagger = np.transpose(np.conj(state))
-            norm = backend.calculate_norm(state - state_dagger)
+            norm = float(norm_function(state - state_dagger, order=2))
             backend.assert_allclose(norm < PRECISION_TOL, True)
         else:
             normalization = 1.0 if normalize is False else 1.0 / np.sqrt(dims)
-            backend.assert_allclose(
-                backend.calculate_norm(state[0] - normalization) <= PRECISION_TOL, True
-            )
-            assert all(
-                backend.calculate_norm(exp_value) <= normalization
-                for exp_value in state[1:]
-            )
+            print(state)
+            backend.assert_allclose(state[0], normalization)
+            assert all(np.abs(exp_value) <= normalization for exp_value in state[1:])
 
 
 @pytest.mark.parametrize("seed", [10])
@@ -370,7 +373,9 @@ def test_pauli_single(backend):
     matrix = backend.cast(matrix, dtype=matrix.dtype)
 
     backend.assert_allclose(
-        backend.calculate_norm(matrix - result) < PRECISION_TOL, True
+        float(backend.calculate_norm_density_matrix(matrix - result, order=2))
+        < PRECISION_TOL,
+        True,
     )
 
 
@@ -406,12 +411,23 @@ def test_random_pauli(
         matrix = backend.cast(matrix, dtype=matrix.dtype)
         if subset is None:
             backend.assert_allclose(
-                backend.calculate_norm(matrix - result_complete_set) < PRECISION_TOL,
+                float(
+                    backend.calculate_norm_density_matrix(
+                        matrix - result_complete_set, order=2
+                    )
+                )
+                < PRECISION_TOL,
                 True,
             )
         else:
             backend.assert_allclose(
-                backend.calculate_norm(matrix - result_subset) < PRECISION_TOL, True
+                float(
+                    backend.calculate_norm_density_matrix(
+                        matrix - result_subset, order=2
+                    )
+                )
+                < PRECISION_TOL,
+                True,
             )
     else:
         matrix = np.transpose(matrix, (1, 0, 2, 3))
@@ -420,12 +436,23 @@ def test_random_pauli(
 
         if subset is None:
             backend.assert_allclose(
-                backend.calculate_norm(matrix - result_complete_set) < PRECISION_TOL,
+                float(
+                    backend.calculate_norm_density_matrix(
+                        matrix - result_complete_set, order=2
+                    )
+                )
+                < PRECISION_TOL,
                 True,
             )
         else:
             backend.assert_allclose(
-                backend.calculate_norm(matrix - result_subset) < PRECISION_TOL, True
+                float(
+                    backend.calculate_norm_density_matrix(
+                        matrix - result_subset, order=2
+                    )
+                )
+                < PRECISION_TOL,
+                True,
             )
 
 

@@ -655,7 +655,7 @@ Parametric ZX interaction (RZX)
     :member-order: bysource
 
 Parametric XX-YY interaction (RXXYY)
-""""""""""""""""""""""""""""""""""
+""""""""""""""""""""""""""""""""""""
 
 .. autoclass:: qibo.gates.RXXYY
     :members:
@@ -743,6 +743,23 @@ Mølmer–Sørensen (MS)
 .. autoclass:: qibo.gates.MS
     :members:
     :member-order: bysource
+
+Quantinuum native gates
+^^^^^^^^^^^^^^^^^^^^^^^
+
+U1q
+"""
+
+.. autoclass:: qibo.gates.U1q
+    :members:
+    :member-order: bysource
+
+.. note::
+    The other Quantinuum single-qubit and two-qubit native gates are
+    implemented in Qibo as:
+        - Pauli-:math:`Z` rotation: :class:`qibo.gates.RZ`
+        - Arbitrary :math:`ZZ` rotation: :class:`qibo.gates.RZZ`
+        - Fully-entangling :math:`ZZ`-interaction: :math:`R_{ZZ}(\\pi/2)`
 
 
 _______________________
