@@ -5,7 +5,7 @@ from typing import Iterable
 
 from joblib import Parallel, delayed
 
-from qibo.backends import GlobalBackend
+from qibo.backends import GlobalBackend, set_threads
 from qibo.config import raise_error
 
 
@@ -45,6 +45,7 @@ def parallel_execution(circuit, states, processes=None, backend=None):
         raise_error(TypeError, "states must be a list.")
 
     def operation(state, circuit):
+        backend.set_threads(backend.nthreads)
         return backend.execute_circuit(circuit, state)
 
     results = Parallel(n_jobs=processes, prefer="threads")(
@@ -102,6 +103,7 @@ def parallel_circuits_execution(
         raise_error(TypeError, "states must be iterable.")
 
     def operation(circuit, state):
+        backend.set_threads(backend.nthreads)
         return backend.execute_circuit(circuit, state, nshots)
 
     if states is None or isinstance(states, backend.tensor_types):
@@ -169,6 +171,7 @@ def parallel_parametrized_execution(
         raise_error(TypeError, "parameters must be a list.")
 
     def operation(params, circuit, state):
+        backend.set_threads(backend.nthreads)
         if state is not None:
             state = backend.cast(state, copy=True)
         circuit.set_parameters(params)
