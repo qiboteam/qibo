@@ -124,7 +124,7 @@ def test_state_dump_load(backend, agnostic_load):
     c = Circuit(1)
     c.add(gates.H(0))
     state = backend.execute_circuit(c)
-    state.dump("tmp")
+    state.dump("tmp.npy")
     if agnostic_load:
         loaded_state = load_result("tmp.npy")
     else:
