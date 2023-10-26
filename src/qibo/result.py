@@ -89,7 +89,7 @@ class QuantumState:
     def __str__(self):
         return self.symbolic()
 
-    def dumps(self):
+    def to_dict(self):
         return {
             "state": self.state(numpy=True),
             "dtype": self.__class__.__name__,
@@ -98,7 +98,7 @@ class QuantumState:
 
     def dump(self, filename):
         with open(filename, "wb") as f:
-            np.save(f, self.dumps())
+            np.save(f, self.to_dict())
 
     @classmethod
     def loads(cls, payload):
@@ -317,7 +317,7 @@ class MeasurementOutcomes:
         qubit_map = self.measurement_gate.qubits
         return observable.expectation_from_samples(freq, qubit_map)
 
-    def dumps(self):
+    def to_dict(self):
         args = {
             "measurements": [m.to_json() for m in self.measurements],
             "probabilities": self._probs,
@@ -330,7 +330,7 @@ class MeasurementOutcomes:
 
     def dump(self, filename):
         with open(filename, "wb") as f:
-            np.save(f, self.dumps())
+            np.save(f, self.to_dict())
 
     @classmethod
     def loads(cls, payload):
@@ -377,9 +377,9 @@ class CircuitResult(QuantumState, MeasurementOutcomes):
             nshots=nshots,
         )
 
-    def dumps(self):
-        args = MeasurementOutcomes.dumps(self)
-        args.update(QuantumState.dumps(self))
+    def to_dict(self):
+        args = MeasurementOutcomes.to_dict(self)
+        args.update(QuantumState.to_dict(self))
         args.update({"dtype": self.__class__.__name__})
         return args
 
