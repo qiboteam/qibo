@@ -4,6 +4,7 @@ from typing import Dict, List, Tuple, Union
 
 import numpy as np
 
+import qibo
 from qibo import gates
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate
@@ -1028,7 +1029,12 @@ class Circuit:
 
         This is a thin wrapper over :meth:`Gate.raw`.
         """
-        return {"queue": [gate.raw for gate in self.queue], "nqubits": self.nqubits}
+        return {
+            "queue": [gate.raw for gate in self.queue],
+            "nqubits": self.nqubits,
+            "density_matrix": self.density_matrix,
+            "qibo_version": qibo.__version__,
+        }
 
     @classmethod
     def load(cls, raw):
@@ -1036,7 +1042,7 @@ class Circuit:
 
         Essentially the counter-part of :meth:`raw`.
         """
-        circ = cls(raw["nqubits"])
+        circ = cls(raw["nqubits"], density_matrix=raw["density_matrix"])
 
         for gate in raw["queue"]:
             circ.add(Gate.load(gate))
