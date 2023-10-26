@@ -1038,7 +1038,7 @@ class Circuit:
         }
 
     @classmethod
-    def load(cls, raw):
+    def from_dict(cls, raw):
         """Load from serialization.
 
         Essentially the counter-part of :meth:`raw`.
