@@ -52,7 +52,7 @@ def test_one_qubit_gates_serialization(gatename):
 
     # raw may contain some objects later converted by JSON (e.g. tuples)
     assert json.loads(json.dumps(raw)) == json_gate
-    assert gates.Gate.load(gate.raw).raw == gate.raw
+    assert gates.Gate.from_dict(gate.raw).raw == gate.raw
 
 
 @pytest.mark.parametrize(
@@ -62,7 +62,7 @@ def test_controlled_gates_serialization(gatename):
     gate, _ = gate_from_json(gatename, control=[1, 4])
 
     assert isinstance(gate.raw, dict)
-    assert gates.Gate.load(gate.raw).raw == gate.raw
+    assert gates.Gate.from_dict(gate.raw).raw == gate.raw
 
 
 @pytest.mark.parametrize(
@@ -185,7 +185,7 @@ def test_one_qubit_rotations_serialization(gatename, params):
 
     # raw may contain some objects later converted by JSON (e.g. tuples)
     assert json.loads(json.dumps(raw)) == json_gate
-    assert gates.Gate.load(gate.raw).raw == gate.raw
+    assert gates.Gate.from_dict(gate.raw).raw == gate.raw
 
 
 @pytest.mark.parametrize(

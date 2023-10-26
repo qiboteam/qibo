@@ -89,7 +89,7 @@ class Gate:
         return encoded_simple
 
     @staticmethod
-    def load(raw: dict):
+    def from_dict(raw: dict):
         """Load from serialization.
 
         Essentially the counter-part of :meth:`raw`.
