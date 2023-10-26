@@ -434,6 +434,15 @@ class NumpyBackend(Backend):
                 "different one using ``qibo.set_device``.",
             )
 
+    def execute_circuits(
+        self, circuits, initial_states=None, nshots=1000, processes=None
+    ):
+        from qibo.parallel import parallel_circuits_execution
+
+        return parallel_circuits_execution(
+            circuits, initial_states, nshots, processes, backend=self
+        )
+
     def execute_circuit_repeated(self, circuit, initial_state=None, nshots=None):
         if nshots is None:
             nshots = 1
