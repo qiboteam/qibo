@@ -7,7 +7,7 @@ from qibo import Circuit, gates
 def test_eager_execute(backend, accelerators):
     c = Circuit(4, accelerators)
     c.add(gates.H(i) for i in range(4))
-    final_state = backend.execute_circuit(c)
+    final_state = backend.execute_circuit(c)._state
     target_state = np.ones(16) / 4.0
     backend.assert_allclose(final_state, target_state)
 
@@ -27,12 +27,12 @@ def test_compiled_execute(backend):
 
     # Run eager circuit
     c1 = create_circuit()
-    r1 = backend.execute_circuit(c1)
+    r1 = backend.execute_circuit(c1)._state
 
     # Run compiled circuit
     c2 = create_circuit()
     c2.compile(backend)
-    r2 = c2()
+    r2 = c2()._state
     np.testing.assert_allclose(r1, r2)
 
 
@@ -59,14 +59,13 @@ def test_memory_error(backend, accelerators):
 
 
 def test_repeated_execute(backend, accelerators):
-    c = Circuit(4, accelerators)
+    c = Circuit(4, accelerators, density_matrix=True)
     thetas = np.random.random(4)
     c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
-    target_state = backend.execute_circuit(c).state(numpy=True)
-    target_state = np.array(20 * [target_state])
+    target_state = backend.execute_circuit(c).state()
+    target_state = target_state
     c.has_collapse = True
-    final_state = backend.execute_circuit(c, nshots=20)
-    final_state = [backend.to_numpy(x) for x in final_state]
+    final_state = backend.execute_circuit(c, nshots=20)._state
     backend.assert_allclose(final_state, target_state)
 
 
@@ -78,7 +77,7 @@ def test_final_state_property(backend):
     with pytest.raises(RuntimeError):
         final_state = c.final_state
 
-    backend.execute_circuit(c)
+    backend.execute_circuit(c)._state
     target_state = np.ones(4) / 2
     backend.assert_allclose(c.final_state, target_state)
 
@@ -93,7 +92,7 @@ def test_density_matrix_circuit(backend):
     c.add(gates.H(1))
     c.add(gates.CNOT(0, 1))
     c.add(gates.H(2))
-    final_rho = backend.execute_circuit(c, np.copy(initial_rho))
+    final_rho = backend.execute_circuit(c, np.copy(initial_rho))._state
 
     h = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
     cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
@@ -123,8 +122,8 @@ def test_circuit_as_initial_state(backend, density_matrix):
 
     actual_circuit = c1 + c
 
-    output = backend.execute_circuit(c, c1)
-    target = backend.execute_circuit(actual_circuit)
+    output = backend.execute_circuit(c, c1)._state
+    target = backend.execute_circuit(actual_circuit)._state
 
     backend.assert_allclose(target, output)
 

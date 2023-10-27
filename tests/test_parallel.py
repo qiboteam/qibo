@@ -30,8 +30,8 @@ def test_parallel_states_evaluation(backend):
         r1.append(backend.execute_circuit(c, state))
 
     r2 = parallel_execution(c, states=states, processes=2, backend=backend)
-    r1 = [x.state(numpy=True) for x in r1]
-    r2 = [x.state(numpy=True) for x in r2]
+    r1 = [x.state() for x in r1]
+    r2 = [x.state() for x in r2]
     backend.assert_allclose(r1, r2)
 
 
@@ -109,6 +109,6 @@ def test_parallel_parametrized_circuit(backend):
     r2 = parallel_parametrized_execution(
         c, parameters=parameters, initial_state=state, processes=2, backend=backend
     )
-    r1 = [x.state(numpy=True) for x in r1]
-    r2 = [x.state(numpy=True) for x in r2]
+    r1 = [x.state() for x in r1]
+    r2 = [x.state() for x in r2]
     backend.assert_allclose(r1, r2)
