@@ -451,6 +451,15 @@ class NumpyBackend(Backend):
                 "different one using ``qibo.set_device``.",
             )
 
+    def execute_circuits(
+        self, circuits, initial_states=None, nshots=1000, processes=None
+    ):
+        from qibo.parallel import parallel_circuits_execution
+
+        return parallel_circuits_execution(
+            circuits, initial_states, nshots, processes, backend=self
+        )
+      
     def execute_circuit_repeated(self, circuit, nshots, initial_state=None):
         """
         Execute the circuit `nshots` times to retrieve probabilities, frequencies
@@ -705,7 +714,9 @@ class NumpyBackend(Backend):
         return self.np.abs(self.np.sum(self.np.conj(state1) * state2))
 
     def calculate_overlap_density_matrix(self, state1, state2):
-        raise_error(NotImplementedError)
+        state1 = self.cast(state1)
+        state2 = self.cast(state2)
+        return self.np.trace(self.np.transpose(self.np.conj(state1)) @ state2)
 
     def calculate_eigenvalues(self, matrix, k=6):
         if self.issparse(matrix):

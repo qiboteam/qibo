@@ -195,6 +195,13 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
+    def execute_circuits(
+        self, circuits, initial_states=None, nshots=None
+    ):  # pragma: no cover
+        """Execute multiple :class:`qibo.models.circuit.Circuit`s in parallel."""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
     def execute_circuit_repeated(
         self, circuit, nshots, initial_state=None
     ):  # pragma: no cover
@@ -327,7 +334,7 @@ class Backend(abc.ABC):
 
     @abc.abstractmethod
     def calculate_overlap_density_matrix(self, state1, state2):  # pragma: no cover
-        """Calculate norm of two density matrices."""
+        """Calculate overlap of two density matrices."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod

@@ -9,11 +9,15 @@ import pytest
 import qibo
 from qibo import gates
 from qibo.models import QFT, Circuit
-from qibo.parallel import parallel_execution, parallel_parametrized_execution
+from qibo.parallel import (
+    parallel_circuits_execution,
+    parallel_execution,
+    parallel_parametrized_execution,
+)
 
 
 @pytest.mark.skipif(sys.platform == "darwin", reason="Mac tests")
-def test_parallel_circuit_evaluation(backend):
+def test_parallel_states_evaluation(backend):
     """Evaluate circuit for multiple input states."""
     nqubits = 10
     np.random.seed(0)
@@ -29,6 +33,53 @@ def test_parallel_circuit_evaluation(backend):
     r1 = [x.state() for x in r1]
     r2 = [x.state() for x in r2]
     backend.assert_allclose(r1, r2)
+
+
+@pytest.mark.skipif(sys.platform == "darwin", reason="Mac tests")
+@pytest.mark.parametrize("use_execute_circuits", [False, True])
+def test_parallel_circuit_evaluation(backend, use_execute_circuits):
+    """Evaluate multiple circuits in parallel."""
+    circuits = [QFT(n) for n in range(1, 11)]
+
+    r1 = []
+    for circuit in circuits:
+        r1.append(backend.execute_circuit(circuit))
+
+    if use_execute_circuits:
+        r2 = backend.execute_circuits(circuits, processes=2)
+    else:
+        r2 = parallel_circuits_execution(circuits, processes=2, backend=backend)
+
+    for x, y in zip(r1, r2):
+        target = x.state(numpy=True)
+        final = y.state(numpy=True)
+        backend.assert_allclose(final, target)
+
+
+@pytest.mark.skipif(sys.platform == "darwin", reason="Mac tests")
+def test_parallel_circuit_states_evaluation(backend):
+    """Evaluate multiple circuits in parallel with different initial states."""
+    circuits = [QFT(n) for n in range(1, 11)]
+    states = [np.random.random(2**n) for n in range(1, 11)]
+
+    with pytest.raises(TypeError):
+        r2 = parallel_circuits_execution(
+            circuits, states=1, processes=2, backend=backend
+        )
+    with pytest.raises(ValueError):
+        r2 = parallel_circuits_execution(
+            circuits, states[:3], processes=2, backend=backend
+        )
+
+    r1 = []
+    for circuit, state in zip(circuits, states):
+        r1.append(backend.execute_circuit(circuit, state))
+
+    r2 = parallel_circuits_execution(circuits, states, processes=2, backend=backend)
+    for x, y in zip(r1, r2):
+        target = x.state(numpy=True)
+        final = y.state(numpy=True)
+        backend.assert_allclose(final, target)
 
 
 @pytest.mark.skipif(sys.platform == "darwin", reason="Mac tests")
