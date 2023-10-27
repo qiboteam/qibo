@@ -1093,19 +1093,19 @@ summarizes which outcomes to expect depending on whether:
 
 .. table::
 
-   +----------+--------------+----------+----------------+-------------------------+
-   | Noise    | Measurements | Collapse | Density Matrix |      Outcome            |
-   +==========+==============+==========+================+=========================+
+   +----------+--------------+----------+----------------+------------------------------------------+
+   | Noise    | Measurements | Collapse | Density Matrix |      Outcome                             |
+   +==========+==============+==========+================+==========================================+
    |    ❌    |      ❌      |    ❌    |   ❌ / ✅      | :class:`qibo.result.QuantumState`        |
-   +----------+--------------+----------+----------------+-------------------------+
-   |    ❌    |      ✅      |    ❌    |   ❌ / ✅      | ``CircuitResult``       |
-   +----------+--------------+----------+----------------+-------------------------+
-   | ❌ / ✅  |      ❌      | ❌ / ✅  |       ✅       | ``QuantumState``        |
-   +----------+--------------+----------+----------------+-------------------------+
-   | ❌ / ✅  |      ✅      | ❌ / ✅  |       ❌       | ``MeasurementOutcomes`` |
-   +----------+--------------+----------+----------------+-------------------------+
-   | ❌ / ✅  |      ✅      | ❌ / ✅  |       ✅       | ``CircuitResult``       |
-   +----------+--------------+----------+----------------+-------------------------+
+   +----------+--------------+----------+----------------+------------------------------------------+
+   |    ❌    |      ✅      |    ❌    |   ❌ / ✅      | :class:`qibo.result.CircuitResult`       |
+   +----------+--------------+----------+----------------+------------------------------------------+
+   | ❌ / ✅  |      ❌      | ❌ / ✅  |       ✅       | :class:`qibo.result.QuantumState`        |
+   +----------+--------------+----------+----------------+------------------------------------------+
+   | ❌ / ✅  |      ✅      | ❌ / ✅  |       ❌       | :class:`qibo.result.MeasurementOutcomes` |
+   +----------+--------------+----------+----------------+------------------------------------------+
+   | ❌ / ✅  |      ✅      | ❌ / ✅  |       ✅       | :class:`qibo.result.CircuitResult`       |
+   +----------+--------------+----------+----------------+------------------------------------------+
 
 Therefore, one of the three objects :class:`qibo.result.QuantumState`,
 :class:`qibo.result.MeasurementOutcomes` or :class:`qibo.result.CircuitResult`
@@ -1146,8 +1146,6 @@ The final result of the circuit execution can also be saved to disk and loaded b
    from qibo.result import load_result
 
    loaded_result = load_result('final_result.npy')
-
-just make sure to load from the correct object out of the three.
 
 .. autoclass:: qibo.result.QuantumState
     :members:
