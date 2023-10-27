@@ -193,10 +193,19 @@ class MeasurementOutcomes:
                 a single `Counter` is returned which contains samples from all
                 the measured qubits, independently of their registers.
         """
-        if self._repeated_execution_frequencies is not None:
-            return self._repeated_execution_frequencies
-
         qubits = self.measurement_gate.qubits
+
+        if self._repeated_execution_frequencies is not None:
+            if binary:
+                return self._repeated_execution_frequencies
+            else:
+                return collections.Counter(
+                    {
+                        int(k, 2): v
+                        for k, v in self._repeated_execution_frequencies.items()
+                    }
+                )
+
         if self._frequencies is None:
             if self.measurement_gate.has_bitflip_noise() and not self.has_samples():
                 self._samples = self.samples()
@@ -236,6 +245,18 @@ class MeasurementOutcomes:
             return frequencies_to_binary(self._frequencies, len(qubits))
 
         return self._frequencies
+
+    def probabilities(self):
+        """Calculate the probabilities as frequency / nshots"""
+        if self._probs is not None:
+            return self._probs
+
+        frequencies = self.frequencies(binary=False)
+        probs = self.backend.np.zeros(2 ** self._samples.shape[1])
+        for state, freq in frequencies.items():
+            probs[state] = freq / self.nshots
+        self._probs = probs
+        return probs
 
     def has_samples(self):
         if self._samples is not None:
@@ -428,6 +449,9 @@ class CircuitResult(QuantumState, MeasurementOutcomes):
             samples=samples,
             nshots=nshots,
         )
+
+    def probabilities(self, qubits=None):
+        return QuantumState.probabilities(self, qubits)
 
     def to_dict(self):
         """Returns a dictonary containinig all the information needed to rebuild the ``CircuitResult``."""

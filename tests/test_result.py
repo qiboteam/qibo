@@ -5,6 +5,16 @@ from qibo import gates, models
 from qibo.result import CircuitResult, MeasurementOutcomes, load_result
 
 
+def test_measurementoutcomes_probabilties(backend):
+    c = models.Circuit(3)
+    c.add(gates.H(0))
+    c.add(gates.M(0, 2))
+    probabilities = c().probabilities(qubits=[0, 2])
+    c.has_collapse = True
+    repeated_probabilities = c().probabilities()
+    backend.assert_allclose(probabilities, repeated_probabilities, atol=1e-1)
+
+
 def test_circuit_result_error(backend):
     c = models.Circuit(1)
     state = np.array([1, 0])
