@@ -1,6 +1,5 @@
 import collections
 import copy
-import json
 from typing import Dict, List, Tuple, Union
 
 import numpy as np
@@ -1049,15 +1048,6 @@ class Circuit:
             circ.add(Gate.from_dict(gate))
 
         return circ
-
-    def dump_json(self, stream):
-        """Dump json representation to the given stream."""
-        json.dump(self.raw, stream)
-
-    @classmethod
-    def load_json(cls, stream):
-        """Dump json representation to the given stream."""
-        return cls.from_dict(json.load(stream))
 
     def to_qasm(self):
         """Convert circuit to QASM.
