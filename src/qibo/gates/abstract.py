@@ -94,9 +94,18 @@ class Gate:
 
         Essentially the counter-part of :meth:`raw`.
         """
-        from qibo.gates import gates
+        from qibo.gates import gates, measurements
 
-        cls = getattr(gates, raw["_class"])
+        for mod in (gates, measurements):
+            try:
+                cls = getattr(mod, raw["_class"])
+                break
+            except AttributeError:
+                # gate not found in given module, try next
+                pass
+        else:
+            raise ValueError(f"Unknown gate {raw['_class']}")
+
         gate = cls(*raw["init_args"], **raw["init_kwargs"])
         try:
             return gate.controlled_by(*raw["_control_qubits"])

@@ -320,6 +320,11 @@ def test_circuit_serialization():
     assert isinstance(raw, dict)
     assert Circuit.from_dict(raw).raw == raw
 
+    c.add(gates.M(0))
+    raw = c.raw
+    assert isinstance(raw, dict)
+    assert Circuit.from_dict(raw).raw == raw
+
 
 def test_circuit_light_cone():
     from qibo import __version__
