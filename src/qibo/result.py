@@ -8,6 +8,14 @@ from qibo.measurements import apply_bitflips, frequencies_to_binary
 
 
 def load_result(filename):
+    """Loads the results of a circuit execution saved to disk.
+
+    Args:
+        filename (str): Path to the file containing the results.
+
+    Returns:
+        A :class:`qibo.result.QuantumState`, :class:`qibo.result.MeasurementOutcomes` or :class:`qibo.result.CircuitResult` object, depending on the input file.
+    """
     payload = np.load(filename, allow_pickle=True).item()
     return globals()[payload.pop("dtype")].from_dict(payload)
 
@@ -90,6 +98,7 @@ class QuantumState:
         return self.symbolic()
 
     def to_dict(self):
+        """Returns a dictonary containinig all the information needed to rebuild the ``QuantumState``"""
         return {
             "state": self.state(numpy=True),
             "dtype": self.__class__.__name__,
@@ -97,16 +106,37 @@ class QuantumState:
         }
 
     def dump(self, filename):
+        """Writes to file the ``QuantumState`` for future reloading.
+
+        Args:
+            filename (str): Path to the file to write to.
+        """
         with open(filename, "wb") as f:
             np.save(f, self.to_dict())
 
     @classmethod
     def from_dict(cls, payload):
+        """Builds a ``QuantumState`` object starting from a dictionary.
+
+        Args:
+            payload (dict): Dictionary containing all the information to load the ``QuantumState`` object.
+
+        Returns:
+            A :class:`qibo.result.QuantumState` object.
+        """
         backend = backends.construct_backend("numpy")
         return cls(payload.get("state"), backend)
 
     @classmethod
     def load(cls, filename):
+        """Builds the ``QuantumState`` object stored in a file.
+
+        Args:
+            filename (str): Path to the file containing the ``QuantumState``.
+
+        Returns:
+            A :class:`qibo.result.QuantumState` object.
+        """
         payload = np.load(filename, allow_pickle=True).item()
         return cls.from_dict(payload)
 
@@ -318,6 +348,7 @@ class MeasurementOutcomes:
         return observable.expectation_from_samples(freq, qubit_map)
 
     def to_dict(self):
+        """Returns a dictonary containinig all the information needed to rebuild the ``MeasurementOutcomes``."""
         args = {
             "measurements": [m.to_json() for m in self.measurements],
             "probabilities": self._probs,
@@ -329,11 +360,24 @@ class MeasurementOutcomes:
         return args
 
     def dump(self, filename):
+        """Writes to file the ``MeasurementOutcomes`` for future reloading.
+
+        Args:
+            filename (str): Path to the file to write to.
+        """
         with open(filename, "wb") as f:
             np.save(f, self.to_dict())
 
     @classmethod
     def from_dict(cls, payload):
+        """Builds a ``MeasurementOutcomes`` object starting from a dictionary.
+
+        Args:
+            payload (dict): Dictionary containing all the information to load the ``MeasurementOutcomes`` object.
+
+        Returns:
+            A :class:`qibo.result.MeasurementOutcomes` object.
+        """
         from qibo.backends import construct_backend
 
         if payload["probabilities"] is not None and payload["samples"] is not None:
@@ -353,6 +397,14 @@ class MeasurementOutcomes:
 
     @classmethod
     def load(cls, filename):
+        """Builds the ``MeasurementOutcomes`` object stored in a file.
+
+        Args:
+            filename (str): Path to the file containing the ``MeasurementOutcomes``.
+
+        Returns:
+            A :class:`qibo.result.MeasurementOutcomes` object.
+        """
         payload = np.load(filename, allow_pickle=True).item()
         return cls.from_dict(payload)
 
@@ -378,6 +430,7 @@ class CircuitResult(QuantumState, MeasurementOutcomes):
         )
 
     def to_dict(self):
+        """Returns a dictonary containinig all the information needed to rebuild the ``CircuitResult``."""
         args = MeasurementOutcomes.to_dict(self)
         args.update(QuantumState.to_dict(self))
         args.update({"dtype": self.__class__.__name__})
@@ -385,6 +438,14 @@ class CircuitResult(QuantumState, MeasurementOutcomes):
 
     @classmethod
     def from_dict(cls, payload):
+        """Builds a ``CircuitResult`` object starting from a dictionary.
+
+        Args:
+            payload (dict): Dictionary containing all the information to load the ``CircuitResult`` object.
+
+        Returns:
+            A :class:`qibo.result.CircuitResult` object.
+        """
         state_load = {"state": payload.pop("state")}
         state = QuantumState.from_dict(state_load)
         measurements = MeasurementOutcomes.from_dict(payload)
