@@ -1083,7 +1083,7 @@ Execution Outcomes
 ------------------
 
 Qibo circuits return different objects when executed depending on what the
-circuit contains and on the settings of the simulation. The Following table
+circuit contains and on the settings of the simulation. The following table
 summarizes which outcomes to expect depending on whether:
 
 * the circuit contains noise channels
