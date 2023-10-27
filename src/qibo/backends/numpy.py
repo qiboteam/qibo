@@ -459,7 +459,7 @@ class NumpyBackend(Backend):
         return parallel_circuits_execution(
             circuits, initial_states, nshots, processes, backend=self
         )
-      
+
     def execute_circuit_repeated(self, circuit, nshots, initial_state=None):
         """
         Execute the circuit `nshots` times to retrieve probabilities, frequencies
