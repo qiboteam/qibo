@@ -12,7 +12,9 @@ def test_measurementoutcomes_probabilties(backend):
     probabilities = c().probabilities(qubits=[0, 2])
     c.has_collapse = True
     repeated_probabilities = c().probabilities()
+    result = MeasurementOutcomes(c.measurements, backend, probabilities=probabilities)
     backend.assert_allclose(probabilities, repeated_probabilities, atol=1e-1)
+    assert (result.probabilities() == probabilities).all()
 
 
 def test_circuit_result_error(backend):
