@@ -67,28 +67,6 @@ def test_entropy_singlet_state(backend):
     backend.assert_allclose(result, 1.0)
 
 
-def test_entropy_random_state(backend):
-    """Check that entropy calculation agrees with numpy."""
-    from qibo.config import EIGVAL_CUTOFF
-
-    # Generate a random positive and hermitian density matrix
-    rho = np.random.random((8, 8)) + 1j * np.random.random((8, 8))
-    rho = rho + rho.conj().T
-    _, u = np.linalg.eigh(rho)
-    s = 5 * np.random.random(8)
-    s = s / s.sum()
-    rho = u.dot(np.diag(s)).dot(u.conj().T)
-
-    result, spectrum = backend.entanglement_entropy(rho)
-    target = -(s * np.log2(s)).sum()
-    backend.assert_allclose(result, target)
-
-    target_eigvals = np.linalg.eigvalsh(rho)
-    masked_eigvals = target_eigvals[np.where(target_eigvals > EIGVAL_CUTOFF)]
-    target_spectrum = -np.log(masked_eigvals)
-    backend.assert_allclose(spectrum, target_spectrum)
-
-
 def test_entropy_switch_partition(backend):
     """Check that partition is switched to the largest counterpart."""
     entropy = callbacks.EntanglementEntropy([0])
@@ -101,44 +79,11 @@ def test_entropy_switch_partition(backend):
     backend.assert_allclose(result, 1.0)
 
 
-def test_entropy_numerical(backend):
-    """Check that entropy calculation does not fail for tiny eigenvalues."""
-    eigvals = np.array(
-        [
-            -1e-10,
-            -1e-15,
-            -2e-17,
-            -1e-18,
-            -5e-60,
-            1e-48,
-            4e-32,
-            5e-14,
-            1e-14,
-            9.9e-13,
-            9e-13,
-            5e-13,
-            1e-13,
-            1e-12,
-            1e-11,
-            1e-10,
-            1e-9,
-            1e-7,
-            1,
-            4,
-            10,
-        ]
-    )
-    rho = np.diag(eigvals)
-    result, _ = backend.entanglement_entropy(rho)
-    mask = eigvals > 0
-    target = -(eigvals[mask] * np.log2(eigvals[mask])).sum()
-    backend.assert_allclose(result, target)
-
-
+@pytest.mark.parametrize("base", [2, np.e, 10])
 @pytest.mark.parametrize("density_matrix", [False, True])
-def test_entropy_in_circuit(backend, density_matrix):
+def test_entropy_in_circuit(backend, density_matrix, base):
     """Check that entropy calculation works in circuit."""
-    entropy = callbacks.EntanglementEntropy([0], compute_spectrum=True)
+    entropy = callbacks.EntanglementEntropy([0], compute_spectrum=True, base=base)
     c = Circuit(2, density_matrix=density_matrix)
     c.add(gates.CallbackGate(entropy))
     c.add(gates.H(0))
@@ -147,12 +92,12 @@ def test_entropy_in_circuit(backend, density_matrix):
     c.add(gates.CallbackGate(entropy))
     state = backend.execute_circuit(c)
 
-    target = [0, 0, 1.0]
-    values = [backend.to_numpy(x) for x in entropy[:]]
+    target = [0, 0, np.log(2)] / np.log(base)
+    values = [backend.to_numpy(x) for x in entropy]
     backend.assert_allclose(values, target, atol=PRECISION_TOL)
 
-    target_spectrum = [0, 0, np.log(2), np.log(2)]
-    entropy_spectrum = np.concatenate(entropy.spectrum).ravel().tolist()
+    target_spectrum = [1.0] + list([0, 0, np.log(2), np.log(2)] / np.log(base))
+    entropy_spectrum = np.ravel(np.concatenate(entropy.spectrum)).tolist()
     backend.assert_allclose(entropy_spectrum, target_spectrum, atol=PRECISION_TOL)
 
 
@@ -290,7 +235,7 @@ def test_entropy_density_matrix(backend):
 
     entropy = callbacks.EntanglementEntropy([1, 3])
     entropy.nqubits = 4
-    final_ent = entropy.apply_density_matrix(backend, rho)
+    final_ent = entropy.apply(backend, rho)
 
     rho = rho.reshape(8 * (2,))
     reduced_rho = np.einsum("abcdafch->bdfh", rho).reshape((4, 4))
