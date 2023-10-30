@@ -256,15 +256,13 @@ class TensorflowBackend(NumpyBackend):
         npmatrix = super().matrix_fused(gate)
         return self.tf.cast(npmatrix, dtype=self.dtype)
 
-    def execute_circuit(
-        self, circuit, initial_state=None, nshots=None, return_array=False
-    ):
+    def execute_circuit(self, circuit, initial_state=None, nshots=1000):
         with self.tf.device(self.device):
-            return super().execute_circuit(circuit, initial_state, nshots, return_array)
+            return super().execute_circuit(circuit, initial_state, nshots)
 
-    def execute_circuit_repeated(self, circuit, initial_state=None, nshots=None):
+    def execute_circuit_repeated(self, circuit, nshots, initial_state=None):
         with self.tf.device(self.device):
-            return super().execute_circuit_repeated(circuit, initial_state, nshots)
+            return super().execute_circuit_repeated(circuit, nshots, initial_state)
 
     def sample_shots(self, probabilities, nshots):
         # redefining this because ``tnp.random.choice`` is not available
@@ -283,7 +281,11 @@ class TensorflowBackend(NumpyBackend):
         # redefining this because ``tnp.unique`` is not available
         res, _, counts = self.tf.unique_with_counts(samples, out_idx="int64")
         res, counts = self.np.array(res), self.np.array(counts)
-        return collections.Counter({int(k): int(v) for k, v in zip(res, counts)})
+        if res.dtype == "string":
+            res = [r.numpy().decode("utf8") for r in res]
+        else:
+            res = [int(r) for r in res]
+        return collections.Counter({k: int(v) for k, v in zip(res, counts)})
 
     def update_frequencies(self, frequencies, probabilities, nsamples):
         # redefining this because ``tnp.unique`` and tensor update is not available
