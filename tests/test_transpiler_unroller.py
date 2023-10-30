@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-from qibolab.native import NativeType
 
 from qibo import gates
 from qibo.backends import NumpyBackend
@@ -8,6 +7,7 @@ from qibo.models import Circuit
 from qibo.transpiler.unroller import (
     DecompositionError,
     NativeGates,
+    NativeType,
     assert_decomposition,
     translate_gate,
 )

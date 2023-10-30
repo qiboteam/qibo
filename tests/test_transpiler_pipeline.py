@@ -3,7 +3,6 @@ import itertools
 import networkx as nx
 import numpy as np
 import pytest
-from qibolab.native import NativeType
 
 from qibo import gates
 from qibo.models import Circuit
@@ -16,7 +15,7 @@ from qibo.transpiler.pipeline import (
 )
 from qibo.transpiler.placer import Random, ReverseTraversal, Trivial
 from qibo.transpiler.router import ShortestPaths
-from qibo.transpiler.unroller import NativeGates
+from qibo.transpiler.unroller import NativeGates, NativeType
 
 
 def generate_random_circuit(nqubits, ngates, seed=None):
