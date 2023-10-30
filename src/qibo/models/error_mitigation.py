@@ -514,11 +514,11 @@ def apply_readout_mitigation(state, calibration_matrix):
     ``calibration_matrix * state.frequencies()``.
 
     Args:
-        state (:class:`qibo.states.CircuitResult`): input state to be updated.
+        state (:class:`qibo.measurements.CircuitResult`): input state to be updated.
         calibration_matrix (numpy.ndarray): calibration matrix for readout mitigation.
 
     Returns:
-        :class:`qibo.states.CircuitResult`: the input state with the updated frequencies.
+        :class:`qibo.measurements.CircuitResult`: the input state with the updated frequencies.
     """
     freq = np.zeros(2**state.nqubits)
     for k, v in state.frequencies().items():
@@ -548,7 +548,7 @@ def apply_randomized_readout_mitigation(
         backend (:class:`qibo.backends.abstract.Backend`): calculation engine.
 
     Return:
-        :class:`qibo.states.CircuitResult`: the state of the input circuit with
+        :class:`qibo.measurements.CircuitResult`: the state of the input circuit with
             mitigated frequencies.
 
     """

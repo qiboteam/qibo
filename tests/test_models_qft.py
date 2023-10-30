@@ -55,7 +55,7 @@ def test_qft_execution(backend, accelerators, nqubits, random):
         initial_state = random_statevector(2**nqubits, backend=backend)
     else:
         initial_state = backend.zero_state(nqubits)
-    final_state = backend.execute_circuit(c, np.copy(initial_state))
+    final_state = backend.execute_circuit(c, np.copy(initial_state))._state
     target_state = exact_qft(backend.to_numpy(initial_state))
     backend.assert_allclose(final_state, target_state)
 

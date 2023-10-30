@@ -78,13 +78,13 @@ def test_kraus_error(backend, density_matrix, nshots):
     target_final_state_samples = target_final_state.samples() if nshots else None
 
     if nshots is None:
-        backend.assert_allclose(final_state, target_final_state)
+        backend.assert_allclose(final_state._state, target_final_state._state)
     else:
         backend.assert_allclose(final_state_samples, target_final_state_samples)
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
-@pytest.mark.parametrize("nshots", [None, 10, 100])
+@pytest.mark.parametrize("nshots", [10, 100])
 def test_unitary_error(backend, density_matrix, nshots):
     u1 = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
     u2 = np.array([[0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
@@ -136,13 +136,13 @@ def test_unitary_error(backend, density_matrix, nshots):
     target_final_state_samples = target_final_state.samples() if nshots else None
 
     if nshots is None:
-        backend.assert_allclose(final_state, target_final_state)
+        backend.assert_allclose(final_state._state, target_final_state._state)
     else:
         backend.assert_allclose(final_state_samples, target_final_state_samples)
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
-@pytest.mark.parametrize("nshots", [None, 10, 100])
+@pytest.mark.parametrize("nshots", [10, 100])
 def test_pauli_error(backend, density_matrix, nshots):
     list_paulis = ["X", "Y", "Z"]
     probabilities = np.array([0, 0.2, 0.3])
@@ -191,13 +191,13 @@ def test_pauli_error(backend, density_matrix, nshots):
     target_final_state_samples = target_final_state.samples() if nshots else None
 
     if nshots is None:
-        backend.assert_allclose(final_state, target_final_state)
+        backend.assert_allclose(final_state._state, target_final_state._state)
     else:
         backend.assert_allclose(final_state_samples, target_final_state_samples)
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
-@pytest.mark.parametrize("nshots", [None, 10, 100])
+@pytest.mark.parametrize("nshots", [10, 100])
 def test_depolarizing_error(backend, density_matrix, nshots):
     depol = DepolarizingError(0.3)
     noise = NoiseModel()
@@ -243,7 +243,7 @@ def test_depolarizing_error(backend, density_matrix, nshots):
     target_final_state_samples = target_final_state.samples() if nshots else None
 
     if nshots is None:
-        backend.assert_allclose(final_state, target_final_state)
+        backend.assert_allclose(final_state._state, target_final_state._state)
     else:
         backend.assert_allclose(final_state_samples, target_final_state_samples)
 
@@ -282,9 +282,13 @@ def test_thermal_error(backend, density_matrix):
         else random_statevector(2**3, backend=backend)
     )
     backend.set_seed(123)
-    final_state = backend.execute_circuit(noise.apply(circuit), np.copy(initial_psi))
+    final_state = backend.execute_circuit(
+        noise.apply(circuit), np.copy(initial_psi)
+    )._state
     backend.set_seed(123)
-    target_final_state = backend.execute_circuit(target_circuit, np.copy(initial_psi))
+    target_final_state = backend.execute_circuit(
+        target_circuit, np.copy(initial_psi)
+    )._state
 
     backend.assert_allclose(final_state, target_final_state)
 
@@ -337,7 +341,7 @@ def test_amplitude_damping_error(backend, density_matrix, nshots):
     target_final_state_samples = target_final_state.samples() if nshots else None
 
     if nshots is None:
-        backend.assert_allclose(final_state, target_final_state)
+        backend.assert_allclose(final_state._state, target_final_state._state)
     else:
         backend.assert_allclose(final_state_samples, target_final_state_samples)
 
@@ -390,7 +394,7 @@ def test_phase_damping_error(backend, density_matrix, nshots):
     target_final_state_samples = target_final_state.samples() if nshots else None
 
     if nshots is None:
-        backend.assert_allclose(final_state, target_final_state)
+        backend.assert_allclose(final_state._state, target_final_state._state)
     else:
         backend.assert_allclose(final_state_samples, target_final_state_samples)
 
@@ -450,9 +454,13 @@ def test_reset_error(backend, density_matrix):
         else random_statevector(2**3, backend=backend)
     )
     backend.set_seed(123)
-    final_state = backend.execute_circuit(noise.apply(circuit), np.copy(initial_psi))
+    final_state = backend.execute_circuit(
+        noise.apply(circuit), np.copy(initial_psi)
+    )._state
     backend.set_seed(123)
-    target_final_state = backend.execute_circuit(target_circuit, np.copy(initial_psi))
+    target_final_state = backend.execute_circuit(
+        target_circuit, np.copy(initial_psi)
+    )._state
 
     backend.assert_allclose(final_state, target_final_state)
 
@@ -508,7 +516,7 @@ def test_custom_error(backend, density_matrix, nshots):
     target_final_state_samples = target_final_state.samples() if nshots else None
 
     if nshots is None:
-        backend.assert_allclose(final_state, target_final_state)
+        backend.assert_allclose(final_state._state, target_final_state._state)
     else:
         backend.assert_allclose(final_state_samples, target_final_state_samples)
 
@@ -690,7 +698,7 @@ def test_noisy_circuit(backend, nshots, idle_qubits):
         ]
         for bound in bounds:
             noise_model = CompositeNoiseModel(params)
-            noise_model.fit(result, bounds=bound, backend=backend)
+            noise_model.fit(circuit, result, bounds=bound, backend=backend)
             backend.assert_allclose(
                 noise_model.hellinger, 1, rtol=noise_model.hellinger0["shot_error"]
             )
@@ -737,14 +745,18 @@ def test_add_condition(backend, density_matrix):
         else random_statevector(2**3, backend=backend)
     )
     backend.set_seed(123)
-    final_state = backend.execute_circuit(noise.apply(circuit), np.copy(initial_psi))
+    final_state = backend.execute_circuit(
+        noise.apply(circuit), np.copy(initial_psi)
+    )._state
     backend.set_seed(123)
-    target_final_state = backend.execute_circuit(target_circuit, np.copy(initial_psi))
+    target_final_state = backend.execute_circuit(
+        target_circuit, np.copy(initial_psi)
+    )._state
 
     backend.assert_allclose(final_state, target_final_state)
 
 
-@pytest.mark.parametrize("density_matrix", [False, True])
+@pytest.mark.parametrize("density_matrix", [True])
 def test_gate_independent_noise(backend, density_matrix):
     pauli = PauliError(list(zip(["Y", "Z"], [0.2, 0.3])))
     depol = DepolarizingError(0.3)
@@ -777,10 +789,10 @@ def test_gate_independent_noise(backend, density_matrix):
     backend.set_seed(123)
     final_state = backend.execute_circuit(
         noise.apply(circuit), initial_state=np.copy(initial_psi)
-    )
+    )._state
     backend.set_seed(123)
     target_final_state = backend.execute_circuit(
         target_circuit, initial_state=np.copy(initial_psi)
-    )
+    )._state
 
     backend.assert_allclose(final_state, target_final_state)

@@ -189,7 +189,7 @@ def test_set_parameters_fusion(backend):
 
 @pytest.mark.parametrize("max_qubits", [1, 2, 3])
 def test_fusion_with_measurements(backend, max_qubits):
-    c = Circuit(3)
+    c = Circuit(3, density_matrix=True)
     c.add(gates.X(i) for i in range(3))
     c.add(gates.M(0))
     c.add(gates.CNOT(0, 1))

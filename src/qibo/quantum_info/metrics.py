@@ -173,7 +173,13 @@ def entanglement_of_formation(
     return ent_of_form
 
 
-def entropy(state, base: float = 2, check_hermitian: bool = False, backend=None):
+def entropy(
+    state,
+    base: float = 2,
+    check_hermitian: bool = False,
+    return_spectrum: bool = False,
+    backend=None,
+):
     """The von-Neumann entropy :math:`S(\\rho)` of a quantum ``state`` :math:`\\rho`, which
     is given by
 
@@ -186,6 +192,9 @@ def entropy(state, base: float = 2, check_hermitian: bool = False, backend=None)
         check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian.
             If ``False``, it assumes ``state`` is Hermitian .
             Defaults to ``False``.
+        return_spectrum: if ``True``, returns ``entropy`` and
+            :math:`-\\log_{\\textup{b}}(\\textup{eigenvalues})`, where :math:`b` is ``base``.
+            If ``False``, returns only ``entropy``. Default is ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -216,31 +225,34 @@ def entropy(state, base: float = 2, check_hermitian: bool = False, backend=None)
         )
 
     if purity(state) == 1.0:
-        ent = 0.0
+        if return_spectrum:
+            return 0.0, backend.cast([1.0], dtype=float)
+
+        return 0.0
+
+    if check_hermitian is False or _check_hermitian_or_not_gpu(state, backend=backend):
+        eigenvalues = np.linalg.eigvalsh(state)
     else:
-        if check_hermitian is False or _check_hermitian_or_not_gpu(
-            state, backend=backend
-        ):
-            eigenvalues = np.linalg.eigvalsh(state)
-        else:
-            eigenvalues = np.linalg.eigvals(state)
+        eigenvalues = np.linalg.eigvals(state)
 
-        if base == 2:
-            log_prob = np.where(eigenvalues > 0, np.log2(eigenvalues), 0.0)
-        elif base == 10:
-            log_prob = np.where(eigenvalues > 0, np.log10(eigenvalues), 0.0)
-        elif base == np.e:
-            log_prob = np.where(eigenvalues > 0, np.log(eigenvalues), 0.0)
-        else:
-            log_prob = np.where(
-                eigenvalues > 0, np.log(eigenvalues) / np.log(base), 0.0
-            )
+    if base == 2:
+        log_prob = np.where(eigenvalues > 0, np.log2(eigenvalues), 0.0)
+    elif base == 10:
+        log_prob = np.where(eigenvalues > 0, np.log10(eigenvalues), 0.0)
+    elif base == np.e:
+        log_prob = np.where(eigenvalues > 0, np.log(eigenvalues), 0.0)
+    else:
+        log_prob = np.where(eigenvalues > 0, np.log(eigenvalues) / np.log(base), 0.0)
 
-        ent = -np.sum(eigenvalues * log_prob)
-        # absolute value if entropy == 0.0 to avoid returning -0.0
-        ent = np.abs(ent) if ent == 0.0 else ent
+    ent = -np.sum(eigenvalues * log_prob)
+    # absolute value if entropy == 0.0 to avoid returning -0.0
+    ent = np.abs(ent) if ent == 0.0 else ent
 
     ent = float(ent)
+
+    if return_spectrum:
+        log_prob = backend.cast(log_prob, dtype=log_prob.dtype)
+        return ent, -log_prob
 
     return ent
 
@@ -250,6 +262,7 @@ def entanglement_entropy(
     bipartition,
     base: float = 2,
     check_hermitian: bool = False,
+    return_spectrum: bool = False,
     backend=None,
 ):
     """Calculates the entanglement entropy :math:`S` of bipartition :math:`A`
@@ -267,6 +280,8 @@ def entanglement_entropy(
         base (float, optional): the base of the log. Defaults to :math: `2`.
         check_hermitian (bool, optional): if ``True``, checks if :math:`\\rho_{A}` is Hermitian.
             If ``False``, it assumes ``state`` is Hermitian . Default: ``False``.
+        return_spectrum: if ``True``, returns ``entropy`` and eigenvalues of ``state``.
+            If ``False``, returns only ``entropy``. Default is ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -302,6 +317,7 @@ def entanglement_entropy(
         reduced_density_matrix,
         base=base,
         check_hermitian=check_hermitian,
+        return_spectrum=return_spectrum,
         backend=backend,
     )
 

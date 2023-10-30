@@ -65,7 +65,7 @@ def optimize(
             # make sure the return type matches the optimizer requirements.
             def myloss(parameters, circuit):
                 circuit.set_parameters(parameters)
-                return np.square(np.sum(circuit())) # returns numpy array
+                return np.square(np.sum(circuit().state())) # returns numpy array
 
             # create circuit ansatz for two qubits
             circuit = models.Circuit(2)

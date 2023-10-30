@@ -54,7 +54,7 @@ def test_circuit_vs_gate_execution(backend, compile):
     target_c.add(gates.X(0))
     target_c.add(gates.X(1))
     target_c.add(gates.CU1(0, 1, theta))
-    target_result = backend.execute_circuit(target_c)
+    target_result = backend.execute_circuit(target_c)._state
 
     # custom circuit
     def custom_circuit(state, theta):
@@ -125,8 +125,8 @@ def test_inverse_circuit_execution(backend, accelerators, fuse):
             c = c.fuse()
     invc = c.invert()
     target_state = np.ones(2**4) / 4
-    final_state = backend.execute_circuit(c, initial_state=np.copy(target_state))
-    final_state = backend.execute_circuit(invc, initial_state=final_state)
+    final_state = backend.execute_circuit(c, initial_state=np.copy(target_state))._state
+    final_state = backend.execute_circuit(invc, initial_state=final_state)._state
     backend.assert_allclose(final_state, target_state)
 
 
@@ -273,24 +273,12 @@ def test_repeated_execute_pauli_noise_channel(backend):
         gates.PauliNoiseChannel(i, list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.3])))
         for i in range(4)
     )
-    final_state = backend.execute_circuit(c, nshots=20)
-
-    backend.set_seed(1234)
-    target_state = []
-    channel_gates = [gates.X, gates.Y, gates.Z]
-    probs = [0.1, 0.2, 0.3, 0.4]
-    for _ in range(20):
-        noiseless_c = Circuit(4)
-        noiseless_c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
-        for i in range(4):
-            index = backend.sample_shots(probs, 1)[0]
-            if index != len(channel_gates):
-                noiseless_c.add(channel_gates[index](i))
-        result = backend.execute_circuit(noiseless_c)
-        target_state.append(result.state(numpy=True))
-    final_state = [backend.to_numpy(x) for x in final_state]
-    target_state = np.stack(target_state)
-    backend.assert_allclose(final_state, target_state)
+    with pytest.raises(RuntimeError) as excinfo:
+        final_state = backend.execute_circuit(c, nshots=20)
+    assert (
+        str(excinfo.value)
+        == "Attempting to perform noisy simulation with `density_matrix=False` and no Measurement gate in the Circuit. If you wish to retrieve the statistics of the outcomes please include measurements in the circuit, otherwise set `density_matrix=True` to recover the final state."
+    )
 
 
 def test_repeated_execute_with_pauli_noise(backend):
@@ -299,24 +287,12 @@ def test_repeated_execute_with_pauli_noise(backend):
     c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
     noisy_c = c.with_pauli_noise(list(zip(["X", "Z"], [0.2, 0.1])))
     backend.set_seed(1234)
-    final_state = backend.execute_circuit(noisy_c, nshots=20)
-
-    backend.set_seed(1234)
-    target_state = []
-    channel_gates = [gates.X, gates.Z]
-    probs = [0.2, 0.1, 0.7]
-    for _ in range(20):
-        noiseless_c = Circuit(4)
-        for i, t in enumerate(thetas):
-            noiseless_c.add(gates.RY(i, theta=t))
-            index = backend.sample_shots(probs, 1)[0]
-            if index != len(channel_gates):
-                noiseless_c.add(channel_gates[index](i))
-        result = backend.execute_circuit(noiseless_c)
-        target_state.append(result.state(numpy=True))
-    target_state = np.stack(target_state)
-    final_state = [backend.to_numpy(x) for x in final_state]
-    backend.assert_allclose(final_state, target_state)
+    with pytest.raises(RuntimeError) as excinfo:
+        final_state = backend.execute_circuit(noisy_c, nshots=20)
+    assert (
+        str(excinfo.value)
+        == "Attempting to perform noisy simulation with `density_matrix=False` and no Measurement gate in the Circuit. If you wish to retrieve the statistics of the outcomes please include measurements in the circuit, otherwise set `density_matrix=True` to recover the final state."
+    )
 
 
 @pytest.mark.parametrize("nqubits", [1, 2])
@@ -336,25 +312,13 @@ def test_repeated_execute_probs_and_freqs(backend, nqubits):
     # Tensorflow seems to yield different results with same seed
     if backend.__class__.__name__ == "TensorflowBackend":
         if nqubits == 1:
-            test_probabilities = [0.17578125, 0.82421875]
-            test_frequencies = Counter({1: 844, 0: 180})
+            test_frequencies = Counter({"1": 844, "0": 180})
         else:
-            test_probabilities = [0.04003906, 0.15039062, 0.15136719, 0.65820312]
-            test_frequencies = Counter({11: 674, 10: 155, 1: 154, 0: 41})
+            test_frequencies = Counter({"11": 674, "10": 155, "01": 154, "00": 41})
     else:
         if nqubits == 1:
-            test_probabilities = [0.22851562, 0.77148438]
             test_frequencies = Counter({"1": 790, "0": 234})
         else:
-            test_probabilities = [0.05078125, 0.18066406, 0.16503906, 0.60351562]
             test_frequencies = Counter({"11": 618, "10": 169, "01": 185, "00": 52})
-
-    test_probabilities = backend.cast(test_probabilities, dtype=float)
-    print(result.probabilities())
-    backend.assert_allclose(
-        float(backend.calculate_norm(result.probabilities() - test_probabilities))
-        < PRECISION_TOL,
-        True,
-    )
 
     assert result.frequencies() == test_frequencies
