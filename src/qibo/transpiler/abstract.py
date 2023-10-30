@@ -2,11 +2,11 @@ from abc import ABC, abstractmethod
 from typing import Tuple
 
 import networkx as nx
-from qibolab.native import NativeType
 
 from qibo import gates
 from qibo.config import raise_error
 from qibo.models import Circuit
+from qibo.transpiler.unroller import NativeType
 
 
 def find_gates_qubits_pairs(circuit: Circuit):

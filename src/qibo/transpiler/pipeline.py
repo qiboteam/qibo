@@ -13,6 +13,7 @@ from qibo.transpiler.star_connectivity import StarConnectivity
 from qibo.transpiler.unroller import (
     DecompositionError,
     NativeGates,
+    NativeType,
     assert_decomposition,
 )
 
