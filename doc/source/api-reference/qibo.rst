@@ -236,12 +236,6 @@ Unary Encoder
 .. autofunction:: qibo.models.encodings.unary_encoder
 
 
-Unary Encoder of Random Gaussian States
-"""""""""""""""""""""""""""""""""""""""
-
-.. autofunction:: qibo.models.encodings.unary_encoder_random_gaussian
-
-
 .. _error-mitigation:
 
 Error Mitigation
