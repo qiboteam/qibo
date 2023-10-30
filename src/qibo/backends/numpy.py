@@ -7,7 +7,7 @@ from qibo.backends import einsum_utils
 from qibo.backends.abstract import Backend
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.config import log, raise_error
-from qibo.states import CircuitResult
+from qibo.result import CircuitResult, MeasurementOutcomes, QuantumState
 
 
 class NumpyBackend(Backend):
@@ -368,9 +368,7 @@ class NumpyBackend(Backend):
         state = (1 - lam) * state + lam * identity
         return state
 
-    def execute_circuit(
-        self, circuit, initial_state=None, nshots=None, return_array=False
-    ):
+    def execute_circuit(self, circuit, initial_state=None, nshots=1000):
         if isinstance(initial_state, type(circuit)):
             if not initial_state.density_matrix == circuit.density_matrix:
                 raise_error(
@@ -390,15 +388,18 @@ class NumpyBackend(Backend):
                 return self.execute_circuit(initial_state + circuit, None, nshots)
 
         if circuit.repeated_execution:
-            return self.execute_circuit_repeated(circuit, initial_state, nshots)
+            if circuit.measurements or circuit.has_collapse:
+                return self.execute_circuit_repeated(circuit, nshots, initial_state)
+            else:
+                raise RuntimeError(
+                    "Attempting to perform noisy simulation with `density_matrix=False` and no Measurement gate in the Circuit. If you wish to retrieve the statistics of the outcomes please include measurements in the circuit, otherwise set `density_matrix=True` to recover the final state."
+                )
 
         if circuit.accelerators:  # pragma: no cover
             return self.execute_distributed_circuit(circuit, initial_state, nshots)
 
         try:
             nqubits = circuit.nqubits
-            if isinstance(initial_state, CircuitResult):
-                initial_state = initial_state.state()
 
             if circuit.density_matrix:
                 if initial_state is None:
@@ -420,11 +421,27 @@ class NumpyBackend(Backend):
                 for gate in circuit.queue:
                     state = gate.apply(self, state, nqubits)
 
-            if return_array:
-                return state
+            if circuit.has_unitary_channel:
+                # here we necessarily have `density_matrix=True`, otherwise
+                # execute_circuit_repeated would have been called
+                if circuit.measurements:
+                    circuit._final_state = CircuitResult(
+                        state, circuit.measurements, self, nshots=nshots
+                    )
+                    return circuit._final_state
+                else:
+                    circuit._final_state = QuantumState(state, self)
+                    return circuit._final_state
+
             else:
-                circuit._final_state = CircuitResult(self, circuit, state, nshots)
-                return circuit._final_state
+                if circuit.measurements:
+                    circuit._final_state = CircuitResult(
+                        state, circuit.measurements, self, nshots=nshots
+                    )
+                    return circuit._final_state
+                else:
+                    circuit._final_state = QuantumState(state, self)
+                    return circuit._final_state
 
         except self.oom_error:
             raise_error(
@@ -434,11 +451,33 @@ class NumpyBackend(Backend):
                 "different one using ``qibo.set_device``.",
             )
 
-    def execute_circuit_repeated(self, circuit, initial_state=None, nshots=None):
-        if nshots is None:
-            nshots = 1
+    def execute_circuits(
+        self, circuits, initial_states=None, nshots=1000, processes=None
+    ):
+        from qibo.parallel import parallel_circuits_execution
 
-        results = []
+        return parallel_circuits_execution(
+            circuits, initial_states, nshots, processes, backend=self
+        )
+
+    def execute_circuit_repeated(self, circuit, nshots, initial_state=None):
+        """
+        Execute the circuit `nshots` times to retrieve probabilities, frequencies
+        and samples. Note that this method is called only if a unitary channel
+        is present in the circuit (i.e. noisy simulation) and `density_matrix=False`, or
+        if some collapsing measuremnt is performed.
+        """
+
+        if (
+            circuit.has_collapse
+            and not circuit.measurements
+            and not circuit.density_matrix
+        ):
+            raise RuntimeError(
+                "The circuit contains only collapsing measurements (`collapse=True`) but `density_matrix=False`. Please set `density_matrix=True` to retrieve the final state after execution."
+            )
+
+        results, final_states = [], []
         nqubits = circuit.nqubits
 
         if not circuit.density_matrix:
@@ -447,8 +486,6 @@ class NumpyBackend(Backend):
                 measurement.target_qubits for measurement in circuit.measurements
             ]
             target_qubits = sum(target_qubits, tuple())
-            probabilities = np.zeros(2 ** len(target_qubits), dtype=float)
-            probabilities = self.cast(probabilities, dtype=probabilities.dtype)
 
         for _ in range(nshots):
             if circuit.density_matrix:
@@ -461,13 +498,10 @@ class NumpyBackend(Backend):
                     if gate.symbolic_parameters:
                         gate.substitute_symbols()
                     state = gate.apply_density_matrix(self, state, nqubits)
-
             else:
                 if circuit.accelerators:  # pragma: no cover
                     # pylint: disable=E1111
-                    state = self.execute_distributed_circuit(
-                        circuit, initial_state, return_array=True
-                    )
+                    state = self.execute_distributed_circuit(circuit, initial_state)
                 else:
                     if initial_state is None:
                         state = self.zero_state(nqubits)
@@ -479,55 +513,48 @@ class NumpyBackend(Backend):
                             gate.substitute_symbols()
                         state = gate.apply(self, state, nqubits)
 
+            if circuit.density_matrix:
+                final_states.append(state)
             if circuit.measurements:
-                result = CircuitResult(self, circuit, state, 1)
+                result = CircuitResult(state, circuit.measurements, self, nshots=1)
                 sample = result.samples()[0]
                 results.append(sample)
                 if not circuit.density_matrix:
-                    probabilities += result.probabilities()
                     samples.append("".join([str(s) for s in sample]))
-            else:
-                results.append(state)
 
-        if circuit.measurements:
-            final_result = CircuitResult(self, circuit, state, nshots)
-            final_result._samples = self.aggregate_shots(results)
-            if not circuit.density_matrix:
-                final_result._repeated_execution_probabilities = probabilities / nshots
-                final_result._repeated_execution_frequencies = (
-                    self.calculate_frequencies(samples)
+        if circuit.density_matrix:  # this implies also it has_collapse
+            assert circuit.has_collapse
+            final_state = np.asarray(final_states).mean(0)
+            if circuit.measurements:
+                qubits = [q for m in circuit.measurements for q in m.target_qubits]
+                final_result = CircuitResult(
+                    final_state,
+                    circuit.measurements,
+                    self,
+                    samples=self.aggregate_shots(results),
+                    nshots=nshots,
                 )
+            else:
+                final_result = QuantumState(final_state, self)
+            circuit._final_state = final_result
+            return final_result
+        else:
+            final_result = MeasurementOutcomes(
+                circuit.measurements,
+                self,
+                samples=self.aggregate_shots(results),
+                nshots=nshots,
+            )
+            final_result._repeated_execution_frequencies = self.calculate_frequencies(
+                samples
+            )
             circuit._final_state = final_result
             return final_result
 
-        circuit._final_state = CircuitResult(self, circuit, results[-1], nshots)
-
-        return results
-
-    def execute_distributed_circuit(
-        self, circuit, initial_state=None, nshots=None, return_array=False
-    ):
+    def execute_distributed_circuit(self, circuit, initial_state=None, nshots=None):
         raise_error(
             NotImplementedError, f"{self} does not support distributed execution."
         )
-
-    def circuit_result_representation(self, result):
-        return result.symbolic()
-
-    def circuit_result_tensor(self, result):
-        return result.execution_result
-
-    def circuit_result_probabilities(self, result, qubits=None):
-        if qubits is None:
-            qubits = result.measurement_gate.qubits
-
-        state = self.circuit_result_tensor(result)
-        if result.density_matrix:
-            return self.calculate_probabilities_density_matrix(
-                state, qubits, result.nqubits
-            )
-        else:
-            return self.calculate_probabilities(state, qubits, result.nqubits)
 
     def calculate_symbolic(
         self, state, nqubits, decimals=5, cutoff=1e-10, max_terms=20
@@ -755,6 +782,10 @@ class NumpyBackend(Backend):
             )
 
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
+        if isinstance(value, CircuitResult) or isinstance(value, QuantumState):
+            value = value.state()
+        if isinstance(target, CircuitResult) or isinstance(target, QuantumState):
+            target = target.state()
         value = self.to_numpy(value)
         target = self.to_numpy(target)
         np.testing.assert_allclose(value, target, rtol=rtol, atol=atol)

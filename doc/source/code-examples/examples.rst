@@ -24,7 +24,7 @@ Here is an example of a circuit with 2 qubits:
     result = c(initial_state) # c.execute(initial_state) also works
     print(result.state())
     # should print `tf.Tensor([1, 0, 0, 0])`
-    print(result.state(numpy=True))
+    print(result.state())
     # should print `np.array([1, 0, 0, 0])`
 .. testoutput::
     :hide:
@@ -212,7 +212,7 @@ Unmeasured qubits are ignored by the measurement objects. Also, the
 order that qubits appear in the results is defined by the order the user added
 the measurements and not the qubit ids.
 
-The final state vector is still accessible via :meth:`qibo.states.CircuitResult.state`.
+The final state vector is still accessible via :meth:`qibo.measurements.CircuitResult.state`.
 Note that the state vector accessed this way corresponds to the state as if no
 measurements occurred, that is the state is not collapsed during the measurement.
 This is because measurement gates are only used to sample bitstrings and do not

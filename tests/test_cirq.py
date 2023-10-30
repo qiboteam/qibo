@@ -59,9 +59,9 @@ def assert_gates_equivalent(
     assert c.depth == target_depth
     if accelerators and not backend.supports_multigpu:
         with pytest.raises(NotImplementedError):
-            final_state = backend.execute_circuit(c, np.copy(initial_state))
+            final_state = backend.execute_circuit(c, np.copy(initial_state)).state()
     else:
-        final_state = backend.execute_circuit(c, np.copy(initial_state))
+        final_state = backend.execute_circuit(c, np.copy(initial_state)).state()
         backend.assert_allclose(final_state, target_state, atol=atol)
 
 
@@ -309,8 +309,7 @@ def test_unitary_matrix_gate_controlled_by(backend, nqubits, ntargets, ndevices)
 def test_qft(backend, accelerators, nqubits):
     c = models.QFT(nqubits, accelerators=accelerators)
     initial_state = random_statevector(2**nqubits, backend=numpy_backend)
-    final_state = backend.execute_circuit(c, np.copy(initial_state))
-    final_state = final_state.state(numpy=True)
+    final_state = backend.execute_circuit(c, np.copy(initial_state)).state()
     final_state = backend.cast(final_state, dtype=final_state.dtype)
     cirq_gates = [(cirq.qft, list(range(nqubits)))]
     target_state, _ = execute_cirq(cirq_gates, nqubits, np.copy(initial_state))
