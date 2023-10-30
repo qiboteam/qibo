@@ -6,6 +6,7 @@ from typing import Optional
 import pytest
 
 from qibo import gates, matrices
+from qibo.gates import abstract
 from qibo.config import PRECISION_TOL
 
 
@@ -65,6 +66,23 @@ def test_controlled_gates_serialization(gatename):
     assert gates.Gate.from_dict(gate.raw).raw == gate.raw
 
 
+def test_gates_serialization_errors(monkeypatch):
+    with pytest.raises(ValueError, match="Unknown"):
+        _ = abstract.Gate.from_dict({"_class": "Ciao"})
+
+    error_tag = "not-control-error"
+
+    def mock_controlled_by(*args, **kwargs):
+        raise RuntimeError(error_tag)
+
+    monkeypatch.setattr(abstract.Gate, "controlled_by", mock_controlled_by)
+
+    with pytest.raises(RuntimeError, match=error_tag):
+        _ = abstract.Gate.from_dict(
+            {"_class": "H", "init_args": (0,), "init_kwargs": {}, "_control_qubits": ()}
+        )
+
+
 @pytest.mark.parametrize(
     "controls,instance", [((1,), "CNOT"), ((1, 2), "TOFFOLI"), ((1, 2, 4), "X")]
 )
@@ -88,7 +106,7 @@ def test_x_decomposition_errors(use_toffolis):
     """Check ``X`` decomposition errors."""
     gate = gates.X(0).controlled_by(1, 2, 3, 4)
     with pytest.raises(ValueError):
-        decomp = gate.decompose(2, 3, use_toffolis=use_toffolis)
+        _ = gate.decompose(2, 3, use_toffolis=use_toffolis)
 
 
 @pytest.mark.parametrize("controls,instance", [((1,), "CZ"), ((1, 2), "Z")])
