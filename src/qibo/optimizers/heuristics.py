@@ -8,7 +8,14 @@ from qibo.optimizers.abstract import Optimizer, check_options
 
 
 class CMAES(Optimizer):
-    def __init__(self, initial_parameters, loss=None, args=(), options={"sigma0": 0.5}):
+    def __init__(
+        self,
+        initial_parameters,
+        loss=None,
+        args=(),
+        options={"sigma0": 0.5},
+        optimizer_kwargs={},
+    ):
         """
         Covariance Matrix Adaptation Evolution Strategy based on
         `pycma <https://github.com/CMA-ES/pycma>`_.
@@ -18,14 +25,15 @@ class CMAES(Optimizer):
                 for gate parameters.
             loss (callable): loss function to train on.
             args (tuple): tuple containing loss function arguments.
-            options (dict): options which can be set into the `cma.fmin2` method.
-                To have a look to all possible options the command
-                `cma.CMAOptions()` can be used.
+            options (dict): arguments which can be set into the `cma.fmin2` method.
+            optimizer_kwargs (dict): extra options. To have a look to all
+                possible options the command `cma.CMAOptions()` can be used.
         """
         super().__init__(initial_parameters, args, loss)
 
         # check if options are compatible with the function and update class options
         check_options(function=cma.fmin2, options=options)
+        options.update({"options": optimizer_kwargs})
         self.set_options(options)
 
     def fit(self):
