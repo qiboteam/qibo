@@ -463,7 +463,14 @@ def vnCDR(
     return mit_val
 
 
-def calibration_matrix(nqubits, qubit_map, noise_model=None, nshots: int = 1000, backend=None):
+def ibu(prob, mat, iters=10):
+    t = np.ones((len(prob),1))/len(prob)
+    for k in range(iters):
+        t = t*(np.transpose(mat)@(prob/(mat@t)))
+
+    return t
+
+def calibration_matrix(nqubits, qubit_map, inv=False, noise_model=None, nshots: int = 1000, backend=None):
     """Computes the calibration matrix for readout mitigation.
 
     Args:
@@ -508,12 +515,16 @@ def calibration_matrix(nqubits, qubit_map, noise_model=None, nshots: int = 1000,
 
     # iqm 
 
-    # matrix[:, [0, 1]] = matrix[:, [1, 0]]
-
-    return np.linalg.inv(matrix)
+    #matrix[[0, 1], :] = matrix[[1, 0], :]
 
 
-def apply_readout_mitigation(state, calibration_matrix):
+    if inv == True:
+        matrix = np.linalg.inv(matrix)
+
+    return matrix
+
+
+def apply_readout_mitigation(state, calibration_matrix, inv=False):
     """Updates the frequencies of the input state with the mitigated ones obtained with
     ``calibration_matrix * state.frequencies()``.
 
@@ -530,8 +541,17 @@ def apply_readout_mitigation(state, calibration_matrix):
         freq[int(k, 2)] = v
 
     freq = freq.reshape(-1, 1)
-    for i, val in enumerate(calibration_matrix @ freq):
-        state._frequencies[i] = float(val)
+
+    if inv:
+        for i, val in enumerate(calibration_matrix @ freq):
+            state._frequencies[i] = float(val)
+    else:
+        prob_mit = ibu(freq/np.sum(freq),calibration_matrix)
+        freq_mit = np.round(prob_mit*np.sum(freq),0)
+        freq_mit = (freq_mit/np.sum(freq_mit))*np.sum(freq)
+
+        for i, val in enumerate(freq_mit):
+            state._frequencies[i] = float(freq_mit[i])
 
     return state
 
@@ -785,7 +805,7 @@ def mit_obs(
 
         if "calibration_matrix" in readout.keys():
             circuit_result = apply_readout_mitigation(
-                circuit_result, readout["calibration_matrix"]
+                circuit_result, readout["calibration_matrix"], readout["inv"]
             )
 
         log.info(c.draw())
@@ -821,9 +841,9 @@ def mit_obs(
     circuit_result = backend.execute_circuit(circuit, nshots=nshots)
     if "calibration_matrix" in readout.keys():
         circuit_result = apply_readout_mitigation(
-            circuit_result, readout["calibration_matrix"]
+            circuit_result, readout["calibration_matrix"], readout["inv"]
         )
-    exp_noisy =  observable.expectation_from_samples(circuit_result.frequencies()) # Add - for iqm
+    exp_noisy =   observable.expectation_from_samples(circuit_result.frequencies()) # Add - for iqm
     # exp_noisy = obs.expectation(c_noisy().state())
     exp_mit = (1 - a) * exp_noisy / ((1 - a) ** 2 + a_std**2)
     exp_mit_std = (
@@ -832,7 +852,7 @@ def mit_obs(
         * abs((1 - a) ** 2 - a_std**2)
         / ((1 - a) ** 2 + a_std**2) ** 2
     )
-
+    log.info(str(exp_mit)+' '+str(exp_noisy))
     if full_output:
         return exp_mit, exp_mit_std, a, a_std, a_list, data
 
