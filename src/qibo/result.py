@@ -247,7 +247,11 @@ class MeasurementOutcomes:
         return self._frequencies
 
     def probabilities(self):
-        """Calculate the probabilities as frequency / nshots"""
+        """Calculate the probabilities as frequencies / nshots
+
+        Returns:
+            The array containing the probabilities of the measured qubits.
+        """
         if self._probs is not None:
             return self._probs
 
