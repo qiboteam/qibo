@@ -214,7 +214,10 @@ def test_circuit_blocks():
         assert block.name == index
     reconstructed_circ = circuit_blocks.circuit()
     # Here we can't use assert gates_equality because the order of the gates is changed
-    np.testing.assert_allclose(circ(), reconstructed_circ())
+    np.testing.assert_allclose(
+        np.array(circ().state(), dtype=float),
+        np.array(reconstructed_circ().state(), dtype=float),
+    )
     first_block = circuit_blocks.search_by_index(0)
     assert_gates_equality(
         first_block.gates,
