@@ -117,8 +117,8 @@ class Circuit:
         queue (_Queue): List that holds the queue of gates of a circuit.
         parametrized_gates (_ParametrizedGates): List of parametric gates.
         trainable_gates (_ParametrizedGates): List of trainable gates.
-        measurements (list): List of non-collapsible measurements
-        _final_state (CircuitResult): Final state after full simulation of the circuit
+        measurements (list): List of non-collapsible measurements.
+        _final_state : Final result after full simulation of the circuit.
         compiled (CompiledExecutor): Circuit executor. Defaults to ``None``.
         repeated_execution (bool): If `True`, the circuit would be re-executed when sampling.
             Defaults to ``False``.
@@ -972,18 +972,21 @@ class Circuit:
 
             backend = GlobalBackend()
 
-        from qibo.states import CircuitResult
+        from qibo.result import CircuitResult, QuantumState
 
         executor = lambda state, nshots: backend.execute_circuit(
-            self, state, nshots, return_array=True
-        )
+            self, state, nshots
+        ).state()
         self.compiled = type("CompiledExecutor", (), {})()
         self.compiled.executor = backend.compile(executor)
-        self.compiled.result = lambda state, nshots: CircuitResult(
-            backend, self, state, nshots
-        )
+        if self.measurements:
+            self.compiled.result = lambda state, nshots: CircuitResult(
+                state, self.measurements, backend, nshots=nshots
+            )
+        else:
+            self.compiled.result = lambda state, nshots: QuantumState(state, backend)
 
-    def execute(self, initial_state=None, nshots=None):
+    def execute(self, initial_state=None, nshots=1000):
         """Executes the circuit. Exact implementation depends on the backend.
 
         Args:
@@ -992,6 +995,10 @@ class Circuit:
                 vector using an array or a circuit. If ``None``, the initial state
                 is ``|000..00>``.
             nshots (int): Number of shots.
+
+        Returns:
+            either a ``qibo.result.QuantumState``, ``qibo.result.MeasurementOutcomes``
+            or ``qibo.result.CircuitResult`` depending on the circuit's configuration.
         """
         if self.compiled:
             # pylint: disable=E1101
@@ -1008,7 +1015,7 @@ class Circuit:
             else:
                 return GlobalBackend().execute_circuit(self, initial_state, nshots)
 
-    def __call__(self, initial_state=None, nshots=None):
+    def __call__(self, initial_state=None, nshots=1000):
         """Equivalent to ``circuit.execute``."""
         return self.execute(initial_state=initial_state, nshots=nshots)
 
