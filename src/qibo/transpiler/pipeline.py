@@ -4,7 +4,7 @@ import numpy as np
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 from qibo.quantum_info.random_ensembles import random_statevector
-from qibo.transpiler.abstract import Optimizer, Placer, Router, Unroller
+from qibo.transpiler.abstract import NativeType, Optimizer, Placer, Router, Unroller
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.placer import Trivial, assert_placement
 from qibo.transpiler.router import ConnectivityError, assert_connectivity
@@ -12,7 +12,6 @@ from qibo.transpiler.star_connectivity import StarConnectivity
 from qibo.transpiler.unroller import (
     DecompositionError,
     NativeGates,
-    NativeType,
     assert_decomposition,
 )
 

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from enum import Flag, auto
 from typing import Tuple
 
 import networkx as nx
@@ -6,7 +7,27 @@ import networkx as nx
 from qibo import gates
 from qibo.config import raise_error
 from qibo.models import Circuit
-from qibo.transpiler.unroller import NativeType
+
+
+class NativeType(Flag):
+    """Define available types of native gates.
+
+    Should have the same names with qibo gates.
+    """
+
+    M = auto()
+    Z = auto()
+    RZ = auto()
+    GPI2 = auto()
+    CZ = auto()
+    iSWAP = auto()
+
+    @classmethod
+    def from_gate(cls, gate: gates.Gate):
+        try:
+            return getattr(cls, gate.__class__.__name__)
+        except AttributeError:
+            raise ValueError(f"Gate {gate} cannot be used as native.")
 
 
 def find_gates_qubits_pairs(circuit: Circuit):

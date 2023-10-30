@@ -4,10 +4,10 @@ import pytest
 from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
+from qibo.transpiler.abstract import NativeType
 from qibo.transpiler.unroller import (
     DecompositionError,
     NativeGates,
-    NativeType,
     assert_decomposition,
     translate_gate,
 )
@@ -135,7 +135,7 @@ def test_fSim_to_native(natives):
     [NativeType.CZ, NativeType.iSWAP, NativeType.CZ | NativeType.iSWAP],
 )
 def test_GeneralizedfSim_to_native(natives):
-    from .test_transpilers_unitary_decompositions import random_unitary
+    from .test_transpiler_unitary_decompositions import random_unitary
 
     unitary = random_unitary(1)
     gate = gates.GeneralizedfSim(0, 1, unitary, phi=0.1)
@@ -167,7 +167,7 @@ def test_TOFFOLI_to_native(natives):
 )
 @pytest.mark.parametrize("nqubits", [1, 2])
 def test_unitary_to_native(nqubits, natives):
-    from .test_transpilers_unitary_decompositions import random_unitary
+    from .test_transpiler_unitary_decompositions import random_unitary
 
     u = random_unitary(nqubits)
     # transform to SU(2^nqubits) form

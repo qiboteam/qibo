@@ -6,6 +6,7 @@ import pytest
 
 from qibo import gates
 from qibo.models import Circuit
+from qibo.transpiler.abstract import NativeType
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.pipeline import (
     Passes,
@@ -15,7 +16,7 @@ from qibo.transpiler.pipeline import (
 )
 from qibo.transpiler.placer import Random, ReverseTraversal, Trivial
 from qibo.transpiler.router import ShortestPaths
-from qibo.transpiler.unroller import NativeGates, NativeType
+from qibo.transpiler.unroller import NativeGates
 
 
 def generate_random_circuit(nqubits, ngates, seed=None):

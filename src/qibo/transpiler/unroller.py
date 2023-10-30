@@ -1,39 +1,16 @@
-from enum import Flag, auto
-
 import numpy as np
 
 from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.config import raise_error
 from qibo.models import Circuit
-from qibo.transpiler.abstract import Unroller
+from qibo.transpiler.abstract import NativeType, Unroller
 from qibo.transpiler.unitary_decompositions import (
     two_qubit_decomposition,
     u3_decomposition,
 )
 
 backend = NumpyBackend()
-
-
-class NativeType(Flag):
-    """Define available types of native gates.
-
-    Should have the same names with qibo gates.
-    """
-
-    M = auto()
-    Z = auto()
-    RZ = auto()
-    GPI2 = auto()
-    CZ = auto()
-    iSWAP = auto()
-
-    @classmethod
-    def from_gate(cls, gate: gates.Gate):
-        try:
-            return getattr(cls, gate.__class__.__name__)
-        except AttributeError:
-            raise ValueError(f"Gate {gate} cannot be used as native.")
 
 
 # TODO: Make setting single-qubit native gates more flexible
