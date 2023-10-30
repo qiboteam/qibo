@@ -6,8 +6,8 @@ from typing import Optional
 import pytest
 
 from qibo import gates, matrices
-from qibo.gates import abstract
 from qibo.config import PRECISION_TOL
+from qibo.gates import abstract
 
 
 @pytest.mark.parametrize(
