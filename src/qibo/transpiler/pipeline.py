@@ -1,6 +1,5 @@
 import networkx as nx
 import numpy as np
-from qibolab.native import NativeType
 
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
