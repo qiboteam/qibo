@@ -13,9 +13,10 @@ def test_unary_encoder(backend, nqubits):
         data = sampler.random((nqubits, nqubits))
         data = backend.cast(data, dtype=data.dtype)
         unary_encoder(data)
-    # with pytest.raises(ValueError):
-    #     data = backend.cast([1, "2", 1])
-    #     unary_encoder(data)
+    with pytest.raises(ValueError):
+        data = sampler.random(nqubits + 1)
+        data = backend.cast(data, dtype=data.dtype)
+        unary_encoder(data)
 
     # sampling random data in interval [-1, 1]
     sampler = np.random.default_rng(1)
