@@ -15,7 +15,6 @@ from qibo.transpiler.unroller import (
 
 def assert_matrices_allclose(gate, two_qubit_natives):
     backend = NumpyBackend()
-    native_gates = translate_gate(gate, two_qubit_natives)
     target_matrix = gate.matrix(backend)
     # Remove global phase from target matrix
     target_unitary = target_matrix / np.power(
@@ -177,14 +176,14 @@ def test_unitary_to_native(nqubits, natives):
 
 
 def test_count_1q():
-    from qibolab.transpilers.unroller import cz_dec
+    from qibo.transpiler.unroller import cz_dec
 
     np.testing.assert_allclose(cz_dec.count_1q(gates.CNOT(0, 1)), 2)
     np.testing.assert_allclose(cz_dec.count_1q(gates.CRX(0, 1, 0.1)), 2)
 
 
 def test_count_2q():
-    from qibolab.transpilers.unroller import cz_dec
+    from qibo.transpiler.unroller import cz_dec
 
     np.testing.assert_allclose(cz_dec.count_2q(gates.CNOT(0, 1)), 1)
     np.testing.assert_allclose(cz_dec.count_2q(gates.CRX(0, 1, 0.1)), 2)
