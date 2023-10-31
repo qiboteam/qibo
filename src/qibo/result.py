@@ -246,21 +246,36 @@ class MeasurementOutcomes:
 
         return self._frequencies
 
-    def probabilities(self):
+    def probabilities(self, qubits=None):
         """Calculate the probabilities as frequencies / nshots
 
         Returns:
             The array containing the probabilities of the measured qubits.
         """
+        nqubits = len(self.measurement_gate.qubits)
+        if qubits is None:
+            qubits = range(nqubits)
+        else:
+            if not set(qubits).issubset(self.measurement_gate.qubits):
+                raise RuntimeError(
+                    "Asking probabilities for qubits that were not measured."
+                )
+            else:
+                qubits = range(len(qubits))
+
         if self._probs is not None:
-            return self._probs
+            return self.backend.calculate_probabilities(
+                self._probs, qubits, len(self.measurement_gate.qubits)
+            )
 
         frequencies = self.frequencies(binary=False)
         probs = self.backend.np.zeros(2 ** self._samples.shape[1])
         for state, freq in frequencies.items():
             probs[state] = freq / self.nshots
         self._probs = probs
-        return probs
+        return self.backend.calculate_probabilities(
+            probs, qubits, len(self.measurement_gate.qubits)
+        )
 
     def has_samples(self):
         if self._samples is not None:
