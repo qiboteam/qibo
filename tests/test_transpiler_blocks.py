@@ -9,10 +9,12 @@ from qibo.transpiler.blocks import (
     _find_previous_gates,
     _find_successive_gates,
     block_decomposition,
+    check_multi_qubit_measurements,
     count_multi_qubit_gates,
     gates_on_qubit,
     initial_block_decomposition,
     remove_gates,
+    split_multi_qubit_measurements,
 )
 
 
@@ -126,6 +128,48 @@ def test_initial_block_decomposition():
     assert len(blocks[3].gates) == 2
 
 
+def test_check_measurements():
+    circ = Circuit(2)
+    circ.add(gates.H(1))
+    circ.add(gates.M(0, 1))
+    assert check_multi_qubit_measurements(circ)
+    circ = Circuit(2)
+    circ.add(gates.H(1))
+    circ.add(gates.M(0))
+    circ.add(gates.M(1))
+    assert not check_multi_qubit_measurements(circ)
+
+
+def test_split_measurements():
+    circ = Circuit(2)
+    circ.add(gates.H(1))
+    circ.add(gates.M(0, 1))
+    new_circ = split_multi_qubit_measurements(circ)
+    assert_gates_equality(new_circ.queue, [gates.H(1), gates.M(0), gates.M(1)])
+
+
+def test_initial_block_decomposition_measurements():
+    circ = Circuit(5)
+    circ.add(gates.M(0))
+    circ.add(gates.M(1))
+    circ.add(gates.H(1))
+    circ.add(gates.H(0))
+    circ.add(gates.CZ(0, 1))
+    circ.add(gates.CZ(0, 1))
+    circ.add(gates.M(1))
+    circ.add(gates.M(3))
+    circ.add(gates.H(3))
+    circ.add(gates.H(4))
+    blocks = initial_block_decomposition(circ)
+    print(blocks[0].gates)
+    assert_gates_equality(
+        blocks[0].gates,
+        [gates.M(0), gates.M(1), gates.H(1), gates.H(0), gates.CZ(0, 1)],
+    )
+    assert_gates_equality(blocks[1].gates, [gates.CZ(0, 1), gates.M(1)])
+    assert_gates_equality(blocks[2].gates, [gates.M(3), gates.H(3), gates.H(4)])
+
+
 def test_initial_block_decomposition_error():
     circ = Circuit(3)
     circ.add(gates.TOFFOLI(0, 1, 2))
@@ -144,6 +188,7 @@ def test_block_decomposition_no_fuse():
     circ = Circuit(4)
     circ.add(gates.H(1))
     circ.add(gates.H(0))
+    circ.add(gates.H(0))
     circ.add(gates.CZ(0, 1))
     circ.add(gates.H(0))
     circ.add(gates.CZ(0, 1))
@@ -152,10 +197,11 @@ def test_block_decomposition_no_fuse():
     circ.add(gates.H(3))
     blocks = block_decomposition(circ, fuse=False)
     assert_gates_equality(
-        blocks[0].gates, [gates.H(1), gates.H(0), gates.CZ(0, 1), gates.H(0)]
+        blocks[0].gates,
+        [gates.H(1), gates.H(0), gates.H(0), gates.CZ(0, 1), gates.H(0)],
     )
     assert len(blocks) == 4
-    assert len(blocks[0].gates) == 4
+    assert len(blocks[0].gates) == 5
     assert len(blocks[1].gates) == 1
     assert blocks[2].entangled == True
     assert blocks[3].entangled == False
@@ -191,6 +237,39 @@ def test_block_decomposition():
     assert len(blocks[3].gates) == 2
     assert blocks[3].qubits == (2, 3)
     assert blocks[2].count_2q_gates() == 3
+    assert len(blocks[2].gates) == 3
+
+
+def test_block_decomposition_measurements():
+    circ = Circuit(4)
+    circ.add(gates.H(1))  # first block
+    circ.add(gates.H(0))  # first block
+    circ.add(gates.CZ(0, 1))  # first block
+    circ.add(gates.H(0))  # first block
+    circ.add(gates.M(0, 1))  # first block
+    circ.add(gates.CZ(1, 2))  # second block
+    circ.add(gates.CZ(1, 2))  # second block
+    circ.add(gates.H(1))  # second block
+    circ.add(gates.H(3))  # 4 block
+    circ.add(gates.CZ(0, 1))  # 3 block
+    circ.add(gates.CZ(0, 1))  # 3 block
+    circ.add(gates.CZ(2, 3))  # 4 block
+    circ.add(gates.M(0, 1))  # 3 block
+    blocks = block_decomposition(circ)
+    assert_gates_equality(
+        blocks[0].gates,
+        [gates.H(1), gates.H(0), gates.CZ(0, 1), gates.H(0), gates.M(0), gates.M(1)],
+    )
+    assert len(blocks) == 4
+    assert blocks[0].count_2q_gates() == 1
+    assert len(blocks[0].gates) == 5
+    assert blocks[0].qubits == (0, 1)
+    assert blocks[1].count_2q_gates() == 2
+    assert len(blocks[1].gates) == 3
+    assert blocks[3].count_2q_gates() == 1
+    assert len(blocks[3].gates) == 2
+    assert blocks[3].qubits == (2, 3)
+    assert blocks[2].count_2q_gates() == 2
     assert len(blocks[2].gates) == 3
 
 
@@ -289,10 +368,12 @@ def test_search_by_index_error_no_index_found():
 
 def test_block_on_qubits():
     block = Block(
-        qubits=(0, 1), gates=[gates.H(0), gates.CZ(0, 1), gates.H(1), gates.CZ(1, 0)]
+        qubits=(0, 1),
+        gates=[gates.H(0), gates.CZ(0, 1), gates.H(1), gates.CZ(1, 0), gates.M(1)],
     )
     new_block = block.on_qubits(new_qubits=(2, 3))
     assert new_block.gates[0].qubits == (2,)
     assert new_block.gates[1].qubits == (2, 3)
     assert new_block.gates[2].qubits == (3,)
     assert new_block.gates[3].qubits == (3, 2)
+    assert new_block.gates[4].qubits == (3,)
