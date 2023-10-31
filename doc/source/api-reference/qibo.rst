@@ -757,9 +757,10 @@ U1q
 .. note::
     The other Quantinuum single-qubit and two-qubit native gates are
     implemented in Qibo as:
-        - Pauli-:math:`Z` rotation: :class:`qibo.gates.RZ`
-        - Arbitrary :math:`ZZ` rotation: :class:`qibo.gates.RZZ`
-        - Fully-entangling :math:`ZZ`-interaction: :math:`R_{ZZ}(\\pi/2)`
+
+    - Pauli-:math:`Z` rotation: :class:`qibo.gates.RZ`
+    - Arbitrary :math:`ZZ` rotation: :class:`qibo.gates.RZZ`
+    - Fully-entangling :math:`ZZ`-interaction: :math:`R_{ZZ}(\\pi/2)`
 
 
 _______________________
