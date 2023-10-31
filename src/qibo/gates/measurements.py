@@ -201,9 +201,12 @@ class M(Gate):
 
     @classmethod
     def load(cls, payload):
-        """Constructs a measurement gate starting from a json serialized one."""
+        """Constructs a measurement gate starting from a json serialized
+        one."""
         args = json.loads(payload)
-        args.pop("name")
+        # drop general serialization data, unused in this specialized loader
+        for key in ("name", "init_args", "_class"):
+            args.pop(key)
         qubits = args.pop("_target_qubits")
         args["basis"] = [getattr(gates, g) for g in args["basis"]]
         args.update(args.pop("init_kwargs"))
