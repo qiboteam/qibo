@@ -43,6 +43,7 @@ def test_uniform_sampling_U3(backend, seed):
     # expectation values in the 3 directions should be the same
     expectation_values = []
     for row in phases:
+        row = [float(phase) for phase in row]
         circuit = Circuit(1)
         circuit.add(gates.U3(0, *row))
         state = backend.execute_circuit(circuit).state()
