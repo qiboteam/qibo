@@ -54,7 +54,8 @@ def test_uniform_sampling_U3(backend, seed):
                 np.conj(state) @ Z @ state,
             ]
         )
-    expectation_values = np.mean(expectation_values, axis=0)
+expectation_values = backend.cast(expectation_values)
+expectation_values = np.mean(expectation_values, axis=0)
 
     backend.assert_allclose(expectation_values[0], expectation_values[1], atol=1e-1)
     backend.assert_allclose(expectation_values[0], expectation_values[2], atol=1e-1)
