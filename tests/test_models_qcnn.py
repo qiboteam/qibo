@@ -3,9 +3,8 @@ import math
 import numpy as np
 import pytest
 
-from qibo.models import Circuit
+from qibo.models import Circuit, qcnn
 from qibo import gates
-from QuantumCNNwAnsatz import QuantumCNN
 
 num_angles = 21
 angles0 = [i * math.pi / num_angles for i in range(num_angles)]
