@@ -295,7 +295,7 @@ def haar_integral(
     Args:
         nqubits (int): Number of qubits.
         power_t (int): power that defines the :math:`t`-design.
-        exact (bool, optional): if ``True``, calculates the Haar integram
+        exact (bool, optional): if ``True``, calculates the Haar integral
             exactly. If ``False``, calculates the integral via Monte Carlo sampling.
             Defaults to ``True``.
         samples (int, optional): number of samples to estimate the integral
