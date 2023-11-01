@@ -3,10 +3,8 @@
 import math
 
 import numpy as np
-from scipy.stats import rv_continuous
 
 from qibo import gates
-from qibo.backends import GlobalBackend
 from qibo.config import raise_error
 from qibo.models.circuit import Circuit
 
@@ -76,7 +74,8 @@ def unary_encoder(data):
 
 
 def _generate_rbs_pairs(nqubits):
-    # generating list of indexes representing the RBS connections
+    """Generating list of indexes representing the RBS connections
+    and creating circuit with all RBS initialised with 0.0 phase."""
     pairs_rbs = [[(0, int(nqubits / 2))]]
     indexes = list(np.array(pairs_rbs).flatten())
     for depth in range(2, int(math.log2(nqubits)) + 1):
@@ -86,7 +85,6 @@ def _generate_rbs_pairs(nqubits):
         pairs_rbs += pairs_rbs_per_depth
         indexes = list(np.array(pairs_rbs_per_depth).flatten())
 
-    # creating circuit with all RBS initialised with 0.0 phase
     circuit = Circuit(nqubits)
     circuit.add(gates.X(0))
     for row in pairs_rbs:
