@@ -147,15 +147,6 @@ class MeasurementOutcomes:
     def __init__(
         self, measurements, backend, probabilities=None, samples=None, nshots=1000
     ):
-        if probabilities is None and samples is None:
-            raise RuntimeError(
-                "You have to provide either the `probabilities` or the `samples` to build a `MeasurementOutcomes` object."
-            )
-        if probabilities is not None and samples is not None:
-            raise RuntimeError(
-                "Both the `probabilities` and the `samples` were provided to build the `MeasurementOutcomes` object. Don't know which one to use."
-            )
-
         self.backend = backend
         self.measurements = measurements
         self.nshots = nshots

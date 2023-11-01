@@ -16,26 +16,6 @@ def test_circuit_result_error(backend):
     )
 
 
-def test_measurementoutcomes_errors(backend):
-    c = models.Circuit(1)
-    c.add(gates.M(0))
-    samples = [np.array([1, 0]) for _ in range(5)]
-    with pytest.raises(Exception) as exc_info:
-        MeasurementOutcomes(c.measurements, backend)
-    assert (
-        str(exc_info.value)
-        == "You have to provide either the `probabilities` or the `samples` to build a `MeasurementOutcomes` object."
-    )
-    with pytest.raises(Exception) as exc_info:
-        MeasurementOutcomes(
-            c.measurements, backend, probabilities=np.array([1, 0]), samples=samples
-        )
-    assert (
-        str(exc_info.value)
-        == "Both the `probabilities` and the `samples` were provided to build the `MeasurementOutcomes` object. Don't know which one to use."
-    )
-
-
 def test_measurement_gate_dump_load(backend):
     c = models.Circuit(2)
     c.add(gates.M(1, 0, basis=[gates.Z, gates.X]))
