@@ -160,7 +160,7 @@ def test_two_qubit_decomposition(run_number):
     np.testing.assert_allclose(final_matrix, unitary, atol=ATOL)
 
 
-@pytest.mark.parametrize("gatename", ["CNOT", "CZ", "SWAP", "iSWAP", "fSim"])
+@pytest.mark.parametrize("gatename", ["CNOT", "CZ", "SWAP", "iSWAP", "fSim", "I"])
 def test_two_qubit_decomposition_common_gates(gatename):
     """Test general two-qubit decomposition on some common gates."""
     backend = NumpyBackend()
@@ -189,15 +189,18 @@ def test_two_qubit_decomposition_bell_unitary(run_number, hz_zero):
     np.testing.assert_allclose(final_matrix, unitary, atol=ATOL)
 
 
-# def test_two_qubit_decomposition_no_entanglement(gatename):
-#     """Test two-qubit decomposition on unitary that creates no entanglement."""
-#     backend = NumpyBackend()
-#     matrix = np.array([[-1.,0.,0.,0.],
-#                        [0.,-1.,0.,0.],
-#                        [0.,0.,1.,0.],
-#                        [0.,0.,0.,1.],
-#                        ])
-#     c = Circuit(2)
-#     c.add(two_qubit_decomposition(0, 1, matrix))
-#     final_matrix = c.unitary(backend)
-#     np.testing.assert_allclose(final_matrix, matrix, atol=ATOL)
+def test_two_qubit_decomposition_no_entanglement():
+    """Test two-qubit decomposition on unitary that creates no entanglement."""
+    backend = NumpyBackend()
+    matrix = np.array(
+        [
+            [-1.0, 0.0, 0.0, 0.0],
+            [0.0, -1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ]
+    )
+    c = Circuit(2)
+    c.add(two_qubit_decomposition(0, 1, matrix))
+    final_matrix = c.unitary(backend)
+    np.testing.assert_allclose(final_matrix, matrix, atol=ATOL)
