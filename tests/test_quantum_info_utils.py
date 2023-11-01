@@ -176,13 +176,8 @@ def test_haar_integral_errors(backend):
         nqubits, power_t, samples = 2, 0.5, 10
         test = haar_integral(nqubits, power_t, samples, backend=backend)
     with pytest.raises(TypeError):
-        nqubits, power_t, exact, samples = 2, 1, False, 1.2
-        test = haar_integral(
-            nqubits, power_t, exact=exact, samples=samples, backend=backend
-        )
-    with pytest.raises(TypeError):
-        nqubits, power_t, samples = 2, 2, 0.5
-        test = haar_integral(nqubits, power_t, samples, backend=backend)
+        nqubits, power_t, samples = 2, 1, 1.2
+        test = haar_integral(nqubits, power_t, samples=samples, backend=backend)
 
 
 @pytest.mark.parametrize("power_t", [1, 2, 3])
@@ -190,13 +185,9 @@ def test_haar_integral_errors(backend):
 def test_haar_integral(backend, nqubits, power_t):
     samples = int(1e4)
 
-    haar_int_exact = haar_integral(
-        nqubits, power_t, exact=True, samples=samples, backend=backend
-    )
+    haar_int_exact = haar_integral(nqubits, power_t, samples=None, backend=backend)
 
-    haar_int_sampled = haar_integral(
-        nqubits, power_t, exact=False, samples=samples, backend=backend
-    )
+    haar_int_sampled = haar_integral(nqubits, power_t, samples=samples, backend=backend)
 
     backend.assert_allclose(haar_int_sampled, haar_int_exact, atol=1e-2)
 

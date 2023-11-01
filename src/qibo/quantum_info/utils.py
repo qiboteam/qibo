@@ -282,7 +282,6 @@ def hellinger_fidelity(prob_dist_p, prob_dist_q, validate: bool = False, backend
 def haar_integral(
     nqubits: int,
     power_t: int,
-    exact: bool = True,
     samples: Optional[int] = None,
     backend=None,
 ):
@@ -295,11 +294,9 @@ def haar_integral(
     Args:
         nqubits (int): Number of qubits.
         power_t (int): power that defines the :math:`t`-design.
-        exact (bool, optional): if ``True``, calculates the Haar integral
-            exactly. If ``False``, calculates the integral via Monte Carlo sampling.
-            Defaults to ``True``.
-        samples (int, optional): number of samples to estimate the integral
-            if ``exact=False``. Defaults to ``None``.
+        samples (int, optional): If ``None``, estimated the integral exactly.
+            Otherwise, number of samples to estimate the integral via sampling.
+            Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -322,12 +319,7 @@ def haar_integral(
             TypeError, f"power_t must be type int, but it is type {type(power_t)}."
         )
 
-    if isinstance(exact, bool) is False:
-        raise_error(
-            TypeError, f"exact must be type bool, but it is type {type(exact)}."
-        )
-
-    if not exact and isinstance(samples, int) is False:
+    if samples is not None and isinstance(samples, int) is False:
         raise_error(
             TypeError, f"samples must be type int, but it is type {type(samples)}."
         )
@@ -337,7 +329,7 @@ def haar_integral(
 
     dim = 2**nqubits
 
-    if not exact:
+    if samples is not None:
         from qibo.quantum_info.random_ensembles import (  # pylint: disable=C0415
             random_statevector,
         )
