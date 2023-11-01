@@ -31,7 +31,7 @@ class CliffordBackend(NumpyBackend):
 
     def execute_circuit(self, circuit, initial_state=None):
         for gate in circuit.queue:
-            if not gate.clifford:
+            if not gate.clifford and not gate.__class__.__name__ == "M":
                 raise RuntimeError("The circuit contains non-Clifford gates.")
 
         try:
@@ -39,9 +39,9 @@ class CliffordBackend(NumpyBackend):
 
             if initial_state is None:
                 I = self.np.eye(nqubits)
-                tableau = self.np.zeros((2 * nqubits, 2 * nqubits + 1), dtype=bool)
+                tableau = self.np.zeros((2 * nqubits + 1, 2 * nqubits + 1), dtype=bool)
                 tableau[:nqubits, :nqubits] = I
-                tableau[nqubits:, nqubits : 2 * nqubits] = I
+                tableau[nqubits:-1, nqubits : 2 * nqubits] = I
             else:
                 tableau = initial_state
 
