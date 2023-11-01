@@ -179,7 +179,7 @@ def split_multi_qubit_measurements(circuit: Circuit):
     for gate in circuit.queue:
         if isinstance(gate, gates.M) and len(gate.qubits) > 1:
             for qubit in gate.qubits:
-                circuit.add(gates.M(qubit))
+                new_circuit.add(gates.M(qubit))
         else:
             new_circuit.add(gate)
     return new_circuit

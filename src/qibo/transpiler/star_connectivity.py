@@ -1,6 +1,7 @@
-from qibo import gates
-from qibo.config import log, raise_error
+from qibo import Circuit, gates
+from qibo.backends import NumpyBackend
 from qibo.transpiler.abstract import Router
+from qibo.transpiler.router import ConnectivityError
 
 
 def find_connected_qubit(qubits, queue, hardware_qubits):
@@ -40,45 +41,10 @@ class StarConnectivity(Router):
         verbose (bool): print info messages.
     """
 
-    def __init__(self, connectivity=None, middle_qubit=2, verbose=False):
+    def __init__(self, connectivity=None, middle_qubit=2):
         self.middle_qubit = middle_qubit
-        self.verbose = verbose
 
-    def tlog(self, message):
-        """Print messages only if ``verbose`` was set to ``True``."""
-        if self.verbose:
-            log.info(message)
-
-    def is_satisfied(self, circuit):
-        """Checks if a circuit respects connectivity constraints.
-
-        Args:
-            circuit (qibo.models.Circuit): Circuit model to check.
-            middle_qubit (int): Hardware middle qubit.
-            verbose (bool): If ``True`` it prints debugging log messages.
-
-        Returns ``True`` if the following conditions are satisfied:
-            - Circuit does not contain more than two-qubit gates.
-            - All two-qubit gates have qubit 0 as target or control.
-
-            otherwise returns ``False``.
-        """
-        for gate in circuit.queue:
-            if len(gate.qubits) > 2 and not isinstance(gate, gates.M):
-                self.tlog(f"{gate.name} acts on more than two qubits.")
-                return False
-            elif len(gate.qubits) == 2:
-                if self.middle_qubit not in gate.qubits:
-                    self.tlog(
-                        "Circuit does not respect connectivity. "
-                        f"{gate.name} acts on {gate.qubits}."
-                    )
-                    return False
-
-        self.tlog("Circuit respects connectivity.")
-        return True
-
-    def __call__(self, circuit, initial_layout=None):
+    def __call__(self, circuit: Circuit, initial_layout=None):
         """Apply the transpiler transformation on a given circuit.
 
         Args:
@@ -128,9 +94,8 @@ class StarConnectivity(Router):
                 continue
 
             if len(qubits) > 2:
-                raise_error(
-                    NotImplementedError,
-                    "Transpiler does not support gates targeting more than two-qubits.",
+                raise ConnectivityError(
+                    "Gates targeting more than two qubits are not supported."
                 )
 
             elif len(qubits) == 2 and middle_qubit not in qubits:
@@ -151,8 +116,6 @@ class StarConnectivity(Router):
             # add gate to the hardware circuit
             if isinstance(gate, gates.Unitary):
                 # gates.Unitary requires matrix as first argument
-                from qibo.backends import NumpyBackend
-
                 backend = NumpyBackend()
                 matrix = gate.matrix(backend)
                 new.add(gate.__class__(matrix, *qubits, **gate.init_kwargs))

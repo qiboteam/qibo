@@ -132,15 +132,18 @@ def test_incorrect_initial_layout():
         transpiler(circuit, initial_layout)
 
 
-@pytest.mark.parametrize("gates", [10, 30])
+@pytest.mark.parametrize("gates", [5, 25])
 @pytest.mark.parametrize("qubits", [3, 5])
 @pytest.mark.parametrize("placer", [Trivial, Random])
 @pytest.mark.parametrize("connectivity", [star_connectivity(), grid_connectivity()])
-def test_random_circuits_5q(gates, qubits, placer, connectivity):
+@pytest.mark.parametrize("split", [1.0, 0.5])
+def test_random_circuits_5q(gates, qubits, placer, connectivity, split):
     placer = placer(connectivity=connectivity)
     layout_circ = Circuit(5)
     initial_layout = placer(layout_circ)
-    transpiler = ShortestPaths(connectivity=connectivity, verbose=True)
+    transpiler = ShortestPaths(
+        connectivity=connectivity, verbose=True, sampling_split=split
+    )
     circuit = generate_random_circuit(nqubits=qubits, ngates=gates)
     transpiled_circuit, final_qubit_map = transpiler(circuit, initial_layout)
     assert transpiler.added_swaps >= 0

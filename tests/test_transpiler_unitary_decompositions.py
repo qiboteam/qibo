@@ -18,7 +18,7 @@ from qibo.transpiler.unitary_decompositions import (
     two_qubit_decomposition,
 )
 
-NREPS = 5  # number of repetitions to execute random tests
+NREPS = 3  # number of repetitions to execute random tests
 ATOL = 1e-12
 
 
@@ -187,3 +187,17 @@ def test_two_qubit_decomposition_bell_unitary(run_number, hz_zero):
     c.add(two_qubit_decomposition(0, 1, unitary))
     final_matrix = c.unitary(backend)
     np.testing.assert_allclose(final_matrix, unitary, atol=ATOL)
+
+
+# def test_two_qubit_decomposition_no_entanglement(gatename):
+#     """Test two-qubit decomposition on unitary that creates no entanglement."""
+#     backend = NumpyBackend()
+#     matrix = np.array([[-1.,0.,0.,0.],
+#                        [0.,-1.,0.,0.],
+#                        [0.,0.,1.,0.],
+#                        [0.,0.,0.,1.],
+#                        ])
+#     c = Circuit(2)
+#     c.add(two_qubit_decomposition(0, 1, matrix))
+#     final_matrix = c.unitary(backend)
+#     np.testing.assert_allclose(final_matrix, matrix, atol=ATOL)

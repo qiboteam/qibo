@@ -256,13 +256,14 @@ def test_block_decomposition_measurements():
     circ.add(gates.CZ(2, 3))  # 4 block
     circ.add(gates.M(0, 1))  # 3 block
     blocks = block_decomposition(circ)
+    print(blocks[0].gates)
     assert_gates_equality(
         blocks[0].gates,
         [gates.H(1), gates.H(0), gates.CZ(0, 1), gates.H(0), gates.M(0), gates.M(1)],
     )
     assert len(blocks) == 4
     assert blocks[0].count_2q_gates() == 1
-    assert len(blocks[0].gates) == 5
+    assert len(blocks[0].gates) == 6
     assert blocks[0].qubits == (0, 1)
     assert blocks[1].count_2q_gates() == 2
     assert len(blocks[1].gates) == 3
@@ -270,7 +271,7 @@ def test_block_decomposition_measurements():
     assert len(blocks[3].gates) == 2
     assert blocks[3].qubits == (2, 3)
     assert blocks[2].count_2q_gates() == 2
-    assert len(blocks[2].gates) == 3
+    assert len(blocks[2].gates) == 4
 
 
 def test_circuit_blocks():

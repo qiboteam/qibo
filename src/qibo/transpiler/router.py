@@ -468,17 +468,9 @@ class Sabre(Router):
         Returns:
             (qibo.models.Circuit): routed circuit.
         """
-        DEBUG = False
         self.preprocessing(circuit=circuit, initial_layout=initial_layout)
-        if DEBUG:
-            draw_dag(self._dag, "dag")
         while self._dag.number_of_nodes() != 0:
             execute_block_list = self.check_execution()
-            if DEBUG:
-                print("front_layer")
-                print(self._front_layer)
-                print("executables")
-                print(execute_block_list)
             if execute_block_list is not None:
                 self.execute_blocks(execute_block_list)
             else:

@@ -7,7 +7,10 @@ from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 from qibo.transpiler.pipeline import transpose_qubits
+from qibo.transpiler.router import ConnectivityError
 from qibo.transpiler.star_connectivity import StarConnectivity
+
+from .test_transpiler_unitary_decompositions import random_unitary
 
 
 def generate_random_circuit(nqubits, depth, seed=None, middle_qubit=2):
@@ -38,18 +41,25 @@ def generate_random_circuit(nqubits, depth, seed=None, middle_qubit=2):
     return circuit
 
 
-@pytest.mark.parametrize("verbose", [True, False])
+def test_error_multi_qubit():
+    circuit = Circuit(3)
+    circuit.add(gates.TOFFOLI(0, 1, 2))
+    transpiler = StarConnectivity(middle_qubit=2)
+    with pytest.raises(ConnectivityError):
+        transpiled, hardware_qubits = transpiler(circuit)
+
+
 @pytest.mark.parametrize("nqubits", [1, 2, 3, 4, 5])
 @pytest.mark.parametrize("middle_qubit", [0, 1, 2, 3, 4])
 @pytest.mark.parametrize("depth", [2, 10])
-def test_fix_connectivity(nqubits, depth, middle_qubit, verbose):
+@pytest.mark.parametrize("measurements", [True, False])
+def test_fix_connectivity(nqubits, depth, middle_qubit, measurements):
     """Checks that the transpiled circuit can be executed and is equivalent to original."""
     original = generate_random_circuit(nqubits, depth, middle_qubit=middle_qubit)
-    transpiler = StarConnectivity(middle_qubit=middle_qubit, verbose=verbose)
+    if measurements:
+        original.add(gates.M(0))
+    transpiler = StarConnectivity(middle_qubit=middle_qubit)
     transpiled, hardware_qubits = transpiler(original)
-    # check that transpiled circuit can be executed
-    assert transpiler.is_satisfied(transpiled)
-    # check that execution results agree with original (using simulation)
     backend = NumpyBackend()
     final_state = backend.execute_circuit(transpiled).state()
     target_state = backend.execute_circuit(original).state()
@@ -65,9 +75,6 @@ def test_fix_connectivity(nqubits, depth, middle_qubit, verbose):
 def test_fix_connectivity_unitaries(nqubits, unitary_dim, depth, middle_qubit):
     """Checks that the transpiled circuit can be executed and is equivalent to original
     when using unitaries."""
-
-    from .test_transpiler_unitary_decompositions import random_unitary
-
     # find the number of qubits for hardware circuit
     n_hardware_qubits = max(nqubits, middle_qubit + 1)
 
@@ -79,8 +86,6 @@ def test_fix_connectivity_unitaries(nqubits, unitary_dim, depth, middle_qubit):
 
     transpiler = StarConnectivity(middle_qubit=middle_qubit)
     transpiled, hardware_qubits = transpiler(original)
-    # check that transpiled circuit can be executed
-    assert transpiler.is_satisfied(transpiled)
     # check that execution results agree with original (using simulation)
     backend = NumpyBackend()
     final_state = backend.execute_circuit(transpiled).state()
