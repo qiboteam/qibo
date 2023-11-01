@@ -1138,7 +1138,7 @@ def expressibility(
         backend = GlobalBackend()
 
     deviation = haar_integral(
-        circuit.nqubits, power_t, exact=True, backend=backend
+        circuit.nqubits, power_t, samples=None, backend=backend
     ) - pqc_integral(circuit, power_t, samples, backend=backend)
 
     fid = float(backend.calculate_norm(deviation, order=order))
