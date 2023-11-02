@@ -53,7 +53,7 @@ def test_dill_circuit_result(backend):
     new_result = dill.loads(serial)
     assert type(new_result) == type(result)
     assert str(new_result) == str(result)
-    backend.assert_allclose(new_result.state(), result.state())
+    backend.assert_allclose(new_result, result)
 
 
 def test_dill_symbols():
@@ -73,7 +73,7 @@ def test_dill_symbols():
 def test_dill_measurement_symbol(backend):
     from qibo import Circuit, gates
 
-    circuit = Circuit(1)
+    circuit = Circuit(1, density_matrix=True)
     circuit.add(gates.H(0))
     cresult = circuit.add(gates.M(0, collapse=True))
     result = backend.execute_circuit(circuit, nshots=1)

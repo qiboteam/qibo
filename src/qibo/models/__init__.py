@@ -1,5 +1,6 @@
 from qibo.models import hep, tsp
 from qibo.models.circuit import Circuit
+from qibo.models.encodings import unary_encoder
 from qibo.models.error_mitigation import (
     CDR,
     ZNE,
