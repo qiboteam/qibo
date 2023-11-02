@@ -229,10 +229,7 @@ class MeasurementOutcomes:
         return self._frequencies
 
     def has_samples(self):
-        if self._samples is not None:
-            return True
-        else:  # pragma: no cover
-            return False
+        return self.measurements[0].result.has_samples()
 
     def samples(self, binary=True, registers=False):
         """Returns raw measurement samples.
