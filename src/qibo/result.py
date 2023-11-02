@@ -67,7 +67,7 @@ class QuantumState:
             The state in the computational basis.
         """
         if numpy:
-            return np.asarray(self._state)
+            return self.backend.to_numpy(self._state)
         else:
             return self._state
 
@@ -147,15 +147,6 @@ class MeasurementOutcomes:
     def __init__(
         self, measurements, backend, probabilities=None, samples=None, nshots=1000
     ):
-        if probabilities is None and samples is None:
-            raise RuntimeError(
-                "You have to provide either the `probabilities` or the `samples` to build a `MeasurementOutcomes` object."
-            )
-        if probabilities is not None and samples is not None:
-            raise RuntimeError(
-                "Both the `probabilities` and the `samples` were provided to build the `MeasurementOutcomes` object. Don't know which one to use."
-            )
-
         self.backend = backend
         self.measurements = measurements
         self.nshots = nshots
@@ -165,9 +156,6 @@ class MeasurementOutcomes:
         self._samples = samples
         self._frequencies = None
         self._repeated_execution_frequencies = None
-
-        for gate in self.measurements:
-            gate.result.reset()
 
     def frequencies(self, binary=True, registers=False):
         """Returns the frequencies of measured samples.
@@ -238,10 +226,7 @@ class MeasurementOutcomes:
         return self._frequencies
 
     def has_samples(self):
-        if self._samples is not None:
-            return True
-        else:  # pragma: no cover
-            return False
+        return self.measurements[0].result.has_samples() or self._samples is not None
 
     def samples(self, binary=True, registers=False):
         """Returns raw measurement samples.
