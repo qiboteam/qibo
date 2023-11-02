@@ -68,14 +68,10 @@ def test_unary_encoder_random_gaussian(backend, nqubits, seed):
         state = np.real(state[indexes])
         amplitudes += [list(state)]
 
-    amplitudes = backend.cast(amplitudes, dtype=float)
-    amplitudes = amplitudes.flatten()
+    amplitudes = list(np.array(amplitudes).flatten())
 
     y, x = np.histogram(amplitudes, bins=50, density=True)
     x = (x[:-1] + x[1:]) / 2
-
-    x = [float(elem) for elem in x]
-    y = [float(elem) for elem in y]
 
     params, _ = curve_fit(gaussian, x, y)
 
