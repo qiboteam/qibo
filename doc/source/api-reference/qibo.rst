@@ -222,6 +222,20 @@ Adiabatic evolution
     :members:
     :member-order: bysource
 
+
+.. _data-encoders:
+
+Data Encoders
+^^^^^^^^^^^^^
+
+We provide a family of algorithms that encode classical data into quantum circuits.
+
+Unary Encoder
+"""""""""""""
+
+.. autofunction:: qibo.models.encodings.unary_encoder
+
+
 .. _error-mitigation:
 
 Error Mitigation
