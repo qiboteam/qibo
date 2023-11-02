@@ -94,6 +94,7 @@ def test_entropy_in_circuit(backend, density_matrix, base):
 
     target = [0, 0, np.log(2)] / np.log(base)
     values = [backend.to_numpy(x) for x in entropy]
+    print(target, values)
     backend.assert_allclose(values, target, atol=PRECISION_TOL)
 
     target_spectrum = [1.0] + list([0, 0, np.log(2), np.log(2)] / np.log(base))
