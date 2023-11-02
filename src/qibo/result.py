@@ -157,9 +157,6 @@ class MeasurementOutcomes:
         self._frequencies = None
         self._repeated_execution_frequencies = None
 
-        for gate in self.measurements:
-            gate.result.reset()
-
     def frequencies(self, binary=True, registers=False):
         """Returns the frequencies of measured samples.
 
@@ -229,7 +226,7 @@ class MeasurementOutcomes:
         return self._frequencies
 
     def has_samples(self):
-        return self.measurements[0].result.has_samples()
+        return self.measurements[0].result.has_samples() or self._samples is not None
 
     def samples(self, binary=True, registers=False):
         """Returns raw measurement samples.

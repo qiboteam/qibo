@@ -521,6 +521,8 @@ class NumpyBackend(Backend):
                 results.append(sample)
                 if not circuit.density_matrix:
                     samples.append("".join([str(s) for s in sample]))
+                for gate in circuit.measurements:
+                    gate.result.reset()
 
         if circuit.density_matrix:  # this implies also it has_collapse
             assert circuit.has_collapse

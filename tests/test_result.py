@@ -56,6 +56,7 @@ def test_circuitresult_dump_load(backend, agnostic_load):
     # from samples and recover the same exact frequencies
     c.has_collapse = True
     result = backend.execute_circuit(c)
+    print(result.has_samples())
     freq = result.frequencies()
     # set probabilities to trigger the warning
     result._probs = result.probabilities()
