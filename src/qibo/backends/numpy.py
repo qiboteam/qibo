@@ -526,7 +526,7 @@ class NumpyBackend(Backend):
 
         if circuit.density_matrix:  # this implies also it has_collapse
             assert circuit.has_collapse
-            final_state = self.np.mean(self.to_numpy(final_states), 0)
+            final_state = np.mean(self.to_numpy(final_states), 0)
             if circuit.measurements:
                 qubits = [q for m in circuit.measurements for q in m.target_qubits]
                 final_result = CircuitResult(
