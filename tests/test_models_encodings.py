@@ -1,8 +1,16 @@
 """Tests for qibo.models.encodings"""
+import math
+
 import numpy as np
 import pytest
+from scipy.optimize import curve_fit
 
-from qibo.models.encodings import unary_encoder
+from qibo.models.encodings import unary_encoder, unary_encoder_random_gaussian
+
+
+def gaussian(x, a, b, c):
+    """Gaussian used in the `unary_encoder_random_gaussian test"""
+    return np.exp(a * x**2 + b * x + c)
 
 
 @pytest.mark.parametrize("nqubits", [2, 4, 8])
@@ -31,3 +39,53 @@ def test_unary_encoder(backend, nqubits):
     backend.assert_allclose(
         state, np.sort(data) / backend.calculate_norm(data, order=2)
     )
+
+
+@pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
+@pytest.mark.parametrize("nqubits", [8, 16])
+def test_unary_encoder_random_gaussian(backend, nqubits, seed):
+    """Tests if encoded vector are random variables sampled from
+    Gaussian distribution with 0.0 mean and variance close to the norm
+    of the random Gaussian vector that was encoded."""
+    with pytest.raises(TypeError):
+        unary_encoder_random_gaussian("1", seed=seed)
+    with pytest.raises(ValueError):
+        unary_encoder_random_gaussian(-1, seed=seed)
+    with pytest.raises(ValueError):
+        unary_encoder_random_gaussian(3, seed=seed)
+    with pytest.raises(TypeError):
+        unary_encoder_random_gaussian(nqubits, seed="seed")
+
+    samples = int(1e2)
+
+    local_state = np.random.default_rng(seed) if seed in [None, 10] else seed
+
+    amplitudes = []
+    for _ in range(samples):
+        circuit = unary_encoder_random_gaussian(nqubits, seed=local_state)
+        state = backend.execute_circuit(circuit).state()
+        indexes = np.flatnonzero(state)
+        state = np.real(state[indexes])
+        amplitudes += [list(state)]
+
+    amplitudes = backend.cast(amplitudes, dtype=float)
+    amplitudes = amplitudes.flatten()
+
+    y, x = np.histogram(amplitudes, bins=50, density=True)
+    x = (x[:-1] + x[1:]) / 2
+
+    x = [float(elem) for elem in x]
+    y = [float(elem) for elem in y]
+
+    params, _ = curve_fit(gaussian, x, y)
+
+    stddev = np.sqrt(-1 / (2 * params[0]))
+    mean = stddev**2 * params[1]
+
+    theoretical_norm = (
+        math.sqrt(2) * math.gamma((nqubits + 1) / 2) / math.gamma(nqubits / 2)
+    )
+    theoretical_norm = 1.0 / theoretical_norm
+
+    backend.assert_allclose(0.0, mean, atol=1e-1)
+    backend.assert_allclose(stddev, theoretical_norm, atol=1e-1)
