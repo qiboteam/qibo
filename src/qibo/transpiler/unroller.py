@@ -227,7 +227,7 @@ iswap_dec = GateDecompositions()
 iswap_dec.add(
     gates.CNOT,
     [
-        gates.U3(0, 7 * np.pi / 2, np.pi, 0),
+        gates.U3(0, 3 * np.pi / 2, np.pi, 0),
         gates.U3(1, np.pi / 2, -np.pi, -np.pi),
         gates.iSWAP(0, 1),
         gates.U3(0, np.pi, 0, np.pi),

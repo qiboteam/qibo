@@ -2,6 +2,7 @@ import numpy as np
 from scipy.linalg import expm
 
 from qibo import gates, matrices
+from qibo.backends import NumpyBackend
 from qibo.config import raise_error
 
 magic_basis = np.array(
@@ -165,12 +166,12 @@ def calculate_h_vector(ud_diag):
 
 def cnot_decomposition(q0, q1, hx, hy, hz):
     """Performs decomposition (6) from arXiv:quant-ph/0307177."""
-    u3 = -1j * (matrices.X + matrices.Z) / np.sqrt(2)
+    u3 = -1j * matrices.H
     # use corrected version from PRA paper (not arXiv)
-    u2 = -u3 @ expm(-1j * (hx - np.pi / 4) * matrices.X)
+    u2 = -u3 @ gates.RX(0, 2 * hx - np.pi / 2).matrix(NumpyBackend())
     # add an extra exp(-i pi / 4) global phase to get exact match
-    v2 = expm(-1j * hz * matrices.Z) * np.exp(-1j * np.pi / 4)
-    v3 = expm(1j * hy * matrices.Z)
+    v2 = np.exp(-1j * np.pi / 4) * gates.RZ(0, 2 * hz).matrix(NumpyBackend())
+    v3 = gates.RZ(0, -2 * hy).matrix(NumpyBackend())
     w = (matrices.I - 1j * matrices.X) / np.sqrt(2)
     # change CNOT to CZ using Hadamard gates
     return [
@@ -190,8 +191,8 @@ def cnot_decomposition(q0, q1, hx, hy, hz):
 def cnot_decomposition_light(q0, q1, hx, hy):
     """Performs decomposition (24) from arXiv:quant-ph/0307177."""
     w = (matrices.I - 1j * matrices.X) / np.sqrt(2)
-    u2 = expm(-1j * hx * matrices.X)
-    v2 = expm(1j * hy * matrices.Z)
+    u2 = gates.RX(0, 2 * hx).matrix(NumpyBackend())
+    v2 = gates.RZ(0, -2 * hy).matrix(NumpyBackend())
     # change CNOT to CZ using Hadamard gates
     return [
         gates.Unitary(np.conj(w).T, q0),
