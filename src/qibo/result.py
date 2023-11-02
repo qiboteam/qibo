@@ -67,7 +67,7 @@ class QuantumState:
             The state in the computational basis.
         """
         if numpy:
-            return np.asarray(self._state)
+            return self.backend.to_numpy(self._state)
         else:
             return self._state
 
