@@ -2,7 +2,6 @@ import numpy as np
 import pytest
 
 from qibo import gates
-from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 from qibo.quantum_info.random_ensembles import random_unitary
 from qibo.transpiler.abstract import NativeType
@@ -15,26 +14,24 @@ from qibo.transpiler.unroller import (
 
 
 def assert_matrices_allclose(gate, two_qubit_natives, backend):
-    target_unitary = gate.matrix(backend)
+    target_matrix = gate.matrix(backend)
     # Remove global phase from target matrix
-    target_unitary /= np.linalg.det(target_unitary) ** (
-        1 / float(target_unitary.shape[0])
+    target_unitary = target_matrix / np.power(
+        np.linalg.det(target_matrix), 1 / float(target_matrix.shape[0]), dtype=complex
     )
     circuit = Circuit(len(gate.qubits))
     circuit.add(translate_gate(gate, two_qubit_natives))
-    native_unitary = circuit.unitary(backend)
+    native_matrix = circuit.unitary(backend)
     # Remove global phase from native matrix
-    native_unitary /= np.linalg.det(native_unitary) ** (
-        1 / float(native_unitary.shape[0])
+    native_unitary = native_matrix / np.power(
+        np.linalg.det(native_matrix), 1 / float(native_matrix.shape[0]), dtype=complex
     )
-
     # There can still be phase differences of -1, -1j, 1j
     c = 0
     for phase in [1, -1, 1j, -1j]:
         if np.allclose(phase * native_unitary, target_unitary, atol=1e-12):
             c = 1
-
-    backend.assert_allclose(c, 1)
+    np.testing.assert_allclose(c, 1)
 
 
 @pytest.mark.parametrize("gatename", ["H", "X", "Y", "I"])

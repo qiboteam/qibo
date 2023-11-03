@@ -156,7 +156,7 @@ def to_bell_diagonal(ud, bell_basis=bell_basis, backend=None):
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    ud = backend.cast(ud, dtype=ud.dtype)
+    ud = backend.cast(ud, dtype=complex)
 
     bell_basis = backend.cast(bell_basis, dtype=bell_basis.dtype)
 
