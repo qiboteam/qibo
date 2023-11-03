@@ -1,10 +1,9 @@
 from enum import Enum, auto
 
 import numpy as np
-from scipy.linalg import expm
 
-from qibo.config import raise_error
-from qibo.hamiltonians import Hamiltonian
+from ..config import raise_error
+from ..hamiltonians import Hamiltonian
 
 
 class DoubleBracketFlowMode(Enum):
@@ -16,7 +15,6 @@ class DoubleBracketFlowMode(Enum):
     """Use group commutator."""
 
 
-# TODO: provide backend agnostic implementation
 class DoubleBracketFlow:
     """
     Class implementing the Double Bracket flow algorithm.
@@ -37,7 +35,8 @@ class DoubleBracketFlow:
         dbf = DoubleBracketFlow(Hamiltonian(nqubits=nqubits, matrix=h0))
 
         # diagonalized matrix
-        dbf.h"""
+        dbf.h
+    """
 
     def __init__(self, hamiltonian: Hamiltonian):
         # TODO: consider passing Mode here
@@ -45,25 +44,39 @@ class DoubleBracketFlow:
 
     def __call__(self, step: float, mode: DoubleBracketFlowMode, d: np.array = None):
         if mode is DoubleBracketFlowMode.canonical:
-            operator = expm(
-                step
-                * (
-                    np.diag(np.diag(self.h.matrix)) @ self.h.matrix
-                    - self.h.matrix @ np.diag(np.diag(self.h.matrix))
-                )
+            operator = self.backend.calculate_matrix_exp(
+                1.0j * step,
+                self.diagonal_h_matrix @ self.h.matrix
+                - self.h.matrix @ self.diagonal_h_matrix,
             )
         elif mode is DoubleBracketFlowMode.group_commutator:
             if d is None:
                 raise_error(ValueError, f"Cannot use group_commutator with matrix {d}")
             operator = (
-                expm(1j * self.h.matrix * step)
-                @ expm(1j * d * step)
-                @ expm(-1j * self.h.matrix * step)
-                @ expm(-1j * d * step)
+                self.h.exp(-step)
+                @ self.backend.calculate_matrix_exp(-step, d)
+                @ self.h.exp(step)
+                @ self.backend.calculate_matrix_exp(step, d)
             )
-        self.h.matrix = operator @ self.h.matrix @ np.matrix(operator).getH()
+        self.h.matrix = (
+            operator @ self.h.matrix @ self.backend.cast(np.matrix(operator).getH())
+        )
+
+    @property
+    def diagonal_h_matrix(self):
+        """Diagonal H matrix."""
+        return self.backend.cast(np.diag(np.diag(self.backend.to_numpy(self.h.matrix))))
 
     @property
     def off_diagonal_norm(self):
-        off_diag_h = self.h.matrix - np.diag(np.diag(self.h.matrix))
-        return np.real(np.trace(np.matrix(off_diag_h).getH() @ off_diag_h))
+        """Norm of off-diagonal part of H matrix."""
+        off_diag_h = self.h.matrix - self.diagonal_h_matrix
+        # TODO: make this trace backend agnostic (test on GPU)
+        return np.real(
+            np.trace(self.backend.cast(np.matrix(off_diag_h).getH()) @ off_diag_h)
+        )
+
+    @property
+    def backend(self):
+        """Get Hamiltonian's backend."""
+        return self.h0.backend
