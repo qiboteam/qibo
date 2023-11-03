@@ -171,7 +171,10 @@ def test_two_qubit_decomposition_common_gates(backend, gatename):
     else:
         gate = getattr(gates, gatename)(0, 1)
     matrix = gate.matrix(backend)
-    if backend.__class__.__name__ in ["CupyBackend", "CuQuantumBackend"] and gatename != "iSWAP":
+    if (
+        backend.__class__.__name__ in ["CupyBackend", "CuQuantumBackend"]
+        and gatename != "iSWAP"
+    ):
         with pytest.raises(NotImplementedError):
             two_qubit_decomposition(0, 1, matrix, backend=backend)
     else:
