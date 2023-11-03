@@ -40,8 +40,8 @@ class CliffordBackend(NumpyBackend):
             if initial_state is None:
                 I = self.np.eye(nqubits)
                 tableau = self.np.zeros((2 * nqubits + 1, 2 * nqubits + 1), dtype=bool)
-                tableau[:nqubits, :nqubits] = I
-                tableau[nqubits:-1, nqubits : 2 * nqubits] = I
+                tableau[:nqubits, :nqubits] = I.copy()
+                tableau[nqubits:-1, nqubits : 2 * nqubits] = I.copy()
             else:
                 tableau = initial_state
 
