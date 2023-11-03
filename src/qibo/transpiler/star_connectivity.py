@@ -116,8 +116,7 @@ class StarConnectivity(Router):
             # add gate to the hardware circuit
             if isinstance(gate, gates.Unitary):
                 # gates.Unitary requires matrix as first argument
-                backend = NumpyBackend()
-                matrix = gate.matrix(backend)
+                matrix = gate.init_args[0]
                 new.add(gate.__class__(matrix, *qubits, **gate.init_kwargs))
             else:
                 new.add(gate.__class__(*qubits, **gate.init_kwargs))
