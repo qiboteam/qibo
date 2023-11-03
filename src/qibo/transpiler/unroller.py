@@ -438,10 +438,13 @@ cz_dec.add(
 cz_dec.add(
     gates.Unitary, lambda gate: two_qubit_decomposition(0, 1, gate.parameters[0])
 )
-cz_dec.add(gates.fSim, lambda gate: two_qubit_decomposition(0, 1, gate.matrix(backend)))
+cz_dec.add(
+    gates.fSim,
+    lambda gate: two_qubit_decomposition(0, 1, gate.matrix(backend), backend=backend),
+)
 cz_dec.add(
     gates.GeneralizedfSim,
-    lambda gate: two_qubit_decomposition(0, 1, gate.matrix(backend)),
+    lambda gate: two_qubit_decomposition(0, 1, gate.matrix(backend), backend=backend),
 )
 
 
