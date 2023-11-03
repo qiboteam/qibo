@@ -6,11 +6,10 @@ import pytest
 from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
+from qibo.quantum_info.random_ensembles import random_unitary
 from qibo.transpiler.pipeline import transpose_qubits
 from qibo.transpiler.router import ConnectivityError
 from qibo.transpiler.star_connectivity import StarConnectivity
-
-from .test_transpiler_unitary_decompositions import random_unitary
 
 
 def generate_random_circuit(nqubits, depth, seed=None, middle_qubit=2):
@@ -82,7 +81,11 @@ def test_fix_connectivity_unitaries(nqubits, unitary_dim, depth, middle_qubit):
     pairs = list(itertools.combinations(range(n_hardware_qubits), unitary_dim))
     for _ in range(depth):
         qubits = pairs[int(np.random.randint(len(pairs)))]
-        original.add(gates.Unitary(random_unitary(unitary_dim), *qubits))
+        original.add(
+            gates.Unitary(
+                random_unitary(2**unitary_dim, backend=NumpyBackend()), *qubits
+            )
+        )
 
     transpiler = StarConnectivity(middle_qubit=middle_qubit)
     transpiled, hardware_qubits = transpiler(original)
