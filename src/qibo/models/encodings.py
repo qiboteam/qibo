@@ -115,8 +115,6 @@ def unary_encoder_random_gaussian(nqubits: int, seed=None):
         stochastic processes, with applications to Monte Carlo*.
         `arXiv:2303.06719v1 [quant-ph] <https://arxiv.org/abs/2303.06719>`_
     """
-    circuit, pairs_rbs = _generate_rbs_pairs(nqubits)
-
     if not isinstance(nqubits, int):
         raise_error(
             TypeError, f"nqubits must be type int, but it is type {type(nqubits)}."
@@ -144,6 +142,8 @@ def unary_encoder_random_gaussian(nqubits: int, seed=None):
     sampler = _probability_distribution_gaussian_loader(
         a=0, b=2 * math.pi, seed=local_state
     )
+
+    circuit, pairs_rbs = _generate_rbs_pairs(nqubits)
 
     phases = []
     for depth, row in enumerate(pairs_rbs, 1):

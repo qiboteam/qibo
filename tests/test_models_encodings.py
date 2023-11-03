@@ -66,9 +66,7 @@ def test_unary_encoder_random_gaussian(backend, nqubits, seed):
         state = backend.execute_circuit(circuit).state()
         indexes = np.flatnonzero(state)
         state = np.real(state[indexes])
-        amplitudes += [list(state)]
-
-    amplitudes = list(np.array(amplitudes).flatten())
+        amplitudes += [float(elem) for elem in list(state)]
 
     y, x = np.histogram(amplitudes, bins=50, density=True)
     x = (x[:-1] + x[1:]) / 2
