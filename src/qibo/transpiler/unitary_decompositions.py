@@ -2,7 +2,7 @@ import numpy as np
 from scipy.linalg import expm
 
 from qibo import gates, matrices
-from qibo.backends import NumpyBackend
+from qibo.backends import GlobalBackend, NumpyBackend
 from qibo.config import raise_error
 
 magic_basis = np.array(
@@ -35,19 +35,25 @@ def u3_decomposition(unitary):
     return theta, phi, lam
 
 
-def calculate_psi(unitary):
-    """Solves the eigenvalue problem of UT_U.
+def calculate_psi(unitary, magic_basis=magic_basis, backend=None):
+    """Solves the eigenvalue problem of :math:`U^{T} U`.
 
     See step (1) of Appendix A in arXiv:quant-ph/0011050.
 
     Args:
         unitary (np.ndarray): Unitary matrix of the gate we are
-        decomposing in the computational basis.
+            decomposing in the computational basis.
 
     Returns:
-        Eigenvectors (in the computational basis) and eigenvalues
-        of UT_U.
+        Eigenvectors (in the computational basis) and eigenvalues of :math:`U^{T} U`.
     """
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    if backend.__class__.__name__ == "CupyBackend":
+        raise_error(NotImplementedError, "CupyBackend does not support `linalg.eig.`")
+
+    magic_basis = backend.cast(magic_basis, dtype=magic_basis.dtype)
     # write unitary in magic basis
     u_magic = np.transpose(np.conj(magic_basis)) @ unitary @ magic_basis
     # construct and diagonalize UT_U
@@ -124,25 +130,34 @@ def calculate_diagonal(unitary, ua, ub, va, vb):
     ub *= det
     va *= det
     vb *= det
-    u_dagger = np.conj(np.kron(ua, ub).T)
-    v_dagger = np.conj(np.kron(va, vb).T)
-    ud = np.dot(np.dot(u_dagger, unitary), v_dagger)
+    u_dagger = np.transpose(np.conj(np.kron(ua, ub)))
+    v_dagger = np.transpose(np.conj(np.kron(va, vb)))
+    ud = u_dagger @ unitary @ v_dagger
     return ua, ub, ud, va, vb
 
 
-def magic_decomposition(unitary):
+def magic_decomposition(unitary, backend=None):
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
     """Decomposes an arbitrary unitary to (A1) from arXiv:quant-ph/0011050."""
-    psi, eigvals = calculate_psi(unitary)
+    psi, eigvals = calculate_psi(unitary, backend=backend)
     psi_tilde = np.conj(np.sqrt(eigvals)) * np.dot(unitary, psi)
     va, vb = calculate_single_qubit_unitaries(psi)
     ua_dagger, ub_dagger = calculate_single_qubit_unitaries(psi_tilde)
-    ua, ub = np.conj(ua_dagger.T), np.conj(ub_dagger.T)
+    ua, ub = np.transpose(np.conj(ua_dagger)), np.transpose(np.conj(ub_dagger))
     return calculate_diagonal(unitary, ua, ub, va, vb)
 
 
-def to_bell_diagonal(ud):
+def to_bell_diagonal(ud, bell_basis=bell_basis, backend=None):
     """Transforms a matrix to the Bell basis and checks if it is diagonal."""
-    ud_bell = np.dot(np.dot(np.conj(bell_basis).T, ud), bell_basis)
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    ud = backend.cast(ud, dtype=ud.dtype)
+
+    bell_basis = backend.cast(bell_basis, dtype=bell_basis.dtype)
+
+    ud_bell = np.transpose(np.conj(bell_basis)) @ ud @ bell_basis
     ud_diag = np.diag(ud_bell)
     if not np.allclose(np.diag(ud_diag), ud_bell):  # pragma: no cover
         return None
@@ -206,7 +221,7 @@ def cnot_decomposition_light(q0, q1, hx, hy):
     ]
 
 
-def two_qubit_decomposition(q0, q1, unitary):
+def two_qubit_decomposition(q0, q1, unitary, backend=None):
     """Performs two qubit unitary gate decomposition (24) from arXiv:quant-ph/0307177.
 
     Args:
@@ -216,15 +231,19 @@ def two_qubit_decomposition(q0, q1, unitary):
     Returns:
         list of gates implementing decomposition (24) from arXiv:quant-ph/0307177
     """
-    ud_diag = to_bell_diagonal(unitary)
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    ud_diag = to_bell_diagonal(unitary, backend=backend)
     ud = None
     if ud_diag is None:
-        u4, v4, ud, u1, v1 = magic_decomposition(unitary)
-        ud_diag = to_bell_diagonal(ud)
+        u4, v4, ud, u1, v1 = magic_decomposition(unitary, backend=backend)
+        ud_diag = to_bell_diagonal(ud, backend=backend)
 
     hx, hy, hz = calculate_h_vector(ud_diag)
+    hx, hy, hz = float(hx), float(hy), float(hz)
     if np.allclose([hx, hy, hz], [0, 0, 0]):
-        u4, v4, ud, u1, v1 = magic_decomposition(unitary)
+        u4, v4, ud, u1, v1 = magic_decomposition(unitary, backend=backend)
         gatelist = [gates.Unitary(u4 @ u1, q0), gates.Unitary(v4 @ v1, q1)]
     elif np.allclose(hz, 0):
         gatelist = cnot_decomposition_light(q0, q1, hx, hy)
