@@ -48,6 +48,6 @@ def test_double_bracket_flow_single_commutator(backend, nqubits):
         dbf(mode=FlowGeneratorType.single_commutator, step=0.01)
 
     for _ in range(NSTEPS):
-        dbf(mode=FlowGeneratorType.group_commutator, step=0.01, d=d)
+        dbf(mode=FlowGeneratorType.single_commutator, step=0.01, d=d)
 
     assert initial_off_diagonal_norm > dbf.off_diagonal_norm
