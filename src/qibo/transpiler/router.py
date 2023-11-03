@@ -533,7 +533,11 @@ class Sabre(Router):
         self._memory_map.append(deepcopy(self.circuit._circuit_logical))
         for candidate in self.swap_candidates():
             candidates_evaluation[candidate] = self.compute_cost(candidate)
-        best_candidate = min(candidates_evaluation, key=candidates_evaluation.get)
+        best_cost = min(candidates_evaluation.values())
+        best_candidates = [
+            key for key, value in candidates_evaluation.items() if value == best_cost
+        ]
+        best_candidate = random.choice(best_candidates)
         for qubit in self.circuit.logical_to_physical(best_candidate):
             self._delta_register[qubit] += self.delta
         self.circuit.update(best_candidate)
