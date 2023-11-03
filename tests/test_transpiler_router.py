@@ -306,7 +306,7 @@ def test_sabre_random_circuits(gates, look, decay, placer, connectivity):
     placer = placer(connectivity=connectivity)
     layout_circ = Circuit(5)
     initial_layout = placer(layout_circ)
-    router = Sabre(connectivity=connectivity, lookahead=look, decay=decay)
+    router = Sabre(connectivity=connectivity, lookahead=look, decay_lookahead=decay)
     circuit = generate_random_circuit(nqubits=5, ngates=gates)
     transpiled_circuit, final_qubit_map = router(circuit, initial_layout)
     assert router.added_swaps >= 0

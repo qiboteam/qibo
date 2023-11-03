@@ -1,3 +1,4 @@
+import random
 from copy import deepcopy
 
 import matplotlib.pyplot as plt
@@ -439,24 +440,37 @@ MAX_ITER = 10000
 
 
 class Sabre(Router):
-    def __init__(self, connectivity: nx.Graph, lookahead: int = 2, decay: float = 0.6):
+    def __init__(
+        self,
+        connectivity: nx.Graph,
+        lookahead: int = 2,
+        decay_lookahead: float = 0.6,
+        delta=0.001,
+        seed=42,
+    ):
         """Routing algorithm proposed in
         https://doi.org/10.48550/arXiv.1809.02573
 
         Args:
             connectivity (dict): hardware chip connectivity.
             lookahead (int): lookahead factor, how many dag layers will be considered in computing the cost.
-            decay (float): value in interval [0,1].
+            decay_lookahead (float): value in interval [0,1].
                 How the weight of the distance in the dag layers decays in computing the cost.
+            delta (float): this parameter defines the number of swaps vs depth trade-off by deciding
+                how the algorithm tends to select non-overlapping SWAPs.
+            seed (int): seed for the candidate random choice as tiebraker.
         """
         self.connectivity = connectivity
         self.lookahead = lookahead
-        self.decay = decay
+        self.decay = decay_lookahead
+        self.delta = delta
+        self._delta_register = None
         self._dist_matrix = None
         self._dag = None
         self._front_layer = None
         self.circuit = None
         self._memory_map = None
+        random.seed(seed)
 
     def __call__(self, circuit, initial_layout):
         """Route the circuit.
@@ -484,6 +498,8 @@ class Sabre(Router):
         - _dag: direct acyclic graph of the circuit based on commutativity.
         - _memory_map: list to remember previous SWAP moves.
         - _front_layer: list containing the blocks to be executed.
+        - _delta_register: list containing the special weigh added to qubits
+            to prevent overlapping swaps.
         """
         self.circuit = CircuitMap(initial_layout, circuit)
         self._dist_matrix = nx.floyd_warshall_numpy(self.connectivity)
@@ -491,6 +507,7 @@ class Sabre(Router):
         self._memory_map = []
         self.update_dag_layers()
         self.update_front_layer()
+        self._delta_register = [1.0 for _ in range(circuit.nqubits)]
 
     def update_dag_layers(self):
         for layer, nodes in enumerate(nx.topological_generations(self._dag)):
@@ -517,13 +534,15 @@ class Sabre(Router):
         for candidate in self.swap_candidates():
             candidates_evaluation[candidate] = self.compute_cost(candidate)
         best_candidate = min(candidates_evaluation, key=candidates_evaluation.get)
+        for qubit in self.circuit.logical_to_physical(best_candidate):
+            self._delta_register[qubit] += self.delta
         self.circuit.update(best_candidate)
 
     def compute_cost(self, candidate):
         """Compute the cost associated to a possible SWAP candidate."""
         temporary_circuit = deepcopy(self.circuit)
         temporary_circuit.update(candidate)
-        if not self.check_new_mapping(temporary_circuit._circuit_logical):
+        if temporary_circuit._circuit_logical in self._memory_map:
             return float("inf")
         tot_distance = 0.0
         weight = 1.0
@@ -533,19 +552,13 @@ class Sabre(Router):
             for gate in layer_gates:
                 qubits = temporary_circuit.get_physical_qubits(gate)
                 avg_layer_distance += (
-                    self._dist_matrix[qubits[0], qubits[1]] - 1.0
-                ) / len(layer_gates)
+                    max(self._delta_register[i] for i in qubits)
+                    * (self._dist_matrix[qubits[0], qubits[1]] - 1.0)
+                    / len(layer_gates)
+                )
             tot_distance += weight * avg_layer_distance
             weight *= self.decay
         return tot_distance
-
-    def check_new_mapping(self, map):
-        """Check that the candidate will generate a new qubit mapping in order to avoid ending up in infinite cycles.
-        If the mapping is not new the cost associated to that candidate will be infinite.
-        """
-        if map in self._memory_map:
-            return False
-        return True
 
     def swap_candidates(self):
         """Return a list of possible candidate SWAPs (to be applied on logical qubits directly).
@@ -600,6 +613,7 @@ class Sabre(Router):
         self.update_dag_layers()
         self.update_front_layer()
         self._memory_map = []
+        self._delta_register = [1.0 for _ in self._delta_register]
 
 
 def draw_dag(dag: nx.DiGraph, filename=None):  # pragma: no cover
