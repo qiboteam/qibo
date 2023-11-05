@@ -49,7 +49,7 @@ def calculate_psi(unitary, magic_basis=magic_basis, backend=None):
     """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
-    print(backend.__class__.__name__)
+
     if backend.__class__.__name__ in ["CupyBackend", "CuQuantumBackend"]:
         raise_error(
             NotImplementedError,
@@ -156,8 +156,7 @@ def to_bell_diagonal(ud, bell_basis=bell_basis, backend=None):
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    ud = backend.cast(ud, dtype=complex)
-
+    ud = backend.cast(ud)
     bell_basis = backend.cast(bell_basis, dtype=bell_basis.dtype)
 
     ud_bell = np.transpose(np.conj(bell_basis)) @ ud @ bell_basis

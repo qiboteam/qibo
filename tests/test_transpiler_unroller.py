@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from qibo import gates
+from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 from qibo.quantum_info.random_ensembles import random_unitary
 from qibo.transpiler.abstract import NativeType
@@ -15,23 +16,30 @@ from qibo.transpiler.unroller import (
 
 def assert_matrices_allclose(gate, two_qubit_natives, backend):
     target_matrix = gate.matrix(backend)
+    target_matrix = backend.cast(target_matrix, dtype=target_matrix.dtype)
     # Remove global phase from target matrix
-    target_unitary = target_matrix / np.power(
+    normalisation = np.power(
         np.linalg.det(target_matrix), 1 / float(target_matrix.shape[0]), dtype=complex
     )
+    normalisation = backend.cast(normalisation, dtype=normalisation.dtype)
+    target_unitary = target_matrix / normalisation
+
     circuit = Circuit(len(gate.qubits))
     circuit.add(translate_gate(gate, two_qubit_natives))
     native_matrix = circuit.unitary(backend)
     # Remove global phase from native matrix
-    native_unitary = native_matrix / np.power(
+    normalisation = np.power(
         np.linalg.det(native_matrix), 1 / float(native_matrix.shape[0]), dtype=complex
     )
+    normalisation = backend.cast(normalisation, dtype=normalisation.dtype)
+    native_unitary = native_matrix / normalisation
+
     # There can still be phase differences of -1, -1j, 1j
     c = 0
     for phase in [1, -1, 1j, -1j]:
         if np.allclose(phase * native_unitary, target_unitary, atol=1e-12):
             c = 1
-    np.testing.assert_allclose(c, 1)
+    backend.assert_allclose(c, 1)
 
 
 @pytest.mark.parametrize("gatename", ["H", "X", "Y", "I"])
@@ -165,7 +173,7 @@ def test_TOFFOLI_to_native(backend, natives):
 )
 @pytest.mark.parametrize("nqubits", [1, 2])
 def test_unitary_to_native(backend, nqubits, natives, seed):
-    u = random_unitary(2**nqubits, seed=seed, backend=backend)
+    u = random_unitary(2**nqubits, seed=seed, backend=NumpyBackend())
     # transform to SU(2^nqubits) form
     u = u / np.sqrt(np.linalg.det(u))
     gate = gates.Unitary(u, *range(nqubits))
