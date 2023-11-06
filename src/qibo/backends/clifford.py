@@ -41,7 +41,7 @@ class CliffordBackend(NumpyBackend):
     def execute_circuit(self, circuit, initial_state=None, nshots=1000):
         for gate in circuit.queue:
             if not gate.clifford and not gate.__class__.__name__ == "M":
-                raise RuntimeError("The circuit contains non-Clifford gates.")
+                raise_error(RuntimeError, "Circuit contains non-Clifford gates.")
 
         try:
             nqubits = circuit.nqubits
