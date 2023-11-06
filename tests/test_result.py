@@ -14,12 +14,8 @@ def test_measurementoutcomes_probabilties(backend, qubits):
     probabilities = backend.execute_circuit(c).probabilities(qubits=qubits)
     c.has_collapse = True
     if 1 in qubits:
-        with pytest.raises(Exception) as exc_info:
-            repeated_probabilities = c().probabilities(qubits=qubits)
-            assert (
-                str(exc_info.value)
-                == "Asking probabilities for qubits that were not measured."
-            )
+        with pytest.raises(RuntimeError):
+            repeated_probabilities = backend.execute_circuit(c).probabilities(qubits=qubits)
     else:
         repeated_probabilities = c().probabilities(qubits=qubits)
         result = MeasurementOutcomes(
