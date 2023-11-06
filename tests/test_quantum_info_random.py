@@ -5,10 +5,11 @@ from functools import reduce
 import numpy as np
 import pytest
 
-from qibo import matrices
+from qibo import Circuit, gates, matrices
 from qibo.config import PRECISION_TOL
 from qibo.quantum_info.metrics import purity
 from qibo.quantum_info.random_ensembles import (
+    _probability_distribution_sin,
     random_clifford,
     random_density_matrix,
     random_gaussian_matrix,
@@ -19,10 +20,54 @@ from qibo.quantum_info.random_ensembles import (
     random_statevector,
     random_stochastic_matrix,
     random_unitary,
+    uniform_sampling_U3,
 )
 
 
-@pytest.mark.parametrize("seed", [None, 10, np.random.Generator(np.random.MT19937(10))])
+@pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
+def test_uniform_sampling_U3(backend, seed):
+    with pytest.raises(TypeError):
+        uniform_sampling_U3("1", seed=seed, backend=backend)
+    with pytest.raises(ValueError):
+        uniform_sampling_U3(0, seed=seed, backend=backend)
+    with pytest.raises(TypeError):
+        uniform_sampling_U3(2, seed="1", backend=backend)
+
+    X = backend.cast(matrices.X, dtype=matrices.X.dtype)
+    Y = backend.cast(matrices.Y, dtype=matrices.Y.dtype)
+    Z = backend.cast(matrices.Z, dtype=matrices.Z.dtype)
+
+    ngates = int(1e4)
+    phases = uniform_sampling_U3(ngates, seed=seed, backend=backend)
+
+    # expectation values in the 3 directions should be the same
+    expectation_values = []
+    for row in phases:
+        row = [float(phase) for phase in row]
+        circuit = Circuit(1)
+        circuit.add(gates.U3(0, *row))
+        state = backend.execute_circuit(circuit).state()
+
+        expectation_values.append(
+            [
+                np.conj(state) @ X @ state,
+                np.conj(state) @ Y @ state,
+                np.conj(state) @ Z @ state,
+            ]
+        )
+    expectation_values = backend.cast(expectation_values)
+    expectation_values = np.mean(expectation_values, axis=0)
+
+    backend.assert_allclose(expectation_values[0], expectation_values[1], atol=1e-1)
+    backend.assert_allclose(expectation_values[0], expectation_values[2], atol=1e-1)
+
+    # execution for coverage
+    sampler = _probability_distribution_sin(a=0, b=np.pi, seed=seed)
+    sampler.pdf(1)
+    sampler.cdf(1)
+
+
+@pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
 def test_random_gaussian_matrix(backend, seed):
     with pytest.raises(TypeError):
         dims = np.array([2])
