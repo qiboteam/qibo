@@ -50,7 +50,10 @@ def calculate_psi(unitary, magic_basis=magic_basis, backend=None):
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    if backend.__class__.__name__ in ["CupyBackend", "CuQuantumBackend"]:
+    if backend.__class__.__name__ in [
+        "CupyBackend",
+        "CuQuantumBackend",
+    ]:  # pragma: no cover
         raise_error(
             NotImplementedError,
             f"{backend.__class__.__name__} does not support `linalg.eig.`",
