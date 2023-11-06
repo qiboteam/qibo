@@ -296,6 +296,19 @@ class TensorflowBackend(NumpyBackend):
         )
         return frequencies
 
+    def calculate_probabilities_from_frequencies(
+        self, frequencies, nqubits, nshots=None
+    ):
+        if nshots is None:
+            nshots = self.np.sum(frequencies.values())
+        probs = []
+        for state in range(2**nqubits):
+            if state in frequencies:
+                probs.append(frequencies[state] / nshots)
+            else:
+                probs.append(0)
+        return self.tf.convert_to_tensor(probs)
+
     def calculate_norm(self, state, order=2):
         state = self.cast(state)
         return self.tf.norm(state, ord=order)

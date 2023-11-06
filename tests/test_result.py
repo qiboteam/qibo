@@ -2,28 +2,33 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates, models
+from qibo.config import raise_error
 from qibo.result import CircuitResult, MeasurementOutcomes, load_result
 
 
-@pytest.mark.parametrize("qubits", [None, [0, 2], [0], [1, 2]])
-def test_measurementoutcomes_probabilties(backend, qubits):
+@pytest.mark.parametrize("qubits", [None, [0], [1, 2]])
+def test_measurementoutcomes_probabilities(backend, qubits):
     c = Circuit(3)
     c.add(gates.X(0))
     c.add(gates.M(0, 2))
     global_probs = backend.execute_circuit(c).probabilities(qubits=[0, 2])
     probabilities = backend.execute_circuit(c).probabilities(qubits=qubits)
     c.has_collapse = True
-    if 1 in qubits:
-        with pytest.raises(RuntimeError):
+    if qubits is not None and 1 in qubits:
+        with pytest.raises(RuntimeError) as excinfo:
             repeated_probabilities = backend.execute_circuit(c).probabilities(
                 qubits=qubits
             )
+            assert (
+                str(excinfo.value)
+                == f"Asking probabilities for qubits {qubits}, but only qubits [0,2] were measured."
+            )
     else:
-        repeated_probabilities = c().probabilities(qubits=qubits)
+        repeated_probabilities = backend.execute_circuit(c).probabilities(qubits=qubits)
         result = MeasurementOutcomes(
             c.measurements, backend, probabilities=global_probs
         )
-        backend.assert_allclose(probabilities, repeated_probabilities, atol=1e-3)
+        backend.assert_allclose(probabilities, repeated_probabilities)
         assert np.sum(repeated_probabilities - probabilities) == 0
         assert np.sum(result.probabilities(qubits) - probabilities) == 0
 

@@ -4,6 +4,7 @@ import warnings
 import numpy as np
 
 from qibo import __version__, backends, gates
+from qibo.config import raise_error
 from qibo.measurements import apply_bitflips, frequencies_to_binary
 
 
@@ -259,9 +260,8 @@ class MeasurementOutcomes:
             if not set(qubits).issubset(self.measurement_gate.qubits):
                 raise_error(
                     RuntimeError,
-                    f"Probabilities were asked for qubits {qubits}, but they were not measured.",
+                    f"Asking probabilities for qubits {qubits}, but only qubits {self.measurement_gate.qubits} were measured.",
                 )
-                qubits = range(len(qubits))
 
         if self._probs is not None:
             return self.backend.calculate_probabilities(
@@ -269,9 +269,9 @@ class MeasurementOutcomes:
             )
 
         frequencies = self.frequencies(binary=False)
-        probs = self.backend.np.zeros(2 ** self._samples.shape[1])
-        for state, freq in frequencies.items():
-            probs[state] = freq / self.nshots
+        probs = self.backend.calculate_probabilities_from_frequencies(
+            frequencies, self._samples.shape[1], self.nshots
+        )
         self._probs = probs
         return self.backend.calculate_probabilities(
             probs, qubits, len(self.measurement_gate.qubits)

@@ -616,6 +616,16 @@ class NumpyBackend(Backend):
         probs = self.np.reshape(probs, len(qubits) * (2,))
         return self._order_probabilities(probs, qubits, nqubits).ravel()
 
+    def calculate_probabilities_from_frequencies(
+        self, frequencies, nqubits, nshots=None
+    ):
+        if nshots is None:
+            nshots = self.np.sum(frequencies.values())
+        probs = self.np.zeros(2**nqubits)
+        for state, freq in frequencies.items():
+            probs[state] = freq / nshots
+        return probs
+
     def set_seed(self, seed):
         self.np.random.seed(seed)
 
