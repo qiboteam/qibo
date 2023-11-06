@@ -50,12 +50,11 @@ class CliffordOperations:
 
     # valid for standard basis measurement only
     def M(self, tableau, qubits, nshots=1000):
-        new_tab = tableau.copy()
         nqubits = CliffordOperations.nqubits(tableau.shape[0])
         samples = []
         for _ in range(nshots):
             sample = []
-            tmp_tab = new_tab.copy()
+            tmp_tab = tableau.copy()
             for q in qubits:
                 p = self.get_x(tmp_tab)[nqubits:, q].nonzero()[0] + nqubits
                 if len(p) > 0:
@@ -91,7 +90,7 @@ class CliffordOperations:
             else:
                 freq[str(s)] = 1
         print(freq)
-        return new_tab
+        return tmp_tab
 
     @staticmethod
     def get_r(tableau, include_scratch=False):
