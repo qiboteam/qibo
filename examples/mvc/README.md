@@ -74,12 +74,6 @@ nx.draw(g, pos)
 ```
 
 
-
-![png](README_files/README_7_0.png)
-
-
-
-
 ```python
 print(f'Number of node is {len(g.nodes)}')
 print(f'Number of edge is {len(g.edges)}')
@@ -184,9 +178,6 @@ ax1.set_title(f'Vertex cover in orange after fix')
 
 
 
-
-
-![png](README_files/README_22_1.png)
 
 
 

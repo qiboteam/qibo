@@ -306,6 +306,7 @@ class CompositeNoiseModel:
 
     def fit(
         self,
+        circuit,
         target_result,
         bounds=True,
         eps=1e-4,
@@ -321,7 +322,7 @@ class CompositeNoiseModel:
         r"""Performs the fitting procedure of the noise model parameters, using the method nlopt.opt from the library NLopt. The fitting procedure is implemented to maximize the hellinger fidelity calculated using the :func:`qibo.noise_model.loss` between the probability distribution function estimated by the noise model and the one measured experimentally. Since, we are using probability distribution functions estimated using a finite number of shots, the hellinger fidelity is going to have an error caused by an imperfect estimation of the probabilities. This method takes into account this effect and stops when the fidelity reaches a corrected maximum $1-\epsilon$, with $\epsilon$=:func:`qibo.noise_model.hellinger_shot_error`.
 
         Args:
-            target_result (:class:`qibo.states.CircuitResult`): the circuit result with frequencies you want to emulate.
+            target_result (:class:`qibo.measurements.CircuitResult`): the circuit result with frequencies you want to emulate.
             bounds: if True are given the default bounds for the depolarizing and thermal relaxation channels' parameters.
                     Otherwise it's possible to pass a matrix of size (2, 4 * nqubits + 4), where bounds[0] and bounds[1]
                     will be respectively the lower and the upper bounds for the parameters. The first 2 * nqubit columns are related
@@ -345,7 +346,6 @@ class CompositeNoiseModel:
 
             backend = GlobalBackend()
 
-        circuit = target_result.circuit
         nshots = target_result.nshots
         target_prob = freq_to_prob(target_result.frequencies())
 
