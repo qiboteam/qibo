@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from qibo import gates, models
+from qibo import Circuit, gates
 from qibo.result import CircuitResult, MeasurementOutcomes, load_result
 
 
