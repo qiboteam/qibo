@@ -2,7 +2,7 @@ from qibo import __version__
 from qibo.backends.abstract import Backend
 from qibo.backends.clifford_operations import CliffordOperations
 from qibo.backends.numpy import NumpyBackend
-
+from qibo.config import raise_error
 
 class CliffordBackend(NumpyBackend):
     def __init__(self):
