@@ -10,8 +10,8 @@ def test_measurementoutcomes_probabilties(backend, qubits):
     c = Circuit(3)
     c.add(gates.X(0))
     c.add(gates.M(0, 2))
-    global_probs = c().probabilities(qubits=[0, 2])
-    probabilities = c().probabilities(qubits=qubits)
+    global_probs = backend.execute_circuit(c).probabilities(qubits=[0, 2])
+    probabilities = backend.execute_circuit(c).probabilities(qubits=qubits)
     c.has_collapse = True
     if 1 in qubits:
         with pytest.raises(Exception) as exc_info:
