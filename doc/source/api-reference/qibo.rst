@@ -1499,6 +1499,12 @@ Random Ensembles
 Functions that can generate random quantum objects.
 
 
+Haar-random :math:`U_{3}`
+"""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.uniform_sampling_U3
+
+
 Random Gaussian matrix
 """"""""""""""""""""""
 
