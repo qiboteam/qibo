@@ -12,7 +12,11 @@ def test_measurementoutcomes_probabilities(backend, qubits):
     c.add(gates.X(0))
     c.add(gates.M(0, 2))
     global_probs = backend.execute_circuit(c).probabilities(qubits=[0, 2])
-    probabilities = backend.execute_circuit(c).probabilities(qubits=qubits)
+    probabilities = (
+        backend.execute_circuit(c).probabilities(qubits=qubits)
+        if qubits is not None
+        else backend.execute_circuit(c).probabilities(qubits=[0, 2])
+    )
     c.has_collapse = True
     if qubits is not None and 1 in qubits:
         with pytest.raises(RuntimeError) as excinfo:
