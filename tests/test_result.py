@@ -5,7 +5,7 @@ from qibo import Circuit, gates, models
 from qibo.result import CircuitResult, MeasurementOutcomes, load_result
 
 
-@pytest.mark.parametrize("qubits", [[0, 2], [0], [1, 2]])
+@pytest.mark.parametrize("qubits", [None, [0, 2], [0], [1, 2]])
 def test_measurementoutcomes_probabilties(backend, qubits):
     c = Circuit(3)
     c.add(gates.X(0))
