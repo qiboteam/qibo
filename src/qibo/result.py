@@ -257,10 +257,7 @@ class MeasurementOutcomes:
             qubits = range(nqubits)
         else:
             if not set(qubits).issubset(self.measurement_gate.qubits):
-                raise RuntimeError(
-                    "Asking probabilities for qubits that were not measured."
-                )
-            else:
+                raise_error(RuntimeError, f"Probabilities were asked for qubits {qubits}, but they were not measured.")
                 qubits = range(len(qubits))
 
         if self._probs is not None:
