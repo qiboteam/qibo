@@ -1,11 +1,16 @@
 import os
 
 import numpy as np
-from datasets import create_dataset, create_target, fig_template, world_map_template
 from matplotlib.cm import get_cmap
 from matplotlib.colors import Normalize
 
 from qibo import Circuit, gates
+from qibo.examples.reuploading_classifier.datasets import (
+    create_dataset,
+    create_target,
+    fig_template,
+    world_map_template,
+)
 
 
 class single_qubit_classifier:
@@ -221,7 +226,7 @@ class single_qubit_classifier:
             plot with 2D representation of Bloch sphere.
         """
         angles = np.zeros((len(self.test_set[0]), 2))
-        from datasets import laea_x, laea_y
+        from qibo.examples.reuploading_classifier.datasets import laea_x, laea_y
 
         fig, ax = world_map_template()
         colors_classes = get_cmap("tab10")

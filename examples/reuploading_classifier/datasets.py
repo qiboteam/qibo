@@ -1,10 +1,12 @@
-from itertools import product
+from itertools import combinations, product
 
 import matplotlib.pyplot as plt
 import numpy as np
 
+from qibo.examples.reuploading_classifier.defined_datasets import *
 
-def create_dataset(name, grid=None, samples=1000, seed=0):
+
+def create_dataset(name, dimensions=2, grid=None, samples=1000, seed=0):
     """Function to create training and test sets for classifying.
 
     Args:
@@ -19,12 +21,18 @@ def create_dataset(name, grid=None, samples=1000, seed=0):
     Returns:
         Dataset for the given problem (x, y)
     """
+
+    if dimensions != 2 and (name != "circle" or name != "square"):
+        raise NotImplementedError
     if grid == None:
         np.random.seed(seed)
-        points = 1 - 2 * np.random.rand(samples, 2)
+        points = 1 - 2 * np.random.rand(samples, dimensions)
     else:
-        x = np.linspace(-1, 1, grid)
-        points = np.array(list(product(x, x)))
+        x = []
+        for _ in range(dimensions):
+            x.append(np.linspace(-1, 1, grid))
+        points = np.array(list(product(*x)))
+
     creator = globals()[f"_{name}"]
 
     x, y = creator(points)
@@ -62,6 +70,114 @@ def create_target(name):
                 dtype=complex,
             ),
         ]
+
+    else:
+        raise NotImplementedError("This dataset is not implemented")
+
+    return targets
+
+
+# TODO: naive targets + krons
+def create_target_n(name, n, naive=True):
+    """Function to create target states for classification.
+
+    Args:
+        name (str): Name of the problem to create the target states, to choose between
+            ['circle', '3 circles', 'square', '4 squares', 'crown', 'tricrown', 'wavy lines']
+
+    Returns:
+        List of numpy arrays encoding target states that depend only on the number of classes of the given problem
+    """
+    if name in ["circle", "square", "crown", "sphere"]:
+        targets = []
+        states = [np.array([1, 0], dtype="complex"), np.array([0, 1], dtype="complex")]
+        for state in states:
+            target = np.kron(state, state)
+            for _ in range(n - 2):
+                target = np.kron(target, state)
+            targets.append(target)
+
+    elif name in ["tricrown"]:
+        if not naive:
+            # With kronecher products
+            targets = []
+            states = [
+                np.array([1, 0], dtype="complex"),
+                np.array([np.cos(np.pi / 3), np.sin(np.pi / 3)], dtype="complex"),
+                np.array([np.cos(np.pi / 3), -np.sin(np.pi / 3)], dtype="complex"),
+            ]
+            for state in states:
+                target = np.kron(state, state)
+                for _ in range(n - 2):
+                    target = np.kron(target, state)
+                targets.append(target)
+        else:
+            # TODO: add some checks here
+            # Using the bigger space
+            targets = []
+            for i in range(4):
+                targets.append(np.zeros((n**2,), dtype="complex"))
+                targets[i][i] = 1
+
+    elif name in ["4_squares", "wavy_lines", "3_circles"]:
+        if naive and n**2 < 4:
+            naive = False
+            print("Can't use naive for this little qubits")
+
+        if not naive:
+            # With kronecher products
+            targets = []
+            states = [
+                np.array([1, 0], dtype="complex"),
+                np.array([1 / np.sqrt(3), np.sqrt(2 / 3)], dtype=complex),
+                np.array(
+                    [1 / np.sqrt(3), np.exp(1j * 2 * np.pi / 3) * np.sqrt(2 / 3)],
+                    dtype=complex,
+                ),
+                np.array(
+                    [1 / np.sqrt(3), np.exp(-1j * 2 * np.pi / 3) * np.sqrt(2 / 3)],
+                    dtype=complex,
+                ),
+            ]
+            for state in states:
+                target = np.kron(state, state)
+                for _ in range(n - 2):
+                    target = np.kron(target, state)
+                targets.append(target)
+        else:
+            # TODO: add some checks here
+            # Using the bigger space
+            targets = []
+            for i in range(4):
+                targets.append(np.zeros((n**2 - 1,), dtype="complex"))
+                targets[i][i] = 1
+
+    elif name in ["hectacrown"]:
+        if naive and n**2 < 6:
+            naive = False
+            print("Can't use naive for this little qubits")
+
+        if not naive:
+            targets = []
+            states = [
+                np.array([1, 0], dtype="complex"),
+                np.array([1, 0], dtype="complex"),
+                1 / np.sqrt(2) * np.array([1, 1], dtype="complex"),
+                1 / np.sqrt(2) * np.array([1, -1], dtype="complex"),
+                1 / np.sqrt(2) * np.array([1, 1j], dtype="complex"),
+                1 / np.sqrt(2) * np.array([1, -1j], dtype="complex"),
+            ]
+            for state in states:
+                target = np.kron(state, state)
+                for _ in range(n - 2):
+                    target = np.kron(target, state)
+                targets.append(target)
+
+        else:
+            targets = []
+            for i in range(6):
+                targets.append(np.zeros((n**2 - 1,), dtype="complex"))
+                targets[i][i] = 1
 
     else:
         raise NotImplementedError("This dataset is not implemented")
@@ -114,6 +230,14 @@ def fig_template(name):
                 circle = plt.Circle(c, r, color="black", fill=False, zorder=10)
                 ax.add_artist(circle)
 
+    elif name == "hectacrown":
+        centers = [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0]]
+        radii = [0.4, 0.55, 0.7, 0.85, 1]
+        for c, r in zip(centers, radii):
+            for ax in axs:
+                circle = plt.Circle(c, r, color="black", fill=False, zorder=10)
+                ax.add_artist(circle)
+
     elif name == "wavy_lines":
         freq = 1
 
@@ -132,6 +256,50 @@ def fig_template(name):
     axs[0].axis("equal")
     axs[1].set(xlabel=r"$x_0$", xlim=[-1, 1], ylim=[-1, 1])
     axs[1].axis("equal")
+
+    return fig, axs
+
+
+def fig_template_3D(name):
+    """Function to create templates for plotting results of classification.
+
+    Args:
+        name (str): Name of the problem to create the figure template, to choose between
+            ['circle', '3 circles', 'square', '4 squares', 'crown', 'tricrown', 'wavy lines']
+
+    Returns:
+        matplotlib.figure, matplotlib.axis with the templates for plotting results.
+
+    """
+
+    fig = plt.figure()
+    axs = []
+    axs.append(fig.add_subplot(1, 2, 1, projection="3d"))
+    axs.append(fig.add_subplot(1, 2, 2, projection="3d"))
+
+    if name == "circle":
+        u, v = np.mgrid[0 : 2 * np.pi : 20j, 0 : np.pi : 10j]
+        x = np.cos(u) * np.sin(v)
+        y = np.sin(u) * np.sin(v)
+        z = np.cos(v)
+        for ax in axs:
+            ax.plot_wireframe(x, y, z, color="black")
+
+    elif name == "square":
+        r = [-0.5 * np.sqrt(2), 0.5 * np.sqrt(2)]
+        for s, e in combinations(np.array(list(product(r, r, r))), 2):
+            if np.sum(np.abs(s - e)) == r[1] - r[0]:
+                for ax in axs:
+                    ax.plot3D(*zip(s, e), color="black")
+
+    axs[0].set(xlabel=r"$x_0$", ylabel=r"$x_1$", zlabel=r"$x_2$")
+    axs[0].set_xlim(-1.01, 1.01)
+    axs[0].set_ylim(-1.01, 1.01)
+    axs[0].set_zlim(-1.01, 1.01)
+    axs[1].set(xlabel=r"$x_0$", ylabel=r"$x_1$", zlabel=r"$x_2$")
+    axs[1].set_xlim(-1.01, 1.01)
+    axs[1].set_ylim(-1.01, 1.01)
+    axs[1].set_zlim(-1.01, 1.01)
 
     return fig, axs
 
@@ -256,6 +424,8 @@ def laea_y(lamb, phi):
     return np.sqrt(2) * np.sin(phi) / np.sqrt(1 + np.cos(phi) * np.cos(lamb / 2))
 
 
+# FIXME: Move them to other file, but crashes due to the globals()
+# TODO: Admits n-dimensional circles
 def _circle(points):
     labels = np.zeros(len(points), dtype=np.int32)
     ids = np.where(np.linalg.norm(points, axis=1) > np.sqrt(2 / np.pi))
@@ -275,6 +445,7 @@ def _3_circles(points):
     return points, labels
 
 
+# TODO: Admits n-dimensional squares
 def _square(points):
     labels = np.zeros(len(points), dtype=np.int32)
     ids = np.where(np.max(np.abs(points), axis=1) > 0.5 * np.sqrt(2))
@@ -323,6 +494,44 @@ def _tricrown(points):
         )
     )
     labels[ids] = 1
+
+    return points, labels
+
+
+def _hectacrown(points):
+    c = [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0]]
+    r = [1, 0.85, 0.7, 0.55, 0.4]
+    labels = np.zeros(len(points), dtype=np.int32)
+    ids = np.where(np.linalg.norm(points - [c[0]], axis=1) > r[0])
+    labels[ids] = 1
+    ids = np.where(
+        np.logical_and(
+            np.linalg.norm(points - [c[0]], axis=1) < r[0],
+            np.linalg.norm(points - [c[1]], axis=1) > r[1],
+        )
+    )
+    labels[ids] = 2
+    ids = np.where(
+        np.logical_and(
+            np.linalg.norm(points - [c[1]], axis=1) < r[1],
+            np.linalg.norm(points - [c[2]], axis=1) > r[2],
+        )
+    )
+    labels[ids] = 3
+    ids = np.where(
+        np.logical_and(
+            np.linalg.norm(points - [c[2]], axis=1) < r[2],
+            np.linalg.norm(points - [c[3]], axis=1) > r[3],
+        )
+    )
+    labels[ids] = 4
+    ids = np.where(
+        np.logical_and(
+            np.linalg.norm(points - [c[3]], axis=1) < r[3],
+            np.linalg.norm(points - [c[4]], axis=1) > r[4],
+        )
+    )
+    labels[ids] = 5
 
     return points, labels
 
