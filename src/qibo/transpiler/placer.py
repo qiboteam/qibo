@@ -221,7 +221,7 @@ class Random(Placer):
                 final_cost = cost
         return final_mapping
 
-    def _cost(graph, gates_qubits_pairs):
+    def _cost(self, graph, gates_qubits_pairs):
         """
         Compute the cost associated to an initial layout as the lengh of the reduced circuit.
 
