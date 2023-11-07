@@ -2,7 +2,6 @@ from enum import Enum, auto
 
 import hyperopt
 import numpy as np
-import scipy
 
 from ..config import raise_error
 from ..hamiltonians import Hamiltonian
