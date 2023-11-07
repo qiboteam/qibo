@@ -1,6 +1,8 @@
 from enum import Enum, auto
 
 import numpy as np
+import scipy
+from hyperopt import fmin, hp, tpe
 
 from ..config import raise_error
 from ..hamiltonians import Hamiltonian
@@ -67,6 +69,7 @@ class DoubleBracketFlow:
                 @ self.h.exp(step)
                 @ self.backend.calculate_matrix_exp(step, d)
             )
+
         self.h.matrix = (
             operator @ self.h.matrix @ self.backend.cast(np.matrix(operator).getH())
         )
@@ -93,3 +96,34 @@ class DoubleBracketFlow:
     def backend(self):
         """Get Hamiltonian's backend."""
         return self.h0.backend
+
+    def optimize_step(
+        self, step_min: float = 0.0001, step_max: int = 0.5, max_evals: int = 1000
+    ):
+        """Optimize step"""
+
+        space = hp.uniform("step", step_min, step_max)
+        best = fmin(
+            fn=self.local_loss,
+            space=space,
+            algo=tpe.suggest,
+            max_evals=max_evals,
+            verbose=False,
+        )
+
+        return best["step"]
+
+    def local_loss(self, step):
+        """Compute loss function distance between"""
+        # copy initial hamiltonian
+        h_copy = self.h
+
+        # one flow step
+        old_loss = self.off_diagonal_norm
+        self.__call__(mode=FlowGeneratorType.canonical, step=step)
+        new_loss = self.off_diagonal_norm
+
+        # set the initial configuration
+        self.h = h_copy
+
+        return new_loss - old_loss
