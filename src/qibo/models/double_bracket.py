@@ -107,8 +107,6 @@ class DoubleBracketFlow:
         """Evaluate energy fluctuations"""
         energy = self.h.expectation(state)
         h = self.h.matrix
-        h2 = h @ h
-        if self.backend.name == "numpy":
-            h2 = np.asarray(h2)
+        h2 = Hamiltonian(nqubits=self.h.nqubits, matrix=h @ h)
         average_h2 = self.backend.calculate_expectation_state(h2, state, normalize=True)
         return np.sqrt(average_h2 - energy**2)
