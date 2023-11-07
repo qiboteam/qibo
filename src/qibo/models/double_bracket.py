@@ -83,13 +83,18 @@ class DoubleBracketFlow:
         return self.backend.cast(np.diag(np.diag(self.backend.to_numpy(self.h.matrix))))
 
     @property
+    def off_diag_h(self):
+        return self.h.matrix - self.diagonal_h_matrix
+
+    @property
     def off_diagonal_norm(self):
         """Norm of off-diagonal part of H matrix."""
-        off_diag_h = self.h.matrix - self.diagonal_h_matrix
         off_diag_h_dag = self.backend.cast(
-            np.matrix(self.backend.to_numpy(off_diag_h)).getH()
+            np.matrix(self.backend.to_numpy(self.off_diag_h)).getH()
         )
-        return np.real(np.trace(self.backend.to_numpy(off_diag_h_dag @ off_diag_h)))
+        return np.real(
+            np.trace(self.backend.to_numpy(off_diag_h_dag @ self.off_diag_h))
+        )
 
     @property
     def backend(self):
