@@ -100,3 +100,11 @@ class DoubleBracketFlow:
     def backend(self):
         """Get Hamiltonian's backend."""
         return self.h0.backend
+
+    def energy_fluctuation(self, state):
+        """Evaluate energy fluctuations"""
+        energy = self.h.expectation(state)
+        h = self.h.matrix
+        h2 = self.backend.to_numpy(np.asarray(h @ h))
+        average_h2 = self.backend.calculate_expectation_state(h2, state, normalize=True)
+        return np.sqrt(average_h2 - energy**2)
