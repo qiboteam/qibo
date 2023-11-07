@@ -4,6 +4,7 @@ from functools import cache
 from qibo import gates
 from qibo.backends.numpy import NumpyBackend
 from qibo.config import raise_error
+from qibo.result import MeasurementOutcomes
 
 
 class CliffordOperations:
@@ -207,7 +208,7 @@ class CliffordBackend(NumpyBackend):
             for gate in circuit.queue:
                 state = gate.apply_clifford(self, state, nqubits, nshots)
 
-            return state
+            return MeasurementOutcomes(circuit.measurements, self, nshots=nshots)
 
         except self.oom_error:
             raise_error(
