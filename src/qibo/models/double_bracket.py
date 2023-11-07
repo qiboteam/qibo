@@ -2,6 +2,8 @@ from enum import Enum, auto
 
 import numpy as np
 
+from qibo.backends.numpy import NumpyBackend
+
 from ..config import raise_error
 from ..hamiltonians import Hamiltonian
 
@@ -105,6 +107,8 @@ class DoubleBracketFlow:
         """Evaluate energy fluctuations"""
         energy = self.h.expectation(state)
         h = self.h.matrix
-        h2 = self.backend.to_numpy(np.asarray(h @ h))
+        h2 = h @ h
+        if self.backend.name == "numpy":
+            h2 = np.asarray(h2)
         average_h2 = self.backend.calculate_expectation_state(h2, state, normalize=True)
         return np.sqrt(average_h2 - energy**2)
