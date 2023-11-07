@@ -1,8 +1,8 @@
 from enum import Enum, auto
 
+import hyperopt
 import numpy as np
 import scipy
-from hyperopt import fmin, hp, tpe
 
 from ..config import raise_error
 from ..hamiltonians import Hamiltonian
@@ -100,17 +100,29 @@ class DoubleBracketFlow:
     def optimize_step(
         self,
         step_min: float = 0.0001,
-        step_max: int = 0.5,
+        step_max: float = 0.5,
         max_evals: int = 1000,
+        space: callable = hyperopt.hp.uniform,
+        optimizer: callable = hyperopt.tpe,
         verbose: bool = False,
     ):
-        """Optimize flow step."""
+        """
+        Optimize flow step.
 
-        space = hp.uniform("step", step_min, step_max)
-        best = fmin(
+        Args:
+            step_min: lower bound of the search grid;
+            step_max: upper bound of the search grid;
+            max_evals: maximum number of iterations done by the hyperoptimizer;
+            space: see hyperopt.hp possibilities;
+            optimizer: see hyperopt algorithms;
+            verbose: level of verbosity.
+        """
+
+        space = space("step", step_min, step_max)
+        best = hyperopt.fmin(
             fn=self.local_loss,
             space=space,
-            algo=tpe.suggest,
+            algo=optimizer.suggest,
             max_evals=max_evals,
             verbose=verbose,
         )
@@ -118,11 +130,11 @@ class DoubleBracketFlow:
         return best["step"]
 
     def local_loss(self, step):
-        """Compute loss function distance between"""
+        """Compute loss function distance between steps."""
         # copy initial hamiltonian
         h_copy = self.h
 
-        # one flow step
+        # TODO: involve a `look_ahead` variable in the hyperoptimization?
         old_loss = self.off_diagonal_norm
         self.__call__(mode=FlowGeneratorType.canonical, step=step)
         new_loss = self.off_diagonal_norm
