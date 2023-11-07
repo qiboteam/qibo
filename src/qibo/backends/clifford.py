@@ -45,10 +45,26 @@ class CliffordOperations:
         return new_tab
 
     def CZ(self, tableau, control_q, target_q, nqubits):
+        """Decomposition --> HCNOTH"""
         new_tab = tableau.copy()
-        new_tab = self.H(new_tab, target_q, nqubits)
-        new_tab = self.CNOT(new_tab, control_q, target_q, nqubits)
-        return self.H(new_tab, target_q, nqubits)
+        r, x, z = (
+            self.get_r(new_tab, nqubits),
+            self.get_x(new_tab, nqubits),
+            self.get_z(new_tab, nqubits),
+        )
+        self.set_r(
+            new_tab,
+            r
+            ^ (x[:, target_q] * z[:, target_q]).flatten()
+            ^ (
+                x[:, control_q]
+                * x[:, target_q]
+                * (z[:, target_q] ^ z[:, control_q] ^ 1)
+            ).flatten()
+            ^ (x[:, target_q] * (z[:, target_q] ^ x[:, control_q])).flatten(),
+        )
+        new_tab[:-1, nqubits + target_q] = z[:, target_q] ^ x[:, control_q]
+        return new_tab
 
     def S(self, tableau, q, nqubits):
         new_tab = tableau.copy()
