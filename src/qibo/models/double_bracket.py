@@ -97,7 +97,7 @@ class DoubleBracketFlow:
         """Get Hamiltonian's backend."""
         return self.h0.backend
 
-    def optimize_step(
+    def hyperopt_step(
         self,
         step_min: float = 0.0001,
         step_max: float = 0.5,
