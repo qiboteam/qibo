@@ -292,7 +292,7 @@ def test_qcnn_training():
     test_qcnn = QuantumCNN(nqubits=4, nlayers=1, nclasses=2, params=init_theta)
     testcircuit = test_qcnn._circuit
     result = test_qcnn.minimize(
-        init_theta, data=data, labels=labels, nshots=10000, method="Powell"
+        init_theta, data=data, labels=labels, nshots=10000, method="sgd"
     )
 
     # test Predictions function
