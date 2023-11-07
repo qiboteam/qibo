@@ -3,14 +3,9 @@ import os
 import numpy as np
 from matplotlib.cm import get_cmap
 from matplotlib.colors import Normalize
+from qdatasets import create_dataset, create_target, fig_template, world_map_template
 
 from qibo import Circuit, gates
-from qibo.examples.reuploading_classifier.datasets import (
-    create_dataset,
-    create_target,
-    fig_template,
-    world_map_template,
-)
 
 
 class single_qubit_classifier:

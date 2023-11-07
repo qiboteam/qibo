@@ -3,8 +3,6 @@ from itertools import combinations, product
 import matplotlib.pyplot as plt
 import numpy as np
 
-from qibo.examples.reuploading_classifier.defined_datasets import *
-
 
 def create_dataset(name, dimensions=2, grid=None, samples=1000, seed=0):
     """Function to create training and test sets for classifying.

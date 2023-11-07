@@ -2,8 +2,8 @@
 import argparse
 import pickle
 
-from qibo.examples.reuploading_classifier.nqubits_qlassifier import n_qubit_classifier
-from qibo.examples.reuploading_classifier.qlassifier import single_qubit_classifier
+from nqubits_qlassifier import n_qubit_classifier
+from qlassifier import single_qubit_classifier
 
 # TODO: fix issue with .pkl
 
@@ -22,8 +22,6 @@ parser.add_argument(
 )
 
 
-# TODO: Choose
-# TODO: The dataset name will encode the data dimension
 def main(
     dataset, layers, nqubits=1, data_dimension=2, entanglement=False, target_naive=True
 ):

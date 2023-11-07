@@ -1,19 +1,12 @@
 import os
 
 import numpy as np
+from datasets import create_dataset, create_target_n, fig_template_3D
 from matplotlib.cm import get_cmap
 from matplotlib.colors import Normalize
+from qlassifier import fidelity, single_qubit_classifier
 
 from qibo import Circuit, gates
-from qibo.examples.reuploading_classifier.datasets import (
-    create_dataset,
-    create_target_n,
-    fig_template_3D,
-)
-from qibo.examples.reuploading_classifier.qlassifier import (
-    fidelity,
-    single_qubit_classifier,
-)
 
 
 class n_qubit_classifier(single_qubit_classifier):
