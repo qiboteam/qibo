@@ -300,7 +300,7 @@ class TensorflowBackend(NumpyBackend):
         self, frequencies, nqubits, nshots=None
     ):
         if nshots is None:
-            nshots = self.np.sum(frequencies.values())
+            nshots = self.np.sum(list(frequencies.values()))
         probs = []
         for state in range(2**nqubits):
             if state in frequencies:

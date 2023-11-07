@@ -620,7 +620,7 @@ class NumpyBackend(Backend):
         self, frequencies, nqubits, nshots=None
     ):
         if nshots is None:
-            nshots = self.np.sum(frequencies.values())
+            nshots = self.np.sum(list(frequencies.values()))
         probs = self.np.zeros(2**nqubits)
         for state, freq in frequencies.items():
             probs[state] = freq / nshots

@@ -1,3 +1,5 @@
+from collections import Counter
+
 import numpy as np
 import pytest
 
@@ -122,3 +124,13 @@ def test_plus_density_matrix(backend):
     matrix = backend.plus_density_matrix(4)
     target_matrix = np.ones((16, 16)) / 16
     backend.assert_allclose(matrix, target_matrix)
+
+
+def test_calculate_probabilities_from_frequencies(backend):
+    probs = backend.cast([0.25, 0, 0, 0.25, 0.25, 0, 0.25, 0], dtype=float)
+    freq = Counter(dict(zip(range(8), np.random.binomial(n=100000, p=probs))))
+    nshots = np.sum(list(freq.values()))
+    probs_1 = backend.calculate_probabilities_from_frequencies(freq, 3, nshots=None)
+    probs_2 = backend.calculate_probabilities_from_frequencies(freq, 3, nshots=nshots)
+    assert np.sum(probs_1 - probs_2) == 0
+    backend.assert_allclose(probs_1, probs, atol=1e-2)
