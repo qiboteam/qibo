@@ -15,6 +15,9 @@ class CliffordOperations:
 
         self.np = np
 
+    def I(self, tableau, q, nqubits):
+        return tableau
+
     def H(self, tableau, q, nqubits):
         new_tab = tableau.copy()
         self.set_r(
@@ -32,7 +35,7 @@ class CliffordOperations:
         x, z = self.get_x(new_tab, nqubits), self.get_z(new_tab, nqubits)
         self.set_r(
             new_tab,
-            self.get_r(tableau, nqubits)
+            self.get_r(new_tab, nqubits)
             ^ (x[:, control_q] * z[:, target_q]).flatten()
             * (x[:, target_q] ^ z[:, control_q] ^ 1).flatten(),
         )
@@ -41,17 +44,64 @@ class CliffordOperations:
         new_tab[:-1, nqubits + control_q] = z[:, control_q] ^ z[:, target_q]
         return new_tab
 
+    def CZ(self, tableau, control_q, target_q, nqubits):
+        new_tab = tableau.copy()
+        new_tab = self.H(new_tab, target_q, nqubits)
+        new_tab = self.CNOT(new_tab, control_q, target_q, nqubits)
+        return self.H(new_tab, target_q, nqubits)
+
     def S(self, tableau, q, nqubits):
         new_tab = tableau.copy()
+        x, z = self.get_x(new_tab, nqubits), self.get_z(new_tab, nqubits)
         self.set_r(
             new_tab,
-            self.get_r(tableau, nqubits)
-            ^ (
-                self.get_x(tableau, nqubits)[:, q] * self.get_z(tableau, nqubits)[:, q]
-            ).flatten(),
+            self.get_r(new_tab, nqubits) ^ (x[:, q] * z[:, q]).flatten(),
         )
-        new_tab[:-1, nqubits + q] = (
-            self.get_z(tableau, nqubits)[:, q] ^ self.get_x(tableau, nqubits)[:, q]
+        new_tab[:-1, nqubits + q] = z[:, q] ^ x[:, q]
+        return new_tab
+
+    def Z(self, tableau, q, nqubits):
+        """Decomposition --> SS"""
+        new_tab = tableau.copy()
+        r, x, z = (
+            self.get_r(new_tab, nqubits),
+            self.get_x(new_tab, nqubits),
+            self.get_z(new_tab, nqubits),
+        )
+        self.set_r(
+            new_tab, r ^ ((x[:, q] * z[:, q]) ^ x[:, q] * (z[:, q] ^ x[:, q])).flatten()
+        )
+        return new_tab
+
+    def X(self, tableau, q, nqubits):
+        """Decomposition --> HSSH"""
+        new_tab = tableau.copy()
+        r, x, z = (
+            self.get_r(new_tab, nqubits),
+            self.get_x(new_tab, nqubits),
+            self.get_z(new_tab, nqubits),
+        )
+        self.set_r(
+            new_tab,
+            r
+            ^ (z[:, q] * (z[:, q] ^ x[:, q])).flatten()
+            ^ (z[:, q] * x[:, q]).flatten(),
+        )
+        return new_tab
+
+    def Y(self, tableau, q, nqubits):
+        """Decomposition --> SSHSSH"""
+        new_tab = tableau.copy()
+        r, x, z = (
+            self.get_r(new_tab, nqubits),
+            self.get_x(new_tab, nqubits),
+            self.get_z(new_tab, nqubits),
+        )
+        self.set_r(
+            new_tab,
+            r
+            ^ (z[:, q] * (z[:, q] ^ x[:, q])).flatten()
+            ^ (x[:, q] * (z[:, q] ^ x[:, q])).flatten(),
         )
         return new_tab
 
@@ -74,7 +124,7 @@ class CliffordOperations:
                 state_copy[p, -1] = outcome
                 state_copy[p, nqubits + q] = 1
                 sample.append(outcome)
-                # determined outcome, state unchanged
+            # determined outcome, state unchanged
             else:
                 CliffordOperations.set_scratch(state_copy, 0)
                 for i in (x[:, q] == 1).nonzero()[0]:
@@ -232,26 +282,31 @@ class CliffordBackend(NumpyBackend):
         probs = self.np.sum(samples, axis=0) / nshots
         return self.np.ravel(self._order_probabilities(probs, qubits, nqubits))
 
+    def tableau_to_generators(tableau, group="stabilizers", return_array=False):
+        import numpy as np
 
-def _tableau_to_generators(tableau, return_array=False):
-    import numpy as np
+        bits_to_gate = {"00": gates.I, "01": gates.X, "10": gates.Z, "11": gates.Y}
 
-    bits_to_gate = {"00": gates.I, "01": gates.X, "10": gates.Z, "11": gates.Y}
-
-    nqubits = int((tableau.shape[0] - 1) / 2)
-    phases = 1j ** (1 * tableau[nqubits:-1, -1])
-    tmp = 1 * tableau[nqubits:-1, :-1]
-    X, Z = tmp[:, :nqubits], tmp[:, nqubits:]
-    generators = []
-    for x, z in zip(X, Z):
-        paulis = []
-        for i, (xx, zz) in enumerate(zip(x, z)):
-            paulis.append(bits_to_gate[f"{zz}{xx}"](i))
-        if return_array:
-            matrix = paulis[0].matrix()
-            for p in paulis[1:]:
-                matrix = np.tensordot(matrix, p.matrix(), axes=0)
-            generators.append(matrix.reshape(2**nqubits, 2**nqubits))
+        nqubits = int((tableau.shape[0] - 1) / 2)
+        if group == "stabilizers":
+            phases = 1j ** (1 * tableau[nqubits:-1, -1])
+            tmp = 1 * tableau[nqubits:-1, :-1]
+        elif group == "destabilizers":
+            phases = 1j ** (1 * tableau[:nqubits, -1])
+            tmp = 1 * tableau[:nqubits, :-1]
         else:
-            generators.append(paulis)
-    return generators, phases
+            raise_error(
+                RuntimeError,
+                "Unsupported value for ``group``. Please use ``group='stabilizers'`` to retrieve the generators of the stabilizers or ``group='destabilizers'`` to get the generators of the destabilizers.",
+            )
+        X, Z = tmp[:, :nqubits], tmp[:, nqubits:]
+        generators = []
+        for x, z in zip(X, Z):
+            paulis = []
+            for i, (xx, zz) in enumerate(zip(x, z)):
+                paulis.append(bits_to_gate[f"{zz}{xx}"](i))
+            if return_array:
+                generators.append([p.matrix for p in paulis])
+            else:
+                generators.append(paulis)
+        return generators, phases
