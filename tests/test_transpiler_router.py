@@ -326,7 +326,7 @@ def test_sabre_memory_map():
     layout_circ = Circuit(5)
     initial_layout = placer(layout_circ)
     router = Sabre(connectivity=star_connectivity())
-    router.preprocessing(circuit=star_circuit(), initial_layout=initial_layout)
+    router._preprocessing(circuit=star_circuit(), initial_layout=initial_layout)
     router._memory_map = [[1, 0, 2, 3, 4]]
-    value = router.compute_cost((0, 1))
+    value = router._compute_cost((0, 1))
     assert value == float("inf")

@@ -7,7 +7,7 @@ from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 from qibo.quantum_info.random_ensembles import random_unitary
-from qibo.transpiler.pipeline import transpose_qubits
+from qibo.transpiler.pipeline import _transpose_qubits
 from qibo.transpiler.router import ConnectivityError
 from qibo.transpiler.star_connectivity import StarConnectivity
 
@@ -63,7 +63,7 @@ def test_fix_connectivity(nqubits, depth, middle_qubit, measurements):
     final_state = backend.execute_circuit(transpiled).state()
     target_state = backend.execute_circuit(original).state()
     hardware_qubits = list(hardware_qubits.values())
-    target_state = transpose_qubits(target_state, hardware_qubits)
+    target_state = _transpose_qubits(target_state, hardware_qubits)
     np.testing.assert_allclose(final_state, target_state)
 
 
@@ -94,5 +94,5 @@ def test_fix_connectivity_unitaries(nqubits, unitary_dim, depth, middle_qubit):
     final_state = backend.execute_circuit(transpiled).state()
     target_state = backend.execute_circuit(original).state()
     hardware_qubits = list(hardware_qubits.values())
-    target_state = transpose_qubits(target_state, hardware_qubits)
+    target_state = _transpose_qubits(target_state, hardware_qubits)
     np.testing.assert_allclose(final_state, target_state)

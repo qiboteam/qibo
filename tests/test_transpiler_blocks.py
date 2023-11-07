@@ -6,15 +6,15 @@ from qibo.transpiler.blocks import (
     Block,
     BlockingError,
     CircuitBlocks,
+    _check_multi_qubit_measurements,
+    _count_multi_qubit_gates,
     _find_previous_gates,
     _find_successive_gates,
+    _gates_on_qubit,
+    _initial_block_decomposition,
+    _remove_gates,
+    _split_multi_qubit_measurements,
     block_decomposition,
-    check_multi_qubit_measurements,
-    count_multi_qubit_gates,
-    gates_on_qubit,
-    initial_block_decomposition,
-    remove_gates,
-    split_multi_qubit_measurements,
 )
 
 
@@ -27,7 +27,7 @@ def assert_gates_equality(gates_1: list, gates_2: list):
 
 def test_count_2q_gates():
     block = Block(qubits=(0, 1), gates=[gates.CZ(0, 1), gates.CZ(0, 1), gates.H(0)])
-    assert block.count_2q_gates() == 2
+    assert block._count_2q_gates() == 2
 
 
 def test_rename():
@@ -41,7 +41,7 @@ def test_add_gate_and_entanglement():
     assert block.entangled == False
     block.add_gate(gates.CZ(0, 1))
     assert block.entangled == True
-    assert block.count_2q_gates() == 1
+    assert block._count_2q_gates() == 1
 
 
 def test_add_gate_error():
@@ -79,21 +79,21 @@ def test_commute_true():
 
 def test_count_multi_qubit_gates():
     gatelist = [gates.CZ(0, 1), gates.H(0), gates.TOFFOLI(0, 1, 2)]
-    assert count_multi_qubit_gates(gatelist) == 2
+    assert _count_multi_qubit_gates(gatelist) == 2
 
 
 def test_gates_on_qubit():
     gatelist = [gates.H(0), gates.H(1), gates.H(2), gates.H(0)]
-    assert_gates_equality(gates_on_qubit(gatelist, 0), [gatelist[0], gatelist[-1]])
-    assert_gates_equality(gates_on_qubit(gatelist, 1), [gatelist[1]])
-    assert_gates_equality(gates_on_qubit(gatelist, 2), [gatelist[2]])
+    assert_gates_equality(_gates_on_qubit(gatelist, 0), [gatelist[0], gatelist[-1]])
+    assert_gates_equality(_gates_on_qubit(gatelist, 1), [gatelist[1]])
+    assert_gates_equality(_gates_on_qubit(gatelist, 2), [gatelist[2]])
 
 
 def test_remove_gates():
     gatelist = [gates.H(0), gates.CZ(0, 1), gates.H(2), gates.CZ(0, 2)]
     remaining = [gates.CZ(0, 1), gates.H(2)]
     delete_list = [gatelist[0], gatelist[3]]
-    remove_gates(gatelist, delete_list)
+    _remove_gates(gatelist, delete_list)
     assert_gates_equality(gatelist, remaining)
 
 
@@ -118,7 +118,7 @@ def test_initial_block_decomposition():
     circ.add(gates.CZ(1, 2))
     circ.add(gates.H(3))
     circ.add(gates.H(4))
-    blocks = initial_block_decomposition(circ)
+    blocks = _initial_block_decomposition(circ)
     assert_gates_equality(blocks[0].gates, [gates.H(1), gates.H(0), gates.CZ(0, 1)])
     assert len(blocks) == 4
     assert len(blocks[0].gates) == 3
@@ -132,19 +132,19 @@ def test_check_measurements():
     circ = Circuit(2)
     circ.add(gates.H(1))
     circ.add(gates.M(0, 1))
-    assert check_multi_qubit_measurements(circ)
+    assert _check_multi_qubit_measurements(circ)
     circ = Circuit(2)
     circ.add(gates.H(1))
     circ.add(gates.M(0))
     circ.add(gates.M(1))
-    assert not check_multi_qubit_measurements(circ)
+    assert not _check_multi_qubit_measurements(circ)
 
 
 def test_split_measurements():
     circ = Circuit(2)
     circ.add(gates.H(1))
     circ.add(gates.M(0, 1))
-    new_circ = split_multi_qubit_measurements(circ)
+    new_circ = _split_multi_qubit_measurements(circ)
     assert_gates_equality(new_circ.queue, [gates.H(1), gates.M(0), gates.M(1)])
 
 
@@ -160,7 +160,7 @@ def test_initial_block_decomposition_measurements():
     circ.add(gates.M(3))
     circ.add(gates.H(3))
     circ.add(gates.H(4))
-    blocks = initial_block_decomposition(circ)
+    blocks = _initial_block_decomposition(circ)
     print(blocks[0].gates)
     assert_gates_equality(
         blocks[0].gates,
@@ -175,7 +175,7 @@ def test_initial_block_decomposition_error():
     circ.add(gates.TOFFOLI(0, 1, 2))
     print(len(circ.queue[0].qubits))
     with pytest.raises(BlockingError):
-        blocks = initial_block_decomposition(circ)
+        blocks = _initial_block_decomposition(circ)
 
 
 def test_block_decomposition_error():
@@ -228,15 +228,15 @@ def test_block_decomposition():
         [gates.H(1), gates.H(0), gates.CZ(0, 1), gates.H(0), gates.CZ(0, 1)],
     )
     assert len(blocks) == 4
-    assert blocks[0].count_2q_gates() == 2
+    assert blocks[0]._count_2q_gates() == 2
     assert len(blocks[0].gates) == 5
     assert blocks[0].qubits == (0, 1)
-    assert blocks[1].count_2q_gates() == 2
+    assert blocks[1]._count_2q_gates() == 2
     assert len(blocks[1].gates) == 3
-    assert blocks[3].count_2q_gates() == 1
+    assert blocks[3]._count_2q_gates() == 1
     assert len(blocks[3].gates) == 2
     assert blocks[3].qubits == (2, 3)
-    assert blocks[2].count_2q_gates() == 3
+    assert blocks[2]._count_2q_gates() == 3
     assert len(blocks[2].gates) == 3
 
 
@@ -262,15 +262,15 @@ def test_block_decomposition_measurements():
         [gates.H(1), gates.H(0), gates.CZ(0, 1), gates.H(0), gates.M(0), gates.M(1)],
     )
     assert len(blocks) == 4
-    assert blocks[0].count_2q_gates() == 1
+    assert blocks[0]._count_2q_gates() == 1
     assert len(blocks[0].gates) == 6
     assert blocks[0].qubits == (0, 1)
-    assert blocks[1].count_2q_gates() == 2
+    assert blocks[1]._count_2q_gates() == 2
     assert len(blocks[1].gates) == 3
-    assert blocks[3].count_2q_gates() == 1
+    assert blocks[3]._count_2q_gates() == 1
     assert len(blocks[3].gates) == 2
     assert blocks[3].qubits == (2, 3)
-    assert blocks[2].count_2q_gates() == 2
+    assert blocks[2]._count_2q_gates() == 2
     assert len(blocks[2].gates) == 4
 
 
@@ -293,11 +293,6 @@ def test_circuit_blocks(backend):
     for index, block in enumerate(circuit_blocks()):
         assert block.name == index
     reconstructed_circ = circuit_blocks.circuit()
-    # Here we can't use assert gates_equality because the order of the gates is changed
-    # np.testing.assert_allclose(
-    #     np.array(circ().state(), dtype=float),
-    #     np.array(reconstructed_circ().state(), dtype=float),
-    # )
     backend.assert_allclose(
         backend.execute_circuit(circ).state(),
         backend.execute_circuit(reconstructed_circ).state(),
