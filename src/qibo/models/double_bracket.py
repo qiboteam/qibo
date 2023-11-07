@@ -98,9 +98,13 @@ class DoubleBracketFlow:
         return self.h0.backend
 
     def optimize_step(
-        self, step_min: float = 0.0001, step_max: int = 0.5, max_evals: int = 1000
+        self,
+        step_min: float = 0.0001,
+        step_max: int = 0.5,
+        max_evals: int = 1000,
+        verbose: bool = False,
     ):
-        """Optimize step"""
+        """Optimize flow step."""
 
         space = hp.uniform("step", step_min, step_max)
         best = fmin(
@@ -108,7 +112,7 @@ class DoubleBracketFlow:
             space=space,
             algo=tpe.suggest,
             max_evals=max_evals,
-            verbose=False,
+            verbose=verbose,
         )
 
         return best["step"]
