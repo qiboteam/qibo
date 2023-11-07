@@ -4,25 +4,6 @@ from qibo.transpiler.abstract import Router
 from qibo.transpiler.router import ConnectivityError
 
 
-def find_connected_qubit(qubits, queue, hardware_qubits):
-    """Helper method for :meth:`qibolab.transpilers.fix_connecivity`.
-
-    Finds which qubit should be mapped to hardware middle qubit
-    by looking at the two-qubit gates that follow.
-    """
-    possible_qubits = set(qubits)
-    for next_gate in queue:
-        if len(next_gate.qubits) == 2:
-            possible_qubits &= {hardware_qubits.index(q) for q in next_gate.qubits}
-            if not possible_qubits:
-                # freedom of choice
-                return qubits[0]
-            elif len(possible_qubits) == 1:
-                return possible_qubits.pop()
-    # freedom of choice
-    return qubits[0]
-
-
 class StarConnectivity(Router):
     """Transforms an arbitrary circuit to one that can be executed on hardware.
     This transpiler produces a circuit that respects the following connectivity:
@@ -73,7 +54,7 @@ class StarConnectivity(Router):
         for i, gate in enumerate(circuit.queue):
             if len(gate.qubits) == 2:
                 if middle_qubit not in gate.qubits:
-                    new_middle = find_connected_qubit(
+                    new_middle = _find_connected_qubit(
                         gate.qubits, circuit.queue[i + 1 :], hardware_qubits
                     )
                     hardware_qubits[middle_qubit], hardware_qubits[new_middle] = (
@@ -100,7 +81,7 @@ class StarConnectivity(Router):
 
             elif len(qubits) == 2 and middle_qubit not in qubits:
                 # find which qubit should be moved to 0
-                new_middle = find_connected_qubit(
+                new_middle = _find_connected_qubit(
                     qubits, circuit.queue[i + 1 :], hardware_qubits
                 )
                 # update hardware qubits according to the swap
@@ -124,3 +105,22 @@ class StarConnectivity(Router):
                 add_swap = True
         hardware_qubits_keys = ["q" + str(i) for i in range(5)]
         return new, dict(zip(hardware_qubits_keys, hardware_qubits))
+
+
+def _find_connected_qubit(qubits, queue, hardware_qubits):
+    """Helper method for :meth:`qibo.transpiler.StarConnectivity`.
+
+    Finds which qubit should be mapped to hardware middle qubit
+    by looking at the two-qubit gates that follow.
+    """
+    possible_qubits = set(qubits)
+    for next_gate in queue:
+        if len(next_gate.qubits) == 2:
+            possible_qubits &= {hardware_qubits.index(q) for q in next_gate.qubits}
+            if not possible_qubits:
+                # freedom of choice
+                return qubits[0]
+            elif len(possible_qubits) == 1:
+                return possible_qubits.pop()
+    # freedom of choice
+    return qubits[0]

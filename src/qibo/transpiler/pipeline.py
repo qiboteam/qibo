@@ -54,7 +54,7 @@ def assert_circuit_equivalence(
         reordered_test_states = []
         initial_map = np.array(list(initial_map.values()))
         reordered_test_states = [
-            transpose_qubits(initial_state, initial_map)
+            _transpose_qubits(initial_state, initial_map)
             for initial_state in test_states
         ]
     else:
@@ -67,7 +67,7 @@ def assert_circuit_equivalence(
         final_state = backend.execute_circuit(
             transpiled_circuit, initial_state=reordered_test_states[i]
         ).state()
-        final_state = transpose_qubits(final_state, ordering)
+        final_state = _transpose_qubits(final_state, ordering)
         fidelity = np.abs(np.dot(np.conj(target_state), final_state))
         try:
             np.testing.assert_allclose(fidelity, 1.0)
@@ -75,7 +75,7 @@ def assert_circuit_equivalence(
             raise TranspilerPipelineError("Circuit equivalence not satisfied.")
 
 
-def transpose_qubits(state: np.ndarray, qubits_ordering: np.ndarray):
+def _transpose_qubits(state: np.ndarray, qubits_ordering: np.ndarray):
     """Reorders qubits of a given state vector.
 
     Args:

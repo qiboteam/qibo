@@ -13,7 +13,7 @@ class PlacementError(Exception):
 
 
 def assert_placement(circuit: Circuit, layout: dict) -> bool:
-    """Check if layout is correct and matches the number of qubits of the circuit.
+    """Check if layout is in the correct form and matches the number of qubits of the circuit.
 
     Args:
         circuit (qibo.models.Circuit): Circuit model to check.
@@ -35,7 +35,7 @@ def assert_placement(circuit: Circuit, layout: dict) -> bool:
 
 
 def assert_mapping_consistency(layout):
-    """Check if layout is correct.
+    """Check if layout is in the correct form.
 
     Args:
         layout (dict): physical to logical qubit mapping.
@@ -208,11 +208,11 @@ class Random(Placer):
         final_mapping = {
             "q" + str(i): final_mapping[i] for i in range(len(final_mapping))
         }
-        final_cost = self.cost(final_graph, gates_qubits_pairs)
+        final_cost = self._cost(final_graph, gates_qubits_pairs)
         for _ in range(self.samples):
             mapping = dict(zip(keys, random.sample(range(nodes), nodes)))
             graph = nx.relabel_nodes(self.connectivity, mapping)
-            cost = self.cost(graph, gates_qubits_pairs)
+            cost = self._cost(graph, gates_qubits_pairs)
             if cost == 0:
                 return {"q" + str(i): mapping[i] for i in range(len(mapping))}
             if cost < final_cost:
@@ -221,8 +221,7 @@ class Random(Placer):
                 final_cost = cost
         return final_mapping
 
-    @staticmethod
-    def cost(graph, gates_qubits_pairs):
+    def _cost(graph, gates_qubits_pairs):
         """
         Compute the cost associated to an initial layout as the lengh of the reduced circuit.
 
@@ -246,7 +245,7 @@ class ReverseTraversal(Placer):
 
     Attributes:
         connectivity (networkx.Graph): chip connectivity.
-        routing_algorithm (qibolab.transpilers.routing.Transpiler): routing algorithm.
+        routing_algorithm (qibo.transpiler.abstract.Router): routing algorithm.
         depth (int): number of two qubit gates considered before finding initial layout.
             if 'None' just one backward step will be implemented.
             If depth is greater than the number of two qubit gates in the circuit, the circuit will be routed more than once.
@@ -271,11 +270,11 @@ class ReverseTraversal(Placer):
 
         initial_placer = Trivial(self.connectivity)
         initial_placement = initial_placer(circuit=circuit)
-        new_circuit = self.assemble_circuit(circuit)
-        final_placement = self.routing_step(initial_placement, new_circuit)
+        new_circuit = self._assemble_circuit(circuit)
+        final_placement = self._routing_step(initial_placement, new_circuit)
         return final_placement
 
-    def assemble_circuit(self, circuit: Circuit):
+    def _assemble_circuit(self, circuit: Circuit):
         """Assemble a single circuit to apply Reverse Traversal placement based on depth.
         Example: for a circuit with four two qubit gates A-B-C-D using depth = 6,
         the function will return the circuit C-D-D-C-B-A.
@@ -305,7 +304,7 @@ class ReverseTraversal(Placer):
             new_circuit.add(gates.CZ(qubits[0], qubits[1]))
         return new_circuit.invert()
 
-    def routing_step(self, layout: dict, circuit: Circuit):
+    def _routing_step(self, layout: dict, circuit: Circuit):
         """Perform routing of the circuit.
 
         Args:
