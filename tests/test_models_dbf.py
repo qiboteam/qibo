@@ -2,6 +2,7 @@
 import numpy as np
 import pytest
 
+from qibo.backends import GlobalBackend
 from qibo.hamiltonians import Hamiltonian
 from qibo.models.double_bracket import DoubleBracketFlow, FlowGeneratorType
 from qibo.quantum_info import random_hermitian
@@ -51,3 +52,11 @@ def test_double_bracket_flow_single_commutator(backend, nqubits):
         dbf(mode=FlowGeneratorType.single_commutator, step=0.01, d=d)
 
     assert initial_off_diagonal_norm > dbf.off_diagonal_norm
+
+
+def test_energy_fluctuations(backend):
+    h0 = GlobalBackend().cast(np.array([[1, 0], [0, -1]]))
+    state = GlobalBackend().cast([1, 0])
+    dbf = DoubleBracketFlow(Hamiltonian(1, matrix=h0, backend=backend))
+    energy_fluctuation = dbf.energy_fluctuation(state=state)
+    assert energy_fluctuation == 0
