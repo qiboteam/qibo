@@ -1,5 +1,4 @@
 import math
-import subprocess, sys
 
 import numpy as np
 import pytest
@@ -7,8 +6,6 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 from qibo.models.qcnn import QuantumCNN
-
-subprocess.call([sys.executable, '-m', 'pip', 'install', 'tensorflow'])
 
 num_angles = 21
 angles0 = [i * math.pi / num_angles for i in range(num_angles)]
@@ -295,7 +292,7 @@ def test_qcnn_training():
     test_qcnn = QuantumCNN(nqubits=4, nlayers=1, nclasses=2, params=init_theta)
     testcircuit = test_qcnn._circuit
     result = test_qcnn.minimize(
-        init_theta, data=data, labels=labels, nshots=10000, method="sgd"
+        init_theta, data=data, labels=labels, nshots=10000, method="Powell"
     )
 
     # test Predictions function
