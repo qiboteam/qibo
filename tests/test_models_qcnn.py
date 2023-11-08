@@ -1,4 +1,5 @@
 import math
+import subprocess, sys
 
 import numpy as np
 import pytest
@@ -6,6 +7,8 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 from qibo.models.qcnn import QuantumCNN
+
+subprocess.call([sys.executable, '-m', 'pip', 'install', 'tensorflow'])
 
 num_angles = 21
 angles0 = [i * math.pi / num_angles for i in range(num_angles)]
