@@ -322,16 +322,11 @@ class QuantumCNN:
             data: the training data to be used in the minimization.
             labels: the corresponding ground truth for the training data.
             nshots: int number of runs of the circuit during the sampling process (default=10000).
-            method: str 'classical optimizer for the minimization'. All methods from scipy.optimize.minmize are suported (default='Powell').
+            method: str 'classical optimizer for the minimization'. All methods from qibo.optimizers.optimize are suported (default='Powell').
         Returns:
             numpy.float64 with value of the minimum found, numpy.ndarray with the optimal angles.
         """
         from qibo.optimizers import optimize
-
-        set_backend("numpy")
-
-        if method == "sgd":
-            set_backend("tensorflow")
         
         loss, optimal_angles, result = optimize(
             self.Cost_function, init_theta, args=(data, labels, nshots), method=method
