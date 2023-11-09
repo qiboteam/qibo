@@ -36,7 +36,7 @@ class Block:
         if not set(gate.qubits).issubset(self.qubits):
             raise_error(
                 BlockingError,
-                f"Gate acting on qubits {gate.qubis} can't be added "
+                f"Gate acting on qubits {gate.qubits} can't be added "
                 + f"to block acting on qubits {self._qubits}.",
             )
         self.gates.append(gate)
