@@ -45,23 +45,32 @@ class QuantumCNN:
 
     """
 
-    def __init__(self, nqubits, nlayers, nclasses=2, params=None, twoqubitansatz = None, Dividend = 2, copy_init_state=None):
+    def __init__(
+        self,
+        nqubits,
+        nlayers,
+        nclasses=2,
+        params=None,
+        twoqubitansatz=None,
+        Dividend=2,
+        copy_init_state=None,
+    ):
         self.nclasses = nclasses
         self.nqubits = nqubits
         self.nlayers = nlayers
         self.twoqubitansatz = twoqubitansatz
 
         if copy_init_state is None:
-            if qibo.get_backend()[:7]=='qibojit':
+            if qibo.get_backend()[:7] == "qibojit":
                 self.copy_init_state = True
             else:
                 self.copy_init_state = False
-        
+
         if self.twoqubitansatz == None:
             self.nparams_conv = 15
         else:
             self.nparams_conv = len(self.twoqubitansatz.get_parameters())
-            
+
         self.nparams_pool = 6
         self.nparams_layer = self.nparams_conv + self.nparams_pool
         self.measured_qubits = int(np.ceil(np.log2(self.nclasses)))
@@ -174,23 +183,23 @@ class QuantumCNN:
         Returns:
             Circuit containing the unitaries added to the specified qubits.
         """
-    
-        if self.twoqubitansatz == None: 
+
+        if self.twoqubitansatz == None:
             c = Circuit(self.nqubits)
             c += self.one_qubit_unitary(bits[0], symbols[0:3])
             c += self.one_qubit_unitary(bits[1], symbols[3:6])
             c.add(gates.RZZ(bits[0], bits[1], symbols[6]))
             c.add(gates.RYY(bits[0], bits[1], symbols[7]))
             c.add(gates.RXX(bits[0], bits[1], symbols[8]))
-    
+
             c += self.one_qubit_unitary(bits[0], symbols[9:12])
             c += self.one_qubit_unitary(bits[1], symbols[12:])
-        
+
         else:
             c = Circuit(self.nqubits)
             c.add(self.twoqubitansatz.on_qubits(bits[0], bits[1]))
-            c.set_parameters(symbols[0:self.nparams_conv])
-        
+            c.set_parameters(symbols[0 : self.nparams_conv])
+
         return c
 
     def two_qubit_pool(self, source_qubit, sink_qubit, symbols):
@@ -338,7 +347,7 @@ class QuantumCNN:
             numpy.float64 with value of the minimum found, numpy.ndarray with the optimal angles.
         """
         from qibo.optimizers import optimize
-        
+
         loss, optimal_angles, result = optimize(
             self.Cost_function, init_theta, args=(data, labels, nshots), method=method
         )
