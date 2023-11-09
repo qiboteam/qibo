@@ -1,10 +1,14 @@
+from typing import Optional
+
 import networkx as nx
 import numpy as np
 
 from qibo.backends import NumpyBackend
+from qibo.config import raise_error
 from qibo.models import Circuit
 from qibo.quantum_info.random_ensembles import random_statevector
 from qibo.transpiler.abstract import NativeType, Optimizer, Placer, Router, Unroller
+from qibo.transpiler.exceptions import TranspilerPipelineError
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.placer import Trivial, assert_placement
 from qibo.transpiler.router import ConnectivityError, assert_connectivity
@@ -16,26 +20,24 @@ from qibo.transpiler.unroller import (
 )
 
 
-class TranspilerPipelineError(Exception):
-    """Raise when an error occurs in the transpiler pipeline"""
-
-
 def assert_circuit_equivalence(
     original_circuit: Circuit,
     transpiled_circuit: Circuit,
     final_map: dict,
-    initial_map: dict = None,
-    test_states: list = None,
+    initial_map: Optional[dict] = None,
+    test_states: Optional[list] = None,
     ntests: int = 3,
 ):
     """Checks that the transpiled circuit agrees with the original using simulation.
 
     Args:
-        original_circuit (qibo.models.Circuit): Original circuit.
-        transpiled_circuit (qibo.models.Circuit): Transpiled circuit.
+        original_circuit (:class:`qibo.models.circuit.Circuit`): Original circuit.
+        transpiled_circuit (:class:`qibo.models.circuit.Circuit`): Transpiled circuit.
         final_map (dict): logical-physical qubit mapping after routing.
-        initial_map (dict): logical_physical qubit mapping before routing, if None trivial initial map is used.
-        test_states (list): states on which the test is performed, if None 'ntests' random states will be tested.
+        initial_map (dict, optional): logical_physical qubit mapping before routing.
+            If ``None``, trivial initial map is used. Defauts to ``None``.
+        test_states (list, optional): states on which the test is performed.
+            If ``None``, ``ntests`` random states will be tested. Defauts to ``None``.
         ntests (int): number of random states tested.
     """
     backend = NumpyBackend()
@@ -72,7 +74,7 @@ def assert_circuit_equivalence(
         try:
             np.testing.assert_allclose(fidelity, 1.0)
         except AssertionError:
-            raise TranspilerPipelineError("Circuit equivalence not satisfied.")
+            raise_error(TranspilerPipelineError, "Circuit equivalence not satisfied.")
 
 
 def _transpose_qubits(state: np.ndarray, qubits_ordering: np.ndarray):
@@ -102,7 +104,7 @@ def assert_transpiling(
     Args:
         original_circuit (qibo.models.Circuit): circuit before transpiling.
         transpiled_circuit (qibo.models.Circuit): circuit after transpiling.
-        connectivity (nx.Graph): chip qubits connectivity.
+        connectivity (networkx.Graph): chip qubits connectivity.
         initial_layout (dict): initial physical-logical qubit mapping.
         final_layout (dict): final physical-logical qubit mapping.
         native_gates: (NativeType): native gates supported by the hardware.

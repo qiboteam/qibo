@@ -11,11 +11,8 @@ from qibo.config import log, raise_error
 from qibo.models import Circuit
 from qibo.transpiler.abstract import Router, find_gates_qubits_pairs
 from qibo.transpiler.blocks import Block, CircuitBlocks
+from qibo.transpiler.exceptions import ConnectivityError
 from qibo.transpiler.placer import assert_placement
-
-
-class ConnectivityError(Exception):
-    """Raise for an error in the connectivity"""
 
 
 def assert_connectivity(connectivity: nx.Graph, circuit: Circuit):

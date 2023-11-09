@@ -34,10 +34,10 @@ def find_gates_qubits_pairs(circuit: Circuit):
     """Translate qibo circuit into a list of pairs of qubits to be used by the router and placer.
 
     Args:
-        circuit (qibo.models.Circuit): circuit to be transpiled.
+        circuit (:class:`qibo.models.circuit.Circuit`): circuit to be transpiled.
 
     Returns:
-        translated_circuit (list): list containing qubits targeted by two qubit gates
+        (list): list containing qubits targeted by two qubit gates.
     """
     translated_circuit = []
     for gate in circuit.queue:
@@ -49,6 +49,7 @@ def find_gates_qubits_pairs(circuit: Circuit):
             raise_error(
                 ValueError, "Gates targeting more than 2 qubits are not supported"
             )
+
     return translated_circuit
 
 
@@ -62,10 +63,10 @@ class Placer(ABC):
         """Find initial qubit mapping
 
         Args:
-            circuit (qibo.models.Circuit): circuit to be mapped.
+            circuit (:class:`qibo.models.circuit.Circuit`): circuit to be mapped.
 
         Returns:
-            initial_layout (dict): dictionary containing the initial logical to physical qubit mapping.
+            (dict): dictionary containing the initial logical to physical qubit mapping.
         """
 
 
@@ -85,8 +86,7 @@ class Router(ABC):
             initial_layout (dict): dictionary containing the initial logical to physical qubit mapping.
 
         Returns:
-            matched_circuit (qibo.models.Circuit): routed circuit
-            final_layout (dict): dictionary containing the final logical to physical qubit mapping.
+            (:class:`qibo.models.circuit.Circuit`, dict): routed circuit and dictionary containing the final logical to physical qubit mapping.
         """
 
 
@@ -98,10 +98,10 @@ class Optimizer(ABC):
         """Find initial qubit mapping
 
         Args:
-            circuit (qibo.models.Circuit): circuit to be optimized
+            circuit (:class:`qibo.models.circuit.Circuit`): circuit to be optimized
 
         Returns:
-            optimized_circuit (qibo.models.Circuit): circuit with optimized number of gates.
+            (:class:`qibo.models.circuit.Circuit`): circuit with optimized number of gates.
         """
 
 
@@ -115,8 +115,8 @@ class Unroller(ABC):
         """Find initial qubit mapping
 
         Args:
-            circuit (qibo.models.Circuit): circuit to be optimized
+            circuit (:class:`qibo.models.circuit.Circuit`): circuit to be optimized
 
         Returns:
-            translated_circuit (qibo.models.Circuit): circuit with native gates.
+            (:class:`qibo.models.circuit.Circuit`): circuit with native gates.
         """

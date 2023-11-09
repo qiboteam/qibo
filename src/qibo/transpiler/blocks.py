@@ -2,10 +2,7 @@ from typing import Optional, Union
 
 from qibo import Circuit, gates
 from qibo.gates import Gate
-
-
-class BlockingError(Exception):
-    """Raise when an error occurs in the blocking procedure"""
+from qibo.transpiler.exceptions import BlockingError
 
 
 class Block:

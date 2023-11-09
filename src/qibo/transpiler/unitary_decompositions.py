@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.linalg import expm
 
 from qibo import gates, matrices
 from qibo.backends import GlobalBackend, NumpyBackend

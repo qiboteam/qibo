@@ -5,6 +5,7 @@ from qibo.backends import NumpyBackend
 from qibo.config import raise_error
 from qibo.models import Circuit
 from qibo.transpiler.abstract import NativeType, Unroller
+from qibo.transpiler.exceptions import DecompositionError
 from qibo.transpiler.unitary_decompositions import (
     two_qubit_decomposition,
     u3_decomposition,
@@ -55,10 +56,6 @@ class NativeGates(Unroller):
         else:
             translated_circuit = two_qubit_translated_circuit
         return translated_circuit
-
-
-class DecompositionError(Exception):
-    """A decomposition error is raised when, during transpiling, gates are not correctly decomposed in native gates"""
 
 
 def assert_decomposition(

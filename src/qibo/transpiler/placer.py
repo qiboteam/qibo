@@ -6,10 +6,7 @@ from qibo import gates
 from qibo.config import raise_error
 from qibo.models import Circuit
 from qibo.transpiler.abstract import Placer, Router, find_gates_qubits_pairs
-
-
-class PlacementError(Exception):
-    """Raise for an error in the initial qubit placement"""
+from qibo.transpiler.exceptions import PlacementError
 
 
 def assert_placement(circuit: Circuit, layout: dict) -> bool:

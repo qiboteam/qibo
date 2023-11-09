@@ -9,7 +9,7 @@ class Preprocessing(Optimizer):
     """Match the number of qubits of the circuit with the number of qubits of the chip if possible.
 
     Args:
-        connectivity (nx.Graph): hardware chip connectivity.
+        connectivity (:class:`networkx.Graph`): hardware chip connectivity.
     """
 
     def __init__(self, connectivity: nx.Graph):
