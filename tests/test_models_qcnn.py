@@ -3,6 +3,7 @@ import math
 import numpy as np
 import pytest
 
+import qibo
 from qibo import gates
 from qibo.models import Circuit
 from qibo.models.qcnn import QuantumCNN
@@ -313,6 +314,9 @@ def test_two_qubit_ansatz():
     test_qcnn = QuantumCNN(4,2,2, twoqubitansatz = c)
 
 def test_two_qubit_ansatz_training():
+    # test qibojit case (copy initial state as quick-fix for in-place update)
+    qibo.set_backend("qibojit")
+    
     c = Circuit(2)
     c.add(gates.H(0))
     c.add(gates.RX(0,0))
