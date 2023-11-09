@@ -45,11 +45,17 @@ class QuantumCNN:
 
     """
 
-    def __init__(self, nqubits, nlayers, nclasses=2, params=None, twoqubitansatz = None, Dividend = 2):
+    def __init__(self, nqubits, nlayers, nclasses=2, params=None, twoqubitansatz = None, Dividend = 2, copy_init_state=None):
         self.nclasses = nclasses
         self.nqubits = nqubits
         self.nlayers = nlayers
         self.twoqubitansatz = twoqubitansatz
+
+        if copy_init_state is None:
+            if qibo.get_backend()[:7]=='qibojit':
+                self.copy_init_state = True
+            else:
+                self.copy_init_state = False
         
         if self.twoqubitansatz == None:
             self.nparams_conv = 15
@@ -265,7 +271,7 @@ class QuantumCNN:
             numpy.array() with predictions for each qubit, for the initial state.
         """
         bias = np.array(theta[0 : self.measured_qubits])
-        if qibo.get_backend()=='qibojit':
+        if self.copy_init_state is True:
             init_state_copy = init_state.copy()
         else:
             init_state_copy = init_state
