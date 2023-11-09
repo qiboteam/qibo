@@ -47,30 +47,30 @@ class Block:
 
     @property
     def qubits(self):
-        """Return a sorted tuple with qubits of the block."""
+        """Returns a sorted tuple with qubits of the block."""
         return tuple(sorted(self._qubits))
 
     @qubits.setter
     def qubits(self, qubits):
         self._qubits = qubits
 
-    def fuse(self, block: "Block", name: str = None):
-        """Fuse the current block with a new one, the qubits they are acting on must coincide.
+    def fuse(self, block, name: Optional[str] = None):
+        """Fuses the current block with a new one, the qubits they are acting on must coincide.
 
         Args:
             block (:class:`qibo.transpiler.blocks.Block`): block to fuse.
-            name (str): name of the fused block.
+            name (str, optional): name of the fused block.
 
         Return:
-            fused_block (:class:`qibo.transpiler.blocks.Block`): fusion of the two input blocks.
+            (:class:`qibo.transpiler.blocks.Block`): fusion of the two input blocks.
         """
         if not self.qubits == block.qubits:
-            raise BlockingError(
-                "In order to fuse two blocks their qubits must coincide."
+            raise_error(
+                BlockingError, "In order to fuse two blocks their qubits must coincide."
             )
         return Block(qubits=self.qubits, gates=self.gates + block.gates, name=name)
 
-    def on_qubits(self, new_qubits):
+    def on_qubits(self, new_qubits: tuple):
         """Return a new block acting on the new qubits.
 
         Args:
@@ -78,10 +78,11 @@ class Block:
         """
         qubits_dict = dict(zip(self.qubits, new_qubits))
         new_gates = [gate.on_qubits(qubits_dict) for gate in self.gates]
+
         return Block(qubits=new_qubits, gates=new_gates, name=self.name)
 
     # TODO: use real QM properties to check commutation
-    def commute(self, block: "Block"):
+    def commute(self, block):
         """Check if a block commutes with the current one.
 
         Args:
@@ -108,8 +109,8 @@ class CircuitBlocks:
     """A CircuitBlocks contains a quantum circuit decomposed in two qubits blocks.
 
     Args:
-        circuit (qibo.models.Circuit): circuit to be decomposed.
-        index_names (bool): assign names to the blocks
+        circuit (:class:`qibo.models.circuit.Circuit`): circuit to be decomposed.
+        index_names (bool, optional): assign names to the blocks
     """
 
     def __init__(self, circuit: Circuit, index_names: bool = False):
@@ -155,8 +156,9 @@ class CircuitBlocks:
         try:
             self.block_list.remove(block)
         except ValueError:
-            raise BlockingError(
-                "The block you are trying to remove is not present in the circuit blocks."
+            raise_error(
+                BlockingError,
+                "The block you are trying to remove is not present in the circuit blocks.",
             )
 
 
@@ -165,21 +167,25 @@ def block_decomposition(circuit: Circuit, fuse: bool = True):
     Break measurements on multiple qubits into measurements of single qubit.
 
     Args:
-        circuit (qibo.models.Circuit): circuit to be decomposed.
-        fuse (bool): fuse adjacent blocks acting on the same qubits.
+        circuit (:class:`qibo.models.circuit.Circuit`): circuit to be decomposed.
+        fuse (bool, optional): fuse adjacent blocks acting on the same qubits.
 
     Return:
-        blocks (list): list of blocks that act on two qubits.
+        (list): list of blocks that act on two qubits.
     """
     if circuit.nqubits < 2:
-        raise BlockingError(
-            "Only circuits with at least two qubits can be decomposed with block_decomposition."
+        raise_error(
+            BlockingError,
+            "Only circuits with at least two qubits can be decomposed with block_decomposition.",
         )
+
     if _check_multi_qubit_measurements(circuit):
         circuit = _split_multi_qubit_measurements(circuit)
     initial_blocks = _initial_block_decomposition(circuit)
+
     if not fuse:
         return initial_blocks
+
     blocks = []
     while len(initial_blocks) > 0:
         first_block = initial_blocks[0]
@@ -194,6 +200,7 @@ def block_decomposition(circuit: Circuit, fuse: bool = True):
                         break
         blocks.append(first_block)
         _remove_gates(initial_blocks, remove_list)
+
     return blocks
 
 
@@ -223,9 +230,11 @@ def _initial_block_decomposition(circuit: Circuit):
                 blocks.append(block)
                 break
             elif len(gate.qubits) > 2:
-                raise BlockingError(
-                    "Gates targeting more than 2 qubits are not supported."
+                raise_error(
+                    BlockingError,
+                    "Gates targeting more than 2 qubits are not supported.",
                 )
+
     # Now we need to deal with the remaining spare single qubit gates
     while len(all_gates) > 0:
         first_qubit = all_gates[0].qubits[0]
@@ -247,6 +256,7 @@ def _initial_block_decomposition(circuit: Circuit):
                 gates=block_gates,
             )
         blocks.append(block)
+
     return blocks
 
 
