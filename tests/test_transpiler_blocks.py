@@ -30,12 +30,6 @@ def test_count_2q_gates():
     assert block._count_2q_gates() == 2
 
 
-def test_rename():
-    block = Block(qubits=(0, 1), gates=[gates.CZ(0, 1)])
-    block.rename("renamed_block")
-    assert block.name == "renamed_block"
-
-
 def test_add_gate_and_entanglement():
     block = Block(qubits=(0, 1), gates=[gates.H(0)])
     assert block.entangled == False

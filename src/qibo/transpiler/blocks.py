@@ -1,6 +1,7 @@
 from typing import Optional, Union
 
 from qibo import Circuit, gates
+from qibo.config import raise_error
 from qibo.gates import Gate
 from qibo.transpiler.exceptions import BlockingError
 
@@ -11,10 +12,7 @@ class Block:
     Args:
         qubits (tuple): qubits where the block is acting.
         gates (list): list of gates that compose the block.
-        name (str or int): name of the block.
-
-    Properties:
-        entangled (bool): True if the block entangles the qubits (there is at least one two qubit gate).
+        name (str or int, optional): name of the block.
     """
 
     def __init__(
@@ -26,20 +24,21 @@ class Block:
 
     @property
     def entangled(self):
-        """True if the block contains two qubit gates."""
+        """Returns ``True`` if the block contains two-qubit gates."""
         return self._count_2q_gates() > 0
 
-    def rename(self, name):
-        """Rename block"""
-        self.name = name
 
     def add_gate(self, gate: Gate):
-        """Add a new gate to the block."""
+        """Add a new gate to the block.
+
+        Args:
+            gate (:class:`qibo.gates.abstract.Gate`): gate to be added.
+        """
         if not set(gate.qubits).issubset(self.qubits):
-            raise BlockingError(
-                "Gate acting on qubits {} can't be added to block acting on qubits {}.".format(
-                    gate.qubits, self._qubits
-                )
+            raise_error(
+                BlockingError,
+                f"Gate acting on qubits {gate.qubis} can't be added "
+                + f"to block acting on qubits {self._qubits}.",
             )
         self.gates.append(gate)
 
@@ -119,7 +118,7 @@ class CircuitBlocks:
         self._index_names = index_names
         if index_names:
             for index, block in enumerate(self.block_list):
-                block.rename(index)
+                block.name = index
         self.qubits = circuit.nqubits
 
     def __call__(self):
