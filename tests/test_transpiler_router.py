@@ -276,12 +276,13 @@ def test_sabre_matched():
     )
 
 
-def test_sabre_simple():
+@pytest.mark.parametrize("seed", [42])
+def test_sabre_simple(seed):
     placer = Trivial()
     circ = Circuit(5)
     circ.add(gates.CZ(0, 1))
     initial_layout = placer(circ)
-    router = Sabre(connectivity=star_connectivity())
+    router = Sabre(connectivity=star_connectivity(), seed=seed)
     routed_circuit, final_map = router(circuit=circ, initial_layout=initial_layout)
     assert router.added_swaps == 1
     assert final_map == {"q0": 2, "q1": 1, "q2": 0, "q3": 3, "q4": 4}
