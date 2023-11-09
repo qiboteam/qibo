@@ -5,7 +5,7 @@ import networkx as nx
 from qibo import gates
 from qibo.config import raise_error
 from qibo.models import Circuit
-from qibo.transpiler.abstract import Placer, Router, find_gates_qubits_pairs
+from qibo.transpiler.abstract import Placer, Router, _find_gates_qubits_pairs
 from qibo.transpiler.exceptions import PlacementError
 
 
@@ -143,7 +143,7 @@ class Subgraph(Placer):
         Returns:
             (dict): physical to logical qubit mapping.
         """
-        gates_qubits_pairs = find_gates_qubits_pairs(circuit)
+        gates_qubits_pairs = _find_gates_qubits_pairs(circuit)
         if len(gates_qubits_pairs) < 3:
             raise_error(
                 ValueError,
@@ -197,7 +197,7 @@ class Random(Placer):
         Returns:
             (dict): physical to logical qubit mapping.
         """
-        gates_qubits_pairs = find_gates_qubits_pairs(circuit)
+        gates_qubits_pairs = _find_gates_qubits_pairs(circuit)
         nodes = self.connectivity.number_of_nodes()
         keys = list(self.connectivity.nodes())
         final_mapping = dict(zip(keys, range(nodes)))
@@ -285,7 +285,7 @@ class ReverseTraversal(Placer):
 
         if self.depth is None:
             return circuit.invert()
-        gates_qubits_pairs = find_gates_qubits_pairs(circuit)
+        gates_qubits_pairs = _find_gates_qubits_pairs(circuit)
         circuit_gates = len(gates_qubits_pairs)
         if circuit_gates == 0:
             raise ValueError("The circuit must contain at least a two qubit gate.")

@@ -9,7 +9,7 @@ from more_itertools import pairwise
 from qibo import gates
 from qibo.config import log, raise_error
 from qibo.models import Circuit
-from qibo.transpiler.abstract import Router, find_gates_qubits_pairs
+from qibo.transpiler.abstract import Router, _find_gates_qubits_pairs
 from qibo.transpiler.blocks import Block, CircuitBlocks
 from qibo.transpiler.exceptions import ConnectivityError
 from qibo.transpiler.placer import assert_placement
@@ -86,7 +86,7 @@ class ShortestPaths(Router):
         self._mapping = initial_layout
         init_qubit_map = np.asarray(list(initial_layout.values()))
         self._initial_checks(circuit.nqubits)
-        self._gates_qubits_pairs = find_gates_qubits_pairs(circuit)
+        self._gates_qubits_pairs = _find_gates_qubits_pairs(circuit)
         self._mapping = dict(zip(range(len(initial_layout)), initial_layout.values()))
         self._graph = nx.relabel_nodes(self.connectivity, self._mapping)
         self._qubit_map = np.sort(init_qubit_map)

@@ -30,29 +30,6 @@ class NativeType(Flag):
             raise ValueError(f"Gate {gate} cannot be used as native.")
 
 
-def find_gates_qubits_pairs(circuit: Circuit):
-    """Translate qibo circuit into a list of pairs of qubits to be used by the router and placer.
-
-    Args:
-        circuit (:class:`qibo.models.circuit.Circuit`): circuit to be transpiled.
-
-    Returns:
-        (list): list containing qubits targeted by two qubit gates.
-    """
-    translated_circuit = []
-    for gate in circuit.queue:
-        if isinstance(gate, gates.M):
-            pass
-        elif len(gate.qubits) == 2:
-            translated_circuit.append(sorted(gate.qubits))
-        elif len(gate.qubits) >= 3:
-            raise_error(
-                ValueError, "Gates targeting more than 2 qubits are not supported"
-            )
-
-    return translated_circuit
-
-
 class Placer(ABC):
     @abstractmethod
     def __init__(self, connectivity: nx.Graph, *args):
@@ -120,3 +97,26 @@ class Unroller(ABC):
         Returns:
             (:class:`qibo.models.circuit.Circuit`): circuit with native gates.
         """
+
+
+def _find_gates_qubits_pairs(circuit: Circuit):
+    """Translate qibo circuit into a list of pairs of qubits to be used by the router and placer.
+
+    Args:
+        circuit (:class:`qibo.models.circuit.Circuit`): circuit to be transpiled.
+
+    Returns:
+        (list): list containing qubits targeted by two qubit gates.
+    """
+    translated_circuit = []
+    for gate in circuit.queue:
+        if isinstance(gate, gates.M):
+            pass
+        elif len(gate.qubits) == 2:
+            translated_circuit.append(sorted(gate.qubits))
+        elif len(gate.qubits) >= 3:
+            raise_error(
+                ValueError, "Gates targeting more than 2 qubits are not supported"
+            )
+
+    return translated_circuit

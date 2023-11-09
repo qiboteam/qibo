@@ -1,5 +1,4 @@
 from qibo import Circuit, gates
-from qibo.backends import NumpyBackend
 from qibo.transpiler.abstract import Router
 from qibo.transpiler.router import ConnectivityError
 
