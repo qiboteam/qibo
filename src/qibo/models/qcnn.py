@@ -264,7 +264,11 @@ class QuantumCNN:
             numpy.array() with predictions for each qubit, for the initial state.
         """
         bias = np.array(theta[0 : self.measured_qubits])
-        circuit_exec = circuit(init_state, nshots)
+        if qibo.get_backend()=='qibojit':
+            init_state_copy = init_state.copy()
+        else:
+            init_state_copy = init_state
+        circuit_exec = circuit(init_state_copy, nshots)
         result = circuit_exec.frequencies(binary=False)
         prediction = np.zeros(self.measured_qubits)
 
