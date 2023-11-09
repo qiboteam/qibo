@@ -27,7 +27,6 @@ class Block:
         """Returns ``True`` if the block contains two-qubit gates."""
         return self._count_2q_gates() > 0
 
-
     def add_gate(self, gate: Gate):
         """Add a new gate to the block.
 
