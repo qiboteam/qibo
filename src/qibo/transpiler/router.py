@@ -3,7 +3,6 @@ from copy import deepcopy
 
 import networkx as nx
 import numpy as np
-from more_itertools import pairwise
 
 from qibo import gates
 from qibo.config import log, raise_error
@@ -306,13 +305,13 @@ class ShortestPaths(Router):
         forward = path[0 : meeting_point + 1]
         backward = list(reversed(path[meeting_point + 1 :]))
         if len(forward) > 1:
-            for f1, f2 in pairwise(forward):
+            for f1, f2 in zip(forward[:-1], forward[1:]):
                 gate = gates.SWAP(self._qubit_map[f1], self._qubit_map[f2])
                 self._transpiled_circuit.add(gate)
                 self._added_swaps_list.append(gate)
 
         if len(backward) > 1:
-            for b1, b2 in pairwise(backward):
+            for b1, b2 in zip(backward[:-1], backward[1:]):
                 gate = gates.SWAP(self._qubit_map[b1], self._qubit_map[b2])
                 self._transpiled_circuit.add(gate)
                 self._added_swaps_list.append(gate)
