@@ -186,6 +186,7 @@ class CliffordOperations:
         else:  # theta == 3*pi/2 + 2*n*pi
             return self.SDG(tableau, q, nqubits)
 
+    # not working properly
     def RY(self, tableau, q, nqubits, theta):
         if theta % (2 * self.np.pi) == 0:
             return self.I(tableau, q, nqubits)
@@ -412,23 +413,21 @@ class CliffordBackend(NumpyBackend):
         return self.np.ravel(self._order_probabilities(probs, qubits, nqubits))
 
     def tableau_to_generators(self, tableau, return_array=False):
-        bits_to_gate = {"00": gates.I, "01": gates.X, "10": gates.Z, "11": gates.Y}
+        bits_to_gate = {"00": "I", "01": "X", "10": "Z", "11": "Y"}
 
         nqubits = int((tableau.shape[1] - 1) / 2)
-        R = 1 * tableau[:-1, -1]
+        phases = (-1) ** tableau[:-1, -1]
         tmp = 1 * tableau[:-1, :-1]
         X, Z = tmp[:, :nqubits], tmp[:, nqubits:]
         generators = []
-        for x, z, r in zip(X, Z, R):
-            phase = (-1) ** r
-            paulis = []
-            for i, (xx, zz) in enumerate(zip(x, z)):
-                paulis.append(bits_to_gate[f"{zz}{xx}"](i))
+        for x, z in zip(X, Z):
+            paulis = [bits_to_gate[f"{zz}{xx}"] for i, (xx, zz) in enumerate(zip(x, z))]
             if return_array:
-                matrix = phase * paulis[0].matrix()
+                paulis = [getattr(gates, p)(0).matrix() for p in paulis]
+                matrix = paulis[0]
                 for p in paulis[1:]:
-                    matrix = self.np.kron(matrix, p.matrix())
+                    matrix = self.np.kron(matrix, p)
                 generators.append(matrix)
             else:
-                generators.append((paulis, phase))
-        return generators
+                generators.append("".join(paulis))
+        return generators, phases
