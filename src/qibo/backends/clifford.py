@@ -4,7 +4,7 @@ from functools import cache
 from qibo import gates
 from qibo.backends.numpy import NumpyBackend
 from qibo.config import raise_error
-from qibo.result import MeasurementOutcomes
+from qibo.result import CircuitResult
 
 
 class CliffordOperations:
@@ -121,6 +121,107 @@ class CliffordOperations:
         )
         return new_tab
 
+    def SX(self, tableau, q, nqubits):
+        """Decomposition --> HSH"""
+        new_tab = tableau.copy()
+        r, x, z = (
+            self.get_r(new_tab, nqubits),
+            self.get_x(new_tab, nqubits),
+            self.get_z(new_tab, nqubits),
+        )
+        self.set_r(
+            new_tab,
+            r ^ (z[:, q] * (z[:, q] ^ x[:, q])).flatten(),
+        )
+        new_tab[:-1, q] = z[:, q] ^ x[:, q]
+        return new_tab
+
+    def SDG(self, tableau, q, nqubits):
+        """Decomposition --> SSS"""
+        new_tab = tableau.copy()
+        r, x, z = (
+            self.get_r(new_tab, nqubits),
+            self.get_x(new_tab, nqubits),
+            self.get_z(new_tab, nqubits),
+        )
+        self.set_r(
+            new_tab,
+            r ^ (x[:, q] * (z[:, q] ^ x[:, q])).flatten(),
+        )
+        new_tab[:-1, nqubits + q] = z[:, q] ^ x[:, q]
+        return new_tab
+
+    def SXDG(self, tableau, q, nqubits):
+        """Decomposition --> HSSSH"""
+        new_tab = tableau.copy()
+        r, x, z = (
+            self.get_r(new_tab, nqubits),
+            self.get_x(new_tab, nqubits),
+            self.get_z(new_tab, nqubits),
+        )
+        self.set_r(
+            new_tab,
+            r ^ (z[:, q] * x[:, q]).flatten(),
+        )
+        new_tab[:-1, q] = z[:, q] ^ x[:, q]
+        return new_tab
+
+    def RX(self, tableau, q, nqubits, theta):
+        if theta % (2 * self.np.pi) == 0:
+            return self.I(tableau, q, nqubits)
+        elif theta % self.np.pi == 0:
+            return self.X(tableau, q, nqubits)
+        elif (theta / (self.np.pi / 2) - 1) % 4 == 0:
+            return self.SX(tableau, q, nqubits)
+        else:  # theta == 3*pi/2 + 2*n*pi
+            return self.SXDG(tableau, q, nqubits)
+
+    def RZ(self, tableau, q, nqubits, theta):
+        if theta % (2 * self.np.pi) == 0:
+            return self.I(tableau, q, nqubits)
+        elif theta % self.np.pi == 0:
+            return self.Z(tableau, q, nqubits)
+        elif (theta / (self.np.pi / 2) - 1) % 4 == 0:
+            return self.S(tableau, q, nqubits)
+        else:  # theta == 3*pi/2 + 2*n*pi
+            return self.SDG(tableau, q, nqubits)
+
+    def RY(self, tableau, q, nqubits, theta):
+        if theta % (2 * self.np.pi) == 0:
+            return self.I(tableau, q, nqubits)
+        elif theta % self.np.pi == 0:
+            return self.Y(tableau, q, nqubits)
+        elif (theta / (self.np.pi / 2) - 1) % 4 == 0:
+            """Decomposition --> SSH"""
+            new_tab = tableau.copy()
+            r, x, z = (
+                self.get_r(new_tab, nqubits),
+                self.get_x(new_tab, nqubits),
+                self.get_z(new_tab, nqubits),
+            )
+            self.set_r(
+                new_tab,
+                r ^ (z[:, q] * (z[:, q] ^ x[:, q])).flatten(),
+            )
+            new_tab[:-1, nqubits + q] = x[:, q]
+            new_tab[:-1, q] = z[:, q]
+            return new_tab
+        else:  # theta == 3*pi/2 + 2*n*pi
+            """Decomposition --> SSHSSHSSH"""
+            new_tab = tableau.copy()
+            r, x, z = (
+                self.get_r(new_tab, nqubits),
+                self.get_x(new_tab, nqubits),
+                self.get_z(new_tab, nqubits),
+            )
+            self.set_r(
+                new_tab,
+                r ^ (x[:, q] * (z[:, q] ^ x[:, q])).flatten(),
+            )
+            new_tab[:-1, nqubits + q] = x[:, q]
+            new_tab[:-1, q] = z[:, q]
+            return new_tab
+
     # valid for a standard basis measurement only
     def M(self, state, qubits, nqubits, collapse=False):
         sample = []
@@ -200,10 +301,10 @@ class CliffordOperations:
         if x1 == z1:
             if x1 == 0:
                 return 0
-            return z2 - x2
+            return z2 ^ x2
         if x1 == 1:
-            return z2 * (2 * x2 - 1)
-        return x2 * (1 - 2 * z2)
+            return z2 * (2 * x2 ^ 1)
+        return x2 * (1 ^ 2 * z2)
 
     def rowsum(self, tableau, h, i, nqubits, include_scratch: bool = False):
         exponents = []
@@ -255,6 +356,10 @@ class CliffordBackend(NumpyBackend):
                 self.np.array(gate.target_qubits),
                 nqubits,
             )
+        elif "theta" in gate.init_kwargs:
+            return operation(
+                tableau, self.np.array(gate.qubits), nqubits, gate.init_kwargs["theta"]
+            )
 
         return operation(tableau, self.np.array(gate.qubits), nqubits)
 
@@ -274,7 +379,15 @@ class CliffordBackend(NumpyBackend):
             for gate in circuit.queue:
                 state = gate.apply_clifford(self, state, nqubits, nshots)
 
-            return MeasurementOutcomes(circuit.measurements, self, nshots=nshots)
+            return CircuitResult(
+                state,
+                circuit.measurements,
+                self,
+                samples=self.np.hstack(
+                    [m.result.samples() for m in circuit.measurements]
+                ),
+                nshots=nshots,
+            )
 
         except self.oom_error:
             raise_error(
@@ -298,31 +411,24 @@ class CliffordBackend(NumpyBackend):
         probs = self.np.sum(samples, axis=0) / nshots
         return self.np.ravel(self._order_probabilities(probs, qubits, nqubits))
 
-    def tableau_to_generators(tableau, group="stabilizers", return_array=False):
-        import numpy as np
-
+    def tableau_to_generators(self, tableau, return_array=False):
         bits_to_gate = {"00": gates.I, "01": gates.X, "10": gates.Z, "11": gates.Y}
 
-        nqubits = int((tableau.shape[0] - 1) / 2)
-        if group == "stabilizers":
-            phases = 1j ** (1 * tableau[nqubits:-1, -1])
-            tmp = 1 * tableau[nqubits:-1, :-1]
-        elif group == "destabilizers":
-            phases = 1j ** (1 * tableau[:nqubits, -1])
-            tmp = 1 * tableau[:nqubits, :-1]
-        else:
-            raise_error(
-                RuntimeError,
-                "Unsupported value for ``group``. Please use ``group='stabilizers'`` to retrieve the generators of the stabilizers or ``group='destabilizers'`` to get the generators of the destabilizers.",
-            )
+        nqubits = int((tableau.shape[1] - 1) / 2)
+        R = 1 * tableau[:-1, -1]
+        tmp = 1 * tableau[:-1, :-1]
         X, Z = tmp[:, :nqubits], tmp[:, nqubits:]
         generators = []
-        for x, z in zip(X, Z):
+        for x, z, r in zip(X, Z, R):
+            phase = (-1) ** r
             paulis = []
             for i, (xx, zz) in enumerate(zip(x, z)):
                 paulis.append(bits_to_gate[f"{zz}{xx}"](i))
             if return_array:
-                generators.append([p.matrix for p in paulis])
+                matrix = phase * paulis[0].matrix()
+                for p in paulis[1:]:
+                    matrix = self.np.kron(matrix, p.matrix())
+                generators.append(matrix)
             else:
-                generators.append(paulis)
-        return generators, phases
+                generators.append((paulis, phase))
+        return generators
