@@ -1,7 +1,6 @@
 import random
 from copy import deepcopy
 
-import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 from more_itertools import pairwise

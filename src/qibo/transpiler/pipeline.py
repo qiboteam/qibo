@@ -38,13 +38,14 @@ def assert_circuit_equivalence(
             If ``None``, trivial initial map is used. Defauts to ``None``.
         test_states (list, optional): states on which the test is performed.
             If ``None``, ``ntests`` random states will be tested. Defauts to ``None``.
-        ntests (int): number of random states tested.
+        ntests (int, optional): number of random states tested. Defauts to :math:`3`.
     """
     backend = NumpyBackend()
     ordering = np.argsort(np.array(list(final_map.values())))
     if transpiled_circuit.nqubits != original_circuit.nqubits:
-        raise ValueError(
-            "Transpiled and original circuit do not have the same number of qubits."
+        raise_error(
+            ValueError,
+            "Transpiled and original circuit do not have the same number of qubits.",
         )
 
     if test_states is None:
@@ -150,8 +151,9 @@ class Passes:
     def default(self, connectivity: nx.Graph):
         """Return the default transpiler pipeline for the required hardware connectivity."""
         if not isinstance(connectivity, nx.Graph):
-            raise TranspilerPipelineError(
-                "Define the hardware chip connectivity to use default transpiler"
+            raise_error(
+                TranspilerPipelineError,
+                "Define the hardware chip connectivity to use default transpiler",
             )
         default_passes = []
         # preprocessing
@@ -176,8 +178,9 @@ class Passes:
                 if self.initial_layout == None:
                     self.initial_layout = transpiler_pass(circuit)
                 else:
-                    raise TranspilerPipelineError(
-                        "You are defining more than one placer pass."
+                    raise_error(
+                        TranspilerPipelineError,
+                        "You are defining more than one placer pass.",
                     )
             elif isinstance(transpiler_pass, Router):
                 if self.initial_layout is not None:
@@ -185,14 +188,15 @@ class Passes:
                         circuit, self.initial_layout
                     )
                 else:
-                    raise TranspilerPipelineError(
-                        "Use a placement pass before routing."
+                    raise_error(
+                        TranspilerPipelineError, "Use a placement pass before routing."
                     )
             elif isinstance(transpiler_pass, Unroller):
                 circuit = transpiler_pass(circuit)
             else:
-                raise TranspilerPipelineError(
-                    "Unrecognised transpiler pass: ", transpiler_pass
+                raise_error(
+                    TranspilerPipelineError,
+                    f"Unrecognised transpiler pass: {transpiler_pass}",
                 )
         return circuit, final_layout
 

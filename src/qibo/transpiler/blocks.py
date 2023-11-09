@@ -12,7 +12,7 @@ class Block:
     Args:
         qubits (tuple): qubits where the block is acting.
         gates (list): list of gates that compose the block.
-        name (str or int, optional): name of the block.
+        name (str or int, optional): name of the block. Defaults to ``None``.
     """
 
     def __init__(
@@ -59,7 +59,7 @@ class Block:
 
         Args:
             block (:class:`qibo.transpiler.blocks.Block`): block to fuse.
-            name (str, optional): name of the fused block.
+            name (str, optional): name of the fused block. Defaults to ``None``.
 
         Return:
             (:class:`qibo.transpiler.blocks.Block`): fusion of the two input blocks.
@@ -102,7 +102,7 @@ class Block:
         This should be done only if the block is entangled and the number of
         two qubit gates is higher than the number after the decomposition.
         """
-        raise NotImplementedError
+        raise_error(NotImplementedError, "")
 
 
 class CircuitBlocks:
@@ -110,7 +110,7 @@ class CircuitBlocks:
 
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): circuit to be decomposed.
-        index_names (bool, optional): assign names to the blocks
+        index_names (bool, optional): assign names to the blocks. Defaults to ``False``.
     """
 
     def __init__(self, circuit: Circuit, index_names: bool = False):
@@ -127,19 +127,21 @@ class CircuitBlocks:
     def search_by_index(self, index: int):
         """Find a block from its index, requires index_names == True"""
         if not self._index_names:
-            raise BlockingError(
-                "You need to assign index names in order to use search_by_index."
+            raise_error(
+                BlockingError,
+                "You need to assign index names in order to use search_by_index.",
             )
         for block in self.block_list:
             if block.name == index:
                 return block
-        raise BlockingError("No block found with index {}.".format(index))
+        raise_error(BlockingError, f"No block found with index {index}.")
 
     def add_block(self, block: "Block"):
         """Add a two qubits block."""
         if not set(block.qubits).issubset(range(self.qubits)):
-            raise BlockingError(
-                "The block can't be added to the circuit because it acts on different qubits"
+            raise_error(
+                BlockingError,
+                "The block can't be added to the circuit because it acts on different qubits",
             )
         self.block_list.append(block)
 

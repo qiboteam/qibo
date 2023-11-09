@@ -19,10 +19,10 @@ def u3_decomposition(unitary):
     """Decomposes arbitrary one-qubit gates to U3.
 
     Args:
-        unitary (np.ndarray): Unitary 2x2 matrix to be decomposed.
+        unitary (ndarray): Unitary 2x2 matrix to be decomposed.
 
     Returns:
-        theta, phi, lam: parameters of U3 gate.
+        (float, float, float): parameters of U3 gate.
     """
     # https://github.com/Qiskit/qiskit-terra/blob/d2e3340adb79719f9154b665e8f6d8dc26b3e0aa/qiskit/quantum_info/synthesis/one_qubit_decompose.py#L221
     su2 = unitary / np.sqrt(np.linalg.det(unitary))

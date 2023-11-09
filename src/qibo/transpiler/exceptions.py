@@ -10,7 +10,8 @@ class ConnectivityError(Exception):
 
 
 class DecompositionError(Exception):
-    """A decomposition error is raised when, during transpiling, gates are not correctly decomposed in native gates"""
+    """A decomposition error is raised when, during transpiling,
+    gates are not correctly decomposed in native gates"""
 
 
 class PlacementError(Exception):

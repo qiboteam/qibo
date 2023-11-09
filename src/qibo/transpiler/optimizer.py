@@ -1,6 +1,7 @@
 import networkx as nx
 
 from qibo import gates
+from qibo.config import raise_error
 from qibo.models import Circuit
 from qibo.transpiler.abstract import Optimizer
 
@@ -19,8 +20,10 @@ class Preprocessing(Optimizer):
         physical_qubits = self.connectivity.number_of_nodes()
         logical_qubits = circuit.nqubits
         if logical_qubits > physical_qubits:
-            raise ValueError(
-                "The number of qubits in the circuit can't be greater than the number of physical qubits."
+            raise_error(
+                ValueError,
+                "The number of qubits in the circuit can't be greater "
+                + "than the number of physical qubits.",
             )
         if logical_qubits == physical_qubits:
             return circuit
@@ -34,15 +37,19 @@ class Rearrange(Optimizer):
     """Rearranges gates using qibo's fusion algorithm.
     May reduce number of SWAPs when fixing for connectivity
     but this has not been tested.
+
+    Args:
+        max_qubits (int, optional): maximum number of qubits to fuse gates.
+            Defaults to :math:`1`.
     """
 
     def __init__(self, max_qubits: int = 1):
         self.max_qubits = max_qubits
 
     def __call__(self, circuit: Circuit):
-        fcircuit = circuit.fuse(max_qubits=self.max_qubits)
+        fused_circuit = circuit.fuse(max_qubits=self.max_qubits)
         new = circuit.__class__(circuit.nqubits)
-        for fgate in fcircuit.queue:
+        for fgate in fused_circuit.queue:
             if isinstance(fgate, gates.FusedGate):
                 new.add(gates.Unitary(fgate.matrix(), *fgate.qubits))
             else:

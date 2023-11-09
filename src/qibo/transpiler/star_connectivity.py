@@ -5,6 +5,7 @@ from qibo.transpiler.router import ConnectivityError
 
 class StarConnectivity(Router):
     """Transforms an arbitrary circuit to one that can be executed on hardware.
+
     This transpiler produces a circuit that respects the following connectivity:
 
              q
@@ -16,26 +17,24 @@ class StarConnectivity(Router):
     by adding SWAP gates when needed.
 
     Args:
-        connectivity (networkx.Graph): chip connectivity, not used for this transpiler.
-        middle_qubit (int): qubit id of the qubit that is in the middle of the star.
-        verbose (bool): print info messages.
+        connectivity (:class:`networkx.Graph`): chip connectivity, not used for this transpiler.
+        middle_qubit (int, optional): qubit id of the qubit that is in the middle of the star.
     """
 
-    def __init__(self, connectivity=None, middle_qubit=2):
+    def __init__(self, connectivity=None, middle_qubit: int = 2):
         self.middle_qubit = middle_qubit
 
     def __call__(self, circuit: Circuit, initial_layout=None):
         """Apply the transpiler transformation on a given circuit.
 
         Args:
-            circuit (qibo.models.Circuit): The original Qibo circuit to transform.
+            circuit (:class:`qibo.models.circuit.Circuit`): The original Qibo circuit to transform.
                 This circuit must contain up to two-qubit gates.
 
         Returns:
-            new (qibo.models.Circuit): Qibo circuit that performs the same operation
-                as the original but respects the hardware connectivity.
-            hardware_qubits (list): List that maps logical to hardware qubits.
-                This is required for transforming final measurements.
+            (:class:`qibo.models.circuit.Circuit`, list): circuit that performs the same operation
+                as the original but respects the hardware connectivity,
+                and list that maps logical to hardware qubits.
         """
 
         middle_qubit = self.middle_qubit
