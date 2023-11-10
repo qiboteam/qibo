@@ -19,12 +19,14 @@ class NativeGates(Unroller):
     """Translates a circuit to native gates.
 
     Args:
-        circuit (qibo.models.Circuit): circuit model to translate into native gates.
-        single_qubit_natives (Tuple): single qubit native gates.
-        two_qubit_natives (NativeType): two qubit native gates supported by the quantum hardware.
+        circuit (:class:`qibo.models.circuit.Circuit`): circuit model to translate
+            into native gates.
+        single_qubit_natives (tuple): single qubit native gates.
+        two_qubit_natives (:class:`qibo.transpiler.abstract.NativeType`): two-qubit native gates
+            supported by the quantum hardware.
 
     Returns:
-        translated_circuit (qibo.models.Circuit): equivalent circuit with native gates.
+        (:class:`qibo.models.circuit.Circuit`): equivalent circuit with native gates.
     """
 
     def __init__(
@@ -66,38 +68,45 @@ def assert_decomposition(
     """Checks if a circuit has been correctly decmposed into native gates.
 
     Args:
-        circuit (qibo.models.Circuit): circuit model to check.
+        circuit (:class:`qibo.models.circuit.Circuit`): circuit model to check.
     """
     for gate in circuit.queue:
         if isinstance(gate, gates.M):
             continue
         if len(gate.qubits) == 1:
             if not isinstance(gate, single_qubit_natives):
-                raise DecompositionError(
-                    f"{gate.name} is not a single qubit native gate."
+                raise_error(
+                    DecompositionError,
+                    f"{gate.name} is not a single qubit native gate.",
                 )
         elif len(gate.qubits) == 2:
             try:
                 native_type_gate = NativeType.from_gate(gate)
                 if not (native_type_gate in two_qubit_natives):
-                    raise DecompositionError(
-                        f"{gate.name} is not a two qubit native gate."
+                    raise_error(
+                        DecompositionError,
+                        f"{gate.name} is not a two qubit native gate.",
                     )
             except ValueError:
-                raise DecompositionError(f"{gate.name} is not a two qubit native gate.")
+                raise_error(
+                    DecompositionError, f"{gate.name} is not a two qubit native gate."
+                )
         else:
-            raise DecompositionError(f"{gate.name} acts on more than two qubits.")
+            raise_error(
+                DecompositionError, f"{gate.name} acts on more than two qubits."
+            )
 
 
 def translate_gate(gate, native_gates: NativeType):
-    """Maps Qibo gates to a hardware native implementation.
+    """Maps gates to a hardware-native implementation.
 
     Args:
-        gate (qibo.gates.abstract.Gate): gate to be decomposed.
-        native_gates (NativeType): two qubit native gates supported by the quantum hardware.
+        gate (:class:`qibo.gates.abstract.Gate`): gate to be decomposed.
+        native_gates (:class:`qibo.transpiler.abstract.NativeType`):
+            two-qubit native gates supported by the quantum hardware.
 
     Returns:
-        List of native gates
+        (list): List of native gates
     """
     if isinstance(gate, (gates.M, gates.I, gates.Align)):
         return gate

@@ -19,7 +19,7 @@ def u3_decomposition(unitary):
     """Decomposes arbitrary one-qubit gates to U3.
 
     Args:
-        unitary (ndarray): Unitary 2x2 matrix to be decomposed.
+        unitary (ndarray): Unitary :math:`2 \\times 2` matrix to be decomposed.
 
     Returns:
         (float, float, float): parameters of U3 gate.
@@ -31,6 +31,7 @@ def u3_decomposition(unitary):
     minus = np.angle(su2[1, 0])
     phi = plus + minus
     lam = plus - minus
+
     return theta, phi, lam
 
 
@@ -40,11 +41,14 @@ def calculate_psi(unitary, magic_basis=magic_basis, backend=None):
     See step (1) of Appendix A in arXiv:quant-ph/0011050.
 
     Args:
-        unitary (np.ndarray): Unitary matrix of the gate we are
-            decomposing in the computational basis.
+        unitary (ndarray): Unitary matrix of the gate we are decomposing
+            in the computational basis.
+        magic_basis (ndarray, optional): basis in which to solve the eigenvalue problem.
+            Defaults to ``magic basis``.
+        backend (:class:`qibo.backends.abstract.Backend`): Backend to use for calculations.
 
     Returns:
-        Eigenvectors (in the computational basis) and eigenvalues of :math:`U^{T} U`.
+        (ndarray) Eigenvectors in the computational basis and eigenvalues of :math:`U^{T} U`.
     """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
@@ -74,7 +78,15 @@ def calculate_psi(unitary, magic_basis=magic_basis, backend=None):
 
 
 def schmidt_decompose(state):
-    """Decomposes a two-qubit product state to its single-qubit parts."""
+    """Decomposes a two-qubit product state to its single-qubit parts.
+
+    Args:
+        state (ndarray): product state to be decomposed.
+
+    Returns:
+        (ndarray, ndarray): decomposition
+
+    """
     u, d, v = np.linalg.svd(np.reshape(state, (2, 2)))
     if not np.allclose(d, [1, 0]):  # pragma: no cover
         raise_error(
@@ -90,10 +102,10 @@ def calculate_single_qubit_unitaries(psi):
     See Lemma 1 of Appendix A in arXiv:quant-ph/0011050.
 
     Args:
-        psi (np.ndarray): Maximally entangled two-qubit states that define a basis.
+        psi (ndarray): Maximally entangled two-qubit states that define a basis.
 
     Returns:
-        Local unitaries UA and UB that map the given basis to the magic basis.
+        (ndarray, ndarray): Local unitaries UA and UB that map the given basis to the magic basis.
     """
 
     # TODO: Handle the case where psi is not real in the magic basis
@@ -229,11 +241,12 @@ def two_qubit_decomposition(q0, q1, unitary, backend=None):
     """Performs two qubit unitary gate decomposition (24) from arXiv:quant-ph/0307177.
 
     Args:
-        q0, q1 (int): Target qubits
-        unitary (np.ndarray): Unitary 4x4 matrix we are decomposing.
+        q0 (int): index of the first qubit.
+        q1 (int): index of the second qubit.
+        unitary (ndarray): Unitary :math:`4 \\times 4` to be decomposed.
 
     Returns:
-        list of gates implementing decomposition (24) from arXiv:quant-ph/0307177
+        (list): gates implementing decomposition (24) from arXiv:quant-ph/0307177
     """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
