@@ -169,7 +169,7 @@ class CliffordOperations:
     def RX(self, tableau, q, nqubits, theta):
         if theta % (2 * self.np.pi) == 0:
             return self.I(tableau, q, nqubits)
-        elif theta % self.np.pi == 0:
+        elif (theta / self.np.pi - 1) % 2 == 0:
             return self.X(tableau, q, nqubits)
         elif (theta / (self.np.pi / 2) - 1) % 4 == 0:
             return self.SX(tableau, q, nqubits)
@@ -179,18 +179,18 @@ class CliffordOperations:
     def RZ(self, tableau, q, nqubits, theta):
         if theta % (2 * self.np.pi) == 0:
             return self.I(tableau, q, nqubits)
-        elif theta % self.np.pi == 0:
+        elif (theta / self.np.pi - 1) % 2 == 0:
             return self.Z(tableau, q, nqubits)
         elif (theta / (self.np.pi / 2) - 1) % 4 == 0:
             return self.S(tableau, q, nqubits)
         else:  # theta == 3*pi/2 + 2*n*pi
             return self.SDG(tableau, q, nqubits)
 
-    # not working properly
+    # not working
     def RY(self, tableau, q, nqubits, theta):
         if theta % (2 * self.np.pi) == 0:
             return self.I(tableau, q, nqubits)
-        elif theta % self.np.pi == 0:
+        elif (theta / self.np.pi - 1) % 2 == 0:
             return self.Y(tableau, q, nqubits)
         elif (theta / (self.np.pi / 2) - 1) % 4 == 0:
             """Decomposition --> SSH"""
@@ -204,8 +204,7 @@ class CliffordOperations:
                 new_tab,
                 r ^ (z[:, q] * (z[:, q] ^ x[:, q])).flatten(),
             )
-            new_tab[:-1, nqubits + q] = x[:, q]
-            new_tab[:-1, q] = z[:, q]
+            new_tab[:-1, [nqubits + q, q]] = new_tab[:-1, [q, nqubits + q]]
             return new_tab
         else:  # theta == 3*pi/2 + 2*n*pi
             """Decomposition --> SSHSSHSSH"""
@@ -219,9 +218,45 @@ class CliffordOperations:
                 new_tab,
                 r ^ (x[:, q] * (z[:, q] ^ x[:, q])).flatten(),
             )
-            new_tab[:-1, nqubits + q] = x[:, q]
-            new_tab[:-1, q] = z[:, q]
+            new_tab[:-1, [nqubits + q, q]] = new_tab[:-1, [q, nqubits + q]]
             return new_tab
+
+    def SWAP(self, tableau, control_q, target_q, nqubits):
+        """Decomposition --> CNOTCNOTCNOT"""
+        new_tab = tableau.copy()
+        r, x, z = (
+            self.get_r(new_tab, nqubits),
+            self.get_x(new_tab, nqubits),
+            self.get_z(new_tab, nqubits),
+        )
+        self.set_r(
+            new_tab,
+            r
+            ^ (
+                x[:, control_q]
+                * z[:, target_q]
+                * (x[:, target_q] ^ z[:, control_q] ^ 1)
+            ).flatten()
+            ^ (
+                (x[:, target_q] ^ x[:, control_q])
+                * (z[:, target_q] ^ z[:, control_q])
+                * (z[:, target_q] ^ x[:, control_q] ^ 1)
+            ).flatten()
+            ^ (
+                x[:, target_q]
+                * z[:, control_q]
+                * (
+                    x[:, control_q]
+                    ^ x[:, target_q]
+                    ^ z[:, control_q]
+                    ^ z[:, target_q]
+                    ^ 1
+                )
+            ).flatten(),
+        )
+        new_tab[:-1, target_q] = x[:, control_q]
+        new_tab[:-1, nqubits + control_q] = z[:, target_q]
+        return new_tab
 
     # valid for a standard basis measurement only
     def M(self, state, qubits, nqubits, collapse=False):
@@ -350,16 +385,18 @@ class CliffordBackend(NumpyBackend):
     def apply_gate_clifford(self, gate, tableau, nqubits, nshots):
         operation = gate.clifford_operation(self)
 
-        if len(gate.control_qubits) > 0:
+        if len(gate.init_args) > 0:
+            if "theta" in gate.init_kwargs:
+                return operation(
+                    tableau,
+                    self.np.array(gate.qubits),
+                    nqubits,
+                    gate.init_kwargs["theta"],
+                )
             return operation(
                 tableau,
-                self.np.array(gate.control_qubits),
-                self.np.array(gate.target_qubits),
+                *gate.init_args,
                 nqubits,
-            )
-        elif "theta" in gate.init_kwargs:
-            return operation(
-                tableau, self.np.array(gate.qubits), nqubits, gate.init_kwargs["theta"]
             )
 
         return operation(tableau, self.np.array(gate.qubits), nqubits)

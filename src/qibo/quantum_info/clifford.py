@@ -8,20 +8,20 @@ from qibo.backends import CliffordBackend
 from qibo.result import CircuitResult
 
 
-def _string_product(A, B):
-    phase_A = False if A[0] == "-" else True
-    phase_B = False if B[0] == "-" else True
-    phase = phase_A ^ phase_B
+def _string_product(operators):
+    phases = np.array(["-" in op for op in operators], dtype=bool)
     prod = []
-    for a, b in zip(A.replace("-", ""), B.replace("-", "")):
-        if a == "I":
-            prod.append(b)
-        elif b == "I":
-            prod.append(a)
-        else:
-            prod.append("".join([a, b]))
-    result = "-" if phase else ""
+    for op in zip(*operators):
+        tmp = "".join([o for o in op if o != "I"])
+        if tmp == "":
+            tmp = "I"
+        prod.append(tmp)
+    result = "-" if len(phases.nonzero()[0]) % 2 == 1 else ""
     return f"{result}({')('.join(prod)})"
+
+
+def _list_of_matrices_product(operators):
+    return np.einsum(*[d for i, op in enumerate(operators) for d in (op, (i, i + 1))])
 
 
 @dataclass
@@ -70,10 +70,10 @@ class Clifford:
             if is_array
             else "".join(["I" for _ in range(self.nqubits)])
         )
-        operators = [[g, identity] for g in operators]
+        operators = [(g, identity) for g in operators]
         if is_array:
-            return [g1 @ g2 for g1, g2 in product(*operators)]
-        return [_string_product(g1, g2) for g1, g2 in product(*operators)]
+            return [_list_of_matrices_product(ops) for ops in product(*operators)]
+        return [_string_product(ops) for ops in product(*operators)]
 
     def get_stabilizers(self, return_array=False):
         generators, phases = self.get_stabilizers_generators(return_array)

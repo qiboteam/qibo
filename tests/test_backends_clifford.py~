@@ -1,0 +1,19 @@
+import numpy as np
+import pytest
+
+from qibo import gates, Circuit
+from qibo.backends import CliffordBackend, NumpyBackend
+
+clifford_bkd = CliffordBackend()
+numpy_bkd = NumpyBackend()
+
+thetas = [ th + 2*i*np.pi for th in [0,np.pi/2,np.pi,3*np.pi/2] for i in range(2) ]
+
+@pytest.mark.parametrize("axis,theta", [('RX',thetas),('RY',thetas),('RZ',thetas)])
+def test_rotations(theta, axis):
+    c = Circuit(1, density_matrix=True)
+    c.add(getattr(gates, axis)(0, theta=theta + 2*i*np.pi))
+    c.add(gates.M(0))
+    clifford_state = clifford_bkd.execute_circuit(c).state()
+    numpy_state = numpy_bkd.execute_circuit(c).state()
+    numpy_bkd.assert_allclose(clifford_state, numpy_state)
