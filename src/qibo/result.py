@@ -268,10 +268,10 @@ class MeasurementOutcomes:
                 self._probs, qubits, len(self.measurement_gate.qubits)
             )
 
-        frequencies = self.frequencies(binary=False)
-        probs = self.backend.calculate_probabilities_from_frequencies(
-            frequencies, self._samples.shape[1], self.nshots
-        )
+        probs = [0 for _ in range(2**nqubits)]
+        for state, freq in self.frequencies(binary=False).items():
+            probs[state] = freq / self.nshots
+        probs = self.backend.cast(probs)
         self._probs = probs
         return self.backend.calculate_probabilities(
             probs, qubits, len(self.measurement_gate.qubits)
