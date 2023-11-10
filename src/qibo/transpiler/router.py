@@ -556,7 +556,7 @@ class Sabre(Router):
         """
         candidates = []
         for block in self._front_layer:
-            for qubit in self.circuit.get_physical_qubits(block)
+            for qubit in self.circuit.get_physical_qubits(block):
                 for connected in self.connectivity.neighbors(qubit):
                     candidate = tuple(
                         sorted(
