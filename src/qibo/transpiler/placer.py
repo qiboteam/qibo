@@ -248,7 +248,7 @@ class ReverseTraversal(Placer):
     """
     Places qubits based on the algorithm proposed in Reference [1].
 
-    Works with ``ShortestPaths`` routing.
+    Compatible with all the available ``Router``s.
 
     Args:
         connectivity (:class:`networkx.Graph`): chip connectivity.
