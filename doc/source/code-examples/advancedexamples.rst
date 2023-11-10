@@ -2008,7 +2008,7 @@ Multiple transpilation steps can be implemented using the :class:`qibo.transpile
 
     import networkx as nx
 
-    from qibo import Gates
+    from qibo import gates
     from qibo.models import Circuit
     from qibo.transpiler.pipeline import Passes, assert_transpiling
     from qibo.transpiler.abstract import NativeType
