@@ -160,7 +160,6 @@ class Passes:
         default_passes.append(Preprocessing(connectivity=connectivity))
         # default placer pass
         default_passes.append(Trivial(connectivity=connectivity))
-        # default_passes.append(ReverseTraversal(connectivity=connectivity, routing_algorithm=ShortestPaths(connectivity), depth=5))
         # default router pass
         default_passes.append(StarConnectivity())
         # default unroller pass
