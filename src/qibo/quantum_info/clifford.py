@@ -9,7 +9,10 @@ from qibo.result import CircuitResult
 
 
 def _string_product(operators):
+    # calculate global sign
     phases = np.array(["-" in op for op in operators], dtype=bool)
+    # remove the - signs
+    operators = "|".join(operators).replace("-", "").split("|")
     prod = []
     for op in zip(*operators):
         tmp = "".join([o for o in op if o != "I"])

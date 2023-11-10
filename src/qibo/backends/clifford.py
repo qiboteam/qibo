@@ -186,14 +186,17 @@ class CliffordOperations:
         else:  # theta == 3*pi/2 + 2*n*pi
             return self.SDG(tableau, q, nqubits)
 
-    # not working
     def RY(self, tableau, q, nqubits, theta):
         if theta % (2 * self.np.pi) == 0:
+            print("I")
             return self.I(tableau, q, nqubits)
         elif (theta / self.np.pi - 1) % 2 == 0:
+            print("Y")
             return self.Y(tableau, q, nqubits)
+        # not working
         elif (theta / (self.np.pi / 2) - 1) % 4 == 0:
             """Decomposition --> SSH"""
+            print("RY(pi/2)")
             new_tab = tableau.copy()
             r, x, z = (
                 self.get_r(new_tab, nqubits),
@@ -206,8 +209,10 @@ class CliffordOperations:
             )
             new_tab[:-1, [nqubits + q, q]] = new_tab[:-1, [q, nqubits + q]]
             return new_tab
+        # not working
         else:  # theta == 3*pi/2 + 2*n*pi
             """Decomposition --> SSHSSHSSH"""
+            print("RY(3*pi/2)")
             new_tab = tableau.copy()
             r, x, z = (
                 self.get_r(new_tab, nqubits),
