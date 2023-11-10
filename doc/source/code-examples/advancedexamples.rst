@@ -2050,7 +2050,7 @@ Multiple transpilation steps can be implemented using the :class:`qibo.transpile
 
     # Optinally call assert_transpiling to check that the final circuit can be executed on hardware
     assert_transpiling(
-        original_circuit=circ,
+        original_circuit=circuit,
         transpiled_circuit=transpiled_circ,
         connectivity=star_connectivity(),
         initial_layout=initial_layout,
