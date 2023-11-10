@@ -2003,6 +2003,7 @@ is possible to use CZ and/or iSWAP. When both CZ and iSWAP gates are available t
 one that minimizes the use of two-qubit gates.
 
 Multiple transpilation steps can be implemented using the :class:`qibo.transpiler.pipeline.Pipeline`:
+
 .. testcode:: python
 
     import networkx as nx
@@ -2054,7 +2055,7 @@ Multiple transpilation steps can be implemented using the :class:`qibo.transpile
         connectivity=star_connectivity(),
         initial_layout=initial_layout,
         final_layout=final_layout,
-        native_gates=NativeType.iSWAP,
+        native_gates=NativeType.iSWAP
     )
 
 In this case circuits will first be transpiled to respect the 5-qubit star connectivity, with qubit 2 as the middle qubit. This will potentially add some SWAP gates.
