@@ -163,7 +163,6 @@ class Passes:
         # default_passes.append(ReverseTraversal(connectivity=connectivity, routing_algorithm=ShortestPaths(connectivity), depth=5))
         # default router pass
         default_passes.append(StarConnectivity())
-        # default_passes.append(ShortestPaths(connectivity=connectivity))
         # default unroller pass
         default_passes.append(NativeGates(two_qubit_natives=self.native_gates))
         return default_passes
