@@ -2049,6 +2049,8 @@ Multiple transpilation steps can be implemented using the :class:`qibo.transpile
     transpiled_circ, final_layout = custom_pipeline(circuit)
 
     # Optinally call assert_transpiling to check that the final circuit can be executed on hardware
+    # For this test it is necessary to get the initial layout
+    initial_layout = custom_pipeline.get_initial_layout()
     assert_transpiling(
         original_circuit=circuit,
         transpiled_circuit=transpiled_circ,
