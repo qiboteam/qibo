@@ -139,7 +139,7 @@ def unary_encoder_random_gaussian(nqubits: int, seed=None):
         np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
     )
 
-    sampler = _probability_distribution_gaussian_loader(
+    sampler = _ProbabilityDistributionGaussianLoader(
         a=0, b=2 * math.pi, seed=local_state
     )
 
@@ -179,7 +179,7 @@ def _generate_rbs_pairs(nqubits):
     return circuit, pairs_rbs
 
 
-class _probability_distribution_gaussian_loader(rv_continuous):
+class _ProbabilityDistributionGaussianLoader(rv_continuous):
     """Probability density function for sampling phases of
     the RBS gates as a function of circuit depth."""
 
