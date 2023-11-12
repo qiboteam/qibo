@@ -147,7 +147,7 @@ def unary_encoder_random_gaussian(nqubits: int, seed=None):
 
     phases = []
     for depth, row in enumerate(pairs_rbs, 1):
-        phases += list(sampler.rvs(depth=depth, size=len(row)))
+        phases.extend(sampler.rvs(depth=depth, size=len(row)))
 
     circuit.set_parameters(phases)
 
