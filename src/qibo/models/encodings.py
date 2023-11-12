@@ -166,8 +166,12 @@ def _generate_rbs_pairs(nqubits):
         pairs_rbs += pairs_rbs_per_depth
         indexes = list(np.array(pairs_rbs_per_depth).flatten())
 
+    pairs_rbs = [
+        [(nqubits - 1 - a, nqubits - 1 - b) for a, b in row] for row in pairs_rbs
+    ]
+
     circuit = Circuit(nqubits)
-    circuit.add(gates.X(0))
+    circuit.add(gates.X(nqubits - 1))
     for row in pairs_rbs:
         for pair in row:
             circuit.add(gates.RBS(*pair, 0.0, trainable=True))
