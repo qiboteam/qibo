@@ -13,7 +13,7 @@ def gaussian(x, a, b, c):
     return np.exp(a * x**2 + b * x + c)
 
 
-@pytest.mark.parametrize("nqubits", [2, 4, 8])
+@pytest.mark.parametrize("nqubits", [2, 4, 8, 16])
 def test_unary_encoder(backend, nqubits):
     sampler = np.random.default_rng(1)
 
@@ -34,11 +34,9 @@ def test_unary_encoder(backend, nqubits):
     circuit = unary_encoder(data)
     state = backend.execute_circuit(circuit).state()
     indexes = np.flatnonzero(state)
-    state = np.sort(state[indexes])
+    state = state[indexes]
 
-    backend.assert_allclose(
-        state, np.sort(data) / backend.calculate_norm(data, order=2)
-    )
+    backend.assert_allclose(state, data / backend.calculate_norm(data, order=2))
 
 
 @pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
