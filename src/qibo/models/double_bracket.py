@@ -107,8 +107,8 @@ class DoubleBracketFlow:
 
     def hyperopt_step(
         self,
-        step_min: float = 0.0001,
-        step_max: float = 0.5,
+        step_min: float = 1e-5,
+        step_max: float = 1,
         max_evals: int = 1000,
         space: callable = hyperopt.hp.uniform,
         optimizer: callable = hyperopt.tpe,
@@ -153,16 +153,13 @@ class DoubleBracketFlow:
         # copy initial hamiltonian
         h_copy = deepcopy(self.h)
 
-        # off_diagonal_norm's value before the steps
-        old_loss = self.off_diagonal_norm
-
         for _ in range(look_ahead):
             self.__call__(mode=self.mode, step=step)
 
         # off_diagonal_norm's value after the steps
-        new_loss = self.off_diagonal_norm
+        loss = self.off_diagonal_norm
 
         # set back the initial configuration
         self.h = h_copy
 
-        return new_loss - old_loss
+        return loss
