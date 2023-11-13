@@ -14,13 +14,14 @@ measurement = gates.M(0, register_name="a")
 measurement2 = gates.M(1, register_name="b")
 
 circ = Circuit(3)
-circ.add(gates.H(0))
 circ.add(measurement)
 circ.add(measurement2)
 
+new_measurement = measurement.on_qubits({0: 1})
+new_measurement.result = measurement.result
 circ2 = Circuit(3)
-for gate in circ.queue:
-    circ2.add(gate)
+circ2.add(gates.H(0))
+circ2.add(new_measurement)
 
 connectivity = nx.Graph()
 connectivity.add_nodes_from([0, 1, 2])
@@ -33,6 +34,7 @@ routed_circ, final_layout = router(circuit=circ, initial_layout=initial_layout)
 result2 = routed_circ.execute(nshots=100)
 # result2 = circ2.execute(nshots=100)
 print(result2.frequencies())
-
-print(measurement.result.has_samples())
+# print(result2.has_samples())
+# print(measurement.result.has_samples())
 print(measurement.result.frequencies())
+# print(measurement.result.has_samples())
