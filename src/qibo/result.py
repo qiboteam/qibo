@@ -373,7 +373,7 @@ class MeasurementOutcomes:
 
         Args:
             observable (Hamiltonian/SymbolicHamiltonian): diagonal observable in the
-            computational basis.
+                computational basis.
 
         Returns:
             (float): expectation value from samples.
