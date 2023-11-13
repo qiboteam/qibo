@@ -1,5 +1,6 @@
 import collections
 import warnings
+from typing import Optional, Union
 
 import numpy as np
 
@@ -15,7 +16,7 @@ def load_result(filename):
         filename (str): Path to the file containing the results.
 
     Returns:
-        A :class:`qibo.result.QuantumState`, :class:`qibo.result.MeasurementOutcomes` or :class:`qibo.result.CircuitResult` object, depending on the input file.
+        :class:`qibo.result.QuantumState` or :class:`qibo.result.MeasurementOutcomes` or :class:`qibo.result.CircuitResult`: result of circuit execution saved to disk, depending on saved filed.
     """
     payload = np.load(filename, allow_pickle=True).item()
     return globals()[payload.pop("dtype")].from_dict(payload)
@@ -30,21 +31,19 @@ class QuantumState:
         self.nqubits = int(np.log2(state.shape[0]))
         self._state = state
 
-    def symbolic(self, decimals=5, cutoff=1e-10, max_terms=20):
+    def symbolic(self, decimals: int = 5, cutoff: float = 1e-10, max_terms: int = 20):
         """Dirac notation representation of the state in the computational basis.
 
         Args:
-            decimals (int): Number of decimals for the amplitudes.
-                Default is 5.
-            cutoff (float): Amplitudes with absolute value smaller than the
-                cutoff are ignored from the representation.
-                Default is 1e-10.
-            max_terms (int): Maximum number of terms to print. If the state
-                contains more terms they will be ignored.
-                Default is 20.
+            decimals (int, optional): Number of decimals for the amplitudes.
+                Defaults to :math:`5`.
+            cutoff (float, optional): Amplitudes with absolute value smaller than the
+                cutoff are ignored from the representation. Defaults to  ``1e-10``.
+            max_terms (int, optional): Maximum number of terms to print. If the state
+                contains more terms they will be ignored. Defaults to :math:`20`.
 
         Returns:
-            A string representing the state in the computational basis.
+            (str): A string representing the state in the computational basis.
         """
         if self.density_matrix:
             terms = self.backend.calculate_symbolic_density_matrix(
@@ -56,31 +55,33 @@ class QuantumState:
             )
         return " + ".join(terms)
 
-    def state(self, numpy=False):
+    def state(self, numpy: bool = False):
         """State's tensor representation as a backend tensor.
 
         Args:
-            numpy (bool): If ``True`` the returned tensor will be a numpy array,
+            numpy (bool, optional): If ``True`` the returned tensor will be a numpy array,
                 otherwise it will follow the backend tensor type.
-                Default is ``False``.
+                Defaults to ``False``.
 
         Returns:
             The state in the computational basis.
         """
         if numpy:
-            return np.asarray(self._state)
-        else:
-            return self._state
+            return np.array(self._state)
+        return self._state
 
-    def probabilities(self, qubits=None):
+    def probabilities(self, qubits: Optional[Union[list, set]] = None):
         """Calculates measurement probabilities by tracing out qubits.
+
         When noisy model is applied to a circuit and `circuit.density_matrix=False`,
         this method returns the average probability resulting from
         repeated execution. This probability distribution approximates the
         exact probability distribution obtained when `circuit.density_matrix=True`.
 
         Args:
-            qubits (list, set): Set of qubits that are measured.
+            qubits (list or set, optional): Set of qubits that are measured.
+                If ``None``, ``qubits`` equates the total number of qubits.
+                Defauts to ``None``.
         """
 
         if qubits is None:
@@ -90,10 +91,8 @@ class QuantumState:
             return self.backend.calculate_probabilities_density_matrix(
                 self._state, qubits, self.nqubits
             )
-        else:
-            return self.backend.calculate_probabilities(
-                self._state, qubits, self.nqubits
-            )
+
+        return self.backend.calculate_probabilities(self._state, qubits, self.nqubits)
 
     def __str__(self):
         return self.symbolic()
@@ -116,14 +115,15 @@ class QuantumState:
             np.save(f, self.to_dict())
 
     @classmethod
-    def from_dict(cls, payload):
+    def from_dict(cls, payload: dict):
         """Builds a ``QuantumState`` object starting from a dictionary.
 
         Args:
-            payload (dict): Dictionary containing all the information to load the ``QuantumState`` object.
+            payload (dict): Dictionary containing all the information
+                to load the ``QuantumState`` object.
 
         Returns:
-            A :class:`qibo.result.QuantumState` object.
+            :class:`qibo.result.QuantumState`: Quantum state object..
         """
         backend = backends.construct_backend("numpy")
         return cls(payload.get("state"), backend)
@@ -136,7 +136,7 @@ class QuantumState:
             filename (str): Path to the file containing the ``QuantumState``.
 
         Returns:
-            A :class:`qibo.result.QuantumState` object.
+            :class:`qibo.result.QuantumState`: Quantum state object.
         """
         payload = np.load(filename, allow_pickle=True).item()
         return cls.from_dict(payload)
@@ -146,7 +146,12 @@ class MeasurementOutcomes:
     """Object to store the outcomes of measurements after circuit execution."""
 
     def __init__(
-        self, measurements, backend, probabilities=None, samples=None, nshots=1000
+        self,
+        measurements,
+        backend,
+        probabilities=None,
+        samples: Optional[int] = None,
+        nshots: int = 1000,
     ):
         self.backend = backend
         self.measurements = measurements
@@ -161,28 +166,28 @@ class MeasurementOutcomes:
         for gate in self.measurements:
             gate.result.reset()
 
-    def frequencies(self, binary=True, registers=False):
+    def frequencies(self, binary: bool = True, registers: bool = False):
         """Returns the frequencies of measured samples.
 
         Args:
-            binary (bool): Return frequency keys in binary or decimal form.
-            registers (bool): Group frequencies according to registers.
+            binary (bool, optional): Return frequency keys in binary or decimal form.
+            registers (bool, optional): Group frequencies according to registers.
 
         Returns:
             A `collections.Counter` where the keys are the observed values
             and the values the corresponding frequencies, that is the number
             of times each measured value/bitstring appears.
 
-            If `binary` is `True`
+            If ``binary`` is ``True``
                 the keys of the `Counter` are in binary form, as strings of
-                0s and 1s.
-            If `binary` is `False`
-                the keys of the `Counter` are integers.
-            If `registers` is `True`
+                :math:`0`s and :math`1`s.
+            If ``binary`` is ``False``
+                the keys of the ``Counter`` are integers.
+            If ``registers`` is ``True``
                 a `dict` of `Counter` s is returned where keys are the name of
                 each register.
-            If `registers` is `False`
-                a single `Counter` is returned which contains samples from all
+            If ``registers`` is ``False``
+                a single ``Counter`` is returned which contains samples from all
                 the measured qubits, independently of their registers.
         """
         qubits = self.measurement_gate.qubits
@@ -190,13 +195,10 @@ class MeasurementOutcomes:
         if self._repeated_execution_frequencies is not None:
             if binary:
                 return self._repeated_execution_frequencies
-            else:
-                return collections.Counter(
-                    {
-                        int(k, 2): v
-                        for k, v in self._repeated_execution_frequencies.items()
-                    }
-                )
+
+            return collections.Counter(
+                {int(k, 2): v for k, v in self._repeated_execution_frequencies.items()}
+            )
 
         if self._frequencies is None:
             if self.measurement_gate.has_bitflip_noise() and not self.has_samples():
@@ -238,7 +240,7 @@ class MeasurementOutcomes:
 
         return self._frequencies
 
-    def probabilities(self, qubits=None):
+    def probabilities(self, qubits: Optional[Union[list, set]] = None):
         """Calculate the probabilities as frequencies / nshots
 
         Returns:
@@ -269,24 +271,24 @@ class MeasurementOutcomes:
     def has_samples(self):
         return self.measurements[0].result.has_samples() or self._samples is not None
 
-    def samples(self, binary=True, registers=False):
+    def samples(self, binary: bool = True, registers: bool = False):
         """Returns raw measurement samples.
 
         Args:
-            binary (bool): Return samples in binary or decimal form.
-            registers (bool): Group samples according to registers.
+            binary (bool, optional): Return samples in binary or decimal form.
+            registers (bool, optional): Group samples according to registers.
 
         Returns:
-            If `binary` is `True`
+            If ``binary`` is ``True``
                 samples are returned in binary form as a tensor
-                of shape `(nshots, n_measured_qubits)`.
-            If `binary` is `False`
+                of shape ``(nshots, n_measured_qubits)``.
+            If ``binary`` is ``False``
                 samples are returned in decimal form as a tensor
-                of shape `(nshots,)`.
-            If `registers` is `True`
-                samples are returned in a `dict` where the keys are the register
+                of shape ``(nshots,)``.
+            If ``registers`` is ``True``
+                samples are returned in a ``dict`` where the keys are the register
                 names and the values are the samples tensors for each register.
-            If `registers` is `False`
+            If ``registers`` is ``False``
                 a single tensor is returned which contains samples from all the
                 measured qubits, independently of their registers.
         """
@@ -336,8 +338,8 @@ class MeasurementOutcomes:
 
         if binary:
             return self._samples
-        else:
-            return self.backend.samples_to_decimal(self._samples, len(qubits))
+
+        return self.backend.samples_to_decimal(self._samples, len(qubits))
 
     @property
     def measurement_gate(self):
@@ -356,7 +358,7 @@ class MeasurementOutcomes:
 
         return self._measurement_gate
 
-    def apply_bitflips(self, p0, p1=None):
+    def apply_bitflips(self, p0: float, p1: Optional[float] = None):
         return apply_bitflips(self, p0, p1)
 
     def expectation_from_samples(self, observable):
@@ -367,7 +369,7 @@ class MeasurementOutcomes:
             computational basis.
 
         Returns:
-            Real number corresponding to the expectation value.
+            (float): expectation value from samples.
         """
         freq = self.frequencies(binary=True)
         qubit_map = self.measurement_gate.qubits
@@ -395,7 +397,7 @@ class MeasurementOutcomes:
             np.save(f, self.to_dict())
 
     @classmethod
-    def from_dict(cls, payload):
+    def from_dict(cls, payload: dict):
         """Builds a ``MeasurementOutcomes`` object starting from a dictionary.
 
         Args:
@@ -422,7 +424,7 @@ class MeasurementOutcomes:
         )
 
     @classmethod
-    def load(cls, filename):
+    def load(cls, filename: str):
         """Builds the ``MeasurementOutcomes`` object stored in a file.
 
         Args:
@@ -455,7 +457,7 @@ class CircuitResult(QuantumState, MeasurementOutcomes):
             nshots=nshots,
         )
 
-    def probabilities(self, qubits=None):
+    def probabilities(self, qubits: Optional[Union[list, set]] = None):
         return QuantumState.probabilities(self, qubits)
 
     def to_dict(self):
@@ -466,14 +468,14 @@ class CircuitResult(QuantumState, MeasurementOutcomes):
         return args
 
     @classmethod
-    def from_dict(cls, payload):
+    def from_dict(cls, payload: dict):
         """Builds a ``CircuitResult`` object starting from a dictionary.
 
         Args:
             payload (dict): Dictionary containing all the information to load the ``CircuitResult`` object.
 
         Returns:
-            A :class:`qibo.result.CircuitResult` object.
+            :class:`qibo.result.CircuitResult`: circuit result object.
         """
         state_load = {"state": payload.pop("state")}
         state = QuantumState.from_dict(state_load)
