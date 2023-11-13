@@ -54,7 +54,10 @@ class DoubleBracketFlow:
         self.h0 = deepcopy(self.h)
         self.mode = mode
 
-    def __call__(self, step: float, mode: FlowGeneratorType, d: np.array = None):
+    def __call__(self, step: float, mode: FlowGeneratorType = None, d: np.array = None):
+        if mode is None:
+            mode = self.mode
+
         if mode is FlowGeneratorType.canonical:
             operator = self.backend.calculate_matrix_exp(
                 1.0j * step,
