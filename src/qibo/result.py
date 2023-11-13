@@ -394,7 +394,7 @@ class MeasurementOutcomes:
         }
         return args
 
-    def dump(self, filename):
+    def dump(self, filename: str):
         """Writes to file the ``MeasurementOutcomes`` for future reloading.
 
         Args:
