@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from functools import reduce
 from itertools import product
 
 import numpy as np
@@ -24,7 +25,8 @@ def _string_product(operators):
 
 
 def _list_of_matrices_product(operators):
-    return np.einsum(*[d for i, op in enumerate(operators) for d in (op, (i, i + 1))])
+    return reduce(np.matmul, operators)  # faster
+    # return np.einsum(*[d for i, op in enumerate(operators) for d in (op, (i, i + 1))])
 
 
 @dataclass

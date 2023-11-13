@@ -106,8 +106,8 @@ class CliffordOperations:
         return new_tab
 
     def Y(self, tableau, q, nqubits):
-        """Decomposition --> SSHSSH"""
-        new_tab = tableau.copy()
+        """Decomposition --> SSHSSH"""  # double check this, cause it should be
+        new_tab = tableau.copy()  # Y = i * HZHZ --> HSSHSS
         r, x, z = (
             self.get_r(new_tab, nqubits),
             self.get_x(new_tab, nqubits),
@@ -195,24 +195,7 @@ class CliffordOperations:
             return self.Y(tableau, q, nqubits)
         # not working
         elif (theta / (self.np.pi / 2) - 1) % 4 == 0:
-            """Decomposition --> SSH"""
-            print("RY(pi/2)")
-            new_tab = tableau.copy()
-            r, x, z = (
-                self.get_r(new_tab, nqubits),
-                self.get_x(new_tab, nqubits),
-                self.get_z(new_tab, nqubits),
-            )
-            self.set_r(
-                new_tab,
-                r ^ (z[:, q] * (z[:, q] ^ x[:, q])).flatten(),
-            )
-            new_tab[:-1, [nqubits + q, q]] = new_tab[:-1, [q, nqubits + q]]
-            return new_tab
-        # not working
-        else:  # theta == 3*pi/2 + 2*n*pi
-            """Decomposition --> SSHSSHSSH"""
-            print("RY(3*pi/2)")
+            """Decomposition --> HSS"""
             new_tab = tableau.copy()
             r, x, z = (
                 self.get_r(new_tab, nqubits),
@@ -222,6 +205,20 @@ class CliffordOperations:
             self.set_r(
                 new_tab,
                 r ^ (x[:, q] * (z[:, q] ^ x[:, q])).flatten(),
+            )
+            new_tab[:-1, [nqubits + q, q]] = new_tab[:-1, [q, nqubits + q]]
+            return new_tab
+        else:  # theta == 3*pi/2 + 2*n*pi
+            """Decomposition --> HSSHSSHSS"""
+            new_tab = tableau.copy()
+            r, x, z = (
+                self.get_r(new_tab, nqubits),
+                self.get_x(new_tab, nqubits),
+                self.get_z(new_tab, nqubits),
+            )
+            self.set_r(
+                new_tab,
+                r ^ (z[:, q] * (z[:, q] ^ x[:, q])).flatten(),
             )
             new_tab[:-1, [nqubits + q, q]] = new_tab[:-1, [q, nqubits + q]]
             return new_tab

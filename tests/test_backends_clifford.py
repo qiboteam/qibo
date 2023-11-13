@@ -26,3 +26,28 @@ def test_rotations(theta, axis):
     print(clifford_state)
     print(numpy_state)
     numpy_bkd.assert_allclose(clifford_state, numpy_state, atol=1e-8)
+
+
+@pytest.mark.parametrize("gate", ["I", "H", "S", "Z", "X", "Y", "SX", "SDG", "SXDG"])
+def test_single_qubit_gates(gate):
+    c = Circuit(3, density_matrix=True)
+    qubits = np.random.randint(3, size=2)
+    c.add(getattr(gates, gate)(qubits[0]))
+    c.add(getattr(gates, gate)(qubits[1]))
+    c.add(gates.M(0))
+    clifford_state = Clifford(clifford_bkd.execute_circuit(c)).state()
+    numpy_state = numpy_bkd.execute_circuit(c).state()
+    numpy_bkd.assert_allclose(clifford_state, numpy_state, atol=1e-8)
+
+
+@pytest.mark.parametrize("gate", ["CNOT", "CZ", "SWAP"])
+def test_two_qubits_gates(gate):
+    c = Circuit(5, density_matrix=True)
+    qubits = np.random.choice(range(5), size=4, replace=False).reshape(2, 2)
+    print(qubits)
+    c.add(getattr(gates, gate)(*qubits[0]))
+    c.add(getattr(gates, gate)(*qubits[1]))
+    c.add(gates.M(0))
+    clifford_state = Clifford(clifford_bkd.execute_circuit(c)).state()
+    numpy_state = numpy_bkd.execute_circuit(c).state()
+    numpy_bkd.assert_allclose(clifford_state, numpy_state, atol=1e-8)
