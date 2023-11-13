@@ -331,3 +331,17 @@ def test_sabre_memory_map():
     router._memory_map = [[1, 0, 2, 3, 4]]
     value = router._compute_cost((0, 1))
     assert value == float("inf")
+
+
+def test_sabre_measurements():
+    measurement = gates.M(0)
+    circ = Circuit(3)
+    circ.add(measurement)
+    connectivity = nx.Graph()
+    connectivity.add_nodes_from([0, 1, 2])
+    connectivity.add_edges_from([(0, 1), (1, 2)])
+    router = Sabre(connectivity=connectivity)
+    initial_layout = {"q0": 0, "q1": 1, "q2": 2}
+    routed_circ, final_layout = router(circuit=circ, initial_layout=initial_layout)
+    circuit_result = routed_circ.execute(nshots=100)
+    assert circuit_result.frequencies() == measurement.result.frequencies()
