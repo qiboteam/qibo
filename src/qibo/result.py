@@ -148,15 +148,6 @@ class MeasurementOutcomes:
     def __init__(
         self, measurements, backend, probabilities=None, samples=None, nshots=1000
     ):
-        if probabilities is None and samples is None:
-            raise RuntimeError(
-                "You have to provide either the `probabilities` or the `samples` to build a `MeasurementOutcomes` object."
-            )
-        if probabilities is not None and samples is not None:
-            raise RuntimeError(
-                "Both the `probabilities` and the `samples` were provided to build the `MeasurementOutcomes` object. Don't know which one to use."
-            )
-
         self.backend = backend
         self.measurements = measurements
         self.nshots = nshots
@@ -265,7 +256,7 @@ class MeasurementOutcomes:
 
         if self._probs is not None:
             return self.backend.calculate_probabilities(
-                self._probs, qubits, len(self.measurement_gate.qubits)
+                np.sqrt(self._probs), qubits, nqubits
             )
 
         probs = [0 for _ in range(2**nqubits)]
@@ -273,15 +264,10 @@ class MeasurementOutcomes:
             probs[state] = freq / self.nshots
         probs = self.backend.cast(probs)
         self._probs = probs
-        return self.backend.calculate_probabilities(
-            probs, qubits, len(self.measurement_gate.qubits)
-        )
+        return self.backend.calculate_probabilities(np.sqrt(probs), qubits, nqubits)
 
     def has_samples(self):
-        if self._samples is not None:
-            return True
-        else:  # pragma: no cover
-            return False
+        return self.measurements[0].result.has_samples() or self._samples is not None
 
     def samples(self, binary=True, registers=False):
         """Returns raw measurement samples.

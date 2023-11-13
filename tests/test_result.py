@@ -9,7 +9,7 @@ from qibo.result import CircuitResult, MeasurementOutcomes, load_result
 @pytest.mark.parametrize("qubits", [None, [0], [1, 2]])
 def test_measurementoutcomes_probabilities(backend, qubits):
     c = Circuit(3)
-    c.add(gates.X(0))
+    c.add(gates.H(0))
     c.add(gates.M(0, 2))
     global_probs = backend.execute_circuit(c).probabilities(qubits=[0, 2])
     probabilities = (
@@ -28,13 +28,14 @@ def test_measurementoutcomes_probabilities(backend, qubits):
                 == f"Asking probabilities for qubits {qubits}, but only qubits [0,2] were measured."
             )
     else:
-        repeated_probabilities = backend.execute_circuit(c).probabilities(qubits=qubits)
+        repeated_probabilities = backend.execute_circuit(c, nshots=10000).probabilities(
+            qubits=qubits
+        )
         result = MeasurementOutcomes(
             c.measurements, backend, probabilities=global_probs
         )
-        backend.assert_allclose(probabilities, repeated_probabilities)
-        assert np.sum(repeated_probabilities - probabilities) == 0
-        assert np.sum(result.probabilities(qubits) - probabilities) == 0
+        backend.assert_allclose(probabilities, repeated_probabilities, atol=1e-2)
+        backend.assert_allclose(result.probabilities(qubits), probabilities, atol=1e-2)
 
 
 def test_circuit_result_error(backend):
@@ -45,26 +46,6 @@ def test_circuit_result_error(backend):
     assert (
         str(exc_info.value)
         == "Circuit does not contain measurements. Use a `QuantumState` instead."
-    )
-
-
-def test_measurementoutcomes_errors(backend):
-    c = models.Circuit(1)
-    c.add(gates.M(0))
-    samples = [np.array([1, 0]) for _ in range(5)]
-    with pytest.raises(Exception) as exc_info:
-        MeasurementOutcomes(c.measurements, backend)
-    assert (
-        str(exc_info.value)
-        == "You have to provide either the `probabilities` or the `samples` to build a `MeasurementOutcomes` object."
-    )
-    with pytest.raises(Exception) as exc_info:
-        MeasurementOutcomes(
-            c.measurements, backend, probabilities=np.array([1, 0]), samples=samples
-        )
-    assert (
-        str(exc_info.value)
-        == "Both the `probabilities` and the `samples` were provided to build the `MeasurementOutcomes` object. Don't know which one to use."
     )
 
 
