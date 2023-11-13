@@ -55,9 +55,9 @@ def test_double_bracket_flow_single_commutator(backend, nqubits):
 
 
 @pytest.mark.parametrize("nqubits", [3, 4, 5])
-@pytest.mark.parametrize("look_ahead", [1, 2])
-def test_hyperopt_step(backend, nqubits, look_ahead):
+def test_hyperopt_step(backend, nqubits):
     h0 = random_hermitian(2**nqubits, backend=backend)
+    d = backend.cast(np.diag(np.diag(backend.to_numpy(h0))))
     dbf = DoubleBracketFlow(Hamiltonian(nqubits, h0, backend=backend))
 
     # find initial best step with look_ahead = 1
@@ -71,9 +71,12 @@ def test_hyperopt_step(backend, nqubits, look_ahead):
     assert step != initial_step
 
     # evolve following the optimized first step
-    dbf(mode=FlowGeneratorType.canonical, step=step)
+    for generator in FlowGeneratorType:
+        dbf(mode=generator, step=step, d=d)
 
     # find the following step size with look_ahead
+    look_ahead = 3
+
     step = dbf.hyperopt_step(
         step_min=initial_step - delta,
         step_max=initial_step + delta,
@@ -81,5 +84,6 @@ def test_hyperopt_step(backend, nqubits, look_ahead):
         look_ahead=look_ahead,
     )
 
-    for _ in range(NSTEPS):
-        dbf(mode=FlowGeneratorType.canonical, step=step)
+    # evolve following the optimized first step
+    for gentype in range(look_ahead):
+        dbf(mode=FlowGeneratorType(gentype + 1), step=step, d=d)
