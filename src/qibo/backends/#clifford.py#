@@ -315,28 +315,19 @@ class CliffordOperations:
         self.set_r(
             new_tab,
             r
-            ^ x[:, target_q]
-            ^ z[:, target_q]
-            ^ (
-                x[:, control_q]
-                * x[:, target_q]
-                * (z[:, control_q] ^ z[:, target_q] ^ 1)
-            ).flatten()
+            ^ x[:, target_q] ^ z[:, target_q]
+            ^ (x[:, control_q] * x[:, target_q] * (z[:, control_q] ^ z[:, target_q] ^ 1)).flatten()
             ^ (x[:, target_q] * (x[:, control_q] ^ z[:, target_q])).flatten()
-            ^ (
-                x[:, control_q]
-                * (x[:, control_q] ^ z[:, target_q])
-                * (z[:, control_q] ^ x[:, target_q] ^ 1)
-            ).flatten(),
-        )
-        new_tab[:-1, target_q] = x[:, control_q] ^ x[:, target_q]
-        new_tab[:-1, [nqubits + control_q, nqubit + target_q]] = np.vstack(
-            (
-                z[:, control_q] ^ x[:, control_q] ^ z[:, target_q],
-                z[:, target_q] ^ x[:, control_q],
+            ^ (x[:, control_q] * (x[:, control_q] ^ z[:, target_q]) * (z[:, control_q] ^ x[:, target_q] ^ 1)).flatten()
             )
-        ).T
+        new_tab[:-1, target_q] = x[:, control_q] ^ x[:, target_q]
+        new_tab[:-1, [nqubits + control_q, nqubit + target_q]] = np.vstack((
+            z[:, control_q] ^  x[:, control_q] ^ z[:, target_q],
+            z[:, target_q] ^ x[:, control_q]
+        )).T
         return new_tab
+
+
 
     # valid for a standard basis measurement only
     def M(self, state, qubits, nqubits, collapse=False):
