@@ -256,8 +256,52 @@ class CliffordOperations:
                 )
             ).flatten(),
         )
-        new_tab[:-1, target_q] = x[:, control_q]
-        new_tab[:-1, nqubits + control_q] = z[:, target_q]
+        new_tab[
+            :-1, [control_q, target_q, nqubits + control_q, nqubits + target_q]
+        ] = new_tab[:-1, [target_q, control_q, nqubits + target_q, nqubits + control_q]]
+        return new_tab
+
+    def iSWAP(self, tableau, control_q, target_q, nqubits):
+        """Decomposition --> HCNOTCNOTHSS"""
+        new_tab = tableau.copy()
+        r, x, z = (
+            self.get_r(new_tab, nqubits),
+            self.get_x(new_tab, nqubits),
+            self.get_z(new_tab, nqubits),
+        )
+        self.set_r(
+            new_tab,
+            r
+            ^ (x[:, target_q] * z[:, target_q]).flatten()
+            ^ (x[:, control_q] * z[:, control_q]).flatten()
+            ^ (x[:, control_q] * (z[:, control_q] ^ x[:, control_q])).flatten()
+            ^ (
+                (z[:, control_q] ^ x[:, control_q])
+                * (z[:, target_q] ^ x[:, target_q])
+                * (x[:, target_q] ^ z[:, control_q] ^ 1)
+            ).flatten()
+            ^ (
+                (x[:, target_q] ^ z[:, control_q] ^ x[:, control_q])
+                * (x[:, target_q] ^ z[:, target_q] ^ x[:, control_q])
+                * (
+                    x[:, target_q]
+                    ^ z[:, target_q]
+                    ^ x[:, control_q]
+                    ^ x[:, control_q]
+                    ^ 1
+                )
+            ).flatten()
+            ^ (
+                x[:, control_q] * (x[:, target_q] ^ x[:, control_q] ^ z[:, control_q])
+            ).flatten(),
+        )
+        new_tab[:-1, [nqubits + control_q, nqubits + target_q]] = self.np.vstack(
+            (
+                x[:, target_q] ^ z[:, target_q] ^ x[:, control_q],
+                x[:, target_q] ^ z[:, control_q] ^ x[:, control_q],
+            )
+        ).T
+        new_tab[:-1, [control_q, target_q]] = new_tab[:-1, [target_q, control_q]]
         return new_tab
 
     # valid for a standard basis measurement only
