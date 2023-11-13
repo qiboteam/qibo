@@ -126,10 +126,10 @@ class TensorflowSGD(Optimizer):
             ):
                 continue
 
-            loss = sgd_step()
-            loss_history.append(loss.numpy())
+            loss = sgd_step().numpy()
+            loss_history.append(loss)
 
             if epoch % nmessage == 0:
-                log.info("ite %d : loss %f", epoch, loss_history[-1])
+                log.info("ite %d : loss %f", epoch, loss)
 
         return self.loss(vparams, *self.args).numpy(), vparams.numpy(), loss_history
