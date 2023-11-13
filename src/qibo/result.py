@@ -147,7 +147,10 @@ class QuantumState:
 
 
 class MeasurementOutcomes:
-    """Object to store the outcomes of measurements after circuit execution."""
+    """Object to store the outcomes of measurements after circuit execution.
+
+    Args:
+    """
 
     def __init__(
         self,
