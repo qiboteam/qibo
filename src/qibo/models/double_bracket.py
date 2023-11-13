@@ -69,13 +69,14 @@ class DoubleBracketFlow:
                 @ self.h.exp(step)
                 @ self.backend.calculate_matrix_exp(step, d)
             )
-
-        self.h.matrix = (
-            operator @ self.h.matrix @ self.backend.cast(np.matrix(operator).getH())
+        operator_dagger = self.backend.cast(
+            np.matrix(self.backend.to_numpy(operator)).getH()
         )
+        self.h.matrix = operator @ self.h.matrix @ operator_dagger
 
     @staticmethod
     def commutator(a, b):
+        """Compute commutator between two arrays."""
         return a @ b - b @ a
 
     @property
@@ -87,10 +88,10 @@ class DoubleBracketFlow:
     def off_diagonal_norm(self):
         """Norm of off-diagonal part of H matrix."""
         off_diag_h = self.h.matrix - self.diagonal_h_matrix
-        # TODO: make this trace backend agnostic (test on GPU)
-        return np.real(
-            np.trace(self.backend.cast(np.matrix(off_diag_h).getH()) @ off_diag_h)
+        off_diag_h_dag = self.backend.cast(
+            np.matrix(self.backend.to_numpy(off_diag_h)).getH()
         )
+        return np.real(np.trace(self.backend.to_numpy(off_diag_h_dag @ off_diag_h)))
 
     @property
     def backend(self):
