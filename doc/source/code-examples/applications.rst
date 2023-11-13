@@ -69,6 +69,8 @@ Quantum Physics
     tutorials/bell-variational/README.md
     tutorials/falqon/README.md
     tutorials/grover/README.md
+    tutorials/dbf/dbf.ipynb
+
 
 Quantum Machine Learning
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -150,6 +152,14 @@ Adiabatic Evolution
     tutorials/adiabatic/README.md
     tutorials/adiabatic3sat/README.md
 
+
+Diagonalization
+^^^^^^^^^^^^^^^
+
+.. toctree::
+    :maxdepth: 1
+
+    tutorials/dbf/dbf.ipynb
 
 FALQON
 ^^^^^^
