@@ -1,4 +1,5 @@
 from enum import Enum, auto
+from functools import partial
 
 import hyperopt
 import numpy as np
@@ -103,6 +104,7 @@ class DoubleBracketFlow:
         max_evals: int = 1000,
         space: callable = hyperopt.hp.uniform,
         optimizer: callable = hyperopt.tpe,
+        look_ahead: int = 1,
         verbose: bool = False,
     ):
         """
@@ -114,12 +116,16 @@ class DoubleBracketFlow:
             max_evals: maximum number of iterations done by the hyperoptimizer;
             space: see hyperopt.hp possibilities;
             optimizer: see hyperopt algorithms;
+            look_ahead: number of flow steps to compute the loss function;
             verbose: level of verbosity.
+
+        Returns:
+            (float): optimized best flow step.
         """
 
         space = space("step", step_min, step_max)
         best = hyperopt.fmin(
-            fn=self.local_loss,
+            fn=partial(self.loss, look_ahead=look_ahead),
             space=space,
             algo=optimizer.suggest,
             max_evals=max_evals,
@@ -128,17 +134,27 @@ class DoubleBracketFlow:
 
         return best["step"]
 
-    def local_loss(self, step):
-        """Compute loss function distance between steps."""
+    def loss(self, step: float, look_ahead: int = 1):
+        """
+        Compute loss function distance between `look_ahead` steps.
+
+        Args:
+            step: flow step.
+            look_ahead: number of flow steps to compute the loss function;
+        """
         # copy initial hamiltonian
         h_copy = self.h
 
-        # TODO: involve a `look_ahead` variable in the hyperoptimization?
+        # off_diagonal_norm's value before the steps
         old_loss = self.off_diagonal_norm
-        self.__call__(mode=FlowGeneratorType.canonical, step=step)
+
+        for _ in range(look_ahead):
+            self.__call__(mode=FlowGeneratorType.canonical, step=step)
+
+        # off_diagonal_norm's value after the steps
         new_loss = self.off_diagonal_norm
 
-        # set the initial configuration
+        # set back the initial configuration
         self.h = h_copy
 
         return new_loss - old_loss
