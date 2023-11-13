@@ -9,7 +9,7 @@ from qibo.config import raise_error
 from qibo.measurements import apply_bitflips, frequencies_to_binary
 
 
-def load_result(filename):
+def load_result(filename: str):
     """Loads the results of a circuit execution saved to disk.
 
     Args:
