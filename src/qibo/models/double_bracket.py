@@ -5,6 +5,8 @@ from functools import partial
 import hyperopt
 import numpy as np
 
+from qibo.backends.numpy import NumpyBackend
+
 from ..config import raise_error
 from ..hamiltonians import Hamiltonian
 
@@ -54,7 +56,10 @@ class DoubleBracketFlow:
         self.h0 = deepcopy(self.h)
         self.mode = mode
 
-    def __call__(self, step: float, mode: FlowGeneratorType, d: np.array = None):
+    def __call__(self, step: float, mode: FlowGeneratorType = None, d: np.array = None):
+        if mode is None:
+            mode = self.mode
+
         if mode is FlowGeneratorType.canonical:
             operator = self.backend.calculate_matrix_exp(
                 1.0j * step,
@@ -92,13 +97,18 @@ class DoubleBracketFlow:
         return self.backend.cast(np.diag(np.diag(self.backend.to_numpy(self.h.matrix))))
 
     @property
+    def off_diag_h(self):
+        return self.h.matrix - self.diagonal_h_matrix
+
+    @property
     def off_diagonal_norm(self):
         """Norm of off-diagonal part of H matrix."""
-        off_diag_h = self.h.matrix - self.diagonal_h_matrix
         off_diag_h_dag = self.backend.cast(
-            np.matrix(self.backend.to_numpy(off_diag_h)).getH()
+            np.matrix(self.backend.to_numpy(self.off_diag_h)).getH()
         )
-        return np.real(np.trace(self.backend.to_numpy(off_diag_h_dag @ off_diag_h)))
+        return np.real(
+            np.trace(self.backend.to_numpy(off_diag_h_dag @ self.off_diag_h))
+        )
 
     @property
     def backend(self):
@@ -163,3 +173,11 @@ class DoubleBracketFlow:
         self.h = h_copy
 
         return loss
+
+    def energy_fluctuation(self, state):
+        """Evaluate energy fluctuations"""
+        energy = self.h.expectation(state)
+        h = self.h.matrix
+        h2 = Hamiltonian(nqubits=self.h.nqubits, matrix=h @ h, backend=self.backend)
+        average_h2 = self.backend.calculate_expectation_state(h2, state, normalize=True)
+        return np.sqrt(average_h2 - energy**2)

@@ -3,6 +3,7 @@ import hyperopt
 import numpy as np
 import pytest
 
+from qibo.backends import GlobalBackend
 from qibo.hamiltonians import Hamiltonian
 from qibo.models.double_bracket import DoubleBracketFlow, FlowGeneratorType
 from qibo.quantum_info import random_hermitian
@@ -87,3 +88,11 @@ def test_hyperopt_step(backend, nqubits):
     # evolve following the optimized first step
     for gentype in range(look_ahead):
         dbf(mode=FlowGeneratorType(gentype + 1), step=step, d=d)
+
+
+def test_energy_fluctuations(backend):
+    h0 = np.array([[1, 0], [0, -1]])
+    state = np.array([1, 0])
+    dbf = DoubleBracketFlow(Hamiltonian(1, matrix=h0, backend=backend))
+    energy_fluctuation = dbf.energy_fluctuation(state=state)
+    assert energy_fluctuation == 0
