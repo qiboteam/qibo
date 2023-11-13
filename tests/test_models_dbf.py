@@ -57,6 +57,6 @@ def test_double_bracket_flow_single_commutator(backend, nqubits):
 def test_energy_fluctuations(backend):
     h0 = np.array([[1, 0], [0, -1]])
     state = np.array([1, 0])
-    dbf = DoubleBracketFlow(Hamiltonian(1, matrix=h0))
+    dbf = DoubleBracketFlow(Hamiltonian(1, matrix=h0, backend=backend))
     energy_fluctuation = dbf.energy_fluctuation(state=state)
     assert energy_fluctuation == 0
