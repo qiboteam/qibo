@@ -109,7 +109,7 @@ class QuantumState:
             "qibo": __version__,
         }
 
-    def dump(self, filename):
+    def dump(self, filename: str):
         """Writes to file the ``QuantumState`` for future reloading.
 
         Args:
@@ -133,7 +133,7 @@ class QuantumState:
         return cls(payload.get("state"), backend)
 
     @classmethod
-    def load(cls, filename):
+    def load(cls, filename: str):
         """Builds the ``QuantumState`` object stored in a file.
 
         Args:
