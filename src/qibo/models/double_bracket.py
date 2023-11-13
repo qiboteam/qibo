@@ -1,3 +1,4 @@
+from copy import deepcopy
 from enum import Enum, auto
 from functools import partial
 
@@ -26,7 +27,8 @@ class DoubleBracketFlow:
     For more details, see https://arxiv.org/pdf/2206.11772.pdf
 
     Args:
-        hamiltonian (Hamiltonian): Starting Hamiltonian
+        hamiltonian (Hamiltonian): Starting Hamiltonian;
+        mode (FlowGeneratorType): type of generator of the evolution.
 
     Example:
         .. code-block:: python
@@ -43,9 +45,14 @@ class DoubleBracketFlow:
         dbf.h
     """
 
-    def __init__(self, hamiltonian: Hamiltonian):
-        # TODO: consider passing Mode here
-        self.h = self.h0 = hamiltonian
+    def __init__(
+        self,
+        hamiltonian: Hamiltonian,
+        mode: FlowGeneratorType = FlowGeneratorType.canonical,
+    ):
+        self.h = hamiltonian
+        self.h0 = deepcopy(self.h)
+        self.mode = mode
 
     def __call__(self, step: float, mode: FlowGeneratorType, d: np.array = None):
         if mode is FlowGeneratorType.canonical:
@@ -144,13 +151,13 @@ class DoubleBracketFlow:
             look_ahead: number of flow steps to compute the loss function;
         """
         # copy initial hamiltonian
-        h_copy = self.h
+        h_copy = deepcopy(self.h)
 
         # off_diagonal_norm's value before the steps
         old_loss = self.off_diagonal_norm
 
         for _ in range(look_ahead):
-            self.__call__(mode=FlowGeneratorType.canonical, step=step)
+            self.__call__(mode=self.mode, step=step)
 
         # off_diagonal_norm's value after the steps
         new_loss = self.off_diagonal_norm
