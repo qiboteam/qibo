@@ -23,7 +23,11 @@ def load_result(filename: str):
 
 
 class QuantumState:
-    """Data structure to represent the final state after circuit execution."""
+    """Data structure to represent the final state after circuit execution.
+
+    Args:
+
+    """
 
     def __init__(self, state, backend):
         self.backend = backend
