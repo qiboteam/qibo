@@ -158,7 +158,8 @@ class MeasurementOutcomes:
 
     Args:
         measurements (:class:`qibo.gates.M`): Measurement gates.
-        backend (qibo.backends.AbstractBackend): Backend used for the calculations. If not provided the :class:`qibo.backends.GlobalBackend` is going to be used.
+        backend (:class:`qibo.backends.AbstractBackend`): Backend used for the calculations. 
+            If ``None``, then :class:`qibo.backends.GlobalBackend` is used. Defaults to ``None``.
         probabilities (np.ndarray): Use these probabilities to generate samples and frequencies.
         samples (np.darray): Use these samples to generate probabilities and frequencies.
         nshots (int): Number of shots used for samples, probabilities and frequencies generation.
