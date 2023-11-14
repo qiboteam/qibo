@@ -414,7 +414,7 @@ class MeasurementOutcomes:
         return args
 
     def dump(self, filename: str):
-        """Writes to file the :class:``qibo.result.MeasurementOutcomes`` for future reloading.
+        """Writes to file the :class:`qibo.result.MeasurementOutcomes` for future reloading.
 
         Args:
             filename (str): Path to the file to write to.
