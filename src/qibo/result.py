@@ -463,7 +463,16 @@ class MeasurementOutcomes:
 
 
 class CircuitResult(QuantumState, MeasurementOutcomes):
-    """Object to store both the outcomes of measurements and the final state after circuit execution."""
+    """Object to store both the outcomes of measurements and the final state after circuit execution.
+
+    Args:
+        final_state (np.ndarray): Input quantum state as np.ndarray.
+        measurements (qibo.gates.M): The measurement gates containing the measurements.
+        backend (qibo.backends.AbstractBackend): Backend used for the calculations. If not provided the :class:`qibo.backends.GlobalBackend` is going to be used.
+        probabilities (np.ndarray): Use these probabilities to generate samples and frequencies.
+        samples (np.darray): Use these samples to generate probabilities and frequencies.
+        nshots (int): Number of shots used for samples, probabilities and frequencies generation.
+    """
 
     def __init__(self, final_state, measurements, backend, samples=None, nshots=1000):
         QuantumState.__init__(self, final_state, backend)
