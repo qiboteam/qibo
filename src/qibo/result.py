@@ -157,7 +157,7 @@ class MeasurementOutcomes:
     """Object to store the outcomes of measurements after circuit execution.
 
     Args:
-        measurements (qibo.gates.M): The measurement gates containing the measurements.
+        measurements (:class:`qibo.gates.M`): Measurement gates.
         backend (qibo.backends.AbstractBackend): Backend used for the calculations. If not provided the :class:`qibo.backends.GlobalBackend` is going to be used.
         probabilities (np.ndarray): Use these probabilities to generate samples and frequencies.
         samples (np.darray): Use these samples to generate probabilities and frequencies.
