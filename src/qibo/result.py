@@ -427,7 +427,7 @@ class MeasurementOutcomes:
         """Builds a :class:`qibo.result.MeasurementOutcomes` object starting from a dictionary.
 
         Args:
-            payload (dict): Dictionary containing all the information to load the :class:``qibo.result.MeasurementOutcomes`` object.
+            payload (dict): Dictionary containing all the information to load the :class:`qibo.result.MeasurementOutcomes` object.
 
         Returns:
             A :class:`qibo.result.MeasurementOutcomes` object.
