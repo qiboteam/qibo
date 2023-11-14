@@ -402,7 +402,7 @@ class MeasurementOutcomes:
         return observable.expectation_from_samples(freq, qubit_map)
 
     def to_dict(self):
-        """Returns a dictonary containinig all the information needed to rebuild the :class:``qibo.result.MeasurementOutcomes``."""
+        """Returns a dictonary containinig all the information needed to rebuild the :class:`qibo.result.MeasurementOutcomes`."""
         args = {
             "measurements": [m.to_json() for m in self.measurements],
             "probabilities": self._probs,
