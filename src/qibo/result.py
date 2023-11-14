@@ -31,7 +31,7 @@ class QuantumState:
     """
 
     def __init__(self, state, backend=None):
-        if backend is None:
+        if backend is None:  # pragma: no cover
             from qibo.backends import GlobalBackend
 
             backend = GlobalBackend()
