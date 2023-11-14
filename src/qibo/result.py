@@ -424,7 +424,7 @@ class MeasurementOutcomes:
 
     @classmethod
     def from_dict(cls, payload: dict):
-        """Builds a :class:``qibo.result.MeasurementOutcomes`` object starting from a dictionary.
+        """Builds a :class:`qibo.result.MeasurementOutcomes` object starting from a dictionary.
 
         Args:
             payload (dict): Dictionary containing all the information to load the :class:``qibo.result.MeasurementOutcomes`` object.
