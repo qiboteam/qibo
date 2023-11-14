@@ -26,10 +26,15 @@ class QuantumState:
     """Data structure to represent the final state after circuit execution.
 
     Args:
-
+        state (np.ndarray): Input quantum state as np.ndarray.
+        backend (qibo.backends.AbstractBackend): Backend used for the calculations. If not provided the :class:`qibo.backends.GlobalBackend` is going to be used.
     """
 
-    def __init__(self, state, backend):
+    def __init__(self, state, backend=None):
+        if backend is None:
+            from qibo.backends import GlobalBackend
+
+            backend = GlobalBackend()
         self.backend = backend
         self.density_matrix = len(state.shape) == 2
         self.nqubits = int(np.log2(state.shape[0]))
@@ -86,6 +91,8 @@ class QuantumState:
             qubits (list or set, optional): Set of qubits that are measured.
                 If ``None``, ``qubits`` equates the total number of qubits.
                 Defauts to ``None``.
+        Returns:
+            (np.ndarray): Probabilities over the input qubits.
         """
 
         if qubits is None:
@@ -150,12 +157,17 @@ class MeasurementOutcomes:
     """Object to store the outcomes of measurements after circuit execution.
 
     Args:
+        measurements (qibo.gates.M): The measurement gates containing the measurements.
+        backend (qibo.backends.AbstractBackend): Backend used for the calculations. If not provided the :class:`qibo.backends.GlobalBackend` is going to be used.
+        probabilities (np.ndarray): Use these probabilities to generate samples and frequencies.
+        samples (np.darray): Use these samples to generate probabilities and frequencies.
+        nshots (int): Number of shots used for samples, probabilities and frequencies generation.
     """
 
     def __init__(
         self,
         measurements,
-        backend,
+        backend=None,
         probabilities=None,
         samples: Optional[int] = None,
         nshots: int = 1000,
@@ -276,6 +288,11 @@ class MeasurementOutcomes:
         return self.backend.calculate_probabilities(np.sqrt(probs), qubits, nqubits)
 
     def has_samples(self):
+        """Check whether the samples are available already.
+
+        Returns:
+            (bool): ``True`` if the samples are available, ``False`` otherwise.
+        """
         return self.measurements[0].result.has_samples() or self._samples is not None
 
     def samples(self, binary: bool = True, registers: bool = False):
@@ -366,6 +383,7 @@ class MeasurementOutcomes:
         return self._measurement_gate
 
     def apply_bitflips(self, p0: float, p1: Optional[float] = None):
+        """Apply bitflips to the measurements with probabilities `p0` and `p1`"""
         return apply_bitflips(self, p0, p1)
 
     def expectation_from_samples(self, observable):
@@ -383,7 +401,7 @@ class MeasurementOutcomes:
         return observable.expectation_from_samples(freq, qubit_map)
 
     def to_dict(self):
-        """Returns a dictonary containinig all the information needed to rebuild the ``MeasurementOutcomes``."""
+        """Returns a dictonary containinig all the information needed to rebuild the :class:``qibo.result.MeasurementOutcomes``."""
         args = {
             "measurements": [m.to_json() for m in self.measurements],
             "probabilities": self._probs,
@@ -395,7 +413,7 @@ class MeasurementOutcomes:
         return args
 
     def dump(self, filename: str):
-        """Writes to file the ``MeasurementOutcomes`` for future reloading.
+        """Writes to file the :class:``qibo.result.MeasurementOutcomes`` for future reloading.
 
         Args:
             filename (str): Path to the file to write to.
@@ -405,10 +423,10 @@ class MeasurementOutcomes:
 
     @classmethod
     def from_dict(cls, payload: dict):
-        """Builds a ``MeasurementOutcomes`` object starting from a dictionary.
+        """Builds a :class:``qibo.result.MeasurementOutcomes`` object starting from a dictionary.
 
         Args:
-            payload (dict): Dictionary containing all the information to load the ``MeasurementOutcomes`` object.
+            payload (dict): Dictionary containing all the information to load the :class:``qibo.result.MeasurementOutcomes`` object.
 
         Returns:
             A :class:`qibo.result.MeasurementOutcomes` object.
@@ -432,10 +450,10 @@ class MeasurementOutcomes:
 
     @classmethod
     def load(cls, filename: str):
-        """Builds the ``MeasurementOutcomes`` object stored in a file.
+        """Builds the :class:``qibo.result.MeasurementOutcomes`` object stored in a file.
 
         Args:
-            filename (str): Path to the file containing the ``MeasurementOutcomes``.
+            filename (str): Path to the file containing the :class:``qibo.result.MeasurementOutcomes``.
 
         Returns:
             A :class:`qibo.result.MeasurementOutcomes` object.
