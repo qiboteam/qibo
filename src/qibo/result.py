@@ -454,7 +454,7 @@ class MeasurementOutcomes:
         """Builds the :class:`qibo.result.MeasurementOutcomes` object stored in a file.
 
         Args:
-            filename (str): Path to the file containing the :class:``qibo.result.MeasurementOutcomes``.
+            filename (str): Path to the file containing the :class:`qibo.result.MeasurementOutcomes`.
 
         Returns:
             A :class:`qibo.result.MeasurementOutcomes` object.
