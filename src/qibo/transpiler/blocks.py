@@ -77,12 +77,7 @@ class Block:
             new_qubits (tuple): new qubits where the block is acting.
         """
         qubits_dict = dict(zip(self.qubits, new_qubits))
-        new_gates = []
-        for gate in self.gates:
-            new_gate = gate.on_qubits(qubits_dict)
-            if isinstance(gate, gates.M):
-                new_gate.result = gate.result
-            new_gates.append(new_gate)
+        new_gates = [gate.on_qubits(qubits_dict) for gate in self.gates]
         return Block(qubits=new_qubits, gates=new_gates, name=self.name)
 
     # TODO: use real QM properties to check commutation
