@@ -278,7 +278,7 @@ class CliffordOperations:
             ^ (
                 (z[:, control_q] ^ x[:, control_q])
                 * (z[:, target_q] ^ x[:, target_q])
-                * (x[:, target_q] ^ z[:, control_q] ^ 1)
+                * (x[:, target_q] ^ x[:, control_q] ^ 1)
             ).flatten()
             ^ (
                 (x[:, target_q] ^ z[:, control_q] ^ x[:, control_q])
@@ -287,7 +287,7 @@ class CliffordOperations:
                     x[:, target_q]
                     ^ z[:, target_q]
                     ^ x[:, control_q]
-                    ^ x[:, control_q]
+                    ^ z[:, control_q]
                     ^ 1
                 )
             ).flatten()
@@ -341,20 +341,8 @@ class CliffordOperations:
         ).T
         return new_tab
 
-    def CSX(self, tableau, control_q, target_q, nqubits, theta):
-        pass
-
-    def CSXDG(self, tableau, control_q, target_q, nqubits, theta):
-        pass
-
-    def CS(self, tableau, control_q, target_q, nqubits, theta):
-        pass
-
-    def CSDG(self, tableau, control_q, target_q, nqubits, theta):
-        pass
-
     def RZX(self, tableau, control_q, target_q, nqubits, theta):
-        """Decomposition --> HCNOTRZCNOTH"""
+        """Decomposition --> H-CNOT-RZ-CNOT-H"""
         new_tab = tableau.copy()
         new_tab = self.H(new_tab, target_q, nqubits)
         new_tab = self.CNOT(new_tab, control_q, target_q, nqubits)
@@ -367,44 +355,23 @@ class CliffordOperations:
             return self.I(tableau, target_q, nqubits)
         elif (theta / self.np.pi - 1) % 2 == 0:
             return self.CNOT(tableau, control_q, target_q, nqubits)
-        elif (theta / (self.np.pi / 2) - 1) % 4 == 0:
-            return self.CSX(tableau, control_q, target_q, nqubits)
-        else:  # theta == 3*pi/2 + 2*n*pi
-            return self.CSXDG(tableau, control_q, target_q, nqubits)
 
     def CRZ(self, tableau, control_q, target_q, nqubits, theta):
         if theta % (2 * self.np.pi) == 0:
             return self.I(tableau, target_q, nqubits)
         elif (theta / self.np.pi - 1) % 2 == 0:
             return self.CZ(tableau, control_q, target_q, nqubits)
-        elif (theta / (self.np.pi / 2) - 1) % 4 == 0:
-            return self.CS(tableau, control_q, target_q, nqubits)
-        else:  # theta == 3*pi/2 + 2*n*pi
-            return self.CSDG(tableau, control_q, target_q, nqubits)
 
     def CRY(self, tableau, control_q, target_q, nqubits, theta):
         if theta % (2 * self.np.pi) == 0:
             return self.I(tableau, target_q, nqubits)
         elif (theta / self.np.pi - 1) % 2 == 0:
             return self.CY(tableau, control_q, target_q, nqubits)
-        elif (theta / (self.np.pi / 2) - 1) % 4 == 0:
-            pass
-        else:  # theta == 3*pi/2 + 2*n*pi
-            pass
 
     def ECR(self, tableau, control_q, target_q, nqubits):
-        new_tab = self.RZX(tableau, control_q, target_q, -self.np.pi / 4, nqubits)
+        new_tab = self.RZX(tableau, control_q, target_q, nqubits, -self.np.pi / 4)
         new_tab = self.X(new_tab, control_q, nqubits)
-        return self.RZX(new_tab, control_q, target_q, -self.np.pi / 4, nqubits)
-
-    def TOFFOLI(self, tableau, control_q0, control_q1, target_q, nqubits):
-        new_tab = self.RY(tableau, target_q, -self.np.pi / 4, nqubits)
-        new_tab = self.CNOT(new_tab, control_q1, target_q, nqubits)
-        new_tab = self.RY(new_tab, target_q, -self.np.pi / 4, nqubits)
-        new_tab = self.CNOT(new_tab, control_q0, target_q, nqubits)
-        new_tab = self.RY(new_tab, target_q, self.np.pi / 4, nqubits)
-        new_tab = self.CNOT(new_tab, control_q1, target_q, nqubits)
-        return self.RY(new_tab, target_q, self.np.pi / 4, nqubits)
+        return self.RZX(new_tab, control_q, target_q, nqubits, -self.np.pi / 4)
 
     # valid for a standard basis measurement only
     def M(self, state, qubits, nqubits, collapse=False):
@@ -565,15 +532,9 @@ class CliffordBackend(NumpyBackend):
             for gate in circuit.queue:
                 state = gate.apply_clifford(self, state, nqubits, nshots)
 
-            return CircuitResult(
-                state,
-                circuit.measurements,
-                self,
-                samples=self.np.hstack(
-                    [m.result.samples() for m in circuit.measurements]
-                ),
-                nshots=nshots,
-            )
+            from qibo.quantum_info.clifford import Clifford
+
+            return Clifford(state)
 
         except self.oom_error:
             raise_error(

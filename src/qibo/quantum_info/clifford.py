@@ -6,7 +6,7 @@ import numpy as np
 
 from qibo import Circuit
 from qibo.backends import CliffordBackend
-from qibo.result import CircuitResult
+from qibo.gates import M
 
 
 def _string_product(operators):
@@ -31,23 +31,30 @@ def _list_of_matrices_product(operators):
 
 @dataclass
 class Clifford:
-    _input: Circuit | CircuitResult
+    _input: Circuit | np.ndarray
     _backend: CliffordBackend = CliffordBackend()
+    _samples = None
 
     tableau: np.ndarray = None
+    measurements: list = None
     nqubits: int = None
+    nshots: int = 1000
 
     def __post_init__(self):
-        if isinstance(self._input, CircuitResult):
-            self.tableau = self._input.state(numpy=True)
+        if isinstance(self._input, np.ndarray):
+            self.tableau = self._input
             self.nqubits = int((self.tableau.shape[1] - 1) / 2)
+            if self.measurements is None:
+                self.measurements = [M(range(self.nqubits))]
         else:
             self.nqubits = self._input.nqubits
+            self.measurements = self._input.measurements
 
     @classmethod
     def run(
         cls, circuit: Circuit, initial_state: np.ndarray = None, nshots: int = 1000
     ):
+        self.nshots = nshots
         result = cls._backend.execute_circuit(_input, initial_state, nshots)
         return cls(result)
 
@@ -84,10 +91,29 @@ class Clifford:
         generators, phases = self.get_stabilizers_generators(return_array)
         return self._construct_operators(generators, phases, return_array)
 
-    def get_destabilizers(self):
-        generators = self.get_destabilizers_generators(True)
+    def get_destabilizers(self, return_array=False):
+        generators = self.get_destabilizers_generators(return_array)
         return self._construct_operators(generators, phases, return_array)
 
     def state(self):
         stabilizers = self.get_stabilizers(True)
         return np.sum(stabilizers, 0) / len(stabilizers)
+
+    def samples(self):
+        measured_qubits = [q for m in self.measurements for q in m.target_qubits]
+        return self._backend.sample_shots(
+            self.tableau, measured_qubits, self.nqubits, self.nshots
+        )
+
+    def frequencies(self):
+        if self._samples is None:
+            self._samples = self.samples()
+        return self._backend.calculate_frequencies(self._samples)
+
+    def probabilities(self):
+        if self._samples is None:
+            self._samples = self.samples()
+        measured_qubits = [q for m in self.measurements for q in m.target_qubits]
+        return self._backend.calculate_probabilities(
+            self.tableau, measured_qubits, self.nqubits, self.nshots
+        )

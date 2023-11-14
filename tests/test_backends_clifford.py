@@ -5,7 +5,7 @@ import pytest
 
 from qibo import Circuit, gates
 from qibo.backends import CliffordBackend, NumpyBackend
-from qibo.quantum_info import Clifford
+from qibo.quantum_info import Clifford, random_clifford
 
 clifford_bkd = CliffordBackend()
 numpy_bkd = NumpyBackend()
@@ -26,7 +26,7 @@ def test_rotations(theta, axis):
     c.add(getattr(gates, axis)(qubits[0], theta=theta))
     c.add(getattr(gates, axis)(qubits[1], theta=theta))
     c.add(gates.M(0))
-    clifford_state = Clifford(clifford_bkd.execute_circuit(c)).state()
+    clifford_state = clifford_bkd.execute_circuit(c).state()
     numpy_state = numpy_bkd.execute_circuit(c).state()
     numpy_bkd.assert_allclose(clifford_state, numpy_state, atol=1e-8)
 
@@ -41,7 +41,7 @@ def test_single_qubit_gates(gate):
     c.add(getattr(gates, gate)(qubits[0]))
     c.add(getattr(gates, gate)(qubits[1]))
     c.add(gates.M(0))
-    clifford_state = Clifford(clifford_bkd.execute_circuit(c)).state()
+    clifford_state = clifford_bkd.execute_circuit(c).state()
     numpy_state = numpy_bkd.execute_circuit(c).state()
     numpy_bkd.assert_allclose(clifford_state, numpy_state, atol=1e-8)
 
@@ -56,22 +56,18 @@ def test_two_qubits_gates(gate):
     c.add(getattr(gates, gate)(*qubits[0]))
     c.add(getattr(gates, gate)(*qubits[1]))
     c.add(gates.M(0))
-    clifford_state = Clifford(clifford_bkd.execute_circuit(c)).state()
+    clifford_state = clifford_bkd.execute_circuit(c).state()
     numpy_state = numpy_bkd.execute_circuit(c).state()
     print(np.abs(clifford_state - numpy_state).sum())
     numpy_bkd.assert_allclose(clifford_state, numpy_state, atol=1e-8)
 
 
-@pytest.mark.parametrize("gate", ["TOFFOLI"])
-def test_three_qubits_gates(gate):
-    c = Circuit(5, density_matrix=True)
-    qubits = [np.random.choice(range(5), size=3, replace=False) for _ in range(2)]
-    H_qubits = np.random.choice(range(5), size=3, replace=False)
-    for q in H_qubits:
-        c.add(gates.H(q))
-    c.add(getattr(gates, gate)(*qubits[0]))
-    c.add(getattr(gates, gate)(*qubits[1]))
-    c.add(gates.M(0))
-    clifford_state = Clifford(clifford_bkd.execute_circuit(c)).state()
-    numpy_state = numpy_bkd.execute_circuit(c).state()
-    numpy_bkd.assert_allclose(clifford_state, numpy_state, atol=1e-8)
+def test_random_clifford_circuit():
+    for _ in range(4):
+        c = random_clifford(5)
+        for q in np.random.choice(range(5), size=3, replace=False):
+            c.add(gates.M(q))
+        result = clifford_bkd.execute_circuit(c)
+        print(result.samples())
+        print(result.frequencies())
+        print(result.probabilities())
