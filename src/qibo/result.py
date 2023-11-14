@@ -137,7 +137,7 @@ class QuantumState:
             :class:`qibo.result.QuantumState`: Quantum state object..
         """
         backend = backends.construct_backend("numpy")
-        return cls(payload.get("state"), backend)
+        return cls(payload.get("state"), backend=backend)
 
     @classmethod
     def load(cls, filename: str):
@@ -158,7 +158,7 @@ class MeasurementOutcomes:
 
     Args:
         measurements (:class:`qibo.gates.M`): Measurement gates.
-        backend (:class:`qibo.backends.AbstractBackend`): Backend used for the calculations. 
+        backend (:class:`qibo.backends.AbstractBackend`): Backend used for the calculations.
             If ``None``, then :class:`qibo.backends.GlobalBackend` is used. Defaults to ``None``.
         probabilities (np.ndarray): Use these probabilities to generate samples and frequencies.
         samples (np.darray): Use these samples to generate probabilities and frequencies.
@@ -384,7 +384,12 @@ class MeasurementOutcomes:
         return self._measurement_gate
 
     def apply_bitflips(self, p0: float, p1: Optional[float] = None):
-        """Apply bitflips to the measurements with probabilities `p0` and `p1`"""
+        """Apply bitflips to the measurements with probabilities `p0` and `p1`
+
+        Args:
+            p0 (float): Probability of the 0->1 flip.
+            p1 (float): Probability of the 1->0 flip.
+        """
         return apply_bitflips(self, p0, p1)
 
     def expectation_from_samples(self, observable):
@@ -443,7 +448,7 @@ class MeasurementOutcomes:
         measurements = [gates.M.load(m) for m in payload.get("measurements")]
         return cls(
             measurements,
-            backend,
+            backend=backend,
             probabilities=payload.get("probabilities"),
             samples=payload.get("samples"),
             nshots=payload.get("nshots"),
@@ -475,7 +480,9 @@ class CircuitResult(QuantumState, MeasurementOutcomes):
         nshots (int): Number of shots used for samples, probabilities and frequencies generation.
     """
 
-    def __init__(self, final_state, measurements, backend, samples=None, nshots=1000):
+    def __init__(
+        self, final_state, measurements, backend=None, samples=None, nshots=1000
+    ):
         QuantumState.__init__(self, final_state, backend)
         qubits = [q for m in measurements for q in m.target_qubits]
         if len(qubits) == 0:
@@ -486,7 +493,7 @@ class CircuitResult(QuantumState, MeasurementOutcomes):
         MeasurementOutcomes.__init__(
             self,
             measurements,
-            backend,
+            backend=backend,
             probabilities=probs,
             samples=samples,
             nshots=nshots,
@@ -518,7 +525,7 @@ class CircuitResult(QuantumState, MeasurementOutcomes):
         return cls(
             state.state(),
             measurements.measurements,
-            state.backend,
+            backend=state.backend,
             samples=measurements.samples(),
             nshots=measurements.nshots,
         )

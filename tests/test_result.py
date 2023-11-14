@@ -32,7 +32,7 @@ def test_measurementoutcomes_probabilities(backend, qubits):
             qubits=qubits
         )
         result = MeasurementOutcomes(
-            c.measurements, backend, probabilities=global_probs
+            c.measurements, backend=backend, probabilities=global_probs
         )
         backend.assert_allclose(probabilities, repeated_probabilities, atol=1e-2)
         backend.assert_allclose(result.probabilities(qubits), probabilities, atol=1e-2)
