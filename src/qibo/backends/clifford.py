@@ -63,7 +63,9 @@ class CliffordOperations:
             ).flatten()
             ^ (x[:, target_q] * (z[:, target_q] ^ x[:, control_q])).flatten(),
         )
-        new_tab[:-1, nqubits + target_q] = z[:, target_q] ^ x[:, control_q]
+        new_tab[:-1, [nqubits + control_q, nqubits + target_q]] = self.np.vstack(
+            (x[:, target_q] ^ z[:, control_q], z[:, target_q] ^ x[:, control_q])
+        ).T
         return new_tab
 
     def S(self, tableau, q, nqubits):
@@ -188,10 +190,8 @@ class CliffordOperations:
 
     def RY(self, tableau, q, nqubits, theta):
         if theta % (2 * self.np.pi) == 0:
-            print("I")
             return self.I(tableau, q, nqubits)
         elif (theta / self.np.pi - 1) % 2 == 0:
-            print("Y")
             return self.Y(tableau, q, nqubits)
         # not working
         elif (theta / (self.np.pi / 2) - 1) % 4 == 0:
@@ -304,6 +304,9 @@ class CliffordOperations:
         new_tab[:-1, [control_q, target_q]] = new_tab[:-1, [target_q, control_q]]
         return new_tab
 
+    def fSWAP(self, tableau, control_q, target_q, nqubits):
+        pass
+
     def CY(self, tableau, control_q, target_q, nqubits):
         """Decomposition --> HCNOTCNOTHSS"""
         new_tab = tableau.copy()
@@ -337,6 +340,71 @@ class CliffordOperations:
             )
         ).T
         return new_tab
+
+    def CSX(self, tableau, control_q, target_q, nqubits, theta):
+        pass
+
+    def CSXDG(self, tableau, control_q, target_q, nqubits, theta):
+        pass
+
+    def CS(self, tableau, control_q, target_q, nqubits, theta):
+        pass
+
+    def CSDG(self, tableau, control_q, target_q, nqubits, theta):
+        pass
+
+    def RZX(self, tableau, control_q, target_q, nqubits, theta):
+        """Decomposition --> HCNOTRZCNOTH"""
+        new_tab = tableau.copy()
+        new_tab = self.H(new_tab, target_q, nqubits)
+        new_tab = self.CNOT(new_tab, control_q, target_q, nqubits)
+        new_tab = self.RZ(new_tab, target_q, nqubits, theta)
+        new_tab = self.CNOT(new_tab, control_q, target_q, nqubits)
+        return self.H(new_tab, target_q, nqubits)
+
+    def CRX(self, tableau, control_q, target_q, nqubits, theta):
+        if theta % (2 * self.np.pi) == 0:
+            return self.I(tableau, target_q, nqubits)
+        elif (theta / self.np.pi - 1) % 2 == 0:
+            return self.CNOT(tableau, control_q, target_q, nqubits)
+        elif (theta / (self.np.pi / 2) - 1) % 4 == 0:
+            return self.CSX(tableau, control_q, target_q, nqubits)
+        else:  # theta == 3*pi/2 + 2*n*pi
+            return self.CSXDG(tableau, control_q, target_q, nqubits)
+
+    def CRZ(self, tableau, control_q, target_q, nqubits, theta):
+        if theta % (2 * self.np.pi) == 0:
+            return self.I(tableau, target_q, nqubits)
+        elif (theta / self.np.pi - 1) % 2 == 0:
+            return self.CZ(tableau, control_q, target_q, nqubits)
+        elif (theta / (self.np.pi / 2) - 1) % 4 == 0:
+            return self.CS(tableau, control_q, target_q, nqubits)
+        else:  # theta == 3*pi/2 + 2*n*pi
+            return self.CSDG(tableau, control_q, target_q, nqubits)
+
+    def CRY(self, tableau, control_q, target_q, nqubits, theta):
+        if theta % (2 * self.np.pi) == 0:
+            return self.I(tableau, target_q, nqubits)
+        elif (theta / self.np.pi - 1) % 2 == 0:
+            return self.CY(tableau, control_q, target_q, nqubits)
+        elif (theta / (self.np.pi / 2) - 1) % 4 == 0:
+            pass
+        else:  # theta == 3*pi/2 + 2*n*pi
+            pass
+
+    def ECR(self, tableau, control_q, target_q, nqubits):
+        new_tab = self.RZX(tableau, control_q, target_q, -self.np.pi / 4, nqubits)
+        new_tab = self.X(new_tab, control_q, nqubits)
+        return self.RZX(new_tab, control_q, target_q, -self.np.pi / 4, nqubits)
+
+    def TOFFOLI(self, tableau, control_q0, control_q1, target_q, nqubits):
+        new_tab = self.RY(tableau, target_q, -self.np.pi / 4, nqubits)
+        new_tab = self.CNOT(new_tab, control_q1, target_q, nqubits)
+        new_tab = self.RY(new_tab, target_q, -self.np.pi / 4, nqubits)
+        new_tab = self.CNOT(new_tab, control_q0, target_q, nqubits)
+        new_tab = self.RY(new_tab, target_q, self.np.pi / 4, nqubits)
+        new_tab = self.CNOT(new_tab, control_q1, target_q, nqubits)
+        return self.RY(new_tab, target_q, self.np.pi / 4, nqubits)
 
     # valid for a standard basis measurement only
     def M(self, state, qubits, nqubits, collapse=False):

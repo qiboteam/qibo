@@ -18,13 +18,16 @@ axes = ["RX", "RY", "RZ"]
 
 @pytest.mark.parametrize("axis,theta", list(product(axes, thetas)))
 def test_rotations(theta, axis):
-    c = Circuit(1, density_matrix=True)
-    c.add(getattr(gates, axis)(0, theta=theta))
+    c = Circuit(3, density_matrix=True)
+    qubits = np.random.randint(3, size=2)
+    H_qubits = np.random.choice(range(3), size=2, replace=False)
+    for q in H_qubits:
+        c.add(gates.H(q))
+    c.add(getattr(gates, axis)(qubits[0], theta=theta))
+    c.add(getattr(gates, axis)(qubits[1], theta=theta))
     c.add(gates.M(0))
     clifford_state = Clifford(clifford_bkd.execute_circuit(c)).state()
     numpy_state = numpy_bkd.execute_circuit(c).state()
-    print(clifford_state)
-    print(numpy_state)
     numpy_bkd.assert_allclose(clifford_state, numpy_state, atol=1e-8)
 
 
@@ -32,6 +35,9 @@ def test_rotations(theta, axis):
 def test_single_qubit_gates(gate):
     c = Circuit(3, density_matrix=True)
     qubits = np.random.randint(3, size=2)
+    H_qubits = np.random.choice(range(3), size=2, replace=False)
+    for q in H_qubits:
+        c.add(gates.H(q))
     c.add(getattr(gates, gate)(qubits[0]))
     c.add(getattr(gates, gate)(qubits[1]))
     c.add(gates.M(0))
@@ -40,11 +46,29 @@ def test_single_qubit_gates(gate):
     numpy_bkd.assert_allclose(clifford_state, numpy_state, atol=1e-8)
 
 
-@pytest.mark.parametrize("gate", ["CNOT", "CZ", "SWAP", "iSWAP"])
+@pytest.mark.parametrize("gate", ["CNOT", "CZ", "SWAP", "iSWAP", "ECR"])
 def test_two_qubits_gates(gate):
     c = Circuit(5, density_matrix=True)
     qubits = np.random.choice(range(5), size=4, replace=False).reshape(2, 2)
-    print(qubits)
+    H_qubits = np.random.choice(range(5), size=3, replace=False)
+    for q in H_qubits:
+        c.add(gates.H(q))
+    c.add(getattr(gates, gate)(*qubits[0]))
+    c.add(getattr(gates, gate)(*qubits[1]))
+    c.add(gates.M(0))
+    clifford_state = Clifford(clifford_bkd.execute_circuit(c)).state()
+    numpy_state = numpy_bkd.execute_circuit(c).state()
+    print(np.abs(clifford_state - numpy_state).sum())
+    numpy_bkd.assert_allclose(clifford_state, numpy_state, atol=1e-8)
+
+
+@pytest.mark.parametrize("gate", ["TOFFOLI"])
+def test_three_qubits_gates(gate):
+    c = Circuit(5, density_matrix=True)
+    qubits = [np.random.choice(range(5), size=3, replace=False) for _ in range(2)]
+    H_qubits = np.random.choice(range(5), size=3, replace=False)
+    for q in H_qubits:
+        c.add(gates.H(q))
     c.add(getattr(gates, gate)(*qubits[0]))
     c.add(getattr(gates, gate)(*qubits[1]))
     c.add(gates.M(0))
