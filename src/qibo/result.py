@@ -451,7 +451,7 @@ class MeasurementOutcomes:
 
     @classmethod
     def load(cls, filename: str):
-        """Builds the :class:``qibo.result.MeasurementOutcomes`` object stored in a file.
+        """Builds the :class:`qibo.result.MeasurementOutcomes` object stored in a file.
 
         Args:
             filename (str): Path to the file containing the :class:``qibo.result.MeasurementOutcomes``.
