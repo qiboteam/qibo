@@ -533,7 +533,6 @@ class Sabre(Router):
                 circuit.queue.remove(gate)
             else:
                 break
-        print(final_measurements)
         if len(final_measurements) == 0:
             return None
         return final_measurements[::-1]
@@ -541,7 +540,6 @@ class Sabre(Router):
     def _append_final_measurements(self, routed_circuit: Circuit):
         """Append the final measurment gates on the correct qubits conserving the measurement register."""
         for measurement in self._final_measurements:
-            print(measurement)
             original_qubits = measurement.qubits
             routed_qubits = (
                 self.circuit.circuit_to_physical(qubit) for qubit in original_qubits
