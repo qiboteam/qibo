@@ -2051,9 +2051,18 @@ class ECR(Gate):
         self.unitary = True
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
-        """"""
+        """Decomposition of :math:`\\textup{ECR}` gate up to global phase.
+
+        A global phase difference exists between the definitions of
+        :math:`\\textup{ECR}` and this decomposition. More precisely,
+
+        .. math::
+            \\textup{ECR} = e^{i 7 \\pi / 4} \\, S(q_{0}) \\, \\sqrt{X}(q_{1}) \\,
+                \\textup{CNOT}(q_{0}, q_{1}) \\, X(q_{0})
+        """
+
         q0, q1 = self.target_qubits
-        return [RZX(q0, q1, np.pi / 4), X(q0), RZX(q0, q1, -np.pi / 4)]
+        return [S(q0), SX(q1), CNOT(q0, q1), X(q0)]
 
 
 class TOFFOLI(Gate):
