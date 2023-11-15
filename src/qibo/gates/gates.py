@@ -1488,6 +1488,11 @@ class FSWAP(Gate):
     def qasm_label(self):
         return "fswap"
 
+    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
+        """"""
+        q0, q1 = self.target_qubits
+        return [X(q1)] + GIVENS(q0, q1, np.pi / 2).decompose() + [X(q0)]
+
 
 class fSim(ParametrizedGate):
     """The fSim gate defined in `arXiv:2001.08343
