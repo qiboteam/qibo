@@ -624,7 +624,7 @@ def test_cun(backend, name, params):
 
     if name in ["CRX", "CRY", "CRZ"]:
         theta = params["theta"]
-        if (theta % (np.pi / 2)).is_integer():
+        if (theta % np.pi).is_integer():
             assert gate.clifford
         else:
             assert not gate.clifford
