@@ -84,7 +84,7 @@ def test_pipeline_default(ngates):
         connectivity=star_connectivity(),
         initial_layout=initial_layout,
         final_layout=final_layout,
-        native_gates=NativeType.CZ,
+        two_qubit_natives=NativeType.CZ,
         check_circuit_equivalence=False,
     )
 
@@ -178,7 +178,7 @@ def test_custom_passes(circ):
         connectivity=star_connectivity(),
         initial_layout=initial_layout,
         final_layout=final_layout,
-        native_gates=NativeType.iSWAP,
+        two_qubit_natives=NativeType.iSWAP,
     )
 
 
@@ -208,7 +208,7 @@ def test_custom_passes_reverse(circ):
         connectivity=star_connectivity(),
         initial_layout=initial_layout,
         final_layout=final_layout,
-        native_gates=NativeType.iSWAP,
+        two_qubit_natives=NativeType.iSWAP,
     )
 
 

@@ -3,6 +3,7 @@ from typing import Optional
 import networkx as nx
 import numpy as np
 
+from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.config import raise_error
 from qibo.models import Circuit
@@ -97,7 +98,8 @@ def assert_transpiling(
     connectivity: nx.Graph,
     initial_layout: dict,
     final_layout: dict,
-    native_gates: NativeType = NativeType.CZ,
+    two_qubit_natives: NativeType = NativeType.CZ,
+    single_qubit_natives: tuple = (gates.I, gates.Z, gates.RZ, gates.U3),
     check_circuit_equivalence=True,
 ):
     """Check that all transpiler passes have been executed correctly.
@@ -108,10 +110,16 @@ def assert_transpiling(
         connectivity (networkx.Graph): chip qubits connectivity.
         initial_layout (dict): initial physical-logical qubit mapping.
         final_layout (dict): final physical-logical qubit mapping.
-        native_gates: (NativeType): native gates supported by the hardware.
+        two_qubit_natives (NativeType): two qubit native gates supported by the hardware.
+        single_qubit_natives (tuple): single qubit native gates supported by the hardware.
+        check_circuit_equivalence (Bool): use simulations to check if the transpiled circuit is the same as the original.
     """
     assert_connectivity(circuit=transpiled_circuit, connectivity=connectivity)
-    assert_decomposition(circuit=transpiled_circuit, two_qubit_natives=native_gates)
+    assert_decomposition(
+        circuit=transpiled_circuit,
+        two_qubit_natives=two_qubit_natives,
+        single_qubit_natives=single_qubit_natives,
+    )
     if original_circuit.nqubits != transpiled_circuit.nqubits:
         qubit_matcher = Preprocessing(connectivity=connectivity)
         original_circuit = qubit_matcher(circuit=original_circuit)
