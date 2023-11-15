@@ -246,7 +246,7 @@ def test_circuit_map():
     circuit_map.execute_block(block_list.search_by_index(1))
     circuit_map.execute_block(block_list.search_by_index(2))
     circuit_map.execute_block(block_list.search_by_index(3))
-    routed_circuit = circuit_map.routed_circuit()
+    routed_circuit = circuit_map.routed_circuit(circuit_kwargs=None)
     assert isinstance(routed_circuit.queue[6], gates.CZ)
     # circuit to logical map: [1,2,0,3]. initial map: {"q0": 2, "q1": 0, "q2": 1, "q3": 3}.
     assert routed_circuit.queue[6].qubits == (0, 1)  # initial circuit qubits (1,2)
@@ -333,9 +333,27 @@ def test_sabre_memory_map():
     assert value == float("inf")
 
 
-def test_sabre_measurements():
+def test_sabre_intermediate_measurements():
     measurement = gates.M(0)
+    circ = Circuit(3, density_matrix=True)
+    circ.add(gates.H(0))
+    circ.add(measurement)
+    circ.add(gates.CNOT(0, 1))
+    connectivity = nx.Graph()
+    connectivity.add_nodes_from([0, 1, 2])
+    connectivity.add_edges_from([(0, 1), (1, 2)])
+    router = Sabre(connectivity=connectivity)
+    initial_layout = {"q0": 0, "q1": 1, "q2": 2}
+    routed_circ, final_layout = router(circuit=circ, initial_layout=initial_layout)
+    circuit_result = routed_circ.execute(nshots=100)
+    assert routed_circ.queue[1].result is measurement.result
+
+
+def test_sabre_final_measurements():
+    measurement = gates.M(0, 1, 2)
     circ = Circuit(3)
+    circ.add(gates.H(0))
+    circ.add(gates.CNOT(0, 2))
     circ.add(measurement)
     connectivity = nx.Graph()
     connectivity.add_nodes_from([0, 1, 2])
@@ -345,3 +363,4 @@ def test_sabre_measurements():
     routed_circ, final_layout = router(circuit=circ, initial_layout=initial_layout)
     circuit_result = routed_circ.execute(nshots=100)
     assert circuit_result.frequencies() == measurement.result.frequencies()
+    assert routed_circ.queue[-1].result is measurement.result

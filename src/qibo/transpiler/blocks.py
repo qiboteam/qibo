@@ -101,7 +101,7 @@ class Block:
         This should be done only if the block is entangled and the number of
         two qubit gates is higher than the number after the decomposition.
         """
-        raise_error(NotImplementedError, "")
+        raise_error(NotImplementedError, "KAK decomposition is not available yet.")
 
 
 class CircuitBlocks:
@@ -144,9 +144,16 @@ class CircuitBlocks:
             )
         self.block_list.append(block)
 
-    def circuit(self):
-        """Return the quantum circuit."""
-        circuit = Circuit(self.qubits)
+    def circuit(self, circuit_kwargs=None):
+        """Return the quantum circuit.
+
+        Args:
+            circuit_kwargs (dict): original circuit init_kwargs.
+        """
+        if circuit_kwargs is None:
+            circuit = Circuit(self.qubits)
+        else:
+            circuit = Circuit(**circuit_kwargs)
         for block in self.block_list:
             for gate in block.gates:
                 circuit.add(gate)
