@@ -46,7 +46,7 @@ def test_single_qubit_gates(gate):
     numpy_bkd.assert_allclose(clifford_state, numpy_state, atol=1e-8)
 
 
-@pytest.mark.parametrize("gate", ["CNOT", "CZ", "SWAP", "iSWAP", "ECR"])
+@pytest.mark.parametrize("gate", ["CNOT", "CZ", "SWAP", "iSWAP", "FSWAP", "ECR"])
 def test_two_qubits_gates(gate):
     c = Circuit(5, density_matrix=True)
     qubits = np.random.choice(range(5), size=4, replace=False).reshape(2, 2)

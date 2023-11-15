@@ -304,8 +304,15 @@ class CliffordOperations:
         new_tab[:-1, [control_q, target_q]] = new_tab[:-1, [target_q, control_q]]
         return new_tab
 
-    def fSWAP(self, tableau, control_q, target_q, nqubits):
-        pass
+    def FSWAP(self, tableau, control_q, target_q, nqubits):
+        new_tab = self.X(tableau, target_q, nqubits)
+        new_tab = self.CNOT(new_tab, control_q, target_q, nqubits)
+        new_tab = self.RY(new_tab, control_q, nqubits, self.np.pi / 2)
+        new_tab = self.CNOT(new_tab, target_q, control_q, nqubits)
+        new_tab = self.RY(new_tab, control_q, nqubits, -self.np.pi / 2)
+        new_tab = self.CNOT(new_tab, target_q, control_q, nqubits)
+        new_tab = self.CNOT(new_tab, control_q, target_q, nqubits)
+        return self.X(new_tab, control_q, nqubits)
 
     def CY(self, tableau, control_q, target_q, nqubits):
         """Decomposition --> HCNOTCNOTHSS"""
@@ -369,9 +376,10 @@ class CliffordOperations:
             return self.CY(tableau, control_q, target_q, nqubits)
 
     def ECR(self, tableau, control_q, target_q, nqubits):
-        new_tab = self.RZX(tableau, control_q, target_q, nqubits, -self.np.pi / 4)
-        new_tab = self.X(new_tab, control_q, nqubits)
-        return self.RZX(new_tab, control_q, target_q, nqubits, -self.np.pi / 4)
+        new_tab = self.S(tableau, control_q, nqubits)
+        new_tab = self.SX(new_tab, target_q, nqubits)
+        new_tab = self.CNOT(new_tab, control_q, target_q, nqubits)
+        return self.X(new_tab, control_q, nqubits)
 
     # valid for a standard basis measurement only
     def M(self, state, qubits, nqubits, collapse=False):
