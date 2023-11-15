@@ -64,10 +64,20 @@ def test_two_qubits_gates(gate):
 
 def test_random_clifford_circuit():
     for _ in range(4):
+        measured_qubits = np.random.choice(range(5), size=3, replace=False)
+        print("----------------- Numpy -------------------")
         c = random_clifford(5)
-        for q in np.random.choice(range(5), size=3, replace=False):
-            c.add(gates.M(q))
-        result = clifford_bkd.execute_circuit(c)
-        print(result.samples())
+        c.add(gates.M(*measured_qubits))
+        # for q in np.random.choice(range(5), size=3, replace=False):
+        #    c.add(gates.M(q))
+        result = numpy_bkd.execute_circuit(c)
         print(result.frequencies())
-        print(result.probabilities())
+        print(result.probabilities(measured_qubits[:2]))
+        print("----------------- Clifford -------------------")
+        c = random_clifford(5)
+        c.add(gates.M(*measured_qubits))
+        result = clifford_bkd.execute_circuit(c)
+        # print(result.samples())
+        print(result.frequencies())
+        print(result.probabilities(measured_qubits[:2]))
+        assert False

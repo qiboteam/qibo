@@ -534,7 +534,7 @@ class CliffordBackend(NumpyBackend):
 
             from qibo.quantum_info.clifford import Clifford
 
-            return Clifford(state)
+            return Clifford(state, measurements=circuit.measurements)
 
         except self.oom_error:
             raise_error(
@@ -551,12 +551,7 @@ class CliffordBackend(NumpyBackend):
             samples.append(operation.M(state, qubits, nqubits, collapse))
         else:
             samples = [operation.M(state, qubits, nqubits) for _ in range(nshots)]
-        return self.np.array(samples).reshape(nshots, -1)
-
-    def calculate_probabilities(self, state, qubits, nqubits, nshots):
-        samples = self.sample_shots(state, qubits, nqubits, nshots)
-        probs = self.np.sum(samples, axis=0) / nshots
-        return self.np.ravel(self._order_probabilities(probs, qubits, nqubits))
+        return self.np.array(samples).reshape(nshots, len(qubits))
 
     def tableau_to_generators(self, tableau, return_array=False):
         bits_to_gate = {"00": "I", "01": "X", "10": "Z", "11": "Y"}

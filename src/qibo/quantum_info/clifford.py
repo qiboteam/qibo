@@ -6,7 +6,9 @@ import numpy as np
 
 from qibo import Circuit
 from qibo.backends import CliffordBackend
+from qibo.config import raise_error
 from qibo.gates import M
+from qibo.measurements import frequencies_to_binary
 
 
 def _string_product(operators):
@@ -45,10 +47,12 @@ class Clifford:
             self.tableau = self._input
             self.nqubits = int((self.tableau.shape[1] - 1) / 2)
             if self.measurements is None:
-                self.measurements = [M(range(self.nqubits))]
+                self.measurements = [M(*range(self.nqubits))]
         else:
             self.nqubits = self._input.nqubits
             self.measurements = self._input.measurements
+        if self.has_samples():
+            self._samples = np.hstack([m.result.samples() for m in self.measurements])
 
     @classmethod
     def run(
@@ -99,21 +103,45 @@ class Clifford:
         stabilizers = self.get_stabilizers(True)
         return np.sum(stabilizers, 0) / len(stabilizers)
 
-    def samples(self):
-        measured_qubits = [q for m in self.measurements for q in m.target_qubits]
-        return self._backend.sample_shots(
-            self.tableau, measured_qubits, self.nqubits, self.nshots
-        )
+    def has_samples(self):
+        return self.measurements[0].result.has_samples() or self._samples is not None
 
-    def frequencies(self):
-        if self._samples is None:
-            self._samples = self.samples()
-        return self._backend.calculate_frequencies(self._samples)
-
-    def probabilities(self):
-        if self._samples is None:
-            self._samples = self.samples()
+    def samples(self, binary=True):
         measured_qubits = [q for m in self.measurements for q in m.target_qubits]
+        if not self.has_samples():
+            self._samples = self._backend.sample_shots(
+                self.tableau, measured_qubits, self.nqubits, self.nshots
+            )
+        if binary:
+            return self._samples
+        else:
+            return self._backend.samples_to_decimal(self._samples, len(measured_qubits))
+
+    def frequencies(self, binary=True):
+        measured_qubits = [q for m in self.measurements for q in m.target_qubits]
+        freq = self._backend.calculate_frequencies(self.samples(False))
+        if binary:
+            return frequencies_to_binary(freq, len(measured_qubits))
+        else:
+            return freq
+
+    def probabilities(self, qubits=None):
+        measured_qubits = [q for m in self.measurements for q in m.target_qubits]
+        if qubits is not None:
+            if not set(qubits).issubset(set(measured_qubits)):
+                raise_error(
+                    RuntimeError,
+                    f"Asking probabilities for qubits {qubits}, but only {measured_qubits} were measured.",
+                )
+        else:
+            qubits = measured_qubits
+
+        probs = [0 for _ in range(2 ** len(measured_qubits))]
+        samples = self.samples(False)
+        for s in samples:
+            probs[s] += 1
+        probs = self._backend.cast(probs) / len(samples)
+        qubits, _ = zip(*sorted(zip(range(len(qubits)), qubits), key=lambda x: x[1]))
         return self._backend.calculate_probabilities(
-            self.tableau, measured_qubits, self.nqubits, self.nshots
+            np.sqrt(probs), qubits, len(measured_qubits)
         )
