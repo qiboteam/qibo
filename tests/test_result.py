@@ -1,3 +1,5 @@
+from os import remove
+
 import numpy as np
 import pytest
 
@@ -60,8 +62,6 @@ def test_measurement_gate_dump_load(backend):
 
 @pytest.mark.parametrize("agnostic_load", [False, True])
 def test_measurementoutcomes_dump_load(backend, agnostic_load):
-    from os import remove
-
     c = models.Circuit(2)
     c.add(gates.M(1, 0, basis=[gates.Z, gates.X]))
     # just to trigger repeated execution and test MeasurementOutcomes
@@ -81,8 +81,6 @@ def test_measurementoutcomes_dump_load(backend, agnostic_load):
 
 @pytest.mark.parametrize("agnostic_load", [False, True])
 def test_circuitresult_dump_load(backend, agnostic_load):
-    from os import remove
-
     c = models.Circuit(2, density_matrix=True)
     c.add(gates.M(1, 0, basis=[gates.Z, gates.X]))
     # trigger repeated execution to build the CircuitResult object

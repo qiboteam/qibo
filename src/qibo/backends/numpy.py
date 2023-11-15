@@ -523,10 +523,12 @@ class NumpyBackend(Backend):
                 results.append(sample)
                 if not circuit.density_matrix:
                     samples.append("".join([str(s) for s in sample]))
+                for gate in circuit.measurements:
+                    gate.result.reset()
 
         if circuit.density_matrix:  # this implies also it has_collapse
             assert circuit.has_collapse
-            final_state = np.asarray(final_states).mean(0)
+            final_state = np.mean(self.to_numpy(final_states), 0)
             if circuit.measurements:
                 qubits = [q for m in circuit.measurements for q in m.target_qubits]
                 final_result = CircuitResult(

@@ -236,6 +236,12 @@ Unary Encoder
 .. autofunction:: qibo.models.encodings.unary_encoder
 
 
+Unary Encoder for Random Gaussian States
+""""""""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.models.encodings.unary_encoder_random_gaussian
+
+
 .. _error-mitigation:
 
 Error Mitigation
@@ -1498,6 +1504,12 @@ Random Ensembles
 ^^^^^^^^^^^^^^^^
 
 Functions that can generate random quantum objects.
+
+
+Haar-random :math:`U_{3}`
+"""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.uniform_sampling_U3
 
 
 Random Gaussian matrix
