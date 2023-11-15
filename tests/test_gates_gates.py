@@ -1074,7 +1074,14 @@ def test_ecr(backend):
 
     target_state = matrix @ initial_state
     backend.assert_allclose(final_state, target_state)
-    backend.assert_allclose(final_state_decompose, target_state)
+    # testing random expectation value due to global phase difference
+    observable = random_hermitian(2**nqubits, backend=backend)
+    backend.assert_allclose(
+        np.transpose(np.conj(final_state_decompose))
+        @ observable
+        @ final_state_decompose,
+        np.transpose(np.conj(target_state)) @ observable @ target_state,
+    )
 
     with pytest.raises(NotImplementedError):
         gates.ECR(0, 1).qasm_label
