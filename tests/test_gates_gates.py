@@ -554,7 +554,7 @@ def test_csx(backend):
     backend.assert_allclose(final_state_decompose, target_state)
 
     assert gates.CSX(0, 1).qasm_label == "csx"
-    assert gates.CSX(0, 1).clifford
+    assert not gates.CSX(0, 1).clifford
     assert gates.CSX(0, 1).unitary
 
 
@@ -590,7 +590,7 @@ def test_csxdg(backend):
     backend.assert_allclose(final_state_decompose, target_state)
 
     assert gates.CSXDG(0, 1).qasm_label == "csxdg"
-    assert gates.CSXDG(0, 1).clifford
+    assert not gates.CSXDG(0, 1).clifford
     assert gates.CSXDG(0, 1).unitary
 
 
@@ -1098,7 +1098,7 @@ def test_toffoli(backend, applyx):
     backend.assert_allclose(final_state, target_state)
 
     assert gatelist[-1].qasm_label == "ccx"
-    assert gates.TOFFOLI(0, 1, 2).clifford
+    assert not gates.TOFFOLI(0, 1, 2).clifford
     assert gates.TOFFOLI(0, 1, 2).unitary
 
 
