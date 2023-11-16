@@ -607,7 +607,6 @@ def PEC(
         Args:
         circuit (:class:`qibo.models.Circuit`): input circuit.
         #### observable (numpy.ndarray): Observable to measure.
-        noise_levels (numpy.ndarray): Sequence of noise levels.
         noise_model (:class:`qibo.noise.NoiseModel`, optional): Noise model applied
             to simulate noisy computation.
         nshots_GST (int, optional): Number of shots used in Gate Set Tomography.
@@ -661,7 +660,7 @@ def PEC(
 
     if type_of_gates[">2 qb gate"] > 0:
         print("This code does not do PEC for >2 qubits")
-        return NaN
+        return np.NaN, np.NaN
 
     elif type_of_gates[">2 qb gate"] == 0:
         if type_of_gates["1 qb gate"] >= 1 and type_of_gates["2 qb gate"] == 0:
@@ -982,7 +981,6 @@ def PEC(
     ##########################################
 
     NshotsGST = nshots_GST
-    lam = noise_levels  # For depolarizing noise
 
     def sort_counts_1qb(matrix):
         counts_matrix = np.zeros((2, 2))
