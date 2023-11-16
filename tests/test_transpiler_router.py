@@ -246,7 +246,7 @@ def test_circuit_map():
     circuit_map.execute_block(block_list.search_by_index(1))
     circuit_map.execute_block(block_list.search_by_index(2))
     circuit_map.execute_block(block_list.search_by_index(3))
-    routed_circuit = circuit_map.routed_circuit(circuit_kwargs=None)
+    routed_circuit = circuit_map.routed_circuit()
     assert isinstance(routed_circuit.queue[6], gates.CZ)
     # circuit to logical map: [1,2,0,3]. initial map: {"q0": 2, "q1": 0, "q2": 1, "q3": 3}.
     assert routed_circuit.queue[6].qubits == (0, 1)  # initial circuit qubits (1,2)

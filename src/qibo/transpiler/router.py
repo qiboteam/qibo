@@ -372,7 +372,7 @@ class CircuitMap:
         self.circuit_blocks.remove_block(block)
 
     def routed_circuit(self, circuit_kwargs=None):
-        """Returns circuit of the routed circuit.
+        """Return the routed circuit.
 
         Args:
             circuit_kwargs (dict): original circuit init_kwargs.
@@ -526,14 +526,13 @@ class Sabre(Router):
     def _detach_final_measurements(self, circuit: Circuit):
         """Detach measurement gates at the end of the circuit for separate handling."""
         final_measurements = []
-        reversed_queue = circuit.queue[::-1]
-        for gate in reversed_queue:
+        for gate in circuit.queue[::-1]:
             if isinstance(gate, gates.M):
                 final_measurements.append(gate)
                 circuit.queue.remove(gate)
             else:
                 break
-        if len(final_measurements) == 0:
+        if not final_measurements:
             return None
         return final_measurements[::-1]
 

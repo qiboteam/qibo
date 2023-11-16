@@ -214,13 +214,14 @@ class M(Gate):
 
     # Overload on_qubits to copy also gate.result, controlled by can be removed for measurements
     def on_qubits(self, qubit_map) -> "Gate":
-        """Creates the same gate targeting different qubits.
+        """Creates the same measurement gate targeting different qubits
+        and preserving the measurement result register.
 
         Args:
             qubit_map (int): Dictionary mapping original qubit indices to new ones.
 
         Returns:
-            A :class:`qibo.gates.Gate` object of the original gate
+            A :class:`qibo.gates.Gate.M` object of the original gate
             type targeting the given qubits.
 
         Example:
@@ -228,19 +229,16 @@ class M(Gate):
             .. testcode::
 
                 from qibo import models, gates
-                c = models.Circuit(4)
-                # Add some CNOT gates
-                c.add(gates.CNOT(2, 3).on_qubits({2: 2, 3: 3})) # equivalent to gates.CNOT(2, 3)
-                c.add(gates.CNOT(2, 3).on_qubits({2: 3, 3: 0})) # equivalent to gates.CNOT(3, 0)
-                c.add(gates.CNOT(2, 3).on_qubits({2: 1, 3: 3})) # equivalent to gates.CNOT(1, 3)
-                c.add(gates.CNOT(2, 3).on_qubits({2: 2, 3: 1})) # equivalent to gates.CNOT(2, 1)
+                measurement = gates.M(0, 1)
+                c = models.Circuit(3)
+                c.add(measurement.on_qubits({0: 0, 1: 2}))
+                assert c.queue[0].result is measurement.result
                 print(c.draw())
             .. testoutput::
 
-                q0: ───X─────
-                q1: ───|─o─X─
-                q2: ─o─|─|─o─
-                q3: ─X─o─X───
+                q0: ─M─
+                q1: ─|─
+                q2: ─M─
         """
 
         qubits = (qubit_map.get(q) for q in self.qubits)
