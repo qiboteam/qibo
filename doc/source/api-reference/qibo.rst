@@ -236,6 +236,12 @@ Unary Encoder
 .. autofunction:: qibo.models.encodings.unary_encoder
 
 
+Unary Encoder for Random Gaussian States
+""""""""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.models.encodings.unary_encoder_random_gaussian
+
+
 .. _error-mitigation:
 
 Error Mitigation
@@ -1127,10 +1133,11 @@ Therefore, one of the three objects :class:`qibo.result.QuantumState`,
 is going to be returned by the circuit execution. The first gives acces to the final
 state and probabilities via the :meth:`qibo.result.QuantumState.state` and
 :meth:`qibo.result.QuantumState.probabilities` methods, whereas the second
-allows to retrieve the final samples and frequencies with the
-:meth:`qibo.result.MeasurementOutcomes.samples` and
-:meth:`qibo.result.MeasurementOutcomes.frequencies` methods. The
-third includes all the above instead.
+allows to retrieve the final samples, the frequencies and the probabilities (calculated
+as ``frequencies/nshots``) with the :meth:`qibo.result.MeasurementOutcomes.samples`,
+:meth:`qibo.result.MeasurementOutcomes.frequencies` and
+:meth:`qibo.result.MeasurementOutcomes.probabilities` methods respectively. The
+:class:`qibo.result.CircuitResult` object includes all the above instead.
 
 Every time some measurement is performed at the end of the execution, the result
 will be a ``CircuitResult`` unless the final state could not be represented with the
