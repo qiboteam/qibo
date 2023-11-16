@@ -118,7 +118,7 @@ class Clifford:
             return self._backend.samples_to_decimal(self._samples, len(measured_qubits))
 
     def frequencies(self, binary=True):
-        measured_qubits = [q for m in self.measurements for q in m.target_qubits]
+        measured_qubits = {q for m in self.measurements for q in m.target_qubits}
         freq = self._backend.calculate_frequencies(self.samples(False))
         if binary:
             return frequencies_to_binary(freq, len(measured_qubits))
@@ -126,12 +126,14 @@ class Clifford:
             return freq
 
     def probabilities(self, qubits=None):
-        measured_qubits = [q for m in self.measurements for q in m.target_qubits]
+        measured_qubits = sorted(
+            {q for m in self.measurements for q in m.target_qubits}
+        )
         if qubits is not None:
             if not set(qubits).issubset(set(measured_qubits)):
                 raise_error(
                     RuntimeError,
-                    f"Asking probabilities for qubits {qubits}, but only {measured_qubits} were measured.",
+                    f"Asking probabilities for qubits {qubits}, but only qubits {measured_qubits} were measured.",
                 )
         else:
             qubits = measured_qubits
@@ -141,7 +143,7 @@ class Clifford:
         for s in samples:
             probs[s] += 1
         probs = self._backend.cast(probs) / len(samples)
-        qubits, _ = zip(*sorted(zip(range(len(qubits)), qubits), key=lambda x: x[1]))
+        qubits = [measured_qubits.index(q) for q in qubits]
         return self._backend.calculate_probabilities(
             np.sqrt(probs), qubits, len(measured_qubits)
         )

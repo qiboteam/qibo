@@ -45,7 +45,7 @@ class CliffordOperations:
         return new_tab
 
     def CZ(self, tableau, control_q, target_q, nqubits):
-        """Decomposition --> HCNOTH"""
+        """Decomposition --> H-CNOT-H"""
         new_tab = tableau.copy()
         r, x, z = (
             self.get_r(new_tab, nqubits),
@@ -79,7 +79,7 @@ class CliffordOperations:
         return new_tab
 
     def Z(self, tableau, q, nqubits):
-        """Decomposition --> SS"""
+        """Decomposition --> S-S"""
         new_tab = tableau.copy()
         r, x, z = (
             self.get_r(new_tab, nqubits),
@@ -92,7 +92,7 @@ class CliffordOperations:
         return new_tab
 
     def X(self, tableau, q, nqubits):
-        """Decomposition --> HSSH"""
+        """Decomposition --> H-S-S-H"""
         new_tab = tableau.copy()
         r, x, z = (
             self.get_r(new_tab, nqubits),
@@ -108,7 +108,7 @@ class CliffordOperations:
         return new_tab
 
     def Y(self, tableau, q, nqubits):
-        """Decomposition --> SSHSSH"""  # double check this, cause it should be
+        """Decomposition --> S-S-H-S-S-H"""  # double check this, cause it should be
         new_tab = tableau.copy()  # Y = i * HZHZ --> HSSHSS
         r, x, z = (
             self.get_r(new_tab, nqubits),
@@ -124,7 +124,7 @@ class CliffordOperations:
         return new_tab
 
     def SX(self, tableau, q, nqubits):
-        """Decomposition --> HSH"""
+        """Decomposition --> H-S-H"""
         new_tab = tableau.copy()
         r, x, z = (
             self.get_r(new_tab, nqubits),
@@ -139,7 +139,7 @@ class CliffordOperations:
         return new_tab
 
     def SDG(self, tableau, q, nqubits):
-        """Decomposition --> SSS"""
+        """Decomposition --> S-S-S"""
         new_tab = tableau.copy()
         r, x, z = (
             self.get_r(new_tab, nqubits),
@@ -154,7 +154,7 @@ class CliffordOperations:
         return new_tab
 
     def SXDG(self, tableau, q, nqubits):
-        """Decomposition --> HSSSH"""
+        """Decomposition --> H-S-S-S-H"""
         new_tab = tableau.copy()
         r, x, z = (
             self.get_r(new_tab, nqubits),
@@ -195,7 +195,7 @@ class CliffordOperations:
             return self.Y(tableau, q, nqubits)
         # not working
         elif (theta / (self.np.pi / 2) - 1) % 4 == 0:
-            """Decomposition --> HSS"""
+            """Decomposition --> H-S-S"""
             new_tab = tableau.copy()
             r, x, z = (
                 self.get_r(new_tab, nqubits),
@@ -209,7 +209,7 @@ class CliffordOperations:
             new_tab[:-1, [nqubits + q, q]] = new_tab[:-1, [q, nqubits + q]]
             return new_tab
         else:  # theta == 3*pi/2 + 2*n*pi
-            """Decomposition --> HSSHSSHSS"""
+            """Decomposition --> H-S-S-H-S-S-H-S-S"""
             new_tab = tableau.copy()
             r, x, z = (
                 self.get_r(new_tab, nqubits),
@@ -224,7 +224,7 @@ class CliffordOperations:
             return new_tab
 
     def SWAP(self, tableau, control_q, target_q, nqubits):
-        """Decomposition --> CNOTCNOTCNOT"""
+        """Decomposition --> CNOT-CNOT-CNOT"""
         new_tab = tableau.copy()
         r, x, z = (
             self.get_r(new_tab, nqubits),
@@ -262,7 +262,7 @@ class CliffordOperations:
         return new_tab
 
     def iSWAP(self, tableau, control_q, target_q, nqubits):
-        """Decomposition --> HCNOTCNOTHSS"""
+        """Decomposition --> H-CNOT-CNOT-H-S-S"""
         new_tab = tableau.copy()
         r, x, z = (
             self.get_r(new_tab, nqubits),
@@ -315,7 +315,7 @@ class CliffordOperations:
         return self.X(new_tab, control_q, nqubits)
 
     def CY(self, tableau, control_q, target_q, nqubits):
-        """Decomposition --> HCNOTCNOTHSS"""
+        """Decomposition --> H-CNOT-CNOT-H-S-S"""
         new_tab = tableau.copy()
         r, x, z = (
             self.get_r(new_tab, nqubits),
@@ -403,7 +403,7 @@ class CliffordOperations:
             # determined outcome, state unchanged
             else:
                 CliffordOperations.set_scratch(state_copy, 0)
-                for i in (x[:, q] == 1).nonzero()[0]:
+                for i in x[:nqubits, q].nonzero()[0]:
                     state_copy = self.rowsum(
                         state_copy,
                         2 * nqubits,

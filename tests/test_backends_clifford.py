@@ -62,22 +62,50 @@ def test_two_qubits_gates(gate):
     numpy_bkd.assert_allclose(clifford_state, numpy_state, atol=1e-8)
 
 
-def test_random_clifford_circuit():
-    for _ in range(4):
-        measured_qubits = np.random.choice(range(5), size=3, replace=False)
-        print("----------------- Numpy -------------------")
-        c = random_clifford(5)
-        c.add(gates.M(*measured_qubits))
-        # for q in np.random.choice(range(5), size=3, replace=False):
-        #    c.add(gates.M(q))
-        result = numpy_bkd.execute_circuit(c)
-        print(result.frequencies())
-        print(result.probabilities(measured_qubits[:2]))
-        print("----------------- Clifford -------------------")
-        c = random_clifford(5)
-        c.add(gates.M(*measured_qubits))
-        result = clifford_bkd.execute_circuit(c)
-        # print(result.samples())
-        print(result.frequencies())
-        print(result.probabilities(measured_qubits[:2]))
-        assert False
+MEASURED_QUBITS = np.random.choice(range(5), size=3, replace=False)
+
+
+@pytest.mark.parametrize(
+    "prob_qubits",
+    [
+        range(5),
+        np.random.choice(MEASURED_QUBITS, size=2, replace=False),
+        [0],
+        [1],
+        [2],
+        [3],
+        [4],
+    ],
+)
+def test_random_clifford_circuit(prob_qubits):
+    c = random_clifford(5)
+    # c.add(gates.M(*MEASURED_QUBITS))
+    c.density_matrix = True
+    c_copy = c.copy()
+    c.add(gates.M(*MEASURED_QUBITS))
+    c_copy.add(gates.M(*MEASURED_QUBITS))
+    numpy_result = numpy_bkd.execute_circuit(c, nshots=1000)
+    clifford_result = clifford_bkd.execute_circuit(c_copy)
+    numpy_bkd.assert_allclose(numpy_result.state(), clifford_result.state())
+    if not set(prob_qubits).issubset(set(MEASURED_QUBITS)):
+        with pytest.raises(RuntimeError) as excinfo:
+            numpy_bkd.assert_allclose(
+                numpy_result.probabilities(prob_qubits),
+                clifford_result.probabilities(prob_qubits),
+            )
+            assert (
+                str(excinfo.value)
+                == f"Asking probabilities for qubits {prob_qubits}, but only qubits {MEASURED_QUBITS} were measured."
+            )
+    else:
+        print(f"Measured qubits: {MEASURED_QUBITS}")
+        print(f"Probs qubits: {prob_qubits}")
+        print(f"Numpy Frequencies: {numpy_result.frequencies()}")
+        print(f"Clifford Frequencies: {clifford_result.frequencies()}")
+        print(f"Numpy probs: {numpy_result.probabilities(MEASURED_QUBITS)}")
+        print(f"Clifford probs: {clifford_result.probabilities()}")
+        numpy_bkd.assert_allclose(
+            numpy_result.probabilities(prob_qubits),
+            clifford_result.probabilities(prob_qubits),
+            atol=1e-1,
+        )
