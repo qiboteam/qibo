@@ -1040,7 +1040,6 @@ class CSX(Gate):
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
-        self.clifford = True
         self.unitary = True
 
     @property
@@ -1082,7 +1081,6 @@ class CSXDG(Gate):
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
-        self.clifford = True
         self.unitary = True
 
     @property
@@ -1119,7 +1117,7 @@ class _CRn_(ParametrizedGate):
         self.parameters = theta
         self.unitary = True
 
-        if isinstance(theta, (float, int)) and (theta % (np.pi / 2)).is_integer():
+        if isinstance(theta, (float, int)) and (theta % np.pi).is_integer():
             self.clifford = True
 
         self.init_args = [q0, q1]
@@ -2086,7 +2084,6 @@ class TOFFOLI(Gate):
         self.control_qubits = (q0, q1)
         self.target_qubits = (q2,)
         self.init_args = [q0, q1, q2]
-        self.clifford = True
         self.unitary = True
 
     @property
