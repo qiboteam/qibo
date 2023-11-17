@@ -1,5 +1,7 @@
 """Error Mitigation Methods."""
 
+from math import factorial
+
 import numpy as np
 from scipy.optimize import curve_fit
 
@@ -34,11 +36,11 @@ def get_gammas(c, solve: bool = True):
         gammas = np.array(
             [
                 1
-                / (2 ** (2 * cmax) * np.math.factorial(i))
+                / (2 ** (2 * cmax) * factorial(i))
                 * (-1) ** i
                 / (1 + 2 * i)
-                * np.math.factorial(1 + 2 * cmax)
-                / (np.math.factorial(cmax) * np.math.factorial(cmax - i))
+                * factorial(1 + 2 * cmax)
+                / (factorial(cmax) * factorial(cmax - i))
                 for i in c
             ]
         )
@@ -512,11 +514,11 @@ def apply_readout_mitigation(state, calibration_matrix):
     ``calibration_matrix * state.frequencies()``.
 
     Args:
-        state (:class:`qibo.states.CircuitResult`): input state to be updated.
+        state (:class:`qibo.measurements.CircuitResult`): input state to be updated.
         calibration_matrix (numpy.ndarray): calibration matrix for readout mitigation.
 
     Returns:
-        :class:`qibo.states.CircuitResult`: the input state with the updated frequencies.
+        :class:`qibo.measurements.CircuitResult`: the input state with the updated frequencies.
     """
     freq = np.zeros(2**state.nqubits)
     for k, v in state.frequencies().items():
@@ -546,7 +548,7 @@ def apply_randomized_readout_mitigation(
         backend (:class:`qibo.backends.abstract.Backend`): calculation engine.
 
     Return:
-        :class:`qibo.states.CircuitResult`: the state of the input circuit with
+        :class:`qibo.measurements.CircuitResult`: the state of the input circuit with
             mitigated frequencies.
 
     """

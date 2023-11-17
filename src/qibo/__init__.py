@@ -10,6 +10,7 @@ from qibo import (
     optimizers,
     parallel,
     parameter,
+    result,
     solvers,
 )
 from qibo.backends import (

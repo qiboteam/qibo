@@ -222,6 +222,26 @@ Adiabatic evolution
     :members:
     :member-order: bysource
 
+
+.. _data-encoders:
+
+Data Encoders
+^^^^^^^^^^^^^
+
+We provide a family of algorithms that encode classical data into quantum circuits.
+
+Unary Encoder
+"""""""""""""
+
+.. autofunction:: qibo.models.encodings.unary_encoder
+
+
+Unary Encoder for Random Gaussian States
+""""""""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.models.encodings.unary_encoder_random_gaussian
+
+
 .. _error-mitigation:
 
 Error Mitigation
@@ -654,10 +674,10 @@ Parametric ZX interaction (RZX)
     :members:
     :member-order: bysource
 
-Parametric XX-YY interaction (RXY)
-""""""""""""""""""""""""""""""""""
+Parametric XX-YY interaction (RXXYY)
+""""""""""""""""""""""""""""""""""""
 
-.. autoclass:: qibo.gates.RXY
+.. autoclass:: qibo.gates.RXXYY
     :members:
     :member-order: bysource
 
@@ -743,6 +763,24 @@ Mølmer–Sørensen (MS)
 .. autoclass:: qibo.gates.MS
     :members:
     :member-order: bysource
+
+Quantinuum native gates
+^^^^^^^^^^^^^^^^^^^^^^^
+
+U1q
+"""
+
+.. autoclass:: qibo.gates.U1q
+    :members:
+    :member-order: bysource
+
+.. note::
+    The other Quantinuum single-qubit and two-qubit native gates are
+    implemented in Qibo as:
+
+    - Pauli-:math:`Z` rotation: :class:`qibo.gates.RZ`
+    - Arbitrary :math:`ZZ` rotation: :class:`qibo.gates.RZZ`
+    - Fully-entangling :math:`ZZ`-interaction: :math:`R_{ZZ}(\\pi/2)`
 
 
 _______________________
@@ -1062,45 +1100,87 @@ _______________________
 
 .. _States:
 
-States
-------
+Execution Outcomes
+------------------
 
-Qibo circuits return :class:`qibo.states.CircuitResult` objects
-when executed. By default, Qibo works as a wave function simulator in the sense
-that propagates the state vector through the circuit applying the
-corresponding gates. In this default usage the result of a circuit execution
-is the full final state vector which can be accessed via :meth:`qibo.states.CircuitResult.state`.
-However, for specific applications it is useful to have measurement samples
-from the final wave function, instead of its full vector form.
-To that end, :class:`qibo.states.CircuitResult` provides the
-:meth:`qibo.states.CircuitResult.samples` and
-:meth:`qibo.states.CircuitResult.frequencies` methods.
+Qibo circuits return different objects when executed depending on what the
+circuit contains and on the settings of the simulation. The following table
+summarizes which outcomes to expect depending on whether:
 
-The state vector (or density matrix) is saved in memory as a tensor supported
-by the currently active backend (see :ref:`Backends <Backends>` for more information).
-A copy of the state can be created using :meth:`qibo.states.CircuitResult.copy`.
-The new state will point to the same tensor in memory as the original one unless
-the ``deep=True`` option was used during the ``copy`` call.
-Note that the qibojit backend performs in-place updates
-state is used as input to a circuit or time evolution. This will modify the
-state's tensor and the tensor of all shallow copies and the current state vector
-values will be lost. If you intend to keep the current state values,
-we recommend creating a deep copy before using it as input to a qibo model.
+* the circuit contains noise channels
+* the qubits are measured at the end of the execution
+* some collapse measurement is present in the circuit
+* ``density_matrix`` is set to ``True`` in simulation
 
-In order to perform measurements the user has to add the measurement gate
-:class:`qibo.gates.M` to the circuit and then execute providing a number
-of shots. If this is done, the :class:`qibo.states.CircuitResult`
-returned by the circuit will contain the measurement samples.
+.. table::
 
-For more information on measurements we refer to the
-:ref:`How to perform measurements? <measurement-examples>` example.
+   +----------+--------------+----------+----------------+------------------------------------------+
+   | Noise    | Measurements | Collapse | Density Matrix |      Outcome                             |
+   +==========+==============+==========+================+==========================================+
+   |    ❌    |      ❌      |    ❌    |   ❌ / ✅      | :class:`qibo.result.QuantumState`        |
+   +----------+--------------+----------+----------------+------------------------------------------+
+   |    ❌    |      ✅      |    ❌    |   ❌ / ✅      | :class:`qibo.result.CircuitResult`       |
+   +----------+--------------+----------+----------------+------------------------------------------+
+   | ❌ / ✅  |      ❌      | ❌ / ✅  |       ✅       | :class:`qibo.result.QuantumState`        |
+   +----------+--------------+----------+----------------+------------------------------------------+
+   | ❌ / ✅  |      ✅      | ❌ / ✅  |       ❌       | :class:`qibo.result.MeasurementOutcomes` |
+   +----------+--------------+----------+----------------+------------------------------------------+
+   | ❌ / ✅  |      ✅      | ❌ / ✅  |       ✅       | :class:`qibo.result.CircuitResult`       |
+   +----------+--------------+----------+----------------+------------------------------------------+
 
-Circuit result
-^^^^^^^^^^^^^^
+Therefore, one of the three objects :class:`qibo.result.QuantumState`,
+:class:`qibo.result.MeasurementOutcomes` or :class:`qibo.result.CircuitResult`
+is going to be returned by the circuit execution. The first gives acces to the final
+state and probabilities via the :meth:`qibo.result.QuantumState.state` and
+:meth:`qibo.result.QuantumState.probabilities` methods, whereas the second
+allows to retrieve the final samples, the frequencies and the probabilities (calculated
+as ``frequencies/nshots``) with the :meth:`qibo.result.MeasurementOutcomes.samples`,
+:meth:`qibo.result.MeasurementOutcomes.frequencies` and
+:meth:`qibo.result.MeasurementOutcomes.probabilities` methods respectively. The
+:class:`qibo.result.CircuitResult` object includes all the above instead.
 
-.. autoclass:: qibo.states.CircuitResult
+Every time some measurement is performed at the end of the execution, the result
+will be a ``CircuitResult`` unless the final state could not be represented with the
+current simulation settings, i.e. if some stochasticity is present in the ciruit
+(via noise channels or collapse measurements) and ``density_matrix=False``. In that
+case a simple ``MeasurementOutcomes`` object is returned.
+
+If no measurement is appended at the end of the circuit, the final ``QuantumState``
+is going to be provided as output. However, if the circuit is stochastic,
+``density_matrix`` should be set to ``True`` in order to recover the final state,
+otherwise an error is raised.
+
+The final result of the circuit execution can also be saved to disk and loaded back:
+
+.. testsetup::
+
+   from qibo import gates, Circuit
+
+.. testcode::
+
+   c = Circuit(2)
+   c.add(gates.M(0,1))
+   # this will be a CircuitResult object
+   result = c()
+   # save it to final_result.npy
+   result.dump('final_result.npy')
+   # can be loaded back
+   from qibo.result import load_result
+
+   loaded_result = load_result('final_result.npy')
+
+.. autoclass:: qibo.result.QuantumState
     :members:
     :member-order: bysource
+
+.. autoclass:: qibo.result.MeasurementOutcomes
+    :members:
+    :member-order: bysource
+
+.. autoclass:: qibo.result.CircuitResult
+    :members:
+    :member-order: bysource
+
 
 
 .. _Callbacks:
@@ -1188,6 +1268,24 @@ variational model.
    :member-order: bysource
    :exclude-members: ParallelBFGS
 
+
+.. _Parameter:
+
+Parameter
+---------
+
+It can be useful to define custom parameters in an optimization context. For
+example, the rotational angles which encodes information in a Quantum Neural Network
+are usually built as a combination of features and trainable parameters. For
+doing this, the :class:`qibo.parameter.Parameter` class can be used. It allows
+to define custom parameters which can be inserted into a :class:`qibo.models.circuit.Circuit`.
+Moreover, it automatically precomputes the analytical derivative of the parameter
+function, which can be used to calculate the derivatives of a variational model
+with respect to its parameters.
+
+.. automodule:: qibo.parameter
+    :members:
+    :member-order: bysource
 
 .. _Gradients:
 
@@ -1406,6 +1504,12 @@ Random Ensembles
 ^^^^^^^^^^^^^^^^
 
 Functions that can generate random quantum objects.
+
+
+Haar-random :math:`U_{3}`
+"""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.uniform_sampling_U3
 
 
 Random Gaussian matrix

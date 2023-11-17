@@ -256,15 +256,13 @@ class TensorflowBackend(NumpyBackend):
         npmatrix = super().matrix_fused(gate)
         return self.tf.cast(npmatrix, dtype=self.dtype)
 
-    def execute_circuit(
-        self, circuit, initial_state=None, nshots=None, return_array=False
-    ):
+    def execute_circuit(self, circuit, initial_state=None, nshots=1000):
         with self.tf.device(self.device):
-            return super().execute_circuit(circuit, initial_state, nshots, return_array)
+            return super().execute_circuit(circuit, initial_state, nshots)
 
-    def execute_circuit_repeated(self, circuit, initial_state=None, nshots=None):
+    def execute_circuit_repeated(self, circuit, nshots, initial_state=None):
         with self.tf.device(self.device):
-            return super().execute_circuit_repeated(circuit, initial_state, nshots)
+            return super().execute_circuit_repeated(circuit, nshots, initial_state)
 
     def sample_shots(self, probabilities, nshots):
         # redefining this because ``tnp.random.choice`` is not available
@@ -283,7 +281,11 @@ class TensorflowBackend(NumpyBackend):
         # redefining this because ``tnp.unique`` is not available
         res, _, counts = self.tf.unique_with_counts(samples, out_idx="int64")
         res, counts = self.np.array(res), self.np.array(counts)
-        return collections.Counter({int(k): int(v) for k, v in zip(res, counts)})
+        if res.dtype == "string":
+            res = [r.numpy().decode("utf8") for r in res]
+        else:
+            res = [int(r) for r in res]
+        return collections.Counter({k: int(v) for k, v in zip(res, counts)})
 
     def update_frequencies(self, frequencies, probabilities, nsamples):
         # redefining this because ``tnp.unique`` and tensor update is not available
@@ -294,17 +296,15 @@ class TensorflowBackend(NumpyBackend):
         )
         return frequencies
 
-    def entanglement_entropy(self, rho):
-        # redefining this because ``tnp.linalg`` is not available
-        from qibo.config import EIGVAL_CUTOFF
+    def calculate_norm(self, state, order=2):
+        state = self.cast(state)
+        return self.tf.norm(state, ord=order)
 
-        # Diagonalize
-        eigvals = self.np.real(self.tf.linalg.eigvalsh(rho))
-        # Treating zero and negative eigenvalues
-        masked_eigvals = eigvals[eigvals > EIGVAL_CUTOFF]
-        spectrum = -1 * self.np.log(masked_eigvals)
-        entropy = self.np.sum(masked_eigvals * spectrum) / self.np.log(2.0)
-        return entropy, spectrum
+    def calculate_norm_density_matrix(self, state, order="nuc"):
+        state = self.cast(state)
+        if order == "nuc":
+            return self.np.trace(state)
+        return self.tf.norm(state, ord=order)
 
     def calculate_eigenvalues(self, matrix, k=6):
         return self.tf.linalg.eigvalsh(matrix)

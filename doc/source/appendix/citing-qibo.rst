@@ -73,6 +73,12 @@ Peer-Reviewed Articles
 
 .. _`arXiv:2308.06313`: https://arxiv.org/abs/2308.06313
 
+* R. Carobene, A. Candido, J. Serrano, A.O-Fuertes, A. Giachero, S. Carrazza,
+  *Qibosoq: an open-source framework for quantum circuit RFSoC programming*
+  (2023), (`arXiv:2310.05851`_)
+
+.. _`arXiv:2310.05851`: https://arxiv.org/abs/2310.05851
+
 Software References in Zenodo
 -----------------------------
 
@@ -101,6 +107,11 @@ Software References in Zenodo
   `https://doi.org/10.5281/zenodo.7662185`_.
 
 .. _`https://doi.org/10.5281/zenodo.7662185`: https://doi.org/10.5281/zenodo.7662185
+
+* R. Carobene, A. Candido, J. Serrano, S. Carrazza, E. Pedicillo. (2023).
+  qiboteam/qibosoq: Qibosoq. Zenodo. `https://doi.org/10.5281/zenodo.8083285`_.
+
+.. _`https://doi.org/10.5281/zenodo.8083285`: https://doi.org/10.5281/zenodo.8083285
 
 
 
