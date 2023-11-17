@@ -78,7 +78,7 @@ def assert_decomposition(
     two_qubit_natives: NativeType,
     single_qubit_natives=(gates.I, gates.Z, gates.RZ, gates.GPI2),
 ):
-    """Checks if a circuit has been correctly decmposed into native gates.
+    """Checks if a circuit has been correctly decomposed into native gates.
 
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): circuit model to check.
@@ -127,19 +127,49 @@ def translate_gate(
         single_qubit_natives (tuple): single qubit native gates.
 
     Returns:
-        (list): List of native gates
+        (list): List of native gates that decompose the input gate.
     """
     if isinstance(gate, (gates.M, gates.I, gates.Align)):
         return gate
+    elif len(gate.qubits) == 1:
+        return _translate_single_qubit_gates(gate, single_qubit_natives)
+    else:
+        return _translate_two_qubit_gates(gate, two_qubit_natives)
 
-    if len(gate.qubits) == 1:
-        if gates.U3 in single_qubit_natives:
-            return u3_dec(gate)
-        if gates.GPI2 in single_qubit_natives:
-            return gpi2_dec(gate)
-        else:
-            raise DecompositionError("Use U3 or GPI2 as single qubit native gates")
 
+def _translate_single_qubit_gates(gate: gates.Gate, single_qubit_natives):
+    """Helper method for :meth:`translate_gate`.
+
+    Maps single qubit gates to a hardware-native implementation.
+
+    Args:
+        gate (:class:`qibo.gates.abstract.Gate`): gate to be decomposed.
+        single_qubit_natives (tuple): single qubit native gates.
+
+    Returns:
+        (list): List of native gates that decompose the input gate.
+    """
+    if gates.U3 in single_qubit_natives:
+        return u3_dec(gate)
+    elif gates.GPI2 in single_qubit_natives:
+        return gpi2_dec(gate)
+    else:
+        raise DecompositionError("Use U3 or GPI2 as single qubit native gates")
+
+
+def _translate_two_qubit_gates(gate: gates.Gate, two_qubit_natives):
+    """Helper method for :meth:`translate_gate`.
+
+    Maps two qubit gates to a hardware-native implementation.
+
+    Args:
+        gate (:class:`qibo.gates.abstract.Gate`): gate to be decomposed.
+        two_qubit_natives (:class:`qibo.transpiler.abstract.NativeType`):
+            two-qubit native gates supported by the quantum hardware.
+
+    Returns:
+        (list): List of native gates that decompose the input gate.
+    """
     if two_qubit_natives is NativeType.CZ | NativeType.iSWAP:
         # Check for a special optimized decomposition.
         if gate.__class__ in opt_dec.decompositions:
