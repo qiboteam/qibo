@@ -104,7 +104,11 @@ class Clifford:
         return np.sum(stabilizers, 0) / len(stabilizers)
 
     def has_samples(self):
-        return self.measurements[0].result.has_samples() or self._samples is not None
+        if self.measurements:
+            return (
+                self.measurements[0].result.has_samples() or self._samples is not None
+            )
+        return False
 
     def samples(self, binary=True):
         measured_qubits = [q for m in self.measurements for q in m.target_qubits]

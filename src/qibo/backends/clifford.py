@@ -305,6 +305,7 @@ class CliffordOperations:
         return new_tab
 
     def FSWAP(self, tableau, control_q, target_q, nqubits):
+        """Decomposition --> X-CNOT-RY-CNOT-RY-CNOT-CNOT-X"""
         new_tab = self.X(tableau, target_q, nqubits)
         new_tab = self.CNOT(new_tab, control_q, target_q, nqubits)
         new_tab = self.RY(new_tab, control_q, nqubits, self.np.pi / 2)
@@ -339,41 +340,91 @@ class CliffordOperations:
                 * (z[:, control_q] ^ x[:, target_q] ^ 1)
             ).flatten(),
         )
-        new_tab[:-1, target_q] = x[:, control_q] ^ x[:, target_q]
-        new_tab[:-1, [nqubits + control_q, nqubit + target_q]] = np.vstack(
+        new_tab[
+            :-1, [target_q, nqubits + control_q, nqubits + target_q]
+        ] = self.np.vstack(
             (
+                x[:, control_q] ^ x[:, target_q],
                 z[:, control_q] ^ x[:, control_q] ^ z[:, target_q],
                 z[:, target_q] ^ x[:, control_q],
             )
         ).T
         return new_tab
 
+    # this is not actually Clifford...
     def RZX(self, tableau, control_q, target_q, nqubits, theta):
         """Decomposition --> H-CNOT-RZ-CNOT-H"""
-        new_tab = tableau.copy()
-        new_tab = self.H(new_tab, target_q, nqubits)
+        new_tab = self.H(tableau, target_q, nqubits)
         new_tab = self.CNOT(new_tab, control_q, target_q, nqubits)
         new_tab = self.RZ(new_tab, target_q, nqubits, theta)
         new_tab = self.CNOT(new_tab, control_q, target_q, nqubits)
         return self.H(new_tab, target_q, nqubits)
 
     def CRX(self, tableau, control_q, target_q, nqubits, theta):
-        if theta % (2 * self.np.pi) == 0:
+        # theta = 4 * n * pi
+        if theta % (4 * self.np.pi) == 0:
             return self.I(tableau, target_q, nqubits)
-        elif (theta / self.np.pi - 1) % 2 == 0:
-            return self.CNOT(tableau, control_q, target_q, nqubits)
+        # theta = pi + 4 * n * pi
+        elif (theta / self.np.pi - 1) % 4 == 0:
+            new_tab = self.X(tableau, target_q, nqubits)
+            new_tab = self.CZ(new_tab, control_q, target_q, nqubits)
+            new_tab = self.X(new_tab, target_q, nqubits)
+            return self.CY(new_tab, control_q, target_q, nqubits)
+        # theta = 2 * pi + 4 * n * pi
+        elif (theta / (2 * self.np.pi) - 1) % 2 == 0:
+            new_tab = self.CZ(tableau, control_q, target_q, nqubits)
+            new_tab = self.Y(new_tab, target_q, nqubits)
+            new_tab = self.CZ(new_tab, control_q, target_q, nqubits)
+            return self.Y(new_tab, target_q, nqubits)
+        # theta = 3 * pi + 4 * n * pi
+        elif (theta / self.np.pi - 3) % 4 == 0:
+            new_tab = self.X(tableau, target_q, nqubits)
+            new_tab = self.CY(new_tab, control_q, target_q, nqubits)
+            new_tab = self.X(new_tab, target_q, nqubits)
+            return self.CZ(new_tab, control_q, target_q, nqubits)
 
     def CRZ(self, tableau, control_q, target_q, nqubits, theta):
-        if theta % (2 * self.np.pi) == 0:
+        # theta = 4 * n * pi
+        if theta % (4 * self.np.pi) == 0:
             return self.I(tableau, target_q, nqubits)
-        elif (theta / self.np.pi - 1) % 2 == 0:
-            return self.CZ(tableau, control_q, target_q, nqubits)
+        # theta = pi + 4 * n * pi
+        elif (theta / self.np.pi - 1) % 4 == 0:
+            new_tab = self.X(tableau, target_q, nqubits)
+            new_tab = self.CY(new_tab, control_q, target_q, nqubits)
+            new_tab = self.X(new_tab, target_q, nqubits)
+            return self.CNOT(new_tab, control_q, target_q, nqubits)
+        # theta = 2 * pi + 4 * n * pi
+        elif (theta / (2 * self.np.pi) - 1) % 2 == 0:
+            new_tab = self.CZ(tableau, control_q, target_q, nqubits)
+            new_tab = self.X(new_tab, target_q, nqubits)
+            new_tab = self.CZ(new_tab, control_q, target_q, nqubits)
+            return self.X(new_tab, target_q, nqubits)
+        # theta = 3 * pi + 4 * n * pi
+        elif (theta / self.np.pi - 3) % 4 == 0:
+            new_tab = self.CNOT(tableau, control_q, target_q, nqubits)
+            new_tab = self.X(new_tab, target_q, nqubits)
+            new_tab = self.CY(new_tab, control_q, target_q, nqubits)
+            return self.X(new_tab, target_q, nqubits)
 
     def CRY(self, tableau, control_q, target_q, nqubits, theta):
-        if theta % (2 * self.np.pi) == 0:
+        # theta = 4 * n * pi
+        if theta % (4 * self.np.pi) == 0:
             return self.I(tableau, target_q, nqubits)
-        elif (theta / self.np.pi - 1) % 2 == 0:
-            return self.CY(tableau, control_q, target_q, nqubits)
+        # theta = pi + 4 * n * pi
+        elif (theta / self.np.pi - 1) % 4 == 0:
+            new_tab = self.Z(tableau, target_q, nqubits)
+            new_tab = self.CNOT(new_tab, control_q, target_q, nqubits)
+            new_tab = self.Z(new_tab, target_q, nqubits)
+            return self.CZ(new_tab, control_q, target_q, nqubits)
+        # theta = 2 * pi + 4 * n * pi
+        elif (theta / (2 * self.np.pi) - 1) % 2 == 0:
+            return self.CRZ(tableau, control_q, target_q, nqubits, theta)
+        # theta = 3 * pi + 4 * n * pi
+        elif (theta / self.np.pi - 3) % 4 == 0:
+            new_tab = self.CZ(tableau, control_q, target_q, nqubits)
+            new_tab = self.Z(new_tab, target_q, nqubits)
+            new_tab = self.CNOT(new_tab, control_q, target_q, nqubits)
+            return self.Z(new_tab, target_q, nqubits)
 
     def ECR(self, tableau, control_q, target_q, nqubits):
         new_tab = self.S(tableau, control_q, nqubits)
@@ -508,21 +559,10 @@ class CliffordBackend(NumpyBackend):
     def apply_gate_clifford(self, gate, tableau, nqubits, nshots):
         operation = gate.clifford_operation(self)
 
-        if len(gate.init_args) > 0:
-            if "theta" in gate.init_kwargs:
-                return operation(
-                    tableau,
-                    self.np.array(gate.qubits),
-                    nqubits,
-                    gate.init_kwargs["theta"],
-                )
-            return operation(
-                tableau,
-                *gate.init_args,
-                nqubits,
-            )
-
-        return operation(tableau, self.np.array(gate.qubits), nqubits)
+        kwargs = (
+            {"theta": gate.init_kwargs["theta"]} if "theta" in gate.init_kwargs else {}
+        )
+        return operation(tableau, *gate.init_args, nqubits, **kwargs)
 
     def execute_circuit(self, circuit, initial_state=None, nshots=1000):
         for gate in circuit.queue:
