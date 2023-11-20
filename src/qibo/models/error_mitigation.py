@@ -464,6 +464,7 @@ def vnCDR(
 
 
 def ibu(prob, mat, iters=10):
+    """Iterative Bayesian Unfolding."""
     t = np.ones((len(prob), 1)) / len(prob)
     for k in range(iters):
         t = t * (np.transpose(mat) @ (prob / (mat @ t)))
@@ -515,10 +516,6 @@ def calibration_matrix(
             f = freq[key] / nshots
             column[int(key, 2)] = f
         matrix[:, i] = column
-
-    # iqm
-
-    # matrix[[0, 1], :] = matrix[[1, 0], :]
 
     if inv == True:
         matrix = np.linalg.inv(matrix)
@@ -707,6 +704,10 @@ def transpile_circ(circuit, qubit_map, backend):
 
 
 def escircuit(circuit, obs, fuse=True, backend=None):
+    """
+    Error sensitive circuit algorithm.
+    Implement what proposed in https://arxiv.org/abs/2112.06255.
+    """
     from qibo.quantum_info import comp_basis_to_pauli, random_clifford, vectorization
 
     if backend is None:  # pragma: no cover
@@ -750,11 +751,6 @@ def escircuit(circuit, obs, fuse=True, backend=None):
 
     circ_cliff1 = circ_cliff.__class__(**circ_cliff.init_kwargs)
 
-    # for gate in adjust_gates:
-    #     circ_cliff1.add(gate)
-
-    # for gate in circ_cliff.queue:
-    #     circ_cliff1.add(gate)
     j = 0
     for gate in circ_cliff.queue:
         if gate.name == "id_init":
@@ -770,7 +766,7 @@ def escircuit(circuit, obs, fuse=True, backend=None):
     return circ_cliff1, circ_cliff, adjust_gates
 
 
-def mit_obs(
+def ICS(
     circuit,
     observable,
     readout={},
@@ -781,6 +777,10 @@ def mit_obs(
     full_output=False,
     backend=None,
 ):
+    """
+    Compute the important Clifford Sampling methos proposed in
+    https://arxiv.org/abs/2112.06255.
+    """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
@@ -831,9 +831,6 @@ def mit_obs(
         / n_training_samples
     )
 
-    # a = np.mean(a_list["1"])
-    # a_std = a_std_1
-
     circuit = circuit.fuse(max_qubits=1)
     if noise_model is not None and backend.name != "qibolab":
         circuit = noise_model.apply(circuit)
@@ -843,10 +840,7 @@ def mit_obs(
         circuit_result = apply_readout_mitigation(
             circuit_result, readout["calibration_matrix"], readout["inv"]
         )
-    exp_noisy = observable.expectation_from_samples(
-        circuit_result.frequencies()
-    )  # Add - for iqm
-    # exp_noisy = obs.expectation(c_noisy().state())
+    exp_noisy = observable.expectation_from_samples(circuit_result.frequencies())
     exp_mit = (1 - a) * exp_noisy / ((1 - a) ** 2 + a_std**2)
     exp_mit_std = (
         a_std
