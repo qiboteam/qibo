@@ -339,7 +339,7 @@ def test_sabre_memory_map():
 
 
 def test_sabre_intermediate_measurements():
-    measurement = gates.M(0)
+    measurement = gates.M(1)
     circ = Circuit(3, density_matrix=True)
     circ.add(gates.H(0))
     circ.add(measurement)
