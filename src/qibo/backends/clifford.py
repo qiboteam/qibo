@@ -326,37 +326,23 @@ class CliffordOperations:
         self.set_r(
             new_tab,
             r
-            ^ (x[:, target_q] * z[:, target_q]).flatten()
+            ^ (x[:, target_q] * (z[:, target_q] ^ x[:, target_q])).flatten()
             ^ (
                 x[:, control_q]
-                * x[:, target_q]
-                * (z[:, control_q] ^ z[:, target_q] ^ 1)
+                * (x[:, target_q] ^ z[:, target_q])
+                * (z[:, control_q] ^ x[:, target_q] ^ 1)
             ).flatten()
-            ^ (x[:, target_q] * (x[:, control_q] ^ z[:, target_q])).flatten()
             ^ (
-                x[:, control_q]
-                * (x[:, control_q] ^ z[:, target_q])
-                * (z[:, control_q] ^ 1)
+                (x[:, target_q] ^ x[:, control_q]) * (z[:, target_q] ^ x[:, target_q])
             ).flatten(),
         )
-        print(x[:, control_q] ^ x[:, target_q])
-        print(z[:, control_q] ^ x[:, control_q] ^ z[:, target_q] ^ x[:, target_q])
-        print(z[:, target_q] ^ x[:, control_q])
-        print(
-            self.np.vstack(
-                (
-                    x[:, control_q] ^ x[:, target_q],
-                    z[:, control_q] ^ x[:, control_q] ^ z[:, target_q] ^ x[:, target_q],
-                    z[:, target_q] ^ x[:, control_q],
-                )
-            ).T
-        )
+
         new_tab[
             :-1, [target_q, nqubits + control_q, nqubits + target_q]
         ] = self.np.vstack(
             (
                 x[:, control_q] ^ x[:, target_q],
-                z[:, control_q] ^ x[:, control_q] ^ z[:, target_q] ^ x[:, target_q],
+                z[:, control_q] ^ z[:, target_q] ^ x[:, target_q],
                 z[:, target_q] ^ x[:, control_q],
             )
         ).T

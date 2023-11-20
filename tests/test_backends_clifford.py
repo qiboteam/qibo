@@ -46,7 +46,6 @@ def test_rotations_2q(theta, axis):
     c.add(getattr(gates, f"C{axis}")(*qubits_1, theta=theta))
     clifford_state = clifford_bkd.execute_circuit(c).state()
     numpy_state = numpy_bkd.execute_circuit(c).state()
-    print(np.abs(clifford_state - numpy_state).max())
     numpy_bkd.assert_allclose(clifford_state, numpy_state, atol=1e-8)
 
 
@@ -67,7 +66,7 @@ def test_single_qubit_gates(gate):
     numpy_bkd.assert_allclose(clifford_state, numpy_state, atol=1e-8)
 
 
-TWO_QUBITS_CLIFFORDS = ["CNOT", "CZ", "SWAP", "iSWAP", "FSWAP", "ECR"]
+TWO_QUBITS_CLIFFORDS = ["CNOT", "CZ", "CY", "SWAP", "iSWAP", "FSWAP", "ECR"]
 
 
 @pytest.mark.parametrize("gate", TWO_QUBITS_CLIFFORDS)
@@ -81,7 +80,6 @@ def test_two_qubits_gates(gate):
     c.add(getattr(gates, gate)(*qubits[1]))
     clifford_state = clifford_bkd.execute_circuit(c).state()
     numpy_state = numpy_bkd.execute_circuit(c).state()
-    print(np.abs(clifford_state - numpy_state).sum())
     numpy_bkd.assert_allclose(clifford_state, numpy_state, atol=1e-8)
 
 
@@ -92,7 +90,7 @@ MEASURED_QUBITS = sorted(np.random.choice(range(5), size=3, replace=False))
     "prob_qubits",
     [
         range(5),
-        sorted(np.random.choice(MEASURED_QUBITS, size=2, replace=False)),
+        np.random.choice(MEASURED_QUBITS, size=2, replace=False),
         [0],
         [1],
         [2],
@@ -101,21 +99,13 @@ MEASURED_QUBITS = sorted(np.random.choice(range(5), size=3, replace=False))
     ],
 )
 def test_random_clifford_circuit(prob_qubits):
-    # c = random_clifford(5)
-    import random
-
-    c = Circuit(5)
-    for gate in random.choices(TWO_QUBITS_CLIFFORDS, k=5):
-        c.add(getattr(gates, gate)(*np.random.choice(range(5), size=2, replace=False)))
+    c = random_clifford(5)
     c.density_matrix = True
     c_copy = c.copy()
     c.add(gates.M(*MEASURED_QUBITS))
     c_copy.add(gates.M(*MEASURED_QUBITS))
     numpy_result = numpy_bkd.execute_circuit(c, nshots=1000)
     clifford_result = clifford_bkd.execute_circuit(c_copy, nshots=1000)
-    for gate in c.queue:
-        print(gate.__class__.__name__)
-        print(gate.init_args)
 
     numpy_bkd.assert_allclose(numpy_result.state(), clifford_result.state())
     if not set(prob_qubits).issubset(set(MEASURED_QUBITS)):
@@ -145,5 +135,10 @@ def test_random_clifford_circuit(prob_qubits):
         numpy_freq = numpy_result.frequencies()
         clifford_freq = clifford_result.frequencies()
         clifford_freq = {state: clifford_freq[state] for state in numpy_freq.keys()}
-        # assert False
-        # assert np.abs(np.array(list(numpy_freq.values())) - np.array(list(clifford_freq.values()))).sum() < 200
+        assert (
+            np.abs(
+                np.array(list(numpy_freq.values()))
+                - np.array(list(clifford_freq.values()))
+            ).sum()
+            < 200
+        )

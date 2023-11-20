@@ -130,9 +130,7 @@ class Clifford:
             return freq
 
     def probabilities(self, qubits=None):
-        measured_qubits = sorted(
-            {q for m in self.measurements for q in m.target_qubits}
-        )
+        measured_qubits = list({q for m in self.measurements for q in m.target_qubits})
         if qubits is not None:
             if not set(qubits).issubset(set(measured_qubits)):
                 raise_error(
