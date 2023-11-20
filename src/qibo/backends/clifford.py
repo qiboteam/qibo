@@ -508,10 +508,10 @@ class CliffordOperations:
         if x1 == z1:
             if x1 == 0:
                 return 0
-            return z2 ^ x2
+            return int(z2) - int(x2)
         if x1 == 1:
-            return z2 * (2 * x2 ^ 1)
-        return x2 * (1 ^ 2 * z2)
+            return int(z2) * (2 * int(x2) - 1)
+        return int(x2) * (1 - 2 * int(z2))
 
     def rowsum(self, tableau, h, i, nqubits, include_scratch: bool = False):
         exponents = []
