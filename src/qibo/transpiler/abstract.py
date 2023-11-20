@@ -9,16 +9,16 @@ from qibo.config import raise_error
 from qibo.models import Circuit
 
 
-class NativeType(Flag):
-    """Define available types of native gates.
+class NativeGates(Flag):
+    """Define native gates supported by the unroller.
+    A native gate set should contain at least one two-qubit gate (CZ or iSWAP)
+    and at least one single qubit gate (GPI2 or U3).
 
     Should have the same names with qibo gates.
     """
 
-    M = auto()
-    Z = auto()
-    RZ = auto()
     GPI2 = auto()
+    U3 = auto()
     CZ = auto()
     iSWAP = auto()
 
@@ -28,6 +28,12 @@ class NativeType(Flag):
             return getattr(cls, gate.__class__.__name__)
         except AttributeError:
             raise ValueError(f"Gate {gate} cannot be used as native.")
+
+    def single_qubit_natives(self):
+        return (self.GPI2, self.U3)
+
+    def two_qubit_natives(self):
+        return (self.CZ, self.iSWAP)
 
 
 class Placer(ABC):
@@ -72,7 +78,7 @@ class Optimizer(ABC):
 
     @abstractmethod
     def __call__(self, circuit: Circuit, *args) -> Circuit:
-        """Find initial qubit mapping
+        """Optimize transpiled circuit.
 
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): circuit to be optimized
@@ -84,7 +90,7 @@ class Optimizer(ABC):
 
 class Unroller(ABC):
     @abstractmethod
-    def __init__(self, native_gates: NativeType, *args):
+    def __init__(self, native_gates: NativeGates, *args):
         """An unroller decomposes gates into native gates."""
 
     @abstractmethod
