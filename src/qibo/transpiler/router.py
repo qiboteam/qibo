@@ -351,14 +351,23 @@ class CircuitMap:
     Args:
         initial_layout (dict): initial logical-to-physical qubit mapping.
         circuit (Circuit): circuit to be routed.
+        blocks (CircuitBlocks): circuit blocks representation, if None the blocks will be computed from the circuit.
     """
 
-    def __init__(self, initial_layout: dict, circuit: Circuit):
-        self.circuit_blocks = CircuitBlocks(circuit, index_names=True)
+    def __init__(self, initial_layout: dict, circuit: Circuit, blocks=None):
+        if blocks is not None:
+            self.circuit_blocks = blocks
+        else:
+            self.circuit_blocks = CircuitBlocks(circuit, index_names=True)
+        self.initial_layout = initial_layout
         self._circuit_logical = list(range(len(initial_layout)))
         self._physical_logical = list(initial_layout.values())
         self._routed_blocks = CircuitBlocks(Circuit(circuit.nqubits))
         self._swaps = 0
+
+    def set_circuit_logical(self, circuit_logical_map: list):
+        """Set the current circuit to logical qubit mapping."""
+        self._circuit_logical = circuit_logical_map
 
     def blocks_qubits_pairs(self):
         """Returns a list containing the qubit pairs of each block."""
@@ -579,7 +588,12 @@ class Sabre(Router):
 
     def _compute_cost(self, candidate):
         """Compute the cost associated to a possible SWAP candidate."""
-        temporary_circuit = deepcopy(self.circuit)
+        temporary_circuit = CircuitMap(
+            initial_layout=self.circuit.initial_layout,
+            circuit=Circuit(len(self.circuit.initial_layout)),
+            blocks=self.circuit.circuit_blocks,
+        )
+        temporary_circuit.set_circuit_logical(deepcopy(self.circuit._circuit_logical))
         temporary_circuit.update(candidate)
         if temporary_circuit._circuit_logical in self._memory_map:
             return float("inf")
