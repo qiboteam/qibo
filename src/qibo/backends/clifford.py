@@ -316,7 +316,7 @@ class CliffordOperations:
         return self.X(new_tab, control_q, nqubits)
 
     def CY(self, tableau, control_q, target_q, nqubits):
-        """Decomposition --> H-CNOT-CNOT-H-S-S"""
+        """Decomposition --> H-CNOT-H-CNOT"""
         new_tab = tableau.copy()
         r, x, z = (
             self.get_r(new_tab, nqubits),
@@ -326,8 +326,7 @@ class CliffordOperations:
         self.set_r(
             new_tab,
             r
-            ^ x[:, target_q]
-            ^ z[:, target_q]
+            ^ (x[:, target_q] * z[:, target_q]).flatten()
             ^ (
                 x[:, control_q]
                 * x[:, target_q]
@@ -337,15 +336,27 @@ class CliffordOperations:
             ^ (
                 x[:, control_q]
                 * (x[:, control_q] ^ z[:, target_q])
-                * (z[:, control_q] ^ x[:, target_q] ^ 1)
+                * (z[:, control_q] ^ 1)
             ).flatten(),
+        )
+        print(x[:, control_q] ^ x[:, target_q])
+        print(z[:, control_q] ^ x[:, control_q] ^ z[:, target_q] ^ x[:, target_q])
+        print(z[:, target_q] ^ x[:, control_q])
+        print(
+            self.np.vstack(
+                (
+                    x[:, control_q] ^ x[:, target_q],
+                    z[:, control_q] ^ x[:, control_q] ^ z[:, target_q] ^ x[:, target_q],
+                    z[:, target_q] ^ x[:, control_q],
+                )
+            ).T
         )
         new_tab[
             :-1, [target_q, nqubits + control_q, nqubits + target_q]
         ] = self.np.vstack(
             (
                 x[:, control_q] ^ x[:, target_q],
-                z[:, control_q] ^ x[:, control_q] ^ z[:, target_q],
+                z[:, control_q] ^ x[:, control_q] ^ z[:, target_q] ^ x[:, target_q],
                 z[:, target_q] ^ x[:, control_q],
             )
         ).T
