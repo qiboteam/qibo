@@ -575,7 +575,7 @@ class CliffordBackend(NumpyBackend):
                 state = initial_state
 
             for gate in circuit.queue:
-                state = gate.apply_clifford(self, state, nqubits, nshots)
+                state = gate.apply_clifford(self, state, nqubits)
 
             from qibo.quantum_info.clifford import Clifford
 

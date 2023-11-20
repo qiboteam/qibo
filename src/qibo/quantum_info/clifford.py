@@ -33,24 +33,19 @@ def _list_of_matrices_product(operators):
 
 @dataclass
 class Clifford:
-    _input: Circuit | np.ndarray
-    _backend: CliffordBackend = CliffordBackend()
-    _samples = None
-
-    tableau: np.ndarray = None
+    tableau: np.ndarray
     measurements: list = None
     nqubits: int = None
     nshots: int = 1000
 
+    _backend: CliffordBackend = CliffordBackend()
+    _measurement_gate = None
+    _samples = None
+
     def __post_init__(self):
-        if isinstance(self._input, np.ndarray):
-            self.tableau = self._input
-            self.nqubits = int((self.tableau.shape[1] - 1) / 2)
-            if self.measurements is None:
-                self.measurements = [M(*range(self.nqubits))]
-        else:
-            self.nqubits = self._input.nqubits
-            self.measurements = self._input.measurements
+        self.nqubits = int((self.tableau.shape[1] - 1) / 2)
+        if self.measurements is None:
+            self.measurements = [M(*range(self.nqubits))]
         if self.has_samples():
             self._samples = np.hstack([m.result.samples() for m in self.measurements])
 
@@ -58,9 +53,7 @@ class Clifford:
     def run(
         cls, circuit: Circuit, initial_state: np.ndarray = None, nshots: int = 1000
     ):
-        self.nshots = nshots
-        result = cls._backend.execute_circuit(_input, initial_state, nshots)
-        return cls(result)
+        return cls._backend.execute_circuit(circuit, initial_state, nshots)
 
     def get_stabilizers_generators(self, return_array=False):
         generators, phases = self._backend.tableau_to_generators(
@@ -103,6 +96,21 @@ class Clifford:
         stabilizers = self.get_stabilizers(True)
         return np.sum(stabilizers, 0) / len(stabilizers)
 
+    @property
+    def measurement_gate(self):
+        """Single measurement gate containing all measured qubits.
+
+        Useful for sampling all measured qubits at once when simulating.
+        """
+        if self._measurement_gate is None:
+            for gate in self.measurements:
+                if self._measurement_gate is None:
+                    self._measurement_gate = M(*gate.init_args, **gate.init_kwargs)
+                else:
+                    self._measurement_gate.add(gate)
+
+        return self._measurement_gate
+
     def has_samples(self):
         if self.measurements:
             return (
@@ -110,16 +118,42 @@ class Clifford:
             )
         return False
 
-    def samples(self, binary=True):
-        measured_qubits = [q for m in self.measurements for q in m.target_qubits]
-        if not self.has_samples():
-            self._samples = self._backend.sample_shots(
-                self.tableau, measured_qubits, self.nqubits, self.nshots
-            )
+    def samples(self, binary: bool = True, registers: bool = False):
+        measured_qubits = self.measurement_gate.target_qubits
+        if self._samples is None:
+            if self.measurements[0].result.has_samples():
+                self._samples = np.concatenate(
+                    [gate.result.samples() for gate in self.measurements], axis=1
+                )
+            else:
+                samples = self._backend.sample_shots(
+                    self.tableau, measured_qubits, self.nqubits, self.nshots
+                )
+            if self.measurement_gate.has_bitflip_noise():
+                p0, p1 = self.measurement_gate.bitflip_map
+                bitflip_probabilities = [
+                    [p0.get(q) for q in qubits],
+                    [p1.get(q) for q in qubits],
+                ]
+                samples = self._backend.apply_bitflips(samples, bitflip_probabilities)
+            # register samples to individual gate ``MeasurementResult``
+            qubit_map = {
+                q: i for i, q in enumerate(self.measurement_gate.target_qubits)
+            }
+            self._samples = np.array(samples, dtype="int32")
+            for gate in self.measurements:
+                rqubits = tuple(qubit_map.get(q) for q in gate.target_qubits)
+                gate.result.register_samples(self._samples[:, rqubits], self._backend)
+        if registers:
+            return {
+                gate.register_name: gate.result.samples(binary)
+                for gate in self.measurements
+            }
+
         if binary:
             return self._samples
-        else:
-            return self._backend.samples_to_decimal(self._samples, len(measured_qubits))
+
+        return self._backend.samples_to_decimal(self._samples, len(measured_qubits))
 
     def frequencies(self, binary=True):
         measured_qubits = {q for m in self.measurements for q in m.target_qubits}

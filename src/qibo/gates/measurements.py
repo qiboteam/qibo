@@ -192,12 +192,14 @@ class M(Gate):
         # collapse state
         return backend.collapse_density_matrix(state, qubits, shot, nqubits)
 
-    def apply_clifford(self, backend, state, nqubits, nshots):
+    def apply_clifford(self, backend, state, nqubits):
         self.result.backend = backend
+        if not self.collapse:
+            return state
 
         qubits = sorted(self.target_qubits)
         self.result.register_samples(
-            backend.sample_shots(state, qubits, nqubits, nshots, self.collapse), nshots
+            backend.sample_shots(state, qubits, nqubits, 1, self.collapse)
         )
         return state
 
