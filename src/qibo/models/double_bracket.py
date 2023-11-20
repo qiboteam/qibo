@@ -2,7 +2,6 @@ from copy import deepcopy
 from enum import Enum, auto
 from functools import partial
 
-import hyperopt
 import numpy as np
 
 from qibo.backends.numpy import NumpyBackend
@@ -120,8 +119,8 @@ class DoubleBracketFlow:
         step_min: float = 1e-5,
         step_max: float = 1,
         max_evals: int = 1000,
-        space: callable = hyperopt.hp.uniform,
-        optimizer: callable = hyperopt.tpe,
+        space: callable = None,
+        optimizer: callable = None,
         look_ahead: int = 1,
         verbose: bool = False,
     ):
@@ -140,6 +139,17 @@ class DoubleBracketFlow:
         Returns:
             (float): optimized best flow step.
         """
+        try:
+            import hyperopt
+        except:
+            raise_error(
+                ImportError, "hyperopt_step function requires hyperopt to be installed."
+            )
+
+        if space is None:
+            space = hyperopt.hp.uniform
+        if optimizer is None:
+            optimizer = hyperopt.tpe
 
         space = space("step", step_min, step_max)
         best = hyperopt.fmin(
