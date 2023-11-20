@@ -464,13 +464,16 @@ def vnCDR(
 
 
 def ibu(prob, mat, iters=10):
-    t = np.ones((len(prob),1))/len(prob)
+    t = np.ones((len(prob), 1)) / len(prob)
     for k in range(iters):
-        t = t*(np.transpose(mat)@(prob/(mat@t)))
+        t = t * (np.transpose(mat) @ (prob / (mat @ t)))
 
     return t
 
-def calibration_matrix(nqubits, qubit_map, inv=False, noise_model=None, nshots: int = 1000, backend=None):
+
+def calibration_matrix(
+    nqubits, qubit_map, inv=False, noise_model=None, nshots: int = 1000, backend=None
+):
     """Computes the calibration matrix for readout mitigation.
 
     Args:
@@ -493,6 +496,7 @@ def calibration_matrix(nqubits, qubit_map, inv=False, noise_model=None, nshots: 
 
     matrix = np.zeros((2**nqubits, 2**nqubits))
     from qibo.config import log
+
     for i in range(2**nqubits):
         state = format(i, f"0{nqubits}b")
 
@@ -502,7 +506,6 @@ def calibration_matrix(nqubits, qubit_map, inv=False, noise_model=None, nshots: 
                 circuit.add(gates.X(q))
         circuit.add(gates.M(*range(nqubits)))
 
-        
         if noise_model is not None and backend.name != "qibolab":
             circuit = noise_model.apply(circuit)
         circuit = transpile_circ(circuit, qubit_map, backend)
@@ -513,10 +516,9 @@ def calibration_matrix(nqubits, qubit_map, inv=False, noise_model=None, nshots: 
             column[int(key, 2)] = f
         matrix[:, i] = column
 
-    # iqm 
+    # iqm
 
-    #matrix[[0, 1], :] = matrix[[1, 0], :]
-
+    # matrix[[0, 1], :] = matrix[[1, 0], :]
 
     if inv == True:
         matrix = np.linalg.inv(matrix)
@@ -536,7 +538,8 @@ def apply_readout_mitigation(state, calibration_matrix, inv=False):
         :class:`qibo.states.CircuitResult`: the input state with the updated frequencies.
     """
     from qibo.config import log
-    freq = np.zeros(2**len(state.measurements))
+
+    freq = np.zeros(2 ** len(state.measurements))
     for k, v in state.frequencies().items():
         freq[int(k, 2)] = v
 
@@ -546,9 +549,9 @@ def apply_readout_mitigation(state, calibration_matrix, inv=False):
         for i, val in enumerate(calibration_matrix @ freq):
             state._frequencies[i] = float(val)
     else:
-        prob_mit = ibu(freq/np.sum(freq),calibration_matrix)
-        freq_mit = np.round(prob_mit*np.sum(freq),0)
-        freq_mit = (freq_mit/np.sum(freq_mit))*np.sum(freq)
+        prob_mit = ibu(freq / np.sum(freq), calibration_matrix)
+        freq_mit = np.round(prob_mit * np.sum(freq), 0)
+        freq_mit = (freq_mit / np.sum(freq_mit)) * np.sum(freq)
 
         for i, val in enumerate(freq_mit):
             state._frequencies[i] = float(freq_mit[i])
@@ -710,7 +713,7 @@ def escircuit(circuit, obs, fuse=True, backend=None):
         backend = GlobalBackend()
 
     sign = -1
-    #while sign == -1:
+    # while sign == -1:
     circ_cliff = sample_clifford_training_circuit(circuit, backend=backend)
     c_unitary = circ_cliff.unitary(backend=backend)
     nqubits = circ_cliff.nqubits
@@ -720,7 +723,7 @@ def escircuit(circuit, obs, fuse=True, backend=None):
     )
     obs_pauli_liouville = U_c2p @ obs_liouville
     index = np.where(abs(obs_pauli_liouville) >= 1e-5)[0][0]
-    sign = np.sign(obs_pauli_liouville[index]) 
+    sign = np.sign(obs_pauli_liouville[index])
 
     obs1 = list(product(["I", "X", "Y", "Z"], repeat=nqubits))[index]
 
@@ -770,7 +773,7 @@ def escircuit(circuit, obs, fuse=True, backend=None):
 def mit_obs(
     circuit,
     observable,
-    readout = {},
+    readout={},
     qubit_map=None,
     noise_model=None,
     nshots=int(1e4),
@@ -791,6 +794,7 @@ def mit_obs(
 
     data = {"noise-free": {"-1": [], "1": []}, "noisy": {"-1": [], "1": []}}
     from qibo.config import log
+
     a_list = {"-1": [], "1": []}
     for c in training_circs:
         circuit_result = c(nshots=nshots)
@@ -808,11 +812,8 @@ def mit_obs(
                 circuit_result, readout["calibration_matrix"], readout["inv"]
             )
 
-        log.info(c.draw())
-        exp_noisy =   observable.expectation_from_samples(circuit_result.frequencies()) #Add minus for iqm
-        # state = c_noisy().state()
-        # exp_noisy = obs.expectation(state)
-        log.info(str(exp)+' '+str(exp_noisy))
+        exp_noisy = observable.expectation_from_samples(circuit_result.frequencies())
+
         if exp > 0:
             data["noise-free"]["1"].append(exp)
             data["noisy"]["1"].append(exp_noisy)
@@ -837,13 +838,14 @@ def mit_obs(
     if noise_model is not None and backend.name != "qibolab":
         circuit = noise_model.apply(circuit)
     circuit = transpile_circ(circuit, qubit_map, backend)
-    log.info(circuit.draw())
     circuit_result = backend.execute_circuit(circuit, nshots=nshots)
     if "calibration_matrix" in readout.keys():
         circuit_result = apply_readout_mitigation(
             circuit_result, readout["calibration_matrix"], readout["inv"]
         )
-    exp_noisy =   observable.expectation_from_samples(circuit_result.frequencies()) # Add - for iqm
+    exp_noisy = observable.expectation_from_samples(
+        circuit_result.frequencies()
+    )  # Add - for iqm
     # exp_noisy = obs.expectation(c_noisy().state())
     exp_mit = (1 - a) * exp_noisy / ((1 - a) ** 2 + a_std**2)
     exp_mit_std = (
@@ -852,7 +854,6 @@ def mit_obs(
         * abs((1 - a) ** 2 - a_std**2)
         / ((1 - a) ** 2 + a_std**2) ** 2
     )
-    log.info(str(exp_mit)+' '+str(exp_noisy))
     if full_output:
         return exp_mit, exp_mit_std, a, a_std, a_list, data
 

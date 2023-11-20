@@ -36,45 +36,23 @@ class VQE:
 
     def minimize(
         self,
-        initial_state,
-        method="Powell",
-        jac=None,
-        hess=None,
-        hessp=None,
-        bounds=None,
-        constraints=(),
-        tol=None,
-        callback=None,
-        options=None,
-        compile=False,
-        processes=None,
+        initial_parameters,
+        optimizer=None,
+        optimizer_options={},
     ):
         """Search for parameters which minimizes the hamiltonian expectation.
 
         Args:
-            initial_state (array): a initial guess for the parameters of the
+            initial_parameters (array or list): a initial guess for the parameters of the
                 variational circuit.
-            method (str): the desired minimization method.
-                See :meth:`qibo.optimizers.optimize` for available optimization
-                methods.
-            jac (dict): Method for computing the gradient vector for scipy optimizers.
-            hess (dict): Method for computing the hessian matrix for scipy optimizers.
-            hessp (callable): Hessian of objective function times an arbitrary
-                vector for scipy optimizers.
-            bounds (sequence or Bounds): Bounds on variables for scipy optimizers.
-            constraints (dict): Constraints definition for scipy optimizers.
-            tol (float): Tolerance of termination for scipy optimizers.
-            callback (callable): Called after each iteration for scipy optimizers.
-            options (dict): a dictionary with options for the different optimizers.
-            compile (bool): whether the TensorFlow graph should be compiled.
-            processes (int): number of processes when using the paralle BFGS method.
+            optimizer (qibo.optimizers.Optimizer): Qibo optimizer which is used to
+                minimize the energy [default is `ScipyMinimizer(method="Powell")`].
+            optimizer_options (dict): extra options for the optimizers.
 
         Return:
-            The final expectation value.
-            The corresponding best parameters.
-            The optimization result object. For scipy methods it returns
-            the ``OptimizeResult``, for ``'cma'`` the ``CMAEvolutionStrategy.result``,
-            and for ``'sgd'`` the options used during the optimization.
+            output of `qibo.optimizers.Optimizer` classes: [best function value,
+                best set of trainable parameters, complete result object according
+                to specific optimizer configuration].
         """
 
         def _loss(params, circuit, hamiltonian):
@@ -83,38 +61,15 @@ class VQE:
             final_state = result.state()
             return hamiltonian.expectation(final_state)
 
-        if compile:
-            loss = self.hamiltonian.backend.compile(_loss)
-        else:
-            loss = _loss
-
-        if method == "cma":
-            # TODO: check if we can use this shortcut
-            # dtype = getattr(self.hamiltonian.backend.np, self.hamiltonian.backend._dtypes.get('DTYPE'))
-            dtype = self.hamiltonian.backend.np.float64
-            loss = lambda p, c, h: dtype(_loss(p, c, h))
-        elif method != "sgd":
-            loss = lambda p, c, h: self.hamiltonian.backend.to_numpy(_loss(p, c, h))
-
-        result, parameters, extra = self.optimizers.optimize(
-            loss,
-            initial_state,
+        opt = optimizer(
+            initial_parameters=initial_parameters,
+            loss=_loss,
             args=(self.circuit, self.hamiltonian),
-            method=method,
-            jac=jac,
-            hess=hess,
-            hessp=hessp,
-            bounds=bounds,
-            constraints=constraints,
-            tol=tol,
-            callback=callback,
-            options=options,
-            compile=compile,
-            processes=processes,
-            backend=self.hamiltonian.backend,
+            **optimizer_options,
         )
-        self.circuit.set_parameters(parameters)
-        return result, parameters, extra
+
+        best_f, best_p, results = opt.fit()
+        return best_f, best_p, results
 
 
 class AAVQE:
