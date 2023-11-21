@@ -13,27 +13,53 @@ class NativeGates(Flag):
     """Define native gates supported by the unroller.
     A native gate set should contain at least one two-qubit gate (CZ or iSWAP)
     and at least one single qubit gate (GPI2 or U3).
+    Gates I, Z, RZ and M are always included in the single qubit native gates set.
 
     Should have the same names with qibo gates.
     """
 
+    I = auto()
+    Z = auto()
+    RZ = auto()
+    M = auto()
     GPI2 = auto()
     U3 = auto()
     CZ = auto()
     iSWAP = auto()
 
+    # TODO: use GPI2 as default single qubit native gate
+    @classmethod
+    def default(cls):
+        """Return default native gates set."""
+        return cls.CZ | cls.U3 | cls.I | cls.Z | cls.RZ | cls.M
+
+    @classmethod
+    def from_gatelist(cls, gatelist: list):
+        """Create a NativeGates object containing all gates from a gatelist."""
+        natives = cls(0)
+        for gate in gatelist:
+            natives |= cls.from_gate(gate)
+        return natives
+
     @classmethod
     def from_gate(cls, gate: gates.Gate):
+        """Create a NativeGates object from a gate.
+        The gate can be either a class:`qibo.gates.Gate` or an instance of this class.
+        """
+        if isinstance(gate, gates.Gate):
+            return cls.from_gate(gate.__class__)
         try:
-            return getattr(cls, gate.__class__.__name__)
+            return getattr(cls, gate.__name__)
         except AttributeError:
             raise ValueError(f"Gate {gate} cannot be used as native.")
 
     def single_qubit_natives(self):
-        return (self.GPI2, self.U3)
+        """Return single qubit native gates in the native gates set."""
+        return self & (self.GPI2 | self.U3) | (self.I | self.Z | self.RZ | self.M)
 
     def two_qubit_natives(self):
-        return (self.CZ, self.iSWAP)
+        """Return two qubit native gates in the native gates set."""
+        return self & (self.CZ | self.iSWAP)
 
 
 class Placer(ABC):

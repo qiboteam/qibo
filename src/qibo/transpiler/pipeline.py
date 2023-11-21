@@ -3,12 +3,11 @@ from typing import Optional
 import networkx as nx
 import numpy as np
 
-from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.config import raise_error
 from qibo.models import Circuit
 from qibo.quantum_info.random_ensembles import random_statevector
-from qibo.transpiler.abstract import NativeType, Optimizer, Placer, Router, Unroller
+from qibo.transpiler.abstract import NativeGates, Optimizer, Placer, Router, Unroller
 from qibo.transpiler.exceptions import TranspilerPipelineError
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.placer import Trivial, assert_placement
@@ -16,7 +15,7 @@ from qibo.transpiler.router import ConnectivityError, assert_connectivity
 from qibo.transpiler.star_connectivity import StarConnectivity
 from qibo.transpiler.unroller import (
     DecompositionError,
-    NativeGates,
+    DefaultUnroller,
     assert_decomposition,
 )
 
@@ -98,8 +97,7 @@ def assert_transpiling(
     connectivity: nx.Graph,
     initial_layout: dict,
     final_layout: dict,
-    two_qubit_natives: NativeType = NativeType.CZ,
-    single_qubit_natives: tuple = (gates.I, gates.Z, gates.RZ, gates.U3),
+    native_gates: NativeGates = NativeGates.default(),
     check_circuit_equivalence=True,
 ):
     """Check that all transpiler passes have been executed correctly.
@@ -110,15 +108,13 @@ def assert_transpiling(
         connectivity (networkx.Graph): chip qubits connectivity.
         initial_layout (dict): initial physical-logical qubit mapping.
         final_layout (dict): final physical-logical qubit mapping.
-        two_qubit_natives (NativeType): two qubit native gates supported by the hardware.
-        single_qubit_natives (tuple): single qubit native gates supported by the hardware.
+        native_gates (NativeGates): native gates supported by the hardware.
         check_circuit_equivalence (Bool): use simulations to check if the transpiled circuit is the same as the original.
     """
     assert_connectivity(circuit=transpiled_circuit, connectivity=connectivity)
     assert_decomposition(
         circuit=transpiled_circuit,
-        two_qubit_natives=two_qubit_natives,
-        single_qubit_natives=single_qubit_natives,
+        native_gates=native_gates,
     )
     if original_circuit.nqubits != transpiled_circuit.nqubits:
         qubit_matcher = Preprocessing(connectivity=connectivity)
@@ -147,7 +143,7 @@ class Passes:
         self,
         passes: list = None,
         connectivity: nx.Graph = None,
-        native_gates: NativeType = NativeType.CZ,
+        native_gates: NativeGates = NativeGates.default(),
     ):
         self.native_gates = native_gates
         if passes is None:
@@ -171,7 +167,7 @@ class Passes:
         # default router pass
         default_passes.append(StarConnectivity())
         # default unroller pass
-        default_passes.append(NativeGates(two_qubit_natives=self.native_gates))
+        default_passes.append(DefaultUnroller(native_gates=self.native_gates))
         return default_passes
 
     def __call__(self, circuit):
@@ -211,11 +207,11 @@ class Passes:
 
         Args:
             circuit (qibo.models.Circuit): circuit to be checked.
-            native_gates (NativeType): two qubit native gates.
+            native_gates (NativeGates): two qubit native gates.
         """
         try:
             assert_connectivity(circuit=circuit, connectivity=self.connectivity)
-            assert_decomposition(circuit=circuit, two_qubit_natives=self.native_gates)
+            assert_decomposition(circuit=circuit, native_gates=self.native_gates)
             return True
         except ConnectivityError:
             return False

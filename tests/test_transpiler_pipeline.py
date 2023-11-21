@@ -6,7 +6,7 @@ import pytest
 
 from qibo import gates
 from qibo.models import Circuit
-from qibo.transpiler.abstract import NativeType
+from qibo.transpiler.abstract import NativeGates
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.pipeline import (
     Passes,
@@ -16,12 +16,11 @@ from qibo.transpiler.pipeline import (
 )
 from qibo.transpiler.placer import Random, ReverseTraversal, Trivial
 from qibo.transpiler.router import ShortestPaths
-from qibo.transpiler.unroller import NativeGates
+from qibo.transpiler.unroller import DefaultUnroller
 
 
 def generate_random_circuit(nqubits, ngates, seed=None):
     """Generate random circuits one-qubit rotations and CZ gates."""
-    pairs = list(itertools.combinations(range(nqubits), 2))
     if seed is not None:  # pragma: no cover
         np.random.seed(seed)
 
@@ -84,7 +83,7 @@ def test_pipeline_default(ngates):
         connectivity=star_connectivity(),
         initial_layout=initial_layout,
         final_layout=final_layout,
-        two_qubit_natives=NativeType.CZ,
+        native_gates=NativeGates.default(),
         check_circuit_equivalence=False,
     )
 
@@ -166,9 +165,11 @@ def test_custom_passes(circ):
     custom_passes.append(Preprocessing(connectivity=star_connectivity()))
     custom_passes.append(Random(connectivity=star_connectivity()))
     custom_passes.append(ShortestPaths(connectivity=star_connectivity()))
-    custom_passes.append(NativeGates(two_qubit_natives=NativeType.iSWAP))
+    custom_passes.append(DefaultUnroller(native_gates=NativeGates.default()))
     custom_pipeline = Passes(
-        custom_passes, connectivity=star_connectivity(), native_gates=NativeType.iSWAP
+        custom_passes,
+        connectivity=star_connectivity(),
+        native_gates=NativeGates.default(),
     )
     transpiled_circ, final_layout = custom_pipeline(circ)
     initial_layout = custom_pipeline.get_initial_layout()
@@ -178,7 +179,7 @@ def test_custom_passes(circ):
         connectivity=star_connectivity(),
         initial_layout=initial_layout,
         final_layout=final_layout,
-        two_qubit_natives=NativeType.iSWAP,
+        native_gates=NativeGates.default(),
     )
 
 
@@ -196,9 +197,11 @@ def test_custom_passes_reverse(circ):
         )
     )
     custom_passes.append(ShortestPaths(connectivity=star_connectivity()))
-    custom_passes.append(NativeGates(two_qubit_natives=NativeType.iSWAP))
+    custom_passes.append(DefaultUnroller(native_gates=NativeGates.default()))
     custom_pipeline = Passes(
-        custom_passes, connectivity=star_connectivity(), native_gates=NativeType.iSWAP
+        custom_passes,
+        connectivity=star_connectivity(),
+        native_gates=NativeGates.default(),
     )
     transpiled_circ, final_layout = custom_pipeline(circ)
     initial_layout = custom_pipeline.get_initial_layout()
@@ -208,7 +211,7 @@ def test_custom_passes_reverse(circ):
         connectivity=star_connectivity(),
         initial_layout=initial_layout,
         final_layout=final_layout,
-        two_qubit_natives=NativeType.iSWAP,
+        native_gates=NativeGates.default(),
     )
 
 
@@ -217,7 +220,9 @@ def test_custom_passes_multiple_placer():
     custom_passes.append(Random(connectivity=star_connectivity()))
     custom_passes.append(Trivial(connectivity=star_connectivity()))
     custom_pipeline = Passes(
-        custom_passes, connectivity=star_connectivity(), native_gates=NativeType.CZ
+        custom_passes,
+        connectivity=star_connectivity(),
+        native_gates=NativeGates.default(),
     )
     circ = generate_random_circuit(nqubits=5, ngates=20)
     with pytest.raises(TranspilerPipelineError):
@@ -228,7 +233,9 @@ def test_custom_passes_no_placer():
     custom_passes = []
     custom_passes.append(ShortestPaths(connectivity=star_connectivity()))
     custom_pipeline = Passes(
-        custom_passes, connectivity=star_connectivity(), native_gates=NativeType.CZ
+        custom_passes,
+        connectivity=star_connectivity(),
+        native_gates=NativeGates.default(),
     )
     circ = generate_random_circuit(nqubits=5, ngates=20)
     with pytest.raises(TranspilerPipelineError):

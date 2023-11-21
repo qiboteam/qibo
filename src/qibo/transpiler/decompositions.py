@@ -47,11 +47,11 @@ class GateDecompositions:
         ]
 
 
+# Decompose single qubit gates using GPI2 (more efficient on hardware)
 gpi2_dec = GateDecompositions()
-gpi2_dec.add(gates.H, [gates.U3(0, 7 * np.pi / 2, np.pi, 0)])
+gpi2_dec.add(gates.H, [gates.Z(0), gates.GPI2(0, np.pi / 2)])
 gpi2_dec.add(gates.X, [gates.U3(0, np.pi, 0, np.pi)])
 gpi2_dec.add(gates.Y, [gates.U3(0, np.pi, 0, 0)])
-# apply virtually by changing ``phase`` instead of using pulses
 gpi2_dec.add(gates.Z, [gates.Z(0)])
 gpi2_dec.add(gates.S, [gates.RZ(0, np.pi / 2)])
 gpi2_dec.add(gates.SDG, [gates.RZ(0, -np.pi / 2)])
@@ -61,11 +61,8 @@ gpi2_dec.add(
     gates.RX, lambda gate: [gates.U3(0, gate.parameters[0], -np.pi / 2, np.pi / 2)]
 )
 gpi2_dec.add(gates.RY, lambda gate: [gates.U3(0, gate.parameters[0], 0, 0)])
-# apply virtually by changing ``phase`` instead of using pulses
 gpi2_dec.add(gates.RZ, lambda gate: [gates.RZ(0, gate.parameters[0])])
-# apply virtually by changing ``phase`` instead of using pulses
 gpi2_dec.add(gates.GPI2, lambda gate: [gates.GPI2(0, gate.parameters[0])])
-# implemented as single RX90 pulse
 gpi2_dec.add(gates.U1, lambda gate: [gates.RZ(0, gate.parameters[0])])
 gpi2_dec.add(
     gates.U2,
@@ -86,12 +83,11 @@ gpi2_dec.add(
     lambda gate: [gates.U3(0, *u3_decomposition(gate.matrix(backend)))],
 )
 
-
+# Decompose single qubit gates using U3
 u3_dec = GateDecompositions()
 u3_dec.add(gates.H, [gates.U3(0, 7 * np.pi / 2, np.pi, 0)])
 u3_dec.add(gates.X, [gates.U3(0, np.pi, 0, np.pi)])
 u3_dec.add(gates.Y, [gates.U3(0, np.pi, 0, 0)])
-# apply virtually by changing ``phase`` instead of using pulses
 u3_dec.add(gates.Z, [gates.Z(0)])
 u3_dec.add(gates.S, [gates.RZ(0, np.pi / 2)])
 u3_dec.add(gates.SDG, [gates.RZ(0, -np.pi / 2)])
@@ -101,11 +97,9 @@ u3_dec.add(
     gates.RX, lambda gate: [gates.U3(0, gate.parameters[0], -np.pi / 2, np.pi / 2)]
 )
 u3_dec.add(gates.RY, lambda gate: [gates.U3(0, gate.parameters[0], 0, 0)])
-# apply virtually by changing ``phase`` instead of using pulses
 u3_dec.add(gates.RZ, lambda gate: [gates.RZ(0, gate.parameters[0])])
-# apply virtually by changing ``phase`` instead of using pulses
+# TODO: decompose using U3
 u3_dec.add(gates.GPI2, lambda gate: [gates.GPI2(0, gate.parameters[0])])
-# implemented as single RX90 pulse
 u3_dec.add(gates.U1, lambda gate: [gates.RZ(0, gate.parameters[0])])
 u3_dec.add(
     gates.U2,
