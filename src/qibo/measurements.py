@@ -107,6 +107,13 @@ class MeasurementResult:
         self.nshots += 1
         return shot
 
+    def add_shot_from_sample(self, sample):
+        if self._samples:
+            self._samples.append(sample)
+        else:
+            self._samples = [sample]
+        self.nshots += 1
+
     def has_samples(self):
         return self._samples is not None
 

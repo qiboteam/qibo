@@ -198,9 +198,8 @@ class M(Gate):
             return state
 
         qubits = sorted(self.target_qubits)
-        self.result.register_samples(
-            backend.sample_shots(state, qubits, nqubits, 1, self.collapse)
-        )
+        sample = backend.sample_shots(state, qubits, nqubits, 1, self.collapse)
+        self.result.add_shot_from_sample(sample)
         return state
 
     def to_json(self):

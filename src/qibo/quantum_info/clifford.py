@@ -44,8 +44,6 @@ class Clifford:
 
     def __post_init__(self):
         self.nqubits = int((self.tableau.shape[1] - 1) / 2)
-        if self.measurements is None:
-            self.measurements = [M(*range(self.nqubits))]
         if self.has_samples():
             self._samples = np.hstack([m.result.samples() for m in self.measurements])
 
@@ -119,6 +117,8 @@ class Clifford:
         return False
 
     def samples(self, binary: bool = True, registers: bool = False):
+        if not self.measurements:
+            raise_error(RuntimeError, "The circuit does not contain any measurement.")
         measured_qubits = self.measurement_gate.target_qubits
         if self._samples is None:
             if self.measurements[0].result.has_samples():

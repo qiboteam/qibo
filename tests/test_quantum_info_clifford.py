@@ -60,3 +60,23 @@ def test_clifford_get_destabilizers():
     ]
     destabilizers = obj.get_destabilizers()
     assert true_destabilizers == destabilizers
+
+
+@pytest.mark.parametrize("binary", [True, False])
+def test_clifford_samples(binary):
+    c = random_clifford(5)
+    c.add(gates.M(3, register_name="3"))
+    c.add(gates.M(0, 1, register_name="01"))
+    obj = Clifford.run(c, nshots=50)
+    samples = obj.samples(binary=binary, registers=True)
+    assert "01" in samples and "3" in samples
+    shapes = [(50, 2), (50, 1)] if binary else [(50,), (50,)]
+    assert samples["01"].shape == shapes[0] and samples["3"].shape == shapes[1]
+
+
+def test_clifford_samples_error():
+    c = random_clifford(1)
+    obj = Clifford.run(c, nshots=50)
+    with pytest.raises(RuntimeError) as excinfo:
+        Clifford.run(c).samples()
+        assert str(excinfo.value) == "The circuit does not contain any measurement."

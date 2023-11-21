@@ -497,8 +497,8 @@ class CliffordOperations:
     def set_scratch(tableau, val):
         tableau[-1, :] = val
 
-    @cache
     @staticmethod
+    @cache
     def exponent(x1, z1, x2, z2):
         if x1 == z1:
             if x1 == 0:
@@ -510,21 +510,23 @@ class CliffordOperations:
 
     def rowsum(self, tableau, h, i, nqubits, include_scratch: bool = False):
         exponents = []
-        new_tab = tableau.copy()
-        x, z = self.get_x(new_tab, nqubits, include_scratch), self.get_z(
-            new_tab, nqubits, include_scratch
+        x, z = self.get_x(tableau, nqubits, include_scratch), self.get_z(
+            tableau, nqubits, include_scratch
         )
         for j in range(nqubits):
             x1, x2 = x[[i, h], [j, j]]
             z1, z2 = z[[i, h], [j, j]]
             exponents.append(CliffordOperations.exponent(x1, z1, x2, z2))
-        if (2 * new_tab[h, -1] + 2 * new_tab[i, -1] + self.np.sum(exponents)) % 4 == 0:
-            new_tab[h, -1] = 0
-        else:  # could be good to check that the expression above is == 2 here...
-            new_tab[h, -1] = 1
-        new_tab[h, :nqubits] = x[i, :] ^ x[h, :]
-        new_tab[h, nqubits:-1] = z[i, :] ^ z[h, :]
-        return new_tab
+        r = (
+            0
+            if (2 * tableau[h, -1] + 2 * tableau[i, -1] + self.np.sum(exponents)) % 4
+            == 0
+            else 1
+        )
+        tableau[h, -1] = r
+        tableau[h, :nqubits] = x[i, :] ^ x[h, :]
+        tableau[h, nqubits:-1] = z[i, :] ^ z[h, :]
+        return tableau
 
 
 class CliffordBackend(NumpyBackend):
@@ -550,7 +552,6 @@ class CliffordBackend(NumpyBackend):
 
     def apply_gate_clifford(self, gate, tableau, nqubits, nshots):
         operation = gate.clifford_operation(self)
-
         kwargs = (
             {"theta": gate.init_kwargs["theta"]} if "theta" in gate.init_kwargs else {}
         )
@@ -574,7 +575,7 @@ class CliffordBackend(NumpyBackend):
 
             from qibo.quantum_info.clifford import Clifford
 
-            return Clifford(state, measurements=circuit.measurements)
+            return Clifford(state, measurements=circuit.measurements, nshots=nshots)
 
         except self.oom_error:
             raise_error(

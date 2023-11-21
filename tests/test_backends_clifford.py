@@ -119,26 +119,41 @@ def test_random_clifford_circuit(prob_qubits):
                 == f"Asking probabilities for qubits {prob_qubits}, but only qubits {MEASURED_QUBITS} were measured."
             )
     else:
-        print(f"Measured qubits: {MEASURED_QUBITS}")
-        print(f"Probs qubits: {prob_qubits}")
-        print(f"Numpy samples: {set(numpy_result.samples(False))}")
-        print(f"Clifford samples: {set(clifford_result.samples(False))}")
-        print(f"Numpy Frequencies: {numpy_result.frequencies()}")
-        print(f"Clifford Frequencies: {clifford_result.frequencies()}")
-        print(f"Numpy probs: {numpy_result.probabilities(MEASURED_QUBITS)}")
-        print(f"Clifford probs: {clifford_result.probabilities()}")
         numpy_bkd.assert_allclose(
             numpy_result.probabilities(prob_qubits),
             clifford_result.probabilities(prob_qubits),
             atol=1e-1,
         )
-        numpy_freq = numpy_result.frequencies()
-        clifford_freq = clifford_result.frequencies()
-        clifford_freq = {state: clifford_freq[state] for state in numpy_freq.keys()}
-        assert (
-            np.abs(
-                np.array(list(numpy_freq.values()))
-                - np.array(list(clifford_freq.values()))
-            ).sum()
-            < 200
-        )
+        for binary in (True, False):
+            numpy_freq = numpy_result.frequencies(binary)
+            clifford_freq = clifford_result.frequencies(binary)
+            clifford_freq = {state: clifford_freq[state] for state in numpy_freq.keys()}
+            assert (
+                np.abs(
+                    np.array(list(numpy_freq.values()))
+                    - np.array(list(clifford_freq.values()))
+                ).sum()
+                < 200
+            )
+
+
+def test_collapsing_measurements():
+    c = random_clifford(3, density_matrix=True)
+    gate_queue = random_clifford(3).queue
+    measured_qubits = np.random.choice(range(3), size=2, replace=False)
+    c_copy = c.copy()
+    c.add(gates.M(*measured_qubits))
+    c_copy.add(gates.M(*measured_qubits))
+    for g in gate_queue:
+        c.add(g)
+        c_copy.add(g)
+    c.add(gates.M(*range(3)))
+    c_copy.add(gates.M(*range(3)))
+    print(c.draw())
+    clifford_res = clifford_bkd.execute_circuit(c)
+    numpy_res = numpy_bkd.execute_circuit(c_copy)
+    print(clifford_res.probabilities())
+    print(numpy_res.probabilities())
+    numpy_bkd.assert_allclose(
+        clifford_res.probabilities(), numpy_res.probabilities(), atol=1e-3
+    )
