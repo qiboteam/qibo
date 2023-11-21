@@ -499,11 +499,6 @@ class CliffordOperations:
 
     @cache
     @staticmethod
-    def nqubits(shape):
-        return int((shape - 1) / 2)
-
-    @cache
-    @staticmethod
     def exponent(x1, z1, x2, z2):
         if x1 == z1:
             if x1 == 0:
