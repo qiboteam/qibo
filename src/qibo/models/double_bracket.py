@@ -1,4 +1,6 @@
+from copy import deepcopy
 from enum import Enum, auto
+from functools import partial
 
 import numpy as np
 
@@ -26,7 +28,8 @@ class DoubleBracketFlow:
     For more details, see https://arxiv.org/pdf/2206.11772.pdf
 
     Args:
-        hamiltonian (Hamiltonian): Starting Hamiltonian
+        hamiltonian (Hamiltonian): Starting Hamiltonian;
+        mode (FlowGeneratorType): type of generator of the evolution.
 
     Example:
         .. code-block:: python
@@ -43,11 +46,19 @@ class DoubleBracketFlow:
         dbf.h
     """
 
-    def __init__(self, hamiltonian: Hamiltonian):
-        # TODO: consider passing Mode here
-        self.h = self.h0 = hamiltonian
+    def __init__(
+        self,
+        hamiltonian: Hamiltonian,
+        mode: FlowGeneratorType = FlowGeneratorType.canonical,
+    ):
+        self.h = hamiltonian
+        self.h0 = deepcopy(self.h)
+        self.mode = mode
 
-    def __call__(self, step: float, mode: FlowGeneratorType, d: np.array = None):
+    def __call__(self, step: float, mode: FlowGeneratorType = None, d: np.array = None):
+        if mode is None:
+            mode = self.mode
+
         if mode is FlowGeneratorType.canonical:
             operator = self.backend.calculate_matrix_exp(
                 1.0j * step,
@@ -102,6 +113,76 @@ class DoubleBracketFlow:
     def backend(self):
         """Get Hamiltonian's backend."""
         return self.h0.backend
+
+    def hyperopt_step(
+        self,
+        step_min: float = 1e-5,
+        step_max: float = 1,
+        max_evals: int = 1000,
+        space: callable = None,
+        optimizer: callable = None,
+        look_ahead: int = 1,
+        verbose: bool = False,
+    ):
+        """
+        Optimize flow step.
+
+        Args:
+            step_min: lower bound of the search grid;
+            step_max: upper bound of the search grid;
+            max_evals: maximum number of iterations done by the hyperoptimizer;
+            space: see hyperopt.hp possibilities;
+            optimizer: see hyperopt algorithms;
+            look_ahead: number of flow steps to compute the loss function;
+            verbose: level of verbosity.
+
+        Returns:
+            (float): optimized best flow step.
+        """
+        try:
+            import hyperopt
+        except:
+            raise_error(
+                ImportError, "hyperopt_step function requires hyperopt to be installed."
+            )
+
+        if space is None:
+            space = hyperopt.hp.uniform
+        if optimizer is None:
+            optimizer = hyperopt.tpe
+
+        space = space("step", step_min, step_max)
+        best = hyperopt.fmin(
+            fn=partial(self.loss, look_ahead=look_ahead),
+            space=space,
+            algo=optimizer.suggest,
+            max_evals=max_evals,
+            verbose=verbose,
+        )
+
+        return best["step"]
+
+    def loss(self, step: float, look_ahead: int = 1):
+        """
+        Compute loss function distance between `look_ahead` steps.
+
+        Args:
+            step: flow step.
+            look_ahead: number of flow steps to compute the loss function;
+        """
+        # copy initial hamiltonian
+        h_copy = deepcopy(self.h)
+
+        for _ in range(look_ahead):
+            self.__call__(mode=self.mode, step=step)
+
+        # off_diagonal_norm's value after the steps
+        loss = self.off_diagonal_norm
+
+        # set back the initial configuration
+        self.h = h_copy
+
+        return loss
 
     def energy_fluctuation(self, state):
         """Evaluate energy fluctuations"""
