@@ -89,7 +89,7 @@ class Clifford:
         return self._construct_operators(generators, phases, return_array)
 
     def get_destabilizers(self, return_array=False):
-        generators = self.get_destabilizers_generators(return_array)
+        generators, phases = self.get_destabilizers_generators(return_array)
         return self._construct_operators(generators, phases, return_array)
 
     def state(self):
@@ -122,7 +122,7 @@ class Clifford:
         measured_qubits = self.measurement_gate.target_qubits
         if self._samples is None:
             if self.measurements[0].result.has_samples():
-                self._samples = np.concatenate(
+                samples = np.concatenate(
                     [gate.result.samples() for gate in self.measurements], axis=1
                 )
             else:
@@ -132,8 +132,8 @@ class Clifford:
             if self.measurement_gate.has_bitflip_noise():
                 p0, p1 = self.measurement_gate.bitflip_map
                 bitflip_probabilities = [
-                    [p0.get(q) for q in qubits],
-                    [p1.get(q) for q in qubits],
+                    [p0.get(q) for q in measured_qubits],
+                    [p1.get(q) for q in measured_qubits],
                 ]
                 samples = self._backend.apply_bitflips(samples, bitflip_probabilities)
             # register samples to individual gate ``MeasurementResult``
