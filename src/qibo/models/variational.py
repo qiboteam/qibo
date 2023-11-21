@@ -581,6 +581,26 @@ class QAOA:
             loss = lambda p, c, h, s: self.hamiltonian.backend.to_numpy(
                 _loss(p, c, h, s)
             )
+        import qibo
+
+        result, parameters, extra = qibo.optimizers_old.optimize(
+            loss,
+            initial_p,
+            args=(self, self.hamiltonian, initial_state),
+            method=method,
+            jac=jac,
+            hess=hess,
+            hessp=hessp,
+            bounds=bounds,
+            constraints=constraints,
+            tol=tol,
+            callback=callback,
+            options=options,
+            compile=compile,
+            processes=processes,
+            backend=self.backend,
+        )
+        print("basic ", method, result, parameters, extra)
 
         if method == "cma":
             from qibo.optimizers.heuristics import CMAES
@@ -625,16 +645,17 @@ class QAOA:
                 "constraints": constraints,
                 "tol": tol,
                 "callback": callback,
-                "options": options,
             }
             opt = ScipyMinimizer(
                 initial_p,
                 loss,
                 args=(self, self.hamiltonian, initial_state),
                 options=opt_options,
+                minimizer_kwargs=options,
             )
 
         result, parameters, extra = opt.fit()
+        print("new", result, parameters, extra)
 
         self.set_parameters(parameters)
         return result, parameters, extra

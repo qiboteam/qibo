@@ -5,7 +5,6 @@ from functions import compute_chsh, cost_function, set_parametrized_circuits
 
 from qibo import set_backend
 from qibo.optimizers.minimizers import ScipyMinimizer
-from qibo.optimizers_old import optimize
 
 
 def main(nshots, backend):

@@ -53,6 +53,10 @@ class ScipyMinimizer(Optimizer):
             f"Optimization is performed using the optimizer: {type(self).__name__}.{self.method}"
         )
 
+        print("scipy", self.loss, self.params, self.args, self.options)
+        import numpy as np
+
+        np.random.seed(42)
         r = minimize(
             self.loss,
             self.params,
