@@ -480,6 +480,7 @@ class Align(Gate):
         self.name = "align"
         self.delay = delay
         self.draw_label = f"A({delay})"
+        self.init_args = q
         self.init_kwargs = {"delay": delay}
         self.target_qubits = tuple(q)
 
@@ -1006,9 +1007,10 @@ class CZ(Gate):
     def decompose(self) -> List[Gate]:
         """Decomposition of :math:`\\text{CZ}` gate.
 
-        Decompose :math:`\\text{CZ}` gate into :class:`qibo.gates.H` in the target qubit,
-        followed by :class:`qibo.gates.CNOT`, followed by another :class:`qibo.gates.H`
-        in the target qubit"""
+        Decompose :math:`\\text{CZ}` gate into :class:`qibo.gates.H` in
+        the target qubit, followed by :class:`qibo.gates.CNOT`, followed
+        by another :class:`qibo.gates.H` in the target qubit
+        """
         q0, q1 = self.init_args
         return [H(q1), CNOT(q0, q1), H(q1)]
 
@@ -1038,7 +1040,6 @@ class CSX(Gate):
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
-        self.clifford = True
         self.unitary = True
 
     @property
@@ -1080,7 +1081,6 @@ class CSXDG(Gate):
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
-        self.clifford = True
         self.unitary = True
 
     @property
@@ -1117,7 +1117,7 @@ class _CRn_(ParametrizedGate):
         self.parameters = theta
         self.unitary = True
 
-        if isinstance(theta, (float, int)) and (theta % (np.pi / 2)).is_integer():
+        if isinstance(theta, (float, int)) and (theta % np.pi).is_integer():
             self.clifford = True
 
         self.init_args = [q0, q1]
@@ -1486,9 +1486,15 @@ class FSWAP(Gate):
     def qasm_label(self):
         return "fswap"
 
+    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
+        """"""
+        q0, q1 = self.target_qubits
+        return [X(q1)] + GIVENS(q0, q1, np.pi / 2).decompose() + [X(q0)]
+
 
 class fSim(ParametrizedGate):
-    """The fSim gate defined in `arXiv:2001.08343 <https://arxiv.org/abs/2001.08343>`_.
+    """The fSim gate defined in `arXiv:2001.08343
+    <https://arxiv.org/abs/2001.08343>`_.
 
     Corresponds to the following unitary matrix
 
@@ -1534,8 +1540,8 @@ class fSim(ParametrizedGate):
 
 
 class SYC(Gate):
-    """The Sycamore gate, defined in the Supplementary Information
-    of `Quantum supremacy using a programmable superconducting processor
+    """The Sycamore gate, defined in the Supplementary Information of `Quantum
+    supremacy using a programmable superconducting processor
     <https://www.nature.com/articles/s41586-019-1666-5>`_.
 
     Corresponding to the following unitary matrix
@@ -1789,7 +1795,8 @@ class RZX(_Rnn_):
 
 
 class RXXYY(_Rnn_):
-    """Parametric 2-qubit :math:`XX + YY` interaction, or rotation about :math:`XX + YY`-axis.
+    """Parametric 2-qubit :math:`XX + YY` interaction, or rotation about
+    :math:`XX + YY`-axis.
 
     Corresponds to the following unitary matrix
 
@@ -1819,8 +1826,9 @@ class RXXYY(_Rnn_):
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
         """Decomposition of :math:`\\text{R_{XX-YY}}` up to global phase.
 
-        This decomposition has a global phase difference with respect to the
-        original gate due to a phase difference in :math:`\\left(\\sqrt{X}\\right)^{\\dagger}`.
+        This decomposition has a global phase difference with respect to
+        the original gate due to a phase difference in
+        :math:`\\left(\\sqrt{X}\\right)^{\\dagger}`.
         """
         q0, q1 = self.target_qubits
         theta = self.init_kwargs["theta"]
@@ -1841,7 +1849,8 @@ class RXXYY(_Rnn_):
 
 
 class MS(ParametrizedGate):
-    """The Mølmer–Sørensen (MS) gate is a two-qubit gate native to trapped ions.
+    """The Mølmer–Sørensen (MS) gate is a two-qubit gate native to trapped
+    ions.
 
     Corresponds to the following unitary matrix
 
@@ -1941,9 +1950,8 @@ class GIVENS(ParametrizedGate):
         return self.__class__(*self.target_qubits, -self.parameters[0])
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
-        """Decomposition of Givens gate according to
-        `ArXiv:2106.13839 <https://arxiv.org/abs/2106.13839>`_.
-        """
+        """Decomposition of Givens gate according to `ArXiv:2106.13839
+        <https://arxiv.org/abs/2106.13839>`_."""
         q0, q1 = self.target_qubits
         theta = self.init_kwargs["theta"]
         return [
@@ -2001,9 +2009,8 @@ class RBS(ParametrizedGate):
         return self.__class__(*self.target_qubits, -self.parameters[0])
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
-        """Decomposition of RBS gate according to
-        `ArXiv:2109.09685 <https://arxiv.org/abs/2109.09685>`_.
-        """
+        """Decomposition of RBS gate according to `ArXiv:2109.09685
+        <https://arxiv.org/abs/2109.09685>`_."""
         q0, q1 = self.target_qubits
         theta = self.init_kwargs["theta"]
         return [
@@ -2047,9 +2054,18 @@ class ECR(Gate):
         self.unitary = True
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
-        """"""
+        """Decomposition of :math:`\\textup{ECR}` gate up to global phase.
+
+        A global phase difference exists between the definitions of
+        :math:`\\textup{ECR}` and this decomposition. More precisely,
+
+        .. math::
+            \\textup{ECR} = e^{i 7 \\pi / 4} \\, S(q_{0}) \\, \\sqrt{X}(q_{1}) \\,
+                \\textup{CNOT}(q_{0}, q_{1}) \\, X(q_{0})
+        """
+
         q0, q1 = self.target_qubits
-        return [RZX(q0, q1, np.pi / 4), X(q0), RZX(q0, q1, -np.pi / 4)]
+        return [S(q0), SX(q1), CNOT(q0, q1), X(q0)]
 
 
 class TOFFOLI(Gate):
@@ -2082,7 +2098,6 @@ class TOFFOLI(Gate):
         self.control_qubits = (q0, q1)
         self.target_qubits = (q2,)
         self.init_args = [q0, q1, q2]
-        self.clifford = True
         self.unitary = True
 
     @property

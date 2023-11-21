@@ -348,14 +348,14 @@ of the :class:`qibo.gates.M` gate. For example
 
     from qibo import Circuit, gates
 
-    c = Circuit(1)
+    c = Circuit(1, density_matrix=True)
     c.add(gates.H(0))
     output = c.add(gates.M(0, collapse=True))
     c.add(gates.H(0))
-    result = c()
+    result = c(nshots=1)
     print(result)
-    # prints [0.7071, 0.7071] if 0 is measured
-    # or [0.7071, -0.7071] if 1 is measured
+    # prints |+><+| if 0 is measured
+    # or |-><-| if 1 is measured
 .. testoutput::
     :hide:
 
@@ -379,7 +379,7 @@ a loop:
 
     from qibo import Circuit, gates
 
-    c = Circuit(1)
+    c = Circuit(1, density_matrix=True)
     c.add(gates.H(0))
     output = c.add(gates.M(0, collapse=True))
     c.add(gates.H(0))
@@ -425,7 +425,7 @@ any parametrized gate as follows:
     import numpy as np
     from qibo import Circuit, gates
 
-    c = Circuit(2)
+    c = Circuit(2, density_matrix=True)
     c.add(gates.H(0))
     output = c.add(gates.M(0, collapse=True))
     c.add(gates.RX(1, theta=np.pi * output.symbols[0] / 4))
@@ -447,7 +447,7 @@ If more than one qubits are used in a ``collapse=True`` measurement gate the
     import numpy as np
     from qibo import Circuit, gates
 
-    c = Circuit(3)
+    c = Circuit(3, density_matrix=True)
     c.add(gates.H(0))
     output = c.add(gates.M(0, 1, collapse=True))
     c.add(gates.RX(1, theta=np.pi * output.symbols[0] / 4))
@@ -600,7 +600,7 @@ Here is a simple example using a custom loss function:
     # custom loss function, computes fidelity
     def myloss(parameters, circuit, target):
         circuit.set_parameters(parameters)
-        final_state = circuit().state(numpy=True)
+        final_state = circuit().state()
         return 1 - np.abs(np.conj(target).dot(final_state))
 
     nqubits = 6
@@ -1036,7 +1036,7 @@ it is sufficient to pass a circuit which was initialized with ``density_matrix=T
 Measurement errors
 ^^^^^^^^^^^^^^^^^^
 
-:class:`qibo.states.CircuitResult` provides :meth:`qibo.states.CircuitResult.apply_bitflips`
+:class:`qibo.measurements.CircuitResult` provides :meth:`qibo.measurements.CircuitResult.apply_bitflips`
 which allows adding bit-flip errors to the sampled bit-strings without having to
 re-execute the simulation. For example:
 
@@ -1059,7 +1059,7 @@ re-execute the simulation. For example:
 The corresponding noisy samples and frequencies can then be obtained as described
 in the :ref:`How to perform measurements? <measurement-examples>` example.
 
-Note that :meth:`qibo.states.CircuitResult.apply_bitflips` modifies
+Note that :meth:`qibo.measurements.CircuitResult.apply_bitflips` modifies
 the measurement samples contained in the corresponding state and therefore the
 original noiseless measurement samples are no longer accessible. It is possible
 to keep the original samples by creating a copy of the states before applying
@@ -1111,7 +1111,7 @@ Moreover, it is possible to simulate asymmetric bit-flips using the ``p1``
 argument as ``result.apply_bitflips(p0=0.2, p1=0.1)``. In this case a
 probability of 0.2 will be used for 0->1 errors but 0.1 for 1->0 errors.
 Similarly to ``p0``, ``p1`` can be a single float number or a dictionary and
-can be used both in :meth:`qibo.states.CircuitResult.apply_bitflips`
+can be used both in :meth:`qibo.measurements.CircuitResult.apply_bitflips`
 and the measurement gate. If ``p1`` is not specified the value of ``p0`` will
 be used for both errors.
 
@@ -1162,13 +1162,13 @@ assuming we have a ``result`` object after running a circuit with a certain numb
 
 .. testcode::
 
-      noise= NoiseModel()
+      noise = NoiseModel()
       params = {"idle_qubits" : True}
       noise.composite(params)
 
       result =  noisy_circ(nshots=1000)
 
-      noise.noise_model.fit(result)
+      noise.noise_model.fit(c, result)
 
       print(noise.noise_model.params)
       print(noise.noise_model.hellinger)
@@ -1956,3 +1956,111 @@ This can also be invoked directly from the ``result`` object:
 
 The expectation from samples currently works only for Hamiltonians that are diagonal in
 the computational basis.
+
+
+.. _tutorials_transpiler:
+
+How to modify the transpiler?
+-----------------------------
+
+Logical quantum circuits for quantum algorithms are hardware agnostic. Usually an all-to-all qubit connectivity
+is assumed while most current hardware only allows the execution of two-qubit gates on a restricted subset of qubit
+pairs. Moreover, quantum devices are restricted to executing a subset of gates, referred to as native.
+This means that, in order to execute circuits on a real quantum chip, they must be transformed into an equivalent,
+hardware specific, circuit. The transformation of the circuit is carried out by the transpiler through the resolution
+of two key steps: connectivity matching and native gates decomposition.
+In order to execute a gate between two qubits that are not directly connected SWAP gates are required. This procedure is called routing.
+As on NISQ devices two-qubit gates are a large source of noise, this procedure generates an overall noisier circuit.
+Therefore, the goal of an efficient routing algorithm is to minimize the number of SWAP gates introduced.
+An important step to ease the connectivity problem, is finding anoptimal initial mapping between logical and physical qubits.
+This step is called placement.
+The native gates decomposition in the transpiling procedure is performed by the unroller. An optimal decomposition uses the least amount
+of two-qubit native gates. It is also possible to reduce the number of gates of the resulting circuit by exploiting
+commutation relations, KAK decomposition or machine learning techniques.
+Qibo implements a built-in transpiler with customizable options for each step. The main algorithms that can
+be used at each transpiler step are reported below with a short description.
+
+The initial placement can be found with one of the following procedures:
+- Trivial: logical-physical qubit mapping is an identity.
+- Custom: custom logical-physical qubit mapping.
+- Random greedy: the best mapping is found within a set of random layouts based on a greedy policy.
+- Subgraph isomorphism: the initial mapping is the one that guarantees the execution of most gates at
+the beginning of the circuit without introducing any SWAP.
+- Reverse traversal: this technique uses one or more reverse routing passes to find an optimal mapping by
+starting from a trivial layout.
+
+The routing problem can be solved with the following algorithms:
+- Shortest paths: when unconnected logical qubits have to interact, they are moved on the chip on
+the shortest path connecting them. When multiple shortest paths are present, the one that also matches
+the largest number of the following two-qubit gates is chosen.
+- Sabre: this heuristic routing technique uses a customizable cost function to add SWAP gates
+that reduce the distance between unconnected qubits involved in two-qubit gates.
+
+Qibolab unroller applies recursively a set of hard-coded gates decompositions in order to translate any gate into
+single and two-qubit native gates. Single qubit gates are translated into U3, RX, RZ, X and Z gates. It is possible to
+fuse multiple single qubit gates acting on the same qubit into a single U3 gate. For the two-qubit native gates it
+is possible to use CZ and/or iSWAP. When both CZ and iSWAP gates are available the chosen decomposition is the
+one that minimizes the use of two-qubit gates.
+
+Multiple transpilation steps can be implemented using the :class:`qibo.transpiler.pipeline.Pipeline`:
+
+.. testcode:: python
+
+    import networkx as nx
+
+    from qibo import gates
+    from qibo.models import Circuit
+    from qibo.transpiler.pipeline import Passes, assert_transpiling
+    from qibo.transpiler.abstract import NativeType
+    from qibo.transpiler.optimizer import Preprocessing
+    from qibo.transpiler.router import ShortestPaths
+    from qibo.transpiler.unroller import NativeGates
+    from qibo.transpiler.placer import Random
+
+    # Define connectivity as nx.Graph
+    def star_connectivity():
+        Q = [i for i in range(5)]
+        chip = nx.Graph()
+        chip.add_nodes_from(Q)
+        graph_list = [(Q[i], Q[2]) for i in range(5) if i != 2]
+        chip.add_edges_from(graph_list)
+        return chip
+
+    # Define the circuit
+    circuit = Circuit(2)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CZ(0, 1))
+
+    # Define custom passes as a list
+    custom_passes = []
+    # Preprocessing adds qubits in the original circuit to match the number of qubits in the chip
+    custom_passes.append(Preprocessing(connectivity=star_connectivity()))
+    # Placement step
+    custom_passes.append(Random(connectivity=star_connectivity()))
+    # Routing step
+    custom_passes.append(ShortestPaths(connectivity=star_connectivity()))
+    # Gate decomposition step
+    custom_passes.append(NativeGates(two_qubit_natives=NativeType.iSWAP))
+
+    # Define the general pipeline
+    custom_pipeline = Passes(custom_passes, connectivity=star_connectivity(), native_gates=NativeType.iSWAP)
+
+    # Call the transpiler pipeline on the circuit
+    transpiled_circ, final_layout = custom_pipeline(circuit)
+
+    # Optinally call assert_transpiling to check that the final circuit can be executed on hardware
+    # For this test it is necessary to get the initial layout
+    initial_layout = custom_pipeline.get_initial_layout()
+    assert_transpiling(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled_circ,
+        connectivity=star_connectivity(),
+        initial_layout=initial_layout,
+        final_layout=final_layout,
+        native_gates=NativeType.iSWAP
+    )
+
+In this case circuits will first be transpiled to respect the 5-qubit star connectivity, with qubit 2 as the middle qubit. This will potentially add some SWAP gates.
+Then all gates will be converted to native. The :class:`qibo.transpiler.unroller.NativeGates` transpiler used in this example assumes Z, RZ, GPI2 or U3 as
+the single-qubit native gates, and supports CZ and iSWAP as two-qubit natives. In this case we restricted the two-qubit gate set to CZ only.
+The final_layout contains the final logical-physical qubit mapping.
