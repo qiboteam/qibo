@@ -4,10 +4,8 @@ from functools import partial
 
 import numpy as np
 
-from qibo.backends.numpy import NumpyBackend
-
-from ..config import raise_error
-from ..hamiltonians import Hamiltonian
+from qibo.config import raise_error
+from qibo.hamiltonians import Hamiltonian
 
 
 class FlowGeneratorType(Enum):
