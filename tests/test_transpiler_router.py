@@ -351,4 +351,4 @@ def test_sabre_intermediate_measurements():
     initial_layout = {"q0": 0, "q1": 1, "q2": 2}
     routed_circ, final_layout = router(circuit=circ, initial_layout=initial_layout)
     circuit_result = routed_circ.execute(nshots=100)
-    assert routed_circ.queue[2].result is measurement.result
+    assert routed_circ.queue[3].result is measurement.result
