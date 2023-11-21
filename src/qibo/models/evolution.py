@@ -1,5 +1,5 @@
 """Models for time evolution of state vectors."""
-from qibo import optimizers, solvers
+from qibo import solvers
 from qibo.callbacks import Gap, Norm
 from qibo.config import log, raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
@@ -288,9 +288,30 @@ class AdiabaticEvolution(StateEvolution):
             )
 
         args = (self, self.hamiltonian.h1, self.opt_messages, self.opt_history)
-        result, parameters, extra = optimizers.optimize(
-            loss, initial_parameters, args=args, method=method, options=options
-        )
+
+        if method == "sgd":
+            from qibo.optimizers.gradient_based import TensorflowSGD
+
+            opt = TensorflowSGD(initial_parameters, loss, args=args, options=options)
+
+        elif method == "cma":
+            from qibo.optimizers.heuristics import CMAES
+
+            opt = CMAES(initial_parameters, loss, args=args, options=options)
+
+        else:
+            from qibo.optimizers.minimizers import ScipyMinimizer
+
+            opt = ScipyMinimizer(
+                initial_parameters,
+                loss,
+                args=args,
+                options={"method": method},
+                minimizer_kwargs=options,
+            )
+
+        result, parameters, extra = opt.fit()
+
         if isinstance(parameters, self.backend.tensor_types) and not len(
             parameters.shape
         ):  # pragma: no cover

@@ -4,7 +4,8 @@ import numpy as np
 from functions import compute_chsh, cost_function, set_parametrized_circuits
 
 from qibo import set_backend
-from qibo.optimizers import optimize
+from qibo.optimizers.minimizers import ScipyMinimizer
+from qibo.optimizers_old import optimize
 
 
 def main(nshots, backend):
@@ -18,9 +19,12 @@ def main(nshots, backend):
     set_backend(backend)
     initial_parameters = np.random.uniform(0, 2 * np.pi, 2)
     circuits = set_parametrized_circuits()
-    best, params, _ = optimize(
-        cost_function, initial_parameters, args=(circuits, nshots)
+
+    opt = ScipyMinimizer(
+        initial_parameters, loss=cost_function, args=(circuits, nshots)
     )
+    best, params, _ = opt.fit()
+
     print(f"Cost: {best}\n")
     print(f"Parameters: {params}\n")
     print(f"Angles for the RY gates: {(params*180/np.pi)%360} in degrees.\n")

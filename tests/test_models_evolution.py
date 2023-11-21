@@ -311,7 +311,7 @@ test_names = "method,options,messages,dense,filename"
 test_values = [
     ("BFGS", {"maxiter": 1}, True, True, "adiabatic_bfgs.out"),
     ("BFGS", {"maxiter": 1}, True, False, "trotter_adiabatic_bfgs.out"),
-    ("sgd", {"nepochs": 5}, False, True, None),
+    ("sgd", {}, False, True, None),
 ]
 
 

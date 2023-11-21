@@ -51,7 +51,6 @@ test_values = [
 @pytest.mark.parametrize(test_names, test_values)
 def test_vqc(backend, method, options, compile, filename):
     """Performs a variational circuit minimization test."""
-    from qibo.optimizers import optimize
 
     def myloss(parameters, circuit, target):
         circuit.set_parameters(parameters)
@@ -77,9 +76,13 @@ def test_vqc(backend, method, options, compile, filename):
     data = np.random.normal(0, 1, size=2**nqubits)
 
     # perform optimization
-    best, params, _ = optimize(
-        myloss, x0, args=(c, data), method=method, options=options, compile=compile
+    from qibo.optimizers.minimizers import ScipyMinimizer
+
+    opt = ScipyMinimizer(
+        x0, myloss, args=(c, data), options={"method": method}, minimizer_kwargs=options
     )
+    best, params, _ = opt.fit()
+
     if filename is not None:
         assert_regression_fixture(backend, params, filename)
 

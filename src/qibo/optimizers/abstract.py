@@ -9,6 +9,8 @@ def check_options(function, options):
     Check if given options dictionary is compatible with optimization
     method arguments.
     """
+
+    print(function.__code__.co_varnames)
     for arg in options:
         if arg not in function.__code__.co_varnames:
             raise_error(

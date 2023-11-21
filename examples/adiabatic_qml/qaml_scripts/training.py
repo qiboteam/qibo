@@ -3,6 +3,7 @@ import numpy as np
 from qaml_scripts.evolution import perform_adiabatic
 
 import qibo
+from qibo.optimizers.heuristics import CMAES
 
 
 def train_adiabatic_evolution(
@@ -114,9 +115,8 @@ def train_adiabatic_evolution(
         else:
             print("Reusing previous best parameters")
 
-        result = qibo.optimizers.optimize(
-            loss_evaluation, initial_p, method="cma", options=options
-        )
+        opt = CMAES(initial_p, loss=loss_evaluation, optimizer_kwargs=options)
+        result = opt.fit()
 
         return result, result[1]
 

@@ -1,3 +1,4 @@
+from qibo import optimizers_old
 from qibo.config import raise_error
 from qibo.models.evolution import StateEvolution
 
@@ -27,7 +28,7 @@ class VQE:
             vqe.minimize(initial_parameters)
     """
 
-    from qibo import optimizers
+    from qibo import optimizers_old
 
     def __init__(self, circuit, hamiltonian):
         """Initialize circuit ansatz and hamiltonian."""
@@ -96,23 +97,60 @@ class VQE:
         elif method != "sgd":
             loss = lambda p, c, h: self.hamiltonian.backend.to_numpy(_loss(p, c, h))
 
-        result, parameters, extra = self.optimizers.optimize(
-            loss,
-            initial_state,
-            args=(self.circuit, self.hamiltonian),
-            method=method,
-            jac=jac,
-            hess=hess,
-            hessp=hessp,
-            bounds=bounds,
-            constraints=constraints,
-            tol=tol,
-            callback=callback,
-            options=options,
-            compile=compile,
-            processes=processes,
-            backend=self.hamiltonian.backend,
-        )
+        if method == "cma":
+            from qibo.optimizers.heuristics import CMAES
+
+            opt = CMAES(
+                initial_state,
+                loss,
+                args=(self.circuit, self.hamiltonian),
+                optimizer_kwargs=options,
+            )
+
+        elif method == "sgd":
+            from qibo.optimizers.gradient_based import TensorflowSGD
+
+            opt = TensorflowSGD(
+                initial_state,
+                loss,
+                args=(self.circuit, self.hamiltonian),
+                options=options,
+            )
+
+        elif method == "parallel_L-BFGS-B":
+            from qibo.optimizers.minimizers import ParallelBFGS
+
+            opt = ParallelBFGS(
+                initial_state,
+                loss,
+                processes=processes,
+                args=(self.circuit, self.hamiltonian),
+                minimizer_kwargs=options,
+            )
+
+        else:
+            from qibo.optimizers.minimizers import ScipyMinimizer
+
+            opt_options = {
+                "method": method,
+                "jac": jac,
+                "hess": hess,
+                "hessp": hessp,
+                "bounds": bounds,
+                "constraints": constraints,
+                "tol": tol,
+                "callback": callback,
+                "options": options,
+            }
+            opt = ScipyMinimizer(
+                initial_state,
+                loss,
+                args=(self.circuit, self.hamiltonian),
+                options=opt_options,
+            )
+
+        result, parameters, extra = opt.fit()
+
         self.circuit.set_parameters(parameters)
         return result, parameters, extra
 
@@ -331,7 +369,7 @@ class QAOA:
             best_energy, final_parameters, extra = qaoa.minimize(initial_parameters, method="BFGS")
     """
 
-    from qibo import hamiltonians, optimizers
+    from qibo import hamiltonians
 
     def __init__(
         self, hamiltonian, mixer=None, solver="exp", callbacks=[], accelerators=None
@@ -544,23 +582,60 @@ class QAOA:
                 _loss(p, c, h, s)
             )
 
-        result, parameters, extra = self.optimizers.optimize(
-            loss,
-            initial_p,
-            args=(self, self.hamiltonian, initial_state),
-            method=method,
-            jac=jac,
-            hess=hess,
-            hessp=hessp,
-            bounds=bounds,
-            constraints=constraints,
-            tol=tol,
-            callback=callback,
-            options=options,
-            compile=compile,
-            processes=processes,
-            backend=self.backend,
-        )
+        if method == "cma":
+            from qibo.optimizers.heuristics import CMAES
+
+            opt = CMAES(
+                initial_p,
+                loss,
+                args=(self, self.hamiltonian, initial_state),
+                optimizer_kwargs=options,
+            )
+
+        elif method == "sgd":
+            from qibo.optimizers.gradient_based import TensorflowSGD
+
+            opt = TensorflowSGD(
+                initial_p,
+                loss,
+                args=(self, self.hamiltonian, initial_state),
+                options=options,
+            )
+
+        elif method == "parallel_L-BFGS-B":
+            from qibo.optimizers.minimizers import ParallelBFGS
+
+            opt = ParallelBFGS(
+                initial_p,
+                loss,
+                processes=processes,
+                args=(self, self.hamiltonian, initial_state),
+                minimizer_kwargs=options,
+            )
+
+        else:
+            from qibo.optimizers.minimizers import ScipyMinimizer
+
+            opt_options = {
+                "method": method,
+                "jac": jac,
+                "hess": hess,
+                "hessp": hessp,
+                "bounds": bounds,
+                "constraints": constraints,
+                "tol": tol,
+                "callback": callback,
+                "options": options,
+            }
+            opt = ScipyMinimizer(
+                initial_p,
+                loss,
+                args=(self, self.hamiltonian, initial_state),
+                options=opt_options,
+            )
+
+        result, parameters, extra = opt.fit()
+
         self.set_parameters(parameters)
         return result, parameters, extra
 
