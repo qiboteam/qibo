@@ -139,7 +139,7 @@ class DoubleBracketFlow:
         """
         try:
             import hyperopt
-        except:
+        except:  # pragma: no cover
             raise_error(
                 ImportError, "hyperopt_step function requires hyperopt to be installed."
             )
