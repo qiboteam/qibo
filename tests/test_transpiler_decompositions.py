@@ -52,7 +52,7 @@ def test_rotations_to_native(backend, gatename, natives):
 
 
 @pytest.mark.parametrize("natives", [NativeGates.U3, NativeGates.GPI2])
-@pytest.mark.parametrize("gatename", ["S", "SDG", "T", "TDG"])
+@pytest.mark.parametrize("gatename", ["S", "SDG", "T", "TDG", "SX"])
 def test_special_single_qubit_to_native(backend, gatename, natives):
     gate = getattr(gates, gatename)(0)
     assert_matrices_allclose(gate, natives=natives, backend=backend)
