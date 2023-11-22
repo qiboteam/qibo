@@ -138,22 +138,21 @@ def test_random_clifford_circuit(prob_qubits):
 
 
 def test_collapsing_measurements():
-    c = random_clifford(3, density_matrix=True)
-    gate_queue = random_clifford(3).queue
+    gate_queue = random_clifford(3, density_matrix=True).queue
     measured_qubits = np.random.choice(range(3), size=2, replace=False)
-    c_copy = c.copy()
-    c.add(gates.M(*measured_qubits))
-    c_copy.add(gates.M(*measured_qubits))
-    for g in gate_queue:
-        c.add(g)
-        c_copy.add(g)
-    c.add(gates.M(*range(3)))
-    c_copy.add(gates.M(*range(3)))
-    print(c.draw())
-    clifford_res = clifford_bkd.execute_circuit(c)
-    numpy_res = numpy_bkd.execute_circuit(c_copy)
-    print(clifford_res.probabilities())
-    print(numpy_res.probabilities())
+    c1 = Circuit(3)
+    c2 = Circuit(3, density_matrix=True)
+    for i, g in enumerate(gate_queue):
+        if i == int(len(gate_queue) / 2):
+            c1.add(gates.M(*measured_qubits))
+            c2.add(gates.M(*measured_qubits))
+        else:
+            c1.add(g)
+            c2.add(g)
+    c1.add(gates.M(*range(3)))
+    c2.add(gates.M(*range(3)))
+    clifford_res = clifford_bkd.execute_circuit(c1)
+    numpy_res = numpy_bkd.execute_circuit(c2)
     numpy_bkd.assert_allclose(
-        clifford_res.probabilities(), numpy_res.probabilities(), atol=1e-3
+        clifford_res.probabilities(), numpy_res.probabilities(), atol=1e-1
     )

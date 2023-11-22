@@ -316,7 +316,7 @@ class CliffordOperations:
         return self.X(new_tab, control_q, nqubits)
 
     def CY(self, tableau, control_q, target_q, nqubits):
-        """Decomposition --> H-CNOT-H-CNOT"""
+        """Decomposition --> S-CNOT-SDG"""
         new_tab = tableau.copy()
         r, x, z = (
             self.get_r(new_tab, nqubits),
@@ -451,7 +451,7 @@ class CliffordOperations:
             # determined outcome, state unchanged
             else:
                 CliffordOperations.set_scratch(state_copy, 0)
-                for i in x[:nqubits, q].nonzero()[0]:
+                for i in x[:nqubits, q].nonzero()[0]:  # try using functools reduce
                     state_copy = self.rowsum(
                         state_copy,
                         2 * nqubits,
@@ -562,6 +562,9 @@ class CliffordBackend(NumpyBackend):
             if not gate.clifford and not gate.__class__.__name__ == "M":
                 raise_error(RuntimeError, "Circuit contains non-Clifford gates.")
 
+        if circuit.repeated_execution and not nshots == 1:
+            return self.execute_circuit_repeated(circuit, initial_state, nshots)
+
         try:
             nqubits = circuit.nqubits
 
@@ -584,6 +587,28 @@ class CliffordBackend(NumpyBackend):
                 "Please switch the execution device to a "
                 "different one using ``qibo.set_device``.",
             )
+
+    def execute_circuit_repeated(self, circuit, initial_state=None, nshots=1000):
+        circuit_copy = circuit.copy()
+        samples = []
+        states = []
+        for i in range(nshots):
+            res = self.execute_circuit(circuit_copy, initial_state, nshots=1)
+            [m.result.reset() for m in circuit_copy.measurements]
+            states.append(res.state())
+            samples.append(res.samples())
+        samples = self.np.vstack(samples)
+
+        from qibo.quantum_info.clifford import Clifford
+
+        result = Clifford(
+            self.zero_state(circuit.nqubits), circuit_copy.measurements, nshots=nshots
+        )
+        result.tableau, result._samples = None, None
+        for m in result.measurements:
+            m.result.register_samples(samples[:, m.target_qubits], self)
+
+        return result
 
     def sample_shots(self, state, qubits, nqubits, nshots, collapse: bool = False):
         operation = CliffordOperations()

@@ -199,7 +199,7 @@ class M(Gate):
 
         qubits = sorted(self.target_qubits)
         sample = backend.sample_shots(state, qubits, nqubits, 1, self.collapse)
-        self.result.add_shot_from_sample(sample)
+        self.result.add_shot_from_sample(sample[0])
         return state
 
     def to_json(self):
