@@ -8,7 +8,7 @@ from qibo.result import CircuitResult
 
 
 class CliffordOperations:
-    """Operations performed by clifford gates on the stabilizers state tableau representation"""
+    """Operations performed by clifford gates on the stabilizers state tableau representation discussed in https://arxiv.org/abs/quant-ph/0406196."""
 
     def __init__(self):
         import numpy as np
@@ -193,7 +193,6 @@ class CliffordOperations:
             return self.I(tableau, q, nqubits)
         elif (theta / self.np.pi - 1) % 2 == 0:
             return self.Y(tableau, q, nqubits)
-        # not working
         elif (theta / (self.np.pi / 2) - 1) % 4 == 0:
             """Decomposition --> H-S-S"""
             new_tab = tableau.copy()
@@ -451,7 +450,7 @@ class CliffordOperations:
             # determined outcome, state unchanged
             else:
                 CliffordOperations.set_scratch(state_copy, 0)
-                for i in x[:nqubits, q].nonzero()[0]:  # try using functools reduce
+                for i in x[:nqubits, q].nonzero()[0]:
                     state_copy = self.rowsum(
                         state_copy,
                         2 * nqubits,
@@ -540,6 +539,14 @@ class CliffordBackend(NumpyBackend):
         self.np = np
 
     def zero_state(self, nqubits):
+        """Construct the zero state |00...00>.
+
+        Args:
+            nqubits (int): Number of qubits.
+
+        Returns:
+            tableau (np.ndarray): The tableau for the zero state.
+        """
         I = self.np.eye(nqubits)
         tableau = self.np.zeros((2 * nqubits + 1, 2 * nqubits + 1), dtype=bool)
         tableau[:nqubits, :nqubits] = I.copy()
@@ -547,6 +554,14 @@ class CliffordBackend(NumpyBackend):
         return tableau
 
     def clifford_operation(self, gate):
+        """Retrieves the tableau operation corresponding to a gate.
+
+        Args:
+            gate (qibo.gates.abstract.gate): Input gate.
+
+        Returns:
+            operation (method): The corrsponding Clifford operation.
+        """
         name = gate.__class__.__name__
         return getattr(self.clifford_operations, name)
 
@@ -558,6 +573,16 @@ class CliffordBackend(NumpyBackend):
         return operation(tableau, *gate.init_args, nqubits, **kwargs)
 
     def execute_circuit(self, circuit, initial_state=None, nshots=1000):
+        """Execute a clifford circuits.
+
+        Args:
+            circuit (qibo.models.Circuit): Input circuit.
+            initial_state (np.ndarray): The tableau of the initial state.
+            nshots (int): Number of shots.
+
+        Returns:
+            result (qibo.quantum_info.Clifford): The result object giving access to the final results.
+        """
         for gate in circuit.queue:
             if not gate.clifford and not gate.__class__.__name__ == "M":
                 raise_error(RuntimeError, "Circuit contains non-Clifford gates.")
@@ -589,6 +614,16 @@ class CliffordBackend(NumpyBackend):
             )
 
     def execute_circuit_repeated(self, circuit, initial_state=None, nshots=1000):
+        """Execute a clifford circuits ``nshots`` times. This is used for all the simulations that involve repeated execution, for instance when collapsing measurement or noise channels are present.
+
+        Args:
+            circuit (qibo.model.Circuit): The input Circuit.
+            initial_state (np.ndarray): The tableau of the initial state.
+            nshots (int): Number of times to repeat the execution.
+
+        Returns:
+            result (qibo.quantum_info.Clifford): The result object giving access to the final results.
+        """
         circuit_copy = circuit.copy()
         samples = []
         states = []
@@ -611,6 +646,18 @@ class CliffordBackend(NumpyBackend):
         return result
 
     def sample_shots(self, state, qubits, nqubits, nshots, collapse: bool = False):
+        """Sample shots by measuring the selected qubits from the provided state tableu.
+
+        Args:
+            state (np.ndarray): The tableu from which to sample shots from.
+            qubits: (tuple): The qubits to measure.
+            nqubits (int): The total number of qubits of the state.
+            nshots (int): Number of shots to sample.
+            collapse (bool): If ``True`` the input state is going to be collapsed with the last shot.
+
+        Returns:
+            samples (np.ndarray): The samples shots.
+        """
         operation = CliffordOperations()
         if collapse:
             samples = [operation.M(state, qubits, nqubits) for _ in range(nshots - 1)]
@@ -620,6 +667,15 @@ class CliffordBackend(NumpyBackend):
         return self.np.array(samples).reshape(nshots, len(qubits))
 
     def tableau_to_generators(self, tableau, return_array=False):
+        """Extract both the stabilizers and de-stabilizers generators from the input tableau.
+
+        Args:
+            tableau (np.ndarray): The input tableau.
+            return_array (bool): If ``True`` returns the generators as numpy arrays, otherwise they are returned as strings.
+
+        Returns:
+            (generators, phases) (list, list): Lists of the extracted generators and their corresponding phases.
+        """
         bits_to_gate = {"00": "I", "01": "X", "10": "Z", "11": "Y"}
 
         nqubits = int((tableau.shape[1] - 1) / 2)
