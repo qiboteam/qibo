@@ -12,6 +12,14 @@ from qibo.measurements import frequencies_to_binary
 
 
 def _string_product(operators):
+    """Calculates the tensor product of a list of operators represented as strings.
+
+    Args:
+        operators (list): The list of operators.
+
+    Returns:
+        product (str): The string representing the tensor product of the operators.
+    """
     # calculate global sign
     phases = np.array(["-" in op for op in operators], dtype=bool)
     # remove the - signs
@@ -27,12 +35,29 @@ def _string_product(operators):
 
 
 def _list_of_matrices_product(operators):
+    """Calculates the tensor product of a list of operators as np.ndarrays.
+
+    Args:
+        operators (list): The list of operators.
+
+    Returns:
+        product (np.ndarray): The tensor product of the operators.
+    """
     return reduce(np.matmul, operators)  # faster
     # return np.einsum(*[d for i, op in enumerate(operators) for d in (op, (i, i + 1))])
 
 
 @dataclass
 class Clifford:
+    """The object storing the results of a circuit execution with the ``qibo.backends.CliffordBackend``.
+
+    Args:
+        tableau (np.ndarray): The tableu of the state.
+        measurements (list): A list of measurements gates ``qibo.gates.M``.
+        nqubits (int): The number of qubits of the state.
+        nshots (int): The number of shots used for sampling the measurements.
+    """
+
     tableau: np.ndarray
     measurements: list = None
     nqubits: int = None
@@ -49,9 +74,20 @@ class Clifford:
     def run(
         cls, circuit: Circuit, initial_state: np.ndarray = None, nshots: int = 1000
     ):
+        """Allows to create a ``Clifford`` object by executing the input circuit.
+
+        Args:
+            circuit (qibo.models.Circuit): The clifford circuit to run.
+            initial_state (np.ndarray): The initial tableu state.
+            nshots (int): The number of shots to perform.
+
+        Returns:
+            result (qibo.quantum_info.Clifford): The object storing the result of the circuit execution.
+        """
         return cls._backend.execute_circuit(circuit, initial_state, nshots)
 
     def get_stabilizers_generators(self, return_array=False):
+        """ """
         generators, phases = self._backend.tableau_to_generators(
             self.tableau, return_array
         )

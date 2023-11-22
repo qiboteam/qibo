@@ -442,7 +442,7 @@ class CliffordOperations:
                     if i != p:
                         state_copy = self.rowsum(state_copy, i.item(), p, nqubits)
                 state_copy[p - nqubits, :] = state_copy[p, :]
-                outcome = int(self.np.random.randint(2, size=1))
+                outcome = self.np.random.randint(2, size=1).item()
                 state_copy[p, :] = 0
                 state_copy[p, -1] = outcome
                 state_copy[p, nqubits + q] = 1
