@@ -124,7 +124,8 @@ class NumpyMatrices:
     @cached_property
     def CY(self):
         return self.np.array(
-            [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, -1j], [0, 0, 1j, 0]], dtype=self.dtype
+            [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, -1j], [0, 0, 1j, 0]],
+            dtype=self.dtype,
         )
 
     @cached_property
