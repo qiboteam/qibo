@@ -1,14 +1,10 @@
 import collections
-import json
 from typing import List, Sequence, Tuple
 
 import sympy
 
 from qibo.backends import GlobalBackend
 from qibo.config import raise_error
-
-REQUIRED_FIELDS = ["name", "init_kwargs", "_target_qubits", "_control_qubits"]
-REQUIRED_FIELDS_INIT_KWARGS = ["theta", "phi", "lam"]
 
 
 class Gate:
@@ -53,24 +49,6 @@ class Gate:
         # for distributed circuits
         self.device_gates = set()
         self.original_gate = None
-
-    def to_json(self):
-        encoded = self.__dict__
-
-        encoded_simple = {
-            key: value for key, value in encoded.items() if key in REQUIRED_FIELDS
-        }
-
-        encoded_simple["init_kwargs"] = {
-            key: value
-            for key, value in encoded_simple["init_kwargs"].items()
-            if key in REQUIRED_FIELDS_INIT_KWARGS
-        }
-
-        for value in encoded_simple:
-            if isinstance(encoded[value], set):
-                encoded_simple[value] = list(encoded_simple[value])
-        return json.dumps(encoded_simple)
 
     @property
     def target_qubits(self) -> Tuple[int]:
@@ -324,6 +302,17 @@ class Gate:
         raise_error(
             NotImplementedError,
             f"Generator eigenvalue is not implemented for {self.__class__.__name__}",
+        )
+
+    def is_clifford(self) -> bool:
+        """Check if the gate is a Clifford gate."""
+        return False
+
+    def decompose_into_clifford(self) -> List["Gate"]:
+        """Decompose a gate into a sequence of Clifford gates."""
+        raise_error(
+            NotImplementedError,
+            f"Decomposition into Clifford gates is not implemented for {self.__class__.__name__}",
         )
 
     def basis_rotation(self):

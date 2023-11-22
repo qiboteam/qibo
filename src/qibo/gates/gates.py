@@ -36,6 +36,14 @@ class H(Gate):
     def qasm_label(self):
         return "h"
 
+    def decompose_into_clifford(self):
+        clifford_queue = [
+            RZ(q=self.qubits[0], theta=np.pi / 2, trainable=False),
+            RX(q=self.qubits[0], theta=np.pi / 2, trainable=False),
+            RZ(q=self.qubits[0], theta=np.pi / 2, trainable=False),
+        ]
+        return clifford_queue
+
 
 class X(Gate):
     """The Pauli-:math:`X` gate.
@@ -148,6 +156,9 @@ class X(Gate):
 
     def basis_rotation(self):
         return H(self.target_qubits[0])
+
+    def is_clifford(self):
+        return True
 
 
 class Y(Gate):
@@ -498,14 +509,14 @@ class _Rn_(ParametrizedGate):
         self.target_qubits = (q,)
         self.unitary = True
 
-        self.initparams = theta
-        if isinstance(theta, Parameter):
-            theta = theta()
-
         if isinstance(theta, (float, int)) and (theta % (np.pi / 2)).is_integer():
             self.clifford = True
 
-        self.parameters = theta
+        self.initparams = theta
+        if isinstance(theta, Parameter):
+            self.parameters = theta()
+        else:
+            self.parameters = theta
         self.init_args = [q]
         self.init_kwargs = {"theta": theta, "trainable": trainable}
 
@@ -561,6 +572,22 @@ class RX(_Rn_):
     def generator_eigenvalue(self):
         return 0.5
 
+    def is_clifford(self):
+        if np.abs(self.parameters) == np.pi / 2:
+            clifford_condition = True
+        else:
+            clifford_condition = False
+        return clifford_condition
+
+    def decompose_into_clifford(self):
+        clifford_queue = [
+            RZ(q=self.qubits[0], theta=np.pi / 2, trainable=False),
+            RX(q=self.qubits[0], theta=-np.pi / 2, trainable=False),
+            RZ(q=self.qubits[0], theta=self.parameters),
+            RX(q=self.qubits[0], theta=np.pi / 2, trainable=False),
+        ]
+        return clifford_queue
+
 
 class RY(_Rn_):
     """Rotation around the Y-axis of the Bloch sphere.
@@ -596,6 +623,16 @@ class RY(_Rn_):
     def generator_eigenvalue(self):
         return 0.5
 
+    def decompose_into_clifford(self):
+        clifford_queue = [
+            RX(q=self.qubits[0], theta=np.pi / 2, trainable=False),
+            RZ(q=self.qubits[0], theta=self.parameters[0]),
+            RZ(q=self.qubits[0], theta=np.pi, trainable=False),
+            RX(q=self.qubits[0], theta=np.pi / 2, trainable=False),
+            RZ(q=self.qubits[0], theta=np.pi, trainable=False),
+        ]
+        return clifford_queue
+
 
 class RZ(_Rn_):
     """Rotation around the Z-axis of the Bloch sphere.
@@ -628,6 +665,9 @@ class RZ(_Rn_):
 
     def generator_eigenvalue(self):
         return 0.5
+
+    def is_clifford(self):
+        return True
 
 
 class GPI(ParametrizedGate):
@@ -700,6 +740,65 @@ class GPI2(ParametrizedGate):
     def _dagger(self) -> "Gate":
         """"""
         return self.__class__(self.target_qubits[0], self.parameters[0] + math.pi)
+
+
+class CrossRes_Variable(ParametrizedGate):
+    """Variable part of the Cross-Resonance gate.
+
+    Args:
+        q (int): qubit index on which the gate acts
+        sign (int): sign multiplier for forward and backward differencing
+        trainable (bool): flag, if set the gate parameters are trainable
+    """
+
+    def __init__(self, q, sign, trainable=True):
+        super().__init__(trainable)
+        self.name = "cross_variable"
+        self.draw_label = "crv"
+        self.target_qubits = (q,)
+
+        self.parameter_names = "sign"
+        self.parameters = sign
+        self.nparams = 1
+
+        self.init_args = [q]
+        self.init_kwargs = {"sign": sign, "trainable": trainable}
+
+
+class RXRY(ParametrizedGate):
+    r"""Single gate RX=RY rotation of type:
+
+    \exp^{i(30 X + \phi Y)}
+
+    """
+
+    def __init__(self, q, phi, s=1.0, trainable=True):
+        super().__init__(trainable)
+        self.name = "rxry"
+        self.draw_label = "rxry"
+        self.target_qubits = (q,)
+
+        self.parameter_names = ["phi", "s"]
+        self.parameters = phi, s
+        self.nparams = 2
+
+        self.init_args = [q]
+        self.init_kwargs = {"phi": phi, "s": s, "trainable": trainable}
+
+
+class RXRY_Variable(ParametrizedGate):
+    def __init__(self, q, phi, trainable=True):
+        super().__init__(trainable)
+        self.name = "rxry_variable"
+        self.draw_label = "rxryv"
+        self.target_qubits = (q,)
+
+        self.parameter_names = "phi"
+        self.parameters = phi
+        self.nparams = 1
+
+        self.init_args = [q]
+        self.init_kwargs = {"phi": phi, "trainable": trainable}
 
 
 class _Un_(ParametrizedGate):
@@ -901,6 +1000,9 @@ class CNOT(Gate):
         q0, q1 = self.control_qubits[0], self.target_qubits[0]
         return [self.__class__(q0, q1)]
 
+    def is_clifford(self):
+        return True
+
 
 class CZ(Gate):
     """The Controlled-Phase gate.
@@ -1036,7 +1138,11 @@ class _CRn_(ParametrizedGate):
         self.name = None
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
-        self.parameters = theta
+        self.initparams = theta
+        if isinstance(theta, Parameter):
+            self.parameters = theta()
+        else:
+            self.parameters = theta
         self.unitary = True
 
         if isinstance(theta, (float, int)) and (theta % (np.pi / 2)).is_integer():
@@ -1173,6 +1279,41 @@ class _CUn_(ParametrizedGate):
         self.init_kwargs = {"trainable": trainable}
 
 
+class CrossRes(ParametrizedGate):
+    """Cross-Resonance gate of type:
+
+    \\exp^{-i(\theta_1 X \\otimes \\mathbb{I} + \theta_2 Z \\otimes X + \theta_2 \\mathbb{I} \\otimes X)}
+
+    Args:
+        q0 (int): control qubit index
+        q1 (int): target qubit index
+        s (float): stochastic paramter for stochastic parameter shift
+        theta1 (float): first parameter
+        theta2 (float): second parameter
+        theta3 (float): third parameter
+        trainable (bool): flag, if set the gate parameters are trainable
+    """
+
+    def __init__(self, q0, q1, s, theta1, theta2, theta3, trainable=True):
+        super().__init__(trainable)
+        self.name = "crossres"
+        self.draw_label = "cr"
+        self.target_qubits = (q0, q1)
+
+        self.parameter_names = ["s", "theta1", "theta2", "theta3"]
+        self.parameters = s, theta1, theta2, theta3
+        self.nparams = 4
+
+        self.init_args = [q0, q1]
+        self.init_kwargs = {
+            "s": s,
+            "theta1": theta1,
+            "theta2": theta2,
+            "theta3": theta3,
+            "trainable": trainable,
+        }
+
+
 class CU1(_CUn_):
     """Controlled first general unitary gate.
 
@@ -1202,7 +1343,11 @@ class CU1(_CUn_):
         self.name = "cu1"
         self.draw_label = "U1"
         self.nparams = 1
-        self.parameters = theta
+        self.initparams = theta
+        if isinstance(theta, Parameter):
+            self.parameters = theta()
+        else:
+            self.parameters = theta
         self.init_kwargs = {"theta": theta, "trainable": trainable}
 
     @property

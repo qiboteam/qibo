@@ -1,5 +1,8 @@
 from functools import cached_property
 
+import numpy as np
+import scipy
+
 from qibo.config import raise_error
 
 
@@ -86,6 +89,50 @@ class NumpyMatrices:
         return self.np.array(
             [[1, -1.0j * self.np.conj(phase)], [-1.0j * phase, 1]], dtype=self.dtype
         ) / self.np.sqrt(2)
+
+    def RXRY_Variable(self, phi):
+        """Developed by Michael Tsesmelis (ACSE-mct22)"""
+
+        Y = np.array([[0, -1j], [1j, 0]])
+
+        return scipy.linalg.expm(1j * phi * Y)
+
+    def RXRY(self, phi, s):
+        """Developed by Michael Tsesmelis (ACSE-mct22)"""
+
+        X = np.array([[0, 1], [1, 0]])
+        Y = np.array([[0, -1j], [1j, 0.0]])
+        matrix = scipy.linalg.expm(-1j * s * (0.3 * X - phi * Y))
+
+        return matrix
+
+    def CrossRes_Variable(self, sign):
+        """Developed by Michael Tsesmelis (ACSE-mct22)"""
+
+        X = np.array([[0, 1], [1, 0]])
+
+        return scipy.linalg.expm(-1j * sign * np.pi / 4 * X)
+
+    def generate_crossres(self, theta1, theta2, theta3):
+        """Developed by Michael Tsesmelis (ACSE-mct22)"""
+
+        I = np.eye(2)
+        X = np.array([[0, 1], [1, 0]])
+        Z = np.array([[1, 0], [0, -1]])
+
+        G = (
+            theta1.item() * np.kron(X, I)
+            - theta2 * np.kron(Z, X)
+            + theta3 * np.kron(I, X)
+        )
+
+        return G
+
+    def CrossRes(self, s, theta1, theta2, theta3):
+        """Developed by Michael Tsesmelis (ACSE-mct22)"""
+
+        G = self.generate_crossres(theta1, theta2, theta3)
+        return scipy.linalg.expm(-1j * s * G)
 
     def U1(self, theta):
         phase = self.np.exp(1j * theta)
