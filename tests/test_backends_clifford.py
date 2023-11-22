@@ -151,8 +151,37 @@ def test_collapsing_measurements():
             c2.add(g)
     c1.add(gates.M(*range(3)))
     c2.add(gates.M(*range(3)))
-    clifford_res = clifford_bkd.execute_circuit(c1)
-    numpy_res = numpy_bkd.execute_circuit(c2)
+    clifford_res = clifford_bkd.execute_circuit(c1, nshots=10000)
+    numpy_res = numpy_bkd.execute_circuit(c2, nshots=10000)
     numpy_bkd.assert_allclose(
-        clifford_res.probabilities(), numpy_res.probabilities(), atol=1e-1
+        clifford_res.probabilities(), numpy_res.probabilities(), atol=1e-2
     )
+
+
+def test_non_clifford_error():
+    c = Circuit(1)
+    c.add(gates.T(0))
+    with pytest.raises(RuntimeError) as excinfo:
+        clifford_bkd.execute_circuit(c)
+        assert str(excinfo.value) == "Circuit contains non-Clifford gates."
+
+
+def test_initial_state():
+    tmp = clifford_bkd.execute_circuit(random_clifford(3))
+    initial_tableau = tmp.tableau
+    initial_state = tmp.state()
+    c = random_clifford(3, density_matrix=True)
+    numpy_state = numpy_bkd.execute_circuit(c, initial_state=initial_state).state()
+    clifford_state = clifford_bkd.execute_circuit(
+        c, initial_state=initial_tableau
+    ).state()
+    numpy_bkd.assert_allclose(numpy_state, clifford_state)
+
+
+def test_bitflip_noise():
+    c = random_clifford(5)
+    qubits = np.random.choice(range(3), size=2, replace=False)
+    c.add(gates.M(*qubits, p0=0.5, p1=0.5))
+    numpy_probs = numpy_bkd.execute_circuit(c).probabilities(qubits)
+    clifford_probs = clifford_bkd.execute_circuit(c, nshots=10000).probabilities()
+    numpy_bkd.assert_allclose(numpy_probs, clifford_probs, atol=1e-2)

@@ -347,15 +347,6 @@ class CliffordOperations:
         ).T
         return new_tab
 
-    # this is not actually Clifford...
-    def RZX(self, tableau, control_q, target_q, nqubits, theta):
-        """Decomposition --> H-CNOT-RZ-CNOT-H"""
-        new_tab = self.H(tableau, target_q, nqubits)
-        new_tab = self.CNOT(new_tab, control_q, target_q, nqubits)
-        new_tab = self.RZ(new_tab, target_q, nqubits, theta)
-        new_tab = self.CNOT(new_tab, control_q, target_q, nqubits)
-        return self.H(new_tab, target_q, nqubits)
-
     def CRX(self, tableau, control_q, target_q, nqubits, theta):
         # theta = 4 * n * pi
         if theta % (4 * self.np.pi) == 0:
@@ -477,16 +468,8 @@ class CliffordOperations:
         return tableau[: -1 + (2 * nqubits + 2) * int(include_scratch), :nqubits]
 
     @staticmethod
-    def set_x(tableau, nqubits, val):
-        tableau[:-1, nqubits] = val
-
-    @staticmethod
     def get_z(tableau, nqubits, include_scratch=False):
         return tableau[: -1 + (2 * nqubits + 2) * int(include_scratch), nqubits:-1]
-
-    @staticmethod
-    def set_z(tableau, nqubits, val):
-        tableau[:-1, nqubits:-1] = val
 
     @staticmethod
     def get_scratch(tableau):
