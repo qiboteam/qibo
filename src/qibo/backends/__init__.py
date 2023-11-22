@@ -100,6 +100,7 @@ class QiboMatrices:
         self.S = self.matrices.S
         self.SDG = self.matrices.SDG
         self.CNOT = self.matrices.CNOT
+        self.CY = self.matrices.CY
         self.CZ = self.matrices.CZ
         self.CSX = self.matrices.CSX
         self.CSXDG = self.matrices.CSXDG
