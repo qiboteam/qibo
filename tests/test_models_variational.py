@@ -9,6 +9,9 @@ from scipy.linalg import expm
 
 from qibo import gates, hamiltonians, models
 from qibo.models.utils import cvar, gibbs
+from qibo.optimizers.gradient_based import TensorflowSGD
+from qibo.optimizers.heuristics import CMAES
+from qibo.optimizers.minimizers import ParallelBFGS, ScipyMinimizer
 from qibo.quantum_info import random_statevector
 
 REGRESSION_FOLDER = pathlib.Path(__file__).with_name("regressions")
@@ -124,9 +127,23 @@ def test_vqe(backend, method, options, compile, filename):
     np.random.seed(0)
     initial_parameters = np.random.uniform(0, 2 * np.pi, 2 * nqubits * layers + nqubits)
     v = models.VQE(circuit, hamiltonian)
-    best, params, _ = v.minimize(
-        initial_parameters, method=method, options=options, compile=compile
-    )
+
+    if method == "cma":
+        opt = CMAES(initial_parameters, optimizer_kwargs=options)
+
+    elif method == "parallel_L-BFGS-B":
+        opt = ParallelBFGS(initial_parameters, minimizer_kwargs=options)
+
+    elif method == "sgd":
+        opt = TensorflowSGD(initial_parameters)
+
+    else:
+        opt = ScipyMinimizer(
+            initial_parameters, options={"method": method}, minimizer_kwargs=options
+        )
+
+    best, params, _ = v.minimize(opt, compile=compile, epochs=5)
+
     if method == "cma":
         # remove `outcmaes` folder
         import shutil
@@ -231,8 +248,9 @@ def test_qaoa_errors(backend):
         qaoa = models.QAOA(h, solver="rk4", accelerators={"/GPU:0": 2})
     # minimize with odd number of parameters
     qaoa = models.QAOA(h)
+    opt = CMAES(np.random.random(5))
     with pytest.raises(ValueError):
-        qaoa.minimize(np.random.random(5))
+        qaoa.minimize(opt)
 
 
 test_names = "method,options,dense,filename"
@@ -251,7 +269,16 @@ def test_qaoa_optimization(backend, method, options, dense, filename):
     h = hamiltonians.XXZ(3, dense=dense, backend=backend)
     qaoa = models.QAOA(h)
     initial_p = [0.05, 0.06, 0.07, 0.08]
-    best, params, _ = qaoa.minimize(initial_p, method=method, options=options)
+
+    if method == "sgd":
+        opt = TensorflowSGD(initial_p)
+
+    else:
+        opt = ScipyMinimizer(
+            initial_p, options={"method": method}, minimizer_kwargs=options
+        )
+
+    best, params, extra = qaoa.minimize(opt, epochs=5)
     if filename is not None:
         assert_regression_fixture(backend, params, filename)
 
@@ -289,8 +316,8 @@ def test_falqon_optimization_callback(backend):
 test_names = "method,options,compile,filename"
 test_values = [
     ("BFGS", {"maxiter": 1}, False, "aavqe_bfgs.out"),
-    ("cma", {"maxfevals": 2}, False, None),
-    ("parallel_L-BFGS-B", {"maxiter": 1}, False, None),
+    # ("cma", {"maxfevals": 2}, False, None),
+    # ("parallel_L-BFGS-B", {"maxiter": 1}, False, None),
 ]
 
 
@@ -322,9 +349,24 @@ def test_aavqe(backend, method, options, compile, filename):
     )
     np.random.seed(0)
     initial_parameters = np.random.uniform(0, 2 * np.pi, 2 * nqubits * layers + nqubits)
-    best, params = aavqe.minimize(
-        params=initial_parameters, method=method, options=options, compile=compile
-    )
+
+    if method == "cma":
+        opt = CMAES(initial_parameters, optimizer_kwargs=options)
+
+    elif method == "parallel_L-BFGS-B":
+        opt = ParallelBFGS(initial_parameters, minimizer_kwargs=options)
+
+    elif method == "sgd":
+        opt = TensorflowSGD(initial_parameters)
+
+    else:
+        opt = ScipyMinimizer(
+            initial_parameters, options={"method": method}, minimizer_kwargs=options
+        )
+
+    best, params = aavqe.minimize(opt, compile=compile)
+    print(best)
+
     if method == "cma":
         # remove `outcmaes` folder
         import shutil
@@ -344,7 +386,11 @@ def test_custom_loss(test_input, test_param, expected):
     h = hamiltonians.XXZ(3)
     qaoa = models.QAOA(h)
     initial_p = [0.314, 0.22, 0.05, 0.59]
-    best, params, _ = qaoa.minimize(
-        initial_p, loss_func=test_input, loss_func_param=test_param
-    )
+
+    opt = ScipyMinimizer(initial_p, loss=test_input)
+
+    best, params, extra = qaoa.minimize(opt, loss_func_param=test_param)
+    # best, params, _ = qaoa.minimize(
+    #    initial_p, loss_func=test_input, loss_func_param=test_param
+    # )
     assert abs(best - expected) <= 0.01

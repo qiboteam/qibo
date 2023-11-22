@@ -52,11 +52,7 @@ class ScipyMinimizer(Optimizer):
         log.info(
             f"Optimization is performed using the optimizer: {type(self).__name__}.{self.method}"
         )
-
-        print("scipy", self.loss, self.params, self.args, self.options)
-        import numpy as np
-
-        np.random.seed(42)
+        print("kwargs", self.options)
         r = minimize(
             self.loss,
             self.params,
@@ -71,7 +67,7 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
     def __init__(
         self,
         initial_parameters,
-        loss,
+        loss=None,
         processes=1,
         args=(),
         options={},

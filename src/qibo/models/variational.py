@@ -1,4 +1,8 @@
+import qibo
 from qibo import optimizers_old
+
+# from qibo.optimizers.heuristics import CMAES
+# from qibo.optimizers.gradient_based import TensorflowSGD
 from qibo.config import raise_error
 from qibo.models.evolution import StateEvolution
 
@@ -37,18 +41,9 @@ class VQE:
 
     def minimize(
         self,
-        initial_state,
-        method="Powell",
-        jac=None,
-        hess=None,
-        hessp=None,
-        bounds=None,
-        constraints=(),
-        tol=None,
-        callback=None,
-        options=None,
+        opt,
         compile=False,
-        processes=None,
+        epochs=100,
     ):
         """Search for parameters which minimizes the hamiltonian expectation.
 
@@ -89,67 +84,21 @@ class VQE:
         else:
             loss = _loss
 
-        if method == "cma":
+        if isinstance(opt, qibo.optimizers.heuristics.CMAES):
             # TODO: check if we can use this shortcut
             # dtype = getattr(self.hamiltonian.backend.np, self.hamiltonian.backend._dtypes.get('DTYPE'))
             dtype = self.hamiltonian.backend.np.float64
             loss = lambda p, c, h: dtype(_loss(p, c, h))
-        elif method != "sgd":
-            loss = lambda p, c, h: self.hamiltonian.backend.to_numpy(_loss(p, c, h))
+        # elif isinstance(opt, qibo.optimizers.gradient_based.TensorflowSGD):
+        #    loss = lambda p, c, h: self.hamiltonian.backend.to_numpy(_loss(p, c, h))
 
-        if method == "cma":
-            from qibo.optimizers.heuristics import CMAES
+        fit_options = {}
+        if isinstance(opt, qibo.optimizers.gradient_based.TensorflowSGD):
+            fit_options.update({"epochs": epochs})
 
-            opt = CMAES(
-                initial_state,
-                loss,
-                args=(self.circuit, self.hamiltonian),
-                optimizer_kwargs=options,
-            )
-
-        elif method == "sgd":
-            from qibo.optimizers.gradient_based import TensorflowSGD
-
-            opt = TensorflowSGD(
-                initial_state,
-                loss,
-                args=(self.circuit, self.hamiltonian),
-                options=options,
-            )
-
-        elif method == "parallel_L-BFGS-B":
-            from qibo.optimizers.minimizers import ParallelBFGS
-
-            opt = ParallelBFGS(
-                initial_state,
-                loss,
-                processes=processes,
-                args=(self.circuit, self.hamiltonian),
-                minimizer_kwargs=options,
-            )
-
-        else:
-            from qibo.optimizers.minimizers import ScipyMinimizer
-
-            opt_options = {
-                "method": method,
-                "jac": jac,
-                "hess": hess,
-                "hessp": hessp,
-                "bounds": bounds,
-                "constraints": constraints,
-                "tol": tol,
-                "callback": callback,
-                "options": options,
-            }
-            opt = ScipyMinimizer(
-                initial_state,
-                loss,
-                args=(self.circuit, self.hamiltonian),
-                options=opt_options,
-            )
-
-        result, parameters, extra = opt.fit()
+        opt.loss = loss
+        opt.args = (self.circuit, self.hamiltonian)
+        result, parameters, extra = opt.fit(**fit_options)
 
         self.circuit.set_parameters(parameters)
         return result, parameters, extra
@@ -282,20 +231,7 @@ class AAVQE:
         st = self.schedule(t)
         return self._h0 * (1 - st) + self._h1 * st
 
-    def minimize(
-        self,
-        params,
-        method="BFGS",
-        jac=None,
-        hess=None,
-        hessp=None,
-        bounds=None,
-        constraints=(),
-        tol=None,
-        options=None,
-        compile=False,
-        processes=None,
-    ):
+    def minimize(self, opt, compile=False, epochs=100):
         """
         Performs minimization to find the ground state of the problem Hamiltonian.
 
@@ -319,19 +255,8 @@ class AAVQE:
         while (t - self._t_max) <= self.ATOL_TIME:
             H = self.hamiltonian(t)
             vqe = models.VQE(self._circuit, H)
-            best, params, _ = vqe.minimize(
-                params,
-                method=method,
-                jac=jac,
-                hess=hess,
-                hessp=hessp,
-                bounds=bounds,
-                constraints=constraints,
-                tol=tol,
-                options=options,
-                compile=compile,
-                processes=processes,
-            )
+            best, params, _ = vqe.minimize(opt, compile, epochs)
+            opt.params = params
             t += self._dt
         return best, params
 
@@ -486,21 +411,10 @@ class QAOA:
 
     def minimize(
         self,
-        initial_p,
+        opt,
         initial_state=None,
-        method="Powell",
-        loss_func=None,
         loss_func_param=dict(),
-        jac=None,
-        hess=None,
-        hessp=None,
-        bounds=None,
-        constraints=(),
-        tol=None,
-        callback=None,
-        options=None,
-        compile=False,
-        processes=None,
+        epochs=100,
     ):
         """Optimizes the variational parameters of the QAOA. A few loss functions are
         provided for QAOA optimizations such as expected value (default), CVar which is introduced in
@@ -550,112 +464,48 @@ class QAOA:
                 best, params, _ = qaoa.minimize(initial_p, loss_func=gibbs, loss_func_param={'eta':0.1})
 
         """
-        if len(initial_p) % 2 != 0:
+        if len(opt.params) % 2 != 0:
             raise_error(
                 ValueError,
                 "Initial guess for the parameters must "
                 "contain an even number of values but "
-                "contains {}.".format(len(initial_p)),
+                "contains {}.".format(len(opt.params)),
             )
+
+        optloss = opt.loss
 
         def _loss(params, qaoa, hamiltonian, state):
             if state is not None:
                 state = hamiltonian.backend.cast(state, copy=True)
             qaoa.set_parameters(params)
             state = qaoa(state)
-            if loss_func is None:
+
+            if optloss is None:
                 return hamiltonian.expectation(state)
             else:
                 func_hyperparams = {
                     key: loss_func_param[key]
                     for key in loss_func_param
-                    if key in loss_func.__code__.co_varnames
+                    if key in optloss.__code__.co_varnames
                 }
                 param = {**func_hyperparams, "hamiltonian": hamiltonian, "state": state}
 
-                return loss_func(**param)
+                return optloss(**param)
 
-        if method == "sgd":
+        if isinstance(opt, qibo.optimizers.gradient_based.TensorflowSGD):
             loss = lambda p, c, h, s: _loss(self.hamiltonian.backend.cast(p), c, h, s)
         else:
             loss = lambda p, c, h, s: self.hamiltonian.backend.to_numpy(
                 _loss(p, c, h, s)
             )
-        import qibo
 
-        result, parameters, extra = qibo.optimizers_old.optimize(
-            loss,
-            initial_p,
-            args=(self, self.hamiltonian, initial_state),
-            method=method,
-            jac=jac,
-            hess=hess,
-            hessp=hessp,
-            bounds=bounds,
-            constraints=constraints,
-            tol=tol,
-            callback=callback,
-            options=options,
-            compile=compile,
-            processes=processes,
-            backend=self.backend,
-        )
-        print("basic ", method, result, parameters, extra)
+        fit_options = {}
+        if isinstance(opt, qibo.optimizers.gradient_based.TensorflowSGD):
+            fit_options.update({"epochs": epochs})
 
-        if method == "cma":
-            from qibo.optimizers.heuristics import CMAES
-
-            opt = CMAES(
-                initial_p,
-                loss,
-                args=(self, self.hamiltonian, initial_state),
-                optimizer_kwargs=options,
-            )
-
-        elif method == "sgd":
-            from qibo.optimizers.gradient_based import TensorflowSGD
-
-            opt = TensorflowSGD(
-                initial_p,
-                loss,
-                args=(self, self.hamiltonian, initial_state),
-                options=options,
-            )
-
-        elif method == "parallel_L-BFGS-B":
-            from qibo.optimizers.minimizers import ParallelBFGS
-
-            opt = ParallelBFGS(
-                initial_p,
-                loss,
-                processes=processes,
-                args=(self, self.hamiltonian, initial_state),
-                minimizer_kwargs=options,
-            )
-
-        else:
-            from qibo.optimizers.minimizers import ScipyMinimizer
-
-            opt_options = {
-                "method": method,
-                "jac": jac,
-                "hess": hess,
-                "hessp": hessp,
-                "bounds": bounds,
-                "constraints": constraints,
-                "tol": tol,
-                "callback": callback,
-            }
-            opt = ScipyMinimizer(
-                initial_p,
-                loss,
-                args=(self, self.hamiltonian, initial_state),
-                options=opt_options,
-                minimizer_kwargs=options,
-            )
-
-        result, parameters, extra = opt.fit()
-        print("new", result, parameters, extra)
+        opt.loss = loss
+        opt.args = (self, self.hamiltonian, initial_state)
+        result, parameters, extra = opt.fit(**fit_options)
 
         self.set_parameters(parameters)
         return result, parameters, extra
