@@ -221,3 +221,37 @@ class M(Gate):
         args["basis"] = [getattr(gates, g) for g in args["basis"]]
         args.update(args.pop("init_kwargs"))
         return cls(*qubits, **args)
+
+    # Overload on_qubits to copy also gate.result, controlled by can be removed for measurements
+    def on_qubits(self, qubit_map) -> "Gate":
+        """Creates the same measurement gate targeting different qubits
+        and preserving the measurement result register.
+
+        Args:
+            qubit_map (int): Dictionary mapping original qubit indices to new ones.
+
+        Returns:
+            A :class:`qibo.gates.Gate.M` object of the original gate
+            type targeting the given qubits.
+
+        Example:
+
+            .. testcode::
+
+                from qibo import models, gates
+                measurement = gates.M(0, 1)
+                c = models.Circuit(3)
+                c.add(measurement.on_qubits({0: 0, 1: 2}))
+                assert c.queue[0].result is measurement.result
+                print(c.draw())
+            .. testoutput::
+
+                q0: ─M─
+                q1: ─|─
+                q2: ─M─
+        """
+
+        qubits = (qubit_map.get(q) for q in self.qubits)
+        gate = self.__class__(*qubits, **self.init_kwargs)
+        gate.result = self.result
+        return gate

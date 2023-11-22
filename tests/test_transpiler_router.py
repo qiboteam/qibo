@@ -298,28 +298,33 @@ def test_sabre_simple(seed):
     )
 
 
-@pytest.mark.parametrize("gates", [10, 40])
+@pytest.mark.parametrize("n_gates", [10, 40])
 @pytest.mark.parametrize("look", [0, 5])
 @pytest.mark.parametrize("decay", [0.5, 1.0])
 @pytest.mark.parametrize("placer", [Trivial, Random])
 @pytest.mark.parametrize("connectivity", [star_connectivity(), grid_connectivity()])
-def test_sabre_random_circuits(gates, look, decay, placer, connectivity):
+def test_sabre_random_circuits(n_gates, look, decay, placer, connectivity):
     placer = placer(connectivity=connectivity)
     layout_circ = Circuit(5)
     initial_layout = placer(layout_circ)
     router = Sabre(connectivity=connectivity, lookahead=look, decay_lookahead=decay)
-    circuit = generate_random_circuit(nqubits=5, ngates=gates)
+    circuit = generate_random_circuit(nqubits=5, ngates=n_gates)
+    measurement = gates.M(*range(5))
+    circuit.add(measurement)
     transpiled_circuit, final_qubit_map = router(circuit, initial_layout)
     assert router.added_swaps >= 0
     assert_connectivity(connectivity, transpiled_circuit)
     assert_placement(transpiled_circuit, final_qubit_map)
-    assert gates + router.added_swaps == transpiled_circuit.ngates
+    assert n_gates + router.added_swaps + 1 == transpiled_circuit.ngates
     assert_circuit_equivalence(
         original_circuit=circuit,
         transpiled_circuit=transpiled_circuit,
         final_map=final_qubit_map,
         initial_map=initial_layout,
     )
+    circuit_result = transpiled_circuit.execute(nshots=100)
+    assert circuit_result.frequencies() == measurement.result.frequencies()
+    assert transpiled_circuit.queue[-1].result is measurement.result
 
 
 def test_sabre_memory_map():
@@ -331,3 +336,19 @@ def test_sabre_memory_map():
     router._memory_map = [[1, 0, 2, 3, 4]]
     value = router._compute_cost((0, 1))
     assert value == float("inf")
+
+
+def test_sabre_intermediate_measurements():
+    measurement = gates.M(1)
+    circ = Circuit(3, density_matrix=True)
+    circ.add(gates.H(0))
+    circ.add(measurement)
+    circ.add(gates.CNOT(0, 2))
+    connectivity = nx.Graph()
+    connectivity.add_nodes_from([0, 1, 2])
+    connectivity.add_edges_from([(0, 1), (1, 2)])
+    router = Sabre(connectivity=connectivity)
+    initial_layout = {"q0": 0, "q1": 1, "q2": 2}
+    routed_circ, final_layout = router(circuit=circ, initial_layout=initial_layout)
+    circuit_result = routed_circ.execute(nshots=100)
+    assert routed_circ.queue[3].result is measurement.result
