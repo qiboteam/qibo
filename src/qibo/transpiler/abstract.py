@@ -27,11 +27,10 @@ class NativeGates(Flag):
     CZ = auto()
     iSWAP = auto()
 
-    # TODO: use GPI2 as default single qubit native gate
     @classmethod
     def default(cls):
         """Return default native gates set."""
-        return cls.CZ | cls.U3 | cls.I | cls.Z | cls.RZ | cls.M
+        return cls.CZ | cls.GPI2 | cls.I | cls.Z | cls.RZ | cls.M
 
     @classmethod
     def from_gatelist(cls, gatelist: list):

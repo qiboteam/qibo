@@ -22,37 +22,18 @@ class DefaultUnroller(Unroller):
     def __init__(
         self,
         native_gates: NativeGates,
-        translate_single_qubit: bool = True,
     ):
         self.native_gates = native_gates
-        self.translate_single_qubit = translate_single_qubit
 
     def __call__(self, circuit: Circuit):
-        two_qubit_translated_circuit = circuit.__class__(circuit.nqubits)
         translated_circuit = circuit.__class__(circuit.nqubits)
         for gate in circuit.queue:
-            if len(gate.qubits) > 1 or self.translate_single_qubit:
-                two_qubit_translated_circuit.add(
-                    translate_gate(
-                        gate,
-                        self.native_gates,
-                    )
+            translated_circuit.add(
+                translate_gate(
+                    gate,
+                    self.native_gates,
                 )
-            else:
-                two_qubit_translated_circuit.add(gate)
-        if self.translate_single_qubit:
-            for gate in two_qubit_translated_circuit.queue:
-                if len(gate.qubits) == 1:
-                    translated_circuit.add(
-                        translate_gate(
-                            gate,
-                            self.native_gates,
-                        )
-                    )
-                else:
-                    translated_circuit.add(gate)
-        else:
-            translated_circuit = two_qubit_translated_circuit
+            )
         return translated_circuit
 
     def is_satisfied(self, circuit: Circuit):
@@ -73,8 +54,7 @@ def assert_decomposition(
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): circuit model to check.
         native_gates (:class:`qibo.transpiler.abstract.NativeGates`):
-            two-qubit native gates supported by the quantum hardware.
-        single_qubit_natives (tuple): single qubit native gates.
+            native gates supported by the quantum hardware.
     """
     for gate in circuit.queue:
         if isinstance(gate, gates.M):
@@ -128,7 +108,16 @@ def translate_gate(
     elif len(gate.qubits) == 1:
         return _translate_single_qubit_gates(gate, native_gates.single_qubit_natives())
     else:
-        return _translate_two_qubit_gates(gate, native_gates)
+        decomposition_2q = _translate_two_qubit_gates(gate, native_gates)
+        final_decomposition = []
+        for gate in decomposition_2q:
+            if len(gate.qubits) == 1:
+                final_decomposition += _translate_single_qubit_gates(
+                    gate, native_gates.single_qubit_natives()
+                )
+            else:
+                final_decomposition.append(gate)
+        return final_decomposition
 
 
 def _translate_single_qubit_gates(gate: gates.Gate, single_qubit_natives: NativeGates):

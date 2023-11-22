@@ -6,7 +6,7 @@ from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 from qibo.quantum_info.random_ensembles import random_unitary
 from qibo.transpiler.abstract import NativeGates
-from qibo.transpiler.unroller import translate_gate
+from qibo.transpiler.unroller import assert_decomposition, translate_gate
 
 
 def assert_matrices_allclose(gate, natives, backend):
@@ -35,6 +35,7 @@ def assert_matrices_allclose(gate, natives, backend):
         if np.allclose(phase * native_unitary, target_unitary, atol=1e-12):
             c = 1
     backend.assert_allclose(c, 1)
+    assert_decomposition(circuit, natives)
 
 
 @pytest.mark.parametrize("natives", [NativeGates.U3, NativeGates.GPI2])
