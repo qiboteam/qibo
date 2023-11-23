@@ -30,7 +30,7 @@ class DoubleBracketIteration:
         mode (IterationGeneratorType): type of generator of the evolution.
 
     Example:
-        .. testcode:: 
+        .. testcode::
 
             import numpy as np
             from qibo.models.double_bracket import DoubleBracketIteration, IterationGeneratorType
@@ -53,7 +53,9 @@ class DoubleBracketIteration:
         self.h0 = deepcopy(self.h)
         self.mode = mode
 
-    def __call__(self, step: float, mode: IterationGeneratorType = None, d: np.array = None):
+    def __call__(
+        self, step: float, mode: IterationGeneratorType = None, d: np.array = None
+    ):
         if mode is None:
             mode = self.mode
 

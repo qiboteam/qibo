@@ -207,9 +207,9 @@ Double Bracket Iteration algorithm for Diagonalization
 """"""""""""""""""""""""""""""""""""""""""""""""""""""
 
 The Double Bracket Flow (DBF) has been presented `here <https://arxiv.org/abs/2206.11772>`_
-as a novel strategy for preparing eigenstates of a quantum system. We implement in 
-Qibo a discretized version of the algorithm, which executes sequential Double 
-Bracket Iterations. 
+as a novel strategy for preparing eigenstates of a quantum system. We implement in
+Qibo a discretized version of the algorithm, which executes sequential Double
+Bracket Iterations.
 
 .. autoclass:: qibo.models.dbi.double_bracket.IterationGeneratorType
     :members:
