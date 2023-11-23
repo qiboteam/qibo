@@ -1,9 +1,13 @@
+from collections import Counter
+
 import numpy as np
 import pytest
 
 from qibo import Circuit, gates
 from qibo.backends import CliffordBackend
 from qibo.quantum_info import Clifford, random_clifford
+
+BACKEND = CliffordBackend()
 
 
 def test_clifford_run():
@@ -63,15 +67,37 @@ def test_clifford_get_destabilizers():
 
 
 @pytest.mark.parametrize("binary", [True, False])
-def test_clifford_samples(binary):
+def test_clifford_samples_frequencies(binary):
     c = random_clifford(5)
     c.add(gates.M(3, register_name="3"))
     c.add(gates.M(0, 1, register_name="01"))
     obj = Clifford.run(c, nshots=50)
-    samples = obj.samples(binary=binary, registers=True)
-    assert "01" in samples and "3" in samples
-    shapes = [(50, 2), (50, 1)] if binary else [(50,), (50,)]
-    assert samples["01"].shape == shapes[0] and samples["3"].shape == shapes[1]
+    samples_1 = obj.samples(binary=binary, registers=True)
+    samples_2 = obj.samples(binary=binary, registers=False)
+    if binary:
+        BACKEND.assert_allclose(samples_2, np.hstack((samples_1["3"], samples_1["01"])))
+    else:
+        BACKEND.assert_allclose(
+            samples_2, [s1 + 4 * s2 for s1, s2 in zip(samples_1["01"], samples_1["3"])]
+        )
+    freq_1 = obj.frequencies(binary=binary, registers=True)
+    freq_2 = obj.frequencies(binary=binary, registers=False)
+
+    if not binary:
+        freq_1 = {
+            reg: Counter({f"{k:0{len(reg)}b}": v for k, v in freq.items()})
+            for reg, freq in freq_1.items()
+        }
+        freq_2 = Counter({f"{k:03b}": v for k, v in freq_2.items()})
+
+    for register, counter in freq_1.items():
+        for bits_1, freq in counter.items():
+            tot = 0
+            for bits_2, counts in freq_2.items():
+                flag = bits_1 == bits_2[0] if register == "3" else bits_1 == bits_2[1:]
+                if flag:
+                    tot += counts
+            assert tot == freq
 
 
 def test_clifford_samples_error():

@@ -275,12 +275,21 @@ class Clifford:
         measured_qubits = set(self.measurement_gate.target_qubits)
         freq = self._backend.calculate_frequencies(self.samples(False))
         if registers:
+            if binary:
+                return {
+                    gate.register_name: frequencies_to_binary(
+                        self._backend.calculate_frequencies(gate.result.samples(False)),
+                        len(gate.target_qubits),
+                    )
+                    for gate in self.measurements
+                }
             return {
                 gate.register_name: self._backend.calculate_frequencies(
                     gate.result.samples(False)
                 )
                 for gate in self.measurements
             }
+
         if binary:
             return frequencies_to_binary(freq, len(measured_qubits))
         else:
