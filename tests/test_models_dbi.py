@@ -1,9 +1,7 @@
 """Testing DoubleBracketIteration model"""
-import hyperopt
 import numpy as np
 import pytest
 
-from qibo.backends import GlobalBackend
 from qibo.hamiltonians import Hamiltonian
 from qibo.models.dbi.double_bracket import DoubleBracketIteration, IterationGeneratorType
 from qibo.quantum_info import random_hermitian
