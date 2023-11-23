@@ -181,7 +181,7 @@ def test_initial_state():
 def test_bitflip_noise():
     c = random_clifford(5)
     qubits = np.random.choice(range(3), size=2, replace=False)
-    c.add(gates.M(*qubits, p0=0.5, p1=0.5))
-    numpy_probs = numpy_bkd.execute_circuit(c).probabilities(qubits)
-    clifford_probs = clifford_bkd.execute_circuit(c, nshots=1000).probabilities()
+    c.add(gates.M(*qubits, p0=0.1, p1=0.5))
+    numpy_probs = numpy_bkd.execute_circuit(c, nshots=10000).probabilities(qubits)
+    clifford_probs = clifford_bkd.execute_circuit(c, nshots=10000).probabilities()
     numpy_bkd.assert_allclose(numpy_probs, clifford_probs, atol=1e-1)

@@ -272,7 +272,7 @@ class Clifford:
                 a single ``Counter`` is returned which contains samples from all
                 the measured qubits, independently of their registers.
         """
-        measured_qubits = set(self.measurement_gate.target_qubits)
+        measured_qubits = self.measurement_gate.target_qubits
         freq = self._backend.calculate_frequencies(self.samples(False))
         if registers:
             if binary:
@@ -304,7 +304,7 @@ class Clifford:
         Returns:
             probabilities (np.ndarray): The measured probabilities.
         """
-        measured_qubits = list({q for m in self.measurements for q in m.target_qubits})
+        measured_qubits = self.measurement_gate.target_qubits
         if qubits is not None:
             if not set(qubits).issubset(set(measured_qubits)):
                 raise_error(
