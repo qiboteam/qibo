@@ -60,7 +60,7 @@ class QuantumCNN:
         self.twoqubitansatz = twoqubitansatz
 
         if copy_init_state is None:
-            if qibo.get_backend()[:7] == "qibojit":
+            if "qibojit" in qibo.get_backend():
                 self.copy_init_state = True
             else:
                 self.copy_init_state = False
