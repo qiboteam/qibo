@@ -2011,10 +2011,10 @@ Multiple transpilation steps can be implemented using the :class:`qibo.transpile
     from qibo import gates
     from qibo.models import Circuit
     from qibo.transpiler.pipeline import Passes, assert_transpiling
-    from qibo.transpiler.abstract import NativeType
+    from qibo.transpiler.abstract import NativeGates
     from qibo.transpiler.optimizer import Preprocessing
     from qibo.transpiler.router import ShortestPaths
-    from qibo.transpiler.unroller import NativeGates
+    from qibo.transpiler.unroller import DefaultUnroller
     from qibo.transpiler.placer import Random
 
     # Define connectivity as nx.Graph
@@ -2040,10 +2040,10 @@ Multiple transpilation steps can be implemented using the :class:`qibo.transpile
     # Routing step
     custom_passes.append(ShortestPaths(connectivity=star_connectivity()))
     # Gate decomposition step
-    custom_passes.append(NativeGates(two_qubit_natives=NativeType.iSWAP))
+    custom_passes.append(DefaultUnroller(native_gates=NativeGates.default()))
 
     # Define the general pipeline
-    custom_pipeline = Passes(custom_passes, connectivity=star_connectivity(), native_gates=NativeType.iSWAP)
+    custom_pipeline = Passes(custom_passes, connectivity=star_connectivity(), native_gates=NativeGates.default())
 
     # Call the transpiler pipeline on the circuit
     transpiled_circ, final_layout = custom_pipeline(circuit)
@@ -2057,7 +2057,7 @@ Multiple transpilation steps can be implemented using the :class:`qibo.transpile
         connectivity=star_connectivity(),
         initial_layout=initial_layout,
         final_layout=final_layout,
-        native_gates=NativeType.iSWAP
+        native_gates=NativeGates.default()
     )
 
 In this case circuits will first be transpiled to respect the 5-qubit star connectivity, with qubit 2 as the middle qubit. This will potentially add some SWAP gates.
