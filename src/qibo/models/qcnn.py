@@ -52,7 +52,6 @@ class QuantumCNN:
         nclasses=2,
         params=None,
         twoqubitansatz=None,
-        Dividend=2,
         copy_init_state=None,
     ):
         self.nclasses = nclasses
