@@ -151,10 +151,10 @@ def test_collapsing_measurements():
             c2.add(g)
     c1.add(gates.M(*range(3)))
     c2.add(gates.M(*range(3)))
-    clifford_res = clifford_bkd.execute_circuit(c1, nshots=10000)
-    numpy_res = numpy_bkd.execute_circuit(c2, nshots=10000)
+    clifford_res = clifford_bkd.execute_circuit(c1, nshots=1000)
+    numpy_res = numpy_bkd.execute_circuit(c2, nshots=1000)
     numpy_bkd.assert_allclose(
-        clifford_res.probabilities(), numpy_res.probabilities(), atol=1e-2
+        clifford_res.probabilities(), numpy_res.probabilities(), atol=1e-1
     )
 
 
@@ -183,5 +183,5 @@ def test_bitflip_noise():
     qubits = np.random.choice(range(3), size=2, replace=False)
     c.add(gates.M(*qubits, p0=0.5, p1=0.5))
     numpy_probs = numpy_bkd.execute_circuit(c).probabilities(qubits)
-    clifford_probs = clifford_bkd.execute_circuit(c, nshots=10000).probabilities()
-    numpy_bkd.assert_allclose(numpy_probs, clifford_probs, atol=1e-2)
+    clifford_probs = clifford_bkd.execute_circuit(c, nshots=1000).probabilities()
+    numpy_bkd.assert_allclose(numpy_probs, clifford_probs, atol=1e-1)

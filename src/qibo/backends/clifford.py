@@ -588,7 +588,7 @@ class CliffordBackend(NumpyBackend):
 
             return Clifford(state, measurements=circuit.measurements, nshots=nshots)
 
-        except self.oom_error:
+        except self.oom_error:  # pragma: no cover
             raise_error(
                 RuntimeError,
                 f"State does not fit in {self.device} memory."
