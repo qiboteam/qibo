@@ -8,7 +8,7 @@ from qibo.config import raise_error
 from qibo.hamiltonians import Hamiltonian
 
 
-class FlowGeneratorType(Enum):
+class IterationGeneratorType(Enum):
     """Define DBF evolution."""
 
     canonical = auto()
@@ -20,25 +20,25 @@ class FlowGeneratorType(Enum):
     # TODO: add double commutator (does it converge?)
 
 
-class DoubleBracketFlow:
+class DoubleBracketIteration:
     """
-    Class implementing the Double Bracket flow algorithm.
+    Class implementing the Double Bracket iteration algorithm.
     For more details, see https://arxiv.org/pdf/2206.11772.pdf
 
     Args:
         hamiltonian (Hamiltonian): Starting Hamiltonian;
-        mode (FlowGeneratorType): type of generator of the evolution.
+        mode (IterationGeneratorType): type of generator of the evolution.
 
     Example:
         .. code-block:: python
 
         import numpy as np
-        from qibo.models.double_bracket import DoubleBracketFlow, FlowGeneratorType
+        from qibo.models.double_bracket import DoubleBracketIteration, IterationGeneratorType
         from qibo.quantum_info import random_hermitian
 
         nqubits = 4
         h0 = random_hermitian(2**nqubits)
-        dbf = DoubleBracketFlow(Hamiltonian(nqubits=nqubits, matrix=h0))
+        dbf = DoubleBracketIteration(Hamiltonian(nqubits=nqubits, matrix=h0))
 
         # diagonalized matrix
         dbf.h
@@ -47,29 +47,29 @@ class DoubleBracketFlow:
     def __init__(
         self,
         hamiltonian: Hamiltonian,
-        mode: FlowGeneratorType = FlowGeneratorType.canonical,
+        mode: IterationGeneratorType = IterationGeneratorType.canonical,
     ):
         self.h = hamiltonian
         self.h0 = deepcopy(self.h)
         self.mode = mode
 
-    def __call__(self, step: float, mode: FlowGeneratorType = None, d: np.array = None):
+    def __call__(self, step: float, mode: IterationGeneratorType = None, d: np.array = None):
         if mode is None:
             mode = self.mode
 
-        if mode is FlowGeneratorType.canonical:
+        if mode is IterationGeneratorType.canonical:
             operator = self.backend.calculate_matrix_exp(
                 1.0j * step,
                 self.commutator(self.diagonal_h_matrix, self.h.matrix),
             )
-        elif mode is FlowGeneratorType.single_commutator:
+        elif mode is IterationGeneratorType.single_commutator:
             if d is None:
                 raise_error(ValueError, f"Cannot use group_commutator with matrix {d}")
             operator = self.backend.calculate_matrix_exp(
                 1.0j * step,
                 self.commutator(d, self.h.matrix),
             )
-        elif mode is FlowGeneratorType.group_commutator:
+        elif mode is IterationGeneratorType.group_commutator:
             if d is None:
                 raise_error(ValueError, f"Cannot use group_commutator with matrix {d}")
             operator = (
@@ -123,7 +123,7 @@ class DoubleBracketFlow:
         verbose: bool = False,
     ):
         """
-        Optimize flow step.
+        Optimize iteration step.
 
         Args:
             step_min: lower bound of the search grid;
@@ -131,11 +131,11 @@ class DoubleBracketFlow:
             max_evals: maximum number of iterations done by the hyperoptimizer;
             space: see hyperopt.hp possibilities;
             optimizer: see hyperopt algorithms;
-            look_ahead: number of flow steps to compute the loss function;
+            look_ahead: number of iteration steps to compute the loss function;
             verbose: level of verbosity.
 
         Returns:
-            (float): optimized best flow step.
+            (float): optimized best iteration step.
         """
         try:
             import hyperopt
@@ -165,8 +165,8 @@ class DoubleBracketFlow:
         Compute loss function distance between `look_ahead` steps.
 
         Args:
-            step: flow step.
-            look_ahead: number of flow steps to compute the loss function;
+            step: iteration step.
+            look_ahead: number of iteration steps to compute the loss function;
         """
         # copy initial hamiltonian
         h_copy = deepcopy(self.h)
