@@ -30,18 +30,18 @@ class DoubleBracketIteration:
         mode (IterationGeneratorType): type of generator of the evolution.
 
     Example:
-        .. code-block:: python
+        .. testcode:: 
 
-        import numpy as np
-        from qibo.models.double_bracket import DoubleBracketIteration, IterationGeneratorType
-        from qibo.quantum_info import random_hermitian
+            import numpy as np
+            from qibo.models.double_bracket import DoubleBracketIteration, IterationGeneratorType
+            from qibo.quantum_info import random_hermitian
 
-        nqubits = 4
-        h0 = random_hermitian(2**nqubits)
-        dbf = DoubleBracketIteration(Hamiltonian(nqubits=nqubits, matrix=h0))
+            nqubits = 4
+            h0 = random_hermitian(2**nqubits)
+            dbf = DoubleBracketIteration(Hamiltonian(nqubits=nqubits, matrix=h0))
 
-        # diagonalized matrix
-        dbf.h
+            # diagonalized matrix
+            dbf.h
     """
 
     def __init__(

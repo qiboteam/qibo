@@ -206,16 +206,16 @@ Iterative Quantum Amplitude Estimation (IQAE)
 Double Bracket Iteration algorithm for Diagonalization
 """"""""""""""""""""""""""""""""""""""""""""""""""""""
 
-The Double Bracket Iteration (DBI) has been presented in `Gluza M. <https://arxiv.org/abs/2206.11772>`_
+The Double Bracket Flow (DBF) has been presented `here <https://arxiv.org/abs/2206.11772>`_
 as a novel strategy for preparing eigenstates of a quantum system. We implement in 
 Qibo a discretized version of the algorithm, which executes sequential Double 
 Bracket Iterations. 
 
-.. autoclass:: qibo.models.dbi.IterationGeneratorType
+.. autoclass:: qibo.models.dbi.double_bracket.IterationGeneratorType
     :members:
     :member-order: bysource
 
-.. autoclass:: qibo.models.dbi.DoubleBracketIteration
+.. autoclass:: qibo.models.dbi.double_bracket.DoubleBracketIteration
     :members:
     :member-order: bysource
 

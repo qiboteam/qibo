@@ -69,7 +69,7 @@ Quantum Physics
     tutorials/bell-variational/README.md
     tutorials/falqon/README.md
     tutorials/grover/README.md
-    tutorials/dbf/dbf.ipynb
+    tutorials/dbi/dbi.ipynb
 
 
 Quantum Machine Learning
@@ -159,7 +159,7 @@ Diagonalization
 .. toctree::
     :maxdepth: 1
 
-    tutorials/dbf/dbf.ipynb
+    tutorials/dbi/dbi.ipynb
 
 FALQON
 ^^^^^^
