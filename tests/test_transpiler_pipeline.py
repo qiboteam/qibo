@@ -1,12 +1,9 @@
-import itertools
-
 import networkx as nx
 import numpy as np
 import pytest
 
 from qibo import gates
 from qibo.models import Circuit
-from qibo.transpiler.abstract import NativeGates
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.pipeline import (
     Passes,
@@ -16,7 +13,7 @@ from qibo.transpiler.pipeline import (
 )
 from qibo.transpiler.placer import Random, ReverseTraversal, Trivial
 from qibo.transpiler.router import ShortestPaths
-from qibo.transpiler.unroller import DefaultUnroller
+from qibo.transpiler.unroller import NativeGates, Unroller
 
 
 def generate_random_circuit(nqubits, ngates, seed=None):
@@ -165,7 +162,7 @@ def test_custom_passes(circ):
     custom_passes.append(Preprocessing(connectivity=star_connectivity()))
     custom_passes.append(Random(connectivity=star_connectivity()))
     custom_passes.append(ShortestPaths(connectivity=star_connectivity()))
-    custom_passes.append(DefaultUnroller(native_gates=NativeGates.default()))
+    custom_passes.append(Unroller(native_gates=NativeGates.default()))
     custom_pipeline = Passes(
         custom_passes,
         connectivity=star_connectivity(),
@@ -197,7 +194,7 @@ def test_custom_passes_reverse(circ):
         )
     )
     custom_passes.append(ShortestPaths(connectivity=star_connectivity()))
-    custom_passes.append(DefaultUnroller(native_gates=NativeGates.default()))
+    custom_passes.append(Unroller(native_gates=NativeGates.default()))
     custom_pipeline = Passes(
         custom_passes,
         connectivity=star_connectivity(),

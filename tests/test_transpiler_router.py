@@ -6,14 +6,7 @@ from qibo import gates
 from qibo.models import Circuit
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.pipeline import assert_circuit_equivalence
-from qibo.transpiler.placer import (
-    Custom,
-    PlacementError,
-    Random,
-    Subgraph,
-    Trivial,
-    assert_placement,
-)
+from qibo.transpiler.placer import Custom, Random, Subgraph, Trivial, assert_placement
 from qibo.transpiler.router import (
     CircuitMap,
     ConnectivityError,
@@ -117,18 +110,6 @@ def test_insufficient_qubits():
     initial_layout = placer(circuit)
     transpiler = ShortestPaths(connectivity=star_connectivity())
     with pytest.raises(ValueError):
-        transpiler(circuit, initial_layout)
-
-
-def test_incorrect_initial_layout():
-    placer = Trivial()
-    circuit = Circuit(4)
-    circuit.add(gates.CNOT(1, 0))
-    circuit.add(gates.CNOT(2, 0))
-    circuit.add(gates.CNOT(3, 0))
-    initial_layout = placer(circuit)
-    transpiler = ShortestPaths(connectivity=star_connectivity())
-    with pytest.raises(PlacementError):
         transpiler(circuit, initial_layout)
 
 

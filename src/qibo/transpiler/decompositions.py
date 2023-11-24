@@ -47,26 +47,25 @@ class GateDecompositions:
         ]
 
 
-def _u3_to_gpi2(t, p, l, optimize=True):
-    """Decompose a U3 gate into GPI2 gates.
+def _u3_to_gpi2(t, p, l):
+    """Decompose a U3 gate into GPI2 gates, the decomposition is optimized to use the minimum number of gates..
 
     Args:
         t (float): theta parameter of U3 gate.
         p (float): phi parameter of U3 gate.
         l (float): lambda parameter of U3 gate.
-        optimize (bool): if True, the decomposition is optimized to use the minimum number of gates.
 
     Returns:
         decomposition (list): list of native gates that decompose the U3 gate.
     """
     decomposition = []
-    if l != 0.0 or not optimize:
+    if l != 0.0:
         decomposition.append(gates.RZ(0, l))
     decomposition.append(gates.GPI2(0, 0))
-    if t != -np.pi or not optimize:
+    if t != -np.pi:
         decomposition.append(gates.RZ(0, t + np.pi))
     decomposition.append(gates.GPI2(0, 0))
-    if p != -np.pi or not optimize:
+    if p != -np.pi:
         decomposition.append(gates.RZ(0, p + np.pi))
     return decomposition
 

@@ -2,10 +2,10 @@ import pytest
 
 from qibo import gates
 from qibo.models import Circuit
-from qibo.transpiler.abstract import NativeGates
 from qibo.transpiler.unroller import (
     DecompositionError,
-    DefaultUnroller,
+    NativeGates,
+    Unroller,
     assert_decomposition,
 )
 
@@ -82,6 +82,9 @@ def test_unroller(natives_1q, natives_2q):
     circuit.add(gates.RZZ(0, 1, 0.3))
     circuit.add(gates.fSim(0, 1, 0.4, 0.5))
     circuit.add(gates.TOFFOLI(0, 1, 2))
-    unroller = DefaultUnroller(native_gates=natives_1q | natives_2q)
+    unroller = Unroller(native_gates=natives_1q | natives_2q)
     translated_circuit = unroller(circuit)
-    assert_decomposition(translated_circuit, native_gates=natives_1q | natives_2q)
+    assert_decomposition(
+        translated_circuit,
+        native_gates=natives_1q | natives_2q | NativeGates.RZ | NativeGates.Z,
+    )

@@ -7,7 +7,7 @@ from qibo.backends import NumpyBackend
 from qibo.config import raise_error
 from qibo.models import Circuit
 from qibo.quantum_info.random_ensembles import random_statevector
-from qibo.transpiler.abstract import NativeGates, Optimizer, Placer, Router, Unroller
+from qibo.transpiler.abstract import Optimizer, Placer, Router
 from qibo.transpiler.exceptions import TranspilerPipelineError
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.placer import Trivial, assert_placement
@@ -15,7 +15,8 @@ from qibo.transpiler.router import ConnectivityError, assert_connectivity
 from qibo.transpiler.star_connectivity import StarConnectivity
 from qibo.transpiler.unroller import (
     DecompositionError,
-    DefaultUnroller,
+    NativeGates,
+    Unroller,
     assert_decomposition,
 )
 
@@ -167,7 +168,7 @@ class Passes:
         # default router pass
         default_passes.append(StarConnectivity())
         # default unroller pass
-        default_passes.append(DefaultUnroller(native_gates=self.native_gates))
+        default_passes.append(Unroller(native_gates=self.native_gates))
         return default_passes
 
     def __call__(self, circuit):
