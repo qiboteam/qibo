@@ -12,6 +12,7 @@ from qibo.transpiler.router import (
     ConnectivityError,
     Sabre,
     ShortestPaths,
+    _find_gates_qubits_pairs,
     assert_connectivity,
 )
 
@@ -111,6 +112,13 @@ def test_insufficient_qubits():
     transpiler = ShortestPaths(connectivity=star_connectivity())
     with pytest.raises(ValueError):
         transpiler(circuit, initial_layout)
+
+
+def test_find_pairs_error():
+    circuit = Circuit(3)
+    circuit.add(gates.TOFFOLI(0, 1, 2))
+    with pytest.raises(ValueError):
+        _find_gates_qubits_pairs(circuit)
 
 
 @pytest.mark.parametrize("gates", [5, 25])
