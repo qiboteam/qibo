@@ -81,14 +81,6 @@ class Unroller:
             )
         return translated_circuit
 
-    def is_satisfied(self, circuit: Circuit):
-        """Return True if a circuit is correctly decomposed into native gates, otherwise False."""
-        try:
-            assert_decomposition(circuit=circuit, native_gates=self.native_gates)
-        except DecompositionError:
-            return False
-        return True
-
 
 def assert_decomposition(
     circuit: Circuit,

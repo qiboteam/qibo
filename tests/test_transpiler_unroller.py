@@ -7,7 +7,30 @@ from qibo.transpiler.unroller import (
     NativeGates,
     Unroller,
     assert_decomposition,
+    translate_gate,
 )
+
+
+def test_native_gates_from_gatelist():
+    natives = NativeGates.from_gatelist([gates.RZ, gates.CZ(0, 1)])
+    assert natives == NativeGates.RZ | NativeGates.CZ
+
+
+def test_native_gates_from_gatelist_fail():
+    with pytest.raises(ValueError):
+        NativeGates.from_gatelist([gates.RZ, gates.X(0)])
+
+
+def test_translate_gate_error_1q():
+    natives = NativeGates(0)
+    with pytest.raises(DecompositionError):
+        translate_gate(gates.X(0), natives)
+
+
+def test_translate_gate_error_2q():
+    natives = NativeGates(0)
+    with pytest.raises(DecompositionError):
+        translate_gate(gates.CZ(0, 1), natives)
 
 
 def test_assert_decomposition():
