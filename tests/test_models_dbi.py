@@ -4,8 +4,8 @@ import pytest
 
 from qibo.hamiltonians import Hamiltonian
 from qibo.models.dbi.double_bracket import (
+    DoubleBracketGeneratorType,
     DoubleBracketIteration,
-    IterationGeneratorType,
 )
 from qibo.quantum_info import random_hermitian
 
@@ -17,7 +17,8 @@ NSTEPS = 50
 def test_double_bracket_iteration_canonical(backend, nqubits):
     h0 = random_hermitian(2**nqubits, backend=backend)
     dbf = DoubleBracketIteration(
-        Hamiltonian(nqubits, h0, backend=backend), mode=IterationGeneratorType.canonical
+        Hamiltonian(nqubits, h0, backend=backend),
+        mode=DoubleBracketGeneratorType.canonical,
     )
     initial_off_diagonal_norm = dbf.off_diagonal_norm
     for _ in range(NSTEPS):
@@ -32,12 +33,12 @@ def test_double_bracket_iteration_group_commutator(backend, nqubits):
     d = backend.cast(np.diag(np.diag(backend.to_numpy(h0))))
     dbf = DoubleBracketIteration(
         Hamiltonian(nqubits, h0, backend=backend),
-        mode=IterationGeneratorType.group_commutator,
+        mode=DoubleBracketGeneratorType.group_commutator,
     )
     initial_off_diagonal_norm = dbf.off_diagonal_norm
 
     with pytest.raises(ValueError):
-        dbf(mode=IterationGeneratorType.group_commutator, step=0.01)
+        dbf(mode=DoubleBracketGeneratorType.group_commutator, step=0.01)
 
     for _ in range(NSTEPS):
         dbf(step=0.01, d=d)
@@ -51,12 +52,12 @@ def test_double_bracket_iteration_single_commutator(backend, nqubits):
     d = backend.cast(np.diag(np.diag(backend.to_numpy(h0))))
     dbf = DoubleBracketIteration(
         Hamiltonian(nqubits, h0, backend=backend),
-        mode=IterationGeneratorType.single_commutator,
+        mode=DoubleBracketGeneratorType.single_commutator,
     )
     initial_off_diagonal_norm = dbf.off_diagonal_norm
 
     with pytest.raises(ValueError):
-        dbf(mode=IterationGeneratorType.single_commutator, step=0.01)
+        dbf(mode=DoubleBracketGeneratorType.single_commutator, step=0.01)
 
     for _ in range(NSTEPS):
         dbf(step=0.01, d=d)
@@ -81,7 +82,7 @@ def test_hyperopt_step(backend, nqubits):
     assert step != initial_step
 
     # evolve following the optimized first step
-    for generator in IterationGeneratorType:
+    for generator in DoubleBracketGeneratorType:
         dbf(mode=generator, step=step, d=d)
 
     # find the following step size with look_ahead
@@ -96,7 +97,7 @@ def test_hyperopt_step(backend, nqubits):
 
     # evolve following the optimized first step
     for gentype in range(look_ahead):
-        dbf(mode=IterationGeneratorType(gentype + 1), step=step, d=d)
+        dbf(mode=DoubleBracketGeneratorType(gentype + 1), step=step, d=d)
 
 
 def test_energy_fluctuations(backend):

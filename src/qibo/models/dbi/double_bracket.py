@@ -8,7 +8,7 @@ from qibo.config import raise_error
 from qibo.hamiltonians import Hamiltonian
 
 
-class IterationGeneratorType(Enum):
+class DoubleBracketGeneratorType(Enum):
     """Define DBF evolution."""
 
     canonical = auto()
@@ -27,13 +27,13 @@ class DoubleBracketIteration:
 
     Args:
         hamiltonian (Hamiltonian): Starting Hamiltonian;
-        mode (IterationGeneratorType): type of generator of the evolution.
+        mode (DoubleBracketGeneratorType): type of generator of the evolution.
 
     Example:
         .. testcode::
 
             import numpy as np
-            from qibo.models.double_bracket import DoubleBracketIteration, IterationGeneratorType
+            from qibo.models.double_bracket import DoubleBracketIteration, DoubleBracketGeneratorType
             from qibo.quantum_info import random_hermitian
 
             nqubits = 4
@@ -47,31 +47,31 @@ class DoubleBracketIteration:
     def __init__(
         self,
         hamiltonian: Hamiltonian,
-        mode: IterationGeneratorType = IterationGeneratorType.canonical,
+        mode: DoubleBracketGeneratorType = DoubleBracketGeneratorType.canonical,
     ):
         self.h = hamiltonian
         self.h0 = deepcopy(self.h)
         self.mode = mode
 
     def __call__(
-        self, step: float, mode: IterationGeneratorType = None, d: np.array = None
+        self, step: float, mode: DoubleBracketGeneratorType = None, d: np.array = None
     ):
         if mode is None:
             mode = self.mode
 
-        if mode is IterationGeneratorType.canonical:
+        if mode is DoubleBracketGeneratorType.canonical:
             operator = self.backend.calculate_matrix_exp(
                 1.0j * step,
                 self.commutator(self.diagonal_h_matrix, self.h.matrix),
             )
-        elif mode is IterationGeneratorType.single_commutator:
+        elif mode is DoubleBracketGeneratorType.single_commutator:
             if d is None:
                 raise_error(ValueError, f"Cannot use group_commutator with matrix {d}")
             operator = self.backend.calculate_matrix_exp(
                 1.0j * step,
                 self.commutator(d, self.h.matrix),
             )
-        elif mode is IterationGeneratorType.group_commutator:
+        elif mode is DoubleBracketGeneratorType.group_commutator:
             if d is None:
                 raise_error(ValueError, f"Cannot use group_commutator with matrix {d}")
             operator = (

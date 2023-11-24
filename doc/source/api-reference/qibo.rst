@@ -211,7 +211,7 @@ as a novel strategy for preparing eigenstates of a quantum system. We implement 
 Qibo a discretized version of the algorithm, which executes sequential Double
 Bracket Iterations.
 
-.. autoclass:: qibo.models.dbi.double_bracket.IterationGeneratorType
+.. autoclass:: qibo.models.dbi.double_bracket.DoubleBracketGeneratorType
     :members:
     :member-order: bysource
 
