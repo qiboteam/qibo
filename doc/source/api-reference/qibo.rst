@@ -1865,6 +1865,35 @@ Kraus operators as probabilistic sum of unitaries
     for a limited set of operators. We leave to the user to decide how to
     best use this function.
 
+Stabilizer Representation
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A quantum state :math:`\psi` can be uniquely defined by the set of its stabilizers :math:`Stab(\ket{\psi})`, i.e. those unitary operators :math:`U` that have :math:`\psi` as an eigenstate with eigenvalue 1. In general, :math:`2^n` stabilizers are needed to uniquely define a :math:`n`-qubits state, but a large class of quantum states can be represented by the intersection of the Stabilizer group with the Pauli group. In that case, indeed, the number of operators needed reduces to :math:`n`. Each one of these :math:`n` Pauli generators takes :math:`2n + 1` bits to specify, yielding a :math:`n(2n+1)` total number of bits needed. In particular, `Aaronson and Gottesman <aaronson_>`_ demonstrated that the application of gates can be efficiently simulated in this representation at the cost of storing the generators of the de-stabilizers in addition to the stabilizers.
+
+Therefore, the :math:`n`-qubits state is uniquely defined by a symplectic matrix of the form
+
+In qibo the :class:`qibo.quantum_info.clifford.Clifford` object is in charge of storing the stabilizer representation of a state. This object is automatically created after the execution of a Clifford Circuit through the :class:`qibo.backends.clifford.CliffordBackend`, but it can also be created by directly passing a symplectic matrix to the constructor
+
+.. testcode::
+   from qibo.quantum_info import Clifford
+   from qibo.backends import CliffordBackend
+
+   # construct the |00...0> state
+   tableau = CliffordBackend().zero_state(nqubits=3)
+   clifford = Clifford(tableau)
+
+then, the generators of the stabilizers can be extracted with the :meth:`qibo.quantum_info.clifford.Clifford.get_stabilizers_generators` method, or the complete set of stabilizers operators can be generated through the :meth:`qibo.quantum_info.clifford.Clifford.get_stabilizers` method
+
+.. testcode::
+   generators, phases = clifford.get_stabilizers_generators()
+   stabilizers = clifford.get_stabilizers()
+
+.. autoclass:: qibo.quantum_info.clifford.Clifford
+    :members:
+    :member-order: bysource
+
+
+
 Utility Functions
 ^^^^^^^^^^^^^^^^^
 
@@ -1989,5 +2018,33 @@ numpy. The default backend can be changed using the ``QIBO_BACKEND`` environment
 variable.
 
 .. autoclass:: qibo.backends.abstract.Backend
+    :members:
+    :member-order: bysource
+
+Clifford Simulation
+^^^^^^^^^^^^^^^^^^^
+
+A special backend in qibo supports the simulation of Clifford circuits. This :class:`qibo.backends.CliffordBackend` backend implements the tableau formalism introduced in `https://arxiv.org/abs/quant-ph/0406196 <aaronson_>`_ to efficiently simulate gate application and measurements sampling in the stabilizers state representation. The execution of a circuit through this backend creates a :class:`qibo.quantum_info.clifford.Clifford` object that gives access to the final measured samples through the :meth:`qibo.quantum_info.clifford.Clifford.samples` method, similarly to :class:`qibo.result.CircuitResult`. The probabilities and frequencies are computed starting from the samples by the :meth:`qibo.quantum_info.clifford.Clifford.frequencies` and :meth:`qibo.quantum_info.clifford.clifford.Clifford.probabilities` methods.
+
+.. _aaronson: https://arxiv.org/abs/quant-ph/0406196
+
+It is also possible to recover the standard state representation with the :meth:`qibo.quantum_info.clifford.Clifford.state` method. Note, however, that this process is inefficient as it involves the construction of all the stabilizers starting from the generators encoded inside the tableau.
+
+As for the other backends, the clifford backend can be set with
+
+.. testcode::  python
+
+    import qibo
+    qibo.set_backend("clifford")
+
+alternatively, a clifford circuit can also be executed starting from the :class:`qibo.quantum_info.Clifford` object
+
+.. code-block::  python
+
+    from qibo.quantum_info import Clifford
+    result = Clifford.run(circuit)
+
+
+.. autoclass:: qibo.backends.clifford.CliffordBackend
     :members:
     :member-order: bysource
