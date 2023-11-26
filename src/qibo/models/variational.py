@@ -1,10 +1,9 @@
 import qibo
-from qibo import optimizers_old
 
-# from qibo.optimizers.heuristics import CMAES
 # from qibo.optimizers.gradient_based import TensorflowSGD
 from qibo.config import raise_error
 from qibo.models.evolution import StateEvolution
+from qibo.optimizers.heuristics import CMAES
 
 
 class VQE:
@@ -31,8 +30,6 @@ class VQE:
             initial_parameters = np.random.uniform(0, 2, 1)
             vqe.minimize(initial_parameters)
     """
-
-    from qibo import optimizers_old
 
     def __init__(self, circuit, hamiltonian):
         """Initialize circuit ansatz and hamiltonian."""
@@ -84,7 +81,7 @@ class VQE:
         else:
             loss = _loss
 
-        if isinstance(opt, qibo.optimizers.heuristics.CMAES):
+        if isinstance(opt, CMAES):
             # TODO: check if we can use this shortcut
             # dtype = getattr(self.hamiltonian.backend.np, self.hamiltonian.backend._dtypes.get('DTYPE'))
             dtype = self.hamiltonian.backend.np.float64
