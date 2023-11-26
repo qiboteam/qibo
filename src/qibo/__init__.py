@@ -7,7 +7,6 @@ from qibo import (
     gates,
     hamiltonians,
     models,
-    optimizers_old,
     parallel,
     parameter,
     result,
