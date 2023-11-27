@@ -70,7 +70,7 @@ class Clifford:
     def __post_init__(self):
         # adding the scratch row if not provided
         if self.tableau.shape[0] % 2 == 0:
-            self.tableau = np.vstack((self.tableau, np.zeros(self.tablaeu.shape[1])))
+            self.tableau = np.vstack((self.tableau, np.zeros(self.tableau.shape[1])))
         self.nqubits = int((self.tableau.shape[1] - 1) / 2)
 
     @classmethod
