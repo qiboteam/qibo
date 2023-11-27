@@ -20,22 +20,20 @@ class CliffordOperations:
 
     def H(self, tableau, q, nqubits):
         new_tab = tableau.copy()
+        r, x, z = self.get_rxz(new_tab, nqubits)
         self.set_r(
             new_tab,
-            self.get_r(new_tab, nqubits)
-            ^ (
-                self.get_x(new_tab, nqubits)[:, q] * self.get_z(new_tab, nqubits)[:, q]
-            ).flatten(),
+            r ^ (x[:, q] * z[:, q]).flatten(),
         )
         new_tab[:, [q, nqubits + q]] = new_tab[:, [nqubits + q, q]]
         return new_tab
 
     def CNOT(self, tableau, control_q, target_q, nqubits):
         new_tab = tableau.copy()
-        x, z = self.get_x(new_tab, nqubits), self.get_z(new_tab, nqubits)
+        r, x, z = self.get_rxz(new_tab, nqubits)
         self.set_r(
             new_tab,
-            self.get_r(new_tab, nqubits)
+            r
             ^ (x[:, control_q] * z[:, target_q]).flatten()
             * (x[:, target_q] ^ z[:, control_q] ^ 1).flatten(),
         )
@@ -47,11 +45,7 @@ class CliffordOperations:
     def CZ(self, tableau, control_q, target_q, nqubits):
         """Decomposition --> H-CNOT-H"""
         new_tab = tableau.copy()
-        r, x, z = (
-            self.get_r(new_tab, nqubits),
-            self.get_x(new_tab, nqubits),
-            self.get_z(new_tab, nqubits),
-        )
+        r, x, z = self.get_rxz(new_tab, nqubits)
         self.set_r(
             new_tab,
             r
@@ -70,10 +64,10 @@ class CliffordOperations:
 
     def S(self, tableau, q, nqubits):
         new_tab = tableau.copy()
-        x, z = self.get_x(new_tab, nqubits), self.get_z(new_tab, nqubits)
+        r, x, z = self.get_rxz(new_tab, nqubits)
         self.set_r(
             new_tab,
-            self.get_r(new_tab, nqubits) ^ (x[:, q] * z[:, q]).flatten(),
+            r ^ (x[:, q] * z[:, q]).flatten(),
         )
         new_tab[:-1, nqubits + q] = z[:, q] ^ x[:, q]
         return new_tab
@@ -81,11 +75,7 @@ class CliffordOperations:
     def Z(self, tableau, q, nqubits):
         """Decomposition --> S-S"""
         new_tab = tableau.copy()
-        r, x, z = (
-            self.get_r(new_tab, nqubits),
-            self.get_x(new_tab, nqubits),
-            self.get_z(new_tab, nqubits),
-        )
+        r, x, z = self.get_rxz(new_tab, nqubits)
         self.set_r(
             new_tab, r ^ ((x[:, q] * z[:, q]) ^ x[:, q] * (z[:, q] ^ x[:, q])).flatten()
         )
@@ -94,11 +84,7 @@ class CliffordOperations:
     def X(self, tableau, q, nqubits):
         """Decomposition --> H-S-S-H"""
         new_tab = tableau.copy()
-        r, x, z = (
-            self.get_r(new_tab, nqubits),
-            self.get_x(new_tab, nqubits),
-            self.get_z(new_tab, nqubits),
-        )
+        r, x, z = self.get_rxz(new_tab, nqubits)
         self.set_r(
             new_tab,
             r
@@ -110,11 +96,7 @@ class CliffordOperations:
     def Y(self, tableau, q, nqubits):
         """Decomposition --> S-S-H-S-S-H"""  # double check this, cause it should be
         new_tab = tableau.copy()  # Y = i * HZHZ --> HSSHSS
-        r, x, z = (
-            self.get_r(new_tab, nqubits),
-            self.get_x(new_tab, nqubits),
-            self.get_z(new_tab, nqubits),
-        )
+        r, x, z = self.get_rxz(new_tab, nqubits)
         self.set_r(
             new_tab,
             r
@@ -126,11 +108,7 @@ class CliffordOperations:
     def SX(self, tableau, q, nqubits):
         """Decomposition --> H-S-H"""
         new_tab = tableau.copy()
-        r, x, z = (
-            self.get_r(new_tab, nqubits),
-            self.get_x(new_tab, nqubits),
-            self.get_z(new_tab, nqubits),
-        )
+        r, x, z = self.get_rxz(new_tab, nqubits)
         self.set_r(
             new_tab,
             r ^ (z[:, q] * (z[:, q] ^ x[:, q])).flatten(),
@@ -141,11 +119,7 @@ class CliffordOperations:
     def SDG(self, tableau, q, nqubits):
         """Decomposition --> S-S-S"""
         new_tab = tableau.copy()
-        r, x, z = (
-            self.get_r(new_tab, nqubits),
-            self.get_x(new_tab, nqubits),
-            self.get_z(new_tab, nqubits),
-        )
+        r, x, z = self.get_rxz(new_tab, nqubits)
         self.set_r(
             new_tab,
             r ^ (x[:, q] * (z[:, q] ^ x[:, q])).flatten(),
@@ -156,11 +130,7 @@ class CliffordOperations:
     def SXDG(self, tableau, q, nqubits):
         """Decomposition --> H-S-S-S-H"""
         new_tab = tableau.copy()
-        r, x, z = (
-            self.get_r(new_tab, nqubits),
-            self.get_x(new_tab, nqubits),
-            self.get_z(new_tab, nqubits),
-        )
+        r, x, z = self.get_rxz(new_tab, nqubits)
         self.set_r(
             new_tab,
             r ^ (z[:, q] * x[:, q]).flatten(),
@@ -196,11 +166,7 @@ class CliffordOperations:
         elif (theta / (self.np.pi / 2) - 1) % 4 == 0:
             """Decomposition --> H-S-S"""
             new_tab = tableau.copy()
-            r, x, z = (
-                self.get_r(new_tab, nqubits),
-                self.get_x(new_tab, nqubits),
-                self.get_z(new_tab, nqubits),
-            )
+            r, x, z = self.get_rxz(new_tab, nqubits)
             self.set_r(
                 new_tab,
                 r ^ (x[:, q] * (z[:, q] ^ x[:, q])).flatten(),
@@ -210,11 +176,7 @@ class CliffordOperations:
         else:  # theta == 3*pi/2 + 2*n*pi
             """Decomposition --> H-S-S-H-S-S-H-S-S"""
             new_tab = tableau.copy()
-            r, x, z = (
-                self.get_r(new_tab, nqubits),
-                self.get_x(new_tab, nqubits),
-                self.get_z(new_tab, nqubits),
-            )
+            r, x, z = self.get_rxz(new_tab, nqubits)
             self.set_r(
                 new_tab,
                 r ^ (z[:, q] * (z[:, q] ^ x[:, q])).flatten(),
@@ -225,11 +187,7 @@ class CliffordOperations:
     def SWAP(self, tableau, control_q, target_q, nqubits):
         """Decomposition --> CNOT-CNOT-CNOT"""
         new_tab = tableau.copy()
-        r, x, z = (
-            self.get_r(new_tab, nqubits),
-            self.get_x(new_tab, nqubits),
-            self.get_z(new_tab, nqubits),
-        )
+        r, x, z = self.get_rxz(new_tab, nqubits)
         self.set_r(
             new_tab,
             r
@@ -263,11 +221,7 @@ class CliffordOperations:
     def iSWAP(self, tableau, control_q, target_q, nqubits):
         """Decomposition --> H-CNOT-CNOT-H-S-S"""
         new_tab = tableau.copy()
-        r, x, z = (
-            self.get_r(new_tab, nqubits),
-            self.get_x(new_tab, nqubits),
-            self.get_z(new_tab, nqubits),
-        )
+        r, x, z = self.get_rxz(new_tab, nqubits)
         self.set_r(
             new_tab,
             r
@@ -317,11 +271,7 @@ class CliffordOperations:
     def CY(self, tableau, control_q, target_q, nqubits):
         """Decomposition --> S-CNOT-SDG"""
         new_tab = tableau.copy()
-        r, x, z = (
-            self.get_r(new_tab, nqubits),
-            self.get_x(new_tab, nqubits),
-            self.get_z(new_tab, nqubits),
-        )
+        r, x, z = self.get_rxz(new_tab, nqubits)
         self.set_r(
             new_tab,
             r
@@ -472,6 +422,14 @@ class CliffordOperations:
         return tableau[: -1 + (2 * nqubits + 2) * int(include_scratch), nqubits:-1]
 
     @staticmethod
+    def get_rxz(tableau, nqubits, include_scratch=False):
+        return (
+            CliffordOperations.get_r(tableau, nqubits, include_scratch),
+            CliffordOperations.get_x(tableau, nqubits, include_scratch),
+            CliffordOperations.get_z(tableau, nqubits, include_scratch),
+        )
+
+    @staticmethod
     def get_scratch(tableau):
         return tableau[-1, :]
 
@@ -549,7 +507,7 @@ class CliffordBackend(NumpyBackend):
         return getattr(self.clifford_operations, name)
 
     def apply_gate_clifford(self, gate, tableau, nqubits, nshots):
-        operation = gate.clifford_operation(self)
+        operation = gate.clifford_operation()
         kwargs = (
             {"theta": gate.init_kwargs["theta"]} if "theta" in gate.init_kwargs else {}
         )

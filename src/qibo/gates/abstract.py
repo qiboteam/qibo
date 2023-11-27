@@ -366,7 +366,8 @@ class Gate:
 
         return backend.matrix(self)
 
-    def clifford_operation(self, backend=CliffordBackend()):
+    def clifford_operation(self):
+        backend = CliffordBackend()
         return backend.clifford_operation(self)
 
     def generator_eigenvalue(self):
