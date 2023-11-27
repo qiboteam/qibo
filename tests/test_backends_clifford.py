@@ -3,8 +3,8 @@ from itertools import product
 import numpy as np
 import pytest
 
-from qibo import Circuit, gates
-from qibo.backends import CliffordBackend, NumpyBackend
+from qibo import Circuit, gates, set_backend
+from qibo.backends import CliffordBackend, GlobalBackend, NumpyBackend
 from qibo.quantum_info import Clifford, random_clifford
 
 clifford_bkd = CliffordBackend()
@@ -189,3 +189,8 @@ def test_bitflip_noise():
     numpy_bkd.assert_allclose(
         numpy_res.probabilities(qubits), clifford_res.probabilities(qubits), atol=1e-1
     )
+
+
+def test_set_backend():
+    set_backend("clifford")
+    assert isinstance(GlobalBackend(), type(CliffordBackend()))
