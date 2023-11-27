@@ -34,6 +34,8 @@ def construct_backend(backend, platform=None, runcard=None):
         from qibolab.backends import QibolabBackend  # pylint: disable=E0401
 
         return QibolabBackend(platform, runcard)
+    elif backend == "clifford":
+        return CliffordBackend()
 
     else:  # pragma: no cover
         raise_error(ValueError, f"Backend {backend} is not available.")
