@@ -86,7 +86,9 @@ def test_controlled_by_one_qubit_gates(backend, gatename):
     cmatrix = np.eye(4, dtype=matrix.dtype)
     cmatrix[2:, 2:] = matrix
     cmatrix = backend.cast(cmatrix, dtype=cmatrix.dtype)
-    target_rho = np.einsum("ab,bc,cd->ad", cmatrix, initial_rho, np.transpose(np.conj(cmatrix)))
+    target_rho = np.einsum(
+        "ab,bc,cd->ad", cmatrix, initial_rho, np.transpose(np.conj(cmatrix))
+    )
     backend.assert_allclose(final_rho, target_rho)
 
 
@@ -114,7 +116,9 @@ def test_two_qubit_gates(backend, gatename, gatekwargs):
     final_rho = apply_gates(backend, [gate], 2, initial_rho)
 
     matrix = gate.matrix(backend)
-    target_rho = np.einsum("ab,bc,cd->ad", matrix, initial_rho, np.transpose(np.conj(matrix)))
+    target_rho = np.einsum(
+        "ab,bc,cd->ad", matrix, initial_rho, np.transpose(np.conj(matrix))
+    )
     backend.assert_allclose(final_rho, target_rho, atol=PRECISION_TOL)
 
 
