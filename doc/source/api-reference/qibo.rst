@@ -1872,9 +1872,22 @@ A quantum state :math:`\psi` can be uniquely defined by the set of its stabilize
 
 Therefore, the :math:`n`-qubits state is uniquely defined by a symplectic matrix of the form
 
+.. image:: ../_static/tableau.png
+   :width: 2329px
+   :height: 1213px
+   :scale: 30 %
+   :align: center
+
+where :math:`x_{ij},z_{ij}` are the bits encoding the :math:`n`-qubits pauli generator as
+
+.. math::
+
+   P_i = \sum_{j=1}^n i^{x_{ij} \oplus z_{ij}} X_j^{x_{ij}}Z_j^{z_{ij}}.
+
 In qibo the :class:`qibo.quantum_info.clifford.Clifford` object is in charge of storing the stabilizer representation of a state. This object is automatically created after the execution of a Clifford Circuit through the :class:`qibo.backends.clifford.CliffordBackend`, but it can also be created by directly passing a symplectic matrix to the constructor
 
 .. testcode::
+
    from qibo.quantum_info import Clifford
    from qibo.backends import CliffordBackend
 
@@ -1885,8 +1898,11 @@ In qibo the :class:`qibo.quantum_info.clifford.Clifford` object is in charge of 
 then, the generators of the stabilizers can be extracted with the :meth:`qibo.quantum_info.clifford.Clifford.get_stabilizers_generators` method, or the complete set of stabilizers operators can be generated through the :meth:`qibo.quantum_info.clifford.Clifford.get_stabilizers` method
 
 .. testcode::
+
    generators, phases = clifford.get_stabilizers_generators()
    stabilizers = clifford.get_stabilizers()
+
+The de-stabilizers can be extracted analogously with :meth:`qibo.quantum_info.clifford.Clifford.get_destabilizers`.
 
 .. autoclass:: qibo.quantum_info.clifford.Clifford
     :members:
@@ -2024,7 +2040,7 @@ variable.
 Clifford Simulation
 ^^^^^^^^^^^^^^^^^^^
 
-A special backend in qibo supports the simulation of Clifford circuits. This :class:`qibo.backends.CliffordBackend` backend implements the tableau formalism introduced in `https://arxiv.org/abs/quant-ph/0406196 <aaronson_>`_ to efficiently simulate gate application and measurements sampling in the stabilizers state representation. The execution of a circuit through this backend creates a :class:`qibo.quantum_info.clifford.Clifford` object that gives access to the final measured samples through the :meth:`qibo.quantum_info.clifford.Clifford.samples` method, similarly to :class:`qibo.result.CircuitResult`. The probabilities and frequencies are computed starting from the samples by the :meth:`qibo.quantum_info.clifford.Clifford.frequencies` and :meth:`qibo.quantum_info.clifford.clifford.Clifford.probabilities` methods.
+A special backend in qibo supports the simulation of Clifford circuits. This :class:`qibo.backends.clifford.CliffordBackend` backend implements the tableau formalism introduced in `https://arxiv.org/abs/quant-ph/0406196 <aaronson_>`_ to efficiently simulate gate application and measurements sampling in the stabilizers state representation. The execution of a circuit through this backend creates a :class:`qibo.quantum_info.clifford.Clifford` object that gives access to the final measured samples through the :meth:`qibo.quantum_info.clifford.Clifford.samples` method, similarly to :class:`qibo.result.CircuitResult`. The probabilities and frequencies are computed starting from the samples by the :meth:`qibo.quantum_info.clifford.Clifford.frequencies` and :meth:`qibo.quantum_info.clifford.Clifford.probabilities` methods.
 
 .. _aaronson: https://arxiv.org/abs/quant-ph/0406196
 
@@ -2037,7 +2053,7 @@ As for the other backends, the clifford backend can be set with
     import qibo
     qibo.set_backend("clifford")
 
-alternatively, a clifford circuit can also be executed starting from the :class:`qibo.quantum_info.Clifford` object
+alternatively, a clifford circuit can also be executed starting from the :class:`qibo.quantum_info.clifford.Clifford` object
 
 .. code-block::  python
 
