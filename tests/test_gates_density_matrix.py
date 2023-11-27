@@ -78,14 +78,15 @@ def test_one_qubit_gates(backend, gatename, gatekwargs):
 @pytest.mark.parametrize("gatename", ["H", "X", "Y", "Z", "S", "SDG", "T", "TDG"])
 def test_controlled_by_one_qubit_gates(backend, gatename):
     nqubits = 2
-    initial_rho = random_density_matrix(2**nqubits, backend=backend)
+    initial_rho = random_density_matrix(2**nqubits, seed=1, backend=backend)
     gate = getattr(gates, gatename)(1).controlled_by(0)
-    final_rho = apply_gates(backend, [gate], 2, initial_rho)
+    final_rho = apply_gates(backend, [gate], 2, np.copy(initial_rho))
 
     matrix = backend.to_numpy(backend.matrix(getattr(gates, gatename)(1)))
     cmatrix = np.eye(4, dtype=matrix.dtype)
     cmatrix[2:, 2:] = matrix
-    target_rho = np.einsum("ab,bc,cd->ad", cmatrix, initial_rho, cmatrix.conj().T)
+    cmatrix = backend.cast(cmatrix, dtype=cmatrix.dtype)
+    target_rho = np.einsum("ab,bc,cd->ad", cmatrix, initial_rho, np.transpose(np.conj(cmatrix)))
     backend.assert_allclose(final_rho, target_rho)
 
 
@@ -93,6 +94,7 @@ def test_controlled_by_one_qubit_gates(backend, gatename):
     "gatename,gatekwargs",
     [
         ("CNOT", {}),
+        ("CY", {}),
         ("CZ", {}),
         ("SWAP", {}),
         ("CRX", {"theta": 0.123}),
@@ -111,8 +113,8 @@ def test_two_qubit_gates(backend, gatename, gatekwargs):
     gate = getattr(gates, gatename)(0, 1, **gatekwargs)
     final_rho = apply_gates(backend, [gate], 2, initial_rho)
 
-    matrix = backend.to_numpy(gate.matrix(backend))
-    target_rho = np.einsum("ab,bc,cd->ad", matrix, initial_rho, matrix.conj().T)
+    matrix = gate.matrix(backend)
+    target_rho = np.einsum("ab,bc,cd->ad", matrix, initial_rho, np.transpose(np.conj(matrix)))
     backend.assert_allclose(final_rho, target_rho, atol=PRECISION_TOL)
 
 
