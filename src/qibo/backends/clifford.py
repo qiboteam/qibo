@@ -641,6 +641,7 @@ class CliffordBackend(NumpyBackend):
         Returns:
             samples (np.ndarray): The samples shots.
         """
+        qubits = qubits
         operation = CliffordOperations()
         if collapse:
             samples = [operation.M(state, qubits, nqubits) for _ in range(nshots - 1)]
