@@ -68,6 +68,9 @@ class Clifford:
     _samples = None
 
     def __post_init__(self):
+        # adding the scratch row if not provided
+        if self.tableau.shape[0] % 2 == 0:
+            self.tableau = np.vstack((self.tableau, np.zeros(self.tablaeu.shape[1])))
         self.nqubits = int((self.tableau.shape[1] - 1) / 2)
 
     @classmethod
@@ -212,7 +215,7 @@ class Clifford:
         """
         if not self.measurements:
             raise_error(RuntimeError, "The circuit does not contain any measurement.")
-        measured_qubits = self.measurement_gate.target_qubits
+        measured_qubits = self.measurement_gate.qubits
         if self._samples is None:
             if self.measurements[0].result.has_samples():
                 samples = np.concatenate(
@@ -304,22 +307,22 @@ class Clifford:
         Returns:
             probabilities (np.ndarray): The measured probabilities.
         """
-        measured_qubits = self.measurement_gate.target_qubits
+        measured_qubits = self.measurement_gate.qubits
         if qubits is not None:
             if not set(qubits).issubset(set(measured_qubits)):
                 raise_error(
                     RuntimeError,
                     f"Asking probabilities for qubits {qubits}, but only qubits {measured_qubits} were measured.",
                 )
+            qubits = [measured_qubits.index(q) for q in qubits]
         else:
-            qubits = measured_qubits
+            qubits = range(len(measured_qubits))
 
         probs = [0 for _ in range(2 ** len(measured_qubits))]
         samples = self.samples(False)
         for s in samples:
             probs[s] += 1
         probs = self._backend.cast(probs) / len(samples)
-        qubits = [measured_qubits.index(q) for q in qubits]
         return self._backend.calculate_probabilities(
             np.sqrt(probs), qubits, len(measured_qubits)
         )
