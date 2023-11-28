@@ -7,8 +7,8 @@ from qibo.optimizers.gradient_based import TensorflowSGD
 
 def test_tensorflow_sgd():
     # tensorflow backend is needed to use the TensorFlowSGD optimizer.
-    set_backend("tensorflow")
     pytest.skip("Skipping SGD test for unsupported backend.")
+    set_backend("tensorflow")
 
     # define a dummy model
     nqubits = 1
