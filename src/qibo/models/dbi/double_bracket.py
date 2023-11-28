@@ -2,6 +2,7 @@ from copy import deepcopy
 from enum import Enum, auto
 from functools import partial
 
+import hyperopt
 import numpy as np
 
 from qibo.config import raise_error
@@ -139,13 +140,6 @@ class DoubleBracketIteration:
         Returns:
             (float): optimized best iteration step.
         """
-        try:
-            import hyperopt
-        except:  # pragma: no cover
-            raise_error(
-                ImportError, "hyperopt_step function requires hyperopt to be installed."
-            )
-
         if space is None:
             space = hyperopt.hp.uniform
         if optimizer is None:
