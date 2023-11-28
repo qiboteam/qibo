@@ -135,7 +135,7 @@ def test_vqe(backend, method, options, compile, filename):
     # test energy fluctuation
     state = v.hamiltonian.ground_state
     energy_fluctuation = v.energy_fluctuation(state)
-    assert energy_fluctuation != 0 
+    assert energy_fluctuation != 0
 
 
 @pytest.mark.parametrize(

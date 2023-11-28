@@ -1,7 +1,8 @@
 import numpy as np
+
 from qibo.config import raise_error
-from qibo.models.evolution import StateEvolution
 from qibo.hamiltonians import Hamiltonian
+from qibo.models.evolution import StateEvolution
 
 
 class VQE:
@@ -118,7 +119,7 @@ class VQE:
         )
         self.circuit.set_parameters(parameters)
         return result, parameters, extra
-    
+
     def energy_fluctuation(self, state):
         """
         Evaluate energy fluctuation
@@ -130,7 +131,9 @@ class VQE:
         """
         energy = self.hamiltonian.expectation(state)
         h = self.hamiltonian.matrix
-        h2 = Hamiltonian(nqubits=self.hamiltonian.nqubits, matrix=h @ h, backend=self.backend)
+        h2 = Hamiltonian(
+            nqubits=self.hamiltonian.nqubits, matrix=h @ h, backend=self.backend
+        )
         average_h2 = self.backend.calculate_expectation_state(h2, state, normalize=True)
         return np.sqrt(average_h2 - energy**2)
 
