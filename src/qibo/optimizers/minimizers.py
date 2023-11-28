@@ -121,6 +121,7 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
             method="L-BFGS-B",
             **self.options,
         )
+
         out.hess_inv = out.hess_inv * np.identity(len(self.params))
         return out.fun, out.x, out
 
