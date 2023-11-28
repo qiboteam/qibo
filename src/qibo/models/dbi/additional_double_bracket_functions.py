@@ -1,12 +1,16 @@
 from copy import deepcopy
+
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-from qibo.models.dbi.double_bracket import DoubleBracketGeneratorType, DoubleBracketIteration
 from hyperopt import hp, tpe
 
 from qibo.config import raise_error
 from qibo.hamiltonians import Hamiltonian
+from qibo.models.dbi.double_bracket import (
+    DoubleBracketGeneratorType,
+    DoubleBracketIteration,
+)
 
 
 class DoubleBracketIterationStrategies(DoubleBracketIteration):
@@ -61,13 +65,13 @@ class DoubleBracketIterationStrategies(DoubleBracketIteration):
         plt.show()
 
     def flow_step(
-        self, 
-        step: float, 
+        self,
+        step: float,
         mode: DoubleBracketGeneratorType = None,
         d: np.array = None,
-        update_h = False
+        update_h=False,
     ):
-        """"Computes the flowed hamiltonian after one double bracket iteration (and updates)"""
+        """ "Computes the flowed hamiltonian after one double bracket iteration (and updates)"""
         if mode is None:
             mode = self.mode
 
@@ -99,18 +103,18 @@ class DoubleBracketIterationStrategies(DoubleBracketIteration):
             self.h.matrix = operator @ self.h.matrix @ operator_dagger
         return operator @ self.h.matrix @ operator_dagger
 
-    def flow_forwards_invariant(self, H = None, step = 0.1):
-        """Execute multiple Double Bracket iterations with the same flow generator """
+    def flow_forwards_invariant(self, H=None, step=0.1):
+        """Execute multiple Double Bracket iterations with the same flow generator"""
         if H is None:
             H = deepcopy(self.h)
         for s in range(self.NSTEPS):
             if self.pleas_use_hyperopt is True:
                 step = self.hyperopt_step(
-                    step_min = 1e-5,
-                    step_max = 1,
-                    space = hp.uniform,
-                    optimizer = tpe,
-                    max_evals = 100,
-                    verbose = True
+                    step_min=1e-5,
+                    step_max=1,
+                    space=hp.uniform,
+                    optimizer=tpe,
+                    max_evals=100,
+                    verbose=True,
                 )
-            self.flow_step(step, update_h = True)
+            self.flow_step(step, update_h=True)
