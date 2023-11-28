@@ -124,7 +124,7 @@ class VQE:
         Evaluate energy fluctuation
 
         .. math::
-            \\Xi_{k}(\\mu) = \\sqrt{\\langle\\mu|\\hat{H}_{k}^2|\\mu\\rangle - \\langle\\mu|\\hat{H}_{k}|\\mu\\rangle^2} \\,
+            \\Xi_{k}(\\mu) = \\sqrt{\\langle\\mu|\\hat{H}^2|\\mu\\rangle - \\langle\\mu|\\hat{H}|\\mu\\rangle^2} \\,
 
         for a given state :math:`|\\mu\\rangle`.
         """
