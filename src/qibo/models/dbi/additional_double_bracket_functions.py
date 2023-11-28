@@ -1,8 +1,8 @@
-
+from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-from double_bracket import DoubleBracketGeneratorType, DoubleBracketIteration
+from qibo.models.dbi.double_bracket import DoubleBracketGeneratorType, DoubleBracketIteration
 from hyperopt import hp, tpe
 
 from qibo.config import raise_error
@@ -60,5 +60,57 @@ class DoubleBracketIterationStrategies(DoubleBracketIteration):
         plt.grid(True)
         plt.show()
 
-    def flow_forward(step):
-        super().__call__(step)
+    def flow_step(
+        self, 
+        step: float, 
+        mode: DoubleBracketGeneratorType = None,
+        d: np.array = None,
+        update_h = False
+    ):
+        """"Computes the flowed hamiltonian after one double bracket iteration (and updates)"""
+        if mode is None:
+            mode = self.mode
+
+        if mode is DoubleBracketGeneratorType.canonical:
+            operator = self.backend.calculate_matrix_exp(
+                1.0j * step,
+                self.commutator(self.diagonal_h_matrix, self.h.matrix),
+            )
+        elif mode is DoubleBracketGeneratorType.single_commutator:
+            if d is None:
+                raise_error(ValueError, f"Cannot use group_commutator with matrix {d}")
+            operator = self.backend.calculate_matrix_exp(
+                1.0j * step,
+                self.commutator(d, self.h.matrix),
+            )
+        elif mode is DoubleBracketGeneratorType.group_commutator:
+            if d is None:
+                raise_error(ValueError, f"Cannot use group_commutator with matrix {d}")
+            operator = (
+                self.h.exp(-step)
+                @ self.backend.calculate_matrix_exp(-step, d)
+                @ self.h.exp(step)
+                @ self.backend.calculate_matrix_exp(step, d)
+            )
+        operator_dagger = self.backend.cast(
+            np.matrix(self.backend.to_numpy(operator)).getH()
+        )
+        if update_h is True:
+            self.h.matrix = operator @ self.h.matrix @ operator_dagger
+        return operator @ self.h.matrix @ operator_dagger
+
+    def flow_forwards_invariant(self, H = None, step = 0.1):
+        """Execute multiple Double Bracket iterations with the same flow generator """
+        if H is None:
+            H = deepcopy(self.h)
+        for s in range(self.NSTEPS):
+            if self.pleas_use_hyperopt is True:
+                step = self.hyperopt_step(
+                    step_min = 1e-5,
+                    step_max = 1,
+                    space = hp.uniform,
+                    optimizer = tpe,
+                    max_evals = 100,
+                    verbose = True
+                )
+            self.flow_step(step, update_h = True)
