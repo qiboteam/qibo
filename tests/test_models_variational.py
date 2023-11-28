@@ -133,7 +133,7 @@ def test_vqe(backend, method, options, compile, filename):
         assert_regression_fixture(backend, params, filename)
 
     # test energy fluctuation
-    state = v.hamiltonian.ground_state
+    state = v.hamiltonian.ground_state.state()
     energy_fluctuation = v.energy_fluctuation(state)
     assert energy_fluctuation != 0 
 
