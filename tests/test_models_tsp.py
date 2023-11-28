@@ -4,6 +4,7 @@ import pytest
 from qibo import gates
 from qibo.models import QAOA, Circuit
 from qibo.models.tsp import TSP
+from qibo.optimizers.minimizers import ScipyMinimizer
 
 from .test_models_variational import assert_regression_fixture
 
@@ -24,11 +25,14 @@ def qaoa_function_of_layer(backend, layer):
     obj_hamil, mixer = small_tsp.hamiltonians()
     qaoa = QAOA(obj_hamil, mixer=mixer)
     initial_state = backend.cast(initial_state, copy=True)
+    opt = ScipyMinimizer(
+        [0.1 for i in range(layer)],
+        options={"method": "BFGS"},
+        minimizer_kwargs={"maxiter": 1},
+    )
+
     best_energy, final_parameters, extra = qaoa.minimize(
-        initial_p=[0.1 for i in range(layer)],
-        initial_state=initial_state,
-        method="BFGS",
-        options={"maxiter": 1},
+        opt, initial_state=initial_state
     )
     qaoa.set_parameters(final_parameters)
     return qaoa.execute(initial_state)

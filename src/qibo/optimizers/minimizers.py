@@ -52,7 +52,7 @@ class ScipyMinimizer(Optimizer):
         log.info(
             f"Optimization is performed using the optimizer: {type(self).__name__}.{self.method}"
         )
-        print("kwargs", self.options)
+
         r = minimize(
             self.loss,
             self.params,

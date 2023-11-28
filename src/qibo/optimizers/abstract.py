@@ -10,7 +10,6 @@ def check_options(function, options):
     method arguments.
     """
 
-    print(function.__code__.co_varnames)
     for arg in options:
         if arg not in function.__code__.co_varnames:
             raise_error(
