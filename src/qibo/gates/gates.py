@@ -783,8 +783,9 @@ class OneQubitGate(ParametrizedGate):
         self.exponentiated = exponentiated
         self.scaling = scaling
 
-        self.parameter_names = list(kwargs.keys())
-        self.parameters = tuple(kwargs.values())
+        k, v = kwargs.keys(), kwargs.values()
+        self.parameter_names = list(k) if len(k) > 1 else list(k)[0]
+        self.parameters = list(v) if len(v) > 1 else list(v)[0]
         self.nparams = len(kwargs)
 
         self.init_args = [q]

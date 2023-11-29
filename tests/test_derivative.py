@@ -129,7 +129,7 @@ import tensorflow as tf
 
 from qibo import gates
 from qibo.backends import GlobalBackend, set_backend
-from qibo.derivative import VAR, create_hamiltonian, finite_differences, parameter_shift
+from qibo.derivative import VAR, create_hamiltonian, stochastic_parameter_shift
 from qibo.models.circuit import Circuit
 
 set_backend("tensorflow")
@@ -252,7 +252,7 @@ def spsr_circuit_RXRY_decomposed(phi, s, shift):
 
     c1 = Circuit(nqubits=1)
     start = gates.OneQubitGate(
-        0, "H", exponentiated=True, generator=RXRYN, scaling=s, phi=phi
+        0, "RXRY", exponentiated=True, generator=RXRYN, scaling=s, phi=phi
     )
     c1.add(start)
     c1.add(VAR(start).return_gate(item="phi", angle=shift))
@@ -346,14 +346,14 @@ def circuit_rxry(nqubits=1):
     # all gates for which generator eigenvalue is implemented
     c.add(gates.H(q=0))
     c.add(gates.RX(q=0, theta=0))
-    c.add(gates.OneQubitGate(0, "H", exponentiated=True, generator=RXRYN, phi=0.1))
+    c.add(gates.OneQubitGate(0, "RXRY", exponentiated=True, generator=RXRYN, phi=0.1))
     c.add(gates.RZ(q=0, theta=0))
     c.add(gates.M(0))
 
     return c
 
 
-def gradient_exact_rxry():
+def gradient_exact_rxry(backend):
     """Calculates exact gradient of a circuit"""
 
     backend = GlobalBackend()
@@ -364,7 +364,7 @@ def gradient_exact_rxry():
         c = circuit(nqubits=1)
         c.set_parameters(test_params)
 
-        ham = create_hamiltonian(0, 1, GlobalBackend())
+        ham = hamiltonian(nqubits=1, backend=backend)
         results = ham.expectation(
             backend.execute_circuit(circuit=c, initial_state=None).state()
         )
@@ -374,4 +374,46 @@ def gradient_exact_rxry():
     return gradients
 
 
-# def test_stochastic_parameter_shift():
+@pytest.mark.parametrize("nshots, atol", [(100000, 1e-2)])
+def test_stochastic_parameter_shift(backend, nshots, atol):
+    # exact gradients
+    grads = gradient_exact_rxry(backend)
+
+    # initializing the circuit
+    c = circuit_rxry(nqubits=1)
+
+    # some parameters
+    # we know the derivative's values with these params
+    test_params = np.linspace(0.1, 1, 3)
+    print(test_params, type(test_params))
+    c.set_parameters(test_params)
+    print(c.get_parameters())
+    test_hamiltonian = hamiltonian(nqubits=1, backend=backend)
+
+    # testing parameter out of bounds
+    with pytest.raises(ValueError):
+        grad_0 = stochastic_parameter_shift(
+            circuit=c, hamiltonian=test_hamiltonian, parameter_index=5
+        )
+
+    # testing hamiltonian type
+    with pytest.raises(TypeError):
+        grad_0 = stochastic_parameter_shift(
+            circuit=c, hamiltonian=c, parameter_index=0, nshots=nshots
+        )
+
+    # executing all the procedure
+
+    grad_1 = stochastic_parameter_shift(
+        circuit=c,
+        hamiltonian=test_hamiltonian,
+        parameter_index=1,
+        scale_factor=1.0,
+        nshots=nshots,
+    )
+
+    # check of known values
+    # calculated using tf.GradientTape
+    # backend.assert_allclose(grad_0, grads[0], atol=atol)
+    backend.assert_allclose(grad_1, grads[1], atol=atol)
+    # backend.assert_allclose(grad_2, grads[2], atol=atol)

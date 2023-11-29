@@ -670,7 +670,7 @@ def stochastic_parameter_shift(
         new_params[ancilla_gate.nparams] += shift
 
         shifted[parameter_index : parameter_index + len(new_params)] = new_params
-
+        print("Here", shifted)
         circuit.set_parameters(shifted)
 
         if nshots is None:
