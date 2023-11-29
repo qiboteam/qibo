@@ -944,7 +944,12 @@ class Circuit:
 
         fgate = gates.FusedGate(*range(self.nqubits))
         for gate in self.queue:
-            if not isinstance(gate, (gates.SpecialGate, gates.M)):
+            if isinstance(gate, gates.Channel):
+                raise_error(
+                    NotImplementedError, 
+                    "`unitary` method not implemented for circuits that contain noise channels."
+                )
+            elif not isinstance(gate, (gates.SpecialGate, gates.M)):
                 fgate.append(gate)
         return fgate.matrix(backend)
 
