@@ -51,11 +51,10 @@ to 3 to hide info messages or 4 to hide both info and warning messages. The
 default value is 1 allowing all messages to appear.
 
 .. note::
-  The `qibojit` backend implements in-place updating of states and unitaries. This
-  implies a target initial state is modified at runtime, in order to save
-  memory. In the case of algorithms in which the initial state is used several times, or
-  it is necessary to be maintain it over time (such as in quantum machine learning applications)
-  it is advisable to save a copy of the states.
+  The `qibojit` backend implements in-place updates. This
+  implies that the initial state is modified at runtime without performing any copies to save memory.
+  For algorithms that require access to the initial state after its modification, such as quantum machine learning applications,
+  it is suggested to perform a copy of the state explicitly.
 
 
 .. _hardware-backends:
