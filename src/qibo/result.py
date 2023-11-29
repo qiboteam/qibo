@@ -156,7 +156,8 @@ class MeasurementOutcomes:
         self._samples = samples
         if samples is not None:
             for m in measurements:
-                m.result.register_samples(samples[:, m.qubits])
+                indices = [self.measurement_gate.qubits.index(q) for q in m.qubits]
+                m.result.register_samples(samples[:, indices])
         self._frequencies = None
         self._repeated_execution_frequencies = None
 
