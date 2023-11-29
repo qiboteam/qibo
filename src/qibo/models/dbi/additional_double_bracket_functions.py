@@ -25,7 +25,7 @@ class DoubleBracketIterationStrategies(DoubleBracketIteration):
         super().__init__(hamiltonian, mode)
         self.NSTEPS = NSTEPS
         self.please_be_verbose = please_be_verbose
-        self.pleas_use_hyperopt = please_use_hyperopt
+        self.please_use_hyperopt = please_use_hyperopt
 
     @staticmethod
     def visualize_matrix(matrix, title=""):
@@ -64,7 +64,7 @@ class DoubleBracketIterationStrategies(DoubleBracketIteration):
         plt.grid(True)
         plt.show()
 
-    def flow_step(
+    def double_bracket_rotation(
         self,
         step: float,
         mode: DoubleBracketGeneratorType = None,
@@ -109,7 +109,7 @@ class DoubleBracketIterationStrategies(DoubleBracketIteration):
             H = deepcopy(self.h)
         self.store_outputs()
         for s in range(self.NSTEPS):
-            if self.pleas_use_hyperopt is True:
+            if self.please_use_hyperopt is True:
                 step = self.hyperopt_step(
                     step_min=1e-5,
                     step_max=1,
@@ -118,23 +118,23 @@ class DoubleBracketIterationStrategies(DoubleBracketIteration):
                     max_evals=100,
                     verbose=True,
                 )
-            self.flow_step(step, update_h=True)
+            self.double_bracket_rotation(step, update_h=True)
 
-            if self.pleas_be_verbose is True:
+            if self.please_be_verbose is True:
                 print("try")
 
     def store_outputs(self, **outputs):
         """Stores ('key', item) or (key = item) as a dictionary"""
         for output_key in outputs:
-            if output_key in self.flow_outputs:
-                self.flow_outputs[output_key].append(outputs[output_key])
+            if output_key in self.DBI_outputs:
+                self.DBI_outputs[output_key].append(outputs[output_key])
             else:
-                self.flow_outputs[output_key] = [outputs[output_key]]
+                self.DBI_outputs[output_key] = [outputs[output_key]]
 
     def store_iteration_outputs(
-        self, flowed_H, iteration_steps, energy_fluctuations, off_diagonal_norms
+        self, iterated_H, iteration_steps, energy_fluctuations, off_diagonal_norms
     ):
-        self.store_outputs("flowed_h", flowed_H)
+        self.store_outputs("iterated_h", iterated_H)
         self.store_outputs("iteration_steps", iteration_steps)
         self.store_outputs("off_diagonal_norms", off_diagonal_norms)
         self.store_outputs("energy_fluctuations", energy_fluctuations)
