@@ -34,7 +34,7 @@ class DoubleBracketIteration:
         .. testcode::
 
             import numpy as np
-            from qibo.models.double_bracket import DoubleBracketIteration, DoubleBracketGeneratorType
+            from qibo.models.dbi.double_bracket import DoubleBracketIteration, DoubleBracketGeneratorType
             from qibo.quantum_info import random_hermitian
 
             nqubits = 4
