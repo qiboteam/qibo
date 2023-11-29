@@ -742,29 +742,6 @@ class GPI2(ParametrizedGate):
         return self.__class__(self.target_qubits[0], self.parameters[0] + math.pi)
 
 
-class CrossRes_Variable(ParametrizedGate):
-    """Variable part of the Cross-Resonance gate.
-
-    Args:
-        q (int): qubit index on which the gate acts
-        sign (int): sign multiplier for forward and backward differencing
-        trainable (bool): flag, if set the gate parameters are trainable
-    """
-
-    def __init__(self, q, sign, trainable=True):
-        super().__init__(trainable)
-        self.name = "cross_variable"
-        self.draw_label = "crv"
-        self.target_qubits = (q,)
-
-        self.parameter_names = "sign"
-        self.parameters = sign
-        self.nparams = 1
-
-        self.init_args = [q]
-        self.init_kwargs = {"sign": sign, "trainable": trainable}
-
-
 class RXRY(ParametrizedGate):
     r"""Single gate RX=RY rotation of type:
 
@@ -784,6 +761,35 @@ class RXRY(ParametrizedGate):
 
         self.init_args = [q]
         self.init_kwargs = {"phi": phi, "s": s, "trainable": trainable}
+
+
+class OneQubitGate(ParametrizedGate):
+    def __init__(
+        self,
+        q,
+        name,
+        generator,
+        scaling=1.0,
+        exponentiated=False,
+        drawlabel="S",
+        trainable=True,
+        **kwargs,
+    ):
+        super().__init__(trainable)
+        self.name = name
+        self.drawlabel = drawlabel
+        self.target_qubits = (q,)
+        self.generator = generator
+        self.exponentiated = exponentiated
+        self.scaling = scaling
+
+        self.parameter_names = list(kwargs.keys())
+        self.parameters = tuple(kwargs.values())
+        self.nparams = len(kwargs)
+
+        self.init_args = [q]
+        kwargs["trainable"] = trainable
+        self.init_kwargs = kwargs
 
 
 class RXRY_Variable(ParametrizedGate):
@@ -1277,41 +1283,6 @@ class _CUn_(ParametrizedGate):
         self.init_args = [q0, q1]
         self.unitary = True
         self.init_kwargs = {"trainable": trainable}
-
-
-class CrossRes(ParametrizedGate):
-    """Cross-Resonance gate of type:
-
-    \\exp^{-i(\theta_1 X \\otimes \\mathbb{I} + \theta_2 Z \\otimes X + \theta_2 \\mathbb{I} \\otimes X)}
-
-    Args:
-        q0 (int): control qubit index
-        q1 (int): target qubit index
-        s (float): stochastic paramter for stochastic parameter shift
-        theta1 (float): first parameter
-        theta2 (float): second parameter
-        theta3 (float): third parameter
-        trainable (bool): flag, if set the gate parameters are trainable
-    """
-
-    def __init__(self, q0, q1, s, theta1, theta2, theta3, trainable=True):
-        super().__init__(trainable)
-        self.name = "crossres"
-        self.draw_label = "cr"
-        self.target_qubits = (q0, q1)
-
-        self.parameter_names = ["s", "theta1", "theta2", "theta3"]
-        self.parameters = s, theta1, theta2, theta3
-        self.nparams = 4
-
-        self.init_args = [q0, q1]
-        self.init_kwargs = {
-            "s": s,
-            "theta1": theta1,
-            "theta2": theta2,
-            "theta3": theta3,
-            "trainable": trainable,
-        }
 
 
 class CU1(_CUn_):

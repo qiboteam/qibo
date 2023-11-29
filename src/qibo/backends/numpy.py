@@ -1,6 +1,7 @@
 import collections
 
 import numpy as np
+import scipy
 
 from qibo import __version__
 from qibo.backends import einsum_utils
@@ -110,7 +111,15 @@ class NumpyBackend(Backend):
     def matrix_parametrized(self, gate):
         """Convert a parametrized gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
-        return getattr(self.matrices, name)(*gate.parameters)
+        if hasattr(self.matrices, name):
+            return getattr(self.matrices, name)(*gate.parameters)
+        else:
+            if gate.exponentiated:
+                return scipy.linalg.expm(
+                    -1j * gate.scaling * gate.generator(*gate.parameters)
+                )
+            else:
+                return gate.generator(*gate.parameters)
 
     def matrix_fused(self, fgate):
         rank = len(fgate.target_qubits)
