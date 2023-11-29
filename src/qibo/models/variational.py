@@ -19,6 +19,7 @@ class VQE:
 
             import numpy as np
             from qibo import gates, models, hamiltonians
+            from qibo.optimizers.heuristics import CMAES
             # create circuit ansatz for two qubits
             circuit = models.Circuit(2)
             circuit.add(gates.RY(0, theta=0))
@@ -28,7 +29,8 @@ class VQE:
             vqe = models.VQE(circuit, hamiltonian)
             # optimize using random initial variational parameters
             initial_parameters = np.random.uniform(0, 2, 1)
-            vqe.minimize(initial_parameters)
+            opt = CMAES(initial_parameters, optimizer_kwargs=options)
+            best, params, _ = v.minimize(opt)
     """
 
     def __init__(self, circuit, hamiltonian):
@@ -45,22 +47,9 @@ class VQE:
         """Search for parameters which minimizes the hamiltonian expectation.
 
         Args:
-            initial_state (array): a initial guess for the parameters of the
-                variational circuit.
-            method (str): the desired minimization method.
-                See :meth:`qibo.optimizers.optimize` for available optimization
-                methods.
-            jac (dict): Method for computing the gradient vector for scipy optimizers.
-            hess (dict): Method for computing the hessian matrix for scipy optimizers.
-            hessp (callable): Hessian of objective function times an arbitrary
-                vector for scipy optimizers.
-            bounds (sequence or Bounds): Bounds on variables for scipy optimizers.
-            constraints (dict): Constraints definition for scipy optimizers.
-            tol (float): Tolerance of termination for scipy optimizers.
-            callback (callable): Called after each iteration for scipy optimizers.
-            options (dict): a dictionary with options for the different optimizers.
+            opt (:class:`qibo.models.circuit.Circuit`): optimization object used to minimise the loss function
             compile (bool): whether the TensorFlow graph should be compiled.
-            processes (int): number of processes when using the paralle BFGS method.
+            epochs (int): number of training epochs.
 
         Return:
             The final expectation value.
@@ -121,6 +110,7 @@ class AAVQE:
 
             import numpy as np
             from qibo import gates, models, hamiltonians
+            from qibo.optimizers.heuristics import CMAES
             # create circuit ansatz for two qubits
             circuit = models.Circuit(2)
             circuit.add(gates.RY(0, theta=0))
@@ -137,7 +127,8 @@ class AAVQE:
             # optimize using random initial variational parameters
             np.random.seed(0)
             initial_parameters = np.random.uniform(0, 2*np.pi, 2)
-            ground_energy, params = aavqe.minimize(initial_parameters)
+            opt = CMAES(initial_parameters)
+            ground_energy, params = aavqe.minimize(opt)
     """
 
     def __init__(
@@ -233,18 +224,10 @@ class AAVQE:
         Performs minimization to find the ground state of the problem Hamiltonian.
 
         Args:
-            params (np.ndarray or list): initial guess for the parameters of the variational circuit.
-            method (str): optimizer to employ.
-            jac (dict): Method for computing the gradient vector for scipy optimizers.
-            hess (dict): Method for computing the hessian matrix for scipy optimizers.
-            hessp (callable): Hessian of objective function times an arbitrary
-                            vector for scipy optimizers.
-            bounds (sequence or Bounds): Bounds on variables for scipy optimizers.
-            constraints (dict): Constraints definition for scipy optimizers.
-            tol (float): Tolerance of termination for scipy optimizers.
-            options (dict): a dictionary with options for the different optimizers.
+        Args:
+            opt (:class:`qibo.models.circuit.Circuit`): optimization object used to minimise the loss function
             compile (bool): whether the TensorFlow graph should be compiled.
-            processes (int): number of processes when using the parallel BFGS method.
+            epochs (int): number of training epochs.
         """
         from qibo import models
 
@@ -281,6 +264,7 @@ class QAOA:
 
             import numpy as np
             from qibo import models, hamiltonians
+            from qibo.optimizers.minimizers import ScipyMinimizer
             # create XXZ Hamiltonian for four qubits
             hamiltonian = hamiltonians.XXZ(4)
             # create QAOA model for this Hamiltonian
@@ -288,7 +272,8 @@ class QAOA:
             # optimize using random initial variational parameters
             # and default options and initial state
             initial_parameters = 0.01 * np.random.random(4)
-            best_energy, final_parameters, extra = qaoa.minimize(initial_parameters, method="BFGS")
+            opt = ScipyMinimizer(initial_parameters, options={"method": "BFGS"})
+            best, params, extra = qaoa.minimize(opt)
     """
 
     from qibo import hamiltonians
@@ -420,24 +405,10 @@ class QAOA:
         `PRR 2, 023074 (2020) <https://journals.aps.org/prresearch/abstract/10.1103/PhysRevResearch.2.023074>`_.
 
         Args:
-            initial_p (np.ndarray): initial guess for the parameters.
+            opt (:class:`qibo.models.circuit.Circuit`): optimization object used to minimise the loss function
             initial_state (np.ndarray): initial state vector of the QAOA.
-            method (str): the desired minimization method.
-                See :meth:`qibo.optimizers.optimize` for available optimization
-                methods.
-            loss_func (function): the desired loss function. If it is None, the expectation is used.
             loss_func_param (dict): a dictionary to pass in the loss function parameters.
-            jac (dict): Method for computing the gradient vector for scipy optimizers.
-            hess (dict): Method for computing the hessian matrix for scipy optimizers.
-            hessp (callable): Hessian of objective function times an arbitrary
-                vector for scipy optimizers.
-            bounds (sequence or Bounds): Bounds on variables for scipy optimizers.
-            constraints (dict): Constraints definition for scipy optimizers.
-            tol (float): Tolerance of termination for scipy optimizers.
-            callback (callable): Called after each iteration for scipy optimizers.
-            options (dict): a dictionary with options for the different optimizers.
-            compile (bool): whether the TensorFlow graph should be compiled.
-            processes (int): number of processes when using the paralle BFGS method.
+            epochs (int): number of training epochs.
 
         Return:
             The final energy (expectation value of the ``hamiltonian``).
