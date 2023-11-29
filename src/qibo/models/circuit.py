@@ -946,8 +946,8 @@ class Circuit:
         for gate in self.queue:
             if isinstance(gate, gates.Channel):
                 raise_error(
-                    NotImplementedError, 
-                    "`unitary` method not implemented for circuits that contain noise channels."
+                    NotImplementedError,
+                    "`unitary` method not implemented for circuits that contain noise channels.",
                 )
             elif not isinstance(gate, (gates.SpecialGate, gates.M)):
                 fgate.append(gate)
