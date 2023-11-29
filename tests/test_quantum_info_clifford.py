@@ -102,7 +102,7 @@ def test_clifford_samples_frequencies(binary):
 
 def test_clifford_samples_error():
     c = random_clifford(1)
-    obj = Clifford.run(c, nshots=50)
+    obj = Clifford.run(c)
     with pytest.raises(RuntimeError) as excinfo:
-        Clifford.run(c).samples()
-        assert str(excinfo.value) == "The circuit does not contain any measurement."
+        obj.samples()
+        assert str(excinfo.value) == "No measurement provided."

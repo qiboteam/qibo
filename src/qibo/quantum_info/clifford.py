@@ -35,7 +35,7 @@ def _string_product(operators):
 
 
 def _list_of_matrices_product(operators):
-    """Calculates the tensor product of a list of operators as np.ndarrays.
+    """Calculates the product of a list of operators as np.ndarrays.
 
     Args:
         operators (list): The list of operators.
@@ -214,7 +214,7 @@ class Clifford:
                 measured qubits, independently of their registers.
         """
         if not self.measurements:
-            raise_error(RuntimeError, "The circuit does not contain any measurement.")
+            raise_error(RuntimeError, "No measurement provided.")
         measured_qubits = self.measurement_gate.qubits
         if self._samples is None:
             if self.measurements[0].result.has_samples():
