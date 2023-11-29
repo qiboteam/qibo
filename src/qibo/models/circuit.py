@@ -405,7 +405,12 @@ class Circuit:
         measurements = []
         new_circuit = self.__class__(**self.init_kwargs)
         for gate in self.queue[::-1]:
-            if isinstance(gate, gates.M) and skip_measurements:
+            if isinstance(gate, gates.Channel):
+                raise_error(
+                    NotImplementedError,
+                    "`invert` method not implemented for circuits that contain noise channels."
+                )
+            elif isinstance(gate, gates.M) and skip_measurements:
                 measurements.append(gate)
             else:
                 new_gate = gate.dagger()
