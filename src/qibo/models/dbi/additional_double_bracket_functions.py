@@ -27,10 +27,20 @@ class DoubleBracketIterationStrategies(DoubleBracketIteration):
         self.please_be_verbose = please_be_verbose
         self.please_use_hyperopt = please_use_hyperopt
 
+        self.DBI_outputs = {
+            "iterated_h": [],
+            "iteration_steps": [],
+            "off_diagonal_norm_histories": [],
+            "energy_fluctuations": [],
+        }
+
     @staticmethod
-    def visualize_matrix(matrix, title=""):
+    def visualize_matrix(matrix, title="", ax=None):
         """Visualize hamiltonian in a heatmap form."""
-        fig, ax = plt.subplots(figsize=(5, 5))
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(5, 5))
+        else:
+            fig = ax.figure
         ax.set_title(title)
         try:
             im = ax.imshow(np.absolute(matrix), cmap="inferno")
@@ -69,7 +79,7 @@ class DoubleBracketIterationStrategies(DoubleBracketIteration):
         step: float,
         mode: DoubleBracketGeneratorType = None,
         d: np.array = None,
-        update_h=False,
+        update_h: bool = False,
     ):
         """ "Computes the flowed hamiltonian after one double bracket iteration (and updates)"""
         if mode is None:
@@ -107,7 +117,7 @@ class DoubleBracketIterationStrategies(DoubleBracketIteration):
         """Execute multiple Double Bracket iterations with fixed flow generator"""
         if H is None:
             H = deepcopy(self.h)
-        self.store_outputs()
+        self.store_initial_inputs()
         for s in range(self.NSTEPS):
             if self.please_use_hyperopt is True:
                 step = self.hyperopt_step(
@@ -119,6 +129,7 @@ class DoubleBracketIterationStrategies(DoubleBracketIteration):
                     verbose=True,
                 )
             self.double_bracket_rotation(step, update_h=True)
+            self.store_iteration_outputs(step)
 
             if self.please_be_verbose is True:
                 print("try")
@@ -131,10 +142,95 @@ class DoubleBracketIterationStrategies(DoubleBracketIteration):
             else:
                 self.DBI_outputs[output_key] = [outputs[output_key]]
 
+    def store_initial_inputs(self):
+        # self.store_outputs("iterated_h", self.h0)
+        # self.store_outputs("iteration_steps", 0.0)
+        # self.store_outputs("off_diagonal_norms", self.off_diagonal_norm())
+        # # TODO: discuss what state to use
+        # self.store_outputs("energy_fluctuations", self.energy_fluctuation(self.h0.ground_state()))
+        self.store_outputs(
+            iterated_h=self.h0,
+            iteration_steps=0.0,
+            off_diagonal_norms=self.off_diagonal_norm,
+            energy_fluctuations=self.energy_fluctuation(self.h0.ground_state()),
+        )
+
     def store_iteration_outputs(
-        self, iterated_H, iteration_steps, energy_fluctuations, off_diagonal_norms
+        self,
+        iteration_step: float,
+        off_diagonal_norm: float = None,
+        energy_fluctuation=None,
     ):
-        self.store_outputs("iterated_h", iterated_H)
-        self.store_outputs("iteration_steps", iteration_steps)
-        self.store_outputs("off_diagonal_norms", off_diagonal_norms)
-        self.store_outputs("energy_fluctuations", energy_fluctuations)
+        if off_diagonal_norm is None:
+            off_diagonal_norm = self.off_diagonal_norm
+        # self.store_outputs("iterated_h", self.h)
+        # self.store_outputs("iteration_steps", iteration_step)
+        # self.store_outputs("off_diagonal_norm_histories", off_diagonal_norm)
+        # self.store_outputs("energy_fluctuations", energy_fluctuation)
+        self.store_outputs(
+            iterated_h=self.h,
+            iteration_steps=iteration_step,
+            off_diagonal_norms=off_diagonal_norm,
+            energy_fluctuations=energy_fluctuation,
+        )
+
+    def visualize_iteration_results(
+        self, DBI_outputs=None, cost_function_type="off_diagonal_norm"
+    ):
+        """a. Plot the cost function wrt to iterations time, default being off diagoanl cost_function_histories
+        b. Visualize the initial matrix
+        c. Visualize the final iterated matrix
+        """
+        if DBI_outputs is None:
+            DBI_outputs = self.DBI_outputs
+
+        # limit options for cost functions
+        cost_function_type_options = ["off_diagonal_norm", "energy_fluctuation"]
+        if cost_function_type not in cost_function_type_options:
+            raise ValueError(
+                f"cost_function_type must be in {cost_function_type_options}"
+            )
+
+        f = plt.figure(figsize=(15, 4))
+        # a
+        ax_a = f.add_subplot(1, 3, 1)
+        if cost_function_type == "off_diagonal_norm":
+            cost_function_histories = DBI_outputs["off_diagonal_norms"]
+            title_a = r"Off-diagonal Norm $\vert\vert\sigma(H_k)\vert\vert$"
+        elif cost_function_type == "energy_fluctuation":
+            cost_function_histories = DBI_outputs["energy_fluctuations"]
+            title_a = r"Energy Fluctuation $\Xi(\mu)$"
+            # = \sqrt{\langle \mu | \hat{H}_k^2 | \mu \rangle - \langle \mu | \hat{H}_k | \mu \rangle^2}
+        x_axis = [
+            sum(DBI_outputs["iteration_steps"][:k])
+            for k in range(1, len(DBI_outputs["iteration_steps"]) + 1)
+        ]
+
+        plt.plot(x_axis, cost_function_histories, "-o")
+        x_labels_rounded = [round(x, 2) for x in x_axis]
+        x_labels_rounded = [0] + x_labels_rounded[0:5] + [max(x_labels_rounded)]
+        x_labels_rounded.pop(3)
+        plt.xticks(x_labels_rounded)
+
+        y_labels_rounded = [round(y, 1) for y in cost_function_histories]
+        y_labels_rounded = y_labels_rounded[0:5] + [min(y_labels_rounded)]
+        plt.yticks(y_labels_rounded)
+
+        plt.grid()
+        plt.xlabel(r"Flow duration $s$")
+        plt.title(title_a)
+
+        # panel label
+        a = -0.1
+        b = 1.05
+        plt.annotate("a)", xy=(a, b), xycoords="axes fraction")
+
+        # b
+        ax_b = f.add_subplot(1, 3, 2)
+        plt.annotate("b)", xy=(a, b), xycoords="axes fraction")
+        self.visualize_matrix(self.h0.matrix, "Initial Matrix", ax_b)
+
+        # c
+        ax_c = f.add_subplot(1, 3, 3)
+        plt.annotate("b)", xy=(a, b), xycoords="axes fraction")
+        self.visualize_matrix(self.h.matrix, "Final Matrix", ax_c)
