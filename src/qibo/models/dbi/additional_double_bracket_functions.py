@@ -143,11 +143,6 @@ class DoubleBracketIterationStrategies(DoubleBracketIteration):
                 self.DBI_outputs[output_key] = [outputs[output_key]]
 
     def store_initial_inputs(self):
-        # self.store_outputs("iterated_h", self.h0)
-        # self.store_outputs("iteration_steps", 0.0)
-        # self.store_outputs("off_diagonal_norms", self.off_diagonal_norm())
-        # # TODO: discuss what state to use
-        # self.store_outputs("energy_fluctuations", self.energy_fluctuation(self.h0.ground_state()))
         self.store_outputs(
             iterated_h=self.h0,
             iteration_steps=0.0,
@@ -163,10 +158,6 @@ class DoubleBracketIterationStrategies(DoubleBracketIteration):
     ):
         if off_diagonal_norm is None:
             off_diagonal_norm = self.off_diagonal_norm
-        # self.store_outputs("iterated_h", self.h)
-        # self.store_outputs("iteration_steps", iteration_step)
-        # self.store_outputs("off_diagonal_norm_histories", off_diagonal_norm)
-        # self.store_outputs("energy_fluctuations", energy_fluctuation)
         self.store_outputs(
             iterated_h=self.h,
             iteration_steps=iteration_step,
