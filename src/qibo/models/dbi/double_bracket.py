@@ -35,6 +35,7 @@ class DoubleBracketIteration:
 
             import numpy as np
             from qibo.models.dbi.double_bracket import DoubleBracketIteration, DoubleBracketGeneratorType
+            from qibo.hamiltonians import Hamiltonian
             from qibo.quantum_info import random_hermitian
 
             nqubits = 4
