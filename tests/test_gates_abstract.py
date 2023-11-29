@@ -232,7 +232,7 @@ def test_cnot_and_cy_and_cz_init():
     gate = gates.CNOT(0, 1)
     assert gate.target_qubits == (1,)
     assert gate.control_qubits == (0,)
-    gate = gates.CZ(4, 7)
+    gate = gates.CY(4, 7)
     assert gate.target_qubits == (7,)
     assert gate.control_qubits == (4,)
     gate = gates.CZ(3, 2)
