@@ -134,6 +134,16 @@ class DoubleBracketIterationStrategies(DoubleBracketIteration):
             if self.please_be_verbose is True:
                 print("try")
 
+    def iterate_forwards_from_optimal_prescribed(
+        self, H=None, prescribed_operators=None, step=0.1
+    ):
+        """Execute double bracket iterations with the optimal operator form a prescribed list"""
+        if H is None:
+            H = deepcopy(self.h)
+        # Use best Z search as default
+        if prescribed_operators is None:
+            prescribed_operators = []  # TODO: list all instances
+
     def store_outputs(self, **outputs):
         """Stores ('key', item) or (key = item) as a dictionary"""
         for output_key in outputs:
