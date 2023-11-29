@@ -154,6 +154,9 @@ class MeasurementOutcomes:
         self._measurement_gate = None
         self._probs = probabilities
         self._samples = samples
+        if samples is not None:
+            for m in measurements:
+                m.result.register_samples(samples[:, m.qubits])
         self._frequencies = None
         self._repeated_execution_frequencies = None
 
