@@ -31,7 +31,7 @@ def _string_product(operators):
             tmp = "I"
         prod.append(tmp)
     result = "-" if len(phases.nonzero()[0]) % 2 == 1 else ""
-    return f"{result}({')('.join(prod)})"
+    return f"{result}{''.join(prod)}"
 
 
 def _list_of_matrices_product(operators):
