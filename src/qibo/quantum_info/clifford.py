@@ -69,9 +69,9 @@ class Clifford:
 
     def __post_init__(self):
         # adding the scratch row if not provided
-        if self.tableau.shape[0] % 2 == 0:
-            self.tableau = np.vstack((self.tableau, np.zeros(self.tableau.shape[1])))
-        self.nqubits = int((self.tableau.shape[1] - 1) / 2)
+        if self.symplectic_matrix.shape[0] % 2 == 0:
+            self.symplectic_matrix = np.vstack((self.symplectic_matrix, np.zeros(self.symplectic_matrix.shape[1])))
+        self.nqubits = int((self.symplectic_matrix.shape[1] - 1) / 2)
 
     @classmethod
     def from_circuit(
@@ -80,7 +80,7 @@ class Clifford:
         """Allows to create a ``Clifford`` object by executing the input circuit.
 
         Args:
-            circuit (:class:`qibo.models.circuit.Circuit`): The clifford circuit to run.
+            circuit (:class:`qibo.models.circuit.Circuit`): Clifford circuit to run.
             initial_state (np.ndarray): The initial tableu state.
             nshots (int): The number of shots to perform.
 
@@ -98,8 +98,8 @@ class Clifford:
         Returns:
             (list, list): Generators and their corresponding phases.
         """
-        generators, phases = self._backend.tableau_to_generators(
-            self.tableau, return_array
+        generators, phases = self._backend.symplectic_matrix_to_generators(
+            self.symplectic_matrix, return_array
         )
         return generators[self.nqubits :], phases[self.nqubits :]
 
@@ -112,8 +112,8 @@ class Clifford:
         Returns:
             (generators, phases) (list, list): List of the generators and their corresponding phases.
         """
-        generators, phases = self._backend.tableau_to_generators(
-            self.tableau, return_array
+        generators, phases = self._backend.symplectic_matrix_to_generators(
+            self.symplectic_matrix, return_array
         )
         return generators[: self.nqubits], phases[: self.nqubits]
 
@@ -223,7 +223,7 @@ class Clifford:
                 )
             else:
                 samples = self._backend.sample_shots(
-                    self.tableau, measured_qubits, self.nqubits, self.nshots
+                    self.symplectic_matrix, measured_qubits, self.nqubits, self.nshots
                 )
             if self.measurement_gate.has_bitflip_noise():
                 p0, p1 = self.measurement_gate.bitflip_map

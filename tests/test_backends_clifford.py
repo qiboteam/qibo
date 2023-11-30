@@ -168,12 +168,12 @@ def test_non_clifford_error():
 
 def test_initial_state():
     tmp = clifford_bkd.execute_circuit(random_clifford(3))
-    initial_tableau = tmp.tableau
+    initial_symplectic_matrix = tmp.symplectic_matrix
     initial_state = tmp.state()
     c = random_clifford(3, density_matrix=True)
     numpy_state = numpy_bkd.execute_circuit(c, initial_state=initial_state).state()
     clifford_state = clifford_bkd.execute_circuit(
-        c, initial_state=initial_tableau
+        c, initial_state=initial_symplectic_matrix
     ).state()
     numpy_bkd.assert_allclose(numpy_state, clifford_state)
 
