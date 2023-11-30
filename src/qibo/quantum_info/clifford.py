@@ -96,7 +96,7 @@ class Clifford:
             return_array (bool): If ``True`` returns the generators as np.ndarray matrices, otherwise their representation as strings is returned.
 
         Returns:
-            (generators, phases) (list, list): List of the generators and their corresponding phases.
+            (list, list): Generators and their corresponding phases.
         """
         generators, phases = self._backend.tableau_to_generators(
             self.tableau, return_array
