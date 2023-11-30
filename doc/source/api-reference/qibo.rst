@@ -203,6 +203,23 @@ Iterative Quantum Amplitude Estimation (IQAE)
     :member-order: bysource
 
 
+Double Bracket Iteration algorithm for Diagonalization
+""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+The Double Bracket Flow (DBF) has been presented `here <https://arxiv.org/abs/2206.11772>`_
+as a novel strategy for preparing eigenstates of a quantum system. We implement in
+Qibo a discretized version of the algorithm, which executes sequential Double
+Bracket Iterations.
+
+.. autoclass:: qibo.models.dbi.double_bracket.DoubleBracketGeneratorType
+    :members:
+    :member-order: bysource
+
+.. autoclass:: qibo.models.dbi.double_bracket.DoubleBracketIteration
+    :members:
+    :member-order: bysource
+
+
 .. _timeevolution:
 
 Time evolution
@@ -221,6 +238,26 @@ Adiabatic evolution
 .. autoclass:: qibo.models.evolution.AdiabaticEvolution
     :members:
     :member-order: bysource
+
+
+.. _data-encoders:
+
+Data Encoders
+^^^^^^^^^^^^^
+
+We provide a family of algorithms that encode classical data into quantum circuits.
+
+Unary Encoder
+"""""""""""""
+
+.. autofunction:: qibo.models.encodings.unary_encoder
+
+
+Unary Encoder for Random Gaussian States
+""""""""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.models.encodings.unary_encoder_random_gaussian
+
 
 .. _error-mitigation:
 
@@ -1113,10 +1150,11 @@ Therefore, one of the three objects :class:`qibo.result.QuantumState`,
 is going to be returned by the circuit execution. The first gives acces to the final
 state and probabilities via the :meth:`qibo.result.QuantumState.state` and
 :meth:`qibo.result.QuantumState.probabilities` methods, whereas the second
-allows to retrieve the final samples and frequencies with the
-:meth:`qibo.result.MeasurementOutcomes.samples` and
-:meth:`qibo.result.MeasurementOutcomes.frequencies` methods. The
-third includes all the above instead.
+allows to retrieve the final samples, the frequencies and the probabilities (calculated
+as ``frequencies/nshots``) with the :meth:`qibo.result.MeasurementOutcomes.samples`,
+:meth:`qibo.result.MeasurementOutcomes.frequencies` and
+:meth:`qibo.result.MeasurementOutcomes.probabilities` methods respectively. The
+:class:`qibo.result.CircuitResult` object includes all the above instead.
 
 Every time some measurement is performed at the end of the execution, the result
 will be a ``CircuitResult`` unless the final state could not be represented with the
@@ -1483,6 +1521,12 @@ Random Ensembles
 ^^^^^^^^^^^^^^^^
 
 Functions that can generate random quantum objects.
+
+
+Haar-random :math:`U_{3}`
+"""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.uniform_sampling_U3
 
 
 Random Gaussian matrix

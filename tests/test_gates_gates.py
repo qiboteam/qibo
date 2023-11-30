@@ -554,7 +554,7 @@ def test_csx(backend):
     backend.assert_allclose(final_state_decompose, target_state)
 
     assert gates.CSX(0, 1).qasm_label == "csx"
-    assert gates.CSX(0, 1).clifford
+    assert not gates.CSX(0, 1).clifford
     assert gates.CSX(0, 1).unitary
 
 
@@ -590,7 +590,7 @@ def test_csxdg(backend):
     backend.assert_allclose(final_state_decompose, target_state)
 
     assert gates.CSXDG(0, 1).qasm_label == "csxdg"
-    assert gates.CSXDG(0, 1).clifford
+    assert not gates.CSXDG(0, 1).clifford
     assert gates.CSXDG(0, 1).unitary
 
 
@@ -624,7 +624,7 @@ def test_cun(backend, name, params):
 
     if name in ["CRX", "CRY", "CRZ"]:
         theta = params["theta"]
-        if (theta % (np.pi / 2)).is_integer():
+        if (theta % np.pi).is_integer():
             assert gate.clifford
         else:
             assert not gate.clifford
@@ -662,13 +662,37 @@ def test_iswap(backend):
 
 
 def test_fswap(backend):
+    nqubits = 2
+    initial_state = random_statevector(2**nqubits, backend=backend)
     final_state = apply_gates(
-        backend, [gates.H(0), gates.X(1), gates.FSWAP(0, 1)], nqubits=2
+        backend,
+        [gates.FSWAP(0, 1)],
+        nqubits=nqubits,
+        initial_state=initial_state,
     )
-    target_state = np.zeros_like(final_state)
-    target_state[2] = 1.0 / np.sqrt(2)
-    target_state[3] = -1.0 / np.sqrt(2)
+    # test decomposition
+    final_state_decompose = apply_gates(
+        backend,
+        gates.FSWAP(0, 1).decompose(),
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+
+    matrix = np.array(
+        [
+            [1, 0, 0, 0],
+            [0, 0, 1, 0],
+            [0, 1, 0, 0],
+            [0, 0, 0, -1],
+        ],
+        dtype=backend.dtype,
+    )
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
+    target_state = matrix @ initial_state
+
     backend.assert_allclose(final_state, target_state)
+    backend.assert_allclose(final_state_decompose, target_state)
+
     assert gates.FSWAP(0, 1).qasm_label == "fswap"
     assert gates.FSWAP(0, 1).clifford
     assert gates.FSWAP(0, 1).unitary
@@ -1074,7 +1098,14 @@ def test_ecr(backend):
 
     target_state = matrix @ initial_state
     backend.assert_allclose(final_state, target_state)
-    backend.assert_allclose(final_state_decompose, target_state)
+    # testing random expectation value due to global phase difference
+    observable = random_hermitian(2**nqubits, backend=backend)
+    backend.assert_allclose(
+        np.transpose(np.conj(final_state_decompose))
+        @ observable
+        @ final_state_decompose,
+        np.transpose(np.conj(target_state)) @ observable @ target_state,
+    )
 
     with pytest.raises(NotImplementedError):
         gates.ECR(0, 1).qasm_label
@@ -1098,7 +1129,7 @@ def test_toffoli(backend, applyx):
     backend.assert_allclose(final_state, target_state)
 
     assert gatelist[-1].qasm_label == "ccx"
-    assert gates.TOFFOLI(0, 1, 2).clifford
+    assert not gates.TOFFOLI(0, 1, 2).clifford
     assert gates.TOFFOLI(0, 1, 2).unitary
 
 
