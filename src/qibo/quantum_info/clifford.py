@@ -305,7 +305,7 @@ class Clifford:
             qubits (tuple): Qubits for which to compute the probabilities.
 
         Returns:
-            probabilities (np.ndarray): The measured probabilities.
+            (np.ndarray): Measured probabilities.
         """
         measured_qubits = self.measurement_gate.qubits
         if qubits is not None:
