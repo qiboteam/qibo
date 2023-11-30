@@ -119,6 +119,7 @@ class DoubleBracketIteration:
     def print_backend(self):
         """Print backend."""
         return self.backend
+
     def hyperopt_step(
         self,
         step_min: float = 1e-5,
