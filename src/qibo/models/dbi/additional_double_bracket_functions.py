@@ -1,4 +1,5 @@
 from copy import deepcopy
+from itertools import product
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,6 +12,19 @@ from qibo.models.dbi.double_bracket import (
     DoubleBracketGeneratorType,
     DoubleBracketIteration,
 )
+from qibo.symbols import I, X, Z
+
+
+class DoubleBracektStrategyType(Enum):
+    """Determines how to variationally choose the diagonal operator"""
+
+    local_Z_search = auto()
+    """Search through Z permutations"""
+    gradient_descent_search = auto()
+    """Search by gradient descent (magnetic field)"""
+    # TODO: how to input list
+    prescribed_search = auto()
+    """Search within a prescribed list of operators"""
 
 
 class DoubleBracketIterationStrategies(DoubleBracketIteration):
@@ -18,14 +32,16 @@ class DoubleBracketIterationStrategies(DoubleBracketIteration):
         self,
         hamiltonian: Hamiltonian,
         NSTEPS: int = 5,
-        please_be_verbose=True,
-        please_use_hyperopt=True,
+        please_be_verbose: bool = True,
+        please_use_hyperopt: bool = True,
         mode: DoubleBracketGeneratorType = DoubleBracketGeneratorType.canonical,
+        variation_strategy_type: DoubleBracketStrategyType = DoubleBracketStrategyType.local_Z_search,
     ):
         super().__init__(hamiltonian, mode)
         self.NSTEPS = NSTEPS
         self.please_be_verbose = please_be_verbose
         self.please_use_hyperopt = please_use_hyperopt
+        self.variation_strategy = variation_strategy
 
         self.DBI_outputs = {
             "iterated_h": [],
@@ -81,7 +97,7 @@ class DoubleBracketIterationStrategies(DoubleBracketIteration):
         d: np.array = None,
         update_h: bool = False,
     ):
-        """ "Computes the flowed hamiltonian after one double bracket iteration (and updates)"""
+        """ "Computes the iterated hamiltonian after one double bracket iteration (and updates)"""
         if mode is None:
             mode = self.mode
 
@@ -113,10 +129,8 @@ class DoubleBracketIterationStrategies(DoubleBracketIteration):
             self.h.matrix = operator @ self.h.matrix @ operator_dagger
         return operator @ self.h.matrix @ operator_dagger
 
-    def iterate_forwards_fixed_generator(self, H=None, step=0.1):
+    def iterate_forwards_fixed_generator(self, step=0.1):
         """Execute multiple Double Bracket iterations with fixed flow generator"""
-        if H is None:
-            H = deepcopy(self.h)
         self.store_initial_inputs()
         for s in range(self.NSTEPS):
             if self.please_use_hyperopt is True:
@@ -134,15 +148,45 @@ class DoubleBracketIterationStrategies(DoubleBracketIteration):
             if self.please_be_verbose is True:
                 print("try")
 
-    def iterate_forwards_from_optimal_prescribed(
-        self, H=None, prescribed_operators=None, step=0.1
+    def generate_local_Z_operators(self, L: int = None):
+        if L is None:
+            L = self.h.nqubits
+        combination_strings = product("ZI", repeat=L)
+        operator_map = {"Z": Z, "I": I}
+        operators = []
+
+        for op_string in combination_strings:
+            product = 1
+            # except for the identity
+            if "Z" in op_string:
+                for qubit, char in enumerate(op_string):
+                    if char in operator_map:
+                        product *= operator_map[char](qubit)
+                operators.append(product)
+        return operators
+
+    def iterate_forwards_via_local_Z_search(
+        self, step: float = 0.1, Z_list: list = [], check_canonical: bool = False
     ):
         """Execute double bracket iterations with the optimal operator form a prescribed list"""
-        if H is None:
-            H = deepcopy(self.h)
-        # Use best Z search as default
-        if prescribed_operators is None:
-            prescribed_operators = []  # TODO: list all instances
+        # prepare iteration
+        self.store_initial_inputs(self.h)
+
+        # generate local Z operators
+        L = self.h.nqubits
+        if Z_list is []:
+            Z_list = self.generate_local_Z_operators(L)
+
+        # search for best flow generator
+        for Z_operator in Z_list:
+            # stash values -> min -> store
+            step = self.hyp
+            iterated_h = self.double_bracekt_rotation(
+                H, step, d=Z_operator, update_h=False
+            )
+            if check_canonical is True:
+                # compare
+                print("Check")
 
     def store_outputs(self, **outputs):
         """Stores ('key', item) or (key = item) as a dictionary"""
@@ -154,10 +198,10 @@ class DoubleBracketIterationStrategies(DoubleBracketIteration):
 
     def store_initial_inputs(self):
         self.store_outputs(
-            iterated_h=self.h0,
+            iterated_h=self.h,
             iteration_steps=0.0,
             off_diagonal_norms=self.off_diagonal_norm,
-            energy_fluctuations=self.energy_fluctuation(self.h0.ground_state()),
+            energy_fluctuations=self.energy_fluctuation(self.h.ground_state()),
         )
 
     def store_iteration_outputs(
@@ -235,3 +279,75 @@ class DoubleBracketIterationStrategies(DoubleBracketIteration):
         ax_c = f.add_subplot(1, 3, 3)
         plt.annotate("b)", xy=(a, b), xycoords="axes fraction")
         self.visualize_matrix(self.h.matrix, "Final Matrix", ax_c)
+
+    def hyperopt_iteration_step(
+        self,
+        step_min: float = 1e-5,
+        step_max: float = 1,
+        max_evals: int = 1000,
+        space: callable = None,
+        optimizer: callable = None,
+        look_ahead: int = 1,
+        verbose: bool = False,
+        d: np.array = None,
+    ):
+        """
+        Optimize iteration step.
+
+        Args:
+            step_min: lower bound of the search grid;
+            step_max: upper bound of the search grid;
+            max_evals: maximum number of iterations done by the hyperoptimizer;
+            space: see hyperopt.hp possibilities;
+            optimizer: see hyperopt algorithms;
+            look_ahead: number of iteration steps to compute the loss function;
+            verbose: level of verbosity.
+            d: diagonal operator for iteration generator.
+
+        Returns:
+            (float): optimized best iteration step.
+        """
+        try:
+            import hyperopt
+        except:  # pragma: no cover
+            raise_error(
+                ImportError, "hyperopt_step function requires hyperopt to be installed."
+            )
+
+        if space is None:
+            space = hyperopt.hp.uniform
+        if optimizer is None:
+            optimizer = hyperopt.tpe
+
+        space = space("step", step_min, step_max)
+        best = hyperopt.fmin(
+            fn=partial(self.iteration_loss(d), look_ahead=look_ahead),
+            space=space,
+            algo=optimizer.suggest,
+            max_evals=max_evals,
+            verbose=verbose,
+        )
+
+        return best["step"]
+
+    def iteration_loss(self, step: float, look_ahead: int = 1, d: np.array = None):
+        """
+        Compute loss function distance between `look_ahead` steps.
+
+        Args:
+            step: iteration step.
+            look_ahead: number of iteration steps to compute the loss function;
+        """
+        # copy initial hamiltonian
+        h_copy = deepcopy(self.h)
+
+        for _ in range(look_ahead):
+            self.__call__(mode=self.mode, step=step, d=d)
+
+        # off_diagonal_norm's value after the steps
+        loss = self.off_diagonal_norm
+
+        # set back the initial configuration
+        self.h = h_copy
+
+        return loss
