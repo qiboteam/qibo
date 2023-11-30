@@ -41,7 +41,7 @@ def _list_of_matrices_product(operators):
         operators (list): The list of operators.
 
     Returns:
-        product (np.ndarray): The tensor product of the operators.
+        (np.ndarray): Tensor product of the operators.
     """
     return reduce(np.matmul, operators)  # faster
     # return np.einsum(*[d for i, op in enumerate(operators) for d in (op, (i, i + 1))])
