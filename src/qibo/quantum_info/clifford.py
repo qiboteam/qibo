@@ -53,7 +53,7 @@ class Clifford:
 
     Args:
         symplectic_matrix (np.ndarray): Symplectic matrix of the state in phase-space representation.
-        measurements (list): A list of measurements gates ``qibo.gates.M``.
+        measurements (list, optional): A list of measurements gates :class:`qibo.gates.M`. Defaults to ``None``.
         nqubits (int): The number of qubits of the state.
         nshots (int): The number of shots used for sampling the measurements.
     """
