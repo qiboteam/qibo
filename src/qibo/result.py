@@ -180,15 +180,16 @@ class MeasurementOutcomes:
         self._measurement_gate = None
         self._probs = probabilities
         self._samples = samples
+        self._frequencies = None
+        self._repeated_execution_frequencies = None
+
         if samples is not None:
             for m in measurements:
                 indices = [self.measurement_gate.qubits.index(q) for q in m.qubits]
                 m.result.register_samples(samples[:, indices])
-        self._frequencies = None
-        self._repeated_execution_frequencies = None
-
-        for gate in self.measurements:
-            gate.result.reset()
+        else:
+            for gate in self.measurements:
+                gate.result.reset()
 
     def frequencies(self, binary: bool = True, registers: bool = False):
         """Returns the frequencies of measured samples.
