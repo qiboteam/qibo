@@ -9,7 +9,7 @@ from qibo.result import CircuitResult
 
 class CliffordOperations:
     """Operations performed by Clifford gates on the phase-space representation of stabilizer states.
-    
+
     See `Aaronson & Gottesman (2004) <https://arxiv.org/abs/quant-ph/0406196>`_.
     """
 
@@ -418,11 +418,15 @@ class CliffordOperations:
 
     @staticmethod
     def get_x(symplectic_matrix, nqubits, include_scratch=False):
-        return symplectic_matrix[: -1 + (2 * nqubits + 2) * int(include_scratch), :nqubits]
+        return symplectic_matrix[
+            : -1 + (2 * nqubits + 2) * int(include_scratch), :nqubits
+        ]
 
     @staticmethod
     def get_z(symplectic_matrix, nqubits, include_scratch=False):
-        return symplectic_matrix[: -1 + (2 * nqubits + 2) * int(include_scratch), nqubits:-1]
+        return symplectic_matrix[
+            : -1 + (2 * nqubits + 2) * int(include_scratch), nqubits:-1
+        ]
 
     @staticmethod
     def get_rxz(symplectic_matrix, nqubits, include_scratch=False):
@@ -462,7 +466,12 @@ class CliffordOperations:
             exponents.append(CliffordOperations.exponent(x1, z1, x2, z2))
         r = (
             0
-            if (2 * symplectic_matrix[h, -1] + 2 * symplectic_matrix[i, -1] + self.np.sum(exponents)) % 4
+            if (
+                2 * symplectic_matrix[h, -1]
+                + 2 * symplectic_matrix[i, -1]
+                + self.np.sum(exponents)
+            )
+            % 4
             == 0
             else 1
         )
@@ -492,7 +501,9 @@ class CliffordBackend(NumpyBackend):
             symplectic_matrix (np.ndarray): The symplectic_matrix for the zero state.
         """
         I = self.np.eye(nqubits)
-        symplectic_matrix = self.np.zeros((2 * nqubits + 1, 2 * nqubits + 1), dtype=bool)
+        symplectic_matrix = self.np.zeros(
+            (2 * nqubits + 1, 2 * nqubits + 1), dtype=bool
+        )
         symplectic_matrix[:nqubits, :nqubits] = I.copy()
         symplectic_matrix[nqubits:-1, nqubits : 2 * nqubits] = I.copy()
         return symplectic_matrix

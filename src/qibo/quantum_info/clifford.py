@@ -70,7 +70,9 @@ class Clifford:
     def __post_init__(self):
         # adding the scratch row if not provided
         if self.symplectic_matrix.shape[0] % 2 == 0:
-            self.symplectic_matrix = np.vstack((self.symplectic_matrix, np.zeros(self.symplectic_matrix.shape[1])))
+            self.symplectic_matrix = np.vstack(
+                (self.symplectic_matrix, np.zeros(self.symplectic_matrix.shape[1]))
+            )
         self.nqubits = int((self.symplectic_matrix.shape[1] - 1) / 2)
 
     @classmethod

@@ -1885,14 +1885,14 @@ Kraus operators as probabilistic sum of unitaries
 Stabilizer Representation
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A quantum state :math:`\psi` can be uniquely defined by the set of its stabilizers :math:`Stab(\ket{\psi})`, 
-i.e. those unitary operators :math:`U` that have :math:`\psi` as an eigenstate with eigenvalue 1. 
-In general, :math:`2^n` stabilizers are needed to uniquely define a :math:`n`-qubits state, 
-ut a large class of quantum states can be represented by the intersection of the Stabilizer group with the Pauli group. 
-In that case, indeed, the number of operators needed reduces to :math:`n`. 
-Each one of these :math:`n` Pauli generators takes :math:`2n + 1` bits to specify, 
-yielding a :math:`n(2n+1)` total number of bits needed. 
-In particular, `Aaronson and Gottesman <aaronson_>`_ demonstrated that the application of gates can be efficiently simulated 
+A quantum state :math:`\psi` can be uniquely defined by the set of its stabilizers :math:`Stab(\ket{\psi})`,
+i.e. those unitary operators :math:`U` that have :math:`\psi` as an eigenstate with eigenvalue 1.
+In general, :math:`2^n` stabilizers are needed to uniquely define a :math:`n`-qubits state,
+ut a large class of quantum states can be represented by the intersection of the Stabilizer group with the Pauli group.
+In that case, indeed, the number of operators needed reduces to :math:`n`.
+Each one of these :math:`n` Pauli generators takes :math:`2n + 1` bits to specify,
+yielding a :math:`n(2n+1)` total number of bits needed.
+In particular, `Aaronson and Gottesman <aaronson_>`_ demonstrated that the application of gates can be efficiently simulated
 in this representation at the cost of storing the generators of the de-stabilizers in addition to the stabilizers.
 
 Therefore, the :math:`n`-qubits state is uniquely defined by a symplectic matrix of the form
@@ -1909,10 +1909,10 @@ where :math:`x_{ij},z_{ij}` are the bits encoding the :math:`n`-qubits pauli gen
 
    P_i = \sum_{j=1}^n i^{x_{ij} \oplus z_{ij}} X_j^{x_{ij}}Z_j^{z_{ij}}.
 
-In qibo the :class:`qibo.quantum_info.clifford.Clifford` object is in charge of storing the 
-stabilizer representation of a state. 
-This object is automatically created after the execution of a Clifford Circuit through the 
-:class:`qibo.backends.clifford.CliffordBackend`, but it can also be created by directly 
+In qibo the :class:`qibo.quantum_info.clifford.Clifford` object is in charge of storing the
+stabilizer representation of a state.
+This object is automatically created after the execution of a Clifford Circuit through the
+:class:`qibo.backends.clifford.CliffordBackend`, but it can also be created by directly
 passing a symplectic matrix to the constructor
 
 .. testcode::
@@ -1924,9 +1924,9 @@ passing a symplectic matrix to the constructor
    symplectic_matrix = CliffordBackend().zero_state(nqubits=3)
    clifford = Clifford(symplectic_matrix)
 
-Then, the generators of the stabilizers can be extracted with the 
-:meth:`qibo.quantum_info.clifford.Clifford.get_stabilizers_generators` method, 
-or the complete set of stabilizers operators can be generated through the 
+Then, the generators of the stabilizers can be extracted with the
+:meth:`qibo.quantum_info.clifford.Clifford.get_stabilizers_generators` method,
+or the complete set of stabilizers operators can be generated through the
 :meth:`qibo.quantum_info.clifford.Clifford.get_stabilizers` method
 
 .. testcode::
@@ -2072,23 +2072,23 @@ variable.
 Clifford Simulation
 ^^^^^^^^^^^^^^^^^^^
 
-A special backend in qibo supports the simulation of Clifford circuits. 
-This :class:`qibo.backends.clifford.CliffordBackend` backend implements the phase-space formalism 
-introduced in `https://arxiv.org/abs/quant-ph/0406196 <aaronson_>`_ to efficiently simulate gate 
-application and measurements sampling in the stabilizers state representation. 
-The execution of a circuit through this backend creates a 
-:class:`qibo.quantum_info.clifford.Clifford` object that gives access to the final measured 
-samples through the :meth:`qibo.quantum_info.clifford.Clifford.samples` method, 
-similarly to :class:`qibo.result.CircuitResult`. 
-The probabilities and frequencies are computed starting from the samples by the 
-:meth:`qibo.quantum_info.clifford.Clifford.frequencies` and 
+A special backend in qibo supports the simulation of Clifford circuits.
+This :class:`qibo.backends.clifford.CliffordBackend` backend implements the phase-space formalism
+introduced in `https://arxiv.org/abs/quant-ph/0406196 <aaronson_>`_ to efficiently simulate gate
+application and measurements sampling in the stabilizers state representation.
+The execution of a circuit through this backend creates a
+:class:`qibo.quantum_info.clifford.Clifford` object that gives access to the final measured
+samples through the :meth:`qibo.quantum_info.clifford.Clifford.samples` method,
+similarly to :class:`qibo.result.CircuitResult`.
+The probabilities and frequencies are computed starting from the samples by the
+:meth:`qibo.quantum_info.clifford.Clifford.frequencies` and
 :meth:`qibo.quantum_info.clifford.Clifford.probabilities` methods.
 
 .. _aaronson: https://arxiv.org/abs/quant-ph/0406196
 
-It is also possible to recover the standard state representation with the 
-:meth:`qibo.quantum_info.clifford.Clifford.state` method. 
-Note, however, that this process is inefficient as it involves the construction of all the 
+It is also possible to recover the standard state representation with the
+:meth:`qibo.quantum_info.clifford.Clifford.state` method.
+Note, however, that this process is inefficient as it involves the construction of all the
 stabilizers starting from the generators encoded inside the symplectic matrix.
 
 As for the other backends, the Clifford backend can be set with
