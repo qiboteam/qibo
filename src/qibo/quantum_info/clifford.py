@@ -49,7 +49,7 @@ def _list_of_matrices_product(operators):
 
 @dataclass
 class Clifford:
-    """The object storing the results of a circuit execution with the ``qibo.backends.CliffordBackend``.
+    """The object storing the results of a circuit execution with the :class:`qibo.backends.CliffordBackend`.
 
     Args:
         tableau (np.ndarray): The tableu of the state.
