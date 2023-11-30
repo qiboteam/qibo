@@ -89,7 +89,7 @@ class Clifford:
         """
         return cls._backend.execute_circuit(circuit, initial_state, nshots)
 
-    def get_stabilizers_generators(self, return_array=False):
+    def generators(self, return_array=False):
         """Extracts the generators of the stabilizers.
 
         Args:
