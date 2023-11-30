@@ -163,7 +163,7 @@ class Clifford:
             return_array (bool): If ``True`` returns the de-stabilizers as np.narrays.
 
         Returns:
-            destabilizers (list): List of the de-stabilizers of the state.
+            (list): Destabilizers of the state.
         """
         generators, phases = self.get_destabilizers_generators(return_array)
         return self._construct_operators(generators, phases, return_array)
