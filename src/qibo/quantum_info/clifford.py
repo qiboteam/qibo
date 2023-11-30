@@ -80,7 +80,7 @@ class Clifford:
         """Allows to create a ``Clifford`` object by executing the input circuit.
 
         Args:
-            circuit (qibo.models.Circuit): The clifford circuit to run.
+            circuit (:class:`qibo.models.circuit.Circuit`): The clifford circuit to run.
             initial_state (np.ndarray): The initial tableu state.
             nshots (int): The number of shots to perform.
 
