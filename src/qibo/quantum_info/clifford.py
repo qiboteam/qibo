@@ -18,7 +18,7 @@ def _string_product(operators):
         operators (list): The list of operators.
 
     Returns:
-        product (str): The string representing the tensor product of the operators.
+        (str): String representing the tensor product of the operators.
     """
     # calculate global sign
     phases = np.array(["-" in op for op in operators], dtype=bool)
