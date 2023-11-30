@@ -58,7 +58,7 @@ class Clifford:
         nshots (int): The number of shots used for sampling the measurements.
     """
 
-    tableau: np.ndarray
+    symplectic_matrix: np.ndarray
     measurements: list = None
     nqubits: int = None
     nshots: int = 1000
