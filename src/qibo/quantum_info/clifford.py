@@ -151,7 +151,7 @@ class Clifford:
             return_array (bool): If ``True`` returns the stabilizers as np.narrays.
 
         Returns:
-            stabilizers (list): List of the stabilizers of the state.
+            (list): Stabilizers of the state.
         """
         generators, phases = self.get_stabilizers_generators(return_array)
         return self._construct_operators(generators, phases, return_array)
