@@ -74,7 +74,7 @@ class Clifford:
         self.nqubits = int((self.tableau.shape[1] - 1) / 2)
 
     @classmethod
-    def run(
+    def from_circuit(
         cls, circuit: Circuit, initial_state: np.ndarray = None, nshots: int = 1000
     ):
         """Allows to create a ``Clifford`` object by executing the input circuit.
