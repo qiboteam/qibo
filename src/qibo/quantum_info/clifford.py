@@ -85,7 +85,7 @@ class Clifford:
             nshots (int): The number of shots to perform.
 
         Returns:
-            result (qibo.quantum_info.Clifford): The object storing the result of the circuit execution.
+            (:class:`qibo.quantum_info.clifford.Clifford`): The object storing the result of the circuit execution.
         """
         return cls._backend.execute_circuit(circuit, initial_state, nshots)
 
