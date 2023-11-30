@@ -172,7 +172,7 @@ class Clifford:
         """Builds the density matrix representation of the state.
 
         Returns:
-            state (np.ndarray): The density matrix of the state.
+            (np.ndarray): Density matrix of the state.
         """
         stabilizers = self.get_stabilizers(True)
         return np.sum(stabilizers, 0) / len(stabilizers)
