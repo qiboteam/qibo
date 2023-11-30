@@ -155,7 +155,7 @@ class Clifford:
         Returns:
             (list): Stabilizers of the state.
         """
-        generators, phases = self.get_stabilizers_generators(return_array)
+        generators, phases = self.generators(return_array)
         return self._construct_operators(generators, phases, return_array)
 
     def destabilizers(self, return_array=False):
@@ -176,7 +176,7 @@ class Clifford:
         Returns:
             (np.ndarray): Density matrix of the state.
         """
-        stabilizers = self.get_stabilizers(True)
+        stabilizers = self.stabilizers(True)
         return np.sum(stabilizers, 0) / len(stabilizers)
 
     @property

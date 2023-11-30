@@ -2103,7 +2103,7 @@ alternatively, a Clifford circuit can also be executed starting from the :class:
 .. code-block::  python
 
     from qibo.quantum_info import Clifford
-    result = Clifford.run(circuit)
+    result = Clifford.from_circuit(circuit)
 
 
 .. autoclass:: qibo.backends.clifford.CliffordBackend
