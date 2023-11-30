@@ -9,6 +9,7 @@ from qibo.quantum_info import Clifford, random_clifford
 
 clifford_backend = CliffordBackend()
 
+
 def test_clifford_run(backend):
     c = random_clifford(3)
     c.add(gates.M(*np.random.choice(3, size=2, replace=False)))
@@ -25,10 +26,10 @@ def test_clifford_get_stabilizers(backend):
     obj = Clifford.from_circuit(c)
     true_generators, true_phases = ["XII", "IZI", "IIZ"], [1, 1, -1]
     generators, phases = obj.generators()
- 
+
     backend.assert_allclose(generators, true_generators)
     backend.assert_allclose(phases.tolist(), true_phases)
- 
+
     true_stabilizers = [
         "-XZZ",
         "XZI",
