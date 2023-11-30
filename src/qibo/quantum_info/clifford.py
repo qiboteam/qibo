@@ -144,7 +144,7 @@ class Clifford:
             return [_list_of_matrices_product(ops) for ops in product(*operators)]
         return [_string_product(ops) for ops in product(*operators)]
 
-    def get_stabilizers(self, return_array=False):
+    def stabilizers(self, return_array=False):
         """Extracts the stabilizers of the state.
 
         Args:
