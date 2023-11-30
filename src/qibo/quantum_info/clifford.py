@@ -52,7 +52,7 @@ class Clifford:
     """The object storing the results of a circuit execution with the :class:`qibo.backends.CliffordBackend`.
 
     Args:
-        tableau (np.ndarray): The tableu of the state.
+        symplectic_matrix (np.ndarray): Symplectic matrix of the state in phase-space representation.
         measurements (list): A list of measurements gates ``qibo.gates.M``.
         nqubits (int): The number of qubits of the state.
         nshots (int): The number of shots used for sampling the measurements.
