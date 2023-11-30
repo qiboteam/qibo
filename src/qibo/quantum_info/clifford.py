@@ -156,7 +156,7 @@ class Clifford:
         generators, phases = self.get_stabilizers_generators(return_array)
         return self._construct_operators(generators, phases, return_array)
 
-    def get_destabilizers(self, return_array=False):
+    def destabilizers(self, return_array=False):
         """Extracts the de-stabilizers of the state.
 
         Args:
