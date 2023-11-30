@@ -11,6 +11,52 @@ from qibo.gates import M
 from qibo.measurements import frequencies_to_binary
 
 
+def _one_qubit_paulis_string_product(p1, p2):
+    """Calculate the product of two 1-qubit paulis represented as strings.
+
+    Args:
+        p1 (str): A pauli operator.
+        p2 (str): Another pauli operator.
+
+    Returns:
+        (str): The product of the two paulis.
+    """
+    products = {
+        "XY": "iZ",
+        "YZ": "iX",
+        "ZX": "iY",
+        "YX": "-iZ",
+        "ZY": "-iX",
+        "XZ": "iY",
+        "XX": "I",
+        "ZZ": "I",
+        "YY": "I",
+        "XI": "X",
+        "IX": "X",
+        "YI": "Y",
+        "IY": "Y",
+        "ZI": "Z",
+        "IZ": "Z",
+    }
+    prod = products["".join([p.replace("i", "").replace("-", "") for p in (p1, p2)])]
+    # calculate the phase
+    sign = np.array(["-" in p for p in (p1, p2, prod)])
+    i = np.array(["i" in p for p in (p1, p2, prod)])
+    sign = "-" if len(sign.nonzero()[0]) % 2 == 1 else ""
+    n_i = len(i.nonzero()[0])
+    if n_i == 0:
+        i = ""
+    elif n_i == 1:
+        i = "i"
+    elif n_i == 2:
+        i = ""
+        sign = "-" if sign == "" else ""
+    elif n_i == 3:
+        i = "i"
+        sign = "-" if sign == "" else ""
+    return "".join([sign, i, prod.replace("i", "").replace("-", "")])
+
+
 def _string_product(operators):
     """Calculates the tensor product of a list of operators represented as strings.
 
@@ -24,14 +70,30 @@ def _string_product(operators):
     phases = np.array(["-" in op for op in operators], dtype=bool)
     # remove the - signs
     operators = "|".join(operators).replace("-", "").split("|")
-    prod = []
+    prod, i = [], 0
     for op in zip(*operators):
-        tmp = "".join([o for o in op if o != "I"])
-        if tmp == "":
+        op = [o for o in op if o != "I"]
+        if len(op) == 0:
             tmp = "I"
-        prod.append(tmp)
-    result = "-" if len(phases.nonzero()[0]) % 2 == 1 else ""
-    return f"{result}{''.join(prod)}"
+        elif len(op) > 1:
+            tmp = reduce(_one_qubit_paulis_string_product, op)
+        else:
+            tmp = op[0]
+        # append signs coming from products
+        if tmp[0] == "-":
+            np.append(phases, True)
+        # count i coming from products
+        if "i" in tmp:
+            i += 1
+        prod.append(tmp.replace("i", "").replace("-", ""))
+    result = "".join(prod)
+    # product of the i-s
+    if i % 4 == 1 or i % 4 == 3:
+        result = f"i{result}"
+    if not (i % 4 == 0 or i % 4 == 1):
+        np.append(phases, True)
+    phases = "-" if len(phases.nonzero()[0]) % 2 == 1 else ""
+    return f"{phases}{result}"
 
 
 def _list_of_matrices_product(operators):
