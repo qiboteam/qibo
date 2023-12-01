@@ -463,9 +463,8 @@ class CliffordOperations:
     def set_scratch(symplectic_matrix, val):
         symplectic_matrix[-1, :] = val
 
-    @staticmethod
-    def exponent(x1, z1, x2, z2):
-        exp = self.engine.np.zeros(len(x1))
+    def exponent(self, x1, z1, x2, z2):
+        exp = self.engine.np.zeros(x1.shape)
         x1_eq_z1 = x1 == z1
         x1_neq_z1 = x1_eq_z1 ^ True
         x1_eq_0 = x1 == 0
@@ -626,17 +625,18 @@ class CliffordBackend(NumpyBackend):
             samples.append(res.samples())
         samples = self.np.vstack(samples)
 
+        for m in circuit.measurements:
+            m.result.register_samples(samples[:, m.target_qubits], self)
+
         from qibo.quantum_info.clifford import Clifford
 
         result = Clifford(
             self.zero_state(circuit.nqubits),
-            circuit_copy.measurements,
+            measurements=circuit.measurements,
             nshots=nshots,
             engine=self.engine,
         )
         result.symplectic_matrix, result._samples = None, None
-        for m in result.measurements:
-            m.result.register_samples(samples[:, m.target_qubits], self)
 
         return result
 
