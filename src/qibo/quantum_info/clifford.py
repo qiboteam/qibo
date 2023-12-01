@@ -1,3 +1,5 @@
+from typing import Optional
+
 from dataclasses import dataclass
 from functools import reduce
 from itertools import product
@@ -17,16 +19,23 @@ class Clifford:
 
     Args:
         symplectic_matrix (np.ndarray): Symplectic matrix of the state in phase-space representation.
-        measurements (list, optional): A list of measurements gates :class:`qibo.gates.M`. Defaults to ``None``.
-        nqubits (int): The number of qubits of the state.
-        nshots (int): The number of shots used for sampling the measurements.
+        nqubits (int): number of qubits of the state.
+        measurements (list, optional): list of measurements gates :class:`qibo.gates.M`. 
+            Defaults to ``None``.
+        nshots (int, optional): number of shots used for sampling the measurements. 
+            Defaults to :math:`1000`.
+        engine (:class:`qibo.backends.abstract.Backend`, optional): engine to use in the execution 
+            of the :class:`qibo.backends.CliffordBackend`. 
+            It accepts all ``qibo`` backends besides the :class:`qibo.backends.TensorflowBackend`,
+            which is not supported. If ``None``, defaults to :class:`qibo.backends.NumpyBackend`
+            Defaults to ``None``.
     """
 
     symplectic_matrix: np.ndarray
-    measurements: list = None
     nqubits: int = None
+    measurements: Optional[list] = None
     nshots: int = 1000
-    engine: Backend = None
+    engine: Optional[Backend] = None
 
     _backend: CliffordBackend = None
     _measurement_gate = None
@@ -291,14 +300,14 @@ class Clifford:
 
 
 def _one_qubit_paulis_string_product(pauli_1: str, pauli_2: str):
-    """Calculate the product of two 1-qubit paulis represented as strings.
+    """Calculate the product of two single-qubit Paulis represented as strings.
 
     Args:
-        p1 (str): A pauli operator.
-        p2 (str): Another pauli operator.
+        pauli_1 (str): First Pauli operator.
+        pauli_2 (str): Second Pauli operator.
 
     Returns:
-        (str): The product of the two paulis.
+        (str): The product of the two Pauli operators.
     """
     products = {
         "XY": "iZ",
