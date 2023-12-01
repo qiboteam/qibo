@@ -1,8 +1,7 @@
-from typing import Optional
-
 from dataclasses import dataclass
 from functools import reduce
 from itertools import product
+from typing import Optional
 
 import numpy as np
 
@@ -20,12 +19,12 @@ class Clifford:
     Args:
         symplectic_matrix (np.ndarray): Symplectic matrix of the state in phase-space representation.
         nqubits (int): number of qubits of the state.
-        measurements (list, optional): list of measurements gates :class:`qibo.gates.M`. 
+        measurements (list, optional): list of measurements gates :class:`qibo.gates.M`.
             Defaults to ``None``.
-        nshots (int, optional): number of shots used for sampling the measurements. 
+        nshots (int, optional): number of shots used for sampling the measurements.
             Defaults to :math:`1000`.
-        engine (:class:`qibo.backends.abstract.Backend`, optional): engine to use in the execution 
-            of the :class:`qibo.backends.CliffordBackend`. 
+        engine (:class:`qibo.backends.abstract.Backend`, optional): engine to use in the execution
+            of the :class:`qibo.backends.CliffordBackend`.
             It accepts all ``qibo`` backends besides the :class:`qibo.backends.TensorflowBackend`,
             which is not supported. If ``None``, defaults to :class:`qibo.backends.NumpyBackend`
             Defaults to ``None``.
