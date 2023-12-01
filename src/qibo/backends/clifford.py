@@ -1,5 +1,4 @@
 """Module defining the Clifford backend."""
-from functools import cache
 
 import numpy as np
 
@@ -14,6 +13,9 @@ class CliffordOperations:
     """Operations performed by Clifford gates on the phase-space representation of stabilizer states.
 
     See `Aaronson & Gottesman (2004) <https://arxiv.org/abs/quant-ph/0406196>`_.
+
+    Args:
+        engine (qibo.backends.Backend): Backend used for the calculation.
     """
 
     def __init__(self, engine):
@@ -462,25 +464,26 @@ class CliffordOperations:
         symplectic_matrix[-1, :] = val
 
     @staticmethod
-    @cache
     def exponent(x1, z1, x2, z2):
-        if x1 == z1:
-            if x1 == 0:
-                return 0
-            return int(z2) - int(x2)
-        if x1 == 1:
-            return int(z2) * (2 * int(x2) - 1)
-        return int(x2) * (1 - 2 * int(z2))
+        exp = np.zeros(len(x1))
+        x1_eq_z1 = x1 == z1
+        x1_neq_z1 = x1_eq_z1 ^ True
+        x1_eq_0 = x1 == 0
+        x1_eq_1 = x1 == 1
+        ind2 = x1_eq_z1 * x1_eq_1
+        ind3 = x1_eq_1 * x1_neq_z1
+        ind4 = x1_eq_0 * x1_neq_z1
+        exp[ind2] = z2[ind2].astype(int) - x2[ind2].astype(int)
+        exp[ind3] = z2[ind3].astype(int) * (2 * x2[ind3].astype(int) - 1)
+        exp[ind4] = x2[ind4].astype(int) * (1 - 2 * z2[ind4].astype(int))
+        return exp
 
     def rowsum(self, symplectic_matrix, h, i, nqubits, include_scratch: bool = False):
         exponents = []
         x, z = self.get_x(symplectic_matrix, nqubits, include_scratch), self.get_z(
             symplectic_matrix, nqubits, include_scratch
         )
-        for j in range(nqubits):
-            x1, x2 = x[[i, h], [j, j]]
-            z1, z2 = z[[i, h], [j, j]]
-            exponents.append(CliffordOperations.exponent(x1, z1, x2, z2))
+        exponents = self.exponent(x[i, :], z[i, :], x[h, :], z[h, :])
         r = (
             0
             if (
@@ -499,6 +502,12 @@ class CliffordOperations:
 
 
 class CliffordBackend(NumpyBackend):
+    """Backend for the simulation of Clifford circuits following `Aaronson & Gottesman (2004) <https://arxiv.org/abs/quant-ph/0406196>`_.
+
+    Args:
+        engine (qibo.backends.Backend): Backend used for the calculation.
+    """
+
     def __init__(self, engine=None):
         super().__init__()
 
@@ -584,7 +593,12 @@ class CliffordBackend(NumpyBackend):
 
             from qibo.quantum_info.clifford import Clifford
 
-            return Clifford(state, measurements=circuit.measurements, nshots=nshots)
+            return Clifford(
+                state,
+                measurements=circuit.measurements,
+                nshots=nshots,
+                engine=self.engine,
+            )
 
         except self.oom_error:  # pragma: no cover
             raise_error(
@@ -607,18 +621,19 @@ class CliffordBackend(NumpyBackend):
         """
         circuit_copy = circuit.copy()
         samples = []
-        states = []
         for i in range(nshots):
             res = self.execute_circuit(circuit_copy, initial_state, nshots=1)
             [m.result.reset() for m in circuit_copy.measurements]
-            states.append(res.state())
             samples.append(res.samples())
         samples = self.np.vstack(samples)
 
         from qibo.quantum_info.clifford import Clifford
 
         result = Clifford(
-            self.zero_state(circuit.nqubits), circuit_copy.measurements, nshots=nshots
+            self.zero_state(circuit.nqubits),
+            circuit_copy.measurements,
+            nshots=nshots,
+            engine=self.engine,
         )
         result.symplectic_matrix, result._samples = None, None
         for m in result.measurements:
@@ -642,10 +657,14 @@ class CliffordBackend(NumpyBackend):
         qubits = qubits
         operation = CliffordOperations(self.engine)
         if collapse:
-            samples = [operation.M(state, qubits, nqubits) for _ in range(nshots - 1)]
+            samples = [
+                operation.M(state, qubits, nqubits) for _ in range(nshots - 1)
+            ]  # parallelize?
             samples.append(operation.M(state, qubits, nqubits, collapse))
         else:
-            samples = [operation.M(state, qubits, nqubits) for _ in range(nshots)]
+            samples = [
+                operation.M(state, qubits, nqubits) for _ in range(nshots)
+            ]  # parallelize?
         return self.np.array(samples).reshape(nshots, len(qubits))
 
     def symplectic_matrix_to_generators(self, symplectic_matrix, return_array=False):
