@@ -13,9 +13,10 @@ from qibo.quantum_info import random_density_matrix, random_statevector
 def test_measurement_collapse(backend, nqubits, targets):
     initial_state = random_statevector(2**nqubits, backend=backend)
     c = models.Circuit(nqubits)
+    for q in np.random.randint(nqubits, size=np.random.randint(nqubits, size=1)):
+        c.add(gates.H(q))
     r = c.add(gates.M(*targets, collapse=True))
     c.add(gates.M(*targets))
-    # final_state = backend.execute_circuit(c, np.copy(initial_state), nshots=1)[0]
     outcome = backend.execute_circuit(c, np.copy(initial_state), nshots=1)
     samples = r.samples()[0]
     backend.assert_allclose(samples, outcome.samples()[0])
