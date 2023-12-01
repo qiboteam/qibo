@@ -465,7 +465,7 @@ class CliffordOperations:
 
     @staticmethod
     def exponent(x1, z1, x2, z2):
-        exp = np.zeros(len(x1))
+        exp = self.engine.np.zeros(len(x1))
         x1_eq_z1 = x1 == z1
         x1_neq_z1 = x1_eq_z1 ^ True
         x1_eq_0 = x1 == 0
@@ -479,7 +479,6 @@ class CliffordOperations:
         return exp
 
     def rowsum(self, symplectic_matrix, h, i, nqubits, include_scratch: bool = False):
-        exponents = []
         x, z = self.get_x(symplectic_matrix, nqubits, include_scratch), self.get_z(
             symplectic_matrix, nqubits, include_scratch
         )
