@@ -1159,11 +1159,13 @@ def _sample_from_quantum_mallows_distribution(nqubits: int, local_state):
     """
     mute_index = list(range(nqubits))
 
-    exponents = np.arange(nqubits, 0, -1, dtype=int)
+    exponents = np.arange(nqubits, 0, -1, dtype=np.int64)
+    powers = 4**exponents
+    powers[powers == 0] = np.iinfo(np.int64).max
 
     r = local_state.uniform(0, 1, size=nqubits)
 
-    indexes = -1 * (np.ceil(np.log2(r + (1 - r) / 4**exponents)))
+    indexes = -1 * (np.ceil(np.log2(r + (1 - r) / powers)))
 
     hadamards = 1 * (indexes < exponents)
 
