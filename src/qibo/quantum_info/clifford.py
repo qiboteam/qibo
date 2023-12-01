@@ -1,3 +1,5 @@
+from typing import Optional
+
 from dataclasses import dataclass
 from functools import reduce
 from itertools import product
@@ -9,104 +11,6 @@ from qibo.backends import Backend, CliffordBackend
 from qibo.config import raise_error
 from qibo.gates import M
 from qibo.measurements import frequencies_to_binary
-
-
-def _one_qubit_paulis_string_product(p1, p2):
-    """Calculate the product of two 1-qubit paulis represented as strings.
-
-    Args:
-        p1 (str): A pauli operator.
-        p2 (str): Another pauli operator.
-
-    Returns:
-        (str): The product of the two paulis.
-    """
-    products = {
-        "XY": "iZ",
-        "YZ": "iX",
-        "ZX": "iY",
-        "YX": "-iZ",
-        "ZY": "-iX",
-        "XZ": "iY",
-        "XX": "I",
-        "ZZ": "I",
-        "YY": "I",
-        "XI": "X",
-        "IX": "X",
-        "YI": "Y",
-        "IY": "Y",
-        "ZI": "Z",
-        "IZ": "Z",
-    }
-    prod = products["".join([p.replace("i", "").replace("-", "") for p in (p1, p2)])]
-    # calculate the phase
-    sign = np.array(["-" in p for p in (p1, p2, prod)])
-    i = np.array(["i" in p for p in (p1, p2, prod)])
-    sign = "-" if len(sign.nonzero()[0]) % 2 == 1 else ""
-    n_i = len(i.nonzero()[0])
-    if n_i == 0:
-        i = ""
-    elif n_i == 1:
-        i = "i"
-    elif n_i == 2:
-        i = ""
-        sign = "-" if sign == "" else ""
-    elif n_i == 3:
-        i = "i"
-        sign = "-" if sign == "" else ""
-    return "".join([sign, i, prod.replace("i", "").replace("-", "")])
-
-
-def _string_product(operators):
-    """Calculates the tensor product of a list of operators represented as strings.
-
-    Args:
-        operators (list): The list of operators.
-
-    Returns:
-        (str): String representing the tensor product of the operators.
-    """
-    # calculate global sign
-    phases = np.array(["-" in op for op in operators], dtype=bool)
-    # remove the - signs
-    operators = "|".join(operators).replace("-", "").split("|")
-    prod, i = [], 0
-    for op in zip(*operators):
-        op = [o for o in op if o != "I"]
-        if len(op) == 0:
-            tmp = "I"
-        elif len(op) > 1:
-            tmp = reduce(_one_qubit_paulis_string_product, op)
-        else:
-            tmp = op[0]
-        # append signs coming from products
-        if tmp[0] == "-":
-            np.append(phases, True)
-        # count i coming from products
-        if "i" in tmp:
-            i += 1
-        prod.append(tmp.replace("i", "").replace("-", ""))
-    result = "".join(prod)
-    # product of the i-s
-    if i % 4 == 1 or i % 4 == 3:
-        result = f"i{result}"
-    if not (i % 4 == 0 or i % 4 == 1):
-        np.append(phases, True)
-    phases = "-" if len(phases.nonzero()[0]) % 2 == 1 else ""
-    return f"{phases}{result}"
-
-
-def _list_of_matrices_product(operators):
-    """Calculates the product of a list of operators as np.ndarrays.
-
-    Args:
-        operators (list): The list of operators.
-
-    Returns:
-        (np.ndarray): Tensor product of the operators.
-    """
-    return reduce(np.matmul, operators)  # faster
-    # return np.einsum(*[d for i, op in enumerate(operators) for d in (op, (i, i + 1))])
 
 
 @dataclass
@@ -197,7 +101,7 @@ class Clifford:
         )
         operators = [(g, identity) for g in operators]
         if is_array:
-            return [_list_of_matrices_product(ops) for ops in product(*operators)]
+            return [reduce(np.matmul, ops) for ops in product(*operators)]
         return [_string_product(ops) for ops in product(*operators)]
 
     def stabilizers(self, return_array=False):
@@ -386,3 +290,94 @@ class Clifford:
         return self._backend.calculate_probabilities(
             np.sqrt(probs), qubits, len(measured_qubits)
         )
+
+
+def _one_qubit_paulis_string_product(pauli_1: str, pauli_2: str):
+    """Calculate the product of two 1-qubit paulis represented as strings.
+
+    Args:
+        p1 (str): A pauli operator.
+        p2 (str): Another pauli operator.
+
+    Returns:
+        (str): The product of the two paulis.
+    """
+    products = {
+        "XY": "iZ",
+        "YZ": "iX",
+        "ZX": "iY",
+        "YX": "-iZ",
+        "ZY": "-iX",
+        "XZ": "iY",
+        "XX": "I",
+        "ZZ": "I",
+        "YY": "I",
+        "XI": "X",
+        "IX": "X",
+        "YI": "Y",
+        "IY": "Y",
+        "ZI": "Z",
+        "IZ": "Z",
+    }
+    prod = products[
+        "".join([p.replace("i", "").replace("-", "") for p in (pauli_1, pauli_2)])
+    ]
+    # calculate the phase
+    sign = np.array(["-" in p for p in (pauli_1, pauli_2, prod)])
+    i = np.array(["i" in p for p in (pauli_1, pauli_2, prod)])
+    sign = "-" if len(sign.nonzero()[0]) % 2 == 1 else ""
+    n_i = len(i.nonzero()[0])
+    if n_i == 0:
+        i = ""
+    elif n_i == 1:
+        i = "i"
+    elif n_i == 2:
+        i = ""
+        sign = "-" if sign == "" else ""
+    elif n_i == 3:
+        i = "i"
+        sign = "-" if sign == "" else ""
+    return "".join([sign, i, prod.replace("i", "").replace("-", "")])
+
+
+def _string_product(operators: list):
+    """Calculates the tensor product of a list of operators represented as strings.
+
+    Args:
+        operators (list): The list of operators.
+
+    Returns:
+        (str): String representing the tensor product of the operators.
+    """
+    # calculate global sign
+    phases = np.array(["-" in op for op in operators], dtype=bool)
+    # remove the - signs
+    operators = "|".join(operators).replace("-", "").split("|")
+
+    prod, i = [], 0
+    for op in zip(*operators):
+        op = [o for o in op if o != "I"]
+        if len(op) == 0:
+            tmp = "I"
+        elif len(op) > 1:
+            tmp = reduce(_one_qubit_paulis_string_product, op)
+        else:
+            tmp = op[0]
+        # append signs coming from products
+        if tmp[0] == "-":
+            np.append(phases, True)
+        # count i coming from products
+        if "i" in tmp:
+            i += 1
+        prod.append(tmp.replace("i", "").replace("-", ""))
+    result = "".join(prod)
+
+    # product of the i-s
+    if i % 4 == 1 or i % 4 == 3:
+        result = f"i{result}"
+    if not (i % 4 == 0 or i % 4 == 1):
+        np.append(phases, True)
+
+    phases = "-" if len(phases.nonzero()[0]) % 2 == 1 else ""
+
+    return f"{phases}{result}"
