@@ -35,7 +35,7 @@ AXES = ["RX", "RY", "RZ"]
 
 
 @pytest.mark.parametrize("axis,theta", list(product(AXES, THETAS_1Q)))
-def test_rotations_1q(theta, axis, backend):
+def test_rotations_1q(backend, theta, axis):
     clifford_bkd = construct_clifford_backend(backend)
     if not clifford_bkd:
         return
@@ -55,7 +55,7 @@ THETAS_2Q = [i * np.pi for i in range(4)]
 
 
 @pytest.mark.parametrize("axis,theta", list(product(AXES, THETAS_2Q)))
-def test_rotations_2q(theta, axis, backend):
+def test_rotations_2q(backend, theta, axis):
     clifford_bkd = construct_clifford_backend(backend)
     if not clifford_bkd:
         return
@@ -76,7 +76,7 @@ SINGLE_QUBIT_CLIFFORDS = ["I", "H", "S", "Z", "X", "Y", "SX", "SDG", "SXDG"]
 
 
 @pytest.mark.parametrize("gate", SINGLE_QUBIT_CLIFFORDS)
-def test_single_qubit_gates(gate, backend):
+def test_single_qubit_gates(backend, gate):
     clifford_bkd = construct_clifford_backend(backend)
     if not clifford_bkd:
         return
@@ -96,7 +96,7 @@ TWO_QUBITS_CLIFFORDS = ["CNOT", "CZ", "CY", "SWAP", "iSWAP", "FSWAP", "ECR"]
 
 
 @pytest.mark.parametrize("gate", TWO_QUBITS_CLIFFORDS)
-def test_two_qubits_gates(gate, backend):
+def test_two_qubits_gates(backend, gate):
     clifford_bkd = construct_clifford_backend(backend)
     if not clifford_bkd:
         return
@@ -127,7 +127,7 @@ MEASURED_QUBITS = sorted(np.random.choice(range(5), size=3, replace=False))
         [4],
     ],
 )
-def test_random_clifford_circuit(prob_qubits, backend):
+def test_random_clifford_circuit(backend, prob_qubits):
     clifford_bkd = construct_clifford_backend(backend)
     if not clifford_bkd:
         return
