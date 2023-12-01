@@ -1888,7 +1888,7 @@ Stabilizer Representation
 A quantum state :math:`\psi` can be uniquely defined by the set of its stabilizers :math:`Stab(\ket{\psi})`,
 i.e. those unitary operators :math:`U` that have :math:`\psi` as an eigenstate with eigenvalue 1.
 In general, :math:`2^n` stabilizers are needed to uniquely define a :math:`n`-qubits state,
-ut a large class of quantum states can be represented by the intersection of the Stabilizer group with the Pauli group.
+but a large class of quantum states can be represented by the intersection of the Stabilizer group with the Pauli group.
 In that case, indeed, the number of operators needed reduces to :math:`n`.
 Each one of these :math:`n` Pauli generators takes :math:`2n + 1` bits to specify,
 yielding a :math:`n(2n+1)` total number of bits needed.
