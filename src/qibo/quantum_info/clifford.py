@@ -5,7 +5,7 @@ from itertools import product
 import numpy as np
 
 from qibo import Circuit
-from qibo.backends import CliffordBackend
+from qibo.backends import Backend, CliffordBackend
 from qibo.config import raise_error
 from qibo.gates import M
 from qibo.measurements import frequencies_to_binary
@@ -124,8 +124,9 @@ class Clifford:
     measurements: list = None
     nqubits: int = None
     nshots: int = 1000
+    engine: Backend = None
 
-    _backend: CliffordBackend = CliffordBackend()
+    _backend: CliffordBackend = None
     _measurement_gate = None
     _samples = None
 
@@ -136,10 +137,15 @@ class Clifford:
                 (self.symplectic_matrix, np.zeros(self.symplectic_matrix.shape[1]))
             )
         self.nqubits = int((self.symplectic_matrix.shape[1] - 1) / 2)
+        self._backend = CliffordBackend(self.engine)
 
     @classmethod
     def from_circuit(
-        cls, circuit: Circuit, initial_state: np.ndarray = None, nshots: int = 1000
+        cls,
+        circuit: Circuit,
+        initial_state: np.ndarray = None,
+        nshots: int = 1000,
+        engine: Backend = None,
     ):
         """Allows to create a ``Clifford`` object by executing the input circuit.
 
@@ -151,10 +157,11 @@ class Clifford:
         Returns:
             (:class:`qibo.quantum_info.clifford.Clifford`): The object storing the result of the circuit execution.
         """
+        cls._backend = CliffordBackend(engine)
         return cls._backend.execute_circuit(circuit, initial_state, nshots)
 
     def generators(self, return_array=False):
-        """Extracts the generators of the stabilizers.
+        """Extracts the generators of both the de-stabilizers (first ``n-qubits`` elements) and the stabilizers (second ``n-qubits`` elements).
 
         Args:
             return_array (bool): If ``True`` returns the generators as np.ndarray matrices, otherwise their representation as strings is returned.
@@ -162,24 +169,9 @@ class Clifford:
         Returns:
             (list, list): Generators and their corresponding phases.
         """
-        generators, phases = self._backend.symplectic_matrix_to_generators(
+        return self._backend.symplectic_matrix_to_generators(
             self.symplectic_matrix, return_array
         )
-        return generators[self.nqubits :], phases[self.nqubits :]
-
-    def get_destabilizers_generators(self, return_array=False):
-        """Extracts the generators of the de-stabilizers.
-
-        Args:
-            return_array (bool): If ``True`` returns the generators as np.ndarray matrices, otherwise their representation as strings is returned.
-
-        Returns:
-            (generators, phases) (list, list): List of the generators and their corresponding phases.
-        """
-        generators, phases = self._backend.symplectic_matrix_to_generators(
-            self.symplectic_matrix, return_array
-        )
-        return generators[: self.nqubits], phases[: self.nqubits]
 
     def _construct_operators(self, generators, phases, is_array=False):
         """Helper function to construct all the operators from their generators.
@@ -218,7 +210,9 @@ class Clifford:
             (list): Stabilizers of the state.
         """
         generators, phases = self.generators(return_array)
-        return self._construct_operators(generators, phases, return_array)
+        return self._construct_operators(
+            generators[self.nqubits :], phases[self.nqubits :], return_array
+        )
 
     def destabilizers(self, return_array=False):
         """Extracts the de-stabilizers of the state.
@@ -229,8 +223,10 @@ class Clifford:
         Returns:
             (list): Destabilizers of the state.
         """
-        generators, phases = self.get_destabilizers_generators(return_array)
-        return self._construct_operators(generators, phases, return_array)
+        generators, phases = self.generators(return_array)
+        return self._construct_operators(
+            generators[: self.nqubits], phases[: self.nqubits], return_array
+        )
 
     def state(self):
         """Builds the density matrix representation of the state.

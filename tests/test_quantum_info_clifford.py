@@ -1,80 +1,172 @@
 from collections import Counter
+from functools import reduce
 
 import numpy as np
 import pytest
 
 from qibo import Circuit, gates
-from qibo.backends import CliffordBackend
+from qibo.backends import CliffordBackend, TensorflowBackend
 from qibo.quantum_info import Clifford, random_clifford
 
-clifford_backend = CliffordBackend()
+
+def construct_clifford_backend(backend):
+    if isinstance(backend, TensorflowBackend):
+        with pytest.raises(NotImplementedError) as excinfo:
+            clifford_backend = CliffordBackend(backend)
+            assert (
+                str(excinfo.value)
+                == "TensorflowBackend for Clifford Simulation is not supported yet."
+            )
+    else:
+        return CliffordBackend(backend)
 
 
-def test_clifford_run(backend):
+def test_clifford_from_circuit(backend):
+    clifford_backend = construct_clifford_backend(backend)
+    if not clifford_backend:
+        return
     c = random_clifford(3)
     c.add(gates.M(*np.random.choice(3, size=2, replace=False)))
-    result = backend.execute_circuit(c)
-    obj = Clifford.from_circuit(c)
+    result = clifford_backend.execute_circuit(c)
+    obj = Clifford.from_circuit(c, engine=backend)
     backend.assert_allclose(obj.state(), result.state())
     backend.assert_allclose(obj.probabilities(), result.probabilities())
 
 
-def test_clifford_get_stabilizers(backend):
+@pytest.mark.parametrize("return_array", [True, False])
+def test_clifford_stabilizers(backend, return_array):
+    clifford_backend = construct_clifford_backend(backend)
+    if not clifford_backend:
+        return
+    c = Circuit(3)
+    c.add(gates.X(2))
+    c.add(gates.H(0))
+    obj = Clifford.from_circuit(c, engine=backend)
+    if return_array:
+        true_generators = [
+            reduce(np.kron, [getattr(gates, gate)(0).matrix() for gate in generator])
+            for generator in ["XII", "IZI", "IIZ"]
+        ]
+    else:
+        true_generators = ["XII", "IZI", "IIZ"]
+    true_phases = [1, 1, -1]
+    generators, phases = obj.generators(return_array)
+
+    if return_array:
+        backend.assert_allclose(generators[3:], true_generators)
+        backend.assert_allclose(phases.tolist()[3:], true_phases)
+    else:
+        assert generators[3:] == true_generators
+        assert phases.tolist()[3:] == true_phases
+
+    if return_array:
+        true_stabilizers = []
+        for stab in [
+            "-XZZ",
+            "XZI",
+            "-XIZ",
+            "XII",
+            "-IZZ",
+            "IZI",
+            "-IIZ",
+            "III",
+        ]:
+            tmp = reduce(
+                np.kron, [getattr(gates, s)(0).matrix() for s in stab.replace("-", "")]
+            )
+            if "-" in stab:
+                tmp *= -1
+            true_stabilizers.append(tmp)
+    else:
+        true_stabilizers = [
+            "-XZZ",
+            "XZI",
+            "-XIZ",
+            "XII",
+            "-IZZ",
+            "IZI",
+            "-IIZ",
+            "III",
+        ]
+    stabilizers = obj.stabilizers(return_array)
+    if return_array:
+        backend.assert_allclose(stabilizers, true_stabilizers)
+    else:
+        assert stabilizers, true_stabilizers
+
+
+@pytest.mark.parametrize("return_array", [True, False])
+def test_clifford_destabilizers(backend, return_array):
+    clifford_backend = construct_clifford_backend(backend)
+    if not clifford_backend:
+        return
     c = Circuit(3)
     c.add(gates.X(2))
     c.add(gates.H(0))
     obj = Clifford.from_circuit(c)
-    true_generators, true_phases = ["XII", "IZI", "IIZ"], [1, 1, -1]
-    generators, phases = obj.generators()
+    if return_array:
+        true_generators = [
+            reduce(np.kron, [getattr(gates, gate)(0).matrix() for gate in generator])
+            for generator in ["ZII", "IXI", "IIX"]
+        ]
+    else:
+        true_generators = ["ZII", "IXI", "IIX"]
+    true_phases = [1, 1, 1]
+    generators, phases = obj.generators(return_array)
 
-    backend.assert_allclose(generators, true_generators)
-    backend.assert_allclose(phases.tolist(), true_phases)
+    if return_array:
+        backend.assert_allclose(generators[:3], true_generators)
+        backend.assert_allclose(phases.tolist()[:3], true_phases)
+    else:
+        assert generators[:3] == true_generators
+        assert phases.tolist()[:3] == true_phases
 
-    true_stabilizers = [
-        "-XZZ",
-        "XZI",
-        "-XIZ",
-        "XII",
-        "-IZZ",
-        "IZI",
-        "-IIZ",
-        "III",
-    ]
-    stabilizers = obj.stabilizers()
-    backend.assert_allclose(stabilizers, true_stabilizers)
-
-
-def test_clifford_destabilizers(backend):
-    c = Circuit(3)
-    c.add(gates.X(2))
-    c.add(gates.H(0))
-    obj = Clifford.from_circuit(c)
-    true_generators, true_phases = ["ZII", "IXI", "IIX"], [1, 1, 1]
-    generators, phases = obj.get_destabilizers_generators()
-
-    backend.assert_allclose(generators, true_generators)
-    backend.assert_allclose(phases.tolist(), true_phases)
-
-    true_destabilizers = [
-        "ZXX",
-        "ZXI",
-        "ZIX",
-        "ZII",
-        "IXX",
-        "IXI",
-        "IIX",
-        "III",
-    ]
-    destabilizers = obj.destabilizers()
-    backend.assert_allclose(destabilizers, true_destabilizers)
+    if return_array:
+        true_destabilizers = []
+        for destab in [
+            "ZXX",
+            "ZXI",
+            "ZIX",
+            "ZII",
+            "IXX",
+            "IXI",
+            "IIX",
+            "III",
+        ]:
+            tmp = reduce(
+                np.kron,
+                [getattr(gates, s)(0).matrix() for s in destab.replace("-", "")],
+            )
+            if "-" in destab:
+                tmp *= -1
+            true_destabilizers.append(tmp)
+    else:
+        true_destabilizers = [
+            "ZXX",
+            "ZXI",
+            "ZIX",
+            "ZII",
+            "IXX",
+            "IXI",
+            "IIX",
+            "III",
+        ]
+    destabilizers = obj.destabilizers(return_array)
+    if return_array:
+        backend.assert_allclose(destabilizers, true_destabilizers)
+    else:
+        assert destabilizers, true_destabilizers
 
 
 @pytest.mark.parametrize("binary", [True, False])
 def test_clifford_samples_frequencies(backend, binary):
+    clifford_backend = construct_clifford_backend(backend)
+    if not clifford_backend:
+        return
     c = random_clifford(5)
     c.add(gates.M(3, register_name="3"))
     c.add(gates.M(0, 1, register_name="01"))
-    obj = Clifford.from_circuit(c, nshots=50)
+    obj = Clifford.from_circuit(c, nshots=50, engine=backend)
     samples_1 = obj.samples(binary=binary, registers=True)
     samples_2 = obj.samples(binary=binary, registers=False)
     if binary:

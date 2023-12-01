@@ -1,8 +1,11 @@
 """Module defining the Clifford backend."""
 from functools import cache
 
+import numpy as np
+
 from qibo import gates
 from qibo.backends.numpy import NumpyBackend
+from qibo.backends.tensorflow import TensorflowBackend
 from qibo.config import raise_error
 from qibo.result import CircuitResult
 
@@ -13,10 +16,8 @@ class CliffordOperations:
     See `Aaronson & Gottesman (2004) <https://arxiv.org/abs/quant-ph/0406196>`_.
     """
 
-    def __init__(self):
-        import numpy as np
-
-        self.np = np
+    def __init__(self, engine):
+        self.engine = engine
 
     def I(self, symplectic_matrix, q, nqubits):
         return symplectic_matrix
@@ -60,7 +61,7 @@ class CliffordOperations:
         )
         symplectic_matrix[
             :-1, [nqubits + control_q, nqubits + target_q]
-        ] = self.np.vstack(
+        ] = self.engine.np.vstack(
             (x[:, target_q] ^ z[:, control_q], z[:, target_q] ^ x[:, control_q])
         ).T
         return symplectic_matrix
@@ -142,31 +143,31 @@ class CliffordOperations:
         return symplectic_matrix
 
     def RX(self, symplectic_matrix, q, nqubits, theta):
-        if theta % (2 * self.np.pi) == 0:
+        if theta % (2 * np.pi) == 0:
             return self.I(symplectic_matrix, q, nqubits)
-        elif (theta / self.np.pi - 1) % 2 == 0:
+        elif (theta / np.pi - 1) % 2 == 0:
             return self.X(symplectic_matrix, q, nqubits)
-        elif (theta / (self.np.pi / 2) - 1) % 4 == 0:
+        elif (theta / (np.pi / 2) - 1) % 4 == 0:
             return self.SX(symplectic_matrix, q, nqubits)
         else:  # theta == 3*pi/2 + 2*n*pi
             return self.SXDG(symplectic_matrix, q, nqubits)
 
     def RZ(self, symplectic_matrix, q, nqubits, theta):
-        if theta % (2 * self.np.pi) == 0:
+        if theta % (2 * np.pi) == 0:
             return self.I(symplectic_matrix, q, nqubits)
-        elif (theta / self.np.pi - 1) % 2 == 0:
+        elif (theta / np.pi - 1) % 2 == 0:
             return self.Z(symplectic_matrix, q, nqubits)
-        elif (theta / (self.np.pi / 2) - 1) % 4 == 0:
+        elif (theta / (np.pi / 2) - 1) % 4 == 0:
             return self.S(symplectic_matrix, q, nqubits)
         else:  # theta == 3*pi/2 + 2*n*pi
             return self.SDG(symplectic_matrix, q, nqubits)
 
     def RY(self, symplectic_matrix, q, nqubits, theta):
-        if theta % (2 * self.np.pi) == 0:
+        if theta % (2 * np.pi) == 0:
             return self.I(symplectic_matrix, q, nqubits)
-        elif (theta / self.np.pi - 1) % 2 == 0:
+        elif (theta / np.pi - 1) % 2 == 0:
             return self.Y(symplectic_matrix, q, nqubits)
-        elif (theta / (self.np.pi / 2) - 1) % 4 == 0:
+        elif (theta / (np.pi / 2) - 1) % 4 == 0:
             """Decomposition --> H-S-S"""
 
             r, x, z = self.get_rxz(symplectic_matrix, nqubits)
@@ -259,7 +260,7 @@ class CliffordOperations:
         )
         symplectic_matrix[
             :-1, [nqubits + control_q, nqubits + target_q]
-        ] = self.np.vstack(
+        ] = self.engine.np.vstack(
             (
                 x[:, target_q] ^ z[:, target_q] ^ x[:, control_q],
                 x[:, target_q] ^ z[:, control_q] ^ x[:, control_q],
@@ -274,13 +275,9 @@ class CliffordOperations:
         """Decomposition --> X-CNOT-RY-CNOT-RY-CNOT-CNOT-X"""
         symplectic_matrix = self.X(symplectic_matrix, target_q, nqubits)
         symplectic_matrix = self.CNOT(symplectic_matrix, control_q, target_q, nqubits)
-        symplectic_matrix = self.RY(
-            symplectic_matrix, control_q, nqubits, self.np.pi / 2
-        )
+        symplectic_matrix = self.RY(symplectic_matrix, control_q, nqubits, np.pi / 2)
         symplectic_matrix = self.CNOT(symplectic_matrix, target_q, control_q, nqubits)
-        symplectic_matrix = self.RY(
-            symplectic_matrix, control_q, nqubits, -self.np.pi / 2
-        )
+        symplectic_matrix = self.RY(symplectic_matrix, control_q, nqubits, -np.pi / 2)
         symplectic_matrix = self.CNOT(symplectic_matrix, target_q, control_q, nqubits)
         symplectic_matrix = self.CNOT(symplectic_matrix, control_q, target_q, nqubits)
         return self.X(symplectic_matrix, control_q, nqubits)
@@ -305,7 +302,7 @@ class CliffordOperations:
 
         symplectic_matrix[
             :-1, [target_q, nqubits + control_q, nqubits + target_q]
-        ] = self.np.vstack(
+        ] = self.engine.np.vstack(
             (
                 x[:, control_q] ^ x[:, target_q],
                 z[:, control_q] ^ z[:, target_q] ^ x[:, target_q],
@@ -316,22 +313,22 @@ class CliffordOperations:
 
     def CRX(self, symplectic_matrix, control_q, target_q, nqubits, theta):
         # theta = 4 * n * pi
-        if theta % (4 * self.np.pi) == 0:
+        if theta % (4 * np.pi) == 0:
             return self.I(symplectic_matrix, target_q, nqubits)
         # theta = pi + 4 * n * pi
-        elif (theta / self.np.pi - 1) % 4 == 0:
+        elif (theta / np.pi - 1) % 4 == 0:
             symplectic_matrix = self.X(symplectic_matrix, target_q, nqubits)
             symplectic_matrix = self.CZ(symplectic_matrix, control_q, target_q, nqubits)
             symplectic_matrix = self.X(symplectic_matrix, target_q, nqubits)
             return self.CY(symplectic_matrix, control_q, target_q, nqubits)
         # theta = 2 * pi + 4 * n * pi
-        elif (theta / (2 * self.np.pi) - 1) % 2 == 0:
+        elif (theta / (2 * np.pi) - 1) % 2 == 0:
             symplectic_matrix = self.CZ(symplectic_matrix, control_q, target_q, nqubits)
             symplectic_matrix = self.Y(symplectic_matrix, target_q, nqubits)
             symplectic_matrix = self.CZ(symplectic_matrix, control_q, target_q, nqubits)
             return self.Y(symplectic_matrix, target_q, nqubits)
         # theta = 3 * pi + 4 * n * pi
-        elif (theta / self.np.pi - 3) % 4 == 0:
+        elif (theta / np.pi - 3) % 4 == 0:
             symplectic_matrix = self.X(symplectic_matrix, target_q, nqubits)
             symplectic_matrix = self.CY(symplectic_matrix, control_q, target_q, nqubits)
             symplectic_matrix = self.X(symplectic_matrix, target_q, nqubits)
@@ -339,22 +336,22 @@ class CliffordOperations:
 
     def CRZ(self, symplectic_matrix, control_q, target_q, nqubits, theta):
         # theta = 4 * n * pi
-        if theta % (4 * self.np.pi) == 0:
+        if theta % (4 * np.pi) == 0:
             return self.I(symplectic_matrix, target_q, nqubits)
         # theta = pi + 4 * n * pi
-        elif (theta / self.np.pi - 1) % 4 == 0:
+        elif (theta / np.pi - 1) % 4 == 0:
             symplectic_matrix = self.X(symplectic_matrix, target_q, nqubits)
             symplectic_matrix = self.CY(symplectic_matrix, control_q, target_q, nqubits)
             symplectic_matrix = self.X(symplectic_matrix, target_q, nqubits)
             return self.CNOT(symplectic_matrix, control_q, target_q, nqubits)
         # theta = 2 * pi + 4 * n * pi
-        elif (theta / (2 * self.np.pi) - 1) % 2 == 0:
+        elif (theta / (2 * np.pi) - 1) % 2 == 0:
             symplectic_matrix = self.CZ(symplectic_matrix, control_q, target_q, nqubits)
             symplectic_matrix = self.X(symplectic_matrix, target_q, nqubits)
             symplectic_matrix = self.CZ(symplectic_matrix, control_q, target_q, nqubits)
             return self.X(symplectic_matrix, target_q, nqubits)
         # theta = 3 * pi + 4 * n * pi
-        elif (theta / self.np.pi - 3) % 4 == 0:
+        elif (theta / np.pi - 3) % 4 == 0:
             symplectic_matrix = self.CNOT(
                 symplectic_matrix, control_q, target_q, nqubits
             )
@@ -364,10 +361,10 @@ class CliffordOperations:
 
     def CRY(self, symplectic_matrix, control_q, target_q, nqubits, theta):
         # theta = 4 * n * pi
-        if theta % (4 * self.np.pi) == 0:
+        if theta % (4 * np.pi) == 0:
             return self.I(symplectic_matrix, target_q, nqubits)
         # theta = pi + 4 * n * pi
-        elif (theta / self.np.pi - 1) % 4 == 0:
+        elif (theta / np.pi - 1) % 4 == 0:
             symplectic_matrix = self.Z(symplectic_matrix, target_q, nqubits)
             symplectic_matrix = self.CNOT(
                 symplectic_matrix, control_q, target_q, nqubits
@@ -375,10 +372,10 @@ class CliffordOperations:
             symplectic_matrix = self.Z(symplectic_matrix, target_q, nqubits)
             return self.CZ(symplectic_matrix, control_q, target_q, nqubits)
         # theta = 2 * pi + 4 * n * pi
-        elif (theta / (2 * self.np.pi) - 1) % 2 == 0:
+        elif (theta / (2 * np.pi) - 1) % 2 == 0:
             return self.CRZ(symplectic_matrix, control_q, target_q, nqubits, theta)
         # theta = 3 * pi + 4 * n * pi
-        elif (theta / self.np.pi - 3) % 4 == 0:
+        elif (theta / np.pi - 3) % 4 == 0:
             symplectic_matrix = self.CZ(symplectic_matrix, control_q, target_q, nqubits)
             symplectic_matrix = self.Z(symplectic_matrix, target_q, nqubits)
             symplectic_matrix = self.CNOT(
@@ -406,7 +403,7 @@ class CliffordOperations:
                     if i != p:
                         state_copy = self.rowsum(state_copy, i.item(), p, nqubits)
                 state_copy[p - nqubits, :] = state_copy[p, :]
-                outcome = self.np.random.randint(2, size=1).item()
+                outcome = self.engine.np.random.randint(2, size=1).item()
                 state_copy[p, :] = 0
                 state_copy[p, -1] = outcome
                 state_copy[p, nqubits + q] = 1
@@ -489,7 +486,7 @@ class CliffordOperations:
             if (
                 2 * symplectic_matrix[h, -1]
                 + 2 * symplectic_matrix[i, -1]
-                + self.np.sum(exponents)
+                + self.engine.np.sum(exponents)
             )
             % 4
             == 0
@@ -502,14 +499,23 @@ class CliffordOperations:
 
 
 class CliffordBackend(NumpyBackend):
-    def __init__(self):
+    def __init__(self, engine=None):
         super().__init__()
 
-        import numpy as np
+        if engine is None:
+            from qibo.backends import GlobalBackend
+
+            engine = GlobalBackend()
+        if isinstance(engine, TensorflowBackend):
+            raise_error(
+                NotImplementedError,
+                "TensorflowBackend for Clifford Simulation is not supported yet.",
+            )
+        self.engine = engine
+        self.np = self.engine.np
 
         self.name = "clifford"
-        self.clifford_operations = CliffordOperations()
-        self.np = np
+        self.clifford_operations = CliffordOperations(engine)
 
     def zero_state(self, nqubits):
         """Construct the zero state |00...00>.
@@ -524,7 +530,7 @@ class CliffordBackend(NumpyBackend):
         symplectic_matrix = self.np.zeros(
             (2 * nqubits + 1, 2 * nqubits + 1), dtype=bool
         )
-        symplectic_matrix[:nqubits, :nqubits] = I.copy()
+        symplectic_matrix[:nqubits, :nqubits] = self.np.copy(I)
         symplectic_matrix[nqubits:-1, nqubits : 2 * nqubits] = I.copy()
         return symplectic_matrix
 
@@ -634,7 +640,7 @@ class CliffordBackend(NumpyBackend):
             samples (np.ndarray): The samples shots.
         """
         qubits = qubits
-        operation = CliffordOperations()
+        operation = CliffordOperations(self.engine)
         if collapse:
             samples = [operation.M(state, qubits, nqubits) for _ in range(nshots - 1)]
             samples.append(operation.M(state, qubits, nqubits, collapse))
