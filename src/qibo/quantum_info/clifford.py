@@ -270,7 +270,9 @@ class Clifford:
             np.sqrt(probs), qubits, len(measured_qubits)
         )
 
-    def _construct_operators(self, generators: list, phases: list, is_array: bool = False):
+    def _construct_operators(
+        self, generators: list, phases: list, is_array: bool = False
+    ):
         """Helper function to construct all the operators from their generators.
 
         Args:
