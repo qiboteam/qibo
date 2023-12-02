@@ -135,13 +135,6 @@ class NumpyMatrices:
         )
 
     @cached_property
-    def CY(self):
-        return self.np.array(
-            [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, -1j], [0, 0, 1j, 0]],
-            dtype=self.dtype,
-        )
-
-    @cached_property
     def CSX(self):
         a = (1 + 1j) / 2
         b = self.np.conj(a)
