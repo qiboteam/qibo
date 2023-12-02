@@ -178,6 +178,15 @@ class Y(Gate):
     def qasm_label(self):
         return "y"
 
+    @Gate.check_controls
+    def controlled_by(self, *q):
+        """Fall back to CY if there is only one control."""
+        if len(q) == 1:
+            gate = CY(q[0], self.target_qubits[0])
+        else:
+            gate = super().controlled_by(*q)
+        return gate
+
     def basis_rotation(self):
         from qibo import matrices  # pylint: disable=C0415
 
@@ -970,6 +979,49 @@ class CNOT(Gate):
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
         q0, q1 = self.control_qubits[0], self.target_qubits[0]
         return [self.__class__(q0, q1)]
+
+
+class CY(Gate):
+    """The Controlled-:math:`Y` gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 & 0 & 0 \\\\
+        0 & 1 & 0 & 0 \\\\
+        0 & 0 & 0 & -i \\\\
+        0 & 0 & i & 0 \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the control qubit id number.
+        q1 (int): the target qubit id number.
+    """
+
+    def __init__(self, q0, q1):
+        super().__init__()
+        self.name = "cy"
+        self.draw_label = "Y"
+        self.control_qubits = (q0,)
+        self.target_qubits = (q1,)
+        self.init_args = [q0, q1]
+        self.clifford = True
+        self.unitary = True
+
+    @property
+    def qasm_label(self):
+        return "cy"
+
+    def decompose(self) -> List[Gate]:
+        """Decomposition of :math:`\\text{CY}` gate.
+
+        Decompose :math:`\\text{CY}` gate into :class:`qibo.gates.SDG` in
+        the target qubit, followed by :class:`qibo.gates.CNOT`, followed
+        by a :class:`qibo.gates.S` in the target qubit.
+        """
+        q0, q1 = self.init_args
+        return [SDG(q1), CNOT(q0, q1), S(q1)]
 
 
 class CZ(Gate):

@@ -565,6 +565,13 @@ Controlled-NOT (CNOT)
     :members:
     :member-order: bysource
 
+Controlled-Y (CY)
+"""""""""""""""""""""
+
+.. autoclass:: qibo.gates.CY
+    :members:
+    :member-order: bysource
+
 Controlled-phase (CZ)
 """""""""""""""""""""
 
