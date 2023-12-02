@@ -1932,16 +1932,16 @@ passing a symplectic matrix to the constructor
    clifford = Clifford(symplectic_matrix)
 
 Then, the generators of the stabilizers can be extracted with the
-:meth:`qibo.quantum_info.clifford.Clifford.get_stabilizers_generators` method,
+:meth:`qibo.quantum_info.clifford.Clifford.generators` method,
 or the complete set of stabilizers operators can be generated through the
-:meth:`qibo.quantum_info.clifford.Clifford.get_stabilizers` method
+:meth:`qibo.quantum_info.clifford.Clifford.stabilizers` method
 
 .. testcode::
 
-   generators, phases = clifford.get_stabilizers_generators()
-   stabilizers = clifford.get_stabilizers()
+   generators, phases = clifford.generators()
+   stabilizers = clifford.stabilizers()
 
-The de-stabilizers can be extracted analogously with :meth:`qibo.quantum_info.clifford.Clifford.get_destabilizers`.
+The de-stabilizers can be extracted analogously with :meth:`qibo.quantum_info.clifford.Clifford.destabilizers`.
 
 .. autoclass:: qibo.quantum_info.clifford.Clifford
     :members:
