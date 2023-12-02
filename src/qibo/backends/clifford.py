@@ -6,7 +6,6 @@ from qibo import gates
 from qibo.backends.numpy import NumpyBackend
 from qibo.backends.tensorflow import TensorflowBackend
 from qibo.config import raise_error
-from qibo.result import CircuitResult
 
 
 class CliffordOperations:
@@ -15,7 +14,7 @@ class CliffordOperations:
     See `Aaronson & Gottesman (2004) <https://arxiv.org/abs/quant-ph/0406196>`_.
 
     Args:
-        engine (qibo.backends.Backend): Backend used for the calculation.
+        engine (:class:`qibo.backends.abstract.Backend`): Backend used for the calculations.
     """
 
     def __init__(self, engine):
@@ -25,8 +24,8 @@ class CliffordOperations:
         return symplectic_matrix
 
     def H(self, symplectic_matrix, q, nqubits):
-        r, x, z = self.get_rxz(symplectic_matrix, nqubits)
-        self.set_r(
+        r, x, z = self._get_rxz(symplectic_matrix, nqubits)
+        self._set_r(
             symplectic_matrix,
             r ^ (x[:, q] * z[:, q]).flatten(),
         )
@@ -34,8 +33,8 @@ class CliffordOperations:
         return symplectic_matrix
 
     def CNOT(self, symplectic_matrix, control_q, target_q, nqubits):
-        r, x, z = self.get_rxz(symplectic_matrix, nqubits)
-        self.set_r(
+        r, x, z = self._get_rxz(symplectic_matrix, nqubits)
+        self._set_r(
             symplectic_matrix,
             r
             ^ (x[:, control_q] * z[:, target_q]).flatten()
@@ -49,8 +48,8 @@ class CliffordOperations:
     def CZ(self, symplectic_matrix, control_q, target_q, nqubits):
         """Decomposition --> H-CNOT-H"""
 
-        r, x, z = self.get_rxz(symplectic_matrix, nqubits)
-        self.set_r(
+        r, x, z = self._get_rxz(symplectic_matrix, nqubits)
+        self._set_r(
             symplectic_matrix,
             r
             ^ (x[:, target_q] * z[:, target_q]).flatten()
@@ -69,8 +68,8 @@ class CliffordOperations:
         return symplectic_matrix
 
     def S(self, symplectic_matrix, q, nqubits):
-        r, x, z = self.get_rxz(symplectic_matrix, nqubits)
-        self.set_r(
+        r, x, z = self._get_rxz(symplectic_matrix, nqubits)
+        self._set_r(
             symplectic_matrix,
             r ^ (x[:, q] * z[:, q]).flatten(),
         )
@@ -80,8 +79,8 @@ class CliffordOperations:
     def Z(self, symplectic_matrix, q, nqubits):
         """Decomposition --> S-S"""
 
-        r, x, z = self.get_rxz(symplectic_matrix, nqubits)
-        self.set_r(
+        r, x, z = self._get_rxz(symplectic_matrix, nqubits)
+        self._set_r(
             symplectic_matrix,
             r ^ ((x[:, q] * z[:, q]) ^ x[:, q] * (z[:, q] ^ x[:, q])).flatten(),
         )
@@ -90,8 +89,8 @@ class CliffordOperations:
     def X(self, symplectic_matrix, q, nqubits):
         """Decomposition --> H-S-S-H"""
 
-        r, x, z = self.get_rxz(symplectic_matrix, nqubits)
-        self.set_r(
+        r, x, z = self._get_rxz(symplectic_matrix, nqubits)
+        self._set_r(
             symplectic_matrix,
             r
             ^ (z[:, q] * (z[:, q] ^ x[:, q])).flatten()
@@ -102,8 +101,8 @@ class CliffordOperations:
     def Y(self, symplectic_matrix, q, nqubits):
         """Decomposition --> S-S-H-S-S-H"""  # double check this, cause it should be
         # Y = i * HZHZ --> HSSHSS
-        r, x, z = self.get_rxz(symplectic_matrix, nqubits)
-        self.set_r(
+        r, x, z = self._get_rxz(symplectic_matrix, nqubits)
+        self._set_r(
             symplectic_matrix,
             r
             ^ (z[:, q] * (z[:, q] ^ x[:, q])).flatten()
@@ -114,8 +113,8 @@ class CliffordOperations:
     def SX(self, symplectic_matrix, q, nqubits):
         """Decomposition --> H-S-H"""
 
-        r, x, z = self.get_rxz(symplectic_matrix, nqubits)
-        self.set_r(
+        r, x, z = self._get_rxz(symplectic_matrix, nqubits)
+        self._set_r(
             symplectic_matrix,
             r ^ (z[:, q] * (z[:, q] ^ x[:, q])).flatten(),
         )
@@ -125,8 +124,8 @@ class CliffordOperations:
     def SDG(self, symplectic_matrix, q, nqubits):
         """Decomposition --> S-S-S"""
 
-        r, x, z = self.get_rxz(symplectic_matrix, nqubits)
-        self.set_r(
+        r, x, z = self._get_rxz(symplectic_matrix, nqubits)
+        self._set_r(
             symplectic_matrix,
             r ^ (x[:, q] * (z[:, q] ^ x[:, q])).flatten(),
         )
@@ -136,8 +135,8 @@ class CliffordOperations:
     def SXDG(self, symplectic_matrix, q, nqubits):
         """Decomposition --> H-S-S-S-H"""
 
-        r, x, z = self.get_rxz(symplectic_matrix, nqubits)
-        self.set_r(
+        r, x, z = self._get_rxz(symplectic_matrix, nqubits)
+        self._set_r(
             symplectic_matrix,
             r ^ (z[:, q] * x[:, q]).flatten(),
         )
@@ -172,8 +171,8 @@ class CliffordOperations:
         elif (theta / (np.pi / 2) - 1) % 4 == 0:
             """Decomposition --> H-S-S"""
 
-            r, x, z = self.get_rxz(symplectic_matrix, nqubits)
-            self.set_r(
+            r, x, z = self._get_rxz(symplectic_matrix, nqubits)
+            self._set_r(
                 symplectic_matrix,
                 r ^ (x[:, q] * (z[:, q] ^ x[:, q])).flatten(),
             )
@@ -184,8 +183,8 @@ class CliffordOperations:
         else:  # theta == 3*pi/2 + 2*n*pi
             """Decomposition --> H-S-S-H-S-S-H-S-S"""
 
-            r, x, z = self.get_rxz(symplectic_matrix, nqubits)
-            self.set_r(
+            r, x, z = self._get_rxz(symplectic_matrix, nqubits)
+            self._set_r(
                 symplectic_matrix,
                 r ^ (z[:, q] * (z[:, q] ^ x[:, q])).flatten(),
             )
@@ -197,8 +196,8 @@ class CliffordOperations:
     def SWAP(self, symplectic_matrix, control_q, target_q, nqubits):
         """Decomposition --> CNOT-CNOT-CNOT"""
 
-        r, x, z = self.get_rxz(symplectic_matrix, nqubits)
-        self.set_r(
+        r, x, z = self._get_rxz(symplectic_matrix, nqubits)
+        self._set_r(
             symplectic_matrix,
             r
             ^ (
@@ -233,8 +232,8 @@ class CliffordOperations:
     def iSWAP(self, symplectic_matrix, control_q, target_q, nqubits):
         """Decomposition --> H-CNOT-CNOT-H-S-S"""
 
-        r, x, z = self.get_rxz(symplectic_matrix, nqubits)
-        self.set_r(
+        r, x, z = self._get_rxz(symplectic_matrix, nqubits)
+        self._set_r(
             symplectic_matrix,
             r
             ^ (x[:, target_q] * z[:, target_q]).flatten()
@@ -287,8 +286,8 @@ class CliffordOperations:
     def CY(self, symplectic_matrix, control_q, target_q, nqubits):
         """Decomposition --> S-CNOT-SDG"""
 
-        r, x, z = self.get_rxz(symplectic_matrix, nqubits)
-        self.set_r(
+        r, x, z = self._get_rxz(symplectic_matrix, nqubits)
+        self._set_r(
             symplectic_matrix,
             r
             ^ (x[:, target_q] * (z[:, target_q] ^ x[:, target_q])).flatten()
@@ -396,14 +395,14 @@ class CliffordOperations:
         sample = []
         state_copy = state if collapse else state.copy()
         for q in qubits:
-            x = CliffordOperations.get_x(state_copy, nqubits)
+            x = CliffordOperations._get_x(state_copy, nqubits)
             p = x[nqubits:, q].nonzero()[0] + nqubits
             # random outcome, affects the state
             if len(p) > 0:
                 p = p[0].item()
                 for i in x[:, q].nonzero()[0]:
                     if i != p:
-                        state_copy = self.rowsum(state_copy, i.item(), p, nqubits)
+                        state_copy = self._rowsum(state_copy, i.item(), p, nqubits)
                 state_copy[p - nqubits, :] = state_copy[p, :]
                 outcome = self.engine.np.random.randint(2, size=1).item()
                 state_copy[p, :] = 0
@@ -412,58 +411,58 @@ class CliffordOperations:
                 sample.append(outcome)
             # determined outcome, state unchanged
             else:
-                CliffordOperations.set_scratch(state_copy, 0)
+                CliffordOperations._set_scratch(state_copy, 0)
                 for i in x[:nqubits, q].nonzero()[0]:
-                    state_copy = self.rowsum(
+                    state_copy = self._rowsum(
                         state_copy,
                         2 * nqubits,
                         i.item() + nqubits,
                         nqubits,
                         include_scratch=True,
                     )
-                sample.append(int(CliffordOperations.get_scratch(state_copy)[-1]))
+                sample.append(int(CliffordOperations._get_scratch(state_copy)[-1]))
         return sample
 
     @staticmethod
-    def get_r(symplectic_matrix, nqubits, include_scratch=False):
+    def _get_r(symplectic_matrix, nqubits, include_scratch=False):
         return symplectic_matrix[
             : -1 + (2 * nqubits + 2) * int(include_scratch),
             -1,
         ]
 
     @staticmethod
-    def set_r(symplectic_matrix, val):
+    def _set_r(symplectic_matrix, val):
         symplectic_matrix[:-1, -1] = val
 
     @staticmethod
-    def get_x(symplectic_matrix, nqubits, include_scratch=False):
+    def _get_x(symplectic_matrix, nqubits, include_scratch=False):
         return symplectic_matrix[
             : -1 + (2 * nqubits + 2) * int(include_scratch), :nqubits
         ]
 
     @staticmethod
-    def get_z(symplectic_matrix, nqubits, include_scratch=False):
+    def _get_z(symplectic_matrix, nqubits, include_scratch=False):
         return symplectic_matrix[
             : -1 + (2 * nqubits + 2) * int(include_scratch), nqubits:-1
         ]
 
     @staticmethod
-    def get_rxz(symplectic_matrix, nqubits, include_scratch=False):
+    def _get_rxz(symplectic_matrix, nqubits, include_scratch=False):
         return (
-            CliffordOperations.get_r(symplectic_matrix, nqubits, include_scratch),
-            CliffordOperations.get_x(symplectic_matrix, nqubits, include_scratch),
-            CliffordOperations.get_z(symplectic_matrix, nqubits, include_scratch),
+            CliffordOperations._get_r(symplectic_matrix, nqubits, include_scratch),
+            CliffordOperations._get_x(symplectic_matrix, nqubits, include_scratch),
+            CliffordOperations._get_z(symplectic_matrix, nqubits, include_scratch),
         )
 
     @staticmethod
-    def get_scratch(symplectic_matrix):
+    def _get_scratch(symplectic_matrix):
         return symplectic_matrix[-1, :]
 
     @staticmethod
-    def set_scratch(symplectic_matrix, val):
+    def _set_scratch(symplectic_matrix, val):
         symplectic_matrix[-1, :] = val
 
-    def exponent(self, x1, z1, x2, z2):
+    def _exponent(self, x1, z1, x2, z2):
         exp = self.engine.np.zeros(x1.shape)
         x1_eq_z1 = x1 == z1
         x1_neq_z1 = x1_eq_z1 ^ True
@@ -477,11 +476,11 @@ class CliffordOperations:
         exp[ind4] = x2[ind4].astype(int) * (1 - 2 * z2[ind4].astype(int))
         return exp
 
-    def rowsum(self, symplectic_matrix, h, i, nqubits, include_scratch: bool = False):
-        x, z = self.get_x(symplectic_matrix, nqubits, include_scratch), self.get_z(
+    def _rowsum(self, symplectic_matrix, h, i, nqubits, include_scratch: bool = False):
+        x, z = self._get_x(symplectic_matrix, nqubits, include_scratch), self._get_z(
             symplectic_matrix, nqubits, include_scratch
         )
-        exponents = self.exponent(x[i, :], z[i, :], x[h, :], z[h, :])
+        exponents = self._exponent(x[i, :], z[i, :], x[h, :], z[h, :])
         r = (
             0
             if (
