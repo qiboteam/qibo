@@ -8,6 +8,19 @@ from qibo.backends.tensorflow import TensorflowBackend
 from qibo.config import raise_error
 
 
+def _calculation_engine(backend):
+    if backend.name == "qibojit":
+        if backend.platform == "cupy" or backend.platform == "cuquantum":
+            return backend.cp
+        return backend.np
+    else:
+        return backend.np
+    raise_error(
+        NotImplementedError,
+        f"{backend.__class__.__name__} for Clifford Simulation is not supported yet.",
+    )
+
+
 class CliffordOperations:
     """Operations performed by Clifford gates on the phase-space representation of stabilizer states.
 
@@ -19,6 +32,7 @@ class CliffordOperations:
 
     def __init__(self, engine):
         self.engine = engine
+        self.np = _calculation_engine(engine)
 
     def I(self, symplectic_matrix, q, nqubits):
         return symplectic_matrix
