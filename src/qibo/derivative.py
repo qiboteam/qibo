@@ -641,7 +641,6 @@ def stochastic_parameter_shift(
     variable_gate = VAR(gate).return_gate(item=param_name, angle=shift)
     circuit.add(variable_gate, position=2)
     circuit.add(ancilla_gate, position=2)
-    print(circuit.draw())
 
     # forward shift
     print("Empty shift:", shifted)

@@ -67,14 +67,11 @@ class NumpyMatrices:
         raise_error(NotImplementedError)
 
     def RX(self, theta):
-        print("Type is ", self.dtype)
         cos = self.np.cos(theta / 2.0) + 0j
         isin = -1j * self.np.sin(theta / 2.0)
         return self.np.array([[cos, isin], [isin, cos]], dtype=self.dtype)
 
     def RY(self, theta):
-        print("Type is ", self.dtype)
-
         cos = self.np.cos(theta / 2.0) + 0j
         sin = self.np.sin(theta / 2.0)
         return self.np.array([[cos, -sin], [sin, cos]], dtype=self.dtype)
@@ -100,23 +97,32 @@ class NumpyMatrices:
 
         return scipy.linalg.expm(1j * phi * Y)
 
+    def expm_taylor(self, A, num_terms=10):
+        if not isinstance(A, self.np.ndarray):
+            A = self.np.asarray(A)
+
+        if A.shape[0] != A.shape[1]:
+            raise ValueError("Input matrix must be square.")
+
+        result = self.np.eye(A.shape[0])
+        term = self.np.eye(A.shape[0])
+
+        for k in range(1, num_terms):
+            term = self.np.dot(term, A) / k
+            result = result + term
+
+        return result
+
     def RXRY(self, phi):
         """Developed by Michael Tsesmelis (ACSE-mct22)"""
 
-        X = self.np.array([[0.0, 1.0], [1.0, 0.0]], dtype=self.dtype)
-        Y = self.np.array([[0.0, -1.0j], [1.0j, 0.0]], dtype=self.dtype)
+        X = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=self.dtype)
+        Y = np.array([[0.0, -1.0j], [1.0j, 0.0]], dtype=self.dtype)
 
-        matrix = self.np.array(scipy.linalg.expm(-1j * (phi / 2 * X)), dtype=self.dtype)
+        expA_np = self.expm_taylor(-1.0j * 0.3 * Y + (phi / 2) * X)
+        matrix = self.np.array(expA_np, dtype=self.dtype)
 
-        cos = self.np.cos(phi / 2.0) + 0j
-        isin = -1j * self.np.sin(phi / 2.0)
-        a = self.np.array([[cos, isin], [isin, cos]], dtype=self.dtype)
-        print("###")
-        print(a, type(a))
-        print(matrix, type(matrix))
-        print("###")
-
-        return a
+        return matrix
 
     def CrossRes_Variable(self, sign):
         """Developed by Michael Tsesmelis (ACSE-mct22)"""

@@ -108,23 +108,35 @@ class NumpyBackend(Backend):
         _matrix = getattr(self.matrices, name)
         return _matrix(2 ** len(gate.target_qubits)) if callable(_matrix) else _matrix
 
+    def expm_taylor(self, A, num_terms=10):
+        # TODO ChatGPT citation
+        if not isinstance(A, np.ndarray):
+            A = np.asarray(A)
+
+        if A.shape[0] != A.shape[1]:
+            raise ValueError("Input matrix must be square.")
+
+        result = np.eye(A.shape[0])
+        term = np.eye(A.shape[0])
+
+        for k in range(1, num_terms):
+            term = np.dot(term, A) / k
+            result = result + term
+
+        return result
+
     def matrix_parametrized(self, gate):
         """Convert a parametrized gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
         if hasattr(self.matrices, name):
-            print("in numpy classic gate:", gate.name)
             return getattr(self.matrices, name)(*gate.parameters)
         else:
-            print(
-                "In numpy:",
-                gate.name,
-                gate.exponentiated,
-                gate.scaling,
-                gate.generator(*gate.parameters),
-            )
             if gate.exponentiated:
-                return scipy.linalg.expm(
-                    -1j * gate.scaling * gate.generator(*gate.parameters)
+                return np.array(
+                    self.expm_taylor(
+                        -1j * gate.scaling * gate.generator(*gate.parameters)
+                    ),
+                    dtype=self.dtype,
                 )
             else:
                 return gate.generator(*gate.parameters)

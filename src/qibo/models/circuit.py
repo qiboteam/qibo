@@ -597,7 +597,6 @@ class Circuit:
             If the circuit contains measurement gates with ``collapse=True``
             a ``sympy.Symbol`` that parametrizes the corresponding outcome.
         """
-        print("name", gate.name)
         if isinstance(gate, collections.abc.Iterable):
             for g in gate:
                 if position >= 0:

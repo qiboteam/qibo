@@ -236,13 +236,21 @@ def test_psr_commuting_gate():
     assert np.isclose(grad_1, grad_2, atol=1e-5)
 
 
-def RXRYN(phi):
-    """Simple generator with non-commuting elements"""
+def expm_taylor(A, num_terms=10):
+    if not isinstance(A, backend.np.ndarray):
+        A = backend.np.asarray(A)
 
-    X = np.array([[0, 1], [1, 0]])
-    Y = np.array([[0, -1j], [1j, 0.0]])
+    if A.shape[0] != A.shape[1]:
+        raise ValueError("Input matrix must be square.")
 
-    return 0.3 * X - phi * Y
+    result = backend.np.eye(A.shape[0])
+    term = backend.np.eye(A.shape[0])
+
+    for k in range(1, num_terms):
+        term = backend.np.dot(term, A) / k
+        result = result + term
+
+    return result
 
 
 def spsr_circuit_RXRY_decomposed(phi, s, shift):
@@ -339,6 +347,18 @@ def test_spsr_RXRY():
     assert np.allclose(fdiff, spsr_vals, atol=0.05)
 
 
+def RXRYN(phi):
+    """Developed by Michael Tsesmelis (ACSE-mct22)"""
+
+    X = backend.np.array([[0.0, 1.0], [1.0, 0.0]], dtype="complex128")
+    Y = backend.np.array([[0.0, -1.0j], [1.0j, 0.0]], dtype="complex128")
+
+    expA_np = expm_taylor(-1.0j * 0.3 * Y + (phi / 2) * X)
+    matrix = backend.np.array(expA_np, dtype="complex128")
+
+    return matrix
+
+
 def circuit_rxry(nqubits=1):
     """Small circuit ansatz"""
 
@@ -347,7 +367,7 @@ def circuit_rxry(nqubits=1):
     c.add(gates.RY(q=0, theta=0))
     # c.add(gates.RY(q=0, theta=10))
     c.add(gates.RXRY(q=0, phi=0))
-    # c.add(gates.OneQubitGate(0, "RXRY", exponentiated=True, generator=RXRYN, phi=0.1))
+    # c.add(gates.OneQubitGate(0, "RXRY", exponentiated=False, generator=RXRYN, phi=0.1))
     c.add(gates.RX(q=0, theta=0))
     c.add(gates.M(0))
 
@@ -364,22 +384,20 @@ def gradient_exact_rxry(backend, test_params):
     with tf.GradientTape() as tape:
         c = circuit_rxry(nqubits=1)
         c.set_parameters(test_params)
-        print(c.draw(), c.get_parameters())
 
         ham = hamiltonian(nqubits=1, backend=backend)
         results = ham.expectation(
             backend.execute_circuit(circuit=c, initial_state=None).state()
         )
-    print(results)
+
     gradients = tape.gradient(results, test_params)
     print(gradients)
-    exit(0)
     return gradients
 
 
 @pytest.mark.parametrize("nshots, atol", [(100000, 1e-2)])
 def test_stochastic_parameter_shift(backend, nshots, atol):
-    test_params = np.linspace(0.1, 1, 3)
+    test_params = np.linspace(0.1, 1.0, 3)
 
     # exact gradients
     grads = gradient_exact_rxry(backend, test_params)
@@ -391,7 +409,7 @@ def test_stochastic_parameter_shift(backend, nshots, atol):
     # we know the derivative's values with these params
 
     c.set_parameters(test_params)
-    print("Initial parameters:", c.get_parameters())
+
     test_hamiltonian = hamiltonian(nqubits=1, backend=backend)
 
     # testing parameter out of bounds
@@ -427,4 +445,5 @@ def test_stochastic_parameter_shift(backend, nshots, atol):
 
 
 if __name__ == "__main__":
+    backend = GlobalBackend()
     test_stochastic_parameter_shift(GlobalBackend(), 10000, 1e-3)
