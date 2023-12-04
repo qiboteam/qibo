@@ -344,50 +344,54 @@ def circuit_rxry(nqubits=1):
 
     c = Circuit(nqubits)
     # all gates for which generator eigenvalue is implemented
-    c.add(gates.H(q=0))
+    c.add(gates.RY(q=0, theta=0))
+    # c.add(gates.RY(q=0, theta=10))
+    c.add(gates.RXRY(q=0, phi=0))
+    # c.add(gates.OneQubitGate(0, "RXRY", exponentiated=True, generator=RXRYN, phi=0.1))
     c.add(gates.RX(q=0, theta=0))
-    c.add(gates.OneQubitGate(0, "RXRY", exponentiated=True, generator=RXRYN, phi=0.1))
-    c.add(gates.RZ(q=0, theta=0))
     c.add(gates.M(0))
 
     return c
 
 
-def gradient_exact_rxry(backend):
+def gradient_exact_rxry(backend, test_params):
     """Calculates exact gradient of a circuit"""
 
     backend = GlobalBackend()
 
-    test_params = tf.Variable(np.linspace(0.1, 1, 3))
+    test_params = tf.Variable(test_params)
 
     with tf.GradientTape() as tape:
-        c = circuit(nqubits=1)
+        c = circuit_rxry(nqubits=1)
         c.set_parameters(test_params)
+        print(c.draw(), c.get_parameters())
 
         ham = hamiltonian(nqubits=1, backend=backend)
         results = ham.expectation(
             backend.execute_circuit(circuit=c, initial_state=None).state()
         )
-
+    print(results)
     gradients = tape.gradient(results, test_params)
-
+    print(gradients)
+    exit(0)
     return gradients
 
 
 @pytest.mark.parametrize("nshots, atol", [(100000, 1e-2)])
 def test_stochastic_parameter_shift(backend, nshots, atol):
+    test_params = np.linspace(0.1, 1, 3)
+
     # exact gradients
-    grads = gradient_exact_rxry(backend)
+    grads = gradient_exact_rxry(backend, test_params)
 
     # initializing the circuit
     c = circuit_rxry(nqubits=1)
 
     # some parameters
     # we know the derivative's values with these params
-    test_params = np.linspace(0.1, 1, 3)
-    print(test_params, type(test_params))
+
     c.set_parameters(test_params)
-    print(c.get_parameters())
+    print("Initial parameters:", c.get_parameters())
     test_hamiltonian = hamiltonian(nqubits=1, backend=backend)
 
     # testing parameter out of bounds
@@ -410,10 +414,17 @@ def test_stochastic_parameter_shift(backend, nshots, atol):
         parameter_index=1,
         scale_factor=1.0,
         nshots=nshots,
+        stochastic_executions=10,
     )
+
+    print(grad_1, grads)
 
     # check of known values
     # calculated using tf.GradientTape
     # backend.assert_allclose(grad_0, grads[0], atol=atol)
     backend.assert_allclose(grad_1, grads[1], atol=atol)
     # backend.assert_allclose(grad_2, grads[2], atol=atol)
+
+
+if __name__ == "__main__":
+    test_stochastic_parameter_shift(GlobalBackend(), 10000, 1e-3)

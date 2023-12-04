@@ -517,6 +517,7 @@ class VAR:
             return angle * self.variables[item]
 
         g = self.original_gate
+
         return gates.OneQubitGate(
             g.target_qubits[0],
             "V",
@@ -524,24 +525,6 @@ class VAR:
             generator=generator,
             angle=angle,
         )
-
-
-def generate_new_stochastic_params(params, s):
-    """Generate the three-gate parameters needed for the stochastic parameter-shift rule.
-
-    Args:
-        params: first-gate parameters, already known
-        s: random initialiser between 0 and 1
-    """
-    idx = len(params)
-    new_params = np.zeros(2 * idx + 1)
-
-    new_params[:idx] = params
-    new_params[idx - 1] = s
-    new_params[idx + 1 :] = params
-    new_params[-1] = 1 - s
-
-    return new_params
 
 
 def stochastic_parameter_shift(
@@ -639,6 +622,7 @@ def stochastic_parameter_shift(
     association = circuit.associate_gates_with_parameters()
     gate = association[parameter_index]
     gate_start = parameter_index
+
     i = 1
     while association[parameter_index - i] == gate:
         gate_start -= 1
@@ -655,23 +639,29 @@ def stochastic_parameter_shift(
     ancilla_gate = copy.deepcopy(gate)
     param_name = "phi"  # TODO accept any name
     variable_gate = VAR(gate).return_gate(item=param_name, angle=shift)
-    circuit.add(variable_gate, position=parameter_index)
-    circuit.add(ancilla_gate, position=parameter_index)
+    circuit.add(variable_gate, position=2)
+    circuit.add(ancilla_gate, position=2)
+    print(circuit.draw())
 
     # forward shift
-    new_param_count = variable_gate.nparams + ancilla_gate.nparams
-    shifted = np.insert(shifted, gate_start + gate.nparams, [0] * new_param_count)
+    print("Empty shift:", shifted)
+    vparams = variable_gate.nparams
+    aparams = ancilla_gate.nparams
+    shifted = np.insert(shifted, gate_start + gate.nparams, [0] + list(gate.parameters))
+    print("New shift:", shifted)
 
     grads = np.zeros(stochastic_executions)
 
     # stochastic sampling
+    np.random.seed(555)
     for i, s in enumerate(np.random.uniform(size=stochastic_executions)):
-        new_params = generate_new_stochastic_params(gate.parameters, s)
-        new_params[ancilla_gate.nparams] += shift
+        gate.scaling = s
+        ancilla_gate.scaling = 1 - s
 
-        shifted[parameter_index : parameter_index + len(new_params)] = new_params
-        print("Here", shifted)
+        shifted[gate_start + vparams] = shift
+
         circuit.set_parameters(shifted)
+        print("After first shift:", circuit.get_parameters())
 
         if nshots is None:
             # forward evaluation
@@ -698,7 +688,8 @@ def stochastic_parameter_shift(
                 circuit=circuit, initial_state=initial_state, nshots=nshots
             ).expectation_from_samples(hamiltonian)
 
-            shifted[parameter_index + ancilla_gate.nparams] -= shift * 2
+            shifted[gate_start + vparams] -= shift * 2
+            print("Second run shifted:", shifted)
 
             circuit.set_parameters(shifted)
 

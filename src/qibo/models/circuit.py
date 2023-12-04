@@ -597,6 +597,7 @@ class Circuit:
             If the circuit contains measurement gates with ``collapse=True``
             a ``sympy.Symbol`` that parametrizes the corresponding outcome.
         """
+        print("name", gate.name)
         if isinstance(gate, collections.abc.Iterable):
             for g in gate:
                 if position >= 0:
@@ -695,8 +696,8 @@ class Circuit:
                     for g in self.queue[:position]:
                         if isinstance(g, gates.ParametrizedGate):
                             param_loc += 1
-                        if g.trainable:
-                            trainable_loc += 1
+                            if g.trainable:
+                                trainable_loc += 1
 
                     self.parametrized_gates.insert(param_loc, gate)
                     if gate.trainable:

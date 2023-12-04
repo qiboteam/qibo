@@ -112,8 +112,16 @@ class NumpyBackend(Backend):
         """Convert a parametrized gate to its matrix representation in the computational basis."""
         name = gate.__class__.__name__
         if hasattr(self.matrices, name):
+            print("in numpy classic gate:", gate.name)
             return getattr(self.matrices, name)(*gate.parameters)
         else:
+            print(
+                "In numpy:",
+                gate.name,
+                gate.exponentiated,
+                gate.scaling,
+                gate.generator(*gate.parameters),
+            )
             if gate.exponentiated:
                 return scipy.linalg.expm(
                     -1j * gate.scaling * gate.generator(*gate.parameters)

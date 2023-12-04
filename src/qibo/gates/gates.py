@@ -742,25 +742,56 @@ class GPI2(ParametrizedGate):
         return self.__class__(self.target_qubits[0], self.parameters[0] + math.pi)
 
 
-class RXRY(ParametrizedGate):
+class RXRY(_Rn_):
+    def __init__(self, q, phi, trainable=True):
+        super().__init__(q, phi, trainable)
+        self.name = "rx"
+        self.draw_label = "RX"
+        self._controlled_gate = CRX
+
+    @property
+    def qasm_label(self):
+        return "rx"
+
+    def generator_eigenvalue(self):
+        return 0.5
+
+    def is_clifford(self):
+        if np.abs(self.parameters) == np.pi / 2:
+            clifford_condition = True
+        else:
+            clifford_condition = False
+        return clifford_condition
+
+    def decompose_into_clifford(self):
+        clifford_queue = [
+            RZ(q=self.qubits[0], theta=np.pi / 2, trainable=False),
+            RX(q=self.qubits[0], theta=-np.pi / 2, trainable=False),
+            RZ(q=self.qubits[0], theta=self.parameters),
+            RX(q=self.qubits[0], theta=np.pi / 2, trainable=False),
+        ]
+        return clifford_queue
+
+
+class RXfRY(ParametrizedGate):
     r"""Single gate RX=RY rotation of type:
 
     \exp^{i(30 X + \phi Y)}
 
     """
 
-    def __init__(self, q, phi, s=1.0, trainable=True):
+    def __init__(self, q, phi, trainable=True):
         super().__init__(trainable)
         self.name = "rxry"
         self.draw_label = "rxry"
         self.target_qubits = (q,)
 
-        self.parameter_names = ["phi", "s"]
-        self.parameters = phi, s
-        self.nparams = 2
+        self.parameter_names = "phi"
+        self.parameters = phi
+        self.nparams = 1
 
         self.init_args = [q]
-        self.init_kwargs = {"phi": phi, "s": s, "trainable": trainable}
+        self.init_kwargs = {"phi": phi, "trainable": trainable}
 
 
 class OneQubitGate(ParametrizedGate):

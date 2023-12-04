@@ -67,11 +67,14 @@ class NumpyMatrices:
         raise_error(NotImplementedError)
 
     def RX(self, theta):
+        print("Type is ", self.dtype)
         cos = self.np.cos(theta / 2.0) + 0j
         isin = -1j * self.np.sin(theta / 2.0)
         return self.np.array([[cos, isin], [isin, cos]], dtype=self.dtype)
 
     def RY(self, theta):
+        print("Type is ", self.dtype)
+
         cos = self.np.cos(theta / 2.0) + 0j
         sin = self.np.sin(theta / 2.0)
         return self.np.array([[cos, -sin], [sin, cos]], dtype=self.dtype)
@@ -97,14 +100,23 @@ class NumpyMatrices:
 
         return scipy.linalg.expm(1j * phi * Y)
 
-    def RXRY(self, phi, s):
+    def RXRY(self, phi):
         """Developed by Michael Tsesmelis (ACSE-mct22)"""
 
-        X = np.array([[0, 1], [1, 0]])
-        Y = np.array([[0, -1j], [1j, 0.0]])
-        matrix = scipy.linalg.expm(-1j * s * (0.3 * X - phi * Y))
+        X = self.np.array([[0.0, 1.0], [1.0, 0.0]], dtype=self.dtype)
+        Y = self.np.array([[0.0, -1.0j], [1.0j, 0.0]], dtype=self.dtype)
 
-        return matrix
+        matrix = self.np.array(scipy.linalg.expm(-1j * (phi / 2 * X)), dtype=self.dtype)
+
+        cos = self.np.cos(phi / 2.0) + 0j
+        isin = -1j * self.np.sin(phi / 2.0)
+        a = self.np.array([[cos, isin], [isin, cos]], dtype=self.dtype)
+        print("###")
+        print(a, type(a))
+        print(matrix, type(matrix))
+        print("###")
+
+        return a
 
     def CrossRes_Variable(self, sign):
         """Developed by Michael Tsesmelis (ACSE-mct22)"""
