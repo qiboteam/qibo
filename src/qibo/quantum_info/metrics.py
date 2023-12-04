@@ -1117,7 +1117,7 @@ def expressibility(
             Defaults to ``None``.
 
     Returns:
-        float: Entangling capability.
+        float: Expressibility of parametrized circuit.
     """
 
     if isinstance(power_t, int) is False:
@@ -1148,25 +1148,95 @@ def expressibility(
 
 
 def frame_potential(
-    nqubits: int,
+    circuit, 
     power_t: int,
-    haar: bool = True,
-    circuit=None,
     samples: int = None,
     backend=None,
 ):
+    """Returns the frame potential of a parametrized circuit under uniform sampling of the parameters.
+
+    For :math:`n` qubits and moment :math:`t`, the frame potential 
+    :math:`\\mathcal{F}_{\\mathcal{U}}^{(t)}` if given by
+
+    ..math::
+        \\mathcal{F}_{\\mathcal{U}}^{(t)} = \\int_{U,V \\in \\mathcal{U}} \\, 
+            dU \\, dV \\, \\abs{\\tr(U^{\\dagger} \\, V)}^{2t} \\, ,
+    
+    where :math:`\\mathcal{U}` is the group of unitaries defined by the parametrized circuit.
+    The frame potential is approximated by the average
+
+    ..math::
+        \\mathcal{F}_{\\mathcal{U}}^{(t)} \\approx \\frac{1}{N} \\, 
+            \\sum_{k=1}^{N} \\, \\abs{\\tr(U_{k}^{\\dagger} \\, V_{k})}^{2t} \\, ,
+        
+    where :math:`N` is the number of ``samples``.
+
+    Args:
+        circuit (:class:`qibo.models.circuit.Circuit`): Parametrized circuit.
+        power_t (int): power that defines the :math:`t`-design.
+        samples (int): number of samples to estimate the integral.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
+
+    Returns:
+        float: Frame potential of the parametrized circuit.
+    """
+    if isinstance(power_t, int) is False:
+        raise_error(
+            TypeError, f"power_t must be type int, but it is type {type(power_t)}."
+        )
+
+    if isinstance(samples, int) is False:
+        raise_error(
+            TypeError, f"samples must be type int, but it is type {type(samples)}."
+        )
+
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    if circuit is not None and nqubits != circuit.nqubits:
-        raise_error(
-            ValueError, f"nqubits ({nqubits}) != circuit.nqubits ({circuit.nqubits})"
-        )
+    potential = 0    
+    for _ in range(samples):
+        unitary_1 = circuit.copy()
+        unitary_2 = circuit.copy()
 
+        params_1 = np.random.uniform(-np.pi, np.pi, circuit.trainable_gates.nparams)
+        params_2 = np.random.uniform(-np.pi, np.pi, circuit.trainable_gates.nparams)
+
+        unitary_1.set_parameters(params_1)
+        unitary_2.set_parameters(params_2)
+
+        unitary_1 = unitary_1.unitary(backend)
+        unitary_2 = unitary_2.unitary(backend)
+
+        potential += np.abs(np.trace(np.transpose(np.conj(unitary_1)) @ unitary_2))**(2*power_t)
+
+    return potential / samples
+
+
+def frame_potential_haar(nqubits: int, power_t: int):
+    """Returns the frame potential of the Haar distirbution.
+
+    For :math:`n` qubits and moment :math:`t`, the frame potential
+    of the Haar distribution is given by
+
+    .. math::
+        \\frac{t! \\, (d - 1)!}{(t + d - 1)!} \\, ,
+    
+    where :math:`d = 2^{n}`.
+
+    Args:
+        nqubits (int): number of qubits.
+        power_t (int): power that defines the :math:`t`-design.
+
+    Returns:
+        float: Frame potential of the Haar distribution.
+    """
     dim = 2**nqubits
 
-    if haar:
-        return factorial(power_t) * factorial(dim - 1) / factorial(power_t + dim - 1)
+    return factorial(power_t) * factorial(dim - 1) / factorial(power_t + dim - 1)
+
+
 
 
 def _check_hermitian_or_not_gpu(matrix, backend=None):
