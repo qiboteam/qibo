@@ -179,6 +179,14 @@ class Channel(Gate):
 
         return super_op
 
+    def matrix(self, backend=None):
+        """"""
+        raise_error(
+            NotImplementedError,
+            "`matrix` method not defined for Channels. "
+            + "Please use one of the following methods: "
+            + "`to_choi` or `to_liouville` or `to_pauli_liouville`."
+        )
 
 class KrausChannel(Channel):
     """General channel defined by arbitrary Kraus operators.
