@@ -426,21 +426,21 @@ class NumpyBackend(Backend):
                 # execute_circuit_repeated would have been called
                 if circuit.measurements:
                     circuit._final_state = CircuitResult(
-                        state, circuit.measurements, self, nshots=nshots
+                        state, circuit.measurements, backend=self, nshots=nshots
                     )
                     return circuit._final_state
                 else:
-                    circuit._final_state = QuantumState(state, self)
+                    circuit._final_state = QuantumState(state, backend=self)
                     return circuit._final_state
 
             else:
                 if circuit.measurements:
                     circuit._final_state = CircuitResult(
-                        state, circuit.measurements, self, nshots=nshots
+                        state, circuit.measurements, backend=self, nshots=nshots
                     )
                     return circuit._final_state
                 else:
-                    circuit._final_state = QuantumState(state, self)
+                    circuit._final_state = QuantumState(state, backend=self)
                     return circuit._final_state
 
         except self.oom_error:
@@ -516,32 +516,36 @@ class NumpyBackend(Backend):
             if circuit.density_matrix:
                 final_states.append(state)
             if circuit.measurements:
-                result = CircuitResult(state, circuit.measurements, self, nshots=1)
+                result = CircuitResult(
+                    state, circuit.measurements, backend=self, nshots=1
+                )
                 sample = result.samples()[0]
                 results.append(sample)
                 if not circuit.density_matrix:
                     samples.append("".join([str(s) for s in sample]))
+                for gate in circuit.measurements:
+                    gate.result.reset()
 
         if circuit.density_matrix:  # this implies also it has_collapse
             assert circuit.has_collapse
-            final_state = np.asarray(final_states).mean(0)
+            final_state = np.mean(self.to_numpy(final_states), 0)
             if circuit.measurements:
                 qubits = [q for m in circuit.measurements for q in m.target_qubits]
                 final_result = CircuitResult(
                     final_state,
                     circuit.measurements,
-                    self,
+                    backend=self,
                     samples=self.aggregate_shots(results),
                     nshots=nshots,
                 )
             else:
-                final_result = QuantumState(final_state, self)
+                final_result = QuantumState(final_state, backend=self)
             circuit._final_state = final_result
             return final_result
         else:
             final_result = MeasurementOutcomes(
                 circuit.measurements,
-                self,
+                backend=self,
                 samples=self.aggregate_shots(results),
                 nshots=nshots,
             )

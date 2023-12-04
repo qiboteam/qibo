@@ -178,6 +178,15 @@ class Y(Gate):
     def qasm_label(self):
         return "y"
 
+    @Gate.check_controls
+    def controlled_by(self, *q):
+        """Fall back to CY if there is only one control."""
+        if len(q) == 1:
+            gate = CY(q[0], self.target_qubits[0])
+        else:
+            gate = super().controlled_by(*q)
+        return gate
+
     def basis_rotation(self):
         from qibo import matrices  # pylint: disable=C0415
 
@@ -972,6 +981,49 @@ class CNOT(Gate):
         return [self.__class__(q0, q1)]
 
 
+class CY(Gate):
+    """The Controlled-:math:`Y` gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 & 0 & 0 \\\\
+        0 & 1 & 0 & 0 \\\\
+        0 & 0 & 0 & -i \\\\
+        0 & 0 & i & 0 \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the control qubit id number.
+        q1 (int): the target qubit id number.
+    """
+
+    def __init__(self, q0, q1):
+        super().__init__()
+        self.name = "cy"
+        self.draw_label = "Y"
+        self.control_qubits = (q0,)
+        self.target_qubits = (q1,)
+        self.init_args = [q0, q1]
+        self.clifford = True
+        self.unitary = True
+
+    @property
+    def qasm_label(self):
+        return "cy"
+
+    def decompose(self) -> List[Gate]:
+        """Decomposition of :math:`\\text{CY}` gate.
+
+        Decompose :math:`\\text{CY}` gate into :class:`qibo.gates.SDG` in
+        the target qubit, followed by :class:`qibo.gates.CNOT`, followed
+        by a :class:`qibo.gates.S` in the target qubit.
+        """
+        q0, q1 = self.init_args
+        return [SDG(q1), CNOT(q0, q1), S(q1)]
+
+
 class CZ(Gate):
     """The Controlled-Phase gate.
 
@@ -1040,7 +1092,6 @@ class CSX(Gate):
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
-        self.clifford = True
         self.unitary = True
 
     @property
@@ -1082,7 +1133,6 @@ class CSXDG(Gate):
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
-        self.clifford = True
         self.unitary = True
 
     @property
@@ -1119,7 +1169,7 @@ class _CRn_(ParametrizedGate):
         self.parameters = theta
         self.unitary = True
 
-        if isinstance(theta, (float, int)) and (theta % (np.pi / 2)).is_integer():
+        if isinstance(theta, (float, int)) and (theta % np.pi).is_integer():
             self.clifford = True
 
         self.init_args = [q0, q1]
@@ -1487,6 +1537,11 @@ class FSWAP(Gate):
     @property
     def qasm_label(self):
         return "fswap"
+
+    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
+        """"""
+        q0, q1 = self.target_qubits
+        return [X(q1)] + GIVENS(q0, q1, np.pi / 2).decompose() + [X(q0)]
 
 
 class fSim(ParametrizedGate):
@@ -2051,9 +2106,18 @@ class ECR(Gate):
         self.unitary = True
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
-        """"""
+        """Decomposition of :math:`\\textup{ECR}` gate up to global phase.
+
+        A global phase difference exists between the definitions of
+        :math:`\\textup{ECR}` and this decomposition. More precisely,
+
+        .. math::
+            \\textup{ECR} = e^{i 7 \\pi / 4} \\, S(q_{0}) \\, \\sqrt{X}(q_{1}) \\,
+                \\textup{CNOT}(q_{0}, q_{1}) \\, X(q_{0})
+        """
+
         q0, q1 = self.target_qubits
-        return [RZX(q0, q1, np.pi / 4), X(q0), RZX(q0, q1, -np.pi / 4)]
+        return [S(q0), SX(q1), CNOT(q0, q1), X(q0)]
 
 
 class TOFFOLI(Gate):
@@ -2086,7 +2150,6 @@ class TOFFOLI(Gate):
         self.control_qubits = (q0, q1)
         self.target_qubits = (q2,)
         self.init_args = [q0, q1, q2]
-        self.clifford = True
         self.unitary = True
 
     @property
