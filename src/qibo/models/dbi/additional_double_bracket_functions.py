@@ -1,4 +1,6 @@
 from copy import deepcopy
+from enum import Enum, auto
+from functools import partial
 from itertools import product
 
 import matplotlib.pyplot as plt
@@ -15,7 +17,7 @@ from qibo.models.dbi.double_bracket import (
 from qibo.symbols import I, X, Z
 
 
-class DoubleBracektStrategyType(Enum):
+class DoubleBracketStrategyType(Enum):
     """Determines how to variationally choose the diagonal operator"""
 
     local_Z_search = auto()
@@ -35,7 +37,7 @@ class DoubleBracketIterationStrategies(DoubleBracketIteration):
         please_be_verbose: bool = True,
         please_use_hyperopt: bool = True,
         mode: DoubleBracketGeneratorType = DoubleBracketGeneratorType.canonical,
-        variation_strategy_type: DoubleBracketStrategyType = DoubleBracketStrategyType.local_Z_search,
+        variation_strategy: DoubleBracketStrategyType = DoubleBracketStrategyType.local_Z_search,
     ):
         super().__init__(hamiltonian, mode)
         self.NSTEPS = NSTEPS
@@ -156,13 +158,13 @@ class DoubleBracketIterationStrategies(DoubleBracketIteration):
         operators = []
 
         for op_string in combination_strings:
-            product = 1
+            tensor_op = 1
             # except for the identity
             if "Z" in op_string:
                 for qubit, char in enumerate(op_string):
                     if char in operator_map:
-                        product *= operator_map[char](qubit)
-                operators.append(product)
+                        tensor_op *= operator_map[char](qubit)
+                operators.append(tensor_op)
         return operators
 
     def iterate_forwards_via_local_Z_search(
@@ -170,7 +172,7 @@ class DoubleBracketIterationStrategies(DoubleBracketIteration):
     ):
         """Execute double bracket iterations with the optimal operator form a prescribed list"""
         # prepare iteration
-        self.store_initial_inputs(self.h)
+        self.store_initial_inputs()
 
         # generate local Z operators
         L = self.h.nqubits
@@ -180,9 +182,8 @@ class DoubleBracketIterationStrategies(DoubleBracketIteration):
         # search for best flow generator
         for Z_operator in Z_list:
             # stash values -> min -> store
-            step = self.hyp
-            iterated_h = self.double_bracekt_rotation(
-                H, step, d=Z_operator, update_h=False
+            iterated_h = self.double_bracket_rotation(
+                self.h, step, d=Z_operator, update_h=False
             )
             if check_canonical is True:
                 # compare
