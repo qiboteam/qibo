@@ -76,7 +76,7 @@ class CliffordOperations:
         )
         symplectic_matrix[
             :-1, [nqubits + control_q, nqubits + target_q]
-        ] = self.engine.np.vstack(
+        ] = self.np.vstack(
             (x[:, target_q] ^ z[:, control_q], z[:, target_q] ^ x[:, control_q])
         ).T
         return symplectic_matrix
@@ -275,7 +275,7 @@ class CliffordOperations:
         )
         symplectic_matrix[
             :-1, [nqubits + control_q, nqubits + target_q]
-        ] = self.engine.np.vstack(
+        ] = self.np.vstack(
             (
                 x[:, target_q] ^ z[:, target_q] ^ x[:, control_q],
                 x[:, target_q] ^ z[:, control_q] ^ x[:, control_q],
@@ -317,7 +317,7 @@ class CliffordOperations:
 
         symplectic_matrix[
             :-1, [target_q, nqubits + control_q, nqubits + target_q]
-        ] = self.engine.np.vstack(
+        ] = self.np.vstack(
             (
                 x[:, control_q] ^ x[:, target_q],
                 z[:, control_q] ^ z[:, target_q] ^ x[:, target_q],
@@ -418,7 +418,7 @@ class CliffordOperations:
                     if i != p:
                         state_copy = self._rowsum(state_copy, i.item(), p, nqubits)
                 state_copy[p - nqubits, :] = state_copy[p, :]
-                outcome = self.engine.np.random.randint(2, size=1).item()
+                outcome = self.np.random.randint(2, size=1).item()
                 state_copy[p, :] = 0
                 state_copy[p, -1] = outcome
                 state_copy[p, nqubits + q] = 1
@@ -477,7 +477,7 @@ class CliffordOperations:
         symplectic_matrix[-1, :] = val
 
     def _exponent(self, x1, z1, x2, z2):
-        exp = self.engine.np.zeros(x1.shape)
+        exp = self.np.zeros(x1.shape)
         x1_eq_z1 = x1 == z1
         x1_neq_z1 = x1_eq_z1 ^ True
         x1_eq_0 = x1 == 0
@@ -500,7 +500,7 @@ class CliffordOperations:
             if (
                 2 * symplectic_matrix[h, -1]
                 + 2 * symplectic_matrix[i, -1]
-                + self.engine.np.sum(exponents)
+                + self.np.sum(exponents)
             )
             % 4
             == 0
@@ -532,7 +532,7 @@ class CliffordBackend(NumpyBackend):
                 "TensorflowBackend for Clifford Simulation is not supported yet.",
             )
         self.engine = engine
-        self.np = self.engine.np
+        self.np = _calculation_engine(engine)
 
         self.name = "clifford"
         self.clifford_operations = CliffordOperations(engine)
