@@ -185,8 +185,9 @@ class Channel(Gate):
             NotImplementedError,
             "`matrix` method not defined for Channels. "
             + "Please use one of the following methods: "
-            + "`to_choi` or `to_liouville` or `to_pauli_liouville`."
+            + "`to_choi` or `to_liouville` or `to_pauli_liouville`.",
         )
+
 
 class KrausChannel(Channel):
     """General channel defined by arbitrary Kraus operators.
