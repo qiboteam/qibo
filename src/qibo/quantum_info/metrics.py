@@ -1181,6 +1181,11 @@ def frame_potential(
 
     Returns:
         float: Frame potential of the parametrized circuit.
+
+    References:
+        1. M. Liu *et al.*, *Estimating the randomness of quantum circuit ensembles up to 50 qubits*.
+        `arXiv:2205.09900 [quant-ph] <https://arxiv.org/abs/2205.09900>`_.
+
     """
     if isinstance(power_t, int) is False:
         raise_error(
