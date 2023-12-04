@@ -1148,27 +1148,27 @@ def expressibility(
 
 
 def frame_potential(
-    circuit, 
+    circuit,
     power_t: int,
     samples: int = None,
     backend=None,
 ):
     """Returns the frame potential of a parametrized circuit under uniform sampling of the parameters.
 
-    For :math:`n` qubits and moment :math:`t`, the frame potential 
+    For :math:`n` qubits and moment :math:`t`, the frame potential
     :math:`\\mathcal{F}_{\\mathcal{U}}^{(t)}` if given by
 
     ..math::
-        \\mathcal{F}_{\\mathcal{U}}^{(t)} = \\int_{U,V \\in \\mathcal{U}} \\, 
+        \\mathcal{F}_{\\mathcal{U}}^{(t)} = \\int_{U,V \\in \\mathcal{U}} \\,
             dU \\, dV \\, \\abs{\\tr(U^{\\dagger} \\, V)}^{2t} \\, ,
-    
+
     where :math:`\\mathcal{U}` is the group of unitaries defined by the parametrized circuit.
     The frame potential is approximated by the average
 
     ..math::
-        \\mathcal{F}_{\\mathcal{U}}^{(t)} \\approx \\frac{1}{N} \\, 
+        \\mathcal{F}_{\\mathcal{U}}^{(t)} \\approx \\frac{1}{N} \\,
             \\sum_{k=1}^{N} \\, \\abs{\\tr(U_{k}^{\\dagger} \\, V_{k})}^{2t} \\, ,
-        
+
     where :math:`N` is the number of ``samples``.
 
     Args:
@@ -1195,7 +1195,7 @@ def frame_potential(
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    potential = 0    
+    potential = 0
     for _ in range(samples):
         unitary_1 = circuit.copy()
         unitary_2 = circuit.copy()
@@ -1209,7 +1209,9 @@ def frame_potential(
         unitary_1 = unitary_1.unitary(backend)
         unitary_2 = unitary_2.unitary(backend)
 
-        potential += np.abs(np.trace(np.transpose(np.conj(unitary_1)) @ unitary_2))**(2*power_t)
+        potential += np.abs(np.trace(np.transpose(np.conj(unitary_1)) @ unitary_2)) ** (
+            2 * power_t
+        )
 
     return potential / samples
 
@@ -1222,7 +1224,7 @@ def frame_potential_haar(nqubits: int, power_t: int):
 
     .. math::
         \\frac{t! \\, (d - 1)!}{(t + d - 1)!} \\, ,
-    
+
     where :math:`d = 2^{n}`.
 
     Args:
@@ -1235,8 +1237,6 @@ def frame_potential_haar(nqubits: int, power_t: int):
     dim = 2**nqubits
 
     return factorial(power_t) * factorial(dim - 1) / factorial(power_t + dim - 1)
-
-
 
 
 def _check_hermitian_or_not_gpu(matrix, backend=None):
