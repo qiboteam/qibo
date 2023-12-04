@@ -1156,7 +1156,7 @@ def frame_potential(
     """Returns the frame potential of a parametrized circuit under uniform sampling of the parameters.
 
     For :math:`n` qubits and moment :math:`t`, the frame potential
-    :math:`\\mathcal{F}_{\\mathcal{U}}^{(t)}` if given by
+    :math:`\\mathcal{F}_{\\mathcal{U}}^{(t)}` if given by [1]
 
     ..math::
         \\mathcal{F}_{\\mathcal{U}}^{(t)} = \\int_{U,V \\in \\mathcal{U}} \\,
@@ -1225,10 +1225,10 @@ def frame_potential_haar(nqubits: int, power_t: int):
     """Returns the frame potential of the Haar distirbution.
 
     For :math:`n` qubits and moment :math:`t`, the frame potential
-    of the Haar distribution is given by
+    of the Haar distribution is given by [1]
 
     .. math::
-        \\frac{t! \\, (d - 1)!}{(t + d - 1)!} \\, ,
+        \\mathcal{F}_{\\textup{Haar}}^{(t)} = \\frac{t! \\, (d - 1)!}{(t + d - 1)!} \\, ,
 
     where :math:`d = 2^{n}`.
 
@@ -1238,6 +1238,10 @@ def frame_potential_haar(nqubits: int, power_t: int):
 
     Returns:
         float: Frame potential of the Haar distribution.
+
+    References:
+        1. M. Kliesch and I. Roth, *Theory of quantum system certification*,
+        `PRX Quantum 2, 010201 (2021) <https://doi.org/10.1103/PRXQuantum.2.010201>`_.
     """
     dim = 2**nqubits
 
