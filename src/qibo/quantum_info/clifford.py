@@ -179,7 +179,7 @@ class Clifford:
             qubit_map = {
                 q: i for i, q in enumerate(self.measurement_gate.target_qubits)
             }
-            self._samples = np.array(samples, dtype="int32")
+            self._samples = self.engine.cast(samples, dtype="int32")
             for gate in self.measurements:
                 rqubits = tuple(qubit_map.get(q) for q in gate.target_qubits)
                 gate.result.register_samples(self._samples[:, rqubits], self._backend)

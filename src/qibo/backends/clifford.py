@@ -410,13 +410,17 @@ class CliffordOperations:
         state_copy = state if collapse else state.copy()
         for q in qubits:
             x = CliffordOperations._get_x(state_copy, nqubits)
-            p = x[nqubits:, q].nonzero()[0] + nqubits
+            p = x[nqubits:, q].nonzero()[0]
             # random outcome, affects the state
             if len(p) > 0:
-                p = p[0].item()
-                for i in x[:, q].nonzero()[0]:
-                    if i != p:
-                        state_copy = self._rowsum(state_copy, i.item(), p, nqubits)
+                p = p[0].item() + nqubits
+                h = self.np.array(
+                    [i for i in x[:, q].nonzero()[0] if i != p], dtype=int
+                )
+                if h.shape[0] > 0:
+                    state_copy = self._rowsum(
+                        state_copy, h, p * self.np.ones(h.shape[0], dtype=int), nqubits
+                    )
                 state_copy[p - nqubits, :] = state_copy[p, :]
                 outcome = self.np.random.randint(2, size=1).item()
                 state_copy[p, :] = 0
@@ -429,8 +433,8 @@ class CliffordOperations:
                 for i in x[:nqubits, q].nonzero()[0]:
                     state_copy = self._rowsum(
                         state_copy,
-                        2 * nqubits,
-                        i.item() + nqubits,
+                        self.np.array([2 * nqubits]),
+                        self.np.array([i + nqubits]),
                         nqubits,
                         include_scratch=True,
                     )
@@ -477,8 +481,9 @@ class CliffordOperations:
         symplectic_matrix[-1, :] = val
 
     def _exponent(self, x1, z1, x2, z2):
-        exp = self.np.zeros(x1.shape)
-        x1_eq_z1 = x1 == z1
+        exp = self.np.zeros(x1.shape, dtype=int)
+        # x1_eq_z1 = x1 == z1
+        x1_eq_z1 = (x1 ^ z1) == 0
         x1_neq_z1 = x1_eq_z1 ^ True
         x1_eq_0 = x1 == 0
         x1_eq_1 = x1 == 1
@@ -494,7 +499,39 @@ class CliffordOperations:
         x, z = self._get_x(symplectic_matrix, nqubits, include_scratch), self._get_z(
             symplectic_matrix, nqubits, include_scratch
         )
+        # print(f"> h: {h}")
+        # print(f"> i: {i}")
+        # print(f"> x[i]: {x[i]}")
+        print(f"rh: {symplectic_matrix[h, -1]}, ri: {symplectic_matrix[i, -1]}")
         exponents = self._exponent(x[i, :], z[i, :], x[h, :], z[h, :])
+        print(f"exponents: {exponents}, sum: {self.np.sum(exponents, axis=-1)}")
+
+        ind = (
+            2 * symplectic_matrix[h, -1]
+            + 2 * symplectic_matrix[i, -1]
+            + self.np.sum(exponents, axis=-1)
+        ) % 4 == 0
+        r = self.np.ones(h.shape[0], dtype=bool)
+        r[ind] = False
+
+        print(f"r: {r}")
+        print(f"matrix: {symplectic_matrix[h]}")
+        symplectic_matrix[h, -1] = r
+        symplectic_matrix[h, :nqubits] = x[i, :] ^ x[h, :]
+        symplectic_matrix[h, nqubits:-1] = z[i, :] ^ z[h, :]
+        return symplectic_matrix
+
+    def old_rowsum(
+        self, symplectic_matrix, h, i, nqubits, include_scratch: bool = False
+    ):
+        x, z = self._get_x(symplectic_matrix, nqubits, include_scratch), self._get_z(
+            symplectic_matrix, nqubits, include_scratch
+        )
+        print(f"matrix: {symplectic_matrix[h]}")
+        print(f"rh: {symplectic_matrix[h, -1]}, ri: {symplectic_matrix[i, -1]}")
+        exponents = self._exponent(x[i, :], z[i, :], x[h, :], z[h, :])
+        print(f"exponents: {exponents}, sum: {self.np.sum(exponents)}")
+
         r = (
             0
             if (
@@ -506,6 +543,7 @@ class CliffordOperations:
             == 0
             else 1
         )
+        print(f"r: {r}")
         symplectic_matrix[h, -1] = r
         symplectic_matrix[h, :nqubits] = x[i, :] ^ x[h, :]
         symplectic_matrix[h, nqubits:-1] = z[i, :] ^ z[h, :]
