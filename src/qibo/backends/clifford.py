@@ -15,10 +15,6 @@ def _calculation_engine(backend):
         return backend.np
     else:
         return backend.np
-    raise_error(
-        NotImplementedError,
-        f"{backend.__class__.__name__} for Clifford Simulation is not supported yet.",
-    )
 
 
 class CliffordOperations:
@@ -482,7 +478,6 @@ class CliffordOperations:
 
     def _exponent(self, x1, z1, x2, z2):
         exp = self.np.zeros(x1.shape, dtype=int)
-        # x1_eq_z1 = x1 == z1
         x1_eq_z1 = (x1 ^ z1) == 0
         x1_neq_z1 = x1_eq_z1 ^ True
         x1_eq_0 = x1 == 0
@@ -499,13 +494,7 @@ class CliffordOperations:
         x, z = self._get_x(symplectic_matrix, nqubits, include_scratch), self._get_z(
             symplectic_matrix, nqubits, include_scratch
         )
-        # print(f"> h: {h}")
-        # print(f"> i: {i}")
-        # print(f"> x[i]: {x[i]}")
-        print(f"rh: {symplectic_matrix[h, -1]}, ri: {symplectic_matrix[i, -1]}")
         exponents = self._exponent(x[i, :], z[i, :], x[h, :], z[h, :])
-        print(f"exponents: {exponents}, sum: {self.np.sum(exponents, axis=-1)}")
-
         ind = (
             2 * symplectic_matrix[h, -1]
             + 2 * symplectic_matrix[i, -1]
@@ -514,36 +503,6 @@ class CliffordOperations:
         r = self.np.ones(h.shape[0], dtype=bool)
         r[ind] = False
 
-        print(f"r: {r}")
-        print(f"matrix: {symplectic_matrix[h]}")
-        symplectic_matrix[h, -1] = r
-        symplectic_matrix[h, :nqubits] = x[i, :] ^ x[h, :]
-        symplectic_matrix[h, nqubits:-1] = z[i, :] ^ z[h, :]
-        return symplectic_matrix
-
-    def old_rowsum(
-        self, symplectic_matrix, h, i, nqubits, include_scratch: bool = False
-    ):
-        x, z = self._get_x(symplectic_matrix, nqubits, include_scratch), self._get_z(
-            symplectic_matrix, nqubits, include_scratch
-        )
-        print(f"matrix: {symplectic_matrix[h]}")
-        print(f"rh: {symplectic_matrix[h, -1]}, ri: {symplectic_matrix[i, -1]}")
-        exponents = self._exponent(x[i, :], z[i, :], x[h, :], z[h, :])
-        print(f"exponents: {exponents}, sum: {self.np.sum(exponents)}")
-
-        r = (
-            0
-            if (
-                2 * symplectic_matrix[h, -1]
-                + 2 * symplectic_matrix[i, -1]
-                + self.np.sum(exponents)
-            )
-            % 4
-            == 0
-            else 1
-        )
-        print(f"r: {r}")
         symplectic_matrix[h, -1] = r
         symplectic_matrix[h, :nqubits] = x[i, :] ^ x[h, :]
         symplectic_matrix[h, nqubits:-1] = z[i, :] ^ z[h, :]

@@ -35,7 +35,12 @@ def construct_backend(backend, platform=None, runcard=None):
 
         return QibolabBackend(platform, runcard)
     elif backend == "clifford":
-        return CliffordBackend()
+        if platform is not None:
+            if platform in ("cupy", "numba", "cuquantum"):
+                engine = construct_backend("qibojit", platform=platform)
+            else:
+                engine = construct_backend(platform)
+        return CliffordBackend(engine)
 
     else:  # pragma: no cover
         raise_error(ValueError, f"Backend {backend} is not available.")

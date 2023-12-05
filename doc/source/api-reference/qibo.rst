@@ -1925,10 +1925,10 @@ passing a symplectic matrix to the constructor
 .. testcode::
 
    from qibo.quantum_info import Clifford
-   from qibo.backends import CliffordBackend
+   from qibo.backends import CliffordBackend, NumpyBackend
 
    # construct the |00...0> state
-   symplectic_matrix = CliffordBackend().zero_state(nqubits=3)
+   symplectic_matrix = CliffordBackend(NumpyBackend()).zero_state(nqubits=3)
    clifford = Clifford(symplectic_matrix)
 
 Then, the generators of the stabilizers can be extracted with the
@@ -2103,9 +2103,10 @@ As for the other backends, the Clifford backend can be set with
 .. testcode::  python
 
     import qibo
-    qibo.set_backend("clifford")
+    qibo.set_backend("clifford", platform="numpy")
 
-alternatively, a Clifford circuit can also be executed starting from the :class:`qibo.quantum_info.clifford.Clifford` object
+by specifying the engine used for calculation, if not provided the current :class:`qibo.backends.GlobalBackend` is used.
+Alternatively, a Clifford circuit can also be executed starting from the :class:`qibo.quantum_info.clifford.Clifford` object
 
 .. code-block::  python
 
