@@ -40,8 +40,11 @@ def restrict_connectivity_qubits(connectivity: nx.Graph, qubits: list):
     Args:
         connectivity (:class:`networkx.Graph`): chip connectivity.
         qubits (list): list of physical qubits to be used.
+
+    Returns:
+        (:class:`networkx.Graph`): restricted connectivity.
     """
-    if set(qubits).issubset(connectivity.nodes):
+    if not set(qubits).issubset(set(connectivity.nodes)):
         raise_error(
             ConnectivityError, "Some qubits are not in the original connectivity."
         )
