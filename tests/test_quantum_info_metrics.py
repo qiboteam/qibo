@@ -16,6 +16,7 @@ from qibo.quantum_info.metrics import (
     entropy,
     expressibility,
     fidelity,
+    frame_potential,
     gate_error,
     hilbert_schmidt_distance,
     impurity,
@@ -649,3 +650,29 @@ def test_expressibility(backend):
     expr_3 = expressibility(c3, t, samples, backend=backend)
 
     backend.assert_allclose(expr_1 < expr_2 < expr_3, True)
+
+
+@pytest.mark.parametrize("samples", [int(1e2)])
+@pytest.mark.parametrize("power_t", [2])
+@pytest.mark.parametrize("nqubits", [2, 3, 4])
+def test_frame_potential(backend, nqubits, power_t, samples):
+
+    depth = int(np.ceil(nqubits * power_t))
+
+    circuit = Circuit(nqubits)
+    circuit.add((gates.U3(q, 0.0, 0.0, 0.0) for q in range(nqubits)))
+    for _ in range(depth):
+        circuit.add((gates.CNOT(q, q + 1) for q in range(nqubits - 1)))
+        circuit.add((gates.U3(q, 0.0, 0.0, 0.0) for q in range(nqubits)))
+
+    with pytest.raises(TypeError):
+        frame_potential(circuit, power_t="2", backend=backend)
+    with pytest.raises(TypeError):
+        frame_potential(circuit, 2, samples="1000", backend=backend)
+
+    dim = 2**nqubits
+    potential_haar = 2 / dim**4
+
+    potential = frame_potential(circuit, power_t=power_t, samples=samples, backend=backend)
+
+    backend.assert_allclose(potential, potential_haar, rtol=1e-2, atol=1e-2)
