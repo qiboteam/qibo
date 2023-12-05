@@ -1,5 +1,4 @@
 import collections
-import multiprocessing
 import os
 
 import numpy as np
@@ -196,7 +195,7 @@ class TensorflowBackend(NumpyBackend):
         elif cpu_devices:
             self.device = cpu_devices[0].name
 
-        self.nthreads = multiprocessing.cpu_count()
+        self.nthreads = 0
 
         self.tensor_types = (np.ndarray, tf.Tensor, tf.Variable)
 
