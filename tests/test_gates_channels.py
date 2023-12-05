@@ -45,7 +45,8 @@ def test_general_channel(backend):
     with pytest.raises(NotImplementedError):
         state = random_statevector(2**2, backend=backend)
         channel1.apply(backend, state, 2)
-
+    with pytest.raises(NotImplementedError):
+        channel1.matrix(backend)
 
 def test_controlled_by_channel_error():
     """"""
