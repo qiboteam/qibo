@@ -1200,52 +1200,27 @@ def frame_potential(
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
+    nqubits = circuit.nqubits
+    dim = 2**nqubits
+
     potential = 0
     for _ in range(samples):
         unitary_1 = circuit.copy()
-        unitary_2 = circuit.copy()
-
         params_1 = np.random.uniform(-np.pi, np.pi, circuit.trainable_gates.nparams)
-        params_2 = np.random.uniform(-np.pi, np.pi, circuit.trainable_gates.nparams)
-
         unitary_1.set_parameters(params_1)
-        unitary_2.set_parameters(params_2)
+        unitary_1 = unitary_1.unitary(backend) / np.sqrt(dim)
 
-        unitary_1 = unitary_1.unitary(backend)
-        unitary_2 = unitary_2.unitary(backend)
+        for _ in range(samples):
+            unitary_2 = circuit.copy()
+            params_2 = np.random.uniform(-np.pi, np.pi, circuit.trainable_gates.nparams)
+            unitary_2.set_parameters(params_2)
+            unitary_2 = unitary_2.unitary(backend) / np.sqrt(dim)
 
-        potential += np.abs(np.trace(np.transpose(np.conj(unitary_1)) @ unitary_2)) ** (
-            2 * power_t
-        )
+            potential += np.abs(np.trace(np.transpose(np.conj(unitary_1)) @ unitary_2)) ** (
+                2 * power_t
+            )
 
-    return potential / samples
-
-
-def frame_potential_haar(nqubits: int, power_t: int):
-    """Returns the frame potential of the Haar distirbution.
-
-    For :math:`n` qubits and moment :math:`t`, the frame potential
-    of the Haar distribution is given by [1]
-
-    .. math::
-        \\mathcal{F}_{\\textup{Haar}}^{(t)} = \\frac{t! \\, (d - 1)!}{(t + d - 1)!} \\, ,
-
-    where :math:`d = 2^{n}`.
-
-    Args:
-        nqubits (int): number of qubits.
-        power_t (int): power that defines the :math:`t`-design.
-
-    Returns:
-        float: Frame potential of the Haar distribution.
-
-    References:
-        1. M. Kliesch and I. Roth, *Theory of quantum system certification*,
-        `PRX Quantum 2, 010201 (2021) <https://doi.org/10.1103/PRXQuantum.2.010201>`_.
-    """
-    dim = 2**nqubits
-
-    return factorial(power_t) * factorial(dim - 1) / factorial(power_t + dim - 1)
+    return potential / samples**2
 
 
 def _check_hermitian_or_not_gpu(matrix, backend=None):
