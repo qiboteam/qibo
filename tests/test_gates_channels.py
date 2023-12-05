@@ -48,6 +48,7 @@ def test_general_channel(backend):
     with pytest.raises(NotImplementedError):
         channel1.matrix(backend)
 
+
 def test_controlled_by_channel_error():
     """"""
     with pytest.raises(ValueError):
