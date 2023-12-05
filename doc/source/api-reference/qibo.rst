@@ -1928,7 +1928,8 @@ passing a symplectic matrix to the constructor
    from qibo.backends import CliffordBackend, NumpyBackend
 
    # construct the |00...0> state
-   symplectic_matrix = CliffordBackend(NumpyBackend()).zero_state(nqubits=3)
+   backend = CliffordBackend(NumpyBackend())
+   symplectic_matrix = backend.zero_state(nqubits=3)
    clifford = Clifford(symplectic_matrix)
 
 Then, the generators of the stabilizers can be extracted with the
