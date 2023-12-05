@@ -34,6 +34,29 @@ def assert_connectivity(connectivity: nx.Graph, circuit: Circuit):
                 )
 
 
+def restrict_connectivity_qubits(connectivity: nx.Graph, qubits: list):
+    """Restrict the connectivity to selected qubits.
+
+    Args:
+        connectivity (:class:`networkx.Graph`): chip connectivity.
+        qubits (list): list of physical qubits to be used.
+    """
+    if set(qubits).issubset(connectivity.nodes):
+        raise_error(
+            ConnectivityError, "Some qubits are not in the original connectivity."
+        )
+    new_connectivity = nx.Graph()
+    new_connectivity.add_nodes_from(qubits)
+    new_edges = []
+    for edge in connectivity.edges:
+        if edge[0] in qubits and edge[1] in qubits:
+            new_edges.append(edge)
+    new_connectivity.add_edges_from(new_edges)
+    if not nx.is_connected(new_connectivity):
+        raise_error(ConnectivityError, "The new connectivity graph is not connected.")
+    return new_connectivity
+
+
 # TODO: make this class work with CircuitMap
 class ShortestPaths(Router):
     """A class to perform initial qubit mapping and connectivity matching.
@@ -716,8 +739,16 @@ def _create_dag(gates_qubits_pairs):
     return _remove_redundant_connections(dag)
 
 
-def _remove_redundant_connections(dag: nx.Graph):
-    """Remove redundant connection from a DAG unsing transitive reduction."""
+def _remove_redundant_connections(dag: nx.DiGraph):
+    """Helper method for :func:`_create_dag`.
+    Remove redundant connection from a DAG using transitive reduction.
+
+    Args:
+        dag (:class:`networkx.DiGraph`): dag to be reduced.
+
+    Returns:
+        (:class:`networkx.DiGraph`): reduced dag.
+    """
     new_dag = nx.DiGraph()
     new_dag.add_nodes_from(range(dag.number_of_nodes()))
     transitive_reduction = nx.transitive_reduction(dag)
