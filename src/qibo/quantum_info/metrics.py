@@ -1,6 +1,5 @@
 """Submodule with distances, metrics, and measures for quantum states and channels."""
 
-from math import factorial
 from typing import Optional, Union
 
 import numpy as np
@@ -1216,9 +1215,9 @@ def frame_potential(
             unitary_2.set_parameters(params_2)
             unitary_2 = unitary_2.unitary(backend) / np.sqrt(dim)
 
-            potential += np.abs(np.trace(np.transpose(np.conj(unitary_1)) @ unitary_2)) ** (
-                2 * power_t
-            )
+            potential += np.abs(
+                np.trace(np.transpose(np.conj(unitary_1)) @ unitary_2)
+            ) ** (2 * power_t)
 
     return potential / samples**2
 
