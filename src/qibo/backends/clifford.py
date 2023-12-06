@@ -1,8 +1,6 @@
 """Module defining the Clifford backend."""
 from functools import reduce
 
-from functools import reduce
-
 import numpy as np
 
 from qibo import gates
