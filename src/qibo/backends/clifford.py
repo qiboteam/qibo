@@ -10,7 +10,9 @@ from qibo.config import raise_error
 
 def _calculation_engine(backend):
     if backend.name == "qibojit":
-        if backend.platform == "cupy" or backend.platform == "cuquantum":  # pragma: no cover
+        if (
+            backend.platform == "cupy" or backend.platform == "cuquantum"
+        ):  # pragma: no cover
             return backend.cp
         return backend.np
     else:
