@@ -366,15 +366,11 @@ class Gate:
 
         return backend.matrix(self)
 
-    def clifford_operation(self):
-        backend = CliffordBackend()
-        return backend.clifford_operation(self)
-
     def generator_eigenvalue(self):
         """This function returns the eigenvalues of the gate's generator.
 
         Returns:
-            np.float generator's eigenvalue or raise an error if not implemented.
+            (float) eigenvalue of the generator.
         """
 
         raise_error(
@@ -383,8 +379,7 @@ class Gate:
         )
 
     def basis_rotation(self):
-        """Transformation required to rotate the basis for measuring the
-        gate."""
+        """Transformation required to rotate the basis for measuring the gate."""
         raise_error(
             NotImplementedError,
             f"Basis rotation is not implemented for {self.__class__.__name__}",

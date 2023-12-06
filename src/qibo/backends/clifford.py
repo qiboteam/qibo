@@ -1,4 +1,5 @@
 """Module defining the Clifford backend."""
+from functools import reduce
 
 import numpy as np
 
@@ -15,8 +16,8 @@ def _calculation_engine(backend):
         ):  # pragma: no cover
             return backend.cp
         return backend.np
-    else:
-        return backend.np
+
+    return backend.np
 
 
 class CliffordOperations:
@@ -59,7 +60,6 @@ class CliffordOperations:
 
     def CZ(self, symplectic_matrix, control_q, target_q, nqubits):
         """Decomposition --> H-CNOT-H"""
-
         r, x, z = self._get_rxz(symplectic_matrix, nqubits)
         self._set_r(
             symplectic_matrix,
@@ -74,9 +74,9 @@ class CliffordOperations:
         )
         symplectic_matrix[
             :-1, [nqubits + control_q, nqubits + target_q]
-        ] = self.np.vstack(
+        ] = self.np.transpose(self.np.vstack(
             (x[:, target_q] ^ z[:, control_q], z[:, target_q] ^ x[:, control_q])
-        ).T
+        ))
         return symplectic_matrix
 
     def S(self, symplectic_matrix, q, nqubits):
@@ -525,11 +525,13 @@ class CliffordBackend(NumpyBackend):
             from qibo.backends import GlobalBackend
 
             engine = GlobalBackend()
+
         if isinstance(engine, TensorflowBackend):
             raise_error(
                 NotImplementedError,
                 "TensorflowBackend for Clifford Simulation is not supported yet.",
             )
+
         self.engine = engine
         self.np = _calculation_engine(engine)
 
@@ -553,35 +555,25 @@ class CliffordBackend(NumpyBackend):
         symplectic_matrix[nqubits:-1, nqubits : 2 * nqubits] = I.copy()
         return symplectic_matrix
 
-    def clifford_operation(self, gate):
-        """Retrieves the symplectic_matrix operation corresponding to a gate.
-
-        Args:
-            gate (qibo.gates.abstract.gate): Input gate.
-
-        Returns:
-            operation (method): The corrsponding Clifford operation.
-        """
-        name = gate.__class__.__name__
-        return getattr(self.clifford_operations, name)
-
     def apply_gate_clifford(self, gate, symplectic_matrix, nqubits, nshots):
-        operation = gate.clifford_operation()
+        operation = getattr(self.clifford_operations, gate.__class__.__name__)
         kwargs = (
             {"theta": gate.init_kwargs["theta"]} if "theta" in gate.init_kwargs else {}
         )
         return operation(symplectic_matrix, *gate.init_args, nqubits, **kwargs)
 
-    def execute_circuit(self, circuit, initial_state=None, nshots=1000):
+    def execute_circuit(self, circuit, initial_state=None, nshots: int = 1000):
         """Execute a Clifford circuits.
 
         Args:
-            circuit (qibo.models.Circuit): Input circuit.
-            initial_state (np.ndarray): The symplectic_matrix of the initial state.
-            nshots (int): Number of shots.
+            circuit (:class:`qibo.models.circuit.Circuit`): Input circuit.
+            initial_state (ndarray, optional): The ``symplectic_matrix`` of the initial state.
+                If ``None``, defaults to the zero state. Defaults to ``None``.
+            nshots (int, optional): Number of shots to perform if ``circuit`` has measurements.
+                Defaults to :math:`10^{3}`.
 
         Returns:
-            result (qibo.quantum_info.Clifford): The result object giving access to the final results.
+            result (:class:`qibo.quantum_info.clifford.Clifford`): Object giving access to the final results.
         """
         for gate in circuit.queue:
             if not gate.clifford and not gate.__class__.__name__ == "M":
@@ -591,17 +583,14 @@ class CliffordBackend(NumpyBackend):
             return self.execute_circuit_repeated(circuit, initial_state, nshots)
 
         try:
+            from qibo.quantum_info.clifford import Clifford
+            
             nqubits = circuit.nqubits
 
-            if initial_state is None:
-                state = self.zero_state(nqubits)
-            else:
-                state = initial_state
+            state = self.zero_state(nqubits) if initial_state is None else initial_state
 
             for gate in circuit.queue:
                 state = gate.apply_clifford(self, state, nqubits)
-
-            from qibo.quantum_info.clifford import Clifford
 
             return Clifford(
                 state,
@@ -678,12 +667,13 @@ class CliffordBackend(NumpyBackend):
             ]  # parallelize?
         return self.np.array(samples).reshape(nshots, len(qubits))
 
-    def symplectic_matrix_to_generators(self, symplectic_matrix, return_array=False):
+    def symplectic_matrix_to_generators(self, symplectic_matrix, return_array: bool = False):
         """Extract both the stabilizers and de-stabilizers generators from the input symplectic_matrix.
 
         Args:
-            symplectic_matrix (np.ndarray): The input symplectic_matrix.
-            return_array (bool): If ``True`` returns the generators as numpy arrays, otherwise they are returned as strings.
+            symplectic_matrix (ndarray): The input symplectic_matrix.
+            return_array (bool, optional): If ``True`` returns the generators as ``ndarrays``.
+                If ``False``, generators are returned as strings. Defaults to ``False``.
 
         Returns:
             (generators, phases) (list, list): Lists of the extracted generators and their corresponding phases.
@@ -696,13 +686,15 @@ class CliffordBackend(NumpyBackend):
         X, Z = tmp[:, :nqubits], tmp[:, nqubits:]
         generators = []
         for x, z in zip(X, Z):
-            paulis = [bits_to_gate[f"{zz}{xx}"] for i, (xx, zz) in enumerate(zip(x, z))]
+            paulis = [bits_to_gate[f"{zz}{xx}"] for xx, zz in zip(x, z)]
             if return_array:
-                paulis = [getattr(gates, p)(0).matrix() for p in paulis]
-                matrix = paulis[0]
-                for p in paulis[1:]:
-                    matrix = self.np.kron(matrix, p)
+                paulis = [self.engine.cast(getattr(gates, p)(0).matrix()) for p in paulis]
+                matrix = reduce(self.np.kron, paulis)
                 generators.append(matrix)
             else:
                 generators.append("".join(paulis))
+
+        if return_array:
+            generators = self.engine.cast(generators)
+
         return generators, phases

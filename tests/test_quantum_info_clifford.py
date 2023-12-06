@@ -49,9 +49,11 @@ def test_clifford_from_circuit(backend, measurement):
     clifford_backend = construct_clifford_backend(backend)
     if not clifford_backend:
         return
+
     c = random_clifford(3, backend=backend)
     if measurement:
         c.add(gates.M(*np.random.choice(3, size=2, replace=False)))
+
     result = clifford_backend.execute_circuit(c)
     obj = Clifford.from_circuit(c, engine=backend)
     backend.assert_allclose(obj.state(), result.state())
