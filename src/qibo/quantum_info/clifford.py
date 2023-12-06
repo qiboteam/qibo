@@ -113,7 +113,7 @@ class Clifford:
         """
         generators, phases = self.generators(return_array)
         return self._construct_operators(
-            generators[: self.nqubits], phases[: self.nqubits], return_array
+            generators[: self.nqubits], phases[: self.nqubits]
         )
 
     def state(self):
