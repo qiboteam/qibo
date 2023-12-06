@@ -1930,7 +1930,7 @@ passing a symplectic matrix to the constructor
    # construct the |00...0> state
    backend = CliffordBackend(NumpyBackend())
    symplectic_matrix = backend.zero_state(nqubits=3)
-   clifford = Clifford(symplectic_matrix)
+   clifford = Clifford(symplectic_matrix, engine=NumpyBackend())
 
 Then, the generators of the stabilizers can be extracted with the
 :meth:`qibo.quantum_info.clifford.Clifford.generators` method,
