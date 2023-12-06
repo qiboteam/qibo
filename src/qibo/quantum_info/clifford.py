@@ -377,7 +377,7 @@ def _string_product(operators: list):
             tmp = op[0]
         # append signs coming from products
         if tmp[0] == "-":
-            np.append(phases, True)
+            phases = np.append(phases, True)
         # count i coming from products
         if "i" in tmp:
             i += 1
@@ -391,5 +391,6 @@ def _string_product(operators: list):
         np.append(phases, True)
 
     phases = "-" if len(phases.nonzero()[0]) % 2 == 1 else ""
+
 
     return f"{phases}{result}"
