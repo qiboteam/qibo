@@ -90,68 +90,6 @@ class NumpyMatrices:
             [[1, -1.0j * self.np.conj(phase)], [-1.0j * phase, 1]], dtype=self.dtype
         ) / self.np.sqrt(2)
 
-    def RXRY_Variable(self, phi):
-        """Developed by Michael Tsesmelis (ACSE-mct22)"""
-
-        Y = np.array([[0, -1j], [1j, 0]])
-
-        return scipy.linalg.expm(1j * phi * Y)
-
-    def expm_taylor(self, A, num_terms=10):
-        if not isinstance(A, self.np.ndarray):
-            A = self.np.asarray(A)
-
-        if A.shape[0] != A.shape[1]:
-            raise ValueError("Input matrix must be square.")
-
-        result = self.np.eye(A.shape[0])
-        term = self.np.eye(A.shape[0])
-
-        for k in range(1, num_terms):
-            term = self.np.dot(term, A) / k
-            result = result + term
-
-        return result
-
-    def RXRY(self, phi):
-        """Developed by Michael Tsesmelis (ACSE-mct22)"""
-
-        X = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=self.dtype)
-        Y = np.array([[0.0, -1.0j], [1.0j, 0.0]], dtype=self.dtype)
-
-        expA_np = self.expm_taylor(-1.0j * 0.3 * Y + (phi / 2) * X)
-        matrix = self.np.array(expA_np, dtype=self.dtype)
-
-        return matrix
-
-    def CrossRes_Variable(self, sign):
-        """Developed by Michael Tsesmelis (ACSE-mct22)"""
-
-        X = np.array([[0, 1], [1, 0]])
-
-        return scipy.linalg.expm(-1j * sign * np.pi / 4 * X)
-
-    def generate_crossres(self, theta1, theta2, theta3):
-        """Developed by Michael Tsesmelis (ACSE-mct22)"""
-
-        I = np.eye(2)
-        X = np.array([[0, 1], [1, 0]])
-        Z = np.array([[1, 0], [0, -1]])
-
-        G = (
-            theta1.item() * np.kron(X, I)
-            - theta2 * np.kron(Z, X)
-            + theta3 * np.kron(I, X)
-        )
-
-        return G
-
-    def CrossRes(self, s, theta1, theta2, theta3):
-        """Developed by Michael Tsesmelis (ACSE-mct22)"""
-
-        G = self.generate_crossres(theta1, theta2, theta3)
-        return scipy.linalg.expm(-1j * s * G)
-
     def U1(self, theta):
         phase = self.np.exp(1j * theta)
         return self.np.array([[1, 0], [0, phase]], dtype=self.dtype)
