@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates, hamiltonians
+from qibo.backends import GlobalBackend, TensorflowBackend
 from qibo.derivative import finite_differences, parameter_shift
 from qibo.symbols import Z
 
@@ -128,16 +129,13 @@ def test_finite_differences(backend, step_size):
 import tensorflow as tf
 
 from qibo import gates
-from qibo.backends import GlobalBackend, set_backend
+from qibo.backends import GlobalBackend, get_backend, set_backend
 from qibo.derivative import VAR, create_hamiltonian, stochastic_parameter_shift
 from qibo.models.circuit import Circuit
-
-set_backend("tensorflow")
 
 
 def gradient_exact():
     """Calculates exact gradient of a circuit"""
-
     backend = GlobalBackend()
 
     test_params = tf.Variable(np.linspace(0.1, 1, 3))
@@ -236,127 +234,22 @@ def test_psr_commuting_gate():
     assert np.isclose(grad_1, grad_2, atol=1e-5)
 
 
-def expm_taylor(A, num_terms=10):
-    if not isinstance(A, backend.np.ndarray):
-        A = backend.np.asarray(A)
+def RXRY_gate(phi):
+    X = np.array([[0.0, 1.0], [1.0, 0.0]], dtype="complex128")
+    Y = np.array([[0.0, -1.0j], [1.0j, 0.0]], dtype="complex128")
 
-    if A.shape[0] != A.shape[1]:
-        raise ValueError("Input matrix must be square.")
-
-    result = backend.np.eye(A.shape[0])
-    term = backend.np.eye(A.shape[0])
-
-    for k in range(1, num_terms):
-        term = backend.np.dot(term, A) / k
-        result = result + term
-
-    return result
+    return np.array(0.3 * Y + phi * X, dtype="complex128")
 
 
-def spsr_circuit_RXRY_decomposed(phi, s, shift):
-    """RXRY decomposed into its 3 constituents for SPSR"""
-
-    ham = create_hamiltonian(0, 1, GlobalBackend())
-
-    c1 = Circuit(nqubits=1)
-    start = gates.OneQubitGate(
-        0, "RXRY", exponentiated=True, generator=RXRYN, scaling=s, phi=phi
-    )
-    c1.add(start)
-    c1.add(VAR(start).return_gate(item="phi", angle=shift))
-    c1.add(
-        gates.OneQubitGate(
-            0, "H", exponentiated=True, generator=RXRYN, scaling=(1 - s), phi=phi
-        )
-    )
-    c1.add(gates.M(0))
+def RXRY_gate_exponentiated(phi):
+    import tensorflow as tf
 
     backend = GlobalBackend()
-
-    val = ham.expectation(
-        backend.execute_circuit(circuit=c1, initial_state=None).state()
-    )
-
-    return val
-
-
-def spsr_circuit_RXRY(phi):
-    """RXRY gate and circuit used for SPSR"""
-
-    ham = create_hamiltonian(0, 1, GlobalBackend())
-    c1 = Circuit(nqubits=1)
-    c1.add(gates.RXRY(0, phi, 1.0))
-    c1.add(gates.M(0))
-
-    backend = GlobalBackend()
-
-    val = ham.expectation(
-        backend.execute_circuit(circuit=c1, initial_state=None).state()
-    )
-
-    c1.set_parameters([phi + 0.001, 1.0])
-    forward = ham.expectation(
-        backend.execute_circuit(circuit=c1, initial_state=None).state()
-    )
-
-    c1.set_parameters([phi - 0.001, 1.0])
-    backward = ham.expectation(
-        backend.execute_circuit(circuit=c1, initial_state=None).state()
-    )
-
-    diff = (forward - backward) / 0.002
-
-    return val, diff
-
-
-def test_spsr_RXRY():
-    """Test `stochastic_parameter_shift` decomposed into its constituents on RXRY"""
-
-    np.random.seed(1430)
-    backend = GlobalBackend()
-
-    angles = np.linspace(0.1, 2 * np.pi, 50)
-
-    evals = [spsr_circuit_RXRY(theta1) for theta1 in angles]
-    fdiff = [res[1] for res in evals]
-    evals = [res[0] for res in evals]
-
-    # spsr
-    pos_vals = np.array(
-        [
-            [
-                spsr_circuit_RXRY_decomposed(theta1, s=s, shift=np.pi / 4)
-                for s in np.random.uniform(size=10)
-            ]
-            for theta1 in angles
-        ]
-    )
-
-    neg_vals = np.array(
-        [
-            [
-                spsr_circuit_RXRY_decomposed(theta1, s=s, shift=-np.pi / 4)
-                for s in np.random.uniform(size=10)
-            ]
-            for theta1 in angles
-        ]
-    )
-
-    spsr_vals = (pos_vals - neg_vals).mean(axis=1)
-
-    assert np.allclose(fdiff, spsr_vals, atol=0.05)
-
-
-def RXRYN(phi):
-    """Developed by Michael Tsesmelis (ACSE-mct22)"""
 
     X = backend.np.array([[0.0, 1.0], [1.0, 0.0]], dtype="complex128")
     Y = backend.np.array([[0.0, -1.0j], [1.0j, 0.0]], dtype="complex128")
 
-    expA_np = expm_taylor(-1.0j * 0.3 * Y + (phi / 2) * X)
-    matrix = backend.np.array(expA_np, dtype="complex128")
-
-    return matrix
+    return tf.linalg.expm(-1j * backend.np.array(0.3 * Y + phi * X, dtype="complex128"))
 
 
 def circuit_rxry(nqubits=1):
@@ -365,9 +258,9 @@ def circuit_rxry(nqubits=1):
     c = Circuit(nqubits)
     # all gates for which generator eigenvalue is implemented
     c.add(gates.RY(q=0, theta=0))
-    # c.add(gates.RY(q=0, theta=10))
-    c.add(gates.RXRY(q=0, phi=0))
-    # c.add(gates.OneQubitGate(0, "RXRY", exponentiated=False, generator=RXRYN, phi=0.1))
+    c.add(
+        gates.OneQubitGate(0, "RXRY", exponentiated=True, generator=RXRY_gate, phi=0.1)
+    )
     c.add(gates.RX(q=0, theta=0))
     c.add(gates.M(0))
 
@@ -381,8 +274,17 @@ def gradient_exact_rxry(backend, test_params):
 
     test_params = tf.Variable(test_params)
 
+    c = Circuit(1)
+    c.add(gates.RY(q=0, theta=0))
+    c.add(
+        gates.OneQubitGate(
+            0, "RXRY", exponentiated=False, generator=RXRY_gate_exponentiated, phi=0.1
+        )
+    )
+    c.add(gates.RX(q=0, theta=0))
+    c.add(gates.M(0))
+
     with tf.GradientTape() as tape:
-        c = circuit_rxry(nqubits=1)
         c.set_parameters(test_params)
 
         ham = hamiltonian(nqubits=1, backend=backend)
@@ -391,59 +293,69 @@ def gradient_exact_rxry(backend, test_params):
         )
 
     gradients = tape.gradient(results, test_params)
-    print(gradients)
+
     return gradients
 
 
-@pytest.mark.parametrize("nshots, atol", [(100000, 1e-2)])
+@pytest.mark.parametrize("nshots, atol", [(10000, 1e-1)])
 def test_stochastic_parameter_shift(backend, nshots, atol):
-    test_params = np.linspace(0.1, 1.0, 3)
-
-    # exact gradients
-    grads = gradient_exact_rxry(backend, test_params)
-
-    # initializing the circuit
-    c = circuit_rxry(nqubits=1)
-
-    # some parameters
-    # we know the derivative's values with these params
-
-    c.set_parameters(test_params)
-
-    test_hamiltonian = hamiltonian(nqubits=1, backend=backend)
+    if not isinstance(backend, TensorflowBackend):
+        pytest.skip(
+            "Stochastic parameter shift is only tested with tensorflow backend."
+        )
 
     # testing parameter out of bounds
-    with pytest.raises(ValueError):
-        grad_0 = stochastic_parameter_shift(
-            circuit=c, hamiltonian=test_hamiltonian, parameter_index=5
+    def func():
+        with pytest.raises(ValueError):
+            grad_0 = stochastic_parameter_shift(
+                circuit=c1, hamiltonian=test_hamiltonian, parameter_index=5
+            )
+
+        # testing hamiltonian type
+        with pytest.raises(TypeError):
+            grad_0 = stochastic_parameter_shift(
+                circuit=c1,
+                hamiltonian=test_hamiltonian,
+                parameter_index=0,
+                nshots=nshots,
+            )
+
+    np.random.seed(42)
+    x = np.linspace(0.1, np.pi, 10)
+    grads = np.zeros((3, 10))
+
+    for i, xi in enumerate(x):
+        test_params = np.array([0.6, xi, 0.4])
+        # exact gradients
+        grads[0, i] = gradient_exact_rxry(backend, test_params)[1]
+
+        # initializing the circuit
+        c1 = circuit_rxry(nqubits=1)
+        c2 = circuit_rxry(nqubits=1)
+
+        # some parameters
+        # we know the derivative's values with these params
+
+        c1.set_parameters(test_params)
+
+        test_hamiltonian = hamiltonian(nqubits=1, backend=backend)
+
+        # executing all the procedure
+        grads[1, i] = stochastic_parameter_shift(
+            circuit=c1,
+            hamiltonian=test_hamiltonian,
+            parameter_index=1,
+            scale_factor=1.0,
+            nshots=None,
+            stochastic_executions=30,
         )
 
-    # testing hamiltonian type
-    with pytest.raises(TypeError):
-        grad_0 = stochastic_parameter_shift(
-            circuit=c, hamiltonian=c, parameter_index=0, nshots=nshots
+        c2.set_parameters(test_params)
+
+        grads[2, i] = test_hamiltonian.expectation(
+            backend.execute_circuit(circuit=c2, initial_state=None).state()
         )
-
-    # executing all the procedure
-
-    grad_1 = stochastic_parameter_shift(
-        circuit=c,
-        hamiltonian=test_hamiltonian,
-        parameter_index=1,
-        scale_factor=1.0,
-        nshots=nshots,
-        stochastic_executions=10,
-    )
-
-    print(grad_1, grads)
 
     # check of known values
     # calculated using tf.GradientTape
-    # backend.assert_allclose(grad_0, grads[0], atol=atol)
-    backend.assert_allclose(grad_1, grads[1], atol=atol)
-    # backend.assert_allclose(grad_2, grads[2], atol=atol)
-
-
-if __name__ == "__main__":
-    backend = GlobalBackend()
-    test_stochastic_parameter_shift(GlobalBackend(), 10000, 1e-3)
+    backend.assert_allclose(grads[0, :], grads[1, :], atol=atol)

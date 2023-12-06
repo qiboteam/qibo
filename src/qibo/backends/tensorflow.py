@@ -250,7 +250,6 @@ class TensorflowBackend(NumpyBackend):
 
     def matrix_parametrized(self, gate):
         npmatrix = super().matrix_parametrized(gate)
-        print(npmatrix, self.dtype)
         return self.tf.cast(npmatrix, dtype=self.dtype)
 
     def matrix_fused(self, gate):

@@ -1,7 +1,8 @@
 import collections
 
 import numpy as np
-import scipy
+import scipy as sp
+import tensorflow as tf
 
 from qibo import __version__
 from qibo.backends import einsum_utils
@@ -110,17 +111,17 @@ class NumpyBackend(Backend):
 
     def expm_taylor(self, A, num_terms=10):
         # TODO ChatGPT citation
-        if not isinstance(A, np.ndarray):
-            A = np.asarray(A)
+        if not isinstance(A, self.np.ndarray):
+            A = self.np.asarray(A)
 
         if A.shape[0] != A.shape[1]:
             raise ValueError("Input matrix must be square.")
 
-        result = np.eye(A.shape[0])
-        term = np.eye(A.shape[0])
+        result = self.np.eye(A.shape[0])
+        term = self.np.eye(A.shape[0])
 
         for k in range(1, num_terms):
-            term = np.dot(term, A) / k
+            term = self.np.dot(term, A) / k
             result = result + term
 
         return result
@@ -132,11 +133,8 @@ class NumpyBackend(Backend):
             return getattr(self.matrices, name)(*gate.parameters)
         else:
             if gate.exponentiated:
-                return np.array(
-                    self.expm_taylor(
-                        -1j * gate.scaling * gate.generator(*gate.parameters)
-                    ),
-                    dtype=self.dtype,
+                return sp.linalg.expm(
+                    -1j * gate.scaling * gate.generator(*gate.parameters)
                 )
             else:
                 return gate.generator(*gate.parameters)
