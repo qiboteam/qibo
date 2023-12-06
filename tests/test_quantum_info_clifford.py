@@ -225,10 +225,14 @@ def test_clifford_samples_frequencies(backend, binary):
 
 def test_clifford_samples_error(backend):
     c = random_clifford(1)
-    obj = Clifford.from_circuit(c, engine=backend)
-    with pytest.raises(RuntimeError) as excinfo:
-        obj.samples()
-        assert str(excinfo.value) == "No measurement provided."
+    if isinstance(backend, TensorflowBackend):
+        with pytest.raises(NotImplementedError):
+            clifford_backend = CliffordBackend(backend)
+    else:
+        obj = Clifford.from_circuit(c, engine=backend)
+        with pytest.raises(RuntimeError) as excinfo:
+            obj.samples()
+            assert str(excinfo.value) == "No measurement provided."
 
 
 @pytest.mark.parametrize("pauli_2", ["Z", "Y", "Y"])
