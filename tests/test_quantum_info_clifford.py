@@ -6,7 +6,8 @@ import pytest
 
 from qibo import Circuit, gates
 from qibo.backends import CliffordBackend, TensorflowBackend
-from qibo.quantum_info import Clifford, random_clifford
+from qibo.quantum_info.clifford import Clifford, _one_qubit_paulis_string_product, _string_product
+from qibo.quantum_info.random_ensembles import random_clifford
 
 
 def construct_clifford_backend(backend):
@@ -198,9 +199,50 @@ def test_clifford_samples_frequencies(backend, binary):
             backend.assert_allclose(freq, tot)
 
 
-def test_clifford_samples_error():
+def test_clifford_samples_error(backend):
     c = random_clifford(1)
-    obj = Clifford.from_circuit(c)
+    obj = Clifford.from_circuit(c, engine=backend)
     with pytest.raises(RuntimeError) as excinfo:
         obj.samples()
         assert str(excinfo.value) == "No measurement provided."
+
+
+@pytest.mark.parametrize("pauli_2", ["Z", "Y", "Y"])
+@pytest.mark.parametrize("pauli_1", ["X", "Y", "Z"])
+def test_one_qubit_paulis_string_product(backend, pauli_1, pauli_2):
+    products = {
+        "XY": "iZ",
+        "YZ": "iX",
+        "ZX": "iY",
+        "YX": "-iZ",
+        "ZY": "-iX",
+        "XZ": "iY",
+        "XX": "I",
+        "ZZ": "I",
+        "YY": "I",
+        "XI": "X",
+        "IX": "X",
+        "YI": "Y",
+        "IY": "Y",
+        "ZI": "Z",
+        "IZ": "Z",
+    }
+
+    product = _one_qubit_paulis_string_product(pauli_1, pauli_2)
+    product_target = products[pauli_1 + pauli_2]
+
+    assert product == product_target
+
+
+@pytest.mark.parametrize(
+        ["operators", "target"], 
+        [
+            [["X", "Y", "Z"], "iI"], 
+            [["Z", "X", "Y", "X", "Z"], "-Y"],
+            [["Z", "I", "Z"], "I"],
+            [["Y", "X"], "-iZ"],
+        ]
+)
+def test_string_product(backend, operators, target):
+    product = _string_product(operators)
+    assert product == target
