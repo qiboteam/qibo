@@ -1922,7 +1922,7 @@ This object is automatically created after the execution of a Clifford Circuit t
 :class:`qibo.backends.clifford.CliffordBackend`, but it can also be created by directly
 passing a symplectic matrix to the constructor
 
-.. testcode::
+.. testsetup::
 
    from qibo.quantum_info import Clifford
    from qibo.backends import CliffordBackend, NumpyBackend
