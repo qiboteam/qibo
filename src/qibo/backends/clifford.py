@@ -695,9 +695,8 @@ class CliffordBackend(NumpyBackend):
         for x, z in zip(X, Z):
             paulis = [bits_to_gate[f"{zz}{xx}"] for xx, zz in zip(x, z)]
             if return_array:
-                paulis = [self.cast(getattr(gates, p)(0).matrix()) for p in paulis]
-                matrix = reduce(self.np.kron, paulis)
-                generators.append(matrix)
+                paulis = [getattr(gates, p)(0).matrix() for p in paulis]
+                generators.append(reduce(self.np.kron, paulis))
             else:
                 generators.append("".join(paulis))
 
