@@ -26,6 +26,23 @@ def construct_clifford_backend(backend):
         return CliffordBackend(backend)
 
 
+@pytest.mark.parametrize("nqubits", [2, 10, 50, 100])
+def test_clifford_from_symplectic_matrix(backend, nqubits):
+    if isinstance(backend, TensorflowBackend):
+        with pytest.raises(NotImplementedError):
+            clifford_backend = CliffordBackend(backend)
+    else:
+        clifford_backend = CliffordBackend(backend)
+        symplectic_matrix = clifford_backend.zero_state(nqubits)
+        clifford_1 = Clifford(symplectic_matrix, engine=backend)
+        clifford_2 = Clifford(symplectic_matrix[:-1], engine=backend)
+
+        for clifford in [clifford_1, clifford_2]:
+            backend.assert_allclose(
+                clifford.symplectic_matrix.shape,
+                (2*nqubits + 1, 2*nqubits + 1),
+            )
+
 @pytest.mark.parametrize("measurement", [False, True])
 def test_clifford_from_circuit(backend, measurement):
     clifford_backend = construct_clifford_backend(backend)
