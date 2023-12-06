@@ -74,9 +74,11 @@ class CliffordOperations:
         )
         symplectic_matrix[
             :-1, [nqubits + control_q, nqubits + target_q]
-        ] = self.np.transpose(self.np.vstack(
-            (x[:, target_q] ^ z[:, control_q], z[:, target_q] ^ x[:, control_q])
-        ))
+        ] = self.np.transpose(
+            self.np.vstack(
+                (x[:, target_q] ^ z[:, control_q], z[:, target_q] ^ x[:, control_q])
+            )
+        )
         return symplectic_matrix
 
     def S(self, symplectic_matrix, q, nqubits):
@@ -584,7 +586,7 @@ class CliffordBackend(NumpyBackend):
 
         try:
             from qibo.quantum_info.clifford import Clifford
-            
+
             nqubits = circuit.nqubits
 
             state = self.zero_state(nqubits) if initial_state is None else initial_state
@@ -667,7 +669,9 @@ class CliffordBackend(NumpyBackend):
             ]  # parallelize?
         return self.np.array(samples).reshape(nshots, len(qubits))
 
-    def symplectic_matrix_to_generators(self, symplectic_matrix, return_array: bool = False):
+    def symplectic_matrix_to_generators(
+        self, symplectic_matrix, return_array: bool = False
+    ):
         """Extract both the stabilizers and de-stabilizers generators from the input symplectic_matrix.
 
         Args:
@@ -688,7 +692,9 @@ class CliffordBackend(NumpyBackend):
         for x, z in zip(X, Z):
             paulis = [bits_to_gate[f"{zz}{xx}"] for xx, zz in zip(x, z)]
             if return_array:
-                paulis = [self.engine.cast(getattr(gates, p)(0).matrix()) for p in paulis]
+                paulis = [
+                    self.engine.cast(getattr(gates, p)(0).matrix()) for p in paulis
+                ]
                 matrix = reduce(self.np.kron, paulis)
                 generators.append(matrix)
             else:

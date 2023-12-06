@@ -276,9 +276,7 @@ class Clifford:
             self.engine.np.sqrt(probs), qubits, len(measured_qubits)
         )
 
-    def _construct_operators(
-        self, generators, phases: list, is_array: bool = False
-    ):
+    def _construct_operators(self, generators, phases: list, is_array: bool = False):
         """Helper function to construct all the operators from their generators.
 
         Args:
@@ -311,10 +309,7 @@ class Clifford:
 
         if is_array:
             return self.engine.cast(
-                [
-                    reduce(self.engine.np.matmul, ops) 
-                    for ops in product(*operators)
-                ]
+                [reduce(self.engine.np.matmul, ops) for ops in product(*operators)]
             )
 
         return [_string_product(ops) for ops in product(*operators)]
