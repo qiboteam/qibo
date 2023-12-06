@@ -64,9 +64,6 @@ class CMAES(Optimizer):
 class BasinHopping(Optimizer):
     def __init__(
         self,
-        initial_parameters,
-        loss=None,
-        args=(),
         options={"niter": 10},
         minimizer_kwargs={},
     ):
@@ -75,28 +72,34 @@ class BasinHopping(Optimizer):
         `scipy.optimize.basinhopping <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.basinhopping.html>`_.
 
         Args:
-            initial_parameters (np.ndarray or list): array with initial values
-                for gate parameters.
-            loss (callable): loss function to train on.
-            args (tuple): tuple containing loss function arguments.
             options (dict): additional information compatible with the
-                `scipy.optimize.basinhopping` optimizer.
-            minimizer_kwargs (dict): extra keyword arguments to be passed to the
-                local minimizer. See `scipy.optimize.basinhopping` documentation.
+                `scipy.optimize.basinhopping` optimizer. The only default set parameter is `niter=10`.
+            minimizer_kwargs (dict): the Basin-Hopping optimizer makes use of an
+                extra Scipy's minimizer to compute the optimizaton. This argument
+                can be used to setup the extra minimization routine. For example,
+                one can set:
+                ```
+                minimizer_kwargs = {
+                    method = "BFGS",
+                    jac = None
+                }
+                ```
         """
-        super().__init__(initial_parameters, args, loss)
+        super().__init__(options)
 
-        self.args = args
         # check if options are compatible with the function and update class options
         check_options(function=basinhopping, options=options)
         self.options = options
-
         self.minimizer_kwargs = minimizer_kwargs
-        self.minimizer_kwargs.update({"args": args})
-        self.set_options({"minimizer_kwargs": self.minimizer_kwargs})
 
-    def fit(self):
+    def fit(self, loss, initial_parameters, args=()):
         """Perform the optimizations via Basin-Hopping strategy.
+
+        Args:
+            loss (callable): loss function to train on.
+            initial_parameters (np.ndarray or list): array with initial values
+                for gate parameters.
+            args (tuple): tuple containing loss function arguments.
 
         Returns:
             (float): best loss value
@@ -108,9 +111,12 @@ class BasinHopping(Optimizer):
             f"Optimization is performed using the optimizer: {type(self).__name__}"
         )
 
+        self.minimizer_kwargs.update({"args": args})
+        self.set_options({"minimizer_kwargs": self.minimizer_kwargs})
+
         r = basinhopping(
-            self.loss,
-            self.params,
+            loss,
+            initial_parameters,
             **self.options,
         )
 
