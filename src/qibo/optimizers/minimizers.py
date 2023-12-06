@@ -8,40 +8,31 @@ from qibo.optimizers.abstract import Optimizer, check_options
 
 
 class ScipyMinimizer(Optimizer):
-    def __init__(
-        self,
-        initial_parameters,
-        loss=None,
-        args=(),
-        options={"method": "Powell"},
-        minimizer_kwargs={},
-    ):
+    def __init__(self, options={"method": "Powell"}):
         """
         Optimization approaches based on ``scipy.optimize.minimize``.
+
+        Args:
+            options (dict): options which can be provided to the general
+                Scipy's minimizer. See `scipy.optimize.minimize` documentation.
+                By default, the `"method"` option is set to `"Powell"`.
+
+        """
+        super().__init__(options)
+        check_options(function=minimize, options=options)
+
+    def fit(self, initial_parameters, loss=None, args=(), fit_options={}):
+        """Perform the optimizations via ScipyMinimizer.
 
         Args:
             initial_parameters (np.ndarray or list): array with initial values
                 for gate parameters.
             loss (callable): loss function to train on.
             args (tuple): tuple containing loss function arguments.
-            options (dict): options which can be provided to the general
-                Scipy's minimizer. See `scipy.optimize.minimize` documentation.
-                By default, the `"method"` option is set to `"Powell"`.
-            minimizer_kwargs (dict): extra options to customize the selected
-                minimizer. This arguments correspond to Scipy's "options".
-
-        """
-        super().__init__(initial_parameters, args, loss)
-
-        # check if options are compatible with the function and update class options
-        check_options(function=minimize, options=options)
-        self.set_options(options)
-        self.set_options({"options": minimizer_kwargs})
-
-        self.method = self.options["method"]
-
-    def fit(self):
-        """Perform the optimizations via ScipyMinimizer.
+            fit_options (dict): dictionary containing extra options which depend
+                on the chosen `"method"`. This argument is called "options" in the
+                Scipy's documentation and we reccomend to fill it according to the
+                official documentation.
 
         Returns:
             (float): best loss value.
@@ -53,10 +44,13 @@ class ScipyMinimizer(Optimizer):
             f"Optimization is performed using the optimizer: {type(self).__name__}.{self.method}"
         )
 
+        # update options with minimizer extra options
+        self.set_options({"options": fit_options})
+
         r = minimize(
-            self.loss,
-            self.params,
-            args=self.args,
+            loss,
+            initial_parameters,
+            args=args,
             **self.options,
         )
 
@@ -66,29 +60,19 @@ class ScipyMinimizer(Optimizer):
 class ParallelBFGS(Optimizer):  # pragma: no cover
     def __init__(
         self,
-        initial_parameters,
-        loss=None,
         processes=1,
-        args=(),
         options={},
-        minimizer_kwargs={},
     ):
         """
         Computes the L-BFGS-B using parallel evaluation using multiprocessing.
         This implementation here is based on https://doi.org/10.32614/RJ-2019-030.
 
         Args:
-            initial_parameters (np.ndarray or list): array with initial values
-                for gate parameters.
-            loss (callable): loss function to train on.
             processes (int): number of parallel processes used to evaluate functions.
-            args (tuple): tuple containing loss function arguments.
             options (dict): possible arguments accepted by
                 `scipy.optimize.minimize` class.
-            minimizer_kwargs (dict): specific options accepted by the L-BFGS-B minimizer.
-                This argument corresponds to Scipy's `"options"`.
         """
-        super().__init__(initial_parameters, args, loss)
+        super().__init__(options)
 
         self.xval = None
         self.function_value = None
@@ -98,11 +82,17 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
 
         # check if options are compatible with the function and update class options
         check_options(function=minimize, options=options)
-        self.set_options(options)
-        self.set_options({"options": minimizer_kwargs})
 
-    def fit(self):
+    def fit(self, initial_parameters, loss=None, args=(), fit_options={}):
         """Performs the optimizations via ParallelBFGS.
+
+        Args:
+            initial_parameters (np.ndarray or list): array with initial values
+                for gate parameters.
+            loss (callable): loss function to train on.
+            args (tuple): tuple containing loss function arguments.
+            fit_options (dict): specific options accepted by the L-BFGS-B minimizer.
+                This argument corresponds to Scipy's `"options"`.
 
         Returns:
             (float): best loss value
@@ -114,9 +104,15 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
             f"Optimization is performed using the optimizer: {type(self).__name__}"
         )
 
+        # update options with L-BFGS-B extra options
+        self.set_options({"options": fit_options})
+        self.loss = loss
+        self.args = args
+        self.params = initial_parameters
+
         out = minimize(
             fun=self.fun,
-            x0=self.params,
+            x0=initial_parameters,
             jac=self.jac,
             method="L-BFGS-B",
             **self.options,
