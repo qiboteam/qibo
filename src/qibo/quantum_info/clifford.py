@@ -392,5 +392,4 @@ def _string_product(operators: list):
 
     phases = "-" if len(phases.nonzero()[0]) % 2 == 1 else ""
 
-
     return f"{phases}{result}"

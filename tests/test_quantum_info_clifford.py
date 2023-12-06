@@ -6,7 +6,11 @@ import pytest
 
 from qibo import Circuit, gates
 from qibo.backends import CliffordBackend, TensorflowBackend
-from qibo.quantum_info.clifford import Clifford, _one_qubit_paulis_string_product, _string_product
+from qibo.quantum_info.clifford import (
+    Clifford,
+    _one_qubit_paulis_string_product,
+    _string_product,
+)
 from qibo.quantum_info.random_ensembles import random_clifford
 
 
@@ -235,13 +239,13 @@ def test_one_qubit_paulis_string_product(backend, pauli_1, pauli_2):
 
 
 @pytest.mark.parametrize(
-        ["operators", "target"], 
-        [
-            [["X", "Y", "Z"], "iI"], 
-            [["Z", "X", "Y", "X", "Z"], "-Y"],
-            [["Z", "I", "Z"], "I"],
-            [["Y", "X"], "-iZ"],
-        ]
+    ["operators", "target"],
+    [
+        [["X", "Y", "Z"], "iI"],
+        [["Z", "X", "Y", "X", "Z"], "-Y"],
+        [["Z", "I", "Z"], "I"],
+        [["Y", "X"], "-iZ"],
+    ],
 )
 def test_string_product(backend, operators, target):
     product = _string_product(operators)
