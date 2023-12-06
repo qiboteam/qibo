@@ -40,8 +40,9 @@ def test_clifford_from_symplectic_matrix(backend, nqubits):
         for clifford in [clifford_1, clifford_2]:
             backend.assert_allclose(
                 clifford.symplectic_matrix.shape,
-                (2*nqubits + 1, 2*nqubits + 1),
+                (2 * nqubits + 1, 2 * nqubits + 1),
             )
+
 
 @pytest.mark.parametrize("measurement", [False, True])
 def test_clifford_from_circuit(backend, measurement):
