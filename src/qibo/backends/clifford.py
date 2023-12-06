@@ -540,6 +540,9 @@ class CliffordBackend(NumpyBackend):
         self.name = "clifford"
         self.clifford_operations = CliffordOperations(engine)
 
+    def cast(self, x, dtype=None, copy=False):
+        return self.engine.cast(x, dtype=dtype, copy=copy)
+
     def zero_state(self, nqubits):
         """Construct the zero state |00...00>.
 
@@ -693,7 +696,7 @@ class CliffordBackend(NumpyBackend):
             paulis = [bits_to_gate[f"{zz}{xx}"] for xx, zz in zip(x, z)]
             if return_array:
                 paulis = [
-                    self.engine.cast(getattr(gates, p)(0).matrix()) for p in paulis
+                    self.cast(getattr(gates, p)(0).matrix()) for p in paulis
                 ]
                 matrix = reduce(self.np.kron, paulis)
                 generators.append(matrix)
@@ -701,6 +704,6 @@ class CliffordBackend(NumpyBackend):
                 generators.append("".join(paulis))
 
         if return_array:
-            generators = self.engine.cast(generators)
+            generators = self.cast(generators)
 
         return generators, phases
