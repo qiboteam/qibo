@@ -8,36 +8,35 @@ from qibo.optimizers.abstract import Optimizer, check_options
 
 
 class CMAES(Optimizer):
-    def __init__(
-        self,
-        initial_parameters,
-        loss=None,
-        args=(),
-        options={"sigma0": 0.5},
-        optimizer_kwargs={},
-    ):
+    def __init__(self, options={"sigma0": 0.5}):
         """
         Covariance Matrix Adaptation Evolution Strategy based on
         `pycma <https://github.com/CMA-ES/pycma>`_.
 
         Args:
-            initial_parameters (np.ndarray or list): array with initial values
-                for gate parameters.
-            loss (callable): loss function to train on.
-            args (tuple): tuple containing loss function arguments.
-            options (dict): arguments which can be set into the `cma.fmin2` method.
-            optimizer_kwargs (dict): extra options. To have a look to all
-                possible options the command `cma.CMAOptions()` can be used.
+            options (dict): optimizer's options. These correspond the the arguments
+                which can be set into the `cma.fmin2` method. Please look at the
+                official documentation `https://cma-es.github.io/apidocs-pycma/cma.evolution_strategy.html#fmin2`_
+                to see all the available options. The only default set parameter
+                is `sigma0`, which we have set to 0.5, as it is a reasonable value
+                when considering variational parameters as rotation angles in a circuit.
         """
-        super().__init__(initial_parameters, args, loss)
+        super().__init__(options)
 
         # check if options are compatible with the function and update class options
         check_options(function=cma.fmin2, options=options)
-        options.update({"options": optimizer_kwargs})
         self.set_options(options)
 
-    def fit(self):
+    def fit(self, loss, initial_parameters, args=(), fit_options={}):
         """Perform the optimizations via CMA-ES.
+
+        Args:
+            loss (callable): loss function to train on.
+            initial_parameters (np.ndarray or list): array with initial values
+                for gate parameters.
+            args (tuple): tuple containing loss function arguments.
+            fit_options (dict): fit extra options. To have a look to all
+                possible options please import the `cma` package and type `cma.CMAOptions()`.
 
         Returns:
             (float): best loss value
@@ -49,10 +48,13 @@ class CMAES(Optimizer):
             f"Optimization is performed using the optimizer: {type(self).__name__}"
         )
 
+        # update options dictionary with extra `cma.fmin` options.
+        self.set_options({"options": fit_options})
+
         r = cma.fmin2(
-            objective_function=self.loss,
-            x0=self.params,
-            args=self.args,
+            objective_function=loss,
+            x0=initial_parameters,
+            args=args,
             **self.options,
         )
 
