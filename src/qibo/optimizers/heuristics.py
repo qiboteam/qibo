@@ -8,19 +8,20 @@ from qibo.optimizers.abstract import Optimizer, check_options
 
 
 class CMAES(Optimizer):
-    def __init__(self, options={"sigma0": 0.5}):
-        """
-        Covariance Matrix Adaptation Evolution Strategy based on
-        `pycma <https://github.com/CMA-ES/pycma>`_.
+    """
+    Covariance Matrix Adaptation Evolution Strategy based on
+    `pycma <https://github.com/CMA-ES/pycma>`_.
 
-        Args:
-            options (dict): optimizer's options. These correspond the the arguments
-                which can be set into the `cma.fmin2` method. Please look at the
-                official documentation `https://cma-es.github.io/apidocs-pycma/cma.evolution_strategy.html#fmin2`_
-                to see all the available options. The only default set parameter
-                is `sigma0`, which we have set to 0.5, as it is a reasonable value
-                when considering variational parameters as rotation angles in a circuit.
-        """
+    Args:
+        options (dict): optimizer's options. These correspond the the arguments
+            which can be set into the `cma.fmin2` method. Please look at the
+            official documentation https://cma-es.github.io/apidocs-pycma/cma.evolution_strategy.html#fmin2
+            to see all the available options. The only default set parameter
+            is `sigma0`, which we have set to 0.5, as it is a reasonable value
+            when considering variational parameters as rotation angles in a circuit.
+    """
+
+    def __init__(self, options={"sigma0": 0.5}):
         super().__init__(options)
 
         # check if options are compatible with the function and update class options
@@ -39,9 +40,7 @@ class CMAES(Optimizer):
                 possible options please import the `cma` package and type `cma.CMAOptions()`.
 
         Returns:
-            (float): best loss value
-            (np.ndarray): best parameter values
-            (cma.evolution_strategy.CMAEvolutionStrategy): full CMA Evolution Strategy object
+            tuple: best loss value (float), best parameter values (np.ndarray), full cma result object.
         """
 
         log.info(
@@ -62,29 +61,31 @@ class CMAES(Optimizer):
 
 
 class BasinHopping(Optimizer):
+    """
+    Global optimizer based on: https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.basinhopping.html.
+
+    Args:
+        options (dict): additional information compatible with the
+            `scipy.optimize.basinhopping` optimizer. The only default set parameter is `niter=10`.
+        minimizer_kwargs (dict): the Basin-Hopping optimizer makes use of an
+            extra Scipy's minimizer to compute the optimizaton. This argument
+            can be used to setup the extra minimization routine. For example,
+            one can set:
+
+            .. code-block:: python
+
+                minimizer_kwargs = {
+                    method = "BFGS",
+                    jac = None
+                }
+
+    """
+
     def __init__(
         self,
         options={"niter": 10},
         minimizer_kwargs={},
     ):
-        """
-        Global optimizer based on
-        `scipy.optimize.basinhopping <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.basinhopping.html>`_.
-
-        Args:
-            options (dict): additional information compatible with the
-                `scipy.optimize.basinhopping` optimizer. The only default set parameter is `niter=10`.
-            minimizer_kwargs (dict): the Basin-Hopping optimizer makes use of an
-                extra Scipy's minimizer to compute the optimizaton. This argument
-                can be used to setup the extra minimization routine. For example,
-                one can set:
-                ```
-                minimizer_kwargs = {
-                    method = "BFGS",
-                    jac = None
-                }
-                ```
-        """
         super().__init__(options)
 
         # check if options are compatible with the function and update class options
@@ -102,9 +103,7 @@ class BasinHopping(Optimizer):
             args (tuple): tuple containing loss function arguments.
 
         Returns:
-            (float): best loss value
-            (np.ndarray): best parameter values
-            (scipy.optimize.OptimizeResult): full scipy OptimizeResult object
+            tuple: best loss value (float), best parameter values (np.ndarray), full scipy OptimizeResult object.
         """
 
         log.info(

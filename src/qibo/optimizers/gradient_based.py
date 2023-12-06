@@ -7,63 +7,62 @@ from qibo.optimizers.abstract import Optimizer, check_options
 
 
 class TensorflowSGD(Optimizer):
+    """
+    Stochastic Gradient Descent (SGD) optimizer using Tensorflow backpropagation.
+    See `tf.keras.Optimizers <https://www.tensorflow.org/api_docs/python/tf/keras/optimizers>`_
+    for a list of the available optimizers.
+
+    Args:
+        optimizer (str): `tensorflow.keras.optimizer`, see
+            https://www.tensorflow.org/api_docs/python/tf/keras/optimizers
+            for the list of available optimizers.
+        options (dict): options which can be provided to the chosen optimizer.
+            See the same reference of above for the complete list of options once
+            the optimizer is selected.
+
+    Example:
+    .. testcode::
+        import numpy as np
+        from qibo import models, hamiltonians, gates, set_backend
+        from qibo.optimizers.gradient_based import TensorFlowSGD
+
+        # tensorflow backend is needed to use the TensorFlowSGD optimizer.
+        set_backend("tensorflow")
+
+        # define a dummy model
+        nqubits = 2
+        nlayers = 3
+
+        c = models.Circuit(nqubits)
+        for l in range(nlayers):
+            for q in range(nqubits):
+                c.add(gates.RY(q=q, theta=0))
+                c.add(gates.RY(q=q, theta=0))
+            for q in range(nqubits-1):
+                c.add(gates.CNOT(q0=q, q1=q+1))
+        c.add(gates.M(*range(nqubits)))
+
+        # define a loss function
+        h = hamiltonians.Z(nqubits)
+        def loss(parameters, circuit, hamiltonian):
+            circuit.set_parameters(parameters)
+            return hamiltonian.expectation(circuit().state())
+
+        # initialize parameters
+        params = np.random.randn(2 * nqubits * nlayers)
+
+        # initialize optimizer
+        options = {"learning_rate": 0.05}
+        opt = TensorFlowSGD(optimizer="Adagrad", options=options)
+        # perform the training
+        res = opt.fit(loss=loss, initial_parameters=params, args=(circuit, hamiltonian), epochs=50, nmessage=1)
+    """
+
     def __init__(
         self,
         optimizer="Adagrad",
         options={"learning_rate": 0.001},
     ):
-        """
-        Stochastic Gradient Descent (SGD) optimizer using Tensorflow backpropagation.
-
-        See `tf.keras.Optimizers <https://www.tensorflow.org/api_docs/python/tf/keras/optimizers>`_
-        for a list of the available optimizers.
-
-        Args:
-            optimizer (str): `tensorflow.keras.optimizer`, see
-                <https://www.tensorflow.org/api_docs/python/tf/keras/optimizers>_
-                for the list of available optimizers.
-            options (dict): options which can be provided to the chosen optimizer.
-                See the same reference of above for the complete list of options once
-                the optimizer is selected.
-
-        Example:
-        .. testcode::
-            import numpy as np
-            from qibo import models, hamiltonians, gates, set_backend
-            from qibo.optimizers.gradient_based import TensorFlowSGD
-
-            # tensorflow backend is needed to use the TensorFlowSGD optimizer.
-            set_backend("tensorflow")
-
-            # define a dummy model
-            nqubits = 2
-            nlayers = 3
-
-            c = models.Circuit(nqubits)
-            for l in range(nlayers):
-                for q in range(nqubits):
-                    c.add(gates.RY(q=q, theta=0))
-                    c.add(gates.RY(q=q, theta=0))
-                for q in range(nqubits-1):
-                    c.add(gates.CNOT(q0=q, q1=q+1))
-            c.add(gates.M(*range(nqubits)))
-
-            # define a loss function
-            h = hamiltonians.Z(nqubits)
-            def loss(parameters, circuit, hamiltonian):
-                circuit.set_parameters(parameters)
-                return hamiltonian.expectation(circuit().state())
-
-            # initialize parameters
-            params = np.random.randn(2 * nqubits * nlayers)
-
-            # initialize optimizer
-            options = {"learning_rate": 0.05}
-            opt = TensorFlowSGD(optimizer="Adagrad", options=options)
-            # perform the training
-            res = opt.fit(loss=loss, initial_parameters=params, args=(circuit, hamiltonian), epochs=50, nmessage=1)
-        """
-
         super().__init__(options)
         # This optimizer works only with tensorflow backend
         self.backend = TensorflowBackend()

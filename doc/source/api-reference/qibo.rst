@@ -1256,18 +1256,40 @@ equation.
 Optimizers
 ----------
 
-Optimizers are used automatically by the ``minimize`` methods of
-:class:`qibo.models.VQE` and :class:`qibo.evolution.AdiabaticEvolution` models.
-The user does not have to use any of the optimizer methods included in the
-current section, however the required options of each optimization method
-can be passed when calling the ``minimize`` method of the respective Qibo
-variational model.
+Various optimizers are implemented in Qibo. We divide the optimizers into three
+types:
 
-.. automodule:: qibo.optimizers
+- the **minimizers** are based on the `scipy.optimize.minimize`_ function of Scipy. All the available minimizers can be accessed through this interface. We also implement a parallelized version of the Scipy's `L-BFGS-B` optimizer, which is called here `ParallelBFGS`;
+
+- the **heuristics** optimizers: an evolutionary strategy (Covariance matrix adaptation evolution strategy (CMA-ES)), for which we rely on the `cmaes`_ packages and a Basin-Hopping algorithm implementation  provided by Scipy as `scipy.optimize.basinhopping`_. These methods are global and, as in the case of many meta-heuristic optimizers they can be as versatile as they are computationally intensive;
+
+- the **gradient based** optimizers built on top of `Tensorflow`_ implementation. This `TensorflowSGD` optimization routine has to be used activating the `tensorflow` backend.
+
+.. _`scipy.optimize.minimize`: https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html
+.. _`scipy.optimize.basinhopping`: https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.basinhopping.html
+.. _`cmaes`: https://cma-es.github.io/apidocs-pycma/
+.. _`Tensorflow`: https://www.tensorflow.org/
+
+Minimizers
+^^^^^^^^^^
+
+.. automodule:: qibo.optimizers.minimizers
    :members:
    :member-order: bysource
-   :exclude-members: ParallelBFGS
 
+Heuristic optimizers
+^^^^^^^^^^^^^^^^^^^^
+
+.. automodule:: qibo.optimizers.heuristics
+   :members:
+   :member-order: bysource
+
+Gradient-based
+^^^^^^^^^^^^^^
+
+.. automodule:: qibo.optimizers.gradient_based
+   :members:
+   :member-order: bysource
 
 .. _Parameter:
 

@@ -8,16 +8,17 @@ from qibo.optimizers.abstract import Optimizer, check_options
 
 
 class ScipyMinimizer(Optimizer):
+    """
+    Optimization approaches based on ``scipy.optimize.minimize``.
+
+    Args:
+        options (dict): options which can be provided to the general
+            Scipy's minimizer. See `scipy.optimize.minimize` documentation.
+            By default, the `"method"` option is set to `"Powell"`.
+
+    """
+
     def __init__(self, options={"method": "Powell"}):
-        """
-        Optimization approaches based on ``scipy.optimize.minimize``.
-
-        Args:
-            options (dict): options which can be provided to the general
-                Scipy's minimizer. See `scipy.optimize.minimize` documentation.
-                By default, the `"method"` option is set to `"Powell"`.
-
-        """
         super().__init__(options)
         check_options(function=minimize, options=options)
 
@@ -35,9 +36,7 @@ class ScipyMinimizer(Optimizer):
                 official documentation.
 
         Returns:
-            (float): best loss value.
-            (np.ndarray): best parameter values.
-            (scipy.optimize.OptimizeResult): full scipy OptimizeResult object.
+            tuple: best loss value (float), best parameter values (np.ndarray), full scipy OptimizeResult object.
         """
 
         log.info(
@@ -58,20 +57,21 @@ class ScipyMinimizer(Optimizer):
 
 
 class ParallelBFGS(Optimizer):  # pragma: no cover
+    """
+    Computes the L-BFGS-B with parallel evaluation using multiprocessing.
+    This implementation here is based on https://doi.org/10.32614/RJ-2019-030.
+
+    Args:
+        processes (int): number of parallel processes used to evaluate functions.
+        options (dict): possible arguments accepted by
+            `scipy.optimize.minimize` class.
+    """
+
     def __init__(
         self,
         processes=1,
         options={},
     ):
-        """
-        Computes the L-BFGS-B using parallel evaluation using multiprocessing.
-        This implementation here is based on https://doi.org/10.32614/RJ-2019-030.
-
-        Args:
-            processes (int): number of parallel processes used to evaluate functions.
-            options (dict): possible arguments accepted by
-                `scipy.optimize.minimize` class.
-        """
         super().__init__(options)
 
         self.xval = None
@@ -95,9 +95,7 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
                 This argument corresponds to Scipy's `"options"`.
 
         Returns:
-            (float): best loss value
-            (np.ndarray): best parameter values
-            (scipy.optimize.OptimizeResult): full scipy OptimizeResult object
+            tuple: best loss value (float), best parameter values (np.ndarray), full scipy OptimizeResult object.
         """
 
         log.info(
