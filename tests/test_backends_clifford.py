@@ -10,7 +10,7 @@ from qibo.backends import (
     NumpyBackend,
     TensorflowBackend,
 )
-from qibo.quantum_info import Clifford, random_clifford
+from qibo.quantum_info.random_ensembles import random_clifford
 
 numpy_bkd = NumpyBackend()
 
@@ -48,7 +48,8 @@ def test_rotations_1q(backend, theta, axis):
     c.add(getattr(gates, axis)(qubits[1], theta=theta))
     clifford_state = clifford_bkd.execute_circuit(c).state()
     numpy_state = numpy_bkd.execute_circuit(c).state()
-    numpy_bkd.assert_allclose(clifford_state, numpy_state, atol=1e-8)
+    numpy_state = backend.cast(numpy_state)
+    backend.assert_allclose(clifford_state, numpy_state, atol=1e-8)
 
 
 THETAS_2Q = [i * np.pi for i in range(4)]
@@ -69,7 +70,8 @@ def test_rotations_2q(backend, theta, axis):
     c.add(getattr(gates, f"C{axis}")(*qubits_1, theta=theta))
     clifford_state = clifford_bkd.execute_circuit(c).state()
     numpy_state = numpy_bkd.execute_circuit(c).state()
-    numpy_bkd.assert_allclose(clifford_state, numpy_state, atol=1e-8)
+    numpy_state = backend.cast(numpy_state)
+    backend.assert_allclose(clifford_state, numpy_state, atol=1e-8)
 
 
 SINGLE_QUBIT_CLIFFORDS = ["I", "H", "S", "Z", "X", "Y", "SX", "SDG", "SXDG"]
@@ -89,7 +91,8 @@ def test_single_qubit_gates(backend, gate):
     c.add(getattr(gates, gate)(qubits[1]))
     clifford_state = clifford_bkd.execute_circuit(c).state()
     numpy_state = numpy_bkd.execute_circuit(c).state()
-    numpy_bkd.assert_allclose(clifford_state, numpy_state, atol=1e-8)
+    numpy_state = backend.cast(numpy_state)
+    backend.assert_allclose(clifford_state, numpy_state, atol=1e-8)
 
 
 TWO_QUBITS_CLIFFORDS = ["CNOT", "CZ", "CY", "SWAP", "iSWAP", "FSWAP", "ECR"]
@@ -109,7 +112,8 @@ def test_two_qubits_gates(backend, gate):
     c.add(getattr(gates, gate)(*qubits[1]))
     clifford_state = clifford_bkd.execute_circuit(c).state()
     numpy_state = numpy_bkd.execute_circuit(c).state()
-    numpy_bkd.assert_allclose(clifford_state, numpy_state, atol=1e-8)
+    numpy_state = backend.cast(numpy_state)
+    backend.assert_allclose(clifford_state, numpy_state, atol=1e-8)
 
 
 MEASURED_QUBITS = sorted(np.random.choice(range(5), size=3, replace=False))
@@ -131,7 +135,7 @@ def test_random_clifford_circuit(backend, prob_qubits):
     clifford_bkd = construct_clifford_backend(backend)
     if not clifford_bkd:
         return
-    c = random_clifford(5)
+    c = random_clifford(5, backend=backend)
     c.density_matrix = True
     c_copy = c.copy()
     c.add(gates.M(*MEASURED_QUBITS))
@@ -139,7 +143,8 @@ def test_random_clifford_circuit(backend, prob_qubits):
     numpy_result = numpy_bkd.execute_circuit(c, nshots=1000)
     clifford_result = clifford_bkd.execute_circuit(c_copy, nshots=1000)
 
-    numpy_bkd.assert_allclose(numpy_result.state(), clifford_result.state())
+    backend.assert_allclose(backend.cast(numpy_result.state()), clifford_result.state())
+
     if not set(prob_qubits).issubset(set(MEASURED_QUBITS)):
         with pytest.raises(RuntimeError) as excinfo:
             numpy_bkd.assert_allclose(
@@ -151,8 +156,8 @@ def test_random_clifford_circuit(backend, prob_qubits):
                 == f"Asking probabilities for qubits {prob_qubits}, but only qubits {MEASURED_QUBITS} were measured."
             )
     else:
-        numpy_bkd.assert_allclose(
-            numpy_result.probabilities(prob_qubits),
+        backend.assert_allclose(
+            backend.cast(numpy_result.probabilities(prob_qubits)),
             clifford_result.probabilities(prob_qubits),
             atol=1e-1,
         )
@@ -173,7 +178,7 @@ def test_collapsing_measurements(backend):
     clifford_bkd = construct_clifford_backend(backend)
     if not clifford_bkd:
         return
-    gate_queue = random_clifford(3, density_matrix=True).queue
+    gate_queue = random_clifford(3, density_matrix=True, backend=backend).queue
     measured_qubits = np.random.choice(range(3), size=2, replace=False)
     c1 = Circuit(3)
     c2 = Circuit(3, density_matrix=True)
@@ -188,8 +193,8 @@ def test_collapsing_measurements(backend):
     c2.add(gates.M(*range(3)))
     clifford_res = clifford_bkd.execute_circuit(c1, nshots=1000)
     numpy_res = numpy_bkd.execute_circuit(c2, nshots=1000)
-    numpy_bkd.assert_allclose(
-        clifford_res.probabilities(), numpy_res.probabilities(), atol=1e-1
+    backend.assert_allclose(
+        clifford_res.probabilities(), backend.cast(numpy_res.probabilities()), atol=1e-1
     )
 
 
@@ -208,30 +213,33 @@ def test_initial_state(backend):
     clifford_bkd = construct_clifford_backend(backend)
     if not clifford_bkd:
         return
-    tmp = clifford_bkd.execute_circuit(random_clifford(3))
+    state = random_clifford(3, backend=numpy_bkd)
+    tmp = clifford_bkd.execute_circuit(state)
     initial_symplectic_matrix = tmp.symplectic_matrix
-    initial_state = tmp.state()
-    c = random_clifford(3, density_matrix=True)
+    initial_state = numpy_bkd.execute_circuit(state).state()
+    initial_state = np.outer(initial_state, np.transpose(np.conj(initial_state)))
+    print(type(initial_state))
+    c = random_clifford(3, density_matrix=True, backend=backend)
     numpy_state = numpy_bkd.execute_circuit(c, initial_state=initial_state).state()
     clifford_state = clifford_bkd.execute_circuit(
         c, initial_state=initial_symplectic_matrix
     ).state()
-    numpy_bkd.assert_allclose(numpy_state, clifford_state)
+    backend.assert_allclose(numpy_state, clifford_state)
 
 
 def test_bitflip_noise(backend):
     clifford_bkd = construct_clifford_backend(backend)
     if not clifford_bkd:
         return
-    c = random_clifford(5)
+    c = random_clifford(5, backend=backend)
     c_copy = c.copy()
     qubits = np.random.choice(range(3), size=2, replace=False)
     c.add(gates.M(*qubits, p0=0.1, p1=0.5))
     c_copy.add(gates.M(*qubits, p0=0.1, p1=0.5))
     numpy_res = numpy_bkd.execute_circuit(c_copy)
     clifford_res = clifford_bkd.execute_circuit(c)
-    numpy_bkd.assert_allclose(
-        numpy_res.probabilities(qubits), clifford_res.probabilities(qubits), atol=1e-1
+    backend.assert_allclose(
+        clifford_res.probabilities(qubits), numpy_res.probabilities(qubits), atol=1e-1
     )
 
 
