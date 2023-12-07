@@ -242,7 +242,7 @@ class Clifford:
                     )
                     for gate in self.measurements
                 }
-            
+
             a = [gate.result.samples(False) for gate in self.measurements]
             print(type(a), type(a[0]), a)
 

@@ -1,7 +1,7 @@
 """Module defining the Clifford backend."""
+import collections
 from functools import reduce
 
-import collections
 import numpy as np
 
 from qibo import gates
@@ -628,7 +628,7 @@ class CliffordBackend(NumpyBackend):
             initial_state (ndarray, optional): The symplectic_matrix of the initial state.
                 If ``None``, defaults to the symplectic matrix of the zero state.
                 Defaults to ``None``.
-            nshots (int, optional): Number of times to repeat the execution. 
+            nshots (int, optional): Number of times to repeat the execution.
                 Defaults to :math:`1000`.
 
         Returns:
@@ -657,7 +657,9 @@ class CliffordBackend(NumpyBackend):
 
         return result
 
-    def sample_shots(self, state, qubits: tuple, nqubits: int, nshots: int, collapse: bool = False):
+    def sample_shots(
+        self, state, qubits: tuple, nqubits: int, nshots: int, collapse: bool = False
+    ):
         """Sample shots by measuring the selected qubits from the provided state tableu.
 
         Args:
@@ -665,7 +667,7 @@ class CliffordBackend(NumpyBackend):
             qubits: (tuple): qubits to measure.
             nqubits (int): total number of qubits of the state.
             nshots (int): number of shots to sample.
-            collapse (bool, optional): If ``True`` the input state is going to be 
+            collapse (bool, optional): If ``True`` the input state is going to be
                 collapsed with the last shot. Defaults to ``False``.
 
         Returns:

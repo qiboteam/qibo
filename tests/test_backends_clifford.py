@@ -167,15 +167,15 @@ def test_random_clifford_circuit(backend, prob_qubits, binary):
         clifford_freq = clifford_result.frequencies(binary)
         print(numpy_freq)
         print(clifford_freq)
-        clifford_freq = {
-            state: clifford_freq[state] for state in numpy_freq.keys()
-        }
+        clifford_freq = {state: clifford_freq[state] for state in numpy_freq.keys()}
         print(clifford_freq.values())
         assert (
-            np.sum(np.abs(
-                np.array(list(numpy_freq.values()))
-                - np.array(list(clifford_freq.values()))
-            ))
+            np.sum(
+                np.abs(
+                    np.array(list(numpy_freq.values()))
+                    - np.array(list(clifford_freq.values()))
+                )
+            )
             < 200
         )
 
