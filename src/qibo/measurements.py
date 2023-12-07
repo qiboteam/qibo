@@ -1,29 +1,8 @@
 import collections
 
-import numpy as np
 import sympy
 
-from qibo import gates
 from qibo.config import raise_error
-
-
-def frequencies_to_binary(frequencies, nqubits):
-    return collections.Counter(
-        {"{:b}".format(k).zfill(nqubits): v for k, v in frequencies.items()}
-    )
-
-
-def apply_bitflips(result, p0, p1=None):
-    gate = result.measurement_gate
-    if p1 is None:
-        probs = 2 * (gate._get_bitflip_tuple(gate.qubits, p0),)
-    else:
-        probs = (
-            gate._get_bitflip_tuple(gate.qubits, p0),
-            gate._get_bitflip_tuple(gate.qubits, p1),
-        )
-    noiseless_samples = result.samples()
-    return result.backend.apply_bitflips(noiseless_samples, probs)
 
 
 class MeasurementSymbol(sympy.Symbol):
@@ -190,9 +169,29 @@ class MeasurementResult:
             )
         if binary:
             qubits = self.measurement_gate.target_qubits
-            return frequencies_to_binary(self._frequencies, len(qubits))
+            return _frequencies_to_binary(self._frequencies, len(qubits))
         else:
             return self._frequencies
 
     def apply_bitflips(self, p0, p1=None):  # pragma: no cover
-        return apply_bitflips(self, p0, p1)
+        return _apply_bitflips(self, p0, p1)
+
+
+def _frequencies_to_binary(frequencies, nqubits):
+    return collections.Counter(
+        {"{:b}".format(int(k)).zfill(nqubits): v for k, v in frequencies.items()}
+    )
+
+
+def _apply_bitflips(result, p0, p1=None):
+    gate = result.measurement_gate
+    if p1 is None:
+        probs = 2 * (gate._get_bitflip_tuple(gate.qubits, p0),)
+    else:
+        probs = (
+            gate._get_bitflip_tuple(gate.qubits, p0),
+            gate._get_bitflip_tuple(gate.qubits, p1),
+        )
+    noiseless_samples = result.samples()
+
+    return result.backend.apply_bitflips(noiseless_samples, probs)
