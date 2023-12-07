@@ -224,7 +224,6 @@ class Clifford:
                 the measured qubits, independently of their registers.
         """
         measured_qubits = self.measurement_gate.target_qubits
-        print(type(self._samples), self._samples)
         freq = self._backend.calculate_frequencies(list(self.samples(False)))
         if registers:
             if binary:
