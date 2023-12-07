@@ -51,7 +51,7 @@ class CliffordOperations:
             symplectic_matrix,
             r
             ^ (x[:, control_q] * z[:, target_q]).flatten()
-            * (x[:, target_q] ^ z[:, control_q] ^ 1).flatten(),
+            * (x[:, target_q] ^ z[:, control_q] ^ True).flatten(),
         )
 
         symplectic_matrix[:-1, target_q] = x[:, target_q] ^ x[:, control_q]
@@ -68,7 +68,7 @@ class CliffordOperations:
             ^ (
                 x[:, control_q]
                 * x[:, target_q]
-                * (z[:, target_q] ^ z[:, control_q] ^ 1)
+                * (z[:, target_q] ^ z[:, control_q] ^ True)
             ).flatten()
             ^ (x[:, target_q] * (z[:, target_q] ^ x[:, control_q])).flatten(),
         )
@@ -217,12 +217,12 @@ class CliffordOperations:
             ^ (
                 x[:, control_q]
                 * z[:, target_q]
-                * (x[:, target_q] ^ z[:, control_q] ^ 1)
+                * (x[:, target_q] ^ z[:, control_q] ^ True)
             ).flatten()
             ^ (
                 (x[:, target_q] ^ x[:, control_q])
                 * (z[:, target_q] ^ z[:, control_q])
-                * (z[:, target_q] ^ x[:, control_q] ^ 1)
+                * (z[:, target_q] ^ x[:, control_q] ^ True)
             ).flatten()
             ^ (
                 x[:, target_q]
@@ -232,7 +232,7 @@ class CliffordOperations:
                     ^ x[:, target_q]
                     ^ z[:, control_q]
                     ^ z[:, target_q]
-                    ^ 1
+                    ^ True
                 )
             ).flatten(),
         )
@@ -256,7 +256,7 @@ class CliffordOperations:
             ^ (
                 (z[:, control_q] ^ x[:, control_q])
                 * (z[:, target_q] ^ x[:, target_q])
-                * (x[:, target_q] ^ x[:, control_q] ^ 1)
+                * (x[:, target_q] ^ x[:, control_q] ^ True)
             ).flatten()
             ^ (
                 (x[:, target_q] ^ z[:, control_q] ^ x[:, control_q])
@@ -266,7 +266,7 @@ class CliffordOperations:
                     ^ z[:, target_q]
                     ^ x[:, control_q]
                     ^ z[:, control_q]
-                    ^ 1
+                    ^ True
                 )
             ).flatten()
             ^ (
@@ -308,7 +308,7 @@ class CliffordOperations:
             ^ (
                 x[:, control_q]
                 * (x[:, target_q] ^ z[:, target_q])
-                * (z[:, control_q] ^ x[:, target_q] ^ 1)
+                * (z[:, control_q] ^ x[:, target_q] ^ True)
             ).flatten()
             ^ (
                 (x[:, target_q] ^ x[:, control_q]) * (z[:, target_q] ^ x[:, target_q])
