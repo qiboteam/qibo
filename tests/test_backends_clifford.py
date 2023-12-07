@@ -166,7 +166,9 @@ def test_random_clifford_circuit(backend, prob_qubits):
             clifford_freq = clifford_result.frequencies(binary)
             print(numpy_freq)
             print(clifford_freq)
-            clifford_freq = {str(state): clifford_freq[str(state)] for state in numpy_freq.keys()}
+            clifford_freq = {
+                str(state): clifford_freq[str(state)] for state in numpy_freq.keys()
+            }
             print(clifford_freq)
             print()
             assert (
