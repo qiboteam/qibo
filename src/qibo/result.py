@@ -6,7 +6,7 @@ import numpy as np
 
 from qibo import __version__, backends, gates
 from qibo.config import raise_error
-from qibo.measurements import apply_bitflips, frequencies_to_binary
+from qibo.measurements import _apply_bitflips, _frequencies_to_binary
 
 
 def load_result(filename: str):
@@ -236,7 +236,7 @@ class MeasurementOutcomes:
                 # register frequencies to individual gate ``MeasurementResult``
                 qubit_map = {q: i for i, q in enumerate(qubits)}
                 reg_frequencies = {}
-                binary_frequencies = frequencies_to_binary(
+                binary_frequencies = _frequencies_to_binary(
                     self._frequencies, len(qubits)
                 )
                 for gate in self.measurements:
@@ -261,7 +261,7 @@ class MeasurementOutcomes:
             }
 
         if binary:
-            return frequencies_to_binary(self._frequencies, len(qubits))
+            return _frequencies_to_binary(self._frequencies, len(qubits))
 
         return self._frequencies
 
@@ -395,7 +395,7 @@ class MeasurementOutcomes:
             p0 (float): Probability of the 0->1 flip.
             p1 (float): Probability of the 1->0 flip.
         """
-        return apply_bitflips(self, p0, p1)
+        return _apply_bitflips(self, p0, p1)
 
     def expectation_from_samples(self, observable):
         """Computes the real expectation value of a diagonal observable from frequencies.
