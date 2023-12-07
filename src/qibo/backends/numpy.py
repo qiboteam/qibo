@@ -643,7 +643,7 @@ class NumpyBackend(Backend):
     def calculate_frequencies(self, samples):
         res, counts = self.np.unique(samples, return_counts=True)
         res, counts = self.np.array(res), self.np.array(counts)
-        return collections.Counter({int(k): int(v) for k, v in zip(res, counts)})
+        return collections.Counter({str(k): int(v) for k, v in zip(res, counts)})
 
     def update_frequencies(self, frequencies, probabilities, nsamples):
         samples = self.sample_shots(probabilities, nsamples)
