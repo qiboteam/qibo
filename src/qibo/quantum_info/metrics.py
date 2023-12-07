@@ -1186,7 +1186,7 @@ def frame_potential(
         `arXiv:2205.09900 [quant-ph] <https://arxiv.org/abs/2205.09900>`_.
 
     """
-    if isinstance(power_t, int) is False:
+    if not isinstance(power_t, int):
         raise_error(
             TypeError, f"power_t must be type int, but it is type {type(power_t)}."
         )
