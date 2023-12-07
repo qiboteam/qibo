@@ -163,7 +163,9 @@ class Clifford:
         """
         if not self.measurements:
             raise_error(RuntimeError, "No measurement provided.")
+
         measured_qubits = self.measurement_gate.qubits
+
         if self._samples is None:
             if self.measurements[0].result.has_samples():
                 samples = np.concatenate(
@@ -175,19 +177,23 @@ class Clifford:
                 )
             if self.measurement_gate.has_bitflip_noise():
                 p0, p1 = self.measurement_gate.bitflip_map
-                bitflip_probabilities = [
-                    [p0.get(q) for q in measured_qubits],
-                    [p1.get(q) for q in measured_qubits],
-                ]
+                bitflip_probabilities = self._backend.cast(
+                    [
+                        [p0.get(q) for q in measured_qubits],
+                        [p1.get(q) for q in measured_qubits],
+                    ]
+                )
+                samples = self._backend.cast(samples, dtype="int32")
                 samples = self._backend.apply_bitflips(samples, bitflip_probabilities)
             # register samples to individual gate ``MeasurementResult``
             qubit_map = {
                 q: i for i, q in enumerate(self.measurement_gate.target_qubits)
             }
-            self._samples = self.engine.cast(samples, dtype="int32")
+            self._samples = self._backend.cast(samples, dtype="int32")
             for gate in self.measurements:
                 rqubits = tuple(qubit_map.get(q) for q in gate.target_qubits)
                 gate.result.register_samples(self._samples[:, rqubits], self._backend)
+
         if registers:
             return {
                 gate.register_name: gate.result.samples(binary)
@@ -224,7 +230,9 @@ class Clifford:
                 the measured qubits, independently of their registers.
         """
         measured_qubits = self.measurement_gate.target_qubits
-        freq = self._backend.calculate_frequencies(list(self.samples(False)))
+        print(type(self.samples(False)), type(self.samples(False)[0]))
+        freq = self._backend.calculate_frequencies(self.samples(False))
+        print(freq)
         if registers:
             if binary:
                 return {
@@ -234,6 +242,9 @@ class Clifford:
                     )
                     for gate in self.measurements
                 }
+            
+            a = [gate.result.samples(False) for gate in self.measurements]
+            print(type(a), type(a[0]), a)
 
             return {
                 gate.register_name: self._backend.calculate_frequencies(

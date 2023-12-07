@@ -168,7 +168,7 @@ class MeasurementResult:
             # individual register samples are registered here
             self.circuit.final_state.samples()
         if binary:
-            return np.array(self._samples, dtype="int32")
+            return self.backend.cast(self._samples, dtype="int32")
         else:
             qubits = self.measurement_gate.target_qubits
             return self.backend.samples_to_decimal(self._samples, len(qubits))

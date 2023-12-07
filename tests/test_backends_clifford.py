@@ -119,6 +119,7 @@ def test_two_qubits_gates(backend, gate):
 MEASURED_QUBITS = sorted(np.random.choice(range(5), size=3, replace=False))
 
 
+@pytest.mark.parametrize("binary", [False, True])
 @pytest.mark.parametrize(
     "prob_qubits",
     [
@@ -131,7 +132,7 @@ MEASURED_QUBITS = sorted(np.random.choice(range(5), size=3, replace=False))
         [4],
     ],
 )
-def test_random_clifford_circuit(backend, prob_qubits):
+def test_random_clifford_circuit(backend, prob_qubits, binary):
     clifford_bkd = construct_clifford_backend(backend)
     if not clifford_bkd:
         return
@@ -161,23 +162,22 @@ def test_random_clifford_circuit(backend, prob_qubits):
             clifford_result.probabilities(prob_qubits),
             atol=1e-1,
         )
-        for binary in (True, False):
-            numpy_freq = numpy_result.frequencies(binary)
-            clifford_freq = clifford_result.frequencies(binary)
-            print(numpy_freq)
-            print(clifford_freq)
-            clifford_freq = {
-                str(state): clifford_freq[str(state)] for state in numpy_freq.keys()
-            }
-            print(clifford_freq)
-            print()
-            assert (
-                np.abs(
-                    np.array(list(numpy_freq.values()))
-                    - np.array(list(clifford_freq.values()))
-                ).sum()
-                < 200
-            )
+
+        numpy_freq = numpy_result.frequencies(binary)
+        clifford_freq = clifford_result.frequencies(binary)
+        print(numpy_freq)
+        print(clifford_freq)
+        clifford_freq = {
+            state: clifford_freq[state] for state in numpy_freq.keys()
+        }
+        print(clifford_freq.values())
+        assert (
+            np.sum(np.abs(
+                np.array(list(numpy_freq.values()))
+                - np.array(list(clifford_freq.values()))
+            ))
+            < 200
+        )
 
 
 def test_collapsing_measurements(backend):

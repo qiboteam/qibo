@@ -1,6 +1,7 @@
 """Module defining the Clifford backend."""
 from functools import reduce
 
+import collections
 import numpy as np
 
 from qibo import gates
@@ -543,6 +544,13 @@ class CliffordBackend(NumpyBackend):
     def cast(self, x, dtype=None, copy=False):
         return self.engine.cast(x, dtype=dtype, copy=copy)
 
+    def calculate_frequencies(self, samples):
+        res, counts = self.engine.np.unique(samples, return_counts=True)
+        # The next two lines are necessary for the GPU backends
+        res = [int(r) if not isinstance(r, str) else r for r in res]
+        counts = [int(v) for v in counts]
+        return collections.Counter({k: v for k, v in zip(res, counts)})
+
     def zero_state(self, nqubits):
         """Construct the zero state |00...00>.
 
@@ -550,7 +558,7 @@ class CliffordBackend(NumpyBackend):
             nqubits (int): Number of qubits.
 
         Returns:
-            symplectic_matrix (np.ndarray): The symplectic_matrix for the zero state.
+            (ndarray): The symplectic_matrix for the zero state.
         """
         I = self.np.eye(nqubits)
         symplectic_matrix = self.np.zeros(
@@ -578,7 +586,7 @@ class CliffordBackend(NumpyBackend):
                 Defaults to :math:`10^{3}`.
 
         Returns:
-            result (:class:`qibo.quantum_info.clifford.Clifford`): Object giving access to the final results.
+            (:class:`qibo.quantum_info.clifford.Clifford`): Object giving access to the final results.
         """
         for gate in circuit.queue:
             if not gate.clifford and not gate.__class__.__name__ == "M":
@@ -612,16 +620,19 @@ class CliffordBackend(NumpyBackend):
                 "different one using ``qibo.set_device``.",
             )
 
-    def execute_circuit_repeated(self, circuit, initial_state=None, nshots=1000):
+    def execute_circuit_repeated(self, circuit, initial_state=None, nshots: int = 1000):
         """Execute a Clifford circuits ``nshots`` times. This is used for all the simulations that involve repeated execution, for instance when collapsing measurement or noise channels are present.
 
         Args:
-            circuit (qibo.model.Circuit): The input Circuit.
-            initial_state (np.ndarray): The symplectic_matrix of the initial state.
-            nshots (int): Number of times to repeat the execution.
+            circuit (:class:`qibo.model.circuit.Circuit`): The input Circuit.
+            initial_state (ndarray, optional): The symplectic_matrix of the initial state.
+                If ``None``, defaults to the symplectic matrix of the zero state.
+                Defaults to ``None``.
+            nshots (int, optional): Number of times to repeat the execution. 
+                Defaults to :math:`1000`.
 
         Returns:
-            result (qibo.quantum_info.Clifford): The result object giving access to the final results.
+            (:class:`qibo.quantum_info.clifford.Clifford`): The result object giving access to the final results.
         """
         circuit_copy = circuit.copy()
         samples = []
@@ -646,18 +657,19 @@ class CliffordBackend(NumpyBackend):
 
         return result
 
-    def sample_shots(self, state, qubits, nqubits, nshots, collapse: bool = False):
+    def sample_shots(self, state, qubits: tuple, nqubits: int, nshots: int, collapse: bool = False):
         """Sample shots by measuring the selected qubits from the provided state tableu.
 
         Args:
-            state (np.ndarray): The tableu from which to sample shots from.
-            qubits: (tuple): The qubits to measure.
-            nqubits (int): The total number of qubits of the state.
-            nshots (int): Number of shots to sample.
-            collapse (bool): If ``True`` the input state is going to be collapsed with the last shot.
+            state (ndarray): symplectic matrix from which to sample shots from.
+            qubits: (tuple): qubits to measure.
+            nqubits (int): total number of qubits of the state.
+            nshots (int): number of shots to sample.
+            collapse (bool, optional): If ``True`` the input state is going to be 
+                collapsed with the last shot. Defaults to ``False``.
 
         Returns:
-            samples (np.ndarray): The samples shots.
+            (ndarray): The samples shots.
         """
         qubits = qubits
         operation = CliffordOperations(self.engine)
@@ -670,7 +682,7 @@ class CliffordBackend(NumpyBackend):
             samples = [
                 operation.M(state, qubits, nqubits) for _ in range(nshots)
             ]  # parallelize?
-        return self.np.array(samples).reshape(nshots, len(qubits))
+        return self.np.array(samples).reshape(nshots, len(qubits)).tolist()
 
     def symplectic_matrix_to_generators(
         self, symplectic_matrix, return_array: bool = False
