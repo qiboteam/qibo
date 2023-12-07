@@ -230,9 +230,7 @@ class Clifford:
                 the measured qubits, independently of their registers.
         """
         measured_qubits = self.measurement_gate.target_qubits
-        print(type(self.samples(False)), type(self.samples(False)[0]))
         freq = self._backend.calculate_frequencies(self.samples(False))
-        print(freq)
         if registers:
             if binary:
                 return {
@@ -242,9 +240,6 @@ class Clifford:
                     )
                     for gate in self.measurements
                 }
-
-            a = [gate.result.samples(False) for gate in self.measurements]
-            print(type(a), type(a[0]), a)
 
             return {
                 gate.register_name: self._backend.calculate_frequencies(
