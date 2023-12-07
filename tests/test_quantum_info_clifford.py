@@ -226,7 +226,7 @@ def test_clifford_samples_frequencies(backend, binary):
 
 
 def test_clifford_samples_error(backend):
-    c = random_clifford(1)
+    c = random_clifford(1, backend=backend)
     if isinstance(backend, TensorflowBackend):
         with pytest.raises(NotImplementedError):
             clifford_backend = CliffordBackend(backend)

@@ -224,7 +224,8 @@ class Clifford:
                 the measured qubits, independently of their registers.
         """
         measured_qubits = self.measurement_gate.target_qubits
-        freq = self._backend.calculate_frequencies(self.samples(False))
+        print(type(self._samples), self._samples)
+        freq = self._backend.calculate_frequencies(list(self.samples(False)))
         if registers:
             if binary:
                 return {
@@ -234,6 +235,7 @@ class Clifford:
                     )
                     for gate in self.measurements
                 }
+
             return {
                 gate.register_name: self._backend.calculate_frequencies(
                     gate.result.samples(False)
@@ -243,8 +245,8 @@ class Clifford:
 
         if binary:
             return frequencies_to_binary(freq, len(measured_qubits))
-        else:
-            return freq
+
+        return freq
 
     def probabilities(self, qubits: Optional[tuple] = None):
         """Computes the probabilities of the selected qubits from the measured samples.
