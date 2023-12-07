@@ -164,7 +164,11 @@ def test_random_clifford_circuit(backend, prob_qubits):
         for binary in (True, False):
             numpy_freq = numpy_result.frequencies(binary)
             clifford_freq = clifford_result.frequencies(binary)
-            clifford_freq = {state: clifford_freq[state] for state in numpy_freq.keys()}
+            print(numpy_freq)
+            print(clifford_freq)
+            clifford_freq = {str(state): clifford_freq[str(state)] for state in numpy_freq.keys()}
+            print(clifford_freq)
+            print()
             assert (
                 np.abs(
                     np.array(list(numpy_freq.values()))

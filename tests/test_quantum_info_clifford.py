@@ -210,10 +210,10 @@ def test_clifford_samples_frequencies(backend, binary):
 
     if not binary:
         freq_1 = {
-            reg: Counter({f"{k:0{len(reg)}b}": v for k, v in freq.items()})
+            reg: Counter({f"{int(k):0{len(reg)}b}": v for k, v in freq.items()})
             for reg, freq in freq_1.items()
         }
-        freq_2 = Counter({f"{k:03b}": v for k, v in freq_2.items()})
+        freq_2 = Counter({f"{int(k):03b}": v for k, v in freq_2.items()})
 
     for register, counter in freq_1.items():
         for bits_1, freq in counter.items():
