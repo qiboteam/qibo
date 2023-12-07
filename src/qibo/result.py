@@ -288,7 +288,7 @@ class MeasurementOutcomes:
 
         probs = [0 for _ in range(2**nqubits)]
         for state, freq in self.frequencies(binary=False).items():
-            probs[state] = freq / self.nshots
+            probs[int(state)] = freq / self.nshots
         probs = self.backend.cast(probs)
         self._probs = probs
         return self.backend.calculate_probabilities(np.sqrt(probs), qubits, nqubits)
