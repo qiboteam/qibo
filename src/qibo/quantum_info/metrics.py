@@ -1191,7 +1191,7 @@ def frame_potential(
             TypeError, f"power_t must be type int, but it is type {type(power_t)}."
         )
 
-    if isinstance(samples, int) is False:
+    if not isinstance(samples, int):
         raise_error(
             TypeError, f"samples must be type int, but it is type {type(samples)}."
         )
