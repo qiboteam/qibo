@@ -131,18 +131,20 @@ def test_clifford_destabilizers(backend, return_array):
     c = Circuit(3)
     c.add(gates.X(2))
     c.add(gates.H(0))
-    obj = Clifford.from_circuit(c)
+    obj = Clifford.from_circuit(c, engine=backend)
     if return_array:
         true_generators = [
             reduce(np.kron, [getattr(gates, gate)(0).matrix() for gate in generator])
             for generator in ["ZII", "IXI", "IIX"]
         ]
+        true_generators = backend.cast(true_generators)
     else:
         true_generators = ["ZII", "IXI", "IIX"]
     true_phases = [1, 1, 1]
     generators, phases = obj.generators(return_array)
 
     if return_array:
+        print(type(generators), type(true_generators))
         backend.assert_allclose(generators[:3], true_generators)
         backend.assert_allclose(phases.tolist()[:3], true_phases)
     else:
