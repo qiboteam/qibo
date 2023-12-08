@@ -73,13 +73,10 @@ class CliffordOperations:
             )
             ^ (x[:, target_q] * (z[:, target_q] ^ x[:, control_q])),
         )
-        symplectic_matrix[
-            :-1, [nqubits + control_q, nqubits + target_q]
-        ] = self.np.transpose(
-            self.np.vstack(
-                (x[:, target_q] ^ z[:, control_q], z[:, target_q] ^ x[:, control_q])
-            )
-        )
+        z_control_q = x[:, target_q] ^ z[:, control_q]
+        z_target_q = z[:, target_q] ^ x[:, control_q]
+        symplectic_matrix[:-1, nqubits + control_q] = z_control_q
+        symplectic_matrix[:-1, nqubits + target_q] = z_target_q
         return symplectic_matrix
 
     def S(self, symplectic_matrix, q, nqubits):
@@ -268,14 +265,10 @@ class CliffordOperations:
             )
             ^ (x[:, control_q] * (x[:, target_q] ^ x[:, control_q] ^ z[:, control_q])),
         )
-        symplectic_matrix[
-            :-1, [nqubits + control_q, nqubits + target_q]
-        ] = self.np.vstack(
-            (
-                x[:, target_q] ^ z[:, target_q] ^ x[:, control_q],
-                x[:, target_q] ^ z[:, control_q] ^ x[:, control_q],
-            )
-        ).T
+        z_control_q = x[:, target_q] ^ z[:, target_q] ^ x[:, control_q]
+        z_target_q = x[:, target_q] ^ z[:, control_q] ^ x[:, control_q]
+        symplectic_matrix[:-1, nqubits + control_q] = z_control_q
+        symplectic_matrix[:-1, nqubits + target_q] = z_target_q
         symplectic_matrix[:-1, [control_q, target_q]] = symplectic_matrix[
             :-1, [target_q, control_q]
         ]
@@ -308,15 +301,12 @@ class CliffordOperations:
             ^ ((x[:, target_q] ^ x[:, control_q]) * (z[:, target_q] ^ x[:, target_q])),
         )
 
-        symplectic_matrix[
-            :-1, [target_q, nqubits + control_q, nqubits + target_q]
-        ] = self.np.vstack(
-            (
-                x[:, control_q] ^ x[:, target_q],
-                z[:, control_q] ^ z[:, target_q] ^ x[:, target_q],
-                z[:, target_q] ^ x[:, control_q],
-            )
-        ).T
+        x_target_q = x[:, control_q] ^ x[:, target_q]
+        z_control_q = z[:, control_q] ^ z[:, target_q] ^ x[:, target_q]
+        z_target_q = z[:, target_q] ^ x[:, control_q]
+        symplectic_matrix[:-1, target_q] = x_target_q
+        symplectic_matrix[:-1, nqubits + control_q] = z_control_q
+        symplectic_matrix[:-1, nqubits + target_q] = z_target_q
         return symplectic_matrix
 
     def CRX(self, symplectic_matrix, control_q, target_q, nqubits, theta):
