@@ -41,7 +41,7 @@ class CliffordOperations:
         r, x, z = self._get_rxz(symplectic_matrix, nqubits)
         self._set_r(
             symplectic_matrix,
-            r ^ (x[:, q] * z[:, q]).flatten(),
+            r ^ (x[:, q] * z[:, q]),
         )
         symplectic_matrix[:, [q, nqubits + q]] = symplectic_matrix[:, [nqubits + q, q]]
         return symplectic_matrix
@@ -51,8 +51,8 @@ class CliffordOperations:
         self._set_r(
             symplectic_matrix,
             r
-            ^ (x[:, control_q] * z[:, target_q]).flatten()
-            * (x[:, target_q] ^ z[:, control_q] ^ True).flatten(),
+            ^ (x[:, control_q] * z[:, target_q])
+            * (x[:, target_q] ^ z[:, control_q] ^ True),
         )
 
         symplectic_matrix[:-1, target_q] = x[:, target_q] ^ x[:, control_q]
@@ -65,13 +65,13 @@ class CliffordOperations:
         self._set_r(
             symplectic_matrix,
             r
-            ^ (x[:, target_q] * z[:, target_q]).flatten()
+            ^ (x[:, target_q] * z[:, target_q])
             ^ (
                 x[:, control_q]
                 * x[:, target_q]
                 * (z[:, target_q] ^ z[:, control_q] ^ True)
-            ).flatten()
-            ^ (x[:, target_q] * (z[:, target_q] ^ x[:, control_q])).flatten(),
+            )
+            ^ (x[:, target_q] * (z[:, target_q] ^ x[:, control_q])),
         )
         symplectic_matrix[
             :-1, [nqubits + control_q, nqubits + target_q]
@@ -86,7 +86,7 @@ class CliffordOperations:
         r, x, z = self._get_rxz(symplectic_matrix, nqubits)
         self._set_r(
             symplectic_matrix,
-            r ^ (x[:, q] * z[:, q]).flatten(),
+            r ^ (x[:, q] * z[:, q]),
         )
         symplectic_matrix[:-1, nqubits + q] = z[:, q] ^ x[:, q]
         return symplectic_matrix
@@ -97,7 +97,7 @@ class CliffordOperations:
         r, x, z = self._get_rxz(symplectic_matrix, nqubits)
         self._set_r(
             symplectic_matrix,
-            r ^ ((x[:, q] * z[:, q]) ^ x[:, q] * (z[:, q] ^ x[:, q])).flatten(),
+            r ^ ((x[:, q] * z[:, q]) ^ x[:, q] * (z[:, q] ^ x[:, q])),
         )
         return symplectic_matrix
 
@@ -107,9 +107,7 @@ class CliffordOperations:
         r, x, z = self._get_rxz(symplectic_matrix, nqubits)
         self._set_r(
             symplectic_matrix,
-            r
-            ^ (z[:, q] * (z[:, q] ^ x[:, q])).flatten()
-            ^ (z[:, q] * x[:, q]).flatten(),
+            r ^ (z[:, q] * (z[:, q] ^ x[:, q])) ^ (z[:, q] * x[:, q]),
         )
         return symplectic_matrix
 
@@ -119,9 +117,7 @@ class CliffordOperations:
         r, x, z = self._get_rxz(symplectic_matrix, nqubits)
         self._set_r(
             symplectic_matrix,
-            r
-            ^ (z[:, q] * (z[:, q] ^ x[:, q])).flatten()
-            ^ (x[:, q] * (z[:, q] ^ x[:, q])).flatten(),
+            r ^ (z[:, q] * (z[:, q] ^ x[:, q])) ^ (x[:, q] * (z[:, q] ^ x[:, q])),
         )
         return symplectic_matrix
 
@@ -131,7 +127,7 @@ class CliffordOperations:
         r, x, z = self._get_rxz(symplectic_matrix, nqubits)
         self._set_r(
             symplectic_matrix,
-            r ^ (z[:, q] * (z[:, q] ^ x[:, q])).flatten(),
+            r ^ (z[:, q] * (z[:, q] ^ x[:, q])),
         )
         symplectic_matrix[:-1, q] = z[:, q] ^ x[:, q]
         return symplectic_matrix
@@ -142,7 +138,7 @@ class CliffordOperations:
         r, x, z = self._get_rxz(symplectic_matrix, nqubits)
         self._set_r(
             symplectic_matrix,
-            r ^ (x[:, q] * (z[:, q] ^ x[:, q])).flatten(),
+            r ^ (x[:, q] * (z[:, q] ^ x[:, q])),
         )
         symplectic_matrix[:-1, nqubits + q] = z[:, q] ^ x[:, q]
         return symplectic_matrix
@@ -153,7 +149,7 @@ class CliffordOperations:
         r, x, z = self._get_rxz(symplectic_matrix, nqubits)
         self._set_r(
             symplectic_matrix,
-            r ^ (z[:, q] * x[:, q]).flatten(),
+            r ^ (z[:, q] * x[:, q]),
         )
         symplectic_matrix[:-1, q] = z[:, q] ^ x[:, q]
         return symplectic_matrix
@@ -189,7 +185,7 @@ class CliffordOperations:
             r, x, z = self._get_rxz(symplectic_matrix, nqubits)
             self._set_r(
                 symplectic_matrix,
-                r ^ (x[:, q] * (z[:, q] ^ x[:, q])).flatten(),
+                r ^ (x[:, q] * (z[:, q] ^ x[:, q])),
             )
             symplectic_matrix[:-1, [nqubits + q, q]] = symplectic_matrix[
                 :-1, [q, nqubits + q]
@@ -201,7 +197,7 @@ class CliffordOperations:
             r, x, z = self._get_rxz(symplectic_matrix, nqubits)
             self._set_r(
                 symplectic_matrix,
-                r ^ (z[:, q] * (z[:, q] ^ x[:, q])).flatten(),
+                r ^ (z[:, q] * (z[:, q] ^ x[:, q])),
             )
             symplectic_matrix[:-1, [nqubits + q, q]] = symplectic_matrix[
                 :-1, [q, nqubits + q]
@@ -219,12 +215,12 @@ class CliffordOperations:
                 x[:, control_q]
                 * z[:, target_q]
                 * (x[:, target_q] ^ z[:, control_q] ^ True)
-            ).flatten()
+            )
             ^ (
                 (x[:, target_q] ^ x[:, control_q])
                 * (z[:, target_q] ^ z[:, control_q])
                 * (z[:, target_q] ^ x[:, control_q] ^ True)
-            ).flatten()
+            )
             ^ (
                 x[:, target_q]
                 * z[:, control_q]
@@ -235,7 +231,7 @@ class CliffordOperations:
                     ^ z[:, target_q]
                     ^ True
                 )
-            ).flatten(),
+            ),
         )
         symplectic_matrix[
             :-1, [control_q, target_q, nqubits + control_q, nqubits + target_q]
@@ -251,14 +247,14 @@ class CliffordOperations:
         self._set_r(
             symplectic_matrix,
             r
-            ^ (x[:, target_q] * z[:, target_q]).flatten()
-            ^ (x[:, control_q] * z[:, control_q]).flatten()
-            ^ (x[:, control_q] * (z[:, control_q] ^ x[:, control_q])).flatten()
+            ^ (x[:, target_q] * z[:, target_q])
+            ^ (x[:, control_q] * z[:, control_q])
+            ^ (x[:, control_q] * (z[:, control_q] ^ x[:, control_q]))
             ^ (
                 (z[:, control_q] ^ x[:, control_q])
                 * (z[:, target_q] ^ x[:, target_q])
                 * (x[:, target_q] ^ x[:, control_q] ^ True)
-            ).flatten()
+            )
             ^ (
                 (x[:, target_q] ^ z[:, control_q] ^ x[:, control_q])
                 * (x[:, target_q] ^ z[:, target_q] ^ x[:, control_q])
@@ -269,10 +265,8 @@ class CliffordOperations:
                     ^ z[:, control_q]
                     ^ True
                 )
-            ).flatten()
-            ^ (
-                x[:, control_q] * (x[:, target_q] ^ x[:, control_q] ^ z[:, control_q])
-            ).flatten(),
+            )
+            ^ (x[:, control_q] * (x[:, target_q] ^ x[:, control_q] ^ z[:, control_q])),
         )
         symplectic_matrix[
             :-1, [nqubits + control_q, nqubits + target_q]
@@ -305,15 +299,13 @@ class CliffordOperations:
         self._set_r(
             symplectic_matrix,
             r
-            ^ (x[:, target_q] * (z[:, target_q] ^ x[:, target_q])).flatten()
+            ^ (x[:, target_q] * (z[:, target_q] ^ x[:, target_q]))
             ^ (
                 x[:, control_q]
                 * (x[:, target_q] ^ z[:, target_q])
                 * (z[:, control_q] ^ x[:, target_q] ^ True)
-            ).flatten()
-            ^ (
-                (x[:, target_q] ^ x[:, control_q]) * (z[:, target_q] ^ x[:, target_q])
-            ).flatten(),
+            )
+            ^ ((x[:, target_q] ^ x[:, control_q]) * (z[:, target_q] ^ x[:, target_q])),
         )
 
         symplectic_matrix[
