@@ -277,3 +277,7 @@ def test_one_qubit_paulis_string_product(backend, pauli_1, pauli_2):
 def test_string_product(backend, operators, target):
     product = _string_product(operators)
     assert product == target
+
+
+def test_1q_paulis_string_product():
+    assert "-iZ" == _one_qubit_paulis_string_product("iX", "iY")

@@ -352,10 +352,9 @@ def _one_qubit_paulis_string_product(pauli_1: str, pauli_2: str):
         "".join([p.replace("i", "").replace("-", "") for p in (pauli_1, pauli_2)])
     ]
     # calculate the phase
-    sign = np.array(["-" in p for p in (pauli_1, pauli_2, prod)])
-    i = np.array(["i" in p for p in (pauli_1, pauli_2, prod)])
-    sign = "-" if len(sign.nonzero()[0]) % 2 == 1 else ""
-    n_i = len(i.nonzero()[0])
+    sign = len([True for p in (pauli_1, pauli_2, prod) if "-" in p])
+    n_i = len([True for p in (pauli_1, pauli_2, prod) if "i" in p])
+    sign = "-" if sign % 2 == 1 else ""
     if n_i == 0:
         i = ""
     elif n_i == 1:
