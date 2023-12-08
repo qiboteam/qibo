@@ -271,6 +271,7 @@ def test_one_qubit_paulis_string_product(backend, pauli_1, pauli_2):
         [["Z", "X", "Y", "X", "Z"], "-Y"],
         [["Z", "I", "Z"], "I"],
         [["Y", "X"], "-iZ"],
+        [["iY", "iX"], "iZ"],
     ],
 )
 def test_string_product(backend, operators, target):

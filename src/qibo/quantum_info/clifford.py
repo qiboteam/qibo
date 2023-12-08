@@ -316,6 +316,8 @@ class Clifford:
 
         identity = "".join(["I" for _ in range(self.nqubits)])
 
+        operators = [(g, identity) for g in operators]
+
         return [_string_product(ops) for ops in product(*operators)]
 
 
@@ -377,11 +379,12 @@ def _string_product(operators: list):
         (str): String representing the tensor product of the operators.
     """
     # calculate global sign
-    phases = np.array(["-" in op for op in operators], dtype=bool)
-    # remove the - signs
-    operators = "|".join(operators).replace("-", "").split("|")
+    phases = len([True for op in operators if "-" in op])
+    i = len([True for op in operators if "i" in op])
+    # remove the - signs and the i
+    operators = "|".join(operators).replace("-", "").replace("i", "").split("|")
 
-    prod, i = [], 0
+    prod = []
     for op in zip(*operators):
         op = [o for o in op if o != "I"]
         if len(op) == 0:
@@ -392,7 +395,7 @@ def _string_product(operators: list):
             tmp = op[0]
         # append signs coming from products
         if tmp[0] == "-":
-            phases = np.append(phases, True)
+            phases += 1
         # count i coming from products
         if "i" in tmp:
             i += 1
@@ -402,9 +405,9 @@ def _string_product(operators: list):
     # product of the i-s
     if i % 4 == 1 or i % 4 == 3:
         result = f"i{result}"
-    if not (i % 4 == 0 or i % 4 == 1):
-        np.append(phases, True)
+    if i % 4 == 2 or i % 4 == 3:
+        phases += 1
 
-    phases = "-" if len(phases.nonzero()[0]) % 2 == 1 else ""
+    phases = "-" if phases % 2 == 1 else ""
 
     return f"{phases}{result}"
