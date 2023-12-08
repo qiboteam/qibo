@@ -568,7 +568,7 @@ class CliffordBackend(NumpyBackend):
         symplectic_matrix[nqubits:-1, nqubits : 2 * nqubits] = I.copy()
         return symplectic_matrix
 
-    def apply_gate_clifford(self, gate, symplectic_matrix, nqubits, nshots):
+    def apply_gate_clifford(self, gate, symplectic_matrix, nqubits):
         operation = getattr(self.clifford_operations, gate.__class__.__name__)
         kwargs = (
             {"theta": gate.init_kwargs["theta"]} if "theta" in gate.init_kwargs else {}
