@@ -1904,7 +1904,7 @@ in this representation at the cost of storing the generators of the de-stabilize
 
 Therefore, the :math:`n`-qubits state is uniquely defined by a symplectic matrix of the form
 
-.. image:: ../_static/tableau.png
+.. image:: ../_static/symplectic_matrix.png
    :width: 2329px
    :height: 1213px
    :scale: 30 %
