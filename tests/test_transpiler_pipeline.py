@@ -6,10 +6,12 @@ from qibo import gates
 from qibo.models import Circuit
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.pipeline import (
+    ConnectivityError,
     Passes,
     TranspilerPipelineError,
     assert_circuit_equivalence,
     assert_transpiling,
+    restrict_connectivity_qubits,
 )
 from qibo.transpiler.placer import Random, ReverseTraversal, Trivial
 from qibo.transpiler.router import ShortestPaths
@@ -68,10 +70,28 @@ def star_connectivity():
     return chip
 
 
+def test_restrict_qubits_error_no_subset():
+    with pytest.raises(ConnectivityError) as excinfo:
+        restrict_connectivity_qubits(star_connectivity(), [1, 2, 6])
+    assert "Some qubits are not in the original connectivity." in str(excinfo.value)
+
+
+def test_restrict_qubits_error_not_connected():
+    with pytest.raises(ConnectivityError) as excinfo:
+        restrict_connectivity_qubits(star_connectivity(), [1, 3])
+    assert "The new connectivity graph is not connected." in str(excinfo.value)
+
+
+def test_restrict_qubits():
+    new_connectivity = restrict_connectivity_qubits(star_connectivity(), [1, 2, 3])
+    assert list(new_connectivity.nodes) == [1, 2, 3]
+    assert list(new_connectivity.edges) == [(1, 2), (2, 3)]
+
+
 @pytest.mark.parametrize("ngates", [5, 10, 50])
 def test_pipeline_default(ngates):
     circ = generate_random_circuit(nqubits=5, ngates=ngates)
-    default_transpiler = Passes(connectivity=star_connectivity())
+    default_transpiler = Passes(passes=None, connectivity=star_connectivity())
     transpiled_circ, final_layout = default_transpiler(circ)
     initial_layout = default_transpiler.get_initial_layout()
     assert_transpiling(
@@ -127,11 +147,11 @@ def test_assert_circuit_equivalence_wrong_nqubits():
 
 def test_error_connectivity():
     with pytest.raises(TranspilerPipelineError):
-        default_transpiler = Passes()
+        default_transpiler = Passes(passes=None, connectivity=None)
 
 
 def test_is_satisfied():
-    default_transpiler = Passes(connectivity=star_connectivity())
+    default_transpiler = Passes(passes=None, connectivity=star_connectivity())
     circuit = Circuit(5)
     circuit.add(gates.CZ(0, 2))
     circuit.add(gates.Z(0))
@@ -139,7 +159,7 @@ def test_is_satisfied():
 
 
 def test_is_satisfied_false_decomposition():
-    default_transpiler = Passes(connectivity=star_connectivity())
+    default_transpiler = Passes(passes=None, connectivity=star_connectivity())
     circuit = Circuit(5)
     circuit.add(gates.CZ(0, 2))
     circuit.add(gates.X(0))
@@ -147,7 +167,7 @@ def test_is_satisfied_false_decomposition():
 
 
 def test_is_satisfied_false_connectivity():
-    default_transpiler = Passes(connectivity=star_connectivity())
+    default_transpiler = Passes(passes=None, connectivity=star_connectivity())
     circuit = Circuit(5)
     circuit.add(gates.CZ(0, 1))
     circuit.add(gates.Z(0))
@@ -241,7 +261,7 @@ def test_custom_passes_no_placer():
 
 def test_custom_passes_wrong_pass():
     custom_passes = [0]
-    custom_pipeline = Passes(passes=custom_passes)
+    custom_pipeline = Passes(passes=custom_passes, connectivity=None)
     circ = generate_random_circuit(nqubits=5, ngates=5)
     with pytest.raises(TranspilerPipelineError):
         transpiled_circ, final_layout = custom_pipeline(circ)

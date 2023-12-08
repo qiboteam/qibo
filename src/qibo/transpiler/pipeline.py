@@ -131,40 +131,71 @@ def assert_transpiling(
         )
 
 
+def restrict_connectivity_qubits(connectivity: nx.Graph, qubits: list):
+    """Restrict the connectivity to selected qubits.
+
+    Args:
+        connectivity (:class:`networkx.Graph`): chip connectivity.
+        qubits (list): list of physical qubits to be used.
+
+    Returns:
+        (:class:`networkx.Graph`): restricted connectivity.
+    """
+    if not set(qubits).issubset(set(connectivity.nodes)):
+        raise_error(
+            ConnectivityError, "Some qubits are not in the original connectivity."
+        )
+    new_connectivity = nx.Graph()
+    new_connectivity.add_nodes_from(qubits)
+    new_edges = []
+    for edge in connectivity.edges:
+        if edge[0] in qubits and edge[1] in qubits:
+            new_edges.append(edge)
+    new_connectivity.add_edges_from(new_edges)
+    if not nx.is_connected(new_connectivity):
+        raise_error(ConnectivityError, "The new connectivity graph is not connected.")
+    return new_connectivity
+
+
 class Passes:
     """Define a transpiler pipeline consisting of smaller transpiler steps that are applied sequentially:
 
     Args:
         passes (list): list of passes to be applied sequentially,
-            if None default transpiler will be used, it requires hardware connectivity.
-        connectivity (nx.Graph): hardware qubit connectivity.
+            if None default transpiler will be used.
+        connectivity (nx.Graph): physical qubits connectivity.
+        native_gates (NativeGates): native gates.
+        on_qubits (list): list of physical qubits to be used. If "None" all qubits are used.
     """
 
     def __init__(
         self,
-        passes: list = None,
-        connectivity: nx.Graph = None,
+        passes: list,
+        connectivity: nx.Graph,
         native_gates: NativeGates = NativeGates.default(),
+        on_qubits: list = None,
     ):
+        if on_qubits is not None:
+            connectivity = restrict_connectivity_qubits(connectivity, on_qubits)
+        self.connectivity = connectivity
         self.native_gates = native_gates
         if passes is None:
-            self.passes = self.default(connectivity)
+            self.passes = self.default()
         else:
             self.passes = passes
-        self.connectivity = connectivity
 
-    def default(self, connectivity: nx.Graph):
+    def default(self):
         """Return the default transpiler pipeline for the required hardware connectivity."""
-        if not isinstance(connectivity, nx.Graph):
+        if not isinstance(self.connectivity, nx.Graph):
             raise_error(
                 TranspilerPipelineError,
                 "Define the hardware chip connectivity to use default transpiler",
             )
         default_passes = []
         # preprocessing
-        default_passes.append(Preprocessing(connectivity=connectivity))
+        default_passes.append(Preprocessing(connectivity=self.connectivity))
         # default placer pass
-        default_passes.append(Trivial(connectivity=connectivity))
+        default_passes.append(Trivial(connectivity=self.connectivity))
         # default router pass
         default_passes.append(StarConnectivity())
         # default unroller pass

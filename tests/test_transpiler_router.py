@@ -14,7 +14,6 @@ from qibo.transpiler.router import (
     ShortestPaths,
     _find_gates_qubits_pairs,
     assert_connectivity,
-    restrict_connectivity_qubits,
 )
 
 
@@ -78,24 +77,6 @@ def matched_circuit():
     circuit.add(gates.CZ(2, 1))
     circuit.add(gates.M(0))
     return circuit
-
-
-def test_restrict_qubits_error_no_subset():
-    with pytest.raises(ConnectivityError) as excinfo:
-        restrict_connectivity_qubits(star_connectivity(), [1, 2, 6])
-    assert "Some qubits are not in the original connectivity." in str(excinfo.value)
-
-
-def test_restrict_qubits_error_not_connected():
-    with pytest.raises(ConnectivityError) as excinfo:
-        restrict_connectivity_qubits(star_connectivity(), [1, 3])
-    assert "The new connectivity graph is not connected." in str(excinfo.value)
-
-
-def test_restrict_qubits():
-    new_connectivity = restrict_connectivity_qubits(star_connectivity(), [1, 2, 3])
-    assert list(new_connectivity.nodes) == [1, 2, 3]
-    assert list(new_connectivity.edges) == [(1, 2), (2, 3)]
 
 
 def test_assert_connectivity():

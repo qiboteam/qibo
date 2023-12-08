@@ -34,32 +34,6 @@ def assert_connectivity(connectivity: nx.Graph, circuit: Circuit):
                 )
 
 
-def restrict_connectivity_qubits(connectivity: nx.Graph, qubits: list):
-    """Restrict the connectivity to selected qubits.
-
-    Args:
-        connectivity (:class:`networkx.Graph`): chip connectivity.
-        qubits (list): list of physical qubits to be used.
-
-    Returns:
-        (:class:`networkx.Graph`): restricted connectivity.
-    """
-    if not set(qubits).issubset(set(connectivity.nodes)):
-        raise_error(
-            ConnectivityError, "Some qubits are not in the original connectivity."
-        )
-    new_connectivity = nx.Graph()
-    new_connectivity.add_nodes_from(qubits)
-    new_edges = []
-    for edge in connectivity.edges:
-        if edge[0] in qubits and edge[1] in qubits:
-            new_edges.append(edge)
-    new_connectivity.add_edges_from(new_edges)
-    if not nx.is_connected(new_connectivity):
-        raise_error(ConnectivityError, "The new connectivity graph is not connected.")
-    return new_connectivity
-
-
 # TODO: make this class work with CircuitMap
 class ShortestPaths(Router):
     """A class to perform initial qubit mapping and connectivity matching.
@@ -101,6 +75,7 @@ class ShortestPaths(Router):
             (:class:`qibo.models.circuit.Circuit`, dict): circut mapped to hardware topology, and final qubit mapping.
         """
         self._mapping = initial_layout
+        dict_keys = list(initial_layout.keys())
         init_qubit_map = np.asarray(list(initial_layout.values()))
         self._initial_checks(circuit.nqubits)
         self._gates_qubits_pairs = _find_gates_qubits_pairs(circuit)
@@ -114,7 +89,7 @@ class ShortestPaths(Router):
             self._transpiler_step(circuit)
         hardware_mapped_circuit = self._remap_circuit(np.argsort(init_qubit_map))
         final_mapping = {
-            "q" + str(j): self._swap_map[j]
+            dict_keys[j]: self._swap_map[j]
             for j in range(self._graph.number_of_nodes())
         }
 
