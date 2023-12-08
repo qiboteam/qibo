@@ -70,6 +70,11 @@ class Clifford:
         cls._backend = CliffordBackend(engine)
         return cls._backend.execute_circuit(circuit, initial_state, nshots)
 
+    # TODO: implement this method in separate PR based on `Bravyi & Maslov (2022) <https://arxiv.org/abs/2003.09412>`_.
+    @classmethod
+    def to_circuit(cls, algorithm=None):  # pragma: no cover
+        raise_error(NotImplementedError, "`to_circuit` method not implemented yet.")
+
     def generators(self, return_array: bool = False):
         """Extracts the generators of both the de-stabilizers (first ``n-qubits`` elements) and the stabilizers (second ``n-qubits`` elements).
 
