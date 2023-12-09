@@ -1368,6 +1368,66 @@ Pauli basis to computational basis
 .. autofunction:: qibo.quantum_info.pauli_to_comp_basis
 
 
+Phase-space Representation of Stabilizer States
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A *stabilizer state* :math:`\ketbra{\psi}{\psi}` can be uniquely defined by the set of its *stabilizers*,
+i.e. those unitary operators :math:`U` that have :math:`\psi` as an eigenstate with eigenvalue :math:`1`.
+In general, :math:`d = 2^n` stabilizers are needed to uniquely define a :math:`n`-qubits state,
+but a large class of quantum states can be represented by the intersection of the Stabilizer group with the Pauli group.
+In that case, indeed, the number of operators needed reduces to :math:`n`.
+Each one of these :math:`n` Pauli generators takes :math:`2n + 1` bits to specify,
+yielding a :math:`n(2n+1)` total number of bits needed.
+In particular, `Aaronson and Gottesman (2004) <aaronson_>`_ demonstrated that the application of gates can be efficiently simulated
+in this representation at the cost of storing the generators of the de-stabilizers in addition to the stabilizers.
+
+Therefore, the :math:`n`-qubits state is uniquely defined by a symplectic matrix of the form
+
+.. image:: ../_static/symplectic_matrix.png
+   :width: 2329px
+   :height: 1213px
+   :scale: 30 %
+   :align: center
+
+where :math:`(x_{ij},z_{ij})` are the bits encoding the :math:`n`-qubits pauli generator as
+
+.. math::
+
+   P_{k} = \bigotimes_{j=1}^{n} i^{x_{jk} \oplus z_{jk}} X_{j}^{x_{jk}}Z_{j}^{z_{jk}}.
+
+In qibo the :class:`qibo.quantum_info.clifford.Clifford` object is in charge of storing the
+stabilizer representation of a state.
+This object is automatically created after the execution of a Clifford Circuit through the
+:class:`qibo.backends.clifford.CliffordBackend`, but it can also be created by directly
+passing a symplectic matrix to the constructor
+
+.. testsetup::
+
+   from qibo.quantum_info import Clifford
+   from qibo.backends import CliffordBackend, NumpyBackend
+
+   # construct the |00...0> state
+   backend = CliffordBackend(NumpyBackend())
+   symplectic_matrix = backend.zero_state(nqubits=3)
+   clifford = Clifford(symplectic_matrix, engine=NumpyBackend())
+
+Then, the generators of the stabilizers can be extracted with the
+:meth:`qibo.quantum_info.clifford.Clifford.generators` method,
+or the complete set of stabilizers operators can be generated through the
+:meth:`qibo.quantum_info.clifford.Clifford.stabilizers` method
+
+.. testcode::
+
+   generators, phases = clifford.generators()
+   stabilizers = clifford.stabilizers()
+
+The de-stabilizers can be extracted analogously with :meth:`qibo.quantum_info.clifford.Clifford.destabilizers`.
+
+.. autoclass:: qibo.quantum_info.clifford.Clifford
+    :members:
+    :member-order: bysource
+
+
 Metrics
 ^^^^^^^
 
@@ -1888,66 +1948,6 @@ Kraus operators as probabilistic sum of unitaries
     approximation will be found at all. This functions will find good solutions
     for a limited set of operators. We leave to the user to decide how to
     best use this function.
-
-Stabilizer Representation
-^^^^^^^^^^^^^^^^^^^^^^^^^
-
-A quantum state :math:`\psi` can be uniquely defined by the set of its stabilizers :math:`Stab(\ket{\psi})`,
-i.e. those unitary operators :math:`U` that have :math:`\psi` as an eigenstate with eigenvalue 1.
-In general, :math:`2^n` stabilizers are needed to uniquely define a :math:`n`-qubits state,
-but a large class of quantum states can be represented by the intersection of the Stabilizer group with the Pauli group.
-In that case, indeed, the number of operators needed reduces to :math:`n`.
-Each one of these :math:`n` Pauli generators takes :math:`2n + 1` bits to specify,
-yielding a :math:`n(2n+1)` total number of bits needed.
-In particular, `Aaronson and Gottesman <aaronson_>`_ demonstrated that the application of gates can be efficiently simulated
-in this representation at the cost of storing the generators of the de-stabilizers in addition to the stabilizers.
-
-Therefore, the :math:`n`-qubits state is uniquely defined by a symplectic matrix of the form
-
-.. image:: ../_static/symplectic_matrix.png
-   :width: 2329px
-   :height: 1213px
-   :scale: 30 %
-   :align: center
-
-where :math:`x_{ij},z_{ij}` are the bits encoding the :math:`n`-qubits pauli generator as
-
-.. math::
-
-   P_i = \sum_{j=1}^n i^{x_{ij} \oplus z_{ij}} X_j^{x_{ij}}Z_j^{z_{ij}}.
-
-In qibo the :class:`qibo.quantum_info.clifford.Clifford` object is in charge of storing the
-stabilizer representation of a state.
-This object is automatically created after the execution of a Clifford Circuit through the
-:class:`qibo.backends.clifford.CliffordBackend`, but it can also be created by directly
-passing a symplectic matrix to the constructor
-
-.. testsetup::
-
-   from qibo.quantum_info import Clifford
-   from qibo.backends import CliffordBackend, NumpyBackend
-
-   # construct the |00...0> state
-   backend = CliffordBackend(NumpyBackend())
-   symplectic_matrix = backend.zero_state(nqubits=3)
-   clifford = Clifford(symplectic_matrix, engine=NumpyBackend())
-
-Then, the generators of the stabilizers can be extracted with the
-:meth:`qibo.quantum_info.clifford.Clifford.generators` method,
-or the complete set of stabilizers operators can be generated through the
-:meth:`qibo.quantum_info.clifford.Clifford.stabilizers` method
-
-.. testcode::
-
-   generators, phases = clifford.generators()
-   stabilizers = clifford.stabilizers()
-
-The de-stabilizers can be extracted analogously with :meth:`qibo.quantum_info.clifford.Clifford.destabilizers`.
-
-.. autoclass:: qibo.quantum_info.clifford.Clifford
-    :members:
-    :member-order: bysource
-
 
 
 Utility Functions
