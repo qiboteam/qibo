@@ -1584,6 +1584,12 @@ Expressibility of parameterized quantum circuits
 .. autofunction:: qibo.quantum_info.expressibility
 
 
+Frame Potential
+"""""""""""""""
+
+.. autofunction:: qibo.quantum_info.frame_potential
+
+
 Random Ensembles
 ^^^^^^^^^^^^^^^^
 
