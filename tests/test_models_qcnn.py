@@ -1,14 +1,15 @@
 import math
+
 import numpy as np
+import pytest
 
-import pytest 
-
-from qibo.models import Circuit
 from qibo import gates, set_backend
+from qibo.models import Circuit
 from qibo.models.qcnn import QuantumCNN
 
 num_angles = 21
 angles0 = [i * math.pi / num_angles for i in range(num_angles)]
+
 
 def test_classifier_circuit2():
     """ """
@@ -273,18 +274,20 @@ def test_1_qubit_classifier_circuit_error():
     except:
         pass
 
+
 def test_two_qubit_ansatz():
     c = Circuit(2)
     c.add(gates.H(0))
-    c.add(gates.RX(0,0))
-    c.add(gates.CNOT(1,0))
-    test_qcnn = QuantumCNN(4,2,2, twoqubitansatz = c)
+    c.add(gates.RX(0, 0))
+    c.add(gates.CNOT(1, 0))
+    test_qcnn = QuantumCNN(4, 2, 2, twoqubitansatz=c)
+
 
 @pytest.mark.parametrize("backend", [("numpy"), ("qibojit")])
-
 def test_qcnn_training(backend):
     set_backend(backend)
     import random
+
     # generate 2 random states and labels for pytest
     data = np.zeros([2, 16])
     for i in range(2):
@@ -311,15 +314,15 @@ def test_qcnn_training(backend):
     predictions.append(1)
     labels = np.array([[1], [-1], [1]])
 
-@pytest.mark.parametrize("backend", [("numpy"), ("qibojit")])
 
+@pytest.mark.parametrize("backend", [("numpy"), ("qibojit")])
 def test_two_qubit_ansatz_training(backend):
     set_backend(backend)
     c = Circuit(2)
     c.add(gates.H(0))
-    c.add(gates.RX(0,0))
-    c.add(gates.CNOT(1,0))
-    test_qcnn = QuantumCNN(4,2,2, twoqubitansatz = c)
+    c.add(gates.RX(0, 0))
+    c.add(gates.CNOT(1, 0))
+    test_qcnn = QuantumCNN(4, 2, 2, twoqubitansatz=c)
 
     data = np.zeros([2, 16])
     for i in range(2):
@@ -327,8 +330,10 @@ def test_two_qubit_ansatz_training(backend):
         data[i] = data_i / np.linalg.norm(data_i)
     labels = [[1], [-1]]
 
-    totalNParams = test_qcnn.nparams_layer*2
-    init_theta = [0 for i in range(totalNParams+1)] #totalNParams+1 to account for bias parameter.
+    totalNParams = test_qcnn.nparams_layer * 2
+    init_theta = [
+        0 for i in range(totalNParams + 1)
+    ]  # totalNParams+1 to account for bias parameter.
 
     result = test_qcnn.minimize(
         init_theta, data=data, labels=labels, nshots=10000, method="Powell"
@@ -343,4 +348,3 @@ def test_two_qubit_ansatz_training(backend):
     predictions.append(1)
     labels = np.array([[1], [-1], [1]])
     test_qcnn.Accuracy(labels, predictions)
-
