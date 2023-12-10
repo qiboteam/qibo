@@ -4,6 +4,7 @@ import warnings
 from typing import Optional, Union
 
 import numpy as np
+from scipy.stats import rv_continuous
 
 from qibo import Circuit, gates
 from qibo.backends import GlobalBackend, NumpyBackend
@@ -17,6 +18,66 @@ from qibo.quantum_info.superoperator_transformations import (
     choi_to_stinespring,
     vectorization,
 )
+
+
+class _probability_distribution_sin(rv_continuous):
+    def _pdf(self, theta: float):
+        return 0.5 * np.sin(theta)
+
+    def _cdf(self, theta: float):
+        return np.sin(theta / 2) ** 2
+
+    def _ppf(self, theta: float):
+        return 2 * np.arcsin(np.sqrt(theta))
+
+
+def uniform_sampling_U3(ngates: int, seed=None, backend=None):
+    """Samples parameters for Haar-random :math:`U_{3}`s (:class:`qibo.gates.U3`).
+
+    Args:
+        ngates (int): Total number of :math:`U_{3}`s to be sampled.
+        seed (int or :class:`numpy.random.Generator`, optional): Either a generator of random
+            numbers or a fixed seed to initialize a generator. If ``None``, initializes
+            a generator with a random seed. Default: ``None``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
+
+    Returns:
+        (ndarray): array of shape (``ngates``, :math:`3`).
+    """
+    if not isinstance(ngates, int):
+        raise_error(
+            TypeError, f"ngates must be type int, but it is type {type(ngates)}."
+        )
+    elif ngates <= 0:
+        raise_error(ValueError, f"ngates must be non-negative, but it is {ngates}.")
+
+    if (
+        seed is not None
+        and not isinstance(seed, int)
+        and not isinstance(seed, np.random.Generator)
+    ):
+        raise_error(
+            TypeError, "seed must be either type int or numpy.random.Generator."
+        )
+
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    local_state = (
+        np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
+    )
+
+    sampler = _probability_distribution_sin(a=0, b=np.pi, seed=local_state)
+    phases = local_state.random((ngates, 3))
+    phases[:, 0] = sampler.rvs(size=len(phases[:, 0]))
+    phases[:, 1] = phases[:, 1] * 2 * np.pi
+    phases[:, 2] = phases[:, 2] * 2 * np.pi
+
+    phases = backend.cast(phases, dtype=phases.dtype)
+
+    return phases
 
 
 def random_gaussian_matrix(
@@ -1098,11 +1159,13 @@ def _sample_from_quantum_mallows_distribution(nqubits: int, local_state):
     """
     mute_index = list(range(nqubits))
 
-    exponents = np.arange(nqubits, 0, -1, dtype=int)
+    exponents = np.arange(nqubits, 0, -1, dtype=np.int64)
+    powers = 4**exponents
+    powers[powers == 0] = np.iinfo(np.int64).max
 
     r = local_state.uniform(0, 1, size=nqubits)
 
-    indexes = -1 * (np.ceil(np.log2(r + (1 - r) / 4**exponents)))
+    indexes = -1 * (np.ceil(np.log2(r + (1 - r) / powers)))
 
     hadamards = 1 * (indexes < exponents)
 

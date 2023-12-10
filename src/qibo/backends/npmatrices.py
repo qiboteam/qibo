@@ -115,10 +115,20 @@ class NumpyMatrices:
             dtype=self.dtype,
         )
 
+    def U1q(self, theta, phi):
+        return self.U3(theta, phi - self.np.pi / 2, self.np.pi / 2 - phi)
+
     @cached_property
     def CNOT(self):
         return self.np.array(
             [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], dtype=self.dtype
+        )
+
+    @cached_property
+    def CY(self):
+        return self.np.array(
+            [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, -1j], [0, 0, 1j, 0]],
+            dtype=self.dtype,
         )
 
     @cached_property
@@ -227,8 +237,8 @@ class NumpyMatrices:
         return self.np.array(
             [
                 [1, 0, 0, 0],
-                [0, u[0, 0], u[0, 1], 0],
-                [0, u[1, 0], u[1, 1], 0],
+                [0, complex(u[0, 0]), complex(u[0, 1]), 0],
+                [0, complex(u[1, 0]), complex(u[1, 1]), 0],
                 [0, 0, 0, phase],
             ],
             dtype=self.dtype,
@@ -284,7 +294,7 @@ class NumpyMatrices:
             dtype=self.dtype,
         )
 
-    def RXY(self, theta):
+    def RXXYY(self, theta):
         cos, sin = self.np.cos(theta / 2), self.np.sin(theta / 2)
         return self.np.array(
             [

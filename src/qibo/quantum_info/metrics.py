@@ -1,5 +1,7 @@
 """Submodule with distances, metrics, and measures for quantum states and channels."""
 
+from typing import Optional, Union
+
 import numpy as np
 from scipy import sparse
 
@@ -171,7 +173,13 @@ def entanglement_of_formation(
     return ent_of_form
 
 
-def entropy(state, base: float = 2, check_hermitian: bool = False, backend=None):
+def entropy(
+    state,
+    base: float = 2,
+    check_hermitian: bool = False,
+    return_spectrum: bool = False,
+    backend=None,
+):
     """The von-Neumann entropy :math:`S(\\rho)` of a quantum ``state`` :math:`\\rho`, which
     is given by
 
@@ -184,6 +192,9 @@ def entropy(state, base: float = 2, check_hermitian: bool = False, backend=None)
         check_hermitian (bool, optional): if ``True``, checks if ``state`` is Hermitian.
             If ``False``, it assumes ``state`` is Hermitian .
             Defaults to ``False``.
+        return_spectrum: if ``True``, returns ``entropy`` and
+            :math:`-\\log_{\\textup{b}}(\\textup{eigenvalues})`, where :math:`b` is ``base``.
+            If ``False``, returns only ``entropy``. Default is ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -214,31 +225,34 @@ def entropy(state, base: float = 2, check_hermitian: bool = False, backend=None)
         )
 
     if purity(state) == 1.0:
-        ent = 0.0
+        if return_spectrum:
+            return 0.0, backend.cast([1.0], dtype=float)
+
+        return 0.0
+
+    if check_hermitian is False or _check_hermitian_or_not_gpu(state, backend=backend):
+        eigenvalues = np.linalg.eigvalsh(state)
     else:
-        if check_hermitian is False or _check_hermitian_or_not_gpu(
-            state, backend=backend
-        ):
-            eigenvalues = np.linalg.eigvalsh(state)
-        else:
-            eigenvalues = np.linalg.eigvals(state)
+        eigenvalues = np.linalg.eigvals(state)
 
-        if base == 2:
-            log_prob = np.where(eigenvalues > 0, np.log2(eigenvalues), 0.0)
-        elif base == 10:
-            log_prob = np.where(eigenvalues > 0, np.log10(eigenvalues), 0.0)
-        elif base == np.e:
-            log_prob = np.where(eigenvalues > 0, np.log(eigenvalues), 0.0)
-        else:
-            log_prob = np.where(
-                eigenvalues > 0, np.log(eigenvalues) / np.log(base), 0.0
-            )
+    if base == 2:
+        log_prob = np.where(eigenvalues > 0, np.log2(eigenvalues), 0.0)
+    elif base == 10:
+        log_prob = np.where(eigenvalues > 0, np.log10(eigenvalues), 0.0)
+    elif base == np.e:
+        log_prob = np.where(eigenvalues > 0, np.log(eigenvalues), 0.0)
+    else:
+        log_prob = np.where(eigenvalues > 0, np.log(eigenvalues) / np.log(base), 0.0)
 
-        ent = -np.sum(eigenvalues * log_prob)
-        # absolute value if entropy == 0.0 to avoid returning -0.0
-        ent = np.abs(ent) if ent == 0.0 else ent
+    ent = -np.sum(eigenvalues * log_prob)
+    # absolute value if entropy == 0.0 to avoid returning -0.0
+    ent = np.abs(ent) if ent == 0.0 else ent
 
     ent = float(ent)
+
+    if return_spectrum:
+        log_prob = backend.cast(log_prob, dtype=log_prob.dtype)
+        return ent, -log_prob
 
     return ent
 
@@ -248,6 +262,7 @@ def entanglement_entropy(
     bipartition,
     base: float = 2,
     check_hermitian: bool = False,
+    return_spectrum: bool = False,
     backend=None,
 ):
     """Calculates the entanglement entropy :math:`S` of bipartition :math:`A`
@@ -265,6 +280,8 @@ def entanglement_entropy(
         base (float, optional): the base of the log. Defaults to :math: `2`.
         check_hermitian (bool, optional): if ``True``, checks if :math:`\\rho_{A}` is Hermitian.
             If ``False``, it assumes ``state`` is Hermitian . Default: ``False``.
+        return_spectrum: if ``True``, returns ``entropy`` and eigenvalues of ``state``.
+            If ``False``, returns only ``entropy``. Default is ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -300,6 +317,7 @@ def entanglement_entropy(
         reduced_density_matrix,
         base=base,
         check_hermitian=check_hermitian,
+        return_spectrum=return_spectrum,
         backend=backend,
     )
 
@@ -359,7 +377,11 @@ def trace_distance(state, target, check_hermitian: bool = False, backend=None):
     difference = state - target
     if check_hermitian is True:
         hermitian = bool(
-            backend.calculate_norm(np.transpose(np.conj(difference)) - difference)
+            float(
+                backend.calculate_norm_density_matrix(
+                    np.transpose(np.conj(difference)) - difference, order=2
+                )
+            )
             <= PRECISION_TOL
         )
         if (
@@ -724,14 +746,18 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
     dim = int(np.sqrt(channel.shape[0]))
 
     if check_unitary is True:
-        norm_channel = backend.calculate_norm(
-            np.dot(np.conj(np.transpose(channel)), channel) - np.eye(dim**2)
+        norm_channel = float(
+            backend.calculate_norm_density_matrix(
+                np.dot(np.conj(np.transpose(channel)), channel) - np.eye(dim**2)
+            )
         )
         if target is None and norm_channel > PRECISION_TOL:
             raise_error(TypeError, "Channel is not unitary and Target is None.")
         if target is not None:
-            norm_target = backend.calculate_norm(
-                np.dot(np.conj(np.transpose(target)), target) - np.eye(dim**2)
+            norm_target = float(
+                backend.calculate_norm(
+                    np.dot(np.conj(np.transpose(target)), target) - np.eye(dim**2)
+                )
             )
             if (norm_channel > PRECISION_TOL) and (norm_target > PRECISION_TOL):
                 raise_error(TypeError, "Neither channel is unitary.")
@@ -1062,8 +1088,14 @@ def entangling_capability(circuit, samples: int, backend=None):
     return capability
 
 
-def expressibility(circuit, t: int, samples: int, backend=None):
-    """Returns the expressibility :math:`\\|A\\|_{HS}` of a parametrized
+def expressibility(
+    circuit,
+    power_t: int,
+    samples: int,
+    order: Optional[Union[int, float, str]] = 2,
+    backend=None,
+):
+    """Returns the expressibility :math:`\\|A\\|` of a parametrized
     circuit, where
 
     .. math::
@@ -1074,8 +1106,11 @@ def expressibility(circuit, t: int, samples: int, backend=None):
 
     Args:
         circuit (:class:`qibo.models.Circuit`): Parametrized circuit.
-        t (int): power that defines the :math:`t`-design.
+        power_t (int): power that defines the :math:`t`-design.
         samples (int): number of samples to estimate the integrals.
+        order (int or float or str, optional): order of the norm :math:`\\|A\\|`.
+            For specifications, see :meth:`qibo.backends.abstract.calculate_norm`.
+            Defaults to :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -1084,8 +1119,10 @@ def expressibility(circuit, t: int, samples: int, backend=None):
         float: Entangling capability.
     """
 
-    if isinstance(t, int) is False:
-        raise_error(TypeError, f"t must be type int, but it is type {type(t)}.")
+    if isinstance(power_t, int) is False:
+        raise_error(
+            TypeError, f"power_t must be type int, but it is type {type(power_t)}."
+        )
 
     if isinstance(samples, int) is False:
         raise_error(
@@ -1100,11 +1137,11 @@ def expressibility(circuit, t: int, samples: int, backend=None):
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    expr = haar_integral(circuit.nqubits, t, samples, backend=backend) - pqc_integral(
-        circuit, t, samples, backend=backend
-    )
+    deviation = haar_integral(
+        circuit.nqubits, power_t, samples=None, backend=backend
+    ) - pqc_integral(circuit, power_t, samples, backend=backend)
 
-    fid = np.trace(expr @ expr)
+    fid = float(backend.calculate_norm(deviation, order=order))
 
     return fid
 
@@ -1131,9 +1168,11 @@ def _check_hermitian_or_not_gpu(matrix, backend=None):
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    hermitian = bool(
-        backend.calculate_norm(np.transpose(np.conj(matrix)) - matrix) < PRECISION_TOL
+    norm = backend.calculate_norm_density_matrix(
+        np.transpose(np.conj(matrix)) - matrix, order=2
     )
+
+    hermitian = bool(float(norm) <= PRECISION_TOL)
 
     if hermitian is False and backend.__class__.__name__ in [
         "CupyBackend",

@@ -4,8 +4,10 @@ from typing import Dict, List, Tuple, Union
 
 import numpy as np
 
+import qibo
 from qibo import gates
 from qibo.config import raise_error
+from qibo.gates.abstract import Gate
 
 NoiseMapType = Union[Tuple[int, int, int], Dict[int, Tuple[int, int, int]]]
 
@@ -42,8 +44,9 @@ class _ParametrizedGates(list):
 class _Queue(list):
     """List that holds the queue of gates of a circuit.
 
-    In addition to the queue, it holds a list of gate moments, where each gate
-    is placed in the earliest possible position depending for the qubits it acts.
+    In addition to the queue, it holds a list of gate moments, where
+    each gate is placed in the earliest possible position depending for
+    the qubits it acts.
     """
 
     def __init__(self, nqubits):
@@ -54,7 +57,7 @@ class _Queue(list):
         self.nmeasurements = 0
 
     def to_fused(self):
-        """Transforms all gates in queue to :class:`qibo.gates.FusedGate`."""
+        """Transform all gates in queue to :class:`qibo.gates.FusedGate`."""
         last_gate = {}
         queue = self.__class__(self.nqubits)
         for gate in self:
@@ -74,7 +77,11 @@ class _Queue(list):
         return queue
 
     def from_fused(self):
-        """Creates the fused circuit queue by removing gates that have been fused to others."""
+        """Create queue from fused circuit.
+
+        Create the fused circuit queue by removing gates that have been
+        fused to others.
+        """
         queue = self.__class__(self.nqubits)
         for gate in self:
             if not gate.marked:
@@ -165,8 +172,8 @@ class Circuit:
         queue (_Queue): List that holds the queue of gates of a circuit.
         parametrized_gates (_ParametrizedGates): List of parametric gates.
         trainable_gates (_ParametrizedGates): List of trainable gates.
-        measurements (list): List of non-collapsible measurements
-        _final_state (CircuitResult): Final state after full simulation of the circuit
+        measurements (list): List of non-collapsible measurements.
+        _final_state : Final result after full simulation of the circuit.
         compiled (CompiledExecutor): Circuit executor. Defaults to ``None``.
         repeated_execution (bool): If `True`, the circuit would be re-executed when sampling.
             Defaults to ``False``.
@@ -206,8 +213,9 @@ class Circuit:
 
         self._final_state = None
         self.compiled = None
-        self.repeated_execution = False
 
+        self.has_collapse = False
+        self.has_unitary_channel = False
         self.density_matrix = density_matrix
 
         # for distributed circuits
@@ -297,15 +305,17 @@ class Circuit:
         for gate in circuit.queue:
             newcircuit.add(gate)
 
-        # Re-execute full circuit when sampling if one of the circuits
-        # has repeated_execution ``True``
-        newcircuit.repeated_execution = (
-            self.repeated_execution or circuit.repeated_execution
-        )
         return newcircuit
 
+    @property
+    def repeated_execution(self):
+        return self.has_collapse or (
+            self.has_unitary_channel and not self.density_matrix
+        )
+
     def on_qubits(self, *qubits):
-        """Generator of gates contained in the circuit acting on specified qubits.
+        """Generator of gates contained in the circuit acting on specified
+        qubits.
 
         Useful for adding a circuit as a subroutine in a larger circuit.
 
@@ -382,8 +392,8 @@ class Circuit:
         return circuit, qubit_map
 
     def _shallow_copy(self):
-        """Helper method for :meth:`qibo.models.circuit.Circuit.copy`
-        and :meth:`qibo.core.circuit.Circuit.fuse`."""
+        """Helper method for :meth:`qibo.models.circuit.Circuit.copy` and
+        :meth:`qibo.core.circuit.Circuit.fuse`."""
         new_circuit = self.__class__(**self.init_kwargs)
         new_circuit.parametrized_gates = _ParametrizedGates(self.parametrized_gates)
         new_circuit.trainable_gates = _ParametrizedGates(self.trainable_gates)
@@ -443,7 +453,12 @@ class Circuit:
         measurements = []
         new_circuit = self.__class__(**self.init_kwargs)
         for gate in self.queue[::-1]:
-            if isinstance(gate, gates.M) and skip_measurements:
+            if isinstance(gate, gates.Channel):
+                raise_error(
+                    NotImplementedError,
+                    "`invert` method not implemented for circuits that contain noise channels.",
+                )
+            elif isinstance(gate, gates.M) and skip_measurements:
                 measurements.append(gate)
             else:
                 new_gate = gate.dagger()
@@ -511,7 +526,8 @@ class Circuit:
         return clifford_circuit
 
     def with_pauli_noise(self, noise_map: NoiseMapType):
-        """Creates a copy of the circuit with Pauli noise gates after each gate.
+        """Creates a copy of the circuit with Pauli noise gates after each
+        gate.
 
         If the original circuit uses state vectors then noise simulation will
         be done using sampling and repeated circuit execution.
@@ -669,7 +685,7 @@ class Circuit:
 
                 gate.result.circuit = self
                 if gate.collapse:
-                    self.repeated_execution = True
+                    self.has_collapse = True
                 else:
                     self.measurements.append(gate)
                 return gate.result
@@ -687,7 +703,7 @@ class Circuit:
                             self.measurements.remove(measurement)
 
             if isinstance(gate, gates.UnitaryChannel):
-                self.repeated_execution = not self.density_matrix
+                self.has_unitary_channel = True
             if isinstance(gate, gates.ParametrizedGate):
                 if position >= 0:
                     param_loc = 0
@@ -772,7 +788,8 @@ class Circuit:
 
     @property
     def depth(self) -> int:
-        """Circuit depth if each gate is placed at the earliest possible position."""
+        """Circuit depth if each gate is placed at the earliest possible
+        position."""
         return len(self.queue.moments)
 
     @property
@@ -1018,7 +1035,8 @@ class Circuit:
         return "\n".join(logs)
 
     def fuse(self, max_qubits=2):
-        """Creates an equivalent circuit by fusing gates for increased simulation performance.
+        """Creates an equivalent circuit by fusing gates for increased
+        simulation performance.
 
         Args:
             max_qubits (int): Maximum number of qubits in the fused gates.
@@ -1080,7 +1098,12 @@ class Circuit:
 
         fgate = gates.FusedGate(*range(self.nqubits))
         for gate in self.queue:
-            if not isinstance(gate, (gates.SpecialGate, gates.M)):
+            if isinstance(gate, gates.Channel):
+                raise_error(
+                    NotImplementedError,
+                    "`unitary` method not implemented for circuits that contain noise channels.",
+                )
+            elif not isinstance(gate, (gates.SpecialGate, gates.M)):
                 fgate.append(gate)
         return fgate.matrix(backend)
 
@@ -1088,8 +1111,8 @@ class Circuit:
     def final_state(self):
         """Returns the final state after full simulation of the circuit.
 
-        If the circuit is executed more than once, only the last final state
-        is returned.
+        If the circuit is executed more than once, only the last final
+        state is returned.
         """
         if self._final_state is None:
             raise_error(
@@ -1119,18 +1142,21 @@ class Circuit:
 
             backend = GlobalBackend()
 
-        from qibo.states import CircuitResult
+        from qibo.result import CircuitResult, QuantumState
 
         executor = lambda state, nshots: backend.execute_circuit(
-            self, state, nshots, return_array=True
-        )
+            self, state, nshots
+        ).state()
         self.compiled = type("CompiledExecutor", (), {})()
         self.compiled.executor = backend.compile(executor)
-        self.compiled.result = lambda state, nshots: CircuitResult(
-            backend, self, state, nshots
-        )
+        if self.measurements:
+            self.compiled.result = lambda state, nshots: CircuitResult(
+                state, self.measurements, backend, nshots=nshots
+            )
+        else:
+            self.compiled.result = lambda state, nshots: QuantumState(state, backend)
 
-    def execute(self, initial_state=None, nshots=None):
+    def execute(self, initial_state=None, nshots=1000):
         """Executes the circuit. Exact implementation depends on the backend.
 
         Args:
@@ -1139,6 +1165,10 @@ class Circuit:
                 vector using an array or a circuit. If ``None``, the initial state
                 is ``|000..00>``.
             nshots (int): Number of shots.
+
+        Returns:
+            either a ``qibo.result.QuantumState``, ``qibo.result.MeasurementOutcomes``
+            or ``qibo.result.CircuitResult`` depending on the circuit's configuration.
         """
         if self.compiled:
             # pylint: disable=E1101
@@ -1155,9 +1185,35 @@ class Circuit:
             else:
                 return GlobalBackend().execute_circuit(self, initial_state, nshots)
 
-    def __call__(self, initial_state=None, nshots=None):
+    def __call__(self, initial_state=None, nshots=1000):
         """Equivalent to ``circuit.execute``."""
         return self.execute(initial_state=initial_state, nshots=nshots)
+
+    @property
+    def raw(self) -> dict:
+        """Serialize to dictionary.
+
+        This is a thin wrapper over :meth:`Gate.raw`.
+        """
+        return {
+            "queue": [gate.raw for gate in self.queue],
+            "nqubits": self.nqubits,
+            "density_matrix": self.density_matrix,
+            "qibo_version": qibo.__version__,
+        }
+
+    @classmethod
+    def from_dict(cls, raw):
+        """Load from serialization.
+
+        Essentially the counter-part of :meth:`raw`.
+        """
+        circ = cls(raw["nqubits"], density_matrix=raw["density_matrix"])
+
+        for gate in raw["queue"]:
+            circ.add(Gate.from_dict(gate))
+
+        return circ
 
     def to_qasm(self):
         """Convert circuit to QASM.

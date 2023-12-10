@@ -6,28 +6,36 @@ import sympy
 from qibo.backends import GlobalBackend
 from qibo.config import raise_error
 
+REQUIRED_FIELDS = [
+    "name",
+    "init_args",
+    "init_kwargs",
+    "_target_qubits",
+    "_control_qubits",
+]
+REQUIRED_FIELDS_INIT_KWARGS = ["theta", "phi", "lam"]
+
 
 class Gate:
     """The base class for gate implementation.
 
     All base gates should inherit this class.
+
+    Attributes:
+        name (str): Name of the gate.
+        draw_label (str): Optional label for drawing the gate in a circuit
+            with :func:`qibo.models.Circuit.draw`.
+        is_controlled_by (bool): ``True`` if the gate was created using the
+            :meth:`qibo.gates.abstract.Gate.controlled_by` method,
+            otherwise ``False``.
+        init_args (list): Arguments used to initialize the gate.
+        init_kwargs (dict): Arguments used to initialize the gate.
+        target_qubits (tuple): Tuple with ids of target qubits.
+        control_qubits (tuple): Tuple with ids of control qubits sorted in
+            increasing order.
     """
 
     def __init__(self):
-        """
-        Attributes:
-            name (str): Name of the gate.
-            draw_label (str): Optional label for drawing the gate in a circuit
-                with :func:`qibo.models.Circuit.draw`.
-            is_controlled_by (bool): ``True`` if the gate was created using the
-                :meth:`qibo.gates.abstract.Gate.controlled_by` method,
-                otherwise ``False``.
-            init_args (list): Arguments used to initialize the gate.
-            init_kwargs (dict): Arguments used to initialize the gate.
-            target_qubits (tuple): Tuple with ids of target qubits.
-            control_qubits (tuple): Tuple with ids of control qubits sorted in
-                increasing order.
-        """
         from qibo import config
 
         self.name = None
@@ -51,6 +59,69 @@ class Gate:
         self.original_gate = None
 
     @property
+    def raw(self) -> dict:
+        """Serialize to dictionary.
+
+        The values used in the serialization should be compatible with a
+        JSON dump (or any other one supporting a minimal set of scalar
+        types). Though the specific implementation is up to the specific
+        gate.
+        """
+        encoded = self.__dict__
+
+        encoded_simple = {
+            key: value for key, value in encoded.items() if key in REQUIRED_FIELDS
+        }
+
+        encoded_simple["init_kwargs"] = {
+            key: value
+            for key, value in encoded_simple["init_kwargs"].items()
+            if key in REQUIRED_FIELDS_INIT_KWARGS
+        }
+
+        for value in encoded_simple:
+            if isinstance(encoded[value], set):
+                encoded_simple[value] = list(encoded_simple[value])
+
+        encoded_simple["_class"] = type(self).__name__
+
+        return encoded_simple
+
+    @staticmethod
+    def from_dict(raw: dict):
+        """Load from serialization.
+
+        Essentially the counter-part of :meth:`raw`.
+        """
+        from qibo.gates import gates, measurements
+
+        for mod in (gates, measurements):
+            try:
+                cls = getattr(mod, raw["_class"])
+                break
+            except AttributeError:
+                # gate not found in given module, try next
+                pass
+        else:
+            raise ValueError(f"Unknown gate {raw['_class']}")
+
+        gate = cls(*raw["init_args"], **raw["init_kwargs"])
+        try:
+            return gate.controlled_by(*raw["_control_qubits"])
+        except RuntimeError as e:
+            if "controlled" in e.args[0]:
+                return gate
+            raise e
+
+    def to_json(self):
+        """Dump gate to JSON.
+
+        Note:
+            Consider using :meth:`raw` directly.
+        """
+        return json.dumps(self.raw)
+
+    @property
     def target_qubits(self) -> Tuple[int]:
         """Tuple with ids of target qubits."""
         return self._target_qubits
@@ -62,7 +133,8 @@ class Gate:
 
     @property
     def qubits(self) -> Tuple[int]:
-        """Tuple with ids of all qubits (control and target) that the gate acts."""
+        """Tuple with ids of all qubits (control and target) that the gate
+        acts."""
         return self.control_qubits + self.target_qubits
 
     @property
@@ -110,9 +182,9 @@ class Gate:
     ):
         """Sets target and control qubits simultaneously.
 
-        This is used for the reduced qubit updates in the distributed circuits
-        because using the individual setters may raise errors due to temporary
-        overlap of control and target qubits.
+        This is used for the reduced qubit updates in the distributed
+        circuits because using the individual setters may raise errors
+        due to temporary overlap of control and target qubits.
         """
         self._set_target_qubits(target_qubits)
         self._set_control_qubits(control_qubits)
@@ -120,7 +192,8 @@ class Gate:
 
     @staticmethod
     def _find_repeated(qubits: Sequence[int]) -> int:
-        """Finds the first qubit id that is repeated in a sequence of qubit ids."""
+        """Finds the first qubit id that is repeated in a sequence of qubit
+        ids."""
         temp_set = set()
         for qubit in qubits:
             if qubit in temp_set:
@@ -128,7 +201,8 @@ class Gate:
             temp_set.add(qubit)
 
     def _check_control_target_overlap(self):
-        """Checks that there are no qubits that are both target and controls."""
+        """Checks that there are no qubits that are both target and
+        controls."""
         common = set(self._target_qubits) & self._control_qubits
         if common:
             raise_error(
@@ -139,7 +213,8 @@ class Gate:
 
     @property
     def parameters(self):
-        """Returns a tuple containing the current value of gate's parameters."""
+        """Returns a tuple containing the current value of gate's
+        parameters."""
         return self._parameters
 
     def commutes(self, gate: "Gate") -> bool:
@@ -284,7 +359,6 @@ class Gate:
         .. note::
             ``Gate.matrix`` was an defined as an atribute in ``qibo`` versions prior to  ``0.2.0``.
             From ``0.2.0`` on, it has been converted into a method and has replaced the ``asmatrix`` method.
-
         """
         if backend is None:  # pragma: no cover
             backend = GlobalBackend()
@@ -292,8 +366,7 @@ class Gate:
         return backend.matrix(self)
 
     def generator_eigenvalue(self):
-        """
-        This function returns the eigenvalues of the gate's generator.
+        """This function returns the eigenvalues of the gate's generator.
 
         Returns:
             np.float generator's eigenvalue or raise an error if not implemented.
@@ -316,7 +389,8 @@ class Gate:
         )
 
     def basis_rotation(self):
-        """Transformation required to rotate the basis for measuring the gate."""
+        """Transformation required to rotate the basis for measuring the
+        gate."""
         raise_error(
             NotImplementedError,
             f"Basis rotation is not implemented for {self.__class__.__name__}",
