@@ -20,7 +20,7 @@ class QuantumCNN:
         twoqubitansatz (Qibo.models.Circuit object): A two qubit ansatz that can be input by the user to form the two qubit ansatz used in the convolutional circuit.
     Example:
         .. testcode::
-            
+
             import math
             import numpy as np
             import random
