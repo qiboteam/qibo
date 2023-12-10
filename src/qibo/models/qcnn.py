@@ -1,7 +1,6 @@
 import numpy as np
 
-import qibo
-from qibo import gates, set_backend
+from qibo import gates, get_backend
 from qibo.models import Circuit
 
 
@@ -18,15 +17,16 @@ class QuantumCNN:
         nclasses (int): number of classes to be classified. Default setting of 2 (phases).
         params: initial list of variational parameters. If not provided, all parameters
             will be initialized to zero.
-        twoqubitansatz (Qibo.models.Circuit object): A two qubit ansatz that can be input by the user to form the two qubit ansatz.
+        twoqubitansatz (Qibo.models.Circuit object): A two qubit ansatz that can be input by the user to form the two qubit ansatz used in the convolutional circuit.
     Example:
         .. testcode::
-            import qibo
-            from qibo.models.qcnn import QuantumCNN
+            
             import math
-            import qibo
             import numpy as np
             import random
+            import qibo
+            from qibo.models.qcnn import QuantumCNN
+
 
             qibo.set_backend("numpy")
             data = np.random.rand(16)
@@ -60,7 +60,7 @@ class QuantumCNN:
         self.twoqubitansatz = twoqubitansatz
 
         if copy_init_state is None:
-            if "qibojit" in qibo.get_backend():
+            if "qibojit" in get_backend():
                 self.copy_init_state = True
             else:
                 self.copy_init_state = False
