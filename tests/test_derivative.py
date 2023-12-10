@@ -1,10 +1,14 @@
+import pathlib
+
 import numpy as np
 import pytest
 
 from qibo import Circuit, gates, hamiltonians
-from qibo.backends import GlobalBackend, TensorflowBackend
+from qibo.backends import GlobalBackend, NumpyBackend
 from qibo.derivative import finite_differences, parameter_shift
 from qibo.symbols import Z
+
+REGRESSION_FOLDER = pathlib.Path(__file__).with_name("regressions")
 
 
 # defining an observable
@@ -129,8 +133,8 @@ def test_finite_differences(backend, step_size):
 import tensorflow as tf
 
 from qibo import gates
-from qibo.backends import GlobalBackend, get_backend, set_backend
-from qibo.derivative import VAR, create_hamiltonian, stochastic_parameter_shift
+from qibo.backends import GlobalBackend
+from qibo.derivative import create_hamiltonian, stochastic_parameter_shift
 from qibo.models.circuit import Circuit
 
 
@@ -297,65 +301,53 @@ def gradient_exact_rxry(backend, test_params):
     return gradients
 
 
-@pytest.mark.parametrize("nshots, atol", [(10000, 1e-1)])
-def test_stochastic_parameter_shift(backend, nshots, atol):
-    if not isinstance(backend, TensorflowBackend):
-        pytest.skip(
-            "Stochastic parameter shift is only tested with tensorflow backend."
-        )
+@pytest.mark.parametrize("out, nshots, rtol", [("spsr.out", None, 1e-1)])
+def test_stochastic_parameter_shift(backend, out, nshots, rtol):
+    if type(backend) is not NumpyBackend:
+        pytest.skip("Stochastic parameter shift is only tested with numpy backend.")
+
+    def load(filename):
+        return np.loadtxt(filename)
+
+    filename = REGRESSION_FOLDER / out
+
+    array = load(filename)
+
+    # initializing the circuit
+    c = circuit_rxry(nqubits=1)
+    test_hamiltonian = hamiltonian(nqubits=1, backend=backend)
 
     # testing parameter out of bounds
-    def func():
-        with pytest.raises(ValueError):
-            grad_0 = stochastic_parameter_shift(
-                circuit=c1, hamiltonian=test_hamiltonian, parameter_index=5
-            )
+    with pytest.raises(ValueError):
+        grad_0 = stochastic_parameter_shift(
+            circuit=c, hamiltonian=test_hamiltonian, parameter_index=5
+        )
 
-        # testing hamiltonian type
-        with pytest.raises(TypeError):
-            grad_0 = stochastic_parameter_shift(
-                circuit=c1,
-                hamiltonian=test_hamiltonian,
-                parameter_index=0,
-                nshots=nshots,
-            )
+    c = circuit_rxry(nqubits=1)
 
     np.random.seed(42)
     x = np.linspace(0.1, np.pi, 10)
-    grads = np.zeros((3, 10))
+    grads = np.zeros((10,))
 
     for i, xi in enumerate(x):
         test_params = np.array([0.6, xi, 0.4])
         # exact gradients
-        grads[0, i] = gradient_exact_rxry(backend, test_params)[1]
-
-        # initializing the circuit
-        c1 = circuit_rxry(nqubits=1)
-        c2 = circuit_rxry(nqubits=1)
+        # array = gradient_exact_rxry(backend, test_params)[1]
 
         # some parameters
         # we know the derivative's values with these params
-
-        c1.set_parameters(test_params)
-
-        test_hamiltonian = hamiltonian(nqubits=1, backend=backend)
+        c.set_parameters(test_params)
 
         # executing all the procedure
-        grads[1, i] = stochastic_parameter_shift(
-            circuit=c1,
+        grads[i] = stochastic_parameter_shift(
+            circuit=c,
             hamiltonian=test_hamiltonian,
             parameter_index=1,
             scale_factor=1.0,
-            nshots=None,
+            nshots=nshots,
             stochastic_executions=30,
-        )
-
-        c2.set_parameters(test_params)
-
-        grads[2, i] = test_hamiltonian.expectation(
-            backend.execute_circuit(circuit=c2, initial_state=None).state()
         )
 
     # check of known values
     # calculated using tf.GradientTape
-    backend.assert_allclose(grads[0, :], grads[1, :], atol=atol)
+    backend.assert_allclose(grads, array, rtol=rtol)

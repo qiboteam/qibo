@@ -500,7 +500,7 @@ class VAR:
     def __init__(self, gate):
         self.parameters = gate.parameters
         self.generator = gate.generator
-        self.kwargs = gate.init_kwargs
+        self.kwargs = copy.deepcopy(gate.init_kwargs)
         del self.kwargs["trainable"]
         self.original_gate = gate
 
