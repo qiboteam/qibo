@@ -1,8 +1,5 @@
 from functools import cached_property
 
-import numpy as np
-import scipy
-
 from qibo.config import raise_error
 
 

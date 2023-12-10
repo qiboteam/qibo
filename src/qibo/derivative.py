@@ -9,80 +9,8 @@ from qibo.hamiltonians import Hamiltonian
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 
 
-def execute_circuit(
-    backend,
-    c,
-    obs,
-    nshots=None,
-    initial_state=None,
-    cdr_params=None,
-    calibration=None,
-    deterministic=False,
-):
-    """
-    Probabilistic circuit execution with possibilities for error mitigation
-
-    Developed by Michael Tsesmelis (ACSE-mct22)
-
-    Args:
-        backend (:class:`qibo.backends.abstract.Backend`): backend to execute circuit on
-        c (:class:`qibo.models.circuit.Circuit`): custom quantum circuit.
-        obs (:class:`qibo.hamiltonians.Hamiltonian`): target observable.
-            if you want to execute on hardware, a symbolic hamiltonian must be
-            provided as follows (example with Pauli Z and ``nqubits=1``):
-            ``SymbolicHamiltonian(np.prod([ Z(i) for i in range(1) ]))``.
-        parameter_index (int): the index which identifies the target parameter
-            in the ``circuit.get_parameters()`` list.
-        initial_state (ndarray, optional): initial state on which the circuit
-            acts. Default is ``None``.
-        scale_factor (float, optional): parameter scale factor. Default is ``1``.
-        nshots (int, optional): number of shots if derivative is evaluated on
-            hardware. If ``None``, the simulation mode is executed.
-            Default is ``None``.
-    """
-    if deterministic or nshots is None:
-        state = c().state()
-        if isinstance(obs, list):
-            res = []
-            for o in obs:
-                res.append(o.expectation(state))
-        else:
-            res = obs.expectation(state)
-        return res
-
-    # retrieve state
-    state = backend.execute_circuit(
-        circuit=c, nshots=nshots, initial_state=initial_state
-    )
-
-    # get expectation values
-    if isinstance(obs, list):
-        result = []
-        for o in obs:
-            exp = state.expectation_from_samples(o)
-
-            # apply CDR correction
-            if cdr_params is not None:
-                a, b = cdr_params
-                exp = a * exp + b
-
-            result.append(exp)
-
-    else:
-        result = state.expectation_from_samples(obs)
-
-        # apply CDR correction
-        if cdr_params is not None:
-            a, b = cdr_params
-            result = a * result + b
-
-    return np.real(result)
-
-
 def create_hamiltonian(qubit=0, nqubits=1, backend=None):
     """Precomputes Hamiltonian.
-
-    Enhanced by Michael Tsesmelis (ACSE-mct22)
 
     Args:
         nqubits (int): number of qubits.

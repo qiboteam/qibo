@@ -377,17 +377,6 @@ class Gate:
             f"Generator eigenvalue is not implemented for {self.__class__.__name__}",
         )
 
-    def is_clifford(self) -> bool:
-        """Check if the gate is a Clifford gate."""
-        return False
-
-    def decompose_into_clifford(self) -> List["Gate"]:
-        """Decompose a gate into a sequence of Clifford gates."""
-        raise_error(
-            NotImplementedError,
-            f"Decomposition into Clifford gates is not implemented for {self.__class__.__name__}",
-        )
-
     def basis_rotation(self):
         """Transformation required to rotate the basis for measuring the
         gate."""

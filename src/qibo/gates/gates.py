@@ -37,14 +37,6 @@ class H(Gate):
     def qasm_label(self):
         return "h"
 
-    def decompose_into_clifford(self):
-        clifford_queue = [
-            RZ(q=self.qubits[0], theta=np.pi / 2, trainable=False),
-            RX(q=self.qubits[0], theta=np.pi / 2, trainable=False),
-            RZ(q=self.qubits[0], theta=np.pi / 2, trainable=False),
-        ]
-        return clifford_queue
-
 
 class X(Gate):
     """The Pauli-:math:`X` gate.
@@ -157,9 +149,6 @@ class X(Gate):
 
     def basis_rotation(self):
         return H(self.target_qubits[0])
-
-    def is_clifford(self):
-        return True
 
 
 class Y(Gate):
@@ -587,22 +576,6 @@ class RX(_Rn_):
     def generator_eigenvalue(self):
         return 0.5
 
-    def is_clifford(self):
-        if np.abs(self.parameters) == np.pi / 2:
-            clifford_condition = True
-        else:
-            clifford_condition = False
-        return clifford_condition
-
-    def decompose_into_clifford(self):
-        clifford_queue = [
-            RZ(q=self.qubits[0], theta=np.pi / 2, trainable=False),
-            RX(q=self.qubits[0], theta=-np.pi / 2, trainable=False),
-            RZ(q=self.qubits[0], theta=self.parameters),
-            RX(q=self.qubits[0], theta=np.pi / 2, trainable=False),
-        ]
-        return clifford_queue
-
 
 class RY(_Rn_):
     """Rotation around the Y-axis of the Bloch sphere.
@@ -638,16 +611,6 @@ class RY(_Rn_):
     def generator_eigenvalue(self):
         return 0.5
 
-    def decompose_into_clifford(self):
-        clifford_queue = [
-            RX(q=self.qubits[0], theta=np.pi / 2, trainable=False),
-            RZ(q=self.qubits[0], theta=self.parameters[0]),
-            RZ(q=self.qubits[0], theta=np.pi, trainable=False),
-            RX(q=self.qubits[0], theta=np.pi / 2, trainable=False),
-            RZ(q=self.qubits[0], theta=np.pi, trainable=False),
-        ]
-        return clifford_queue
-
 
 class RZ(_Rn_):
     """Rotation around the Z-axis of the Bloch sphere.
@@ -680,9 +643,6 @@ class RZ(_Rn_):
 
     def generator_eigenvalue(self):
         return 0.5
-
-    def is_clifford(self):
-        return True
 
 
 class GPI(ParametrizedGate):
@@ -1020,9 +980,6 @@ class CNOT(Gate):
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
         q0, q1 = self.control_qubits[0], self.target_qubits[0]
         return [self.__class__(q0, q1)]
-
-    def is_clifford(self):
-        return True
 
 
 class CY(Gate):

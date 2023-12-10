@@ -505,26 +505,6 @@ class Circuit:
             decomp_circuit.add(gate.decompose(*free))
         return decomp_circuit
 
-    def to_clifford(self):
-        """Translate a circuit into an equivalent one composed of only Clifford gates.
-
-        In `Qibo` we refers to [``X``, ``CNOT``, ``RX(pi/2)``, ``RZ(theta)``] as
-        Clifford gates.
-
-        Returns:
-            Circuit object containing only Clifford gates.
-        """
-
-        clifford_circuit = self.__class__(**self.init_kwargs)
-        # cycle on gates replacing non-clifford with clifford
-        for gate in self.queue:
-            if gate.is_clifford():
-                clifford_circuit.add(gate)
-            else:
-                clifford_circuit.add(gate.decompose_into_clifford())
-
-        return clifford_circuit
-
     def with_pauli_noise(self, noise_map: NoiseMapType):
         """Creates a copy of the circuit with Pauli noise gates after each
         gate.
