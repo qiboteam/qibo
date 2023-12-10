@@ -518,11 +518,10 @@ class VAR:
 
         g = self.original_gate
 
-        return gates.OneQubitGate(
+        return gates.ParametrizedUnitary(
+            generator,
             g.target_qubits[0],
-            "V",
             exponentiated=g.exponentiated,
-            generator=generator,
             angle=angle,
         )
 

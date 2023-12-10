@@ -2,7 +2,6 @@ import collections
 
 import numpy as np
 import scipy as sp
-import tensorflow as tf
 
 from qibo import __version__
 from qibo.backends import einsum_utils
@@ -115,12 +114,7 @@ class NumpyBackend(Backend):
         if hasattr(self.matrices, name):
             return getattr(self.matrices, name)(*gate.parameters)
         else:
-            if gate.exponentiated:
-                return sp.linalg.expm(
-                    -1j * gate.scaling * gate.generator(*gate.parameters)
-                )
-            else:
-                return gate.generator(*gate.parameters)
+            return gate.make_unitary()
 
     def matrix_fused(self, fgate):
         rank = len(fgate.target_qubits)

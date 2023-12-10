@@ -2,6 +2,7 @@ import math
 from typing import List
 
 import numpy as np
+import scipy as sp
 
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate, ParametrizedGate
@@ -740,36 +741,6 @@ class GPI2(ParametrizedGate):
     def _dagger(self) -> "Gate":
         """"""
         return self.__class__(self.target_qubits[0], self.parameters[0] + math.pi)
-
-
-class OneQubitGate(ParametrizedGate):
-    def __init__(
-        self,
-        q,
-        name,
-        generator,
-        scaling=1.0,
-        exponentiated=False,
-        drawlabel="S",
-        trainable=True,
-        **kwargs,
-    ):
-        super().__init__(trainable)
-        self.name = name
-        self.drawlabel = drawlabel
-        self.target_qubits = (q,)
-        self.generator = generator
-        self.exponentiated = exponentiated
-        self.scaling = scaling
-
-        k, v = kwargs.keys(), kwargs.values()
-        self.parameter_names = list(k) if len(k) > 1 else list(k)[0]
-        self.parameters = list(v) if len(v) > 1 else list(v)[0]
-        self.nparams = len(kwargs)
-
-        self.init_args = [q]
-        kwargs["trainable"] = trainable
-        self.init_kwargs = kwargs
 
 
 class _Un_(ParametrizedGate):
@@ -2233,3 +2204,71 @@ class Unitary(ParametrizedGate):
     def _dagger(self):
         ud = np.conj(np.transpose(self.parameters[0]))
         return self.__class__(ud, *self.target_qubits, **self.init_kwargs)
+
+
+class ParametrizedUnitary(ParametrizedGate):
+    """Arbitrary parametrized unitary gate.
+
+    Args:
+        generator (callable): Parametrized unitary generator as callable.
+        *q (int): Qubit id numbers that the gate acts on.
+        name (str): Optional name for the gate.
+        exponentiated (bool): whether generator matrix should be exponentiated to form the unitary.
+        trainable (bool): whether gate parameters can be updated using
+            :meth:`qibo.models.circuit.Circuit.set_parameters`.
+            Defaults to ``True``.
+        check_unitary (bool): if ``True``, checks if ``unitary`` is an unitary operator.
+            If ``False``, check is not performed and ``unitary`` attribute
+            defaults to ``False``. Note that, even when the check is performed,
+            there is no enforcement. This allows the user to create
+            non-unitary gates. Default is ``True``.
+        scaling (float): scaling constant multiplying the generator before the generator matrix is exponentiated.
+        **kwargs (float): Initial parameters names and values for executing the generator callable.
+    """
+
+    def __init__(
+        self,
+        generator,
+        *q,
+        name: str = None,
+        exponentiated: bool = False,
+        trainable: bool = True,
+        check_unitary: bool = True,
+        scaling: float = 1.0,
+        **kwargs,
+    ):
+        super().__init__(trainable)
+        self.name = name
+        self.drawlabel = "PU"
+        self.target_qubits = tuple(q)
+        self.generator = generator
+        self.exponentiated = exponentiated
+        self.scaling = scaling
+
+        k, v = kwargs.keys(), kwargs.values()
+        self.parameter_names = list(k) if len(k) > 1 else list(k)[0]
+        self.parameters = list(v) if len(v) > 1 else list(v)[0]
+        self.nparams = len(kwargs)
+
+        self.init_args = [q]
+        kwargs["trainable"] = trainable
+        self.init_kwargs = kwargs
+
+        # checking unitarity without invoking any backend
+        if check_unitary:
+            unitary = self.make_unitary()
+            product = np.transpose(np.conj(unitary)) @ unitary
+            sums = all(np.abs(1 - np.sum(product, axis=1)) < PRECISION_TOL)
+            diagonal = all(np.abs(1 - np.diag(product)) < PRECISION_TOL)
+
+            self.unitary = True if sums and diagonal else False
+            del sums, diagonal, product
+
+    def make_unitary(self):
+        """Runs generator callable as unitary matrix or exponentiates generator using scipy's matrix
+        exponentiation tools if the gate.exponentiated is ``True``."""
+
+        if self.exponentiated:
+            return sp.linalg.expm(-1j * self.scaling * self.generator(*self.parameters))
+        else:
+            return self.generator(*self.parameters)

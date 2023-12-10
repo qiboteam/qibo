@@ -262,9 +262,7 @@ def circuit_rxry(nqubits=1):
     c = Circuit(nqubits)
     # all gates for which generator eigenvalue is implemented
     c.add(gates.RY(q=0, theta=0))
-    c.add(
-        gates.OneQubitGate(0, "RXRY", exponentiated=True, generator=RXRY_gate, phi=0.1)
-    )
+    c.add(gates.ParametrizedUnitary(RXRY_gate, 0, exponentiated=True, phi=0.1))
     c.add(gates.RX(q=0, theta=0))
     c.add(gates.M(0))
 
@@ -281,8 +279,8 @@ def gradient_exact_rxry(backend, test_params):
     c = Circuit(1)
     c.add(gates.RY(q=0, theta=0))
     c.add(
-        gates.OneQubitGate(
-            0, "RXRY", exponentiated=False, generator=RXRY_gate_exponentiated, phi=0.1
+        gates.ParametrizedUnitary(
+            RXRY_gate_exponentiated, 0, exponentiated=False, phi=0.1
         )
     )
     c.add(gates.RX(q=0, theta=0))
