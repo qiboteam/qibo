@@ -123,26 +123,32 @@ def ZNE(
         noise_levels (numpy.ndarray): Sequence of noise levels.
         noise_model (:class:`qibo.noise.NoiseModel`, optional): Noise model applied
             to simulate noisy computation.
-        nshots (int, optional): Number of shots.
+        nshots (int, optional): Number of shots. Defauylts to 10000.
         solve_for_gammas (bool, optional): If ``True``, explicitly solve the
-            equations to obtain the ``gamma`` coefficients.
+            equations to obtain the ``gamma`` coefficients. Default is ``False``.
         insertion_gate (str, optional): gate to be used in the insertion.
             If ``"RX"``, the gate used is :math:``RX(\\pi / 2)``.
-            Default is ``"CNOT"``.
-        readout (dict, optional): It has the structure
-            {'calibration_matrix': `numpy.ndarray`, 'ncircuits': `int`}.
-            If passed, the calibration matrix or the randomized method is
-            used to mitigate readout errors.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): Calculation engine.
+            Defaults to ``"CNOT"``.
+        readout (dict, optional): A dictionary that may contain the following keys:
+            - 'calibration_matrix': numpy.ndarray, used for applying a pre-computed calibration matrix for readout error mitigation.
+            - 'random_ncircuits': int, specifies the number of random circuits to use for the randomized method of readout error mitigation.
+            - 'ibu_iters': int, specifies the number of iterations for the iterative Bayesian update method of readout error mitigation.
+            If provided, the corresponding readout error mitigation method is used.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
 
     Returns:
         numpy.ndarray: Estimate of the expected value of ``observable`` in the noise free condition.
-    """
 
+    Reference:
+        1. K. Temme, S. Bravyi et al, *Error mitigation for short-depth quantum circuits*.
+           `arXiv:1612.02058 [quant-ph] <https://arxiv.org/abs/1612.02058>`_.
+    """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    expected_val = []
+    expected_values = []
     for num_insertions in noise_levels:
         noisy_circuit = get_noisy_circuit(
             circuit, num_insertions, insertion_gate=insertion_gate
@@ -156,17 +162,17 @@ def ZNE(
                 noisy_circuit = noise_model.apply(noisy_circuit)
             circuit_result = backend.execute_circuit(noisy_circuit, nshots=nshots)
         if "calibration_matrix" in readout.keys() is not None:
-            circuit_result = apply_readout_mitigation(
-                circuit_result, readout["calibration_matrix"]
+            circuit_result = apply_cal_mat_readout_mitigation(
+                circuit_result, readout["calibration_matrix"], readout["ibu_iters"]
             )
         val = circuit_result.expectation_from_samples(observable)
         if "ncircuits" in readout.keys():
             val /= circuit_result_cal.expectation_from_samples(observable)
-        expected_val.append(val)
+        expected_values.append(val)
 
-    gamma = get_gammas(noise_levels, solve=solve_for_gammas)
+    gamma = get_gammas(noise_levels, analytical=solve_for_gammas)
 
-    return np.sum(gamma * expected_val)
+    return np.sum(gamma * expected_values)
 
 
 def sample_training_circuit(
