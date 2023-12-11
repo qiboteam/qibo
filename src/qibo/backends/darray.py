@@ -30,4 +30,5 @@ class DarrayBackend(NumpyBackend):
             raise ValueError("Initial state not supported by darray backend")
 
         super().execute_circuit(circuit, nshots=nshots)
+        # pylint: disable=E1101
         self.client.compute(self._final_state._state)
