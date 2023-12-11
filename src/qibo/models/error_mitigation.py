@@ -553,14 +553,14 @@ def apply_cal_mat_readout_mitigation(state, calibration_matrix, iterations=None)
     Applies readout error mitigation to the given state using the provided calibration matrix.
 
     Args:
-        state (:class:`qibo.states.CircuitResult`): the input state to be updated. This state should contain the
+        state (:class:`qibo.measurements.CircuitResult`): the input state to be updated. This state should contain the
             frequencies that need to be mitigated.
         calibration_matrix (numpy.ndarray, optional): the calibration matrix for readout mitigation.
         iterations (int, optional): the number of iterations to use for the Iterative Bayesian Unfolding method.
             If ``None`` the 'inverse' method is used. Defaults to ``None``.
 
     Returns:
-        :class:`qibo.states.CircuitResult`: The input state with the updated (mitigated) frequencies.
+        :class:`qibo.measurements.CircuitResult`: The input state with the updated (mitigated) frequencies.
     """
     frequencies = np.zeros(2 ** len(state.measurements[0].qubits))
     for key, value in state.frequencies().items():
@@ -938,7 +938,7 @@ def ICS(
 
 
 def transpile_circ(circuit, qubit_map, backend):
-    from qibolab.transpilers.unitary_decompositions import u3_decomposition
+    from qibo.transpiler.unitary_decompositions import u3_decomposition
 
     if backend.name == "qibolab":
         if qubit_map is None:
