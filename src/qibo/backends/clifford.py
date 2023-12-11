@@ -12,7 +12,7 @@ from qibo.config import raise_error
 
 
 def _calculation_engine(backend):
-    """Helper function to initiate Clifford backend with the correct engine."""
+    """Helper function to initialize the Clifford backend with the correct engine."""
     if backend.name == "qibojit":
         if (
             backend.platform == "cupy" or backend.platform == "cuquantum"
@@ -466,6 +466,17 @@ class CliffordOperations:
         symplectic_matrix[-1, :] = val
 
     def _exponent(self, x1, z1, x2, z2):
+        """Helper function that computes the exponent to which i is raised for the product of the x and z paulis encoded in the symplectic matrix. This is used in _rowsum. The computation is performed parallely over the separated paulis x1[i], z1[i], x2[i] and z2[i].
+
+        Args:
+            x1 (np.array): Bits of the first x paulis.
+            z1 (np.array): Bits of the first z paulis.
+            x2 (np.array): Bits of the second x paulis.
+            z2 (np.array): Bits of the second z paulis.
+
+        Returns:
+            (np.array): The calculated exponents.
+        """
         exp = self.np.zeros(x1.shape, dtype=int)
         x1_eq_z1 = (x1 ^ z1) == 0
         x1_neq_z1 = x1_eq_z1 ^ True
@@ -480,6 +491,18 @@ class CliffordOperations:
         return exp
 
     def _rowsum(self, symplectic_matrix, h, i, nqubits, include_scratch: bool = False):
+        """Helper function that updates the symplectic matrix by setting the h-th generator equal to the (i+h)-th one. This is done to keep track of the phase of the h-th row of the symplectic matrix (r[h]). The function is applied parallely over all the rows h and i passed.
+
+        Args:
+            symplectic_matrix (np.array): Input symplectic matrix.
+            h (np.array): Indices of the rows encoding the generators to update.
+            i (np.array): Indices of the rows encoding the generators to use.
+            nqubits (int): Total number of qubits.
+            include_scratch (bool): If ``True`` the scratch row (last row of the symplectic matrix) is inlcuded in the computation as well.
+
+        Returns:
+            (np.array): The updated symplectic matrix.
+        """
         x, z = self._get_x(symplectic_matrix, nqubits, include_scratch), self._get_z(
             symplectic_matrix, nqubits, include_scratch
         )
