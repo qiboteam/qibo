@@ -1379,7 +1379,7 @@ In that case, indeed, the number of operators needed reduces to :math:`n`.
 Each one of these :math:`n` Pauli generators takes :math:`2n + 1` bits to specify,
 yielding a :math:`n(2n+1)` total number of bits needed.
 In particular, `Aaronson and Gottesman (2004) <aaronson_>`_ demonstrated that the application of gates can be efficiently simulated
-in this representation at the cost of storing the generators of the de-stabilizers in addition to the stabilizers.
+in this representation at the cost of storing the generators of the destabilizers in addition to the stabilizers.
 
 Therefore, the :math:`n`-qubits state is uniquely defined by a symplectic matrix of the form
 
@@ -1421,7 +1421,7 @@ or the complete set of stabilizers operators can be generated through the
    generators, phases = clifford.generators()
    stabilizers = clifford.stabilizers()
 
-The de-stabilizers can be extracted analogously with :meth:`qibo.quantum_info.clifford.Clifford.destabilizers`.
+The destabilizers can be extracted analogously with :meth:`qibo.quantum_info.clifford.Clifford.destabilizers`.
 
 .. autoclass:: qibo.quantum_info.clifford.Clifford
     :members:

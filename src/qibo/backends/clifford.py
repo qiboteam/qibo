@@ -693,7 +693,7 @@ class CliffordBackend(NumpyBackend):
     def symplectic_matrix_to_generators(
         self, symplectic_matrix, return_array: bool = False
     ):
-        """Extract both the stabilizers and de-stabilizers generators from the input symplectic_matrix.
+        """Extract both the stabilizers and destabilizers generators from the input symplectic_matrix.
 
         Args:
             symplectic_matrix (ndarray): The input symplectic_matrix.
