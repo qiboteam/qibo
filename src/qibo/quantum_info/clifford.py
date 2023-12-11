@@ -1,7 +1,9 @@
+"""Module definig the Clifford object, which allows phase-space representation of Clifford circuits and stabilizer states."""
+
 from dataclasses import dataclass
 from functools import reduce
 from itertools import product
-from typing import Optional
+from typing import Optional, Union
 
 import numpy as np
 
@@ -14,11 +16,11 @@ from qibo.measurements import frequencies_to_binary
 
 @dataclass
 class Clifford:
-    """The object storing the results of a circuit execution with the :class:`qibo.backends.CliffordBackend`.
+    """Object storing the results of a circuit execution with the :class:`qibo.backends.clifford.CliffordBackend`.
 
     Args:
-        symplectic_matrix (np.ndarray): Symplectic matrix of the state in phase-space representation.
-        nqubits (int): number of qubits of the state.
+        symplectic_matrix (ndarray): Symplectic matrix of the state in phase-space representation.
+        nqubits (int, optional): number of qubits of the state.
         measurements (list, optional): list of measurements gates :class:`qibo.gates.M`.
             Defaults to ``None``.
         nshots (int, optional): number of shots used for sampling the measurements.
@@ -31,14 +33,14 @@ class Clifford:
     """
 
     symplectic_matrix: np.ndarray
-    nqubits: int = None
+    nqubits: Optional[int] = None
     measurements: Optional[list] = None
     nshots: int = 1000
     engine: Optional[Backend] = None
 
-    _backend: CliffordBackend = None
+    _backend: Optional[CliffordBackend] = None
     _measurement_gate = None
-    _samples = None
+    _samples: Optional[int] = None
 
     def __post_init__(self):
         # adding the scratch row if not provided
@@ -68,6 +70,7 @@ class Clifford:
             (:class:`qibo.quantum_info.clifford.Clifford`): The object storing the result of the circuit execution.
         """
         cls._backend = CliffordBackend(engine)
+
         return cls._backend.execute_circuit(circuit, initial_state, nshots)
 
     # TODO: implement this method in separate PR based on `Bravyi & Maslov (2022) <https://arxiv.org/abs/2003.09412>`_.
@@ -76,14 +79,14 @@ class Clifford:
         raise_error(NotImplementedError, "`to_circuit` method not implemented yet.")
 
     def generators(self, return_array: bool = False):
-        """Extracts the generators of both the de-stabilizers (first ``n-qubits`` elements) and the stabilizers (second ``n-qubits`` elements).
+        """Extracts the generators of stabilizers and destabilizers.
 
         Args:
             return_array (bool, optional): If ``True`` returns the generators as ``ndarray``.
                 If ``False``, their representation as strings is returned. Defaults to ``False``.
 
         Returns:
-            (list, list): Generators and their corresponding phases.
+            (list, list): Generators and their corresponding phases, respectively.
         """
         return self._backend.symplectic_matrix_to_generators(
             self.symplectic_matrix, return_array
@@ -107,7 +110,7 @@ class Clifford:
         )
 
     def destabilizers(self, return_array: bool = False):
-        """Extracts the de-stabilizers of the state.
+        """Extracts the destabilizers of the state.
 
         Args:
             return_array (bool, optional): If ``True`` returns the destabilizers as ``ndarray``.
@@ -117,6 +120,7 @@ class Clifford:
             (list): Destabilizers of the state.
         """
         generators, phases = self.generators(return_array)
+
         return self._construct_operators(
             generators[: self.nqubits], phases[: self.nqubits]
         )
@@ -124,10 +128,14 @@ class Clifford:
     def state(self):
         """Builds the density matrix representation of the state.
 
+        .. note::
+            This method is inefficient in runtime and memory for a large number of qubits.
+
         Returns:
-            (np.ndarray): Density matrix of the state.
+            (ndarray): Density matrix of the state.
         """
         stabilizers = self.stabilizers(True)
+
         return self.engine.np.sum(stabilizers, axis=0) / len(stabilizers)
 
     @property
@@ -149,8 +157,10 @@ class Clifford:
         """Returns raw measurement samples.
 
         Args:
-            binary (bool, optional): Return samples in binary or decimal form.
-            registers (bool, optional): Group samples according to registers.
+            binary (bool, optional): If ``False``, return samples in binary form.
+                If ``True``, returns samples in decimal form. Defalts to ``True``.
+            registers (bool, optional): If ``True``, groups samples according to registers.
+                Defaults to ``False``.
 
         Returns:
             If ``binary`` is ``True``
@@ -214,8 +224,10 @@ class Clifford:
         """Returns the frequencies of measured samples.
 
         Args:
-            binary (bool, optional): Return frequency keys in binary or decimal form.
-            registers (bool, optional): Group frequencies according to registers.
+            binary (bool, optional): If ``True``, return frequency keys in binary form.
+                If ``False``, return frequency keys in decimal form. Defaults to ``True``.
+            registers (bool, optional): If ``True``, groups frequencies according to registers.
+                Defaults to ``False``.
 
         Returns:
             A `collections.Counter` where the keys are the observed values
@@ -258,15 +270,18 @@ class Clifford:
 
         return freq
 
-    def probabilities(self, qubits: Optional[tuple] = None):
+    def probabilities(self, qubits: Optional[Union[tuple, list]] = None):
         """Computes the probabilities of the selected qubits from the measured samples.
 
         Args:
-            qubits (tuple): Qubits for which to compute the probabilities.
+            qubits (tuple or list, optional): Qubits for which to compute the probabilities.
 
         Returns:
-            (np.ndarray): Measured probabilities.
+            (ndarray): Measured probabilities.
         """
+        if isinstance(qubits, list):
+            qubits = tuple(qubits)
+
         measured_qubits = self.measurement_gate.qubits
         if qubits is not None:
             if not set(qubits).issubset(set(measured_qubits)):
@@ -289,7 +304,7 @@ class Clifford:
             self.engine.np.sqrt(probs), qubits, len(measured_qubits)
         )
 
-    def _construct_operators(self, generators, phases: list):
+    def _construct_operators(self, generators: list, phases: list):
         """Helper function to construct all the operators from their generators.
 
         Args:
@@ -334,7 +349,7 @@ def _one_qubit_paulis_string_product(pauli_1: str, pauli_2: str):
         pauli_2 (str): Second Pauli operator.
 
     Returns:
-        (str): The product of the two Pauli operators.
+        (str): Product of the two Pauli operators.
     """
     products = {
         "XY": "iZ",
@@ -377,7 +392,7 @@ def _string_product(operators: list):
     """Calculates the tensor product of a list of operators represented as strings.
 
     Args:
-        operators (list): The list of operators.
+        operators (list): list of operators.
 
     Returns:
         (str): String representing the tensor product of the operators.
