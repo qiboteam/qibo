@@ -1,7 +1,7 @@
 import os
 
-from qibo.backends.abstract import Backend
 from qibo.backends.clifford import CliffordBackend
+from qibo.backends.darray import DarrayBackend
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.backends.numpy import NumpyBackend
 from qibo.backends.tensorflow import TensorflowBackend
@@ -29,6 +29,9 @@ def construct_backend(backend, platform=None, runcard=None):
 
     elif backend == "numpy":
         return NumpyBackend()
+
+    elif backend == "numpy":
+        return DarrayBackend(platform)
 
     elif backend == "qibolab":  # pragma: no cover
         from qibolab.backends import QibolabBackend  # pylint: disable=E0401
