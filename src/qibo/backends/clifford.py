@@ -466,10 +466,10 @@ class CliffordOperations:
         symplectic_matrix[-1, :] = val
 
     def _exponent(self, x1, z1, x2, z2):
-        """Computes the exponent to which i is raised for the product of the x and z Paulis encoded in the symplectic matrix. 
-        
-        This is used in _rowsum. 
-        The computation is performed parallely over the separated Paulis 
+        """Computes the exponent to which i is raised for the product of the x and z Paulis encoded in the symplectic matrix.
+
+        This is used in _rowsum.
+        The computation is performed parallely over the separated Paulis
         x1[i], z1[i], x2[i] and z2[i].
 
         Args:
