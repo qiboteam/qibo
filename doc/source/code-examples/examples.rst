@@ -8,10 +8,16 @@ How to write and execute a circuit?
 
 Here is an example of a circuit with 2 qubits:
 
-.. testcode::
+.. testsetup::
 
     import numpy as np
     from qibo import Circuit, gates
+
+.. doctest::
+    >>> from qibo import get_backend
+    :skipif: get_backend() == "clifford"
+
+.. testcode::
 
     # Construct the circuit
     c = Circuit(2)
@@ -26,6 +32,7 @@ Here is an example of a circuit with 2 qubits:
     # should print `tf.Tensor([1, 0, 0, 0])`
     print(result.state())
     # should print `np.array([1, 0, 0, 0])`
+
 .. testoutput::
     :hide:
 
