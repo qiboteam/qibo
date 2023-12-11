@@ -935,3 +935,26 @@ def ICS(
         )
 
     return mitigated_expectation
+
+
+def transpile_circ(circuit, qubit_map, backend):
+    from qibolab.transpilers.unitary_decompositions import u3_decomposition
+
+    if backend.name == "qibolab":
+        if qubit_map is None:
+            qubit_map = list(range(circuit.nqubits))
+        new_c = circuit.__class__(backend.platform.nqubits)
+        for gate in circuit.queue:
+            qubits = [qubit_map[j] for j in gate.qubits]
+            if isinstance(gate, gates.M):
+                new_gate = gates.M(*tuple(qubits), **gate.init_kwargs)
+                new_gate.result = gate.result
+                new_c.add(new_gate)
+            elif isinstance(gate, gates.I):
+                new_c.add(gate.__class__(*tuple(qubits), **gate.init_kwargs))
+            else:
+                matrix = gate.matrix()
+                new_c.add(gates.U3(qubits[0], *u3_decomposition(matrix)))
+        return new_c
+
+    return circuit
