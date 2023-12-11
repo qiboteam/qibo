@@ -132,13 +132,7 @@ class VQE:
         Args:
             state (np.ndarray): quantum state to be used to compute the energy fluctuation with H.
         """
-        energy = self.hamiltonian.expectation(state)
-        h = self.hamiltonian.matrix
-        h2 = Hamiltonian(
-            nqubits=self.hamiltonian.nqubits, matrix=h @ h, backend=self.backend
-        )
-        average_h2 = self.backend.calculate_expectation_state(h2, state, normalize=True)
-        return np.sqrt(average_h2 - energy**2)
+        return self.hamiltonian.energy_fluctuation(state)
 
 
 class AAVQE:
