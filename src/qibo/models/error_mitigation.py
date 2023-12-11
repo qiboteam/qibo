@@ -678,31 +678,33 @@ def sample_clifford_training_circuit(
             form (``gates.XYZ``, ``kwargs``). For example, phase gates are used by default:
             ``list((RZ, {'theta':0}), (RZ, {'theta':pi/2}), (RZ, {'theta':pi}), (RZ, {'theta':3*pi/2}))``.
         sigma (float, optional): standard devation of the Gaussian distribution used for sampling.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): Calculation engine.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
 
     Returns:
         :class:`qibo.models.Circuit`: The sampled circuit.
     """
-    from qibo.quantum_info import random_clifford
+    from qibo.quantum_info import (  # pylint: disable=import-outside-toplevel
+        random_clifford,
+    )
 
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    # Find all the non-Clifford gates
-    gates_to_replace = []
-    for i, gate in enumerate(circuit.queue):
-        if gate.clifford is False and isinstance(gate, gates.M) is False:
-            gates_to_replace.append([i, gate])
-    gates_to_replace = np.array(gates_to_replace, dtype=object)
+    non_clifford_gates = [
+        (i, gate)
+        for i, gate in enumerate(circuit.queue)
+        if not gate.clifford and not isinstance(gate, gates.M)
+    ]
 
-    if len(gates_to_replace) == 0:
+    if not non_clifford_gates:
         raise_error(ValueError, "No non-Clifford gate found, no circuit sampled.")
 
-    # Build the training circuit by substituting the sampled gates
     sampled_circuit = circuit.__class__(**circuit.init_kwargs)
 
     for i, gate in enumerate(circuit.queue):
-        if gate.name == "id_end":  # isinstance(gate, gates.M):
+        if isinstance(gate, gates.M):
             gate_rand = gates.Unitary(
                 random_clifford(1, backend=backend, return_circuit=False),
                 gate.qubits[0],
@@ -713,98 +715,99 @@ def sample_clifford_training_circuit(
             sampled_circuit.add(gate)
 
         else:
-            if i in gates_to_replace[:, 0]:
+            if i in [index for index, _ in non_clifford_gates]:
                 gate = gates.Unitary(
                     random_clifford(1, backend=backend, return_circuit=False),
                     gate.qubits[0],
                 )
                 gate.clifford = True
             sampled_circuit.add(gate)
+
     return sampled_circuit
 
 
-def transpile_circ(circuit, qubit_map, backend):
-    from qibolab.transpilers.unitary_decompositions import u3_decomposition
-
-    if backend.name == "qibolab":
-        new_c = circuit.__class__(backend.platform.nqubits)
-        for gate in circuit.queue:
-            qubits = [qubit_map[j] for j in gate.qubits]
-            if isinstance(gate, gates.M):
-                new_gate = gates.M(*tuple(qubits), **gate.init_kwargs)
-                new_gate.result = gate.result
-                new_c.add(new_gate)
-            elif isinstance(gate, gates.I):
-                new_c.add(gate.__class__(*tuple(qubits), **gate.init_kwargs))
-            else:
-                matrix = gate.matrix()
-                new_c.add(gates.U3(qubits[0], *u3_decomposition(matrix)))
-        return new_c
-    else:
-        return circuit
-
-
-def escircuit(circuit, obs, fuse=True, backend=None):
+def error_sensitive_circuit(circuit, observable, fuse=True, backend=None):
     """
-    Error sensitive circuit algorithm.
-    Implement what proposed in https://arxiv.org/abs/2112.06255.
+    Generates a Clifford circuit that preserves the same circuit frame as the input circuit, and stabilizes the specified Pauli observable.
+
+    Args:
+        circuit (:class:`qibo.models.Circuit`): input circuit.
+        observable (numpy.ndarray): Pauli observable to be measured.
+        fuse (bool, optional): if True, fuse the single qubits gates in the circuit.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. if ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
+
+    Returns:
+        :class:`qibo.models.Circuit`: the error sensitive circuit.
+        :class:`qibo.models.Circuit`: the sampled Clifford circuit.
+        list: the list of adjustment gates.
+
+    Reference:
+        1. Dayue Qin, Yanzhu Chen et al, *Error statistics and scalability of quantum error mitigation formulas*.
+           `arXiv:2112.06255 [quant-ph] <https://arxiv.org/abs/2112.06255>`_.
     """
-    from qibo.quantum_info import comp_basis_to_pauli, random_clifford, vectorization
+    from qibo.quantum_info import (  # pylint: disable=import-outside-toplevel
+        comp_basis_to_pauli,
+        random_clifford,
+        vectorization,
+    )
 
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    sign = -1
-    # while sign == -1:
-    circ_cliff = sample_clifford_training_circuit(circuit, backend=backend)
-    c_unitary = circ_cliff.unitary(backend=backend)
-    nqubits = circ_cliff.nqubits
-    U_c2p = comp_basis_to_pauli(nqubits, backend=backend)
-    obs_liouville = vectorization(
-        np.transpose(np.conjugate(c_unitary)) @ obs.matrix @ c_unitary, order="row"
+    sampled_circuit = sample_clifford_training_circuit(circuit, backend=backend)
+    unitary_matrix = sampled_circuit.unitary(backend=backend)
+    num_qubits = sampled_circuit.nqubits
+
+    comp_to_pauli = comp_basis_to_pauli(num_qubits, backend=backend)
+    observable_liouville = vectorization(
+        np.transpose(np.conjugate(unitary_matrix)) @ observable.matrix @ unitary_matrix,
+        order="row",
+        backend=backend,
     )
-    obs_pauli_liouville = U_c2p @ obs_liouville
-    index = np.where(abs(obs_pauli_liouville) >= 1e-5)[0][0]
-    sign = np.sign(obs_pauli_liouville[index])
+    observable_pauli_liouville = comp_to_pauli @ observable_liouville
 
-    obs1 = list(product(["I", "X", "Y", "Z"], repeat=nqubits))[index]
+    index = int(np.where(abs(observable_pauli_liouville) >= 1e-5)[0][0])
 
-    paulis = {
-        "I": gates.I(0).matrix(),
-        "X": gates.X(0).matrix(),
-        "Y": gates.Y(0).matrix(),
-        "Z": gates.Z(0).matrix(),
+    observable_pauli = list(product(["I", "X", "Y", "Z"], repeat=num_qubits))[index]
+
+    pauli_gates = {
+        "I": backend.cast(gates.I(0).matrix(backend=backend)),
+        "X": backend.cast(gates.X(0).matrix(backend=backend)),
+        "Y": backend.cast(gates.Y(0).matrix(backend=backend)),
+        "Z": backend.cast(gates.Z(0).matrix(backend=backend)),
     }
 
-    adjust_gates = []
-    for i in range(nqubits):
-        obs_i = paulis[obs1[i]]
-        R = paulis["I"]
-        while np.any(abs(obs_i - paulis["Z"]) > 1e-5) and np.any(
-            abs(obs_i - paulis["I"]) > 1e-5
+    adjustment_gates = []
+    for i in range(num_qubits):
+        observable_i = pauli_gates[observable_pauli[i]]
+        random_init = pauli_gates["I"]
+        while np.any(abs(observable_i - pauli_gates["Z"]) > 1e-5) and np.any(
+            abs(observable_i - pauli_gates["I"]) > 1e-5
         ):
-            R = random_clifford(1, backend=backend, return_circuit=False)
-            obs_i = np.conjugate(np.transpose(R)) @ paulis[obs1[i]] @ R
+            random_init = random_clifford(1, backend=backend, return_circuit=False)
+            observable_i = (
+                np.conjugate(np.transpose(random_init))
+                @ pauli_gates[observable_pauli[i]]
+                @ random_init
+            )
 
-        adjust_gate = gates.Unitary(R, i)
-        adjust_gate.clifford = True
-        adjust_gates.append(adjust_gate)
+        adjustment_gate = gates.Unitary(random_init, i)
+        adjustment_gate.clifford = True
+        adjustment_gates.append(adjustment_gate)
 
-    circ_cliff1 = circ_cliff.__class__(**circ_cliff.init_kwargs)
+    sensitive_circuit = sampled_circuit.__class__(**sampled_circuit.init_kwargs)
 
-    j = 0
-    for gate in circ_cliff.queue:
-        if gate.name == "id_init":
-            circ_cliff1.add(gate)
-            circ_cliff1.add(adjust_gates[j])
-            j += 1
-        else:
-            circ_cliff1.add(gate)
+    for gate in adjustment_gates:
+        sensitive_circuit.add(gate)
+    for gate in sampled_circuit.queue:
+        sensitive_circuit.add(gate)
 
     if fuse:
-        circ_cliff1 = circ_cliff1.fuse(max_qubits=1)
+        sensitive_circuit = sensitive_circuit.fuse(max_qubits=1)
 
-    return circ_cliff1, circ_cliff, adjust_gates
+    return sensitive_circuit, sampled_circuit, adjustment_gates
 
 
 def ICS(
@@ -819,8 +822,37 @@ def ICS(
     backend=None,
 ):
     """
-    Compute the important Clifford Sampling methos proposed in
-    https://arxiv.org/abs/2112.06255.
+    Computes the Important Clifford Sampling method.
+
+    Args:
+        circuit (:class:`qibo.models.Circuit`): input circuit.
+        observable (numpy.ndarray): the observable to be measured.
+        readout (dict, optional): A dictionary that may contain the following keys:
+            - 'calibration_matrix': numpy.ndarray, used for applying a pre-computed calibration matrix for readout error mitigation.
+            - 'random_ncircuits': int, specifies the number of random circuits to use for the randomized method of readout error mitigation.
+            - 'ibu_iters': int, specifies the number of iterations for the iterative Bayesian update method of readout error mitigation.
+                            If ``None`` the 'inverse' method is used.
+            If provided, the corresponding readout error mitigation method is used.
+        qubit_map (list, optional): the qubit map. If None, a list of range of circuit's qubits is used. Defaults to ``None``.
+        noise_model (qibo.models.noise.Noise, optional): the noise model to be applied. Defaults to ``None``.
+        nshots (int, optional): the number of shots for the circuit execution. Defaults to 10000.
+        n_training_samples (int, optional): the number of training samples. Defaults to 10.
+        full_output (bool, optional): if ``True``, this function returns additional
+            information: ``val``, ``optimal_params``, ``train_val``. Defaults to ``False``.
+        backend (qibo.backends.abstract.Backend, optional): the backend to be used in the execution.
+            If None, it uses the global backend. Defaults to ``None``.
+
+    Returns:
+        mitigated_expectation (float): the mitigated expectated value.
+        mitigated_expectation_std (float): the standard deviation of the mitigated expectated value.
+        dep_param (float): the depolarizing parameter.
+        dep_param_std (float): the standard deviation of the depolarizing parameter.
+        lambda_list (list): the list of the depolarizing parameters.
+        data (dict): the data dictionary containing the noise-free and noisy expectation values obtained with the training circuits.
+
+    Reference:
+        1. Dayue Qin, Yanzhu Chen et al, *Error statistics and scalability of quantum error mitigation formulas*.
+           `arXiv:2112.06255 [quant-ph] <https://arxiv.org/abs/2112.06255>`_.
     """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
@@ -828,68 +860,78 @@ def ICS(
     if qubit_map is None:
         qubit_map = list(range(circuit.nqubits))
 
-    training_circs = [
-        escircuit(circuit, observable, backend=backend)[0]
+    training_circuits = [
+        error_sensitive_circuit(circuit, observable, backend=backend)[0]
         for _ in range(n_training_samples)
     ]
 
-    data = {"noise-free": {"-1": [], "1": []}, "noisy": {"-1": [], "1": []}}
-    from qibo.config import log
+    data = {"noise-free": [], "noisy": []}
+    lambda_list = []
 
-    a_list = {"-1": [], "1": []}
-    for c in training_circs:
-        circuit_result = c(nshots=nshots)
-        exp = observable.expectation_from_samples(circuit_result.frequencies())
-        # state = c().state()
-        # exp = obs.expectation(state)
+    for training_circuit in training_circuits:
+        circuit_result = training_circuit(nshots=nshots)
+        expectation = observable.expectation_from_samples(circuit_result.frequencies())
+
         if noise_model is not None and backend.name != "qibolab":
-            c = noise_model.apply(c)
+            training_circuit = noise_model.apply(training_circuit)
 
-        c = transpile_circ(c, qubit_map, backend)
-        circuit_result = backend.execute_circuit(c, nshots=nshots)
+        training_circuit = transpile_circ(training_circuit, qubit_map, backend)
+        circuit_result = backend.execute_circuit(training_circuit, nshots=nshots)
 
         if "calibration_matrix" in readout.keys():
-            circuit_result = apply_readout_mitigation(
-                circuit_result, readout["calibration_matrix"], readout["inv"]
+            circuit_result = apply_cal_mat_readout_mitigation(
+                circuit_result,
+                readout["calibration_matrix"],
+                readout["ibu_iters"],
             )
 
-        exp_noisy = observable.expectation_from_samples(circuit_result.frequencies())
+        noisy_expectation = observable.expectation_from_samples(
+            circuit_result.frequencies()
+        )
 
-        if exp > 0:
-            data["noise-free"]["1"].append(exp)
-            data["noisy"]["1"].append(exp_noisy)
-            a_list["1"].append(1 - exp_noisy / exp)
-        else:
-            data["noise-free"]["-1"].append(exp)
-            data["noisy"]["-1"].append(exp_noisy)
-            a_list["-1"].append(1 - exp_noisy / exp)
+        data["noise-free"].append(expectation)
+        data["noisy"].append(noisy_expectation)
+        lambda_list.append(1 - noisy_expectation / expectation)
 
-    a_std_1 = np.std(a_list["1"])
-    a_std_m1 = np.std(a_list["-1"])
-    a = (np.sum(a_list["1"]) + np.sum(a_list["-1"])) / n_training_samples
-    a_std = np.sqrt(
-        (a_std_1**2 * len(a_list["1"]) + a_std_m1**2 * len(a_list["-1"]))
-        / n_training_samples
-    )
+    dep_param = np.mean(lambda_list)
+    dep_param_std = np.std(lambda_list)
 
     circuit = circuit.fuse(max_qubits=1)
+
     if noise_model is not None and backend.name != "qibolab":
         circuit = noise_model.apply(circuit)
+
     circuit = transpile_circ(circuit, qubit_map, backend)
     circuit_result = backend.execute_circuit(circuit, nshots=nshots)
-    if "calibration_matrix" in readout.keys():
-        circuit_result = apply_readout_mitigation(
-            circuit_result, readout["calibration_matrix"], readout["inv"]
-        )
-    exp_noisy = observable.expectation_from_samples(circuit_result.frequencies())
-    exp_mit = (1 - a) * exp_noisy / ((1 - a) ** 2 + a_std**2)
-    exp_mit_std = (
-        a_std
-        * abs(exp_noisy)
-        * abs((1 - a) ** 2 - a_std**2)
-        / ((1 - a) ** 2 + a_std**2) ** 2
-    )
-    if full_output:
-        return exp_mit, exp_mit_std, a, a_std, a_list, data
 
-    return exp_mit
+    if "calibration_matrix" in readout.keys():
+        circuit_result = apply_cal_mat_readout_mitigation(
+            circuit_result, readout["calibration_matrix"], readout["ibu_iters"]
+        )
+
+    noisy_expectation = observable.expectation_from_samples(
+        circuit_result.frequencies()
+    )
+    mitigated_expectation = (
+        (1 - dep_param)
+        * noisy_expectation
+        / ((1 - dep_param) ** 2 + dep_param_std**2)
+    )
+    mitigated_expectation_std = (
+        dep_param_std
+        * abs(noisy_expectation)
+        * abs((1 - dep_param) ** 2 - dep_param_std**2)
+        / ((1 - dep_param) ** 2 + dep_param_std**2) ** 2
+    )
+
+    if full_output:
+        return (
+            mitigated_expectation,
+            mitigated_expectation_std,
+            dep_param,
+            dep_param_std,
+            lambda_list,
+            data,
+        )
+
+    return mitigated_expectation
