@@ -5,7 +5,7 @@ from qibo.models.error_mitigation import (
     ZNE,
     get_gammas,
     get_noisy_circuit,
-    sample_training_circuit,
+    sample_training_circuit_cdr,
     vnCDR,
 )
 from qibo.models.evolution import AdiabaticEvolution, StateEvolution

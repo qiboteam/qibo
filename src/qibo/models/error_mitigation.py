@@ -10,42 +10,45 @@ from qibo.backends import GlobalBackend
 from qibo.config import raise_error
 
 
-def get_gammas(c, solve: bool = True):
+def get_gammas(noise_levels, analytical: bool = True):
     """Standalone function to compute the ZNE coefficients given the noise levels.
 
     Args:
-        c (numpy.ndarray): array containing the different noise levels.
+        noise_levels (numpy.ndarray): array containing the different noise levels.
             Note that in the CNOT insertion paradigm this corresponds to
             the number of CNOT pairs to be inserted. The canonical ZNE
             noise levels are obtained as ``2 * c + 1``.
-        solve (bool, optional): If ``True``, computes the coeffients by solving the
+        analytical (bool, optional): if ``True``, computes the coeffients by solving the
             linear system. If ``False``, use the analytical solution valid
             for the CNOT insertion method. Default is ``True``.
 
     Returns:
-        numpy.ndarray: The computed coefficients.
+        numpy.ndarray: the computed coefficients.
     """
-    if solve:
-        c = 2 * c + 1
-        a = np.array([c**i for i in range(len(c))])
-        b = np.zeros(len(c))
-        b[0] = 1
-        gammas = np.linalg.solve(a, b)
+    if analytical:
+        noise_levels = 2 * noise_levels + 1
+        a_matrix = np.array([noise_levels**i for i in range(len(noise_levels))])
+        b_vector = np.zeros(len(noise_levels))
+        b_vector[0] = 1
+        zne_coefficients = np.linalg.solve(a_matrix, b_vector)
     else:
-        cmax = c[-1]
-        gammas = np.array(
+        max_noise_level = noise_levels[-1]
+        zne_coefficients = np.array(
             [
                 1
-                / (2 ** (2 * cmax) * np.math.factorial(i))
+                / (2 ** (2 * max_noise_level) * np.math.factorial(i))
                 * (-1) ** i
                 / (1 + 2 * i)
-                * np.math.factorial(1 + 2 * cmax)
-                / (np.math.factorial(cmax) * np.math.factorial(cmax - i))
-                for i in c
+                * np.math.factorial(1 + 2 * max_noise_level)
+                / (
+                    np.math.factorial(max_noise_level)
+                    * np.math.factorial(max_noise_level - i)
+                )
+                for i in noise_levels
             ]
         )
 
-    return gammas
+    return zne_coefficients
 
 
 def get_noisy_circuit(circuit, num_insertions: int, insertion_gate: str = "CNOT"):
