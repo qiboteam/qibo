@@ -1,9 +1,11 @@
+import json
 from typing import Dict, Optional, Tuple
 
+from qibo import gates
 from qibo.config import raise_error
 from qibo.gates.abstract import Gate
 from qibo.gates.gates import Z
-from qibo.states import MeasurementResult
+from qibo.measurements import MeasurementResult
 
 
 class M(Gate):
@@ -58,6 +60,11 @@ class M(Gate):
         # list of measurement pulses implementing the gate
         # relevant for experiments only
         self.pulses = None
+        # saving basis for __repr__ ans save to file
+        if not isinstance(basis, list):
+            self.basis_gates = len(q) * [basis]
+        else:
+            self.basis_gates = basis
 
         self.init_args = q
         self.init_kwargs = {
@@ -184,3 +191,57 @@ class M(Gate):
         shot = self.result.add_shot(probs)
         # collapse state
         return backend.collapse_density_matrix(state, qubits, shot, nqubits)
+
+    def to_json(self):
+        """Serializes the measurement gate to json."""
+        encoding = json.loads(super().to_json())
+        encoding.pop("_control_qubits")
+        encoding.update({"basis": [g.__name__ for g in self.basis_gates]})
+        return json.dumps(encoding)
+
+    @classmethod
+    def load(cls, payload):
+        """Constructs a measurement gate starting from a json serialized
+        one."""
+        args = json.loads(payload)
+        # drop general serialization data, unused in this specialized loader
+        for key in ("name", "init_args", "_class"):
+            args.pop(key)
+        qubits = args.pop("_target_qubits")
+        args["basis"] = [getattr(gates, g) for g in args["basis"]]
+        args.update(args.pop("init_kwargs"))
+        return cls(*qubits, **args)
+
+    # Overload on_qubits to copy also gate.result, controlled by can be removed for measurements
+    def on_qubits(self, qubit_map) -> "Gate":
+        """Creates the same measurement gate targeting different qubits
+        and preserving the measurement result register.
+
+        Args:
+            qubit_map (int): Dictionary mapping original qubit indices to new ones.
+
+        Returns:
+            A :class:`qibo.gates.Gate.M` object of the original gate
+            type targeting the given qubits.
+
+        Example:
+
+            .. testcode::
+
+                from qibo import models, gates
+                measurement = gates.M(0, 1)
+                c = models.Circuit(3)
+                c.add(measurement.on_qubits({0: 0, 1: 2}))
+                assert c.queue[0].result is measurement.result
+                print(c.draw())
+            .. testoutput::
+
+                q0: ─M─
+                q1: ─|─
+                q2: ─M─
+        """
+
+        qubits = (qubit_map.get(q) for q in self.qubits)
+        gate = self.__class__(*qubits, **self.init_kwargs)
+        gate.result = self.result
+        return gate

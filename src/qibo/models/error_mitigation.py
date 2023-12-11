@@ -606,7 +606,7 @@ def apply_randomized_readout_mitigation(
             Defaults to ``None``.
 
     Return:
-        :class:`qibo.states.CircuitResult`: the state of the input circuit with
+        :class:`qibo.measurements.CircuitResult`: the state of the input circuit with
             mitigated frequencies.
 
 

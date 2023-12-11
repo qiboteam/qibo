@@ -195,8 +195,15 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
+    def execute_circuits(
+        self, circuits, initial_states=None, nshots=None
+    ):  # pragma: no cover
+        """Execute multiple :class:`qibo.models.circuit.Circuit`s in parallel."""
+        raise_error(NotImplementedError)
+
+    @abc.abstractmethod
     def execute_circuit_repeated(
-        self, circuit, initial_state=None, nshots=None
+        self, circuit, nshots, initial_state=None
     ):  # pragma: no cover
         """Execute a :class:`qibo.models.circuit.Circuit` multiple times.
 
@@ -210,37 +217,6 @@ class Backend(abc.ABC):
         self, circuit, initial_state=None, nshots=None
     ):  # pragma: no cover
         """Execute a :class:`qibo.models.circuit.Circuit` using multiple GPUs."""
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def circuit_result_representation(self, result):  # pragma: no cover
-        """Represent a quantum state based on circuit execution results.
-
-        Args:
-            result (:class:`qibo.states.CircuitResult`): Result object that contains
-                the data required to represent the state.
-        """
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def circuit_result_tensor(self, result):  # pragma: no cover
-        """State vector or density matrix representing a quantum state as an array.
-
-        Args:
-            result (:class:`qibo.states.CircuitResult`): Result object that contains
-                the data required to represent the state.
-        """
-        raise_error(NotImplementedError)
-
-    @abc.abstractmethod
-    def circuit_result_probabilities(self, result, qubits=None):  # pragma: no cover
-        """Calculates measurement probabilities by tracing out qubits.
-
-        Args:
-            result (:class:`qibo.states.CircuitResult`): Result object that contains
-                the data required to represent the state.
-            qubits (list, set): Set of qubits that are measured.
-        """
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
@@ -321,18 +297,29 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def entanglement_entropy(self, rho):  # pragma: no cover
-        """Calculate entangelement entropy of a reduced density matrix."""
+    def calculate_norm(self, state, order=2):  # pragma: no cover
+        """Calculate norm of a state vector.
+
+        For specifications on possible values of the parameter ``order``
+        for the ``tensorflow`` backend, please refer to
+        `tensorflow.norm <https://www.tensorflow.org/api_docs/python/tf/norm>`_.
+        For all other backends, please refer to
+        `numpy.linalg.norm <https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html>`_.
+        """
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
-    def calculate_norm(self, state):  # pragma: no cover
-        """Calculate norm of a state vector."""
-        raise_error(NotImplementedError)
+    def calculate_norm_density_matrix(self, state, order="nuc"):  # pragma: no cover
+        """Calculate norm of a density matrix. Default is the ``nuclear`` norm.
 
-    @abc.abstractmethod
-    def calculate_norm_density_matrix(self, state):  # pragma: no cover
-        """Calculate norm (trace) of a density matrix."""
+        If ``order="nuc"``, it returns the nuclear norm of ``state``,
+        assuming ``state`` is Hermitian (also known as trace norm).
+        For specifications on the other  possible values of the
+        parameter ``order`` for the ``tensorflow`` backend, please refer to
+        `tensorflow.norm <https://www.tensorflow.org/api_docs/python/tf/norm>`_.
+        For all other backends, please refer to
+        `numpy.linalg.norm <https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html>`_.
+        """
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
@@ -342,7 +329,7 @@ class Backend(abc.ABC):
 
     @abc.abstractmethod
     def calculate_overlap_density_matrix(self, state1, state2):  # pragma: no cover
-        """Calculate norm of two density matrices."""
+        """Calculate overlap of two density matrices."""
         raise_error(NotImplementedError)
 
     @abc.abstractmethod
@@ -397,8 +384,8 @@ class Backend(abc.ABC):
         raise_error(NotImplementedError)
 
     def assert_circuitclose(self, circuit, target_circuit, rtol=1e-7, atol=0.0):
-        value = self.execute_circuit(circuit)
-        target = self.execute_circuit(target_circuit)
+        value = self.execute_circuit(circuit)._state
+        target = self.execute_circuit(target_circuit)._state
         self.assert_allclose(value, target, rtol=rtol, atol=atol)
 
     @abc.abstractmethod

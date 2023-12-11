@@ -212,7 +212,7 @@ class StyleQGAN:
         # quantum generator circuit
         for i in range(samples):
             self.set_parameters(circuit, params, x_input, i)
-            final_state = self.backend.execute_circuit(circuit, return_array=True)
+            final_state = self.backend.execute_circuit(circuit)._state
             for ii in range(self.nqubits):
                 X[ii].append(hamiltonians_list[ii].expectation(final_state))
         # shape array

@@ -78,14 +78,17 @@ def test_one_qubit_gates(backend, gatename, gatekwargs):
 @pytest.mark.parametrize("gatename", ["H", "X", "Y", "Z", "S", "SDG", "T", "TDG"])
 def test_controlled_by_one_qubit_gates(backend, gatename):
     nqubits = 2
-    initial_rho = random_density_matrix(2**nqubits, backend=backend)
+    initial_rho = random_density_matrix(2**nqubits, seed=1, backend=backend)
     gate = getattr(gates, gatename)(1).controlled_by(0)
-    final_rho = apply_gates(backend, [gate], 2, initial_rho)
+    final_rho = apply_gates(backend, [gate], 2, np.copy(initial_rho))
 
     matrix = backend.to_numpy(backend.matrix(getattr(gates, gatename)(1)))
     cmatrix = np.eye(4, dtype=matrix.dtype)
     cmatrix[2:, 2:] = matrix
-    target_rho = np.einsum("ab,bc,cd->ad", cmatrix, initial_rho, cmatrix.conj().T)
+    cmatrix = backend.cast(cmatrix, dtype=cmatrix.dtype)
+    target_rho = np.einsum(
+        "ab,bc,cd->ad", cmatrix, initial_rho, np.transpose(np.conj(cmatrix))
+    )
     backend.assert_allclose(final_rho, target_rho)
 
 
@@ -93,6 +96,7 @@ def test_controlled_by_one_qubit_gates(backend, gatename):
     "gatename,gatekwargs",
     [
         ("CNOT", {}),
+        ("CY", {}),
         ("CZ", {}),
         ("SWAP", {}),
         ("CRX", {"theta": 0.123}),
@@ -111,8 +115,10 @@ def test_two_qubit_gates(backend, gatename, gatekwargs):
     gate = getattr(gates, gatename)(0, 1, **gatekwargs)
     final_rho = apply_gates(backend, [gate], 2, initial_rho)
 
-    matrix = backend.to_numpy(gate.matrix(backend))
-    target_rho = np.einsum("ab,bc,cd->ad", matrix, initial_rho, matrix.conj().T)
+    matrix = gate.matrix(backend)
+    target_rho = np.einsum(
+        "ab,bc,cd->ad", matrix, initial_rho, np.transpose(np.conj(matrix))
+    )
     backend.assert_allclose(final_rho, target_rho, atol=PRECISION_TOL)
 
 
@@ -165,11 +171,11 @@ def test_controlled_by_no_effect(backend):
     c = Circuit(4, density_matrix=True)
     c.add(gates.X(0))
     c.add(gates.SWAP(1, 3).controlled_by(0, 2))
-    final_rho = backend.execute_circuit(c, np.copy(initial_rho))
+    final_rho = backend.execute_circuit(c, np.copy(initial_rho)).state()
 
     c = Circuit(4, density_matrix=True)
     c.add(gates.X(0))
-    target_rho = backend.execute_circuit(c, np.copy(initial_rho))
+    target_rho = backend.execute_circuit(c, np.copy(initial_rho)).state()
     backend.assert_allclose(final_rho, target_rho)
 
 
@@ -183,13 +189,13 @@ def test_controlled_with_effect(backend):
     c.add(gates.X(0))
     c.add(gates.X(2))
     c.add(gates.SWAP(1, 3).controlled_by(0, 2))
-    final_rho = backend.execute_circuit(c, np.copy(initial_rho))
+    final_rho = backend.execute_circuit(c, np.copy(initial_rho)).state()
 
     c = Circuit(4, density_matrix=True)
     c.add(gates.X(0))
     c.add(gates.X(2))
     c.add(gates.SWAP(1, 3))
-    target_rho = backend.execute_circuit(c, np.copy(initial_rho))
+    target_rho = backend.execute_circuit(c, np.copy(initial_rho)).state()
     backend.assert_allclose(final_rho, target_rho)
 
 
@@ -202,11 +208,11 @@ def test_controlled_by_random(backend, nqubits):
     c = Circuit(nqubits, density_matrix=True)
     c.add(gates.RX(1, theta=0.789).controlled_by(2))
     c.add(gates.fSim(0, 2, theta=0.123, phi=0.321).controlled_by(1, 3))
-    final_rho = backend.execute_circuit(c, np.copy(initial_rho))
+    final_rho = backend.execute_circuit(c, np.copy(initial_rho)).state()
 
     c = Circuit(nqubits)
     c.add(gates.RX(1, theta=0.789).controlled_by(2))
     c.add(gates.fSim(0, 2, theta=0.123, phi=0.321).controlled_by(1, 3))
-    target_psi = backend.execute_circuit(c, np.copy(initial_psi))
+    target_psi = backend.execute_circuit(c, np.copy(initial_psi)).state()
     target_rho = np.outer(target_psi, np.conj(target_psi))
     backend.assert_allclose(final_rho, target_rho)

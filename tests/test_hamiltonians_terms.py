@@ -50,7 +50,7 @@ def test_hamiltonian_term_gates(backend):
     final_state = term(backend, np.copy(initial_state), nqubits)
     c = models.Circuit(nqubits)
     c.add(gates.Unitary(matrix, 1, 2))
-    target_state = backend.execute_circuit(c, np.copy(initial_state))
+    target_state = backend.execute_circuit(c, np.copy(initial_state)).state()
     backend.assert_allclose(final_state, target_state)
 
 

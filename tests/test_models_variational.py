@@ -132,6 +132,11 @@ def test_vqe(backend, method, options, compile, filename):
     if filename is not None:
         assert_regression_fixture(backend, params, filename)
 
+    # test energy fluctuation
+    state = np.ones(2**nqubits) / np.sqrt(2**nqubits)
+    energy_fluctuation = v.energy_fluctuation(state)
+    assert energy_fluctuation >= 0
+
 
 @pytest.mark.parametrize(
     "solver,dense",
