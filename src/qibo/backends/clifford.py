@@ -614,8 +614,8 @@ class CliffordBackend(NumpyBackend):
             )
 
     def execute_circuit_repeated(self, circuit, initial_state=None, nshots: int = 1000):
-        """Execute a Clifford circuits ``nshots`` times. 
-        
+        """Execute a Clifford circuits ``nshots`` times.
+
         This is used for all the simulations that involve repeated execution.
         For instance when collapsing measurement or noise channels are present.
 
@@ -654,7 +654,12 @@ class CliffordBackend(NumpyBackend):
         return result
 
     def sample_shots(
-        self, state, qubits: Union[tuple, list], nqubits: int, nshots: int, collapse: bool = False
+        self,
+        state,
+        qubits: Union[tuple, list],
+        nqubits: int,
+        nshots: int,
+        collapse: bool = False,
     ):
         """Sample shots by measuring the selected qubits from the provided state tableu.
 
