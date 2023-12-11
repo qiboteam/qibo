@@ -466,16 +466,20 @@ class CliffordOperations:
         symplectic_matrix[-1, :] = val
 
     def _exponent(self, x1, z1, x2, z2):
-        """Helper function that computes the exponent to which i is raised for the product of the x and z paulis encoded in the symplectic matrix. This is used in _rowsum. The computation is performed parallely over the separated paulis x1[i], z1[i], x2[i] and z2[i].
+        """Computes the exponent to which i is raised for the product of the x and z Paulis encoded in the symplectic matrix. 
+        
+        This is used in _rowsum. 
+        The computation is performed parallely over the separated Paulis 
+        x1[i], z1[i], x2[i] and z2[i].
 
         Args:
-            x1 (np.array): Bits of the first x paulis.
-            z1 (np.array): Bits of the first z paulis.
-            x2 (np.array): Bits of the second x paulis.
-            z2 (np.array): Bits of the second z paulis.
+            x1 (ndarray): Bits of the first x Paulis.
+            z1 (ndarray): Bits of the first z Paulis.
+            x2 (ndarray): Bits of the second x Paulis.
+            z2 (ndarray): Bits of the second z Paulis.
 
         Returns:
-            (np.array): The calculated exponents.
+            (ndarray): Calculated exponents.
         """
         exp = self.np.zeros(x1.shape, dtype=int)
         x1_eq_z1 = (x1 ^ z1) == 0
@@ -488,10 +492,11 @@ class CliffordOperations:
         exp[ind2] = z2[ind2].astype(int) - x2[ind2].astype(int)
         exp[ind3] = z2[ind3].astype(int) * (2 * x2[ind3].astype(int) - 1)
         exp[ind4] = x2[ind4].astype(int) * (1 - 2 * z2[ind4].astype(int))
+
         return exp
 
     def _rowsum(self, symplectic_matrix, h, i, nqubits, include_scratch: bool = False):
-        """Helper function that updates the symplectic matrix by setting the h-th generator equal to the (i+h)-th one. This is done to keep track of the phase of the h-th row of the symplectic matrix (r[h]). The function is applied parallely over all the rows h and i passed.
+        """Updates the symplectic matrix by setting the h-th generator equal to the (i+h)-th one. This is done to keep track of the phase of the h-th row of the symplectic matrix (r[h]). The function is applied parallely over all the rows h and i passed.
 
         Args:
             symplectic_matrix (np.array): Input symplectic matrix.
@@ -518,6 +523,7 @@ class CliffordOperations:
         symplectic_matrix[h, -1] = r
         symplectic_matrix[h, :nqubits] = x[i, :] ^ x[h, :]
         symplectic_matrix[h, nqubits:-1] = z[i, :] ^ z[h, :]
+
         return symplectic_matrix
 
 
@@ -684,7 +690,7 @@ class CliffordBackend(NumpyBackend):
         nshots: int,
         collapse: bool = False,
     ):
-        """Sample shots by measuring the selected qubits from the provided state tableu.
+        """Sample shots by measuring the selected qubits from the provided symplectic matrix of a ``state``.
 
         Args:
             state (ndarray): symplectic matrix from which to sample shots from.
@@ -716,7 +722,7 @@ class CliffordBackend(NumpyBackend):
     def symplectic_matrix_to_generators(
         self, symplectic_matrix, return_array: bool = False
     ):
-        """Extract both the stabilizers and destabilizers generators from the input symplectic_matrix.
+        """Extract both the stabilizers and destabilizers generators from the input symplectic matrix.
 
         Args:
             symplectic_matrix (ndarray): The input symplectic_matrix.
@@ -724,7 +730,7 @@ class CliffordBackend(NumpyBackend):
                 If ``False``, generators are returned as strings. Defaults to ``False``.
 
         Returns:
-            (list, list): Lists of the extracted generators and their corresponding phases, respectively.
+            (list, list): Extracted generators and their corresponding phases, respectively.
         """
         bits_to_gate = {"00": "I", "01": "X", "10": "Z", "11": "Y"}
 
