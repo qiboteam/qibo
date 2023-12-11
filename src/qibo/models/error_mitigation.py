@@ -175,7 +175,7 @@ def ZNE(
     return np.sum(gamma * expected_values)
 
 
-def sample_training_circuit(
+def sample_training_circuit_cdr(
     circuit,
     replacement_gates: list = None,
     sigma: float = 0.5,
@@ -191,7 +191,9 @@ def sample_training_circuit(
             form (``gates.XYZ``, ``kwargs``). For example, phase gates are used by default:
             ``list((RZ, {'theta':0}), (RZ, {'theta':pi/2}), (RZ, {'theta':pi}), (RZ, {'theta':3*pi/2}))``.
         sigma (float, optional): standard devation of the Gaussian distribution used for sampling.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): Calculation engine.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
 
     Returns:
         :class:`qibo.models.Circuit`: The sampled circuit.
@@ -202,18 +204,15 @@ def sample_training_circuit(
     if replacement_gates is None:
         replacement_gates = [(gates.RZ, {"theta": n * np.pi / 2}) for n in range(4)]
 
-    # Find all the non-Clifford RZ gates
     gates_to_replace = []
     for i, gate in enumerate(circuit.queue):
         if isinstance(gate, gates.RZ):
             if gate.init_kwargs["theta"] % (np.pi / 2) != 0.0:
                 gates_to_replace.append((i, gate))
 
-    if len(gates_to_replace) == 0:
+    if not gates_to_replace:
         raise_error(ValueError, "No non-Clifford RZ gate found, no circuit sampled.")
 
-    # For each RZ gate build the possible candidates and
-    # compute the frobenius distance to the candidates
     replacement, distance = [], []
     for _, gate in gates_to_replace:
         rep_gates = np.array(
@@ -231,31 +230,28 @@ def sample_training_circuit(
         )
 
     distance = np.vstack(distance)
-    # Compute the scores
     prob = np.exp(-(distance**2) / sigma**2)
-    # Sample which of the RZ found to substitute
+
     index = np.random.choice(
         range(len(gates_to_replace)),
         size=min(int(len(gates_to_replace) / 2), 50),
         replace=False,
         p=prob.sum(-1) / prob.sum(),
     )
+
     gates_to_replace = np.array([gates_to_replace[i] for i in index])
     prob = [prob[i] for i in index]
-    # Sample which replacement gate to substitute with
+
     replacement = np.array([replacement[i] for i in index])
     replacement = [
         replacement[i][np.random.choice(range(len(p)), size=1, p=p / p.sum())[0]]
         for i, p in enumerate(prob)
     ]
     replacement = {i[0]: g for i, g in zip(gates_to_replace, replacement)}
-    # Build the training circuit by substituting the sampled gates
+
     sampled_circuit = circuit.__class__(**circuit.init_kwargs)
     for i, gate in enumerate(circuit.queue):
-        if i in replacement.keys():
-            sampled_circuit.add(replacement[i])
-        else:
-            sampled_circuit.add(gate)
+        sampled_circuit.add(replacement.get(i, gate))
 
     return sampled_circuit
 
@@ -279,57 +275,62 @@ def CDR(
         observable (numpy.ndarray): observable to be measured.
         noise_model (:class:`qibo.noise.NoiseModel`): noise model used for simulating
             noisy computation.
-        nshots (int, optional): number of shots.
+        nshots (int, optional): number of shots. Defaults 10000.
         model (callable, optional): model used for fitting. This should be a callable
             function object ``f(x, *params)``, taking as input the predictor variable
             and the parameters. Default is a simple linear model ``f(x,a,b) := a*x + b``.
-        n_training_samples (int, optional): number of training circuits to sample.
+        n_training_samples (int, optional): number of training circuits to sample. Defaults to 100.
         full_output (bool, optional): if ``True``, this function returns additional
-            information: ``val``, ``optimal_params``, ``train_val``.
-        readout (dict, optional): It has the structure
-            {'calibration_matrix': `numpy.ndarray`, 'ncircuits': `int`}.
-            If passed, the calibration matrix or the randomized method is
-            used to mitigate readout errors.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): calculation engine.
+            information: ``val``, ``optimal_params``, ``train_val``. Defaults to ``False``.
+        readout (dict, optional): A dictionary that may contain the following keys:
+            - 'calibration_matrix': numpy.ndarray, used for applying a pre-computed calibration matrix for readout error mitigation.
+            - 'random_ncircuits': int, specifies the number of random circuits to use for the randomized method of readout error mitigation.
+            - 'ibu_iters': int, specifies the number of iterations for the iterative Bayesian update method of readout error mitigation.
+            If provided, the corresponding readout error mitigation method is used.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
 
     Returns:
         mit_val (float): Mitigated expectation value of `observable`.
         val (float): Noisy expectation value of `observable`.
         optimal_params (list): Optimal values for `params`.
         train_val (dict): Contains the noise-free and noisy expectation values obtained with the training circuits.
-    """
 
-    # Set backend
+    Reference:
+        1. P. Czarnik, A. Arrasmith et al, *Error mitigation with Clifford quantum-circuit data*.
+           `arXiv:2005.10189 [quant-ph] <https://arxiv.org/abs/2005.10189>`_.
+    """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
-    # Sample the training set
+
     training_circuits = [
-        sample_training_circuit(circuit) for n in range(n_training_samples)
+        sample_training_circuit_cdr(circuit) for _ in range(n_training_samples)
     ]
-    # Run the sampled circuits
+
     train_val = {"noise-free": [], "noisy": []}
-    for c in training_circuits:
-        val = c(nshots=nshots).expectation_from_samples(observable)
+    for circ in training_circuits:
+        val = circ(nshots=nshots).expectation_from_samples(observable)
         train_val["noise-free"].append(val)
         if "ncircuits" in readout.keys():
             circuit_result, circuit_result_cal = apply_randomized_readout_mitigation(
-                c, noise_model, nshots, readout["ncircuits"], backend
+                circ, noise_model, nshots, readout["ncircuits"], backend
             )
         else:
             if noise_model is not None and backend.name != "qibolab":
-                c = noise_model.apply(c)
-            circuit_result = backend.execute_circuit(c, nshots=nshots)
+                circ = noise_model.apply(circ)
+            circuit_result = backend.execute_circuit(circ, nshots=nshots)
         if "calibration_matrix" in readout.keys() is not None:
-            circuit_result = apply_readout_mitigation(
-                circuit_result, readout["calibration_matrix"]
+            circuit_result = apply_cal_mat_readout_mitigation(
+                circuit_result, readout["calibration_matrix"], readout["ibu_iters"]
             )
         val = circuit_result.expectation_from_samples(observable)
         if "ncircuits" in readout.keys():
             val /= circuit_result_cal.expectation_from_samples(observable)
         train_val["noisy"].append(val)
-    # Fit the model
+
     optimal_params = curve_fit(model, train_val["noisy"], train_val["noise-free"])[0]
-    # Run the input circuit
+
     if "ncircuits" in readout.keys():
         circuit_result, circuit_result_cal = apply_randomized_readout_mitigation(
             circuit, noise_model, nshots, readout["ncircuits"], backend
@@ -339,19 +340,18 @@ def CDR(
             circuit = noise_model.apply(circuit)
         circuit_result = backend.execute_circuit(circuit, nshots=nshots)
     if "calibration_matrix" in readout.keys() is not None:
-        circuit_result = apply_readout_mitigation(
-            circuit_result, readout["calibration_matrix"]
+        circuit_result = apply_cal_mat_readout_mitigation(
+            circuit_result, readout["calibration_matrix"], readout["ibu_iters"]
         )
     val = circuit_result.expectation_from_samples(observable)
     if "ncircuits" in readout.keys():
         val /= circuit_result_cal.expectation_from_samples(observable)
     mit_val = model(val, *optimal_params)
 
-    # Return data
-    if full_output == True:
+    if full_output is True:
         return mit_val, val, optimal_params, train_val
-    else:
-        return mit_val
+
+    return mit_val
 
 
 def vnCDR(
