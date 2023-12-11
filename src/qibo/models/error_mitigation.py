@@ -62,7 +62,7 @@ def get_noisy_circuit(circuit, num_insertions: int, insertion_gate: str = "CNOT"
             Default is ``"CNOT"``.
 
     Returns:
-        :class:`qibo.models.Circuit`: The circuit with the inserted CNOT pairs.
+        :class:`qibo.models.Circuit`: circuit with the inserted gate pairs.
     """
     if insertion_gate not in ("CNOT", "RX"):  # pragma: no cover
         raise_error(
@@ -83,16 +83,17 @@ def get_noisy_circuit(circuit, num_insertions: int, insertion_gate: str = "CNOT"
 
     for gate in circuit.queue:
         noisy_circuit.add(gate)
+
         if isinstance(gate, i_gate):
             if insertion_gate == "CNOT":
                 control = gate.control_qubits[0]
                 target = gate.target_qubits[0]
-                for i in range(num_insertions):
+                for _ in range(num_insertions):
                     noisy_circuit.add(gates.CNOT(control, target))
                     noisy_circuit.add(gates.CNOT(control, target))
             elif gate.init_kwargs["theta"] == theta:
                 qubit = gate.qubits[0]
-                for i in range(num_insertions):
+                for _ in range(num_insertions):
                     noisy_circuit.add(gates.RX(qubit, theta=theta))
                     noisy_circuit.add(gates.RX(qubit, theta=-theta))
 
