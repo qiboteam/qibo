@@ -68,7 +68,7 @@ class QuantumState:
         """State's tensor representation as a backend tensor.
 
         Args:
-            numpy (bool, optional): If ``True`` the returned tensor will be a numpy array,
+            numpy (bool, optional): If ``True`` the returned tensor will be a ``numpy`` array,
                 otherwise it will follow the backend tensor type.
                 Defaults to ``False``.
 
@@ -76,7 +76,8 @@ class QuantumState:
             The state in the computational basis.
         """
         if numpy:
-            return np.array(self._state)
+            return np.array(self._state.tolist())
+
         return self._state
 
     def probabilities(self, qubits: Optional[Union[list, set]] = None):
