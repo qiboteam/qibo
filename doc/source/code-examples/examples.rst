@@ -8,11 +8,6 @@ How to write and execute a circuit?
 
 Here is an example of a circuit with 2 qubits:
 
-.. testsetup::
-
-   from qibo.backends import set_backend
-   set_backend("numpy")
-
 .. testcode::
 
     import numpy as np
