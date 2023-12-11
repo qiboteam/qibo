@@ -472,17 +472,35 @@ def vnCDR(
     return mit_val
 
 
-def ibu(prob, mat, iters=10):
-    """Iterative Bayesian Unfolding."""
-    t = np.ones((len(prob), 1)) / len(prob)
-    for k in range(iters):
-        t = t * (np.transpose(mat) @ (prob / (mat @ t)))
+def iterative_bayesian_unfolding(probabilities, response_matrix, iterations=10):
+    """
+    Iterative Bayesian Unfolding (IBU) method for readout mitigation.
 
-    return t
+    Args:
+        probabilities (numpy.ndarray): the input probabilities to be unfolded.
+        response_matrix (numpy.ndarray): the response matrix.
+        iterations (int, optional): the number of iterations to perform. Defaults to 10.
+
+    Returns:
+        numpy.ndarray: the unfolded probabilities.
+
+    Reference:
+        1. S. Srinivasan, B. Pokharel et al, *Scalable Measurement Error Mitigation via Iterative Bayesian Unfolding*.
+           `arXiv:2210.12284 [quant-ph] <https://arxiv.org/abs/2210.12284>`_.
+    """
+    unfolded_probabilities = np.ones((len(probabilities), 1)) / len(probabilities)
+
+    for _ in range(iterations):
+        unfolded_probabilities = unfolded_probabilities * (
+            np.transpose(response_matrix)
+            @ (probabilities / (response_matrix @ unfolded_probabilities))
+        )
+
+    return unfolded_probabilities
 
 
-def calibration_matrix(
-    nqubits, qubit_map, inv=False, noise_model=None, nshots: int = 1000, backend=None
+def get_calibration_matrix(
+    nqubits, qubit_map, noise_model=None, nshots: int = 10000, backend=None
 ):
     """Computes the calibration matrix for readout mitigation.
 
@@ -491,76 +509,82 @@ def calibration_matrix(
         noise_model (:class:`qibo.noise.NoiseModel`, optional): noise model used for simulating
             noisy computation. This matrix can be used to mitigate the effect of
             `qibo.noise.ReadoutError`.
-        nshots (int, optional): number of shots.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): calculation engine.
+        nshots (int, optional): number of shots. Defaults to 10000.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
 
     Returns:
         numpy.ndarray : The computed (`nqubits`, `nqubits`) calibration matrix for
             readout mitigation.
     """
-
     from qibo import Circuit  # pylint: disable=import-outside-toplevel
 
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    matrix = np.zeros((2**nqubits, 2**nqubits))
-    from qibo.config import log
+    calibration_matrix = np.zeros((2**nqubits, 2**nqubits))
 
     for i in range(2**nqubits):
-        state = format(i, f"0{nqubits}b")
+        binary_state = format(i, f"0{nqubits}b")
 
         circuit = Circuit(nqubits, density_matrix=True)
-        for q, bit in enumerate(state):
+        for qubit, bit in enumerate(binary_state):
             if bit == "1":
-                circuit.add(gates.X(q))
+                circuit.add(gates.X(qubit))
         circuit.add(gates.M(*range(nqubits)))
 
         if noise_model is not None and backend.name != "qibolab":
             circuit = noise_model.apply(circuit)
         circuit = transpile_circ(circuit, qubit_map, backend)
-        freq = backend.execute_circuit(circuit, nshots=nshots).frequencies()
+
+        frequencies = backend.execute_circuit(circuit, nshots=nshots).frequencies()
+
         column = np.zeros(2**nqubits)
-        for key in freq.keys():
-            f = freq[key] / nshots
-            column[int(key, 2)] = f
-        matrix[:, i] = column
+        for key, value in frequencies.items():
+            column[int(key, 2)] = value / nshots
+        calibration_matrix[:, i] = column
 
-    if inv == True:
-        matrix = np.linalg.inv(matrix)
-
-    return matrix
+    return calibration_matrix
 
 
-def apply_readout_mitigation(state, calibration_matrix, inv=False):
-    """Updates the frequencies of the input state with the mitigated ones obtained with
-    ``calibration_matrix * state.frequencies()``.
+def apply_cal_mat_readout_mitigation(state, calibration_matrix, iterations=None):
+    """
+    Applies readout error mitigation to the given state using the provided calibration matrix.
 
     Args:
-        state (:class:`qibo.states.CircuitResult`): input state to be updated.
-        calibration_matrix (numpy.ndarray): calibration matrix for readout mitigation.
+        state (:class:`qibo.states.CircuitResult`): the input state to be updated. This state should contain the
+            frequencies that need to be mitigated.
+        calibration_matrix (numpy.ndarray, optional): the calibration matrix for readout mitigation.
+        iterations (int, optional): the number of iterations to use for the Iterative Bayesian Unfolding method.
+            If ``None`` the 'inverse' method is used. Defaults to ``None``.
 
     Returns:
-        :class:`qibo.states.CircuitResult`: the input state with the updated frequencies.
+        :class:`qibo.states.CircuitResult`: The input state with the updated (mitigated) frequencies.
     """
-    from qibo.config import log
+    frequencies = np.zeros(2 ** len(state.measurements[0].qubits))
+    for key, value in state.frequencies().items():
+        frequencies[int(key, 2)] = value
 
-    freq = np.zeros(2 ** len(state.measurements))
-    for k, v in state.frequencies().items():
-        freq[int(k, 2)] = v
+    frequencies = frequencies.reshape(-1, 1)
 
-    freq = freq.reshape(-1, 1)
-
-    if inv:
-        for i, val in enumerate(calibration_matrix @ freq):
-            state._frequencies[i] = float(val)
+    if iterations is None:
+        calibration_matrix = np.linalg.inv(calibration_matrix)
+        for i, value in enumerate(calibration_matrix @ frequencies):
+            state._frequencies[i] = float(value)
     else:
-        prob_mit = ibu(freq / np.sum(freq), calibration_matrix)
-        freq_mit = np.round(prob_mit * np.sum(freq), 0)
-        freq_mit = (freq_mit / np.sum(freq_mit)) * np.sum(freq)
+        mitigated_probabilities = iterative_bayesian_unfolding(
+            frequencies / np.sum(frequencies), calibration_matrix, iterations
+        )
+        mitigated_frequencies = np.round(
+            mitigated_probabilities * np.sum(frequencies), 0
+        )
+        mitigated_frequencies = (
+            mitigated_frequencies / np.sum(mitigated_frequencies)
+        ) * np.sum(frequencies)
 
-        for i, val in enumerate(freq_mit):
-            state._frequencies[i] = float(freq_mit[i])
+        for i, value in enumerate(mitigated_frequencies):
+            state._frequencies[i] = float(value)
 
     return state
 
@@ -568,22 +592,27 @@ def apply_readout_mitigation(state, calibration_matrix, inv=False):
 def apply_randomized_readout_mitigation(
     circuit, noise_model=None, nshots: int = int(1e3), ncircuits: int = 10, backend=None
 ):
-    """Implements the readout mitigation method proposed in https://arxiv.org/abs/2012.09738.
+    """Readout mitigation method that transforms the bias in an expectation value into a measurable multiplicative factor. This factor can be eliminated at the expense of increased sampling complexity for the observable.
 
     Args:
         circuit (:class:`qibo.models.Circuit`): input circuit.
         noise_model(:class:`qibo.noise.NoiseModel`, optional): noise model used for
-            simulating noisy computation. This matrix can be used to mitigate the
-            effects of :class:`qibo.noise.ReadoutError`.
-        nshots (int, optional): number of shots.
+            simulating noisy computation. Defaults to ``None``.
+        nshots (int, optional): number of shots. Defaults to 10000.
         ncircuits (int, optional): number of randomized circuits. Each of them uses
-            ``int(nshots / ncircuits)`` shots.
-        backend (:class:`qibo.backends.abstract.Backend`): calculation engine.
+            ``int(nshots / ncircuits)`` shots. Defaults to 10.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
 
     Return:
         :class:`qibo.states.CircuitResult`: the state of the input circuit with
             mitigated frequencies.
 
+
+    Reference:
+        1. Ewout van den Berg, Zlatko K. Minev et al, *Model-free readout-error mitigation for quantum expectation values*.
+           `arXiv:2012.09738 [quant-ph] <https://arxiv.org/abs/2012.09738>`_.
     """
     from qibo import Circuit  # pylint: disable=import-outside-toplevel
     from qibo.quantum_info import (  # pylint: disable=import-outside-toplevel
@@ -593,7 +622,7 @@ def apply_randomized_readout_mitigation(
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    qubits = circuit.queue[-1].qubits
+    meas_qubits = circuit.measurements[0].qubits
     nshots_r = int(nshots / ncircuits)
     freq = np.zeros((ncircuits, 2), object)
     for k in range(ncircuits):
@@ -601,19 +630,22 @@ def apply_randomized_readout_mitigation(
         circuit_c.queue.pop()
         cal_circuit = Circuit(circuit.nqubits, density_matrix=True)
 
-        x_gate = random_pauli(len(qubits), 1, subset=["I", "X"]).queue
+        x_gate = random_pauli(circuit.nqubits, 1, subset=["I", "X"]).queue
 
         error_map = {}
-        for gate in x_gate:
+        for j, gate in enumerate(x_gate):
             if gate.name == "x":
-                error_map[gate.qubits[0]] = 1
+                if gate.qubits[0] in meas_qubits:
+                    error_map[gate.qubits[0]] = 1
+                else:
+                    x_gate.queue[j] = gates.I(gate.qubits[0])
 
         circuits = [circuit_c, cal_circuit]
         results = []
         freqs = []
         for circ in circuits:
             circ.add(x_gate)
-            circ.add(gates.M(*qubits))
+            circ.add(gates.M(*meas_qubits))
             if noise_model is not None and backend.name != "qibolab":
                 circ = noise_model.apply(circ)
             result = backend.execute_circuit(circ, nshots=nshots_r)
@@ -625,8 +657,8 @@ def apply_randomized_readout_mitigation(
     for j in range(2):
         results[j].nshots = nshots
         freq_sum = freq[0, j]
-        for f in freq[1::, j]:
-            freq_sum += f
+        for frs in freq[1::, j]:
+            freq_sum += frs
         results[j]._frequencies = freq_sum
 
     return results
