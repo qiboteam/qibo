@@ -30,6 +30,10 @@ class NumpyBackend(Backend):
             np.complex128,
         )
 
+        from qibo.backends.clifford import CliffordOperations
+
+        self.clifford_operations = CliffordOperations(self.np)
+
     def set_precision(self, precision):
         if precision != self.precision:
             if precision == "single":
