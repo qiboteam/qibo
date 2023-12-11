@@ -385,12 +385,15 @@ def vnCDR(
             If ``"RX"``, the gate used is :math:``RX(\\pi / 2)``.
             Default is ``"CNOT"``.
         full_output (bool, optional): if ``True``, this function returns additional
-            information: ``val``, ``optimal_params``, ``train_val``.
-        readout (dict, optional): It has the structure
-            {'calibration_matrix': `numpy.ndarray`, 'ncircuits': `int`}.
-            If passed, the calibration matrix or the randomized method is
-            used to mitigate readout errors.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): calculation engine.
+            information: ``val``, ``optimal_params``, ``train_val``. Defaults to ``False``.
+        readout (dict, optional): A dictionary that may contain the following keys:
+            - 'calibration_matrix': numpy.ndarray, used for applying a pre-computed calibration matrix for readout error mitigation.
+            - 'random_ncircuits': int, specifies the number of random circuits to use for the randomized method of readout error mitigation.
+            - 'ibu_iters': int, specifies the number of iterations for the iterative Bayesian update method of readout error mitigation.
+            If provided, the corresponding readout error mitigation method is used.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
 
     Returns:
         mit_val (float): Mitigated expectation value of `observable`.
@@ -398,24 +401,24 @@ def vnCDR(
         optimal_params (list): Optimal values for `params`.
         train_val (dict): Contains the noise-free and noisy expectation values obtained
         with the training circuits.
-    """
 
-    # Set backend
+    Reference:
+        1. A. Lowe, MH. Gordon et al, *Unified approach to data-driven quantum error mitigation*.
+           `arXiv:2011.01157 [quant-ph] <https://arxiv.org/abs/2011.01157>`_.
+    """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    # Sample the training circuits
     training_circuits = [
-        sample_training_circuit(circuit) for n in range(n_training_samples)
+        sample_training_circuit_cdr(circuit) for _ in range(n_training_samples)
     ]
     train_val = {"noise-free": [], "noisy": []}
 
-    # Add the different noise levels and run the circuits
-    for c in training_circuits:
-        val = c(nshots=nshots).expectation_from_samples(observable)
+    for circ in training_circuits:
+        val = circ(nshots=nshots).expectation_from_samples(observable)
         train_val["noise-free"].append(val)
         for level in noise_levels:
-            noisy_c = get_noisy_circuit(c, level, insertion_gate=insertion_gate)
+            noisy_c = get_noisy_circuit(circ, level, insertion_gate=insertion_gate)
             if "ncircuits" in readout.keys():
                 (
                     circuit_result,
@@ -428,22 +431,19 @@ def vnCDR(
                     noisy_c = noise_model.apply(noisy_c)
                 circuit_result = backend.execute_circuit(noisy_c, nshots=nshots)
             if "calibration_matrix" in readout.keys():
-                circuit_result = apply_readout_mitigation(
-                    circuit_result, readout["calibration_matrix"]
+                circuit_result = apply_cal_mat_readout_mitigation(
+                    circuit_result, readout["calibration_matrix"], readout["ibu_iters"]
                 )
             val = circuit_result.expectation_from_samples(observable)
             if "ncircuits" in readout.keys():
                 val /= circuit_result_cal.expectation_from_samples(observable)
             train_val["noisy"].append(val)
 
-    # Repeat noise-free values for each noise level
     noisy_array = np.array(train_val["noisy"]).reshape(-1, len(noise_levels))
 
-    # Fit the model
     params = np.random.rand(len(noise_levels))
     optimal_params = curve_fit(model, noisy_array.T, train_val["noise-free"], p0=params)
 
-    # Run the input circuit
     val = []
     for level in noise_levels:
         noisy_c = get_noisy_circuit(circuit, level, insertion_gate=insertion_gate)
@@ -456,8 +456,8 @@ def vnCDR(
                 noisy_c = noise_model.apply(noisy_c)
             circuit_result = backend.execute_circuit(noisy_c, nshots=nshots)
         if "calibration_matrix" in readout.keys():
-            circuit_result = apply_readout_mitigation(
-                circuit_result, readout["calibration_matrix"]
+            circuit_result = apply_cal_mat_readout_mitigation(
+                circuit_result, readout["calibration_matrix"], readout["ibu_iters"]
             )
         expval = circuit_result.expectation_from_samples(observable)
         if "ncircuits" in readout.keys():
@@ -466,8 +466,7 @@ def vnCDR(
 
     mit_val = model(np.array(val).reshape(-1, 1), *optimal_params[0])[0]
 
-    # Return data
-    if full_output == True:
+    if full_output is True:
         return mit_val, val, optimal_params, train_val
 
     return mit_val
