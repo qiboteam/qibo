@@ -22,7 +22,15 @@ def assert_connectivity(connectivity: nx.Graph, circuit: Circuit):
         circuit (:class:`qibo.models.circuit.Circuit`): circuit model to check.
         connectivity (:class:`networkx.Graph`): chip connectivity.
     """
-
+    if list(connectivity.nodes) != list(range(connectivity.number_of_nodes())):
+        node_mapping = {node: i for i, node in enumerate(connectivity.nodes)}
+        new_connectivity = nx.Graph()
+        for new_name in node_mapping.values():
+            new_connectivity.add_node(new_name)
+        new_connectivity.add_edges_from(
+            [(node_mapping[u], node_mapping[v]) for u, v in connectivity.edges]
+        )
+        connectivity = new_connectivity
     for gate in circuit.queue:
         if len(gate.qubits) > 2 and not isinstance(gate, gates.M):
             raise_error(ConnectivityError, f"{gate.name} acts on more than two qubits.")
@@ -32,339 +40,6 @@ def assert_connectivity(connectivity: nx.Graph, circuit: Circuit):
                     ConnectivityError,
                     f"Circuit does not respect connectivity. {gate.name} acts on {gate.qubits}.",
                 )
-
-
-# TODO: make this class work with CircuitMap
-class ShortestPaths(Router):
-    """A class to perform initial qubit mapping and connectivity matching.
-
-    Args:
-        connectivity (:class:`networkx.Graph`): chip connectivity.
-        sampling_split (float, optional): fraction of paths tested
-            (between :math:`0` and :math:`1`). Defaults to :math:`1.0`.
-        verbose (bool, optional): If ``True``, print info messages. Defaults to ``False``.
-    """
-
-    def __init__(
-        self, connectivity: nx.Graph, sampling_split: float = 1.0, verbose: bool = False
-    ):
-        self.connectivity = connectivity
-        self.sampling_split = sampling_split
-        self.verbose = verbose
-
-        self.initial_layout = None
-        self._added_swaps = 0
-        self.final_map = None
-        self._gates_qubits_pairs = None
-        self._mapping = None
-        self._swap_map = None
-        self._added_swaps_list = []
-        self._graph = None
-        self._qubit_map = None
-        self._transpiled_circuit = None
-        self._circuit_position = 0
-
-    def __call__(self, circuit: Circuit, initial_layout: dict):
-        """Circuit connectivity matching.
-
-        Args:
-            circuit (:class:`qibo.models.circuit.Circuit`): circuit to be matched to hardware connectivity.
-            initial_layout (dict): initial physical-to-logical qubit mapping
-
-        Returns:
-            (:class:`qibo.models.circuit.Circuit`, dict): circut mapped to hardware topology, and final qubit mapping.
-        """
-        self._mapping = initial_layout
-        dict_keys = list(initial_layout.keys())
-        init_qubit_map = np.asarray(list(initial_layout.values()))
-        self._initial_checks(circuit.nqubits)
-        self._gates_qubits_pairs = _find_gates_qubits_pairs(circuit)
-        self._mapping = dict(zip(range(len(initial_layout)), initial_layout.values()))
-        self._graph = nx.relabel_nodes(self.connectivity, self._mapping)
-        self._qubit_map = np.sort(init_qubit_map)
-        self._swap_map = deepcopy(init_qubit_map)
-        self._first_transpiler_step(circuit)
-
-        while len(self._gates_qubits_pairs) != 0:
-            self._transpiler_step(circuit)
-        hardware_mapped_circuit = self._remap_circuit(np.argsort(init_qubit_map))
-        final_mapping = {
-            dict_keys[j]: self._swap_map[j]
-            for j in range(self._graph.number_of_nodes())
-        }
-
-        return hardware_mapped_circuit, final_mapping
-
-    @property
-    def added_swaps(self):
-        """Number of added swaps during transpiling."""
-        return self._added_swaps
-
-    @property
-    def sampling_split(self):
-        """Fraction of possible shortest paths to be analyzed."""
-        return self._sampling_split
-
-    @sampling_split.setter
-    def sampling_split(self, sampling_split: float):
-        """Set the sampling split, the fraction of possible shortest paths to be analyzed.
-
-        Args:
-            sampling_split (float): define fraction of shortest path tested.
-        """
-
-        if 0.0 < sampling_split <= 1.0:
-            self._sampling_split = sampling_split
-        else:
-            raise_error(ValueError, "Sampling_split must be in (0:1].")
-
-    def _transpiler_step(self, circuit: Circuit):
-        """Transpilation step. Find new mapping, add swap gates and apply gates that can be run with this configuration.
-
-        Args:
-            circuit (:class:`qibo.models.circuit.Circuit`): circuit to be transpiled.
-        """
-        len_before_step = len(self._gates_qubits_pairs)
-        path, meeting_point = self._relocate()
-        self._add_swaps(path, meeting_point)
-        self._update_qubit_map()
-        self._add_gates(circuit, len_before_step - len(self._gates_qubits_pairs))
-
-    def _first_transpiler_step(self, circuit: Circuit):
-        """First transpilation step. Apply gates that can be run with the initial qubit mapping.
-
-        Args:
-            circuit (:class:`qibo.models.circuit.Circuit`): circuit to be transpiled.
-        """
-        self._circuit_position = 0
-        self._added_swaps = 0
-        self._added_swaps_list = []
-        len_2q_circuit = len(self._gates_qubits_pairs)
-        self._gates_qubits_pairs = self._reduce(self._graph)
-        self._add_gates(circuit, len_2q_circuit - len(self._gates_qubits_pairs))
-
-    def _reduce(self, graph: nx.Graph):
-        """Reduces the circuit by deleting two-qubit gates if it can be applied on the current configuration.
-
-        Args:
-            graph (:class:`networkx.Graph`): current hardware qubit mapping.
-
-        Returns:
-            (list): reduced circuit.
-        """
-        new_circuit = self._gates_qubits_pairs.copy()
-        while (
-            new_circuit != []
-            and (new_circuit[0][0], new_circuit[0][1]) in graph.edges()
-        ):
-            del new_circuit[0]
-        return new_circuit
-
-    def _map_list(self, path: list):
-        """Return all possible walks of qubits, or a fraction, for a given path.
-
-        Args:
-            path (list): path to move qubits.
-
-        Returns:
-            (list, list): all possible walks of qubits, or a fraction of them based on self.sampling_split, for a given path, and qubit meeting point for each path.
-        """
-        path_ends = [path[0], path[-1]]
-        path_middle = path[1:-1]
-        mapping_list = []
-        meeting_point_list = []
-        test_paths = range(len(path) - 1)
-        if self.sampling_split != 1.0:
-            test_paths = np.random.choice(
-                test_paths,
-                size=int(np.ceil(len(test_paths) * self.sampling_split)),
-                replace=False,
-            )
-        for i in test_paths:
-            values = path_middle[:i] + path_ends + path_middle[i:]
-            mapping = dict(zip(path, values))
-            mapping_list.append(mapping)
-            meeting_point_list.append(i)
-
-        return mapping_list, meeting_point_list
-
-    def _relocate(self):
-        """Greedy algorithm to decide which path to take, and how qubits should walk.
-
-        Returns:
-            (list, int): best path to move qubits and qubit meeting point in the path.
-        """
-        nodes = self._graph.number_of_nodes()
-        circuit = self._reduce(self._graph)
-        final_circuit = circuit
-        keys = list(range(nodes))
-        final_graph = self._graph
-        final_mapping = dict(zip(keys, keys))
-        # Consider all shortest paths
-        path_list = [
-            p
-            for p in nx.all_shortest_paths(
-                self._graph, source=circuit[0][0], target=circuit[0][1]
-            )
-        ]
-        self._added_swaps += len(path_list[0]) - 2
-        # Here test all paths
-        for path in path_list:
-            # map_list uses self.sampling_split
-            list_, meeting_point_list = self._map_list(path)
-            for j, mapping in enumerate(list_):
-                new_graph = nx.relabel_nodes(self._graph, mapping)
-                new_circuit = self._reduce(new_graph)
-                # Greedy looking for the optimal path and the optimal walk on this path
-                if len(new_circuit) < len(final_circuit):
-                    final_graph = new_graph
-                    final_circuit = new_circuit
-                    final_mapping = mapping
-                    final_path = path
-                    meeting_point = meeting_point_list[j]
-        self._graph = final_graph
-        self._mapping = final_mapping
-        self._gates_qubits_pairs = final_circuit
-
-        return final_path, meeting_point
-
-    def _initial_checks(self, qubits: int):
-        """Initializes the transpiled circuit and check if it can be mapped to the defined connectivity.
-
-        Args:
-            qubits (int): number of qubits in the circuit to be transpiled.
-        """
-        nodes = self.connectivity.number_of_nodes()
-        if qubits > nodes:
-            raise_error(
-                ValueError,
-                "There are not enough physical qubits in the hardware to map the circuit.",
-            )
-        if qubits == nodes:
-            new_circuit = Circuit(nodes)
-        else:
-            if self.verbose:
-                log.info(
-                    "You are using more physical qubits than required by the circuit, some ancillary qubits will be added to the circuit."
-                )
-            new_circuit = Circuit(nodes)
-        self._transpiled_circuit = new_circuit
-
-    def _add_gates(self, circuit: Circuit, matched_gates: int):
-        """Adds one and two qubit gates to transpiled circuit until connectivity is matched.
-
-        Args:
-            circuit (:class:`qibo.models.circuit.Circuit`): circuit to be transpiled.
-            matched_gates (int): number of two-qubit gates that
-                can be applied with the current qubit mapping.
-        """
-        index = 0
-        while self._circuit_position < len(circuit.queue):
-            gate = circuit.queue[self._circuit_position]
-            if isinstance(gate, gates.M):
-                measured_qubits = gate.qubits
-                self._transpiled_circuit.add(
-                    gate.on_qubits(
-                        {
-                            measured_qubits[i]: self._qubit_map[measured_qubits[i]]
-                            for i in range(len(measured_qubits))
-                        }
-                    )
-                )
-                self._circuit_position += 1
-            elif len(gate.qubits) == 1:
-                self._transpiled_circuit.add(
-                    gate.on_qubits({gate.qubits[0]: self._qubit_map[gate.qubits[0]]})
-                )
-                self._circuit_position += 1
-            else:
-                index += 1
-                if index == matched_gates + 1:
-                    break
-                self._transpiled_circuit.add(
-                    gate.on_qubits(
-                        {
-                            gate.qubits[0]: self._qubit_map[gate.qubits[0]],
-                            gate.qubits[1]: self._qubit_map[gate.qubits[1]],
-                        }
-                    )
-                )
-                self._circuit_position += 1
-
-    def _add_swaps(self, path: list, meeting_point: int):
-        """Adds swaps to the transpiled circuit to move qubits.
-
-        Args:
-            path (list): path to move qubits.
-            meeting_point (int): qubit meeting point in the path.
-        """
-        forward = path[0 : meeting_point + 1]
-        backward = list(reversed(path[meeting_point + 1 :]))
-        if len(forward) > 1:
-            for f1, f2 in zip(forward[:-1], forward[1:]):
-                gate = gates.SWAP(self._qubit_map[f1], self._qubit_map[f2])
-                self._transpiled_circuit.add(gate)
-                self._added_swaps_list.append(gate)
-
-        if len(backward) > 1:
-            for b1, b2 in zip(backward[:-1], backward[1:]):
-                gate = gates.SWAP(self._qubit_map[b1], self._qubit_map[b2])
-                self._transpiled_circuit.add(gate)
-                self._added_swaps_list.append(gate)
-
-    def _update_swap_map(self, swap: tuple):
-        """Updates the qubit swap map."""
-        temp = self._swap_map[swap[0]]
-        self._swap_map[swap[0]] = self._swap_map[swap[1]]
-        self._swap_map[swap[1]] = temp
-
-    def _update_qubit_map(self):
-        """Update the qubit mapping after adding swaps."""
-        old_mapping = self._qubit_map.copy()
-        for key, value in self._mapping.items():
-            self._qubit_map[value] = old_mapping[key]
-
-    def _remap_circuit(self, qubit_map):
-        """Map logical to physical qubits in a circuit.
-
-        Args:
-            qubit_map (ndarray): new qubit mapping.
-
-        Returns:
-            (:class:`qibo.models.circuit.Circuit`): transpiled circuit mapped with initial qubit mapping.
-        """
-        new_circuit = Circuit(self._transpiled_circuit.nqubits)
-        for gate in self._transpiled_circuit.queue:
-            new_circuit.add(gate.on_qubits({q: qubit_map[q] for q in gate.qubits}))
-            if gate in self._added_swaps_list:
-                self._update_swap_map(
-                    tuple(qubit_map[gate.qubits[i]] for i in range(2))
-                )
-        return new_circuit
-
-
-def _find_gates_qubits_pairs(circuit: Circuit):
-    """Helper method for :meth:`qibo.transpiler.router.ShortestPaths`.
-    Translate qibo circuit into a list of pairs of qubits to be used by the router and placer.
-
-    Args:
-        circuit (:class:`qibo.models.circuit.Circuit`): circuit to be transpiled.
-
-    Returns:
-        (list): list containing qubits targeted by two qubit gates.
-    """
-    translated_circuit = []
-    for gate in circuit.queue:
-        if isinstance(gate, gates.M):
-            pass
-        elif len(gate.qubits) == 2:
-            translated_circuit.append(sorted(gate.qubits))
-        elif len(gate.qubits) >= 3:
-            raise_error(
-                ValueError, "Gates targeting more than 2 qubits are not supported"
-            )
-
-    return translated_circuit
 
 
 class CircuitMap:
@@ -383,6 +58,7 @@ class CircuitMap:
         else:
             self.circuit_blocks = CircuitBlocks(circuit, index_names=True)
         self.initial_layout = initial_layout
+        self._graph_qubits_names = [int(key[1:]) for key in initial_layout.keys()]
         self._circuit_logical = list(range(len(initial_layout)))
         self._physical_logical = list(initial_layout.values())
         self._routed_blocks = CircuitBlocks(Circuit(circuit.nqubits))
@@ -400,7 +76,9 @@ class CircuitMap:
         """Executes a block by removing it from the circuit representation
         and adding it to the routed circuit.
         """
-        self._routed_blocks.add_block(block.on_qubits(self.get_physical_qubits(block)))
+        self._routed_blocks.add_block(
+            block.on_qubits(self.get_physical_qubits(block, index=True))
+        )
         self.circuit_blocks.remove_block(block)
 
     def routed_circuit(self, circuit_kwargs=None):
@@ -424,7 +102,7 @@ class CircuitMap:
         and add the SWAP gate to the routed blocks, the swap is represented by a tuple containing
         the logical qubits to be swapped.
         """
-        physical_swap = self.logical_to_physical(swap)
+        physical_swap = self.logical_to_physical(swap, index=True)
         self._routed_blocks.add_block(
             Block(qubits=physical_swap, gates=[gates.SWAP(*physical_swap)])
         )
@@ -438,14 +116,25 @@ class CircuitMap:
         """Returns the current logical qubits where a block is acting"""
         return self.circuit_to_logical(block.qubits)
 
-    def get_physical_qubits(self, block: Block or int):
-        """Returns the physical qubits where a block is acting."""
+    def get_physical_qubits(self, block: Block or int, index=False):
+        """Returns the physical qubits where a block is acting.
+        If index is True the qubits are returned as indices of the connectivity nodes.
+        """
         if isinstance(block, int):
             block = self.circuit_blocks.search_by_index(block)
-        return self.logical_to_physical(self.get_logical_qubits(block))
+        return self.logical_to_physical(self.get_logical_qubits(block), index=index)
 
-    def logical_to_physical(self, logical_qubits: tuple):
-        """Returns the physical qubits associated to the logical qubits."""
+    def logical_to_physical(self, logical_qubits: tuple, index=False):
+        """Returns the physical qubits associated to the logical qubits.
+        If index is True the qubits are returned as indices of the connectivity nodes.
+        """
+        if not index:
+            return tuple(
+                self._graph_qubits_names[
+                    self._physical_logical.index(logical_qubits[i])
+                ]
+                for i in range(2)
+            )
         return tuple(self._physical_logical.index(logical_qubits[i]) for i in range(2))
 
     def circuit_to_logical(self, circuit_qubits: tuple):
@@ -454,7 +143,250 @@ class CircuitMap:
 
     def circuit_to_physical(self, circuit_qubit: int):
         """Returns the current physical qubit associated to an initial circuit qubit."""
-        return self._physical_logical.index(self._circuit_logical[circuit_qubit])
+        return self._graph_qubits_names[
+            self._physical_logical.index(self._circuit_logical[circuit_qubit])
+        ]
+
+    def physical_to_logical(self, physical_qubit: int):
+        """Returns the current logical qubit associated to a physical qubit (connectivity graph node)."""
+        physical_qubit_index = self._graph_qubits_names.index(physical_qubit)
+        return self._physical_logical[physical_qubit_index]
+
+
+class ShortestPaths(Router):
+    """A class to perform initial qubit mapping and connectivity matching.
+
+    Args:
+        connectivity (:class:`networkx.Graph`): chip connectivity.
+        sampling_split (float, optional): fraction of paths tested
+            (between :math:`0` and :math:`1`). Defaults to :math:`1.0`.
+        seed (int): seed for the random number generator.
+    """
+
+    def __init__(self, connectivity: nx.Graph, seed=42):
+        self.connectivity = connectivity
+        self._front_layer = None
+        self.circuit = None
+        self._dag = None
+        self._final_measurements = None
+        random.seed(seed)
+
+    @property
+    def added_swaps(self):
+        """Number of SWAP gates added to the circuit during routing."""
+        return self.circuit._swaps
+
+    def __call__(self, circuit: Circuit, initial_layout: dict):
+        """Circuit connectivity matching.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): circuit to be matched to hardware connectivity.
+            initial_layout (dict): initial physical-to-logical qubit mapping
+
+        Returns:
+            (:class:`qibo.models.circuit.Circuit`, dict): circut mapped to hardware topology, and final physical-to-logical qubit mapping.
+        """
+        self._preprocessing(circuit=circuit, initial_layout=initial_layout)
+        while self._dag.number_of_nodes() != 0:
+            print("new step, front layer:", self._front_layer)
+            execute_block_list = self._check_execution()
+            print("executable gates:", execute_block_list)
+            if execute_block_list is not None:
+                self._execute_blocks(execute_block_list)
+            else:
+                self._find_new_mapping()
+
+        routed_circuit = self.circuit.routed_circuit(circuit_kwargs=circuit.init_kwargs)
+        if self._final_measurements is not None:
+            routed_circuit = self._append_final_measurements(
+                routed_circuit=routed_circuit
+            )
+
+        return routed_circuit, self.circuit.final_layout()
+
+    def _find_new_mapping(self):
+        """Find new qubit mapping. The mapping is found by looking for the shortest path."""
+        candidates_evaluation = []
+        for candidate in self._candidates():
+            cost = self._compute_cost(candidate)
+            candidates_evaluation.append((candidate, cost))
+            print("candidate evaluation:", (candidate, cost))
+        best_cost = min(candidate[1] for candidate in candidates_evaluation)
+        best_candidates = [
+            candidate[0]
+            for candidate in candidates_evaluation
+            if candidate[1] == best_cost
+        ]
+        print("best cost:", best_cost)
+        print("best candidates:", best_candidates)
+        best_candidate = random.choice(best_candidates)
+        print("best candidate:", best_candidate)
+        self._add_swaps(best_candidate, self.circuit)
+
+    def _candidates(self):
+        """Return all possible shortest paths,
+        a list contains the new mapping and a second list contains the path meeting point.
+        """
+        target_qubits = self.circuit.get_physical_qubits(self._front_layer[0])
+        path_list = list(
+            nx.all_shortest_paths(
+                self.connectivity, source=target_qubits[0], target=target_qubits[1]
+            )
+        )
+        all_candidates = []
+        for path in path_list:
+            for meeting_point in range(len(path) - 1):
+                all_candidates.append((path, meeting_point))
+        return all_candidates
+
+    @staticmethod
+    def _add_swaps(candidate: tuple, circuitmap: CircuitMap):
+        """Adds swaps to the circuit to move qubits.
+
+        Args:
+            candidate (tuple): contains path to move qubits and qubit meeting point in the path.
+            circuitmap (CircuitMap): representation of the circuit.
+        """
+        path = candidate[0]
+        meeting_point = candidate[1]
+        forward = path[0 : meeting_point + 1]
+        backward = list(reversed(path[meeting_point + 1 :]))
+        if len(forward) > 1:
+            for f1, f2 in zip(forward[:-1], forward[1:]):
+                circuitmap.update(
+                    (
+                        circuitmap.physical_to_logical(f1),
+                        circuitmap.physical_to_logical(f2),
+                    )
+                )
+        if len(backward) > 1:
+            for b1, b2 in zip(backward[:-1], backward[1:]):
+                circuitmap.update(
+                    (
+                        circuitmap.physical_to_logical(b1),
+                        circuitmap.physical_to_logical(b2),
+                    )
+                )
+
+    def _compute_cost(self, candidate):
+        """Greedy algorithm to decide which path to take, and how qubits should walk.
+
+        Returns:
+            (list, int): best path to move qubits and qubit meeting point in the path.
+        """
+        temporary_circuit = CircuitMap(
+            initial_layout=self.circuit.initial_layout,
+            circuit=Circuit(len(self.circuit.initial_layout)),
+            blocks=self.circuit.circuit_blocks,
+        )
+        temporary_circuit.set_circuit_logical(deepcopy(self.circuit._circuit_logical))
+        self._add_swaps(candidate, temporary_circuit)
+        temporary_dag = deepcopy(self._dag)
+        successive_executed_gates = 0
+        while temporary_dag.number_of_nodes() != 0:
+            for layer, nodes in enumerate(nx.topological_generations(temporary_dag)):
+                for node in nodes:
+                    temporary_dag.nodes[node]["layer"] = layer
+            temporary_front_layer = [
+                node[0] for node in temporary_dag.nodes(data="layer") if node[1] == 0
+            ]
+            all_executed = True
+            for block in temporary_front_layer:
+                print("check temp block:", block)
+                if (
+                    temporary_circuit.get_physical_qubits(block)
+                    in self.connectivity.edges
+                    or not temporary_circuit.circuit_blocks.search_by_index(
+                        block
+                    ).entangled
+                ):
+                    successive_executed_gates += 1
+                    temporary_circuit.execute_block(
+                        temporary_circuit.circuit_blocks.search_by_index(block)
+                    )
+                    temporary_dag.remove_node(block)
+                    print("executed")
+                else:
+                    all_executed = False
+            if not all_executed:
+                break
+            print("cost:", successive_executed_gates)
+        return -successive_executed_gates
+
+    def _check_execution(self):
+        """Check if some blocks in the front layer can be executed in the current configuration.
+
+        Returns:
+            (list): executable blocks if there are, ``None`` otherwise.
+        """
+        executable_blocks = []
+        for block in self._front_layer:
+            if (
+                self.circuit.get_physical_qubits(block) in self.connectivity.edges
+                or not self.circuit.circuit_blocks.search_by_index(block).entangled
+            ):
+                executable_blocks.append(block)
+        if len(executable_blocks) == 0:
+            return None
+        return executable_blocks
+
+    def _execute_blocks(self, blocklist: list):
+        """Execute a list of blocks:
+        -Remove the correspondent nodes from the dag and circuit representation.
+        -Add the executed blocks to the routed circuit.
+        -Update the dag layers and front layer.
+        """
+        for block_id in blocklist:
+            block = self.circuit.circuit_blocks.search_by_index(block_id)
+            self.circuit.execute_block(block)
+            self._dag.remove_node(block_id)
+        self._update_front_layer()
+
+    def _update_front_layer(self):
+        """Update the front layer of the dag."""
+        for layer, nodes in enumerate(nx.topological_generations(self._dag)):
+            for node in nodes:
+                self._dag.nodes[node]["layer"] = layer
+        self._front_layer = [
+            node[0] for node in self._dag.nodes(data="layer") if node[1] == 0
+        ]
+
+    def _preprocessing(self, circuit: Circuit, initial_layout: dict):
+        """The following objects will be initialised:
+        - circuit: class to represent circuit and to perform logical-physical qubit mapping.
+        - _final_measurements: measurement gates at the end of the circuit.
+        - _front_layer: list containing the blocks to be executed.
+        """
+        copied_circuit = _copy_circuit(circuit)
+        self._final_measurements = self._detach_final_measurements(copied_circuit)
+        self.circuit = CircuitMap(initial_layout, copied_circuit)
+        self._dag = _create_dag(self.circuit.blocks_qubits_pairs())
+        self._update_front_layer()
+
+    def _detach_final_measurements(self, circuit: Circuit):
+        """Detach measurement gates at the end of the circuit for separate handling."""
+        final_measurements = []
+        for gate in circuit.queue[::-1]:
+            if isinstance(gate, gates.M):
+                final_measurements.append(gate)
+                circuit.queue.remove(gate)
+            else:
+                break
+        if not final_measurements:
+            return None
+        return final_measurements[::-1]
+
+    def _append_final_measurements(self, routed_circuit: Circuit):
+        """Append the final measurment gates on the correct qubits conserving the measurement register."""
+        for measurement in self._final_measurements:
+            original_qubits = measurement.qubits
+            routed_qubits = (
+                self.circuit.circuit_to_physical(qubit) for qubit in original_qubits
+            )
+            routed_circuit.add(
+                measurement.on_qubits(dict(zip(original_qubits, routed_qubits)))
+            )
+        return routed_circuit
 
 
 class Sabre(Router):
@@ -536,24 +468,15 @@ class Sabre(Router):
         - _delta_register: list containing the special weigh added to qubits
             to prevent overlapping swaps.
         """
-        copy_circuit = self._copy_circuit(circuit)
-        self._final_measurements = self._detach_final_measurements(copy_circuit)
-        self.circuit = CircuitMap(initial_layout, copy_circuit)
+        copied_circuit = _copy_circuit(circuit)
+        self._final_measurements = self._detach_final_measurements(copied_circuit)
+        self.circuit = CircuitMap(initial_layout, copied_circuit)
         self._dist_matrix = nx.floyd_warshall_numpy(self.connectivity)
         self._dag = _create_dag(self.circuit.blocks_qubits_pairs())
         self._memory_map = []
         self._update_dag_layers()
         self._update_front_layer()
         self._delta_register = [1.0 for _ in range(circuit.nqubits)]
-
-    @staticmethod
-    def _copy_circuit(circuit: Circuit):
-        """Return a copy of the circuit to avoid altering the original circuit.
-        This copy conserves the registers of the measurement gates."""
-        new_circuit = Circuit(circuit.nqubits)
-        for gate in circuit.queue:
-            new_circuit.add(gate)
-        return new_circuit
 
     def _detach_final_measurements(self, circuit: Circuit):
         """Detach measurement gates at the end of the circuit for separate handling."""
@@ -605,7 +528,7 @@ class Sabre(Router):
             key for key, value in candidates_evaluation.items() if value == best_cost
         ]
         best_candidate = random.choice(best_candidates)
-        for qubit in self.circuit.logical_to_physical(best_candidate):
+        for qubit in self.circuit.logical_to_physical(best_candidate, index=True):
             self._delta_register[qubit] += self.delta
         self.circuit.update(best_candidate)
 
@@ -626,7 +549,7 @@ class Sabre(Router):
             layer_gates = self._get_dag_layer(layer)
             avg_layer_distance = 0.0
             for gate in layer_gates:
-                qubits = temporary_circuit.get_physical_qubits(gate)
+                qubits = temporary_circuit.get_physical_qubits(gate, index=True)
                 avg_layer_distance += (
                     max(self._delta_register[i] for i in qubits)
                     * (self._dist_matrix[qubits[0], qubits[1]] - 1.0)
@@ -647,8 +570,8 @@ class Sabre(Router):
                     candidate = tuple(
                         sorted(
                             (
-                                self.circuit._physical_logical[qubit],
-                                self.circuit._physical_logical[connected],
+                                self.circuit.physical_to_logical(qubit),
+                                self.circuit.physical_to_logical(connected),
                             )
                         )
                     )
@@ -657,7 +580,7 @@ class Sabre(Router):
         return candidates
 
     def _check_execution(self):
-        """Check if some gatesblocks in the front layer can be executed in the current configuration.
+        """Check if some blocks in the front layer can be executed in the current configuration.
 
         Returns:
             (list): executable blocks if there are, ``None`` otherwise.
@@ -688,6 +611,18 @@ class Sabre(Router):
         self._update_front_layer()
         self._memory_map = []
         self._delta_register = [1.0 for _ in self._delta_register]
+
+
+def _copy_circuit(circuit: Circuit):
+    """Helper method for :meth:`qibo.transpiler.router`.
+
+    Return a copy of the circuit to avoid altering the original circuit.
+    This copy conserves the registers of the measurement gates.
+    """
+    new_circuit = Circuit(circuit.nqubits)
+    for gate in circuit.queue:
+        new_circuit.add(gate)
+    return new_circuit
 
 
 def _create_dag(gates_qubits_pairs):

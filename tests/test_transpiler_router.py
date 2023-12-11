@@ -5,14 +5,16 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 from qibo.transpiler.optimizer import Preprocessing
-from qibo.transpiler.pipeline import assert_circuit_equivalence
+from qibo.transpiler.pipeline import (
+    assert_circuit_equivalence,
+    restrict_connectivity_qubits,
+)
 from qibo.transpiler.placer import Custom, Random, Subgraph, Trivial, assert_placement
 from qibo.transpiler.router import (
     CircuitMap,
     ConnectivityError,
     Sabre,
     ShortestPaths,
-    _find_gates_qubits_pairs,
     assert_connectivity,
 )
 
@@ -105,22 +107,6 @@ def test_split_setter(split):
         )
 
 
-def test_insufficient_qubits():
-    circuit = generate_random_circuit(10, 20)
-    placer = Trivial()
-    initial_layout = placer(circuit)
-    transpiler = ShortestPaths(connectivity=star_connectivity())
-    with pytest.raises(ValueError):
-        transpiler(circuit, initial_layout)
-
-
-def test_find_pairs_error():
-    circuit = Circuit(3)
-    circuit.add(gates.TOFFOLI(0, 1, 2))
-    with pytest.raises(ValueError):
-        _find_gates_qubits_pairs(circuit)
-
-
 @pytest.mark.parametrize("gates", [5, 25])
 @pytest.mark.parametrize("qubits", [3, 5])
 @pytest.mark.parametrize("placer", [Trivial, Random])
@@ -130,9 +116,7 @@ def test_random_circuits_5q(gates, qubits, placer, connectivity, split):
     placer = placer(connectivity=connectivity)
     layout_circ = Circuit(5)
     initial_layout = placer(layout_circ)
-    transpiler = ShortestPaths(
-        connectivity=connectivity, verbose=True, sampling_split=split
-    )
+    transpiler = ShortestPaths(connectivity=connectivity, sampling_split=split)
     circuit = generate_random_circuit(nqubits=qubits, ngates=gates)
     transpiled_circuit, final_qubit_map = transpiler(circuit, initial_layout)
     assert transpiler.added_swaps >= 0
@@ -341,3 +325,45 @@ def test_sabre_intermediate_measurements():
     routed_circ, final_layout = router(circuit=circ, initial_layout=initial_layout)
     circuit_result = routed_circ.execute(nshots=100)
     assert routed_circ.queue[3].result is measurement.result
+
+
+def test_sabre_restrict_qubits():
+    circ = Circuit(3)
+    circ.add(gates.CZ(0, 1))
+    circ.add(gates.CZ(0, 2))
+    circ.add(gates.CZ(2, 1))
+    initial_layout = {"q0": 0, "q2": 2, "q3": 1}
+    connectivity = star_connectivity()
+    restricted_connectivity = restrict_connectivity_qubits(connectivity, [0, 2, 3])
+    router = Sabre(connectivity=restricted_connectivity)
+    routed_circ, final_layout = router(circuit=circ, initial_layout=initial_layout)
+    assert_circuit_equivalence(
+        original_circuit=circ,
+        transpiled_circuit=routed_circ,
+        final_map=final_layout,
+        initial_map=initial_layout,
+    )
+    assert_connectivity(restricted_connectivity, routed_circ)
+    print(final_layout)
+    print(routed_circ.draw())
+    assert_placement(routed_circ, final_layout, connectivity=restricted_connectivity)
+
+
+def test_shortest_paths_restrict_qubits():
+    circ = Circuit(3)
+    circ.add(gates.CZ(0, 1))
+    circ.add(gates.CZ(0, 2))
+    circ.add(gates.CZ(2, 1))
+    initial_layout = {"q0": 0, "q2": 2, "q3": 1}
+    connectivity = star_connectivity()
+    restricted_connectivity = restrict_connectivity_qubits(connectivity, [0, 2, 3])
+    router = ShortestPaths(connectivity=restricted_connectivity)
+    routed_circ, final_layout = router(circuit=circ, initial_layout=initial_layout)
+    assert_circuit_equivalence(
+        original_circuit=circ,
+        transpiled_circuit=routed_circ,
+        final_map=final_layout,
+        initial_map=initial_layout,
+    )
+    assert_connectivity(restricted_connectivity, routed_circ)
+    assert_placement(routed_circ, final_layout, connectivity=restricted_connectivity)

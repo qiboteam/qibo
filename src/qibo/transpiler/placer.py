@@ -8,7 +8,6 @@ from qibo.config import raise_error
 from qibo.models import Circuit
 from qibo.transpiler.abstract import Placer, Router
 from qibo.transpiler.exceptions import PlacementError
-from qibo.transpiler.router import _find_gates_qubits_pairs
 
 
 def assert_placement(
@@ -58,6 +57,29 @@ def assert_mapping_consistency(layout: dict, connectivity: nx.Graph = None):
             PlacementError,
             "Some logical qubits in the layout may be missing or duplicated.",
         )
+
+
+def _find_gates_qubits_pairs(circuit: Circuit):
+    """Helper method for :meth:`qibo.transpiler.placer`.
+    Translate qibo circuit into a list of pairs of qubits to be used by the router and placer.
+
+    Args:
+        circuit (:class:`qibo.models.circuit.Circuit`): circuit to be transpiled.
+
+    Returns:
+        gates_qubits_pairs (list): list containing pairs of qubits targeted by two qubits gates.
+    """
+    gates_qubits_pairs = []
+    for gate in circuit.queue:
+        if isinstance(gate, gates.M):
+            pass
+        elif len(gate.qubits) == 2:
+            gates_qubits_pairs.append(sorted(gate.qubits))
+        elif len(gate.qubits) >= 3:
+            raise_error(
+                ValueError, "Gates targeting more than 2 qubits are not supported"
+            )
+    return gates_qubits_pairs
 
 
 class Trivial(Placer):
