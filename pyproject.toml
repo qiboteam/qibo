@@ -30,6 +30,9 @@ hyperopt = "^0.2.7"
 tabulate = "^0.9.0"
 dask = { version = "^2023.12.0", optional = true }
 
+[tool.poetry.extras]
+darray = ["dask"]
+
 [tool.poetry.group.dev]
 optional = true
 
@@ -66,14 +69,6 @@ matplotlib = "^3.7.0"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
 tensorflow = { version = "^2.15.0", markers = "sys_platform == 'linux'" }
 
-[tool.poe.tasks]
-test = "pytest"
-lint = "pylint src --errors-only"
-lint-warnings = "pylint src --exit-zero"
-docs = "make -C doc html"
-docs-clean = "make -C doc clean"
-test-docs = "make -C doc doctest"
-
 [tool.poetry.group.cuda11]
 optional = true
 
@@ -81,7 +76,6 @@ optional = true
 cupy-cuda11x = "^12.0.0"
 cuquantum-python-cu11 = "^23.3.0"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
-
 [tool.poetry.group.cuda12]
 optional = true
 
@@ -89,6 +83,14 @@ optional = true
 cupy-cuda12x = "^12.0.0"
 cuquantum-python-cu12 = "^23.3.0"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
+
+[tool.poe.tasks]
+test = "pytest"
+lint = "pylint src --errors-only"
+lint-warnings = "pylint src --exit-zero"
+docs = "make -C doc html"
+docs-clean = "make -C doc clean"
+test-docs = "make -C doc doctest"
 
 [tool.pylint.reports]
 output-format = "colorized"
