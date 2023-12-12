@@ -221,6 +221,7 @@ class Circuit:
         self.compiled = None
 
         self.has_collapse = False
+        self.collapses = 0
         self.has_unitary_channel = False
         self.unitary_channels = 0
         self.density_matrix = density_matrix
@@ -673,6 +674,7 @@ class Circuit:
                 gate.result.circuit = self
                 if gate.collapse:
                     self.has_collapse = True
+                    self.collapses += 1
                 else:
                     self.measurements.append(gate)
                 return gate.result
@@ -687,6 +689,7 @@ class Circuit:
                         if set(measurement.qubits) & set(gate.qubits):
                             measurement.collapse = True
                             self.has_collapse = True
+                            self.collapses += 1
                             self.measurements.remove(measurement)
 
             if isinstance(gate, gates.UnitaryChannel):
@@ -749,11 +752,22 @@ class Circuit:
 
             else:
                 pos = self.queue.remove(gate)
-                for measurement in list(self.measurements):
-                    if not bool(set(measurement.qubits) & set(gate.qubits)):
-                        measurement.collapse = False
-                        self.repeated_execution = False
-                        self.measurements.remove(measurement)
+
+                for q in gate.qubits:
+                    idx = self.queue.moment_index[q]
+                    if self.queue.moments[idx][q] != gate:
+                        # another gate exists after the measurement gate
+                        continue
+                    else:
+                        while idx > 0 and not isinstance(
+                            self.queue.moments[idx][q], gates.M
+                        ):
+                            idx -= 1
+                        mgate = self.queue.moments[idx][q]
+                        mgate.collapse = False
+                        self.collapses -= 1
+                        self.measurements.append(mgate)
+                        self.has_collapse = False if self.collapses == 0 else True
 
             if isinstance(gate, gates.UnitaryChannel):
                 self.unitary_channels -= 1
