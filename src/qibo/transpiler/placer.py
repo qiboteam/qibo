@@ -11,7 +11,7 @@ from qibo.transpiler.exceptions import PlacementError
 
 
 def assert_placement(
-    circuit: Circuit, layout: dict, connectivity: nx.graph = None
+    circuit: Circuit, layout: dict, connectivity: nx.Graph = None
 ) -> bool:
     """Check if layout is in the correct form and matches the number of qubits of the circuit.
 

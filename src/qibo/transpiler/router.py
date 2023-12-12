@@ -188,9 +188,7 @@ class ShortestPaths(Router):
         """
         self._preprocessing(circuit=circuit, initial_layout=initial_layout)
         while self._dag.number_of_nodes() != 0:
-            print("new step, front layer:", self._front_layer)
             execute_block_list = self._check_execution()
-            print("executable gates:", execute_block_list)
             if execute_block_list is not None:
                 self._execute_blocks(execute_block_list)
             else:
@@ -210,17 +208,13 @@ class ShortestPaths(Router):
         for candidate in self._candidates():
             cost = self._compute_cost(candidate)
             candidates_evaluation.append((candidate, cost))
-            print("candidate evaluation:", (candidate, cost))
         best_cost = min(candidate[1] for candidate in candidates_evaluation)
         best_candidates = [
             candidate[0]
             for candidate in candidates_evaluation
             if candidate[1] == best_cost
         ]
-        print("best cost:", best_cost)
-        print("best candidates:", best_candidates)
         best_candidate = random.choice(best_candidates)
-        print("best candidate:", best_candidate)
         self._add_swaps(best_candidate, self.circuit)
 
     def _candidates(self):
@@ -270,6 +264,7 @@ class ShortestPaths(Router):
 
     def _compute_cost(self, candidate):
         """Greedy algorithm to decide which path to take, and how qubits should walk.
+        The cost is computed as minus the number of successive gates that can be executed.
 
         Returns:
             (list, int): best path to move qubits and qubit meeting point in the path.
@@ -292,7 +287,6 @@ class ShortestPaths(Router):
             ]
             all_executed = True
             for block in temporary_front_layer:
-                print("check temp block:", block)
                 if (
                     temporary_circuit.get_physical_qubits(block)
                     in self.connectivity.edges
@@ -305,12 +299,10 @@ class ShortestPaths(Router):
                         temporary_circuit.circuit_blocks.search_by_index(block)
                     )
                     temporary_dag.remove_node(block)
-                    print("executed")
                 else:
                     all_executed = False
             if not all_executed:
                 break
-            print("cost:", successive_executed_gates)
         return -successive_executed_gates
 
     def _check_execution(self):

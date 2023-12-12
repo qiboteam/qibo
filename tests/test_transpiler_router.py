@@ -334,8 +334,6 @@ def test_sabre_restrict_qubits():
         initial_map=initial_layout,
     )
     assert_connectivity(restricted_connectivity, routed_circ)
-    print(final_layout)
-    print(routed_circ.draw())
     assert_placement(routed_circ, final_layout, connectivity=restricted_connectivity)
 
 
