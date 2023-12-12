@@ -23,15 +23,9 @@ Instead, if you use `conda <https://anaconda.org/>`_ type:
 
 Here an example of Quantum Fourier Transform (QFT) to test your installation:
 
-.. testsetup::
+.. testcode::
 
     from qibo.models import QFT
-
-.. doctest::
-    >>> from qibo import get_backend
-    :skipif: get_backend() == "clifford"
-
-.. testcode::
 
     # Create a QFT circuit with 15 qubits
     circuit = QFT(15)
@@ -41,16 +35,10 @@ Here an example of Quantum Fourier Transform (QFT) to test your installation:
 
 Here an example of adding gates and measurements:
 
-.. testsetup::
+.. testcode::
 
     import numpy as np
     from qibo import Circuit, gates
-
-.. doctest::
-    >>> from qibo import get_backend
-    :skipif: get_backend() == "clifford"
-
-.. testcode::
 
     c = Circuit(2)
     c.add(gates.X(0))
