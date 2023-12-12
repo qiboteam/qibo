@@ -17,6 +17,8 @@ circuit = Circuit(5)
 circuit.add(gates.CNOT(1, 3))
 circuit.add(gates.CNOT(2, 1))
 circuit.add(gates.CNOT(4, 1))
+circuit.add(gates.CNOT(4, 2))
+circuit.add(gates.CNOT(4, 3))
 initial_layout = {"q0": 0, "q1": 1, "q2": 2, "q3": 3, "q4": 4}
 transpiler = ShortestPaths(connectivity=star_connectivity())
 routed_circ, final_layout = transpiler(circuit, initial_layout)

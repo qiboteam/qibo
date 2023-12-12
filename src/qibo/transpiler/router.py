@@ -277,7 +277,7 @@ class ShortestPaths(Router):
         temporary_circuit = CircuitMap(
             initial_layout=self.circuit.initial_layout,
             circuit=Circuit(len(self.circuit.initial_layout)),
-            blocks=self.circuit.circuit_blocks,
+            blocks=deepcopy(self.circuit.circuit_blocks),
         )
         temporary_circuit.set_circuit_logical(deepcopy(self.circuit._circuit_logical))
         self._add_swaps(candidate, temporary_circuit)

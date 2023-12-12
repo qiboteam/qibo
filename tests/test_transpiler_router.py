@@ -99,25 +99,15 @@ def test_assert_connectivity_3q():
         assert_connectivity(star_connectivity(), circuit)
 
 
-@pytest.mark.parametrize("split", [2.0, -1.0])
-def test_split_setter(split):
-    with pytest.raises(ValueError):
-        transpiler = ShortestPaths(
-            connectivity=star_connectivity(), sampling_split=split
-        )
-
-
 @pytest.mark.parametrize("gates", [5, 25])
-@pytest.mark.parametrize("qubits", [3, 5])
 @pytest.mark.parametrize("placer", [Trivial, Random])
 @pytest.mark.parametrize("connectivity", [star_connectivity(), grid_connectivity()])
-@pytest.mark.parametrize("split", [1.0, 0.5])
-def test_random_circuits_5q(gates, qubits, placer, connectivity, split):
+def test_random_circuits_5q(gates, placer, connectivity):
     placer = placer(connectivity=connectivity)
     layout_circ = Circuit(5)
     initial_layout = placer(layout_circ)
-    transpiler = ShortestPaths(connectivity=connectivity, sampling_split=split)
-    circuit = generate_random_circuit(nqubits=qubits, ngates=gates)
+    transpiler = ShortestPaths(connectivity=connectivity)
+    circuit = generate_random_circuit(nqubits=5, ngates=gates)
     transpiled_circuit, final_qubit_map = transpiler(circuit, initial_layout)
     assert transpiler.added_swaps >= 0
     assert_connectivity(connectivity, transpiled_circuit)
