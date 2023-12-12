@@ -2133,7 +2133,7 @@ Alternatively, a Clifford circuit can also be executed starting from the :class:
 .. code-block::  python
 
     from qibo.quantum_info import Clifford, random_clifford
-    
+
     nqubits = 2
     circuit = random_clifford(nqubits)
     result = Clifford.from_circuit(circuit)
