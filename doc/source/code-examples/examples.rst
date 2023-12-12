@@ -8,16 +8,10 @@ How to write and execute a circuit?
 
 Here is an example of a circuit with 2 qubits:
 
-.. testsetup::
+.. testcode::
 
     import numpy as np
     from qibo import Circuit, gates
-
-.. doctest::
-    >>> from qibo import get_backend
-    :skipif: get_backend() == "clifford"
-
-.. testcode::
 
     # Construct the circuit
     c = Circuit(2)
