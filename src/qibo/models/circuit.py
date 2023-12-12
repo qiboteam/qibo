@@ -119,7 +119,8 @@ class Circuit:
 
             - *nqubits*
             - *accelerators*
-            - *density_matrix*.
+            - *density_matrix*
+            - *wires_names*.
 
         queue (_Queue): List that holds the queue of gates of a circuit.
         parametrized_gates (_ParametrizedGates): List of parametric gates.
@@ -133,6 +134,8 @@ class Circuit:
             Defaults to ``False``.
         accelerators (dict): Dictionary that maps device names to the number of times each
             device will be used. Defaults to ``None``.
+        wires_names (list or dict): Names for each qubit,
+            if None the default names ``q0``, ``q1``... ``qn`` will be used.
         ndevices (int): Total number of devices. Defaults to ``None``.
         nglobal (int): Base two logarithm of the number of devices. Defaults to ``None``.
         nlocal (int): Total number of available qubits in each device. Defaults to ``None``.
@@ -140,7 +143,13 @@ class Circuit:
             Defaults to ``None``.
     """
 
-    def __init__(self, nqubits, accelerators=None, density_matrix=False):
+    def __init__(
+        self,
+        nqubits: int,
+        accelerators=None,
+        density_matrix: bool = False,
+        wires_names: Union[list, dict] = None,
+    ):
         if not isinstance(nqubits, int):
             raise_error(
                 TypeError,
@@ -152,10 +161,12 @@ class Circuit:
                 f"Number of qubits must be positive but is {nqubits}.",
             )
         self.nqubits = nqubits
+        self.wires_names = wires_names
         self.init_kwargs = {
             "nqubits": nqubits,
             "accelerators": accelerators,
             "density_matrix": density_matrix,
+            "wires_names": wires_names,
         }
         self.queue = _Queue(nqubits)
         # Keep track of parametrized gates for the ``set_parameters`` method
@@ -258,6 +269,31 @@ class Circuit:
             newcircuit.add(gate)
 
         return newcircuit
+
+    @property
+    def wires_names(self):
+        return self._wires_names
+
+    @wires_names.setter
+    def wires_names(self, wires_names: Union[list, dict]):
+        if isinstance(wires_names, list):
+            if len(wires_names) != self.nqubits:
+                raise_error(
+                    ValueError,
+                    f"Number of wires names must be equal to the number of qubits but is {len(wires_names)}.",
+                )
+            self._wires_names = wires_names
+        elif isinstance(wires_names, dict):
+            self._wires_names = [
+                wires_names.get(f"q{i}", f"q{i}") for i in range(self.nqubits)
+            ]
+        elif isinstance(wires_names, type(None)):
+            self._wires_names = [f"q{i}" for i in range(self.nqubits)]
+        else:
+            raise_error(
+                TypeError,
+                f"Wire names must be a list or dict but is {type(wires_names)}.",
+            )
 
     @property
     def repeated_execution(self):
@@ -1416,11 +1452,12 @@ class Circuit:
                 matrix[row][col] += "─" * (1 + maxlen - len(matrix[row][col]))
 
         # Print to terminal
+        max_name_len = max(len(name) for name in self.wires_names)
         output = ""
         for q in range(self.nqubits):
             output += (
-                f"q{q}"
-                + " " * (len(str(self.nqubits)) - len(str(q)))
+                self.wires_names[q]
+                + " " * (max_name_len - len(self.wires_names[q]))
                 + ": ─"
                 + "".join(matrix[q])
                 + "\n"
@@ -1453,7 +1490,7 @@ class Circuit:
 
             for row in range(self.nqubits):
                 chunks, nchunks = chunkstring(
-                    loutput[row][3 + len(str(self.nqubits)) :], line_wrap
+                    loutput[row][3 + max_name_len - 1 :], line_wrap
                 )
                 if nchunks == 1:
                     loutput = None
@@ -1462,8 +1499,8 @@ class Circuit:
                     loutput += ["" for _ in range(self.nqubits)]
                     suffix = " ...\n"
                     prefix = (
-                        f"q{row}"
-                        + " " * (len(str(self.nqubits)) - len(str(row)))
+                        self.wires_names[row]
+                        + " " * (max_name_len - len(self.wires_names[row]))
                         + ": "
                     )
                     if i == 0:
