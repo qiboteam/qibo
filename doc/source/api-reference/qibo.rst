@@ -2120,11 +2120,13 @@ As for the other backends, the Clifford backend can be set with
 by specifying the engine used for calculation, if not provided the current :class:`qibo.backends.GlobalBackend` is used
 
 .. testcode::  python
+    from qibo import set_backend
+    from qibo.backends import CliffordBackend
 
-   # setting numpy as the global backend
-   set_backend("numpy")
-   # the clifford backend will use the numpy backend as engine
-   backend = CliffordBackend()
+    # setting numpy as the global backend
+    set_backend("numpy")
+    # the clifford backend will use the numpy backend as engine
+    backend = CliffordBackend()
 
 Alternatively, a Clifford circuit can also be executed starting from the :class:`qibo.quantum_info.clifford.Clifford` object
 
