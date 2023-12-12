@@ -40,17 +40,19 @@ class ScipyMinimizer(Optimizer):
         """
 
         log.info(
-            f"Optimization is performed using the optimizer: {type(self).__name__}.{self.method}"
+            f"Optimization is performed using the optimizer: {type(self).__name__}.{self.options['method']}"
         )
 
         # update options with minimizer extra options
         self.set_options({"options": fit_options})
+        print("####", self.options)
+        print(initial_parameters, loss(initial_parameters, *args), self.options)
 
         r = minimize(
             loss,
             initial_parameters,
             args=args,
-            **self.options,
+            options=self.options,
         )
 
         return r.fun, r.x, r

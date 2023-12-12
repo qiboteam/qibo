@@ -394,7 +394,11 @@ class QAOA:
     def minimize(
         self,
         opt,
+        initial_parameters,
+        hamiltonian,
         initial_state=None,
+        fit_options=dict(),
+        loss=None,
         loss_func_param=dict(),
         epochs=100,
     ):
@@ -432,15 +436,16 @@ class QAOA:
                 best, params, _ = qaoa.minimize(initial_p, loss_func=gibbs, loss_func_param={'eta':0.1})
 
         """
-        if len(opt.params) % 2 != 0:
+        if len(initial_parameters) % 2 != 0:
             raise_error(
                 ValueError,
                 "Initial guess for the parameters must "
                 "contain an even number of values but "
-                "contains {}.".format(len(opt.params)),
+                "contains {}.".format(len(initial_parameters)),
             )
 
-        optloss = opt.loss
+        optloss = loss
+        self.set_parameters(initial_parameters)
 
         def _loss(params, qaoa, hamiltonian, state):
             if state is not None:
@@ -467,14 +472,17 @@ class QAOA:
                 _loss(p, c, h, s)
             )
 
-        fit_options = {}
         if isinstance(opt, qibo.optimizers.gradient_based.TensorflowSGD):
             fit_options.update({"epochs": epochs})
 
-        opt.loss = loss
         opt.args = (self, self.hamiltonian, initial_state)
-        result, parameters, extra = opt.fit(**fit_options)
-
+        result, parameters, extra = opt.fit(
+            initial_parameters,
+            loss,
+            args=(self, hamiltonian, initial_state),
+            fit_options=fit_options,
+        )
+        print(extra)
         self.set_parameters(parameters)
         return result, parameters, extra
 

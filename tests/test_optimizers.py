@@ -50,11 +50,11 @@ def test_scipyminimizer(backend):
     hamiltonian = create_hamiltonian()
     parameters = np.random.randn(len(circuit.get_parameters()))
 
-    optimizer = ScipyMinimizer(
-        initial_parameters=parameters, args=(circuit, hamiltonian), loss=black_box_loss
-    )
+    optimizer = ScipyMinimizer()
 
-    result = optimizer.fit()
+    result = optimizer.fit(
+        initial_parameters=parameters, loss=black_box_loss, args=(circuit, hamiltonian)
+    )
     assert np.isclose(result[0], -1, atol=1e-4)
 
 
@@ -65,11 +65,11 @@ def test_parallel_bfgs(backend):
     hamiltonian = create_hamiltonian()
     parameters = np.random.randn(len(circuit.get_parameters()))
 
-    optimizer = ParallelBFGS(
+    optimizer = ParallelBFGS()
+
+    result = optimizer.fit(
         initial_parameters=parameters, args=(circuit, hamiltonian), loss=black_box_loss
     )
-
-    result = optimizer.fit()
     assert np.isclose(result[0], -1, atol=1e-4)
 
 
@@ -80,13 +80,13 @@ def test_basinhopping(backend):
     hamiltonian = create_hamiltonian()
     parameters = np.random.randn(len(circuit.get_parameters()))
 
-    optimizer = BasinHopping(
+    optimizer = BasinHopping()
+
+    result = optimizer.fit(
         initial_parameters=parameters,
         args=(circuit, hamiltonian),
         loss=black_box_loss,
     )
-
-    result = optimizer.fit()
     assert np.isclose(result[0], -1, atol=1e-4)
 
 
@@ -97,9 +97,9 @@ def test_cmaes(backend):
     hamiltonian = create_hamiltonian()
     parameters = np.random.randn(len(circuit.get_parameters()))
 
-    optimizer = CMAES(
+    optimizer = CMAES()
+
+    result = optimizer.fit(
         initial_parameters=parameters, args=(circuit, hamiltonian), loss=black_box_loss
     )
-
-    result = optimizer.fit()
     assert np.isclose(result[0], -1, atol=1e-4)
