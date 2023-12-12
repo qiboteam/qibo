@@ -102,13 +102,15 @@ class NumpyBackend(Backend):
         return state
 
     def matrix(self, gate):
-        """Convert a gate to its matrix representation in the computational basis."""
+        """Convert a gate to its matrix representation in the computational
+        basis."""
         name = gate.__class__.__name__
         _matrix = getattr(self.matrices, name)
         return _matrix(2 ** len(gate.target_qubits)) if callable(_matrix) else _matrix
 
     def matrix_parametrized(self, gate):
-        """Convert a parametrized gate to its matrix representation in the computational basis."""
+        """Convert a parametrized gate to its matrix representation in the
+        computational basis."""
         name = gate.__class__.__name__
         return getattr(self.matrices, name)(*gate.parameters)
 
@@ -421,27 +423,14 @@ class NumpyBackend(Backend):
                 for gate in circuit.queue:
                     state = gate.apply(self, state, nqubits)
 
-            if circuit.has_unitary_channel:
-                # here we necessarily have `density_matrix=True`, otherwise
-                # execute_circuit_repeated would have been called
-                if circuit.measurements:
-                    circuit._final_state = CircuitResult(
-                        state, circuit.measurements, backend=self, nshots=nshots
-                    )
-                    return circuit._final_state
-                else:
-                    circuit._final_state = QuantumState(state, backend=self)
-                    return circuit._final_state
-
+            if circuit.measurements:
+                circuit._final_state = CircuitResult(
+                    state, circuit.measurements, backend=self, nshots=nshots
+                )
             else:
-                if circuit.measurements:
-                    circuit._final_state = CircuitResult(
-                        state, circuit.measurements, backend=self, nshots=nshots
-                    )
-                    return circuit._final_state
-                else:
-                    circuit._final_state = QuantumState(state, backend=self)
-                    return circuit._final_state
+                circuit._final_state = QuantumState(state, backend=self)
+
+            return circuit._final_state
 
         except self.oom_error:
             raise_error(
@@ -461,11 +450,13 @@ class NumpyBackend(Backend):
         )
 
     def execute_circuit_repeated(self, circuit, nshots, initial_state=None):
-        """
-        Execute the circuit `nshots` times to retrieve probabilities, frequencies
-        and samples. Note that this method is called only if a unitary channel
-        is present in the circuit (i.e. noisy simulation) and `density_matrix=False`, or
-        if some collapsing measuremnt is performed.
+        """Execute the circuit `nshots` times to retrieve probabilities,
+        frequencies and samples.
+
+        Note that this method is called only if a unitary channel is
+        present in the circuit (i.e. noisy simulation) and
+        `density_matrix=False`, or if some collapsing measuremnt is
+        performed.
         """
 
         if (
