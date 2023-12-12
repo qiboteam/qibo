@@ -6,8 +6,9 @@ import networkx as nx
 from qibo import gates
 from qibo.config import raise_error
 from qibo.models import Circuit
-from qibo.transpiler.abstract import Placer, Router, _find_gates_qubits_pairs
+from qibo.transpiler.abstract import Placer, Router
 from qibo.transpiler.exceptions import PlacementError
+from qibo.transpiler.router import _find_gates_qubits_pairs
 
 
 def assert_placement(circuit: Circuit, layout: dict) -> bool:

@@ -45,6 +45,17 @@ def test_circuit_unitary_bigger(backend, with_measurement):
     backend.assert_allclose(final_matrix, target_matrix)
 
 
+def test_circuit_unitary_and_inverse_with_noise_channel(backend):
+    circuit = Circuit(2)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.DepolarizingChannel([0, 1], 0.2))
+    with pytest.raises(NotImplementedError):
+        circuit.unitary(backend)
+    with pytest.raises(NotImplementedError):
+        circuit.invert()
+
+
 @pytest.mark.parametrize("compile", [False, True])
 def test_circuit_vs_gate_execution(backend, compile):
     """Check consistency between executing circuit and stand alone gates."""

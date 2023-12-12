@@ -292,25 +292,21 @@ class AdiabaticEvolution(StateEvolution):
         if method == "sgd":
             from qibo.optimizers.gradient_based import TensorflowSGD
 
-            opt = TensorflowSGD(initial_parameters, loss, args=args, options=options)
+            opt = TensorflowSGD(options=options)
 
         elif method == "cma":
             from qibo.optimizers.heuristics import CMAES
 
-            opt = CMAES(initial_parameters, loss, args=args, options=options)
+            opt = CMAES(options=options)
 
         else:
             from qibo.optimizers.minimizers import ScipyMinimizer
 
-            opt = ScipyMinimizer(
-                initial_parameters,
-                loss,
-                args=args,
-                options={"method": method},
-                minimizer_kwargs=options,
-            )
+            opt = ScipyMinimizer(options={"method": method})
 
-        result, parameters, extra = opt.fit()
+        result, parameters, extra = opt.fit(
+            initial_parameters, loss, args, fit_options=options
+        )
 
         if isinstance(parameters, self.backend.tensor_types) and not len(
             parameters.shape

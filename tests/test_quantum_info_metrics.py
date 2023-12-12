@@ -28,6 +28,7 @@ from qibo.quantum_info.metrics import (
 )
 from qibo.quantum_info.random_ensembles import (
     random_density_matrix,
+    random_hermitian,
     random_statevector,
     random_unitary,
 )
@@ -511,8 +512,7 @@ def test_process_fidelity_and_infidelity(backend):
         target = backend.cast(target, dtype=target.dtype)
         test = process_fidelity(channel, target, backend=backend)
     with pytest.raises(TypeError):
-        channel = np.random.rand(d**2, d**2)
-        channel = backend.cast(channel, dtype=channel.dtype)
+        channel = random_hermitian(d**2, backend=backend)
         test = process_fidelity(channel, check_unitary=True, backend=backend)
     with pytest.raises(TypeError):
         channel = 10 * np.random.rand(d**2, d**2)
