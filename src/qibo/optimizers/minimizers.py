@@ -45,16 +45,12 @@ class ScipyMinimizer(Optimizer):
 
         # update options with minimizer extra options
         self.set_options({"options": fit_options})
-        print("####", self.options)
-        print(
-            initial_parameters, loss(np.array(initial_parameters), *args), self.options
-        )
 
         r = minimize(
             loss,
             initial_parameters,
             args=args,
-            options=self.options,
+            **self.options,
         )
 
         return r.fun, r.x, r

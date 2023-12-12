@@ -28,7 +28,7 @@ class CMAES(Optimizer):
         check_options(function=cma.fmin2, options=options)
         self.set_options(options)
 
-    def fit(self, loss, initial_parameters, args=(), fit_options={}):
+    def fit(self, initial_parameters, loss, args=(), fit_options={}):
         """Perform the optimizations via CMA-ES.
 
         Args:

@@ -74,10 +74,10 @@ class TensorflowSGD(Optimizer):
 
     def fit(
         self,
-        loss,
         initial_parameters,
+        loss,
         args=(),
-        epochs=100000,
+        fit_options={"epochs": 10000},
         nmessage=100,
         loss_threshold=None,
     ):
@@ -122,7 +122,7 @@ class TensorflowSGD(Optimizer):
         self.backend.compile(sgd_step)
 
         # SGD procedure: loop over epochs
-        for epoch in range(epochs):
+        for epoch in range(fit_options["epochs"]):
             # early stopping if loss_threshold has been set
             if (
                 loss_threshold is not None

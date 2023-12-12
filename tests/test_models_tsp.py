@@ -15,7 +15,6 @@ def qaoa_function_of_layer(backend, layer):
     in the number of layers and compute the distance of the mode of the histogram obtained
     from QAOA
     """
-    np.random.seed(42)
     num_cities = 3
     distance_matrix = np.array([[0, 0.9, 0.8], [0.4, 0, 0.1], [0, 0.7, 0]])
     # there are two possible cycles, one with distance 1, one with distance 1.9
@@ -33,7 +32,6 @@ def qaoa_function_of_layer(backend, layer):
         initial_state=initial_state,
         initial_parameters=np.array([0.1 for _ in range(layer)]),
         fit_options={"maxiter": 1},
-        hamiltonian=obj_hamil,
     )
 
     return qaoa.execute(initial_state)
