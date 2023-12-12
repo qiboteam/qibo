@@ -222,6 +222,7 @@ class Circuit:
 
         self.has_collapse = False
         self.has_unitary_channel = False
+        self.unitary_channels = 0
         self.density_matrix = density_matrix
 
         # for distributed circuits
@@ -684,12 +685,14 @@ class Circuit:
 
                     for measurement in list(self.measurements):
                         if set(measurement.qubits) & set(gate.qubits):
-                            measurement.collapse = False
-                            self.repeated_execution = False
+                            measurement.collapse = True
+                            self.has_collapse = True
                             self.measurements.remove(measurement)
 
             if isinstance(gate, gates.UnitaryChannel):
-                self.has_unitary_channel = True
+                self.unitary_channels += 1
+                self.has_unitary_channel = True if self.unitary_channels > 1 else False
+
             if isinstance(gate, gates.ParametrizedGate):
                 if isinstance(position, int):
                     param_loc = 0
@@ -753,7 +756,9 @@ class Circuit:
                         self.measurements.remove(measurement)
 
             if isinstance(gate, gates.UnitaryChannel):
-                self.repeated_execution = self.density_matrix
+                self.unitary_channels -= 1
+                self.has_unitary_channel = True if self.unitary_channels > 1 else False
+
             if isinstance(gate, gates.ParametrizedGate):
                 self.parametrized_gates.remove(gate)
                 if gate.trainable:
