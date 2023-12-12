@@ -754,7 +754,7 @@ class Circuit:
                 pos = self.queue.remove(gate)
 
                 for q in gate.qubits:
-                    idx = self.queue.moment_index[q]
+                    idx = self.queue.moment_index[q] - 1
                     if self.queue.moments[idx][q] != gate:
                         # another gate exists after the measurement gate
                         continue
