@@ -93,6 +93,60 @@ def test_circuit_add():
     assert list(c.queue) == [g1, g2, g3]
 
 
+def test_circuit_add_positional():
+    c = Circuit(2)
+    g1, g2, g3, g4 = gates.H(0), gates.H(1), gates.CNOT(0, 1), gates.RX(0, theta=0)
+    c.add(g1)
+    c.add(g2)
+    c.add(g3)
+    c.add(g4, 2)
+    assert c.depth == 3
+    assert c.ngates == 4
+    assert list(c.queue) == [g1, g2, g4, g3]
+
+
+def test_remove():
+    c = Circuit(2)
+    g1, g2, g3 = gates.H(0), gates.H(1), gates.CNOT(0, 1)
+    c.add(g1)
+    c.add(g2)
+    c.add(g3)
+    c.remove(g2)
+    assert c.depth == 2
+    assert c.ngates == 2
+    assert list(c.queue) == [g1, g3]
+
+
+def test_circuit_moments():
+    c = Circuit(2)
+    gatelist = [
+        gates.H(0),
+        gates.H(1),
+        gates.RY(0, theta=0),
+        gates.RX(1, theta=0),
+        gates.CNOT(0, 1),
+        gates.RZ(0, theta=0),
+    ]
+    c.add(gatelist[0])
+    c.add(gatelist[1])
+    c.add(gatelist[2])
+    c.add(gatelist[3])
+    c.add(gatelist[4])
+    c.add(gatelist[5], 2)
+    assert c.queue.moments == [
+        [gatelist[0], gatelist[1]],
+        [gatelist[5], gatelist[3]],
+        [gatelist[2], None],
+        [gatelist[4], gatelist[4]],
+    ]
+    c.remove(gatelist[5])
+    assert c.queue.moments == [
+        [gatelist[0], gatelist[1]],
+        [gatelist[2], gatelist[3]],
+        [gatelist[4], gatelist[4]],
+    ]
+
+
 def test_circuit_add_errors():
     c = Circuit(2)
     with pytest.raises(TypeError):
@@ -118,6 +172,24 @@ def test_circuit_add_iterable():
     assert c.depth == 4
     assert c.ngates == 6
     assert isinstance(c.queue[-1], gates.CNOT)
+
+
+def test_circuit_add_iterable_positional():
+    c = Circuit(2)
+    # adding list
+    g1 = gates.H(0)
+    g2 = gates.H(1)
+    g3 = gates.CNOT(0, 1)
+    g4 = gates.RX(0, theta=0)
+    g5 = gates.RY(1, theta=0)
+    c.add(g1)
+    c.add(g2)
+    c.add(g3)
+    gatelist = [g4, g5]
+    c.add(gatelist, 2)
+    assert c.depth == 3
+    assert c.ngates == 5
+    assert list(c.queue) == [g1, g2, g4, g5, g3]
 
 
 def test_circuit_add_generator():

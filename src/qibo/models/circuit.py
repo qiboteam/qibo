@@ -118,22 +118,22 @@ class _Queue(list):
 
     def insert(self, pos, gate: gates.Gate):
         super().insert(pos, gate)
-        if gate.qubits:
-            qubits = gate.qubits
-        else:  # special gate acting on all qubits
-            qubits = tuple(range(self.nqubits))
-
-        if isinstance(gate, gates.M):
-            self.nmeasurements += 1
 
         # calculate moment index for this gate
-        idx = max(self.moment_index[q] for q in qubits)
-        for q in qubits:
-            if idx >= len(self.moments):
-                # Add a moment
-                self.moments.insert(pos, len(self.moments[-1]) * [None])
-            self.moments[pos][q] = gate
-            self.moment_index[q] = idx + 1
+        self.moments = [self.nqubits * [None]]
+        self.moment_index = self.nqubits * [0]
+        for g in self:
+            if g.qubits:
+                qubits = g.qubits
+            else:  # special gate acting on all qubits
+                qubits = tuple(range(self.nqubits))
+            idx = max(self.moment_index[q] for q in qubits)
+            for q in g.qubits:
+                if idx >= len(self.moments):
+                    # Add a moment
+                    self.moments.append(len(self.moments[-1]) * [None])
+                self.moments[idx][q] = g
+                self.moment_index[q] = idx + 1
 
     def remove(self, gate):
         pos = super().index(gate)
@@ -142,15 +142,21 @@ class _Queue(list):
         if isinstance(gate, gates.M):
             self.nmeasurements -= 1
 
-        if gate.qubits:
-            qubits = gate.qubits
-        else:  # special gate acting on all qubits
-            qubits = tuple(range(self.nqubits))
-
         # calculate moment index for this gate
-        for q in qubits:
-            self.moment_index[q] -= 1
-        del self.moments[pos]
+        self.moments = [self.nqubits * [None]]
+        self.moment_index = self.nqubits * [0]
+        for g in self:
+            if g.qubits:
+                qubits = g.qubits
+            else:  # special gate acting on all qubits
+                qubits = tuple(range(self.nqubits))
+            idx = max(self.moment_index[q] for q in qubits)
+            for q in g.qubits:
+                if idx >= len(self.moments):
+                    # Add a moment
+                    self.moments.append(len(self.moments[-1]) * [None])
+                self.moments[idx][q] = g
+                self.moment_index[q] = idx + 1
 
         return pos
 
@@ -579,7 +585,7 @@ class Circuit:
                 noisy_circuit.add(noise_gate)
         return noisy_circuit
 
-    def add(self, gate, position=-1):
+    def add(self, gate, position=None):
         """Add a gate to a given queue.
 
         Args:
@@ -595,7 +601,7 @@ class Circuit:
         """
         if isinstance(gate, collections.abc.Iterable):
             for g in gate:
-                if position >= 0:
+                if isinstance(position, int):
                     self.add(g, position)
                     position += 1
                 else:
@@ -620,13 +626,13 @@ class Circuit:
             if not isinstance(gate, gates.Gate):
                 raise_error(TypeError, f"Unknown gate type {type(gate)}.")
 
-            if self._final_state is not None and position == -1:
+            if self._final_state is not None and position is None:
                 raise_error(
                     RuntimeError,
                     "Cannot add gates to a circuit after it is executed.",
                 )
 
-            if isinstance(gate, gates.M) and position >= 0:
+            if isinstance(gate, gates.M) and isinstance(position, int):
                 raise_error(
                     RuntimeError,
                     "Cannot add Measurement gate at a specific location.",
@@ -671,7 +677,7 @@ class Circuit:
                 return gate.result
 
             else:
-                if position >= 0:
+                if isinstance(position, int) and position < len(self.queue):
                     self.queue.insert(position, gate)
                 else:
                     self.queue.append(gate)
@@ -685,7 +691,7 @@ class Circuit:
             if isinstance(gate, gates.UnitaryChannel):
                 self.has_unitary_channel = True
             if isinstance(gate, gates.ParametrizedGate):
-                if position >= 0:
+                if isinstance(position, int):
                     param_loc = 0
                     trainable_loc = 0
                     for g in self.queue[:position]:
@@ -716,7 +722,7 @@ class Circuit:
                 replace with
         """
 
-        if isinstance(gate, list):
+        if isinstance(gate, collections.abc.Iterable):
             for g in gate:
                 self.remove(g)
 

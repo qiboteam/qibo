@@ -259,7 +259,7 @@ def RXRY_gate_exponentiated(phi):
 def circuit_rxry(nqubits=1):
     """Small circuit ansatz"""
 
-    c = Circuit(nqubits)
+    c = Circuit(nqubits, density_matrix=True)
     # all gates for which generator eigenvalue is implemented
     c.add(gates.RY(q=0, theta=0))
     c.add(gates.ParametrizedUnitary(RXRY_gate, 0, exponentiated=True, phi=0.1))
