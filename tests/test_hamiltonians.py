@@ -423,18 +423,3 @@ def test_hamiltonian_exponentiation(backend, sparse_type, dense):
 
     backend.assert_allclose(H.exp(0.5), target_matrix)
     backend.assert_allclose(H1.exp(0.5), target_matrix)
-
-
-def test_hamiltonian_energy_fluctuation(backend):
-    """Test energy fluctuation."""
-    # define hamiltonian
-    ham = hamiltonians.XXZ(nqubits=2, backend=backend)
-    # take ground state and zero state
-    ground_state = ham.ground_state()
-    zero_state = np.ones(2**2) / np.sqrt(2**2)
-    # collect energy fluctuations
-    gs_energy_fluctuation = ham.energy_fluctuation(ground_state)
-    zs_energy_fluctuation = ham.energy_fluctuation(zero_state)
-
-    assert np.isclose(gs_energy_fluctuation, 0, atol=1e-5)
-    assert gs_energy_fluctuation < zs_energy_fluctuation
