@@ -346,6 +346,7 @@ def test_custom_loss(test_input, test_param, expected):
     )
     assert abs(best - expected) <= 0.01
 
+
 def test_energy_fluctuations(backend):
     h0 = np.array([[1, 0], [0, -1]])
     state = np.array([1, 0])
