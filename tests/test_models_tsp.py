@@ -25,16 +25,15 @@ def qaoa_function_of_layer(backend, layer):
     obj_hamil, mixer = small_tsp.hamiltonians()
     qaoa = QAOA(obj_hamil, mixer=mixer)
     initial_state = backend.cast(initial_state, copy=True)
-    opt = ScipyMinimizer(
-        [0.1 for i in range(layer)],
-        options={"method": "BFGS"},
-        minimizer_kwargs={"maxiter": 1},
-    )
+    opt = ScipyMinimizer(options={"method": "BFGS"})
 
     best_energy, final_parameters, extra = qaoa.minimize(
-        opt, initial_state=initial_state
+        opt,
+        initial_state=initial_state,
+        initial_parameters=np.array([0.1 for _ in range(layer)]),
+        fit_options={"maxiter": 1},
     )
-    qaoa.set_parameters(final_parameters)
+
     return qaoa.execute(initial_state)
 
 

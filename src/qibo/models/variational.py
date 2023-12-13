@@ -41,10 +41,7 @@ class VQE:
         self.backend = hamiltonian.backend
 
     def minimize(
-        self,
-        opt,
-        compile=False,
-        epochs=100,
+        self, opt, initial_parameters, loss=None, fit_options=dict(), compile=False
     ):
         """Search for parameters which minimizes the hamiltonian expectation.
 
@@ -80,13 +77,12 @@ class VQE:
         # elif isinstance(opt, qibo.optimizers.gradient_based.TensorflowSGD):
         #    loss = lambda p, c, h: self.hamiltonian.backend.to_numpy(_loss(p, c, h))
 
-        fit_options = {}
-        if isinstance(opt, qibo.optimizers.gradient_based.TensorflowSGD):
-            fit_options.update({"epochs": epochs})
-
-        opt.loss = loss
-        opt.args = (self.circuit, self.hamiltonian)
-        result, parameters, extra = opt.fit(**fit_options)
+        result, parameters, extra = opt.fit(
+            initial_parameters,
+            loss,
+            args=(self.circuit, self.hamiltonian),
+            fit_options=fit_options,
+        )
 
         self.circuit.set_parameters(parameters)
         return result, parameters, extra
@@ -241,7 +237,9 @@ class AAVQE:
         st = self.schedule(t)
         return self._h0 * (1 - st) + self._h1 * st
 
-    def minimize(self, opt, compile=False, epochs=100):
+    def minimize(
+        self, opt, initial_parameters, fit_options=dict(), compile=False, epochs=100
+    ):
         """
         Performs minimization to find the ground state of the problem Hamiltonian.
 
@@ -254,11 +252,13 @@ class AAVQE:
         from qibo import models
 
         t = 0.0
+        params = initial_parameters
         while (t - self._t_max) <= self.ATOL_TIME:
             H = self.hamiltonian(t)
             vqe = models.VQE(self._circuit, H)
-            best, params, _ = vqe.minimize(opt, compile, epochs)
-            opt.params = params
+            best, params, _ = vqe.minimize(
+                opt, params, fit_options=fit_options, compile=compile
+            )
             t += self._dt
         return best, params
 
@@ -416,9 +416,11 @@ class QAOA:
     def minimize(
         self,
         opt,
+        initial_parameters,
+        loss=None,
         initial_state=None,
+        fit_options=dict(),
         loss_func_param=dict(),
-        epochs=100,
     ):
         """Optimizes the variational parameters of the QAOA. A few loss functions are
         provided for QAOA optimizations such as expected value (default), CVar which is introduced in
@@ -430,7 +432,6 @@ class QAOA:
             opt (:class:`qibo.models.circuit.Circuit`): optimization object used to minimise the loss function
             initial_state (np.ndarray): initial state vector of the QAOA.
             loss_func_param (dict): a dictionary to pass in the loss function parameters.
-            epochs (int): number of training epochs.
 
         Return:
             The final energy (expectation value of the ``hamiltonian``).
@@ -454,15 +455,16 @@ class QAOA:
                 best, params, _ = qaoa.minimize(initial_p, loss_func=gibbs, loss_func_param={'eta':0.1})
 
         """
-        if len(opt.params) % 2 != 0:
+        if len(initial_parameters) % 2 != 0:
             raise_error(
                 ValueError,
                 "Initial guess for the parameters must "
                 "contain an even number of values but "
-                "contains {}.".format(len(opt.params)),
+                "contains {}.".format(len(initial_parameters)),
             )
 
-        optloss = opt.loss
+        optloss = loss
+        self.set_parameters(initial_parameters)
 
         def _loss(params, qaoa, hamiltonian, state):
             if state is not None:
@@ -489,13 +491,13 @@ class QAOA:
                 _loss(p, c, h, s)
             )
 
-        fit_options = {}
-        if isinstance(opt, qibo.optimizers.gradient_based.TensorflowSGD):
-            fit_options.update({"epochs": epochs})
-
-        opt.loss = loss
         opt.args = (self, self.hamiltonian, initial_state)
-        result, parameters, extra = opt.fit(**fit_options)
+        result, parameters, extra = opt.fit(
+            initial_parameters,
+            loss,
+            args=(self, self.hamiltonian, initial_state),
+            fit_options=fit_options,
+        )
 
         self.set_parameters(parameters)
         return result, parameters, extra

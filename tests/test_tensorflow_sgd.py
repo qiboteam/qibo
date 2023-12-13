@@ -36,19 +36,28 @@ def test_tensorflow_sgd():
     # test full sgd
     np.random.seed(42)
     params = np.random.randn(2 * nqubits * nlayers)
-    opt = TensorflowSGD(
-        initial_parameters=params, loss=loss, args=(c, h), options=options
+    opt = TensorflowSGD(options=options)
+    result_full = opt.fit(
+        initial_parameters=params,
+        loss=loss,
+        args=(c, h),
+        fit_options={"epochs": 100},
+        nmessage=1,
     )
-    result_full = opt.fit(epochs=100, nmessage=1)
 
     assert np.isclose(result_full[0], -1, atol=1e-3)
 
     # test with early stopping
     np.random.seed(42)
     params = np.random.randn(2 * nqubits * nlayers)
-    opt = TensorflowSGD(
-        initial_parameters=params, loss=loss, args=(c, h), options=options
+    opt = TensorflowSGD(options=options)
+    result_early_stopping = opt.fit(
+        initial_parameters=params,
+        loss=loss,
+        args=(c, h),
+        fit_options={"epochs": 100},
+        nmessage=1,
+        loss_threshold=-0.5,
     )
-    result_early_stopping = opt.fit(epochs=100, nmessage=1, loss_treshold=-0.5)
 
     assert result_full[0] < result_early_stopping[0]

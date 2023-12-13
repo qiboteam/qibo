@@ -40,7 +40,7 @@ class ScipyMinimizer(Optimizer):
         """
 
         log.info(
-            f"Optimization is performed using the optimizer: {type(self).__name__}.{self.method}"
+            f"Optimization is performed using the optimizer: {type(self).__name__}.{self.options['method']}"
         )
 
         # update options with minimizer extra options
