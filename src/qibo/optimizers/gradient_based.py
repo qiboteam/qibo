@@ -53,9 +53,9 @@ class TensorflowSGD(Optimizer):
 
         # initialize optimizer
         options = {"learning_rate": 0.05}
-        opt = TensorFlowSGD(optimizer="Adagrad", options=options)
+        opt = TensorFlowSGD(options=options)
         # perform the training
-        res = opt.fit(loss=loss, initial_parameters=params, args=(circuit, hamiltonian), epochs=50, nmessage=1)
+        res = opt.fit(loss=loss, initial_parameters=params, args=(circuit, hamiltonian), fit_options={"epochs": 100}, nmessage=1)
     """
 
     def __init__(

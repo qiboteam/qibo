@@ -30,8 +30,8 @@ class VQE:
             vqe = models.VQE(circuit, hamiltonian)
             # optimize using random initial variational parameters
             initial_parameters = np.random.uniform(0, 2, 1)
-            opt = CMAES(initial_parameters, optimizer_kwargs=options)
-            best, params, _ = v.minimize(opt)
+            opt = CMAES()
+            best, params, _ = v.minimize(opt, initial_parameters, fit_options=options)
     """
 
     def __init__(self, circuit, hamiltonian):
@@ -145,8 +145,8 @@ class AAVQE:
             # optimize using random initial variational parameters
             np.random.seed(0)
             initial_parameters = np.random.uniform(0, 2*np.pi, 2)
-            opt = CMAES(initial_parameters)
-            ground_energy, params = aavqe.minimize(opt)
+            opt = CMAES()
+            ground_energy, params = aavqe.minimize(opt, initial_parameters)
     """
 
     def __init__(
@@ -294,8 +294,8 @@ class QAOA:
             # optimize using random initial variational parameters
             # and default options and initial state
             initial_parameters = 0.01 * np.random.random(4)
-            opt = ScipyMinimizer(initial_parameters, options={"method": "BFGS"})
-            best, params, extra = qaoa.minimize(opt)
+            opt = ScipyMinimizer(options={"method": "BFGS"})
+            best, params, extra = qaoa.minimize(opt, initial_parameters)
     """
 
     from qibo import hamiltonians
@@ -446,13 +446,15 @@ class QAOA:
 
                 from qibo import hamiltonians
                 from qibo.models.utils import cvar, gibbs
+                from qibo.optimizer.minimizers import ScipyMinimizer
 
                 h = hamiltonians.XXZ(3)
                 qaoa = models.QAOA(h)
+                opt = ScipyMinimizer(options={"method": "BFGS"})
                 initial_p = [0.314, 0.22, 0.05, 0.59]
-                best, params, _ = qaoa.minimize(initial_p)
-                best, params, _ = qaoa.minimize(initial_p, loss_func=cvar, loss_func_param={'alpha':0.1})
-                best, params, _ = qaoa.minimize(initial_p, loss_func=gibbs, loss_func_param={'eta':0.1})
+                best, params, _ = qaoa.minimize(opt, initial_p)
+                best, params, _ = qaoa.minimize(opt, initial_p, loss=cvar, loss_func_param={'alpha':0.1})
+                best, params, _ = qaoa.minimize(opt, initial_p, loss=gibbs, loss_func_param={'eta':0.1})
 
         """
         if len(initial_parameters) % 2 != 0:
