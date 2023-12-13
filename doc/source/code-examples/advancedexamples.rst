@@ -649,7 +649,7 @@ Hamiltonian. Here is a simple example using the Heisenberg XXZ Hamiltonian:
 
     import numpy as np
     from qibo import models, hamiltonians
-    from qibo.minimizers import ScipyMinimizer
+    from qibo.optimizers.minimizers import ScipyMinimizer
 
     # Create XXZ Hamiltonian for six qubits
     hamiltonian = hamiltonians.XXZ(6)
@@ -1781,7 +1781,7 @@ done as follows:
     evolution = models.AdiabaticEvolution(h0, h1, sp, dt=1e-2)
     # Find the optimal value for ``p`` starting from ``p = 0.5`` and ``T=1``.
     initial_guess = [0.5, 1]
-    opt = ScipyMinimizer({'method'='BFGS')
+    opt = ScipyMinimizer({'method'='BFGS'})
     best, params, extra = evolution.minimize(opt, initial_parameters=initial_guess, fit_options={'disp': True})
     print(best) # prints the best energy <H1> found from the final state
     print(params) # prints the optimal values for the parameters.
