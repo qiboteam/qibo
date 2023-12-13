@@ -203,6 +203,23 @@ Iterative Quantum Amplitude Estimation (IQAE)
     :member-order: bysource
 
 
+Double Bracket Iteration algorithm for Diagonalization
+""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+The Double Bracket Flow (DBF) has been presented `here <https://arxiv.org/abs/2206.11772>`_
+as a novel strategy for preparing eigenstates of a quantum system. We implement in
+Qibo a discretized version of the algorithm, which executes sequential Double
+Bracket Iterations.
+
+.. autoclass:: qibo.models.dbi.double_bracket.DoubleBracketGeneratorType
+    :members:
+    :member-order: bysource
+
+.. autoclass:: qibo.models.dbi.double_bracket.DoubleBracketIteration
+    :members:
+    :member-order: bysource
+
+
 .. _timeevolution:
 
 Time evolution
@@ -545,6 +562,13 @@ Controlled-NOT (CNOT)
 """""""""""""""""""""
 
 .. autoclass:: qibo.gates.CNOT
+    :members:
+    :member-order: bysource
+
+Controlled-Y (CY)
+"""""""""""""""""""""
+
+.. autoclass:: qibo.gates.CY
     :members:
     :member-order: bysource
 
@@ -1498,6 +1522,12 @@ Expressibility of parameterized quantum circuits
 """"""""""""""""""""""""""""""""""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.expressibility
+
+
+Frame Potential
+"""""""""""""""
+
+.. autofunction:: qibo.quantum_info.frame_potential
 
 
 Random Ensembles

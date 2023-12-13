@@ -7,10 +7,9 @@ import numpy as np
 from qibo import gates
 from qibo.config import log, raise_error
 from qibo.models import Circuit
-from qibo.transpiler.abstract import Router, _find_gates_qubits_pairs
+from qibo.transpiler.abstract import Router
 from qibo.transpiler.blocks import Block, CircuitBlocks
 from qibo.transpiler.exceptions import ConnectivityError
-from qibo.transpiler.placer import assert_placement
 
 
 def assert_connectivity(connectivity: nx.Graph, circuit: Circuit):
@@ -248,7 +247,6 @@ class ShortestPaths(Router):
                     "You are using more physical qubits than required by the circuit, some ancillary qubits will be added to the circuit."
                 )
             new_circuit = Circuit(nodes)
-        assert_placement(new_circuit, self._mapping)
         self._transpiled_circuit = new_circuit
 
     def _add_gates(self, circuit: Circuit, matched_gates: int):
@@ -342,6 +340,30 @@ class ShortestPaths(Router):
                     tuple(qubit_map[gate.qubits[i]] for i in range(2))
                 )
         return new_circuit
+
+
+def _find_gates_qubits_pairs(circuit: Circuit):
+    """Helper method for :meth:`qibo.transpiler.router.ShortestPaths`.
+    Translate qibo circuit into a list of pairs of qubits to be used by the router and placer.
+
+    Args:
+        circuit (:class:`qibo.models.circuit.Circuit`): circuit to be transpiled.
+
+    Returns:
+        (list): list containing qubits targeted by two qubit gates.
+    """
+    translated_circuit = []
+    for gate in circuit.queue:
+        if isinstance(gate, gates.M):
+            pass
+        elif len(gate.qubits) == 2:
+            translated_circuit.append(sorted(gate.qubits))
+        elif len(gate.qubits) >= 3:
+            raise_error(
+                ValueError, "Gates targeting more than 2 qubits are not supported"
+            )
+
+    return translated_circuit
 
 
 class CircuitMap:
