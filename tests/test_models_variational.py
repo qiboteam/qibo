@@ -345,3 +345,10 @@ def test_custom_loss(test_input, test_param, expected):
         initial_p, loss_func=test_input, loss_func_param=test_param
     )
     assert abs(best - expected) <= 0.01
+
+def test_energy_fluctuations(backend):
+    h0 = np.array([[1, 0], [0, -1]])
+    state = np.array([1, 0])
+    dbf = DoubleBracketIteration(Hamiltonian(1, matrix=h0, backend=backend))
+    energy_fluctuation = dbf.energy_fluctuation(state=state)
+    assert energy_fluctuation == 0
