@@ -1107,6 +1107,10 @@ objects as described in the previous section.
     :members:
     :member-order: bysource
 
+.. autoclass:: qibo.symbols.I
+    :members:
+    :member-order: bysource
+
 .. autoclass:: qibo.symbols.X
     :members:
     :member-order: bysource
@@ -1522,6 +1526,12 @@ Expressibility of parameterized quantum circuits
 """"""""""""""""""""""""""""""""""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.expressibility
+
+
+Frame Potential
+"""""""""""""""
+
+.. autofunction:: qibo.quantum_info.frame_potential
 
 
 Random Ensembles
