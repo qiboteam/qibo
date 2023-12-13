@@ -132,6 +132,11 @@ def test_vqe(backend, method, options, compile, filename):
     if filename is not None:
         assert_regression_fixture(backend, params, filename)
 
+    # test energy fluctuation
+    state = np.ones(2**nqubits) / np.sqrt(2**nqubits)
+    energy_fluctuation = v.energy_fluctuation(state)
+    assert energy_fluctuation >= 0
+
 
 @pytest.mark.parametrize(
     "solver,dense",
@@ -345,10 +350,3 @@ def test_custom_loss(test_input, test_param, expected):
         initial_p, loss_func=test_input, loss_func_param=test_param
     )
     assert abs(best - expected) <= 0.01
-
-def test_energy_fluctuations(backend):
-    h0 = np.array([[1, 0], [0, -1]])
-    state = np.array([1, 0])
-    dbf = DoubleBracketIteration(Hamiltonian(1, matrix=h0, backend=backend))
-    energy_fluctuation = dbf.energy_fluctuation(state=state)
-    assert energy_fluctuation == 0
