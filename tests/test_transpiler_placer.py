@@ -11,6 +11,7 @@ from qibo.transpiler.placer import (
     ReverseTraversal,
     Subgraph,
     Trivial,
+    _find_gates_qubits_pairs,
     assert_mapping_consistency,
     assert_placement,
 )
@@ -92,6 +93,22 @@ def test_mapping_consistency_restricted_error(layout):
         assert_mapping_consistency(layout, restricted_connecyivity)
 
 
+def test_gates_qubits_pairs():
+    circuit = Circuit(5)
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.CNOT(1, 2))
+    circuit.add(gates.M(1, 2))
+    gates_qubits_pairs = _find_gates_qubits_pairs(circuit)
+    assert gates_qubits_pairs == [[0, 1], [1, 2]]
+
+
+def test_gates_qubits_pairs_error():
+    circuit = Circuit(5)
+    circuit.add(gates.TOFFOLI(0, 1, 2))
+    with pytest.raises(ValueError):
+        gates_qubits_pairs = _find_gates_qubits_pairs(circuit)
+
+
 def test_trivial():
     circuit = Circuit(5)
     connectivity = star_connectivity()
@@ -125,12 +142,16 @@ def test_trivial_error():
     "custom_layout", [[4, 3, 2, 1, 0], {"q0": 4, "q1": 3, "q2": 2, "q3": 1, "q4": 0}]
 )
 @pytest.mark.parametrize("give_circuit", [True, False])
-def test_custom(custom_layout, give_circuit):
+@pytest.mark.parametrize("give_connectivity", [True, False])
+def test_custom(custom_layout, give_circuit, give_connectivity):
     if give_circuit:
         circuit = Circuit(5)
     else:
         circuit = None
-    connectivity = star_connectivity()
+    if give_connectivity:
+        connectivity = star_connectivity()
+    else:
+        connectivity = None
     placer = Custom(connectivity=connectivity, map=custom_layout)
     layout = placer(circuit)
     assert layout == {"q0": 4, "q1": 3, "q2": 2, "q3": 1, "q4": 0}

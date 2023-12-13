@@ -120,8 +120,12 @@ def assert_transpiling(
     if original_circuit.nqubits != transpiled_circuit.nqubits:
         qubit_matcher = Preprocessing(connectivity=connectivity)
         original_circuit = qubit_matcher(circuit=original_circuit)
-    assert_placement(circuit=original_circuit, layout=initial_layout)
-    assert_placement(circuit=transpiled_circuit, layout=final_layout)
+    assert_placement(
+        circuit=original_circuit, layout=initial_layout, connectivity=connectivity
+    )
+    assert_placement(
+        circuit=transpiled_circuit, layout=final_layout, connectivity=connectivity
+    )
     if check_circuit_equivalence:
         assert_circuit_equivalence(
             original_circuit=original_circuit,
@@ -207,8 +211,10 @@ class Passes:
         final_layout = None
         for transpiler_pass in self.passes:
             if isinstance(transpiler_pass, Optimizer):
+                transpiler_pass.connectivity = self.connectivity
                 circuit = transpiler_pass(circuit)
             elif isinstance(transpiler_pass, Placer):
+                transpiler_pass.connectivity = self.connectivity
                 if self.initial_layout == None:
                     self.initial_layout = transpiler_pass(circuit)
                 else:
@@ -217,6 +223,7 @@ class Passes:
                         "You are defining more than one placer pass.",
                     )
             elif isinstance(transpiler_pass, Router):
+                transpiler_pass.connectivity = self.connectivity
                 if self.initial_layout is not None:
                     circuit, final_layout = transpiler_pass(
                         circuit, self.initial_layout

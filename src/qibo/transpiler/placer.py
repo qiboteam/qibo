@@ -272,7 +272,7 @@ class Random(Placer):
                 return dict(zip(dict_keys, list(mapping.values())))
             if cost < final_cost:
                 final_graph = graph
-                final_mapping = {dict_keys[i]: mapping[i] for i in range(len(mapping))}
+                final_mapping = mapping
                 final_cost = cost
         return dict(zip(dict_keys, list(final_mapping.values())))
 

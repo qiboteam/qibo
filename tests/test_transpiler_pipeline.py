@@ -14,7 +14,7 @@ from qibo.transpiler.pipeline import (
     restrict_connectivity_qubits,
 )
 from qibo.transpiler.placer import Random, ReverseTraversal, Trivial
-from qibo.transpiler.router import ShortestPaths
+from qibo.transpiler.router import Sabre, ShortestPaths
 from qibo.transpiler.unroller import NativeGates, Unroller
 
 
@@ -174,13 +174,24 @@ def test_is_satisfied_false_connectivity():
     assert not default_transpiler.is_satisfied(circuit)
 
 
+@pytest.mark.parametrize("reps", [range(3)])
+@pytest.mark.parametrize("placer", [Random, Trivial, ReverseTraversal])
+@pytest.mark.parametrize("routing", [ShortestPaths, Sabre])
 @pytest.mark.parametrize(
     "circ", [generate_random_circuit(nqubits=5, ngates=20), small_circuit()]
 )
-def test_custom_passes(circ):
+def test_custom_passes(circ, placer, routing, reps):
     custom_passes = []
     custom_passes.append(Preprocessing(connectivity=star_connectivity()))
-    custom_passes.append(Random(connectivity=star_connectivity()))
+    if placer == ReverseTraversal:
+        custom_passes.append(
+            placer(
+                connectivity=star_connectivity(),
+                routing_algorithm=routing(connectivity=star_connectivity()),
+            )
+        )
+    else:
+        custom_passes.append(placer(connectivity=star_connectivity()))
     custom_passes.append(ShortestPaths(connectivity=star_connectivity()))
     custom_passes.append(Unroller(native_gates=NativeGates.default()))
     custom_pipeline = Passes(
@@ -194,6 +205,44 @@ def test_custom_passes(circ):
         original_circuit=circ,
         transpiled_circuit=transpiled_circ,
         connectivity=star_connectivity(),
+        initial_layout=initial_layout,
+        final_layout=final_layout,
+        native_gates=NativeGates.default(),
+    )
+
+
+@pytest.mark.parametrize("reps", [range(3)])
+@pytest.mark.parametrize("placer", [Random, Trivial, ReverseTraversal])
+@pytest.mark.parametrize("routing", [ShortestPaths, Sabre])
+def test_custom_passes_restict(reps, placer, routing):
+    circ = generate_random_circuit(nqubits=3, ngates=20)
+    custom_passes = []
+    custom_passes.append(Preprocessing(connectivity=star_connectivity()))
+    if placer == ReverseTraversal:
+        custom_passes.append(
+            placer(
+                connectivity=star_connectivity(),
+                routing_algorithm=routing(connectivity=star_connectivity()),
+            )
+        )
+    else:
+        custom_passes.append(placer(connectivity=star_connectivity()))
+    custom_passes.append(routing(connectivity=star_connectivity()))
+    custom_passes.append(Unroller(native_gates=NativeGates.default()))
+    custom_pipeline = Passes(
+        custom_passes,
+        connectivity=star_connectivity(),
+        native_gates=NativeGates.default(),
+        on_qubits=[1, 2, 3],
+    )
+    transpiled_circ, final_layout = custom_pipeline(circ)
+    initial_layout = custom_pipeline.get_initial_layout()
+    print(initial_layout)
+    print(final_layout)
+    assert_transpiling(
+        original_circuit=circ,
+        transpiled_circuit=transpiled_circ,
+        connectivity=restrict_connectivity_qubits(star_connectivity(), [1, 2, 3]),
         initial_layout=initial_layout,
         final_layout=final_layout,
         native_gates=NativeGates.default(),
