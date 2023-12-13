@@ -1,7 +1,5 @@
 """Module defining the QuantumNetwork class and adjacent functions."""
 
-# %%
-
 from functools import reduce
 from operator import mul
 from typing import List, Optional, Tuple, Union
@@ -243,7 +241,6 @@ class QuantumNetwork:
 
         return all([eigenvalue >= precision_tol for eigenvalue in eigenvalues])
 
-    @property
     def is_channel(
         self,
         order: Optional[Union[int, str]] = None,
@@ -270,3 +267,19 @@ class QuantumNetwork:
         return self.is_causal(
             order, precision_tol_causal
         ) and self.is_positive_semidefinite(precision_tol_psd)
+
+    def apply(self, state):
+        """Apply the Choi operator :math:`\\mathcal{E}` to ``state`` :math:`\\varrho`.
+
+        It is assumed that ``state`` :math:`\\varrho` is a density matrix.
+
+        Args:
+            state (ndarray): density matrix of a ``state``.
+
+        Returns:
+            ndarray: Resulting state :math:`\\mathcal{E}(\\varrho)`.
+        """
+        if self.is_pure():
+            return np.einsum("jk,lm,jl -> km", self.matrix, np.conj(self.matrix), state)
+
+        return np.einsum("jklm,kl -> jl", self.matrix, state)
