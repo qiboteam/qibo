@@ -524,8 +524,8 @@ Here is a simple example using the Heisenberg XXZ model Hamiltonian:
     from qibo import models, gates, hamiltonians
     from qibo.optimizers.minimizers import ScipyMinimizer
 
-    nqubits = 6
-    nlayers  = 4
+    nqubits = 4
+    nlayers  = 3
 
     # Create variational circuit
     circuit = models.Circuit(nqubits)
@@ -543,9 +543,10 @@ Here is a simple example using the Heisenberg XXZ model Hamiltonian:
     opt = ScipyMinimizer({'method': 'BFGS'})
     vqe = models.VQE(circuit, hamiltonian)
 
+    nparams = len(circuit.get_parameters())
+
     # Optimize starting from a random guess for the variational parameters
-    initial_parameters = np.random.uniform(0, 2*np.pi,
-                                            2*nqubits*nlayers + nqubits)
+    initial_parameters = np.random.uniform(0, 2*np.pi, nparams)
     best, params, extra = vqe.minimize(opt, initial_parameters, compile=False)
 
 
@@ -559,7 +560,7 @@ To switch the backend one can do ``qibo.set_backend("tensorflow")``.
 Check the :ref:`How to use automatic differentiation? <autodiff-example>`
 section for more details.
 
-When using a VQE with more than 12 qubits, it may be useful to fuse the circit implementing
+When using a VQE with more than 12 qubits, it may be useful to fuse the circuit implementing
 the ansatz using :meth:`qibo.models.Circuit.fuse`.
 This optimizes performance by fusing the layer of one-qubit parametrized gates with
 the layer of two-qubit entangling gates and applying both as a single layer of
@@ -605,7 +606,7 @@ Here is a simple example using a custom loss function:
         final_state = circuit().state()
         return 1 - np.abs(np.conj(target).dot(final_state))
 
-    nqubits = 6
+    nqubits = 4
     nlayers  = 2
 
     # Create variational circuit

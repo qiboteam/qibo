@@ -24,12 +24,13 @@ class VQE:
             # create circuit ansatz for two qubits
             circuit = models.Circuit(2)
             circuit.add(gates.RY(0, theta=0))
+            circuit.add(gates.RZ(0, theta=0))
             # create XXZ Hamiltonian for two qubits
             hamiltonian = hamiltonians.XXZ(2)
             # create VQE model for the circuit and Hamiltonian
             vqe = models.VQE(circuit, hamiltonian)
             # optimize using random initial variational parameters
-            initial_parameters = np.random.uniform(0, 2, 1)
+            initial_parameters = np.random.uniform(0, 2, 2)
             options = {'maxiter': 1}
             opt = CMAES()
             best, params, _ = vqe.minimize(opt, initial_parameters, fit_options=options)

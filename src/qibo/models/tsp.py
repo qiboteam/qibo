@@ -104,7 +104,7 @@ class TSP:
                 from QAOA
 
                 '''
-                from qibo.oprtimizers.minimizers import ScipyMinimizer
+                from qibo.optimizers.minimizers import ScipyMinimizer
                 small_tsp = TSP(distance_matrix)
                 obj_hamil, mixer = small_tsp.hamiltonians()
                 qaoa = QAOA(obj_hamil, mixer=mixer)

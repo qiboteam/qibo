@@ -1,8 +1,7 @@
 import numpy as np
 import pytest
 
-from qibo import gates
-from qibo.models import QAOA, Circuit
+from qibo.models import QAOA
 from qibo.models.tsp import TSP
 from qibo.optimizers.minimizers import ScipyMinimizer
 
