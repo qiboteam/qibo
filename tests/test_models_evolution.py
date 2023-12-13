@@ -328,6 +328,7 @@ def test_scheduling_optimization(backend, method, options, messages, dense, file
     adevp = models.AdiabaticEvolution(h0, h1, sp, dt=1e-1)
 
     if method == "sgd":
+        pytest.skip("Tensorflow backend is not supported.")
         opt = TensorflowSGD()
         if backend.name != "tensorflow":
             with pytest.raises(RuntimeError):
