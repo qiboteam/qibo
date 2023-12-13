@@ -4,6 +4,8 @@ from scipy.linalg import expm
 
 from qibo import callbacks, hamiltonians, models
 from qibo.config import raise_error
+from qibo.optimizers.gradient_based import TensorflowSGD
+from qibo.optimizers.minimizers import ScipyMinimizer
 
 
 def assert_states_equal(backend, state, target_state, atol=0):
@@ -327,14 +329,16 @@ def test_scheduling_optimization(backend, method, options, messages, dense, file
 
     if method == "sgd":
         pytest.skip("SGD is only supported with tensorflow backend.")
+        opt = TensorflowSGD()
         if backend.name != "tensorflow":
             with pytest.raises(RuntimeError):
                 best, params, _ = adevp.minimize(
-                    [0.5, 1], method=method, options=options, messages=messages
+                    opt, [0.5, 1], options=options, messages=messages
                 )
     else:
+        opt = ScipyMinimizer({"method": "BFGS"})
         best, params, _ = adevp.minimize(
-            [0.5, 1], method=method, options=options, messages=messages
+            opt, [0.5, 1], fit_options=options, messages=messages
         )
 
     if filename is not None:

@@ -522,6 +522,7 @@ Here is a simple example using the Heisenberg XXZ model Hamiltonian:
 
     import numpy as np
     from qibo import models, gates, hamiltonians
+    from qibo.optimizers.minimizers import ScipyMinimizer
 
     nqubits = 6
     nlayers  = 4
@@ -539,12 +540,13 @@ Here is a simple example using the Heisenberg XXZ model Hamiltonian:
     # Create XXZ Hamiltonian
     hamiltonian = hamiltonians.XXZ(nqubits=nqubits)
     # Create VQE model
+    opt = ScipyMinimizer({'method'='BFGS'})
     vqe = models.VQE(circuit, hamiltonian)
 
     # Optimize starting from a random guess for the variational parameters
     initial_parameters = np.random.uniform(0, 2*np.pi,
                                             2*nqubits*nlayers + nqubits)
-    best, params, extra = vqe.minimize(initial_parameters, method='BFGS', compile=False)
+    best, params, extra = vqe.minimize(opt, initial_parameters, compile=False)
 
 
 
@@ -587,7 +589,7 @@ How to write a custom variational circuit optimization?
 
 Similarly to the VQE, a custom implementation of a Variational Quantum Circuit
 (VQC) model can be achieved by defining a custom loss function and calling the
-:meth:`qibo.optimizers.optimize` method.
+desired optimizer.
 
 Here is a simple example using a custom loss function:
 
@@ -595,7 +597,7 @@ Here is a simple example using a custom loss function:
 
     import numpy as np
     from qibo import models, gates
-    from qibo.optimizers import optimize
+    from qibo.optimizers.minimizers import ScipyMinimizer
 
     # custom loss function, computes fidelity
     def myloss(parameters, circuit, target):
@@ -621,7 +623,10 @@ Here is a simple example using a custom loss function:
     data = np.random.normal(0, 1, size=2**nqubits)
 
     # perform optimization
-    best, params, extra = optimize(myloss, x0, args=(c, data), method='BFGS')
+    optimizer = ScipyMinimizer(options={'method'='BFGS'})
+    result = optimizer.fit(
+        initial_parameters=x0, loss=myloss, args=(c, data)
+    )
 
     # set final solution to circuit instance
     c.set_parameters(params)
@@ -644,6 +649,7 @@ Hamiltonian. Here is a simple example using the Heisenberg XXZ Hamiltonian:
 
     import numpy as np
     from qibo import models, hamiltonians
+    from qibo.minimizers import ScipyMinimizer
 
     # Create XXZ Hamiltonian for six qubits
     hamiltonian = hamiltonians.XXZ(6)
@@ -652,7 +658,9 @@ Hamiltonian. Here is a simple example using the Heisenberg XXZ Hamiltonian:
 
     # Optimize starting from a random guess for the variational parameters
     initial_parameters = 0.01 * np.random.uniform(0,1,4)
-    best_energy, final_parameters, extra = qaoa.minimize(initial_parameters, method="BFGS")
+    opt = ScipyMinimizer(options={'method': 'BFGS'})
+
+    best, params, extra = qaoa.minimize(opt, initial_parameters=initial_parameters)
 
 In the above example the initial guess for parameters has length four and
 therefore the QAOA ansatz consists of four operators, two using the
@@ -1762,6 +1770,7 @@ done as follows:
 
     import numpy as np
     from qibo import hamiltonians, models
+    from qibo.minimizers import ScipyMinimizer
 
     # Define Hamiltonians
     h0 = hamiltonians.X(3)
@@ -1772,7 +1781,8 @@ done as follows:
     evolution = models.AdiabaticEvolution(h0, h1, sp, dt=1e-2)
     # Find the optimal value for ``p`` starting from ``p = 0.5`` and ``T=1``.
     initial_guess = [0.5, 1]
-    # best, params, extra = evolution.minimize(initial_guess, method="BFGS", options={'disp': True})
+    opt = ScipyMinimizer({'method'='BFGS')
+    best, params, extra = evolution.minimize(opt, initial_parameters=initial_guess, fit_options={'disp': True})
     print(best) # prints the best energy <H1> found from the final state
     print(params) # prints the optimal values for the parameters.
 .. testoutput::

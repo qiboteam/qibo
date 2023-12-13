@@ -1,5 +1,5 @@
 """Models for time evolution of state vectors."""
-from qibo import solvers
+from qibo import optimizers, solvers
 from qibo.callbacks import Gap, Norm
 from qibo.config import log, raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
@@ -263,7 +263,7 @@ class AdiabaticEvolution(StateEvolution):
             log.info(f"Params: {params}  -  <H1> = {loss}")
         return loss
 
-    def minimize(self, initial_parameters, method="BFGS", options=None, messages=False):
+    def minimize(self, opt, initial_parameters, fit_options=None, messages=False):
         """Optimize the free parameters of the scheduling function.
 
         Args:
@@ -280,7 +280,7 @@ class AdiabaticEvolution(StateEvolution):
                 optimization.
         """
         self.opt_messages = messages
-        if method == "sgd":
+        if isinstance(opt, optimizers.gradient_based.TensorflowSGD) == "sgd":
             loss = self._loss
         else:
             loss = lambda p, ae, h1, msg, hist: self.backend.to_numpy(
@@ -289,23 +289,8 @@ class AdiabaticEvolution(StateEvolution):
 
         args = (self, self.hamiltonian.h1, self.opt_messages, self.opt_history)
 
-        if method == "sgd":
-            from qibo.optimizers.gradient_based import TensorflowSGD
-
-            opt = TensorflowSGD(options=options)
-
-        elif method == "cma":
-            from qibo.optimizers.heuristics import CMAES
-
-            opt = CMAES(options=options)
-
-        else:
-            from qibo.optimizers.minimizers import ScipyMinimizer
-
-            opt = ScipyMinimizer(options={"method": method})
-
         result, parameters, extra = opt.fit(
-            initial_parameters, loss, args, fit_options=options
+            initial_parameters, loss, args, fit_options=fit_options
         )
 
         if isinstance(parameters, self.backend.tensor_types) and not len(
