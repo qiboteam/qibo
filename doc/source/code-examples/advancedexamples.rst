@@ -1770,7 +1770,7 @@ done as follows:
 
     import numpy as np
     from qibo import hamiltonians, models
-    from qibo.minimizers import ScipyMinimizer
+    from qibo.optimizers.minimizers import ScipyMinimizer
 
     # Define Hamiltonians
     h0 = hamiltonians.X(3)

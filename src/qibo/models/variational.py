@@ -31,7 +31,7 @@ class VQE:
             # optimize using random initial variational parameters
             initial_parameters = np.random.uniform(0, 2, 1)
             opt = CMAES()
-            best, params, _ = v.minimize(opt, initial_parameters, fit_options=options)
+            best, params, _ = vqe.minimize(opt, initial_parameters, fit_options=options)
     """
 
     def __init__(self, circuit, hamiltonian):
