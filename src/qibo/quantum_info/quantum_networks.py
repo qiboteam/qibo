@@ -279,7 +279,7 @@ class QuantumNetwork:
         Returns:
             ndarray: Resulting state :math:`\\mathcal{E}(\\varrho)`.
         """
-        if self.is_pure():
+        if self.is_pure:
             return np.einsum("jk,lm,jl -> km", self.matrix, np.conj(self.matrix), state)
 
         return np.einsum("jklm,kl -> jl", self.matrix, state)
