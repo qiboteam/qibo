@@ -104,11 +104,13 @@ class TSP:
                 from QAOA
 
                 '''
+                from qibo.oprtimizers.minimizers import ScipyMinimizer
                 small_tsp = TSP(distance_matrix)
                 obj_hamil, mixer = small_tsp.hamiltonians()
                 qaoa = QAOA(obj_hamil, mixer=mixer)
-                best_energy, final_parameters, extra = qaoa.minimize(initial_p=[0.1] * layer,
-                                                     initial_state=initial_state, method='BFGS')
+                opt = ScipyMinimizer({'method': 'BFGS'})
+                best_energy, final_parameters, extra = qaoa.minimize(opt, initial_parameters=[0.1] * layer,
+                                                     initial_state=initial_state)
                 qaoa.set_parameters(final_parameters)
                 quantum_state = qaoa.execute(initial_state)
                 circuit = Circuit(9)

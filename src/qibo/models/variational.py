@@ -447,7 +447,7 @@ class QAOA:
 
                 from qibo import hamiltonians
                 from qibo.models.utils import cvar, gibbs
-                from qibo.optimizer.minimizers import ScipyMinimizer
+                from qibo.optimizers.minimizers import ScipyMinimizer
 
                 h = hamiltonians.XXZ(3)
                 qaoa = models.QAOA(h)
