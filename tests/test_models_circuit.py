@@ -627,9 +627,14 @@ def test_circuit_draw():
     assert circuit.draw() == ref
 
 
-def test_circuit_wires_names_error():
+def test_circuit_wires_names_error_type():
     with pytest.raises(TypeError):
         circuit = Circuit(5, wires_names=1)
+
+
+def test_circuit_wires_names_error_len():
+    with pytest.raises(ValueError):
+        circuit = Circuit(5, wires_names=["a", "b", "c"])
 
 
 def test_circuit_draw_names():
