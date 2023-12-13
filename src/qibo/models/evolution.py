@@ -263,7 +263,7 @@ class AdiabaticEvolution(StateEvolution):
             log.info(f"Params: {params}  -  <H1> = {loss}")
         return loss
 
-    def minimize(self, opt, initial_parameters, fit_options=None, messages=False):
+    def minimize(self, opt, initial_parameters, fit_options={}, messages=False):
         """Optimize the free parameters of the scheduling function.
 
         Args:

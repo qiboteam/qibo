@@ -319,8 +319,8 @@ def test_falqon_optimization_callback(backend):
 test_names = "method,options,compile,filename"
 test_values = [
     ("BFGS", {"maxiter": 1}, False, "aavqe_bfgs.out"),
-    # ("cma", {"maxfevals": 2}, False, None),
-    # ("parallel_L-BFGS-B", {"maxiter": 1}, False, None),
+    ("cma", {"maxfevals": 2}, False, None),
+    ("parallel_L-BFGS-B", {"maxiter": 1}, False, None),
 ]
 
 

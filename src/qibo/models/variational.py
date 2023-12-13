@@ -30,6 +30,7 @@ class VQE:
             vqe = models.VQE(circuit, hamiltonian)
             # optimize using random initial variational parameters
             initial_parameters = np.random.uniform(0, 2, 1)
+            options = {'maxiter': 1}
             opt = CMAES()
             best, params, _ = vqe.minimize(opt, initial_parameters, fit_options=options)
     """
@@ -41,7 +42,7 @@ class VQE:
         self.backend = hamiltonian.backend
 
     def minimize(
-        self, opt, initial_parameters, loss=None, fit_options=dict(), compile=False
+        self, opt, initial_parameters, loss=None, fit_options={}, compile=False
     ):
         """Search for parameters which minimizes the hamiltonian expectation.
 
@@ -465,7 +466,7 @@ class QAOA:
                 "contains {}.".format(len(initial_parameters)),
             )
 
-        optloss = loss
+        loss_function = loss
         self.set_parameters(initial_parameters)
 
         def _loss(params, qaoa, hamiltonian, state):
@@ -474,17 +475,17 @@ class QAOA:
             qaoa.set_parameters(params)
             state = qaoa(state)
 
-            if optloss is None:
+            if loss_function is None:
                 return hamiltonian.expectation(state)
             else:
                 func_hyperparams = {
                     key: loss_func_param[key]
                     for key in loss_func_param
-                    if key in optloss.__code__.co_varnames
+                    if key in loss_function.__code__.co_varnames
                 }
                 param = {**func_hyperparams, "hamiltonian": hamiltonian, "state": state}
 
-                return optloss(**param)
+                return loss_function(**param)
 
         if isinstance(opt, qibo.optimizers.gradient_based.TensorflowSGD):
             loss = lambda p, c, h, s: _loss(self.hamiltonian.backend.cast(p), c, h, s)

@@ -19,10 +19,10 @@ def main(nshots, backend):
     initial_parameters = np.random.uniform(0, 2 * np.pi, 2)
     circuits = set_parametrized_circuits()
 
-    opt = ScipyMinimizer(
+    opt = ScipyMinimizer()
+    best, params, _ = opt.fit(
         initial_parameters, loss=cost_function, args=(circuits, nshots)
     )
-    best, params, _ = opt.fit()
 
     print(f"Cost: {best}\n")
     print(f"Parameters: {params}\n")

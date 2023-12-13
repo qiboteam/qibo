@@ -313,7 +313,7 @@ test_names = "method,options,messages,dense,filename"
 test_values = [
     ("BFGS", {"maxiter": 1}, True, True, "adiabatic_bfgs.out"),
     ("BFGS", {"maxiter": 1}, True, False, "trotter_adiabatic_bfgs.out"),
-    ("sgd", {}, False, True, None),
+    ("sgd", {"epochs": 5}, False, True, None),
 ]
 
 
@@ -328,12 +328,11 @@ def test_scheduling_optimization(backend, method, options, messages, dense, file
     adevp = models.AdiabaticEvolution(h0, h1, sp, dt=1e-1)
 
     if method == "sgd":
-        pytest.skip("SGD is only supported with tensorflow backend.")
         opt = TensorflowSGD()
         if backend.name != "tensorflow":
             with pytest.raises(RuntimeError):
                 best, params, _ = adevp.minimize(
-                    opt, [0.5, 1], options=options, messages=messages
+                    opt, [0.5, 1], fit_options=options, messages=messages
                 )
     else:
         opt = ScipyMinimizer({"method": "BFGS"})
