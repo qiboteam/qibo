@@ -174,6 +174,9 @@ class Hamiltonian(AbstractHamiltonian):
 
         Args:
             state (np.ndarray): quantum state to be used to compute the energy fluctuation.
+
+        Return:
+            Energy fluctuation value (float).
         """
         energy = self.expectation(state)
         h = self.matrix
