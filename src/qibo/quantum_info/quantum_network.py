@@ -1,5 +1,7 @@
 """Module defining the QuantumNetwork class and adjacent functions."""
 
+# %%
+
 from functools import reduce
 from operator import mul
 from typing import List, Optional, Tuple, Union
@@ -89,7 +91,7 @@ class QuantumNetwork:
         if self.system_output is None:
             self.system_output = (False,) if len(self.partition) == 1 else (False, True)
         else:
-            self.system_output = tuple(system_output)
+            self.system_output = tuple(self.system_output)
 
     @property
     def is_pure(self):
