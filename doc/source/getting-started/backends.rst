@@ -50,6 +50,12 @@ be controlled using the ``QIBO_LOG_LEVEL`` environment variable. This can be set
 to 3 to hide info messages or 4 to hide both info and warning messages. The
 default value is 1 allowing all messages to appear.
 
+.. note::
+  The `qibojit` backend implements in-place updates. This
+  implies that the initial state is modified at runtime without performing any copies to save memory.
+  For algorithms that require access to the initial state after its modification, such as quantum machine learning applications,
+  it is suggested to perform a copy of the state explicitly if really needed by the algorithm.
+
 
 .. _hardware-backends:
 
