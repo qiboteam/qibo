@@ -4,7 +4,6 @@ import pytest
 import qibo
 from qibo import hamiltonians
 from qibo.models import Circuit
-from qibo.optimizers.abstract import Optimizer
 from qibo.optimizers.heuristics import CMAES, BasinHopping
 from qibo.optimizers.minimizers import ParallelBFGS, ScipyMinimizer
 
