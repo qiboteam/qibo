@@ -1,9 +1,10 @@
 """Meta-heuristic optimization algorithms."""
 
 import cma
+import numpy as np
 from scipy.optimize import basinhopping
 
-from qibo.config import log
+from qibo.config import log, raise_error
 from qibo.optimizers.abstract import Optimizer, check_options
 
 
@@ -42,6 +43,18 @@ class CMAES(Optimizer):
         Returns:
             tuple: best loss value (float), best parameter values (np.ndarray), full cma result object.
         """
+        if not isinstance(args, tuple):
+            raise_error(TypeError, "Loss function args must be provided as a tuple.")
+        else:
+            self.args = args
+
+        if not isinstance(initial_parameters, np.ndarray) and not isinstance(
+            initial_parameters, list
+        ):
+            raise_error(
+                TypeError,
+                "Parameters must be a list of Parameter objects or a numpy array.",
+            )
 
         log.info(
             f"Optimization is performed using the optimizer: {type(self).__name__}"
@@ -105,6 +118,18 @@ class BasinHopping(Optimizer):
         Returns:
             tuple: best loss value (float), best parameter values (np.ndarray), full scipy OptimizeResult object.
         """
+        if not isinstance(args, tuple):
+            raise_error(TypeError, "Loss function args must be provided as a tuple.")
+        else:
+            self.args = args
+
+        if not isinstance(initial_parameters, np.ndarray) and not isinstance(
+            initial_parameters, list
+        ):
+            raise_error(
+                TypeError,
+                "Parameters must be a list of Parameter objects or a numpy array.",
+            )
 
         log.info(
             f"Optimization is performed using the optimizer: {type(self).__name__}"

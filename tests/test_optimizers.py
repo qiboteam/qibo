@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 import qibo
 from qibo import hamiltonians
@@ -103,3 +104,39 @@ def test_cmaes(backend):
         initial_parameters=parameters, args=(circuit, hamiltonian), loss=black_box_loss
     )
     assert np.isclose(result[0], -1, atol=1e-4)
+
+
+def test_optimizer_arguments(backend):
+    """Test option dictionary mechanism."""
+
+    # setting reasonable options
+    options = {"sigma0": 0.5}
+    opt = CMAES(options=options)
+
+    # setting wrong options
+    options.update({"hello": "hello"})
+    with pytest.raises(TypeError):
+        opt = CMAES(options=options)
+
+    # passing wrong args data structure (not a tuple)
+    circuit = ansatz()
+    hamiltonian = create_hamiltonian()
+    parameters = np.random.randn(len(circuit.get_parameters()))
+    optimizer = ScipyMinimizer()
+
+    with pytest.raises(TypeError):
+        _ = optimizer.fit(
+            initial_parameters=parameters,
+            loss=black_box_loss,
+            args=[circuit, hamiltonian],
+        )
+
+    # passing parameters not in array or list shape
+    parameters = {"parameters": parameters}
+
+    with pytest.raises(TypeError):
+        _ = optimizer.fit(
+            initial_parameters=parameters,
+            loss=black_box_loss,
+            args=(circuit, hamiltonian),
+        )

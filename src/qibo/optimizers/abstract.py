@@ -45,11 +45,9 @@ class Optimizer:
             fit_options (dict): extra options to customize the fit.
         """
         if not isinstance(args, tuple):
-            self.args = (args,)
+            raise_error(TypeError, "Loss function args must be provided as a tuple.")
         else:
             self.args = args
-
-        self.params = initial_parameters
 
         if not isinstance(initial_parameters, np.ndarray) and not isinstance(
             initial_parameters, list
@@ -58,3 +56,5 @@ class Optimizer:
                 TypeError,
                 "Parameters must be a list of Parameter objects or a numpy array.",
             )
+
+        self.params = initial_parameters
