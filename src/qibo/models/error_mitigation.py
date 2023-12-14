@@ -597,11 +597,12 @@ def apply_randomized_readout_mitigation(
 
         error_map = {}
         for j, gate in enumerate(x_gate):
-            if gate.name == "x":
-                if gate.qubits[0] in meas_qubits:
-                    error_map[gate.qubits[0]] = 1
-                else:
-                    x_gate.queue[j] = gates.I(gate.qubits[0])
+            if isinstance(gate, gates.X) and gate.qubits[0] in meas_qubits:
+                error_map[gate.qubits[0]] = 1
+                # if gate.qubits[0] in meas_qubits:
+                #     error_map[gate.qubits[0]] = 1
+                # else:
+                #     x_gate.queue[j] = gates.I(gate.qubits[0])
 
         circuits = [circuit_c, cal_circuit]
         results = []
@@ -637,6 +638,9 @@ def apply_readout_mitigation(
     qubit_map=None,
     backend=None,
 ):
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
     if "ncircuits" in readout:
         circuit_result, circuit_result_cal = apply_randomized_readout_mitigation(
             circuit, noise_model, nshots, readout["ncircuits"], backend
@@ -912,33 +916,35 @@ def ICS(
     return mitigated_expectation
 
 
-def transpile_circ(circuit, qubit_map, backend):
-    from qibo.transpiler.unitary_decompositions import u3_decomposition
+# def transpile_circ(circuit, qubit_map, backend):
+#     from qibo.transpiler.unitary_decompositions import u3_decomposition
 
-    if backend.name == "qibolab":
-        if qubit_map is None:
-            qubit_map = list(range(circuit.nqubits))
-        new_c = circuit.__class__(backend.platform.nqubits)
-        for gate in circuit.queue:
-            qubits = [qubit_map[j] for j in gate.qubits]
-            if isinstance(gate, gates.M):
-                new_gate = gates.M(*tuple(qubits), **gate.init_kwargs)
-                new_gate.result = gate.result
-                new_c.add(new_gate)
-            elif isinstance(gate, gates.I):
-                new_c.add(gate.__class__(*tuple(qubits), **gate.init_kwargs))
-            else:
-                matrix = gate.matrix()
-                new_c.add(gates.U3(qubits[0], *u3_decomposition(matrix)))
-        return new_c
+#     if backend.name == "qibolab":
+#         if qubit_map is None:
+#             qubit_map = list(range(circuit.nqubits))
+#         new_c = circuit.__class__(backend.platform.nqubits)
+#         for gate in circuit.queue:
+#             qubits = [qubit_map[j] for j in gate.qubits]
+#             if isinstance(gate, gates.M):
+#                 new_gate = gates.M(*tuple(qubits), **gate.init_kwargs)
+#                 new_gate.result = gate.result
+#                 new_c.add(new_gate)
+#             elif isinstance(gate, gates.I):
+#                 new_c.add(gate.__class__(*tuple(qubits), **gate.init_kwargs))
+#             else:
+#                 matrix = gate.matrix()
+#                 new_c.add(gates.U3(qubits[0], *u3_decomposition(matrix)))
+#         return new_c
 
-    return circuit
+#     return circuit
 
 
 def _circuit_conf(circuit, qubit_map, noise_model, nshots, backend=None):
     from qibo.transpiler.placer import Custom
 
-    if backend.name == "qibolab":
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+    elif backend.name == "qibolab":  # pragma: no cover
         backend.transpiler.passes[1] = Custom(
             map=qubit_map, connectivity=backend.platform.topology
         )

@@ -8,8 +8,7 @@ from qibo.models.error_mitigation import (
     CDR,
     ICS,
     ZNE,
-    apply_cal_mat_readout_mitigation,
-    apply_randomized_readout_mitigation,
+    apply_readout_mitigation,
     get_calibration_matrix,
     sample_clifford_training_circuit,
     sample_training_circuit_cdr,
@@ -287,6 +286,9 @@ def test_readout_mitigation(backend, nqubits, method, ibu_iters):
         calibration = get_calibration_matrix(
             nqubits, None, noise, nshots=nshots, backend=backend
         )
+        readout = {"calibration_matrix": calibration, "ibu_iters": ibu_iters}
+    elif method == "randomized":
+        readout = {"ncircuits": 10}
     # Define the observable
     obs = np.prod([Z(i) for i in range(nqubits)])
     obs = SymbolicHamiltonian(obs, backend=backend)
@@ -297,17 +299,8 @@ def test_readout_mitigation(backend, nqubits, method, ibu_iters):
     # get noisy expected val
     state = backend.execute_circuit(noise.apply(c), nshots=nshots)
     noisy_val = state.expectation_from_samples(obs)
-    if method == "cal_matrix":
-        mit_state = apply_cal_mat_readout_mitigation(state, calibration, ibu_iters)
-        mit_val = mit_state.expectation_from_samples(obs)
-    elif method == "randomized":
-        ncircuits = 10
-        result, result_cal = apply_randomized_readout_mitigation(
-            c, noise, nshots, ncircuits, backend
-        )
-        mit_val = result.expectation_from_samples(
-            obs
-        ) / result_cal.expectation_from_samples(obs)
+
+    mit_val = apply_readout_mitigation(c, obs, noise, nshots, readout, backend=backend)
 
     assert np.abs(true_val - mit_val) <= np.abs(true_val - noisy_val)
 
