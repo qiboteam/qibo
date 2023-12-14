@@ -1,6 +1,7 @@
+from abc import abstractmethod
+
 import numpy as np
 
-from qibo import backends
 from qibo.config import raise_error
 
 
@@ -18,6 +19,29 @@ def check_options(function, options):
             )
 
 
+def check_fit_arguments(args, initial_parameters):
+    """
+    Check loss function args and initial parameters Types.
+
+    Args:
+        args (tuple): list of loss function extra arguments.
+        initial_parameters (np.ndarray or list): initial parameters.
+    """
+    # check whether if args are a tuple
+    if not isinstance(args, tuple):
+        raise_error(TypeError, "Loss function args must be provided as a tuple.")
+    else:
+        args = args
+    # check whether params are a list or a numpy array
+    if not isinstance(initial_parameters, np.ndarray) and not isinstance(
+        initial_parameters, list
+    ):
+        raise_error(
+            TypeError,
+            "Parameters must be a list of Parameter objects or a numpy array.",
+        )
+
+
 class Optimizer:
     """Qibo optimizer class."""
 
@@ -25,7 +49,7 @@ class Optimizer:
         """
         Args:
             options (dict): optimizer's parameters. This dictionary has to be
-                filled according to each specific optimizer interfate.
+                filled according to each specific optimizer interface.
         """
         self.options = options
 
@@ -33,28 +57,22 @@ class Optimizer:
         """Update self.options dictionary"""
         self.options.update(updates)
 
-    def fit(self, loss, initial_parameters, args=(), fit_options={}):
+    @abstractmethod
+    def fit(
+        self,
+        initial_parameters,
+        loss,
+        args=(),
+        fit_options={},
+    ):  # pragma: no cover
         """
-        Compute the optimization strategy given loss function generalities.
+        Compute the optimization strategy according to the chosen optimizer.
 
         Args:
-            loss (callable): loss function to train on.
             initial_parameters (np.ndarray or list): array with initial values
                 for gate parameters.
+            loss (callable): loss function to train on.
             args (tuple): tuple containing loss function arguments.
             fit_options (dict): extra options to customize the fit.
         """
-        if not isinstance(args, tuple):
-            raise_error(TypeError, "Loss function args must be provided as a tuple.")
-        else:
-            self.args = args
-
-        if not isinstance(initial_parameters, np.ndarray) and not isinstance(
-            initial_parameters, list
-        ):
-            raise_error(
-                TypeError,
-                "Parameters must be a list of Parameter objects or a numpy array.",
-            )
-
-        self.params = initial_parameters
+        raise_error(NotImplementedError)

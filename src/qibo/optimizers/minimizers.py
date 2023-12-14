@@ -4,7 +4,7 @@ import numpy as np
 from scipy.optimize import minimize
 
 from qibo.config import log, raise_error
-from qibo.optimizers.abstract import Optimizer, check_options
+from qibo.optimizers.abstract import Optimizer, check_fit_arguments, check_options
 
 
 class ScipyMinimizer(Optimizer):
@@ -20,7 +20,7 @@ class ScipyMinimizer(Optimizer):
 
     def __init__(self, options={"method": "Powell"}):
         super().__init__(options)
-        self.name = "scipyminimizer"
+        self.name = "scipy_minimizer"
         check_options(function=minimize, options=options)
 
     def fit(self, initial_parameters, loss=None, args=(), fit_options={}):
@@ -33,24 +33,14 @@ class ScipyMinimizer(Optimizer):
             args (tuple): tuple containing loss function arguments.
             fit_options (dict): dictionary containing extra options which depend
                 on the chosen `"method"`. This argument is called "options" in the
-                Scipy's documentation and we reccomend to fill it according to the
+                Scipy's documentation and we recommend to fill it according to the
                 official documentation.
 
         Returns:
             tuple: best loss value (float), best parameter values (np.ndarray), full scipy OptimizeResult object.
         """
-        if not isinstance(args, tuple):
-            raise_error(TypeError, "Loss function args must be provided as a tuple.")
-        else:
-            self.args = args
 
-        if not isinstance(initial_parameters, np.ndarray) and not isinstance(
-            initial_parameters, list
-        ):
-            raise_error(
-                TypeError,
-                "Parameters must be a list of Parameter objects or a numpy array.",
-            )
+        check_fit_arguments(args=args, initial_parameters=initial_parameters)
 
         log.info(
             f"Optimization is performed using the optimizer: {type(self).__name__}.{self.options['method']}"
@@ -110,18 +100,8 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
         Returns:
             tuple: best loss value (float), best parameter values (np.ndarray), full scipy OptimizeResult object.
         """
-        if not isinstance(args, tuple):
-            raise_error(TypeError, "Loss function args must be provided as a tuple.")
-        else:
-            self.args = args
 
-        if not isinstance(initial_parameters, np.ndarray) and not isinstance(
-            initial_parameters, list
-        ):
-            raise_error(
-                TypeError,
-                "Parameters must be a list of Parameter objects or a numpy array.",
-            )
+        check_fit_arguments(args=args, initial_parameters=initial_parameters)
 
         log.info(
             f"Optimization is performed using the optimizer: {type(self).__name__}"

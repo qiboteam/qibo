@@ -1,11 +1,10 @@
 """Meta-heuristic optimization algorithms."""
 
 import cma
-import numpy as np
 from scipy.optimize import basinhopping
 
-from qibo.config import log, raise_error
-from qibo.optimizers.abstract import Optimizer, check_options
+from qibo.config import log
+from qibo.optimizers.abstract import Optimizer, check_fit_arguments, check_options
 
 
 class CMAES(Optimizer):
@@ -33,9 +32,9 @@ class CMAES(Optimizer):
         """Perform the optimizations via CMA-ES.
 
         Args:
-            loss (callable): loss function to train on.
             initial_parameters (np.ndarray or list): array with initial values
                 for gate parameters.
+            loss (callable): loss function to train on.
             args (tuple): tuple containing loss function arguments.
             fit_options (dict): fit extra options. To have a look to all
                 possible options please import the `cma` package and type `cma.CMAOptions()`.
@@ -43,18 +42,8 @@ class CMAES(Optimizer):
         Returns:
             tuple: best loss value (float), best parameter values (np.ndarray), full cma result object.
         """
-        if not isinstance(args, tuple):
-            raise_error(TypeError, "Loss function args must be provided as a tuple.")
-        else:
-            self.args = args
 
-        if not isinstance(initial_parameters, np.ndarray) and not isinstance(
-            initial_parameters, list
-        ):
-            raise_error(
-                TypeError,
-                "Parameters must be a list of Parameter objects or a numpy array.",
-            )
+        check_fit_arguments(args=args, initial_parameters=initial_parameters)
 
         log.info(
             f"Optimization is performed using the optimizer: {type(self).__name__}"
@@ -106,30 +95,20 @@ class BasinHopping(Optimizer):
         self.options = options
         self.minimizer_kwargs = minimizer_kwargs
 
-    def fit(self, loss, initial_parameters, args=()):
+    def fit(self, initial_parameters, loss, args=()):
         """Perform the optimizations via Basin-Hopping strategy.
 
         Args:
-            loss (callable): loss function to train on.
             initial_parameters (np.ndarray or list): array with initial values
                 for gate parameters.
+            loss (callable): loss function to train on.
             args (tuple): tuple containing loss function arguments.
 
         Returns:
             tuple: best loss value (float), best parameter values (np.ndarray), full scipy OptimizeResult object.
         """
-        if not isinstance(args, tuple):
-            raise_error(TypeError, "Loss function args must be provided as a tuple.")
-        else:
-            self.args = args
 
-        if not isinstance(initial_parameters, np.ndarray) and not isinstance(
-            initial_parameters, list
-        ):
-            raise_error(
-                TypeError,
-                "Parameters must be a list of Parameter objects or a numpy array.",
-            )
+        check_fit_arguments(args=args, initial_parameters=initial_parameters)
 
         log.info(
             f"Optimization is performed using the optimizer: {type(self).__name__}"

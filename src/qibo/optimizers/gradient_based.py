@@ -1,9 +1,8 @@
 """Gradient descent strategies to optimize quantum models."""
-import numpy as np
 
 from qibo.backends import TensorflowBackend
-from qibo.config import log, raise_error
-from qibo.optimizers.abstract import Optimizer
+from qibo.config import log
+from qibo.optimizers.abstract import Optimizer, check_fit_arguments
 
 
 class TensorflowSGD(Optimizer):
@@ -85,9 +84,9 @@ class TensorflowSGD(Optimizer):
         Compute the SGD optimization according to the chosen optimizer.
 
         Args:
-            loss (callable): loss function to train on.
             initial_parameters (np.ndarray or list): array with initial values
                 for gate parameters.
+            loss (callable): loss function to train on.
             args (tuple): tuple containing loss function arguments.
             fit_options (dics): extra options to customize the fit. The default
             epochs (int): number of optimization iterations [default 10000].
@@ -101,18 +100,8 @@ class TensorflowSGD(Optimizer):
             (np.ndarray): best parameter values
             (list): loss function history
         """
-        if not isinstance(args, tuple):
-            raise_error(TypeError, "Loss function args must be provided as a tuple.")
-        else:
-            self.args = args
 
-        if not isinstance(initial_parameters, np.ndarray) and not isinstance(
-            initial_parameters, list
-        ):
-            raise_error(
-                TypeError,
-                "Parameters must be a list of Parameter objects or a numpy array.",
-            )
+        check_fit_arguments(args=args, initial_parameters=initial_parameters)
 
         vparams = self.backend.tf.Variable(
             initial_parameters, dtype=self.backend.tf.complex128
