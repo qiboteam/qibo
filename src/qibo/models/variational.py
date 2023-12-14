@@ -20,7 +20,7 @@ class VQE:
 
             import numpy as np
             from qibo import gates, models, hamiltonians
-            from qibo.optimizers.heuristics import CMAES
+            from qibo.optimizers.minimizers import ScipyMinimizer
             # create circuit ansatz for two qubits
             circuit = models.Circuit(2)
             circuit.add(gates.RY(0, theta=0))
@@ -31,9 +31,8 @@ class VQE:
             vqe = models.VQE(circuit, hamiltonian)
             # optimize using random initial variational parameters
             initial_parameters = np.random.uniform(0, 2, 2)
-            options = {'maxiter': 1}
-            opt = CMAES()
-            best, params, _ = vqe.minimize(opt, initial_parameters, fit_options=options)
+            opt = ScipyMinimizer({"method": "BFGS"})
+            best, params, _ = vqe.minimize(opt, initial_parameters)
     """
 
     def __init__(self, circuit, hamiltonian):
@@ -130,7 +129,7 @@ class AAVQE:
 
             import numpy as np
             from qibo import gates, models, hamiltonians
-            from qibo.optimizers.heuristics import CMAES
+            from qibo.optimizers.minimizers import ScipyMinimizer
             # create circuit ansatz for two qubits
             circuit = models.Circuit(2)
             circuit.add(gates.RY(0, theta=0))
@@ -147,7 +146,7 @@ class AAVQE:
             # optimize using random initial variational parameters
             np.random.seed(0)
             initial_parameters = np.random.uniform(0, 2*np.pi, 2)
-            opt = CMAES()
+            opt = ScipyMinimizer(options={"method":"Powell"})
             ground_energy, params = aavqe.minimize(opt, initial_parameters)
     """
 

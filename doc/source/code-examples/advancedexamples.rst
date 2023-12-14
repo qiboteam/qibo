@@ -606,7 +606,7 @@ Here is a simple example using a custom loss function:
         final_state = circuit().state()
         return 1 - np.abs(np.conj(target).dot(final_state))
 
-    nqubits = 4
+    nqubits = 3
     nlayers  = 2
 
     # Create variational circuit
@@ -620,13 +620,14 @@ Here is a simple example using a custom loss function:
     c.add((gates.RY(q, theta=0) for q in range(nqubits)))
 
     # Optimize starting from a random guess for the variational parameters
-    x0 = np.random.uniform(0, 2*np.pi, 2*nqubits*nlayers + nqubits)
+    nparams = len(c.get_parameters())
+    params = np.random.uniform(0, 2*np.pi, nparams)
     data = np.random.normal(0, 1, size=2**nqubits)
 
     # perform optimization
     optimizer = ScipyMinimizer(options={'method': 'BFGS'})
     result = optimizer.fit(
-        initial_parameters=x0, loss=myloss, args=(c, data)
+        initial_parameters=params, loss=myloss, args=(c, data)
     )
 
     # set final solution to circuit instance
