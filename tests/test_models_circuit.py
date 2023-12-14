@@ -624,20 +624,24 @@ def test_circuit_draw():
             circuit.add(gates.CU1(i2, i1, theta=0))
     circuit.add(gates.SWAP(0, 4))
     circuit.add(gates.SWAP(1, 3))
+
     assert circuit.draw() == ref
 
 
-def test_circuit_wires_names_error_type():
+def test_circuit_wire_names_errors():
     with pytest.raises(TypeError):
-        circuit = Circuit(5, wires_names=1)
-
-
-def test_circuit_wires_names_error_len():
+        circuit = Circuit(5, wire_names=1)
     with pytest.raises(ValueError):
-        circuit = Circuit(5, wires_names=["a", "b", "c"])
+        circuit = Circuit(5, wire_names=["a", "b", "c"])
+    with pytest.raises(ValueError):
+        circuit = Circuit(2, wire_names={"q0": "1", "q1": "2", "q2": "3"})
+    with pytest.raises(ValueError):
+        circuit = Circuit(2, wire_names={"q0": "1", "q1": 2})
+    with pytest.raises(ValueError):
+        circuit = Circuit(2, wire_names=["1", 2])
 
 
-def test_circuit_draw_names():
+def test_circuit_draw_wire_names():
     """Test circuit text draw."""
     ref = (
         "a    : ─H─U1─U1─U1─U1───────────────────────────x───\n"
@@ -646,13 +650,14 @@ def test_circuit_draw_names():
         "1    : ─────────o──|───────o──|────o──|──H─U1───|─x─\n"
         "q4   : ────────────o──────────o───────o────o──H─x───"
     )
-    circuit = Circuit(5, wires_names=["a", "b", "hello", "1", "q4"])
+    circuit = Circuit(5, wire_names=["a", "b", "hello", "1", "q4"])
     for i1 in range(5):
         circuit.add(gates.H(i1))
         for i2 in range(i1 + 1, 5):
             circuit.add(gates.CU1(i2, i1, theta=0))
     circuit.add(gates.SWAP(0, 4))
     circuit.add(gates.SWAP(1, 3))
+
     assert circuit.draw() == ref
 
 
@@ -751,7 +756,7 @@ def test_circuit_draw_line_wrap_names():
 
     import numpy as np
 
-    circuit = Circuit(5, wires_names={"q1": "a"})
+    circuit = Circuit(5, wire_names={"q1": "a"})
     for i1 in range(5):
         circuit.add(gates.H(i1))
         for i2 in range(i1 + 1, 5):
