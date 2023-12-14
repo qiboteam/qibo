@@ -163,6 +163,27 @@ class Hamiltonian(AbstractHamiltonian):
             dim = int(self.matrix.shape[0])
         return self.backend.cast(self.backend.matrices.I(dim), dtype=self.matrix.dtype)
 
+    def energy_fluctuation(self, state):
+        """
+        Evaluate energy fluctuation:
+
+        .. math::
+            \\Xi_{k}(\\mu) = \\sqrt{\\langle\\mu|\\hat{H}^2|\\mu\\rangle - \\langle\\mu|\\hat{H}|\\mu\\rangle^2} \\,
+
+        for a given state :math:`|\\mu\\rangle`.
+
+        Args:
+            state (np.ndarray): quantum state to be used to compute the energy fluctuation.
+
+        Return:
+            Energy fluctuation value (float).
+        """
+        energy = self.expectation(state)
+        h = self.matrix
+        h2 = Hamiltonian(nqubits=self.nqubits, matrix=h @ h, backend=self.backend)
+        average_h2 = self.backend.calculate_expectation_state(h2, state, normalize=True)
+        return np.sqrt(np.abs(average_h2 - energy**2))
+
     def __add__(self, o):
         if isinstance(o, self.__class__):
             if self.nqubits != o.nqubits:
