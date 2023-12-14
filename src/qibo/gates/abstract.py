@@ -358,7 +358,7 @@ class Gate:
             ndarray: Matrix representation of gate.
 
         .. note::
-            ``Gate.matrix`` was an defined as an atribute in ``qibo`` versions prior to  ``0.2.0``.
+            ``Gate.matrix`` was defined as an atribute in ``qibo`` versions prior to  ``0.2.0``.
             From ``0.2.0`` on, it has been converted into a method and has replaced the ``asmatrix`` method.
         """
         if backend is None:  # pragma: no cover
