@@ -101,18 +101,7 @@ class TensorflowSGD(Optimizer):
             (np.ndarray): best parameter values
             (list): loss function history
         """
-        if not isinstance(args, tuple):
-            raise_error(TypeError, "Loss function args must be provided as a tuple.")
-        else:
-            self.args = args
-
-        if not isinstance(initial_parameters, np.ndarray) and not isinstance(
-            initial_parameters, list
-        ):
-            raise_error(
-                TypeError,
-                "Parameters must be a list of Parameter objects or a numpy array.",
-            )
+        super().fit(initial_parameters, loss, args, fit_options)
 
         vparams = self.backend.tf.Variable(
             initial_parameters, dtype=self.backend.tf.complex128

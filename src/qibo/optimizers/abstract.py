@@ -33,14 +33,14 @@ class Optimizer:
         """Update self.options dictionary"""
         self.options.update(updates)
 
-    def fit(self, loss, initial_parameters, args=(), fit_options={}):
+    def fit(self, initial_parameters, loss, args=(), fit_options={}):
         """
         Compute the optimization strategy given loss function generalities.
 
         Args:
-            loss (callable): loss function to train on.
             initial_parameters (np.ndarray or list): array with initial values
                 for gate parameters.
+            loss (callable): loss function to train on.
             args (tuple): tuple containing loss function arguments.
             fit_options (dict): extra options to customize the fit.
         """

@@ -43,22 +43,7 @@ class CMAES(Optimizer):
         Returns:
             tuple: best loss value (float), best parameter values (np.ndarray), full cma result object.
         """
-        if not isinstance(args, tuple):
-            raise_error(TypeError, "Loss function args must be provided as a tuple.")
-        else:
-            self.args = args
-
-        if not isinstance(initial_parameters, np.ndarray) and not isinstance(
-            initial_parameters, list
-        ):
-            raise_error(
-                TypeError,
-                "Parameters must be a list of Parameter objects or a numpy array.",
-            )
-
-        log.info(
-            f"Optimization is performed using the optimizer: {type(self).__name__}"
-        )
+        super().fit(initial_parameters, loss, args, fit_options)
 
         # update options dictionary with extra `cma.fmin` options.
         self.set_options({"options": fit_options})
@@ -106,7 +91,7 @@ class BasinHopping(Optimizer):
         self.options = options
         self.minimizer_kwargs = minimizer_kwargs
 
-    def fit(self, loss, initial_parameters, args=()):
+    def fit(self, initial_parameters, loss, args=()):
         """Perform the optimizations via Basin-Hopping strategy.
 
         Args:
@@ -118,18 +103,7 @@ class BasinHopping(Optimizer):
         Returns:
             tuple: best loss value (float), best parameter values (np.ndarray), full scipy OptimizeResult object.
         """
-        if not isinstance(args, tuple):
-            raise_error(TypeError, "Loss function args must be provided as a tuple.")
-        else:
-            self.args = args
-
-        if not isinstance(initial_parameters, np.ndarray) and not isinstance(
-            initial_parameters, list
-        ):
-            raise_error(
-                TypeError,
-                "Parameters must be a list of Parameter objects or a numpy array.",
-            )
+        super().fit(initial_parameters, loss, args)
 
         log.info(
             f"Optimization is performed using the optimizer: {type(self).__name__}"
