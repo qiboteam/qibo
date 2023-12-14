@@ -1,6 +1,6 @@
 import collections
 import copy
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -120,7 +120,7 @@ class Circuit:
             - *nqubits*
             - *accelerators*
             - *density_matrix*
-            - *wires_names*.
+            - *wire_names*.
 
         queue (_Queue): List that holds the queue of gates of a circuit.
         parametrized_gates (_ParametrizedGates): List of parametric gates.
@@ -130,12 +130,16 @@ class Circuit:
         compiled (CompiledExecutor): Circuit executor. Defaults to ``None``.
         repeated_execution (bool): If `True`, the circuit would be re-executed when sampling.
             Defaults to ``False``.
-        density_matrix (bool): If `True`, the circuit would evolve density matrices.
+        density_matrix (bool, optional): If `True`, the circuit would evolve density matrices.
+            If ``False``, defaults to statevector simulation.
             Defaults to ``False``.
-        accelerators (dict): Dictionary that maps device names to the number of times each
+        accelerators (dict, optional): Dictionary that maps device names to the number of times each
             device will be used. Defaults to ``None``.
-        wires_names (list or dict): Names for each qubit,
-            if None the default names ``q0``, ``q1``... ``qn`` will be used.
+        wire_names (list or dict, optional): Names for qubit wires.
+            If ``None``, defaults to (``q0``, ``q1``... ``qn``).
+            If ``list`` is passed, length of ``list`` must match ``nqubits``.
+            If ``dict`` is passed, the keys should match the default pattern.
+            Defaults to ``None``.
         ndevices (int): Total number of devices. Defaults to ``None``.
         nglobal (int): Base two logarithm of the number of devices. Defaults to ``None``.
         nlocal (int): Total number of available qubits in each device. Defaults to ``None``.
@@ -148,7 +152,7 @@ class Circuit:
         nqubits: int,
         accelerators=None,
         density_matrix: bool = False,
-        wires_names: Union[list, dict] = None,
+        wire_names: Optional[Union[list, dict]] = None,
     ):
         if not isinstance(nqubits, int):
             raise_error(
@@ -161,12 +165,12 @@ class Circuit:
                 f"Number of qubits must be positive but is {nqubits}.",
             )
         self.nqubits = nqubits
-        self.wires_names = wires_names
+        self.wire_names = wire_names
         self.init_kwargs = {
             "nqubits": nqubits,
             "accelerators": accelerators,
             "density_matrix": density_matrix,
-            "wires_names": wires_names,
+            "wire_names": wire_names,
         }
         self.queue = _Queue(nqubits)
         # Keep track of parametrized gates for the ``set_parameters`` method
@@ -271,29 +275,50 @@ class Circuit:
         return newcircuit
 
     @property
-    def wires_names(self):
-        return self._wires_names
+    def wire_names(self):
+        return self._wire_names
 
-    @wires_names.setter
-    def wires_names(self, wires_names: Union[list, dict]):
-        if isinstance(wires_names, list):
-            if len(wires_names) != self.nqubits:
-                raise_error(
-                    ValueError,
-                    f"Number of wires names must be equal to the number of qubits but is {len(wires_names)}.",
-                )
-            self._wires_names = wires_names
-        elif isinstance(wires_names, dict):
-            self._wires_names = [
-                wires_names.get(f"q{i}", f"q{i}") for i in range(self.nqubits)
-            ]
-        elif isinstance(wires_names, type(None)):
-            self._wires_names = [f"q{i}" for i in range(self.nqubits)]
-        else:
+    @wire_names.setter
+    def wire_names(self, wire_names: Union[list, dict]):
+        if not isinstance(wire_names, (list, dict, type(None))):
             raise_error(
                 TypeError,
-                f"Wire names must be a list or dict but is {type(wires_names)}.",
+                f"``wire_names`` must be type ``list`` or ``dict``, but is {type(wire_names)}.",
             )
+
+        if isinstance(wire_names, list):
+            if len(wire_names) != self.nqubits:
+                raise_error(
+                    ValueError,
+                    "Number of wire names must be equal to the number of qubits, "
+                    f"but is {len(wire_names)}.",
+                )
+
+            if any([not isinstance(name, str) for name in wire_names]):
+                raise_error(ValueError, "all wire names must be type ``str``.")
+
+            self._wire_names = wire_names
+        elif isinstance(wire_names, dict):
+            if len(wire_names.keys()) > self.nqubits:
+                raise_error(
+                    ValueError,
+                    "number of elements in the ``wire_names`` dictionary "
+                    + "cannot be bigger than ``nqubits``.",
+                )
+
+            if any([not isinstance(name, str) for name in wire_names.keys()]) or any(
+                [not isinstance(name, str) for name in wire_names.values()]
+            ):
+                raise_error(
+                    ValueError,
+                    "all keys and values in the ``wire_names`` dictionary must be type ``str``.",
+                )
+
+            self._wire_names = [
+                wire_names.get(f"q{i}", f"q{i}") for i in range(self.nqubits)
+            ]
+        else:
+            self._wire_names = [f"q{i}" for i in range(self.nqubits)]
 
     @property
     def repeated_execution(self):
@@ -1452,12 +1477,12 @@ class Circuit:
                 matrix[row][col] += "─" * (1 + maxlen - len(matrix[row][col]))
 
         # Print to terminal
-        max_name_len = max(len(name) for name in self.wires_names)
+        max_name_len = max(len(name) for name in self.wire_names)
         output = ""
         for q in range(self.nqubits):
             output += (
-                self.wires_names[q]
-                + " " * (max_name_len - len(self.wires_names[q]))
+                self.wire_names[q]
+                + " " * (max_name_len - len(self.wire_names[q]))
                 + ": ─"
                 + "".join(matrix[q])
                 + "\n"
@@ -1499,8 +1524,8 @@ class Circuit:
                     loutput += ["" for _ in range(self.nqubits)]
                     suffix = " ...\n"
                     prefix = (
-                        self.wires_names[row]
-                        + " " * (max_name_len - len(self.wires_names[row]))
+                        self.wire_names[row]
+                        + " " * (max_name_len - len(self.wire_names[row]))
                         + ": "
                     )
                     if i == 0:
