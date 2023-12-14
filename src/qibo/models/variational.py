@@ -487,7 +487,7 @@ class QAOA:
 
                 return loss_function(**param)
 
-        if isinstance(opt, qibo.optimizers.gradient_based.TensorflowSGD):
+        if opt.name == "tensorflow_sgd":
             loss = lambda p, c, h, s: _loss(self.hamiltonian.backend.cast(p), c, h, s)
         else:
             loss = lambda p, c, h, s: self.hamiltonian.backend.to_numpy(

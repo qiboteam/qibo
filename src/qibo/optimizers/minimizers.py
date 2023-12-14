@@ -20,6 +20,7 @@ class ScipyMinimizer(Optimizer):
 
     def __init__(self, options={"method": "Powell"}):
         super().__init__(options)
+        self.name = "scipyminimizer"
         check_options(function=minimize, options=options)
 
     def fit(self, initial_parameters, loss=None, args=(), fit_options={}):
@@ -73,7 +74,7 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
         options={},
     ):
         super().__init__(options)
-
+        self.name = "parallel_bfgs"
         self.xval = None
         self.function_value = None
         self.jacobian_value = None

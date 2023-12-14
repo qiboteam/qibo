@@ -64,9 +64,9 @@ class TensorflowSGD(Optimizer):
         options={"learning_rate": 0.001},
     ):
         super().__init__(options)
+        self.name = "tensorflow_sgd"
         # This optimizer works only with tensorflow backend
         self.backend = TensorflowBackend()
-
         self.options = options
 
         # options are automatically checked inside the tf.keras.optimizer

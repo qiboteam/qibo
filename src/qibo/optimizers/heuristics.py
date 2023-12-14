@@ -23,7 +23,7 @@ class CMAES(Optimizer):
 
     def __init__(self, options={"sigma0": 0.5}):
         super().__init__(options)
-
+        self.name = "cmaes"
         # check if options are compatible with the function and update class options
         check_options(function=cma.fmin2, options=options)
         self.set_options(options)
@@ -87,7 +87,7 @@ class BasinHopping(Optimizer):
         minimizer_kwargs={},
     ):
         super().__init__(options)
-
+        self.name = "basinhopping"
         # check if options are compatible with the function and update class options
         check_options(function=basinhopping, options=options)
         self.options = options
