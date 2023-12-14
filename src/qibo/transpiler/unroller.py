@@ -11,9 +11,8 @@ class NativeGates(Flag):
     """Define native gates supported by the unroller.
     A native gate set should contain at least one two-qubit gate (CZ or iSWAP)
     and at least one single qubit gate (GPI2 or U3).
-    Gates I, Z, RZ and M are always included in the single qubit native gates set.
-
-    Should have the same names with qibo gates.
+    Possible values are:
+    I, Z, RZ, M, GPI2, U3, CZ, iSWAP.
     """
 
     I = auto()
@@ -56,8 +55,6 @@ class Unroller:
     """Translates a circuit to native gates.
 
     Args:
-        circuit (:class:`qibo.models.circuit.Circuit`): circuit model to translate
-            into native gates.
         native_gates (:class:`qibo.transpiler.unroller.NativeGates`): native gates to use in the transpiled circuit.
 
     Returns:
@@ -71,6 +68,14 @@ class Unroller:
         self.native_gates = native_gates
 
     def __call__(self, circuit: Circuit):
+        """Decomposes a circuit into native gates.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): circuit model to decompose.
+
+        Returns:
+            (:class:`qibo.models.circuit.Circuit`): equivalent circuit with native gates.
+        """
         translated_circuit = circuit.__class__(circuit.nqubits)
         for gate in circuit.queue:
             translated_circuit.add(
