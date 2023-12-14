@@ -4,6 +4,7 @@ import pytest
 import qibo
 from qibo import hamiltonians
 from qibo.models import Circuit
+from qibo.optimizers.abstract import Optimizer
 from qibo.optimizers.heuristics import CMAES, BasinHopping
 from qibo.optimizers.minimizers import ParallelBFGS, ScipyMinimizer
 
@@ -42,6 +43,21 @@ def black_box_loss(params, circuit, hamiltonian):
     """Simple black-box optimizer loss function"""
     circuit.set_parameters(params)
     return hamiltonian.expectation(circuit().state())
+
+
+def test_abstractoptimizer(backend):
+    opt = Optimizer()
+    params = np.array([5.0, 6.0, 7.0])
+    y = np.array([2.0, 2.0, 3.0])
+    loss = lambda x, y: (y - x) ** 2
+
+    opt.fit(params, loss, args=tuple(y))
+
+    with pytest.raises(TypeError):
+        opt.fit(params, loss, args=y)
+
+    with pytest.raises(TypeError):
+        opt.fit({0: 0.0, 1: 1.0, 2: 2.0}, loss, args=(y))
 
 
 def test_scipyminimizer(backend):
