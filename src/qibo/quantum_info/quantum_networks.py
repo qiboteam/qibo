@@ -98,13 +98,18 @@ class QuantumNetwork:
                 f"``precision_tol`` must be non-negative float, but it is {precision_tol}",
             )
 
-        reshaped = np.reshape(self._matrix, (self.dims, self.dims))
-        return bool(
-            self._backend.calculate_norm_density_matrix(
-                np.transpose(np.conj(reshaped)) - reshaped, order=order
-            )
-            <= precision_tol
+        if order is None and self._backend.__class__.__name__ == "TensorflowBackend":
+            order = "euclidean"
+
+        reshaped = self._backend.cast(
+            np.reshape(self._matrix, (self.dims, self.dims)), dtype=self._matrix.dtype
         )
+        reshaped = self._backend.cast(
+            np.transpose(np.conj(reshaped)) - reshaped, dtype=reshaped.dtype
+        )
+        norm = self._backend.calculate_norm_density_matrix(reshaped, order=order)
+
+        return float(norm) <= precision_tol
 
     def is_unital(
         self, order: Optional[Union[int, str]] = None, precision_tol: float = 1e-8
@@ -136,6 +141,9 @@ class QuantumNetwork:
                 f"``precision_tol`` must be non-negative float, but it is {precision_tol}",
             )
 
+        if order is None and self._backend.__class__.__name__ == "TensorflowBackend":
+            order = "euclidean"
+
         self._matrix = self._full()
 
         partial_trace = np.einsum("jkjl -> kl", self._matrix)
@@ -143,13 +151,12 @@ class QuantumNetwork:
             np.eye(partial_trace.shape[0]), dtype=partial_trace.dtype
         )
 
-        return bool(
-            self._backend.calculate_norm_density_matrix(
-                partial_trace - identity,
-                order=order,
-            )
-            <= precision_tol
+        norm = self._backend.calculate_norm_density_matrix(
+            partial_trace - identity,
+            order=order,
         )
+
+        return float(norm) <= precision_tol
 
     def is_causal(
         self, order: Optional[Union[int, str]] = None, precision_tol: float = 1e-8
@@ -181,6 +188,9 @@ class QuantumNetwork:
                 f"``precision_tol`` must be non-negative float, but it is {precision_tol}",
             )
 
+        if order is None and self._backend.__class__.__name__ == "TensorflowBackend":
+            order = "euclidean"
+
         self._matrix = self._full()
 
         partial_trace = np.einsum("jklk -> jl", self._matrix)
@@ -188,13 +198,12 @@ class QuantumNetwork:
             np.eye(partial_trace.shape[0]), dtype=partial_trace.dtype
         )
 
-        return bool(
-            self._backend.calculate_norm_density_matrix(
-                partial_trace - identity,
-                order=order,
-            )
-            <= precision_tol
+        norm = self._backend.calculate_norm_density_matrix(
+            partial_trace - identity,
+            order=order,
         )
+
+        return float(norm) <= precision_tol
 
     def is_positive_semidefinite(self, precision_tol: float = 0.0):
         """Returns bool indicating if Choi operator :math:`\\mathcal{E}` of the networn is positive-semidefinite.
