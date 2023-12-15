@@ -124,7 +124,7 @@ class QuantumNetwork:
 
         self._matrix = self._full()
 
-        partial_trace = np.einsum("jklm -> km", self._matrix)
+        partial_trace = np.einsum("jkjl -> kl", self._matrix)
         identity = self._backend.cast(
             np.eye(partial_trace.shape[0]), dtype=partial_trace.dtype
         )
@@ -169,7 +169,7 @@ class QuantumNetwork:
 
         self._matrix = self._full()
 
-        partial_trace = np.einsum("jklm -> jl", self._matrix)
+        partial_trace = np.einsum("jklk -> jl", self._matrix)
         identity = self._backend.cast(
             np.eye(partial_trace.shape[0]), dtype=partial_trace.dtype
         )
@@ -250,7 +250,7 @@ class QuantumNetwork:
 
         return np.einsum("jklm,kl -> jl", self._matrix, state)
 
-    def link_product(self, second_network, expr: Optional[str] = None):
+    def link_product(self, second_network, subscripts: Optional[str] = None):
         if not isinstance(second_network, QuantumNetwork):
             raise_error(
                 TypeError,
@@ -258,20 +258,20 @@ class QuantumNetwork:
                 + "``QuantumNetwork`` with a non-``QuantumNetwork``.",
             )
 
-        channel_expr = match(r"i\s*j\s*,\s*j\s*k\s*->\s*i\s*k", expr)
-        inv_expr = match(r"i\s*j\s*,\s*k\s*i\s*->\s*k\s*j", expr)
+        channel_subscripts = match(r"i\s*j\s*,\s*j\s*k\s* -> \s*i\s*k", subscripts)
+        inv_subscripts = match(r"i\s*j\s*,\s*k\s*i\s* -> \s*k\s*j", subscripts)
 
         first_matrix = self._full()
         second_matrix = second_network._full()  # pylint: disable=W0212
 
-        if expr is None or channel_expr is not None:
+        if subscripts is None or channel_subscripts is not None:
             cexpr = "ijab,jkbc->ikac"
             return QuantumNetwork(
                 np.einsum(cexpr, first_matrix, second_matrix),
                 [self.partition[0], second_network.partition[1]],
             )
 
-        if inv_expr is not None:
+        if inv_subscripts is not None:
             cexpr = "ijab,jkbc->ikac"
             return QuantumNetwork(
                 np.einsum(cexpr, first_matrix, second_matrix),
