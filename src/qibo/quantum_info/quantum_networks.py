@@ -1,4 +1,5 @@
 """Module defining the QuantumNetwork class and adjacent functions."""
+import warnings
 from functools import reduce
 from operator import mul
 from re import match
@@ -29,9 +30,6 @@ class QuantumNetwork:
         self.dims = reduce(mul, self.partition)
 
         self._set_tensor_and_parameters()
-
-        if not self.is_hermitian:
-            raise Warning("The input matrix is not Hermitian.")
 
     def matrix(self, backend=None):
         """Returns the Choi operator of the quantum network in matrix form.
@@ -401,6 +399,9 @@ class QuantumNetwork:
         """Sets tensor based on inputs."""
         if self._backend is None:
             self._backend = GlobalBackend()
+
+        if not self.is_hermitian():
+            warnings.warn("Input matrix is not Hermitian.")
 
         if isinstance(self.partition, list):
             self.partition = tuple(self.partition)
