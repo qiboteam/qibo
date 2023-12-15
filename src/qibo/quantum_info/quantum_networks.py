@@ -12,11 +12,27 @@ from qibo.config import raise_error
 
 
 class QuantumNetwork:
+    """Quantum network object that holds a Choi operator as a tensor.
+
+    Args:
+        matrix (ndarray): input Choi operator.
+        partition (List[int] or Tuple[int]): partition of ``matrix``.
+        system_output (List[bool] or Tuple[bool], optional): mask on the output system of the
+            Choi operator. If ``None`` and ``len(partition) == 1``, defaults to ``(False,)``.
+            If ``None`` and ``len(partition) != 1``, defaults to ``(False, True)``.
+            Defaults to ``None``.
+        is_pure (bool, optional): ``True`` when ``matrix`` is a rank-:math:`1` operator,
+            ``False`` otherwise. Defaults to ``False``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used in
+            calculations. If ``None``, defaults to :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
+    """
+
     def __init__(
         self,
         matrix,
         partition: Union[List[int], Tuple[int]],
-        system_output: Optional[Tuple[bool]] = None,
+        system_output: Optional[Union[List[bool], Tuple[bool]]] = None,
         is_pure: bool = False,
         backend=None,
     ):
