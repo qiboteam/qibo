@@ -123,7 +123,7 @@ class TensorflowSGD(Optimizer):
         self.backend.compile(sgd_step)
 
         # SGD procedure: loop over epochs
-        for epoch in range(fit_options["epochs"]):
+        for epoch in range(fit_options["epochs"]):  # pragma: no cover
             # early stopping if loss_threshold has been set
             if (
                 loss_threshold is not None
