@@ -208,6 +208,7 @@ def test_sample_training_circuit(nqubits):
         c.queue[j].clifford = True
     with pytest.raises(ValueError):
         sample_training_circuit_cdr(c)
+    with pytest.raises(ValueError):
         sample_clifford_training_circuit(c)
 
 
