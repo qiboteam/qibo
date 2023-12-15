@@ -207,20 +207,23 @@ class QuantumNetwork:
 
         return float(norm) <= precision_tol
 
-    def is_positive_semidefinite(self, precision_tol: float = 0.0):
+    def is_positive_semidefinite(self, precision_tol: float = 1e-8):
         """Returns bool indicating if Choi operator :math:`\\mathcal{E}` of the networn is positive-semidefinite.
 
         Args:
             precision_tol (float, optional): threshold value used to check if eigenvalues of
                 the Choi operator :math:`\\mathcal{E}` are such that
-                :math:`\\textup{eigenvalues}(\\mathcal{E}) >= \\textup{precision_tol}`.
+                :math:`\\textup{eigenvalues}(\\mathcal{E}) >= - \\textup{precision_tol}`.
                 Note that this parameter can be set to negative values.
                 Defaults to :math:`0.0`.
 
         Returns:
             bool: Positive-semidefinite condition.
         """
+        self._matrix = self._full()
+
         reshaped = np.reshape(self._matrix, (self.dims, self.dims))
+
         if self.is_hermitian():
             eigenvalues = np.linalg.eigvalsh(reshaped)
         else:
@@ -231,7 +234,7 @@ class QuantumNetwork:
                 reshaped = np.array(reshaped.tolist(), dtype=reshaped.dtype)
             eigenvalues = np.linalg.eigvals(reshaped)
 
-        return all(eigenvalue >= precision_tol for eigenvalue in eigenvalues)
+        return all(eigenvalue >= -precision_tol for eigenvalue in eigenvalues)
 
     def is_channel(
         self,
@@ -308,6 +311,16 @@ class QuantumNetwork:
 
         raise_error(NotImplementedError, "Not implemented.")
 
+    def copy(self):
+        """Returns a copy of the ``QuantumNetwork`` object."""
+        return self.__class__(
+            np.copy(self._matrix),
+            partition=self.partition,
+            system_output=self.system_output,
+            is_pure=self._is_pure,
+            backend=self._backend,
+        )
+
     def __add__(self, second_network):
         """Add two Quantum Networks by adding their Choi operators.
 
@@ -367,7 +380,16 @@ class QuantumNetwork:
 
         matrix = self._full()
 
-        return QuantumNetwork(number * matrix, self.partition, self.system_output)
+        return QuantumNetwork(
+            number * matrix,
+            self.partition,
+            self.system_output,
+            self._is_pure,
+            self._backend,
+        )
+
+    def __rmul__(self, number: Union[float, int]):
+        return self.__mul__(number)
 
     def __truediv__(self, number: Union[float, int]):
         """Returns quantum network with its Choi operator divided by a scalar.
@@ -387,7 +409,13 @@ class QuantumNetwork:
 
         matrix = self._full()
 
-        return QuantumNetwork(matrix / number, self.partition, self.system_output)
+        return QuantumNetwork(
+            matrix / number,
+            self.partition,
+            self.system_output,
+            self._is_pure,
+            self._backend,
+        )
 
     def __matmul__(self, second_network, subscripts: Optional[str] = None):
         """Defines matrix multiplication between two ``QuantumNetwork`` objects.
