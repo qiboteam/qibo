@@ -59,7 +59,7 @@ class QuantumNetwork:
         Returns:
             ndarray: Choi matrix of the quantum network.
         """
-        if backend is None:
+        if backend is None:  # pragma: no cover
             backend = self._backend
 
         return backend.cast(self._matrix, dtype=self._matrix.dtype)
@@ -100,6 +100,8 @@ class QuantumNetwork:
 
         if order is None and self._backend.__class__.__name__ == "TensorflowBackend":
             order = "euclidean"
+
+        self._matrix = self._full()
 
         reshaped = self._backend.cast(
             np.reshape(self._matrix, (self.dims, self.dims)), dtype=self._matrix.dtype
@@ -222,7 +224,10 @@ class QuantumNetwork:
         if self.is_hermitian():
             eigenvalues = np.linalg.eigvalsh(reshaped)
         else:
-            if self._backend.__class__.__name__ in ["CupyBackend", "CuQuantumBackend"]:
+            if self._backend.__class__.__name__ in [
+                "CupyBackend",
+                "CuQuantumBackend",
+            ]:  # pragma: no cover
                 reshaped = np.array(reshaped.tolist(), dtype=reshaped.dtype)
             eigenvalues = np.linalg.eigvals(reshaped)
 
@@ -271,7 +276,7 @@ class QuantumNetwork:
                 "jk,lm,jl -> km", self._matrix, np.conj(self._matrix), state
             )
 
-        return np.einsum("jklm,kl -> jl", self._matrix, state)
+        return np.einsum("jklm,km -> jl", self._matrix, state)
 
     def link_product(self, second_network, subscripts: Optional[str] = None):
         if not isinstance(second_network, QuantumNetwork):
@@ -323,11 +328,11 @@ class QuantumNetwork:
                 + f"and and object of type ``{type(second_network)}``.",
             )
 
-        if self._matrix.shape != second_network.matrix().shape:
+        if self._matrix.shape != second_network.matrix(second_network._backend).shape:
             raise_error(
                 ValueError,
-                "The Choi operators must have the same shape, "
-                + f"but {self._matrix.shape} != {second_network.shape}.",
+                f"The Choi operators must have the same shape, but {self._matrix.shape} != "
+                + f"{second_network.matrix(second_network._backend).shape}.",
             )
 
         if self.system_output != second_network.system_output:
@@ -384,7 +389,7 @@ class QuantumNetwork:
 
         return QuantumNetwork(matrix / number, self.partition, self.system_output)
 
-    def __matmul__(self, second_network):
+    def __matmul__(self, second_network, subscripts: Optional[str] = None):
         """Defines matrix multiplication between two ``QuantumNetwork`` objects.
 
         If ``len(self.partition) == 2`` and ``len(second_network.partition) == 2``,
@@ -393,6 +398,7 @@ class QuantumNetwork:
 
         Args:
             second_network (:class:`qibo.quantum_info.quantum_networks.QuantumNetwork`):
+            subscripts (str, optional): .
 
         Returns:
             :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`: Quantum network resulting
@@ -406,7 +412,7 @@ class QuantumNetwork:
             )
 
         if len(self.partition) == 2 and len(second_network.partition) == 2:
-            return self.link_product(second_network)
+            return self.link_product(second_network, subscripts=subscripts)
 
     def __str__(self):
         """Method to define how to print relevant information of the quantum network."""
