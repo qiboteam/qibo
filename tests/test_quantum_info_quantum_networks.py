@@ -36,6 +36,41 @@ def test_errors(backend):
     with pytest.raises(ValueError):
         network + network_state
 
+    network_2 = network.copy()
+    with pytest.raises(ValueError):
+        network_2.system_output = (False,)
+        network += network_2
+
+
+def test_operational_logic(backend):
+    lamb = float(np.random.rand())
+    channel = gates.DepolarizingChannel(0, lamb)
+    nqubits = len(channel.target_qubits)
+    dims = 2**nqubits
+    partition = (dims, dims)
+    network = QuantumNetwork(
+        channel.to_choi(backend=backend), partition, backend=backend
+    )
+
+    # Adding QuantumNetwork to non-QuantumNetwork
+    with pytest.raises(TypeError):
+        network @ network.matrix(backend)
+
+    # Sum with itself has to match multiplying by int
+    backend.assert_allclose(
+        (network + network).matrix(backend), (2 * network).matrix(backend)
+    )
+
+    # Sum with itself has to match multiplying by float
+    backend.assert_allclose(
+        (network + network).matrix(backend), (2.0 * network).matrix(backend)
+    )
+
+    # Multiplying and dividing by same scalar has to bring back to original network
+    backend.assert_allclose(
+        ((2.0 * network) / 2).matrix(backend), network.matrix(backend)
+    )
+
 
 def test_parameters(backend):
     lamb = float(np.random.rand())
@@ -106,3 +141,8 @@ def test_with_unitaries(backend):
         network_1.link_product(network_2, subscript).matrix(backend=backend),
         network_3._full(),
     )
+
+    assert network_1.is_hermitian()
+    assert network_1.is_causal()
+    assert network_1.is_causal()
+    assert network_1.is_positive_semidefinite()
