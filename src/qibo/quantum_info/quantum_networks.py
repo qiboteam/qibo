@@ -279,6 +279,18 @@ class QuantumNetwork:
         raise_error(NotImplementedError, "Not implemented.")
 
     def __add__(self, second_network):
+        """Add two Quantum Networks by adding their Choi operators.
+
+        This operation always returns a non-pure Quantum Network.
+
+        Args:
+            second_network (:class:`qibo.quantum_info.quantum_networks.QuantumNetwork`): Quantum
+                network to be added to the original network.
+
+        Returns:
+            (:class:`qibo.quantum_info.quantum_networks.QuantumNetwork`): Quantum network resulting
+                from the summation of two Choi operators.
+        """
         if not isinstance(second_network, QuantumNetwork):
             raise_error(
                 TypeError,
@@ -308,6 +320,15 @@ class QuantumNetwork:
         )
 
     def __mul__(self, number: Union[float, int]):
+        """Returns quantum network with its Choi operator multiplied by a scalar.
+
+        Args:
+            number (float or int): scalar to multiply the Choi operator of the network with.
+
+        Returns:
+            :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`: Quantum network with its
+                Choi operator multiplied by ``number``.
+        """
         if not isinstance(number, (float, int)):
             raise_error(
                 TypeError,
@@ -319,6 +340,15 @@ class QuantumNetwork:
         return QuantumNetwork(number * matrix, self.partition, self.system_output)
 
     def __truediv__(self, number: Union[float, int]):
+        """Returns quantum network with its Choi operator divided by a scalar.
+
+        Args:
+            number (float or int): scalar to divide the Choi operator of the network with.
+
+        Returns:
+            :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`: Quantum network with its
+                Choi operator divided by ``number``.
+        """
         if not isinstance(number, (float, int)):
             raise_error(
                 TypeError,
@@ -330,6 +360,19 @@ class QuantumNetwork:
         return QuantumNetwork(matrix / number, self.partition, self.system_output)
 
     def __matmul__(self, second_network):
+        """Defines matrix multiplication between two ``QuantumNetwork`` objects.
+
+        If ``len(self.partition) == 2`` and ``len(second_network.partition) == 2``,
+        this method is overwritten by
+        :meth:`qibo.quantum_info.quantum_networks.QuantumNetwork.link_product`.
+
+        Args:
+            second_network (:class:`qibo.quantum_info.quantum_networks.QuantumNetwork`):
+
+        Returns:
+            :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`: Quantum network resulting
+                from the link
+        """
         if not isinstance(second_network, QuantumNetwork):
             raise_error(
                 TypeError,
@@ -341,11 +384,12 @@ class QuantumNetwork:
             return self.link_product(second_network)
 
     def __str__(self):
+        """Method to define how to print relevant information of the quantum network."""
         string_in = ", ".join(
             [
                 str(self.partition[k])
                 for k in range(len(self.partition))
-                if self.system_output[k] is False
+                if not self.system_output[k]
             ]
         )
 
@@ -353,7 +397,7 @@ class QuantumNetwork:
             [
                 str(self.partition[k])
                 for k in range(len(self.partition))
-                if self.system_output[k] is True
+                if self.system_output[k]
             ]
         )
 
