@@ -1,6 +1,7 @@
 import os
 
 from qibo.backends.abstract import Backend
+from qibo.backends.clifford import CliffordBackend
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.backends.numpy import NumpyBackend
 from qibo.backends.tensorflow import TensorflowBackend
@@ -33,6 +34,13 @@ def construct_backend(backend, platform=None, runcard=None):
         from qibolab.backends import QibolabBackend  # pylint: disable=E0401
 
         return QibolabBackend(platform, runcard)
+    elif backend == "clifford":
+        if platform is not None:  # pragma: no cover
+            if platform in ("cupy", "numba", "cuquantum"):
+                platform = construct_backend("qibojit", platform=platform)
+            else:
+                platform = construct_backend(platform)
+        return CliffordBackend(platform)
 
     else:  # pragma: no cover
         raise_error(ValueError, f"Backend {backend} is not available.")
@@ -141,7 +149,7 @@ def set_device(device):
     if device[0] != "/" or len(parts) < 2 or len(parts) > 3:
         raise_error(
             ValueError,
-            "Device name should follow the pattern: " "/{device type}:{device number}.",
+            "Device name should follow the pattern: /{device type}:{device number}.",
         )
     backend = GlobalBackend()
     backend.set_device(device)
