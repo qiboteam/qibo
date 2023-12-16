@@ -21,7 +21,7 @@ class QuantumNetwork:
             Choi operator. If ``None`` and ``len(partition) == 1``, defaults to ``(False,)``.
             If ``None`` and ``len(partition) != 1``, defaults to ``(False, True)``.
             Defaults to ``None``.
-        is_pure (bool, optional): ``True`` when ``matrix`` is a rank-:math:`1` operator,
+        pure (bool, optional): ``True`` when ``matrix`` is a rank-:math:`1` operator,
             ``False`` otherwise. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used in
             calculations. If ``None``, defaults to :class:`qibo.backends.GlobalBackend`.
@@ -33,15 +33,15 @@ class QuantumNetwork:
         matrix,
         partition: Union[List[int], Tuple[int]],
         system_output: Optional[Union[List[bool], Tuple[bool]]] = None,
-        is_pure: bool = False,
+        pure: bool = False,
         backend=None,
     ):
-        self._run_checks(partition, system_output, is_pure)
+        self._run_checks(partition, system_output, pure)
 
         self._matrix = matrix
         self.partition = partition
         self.system_output = system_output
-        self._is_pure = is_pure
+        self._pure = pure
         self._backend = backend
         self.dims = reduce(mul, self.partition)
 
@@ -64,11 +64,11 @@ class QuantumNetwork:
 
         return backend.cast(self._matrix, dtype=self._matrix.dtype)
 
-    def is_pure(self):
+    def pure(self):
         """Returns bool indicading if the Choi operator of the network is pure."""
-        return self._is_pure
+        return self._pure
 
-    def is_hermitian(
+    def hermitian(
         self, order: Optional[Union[int, str]] = None, precision_tol: float = 1e-8
     ):
         """Returns bool indicating if the Choi operator :math:`\\mathcal{E}` of the network is Hermitian.
@@ -113,7 +113,7 @@ class QuantumNetwork:
 
         return float(norm) <= precision_tol
 
-    def is_unital(
+    def unital(
         self, order: Optional[Union[int, str]] = None, precision_tol: float = 1e-8
     ):
         """Returns bool indicating if the Choi operator :math:`\\mathcal{E}` of the network is unital.
@@ -160,7 +160,7 @@ class QuantumNetwork:
 
         return float(norm) <= precision_tol
 
-    def is_causal(
+    def causal(
         self, order: Optional[Union[int, str]] = None, precision_tol: float = 1e-8
     ):
         """Returns bool indicating if the Choi operator :math:`\\mathcal{E}` of the network satisfies the causal order condition.
@@ -207,7 +207,7 @@ class QuantumNetwork:
 
         return float(norm) <= precision_tol
 
-    def is_positive_semidefinite(self, precision_tol: float = 1e-8):
+    def positive_semidefinite(self, precision_tol: float = 1e-8):
         """Returns bool indicating if Choi operator :math:`\\mathcal{E}` of the networn is positive-semidefinite.
 
         Args:
@@ -224,7 +224,7 @@ class QuantumNetwork:
 
         reshaped = np.reshape(self._matrix, (self.dims, self.dims))
 
-        if self.is_hermitian():
+        if self.hermitian():
             eigenvalues = np.linalg.eigvalsh(reshaped)
         else:
             if self._backend.__class__.__name__ in [
@@ -236,7 +236,7 @@ class QuantumNetwork:
 
         return all(eigenvalue >= -precision_tol for eigenvalue in eigenvalues)
 
-    def is_channel(
+    def channel(
         self,
         order: Optional[Union[int, str]] = None,
         precision_tol_causal: float = 1e-8,
@@ -259,9 +259,9 @@ class QuantumNetwork:
         Returns:
             bool: Channel condition.
         """
-        return self.is_causal(
-            order, precision_tol_causal
-        ) and self.is_positive_semidefinite(precision_tol_psd)
+        return self.causal(order, precision_tol_causal) and self.positive_semidefinite(
+            precision_tol_psd
+        )
 
     def apply(self, state):
         """Apply the Choi operator :math:`\\mathcal{E}` to ``state`` :math:`\\varrho`.
@@ -274,7 +274,7 @@ class QuantumNetwork:
         Returns:
             ndarray: Resulting state :math:`\\mathcal{E}(\\varrho)`.
         """
-        if self.is_pure():
+        if self.pure():
             return np.einsum(
                 "jk,lm,jl -> km", self._matrix, np.conj(self._matrix), state
             )
@@ -282,6 +282,25 @@ class QuantumNetwork:
         return np.einsum("jklm,km -> jl", self._matrix, state)
 
     def link_product(self, second_network, subscripts: Optional[str] = None):
+        """Link product between two quantum networks.
+
+        The link product is not commutative. Here, we assume that
+        :math:`A.\\textup{link_product}(B)` means "applying :math:`B` to :math:`A`".
+        However, the ``link_product`` is associative, so we override the `@` operation
+        in order to simplify notation.
+
+        Args:
+            second_network (:class:`qibo.quantum_info.quantum_networks.QuantumNetwork`): Quantum
+                network to be applied to the original network.
+            subscripts (str, optional): Specifies the subscript for summation using
+                the Einstein summation convention. For more details, please refer to
+                `numpy.einsum <https://numpy.org/doc/stable/reference/generated/numpy.einsum.html>`_.
+                Defaults to ``None``.
+
+        Returns:
+            :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`: Quantum network resulting
+                from the link product between two quantum networks.
+        """
         if not isinstance(second_network, QuantumNetwork):
             raise_error(
                 TypeError,
@@ -312,12 +331,12 @@ class QuantumNetwork:
         raise_error(NotImplementedError, "Not implemented.")
 
     def copy(self):
-        """Returns a copy of the ``QuantumNetwork`` object."""
+        """Returns a copy of the :class:`qibo.quantum_info.quantum_networks.QuantumNetwork` object."""
         return self.__class__(
             np.copy(self._matrix),
             partition=self.partition,
             system_output=self.system_output,
-            is_pure=self._is_pure,
+            pure=self._pure,
             backend=self._backend,
         )
 
@@ -358,7 +377,7 @@ class QuantumNetwork:
             first_matrix + second_matrix,
             self.partition,
             self.system_output,
-            is_pure=False,
+            pure=False,
             backend=self._backend,
         )
 
@@ -384,11 +403,12 @@ class QuantumNetwork:
             number * matrix,
             self.partition,
             self.system_output,
-            self._is_pure,
+            self._pure,
             self._backend,
         )
 
     def __rmul__(self, number: Union[float, int]):
+        """"""
         return self.__mul__(number)
 
     def __truediv__(self, number: Union[float, int]):
@@ -413,7 +433,7 @@ class QuantumNetwork:
             matrix / number,
             self.partition,
             self.system_output,
-            self._is_pure,
+            self._pure,
             self._backend,
         )
 
@@ -462,7 +482,7 @@ class QuantumNetwork:
 
         return f"J[{string_in} -> {string_out}]"
 
-    def _run_checks(self, partition, system_output, is_pure):
+    def _run_checks(self, partition, system_output, pure):
         """Checks if all inputs are correct in type and value."""
         if not isinstance(partition, (list, tuple)):
             raise_error(
@@ -492,10 +512,10 @@ class QuantumNetwork:
                 + f"but {len(system_output)} != {len(partition)}.",
             )
 
-        if not isinstance(is_pure, bool):
+        if not isinstance(pure, bool):
             raise_error(
                 TypeError,
-                f"``is_pure`` must be type ``bool``, but it is type ``{type(is_pure)}``.",
+                f"``pure`` must be type ``bool``, but it is type ``{type(pure)}``.",
             )
 
     def _set_tensor_and_parameters(self):
@@ -503,13 +523,13 @@ class QuantumNetwork:
         if self._backend is None:
             self._backend = GlobalBackend()
 
-        if not self.is_hermitian():
+        if not self.hermitian():
             warnings.warn("Input matrix is not Hermitian.")
 
         if isinstance(self.partition, list):
             self.partition = tuple(self.partition)
 
-        if self._is_pure:
+        if self._pure:
             self._matrix = np.reshape(self._matrix, self.partition)
         else:
             matrix_partition = self.partition * 2
@@ -521,9 +541,9 @@ class QuantumNetwork:
             self.system_output = tuple(self.system_output)
 
     def _full(self):
-        if self.is_pure():
+        if self.pure():
             matrix = np.einsum("jk,lm -> kjml", self._matrix, np.conj(self._matrix))
-            self._is_pure = False
+            self._pure = False
 
             return matrix
 

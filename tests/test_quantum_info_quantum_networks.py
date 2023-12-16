@@ -22,13 +22,13 @@ def test_errors(backend):
     network_state = QuantumNetwork(state, (1, 2), backend=backend)
 
     with pytest.raises(ValueError):
-        network.is_hermitian(precision_tol=-1e-8)
+        network.hermitian(precision_tol=-1e-8)
 
     with pytest.raises(ValueError):
-        network.is_unital(precision_tol=-1e-8)
+        network.unital(precision_tol=-1e-8)
 
     with pytest.raises(ValueError):
-        network.is_causal(precision_tol=-1e-8)
+        network.causal(precision_tol=-1e-8)
 
     with pytest.raises(TypeError):
         network + 1
@@ -89,10 +89,10 @@ def test_parameters(backend):
     backend.assert_allclose(network.partition, partition)
     backend.assert_allclose(network.system_output, (False, True))
 
-    assert network.is_causal()
-    assert network.is_unital()
-    assert network.is_hermitian()
-    assert network.is_positive_semidefinite()
+    assert network.causal()
+    assert network.unital()
+    assert network.hermitian()
+    assert network.positive_semidefinite()
 
 
 def test_with_states(backend):
@@ -119,8 +119,8 @@ def test_with_states(backend):
         state_output_link.matrix(backend=backend).reshape((dims, dims)), state_output
     )
 
-    assert network_state.is_hermitian()
-    assert network_state.is_positive_semidefinite()
+    assert network_state.hermitian()
+    assert network_state.positive_semidefinite()
 
 
 def test_with_unitaries(backend):
@@ -130,10 +130,10 @@ def test_with_unitaries(backend):
     unitary_1 = random_unitary(dims, backend=backend)
     unitary_2 = random_unitary(dims, backend=backend)
 
-    network_1 = QuantumNetwork(unitary_1, (dims, dims), is_pure=True, backend=backend)
-    network_2 = QuantumNetwork(unitary_2, (dims, dims), is_pure=True, backend=backend)
+    network_1 = QuantumNetwork(unitary_1, (dims, dims), pure=True, backend=backend)
+    network_2 = QuantumNetwork(unitary_2, (dims, dims), pure=True, backend=backend)
     network_3 = QuantumNetwork(
-        unitary_2 @ unitary_1, (dims, dims), is_pure=True, backend=backend
+        unitary_2 @ unitary_1, (dims, dims), pure=True, backend=backend
     )
 
     subscript = "ij,jk -> ik"
@@ -142,7 +142,7 @@ def test_with_unitaries(backend):
         network_3._full(),
     )
 
-    assert network_1.is_hermitian()
-    assert network_1.is_causal()
-    assert network_1.is_causal()
-    assert network_1.is_positive_semidefinite()
+    assert network_1.hermitian()
+    assert network_1.causal()
+    assert network_1.causal()
+    assert network_1.positive_semidefinite()
