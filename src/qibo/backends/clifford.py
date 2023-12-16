@@ -586,7 +586,7 @@ class CliffordBackend(NumpyBackend):
             (2 * nqubits + 1, 2 * nqubits + 1), dtype=bool
         )
         symplectic_matrix[:nqubits, :nqubits] = self.np.copy(I)
-        symplectic_matrix[nqubits:-1, nqubits : 2 * nqubits] = I.copy()
+        symplectic_matrix[nqubits:-1, nqubits : 2 * nqubits] = self.np.copy(I)
         return symplectic_matrix
 
     def apply_gate_clifford(self, gate, symplectic_matrix, nqubits):
