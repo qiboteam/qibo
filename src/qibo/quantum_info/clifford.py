@@ -43,13 +43,23 @@ class Clifford:
     _samples: Optional[int] = None
 
     def __post_init__(self):
-        # adding the scratch row if not provided
-        if self.symplectic_matrix.shape[0] % 2 == 0:
-            self.symplectic_matrix = np.vstack(
-                (self.symplectic_matrix, np.zeros(self.symplectic_matrix.shape[1]))
-            )
-        self.nqubits = int((self.symplectic_matrix.shape[1] - 1) / 2)
-        self._backend = CliffordBackend(self.engine)
+        if isinstance(self.symplectic_matrix, Circuit):
+            clifford = self.from_circuit(self.symplectic_matrix)
+            self.symplectic_matrix = clifford.symplectic_matrix
+            self.nqubits = clifford.nqubits
+            self.measurements = clifford.measurements
+            self.engine = clifford.engine
+            self._samples = clifford._samples
+            self._measurement_gate = clifford._measurement_gate
+            self._backend = clifford._backend
+        else:
+            # adding the scratch row if not provided
+            if self.symplectic_matrix.shape[0] % 2 == 0:
+                self.symplectic_matrix = np.vstack(
+                    (self.symplectic_matrix, np.zeros(self.symplectic_matrix.shape[1]))
+                )
+            self.nqubits = int((self.symplectic_matrix.shape[1] - 1) / 2)
+            self._backend = CliffordBackend(self.engine)
 
     @classmethod
     def from_circuit(
