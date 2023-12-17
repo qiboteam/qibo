@@ -314,8 +314,15 @@ class Clifford:
         Returns:
             :class:`qibo.quantum_info.clifford.Clifford`: copy of original ``Clifford`` object.
         """
+        if not isinstance(deep, bool):
+            raise_error(
+                TypeError, f"``deep`` must be type bool, but it is type {type(deep)}."
+            )
+
         symplectic_matrix = (
-            np.copy(self.symplectic_matrix) if deep else self.symplectic_matrix
+            self.engine.np.copy(self.symplectic_matrix)
+            if deep
+            else self.symplectic_matrix
         )
 
         return self.__class__(
