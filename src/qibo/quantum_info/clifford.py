@@ -134,7 +134,7 @@ class Clifford:
         Returns:
             (ndarray): Density matrix of the state.
         """
-        stabilizers = self.stabilizers(True)
+        stabilizers = self.stabilizers(return_array=True)
 
         return self.engine.np.sum(stabilizers, axis=0) / len(stabilizers)
 
@@ -302,6 +302,24 @@ class Clifford:
 
         return self._backend.calculate_probabilities(
             self.engine.np.sqrt(probs), qubits, len(measured_qubits)
+        )
+
+    def copy(self, deep: bool = False):
+        """Returns copy of :class:`qibo.quantum_info.clifford.Clifford` object.
+
+        Args:
+            deep (bool, optional): If ``True``, creates another copy in memory.
+                Defaults to ``False``.
+
+        Returns:
+            :class:`qibo.quantum_info.clifford.Clifford`: copy of original ``Clifford`` object.
+        """
+        symplectic_matrix = (
+            np.copy(self.symplectic_matrix) if deep else self.symplectic_matrix
+        )
+
+        return self.__class__(
+            symplectic_matrix, self.nqubits, self.measurements, self.nshots, self.engine
         )
 
     def _construct_operators(self, generators: list, phases: list):
