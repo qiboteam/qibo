@@ -19,7 +19,10 @@ class Clifford:
     """Object storing the results of a circuit execution with the :class:`qibo.backends.clifford.CliffordBackend`.
 
     Args:
-        symplectic_matrix (ndarray): Symplectic matrix of the state in phase-space representation.
+        data (ndarray or :class:`qibo.models.circuit.Circuit`): If ``ndarray``, it is the
+            symplectic matrix of the state in phase-space representation.
+            If :class:`qibo.models.circuit.Circuit`, it is a circuit composed only of Clifford
+            gates and measurements.
         nqubits (int, optional): number of qubits of the state.
         measurements (list, optional): list of measurements gates :class:`qibo.gates.M`.
             Defaults to ``None``.
@@ -32,7 +35,7 @@ class Clifford:
             Defaults to ``None``.
     """
 
-    symplectic_matrix: np.ndarray
+    data: Union[np.ndarray, Circuit]
     nqubits: Optional[int] = None
     measurements: Optional[list] = None
     nshots: int = 1000
@@ -43,8 +46,8 @@ class Clifford:
     _samples: Optional[int] = None
 
     def __post_init__(self):
-        if isinstance(self.symplectic_matrix, Circuit):
-            clifford = self.from_circuit(self.symplectic_matrix)
+        if isinstance(self.data, Circuit):
+            clifford = self.from_circuit(self.data)
             self.symplectic_matrix = clifford.symplectic_matrix
             self.nqubits = clifford.nqubits
             self.measurements = clifford.measurements
@@ -54,6 +57,7 @@ class Clifford:
             self._backend = clifford._backend
         else:
             # adding the scratch row if not provided
+            self.symplectic_matrix = self.data
             if self.symplectic_matrix.shape[0] % 2 == 0:
                 self.symplectic_matrix = np.vstack(
                     (self.symplectic_matrix, np.zeros(self.symplectic_matrix.shape[1]))
