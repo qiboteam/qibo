@@ -61,6 +61,29 @@ def test_clifford_from_circuit(backend, measurement):
         backend.assert_allclose(obj.probabilities(), result.probabilities())
 
 
+@pytest.mark.parametrize("nqubits", [1, 10, 100])
+def test_clifford_initialization(backend, nqubits):
+    if backend.__class__.__name__ == "TensorflowBackend":
+        pytest.skip("CliffordBackend not defined for Tensorflow engine.")
+
+    clifford_backend = construct_clifford_backend(backend)
+
+    circuit = random_clifford(nqubits, backend=backend)
+    symplectic_matrix = clifford_backend.execute_circuit(circuit).symplectic_matrix
+
+    clifford_from_symplectic = Clifford(symplectic_matrix, engine=backend)
+    clifford_from_circuit = Clifford.from_circuit(circuit, engine=backend)
+    clifford_from_initialization = Clifford(circuit, engine=backend)
+
+    backend.assert_allclose(
+        clifford_from_symplectic.symplectic_matrix, symplectic_matrix
+    )
+    backend.assert_allclose(clifford_from_circuit.symplectic_matrix, symplectic_matrix)
+    backend.assert_allclose(
+        clifford_from_initialization.symplectic_matrix, symplectic_matrix
+    )
+
+
 @pytest.mark.parametrize("return_array", [True, False])
 def test_clifford_stabilizers(backend, return_array):
     clifford_backend = construct_clifford_backend(backend)
@@ -235,6 +258,27 @@ def test_clifford_samples_error(backend):
         with pytest.raises(RuntimeError) as excinfo:
             obj.samples()
             assert str(excinfo.value) == "No measurement provided."
+
+
+@pytest.mark.parametrize("deep", [False, True])
+@pytest.mark.parametrize("nqubits", [1, 10, 100])
+def test_clifford_copy(backend, nqubits, deep):
+    if backend.__class__.__name__ == "TensorflowBackend":
+        pytest.skip("CliffordBackend not defined for Tensorflow engine.")
+
+    circuit = random_clifford(nqubits, backend=backend)
+    clifford = Clifford.from_circuit(circuit, engine=backend)
+
+    with pytest.raises(TypeError):
+        clifford.copy(deep="True")
+
+    copy = clifford.copy(deep=deep)
+
+    backend.assert_allclose(copy.symplectic_matrix, clifford.symplectic_matrix)
+    assert copy.nqubits == clifford.nqubits
+    assert copy.measurements == clifford.measurements
+    assert copy.nshots == clifford.nshots
+    assert copy.engine == clifford.engine
 
 
 @pytest.mark.parametrize("pauli_2", ["Z", "Y", "Y"])
