@@ -1,6 +1,5 @@
 from copy import deepcopy
 from enum import Enum, auto
-from functools import partial
 
 import numpy as np
 
@@ -101,12 +100,12 @@ class DoubleBracketIteration:
 
     @property
     def off_diagonal_norm(self):
-        """Norm of off-diagonal part of H matrix."""
+        r"""Hilbert Schmidt norm of off-diagonal part of H matrix: \sqrt{A^\dag A}"""
         off_diag_h_dag = self.backend.cast(
             np.matrix(self.backend.to_numpy(self.off_diag_h)).getH()
         )
-        return np.real(
-            np.trace(self.backend.to_numpy(off_diag_h_dag @ self.off_diag_h))
+        return np.sqrt(
+            np.real(np.trace(self.backend.to_numpy(off_diag_h_dag @ self.off_diag_h)))
         )
 
     @property
@@ -123,6 +122,7 @@ class DoubleBracketIteration:
         optimizer: callable = None,
         look_ahead: int = 1,
         verbose: bool = False,
+        d: np.array = None,
     ):
         """
         Optimize iteration step.
@@ -134,7 +134,8 @@ class DoubleBracketIteration:
             space: see hyperopt.hp possibilities;
             optimizer: see hyperopt algorithms;
             look_ahead: number of iteration steps to compute the loss function;
-            verbose: level of verbosity.
+            verbose: level of verbosity;
+            d: diagonal operator for generating double-bracket iterations.
 
         Returns:
             (float): optimized best iteration step.
@@ -152,8 +153,9 @@ class DoubleBracketIteration:
             optimizer = hyperopt.tpe
 
         space = space("step", step_min, step_max)
+        objective = lambda step: self.loss(step=step, d=d, look_ahead=look_ahead)
         best = hyperopt.fmin(
-            fn=partial(self.loss, look_ahead=look_ahead),
+            fn=objective,
             space=space,
             algo=optimizer.suggest,
             max_evals=max_evals,
@@ -162,19 +164,20 @@ class DoubleBracketIteration:
 
         return best["step"]
 
-    def loss(self, step: float, look_ahead: int = 1):
+    def loss(self, step: float, d: np.array = None, look_ahead: int = 1):
         """
         Compute loss function distance between `look_ahead` steps.
 
         Args:
             step: iteration step.
+            d: diagonal operator, use canonical by default.
             look_ahead: number of iteration steps to compute the loss function;
         """
         # copy initial hamiltonian
         h_copy = deepcopy(self.h)
 
         for _ in range(look_ahead):
-            self.__call__(mode=self.mode, step=step)
+            self.__call__(mode=self.mode, step=step, d=d)
 
         # off_diagonal_norm's value after the steps
         loss = self.off_diagonal_norm
