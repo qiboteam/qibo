@@ -7,7 +7,7 @@ from typing import Optional, Union
 
 import numpy as np
 
-from qibo import Circuit
+from qibo import Circuit, gates
 from qibo.backends import Backend, CliffordBackend
 from qibo.config import raise_error
 from qibo.gates import M
@@ -478,3 +478,35 @@ def _string_product(operators: list):
     phases = "-" if phases % 2 == 1 else ""
 
     return f"{phases}{result}"
+
+
+def _decompose_clifford_1q(symplectic_matrix):
+    """Decompose a single-qubit clifford"""
+    circuit = Circuit(1)
+
+    # Add phase correction
+    destab_phase, stab_phase = symplectic_matrix[:-1, 2]
+    if destab_phase and not stab_phase:
+        circuit.add(gates.Z(0))
+    elif not destab_phase and stab_phase:
+        circuit.add(gates.X(0))
+    elif destab_phase and stab_phase:
+        circuit.add(gates.Y(0))
+
+    destab_x, destab_z = symplectic_matrix[0, 0], symplectic_matrix[0, 1]
+    stab_x, stab_z = symplectic_matrix[1, 0], symplectic_matrix[1, 1]
+
+    if stab_z and not stab_x:
+        if destab_z:
+            circuit.add(gates.S(0))
+    elif not stab_z and stab_x:
+        if destab_x:
+            circuit.add(gates.SDG(0))
+        circuit.add(gates.H(0))
+    else:
+        if not destab_z:
+            circuit.add(gates.S(0))
+        circuit.add(gates.H(0))
+        circuit.add(gates.S(0))
+
+    return circuit
