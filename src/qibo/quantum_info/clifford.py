@@ -47,7 +47,7 @@ class Clifford:
 
     def __post_init__(self):
         if isinstance(self.data, Circuit):
-            clifford = self.from_circuit(self.data)
+            clifford = self.from_circuit(self.data, engine=self.engine)
             self.symplectic_matrix = clifford.symplectic_matrix
             self.nqubits = clifford.nqubits
             self.measurements = clifford.measurements
