@@ -61,12 +61,12 @@ class Optimizer:
         self.options.update(updates)
 
     @abstractmethod
-    def get_options(self):  # pragma: no cover
+    def get_options_list(self):  # pragma: no cover
         """Return all available optimizer options."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def get_fit_options(self):  # pragma: no cover
+    def get_fit_options_list(self):  # pragma: no cover
         """Return all available fitting options."""
         raise_error(NotImplementedError)
 

@@ -21,7 +21,8 @@ class ScipyMinimizer(Optimizer):
     def __init__(self, options={"method": "Powell"}):
         self.options = {}
         self.name = "scipy_minimizer"
-        check_options(function=minimize, options=options)
+        self._fit_function = minimize
+        check_options(function=self._fit_function, options=options)
 
     def fit(self, initial_parameters, loss=None, args=(), fit_options={}):
         """Perform the optimizations via ScipyMinimizer.
@@ -49,7 +50,7 @@ class ScipyMinimizer(Optimizer):
         # update options with minimizer extra options
         self.set_options({"options": fit_options})
 
-        r = minimize(
+        r = self._fit_function(
             loss,
             initial_parameters,
             args=args,
@@ -82,9 +83,10 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
         self.jacobian_value = None
         self.processes = processes
         self.precision = np.finfo("float64").eps
+        self._fit_function = minimize
 
         # check if options are compatible with the function and update class options
-        check_options(function=minimize, options=options)
+        check_options(function=self._fit_function, options=options)
 
     def fit(self, initial_parameters, loss=None, args=(), fit_options={}):
         """Performs the optimizations via ParallelBFGS.
@@ -113,7 +115,7 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
         self.args = args
         self.params = initial_parameters
 
-        out = minimize(
+        out = self._fit_function(
             fun=self.fun,
             x0=initial_parameters,
             jac=self.jac,

@@ -30,11 +30,16 @@ class CMAES(Optimizer):
         check_options(function=self._fit_function, options=options)
         self.set_options(options)
 
-    def get_options(self):
+    def get_options_list(self):
         """Return all available optimizer's options."""
-        return self._fit_function.__code__.co_varnames
+        default_arguments = ["objective_function", "x0", "args", "options"]
+        customizable_arguments = ()
+        for arg in self._fit_function.__code__.co_varnames:
+            if arg not in default_arguments:
+                customizable_arguments += (arg,)
+        return customizable_arguments
 
-    def get_fit_options(self, keyword=None):
+    def get_fit_options_list(self, keyword=None):
         """
         Return all the available fit options for the optimizer.
 
@@ -68,7 +73,7 @@ class CMAES(Optimizer):
         # update options dictionary with extra `cma.fmin` options.
         self.set_options({"options": fit_options})
 
-        r = cma.fmin2(
+        r = self._fit_function(
             objective_function=loss,
             x0=initial_parameters,
             args=args,
@@ -106,8 +111,9 @@ class BasinHopping(Optimizer):
     ):
         self.options = {}
         self.name = "basinhopping"
+        self._fit_function = basinhopping
         # check if options are compatible with the function and update class options
-        check_options(function=basinhopping, options=options)
+        check_options(function=self._fit_function, options=options)
         self.options = options
         self.minimizer_kwargs = minimizer_kwargs
 
@@ -133,7 +139,7 @@ class BasinHopping(Optimizer):
         self.minimizer_kwargs.update({"args": args})
         self.set_options({"minimizer_kwargs": self.minimizer_kwargs})
 
-        r = basinhopping(
+        r = self._fit_function(
             loss,
             initial_parameters,
             **self.options,

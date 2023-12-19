@@ -1,7 +1,8 @@
 """Gradient descent strategies to optimize quantum models."""
+import inspect
 
 from qibo.backends import TensorflowBackend
-from qibo.config import log
+from qibo.config import log, raise_error
 from qibo.optimizers.abstract import Optimizer, check_fit_arguments
 
 
@@ -63,22 +64,44 @@ class TensorflowSGD(Optimizer):
         options={"learning_rate": 0.001},
     ):
         self.options = {}
-        self.name = "tensorflow_sgd"
+        self.name = "tensorflow"
         # This optimizer works only with tensorflow backend
         self.backend = TensorflowBackend()
         self.options = options
 
         # options are automatically checked inside the tf.keras.optimizer
         self.optimizer = getattr(self.backend.tf.optimizers, optimizer)(**self.options)
+        self.name += f"_{self.optimizer.name}"
+
+    def set_options(self, updates):
+        """Update self.options dictionary"""
+        for arg in updates:
+            if arg not in self.get_options_list():
+                raise_error(
+                    TypeError,
+                    f"Given argument {arg} is not accepted by {self.name}.",
+                )
+        self.options.update(updates)
+        self.optimizer = getattr(self.backend.tf.optimizers, self.optimizer.name)(
+            **self.options
+        )
+
+    def get_options_list(self):
+        """Return list of available options of the chosen optimizer."""
+        opt_class = type(self.optimizer)
+        return list(inspect.signature(opt_class).parameters)
+
+    def get_fit_options_list(self):
+        """Return fit options list."""
+        fit_options_list = ["epochs", "nmessage", "loss_threshold"]
+        return fit_options_list
 
     def fit(
         self,
         initial_parameters,
         loss,
         args=(),
-        fit_options={"epochs": 10000},
-        nmessage=100,
-        loss_threshold=None,
+        fit_options={"epochs": 10000, "nmessage": 100, "loss_threshold": None},
     ):
         """
         Compute the SGD optimization according to the chosen optimizer.
@@ -100,8 +123,12 @@ class TensorflowSGD(Optimizer):
             (np.ndarray): best parameter values
             (list): loss function history
         """
-
         check_fit_arguments(args=args, initial_parameters=initial_parameters)
+
+        default_fit_options = {"epochs": 10000, "nmessage": 100, "loss_threshold": None}
+
+        # update the options with new ones
+        default_fit_options.update(fit_options)
 
         vparams = self.backend.tf.Variable(
             initial_parameters, dtype=self.backend.tf.complex128
@@ -123,19 +150,19 @@ class TensorflowSGD(Optimizer):
         self.backend.compile(sgd_step)
 
         # SGD procedure: loop over epochs
-        for epoch in range(fit_options["epochs"]):  # pragma: no cover
+        for epoch in range(default_fit_options["epochs"]):  # pragma: no cover
             # early stopping if loss_threshold has been set
             if (
-                loss_threshold is not None
+                default_fit_options["loss_threshold"] is not None
                 and (epoch != 0)
-                and (loss_history[-1] <= loss_threshold)
+                and (loss_history[-1] <= default_fit_options["loss_threshold"])
             ):
                 break
 
             loss_value = sgd_step().numpy()
             loss_history.append(loss_value)
 
-            if epoch % nmessage == 0:
+            if epoch % default_fit_options["nmessage"] == 0:
                 log.info("ite %d : loss %f", epoch, loss_value)
 
         return loss(vparams, *args).numpy(), vparams.numpy(), loss_history
