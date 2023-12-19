@@ -1,4 +1,5 @@
 """Meta-heuristic optimization algorithms."""
+import inspect
 
 import cma
 from scipy.optimize import basinhopping
@@ -106,16 +107,28 @@ class BasinHopping(Optimizer):
 
     def __init__(
         self,
-        options={"niter": 10},
+        options={},
         minimizer_kwargs={},
     ):
-        self.options = {}
+        self.options = {"niter": 10}
         self.name = "basinhopping"
         self._fit_function = basinhopping
         # check if options are compatible with the function and update class options
         check_options(function=self._fit_function, options=options)
         self.options = options
         self.minimizer_kwargs = minimizer_kwargs
+
+    def get_options_list(self):
+        """Return all available optimizer's options."""
+        default_arguments = ["func", "x0", "options", "minimizer_kwargs"]
+        customizable_arguments = []
+        for arg in list(inspect.signature(self._fit_function).parameters):
+            if arg not in default_arguments:
+                customizable_arguments.append(arg)
+        return customizable_arguments
+
+    def get_fit_options_list(self):
+        print(f"No `fit_options` are required for the Basin-Hopping optimizer.")
 
     def fit(self, initial_parameters, loss, args=()):
         """Perform the optimizations via Basin-Hopping strategy.
