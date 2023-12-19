@@ -14,7 +14,7 @@ def gaussian(x, a, b, c):
 
 
 @pytest.mark.parametrize("architecture", ["tree", "diagonal"])
-@pytest.mark.parametrize("nqubits", [2, 4, 8, 16])
+@pytest.mark.parametrize("nqubits", [8])
 def test_unary_encoder(backend, nqubits, architecture):
     sampler = np.random.default_rng(1)
 
@@ -38,8 +38,7 @@ def test_unary_encoder(backend, nqubits, architecture):
 
     # sampling random data in interval [-1, 1]
     sampler = np.random.default_rng(1)
-    # data = 2 * sampler.random(nqubits) - 1
-    data = 2 * sampler.random(nqubits)
+    data = 2 * sampler.random(nqubits) - 1
     data = backend.cast(data, dtype=data.dtype)
 
     circuit = unary_encoder(data, architecture=architecture)

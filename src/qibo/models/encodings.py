@@ -65,7 +65,10 @@ def unary_encoder(data, architecture: str = "tree"):
     nqubits = len(data)
 
     circuit = Circuit(nqubits)
+    # if architecture == "tree":
     circuit.add(gates.X(nqubits - 1))
+    # else:
+    #     circuit.add(gates.X(0))
     circuit_rbs, _ = _generate_rbs_pairs(nqubits, architecture=architecture)
     circuit += circuit_rbs
 
@@ -205,13 +208,11 @@ def _generate_rbs_pairs(nqubits: int, architecture: str):
 
 def _generate_rbs_angles(data, nqubits: int, architecture: str):
     if architecture == "diagonal":
-        norm = np.linalg.norm(data)
-        denominator = norm
-        phases = []
-        for k, elem in enumerate(data[:-1], 1):
-            sin = 1 if k == 1 else math.sin(phases[-1])
-            denominator *= sin
-            phases.append(math.acos(elem / denominator))
+        phases = [
+            math.atan2(np.linalg.norm(data[k + 1 :]), data[k])
+            for k in range(len(data) - 2)
+        ]
+        phases.append(math.atan2(data[-1], data[-2]))
 
     if architecture == "tree":
         j_max = int(nqubits / 2)
