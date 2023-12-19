@@ -1,4 +1,5 @@
 """Optimization algorithms inherited from Scipy's minimization module."""
+import inspect
 
 import numpy as np
 from scipy.optimize import minimize
@@ -18,11 +19,25 @@ class ScipyMinimizer(Optimizer):
 
     """
 
-    def __init__(self, options={"method": "Powell"}):
-        self.options = {}
-        self.name = "scipy_minimizer"
+    def __init__(self, options={}):
+        self.options = options = {"method": "Powell"}
+        self.name = f"scipy_minimizer_{self.options['method']}"
         self._fit_function = minimize
         check_options(function=self._fit_function, options=options)
+
+    def get_options_list(self):
+        """Return all available optimizer's options."""
+        default_arguments = ["fun", "x0", "args", "options"]
+        customizable_arguments = []
+        for arg in list(inspect.signature(self._fit_function).parameters):
+            if arg not in default_arguments:
+                customizable_arguments.append(arg)
+        return customizable_arguments
+
+    def get_fit_options_list(self):
+        print(
+            f"Please have a look to the `options` argument of `scipy.optimize.minimize(method='{self.options['method']}')`"
+        )
 
     def fit(self, initial_parameters, loss=None, args=(), fit_options={}):
         """Perform the optimizations via ScipyMinimizer.
@@ -87,6 +102,20 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
 
         # check if options are compatible with the function and update class options
         check_options(function=self._fit_function, options=options)
+
+    def get_options_list(self):
+        """Return all available optimizer's options."""
+        default_arguments = ["fun", "x0", "args", "options", "method"]
+        customizable_arguments = []
+        for arg in list(inspect.signature(self._fit_function).parameters):
+            if arg not in default_arguments:
+                customizable_arguments.append(arg)
+        return customizable_arguments
+
+    def get_fit_options_list(self):
+        print(
+            f"Please have a look to the `options` argument of `scipy.optimize.minimize(method='L-BFGS-B')`"
+        )
 
     def fit(self, initial_parameters, loss=None, args=(), fit_options={}):
         """Performs the optimizations via ParallelBFGS.
