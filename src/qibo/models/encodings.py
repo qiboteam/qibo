@@ -32,6 +32,10 @@ def unary_encoder(data, architecture: str = "tree"):
 
     Args:
         data (ndarray, optional): :math:`1`-dimensional array of data to be loaded.
+        architecture(str, optional): circuit architecture used for the unary loader.
+            If ``diagonal``, uses a ladder-like structure.
+            If ``tree``, uses a binary-tree-based structure.
+            Defaults to ``tree``.
 
     Returns:
         :class:`qibo.models.circuit.Circuit`: circuit that loads ``data`` in unary representation.
@@ -65,10 +69,7 @@ def unary_encoder(data, architecture: str = "tree"):
     nqubits = len(data)
 
     circuit = Circuit(nqubits)
-    # if architecture == "tree":
     circuit.add(gates.X(nqubits - 1))
-    # else:
-    #     circuit.add(gates.X(0))
     circuit_rbs, _ = _generate_rbs_pairs(nqubits, architecture=architecture)
     circuit += circuit_rbs
 
@@ -108,6 +109,9 @@ def unary_encoder_random_gaussian(nqubits: int, architecture: str = "tree", seed
 
     Args:
         nqubits (int): number of qubits.
+        architecture(str, optional): circuit architecture used for the unary loader.
+            If ``tree``, uses a binary-tree-based structure.
+            Defaults to ``tree``.
         seed (int or :class:`numpy.random.Generator`, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
@@ -178,7 +182,20 @@ def unary_encoder_random_gaussian(nqubits: int, architecture: str = "tree", seed
 
 def _generate_rbs_pairs(nqubits: int, architecture: str):
     """Generating list of indexes representing the RBS connections
-    and creating circuit with all RBS initialised with 0.0 phase."""
+
+    Creates circuit with all RBS initialised with 0.0 phase.
+
+    Args:
+        nqubits (int): number of qubits.
+        architecture(str, optional): circuit architecture used for the unary loader.
+            If ``diagonal``, uses a ladder-like structure.
+            If ``tree``, uses a binary-tree-based structure.
+            Defaults to ``tree``.
+
+    Returns:
+        (:class:`qibo.models.circuit.Circuit`, list): circuit composed of :class:`qibo.gates.gates.RBS`
+            and list of indexes of target qubits per depth.
+    """
 
     if architecture == "diagonal":
         pairs_rbs = np.arange(nqubits)
@@ -207,6 +224,19 @@ def _generate_rbs_pairs(nqubits: int, architecture: str):
 
 
 def _generate_rbs_angles(data, nqubits: int, architecture: str):
+    """Generating list of angles for RBS gates based on ``architecture``.
+
+    Args:
+        data (ndarray, optional): :math:`1`-dimensional array of data to be loaded.
+        nqubits (int): number of qubits.
+        architecture(str, optional): circuit architecture used for the unary loader.
+            If ``diagonal``, uses a ladder-like structure.
+            If ``tree``, uses a binary-tree-based structure.
+            Defaults to ``tree``.
+
+    Returns:
+        list: list of phases for RBS gates.
+    """
     if architecture == "diagonal":
         phases = [
             math.atan2(np.linalg.norm(data[k + 1 :]), data[k])
