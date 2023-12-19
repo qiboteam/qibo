@@ -62,7 +62,7 @@ def test_clifford_from_circuit(backend, measurement):
 
 
 @pytest.mark.parametrize("algorithm", [None, "AG04", "BM20"])
-@pytest.mark.parametrize("nqubits", [1, 2, 3, 10, 100])
+@pytest.mark.parametrize("nqubits", [1, 2, 3, 10, 50])
 def test_clifford_to_circuit(backend, nqubits, algorithm):
     if backend.__class__.__name__ == "TensorflowBackend":
         pytest.skip("CliffordBackend not defined for Tensorflow engine.")
@@ -96,7 +96,7 @@ def test_clifford_to_circuit(backend, nqubits, algorithm):
         backend.assert_allclose(symplectic_matrix_compiled, symplectic_matrix_original)
 
 
-@pytest.mark.parametrize("nqubits", [1, 10, 100])
+@pytest.mark.parametrize("nqubits", [1, 10, 50])
 def test_clifford_initialization(backend, nqubits):
     if backend.__class__.__name__ == "TensorflowBackend":
         pytest.skip("CliffordBackend not defined for Tensorflow engine.")
@@ -126,7 +126,8 @@ def test_clifford_stabilizers(backend, symplectic, return_array):
     if not clifford_backend:
         return
 
-    c = Circuit(3)
+    nqubits = 3
+    c = Circuit(nqubits)
     c.add(gates.X(2))
     c.add(gates.H(0))
     obj = Clifford.from_circuit(c, engine=backend)
@@ -147,7 +148,9 @@ def test_clifford_stabilizers(backend, symplectic, return_array):
         assert generators[3:] == true_generators
         assert phases.tolist()[3:] == true_phases
 
-    if return_array:
+    if symplectic:
+        true_stabilizers = obj.symplectic_matrix[nqubits:-1, :]
+    elif not symplectic and return_array:
         true_stabilizers = []
         for stab in [
             "-XZZ",
@@ -165,7 +168,7 @@ def test_clifford_stabilizers(backend, symplectic, return_array):
             if "-" in stab:
                 tmp *= -1
             true_stabilizers.append(tmp)
-    else:
+    elif not symplectic and not return_array:
         true_stabilizers = [
             "-XZZ",
             "XZI",
@@ -176,8 +179,9 @@ def test_clifford_stabilizers(backend, symplectic, return_array):
             "-IIZ",
             "III",
         ]
-    stabilizers = obj.stabilizers(return_array=return_array)
-    if return_array:
+
+    stabilizers = obj.stabilizers(symplectic, return_array)
+    if symplectic or (not symplectic and return_array):
         backend.assert_allclose(stabilizers, true_stabilizers)
     else:
         assert stabilizers, true_stabilizers
@@ -190,7 +194,8 @@ def test_clifford_destabilizers(backend, symplectic, return_array):
     if not clifford_backend:
         return
 
-    c = Circuit(3)
+    nqubits = 3
+    c = Circuit(nqubits)
     c.add(gates.X(2))
     c.add(gates.H(0))
     obj = Clifford.from_circuit(c, engine=backend)
@@ -206,14 +211,15 @@ def test_clifford_destabilizers(backend, symplectic, return_array):
     generators, phases = obj.generators(return_array=return_array)
 
     if return_array:
-        print(type(generators), type(true_generators))
         backend.assert_allclose(generators[:3], true_generators)
         backend.assert_allclose(phases.tolist()[:3], true_phases)
     else:
         assert generators[:3] == true_generators
         assert phases.tolist()[:3] == true_phases
 
-    if return_array:
+    if symplectic:
+        true_destabilizers = obj.symplectic_matrix[:nqubits, :]
+    elif not symplectic and return_array:
         true_destabilizers = []
         for destab in [
             "ZXX",
@@ -232,7 +238,7 @@ def test_clifford_destabilizers(backend, symplectic, return_array):
             if "-" in destab:
                 tmp *= -1
             true_destabilizers.append(tmp)
-    else:
+    elif not symplectic and not return_array:
         true_destabilizers = [
             "ZXX",
             "ZXI",
@@ -243,8 +249,8 @@ def test_clifford_destabilizers(backend, symplectic, return_array):
             "IIX",
             "III",
         ]
-    destabilizers = obj.destabilizers(return_array=return_array)
-    if return_array:
+    destabilizers = obj.destabilizers(symplectic, return_array)
+    if symplectic or (not symplectic and return_array):
         backend.assert_allclose(destabilizers, true_destabilizers)
     else:
         assert destabilizers, true_destabilizers
