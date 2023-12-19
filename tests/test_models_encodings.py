@@ -13,28 +13,39 @@ def gaussian(x, a, b, c):
     return np.exp(a * x**2 + b * x + c)
 
 
+@pytest.mark.parametrize("architecture", ["tree", "diagonal"])
 @pytest.mark.parametrize("nqubits", [2, 4, 8, 16])
-def test_unary_encoder(backend, nqubits):
+def test_unary_encoder(backend, nqubits, architecture):
     sampler = np.random.default_rng(1)
 
     with pytest.raises(TypeError):
         data = sampler.random((nqubits, nqubits))
         data = backend.cast(data, dtype=data.dtype)
-        unary_encoder(data)
-    with pytest.raises(ValueError):
-        data = sampler.random(nqubits + 1)
+        unary_encoder(data, architecture=architecture)
+    with pytest.raises(TypeError):
+        data = sampler.random(nqubits)
         data = backend.cast(data, dtype=data.dtype)
-        unary_encoder(data)
+        unary_encoder(data, architecture=True)
+    with pytest.raises(ValueError):
+        data = sampler.random(nqubits)
+        data = backend.cast(data, dtype=data.dtype)
+        unary_encoder(data, architecture="semi-diagonal")
+    if architecture == "tree":
+        with pytest.raises(ValueError):
+            data = sampler.random(nqubits + 1)
+            data = backend.cast(data, dtype=data.dtype)
+            unary_encoder(data, architecture=architecture)
 
     # sampling random data in interval [-1, 1]
     sampler = np.random.default_rng(1)
-    data = 2 * sampler.random(nqubits) - 1
+    # data = 2 * sampler.random(nqubits) - 1
+    data = 2 * sampler.random(nqubits)
     data = backend.cast(data, dtype=data.dtype)
 
-    circuit = unary_encoder(data)
+    circuit = unary_encoder(data, architecture=architecture)
     state = backend.execute_circuit(circuit).state()
     indexes = np.flatnonzero(state)
-    state = state[indexes]
+    state = np.real(state[indexes])
 
     backend.assert_allclose(state, data / backend.calculate_norm(data, order=2))
 
@@ -51,6 +62,10 @@ def test_unary_encoder_random_gaussian(backend, nqubits, seed):
         unary_encoder_random_gaussian(-1, seed=seed)
     with pytest.raises(ValueError):
         unary_encoder_random_gaussian(3, seed=seed)
+    with pytest.raises(ValueError):
+        unary_encoder_random_gaussian(nqubits, architecture=True, seed=seed)
+    with pytest.raises(ValueError):
+        unary_encoder_random_gaussian(nqubits, architecture="diagonal", seed=seed)
     with pytest.raises(TypeError):
         unary_encoder_random_gaussian(nqubits, seed="seed")
 

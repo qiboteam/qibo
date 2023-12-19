@@ -51,7 +51,8 @@ def unary_encoder(data, architecture: str = "tree"):
             TypeError,
             f"``architecture`` must be type str, but it is type {type(architecture)}.",
         )
-    if architecture not in ["diagonal", "semi-diagonal", "tree"]:
+
+    if architecture not in ["diagonal", "tree"]:
         raise_error(ValueError, f"``architecture`` {architecture} not found.")
 
     if architecture == "tree" and not math.log2(data.shape[0]).is_integer():
@@ -64,28 +65,12 @@ def unary_encoder(data, architecture: str = "tree"):
     nqubits = len(data)
 
     circuit = Circuit(nqubits)
-    if architecture == "semi-diagonal":
-        circuit.add(gates.X(int(nqubits / 2)))
-    else:
-        circuit.add(gates.X(nqubits - 1))
+    circuit.add(gates.X(nqubits - 1))
     circuit_rbs, _ = _generate_rbs_pairs(nqubits, architecture=architecture)
     circuit += circuit_rbs
 
     # calculating phases and setting circuit parameters
-    phases = _rbs_angles_deterministic(data, nqubits, architecture)
-    # r_array = np.zeros(nqubits - 1, dtype=float)
-    # phases = np.zeros(nqubits - 1, dtype=float)
-    # for j in range(1, j_max + 1):
-    #     r_array[j_max + j - 2] = math.sqrt(data[2 * j - 1] ** 2 + data[2 * j - 2] ** 2)
-    #     theta = math.acos(data[2 * j - 2] / r_array[j_max + j - 2])
-    #     if data[2 * j - 1] < 0.0:
-    #         theta = 2 * math.pi - theta
-    #     phases[j_max + j - 2] = theta
-
-    # for j in range(j_max - 1, 0, -1):
-    #     r_array[j - 1] = math.sqrt(r_array[2 * j] ** 2 + r_array[2 * j - 1] ** 2)
-    #     phases[j - 1] = math.acos(r_array[2 * j - 1] / r_array[j - 1])
-
+    phases = _generate_rbs_angles(data, nqubits, architecture)
     circuit.set_parameters(phases)
 
     return circuit
@@ -136,11 +121,25 @@ def unary_encoder_random_gaussian(nqubits: int, architecture: str = "tree", seed
         raise_error(
             TypeError, f"nqubits must be type int, but it is type {type(nqubits)}."
         )
-    elif nqubits <= 0.0:
+
+    if nqubits <= 0.0:
         raise_error(
             ValueError, f"nqubits must be a positive integer, but it is {nqubits}."
         )
-    elif not math.log2(nqubits).is_integer():
+
+    if not isinstance(architecture, str):
+        raise_error(
+            TypeError,
+            f"``architecture`` must be type str, but it is type {type(architecture)}.",
+        )
+
+    if architecture != "tree":
+        raise_error(
+            NotImplementedError,
+            f"Currently, this function only accepts ``architecture=='tree'``.",
+        )
+
+    if not math.log2(nqubits).is_integer():
         raise_error(ValueError, f"nqubits must be a power of 2, but it is {nqubits}.")
 
     if (
@@ -182,13 +181,6 @@ def _generate_rbs_pairs(nqubits: int, architecture: str):
         pairs_rbs = np.arange(nqubits)
         pairs_rbs = [[pair] for pair in zip(pairs_rbs[:-1], pairs_rbs[1:])]
 
-    if architecture == "semi-diagonal":
-        index = int(nqubits / 2) - 1
-        pairs_rbs = [[(index, index + 1)]]
-        for k in range(index):
-            target, control = pairs_rbs[k][0][0], pairs_rbs[k][-1][1]
-            pairs_rbs.append([(target - 1, target), (control, control + 1)])
-
     if architecture == "tree":
         pairs_rbs = [[(0, int(nqubits / 2))]]
         indexes = list(np.array(pairs_rbs).flatten())
@@ -211,7 +203,7 @@ def _generate_rbs_pairs(nqubits: int, architecture: str):
     return circuit, pairs_rbs
 
 
-def _rbs_angles_deterministic(data, nqubits: int, architecture: str):
+def _generate_rbs_angles(data, nqubits: int, architecture: str):
     if architecture == "diagonal":
         norm = np.linalg.norm(data)
         denominator = norm
@@ -220,23 +212,6 @@ def _rbs_angles_deterministic(data, nqubits: int, architecture: str):
             sin = 1 if k == 1 else math.sin(phases[-1])
             denominator *= sin
             phases.append(math.acos(elem / denominator))
-
-    if architecture == "semi-diagonal":
-        phi_1 = math.atan(data[0] / data[1])
-        phi_last = math.atan(data[-1] / data[-2])
-
-        phases, phases_reverse = [phi_1], [phi_last]
-        k = 1
-        while len(phases) + len(phases_reverse) < len(data) - 1:
-            phases.append(math.atan(data[k] / (data[k + 1] * math.cos(phases[k - 1]))))
-            phases_reverse.append(
-                math.atan(
-                    data[nqubits - 1 - k]
-                    / (data[nqubits - 1 - k] * math.cos(phases_reverse[-k]))
-                )
-            )
-            k += 1
-        phases.extend(phases_reverse[::-1][1:])
 
     if architecture == "tree":
         j_max = int(nqubits / 2)
