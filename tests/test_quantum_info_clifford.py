@@ -6,11 +6,11 @@ import pytest
 
 from qibo import Circuit, gates
 from qibo.backends import CliffordBackend, TensorflowBackend
-from qibo.quantum_info.clifford import (
-    Clifford,
+from qibo.quantum_info._clifford_utils import (
     _one_qubit_paulis_string_product,
     _string_product,
 )
+from qibo.quantum_info.clifford import Clifford
 from qibo.quantum_info.random_ensembles import random_clifford
 
 
@@ -139,7 +139,7 @@ def test_clifford_stabilizers(backend, return_array):
             "-IIZ",
             "III",
         ]
-    stabilizers = obj.stabilizers(return_array)
+    stabilizers = obj.stabilizers(return_array=return_array)
     if return_array:
         backend.assert_allclose(stabilizers, true_stabilizers)
     else:
@@ -204,7 +204,7 @@ def test_clifford_destabilizers(backend, return_array):
             "IIX",
             "III",
         ]
-    destabilizers = obj.destabilizers(return_array)
+    destabilizers = obj.destabilizers(return_array=return_array)
     if return_array:
         backend.assert_allclose(destabilizers, true_destabilizers)
     else:
