@@ -1,6 +1,6 @@
 """Module definig the Clifford object, which allows phase-space representation of Clifford circuits and stabilizer states."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import reduce
 from itertools import product
 from typing import Optional, Union
@@ -13,12 +13,7 @@ from qibo.config import raise_error
 from qibo.gates import M
 from qibo.measurements import frequencies_to_binary
 
-from ._clifford_utils import (
-    _decomposition_AG04,
-    _decomposition_BM20,
-    _single_qubit_clifford_decomposition,
-    _string_product,
-)
+from ._clifford_utils import _decomposition_AG04, _decomposition_BM20, _string_product
 
 
 @dataclass
@@ -42,7 +37,8 @@ class Clifford:
             Defaults to ``None``.
     """
 
-    data: Union[np.ndarray, Circuit]
+    symplectic_matrix: np.ndarray = field(init=False)
+    data: Union[np.ndarray, Circuit] = field(repr=False)
     nqubits: Optional[int] = None
     measurements: Optional[list] = None
     nshots: int = 1000
