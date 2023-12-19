@@ -7,6 +7,7 @@ import pytest
 from qibo import Circuit, gates
 from qibo.backends import CliffordBackend, TensorflowBackend
 from qibo.quantum_info._clifford_utils import (
+    _cnot_cost,
     _one_qubit_paulis_string_product,
     _string_product,
 )
@@ -80,6 +81,8 @@ def test_clifford_to_circuit(backend, nqubits, algorithm):
             symplectic_matrix_compiled = symplectic_matrix_compiled.to_circuit(
                 algorithm=algorithm
             )
+        with pytest.raises(ValueError):
+            _cnot_cost(symplectic_matrix_compiled)
     else:
         with pytest.raises(TypeError):
             symplectic_matrix_compiled.to_circuit(algorithm=True)
