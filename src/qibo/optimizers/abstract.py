@@ -1,3 +1,4 @@
+import inspect
 from abc import abstractmethod
 
 import numpy as np
@@ -12,7 +13,7 @@ def check_options(function, options):
     """
 
     for arg in options:
-        if arg not in function.__code__.co_varnames:
+        if arg not in list(inspect.signature(function).parameters):
             raise_error(
                 TypeError,
                 f"Given argument {arg} is not accepted by {function.__code__.co_name} function, which is the fitting function of the chosen optimizer.",

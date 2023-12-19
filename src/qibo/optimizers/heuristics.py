@@ -35,7 +35,7 @@ class CMAES(Optimizer):
         """Return all available optimizer's options."""
         default_arguments = ["objective_function", "x0", "args", "options"]
         customizable_arguments = ()
-        for arg in self._fit_function.__code__.co_varnames:
+        for arg in list(inspect.signature(self._fit_function).parameters):
             if arg not in default_arguments:
                 customizable_arguments += (arg,)
         return customizable_arguments
