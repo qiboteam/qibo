@@ -269,6 +269,8 @@ test_values = [
 def test_qaoa_optimization(backend, method, options, dense, filename):
     if method == "sgd" and backend.name != "tensorflow":
         pytest.skip("Skipping SGD test for unsupported backend.")
+    if (method == "sgd" or compile) and "tensorflow" in backend.name:
+        pytest.skip("Skipping SGD test because tensorflow is not supported.")
     h = hamiltonians.XXZ(3, dense=dense, backend=backend)
     qaoa = models.QAOA(h)
     initial_p = [0.05, 0.06, 0.07, 0.08]

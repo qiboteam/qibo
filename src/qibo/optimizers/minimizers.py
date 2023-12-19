@@ -20,10 +20,11 @@ class ScipyMinimizer(Optimizer):
     """
 
     def __init__(self, options={}):
-        self.options = options = {"method": "Powell"}
-        self.name = f"scipy_minimizer_{self.options['method']}"
+        self.options = {"method": "Powell"}
+        self.name = "scipy_minimizer"
         self._fit_function = minimize
         check_options(function=self._fit_function, options=options)
+        self.set_options(options)
 
     def get_options_list(self):
         """Return all available optimizer's options."""
