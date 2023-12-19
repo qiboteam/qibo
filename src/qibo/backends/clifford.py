@@ -177,7 +177,7 @@ class CliffordOperations:
             return CliffordOperations.SDG(symplectic_matrix, q, nqubits)
 
     @staticmethod
-    def RY_pi(symplectic_matrix, q, nqubits, theta):
+    def RY_pi(symplectic_matrix, q, nqubits):
         """Decomposition --> H-S-S"""
         r = symplectic_matrix[:-1, -1]
         x = symplectic_matrix[:-1, :nqubits]
@@ -467,11 +467,15 @@ class CliffordOperations:
             if len(p) > 0:
                 p = p[0].item() + nqubits
                 h = self.np.array(
-                    [i for i in x[:, q].nonzero()[0] if i != p], dtype=int
+                    [i for i in x[:, q].nonzero()[0] if i != p], dtype=np.uint
                 )
                 if h.shape[0] > 0:
                     state_copy = self._rowsum(
-                        state_copy, h, p * self.np.ones(h.shape[0], dtype=int), nqubits
+                        state_copy,
+                        h,
+                        p * self.np.ones(h.shape[0], dtype=np.uint),
+                        nqubits,
+                        False,
                     )
                 state_copy[p - nqubits, :] = state_copy[p, :]
                 outcome = self.np.random.randint(2, size=1).item()
@@ -485,8 +489,8 @@ class CliffordOperations:
                 for i in x[:nqubits, q].nonzero()[0]:
                     state_copy = self._rowsum(
                         state_copy,
-                        self.np.array([2 * nqubits]),
-                        self.np.array([i + nqubits]),
+                        self.np.array([2 * nqubits], dtype=np.uint),
+                        self.np.array([i + nqubits], dtype=np.uint),
                         nqubits,
                         include_scratch=True,
                     )
