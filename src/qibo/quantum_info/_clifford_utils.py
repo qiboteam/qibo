@@ -106,10 +106,10 @@ def _decomposition_AG04(clifford):
     Args:
         clifford (:class:`qibo.quantum_info.clifford.Clifford`): Clifford object.
 
-    Return:
+    Returns:
         :class:`qibo.models.circuit.Circuit`: Clifford circuit.
 
-    Reference:
+    References:
         1. S. Aaronson, D. Gottesman, *Improved Simulation of Stabilizer Circuits*,
            Phys. Rev. A 70, 052328 (2004).
            `arXiv:quant-ph/0406196 <https://arxiv.org/abs/quant-ph/0406196>`_
@@ -124,12 +124,12 @@ def _decomposition_AG04(clifford):
 
     for k in range(nqubits):
         # put a 1 one into position by permuting and using Hadamards(i,i)
-        _set_qubit_x_true(clifford_copy, circuit, k)
+        _set_qubit_x_to_true(clifford_copy, circuit, k)
         # make all entries in row i except ith equal to 0
         # by using phase gate and CNOTS
-        _set_row_x_zero(clifford_copy, circuit, k)
+        _set_row_x_to_zero(clifford_copy, circuit, k)
         # treat Zs
-        _set_row_z_zero(clifford_copy, circuit, k)
+        _set_row_z_to_zero(clifford_copy, circuit, k)
 
     for k in range(nqubits):
         if clifford_copy.symplectic_matrix[:nqubits, -1][k]:
@@ -147,7 +147,8 @@ def _decomposition_AG04(clifford):
 
 
 def _decomposition_BM20(clifford):
-    """Optimal CNOT-cost decomposition of a Clifford operator on :math:`n \\in \\{2, 3 \\}` into a circuit based on Bravyi-Maslov method.
+    """Optimal CNOT-cost decomposition of a Clifford operator on :math:`n \\in \\{2, 3 \\}`
+    into a circuit based on Bravyi-Maslov method.
 
     Args:
         clifford (:class:`qibo.quantum_info.clifford.Clifford`): Clifford object.
@@ -174,13 +175,11 @@ def _decomposition_BM20(clifford):
 
     cnot_cost = _cnot_cost(clifford_copy)
 
-    # Find composition of circuits with CX and (H.S)^a gates to reduce CNOT count
     while cnot_cost > 0:
         clifford_copy, inverse_circuit, cnot_cost = _reduce_cost(
             clifford_copy, inverse_circuit, cnot_cost
         )
 
-    # Decompose the remaining product of 1-qubit cliffords
     last_row = clifford_copy.engine.cast([False] * 3, dtype=bool)
     circuit = Circuit(nqubits)
     for qubit in range(nqubits):
@@ -196,7 +195,6 @@ def _decomposition_BM20(clifford):
                 gate.target_qubits = (qubit,)
                 circuit.queue.extend([gate])
 
-    # Add the inverse of the 2-qubit reductions circuit
     if len(inverse_circuit.queue) > 0:
         circuit.queue.extend(inverse_circuit.invert().queue)
 
@@ -214,7 +212,6 @@ def _single_qubit_clifford_decomposition(symplectic_matrix):
     """
     circuit = Circuit(nqubits=1)
 
-    # Add phase correction
     destabilizer_phase, stabilizer_phase = symplectic_matrix[:-1, -1]
     if destabilizer_phase and not stabilizer_phase:
         circuit.add(gates.Z(0))
@@ -242,11 +239,15 @@ def _single_qubit_clifford_decomposition(symplectic_matrix):
     return circuit
 
 
-def _set_qubit_x_true(clifford, circuit, qubit):
-    """Set destabilizer.X[qubit, qubit] to be True.
+def _set_qubit_x_to_true(clifford, circuit: Circuit, qubit: int):
+    """Set a :math:`X`-destabilizer to ``True``.
 
-    This is done by permuting columns l > qubit or if necessary applying
-    a Hadamard
+    This is done by permuting columns ``l > qubit`` or, if necessary, applying a Hadamard.
+
+    Args:
+        clifford (:class:`qibo.quantum_info.clifford.Clifford`): Clifford object.
+        circuit (:class:`qibo.models.circuit.Circuit`): circuit object.
+        qubit (int): index of the qubit to operate on.
     """
     nqubits = clifford.nqubits
 
@@ -256,7 +257,6 @@ def _set_qubit_x_true(clifford, circuit, qubit):
     if x[qubit]:
         return
 
-    # Try to find non-zero element
     for k in range(qubit + 1, nqubits):
         if np.all(x[k]):
             clifford.symplectic_matrix = clifford._backend.clifford_operations.SWAP(
@@ -265,7 +265,6 @@ def _set_qubit_x_true(clifford, circuit, qubit):
             circuit.add(gates.SWAP(k, qubit))
             return
 
-    # no non-zero element found: need to apply Hadamard somewhere
     for k in range(qubit, nqubits):
         if np.all(z[k]):
             clifford.symplectic_matrix = clifford._backend.clifford_operations.H(
@@ -280,10 +279,15 @@ def _set_qubit_x_true(clifford, circuit, qubit):
             return
 
 
-def _set_row_x_zero(clifford, circuit, qubit):
-    """Set destabilizer.X[qubit, i] to False for all i > qubit.
+def _set_row_x_to_zero(clifford, circuit: Circuit, qubit: int):
+    """Set :math:`X`-destabilizer to ``False`` for all ``k > qubit``.
 
-    This is done by applying CNOTS assumes k<=N and A[k][k]=1
+    This is done by applying CNOTs, assuming ``k <= N`` and ``clifford.symplectic_matrix[k][k]=1``.
+
+    Args:
+        clifford (:class:`qibo.quantum_info.clifford.Clifford`): Clifford object.
+        circuit (:class:`qibo.models.circuit.Circuit`): circuit object.
+        qubit (int): index of the qubit to operate on.
     """
     nqubits = clifford.nqubits
 
@@ -298,7 +302,6 @@ def _set_row_x_zero(clifford, circuit, qubit):
             )
             circuit.add(gates.CNOT(qubit, k))
 
-    # Check whether Zs need to be set to zero:
     if np.any(z[qubit:]):
         if not z[qubit]:
             # to treat Zs: make sure row.Z[k] to True
@@ -307,32 +310,35 @@ def _set_row_x_zero(clifford, circuit, qubit):
             )
             circuit.add(gates.S(qubit))
 
-        # reverse CNOTS
         for k in range(qubit + 1, nqubits):
             if z[k]:
                 clifford.symplectic_matrix = clifford._backend.clifford_operations.CNOT(
                     clifford.symplectic_matrix, k, qubit, nqubits
                 )
                 circuit.add(gates.CNOT(k, qubit))
-        # set row.Z[qubit] to False
+
         clifford.symplectic_matrix = clifford._backend.clifford_operations.S(
             clifford.symplectic_matrix, qubit, nqubits
         )
         circuit.add(gates.S(qubit))
 
 
-def _set_row_z_zero(clifford, circuit, qubit):
-    """Set stabilizer.Z[qubit, i] to False for all i > qubit.
+def _set_row_z_to_zero(clifford, circuit: Circuit, qubit: int):
+    """Set :math:`Z`-stabilizer to ``False`` for all ``i > qubit``.
 
     Implemented by applying (reverse) CNOTs.
-    It assumes ``qubit < nqubits`` and that ``_set_row_x_zero`` has been called first.
+    It assumes ``qubit < nqubits`` and that ``_set_row_x_to_zero`` has been called first.
+
+    Args:
+        clifford (:class:`qibo.quantum_info.clifford.Clifford`): Clifford object.
+        circuit (:class:`qibo.models.circuit.Circuit`): circuit object.
+        qubit (int): index of the qubit to operate on.
     """
     nqubits = clifford.nqubits
 
     x = clifford.stabilizers(symplectic=True)
     x, z = x[:, :nqubits][qubit], x[:, nqubits:-1][qubit]
 
-    # check whether Zs need to be set to zero:
     if np.any(z[qubit + 1 :]):
         for k in range(qubit + 1, nqubits):
             if z[k]:
@@ -341,7 +347,6 @@ def _set_row_z_zero(clifford, circuit, qubit):
                 )
                 circuit.add(gates.CNOT(k, qubit))
 
-    # check whether Xs need to be set to zero:
     if np.any(x[qubit:]):
         clifford.symplectic_matrix = clifford._backend.clifford_operations.H(
             clifford.symplectic_matrix, qubit, nqubits
@@ -365,7 +370,14 @@ def _set_row_z_zero(clifford, circuit, qubit):
 
 
 def _cnot_cost(clifford):
-    """Return the number of CX gates required for Clifford decomposition."""
+    """Returns the number of CNOT gates required for Clifford decomposition.
+
+    Args:
+        clifford (:class:`qibo.quantum_info.clifford.Clifford`): Clifford object.
+
+    Returns:
+        int: Number of CNOT gates required.
+    """
     if clifford.nqubits > 3:
         raise_error(ValueError, "No Clifford CNOT cost function for ``nqubits > 3``.")
 
@@ -375,8 +387,8 @@ def _cnot_cost(clifford):
     return _cnot_cost2(clifford)
 
 
-def _rank2(a, b, c, d):
-    """Return rank of 2x2 boolean matrix."""
+def _rank_2(a: bool, b: bool, c: bool, d: bool):
+    """Returns rank of 2x2 boolean matrix."""
     if (a & d) ^ (b & c):
         return 2
     if a or b or c or d:
@@ -385,16 +397,23 @@ def _rank2(a, b, c, d):
 
 
 def _cnot_cost2(clifford):
-    """Return CNOT cost of a 2-qubit clifford."""
+    """Returns CNOT cost of a two-qubit Clifford.
+
+    Args:
+        clifford (:class:`qibo.quantum_info.clifford.Clifford`): Clifford object.
+
+    Returns:
+        int: Number of CNOT gates required.
+    """
     symplectic_matrix = clifford.symplectic_matrix[:-1, :-1]
 
-    r00 = _rank2(
+    r00 = _rank_2(
         symplectic_matrix[0, 0],
         symplectic_matrix[0, 2],
         symplectic_matrix[2, 0],
         symplectic_matrix[2, 2],
     )
-    r01 = _rank2(
+    r01 = _rank_2(
         symplectic_matrix[0, 1],
         symplectic_matrix[0, 3],
         symplectic_matrix[2, 1],
@@ -408,19 +427,24 @@ def _cnot_cost2(clifford):
 
 
 def _cnot_cost3(clifford):  # pragma: no cover
-    """Return CNOT cost of a 3-qubit clifford."""
+    """Return CNOT cost of a 3-qubit clifford.
 
-    # pylint: disable=too-many-return-statements,too-many-boolean-expressions
+    Args:
+        clifford (:class:`qibo.quantum_info.clifford.Clifford`): Clifford object.
+
+    Returns:
+        int: Number of CNOT gates required.
+    """
 
     symplectic_matrix = clifford.symplectic_matrix[:-1, :-1]
 
     nqubits = 3
-    # create information transfer matrices R1, R2
+
     R1 = np.zeros((nqubits, nqubits), dtype=int)
     R2 = np.zeros((nqubits, nqubits), dtype=int)
     for q1 in range(nqubits):
         for q2 in range(nqubits):
-            R2[q1, q2] = _rank2(
+            R2[q1, q2] = _rank_2(
                 symplectic_matrix[q1, q2],
                 symplectic_matrix[q1, q2 + nqubits],
                 symplectic_matrix[q1 + nqubits, q2],
@@ -489,14 +513,19 @@ def _cnot_cost3(clifford):  # pragma: no cover
     return 4
 
 
-def _reduce_cost(clifford, inverse_circuit, cost):  # pragma: no cover
-    """Two-qubit cost reduction step"""
+def _reduce_cost(clifford, inverse_circuit: Circuit, cost: int):  # pragma: no cover
+    """Step that tries to reduce the two-qubit cost of a Clifford circuit.
+
+    Args:
+        clifford (:class:`qibo.quantum_info.clifford.Clifford`): Clifford object.
+        circuit (:class:`qibo.models.circuit.Circuit`): circuit object.
+        cost (int): initial cost.
+    """
     nqubits = clifford.nqubits
 
     for control in range(nqubits):
         for target in range(control + 1, nqubits):
             for n0, n1 in product(range(3), repeat=2):
-                # Apply a 2-qubit block
                 reduced = clifford.copy(deep=True)
                 for qubit, n in [(control, n0), (target, n1)]:
                     if n == 1:
@@ -535,11 +564,9 @@ def _reduce_cost(clifford, inverse_circuit, cost):  # pragma: no cover
                     reduced.symplectic_matrix, control, target, nqubits
                 )
 
-                # Compute new cost
                 new_cost = _cnot_cost(reduced)
 
                 if new_cost == cost - 1:
-                    # Add decomposition to inverse circuit
                     for qubit, n in [(control, n0), (target, n1)]:
                         if n == 1:
                             inverse_circuit.add(gates.SDG(qubit))
