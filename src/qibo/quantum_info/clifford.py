@@ -113,9 +113,9 @@ class Clifford:
             algorithm = "AG04"
 
         if algorithm == "BM20":
-            return _decomposition_BM20(self.copy(deep=True))
+            return _decomposition_BM20(self)
 
-        return _decomposition_AG04(self.copy(deep=True))
+        return _decomposition_AG04(self)
 
     def generators(self, return_array: bool = False):
         """Extracts the generators of stabilizers and destabilizers.
@@ -532,12 +532,12 @@ def _decomposition_AG04(clifford):
 
     for k in range(nqubits):
         if clifford_copy.symplectic_matrix[:nqubits, -1][k]:
-            clifford.symplectic_matrix = clifford._backend.clifford_operations.Z(
+            clifford_copy.symplectic_matrix = clifford._backend.clifford_operations.Z(
                 clifford_copy.symplectic_matrix, k, nqubits
             )
             circuit.add(gates.Z(k))
         if clifford_copy.symplectic_matrix[nqubits:-1, -1][k]:
-            clifford.symplectic_matrix = clifford._backend.clifford_operations.X(
+            clifford_copy.symplectic_matrix = clifford._backend.clifford_operations.X(
                 clifford_copy.symplectic_matrix, k, nqubits
             )
             circuit.add(gates.X(k))
@@ -559,6 +559,7 @@ def _decomposition_BM20(clifford):
            `arXiv:2003.09412 [quant-ph] <https://arxiv.org/abs/2003.09412>`_.
     """
     nqubits = clifford.nqubits
+    clifford_copy = clifford.copy(deep=True)
 
     if nqubits > 3:
         raise_error(
@@ -566,26 +567,26 @@ def _decomposition_BM20(clifford):
         )
 
     if nqubits == 1:
-        return _single_qubit_clifford_decomposition(clifford.symplectic_matrix)
+        return _single_qubit_clifford_decomposition(clifford_copy.symplectic_matrix)
 
     inverse_circuit = Circuit(nqubits)
 
-    cnot_cost = _cnot_cost(clifford)
+    cnot_cost = _cnot_cost(clifford_copy)
 
     # Find composition of circuits with CX and (H.S)^a gates to reduce CNOT count
     while cnot_cost > 0:
-        clifford, inverse_circuit, cnot_cost = _reduce_cost(
-            clifford, inverse_circuit, cnot_cost
+        clifford_copy, inverse_circuit, cnot_cost = _reduce_cost(
+            clifford_copy, inverse_circuit, cnot_cost
         )
 
     # Decompose the remaining product of 1-qubit cliffords
-    last_row = clifford.engine.cast([False] * 3, dtype=bool)
+    last_row = clifford_copy.engine.cast([False] * 3, dtype=bool)
     circuit = Circuit(nqubits)
     for qubit in range(nqubits):
         position = [qubit, qubit + nqubits]
         single_qubit_circuit = _single_qubit_clifford_decomposition(
-            clifford.engine.np.append(
-                clifford.symplectic_matrix[position][:, position + [-1]], last_row
+            clifford_copy.engine.np.append(
+                clifford_copy.symplectic_matrix[position][:, position + [-1]], last_row
             ).reshape(3, 3)
         )
         if len(single_qubit_circuit.queue) > 0:
