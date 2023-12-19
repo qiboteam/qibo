@@ -74,6 +74,10 @@ def test_clifford_to_circuit(backend, nqubits, algorithm):
         clifford, engine=backend
     ).symplectic_matrix
 
+    symplectic_matrix_from_symplectic = Clifford(
+        symplectic_matrix_original, engine=backend
+    )
+
     symplectic_matrix_compiled = Clifford.from_circuit(clifford, engine=backend)
 
     if algorithm == "BM20" and nqubits > 3:
@@ -89,6 +93,13 @@ def test_clifford_to_circuit(backend, nqubits, algorithm):
         with pytest.raises(ValueError):
             symplectic_matrix_compiled.to_circuit(algorithm="BM21")
 
+        symplectic_matrix_from_symplectic = (
+            symplectic_matrix_from_symplectic.to_circuit(algorithm=algorithm)
+        )
+        symplectic_matrix_from_symplectic = Clifford.from_circuit(
+            symplectic_matrix_from_symplectic, engine=backend
+        ).symplectic_matrix
+
         symplectic_matrix_compiled = symplectic_matrix_compiled.to_circuit(
             algorithm=algorithm
         )
@@ -96,6 +107,9 @@ def test_clifford_to_circuit(backend, nqubits, algorithm):
             symplectic_matrix_compiled, engine=backend
         ).symplectic_matrix
 
+        backend.assert_allclose(
+            symplectic_matrix_from_symplectic, symplectic_matrix_original
+        )
         backend.assert_allclose(symplectic_matrix_compiled, symplectic_matrix_original)
 
 
