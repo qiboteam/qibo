@@ -22,9 +22,9 @@ class Clifford:
 
     Args:
         data (ndarray or :class:`qibo.models.circuit.Circuit`): If ``ndarray``, it is the
-            symplectic matrix of the state in phase-space representation.
+            symplectic matrix of the stabilizer state in phase-space representation.
             If :class:`qibo.models.circuit.Circuit`, it is a circuit composed only of Clifford
-            gates and measurements.
+            gates and computational-basis measurements.
         nqubits (int, optional): number of qubits of the state.
         measurements (list, optional): list of measurements gates :class:`qibo.gates.M`.
             Defaults to ``None``.
@@ -58,6 +58,7 @@ class Clifford:
             self._samples = clifford._samples
             self._measurement_gate = clifford._measurement_gate
             self._backend = clifford._backend
+            self._original_circuit = self.data.queue
         else:
             # adding the scratch row if not provided
             self.symplectic_matrix = self.data
@@ -67,6 +68,7 @@ class Clifford:
                 )
             self.nqubits = int((self.symplectic_matrix.shape[1] - 1) / 2)
             self._backend = CliffordBackend(self.engine)
+            self._original_circuit = None
 
     @classmethod
     def from_circuit(
@@ -100,6 +102,22 @@ class Clifford:
         return cls._backend.execute_circuit(circuit, initial_state, nshots)
 
     def to_circuit(self, algorithm: Optional[str] = None):
+        """Converts symplectic matrix into a Clifford circuit.
+
+        Args:
+            algorithm (str, optional): If ``AG04``, uses the decomposition algorithm from
+                `Aaronson & Gottesman (2004) <https://arxiv.org/abs/quant-ph/0406196>`_.
+                If ``BM20`` and ``Clifford.nqubits <= 3``, uses the decomposition algorithm from
+                `Bravyi & Maslov (2020) <https://arxiv.org/abs/2003.09412>`_.
+                If ``None`` and Clifford object was created from a symplectic matrix,
+                defaults to ``AG04``.
+                If ``None`` and Clifford object was created from a circuit,
+                returns the original circuit.
+                Defaults to ``None``.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit`: circuit composed of Clifford gates.
+        """
         if not isinstance(algorithm, (str, type(None))):
             raise_error(
                 TypeError,
@@ -109,8 +127,14 @@ class Clifford:
         if algorithm is not None and algorithm not in ["AG04", "BM20"]:
             raise_error(ValueError, f"``algorithm`` {algorithm} not found.")
 
-        if algorithm is None:
+        if algorithm is None and self._original_circuit is None:
             algorithm = "AG04"
+
+        if algorithm is None and self._original_circuit is not None:
+            circuit = Circuit(self.nqubits)
+            circuit.queue = self._original_circuit
+
+            return circuit
 
         if algorithm == "BM20":
             return _decomposition_BM20(self)
@@ -135,11 +159,15 @@ class Clifford:
         """Extracts the stabilizers of the state.
 
         Args:
-            return_array (bool, optional): If ``True`` returns the stabilizers as ``ndarray``.
+            symplectic (bool, optional): If ``True``, returns the rows of the symplectic matrix
+                that correspond to the :math:`n` generators of the :math:`2^{n}` total stabilizers,
+                independently of ``return_array``.
+            return_array (bool, optional): To be used when ``symplectic = False``.
+                If ``True`` returns the stabilizers as ``ndarray``.
                 If ``False``, returns stabilizers as strings. Defaults to ``False``.
 
         Returns:
-            (list): Stabilizers of the state.
+            (ndarray or list): Stabilizers of the state.
         """
         if not symplectic:
             generators, phases = self.generators(return_array)
@@ -155,11 +183,16 @@ class Clifford:
         """Extracts the destabilizers of the state.
 
         Args:
-            return_array (bool, optional): If ``True`` returns the destabilizers as ``ndarray``.
-                If ``False``, their representation as strings is returned. Defaults to ``False``.
+            symplectic (bool, optional): If ``True``, returns the rows of the symplectic matrix
+                that correspond to the :math:`n` generators of the :math:`2^{n}` total
+                destabilizers, independently of ``return_array``.
+            return_array (bool, optional): To be used when ``symplectic = False``.
+                If ``True`` returns the destabilizers as ``ndarray``.
+                If ``False``, their representation as strings is returned.
+                Defaults to ``False``.
 
         Returns:
-            (list): Destabilizers of the state.
+            (ndarray or list): Destabilizers of the state.
         """
         if not symplectic:
             generators, phases = self.generators(return_array)
