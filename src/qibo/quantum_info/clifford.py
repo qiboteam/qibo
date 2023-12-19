@@ -47,9 +47,11 @@ class Clifford:
     _backend: Optional[CliffordBackend] = None
     _measurement_gate = None
     _samples: Optional[int] = None
+    # _original_circuit: list = field(init=False, repr=False)
 
     def __post_init__(self):
         if isinstance(self.data, Circuit):
+            # self._original_circuit = self.data.copy(deep=True).queue
             clifford = self.from_circuit(self.data, engine=self.engine)
             self.symplectic_matrix = clifford.symplectic_matrix
             self.nqubits = clifford.nqubits
@@ -58,7 +60,6 @@ class Clifford:
             self._samples = clifford._samples
             self._measurement_gate = clifford._measurement_gate
             self._backend = clifford._backend
-            self._original_circuit = self.data.queue
         else:
             # adding the scratch row if not provided
             self.symplectic_matrix = self.data
@@ -97,6 +98,7 @@ class Clifford:
         Returns:
             (:class:`qibo.quantum_info.clifford.Clifford`): Object storing the result of the circuit execution.
         """
+        cls._original_circuit = circuit.copy(deep=True).queue
         cls._backend = CliffordBackend(engine)
 
         return cls._backend.execute_circuit(circuit, initial_state, nshots)
