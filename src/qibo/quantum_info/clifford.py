@@ -113,9 +113,9 @@ class Clifford:
             algorithm = "AG04"
 
         if algorithm == "BM20":
-            return _decomposition_BM20(self)
+            return _decomposition_BM20(self.copy(deep=True))
 
-        return _decomposition_AG04(self)
+        return _decomposition_AG04(self.copy(deep=True))
 
     def generators(self, return_array: bool = False):
         """Extracts the generators of stabilizers and destabilizers.
@@ -589,11 +589,14 @@ def _decomposition_BM20(clifford):
             ).reshape(3, 3)
         )
         if len(single_qubit_circuit.queue) > 0:
-            circuit.queue += single_qubit_circuit.queue
+            for gate in single_qubit_circuit.queue:
+                gate.init_args = [qubit]
+                gate.target_qubits = (qubit,)
+                circuit.queue.extend([gate])
 
     # Add the inverse of the 2-qubit reductions circuit
     if len(inverse_circuit.queue) > 0:
-        circuit.queue += inverse_circuit.invert().queue
+        circuit.queue.extend(inverse_circuit.invert().queue)
 
     return circuit
 
