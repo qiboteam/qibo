@@ -10,7 +10,7 @@ from qibo.config import raise_error
 from qibo.models.circuit import Circuit
 
 
-def unary_encoder(data):
+def unary_encoder(data, architecture: str = "diagonal"):
     """Creates circuit that performs the unary encoding of ``data``.
 
     Given a classical ``data`` array :math:`\\mathbf{x} \\in \\mathbb{R}^{d}` such that
@@ -50,10 +50,18 @@ def unary_encoder(data):
             ValueError, f"len(data) must be a power of 2, but it is {len(data)}."
         )
 
+    if not isinstance(architecture, str):
+        raise_error(
+            TypeError,
+            f"``architecture`` must be type str, but it is type {type(architecture)}.",
+        )
+    if architecture not in ["diagonal", "semi-diagonal", "tree"]:
+        raise_error(ValueError, f"``architecture`` {architecture} not found.")
+
     nqubits = len(data)
     j_max = int(nqubits / 2)
 
-    circuit, _ = _generate_rbs_pairs(nqubits)
+    circuit, _ = _generate_rbs_pairs(nqubits, architecture=architecture)
 
     # calculating phases and setting circuit parameters
     r_array = np.zeros(nqubits - 1, dtype=float)
@@ -74,7 +82,9 @@ def unary_encoder(data):
     return circuit
 
 
-def unary_encoder_random_gaussian(nqubits: int, seed=None):
+def unary_encoder_random_gaussian(
+    nqubits: int, architecture: str = "parallel", seed=None
+):
     """Creates a circuit that performs the unary encoding of a random Gaussian state.
 
     Given :math:`d` qubits, encodes the quantum state
@@ -143,7 +153,7 @@ def unary_encoder_random_gaussian(nqubits: int, seed=None):
         a=0, b=2 * math.pi, seed=local_state
     )
 
-    circuit, pairs_rbs = _generate_rbs_pairs(nqubits)
+    circuit, pairs_rbs = _generate_rbs_pairs(nqubits, architecture)
 
     phases = []
     for depth, row in enumerate(pairs_rbs, 1):
@@ -154,27 +164,29 @@ def unary_encoder_random_gaussian(nqubits: int, seed=None):
     return circuit
 
 
-def _generate_rbs_pairs(nqubits):
+def _generate_rbs_pairs(nqubits: int, architecture: str):
     """Generating list of indexes representing the RBS connections
     and creating circuit with all RBS initialised with 0.0 phase."""
-    pairs_rbs = [[(0, int(nqubits / 2))]]
-    indexes = list(np.array(pairs_rbs).flatten())
-    for depth in range(2, int(math.log2(nqubits)) + 1):
-        pairs_rbs_per_depth = [
-            [(index, index + int(nqubits / 2**depth)) for index in indexes]
+
+    if architecture == "tree":
+        pairs_rbs = [[(0, int(nqubits / 2))]]
+        indexes = list(np.array(pairs_rbs).flatten())
+        for depth in range(2, int(math.log2(nqubits)) + 1):
+            pairs_rbs_per_depth = [
+                [(index, index + int(nqubits / 2**depth)) for index in indexes]
+            ]
+            pairs_rbs += pairs_rbs_per_depth
+            indexes = list(np.array(pairs_rbs_per_depth).flatten())
+
+        pairs_rbs = [
+            [(nqubits - 1 - a, nqubits - 1 - b) for a, b in row] for row in pairs_rbs
         ]
-        pairs_rbs += pairs_rbs_per_depth
-        indexes = list(np.array(pairs_rbs_per_depth).flatten())
 
-    pairs_rbs = [
-        [(nqubits - 1 - a, nqubits - 1 - b) for a, b in row] for row in pairs_rbs
-    ]
-
-    circuit = Circuit(nqubits)
-    circuit.add(gates.X(nqubits - 1))
-    for row in pairs_rbs:
-        for pair in row:
-            circuit.add(gates.RBS(*pair, 0.0, trainable=True))
+        circuit = Circuit(nqubits)
+        circuit.add(gates.X(nqubits - 1))
+        for row in pairs_rbs:
+            for pair in row:
+                circuit.add(gates.RBS(*pair, 0.0, trainable=True))
 
     return circuit, pairs_rbs
 
