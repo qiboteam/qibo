@@ -60,4 +60,8 @@ def test_tensorflow_sgd():
         loss_threshold=-0.5,
     )
 
+    # get options lists
+    options_list = optimizer.get_options_list()
+    fit_options_list = optimizer.get_fit_options_list()
+
     assert result_full[0] < result_early_stopping[0]

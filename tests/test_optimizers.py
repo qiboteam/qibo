@@ -56,6 +56,11 @@ def test_scipyminimizer(backend):
     result = optimizer.fit(
         initial_parameters=parameters, loss=black_box_loss, args=(circuit, hamiltonian)
     )
+
+    # get options lists
+    options_list = optimizer.get_options_list()
+    fit_options_list = optimizer.get_fit_options_list()
+
     assert np.isclose(result[0], -1, atol=1e-4)
 
 
@@ -71,6 +76,11 @@ def test_parallel_bfgs(backend):
     result = optimizer.fit(
         initial_parameters=parameters, args=(circuit, hamiltonian), loss=black_box_loss
     )
+
+    # get options lists
+    options_list = optimizer.get_options_list()
+    fit_options_list = optimizer.get_fit_options_list()
+
     assert np.isclose(result[0], -1, atol=1e-4)
 
 
@@ -88,6 +98,11 @@ def test_basinhopping(backend):
         args=(circuit, hamiltonian),
         loss=black_box_loss,
     )
+
+    # get options lists
+    options_list = optimizer.get_options_list()
+    fit_options_list = optimizer.get_fit_options_list()
+
     assert np.isclose(result[0], -1, atol=1e-4)
 
 
@@ -103,7 +118,14 @@ def test_cmaes(backend):
     result = optimizer.fit(
         initial_parameters=parameters, args=(circuit, hamiltonian), loss=black_box_loss
     )
+
+    # get options lists
+    options_list = optimizer.get_options_list()
+    fit_options_list = optimizer.get_fit_options_list()
+    reduced_fit_options_list = optimizer.get_fit_options_list(keyword="tol")
+
     assert np.isclose(result[0], -1, atol=1e-4)
+    assert len(reduced_fit_options_list) < len(fit_options_list)
 
 
 def test_optimizer_arguments(backend):
