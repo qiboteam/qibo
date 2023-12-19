@@ -128,7 +128,7 @@ class BasinHopping(Optimizer):
         return customizable_arguments
 
     def get_fit_options_list(self):
-        print(f"No `fit_options` are required for the Basin-Hopping optimizer.")
+        log.info(f"No `fit_options` are required for the Basin-Hopping optimizer.")
 
     def fit(self, initial_parameters, loss, args=()):
         """Perform the optimizations via Basin-Hopping strategy.

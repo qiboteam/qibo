@@ -36,7 +36,7 @@ class ScipyMinimizer(Optimizer):
         return customizable_arguments
 
     def get_fit_options_list(self):
-        print(
+        log.info(
             f"Please have a look to the `options` argument of `scipy.optimize.minimize(method='{self.options['method']}')`"
         )
 
