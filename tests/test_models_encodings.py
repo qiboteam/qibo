@@ -62,9 +62,9 @@ def test_unary_encoder_random_gaussian(backend, nqubits, seed):
         unary_encoder_random_gaussian(-1, seed=seed)
     with pytest.raises(ValueError):
         unary_encoder_random_gaussian(3, seed=seed)
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         unary_encoder_random_gaussian(nqubits, architecture=True, seed=seed)
-    with pytest.raises(ValueError):
+    with pytest.raises(NotImplementedError):
         unary_encoder_random_gaussian(nqubits, architecture="diagonal", seed=seed)
     with pytest.raises(TypeError):
         unary_encoder_random_gaussian(nqubits, seed="seed")
