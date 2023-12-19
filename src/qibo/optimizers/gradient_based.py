@@ -62,7 +62,7 @@ class TensorflowSGD(Optimizer):
         optimizer="Adagrad",
         options={"learning_rate": 0.001},
     ):
-        super().__init__(options)
+        self.options = {}
         self.name = "tensorflow_sgd"
         # This optimizer works only with tensorflow backend
         self.backend = TensorflowBackend()

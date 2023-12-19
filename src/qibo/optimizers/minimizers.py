@@ -3,7 +3,7 @@
 import numpy as np
 from scipy.optimize import minimize
 
-from qibo.config import log, raise_error
+from qibo.config import log
 from qibo.optimizers.abstract import Optimizer, check_fit_arguments, check_options
 
 
@@ -19,7 +19,7 @@ class ScipyMinimizer(Optimizer):
     """
 
     def __init__(self, options={"method": "Powell"}):
-        super().__init__(options)
+        self.options = {}
         self.name = "scipy_minimizer"
         check_options(function=minimize, options=options)
 
@@ -75,7 +75,7 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
         processes=1,
         options={},
     ):
-        super().__init__(options)
+        self.options = {}
         self.name = "parallel_bfgs"
         self.xval = None
         self.function_value = None

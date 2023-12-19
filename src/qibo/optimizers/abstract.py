@@ -15,7 +15,7 @@ def check_options(function, options):
         if arg not in function.__code__.co_varnames:
             raise_error(
                 TypeError,
-                f"Given argument {arg} is not accepted by {function.__code__.co_name} function.",
+                f"Given argument {arg} is not accepted by {function.__code__.co_name} function, which is the fitting function of the chosen optimizer.",
             )
 
 
@@ -52,10 +52,23 @@ class Optimizer:
                 filled according to each specific optimizer interface.
         """
         self.options = options
+        self._fit_function = None
 
     def set_options(self, updates):
         """Update self.options dictionary"""
+        # check the new options are arguments of the fitting function
+        check_options(self._fit_function, updates)
         self.options.update(updates)
+
+    @abstractmethod
+    def get_options(self):  # pragma: no cover
+        """Return all available optimizer options."""
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def get_fit_options(self):  # pragma: no cover
+        """Return all available fitting options."""
+        raise_error(NotImplementedError)
 
     @abstractmethod
     def fit(

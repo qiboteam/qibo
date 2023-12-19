@@ -22,11 +22,27 @@ class CMAES(Optimizer):
     """
 
     def __init__(self, options={"sigma0": 0.5}):
-        super().__init__(options)
+        self.options = {}
         self.name = "cmaes"
+        self._fit_function = cma.fmin2
+
         # check if options are compatible with the function and update class options
-        check_options(function=cma.fmin2, options=options)
+        check_options(function=self._fit_function, options=options)
         self.set_options(options)
+
+    def get_options(self):
+        """Return all available optimizer's options."""
+        return self._fit_function.__code__.co_varnames
+
+    def get_fit_options(self, keyword=None):
+        """
+        Return all the available fit options for the optimizer.
+
+        Args:
+            keyword (str): keyword to help the research of fit options into the
+                options dictionary.
+        """
+        return cma.CMAOptions(keyword)
 
     def fit(self, initial_parameters, loss, args=(), fit_options={}):
         """Perform the optimizations via CMA-ES.
@@ -88,7 +104,7 @@ class BasinHopping(Optimizer):
         options={"niter": 10},
         minimizer_kwargs={},
     ):
-        super().__init__(options)
+        self.options = {}
         self.name = "basinhopping"
         # check if options are compatible with the function and update class options
         check_options(function=basinhopping, options=options)
