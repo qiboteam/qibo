@@ -113,9 +113,6 @@ class Clifford:
         if algorithm is not None and algorithm not in ["AG04", "BM20"]:
             raise_error(ValueError, f"``algorithm`` {algorithm} not found.")
 
-        if self.nqubits == 1:
-            return _single_qubit_clifford_decomposition(self.symplectic_matrix)
-
         if algorithm is None:
             algorithm = "AG04"
 

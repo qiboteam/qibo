@@ -61,6 +61,41 @@ def test_clifford_from_circuit(backend, measurement):
         backend.assert_allclose(obj.probabilities(), result.probabilities())
 
 
+@pytest.mark.parametrize("algorithm", [None, "AG04", "BM20"])
+@pytest.mark.parametrize("nqubits", [1, 2, 3, 10, 100])
+def test_clifford_to_circuit(backend, nqubits, algorithm):
+    if backend.__class__.__name__ == "TensorflowBackend":
+        pytest.skip("CliffordBackend not defined for Tensorflow engine.")
+
+    clifford = random_clifford(nqubits, backend=backend)
+
+    symplectic_matrix_original = Clifford.from_circuit(
+        clifford, engine=backend
+    ).symplectic_matrix
+
+    symplectic_matrix_compiled = Clifford.from_circuit(clifford, engine=backend)
+
+    if algorithm == "BM20" and nqubits > 3:
+        with pytest.raises(ValueError):
+            symplectic_matrix_compiled = symplectic_matrix_compiled.to_circuit(
+                algorithm=algorithm
+            )
+    else:
+        with pytest.raises(TypeError):
+            symplectic_matrix_compiled.to_circuit(algorithm=True)
+        with pytest.raises(ValueError):
+            symplectic_matrix_compiled.to_circuit(algorithm="BM21")
+
+        symplectic_matrix_compiled = symplectic_matrix_compiled.to_circuit(
+            algorithm=algorithm
+        )
+        symplectic_matrix_compiled = Clifford.from_circuit(
+            symplectic_matrix_compiled, engine=backend
+        ).symplectic_matrix
+
+        backend.assert_allclose(symplectic_matrix_compiled, symplectic_matrix_original)
+
+
 @pytest.mark.parametrize("nqubits", [1, 10, 100])
 def test_clifford_initialization(backend, nqubits):
     if backend.__class__.__name__ == "TensorflowBackend":
@@ -85,10 +120,12 @@ def test_clifford_initialization(backend, nqubits):
 
 
 @pytest.mark.parametrize("return_array", [True, False])
-def test_clifford_stabilizers(backend, return_array):
+@pytest.mark.parametrize("symplectic", [True, False])
+def test_clifford_stabilizers(backend, symplectic, return_array):
     clifford_backend = construct_clifford_backend(backend)
     if not clifford_backend:
         return
+
     c = Circuit(3)
     c.add(gates.X(2))
     c.add(gates.H(0))
@@ -101,7 +138,7 @@ def test_clifford_stabilizers(backend, return_array):
     else:
         true_generators = ["XII", "IZI", "IIZ"]
     true_phases = [1, 1, -1]
-    generators, phases = obj.generators(return_array)
+    generators, phases = obj.generators(return_array=return_array)
 
     if return_array:
         backend.assert_allclose(generators[3:], true_generators)
@@ -147,10 +184,12 @@ def test_clifford_stabilizers(backend, return_array):
 
 
 @pytest.mark.parametrize("return_array", [True, False])
-def test_clifford_destabilizers(backend, return_array):
+@pytest.mark.parametrize("symplectic", [True, False])
+def test_clifford_destabilizers(backend, symplectic, return_array):
     clifford_backend = construct_clifford_backend(backend)
     if not clifford_backend:
         return
+
     c = Circuit(3)
     c.add(gates.X(2))
     c.add(gates.H(0))
@@ -164,7 +203,7 @@ def test_clifford_destabilizers(backend, return_array):
     else:
         true_generators = ["ZII", "IXI", "IIX"]
     true_phases = [1, 1, 1]
-    generators, phases = obj.generators(return_array)
+    generators, phases = obj.generators(return_array=return_array)
 
     if return_array:
         print(type(generators), type(true_generators))

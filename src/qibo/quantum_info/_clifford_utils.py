@@ -119,6 +119,9 @@ def _decomposition_AG04(clifford):
     circuit = Circuit(nqubits)
     clifford_copy = clifford.copy(deep=True)
 
+    if nqubits == 1:
+        return _single_qubit_clifford_decomposition(clifford_copy.symplectic_matrix)
+
     for k in range(nqubits):
         # put a 1 one into position by permuting and using Hadamards(i,i)
         _set_qubit_x_true(clifford_copy, circuit, k)
@@ -404,7 +407,7 @@ def _cnot_cost2(clifford):
     return r01 + 1 - r00
 
 
-def _cnot_cost3(clifford):
+def _cnot_cost3(clifford):  # pragma: no cover
     """Return CNOT cost of a 3-qubit clifford."""
 
     # pylint: disable=too-many-return-statements,too-many-boolean-expressions
@@ -424,6 +427,7 @@ def _cnot_cost3(clifford):
                 symplectic_matrix[q1 + nqubits, q2 + nqubits],
             )
             mask = np.zeros(2 * nqubits, dtype=int)
+            mask = clifford.engine.cast(mask, dtype=mask.dtype)
             mask[[q2, q2 + nqubits]] = 1
             loc_y_x = np.array_equal(
                 symplectic_matrix[q1, :] & mask, symplectic_matrix[q1, :]
@@ -485,7 +489,7 @@ def _cnot_cost3(clifford):
     return 4
 
 
-def _reduce_cost(clifford, inverse_circuit, cost):
+def _reduce_cost(clifford, inverse_circuit, cost):  # pragma: no cover
     """Two-qubit cost reduction step"""
     nqubits = clifford.nqubits
 
