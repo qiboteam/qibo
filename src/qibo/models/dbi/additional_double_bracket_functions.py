@@ -16,7 +16,7 @@ from qibo.symbols import I, X, Z
 
 
 def visualize_matrix(matrix, title=""):
-    """Visualize hamiltonian in a heatmap form."""
+    """Visualize absolute values of a matrix in a heatmap form."""
     fig, ax = plt.subplots(figsize=(5, 5))
     ax.set_title(title)
     try:
@@ -29,7 +29,7 @@ def visualize_matrix(matrix, title=""):
 def visualize_drift(h0, h):
     """Visualize drift of the evolved hamiltonian w.r.t. h0."""
     fig, ax = plt.subplots(figsize=(5, 5))
-    ax.set_title(r"Drift: $|\hat{H}_0 - \hat{H}_{\ell}|$")
+    ax.set_title(r"Drift: $|\hat{H}_0 - \hat{H}_{1}|$")
     try:
         im = ax.imshow(np.absolute(h0 - h), cmap="inferno")
     except TypeError:
@@ -68,15 +68,35 @@ def plot_histories(loss_histories: list, steps: list, labels: list = None):
     plt.title("Loss function histories")
 
 
-def generate_Z_operators(n_qubits: int):
-    """Generate the full permutations of local_Z operators with n_qubits and their respective names.
-
+def generate_Z_operators(nqubits: int):
+    """Generate a dictionary containing 1) all possible products of Pauli Z operators for L = n_qubits and 2) their respective names.
     Return: Dictionary with the following keys
 
         - *"Z_operators"*
         - *"Z_words"*
+
+     Example:
+        .. testcode::
+
+            from qibo.models.dbi.additional_double_bracket_functions import generate_Z_operators
+            from qibo.models.dbi.double_bracket import DoubleBracketIteration
+            from qibo.quantum_info import random_hermitian
+            from qibo.hamiltonians import Hamiltonian
+            import numpy as np
+
+            nqubits = 4
+            h0 = random_hermitian(2**nqubits)
+            dbi = DoubleBracketIteration(Hamiltonian(nqubits=nqubits, matrix=h0))
+            generate_Z = generate_Z_operators(4)
+            Z_ops = generate_Z["Z_operators"]
+            Z_words = generate_Z["Z_operators"]
+
+            delta_h0 = dbi.diagonal_h_matrix
+            dephasing_channel = (sum([Z_op @ h0 @ Z_op for Z_op in Z_ops])+h0)/2**nqubits
+            norm_diff = np.linalg.norm(delta_h0 - dephasing_channel)
+            print(norm_diff)
     """
-    combination_strings = product("ZI", repeat=n_qubits)
+    combination_strings = product("ZI", repeat=nqubits)
     operator_map = {"Z": Z, "I": I}
     operators = []
     operators_words = []
@@ -96,32 +116,39 @@ def generate_Z_operators(n_qubits: int):
 
 
 def iteration_from_list(
-    class_dbi: DoubleBracketIteration,
+    dbi_object: DoubleBracketIteration,
     d_list: list,
     step: float = None,
+    step_min: float = 1e-5,
+    step_max: float = 1,
+    max_evals: int = 100,
     compare_canonical: bool = True,
 ):
     """Perform 1 double-bracket iteration with an optimal diagonal operator.
 
     Args:
-        class_dbi (_DoubleBracketIteration): The object intended for double bracket iteration.
+        dbi_object (_DoubleBracketIteration): The object intended for double bracket iteration.
         d_list (list): List of diagonal operators (np.array) to run from.
         step (float): Fixed iteration duration.
             Defaults to ``None``, uses hyperopt.
+        step_min (float): Minimally allowed iteration duration.
+        step_max (float): Maximally allowed iteration duration.
+        max_evals (int): Maximally allowed number of evaluation in hyperopt.
         compare_canonical (bool): If `True`, the optimal diagonal operator chosen from "d_list" is compared with the canonical bracket.
 
     Returns:
         The index of the optimal diagonal operator and respective step duration.
     """
-    h_before = deepcopy(class_dbi.h)
-    off_diagonal_norms = []
+    h_before = deepcopy(dbi_object.h)
+    norms_off_diagonal_restriction = []
+    optimal_steps = []
     for d in d_list:
-        # fixed step
+        # prescribed step durations
         if step is not None:
-            class_dbi(step=step, d=d)
-        # hyperopt
+            dbi_object(step=step, d=d)
+        # compute step durations using hyperopt
         else:
-            step = class_dbi.hyperopt_step(
+            step = dbi_object.hyperopt_step(
                 step_min=1e-5,
                 step_max=1,
                 space=hp.uniform,
@@ -129,57 +156,40 @@ def iteration_from_list(
                 max_evals=100,
                 d=d,
             )
-        off_diagonal_norms.append(class_dbi.off_diagonal_norm)
-        class_dbi.h = deepcopy(h_before)
+        optimal_steps.append(step)
+        norms_off_diagonal_restriction.append(dbi_object.off_diagonal_norm)
+        dbi_object.h = deepcopy(h_before)
     # canonical
     if compare_canonical is True:
-        generator_type = class_dbi.mode
-        class_dbi.mode = DoubleBracketGeneratorType.canonical
+        generator_type = dbi_object.mode
+        dbi_object.mode = DoubleBracketGeneratorType.canonical
         if step is not None:
-            class_dbi(step=step)
+            dbi_object(step=step)
         else:
-            step = class_dbi.hyperopt_step(
-                step_min=1e-5,
-                step_max=1,
+            step = dbi_object.hyperopt_step(
+                step_min=step_min,
+                step_max=step_max,
                 space=hp.uniform,
                 optimizer=tpe,
-                max_evals=100,
+                max_evals=max_evals,
             )
-        off_diagonal_norms.append(class_dbi.off_diagonal_norm)
-        class_dbi.h = deepcopy(h_before)
-        class_dbi.mode = generator_type
+        optimal_steps.append(step)
+        norms_off_diagonal_restriction.append(dbi_object.off_diagonal_norm)
+        dbi_object.h = deepcopy(h_before)
+        dbi_object.mode = generator_type
     # find best d
-    idx_max_loss = off_diagonal_norms.index(min(off_diagonal_norms))
+    idx_max_loss = norms_off_diagonal_restriction.index(
+        min(norms_off_diagonal_restriction)
+    )
+    step_optimal = optimal_steps[idx_max_loss]
     # run with optimal d
     if idx_max_loss == len(d_list):
         # canonical
-        generator_type = class_dbi.mode
-        class_dbi.mode = DoubleBracketGeneratorType.canonical
-        if step is not None:
-            class_dbi(step=step)
-        else:
-            step = class_dbi.hyperopt_step(
-                step_min=1e-5,
-                step_max=1,
-                space=hp.uniform,
-                optimizer=tpe,
-                max_evals=100,
-            )
-        class_dbi.mode = generator_type
+        generator_type = dbi_object.mode
+        dbi_object.mode = DoubleBracketGeneratorType.canonical
+        dbi_object(step=step)
+        dbi_object.mode = generator_type
     else:
         d_optimal = d_list[idx_max_loss]
-        # fixed step
-        if step is not None:
-            class_dbi(step=step, d=d_optimal)
-        # hyperopt
-        else:
-            step = class_dbi.hyperopt_step(
-                step_min=1e-5,
-                step_max=1,
-                space=hp.uniform,
-                optimizer=tpe,
-                max_evals=100,
-                d=d_optimal,
-            )
-
+        dbi_object(step=step, d=d_optimal)
     return idx_max_loss, step
