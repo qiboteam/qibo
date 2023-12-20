@@ -102,6 +102,11 @@ def test_vqe(backend, method, options, compile, filename):
     """Performs a VQE circuit minimization test."""
     if (method == "sgd" or compile) and backend.name != "tensorflow":
         pytest.skip("Skipping SGD test for unsupported backend.")
+    if backend.name == "tensorflow":
+        import tensorflow as tf
+
+        tf.config.threading.set_inter_op_parallelism_threads = 1
+        tf.config.threading.set_intra_op_parallelism_threads = 1
     nqubits = 3
     layers = 4
     circuit = models.Circuit(nqubits)
