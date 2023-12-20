@@ -105,7 +105,7 @@ def ZNE(
     observable,
     noise_levels,
     noise_model=None,
-    nshots=int(1e4),
+    nshots=10000,
     solve_for_gammas=False,
     insertion_gate="CNOT",
     readout: dict = {},
@@ -120,11 +120,11 @@ def ZNE(
 
     Args:
         circuit (:class:`qibo.models.Circuit`): input circuit.
-        observable (numpy.ndarray): Observable to measure.
+        observable (:class:`qibo.hamiltonians.Hamiltonian/:class:`qibo.hamiltonians.SymbolicHamiltonian`): Observable to measure.
         noise_levels (numpy.ndarray): Sequence of noise levels.
         noise_model (:class:`qibo.noise.NoiseModel`, optional): Noise model applied
             to simulate noisy computation.
-        nshots (int, optional): Number of shots. Defauylts to 10000.
+        nshots (int, optional): Number of shots. Defaults to :math:`10000`.
         solve_for_gammas (bool, optional): If ``True``, explicitly solve the
             equations to obtain the ``gamma`` coefficients. Default is ``False``.
         insertion_gate (str, optional): gate to be used in the insertion.
@@ -133,8 +133,9 @@ def ZNE(
         readout (dict, optional): A dictionary that may contain the following keys:
             - 'calibration_matrix': numpy.ndarray, used for applying a pre-computed calibration matrix for readout error mitigation.
             - 'random_ncircuits': int, specifies the number of random circuits to use for the randomized method of readout error mitigation.
-            - 'ibu_iters': int, specifies the number of iterations for the iterative Bayesian update method of readout error mitigation.
+            - 'ibu_iters': int, specifies the number of iterations for the iterative Bayesian unfolding method of readout error mitigation.
             If provided, the corresponding readout error mitigation method is used.
+        qubit_map (list, optional): the qubit map. If None, a list of range of circuit's qubits is used. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -255,7 +256,7 @@ def CDR(
     circuit,
     observable,
     noise_model,
-    nshots: int = int(1e4),
+    nshots: int = 10000,
     model=lambda x, a, b: a * x + b,
     n_training_samples: int = 100,
     full_output: bool = False,
@@ -268,10 +269,10 @@ def CDR(
     Args:
         circuit (:class:`qibo.models.Circuit`): input circuit decomposed in the
             primitive gates ``X``, ``CNOT``, ``RX(pi/2)``, ``RZ(theta)``.
-        observable (numpy.ndarray): observable to be measured.
+        observable (:class:`qibo.hamiltonians.Hamiltonian/:class:`qibo.hamiltonians.SymbolicHamiltonian`): observable to be measured.
         noise_model (:class:`qibo.noise.NoiseModel`): noise model used for simulating
             noisy computation.
-        nshots (int, optional): number of shots. Defaults 10000.
+        nshots (int, optional): number of shots. Defaults :math:`10000`.
         model (callable, optional): model used for fitting. This should be a callable
             function object ``f(x, *params)``, taking as input the predictor variable
             and the parameters. Default is a simple linear model ``f(x,a,b) := a*x + b``.
@@ -281,8 +282,9 @@ def CDR(
         readout (dict, optional): A dictionary that may contain the following keys:
             - 'calibration_matrix': numpy.ndarray, used for applying a pre-computed calibration matrix for readout error mitigation.
             - 'random_ncircuits': int, specifies the number of random circuits to use for the randomized method of readout error mitigation.
-            - 'ibu_iters': int, specifies the number of iterations for the iterative Bayesian update method of readout error mitigation.
+            - 'ibu_iters': int, specifies the number of iterations for the iterative Bayesian unfolding method of readout error mitigation.
             If provided, the corresponding readout error mitigation method is used.
+        qubit_map (list, optional): the qubit map. If None, a list of range of circuit's qubits is used. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -331,7 +333,7 @@ def vnCDR(
     observable,
     noise_levels,
     noise_model,
-    nshots: int = int(1e4),
+    nshots: int = 10000,
     model=lambda x, *params: (x * np.array(params).reshape(-1, 1)).sum(0),
     n_training_samples: int = 100,
     insertion_gate: str = "CNOT",
@@ -345,11 +347,11 @@ def vnCDR(
     Args:
         circuit (:class:`qibo.models.Circuit`): input circuit decomposed in the
             primitive gates ``X``, ``CNOT``, ``RX(pi/2)``, ``RZ(theta)``.
-        observable (numpy.ndarray): observable to be measured.
+        observable (:class:`qibo.hamiltonians.Hamiltonian/:class:`qibo.hamiltonians.SymbolicHamiltonian`): observable to be measured.
         noise_levels (numpy.ndarray): sequence of noise levels.
         noise_model (:class:`qibo.noise.NoiseModel`): noise model used for
             simulating noisy computation.
-        nshots (int, optional): number of shots.
+        nshots (int, optional): number of shots. Defaults to :math:`10000`.
         model (callable, optional): model used for fitting. This should be a callable
             function object ``f(x, *params)``, taking as input the predictor variable
             and the parameters. Default is a simple linear model ``f(x,a,b) := a*x + b``.
@@ -362,8 +364,9 @@ def vnCDR(
         readout (dict, optional): A dictionary that may contain the following keys:
             - 'calibration_matrix': numpy.ndarray, used for applying a pre-computed calibration matrix for readout error mitigation.
             - 'random_ncircuits': int, specifies the number of random circuits to use for the randomized method of readout error mitigation.
-            - 'ibu_iters': int, specifies the number of iterations for the iterative Bayesian update method of readout error mitigation.
+            - 'ibu_iters': int, specifies the number of iterations for the iterative Bayesian unfolding method of readout error mitigation.
             If provided, the corresponding readout error mitigation method is used.
+        qubit_map (list, optional): the qubit map. If None, a list of range of circuit's qubits is used. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -457,17 +460,18 @@ def iterative_bayesian_unfolding(probabilities, response_matrix, iterations=10):
     return unfolded_probabilities
 
 
-def get_calibration_matrix(
+def get_response_matrix(
     nqubits, qubit_map=None, noise_model=None, nshots: int = 10000, backend=None
 ):
     """Computes the calibration matrix for readout mitigation.
 
     Args:
         nqubits (int): Total number of qubits.
+        qubit_map (list, optional): the qubit map. If None, a list of range of circuit's qubits is used. Defaults to ``None``.
         noise_model (:class:`qibo.noise.NoiseModel`, optional): noise model used for simulating
             noisy computation. This matrix can be used to mitigate the effect of
             `qibo.noise.ReadoutError`.
-        nshots (int, optional): number of shots. Defaults to 10000.
+        nshots (int, optional): number of shots. Defaults to :math:`10000`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -481,7 +485,7 @@ def get_calibration_matrix(
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    calibration_matrix = np.zeros((2**nqubits, 2**nqubits))
+    response_matrix = np.zeros((2**nqubits, 2**nqubits))
 
     for i in range(2**nqubits):
         binary_state = format(i, f"0{nqubits}b")
@@ -501,19 +505,19 @@ def get_calibration_matrix(
         column = np.zeros(2**nqubits)
         for key, value in frequencies.items():
             column[int(key, 2)] = value / nshots
-        calibration_matrix[:, i] = column
+        response_matrix[:, i] = column
 
-    return calibration_matrix
+    return response_matrix
 
 
-def apply_cal_mat_readout_mitigation(state, calibration_matrix, iterations=None):
+def apply_cal_mat_readout_mitigation(state, response_matrix, iterations=None):
     """
     Applies readout error mitigation to the given state using the provided calibration matrix.
 
     Args:
         state (:class:`qibo.measurements.CircuitResult`): the input state to be updated. This state should contain the
             frequencies that need to be mitigated.
-        calibration_matrix (numpy.ndarray, optional): the calibration matrix for readout mitigation.
+        response_matrix (numpy.ndarray): the calibration matrix for readout mitigation.
         iterations (int, optional): the number of iterations to use for the Iterative Bayesian Unfolding method.
             If ``None`` the 'inverse' method is used. Defaults to ``None``.
 
@@ -527,12 +531,12 @@ def apply_cal_mat_readout_mitigation(state, calibration_matrix, iterations=None)
     frequencies = frequencies.reshape(-1, 1)
 
     if iterations is None:
-        calibration_matrix = np.linalg.inv(calibration_matrix)
+        calibration_matrix = np.linalg.inv(response_matrix)
         for i, value in enumerate(calibration_matrix @ frequencies):
             state._frequencies[i] = float(value)
     else:
         mitigated_probabilities = iterative_bayesian_unfolding(
-            frequencies / np.sum(frequencies), calibration_matrix, iterations
+            frequencies / np.sum(frequencies), response_matrix, iterations
         )
         mitigated_frequencies = np.round(
             mitigated_probabilities * np.sum(frequencies), 0
@@ -550,7 +554,7 @@ def apply_cal_mat_readout_mitigation(state, calibration_matrix, iterations=None)
 def apply_randomized_readout_mitigation(
     circuit,
     noise_model=None,
-    nshots: int = int(1e3),
+    nshots: int = 10000,
     ncircuits: int = 10,
     qubit_map=None,
     backend=None,
@@ -561,9 +565,10 @@ def apply_randomized_readout_mitigation(
         circuit (:class:`qibo.models.Circuit`): input circuit.
         noise_model(:class:`qibo.noise.NoiseModel`, optional): noise model used for
             simulating noisy computation. Defaults to ``None``.
-        nshots (int, optional): number of shots. Defaults to 10000.
+        nshots (int, optional): number of shots. Defaults to :math:`10000`.
         ncircuits (int, optional): number of randomized circuits. Each of them uses
             ``int(nshots / ncircuits)`` shots. Defaults to 10.
+        qubit_map (list, optional): the qubit map. If None, a list of range of circuit's qubits is used. Defaults to ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -633,11 +638,31 @@ def apply_readout_mitigation(
     circuit,
     observable,
     noise_model=None,
-    nshots: int = int(1e3),
+    nshots: int = 10000,
     readout={},
     qubit_map=None,
     backend=None,
 ):
+    """
+    Applies readout error mitigation to the given circuit and observable.
+
+    Args:
+        circuit (qibo.models.Circuit): input circuit.
+        observable (:class:`qibo.hamiltonians.Hamiltonian/:class:`qibo.hamiltonians.SymbolicHamiltonian`): The observable to be measured.
+        noise_model (qibo.models.noise.Noise, optional): the noise model to be applied. Defaults to ``None``.
+        nshots (int, optional): the number of shots for the circuit execution. Defaults to :math:`10000`.
+        readout (dict, optional): a dictionary that may contain the following keys:
+            - 'ncircuits': int, specifies the number of random circuits to use for the randomized method of readout error mitigation.
+            - 'calibration_matrix': numpy.ndarray, used for applying a pre-computed calibration matrix for readout error mitigation.
+            - 'ibu_iters': int, specifies the number of iterations for the iterative Bayesian unfolding method of readout error mitigation.
+            If provided, the corresponding readout error mitigation method is used. Defaults to {}.
+        qubit_map (list, optional): the qubit map. If None, a list of range of circuit's qubits is used. Defaults to ``None``.
+        backend (qibo.backends.abstract.Backend, optional): the backend to be used in the execution.
+            If None, it uses the global backend. Defaults to ``None``.
+
+    Returns:
+        float: The mitigated expectation value of the observable.
+    """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
@@ -672,13 +697,7 @@ def sample_clifford_training_circuit(
     """Samples a training circuit for CDR by susbtituting some of the non-Clifford gates.
 
     Args:
-        circuit (:class:`qibo.models.Circuit`): circuit to sample from,
-            decomposed in ``RX(pi/2)``, ``X``, ``CNOT`` and ``RZ`` gates.
-        replacement_gates (list, optional): candidates for the substitution of the
-            non-Clifford gates. The ``list`` should be composed by ``tuples`` of the
-            form (``gates.XYZ``, ``kwargs``). For example, phase gates are used by default:
-            ``list((RZ, {'theta':0}), (RZ, {'theta':pi/2}), (RZ, {'theta':pi}), (RZ, {'theta':3*pi/2}))``.
-        sigma (float, optional): standard devation of the Gaussian distribution used for sampling.
+        circuit (:class:`qibo.models.Circuit`): circuit to sample from.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -732,8 +751,7 @@ def error_sensitive_circuit(circuit, observable, backend=None):
 
     Args:
         circuit (:class:`qibo.models.Circuit`): input circuit.
-        observable (numpy.ndarray): Pauli observable to be measured.
-        fuse (bool, optional): if True, fuse the single qubits gates in the circuit.
+        observable (:class:`qibo.hamiltonians.Hamiltonian/:class:`qibo.hamiltonians.SymbolicHamiltonian`): Pauli observable to be measured.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. if ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -824,16 +842,16 @@ def ICS(
 
     Args:
         circuit (:class:`qibo.models.Circuit`): input circuit.
-        observable (numpy.ndarray): the observable to be measured.
+        observable (:class:`qibo.hamiltonians.Hamiltonian/:class:`qibo.hamiltonians.SymbolicHamiltonian`): the observable to be measured.
         readout (dict, optional): A dictionary that may contain the following keys:
             - 'calibration_matrix': numpy.ndarray, used for applying a pre-computed calibration matrix for readout error mitigation.
             - 'random_ncircuits': int, specifies the number of random circuits to use for the randomized method of readout error mitigation.
-            - 'ibu_iters': int, specifies the number of iterations for the iterative Bayesian update method of readout error mitigation.
+            - 'ibu_iters': int, specifies the number of iterations for the iterative Bayesian unfolding method of readout error mitigation.
                             If ``None`` the 'inverse' method is used.
             If provided, the corresponding readout error mitigation method is used.
-        qubit_map (list, optional): the qubit map. If None, a list of range of circuit's qubits is used. Defaults to ``None``.
+        qubit_map (list, optional): the qubit map. If ``None``, a list of range of circuit's qubits is used. Defaults to ``None``.
         noise_model (qibo.models.noise.Noise, optional): the noise model to be applied. Defaults to ``None``.
-        nshots (int, optional): the number of shots for the circuit execution. Defaults to 10000.
+        nshots (int, optional): the number of shots for the circuit execution. Defaults to :math:`10000`.
         n_training_samples (int, optional): the number of training samples. Defaults to 10.
         full_output (bool, optional): if ``True``, this function returns additional
             information: ``val``, ``optimal_params``, ``train_val``. Defaults to ``False``.
@@ -916,7 +934,21 @@ def ICS(
     return mitigated_expectation
 
 
-def _circuit_conf(circuit, qubit_map, noise_model, nshots, backend=None):
+def _circuit_conf(circuit, qubit_map, noise_model=None, nshots=10000, backend=None):
+    """
+    Helper function to execute the given circuit with the specified parameters.
+
+    Args:
+        circuit (qibo.models.Circuit): input circuit.
+        qubit_map (list): the qubit map. If ``None``, a list of range of circuit's qubits is used. Defaults to ``None``.
+        noise_model (qibo.models.noise.Noise, optional): The noise model to be applied. Defaults to ``None``.
+        nshots (int): the number of shots for the circuit execution. Defaults to :math:`10000`..
+        backend (qibo.backends.abstract.Backend, optional): the backend to be used in the execution.
+            If None, it uses the global backend. Defaults to ``None``.
+
+    Returns:
+        qibo.states.CircuitResult: The result of the circuit execution.
+    """
     from qibo.transpiler.placer import Custom
 
     if backend is None:  # pragma: no cover

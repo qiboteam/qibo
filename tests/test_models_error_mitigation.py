@@ -9,7 +9,7 @@ from qibo.models.error_mitigation import (
     ICS,
     ZNE,
     apply_readout_mitigation,
-    get_calibration_matrix,
+    get_response_matrix,
     sample_clifford_training_circuit,
     sample_training_circuit_cdr,
     vnCDR,
@@ -298,7 +298,7 @@ def test_readout_mitigation(backend, nqubits, nmeas, method, ibu_iters):
     noise = NoiseModel()
     noise.add(ReadoutError(probabilities=p), gate=gates.M)
     if method == "cal_matrix":
-        calibration = get_calibration_matrix(
+        calibration = get_response_matrix(
             nmeas, None, noise, nshots=nshots, backend=backend
         )
         readout = {"calibration_matrix": calibration, "ibu_iters": ibu_iters}
