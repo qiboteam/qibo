@@ -4,11 +4,10 @@ import pytest
 
 from qibo import gates
 from qibo.models import Circuit
+from qibo.transpiler._exceptions import ConnectivityError, TranspilerPipelineError
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.pipeline import (
-    ConnectivityError,
     Passes,
-    TranspilerPipelineError,
     assert_circuit_equivalence,
     assert_transpiling,
     restrict_connectivity_qubits,
