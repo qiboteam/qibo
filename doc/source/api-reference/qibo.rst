@@ -279,7 +279,7 @@ and both can be used as standalone functions or in combination with the other
 general mitigation methods by setting the paramter `readout`.
 
 
-Calibration Matrix
+Response Matrix
 """"""""""""""""""
 Given :math:`n` qubits, all the possible :math:`2^n` states are constructed via the
 application of the corresponding sequence of :math:`X` gates
@@ -297,14 +297,22 @@ columns :math:`M=\big(F_0^{noisy},...,F_{n-1}^{noisy}\big)`. We have indeed that
 and, therefore, the calibration matrix obtained as :math:`M_{\text{cal}}=M^{-1}`
 can be used to recover the noise-free frequencies.
 
-.. autofunction:: qibo.models.error_mitigation.calibration_matrix
+The calibration matrix :math:`M_{\text{cal}}` lacks stochasticity, resulting in a 'negative probability' issue.
+The distributions that arise after applying :math:`M_{\text{cal}}` are quasiprobabilities;
+the individual elements can be negative surpass 1, provided they sum to 1.
+It is posible to use Iterative Bayesian Unfolding (IBU) to preserve non-negativity.
+See `Srinivasan et al <https://arxiv.org/abs/2210.12284>`_ for more details.
+
+
+
+.. autofunction:: qibo.models.error_mitigation.get_response_matrix
 
 
 .. autofunction:: qibo.models.error_mitigation.apply_readout_mitigation
 
 
-Randomized
-""""""""""
+Randomized readout mitigation
+""""""""""""""""""""""""""""""
 This approach converts the effect of any noise map :math:`A` into a single multiplication
 factor for each Pauli observable, that is, diagonalizes the measurement channel.
 The multiplication factor :math:`\lambda` can be directly measured even without
@@ -320,7 +328,7 @@ factor results in the mitigated Pauli expectation value :math:`\langle O\rangle_
 Zero Noise Extrapolation (ZNE)
 """"""""""""""""""""""""""""""
 
-Given a noisy circuit :math:`C` and an observable :math:`A`,  Zero Noise Extrapolation (ZNE)
+Given a noisy circuit :math:`C` and an observable :math:`A`, Zero Noise Extrapolation (ZNE)
 consists in running :math:`n+1` versions of the circuit with different noise levels
 :math:`\{c_j\}_{j=0..n}` and, for each of them, measuring the expected value of the observable
 :math:`E_j=\langle A\rangle_j`.
@@ -381,7 +389,7 @@ See `Sopena et al <https://arxiv.org/abs/2103.12680>`_ for more details.
 .. autofunction:: qibo.models.error_mitigation.CDR
 
 
-.. autofunction:: qibo.models.error_mitigation.sample_training_circuit
+.. autofunction:: qibo.models.error_mitigation.sample_training_circuit_cdr
 
 
 Variable Noise CDR (vnCDR)
@@ -415,6 +423,34 @@ See `Sopena et al <https://arxiv.org/abs/2103.12680>`_ for all the details.
 
 .. autofunction:: qibo.models.error_mitigation.vnCDR
 
+
+Importance Clifford Sampling (ICS)
+""""""""""""""""""""""""""""""
+
+In the Importance Clifford Sampling (ICS) method, a set of :math:`n` circuits
+:math:`S_n=\{C_i\}_{i=1,..,n}` that stabilizes a given Pauli observable is generated starting from the original circuit
+:math:`C_0` by replacing all the non-Clifford gates with Clifford ones.
+Given an observable :math:`A`, all the circuits of :math:`S_n` are both simulated
+to obtain the correspondent expected values of :math:`A` in noise-free condition
+:math:`\{a_i^{exact}\}_{i=1,..,n}`, and run in noisy conditions to obtain the noisy
+expected values :math:`\{a_i^{noisy}\}_{i=1,..,n}`.
+
+Finally, a theoretically inspired model :math:`f` is learned using the training data.
+
+The mitigated expected value of :math:`A` at the end of :math:`C_0` is then
+obtained simply with :math:`f(a_0^{noisy})`.
+
+In this implementation the initial circuit is expected to be decomposed in the three
+Clifford gates :math:`RX(\frac{\pi}{2})`, :math:`CNOT`, :math:`X` and in :math:`RZ(\theta)`
+(which is Clifford only for :math:`\theta=\frac{n\pi}{2}`).
+By default the set of Clifford gates used for substitution is
+:math:`\{RZ(0),RZ(\frac{\pi}{2}),RZ(\pi),RZ(\frac{3}{2}\pi)\}`.
+See `Sopena et al <https://arxiv.org/abs/2103.12680>`_ for more details.
+
+.. autofunction:: qibo.models.error_mitigation.ICS
+
+
+.. autofunction:: qibo.models.error_mitigation.sample_clifford_training_circuit
 
 _______________________
 
