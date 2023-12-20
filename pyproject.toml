@@ -63,9 +63,8 @@ pytest-cov = "^4.0.0"
 pylint = "^3.0.3"
 matplotlib = "^3.7.0"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
-tensorflow = { version = "^2.15.0", markers = "sys_platform == 'linux' or sys_platform == 'darwin'" }
-# TODO: the marker is a temporary solution due to the lack of the tensorflow-io 0.32.0's wheels for Windows, this package is one of
-# the tensorflow requirements
+tensorflow = { version = "^2.15.0", markers = "sys_platform == 'linux'" }
+
 [tool.poe.tasks]
 test = "pytest"
 lint = "pylint src --errors-only"
@@ -74,7 +73,6 @@ docs = "make -C doc html"
 docs-clean = "make -C doc clean"
 test-docs = "make -C doc doctest"
 
-
 [tool.poetry.group.cuda11]
 optional = true
 
@@ -82,7 +80,6 @@ optional = true
 cupy-cuda11x = "^12.0.0"
 cuquantum-python-cu11 = "^23.3.0"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
-
 
 [tool.poetry.group.cuda12]
 optional = true

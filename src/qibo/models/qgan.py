@@ -235,9 +235,9 @@ class StyleQGAN:
         y_fake = np.ones((samples, 1))
         # evaluate discriminator on fake examples
         disc_output = discriminator(x_fake)
-        loss = tf.keras.losses.binary_crossentropy(
+        loss = tf.keras.losses.binary_crossentropy(  # pylint: disable=no-member
             y_fake, disc_output
-        )  # pylint: disable=no-member
+        )
         loss = tf.reduce_mean(loss)
         return loss
 
@@ -266,9 +266,9 @@ class StyleQGAN:
                 np.random.uniform(-0.15, 0.15, n), dtype=tf.complex128
             )
 
-        optimizer = tf.optimizers.Adadelta(
+        optimizer = tf.optimizers.Adadelta(  # pylint: disable=no-member
             learning_rate=self.lr
-        )  # pylint: disable=no-member
+        )
         # prepare real samples
         s = self.reference
         # manually enumerate epochs
