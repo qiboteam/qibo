@@ -449,7 +449,9 @@ def iterative_bayesian_unfolding(probabilities, response_matrix, iterations=10):
         numpy.ndarray: the unfolded probabilities.
 
     Reference:
-        1. S. Srinivasan, B. Pokharel et al, *Scalable Measurement Error Mitigation via Iterative Bayesian Unfolding*.
+        1. B. Nachman, M. Urbanek et al, *Unfolding Quantum Computer Readout Noise*.
+           `arXiv:1910.01969 [quant-ph] <https://arxiv.org/abs/1910.01969>`_.
+        2. S. Srinivasan, B. Pokharel et al, *Scalable Measurement Error Mitigation via Iterative Bayesian Unfolding*.
            `arXiv:2210.12284 [quant-ph] <https://arxiv.org/abs/2210.12284>`_.
     """
     unfolded_probabilities = np.ones((len(probabilities), 1)) / len(probabilities)

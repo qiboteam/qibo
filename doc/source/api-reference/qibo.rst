@@ -301,11 +301,20 @@ The calibration matrix :math:`M_{\text{cal}}` lacks stochasticity, resulting in 
 The distributions that arise after applying :math:`M_{\text{cal}}` are quasiprobabilities;
 the individual elements can be negative surpass 1, provided they sum to 1.
 It is posible to use Iterative Bayesian Unfolding (IBU) to preserve non-negativity.
-See `Srinivasan et al <https://arxiv.org/abs/2210.12284>`_ for more details.
+See `Nachman et al <https://arxiv.org/abs/1910.01969>`_ for more details.
 
 
 
 .. autofunction:: qibo.models.error_mitigation.get_response_matrix
+
+
+.. autofunction:: qibo.models.error_mitigation.iterative_bayesian_unfolding
+
+
+.. autofunction:: qibo.models.error_mitigation.apply_cal_mat_readout_mitigation
+
+
+.. autofunction:: qibo.models.error_mitigation.apply_randomized_readout_mitigation
 
 
 .. autofunction:: qibo.models.error_mitigation.apply_readout_mitigation
