@@ -1322,6 +1322,7 @@ Or use the randomized readout mitigation:
    readout = {"ncircuits": 10}
    # mitigate the readout errors
    mit_val = apply_readout_mitigation(circ, obs, noise, readout=readout)
+   print(mit_val)
    # 0.5860884499785314
 
 .. testoutput::
