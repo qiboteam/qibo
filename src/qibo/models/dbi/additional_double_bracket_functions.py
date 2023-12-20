@@ -69,7 +69,13 @@ def plot_histories(loss_histories: list, steps: list, labels: list = None):
 
 
 def generate_Z_operators(n_qubits: int):
-    """Generate a list of local_Z operators with n_qubits and their respective names."""
+    """Generate the full permutations of local_Z operators with n_qubits and their respective names.
+
+    Return: Dictionary with the following keys
+
+        - *"Z_operators"*
+        - *"Z_words"*
+    """
     combination_strings = product("ZI", repeat=n_qubits)
     operator_map = {"Z": Z, "I": I}
     operators = []
@@ -95,8 +101,17 @@ def iteration_from_list(
     step: float = None,
     compare_canonical: bool = True,
 ):
-    """Performs 1 double-bracket iteration using the optimal generator from operator_list.
-    Returns the index of the optimal operator
+    """Perform 1 double-bracket iteration with an optimal diagonal operator.
+
+    Args:
+        class_dbi (_DoubleBracketIteration): The object intended for double bracket iteration.
+        d_list (list): List of diagonal operators (np.array) to run from.
+        step (float): Fixed iteration duration.
+            Defaults to ``None``, uses hyperopt.
+        compare_canonical (bool): If `True`, the optimal diagonal operator chosen from "d_list" is compared with the canonical bracket.
+
+    Returns:
+        The index of the optimal diagonal operator and respective step duration.
     """
     h_before = deepcopy(class_dbi.h)
     off_diagonal_norms = []

@@ -31,9 +31,9 @@ class DoubleBracketIteration:
     Example:
         .. testcode::
 
-            import numpy as np
-            from qibo.models.double_bracket import DoubleBracketIteration, DoubleBracketGeneratorType
+            from qibo.models.dbi.double_bracket import DoubleBracketIteration, DoubleBracketGeneratorType
             from qibo.quantum_info import random_hermitian
+            from qibo.hamiltonians import Hamiltonian
 
             nqubits = 4
             h0 = random_hermitian(2**nqubits)
