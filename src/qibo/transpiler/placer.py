@@ -18,8 +18,9 @@ def assert_placement(
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): Circuit model to check.
         layout (dict): physical to logical qubit mapping.
-        connectivity (:class:`networkx.Graph`, optional): chip connectivity. This argument is necessary if the
-            layout applied to a subset of qubits in the original connectivity graph.
+        connectivity (:class:`networkx.Graph`, optional): chip connectivity.
+            This argument is necessary if the layout applied to a subset of
+            qubits in the original connectivity graph. Defaults to ``None``.
     """
     assert_mapping_consistency(layout=layout, connectivity=connectivity)
     if circuit.nqubits > len(layout):
@@ -39,8 +40,9 @@ def assert_mapping_consistency(layout: dict, connectivity: nx.Graph = None):
 
     Args:
         layout (dict): physical to logical qubit mapping.
-        connectivity (:class:`networkx.Graph`, optional): chip connectivity. This argument is necessary if the
-            layout applied to a subset of qubits in the original connectivity graph.
+        connectivity (:class:`networkx.Graph`, optional): chip connectivity.
+            This argument is necessary if the layout applied to a subset of
+            qubits in the original connectivity graph. Defaults to ``None``.
     """
     values = sorted(layout.values())
     if connectivity is not None:
@@ -61,13 +63,13 @@ def assert_mapping_consistency(layout: dict, connectivity: nx.Graph = None):
 
 def _find_gates_qubits_pairs(circuit: Circuit):
     """Helper method for :meth:`qibo.transpiler.placer`.
-    Translate qibo circuit into a list of pairs of qubits to be used by the router and placer.
+    Translate circuit into a list of pairs of qubits to be used by the router and placer.
 
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): circuit to be transpiled.
 
     Returns:
-        gates_qubits_pairs (list): list containing pairs of qubits targeted by two qubits gates.
+        (list): Pairs of qubits targeted by two qubits gates.
     """
     gates_qubits_pairs = []
     for gate in circuit.queue:
@@ -136,9 +138,9 @@ class Custom(Placer):
             :math:`{\\textup{"q0"}: 1, \\textup{"q1"}: 2, \\textup{"q2"}:0}`
             to assign the physical qubits :math:`\\{0, 1, 2\\}`
             to the logical qubits :math:`[1, 2, 0]`.
-        connectivity (networkx.Graph, optional): chip connectivity.
+        connectivity (:class:`networkx.Graph`, optional): chip connectivity.
             This argument is necessary if the layout applied to a subset of
-            qubits of the original connectivity graph.
+            qubits of the original connectivity graph. Defaults to ``None``.
     """
 
     def __init__(self, map: Union[list, dict], connectivity: nx.Graph = None):
@@ -228,6 +230,7 @@ class Subgraph(Placer):
                 break
 
         sorted_result = dict(sorted(result.mapping.items()))
+
         return dict(
             zip(["q" + str(i) for i in sorted_result.keys()], sorted_result.values())
         )
@@ -261,6 +264,7 @@ class Random(Placer):
         nodes = self.connectivity.number_of_nodes()
         keys = list(self.connectivity.nodes())
         dict_keys = ["q" + str(i) for i in keys]
+
         final_mapping = dict(zip(keys, range(nodes)))
         final_graph = nx.relabel_nodes(self.connectivity, final_mapping)
         final_cost = self._cost(final_graph, gates_qubits_pairs)
@@ -274,6 +278,7 @@ class Random(Placer):
                 final_graph = graph
                 final_mapping = mapping
                 final_cost = cost
+
         return dict(zip(dict_keys, list(final_mapping.values())))
 
     def _cost(self, graph: nx.Graph, gates_qubits_pairs: list):
@@ -290,6 +295,7 @@ class Random(Placer):
         for allowed, gate in enumerate(gates_qubits_pairs):
             if gate not in graph.edges():
                 return len(gates_qubits_pairs) - allowed - 1
+
         return 0
 
 
@@ -334,11 +340,11 @@ class ReverseTraversal(Placer):
         Returns:
             (dict): physical to logical qubit mapping.
         """
-
         initial_placer = Trivial(self.connectivity)
         initial_placement = initial_placer(circuit=circuit)
         new_circuit = self._assemble_circuit(circuit)
         final_placement = self._routing_step(initial_placement, new_circuit)
+
         return final_placement
 
     def _assemble_circuit(self, circuit: Circuit):
@@ -385,6 +391,6 @@ class ReverseTraversal(Placer):
             layout (dict): intial qubit layout.
             circuit (:class:`qibo.models.circuit.Circuit`): circuit to be routed.
         """
-
         _, final_mapping = self.routing_algorithm(circuit, layout)
+
         return final_mapping
