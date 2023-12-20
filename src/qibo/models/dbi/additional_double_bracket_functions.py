@@ -149,11 +149,11 @@ def iteration_from_list(
         # compute step durations using hyperopt
         else:
             step = dbi_object.hyperopt_step(
-                step_min=1e-5,
-                step_max=1,
+                step_min=step_min,
+                step_max=step_max,
                 space=hp.uniform,
                 optimizer=tpe,
-                max_evals=100,
+                max_evals=max_evals,
                 d=d,
             )
         optimal_steps.append(step)
