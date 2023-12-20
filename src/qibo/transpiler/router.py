@@ -1,5 +1,6 @@
 import random
 from copy import deepcopy
+from typing import Optional, Union
 
 import networkx as nx
 
@@ -42,16 +43,24 @@ def assert_connectivity(connectivity: nx.Graph, circuit: Circuit):
 
 
 class CircuitMap:
-    """Class to keep track of the circuit and physical-logical mapping during routing,
-    this class also implements the initial two qubit blocks decomposition.
+    """Class that stores the circuit and physical-logical mapping during routing.
+
+    Also implements the initial two-qubit block decompositions.
 
     Args:
         initial_layout (dict): initial logical-to-physical qubit mapping.
-        circuit (Circuit): circuit to be routed.
-        blocks (CircuitBlocks): circuit blocks representation, if None the blocks will be computed from the circuit.
+        circuit (:class:`qibo.models.circuit.Circuit`): circuit to be routed.
+        blocks (:class:`qibo.transpiler.blocks.CircuitBlocks`, optional): circuit block representation.
+            If ``None``, the blocks will be computed from the circuit.
+            Defaults to ``None``.
     """
 
-    def __init__(self, initial_layout: dict, circuit: Circuit, blocks=None):
+    def __init__(
+        self,
+        initial_layout: dict,
+        circuit: Circuit,
+        blocks: Optional[CircuitBlocks] = None,
+    ):
         if blocks is not None:
             self.circuit_blocks = blocks
         else:
@@ -64,7 +73,13 @@ class CircuitMap:
         self._swaps = 0
 
     def set_circuit_logical(self, circuit_logical_map: list):
-        """Set the current circuit to logical qubit mapping."""
+        """Sets the current circuit to logical qubit mapping.
+
+        Method works in-place.
+
+        Args:
+            circuit_logical_map (list): logical mapping.
+        """
         self._circuit_logical = circuit_logical_map
 
     def blocks_qubits_pairs(self):
@@ -74,17 +89,25 @@ class CircuitMap:
     def execute_block(self, block: Block):
         """Executes a block by removing it from the circuit representation
         and adding it to the routed circuit.
+
+        Method works in-place.
+
+        Args:
+            block (:class:`qibo.transpiler.blocks.Block`): block to be removed.
         """
         self._routed_blocks.add_block(
             block.on_qubits(self.get_physical_qubits(block, index=True))
         )
         self.circuit_blocks.remove_block(block)
 
-    def routed_circuit(self, circuit_kwargs=None):
-        """Return the routed circuit.
+    def routed_circuit(self, circuit_kwargs: Optional[dict] = None):
+        """Returns the routed circuit.
 
         Args:
-            circuit_kwargs (dict): original circuit init_kwargs.
+            circuit_kwargs (dict): original circuit ``init_kwargs``.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit`: Routed circuit.
         """
         return self._routed_blocks.circuit(circuit_kwargs=circuit_kwargs)
 
@@ -94,12 +117,17 @@ class CircuitMap:
             "q" + str(self.circuit_to_physical(i)): i
             for i in range(len(self._circuit_logical))
         }
+
         return dict(sorted(unsorted_dict.items()))
 
     def update(self, swap: tuple):
-        """Updates the logical-physical qubit mapping after applying a SWAP
-        and add the SWAP gate to the routed blocks, the swap is represented by a tuple containing
-        the logical qubits to be swapped.
+        """Updates the logical-physical qubit mapping after applying a ``SWAP``
+
+        Adds the :class:`qibo.gates.gates.SWAP` gate to the routed blocks.
+        Method works in-place.
+
+        Args:
+            swap (tuple): tuple containing the logical qubits to be swapped.
         """
         physical_swap = self.logical_to_physical(swap, index=True)
         self._routed_blocks.add_block(
@@ -112,20 +140,43 @@ class CircuitMap:
         self._circuit_logical[idx_0], self._circuit_logical[idx_1] = swap[1], swap[0]
 
     def get_logical_qubits(self, block: Block):
-        """Returns the current logical qubits where a block is acting"""
+        """Returns the current logical qubits where a block is acting on.
+
+        Args:
+            block (:class:`qibo.transpiler.blocks.Block`): block to be analysed.
+
+        Returns:
+            (tuple): logical qubits where a block is acting on.
+        """
         return self.circuit_to_logical(block.qubits)
 
-    def get_physical_qubits(self, block: Block or int, index=False):
-        """Returns the physical qubits where a block is acting.
-        If index is True the qubits are returned as indices of the connectivity nodes.
+    def get_physical_qubits(self, block: Union[int, Block], index: bool = False):
+        """Returns the physical qubits where a block is acting on.
+
+        Args:
+            block (int or :class:`qibo.transpiler.blocks.Block`): block to be analysed.
+            index (bool, optional): If ``True``, qubits are returned as indices of
+                the connectivity nodes. Defaults to ``False``.
+
+        Returns:
+            (tuple): physical qubits where a block is acting on.
+
         """
         if isinstance(block, int):
             block = self.circuit_blocks.search_by_index(block)
+
         return self.logical_to_physical(self.get_logical_qubits(block), index=index)
 
-    def logical_to_physical(self, logical_qubits: tuple, index=False):
+    def logical_to_physical(self, logical_qubits: tuple, index: bool = False):
         """Returns the physical qubits associated to the logical qubits.
-        If index is True the qubits are returned as indices of the connectivity nodes.
+
+        Args:
+            logical_qubits (tuple): physical qubits.
+            index (bool, optional): If ``True``, qubits are returned as indices of
+                `the connectivity nodes. Defaults to ``False``.
+
+        Returns:
+            (tuple): physical qubits associated to the logical qubits.
         """
         if not index:
             return tuple(
@@ -134,21 +185,44 @@ class CircuitMap:
                 ]
                 for i in range(2)
             )
+
         return tuple(self._physical_logical.index(logical_qubits[i]) for i in range(2))
 
     def circuit_to_logical(self, circuit_qubits: tuple):
-        """Returns the current logical qubits associated to the initial circuit qubits."""
+        """Returns the current logical qubits associated to the initial circuit qubits.
+
+        Args:
+            circuit_qubits (tuple): circuit qubits.
+
+        Returns:
+            (tuple): logical qubits.
+        """
         return tuple(self._circuit_logical[circuit_qubits[i]] for i in range(2))
 
     def circuit_to_physical(self, circuit_qubit: int):
-        """Returns the current physical qubit associated to an initial circuit qubit."""
+        """Returns the current physical qubit associated to an initial circuit qubit.
+
+        Args:
+            circuit_qubit (int): circuit qubit.
+
+        Returns:
+            (int): physical qubit.
+        """
         return self._graph_qubits_names[
             self._physical_logical.index(self._circuit_logical[circuit_qubit])
         ]
 
     def physical_to_logical(self, physical_qubit: int):
-        """Returns the current logical qubit associated to a physical qubit (connectivity graph node)."""
+        """Returns the current logical qubit associated to a physical qubit (connectivity graph node).
+
+        Args:
+            physical_qubit (int): physical qubit.
+
+        Returns:
+            (int): logical qubit.
+        """
         physical_qubit_index = self._graph_qubits_names.index(physical_qubit)
+
         return self._physical_logical[physical_qubit_index]
 
 
@@ -157,17 +231,18 @@ class ShortestPaths(Router):
 
     Args:
         connectivity (:class:`networkx.Graph`): chip connectivity.
-        sampling_split (float, optional): fraction of paths tested
-            (between :math:`0` and :math:`1`). Defaults to :math:`1.0`.
-        seed (int): seed for the random number generator.
+        seed (int, optional): seed for the random number generator.
+            If ``None``, defaults to :math:`42`. Defaults to ``None``.
     """
 
-    def __init__(self, connectivity: nx.Graph, seed=42):
+    def __init__(self, connectivity: nx.Graph, seed: Optional[int] = None):
         self.connectivity = connectivity
         self._front_layer = None
         self.circuit = None
         self._dag = None
         self._final_measurements = None
+        if seed is None:
+            seed = 42
         random.seed(seed)
 
     @property
@@ -387,18 +462,18 @@ class Sabre(Router):
         lookahead: int = 2,
         decay_lookahead: float = 0.6,
         delta: float = 0.001,
-        seed=None,
+        seed: Optional[int] = None,
     ):
         """Routing algorithm proposed in Ref [1].
 
         Args:
             connectivity (dict): hardware chip connectivity.
-            lookahead (int): lookahead factor, how many dag layers will be considered in computing the cost.
-            decay_lookahead (float): value in interval [0,1].
+            lookahead (int, optional): lookahead factor, how many dag layers will be considered in computing the cost.
+            decay_lookahead (float, optional): value in interval [0,1].
                 How the weight of the distance in the dag layers decays in computing the cost.
-            delta (float): this parameter defines the number of swaps vs depth trade-off by deciding
+            delta (float, optional): this parameter defines the number of swaps vs depth trade-off by deciding
                 how the algorithm tends to select non-overlapping SWAPs.
-            seed (int): seed for the candidate random choice as tiebraker.
+            seed (int, optional): seed for the candidate random choice as tiebraker.
 
         References:
             1. G. Li, Y. Ding, and Y. Xie, *Tackling the Qubit Mapping Problem for NISQ-Era Quantum Devices*.
