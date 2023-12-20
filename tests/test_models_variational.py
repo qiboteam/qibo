@@ -102,11 +102,10 @@ def test_vqe(backend, method, options, compile, filename):
     """Performs a VQE circuit minimization test."""
     if (method == "sgd" or compile) and backend.name != "tensorflow":
         pytest.skip("Skipping SGD test for unsupported backend.")
-    if backend.name == "tensorflow":
-        import tensorflow as tf
-
-        tf.config.threading.set_inter_op_parallelism_threads = 1
-        tf.config.threading.set_intra_op_parallelism_threads = 1
+    if method != "sgd" and backend.name == "tensorflow":
+        pytest.skip("Skipping scipy optimizers for tensorflow.")
+    n_threads = backend.nthreads
+    backend.set_threads(1)
     nqubits = 3
     layers = 4
     circuit = models.Circuit(nqubits)
@@ -141,6 +140,7 @@ def test_vqe(backend, method, options, compile, filename):
     state = np.ones(2**nqubits) / np.sqrt(2**nqubits)
     energy_fluctuation = v.energy_fluctuation(state)
     assert energy_fluctuation >= 0
+    backend.set_threads(n_threads)
 
 
 @pytest.mark.parametrize(
