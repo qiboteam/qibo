@@ -1293,11 +1293,11 @@ calibration matrix and use it modify the final state after the circuit execution
 
 .. testcode::
 
-   from qibo.models.error_mitigation import apply_cal_mat_readout_mitigation, get_calibration_matrix
+   from qibo.models.error_mitigation import apply_cal_mat_readout_mitigation, get_response_matrix
 
    nshots = 10000
    # compute the calibration matrix
-   calibration = get_calibration_matrix(
+   calibration = get_response_matrix(
        nqubits, backend=backend, noise_model=noise, nshots=nshots
    )
    # execute the circuit
