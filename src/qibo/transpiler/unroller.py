@@ -3,8 +3,8 @@ from enum import Flag, auto
 from qibo import gates
 from qibo.config import raise_error
 from qibo.models import Circuit
+from qibo.transpiler._exceptions import DecompositionError
 from qibo.transpiler.decompositions import cz_dec, gpi2_dec, iswap_dec, opt_dec, u3_dec
-from qibo.transpiler.exceptions import DecompositionError
 
 
 class NativeGates(Flag):

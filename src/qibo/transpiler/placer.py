@@ -6,8 +6,8 @@ import networkx as nx
 from qibo import gates
 from qibo.config import raise_error
 from qibo.models import Circuit
+from qibo.transpiler._exceptions import PlacementError
 from qibo.transpiler.abstract import Placer, Router
-from qibo.transpiler.exceptions import PlacementError
 
 
 def assert_placement(

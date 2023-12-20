@@ -7,8 +7,8 @@ from qibo.backends import NumpyBackend
 from qibo.config import raise_error
 from qibo.models import Circuit
 from qibo.quantum_info.random_ensembles import random_statevector
+from qibo.transpiler._exceptions import TranspilerPipelineError
 from qibo.transpiler.abstract import Optimizer, Placer, Router
-from qibo.transpiler.exceptions import TranspilerPipelineError
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.placer import Trivial, assert_placement
 from qibo.transpiler.router import ConnectivityError, assert_connectivity

@@ -2,14 +2,13 @@ import random
 from copy import deepcopy
 
 import networkx as nx
-import numpy as np
 
 from qibo import gates
-from qibo.config import log, raise_error
+from qibo.config import raise_error
 from qibo.models import Circuit
+from qibo.transpiler._exceptions import ConnectivityError
 from qibo.transpiler.abstract import Router
 from qibo.transpiler.blocks import Block, CircuitBlocks
-from qibo.transpiler.exceptions import ConnectivityError
 
 
 def assert_connectivity(connectivity: nx.Graph, circuit: Circuit):
