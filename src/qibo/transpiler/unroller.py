@@ -8,11 +8,20 @@ from qibo.transpiler.exceptions import DecompositionError
 
 
 class NativeGates(Flag):
-    """Define native gates supported by the unroller.
-    A native gate set should contain at least one two-qubit gate (CZ or iSWAP)
-    and at least one single qubit gate (GPI2 or U3).
-    Possible values are:
-    I, Z, RZ, M, GPI2, U3, CZ, iSWAP.
+    """Define native gates supported by the unroller. A native gate set should contain at least
+    one two-qubit gate (:class:`qibo.gates.gates.CZ` or :class:`qibo.gates.gates.iSWAP`),
+    and at least one single-qubit gate
+    (:class:`qibo.gates.gates.GPI2` or :class:`qibo.gates.gates.U3`).
+
+    Possible gates are:
+        - :class:`qibo.gates.gates.I`
+        - :class:`qibo.gates.gates.Z`
+        - :class:`qibo.gates.gates.RZ`
+        - :class:`qibo.gates.gates.M`
+        - :class:`qibo.gates.gates.GPI2`
+        - :class:`qibo.gates.gates.U3`
+        - :class:`qibo.gates.gates.CZ`
+        - :class:`qibo.gates.gates.iSWAP`
     """
 
     I = auto()
@@ -31,7 +40,7 @@ class NativeGates(Flag):
 
     @classmethod
     def from_gatelist(cls, gatelist: list):
-        """Create a NativeGates object containing all gates from a gatelist."""
+        """Create a NativeGates object containing all gates from a ``gatelist``."""
         natives = cls(0)
         for gate in gatelist:
             natives |= cls.from_gate(gate)
@@ -39,9 +48,8 @@ class NativeGates(Flag):
 
     @classmethod
     def from_gate(cls, gate: gates.Gate):
-        """Create a NativeGates object from a gate.
-        The gate can be either a class:`qibo.gates.Gate` or an instance of this class.
-        """
+        """Create a :class:`qibo.transpiler.unroller.NativeGates`
+        object from a :class:`qibo.gates.gates.Gate`."""
         if isinstance(gate, gates.Gate):
             return cls.from_gate(gate.__class__)
         try:
@@ -55,7 +63,8 @@ class Unroller:
     """Translates a circuit to native gates.
 
     Args:
-        native_gates (:class:`qibo.transpiler.unroller.NativeGates`): native gates to use in the transpiled circuit.
+        native_gates (:class:`qibo.transpiler.unroller.NativeGates`): native gates to use
+            in the transpiled circuit.
 
     Returns:
         (:class:`qibo.models.circuit.Circuit`): equivalent circuit with native gates.
