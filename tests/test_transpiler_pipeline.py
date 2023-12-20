@@ -78,7 +78,7 @@ def test_restrict_qubits_error_no_subset():
 def test_restrict_qubits_error_not_connected():
     with pytest.raises(ConnectivityError) as excinfo:
         restrict_connectivity_qubits(star_connectivity(), [1, 3])
-    assert "The new connectivity graph is not connected." in str(excinfo.value)
+    assert "New connectivity graph is not connected." in str(excinfo.value)
 
 
 def test_restrict_qubits():
