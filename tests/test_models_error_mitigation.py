@@ -28,7 +28,9 @@ def get_noise_model(error, gate, cal_matrix=[False, None]):
     return noise
 
 
-def get_circuit(nqubits):
+def get_circuit(nqubits, nmeas=None):
+    if nmeas is None:
+        nmeas = nqubits
     # Define the circuit
     hz = 0.5
     hx = 0.5
@@ -45,7 +47,7 @@ def get_circuit(nqubits):
     c.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
     c.add(gates.RZ(q + 1, theta=-2 * dt) for q in range(1, nqubits, 2))
     c.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
-    c.add(gates.M(*range(nqubits)))
+    c.add(gates.M(*range(nmeas)))
 
     return c
 
@@ -55,8 +57,8 @@ backend = construct_backend("numpy")
 cal_matrix_1q = random_stochastic_matrix(
     2, diagonally_dominant=True, seed=2, backend=backend
 )
-cal_matrix_3q = random_stochastic_matrix(
-    8, diagonally_dominant=True, seed=2, backend=backend
+cal_matrix_2q = random_stochastic_matrix(
+    4, diagonally_dominant=True, seed=2, backend=backend
 )
 
 
@@ -68,7 +70,7 @@ cal_matrix_3q = random_stochastic_matrix(
             3,
             get_noise_model(DepolarizingError(0.1), gates.CNOT),
             "CNOT",
-            {"calibration_matrix": cal_matrix_3q, "ibu_iters": None},
+            {"calibration_matrix": cal_matrix_2q, "ibu_iters": None},
         ),
         (
             3,
@@ -102,13 +104,19 @@ def test_zne(backend, nqubits, noise, solve, insertion_gate, readout):
         tf.config.threading.set_intra_op_parallelism_threads = 1
     else:
         backend.set_threads(1)
+
+    if nqubits == 1:
+        nmeas = 1
+    else:
+        nmeas = nqubits - 1
     # Define the circuit
-    c = get_circuit(nqubits)
+    c = get_circuit(nqubits, nmeas)
     # Define the observable
-    obs = np.prod([Z(i) for i in range(nqubits)])
+    obs = np.prod([Z(i) for i in range(nmeas)])
+    obs_exact = SymbolicHamiltonian(obs, nqubits=nqubits, backend=backend)
     obs = SymbolicHamiltonian(obs, backend=backend)
     # Noise-free expected value
-    exact = obs.expectation(backend.execute_circuit(c).state())
+    exact = obs_exact.expectation(backend.execute_circuit(c).state())
     # Noisy expected value without mitigation
     state = backend.execute_circuit(noise.apply(c), nshots=10000)
     noisy = state.expectation_from_samples(obs)
@@ -135,20 +143,21 @@ def test_zne(backend, nqubits, noise, solve, insertion_gate, readout):
     [
         (get_noise_model(DepolarizingError(0.1), gates.CNOT), {}),
         (
-            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, cal_matrix_3q]),
-            {"calibration_matrix": cal_matrix_3q, "ibu_iters": None},
+            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, cal_matrix_2q]),
+            {"calibration_matrix": cal_matrix_2q, "ibu_iters": None},
         ),
         (
-            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, cal_matrix_3q]),
-            {"calibration_matrix": cal_matrix_3q, "ibu_iters": 10},
+            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, cal_matrix_2q]),
+            {"calibration_matrix": cal_matrix_2q, "ibu_iters": 10},
         ),
         (
-            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, cal_matrix_3q]),
+            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, cal_matrix_2q]),
             {"ncircuits": 2},
         ),
     ],
 )
 def test_cdr(backend, nqubits, noise, full_output, readout):
+    """Test that CDR reduces the noise."""
     if backend.name == "tensorflow":
         import tensorflow as tf
 
@@ -156,14 +165,19 @@ def test_cdr(backend, nqubits, noise, full_output, readout):
         tf.config.threading.set_intra_op_parallelism_threads = 1
     else:
         backend.set_threads(1)
-    """Test that CDR reduces the noise."""
+
+    if nqubits == 1:
+        nmeas = 1
+    else:
+        nmeas = nqubits - 1
     # Define the circuit
-    c = get_circuit(nqubits)
+    c = get_circuit(nqubits, nmeas)
     # Define the observable
-    obs = np.prod([Z(i) for i in range(nqubits)])
+    obs = np.prod([Z(i) for i in range(nmeas)])
+    obs_exact = SymbolicHamiltonian(obs, nqubits=nqubits, backend=backend)
     obs = SymbolicHamiltonian(obs, backend=backend)
     # Noise-free expected value
-    exact = obs.expectation(backend.execute_circuit(c).state())
+    exact = obs_exact.expectation(backend.execute_circuit(c).state())
     # Noisy expected value without mitigation
     state = backend.execute_circuit(noise.apply(c), nshots=10000)
     noisy = state.expectation_from_samples(obs)
@@ -268,10 +282,10 @@ def test_vncdr(backend, nqubits, noise, full_output, insertion_gate, readout):
     assert np.abs(exact - estimate) <= np.abs(exact - noisy)
 
 
-@pytest.mark.parametrize("nqubits", [3])
+@pytest.mark.parametrize("nqubits,nmeas", [(3, 2)])
 @pytest.mark.parametrize("method", ["cal_matrix", "randomized"])
 @pytest.mark.parametrize("ibu_iters", [None, 10])
-def test_readout_mitigation(backend, nqubits, method, ibu_iters):
+def test_readout_mitigation(backend, nqubits, nmeas, method, ibu_iters):
     if backend.name == "tensorflow":
         import tensorflow as tf
 
@@ -280,21 +294,21 @@ def test_readout_mitigation(backend, nqubits, method, ibu_iters):
     else:
         backend.set_threads(1)
     nshots = 10000
-    p = random_stochastic_matrix(2**nqubits, diagonally_dominant=True, seed=5)
+    p = random_stochastic_matrix(2**nmeas, diagonally_dominant=True, seed=5)
     noise = NoiseModel()
     noise.add(ReadoutError(probabilities=p), gate=gates.M)
     if method == "cal_matrix":
         calibration = get_calibration_matrix(
-            nqubits, None, noise, nshots=nshots, backend=backend
+            nmeas, None, noise, nshots=nshots, backend=backend
         )
         readout = {"calibration_matrix": calibration, "ibu_iters": ibu_iters}
     elif method == "randomized":
         readout = {"ncircuits": 10}
     # Define the observable
-    obs = np.prod([Z(i) for i in range(nqubits)])
+    obs = np.prod([Z(i) for i in range(nmeas)])
     obs = SymbolicHamiltonian(obs, backend=backend)
     # get noise free expected val
-    c = get_circuit(nqubits)
+    c = get_circuit(nqubits, nmeas)
     true_state = backend.execute_circuit(c, nshots=nshots)
     true_val = true_state.expectation_from_samples(obs)
     # get noisy expected val
@@ -313,15 +327,15 @@ def test_readout_mitigation(backend, nqubits, method, ibu_iters):
     [
         (get_noise_model(DepolarizingError(0.1), gates.CNOT), {}),
         (
-            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, cal_matrix_3q]),
-            {"calibration_matrix": cal_matrix_3q, "ibu_iters": None},
+            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, cal_matrix_2q]),
+            {"calibration_matrix": cal_matrix_2q, "ibu_iters": None},
         ),
         (
-            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, cal_matrix_3q]),
-            {"calibration_matrix": cal_matrix_3q, "ibu_iters": 10},
+            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, cal_matrix_2q]),
+            {"calibration_matrix": cal_matrix_2q, "ibu_iters": 10},
         ),
         (
-            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, cal_matrix_3q]),
+            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, cal_matrix_2q]),
             {"ncircuits": 2},
         ),
     ],
@@ -336,12 +350,13 @@ def test_ics(backend, nqubits, noise, full_output, readout):
         backend.set_threads(1)
     """Test that ICS reduces the noise."""
     # Define the circuit
-    c = get_circuit(nqubits)
+    c = get_circuit(nqubits, nqubits - 1)
     # Define the observable
-    obs = np.prod([Z(i) for i in range(nqubits)])
+    obs = np.prod([Z(i) for i in range(nqubits - 1)])
+    obs_exact = SymbolicHamiltonian(obs, nqubits=nqubits, backend=backend)
     obs = SymbolicHamiltonian(obs, backend=backend)
     # Noise-free expected value
-    exact = obs.expectation(backend.execute_circuit(c).state())
+    exact = obs_exact.expectation(backend.execute_circuit(c).state())
     # Noisy expected value without mitigation
     state = backend.execute_circuit(noise.apply(c), nshots=10000)
     noisy = state.expectation_from_samples(obs)

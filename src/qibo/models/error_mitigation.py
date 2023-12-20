@@ -706,15 +706,14 @@ def sample_clifford_training_circuit(
 
     for i, gate in enumerate(circuit.queue):
         if isinstance(gate, gates.M):
-            gate_rand = gates.Unitary(
-                random_clifford(1, backend=backend, return_circuit=False),
-                gate.qubits[0],
-            )
-            gate_rand.clifford = True
-
-            sampled_circuit.add(gate_rand)
+            for q in gate.qubits:
+                gate_rand = gates.Unitary(
+                    random_clifford(1, backend=backend, return_circuit=False),
+                    q,
+                )
+                gate_rand.clifford = True
+                sampled_circuit.add(gate_rand)
             sampled_circuit.add(gate)
-
         else:
             if i in [index for index, _ in non_clifford_gates]:
                 gate = gates.Unitary(
@@ -762,6 +761,7 @@ def error_sensitive_circuit(circuit, observable, backend=None):
     num_qubits = sampled_circuit.nqubits
 
     comp_to_pauli = comp_basis_to_pauli(num_qubits, backend=backend)
+    observable.nqubits = num_qubits
     observable_liouville = vectorization(
         np.transpose(np.conjugate(unitary_matrix)) @ observable.matrix @ unitary_matrix,
         order="row",
@@ -914,29 +914,6 @@ def ICS(
         )
 
     return mitigated_expectation
-
-
-# def transpile_circ(circuit, qubit_map, backend):
-#     from qibo.transpiler.unitary_decompositions import u3_decomposition
-
-#     if backend.name == "qibolab":
-#         if qubit_map is None:
-#             qubit_map = list(range(circuit.nqubits))
-#         new_c = circuit.__class__(backend.platform.nqubits)
-#         for gate in circuit.queue:
-#             qubits = [qubit_map[j] for j in gate.qubits]
-#             if isinstance(gate, gates.M):
-#                 new_gate = gates.M(*tuple(qubits), **gate.init_kwargs)
-#                 new_gate.result = gate.result
-#                 new_c.add(new_gate)
-#             elif isinstance(gate, gates.I):
-#                 new_c.add(gate.__class__(*tuple(qubits), **gate.init_kwargs))
-#             else:
-#                 matrix = gate.matrix()
-#                 new_c.add(gates.U3(qubits[0], *u3_decomposition(matrix)))
-#         return new_c
-
-#     return circuit
 
 
 def _circuit_conf(circuit, qubit_map, noise_model, nshots, backend=None):
