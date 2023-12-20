@@ -1,4 +1,4 @@
-from copy import deepcopy
+from copy import copy, deepcopy
 from itertools import product
 
 import matplotlib.pyplot as plt
@@ -58,7 +58,7 @@ def plot_histories(loss_histories: list, steps: list, labels: list = None):
     plt.yticks(y_labels_rounded)
 
     if labels is not None:
-        labels_copy = labels
+        labels_copy = copy(labels)
         labels_copy.insert(0, "Initial")
         for i, label in enumerate(labels_copy):
             plt.text(x_axis[i], loss_histories[i], label)
@@ -115,7 +115,7 @@ def generate_Z_operators(nqubits: int):
     return {"Z_operators": operators, "Z_words": operators_words}
 
 
-def iteration_from_list(
+def select_best_dbr_generator(
     dbi_object: DoubleBracketIteration,
     d_list: list,
     step: float = None,
@@ -124,7 +124,7 @@ def iteration_from_list(
     max_evals: int = 100,
     compare_canonical: bool = True,
 ):
-    """Perform 1 double-bracket iteration with an optimal diagonal operator.
+    """Selects the best double bracket rotation generator from a list.
 
     Args:
         dbi_object (_DoubleBracketIteration): The object intended for double bracket iteration.
@@ -182,14 +182,36 @@ def iteration_from_list(
         min(norms_off_diagonal_restriction)
     )
     step_optimal = optimal_steps[idx_max_loss]
+    return idx_max_loss, step_optimal
+
+
+def select_best_dbr_generator_and_run(
+    dbi_object: DoubleBracketIteration,
+    d_list: list,
+    step: float = None,
+    step_min: float = 1e-5,
+    step_max: float = 1,
+    max_evals: int = 100,
+    compare_canonical: bool = True,
+):
+    """Run double bracket iteration with generator chosen from a list."""
+    idx_max_loss, step_optimal = select_best_dbr_generator(
+        dbi_object,
+        d_list,
+        step=step,
+        step_min=step_min,
+        step_max=step_max,
+        max_evals=max_evals,
+        compare_canonical=compare_canonical,
+    )
     # run with optimal d
     if idx_max_loss == len(d_list):
         # canonical
         generator_type = dbi_object.mode
         dbi_object.mode = DoubleBracketGeneratorType.canonical
-        dbi_object(step=step)
+        dbi_object(step=step_optimal)
         dbi_object.mode = generator_type
     else:
         d_optimal = d_list[idx_max_loss]
-        dbi_object(step=step, d=d_optimal)
-    return idx_max_loss, step
+        dbi_object(step=step_optimal, d=d_optimal)
+    return idx_max_loss, step_optimal
