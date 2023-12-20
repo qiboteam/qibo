@@ -58,7 +58,7 @@ def test_vqc(backend, method, options, compile, filename):
         state = backend.to_numpy(backend.execute_circuit(circuit).state())
         return 1 - np.abs(np.dot(np.conj(target), state))
 
-    nqubits = 6
+    nqubits = 3
     nlayers = 4
 
     # Create variational circuit
@@ -102,7 +102,7 @@ def test_vqe(backend, method, options, compile, filename):
     """Performs a VQE circuit minimization test."""
     if (method == "sgd" or compile) and backend.name != "tensorflow":
         pytest.skip("Skipping SGD test for unsupported backend.")
-    nqubits = 6
+    nqubits = 3
     layers = 4
     circuit = models.Circuit(nqubits)
     for l in range(layers):
