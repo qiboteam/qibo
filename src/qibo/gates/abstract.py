@@ -3,7 +3,7 @@ from typing import List, Sequence, Tuple
 
 import sympy
 
-from qibo.backends import GlobalBackend
+from qibo.backends import CliffordBackend, GlobalBackend
 from qibo.config import raise_error
 
 REQUIRED_FIELDS = [
@@ -369,7 +369,7 @@ class Gate:
         """This function returns the eigenvalues of the gate's generator.
 
         Returns:
-            np.float generator's eigenvalue or raise an error if not implemented.
+            (float) eigenvalue of the generator.
         """
 
         raise_error(
@@ -378,8 +378,7 @@ class Gate:
         )
 
     def basis_rotation(self):
-        """Transformation required to rotate the basis for measuring the
-        gate."""
+        """Transformation required to rotate the basis for measuring the gate."""
         raise_error(
             NotImplementedError,
             f"Basis rotation is not implemented for {self.__class__.__name__}",
@@ -390,6 +389,9 @@ class Gate:
 
     def apply_density_matrix(self, backend, state, nqubits):
         return backend.apply_gate_density_matrix(self, state, nqubits)
+
+    def apply_clifford(self, backend, state, nqubits):
+        return backend.apply_gate_clifford(self, state, nqubits)
 
 
 class SpecialGate(Gate):

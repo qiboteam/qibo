@@ -192,6 +192,16 @@ class M(Gate):
         # collapse state
         return backend.collapse_density_matrix(state, qubits, shot, nqubits)
 
+    def apply_clifford(self, backend, state, nqubits):
+        self.result.backend = backend
+        if not self.collapse:
+            return state
+
+        qubits = sorted(self.target_qubits)
+        sample = backend.sample_shots(state, qubits, nqubits, 1, self.collapse)
+        self.result.add_shot_from_sample(sample[0])
+        return state
+
     def to_json(self):
         """Serializes the measurement gate to json."""
         encoding = json.loads(super().to_json())
