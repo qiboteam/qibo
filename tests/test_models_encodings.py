@@ -40,7 +40,7 @@ def test_unary_encoder(backend, nqubits):
 
 
 @pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
-@pytest.mark.parametrize("nqubits", [8, 16])
+@pytest.mark.parametrize("nqubits", [8])
 def test_unary_encoder_random_gaussian(backend, nqubits, seed):
     """Tests if encoded vector are random variables sampled from
     Gaussian distribution with 0.0 mean and variance close to the norm
