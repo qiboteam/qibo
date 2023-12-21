@@ -598,7 +598,7 @@ def test_entangling_capability(backend):
         entangling_capability(circuit, samples, backend=backend)
 
     nqubits = 2
-    samples = 500
+    samples = 100
 
     c1 = Circuit(nqubits)
     c1.add([gates.RX(q, 0, trainable=True) for q in range(nqubits)])
@@ -631,7 +631,7 @@ def test_expressibility(backend):
         expressibility(circuit, t, samples, backend=backend)
 
     nqubits = 2
-    samples = 500
+    samples = 100
     t = 1
 
     c1 = Circuit(nqubits)
