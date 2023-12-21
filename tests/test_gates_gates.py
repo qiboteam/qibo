@@ -481,6 +481,56 @@ def test_cnot(backend, applyx):
 @pytest.mark.parametrize("seed_observable", list(range(1, 10 + 1)))
 @pytest.mark.parametrize("seed_state", list(range(1, 10 + 1)))
 @pytest.mark.parametrize("controlled_by", [False, True])
+def test_cy(backend, controlled_by, seed_state, seed_observable):
+    nqubits = 2
+    initial_state = random_statevector(2**nqubits, seed=seed_state, backend=backend)
+    matrix = np.array(
+        [
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 0, -1j],
+            [0, 0, 1j, 0],
+        ]
+    )
+    matrix = backend.cast(matrix, dtype=matrix.dtype)
+
+    target_state = np.dot(matrix, initial_state)
+    # test decomposition
+    final_state_decompose = apply_gates(
+        backend,
+        gates.CY(0, 1).decompose(),
+        nqubits=nqubits,
+        initial_state=initial_state,
+    )
+
+    if controlled_by:
+        gate = gates.Y(1).controlled_by(0)
+    else:
+        gate = gates.CY(0, 1)
+
+    final_state = apply_gates(backend, [gate], initial_state=initial_state)
+
+    assert gate.name == "cy"
+
+    backend.assert_allclose(final_state, target_state)
+
+    # testing random expectation value due to global phase difference
+    observable = random_hermitian(2**nqubits, seed=seed_observable, backend=backend)
+    backend.assert_allclose(
+        np.transpose(np.conj(final_state_decompose))
+        @ observable
+        @ final_state_decompose,
+        np.transpose(np.conj(target_state)) @ observable @ target_state,
+    )
+
+    assert gates.CY(0, 1).qasm_label == "cy"
+    assert gates.CY(0, 1).clifford
+    assert gates.CY(0, 1).unitary
+
+
+@pytest.mark.parametrize("seed_observable", list(range(1, 10 + 1)))
+@pytest.mark.parametrize("seed_state", list(range(1, 10 + 1)))
+@pytest.mark.parametrize("controlled_by", [False, True])
 def test_cz(backend, controlled_by, seed_state, seed_observable):
     nqubits = 2
     initial_state = random_statevector(2**nqubits, seed=seed_state, backend=backend)

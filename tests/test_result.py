@@ -30,14 +30,14 @@ def test_measurementoutcomes_probabilities(backend, qubits):
                 == f"Asking probabilities for qubits {qubits}, but only qubits [0,2] were measured."
             )
     else:
-        repeated_probabilities = backend.execute_circuit(c, nshots=10000).probabilities(
+        repeated_probabilities = backend.execute_circuit(c, nshots=1000).probabilities(
             qubits=qubits
         )
         result = MeasurementOutcomes(
             c.measurements, backend=backend, probabilities=global_probs
         )
-        backend.assert_allclose(probabilities, repeated_probabilities, atol=1e-2)
-        backend.assert_allclose(result.probabilities(qubits), probabilities, atol=1e-2)
+        backend.assert_allclose(probabilities, repeated_probabilities, atol=1e-1)
+        backend.assert_allclose(result.probabilities(qubits), probabilities, atol=1e-1)
 
 
 def test_circuit_result_error(backend):

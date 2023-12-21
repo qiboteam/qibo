@@ -68,7 +68,7 @@ class QuantumState:
         """State's tensor representation as a backend tensor.
 
         Args:
-            numpy (bool, optional): If ``True`` the returned tensor will be a numpy array,
+            numpy (bool, optional): If ``True`` the returned tensor will be a ``numpy`` array,
                 otherwise it will follow the backend tensor type.
                 Defaults to ``False``.
 
@@ -76,7 +76,8 @@ class QuantumState:
             The state in the computational basis.
         """
         if numpy:
-            return np.array(self._state)
+            return np.array(self._state.tolist())
+
         return self._state
 
     def probabilities(self, qubits: Optional[Union[list, set]] = None):
@@ -183,8 +184,13 @@ class MeasurementOutcomes:
         self._frequencies = None
         self._repeated_execution_frequencies = None
 
-        for gate in self.measurements:
-            gate.result.reset()
+        if samples is not None:
+            for m in measurements:
+                indices = [self.measurement_gate.qubits.index(q) for q in m.qubits]
+                m.result.register_samples(samples[:, indices])
+        else:
+            for gate in self.measurements:
+                gate.result.reset()
 
     def frequencies(self, binary: bool = True, registers: bool = False):
         """Returns the frequencies of measured samples.
@@ -275,8 +281,9 @@ class MeasurementOutcomes:
                     RuntimeError,
                     f"Asking probabilities for qubits {qubits}, but only qubits {self.measurement_gate.qubits} were measured.",
                 )
+            qubits = [self.measurement_gate.qubits.index(q) for q in qubits]
 
-        if self._probs is not None:
+        if self._probs is not None and not self.measurement_gate.has_bitflip_noise():
             return self.backend.calculate_probabilities(
                 np.sqrt(self._probs), qubits, nqubits
             )
@@ -489,7 +496,7 @@ class CircuitResult(QuantumState, MeasurementOutcomes):
             raise ValueError(
                 "Circuit does not contain measurements. Use a `QuantumState` instead."
             )
-        probs = self.probabilities(qubits) if samples is None else None
+        probs = QuantumState.probabilities(self, qubits) if samples is None else None
         MeasurementOutcomes.__init__(
             self,
             measurements,
@@ -500,6 +507,8 @@ class CircuitResult(QuantumState, MeasurementOutcomes):
         )
 
     def probabilities(self, qubits: Optional[Union[list, set]] = None):
+        if self.measurement_gate.has_bitflip_noise():
+            return MeasurementOutcomes.probabilities(self, qubits)
         return QuantumState.probabilities(self, qubits)
 
     def to_dict(self):
