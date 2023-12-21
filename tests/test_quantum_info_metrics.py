@@ -565,10 +565,10 @@ def test_diamond_norm(backend, nqubits):
     unitary = backend.identity_density_matrix(nqubits, normalize=False)
     unitary = to_choi(unitary, order="row", backend=backend)
 
-    dnorm = diamond_norm(unitary)
+    dnorm = diamond_norm(unitary, backend=backend)
     backend.assert_allclose(dnorm, 1.0, atol=PRECISION_TOL)
 
-    dnorm = diamond_norm(unitary, unitary)
+    dnorm = diamond_norm(unitary, unitary, backend=backend)
     backend.assert_allclose(dnorm, 0.0, atol=PRECISION_TOL)
 
 
