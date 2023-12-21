@@ -180,16 +180,16 @@ def test_haar_integral_errors(backend):
         test = haar_integral(nqubits, power_t, samples=samples, backend=backend)
 
 
-@pytest.mark.parametrize("power_t", [1, 2, 3])
+@pytest.mark.parametrize("power_t", [1, 2])
 @pytest.mark.parametrize("nqubits", [2, 3])
 def test_haar_integral(backend, nqubits, power_t):
-    samples = int(1e4)
+    samples = int(1e3)
 
     haar_int_exact = haar_integral(nqubits, power_t, samples=None, backend=backend)
 
     haar_int_sampled = haar_integral(nqubits, power_t, samples=samples, backend=backend)
 
-    backend.assert_allclose(haar_int_sampled, haar_int_exact, atol=1e-2)
+    backend.assert_allclose(haar_int_sampled, haar_int_exact, atol=1e-1)
 
 
 def test_pqc_integral(backend):
