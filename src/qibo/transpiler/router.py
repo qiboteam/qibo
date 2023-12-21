@@ -7,10 +7,9 @@ import numpy as np
 from qibo import gates
 from qibo.config import log, raise_error
 from qibo.models import Circuit
-from qibo.transpiler.abstract import Router, _find_gates_qubits_pairs
+from qibo.transpiler.abstract import Router
 from qibo.transpiler.blocks import Block, CircuitBlocks
 from qibo.transpiler.exceptions import ConnectivityError
-from qibo.transpiler.placer import assert_placement
 
 
 def assert_connectivity(connectivity: nx.Graph, circuit: Circuit):
@@ -248,7 +247,6 @@ class ShortestPaths(Router):
                     "You are using more physical qubits than required by the circuit, some ancillary qubits will be added to the circuit."
                 )
             new_circuit = Circuit(nodes)
-        assert_placement(new_circuit, self._mapping)
         self._transpiled_circuit = new_circuit
 
     def _add_gates(self, circuit: Circuit, matched_gates: int):
@@ -344,6 +342,30 @@ class ShortestPaths(Router):
         return new_circuit
 
 
+def _find_gates_qubits_pairs(circuit: Circuit):
+    """Helper method for :meth:`qibo.transpiler.router.ShortestPaths`.
+    Translate qibo circuit into a list of pairs of qubits to be used by the router and placer.
+
+    Args:
+        circuit (:class:`qibo.models.circuit.Circuit`): circuit to be transpiled.
+
+    Returns:
+        (list): list containing qubits targeted by two qubit gates.
+    """
+    translated_circuit = []
+    for gate in circuit.queue:
+        if isinstance(gate, gates.M):
+            pass
+        elif len(gate.qubits) == 2:
+            translated_circuit.append(sorted(gate.qubits))
+        elif len(gate.qubits) >= 3:
+            raise_error(
+                ValueError, "Gates targeting more than 2 qubits are not supported"
+            )
+
+    return translated_circuit
+
+
 class CircuitMap:
     """Class to keep track of the circuit and physical-logical mapping during routing,
     this class also implements the initial two qubit blocks decomposition.
@@ -351,14 +373,23 @@ class CircuitMap:
     Args:
         initial_layout (dict): initial logical-to-physical qubit mapping.
         circuit (Circuit): circuit to be routed.
+        blocks (CircuitBlocks): circuit blocks representation, if None the blocks will be computed from the circuit.
     """
 
-    def __init__(self, initial_layout: dict, circuit: Circuit):
-        self.circuit_blocks = CircuitBlocks(circuit, index_names=True)
+    def __init__(self, initial_layout: dict, circuit: Circuit, blocks=None):
+        if blocks is not None:
+            self.circuit_blocks = blocks
+        else:
+            self.circuit_blocks = CircuitBlocks(circuit, index_names=True)
+        self.initial_layout = initial_layout
         self._circuit_logical = list(range(len(initial_layout)))
         self._physical_logical = list(initial_layout.values())
         self._routed_blocks = CircuitBlocks(Circuit(circuit.nqubits))
         self._swaps = 0
+
+    def set_circuit_logical(self, circuit_logical_map: list):
+        """Set the current circuit to logical qubit mapping."""
+        self._circuit_logical = circuit_logical_map
 
     def blocks_qubits_pairs(self):
         """Returns a list containing the qubit pairs of each block."""
@@ -371,9 +402,13 @@ class CircuitMap:
         self._routed_blocks.add_block(block.on_qubits(self.get_physical_qubits(block)))
         self.circuit_blocks.remove_block(block)
 
-    def routed_circuit(self):
-        """Returns circuit of the routed circuit."""
-        return self._routed_blocks.circuit()
+    def routed_circuit(self, circuit_kwargs=None):
+        """Return the routed circuit.
+
+        Args:
+            circuit_kwargs (dict): original circuit init_kwargs.
+        """
+        return self._routed_blocks.circuit(circuit_kwargs=circuit_kwargs)
 
     def final_layout(self):
         """Returns the final physical-circuit qubits mapping."""
@@ -455,6 +490,7 @@ class Sabre(Router):
         self._front_layer = None
         self.circuit = None
         self._memory_map = None
+        self._final_measurements = None
         random.seed(seed)
 
     def __call__(self, circuit: Circuit, initial_layout: dict):
@@ -475,7 +511,13 @@ class Sabre(Router):
             else:
                 self._find_new_mapping()
 
-        return self.circuit.routed_circuit(), self.circuit.final_layout()
+        routed_circuit = self.circuit.routed_circuit(circuit_kwargs=circuit.init_kwargs)
+        if self._final_measurements is not None:
+            routed_circuit = self._append_final_measurements(
+                routed_circuit=routed_circuit
+            )
+
+        return routed_circuit, self.circuit.final_layout()
 
     @property
     def added_swaps(self):
@@ -485,6 +527,7 @@ class Sabre(Router):
     def _preprocessing(self, circuit: Circuit, initial_layout: dict):
         """The following objects will be initialised:
         - circuit: class to represent circuit and to perform logical-physical qubit mapping.
+        - _final_measurements: measurement gates at the end of the circuit.
         - _dist_matrix: matrix reporting the shortest path lengh between all node pairs.
         - _dag: direct acyclic graph of the circuit based on commutativity.
         - _memory_map: list to remember previous SWAP moves.
@@ -492,7 +535,9 @@ class Sabre(Router):
         - _delta_register: list containing the special weigh added to qubits
             to prevent overlapping swaps.
         """
-        self.circuit = CircuitMap(initial_layout, circuit)
+        copy_circuit = self._copy_circuit(circuit)
+        self._final_measurements = self._detach_final_measurements(copy_circuit)
+        self.circuit = CircuitMap(initial_layout, copy_circuit)
         self._dist_matrix = nx.floyd_warshall_numpy(self.connectivity)
         self._dag = _create_dag(self.circuit.blocks_qubits_pairs())
         self._memory_map = []
@@ -500,7 +545,42 @@ class Sabre(Router):
         self._update_front_layer()
         self._delta_register = [1.0 for _ in range(circuit.nqubits)]
 
+    @staticmethod
+    def _copy_circuit(circuit: Circuit):
+        """Return a copy of the circuit to avoid altering the original circuit.
+        This copy conserves the registers of the measurement gates."""
+        new_circuit = Circuit(circuit.nqubits)
+        for gate in circuit.queue:
+            new_circuit.add(gate)
+        return new_circuit
+
+    def _detach_final_measurements(self, circuit: Circuit):
+        """Detach measurement gates at the end of the circuit for separate handling."""
+        final_measurements = []
+        for gate in circuit.queue[::-1]:
+            if isinstance(gate, gates.M):
+                final_measurements.append(gate)
+                circuit.queue.remove(gate)
+            else:
+                break
+        if not final_measurements:
+            return None
+        return final_measurements[::-1]
+
+    def _append_final_measurements(self, routed_circuit: Circuit):
+        """Append the final measurment gates on the correct qubits conserving the measurement register."""
+        for measurement in self._final_measurements:
+            original_qubits = measurement.qubits
+            routed_qubits = (
+                self.circuit.circuit_to_physical(qubit) for qubit in original_qubits
+            )
+            routed_circuit.add(
+                measurement.on_qubits(dict(zip(original_qubits, routed_qubits)))
+            )
+        return routed_circuit
+
     def _update_dag_layers(self):
+        """Update dag layers and put them in topological order."""
         for layer, nodes in enumerate(nx.topological_generations(self._dag)):
             for node in nodes:
                 self._dag.nodes[node]["layer"] = layer
@@ -530,7 +610,12 @@ class Sabre(Router):
 
     def _compute_cost(self, candidate):
         """Compute the cost associated to a possible SWAP candidate."""
-        temporary_circuit = deepcopy(self.circuit)
+        temporary_circuit = CircuitMap(
+            initial_layout=self.circuit.initial_layout,
+            circuit=Circuit(len(self.circuit.initial_layout)),
+            blocks=self.circuit.circuit_blocks,
+        )
+        temporary_circuit.set_circuit_logical(deepcopy(self.circuit._circuit_logical))
         temporary_circuit.update(candidate)
         if temporary_circuit._circuit_logical in self._memory_map:
             return float("inf")

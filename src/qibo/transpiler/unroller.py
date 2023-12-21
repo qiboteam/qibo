@@ -1,29 +1,64 @@
-import numpy as np
+from enum import Flag, auto
 
 from qibo import gates
-from qibo.backends import NumpyBackend
 from qibo.config import raise_error
 from qibo.models import Circuit
-from qibo.transpiler.abstract import NativeType, Unroller
+from qibo.transpiler.decompositions import cz_dec, gpi2_dec, iswap_dec, opt_dec, u3_dec
 from qibo.transpiler.exceptions import DecompositionError
-from qibo.transpiler.unitary_decompositions import (
-    two_qubit_decomposition,
-    u3_decomposition,
-)
 
-backend = NumpyBackend()
+
+class NativeGates(Flag):
+    """Define native gates supported by the unroller.
+    A native gate set should contain at least one two-qubit gate (CZ or iSWAP)
+    and at least one single qubit gate (GPI2 or U3).
+    Gates I, Z, RZ and M are always included in the single qubit native gates set.
+
+    Should have the same names with qibo gates.
+    """
+
+    I = auto()
+    Z = auto()
+    RZ = auto()
+    M = auto()
+    GPI2 = auto()
+    U3 = auto()
+    CZ = auto()
+    iSWAP = auto()
+
+    @classmethod
+    def default(cls):
+        """Return default native gates set."""
+        return cls.CZ | cls.GPI2 | cls.I | cls.Z | cls.RZ | cls.M
+
+    @classmethod
+    def from_gatelist(cls, gatelist: list):
+        """Create a NativeGates object containing all gates from a gatelist."""
+        natives = cls(0)
+        for gate in gatelist:
+            natives |= cls.from_gate(gate)
+        return natives
+
+    @classmethod
+    def from_gate(cls, gate: gates.Gate):
+        """Create a NativeGates object from a gate.
+        The gate can be either a class:`qibo.gates.Gate` or an instance of this class.
+        """
+        if isinstance(gate, gates.Gate):
+            return cls.from_gate(gate.__class__)
+        try:
+            return getattr(cls, gate.__name__)
+        except AttributeError:
+            raise ValueError(f"Gate {gate} cannot be used as native.")
 
 
 # TODO: Make setting single-qubit native gates more flexible
-class NativeGates(Unroller):
+class Unroller:
     """Translates a circuit to native gates.
 
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): circuit model to translate
             into native gates.
-        single_qubit_natives (tuple): single qubit native gates.
-        two_qubit_natives (:class:`qibo.transpiler.abstract.NativeType`): two-qubit native gates
-            supported by the quantum hardware.
+        native_gates (:class:`qibo.transpiler.unroller.NativeGates`): native gates to use in the transpiled circuit.
 
     Returns:
         (:class:`qibo.models.circuit.Circuit`): equivalent circuit with native gates.
@@ -31,65 +66,48 @@ class NativeGates(Unroller):
 
     def __init__(
         self,
-        two_qubit_natives: NativeType,
-        single_qubit_natives=(gates.I, gates.Z, gates.RZ, gates.U3),
-        translate_single_qubit: bool = True,
+        native_gates: NativeGates,
     ):
-        self.two_qubit_natives = two_qubit_natives
-        self.single_qubit_natives = single_qubit_natives
-        self.translate_single_qubit = translate_single_qubit
+        self.native_gates = native_gates
 
     def __call__(self, circuit: Circuit):
-        two_qubit_translated_circuit = circuit.__class__(circuit.nqubits)
         translated_circuit = circuit.__class__(circuit.nqubits)
         for gate in circuit.queue:
-            if len(gate.qubits) > 1 or self.translate_single_qubit:
-                two_qubit_translated_circuit.add(
-                    translate_gate(gate, self.two_qubit_natives)
+            translated_circuit.add(
+                translate_gate(
+                    gate,
+                    self.native_gates,
                 )
-            else:
-                two_qubit_translated_circuit.add(gate)
-        if self.translate_single_qubit:
-            for gate in two_qubit_translated_circuit.queue:
-                if len(gate.qubits) == 1:
-                    translated_circuit.add(translate_gate(gate, self.two_qubit_natives))
-                else:
-                    translated_circuit.add(gate)
-        else:
-            translated_circuit = two_qubit_translated_circuit
+            )
         return translated_circuit
 
 
 def assert_decomposition(
     circuit: Circuit,
-    two_qubit_natives: NativeType,
-    single_qubit_natives=(gates.I, gates.Z, gates.RZ, gates.U3),
+    native_gates: NativeGates,
 ):
-    """Checks if a circuit has been correctly decmposed into native gates.
+    """Checks if a circuit has been correctly decomposed into native gates.
 
     Args:
         circuit (:class:`qibo.models.circuit.Circuit`): circuit model to check.
+        native_gates (:class:`qibo.transpiler.unroller.NativeGates`):
+            native gates in the transpiled circuit.
     """
     for gate in circuit.queue:
         if isinstance(gate, gates.M):
             continue
-        if len(gate.qubits) == 1:
-            if not isinstance(gate, single_qubit_natives):
-                raise_error(
-                    DecompositionError,
-                    f"{gate.name} is not a single qubit native gate.",
-                )
-        elif len(gate.qubits) == 2:
+        if len(gate.qubits) <= 2:
             try:
-                native_type_gate = NativeType.from_gate(gate)
-                if not (native_type_gate in two_qubit_natives):
+                native_type_gate = NativeGates.from_gate(gate)
+                if not (native_type_gate & native_gates):
                     raise_error(
                         DecompositionError,
-                        f"{gate.name} is not a two qubit native gate.",
+                        f"{gate.name} is not a native gate.",
                     )
             except ValueError:
                 raise_error(
-                    DecompositionError, f"{gate.name} is not a two qubit native gate."
+                    DecompositionError,
+                    f"{gate.name} is not a native gate.",
                 )
         else:
             raise_error(
@@ -97,24 +115,69 @@ def assert_decomposition(
             )
 
 
-def translate_gate(gate, native_gates: NativeType):
+def translate_gate(
+    gate,
+    native_gates: NativeGates,
+):
     """Maps gates to a hardware-native implementation.
 
     Args:
         gate (:class:`qibo.gates.abstract.Gate`): gate to be decomposed.
-        native_gates (:class:`qibo.transpiler.abstract.NativeType`):
-            two-qubit native gates supported by the quantum hardware.
+        native_gates (:class:`qibo.transpiler.unroller.NativeGates`): native gates to use in the decomposition.
 
     Returns:
-        (list): List of native gates
+        (list): List of native gates that decompose the input gate.
     """
     if isinstance(gate, (gates.M, gates.I, gates.Align)):
         return gate
+    elif len(gate.qubits) == 1:
+        return _translate_single_qubit_gates(gate, native_gates)
+    else:
+        decomposition_2q = _translate_two_qubit_gates(gate, native_gates)
+        final_decomposition = []
+        for gate in decomposition_2q:
+            if len(gate.qubits) == 1:
+                final_decomposition += _translate_single_qubit_gates(gate, native_gates)
+            else:
+                final_decomposition.append(gate)
+        return final_decomposition
 
-    if len(gate.qubits) == 1:
-        return onequbit_dec(gate)
 
-    if native_gates is NativeType.CZ | NativeType.iSWAP:
+def _translate_single_qubit_gates(gate: gates.Gate, single_qubit_natives: NativeGates):
+    """Helper method for :meth:`translate_gate`.
+
+    Maps single qubit gates to a hardware-native implementation.
+
+    Args:
+        gate (:class:`qibo.gates.abstract.Gate`): gate to be decomposed.
+        single_qubit_natives (:class:`qibo.transpiler.unroller.NativeGates`): single qubit native gates.
+
+    Returns:
+        (list): List of native gates that decompose the input gate.
+    """
+    if NativeGates.U3 & single_qubit_natives:
+        return u3_dec(gate)
+    elif NativeGates.GPI2 & single_qubit_natives:
+        return gpi2_dec(gate)
+    else:
+        raise DecompositionError("Use U3 or GPI2 as single qubit native gates")
+
+
+def _translate_two_qubit_gates(gate: gates.Gate, native_gates: NativeGates):
+    """Helper method for :meth:`translate_gate`.
+
+    Maps two qubit gates to a hardware-native implementation.
+
+    Args:
+        gate (:class:`qibo.gates.abstract.Gate`): gate to be decomposed.
+        native_gates (:class:`qibo.transpiler.unroller.NativeGates`): native gates supported by the quantum hardware.
+
+    Returns:
+        (list): List of native gates that decompose the input gate.
+    """
+    if (
+        native_gates & (NativeGates.CZ | NativeGates.iSWAP)
+    ) is NativeGates.CZ | NativeGates.iSWAP:
         # Check for a special optimized decomposition.
         if gate.__class__ in opt_dec.decompositions:
             return opt_dec(gate)
@@ -133,9 +196,9 @@ def translate_gate(gate, native_gates: NativeType):
                 return cz_dec(gate)
             else:  # pragma: no cover
                 return iswap_dec(gate)
-    elif native_gates is NativeType.CZ:
+    elif native_gates & NativeGates.CZ:
         return cz_dec(gate)
-    elif native_gates is NativeType.iSWAP:
+    elif native_gates & NativeGates.iSWAP:
         if gate.__class__ in iswap_dec.decompositions:
             return iswap_dec(gate)
         else:
@@ -145,326 +208,8 @@ def translate_gate(gate, native_gates: NativeType):
             iswap_decomposed = []
             for g in cz_decomposed:
                 # Need recursive function as gates.Unitary is not in iswap_dec
-                for g_translated in translate_gate(g, NativeType.iSWAP):
+                for g_translated in translate_gate(g, native_gates=native_gates):
                     iswap_decomposed.append(g_translated)
             return iswap_decomposed
     else:  # pragma: no cover
-        raise_error(NotImplementedError, "Use only CZ and/or iSWAP as native gates")
-
-
-class GateDecompositions:
-    """Abstract data structure that holds decompositions of gates."""
-
-    def __init__(self):
-        self.decompositions = {}
-
-    def add(self, gate, decomposition):
-        """Register a decomposition for a gate."""
-        self.decompositions[gate] = decomposition
-
-    def count_2q(self, gate):
-        """Count the number of two-qubit gates in the decomposition of the given gate."""
-        if gate.parameters:
-            decomposition = self.decompositions[gate.__class__](gate)
-        else:
-            decomposition = self.decompositions[gate.__class__]
-        return len(tuple(g for g in decomposition if len(g.qubits) > 1))
-
-    def count_1q(self, gate):
-        """Count the number of single qubit gates in the decomposition of the given gate."""
-        if gate.parameters:
-            decomposition = self.decompositions[gate.__class__](gate)
-        else:
-            decomposition = self.decompositions[gate.__class__]
-        return len(tuple(g for g in decomposition if len(g.qubits) == 1))
-
-    def __call__(self, gate):
-        """Decompose a gate."""
-        decomposition = self.decompositions[gate.__class__]
-        if callable(decomposition):
-            decomposition = decomposition(gate)
-        return [
-            g.on_qubits({i: q for i, q in enumerate(gate.qubits)})
-            for g in decomposition
-        ]
-
-
-onequbit_dec = GateDecompositions()
-onequbit_dec.add(gates.H, [gates.U3(0, 7 * np.pi / 2, np.pi, 0)])
-onequbit_dec.add(gates.X, [gates.U3(0, np.pi, 0, np.pi)])
-onequbit_dec.add(gates.Y, [gates.U3(0, np.pi, 0, 0)])
-# apply virtually by changing ``phase`` instead of using pulses
-onequbit_dec.add(gates.Z, [gates.Z(0)])
-onequbit_dec.add(gates.S, [gates.RZ(0, np.pi / 2)])
-onequbit_dec.add(gates.SDG, [gates.RZ(0, -np.pi / 2)])
-onequbit_dec.add(gates.T, [gates.RZ(0, np.pi / 4)])
-onequbit_dec.add(gates.TDG, [gates.RZ(0, -np.pi / 4)])
-onequbit_dec.add(
-    gates.RX, lambda gate: [gates.U3(0, gate.parameters[0], -np.pi / 2, np.pi / 2)]
-)
-onequbit_dec.add(gates.RY, lambda gate: [gates.U3(0, gate.parameters[0], 0, 0)])
-# apply virtually by changing ``phase`` instead of using pulses
-onequbit_dec.add(gates.RZ, lambda gate: [gates.RZ(0, gate.parameters[0])])
-# apply virtually by changing ``phase`` instead of using pulses
-onequbit_dec.add(gates.GPI2, lambda gate: [gates.GPI2(0, gate.parameters[0])])
-# implemented as single RX90 pulse
-onequbit_dec.add(gates.U1, lambda gate: [gates.RZ(0, gate.parameters[0])])
-onequbit_dec.add(
-    gates.U2,
-    lambda gate: [gates.U3(0, np.pi / 2, gate.parameters[0], gate.parameters[1])],
-)
-onequbit_dec.add(
-    gates.U3,
-    lambda gate: [
-        gates.U3(0, gate.parameters[0], gate.parameters[1], gate.parameters[2])
-    ],
-)
-onequbit_dec.add(
-    gates.Unitary,
-    lambda gate: [gates.U3(0, *u3_decomposition(gate.parameters[0]))],
-)
-onequbit_dec.add(
-    gates.FusedGate,
-    lambda gate: [gates.U3(0, *u3_decomposition(gate.matrix(backend)))],
-)
-
-# register the iSWAP decompositions
-iswap_dec = GateDecompositions()
-iswap_dec.add(
-    gates.CNOT,
-    [
-        gates.U3(0, 3 * np.pi / 2, np.pi, 0),
-        gates.U3(1, np.pi / 2, -np.pi, -np.pi),
-        gates.iSWAP(0, 1),
-        gates.U3(0, np.pi, 0, np.pi),
-        gates.U3(1, np.pi / 2, -np.pi, -np.pi),
-        gates.iSWAP(0, 1),
-        gates.U3(0, np.pi / 2, np.pi / 2, -np.pi),
-        gates.U3(1, np.pi / 2, -np.pi, -np.pi / 2),
-    ],
-)
-iswap_dec.add(
-    gates.CZ,
-    [
-        gates.U3(0, 7 * np.pi / 2, np.pi, 0),
-        gates.U3(1, 7 * np.pi / 2, np.pi, 0),
-        gates.U3(1, np.pi / 2, -np.pi, -np.pi),
-        gates.iSWAP(0, 1),
-        gates.U3(0, np.pi, 0, np.pi),
-        gates.U3(1, np.pi / 2, -np.pi, -np.pi),
-        gates.iSWAP(0, 1),
-        gates.U3(0, np.pi / 2, np.pi / 2, -np.pi),
-        gates.U3(1, np.pi / 2, -np.pi, -np.pi / 2),
-        gates.U3(1, 7 * np.pi / 2, np.pi, 0),
-    ],
-)
-iswap_dec.add(
-    gates.SWAP,
-    [
-        gates.iSWAP(0, 1),
-        gates.U3(1, np.pi / 2, -np.pi / 2, np.pi / 2),
-        gates.iSWAP(0, 1),
-        gates.U3(0, np.pi / 2, -np.pi / 2, np.pi / 2),
-        gates.iSWAP(0, 1),
-        gates.U3(1, np.pi / 2, -np.pi / 2, np.pi / 2),
-    ],
-)
-iswap_dec.add(gates.iSWAP, [gates.iSWAP(0, 1)])
-
-# register CZ decompositions
-cz_dec = GateDecompositions()
-cz_dec.add(gates.CNOT, [gates.H(1), gates.CZ(0, 1), gates.H(1)])
-cz_dec.add(gates.CZ, [gates.CZ(0, 1)])
-cz_dec.add(
-    gates.SWAP,
-    [
-        gates.H(1),
-        gates.CZ(0, 1),
-        gates.H(1),
-        gates.H(0),
-        gates.CZ(1, 0),
-        gates.H(0),
-        gates.H(1),
-        gates.CZ(0, 1),
-        gates.H(1),
-    ],
-)
-cz_dec.add(
-    gates.iSWAP,
-    [
-        gates.U3(0, np.pi / 2.0, 0, -np.pi / 2.0),
-        gates.U3(1, np.pi / 2.0, 0, -np.pi / 2.0),
-        gates.CZ(0, 1),
-        gates.H(0),
-        gates.H(1),
-        gates.CZ(0, 1),
-        gates.H(0),
-        gates.H(1),
-    ],
-)
-cz_dec.add(
-    gates.CRX,
-    lambda gate: [
-        gates.RX(1, gate.parameters[0] / 2.0),
-        gates.CZ(0, 1),
-        gates.RX(1, -gate.parameters[0] / 2.0),
-        gates.CZ(0, 1),
-    ],
-)
-cz_dec.add(
-    gates.CRY,
-    lambda gate: [
-        gates.RY(1, gate.parameters[0] / 2.0),
-        gates.CZ(0, 1),
-        gates.RY(1, -gate.parameters[0] / 2.0),
-        gates.CZ(0, 1),
-    ],
-)
-cz_dec.add(
-    gates.CRZ,
-    lambda gate: [
-        gates.RZ(1, gate.parameters[0] / 2.0),
-        gates.H(1),
-        gates.CZ(0, 1),
-        gates.RX(1, -gate.parameters[0] / 2.0),
-        gates.CZ(0, 1),
-        gates.H(1),
-    ],
-)
-cz_dec.add(
-    gates.CU1,
-    lambda gate: [
-        gates.RZ(0, gate.parameters[0] / 2.0),
-        gates.H(1),
-        gates.CZ(0, 1),
-        gates.RX(1, -gate.parameters[0] / 2.0),
-        gates.CZ(0, 1),
-        gates.H(1),
-        gates.RZ(1, gate.parameters[0] / 2.0),
-    ],
-)
-cz_dec.add(
-    gates.CU2,
-    lambda gate: [
-        gates.RZ(1, (gate.parameters[1] - gate.parameters[0]) / 2.0),
-        gates.H(1),
-        gates.CZ(0, 1),
-        gates.H(1),
-        gates.U3(1, -np.pi / 4, 0, -(gate.parameters[1] + gate.parameters[0]) / 2.0),
-        gates.H(1),
-        gates.CZ(0, 1),
-        gates.H(1),
-        gates.U3(1, np.pi / 4, gate.parameters[0], 0),
-    ],
-)
-cz_dec.add(
-    gates.CU3,
-    lambda gate: [
-        gates.RZ(1, (gate.parameters[2] - gate.parameters[1]) / 2.0),
-        gates.H(1),
-        gates.CZ(0, 1),
-        gates.H(1),
-        gates.U3(
-            1,
-            -gate.parameters[0] / 2.0,
-            0,
-            -(gate.parameters[2] + gate.parameters[1]) / 2.0,
-        ),
-        gates.H(1),
-        gates.CZ(0, 1),
-        gates.H(1),
-        gates.U3(1, gate.parameters[0] / 2.0, gate.parameters[1], 0),
-    ],
-)
-cz_dec.add(
-    gates.FSWAP,
-    [
-        gates.U3(0, np.pi / 2, -np.pi / 2, -np.pi),
-        gates.U3(1, np.pi / 2, np.pi / 2, np.pi / 2),
-        gates.CZ(0, 1),
-        gates.U3(0, np.pi / 2, 0, -np.pi / 2),
-        gates.U3(1, np.pi / 2, 0, np.pi / 2),
-        gates.CZ(0, 1),
-        gates.U3(0, np.pi / 2, np.pi / 2, -np.pi),
-        gates.U3(1, np.pi / 2, 0, -np.pi),
-    ],
-)
-cz_dec.add(
-    gates.RXX,
-    lambda gate: [
-        gates.H(0),
-        gates.CZ(0, 1),
-        gates.RX(1, gate.parameters[0]),
-        gates.CZ(0, 1),
-        gates.H(0),
-    ],
-)
-cz_dec.add(
-    gates.RYY,
-    lambda gate: [
-        gates.RX(0, np.pi / 2),
-        gates.U3(1, np.pi / 2, np.pi / 2, -np.pi),
-        gates.CZ(0, 1),
-        gates.RX(1, gate.parameters[0]),
-        gates.CZ(0, 1),
-        gates.RX(0, -np.pi / 2),
-        gates.U3(1, np.pi / 2, 0, np.pi / 2),
-    ],
-)
-cz_dec.add(
-    gates.RZZ,
-    lambda gate: [
-        gates.H(1),
-        gates.CZ(0, 1),
-        gates.RX(1, gate.parameters[0]),
-        gates.CZ(0, 1),
-        gates.H(1),
-    ],
-)
-cz_dec.add(
-    gates.TOFFOLI,
-    [
-        gates.CZ(1, 2),
-        gates.RX(2, -np.pi / 4),
-        gates.CZ(0, 2),
-        gates.RX(2, np.pi / 4),
-        gates.CZ(1, 2),
-        gates.RX(2, -np.pi / 4),
-        gates.CZ(0, 2),
-        gates.RX(2, np.pi / 4),
-        gates.RZ(1, np.pi / 4),
-        gates.H(1),
-        gates.CZ(0, 1),
-        gates.RZ(0, np.pi / 4),
-        gates.RX(1, -np.pi / 4),
-        gates.CZ(0, 1),
-        gates.H(1),
-    ],
-)
-cz_dec.add(
-    gates.Unitary,
-    lambda gate: two_qubit_decomposition(0, 1, gate.parameters[0], backend=backend),
-)
-cz_dec.add(
-    gates.fSim,
-    lambda gate: two_qubit_decomposition(0, 1, gate.matrix(backend), backend=backend),
-)
-cz_dec.add(
-    gates.GeneralizedfSim,
-    lambda gate: two_qubit_decomposition(0, 1, gate.matrix(backend), backend=backend),
-)
-
-
-# register other optimized gate decompositions
-opt_dec = GateDecompositions()
-opt_dec.add(
-    gates.SWAP,
-    [
-        gates.H(0),
-        gates.SDG(0),
-        gates.SDG(1),
-        gates.iSWAP(0, 1),
-        gates.CZ(0, 1),
-        gates.H(1),
-    ],
-)
+        raise_error(DecompositionError, "Use only CZ and/or iSWAP as native gates")

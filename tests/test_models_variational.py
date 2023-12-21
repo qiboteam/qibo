@@ -58,7 +58,7 @@ def test_vqc(backend, method, options, compile, filename):
         state = backend.to_numpy(backend.execute_circuit(circuit).state())
         return 1 - np.abs(np.dot(np.conj(target), state))
 
-    nqubits = 6
+    nqubits = 3
     nlayers = 4
 
     # Create variational circuit
@@ -102,7 +102,11 @@ def test_vqe(backend, method, options, compile, filename):
     """Performs a VQE circuit minimization test."""
     if (method == "sgd" or compile) and backend.name != "tensorflow":
         pytest.skip("Skipping SGD test for unsupported backend.")
-    nqubits = 6
+    if method != "sgd" and backend.name == "tensorflow":
+        pytest.skip("Skipping scipy optimizers for tensorflow.")
+    n_threads = backend.nthreads
+    backend.set_threads(1)
+    nqubits = 3
     layers = 4
     circuit = models.Circuit(nqubits)
     for l in range(layers):
@@ -131,6 +135,12 @@ def test_vqe(backend, method, options, compile, filename):
         shutil.rmtree("outcmaes")
     if filename is not None:
         assert_regression_fixture(backend, params, filename)
+
+    # test energy fluctuation
+    state = np.ones(2**nqubits) / np.sqrt(2**nqubits)
+    energy_fluctuation = v.energy_fluctuation(state)
+    assert energy_fluctuation >= 0
+    backend.set_threads(n_threads)
 
 
 @pytest.mark.parametrize(
