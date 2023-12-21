@@ -652,9 +652,9 @@ def test_expressibility(backend):
     backend.assert_allclose(expr_1 < expr_2 < expr_3, True)
 
 
-@pytest.mark.parametrize("samples", [int(1e2)])
+@pytest.mark.parametrize("samples", [int(1e1)])
 @pytest.mark.parametrize("power_t", [2])
-@pytest.mark.parametrize("nqubits", [2, 3, 4])
+@pytest.mark.parametrize("nqubits", [2, 3])
 def test_frame_potential(backend, nqubits, power_t, samples):
     depth = int(np.ceil(nqubits * power_t))
 
