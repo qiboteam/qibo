@@ -13,9 +13,10 @@ from qibo.quantum_info import random_density_matrix, random_statevector
 def test_measurement_collapse(backend, nqubits, targets):
     initial_state = random_statevector(2**nqubits, backend=backend)
     c = models.Circuit(nqubits)
+    for q in np.random.randint(nqubits, size=np.random.randint(nqubits, size=1)):
+        c.add(gates.H(q))
     r = c.add(gates.M(*targets, collapse=True))
     c.add(gates.M(*targets))
-    # final_state = backend.execute_circuit(c, np.copy(initial_state), nshots=1)[0]
     outcome = backend.execute_circuit(c, np.copy(initial_state), nshots=1)
     samples = r.samples()[0]
     backend.assert_allclose(samples, outcome.samples()[0])
@@ -112,7 +113,6 @@ def test_measurement_result_parameters_random(backend):
     backend.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.skip(reason="no way of currently testing this")
 @pytest.mark.parametrize("use_loop", [True, False])
 def test_measurement_result_parameters_repeated_execution(backend, use_loop):
     initial_state = random_density_matrix(2**4, backend=backend)
@@ -151,7 +151,6 @@ def test_measurement_result_parameters_repeated_execution(backend, use_loop):
     backend.assert_allclose(final_states, target_states)
 
 
-@pytest.mark.skip(reason="no way of currently testing this")
 def test_measurement_result_parameters_repeated_execution_final_measurements(backend):
     initial_state = random_density_matrix(2**4, backend=backend)
     backend.set_seed(123)
@@ -207,24 +206,24 @@ def test_measurement_result_parameters_multiple_qubits(backend):
     backend.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.skip(reason="no way of currently testing this")
+@pytest.mark.skip(reason="this has to be updated for density matrices")
 @pytest.mark.parametrize("nqubits,targets", [(5, [2, 4]), (6, [3, 5])])
 def test_measurement_collapse_distributed(backend, accelerators, nqubits, targets):
-    initial_state = random_density_matrix(2**4, backend=backend)
+    initial_state = random_density_matrix(2**nqubits, backend=backend)
     c = models.Circuit(nqubits, accelerators, density_matrix=True)
     m = c.add(gates.M(*targets, collapse=True))
-    result = backend.execute_circuit(c, np.copy(initial_state), nshots=1)
-    slicer = nqubits * [slice(None)]
+    result = backend.execute_circuit(c, np.copy(initial_state), nshots=1).state()
+    slicer = 2 * nqubits * [slice(None)]
     outcomes = [r.outcome() for r in m.symbols]
     for t, r in zip(targets, outcomes):
         slicer[t] = int(r)
     slicer = tuple(slicer)
-    initial_state = initial_state.reshape(nqubits * (2,))
+    initial_state = initial_state.reshape(2 * nqubits * (2,))
     target_state = np.zeros_like(initial_state)
     target_state[slicer] = initial_state[slicer]
     norm = (np.abs(target_state) ** 2).sum()
     target_state = target_state.ravel() / np.sqrt(norm)
-    backend.assert_allclose(result[0], target_state)
+    backend.assert_allclose(result, target_state.reshape(2**nqubits, 2**nqubits))
 
 
 def test_collapse_after_measurement(backend):

@@ -122,6 +122,13 @@ class NumpyMatrices:
         )
 
     @cached_property
+    def CY(self):
+        return self.np.array(
+            [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, -1j], [0, 0, 1j, 0]],
+            dtype=self.dtype,
+        )
+
+    @cached_property
     def CZ(self):
         return self.np.array(
             [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, -1]], dtype=self.dtype
@@ -227,8 +234,8 @@ class NumpyMatrices:
         return self.np.array(
             [
                 [1, 0, 0, 0],
-                [0, u[0, 0], u[0, 1], 0],
-                [0, u[1, 0], u[1, 1], 0],
+                [0, complex(u[0, 0]), complex(u[0, 1]), 0],
+                [0, complex(u[1, 0]), complex(u[1, 1]), 0],
                 [0, 0, 0, phase],
             ],
             dtype=self.dtype,

@@ -27,13 +27,13 @@ def test_compiled_execute(backend):
 
     # Run eager circuit
     c1 = create_circuit()
-    r1 = backend.execute_circuit(c1)._state
+    r1 = backend.execute_circuit(c1).state()
 
     # Run compiled circuit
     c2 = create_circuit()
     c2.compile(backend)
-    r2 = c2()._state
-    np.testing.assert_allclose(r1, r2)
+    r2 = c2().state()
+    np.testing.assert_allclose(backend.to_numpy(r1), backend.to_numpy(r2))
 
 
 def test_compiling_twice_exception(backend):
@@ -59,14 +59,22 @@ def test_memory_error(backend, accelerators):
 
 
 def test_repeated_execute(backend, accelerators):
-    c = Circuit(4, accelerators, density_matrix=True)
-    thetas = np.random.random(4)
-    c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
-    target_state = backend.execute_circuit(c).state()
-    target_state = target_state
-    c.has_collapse = True
-    final_state = backend.execute_circuit(c, nshots=20)._state
-    backend.assert_allclose(final_state, target_state)
+    if accelerators is not None:
+        with pytest.raises(NotImplementedError):
+            c = Circuit(4, accelerators, density_matrix=True)
+    else:
+        c = Circuit(4, accelerators, density_matrix=True)
+        thetas = np.random.random(4)
+        c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
+        target_state = backend.execute_circuit(c).state()
+        target_state = target_state
+        c.has_collapse = True
+        if accelerators is not None:
+            with pytest.raises(NotImplementedError):
+                final_state = backend.execute_circuit(c, nshots=20)
+        else:
+            final_state = backend.execute_circuit(c, nshots=20).state()
+            backend.assert_allclose(final_state, target_state)
 
 
 def test_final_state_property(backend):
@@ -92,7 +100,7 @@ def test_density_matrix_circuit(backend):
     c.add(gates.H(1))
     c.add(gates.CNOT(0, 1))
     c.add(gates.H(2))
-    final_rho = backend.execute_circuit(c, np.copy(initial_rho))._state
+    final_rho = backend.execute_circuit(c, np.copy(initial_rho)).state()
 
     h = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
     cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
@@ -122,8 +130,8 @@ def test_circuit_as_initial_state(backend, density_matrix):
 
     actual_circuit = c1 + c
 
-    output = backend.execute_circuit(c, c1)._state
-    target = backend.execute_circuit(actual_circuit)._state
+    output = backend.execute_circuit(c, c1).state()
+    target = backend.execute_circuit(actual_circuit).state()
 
     backend.assert_allclose(target, output)
 

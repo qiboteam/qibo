@@ -1,4 +1,7 @@
+import numpy as np
+
 from qibo.config import raise_error
+from qibo.hamiltonians import Hamiltonian
 from qibo.models.evolution import StateEvolution
 
 
@@ -33,6 +36,7 @@ class VQE:
         """Initialize circuit ansatz and hamiltonian."""
         self.circuit = circuit
         self.hamiltonian = hamiltonian
+        self.backend = hamiltonian.backend
 
     def minimize(
         self,
@@ -115,6 +119,20 @@ class VQE:
         )
         self.circuit.set_parameters(parameters)
         return result, parameters, extra
+
+    def energy_fluctuation(self, state):
+        """
+        Evaluate energy fluctuation
+
+        .. math::
+            \\Xi_{k}(\\mu) = \\sqrt{\\langle\\mu|\\hat{H}^2|\\mu\\rangle - \\langle\\mu|\\hat{H}|\\mu\\rangle^2} \\,
+
+        for a given state :math:`|\\mu\\rangle`.
+
+        Args:
+            state (np.ndarray): quantum state to be used to compute the energy fluctuation with H.
+        """
+        return self.hamiltonian.energy_fluctuation(state)
 
 
 class AAVQE:

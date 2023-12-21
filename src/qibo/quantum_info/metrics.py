@@ -1,5 +1,7 @@
 """Submodule with distances, metrics, and measures for quantum states and channels."""
 
+from typing import Optional, Union
+
 import numpy as np
 from scipy import sparse
 
@@ -1086,8 +1088,14 @@ def entangling_capability(circuit, samples: int, backend=None):
     return capability
 
 
-def expressibility(circuit, t: int, samples: int, backend=None):
-    """Returns the expressibility :math:`\\|A\\|_{HS}` of a parametrized
+def expressibility(
+    circuit,
+    power_t: int,
+    samples: int,
+    order: Optional[Union[int, float, str]] = 2,
+    backend=None,
+):
+    """Returns the expressibility :math:`\\|A\\|` of a parametrized
     circuit, where
 
     .. math::
@@ -1098,18 +1106,23 @@ def expressibility(circuit, t: int, samples: int, backend=None):
 
     Args:
         circuit (:class:`qibo.models.Circuit`): Parametrized circuit.
-        t (int): power that defines the :math:`t`-design.
+        power_t (int): power that defines the :math:`t`-design.
         samples (int): number of samples to estimate the integrals.
+        order (int or float or str, optional): order of the norm :math:`\\|A\\|`.
+            For specifications, see :meth:`qibo.backends.abstract.calculate_norm`.
+            Defaults to :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
 
     Returns:
-        float: Entangling capability.
+        float: Expressibility of parametrized circuit.
     """
 
-    if isinstance(t, int) is False:
-        raise_error(TypeError, f"t must be type int, but it is type {type(t)}.")
+    if isinstance(power_t, int) is False:
+        raise_error(
+            TypeError, f"power_t must be type int, but it is type {type(power_t)}."
+        )
 
     if isinstance(samples, int) is False:
         raise_error(
@@ -1124,13 +1137,89 @@ def expressibility(circuit, t: int, samples: int, backend=None):
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    expr = haar_integral(circuit.nqubits, t, samples, backend=backend) - pqc_integral(
-        circuit, t, samples, backend=backend
-    )
+    deviation = haar_integral(
+        circuit.nqubits, power_t, samples=None, backend=backend
+    ) - pqc_integral(circuit, power_t, samples, backend=backend)
 
-    fid = np.trace(expr @ expr)
+    fid = float(backend.calculate_norm(deviation, order=order))
 
     return fid
+
+
+def frame_potential(
+    circuit,
+    power_t: int,
+    samples: int = None,
+    backend=None,
+):
+    """Returns the frame potential of a parametrized circuit under uniform sampling of the parameters.
+
+    For :math:`n` qubits and moment :math:`t`, the frame potential
+    :math:`\\mathcal{F}_{\\mathcal{U}}^{(t)}` if given by [1]
+
+    .. math::
+        \\mathcal{F}_{\\mathcal{U}}^{(t)} = \\int_{U,V \\in \\mathcal{U}} \\,
+            \\text{d}U \\, \\text{d}V \\, \\text{abs}\\bigl[\\text{tr}(U^{\\dagger} \\, V)\\bigr]^{2t} \\, ,
+
+    where :math:`\\mathcal{U}` is the group of unitaries defined by the parametrized circuit.
+    The frame potential is approximated by the average
+
+    .. math::
+        \\mathcal{F}_{\\mathcal{U}}^{(t)} \\approx \\frac{1}{N} \\,
+            \\sum_{k=1}^{N} \\, \\text{abs}\\bigl[ \\text{tr}(U_{k}^{\\dagger} \\, V_{k})\\bigr]^{2t} \\, ,
+
+    where :math:`N` is the number of ``samples``.
+
+    Args:
+        circuit (:class:`qibo.models.circuit.Circuit`): Parametrized circuit.
+        power_t (int): power that defines the :math:`t`-design.
+        samples (int): number of samples to estimate the integral.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
+            Defaults to ``None``.
+
+    Returns:
+        float: Frame potential of the parametrized circuit.
+
+    References:
+        1. M. Liu *et al.*, *Estimating the randomness of quantum circuit ensembles up to 50 qubits*.
+        `arXiv:2205.09900 [quant-ph] <https://arxiv.org/abs/2205.09900>`_.
+
+    """
+    if not isinstance(power_t, int):
+        raise_error(
+            TypeError, f"power_t must be type int, but it is type {type(power_t)}."
+        )
+
+    if not isinstance(samples, int):
+        raise_error(
+            TypeError, f"samples must be type int, but it is type {type(samples)}."
+        )
+
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    nqubits = circuit.nqubits
+    dim = 2**nqubits
+
+    potential = 0
+    for _ in range(samples):
+        unitary_1 = circuit.copy()
+        params_1 = np.random.uniform(-np.pi, np.pi, circuit.trainable_gates.nparams)
+        unitary_1.set_parameters(params_1)
+        unitary_1 = unitary_1.unitary(backend) / np.sqrt(dim)
+
+        for _ in range(samples):
+            unitary_2 = circuit.copy()
+            params_2 = np.random.uniform(-np.pi, np.pi, circuit.trainable_gates.nparams)
+            unitary_2.set_parameters(params_2)
+            unitary_2 = unitary_2.unitary(backend) / np.sqrt(dim)
+
+            potential += np.abs(
+                np.trace(np.transpose(np.conj(unitary_1)) @ unitary_2)
+            ) ** (2 * power_t)
+
+    return potential / samples**2
 
 
 def _check_hermitian_or_not_gpu(matrix, backend=None):

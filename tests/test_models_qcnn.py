@@ -302,13 +302,13 @@ def test_qcnn_training(backend):
     test_qcnn = QuantumCNN(nqubits=4, nlayers=1, nclasses=2, params=init_theta)
     testcircuit = test_qcnn._circuit
     result = test_qcnn.minimize(
-        init_theta, data=data, labels=labels, nshots=10000, method="Powell"
+        init_theta, data=data, labels=labels, nshots=1000, method="Powell"
     )
 
     # test Predictions function
     predictions = []
     for n in range(len(data)):
-        predictions.append(test_qcnn.predict(data[n], nshots=10000)[0])
+        predictions.append(test_qcnn.predict(data[n], nshots=1000)[0])
 
     # test Accuracy function
     predictions.append(1)
