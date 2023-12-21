@@ -203,6 +203,23 @@ Iterative Quantum Amplitude Estimation (IQAE)
     :member-order: bysource
 
 
+Double Bracket Iteration algorithm for Diagonalization
+""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+The Double Bracket Flow (DBF) has been presented `here <https://arxiv.org/abs/2206.11772>`_
+as a novel strategy for preparing eigenstates of a quantum system. We implement in
+Qibo a discretized version of the algorithm, which executes sequential Double
+Bracket Iterations.
+
+.. autoclass:: qibo.models.dbi.double_bracket.DoubleBracketGeneratorType
+    :members:
+    :member-order: bysource
+
+.. autoclass:: qibo.models.dbi.double_bracket.DoubleBracketIteration
+    :members:
+    :member-order: bysource
+
+
 .. _timeevolution:
 
 Time evolution
@@ -221,6 +238,26 @@ Adiabatic evolution
 .. autoclass:: qibo.models.evolution.AdiabaticEvolution
     :members:
     :member-order: bysource
+
+
+.. _data-encoders:
+
+Data Encoders
+^^^^^^^^^^^^^
+
+We provide a family of algorithms that encode classical data into quantum circuits.
+
+Unary Encoder
+"""""""""""""
+
+.. autofunction:: qibo.models.encodings.unary_encoder
+
+
+Unary Encoder for Random Gaussian States
+""""""""""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.models.encodings.unary_encoder_random_gaussian
+
 
 .. _error-mitigation:
 
@@ -528,6 +565,13 @@ Controlled-NOT (CNOT)
     :members:
     :member-order: bysource
 
+Controlled-Y (CY)
+"""""""""""""""""""""
+
+.. autoclass:: qibo.gates.CY
+    :members:
+    :member-order: bysource
+
 Controlled-phase (CZ)
 """""""""""""""""""""
 
@@ -654,10 +698,10 @@ Parametric ZX interaction (RZX)
     :members:
     :member-order: bysource
 
-Parametric XX-YY interaction (RXY)
-""""""""""""""""""""""""""""""""""
+Parametric XX-YY interaction (RXXYY)
+""""""""""""""""""""""""""""""""""""
 
-.. autoclass:: qibo.gates.RXY
+.. autoclass:: qibo.gates.RXXYY
     :members:
     :member-order: bysource
 
@@ -743,6 +787,24 @@ Mølmer–Sørensen (MS)
 .. autoclass:: qibo.gates.MS
     :members:
     :member-order: bysource
+
+Quantinuum native gates
+^^^^^^^^^^^^^^^^^^^^^^^
+
+U1q
+"""
+
+.. autoclass:: qibo.gates.U1q
+    :members:
+    :member-order: bysource
+
+.. note::
+    The other Quantinuum single-qubit and two-qubit native gates are
+    implemented in Qibo as:
+
+    - Pauli-:math:`Z` rotation: :class:`qibo.gates.RZ`
+    - Arbitrary :math:`ZZ` rotation: :class:`qibo.gates.RZZ`
+    - Fully-entangling :math:`ZZ`-interaction: :math:`R_{ZZ}(\\pi/2)`
 
 
 _______________________
@@ -1045,6 +1107,10 @@ objects as described in the previous section.
     :members:
     :member-order: bysource
 
+.. autoclass:: qibo.symbols.I
+    :members:
+    :member-order: bysource
+
 .. autoclass:: qibo.symbols.X
     :members:
     :member-order: bysource
@@ -1062,45 +1128,87 @@ _______________________
 
 .. _States:
 
-States
-------
+Execution Outcomes
+------------------
 
-Qibo circuits return :class:`qibo.states.CircuitResult` objects
-when executed. By default, Qibo works as a wave function simulator in the sense
-that propagates the state vector through the circuit applying the
-corresponding gates. In this default usage the result of a circuit execution
-is the full final state vector which can be accessed via :meth:`qibo.states.CircuitResult.state`.
-However, for specific applications it is useful to have measurement samples
-from the final wave function, instead of its full vector form.
-To that end, :class:`qibo.states.CircuitResult` provides the
-:meth:`qibo.states.CircuitResult.samples` and
-:meth:`qibo.states.CircuitResult.frequencies` methods.
+Qibo circuits return different objects when executed depending on what the
+circuit contains and on the settings of the simulation. The following table
+summarizes which outcomes to expect depending on whether:
 
-The state vector (or density matrix) is saved in memory as a tensor supported
-by the currently active backend (see :ref:`Backends <Backends>` for more information).
-A copy of the state can be created using :meth:`qibo.states.CircuitResult.copy`.
-The new state will point to the same tensor in memory as the original one unless
-the ``deep=True`` option was used during the ``copy`` call.
-Note that the qibojit backend performs in-place updates
-state is used as input to a circuit or time evolution. This will modify the
-state's tensor and the tensor of all shallow copies and the current state vector
-values will be lost. If you intend to keep the current state values,
-we recommend creating a deep copy before using it as input to a qibo model.
+* the circuit contains noise channels
+* the qubits are measured at the end of the execution
+* some collapse measurement is present in the circuit
+* ``density_matrix`` is set to ``True`` in simulation
 
-In order to perform measurements the user has to add the measurement gate
-:class:`qibo.gates.M` to the circuit and then execute providing a number
-of shots. If this is done, the :class:`qibo.states.CircuitResult`
-returned by the circuit will contain the measurement samples.
+.. table::
 
-For more information on measurements we refer to the
-:ref:`How to perform measurements? <measurement-examples>` example.
+   +----------+--------------+----------+----------------+------------------------------------------+
+   | Noise    | Measurements | Collapse | Density Matrix |      Outcome                             |
+   +==========+==============+==========+================+==========================================+
+   |    ❌    |      ❌      |    ❌    |   ❌ / ✅      | :class:`qibo.result.QuantumState`        |
+   +----------+--------------+----------+----------------+------------------------------------------+
+   |    ❌    |      ✅      |    ❌    |   ❌ / ✅      | :class:`qibo.result.CircuitResult`       |
+   +----------+--------------+----------+----------------+------------------------------------------+
+   | ❌ / ✅  |      ❌      | ❌ / ✅  |       ✅       | :class:`qibo.result.QuantumState`        |
+   +----------+--------------+----------+----------------+------------------------------------------+
+   | ❌ / ✅  |      ✅      | ❌ / ✅  |       ❌       | :class:`qibo.result.MeasurementOutcomes` |
+   +----------+--------------+----------+----------------+------------------------------------------+
+   | ❌ / ✅  |      ✅      | ❌ / ✅  |       ✅       | :class:`qibo.result.CircuitResult`       |
+   +----------+--------------+----------+----------------+------------------------------------------+
 
-Circuit result
-^^^^^^^^^^^^^^
+Therefore, one of the three objects :class:`qibo.result.QuantumState`,
+:class:`qibo.result.MeasurementOutcomes` or :class:`qibo.result.CircuitResult`
+is going to be returned by the circuit execution. The first gives acces to the final
+state and probabilities via the :meth:`qibo.result.QuantumState.state` and
+:meth:`qibo.result.QuantumState.probabilities` methods, whereas the second
+allows to retrieve the final samples, the frequencies and the probabilities (calculated
+as ``frequencies/nshots``) with the :meth:`qibo.result.MeasurementOutcomes.samples`,
+:meth:`qibo.result.MeasurementOutcomes.frequencies` and
+:meth:`qibo.result.MeasurementOutcomes.probabilities` methods respectively. The
+:class:`qibo.result.CircuitResult` object includes all the above instead.
 
-.. autoclass:: qibo.states.CircuitResult
+Every time some measurement is performed at the end of the execution, the result
+will be a ``CircuitResult`` unless the final state could not be represented with the
+current simulation settings, i.e. if some stochasticity is present in the ciruit
+(via noise channels or collapse measurements) and ``density_matrix=False``. In that
+case a simple ``MeasurementOutcomes`` object is returned.
+
+If no measurement is appended at the end of the circuit, the final ``QuantumState``
+is going to be provided as output. However, if the circuit is stochastic,
+``density_matrix`` should be set to ``True`` in order to recover the final state,
+otherwise an error is raised.
+
+The final result of the circuit execution can also be saved to disk and loaded back:
+
+.. testsetup::
+
+   from qibo import gates, Circuit
+
+.. testcode::
+
+   c = Circuit(2)
+   c.add(gates.M(0,1))
+   # this will be a CircuitResult object
+   result = c()
+   # save it to final_result.npy
+   result.dump('final_result.npy')
+   # can be loaded back
+   from qibo.result import load_result
+
+   loaded_result = load_result('final_result.npy')
+
+.. autoclass:: qibo.result.QuantumState
     :members:
     :member-order: bysource
+
+.. autoclass:: qibo.result.MeasurementOutcomes
+    :members:
+    :member-order: bysource
+
+.. autoclass:: qibo.result.CircuitResult
+    :members:
+    :member-order: bysource
+
 
 
 .. _Callbacks:
@@ -1189,6 +1297,24 @@ variational model.
    :exclude-members: ParallelBFGS
 
 
+.. _Parameter:
+
+Parameter
+---------
+
+It can be useful to define custom parameters in an optimization context. For
+example, the rotational angles which encodes information in a Quantum Neural Network
+are usually built as a combination of features and trainable parameters. For
+doing this, the :class:`qibo.parameter.Parameter` class can be used. It allows
+to define custom parameters which can be inserted into a :class:`qibo.models.circuit.Circuit`.
+Moreover, it automatically precomputes the analytical derivative of the parameter
+function, which can be used to calculate the derivatives of a variational model
+with respect to its parameters.
+
+.. automodule:: qibo.parameter
+    :members:
+    :member-order: bysource
+
 .. _Gradients:
 
 Gradients
@@ -1244,6 +1370,71 @@ Pauli basis to computational basis
 """"""""""""""""""""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.pauli_to_comp_basis
+
+
+Phase-space Representation of Stabilizer States
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A *stabilizer state* :math:`\ketbra{\psi}{\psi}` can be uniquely defined by
+the set of its *stabilizers*, i.e. those unitary operators :math:`U` that have
+:math:`\psi` as an eigenstate with eigenvalue :math:`1`.
+In general, :math:`n`-qubit stabilizer states are stabilized by :math:`d = 2^n`
+Pauli operators on said :math:`n` qubits.
+However, it is known that the set of :math:`d` Paulis can be generated by only
+:math:`n` unique members of the set.
+In that case, indeed, the number of operators needed to represent a
+stabilizer state reduces to :math:`n`.
+Each one of these :math:`n` Pauli *generators* takes :math:`2n + 1` bits to specify,
+yielding a :math:`n(2n+1)` total number of bits needed.
+In particular, `Aaronson and Gottesman (2004) <aaronson_>`_ demonstrated that the application
+of Clifford gates on stabilizer states can be efficiently simulated in this representation
+at the cost of storing the generators of the *destabilizers*, in addition to the stabilizers.
+
+A :math:`n`-qubit stabilizer state is uniquely defined by a symplectic matrix of the form
+
+.. image:: ../_static/symplectic_matrix.png
+   :width: 2329px
+   :height: 1213px
+   :scale: 30 %
+   :align: center
+
+where :math:`(x_{kl},z_{kl})` are the bits encoding the :math:`n`-qubits Pauli generator as
+
+.. math::
+
+   P_{k} = \bigotimes_{l=1}^{n} \, i^{x_{kl} \, \oplus \, z_{kl}} \, X_{l}^{x_{kl}} \, Z_{l}^{z_{kl}}.
+
+The :class:`qibo.quantum_info.clifford.Clifford` object is in charge of storing the
+phase-space representation of a stabilizer state.
+This object is automatically created after the execution of a Clifford circuit through the
+:class:`qibo.backends.clifford.CliffordBackend`, but it can also be created by directly
+passing a symplectic matrix to the constructor.
+
+.. testsetup::
+
+   from qibo.quantum_info import Clifford
+   from qibo.backends import CliffordBackend, NumpyBackend
+
+   # construct the |00...0> state
+   backend = CliffordBackend(NumpyBackend())
+   symplectic_matrix = backend.zero_state(nqubits=3)
+   clifford = Clifford(symplectic_matrix, engine=NumpyBackend())
+
+The generators of the stabilizers can be extracted with the
+:meth:`qibo.quantum_info.clifford.Clifford.generators` method,
+or the complete set of :math:`d = 2^{n}` stabilizers operators can be extracted through the
+:meth:`qibo.quantum_info.clifford.Clifford.stabilizers` method.
+
+.. testcode::
+
+   generators, phases = clifford.generators()
+   stabilizers = clifford.stabilizers()
+
+The destabilizers can be extracted analogously with :meth:`qibo.quantum_info.clifford.Clifford.destabilizers`.
+
+.. autoclass:: qibo.quantum_info.clifford.Clifford
+    :members:
+    :member-order: bysource
 
 
 Metrics
@@ -1402,10 +1593,22 @@ Expressibility of parameterized quantum circuits
 .. autofunction:: qibo.quantum_info.expressibility
 
 
+Frame Potential
+"""""""""""""""
+
+.. autofunction:: qibo.quantum_info.frame_potential
+
+
 Random Ensembles
 ^^^^^^^^^^^^^^^^
 
 Functions that can generate random quantum objects.
+
+
+Haar-random :math:`U_{3}`
+"""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.uniform_sampling_U3
 
 
 Random Gaussian matrix
@@ -1761,6 +1964,7 @@ Kraus operators as probabilistic sum of unitaries
     for a limited set of operators. We leave to the user to decide how to
     best use this function.
 
+
 Utility Functions
 ^^^^^^^^^^^^^^^^^
 
@@ -1885,5 +2089,60 @@ numpy. The default backend can be changed using the ``QIBO_BACKEND`` environment
 variable.
 
 .. autoclass:: qibo.backends.abstract.Backend
+    :members:
+    :member-order: bysource
+
+Clifford Simulation
+^^^^^^^^^^^^^^^^^^^
+
+A special backend in qibo supports the simulation of Clifford circuits.
+This :class:`qibo.backends.clifford.CliffordBackend` backend implements the phase-space formalism
+introduced in `https://arxiv.org/abs/quant-ph/0406196 <aaronson_>`_ to efficiently simulate gate
+application and measurements sampling in the stabilizers state representation.
+The execution of a circuit through this backend creates a
+:class:`qibo.quantum_info.clifford.Clifford` object that gives access to the final measured
+samples through the :meth:`qibo.quantum_info.clifford.Clifford.samples` method,
+similarly to :class:`qibo.result.CircuitResult`.
+The probabilities and frequencies are computed starting from the samples by the
+:meth:`qibo.quantum_info.clifford.Clifford.frequencies` and
+:meth:`qibo.quantum_info.clifford.Clifford.probabilities` methods.
+
+.. _aaronson: https://arxiv.org/abs/quant-ph/0406196
+
+It is also possible to recover the standard state representation with the
+:meth:`qibo.quantum_info.clifford.Clifford.state` method.
+Note, however, that this process is inefficient as it involves the construction of all the
+stabilizers starting from the generators encoded inside the symplectic matrix.
+
+As for the other backends, the Clifford backend can be set with
+
+.. testcode::  python
+
+    import qibo
+    qibo.set_backend("clifford", platform="numpy")
+
+by specifying the engine used for calculation, if not provided the current :class:`qibo.backends.GlobalBackend` is used
+
+.. testcode::  python
+
+    import qibo
+
+    # setting numpy as the global backend
+    qibo.set_backend("numpy")
+    # the clifford backend will use the numpy backend as engine
+    backend = qibo.backends.CliffordBackend()
+
+Alternatively, a Clifford circuit can also be executed starting from the :class:`qibo.quantum_info.clifford.Clifford` object
+
+.. code-block::  python
+
+    from qibo.quantum_info import Clifford, random_clifford
+
+    nqubits = 2
+    circuit = random_clifford(nqubits)
+    result = Clifford.from_circuit(circuit)
+
+
+.. autoclass:: qibo.backends.clifford.CliffordBackend
     :members:
     :member-order: bysource

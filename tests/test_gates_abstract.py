@@ -1,9 +1,13 @@
-"""Tests methods defined in `qibo/gates/abstract.py` and `qibo/gates/gates.py`."""
-import numpy as np
+"""Tests methods defined in `qibo/gates/abstract.py` and
+`qibo/gates/gates.py`."""
+import json
+from typing import Optional
+
 import pytest
 
 from qibo import gates, matrices
 from qibo.config import PRECISION_TOL
+from qibo.gates import abstract
 
 
 @pytest.mark.parametrize(
@@ -12,6 +16,71 @@ from qibo.config import PRECISION_TOL
 def test_one_qubit_gates_init(gatename):
     gate = getattr(gates, gatename)(0)
     assert gate.target_qubits == (0,)
+
+
+def gate_from_json(gatename: str, control: Optional[list] = None):
+    gate = getattr(gates, gatename)(0)
+
+    control = [] if control is None else control
+
+    json_general = f"""
+    {{
+        "name": {{}},
+        "init_args": [0],
+        "init_kwargs": {{}},
+        "_target_qubits": [0],
+        "_control_qubits": {control}
+    }}
+    """
+
+    json_gate = json.loads(json_general)
+    json_gate["name"] = gate.name
+
+    return gate, json_gate
+
+
+@pytest.mark.parametrize(
+    "gatename", ["H", "X", "Y", "Z", "S", "SDG", "T", "TDG", "I", "Align"]
+)
+def test_one_qubit_gates_serialization(gatename):
+    gate, json_gate = gate_from_json(gatename)
+    raw = gate.raw
+
+    assert isinstance(raw, dict)
+    assert gate.to_json() == json.dumps(raw)
+
+    del raw["_class"]
+
+    # raw may contain some objects later converted by JSON (e.g. tuples)
+    assert json.loads(json.dumps(raw)) == json_gate
+    assert gates.Gate.from_dict(gate.raw).raw == gate.raw
+
+
+@pytest.mark.parametrize(
+    "gatename", ["H", "X", "Y", "Z", "S", "SDG", "T", "TDG", "I", "Align"]
+)
+def test_controlled_gates_serialization(gatename):
+    gate, _ = gate_from_json(gatename, control=[1, 4])
+
+    assert isinstance(gate.raw, dict)
+    assert gates.Gate.from_dict(gate.raw).raw == gate.raw
+
+
+def test_gates_serialization_errors(monkeypatch):
+    with pytest.raises(ValueError, match="Unknown"):
+        _ = abstract.Gate.from_dict({"_class": "Ciao"})
+
+    error_tag = "not-control-error"
+
+    def mock_controlled_by(*args, **kwargs):
+        raise RuntimeError(error_tag)
+
+    monkeypatch.setattr(abstract.Gate, "controlled_by", mock_controlled_by)
+
+    with pytest.raises(RuntimeError, match=error_tag):
+        _ = abstract.Gate.from_dict(
+            {"_class": "H", "init_args": (0,), "init_kwargs": {}, "_control_qubits": ()}
+        )
 
 
 @pytest.mark.parametrize(
@@ -37,7 +106,7 @@ def test_x_decomposition_errors(use_toffolis):
     """Check ``X`` decomposition errors."""
     gate = gates.X(0).controlled_by(1, 2, 3, 4)
     with pytest.raises(ValueError):
-        decomp = gate.decompose(2, 3, use_toffolis=use_toffolis)
+        _ = gate.decompose(2, 3, use_toffolis=use_toffolis)
 
 
 @pytest.mark.parametrize("controls,instance", [((1,), "CZ"), ((1, 2), "Z")])
@@ -104,6 +173,50 @@ def test_one_qubit_rotations_init(gatename, params):
         ("U3", (0.1234, 0.4321, 0.5678)),
     ],
 )
+def test_one_qubit_rotations_serialization(gatename, params):
+    gate = getattr(gates, gatename)(0, *params)
+
+    json_general = """
+    {
+        "name": {},
+        "init_args": [0],
+        "init_kwargs": {},
+        "_target_qubits": [0],
+        "_control_qubits": []
+    }
+    """
+
+    json_gate = json.loads(json_general)
+    json_gate["name"] = gate.name
+    json_gate["init_kwargs"] = gate.init_kwargs
+    del json_gate["init_kwargs"]["trainable"]
+
+    raw = gate.raw
+    del raw["_class"]
+
+    raw = gate.raw
+
+    assert isinstance(raw, dict)
+    assert gate.to_json() == json.dumps(raw)
+
+    del raw["_class"]
+
+    # raw may contain some objects later converted by JSON (e.g. tuples)
+    assert json.loads(json.dumps(raw)) == json_gate
+    assert gates.Gate.from_dict(gate.raw).raw == gate.raw
+
+
+@pytest.mark.parametrize(
+    "gatename,params",
+    [
+        ("RX", (0.1234,)),
+        ("RY", (0.1234,)),
+        ("RZ", (0.1234,)),
+        ("U1", (0.1234,)),
+        ("U2", (0.1234, 0.4321)),
+        ("U3", (0.1234, 0.4321, 0.5678)),
+    ],
+)
 def test_one_qubit_rotations_controlled_by(gatename, params):
     gate = getattr(gates, gatename)(0, *params).controlled_by(1)
     assert gate.target_qubits == (0,)
@@ -115,10 +228,13 @@ def test_one_qubit_rotations_controlled_by(gatename, params):
     assert gate.parameters == params
 
 
-def test_cnot_and_cz_init():
+def test_cnot_and_cy_and_cz_init():
     gate = gates.CNOT(0, 1)
     assert gate.target_qubits == (1,)
     assert gate.control_qubits == (0,)
+    gate = gates.CY(4, 7)
+    assert gate.target_qubits == (7,)
+    assert gate.control_qubits == (4,)
     gate = gates.CZ(3, 2)
     assert gate.target_qubits == (2,)
     assert gate.control_qubits == (3,)

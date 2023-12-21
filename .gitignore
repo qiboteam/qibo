@@ -134,6 +134,8 @@ dmypy.json
 
 # tmp files
 tmp/
+tmp.npy
 
 # Mac
 .DS_Store
+.devenv

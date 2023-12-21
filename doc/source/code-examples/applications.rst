@@ -69,6 +69,8 @@ Quantum Physics
     tutorials/bell-variational/README.md
     tutorials/falqon/README.md
     tutorials/grover/README.md
+    tutorials/dbi/dbi.ipynb
+
 
 Quantum Machine Learning
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -85,6 +87,16 @@ Quantum Machine Learning
     tutorials/qcnn_classifier/qcnn_demo.ipynb
     tutorials/qclustering/README.md
     tutorials/adiabatic_qml/adiabatic-qml.ipynb
+
+Combinatorics
+^^^^^^^^^^^^^
+
+.. toctree::
+    :maxdepth: 1
+
+    tutorials/qap/README.md
+    tutorials/mvc/README.md
+
 
 Applications by algorithm
 -------------------------
@@ -141,6 +153,14 @@ Adiabatic Evolution
     tutorials/adiabatic3sat/README.md
 
 
+Diagonalization
+^^^^^^^^^^^^^^^
+
+.. toctree::
+    :maxdepth: 1
+
+    tutorials/dbi/dbi.ipynb
+
 FALQON
 ^^^^^^
 
@@ -153,6 +173,7 @@ Clustering
 ^^^^^^^^^^
 
 .. toctree::
-    :maxdepth: 1
+    :maxdepth: 2
 
-    tutorials/qclustering/README.md
+    applications-by-topic
+    applications-by-algorithm

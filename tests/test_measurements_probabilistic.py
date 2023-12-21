@@ -83,14 +83,15 @@ def test_measurements_with_probabilistic_noise(backend):
 
     backend.set_seed(123)
     target_samples = []
+    channel_gates = [gates.Y, gates.Z]
+    probs = [0.2, 0.4, 0.4]
     for _ in range(20):
         noiseless_c = models.Circuit(5)
         noiseless_c.add((gates.RX(i, t) for i, t in enumerate(thetas)))
         for i in range(5):
-            if backend.np.random.random() < 0.2:
-                noiseless_c.add(gates.Y(i))
-            if backend.np.random.random() < 0.4:
-                noiseless_c.add(gates.Z(i))
+            index = backend.sample_shots(probs, 1)[0]
+            if index != len(channel_gates):
+                noiseless_c.add(channel_gates[index](i))
         noiseless_c.add(gates.M(*range(5)))
         result = backend.execute_circuit(noiseless_c, nshots=1)
         target_samples.append(backend.to_numpy(result.samples()))
@@ -139,11 +140,13 @@ def test_post_measurement_bitflips_on_circuit_result(backend):
     ],
 )
 def test_measurementresult_apply_bitflips(backend, i, p0, p1):
-    from qibo.states import CircuitResult
+    from qibo.result import CircuitResult
 
     c = models.Circuit(3)
     c.add(gates.M(*range(3)))
-    result = CircuitResult(backend, c, None)
+    state = np.zeros(8)
+    state[0] = 1.0
+    result = CircuitResult(state, c.measurements, backend)
     result._samples = np.zeros((10, 3), dtype="int32")
     backend.set_seed(123)
     noisy_samples = result.apply_bitflips(p0, p1)

@@ -212,7 +212,7 @@ class StyleQGAN:
         # quantum generator circuit
         for i in range(samples):
             self.set_parameters(circuit, params, x_input, i)
-            final_state = self.backend.execute_circuit(circuit, return_array=True)
+            final_state = self.backend.execute_circuit(circuit)._state
             for ii in range(self.nqubits):
                 X[ii].append(hamiltonians_list[ii].expectation(final_state))
         # shape array
@@ -235,7 +235,9 @@ class StyleQGAN:
         y_fake = np.ones((samples, 1))
         # evaluate discriminator on fake examples
         disc_output = discriminator(x_fake)
-        loss = tf.keras.losses.binary_crossentropy(y_fake, disc_output)
+        loss = tf.keras.losses.binary_crossentropy(  # pylint: disable=no-member
+            y_fake, disc_output
+        )
         loss = tf.reduce_mean(loss)
         return loss
 
@@ -264,7 +266,9 @@ class StyleQGAN:
                 np.random.uniform(-0.15, 0.15, n), dtype=tf.complex128
             )
 
-        optimizer = tf.optimizers.Adadelta(learning_rate=self.lr)
+        optimizer = tf.optimizers.Adadelta(  # pylint: disable=no-member
+            learning_rate=self.lr
+        )
         # prepare real samples
         s = self.reference
         # manually enumerate epochs

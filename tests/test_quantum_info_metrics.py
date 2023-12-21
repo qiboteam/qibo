@@ -16,6 +16,7 @@ from qibo.quantum_info.metrics import (
     entropy,
     expressibility,
     fidelity,
+    frame_potential,
     gate_error,
     hilbert_schmidt_distance,
     impurity,
@@ -28,6 +29,7 @@ from qibo.quantum_info.metrics import (
 )
 from qibo.quantum_info.random_ensembles import (
     random_density_matrix,
+    random_hermitian,
     random_statevector,
     random_unitary,
 )
@@ -156,12 +158,7 @@ def test_entropy(backend, base, check_hermitian):
         test = 0.8613531161467861
 
     backend.assert_allclose(
-        backend.calculate_norm(
-            entropy(state, base, check_hermitian=check_hermitian, backend=backend)
-            - test
-        )
-        < PRECISION_TOL,
-        True,
+        entropy(state, base, check_hermitian=check_hermitian, backend=backend), test
     )
 
 
@@ -516,12 +513,11 @@ def test_process_fidelity_and_infidelity(backend):
         target = backend.cast(target, dtype=target.dtype)
         test = process_fidelity(channel, target, backend=backend)
     with pytest.raises(TypeError):
-        channel = np.random.rand(d**2, d**2)
-        channel = backend.cast(channel, dtype=channel.dtype)
+        channel = random_hermitian(d**2, backend=backend)
         test = process_fidelity(channel, check_unitary=True, backend=backend)
     with pytest.raises(TypeError):
-        channel = np.random.rand(d**2, d**2)
-        target = np.random.rand(d**2, d**2)
+        channel = 10 * np.random.rand(d**2, d**2)
+        target = 10 * np.random.rand(d**2, d**2)
         channel = backend.cast(channel, dtype=channel.dtype)
         target = backend.cast(target, dtype=target.dtype)
         test = process_fidelity(channel, target, check_unitary=True, backend=backend)
@@ -654,3 +650,30 @@ def test_expressibility(backend):
     expr_3 = expressibility(c3, t, samples, backend=backend)
 
     backend.assert_allclose(expr_1 < expr_2 < expr_3, True)
+
+
+@pytest.mark.parametrize("samples", [int(1e2)])
+@pytest.mark.parametrize("power_t", [2])
+@pytest.mark.parametrize("nqubits", [2, 3, 4])
+def test_frame_potential(backend, nqubits, power_t, samples):
+    depth = int(np.ceil(nqubits * power_t))
+
+    circuit = Circuit(nqubits)
+    circuit.add(gates.U3(q, 0.0, 0.0, 0.0) for q in range(nqubits))
+    for _ in range(depth):
+        circuit.add(gates.CNOT(q, q + 1) for q in range(nqubits - 1))
+        circuit.add(gates.U3(q, 0.0, 0.0, 0.0) for q in range(nqubits))
+
+    with pytest.raises(TypeError):
+        frame_potential(circuit, power_t="2", backend=backend)
+    with pytest.raises(TypeError):
+        frame_potential(circuit, 2, samples="1000", backend=backend)
+
+    dim = 2**nqubits
+    potential_haar = 2 / dim**4
+
+    potential = frame_potential(
+        circuit, power_t=power_t, samples=samples, backend=backend
+    )
+
+    backend.assert_allclose(potential, potential_haar, rtol=1e-2, atol=1e-2)

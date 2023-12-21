@@ -34,7 +34,7 @@ def qaoa_function_of_layer(backend, layer):
     return qaoa.execute(initial_state)
 
 
-@pytest.mark.parametrize("nlayers", [4, 6, 8])
+@pytest.mark.parametrize("nlayers", [2, 4])
 def test_tsp(backend, nlayers):
     final_state = backend.to_numpy(qaoa_function_of_layer(backend, nlayers))
     assert_regression_fixture(

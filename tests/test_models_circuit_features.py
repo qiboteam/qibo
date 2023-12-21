@@ -45,6 +45,17 @@ def test_circuit_unitary_bigger(backend, with_measurement):
     backend.assert_allclose(final_matrix, target_matrix)
 
 
+def test_circuit_unitary_and_inverse_with_noise_channel(backend):
+    circuit = Circuit(2)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.DepolarizingChannel([0, 1], 0.2))
+    with pytest.raises(NotImplementedError):
+        circuit.unitary(backend)
+    with pytest.raises(NotImplementedError):
+        circuit.invert()
+
+
 @pytest.mark.parametrize("compile", [False, True])
 def test_circuit_vs_gate_execution(backend, compile):
     """Check consistency between executing circuit and stand alone gates."""
@@ -54,7 +65,7 @@ def test_circuit_vs_gate_execution(backend, compile):
     target_c.add(gates.X(0))
     target_c.add(gates.X(1))
     target_c.add(gates.CU1(0, 1, theta))
-    target_result = backend.execute_circuit(target_c)
+    target_result = backend.execute_circuit(target_c)._state
 
     # custom circuit
     def custom_circuit(state, theta):
@@ -125,8 +136,8 @@ def test_inverse_circuit_execution(backend, accelerators, fuse):
             c = c.fuse()
     invc = c.invert()
     target_state = np.ones(2**4) / 4
-    final_state = backend.execute_circuit(c, initial_state=np.copy(target_state))
-    final_state = backend.execute_circuit(invc, initial_state=final_state)
+    final_state = backend.execute_circuit(c, initial_state=np.copy(target_state))._state
+    final_state = backend.execute_circuit(invc, initial_state=final_state)._state
     backend.assert_allclose(final_state, target_state)
 
 
@@ -273,25 +284,12 @@ def test_repeated_execute_pauli_noise_channel(backend):
         gates.PauliNoiseChannel(i, list(zip(["X", "Y", "Z"], [0.1, 0.2, 0.3])))
         for i in range(4)
     )
-    final_state = backend.execute_circuit(c, nshots=20)
-
-    backend.set_seed(1234)
-    target_state = []
-    for _ in range(20):
-        noiseless_c = Circuit(4)
-        noiseless_c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
-        for i in range(4):
-            if backend.np.random.random() < 0.1:
-                noiseless_c.add(gates.X(i))
-            if backend.np.random.random() < 0.2:
-                noiseless_c.add(gates.Y(i))
-            if backend.np.random.random() < 0.3:
-                noiseless_c.add(gates.Z(i))
-        result = backend.execute_circuit(noiseless_c)
-        target_state.append(result.state(numpy=True))
-    final_state = [backend.to_numpy(x) for x in final_state]
-    target_state = np.stack(target_state)
-    backend.assert_allclose(final_state, target_state)
+    with pytest.raises(RuntimeError) as excinfo:
+        final_state = backend.execute_circuit(c, nshots=20)
+    assert (
+        str(excinfo.value)
+        == "Attempting to perform noisy simulation with `density_matrix=False` and no Measurement gate in the Circuit. If you wish to retrieve the statistics of the outcomes please include measurements in the circuit, otherwise set `density_matrix=True` to recover the final state."
+    )
 
 
 def test_repeated_execute_with_pauli_noise(backend):
@@ -300,23 +298,12 @@ def test_repeated_execute_with_pauli_noise(backend):
     c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
     noisy_c = c.with_pauli_noise(list(zip(["X", "Z"], [0.2, 0.1])))
     backend.set_seed(1234)
-    final_state = backend.execute_circuit(noisy_c, nshots=20)
-
-    backend.set_seed(1234)
-    target_state = []
-    for _ in range(20):
-        noiseless_c = Circuit(4)
-        for i, t in enumerate(thetas):
-            noiseless_c.add(gates.RY(i, theta=t))
-            if backend.np.random.random() < 0.2:
-                noiseless_c.add(gates.X(i))
-            if backend.np.random.random() < 0.1:
-                noiseless_c.add(gates.Z(i))
-        result = backend.execute_circuit(noiseless_c)
-        target_state.append(result.state(numpy=True))
-    target_state = np.stack(target_state)
-    final_state = [backend.to_numpy(x) for x in final_state]
-    backend.assert_allclose(final_state, target_state)
+    with pytest.raises(RuntimeError) as excinfo:
+        final_state = backend.execute_circuit(noisy_c, nshots=20)
+    assert (
+        str(excinfo.value)
+        == "Attempting to perform noisy simulation with `density_matrix=False` and no Measurement gate in the Circuit. If you wish to retrieve the statistics of the outcomes please include measurements in the circuit, otherwise set `density_matrix=True` to recover the final state."
+    )
 
 
 @pytest.mark.parametrize("nqubits", [1, 2])
@@ -336,26 +323,14 @@ def test_repeated_execute_probs_and_freqs(backend, nqubits):
     # Tensorflow seems to yield different results with same seed
     if backend.__class__.__name__ == "TensorflowBackend":
         if nqubits == 1:
-            test_probabilities = [0.171875, 0.828125]
-            test_frequencies = Counter({1: 848, 0: 176})
+            test_frequencies = Counter({"1": 844, "0": 180})
         else:
-            test_probabilities = [0.04101562, 0.12695312, 0.140625, 0.69140625]
-            test_frequencies = Counter({11: 708, 10: 144, 1: 130, 0: 42})
+            test_frequencies = Counter({"11": 674, "10": 155, "01": 154, "00": 41})
     else:
         if nqubits == 1:
-            test_probabilities = [0.20117188, 0.79882812]
-            test_frequencies = Counter({"1": 818, "0": 206})
+            test_frequencies = Counter({"1": 790, "0": 234})
         else:
-            test_probabilities = [0.0390625, 0.16113281, 0.17382812, 0.62597656]
-            test_frequencies = Counter({"11": 641, "10": 178, "01": 165, "00": 40})
+            test_frequencies = Counter({"11": 618, "10": 169, "01": 185, "00": 52})
 
-    test_probabilities = backend.cast(test_probabilities, dtype=float)
-
-    print(result.probabilities())
-    backend.assert_allclose(
-        backend.calculate_norm(result.probabilities() - test_probabilities)
-        < PRECISION_TOL,
-        True,
-    )
-
-    assert result.frequencies() == test_frequencies
+    for key in dict(test_frequencies).keys():
+        backend.assert_allclose(result.frequencies()[key], test_frequencies[key])

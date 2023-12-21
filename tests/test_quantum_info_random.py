@@ -5,10 +5,11 @@ from functools import reduce
 import numpy as np
 import pytest
 
-from qibo import matrices
+from qibo import Circuit, gates, matrices
 from qibo.config import PRECISION_TOL
 from qibo.quantum_info.metrics import purity
 from qibo.quantum_info.random_ensembles import (
+    _probability_distribution_sin,
     random_clifford,
     random_density_matrix,
     random_gaussian_matrix,
@@ -19,10 +20,54 @@ from qibo.quantum_info.random_ensembles import (
     random_statevector,
     random_stochastic_matrix,
     random_unitary,
+    uniform_sampling_U3,
 )
 
 
-@pytest.mark.parametrize("seed", [None, 10, np.random.Generator(np.random.MT19937(10))])
+@pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
+def test_uniform_sampling_U3(backend, seed):
+    with pytest.raises(TypeError):
+        uniform_sampling_U3("1", seed=seed, backend=backend)
+    with pytest.raises(ValueError):
+        uniform_sampling_U3(0, seed=seed, backend=backend)
+    with pytest.raises(TypeError):
+        uniform_sampling_U3(2, seed="1", backend=backend)
+
+    X = backend.cast(matrices.X, dtype=matrices.X.dtype)
+    Y = backend.cast(matrices.Y, dtype=matrices.Y.dtype)
+    Z = backend.cast(matrices.Z, dtype=matrices.Z.dtype)
+
+    ngates = int(1e4)
+    phases = uniform_sampling_U3(ngates, seed=seed, backend=backend)
+
+    # expectation values in the 3 directions should be the same
+    expectation_values = []
+    for row in phases:
+        row = [float(phase) for phase in row]
+        circuit = Circuit(1)
+        circuit.add(gates.U3(0, *row))
+        state = backend.execute_circuit(circuit).state()
+
+        expectation_values.append(
+            [
+                np.conj(state) @ X @ state,
+                np.conj(state) @ Y @ state,
+                np.conj(state) @ Z @ state,
+            ]
+        )
+    expectation_values = backend.cast(expectation_values)
+    expectation_values = np.mean(expectation_values, axis=0)
+
+    backend.assert_allclose(expectation_values[0], expectation_values[1], atol=1e-1)
+    backend.assert_allclose(expectation_values[0], expectation_values[2], atol=1e-1)
+
+    # execution for coverage
+    sampler = _probability_distribution_sin(a=0, b=np.pi, seed=seed)
+    sampler.pdf(1)
+    sampler.cdf(1)
+
+
+@pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
 def test_random_gaussian_matrix(backend, seed):
     with pytest.raises(TypeError):
         dims = np.array([2])
@@ -72,14 +117,14 @@ def test_random_hermitian(backend):
     dims = 4
     matrix = random_hermitian(dims, backend=backend)
     matrix_dagger = np.transpose(np.conj(matrix))
-    norm = backend.calculate_norm(matrix - matrix_dagger)
+    norm = float(backend.calculate_norm_density_matrix(matrix - matrix_dagger, order=2))
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
     # test if function returns semidefinite Hermitian operator
     dims = 4
     matrix = random_hermitian(dims, semidefinite=True, backend=backend)
     matrix_dagger = np.transpose(np.conj(matrix))
-    norm = backend.calculate_norm(matrix - matrix_dagger)
+    norm = float(backend.calculate_norm_density_matrix(matrix - matrix_dagger, order=2))
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
     eigenvalues = np.linalg.eigvalsh(matrix)
@@ -90,7 +135,7 @@ def test_random_hermitian(backend):
     dims = 4
     matrix = random_hermitian(dims, normalize=True, backend=backend)
     matrix_dagger = np.transpose(np.conj(matrix))
-    norm = backend.calculate_norm(matrix - matrix_dagger)
+    norm = float(backend.calculate_norm_density_matrix(matrix - matrix_dagger, order=2))
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
     eigenvalues = np.linalg.eigvalsh(matrix)
@@ -101,7 +146,7 @@ def test_random_hermitian(backend):
     dims = 4
     matrix = random_hermitian(dims, semidefinite=True, normalize=True, backend=backend)
     matrix_dagger = np.transpose(np.conj(matrix))
-    norm = backend.calculate_norm(matrix - matrix_dagger)
+    norm = float(backend.calculate_norm(matrix - matrix_dagger, order=2))
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
     eigenvalues = np.linalg.eigvalsh(matrix)
@@ -133,7 +178,9 @@ def test_random_unitary(backend):
     matrix = random_unitary(dims, backend=backend)
     matrix_dagger = np.transpose(np.conj(matrix))
     matrix_inv = np.linalg.inv(matrix)
-    norm = backend.calculate_norm(matrix_inv - matrix_dagger)
+    norm = float(
+        backend.calculate_norm_density_matrix(matrix_inv - matrix_dagger, order=2)
+    )
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
     # tests if operator is unitary (measure == None)
@@ -141,24 +188,44 @@ def test_random_unitary(backend):
     matrix = random_unitary(dims, measure, backend=backend)
     matrix_dagger = np.transpose(np.conj(matrix))
     matrix_inv = np.linalg.inv(matrix)
-    norm = backend.calculate_norm(matrix_inv - matrix_dagger)
+    norm = float(backend.calculate_norm(matrix_inv - matrix_dagger, order=2))
     backend.assert_allclose(norm < PRECISION_TOL, True)
 
 
-@pytest.mark.parametrize("measure", [None, "haar"])
+@pytest.mark.parametrize("order", ["row", "column"])
+@pytest.mark.parametrize("rank", [None, 4])
+@pytest.mark.parametrize("measure", [None, "haar", "bcsz"])
 @pytest.mark.parametrize(
     "representation",
-    ["chi", "chi-IZXY", "choi", "kraus", "liouville", "pauli", "pauli-IZXY"],
+    [
+        "chi",
+        "chi-IZXY",
+        "choi",
+        "kraus",
+        "liouville",
+        "pauli",
+        "pauli-IZXY",
+        "stinespring",
+    ],
 )
-def test_random_quantum_channel(backend, representation, measure):
+def test_random_quantum_channel(backend, representation, measure, rank, order):
     with pytest.raises(TypeError):
         test = random_quantum_channel(4, representation=True, backend=backend)
     with pytest.raises(ValueError):
         test = random_quantum_channel(4, representation="Choi", backend=backend)
+    with pytest.raises(NotImplementedError):
+        test = random_quantum_channel(4, measure="bcsz", order="system")
 
     # All subroutines are already tested elsewhere,
     # so here we only execute them once for coverage
-    random_quantum_channel(4, representation, measure, backend=backend)
+    random_quantum_channel(
+        4,
+        rank=rank,
+        representation=representation,
+        measure=measure,
+        order=order,
+        backend=backend,
+    )
 
 
 @pytest.mark.parametrize("haar", [False, True])
@@ -186,7 +253,7 @@ def test_random_statevector(backend, haar, seed):
 
 @pytest.mark.parametrize("normalize", [False, True])
 @pytest.mark.parametrize("basis", [None, "pauli-IXYZ", "pauli-IZXY"])
-@pytest.mark.parametrize("metric", ["Hilbert-Schmidt", "Bures"])
+@pytest.mark.parametrize("metric", ["hilbert-schmidt", "ginibre", "bures"])
 @pytest.mark.parametrize("pure", [False, True])
 @pytest.mark.parametrize("dims", [2, 4])
 def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
@@ -219,6 +286,11 @@ def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
         with pytest.raises(ValueError):
             test = random_density_matrix(dims=dims, normalize=True)
     else:
+        norm_function = (
+            backend.calculate_norm_density_matrix
+            if basis is None
+            else backend.calculate_norm
+        )
         state = random_density_matrix(
             dims,
             pure=pure,
@@ -239,23 +311,20 @@ def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
                 backend.assert_allclose(purity(state) >= 1.0 - PRECISION_TOL, True)
 
             state_dagger = np.transpose(np.conj(state))
-            norm = backend.calculate_norm(state - state_dagger)
+            norm = float(norm_function(state - state_dagger, order=2))
             backend.assert_allclose(norm < PRECISION_TOL, True)
         else:
             normalization = 1.0 if normalize is False else 1.0 / np.sqrt(dims)
-            backend.assert_allclose(
-                backend.calculate_norm(state[0] - normalization) <= PRECISION_TOL, True
-            )
-            assert all(
-                backend.calculate_norm(exp_value) <= normalization
-                for exp_value in state[1:]
-            )
+            print(state)
+            backend.assert_allclose(state[0], normalization)
+            assert all(np.abs(exp_value) <= normalization for exp_value in state[1:])
 
 
 @pytest.mark.parametrize("seed", [10])
+@pytest.mark.parametrize("density_matrix", [False, True])
 @pytest.mark.parametrize("return_circuit", [True, False])
 @pytest.mark.parametrize("nqubits", [1, 2])
-def test_random_clifford(backend, nqubits, return_circuit, seed):
+def test_random_clifford(backend, nqubits, return_circuit, density_matrix, seed):
     with pytest.raises(TypeError):
         test = random_clifford(
             nqubits="1", return_circuit=return_circuit, backend=backend
@@ -281,7 +350,11 @@ def test_random_clifford(backend, nqubits, return_circuit, seed):
     result = backend.cast(result, dtype=result.dtype)
 
     matrix = random_clifford(
-        nqubits, return_circuit=return_circuit, seed=seed, backend=backend
+        nqubits,
+        return_circuit=return_circuit,
+        density_matrix=density_matrix,
+        seed=seed,
+        backend=backend,
     )
 
     if return_circuit:
@@ -345,7 +418,9 @@ def test_pauli_single(backend):
     matrix = backend.cast(matrix, dtype=matrix.dtype)
 
     backend.assert_allclose(
-        backend.calculate_norm(matrix - result) < PRECISION_TOL, True
+        float(backend.calculate_norm_density_matrix(matrix - result, order=2))
+        < PRECISION_TOL,
+        True,
     )
 
 
@@ -354,8 +429,11 @@ def test_pauli_single(backend):
 @pytest.mark.parametrize("max_qubits", [None])
 @pytest.mark.parametrize("subset", [None, ["I", "X"]])
 @pytest.mark.parametrize("return_circuit", [True, False])
+@pytest.mark.parametrize("density_matrix", [False, True])
 @pytest.mark.parametrize("seed", [10])
-def test_random_pauli(backend, qubits, depth, max_qubits, subset, return_circuit, seed):
+def test_random_pauli(
+    backend, qubits, depth, max_qubits, subset, return_circuit, density_matrix, seed
+):
     result_complete_set = np.array(
         [
             [0.0 + 0.0j, 1.0 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
@@ -370,7 +448,7 @@ def test_random_pauli(backend, qubits, depth, max_qubits, subset, return_circuit
     result_subset = backend.identity_density_matrix(2, normalize=False)
 
     matrix = random_pauli(
-        qubits, depth, max_qubits, subset, return_circuit, seed, backend
+        qubits, depth, max_qubits, subset, return_circuit, density_matrix, seed, backend
     )
 
     if return_circuit:
@@ -378,12 +456,23 @@ def test_random_pauli(backend, qubits, depth, max_qubits, subset, return_circuit
         matrix = backend.cast(matrix, dtype=matrix.dtype)
         if subset is None:
             backend.assert_allclose(
-                backend.calculate_norm(matrix - result_complete_set) < PRECISION_TOL,
+                float(
+                    backend.calculate_norm_density_matrix(
+                        matrix - result_complete_set, order=2
+                    )
+                )
+                < PRECISION_TOL,
                 True,
             )
         else:
             backend.assert_allclose(
-                backend.calculate_norm(matrix - result_subset) < PRECISION_TOL, True
+                float(
+                    backend.calculate_norm_density_matrix(
+                        matrix - result_subset, order=2
+                    )
+                )
+                < PRECISION_TOL,
+                True,
             )
     else:
         matrix = np.transpose(matrix, (1, 0, 2, 3))
@@ -392,12 +481,23 @@ def test_random_pauli(backend, qubits, depth, max_qubits, subset, return_circuit
 
         if subset is None:
             backend.assert_allclose(
-                backend.calculate_norm(matrix - result_complete_set) < PRECISION_TOL,
+                float(
+                    backend.calculate_norm_density_matrix(
+                        matrix - result_complete_set, order=2
+                    )
+                )
+                < PRECISION_TOL,
                 True,
             )
         else:
             backend.assert_allclose(
-                backend.calculate_norm(matrix - result_subset) < PRECISION_TOL, True
+                float(
+                    backend.calculate_norm_density_matrix(
+                        matrix - result_subset, order=2
+                    )
+                )
+                < PRECISION_TOL,
+                True,
             )
 
 
