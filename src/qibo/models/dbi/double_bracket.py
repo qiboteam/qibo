@@ -1,6 +1,7 @@
 from copy import deepcopy
 from enum import Enum, auto
 
+import hyperopt
 import numpy as np
 
 from qibo.config import raise_error
@@ -140,13 +141,6 @@ class DoubleBracketIteration:
         Returns:
             (float): optimized best iteration step.
         """
-        try:
-            import hyperopt
-        except:  # pragma: no cover
-            raise_error(
-                ImportError, "hyperopt_step function requires hyperopt to be installed."
-            )
-
         if space is None:
             space = hyperopt.hp.uniform
         if optimizer is None:
@@ -188,9 +182,15 @@ class DoubleBracketIteration:
         return loss
 
     def energy_fluctuation(self, state):
-        """Evaluate energy fluctuations"""
-        energy = self.h.expectation(state)
-        h = self.h.matrix
-        h2 = Hamiltonian(nqubits=self.h.nqubits, matrix=h @ h, backend=self.backend)
-        average_h2 = self.backend.calculate_expectation_state(h2, state, normalize=True)
-        return np.sqrt(average_h2 - energy**2)
+        """
+        Evaluate energy fluctuation
+
+        .. math::
+            \\Xi_{k}(\\mu) = \\sqrt{\\langle\\mu|\\hat{H}^2|\\mu\\rangle - \\langle\\mu|\\hat{H}|\\mu\\rangle^2} \\,
+
+        for a given state :math:`|\\mu\\rangle`.
+
+        Args:
+            state (np.ndarray): quantum state to be used to compute the energy fluctuation with H.
+        """
+        return self.h.energy_fluctuation(state)

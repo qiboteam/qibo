@@ -195,9 +195,7 @@ class TensorflowBackend(NumpyBackend):
         elif cpu_devices:
             self.device = cpu_devices[0].name
 
-        import psutil
-
-        self.nthreads = psutil.cpu_count(logical=True)
+        self.nthreads = 0
 
         self.tensor_types = (np.ndarray, tf.Tensor, tf.Variable)
 

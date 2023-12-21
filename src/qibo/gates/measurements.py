@@ -192,6 +192,16 @@ class M(Gate):
         # collapse state
         return backend.collapse_density_matrix(state, qubits, shot, nqubits)
 
+    def apply_clifford(self, backend, state, nqubits):
+        self.result.backend = backend
+        if not self.collapse:
+            return state
+
+        qubits = sorted(self.target_qubits)
+        sample = backend.sample_shots(state, qubits, nqubits, 1, self.collapse)
+        self.result.add_shot_from_sample(sample[0])
+        return state
+
     def to_json(self):
         """Serializes the measurement gate to json."""
         encoding = json.loads(super().to_json())
@@ -211,3 +221,37 @@ class M(Gate):
         args["basis"] = [getattr(gates, g) for g in args["basis"]]
         args.update(args.pop("init_kwargs"))
         return cls(*qubits, **args)
+
+    # Overload on_qubits to copy also gate.result, controlled by can be removed for measurements
+    def on_qubits(self, qubit_map) -> "Gate":
+        """Creates the same measurement gate targeting different qubits
+        and preserving the measurement result register.
+
+        Args:
+            qubit_map (int): Dictionary mapping original qubit indices to new ones.
+
+        Returns:
+            A :class:`qibo.gates.Gate.M` object of the original gate
+            type targeting the given qubits.
+
+        Example:
+
+            .. testcode::
+
+                from qibo import models, gates
+                measurement = gates.M(0, 1)
+                c = models.Circuit(3)
+                c.add(measurement.on_qubits({0: 0, 1: 2}))
+                assert c.queue[0].result is measurement.result
+                print(c.draw())
+            .. testoutput::
+
+                q0: ─M─
+                q1: ─|─
+                q2: ─M─
+        """
+
+        qubits = (qubit_map.get(q) for q in self.qubits)
+        gate = self.__class__(*qubits, **self.init_kwargs)
+        gate.result = self.result
+        return gate

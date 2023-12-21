@@ -186,7 +186,7 @@ def test_circuit_add_sampling(backend):
 
     circ.add(gates.PauliNoiseChannel(0, [("Z", 0.01)]))
     circ += circ_no_noise.invert()
-    circ.add(gates.M(0))
+    measurement = circ.add(gates.M(0))
 
     # Sampling using 10 shots
     np.random.seed(123)
@@ -198,6 +198,7 @@ def test_circuit_add_sampling(backend):
     backend.set_seed(123)
     np.random.seed(123)
     for _ in range(10):
+        measurement.reset()
         result = backend.execute_circuit(circ, nshots=1)
         target_samples.append(result.samples())
 
