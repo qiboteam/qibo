@@ -597,6 +597,9 @@ def test_entangling_capability(backend, seed):
         circuit = Circuit(1)
         samples = 0.5
         entangling_capability(circuit, samples, seed=seed, backend=backend)
+    with pytest.raises(TypeError):
+        circuit = Circuit(1)
+        entangling_capability(circuit, samples=10, seed=True, backend=backend)
 
     nqubits = 2
     samples = 100
