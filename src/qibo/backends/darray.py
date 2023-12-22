@@ -22,6 +22,7 @@ class DarrayBackend(NumpyBackend):
         super().__init__()
         self.name = "darray"
         self.versions["dask"] = dask.__version__
+        self.tensor_types = da.Array
         # acquire a default client, if no one has been passed, to avoid reinstantiating
         # it every time
         self.client = client if client is not None else Client()
@@ -31,6 +32,15 @@ class DarrayBackend(NumpyBackend):
 
     def to_numpy(self, x):
         return self.client.compute(x)
+
+    def cast(self, x, dtype=None, copy=False):
+        if dtype is None:
+            dtype = self.dtype
+        if isinstance(x, self.tensor_types):
+            return x.astype(dtype, copy=copy)
+        elif self.issparse(x):
+            return x.astype(dtype, copy=copy)
+        return da.array(x, dtype=dtype)
 
     def zero_state(self, nqubits):
         state = da.zeros(2**nqubits, dtype=self.dtype)

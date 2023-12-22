@@ -30,7 +30,7 @@ def construct_backend(backend, platform=None, runcard=None):
     elif backend == "numpy":
         return NumpyBackend()
 
-    elif backend == "numpy":
+    elif backend == "darray":
         return DarrayBackend(platform)
 
     elif backend == "qibolab":  # pragma: no cover

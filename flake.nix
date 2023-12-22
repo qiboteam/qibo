@@ -55,6 +55,7 @@
                       pkgs.python3Packages.tomli
                     ];
                   }))
+                graphviz
               ];
 
               languages.python = {
