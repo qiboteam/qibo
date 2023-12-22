@@ -10,7 +10,6 @@ from qibo.backends.numpy import NumpyBackend
 from qibo.backends.tensorflow import TensorflowBackend
 from qibo.config import raise_error
 
-
 def _calculation_engine(backend):
     """Helper function to initialize the Clifford backend with the correct engine."""
     if backend.name == "qibojit":

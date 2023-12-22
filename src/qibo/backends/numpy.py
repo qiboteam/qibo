@@ -31,8 +31,9 @@ class NumpyBackend(Backend):
         )
 
         from qibo.backends.clifford import CliffordOperations
-
-        self.clifford_operations = CliffordOperations(self.np)
+        from qibo.backends import clifford_operations
+        
+        self.clifford_operations = clifford_operations#CliffordOperations(self.np)
 
     def set_precision(self, precision):
         if precision != self.precision:
