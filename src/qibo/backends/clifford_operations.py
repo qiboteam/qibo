@@ -1,7 +1,9 @@
 import numpy as np
 
+
 def I(symplectic_matrix, q, nqubits):
     return symplectic_matrix
+
 
 def H(symplectic_matrix, q, nqubits):
     r = symplectic_matrix[:-1, -1]
@@ -10,6 +12,7 @@ def H(symplectic_matrix, q, nqubits):
     symplectic_matrix[:-1, -1] = r ^ (x[:, q] & z[:, q])
     symplectic_matrix[:, [q, nqubits + q]] = symplectic_matrix[:, [nqubits + q, q]]
     return symplectic_matrix
+
 
 def CNOT(symplectic_matrix, control_q, target_q, nqubits):
     ind_zt = nqubits + target_q
@@ -145,9 +148,7 @@ def RY_pi(symplectic_matrix, q, nqubits):
     x = symplectic_matrix[:-1, :nqubits]
     z = symplectic_matrix[:-1, nqubits:-1]
     symplectic_matrix[:-1, -1] = r ^ (x[:, q] & (z[:, q] ^ x[:, q]))
-    symplectic_matrix[:-1, [nqubits + q, q]] = symplectic_matrix[
-        :-1, [q, nqubits + q]
-    ]
+    symplectic_matrix[:-1, [nqubits + q, q]] = symplectic_matrix[:-1, [q, nqubits + q]]
     return symplectic_matrix
 
 
@@ -157,9 +158,7 @@ def RY_3pi_2(symplectic_matrix, q, nqubits):
     x = symplectic_matrix[:-1, :nqubits]
     z = symplectic_matrix[:-1, nqubits:-1]
     symplectic_matrix[:-1, -1] = r ^ (z[:, q] & (z[:, q] ^ x[:, q]))
-    symplectic_matrix[:-1, [nqubits + q, q]] = symplectic_matrix[
-        :-1, [q, nqubits + q]
-    ]
+    symplectic_matrix[:-1, [nqubits + q, q]] = symplectic_matrix[:-1, [q, nqubits + q]]
     return symplectic_matrix
 
 
@@ -238,24 +237,12 @@ def iSWAP(symplectic_matrix, control_q, target_q, nqubits):
 def FSWAP(symplectic_matrix, control_q, target_q, nqubits):
     """Decomposition --> X-CNOT-RY-CNOT-RY-CNOT-CNOT-X"""
     symplectic_matrix = X(symplectic_matrix, target_q, nqubits)
-    symplectic_matrix = CNOT(
-        symplectic_matrix, control_q, target_q, nqubits
-    )
-    symplectic_matrix = RY(
-        symplectic_matrix, control_q, nqubits, np.pi / 2
-    )
-    symplectic_matrix = CNOT(
-        symplectic_matrix, target_q, control_q, nqubits
-    )
-    symplectic_matrix = RY(
-        symplectic_matrix, control_q, nqubits, -np.pi / 2
-    )
-    symplectic_matrix = CNOT(
-        symplectic_matrix, target_q, control_q, nqubits
-    )
-    symplectic_matrix = CNOT(
-        symplectic_matrix, control_q, target_q, nqubits
-    )
+    symplectic_matrix = CNOT(symplectic_matrix, control_q, target_q, nqubits)
+    symplectic_matrix = RY(symplectic_matrix, control_q, nqubits, np.pi / 2)
+    symplectic_matrix = CNOT(symplectic_matrix, target_q, control_q, nqubits)
+    symplectic_matrix = RY(symplectic_matrix, control_q, nqubits, -np.pi / 2)
+    symplectic_matrix = CNOT(symplectic_matrix, target_q, control_q, nqubits)
+    symplectic_matrix = CNOT(symplectic_matrix, control_q, target_q, nqubits)
     return X(symplectic_matrix, control_q, nqubits)
 
 
@@ -289,44 +276,22 @@ def CRX(symplectic_matrix, control_q, target_q, nqubits, theta):
         return I(symplectic_matrix, target_q, nqubits)
     # theta = pi + 4 * n * pi
     elif (theta / np.pi - 1) % 4 == 0:
-        symplectic_matrix = X(
-            symplectic_matrix, target_q, nqubits
-        )
-        symplectic_matrix = CZ(
-            symplectic_matrix, control_q, target_q, nqubits
-        )
-        symplectic_matrix = X(
-            symplectic_matrix, target_q, nqubits
-        )
-        return CY(
-            symplectic_matrix, control_q, target_q, nqubits
-        )
+        symplectic_matrix = X(symplectic_matrix, target_q, nqubits)
+        symplectic_matrix = CZ(symplectic_matrix, control_q, target_q, nqubits)
+        symplectic_matrix = X(symplectic_matrix, target_q, nqubits)
+        return CY(symplectic_matrix, control_q, target_q, nqubits)
     # theta = 2 * pi + 4 * n * pi
     elif (theta / (2 * np.pi) - 1) % 2 == 0:
-        symplectic_matrix = CZ(
-            symplectic_matrix, control_q, target_q, nqubits
-        )
-        symplectic_matrix = Y(
-            symplectic_matrix, target_q, nqubits
-        )
-        symplectic_matrix = CZ(
-            symplectic_matrix, control_q, target_q, nqubits
-        )
+        symplectic_matrix = CZ(symplectic_matrix, control_q, target_q, nqubits)
+        symplectic_matrix = Y(symplectic_matrix, target_q, nqubits)
+        symplectic_matrix = CZ(symplectic_matrix, control_q, target_q, nqubits)
         return Y(symplectic_matrix, target_q, nqubits)
     # theta = 3 * pi + 4 * n * pi
     elif (theta / np.pi - 3) % 4 == 0:
-        symplectic_matrix = X(
-            symplectic_matrix, target_q, nqubits
-        )
-        symplectic_matrix = CY(
-            symplectic_matrix, control_q, target_q, nqubits
-        )
-        symplectic_matrix = X(
-            symplectic_matrix, target_q, nqubits
-        )
-        return CZ(
-            symplectic_matrix, control_q, target_q, nqubits
-        )
+        symplectic_matrix = X(symplectic_matrix, target_q, nqubits)
+        symplectic_matrix = CY(symplectic_matrix, control_q, target_q, nqubits)
+        symplectic_matrix = X(symplectic_matrix, target_q, nqubits)
+        return CZ(symplectic_matrix, control_q, target_q, nqubits)
 
 
 def CRZ(symplectic_matrix, control_q, target_q, nqubits, theta):
@@ -335,41 +300,21 @@ def CRZ(symplectic_matrix, control_q, target_q, nqubits, theta):
         return I(symplectic_matrix, target_q, nqubits)
     # theta = pi + 4 * n * pi
     elif (theta / np.pi - 1) % 4 == 0:
-        symplectic_matrix = X(
-            symplectic_matrix, target_q, nqubits
-        )
-        symplectic_matrix = CY(
-            symplectic_matrix, control_q, target_q, nqubits
-        )
-        symplectic_matrix = X(
-            symplectic_matrix, target_q, nqubits
-        )
-        return CNOT(
-            symplectic_matrix, control_q, target_q, nqubits
-        )
+        symplectic_matrix = X(symplectic_matrix, target_q, nqubits)
+        symplectic_matrix = CY(symplectic_matrix, control_q, target_q, nqubits)
+        symplectic_matrix = X(symplectic_matrix, target_q, nqubits)
+        return CNOT(symplectic_matrix, control_q, target_q, nqubits)
     # theta = 2 * pi + 4 * n * pi
     elif (theta / (2 * np.pi) - 1) % 2 == 0:
-        symplectic_matrix = CZ(
-            symplectic_matrix, control_q, target_q, nqubits
-        )
-        symplectic_matrix = X(
-            symplectic_matrix, target_q, nqubits
-        )
-        symplectic_matrix = CZ(
-            symplectic_matrix, control_q, target_q, nqubits
-        )
+        symplectic_matrix = CZ(symplectic_matrix, control_q, target_q, nqubits)
+        symplectic_matrix = X(symplectic_matrix, target_q, nqubits)
+        symplectic_matrix = CZ(symplectic_matrix, control_q, target_q, nqubits)
         return X(symplectic_matrix, target_q, nqubits)
     # theta = 3 * pi + 4 * n * pi
     elif (theta / np.pi - 3) % 4 == 0:
-        symplectic_matrix = CNOT(
-            symplectic_matrix, control_q, target_q, nqubits
-        )
-        symplectic_matrix = X(
-            symplectic_matrix, target_q, nqubits
-        )
-        symplectic_matrix = CY(
-            symplectic_matrix, control_q, target_q, nqubits
-        )
+        symplectic_matrix = CNOT(symplectic_matrix, control_q, target_q, nqubits)
+        symplectic_matrix = X(symplectic_matrix, target_q, nqubits)
+        symplectic_matrix = CY(symplectic_matrix, control_q, target_q, nqubits)
         return X(symplectic_matrix, target_q, nqubits)
 
 
@@ -379,85 +324,27 @@ def CRY(symplectic_matrix, control_q, target_q, nqubits, theta):
         return I(symplectic_matrix, target_q, nqubits)
     # theta = pi + 4 * n * pi
     elif (theta / np.pi - 1) % 4 == 0:
-        symplectic_matrix = Z(
-            symplectic_matrix, target_q, nqubits
-        )
-        symplectic_matrix = CNOT(
-            symplectic_matrix, control_q, target_q, nqubits
-        )
-        symplectic_matrix = Z(
-            symplectic_matrix, target_q, nqubits
-        )
-        return CZ(
-            symplectic_matrix, control_q, target_q, nqubits
-        )
+        symplectic_matrix = Z(symplectic_matrix, target_q, nqubits)
+        symplectic_matrix = CNOT(symplectic_matrix, control_q, target_q, nqubits)
+        symplectic_matrix = Z(symplectic_matrix, target_q, nqubits)
+        return CZ(symplectic_matrix, control_q, target_q, nqubits)
     # theta = 2 * pi + 4 * n * pi
     elif (theta / (2 * np.pi) - 1) % 2 == 0:
-        return CRZ(
-            symplectic_matrix, control_q, target_q, nqubits, theta
-        )
+        return CRZ(symplectic_matrix, control_q, target_q, nqubits, theta)
     # theta = 3 * pi + 4 * n * pi
     elif (theta / np.pi - 3) % 4 == 0:
-        symplectic_matrix = CZ(
-            symplectic_matrix, control_q, target_q, nqubits
-        )
-        symplectic_matrix = Z(
-            symplectic_matrix, target_q, nqubits
-        )
-        symplectic_matrix = CNOT(
-            symplectic_matrix, control_q, target_q, nqubits
-        )
+        symplectic_matrix = CZ(symplectic_matrix, control_q, target_q, nqubits)
+        symplectic_matrix = Z(symplectic_matrix, target_q, nqubits)
+        symplectic_matrix = CNOT(symplectic_matrix, control_q, target_q, nqubits)
         return Z(symplectic_matrix, target_q, nqubits)
 
 
 def ECR(symplectic_matrix, control_q, target_q, nqubits):
     symplectic_matrix = S(symplectic_matrix, control_q, nqubits)
     symplectic_matrix = SX(symplectic_matrix, target_q, nqubits)
-    symplectic_matrix = CNOT(
-        symplectic_matrix, control_q, target_q, nqubits
-    )
+    symplectic_matrix = CNOT(symplectic_matrix, control_q, target_q, nqubits)
     return X(symplectic_matrix, control_q, nqubits)
 
-# valid for a standard basis measurement only
-def M(state, qubits, nqubits, collapse=False):
-    sample = []
-    state_copy = state if collapse else state.copy()
-    for q in qubits:
-        x = state_copy[:-1, :nqubits]
-        p = x[nqubits:, q].nonzero()[0]
-        # random outcome, affects the state
-        if len(p) > 0:
-            p = p[0].item() + nqubits
-            h = np.array(
-                [i for i in x[:, q].nonzero()[0] if i != p], dtype=np.uint
-            )
-            if h.shape[0] > 0:
-                state_copy = _rowsum(
-                    state_copy,
-                    h,
-                    p * np.ones(h.shape[0], dtype=np.uint),
-                    nqubits,
-                    False,
-                )
-            state_copy[p - nqubits, :] = state_copy[p, :]
-            outcome = np.random.randint(2, size=1).item()
-            state_copy[p, :] = 0
-            state_copy[p, -1] = outcome
-            state_copy[p, nqubits + q] = 1
-            sample.append(outcome)
-        # determined outcome, state unchanged
-        else:
-            state_copy[-1, :] = False
-            for i in x[:nqubits, q].nonzero()[0]:
-                state_copy = _rowsum(
-                    state_copy,
-                    np.array([2 * nqubits], dtype=np.uint),
-                    np.array([i + nqubits], dtype=np.uint),
-                    nqubits,
-                    include_scratch=True,
-                )
-            sample.append(int(state_copy[-1, -1]))
-    return sample
 
 def _exponent(x1, z1, x2, z2):
     """Helper function that computes the exponent to which i is raised for the product of the x and z paulis encoded in the symplectic matrix. This is used in _rowsum. The computation is performed parallely over the separated paulis x1[i], z1[i], x2[i] and z2[i].
@@ -484,6 +371,7 @@ def _exponent(x1, z1, x2, z2):
     exp[ind4] = x2[ind4].astype(int) * (1 - 2 * z2[ind4].astype(int))
     return exp
 
+
 def _rowsum(symplectic_matrix, h, i, nqubits, include_scratch: bool = False):
     """Helper function that updates the symplectic matrix by setting the h-th generator equal to the (i+h)-th one. This is done to keep track of the phase of the h-th row of the symplectic matrix (r[h]). The function is applied parallely over all the rows h and i passed.
 
@@ -498,9 +386,7 @@ def _rowsum(symplectic_matrix, h, i, nqubits, include_scratch: bool = False):
         (np.array): The updated symplectic matrix.
     """
     x = symplectic_matrix[: -1 + (2 * nqubits + 2) * int(include_scratch), :nqubits]
-    z = symplectic_matrix[
-        : -1 + (2 * nqubits + 2) * int(include_scratch), nqubits:-1
-    ]
+    z = symplectic_matrix[: -1 + (2 * nqubits + 2) * int(include_scratch), nqubits:-1]
     exponents = _exponent(x[i, :], z[i, :], x[h, :], z[h, :])
     ind = (
         2 * symplectic_matrix[h, -1]
@@ -514,3 +400,52 @@ def _rowsum(symplectic_matrix, h, i, nqubits, include_scratch: bool = False):
     symplectic_matrix[h, :nqubits] = x[i, :] ^ x[h, :]
     symplectic_matrix[h, nqubits:-1] = z[i, :] ^ z[h, :]
     return symplectic_matrix
+
+
+def _determined_outcome(state, q, nqubits):
+    state[-1, :] = False
+    for i in state[:nqubits, q].nonzero()[0]:
+        state = _rowsum(
+            state,
+            np.array([2 * nqubits], dtype=np.uint),
+            np.array([i + nqubits], dtype=np.uint),
+            nqubits,
+            include_scratch=True,
+        )
+    return state, np.uint(state[-1, -1])
+
+
+def _random_outcome(state, p, q, nqubits):
+    h = np.array([i for i in state[:-1, q].nonzero()[0] if i != p], dtype=np.uint)
+    if h.shape[0] > 0:
+        state = _rowsum(
+            state,
+            h,
+            p * np.ones(h.shape[0], dtype=np.uint),
+            nqubits,
+            False,
+        )
+    state[p - nqubits, :] = state[p, :]
+    outcome = np.random.randint(2, size=1).item()
+    state[p, :] = 0
+    state[p, -1] = outcome
+    state[p, nqubits + q] = 1
+    return state, outcome
+
+
+# valid for a standard basis measurement only
+def M(state, qubits, nqubits, collapse=False):
+    sample = []
+    state_copy = state if collapse else state.copy()
+    for q in qubits:
+        x = state_copy[:-1, :nqubits]
+        p = x[nqubits:, q].nonzero()[0]
+        # random outcome, affects the state
+        if len(p) > 0:
+            p = p[0].item() + nqubits
+            state_copy, outcome = _random_outcome(state_copy, p, q, nqubits)
+        # determined outcome, state unchanged
+        else:
+            state_copy, outcome = _determined_outcome(state_copy, q, nqubits)
+        sample.append(outcome)
+    return sample
