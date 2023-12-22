@@ -75,8 +75,8 @@ def test_mapping_consistency_error(layout):
 def test_mapping_consistency_restricted():
     layout = {"q0": 0, "q2": 1}
     connectivity = star_connectivity()
-    restricted_connecyivity = restrict_connectivity_qubits(connectivity, [0, 2])
-    assert_mapping_consistency(layout, restricted_connecyivity)
+    restricted_connectivity = restrict_connectivity_qubits(connectivity, [0, 2])
+    assert_mapping_consistency(layout, restricted_connectivity)
 
 
 @pytest.mark.parametrize(
@@ -88,9 +88,9 @@ def test_mapping_consistency_restricted():
 )
 def test_mapping_consistency_restricted_error(layout):
     connectivity = star_connectivity()
-    restricted_connecyivity = restrict_connectivity_qubits(connectivity, [0, 2])
+    restricted_connectivity = restrict_connectivity_qubits(connectivity, [0, 2])
     with pytest.raises(PlacementError):
-        assert_mapping_consistency(layout, restricted_connecyivity)
+        assert_mapping_consistency(layout, restricted_connectivity)
 
 
 def test_gates_qubits_pairs():

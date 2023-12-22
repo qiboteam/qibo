@@ -312,7 +312,8 @@ def test_sabre_intermediate_measurements():
     assert routed_circ.queue[3].result is measurement.result
 
 
-def test_sabre_restrict_qubits():
+@pytest.mark.parametrize("router_algorithm", [Sabre, ShortestPaths])
+def test_restrict_qubits(router_algorithm):
     circ = Circuit(3)
     circ.add(gates.CZ(0, 1))
     circ.add(gates.CZ(0, 2))
@@ -320,27 +321,7 @@ def test_sabre_restrict_qubits():
     initial_layout = {"q0": 0, "q2": 2, "q3": 1}
     connectivity = star_connectivity()
     restricted_connectivity = restrict_connectivity_qubits(connectivity, [0, 2, 3])
-    router = Sabre(connectivity=restricted_connectivity)
-    routed_circ, final_layout = router(circuit=circ, initial_layout=initial_layout)
-    assert_circuit_equivalence(
-        original_circuit=circ,
-        transpiled_circuit=routed_circ,
-        final_map=final_layout,
-        initial_map=initial_layout,
-    )
-    assert_connectivity(restricted_connectivity, routed_circ)
-    assert_placement(routed_circ, final_layout, connectivity=restricted_connectivity)
-
-
-def test_shortest_paths_restrict_qubits():
-    circ = Circuit(3)
-    circ.add(gates.CZ(0, 1))
-    circ.add(gates.CZ(0, 2))
-    circ.add(gates.CZ(2, 1))
-    initial_layout = {"q0": 0, "q2": 2, "q3": 1}
-    connectivity = star_connectivity()
-    restricted_connectivity = restrict_connectivity_qubits(connectivity, [0, 2, 3])
-    router = ShortestPaths(connectivity=restricted_connectivity)
+    router = router_algorithm(connectivity=restricted_connectivity)
     routed_circ, final_layout = router(circuit=circ, initial_layout=initial_layout)
     assert_circuit_equivalence(
         original_circuit=circ,

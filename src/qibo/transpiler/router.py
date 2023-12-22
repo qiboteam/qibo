@@ -25,8 +25,6 @@ def assert_connectivity(connectivity: nx.Graph, circuit: Circuit):
     if list(connectivity.nodes) != list(range(connectivity.number_of_nodes())):
         node_mapping = {node: i for i, node in enumerate(connectivity.nodes)}
         new_connectivity = nx.Graph()
-        # for new_name in node_mapping.values():
-        #     new_connectivity.add_node(new_name)
         new_connectivity.add_edges_from(
             [(node_mapping[u], node_mapping[v]) for u, v in connectivity.edges]
         )
