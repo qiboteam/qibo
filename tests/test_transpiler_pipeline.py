@@ -142,9 +142,10 @@ def test_error_connectivity():
         default_transpiler = Passes(passes=None, connectivity=None)
 
 
-def test_is_satisfied():
+@pytest.mark.parametrize("qubits", [3, 5])
+def test_is_satisfied(qubits):
     default_transpiler = Passes(passes=None, connectivity=star_connectivity())
-    circuit = Circuit(5)
+    circuit = Circuit(qubits)
     circuit.add(gates.CZ(0, 2))
     circuit.add(gates.Z(0))
     assert default_transpiler.is_satisfied(circuit)
@@ -166,11 +167,12 @@ def test_is_satisfied_false_connectivity():
     assert not default_transpiler.is_satisfied(circuit)
 
 
+@pytest.mark.parametrize("qubits", [2, 5])
 @pytest.mark.parametrize("gates", [5, 20])
 @pytest.mark.parametrize("placer", [Random, Trivial, ReverseTraversal])
 @pytest.mark.parametrize("routing", [ShortestPaths, Sabre])
-def test_custom_passes(placer, routing, gates):
-    circ = generate_random_circuit(nqubits=5, ngates=gates)
+def test_custom_passes(placer, routing, gates, qubits):
+    circ = generate_random_circuit(nqubits=qubits, ngates=gates)
     custom_passes = []
     custom_passes.append(Preprocessing(connectivity=star_connectivity()))
     if placer == ReverseTraversal:
