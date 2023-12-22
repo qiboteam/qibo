@@ -1,5 +1,6 @@
 import os
 
+from qibo.backends.abstract import Backend
 from qibo.backends.clifford import CliffordBackend
 from qibo.backends.darray import DarrayBackend
 from qibo.backends.npmatrices import NumpyMatrices

@@ -8,9 +8,7 @@ import qibo.backends
 
 @pytest.fixture
 def da_backend():
-    client = Client()
-
-    return qibo.backends.construct_backend("darray", client)
+    return qibo.backends.construct_backend("darray")
 
 
 def test_darray(da_backend):
