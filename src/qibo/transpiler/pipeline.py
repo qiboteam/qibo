@@ -151,10 +151,9 @@ def restrict_connectivity_qubits(connectivity: nx.Graph, qubits: list):
         )
     new_connectivity = nx.Graph()
     new_connectivity.add_nodes_from(qubits)
-    new_edges = []
-    for edge in connectivity.edges:
-        if edge[0] in qubits and edge[1] in qubits:
-            new_edges.append(edge)
+    new_edges = [
+        edge for edge in connectivity.edges if (edge[0] in qubits and edge[1] in qubits)
+    ]
     new_connectivity.add_edges_from(new_edges)
     if not nx.is_connected(new_connectivity):
         raise_error(ConnectivityError, "The new connectivity graph is not connected.")
@@ -165,8 +164,7 @@ class Passes:
     """Define a transpiler pipeline consisting of smaller transpiler steps that are applied sequentially:
 
     Args:
-        passes (list): list of passes to be applied sequentially,
-            if None default transpiler will be used.
+        passes (list): list of passes to be applied sequentially.
         connectivity (nx.Graph): physical qubits connectivity.
         native_gates (NativeGates): native gates.
         on_qubits (list): list of physical qubits to be used. If "None" all qubits are used.
@@ -183,10 +181,7 @@ class Passes:
             connectivity = restrict_connectivity_qubits(connectivity, on_qubits)
         self.connectivity = connectivity
         self.native_gates = native_gates
-        if passes is None:
-            self.passes = self.default()
-        else:
-            self.passes = passes
+        self.passes = passes
 
     def default(self):
         """Return the default transpiler pipeline for the required hardware connectivity."""
