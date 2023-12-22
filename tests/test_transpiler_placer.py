@@ -3,10 +3,10 @@ import pytest
 
 from qibo import gates
 from qibo.models import Circuit
+from qibo.transpiler._exceptions import PlacementError
 from qibo.transpiler.pipeline import restrict_connectivity_qubits
 from qibo.transpiler.placer import (
     Custom,
-    PlacementError,
     Random,
     ReverseTraversal,
     Subgraph,

@@ -26,6 +26,7 @@ Here is an example of a circuit with 2 qubits:
     # should print `tf.Tensor([1, 0, 0, 0])`
     print(result.state())
     # should print `np.array([1, 0, 0, 0])`
+
 .. testoutput::
     :hide:
 

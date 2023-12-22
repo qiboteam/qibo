@@ -4,19 +4,14 @@ import pytest
 
 from qibo import gates
 from qibo.models import Circuit
+from qibo.transpiler._exceptions import ConnectivityError
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.pipeline import (
     assert_circuit_equivalence,
     restrict_connectivity_qubits,
 )
 from qibo.transpiler.placer import Custom, Random, Subgraph, Trivial, assert_placement
-from qibo.transpiler.router import (
-    CircuitMap,
-    ConnectivityError,
-    Sabre,
-    ShortestPaths,
-    assert_connectivity,
-)
+from qibo.transpiler.router import CircuitMap, Sabre, ShortestPaths, assert_connectivity
 
 
 def star_connectivity():

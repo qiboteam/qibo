@@ -1,9 +1,9 @@
 import pytest
 
 from qibo import Circuit, gates
+from qibo.transpiler._exceptions import BlockingError
 from qibo.transpiler.blocks import (
     Block,
-    BlockingError,
     CircuitBlocks,
     _check_multi_qubit_measurements,
     _count_multi_qubit_gates,

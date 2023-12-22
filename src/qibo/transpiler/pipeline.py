@@ -7,8 +7,8 @@ from qibo.backends import NumpyBackend
 from qibo.config import raise_error
 from qibo.models import Circuit
 from qibo.quantum_info.random_ensembles import random_statevector
+from qibo.transpiler._exceptions import TranspilerPipelineError
 from qibo.transpiler.abstract import Optimizer, Placer, Router
-from qibo.transpiler.exceptions import TranspilerPipelineError
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.placer import Trivial, assert_placement
 from qibo.transpiler.router import ConnectivityError, assert_connectivity
@@ -149,14 +149,17 @@ def restrict_connectivity_qubits(connectivity: nx.Graph, qubits: list):
         raise_error(
             ConnectivityError, "Some qubits are not in the original connectivity."
         )
+
     new_connectivity = nx.Graph()
     new_connectivity.add_nodes_from(qubits)
     new_edges = [
-        edge for edge in connectivity.edges if (edge[0] in qubits and edge[1] in qubits)
+        edge for edge in connectivity.edges if edge[0] in qubits and edge[1] in qubits
     ]
     new_connectivity.add_edges_from(new_edges)
+
     if not nx.is_connected(new_connectivity):
-        raise_error(ConnectivityError, "The new connectivity graph is not connected.")
+        raise_error(ConnectivityError, "New connectivity graph is not connected.")
+
     return new_connectivity
 
 
@@ -164,16 +167,22 @@ class Passes:
     """Define a transpiler pipeline consisting of smaller transpiler steps that are applied sequentially:
 
     Args:
-        passes (list): list of passes to be applied sequentially.
-        connectivity (nx.Graph): physical qubits connectivity.
-        native_gates (NativeGates): native gates.
-        on_qubits (list): list of physical qubits to be used. If "None" all qubits are used.
+        passes (list, optional): list of passes to be applied sequentially.
+            If ``None``, default transpiler will be used.
+            Defaults to ``None``.
+        connectivity (:class:`networkx.Graph`, optional): physical qubits connectivity.
+            If ``None``, :class:`` is used.
+            Defaults to ``None``.
+        native_gates (:class:`qibo.transpiler.unroller.NativeGates`, optional): native gates.
+            Defaults to :math:`qibo.transpiler.unroller.NativeGates.default`.
+        on_qubits (list, optional): list of physical qubits to be used.
+            If "None" all qubits are used. Defaults to ``None``.
     """
 
     def __init__(
         self,
-        passes: list,
-        connectivity: nx.Graph,
+        passes: list = None,
+        connectivity: nx.Graph = None,
         native_gates: NativeGates = NativeGates.default(),
         on_qubits: list = None,
     ):
@@ -181,7 +190,7 @@ class Passes:
             connectivity = restrict_connectivity_qubits(connectivity, on_qubits)
         self.connectivity = connectivity
         self.native_gates = native_gates
-        self.passes = passes
+        self.passes = self.default() if passes is None else passes
 
     def default(self):
         """Return the default transpiler pipeline for the required hardware connectivity."""
@@ -199,6 +208,7 @@ class Passes:
         default_passes.append(StarConnectivity())
         # default unroller pass
         default_passes.append(Unroller(native_gates=self.native_gates))
+
         return default_passes
 
     def __call__(self, circuit):
@@ -234,14 +244,17 @@ class Passes:
                     TranspilerPipelineError,
                     f"Unrecognised transpiler pass: {transpiler_pass}",
                 )
+
         return circuit, final_layout
 
-    def is_satisfied(self, circuit):
-        """Return True if the circuit respects the hardware connectivity and native gates, False otherwise.
+    def is_satisfied(self, circuit: Circuit):
+        """Returns ``True`` if the circuit respects the hardware connectivity and native gates, ``False`` otherwise.
 
         Args:
-            circuit (qibo.models.Circuit): circuit to be checked.
-            native_gates (NativeGates): two qubit native gates.
+            circuit (:class:`qibo.models.circuit.Circuit`): circuit to be checked.
+
+        Returns:
+            (bool): satisfiability condition.
         """
         try:
             assert_connectivity(circuit=circuit, connectivity=self.connectivity)
