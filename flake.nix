@@ -36,7 +36,7 @@
           inherit inputs pkgs;
           modules = [
             {
-              packages = with pkgs; [pre-commit poethepoet stdenv.cc.cc.lib graphviz];
+              packages = with pkgs; [pre-commit poethepoet stdenv.cc.cc.lib zlib graphviz];
 
               languages.python = {
                 enable = true;
