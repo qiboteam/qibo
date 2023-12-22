@@ -1,9 +1,12 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     systems.url = "github:nix-systems/default";
     devenv.url = "github:cachix/devenv";
-    nixpkgs-python.url = "github:cachix/nixpkgs-python";
+    nixpkgs-python = {
+      url = "github:cachix/nixpkgs-python";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = {
@@ -33,38 +36,15 @@
           inherit inputs pkgs;
           modules = [
             {
-              packages = with pkgs; [
-                pre-commit
-                (python3Packages.buildPythonPackage
-                  (let
-                    pname = "poethepoet";
-                    version = "0.24.1";
-                  in {
-                    inherit pname version;
-                    src = fetchPypi {
-                      inherit pname version;
-                      sha256 = "sha256-OvpEtPxzJ98N2RLtoBJgSgcq8rtNJD+w5B6Oyo2r+e0=";
-                      python = "py3";
-                      dist = "py3";
-                      format = "wheel";
-                    };
-                    format = "wheel";
-                    propagatedBuildInputs = [
-                      # Specify dependencies
-                      pkgs.python3Packages.pastel
-                      pkgs.python3Packages.tomli
-                    ];
-                  }))
-                graphviz
-              ];
+              packages = with pkgs; [pre-commit poethepoet stdenv.cc.cc.lib graphviz];
 
               languages.python = {
                 enable = true;
                 poetry = {
                   enable = true;
                   install.enable = true;
+                  install.groups = ["dev" "tests"];
                   install.allExtras = true;
-                  install.groups = ["dev"];
                 };
                 version = "3.11";
               };
