@@ -10,6 +10,7 @@ from qibo.backends.numpy import NumpyBackend
 from qibo.backends.tensorflow import TensorflowBackend
 from qibo.config import raise_error
 
+
 def _calculation_engine(backend):
     """Helper function to initialize the Clifford backend with the correct engine."""
     if backend.name == "qibojit":
@@ -771,15 +772,16 @@ class CliffordBackend(NumpyBackend):
         if isinstance(qubits, list):
             qubits = tuple(qubits)
 
-        operation = self.clifford_operations
         if collapse:
             samples = [
-                operation.M(state, qubits, nqubits) for _ in range(nshots - 1)
+                self.clifford_operations.M(state, qubits, nqubits)
+                for _ in range(nshots - 1)
             ]  # parallelize?
-            samples.append(operation.M(state, qubits, nqubits, collapse))
+            samples.append(self.clifford_operations.M(state, qubits, nqubits, collapse))
         else:
             samples = [
-                operation.M(state, qubits, nqubits) for _ in range(nshots)
+                self.clifford_operations.M(state, qubits, nqubits)
+                for _ in range(nshots)
             ]  # parallelize?
 
         return self.np.array(samples).reshape(nshots, len(qubits)).tolist()

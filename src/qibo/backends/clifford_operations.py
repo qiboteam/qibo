@@ -367,7 +367,6 @@ def _rowsum(symplectic_matrix, h, i, nqubits, include_scratch: bool = False):
     Returns:
         (np.array): The updated symplectic matrix.
     """
-    print("qibo rowsum")
     x = symplectic_matrix[: -1 + (2 * nqubits + 2) * int(include_scratch), :nqubits]
     z = symplectic_matrix[: -1 + (2 * nqubits + 2) * int(include_scratch), nqubits:-1]
     exponents = _exponent(x[i, :], z[i, :], x[h, :], z[h, :])
