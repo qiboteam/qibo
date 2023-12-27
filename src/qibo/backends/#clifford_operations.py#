@@ -1,13 +1,11 @@
 import numpy as np
 
-
 def _get_rxz(symplectic_matrix, nqubits):
     return (
         symplectic_matrix[:-1, -1],
         symplectic_matrix[:-1, :nqubits],
-        symplectic_matrix[:-1, nqubits:-1],
+        symplectic_matrix[:-1, nqubits:-1]
     )
-
 
 def I(symplectic_matrix, q, nqubits):
     return symplectic_matrix
@@ -67,7 +65,7 @@ def Z(symplectic_matrix, q, nqubits):
     symplectic_matrix[:-1, -1] = r ^ (
         (x[:, q] & z[:, q]) ^ x[:, q] & (z[:, q] ^ x[:, q])
     )
-    return symplectic_matrix
+b    return symplectic_matrix
 
 
 def X(symplectic_matrix, q, nqubits):
@@ -367,7 +365,7 @@ def _rowsum(symplectic_matrix, h, i, nqubits, include_scratch: bool = False):
     Returns:
         (np.array): The updated symplectic matrix.
     """
-    print("qibo rowsum")
+    print('qibo rowsum')
     x = symplectic_matrix[: -1 + (2 * nqubits + 2) * int(include_scratch), :nqubits]
     z = symplectic_matrix[: -1 + (2 * nqubits + 2) * int(include_scratch), nqubits:-1]
     exponents = _exponent(x[i, :], z[i, :], x[h, :], z[h, :])
