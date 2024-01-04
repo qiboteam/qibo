@@ -878,7 +878,7 @@ def gate_error(channel, target=None, check_unitary: bool = False, backend=None):
     return error
 
 
-def diamond_norm(channel, target=None, **kwargs):
+def diamond_norm(channel, target=None, backend=None, **kwargs):
     """Calculates the diamond norm :math:`\\|\\mathcal{E}\\|_{\\diamond}` of
     ``channel`` :math:`\\mathcal{E}`, which is given by
 
@@ -938,7 +938,8 @@ def diamond_norm(channel, target=None, **kwargs):
 
     # `CVXPY` only works with `numpy`, so this function has to
     # convert any channel to the `numpy` backend by default
-    backend = GlobalBackend()
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
     channel = backend.to_numpy(channel)
 
     channel = np.transpose(channel)
