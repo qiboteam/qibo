@@ -203,7 +203,7 @@ def _generate_rbs_pairs(nqubits: int, architecture: str):
 
     if architecture == "tree":
         pairs_rbs = [[(0, int(nqubits / 2))]]
-        indexes = list(np.array(pairs_rbs).flatten())
+        indexes = list(pairs_rbs[0][0])
         for depth in range(2, int(math.log2(nqubits)) + 1):
             pairs_rbs_per_depth = [
                 [(index, index + int(nqubits / 2**depth)) for index in indexes]
