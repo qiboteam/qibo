@@ -811,3 +811,5 @@ class TrotterHamiltonian:
     @classmethod
     def from_symbolic(cls, symbolic_hamiltonian, symbol_map):
         return cls()
+
+

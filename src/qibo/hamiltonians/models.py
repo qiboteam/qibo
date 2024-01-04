@@ -195,3 +195,25 @@ def MaxCut(nqubits, dense=True, backend=None):
     if dense:
         return ham.dense
     return ham
+
+def product_formulas(H_odd, H_even, dt, order):
+    """
+    we compute the results for lattice hamiltonians
+    first order product formula e^(-itH_even)e^(-itH_odd)
+    second order product formula e^(-itH_odd)e^(-itH_even)e^(-t/2 H_odd)
+    H_odd and H_even are Hamiltonians
+    dt is the timestep.
+
+    We use Trotter decomposition to perform the task.
+    """
+    circuit_even = H_even.circuit(dt=dt)
+    if order == 1:
+        circuit_odd = H_odd.circuit(dt = dt)
+        return circuit_odd + circuit_even
+    elif order == 2:
+        circuit_half_odd = H_odd.circuit(dt= dt/2)
+        return circuit_half_odd + circuit_even + circuit_half_odd
+    else:
+        print("Currently we only support order of 1 and 2")
+        return None
+
