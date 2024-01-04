@@ -47,11 +47,9 @@ class Clifford:
     _backend: Optional[CliffordBackend] = None
     _measurement_gate = None
     _samples: Optional[int] = None
-    # _original_circuit: list = field(init=False, repr=False)
 
     def __post_init__(self):
         if isinstance(self.data, Circuit):
-            # self._original_circuit = self.data.copy(deep=True).queue
             clifford = self.from_circuit(self.data, engine=self.engine)
             self.symplectic_matrix = clifford.symplectic_matrix
             self.nqubits = clifford.nqubits
@@ -69,7 +67,6 @@ class Clifford:
                 )
             self.nqubits = int((self.symplectic_matrix.shape[1] - 1) / 2)
             self._backend = CliffordBackend(self.engine)
-            self._original_circuit = None
 
     @classmethod
     def from_circuit(
@@ -98,12 +95,11 @@ class Clifford:
         Returns:
             (:class:`qibo.quantum_info.clifford.Clifford`): Object storing the result of the circuit execution.
         """
-        cls._original_circuit = circuit.copy(deep=True).queue
         cls._backend = CliffordBackend(engine)
 
         return cls._backend.execute_circuit(circuit, initial_state, nshots)
 
-    def to_circuit(self, algorithm: Optional[str] = None):
+    def to_circuit(self, algorithm: Optional[str] = "AG04"):
         """Converts symplectic matrix into a Clifford circuit.
 
         Args:
@@ -111,32 +107,19 @@ class Clifford:
                 `Aaronson & Gottesman (2004) <https://arxiv.org/abs/quant-ph/0406196>`_.
                 If ``BM20`` and ``Clifford.nqubits <= 3``, uses the decomposition algorithm from
                 `Bravyi & Maslov (2020) <https://arxiv.org/abs/2003.09412>`_.
-                If ``None`` and Clifford object was created from a symplectic matrix,
-                defaults to ``AG04``.
-                If ``None`` and Clifford object was created from a circuit,
-                returns the original circuit.
-                Defaults to ``None``.
+                Defaults to ``AG04``.
 
         Returns:
             :class:`qibo.models.circuit.Circuit`: circuit composed of Clifford gates.
         """
-        if not isinstance(algorithm, (str, type(None))):
+        if not isinstance(algorithm, str):
             raise_error(
                 TypeError,
-                f"``algorithm`` must be type int, but it is type {type(algorithm)}",
+                f"``algorithm`` must be type str, but it is type {type(algorithm)}",
             )
 
-        if algorithm is not None and algorithm not in ["AG04", "BM20"]:
+        if algorithm not in ["AG04", "BM20"]:
             raise_error(ValueError, f"``algorithm`` {algorithm} not found.")
-
-        if algorithm is None and self._original_circuit is None:
-            algorithm = "AG04"
-
-        if algorithm is None and self._original_circuit is not None:
-            circuit = Circuit(self.nqubits)
-            circuit.queue = self._original_circuit
-
-            return circuit
 
         if algorithm == "BM20":
             return _decomposition_BM20(self)

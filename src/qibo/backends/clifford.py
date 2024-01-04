@@ -633,7 +633,6 @@ class CliffordBackend(NumpyBackend):
                 nshots=nshots,
                 engine=self.engine,
             )
-            clifford._original_circuit = circuit.copy(deep=True).queue
 
             return clifford
 

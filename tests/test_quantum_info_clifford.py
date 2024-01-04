@@ -62,7 +62,7 @@ def test_clifford_from_circuit(backend, measurement):
         backend.assert_allclose(obj.probabilities(), result.probabilities())
 
 
-@pytest.mark.parametrize("algorithm", [None, "AG04", "BM20"])
+@pytest.mark.parametrize("algorithm", ["AG04", "BM20"])
 @pytest.mark.parametrize("nqubits", [1, 2, 3, 10, 50])
 def test_clifford_to_circuit(backend, nqubits, algorithm):
     if backend.__class__.__name__ == "TensorflowBackend":
