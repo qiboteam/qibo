@@ -87,10 +87,7 @@ def select_best_dbr_generator(
     optimal_steps = []
     for d in d_list:
         # prescribed step durations
-        if step is not None:
-            dbi_object(step=step, d=d)
-        # compute step durations using hyperopt
-        else:
+        if step is None:
             step = dbi_object.hyperopt_step(
                 step_min=step_min,
                 step_max=step_max,
@@ -99,6 +96,7 @@ def select_best_dbr_generator(
                 max_evals=max_evals,
                 d=d,
             )
+        dbi_object(step=step, d=d)
         optimal_steps.append(step)
         norms_off_diagonal_restriction.append(dbi_object.off_diagonal_norm)
         dbi_object.h = deepcopy(h_before)
@@ -106,9 +104,7 @@ def select_best_dbr_generator(
     if compare_canonical is True:
         generator_type = dbi_object.mode
         dbi_object.mode = DoubleBracketGeneratorType.canonical
-        if step is not None:
-            dbi_object(step=step)
-        else:
+        if step is None:
             step = dbi_object.hyperopt_step(
                 step_min=step_min,
                 step_max=step_max,
@@ -116,11 +112,14 @@ def select_best_dbr_generator(
                 optimizer=tpe,
                 max_evals=max_evals,
             )
+        dbi_object(step=step)
         optimal_steps.append(step)
         norms_off_diagonal_restriction.append(dbi_object.off_diagonal_norm)
+        # print(f'canonical step {step}, loss {dbi_object.off_diagonal_norm}')
         dbi_object.h = deepcopy(h_before)
         dbi_object.mode = generator_type
     # find best d
+    # print(norms_off_diagonal_restriction)
     idx_max_loss = norms_off_diagonal_restriction.index(
         min(norms_off_diagonal_restriction)
     )
@@ -148,7 +147,7 @@ def select_best_dbr_generator_and_run(
         compare_canonical=compare_canonical,
     )
     # run with optimal d
-    if idx_max_loss == len(d_list):
+    if idx_max_loss == len(d_list) and compare_canonical is True:
         # canonical
         generator_type = dbi_object.mode
         dbi_object.mode = DoubleBracketGeneratorType.canonical
