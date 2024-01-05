@@ -1,5 +1,6 @@
 from copy import deepcopy
 from enum import Enum, auto
+from functools import partial
 
 import hyperopt
 import numpy as np
@@ -147,15 +148,13 @@ class DoubleBracketIteration:
             optimizer = hyperopt.tpe
 
         space = space("step", step_min, step_max)
-        objective = lambda step: self.loss(step=step, d=d, look_ahead=look_ahead)
         best = hyperopt.fmin(
-            fn=objective,
+            fn=partial(self.loss, d=d, look_ahead=look_ahead),
             space=space,
             algo=optimizer.suggest,
             max_evals=max_evals,
             verbose=verbose,
         )
-
         return best["step"]
 
     def loss(self, step: float, d: np.array = None, look_ahead: int = 1):
