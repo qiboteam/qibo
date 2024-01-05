@@ -1,4 +1,4 @@
-from copy import copy, deepcopy
+from copy import deepcopy
 from itertools import product
 
 import matplotlib.pyplot as plt
@@ -6,74 +6,18 @@ import numpy as np
 import seaborn as sns
 from hyperopt import hp, tpe
 
+from qibo import symbols
 from qibo.config import raise_error
 from qibo.hamiltonians import Hamiltonian, SymbolicHamiltonian
 from qibo.models.dbi.double_bracket import (
     DoubleBracketGeneratorType,
     DoubleBracketIteration,
 )
-from qibo.symbols import I, X, Z
-
-
-def visualize_matrix(matrix, title=""):
-    """Visualize absolute values of a matrix in a heatmap form."""
-    fig, ax = plt.subplots(figsize=(5, 5))
-    ax.set_title(title)
-    try:
-        im = ax.imshow(np.absolute(matrix), cmap="inferno")
-    except TypeError:
-        im = ax.imshow(np.absolute(matrix.get()), cmap="inferno")
-    fig.colorbar(im, ax=ax)
-
-
-def visualize_drift(h0, h):
-    """Visualize drift of the evolved hamiltonian w.r.t. h0."""
-    fig, ax = plt.subplots(figsize=(5, 5))
-    ax.set_title(r"Drift: $|\hat{H}_0 - \hat{H}_{1}|$")
-    try:
-        im = ax.imshow(np.absolute(h0 - h), cmap="inferno")
-    except TypeError:
-        im = ax.imshow(np.absolute((h0 - h).get()), cmap="inferno")
-
-    fig.colorbar(im, ax=ax)
-
-
-def plot_histories(loss_histories: list, steps: list, labels: list = None):
-    """Plot off-diagonal norm histories over a sequential evolution."""
-    plt.figure(figsize=(5, 5 * 6 / 8))
-    if len(steps) == 1:
-        # fixed_step
-        x_axis = [i * steps[0] for i in range(len(loss_histories))]
-    else:
-        x_axis = [sum(steps[:k]) for k in range(1, len(steps) + 1)]
-    plt.plot(x_axis, loss_histories, "-o")
-
-    x_labels_rounded = [round(x, 2) for x in x_axis]
-    x_labels_rounded = [0] + x_labels_rounded[0:5] + [max(x_labels_rounded)]
-    x_labels_rounded.pop(3)
-    plt.xticks(x_labels_rounded)
-
-    y_labels_rounded = [round(y, 1) for y in loss_histories]
-    y_labels_rounded = y_labels_rounded[0:5] + [min(y_labels_rounded)]
-    plt.yticks(y_labels_rounded)
-
-    if labels is not None:
-        labels_copy = copy(labels)
-        labels_copy.insert(0, "Initial")
-        for i, label in enumerate(labels_copy):
-            plt.text(x_axis[i], loss_histories[i], label)
-
-    plt.grid()
-    plt.xlabel(r"Flow duration $s$")
-    plt.title("Loss function histories")
 
 
 def generate_Z_operators(nqubits: int):
     """Generate a dictionary containing 1) all possible products of Pauli Z operators for L = n_qubits and 2) their respective names.
-    Return: Dictionary with the following keys
-
-        - *"Z_operators"*
-        - *"Z_words"*
+    Return: Dictionary with operator names (str) as keys and operators (np.array) as values
 
      Example:
         .. testcode::
@@ -88,31 +32,33 @@ def generate_Z_operators(nqubits: int):
             h0 = random_hermitian(2**nqubits)
             dbi = DoubleBracketIteration(Hamiltonian(nqubits=nqubits, matrix=h0))
             generate_Z = generate_Z_operators(4)
-            Z_ops = generate_Z["Z_operators"]
-            Z_words = generate_Z["Z_operators"]
+            Z_ops = list(generate_Z.values())
+            Z_words = list(generate_Z.keys())
 
             delta_h0 = dbi.diagonal_h_matrix
             dephasing_channel = (sum([Z_op @ h0 @ Z_op for Z_op in Z_ops])+h0)/2**nqubits
             norm_diff = np.linalg.norm(delta_h0 - dephasing_channel)
             print(norm_diff)
     """
+    # list of tupples, e.g. ('Z','I','Z')
     combination_strings = product("ZI", repeat=nqubits)
-    operator_map = {"Z": Z, "I": I}
-    operators = []
-    operators_words = []
+    output_dict = {}
 
-    for op_string in combination_strings:
-        tensor_op = 1
+    for op_string_tup in combination_strings:
         # except for the identity
-        if "Z" in op_string:
-            for qubit, char in enumerate(op_string):
-                if char in operator_map:
-                    tensor_op *= operator_map[char](qubit)
-            op_string_cat = "".join(op_string)
-            operators_words.append(op_string_cat)
-            # append np.array operators
-            operators.append(SymbolicHamiltonian(tensor_op).dense.matrix)
-    return {"Z_operators": operators, "Z_words": operators_words}
+        if "Z" in op_string_tup:
+            op_name = "".join(op_string_tup)
+            tensor_op = str_to_op(op_name)
+            # append in output_dict
+            output_dict[op_name] = SymbolicHamiltonian(tensor_op).dense.matrix
+    return output_dict
+
+
+def str_to_op(name: str):
+    tensor_op = 1
+    for qubit, char in enumerate(name):
+        tensor_op *= getattr(symbols, char)(qubit)
+    return tensor_op
 
 
 def select_best_dbr_generator(
