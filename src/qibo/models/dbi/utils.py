@@ -1,9 +1,6 @@
 from copy import deepcopy
 from itertools import product
 
-import matplotlib.pyplot as plt
-import numpy as np
-import seaborn as sns
 from hyperopt import hp, tpe
 
 from qibo import symbols
