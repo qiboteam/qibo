@@ -64,7 +64,7 @@ def select_best_dbr_generator(
     step: float = None,
     step_min: float = 1e-5,
     step_max: float = 1,
-    max_evals: int = 100,
+    max_evals: int = 200,
     compare_canonical: bool = True,
 ):
     """Selects the best double bracket rotation generator from a list.
@@ -133,7 +133,7 @@ def select_best_dbr_generator_and_run(
     step: float = None,
     step_min: float = 1e-5,
     step_max: float = 1,
-    max_evals: int = 100,
+    max_evals: int = 200,
     compare_canonical: bool = True,
 ):
     """Run double bracket iteration with generator chosen from a list."""
