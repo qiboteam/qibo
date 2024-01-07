@@ -8,7 +8,7 @@ from qibo.models.error_mitigation import (
     CDR,
     ICS,
     ZNE,
-    apply_readout_mitigation,
+    apply_problem_with_readout_conf,
     get_response_matrix,
     sample_clifford_training_circuit,
     sample_training_circuit_cdr,
@@ -19,11 +19,11 @@ from qibo.quantum_info import random_stochastic_matrix
 from qibo.symbols import Z
 
 
-def get_noise_model(error, gate, cal_matrix=[False, None]):
+def get_noise_model(error, gate, resp_matrix=[False, None]):
     noise = NoiseModel()
     noise.add(error, gate)
-    if cal_matrix[0]:
-        noise.add(ReadoutError(probabilities=cal_matrix[1]), gate=gates.M)
+    if resp_matrix[0]:
+        noise.add(ReadoutError(probabilities=resp_matrix[1]), gate=gates.M)
 
     return noise
 
@@ -53,11 +53,11 @@ def get_circuit(nqubits, nmeas=None):
 
 
 backend = construct_backend("numpy")
-# # Generate random calibration matrices
-cal_matrix_1q = random_stochastic_matrix(
+# # Generate random response matrices
+resp_matrix_1q = random_stochastic_matrix(
     2, diagonally_dominant=True, seed=2, backend=backend
 )
-cal_matrix_2q = random_stochastic_matrix(
+resp_matrix_2q = random_stochastic_matrix(
     4, diagonally_dominant=True, seed=2, backend=backend
 )
 
@@ -70,7 +70,7 @@ cal_matrix_2q = random_stochastic_matrix(
             3,
             get_noise_model(DepolarizingError(0.1), gates.CNOT),
             "CNOT",
-            {"calibration_matrix": cal_matrix_2q, "ibu_iters": None},
+            {"response_matrix": resp_matrix_2q, "ibu_iters": None},
         ),
         (
             3,
@@ -83,13 +83,13 @@ cal_matrix_2q = random_stochastic_matrix(
             1,
             get_noise_model(DepolarizingError(0.3), gates.RX),
             "RX",
-            {"calibration_matrix": cal_matrix_1q, "ibu_iters": None},
+            {"response_matrix": resp_matrix_1q, "ibu_iters": None},
         ),
         (
             1,
             get_noise_model(DepolarizingError(0.3), gates.RX),
             "RX",
-            {"calibration_matrix": cal_matrix_1q, "ibu_iters": 10},
+            {"response_matrix": resp_matrix_1q, "ibu_iters": 10},
         ),
         (1, get_noise_model(DepolarizingError(0.1), gates.RX), "RX", {"ncircuits": 2}),
     ],
@@ -143,15 +143,15 @@ def test_zne(backend, nqubits, noise, solve, insertion_gate, readout):
     [
         (get_noise_model(DepolarizingError(0.1), gates.CNOT), {}),
         (
-            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, cal_matrix_2q]),
-            {"calibration_matrix": cal_matrix_2q, "ibu_iters": None},
+            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, resp_matrix_2q]),
+            {"response_matrix": resp_matrix_2q, "ibu_iters": None},
         ),
         (
-            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, cal_matrix_2q]),
-            {"calibration_matrix": cal_matrix_2q, "ibu_iters": 10},
+            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, resp_matrix_2q]),
+            {"response_matrix": resp_matrix_2q, "ibu_iters": 10},
         ),
         (
-            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, cal_matrix_2q]),
+            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, resp_matrix_2q]),
             {"ncircuits": 2},
         ),
     ],
@@ -231,13 +231,13 @@ def test_sample_training_circuit(nqubits):
     [
         (
             1,
-            get_noise_model(DepolarizingError(0.1), gates.RX, [True, cal_matrix_1q]),
+            get_noise_model(DepolarizingError(0.1), gates.RX, [True, resp_matrix_1q]),
             "RX",
-            {"calibration_matrix": cal_matrix_1q, "ibu_iters": 10},
+            {"response_matrix": resp_matrix_1q, "ibu_iters": 10},
         ),
         (
             1,
-            get_noise_model(DepolarizingError(0.1), gates.RX, [True, cal_matrix_1q]),
+            get_noise_model(DepolarizingError(0.1), gates.RX, [True, resp_matrix_1q]),
             "RX",
             {"ncircuits": 2},
         ),
@@ -283,7 +283,7 @@ def test_vncdr(backend, nqubits, noise, full_output, insertion_gate, readout):
 
 
 @pytest.mark.parametrize("nqubits,nmeas", [(3, 2)])
-@pytest.mark.parametrize("method", ["cal_matrix", "randomized"])
+@pytest.mark.parametrize("method", ["response_matrix", "randomized"])
 @pytest.mark.parametrize("ibu_iters", [None, 10])
 def test_readout_mitigation(backend, nqubits, nmeas, method, ibu_iters):
     if backend.name == "tensorflow":
@@ -297,11 +297,11 @@ def test_readout_mitigation(backend, nqubits, nmeas, method, ibu_iters):
     p = random_stochastic_matrix(2**nmeas, diagonally_dominant=True, seed=5)
     noise = NoiseModel()
     noise.add(ReadoutError(probabilities=p), gate=gates.M)
-    if method == "cal_matrix":
-        calibration = get_response_matrix(
+    if method == "response_matrix":
+        response = get_response_matrix(
             nmeas, None, noise, nshots=nshots, backend=backend
         )
-        readout = {"calibration_matrix": calibration, "ibu_iters": ibu_iters}
+        readout = {"response_matrix": response, "ibu_iters": ibu_iters}
     elif method == "randomized":
         readout = {"ncircuits": 10}
     # Define the observable
@@ -315,7 +315,9 @@ def test_readout_mitigation(backend, nqubits, nmeas, method, ibu_iters):
     state = backend.execute_circuit(noise.apply(c), nshots=nshots)
     noisy_val = state.expectation_from_samples(obs)
 
-    mit_val = apply_readout_mitigation(c, obs, noise, nshots, readout, backend=backend)
+    mit_val = apply_problem_with_readout_conf(
+        c, obs, noise, nshots, readout, backend=backend
+    )
 
     assert np.abs(true_val - mit_val) <= np.abs(true_val - noisy_val)
 
@@ -327,15 +329,15 @@ def test_readout_mitigation(backend, nqubits, nmeas, method, ibu_iters):
     [
         (get_noise_model(DepolarizingError(0.1), gates.CNOT), {}),
         (
-            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, cal_matrix_2q]),
-            {"calibration_matrix": cal_matrix_2q, "ibu_iters": None},
+            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, resp_matrix_2q]),
+            {"response_matrix": resp_matrix_2q, "ibu_iters": None},
         ),
         (
-            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, cal_matrix_2q]),
-            {"calibration_matrix": cal_matrix_2q, "ibu_iters": 10},
+            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, resp_matrix_2q]),
+            {"response_matrix": resp_matrix_2q, "ibu_iters": 10},
         ),
         (
-            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, cal_matrix_2q]),
+            get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, resp_matrix_2q]),
             {"ncircuits": 2},
         ),
     ],

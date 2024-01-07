@@ -288,7 +288,7 @@ In the presence of readout errors, we will measure for each state :math:`i` some
 frequencies :math:`F_i^{noisy}` different from the ideal ones
 :math:`F_i^{ideal}=\delta_{i,j}`.
 
-The effect of the error is modeled by the matrix composed of the noisy frequencies as
+The effect of the error is modeled by the response matrix composed of the noisy frequencies as
 columns :math:`M=\big(F_0^{noisy},...,F_{n-1}^{noisy}\big)`. We have indeed that:
 
 .. math::
@@ -311,13 +311,13 @@ See `Nachman et al <https://arxiv.org/abs/1910.01969>`_ for more details.
 .. autofunction:: qibo.models.error_mitigation.iterative_bayesian_unfolding
 
 
-.. autofunction:: qibo.models.error_mitigation.apply_cal_mat_readout_mitigation
+.. autofunction:: qibo.models.error_mitigation.apply_resp_mat_readout_mitigation
 
 
 .. autofunction:: qibo.models.error_mitigation.apply_randomized_readout_mitigation
 
 
-.. autofunction:: qibo.models.error_mitigation.apply_readout_mitigation
+.. autofunction:: qibo.models.error_mitigation.apply_problem_with_readout_conf
 
 
 Randomized readout mitigation
@@ -434,7 +434,7 @@ See `Sopena et al <https://arxiv.org/abs/2103.12680>`_ for all the details.
 
 
 Importance Clifford Sampling (ICS)
-""""""""""""""""""""""""""""""
+""""""""""""""""""""""""""""""""""
 
 In the Importance Clifford Sampling (ICS) method, a set of :math:`n` circuits
 :math:`S_n=\{C_i\}_{i=1,..,n}` that stabilizes a given Pauli observable is generated starting from the original circuit

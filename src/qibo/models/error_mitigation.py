@@ -133,7 +133,7 @@ def ZNE(
         readout (dict, optional): a dictionary that may contain the following keys:
 
             *    ncircuits: int, specifies the number of random circuits to use for the randomized method of readout error mitigation.
-            *    calibration_matrix: numpy.ndarray, used for applying a pre-computed calibration matrix for readout error mitigation.
+            *    response_matrix: numpy.ndarray, used for applying a pre-computed response matrix for readout error mitigation.
             *    ibu_iters: int, specifies the number of iterations for the iterative Bayesian unfolding method of readout error mitigation. If provided, the corresponding readout error mitigation method is used. Defaults to {}.
 
         qubit_map (list, optional): the qubit map. If None, a list of range of circuit's qubits is used. Defaults to ``None``.
@@ -156,7 +156,7 @@ def ZNE(
         noisy_circuit = get_noisy_circuit(
             circuit, num_insertions, insertion_gate=insertion_gate
         )
-        val = apply_readout_mitigation(
+        val = apply_problem_with_readout_conf(
             noisy_circuit,
             observable,
             noise_model,
@@ -283,7 +283,7 @@ def CDR(
         readout (dict, optional): a dictionary that may contain the following keys:
 
             *    ncircuits: int, specifies the number of random circuits to use for the randomized method of readout error mitigation.
-            *    calibration_matrix: numpy.ndarray, used for applying a pre-computed calibration matrix for readout error mitigation.
+            *    response_matrix: numpy.ndarray, used for applying a pre-computed response matrix for readout error mitigation.
             *    ibu_iters: int, specifies the number of iterations for the iterative Bayesian unfolding method of readout error mitigation. If provided, the corresponding readout error mitigation method is used. Defaults to {}.
 
         qubit_map (list, optional): the qubit map. If None, a list of range of circuit's qubits is used. Defaults to ``None``.
@@ -312,14 +312,14 @@ def CDR(
     for circ in training_circuits:
         val = circ(nshots=nshots).expectation_from_samples(observable)
         train_val["noise-free"].append(val)
-        val = apply_readout_mitigation(
+        val = apply_problem_with_readout_conf(
             circ, observable, noise_model, nshots, readout, qubit_map, backend=backend
         )
         train_val["noisy"].append(val)
 
     optimal_params = curve_fit(model, train_val["noisy"], train_val["noise-free"])[0]
 
-    val = apply_readout_mitigation(
+    val = apply_problem_with_readout_conf(
         circuit, observable, noise_model, nshots, readout, qubit_map, backend=backend
     )
     mit_val = model(val, *optimal_params)
@@ -366,7 +366,7 @@ def vnCDR(
         readout (dict, optional): a dictionary that may contain the following keys:
 
             *    ncircuits: int, specifies the number of random circuits to use for the randomized method of readout error mitigation.
-            *    calibration_matrix: numpy.ndarray, used for applying a pre-computed calibration matrix for readout error mitigation.
+            *    response_matrix: numpy.ndarray, used for applying a pre-computed response matrix for readout error mitigation.
             *    ibu_iters: int, specifies the number of iterations for the iterative Bayesian unfolding method of readout error mitigation. If provided, the corresponding readout error mitigation method is used. Defaults to {}.
 
         qubit_map (list, optional): the qubit map. If None, a list of range of circuit's qubits is used. Defaults to ``None``.
@@ -398,7 +398,7 @@ def vnCDR(
         train_val["noise-free"].append(val)
         for level in noise_levels:
             noisy_c = get_noisy_circuit(circ, level, insertion_gate=insertion_gate)
-            val = apply_readout_mitigation(
+            val = apply_problem_with_readout_conf(
                 noisy_c,
                 observable,
                 noise_model,
@@ -417,7 +417,7 @@ def vnCDR(
     val = []
     for level in noise_levels:
         noisy_c = get_noisy_circuit(circuit, level, insertion_gate=insertion_gate)
-        expval = apply_readout_mitigation(
+        expval = apply_problem_with_readout_conf(
             noisy_c,
             observable,
             noise_model,
@@ -468,7 +468,7 @@ def iterative_bayesian_unfolding(probabilities, response_matrix, iterations=10):
 def get_response_matrix(
     nqubits, qubit_map=None, noise_model=None, nshots: int = 10000, backend=None
 ):
-    """Computes the calibration matrix for readout mitigation.
+    """Computes the response matrix for readout mitigation.
 
     Args:
         nqubits (int): Total number of qubits.
@@ -482,7 +482,7 @@ def get_response_matrix(
             Defaults to ``None``.
 
     Returns:
-        numpy.ndarray : The computed (`nqubits`, `nqubits`) calibration matrix for
+        numpy.ndarray : The computed (`nqubits`, `nqubits`) response matrix for
             readout mitigation.
     """
     from qibo import Circuit  # pylint: disable=import-outside-toplevel
@@ -515,14 +515,14 @@ def get_response_matrix(
     return response_matrix
 
 
-def apply_cal_mat_readout_mitigation(state, response_matrix, iterations=None):
+def apply_resp_mat_readout_mitigation(state, response_matrix, iterations=None):
     """
-    Applies readout error mitigation to the given state using the provided calibration matrix.
+    Applies readout error mitigation to the given state using the provided response matrix.
 
     Args:
         state (:class:`qibo.measurements.CircuitResult`): the input state to be updated. This state should contain the
             frequencies that need to be mitigated.
-        response_matrix (numpy.ndarray): the calibration matrix for readout mitigation.
+        response_matrix (numpy.ndarray): the response matrix for readout mitigation.
         iterations (int, optional): the number of iterations to use for the Iterative Bayesian Unfolding method.
             If ``None`` the 'inverse' method is used. Defaults to ``None``.
 
@@ -639,7 +639,7 @@ def apply_randomized_readout_mitigation(
     return results
 
 
-def apply_readout_mitigation(
+def apply_problem_with_readout_conf(
     circuit,
     observable,
     noise_model=None,
@@ -659,7 +659,7 @@ def apply_readout_mitigation(
         readout (dict, optional): a dictionary that may contain the following keys:
 
             *    ncircuits: int, specifies the number of random circuits to use for the randomized method of readout error mitigation.
-            *    calibration_matrix: numpy.ndarray, used for applying a pre-computed calibration matrix for readout error mitigation.
+            *    response_matrix: numpy.ndarray, used for applying a pre-computed response matrix for readout error mitigation.
             *    ibu_iters: int, specifies the number of iterations for the iterative Bayesian unfolding method of readout error mitigation. If provided, the corresponding readout error mitigation method is used. Defaults to {}.
 
         qubit_map (list, optional): the qubit map. If None, a list of range of circuit's qubits is used. Defaults to ``None``.
@@ -681,10 +681,10 @@ def apply_readout_mitigation(
             circuit, qubit_map, noise_model, nshots, backend=backend
         )
 
-    if "calibration_matrix" in readout:
-        circuit_result = apply_cal_mat_readout_mitigation(
+    if "response_matrix" in readout:
+        circuit_result = apply_resp_mat_readout_mitigation(
             circuit_result,
-            readout["calibration_matrix"],
+            readout["response_matrix"],
             readout.get("ibu_iters", None),
         )
 
@@ -852,7 +852,7 @@ def ICS(
         readout (dict, optional): a dictionary that may contain the following keys:
 
             *    ncircuits: int, specifies the number of random circuits to use for the randomized method of readout error mitigation.
-            *    calibration_matrix: numpy.ndarray, used for applying a pre-computed calibration matrix for readout error mitigation.
+            *    response_matrix: numpy.ndarray, used for applying a pre-computed response matrix for readout error mitigation.
             *    ibu_iters: int, specifies the number of iterations for the iterative Bayesian unfolding method of readout error mitigation. If provided, the corresponding readout error mitigation method is used. Defaults to {}.
 
         qubit_map (list, optional): the qubit map. If ``None``, a list of range of circuit's qubits is used. Defaults to ``None``.
@@ -894,7 +894,7 @@ def ICS(
         circuit_result = training_circuit(nshots=nshots)
         expectation = observable.expectation_from_samples(circuit_result.frequencies())
 
-        noisy_expectation = apply_readout_mitigation(
+        noisy_expectation = apply_problem_with_readout_conf(
             training_circuit,
             observable,
             noise_model,
@@ -911,7 +911,7 @@ def ICS(
     dep_param = np.mean(lambda_list)
     dep_param_std = np.std(lambda_list)
 
-    noisy_expectation = apply_readout_mitigation(
+    noisy_expectation = apply_problem_with_readout_conf(
         circuit, observable, noise_model, nshots, readout, qubit_map, backend=backend
     )
 

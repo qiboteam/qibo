@@ -1289,11 +1289,11 @@ Now let's check that error mitigation produces better estimates of the exact exp
 Readout Mitigation
 ^^^^^^^^^^^^^^^^^^
 Firstly, let's try to mitigate the readout errors. To do this, we can either compute the
-calibration matrix and use it modify the final state after the circuit execution:
+response matrix and use it modify the final state after the circuit execution:
 
 .. testcode::
 
-   from qibo.models.error_mitigation import apply_readout_mitigation, get_response_matrix
+   from qibo.models.error_mitigation import apply_problem_with_readout_conf, get_response_matrix
 
    nshots = 10000
    # compute the response matrix
@@ -1301,9 +1301,9 @@ calibration matrix and use it modify the final state after the circuit execution
        nqubits, backend=backend, noise_model=noise, nshots=nshots
    )
    # define mitigation options
-   readout = {"calibration_matrix": response_matrix}
+   readout = {"response_matrix": response_matrix}
    # mitigate the readout errors
-   mit_val = apply_readout_mitigation(circ, obs, noise, readout=readout)
+   mit_val = apply_problem_with_readout_conf(circ, obs, noise, readout=readout)
    print(mit_val)
    # 0.5945794816381054
 
@@ -1321,7 +1321,7 @@ Or use the randomized readout mitigation:
    # define mitigation options
    readout = {"ncircuits": 10}
    # mitigate the readout errors
-   mit_val = apply_readout_mitigation(circ, obs, noise, readout=readout)
+   mit_val = apply_problem_with_readout_conf(circ, obs, noise, readout=readout)
    print(mit_val)
    # 0.5860884499785314
 
@@ -1383,8 +1383,8 @@ combined with the readout mitigation:
 .. testcode::
 
    # we can either use
-   # the calibration matrix computed earlier
-   readout = {'calibration_matrix': response_matrix}
+   # the response matrix computed earlier
+   readout = {'response_matrix': response_matrix}
    # or the randomized readout
    readout = {'ncircuits': 10}
 
