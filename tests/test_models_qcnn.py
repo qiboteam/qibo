@@ -11,7 +11,7 @@ num_angles = 21
 angles0 = [i * math.pi / num_angles for i in range(num_angles)]
 
 
-def test_classifier_circuit2():
+def test_classifier_circuit2(backend):
     """ """
     nqubits = 2
     nlayers = int(nqubits / 2)
@@ -35,7 +35,7 @@ def test_classifier_circuit2():
     np.testing.assert_allclose(statevector.imag, real_vector.imag, atol=1e-5)
 
 
-def get_real_vector2():
+def get_real_vector2(backend):
     nqubits = 2
     bits = range(nqubits)
     init_state = np.ones(2**nqubits) / np.sqrt(2**nqubits)  #
@@ -75,7 +75,7 @@ def get_real_vector2():
     return a
 
 
-def test_classifier_circuit4():
+def test_classifier_circuit4(backend):
     """ """
     nqubits = 4
     nlayers = int(nqubits / 2)
@@ -93,7 +93,7 @@ def test_classifier_circuit4():
     np.testing.assert_allclose(statevector.imag, real_vector.imag, atol=1e-5)
 
 
-def get_real_vector4():
+def get_real_vector4(backend):
     nqubits = 4
     init_state = np.ones(2**nqubits) / np.sqrt(2**nqubits)  #
     angles = angles0
@@ -231,7 +231,7 @@ def get_real_vector4():
     return a
 
 
-def one_qubit_unitary(nqubits, bit, symbols):
+def one_qubit_unitary(nqubits, bit, symbols, backend):
     c = Circuit(nqubits)
     c.add(gates.RX(bit, symbols[0]))
     c.add(gates.RY(bit, symbols[1]))
@@ -240,42 +240,42 @@ def one_qubit_unitary(nqubits, bit, symbols):
     return c
 
 
-def RXX_unitary(nqubits, bit0, bit1, angle):
+def RXX_unitary(nqubits, bit0, bit1, angle, backend):
     c = Circuit(nqubits)
     c.add(gates.RXX(bit0, bit1, angle))
 
     return c
 
 
-def RYY_unitary(nqubits, bit0, bit1, angle):
+def RYY_unitary(nqubits, bit0, bit1, angle, backend):
     c = Circuit(nqubits)
     c.add(gates.RYY(bit0, bit1, angle))
 
     return c
 
 
-def RZZ_unitary(nqubits, bit0, bit1, angle):
+def RZZ_unitary(nqubits, bit0, bit1, angle, backend):
     c = Circuit(nqubits)
     c.add(gates.RZZ(bit0, bit1, angle))
 
     return c
 
 
-def CNOT_unitary(nqubits, bit0, bit1):
+def CNOT_unitary(nqubits, bit0, bit1, backend):
     c = Circuit(nqubits)
     c.add(gates.CNOT(bit0, bit1))
 
     return c
 
 
-def test_1_qubit_classifier_circuit_error():
+def test_1_qubit_classifier_circuit_error(backend):
     try:
         QuantumCNN(nqubits=1, nlayers=1, nclasses=2)
     except:
         pass
 
 
-def test_two_qubit_ansatz():
+def test_two_qubit_ansatz(backend):
     c = Circuit(2)
     c.add(gates.H(0))
     c.add(gates.RX(0, 0))
@@ -283,7 +283,6 @@ def test_two_qubit_ansatz():
     test_qcnn = QuantumCNN(4, 2, 2, twoqubitansatz=c)
 
 
-@pytest.mark.parametrize("backend", [("numpy"), ("qibojit")])
 def test_qcnn_training(backend):
     set_backend(backend)
     import random
@@ -315,7 +314,6 @@ def test_qcnn_training(backend):
     labels = np.array([[1], [-1], [1]])
 
 
-@pytest.mark.parametrize("backend", [("numpy"), ("qibojit")])
 def test_two_qubit_ansatz_training(backend):
     set_backend(backend)
     c = Circuit(2)
