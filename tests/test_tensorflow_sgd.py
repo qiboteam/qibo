@@ -7,7 +7,7 @@ from qibo.optimizers.gradient_based import TensorflowSGD
 
 def test_tensorflow_sgd():
     # tensorflow backend is needed to use the TensorFlowSGD optimizer.
-    pytest.skip("Skipping SGD test for unsupported backend.")
+    # pytest.skip("Skipping SGD test for unsupported backend.")
     set_backend("tensorflow")
 
     # define a dummy model
@@ -41,8 +41,7 @@ def test_tensorflow_sgd():
         initial_parameters=params,
         loss=loss,
         args=(c, h),
-        fit_options={"epochs": 100},
-        nmessage=1,
+        fit_options={"epochs": 100, "nmessage": 1},
     )
 
     assert np.isclose(result_full[0], -1, atol=1e-3)
@@ -55,13 +54,11 @@ def test_tensorflow_sgd():
         initial_parameters=params,
         loss=loss,
         args=(c, h),
-        fit_options={"epochs": 100},
-        nmessage=1,
-        loss_threshold=-0.5,
+        fit_options={"epochs": 100, "nmessage": 1, "loss_threshold": -0.5},
     )
 
     # get options lists
-    options_list = optimizer.get_options_list()
-    fit_options_list = optimizer.get_fit_options_list()
+    options_list = opt.get_options_list()
+    fit_options_list = opt.get_fit_options_list()
 
     assert result_full[0] < result_early_stopping[0]
