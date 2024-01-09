@@ -46,13 +46,14 @@ def check_fit_arguments(args, initial_parameters):
 class Optimizer:
     """Qibo optimizer class."""
 
-    def __init__(self, options={}):
+    def __init__(self, options={}):  # pragma: no cover
         """
         Args:
             options (dict): optimizer's parameters. This dictionary has to be
                 filled according to each specific optimizer interface.
         """
-        pass
+        self.options = options
+        self._fit_function = None
 
     def set_options(self, updates):
         """Update self.options dictionary"""
