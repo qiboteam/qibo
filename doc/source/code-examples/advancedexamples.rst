@@ -811,12 +811,10 @@ Using density matrices
 Qibo circuits can evolve density matrices if they are initialized using the
 ``density_matrix=True`` flag, for example:
 
-.. testsetup::
+.. testcode::
 
     import qibo
     qibo.set_backend("qibojit")
-
-.. testcode::
 
     from qibo import models, gates
 

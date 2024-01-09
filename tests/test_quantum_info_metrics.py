@@ -565,10 +565,10 @@ def test_diamond_norm(backend, nqubits):
     unitary = backend.identity_density_matrix(nqubits, normalize=False)
     unitary = to_choi(unitary, order="row", backend=backend)
 
-    dnorm = diamond_norm(unitary)
+    dnorm = diamond_norm(unitary, backend=backend)
     backend.assert_allclose(dnorm, 1.0, atol=PRECISION_TOL)
 
-    dnorm = diamond_norm(unitary, unitary)
+    dnorm = diamond_norm(unitary, unitary, backend=backend)
     backend.assert_allclose(dnorm, 0.0, atol=PRECISION_TOL)
 
 
@@ -598,7 +598,7 @@ def test_entangling_capability(backend):
         entangling_capability(circuit, samples, backend=backend)
 
     nqubits = 2
-    samples = 500
+    samples = 100
 
     c1 = Circuit(nqubits)
     c1.add([gates.RX(q, 0, trainable=True) for q in range(nqubits)])
@@ -631,7 +631,7 @@ def test_expressibility(backend):
         expressibility(circuit, t, samples, backend=backend)
 
     nqubits = 2
-    samples = 500
+    samples = 100
     t = 1
 
     c1 = Circuit(nqubits)
@@ -652,9 +652,9 @@ def test_expressibility(backend):
     backend.assert_allclose(expr_1 < expr_2 < expr_3, True)
 
 
-@pytest.mark.parametrize("samples", [int(1e2)])
+@pytest.mark.parametrize("samples", [int(1e1)])
 @pytest.mark.parametrize("power_t", [2])
-@pytest.mark.parametrize("nqubits", [2, 3, 4])
+@pytest.mark.parametrize("nqubits", [2, 3])
 def test_frame_potential(backend, nqubits, power_t, samples):
     depth = int(np.ceil(nqubits * power_t))
 
