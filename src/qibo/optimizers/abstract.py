@@ -52,8 +52,7 @@ class Optimizer:
             options (dict): optimizer's parameters. This dictionary has to be
                 filled according to each specific optimizer interface.
         """
-        self.options = options
-        self._fit_function = None
+        pass
 
     def set_options(self, updates):
         """Update self.options dictionary"""
