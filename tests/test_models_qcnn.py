@@ -3,7 +3,7 @@ import math
 import numpy as np
 import pytest
 
-from qibo import gates, set_backend
+from qibo import gates
 from qibo.models import Circuit
 from qibo.models.qcnn import QuantumCNN
 
@@ -28,7 +28,7 @@ def test_classifier_circuit2(backend):
 
     # circuit = qcnn._circuit
     statevector = circuit(init_state).state()
-    real_vector = get_real_vector2()
+    real_vector = get_real_vector2(backend)
 
     # to compare statevector and real_vector
     np.testing.assert_allclose(statevector.real, real_vector.real, atol=1e-5)
@@ -86,7 +86,7 @@ def test_classifier_circuit4(backend):
 
     circuit = qcnn.Classifier_circuit(angles)
     statevector = circuit(init_state).state()
-    real_vector = get_real_vector4()
+    real_vector = get_real_vector4(backend)
 
     # to compare statevector and real_vector
     np.testing.assert_allclose(statevector.real, real_vector.real, atol=1e-5)
@@ -284,7 +284,6 @@ def test_two_qubit_ansatz(backend):
 
 
 def test_qcnn_training(backend):
-    set_backend(backend)
     import random
 
     # generate 2 random states and labels for pytest
@@ -315,7 +314,6 @@ def test_qcnn_training(backend):
 
 
 def test_two_qubit_ansatz_training(backend):
-    set_backend(backend)
     c = Circuit(2)
     c.add(gates.H(0))
     c.add(gates.RX(0, 0))
