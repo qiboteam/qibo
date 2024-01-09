@@ -44,29 +44,29 @@ def get_real_vector2(backend):
     # convolution
     k = 0
     a = np.dot(
-        one_qubit_unitary(nqubits, bits[0], angles[k : k + 3]).unitary(), init_state
+        one_qubit_unitary(nqubits, bits[0], angles[k : k + 3], backend).unitary(), init_state
     )
     k += 3
-    a = np.dot(one_qubit_unitary(nqubits, bits[1], angles[k : k + 3]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[1], angles[k : k + 3], backend).unitary(), a)
     k += 3
-    a = np.dot(RZZ_unitary(nqubits, bits[0], bits[1], angles[k]).unitary(), a)
+    a = np.dot(RZZ_unitary(nqubits, bits[0], bits[1], angles[k], backend).unitary(), a)
     k += 1
-    a = np.dot(RYY_unitary(nqubits, bits[0], bits[1], angles[k]).unitary(), a)
+    a = np.dot(RYY_unitary(nqubits, bits[0], bits[1], angles[k], backend).unitary(), a)
     k += 1
-    a = np.dot(RXX_unitary(nqubits, bits[0], bits[1], angles[k]).unitary(), a)
+    a = np.dot(RXX_unitary(nqubits, bits[0], bits[1], angles[k], backend).unitary(), a)
     k += 1
-    a = np.dot(one_qubit_unitary(nqubits, bits[0], angles[k : k + 3]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[0], angles[k : k + 3], backend).unitary(), a)
     k += 3
-    a = np.dot(one_qubit_unitary(nqubits, bits[1], angles[k : k + 3]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[1], angles[k : k + 3], backend).unitary(), a)
     k += 3
     # pooling
     ksink = k
-    a = np.dot(one_qubit_unitary(nqubits, bits[1], angles[k : k + 3]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[1], angles[k : k + 3], backend).unitary(), a)
     k += 3
-    a = np.dot(one_qubit_unitary(nqubits, bits[0], angles[k : k + 3]).unitary(), a)
-    a = np.dot(CNOT_unitary(nqubits, bits[0], bits[1]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[0], angles[k : k + 3], backend).unitary(), a)
+    a = np.dot(CNOT_unitary(nqubits, bits[0], bits[1], backend).unitary(), a)
     a = np.dot(
-        one_qubit_unitary(nqubits, bits[1], angles[ksink : ksink + 3])
+        one_qubit_unitary(nqubits, bits[1], angles[ksink : ksink + 3], backend)
         .invert()
         .unitary(),
         a,
@@ -105,81 +105,81 @@ def get_real_vector4(backend):
     b1 = 1
     k = 0
     a = np.dot(
-        one_qubit_unitary(nqubits, bits[b0], angles[k : k + 3]).unitary(), init_state
+        one_qubit_unitary(nqubits, bits[b0], angles[k : k + 3], backend).unitary(), init_state
     )
     k += 3
-    a = np.dot(one_qubit_unitary(nqubits, bits[b1], angles[k : k + 3]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[b1], angles[k : k + 3], backend).unitary(), a)
     k += 3
-    a = np.dot(RZZ_unitary(nqubits, bits[b0], bits[b1], angles[k]).unitary(), a)
+    a = np.dot(RZZ_unitary(nqubits, bits[b0], bits[b1], angles[k], backend).unitary(), a)
     k += 1
-    a = np.dot(RYY_unitary(nqubits, bits[b0], bits[b1], angles[k]).unitary(), a)
+    a = np.dot(RYY_unitary(nqubits, bits[b0], bits[b1], angles[k], backend).unitary(), a)
     k += 1
-    a = np.dot(RXX_unitary(nqubits, bits[b0], bits[b1], angles[k]).unitary(), a)
+    a = np.dot(RXX_unitary(nqubits, bits[b0], bits[b1], angles[k], backend).unitary(), a)
     k += 1
-    a = np.dot(one_qubit_unitary(nqubits, bits[b0], angles[k : k + 3]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[b0], angles[k : k + 3], backend).unitary(), a)
     k += 3
-    a = np.dot(one_qubit_unitary(nqubits, bits[b1], angles[k : k + 3]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[b1], angles[k : k + 3], backend).unitary(), a)
 
     b0 = 2
     b1 = 3
     k = 0
-    a = np.dot(one_qubit_unitary(nqubits, bits[b0], angles[k : k + 3]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[b0], angles[k : k + 3], backend).unitary(), a)
     k += 3
-    a = np.dot(one_qubit_unitary(nqubits, bits[b1], angles[k : k + 3]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[b1], angles[k : k + 3], backend).unitary(), a)
     k += 3
-    a = np.dot(RZZ_unitary(nqubits, bits[b0], bits[b1], angles[k]).unitary(), a)
+    a = np.dot(RZZ_unitary(nqubits, bits[b0], bits[b1], angles[k], backend).unitary(), a)
     k += 1
-    a = np.dot(RYY_unitary(nqubits, bits[b0], bits[b1], angles[k]).unitary(), a)
+    a = np.dot(RYY_unitary(nqubits, bits[b0], bits[b1], angles[k], backend).unitary(), a)
     k += 1
-    a = np.dot(RXX_unitary(nqubits, bits[b0], bits[b1], angles[k]).unitary(), a)
+    a = np.dot(RXX_unitary(nqubits, bits[b0], bits[b1], angles[k], backend).unitary(), a)
     k += 1
-    a = np.dot(one_qubit_unitary(nqubits, bits[b0], angles[k : k + 3]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[b0], angles[k : k + 3], backend).unitary(), a)
     k += 3
-    a = np.dot(one_qubit_unitary(nqubits, bits[b1], angles[k : k + 3]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[b1], angles[k : k + 3], backend).unitary(), a)
 
     b0 = 1
     b1 = 2
     k = 0
-    a = np.dot(one_qubit_unitary(nqubits, bits[b0], angles[k : k + 3]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[b0], angles[k : k + 3], backend).unitary(), a)
     k += 3
-    a = np.dot(one_qubit_unitary(nqubits, bits[b1], angles[k : k + 3]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[b1], angles[k : k + 3], backend).unitary(), a)
     k += 3
-    a = np.dot(RZZ_unitary(nqubits, bits[b0], bits[b1], angles[k]).unitary(), a)
+    a = np.dot(RZZ_unitary(nqubits, bits[b0], bits[b1], angles[k], backend).unitary(), a)
     k += 1
-    a = np.dot(RYY_unitary(nqubits, bits[b0], bits[b1], angles[k]).unitary(), a)
+    a = np.dot(RYY_unitary(nqubits, bits[b0], bits[b1], angles[k], backend).unitary(), a)
     k += 1
-    a = np.dot(RXX_unitary(nqubits, bits[b0], bits[b1], angles[k]).unitary(), a)
+    a = np.dot(RXX_unitary(nqubits, bits[b0], bits[b1], angles[k], backend).unitary(), a)
     k += 1
-    a = np.dot(one_qubit_unitary(nqubits, bits[b0], angles[k : k + 3]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[b0], angles[k : k + 3], backend).unitary(), a)
     k += 3
-    a = np.dot(one_qubit_unitary(nqubits, bits[b1], angles[k : k + 3]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[b1], angles[k : k + 3], backend).unitary(), a)
 
     b0 = 3
     b1 = 0
     k = 0
-    a = np.dot(one_qubit_unitary(nqubits, bits[b0], angles[k : k + 3]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[b0], angles[k : k + 3], backend).unitary(), a)
     k += 3
-    a = np.dot(one_qubit_unitary(nqubits, bits[b1], angles[k : k + 3]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[b1], angles[k : k + 3], backend).unitary(), a)
     k += 3
-    a = np.dot(RZZ_unitary(nqubits, bits[b0], bits[b1], angles[k]).unitary(), a)
+    a = np.dot(RZZ_unitary(nqubits, bits[b0], bits[b1], angles[k], backend).unitary(), a)
     k += 1
-    a = np.dot(RYY_unitary(nqubits, bits[b0], bits[b1], angles[k]).unitary(), a)
+    a = np.dot(RYY_unitary(nqubits, bits[b0], bits[b1], angles[k], backend).unitary(), a)
     k += 1
-    a = np.dot(RXX_unitary(nqubits, bits[b0], bits[b1], angles[k]).unitary(), a)
+    a = np.dot(RXX_unitary(nqubits, bits[b0], bits[b1], angles[k], backend).unitary(), a)
     k += 1
-    a = np.dot(one_qubit_unitary(nqubits, bits[b0], angles[k : k + 3]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[b0], angles[k : k + 3], backend).unitary(), a)
     k += 3
-    a = np.dot(one_qubit_unitary(nqubits, bits[b1], angles[k : k + 3]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[b1], angles[k : k + 3], backend).unitary(), a)
 
     # pooling - layer 1
     k = 15  # k+=3
     ksink = k
-    a = np.dot(one_qubit_unitary(nqubits, bits[2], angles[k : k + 3]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[2], angles[k : k + 3], backend).unitary(), a)
     k += 3
-    a = np.dot(one_qubit_unitary(nqubits, bits[0], angles[k : k + 3]).unitary(), a)
-    a = np.dot(CNOT_unitary(nqubits, bits[0], bits[2]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[0], angles[k : k + 3], backend).unitary(), a)
+    a = np.dot(CNOT_unitary(nqubits, bits[0], bits[2], backend).unitary(), a)
     a = np.dot(
-        one_qubit_unitary(nqubits, bits[2], angles[ksink : ksink + 3])
+        one_qubit_unitary(nqubits, bits[2], angles[ksink : ksink + 3], backend)
         .invert()
         .unitary(),
         a,
@@ -187,12 +187,12 @@ def get_real_vector4(backend):
 
     k = 15  # k+=3
     ksink = k
-    a = np.dot(one_qubit_unitary(nqubits, bits[3], angles[k : k + 3]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[3], angles[k : k + 3], backend).unitary(), a)
     k += 3
-    a = np.dot(one_qubit_unitary(nqubits, bits[1], angles[k : k + 3]).unitary(), a)
-    a = np.dot(CNOT_unitary(nqubits, bits[1], bits[3]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[1], angles[k : k + 3], backend).unitary(), a)
+    a = np.dot(CNOT_unitary(nqubits, bits[1], bits[3], backend).unitary(), a)
     a = np.dot(
-        one_qubit_unitary(nqubits, bits[3], angles[ksink : ksink + 3])
+        one_qubit_unitary(nqubits, bits[3], angles[ksink : ksink + 3], backend)
         .invert()
         .unitary(),
         a,
@@ -200,29 +200,29 @@ def get_real_vector4(backend):
 
     # convolution - layer 2
     k = 0
-    a = np.dot(one_qubit_unitary(nqubits, bits[2], angles[k : k + 3]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[2], angles[k : k + 3], backend).unitary(), a)
     k += 3
-    a = np.dot(one_qubit_unitary(nqubits, bits[3], angles[k : k + 3]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[3], angles[k : k + 3], backend).unitary(), a)
     k += 3
-    a = np.dot(RZZ_unitary(nqubits, bits[2], bits[3], angles[k]).unitary(), a)
+    a = np.dot(RZZ_unitary(nqubits, bits[2], bits[3], angles[k], backend).unitary(), a)
     k += 1
-    a = np.dot(RYY_unitary(nqubits, bits[2], bits[3], angles[k]).unitary(), a)
+    a = np.dot(RYY_unitary(nqubits, bits[2], bits[3], angles[k], backend).unitary(), a)
     k += 1
-    a = np.dot(RXX_unitary(nqubits, bits[2], bits[3], angles[k]).unitary(), a)
+    a = np.dot(RXX_unitary(nqubits, bits[2], bits[3], angles[k], backend).unitary(), a)
     k += 1
-    a = np.dot(one_qubit_unitary(nqubits, bits[2], angles[k : k + 3]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[2], angles[k : k + 3], backend).unitary(), a)
     k += 3
-    a = np.dot(one_qubit_unitary(nqubits, bits[3], angles[k : k + 3]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[3], angles[k : k + 3], backend).unitary(), a)
     k += 3
 
     # pooling - layer 2
     ksink = k
-    a = np.dot(one_qubit_unitary(nqubits, bits[3], angles[k : k + 3]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[3], angles[k : k + 3], backend).unitary(), a)
     k += 3
-    a = np.dot(one_qubit_unitary(nqubits, bits[2], angles[k : k + 3]).unitary(), a)
-    a = np.dot(CNOT_unitary(nqubits, bits[2], bits[3]).unitary(), a)
+    a = np.dot(one_qubit_unitary(nqubits, bits[2], angles[k : k + 3], backend).unitary(), a)
+    a = np.dot(CNOT_unitary(nqubits, bits[2], bits[3], backend).unitary(), a)
     a = np.dot(
-        one_qubit_unitary(nqubits, bits[3], angles[ksink : ksink + 3])
+        one_qubit_unitary(nqubits, bits[3], angles[ksink : ksink + 3], backend)
         .invert()
         .unitary(),
         a,
