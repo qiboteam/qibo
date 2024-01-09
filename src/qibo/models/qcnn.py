@@ -17,7 +17,7 @@ class QuantumCNN:
         nclasses (int): number of classes to be classified. Default setting of 2 (phases).
         params: initial list of variational parameters. If not provided, all parameters
             will be initialized to zero.
-        twoqubitansatz (Qibo.models.Circuit object): A two qubit ansatz that can be input by the user to form the two qubit ansatz used in the convolutional circuit.
+        twoqubitansatz (:class:`qibo.models.Circuit`): a two qubit ansatz that can be input by the user to form the two qubit ansatz used in the convolutional circuit.
     Example:
         .. testcode::
 
