@@ -627,12 +627,14 @@ class CliffordBackend(NumpyBackend):
             for gate in circuit.queue:
                 state = gate.apply_clifford(self, state, nqubits)
 
-            return Clifford(
+            clifford = Clifford(
                 state,
                 measurements=circuit.measurements,
                 nshots=nshots,
                 engine=self.engine,
             )
+
+            return clifford
 
         except self.oom_error:  # pragma: no cover
             raise_error(

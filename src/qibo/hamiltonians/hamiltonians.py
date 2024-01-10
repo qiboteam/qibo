@@ -155,7 +155,7 @@ class Hamiltonian(AbstractHamiltonian):
             for i in qubit_map:
                 index += int(k[qubit_map.index(i)]) * 2 ** (size - 1 - i)
             expval += obs[index, index] * counts[j]
-        return expval
+        return np.real(expval)
 
     def eye(self, dim: Optional[int] = None):
         """Generate Identity matrix with dimension ``dim``"""
