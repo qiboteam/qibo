@@ -1,6 +1,5 @@
 from qibo.backends import GlobalBackend
 from qibo.gates.abstract import SpecialGate
-from qibo.gates.gates import I
 from qibo.gates.measurements import M
 
 
@@ -55,7 +54,7 @@ class FusedGate(SpecialGate):
     def from_gate(cls, gate):
         fgate = cls(*gate.qubits)
         fgate.append(gate)
-        if isinstance(gate, (M, SpecialGate, I)):
+        if isinstance(gate, (M, SpecialGate)):
             # special gates do not participate in fusion
             fgate.marked = True
         return fgate

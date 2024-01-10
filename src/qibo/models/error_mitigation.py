@@ -156,7 +156,7 @@ def ZNE(
         noisy_circuit = get_noisy_circuit(
             circuit, num_insertions, insertion_gate=insertion_gate
         )
-        val = apply_problem_with_readout_conf(
+        val = get_expectation_val_with_readout_mitigation(
             noisy_circuit,
             observable,
             noise_model,
@@ -312,14 +312,14 @@ def CDR(
     for circ in training_circuits:
         val = circ(nshots=nshots).expectation_from_samples(observable)
         train_val["noise-free"].append(val)
-        val = apply_problem_with_readout_conf(
+        val = get_expectation_val_with_readout_mitigation(
             circ, observable, noise_model, nshots, readout, qubit_map, backend=backend
         )
         train_val["noisy"].append(val)
 
     optimal_params = curve_fit(model, train_val["noisy"], train_val["noise-free"])[0]
 
-    val = apply_problem_with_readout_conf(
+    val = get_expectation_val_with_readout_mitigation(
         circuit, observable, noise_model, nshots, readout, qubit_map, backend=backend
     )
     mit_val = model(val, *optimal_params)
@@ -398,7 +398,7 @@ def vnCDR(
         train_val["noise-free"].append(val)
         for level in noise_levels:
             noisy_c = get_noisy_circuit(circ, level, insertion_gate=insertion_gate)
-            val = apply_problem_with_readout_conf(
+            val = get_expectation_val_with_readout_mitigation(
                 noisy_c,
                 observable,
                 noise_model,
@@ -417,7 +417,7 @@ def vnCDR(
     val = []
     for level in noise_levels:
         noisy_c = get_noisy_circuit(circuit, level, insertion_gate=insertion_gate)
-        expval = apply_problem_with_readout_conf(
+        expval = get_expectation_val_with_readout_mitigation(
             noisy_c,
             observable,
             noise_model,
@@ -501,7 +501,7 @@ def get_response_matrix(
                 circuit.add(gates.X(qubit))
         circuit.add(gates.M(*range(nqubits)))
 
-        circuit_result = _circuit_conf(
+        circuit_result = _execute_circuit(
             circuit, qubit_map, noise_model, nshots, backend=backend
         )
 
@@ -537,8 +537,7 @@ def apply_resp_mat_readout_mitigation(state, response_matrix, iterations=None):
 
     if iterations is None:
         calibration_matrix = np.linalg.inv(response_matrix)
-        for i, value in enumerate(calibration_matrix @ frequencies):
-            state._frequencies[i] = float(value)
+        mitigated_frequencies = calibration_matrix @ frequencies
     else:
         mitigated_probabilities = iterative_bayesian_unfolding(
             frequencies / np.sum(frequencies), response_matrix, iterations
@@ -550,8 +549,8 @@ def apply_resp_mat_readout_mitigation(state, response_matrix, iterations=None):
             mitigated_frequencies / np.sum(mitigated_frequencies)
         ) * np.sum(frequencies)
 
-        for i, value in enumerate(mitigated_frequencies):
-            state._frequencies[i] = float(value)
+    for i, value in enumerate(mitigated_frequencies):
+        state._frequencies[i] = float(value)
 
     return state
 
@@ -609,10 +608,6 @@ def apply_randomized_readout_mitigation(
         for j, gate in enumerate(x_gate):
             if isinstance(gate, gates.X) and gate.qubits[0] in meas_qubits:
                 error_map[gate.qubits[0]] = 1
-                # if gate.qubits[0] in meas_qubits:
-                #     error_map[gate.qubits[0]] = 1
-                # else:
-                #     x_gate.queue[j] = gates.I(gate.qubits[0])
 
         circuits = [circuit_c, cal_circuit]
         results = []
@@ -621,7 +616,7 @@ def apply_randomized_readout_mitigation(
             circ.add(x_gate)
             circ.add(gates.M(*meas_qubits))
 
-            result = _circuit_conf(
+            result = _execute_circuit(
                 circ, qubit_map, noise_model, nshots_r, backend=backend
             )
             result._samples = result.apply_bitflips(error_map)
@@ -639,7 +634,7 @@ def apply_randomized_readout_mitigation(
     return results
 
 
-def apply_problem_with_readout_conf(
+def get_expectation_val_with_readout_mitigation(
     circuit,
     observable,
     noise_model=None,
@@ -677,16 +672,15 @@ def apply_problem_with_readout_conf(
             circuit, noise_model, nshots, readout["ncircuits"], backend
         )
     else:
-        circuit_result = _circuit_conf(
+        circuit_result = _execute_circuit(
             circuit, qubit_map, noise_model, nshots, backend=backend
         )
-
-    if "response_matrix" in readout:
-        circuit_result = apply_resp_mat_readout_mitigation(
-            circuit_result,
-            readout["response_matrix"],
-            readout.get("ibu_iters", None),
-        )
+        if "response_matrix" in readout:
+            circuit_result = apply_resp_mat_readout_mitigation(
+                circuit_result,
+                readout["response_matrix"],
+                readout.get("ibu_iters", None),
+            )
 
     exp_val = circuit_result.expectation_from_samples(observable)
 
@@ -718,13 +712,13 @@ def sample_clifford_training_circuit(
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    non_clifford_gates = [
-        (i, gate)
+    non_clifford_gates_indices = [
+        i
         for i, gate in enumerate(circuit.queue)
         if not gate.clifford and not isinstance(gate, gates.M)
     ]
 
-    if not non_clifford_gates:
+    if not non_clifford_gates_indices:
         raise_error(ValueError, "No non-Clifford gate found, no circuit sampled.")
 
     sampled_circuit = circuit.__class__(**circuit.init_kwargs)
@@ -740,7 +734,7 @@ def sample_clifford_training_circuit(
                 sampled_circuit.add(gate_rand)
             sampled_circuit.add(gate)
         else:
-            if i in [index for index, _ in non_clifford_gates]:
+            if i in non_clifford_gates_indices:
                 gate = gates.Unitary(
                     random_clifford(1, backend=backend, return_circuit=False),
                     gate.qubits[0],
@@ -894,7 +888,7 @@ def ICS(
         circuit_result = training_circuit(nshots=nshots)
         expectation = observable.expectation_from_samples(circuit_result.frequencies())
 
-        noisy_expectation = apply_problem_with_readout_conf(
+        noisy_expectation = get_expectation_val_with_readout_mitigation(
             training_circuit,
             observable,
             noise_model,
@@ -911,20 +905,20 @@ def ICS(
     dep_param = np.mean(lambda_list)
     dep_param_std = np.std(lambda_list)
 
-    noisy_expectation = apply_problem_with_readout_conf(
+    noisy_expectation = get_expectation_val_with_readout_mitigation(
         circuit, observable, noise_model, nshots, readout, qubit_map, backend=backend
     )
+    one_dep_squared = (1 - dep_param) ** 2
+    dep_std_squared = dep_param_std**2
 
     mitigated_expectation = (
-        (1 - dep_param)
-        * noisy_expectation
-        / ((1 - dep_param) ** 2 + dep_param_std**2)
+        (1 - dep_param) * noisy_expectation / (one_dep_squared + dep_std_squared)
     )
     mitigated_expectation_std = (
         dep_param_std
         * abs(noisy_expectation)
-        * abs((1 - dep_param) ** 2 - dep_param_std**2)
-        / ((1 - dep_param) ** 2 + dep_param_std**2) ** 2
+        * abs((1 - dep_param) ** 2 - dep_std_squared)
+        / (one_dep_squared + dep_std_squared) ** 2
     )
 
     if full_output:
@@ -940,7 +934,7 @@ def ICS(
     return mitigated_expectation
 
 
-def _circuit_conf(circuit, qubit_map, noise_model=None, nshots=10000, backend=None):
+def _execute_circuit(circuit, qubit_map, noise_model=None, nshots=10000, backend=None):
     """
     Helper function to execute the given circuit with the specified parameters.
 

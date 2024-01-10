@@ -317,7 +317,7 @@ See `Nachman et al <https://arxiv.org/abs/1910.01969>`_ for more details.
 .. autofunction:: qibo.models.error_mitigation.apply_randomized_readout_mitigation
 
 
-.. autofunction:: qibo.models.error_mitigation.apply_problem_with_readout_conf
+.. autofunction:: qibo.models.error_mitigation.get_expectation_val_with_readout_mitigation
 
 
 Randomized readout mitigation
@@ -1464,10 +1464,6 @@ passing a symplectic matrix to the constructor.
    backend = CliffordBackend(NumpyBackend())
    symplectic_matrix = backend.zero_state(nqubits=3)
    clifford = Clifford(symplectic_matrix, engine=NumpyBackend())
-
-   # The initialization above is equivalent to the initialization below
-   circuit = Circuit(nqubits=3)
-   clifford = Clifford(circuit, engine=NumpyBackend())
 
 The generators of the stabilizers can be extracted with the
 :meth:`qibo.quantum_info.clifford.Clifford.generators` method,
