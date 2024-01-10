@@ -82,7 +82,7 @@ class CliffordBackend(NumpyBackend):
             (2 * nqubits + 1, 2 * nqubits + 1), dtype=bool
         )
         symplectic_matrix[:nqubits, :nqubits] = self.np.copy(I)
-        symplectic_matrix[nqubits:-1, nqubits : 2 * nqubits] = I.copy()
+        symplectic_matrix[nqubits:-1, nqubits : 2 * nqubits] = self.np.copy(I)
         return symplectic_matrix
 
     def apply_gate_clifford(self, gate, symplectic_matrix, nqubits):
@@ -186,7 +186,7 @@ class CliffordBackend(NumpyBackend):
         nshots: int,
         collapse: bool = False,
     ):
-        """Sample shots by measuring the selected qubits from the provided state tableu.
+        """Sample shots by measuring the selected qubits from the provided symplectic matrix of a ``state``.
 
         Args:
             state (ndarray): symplectic matrix from which to sample shots from.
@@ -219,7 +219,7 @@ class CliffordBackend(NumpyBackend):
     def symplectic_matrix_to_generators(
         self, symplectic_matrix, return_array: bool = False
     ):
-        """Extract both the stabilizers and destabilizers generators from the input symplectic_matrix.
+        """Extract both the stabilizers and destabilizers generators from the input symplectic matrix.
 
         Args:
             symplectic_matrix (ndarray): The input symplectic_matrix.
@@ -227,7 +227,7 @@ class CliffordBackend(NumpyBackend):
                 If ``False``, generators are returned as strings. Defaults to ``False``.
 
         Returns:
-            (list, list): Lists of the extracted generators and their corresponding phases, respectively.
+            (list, list): Extracted generators and their corresponding phases, respectively.
         """
         bits_to_gate = {"00": "I", "01": "X", "10": "Z", "11": "Y"}
 

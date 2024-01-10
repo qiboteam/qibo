@@ -23,12 +23,6 @@ Instead, if you use `conda <https://anaconda.org/>`_ type:
 
 Here an example of Quantum Fourier Transform (QFT) to test your installation:
 
-.. testsetup::
-
-   from qibo.backends import set_backend
-
-   set_backend("numpy")
-
 .. testcode::
 
     from qibo.models import QFT
