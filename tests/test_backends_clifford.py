@@ -247,7 +247,7 @@ def test_bitflip_noise(backend):
 
 
 def test_set_backend(backend):
-    set_backend(str(backend))
+    set_backend(backend.name)
     clifford_bkd = construct_clifford_backend(backend)
     if not clifford_bkd:
         return
