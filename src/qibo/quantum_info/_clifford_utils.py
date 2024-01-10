@@ -165,7 +165,7 @@ def _decomposition_BM20(clifford):
 
     if nqubits > 3:
         raise_error(
-            ValueError, "This methos can only be implemented for ``nqubits <= 3``."
+            ValueError, "This method can only be implemented for ``nqubits <= 3``."
         )
 
     if nqubits == 1:
