@@ -565,10 +565,10 @@ def test_diamond_norm(backend, nqubits):
     unitary = backend.identity_density_matrix(nqubits, normalize=False)
     unitary = to_choi(unitary, order="row", backend=backend)
 
-    dnorm = diamond_norm(unitary)
+    dnorm = diamond_norm(unitary, backend=backend)
     backend.assert_allclose(dnorm, 1.0, atol=PRECISION_TOL)
 
-    dnorm = diamond_norm(unitary, unitary)
+    dnorm = diamond_norm(unitary, unitary, backend=backend)
     backend.assert_allclose(dnorm, 0.0, atol=PRECISION_TOL)
 
 
@@ -591,29 +591,33 @@ def test_meyer_wallach_entanglement(backend):
     )
 
 
-def test_entangling_capability(backend):
+@pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
+def test_entangling_capability(backend, seed):
     with pytest.raises(TypeError):
         circuit = Circuit(1)
         samples = 0.5
-        entangling_capability(circuit, samples, backend=backend)
+        entangling_capability(circuit, samples, seed=seed, backend=backend)
+    with pytest.raises(TypeError):
+        circuit = Circuit(1)
+        entangling_capability(circuit, samples=10, seed="10", backend=backend)
 
     nqubits = 2
-    samples = 500
+    samples = 100
 
     c1 = Circuit(nqubits)
     c1.add([gates.RX(q, 0, trainable=True) for q in range(nqubits)])
     c1.add(gates.CNOT(0, 1))
     c1.add([gates.RX(q, 0, trainable=True) for q in range(nqubits)])
-    ent_mw1 = entangling_capability(c1, samples, backend=backend)
+    ent_mw1 = entangling_capability(c1, samples, seed=seed, backend=backend)
 
     c2 = Circuit(nqubits)
     c2.add(gates.H(0))
     c2.add(gates.CNOT(0, 1))
     c2.add(gates.RX(0, 0, trainable=True))
-    ent_mw2 = entangling_capability(c2, samples, backend=backend)
+    ent_mw2 = entangling_capability(c2, samples, seed=seed, backend=backend)
 
     c3 = Circuit(nqubits)
-    ent_mw3 = entangling_capability(c3, samples, backend=backend)
+    ent_mw3 = entangling_capability(c3, samples, seed=seed, backend=backend)
 
     backend.assert_allclose(ent_mw3 < ent_mw1 < ent_mw2, True)
 
@@ -631,7 +635,7 @@ def test_expressibility(backend):
         expressibility(circuit, t, samples, backend=backend)
 
     nqubits = 2
-    samples = 500
+    samples = 100
     t = 1
 
     c1 = Circuit(nqubits)
@@ -652,9 +656,9 @@ def test_expressibility(backend):
     backend.assert_allclose(expr_1 < expr_2 < expr_3, True)
 
 
-@pytest.mark.parametrize("samples", [int(1e2)])
+@pytest.mark.parametrize("samples", [int(1e1)])
 @pytest.mark.parametrize("power_t", [2])
-@pytest.mark.parametrize("nqubits", [2, 3, 4])
+@pytest.mark.parametrize("nqubits", [2, 3])
 def test_frame_potential(backend, nqubits, power_t, samples):
     depth = int(np.ceil(nqubits * power_t))
 

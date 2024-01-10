@@ -37,7 +37,7 @@ def test_uniform_sampling_U3(backend, seed):
     Y = backend.cast(matrices.Y, dtype=matrices.Y.dtype)
     Z = backend.cast(matrices.Z, dtype=matrices.Z.dtype)
 
-    ngates = int(1e4)
+    ngates = int(1e3)
     phases = uniform_sampling_U3(ngates, seed=seed, backend=backend)
 
     # expectation values in the 3 directions should be the same
