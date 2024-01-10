@@ -1,6 +1,6 @@
 """Module definig the Clifford object, which allows phase-space representation of Clifford circuits and stabilizer states."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import reduce
 from itertools import product
 from typing import Optional, Union
@@ -13,13 +13,18 @@ from qibo.config import raise_error
 from qibo.gates import M
 from qibo.measurements import frequencies_to_binary
 
+from ._clifford_utils import _decomposition_AG04, _decomposition_BM20, _string_product
+
 
 @dataclass
 class Clifford:
     """Object storing the results of a circuit execution with the :class:`qibo.backends.clifford.CliffordBackend`.
 
     Args:
-        symplectic_matrix (ndarray): Symplectic matrix of the state in phase-space representation.
+        data (ndarray or :class:`qibo.models.circuit.Circuit`): If ``ndarray``, it is the
+            symplectic matrix of the stabilizer state in phase-space representation.
+            If :class:`qibo.models.circuit.Circuit`, it is a circuit composed only of Clifford
+            gates and computational-basis measurements.
         nqubits (int, optional): number of qubits of the state.
         measurements (list, optional): list of measurements gates :class:`qibo.gates.M`.
             Defaults to ``None``.
@@ -32,7 +37,8 @@ class Clifford:
             Defaults to ``None``.
     """
 
-    symplectic_matrix: np.ndarray
+    symplectic_matrix: np.ndarray = field(init=False)
+    data: Union[np.ndarray, Circuit] = field(repr=False)
     nqubits: Optional[int] = None
     measurements: Optional[list] = None
     nshots: int = 1000
@@ -43,13 +49,24 @@ class Clifford:
     _samples: Optional[int] = None
 
     def __post_init__(self):
-        # adding the scratch row if not provided
-        if self.symplectic_matrix.shape[0] % 2 == 0:
-            self.symplectic_matrix = np.vstack(
-                (self.symplectic_matrix, np.zeros(self.symplectic_matrix.shape[1]))
-            )
-        self.nqubits = int((self.symplectic_matrix.shape[1] - 1) / 2)
-        self._backend = CliffordBackend(self.engine)
+        if isinstance(self.data, Circuit):
+            clifford = self.from_circuit(self.data, engine=self.engine)
+            self.symplectic_matrix = clifford.symplectic_matrix
+            self.nqubits = clifford.nqubits
+            self.measurements = clifford.measurements
+            self.engine = clifford.engine
+            self._samples = clifford._samples
+            self._measurement_gate = clifford._measurement_gate
+            self._backend = clifford._backend
+        else:
+            # adding the scratch row if not provided
+            self.symplectic_matrix = self.data
+            if self.symplectic_matrix.shape[0] % 2 == 0:
+                self.symplectic_matrix = np.vstack(
+                    (self.symplectic_matrix, np.zeros(self.symplectic_matrix.shape[1]))
+                )
+            self.nqubits = int((self.symplectic_matrix.shape[1] - 1) / 2)
+            self._backend = CliffordBackend(self.engine)
 
     @classmethod
     def from_circuit(
@@ -59,24 +76,55 @@ class Clifford:
         nshots: int = 1000,
         engine: Optional[Backend] = None,
     ):
-        """Allows to create a ``Clifford`` object by executing the input circuit.
+        """Allows to create a :class:`qibo.quantum_info.clifford.Clifford` object by executing the input circuit.
 
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): Clifford circuit to run.
-            initial_state (np.ndarray): The initial tableu state.
-            nshots (int): The number of shots to perform.
+            initial_state (ndarray, optional): symplectic matrix of the initial state.
+                If ``None``, defaults to the symplectic matrix of the zero state.
+                Defaults to ``None``.
+            nshots (int, optional): number of measurement shots to perform
+                if ``circuit`` has measurement gates. Defaults to :math:`10^{3}`.
+            engine (:class:`qibo.backends.abstract.Backend`, optional): engine to use in the
+                execution of the :class:`qibo.backends.CliffordBackend`.
+                It accepts all ``qibo`` backends besides the
+                :class:`qibo.backends.TensorflowBackend`, which is not supported.
+                If ``None``, defaults to :class:`qibo.backends.NumpyBackend`.
+                Defaults to ``None``.
 
         Returns:
-            (:class:`qibo.quantum_info.clifford.Clifford`): The object storing the result of the circuit execution.
+            (:class:`qibo.quantum_info.clifford.Clifford`): Object storing the result of the circuit execution.
         """
         cls._backend = CliffordBackend(engine)
 
         return cls._backend.execute_circuit(circuit, initial_state, nshots)
 
-    # TODO: implement this method in separate PR based on `Bravyi & Maslov (2022) <https://arxiv.org/abs/2003.09412>`_.
-    @classmethod
-    def to_circuit(cls, algorithm=None):  # pragma: no cover
-        raise_error(NotImplementedError, "`to_circuit` method not implemented yet.")
+    def to_circuit(self, algorithm: Optional[str] = "AG04"):
+        """Converts symplectic matrix into a Clifford circuit.
+
+        Args:
+            algorithm (str, optional): If ``AG04``, uses the decomposition algorithm from
+                `Aaronson & Gottesman (2004) <https://arxiv.org/abs/quant-ph/0406196>`_.
+                If ``BM20`` and ``Clifford.nqubits <= 3``, uses the decomposition algorithm from
+                `Bravyi & Maslov (2020) <https://arxiv.org/abs/2003.09412>`_.
+                Defaults to ``AG04``.
+
+        Returns:
+            :class:`qibo.models.circuit.Circuit`: circuit composed of Clifford gates.
+        """
+        if not isinstance(algorithm, str):
+            raise_error(
+                TypeError,
+                f"``algorithm`` must be type str, but it is type {type(algorithm)}",
+            )
+
+        if algorithm not in ["AG04", "BM20"]:
+            raise_error(ValueError, f"``algorithm`` {algorithm} not found.")
+
+        if algorithm == "BM20":
+            return _decomposition_BM20(self)
+
+        return _decomposition_AG04(self)
 
     def generators(self, return_array: bool = False):
         """Extracts the generators of stabilizers and destabilizers.
@@ -92,38 +140,53 @@ class Clifford:
             self.symplectic_matrix, return_array
         )
 
-    def stabilizers(self, return_array: bool = False):
+    def stabilizers(self, symplectic: bool = False, return_array: bool = False):
         """Extracts the stabilizers of the state.
 
         Args:
-            return_array (bool, optional): If ``True`` returns the stabilizers as ``ndarray``.
+            symplectic (bool, optional): If ``True``, returns the rows of the symplectic matrix
+                that correspond to the :math:`n` generators of the :math:`2^{n}` total stabilizers,
+                independently of ``return_array``.
+            return_array (bool, optional): To be used when ``symplectic = False``.
+                If ``True`` returns the stabilizers as ``ndarray``.
                 If ``False``, returns stabilizers as strings. Defaults to ``False``.
 
         Returns:
-            (list): Stabilizers of the state.
+            (ndarray or list): Stabilizers of the state.
         """
-        generators, phases = self.generators(return_array)
+        if not symplectic:
+            generators, phases = self.generators(return_array)
 
-        return self._construct_operators(
-            generators[self.nqubits :],
-            phases[self.nqubits :],
-        )
+            return self._construct_operators(
+                generators[self.nqubits :],
+                phases[self.nqubits :],
+            )
 
-    def destabilizers(self, return_array: bool = False):
+        return self.symplectic_matrix[self.nqubits : -1, :]
+
+    def destabilizers(self, symplectic: bool = False, return_array: bool = False):
         """Extracts the destabilizers of the state.
 
         Args:
-            return_array (bool, optional): If ``True`` returns the destabilizers as ``ndarray``.
-                If ``False``, their representation as strings is returned. Defaults to ``False``.
+            symplectic (bool, optional): If ``True``, returns the rows of the symplectic matrix
+                that correspond to the :math:`n` generators of the :math:`2^{n}` total
+                destabilizers, independently of ``return_array``.
+            return_array (bool, optional): To be used when ``symplectic = False``.
+                If ``True`` returns the destabilizers as ``ndarray``.
+                If ``False``, their representation as strings is returned.
+                Defaults to ``False``.
 
         Returns:
-            (list): Destabilizers of the state.
+            (ndarray or list): Destabilizers of the state.
         """
-        generators, phases = self.generators(return_array)
+        if not symplectic:
+            generators, phases = self.generators(return_array)
 
-        return self._construct_operators(
-            generators[: self.nqubits], phases[: self.nqubits]
-        )
+            return self._construct_operators(
+                generators[: self.nqubits], phases[: self.nqubits]
+            )
+
+        return self.symplectic_matrix[: self.nqubits, :]
 
     def state(self):
         """Builds the density matrix representation of the state.
@@ -134,7 +197,7 @@ class Clifford:
         Returns:
             (ndarray): Density matrix of the state.
         """
-        stabilizers = self.stabilizers(True)
+        stabilizers = self.stabilizers(return_array=True)
 
         return self.engine.np.sum(stabilizers, axis=0) / len(stabilizers)
 
@@ -304,6 +367,31 @@ class Clifford:
             self.engine.np.sqrt(probs), qubits, len(measured_qubits)
         )
 
+    def copy(self, deep: bool = False):
+        """Returns copy of :class:`qibo.quantum_info.clifford.Clifford` object.
+
+        Args:
+            deep (bool, optional): If ``True``, creates another copy in memory.
+                Defaults to ``False``.
+
+        Returns:
+            :class:`qibo.quantum_info.clifford.Clifford`: copy of original ``Clifford`` object.
+        """
+        if not isinstance(deep, bool):
+            raise_error(
+                TypeError, f"``deep`` must be type bool, but it is type {type(deep)}."
+            )
+
+        symplectic_matrix = (
+            self.engine.np.copy(self.symplectic_matrix)
+            if deep
+            else self.symplectic_matrix
+        )
+
+        return self.__class__(
+            symplectic_matrix, self.nqubits, self.measurements, self.nshots, self.engine
+        )
+
     def _construct_operators(self, generators: list, phases: list):
         """Helper function to construct all the operators from their generators.
 
@@ -339,94 +427,3 @@ class Clifford:
         operators = [(g, identity) for g in operators]
 
         return [_string_product(ops) for ops in product(*operators)]
-
-
-def _one_qubit_paulis_string_product(pauli_1: str, pauli_2: str):
-    """Calculate the product of two single-qubit Paulis represented as strings.
-
-    Args:
-        pauli_1 (str): First Pauli operator.
-        pauli_2 (str): Second Pauli operator.
-
-    Returns:
-        (str): Product of the two Pauli operators.
-    """
-    products = {
-        "XY": "iZ",
-        "YZ": "iX",
-        "ZX": "iY",
-        "YX": "-iZ",
-        "ZY": "-iX",
-        "XZ": "iY",
-        "XX": "I",
-        "ZZ": "I",
-        "YY": "I",
-        "XI": "X",
-        "IX": "X",
-        "YI": "Y",
-        "IY": "Y",
-        "ZI": "Z",
-        "IZ": "Z",
-    }
-    prod = products[
-        "".join([p.replace("i", "").replace("-", "") for p in (pauli_1, pauli_2)])
-    ]
-    # calculate the phase
-    sign = len([True for p in (pauli_1, pauli_2, prod) if "-" in p])
-    n_i = len([True for p in (pauli_1, pauli_2, prod) if "i" in p])
-    sign = "-" if sign % 2 == 1 else ""
-    if n_i == 0:
-        i = ""
-    elif n_i == 1:
-        i = "i"
-    elif n_i == 2:
-        i = ""
-        sign = "-" if sign == "" else ""
-    elif n_i == 3:
-        i = "i"
-        sign = "-" if sign == "" else ""
-    return "".join([sign, i, prod.replace("i", "").replace("-", "")])
-
-
-def _string_product(operators: list):
-    """Calculates the tensor product of a list of operators represented as strings.
-
-    Args:
-        operators (list): list of operators.
-
-    Returns:
-        (str): String representing the tensor product of the operators.
-    """
-    # calculate global sign
-    phases = len([True for op in operators if "-" in op])
-    i = len([True for op in operators if "i" in op])
-    # remove the - signs and the i
-    operators = "|".join(operators).replace("-", "").replace("i", "").split("|")
-
-    prod = []
-    for op in zip(*operators):
-        op = [o for o in op if o != "I"]
-        if len(op) == 0:
-            tmp = "I"
-        elif len(op) > 1:
-            tmp = reduce(_one_qubit_paulis_string_product, op)
-        else:
-            tmp = op[0]
-        # append signs coming from products
-        if tmp[0] == "-":
-            phases += 1
-        # count i coming from products
-        if "i" in tmp:
-            i += 1
-        prod.append(tmp.replace("i", "").replace("-", ""))
-    result = "".join(prod)
-
-    # product of the i-s
-    if i % 4 == 1 or i % 4 == 3:
-        result = f"i{result}"
-    if i % 4 == 2 or i % 4 == 3:
-        phases += 1
-
-    phases = "-" if phases % 2 == 1 else ""
-
-    return f"{phases}{result}"
