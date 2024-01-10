@@ -354,7 +354,7 @@ def _exponent(x1, z1, x2, z2):
     return exp
 
 
-def _rowsum(symplectic_matrix, h, i, nqubits, include_scratch: bool = False):
+def _rowsum(symplectic_matrix, h, i, nqubits):
     """Helper function that updates the symplectic matrix by setting the h-th generator equal to the (i+h)-th one. This is done to keep track of the phase of the h-th row of the symplectic matrix (r[h]). The function is applied parallely over all the rows h and i passed.
 
     Args:
@@ -362,14 +362,13 @@ def _rowsum(symplectic_matrix, h, i, nqubits, include_scratch: bool = False):
         h (np.array): Indices of the rows encoding the generators to update.
         i (np.array): Indices of the rows encoding the generators to use.
         nqubits (int): Total number of qubits.
-        include_scratch (bool): If ``True`` the scratch row (last row of the symplectic matrix) is inlcuded in the computation as well.
 
     Returns:
         (np.array): The updated symplectic matrix.
     """
-    x = symplectic_matrix[: -1 + (2 * nqubits + 2) * int(include_scratch), :nqubits]
-    z = symplectic_matrix[: -1 + (2 * nqubits + 2) * int(include_scratch), nqubits:-1]
-    exponents = _exponent(x[i, :], z[i, :], x[h, :], z[h, :])
+    xi, xh = symplectic_matrix[i, :nqubits], symplectic_matrix[h, :nqubits]
+    zi, zh = symplectic_matrix[i, nqubits:-1], symplectic_matrix[h, nqubits:-1]
+    exponents = _exponent(xi, zi, xh, zh)
     ind = (
         2 * symplectic_matrix[h, -1]
         + 2 * symplectic_matrix[i, -1]
@@ -379,8 +378,8 @@ def _rowsum(symplectic_matrix, h, i, nqubits, include_scratch: bool = False):
     r[ind] = False
 
     symplectic_matrix[h, -1] = r
-    symplectic_matrix[h, :nqubits] = x[i, :] ^ x[h, :]
-    symplectic_matrix[h, nqubits:-1] = z[i, :] ^ z[h, :]
+    symplectic_matrix[h, :nqubits] = xi ^ xh
+    symplectic_matrix[h, nqubits:-1] = zi ^ zh
     return symplectic_matrix
 
 
@@ -392,20 +391,21 @@ def _determined_outcome(state, q, nqubits):
             np.array([2 * nqubits], dtype=np.uint),
             np.array([i + nqubits], dtype=np.uint),
             nqubits,
-            include_scratch=True,
         )
     return state, np.uint(state[-1, -1])
 
 
 def _random_outcome(state, p, q, nqubits):
-    h = np.array([i for i in state[:-1, q].nonzero()[0] if i != p], dtype=np.uint)
+    p = p[0] + nqubits
+    h = state[:-1, q].copy()
+    h[p] = False
+    h = h.nonzero()[0]
     if h.shape[0] > 0:
         state = _rowsum(
             state,
             h,
             p * np.ones(h.shape[0], dtype=np.uint),
             nqubits,
-            False,
         )
     state[p - nqubits, :] = state[p, :]
     outcome = np.random.randint(2, size=1).item()
@@ -420,11 +420,9 @@ def M(state, qubits, nqubits, collapse=False):
     sample = []
     state_copy = state if collapse else state.copy()
     for q in qubits:
-        x = state_copy[:-1, :nqubits]
-        p = x[nqubits:, q].nonzero()[0]
+        p = state_copy[nqubits:-1, q].nonzero()[0]
         # random outcome, affects the state
         if len(p) > 0:
-            p = p[0].item() + nqubits
             state_copy, outcome = _random_outcome(state_copy, p, q, nqubits)
         # determined outcome, state unchanged
         else:
