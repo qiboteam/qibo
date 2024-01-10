@@ -20,8 +20,6 @@ from qibo.noise import AmplitudeDampingError, DepolarizingError, NoiseModel, Pau
 # from gate_set_tomography import GST_1qb, GST_2qb, GST_1qb_basis_operations, GST_2qb_basis_operations
 
 
-
-
 def test_prepare_states_valid_k_single_qubit():
     # Test for valid input with a single qubit
     k = 2
