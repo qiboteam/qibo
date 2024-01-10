@@ -1465,6 +1465,10 @@ passing a symplectic matrix to the constructor.
    symplectic_matrix = backend.zero_state(nqubits=3)
    clifford = Clifford(symplectic_matrix, engine=NumpyBackend())
 
+   # The initialization above is equivalent to the initialization below
+   circuit = Circuit(nqubits=3)
+   clifford = Clifford(circuit, engine=NumpyBackend())
+
 The generators of the stabilizers can be extracted with the
 :meth:`qibo.quantum_info.clifford.Clifford.generators` method,
 or the complete set of :math:`d = 2^{n}` stabilizers operators can be extracted through the
