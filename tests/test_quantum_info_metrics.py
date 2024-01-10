@@ -591,11 +591,15 @@ def test_meyer_wallach_entanglement(backend):
     )
 
 
-def test_entangling_capability(backend):
+@pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
+def test_entangling_capability(backend, seed):
     with pytest.raises(TypeError):
         circuit = Circuit(1)
         samples = 0.5
-        entangling_capability(circuit, samples, backend=backend)
+        entangling_capability(circuit, samples, seed=seed, backend=backend)
+    with pytest.raises(TypeError):
+        circuit = Circuit(1)
+        entangling_capability(circuit, samples=10, seed="10", backend=backend)
 
     nqubits = 2
     samples = 100
@@ -604,16 +608,16 @@ def test_entangling_capability(backend):
     c1.add([gates.RX(q, 0, trainable=True) for q in range(nqubits)])
     c1.add(gates.CNOT(0, 1))
     c1.add([gates.RX(q, 0, trainable=True) for q in range(nqubits)])
-    ent_mw1 = entangling_capability(c1, samples, backend=backend)
+    ent_mw1 = entangling_capability(c1, samples, seed=seed, backend=backend)
 
     c2 = Circuit(nqubits)
     c2.add(gates.H(0))
     c2.add(gates.CNOT(0, 1))
     c2.add(gates.RX(0, 0, trainable=True))
-    ent_mw2 = entangling_capability(c2, samples, backend=backend)
+    ent_mw2 = entangling_capability(c2, samples, seed=seed, backend=backend)
 
     c3 = Circuit(nqubits)
-    ent_mw3 = entangling_capability(c3, samples, backend=backend)
+    ent_mw3 = entangling_capability(c3, samples, seed=seed, backend=backend)
 
     backend.assert_allclose(ent_mw3 < ent_mw1 < ent_mw2, True)
 
