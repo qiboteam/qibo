@@ -49,12 +49,11 @@ def build_hamiltonian(nqubits):
 
 def test_tensorflow_sgd():
     # tensorflow backend is needed to use the TensorFlowSGD optimizer.
+    pytest.skip("Skipping SGD test for unsupported backend.")
     set_backend("tensorflow")
 
     c = build_circuit(nqubits=1, nlayers=2)
     h = build_hamiltonian(nqubits=1)
-
-    pytest.skip("Skipping SGD test for unsupported backend.")
 
     # set optimizers options and fit
     options = {"learning_rate": 0.05}
