@@ -1,5 +1,6 @@
 from copy import deepcopy
 from itertools import product
+from typing import Optional
 
 from hyperopt import hp, tpe
 
@@ -35,7 +36,6 @@ def generate_Z_operators(nqubits: int):
             delta_h0 = dbi.diagonal_h_matrix
             dephasing_channel = (sum([Z_op @ h0 @ Z_op for Z_op in Z_ops])+h0)/2**nqubits
             norm_diff = np.linalg.norm(delta_h0 - dephasing_channel)
-            print(norm_diff)
     """
     # list of tupples, e.g. ('Z','I','Z')
     combination_strings = product("ZI", repeat=nqubits)
@@ -61,7 +61,7 @@ def str_to_op(name: str):
 def select_best_dbr_generator(
     dbi_object: DoubleBracketIteration,
     d_list: list,
-    step: float = None,
+    step: Optional[float] = None,
     step_min: float = 1e-5,
     step_max: float = 1,
     max_evals: int = 200,
@@ -82,11 +82,11 @@ def select_best_dbr_generator(
     Returns:
         The index of the optimal diagonal operator and respective step duration.
     """
-    h_before = deepcopy(dbi_object.h)
     norms_off_diagonal_restriction = []
     optimal_steps = []
     for d in d_list:
         # prescribed step durations
+        h_before = deepcopy(dbi_object.h)
         if step is None:
             step = dbi_object.hyperopt_step(
                 step_min=step_min,
@@ -99,7 +99,7 @@ def select_best_dbr_generator(
         dbi_object(step=step, d=d)
         optimal_steps.append(step)
         norms_off_diagonal_restriction.append(dbi_object.off_diagonal_norm)
-        dbi_object.h = deepcopy(h_before)
+        dbi_object.h = h_before
     # canonical
     if compare_canonical is True:
         generator_type = dbi_object.mode
@@ -115,11 +115,9 @@ def select_best_dbr_generator(
         dbi_object(step=step)
         optimal_steps.append(step)
         norms_off_diagonal_restriction.append(dbi_object.off_diagonal_norm)
-        # print(f'canonical step {step}, loss {dbi_object.off_diagonal_norm}')
         dbi_object.h = deepcopy(h_before)
         dbi_object.mode = generator_type
     # find best d
-    # print(norms_off_diagonal_restriction)
     idx_max_loss = norms_off_diagonal_restriction.index(
         min(norms_off_diagonal_restriction)
     )
@@ -130,7 +128,7 @@ def select_best_dbr_generator(
 def select_best_dbr_generator_and_run(
     dbi_object: DoubleBracketIteration,
     d_list: list,
-    step: float = None,
+    step: Optional[float] = None,
     step_min: float = 1e-5,
     step_max: float = 1,
     max_evals: int = 200,

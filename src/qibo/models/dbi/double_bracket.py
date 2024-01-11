@@ -38,7 +38,7 @@ class DoubleBracketIteration:
             from qibo.hamiltonians import Hamiltonian
 
             nqubits = 4
-            h0 = random_hermitian(2**nqubits)
+            h0 = random_hermitian(2**nqubits, seed=2)
             dbf = DoubleBracketIteration(Hamiltonian(nqubits=nqubits, matrix=h0))
 
             # diagonalized matrix
