@@ -662,7 +662,7 @@ def get_expectation_val_with_readout_mitigation(
             If None, it uses the global backend. Defaults to ``None``.
 
     Returns:
-        float: The mitigated expectation value of the observable.
+        float: the mitigated expectation value of the observable.
     """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
