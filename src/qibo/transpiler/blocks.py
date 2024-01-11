@@ -3,7 +3,7 @@ from typing import Optional, Union
 from qibo import Circuit, gates
 from qibo.config import raise_error
 from qibo.gates import Gate
-from qibo.transpiler.exceptions import BlockingError
+from qibo.transpiler._exceptions import BlockingError
 
 
 class Block:
