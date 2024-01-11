@@ -1,4 +1,5 @@
 import math
+import warnings
 
 import numpy as np
 import pytest
@@ -6,8 +7,6 @@ import pytest
 from qibo import gates, get_backend
 from qibo.models import Circuit
 from qibo.models.qcnn import QuantumCNN
-
-import warnings
 
 text = str(get_backend())
 
