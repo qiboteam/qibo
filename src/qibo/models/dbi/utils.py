@@ -20,7 +20,7 @@ def generate_Z_operators(nqubits: int):
      Example:
         .. testcode::
 
-            from qibo.models.dbi.additional_double_bracket_functions import generate_Z_operators
+            from qibo.models.dbi.utils import generate_Z_operators
             from qibo.models.dbi.double_bracket import DoubleBracketIteration
             from qibo.quantum_info import random_hermitian
             from qibo.hamiltonians import Hamiltonian
@@ -45,13 +45,22 @@ def generate_Z_operators(nqubits: int):
         # except for the identity
         if "Z" in op_string_tup:
             op_name = "".join(op_string_tup)
-            tensor_op = str_to_op(op_name)
+            tensor_op = str_to_symbolic(op_name)
             # append in output_dict
             output_dict[op_name] = SymbolicHamiltonian(tensor_op).dense.matrix
     return output_dict
 
 
-def str_to_op(name: str):
+def str_to_symbolic(name: str):
+    """Converts string into symbolic hamiltonian
+    Example:
+        .. testcode::
+
+            from qibo.models.dbi.utils import str_to_op
+            op_name = "ZYXZI"
+            # returns 5-qubit symbolic hamiltonian
+            ZIXZI_op = str_to_op(op_name)
+    """
     tensor_op = 1
     for qubit, char in enumerate(name):
         tensor_op *= getattr(symbols, char)(qubit)
