@@ -7,7 +7,6 @@ from qibo import gates
 from qibo.models import Circuit
 from qibo.models.qcnn import QuantumCNN
 
-
 num_angles = 21
 angles0 = [i * math.pi / num_angles for i in range(num_angles)]
 
