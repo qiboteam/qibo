@@ -482,7 +482,7 @@ def get_response_matrix(
             Defaults to ``None``.
 
     Returns:
-        numpy.ndarray : The computed (`nqubits`, `nqubits`) response matrix for
+        numpy.ndarray : the computed (`nqubits`, `nqubits`) response matrix for
             readout mitigation.
     """
     from qibo import Circuit  # pylint: disable=import-outside-toplevel
