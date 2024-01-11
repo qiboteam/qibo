@@ -4,15 +4,16 @@ import pytest
 
 from qibo import gates
 from qibo.models import Circuit
+from qibo.transpiler._exceptions import ConnectivityError, TranspilerPipelineError
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.pipeline import (
     Passes,
-    TranspilerPipelineError,
     assert_circuit_equivalence,
     assert_transpiling,
+    restrict_connectivity_qubits,
 )
 from qibo.transpiler.placer import Random, ReverseTraversal, Trivial
-from qibo.transpiler.router import ShortestPaths
+from qibo.transpiler.router import Sabre, ShortestPaths
 from qibo.transpiler.unroller import NativeGates, Unroller
 
 
@@ -52,13 +53,6 @@ def generate_random_circuit(nqubits, ngates, seed=None):
     return circuit
 
 
-def small_circuit():
-    circuit = Circuit(2)
-    circuit.add(gates.H(0))
-    circuit.add(gates.CZ(0, 1))
-    return circuit
-
-
 def star_connectivity():
     Q = [i for i in range(5)]
     chip = nx.Graph()
@@ -68,10 +62,28 @@ def star_connectivity():
     return chip
 
 
+def test_restrict_qubits_error_no_subset():
+    with pytest.raises(ConnectivityError) as excinfo:
+        restrict_connectivity_qubits(star_connectivity(), [1, 2, 6])
+    assert "Some qubits are not in the original connectivity." in str(excinfo.value)
+
+
+def test_restrict_qubits_error_not_connected():
+    with pytest.raises(ConnectivityError) as excinfo:
+        restrict_connectivity_qubits(star_connectivity(), [1, 3])
+    assert "New connectivity graph is not connected." in str(excinfo.value)
+
+
+def test_restrict_qubits():
+    new_connectivity = restrict_connectivity_qubits(star_connectivity(), [1, 2, 3])
+    assert list(new_connectivity.nodes) == [1, 2, 3]
+    assert list(new_connectivity.edges) == [(1, 2), (2, 3)]
+
+
 @pytest.mark.parametrize("ngates", [5, 10, 50])
 def test_pipeline_default(ngates):
     circ = generate_random_circuit(nqubits=5, ngates=ngates)
-    default_transpiler = Passes(connectivity=star_connectivity())
+    default_transpiler = Passes(passes=None, connectivity=star_connectivity())
     transpiled_circ, final_layout = default_transpiler(circ)
     initial_layout = default_transpiler.get_initial_layout()
     assert_transpiling(
@@ -127,19 +139,20 @@ def test_assert_circuit_equivalence_wrong_nqubits():
 
 def test_error_connectivity():
     with pytest.raises(TranspilerPipelineError):
-        default_transpiler = Passes()
+        default_transpiler = Passes(passes=None, connectivity=None)
 
 
-def test_is_satisfied():
-    default_transpiler = Passes(connectivity=star_connectivity())
-    circuit = Circuit(5)
+@pytest.mark.parametrize("qubits", [3, 5])
+def test_is_satisfied(qubits):
+    default_transpiler = Passes(passes=None, connectivity=star_connectivity())
+    circuit = Circuit(qubits)
     circuit.add(gates.CZ(0, 2))
     circuit.add(gates.Z(0))
     assert default_transpiler.is_satisfied(circuit)
 
 
 def test_is_satisfied_false_decomposition():
-    default_transpiler = Passes(connectivity=star_connectivity())
+    default_transpiler = Passes(passes=None, connectivity=star_connectivity())
     circuit = Circuit(5)
     circuit.add(gates.CZ(0, 2))
     circuit.add(gates.X(0))
@@ -147,21 +160,31 @@ def test_is_satisfied_false_decomposition():
 
 
 def test_is_satisfied_false_connectivity():
-    default_transpiler = Passes(connectivity=star_connectivity())
+    default_transpiler = Passes(passes=None, connectivity=star_connectivity())
     circuit = Circuit(5)
     circuit.add(gates.CZ(0, 1))
     circuit.add(gates.Z(0))
     assert not default_transpiler.is_satisfied(circuit)
 
 
-@pytest.mark.parametrize(
-    "circ", [generate_random_circuit(nqubits=5, ngates=20), small_circuit()]
-)
-def test_custom_passes(circ):
+@pytest.mark.parametrize("qubits", [2, 5])
+@pytest.mark.parametrize("gates", [5, 20])
+@pytest.mark.parametrize("placer", [Random, Trivial, ReverseTraversal])
+@pytest.mark.parametrize("routing", [ShortestPaths, Sabre])
+def test_custom_passes(placer, routing, gates, qubits):
+    circ = generate_random_circuit(nqubits=qubits, ngates=gates)
     custom_passes = []
     custom_passes.append(Preprocessing(connectivity=star_connectivity()))
-    custom_passes.append(Random(connectivity=star_connectivity()))
-    custom_passes.append(ShortestPaths(connectivity=star_connectivity()))
+    if placer == ReverseTraversal:
+        custom_passes.append(
+            placer(
+                connectivity=star_connectivity(),
+                routing_algorithm=routing(connectivity=star_connectivity()),
+            )
+        )
+    else:
+        custom_passes.append(placer(connectivity=star_connectivity()))
+    custom_passes.append(routing(connectivity=star_connectivity()))
     custom_passes.append(Unroller(native_gates=NativeGates.default()))
     custom_pipeline = Passes(
         custom_passes,
@@ -180,32 +203,36 @@ def test_custom_passes(circ):
     )
 
 
-@pytest.mark.parametrize(
-    "circ", [generate_random_circuit(nqubits=5, ngates=20), small_circuit()]
-)
-def test_custom_passes_reverse(circ):
+@pytest.mark.parametrize("gates", [5, 20])
+@pytest.mark.parametrize("placer", [Random, Trivial, ReverseTraversal])
+@pytest.mark.parametrize("routing", [ShortestPaths, Sabre])
+def test_custom_passes_restict(gates, placer, routing):
+    circ = generate_random_circuit(nqubits=3, ngates=gates)
     custom_passes = []
     custom_passes.append(Preprocessing(connectivity=star_connectivity()))
-    custom_passes.append(
-        ReverseTraversal(
-            connectivity=star_connectivity(),
-            routing_algorithm=ShortestPaths(connectivity=star_connectivity()),
-            depth=20,
+    if placer == ReverseTraversal:
+        custom_passes.append(
+            placer(
+                connectivity=star_connectivity(),
+                routing_algorithm=routing(connectivity=star_connectivity()),
+            )
         )
-    )
-    custom_passes.append(ShortestPaths(connectivity=star_connectivity()))
+    else:
+        custom_passes.append(placer(connectivity=star_connectivity()))
+    custom_passes.append(routing(connectivity=star_connectivity()))
     custom_passes.append(Unroller(native_gates=NativeGates.default()))
     custom_pipeline = Passes(
         custom_passes,
         connectivity=star_connectivity(),
         native_gates=NativeGates.default(),
+        on_qubits=[1, 2, 3],
     )
     transpiled_circ, final_layout = custom_pipeline(circ)
     initial_layout = custom_pipeline.get_initial_layout()
     assert_transpiling(
         original_circuit=circ,
         transpiled_circuit=transpiled_circ,
-        connectivity=star_connectivity(),
+        connectivity=restrict_connectivity_qubits(star_connectivity(), [1, 2, 3]),
         initial_layout=initial_layout,
         final_layout=final_layout,
         native_gates=NativeGates.default(),
@@ -241,7 +268,7 @@ def test_custom_passes_no_placer():
 
 def test_custom_passes_wrong_pass():
     custom_passes = [0]
-    custom_pipeline = Passes(passes=custom_passes)
+    custom_pipeline = Passes(passes=custom_passes, connectivity=None)
     circ = generate_random_circuit(nqubits=5, ngates=5)
     with pytest.raises(TranspilerPipelineError):
         transpiled_circ, final_layout = custom_pipeline(circ)
