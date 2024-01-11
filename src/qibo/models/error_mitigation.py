@@ -527,7 +527,7 @@ def apply_resp_mat_readout_mitigation(state, response_matrix, iterations=None):
             If ``None`` the 'inverse' method is used. Defaults to ``None``.
 
     Returns:
-        :class:`qibo.measurements.CircuitResult`: The input state with the updated (mitigated) frequencies.
+        :class:`qibo.measurements.CircuitResult`: the input state with the updated (mitigated) frequencies.
     """
     frequencies = np.zeros(2 ** len(state.measurements[0].qubits))
     for key, value in state.frequencies().items():
