@@ -1291,7 +1291,7 @@ response matrix and use it modify the final state after the circuit execution:
 
 .. testcode::
 
-   from qibo.models.error_mitigation import apply_problem_with_readout_conf, get_response_matrix
+   from qibo.models.error_mitigation import get_expectation_val_with_readout_mitigation, get_response_matrix
 
    nshots = 10000
    # compute the response matrix
@@ -1301,7 +1301,7 @@ response matrix and use it modify the final state after the circuit execution:
    # define mitigation options
    readout = {"response_matrix": response_matrix}
    # mitigate the readout errors
-   mit_val = apply_problem_with_readout_conf(circ, obs, noise, readout=readout)
+   mit_val = get_expectation_val_with_readout_mitigation(circ, obs, noise, readout=readout)
    print(mit_val)
    # 0.5945794816381054
 
@@ -1319,7 +1319,7 @@ Or use the randomized readout mitigation:
    # define mitigation options
    readout = {"ncircuits": 10}
    # mitigate the readout errors
-   mit_val = apply_problem_with_readout_conf(circ, obs, noise, readout=readout)
+   mit_val = get_expectation_val_with_readout_mitigation(circ, obs, noise, readout=readout)
    print(mit_val)
    # 0.5860884499785314
 

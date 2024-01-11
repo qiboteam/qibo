@@ -8,7 +8,7 @@ from qibo.models.error_mitigation import (
     CDR,
     ICS,
     ZNE,
-    apply_problem_with_readout_conf,
+    get_expectation_val_with_readout_mitigation,
     get_response_matrix,
     sample_clifford_training_circuit,
     sample_training_circuit_cdr,
@@ -315,7 +315,7 @@ def test_readout_mitigation(backend, nqubits, nmeas, method, ibu_iters):
     state = backend.execute_circuit(noise.apply(c), nshots=nshots)
     noisy_val = state.expectation_from_samples(obs)
 
-    mit_val = apply_problem_with_readout_conf(
+    mit_val = get_expectation_val_with_readout_mitigation(
         c, obs, noise, nshots, readout, backend=backend
     )
 
