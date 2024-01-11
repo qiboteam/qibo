@@ -3,9 +3,13 @@ import math
 import numpy as np
 import pytest
 
-from qibo import gates
+from qibo import gates, get_backend
 from qibo.models import Circuit
 from qibo.models.qcnn import QuantumCNN
+
+import warnings
+
+text = str(get_backend())
 
 num_angles = 21
 angles0 = [i * math.pi / num_angles for i in range(num_angles)]
@@ -400,6 +404,7 @@ def test_qcnn_training(backend):
 
 
 def test_two_qubit_ansatz_training(backend):
+    warnings.warn(UserWarning("{}".format(text)))
     c = Circuit(2)
     c.add(gates.H(0))
     c.add(gates.RX(0, 0))
