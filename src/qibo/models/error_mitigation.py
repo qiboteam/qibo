@@ -703,7 +703,7 @@ def sample_clifford_training_circuit(
             Defaults to ``None``.
 
     Returns:
-        :class:`qibo.models.Circuit`: The sampled circuit.
+        :class:`qibo.models.Circuit`: the sampled circuit.
     """
     from qibo.quantum_info import (  # pylint: disable=import-outside-toplevel
         random_clifford,
