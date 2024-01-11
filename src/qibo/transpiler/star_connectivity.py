@@ -3,6 +3,7 @@ from qibo.transpiler.abstract import Router
 from qibo.transpiler.router import ConnectivityError
 
 
+# TODO: split into routing plus placer steps
 class StarConnectivity(Router):
     """Transforms an arbitrary circuit to one that can be executed on hardware.
 
@@ -23,6 +24,7 @@ class StarConnectivity(Router):
 
     def __init__(self, connectivity=None, middle_qubit: int = 2):
         self.middle_qubit = middle_qubit
+        self.connectivity = connectivity
 
     def __call__(self, circuit: Circuit, initial_layout=None):
         """Apply the transpiler transformation on a given circuit.
