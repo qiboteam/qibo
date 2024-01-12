@@ -65,7 +65,7 @@ resp_matrix_2q = random_stochastic_matrix(
 @pytest.mark.parametrize(
     "nqubits,noise,insertion_gate,readout",
     [
-        (3, get_noise_model(DepolarizingError(0.1), gates.CNOT), "CNOT", {}),
+        (3, get_noise_model(DepolarizingError(0.1), gates.CNOT), "CNOT", None),
         (
             3,
             get_noise_model(DepolarizingError(0.1), gates.CNOT),
@@ -78,7 +78,7 @@ resp_matrix_2q = random_stochastic_matrix(
             "CNOT",
             {"ncircuits": 2},
         ),
-        (1, get_noise_model(DepolarizingError(0.1), gates.RX), "RX", {}),
+        (1, get_noise_model(DepolarizingError(0.1), gates.RX), "RX", None),
         (
             1,
             get_noise_model(DepolarizingError(0.3), gates.RX),
@@ -141,7 +141,7 @@ def test_zne(backend, nqubits, noise, solve, insertion_gate, readout):
 @pytest.mark.parametrize(
     "noise,readout",
     [
-        (get_noise_model(DepolarizingError(0.1), gates.CNOT), {}),
+        (get_noise_model(DepolarizingError(0.1), gates.CNOT), None),
         (
             get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, resp_matrix_2q]),
             {"response_matrix": resp_matrix_2q, "ibu_iters": None},
@@ -327,7 +327,7 @@ def test_readout_mitigation(backend, nqubits, nmeas, method, ibu_iters):
 @pytest.mark.parametrize(
     "noise,readout",
     [
-        (get_noise_model(DepolarizingError(0.1), gates.CNOT), {}),
+        (get_noise_model(DepolarizingError(0.1), gates.CNOT), None),
         (
             get_noise_model(DepolarizingError(0.1), gates.CNOT, [True, resp_matrix_2q]),
             {"response_matrix": resp_matrix_2q, "ibu_iters": None},

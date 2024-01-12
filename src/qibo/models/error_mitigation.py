@@ -645,7 +645,7 @@ def get_expectation_val_with_readout_mitigation(
     observable,
     noise_model=None,
     nshots: int = 10000,
-    readout={},
+    readout=None,
     qubit_map=None,
     backend=None,
 ):
@@ -672,6 +672,8 @@ def get_expectation_val_with_readout_mitigation(
     """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
+    if readout is None:
+        readout = {}
 
     if "ncircuits" in readout:
         circuit_result, circuit_result_cal = apply_randomized_readout_mitigation(
@@ -837,7 +839,7 @@ def error_sensitive_circuit(circuit, observable, backend=None):
 def ICS(
     circuit,
     observable,
-    readout={},
+    readout=None,
     qubit_map=None,
     noise_model=None,
     nshots=int(1e4),
@@ -880,6 +882,8 @@ def ICS(
     """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
+    if readout is None:
+        readout = {}
 
     if qubit_map is None:
         qubit_map = list(range(circuit.nqubits))
