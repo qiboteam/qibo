@@ -85,6 +85,18 @@ class CliffordBackend(NumpyBackend):
         symplectic_matrix[nqubits:-1, nqubits : 2 * nqubits] = self.np.copy(I)
         return symplectic_matrix
 
+    def reshape_clifford_state(self, state, nqubits):
+        """Reshape the symplectic matrix to the shape needed by the engine.
+
+        Args:
+            state (ndarray): The input state.
+            nqubits (int): Number of qubits.
+
+        Returns:
+            (ndarray): The reshaped state.
+        """
+        return self.engine.reshape_clifford_state(state, nqubits)
+
     def apply_gate_clifford(self, gate, symplectic_matrix, nqubits):
         operation = getattr(self.clifford_operations, gate.__class__.__name__)
         kwargs = (
@@ -120,8 +132,12 @@ class CliffordBackend(NumpyBackend):
 
             state = self.zero_state(nqubits) if initial_state is None else initial_state
 
+            state = self.reshape_clifford_state(state, nqubits)
+
             for gate in circuit.queue:
                 state = gate.apply_clifford(self, state, nqubits)
+
+            state = self.reshape_clifford_state(state, nqubits)
 
             return Clifford(
                 state,

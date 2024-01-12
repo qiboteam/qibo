@@ -77,6 +77,9 @@ class NumpyBackend(Backend):
     def compile(self, func):
         return func
 
+    def reshape_clifford_state(self, state, nqubits):
+        return state
+
     def zero_state(self, nqubits):
         state = self.np.zeros(2**nqubits, dtype=self.dtype)
         state[0] = 1
