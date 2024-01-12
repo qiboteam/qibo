@@ -108,7 +108,7 @@ def ZNE(
     nshots=10000,
     solve_for_gammas=False,
     insertion_gate="CNOT",
-    readout: dict = {},
+    readout=None,
     qubit_map=None,
     backend=None,
 ):
@@ -150,6 +150,8 @@ def ZNE(
     """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
+    if readout is None:
+        readout = {}
 
     expected_values = []
     for num_insertions in noise_levels:
@@ -261,7 +263,7 @@ def CDR(
     model=lambda x, a, b: a * x + b,
     n_training_samples: int = 100,
     full_output: bool = False,
-    readout: dict = {},
+    readout=None,
     qubit_map=None,
     backend=None,
 ):
@@ -303,6 +305,8 @@ def CDR(
     """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
+    if readout is None:
+        readout = {}
 
     training_circuits = [
         sample_training_circuit_cdr(circuit) for _ in range(n_training_samples)
@@ -340,7 +344,7 @@ def vnCDR(
     n_training_samples: int = 100,
     insertion_gate: str = "CNOT",
     full_output: bool = False,
-    readout: dict = {},
+    readout=None,
     qubit_map=None,
     backend=None,
 ):
@@ -387,6 +391,8 @@ def vnCDR(
     """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
+    if readout is None:
+        readout = {}
 
     training_circuits = [
         sample_training_circuit_cdr(circuit) for _ in range(n_training_samples)
@@ -482,7 +488,7 @@ def get_response_matrix(
             Defaults to ``None``.
 
     Returns:
-        numpy.ndarray : The computed (`nqubits`, `nqubits`) response matrix for
+        numpy.ndarray : the computed (`nqubits`, `nqubits`) response matrix for
             readout mitigation.
     """
     from qibo import Circuit  # pylint: disable=import-outside-toplevel
@@ -527,7 +533,7 @@ def apply_resp_mat_readout_mitigation(state, response_matrix, iterations=None):
             If ``None`` the 'inverse' method is used. Defaults to ``None``.
 
     Returns:
-        :class:`qibo.measurements.CircuitResult`: The input state with the updated (mitigated) frequencies.
+        :class:`qibo.measurements.CircuitResult`: the input state with the updated (mitigated) frequencies.
     """
     frequencies = np.zeros(2 ** len(state.measurements[0].qubits))
     for key, value in state.frequencies().items():
@@ -662,7 +668,7 @@ def get_expectation_val_with_readout_mitigation(
             If None, it uses the global backend. Defaults to ``None``.
 
     Returns:
-        float: The mitigated expectation value of the observable.
+        float: the mitigated expectation value of the observable.
     """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
@@ -694,7 +700,7 @@ def sample_clifford_training_circuit(
     circuit,
     backend=None,
 ):
-    """Samples a training circuit for CDR by susbtituting some of the non-Clifford gates.
+    """Samples a training circuit for CDR by susbtituting all the non-Clifford gates.
 
     Args:
         circuit (:class:`qibo.models.Circuit`): circuit to sample from.
@@ -703,7 +709,7 @@ def sample_clifford_training_circuit(
             Defaults to ``None``.
 
     Returns:
-        :class:`qibo.models.Circuit`: The sampled circuit.
+        :class:`qibo.models.Circuit`: the sampled circuit.
     """
     from qibo.quantum_info import (  # pylint: disable=import-outside-toplevel
         random_clifford,
@@ -736,8 +742,10 @@ def sample_clifford_training_circuit(
         else:
             if i in non_clifford_gates_indices:
                 gate = gates.Unitary(
-                    random_clifford(1, backend=backend, return_circuit=False),
-                    gate.qubits[0],
+                    random_clifford(
+                        len(gate.qubits), backend=backend, return_circuit=False
+                    ),
+                    *gate.qubits,
                 )
                 gate.clifford = True
             sampled_circuit.add(gate)
