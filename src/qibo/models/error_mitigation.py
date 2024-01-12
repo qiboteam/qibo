@@ -672,7 +672,7 @@ def get_expectation_val_with_readout_mitigation(
     """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
-    if readout is None:
+    if readout is None:  # pragma: no cover
         readout = {}
 
     if "ncircuits" in readout:

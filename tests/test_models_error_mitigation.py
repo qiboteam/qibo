@@ -229,6 +229,7 @@ def test_sample_training_circuit(nqubits):
 @pytest.mark.parametrize(
     "nqubits,noise,insertion_gate,readout",
     [
+        (1, get_noise_model(DepolarizingError(0.1), gates.RX), "RX", None),
         (
             1,
             get_noise_model(DepolarizingError(0.1), gates.RX, [True, resp_matrix_1q]),
