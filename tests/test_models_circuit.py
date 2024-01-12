@@ -624,6 +624,40 @@ def test_circuit_draw():
             circuit.add(gates.CU1(i2, i1, theta=0))
     circuit.add(gates.SWAP(0, 4))
     circuit.add(gates.SWAP(1, 3))
+
+    assert circuit.draw() == ref
+
+
+def test_circuit_wire_names_errors():
+    with pytest.raises(TypeError):
+        circuit = Circuit(5, wire_names=1)
+    with pytest.raises(ValueError):
+        circuit = Circuit(5, wire_names=["a", "b", "c"])
+    with pytest.raises(ValueError):
+        circuit = Circuit(2, wire_names={"q0": "1", "q1": "2", "q2": "3"})
+    with pytest.raises(ValueError):
+        circuit = Circuit(2, wire_names={"q0": "1", "q1": 2})
+    with pytest.raises(ValueError):
+        circuit = Circuit(2, wire_names=["1", 2])
+
+
+def test_circuit_draw_wire_names():
+    """Test circuit text draw."""
+    ref = (
+        "a    : ─H─U1─U1─U1─U1───────────────────────────x───\n"
+        "b    : ───o──|──|──|──H─U1─U1─U1────────────────|─x─\n"
+        "hello: ──────o──|──|────o──|──|──H─U1─U1────────|─|─\n"
+        "1    : ─────────o──|───────o──|────o──|──H─U1───|─x─\n"
+        "q4   : ────────────o──────────o───────o────o──H─x───"
+    )
+    circuit = Circuit(5, wire_names=["a", "b", "hello", "1", "q4"])
+    for i1 in range(5):
+        circuit.add(gates.H(i1))
+        for i2 in range(i1 + 1, 5):
+            circuit.add(gates.CU1(i2, i1, theta=0))
+    circuit.add(gates.SWAP(0, 4))
+    circuit.add(gates.SWAP(1, 3))
+
     assert circuit.draw() == ref
 
 
@@ -666,6 +700,63 @@ def test_circuit_draw_line_wrap():
     import numpy as np
 
     circuit = Circuit(5)
+    for i1 in range(5):
+        circuit.add(gates.H(i1))
+        for i2 in range(i1 + 1, 5):
+            circuit.add(gates.CU1(i2, i1, theta=0))
+    circuit.add(gates.SWAP(0, 4))
+    circuit.add(gates.SWAP(1, 3))
+    circuit.add(gates.I(*range(2)))
+    circuit.add(gates.M(3, collapse=True))
+    circuit.add(gates.fSim(0, 4, 0, 0))
+    circuit.add(gates.CU3(0, 1, 0, 0, 0))
+    circuit.add(gates.TOFFOLI(4, 3, 2))
+    circuit.add(gates.GeneralizedfSim(0, 2, np.eye(2), 0))
+    circuit.add(gates.X(4).controlled_by(1, 2, 3))
+    circuit.add(gates.M(*range(3)))
+    assert circuit.draw(line_wrap=50) == ref_line_wrap_50
+    assert circuit.draw(line_wrap=30) == ref_line_wrap_30
+
+
+def test_circuit_draw_line_wrap_names():
+    """Test circuit text draw with line wrap."""
+    ref_line_wrap_50 = (
+        "q0:     ─H─U1─U1─U1─U1───────────────────────────x───I───f ...\n"
+        "a :     ───o──|──|──|──H─U1─U1─U1────────────────|─x─I───| ...\n"
+        "q2:     ──────o──|──|────o──|──|──H─U1─U1────────|─|─────| ...\n"
+        "q3:     ─────────o──|───────o──|────o──|──H─U1───|─x───M─| ...\n"
+        "q4:     ────────────o──────────o───────o────o──H─x───────f ...\n"
+        "\n"
+        "q0: ... ─o────gf───M─\n"
+        "a : ... ─U3───|──o─M─\n"
+        "q2: ... ────X─gf─o─M─\n"
+        "q3: ... ────o────o───\n"
+        "q4: ... ────o────X───"
+    )
+
+    ref_line_wrap_30 = (
+        "q0:     ─H─U1─U1─U1─U1──────────────── ...\n"
+        "a :     ───o──|──|──|──H─U1─U1─U1───── ...\n"
+        "q2:     ──────o──|──|────o──|──|──H─U1 ...\n"
+        "q3:     ─────────o──|───────o──|────o─ ...\n"
+        "q4:     ────────────o──────────o────── ...\n"
+        "\n"
+        "q0: ... ───────────x───I───f─o────gf── ...\n"
+        "a : ... ───────────|─x─I───|─U3───|──o ...\n"
+        "q2: ... ─U1────────|─|─────|────X─gf─o ...\n"
+        "q3: ... ─|──H─U1───|─x───M─|────o────o ...\n"
+        "q4: ... ─o────o──H─x───────f────o────X ...\n"
+        "\n"
+        "q0: ... ─M─\n"
+        "a : ... ─M─\n"
+        "q2: ... ─M─\n"
+        "q3: ... ───\n"
+        "q4: ... ───"
+    )
+
+    import numpy as np
+
+    circuit = Circuit(5, wire_names={"q1": "a"})
     for i1 in range(5):
         circuit.add(gates.H(i1))
         for i2 in range(i1 + 1, 5):

@@ -7,8 +7,8 @@ from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 from qibo.quantum_info.random_ensembles import random_unitary
+from qibo.transpiler._exceptions import ConnectivityError
 from qibo.transpiler.pipeline import _transpose_qubits
-from qibo.transpiler.router import ConnectivityError
 from qibo.transpiler.star_connectivity import StarConnectivity
 
 

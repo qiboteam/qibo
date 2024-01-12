@@ -146,6 +146,8 @@ class CliffordBackend(NumpyBackend):
                 engine=self.engine,
             )
 
+            return clifford
+
         except self.oom_error:  # pragma: no cover
             raise_error(
                 RuntimeError,
