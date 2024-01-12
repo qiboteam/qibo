@@ -139,7 +139,7 @@ class CliffordBackend(NumpyBackend):
 
             state = self.reshape_clifford_state(state, nqubits)
 
-            return Clifford(
+            clifford = Clifford(
                 state,
                 measurements=circuit.measurements,
                 nshots=nshots,
