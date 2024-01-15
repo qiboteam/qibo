@@ -6,7 +6,7 @@ from hyperopt import hp, tpe
 
 from qibo import symbols
 from qibo.config import raise_error
-from qibo.hamiltonians import Hamiltonian, SymbolicHamiltonian
+from qibo.hamiltonians import SymbolicHamiltonian
 from qibo.models.dbi.double_bracket import (
     DoubleBracketGeneratorType,
     DoubleBracketIteration,
@@ -29,9 +29,8 @@ def generate_Z_operators(nqubits: int):
             nqubits = 4
             h0 = random_hermitian(2**nqubits)
             dbi = DoubleBracketIteration(Hamiltonian(nqubits=nqubits, matrix=h0))
-            generate_Z = generate_Z_operators(4)
+            generate_Z = generate_Z_operators(nqubits)
             Z_ops = list(generate_Z.values())
-            Z_words = list(generate_Z.keys())
 
             delta_h0 = dbi.diagonal_h_matrix
             dephasing_channel = (sum([Z_op @ h0 @ Z_op for Z_op in Z_ops])+h0)/2**nqubits
@@ -56,10 +55,10 @@ def str_to_symbolic(name: str):
     Example:
         .. testcode::
 
-            from qibo.models.dbi.utils import str_to_op
+            from qibo.models.dbi.utils import str_to_symbolic
             op_name = "ZYXZI"
             # returns 5-qubit symbolic hamiltonian
-            ZIXZI_op = str_to_op(op_name)
+            ZIXZI_op = str_to_symbolic(op_name)
     """
     tensor_op = 1
     for qubit, char in enumerate(name):
