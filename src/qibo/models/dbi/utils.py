@@ -44,13 +44,13 @@ def generate_Z_operators(nqubits: int):
         # except for the identity
         if "Z" in op_string_tup:
             op_name = "".join(op_string_tup)
-            tensor_op = str_to_symbolic(op_name)
+            tensor_op = _str_to_symbolic(op_name)
             # append in output_dict
             output_dict[op_name] = SymbolicHamiltonian(tensor_op).dense.matrix
     return output_dict
 
 
-def str_to_symbolic(name: str):
+def _str_to_symbolic(name: str):
     """Converts string into symbolic hamiltonian
     Example:
         .. testcode::
