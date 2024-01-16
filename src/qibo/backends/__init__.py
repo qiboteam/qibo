@@ -4,8 +4,6 @@ from qibo.backends.abstract import Backend
 from qibo.backends.clifford import CliffordBackend
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.backends.numpy import NumpyBackend
-from qibo.backends.qibo_client import QiboClientBackend
-from qibo.backends.qiskit_client import QiskitClientBackend
 from qibo.backends.tensorflow import TensorflowBackend
 from qibo.config import log, raise_error
 
@@ -43,9 +41,13 @@ def construct_backend(backend, platform=None, runcard=None, token=None):
             else:
                 platform = construct_backend(platform)
         return CliffordBackend(platform)
-    elif backend == "QiboClientBackend":
+    elif backend == "qibo_client":
+        from qibo_cloud_backends.backends.qibo_client import QiboClientBackend
+
         return QiboClientBackend(platform=platform, runcard=runcard, token=token)
-    elif backend == "QiskitClientBackend":
+    elif backend == "qiskit_client":
+        from qibo_cloud_backends.backends.qiskit_client import QiskitClientBackend
+
         return QiskitClientBackend(platform=platform, runcard=runcard, token=token)
     else:  # pragma: no cover
         raise_error(ValueError, f"Backend {backend} is not available.")
