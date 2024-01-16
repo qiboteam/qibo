@@ -4,11 +4,13 @@ from qibo.backends.abstract import Backend
 from qibo.backends.clifford import CliffordBackend
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.backends.numpy import NumpyBackend
+from qibo.backends.qibo_client import QiboClientBackend
+from qibo.backends.qiskit_client import QiskitClientBackend
 from qibo.backends.tensorflow import TensorflowBackend
 from qibo.config import log, raise_error
 
 
-def construct_backend(backend, platform=None, runcard=None):
+def construct_backend(backend, platform=None, runcard=None, token=None):
     if backend == "qibojit":
         from qibojit.backends import CupyBackend, CuQuantumBackend, NumbaBackend
 
@@ -41,7 +43,10 @@ def construct_backend(backend, platform=None, runcard=None):
             else:
                 platform = construct_backend(platform)
         return CliffordBackend(platform)
-
+    elif backend == "QiboClientBackend":
+        return QiboClientBackend(platform=platform, runcard=runcard, token=token)
+    elif backend == "QiskitClientBackend":
+        return QiskitClientBackend(platform=platform, runcard=runcard, token=token)
     else:  # pragma: no cover
         raise_error(ValueError, f"Backend {backend} is not available.")
 
@@ -83,7 +88,9 @@ class GlobalBackend(NumpyBackend):
         return cls._instance
 
     @classmethod
-    def set_backend(cls, backend, platform=None, runcard=None):  # pragma: no cover
+    def set_backend(
+        cls, backend, platform=None, runcard=None, token=None
+    ):  # pragma: no cover
         if (
             cls._instance is None
             or cls._instance.name != backend
@@ -127,8 +134,8 @@ def get_backend():
     return str(GlobalBackend())
 
 
-def set_backend(backend, platform=None, runcard=None):
-    GlobalBackend.set_backend(backend, platform, runcard)
+def set_backend(backend, platform=None, runcard=None, token=None):
+    GlobalBackend.set_backend(backend, platform, runcard, token)
 
 
 def get_precision():
