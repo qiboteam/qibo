@@ -84,6 +84,83 @@ def _find_gates_qubits_pairs(circuit: Circuit):
     return gates_qubits_pairs
 
 
+class StarConnectivityPlacer(Placer):
+    """Find an optimized qubit placement for the following connectivity:
+
+             q
+             |
+        q -- q -- q
+             |
+             q
+
+    Args:
+        connectivity (:class:`networkx.Graph`): chip connectivity, not used for this transpiler.
+        middle_qubit (int, optional): qubit id of the qubit that is in the middle of the star.
+    """
+
+    def __init__(self, connectivity=None, middle_qubit: int = 2):
+        self.middle_qubit = middle_qubit
+        self.connectivity = connectivity
+
+    def __call__(self, circuit: Circuit):
+        """Apply the transpiler transformation on a given circuit.
+
+        Args:
+            circuit (:class:`qibo.models.circuit.Circuit`): The original Qibo circuit to transform.
+                This circuit must contain up to two-qubit gates.
+
+        Returns:
+            (dict): physical to logical qubit mapping.
+        """
+
+        # find the number of qubits for hardware circuit
+        nqubits = max(circuit.nqubits, self.middle_qubit + 1)
+        hardware_qubits = list(range(nqubits))
+
+        for i, gate in enumerate(circuit.queue):
+            if len(gate.qubits) > 2:
+                raise_error(
+                    PlacementError,
+                    "Gates targeting more than 2 qubits are not supported",
+                )
+            if len(gate.qubits) == 2:
+                if self.middle_qubit not in gate.qubits:
+                    new_middle = self._find_connected_qubit(
+                        gate.qubits, circuit.queue[i + 1 :], hardware_qubits
+                    )
+                    hardware_qubits[self.middle_qubit], hardware_qubits[new_middle] = (
+                        new_middle,
+                        self.middle_qubit,
+                    )
+                    break
+
+        return dict(
+            zip(["q" + str(i) for i in range(circuit.nqubits)], range(circuit.nqubits))
+        )
+
+    def _find_connected_qubit(qubits, queue, hardware_qubits):
+        """
+        Finds which qubit should be mapped to hardware middle qubit
+        by looking at the two-qubit gates that follow.
+        """
+        possible_qubits = set(qubits)
+        for next_gate in queue:
+            if len(next_gate.qubits) > 2:
+                raise_error(
+                    PlacementError,
+                    "Gates targeting more than 2 qubits are not supported",
+                )
+            if len(next_gate.qubits) == 2:
+                possible_qubits &= {hardware_qubits.index(q) for q in next_gate.qubits}
+                if not possible_qubits:
+                    # freedom of choice
+                    return qubits[0]
+                elif len(possible_qubits) == 1:
+                    return possible_qubits.pop()
+        # freedom of choice
+        return qubits[0]
+
+
 class Trivial(Placer):
     """Place qubits according to the following notation:
 
