@@ -134,9 +134,7 @@ class StarConnectivityPlacer(Placer):
                     )
                     break
 
-        return dict(
-            zip(["q" + str(i) for i in range(circuit.nqubits)], hardware_qubits)
-        )
+        return dict(zip(["q" + str(i) for i in range(nqubits)], hardware_qubits))
 
     def _find_connected_qubit(self, qubits, queue, hardware_qubits):
         """

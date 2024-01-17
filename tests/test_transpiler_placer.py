@@ -9,6 +9,7 @@ from qibo.transpiler.placer import (
     Custom,
     Random,
     ReverseTraversal,
+    StarConnectivityPlacer,
     Subgraph,
     Trivial,
     _find_gates_qubits_pairs,
@@ -321,3 +322,14 @@ def test_reverse_traversal_restricted():
     assert_placement(
         circuit=circuit, layout=layout, connectivity=restricted_connectivity
     )
+
+
+def test_star_connectivity_placer():
+    circ = Circuit(3)
+    circ.add(gates.CZ(0, 1))
+    circ.add(gates.CZ(1, 2))
+    circ.add(gates.CZ(0, 2))
+    placer = StarConnectivityPlacer(middle_qubit=2)
+    layout = placer(circ)
+    assert_placement(circ, layout)
+    assert layout == {"q0": 0, "q1": 2, "q2": 1}

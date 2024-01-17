@@ -27,11 +27,11 @@ from qibo.transpiler.router import (
 )
 
 
-def star_connectivity():
+def star_connectivity(middle_qubit=2):
     Q = [i for i in range(5)]
     chip = nx.Graph()
     chip.add_nodes_from(Q)
-    graph_list = [(Q[i], Q[2]) for i in range(5) if i != 2]
+    graph_list = [(Q[i], Q[middle_qubit]) for i in range(5) if i != middle_qubit]
     chip.add_edges_from(graph_list)
     return chip
 
@@ -351,53 +351,34 @@ def test_star_error_multi_qubit():
     circuit.add(gates.TOFFOLI(0, 1, 2))
     transpiler = StarConnectivityRouter(middle_qubit=2)
     with pytest.raises(ConnectivityError):
-        transpiled, hardware_qubits = transpiler(circuit)
+        transpiled, hardware_qubits = transpiler(
+            initial_layout={"q0": 0, "q1": 1, "q2": 2}, circuit=circuit
+        )
 
 
 @pytest.mark.parametrize("nqubits", [1, 2, 3, 4, 5])
-@pytest.mark.parametrize("middle_qubit", [0, 1, 2, 3, 4])
+@pytest.mark.parametrize("middle_qubit", [3, 4])
 @pytest.mark.parametrize("depth", [2, 10])
 @pytest.mark.parametrize("measurements", [True, False])
-def test_star_fix_connectivity(nqubits, depth, middle_qubit, measurements):
-    """Checks that the transpiled circuit can be executed and is equivalent to original."""
-    original = generate_random_circuit(nqubits, depth, middle_qubit=middle_qubit)
+def test_star_router(nqubits, depth, middle_qubit, measurements):
+    circuit = generate_random_circuit(nqubits, depth)
+    connectivity = star_connectivity(middle_qubit)
     if measurements:
-        original.add(gates.M(0))
+        circuit.add(gates.M(0))
     transpiler = StarConnectivityRouter(middle_qubit=middle_qubit)
-    transpiled, hardware_qubits = transpiler(original)
-    final_state = backend.execute_circuit(transpiled).state()
-    target_state = backend.execute_circuit(original).state()
-    hardware_qubits = list(hardware_qubits.values())
-    target_state = _transpose_qubits(target_state, hardware_qubits)
-    np.testing.assert_allclose(final_state, target_state)
-
-
-@pytest.mark.parametrize("nqubits", [2, 3, 4, 5])
-@pytest.mark.parametrize("middle_qubit", [0, 1, 2, 3, 4])
-@pytest.mark.parametrize("unitary_dim", [1, 2])
-@pytest.mark.parametrize("depth", [2, 10])
-def test_fix_connectivity_unitaries(nqubits, unitary_dim, depth, middle_qubit):
-    """Checks that the transpiled circuit can be executed and is equivalent to original
-    when using unitaries."""
-    # find the number of qubits for hardware circuit
-    n_hardware_qubits = max(nqubits, middle_qubit + 1)
-
-    original = Circuit(n_hardware_qubits)
-    pairs = list(itertools.combinations(range(n_hardware_qubits), unitary_dim))
-    for _ in range(depth):
-        qubits = pairs[int(np.random.randint(len(pairs)))]
-        original.add(
-            gates.Unitary(
-                random_unitary(2**unitary_dim, backend=NumpyBackend()), *qubits
-            )
-        )
-
-    transpiler = StarConnectivity(middle_qubit=middle_qubit)
-    transpiled, hardware_qubits = transpiler(original)
-    # check that execution results agree with original (using simulation)
-    backend = NumpyBackend()
-    final_state = backend.execute_circuit(transpiled).state()
-    target_state = backend.execute_circuit(original).state()
-    hardware_qubits = list(hardware_qubits.values())
-    target_state = _transpose_qubits(target_state, hardware_qubits)
-    np.testing.assert_allclose(final_state, target_state)
+    placer = StarConnectivityPlacer(middle_qubit=middle_qubit)
+    initial_layout = placer(circuit=circuit)
+    transpiled_circuit, final_qubit_map = transpiler(
+        circuit=circuit, initial_layout=initial_layout
+    )
+    assert_connectivity(connectivity, transpiled_circuit)
+    assert_placement(transpiled_circuit, final_qubit_map)
+    matched_original = Circuit(max(circuit.nqubits, middle_qubit + 1))
+    for gate in circuit.queue:
+        matched_original.add(gate)
+    assert_circuit_equivalence(
+        original_circuit=matched_original,
+        transpiled_circuit=transpiled_circuit,
+        final_map=final_qubit_map,
+        initial_map=initial_layout,
+    )

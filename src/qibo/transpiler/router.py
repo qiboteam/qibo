@@ -80,7 +80,7 @@ class StarConnectivityRouter(Router):
         middle_qubit = self.middle_qubit
         nqubits = max(circuit.nqubits, middle_qubit + 1)
         # new circuit object that will be compatible with hardware connectivity
-        new = circuit.__class__(nqubits)
+        new = Circuit(nqubits)
         # list to maps logical to hardware qubits
         hardware_qubits = list(initial_layout.values())
 
