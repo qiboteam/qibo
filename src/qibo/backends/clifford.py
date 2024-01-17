@@ -232,7 +232,7 @@ class CliffordBackend(NumpyBackend):
                 for _ in range(nshots)
             ]  # parallelize?
 
-        return self.np.array(samples).reshape(nshots, len(qubits)).tolist()
+        return self.engine.cast(samples)
 
     def symplectic_matrix_to_generators(
         self, symplectic_matrix, return_array: bool = False
