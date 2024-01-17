@@ -135,10 +135,10 @@ class StarConnectivityPlacer(Placer):
                     break
 
         return dict(
-            zip(["q" + str(i) for i in range(circuit.nqubits)], range(circuit.nqubits))
+            zip(["q" + str(i) for i in range(circuit.nqubits)], hardware_qubits)
         )
 
-    def _find_connected_qubit(qubits, queue, hardware_qubits):
+    def _find_connected_qubit(self, qubits, queue, hardware_qubits):
         """
         Finds which qubit should be mapped to hardware middle qubit
         by looking at the two-qubit gates that follow.

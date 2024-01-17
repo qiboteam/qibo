@@ -62,7 +62,7 @@ class StarConnectivityRouter(Router):
         self.middle_qubit = middle_qubit
         self.connectivity = connectivity
 
-    def __call__(self, circuit: Circuit, initial_layout=None):
+    def __call__(self, circuit: Circuit, initial_layout: dict):
         """Apply the transpiler transformation on a given circuit.
 
         Args:
