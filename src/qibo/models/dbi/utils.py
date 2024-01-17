@@ -80,7 +80,7 @@ def select_best_dbr_generator(
     """Selects the best double bracket rotation generator from a list.
 
     Args:
-        dbi_object (_DoubleBracketIteration): The object intended for double bracket iteration.
+        h (_Hamiltonian): The hamiltonian intended for double bracket iteration.
         d_list (list): List of diagonal operators (np.array) to run from.
         step (float): Fixed iteration duration.
             Defaults to ``None``, uses hyperopt.
@@ -88,6 +88,7 @@ def select_best_dbr_generator(
         step_max (float): Maximally allowed iteration duration.
         max_evals (int): Maximally allowed number of evaluation in hyperopt.
         compare_canonical (bool): If `True`, the optimal diagonal operator chosen from "d_list" is compared with the canonical bracket.
+        mode (_DoubleBracketGeneratorType): DBI generator type used for the selection.
 
     Returns:
         The index of the optimal diagonal operator, respective step duration, and evolution direction.

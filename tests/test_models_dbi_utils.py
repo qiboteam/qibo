@@ -42,13 +42,13 @@ def test_select_best_dbr_generator_and_run(backend, nqubits, step):
     initial_off_diagonal_norm = dbi.off_diagonal_norm
 
     for _ in range(NSTEPS):
-        idx, step_optimize = select_best_dbr_generator_and_run(
+        idx, step_optimize, flip_sign = select_best_dbr_generator_and_run(
             dbi, Z_ops, step=step, compare_canonical=True
         )
         if idx == len(Z_ops):
             dbi(step=step_optimize, mode=DoubleBracketGeneratorType.canonical)
             dbi.mode = DoubleBracketGeneratorType.single_commutator
         else:
-            dbi(step=step_optimize, d=Z_ops[idx])
+            dbi(step=step_optimize, d=flip_sign * Z_ops[idx])
 
     assert initial_off_diagonal_norm > dbi.off_diagonal_norm
