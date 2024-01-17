@@ -2,11 +2,12 @@ from copy import deepcopy
 from itertools import product
 from typing import Optional
 
+import numpy as np
 from hyperopt import hp, tpe
 
 from qibo import symbols
 from qibo.config import raise_error
-from qibo.hamiltonians import SymbolicHamiltonian
+from qibo.hamiltonians import Hamiltonian, SymbolicHamiltonian
 from qibo.models.dbi.double_bracket import (
     DoubleBracketGeneratorType,
     DoubleBracketIteration,
@@ -67,13 +68,14 @@ def str_to_symbolic(name: str):
 
 
 def select_best_dbr_generator(
-    dbi_object: DoubleBracketIteration,
+    h: Hamiltonian,
     d_list: list,
     step: Optional[float] = None,
     step_min: float = 1e-5,
     step_max: float = 1,
     max_evals: int = 200,
     compare_canonical: bool = True,
+    mode: DoubleBracketGeneratorType = DoubleBracketGeneratorType.single_commutator,
 ):
     """Selects the best double bracket rotation generator from a list.
 
@@ -88,49 +90,58 @@ def select_best_dbr_generator(
         compare_canonical (bool): If `True`, the optimal diagonal operator chosen from "d_list" is compared with the canonical bracket.
 
     Returns:
-        The index of the optimal diagonal operator and respective step duration.
+        The index of the optimal diagonal operator, respective step duration, and evolution direction.
     """
-    norms_off_diagonal_restriction = []
-    optimal_steps = []
-    for d in d_list:
+    norms_off_diagonal_restriction = [0 for i in range(len(d_list))]
+    optimal_steps = [0 for i in range(len(d_list))]
+    flip_list = [1 for i in range(len(d_list))]
+    for i, d in enumerate(d_list):
         # prescribed step durations
-        h_before = deepcopy(dbi_object.h)
-        if step is None:
-            step = dbi_object.hyperopt_step(
-                step_min=step_min,
-                step_max=step_max,
-                space=hp.uniform,
-                optimizer=tpe,
-                max_evals=max_evals,
-                d=d,
-            )
-        dbi_object(step=step, d=d)
-        optimal_steps.append(step)
-        norms_off_diagonal_restriction.append(dbi_object.off_diagonal_norm)
-        dbi_object.h = h_before
+        h_eval = deepcopy(h)
+        dbi_eval = DoubleBracketIteration(h_eval, mode=mode)
+        flip_list[i] = CS_angle_sgn(dbi_eval, d)
+        if flip_list[i] is not 0:
+            if step is None:
+                step_best = dbi_eval.hyperopt_step(
+                    step_min=step_min,
+                    step_max=step_max,
+                    space=hp.uniform,
+                    optimizer=tpe,
+                    max_evals=max_evals,
+                    d=flip_list[i] * d,
+                )
+            else:
+                step_best = step
+            dbi_eval(step=step_best, d=flip_list[i] * d)
+            optimal_steps[i] = step_best
+            norms_off_diagonal_restriction[i] = dbi_eval.off_diagonal_norm
     # canonical
     if compare_canonical is True:
-        generator_type = dbi_object.mode
-        dbi_object.mode = DoubleBracketGeneratorType.canonical
+        flip_list.append(1)
+        h_eval = deepcopy(h)
+        dbi_eval = DoubleBracketIteration(
+            h_eval, mode=DoubleBracketGeneratorType.canonical
+        )
         if step is None:
-            step = dbi_object.hyperopt_step(
+            step_best = dbi_eval.hyperopt_step(
                 step_min=step_min,
                 step_max=step_max,
                 space=hp.uniform,
                 optimizer=tpe,
                 max_evals=max_evals,
             )
-        dbi_object(step=step)
-        optimal_steps.append(step)
-        norms_off_diagonal_restriction.append(dbi_object.off_diagonal_norm)
-        dbi_object.h = deepcopy(h_before)
-        dbi_object.mode = generator_type
+        else:
+            step_best = step
+        dbi_eval(step=step_best)
+        optimal_steps.append(step_best)
+        norms_off_diagonal_restriction.append(dbi_eval.off_diagonal_norm)
     # find best d
     idx_max_loss = norms_off_diagonal_restriction.index(
         min(norms_off_diagonal_restriction)
     )
+    flip = flip_list[idx_max_loss]
     step_optimal = optimal_steps[idx_max_loss]
-    return idx_max_loss, step_optimal
+    return idx_max_loss, step_optimal, flip
 
 
 def select_best_dbr_generator_and_run(
@@ -143,23 +154,35 @@ def select_best_dbr_generator_and_run(
     compare_canonical: bool = True,
 ):
     """Run double bracket iteration with generator chosen from a list."""
-    idx_max_loss, step_optimal = select_best_dbr_generator(
-        dbi_object,
+    idx_max_loss, step_optimal, flip_sign = select_best_dbr_generator(
+        dbi_object.h,
         d_list,
         step=step,
         step_min=step_min,
         step_max=step_max,
         max_evals=max_evals,
         compare_canonical=compare_canonical,
+        mode=dbi_object.mode,
     )
     # run with optimal d
     if idx_max_loss == len(d_list) and compare_canonical is True:
         # canonical
-        generator_type = dbi_object.mode
-        dbi_object.mode = DoubleBracketGeneratorType.canonical
-        dbi_object(step=step_optimal)
-        dbi_object.mode = generator_type
+        dbi_object(step=step_optimal, mode=DoubleBracketGeneratorType.canonical)
+
     else:
-        d_optimal = d_list[idx_max_loss]
+        d_optimal = flip_sign * d_list[idx_max_loss]
         dbi_object(step=step_optimal, d=d_optimal)
-    return idx_max_loss, step_optimal
+    return idx_max_loss, step_optimal, flip_sign
+
+
+def CS_angle_sgn(dbi_object, d):
+    """Calculates the sign of Cauchy-Schwarz Angle $$<W(Z), W(canonical)>_{HS}$$"""
+    norm = np.trace(
+        np.dot(
+            np.conjugate(
+                dbi_object.commutator(dbi_object.diagonal_h_matrix, dbi_object.h.matrix)
+            ).T,
+            dbi_object.commutator(d, dbi_object.h.matrix),
+        )
+    )
+    return np.sign(norm)
