@@ -397,9 +397,10 @@ def _determined_outcome(state, q, nqubits):
 
 def _random_outcome(state, p, q, nqubits):
     p = p[0] + nqubits
-    h = state[:-1, q].copy()
-    h[p] = False
-    h = h.nonzero()[0]
+    tmp = state[p, q].copy()
+    state[p, q] = False
+    h = state[:-1, q].nonzero()[0]
+    state[p, q] = tmp
     if h.shape[0] > 0:
         state = _rowsum(
             state,
@@ -409,10 +410,14 @@ def _random_outcome(state, p, q, nqubits):
         )
     state[p - nqubits, :] = state[p, :]
     outcome = np.random.randint(2, size=1).item()
-    state[p, :] = 0
+    state[p, :] = False
     state[p, -1] = outcome
-    state[p, nqubits + q] = 1
+    state[p, nqubits + q] = True
     return state, outcome
+
+
+def _get_p(state, q, nqubits):
+    return state[nqubits:-1, q].nonzero()[0]
 
 
 # valid for a standard basis measurement only
@@ -420,7 +425,7 @@ def M(state, qubits, nqubits, collapse=False):
     sample = []
     state_copy = state if collapse else state.copy()
     for q in qubits:
-        p = state_copy[nqubits:-1, q].nonzero()[0]
+        p = _get_p(state_copy, q, nqubits)
         # random outcome, affects the state
         if len(p) > 0:
             state_copy, outcome = _random_outcome(state_copy, p, q, nqubits)
