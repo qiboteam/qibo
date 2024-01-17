@@ -857,7 +857,6 @@ def GST_basis_operations(
 
             idx_basis_ops = 169
             for idx_basis_ops in range(169, 241):
-                time.sleep(3)
                 for k in range(0, 16):
                     # Initial states
                     circ = prepare_states(k, nqubits)
