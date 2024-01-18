@@ -333,3 +333,11 @@ def test_star_connectivity_placer():
     layout = placer(circ)
     assert_placement(circ, layout)
     assert layout == {"q0": 0, "q1": 2, "q2": 1}
+
+
+def test_star_connectivity_placer_error():
+    circ = Circuit(3)
+    circ.add(gates.TOFFOLI(0, 1, 2))
+    placer = StarConnectivityPlacer(middle_qubit=2)
+    with pytest.raises(PlacementError):
+        layout = placer(circ)

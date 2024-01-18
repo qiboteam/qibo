@@ -1,9 +1,13 @@
+import itertools
+
 import networkx as nx
 import numpy as np
 import pytest
 
 from qibo import gates
+from qibo.backends import NumpyBackend
 from qibo.models import Circuit
+from qibo.quantum_info.random_ensembles import random_unitary
 from qibo.transpiler._exceptions import ConnectivityError
 from qibo.transpiler.optimizer import Preprocessing
 from qibo.transpiler.pipeline import (
@@ -356,13 +360,26 @@ def test_star_error_multi_qubit():
         )
 
 
-@pytest.mark.parametrize("nqubits", [1, 2, 3, 4, 5])
-@pytest.mark.parametrize("middle_qubit", [3, 4])
+@pytest.mark.parametrize("nqubits", [1, 3, 5])
+@pytest.mark.parametrize("middle_qubit", [0, 2, 4])
 @pytest.mark.parametrize("depth", [2, 10])
 @pytest.mark.parametrize("measurements", [True, False])
-def test_star_router(nqubits, depth, middle_qubit, measurements):
-    circuit = generate_random_circuit(nqubits, depth)
+@pytest.mark.parametrize("unitaries", [True, False])
+def test_star_router(nqubits, depth, middle_qubit, measurements, unitaries):
+    unitary_dim = min(2, nqubits)
     connectivity = star_connectivity(middle_qubit)
+    if unitaries:
+        circuit = Circuit(nqubits)
+        pairs = list(itertools.combinations(range(nqubits), unitary_dim))
+        for _ in range(depth):
+            qubits = pairs[int(np.random.randint(len(pairs)))]
+            circuit.add(
+                gates.Unitary(
+                    random_unitary(2**unitary_dim, backend=NumpyBackend()), *qubits
+                )
+            )
+    else:
+        circuit = generate_random_circuit(nqubits, depth)
     if measurements:
         circuit.add(gates.M(0))
     transpiler = StarConnectivityRouter(middle_qubit=middle_qubit)
