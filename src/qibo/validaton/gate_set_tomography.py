@@ -127,7 +127,7 @@ def GST_execute_circuit(circuit, k, j, nshots=int(1e4), backend=None):
     result = backend.execute_circuit(circuit, nshots=nshots)
     observables = [symbols.I, symbols.Z, symbols.Z, symbols.Z]
     observables_list = list(product(observables, repeat=nqubits))[j]
-    # print(observables_list)
+    
     observable = 1
     for q, obs in enumerate(observables_list):
         if obs is not symbols.I:
