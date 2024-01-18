@@ -77,7 +77,10 @@ class NumpyBackend(Backend):
     def compile(self, func):
         return func
 
-    def reshape_clifford_state(self, state, nqubits):
+    def clifford_pre_execution_reshape(self, state):
+        return state
+
+    def clifford_post_execution_reshape(self, state, nqubits):
         return state
 
     def zero_state(self, nqubits):

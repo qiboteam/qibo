@@ -404,7 +404,7 @@ def _random_outcome(state, p, q, nqubits):
     if h.shape[0] > 0:
         state = _rowsum(
             state,
-            h,
+            h.astype(np.uint),
             p * np.ones(h.shape[0], dtype=np.uint),
             nqubits,
         )
