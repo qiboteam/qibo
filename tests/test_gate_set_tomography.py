@@ -16,21 +16,22 @@ from gate_set_tomography import (
 import qibo
 from qibo import gates
 from qibo.noise import AmplitudeDampingError, DepolarizingError, NoiseModel, PauliError
+
 =======
 import numpy as np
 import pytest
 
-from qibo.validation.gate_set_tomography import (
-	prepare_states,
-	measurement_basis,
-	reset_register,
-    GST_execute_circuit,
-	GST
-	)
-
 import qibo
 from qibo import gates
 from qibo.noise import DepolarizingError, NoiseModel
+from qibo.validation.gate_set_tomography import (
+    GST,
+    GST_execute_circuit,
+    measurement_basis,
+    prepare_states,
+    reset_register,
+)
+
 >>>>>>> Stashed changes
 
 
