@@ -5,19 +5,16 @@ from itertools import product
 import numpy as np
 import pytest
 from gate_set_tomography import (
-    GST,
-    GST_basis_operations,
+	prepare_states,
+	measurement_basis,
+	reset_register,
     GST_execute_circuit,
-    measurement_basis,
-    prepare_states,
-)
+	GST
+	)
 
 import qibo
 from qibo import gates
 from qibo.noise import AmplitudeDampingError, DepolarizingError, NoiseModel, PauliError
-
-# import gate_set_tomography
-# from gate_set_tomography import GST_1qb, GST_2qb, GST_1qb_basis_operations, GST_2qb_basis_operations
 
 
 def test_prepare_states_valid_k_single_qubit():
@@ -116,6 +113,73 @@ def test_measurement_basis_invalid_j_valid_nqubits():
 ##################################################################################
 
 
+def test_reset_register_valid_string_1qb():
+	# Test for valid string
+	nqubits = 1
+	test_circuit = qibo.models.Circuit(nqubits)
+	test_circuit.add(gates.H(0))
+
+	invert_register = 'sp_0'
+	inverted_circuit = reset_register(test_circuit, invert_register)
+
+	assert isinstance(inverted_circuit, qibo.models.circuit.Circuit)
+
+
+def test_reset_register_sp_0():
+	# Test resetting qubit 0
+
+	nqubits = 2
+	test_circuit = qibo.models.Circuit(nqubits)
+	test_circuit.add(gates.H(0))
+	test_circuit.add(gates.S(1))
+
+	inverse_circuit = reset_register(test_circuit, 'sp_0')
+
+	assert isinstance(inverse_circuit, qibo.models.circuit.Circuit)
+
+
+def test_reset_register_sp_1():
+	# Test resetting qubit 1
+
+	nqubits = 2
+	test_circuit = qibo.models.Circuit(nqubits)
+	test_circuit.add(gates.H(0))
+	test_circuit.add(gates.S(1))
+
+	inverse_circuit = reset_register(test_circuit, 'sp_1')
+
+	assert isinstance(inverse_circuit, qibo.models.circuit.Circuit)
+
+
+def test_reset_register_sp_t():
+	# Test resetting both qubits
+
+	nqubits = 2
+	test_circuit = qibo.models.Circuit(nqubits)
+	test_circuit.add(gates.H(0))
+	test_circuit.add(gates.CNOT(0, 1))
+
+	inverse_circuit = reset_register(test_circuit, 'sp_t')
+
+	assert isinstance(inverse_circuit, qibo.models.circuit.Circuit)
+
+
+def test_reset_register_invalid_string():
+	# Test resetting both qubits
+
+	nqubits = 2
+	test_circuit = qibo.models.Circuit(nqubits)
+	test_circuit.add(gates.H(0))
+	test_circuit.add(gates.CNOT(0, 1))
+
+	# Check if NameError is raised
+	with pytest.raises(NameError):
+		inverse_circuit = reset_register(test_circuit, 'sp_2')
+
+
+#################################################################################
+
+
 def test_GST_execute_circuit():
     nqubits = 1
     circuit = qibo.models.Circuit(nqubits)
@@ -131,7 +195,7 @@ def test_GST_execute_circuit():
         assert isinstance(result, float)
 
 
-##################################################################################
+#################################################################################
 
 
 def test_GST_one_qubit_empty_circuit():
@@ -160,52 +224,20 @@ def test_GST_two_qubit_with_gate():
     assert np.shape(result) == (16, 16)  # and np.shape(result)[1] == 4
 
 
-##################################################################################
-
-
-def test_GST_basis_operations_no_inputs():
-    # Example 1: Test with default parameters
-    with pytest.raises(ValueError, match="nqubits needs to be either 1 or 2"):
-        output1, output2, output3 = GST_basis_operations()
-
-
-def test_GST_basis_operations_with_inputs_one_qubit():
-    # Example 2: Test with specific parameters
+def test_GST_one_qubit_with_gate_with_valid_reset_register_string():
     nqubits = 1
-    gjk1 = GST(nqubits)
-
-    lam = 0.2
-    depol = NoiseModel()
-    depol.add(DepolarizingError(lam))
-
-    output1, output2, output3 = GST_basis_operations(
-        nqubits=1, gjk=gjk1, nshots=1000, noise_model=depol
-    )
-
-    assert (
-        np.shape(output1) == (13, 4, 4)
-        and np.shape(output2) == (16, 13)
-        and np.shape(output3) == (13, 2, 2)
-    )
-    # assert np.shape(output1) == (241, 16, 16) and np.shape(output2) == (256, 241) and np.shape(output3) == (241, 4, 4)
+    test_gate = gates.H(0)
+    invert_register = 'sp_0'
+    result = GST(nqubits, gate=test_gate, invert_register=invert_register)
+    assert np.shape(result) == (4, 4)  # and np.shape(result)[1] == 4
 
 
-def test_GST_basis_operations_with_inputs_two_qubit():
-    # Example 2: Test with specific parameters
+def test_GST_two_qubit_with_gate_with_valid_reset_register_string():
     nqubits = 2
-    gjk2 = GST(nqubits)
+    test_gate = gates.CNOT(0, 1)
+    invert_register = 'sp_t'
+    result = GST(nqubits, gate=test_gate, invert_register=invert_register)
+    assert np.shape(result) == (16, 16)  # and np.shape(result)[1] == 4
 
-    lam = 0.4
-    depol = NoiseModel()
-    depol.add(DepolarizingError(lam))
 
-    output1, output2, output3 = GST_basis_operations(
-        nqubits=2, gjk=gjk2, nshots=1000, noise_model=depol
-    )
-
-    # assert np.shape(output1) == (13, 4, 4) and np.shape(output2) == (16, 13) and np.shape(output3) == (13, 2, 2)
-    assert (
-        np.shape(output1) == (241, 16, 16)
-        and np.shape(output2) == (256, 241)
-        and np.shape(output3) == (241, 4, 4)
-    )
+##################################################################################
