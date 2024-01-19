@@ -335,8 +335,11 @@ def test_star_connectivity_placer():
     assert layout == {"q0": 0, "q1": 2, "q2": 1}
 
 
-def test_star_connectivity_placer_error():
+@pytest.mark.parametrize("first", [True, False])
+def test_star_connectivity_placer_error(first):
     circ = Circuit(3)
+    if first:
+        circ.add(gates.CZ(0, 1))
     circ.add(gates.TOFFOLI(0, 1, 2))
     placer = StarConnectivityPlacer(middle_qubit=2)
     with pytest.raises(PlacementError):
