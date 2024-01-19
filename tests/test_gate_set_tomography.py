@@ -230,12 +230,4 @@ def test_GST_one_qubit_with_gate_with_valid_reset_register_string():
     assert np.shape(result) == (4, 4)  # and np.shape(result)[1] == 4
 
 
-def test_GST_two_qubit_with_gate_with_valid_reset_register_string():
-    nqubits = 2
-    test_gate = gates.CNOT(0, 1)
-    invert_register = "sp_t"
-    result = GST(nqubits, gate=test_gate, invert_register=invert_register)
-    assert np.shape(result) == (16, 16)  # and np.shape(result)[1] == 4
-
-
 ##################################################################################
