@@ -112,67 +112,67 @@ def test_measurement_basis_invalid_j_valid_nqubits():
 
 
 def test_reset_register_valid_string_1qb():
-	# Test for valid string
-	nqubits = 1
-	test_circuit = qibo.models.Circuit(nqubits)
-	test_circuit.add(gates.H(0))
+    # Test for valid string
+    nqubits = 1
+    test_circuit = qibo.models.Circuit(nqubits)
+    test_circuit.add(gates.H(0))
 
-	invert_register = 'sp_0'
-	inverted_circuit = reset_register(test_circuit, invert_register)
+    invert_register = "sp_0"
+    inverted_circuit = reset_register(test_circuit, invert_register)
 
-	assert isinstance(inverted_circuit, qibo.models.circuit.Circuit)
+    assert isinstance(inverted_circuit, qibo.models.circuit.Circuit)
 
 
 def test_reset_register_sp_0():
-	# Test resetting qubit 0
+    # Test resetting qubit 0
 
-	nqubits = 2
-	test_circuit = qibo.models.Circuit(nqubits)
-	test_circuit.add(gates.H(0))
-	test_circuit.add(gates.S(1))
+    nqubits = 2
+    test_circuit = qibo.models.Circuit(nqubits)
+    test_circuit.add(gates.H(0))
+    test_circuit.add(gates.S(1))
 
-	inverse_circuit = reset_register(test_circuit, 'sp_0')
+    inverse_circuit = reset_register(test_circuit, "sp_0")
 
-	assert isinstance(inverse_circuit, qibo.models.circuit.Circuit)
+    assert isinstance(inverse_circuit, qibo.models.circuit.Circuit)
 
 
 def test_reset_register_sp_1():
-	# Test resetting qubit 1
+    # Test resetting qubit 1
 
-	nqubits = 2
-	test_circuit = qibo.models.Circuit(nqubits)
-	test_circuit.add(gates.H(0))
-	test_circuit.add(gates.S(1))
+    nqubits = 2
+    test_circuit = qibo.models.Circuit(nqubits)
+    test_circuit.add(gates.H(0))
+    test_circuit.add(gates.S(1))
 
-	inverse_circuit = reset_register(test_circuit, 'sp_1')
+    inverse_circuit = reset_register(test_circuit, "sp_1")
 
-	assert isinstance(inverse_circuit, qibo.models.circuit.Circuit)
+    assert isinstance(inverse_circuit, qibo.models.circuit.Circuit)
 
 
 def test_reset_register_sp_t():
-	# Test resetting both qubits
+    # Test resetting both qubits
 
-	nqubits = 2
-	test_circuit = qibo.models.Circuit(nqubits)
-	test_circuit.add(gates.H(0))
-	test_circuit.add(gates.CNOT(0, 1))
+    nqubits = 2
+    test_circuit = qibo.models.Circuit(nqubits)
+    test_circuit.add(gates.H(0))
+    test_circuit.add(gates.CNOT(0, 1))
 
-	inverse_circuit = reset_register(test_circuit, 'sp_t')
+    inverse_circuit = reset_register(test_circuit, "sp_t")
 
-	assert isinstance(inverse_circuit, qibo.models.circuit.Circuit)
+    assert isinstance(inverse_circuit, qibo.models.circuit.Circuit)
 
 
 def test_reset_register_invalid_string():
-	# Test resetting both qubits
+    # Test resetting both qubits
 
-	nqubits = 2
-	test_circuit = qibo.models.Circuit(nqubits)
-	test_circuit.add(gates.H(0))
-	test_circuit.add(gates.CNOT(0, 1))
+    nqubits = 2
+    test_circuit = qibo.models.Circuit(nqubits)
+    test_circuit.add(gates.H(0))
+    test_circuit.add(gates.CNOT(0, 1))
 
-	# Check if NameError is raised
-	with pytest.raises(NameError):
-		inverse_circuit = reset_register(test_circuit, 'sp_2')
+    # Check if NameError is raised
+    with pytest.raises(NameError):
+        inverse_circuit = reset_register(test_circuit, "sp_2")
 
 
 #################################################################################
@@ -225,7 +225,7 @@ def test_GST_two_qubit_with_gate():
 def test_GST_one_qubit_with_gate_with_valid_reset_register_string():
     nqubits = 1
     test_gate = gates.H(0)
-    invert_register = 'sp_0'
+    invert_register = "sp_0"
     result = GST(nqubits, gate=test_gate, invert_register=invert_register)
     assert np.shape(result) == (4, 4)  # and np.shape(result)[1] == 4
 
@@ -233,7 +233,7 @@ def test_GST_one_qubit_with_gate_with_valid_reset_register_string():
 def test_GST_two_qubit_with_gate_with_valid_reset_register_string():
     nqubits = 2
     test_gate = gates.CNOT(0, 1)
-    invert_register = 'sp_t'
+    invert_register = "sp_t"
     result = GST(nqubits, gate=test_gate, invert_register=invert_register)
     assert np.shape(result) == (16, 16)  # and np.shape(result)[1] == 4
 
