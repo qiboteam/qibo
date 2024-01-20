@@ -4,7 +4,7 @@ from functools import reduce
 from itertools import permutations
 from math import factorial
 from re import finditer
-from typing import Optional
+from typing import Optional, Union
 
 import numpy as np
 
@@ -13,7 +13,9 @@ from qibo.backends import GlobalBackend
 from qibo.config import PRECISION_TOL, raise_error
 
 
-def hamming_weight(bitstring, return_indexes: bool = False):
+def hamming_weight(
+    bitstring: Union[int, list, tuple, np.ndarray], return_indexes: bool = False
+):
     """Calculates the Hamming weight of a bitstring.
 
     Args:
@@ -31,6 +33,13 @@ def hamming_weight(bitstring, return_indexes: bool = False):
             f"return_indexes must be type bool, but it is type {type(return_indexes)}",
         )
 
+    if not isinstance(bitstring, (int, list, tuple, np.ndarray)):
+        raise_error(
+            TypeError,
+            "bitstring must be either type int, list, tuple, or numpy.ndarray. "
+            f"However, it is type {type(bitstring)}.",
+        )
+
     if isinstance(bitstring, int):
         bitstring = f"{bitstring:b}"
     elif isinstance(bitstring, (list, tuple, np.ndarray)):
@@ -42,6 +51,39 @@ def hamming_weight(bitstring, return_indexes: bool = False):
         return indexes
 
     return len(indexes)
+
+
+def hamming_distance(bitstring_1, bitstring_2, return_indexes: bool = False):
+    if not isinstance(return_indexes, bool):
+        raise_error(
+            TypeError,
+            f"return_indexes must be type bool, but it is type {type(return_indexes)}",
+        )
+
+    if not isinstance(bitstring_1, (int, list, tuple, np.ndarray)):
+        raise_error(
+            TypeError,
+            "bitstring_1 must be either type int, list, tuple, or numpy.ndarray. "
+            f"However, it is type {type(bitstring_1)}.",
+        )
+
+    if not isinstance(bitstring_2, (int, list, tuple, np.ndarray)):
+        raise_error(
+            TypeError,
+            "bitstring_2 must be either type int, list, tuple, or numpy.ndarray. "
+            f"However, it is type {type(bitstring_2)}.",
+        )
+
+    if isinstance(bitstring_1, int):
+        bitstring_1 = f"{bitstring_1:b}"
+
+    if isinstance(bitstring_2, int):
+        bitstring_2 = f"{bitstring_2:b}"
+
+    bitstring_1 = np.array(list(bitstring_1), dtype=int)
+    bitstring_2 = np.array(list(bitstring_2), dtype=int)
+
+    return hamming_weight(bitstring_1 - bitstring_2, return_indexes=return_indexes)
 
 
 def hadamard_transform(array, implementation: str = "fast", backend=None):
