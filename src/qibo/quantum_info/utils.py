@@ -14,7 +14,7 @@ from qibo.config import PRECISION_TOL, raise_error
 
 
 def hamming_weight(
-    bitstring: Union[int, list, tuple, np.ndarray], return_indexes: bool = False
+    bitstring: Union[int, str, list, tuple, np.ndarray], return_indexes: bool = False
 ):
     """Calculates the Hamming weight of a bitstring.
 
@@ -33,7 +33,7 @@ def hamming_weight(
             f"return_indexes must be type bool, but it is type {type(return_indexes)}",
         )
 
-    if not isinstance(bitstring, (int, list, tuple, np.ndarray)):
+    if not isinstance(bitstring, (int, str, list, tuple, np.ndarray)):
         raise_error(
             TypeError,
             "bitstring must be either type int, list, tuple, or numpy.ndarray. "
@@ -54,6 +54,17 @@ def hamming_weight(
 
 
 def hamming_distance(bitstring_1, bitstring_2, return_indexes: bool = False):
+    """Calculates the Hamming distance ``bitstring_1 - bitstring_2``.
+
+    Args:
+        bitstring_1 (int or str or list or tuple or ndarray): fisrt bistring.
+        bitstring_2 (int or str or list or tuple or ndarray): second bitstring.
+        return_indexes (bool, optional): If ``True``, returns the indexes of the
+            non-zero elements. Defaults to ``False``.
+
+    Returns:
+        int or list: Hamming distance or list of indexes of non-zero elements.
+    """
     if not isinstance(return_indexes, bool):
         raise_error(
             TypeError,
