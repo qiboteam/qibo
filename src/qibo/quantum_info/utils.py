@@ -54,7 +54,9 @@ def hamming_weight(
 
 
 def hamming_distance(bitstring_1, bitstring_2, return_indexes: bool = False):
-    """Calculates the Hamming distance ``bitstring_1 - bitstring_2``.
+    """Calculates the Hamming distance between two bistrings.
+
+    This is done by calculating the Hamming weight of ``bitstring_1 - bitstring_2``.
 
     Args:
         bitstring_1 (int or str or list or tuple or ndarray): fisrt bistring.
