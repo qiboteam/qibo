@@ -53,7 +53,11 @@ def hamming_weight(
     return len(indexes)
 
 
-def hamming_distance(bitstring_1, bitstring_2, return_indexes: bool = False):
+def hamming_distance(
+    bitstring_1: Union[int, str, list, tuple, np.ndarray],
+    bitstring_2: Union[int, str, list, tuple, np.ndarray],
+    return_indexes: bool = False,
+):
     """Calculates the Hamming distance between two bistrings.
 
     This is done by calculating the Hamming weight of ``bitstring_1 - bitstring_2``.
@@ -73,14 +77,14 @@ def hamming_distance(bitstring_1, bitstring_2, return_indexes: bool = False):
             f"return_indexes must be type bool, but it is type {type(return_indexes)}",
         )
 
-    if not isinstance(bitstring_1, (int, list, tuple, np.ndarray)):
+    if not isinstance(bitstring_1, (int, str, list, tuple, np.ndarray)):
         raise_error(
             TypeError,
             "bitstring_1 must be either type int, list, tuple, or numpy.ndarray. "
             f"However, it is type {type(bitstring_1)}.",
         )
 
-    if not isinstance(bitstring_2, (int, list, tuple, np.ndarray)):
+    if not isinstance(bitstring_2, (int, str, list, tuple, np.ndarray)):
         raise_error(
             TypeError,
             "bitstring_2 must be either type int, list, tuple, or numpy.ndarray. "
