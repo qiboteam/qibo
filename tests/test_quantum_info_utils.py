@@ -65,6 +65,8 @@ def test_hamming_distance(bitstring, kind):
         test = hamming_distance("0101", "1010", return_indexes="True")
     with pytest.raises(TypeError):
         test = hamming_distance(2.3, "1010")
+    with pytest.raises(TypeError):
+        test = hamming_distance("1010", 2.3)
 
     bitstring = f"{bitstring:b}"
     distance = hamming_distance(kind(bitstring), kind(bitstring))
