@@ -42,11 +42,15 @@ def construct_backend(backend, platform=None, runcard=None, token=None):
                 platform = construct_backend(platform)
         return CliffordBackend(platform)
     elif backend == "qibo_client":
-        from qibo_cloud_backends.backends.qibo_client import QiboClientBackend
+        from qibo_cloud_backends.backends.qibo_client import (  # pylint: disable=E0401
+            QiboClientBackend,
+        )
 
         return QiboClientBackend(platform=platform, runcard=runcard, token=token)
     elif backend == "qiskit_client":
-        from qibo_cloud_backends.backends.qiskit_client import QiskitClientBackend
+        from qibo_cloud_backends.backends.qiskit_client import (  # pylint: disable=E0401
+            QiskitClientBackend,
+        )
 
         return QiskitClientBackend(platform=platform, runcard=runcard, token=token)
     else:  # pragma: no cover
