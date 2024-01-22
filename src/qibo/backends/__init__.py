@@ -36,7 +36,18 @@ def construct_backend(backend, platform=None):
         return QibolabBackend(platform)
     elif backend == "clifford":
         return CliffordBackend(platform)
+    elif backend == "qibo_client":
+        from qibo_cloud_backends.backends.qibo_client import (  # pylint: disable=E0401
+            QiboClientBackend,
+        )
 
+        return QiboClientBackend(platform=platform, runcard=runcard, token=token)
+    elif backend == "qiskit_client":
+        from qibo_cloud_backends.backends.qiskit_client import (  # pylint: disable=E0401
+            QiskitClientBackend,
+        )
+
+        return QiskitClientBackend(platform=platform, runcard=runcard, token=token)
     else:  # pragma: no cover
         raise_error(ValueError, f"Backend {backend} is not available.")
 
