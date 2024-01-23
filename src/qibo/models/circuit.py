@@ -1249,9 +1249,9 @@ class Circuit:
                     yield name, int(index)
 
         # Remove comment lines
-        lines = (line for line in qasm_code.split("\n") if line and line[:2] != "//")
+        lines = [line for line in qasm_code.split("\n") if line and line[:2] != "//"]
 
-        if not re.search(r"^OPENQASM [0-9]+\.[0-9]+", next(lines)):
+        if not re.search(r"^OPENQASM [0-9]+\.[0-9]+", lines[0]):
             raise_error(
                 ValueError,
                 "QASM code should start with 'OPENQASM X.X' with X.X indicating the version.",
@@ -1268,6 +1268,7 @@ class Circuit:
         composite_gates = {}  # composite gates created with the "gate" command
 
         def parse_line(line):
+            line = line.replace(r"/\s\s+/g", " ").replace(r"^[\s]+", "")
             command, *args = line.split(" ")
             args = " ".join(args)
             if args[-1] == ";":
@@ -1286,7 +1287,7 @@ class Circuit:
                     cregs_size[name] = nqubits
 
             elif command == "measure":
-                args = args.split("->")
+                args = args.replace(" ", "").split("->")
                 if len(args) != 2:
                     raise_error(ValueError, "Invalid QASM measurement:", line)
                 qubit = next(read_args(args[0]))
@@ -1434,7 +1435,21 @@ class Circuit:
                 gate_list.append((gatetype, list(qubit_list), params))
 
         for line in lines:
-            parse_line(line)
+            line = (
+                re.sub(r"^OPENQASM [0-9]+\.[0-9]+;*\s*", "", line)
+                .replace(r"/\s\s+/g", " ")
+                .replace(r"^[\s]+", "")
+                .replace("[\\s]+\n", "")
+                .replace("; ", ";")
+                .replace(", ", ",")
+            )
+            _lines = [line]
+            if len(re.findall(";", line)) > 1 and not line.split(" ")[0] == "gate":
+                _lines = line.split(";")[:-1]
+            for l in _lines:
+                print(l)
+                if l != "":
+                    parse_line(l)
 
         # Create measurement gate qubit lists from registers
         for i, (gatetype, register, _) in enumerate(gate_list):
