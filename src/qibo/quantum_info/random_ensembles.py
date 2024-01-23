@@ -567,7 +567,7 @@ def random_density_matrix(
 
     if pure:
         state = random_statevector(dims, seed=seed, backend=backend)
-        state = np.outer(state, np.transpose(np.conj(state)))
+        state = np.outer(state, np.conj(state))
     else:
         if metric in ["hilbert-schmidt", "ginibre"]:
             state = random_gaussian_matrix(
@@ -583,7 +583,7 @@ def random_density_matrix(
                 state, random_gaussian_matrix(dims, rank, seed=seed, backend=backend)
             )
             state = np.dot(state, np.transpose(np.conj(state)))
-            state = state / np.trace(state)
+            state /= np.trace(state)
 
     state = backend.cast(state, dtype=state.dtype)
 
