@@ -339,9 +339,7 @@ def haar_integral(
             rand_unit_density, dtype=rand_unit_density.dtype
         )
         for _ in range(samples):
-            haar_state = np.reshape(
-                random_statevector(dim, haar=True, backend=backend), (-1, 1)
-            )
+            haar_state = np.reshape(random_statevector(dim, backend=backend), (-1, 1))
 
             rho = haar_state @ np.conj(np.transpose(haar_state))
 
