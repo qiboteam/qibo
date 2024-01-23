@@ -95,4 +95,3 @@ output-format = "colorized"
 [tool.pytest.ini_options]
 testpaths = ['tests/']
 filterwarnings = ['ignore::RuntimeWarning']
-
