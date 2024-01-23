@@ -415,7 +415,7 @@ def random_quantum_channel(
     return super_op
 
 
-def random_statevector(dims: int, haar: bool = False, seed=None, backend=None):
+def random_statevector(dims: int, seed=None, backend=None):
     """Creates a random statevector :math:`\\ket{\\psi}`.
 
     .. math::
@@ -427,10 +427,6 @@ def random_statevector(dims: int, haar: bool = False, seed=None, backend=None):
 
     Args:
         dims (int): dimension of the matrix.
-        haar (bool, optional): if ``True``, statevector is created by sampling a
-            Haar random unitary :math:`U_{\\text{haar}}` and acting with it on a
-            random computational basis state :math:`\\ket{k}`, i.e.
-            :math:`\\ket{\\psi} = U_{\\text{haar}} \\ket{k}`. Defaults to ``False``.
         seed (int or :class:`numpy.random.Generator`, optional): Either a generator of
             random numbers or a fixed seed to initialize a generator. If ``None``,
             initializes a generator with a random seed. Defaults to ``None``.
@@ -444,9 +440,6 @@ def random_statevector(dims: int, haar: bool = False, seed=None, backend=None):
 
     if dims <= 0:
         raise_error(ValueError, "dim must be of type int and >= 1")
-
-    if not isinstance(haar, bool):
-        raise_error(TypeError, f"haar must be type bool, but it is type {type(haar)}.")
 
     if (
         seed is not None
@@ -464,18 +457,11 @@ def random_statevector(dims: int, haar: bool = False, seed=None, backend=None):
         np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
     )
 
-    if not haar:
-        # sample real and imag parts of complex amplitude in [-1, 1]
-        state = 1j * (2 * local_state.random(dims) - 1)
-        state += 2 * local_state.random(dims) - 1
-        state /= np.linalg.norm(state)
-        state = backend.cast(state, dtype=state.dtype)
-    else:
-        # select a random column of a haar random unitary
-        k = local_state.integers(low=0, high=dims)
-        state = random_unitary(dims, measure="haar", seed=seed, backend=backend)[:, k]
+    state = local_state.standard_normal(dims).astype(complex)
+    state += 1.0j * local_state.standard_normal(dims)
+    state /= np.linalg.norm(state)
 
-    return state
+    return backend.cast(state, dtype=state.dtype)
 
 
 def random_density_matrix(
