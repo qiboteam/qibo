@@ -12,7 +12,7 @@ num_angles = 21
 angles0 = [i * math.pi / num_angles for i in range(num_angles)]
 
 
-def test_classifier_circuit2(backend, capsys, mad):
+def test_classifier_circuit2(backend, capsys):
     """ """
 
     with capsys.disabled():
