@@ -3,8 +3,7 @@ import math
 import numpy as np
 import pytest
 
-from qibo import gates
-from qibo import get_backend
+from qibo import gates, get_backend
 from qibo.models import Circuit
 from qibo.models.qcnn import QuantumCNN
 
