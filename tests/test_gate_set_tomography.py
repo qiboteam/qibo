@@ -207,6 +207,7 @@ def test_GST_two_qubit_empty_circuit():
     result = GST(nqubits)
     assert np.shape(result) == (16, 16)
 
+
 def test_GST_one_qubit_with_gate():
     nqubits = 1
     test_gate = gates.H(0)
