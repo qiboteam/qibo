@@ -1447,7 +1447,6 @@ class Circuit:
             if len(re.findall(";", line)) > 1 and not line.split(" ")[0] == "gate":
                 _lines = line.split(";")[:-1]
             for l in _lines:
-                print(l)
                 if l != "":
                     parse_line(l)
 

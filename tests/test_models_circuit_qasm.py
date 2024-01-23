@@ -536,3 +536,13 @@ measure q[0] -> a[0];measure q[1]->a[1];"""
     assert isinstance(c.queue[1], gates.X)
     assert isinstance(c.queue[2], gates.CNOT)
     assert c.measurement_tuples == {"a": (0, 1)}
+
+
+def test_from_qasm_gate_command():
+    target = """OPENQASM 3.0;
+include "qelib1.inc";
+gate bob(theta) q0,q1 { h q1; cx q0,q1; rz(theta) q1; cx q0,q1; h q1; }
+gate alice q0,q1 { rzx(pi/4) q0,q1; x q0; rzx(-pi/4) q0,q1; }
+qreg q[3];
+bob(-pi/2) q[0],q[2];
+alice q[1],q[0];"""
