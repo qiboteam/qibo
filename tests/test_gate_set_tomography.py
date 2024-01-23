@@ -198,7 +198,7 @@ def test_GST_execute_circuit():
 
 def test_GST_one_qubit_empty_circuit():
     nqubits = 1
-    result = GST(nqubits)
+    result = GST(nqubits, gate=None, invert_register=None, noise_model=None, backend=None)
     assert np.shape(result) == (4, 4)
 
 
