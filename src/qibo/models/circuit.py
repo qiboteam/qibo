@@ -1322,23 +1322,25 @@ class Circuit:
             elif command == "gate":
                 _name, _qubits, *_ = args.split(" ")
                 _separate_gates = (
-                    re.search(r"\{(.*?)\}", args).group(0)[2:-3].split("; ")
+                    re.search(r"\{(.*?)\}", args).group(0)[2:-2].split(";")
                 )
                 _params = re.search(r"\((.*?)\)", _name)
                 _qubits = _qubits.split(",")
                 if _params:
                     _name = _name[: _params.start()]
-                    _params = _params.group()[0][1:-1].split(",")
+                    _params = _params.group()[1:-1].split(",")
                 composite_gates[_name] = []
                 for g in _separate_gates:
                     _g_name, _g_qubits = g.split(" ")
                     _g_params = re.search(r"\((.*?)\)", _g_name)
-                    if _g_params:
+                    if _g_params and _params:
                         _g_name = _g_name[: _g_params.start()]
                         _g_params = [
                             f"{{{_params.index(p)}}}"
-                            for p in _g_params.group()[0][1:-1].split(",")
+                            for p in _g_params.group()[1:-1].split(",")
                         ]
+                    else:
+                        _g_params = None
                     _g_qubits = [
                         f"{{{_qubits.index(q)}}}" for q in _g_qubits.split(",")
                     ]
@@ -1366,7 +1368,7 @@ class Circuit:
                     )
                 except:
                     if gatename in composite_gates:
-                        _q = line.split(" ")[-1].split(",")
+                        _q = line.split(" ")[-1].replace(";", "").split(",")
                         _p = (
                             re.search(r"\((.*?)\)", line.split(" ")[0])
                             .group(0)
