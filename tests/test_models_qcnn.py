@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from qibo import gates
+from qibo import get_backend
 from qibo.models import Circuit
 from qibo.models.qcnn import QuantumCNN
 
@@ -11,8 +12,13 @@ num_angles = 21
 angles0 = [i * math.pi / num_angles for i in range(num_angles)]
 
 
-def test_classifier_circuit2(backend):
+def test_classifier_circuit2(backend, capsys, mad):
     """ """
+
+    with capsys.disabled():
+        backender = get_backend()
+        print(str(backender))
+
     nqubits = 2
     nlayers = int(nqubits / 2)
     init_state = np.ones(2**nqubits) / np.sqrt(2**nqubits)  #
