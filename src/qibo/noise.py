@@ -1,6 +1,7 @@
 import collections
 from itertools import combinations
 from math import log2
+from typing import Optional, Union
 
 from qibo import gates
 from qibo.config import raise_error
@@ -211,7 +212,13 @@ class NoiseModel:
         self.errors = collections.defaultdict(list)
         self.noise_model = {}
 
-    def add(self, error, gate=None, qubits=None, condition=None):
+    def add(
+        self,
+        error,
+        gate: Optional[gates.Gate] = None,
+        qubits: Optional[Union[int, tuple]] = None,
+        condition=None,
+    ):
         """Add a quantum error for a specific gate and qubit to the noise model.
 
         Args:
@@ -224,13 +231,14 @@ class NoiseModel:
                 :class:`qibo.noise.ReadoutError`,
                 :class:`qibo.noise.ResetError`,
                 :class:`qibo.noise.UnitaryError`,
-                :class:`qibo.noise.KrausError` and
+                :class:`qibo.noise.KrausError`, and
                 :class:`qibo.noise.CustomError`.
-            gate (:class:`qibo.gates.Gate`): gate after which the noise will be added.
+            gate (:class:`qibo.gates.Gate`, optional): gate after which the noise will be added.
                 If ``None``, the noise will be added after each gate except
                 :class:`qibo.gates.Channel` and :class:`qibo.gates.M`.
-            qubits (tuple): qubits where the noise will be applied. If ``None``,
+            qubits (int or tuple, optional): qubits where the noise will be applied. If ``None``,
                 the noise will be added after every instance of the gate.
+                Defaults to ``None``.
             condition (callable, optional): function that takes :class:`qibo.gates.Gate`
                 object as an input and returns ``True`` if noise should be added to it.
 
@@ -306,9 +314,8 @@ class NoiseModel:
             circuit (:class:`qibo.models.circuit.Circuit`): quantum circuit
 
         Returns:
-            A (:class:`qibo.models.circuit.Circuit`) which corresponds
-            to the initial circuit with noise gates added according
-            to the noise model.
+            (:class:`qibo.models.circuit.Circuit`): initial circuit with noise gates
+                added according to the noise model.
         """
 
         if isinstance(self.noise_model, CompositeNoiseModel):
