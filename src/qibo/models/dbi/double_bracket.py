@@ -67,14 +67,14 @@ class DoubleBracketIteration:
             )
         elif mode is DoubleBracketGeneratorType.single_commutator:
             if d is None:
-                raise_error(ValueError, f"Cannot use group_commutator with matrix {d}")
+                d = self.diagonal_h_matrix
             operator = self.backend.calculate_matrix_exp(
                 1.0j * step,
                 self.commutator(d, self.h.matrix),
             )
         elif mode is DoubleBracketGeneratorType.group_commutator:
             if d is None:
-                d = self.diagonal_h_matrix
+                raise_error(ValueError, f"Cannot use group_commutator with matrix {d}")
             operator = (
                 self.h.exp(-step)
                 @ self.backend.calculate_matrix_exp(-step, d)

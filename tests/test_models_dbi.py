@@ -56,9 +56,6 @@ def test_double_bracket_iteration_single_commutator(backend, nqubits):
     )
     initial_off_diagonal_norm = dbf.off_diagonal_norm
 
-    with pytest.raises(ValueError):
-        dbf(mode=DoubleBracketGeneratorType.single_commutator, step=0.01)
-
     for _ in range(NSTEPS):
         dbf(step=0.01, d=d)
 
