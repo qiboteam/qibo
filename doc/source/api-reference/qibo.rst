@@ -2187,6 +2187,10 @@ Alternatively, a Clifford circuit can also be executed starting from the :class:
     circuit = random_clifford(nqubits)
     result = Clifford.from_circuit(circuit)
 
+.. autoclass:: qibo.backends.clifford.CliffordBackend
+    :members:
+    :member-order: bysource
+
 Gate set tomography
 """""""""""""""""""
 
@@ -2234,8 +2238,3 @@ used in probabilistic error cancellation.
     # Do gate set tomography for CNOT gate
     gate_CNOT = gates.CNOT(0,1)
     Ojk_2qb_CNOT = GST(nqubits=2, nshots=int(1e4), noise_model=depol, gate=gate_CNOT)
-
-
-.. autoclass:: qibo.backends.clifford.CliffordBackend
-    :members:
-    :member-order: bysource
