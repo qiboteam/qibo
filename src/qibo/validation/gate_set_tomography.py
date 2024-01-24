@@ -90,7 +90,9 @@ def reset_register(circuit, invert_register):
                 if theta is None:
                     new_circ.add(getattr(gates, data["_class"])(0))
                 else:
-                    new_circ.add(getattr(gates, data["_class"])(0, theta)) # <-- Not covered in tests. Thinking about future proofing when we need to invert a random gate that has theta parameter.
+                    new_circ.add(
+                        getattr(gates, data["_class"])(0, theta)
+                    )  # <-- Not covered in tests. Thinking about future proofing when we need to invert a random gate that has theta parameter.
 
     elif invert_register == "sp_t":
         new_circ = circuit.copy()
@@ -125,7 +127,6 @@ def GST_execute_circuit(circuit, k, j, nshots=int(1e4), backend=None):
     Returns:
         numpy.float: Expectation value given by either Tr(Q_j rho_k) or Tr(Q_j O_l rho_k).
     """
-    
 
     nqubits = circuit.nqubits
     if nqubits != 1 and nqubits != 2:
@@ -139,7 +140,7 @@ def GST_execute_circuit(circuit, k, j, nshots=int(1e4), backend=None):
         else:
             if backend is None:  # pragma: no cover
                 backend = GlobalBackend()
-        
+
             result = backend.execute_circuit(circuit, nshots=nshots)
             observables = [symbols.I, symbols.Z, symbols.Z, symbols.Z]
             observables_list = list(product(observables, repeat=nqubits))[j]
@@ -149,7 +150,7 @@ def GST_execute_circuit(circuit, k, j, nshots=int(1e4), backend=None):
                     observable *= obs(q)
             observable = SymbolicHamiltonian(observable, nqubits=nqubits)
             expectation_val = result.expectation_from_samples(observable)
-        
+
             return expectation_val
 
 
