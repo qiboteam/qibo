@@ -7,6 +7,7 @@ from qibo.tomography.gate_set_tomography import (
     measurement_basis,
     prepare_states,
     reset_register,
+    GST,
 )
 
 
