@@ -2191,7 +2191,7 @@ Gate set tomography
 """""""""""""""""""
 
 Gate set tomography is used to obtain the noise profile of each operator.
-The noise profile can then be inverted and encoded in basis operations to be 
+The noise profile can then be inverted and encoded in basis operations to be
 used in probabilistic error cancellation.
 
 .. testsetup:: python
@@ -2205,7 +2205,7 @@ used in probabilistic error cancellation.
     np.random.seed(seed_value)
 
 .. testcode:: python
-    
+
     # Create the quantum circuit
     circuit = Circuit(2)
     circuit.add(gates.H(0))
@@ -2213,7 +2213,7 @@ used in probabilistic error cancellation.
     circuit.add(gates.CNOT(0,1))
     circuit.add(gates.M(0))
     circuit.add(gates.M(1))
-    
+
     # Create noise model
     lam = 0.4
     depol = NoiseModel()
