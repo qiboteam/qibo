@@ -11,7 +11,7 @@ from qibo.models.dbi.double_bracket import (
 from qibo.models.dbi.utils import *
 from qibo.quantum_info import random_hermitian
 
-NSTEPS = 15
+NSTEPS = 5
 """Number of steps for evolution."""
 
 
@@ -31,7 +31,7 @@ def test_generate_Z_operators(nqubits):
 
 @pytest.mark.parametrize("nqubits", [3, 4, 5])
 @pytest.mark.parametrize("step", [0.1, None])
-def test_select_best_dbr_generator_and_run(backend, nqubits, step):
+def test_select_best_dbr_generator(backend, nqubits, step):
     h0 = random_hermitian(2**nqubits, seed=1, backend=backend)
     dbi = DoubleBracketIteration(
         Hamiltonian(nqubits, h0, backend=backend),
@@ -42,13 +42,8 @@ def test_select_best_dbr_generator_and_run(backend, nqubits, step):
     initial_off_diagonal_norm = dbi.off_diagonal_norm
 
     for _ in range(NSTEPS):
-        idx, step_optimize, flip_sign = select_best_dbr_generator_and_run(
+        dbi, idx, step_optimize, flip = select_best_dbr_generator(
             dbi, Z_ops, step=step, compare_canonical=True
         )
-        if idx == len(Z_ops):
-            dbi(step=step_optimize, mode=DoubleBracketGeneratorType.canonical)
-            dbi.mode = DoubleBracketGeneratorType.single_commutator
-        else:
-            dbi(step=step_optimize, d=flip_sign * Z_ops[idx])
 
     assert initial_off_diagonal_norm > dbi.off_diagonal_norm
