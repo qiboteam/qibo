@@ -183,7 +183,7 @@ def GST(
     else:
         if backend is None:  # pragma: no cover
             backend = GlobalBackend()
-    
+
         if gate is not None:
             qb_gate = len(gate.qubits)
             if nqubits != qb_gate:
@@ -191,7 +191,7 @@ def GST(
                     f"Mismatched inputs: nqubits given as {nqubits}. {gate} is a {qb_gate}-qubit gate."
                 )
             gate = gate.__class__(*list(range(qb_gate)), **gate.init_kwargs)
-    
+
         # GST for empty circuit or with gates
         matrix_jk = np.zeros((4**nqubits, 4**nqubits))
         for k in range(4**nqubits):
@@ -214,10 +214,10 @@ def GST(
                         "sp_t"
                         " to reset both qubits."
                     )
-    
+
             if gate is not None:
                 circ.add(gate)
-    
+
             for j in range(4**nqubits):
                 new_circ = measurement_basis(j, circ)
                 if noise_model is not None and backend.name != "qibolab":
