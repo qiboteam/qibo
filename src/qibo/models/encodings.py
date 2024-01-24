@@ -1,6 +1,7 @@
 """Module with functions that encode classical data into quantum circuits."""
 
 import math
+from typing import Optional, Union
 
 import numpy as np
 from scipy.stats import rv_continuous
@@ -8,6 +9,54 @@ from scipy.stats import rv_continuous
 from qibo import gates
 from qibo.config import raise_error
 from qibo.models.circuit import Circuit
+
+
+def comp_basis_encoder(
+    basis_element: Union[int, str, list, tuple], nqubits: Optional[int] = None
+):
+    if not isinstance(basis_element, (int, str, list, tuple)):
+        raise_error(
+            TypeError,
+            "basis_element must be either type int or str or list or tuple, "
+            + f"but it is type {type(basis_element)}.",
+        )
+
+    if isinstance(basis_element, (str, list, tuple)):
+        if any(elem not in ["0", "1", 0, 1] for elem in basis_element):
+            raise_error(ValueError, "all elements must be 0 or 1.")
+        if len(basis_element) > nqubits:
+            raise_error(
+                ValueError,
+                f"nqubits ({nqubits}) must be >= len(basis_element) ({len(basis_element)}).",
+            )
+
+    if not isinstance(nqubits, int):
+        raise_error(
+            TypeError, f"nqubits must be type int, but it is type {type(nqubits)}."
+        )
+
+    if nqubits is None:
+        if isinstance(basis_element, int):
+            raise_error(
+                ValueError, f"nqubits must be specified when basis_element is type int."
+            )
+        else:
+            nqubits = len(basis_element)
+
+    if isinstance(basis_element, int):
+        basis_element = f"{basis_element:0{nqubits}b}"
+
+    if isinstance(basis_element, (str, tuple)):
+        basis_element = list(basis_element)
+
+    basis_element = list(map(int, basis_element))
+
+    circuit = Circuit(nqubits)
+    for qubit, elem in enumerate(basis_element):
+        if elem == 1:
+            circuit.add(gates.X(qubit))
+
+    return circuit
 
 
 def unary_encoder(data, architecture: str = "tree"):
