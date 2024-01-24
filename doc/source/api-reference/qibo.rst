@@ -849,7 +849,7 @@ U1q
 
     - Pauli-:math:`Z` rotation: :class:`qibo.gates.RZ`
     - Arbitrary :math:`ZZ` rotation: :class:`qibo.gates.RZZ`
-    - Fully-entangling :math:`ZZ`-interaction: :math:`R_{ZZ}(\\pi/2)`
+    - Fully-entangling :math:`ZZ`-interaction: :math:`R_{ZZ}(\pi/2)`
 
 
 _______________________
