@@ -40,11 +40,6 @@ def comp_basis_encoder(
     if isinstance(basis_element, (str, list, tuple)):
         if any(elem not in ["0", "1", 0, 1] for elem in basis_element):
             raise_error(ValueError, "all elements must be 0 or 1.")
-        if len(basis_element) > nqubits:
-            raise_error(
-                ValueError,
-                f"nqubits ({nqubits}) must be >= len(basis_element) ({len(basis_element)}).",
-            )
 
     if nqubits is not None and not isinstance(nqubits, int):
         raise_error(
