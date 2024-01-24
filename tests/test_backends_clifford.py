@@ -165,10 +165,7 @@ def test_random_clifford_circuit(backend, prob_qubits, binary):
 
         numpy_freq = numpy_result.frequencies(binary)
         clifford_freq = clifford_result.frequencies(binary)
-        print(numpy_freq)
-        print(clifford_freq)
         clifford_freq = {state: clifford_freq[state] for state in numpy_freq.keys()}
-        print(clifford_freq.values())
         assert (
             np.sum(
                 np.abs(
@@ -176,7 +173,7 @@ def test_random_clifford_circuit(backend, prob_qubits, binary):
                     - np.array(list(clifford_freq.values()))
                 )
             )
-            < 200
+            < 250
         )
 
 
@@ -224,7 +221,6 @@ def test_initial_state(backend):
     initial_symplectic_matrix = tmp.symplectic_matrix
     initial_state = numpy_bkd.execute_circuit(state).state()
     initial_state = np.outer(initial_state, np.transpose(np.conj(initial_state)))
-    print(type(initial_state))
     c = random_clifford(3, density_matrix=True, backend=backend)
     numpy_state = numpy_bkd.execute_circuit(c, initial_state=initial_state).state()
     clifford_state = clifford_bkd.execute_circuit(

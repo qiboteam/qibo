@@ -457,9 +457,7 @@ def test_measurement_basis_list(backend):
     c.add(gates.X(3))
     c.add(gates.M(0, 1, 2, 3, basis=[gates.X, gates.Z, gates.X, gates.Z]))
     result = c(nshots=100)
-    print(result.frequencies())
     assert result.frequencies() == {"0011": 100}
-    print(c.draw())
     assert (
         c.draw()
         == """q0: ─H─H───M─
