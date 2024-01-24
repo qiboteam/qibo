@@ -211,8 +211,8 @@ def test_GST_execute_circuit_wrong_qb():
     circuit.add(gates.M(0))
     k = 0
     j = 0
-    
-     # Check if ValueError is raised
+
+    # Check if ValueError is raised
     with pytest.raises(ValueError, match="nqubits needs to be either 1 or 2"):
         result = GST_execute_circuit(circuit, k, j)
 
