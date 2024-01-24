@@ -3,11 +3,11 @@ import pytest
 import qibo
 from qibo import gates
 from qibo.tomography.gate_set_tomography import (
+    GST,
     GST_execute_circuit,
     measurement_basis,
     prepare_states,
     reset_register,
-    GST,
 )
 
 
