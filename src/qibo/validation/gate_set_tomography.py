@@ -2,10 +2,9 @@ from itertools import product
 
 import numpy as np
 
-from qibo import gates, symbols
+from qibo import Circuit, gates, symbols
 from qibo.backends import GlobalBackend
 from qibo.hamiltonians import SymbolicHamiltonian
-from qibo import Circuit
 
 
 def prepare_states(k, nqubits):
