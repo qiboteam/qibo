@@ -247,6 +247,12 @@ Data Encoders
 
 We provide a family of algorithms that encode classical data into quantum circuits.
 
+Computational Basis Encoder
+"""""""""""""""""""""""""""
+
+.. autofunction:: qibo.models.encodings.comp_basis_encoder
+
+
 Unary Encoder
 """""""""""""
 
