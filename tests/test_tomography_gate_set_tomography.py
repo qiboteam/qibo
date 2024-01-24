@@ -280,12 +280,12 @@ def test_GST_two_qubit_with_gate_with_valid_reset_register_string():
 
 def test_GST_empty_circuit_with_invalid_qb():
     nqubits = 3
-    
+
     # Check if ValueError is raised
     with pytest.raises(ValueError, match="nqubits needs to be either 1 or 2"):
         result = GST(
-        nqubits, gate=None, invert_register=None, noise_model=None, backend=None
-    )
+            nqubits, gate=None, invert_register=None, noise_model=None, backend=None
+        )
 
 
 ##################################################################################
