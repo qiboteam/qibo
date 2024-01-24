@@ -20,7 +20,7 @@ def gaussian(x, a, b, c):
 @pytest.mark.parametrize(
     "basis_element", [5, "101", ["1", "0", "1"], [1, 0, 1], ("1", "0", "1"), (1, 0, 1)]
 )
-def test_comp_basis_encoder(backend, basis_element, nqubits):
+def test_comp_basis_encoder(backend, basis_element):
     with pytest.raises(TypeError):
         circuit = comp_basis_encoder(2.3)
     with pytest.raises(ValueError):
