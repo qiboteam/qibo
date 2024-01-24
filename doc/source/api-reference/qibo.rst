@@ -2187,6 +2187,54 @@ Alternatively, a Clifford circuit can also be executed starting from the :class:
     circuit = random_clifford(nqubits)
     result = Clifford.from_circuit(circuit)
 
+Gate set tomography
+"""""""""""""""""""
+
+Gate set tomography is used to obtain the noise profile of each operator.
+The noise profile can then be inverted and encoded in basis operations to be 
+used in probabilistic error cancellation.
+
+.. testsetup:: python
+
+    from qibo.noise import NoiseModel, DepolarizingError
+    from qibo import Circuit
+    from qibo import gates
+    import numpy as np
+
+    seed_value = 42  # You can use any integer value as the seed
+    np.random.seed(seed_value)
+
+.. testcode:: python
+    
+    # Create the quantum circuit
+    circuit = Circuit(2)
+    circuit.add(gates.H(0))
+    circuit.add(gates.RX(0, np.pi/7))
+    circuit.add(gates.CNOT(0,1))
+    circuit.add(gates.M(0))
+    circuit.add(gates.M(1))
+    
+    # Create noise model
+    lam = 0.4
+    depol = NoiseModel()
+    depol.add(DepolarizingError(lam))
+
+    # Do gate set tomography for an empty circuit by leaving gate=None.
+    gjk_1qb = GST(nqubits=1, nshots=int(1e4), noise_model=depol)
+    gjk_2qb = GST(nqubits=2, nshots=int(1e4), noise_model=depol)
+
+    # Do gate set tomography for Hadamard gate
+    gate_Hadamard = gates.H(0)
+    Ojk_1qb_Hadamard = GST(nqubits=1, nshots=int(1e4), noise_model=depol, gate=gate_Hadamard)
+
+    # Do gate set tomography for Rx(pi/7) gate
+    gate_RX = gates.RX(0, np.pi/7)
+    Ojk_1qb_RX = GST(nqubits=1, nshots=int(1e4), noise_model=depol, gate=gate_RX)
+
+    # Do gate set tomography for CNOT gate
+    gate_CNOT = gates.CNOT(0,1)
+    Ojk_2qb_CNOT = GST(nqubits=2, nshots=int(1e4), noise_model=depol, gate=gate_CNOT)
+
 
 .. autoclass:: qibo.backends.clifford.CliffordBackend
     :members:
