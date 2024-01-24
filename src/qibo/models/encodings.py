@@ -14,6 +14,22 @@ from qibo.models.circuit import Circuit
 def comp_basis_encoder(
     basis_element: Union[int, str, list, tuple], nqubits: Optional[int] = None
 ):
+    """Creates circuit that performs encoding of bitstrings into computational basis states.
+
+    Args:
+        basis_element (int or str or list or tuple): bitstring to be encoded.
+            If ``int``, ``nqubits`` must be specified.
+            If ``str``, must be composed of only :math:`0`s and :math:`1`s.
+            If ``list`` or ``tuple``, must be composed of :math:`0`s and
+            :math:`1`s as ``int`` or ``str``.
+        nqubits (int, optional): total number of qubits in the circuit.
+            If ``basis_element`` is ``int``, ``nqubits`` must be specified.
+            If ``nqubits`` is ``None``, ``nqubits`` defaults to length of ``basis_element``.
+            Defaults to ``None``.
+
+    Returns:
+       :class:`qibo.models.circuit.Circuit`: circuit encoding computational basis element.
+    """
     if not isinstance(basis_element, (int, str, list, tuple)):
         raise_error(
             TypeError,
