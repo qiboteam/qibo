@@ -2203,6 +2203,13 @@ used in probabilistic error cancellation.
     from qibo.noise import NoiseModel, DepolarizingError
     from qibo import Circuit
     from qibo import gates
+    from qibo.tomography.gate_set_tomography import (
+        GST_execute_circuit,
+        measurement_basis,
+        prepare_states,
+        reset_register,
+        GST,
+    )
     import numpy as np
 
     seed_value = 42  # You can use any integer value as the seed
