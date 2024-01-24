@@ -8,6 +8,7 @@ from qibo.config import raise_error
 from qibo.models import Circuit
 from qibo.transpiler._exceptions import PlacementError
 from qibo.transpiler.abstract import Placer, Router
+from qibo.transpiler.router import _find_connected_qubit
 
 
 def assert_placement(
@@ -125,8 +126,11 @@ class StarConnectivityPlacer(Placer):
                 )
             if len(gate.qubits) == 2:
                 if self.middle_qubit not in gate.qubits:
-                    new_middle = self._find_connected_qubit(
-                        gate.qubits, circuit.queue[i + 1 :], hardware_qubits
+                    new_middle = _find_connected_qubit(
+                        gate.qubits,
+                        circuit.queue[i + 1 :],
+                        hardware_qubits,
+                        error=PlacementError,
                     )
                     hardware_qubits[self.middle_qubit], hardware_qubits[new_middle] = (
                         new_middle,
@@ -135,28 +139,6 @@ class StarConnectivityPlacer(Placer):
                     break
 
         return dict(zip(["q" + str(i) for i in range(nqubits)], hardware_qubits))
-
-    def _find_connected_qubit(self, qubits, queue, hardware_qubits):
-        """
-        Finds which qubit should be mapped to hardware middle qubit
-        by looking at the two-qubit gates that follow.
-        """
-        possible_qubits = set(qubits)
-        for next_gate in queue:
-            if len(next_gate.qubits) > 2:
-                raise_error(
-                    PlacementError,
-                    "Gates targeting more than 2 qubits are not supported",
-                )
-            if len(next_gate.qubits) == 2:
-                possible_qubits &= {hardware_qubits.index(q) for q in next_gate.qubits}
-                if not possible_qubits:
-                    # freedom of choice
-                    return qubits[0]
-                elif len(possible_qubits) == 1:
-                    return possible_qubits.pop()
-        # freedom of choice
-        return qubits[0]
 
 
 class Trivial(Placer):

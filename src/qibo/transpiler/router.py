@@ -101,7 +101,10 @@ class StarConnectivityRouter(Router):
             elif len(qubits) == 2 and middle_qubit not in qubits:
                 # find which qubit should be moved
                 new_middle = _find_connected_qubit(
-                    qubits, circuit.queue[i + 1 :], hardware_qubits
+                    qubits,
+                    circuit.queue[i + 1 :],
+                    hardware_qubits,
+                    error=ConnectivityError,
                 )
                 # update hardware qubits according to the swap
                 hardware_qubits[middle_qubit], hardware_qubits[new_middle] = (
@@ -123,22 +126,26 @@ class StarConnectivityRouter(Router):
         return new, dict(zip(hardware_qubits_keys, hardware_qubits))
 
 
-def _find_connected_qubit(qubits, queue, hardware_qubits):
-    """Helper method for :meth:`qibo.transpiler.StarConnectivity`.
+def _find_connected_qubit(qubits, queue, hardware_qubits, error):
+    """Helper method for :meth:`qibo.transpiler.router.StarConnectivityRouter`
+    and :meth:`qibo.transpiler.router.StarConnectivityPlacer`.
 
     Finds which qubit should be mapped to hardware middle qubit
     by looking at the two-qubit gates that follow.
     """
     possible_qubits = set(qubits)
     for next_gate in queue:
+        if len(next_gate.qubits) > 2:
+            raise_error(
+                error,
+                "Gates targeting more than 2 qubits are not supported",
+            )
         if len(next_gate.qubits) == 2:
             possible_qubits &= {hardware_qubits.index(q) for q in next_gate.qubits}
             if not possible_qubits:
-                # freedom of choice
                 return qubits[0]
             elif len(possible_qubits) == 1:
                 return possible_qubits.pop()
-    # freedom of choice
     return qubits[0]
 
 
