@@ -1,13 +1,8 @@
-# test_gate_set_tomography.py
-
-import numpy as np
 import pytest
 
 import qibo
 from qibo import gates
-from qibo.noise import DepolarizingError, NoiseModel
-from qibo.validation.gate_set_tomography import (
-    GST,
+from qibo.tomography.gate_set_tomography import (
     GST_execute_circuit,
     measurement_basis,
     prepare_states,
