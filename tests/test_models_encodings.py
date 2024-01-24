@@ -17,7 +17,6 @@ def gaussian(x, a, b, c):
     return np.exp(a * x**2 + b * x + c)
 
 
-@pytest.mark.parametrize("nqubits", [3])
 @pytest.mark.parametrize(
     "basis_element", [5, "101", ["1", "0", "1"], [1, 0, 1], ("1", "0", "1"), (1, 0, 1)]
 )
@@ -38,7 +37,11 @@ def test_comp_basis_encoder(backend, basis_element, nqubits):
     target = np.kron(one, np.kron(zero, one))
     target = backend.cast(target, dtype=target.dtype)
 
-    state = comp_basis_encoder(basis_element, nqubits)
+    if isinstance(basis_element, int):
+        state = comp_basis_encoder(basis_element, nqubits=3)
+    else:
+        state = comp_basis_encoder(basis_element)
+
     state = backend.execute_circuit(state).state()
 
     backend.assert_allclose(state, target)
