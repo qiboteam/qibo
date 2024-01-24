@@ -175,7 +175,7 @@ def test_reset_register_invalid_string():
 #################################################################################
 
 
-def test_GST_execute_circuit():
+def test_GST_execute_circuit_1qb():
     nqubits = 1
     circuit = qibo.models.Circuit(nqubits)
     circuit.add(gates.M(0))
@@ -190,6 +190,33 @@ def test_GST_execute_circuit():
         assert isinstance(result, float)
 
 
+def test_GST_execute_circuit_2qb():
+    nqubits = 2
+    circuit = qibo.models.Circuit(nqubits)
+    circuit.add(gates.M(0))
+    k = 0
+    j = 0
+    result = GST_execute_circuit(circuit, k, j)
+    if j == 0:
+        # For j = 0, expect an exact match
+        assert result == 1.0
+    else:
+        # For other values of j, use pytest.approx
+        assert isinstance(result, float)
+
+
+def test_GST_execute_circuit_wrong_qb():
+    nqubits = 4
+    circuit = qibo.models.Circuit(nqubits)
+    circuit.add(gates.M(0))
+    k = 0
+    j = 0
+    
+     # Check if ValueError is raised
+    with pytest.raises(ValueError, match="nqubits needs to be either 1 or 2"):
+        result = GST_execute_circuit(circuit, k, j)
+
+
 #################################################################################
 
 
@@ -201,40 +228,40 @@ def test_GST_one_qubit_empty_circuit():
     assert np.shape(result) == (4, 4)
 
 
-# def test_GST_two_qubit_empty_circuit():
-#     nqubits = 2
-#     result = GST(nqubits)
-#     assert np.shape(result) == (16, 16)
+def test_GST_two_qubit_empty_circuit():
+    nqubits = 2
+    result = GST(nqubits)
+    assert np.shape(result) == (16, 16)
 
 
-# def test_GST_one_qubit_with_gate():
-#     nqubits = 1
-#     test_gate = gates.H(0)
-#     result = GST(nqubits, gate=test_gate)
-#     assert np.shape(result) == (4, 4)
+def test_GST_one_qubit_with_gate():
+    nqubits = 1
+    test_gate = gates.H(0)
+    result = GST(nqubits, gate=test_gate)
+    assert np.shape(result) == (4, 4)
 
 
-# def test_GST_two_qubit_with_gate():
-#     nqubits = 2
-#     test_gate = gates.CNOT(0, 1)
-#     result = GST(nqubits, gate=test_gate)
-#     assert np.shape(result) == (16, 16)
+def test_GST_two_qubit_with_gate():
+    nqubits = 2
+    test_gate = gates.CNOT(0, 1)
+    result = GST(nqubits, gate=test_gate)
+    assert np.shape(result) == (16, 16)
 
 
-# def test_GST_one_qubit_with_gate_with_valid_reset_register_string():
-#     nqubits = 1
-#     test_gate = gates.H(0)
-#     invert_register = "sp_0"
-#     result = GST(nqubits=nqubits, gate=test_gate, invert_register=invert_register)
-#     assert np.shape(result) == (4, 4)
+def test_GST_one_qubit_with_gate_with_valid_reset_register_string():
+    nqubits = 1
+    test_gate = gates.H(0)
+    invert_register = "sp_0"
+    result = GST(nqubits=nqubits, gate=test_gate, invert_register=invert_register)
+    assert np.shape(result) == (4, 4)
 
 
-# def test_GST_two_qubit_with_gate_with_valid_reset_register_string():
-#     nqubits = 2
-#     test_gate = gates.CZ(0, 1)
-#     invert_register = "sp_t"
-#     result = GST(nqubits=nqubits, gate=test_gate, invert_register=invert_register)
-#     assert np.shape(result) == (16, 16)
+def test_GST_two_qubit_with_gate_with_valid_reset_register_string():
+    nqubits = 2
+    test_gate = gates.CZ(0, 1)
+    invert_register = "sp_t"
+    result = GST(nqubits=nqubits, gate=test_gate, invert_register=invert_register)
+    assert np.shape(result) == (16, 16)
 
 
 ##################################################################################
