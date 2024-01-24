@@ -190,6 +190,7 @@ def test_GST_execute_circuit():
 
 #################################################################################
 
+
 def test_GST_one_qubit_empty_circuit():
     nqubits = 1
     result = GST(
