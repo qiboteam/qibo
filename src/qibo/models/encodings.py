@@ -30,7 +30,7 @@ def comp_basis_encoder(
                 f"nqubits ({nqubits}) must be >= len(basis_element) ({len(basis_element)}).",
             )
 
-    if not isinstance(nqubits, int):
+    if nqubits is not None and not isinstance(nqubits, int):
         raise_error(
             TypeError, f"nqubits must be type int, but it is type {type(nqubits)}."
         )
