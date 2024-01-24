@@ -11,6 +11,7 @@ from qibo.tomography.gate_set_tomography import (
     reset_register,
 )
 
+
 def test_prepare_states_valid_k_single_qubit():
     # Test for valid input with a single qubit
     k = 2
