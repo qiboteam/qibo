@@ -1176,14 +1176,15 @@ def frame_potential(
 
     .. math::
         \\mathcal{F}_{\\mathcal{U}}^{(t)} = \\int_{U,V \\in \\mathcal{U}} \\,
-            \\text{d}U \\, \\text{d}V \\, \\text{abs}\\bigl[\\text{tr}(U^{\\dagger} \\, V)\\bigr]^{2t} \\, ,
+            \\text{d}U \\, \\text{d}V \\, \\bigl| \\, \\text{tr}(U^{\\dagger} \\, V)
+            \\, \\bigr|^{2t} \\, ,
 
     where :math:`\\mathcal{U}` is the group of unitaries defined by the parametrized circuit.
     The frame potential is approximated by the average
 
     .. math::
         \\mathcal{F}_{\\mathcal{U}}^{(t)} \\approx \\frac{1}{N} \\,
-            \\sum_{k=1}^{N} \\, \\text{abs}\\bigl[ \\text{tr}(U_{k}^{\\dagger} \\, V_{k})\\bigr]^{2t} \\, ,
+            \\sum_{k=1}^{N} \\, \\bigl| \\, \\text{tr}(U_{k}^{\\dagger} \\, V_{k}) \\, \\bigr|^{2t} \\, ,
 
     where :math:`N` is the number of ``samples``.
 
