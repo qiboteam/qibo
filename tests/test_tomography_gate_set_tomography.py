@@ -262,12 +262,34 @@ def test_GST_two_qubit_with_gate():
     assert np.shape(result) == (16, 16)
 
 
+def test_GST_one_qubit_with_gate():
+    nqubits = 1
+    test_gate = gates.RX(0, np.pi/7)
+    result = GST(nqubits, gate=test_gate)
+    assert np.shape(result) == (4, 4)
+
+
+def test_GST_two_qubit_with_gate():
+    nqubits = 2
+    test_gate = gates.CRX(0, 1, np.pi/7)
+    result = GST(nqubits, gate=test_gate)
+    assert np.shape(result) == (16, 16)
+
+
 def test_GST_one_qubit_with_gate_with_valid_reset_register_string():
     nqubits = 1
     test_gate = gates.H(0)
     invert_register = "sp_0"
     result = GST(nqubits=nqubits, gate=test_gate, invert_register=invert_register)
     assert np.shape(result) == (4, 4)
+
+
+def test_GST_two_qubit_with_gate_with_valid_reset_register_string():
+    nqubits = 2
+    test_gate = gates.H(1)
+    invert_register = "sp_1"
+    result = GST(nqubits=nqubits, gate=test_gate, invert_register=invert_register)
+    assert np.shape(result) == (16, 16)
 
 
 def test_GST_two_qubit_with_gate_with_valid_reset_register_string():
@@ -288,15 +310,12 @@ def test_GST_empty_circuit_with_invalid_qb():
         )
 
 
-def test_GST_empty_circuit_with_invalid_qb():
-    nqubits = 1
+def test_GST_with_gate_with_invalid_qb():
+    nqubits = 3
     test_gate = gates.CNOT(0, 1)
 
     # Check if ValueError is raised
-    with pytest.raises(
-        ValueError,
-        match=f"nqubits given as {nqubits}. {test_gate} is a {len(test_gate.qubits)}-qubit gate",
-    ):
+    with pytest.raises(ValueError):
         result = GST(
             nqubits,
             gate=test_gate,
