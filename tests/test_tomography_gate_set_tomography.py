@@ -291,6 +291,22 @@ def test_GST_two_qubit_with_gate_with_valid_reset_register_string():
     assert np.shape(result) == (16, 16)
 
 
+def test_GST_one_qubit_with_param_gate_with_valid_reset_register_string():
+    nqubits = 1
+    test_gate = gates.RX(0, np.pi/7)
+    invert_register = "sp_0"
+    result = GST(nqubits=nqubits, gate=None, invert_register=invert_register)
+    assert np.shape(result) == (4, 4)
+
+
+def test_GST_two_qubit_with_param_gate_with_valid_reset_register_string():
+    nqubits = 2
+    test_gate = gates.RX(1, np.pi/7)
+    invert_register = "sp_1"
+    result = GST(nqubits=nqubits, gate=None, invert_register=invert_register)
+    assert np.shape(result) == (16, 16)
+
+
 def test_GST_two_qubit_with_gate_with_valid_reset_register_string():
     nqubits = 2
     test_gate = gates.CZ(0, 1)
@@ -331,6 +347,21 @@ def test_GST_with_gate_with_invalid_qb():
             backend=None,
         )
 
+
+def test_GST_with_gate_with_invalid_qb():
+    nqubits = 2
+    test_gate = gates.H(0)
+
+    # Check if ValueError is raised
+    with pytest.raises(ValueError):
+        result = GST(
+            nqubits,
+            gate=test_gate,
+            invert_register=None,
+            noise_model=None,
+            backend=None,
+        )
+        
 
 def test_GST_one_qubit_empty_circuit_with_noise():
     nshots = int(1e4)
