@@ -55,9 +55,13 @@ def test_operational_logic(backend):
         channel.to_choi(backend=backend), partition, backend=backend
     )
 
-    # Adding QuantumNetwork to non-QuantumNetwork
+    # Multiplying QuantumNetwork with non-QuantumNetwork
     with pytest.raises(TypeError):
         network @ network.matrix(backend)
+
+    # Linking QuantumNetwork with non-QuantumNetwork
+    with pytest.raises(TypeError):
+        network.link_product(network.matrix(backend))
 
     # Sum with itself has to match multiplying by int
     backend.assert_allclose(
@@ -96,6 +100,7 @@ def test_parameters(backend):
     assert network.unital()
     assert network.hermitian()
     assert network.positive_semidefinite()
+    assert network.channel()
 
 
 def test_with_states(backend):
@@ -139,7 +144,7 @@ def test_with_unitaries(backend):
         unitary_2 @ unitary_1, (dims, dims), pure=True, backend=backend
     )
 
-    subscript = "ij,jk -> ik"
+    subscript = "il,lk -> ik"
     backend.assert_allclose(
         network_1.link_product(network_2, subscript).matrix(backend=backend),
         network_3._full(),

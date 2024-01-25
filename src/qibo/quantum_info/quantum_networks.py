@@ -281,7 +281,7 @@ class QuantumNetwork:
 
         return np.einsum("jklm,km -> jl", self._matrix, state)
 
-    def link_product(self, second_network, subscripts: Optional[str] = None):
+    def link_product(self, second_network, subscripts: str = "ij,jk -> ik"):
         """Link product between two quantum networks.
 
         The link product is not commutative. Here, we assume that
@@ -295,7 +295,6 @@ class QuantumNetwork:
             subscripts (str, optional): Specifies the subscript for summation using
                 the Einstein summation convention. For more details, please refer to
                 `numpy.einsum <https://numpy.org/doc/stable/reference/generated/numpy.einsum.html>`_.
-                Defaults to ``None``.
 
         Returns:
             :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`: Quantum network resulting
@@ -308,12 +307,11 @@ class QuantumNetwork:
                 + "``QuantumNetwork`` with a non-``QuantumNetwork``.",
             )
 
-        if subscripts is not None:
-            if not isinstance(subscripts, str):
-                raise_error(
-                    TypeError,
-                    f"subscripts must be type str, but it is type {type(subscripts)}.",
-                )
+        if not isinstance(subscripts, str):
+            raise_error(
+                TypeError,
+                f"subscripts must be type str, but it is type {type(subscripts)}.",
+            )
 
         subscripts = subscripts.replace(" ", "")
 
@@ -334,7 +332,8 @@ class QuantumNetwork:
 
         if not channel_subscripts and not inv_subscripts and not super_subscripts:
             raise_error(
-                NotImplementedError, "Subscripts do not match any implemented pattern."
+                NotImplementedError,
+                "Subscripts do not match any implemented pattern.",
             )
 
         first_matrix = self._full()
