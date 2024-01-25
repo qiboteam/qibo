@@ -196,40 +196,39 @@ def GST(
                 " to reset both qubits."
             )
 
-    else:
-        if backend is None:  # pragma: no cover
-            backend = GlobalBackend()
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    if gate is not None:
+        qb_gate = len(gate.qubits)
+        if nqubits != qb_gate:
+            raise ValueError(
+                f"Mismatched inputs: nqubits given as {nqubits}. {gate} is a {qb_gate}-qubit gate."
+            )
+        gate = gate.__class__(*list(range(qb_gate)), **gate.init_kwargs)
+
+    # GST for empty circuit or with gates
+    matrix_jk = np.zeros((4**nqubits, 4**nqubits))
+    for k in range(4**nqubits):
+        circ = prepare_states(k, nqubits)
+        if invert_register is not None:
+            inverted_circuit = reset_register(circ, invert_register)
+            if invert_register == "sp_0":
+                circ.add(inverted_circuit.on_qubits(0))
+            elif invert_register == "sp_1":
+                circ.add(inverted_circuit.on_qubits(1))
+            elif invert_register == "sp_t":
+                circ.add(inverted_circuit.on_qubits(0, 1))
 
         if gate is not None:
-            qb_gate = len(gate.qubits)
-            if nqubits != qb_gate:
-                raise ValueError(
-                    f"Mismatched inputs: nqubits given as {nqubits}. {gate} is a {qb_gate}-qubit gate."
-                )
-            gate = gate.__class__(*list(range(qb_gate)), **gate.init_kwargs)
+            circ.add(gate)
 
-        # GST for empty circuit or with gates
-        matrix_jk = np.zeros((4**nqubits, 4**nqubits))
-        for k in range(4**nqubits):
-            circ = prepare_states(k, nqubits)
-            if invert_register is not None:
-                inverted_circuit = reset_register(circ, invert_register)
-                if invert_register == "sp_0":
-                    circ.add(inverted_circuit.on_qubits(0))
-                elif invert_register == "sp_1":
-                    circ.add(inverted_circuit.on_qubits(1))
-                elif invert_register == "sp_t":
-                    circ.add(inverted_circuit.on_qubits(0, 1))
-
-            if gate is not None:
-                circ.add(gate)
-
-            for j in range(4**nqubits):
-                new_circ = measurement_basis(j, circ)
-                if noise_model is not None and backend.name != "qibolab":
-                    new_circ = noise_model.apply(new_circ)
-                expectation_val = GST_execute_circuit(
-                    new_circ, k, j, nshots, backend=backend
-                )
-                matrix_jk[j, k] = expectation_val
-        return matrix_jk
+        for j in range(4**nqubits):
+            new_circ = measurement_basis(j, circ)
+            if noise_model is not None and backend.name != "qibolab":
+                new_circ = noise_model.apply(new_circ)
+            expectation_val = GST_execute_circuit(
+                new_circ, k, j, nshots, backend=backend
+            )
+            matrix_jk[j, k] = expectation_val
+    return matrix_jk
