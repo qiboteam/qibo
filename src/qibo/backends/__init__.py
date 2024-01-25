@@ -8,7 +8,7 @@ from qibo.backends.tensorflow import TensorflowBackend
 from qibo.config import log, raise_error
 
 
-def construct_backend(backend, platform=None, runcard=None, token=None):
+def construct_backend(backend, platform=None, runcard=None, token=None, provider=None):
     if backend == "qibojit":
         from qibojit.backends import CupyBackend, CuQuantumBackend, NumbaBackend
 
@@ -41,18 +41,18 @@ def construct_backend(backend, platform=None, runcard=None, token=None):
             else:
                 platform = construct_backend(platform)
         return CliffordBackend(platform)
-    elif backend == "qibo_client":  # pragma: no cover
+    elif backend == "qibo":  # pragma: no cover
         from qibo_cloud_backends.backends.qibo_client import (  # pylint: disable=E0401
             QiboClientBackend,
         )
 
-        return QiboClientBackend(platform=platform, runcard=runcard, token=token)
-    elif backend == "qiskit_client":  # pragma: no cover
+        return QiboClientBackend(platform=platform, provider=provider, token=token)
+    elif backend == "qiskit":  # pragma: no cover
         from qibo_cloud_backends.backends.qiskit_client import (  # pylint: disable=E0401
             QiskitClientBackend,
         )
 
-        return QiskitClientBackend(platform=platform, runcard=runcard, token=token)
+        return QiskitClientBackend(platform=platform, provider=provider, token=token)
     else:  # pragma: no cover
         raise_error(ValueError, f"Backend {backend} is not available.")
 
@@ -95,14 +95,16 @@ class GlobalBackend(NumpyBackend):
 
     @classmethod
     def set_backend(
-        cls, backend, platform=None, runcard=None, token=None
+        cls, backend, platform=None, runcard=None, token=None, provider=None
     ):  # pragma: no cover
         if (
             cls._instance is None
             or cls._instance.name != backend
             or cls._instance.platform != platform
         ):
-            cls._instance = construct_backend(backend, platform, runcard)
+            cls._instance = construct_backend(
+                backend, platform, runcard, token, provider
+            )
         log.info(f"Using {cls._instance} backend on {cls._instance.device}")
 
 
