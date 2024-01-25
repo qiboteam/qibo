@@ -287,5 +287,14 @@ def test_GST_empty_circuit_with_invalid_qb():
             nqubits, gate=None, invert_register=None, noise_model=None, backend=None
         )
 
+def test_GST_empty_circuit_with_invalid_qb():
+    nqubits = 1
+    test_gate = gates.CNOT(0, 1)
+    
+    # Check if ValueError is raised
+    with pytest.raises(ValueError, match="nqubits given as {nqubits}. {test_gate} is a {len(test_gate.nqubits)}-qubit gate"):
+        result = GST(
+            nqubits, gate=test_gate, invert_register=None, noise_model=None, backend=None
+        )
 
 ##################################################################################
