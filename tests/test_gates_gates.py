@@ -714,7 +714,8 @@ def test_iswap(backend):
 def test_siswap(backend):
     final_state = apply_gates(backend, [gates.X(1), gates.SiSWAP(0, 1)], nqubits=2)
     target_state = np.zeros_like(final_state)
-    target_state[2] = 1.0j
+    target_state[1] = 1.0 / np.sqrt(2)
+    target_state[2] = 1.0j / np.sqrt(2)
     backend.assert_allclose(final_state, target_state)
 
     assert not gates.SiSWAP(0, 1).clifford
