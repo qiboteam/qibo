@@ -10,6 +10,7 @@ from qibo.tomography.gate_set_tomography import (
     prepare_states,
     reset_register,
 )
+from qibo.noise import NoiseModel, DepolarizingError
 
 
 def test_prepare_states_valid_k_single_qubit():
@@ -331,6 +332,19 @@ def test_GST_with_gate_with_invalid_qb():
             noise_model=None,
             backend=None,
         )
+
+
+def test_GST_one_qubit_empty_circuit_with_noise():
+    nshots = int(1e4)
+    lam = 0.5
+    depol = NoiseModel()
+    depol.add(DepolarizingError(lam))
+    noise_model = depol
+    nqubits = 1
+    result = GST(
+        nqubits, gate=None, invert_register=None, noise_model=depol, backend=None
+    )
+    assert np.shape(result) == (4, 4)
 
 
 ##################################################################################
