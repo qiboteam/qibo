@@ -295,7 +295,7 @@ def test_GST_empty_circuit_with_invalid_qb():
     # Check if ValueError is raised
     with pytest.raises(
         ValueError,
-        match="nqubits given as {nqubits}. {test_gate} is a {len(test_gate.nqubits)}-qubit gate",
+        match=f"nqubits given as {nqubits}. {test_gate} is a {len(test_gate.nqubits)}-qubit gate",
     ):
         result = GST(
             nqubits,
