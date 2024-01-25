@@ -279,17 +279,15 @@ def test_GST_two_qubit_with_gate():
 
 def test_GST_one_qubit_with_gate_with_valid_reset_register_string():
     nqubits = 1
-    test_gate = gates.H(0)
     invert_register = "sp_0"
-    result = GST(nqubits=nqubits, gate=test_gate, invert_register=invert_register)
+    result = GST(nqubits=nqubits, gate=None, invert_register=invert_register)
     assert np.shape(result) == (4, 4)
 
 
 def test_GST_two_qubit_with_gate_with_valid_reset_register_string():
     nqubits = 2
-    test_gate = gates.H(1)
     invert_register = "sp_1"
-    result = GST(nqubits=nqubits, gate=test_gate, invert_register=invert_register)
+    result = GST(nqubits=nqubits, gate=None, invert_register=invert_register)
     assert np.shape(result) == (16, 16)
 
 
