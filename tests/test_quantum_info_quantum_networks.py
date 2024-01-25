@@ -139,7 +139,7 @@ def test_with_unitaries(backend):
         unitary_2 @ unitary_1, (dims, dims), pure=True, backend=backend
     )
 
-    subscript = "il,lk -> ik"
+    subscript = "ij,jk -> ik"
     backend.assert_allclose(
         network_1.link_product(network_2, subscript).matrix(backend=backend),
         network_3._full(),
