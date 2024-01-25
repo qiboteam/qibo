@@ -208,7 +208,7 @@ def test_GST_execute_circuit_1qb():
 def test_GST_execute_circuit_2qb():
     nqubits = 2
     circuit = qibo.models.Circuit(nqubits)
-    circuit.add(gates.M(0))
+    circuit.add(gates.H(0))
     k = 0
     j = 0
     result = GST_execute_circuit(circuit, k, j)
@@ -301,17 +301,19 @@ def test_GST_two_qubit_with_gate_with_valid_reset_register_string():
     assert np.shape(result) == (16, 16)
 
 
-def test_GST_two_qubit_with_gate_with_INvalid_reset_register_string():
+def test_GST_two_qubit_with_gate_with_invalid_reset_register_string():
     nqubits = 2
     test_gate = gates.CZ(0, 1)
     invert_register = "sp_3"
-    result = GST(nqubits=nqubits, gate=test_gate, invert_register=invert_register)
-    assert np.shape(result) == (16, 16)
+
+    with pytest.raises(NameError):
+        result = GST(
+            nqubits=nqubits, gate=test_gate, invert_register=invert_register
+        )
 
 
 def test_GST_empty_circuit_with_invalid_qb():
     nqubits = 3
-
     # Check if ValueError is raised
     with pytest.raises(ValueError, match="nqubits needs to be either 1 or 2"):
         result = GST(
