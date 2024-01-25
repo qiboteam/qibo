@@ -1,6 +1,8 @@
+import math
 from copy import deepcopy
 from enum import Enum, auto
 from functools import partial
+from typing import Optional
 
 import hyperopt
 import numpy as np
@@ -19,6 +21,17 @@ class DoubleBracketGeneratorType(Enum):
     group_commutator = auto()
     """Use group commutator approximation"""
     # TODO: add double commutator (does it converge?)
+
+
+class DoubleBracketScheduling(Enum):
+    """Define the DBI scheduling strategies."""
+
+    use_hyperopt = auto()
+    """Use hyperopt package."""
+    use_grid_search = auto()
+    """Use greedy grid search."""
+    use_polynomial_approximation = auto()
+    """Use polynomial expansion (analytical) of the loss function."""
 
 
 class DoubleBracketIteration:
@@ -49,10 +62,12 @@ class DoubleBracketIteration:
         self,
         hamiltonian: Hamiltonian,
         mode: DoubleBracketGeneratorType = DoubleBracketGeneratorType.canonical,
+        scheduling: DoubleBracketScheduling = DoubleBracketScheduling.use_grid_search,
     ):
         self.h = hamiltonian
         self.h0 = deepcopy(self.h)
         self.mode = mode
+        self.scheduling = scheduling
 
     def __call__(
         self, step: float, mode: DoubleBracketGeneratorType = None, d: np.array = None
@@ -115,6 +130,36 @@ class DoubleBracketIteration:
         """Get Hamiltonian's backend."""
         return self.h0.backend
 
+    def grid_search_step(
+        self,
+        step_min: float = 1e-5,
+        step_max: float = 1,
+        num_evals: int = 100,
+        space: Optional[np.array] = None,
+        d: Optional[np.array] = None,
+    ):
+        """
+        Greedy optimization of the iteration step.
+
+        Args:
+            step_min: lower bound of the search grid;
+            step_max: upper bound of the search grid;
+            mnum_evals: number of iterations between step_min and step_max;
+            d: diagonal operator for generating double-bracket iterations.
+
+        Returns:
+            (float): optimized best iteration step (minimizing off-diagonal norm).
+        """
+        if space is None:
+            space = np.linspace(step_min, step_max, num_evals)
+
+        if d is None:
+            d = self.diagonal_h_matrix
+
+        loss_list = [self.loss(step, d=d) for step in space]
+        idx_max_loss = loss_list.index(min(loss_list))
+        return space[idx_max_loss]
+
     def hyperopt_step(
         self,
         step_min: float = 1e-5,
@@ -124,10 +169,10 @@ class DoubleBracketIteration:
         optimizer: callable = None,
         look_ahead: int = 1,
         verbose: bool = False,
-        d: np.array = None,
+        d: Optional[np.array] = None,
     ):
         """
-        Optimize iteration step.
+        Optimize iteration step using hyperopt.
 
         Args:
             step_min: lower bound of the search grid;
@@ -140,12 +185,14 @@ class DoubleBracketIteration:
             d: diagonal operator for generating double-bracket iterations.
 
         Returns:
-            (float): optimized best iteration step.
+            (float): optimized best iteration step (minimizing off-diagonal norm).
         """
         if space is None:
             space = hyperopt.hp.uniform
         if optimizer is None:
             optimizer = hyperopt.tpe
+        if d is None:
+            d = self.diagonal_h_matrix
 
         space = space("step", step_min, step_max)
         best = hyperopt.fmin(
@@ -156,6 +203,92 @@ class DoubleBracketIteration:
             verbose=verbose,
         )
         return best["step"]
+
+    def polynomial_step(
+        self,
+        n: int = 3,
+        n_max: int = 5,
+        d: np.array = None,
+        backup_scheduling: DoubleBracketScheduling = DoubleBracketScheduling.use_grid_search,
+    ):
+        r"""
+        Optimizes iteration step by solving the n_th order polynomial expansion of the loss function.
+        e.g. $n=2$: $2\Trace(\sigma(\Gamma_1 + s\Gamma_2 + s^2/2\Gamma_3)\sigma(\Gamma_0 + s\Gamma_1 + s^2/2\Gamma_2))
+        Args:
+            n (int, optional): The order to which the loss function is expanded. Defaults to 3.
+            n_max (int, optional): The maximum order allowed for recurring calls of `polynomial_step`. Defaults to 5.
+            d (np.array, optional): The diagonal operator, default as $\delta(H)$.
+        """
+
+        if d is None:
+            d = self.diagonal_h_matrix
+
+        def sigma(h: np.array):
+            return h - self.backend.cast(np.diag(np.diag(self.backend.to_numpy(h))))
+
+        def Gamma(k: int):
+            r"""Computes the k_th Gamma function i.e $\Gamma_k=[W,...,[W,[W,H]]...]$, where we take k nested commutators with $W = [D, H]$"""
+            if k == 0:
+                return self.h.matrix
+            else:
+                W = self.commutator(d, sigma(self.h.matrix))
+                result = self.h.matrix
+                for _ in range(k):
+                    result = self.commutator(W, result)
+            return result
+
+        # list starting from s^n highest order to s^0
+        sigma_gamma_list = np.array([sigma(Gamma(k)) for k in range(n + 2)])
+        exp_list = np.array([1 / math.factorial(k) for k in range(n + 1)])
+        # coefficients for rotation with [W,H] and H
+        c1 = [
+            exp_coef * delta_gamma
+            for exp_coef, delta_gamma in zip(exp_list, sigma_gamma_list[1:])
+        ]
+        c2 = [
+            exp_coef * delta_gamma
+            for exp_coef, delta_gamma in zip(exp_list, sigma_gamma_list[:-1])
+        ]
+        # product coefficient
+        trace_coefficients = [0] * (2 * n + 1)
+        for k in range(n + 1):
+            for j in range(n + 1):
+                power = k + j
+                product_matrix = c1[k] @ c2[j]
+                trace_coefficients[power] += 2 * np.trace(product_matrix)
+        roots = np.roots(list(reversed(trace_coefficients[: n + 1])))
+        error = 1e-3
+        real_positive_roots = [
+            np.real(root)
+            for root in roots
+            if np.imag(root) < error and np.real(root) > 0
+        ]
+        # solution exists, return minimum s
+        if len(real_positive_roots) > 0:
+            return min(real_positive_roots)
+        # solution does not exist, resort to backup scheduling
+        elif (
+            backup_scheduling == DoubleBracketScheduling.use_polynomial_approximation
+            and n < n_max + 1
+        ):
+            return self.polynomial_step(d, n=n + 1, backup_scheduling=backup_scheduling)
+        else:
+            return self.choose_step(d, backup_scheduling)
+
+    def choose_step(
+        self,
+        d: Optional[np.array] = None,
+        scheduling: Optional[DoubleBracketScheduling] = None,
+        **kwargs,
+    ):
+        if scheduling is None:
+            scheduling = self.scheduling
+        if scheduling is DoubleBracketScheduling.use_grid_search:
+            return self.grid_search_step(d=d, **kwargs)
+        if scheduling is DoubleBracketScheduling.use_hyperopt:
+            return self.hyperopt_step(d=d, **kwargs)
+        if scheduling is DoubleBracketScheduling.use_polynomial_approximation:
+            return self.polynomial_step(d=d, **kwargs)
 
     def loss(self, step: float, d: np.array = None, look_ahead: int = 1):
         """
