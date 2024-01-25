@@ -341,14 +341,22 @@ class QuantumNetwork:
         second_matrix = second_network._full()  # pylint: disable=W0212
 
         if super_subscripts:
-            # cexpr = "ijklabcd,jkbc->ilad"
-            cexpr = subscripts[:4] + "abcd," + subscripts[5:7] + "bc->" + subscripts[9:]
+            cexpr = (
+                subscripts[:4]
+                + "abcd,"
+                + subscripts[5:7]
+                + "bc->"
+                + subscripts[9:]
+                + "ad"
+            )
             return QuantumNetwork(
                 np.einsum(cexpr, first_matrix, second_matrix),
                 [self.partition[0], self.partition[3]],
             )
 
-        cexpr = "ijab,jkbc->ikac"
+        cexpr = (
+            subscripts[:2] + "ab," + subscripts[3:5] + "bc->" + subscripts[7:] + "ac"
+        )
 
         if inv_subscripts:
             return QuantumNetwork(
