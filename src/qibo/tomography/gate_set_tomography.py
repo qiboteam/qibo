@@ -181,7 +181,11 @@ def GST(
 
     # Check if invert_register has the correct string.
     if invert_register is not None:
-        if invert_register != "sp_0" and invert_register != "sp_1" and invert_register != "sp_t":
+        if (
+            invert_register != "sp_0"
+            and invert_register != "sp_1"
+            and invert_register != "sp_t"
+        ):
             raise NameError(
                 f"{invert_register} not recognized. Input "
                 "sp_0"
