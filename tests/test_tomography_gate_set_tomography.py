@@ -264,14 +264,14 @@ def test_GST_two_qubit_with_gate():
 
 def test_GST_one_qubit_with_gate():
     nqubits = 1
-    test_gate = gates.RX(0, np.pi/7)
+    test_gate = gates.RX(0, np.pi / 7)
     result = GST(nqubits, gate=test_gate)
     assert np.shape(result) == (4, 4)
 
 
 def test_GST_two_qubit_with_gate():
     nqubits = 2
-    test_gate = gates.CRX(0, 1, np.pi/7)
+    test_gate = gates.CRX(0, 1, np.pi / 7)
     result = GST(nqubits, gate=test_gate)
     assert np.shape(result) == (16, 16)
 
