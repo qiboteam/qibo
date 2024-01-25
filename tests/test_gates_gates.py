@@ -711,6 +711,16 @@ def test_iswap(backend):
     assert gates.iSWAP(0, 1).unitary
 
 
+def test_siswap(backend):
+    final_state = apply_gates(backend, [gates.X(1), gates.SiSWAP(0, 1)], nqubits=2)
+    target_state = np.zeros_like(final_state)
+    target_state[2] = 1.0j
+    backend.assert_allclose(final_state, target_state)
+
+    assert not gates.SiSWAP(0, 1).clifford
+    assert gates.SiSWAP(0, 1).unitary
+
+
 def test_fswap(backend):
     nqubits = 2
     initial_state = random_statevector(2**nqubits, backend=backend)
