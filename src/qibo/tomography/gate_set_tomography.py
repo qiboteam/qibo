@@ -173,11 +173,24 @@ def GST(
         numpy.array: Numpy array with elements jk equivalent to either Tr(Q_j rho_k) or Tr(Q_j O_l rho_k).
     """
 
-    # Check if class_qubit_gate corresponds to nqubits-gate.
+    # Check if gate is 1 or 2 qubit gate.
     if nqubits != 1 and nqubits != 2:
         raise ValueError(
             f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2."
         )
+
+    # Check if invert_register has the correct string.
+    if invert_register is not None:
+        if invert_register != "sp_0" and invert_register != "sp_1" and invert_register != "sp_t":
+            raise NameError(
+                f"{invert_register} not recognized. Input "
+                "sp_0"
+                " to reset qubit 0, "
+                "sp_1"
+                " to reset qubit 1, or "
+                "sp_t"
+                " to reset both qubits."
+            )
 
     else:
         if backend is None:  # pragma: no cover
@@ -203,16 +216,6 @@ def GST(
                     circ.add(inverted_circuit.on_qubits(1))
                 elif invert_register == "sp_t":
                     circ.add(inverted_circuit.on_qubits(0, 1))
-                else:
-                    raise NameError(
-                        f"{invert_register} not recognized. Input "
-                        "sp_0"
-                        " to reset qubit 0, "
-                        "sp_1"
-                        " to reset qubit 1, or "
-                        "sp_t"
-                        " to reset both qubits."
-                    )
 
             if gate is not None:
                 circ.add(gate)
