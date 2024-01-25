@@ -1,8 +1,8 @@
 """Module defining the QuantumNetwork class and adjacent functions."""
+import re
 import warnings
 from functools import reduce
 from operator import mul
-from re import match
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
@@ -308,27 +308,58 @@ class QuantumNetwork:
                 + "``QuantumNetwork`` with a non-``QuantumNetwork``.",
             )
 
-        channel_subscripts = match(r"i\s*j\s*,\s*j\s*k\s* -> \s*i\s*k", subscripts)
-        inv_subscripts = match(r"i\s*j\s*,\s*k\s*i\s* -> \s*k\s*j", subscripts)
+        if subscripts is not None:
+            if not isinstance(subscripts, str):
+                raise_error(
+                    TypeError,
+                    f"subscripts must be type str, but it is type {type(subscripts)}.",
+                )
+
+        subscripts = subscripts.replace(" ", "")
+
+        pattern_two = re.compile("[a-z][a-z],[a-z][a-z]->[a-z][a-z]")
+        pattern_four = re.compile("[a-z][a-z][a-z][a-z],[a-z][a-z]->[a-z][a-z]")
+
+        channel_subscripts = (
+            bool(re.match(pattern_two, subscripts)) and subscripts[1] == subscripts[3]
+        )
+        inv_subscripts = (
+            bool(re.match(pattern_two, subscripts)) and subscripts[0] == subscripts[4]
+        )
+        super_subscripts = (
+            bool(re.match(pattern_four, subscripts))
+            and subscripts[1] == subscripts[5]
+            and subscripts[2] == subscripts[6]
+        )
+
+        if not channel_subscripts and not inv_subscripts and not super_subscripts:
+            raise_error(
+                NotImplementedError, "Subscripts do not match any implemented pattern."
+            )
 
         first_matrix = self._full()
         second_matrix = second_network._full()  # pylint: disable=W0212
 
-        if subscripts is None or channel_subscripts is not None:
-            cexpr = "ijab,jkbc->ikac"
+        if super_subscripts:
+            # cexpr = "ijklabcd,jkbc->ilad"
+            cexpr = subscripts[:4] + "abcd," + subscripts[5:7] + "bc->" + subscripts[9:]
             return QuantumNetwork(
                 np.einsum(cexpr, first_matrix, second_matrix),
-                [self.partition[0], second_network.partition[1]],
+                [self.partition[0], self.partition[3]],
             )
 
-        if inv_subscripts is not None:
-            cexpr = "ijab,jkbc->ikac"
+        cexpr = "ijab,jkbc->ikac"
+
+        if inv_subscripts:
             return QuantumNetwork(
                 np.einsum(cexpr, first_matrix, second_matrix),
                 [second_network.partition[0], self.partition[1]],
             )
 
-        raise_error(NotImplementedError, "Not implemented.")
+        return QuantumNetwork(
+            np.einsum(cexpr, first_matrix, second_matrix),
+            [self.partition[0], second_network.partition[1]],
+        )
 
     def copy(self):
         """Returns a copy of the :class:`qibo.quantum_info.quantum_networks.QuantumNetwork` object."""
