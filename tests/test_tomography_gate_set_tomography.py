@@ -134,6 +134,19 @@ def test_reset_register_sp_0():
     assert isinstance(inverse_circuit, qibo.models.circuit.Circuit)
 
 
+def test_reset_register_sp_0():
+    # Test resetting qubit 0
+
+    nqubits = 1
+    test_circuit = qibo.models.Circuit(nqubits)
+    test_circuit.add(gates.H(0))
+    test_circuit.add(gates.RX(0, np.pi/3))
+
+    inverse_circuit = reset_register(test_circuit, "sp_0")
+
+    assert isinstance(inverse_circuit, qibo.models.circuit.Circuit)
+
+
 def test_reset_register_sp_1():
     # Test resetting qubit 1
 
