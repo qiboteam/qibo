@@ -307,9 +307,7 @@ def test_GST_two_qubit_with_gate_with_invalid_reset_register_string():
     invert_register = "sp_3"
 
     with pytest.raises(NameError):
-        result = GST(
-            nqubits=nqubits, gate=test_gate, invert_register=invert_register
-        )
+        result = GST(nqubits=nqubits, gate=test_gate, invert_register=invert_register)
 
 
 def test_GST_empty_circuit_with_invalid_qb():
