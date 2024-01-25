@@ -65,7 +65,7 @@ def test_singlequbit_gates_cirq(backend):
     c1.add(gates.I(0))
     final_state_c1 = backend.execute_circuit(c1).state()
 
-    c2 = circuit_from_qasm(c1.to_qasm().replace("OPENQASM 3.0", "OPENQASM 2.0"))
+    c2 = circuit_from_qasm(c1.to_qasm())
     c2depth = len(cirq.Circuit(c2.all_operations()))
     assert c1.depth == c2depth
     final_state_c2 = (
@@ -88,7 +88,7 @@ def test_multiqubit_gates_cirq(backend):
     c1.add(gates.X(0).controlled_by(1))
     final_state_c1 = backend.execute_circuit(c1).state()
 
-    c2 = circuit_from_qasm(c1.to_qasm().replace("OPENQASM 3.0", "OPENQASM 2.0"))
+    c2 = circuit_from_qasm(c1.to_qasm())
     c2depth = len(cirq.Circuit(c2.all_operations()))
     assert c1.depth == c2depth
     final_state_c2 = (
@@ -112,7 +112,7 @@ def test_toffoli_cirq(backend):
     c1.add(gates.TOFFOLI(1, 2, 0))
     final_state_c1 = backend.execute_circuit(c1).state()
 
-    c2 = circuit_from_qasm(c1.to_qasm().replace("OPENQASM 3.0", "OPENQASM 2.0"))
+    c2 = circuit_from_qasm(c1.to_qasm())
     c2depth = len(cirq.Circuit(c2.all_operations()))
     assert c1.depth == c2depth
     final_state_c2 = (
@@ -132,7 +132,7 @@ def test_parametrized_gate_cirq(backend):
     c1.add(gates.RY(1, 0.1234))
     final_state_c1 = backend.execute_circuit(c1).state()
 
-    c2 = circuit_from_qasm(c1.to_qasm().replace("OPENQASM 3.0", "OPENQASM 2.0"))
+    c2 = circuit_from_qasm(c1.to_qasm())
     c2depth = len(cirq.Circuit(c2.all_operations()))
     assert c1.depth == c2depth
     final_state_c2 = (
@@ -152,7 +152,7 @@ def test_cu1_cirq():
     c1.add(gates.CU1(0, 1, 0.567))
     # catches unknown gate "cu1"
     with pytest.raises(exception.QasmException):
-        c2 = circuit_from_qasm(c1.to_qasm().replace("OPENQASM 3.0", "OPENQASM 2.0"))
+        c2 = circuit_from_qasm(c1.to_qasm())
 
 
 def test_ugates_cirq(backend):
@@ -162,7 +162,7 @@ def test_ugates_cirq(backend):
     c1.add(gates.U2(2, 0.5, 0.6))
     final_state_c1 = backend.execute_circuit(c1).state()
 
-    c2 = circuit_from_qasm(c1.to_qasm().replace("OPENQASM 3.0", "OPENQASM 2.0"))
+    c2 = circuit_from_qasm(c1.to_qasm())
     c2depth = len(cirq.Circuit(c2.all_operations()))
     assert c1.depth == c2depth
     final_state_c2 = (
