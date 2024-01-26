@@ -1,6 +1,5 @@
 """Module defining the QuantumNetwork class and adjacent functions."""
 import re
-import warnings
 from functools import reduce
 from operator import mul
 from typing import List, Optional, Tuple, Union
@@ -561,8 +560,8 @@ class QuantumNetwork:
         if self._backend is None:
             self._backend = GlobalBackend()
 
-        if not self.hermitian():
-            warnings.warn("Input matrix is not Hermitian.")
+        # if not self.hermitian():
+        #     warnings.warn("Input matrix is not Hermitian.")
 
         if isinstance(self.partition, list):
             self.partition = tuple(self.partition)
