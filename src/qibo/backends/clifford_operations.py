@@ -1,3 +1,5 @@
+from functools import reduce
+
 import numpy as np
 
 
@@ -354,7 +356,7 @@ def _exponent(x1, z1, x2, z2):
     return exp
 
 
-def _rowsum(symplectic_matrix, h, i, nqubits):
+def _rowsum(symplectic_matrix, h, i, nqubits, determined=False):
     """Helper function that updates the symplectic matrix by setting the h-th generator equal to the (i+h)-th one. This is done to keep track of the phase of the h-th row of the symplectic matrix (r[h]). The function is applied parallely over all the rows h and i passed.
 
     Args:
@@ -377,21 +379,24 @@ def _rowsum(symplectic_matrix, h, i, nqubits):
     r = np.ones(h.shape[0], dtype=bool)
     r[ind] = False
 
+    xi_xh = xi ^ xh
+    zi_zh = zi ^ zh
+    if determined:
+        r = reduce(np.logical_xor, r)
+        xi_xh = reduce(np.logical_xor, xi_xh)
+        zi_zh = reduce(np.logical_xor, zi_zh)
     symplectic_matrix[h, -1] = r
-    symplectic_matrix[h, :nqubits] = xi ^ xh
-    symplectic_matrix[h, nqubits:-1] = zi ^ zh
+    symplectic_matrix[h, :nqubits] = xi_xh
+    symplectic_matrix[h, nqubits:-1] = zi_zh
     return symplectic_matrix
 
 
 def _determined_outcome(state, q, nqubits):
     state[-1, :] = False
-    for i in state[:nqubits, q].nonzero()[0]:
-        state = _rowsum(
-            state,
-            np.array([2 * nqubits], dtype=np.uint),
-            np.array([i + nqubits], dtype=np.uint),
-            nqubits,
-        )
+    idx = state[:nqubits, q].nonzero()[0] + nqubits
+    state = _rowsum(
+        state, 2 * nqubits * np.ones(idx.shape, dtype=int), idx, nqubits, True
+    )
     return state, np.uint(state[-1, -1])
 
 
