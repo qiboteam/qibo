@@ -5,7 +5,11 @@ import pytest
 
 from qibo import gates
 from qibo.quantum_info.quantum_networks import QuantumNetwork
-from qibo.quantum_info.random_ensembles import random_density_matrix, random_unitary
+from qibo.quantum_info.random_ensembles import (
+    random_density_matrix,
+    random_gaussian_matrix,
+    random_unitary,
+)
 
 
 def test_errors(backend):
@@ -44,6 +48,14 @@ def test_errors(backend):
         network_2.system_output = (False,)
         network += network_2
 
+    # Multiplying QuantumNetwork with non-QuantumNetwork
+    with pytest.raises(TypeError):
+        network @ network.matrix(backend)
+
+    # Linking QuantumNetwork with non-QuantumNetwork
+    with pytest.raises(TypeError):
+        network.link_product(network.matrix(backend))
+
 
 def test_operational_logic(backend):
     lamb = float(np.random.rand())
@@ -54,14 +66,6 @@ def test_operational_logic(backend):
     network = QuantumNetwork(
         channel.to_choi(backend=backend), partition, backend=backend
     )
-
-    # Multiplying QuantumNetwork with non-QuantumNetwork
-    with pytest.raises(TypeError):
-        network @ network.matrix(backend)
-
-    # Linking QuantumNetwork with non-QuantumNetwork
-    with pytest.raises(TypeError):
-        network.link_product(network.matrix(backend))
 
     # Sum with itself has to match multiplying by int
     backend.assert_allclose(
@@ -152,5 +156,17 @@ def test_with_unitaries(backend):
 
     assert network_1.hermitian()
     assert network_1.causal()
-    assert network_1.causal()
     assert network_1.positive_semidefinite()
+
+
+def test_non_hermitian(backend):
+    nqubits = 2
+    dims = 2**nqubits
+
+    matrix = random_gaussian_matrix(dims**2, backend=backend)
+    network = QuantumNetwork(matrix, (dims, dims), pure=False, backend=backend)
+
+    assert not network.hermitian()
+    assert not network.causal()
+    assert not network.positive_semidefinite()
+    assert not network.channel()
