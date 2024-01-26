@@ -4,13 +4,7 @@ import pytest
 import qibo
 from qibo import gates
 from qibo.noise import DepolarizingError, NoiseModel
-from qibo.tomography.gate_set_tomography import (
-    GST_execute_circuit,
-    execute_GST,
-    measurement_basis,
-    prepare_states,
-    reset_register,
-)
+from qibo.tomography.gate_set_tomography import *
 
 
 def test_prepare_states_valid_k_single_qubit():
