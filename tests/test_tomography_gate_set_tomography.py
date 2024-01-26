@@ -6,6 +6,7 @@ from qibo import gates
 from qibo.noise import DepolarizingError, NoiseModel
 from qibo.tomography.gate_set_tomography import *
 
+
 def test_prepare_states_valid_k_single_qubit():
     # Test for valid input with a single qubit
     k = 2
