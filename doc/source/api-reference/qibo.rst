@@ -2203,13 +2203,7 @@ used in probabilistic error cancellation.
     from qibo.noise import NoiseModel, DepolarizingError
     from qibo import Circuit
     from qibo import gates
-    from qibo.tomography.gate_set_tomography import (
-        GST_execute_circuit,
-        measurement_basis,
-        prepare_states,
-        reset_register,
-        GST,
-    )
+    from qibo.tomography.gate_set_tomography import *
     import numpy as np
 
     seed_value = 42  # You can use any integer value as the seed
@@ -2236,12 +2230,12 @@ used in probabilistic error cancellation.
 
     # Do gate set tomography for Hadamard gate
     gate_Hadamard = gates.H(0)
-    Ojk_1qb_Hadamard = GST(nqubits=1, nshots=int(1e4), noise_model=depol, gate=gate_Hadamard)
+    Ojk_1qb_Hadamard = execute_GST(nqubits=1, nshots=int(1e4), noise_model=depol, gate=gate_Hadamard)
 
     # Do gate set tomography for Rx(pi/7) gate
     gate_RX = gates.RX(0, np.pi/7)
-    Ojk_1qb_RX = GST(nqubits=1, nshots=int(1e4), noise_model=depol, gate=gate_RX)
+    Ojk_1qb_RX = execute_GST(nqubits=1, nshots=int(1e4), noise_model=depol, gate=gate_RX)
 
     # Do gate set tomography for CNOT gate
     gate_CNOT = gates.CNOT(0,1)
-    Ojk_2qb_CNOT = GST(nqubits=2, nshots=int(1e4), noise_model=depol, gate=gate_CNOT)
+    Ojk_2qb_CNOT = execute_GST(nqubits=2, nshots=int(1e4), noise_model=depol, gate=gate_CNOT)
