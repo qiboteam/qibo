@@ -42,13 +42,13 @@ def construct_backend(backend, platform=None, runcard=None, token=None, provider
                 platform = construct_backend(platform)
         return CliffordBackend(platform)
     elif backend == "qibo":  # pragma: no cover
-        from qibo_cloud_backends.backends.qibo_client import (  # pylint: disable=E0401
+        from qibo_cloud_backends.qibo_client import (  # pylint: disable=E0401
             QiboClientBackend,
         )
 
         return QiboClientBackend(platform=platform, provider=provider, token=token)
     elif backend == "qiskit":  # pragma: no cover
-        from qibo_cloud_backends.backends.qiskit_client import (  # pylint: disable=E0401
+        from qibo_cloud_backends.qiskit_client import (  # pylint: disable=E0401
             QiskitClientBackend,
         )
 
@@ -142,8 +142,8 @@ def get_backend():
     return str(GlobalBackend())
 
 
-def set_backend(backend, platform=None, runcard=None, token=None):
-    GlobalBackend.set_backend(backend, platform, runcard, token)
+def set_backend(backend, platform=None, runcard=None, token=None, provider=None):
+    GlobalBackend.set_backend(backend, platform, runcard, token, provider)
 
 
 def get_precision():
