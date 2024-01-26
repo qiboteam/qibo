@@ -5,8 +5,8 @@ import qibo
 from qibo import gates
 from qibo.noise import DepolarizingError, NoiseModel
 from qibo.tomography.gate_set_tomography import (
-    execute_GST,
     GST_execute_circuit,
+    execute_GST,
     measurement_basis,
     prepare_states,
     reset_register,
@@ -324,7 +324,9 @@ def test_GST_two_qubit_with_gate_with_valid_reset_register_string():
     nqubits = 2
     test_gate = gates.CZ(0, 1)
     invert_register = "sp_t"
-    result = execute_GST(nqubits=nqubits, gate=test_gate, invert_register=invert_register)
+    result = execute_GST(
+        nqubits=nqubits, gate=test_gate, invert_register=invert_register
+    )
     assert np.shape(result) == (16, 16)
 
 
@@ -333,7 +335,9 @@ def test_GST_two_qubit_with_gate_with_invalid_reset_register_string():
     test_gate = gates.CZ(0, 1)
     invert_register = "sp_3"
     with pytest.raises(NameError):
-        result = execute_GST(nqubits=nqubits, gate=test_gate, invert_register=invert_register)
+        result = execute_GST(
+            nqubits=nqubits, gate=test_gate, invert_register=invert_register
+        )
 
 
 def test_GST_empty_circuit_with_invalid_qb():
