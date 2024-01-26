@@ -2225,8 +2225,8 @@ used in probabilistic error cancellation.
     depol.add(DepolarizingError(lam))
 
     # Do gate set tomography for an empty circuit by leaving gate=None.
-    gjk_1qb = GST(nqubits=1, nshots=int(1e4), noise_model=depol)
-    gjk_2qb = GST(nqubits=2, nshots=int(1e4), noise_model=depol)
+    gjk_1qb = execute_GST(nqubits=1, nshots=int(1e4), noise_model=depol)
+    gjk_2qb = execute_GST(nqubits=2, nshots=int(1e4), noise_model=depol)
 
     # Do gate set tomography for Hadamard gate
     gate_Hadamard = gates.H(0)
