@@ -33,17 +33,22 @@ def construct_backend(backend, platform=None, runcard=None, token=None, provider
     elif backend == "qibolab":  # pragma: no cover
         from qibolab.backends import QibolabBackend  # pylint: disable=E0401
 
-        return QibolabBackend(platform)
+        return QibolabBackend(platform, runcard)
     elif backend == "clifford":
+        if platform is not None:  # pragma: no cover
+            if platform in ("cupy", "numba", "cuquantum"):
+                platform = construct_backend("qibojit", platform=platform)
+            else:
+                platform = construct_backend(platform)
         return CliffordBackend(platform)
     elif backend == "qibo":  # pragma: no cover
-        from qibo_cloud_backends.backends.qibo_client import (  # pylint: disable=E0401
+        from qibo_cloud_backends.qibo_client import (  # pylint: disable=E0401
             QiboClientBackend,
         )
 
         return QiboClientBackend(platform=platform, provider=provider, token=token)
     elif backend == "qiskit":  # pragma: no cover
-        from qibo_cloud_backends.backends.qiskit_client import (  # pylint: disable=E0401
+        from qibo_cloud_backends.qiskit_client import (  # pylint: disable=E0401
             QiskitClientBackend,
         )
 
@@ -124,8 +129,6 @@ class QiboMatrices:
         self.CSXDG = self.matrices.CSXDG
         self.SWAP = self.matrices.SWAP
         self.iSWAP = self.matrices.iSWAP
-        self.SiSWAP = self.matrices.SiSWAP
-        self.SiSWAPDG = self.matrices.SiSWAPDG
         self.FSWAP = self.matrices.FSWAP
         self.ECR = self.matrices.ECR
         self.SYC = self.matrices.SYC
@@ -139,8 +142,8 @@ def get_backend():
     return str(GlobalBackend())
 
 
-def set_backend(backend, platform=None):
-    GlobalBackend.set_backend(backend, platform)
+def set_backend(backend, platform=None, runcard=None, token=None, provider=None):
+    GlobalBackend.set_backend(backend, platform, runcard, token, provider)
 
 
 def get_precision():
@@ -178,10 +181,3 @@ def set_threads(nthreads):
     if nthreads < 1:
         raise_error(ValueError, "Number of threads must be positive.")
     GlobalBackend().set_threads(nthreads)
-
-
-def _check_backend(backend):
-    if backend is None:
-        return GlobalBackend()
-
-    return backend
