@@ -43,6 +43,9 @@ def test_errors(backend):
     with pytest.raises(TypeError):
         network * "1"
 
+    with pytest.raises(TypeError):
+        network / "1"
+
     network_2 = network.copy()
     with pytest.raises(ValueError):
         network_2.system_output = (False,)
@@ -55,6 +58,12 @@ def test_errors(backend):
     # Linking QuantumNetwork with non-QuantumNetwork
     with pytest.raises(TypeError):
         network.link_product(network.matrix(backend))
+
+    with pytest.raises(TypeError):
+        network.link_product(network, subscripts=True)
+
+    with pytest.raises(NotImplementedError):
+        network.link_product(network, subscripts="jk,lm->no")
 
 
 def test_operational_logic(backend):
@@ -148,10 +157,18 @@ def test_with_unitaries(backend):
         unitary_2 @ unitary_1, (dims, dims), pure=True, backend=backend
     )
 
+    network_4 = QuantumNetwork(
+        unitary_1 @ unitary_2, (dims, dims), pure=True, backend=backend
+    )
+
     subscript = "il,lk -> ik"
     backend.assert_allclose(
         network_1.link_product(network_2, subscript).matrix(backend=backend),
         network_3._full(),
+    )
+    backend.assert_allclose(
+        network_2.link_product(network_1, subscript).matrix(backend=backend),
+        network_4._full(),
     )
 
     assert network_1.hermitian()
