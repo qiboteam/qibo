@@ -152,7 +152,7 @@ def GST_execute_circuit(circuit, k, j, nshots=int(1e4), backend=None):
             return expectation_val
 
 
-def GST(
+def execute_GST(
     nqubits=None,
     gate=None,
     nshots=int(1e4),
@@ -170,7 +170,9 @@ def GST(
             to simulate noisy computation.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Calculation engine.
     Returns:
-        numpy.array: Numpy array with elements jk equivalent to either Tr(Q_j rho_k) or Tr(Q_j O_l rho_k).
+        ndarray: array with elements ``jk`` equivalent to either :math:`\\text{tr}(Q_{j} \\, \\rho_{k})`
+            or :math:`\\text{tr}(Q_{j} \\, O_{l} \\rho_{k})` where :math:`O_{l}` is the l-th operation
+            in the original circuit.
     """
 
     # Check if gate is 1 or 2 qubit gate.
