@@ -693,6 +693,13 @@ iSwap (iSWAP)
     :members:
     :member-order: bysource
 
+Square root of iSwap (SiSWAP)
+"""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.SiSWAP
+    :members:
+    :member-order: bysource
+
 f-Swap (FSWAP)
 """"""""""""""
 
