@@ -4,8 +4,7 @@ import pytest
 import qibo
 from qibo import gates
 from qibo.noise import DepolarizingError, NoiseModel
-from src.qibo.tomography.gate_set_tomography import *
-
+from qibo.tomography.gate_set_tomography import *
 
 def test_prepare_states_valid_k_single_qubit():
     # Test for valid input with a single qubit
