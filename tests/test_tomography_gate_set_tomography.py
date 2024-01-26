@@ -5,7 +5,7 @@ import qibo
 from qibo import gates
 from qibo.noise import DepolarizingError, NoiseModel
 from qibo.tomography.gate_set_tomography import (
-    GST,
+    execute_GST,
     GST_execute_circuit,
     measurement_basis,
     prepare_states,
@@ -250,7 +250,7 @@ def test_GST_execute_circuit_wrong_qb():
 
 def test_GST_one_qubit_empty_circuit():
     nqubits = 1
-    result = GST(
+    result = execute_GST(
         nqubits, gate=None, invert_register=None, noise_model=None, backend=None
     )
     assert np.shape(result) == (4, 4)
@@ -258,49 +258,49 @@ def test_GST_one_qubit_empty_circuit():
 
 def test_GST_two_qubit_empty_circuit():
     nqubits = 2
-    result = GST(nqubits)
+    result = execute_GST(nqubits)
     assert np.shape(result) == (16, 16)
 
 
 def test_GST_one_qubit_with_gate():
     nqubits = 1
     test_gate = gates.H(0)
-    result = GST(nqubits, gate=test_gate)
+    result = execute_GST(nqubits, gate=test_gate)
     assert np.shape(result) == (4, 4)
 
 
 def test_GST_two_qubit_with_gate():
     nqubits = 2
     test_gate = gates.CNOT(0, 1)
-    result = GST(nqubits, gate=test_gate)
+    result = execute_GST(nqubits, gate=test_gate)
     assert np.shape(result) == (16, 16)
 
 
 def test_GST_one_qubit_with_gate():
     nqubits = 1
     test_gate = gates.RX(0, np.pi / 7)
-    result = GST(nqubits, gate=test_gate)
+    result = execute_GST(nqubits, gate=test_gate)
     assert np.shape(result) == (4, 4)
 
 
 def test_GST_two_qubit_with_gate():
     nqubits = 2
     test_gate = gates.CRX(0, 1, np.pi / 7)
-    result = GST(nqubits, gate=test_gate)
+    result = execute_GST(nqubits, gate=test_gate)
     assert np.shape(result) == (16, 16)
 
 
 def test_GST_one_qubit_with_gate_with_valid_reset_register_string():
     nqubits = 1
     invert_register = "sp_0"
-    result = GST(nqubits=nqubits, gate=None, invert_register=invert_register)
+    result = execute_GST(nqubits=nqubits, gate=None, invert_register=invert_register)
     assert np.shape(result) == (4, 4)
 
 
 def test_GST_two_qubit_with_gate_with_valid_reset_register_string():
     nqubits = 2
     invert_register = "sp_1"
-    result = GST(nqubits=nqubits, gate=None, invert_register=invert_register)
+    result = execute_GST(nqubits=nqubits, gate=None, invert_register=invert_register)
     assert np.shape(result) == (16, 16)
 
 
@@ -308,7 +308,7 @@ def test_GST_one_qubit_with_param_gate_with_valid_reset_register_string():
     nqubits = 1
     test_gate = gates.RX(0, np.pi / 7)
     invert_register = "sp_0"
-    result = GST(nqubits=nqubits, gate=None, invert_register=invert_register)
+    result = execute_GST(nqubits=nqubits, gate=None, invert_register=invert_register)
     assert np.shape(result) == (4, 4)
 
 
@@ -316,7 +316,7 @@ def test_GST_two_qubit_with_param_gate_with_valid_reset_register_string():
     nqubits = 2
     test_gate = gates.CNOT(0, 1)
     invert_register = "sp_1"
-    result = GST(nqubits=nqubits, gate=None, invert_register=invert_register)
+    result = execute_GST(nqubits=nqubits, gate=None, invert_register=invert_register)
     assert np.shape(result) == (16, 16)
 
 
@@ -324,7 +324,7 @@ def test_GST_two_qubit_with_gate_with_valid_reset_register_string():
     nqubits = 2
     test_gate = gates.CZ(0, 1)
     invert_register = "sp_t"
-    result = GST(nqubits=nqubits, gate=test_gate, invert_register=invert_register)
+    result = execute_GST(nqubits=nqubits, gate=test_gate, invert_register=invert_register)
     assert np.shape(result) == (16, 16)
 
 
@@ -332,16 +332,15 @@ def test_GST_two_qubit_with_gate_with_invalid_reset_register_string():
     nqubits = 2
     test_gate = gates.CZ(0, 1)
     invert_register = "sp_3"
-
     with pytest.raises(NameError):
-        result = GST(nqubits=nqubits, gate=test_gate, invert_register=invert_register)
+        result = execute_GST(nqubits=nqubits, gate=test_gate, invert_register=invert_register)
 
 
 def test_GST_empty_circuit_with_invalid_qb():
     nqubits = 3
     # Check if ValueError is raised
     with pytest.raises(ValueError, match="nqubits needs to be either 1 or 2"):
-        result = GST(
+        result = execute_GST(
             nqubits, gate=None, invert_register=None, noise_model=None, backend=None
         )
 
@@ -352,7 +351,7 @@ def test_GST_with_gate_with_invalid_qb():
 
     # Check if ValueError is raised
     with pytest.raises(ValueError):
-        result = GST(
+        result = execute_GST(
             nqubits,
             gate=test_gate,
             invert_register=None,
@@ -367,7 +366,7 @@ def test_GST_with_gate_with_invalid_qb():
 
     # Check if ValueError is raised
     with pytest.raises(ValueError):
-        result = GST(
+        result = execute_GST(
             nqubits,
             gate=test_gate,
             invert_register=None,
@@ -383,7 +382,7 @@ def test_GST_one_qubit_empty_circuit_with_noise():
     depol.add(DepolarizingError(lam))
     noise_model = depol
     nqubits = 1
-    result = GST(
+    result = execute_GST(
         nqubits, gate=None, invert_register=None, noise_model=depol, backend=None
     )
     assert np.shape(result) == (4, 4)
