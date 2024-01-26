@@ -386,4 +386,17 @@ def test_GST_one_qubit_empty_circuit_with_noise():
     assert np.shape(result) == (4, 4)
 
 
+def test_GST_one_qubit_empty_circuit_with_noise():
+    nshots = int(1e4)
+    lam = 0.5
+    depol = NoiseModel()
+    depol.add(DepolarizingError(lam))
+    noise_model = depol
+    nqubits = 2
+    result = execute_GST(
+        nqubits, gate=None, invert_register=None, noise_model=depol, backend=None
+    )
+    assert np.shape(result) == (16, 16)
+
+
 ##################################################################################
