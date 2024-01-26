@@ -313,18 +313,11 @@ class QuantumNetwork:
             )
 
         subscripts = subscripts.replace(" ", "")
-
-        pattern_two = re.compile("[a-z][a-z],[a-z][a-z]->[a-z][a-z]")
-        pattern_four = re.compile("[a-z][a-z][a-z][a-z],[a-z][a-z]->[a-z][a-z]")
-
-        channel_subscripts = (
-            bool(re.match(pattern_two, subscripts)) and subscripts[1] == subscripts[3]
-        )
-        inv_subscripts = (
-            bool(re.match(pattern_two, subscripts)) and subscripts[0] == subscripts[4]
-        )
+        pattern_two, pattern_four = self._check_subscript_pattern(subscripts)
+        channel_subscripts = pattern_two and subscripts[1] == subscripts[3]
+        inv_subscripts = pattern_two and subscripts[0] == subscripts[4]
         super_subscripts = (
-            bool(re.match(pattern_four, subscripts))
+            pattern_four
             and subscripts[1] == subscripts[5]
             and subscripts[2] == subscripts[6]
         )
@@ -474,7 +467,7 @@ class QuantumNetwork:
             self._backend,
         )
 
-    def __matmul__(self, second_network, subscripts: Optional[str] = None):
+    def __matmul__(self, second_network, subscripts: str = "ij,jk -> ik"):
         """Defines matrix multiplication between two ``QuantumNetwork`` objects.
 
         If ``len(self.partition) == 2`` and ``len(second_network.partition) == 2``,
@@ -496,8 +489,15 @@ class QuantumNetwork:
                 + "``QuantumNetwork`` by a non-``QuantumNetwork``.",
             )
 
-        if len(self.partition) == 2 and len(second_network.partition) == 2:
-            return self.link_product(second_network, subscripts=subscripts)
+        subscripts = subscripts.replace(" ", "")
+        pattern_two, pattern_four = self._check_subscript_pattern(subscripts)
+
+        if not pattern_two and not pattern_four:
+            raise_error(
+                NotImplementedError, f"partitions do not match any implemented pattern."
+            )
+
+        return self.link_product(second_network, subscripts=subscripts)
 
     def __str__(self):
         """Method to define how to print relevant information of the quantum network."""
@@ -585,3 +585,11 @@ class QuantumNetwork:
             return matrix
 
         return self._matrix
+
+    def _check_subscript_pattern(self, subscripts: str):
+        pattern_two = re.compile("[a-z][a-z],[a-z][a-z]->[a-z][a-z]")
+        pattern_four = re.compile("[a-z][a-z][a-z][a-z],[a-z][a-z]->[a-z][a-z]")
+
+        return bool(re.match(pattern_two, subscripts)), bool(
+            re.match(pattern_four, subscripts)
+        )
