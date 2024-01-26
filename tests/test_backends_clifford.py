@@ -136,7 +136,7 @@ def test_random_clifford_circuit(backend, prob_qubits, binary):
     clifford_bkd = construct_clifford_backend(backend)
     if not clifford_bkd:
         return
-    c = random_clifford(5, backend=backend)
+    c = random_clifford(5, seed=1, backend=backend)
     c.density_matrix = True
     c_copy = c.copy()
     c.add(gates.M(*MEASURED_QUBITS))
@@ -173,7 +173,7 @@ def test_random_clifford_circuit(backend, prob_qubits, binary):
                     - np.array(list(clifford_freq.values()))
                 )
             )
-            < 250
+            < 200
         )
 
 
