@@ -454,7 +454,9 @@ def random_statevector(dims: int, seed=None, backend=None):
         backend = GlobalBackend()
 
     local_state = (
-        np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
+        backend.np.random.default_rng(seed)
+        if seed is None or isinstance(seed, int)
+        else seed
     )
 
     state = local_state.standard_normal(dims).astype(complex)
