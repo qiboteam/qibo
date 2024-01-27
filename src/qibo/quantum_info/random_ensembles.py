@@ -453,11 +453,13 @@ def random_statevector(dims: int, seed=None, backend=None):
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    local_state = (
-        backend.np.random.default_rng(seed)
-        if seed is None or isinstance(seed, int)
-        else seed
-    )
+    if seed is None or isinstance(seed, int):
+        if backend.__class__.__name__ in ["CupyBackend", "CuQuantumBackend"]:
+            local_state = backend.np.random.default_rng(seed)
+        else:
+            local_state = np.random.default_rng(seed)
+    else:
+        local_state = seed
 
     state = local_state.standard_normal(dims).astype(complex)
     state += 1.0j * local_state.standard_normal(dims)
