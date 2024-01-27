@@ -101,6 +101,7 @@ class QuantumNetwork:
             order = "euclidean"
 
         self._matrix = self._full()
+        self._pure = False
 
         reshaped = self._backend.cast(
             np.reshape(self._matrix, (self.dims, self.dims)), dtype=self._matrix.dtype
@@ -146,6 +147,7 @@ class QuantumNetwork:
             order = "euclidean"
 
         self._matrix = self._full()
+        self._pure = False
 
         partial_trace = np.einsum("jkjl -> kl", self._matrix)
         identity = self._backend.cast(
@@ -193,6 +195,7 @@ class QuantumNetwork:
             order = "euclidean"
 
         self._matrix = self._full()
+        self._pure = False
 
         partial_trace = np.einsum("jklk -> jl", self._matrix)
         identity = self._backend.cast(
@@ -220,6 +223,7 @@ class QuantumNetwork:
             bool: Positive-semidefinite condition.
         """
         self._matrix = self._full()
+        self._pure = False
 
         reshaped = np.reshape(self._matrix, (self.dims, self.dims))
 
