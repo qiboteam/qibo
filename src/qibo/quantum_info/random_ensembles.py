@@ -1222,8 +1222,11 @@ def _set_backend_and_local_state(seed, backend):
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    if seed is None or isinstance(seed, int):  # pragma: no cover
-        if backend.__class__.__name__ in ["CupyBackend", "CuQuantumBackend"]:
+    if seed is None or isinstance(seed, int):
+        if backend.__class__.__name__ in [
+            "CupyBackend",
+            "CuQuantumBackend",
+        ]:  # pragma: no cover
             local_state = backend.np.random.default_rng(seed)
         else:
             local_state = np.random.default_rng(seed)
