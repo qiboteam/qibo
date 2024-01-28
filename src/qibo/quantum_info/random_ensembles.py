@@ -1281,3 +1281,11 @@ def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend)
     super_op = operator @ super_op @ operator
 
     return super_op
+
+
+def _generate_local_state(seed):
+    local_state = (
+        np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
+    )
+
+    return local_state
