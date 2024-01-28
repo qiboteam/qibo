@@ -17,9 +17,8 @@ class QuantumNetwork:
         matrix (ndarray): input Choi operator.
         partition (List[int] or Tuple[int]): partition of ``matrix``.
         system_output (List[bool] or Tuple[bool], optional): mask on the output system of the
-            Choi operator. If ``None`` and ``len(partition) == 1``, defaults to ``(False,)``.
-            If ``None`` and ``len(partition) != 1``, defaults to ``(False, True)``.
-            Defaults to ``None``.
+            Choi operator. If ``None``, defaults to
+            ``(False,True,False,True,...)``, where ``len(system_output)=len(partition)``.
         pure (bool, optional): ``True`` when ``matrix`` is a rank-:math:`1` operator,
             ``False`` otherwise. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used in
@@ -243,7 +242,7 @@ class QuantumNetwork:
         self,
         order: Optional[Union[int, str]] = None,
         precision_tol_causal: float = 1e-8,
-        precision_tol_psd: float = 0.0,
+        precision_tol_psd: float = 1e-8,
     ):
         """Returns bool indicating if Choi operator :math:`\\mathcal{E}` is a channel.
 
@@ -394,7 +393,7 @@ class QuantumNetwork:
                 + f"and and object of type ``{type(second_network)}``.",
             )
 
-        if self._matrix.shape != second_network.matrix(second_network._backend).shape:
+        if self._full().shape != second_network._full().shape:
             raise_error(
                 ValueError,
                 f"The Choi operators must have the same shape, but {self._matrix.shape} != "
@@ -431,15 +430,22 @@ class QuantumNetwork:
                 "It is not possible to multiply a ``QuantumNetwork`` by a non-scalar.",
             )
 
-        matrix = self._full()
-
-        return QuantumNetwork(
-            number * matrix,
-            self.partition,
-            self.system_output,
-            self._pure,
-            self._backend,
-        )
+        if self.pure():
+            return QuantumNetwork(
+                np.emath.sqrt(number) * self.matrix(),
+                self.partition,
+                self.system_output,
+                self._pure,
+                self._backend,
+            )
+        else:
+            return QuantumNetwork(
+                number * self.matrix(),
+                self.partition,
+                self.system_output,
+                self._pure,
+                self._backend,
+            )
 
     def __rmul__(self, number: Union[float, int]):
         """"""
@@ -498,7 +504,7 @@ class QuantumNetwork:
 
         if not pattern_two and not pattern_four:
             raise_error(
-                NotImplementedError, f"partitions do not match any implemented pattern."
+                NotImplementedError, f"partitions do not match any implemented pattern. use `link_product` method to specify the subscript."
             )
 
         return self.link_product(second_network, subscripts=subscripts)
@@ -570,21 +576,29 @@ class QuantumNetwork:
         if isinstance(self.partition, list):
             self.partition = tuple(self.partition)
 
-        if self._pure:
-            self._matrix = np.reshape(self._matrix, self.partition)
-        else:
-            matrix_partition = self.partition * 2
-            self._matrix = np.reshape(self._matrix, matrix_partition)
+        try:
+            if self._pure:
+                self._matrix = np.reshape(self._matrix, self.partition)
+            else:
+                matrix_partition = self.partition * 2
+                self._matrix = np.reshape(self._matrix, matrix_partition)
+        except ValueError:
+            raise ValueError(
+                f"``partition`` does not match the shape of the input matrix. \
+Cannot reshpae matrix of size {self._matrix.shape} to partition {self.partition}"
+            )
 
         if self.system_output is None:
-            self.system_output = (False,) if len(self.partition) == 1 else (False, True)
+            self.system_output = [True,] * len(self.partition)
+            for k in range(len(self.partition) // 2):
+                self.system_output[k*2] = False
+            self.system_output = tuple(self.system_output)
         else:
             self.system_output = tuple(self.system_output)
 
     def _full(self):
         if self.pure():
             matrix = np.einsum("jk,lm -> kjml", self._matrix, np.conj(self._matrix))
-            self._pure = False
 
             return matrix
 
