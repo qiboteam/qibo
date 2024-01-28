@@ -1489,35 +1489,11 @@ The destabilizers can be extracted analogously with :meth:`qibo.quantum_info.cli
     :member-order: bysource
 
 
-Metrics
-^^^^^^^
 
-Set of functions that are used to calculate metrics of states, (pseudo-)distance measures
-between states, and distance measures between quantum channels.
+Entropy measures
+^^^^^^^^^^^^^^^^
 
-Purity
-""""""
-
-.. autofunction:: qibo.quantum_info.purity
-
-
-Impurity
-""""""""
-
-.. autofunction:: qibo.quantum_info.impurity
-
-
-Concurrence
-"""""""""""
-
-.. autofunction:: qibo.quantum_info.concurrence
-
-
-Entanglement of formation
-"""""""""""""""""""""""""
-
-.. autofunction:: qibo.quantum_info.entanglement_of_formation
-
+Set of functions to calculate entropy measures.
 
 Entropy
 """""""
@@ -1545,6 +1521,60 @@ Entanglement entropy
     the functions are intended to be used on Hermitian inputs. When ``validate=True``
     and the reduced density matrix is non-Hermitian, an error will be raised
     when using `cupy` backend.
+
+
+Entanglement measures
+^^^^^^^^^^^^^^^^^^^^^
+
+Set of functions to calculate entanglement measures.
+
+
+Concurrence
+"""""""""""
+
+.. autofunction:: qibo.quantum_info.concurrence
+
+
+Entanglement of formation
+"""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.entanglement_of_formation
+
+
+Entanglement fidelity
+"""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.entanglement_fidelity
+
+
+Meyer-Wallach entanglement
+""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.meyer_wallach_entanglement
+
+
+Entanglement capability
+"""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.entangling_capability
+
+
+Metrics
+^^^^^^^
+
+Set of functions that are used to calculate metrics of states, (pseudo-)distance measures
+between states, and distance measures between quantum channels.
+
+Purity
+""""""
+
+.. autofunction:: qibo.quantum_info.purity
+
+
+Impurity
+""""""""
+
+.. autofunction:: qibo.quantum_info.impurity
 
 
 Trace distance
@@ -1591,12 +1621,6 @@ Bures distance
 .. autofunction:: qibo.quantum_info.bures_distance
 
 
-Entanglement fidelity
-"""""""""""""""""""""
-
-.. autofunction:: qibo.quantum_info.entanglement_fidelity
-
-
 Process fidelity
 """"""""""""""""
 
@@ -1625,18 +1649,6 @@ Diamond Norm
 """"""""""""
 
 .. autofunction:: qibo.quantum_info.diamond_norm
-
-
-Meyer-Wallach entanglement
-""""""""""""""""""""""""""
-
-.. autofunction:: qibo.quantum_info.meyer_wallach_entanglement
-
-
-Entanglement capability
-"""""""""""""""""""""""
-
-.. autofunction:: qibo.quantum_info.entangling_capability
 
 
 Expressibility of parameterized quantum circuits
