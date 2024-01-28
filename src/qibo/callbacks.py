@@ -125,7 +125,7 @@ class EntanglementEntropy(Callback):
             ]
 
     def apply(self, backend, state):
-        from qibo.quantum_info.metrics import entanglement_entropy
+        from qibo.quantum_info.entanglement import entanglement_entropy
 
         entropy, spectrum = entanglement_entropy(
             state,
