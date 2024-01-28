@@ -454,7 +454,10 @@ def random_statevector(dims: int, seed=None, backend=None):
         backend = GlobalBackend()
 
     if seed is None or isinstance(seed, int):
-        if backend.__class__.__name__ in ["CupyBackend", "CuQuantumBackend"]:
+        if backend.__class__.__name__ in [
+            "CupyBackend",
+            "CuQuantumBackend",
+        ]:  # pragma: no cover
             local_state = backend.np.random.default_rng(seed)
         else:
             local_state = np.random.default_rng(seed)
