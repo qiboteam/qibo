@@ -467,15 +467,22 @@ class QuantumNetwork:
                 "It is not possible to divide a ``QuantumNetwork`` by a non-scalar.",
             )
 
-        matrix = self._full()
-
-        return QuantumNetwork(
-            matrix / number,
-            self.partition,
-            self.system_output,
-            self._pure,
-            self._backend,
-        )
+        if self.pure():
+            return QuantumNetwork(
+                self.matrix() / np.emath.sqrt(number),
+                self.partition,
+                self.system_output,
+                self._pure,
+                self._backend,
+            )
+        else:
+            return QuantumNetwork(
+                self.matrix() / number,
+                self.partition,
+                self.system_output,
+                self._pure,
+                self._backend,
+            )
 
     def __matmul__(self, second_network, subscripts: str = "ij,jk -> ik"):
         """Defines matrix multiplication between two ``QuantumNetwork`` objects.
