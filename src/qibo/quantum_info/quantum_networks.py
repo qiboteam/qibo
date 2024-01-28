@@ -504,7 +504,8 @@ class QuantumNetwork:
 
         if not pattern_two and not pattern_four:
             raise_error(
-                NotImplementedError, f"partitions do not match any implemented pattern. use `link_product` method to specify the subscript."
+                NotImplementedError,
+                f"partitions do not match any implemented pattern. use `link_product` method to specify the subscript.",
             )
 
         return self.link_product(second_network, subscripts=subscripts)
@@ -589,9 +590,11 @@ Cannot reshpae matrix of size {self._matrix.shape} to partition {self.partition}
             )
 
         if self.system_output is None:
-            self.system_output = [True,] * len(self.partition)
+            self.system_output = [
+                True,
+            ] * len(self.partition)
             for k in range(len(self.partition) // 2):
-                self.system_output[k*2] = False
+                self.system_output[k * 2] = False
             self.system_output = tuple(self.system_output)
         else:
             self.system_output = tuple(self.system_output)
