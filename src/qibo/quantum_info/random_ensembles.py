@@ -1284,6 +1284,15 @@ def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend)
 
 
 def _generate_local_state(seed):
+    if (
+        seed is not None
+        and not isinstance(seed, int)
+        and not isinstance(seed, np.random.Generator)
+    ):
+        raise_error(
+            TypeError, "seed must be either type int or numpy.random.Generator."
+        )
+
     local_state = (
         np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
     )
