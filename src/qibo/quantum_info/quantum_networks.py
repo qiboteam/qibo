@@ -433,7 +433,7 @@ class QuantumNetwork:
 
         if self.pure() and number > 0.0:
             return QuantumNetwork(
-                np.sqrt(number) * self.matrix(),
+                np.sqrt(number) * self.matrix(backend=self._backend),
                 partition=self.partition,
                 system_output=self.system_output,
                 pure=True,
@@ -445,7 +445,7 @@ class QuantumNetwork:
         return QuantumNetwork(
             number * matrix,
             partition=self.partition,
-            system_ouput=self.system_output,
+            system_output=self.system_output,
             pure=False,
             backend=self._backend,
         )
@@ -474,7 +474,7 @@ class QuantumNetwork:
             return QuantumNetwork(
                 self.matrix(backend=self._backend) / np.sqrt(number),
                 partition=self.partition,
-                system_ouput=self.system_output,
+                system_output=self.system_output,
                 pure=True,
                 backend=self._backend,
             )
