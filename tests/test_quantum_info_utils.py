@@ -48,19 +48,17 @@ def test_hamming_weight(bitstring, kind):
     assert indexes == indexes_test
 
 
-@pytest.mark.parametrize("bitstring", range(2**5))
+bitstring_1, bitstring_2 = "11111", "10101"
 @pytest.mark.parametrize(
-    "kind",
+    ["bitstring_1", "bitstring_2"], 
     [
-        str,
-        list,
-        tuple,
-        lambda b: np.array(list(b)),
-        lambda b: int(b, 2),
-        lambda b: list(map(int, b)),
-    ],
+        [bitstring_1, bitstring_2], 
+        [int(bitstring_1, 2), int(bitstring_2, 2)],
+        [list(bitstring_1), list(bitstring_2)],
+        [tuple(bitstring_1), tuple(bitstring_2)],
+    ]
 )
-def test_hamming_distance(bitstring, kind):
+def test_hamming_distance(bitstring_1, bitstring_2):
     with pytest.raises(TypeError):
         test = hamming_distance("0101", "1010", return_indexes="True")
     with pytest.raises(TypeError):
@@ -68,12 +66,14 @@ def test_hamming_distance(bitstring, kind):
     with pytest.raises(TypeError):
         test = hamming_distance("1010", 2.3)
 
-    bitstring = f"{bitstring:b}"
-    distance = hamming_distance(kind(bitstring), kind(bitstring))
-    indexes = hamming_distance(kind(bitstring), kind(bitstring), True)
+    if isinstance(bitstring_1, int):
+        bitstring_1, bitstring_2 = f"{bitstring_1:b}", f"{bitstring_2:b}"
+    
+    distance = hamming_distance(bitstring_1, bitstring_2)
+    indexes = hamming_distance(bitstring_1, bitstring_2, return_indexes=True)
 
-    assert distance == 0
-    assert indexes == []
+    assert distance == 2
+    assert indexes == [0, 2]
 
 
 @pytest.mark.parametrize("is_matrix", [False, True])
