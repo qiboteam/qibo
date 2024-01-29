@@ -431,23 +431,23 @@ class QuantumNetwork:
                 "It is not possible to multiply a ``QuantumNetwork`` by a non-scalar.",
             )
 
-        matrix = self._full()
-
-        if self.pure():
+        if self.pure() and number > 0.0:
             return QuantumNetwork(
-                number * matrix,
+                np.sqrt(number) * self.matrix(),
                 partition=self.partition,
                 system_output=self.system_output,
-                pure=False,
+                pure=True,
                 backend=self._backend,
             )
 
+        matrix = self._full()
+
         return QuantumNetwork(
             number * matrix,
-            self.partition,
-            self.system_output,
-            self._pure,
-            self._backend,
+            partition=self.partition,
+            system_ouput=self.system_output,
+            pure=False,
+            backend=self._backend,
         )
 
     def __rmul__(self, number: Union[float, int]):
@@ -470,21 +470,21 @@ class QuantumNetwork:
                 "It is not possible to divide a ``QuantumNetwork`` by a non-scalar.",
             )
 
-        if self.pure():
+        if self.pure() and number > 0.0:
             return QuantumNetwork(
-                self.matrix(backend=self._backend) / np.emath.sqrt(number),
-                self.partition,
-                self.system_output,
-                self._pure,
-                self._backend,
+                self.matrix(backend=self._backend) / np.sqrt(number),
+                partition=self.partition,
+                system_ouput=self.system_output,
+                pure=True,
+                backend=self._backend,
             )
 
         return QuantumNetwork(
             self.matrix(backend=self._backend) / number,
-            self.partition,
-            self.system_output,
-            self._pure,
-            self._backend,
+            partition=self.partition,
+            system_output=self.system_output,
+            pure=False,
+            backend=self._backend,
         )
 
     def __matmul__(self, second_network, subscripts: str = "ij,jk -> ik"):
