@@ -404,11 +404,11 @@ class QuantumNetwork:
         if self.system_output != second_network.system_output:
             raise_error(ValueError, "The networks must have the same output system.")
 
-        first_matrix = self._full()
-        second_matrix = second_network._full()
+        new_first_matrix = self._full()
+        new_second_matrix = second_network._full()
 
         return QuantumNetwork(
-            first_matrix + second_matrix,
+            new_first_matrix + new_second_matrix,
             self.partition,
             self.system_output,
             pure=False,
@@ -431,17 +431,19 @@ class QuantumNetwork:
                 "It is not possible to multiply a ``QuantumNetwork`` by a non-scalar.",
             )
 
+        matrix = self._full()
+
         if self.pure():
             return QuantumNetwork(
-                np.emath.sqrt(number) * self.matrix(backend=self._backend),
-                self.partition,
-                self.system_output,
-                self._pure,
-                self._backend,
+                number * matrix,
+                partition=self.partition,
+                system_output=self.system_output,
+                pure=False,
+                backend=self._backend,
             )
 
         return QuantumNetwork(
-            number * self.matrix(backend=self._backend),
+            number * matrix,
             self.partition,
             self.system_output,
             self._pure,
@@ -592,7 +594,7 @@ class QuantumNetwork:
             raise_error(
                 ValueError,
                 "``partition`` does not match the shape of the input matrix. "
-                + f"Cannot reshpae matrix of size {self._matrix.shape} to partition {self.partition}",
+                + f"Cannot reshape matrix of size {self._matrix.shape} to partition {self.partition}",
             )
 
         if self.system_output is None:
@@ -607,12 +609,13 @@ class QuantumNetwork:
 
     def _full(self):
         """Reshapes input matrix based on purity."""
+        matrix = np.copy(self._matrix)
         if self.pure():
-            matrix = np.einsum("jk,lm -> kjml", self._matrix, np.conj(self._matrix))
+            matrix = np.einsum("jk,lm -> kjml", matrix, np.conj(matrix))
 
             return matrix
 
-        return self._matrix
+        return matrix
 
     def _check_subscript_pattern(self, subscripts: str):
         """Checks if input subscript match any implemented pattern."""

@@ -93,14 +93,25 @@ def test_operational_logic(backend):
         channel.to_choi(backend=backend), partition, backend=backend
     )
 
+    state = random_density_matrix(dims, backend=backend)
+    network_state_pure = QuantumNetwork(state, (2, 2), pure=True, backend=backend)
+
     # Sum with itself has to match multiplying by int
     backend.assert_allclose(
         (network + network).matrix(backend), (2 * network).matrix(backend)
+    )
+    backend.assert_allclose(
+        (network_state_pure + network_state_pure).matrix(backend),
+        (2 * network_state_pure).matrix(backend),
     )
 
     # Sum with itself has to match multiplying by float
     backend.assert_allclose(
         (network + network).matrix(backend), (2.0 * network).matrix(backend)
+    )
+    backend.assert_allclose(
+        (network_state_pure + network_state_pure).matrix(backend),
+        (2.0 * network_state_pure).matrix(backend),
     )
 
     # Multiplying and dividing by same scalar has to bring back to original network
