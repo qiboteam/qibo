@@ -154,7 +154,6 @@ def test_initial_block_decomposition_measurements():
     circ.add(gates.H(3))
     circ.add(gates.H(4))
     blocks = _initial_block_decomposition(circ)
-    print(blocks[0].gates)
     assert_gates_equality(
         blocks[0].gates,
         [gates.M(0), gates.M(1), gates.H(1), gates.H(0), gates.CZ(0, 1)],
@@ -166,7 +165,6 @@ def test_initial_block_decomposition_measurements():
 def test_initial_block_decomposition_error():
     circ = Circuit(3)
     circ.add(gates.TOFFOLI(0, 1, 2))
-    print(len(circ.queue[0].qubits))
     with pytest.raises(BlockingError):
         blocks = _initial_block_decomposition(circ)
 
@@ -249,7 +247,6 @@ def test_block_decomposition_measurements():
     circ.add(gates.CZ(2, 3))  # 4 block
     circ.add(gates.M(0, 1))  # 3 block
     blocks = block_decomposition(circ)
-    print(blocks[0].gates)
     assert_gates_equality(
         blocks[0].gates,
         [gates.H(1), gates.H(0), gates.CZ(0, 1), gates.H(0), gates.M(0), gates.M(1)],
