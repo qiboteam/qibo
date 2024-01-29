@@ -58,6 +58,7 @@ def test_double_bracket_iteration_single_commutator(backend, nqubits):
 
     for _ in range(NSTEPS):
         dbf(step=0.01, d=d)
+    dbf(step=0.01)
 
     assert initial_off_diagonal_norm > dbf.off_diagonal_norm
 
