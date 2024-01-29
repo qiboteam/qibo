@@ -352,7 +352,6 @@ def test_random_clifford(backend, nqubits, return_circuit, density_matrix, seed)
     )
 
     if return_circuit:
-        print(matrix.draw())
         matrix = matrix.unitary(backend)
 
     backend.assert_allclose(matrix, result, atol=PRECISION_TOL)
