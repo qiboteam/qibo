@@ -166,15 +166,11 @@ def test_random_clifford_circuit(backend, prob_qubits, binary):
         numpy_freq = numpy_result.frequencies(binary)
         clifford_freq = clifford_result.frequencies(binary)
         clifford_freq = {state: clifford_freq[state] for state in numpy_freq.keys()}
-        assert (
-            np.sum(
-                np.abs(
-                    np.array(list(numpy_freq.values()))
-                    - np.array(list(clifford_freq.values()))
-                )
-            )
-            < 200
-        )
+        assert len(numpy_freq) == len(clifford_freq)
+        for np_count, clif_count in zip(numpy_freq.values(), clifford_freq.values()):
+            backend.assert_allclose(
+                np_count / 1000, clif_count / 1000, atol=1e-1
+            )  # nshots = 1000
 
 
 def test_collapsing_measurements(backend):
@@ -249,5 +245,5 @@ def test_set_backend(backend):
     clifford_bkd = construct_clifford_backend(backend)
     if not clifford_bkd:
         return
-    set_backend("clifford")
+    set_backend("clifford", platform=str(backend))
     assert isinstance(GlobalBackend(), type(clifford_bkd))
