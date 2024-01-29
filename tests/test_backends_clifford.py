@@ -245,5 +245,8 @@ def test_set_backend(backend):
     clifford_bkd = construct_clifford_backend(backend)
     if not clifford_bkd:
         return
-    set_backend("clifford", platform=str(backend))
+    platform = backend.platform
+    if platform is None:
+        platform = str(backend)
+    set_backend("clifford", platform=platform)
     assert isinstance(GlobalBackend(), type(clifford_bkd))
