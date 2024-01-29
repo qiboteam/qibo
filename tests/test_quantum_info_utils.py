@@ -49,14 +49,16 @@ def test_hamming_weight(bitstring, kind):
 
 
 bitstring_1, bitstring_2 = "11111", "10101"
+
+
 @pytest.mark.parametrize(
-    ["bitstring_1", "bitstring_2"], 
+    ["bitstring_1", "bitstring_2"],
     [
-        [bitstring_1, bitstring_2], 
+        [bitstring_1, bitstring_2],
         [int(bitstring_1, 2), int(bitstring_2, 2)],
         [list(bitstring_1), list(bitstring_2)],
         [tuple(bitstring_1), tuple(bitstring_2)],
-    ]
+    ],
 )
 def test_hamming_distance(bitstring_1, bitstring_2):
     with pytest.raises(TypeError):
@@ -68,7 +70,7 @@ def test_hamming_distance(bitstring_1, bitstring_2):
 
     if isinstance(bitstring_1, int):
         bitstring_1, bitstring_2 = f"{bitstring_1:b}", f"{bitstring_2:b}"
-    
+
     distance = hamming_distance(bitstring_1, bitstring_2)
     indexes = hamming_distance(bitstring_1, bitstring_2, return_indexes=True)
 

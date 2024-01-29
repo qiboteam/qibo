@@ -62,7 +62,7 @@ def hamming_distance(
 ):
     """Calculates the Hamming distance between two bistrings.
 
-    This is done by calculating the Hamming weight 
+    This is done by calculating the Hamming weight
     (:func:`qibo.quantum_info.utils.hamming_weight`) of ``| bitstring_1 - bitstring_2 |``.
 
     Args:
