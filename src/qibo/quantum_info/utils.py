@@ -100,9 +100,11 @@ def hamming_distance(
     if isinstance(bitstring_2, (list, tuple)):
         bitstring_2 = "".join(bitstring_2)
 
-    return hamming_weight(
-        abs(int(bitstring_1, 2) - int(bitstring_2, 2)), return_indexes=return_indexes
-    )
+    nbits = max(len(bitstring_1), len(bitstring_2))
+
+    difference = abs(int(bitstring_1, 2) - int(bitstring_2, 2))
+
+    return hamming_weight(f"{difference:{nbits}b}", return_indexes=return_indexes)
 
 
 def hadamard_transform(array, implementation: str = "fast", backend=None):

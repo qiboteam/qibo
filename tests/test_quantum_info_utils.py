@@ -75,7 +75,7 @@ def test_hamming_distance(bitstring_1, bitstring_2):
     indexes = hamming_distance(bitstring_1, bitstring_2, return_indexes=True)
 
     assert distance == 2
-    assert indexes == [0, 2]
+    assert indexes == [1, 3]
 
 
 @pytest.mark.parametrize("is_matrix", [False, True])
