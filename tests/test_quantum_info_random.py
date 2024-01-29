@@ -310,7 +310,6 @@ def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
             backend.assert_allclose(norm < PRECISION_TOL, True)
         else:
             normalization = 1.0 if normalize is False else 1.0 / np.sqrt(dims)
-            print(state)
             backend.assert_allclose(state[0], normalization)
             assert all(np.abs(exp_value) <= normalization for exp_value in state[1:])
 
