@@ -1,4 +1,5 @@
 """Test IQAE model defined in `qibo/models/iqae.py`."""
+
 import numpy as np
 import pytest
 
@@ -144,9 +145,7 @@ def R_qibo(qc, qx, qx_measure, nbit, b_max, b_min):
         gates.RY(q=qx_measure, theta=(b_max - b_min) / 2**nbit * 2 * 0.5 + 2 * b_min)
     )
     for i in range(nbit):
-        qc.add(
-            gates.CU3(qx[i], qx_measure, 2**i * (b_max - b_min) / 2**nbit * 2, 0, 0)
-        )
+        qc.add(gates.CU3(qx[i], qx_measure, 2**i * (b_max - b_min) / 2**nbit * 2, 0, 0))
 
 
 def Rinv_qibo(qc, qx, qx_measure, nbit, b_max, b_min):
@@ -161,9 +160,7 @@ def Rinv_qibo(qc, qx, qx_measure, nbit, b_max, b_min):
     """
     for i in range(nbit)[::-1]:
         qc.add(
-            gates.CU3(
-                qx[i], qx_measure, -(2**i) * (b_max - b_min) / 2**nbit * 2, 0, 0
-            )
+            gates.CU3(qx[i], qx_measure, -(2**i) * (b_max - b_min) / 2**nbit * 2, 0, 0)
         )
     qc.add(
         gates.RY(q=qx_measure, theta=-(b_max - b_min) / 2**nbit * 2 * 0.5 - 2 * b_min)
