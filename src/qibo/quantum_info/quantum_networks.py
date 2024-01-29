@@ -277,12 +277,12 @@ class QuantumNetwork:
         Returns:
             ndarray: Resulting state :math:`\\mathcal{E}(\\varrho)`.
         """
-        if self.pure():
-            return np.einsum(
-                "jk,lm,jl -> km", self._matrix, np.conj(self._matrix), state
-            )
+        matrix = np.copy(self._matrix)
 
-        return np.einsum("jklm,km -> jl", self._matrix, state)
+        if self.pure():
+            return np.einsum("jk,lm,jl -> km", matrix, np.conj(matrix), state)
+
+        return np.einsum("jklm,km -> jl", matrix, state)
 
     def link_product(self, second_network, subscripts: str = "ij,jk -> ik"):
         """Link product between two quantum networks.
