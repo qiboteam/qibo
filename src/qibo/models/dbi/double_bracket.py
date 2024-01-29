@@ -209,7 +209,7 @@ class DoubleBracketIteration:
         n: int = 3,
         n_max: int = 5,
         d: np.array = None,
-        backup_scheduling: DoubleBracketScheduling = DoubleBracketScheduling.use_grid_search,
+        backup_scheduling: DoubleBracketScheduling = None,
     ):
         r"""
         Optimizes iteration step by solving the n_th order polynomial expansion of the loss function.
@@ -222,6 +222,9 @@ class DoubleBracketIteration:
 
         if d is None:
             d = self.diagonal_h_matrix
+
+        if backup_scheduling is None:
+            backup_scheduling = DoubleBracketScheduling.use_grid_search
 
         def sigma(h: np.array):
             return h - self.backend.cast(np.diag(np.diag(self.backend.to_numpy(h))))
@@ -271,9 +274,11 @@ class DoubleBracketIteration:
             backup_scheduling == DoubleBracketScheduling.use_polynomial_approximation
             and n < n_max + 1
         ):
-            return self.polynomial_step(d, n=n + 1, backup_scheduling=backup_scheduling)
+            return self.polynomial_step(
+                n=n + 1, d=d, backup_scheduling=backup_scheduling
+            )
         else:
-            return self.choose_step(d, backup_scheduling)
+            return self.choose_step(d=d, scheduling=backup_scheduling)
 
     def choose_step(
         self,
