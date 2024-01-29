@@ -11,6 +11,7 @@ from qibo.hamiltonians import Hamiltonian, SymbolicHamiltonian
 from qibo.models.dbi.double_bracket import (
     DoubleBracketGeneratorType,
     DoubleBracketIteration,
+    DoubleBracketScheduling,
 )
 
 
@@ -71,11 +72,9 @@ def select_best_dbr_generator(
     dbi_object: DoubleBracketIteration,
     d_list: list,
     step: Optional[float] = None,
-    step_min: float = 1e-5,
-    step_max: float = 1,
-    max_evals: int = 200,
     compare_canonical: bool = True,
-    mode: DoubleBracketGeneratorType = DoubleBracketGeneratorType.single_commutator,
+    scheduling: DoubleBracketScheduling = None,
+    **kwargs,
 ):
     """Selects the best double bracket rotation generator from a list and runs the
 
@@ -88,11 +87,12 @@ def select_best_dbr_generator(
         step_max (float): Maximally allowed iteration duration.
         max_evals (int): Maximally allowed number of evaluation in hyperopt.
         compare_canonical (bool): If `True`, the optimal diagonal operator chosen from "d_list" is compared with the canonical bracket.
-        mode (_DoubleBracketGeneratorType): DBI generator type used for the selection.
 
     Returns:
         The updated dbi_object, index of the optimal diagonal operator, respective step duration, and evolution direction.
     """
+    if scheduling is None:
+        scheduling = dbi_object.scheduling
     norms_off_diagonal_restriction = [
         dbi_object.off_diagonal_norm for _ in range(len(d_list))
     ]
@@ -104,13 +104,8 @@ def select_best_dbr_generator(
         flip_list[i] = CS_angle_sgn(dbi_eval, d)
         if flip_list[i] != 0:
             if step is None:
-                step_best = dbi_eval.hyperopt_step(
-                    d=flip_list[i] * d,
-                    step_min=step_min,
-                    step_max=step_max,
-                    space=hp.uniform,
-                    optimizer=tpe,
-                    max_evals=max_evals,
+                step_best = dbi_eval.choose_step(
+                    d=flip_list[i] * d, scheduling=scheduling, **kwargs
                 )
             else:
                 step_best = step
@@ -123,13 +118,7 @@ def select_best_dbr_generator(
         dbi_eval = deepcopy(dbi_object)
         dbi_eval.mode = DoubleBracketGeneratorType.canonical
         if step is None:
-            step_best = dbi_eval.hyperopt_step(
-                step_min=step_min,
-                step_max=step_max,
-                space=hp.uniform,
-                optimizer=tpe,
-                max_evals=max_evals,
-            )
+            step_best = dbi_eval.choose_step(scheduling=scheduling, **kwargs)
         else:
             step_best = step
         dbi_eval(step=step_best)
