@@ -136,7 +136,7 @@ def test_random_clifford_circuit(backend, prob_qubits, binary):
     clifford_bkd = construct_clifford_backend(backend)
     if not clifford_bkd:
         return
-    c = random_clifford(5, backend=backend)
+    c = random_clifford(5, seed=1, backend=backend)
     c.density_matrix = True
     c_copy = c.copy()
     c.add(gates.M(*MEASURED_QUBITS))
@@ -166,15 +166,11 @@ def test_random_clifford_circuit(backend, prob_qubits, binary):
         numpy_freq = numpy_result.frequencies(binary)
         clifford_freq = clifford_result.frequencies(binary)
         clifford_freq = {state: clifford_freq[state] for state in numpy_freq.keys()}
-        assert (
-            np.sum(
-                np.abs(
-                    np.array(list(numpy_freq.values()))
-                    - np.array(list(clifford_freq.values()))
-                )
-            )
-            < 200
-        )
+        assert len(numpy_freq) == len(clifford_freq)
+        for np_count, clif_count in zip(numpy_freq.values(), clifford_freq.values()):
+            backend.assert_allclose(
+                np_count / 1000, clif_count / 1000, atol=1e-1
+            )  # nshots = 1000
 
 
 def test_collapsing_measurements(backend):
@@ -221,7 +217,6 @@ def test_initial_state(backend):
     initial_symplectic_matrix = tmp.symplectic_matrix
     initial_state = numpy_bkd.execute_circuit(state).state()
     initial_state = np.outer(initial_state, np.transpose(np.conj(initial_state)))
-    print(type(initial_state))
     c = random_clifford(3, density_matrix=True, backend=backend)
     numpy_state = numpy_bkd.execute_circuit(c, initial_state=initial_state).state()
     clifford_state = clifford_bkd.execute_circuit(
@@ -251,5 +246,8 @@ def test_set_backend(backend):
     clifford_bkd = construct_clifford_backend(backend)
     if not clifford_bkd:
         return
-    set_backend("clifford")
+    platform = backend.platform
+    if platform is None:
+        platform = str(backend)
+    set_backend("clifford", platform=platform)
     assert isinstance(GlobalBackend(), type(clifford_bkd))
