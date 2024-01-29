@@ -117,7 +117,7 @@ class DoubleBracketIteration:
 
     @property
     def off_diagonal_norm(self):
-        r"""Hilbert Schmidt norm of off-diagonal part of H matrix: \sqrt{A^\dag A}"""
+        r"""Hilbert Schmidt norm of off-diagonal part of H matrix: \Tr(\sqrt{A^\dag A})"""
         off_diag_h_dag = self.backend.cast(
             np.matrix(self.backend.to_numpy(self.off_diag_h)).getH()
         )

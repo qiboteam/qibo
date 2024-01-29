@@ -93,9 +93,11 @@ def select_best_dbr_generator(
     Returns:
         The updated dbi_object, index of the optimal diagonal operator, respective step duration, and evolution direction.
     """
-    norms_off_diagonal_restriction = [0 for i in range(len(d_list))]
-    optimal_steps = [0 for i in range(len(d_list))]
-    flip_list = [1 for i in range(len(d_list))]
+    norms_off_diagonal_restriction = [
+        dbi_object.off_diagonal_norm for _ in range(len(d_list))
+    ]
+    optimal_steps = [0 for _ in range(len(d_list))]
+    flip_list = [1 for _ in range(len(d_list))]
     for i, d in enumerate(d_list):
         # prescribed step durations
         dbi_eval = deepcopy(dbi_object)
@@ -103,12 +105,12 @@ def select_best_dbr_generator(
         if flip_list[i] != 0:
             if step is None:
                 step_best = dbi_eval.hyperopt_step(
+                    d=flip_list[i] * d,
                     step_min=step_min,
                     step_max=step_max,
                     space=hp.uniform,
                     optimizer=tpe,
                     max_evals=max_evals,
-                    d=flip_list[i] * d,
                 )
             else:
                 step_best = step
