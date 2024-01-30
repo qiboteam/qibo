@@ -116,7 +116,7 @@ def test_classical_relative_entropy(backend, base, kind):
 
 @pytest.mark.parametrize("kind", [None, list])
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
-@pytest.mark.parametrize("alpha", [1, 2, 3, np.inf])
+@pytest.mark.parametrize("alpha", [0, 1, 2, 3, np.inf])
 def test_classical_renyi_entropy(backend, alpha, base, kind):
     with pytest.raises(TypeError):
         prob = np.array([1.0, 0.0])
@@ -158,7 +158,9 @@ def test_classical_renyi_entropy(backend, alpha, base, kind):
     prob_dist = np.random.rand(10)
     prob_dist /= np.sum(prob_dist)
 
-    if alpha == 1:
+    if alpha == 0.0:
+        target = np.log2(len(prob_dist)) / np.log2(base)
+    elif alpha == 1:
         target = shannon_entropy(prob_dist, base=base, backend=backend)
     elif alpha == 2:
         target = -1 * np.log2(np.sum(prob_dist**2)) / np.log2(base)

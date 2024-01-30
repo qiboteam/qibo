@@ -164,20 +164,20 @@ def classical_renyi_entropy(
         H_{\\alpha}(\\mathbf{p}) = \\frac{1}{1 - \\alpha} \\, \\log\\left( \\sum_{x}
             \\, \\mathbf{p}^{\\alpha}(x) \\right) \\, .
 
-    For :math:`\\alpha \\in \\{0, 1, \\infty \\}`, it is further defined that
-
-    .. math::
-        H_{\\alpha}(\\mathbf{p}) = \\lim_{\\beta \\to \\alpha} \\, H_{\\beta}(\\mathbf{p}) \\, .
-
     A special case is the limit :math:`\\alpha \\to 1`, in which the classical Rényi entropy
     coincides with the :func:`qibo.quantum_info.entropies.shannon_entropy`.
+
+    Another special case is the limit :math:`\\alpha \\to 0`, where the function is
+    reduced to the :math:`\\log\\left(|\\mathbf{p}|\\right)`, with :math:`|\\mathbf{p}|`
+    being the support of :math:`\\mathbf{p}`.
+
+    In the limit :math:`\\alpha \\to \\infty`, the function reduces to
+    :math:`-\\log(\\max_{x}(\\mathbf{p}(x)))`, which is called the
+    `min-entropy <https://en.wikipedia.org/wiki/Min-entropy>`_.
 
     Args:
         prob_dist (ndarray): discrete probability distribution.
         alpha (float or int): order of the Rényi entropy.
-            If :math:`\\alpha = 1`, defaults to :func:`qibo.quantum_info.entropies.shannon_entropy`.
-            If :math:`\\alpha = \\infty`, defaults to the
-            `min-entropy <https://en.wikipedia.org/wiki/Min-entropy>`_.
         base (float): the base of the log. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
@@ -221,6 +221,9 @@ def classical_renyi_entropy(
 
     if np.abs(np.sum(prob_dist) - 1.0) > PRECISION_TOL:
         raise_error(ValueError, "Probability array must sum to 1.")
+
+    if alpha == 0.0:
+        return np.log2(len(prob_dist)) / np.log2(base)
 
     if alpha == 1.0:
         return shannon_entropy(prob_dist, base=base, backend=backend)
