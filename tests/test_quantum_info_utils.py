@@ -180,8 +180,9 @@ def test_total_variation_distance(backend, validate, kind):
     backend.assert_allclose(distance, target, atol=1e-5)
 
 
+@pytest.mark.parametrize("kind", [None, list])
 @pytest.mark.parametrize("validate", [False, True])
-def test_hellinger(backend, validate):
+def test_hellinger(backend, validate, kind):
     with pytest.raises(TypeError):
         prob = np.random.rand(1, 2)
         prob_q = np.random.rand(1, 5)
@@ -221,6 +222,9 @@ def test_hellinger(backend, validate):
     target = float(
         backend.calculate_norm(np.sqrt(prob_p) - np.sqrt(prob_q)) / np.sqrt(2)
     )
+
+    if kind is not None:
+        prob_p, prob_q = list(prob_p), list(prob_q)
 
     distance = hellinger_distance(prob_p, prob_q, validate=validate, backend=backend)
     fidelity = hellinger_fidelity(prob_p, prob_q, validate=validate, backend=backend)
