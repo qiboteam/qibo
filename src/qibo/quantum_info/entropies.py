@@ -1,4 +1,5 @@
 """Submodule with entropy measures."""
+from typing import Union
 
 import numpy as np
 
@@ -151,7 +152,9 @@ def classical_relative_entropy(prob_dist_p, prob_dist_q, base: float = 2, backen
     return entropy_p - relative
 
 
-def classical_renyi_entropy(prob_dist, alpha: float, base: float = 2, backend=None):
+def classical_renyi_entropy(
+    prob_dist, alpha: Union[float, int], base: float = 2, backend=None
+):
     """Calculates the classical Rényi entropy :math:`H_{\\alpha}` of a discrete probability distribution.
 
     For :math:`\\alpha \\in (0, \\, 1) \\cup (1, \\, \\infty)` and probability distribution
@@ -171,7 +174,7 @@ def classical_renyi_entropy(prob_dist, alpha: float, base: float = 2, backend=No
 
     Args:
         prob_dist (ndarray): discrete probability distribution.
-        alpha (float): order of the Rényi entropy.
+        alpha (float or int): order of the Rényi entropy.
             If :math:`\\alpha = 1`, defaults to :func:`qibo.quantum_info.entropies.shannon_entropy`.
             If :math:`\\alpha = \\infty`, defaults to the
             `min-entropy <https://en.wikipedia.org/wiki/Min-entropy>`_.
@@ -190,7 +193,7 @@ def classical_renyi_entropy(prob_dist, alpha: float, base: float = 2, backend=No
         # np.float64 is necessary instead of native float because of tensorflow
         prob_dist = backend.cast(prob_dist, dtype=np.float64)
 
-    if not isinstance(alpha, float):
+    if not isinstance(alpha, (float, int)):
         raise_error(
             TypeError, f"alpha must be type float, but it is type {type(alpha)}."
         )

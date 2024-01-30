@@ -4,6 +4,7 @@ import pytest
 from qibo.config import PRECISION_TOL
 from qibo.quantum_info.entropies import (
     classical_relative_entropy,
+    classical_renyi_entropy,
     entanglement_entropy,
     entropy,
     relative_entropy,
@@ -111,6 +112,48 @@ def test_classical_relative_entropy(backend, base, kind):
     divergence = classical_relative_entropy(prob_p, prob_q, base=base, backend=backend)
 
     backend.assert_allclose(divergence, target, atol=1e-5)
+
+
+@pytest.mark.parametrize("kind", [None, list])
+@pytest.mark.parametrize("base", [2, 10, np.e, 5])
+@pytest.mark.parametrize("alpha", [1, 2, 3, np.inf])
+def test_classical_renyi_entropy(backend, alpha, base, kind):
+    with pytest.raises(TypeError):
+        prob = np.array([1.0, 0.0])
+        prob = backend.cast(prob, dtype=prob.dtype)
+        test = classical_renyi_entropy(prob, alpha="2", backend=backend)
+    with pytest.raises(ValueError):
+        prob = np.array([1.0, 0.0])
+        prob = backend.cast(prob, dtype=prob.dtype)
+        test = classical_renyi_entropy(prob, alpha=-2, backend=backend)
+    with pytest.raises(TypeError):
+        prob = np.array([1.0, 0.0])
+        prob = backend.cast(prob, dtype=prob.dtype)
+        test = classical_renyi_entropy(prob, alpha, base="2", backend=backend)
+    with pytest.raises(ValueError):
+        prob = np.array([1.0, 0.0])
+        prob = backend.cast(prob, dtype=prob.dtype)
+        test = classical_renyi_entropy(prob, alpha, base=-2, backend=backend)
+    with pytest.raises(TypeError):
+        prob = np.array([[1.0], [0.0]])
+        prob = backend.cast(prob, dtype=prob.dtype)
+        test = classical_renyi_entropy(prob, alpha, backend=backend)
+    with pytest.raises(TypeError):
+        prob = np.array([])
+        prob = backend.cast(prob, dtype=prob.dtype)
+        test = classical_renyi_entropy(prob, alpha, backend=backend)
+    with pytest.raises(ValueError):
+        prob = np.array([1.0, -1.0])
+        prob = backend.cast(prob, dtype=prob.dtype)
+        test = classical_renyi_entropy(prob, alpha, backend=backend)
+    with pytest.raises(ValueError):
+        prob = np.array([1.1, 0.0])
+        prob = backend.cast(prob, dtype=prob.dtype)
+        test = classical_renyi_entropy(prob, alpha, backend=backend)
+    with pytest.raises(ValueError):
+        prob = np.array([0.5, 0.4999999])
+        prob = backend.cast(prob, dtype=prob.dtype)
+        test = classical_renyi_entropy(prob, alpha, backend=backend)
 
 
 @pytest.mark.parametrize("check_hermitian", [False, True])
