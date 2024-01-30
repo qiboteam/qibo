@@ -119,7 +119,7 @@ def entropy(
     if base <= 0.0:
         raise_error(ValueError, "log base must be non-negative.")
 
-    if isinstance(check_hermitian, bool) is False:
+    if not isinstance(check_hermitian, bool):
         raise_error(
             TypeError,
             f"check_hermitian must be type bool, but it is type {type(check_hermitian)}.",
@@ -131,7 +131,7 @@ def entropy(
 
         return 0.0
 
-    if check_hermitian is False or _check_hermitian_or_not_gpu(state, backend=backend):
+    if not check_hermitian or _check_hermitian_or_not_gpu(state, backend=backend):
         eigenvalues = np.linalg.eigvalsh(state)
     else:
         eigenvalues = np.linalg.eigvals(state)
@@ -158,46 +158,14 @@ def entropy(
     return ent
 
 
-def entanglement_entropy(
-    state,
-    bipartition,
-    base: float = 2,
-    check_hermitian: bool = False,
-    return_spectrum: bool = False,
-    backend=None,
+def relative_entropy(
+    state, target, base: float = 2, check_hermitian: bool = False, backend=None
 ):
-    """Calculates the entanglement entropy :math:`S` of bipartition :math:`A`
-    of ``state`` :math:`\\rho`. This is given by
-
-    .. math::
-        S(\\rho_{A}) = -\\text{tr}(\\rho_{A} \\, \\log(\\rho_{A})) \\, ,
-
-    where :math:`\\rho_{A} = \\text{tr}_{B}(\\rho)` is the reduced density matrix calculated
-    by tracing out the ``bipartition`` :math:`B`.
-
-    Args:
-        state (ndarray): statevector or density matrix.
-        bipartition (list or tuple or ndarray): qubits in the subsystem to be traced out.
-        base (float, optional): the base of the log. Defaults to :math: `2`.
-        check_hermitian (bool, optional): if ``True``, checks if :math:`\\rho_{A}` is Hermitian.
-            If ``False``, it assumes ``state`` is Hermitian . Default: ``False``.
-        return_spectrum: if ``True``, returns ``entropy`` and eigenvalues of ``state``.
-            If ``False``, returns only ``entropy``. Default is ``False``.
-        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
-            in the execution. If ``None``, it uses
-            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
-
-    Returns:
-        float: Entanglement entropy :math:`S` of ``state`` :math:`\\rho`.
-    """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    if base <= 0.0:
-        raise_error(ValueError, "log base must be non-negative.")
-
     if (
-        (len(state.shape) not in [1, 2])
+        (len(state.shape) >= 3)
         or (len(state) == 0)
         or (len(state.shape) == 2 and state.shape[0] != state.shape[1])
     ):
@@ -206,23 +174,68 @@ def entanglement_entropy(
             f"state must have dims either (k,) or (k,k), but have dims {state.shape}.",
         )
 
-    nqubits = int(np.log2(state.shape[0]))
+    if (
+        (len(target.shape) >= 3)
+        or (len(target) == 0)
+        or (len(target.shape) == 2 and target.shape[0] != target.shape[1])
+    ):
+        raise_error(
+            TypeError,
+            f"target must have dims either (k,) or (k,k), but have dims {target.shape}.",
+        )
 
-    reduced_density_matrix = (
-        backend.partial_trace(state, bipartition, nqubits)
-        if len(state.shape) == 1
-        else backend.partial_trace_density_matrix(state, bipartition, nqubits)
-    )
+    if base <= 0.0:
+        raise_error(ValueError, "log base must be non-negative.")
 
-    entropy_entanglement = entropy(
-        reduced_density_matrix,
-        base=base,
-        check_hermitian=check_hermitian,
-        return_spectrum=return_spectrum,
-        backend=backend,
-    )
+    if not isinstance(check_hermitian, bool):
+        raise_error(
+            TypeError,
+            f"check_hermitian must be type bool, but it is type {type(check_hermitian)}.",
+        )
 
-    return entropy_entanglement
+    if purity(state) == 1.0 and purity(target) == 1.0:
+        return 0.0
+
+    if not check_hermitian or _check_hermitian_or_not_gpu(state, backend=backend):
+        eigenvalues_state = np.linalg.eigvalsh(state)
+    else:
+        eigenvalues_state = np.linalg.eigvals(state)
+
+    if not check_hermitian or _check_hermitian_or_not_gpu(target, backend=backend):
+        eigenvalues_target = np.linalg.eigvalsh(target)
+    else:
+        eigenvalues_target = np.linalg.eigvals(target)
+
+    if base == 2:
+        log_state = np.where(eigenvalues_state > 0, np.log2(eigenvalues_state), 0.0)
+        log_target = np.where(
+            eigenvalues_target > 0, np.log2(eigenvalues_target), -np.inf
+        )
+    elif base == 10:
+        log_state = np.where(eigenvalues_state > 0, np.log10(eigenvalues_state), 0.0)
+        log_target = np.where(
+            eigenvalues_target > 0, np.log10(eigenvalues_target), -np.inf
+        )
+    elif base == np.e:
+        log_state = np.where(eigenvalues_state > 0, np.log(eigenvalues_state), 0.0)
+        log_target = np.where(
+            eigenvalues_target > 0, np.log(eigenvalues_target), -np.inf
+        )
+    else:
+        log_state = np.where(
+            eigenvalues_state > 0, np.log(eigenvalues_state) / np.log(base), 0.0
+        )
+        log_target = np.where(
+            eigenvalues_target > 0, np.log(eigenvalues_target) / np.log(base), -np.inf
+        )
+
+    log_target = np.where(eigenvalues_state != 0.0, log_target, 0.0)
+
+    entropy_state = np.sum(eigenvalues_state * log_state)
+
+    relative = np.sum(eigenvalues_state * log_target)
+
+    return float(entropy_state - relative)
 
 
 def classical_relative_entropy(
@@ -306,3 +319,70 @@ def classical_relative_entropy(
     relative = np.sum(prob_dist_p * log_prob)
 
     return entropy_p - relative
+
+
+def entanglement_entropy(
+    state,
+    bipartition,
+    base: float = 2,
+    check_hermitian: bool = False,
+    return_spectrum: bool = False,
+    backend=None,
+):
+    """Calculates the entanglement entropy :math:`S` of bipartition :math:`A`
+    of ``state`` :math:`\\rho`. This is given by
+
+    .. math::
+        S(\\rho_{A}) = -\\text{tr}(\\rho_{A} \\, \\log(\\rho_{A})) \\, ,
+
+    where :math:`\\rho_{A} = \\text{tr}_{B}(\\rho)` is the reduced density matrix calculated
+    by tracing out the ``bipartition`` :math:`B`.
+
+    Args:
+        state (ndarray): statevector or density matrix.
+        bipartition (list or tuple or ndarray): qubits in the subsystem to be traced out.
+        base (float, optional): the base of the log. Defaults to :math: `2`.
+        check_hermitian (bool, optional): if ``True``, checks if :math:`\\rho_{A}` is Hermitian.
+            If ``False``, it assumes ``state`` is Hermitian . Default: ``False``.
+        return_spectrum: if ``True``, returns ``entropy`` and eigenvalues of ``state``.
+            If ``False``, returns only ``entropy``. Default is ``False``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        float: Entanglement entropy :math:`S` of ``state`` :math:`\\rho`.
+    """
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    if base <= 0.0:
+        raise_error(ValueError, "log base must be non-negative.")
+
+    if (
+        (len(state.shape) not in [1, 2])
+        or (len(state) == 0)
+        or (len(state.shape) == 2 and state.shape[0] != state.shape[1])
+    ):
+        raise_error(
+            TypeError,
+            f"state must have dims either (k,) or (k,k), but have dims {state.shape}.",
+        )
+
+    nqubits = int(np.log2(state.shape[0]))
+
+    reduced_density_matrix = (
+        backend.partial_trace(state, bipartition, nqubits)
+        if len(state.shape) == 1
+        else backend.partial_trace_density_matrix(state, bipartition, nqubits)
+    )
+
+    entropy_entanglement = entropy(
+        reduced_density_matrix,
+        base=base,
+        check_hermitian=check_hermitian,
+        return_spectrum=return_spectrum,
+        backend=backend,
+    )
+
+    return entropy_entanglement
