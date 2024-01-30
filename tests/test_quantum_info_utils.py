@@ -131,8 +131,9 @@ def test_shannon_entropy(backend, base):
         backend.assert_allclose(result, 1.0)
 
 
+@pytest.mark.parametrize("kind", [None, list])
 @pytest.mark.parametrize("validate", [False, True])
-def test_total_variation_distance(backend, validate):
+def test_total_variation_distance(backend, validate, kind):
     with pytest.raises(TypeError):
         prob = np.random.rand(1, 2)
         prob_q = np.random.rand(1, 5)
@@ -170,6 +171,10 @@ def test_total_variation_distance(backend, validate):
     prob_q /= np.sum(prob_q)
 
     target = (1 / 2) * np.sum(np.abs(prob_p - prob_q))
+
+    if kind is not None:
+        prob_p, prob_q = kind(prob_q), kind(prob_q)
+
     distance = total_variation_distance(prob_p, prob_q, validate, backend=backend)
 
     assert distance == target
