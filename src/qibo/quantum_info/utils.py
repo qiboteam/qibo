@@ -17,7 +17,7 @@ def hamming_weight(bitstring, return_indexes: bool = False):
     """Calculates the Hamming weight of a bitstring.
 
     Args:
-        bitstring (int or str or tuple or list or ndarray): bitstring to calculate the
+        bitstring (int or str or tuple or list or ndarray): bitstring to Calculates the
             weight, either in binary or integer representation.
         return_indexes (bool, optional): If ``True``, returns the indexes of the
             non-zero elements. Defaults to ``False``.
@@ -128,7 +128,7 @@ def hadamard_transform(array, implementation: str = "fast", backend=None):
 
 
 def shannon_entropy(probability_array, base: float = 2, backend=None):
-    """Calculate the Shannon entropy of a probability array :math:`\\mathbf{p}`, which is given by
+    """Calculates the Shannon entropy of a probability array :math:`\\mathbf{p}`, which is given by
 
     .. math::
         H(\\mathbf{p}) = - \\sum_{k = 0}^{d^{2} - 1} \\, p_{k} \\, \\log_{b}(p_{k}) \\, ,
@@ -193,10 +193,72 @@ def shannon_entropy(probability_array, base: float = 2, backend=None):
     return complex(entropy).real
 
 
+def total_variation_distance(
+    prob_dist_p, prob_dist_q, validate: bool = False, backend=None
+):
+    """Calculates the Total Variation (TV) distance between two discrete probability distributions.
+
+    For probabilities :math:`\\mathbf{p}` and :math:`\\mathbf{q}`, it is defined as
+
+    ..math::
+        d_{\\text{TV}}(\\mathbf{p} \\, , \\, \\mathbf{q}) = \\frac{1}{2}
+            \\, \\| \\mathbf{p} - \\mathbf{q} \\|_{1} \\, ,
+
+    where :math:`\\| \\cdot \\|_{1}` is the :math:`\\mathcal{l}_{1}`-norm.
+
+    Args:
+        prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
+        prob_dist_q (ndarray or list): discrete probability distribution :math:`q`.
+        validate (bool, optional): If ``True``, checks if :math:`p` and :math:`q` are proper
+            probability distributions. Defaults to ``False``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
+            used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        float: Total variation distance between :math:`\\mathbf{p}` and :math:`\\mathbf{q}`.
+    """
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    if isinstance(prob_dist_p, list):
+        prob_dist_p = backend.cast(prob_dist_p, dtype=float)
+    if isinstance(prob_dist_q, list):
+        prob_dist_q = backend.cast(prob_dist_q, dtype=float)
+
+    if (len(prob_dist_p.shape) != 1) or (len(prob_dist_q.shape) != 1):
+        raise_error(
+            TypeError,
+            "Probability arrays must have dims (k,) but have "
+            + f"dims {prob_dist_p.shape} and {prob_dist_q.shape}.",
+        )
+
+    if (len(prob_dist_p) == 0) or (len(prob_dist_q) == 0):
+        raise_error(TypeError, "At least one of the arrays is empty.")
+
+    if validate:
+        if (any(prob_dist_p < 0) or any(prob_dist_p > 1.0)) or (
+            any(prob_dist_q < 0) or any(prob_dist_q > 1.0)
+        ):
+            raise_error(
+                ValueError,
+                "All elements of the probability array must be between 0. and 1..",
+            )
+        if np.abs(np.sum(prob_dist_p) - 1.0) > PRECISION_TOL:
+            raise_error(ValueError, "First probability array must sum to 1.")
+
+        if np.abs(np.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
+            raise_error(ValueError, "Second probability array must sum to 1.")
+
+    total_variation = (1 / 2) * np.sum(np.abs(prob_dist_p - prob_dist_q))
+
+    return total_variation
+
+
 def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend=None):
-    """Calculate the Hellinger distance :math:`H(p, q)` between
-    two discrete probability distributions, :math:`\\mathbf{p}` and :math:`\\mathbf{q}`.
-    It is defined as
+    """Calculates the Hellinger distance :math:`H` between two discrete probability distributions.
+
+    For probabilities :math:`\\mathbf{p}` and :math:`\\mathbf{q}`, it is defined as
 
     .. math::
         H(\\mathbf{p} \\, , \\, \\mathbf{q}) = \\frac{1}{\\sqrt{2}} \\, \\|
@@ -205,10 +267,10 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend
     where :math:`\\|\\cdot\\|_{2}` is the Euclidean norm.
 
     Args:
-        prob_dist_p: (discrete) probability distribution :math:`p`.
-        prob_dist_q: (discrete) probability distribution :math:`q`.
-        validate (bool): if True, checks if :math:`p` and :math:`q` are proper
-            probability distributions. Default: False.
+        prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
+        prob_dist_q (ndarray or list): discrete probability distribution :math:`q`.
+        validate (bool, optional): If ``True``, checks if :math:`p` and :math:`q` are proper
+            probability distributions. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -256,15 +318,20 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend
 
 
 def hellinger_fidelity(prob_dist_p, prob_dist_q, validate: bool = False, backend=None):
-    """Calculate the Hellinger fidelity between two discrete
-    probability distributions, :math:`p` and :math:`q`. The fidelity is
-    defined as :math:`(1 - H^{2}(p, q))^{2}`, where :math:`H(p, q)`
-    is the Hellinger distance.
+    """Calculates the Hellinger fidelity between two discrete probability distributions.
+
+    For probabilities :math:`p` and :math:`q`, the fidelity is defined as
+
+    ..math::
+        (1 - H^{2}(p, q))^{2} \\, ,
+
+    where :math:`H(p, q)` is the Hellinger distance
+    (:func:`qibo.quantum_info.utils.hellinger_distance`).
 
     Args:
-        prob_dist_p: (discrete) probability distribution :math:`p`.
-        prob_dist_q: (discrete) probability distribution :math:`q`.
-        validate (bool): if True, checks if :math:`p` and :math:`q` are proper
+        prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
+        prob_dist_q (ndarray or list): discrete probability distribution :math:`q`.
+        validate (bool, optional): if True, checks if :math:`p` and :math:`q` are proper
             probability distributions. Default: False.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
