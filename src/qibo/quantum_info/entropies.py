@@ -222,3 +222,63 @@ def entanglement_entropy(
     )
 
     return entropy_entanglement
+
+
+def classical_relative_entropy(
+    prob_dist_p, prob_dist_q, base: float = 2, validate: bool = False, backend=None
+):
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    if isinstance(prob_dist_p, list):
+        prob_dist_p = backend.cast(prob_dist_p, dtype=float)
+    if isinstance(prob_dist_q, list):
+        prob_dist_q = backend.cast(prob_dist_q, dtype=float)
+
+    if (len(prob_dist_p.shape) != 1) or (len(prob_dist_q.shape) != 1):
+        raise_error(
+            TypeError,
+            "Probability arrays must have dims (k,) but have "
+            + f"dims {prob_dist_p.shape} and {prob_dist_q.shape}.",
+        )
+
+    if (len(prob_dist_p) == 0) or (len(prob_dist_q) == 0):
+        raise_error(TypeError, "At least one of the arrays is empty.")
+
+    if base <= 0:
+        raise_error(ValueError, "log base must be non-negative.")
+
+    if validate:
+        if (any(prob_dist_p < 0) or any(prob_dist_p > 1.0)) or (
+            any(prob_dist_q < 0) or any(prob_dist_q > 1.0)
+        ):
+            raise_error(
+                ValueError,
+                "All elements of the probability array must be between 0. and 1..",
+            )
+        if np.abs(np.sum(prob_dist_p) - 1.0) > PRECISION_TOL:
+            raise_error(ValueError, "First probability array must sum to 1.")
+
+        if np.abs(np.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
+            raise_error(ValueError, "Second probability array must sum to 1.")
+
+    entropy_p = -shannon_entropy(prob_dist_p, base=base, backend=backend)
+
+    if base == 2:
+        log_prob_q = np.where(prob_dist_q != 0.0, np.log2(prob_dist_q), -np.inf)
+        log_prob = np.where(prob_dist_p != 0.0, log_prob_q, 0.0)
+    elif base == 10:
+        log_prob_q = np.where(prob_dist_q != 0.0, np.log10(prob_dist_q), -np.inf)
+        log_prob = np.where(prob_dist_p != 0, log_prob_q, 0.0)
+    elif base == np.e:
+        log_prob_q = np.where(prob_dist_q != 0.0, np.log(prob_dist_q), -np.inf)
+        log_prob = np.where(prob_dist_p != 0, log_prob_q, 0.0)
+    else:
+        log_prob_q = np.where(
+            prob_dist_q != 0.0, np.log(prob_dist_q) / np.log(base), -np.inf
+        )
+        log_prob = np.where(prob_dist_p != 0, log_prob_q / np.log(base), 0.0)
+
+    relative = np.sum(prob_dist_p * log_prob)
+
+    return entropy_p - relative
