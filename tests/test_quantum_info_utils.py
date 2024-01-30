@@ -14,7 +14,6 @@ from qibo.quantum_info.utils import (
     hellinger_distance,
     hellinger_fidelity,
     pqc_integral,
-    shannon_entropy,
 )
 
 
@@ -88,46 +87,6 @@ def test_hadamard_transform(backend, nqubits, implementation, is_matrix):
     )
 
     backend.assert_allclose(transformed, test_transformed, atol=PRECISION_TOL)
-
-
-def test_shannon_entropy_errors(backend):
-    with pytest.raises(ValueError):
-        prob = np.array([1.0, 0.0])
-        prob = backend.cast(prob, dtype=prob.dtype)
-        test = shannon_entropy(prob, -2, backend=backend)
-    with pytest.raises(TypeError):
-        prob = np.array([[1.0], [0.0]])
-        prob = backend.cast(prob, dtype=prob.dtype)
-        test = shannon_entropy(prob, backend=backend)
-    with pytest.raises(TypeError):
-        prob = np.array([])
-        prob = backend.cast(prob, dtype=prob.dtype)
-        test = shannon_entropy(prob, backend=backend)
-    with pytest.raises(ValueError):
-        prob = np.array([1.0, -1.0])
-        prob = backend.cast(prob, dtype=prob.dtype)
-        test = shannon_entropy(prob, backend=backend)
-    with pytest.raises(ValueError):
-        prob = np.array([1.1, 0.0])
-        prob = backend.cast(prob, dtype=prob.dtype)
-        test = shannon_entropy(prob, backend=backend)
-    with pytest.raises(ValueError):
-        prob = np.array([0.5, 0.4999999])
-        prob = backend.cast(prob, dtype=prob.dtype)
-        test = shannon_entropy(prob, backend=backend)
-
-
-@pytest.mark.parametrize("base", [2, 10, np.e, 5])
-def test_shannon_entropy(backend, base):
-    prob_array = [1.0, 0.0]
-    result = shannon_entropy(prob_array, base, backend=backend)
-    backend.assert_allclose(result, 0.0)
-
-    if base == 2:
-        prob_array = np.array([0.5, 0.5])
-        prob_array = backend.cast(prob_array, dtype=prob_array.dtype)
-        result = shannon_entropy(prob_array, base, backend=backend)
-        backend.assert_allclose(result, 1.0)
 
 
 def test_hellinger(backend):

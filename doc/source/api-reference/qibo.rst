@@ -1489,40 +1489,6 @@ The destabilizers can be extracted analogously with :meth:`qibo.quantum_info.cli
     :member-order: bysource
 
 
-
-Entropy measures
-^^^^^^^^^^^^^^^^
-
-Set of functions to calculate entropy measures.
-
-Entropy
-"""""""
-
-.. autofunction:: qibo.quantum_info.entropy
-
-.. note::
-    ``validate`` flag allows the user to choose if the function will check if input
-    ``state`` is Hermitian or not. Default option is ``validate=False``, i.e. the
-    assumption of Hermiticity, because it is faster and, more importantly,
-    the functions are intended to be used on Hermitian inputs. When ``validate=True``
-    and ``state`` is non-Hermitian, an error will be raised when using `cupy` backend.
-
-
-Entanglement entropy
-""""""""""""""""""""
-
-.. autofunction:: qibo.quantum_info.entanglement_entropy
-
-.. note::
-    ``validate`` flag allows the user to choose if the function will check if
-    the reduced density matrix resulting from tracing out ``bipartition`` from input
-    ``state`` is Hermitian or not. Default option is ``validate=False``, i.e. the
-    assumption of Hermiticity, because it is faster and, more importantly,
-    the functions are intended to be used on Hermitian inputs. When ``validate=True``
-    and the reduced density matrix is non-Hermitian, an error will be raised
-    when using `cupy` backend.
-
-
 Entanglement measures
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -1557,6 +1523,46 @@ Entanglement capability
 """""""""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.entangling_capability
+
+
+Entropy measures
+^^^^^^^^^^^^^^^^
+
+Set of functions to calculate entropy measures.
+
+
+Shannon entropy
+"""""""""""""""
+
+.. autofunction:: qibo.quantum_info.shannon_entropy
+
+
+Entropy
+"""""""
+
+.. autofunction:: qibo.quantum_info.entropy
+
+.. note::
+    ``validate`` flag allows the user to choose if the function will check if input
+    ``state`` is Hermitian or not. Default option is ``validate=False``, i.e. the
+    assumption of Hermiticity, because it is faster and, more importantly,
+    the functions are intended to be used on Hermitian inputs. When ``validate=True``
+    and ``state`` is non-Hermitian, an error will be raised when using `cupy` backend.
+
+
+Entanglement Entropy
+""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.entanglement_entropy
+
+.. note::
+    ``validate`` flag allows the user to choose if the function will check if
+    the reduced density matrix resulting from tracing out ``bipartition`` from input
+    ``state`` is Hermitian or not. Default option is ``validate=False``, i.e. the
+    assumption of Hermiticity, because it is faster and, more importantly,
+    the functions are intended to be used on Hermitian inputs. When ``validate=True``
+    and the reduced density matrix is non-Hermitian, an error will be raised
+    when using `cupy` backend.
 
 
 Metrics
@@ -2045,12 +2051,6 @@ Hadamard Transform
 """"""""""""""""""
 
 .. autofunction:: qibo.quantum_info.hadamard_transform
-
-
-Shannon entropy
-"""""""""""""""
-
-.. autofunction:: qibo.quantum_info.shannon_entropy
 
 
 Hellinger distance

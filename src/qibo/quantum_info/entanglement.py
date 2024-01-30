@@ -90,12 +90,12 @@ def entanglement_of_formation(
         x = \\frac{1 + \\sqrt{1 - C^{2}(\\rho)}}{2} \\, ,
 
     :math:`C(\\rho)` is the :func:`qibo.quantum_info.concurrence` of :math:`\\rho`,
-    and :math:`H` is the :func:`qibo.quantum_info.shannon_entropy`.
+    and :math:`H` is the :func:`qibo.quantum_info.entropies.shannon_entropy`.
 
     Args:
         state (ndarray): statevector or density matrix.
         bipartition (list or tuple or ndarray): qubits in the subsystem to be traced out.
-        base (float): the base of the log in :func:`qibo.quantum_info.shannon_entropy`.
+        base (float): the base of the log in :func:`qibo.quantum_info.entropies.shannon_entropy`.
             Defaults to  :math:`2`.
         check_purity (bool, optional): if ``True``, checks if ``state`` is pure. If ``False``,
             it assumes ``state`` is pure . Default: ``True``.
@@ -110,7 +110,7 @@ def entanglement_of_formation(
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    from qibo.quantum_info.utils import shannon_entropy  # pylint: disable=C0415
+    from qibo.quantum_info.entropies import shannon_entropy  # pylint: disable=C0415
 
     concur = concurrence(
         state, bipartition=bipartition, check_purity=check_purity, backend=backend
