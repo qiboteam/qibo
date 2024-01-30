@@ -81,8 +81,9 @@ def entropy(
     return_spectrum: bool = False,
     backend=None,
 ):
-    """The von-Neumann entropy :math:`S(\\rho)` of a quantum ``state`` :math:`\\rho`, which
-    is given by
+    """Calculates the von-Neumann entropy :math:`S(\\rho)` of a quantum ``state`` :math:`\\rho`.
+
+    It is given by
 
     .. math::
         S(\\rho) = - \\text{tr}\\left[\\rho \\, \\log(\\rho)\\right]
@@ -161,6 +162,28 @@ def entropy(
 def relative_entropy(
     state, target, base: float = 2, check_hermitian: bool = False, backend=None
 ):
+    """Calculates the relative entropy :math:`S(\\rho \\, \\| \\, \\sigma)` between ``state`` :math:`\\rho` and ``target`` :math:`\\sigma`.
+
+    It is given by
+
+    .. math::
+        S(\\rho \\, \\| \\, \\sigma) = \\text{tr}\\left[\\rho \\, \\log(\\rho)\\right]
+            - \\text{tr}\\left[\\rho \\, \\log(\\sigma)\\right]
+
+    Args:
+        state (ndarray): statevector or density matrix :math:`\\rho`.
+        target (ndarray): statevector or density matrix :math:`\\sigma`.
+        base (float, optional): the base of the log. Defaults to :math:`2`.
+        check_hermitian (bool, optional): If ``True``, checks if ``state`` is Hermitian.
+            If ``False``, it assumes ``state`` is Hermitian .
+            Defaults to ``False``.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        float: Relative (von-Neumann) entropy :math:`S(\\rho \\, \\| \\, \\sigma)`.
+    """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
