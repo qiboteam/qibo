@@ -66,12 +66,12 @@ def shannon_entropy(probability_array, base: float = 2, backend=None):
             probability_array != 0, np.log(probability_array) / np.log(base), 0.0
         )
 
-    entropy = -np.sum(probability_array * log_prob)
+    shan_entropy = -np.sum(probability_array * log_prob)
 
     # absolute value if entropy == 0.0 to avoid returning -0.0
-    entropy = np.abs(entropy) if entropy == 0.0 else entropy
+    shan_entropy = np.abs(shan_entropy) if shan_entropy == 0.0 else shan_entropy
 
-    return complex(entropy).real
+    return complex(shan_entropy).real
 
 
 def entropy(
@@ -288,7 +288,7 @@ def classical_relative_entropy(
         if np.abs(np.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
             raise_error(ValueError, "Second probability array must sum to 1.")
 
-    entropy_p = -shannon_entropy(prob_dist_p, base=base, backend=backend)
+    entropy_p = -1 * shannon_entropy(prob_dist_p, base=base, backend=backend)
 
     if base == 2:
         log_prob_q = np.where(prob_dist_q != 0.0, np.log2(prob_dist_q), -np.inf)
