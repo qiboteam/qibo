@@ -373,7 +373,7 @@ class QuantumNetwork:
             pure=self._pure,
             backend=self._backend,
         )
-    
+
     def to_full(self, backend=None):
         """Convert the internal representation to the full Choi operator of the network.
 
