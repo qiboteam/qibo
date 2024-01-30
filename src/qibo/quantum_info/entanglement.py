@@ -42,7 +42,7 @@ def concurrence(state, bipartition, check_purity: bool = True, backend=None):
             f"state must have dims either (k,) or (k,k), but have dims {state.shape}.",
         )
 
-    if isinstance(check_purity, bool) is False:
+    if not isinstance(check_purity, bool):
         raise_error(
             TypeError,
             f"check_purity must be type bool, but it is type {type(check_purity)}.",
@@ -158,7 +158,7 @@ def entanglement_fidelity(
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    if isinstance(nqubits, int) is False:
+    if not isinstance(nqubits, int):
         raise_error(
             TypeError, f"nqubits must be type int, but it is type {type(nqubits)}."
         )
@@ -178,7 +178,7 @@ def entanglement_fidelity(
             f"state must have dims either (k,) or (k,k), but have dims {state.shape}.",
         )
 
-    if isinstance(check_hermitian, bool) is False:
+    if not isinstance(check_hermitian, bool):
         raise_error(
             TypeError,
             f"check_hermitian must be type bool, but it is type {type(check_hermitian)}.",
@@ -265,7 +265,7 @@ def entangling_capability(circuit, samples: int, seed=None, backend=None):
         float: Entangling capability.
     """
 
-    if isinstance(samples, int) is False:
+    if not isinstance(samples, int):
         raise_error(
             TypeError, f"samples must be type int, but it is type {type(samples)}."
         )
