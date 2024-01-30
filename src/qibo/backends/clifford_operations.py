@@ -385,17 +385,25 @@ def _rowsum(symplectic_matrix, h, i, nqubits, determined=False):
         r = reduce(np.logical_xor, r)
         xi_xh = reduce(np.logical_xor, xi_xh)
         zi_zh = reduce(np.logical_xor, zi_zh)
-    symplectic_matrix[h, -1] = r
-    symplectic_matrix[h, :nqubits] = xi_xh
-    symplectic_matrix[h, nqubits:-1] = zi_zh
+        symplectic_matrix[h[0], -1] = r
+        symplectic_matrix[h[0], :nqubits] = xi_xh
+        symplectic_matrix[h[0], nqubits:-1] = zi_zh
+    else:
+        symplectic_matrix[h, -1] = r
+        symplectic_matrix[h, :nqubits] = xi_xh
+        symplectic_matrix[h, nqubits:-1] = zi_zh
     return symplectic_matrix
 
 
 def _determined_outcome(state, q, nqubits):
     state[-1, :] = False
-    idx = state[:nqubits, q].nonzero()[0] + nqubits
+    idx = (state[:nqubits, q].nonzero()[0] + nqubits).astype(np.uint)
     state = _rowsum(
-        state, 2 * nqubits * np.ones(idx.shape, dtype=int), idx, nqubits, True
+        state,
+        2 * nqubits * np.ones(idx.shape, dtype=np.uint),
+        idx.astype(np.uint),
+        nqubits,
+        True,
     )
     return state, np.uint(state[-1, -1])
 
@@ -412,6 +420,7 @@ def _random_outcome(state, p, q, nqubits):
             h.astype(np.uint),
             p * np.ones(h.shape[0], dtype=np.uint),
             nqubits,
+            False,
         )
     state[p - nqubits, :] = state[p, :]
     outcome = np.random.randint(2, size=1).item()
