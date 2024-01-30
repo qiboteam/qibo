@@ -155,6 +155,25 @@ def test_classical_renyi_entropy(backend, alpha, base, kind):
         prob = backend.cast(prob, dtype=prob.dtype)
         test = classical_renyi_entropy(prob, alpha, backend=backend)
 
+    prob_dist = np.random.rand(10)
+    prob_dist /= np.sum(prob_dist)
+
+    if alpha == 1:
+        target = shannon_entropy(prob_dist, base=base, backend=backend)
+    elif alpha == 2:
+        target = -1 * np.log2(np.sum(prob_dist**2)) / np.log2(base)
+    elif alpha == np.inf:
+        target = -1 * np.log2(max(prob_dist)) / np.log2(base)
+    else:
+        target = (1 / (1 - alpha)) * np.log2(np.sum(prob_dist**alpha)) / np.log2(base)
+
+    if kind is not None:
+        prob_dist = kind(prob_dist)
+
+    renyi_ent = classical_renyi_entropy(prob_dist, alpha, base=base, backend=backend)
+
+    backend.assert_allclose(renyi_ent, target, atol=1e-5)
+
 
 @pytest.mark.parametrize("check_hermitian", [False, True])
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
