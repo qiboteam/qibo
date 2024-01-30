@@ -151,7 +151,7 @@ def shannon_entropy(probability_array, base: float = 2, backend=None):
         backend = GlobalBackend()
 
     if isinstance(probability_array, list):
-        probability_array = backend.cast(probability_array, dtype=float)
+        probability_array = backend.cast(probability_array, dtype=np.float64)
 
     if base <= 0:
         raise_error(ValueError, "log base must be non-negative.")
@@ -222,9 +222,9 @@ def total_variation_distance(
         backend = GlobalBackend()
 
     if isinstance(prob_dist_p, list):
-        prob_dist_p = backend.cast(prob_dist_p, dtype=float)
+        prob_dist_p = backend.cast(prob_dist_p, dtype=np.float64)
     if isinstance(prob_dist_q, list):
-        prob_dist_q = backend.cast(prob_dist_q, dtype=float)
+        prob_dist_q = backend.cast(prob_dist_q, dtype=np.float64)
 
     if (len(prob_dist_p.shape) != 1) or (len(prob_dist_q.shape) != 1):
         raise_error(
@@ -282,9 +282,9 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend
         backend = GlobalBackend()
 
     if isinstance(prob_dist_p, list):
-        prob_dist_p = backend.cast(prob_dist_p, dtype=float)
+        prob_dist_p = backend.cast(prob_dist_p, dtype=np.float64)
     if isinstance(prob_dist_q, list):
-        prob_dist_q = backend.cast(prob_dist_q, dtype=float)
+        prob_dist_q = backend.cast(prob_dist_q, dtype=np.float64)
 
     if (len(prob_dist_p.shape) != 1) or (len(prob_dist_q.shape) != 1):
         raise_error(
