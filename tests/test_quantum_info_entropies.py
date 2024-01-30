@@ -56,6 +56,66 @@ def test_shannon_entropy(backend, base):
         backend.assert_allclose(result, 1.0)
 
 
+@pytest.mark.parametrize("kind", [None, list])
+@pytest.mark.parametrize("validate", [False, True])
+@pytest.mark.parametrize("base", [2, 10, np.e, 5])
+def test_classical_relative_entropy(backend, base, validate, kind):
+    with pytest.raises(TypeError):
+        prob = np.random.rand(1, 2)
+        prob_q = np.random.rand(1, 5)
+        prob = backend.cast(prob, dtype=prob.dtype)
+        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        test = classical_relative_entropy(prob, prob_q, backend=backend)
+    with pytest.raises(TypeError):
+        prob = np.random.rand(1, 2)[0]
+        prob_q = np.array([])
+        prob = backend.cast(prob, dtype=prob.dtype)
+        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        test = classical_relative_entropy(prob, prob_q, backend=backend)
+    with pytest.raises(ValueError):
+        prob = np.array([-1, 2.0])
+        prob_q = np.random.rand(1, 5)[0]
+        prob = backend.cast(prob, dtype=prob.dtype)
+        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        test = classical_relative_entropy(prob, prob_q, validate=True, backend=backend)
+    with pytest.raises(ValueError):
+        prob = np.random.rand(1, 2)[0]
+        prob_q = np.array([1.0, 0.0])
+        prob = backend.cast(prob, dtype=prob.dtype)
+        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        test = classical_relative_entropy(prob, prob_q, validate=True, backend=backend)
+    with pytest.raises(ValueError):
+        prob = np.array([1.0, 0.0])
+        prob_q = np.random.rand(1, 2)[0]
+        prob = backend.cast(prob, dtype=prob.dtype)
+        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        test = classical_relative_entropy(prob, prob_q, validate=True, backend=backend)
+    with pytest.raises(ValueError):
+        prob = np.array([1.0, 0.0])
+        prob_q = np.array([0.0, 1.0])
+        prob = backend.cast(prob, dtype=prob.dtype)
+        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        test = classical_relative_entropy(prob, prob_q, base=-2, backend=backend)
+
+    prob_p = np.random.rand(10)
+    prob_q = np.random.rand(10)
+    prob_p /= np.sum(prob_p)
+    prob_q /= np.sum(prob_q)
+
+    target = np.sum(prob_p * np.log(prob_p) / np.log(base)) - np.sum(
+        prob_p * np.log(prob_q) / np.log(base)
+    )
+
+    if kind is not None:
+        prob_p, prob_q = kind(prob_p), kind(prob_q)
+
+    divergence = classical_relative_entropy(
+        prob_p, prob_q, base=base, validate=validate, backend=backend
+    )
+
+    backend.assert_allclose(divergence, target, atol=1e-5)
+
+
 @pytest.mark.parametrize("check_hermitian", [False, True])
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
 def test_entropy(backend, base, check_hermitian):
@@ -178,66 +238,6 @@ def test_relative_entropy(backend, base, check_hermitian):
         test = relative_entropy(
             state, target, base=base, check_hermitian=True, backend=backend
         )
-
-
-@pytest.mark.parametrize("kind", [None, list])
-@pytest.mark.parametrize("validate", [False, True])
-@pytest.mark.parametrize("base", [2, 10, np.e, 5])
-def test_classical_relative_entropy(backend, base, validate, kind):
-    with pytest.raises(TypeError):
-        prob = np.random.rand(1, 2)
-        prob_q = np.random.rand(1, 5)
-        prob = backend.cast(prob, dtype=prob.dtype)
-        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        test = classical_relative_entropy(prob, prob_q, backend=backend)
-    with pytest.raises(TypeError):
-        prob = np.random.rand(1, 2)[0]
-        prob_q = np.array([])
-        prob = backend.cast(prob, dtype=prob.dtype)
-        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        test = classical_relative_entropy(prob, prob_q, backend=backend)
-    with pytest.raises(ValueError):
-        prob = np.array([-1, 2.0])
-        prob_q = np.random.rand(1, 5)[0]
-        prob = backend.cast(prob, dtype=prob.dtype)
-        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        test = classical_relative_entropy(prob, prob_q, validate=True, backend=backend)
-    with pytest.raises(ValueError):
-        prob = np.random.rand(1, 2)[0]
-        prob_q = np.array([1.0, 0.0])
-        prob = backend.cast(prob, dtype=prob.dtype)
-        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        test = classical_relative_entropy(prob, prob_q, validate=True, backend=backend)
-    with pytest.raises(ValueError):
-        prob = np.array([1.0, 0.0])
-        prob_q = np.random.rand(1, 2)[0]
-        prob = backend.cast(prob, dtype=prob.dtype)
-        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        test = classical_relative_entropy(prob, prob_q, validate=True, backend=backend)
-    with pytest.raises(ValueError):
-        prob = np.array([1.0, 0.0])
-        prob_q = np.array([0.0, 1.0])
-        prob = backend.cast(prob, dtype=prob.dtype)
-        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
-        test = classical_relative_entropy(prob, prob_q, base=-2, backend=backend)
-
-    prob_p = np.random.rand(10)
-    prob_q = np.random.rand(10)
-    prob_p /= np.sum(prob_p)
-    prob_q /= np.sum(prob_q)
-
-    target = np.sum(prob_p * np.log(prob_p) / np.log(base)) - np.sum(
-        prob_p * np.log(prob_q) / np.log(base)
-    )
-
-    if kind is not None:
-        prob_p, prob_q = kind(prob_p), kind(prob_q)
-
-    divergence = classical_relative_entropy(
-        prob_p, prob_q, base=base, validate=validate, backend=backend
-    )
-
-    backend.assert_allclose(divergence, target, atol=1e-5)
 
 
 @pytest.mark.parametrize("check_hermitian", [False, True])
