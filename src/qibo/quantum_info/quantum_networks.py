@@ -373,6 +373,22 @@ class QuantumNetwork:
             pure=self._pure,
             backend=self._backend,
         )
+    
+    def to_full(self, backend=None):
+        """Convert the internal representation to the full Choi operator of the network.
+
+        Returns:
+            (:class:`qibo.quantum_info.quantum_networks.QuantumNetwork`): The full representation
+            of the Quantum network.
+        """
+        if backend is None:  # pragma: no cover
+            backend = self._backend
+
+        if self.pure():
+            self._matrix = self._full()
+            self._pure = False
+
+        return self.matrix(backend)
 
     def __add__(self, second_network):
         """Add two Quantum Networks by adding their Choi operators.

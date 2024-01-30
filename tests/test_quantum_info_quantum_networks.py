@@ -102,7 +102,7 @@ def test_operational_logic(backend):
     )
     backend.assert_allclose(
         (network_state_pure + network_state_pure).matrix(backend),
-        (2 * network_state_pure).matrix(backend),
+        (2 * network_state_pure).to_full(),
     )
 
     # Sum with itself has to match multiplying by float
@@ -111,7 +111,7 @@ def test_operational_logic(backend):
     )
     backend.assert_allclose(
         (network_state_pure + network_state_pure).matrix(backend),
-        (2.0 * network_state_pure).matrix(backend),
+        (2.0 * network_state_pure).to_full(),
     )
 
     # Multiplying and dividing by same scalar has to bring back to original network
