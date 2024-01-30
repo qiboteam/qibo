@@ -1543,6 +1543,12 @@ Classical Relative Entropy
 .. autofunction:: qibo.quantum_info.classical_relative_entropy
 
 
+Classical Rényi Entropy
+"""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.classical_renyi_entropy
+
+
 Entropy
 """""""
 
@@ -1568,6 +1574,12 @@ Relative Entropy
     this function are intended to be used on Hermitian inputs. When ``validate=True``
     and either ``state`` or ``target`` is non-Hermitian,
     an error will be raised when using `cupy` backend.
+
+
+Rényi Entropy
+"""""""""""""
+
+.. autofunction:: qibo.quantum_info.renyi_entropy
 
 
 Entanglement Entropy
