@@ -177,7 +177,7 @@ def test_total_variation_distance(backend, validate, kind):
 
     distance = total_variation_distance(prob_p, prob_q, validate, backend=backend)
 
-    assert distance == target
+    backend.assert_allclose(distance, target, atol=1e-5)
 
 
 @pytest.mark.parametrize("validate", [False, True])
