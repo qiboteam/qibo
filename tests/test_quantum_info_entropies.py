@@ -146,15 +146,38 @@ def test_relative_entropy(backend, base, check_hermitian):
     state = random_density_matrix(dims, backend=backend)
     target = backend.identity_density_matrix(nqubits, normalize=True)
 
-    print(relative_entropy(state, target, base, check_hermitian, backend))
-    print(entropy(state, base, check_hermitian=check_hermitian, backend=backend))
-
     backend.assert_allclose(
         relative_entropy(state, target, base, check_hermitian, backend),
         np.log(dims) / np.log(base)
         - entropy(state, base=base, check_hermitian=check_hermitian, backend=backend),
         atol=1e-5,
     )
+
+    state = backend.cast([1.0, 0.0], dtype=np.float64)
+    target = backend.cast([0.0, 1.0], dtype=np.float64)
+
+    assert relative_entropy(state, target, backend=backend) == 0.0
+
+    # for coverage when GPUs are present
+    if backend.__class__.__name__ in ["CupyBackend", "CuQuantumBackend"]:
+        with pytest.raises(NotImplementedError):
+            state = random_unitary(4, backend=backend)
+            target = random_density_matrix(4, backend=backend)
+            test = relative_entropy(
+                state, target, base=base, check_hermitian=True, backend=backend
+            )
+        with pytest.raises(NotImplementedError):
+            target = random_unitary(4, backend=backend)
+            state = random_density_matrix(4, backend=backend)
+            test = relative_entropy(
+                state, target, base=base, check_hermitian=True, backend=backend
+            )
+    else:
+        state = random_unitary(4, backend=backend)
+        target = random_unitary(4, backend=backend)
+        test = relative_entropy(
+            state, target, base=base, check_hermitian=True, backend=backend
+        )
 
 
 @pytest.mark.parametrize("kind", [None, list])
