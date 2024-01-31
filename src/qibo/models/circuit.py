@@ -1248,7 +1248,7 @@ class Circuit:
                     yield name, int(index)
 
         # Remove comment lines
-        lines = [line for line in qasm_code.split("\n") if line and line[:2] != "//"]
+        lines = [line for line in qasm_code.splitlines() if line and line[:2] != "//"]
 
         if not re.search(r"^OPENQASM [0-9]+\.[0-9]+", lines[0]):
             raise_error(
