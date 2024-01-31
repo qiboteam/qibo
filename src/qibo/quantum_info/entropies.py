@@ -338,6 +338,72 @@ def classical_relative_renyi_entropy(
     return (1 / (alpha - 1)) * np.log2(np.sum(prob_p * prob_q)) / np.log2(base)
 
 
+def classical_tsallis_entropy(prob_dist, alpha: float, base: float = 2, backend=None):
+    """Calculates the classical Tsallis entropy for a discrete probability distribution.
+
+    This is defined as
+
+    .. math::
+        S_{\\alpha}(\\mathbf{p}) = \\frac{1}{\\alpha - 1} \\,
+            \\left(1 - \\sum_{x} \\, \\mathbf{p}^{\\alpha}(x) \\right)
+
+    Args:
+        prob_dist (ndarray): discrete probability distribution.
+        alpha (float or int): entropic index.
+        base (float): the base of the log. Used when ``alpha=1.0``.
+            Defaults to  :math:`2`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
+            used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        float: Classical Tsallis entropy :math:`S_{\\alpha}(\\mathbf{p})`.
+    """
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    if isinstance(prob_dist, list):
+        # np.float64 is necessary instead of native float because of tensorflow
+        prob_dist = backend.cast(prob_dist, dtype=np.float64)
+
+    if not isinstance(alpha, (float, int)):
+        raise_error(
+            TypeError, f"alpha must be type float, but it is type {type(alpha)}."
+        )
+
+    if alpha < 0.0:
+        raise_error(ValueError, "alpha must a non-negative float.")
+
+    if base <= 0:
+        raise_error(ValueError, "log base must be non-negative.")
+
+    if len(prob_dist.shape) != 1:
+        raise_error(
+            TypeError,
+            f"Probability array must have dims (k,) but it has {prob_dist.shape}.",
+        )
+
+    if len(prob_dist) == 0:
+        raise_error(TypeError, "Empty array.")
+
+    if any(prob_dist < 0) or any(prob_dist > 1.0):
+        raise_error(
+            ValueError,
+            "All elements of the probability array must be between 0. and 1..",
+        )
+
+    if np.abs(np.sum(prob_dist) - 1.0) > PRECISION_TOL:
+        raise_error(ValueError, "Probability array must sum to 1.")
+
+    if alpha == 1.0:
+        return shannon_entropy(prob_dist, base=base, backend=backend)
+
+    if isinstance(prob_dist, list):
+        prob_dist = backend.cast(prob_dist, dtype=np.float64)
+
+    return (1 / (1 - alpha)) * (np.sum(prob_dist**alpha) - 1)
+
+
 def entropy(
     state,
     base: float = 2,
@@ -736,6 +802,61 @@ def relative_renyi_entropy(
     log = np.log2(np.trace(log))
 
     return (1 / (alpha - 1)) * log / np.log2(base)
+
+
+def tsallis_entropy(state, alpha: float, base: float = 2, backend=None):
+    """Calculates the Tsallis entropy of a quantum state.
+
+    .. math::
+        S_{\\alpha}(\\rho) = \\frac{1}{1 - \\alpha} \\,
+            \\left( \\text{tr}(\\rho^{\\alpha}) - 1 \\right)
+
+    When :math:`\\alpha = 1`, the functions defaults to
+    :func:`qibo.quantum_info.entropies.entropy`.
+
+    Args:
+        state (ndarray): statevector or density matrix.
+        alpha (float or int): entropic index.
+        base (float, optional): the base of the log. Used when ``alpha=1.0``.
+            Defaults to :math:`2`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
+            in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        float: Tsallis entropy :math:`S_{\\alpha}(\\rho)`.
+    """
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    if (
+        (len(state.shape) >= 3)
+        or (len(state) == 0)
+        or (len(state.shape) == 2 and state.shape[0] != state.shape[1])
+    ):
+        raise_error(
+            TypeError,
+            f"state must have dims either (k,) or (k,k), but have dims {state.shape}.",
+        )
+
+    if not isinstance(alpha, (float, int)):
+        raise_error(
+            TypeError, f"alpha must be type float, but it is type {type(alpha)}."
+        )
+
+    if alpha < 0.0:
+        raise_error(ValueError, "alpha must a non-negative float.")
+
+    if base <= 0.0:
+        raise_error(ValueError, "log base must be non-negative.")
+
+    if abs(purity(state) - 1.0) < PRECISION_TOL:
+        return 0.0
+
+    if alpha == 1.0:
+        return entropy(state, base=base, backend=backend)
+
+    return (1 / (1 - alpha)) * (np.trace(np.linalg.matrix_power(state, alpha)) - 1)
 
 
 def entanglement_entropy(
