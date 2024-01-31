@@ -1,4 +1,5 @@
 """Test gates defined in `qibo/gates/gates.py`."""
+
 import numpy as np
 import pytest
 
