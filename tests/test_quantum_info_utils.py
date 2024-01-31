@@ -170,7 +170,7 @@ def test_total_variation_distance(backend, validate, kind):
     prob_p /= np.sum(prob_p)
     prob_q /= np.sum(prob_q)
 
-    target = (1 / 2) * np.sum(np.abs(prob_p - prob_q))
+    target = 0.5 * np.sum(np.abs(prob_p - prob_q))
 
     if kind is not None:
         prob_p, prob_q = kind(prob_p), kind(prob_q)
