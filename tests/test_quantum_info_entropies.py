@@ -4,6 +4,7 @@ from scipy.linalg import sqrtm
 
 from qibo.config import PRECISION_TOL
 from qibo.quantum_info.entropies import (
+    _matrix_power,
     classical_relative_entropy,
     classical_relative_renyi_entropy,
     classical_renyi_entropy,
@@ -508,7 +509,7 @@ def test_renyi_entropy(backend, alpha, base):
     ["state_flag", "target_flag"], [[True, True], [False, True], [True, False]]
 )
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
-@pytest.mark.parametrize("alpha", [0, 1, 2, 3, np.inf])
+@pytest.mark.parametrize("alpha", [0, 1, 2, 3, 5.4, np.inf])
 def test_relative_renyi_entropy(backend, alpha, base, state_flag, target_flag):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
@@ -554,66 +555,48 @@ def test_relative_renyi_entropy(backend, alpha, base, state_flag, target_flag):
         else random_density_matrix(4, backend=backend)
     )
 
-    if alpha == 1.0:
-        log = relative_entropy(state, target, base, backend=backend)
-    elif alpha == np.inf:
-        if backend.__class__.__name__ in ["CupyBackend", "CuQuantumBackend"]:
-            eigenvalues_state, eigenvectors_state = np.linalg.eigh(state)
-            new_state = np.zeros_like(state, dtype=complex)
-            new_state = backend.cast(new_state, dtype=new_state.dtype)
-            for eigenvalue, eigenstate in zip(
-                eigenvalues_state, np.transpose(eigenvectors_state)
-            ):
-                new_state += np.sqrt(eigenvalue) * np.outer(
-                    eigenstate, np.conj(eigenstate)
-                )
-
-            eigenvalues_target, eigenvectors_target = np.linalg.eigh(target)
-            new_target = np.zeros_like(target, dtype=complex)
-            new_target = backend.cast(new_target, dtype=new_target.dtype)
-            for eigenvalue, eigenstate in zip(
-                eigenvalues_target, np.transpose(eigenvectors_target)
-            ):
-                new_target += np.sqrt(eigenstate) * np.outer(
-                    eigenstate, np.conj(eigenstate)
-                )
-        else:
-            if len(state.shape) == 1:
-                state = np.outer(state, np.conj(state))
-
-            if len(target.shape) == 1:
-                target = np.outer(target, np.conj(target))
-
-            new_state, new_target = sqrtm(state).astype("complex128"), sqrtm(
-                target
-            ).astype("complex128")
-            new_state = backend.cast(new_state, dtype=new_state.dtype)
-            new_target = backend.cast(new_target, dtype=new_target.dtype)
-
-        log = np.log2(
-            backend.calculate_norm_density_matrix(new_state @ new_target, order=1)
+    if state_flag and target_flag:
+        backend.assert_allclose(
+            relative_renyi_entropy(state, target, alpha, base, backend), 0.0, atol=1e-5
         )
-
-        log = -2 * log / np.log2(base)
-
     else:
-        if len(state.shape) == 1:
-            state = np.outer(state, np.conj(state))
+        if target_flag and alpha > 1:
+            with pytest.raises(NotImplementedError):
+                relative_renyi_entropy(state, target, alpha, base, backend)
+        else:
+            if alpha == 1.0:
+                log = relative_entropy(state, target, base, backend=backend)
+            elif alpha == np.inf:
+                new_state = _matrix_power(state, 0.5, backend)
+                new_target = _matrix_power(target, 0.5, backend)
 
-        if len(target.shape) == 1:
-            target = np.outer(target, np.conj(target))
+                log = np.log2(
+                    backend.calculate_norm_density_matrix(
+                        new_state @ new_target, order=1
+                    )
+                )
 
-        log = np.linalg.matrix_power(state, alpha)
-        log = log @ np.linalg.matrix_power(target, 1 - alpha)
-        log = np.log2(np.trace(log))
+                log = -2 * log / np.log2(base)
+            else:
+                if len(state.shape) == 1:
+                    state = np.outer(state, np.conj(state))
 
-        log = (1 / (alpha - 1)) * log / np.log2(base)
+                if len(target.shape) == 1:
+                    target = np.outer(target, np.conj(target))
 
-    backend.assert_allclose(
-        relative_renyi_entropy(state, target, alpha=alpha, base=base, backend=backend),
-        log,
-        atol=1e-5,
-    )
+                log = _matrix_power(state, alpha, backend)
+                log = log @ _matrix_power(target, 1 - alpha, backend)
+                log = np.log2(np.trace(log))
+
+                log = (1 / (alpha - 1)) * log / np.log2(base)
+
+            backend.assert_allclose(
+                relative_renyi_entropy(
+                    state, target, alpha=alpha, base=base, backend=backend
+                ),
+                log,
+                atol=1e-5,
+            )
 
     # test pure states
     state = random_density_matrix(4, pure=True, backend=backend)
@@ -626,7 +609,7 @@ def test_relative_renyi_entropy(backend, alpha, base, state_flag, target_flag):
 
 
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
-@pytest.mark.parametrize("alpha", [0, 1, 2, 3, np.inf])
+@pytest.mark.parametrize("alpha", [0, 1, 2, 3, 5.4])
 def test_tsallis_entropy(backend, alpha, base):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
@@ -648,7 +631,7 @@ def test_tsallis_entropy(backend, alpha, base):
         target = entropy(state, base=base, backend=backend)
     else:
         target = (1 / (1 - alpha)) * (
-            np.trace(np.linalg.matrix_power(state, alpha)) - 1
+            np.trace(_matrix_power(state, alpha, backend)) - 1
         )
 
     backend.assert_allclose(

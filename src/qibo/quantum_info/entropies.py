@@ -3,6 +3,7 @@
 from typing import Union
 
 import numpy as np
+from scipy.linalg import fractional_matrix_power
 
 from qibo.backends import GlobalBackend
 from qibo.config import PRECISION_TOL, raise_error
@@ -671,7 +672,7 @@ def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None
             / np.log2(base)
         )
 
-    log = np.log2(np.trace(np.linalg.matrix_power(state, alpha)))
+    log = np.log2(np.trace(_matrix_power(state, alpha, backend)))
 
     return (1 / (1 - alpha)) * log / np.log2(base)
 
@@ -697,6 +698,12 @@ def relative_renyi_entropy(
     with :math:`\\|\\cdot\\|_{1}` being the
     `Schatten 1-norm <https://en.wikipedia.org/wiki/Matrix_norm#Schatten_norms>`_.
     This is known as the `min-relative entropy <https://arxiv.org/abs/1310.7178>`_.
+
+    .. note::
+        Function raises ``NotImplementedError`` when ``target`` :math:`sigma`
+        is a pure state and :math:`\\alpha > 1`. This is due to the fact that
+        it is not possible to calculate :math:`\\sigma^{1 - \\alpha}` when
+        :math:`\\alpha > 1` and :math:`\\sigma` is a projector, i.e. a singular matrix.
 
     Args:
         state (ndarray): statevector or density matrix :math:`\\rho`.
@@ -744,53 +751,28 @@ def relative_renyi_entropy(
     if base <= 0.0:
         raise_error(ValueError, "log base must be non-negative.")
 
+    purity_target = purity(target)
     if (
         abs(purity(state) - 1.0) < PRECISION_TOL
-        and abs(purity(target) - 1) < PRECISION_TOL
+        and abs(purity_target - 1) < PRECISION_TOL
     ):
         return 0.0
 
+    if alpha > 1.0 and abs(purity_target - 1) < PRECISION_TOL:
+        raise_error(
+            NotImplementedError,
+            "It is not possible to invert a singular matrix. ``target`` is a pure state and alpha > 1.",
+        )
+
     if len(state.shape) == 1:
         state = np.outer(state, np.conj(state))
-
-    if len(target.shape) == 1:
-        target = np.outer(target, np.conj(target))
 
     if alpha == 1.0:
         return relative_entropy(state, target, base, backend=backend)
 
     if alpha == np.inf:
-        if backend.__class__.__name__ in [
-            "CupyBackend",
-            "CuQuantumBackend",
-        ]:  # pragma: no cover
-            eigenvalues_state, eigenvectors_state = np.linalg.eigh(state)
-            new_state = np.zeros_like(state, dtype=complex)
-            new_state = backend.cast(new_state, dtype=new_state.dtype)
-            for eigenvalue, eigenstate in zip(
-                eigenvalues_state, np.transpose(eigenvectors_state)
-            ):
-                new_state += np.sqrt(eigenvalue) * np.outer(
-                    eigenstate, np.conj(eigenstate)
-                )
-
-            eigenvalues_target, eigenvectors_target = np.linalg.eigh(target)
-            new_target = np.zeros_like(target, dtype=complex)
-            new_target = backend.cast(new_target, dtype=new_target.dtype)
-            for eigenvalue, eigenstate in zip(
-                eigenvalues_target, np.transpose(eigenvectors_target)
-            ):
-                new_target += np.sqrt(eigenstate) * np.outer(
-                    eigenstate, np.conj(eigenstate)
-                )
-        else:
-            from scipy.linalg import sqrtm  # pylint: disable=C0415
-
-            # astype method needed because of tensorflow
-            new_state = sqrtm(state).astype("complex128")
-            new_target = sqrtm(target).astype("complex128")
-            new_state = backend.cast(new_state, dtype=new_state.dtype)
-            new_target = backend.cast(new_target, dtype=new_target.dtype)
+        new_state = _matrix_power(state, 0.5, backend)
+        new_target = _matrix_power(target, 0.5, backend)
 
         log = np.log2(
             backend.calculate_norm_density_matrix(new_state @ new_target, order=1)
@@ -798,8 +780,8 @@ def relative_renyi_entropy(
 
         return -2 * log / np.log2(base)
 
-    log = np.linalg.matrix_power(state, alpha)
-    log = log @ np.linalg.matrix_power(target, 1 - alpha)
+    log = _matrix_power(state, alpha, backend)
+    log = log @ _matrix_power(target, 1 - alpha, backend)
     log = np.log2(np.trace(log))
 
     return (1 / (alpha - 1)) * log / np.log2(base)
@@ -857,7 +839,7 @@ def tsallis_entropy(state, alpha: float, base: float = 2, backend=None):
     if alpha == 1.0:
         return entropy(state, base=base, backend=backend)
 
-    return (1 / (1 - alpha)) * (np.trace(np.linalg.matrix_power(state, alpha)) - 1)
+    return (1 / (1 - alpha)) * (np.trace(_matrix_power(state, alpha, backend)) - 1)
 
 
 def entanglement_entropy(
@@ -925,3 +907,18 @@ def entanglement_entropy(
     )
 
     return entropy_entanglement
+
+
+def _matrix_power(matrix, alpha, backend):
+    """Calculates ``matrix ** alpha`` according to backend."""
+    if backend.__class__.__name__ in ["CupyBackend", "CuQuantumBackend"]:
+        new_matrix = backend.to_numpy(matrix)
+    else:
+        new_matrix = np.copy(matrix)
+
+    if len(new_matrix.shape) == 1:
+        new_matrix = np.outer(new_matrix, np.conj(new_matrix))
+
+    new_matrix = fractional_matrix_power(new_matrix, alpha)
+
+    return backend.cast(new_matrix, dtype=new_matrix.dtype)
