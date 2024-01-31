@@ -158,7 +158,7 @@ def classical_renyi_entropy(
     """Calculates the classical Rényi entropy :math:`H_{\\alpha}` of a discrete probability distribution.
 
     For :math:`\\alpha \\in (0, \\, 1) \\cup (1, \\, \\infty)` and probability distribution
-    :math:`\\mathbf{p}`, the Rényi entropy is defined as
+    :math:`\\mathbf{p}`, the classical Rényi entropy is defined as
 
     .. math::
         H_{\\alpha}(\\mathbf{p}) = \\frac{1}{1 - \\alpha} \\, \\log\\left( \\sum_{x}
@@ -168,8 +168,10 @@ def classical_renyi_entropy(
     coincides with the :func:`qibo.quantum_info.entropies.shannon_entropy`.
 
     Another special case is the limit :math:`\\alpha \\to 0`, where the function is
-    reduced to the :math:`\\log\\left(|\\mathbf{p}|\\right)`, with :math:`|\\mathbf{p}|`
+    reduced to :math:`\\log\\left(|\\mathbf{p}|\\right)`, with :math:`|\\mathbf{p}|`
     being the support of :math:`\\mathbf{p}`.
+    This is knows as the `Hartley entropy <https://en.wikipedia.org/wiki/Hartley_function>`
+    (also known as *Hartley function* or *max-entropy*).
 
     In the limit :math:`\\alpha \\to \\infty`, the function reduces to
     :math:`-\\log(\\max_{x}(\\mathbf{p}(x)))`, which is called the
@@ -184,7 +186,7 @@ def classical_renyi_entropy(
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
     Returns:
-        float: Rényi entropy :math:`H_{\\alpha}`.
+        float: Classical Rényi entropy :math:`H_{\\alpha}`.
     """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
@@ -421,6 +423,84 @@ def relative_entropy(
     relative = np.sum(eigenvalues_state * log_target)
 
     return float(entropy_state - relative)
+
+
+def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None):
+    """Calculates the Rényi entropy :math:`H_{\\alpha}` of a quantum state :math:`\\rho`.
+
+    For :math:`\\alpha \\in (0, \\, 1) \\cup (1, \\, \\infty)`, the Rényi entropy is defined as
+
+    .. math::
+        H_{\\alpha}(\\rho) = \\frac{1}{1 - \\alpha} \\, \\log\\left( \\rho^{\\alpha} \\right) \\, .
+
+    A special case is the limit :math:`\\alpha \\to 1`, in which the Rényi entropy
+    coincides with the :func:`qibo.quantum_info.entropies.entropy`.
+
+    Another special case is the limit :math:`\\alpha \\to 0`, where the function is
+    reduced to :math:`\\log\\left(d\\right)`, with :math:`d = 2^{n}`
+    being the dimension of the Hilbert space in which ``state`` :math:`\\rho` lives in.
+    This is knows as the `Hartley entropy <https://en.wikipedia.org/wiki/Hartley_function>_`
+    (also known as *Hartley function* or *max-entropy*).
+
+    In the limit :math:`\\alpha \\to \\infty`, the function reduces to
+    :math:`-\\log(\\|\\rho\\|_{\\infty})`, with :math:`\\|\\cdot\\|_{\\infty}`
+    being the `spectral norm <https://en.wikipedia.org/wiki/Matrix_norm#Matrix_norms_induced_by_vector_p-norms>`_.
+    This is known as the `min-entropy <https://en.wikipedia.org/wiki/Min-entropy>`_.
+
+    Args:
+        prob_dist (ndarray): discrete probability distribution.
+        alpha (float or int): order of the Rényi entropy.
+        base (float): the base of the log. Defaults to  :math:`2`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
+            used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        float: Rényi entropy :math:`H_{\\alpha}`.
+    """
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    if (
+        (len(state.shape) >= 3)
+        or (len(state) == 0)
+        or (len(state.shape) == 2 and state.shape[0] != state.shape[1])
+    ):
+        raise_error(
+            TypeError,
+            f"state must have dims either (k,) or (k,k), but have dims {state.shape}.",
+        )
+
+    if not isinstance(alpha, (float, int)):
+        raise_error(
+            TypeError, f"alpha must be type float, but it is type {type(alpha)}."
+        )
+
+    if alpha < 0.0:
+        raise_error(ValueError, "alpha must a non-negative float.")
+
+    if base <= 0.0:
+        raise_error(ValueError, "log base must be non-negative.")
+
+    if purity(state) == 1.0:
+        return 0.0
+
+    if alpha == 0.0:
+        return np.log2(len(state)) / np.log2(base)
+
+    if alpha == 1.0:
+        return entropy(state, base=base, backend=backend)
+
+    if alpha == np.inf:
+        return (
+            -1
+            * np.log2(backend.calculate_norm_density_matrix(state, order=2))
+            / np.log2(base)
+        )
+
+    log = np.log2(np.trace(np.linalg.matrix_power(state, alpha)))
+
+    return (1 / (1 - alpha)) * log / np.log2(base)
 
 
 def entanglement_entropy(
