@@ -1,4 +1,5 @@
 """Module defining the Clifford backend."""
+
 import collections
 from functools import reduce
 from typing import Union
