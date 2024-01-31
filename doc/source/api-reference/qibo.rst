@@ -1271,7 +1271,7 @@ Callbacks
 Callbacks provide a way to calculate quantities on the state vector as it
 propagates through the circuit. Example of such quantity is the entanglement
 entropy, which is currently the only callback implemented in
-:class:`qibo.callbacks.EntanglementEntropy`.
+:class:`qibo.callbacks.Entanglemententropy`.
 The user can create custom callbacks by inheriting the
 :class:`qibo.callbacks.Callback` class. The point each callback is
 calculated inside the circuit is defined by adding a :class:`qibo.gates.CallbackGate`.
@@ -1284,7 +1284,7 @@ This can be added similarly to a standard gate and does not affect the state vec
 Entanglement entropy
 ^^^^^^^^^^^^^^^^^^^^
 
-.. autoclass:: qibo.callbacks.EntanglementEntropy
+.. autoclass:: qibo.callbacks.Entanglemententropy
    :members:
    :member-order: bysource
 
@@ -1537,16 +1537,22 @@ Shannon entropy
 .. autofunction:: qibo.quantum_info.shannon_entropy
 
 
-Classical Relative Entropy
+Classical relative entropy
 """"""""""""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.classical_relative_entropy
 
 
-Classical Rényi Entropy
+Classical Rényi entropy
 """""""""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.classical_renyi_entropy
+
+
+Classical Rényi relative entropy
+""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.classical_relative_renyi_entropy
 
 
 Entropy
@@ -1562,7 +1568,7 @@ Entropy
     and ``state`` is non-Hermitian, an error will be raised when using `cupy` backend.
 
 
-Relative Entropy
+Relative entropy
 """"""""""""""""
 
 .. autofunction:: qibo.quantum_info.relative_entropy
@@ -1576,13 +1582,19 @@ Relative Entropy
     an error will be raised when using `cupy` backend.
 
 
-Rényi Entropy
+Rényi entropy
 """""""""""""
 
 .. autofunction:: qibo.quantum_info.renyi_entropy
 
 
-Entanglement Entropy
+Rényi relative entropy
+""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.renyi_relative_entropy
+
+
+Entanglement entropy
 """"""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.entanglement_entropy

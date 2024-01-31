@@ -1,13 +1,16 @@
 import numpy as np
 import pytest
+from scipy.linalg import sqrtm
 
 from qibo.config import PRECISION_TOL
 from qibo.quantum_info.entropies import (
     classical_relative_entropy,
+    classical_relative_renyi_entropy,
     classical_renyi_entropy,
     entanglement_entropy,
     entropy,
     relative_entropy,
+    relative_renyi_entropy,
     renyi_entropy,
     shannon_entropy,
 )
@@ -111,6 +114,103 @@ def test_classical_relative_entropy(backend, base, kind):
         prob_p, prob_q = kind(prob_p), kind(prob_q)
 
     divergence = classical_relative_entropy(prob_p, prob_q, base=base, backend=backend)
+
+    backend.assert_allclose(divergence, target, atol=1e-5)
+
+
+@pytest.mark.parametrize("kind", [None, list])
+@pytest.mark.parametrize("base", [2, 10, np.e, 5])
+@pytest.mark.parametrize("alpha", [0, 1 / 2, 1, 2, 3, np.inf])
+def test_classical_relative_renyi_entropy(backend, alpha, base, kind):
+    with pytest.raises(TypeError):
+        prob = np.random.rand(1, 2)
+        prob_q = np.random.rand(1, 5)
+        prob = backend.cast(prob, dtype=prob.dtype)
+        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        test = classical_relative_renyi_entropy(
+            prob, prob_q, alpha, base, backend=backend
+        )
+    with pytest.raises(TypeError):
+        prob = np.random.rand(1, 2)[0]
+        prob_q = np.array([])
+        prob = backend.cast(prob, dtype=prob.dtype)
+        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        test = classical_relative_renyi_entropy(
+            prob, prob_q, alpha, base, backend=backend
+        )
+    with pytest.raises(ValueError):
+        prob = np.array([-1, 2.0])
+        prob_q = np.random.rand(1, 5)[0]
+        prob = backend.cast(prob, dtype=prob.dtype)
+        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        test = classical_relative_renyi_entropy(
+            prob, prob_q, alpha, base, backend=backend
+        )
+    with pytest.raises(ValueError):
+        prob = np.random.rand(1, 2)[0]
+        prob_q = np.array([1.0, 0.0])
+        prob = backend.cast(prob, dtype=prob.dtype)
+        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        test = classical_relative_renyi_entropy(
+            prob, prob_q, alpha, base, backend=backend
+        )
+    with pytest.raises(ValueError):
+        prob = np.array([1.0, 0.0])
+        prob_q = np.random.rand(1, 2)[0]
+        prob = backend.cast(prob, dtype=prob.dtype)
+        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        test = classical_relative_renyi_entropy(
+            prob, prob_q, alpha, base, backend=backend
+        )
+    with pytest.raises(ValueError):
+        prob = np.array([1.0, 0.0])
+        prob_q = np.array([0.0, 1.0])
+        prob = backend.cast(prob, dtype=prob.dtype)
+        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        test = classical_relative_renyi_entropy(
+            prob, prob_q, alpha, base=-2, backend=backend
+        )
+    with pytest.raises(TypeError):
+        prob = np.array([1.0, 0.0])
+        prob_q = np.array([0.0, 1.0])
+        prob = backend.cast(prob, dtype=prob.dtype)
+        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        test = classical_relative_renyi_entropy(
+            prob, prob_q, alpha="1", base=base, backend=backend
+        )
+    with pytest.raises(ValueError):
+        prob = np.array([1.0, 0.0])
+        prob_q = np.array([0.0, 1.0])
+        prob = backend.cast(prob, dtype=prob.dtype)
+        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        test = classical_relative_renyi_entropy(
+            prob, prob_q, alpha=-2, base=base, backend=backend
+        )
+
+    prob_p = np.random.rand(10)
+    prob_q = np.random.rand(10)
+    prob_p /= np.sum(prob_p)
+    prob_q /= np.sum(prob_q)
+
+    if alpha == 0.5:
+        target = -2 * np.log2(np.sum(np.sqrt(prob_p * prob_q))) / np.log2(base)
+    elif alpha == 1.0:
+        target = classical_relative_entropy(prob_p, prob_q, base=base, backend=backend)
+    elif alpha == np.inf:
+        target = np.log2(max(prob_p / prob_q)) / np.log2(base)
+    else:
+        target = (
+            (1 / (alpha - 1))
+            * np.log2(np.sum(prob_p**alpha * prob_q ** (1 - alpha)))
+            / np.log2(base)
+        )
+
+    if kind is not None:
+        prob_p, prob_q = kind(prob_p), kind(prob_q)
+
+    divergence = classical_relative_renyi_entropy(
+        prob_p, prob_q, alpha=alpha, base=base, backend=backend
+    )
 
     backend.assert_allclose(divergence, target, atol=1e-5)
 
@@ -340,6 +440,104 @@ def test_renyi_entropy(backend, alpha, base):
     state = random_density_matrix(4, pure=True, backend=backend)
     backend.assert_allclose(
         renyi_entropy(state, alpha=alpha, base=base, backend=backend), 0.0, atol=1e-8
+    )
+
+
+@pytest.mark.parametrize("base", [2, 10, np.e, 5])
+@pytest.mark.parametrize("alpha", [0, 1, 2, 3, np.inf])
+def test_relative_renyi_entropy(backend, alpha, base):
+    with pytest.raises(TypeError):
+        state = np.random.rand(2, 3)
+        state = backend.cast(state, dtype=state.dtype)
+        target = random_density_matrix(4, backend=backend)
+        test = relative_renyi_entropy(
+            state, target, alpha=alpha, base=base, backend=backend
+        )
+    with pytest.raises(TypeError):
+        target = np.random.rand(2, 3)
+        target = backend.cast(target, dtype=target.dtype)
+        state = random_density_matrix(4, backend=backend)
+        test = relative_renyi_entropy(
+            state, target, alpha=alpha, base=base, backend=backend
+        )
+    with pytest.raises(TypeError):
+        state = random_statevector(4, backend=backend)
+        target = random_statevector(4, backend=backend)
+        test = relative_renyi_entropy(
+            state, target, alpha="2", base=base, backend=backend
+        )
+    with pytest.raises(ValueError):
+        state = random_statevector(4, backend=backend)
+        target = random_statevector(4, backend=backend)
+        test = relative_renyi_entropy(
+            state, target, alpha=-1, base=base, backend=backend
+        )
+    with pytest.raises(ValueError):
+        state = random_statevector(4, backend=backend)
+        target = random_statevector(4, backend=backend)
+        test = relative_renyi_entropy(
+            state, target, alpha=alpha, base=0, backend=backend
+        )
+
+    state = random_density_matrix(4, backend=backend)
+    target = random_density_matrix(4, backend=backend)
+
+    if alpha == 1.0:
+        log = relative_entropy(state, target, base, backend=backend)
+    elif alpha == np.inf:
+        if backend.__class__.__name__ in ["CupyBackend", "CuQuantumBackend"]:
+            eigenvalues_state, eigenvectors_state = np.linalg.eigh(state)
+            new_state = np.zeros_like(state, dtype=complex)
+            new_state = backend.cast(new_state, dtype=new_state.dtype)
+            for eigenvalue, eigenstate in zip(
+                eigenvalues_state, np.transpose(eigenvectors_state)
+            ):
+                new_state += np.sqrt(eigenvalue) * np.outer(
+                    eigenstate, np.conj(eigenstate)
+                )
+
+            eigenvalues_target, eigenvectors_target = np.linalg.eigh(target)
+            new_target = np.zeros_like(target, dtype=complex)
+            new_target = backend.cast(new_target, dtype=new_target.dtype)
+            for eigenvalue, eigenstate in zip(
+                eigenvalues_target, np.transpose(eigenvectors_target)
+            ):
+                new_target += np.sqrt(eigenstate) * np.outer(
+                    eigenstate, np.conj(eigenstate)
+                )
+        else:
+            new_state, new_target = sqrtm(state).astype("complex128"), sqrtm(
+                target
+            ).astype("complex128")
+            new_state = backend.cast(new_state, dtype=new_state.dtype)
+            new_target = backend.cast(new_target, dtype=new_target.dtype)
+
+        log = np.log2(
+            backend.calculate_norm_density_matrix(new_state @ new_target, order=1)
+        )
+
+        log = -2 * log / np.log2(base)
+
+    else:
+        log = np.linalg.matrix_power(state, alpha)
+        log = log @ np.linalg.matrix_power(target, 1 - alpha)
+        log = np.log2(np.trace(log))
+
+        log = (1 / (alpha - 1)) * log / np.log2(base)
+
+    backend.assert_allclose(
+        relative_renyi_entropy(state, target, alpha=alpha, base=base, backend=backend),
+        log,
+        atol=1e-5,
+    )
+
+    # test pure states
+    state = random_density_matrix(4, pure=True, backend=backend)
+    target = random_density_matrix(4, pure=True, backend=backend)
+    backend.assert_allclose(
+        relative_renyi_entropy(state, target, alpha=alpha, base=base, backend=backend),
+        0.0,
+        atol=1e-8,
     )
 
 
