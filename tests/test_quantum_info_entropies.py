@@ -5,6 +5,7 @@ from qibo.config import PRECISION_TOL
 from qibo.quantum_info.entropies import (
     classical_relative_entropy,
     classical_renyi_entropy,
+    classical_renyi_relative_entropy,
     entanglement_entropy,
     entropy,
     relative_entropy,
@@ -111,6 +112,103 @@ def test_classical_relative_entropy(backend, base, kind):
         prob_p, prob_q = kind(prob_p), kind(prob_q)
 
     divergence = classical_relative_entropy(prob_p, prob_q, base=base, backend=backend)
+
+    backend.assert_allclose(divergence, target, atol=1e-5)
+
+
+@pytest.mark.parametrize("kind", [None, list])
+@pytest.mark.parametrize("base", [2, 10, np.e, 5])
+@pytest.mark.parametrize("alpha", [0, 1 / 2, 1, 2, 3, np.inf])
+def test_classical_renyi_relative_entropy(backend, alpha, base, kind):
+    with pytest.raises(TypeError):
+        prob = np.random.rand(1, 2)
+        prob_q = np.random.rand(1, 5)
+        prob = backend.cast(prob, dtype=prob.dtype)
+        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        test = classical_renyi_relative_entropy(
+            prob, prob_q, alpha, base, backend=backend
+        )
+    with pytest.raises(TypeError):
+        prob = np.random.rand(1, 2)[0]
+        prob_q = np.array([])
+        prob = backend.cast(prob, dtype=prob.dtype)
+        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        test = classical_renyi_relative_entropy(
+            prob, prob_q, alpha, base, backend=backend
+        )
+    with pytest.raises(ValueError):
+        prob = np.array([-1, 2.0])
+        prob_q = np.random.rand(1, 5)[0]
+        prob = backend.cast(prob, dtype=prob.dtype)
+        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        test = classical_renyi_relative_entropy(
+            prob, prob_q, alpha, base, backend=backend
+        )
+    with pytest.raises(ValueError):
+        prob = np.random.rand(1, 2)[0]
+        prob_q = np.array([1.0, 0.0])
+        prob = backend.cast(prob, dtype=prob.dtype)
+        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        test = classical_renyi_relative_entropy(
+            prob, prob_q, alpha, base, backend=backend
+        )
+    with pytest.raises(ValueError):
+        prob = np.array([1.0, 0.0])
+        prob_q = np.random.rand(1, 2)[0]
+        prob = backend.cast(prob, dtype=prob.dtype)
+        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        test = classical_renyi_relative_entropy(
+            prob, prob_q, alpha, base, backend=backend
+        )
+    with pytest.raises(ValueError):
+        prob = np.array([1.0, 0.0])
+        prob_q = np.array([0.0, 1.0])
+        prob = backend.cast(prob, dtype=prob.dtype)
+        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        test = classical_renyi_relative_entropy(
+            prob, prob_q, alpha, base=-2, backend=backend
+        )
+    with pytest.raises(TypeError):
+        prob = np.array([1.0, 0.0])
+        prob_q = np.array([0.0, 1.0])
+        prob = backend.cast(prob, dtype=prob.dtype)
+        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        test = classical_renyi_relative_entropy(
+            prob, prob_q, alpha="1", base=base, backend=backend
+        )
+    with pytest.raises(ValueError):
+        prob = np.array([1.0, 0.0])
+        prob_q = np.array([0.0, 1.0])
+        prob = backend.cast(prob, dtype=prob.dtype)
+        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        test = classical_renyi_relative_entropy(
+            prob, prob_q, alpha=-2, base=base, backend=backend
+        )
+
+    prob_p = np.random.rand(10)
+    prob_q = np.random.rand(10)
+    prob_p /= np.sum(prob_p)
+    prob_q /= np.sum(prob_q)
+
+    if alpha == 0.5:
+        target = -2 * np.log2(np.sum(np.sqrt(prob_p * prob_q))) / np.log2(base)
+    elif alpha == 1.0:
+        target = classical_relative_entropy(prob_p, prob_q, base=base, backend=backend)
+    elif alpha == np.inf:
+        target = np.log2(max(prob_p / prob_q)) / np.log2(base)
+    else:
+        target = (
+            (1 / (alpha - 1))
+            * np.log2(np.sum(prob_p**alpha * prob_q ** (1 - alpha)))
+            / np.log2(base)
+        )
+
+    if kind is not None:
+        prob_p, prob_q = kind(prob_p), kind(prob_q)
+
+    divergence = classical_renyi_relative_entropy(
+        prob_p, prob_q, alpha=alpha, base=base, backend=backend
+    )
 
     backend.assert_allclose(divergence, target, atol=1e-5)
 
