@@ -238,6 +238,70 @@ def classical_renyi_entropy(
     return renyi_ent
 
 
+def classical_renyi_relative_entropy(
+    prob_dist_p, prob_dist_q, alpha: Union[float, int], base: float = 2, backend=None
+):
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    if isinstance(prob_dist_p, list):
+        # np.float64 is necessary instead of native float because of tensorflow
+        prob_dist_p = backend.cast(prob_dist_p, dtype=np.float64)
+    if isinstance(prob_dist_q, list):
+        # np.float64 is necessary instead of native float because of tensorflow
+        prob_dist_q = backend.cast(prob_dist_q, dtype=np.float64)
+
+    if (len(prob_dist_p.shape) != 1) or (len(prob_dist_q.shape) != 1):
+        raise_error(
+            TypeError,
+            "Probability arrays must have dims (k,) but have "
+            + f"dims {prob_dist_p.shape} and {prob_dist_q.shape}.",
+        )
+
+    if (len(prob_dist_p) == 0) or (len(prob_dist_q) == 0):
+        raise_error(TypeError, "At least one of the arrays is empty.")
+
+    if not isinstance(alpha, (float, int)):
+        raise_error(
+            TypeError, f"alpha must be type float, but it is type {type(alpha)}."
+        )
+
+    if alpha < 0.0:
+        raise_error(ValueError, "alpha must a non-negative float.")
+
+    if base <= 0:
+        raise_error(ValueError, "log base must be non-negative.")
+
+    if (any(prob_dist_p < 0) or any(prob_dist_p > 1.0)) or (
+        any(prob_dist_q < 0) or any(prob_dist_q > 1.0)
+    ):
+        raise_error(
+            ValueError,
+            "All elements of the probability array must be between 0. and 1..",
+        )
+    if np.abs(np.sum(prob_dist_p) - 1.0) > PRECISION_TOL:
+        raise_error(ValueError, "First probability array must sum to 1.")
+
+    if np.abs(np.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
+        raise_error(ValueError, "Second probability array must sum to 1.")
+
+    if alpha == 0.5:
+        return -2 * np.log2(np.sum(np.sqrt(prob_dist_p * prob_dist_q))) / np.log2(base)
+
+    if alpha == 1.0:
+        return classical_relative_entropy(
+            prob_dist_p, prob_dist_q, base=base, backend=backend
+        )
+
+    if alpha == np.inf:
+        return np.log2(max(prob_dist_p / prob_dist_q)) / np.log2(base)
+
+    prob_p = prob_dist_p**alpha
+    prob_q = prob_dist_q ** (1 - alpha)
+
+    return (1 / (alpha - 1)) * np.log2(np.sum(prob_p * prob_q)) / np.log2(base)
+
+
 def entropy(
     state,
     base: float = 2,
