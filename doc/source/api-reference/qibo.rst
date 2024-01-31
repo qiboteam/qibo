@@ -1537,6 +1537,18 @@ Shannon entropy
 .. autofunction:: qibo.quantum_info.shannon_entropy
 
 
+Classical Relative Entropy
+""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.classical_relative_entropy
+
+
+Classical Rényi Entropy
+"""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.classical_renyi_entropy
+
+
 Entropy
 """""""
 
@@ -1564,10 +1576,10 @@ Relative Entropy
     an error will be raised when using `cupy` backend.
 
 
-Classical Relative Entropy
-""""""""""""""""""""""""""
+Rényi Entropy
+"""""""""""""
 
-.. autofunction:: qibo.quantum_info.classical_relative_entropy
+.. autofunction:: qibo.quantum_info.renyi_entropy
 
 
 Entanglement Entropy

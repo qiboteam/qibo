@@ -1,4 +1,5 @@
 """Submodule with entropy measures."""
+from typing import Union
 
 import numpy as np
 
@@ -7,7 +8,7 @@ from qibo.config import PRECISION_TOL, raise_error
 from qibo.quantum_info.metrics import _check_hermitian_or_not_gpu, purity
 
 
-def shannon_entropy(probability_array, base: float = 2, backend=None):
+def shannon_entropy(prob_dist, base: float = 2, backend=None):
     """Calculate the Shannon entropy of a probability array :math:`\\mathbf{p}`, which is given by
 
     .. math::
@@ -18,7 +19,7 @@ def shannon_entropy(probability_array, base: float = 2, backend=None):
     and :math:`0 \\log_{b}(0) \\equiv 0`.
 
     Args:
-        probability_array (ndarray or list): a probability array :math:`\\mathbf{p}`.
+        prob_dist (ndarray or list): a probability array :math:`\\mathbf{p}`.
         base (float): the base of the log. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
@@ -30,48 +31,211 @@ def shannon_entropy(probability_array, base: float = 2, backend=None):
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    if isinstance(probability_array, list):
+    if isinstance(prob_dist, list):
         # np.float64 is necessary instead of native float because of tensorflow
-        probability_array = backend.cast(probability_array, dtype=np.float64)
+        prob_dist = backend.cast(prob_dist, dtype=np.float64)
 
     if base <= 0:
         raise_error(ValueError, "log base must be non-negative.")
 
-    if len(probability_array.shape) != 1:
+    if len(prob_dist.shape) != 1:
         raise_error(
             TypeError,
-            f"Probability array must have dims (k,) but it has {probability_array.shape}.",
+            f"Probability array must have dims (k,) but it has {prob_dist.shape}.",
         )
 
-    if len(probability_array) == 0:
+    if len(prob_dist) == 0:
         raise_error(TypeError, "Empty array.")
 
-    if any(probability_array < 0) or any(probability_array > 1.0):
+    if any(prob_dist < 0) or any(prob_dist > 1.0):
         raise_error(
             ValueError,
             "All elements of the probability array must be between 0. and 1..",
         )
 
-    if np.abs(np.sum(probability_array) - 1.0) > PRECISION_TOL:
+    if np.abs(np.sum(prob_dist) - 1.0) > PRECISION_TOL:
         raise_error(ValueError, "Probability array must sum to 1.")
 
     if base == 2:
-        log_prob = np.where(probability_array != 0.0, np.log2(probability_array), 0.0)
+        log_prob = np.where(prob_dist != 0.0, np.log2(prob_dist), 0.0)
     elif base == 10:
-        log_prob = np.where(probability_array != 0, np.log10(probability_array), 0.0)
+        log_prob = np.where(prob_dist != 0, np.log10(prob_dist), 0.0)
     elif base == np.e:
-        log_prob = np.where(probability_array != 0, np.log(probability_array), 0.0)
+        log_prob = np.where(prob_dist != 0, np.log(prob_dist), 0.0)
     else:
-        log_prob = np.where(
-            probability_array != 0, np.log(probability_array) / np.log(base), 0.0
-        )
+        log_prob = np.where(prob_dist != 0, np.log(prob_dist) / np.log(base), 0.0)
 
-    shan_entropy = -np.sum(probability_array * log_prob)
+    shan_entropy = -np.sum(prob_dist * log_prob)
 
     # absolute value if entropy == 0.0 to avoid returning -0.0
     shan_entropy = np.abs(shan_entropy) if shan_entropy == 0.0 else shan_entropy
 
     return complex(shan_entropy).real
+
+
+def classical_relative_entropy(prob_dist_p, prob_dist_q, base: float = 2, backend=None):
+    """Calculates the relative entropy between two discrete probability distributions.
+
+    For probabilities :math:`\\mathbf{p}` and :math:`\\mathbf{q}`, it is defined as
+
+    ..math::
+        D(\\mathbf{p} \\, \\| \\, \\mathbf{q}) = \\sum_{x} \\, \\mathbf{p}(x) \\,
+            \\log\\left( \\frac{\\mathbf{p}(x)}{\\mathbf{q}(x)} \\right) \\, .
+
+    The classical relative entropy is also known as the
+    `Kullback-Leibler (KL) divergence <https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence>`_.
+
+    Args:
+        prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
+        prob_dist_q (ndarray or list): discrete probability distribution :math:`q`.
+        base (float): the base of the log. Defaults to  :math:`2`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
+            used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        float: Classical relative entropy between :math:`\\mathbf{p}` and :math:`\\mathbf{q}`.
+    """
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    if isinstance(prob_dist_p, list):
+        # np.float64 is necessary instead of native float because of tensorflow
+        prob_dist_p = backend.cast(prob_dist_p, dtype=np.float64)
+    if isinstance(prob_dist_q, list):
+        # np.float64 is necessary instead of native float because of tensorflow
+        prob_dist_q = backend.cast(prob_dist_q, dtype=np.float64)
+
+    if (len(prob_dist_p.shape) != 1) or (len(prob_dist_q.shape) != 1):
+        raise_error(
+            TypeError,
+            "Probability arrays must have dims (k,) but have "
+            + f"dims {prob_dist_p.shape} and {prob_dist_q.shape}.",
+        )
+
+    if (len(prob_dist_p) == 0) or (len(prob_dist_q) == 0):
+        raise_error(TypeError, "At least one of the arrays is empty.")
+
+    if base <= 0:
+        raise_error(ValueError, "log base must be non-negative.")
+
+    if (any(prob_dist_p < 0) or any(prob_dist_p > 1.0)) or (
+        any(prob_dist_q < 0) or any(prob_dist_q > 1.0)
+    ):
+        raise_error(
+            ValueError,
+            "All elements of the probability array must be between 0. and 1..",
+        )
+    if np.abs(np.sum(prob_dist_p) - 1.0) > PRECISION_TOL:
+        raise_error(ValueError, "First probability array must sum to 1.")
+
+    if np.abs(np.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
+        raise_error(ValueError, "Second probability array must sum to 1.")
+
+    entropy_p = -1 * shannon_entropy(prob_dist_p, base=base, backend=backend)
+
+    if base == 2:
+        log_prob_q = np.where(prob_dist_q != 0.0, np.log2(prob_dist_q), -np.inf)
+    elif base == 10:
+        log_prob_q = np.where(prob_dist_q != 0.0, np.log10(prob_dist_q), -np.inf)
+    elif base == np.e:
+        log_prob_q = np.where(prob_dist_q != 0.0, np.log(prob_dist_q), -np.inf)
+    else:
+        log_prob_q = np.where(
+            prob_dist_q != 0.0, np.log(prob_dist_q) / np.log(base), -np.inf
+        )
+
+    log_prob = np.where(prob_dist_p != 0.0, log_prob_q, 0.0)
+
+    relative = np.sum(prob_dist_p * log_prob)
+
+    return entropy_p - relative
+
+
+def classical_renyi_entropy(
+    prob_dist, alpha: Union[float, int], base: float = 2, backend=None
+):
+    """Calculates the classical Rényi entropy :math:`H_{\\alpha}` of a discrete probability distribution.
+
+    For :math:`\\alpha \\in (0, \\, 1) \\cup (1, \\, \\infty)` and probability distribution
+    :math:`\\mathbf{p}`, the classical Rényi entropy is defined as
+
+    .. math::
+        H_{\\alpha}(\\mathbf{p}) = \\frac{1}{1 - \\alpha} \\, \\log\\left( \\sum_{x}
+            \\, \\mathbf{p}^{\\alpha}(x) \\right) \\, .
+
+    A special case is the limit :math:`\\alpha \\to 1`, in which the classical Rényi entropy
+    coincides with the :func:`qibo.quantum_info.entropies.shannon_entropy`.
+
+    Another special case is the limit :math:`\\alpha \\to 0`, where the function is
+    reduced to :math:`\\log\\left(|\\mathbf{p}|\\right)`, with :math:`|\\mathbf{p}|`
+    being the support of :math:`\\mathbf{p}`.
+    This is knows as the `Hartley entropy <https://en.wikipedia.org/wiki/Hartley_function>`
+    (also known as *Hartley function* or *max-entropy*).
+
+    In the limit :math:`\\alpha \\to \\infty`, the function reduces to
+    :math:`-\\log(\\max_{x}(\\mathbf{p}(x)))`, which is called the
+    `min-entropy <https://en.wikipedia.org/wiki/Min-entropy>`_.
+
+    Args:
+        prob_dist (ndarray): discrete probability distribution.
+        alpha (float or int): order of the Rényi entropy.
+        base (float): the base of the log. Defaults to  :math:`2`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
+            used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        float: Classical Rényi entropy :math:`H_{\\alpha}`.
+    """
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    if isinstance(prob_dist, list):
+        # np.float64 is necessary instead of native float because of tensorflow
+        prob_dist = backend.cast(prob_dist, dtype=np.float64)
+
+    if not isinstance(alpha, (float, int)):
+        raise_error(
+            TypeError, f"alpha must be type float, but it is type {type(alpha)}."
+        )
+
+    if alpha < 0.0:
+        raise_error(ValueError, "alpha must a non-negative float.")
+
+    if base <= 0:
+        raise_error(ValueError, "log base must be non-negative.")
+
+    if len(prob_dist.shape) != 1:
+        raise_error(
+            TypeError,
+            f"Probability array must have dims (k,) but it has {prob_dist.shape}.",
+        )
+
+    if len(prob_dist) == 0:
+        raise_error(TypeError, "Empty array.")
+
+    if any(prob_dist < 0) or any(prob_dist > 1.0):
+        raise_error(
+            ValueError,
+            "All elements of the probability array must be between 0. and 1..",
+        )
+
+    if np.abs(np.sum(prob_dist) - 1.0) > PRECISION_TOL:
+        raise_error(ValueError, "Probability array must sum to 1.")
+
+    if alpha == 0.0:
+        return np.log2(len(prob_dist)) / np.log2(base)
+
+    if alpha == 1.0:
+        return shannon_entropy(prob_dist, base=base, backend=backend)
+
+    if alpha == np.inf:
+        return -1 * np.log2(max(prob_dist)) / np.log2(base)
+
+    renyi_ent = (1 / (1 - alpha)) * np.log2(np.sum(prob_dist**alpha)) / np.log2(base)
+
+    return renyi_ent
 
 
 def entropy(
@@ -261,87 +425,82 @@ def relative_entropy(
     return float(entropy_state - relative)
 
 
-def classical_relative_entropy(
-    prob_dist_p, prob_dist_q, base: float = 2, validate: bool = False, backend=None
-):
-    """Calculates the relative entropy between two discrete probability distributions.
+def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None):
+    """Calculates the Rényi entropy :math:`H_{\\alpha}` of a quantum state :math:`\\rho`.
 
-    For probabilities :math:`\\mathbf{p}` and :math:`\\mathbf{q}`, it is defined as
+    For :math:`\\alpha \\in (0, \\, 1) \\cup (1, \\, \\infty)`, the Rényi entropy is defined as
 
-    ..math::
-        D(\\mathbf{p} \\, \\| \\, \\mathbf{q}) = \\sum_{x} \\, \\mathbf{p}(x) \\,
-            \\log\\left( \\frac{\\mathbf{p}(x)}{\\mathbf{q}(x)} \\right) \\, .
+    .. math::
+        H_{\\alpha}(\\rho) = \\frac{1}{1 - \\alpha} \\, \\log\\left( \\rho^{\\alpha} \\right) \\, .
 
-    The classical relative entropy is also known as the
-    `Kullback-Leibler (KL) divergence <https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence>`_.
+    A special case is the limit :math:`\\alpha \\to 1`, in which the Rényi entropy
+    coincides with the :func:`qibo.quantum_info.entropies.entropy`.
+
+    Another special case is the limit :math:`\\alpha \\to 0`, where the function is
+    reduced to :math:`\\log\\left(d\\right)`, with :math:`d = 2^{n}`
+    being the dimension of the Hilbert space in which ``state`` :math:`\\rho` lives in.
+    This is knows as the `Hartley entropy <https://en.wikipedia.org/wiki/Hartley_function>_`
+    (also known as *Hartley function* or *max-entropy*).
+
+    In the limit :math:`\\alpha \\to \\infty`, the function reduces to
+    :math:`-\\log(\\|\\rho\\|_{\\infty})`, with :math:`\\|\\cdot\\|_{\\infty}`
+    being the `spectral norm <https://en.wikipedia.org/wiki/Matrix_norm#Matrix_norms_induced_by_vector_p-norms>`_.
+    This is known as the `min-entropy <https://en.wikipedia.org/wiki/Min-entropy>`_.
 
     Args:
-        prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
-        prob_dist_q (ndarray or list): discrete probability distribution :math:`q`.
+        prob_dist (ndarray): discrete probability distribution.
+        alpha (float or int): order of the Rényi entropy.
         base (float): the base of the log. Defaults to  :math:`2`.
-        validate (bool, optional): If ``True``, checks if :math:`p` and :math:`q` are proper
-            probability distributions. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
     Returns:
-        float: Classical relative entropy between :math:`\\mathbf{p}` and :math:`\\mathbf{q}`.
+        float: Rényi entropy :math:`H_{\\alpha}`.
     """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
-    if isinstance(prob_dist_p, list):
-        # np.float64 is necessary instead of native float because of tensorflow
-        prob_dist_p = backend.cast(prob_dist_p, dtype=np.float64)
-    if isinstance(prob_dist_q, list):
-        # np.float64 is necessary instead of native float because of tensorflow
-        prob_dist_q = backend.cast(prob_dist_q, dtype=np.float64)
-
-    if (len(prob_dist_p.shape) != 1) or (len(prob_dist_q.shape) != 1):
+    if (
+        (len(state.shape) >= 3)
+        or (len(state) == 0)
+        or (len(state.shape) == 2 and state.shape[0] != state.shape[1])
+    ):
         raise_error(
             TypeError,
-            "Probability arrays must have dims (k,) but have "
-            + f"dims {prob_dist_p.shape} and {prob_dist_q.shape}.",
+            f"state must have dims either (k,) or (k,k), but have dims {state.shape}.",
         )
 
-    if (len(prob_dist_p) == 0) or (len(prob_dist_q) == 0):
-        raise_error(TypeError, "At least one of the arrays is empty.")
+    if not isinstance(alpha, (float, int)):
+        raise_error(
+            TypeError, f"alpha must be type float, but it is type {type(alpha)}."
+        )
 
-    if base <= 0:
+    if alpha < 0.0:
+        raise_error(ValueError, "alpha must a non-negative float.")
+
+    if base <= 0.0:
         raise_error(ValueError, "log base must be non-negative.")
 
-    if validate:
-        if (any(prob_dist_p < 0) or any(prob_dist_p > 1.0)) or (
-            any(prob_dist_q < 0) or any(prob_dist_q > 1.0)
-        ):
-            raise_error(
-                ValueError,
-                "All elements of the probability array must be between 0. and 1..",
-            )
-        if np.abs(np.sum(prob_dist_p) - 1.0) > PRECISION_TOL:
-            raise_error(ValueError, "First probability array must sum to 1.")
+    if abs(purity(state) - 1.0) < PRECISION_TOL:
+        return 0.0
 
-        if np.abs(np.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
-            raise_error(ValueError, "Second probability array must sum to 1.")
+    if alpha == 0.0:
+        return np.log2(len(state)) / np.log2(base)
 
-    entropy_p = -1 * shannon_entropy(prob_dist_p, base=base, backend=backend)
+    if alpha == 1.0:
+        return entropy(state, base=base, backend=backend)
 
-    if base == 2:
-        log_prob_q = np.where(prob_dist_q != 0.0, np.log2(prob_dist_q), -np.inf)
-    elif base == 10:
-        log_prob_q = np.where(prob_dist_q != 0.0, np.log10(prob_dist_q), -np.inf)
-    elif base == np.e:
-        log_prob_q = np.where(prob_dist_q != 0.0, np.log(prob_dist_q), -np.inf)
-    else:
-        log_prob_q = np.where(
-            prob_dist_q != 0.0, np.log(prob_dist_q) / np.log(base), -np.inf
+    if alpha == np.inf:
+        return (
+            -1
+            * np.log2(backend.calculate_norm_density_matrix(state, order=2))
+            / np.log2(base)
         )
 
-    log_prob = np.where(prob_dist_p != 0.0, log_prob_q, 0.0)
+    log = np.log2(np.trace(np.linalg.matrix_power(state, alpha)))
 
-    relative = np.sum(prob_dist_p * log_prob)
-
-    return entropy_p - relative
+    return (1 / (1 - alpha)) * log / np.log2(base)
 
 
 def entanglement_entropy(
