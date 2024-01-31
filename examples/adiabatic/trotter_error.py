@@ -1,4 +1,5 @@
 """Error of evolution using Trotter decomposition."""
+
 import argparse
 
 import matplotlib
