@@ -1271,7 +1271,7 @@ Callbacks
 Callbacks provide a way to calculate quantities on the state vector as it
 propagates through the circuit. Example of such quantity is the entanglement
 entropy, which is currently the only callback implemented in
-:class:`qibo.callbacks.Entanglemententropy`.
+:class:`qibo.callbacks.EntanglementEntropy`.
 The user can create custom callbacks by inheriting the
 :class:`qibo.callbacks.Callback` class. The point each callback is
 calculated inside the circuit is defined by adding a :class:`qibo.gates.CallbackGate`.
@@ -1284,7 +1284,7 @@ This can be added similarly to a standard gate and does not affect the state vec
 Entanglement entropy
 ^^^^^^^^^^^^^^^^^^^^
 
-.. autoclass:: qibo.callbacks.Entanglemententropy
+.. autoclass:: qibo.callbacks.EntanglementEntropy
    :members:
    :member-order: bysource
 
