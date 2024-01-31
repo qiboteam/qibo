@@ -548,7 +548,7 @@ def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None
     This is known as the `min-entropy <https://en.wikipedia.org/wiki/Min-entropy>`_.
 
     Args:
-        prob_dist (ndarray): discrete probability distribution.
+        state (ndarray): statevector or density matrix.
         alpha (float or int): order of the Rényi entropy.
         base (float): the base of the log. Defaults to  :math:`2`.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
@@ -606,6 +606,37 @@ def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None
 def relative_renyi_entropy(
     state, target, alpha: Union[float, int], base: float = 2, backend=None
 ):
+    """Calculates the relative Rényi entropy between two quantum states.
+
+    For :math:`\\alpha \\in (0, \\, 1) \\cup (1, \\, \\infty)` and quantum states
+    :math:`\\rho` and :math:`\\sigma`, the relative Rényi entropy is defined as
+
+    .. math::
+        H_{\\alpha}(\\rho \\, \\| \\, \\sigma) = \\frac{1}{\\alpha - 1} \\,
+            \\log\\left( \\textup{tr}\\left( \\rho^{\\alpha} \\,
+            \\sigma^{1 - \\alpha} \\right) \\right) \\, .
+
+    A special case is the limit :math:`\\alpha \\to 1`, in which the Rényi entropy
+    coincides with the :func:`qibo.quantum_info.entropies.relative_entropy`.
+
+    In the limit :math:`\\alpha \\to \\infty`, the function reduces to
+    :math:`-2 \\, \\log(\\|\\sqrt{\\rho} \\, \\sqrt{\\sigma}\\|_{1})`,
+    with :math:`\\|\\cdot\\|_{1}` being the
+    `Schatten 1-norm <https://en.wikipedia.org/wiki/Matrix_norm#Schatten_norms>`_.
+    This is known as the `min-relative entropy <https://arxiv.org/abs/1310.7178>`_.
+
+    Args:
+        state (ndarray): statevector or density matrix :math:`\\rho`.
+        target (ndarray): statevector or density matrix :math:`\\sigma`.
+        alpha (float or int): order of the Rényi entropy.
+        base (float): the base of the log. Defaults to  :math:`2`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
+            used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        float: Relative Rényi entropy :math:`H_{\\alpha}(\\rho \\, \\| \\, \\sigma)`.
+    """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
