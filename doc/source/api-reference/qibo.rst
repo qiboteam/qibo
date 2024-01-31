@@ -2091,6 +2091,12 @@ Hamming weight
 .. autofunction:: qibo.quantum_info.hamming_weight
 
 
+Hamming distance
+""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.hamming_distance
+
+
 Hadamard Transform
 """"""""""""""""""
 

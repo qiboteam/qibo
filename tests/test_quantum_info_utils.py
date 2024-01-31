@@ -10,6 +10,7 @@ from qibo.quantum_info.metrics import fidelity
 from qibo.quantum_info.utils import (
     haar_integral,
     hadamard_transform,
+    hamming_distance,
     hamming_weight,
     hellinger_distance,
     hellinger_fidelity,
@@ -32,6 +33,8 @@ from qibo.quantum_info.utils import (
 def test_hamming_weight(bitstring, kind):
     with pytest.raises(TypeError):
         test = hamming_weight("0101", return_indexes="True")
+    with pytest.raises(TypeError):
+        test = hamming_weight(2.3)
 
     bitstring = f"{bitstring:b}"
     weight_test = len(bitstring.replace("0", ""))
@@ -42,6 +45,36 @@ def test_hamming_weight(bitstring, kind):
 
     assert weight == weight_test
     assert indexes == indexes_test
+
+
+bitstring_1, bitstring_2 = "11111", "10101"
+
+
+@pytest.mark.parametrize(
+    ["bitstring_1", "bitstring_2"],
+    [
+        [bitstring_1, bitstring_2],
+        [int(bitstring_1, 2), int(bitstring_2, 2)],
+        [list(bitstring_1), list(bitstring_2)],
+        [tuple(bitstring_1), tuple(bitstring_2)],
+    ],
+)
+def test_hamming_distance(bitstring_1, bitstring_2):
+    with pytest.raises(TypeError):
+        test = hamming_distance("0101", "1010", return_indexes="True")
+    with pytest.raises(TypeError):
+        test = hamming_distance(2.3, "1010")
+    with pytest.raises(TypeError):
+        test = hamming_distance("1010", 2.3)
+
+    if isinstance(bitstring_1, int):
+        bitstring_1, bitstring_2 = f"{bitstring_1:b}", f"{bitstring_2:b}"
+
+    distance = hamming_distance(bitstring_1, bitstring_2)
+    indexes = hamming_distance(bitstring_1, bitstring_2, return_indexes=True)
+
+    assert distance == 2
+    assert indexes == [1, 3]
 
 
 @pytest.mark.parametrize("is_matrix", [False, True])
