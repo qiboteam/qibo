@@ -38,7 +38,7 @@ def test_simple_cirq(backend):
     c1.add(gates.H(1))
     final_state_c1 = backend.execute_circuit(c1).state()
 
-    c2 = circuit_from_qasm(c1.to_qasm().replace("OPENQASM 3.0", "OPENQASM 2.0"))
+    c2 = circuit_from_qasm(c1.to_qasm())
     c2depth = len(cirq.Circuit(c2.all_operations()))
     assert c1.depth == c2depth
     final_state_c2 = (
