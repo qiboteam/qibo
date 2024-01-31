@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "qibo"
-version = "0.2.4"
+version = "0.2.5"
 description = "A framework for quantum computing with hardware acceleration."
 authors = ["The Qibo team"]
 license = "Apache License 2.0"
@@ -95,3 +95,7 @@ output-format = "colorized"
 [tool.pytest.ini_options]
 testpaths = ['tests/']
 filterwarnings = ['ignore::RuntimeWarning']
+
+addopts = [
+  '--durations=60',
+]
