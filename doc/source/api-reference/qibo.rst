@@ -1552,7 +1552,7 @@ Classical Rényi entropy
 Classical Rényi relative entropy
 """"""""""""""""""""""""""""""""
 
-.. autofunction:: qibo.quantum_info.classical_renyi_relative_entropy
+.. autofunction:: qibo.quantum_info.classical_relative_renyi_entropy
 
 
 Entropy
