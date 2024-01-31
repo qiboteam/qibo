@@ -482,7 +482,7 @@ def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None
     if base <= 0.0:
         raise_error(ValueError, "log base must be non-negative.")
 
-    if purity(state) == 1.0:
+    if abs(purity(state) - 1.0) < PRECISION_TOL:
         return 0.0
 
     if alpha == 0.0:
