@@ -483,6 +483,12 @@ def relative_entropy(
     if purity(state) == 1.0 and purity(target) == 1.0:
         return 0.0
 
+    if len(state.shape) == 1:
+        state = np.outer(state, np.conj(state))
+
+    if len(target.shape) == 1:
+        target = np.outer(target, np.conj(target))
+
     if not check_hermitian or _check_hermitian_or_not_gpu(state, backend=backend):
         eigenvalues_state = np.linalg.eigvalsh(state)
     else:
@@ -677,11 +683,20 @@ def relative_renyi_entropy(
     ):
         return 0.0
 
+    if len(state.shape) == 1:
+        state = np.outer(state, np.conj(state))
+
+    if len(target.shape) == 1:
+        target = np.outer(target, np.conj(target))
+
     if alpha == 1.0:
         return relative_entropy(state, target, base, backend=backend)
 
     if alpha == np.inf:
-        if backend.__class__.__name__ in ["CupyBackend", "CuQuantumBackend"]:
+        if backend.__class__.__name__ in [
+            "CupyBackend",
+            "CuQuantumBackend",
+        ]:  # pragma: no cover
             eigenvalues_state, eigenvectors_state = np.linalg.eigh(state)
             new_state = np.zeros_like(state, dtype=complex)
             new_state = backend.cast(new_state, dtype=new_state.dtype)
@@ -715,12 +730,6 @@ def relative_renyi_entropy(
         )
 
         return -2 * log / np.log2(base)
-
-    if len(state.shape) == 1:
-        state = np.outer(state, np.conj(state))
-
-    if len(target.shape) == 1:
-        target = np.outer(target, np.conj(target))
 
     log = np.linalg.matrix_power(state, alpha)
     log = log @ np.linalg.matrix_power(target, 1 - alpha)

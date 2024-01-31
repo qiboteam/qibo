@@ -443,9 +443,12 @@ def test_renyi_entropy(backend, alpha, base):
     )
 
 
+@pytest.mark.parametrize(
+    ["state_flag", "target_flag"], [[True, True], [False, True], [True, False]]
+)
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
 @pytest.mark.parametrize("alpha", [0, 1, 2, 3, np.inf])
-def test_relative_renyi_entropy(backend, alpha, base):
+def test_relative_renyi_entropy(backend, alpha, base, state_flag, target_flag):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
@@ -479,8 +482,12 @@ def test_relative_renyi_entropy(backend, alpha, base):
             state, target, alpha=alpha, base=0, backend=backend
         )
 
-    state = random_density_matrix(4, backend=backend)
-    target = random_density_matrix(4, backend=backend)
+    state = (
+        random_statevector(4, backend=backend)
+        if state_flag
+        else random_density_matrix(4, backend=backend)
+    )
+    target = backend.identity_density_matrix(2, normalize=True)
 
     if alpha == 1.0:
         log = relative_entropy(state, target, base, backend=backend)
@@ -506,6 +513,12 @@ def test_relative_renyi_entropy(backend, alpha, base):
                     eigenstate, np.conj(eigenstate)
                 )
         else:
+            if len(state.shape) == 1:
+                state = np.outer(state, np.conj(state))
+
+            if len(target.shape) == 1:
+                target = np.outer(target, np.conj(target))
+
             new_state, new_target = sqrtm(state).astype("complex128"), sqrtm(
                 target
             ).astype("complex128")
@@ -519,6 +532,12 @@ def test_relative_renyi_entropy(backend, alpha, base):
         log = -2 * log / np.log2(base)
 
     else:
+        if len(state.shape) == 1:
+            state = np.outer(state, np.conj(state))
+
+        if len(target.shape) == 1:
+            target = np.outer(target, np.conj(target))
+
         log = np.linalg.matrix_power(state, alpha)
         log = log @ np.linalg.matrix_power(target, 1 - alpha)
         log = np.log2(np.trace(log))
