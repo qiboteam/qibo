@@ -1555,6 +1555,12 @@ Classical Rényi relative entropy
 .. autofunction:: qibo.quantum_info.classical_relative_renyi_entropy
 
 
+Classical Tsallis entropy
+"""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.classical_tsallis_entropy
+
+
 Entropy
 """""""
 
@@ -1592,6 +1598,12 @@ Rényi relative entropy
 """"""""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.renyi_relative_entropy
+
+
+Tsallis entropy
+"""""""""""""""
+
+.. autofunction:: qibo.quantum_info.tsallis_entropy
 
 
 Entanglement entropy
