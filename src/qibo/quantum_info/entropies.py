@@ -170,7 +170,7 @@ def classical_renyi_entropy(
     Another special case is the limit :math:`\\alpha \\to 0`, where the function is
     reduced to :math:`\\log\\left(|\\mathbf{p}|\\right)`, with :math:`|\\mathbf{p}|`
     being the support of :math:`\\mathbf{p}`.
-    This is knows as the `Hartley entropy <https://en.wikipedia.org/wiki/Hartley_function>`
+    This is knows as the `Hartley entropy <https://en.wikipedia.org/wiki/Hartley_function>`_
     (also known as *Hartley function* or *max-entropy*).
 
     In the limit :math:`\\alpha \\to \\infty`, the function reduces to
@@ -241,6 +241,42 @@ def classical_renyi_entropy(
 def classical_renyi_relative_entropy(
     prob_dist_p, prob_dist_q, alpha: Union[float, int], base: float = 2, backend=None
 ):
+    """Calculates the classical Rényi relative entropy between two discrete probability distributions.
+
+    This function is also known as
+    `Rényi divergence <https://en.wikipedia.org/wiki/R%C3%A9nyi_entropy#R%C3%A9nyi_divergence>`_.
+
+    For :math:`\\alpha \\in (0, \\, 1) \\cup (1, \\, \\infty)` and probability distributions
+    :math:`\\mathbf{p}` and :math:`\\mathbf{q}`, the classical Rényi relative entropy is defined as
+
+    .. math::
+        H_{\\alpha}(\\mathbf{p} \\, \\| \\, \\mathbf{q}) = \\frac{1}{\\alpha - 1} \\,
+            \\log\\left( \\sum_{x} \\, \\frac{\\mathbf{p}^{\\alpha}(x)}
+            {\\mathbf{q}^{\\alpha - 1}(x)} \\right) \\, .
+
+    A special case is the limit :math:`\\alpha \\to 1`, in which the classical Rényi divergence
+    coincides with the :func:`qibo.quantum_info.entropies.classical_relative_entropy`.
+
+    Another special case is the limit :math:`\\alpha \\to 1/2`, where the function is
+    reduced to :math:`-2 \\log\\left(\\sum_{x} \\, \\sqrt{\\mathbf{p}(x) \\, \\mathbf{q}(x)} \\right)`.
+    The sum inside the :math:`\\log` is known as the
+    `Bhattacharyya coefficient <https://en.wikipedia.org/wiki/Bhattacharyya_distance>`_.
+
+    In the limit :math:`\\alpha \\to \\infty`, the function reduces to
+    :math:`\\log(\\max_{x}(\\mathbf{p}(x) \\, \\mathbf{q}(x))`.
+
+    Args:
+        prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
+        prob_dist_q (ndarray or list): discrete probability distribution :math:`q`.
+        alpha (float or int): order of the Rényi entropy.
+        base (float): the base of the log. Defaults to  :math:`2`.
+        backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
+            used in the execution. If ``None``, it uses
+            :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
+
+    Returns:
+        float: Classical Rényi relative entropy :math:`H_{\\alpha}(\\mathbf{p} \\, \\| \\, \\mathbf{q})`.
+    """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
