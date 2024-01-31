@@ -1,4 +1,5 @@
 """Test methods defined in `qibo/core/callbacks.py`."""
+
 import numpy as np
 import pytest
 

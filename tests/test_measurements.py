@@ -1,4 +1,5 @@
 """Test circuit result measurements and measurement gate and as part of circuit."""
+
 import numpy as np
 import pytest
 
