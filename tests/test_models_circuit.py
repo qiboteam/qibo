@@ -1,4 +1,5 @@
 """Test all methods defined in `qibo/models/circuit.py`."""
+
 from collections import Counter
 
 import pytest
