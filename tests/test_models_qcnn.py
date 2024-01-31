@@ -368,8 +368,8 @@ def test_two_qubit_ansatz(backend):
     c.add(gates.CNOT(1, 0))
     test_qcnn = QuantumCNN(4, 2, 2, twoqubitansatz=c)
 
-@pytest.mark.parametrize("backend", [("numpy"), ("qibojit")])
 
+@pytest.mark.parametrize("backend", [("numpy"), ("qibojit")])
 def test_qcnn_training(backend):
     import random
 
@@ -399,8 +399,8 @@ def test_qcnn_training(backend):
     predictions.append(1)
     labels = np.array([[1], [-1], [1]])
 
-@pytest.mark.parametrize("backend", [("numpy"), ("qibojit")])
 
+@pytest.mark.parametrize("backend", [("numpy"), ("qibojit")])
 def test_two_qubit_ansatz_training(backend):
     c = Circuit(2)
     c.add(gates.H(0))
