@@ -1267,7 +1267,7 @@ class Circuit:
         composite_gates = {}  # composite gates created with the "gate" command
 
         def parse_line(line):
-            line = line.replace(r"/\s\s+/g", " ").replace(r"^[\s]+", "")
+            line = line.replace(r"/\s{2,}/g", " ").replace(r"^[\s]+", "")
             command, *args = line.split(" ")
             args = " ".join(args)
             if args[-1] == ";":
