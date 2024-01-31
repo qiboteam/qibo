@@ -238,16 +238,16 @@ def classical_renyi_entropy(
     return renyi_ent
 
 
-def classical_renyi_relative_entropy(
+def classical_relative_renyi_entropy(
     prob_dist_p, prob_dist_q, alpha: Union[float, int], base: float = 2, backend=None
 ):
-    """Calculates the classical Rényi relative entropy between two discrete probability distributions.
+    """Calculates the classical relative Rényi entropy between two discrete probability distributions.
 
     This function is also known as
     `Rényi divergence <https://en.wikipedia.org/wiki/R%C3%A9nyi_entropy#R%C3%A9nyi_divergence>`_.
 
     For :math:`\\alpha \\in (0, \\, 1) \\cup (1, \\, \\infty)` and probability distributions
-    :math:`\\mathbf{p}` and :math:`\\mathbf{q}`, the classical Rényi relative entropy is defined as
+    :math:`\\mathbf{p}` and :math:`\\mathbf{q}`, the classical relative Rényi entropy is defined as
 
     .. math::
         H_{\\alpha}(\\mathbf{p} \\, \\| \\, \\mathbf{q}) = \\frac{1}{\\alpha - 1} \\,
@@ -275,7 +275,7 @@ def classical_renyi_relative_entropy(
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
 
     Returns:
-        float: Classical Rényi relative entropy :math:`H_{\\alpha}(\\mathbf{p} \\, \\| \\, \\mathbf{q})`.
+        float: Classical relative Rényi entropy :math:`H_{\\alpha}(\\mathbf{p} \\, \\| \\, \\mathbf{q})`.
     """
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
@@ -601,6 +601,101 @@ def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None
     log = np.log2(np.trace(np.linalg.matrix_power(state, alpha)))
 
     return (1 / (1 - alpha)) * log / np.log2(base)
+
+
+def relative_renyi_entropy(
+    state, target, alpha: Union[float, int], base: float = 2, backend=None
+):
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    if (
+        (len(state.shape) >= 3)
+        or (len(state) == 0)
+        or (len(state.shape) == 2 and state.shape[0] != state.shape[1])
+    ):
+        raise_error(
+            TypeError,
+            f"state must have dims either (k,) or (k,k), but have dims {state.shape}.",
+        )
+
+    if (
+        (len(target.shape) >= 3)
+        or (len(target) == 0)
+        or (len(target.shape) == 2 and target.shape[0] != target.shape[1])
+    ):
+        raise_error(
+            TypeError,
+            f"target must have dims either (k,) or (k,k), but have dims {target.shape}.",
+        )
+
+    if not isinstance(alpha, (float, int)):
+        raise_error(
+            TypeError, f"alpha must be type float, but it is type {type(alpha)}."
+        )
+
+    if alpha < 0.0:
+        raise_error(ValueError, "alpha must a non-negative float.")
+
+    if base <= 0.0:
+        raise_error(ValueError, "log base must be non-negative.")
+
+    if (
+        abs(purity(state) - 1.0) < PRECISION_TOL
+        and abs(purity(target) - 1) < PRECISION_TOL
+    ):
+        return 0.0
+
+    if alpha == 1.0:
+        return relative_entropy(state, target, base, backend=backend)
+
+    if alpha == np.inf:
+        if backend.__class__.__name__ in ["CupyBackend", "CuQuantumBackend"]:
+            eigenvalues_state, eigenvectors_state = np.linalg.eigh(state)
+            new_state = np.zeros_like(state, dtype=complex)
+            new_state = backend.cast(new_state, dtype=new_state.dtype)
+            for eigenvalue, eigenstate in zip(
+                eigenvalues_state, np.transpose(eigenvectors_state)
+            ):
+                new_state += np.sqrt(eigenvalue) * np.outer(
+                    eigenstate, np.conj(eigenstate)
+                )
+
+            eigenvalues_target, eigenvectors_target = np.linalg.eigh(target)
+            new_target = np.zeros_like(target, dtype=complex)
+            new_target = backend.cast(new_target, dtype=new_target.dtype)
+            for eigenvalue, eigenstate in zip(
+                eigenvalues_target, np.transpose(eigenvectors_target)
+            ):
+                new_target += np.sqrt(eigenstate) * np.outer(
+                    eigenstate, np.conj(eigenstate)
+                )
+        else:
+            from scipy.linalg import sqrtm  # pylint: disable=C0415
+
+            # astype method needed because of tensorflow
+            new_state = sqrtm(state).astype("complex128")
+            new_target = sqrtm(target).astype("complex128")
+            new_state = backend.cast(new_state, dtype=new_state.dtype)
+            new_target = backend.cast(new_target, dtype=new_target.dtype)
+
+        log = np.log2(
+            backend.calculate_norm_density_matrix(new_state @ new_target, order=1)
+        )
+
+        return -2 * log / np.log2(base)
+
+    if len(state.shape) == 1:
+        state = np.outer(state, np.conj(state))
+
+    if len(target.shape) == 1:
+        target = np.outer(target, np.conj(target))
+
+    log = np.linalg.matrix_power(state, alpha)
+    log = log @ np.linalg.matrix_power(target, 1 - alpha)
+    log = np.log2(np.trace(log))
+
+    return (1 / (alpha - 1)) * log / np.log2(base)
 
 
 def entanglement_entropy(
