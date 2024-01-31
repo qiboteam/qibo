@@ -4,7 +4,7 @@ from functools import reduce
 from itertools import permutations
 from math import factorial
 from re import finditer
-from typing import Optional
+from typing import Optional, Union
 
 import numpy as np
 
@@ -13,11 +13,15 @@ from qibo.backends import GlobalBackend
 from qibo.config import PRECISION_TOL, raise_error
 
 
-def hamming_weight(bitstring, return_indexes: bool = False):
+def hamming_weight(
+    bitstring: Union[int, str, list, tuple], return_indexes: bool = False
+):
     """Calculates the Hamming weight of a bitstring.
 
+    The Hamming weight of a bistring is the number of :math:'1's that the bistring contains.
+
     Args:
-        bitstring (int or str or tuple or list or ndarray): bitstring to Calculates the
+        bitstring (int or str or tuple or list): bitstring to calculate the
             weight, either in binary or integer representation.
         return_indexes (bool, optional): If ``True``, returns the indexes of the
             non-zero elements. Defaults to ``False``.
@@ -31,6 +35,13 @@ def hamming_weight(bitstring, return_indexes: bool = False):
             f"return_indexes must be type bool, but it is type {type(return_indexes)}",
         )
 
+    if not isinstance(bitstring, (int, str, list, tuple, np.ndarray)):
+        raise_error(
+            TypeError,
+            "bitstring must be either type int, list, tuple, or numpy.ndarray. "
+            f"However, it is type {type(bitstring)}.",
+        )
+
     if isinstance(bitstring, int):
         bitstring = f"{bitstring:b}"
     elif isinstance(bitstring, (list, tuple, np.ndarray)):
@@ -42,6 +53,58 @@ def hamming_weight(bitstring, return_indexes: bool = False):
         return indexes
 
     return len(indexes)
+
+
+def hamming_distance(
+    bitstring_1: Union[int, str, list, tuple],
+    bitstring_2: Union[int, str, list, tuple],
+    return_indexes: bool = False,
+):
+    """Calculates the Hamming distance between two bistrings.
+
+    This is done by calculating the Hamming weight
+    (:func:`qibo.quantum_info.utils.hamming_weight`) of ``| bitstring_1 - bitstring_2 |``.
+
+    Args:
+        bitstring_1 (int or str or list or tuple): fisrt bistring.
+        bitstring_2 (int or str or list or tuple): second bitstring.
+        return_indexes (bool, optional): If ``True``, returns the indexes of the
+            non-zero elements. Defaults to ``False``.
+
+    Returns:
+        int or list: Hamming distance or list of indexes of non-zero elements.
+    """
+    if not isinstance(return_indexes, bool):
+        raise_error(
+            TypeError,
+            f"return_indexes must be type bool, but it is type {type(return_indexes)}",
+        )
+
+    if not isinstance(bitstring_1, (int, str, list, tuple)):
+        raise_error(
+            TypeError,
+            "bitstring_1 must be either type int, list, tuple, or numpy.ndarray. "
+            f"However, it is type {type(bitstring_1)}.",
+        )
+
+    if not isinstance(bitstring_2, (int, str, list, tuple)):
+        raise_error(
+            TypeError,
+            "bitstring_2 must be either type int, list, tuple, or numpy.ndarray. "
+            f"However, it is type {type(bitstring_2)}.",
+        )
+
+    if isinstance(bitstring_1, (list, tuple)):
+        bitstring_1 = "".join(bitstring_1)
+
+    if isinstance(bitstring_2, (list, tuple)):
+        bitstring_2 = "".join(bitstring_2)
+
+    nbits = max(len(bitstring_1), len(bitstring_2))
+
+    difference = abs(int(bitstring_1, 2) - int(bitstring_2, 2))
+
+    return hamming_weight(f"{difference:{nbits}b}", return_indexes=return_indexes)
 
 
 def hadamard_transform(array, implementation: str = "fast", backend=None):
