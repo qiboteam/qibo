@@ -1,4 +1,5 @@
 """Module defining the QuantumNetwork class and adjacent functions."""
+
 import re
 from functools import reduce
 from operator import mul
