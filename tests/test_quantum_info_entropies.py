@@ -8,6 +8,7 @@ from qibo.quantum_info.entropies import (
     entanglement_entropy,
     entropy,
     relative_entropy,
+    renyi_entropy,
     shannon_entropy,
 )
 from qibo.quantum_info.random_ensembles import (
@@ -299,6 +300,47 @@ def test_relative_entropy(backend, base, check_hermitian):
         test = relative_entropy(
             state, target, base=base, check_hermitian=True, backend=backend
         )
+
+
+@pytest.mark.parametrize("base", [2, 10, np.e, 5])
+@pytest.mark.parametrize("alpha", [0, 1, 2, 3, np.inf])
+def test_renyi_entropy(backend, alpha, base):
+    with pytest.raises(TypeError):
+        state = np.random.rand(2, 3)
+        state = backend.cast(state, dtype=state.dtype)
+        test = renyi_entropy(state, alpha=alpha, base=base, backend=backend)
+    with pytest.raises(TypeError):
+        state = random_statevector(4, backend=backend)
+        test = renyi_entropy(state, alpha="2", base=base, backend=backend)
+    with pytest.raises(ValueError):
+        state = random_statevector(4, backend=backend)
+        test = renyi_entropy(state, alpha=-1, base=base, backend=backend)
+    with pytest.raises(ValueError):
+        state = random_statevector(4, backend=backend)
+        test = renyi_entropy(state, alpha=alpha, base=0, backend=backend)
+
+    state = random_density_matrix(4, backend=backend)
+
+    if alpha == 0.0:
+        target = np.log2(len(state)) / np.log2(base)
+    elif alpha == 1.0:
+        target = entropy(state, base=base, backend=backend)
+    elif alpha == np.inf:
+        target = backend.calculate_norm_density_matrix(state, order=2)
+        target = -1 * np.log2(target) / np.log2(base)
+    else:
+        target = np.log2(np.trace(np.linalg.matrix_power(state, alpha)))
+        target = (1 / (1 - alpha)) * target / np.log2(base)
+
+    backend.assert_allclose(
+        renyi_entropy(state, alpha=alpha, base=base, backend=backend), target, atol=1e-5
+    )
+
+    # test pure state
+    state = random_density_matrix(4, pure=True, backend=backend)
+    backend.assert_allclose(
+        renyi_entropy(state, alpha=alpha, base=base, backend=backend), 0.0, atol=1e-8
+    )
 
 
 @pytest.mark.parametrize("check_hermitian", [False, True])
