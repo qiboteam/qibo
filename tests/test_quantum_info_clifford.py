@@ -105,10 +105,6 @@ def test_clifford_to_circuit(backend, nqubits, algorithm, seed):
             symplectic_matrix_compiled, engine=engine
         ).symplectic_matrix
 
-        print(symplectic_matrix_from_symplectic == symplectic_matrix_original)
-        print(
-            (~symplectic_matrix_from_symplectic == symplectic_matrix_original).nonzero()
-        )
         backend.assert_allclose(
             symplectic_matrix_from_symplectic, symplectic_matrix_original
         )
