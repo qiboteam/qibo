@@ -1,4 +1,5 @@
 """Tests for qibo.models.encodings"""
+
 import math
 
 import numpy as np
