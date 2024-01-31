@@ -250,7 +250,7 @@ def total_variation_distance(
         if np.abs(np.sum(prob_dist_q) - 1.0) > PRECISION_TOL:
             raise_error(ValueError, "Second probability array must sum to 1.")
 
-    total_variation = (1 / 2) * np.sum(np.abs(prob_dist_p - prob_dist_q))
+    total_variation = 0.5 * np.sum(np.abs(prob_dist_p - prob_dist_q))
 
     return total_variation
 
