@@ -160,6 +160,5 @@ class FusedGate(SpecialGate):
 
     def apply_clifford(self, backend, state, nqubits):
         for gate in self.gates:
-            print(gate)
             state = gate.apply_clifford(backend, state, nqubits)
         return state
