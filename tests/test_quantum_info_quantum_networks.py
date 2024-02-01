@@ -1,6 +1,5 @@
 """Tests for quantum_info.quantum_networks submodule"""
 
-# %%
 import numpy as np
 import pytest
 
@@ -132,6 +131,12 @@ def test_operational_logic(backend):
         ((2.0 * network) / 2).matrix(backend), network.matrix(backend)
     )
 
+    unitary = random_unitary(dims, backend=backend)
+    network_unitary = QuantumNetwork(unitary, (dims, dims), pure=True, backend=backend)
+    backend.assert_allclose(
+        (network_unitary / 2).matrix(backend), unitary / np.sqrt(2), atol=1e-5
+    )
+
 
 def test_parameters(backend):
     lamb = float(np.random.rand())
@@ -217,6 +222,28 @@ def test_with_unitaries(backend, subscript):
         backend.assert_allclose(test, (network_2 @ network_1).to_full(backend=backend))
 
 
+def test_with_comb(backend):
+    subscript = "jklm,lmno->jkno"
+    partition = (2,) * 4
+    sys_out = (False, True) * 2
+
+    comb = random_density_matrix(2**4, backend=backend)
+    comb_2 = random_density_matrix(2**4, backend=backend)
+
+    comb_choi = QuantumNetwork(comb, partition, system_output=sys_out, backend=backend)
+    comb_choi_2 = QuantumNetwork(
+        comb_2, partition, system_output=sys_out, backend=backend
+    )
+    comb_choi_3 = QuantumNetwork(
+        comb @ comb_2, partition, system_output=sys_out, backend=backend
+    ).to_full(backend)
+
+    test = comb_choi.link_product(comb_choi_2, subscript).to_full(backend)
+
+    backend.assert_allclose(test, comb_choi_3, atol=1e-5)
+    backend.assert_allclose(test, (comb_choi @ comb_choi_2).to_full(backend), atol=1e-5)
+
+
 def test_apply(backend):
     nqubits = 2
     dims = 2**nqubits
@@ -244,6 +271,3 @@ def test_non_hermitian_and_prints(backend):
     assert not network.channel()
 
     assert network.__str__() == "J[4 -> 4]"
-
-
-# %%

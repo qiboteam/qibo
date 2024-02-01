@@ -323,8 +323,8 @@ class QuantumNetwork:
         inv_subscripts = pattern_two and subscripts[0] == subscripts[4]
         super_subscripts = (
             pattern_four
-            and subscripts[1] == subscripts[5]
-            and subscripts[2] == subscripts[6]
+            and subscripts[2] == subscripts[5]
+            and subscripts[3] == subscripts[6]
         )
 
         if not channel_subscripts and not inv_subscripts and not super_subscripts:
@@ -337,22 +337,11 @@ class QuantumNetwork:
         second_matrix = second_network._full()  # pylint: disable=W0212
 
         if super_subscripts:
-            cexpr = (
-                subscripts[:4]
-                + "abcd,"
-                + subscripts[5:7]
-                + "bc->"
-                + subscripts[9:]
-                + "ad"
-            )
+            cexpr = "jklmnopq,nopqrstu->jklmrstu"
             return QuantumNetwork(
                 np.einsum(cexpr, first_matrix, second_matrix),
-                [self.partition[0], self.partition[3]],
+                self.partition[:2] + second_network.partition[2:],
             )
-
-        cexpr = (
-            subscripts[:2] + "ab," + subscripts[3:5] + "bc->" + subscripts[7:] + "ac"
-        )
 
         cexpr = "jkab,klbc->jlac"
 
@@ -536,7 +525,7 @@ class QuantumNetwork:
         if len(self.partition) == 2:
             subscripts = "jk,kl -> jl"
         elif len(self.partition) == 4:
-            subscripts = "jklmabcd,klbc -> jmad"
+            subscripts = "jklm,lmno -> jkno"
         else:
             raise_error(
                 NotImplementedError,
@@ -645,8 +634,11 @@ class QuantumNetwork:
 
     def _check_subscript_pattern(self, subscripts: str):
         """Checks if input subscript match any implemented pattern."""
-        pattern_two = re.compile("[a-z][a-z],[a-z][a-z]->[a-z][a-z]")
-        pattern_four = re.compile("[a-z][a-z][a-z][a-z],[a-z][a-z]->[a-z][a-z]")
+        braket = "[a-z]"
+        pattern_two = re.compile(braket * 2 + "," + braket * 2 + "->" + braket * 2)
+        pattern_four = re.compile(braket * 4 + "," + braket * 4 + "->" + braket * 4)
+        # pattern_two = re.compile("[a-z][a-z],[a-z][a-z]->[a-z][a-z]")
+        # pattern_four = re.compile("[a-z][a-z][a-z][a-z],[a-z][a-z]->[a-z][a-z]")
 
         return bool(re.match(pattern_two, subscripts)), bool(
             re.match(pattern_four, subscripts)
