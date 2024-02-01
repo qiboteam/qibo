@@ -281,7 +281,7 @@ class QuantumNetwork:
         matrix = np.copy(self._matrix)
 
         if self.pure():
-            return np.einsum("jk,lm,jl -> km", matrix, np.conj(matrix), state)
+            return np.einsum("kj,ml,jl -> km", matrix, np.conj(matrix), state)
 
         return np.einsum("jklm,km -> jl", matrix, state)
 
@@ -504,20 +504,18 @@ class QuantumNetwork:
             backend=self._backend,
         )
 
-    def __matmul__(self, second_network, subscripts: str = "ij,jk -> ik"):
+    def __matmul__(self, second_network):
         """Defines matrix multiplication between two ``QuantumNetwork`` objects.
 
-        If ``len(self.partition) == 2`` and ``len(second_network.partition) == 2``,
-        this method is overwritten by
+        If ``self.partition == second_network.partition in [2, 4]``, this method is overwritten by
         :meth:`qibo.quantum_info.quantum_networks.QuantumNetwork.link_product`.
 
         Args:
             second_network (:class:`qibo.quantum_info.quantum_networks.QuantumNetwork`):
-            subscripts (str, optional): .
 
         Returns:
             :class:`qibo.quantum_info.quantum_networks.QuantumNetwork`: Quantum network resulting
-                from the link
+                from the link product operation.
         """
         if not isinstance(second_network, QuantumNetwork):
             raise_error(
@@ -526,13 +524,22 @@ class QuantumNetwork:
                 + "``QuantumNetwork`` by a non-``QuantumNetwork``.",
             )
 
-        subscripts = subscripts.replace(" ", "")
-        pattern_two, pattern_four = self._check_subscript_pattern(subscripts)
+        if self.partition != second_network.partition:
+            raise_error(
+                ValueError,
+                "partitions of the networks do not match: "
+                + f"{self.partition} != {second_network.partition}.",
+            )
 
-        if not pattern_two and not pattern_four:
+        if len(self.partition) == 2:
+            subscripts = "jk,kl -> jl"
+        elif len(self.partition) == 4:
+            subscripts = "jklmabcd,klbc -> jmad"
+        else:
             raise_error(
                 NotImplementedError,
-                f"`partitions` do not match any implemented pattern. Use `link_product` method to specify the subscript.",
+                "`partitions` do not match any implemented pattern``. "
+                + "Use `link_product` method to specify the subscript.",
             )
 
         return self.link_product(second_network, subscripts=subscripts)
