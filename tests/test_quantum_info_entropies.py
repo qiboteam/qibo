@@ -614,16 +614,16 @@ def test_tsallis_entropy(backend, alpha, base):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
-        test = renyi_entropy(state, alpha=alpha, base=base, backend=backend)
+        test = tsallis_entropy(state, alpha=alpha, base=base, backend=backend)
     with pytest.raises(TypeError):
         state = random_statevector(4, backend=backend)
-        test = renyi_entropy(state, alpha="2", base=base, backend=backend)
+        test = tsallis_entropy(state, alpha="2", base=base, backend=backend)
     with pytest.raises(ValueError):
         state = random_statevector(4, backend=backend)
-        test = renyi_entropy(state, alpha=-1, base=base, backend=backend)
+        test = tsallis_entropy(state, alpha=-1, base=base, backend=backend)
     with pytest.raises(ValueError):
         state = random_statevector(4, backend=backend)
-        test = renyi_entropy(state, alpha=alpha, base=0, backend=backend)
+        test = tsallis_entropy(state, alpha=alpha, base=0, backend=backend)
 
     state = random_density_matrix(4, backend=backend)
 
@@ -638,6 +638,12 @@ def test_tsallis_entropy(backend, alpha, base):
         tsallis_entropy(state, alpha=alpha, base=base, backend=backend),
         target,
         atol=1e-5,
+    )
+
+    # test pure state
+    state = random_density_matrix(4, pure=True, backend=backend)
+    backend.assert_allclose(
+        tsallis_entropy(state, alpha=alpha, base=base, backend=backend), 0.0, atol=1e-5
     )
 
 
