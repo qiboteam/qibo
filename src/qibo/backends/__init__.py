@@ -41,7 +41,7 @@ def construct_backend(backend, platform=None, runcard=None, token=None, provider
             else:
                 platform = construct_backend(platform)
         return CliffordBackend(platform)
-    elif backend == "qibo":  # pragma: no cover
+    elif backend == "qibo-cloud":  # pragma: no cover
         from qibo_cloud_backends.qibo_client import (  # pylint: disable=E0401
             QiboClientBackend,
         )
