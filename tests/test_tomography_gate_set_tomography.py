@@ -230,7 +230,7 @@ def test_GST_execute_circuit_1qb_jnonzero():
 def test_GST_execute_circuit_2qb_j0():
     np.random.seed(42)
     nqubits = 2
-    circuit = Circuit(nqubits)
+    circuit = qibo.models.Circuit(nqubits)
     circuit.add(gates.H(0))
     circuit.add(gates.M(0))
     circuit.add(gates.M(1))
@@ -243,7 +243,7 @@ def test_GST_execute_circuit_2qb_j0():
 def test_GST_execute_circuit_2qb_jnonzero():
     np.random.seed(42)
     nqubits = 2
-    circuit = Circuit(nqubits)
+    circuit = qibo.models.Circuit(nqubits)
     circuit.add(gates.H(0))
     circuit.add(gates.H(1))
     circuit.add(gates.M(0))
