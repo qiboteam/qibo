@@ -400,9 +400,6 @@ def classical_tsallis_entropy(prob_dist, alpha: float, base: float = 2, backend=
     if alpha == 1.0:
         return shannon_entropy(prob_dist, base=base, backend=backend)
 
-    if isinstance(prob_dist, list):
-        prob_dist = backend.cast(prob_dist, dtype=np.float64)
-
     return (1 / (1 - alpha)) * (np.sum(prob_dist**alpha) - 1)
 
 
@@ -911,7 +908,10 @@ def entanglement_entropy(
 
 def _matrix_power(matrix, alpha, backend):
     """Calculates ``matrix ** alpha`` according to backend."""
-    if backend.__class__.__name__ in ["CupyBackend", "CuQuantumBackend"]:
+    if backend.__class__.__name__ in [
+        "CupyBackend",
+        "CuQuantumBackend",
+    ]:  # pragma: no cover
         new_matrix = backend.to_numpy(matrix)
     else:
         new_matrix = np.copy(matrix)
