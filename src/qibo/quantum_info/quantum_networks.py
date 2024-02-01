@@ -354,9 +354,11 @@ class QuantumNetwork:
             subscripts[:2] + "ab," + subscripts[3:5] + "bc->" + subscripts[7:] + "ac"
         )
 
+        cexpr = "jkab,klbc->jlac"
+
         if inv_subscripts:
             return QuantumNetwork(
-                np.einsum(cexpr, first_matrix, second_matrix),
+                np.einsum(cexpr, second_matrix, first_matrix),
                 [second_network.partition[0], self.partition[1]],
             )
 
@@ -614,7 +616,7 @@ class QuantumNetwork:
             else:
                 matrix_partition = self.partition * 2
                 self._matrix = np.reshape(self._matrix, matrix_partition)
-        except ValueError:
+        except:
             raise_error(
                 ValueError,
                 "``partition`` does not match the shape of the input matrix. "

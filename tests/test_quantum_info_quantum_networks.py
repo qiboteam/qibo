@@ -1,5 +1,6 @@
 """Tests for quantum_info.quantum_networks submodule"""
 
+# %%
 import numpy as np
 import pytest
 
@@ -24,6 +25,9 @@ def test_errors(backend):
 
     state = random_density_matrix(dims, backend=backend)
     network_state = QuantumNetwork(state, (1, 2), backend=backend)
+
+    matrix = random_density_matrix(2**3, backend=backend)
+    net = QuantumNetwork(matrix, (2,) * 3, backend=backend)
 
     with pytest.raises(TypeError):
         QuantumNetwork(channel.to_choi(backend=backend), partition=True)
@@ -81,6 +85,15 @@ def test_errors(backend):
 
     with pytest.raises(NotImplementedError):
         network.link_product(network, subscripts="jk,lm->no")
+
+    with pytest.raises(NotImplementedError):
+        net @ net
+
+    with pytest.raises(ValueError):
+        net @ network
+
+    with pytest.raises(ValueError):
+        QuantumNetwork(matrix, (1, 2), backend=backend)
 
 
 def test_operational_logic(backend):
@@ -172,7 +185,8 @@ def test_with_states(backend):
     assert network_state.positive_semidefinite()
 
 
-def test_with_unitaries(backend):
+@pytest.mark.parametrize("subscript", ["jk,kl->jl", "jk,lj->lk"])
+def test_with_unitaries(backend, subscript):
     nqubits = 2
     dims = 2**nqubits
 
@@ -184,23 +198,37 @@ def test_with_unitaries(backend):
     network_3 = QuantumNetwork(
         unitary_2 @ unitary_1, (dims, dims), pure=True, backend=backend
     )
-    network_4 = network_1 @ network_2
-
-    subscript = "il,lk -> ik"
-    network_1 = QuantumNetwork(unitary_1, (dims, dims), pure=True, backend=backend)
-    network_2 = QuantumNetwork(unitary_2, (dims, dims), pure=True, backend=backend)
-    backend.assert_allclose(
-        network_1.link_product(network_2, subscript).matrix(backend=backend),
-        network_3._full(),
+    network_4 = QuantumNetwork(
+        unitary_1 @ unitary_2, (dims, dims), pure=True, backend=backend
     )
 
-    subscript = "il,lk -> ik"
-    network_1 = QuantumNetwork(unitary_1, (dims, dims), pure=True, backend=backend)
-    network_2 = QuantumNetwork(unitary_2, (dims, dims), pure=True, backend=backend)
-    backend.assert_allclose(
-        network_1.link_product(network_2, subscript).matrix(backend=backend),
-        network_4.matrix(backend=backend),
-    )
+    test = network_1.link_product(network_2, subscript).to_full(backend=backend)
+
+    if subscript[1] == subscript[3]:
+        backend.assert_allclose(test, network_3.to_full(backend), atol=1e-8)
+
+        backend.assert_allclose(
+            test, (network_1 @ network_2).to_full(backend=backend), atol=1e-8
+        )
+
+    if subscript[0] == subscript[4]:
+        backend.assert_allclose(test, network_4.to_full(backend))
+
+        backend.assert_allclose(test, (network_2 @ network_1).to_full(backend=backend))
+
+
+def test_apply(backend):
+    nqubits = 2
+    dims = 2**nqubits
+
+    state = random_density_matrix(dims, backend=backend)
+    unitary = random_unitary(dims, backend=backend)
+    network = QuantumNetwork(unitary, (dims, dims), pure=True, backend=backend)
+
+    applied = network.apply(state)
+    target = unitary @ state @ np.transpose(np.conj(unitary))
+
+    backend.assert_allclose(applied, target, atol=1e-8)
 
 
 def test_non_hermitian_and_prints(backend):
@@ -216,3 +244,6 @@ def test_non_hermitian_and_prints(backend):
     assert not network.channel()
 
     assert network.__str__() == "J[4 -> 4]"
+
+
+# %%
