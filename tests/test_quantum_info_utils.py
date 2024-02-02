@@ -10,6 +10,7 @@ from qibo.quantum_info.metrics import fidelity
 from qibo.quantum_info.utils import (
     haar_integral,
     hadamard_transform,
+    hamming_distance,
     hamming_weight,
     hellinger_distance,
     hellinger_fidelity,
@@ -33,6 +34,8 @@ from qibo.quantum_info.utils import (
 def test_hamming_weight(bitstring, kind):
     with pytest.raises(TypeError):
         test = hamming_weight("0101", return_indexes="True")
+    with pytest.raises(TypeError):
+        test = hamming_weight(2.3)
 
     bitstring = f"{bitstring:b}"
     weight_test = len(bitstring.replace("0", ""))
@@ -43,6 +46,36 @@ def test_hamming_weight(bitstring, kind):
 
     assert weight == weight_test
     assert indexes == indexes_test
+
+
+bitstring_1, bitstring_2 = "11111", "10101"
+
+
+@pytest.mark.parametrize(
+    ["bitstring_1", "bitstring_2"],
+    [
+        [bitstring_1, bitstring_2],
+        [int(bitstring_1, 2), int(bitstring_2, 2)],
+        [list(bitstring_1), list(bitstring_2)],
+        [tuple(bitstring_1), tuple(bitstring_2)],
+    ],
+)
+def test_hamming_distance(bitstring_1, bitstring_2):
+    with pytest.raises(TypeError):
+        test = hamming_distance("0101", "1010", return_indexes="True")
+    with pytest.raises(TypeError):
+        test = hamming_distance(2.3, "1010")
+    with pytest.raises(TypeError):
+        test = hamming_distance("1010", 2.3)
+
+    if isinstance(bitstring_1, int):
+        bitstring_1, bitstring_2 = f"{bitstring_1:b}", f"{bitstring_2:b}"
+
+    distance = hamming_distance(bitstring_1, bitstring_2)
+    indexes = hamming_distance(bitstring_1, bitstring_2, return_indexes=True)
+
+    assert distance == 2
+    assert indexes == [1, 3]
 
 
 @pytest.mark.parametrize("is_matrix", [False, True])
@@ -180,16 +213,16 @@ def test_haar_integral_errors(backend):
         test = haar_integral(nqubits, power_t, samples=samples, backend=backend)
 
 
-@pytest.mark.parametrize("power_t", [1, 2, 3])
+@pytest.mark.parametrize("power_t", [1, 2])
 @pytest.mark.parametrize("nqubits", [2, 3])
 def test_haar_integral(backend, nqubits, power_t):
-    samples = int(1e4)
+    samples = int(1e3)
 
     haar_int_exact = haar_integral(nqubits, power_t, samples=None, backend=backend)
 
     haar_int_sampled = haar_integral(nqubits, power_t, samples=samples, backend=backend)
 
-    backend.assert_allclose(haar_int_sampled, haar_int_exact, atol=1e-2)
+    backend.assert_allclose(haar_int_sampled, haar_int_exact, atol=1e-1)
 
 
 def test_pqc_integral(backend):

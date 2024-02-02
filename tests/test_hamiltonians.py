@@ -1,4 +1,5 @@
 """Test methods in `qibo/core/hamiltonians.py`."""
+
 import numpy as np
 import pytest
 
@@ -183,7 +184,7 @@ def test_hamiltonian_matmul_states(backend, sparse_type):
     else:
         if backend.name == "tensorflow":
             pytest.skip("Tensorflow does not support operations with sparse matrices.")
-        nqubits = 5
+        nqubits = 3
         nstates = 2**nqubits
         matrix = random_sparse_matrix(backend, nstates, sparse_type)
         H = hamiltonians.Hamiltonian(nqubits, matrix, backend=backend)

@@ -1,4 +1,5 @@
 """Test channels defined in `qibo/gates.py`."""
+
 import numpy as np
 import pytest
 

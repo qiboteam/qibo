@@ -8,7 +8,7 @@ from qibo.backends.tensorflow import TensorflowBackend
 from qibo.config import log, raise_error
 
 
-def construct_backend(backend, platform=None, runcard=None):
+def construct_backend(backend, platform=None):
     if backend == "qibojit":
         from qibojit.backends import CupyBackend, CuQuantumBackend, NumbaBackend
 
@@ -33,7 +33,7 @@ def construct_backend(backend, platform=None, runcard=None):
     elif backend == "qibolab":  # pragma: no cover
         from qibolab.backends import QibolabBackend  # pylint: disable=E0401
 
-        return QibolabBackend(platform, runcard)
+        return QibolabBackend(platform)
     elif backend == "clifford":
         if platform is not None:  # pragma: no cover
             if platform in ("cupy", "numba", "cuquantum"):
@@ -83,13 +83,13 @@ class GlobalBackend(NumpyBackend):
         return cls._instance
 
     @classmethod
-    def set_backend(cls, backend, platform=None, runcard=None):  # pragma: no cover
+    def set_backend(cls, backend, platform=None):  # pragma: no cover
         if (
             cls._instance is None
             or cls._instance.name != backend
             or cls._instance.platform != platform
         ):
-            cls._instance = construct_backend(backend, platform, runcard)
+            cls._instance = construct_backend(backend, platform)
         log.info(f"Using {cls._instance} backend on {cls._instance.device}")
 
 
@@ -114,6 +114,7 @@ class QiboMatrices:
         self.CSXDG = self.matrices.CSXDG
         self.SWAP = self.matrices.SWAP
         self.iSWAP = self.matrices.iSWAP
+        self.SiSWAP = self.matrices.SiSWAP
         self.FSWAP = self.matrices.FSWAP
         self.ECR = self.matrices.ECR
         self.SYC = self.matrices.SYC
@@ -127,8 +128,8 @@ def get_backend():
     return str(GlobalBackend())
 
 
-def set_backend(backend, platform=None, runcard=None):
-    GlobalBackend.set_backend(backend, platform, runcard)
+def set_backend(backend, platform=None):
+    GlobalBackend.set_backend(backend, platform)
 
 
 def get_precision():
