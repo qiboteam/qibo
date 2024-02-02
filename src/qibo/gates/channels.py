@@ -1,4 +1,5 @@
 """Define quantum channels."""
+
 from itertools import product
 from math import exp, sqrt
 from typing import Optional, Tuple

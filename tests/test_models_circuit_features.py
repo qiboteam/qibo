@@ -1,4 +1,5 @@
 """Test how features defined in :class:`qibo.models.circuit.Circuit` work during circuit execution."""
+
 from collections import Counter
 
 import numpy as np

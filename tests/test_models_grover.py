@@ -1,4 +1,5 @@
 """Test Grover model defined in `qibo/models/grover.py`."""
+
 import pytest
 
 from qibo import Circuit, gates
