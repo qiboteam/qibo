@@ -1,4 +1,5 @@
 """Test :meth:`qibo.models.circuit.Circuit.get_parameters` and :meth:`qibo.models.circuit.Circuit.set_parameters`."""
+
 import sys
 
 import numpy as np

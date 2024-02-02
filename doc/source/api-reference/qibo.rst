@@ -247,6 +247,32 @@ Data Encoders
 
 We provide a family of algorithms that encode classical data into quantum circuits.
 
+Computational Basis Encoder
+"""""""""""""""""""""""""""
+
+Given a bitstring :math:`b` of length :math:`n`, this encoder generates a layer of Pauli-:math:`X`
+gates that creates the quantum state :math:`|\,b\,\rangle`.
+
+For instance, the following two circuit generations are equivalent:
+
+.. testsetup::
+
+    from qibo import Circuit, gates
+    from qibo.models.encodings import comp_basis_encoder
+
+.. testcode::
+
+    b = "101"
+    circuit_1 = comp_basis_encoder(b)
+
+    circuit_2 = Circuit(3)
+    circuit_2.add(gates.X(0))
+    circuit_2.add(gates.X(2))
+
+
+.. autofunction:: qibo.models.encodings.comp_basis_encoder
+
+
 Unary Encoder
 """""""""""""
 
@@ -687,6 +713,13 @@ iSwap (iSWAP)
     :members:
     :member-order: bysource
 
+Square root of iSwap (SiSWAP)
+"""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.SiSWAP
+    :members:
+    :member-order: bysource
+
 f-Swap (FSWAP)
 """"""""""""""
 
@@ -849,7 +882,7 @@ U1q
 
     - Pauli-:math:`Z` rotation: :class:`qibo.gates.RZ`
     - Arbitrary :math:`ZZ` rotation: :class:`qibo.gates.RZZ`
-    - Fully-entangling :math:`ZZ`-interaction: :math:`R_{ZZ}(\\pi/2)`
+    - Fully-entangling :math:`ZZ`-interaction: :math:`R_{ZZ}(\pi/2)`
 
 
 _______________________
@@ -2020,6 +2053,12 @@ Hamming weight
 """"""""""""""
 
 .. autofunction:: qibo.quantum_info.hamming_weight
+
+
+Hamming distance
+""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.hamming_distance
 
 
 Hadamard Transform

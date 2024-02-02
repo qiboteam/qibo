@@ -1476,7 +1476,7 @@ class SWAP(Gate):
 
 
 class iSWAP(Gate):
-    """The iswap gate.
+    """The iSWAP gate.
 
     Corresponds to the following unitary matrix
 
@@ -1505,6 +1505,33 @@ class iSWAP(Gate):
     @property
     def qasm_label(self):
         return "iswap"
+
+
+class SiSWAP(Gate):
+    """The :math:`\\sqrt{\\text{iSWAP}}}` gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 & 0 & 0 \\\\
+        0 & 1/\\sqrt{2} & i/\\sqrt{2} & 0 \\\\
+        0 & i/\\sqrt{2} & 1/\\sqrt{2} & 0 \\\\
+        0 & 0 & 0 & 1 \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the first qubit to be swapped id number.
+        q1 (int): the second qubit to be swapped id number.
+    """
+
+    def __init__(self, q0, q1):
+        super().__init__()
+        self.name = "siswap"
+        self.draw_label = "si"
+        self.target_qubits = (q0, q1)
+        self.init_args = [q0, q1]
+        self.unitary = True
 
 
 class FSWAP(Gate):
