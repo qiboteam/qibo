@@ -33,7 +33,7 @@ def circuit(nqubits=1):
 def test_standard_parameter_shift(backend, nshots, atol, scale_factor, grads):
     # initializing the circuit
     c = circuit(nqubits=1)
-    np.random.seed(42)
+    backend.set_seed(42)
 
     # some parameters
     # we know the derivative's values with these params
@@ -89,7 +89,7 @@ def test_standard_parameter_shift(backend, nshots, atol, scale_factor, grads):
 def test_finite_differences(backend, step_size):
     # initializing the circuit
     c = circuit(nqubits=1)
-    np.random.seed(42)
+    backend.set_seed(42)
 
     # some parameters
     test_params = np.linspace(0.1, 1, 3)
