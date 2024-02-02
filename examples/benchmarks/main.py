@@ -3,6 +3,7 @@ Generic benchmark script that runs circuits defined in `benchmark_models.py`.
 
 The type of the circuit is selected using the ``--type`` flag.
 """
+
 import argparse
 import os
 import time

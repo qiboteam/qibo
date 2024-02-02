@@ -1,4 +1,5 @@
 """Testing HEP models."""
+
 import numpy as np
 import pytest
 

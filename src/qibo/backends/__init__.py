@@ -114,6 +114,7 @@ class QiboMatrices:
         self.CSXDG = self.matrices.CSXDG
         self.SWAP = self.matrices.SWAP
         self.iSWAP = self.matrices.iSWAP
+        self.SiSWAP = self.matrices.SiSWAP
         self.FSWAP = self.matrices.FSWAP
         self.ECR = self.matrices.ECR
         self.SYC = self.matrices.SYC

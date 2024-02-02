@@ -1,5 +1,6 @@
 """Tests methods defined in `qibo/gates/abstract.py` and
 `qibo/gates/gates.py`."""
+
 import json
 from typing import Optional
 
