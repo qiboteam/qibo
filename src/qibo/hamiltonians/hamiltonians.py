@@ -1,4 +1,5 @@
 """Module defining Hamiltonian classes."""
+
 from itertools import chain
 from typing import Optional
 

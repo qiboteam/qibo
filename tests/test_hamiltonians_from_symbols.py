@@ -1,4 +1,5 @@
 """Test dense matrix of Hamiltonians constructed using symbols."""
+
 import numpy as np
 import pytest
 import sympy
