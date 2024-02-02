@@ -6,12 +6,46 @@ import numpy as np
 import pytest
 from scipy.optimize import curve_fit
 
-from qibo.models.encodings import unary_encoder, unary_encoder_random_gaussian
+from qibo.models.encodings import (
+    comp_basis_encoder,
+    unary_encoder,
+    unary_encoder_random_gaussian,
+)
 
 
 def gaussian(x, a, b, c):
     """Gaussian used in the `unary_encoder_random_gaussian test"""
     return np.exp(a * x**2 + b * x + c)
+
+
+@pytest.mark.parametrize(
+    "basis_element", [5, "101", ["1", "0", "1"], [1, 0, 1], ("1", "0", "1"), (1, 0, 1)]
+)
+def test_comp_basis_encoder(backend, basis_element):
+    with pytest.raises(TypeError):
+        circuit = comp_basis_encoder(2.3)
+    with pytest.raises(ValueError):
+        circuit = comp_basis_encoder("0b001")
+    with pytest.raises(ValueError):
+        circuit = comp_basis_encoder("001", nqubits=2)
+    with pytest.raises(TypeError):
+        circuit = comp_basis_encoder("001", nqubits=3.1)
+    with pytest.raises(ValueError):
+        circuit = comp_basis_encoder(3)
+
+    zero = np.array([1, 0], dtype=complex)
+    one = np.array([0, 1], dtype=complex)
+    target = np.kron(one, np.kron(zero, one))
+    target = backend.cast(target, dtype=target.dtype)
+
+    if isinstance(basis_element, int):
+        state = comp_basis_encoder(basis_element, nqubits=3)
+    else:
+        state = comp_basis_encoder(basis_element)
+
+    state = backend.execute_circuit(state).state()
+
+    backend.assert_allclose(state, target)
 
 
 @pytest.mark.parametrize("architecture", ["tree", "diagonal"])
