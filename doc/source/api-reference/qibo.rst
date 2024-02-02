@@ -250,7 +250,7 @@ We provide a family of algorithms that encode classical data into quantum circui
 Computational Basis Encoder
 """""""""""""""""""""""""""
 
-Given a bitstring :math:`b` of length :math:`n`, this encoder generates of a layer of Pauli-:math:`X``
+Given a bitstring :math:`b` of length :math:`n`, this encoder generates a layer of Pauli-:math:`X`
 gates that creates the quantum state :math:`|\,b\,\rangle`.
 
 For instance, the following two circuit generations are equivalent:
