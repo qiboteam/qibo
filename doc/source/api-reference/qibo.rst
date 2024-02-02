@@ -250,6 +250,26 @@ We provide a family of algorithms that encode classical data into quantum circui
 Computational Basis Encoder
 """""""""""""""""""""""""""
 
+Given a bitstring :math:`b` of length :math:`n`, this encoder generates of a layer of Pauli-:math:`X``
+gates that creates the quantum state :math:`|\,b\,\rangle`.
+
+For instance, the following two circuit generations are equivalent:
+
+.. testsetup::
+
+    from qibo import Circuit, gates
+    from qibo.models.encodings import comp_basis_encoder
+
+.. testcode::
+
+    b = "101"
+    circuit_1 = comp_basis_encoder(b)
+
+    circuit_2 = Circuit(3)
+    circuit_2.add(gates.X(0))
+    circuit_2.add(gates.X(2))
+
+
 .. autofunction:: qibo.models.encodings.comp_basis_encoder
 
 
