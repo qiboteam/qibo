@@ -419,19 +419,7 @@ def random_statevector(dims: int, seed=None, backend=None):
             TypeError, "seed must be either type int or numpy.random.Generator."
         )
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
-
-    if seed is None or isinstance(seed, int):
-        if backend.__class__.__name__ in [
-            "CupyBackend",
-            "CuQuantumBackend",
-        ]:  # pragma: no cover
-            local_state = backend.np.random.default_rng(seed)
-        else:
-            local_state = np.random.default_rng(seed)
-    else:
-        local_state = seed
+    backend, local_state = _set_backend_and_local_state(seed, backend)
 
     state = local_state.standard_normal(dims).astype(complex)
     state += 1.0j * local_state.standard_normal(dims)
