@@ -40,6 +40,9 @@ class Channel(Gate):
     def apply_density_matrix(self, backend, state, nqubits):
         return backend.apply_channel_density_matrix(self, state, nqubits)
 
+    def apply_clifford(self, backend, state, nqubits):
+        return backend.apply_channel(self, state, nqubits)
+
     def to_choi(self, nqubits: Optional[int] = None, order: str = "row", backend=None):
         """Returns the Choi representation :math:`\\mathcal{E}`
         of the Kraus channel :math:`\\{K_{\\alpha}\\}_{\\alpha}`.

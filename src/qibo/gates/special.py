@@ -157,3 +157,8 @@ class FusedGate(SpecialGate):
                 if neighbor is not None:
                     parent.left_neighbors[q] = neighbor
                     neighbor.right_neighbors[q] = parent
+
+    def apply_clifford(self, backend, state, nqubits):
+        for gate in self.gates:
+            state = gate.apply_clifford(backend, state, nqubits)
+        return state
