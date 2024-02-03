@@ -1751,6 +1751,14 @@ Frame Potential
 .. autofunction:: qibo.quantum_info.frame_potential
 
 
+Quantum Networks
+^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.quantum_info.quantum_networks.QuantumNetwork
+    :members:
+    :member-order: bysource
+
+
 Random Ensembles
 ^^^^^^^^^^^^^^^^
 

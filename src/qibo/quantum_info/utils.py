@@ -191,9 +191,9 @@ def hadamard_transform(array, implementation: str = "fast", backend=None):
 
 
 def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend=None):
-    """Calculate the Hellinger distance :math:`H(p, q)` between
-    two discrete probability distributions, :math:`\\mathbf{p}` and :math:`\\mathbf{q}`.
-    It is defined as
+    """Calculates the Hellinger distance :math:`H` between two discrete probability distributions.
+
+    For probabilities :math:`\\mathbf{p}` and :math:`\\mathbf{q}`, it is defined as
 
     .. math::
         H(\\mathbf{p} \\, , \\, \\mathbf{q}) = \\frac{1}{\\sqrt{2}} \\, \\|
@@ -202,10 +202,10 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend
     where :math:`\\|\\cdot\\|_{2}` is the Euclidean norm.
 
     Args:
-        prob_dist_p: (discrete) probability distribution :math:`p`.
-        prob_dist_q: (discrete) probability distribution :math:`q`.
-        validate (bool): if True, checks if :math:`p` and :math:`q` are proper
-            probability distributions. Default: False.
+        prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
+        prob_dist_q (ndarray or list): discrete probability distribution :math:`q`.
+        validate (bool, optional): If ``True``, checks if :math:`p` and :math:`q` are proper
+            probability distributions. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses
             :class:`qibo.backends.GlobalBackend`. Defaults to ``None``.
@@ -217,9 +217,9 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend
         backend = GlobalBackend()
 
     if isinstance(prob_dist_p, list):
-        prob_dist_p = backend.cast(prob_dist_p, dtype=float)
+        prob_dist_p = backend.cast(prob_dist_p, dtype=np.float64)
     if isinstance(prob_dist_q, list):
-        prob_dist_q = backend.cast(prob_dist_q, dtype=float)
+        prob_dist_q = backend.cast(prob_dist_q, dtype=np.float64)
 
     if (len(prob_dist_p.shape) != 1) or (len(prob_dist_q.shape) != 1):
         raise_error(
@@ -253,15 +253,20 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend
 
 
 def hellinger_fidelity(prob_dist_p, prob_dist_q, validate: bool = False, backend=None):
-    """Calculate the Hellinger fidelity between two discrete
-    probability distributions, :math:`p` and :math:`q`. The fidelity is
-    defined as :math:`(1 - H^{2}(p, q))^{2}`, where :math:`H(p, q)`
-    is the Hellinger distance.
+    """Calculates the Hellinger fidelity between two discrete probability distributions.
+
+    For probabilities :math:`p` and :math:`q`, the fidelity is defined as
+
+    .. math::
+        (1 - H^{2}(p, q))^{2} \\, ,
+
+    where :math:`H(p, q)` is the Hellinger distance
+    (:func:`qibo.quantum_info.utils.hellinger_distance`).
 
     Args:
-        prob_dist_p: (discrete) probability distribution :math:`p`.
-        prob_dist_q: (discrete) probability distribution :math:`q`.
-        validate (bool): if True, checks if :math:`p` and :math:`q` are proper
+        prob_dist_p (ndarray or list): discrete probability distribution :math:`p`.
+        prob_dist_q (ndarray or list): discrete probability distribution :math:`q`.
+        validate (bool, optional): if True, checks if :math:`p` and :math:`q` are proper
             probability distributions. Default: False.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be
             used in the execution. If ``None``, it uses

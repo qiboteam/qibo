@@ -122,7 +122,9 @@ def test_hadamard_transform(backend, nqubits, implementation, is_matrix):
     backend.assert_allclose(transformed, test_transformed, atol=PRECISION_TOL)
 
 
-def test_hellinger(backend):
+@pytest.mark.parametrize("kind", [None, list])
+@pytest.mark.parametrize("validate", [False, True])
+def test_hellinger(backend, validate, kind):
     with pytest.raises(TypeError):
         prob = np.random.rand(1, 2)
         prob_q = np.random.rand(1, 5)
@@ -154,10 +156,23 @@ def test_hellinger(backend):
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
         test = hellinger_distance(prob, prob_q, validate=True, backend=backend)
 
-    prob = [1.0, 0.0]
-    prob_q = [1.0, 0.0]
-    backend.assert_allclose(hellinger_distance(prob, prob_q, backend=backend), 0.0)
-    backend.assert_allclose(hellinger_fidelity(prob, prob_q, backend=backend), 1.0)
+    prob_p = np.random.rand(10)
+    prob_q = np.random.rand(10)
+    prob_p /= np.sum(prob_p)
+    prob_q /= np.sum(prob_q)
+
+    target = float(
+        backend.calculate_norm(np.sqrt(prob_p) - np.sqrt(prob_q)) / np.sqrt(2)
+    )
+
+    if kind is not None:
+        prob_p, prob_q = list(prob_p), list(prob_q)
+
+    distance = hellinger_distance(prob_p, prob_q, validate=validate, backend=backend)
+    fidelity = hellinger_fidelity(prob_p, prob_q, validate=validate, backend=backend)
+
+    assert distance == target
+    assert fidelity == (1 - target**2) ** 2
 
 
 def test_haar_integral_errors(backend):
