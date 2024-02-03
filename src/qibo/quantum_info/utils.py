@@ -263,7 +263,7 @@ def total_variation_distance(
 
     For probabilities :math:`\\mathbf{p}` and :math:`\\mathbf{q}`, it is defined as
 
-    ..math::
+    .. math::
         d_{\\text{TV}}(\\mathbf{p} \\, , \\, \\mathbf{q}) = \\frac{1}{2}
             \\, \\| \\mathbf{p} - \\mathbf{q} \\|_{1} \\, ,
 
