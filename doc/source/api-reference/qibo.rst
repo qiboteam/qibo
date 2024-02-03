@@ -1677,6 +1677,14 @@ Frame Potential
 .. autofunction:: qibo.quantum_info.frame_potential
 
 
+Quantum Networks
+^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.quantum_info.quantum_networks.QuantumNetwork
+    :members:
+    :member-order: bysource
+
+
 Random Ensembles
 ^^^^^^^^^^^^^^^^
 
@@ -2071,6 +2079,12 @@ Shannon entropy
 """""""""""""""
 
 .. autofunction:: qibo.quantum_info.shannon_entropy
+
+
+Total Variation distance
+""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.total_variation_distance
 
 
 Hellinger distance
