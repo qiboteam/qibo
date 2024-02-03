@@ -1593,10 +1593,10 @@ von Neumann entropy
 .. autofunction:: qibo.quantum_info.von_neumann_entropy
 
 .. note::
-    ``validate`` flag allows the user to choose if the function will check if input
-    ``state`` is Hermitian or not. Default option is ``validate=False``, i.e. the
+    ``check_hermitian`` flag allows the user to choose if the function will check if input
+    ``state`` is Hermitian or not. Default option is ``check_hermitian=False``, i.e. the
     assumption of Hermiticity. This is faster and, more importantly,
-    this function are intended to be used on Hermitian inputs. When ``validate=True``
+    this function are intended to be used on Hermitian inputs. When ``check_hermitian=True``
     and ``state`` is non-Hermitian, an error will be raised when using `cupy` backend.
 
 
@@ -1606,10 +1606,10 @@ Relative von Neumann entropy
 .. autofunction:: qibo.quantum_info.relative_von_neumann_entropy
 
 .. note::
-    ``validate`` flag allows the user to choose if the function will check if input
-    ``state`` is Hermitian or not. Default option is ``validate=False``, i.e. the
+    ``check_hermitian`` flag allows the user to choose if the function will check if input
+    ``state`` is Hermitian or not. Default option is ``check_hermitian=False``, i.e. the
     assumption of Hermiticity. This is faster and, more importantly,
-    this function are intended to be used on Hermitian inputs. When ``validate=True``
+    this function are intended to be used on Hermitian inputs. When ``check_hermitian=True``
     and either ``state`` or ``target`` is non-Hermitian,
     an error will be raised when using `cupy` backend.
 
@@ -1638,11 +1638,11 @@ Entanglement entropy
 .. autofunction:: qibo.quantum_info.entanglement_entropy
 
 .. note::
-    ``validate`` flag allows the user to choose if the function will check if
+    ``check_hermitian`` flag allows the user to choose if the function will check if
     the reduced density matrix resulting from tracing out ``bipartition`` from input
-    ``state`` is Hermitian or not. Default option is ``validate=False``, i.e. the
+    ``state`` is Hermitian or not. Default option is ``check_hermitian=False``, i.e. the
     assumption of Hermiticity. This is faster and, more importantly,
-    this function are intended to be used on Hermitian inputs. When ``validate=True``
+    this function are intended to be used on Hermitian inputs. When ``check_hermitian=True``
     and the reduced density matrix is non-Hermitian, an error will be raised
     when using `cupy` backend.
 
@@ -1671,11 +1671,11 @@ Trace distance
 .. autofunction:: qibo.quantum_info.trace_distance
 
 .. note::
-    ``validate`` flag allows the user to choose if the function will check if difference
+    ``check_hermitian`` flag allows the user to choose if the function will check if difference
     between inputs, ``state - target``, is Hermitian or not. Default option is
-    ``validate=False``, i.e. the assumption of Hermiticity, because it is faster and,
+    ``check_hermitian=False``, i.e. the assumption of Hermiticity, because it is faster and,
     more importantly, the functions are intended to be used on Hermitian inputs.
-    When ``validate=True`` and ``state - target`` is non-Hermitian, an error will be
+    When ``check_hermitian=True`` and ``state - target`` is non-Hermitian, an error will be
     raised when using `cupy` backend.
 
 
