@@ -385,7 +385,7 @@ def hellinger_fidelity(prob_dist_p, prob_dist_q, validate: bool = False, backend
 
     For probabilities :math:`p` and :math:`q`, the fidelity is defined as
 
-    ..math::
+    .. math::
         (1 - H^{2}(p, q))^{2} \\, ,
 
     where :math:`H(p, q)` is the Hellinger distance
