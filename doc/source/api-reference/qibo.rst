@@ -2081,6 +2081,12 @@ Shannon entropy
 .. autofunction:: qibo.quantum_info.shannon_entropy
 
 
+Total Variation distance
+""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.total_variation_distance
+
+
 Hellinger distance
 """"""""""""""""""
 
