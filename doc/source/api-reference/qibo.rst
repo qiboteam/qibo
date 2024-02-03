@@ -1587,10 +1587,10 @@ Classical Tsallis entropy
 .. autofunction:: qibo.quantum_info.classical_tsallis_entropy
 
 
-Entropy
-"""""""
+von Neumann entropy
+"""""""""""""""""""
 
-.. autofunction:: qibo.quantum_info.entropy
+.. autofunction:: qibo.quantum_info.von_neumann_entropy
 
 .. note::
     ``validate`` flag allows the user to choose if the function will check if input
@@ -1600,10 +1600,10 @@ Entropy
     and ``state`` is non-Hermitian, an error will be raised when using `cupy` backend.
 
 
-Relative entropy
-""""""""""""""""
+Relative von Neumann entropy
+""""""""""""""""""""""""""""
 
-.. autofunction:: qibo.quantum_info.relative_entropy
+.. autofunction:: qibo.quantum_info.relative_von_neumann_entropy
 
 .. note::
     ``validate`` flag allows the user to choose if the function will check if input
@@ -1620,7 +1620,7 @@ Rényi entropy
 .. autofunction:: qibo.quantum_info.renyi_entropy
 
 
-Rényi relative entropy
+Relative Rényi entropy
 """"""""""""""""""""""
 
 .. autofunction:: qibo.quantum_info.renyi_relative_entropy

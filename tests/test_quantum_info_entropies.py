@@ -10,12 +10,12 @@ from qibo.quantum_info.entropies import (
     classical_renyi_entropy,
     classical_tsallis_entropy,
     entanglement_entropy,
-    entropy,
-    relative_entropy,
     relative_renyi_entropy,
+    relative_von_neumann_entropy,
     renyi_entropy,
     shannon_entropy,
     tsallis_entropy,
+    von_neumann_entropy,
 )
 from qibo.quantum_info.random_ensembles import (
     random_density_matrix,
@@ -342,33 +342,43 @@ def test_classical_tsallis_entropy(backend, alpha, base, kind):
 
 @pytest.mark.parametrize("check_hermitian", [False, True])
 @pytest.mark.parametrize("base", [2, 10, np.e, 5])
-def test_entropy(backend, base, check_hermitian):
+def test_von_neumann_entropy(backend, base, check_hermitian):
     with pytest.raises(TypeError):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
-        test = entropy(
+        test = von_neumann_entropy(
             state, base=base, check_hermitian=check_hermitian, backend=backend
         )
     with pytest.raises(ValueError):
         state = np.array([1.0, 0.0])
         state = backend.cast(state, dtype=state.dtype)
-        test = entropy(state, base=0, check_hermitian=check_hermitian, backend=backend)
+        test = von_neumann_entropy(
+            state, base=0, check_hermitian=check_hermitian, backend=backend
+        )
     with pytest.raises(TypeError):
         state = np.array([1.0, 0.0])
         state = backend.cast(state, dtype=state.dtype)
-        test = entropy(state, base=base, check_hermitian="False", backend=backend)
+        test = von_neumann_entropy(
+            state, base=base, check_hermitian="False", backend=backend
+        )
 
     if backend.__class__.__name__ in ["CupyBackend", "CuQuantumBackend"]:
         with pytest.raises(NotImplementedError):
             state = random_unitary(4, backend=backend)
-            test = entropy(state, base=base, check_hermitian=True, backend=backend)
+            test = von_neumann_entropy(
+                state, base=base, check_hermitian=True, backend=backend
+            )
     else:
         state = random_unitary(4, backend=backend)
-        test = entropy(state, base=base, check_hermitian=True, backend=backend)
+        test = von_neumann_entropy(
+            state, base=base, check_hermitian=True, backend=backend
+        )
 
     state = np.array([1.0, 0.0])
     state = backend.cast(state, dtype=state.dtype)
-    backend.assert_allclose(entropy(state, backend=backend), 0.0, atol=PRECISION_TOL)
+    backend.assert_allclose(
+        von_neumann_entropy(state, backend=backend), 0.0, atol=PRECISION_TOL
+    )
 
     state = np.array([1.0, 0.0, 0.0, 0.0])
     state = np.outer(state, state)
@@ -386,7 +396,10 @@ def test_entropy(backend, base, check_hermitian):
         test = 0.8613531161467861
 
     backend.assert_allclose(
-        entropy(state, base, check_hermitian=check_hermitian, backend=backend), test
+        von_neumann_entropy(
+            state, base, check_hermitian=check_hermitian, backend=backend
+        ),
+        test,
     )
 
 
@@ -397,14 +410,14 @@ def test_relative_entropy(backend, base, check_hermitian):
         state = np.random.rand(2, 3)
         state = backend.cast(state, dtype=state.dtype)
         target = random_density_matrix(2, pure=True, backend=backend)
-        test = relative_entropy(
+        test = relative_von_neumann_entropy(
             state, target, base=base, check_hermitian=check_hermitian, backend=backend
         )
     with pytest.raises(TypeError):
         target = np.random.rand(2, 3)
         target = backend.cast(target, dtype=target.dtype)
         state = random_density_matrix(2, pure=True, backend=backend)
-        test = relative_entropy(
+        test = relative_von_neumann_entropy(
             state, target, base=base, check_hermitian=check_hermitian, backend=backend
         )
     with pytest.raises(ValueError):
@@ -412,7 +425,7 @@ def test_relative_entropy(backend, base, check_hermitian):
         state = backend.cast(state, dtype=state.dtype)
         target = np.array([0.0, 1.0])
         target = backend.cast(target, dtype=target.dtype)
-        test = relative_entropy(
+        test = relative_von_neumann_entropy(
             state, target, base=0, check_hermitian=check_hermitian, backend=backend
         )
     with pytest.raises(TypeError):
@@ -420,7 +433,7 @@ def test_relative_entropy(backend, base, check_hermitian):
         state = backend.cast(state, dtype=state.dtype)
         target = np.array([0.0, 1.0])
         target = backend.cast(target, dtype=target.dtype)
-        test = relative_entropy(
+        test = relative_von_neumann_entropy(
             state, target, base=base, check_hermitian="False", backend=backend
         )
 
@@ -431,35 +444,37 @@ def test_relative_entropy(backend, base, check_hermitian):
     target = backend.identity_density_matrix(nqubits, normalize=True)
 
     backend.assert_allclose(
-        relative_entropy(state, target, base, check_hermitian, backend),
+        relative_von_neumann_entropy(state, target, base, check_hermitian, backend),
         np.log(dims) / np.log(base)
-        - entropy(state, base=base, check_hermitian=check_hermitian, backend=backend),
+        - von_neumann_entropy(
+            state, base=base, check_hermitian=check_hermitian, backend=backend
+        ),
         atol=1e-5,
     )
 
     state = backend.cast([1.0, 0.0], dtype=np.float64)
     target = backend.cast([0.0, 1.0], dtype=np.float64)
 
-    assert relative_entropy(state, target, backend=backend) == 0.0
+    assert relative_von_neumann_entropy(state, target, backend=backend) == 0.0
 
     # for coverage when GPUs are present
     if backend.__class__.__name__ in ["CupyBackend", "CuQuantumBackend"]:
         with pytest.raises(NotImplementedError):
             state = random_unitary(4, backend=backend)
             target = random_density_matrix(4, backend=backend)
-            test = relative_entropy(
+            test = relative_von_neumann_entropy(
                 state, target, base=base, check_hermitian=True, backend=backend
             )
         with pytest.raises(NotImplementedError):
             target = random_unitary(4, backend=backend)
             state = random_density_matrix(4, backend=backend)
-            test = relative_entropy(
+            test = relative_von_neumann_entropy(
                 state, target, base=base, check_hermitian=True, backend=backend
             )
     else:
         state = random_unitary(4, backend=backend)
         target = random_unitary(4, backend=backend)
-        test = relative_entropy(
+        test = relative_von_neumann_entropy(
             state, target, base=base, check_hermitian=True, backend=backend
         )
 
@@ -486,7 +501,7 @@ def test_renyi_entropy(backend, alpha, base):
     if alpha == 0.0:
         target = np.log2(len(state)) / np.log2(base)
     elif alpha == 1.0:
-        target = entropy(state, base=base, backend=backend)
+        target = von_neumann_entropy(state, base=base, backend=backend)
     elif alpha == np.inf:
         target = backend.calculate_norm_density_matrix(state, order=2)
         target = -1 * np.log2(target) / np.log2(base)
@@ -565,7 +580,7 @@ def test_relative_renyi_entropy(backend, alpha, base, state_flag, target_flag):
                 relative_renyi_entropy(state, target, alpha, base, backend)
         else:
             if alpha == 1.0:
-                log = relative_entropy(state, target, base, backend=backend)
+                log = relative_von_neumann_entropy(state, target, base, backend=backend)
             elif alpha == np.inf:
                 new_state = _matrix_power(state, 0.5, backend)
                 new_target = _matrix_power(target, 0.5, backend)
@@ -628,7 +643,7 @@ def test_tsallis_entropy(backend, alpha, base):
     state = random_density_matrix(4, backend=backend)
 
     if alpha == 1.0:
-        target = entropy(state, base=base, backend=backend)
+        target = von_neumann_entropy(state, base=base, backend=backend)
     else:
         target = (1 / (1 - alpha)) * (
             np.trace(_matrix_power(state, alpha, backend)) - 1

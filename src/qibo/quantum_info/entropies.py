@@ -403,7 +403,7 @@ def classical_tsallis_entropy(prob_dist, alpha: float, base: float = 2, backend=
     return (1 / (1 - alpha)) * (np.sum(prob_dist**alpha) - 1)
 
 
-def entropy(
+def von_neumann_entropy(
     state,
     base: float = 2,
     check_hermitian: bool = False,
@@ -488,7 +488,7 @@ def entropy(
     return ent
 
 
-def relative_entropy(
+def relative_von_neumann_entropy(
     state, target, base: float = 2, check_hermitian: bool = False, backend=None
 ):
     """Calculates the relative entropy :math:`S(\\rho \\, \\| \\, \\sigma)` between ``state`` :math:`\\rho` and ``target`` :math:`\\sigma`.
@@ -660,7 +660,7 @@ def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None
         return np.log2(len(state)) / np.log2(base)
 
     if alpha == 1.0:
-        return entropy(state, base=base, backend=backend)
+        return von_neumann_entropy(state, base=base, backend=backend)
 
     if alpha == np.inf:
         return (
@@ -765,7 +765,7 @@ def relative_renyi_entropy(
         state = np.outer(state, np.conj(state))
 
     if alpha == 1.0:
-        return relative_entropy(state, target, base, backend=backend)
+        return relative_von_neumann_entropy(state, target, base, backend=backend)
 
     if alpha == np.inf:
         new_state = _matrix_power(state, 0.5, backend)
@@ -834,7 +834,7 @@ def tsallis_entropy(state, alpha: float, base: float = 2, backend=None):
         return 0.0
 
     if alpha == 1.0:
-        return entropy(state, base=base, backend=backend)
+        return von_neumann_entropy(state, base=base, backend=backend)
 
     return (1 / (1 - alpha)) * (np.trace(_matrix_power(state, alpha, backend)) - 1)
 
@@ -895,7 +895,7 @@ def entanglement_entropy(
         else backend.partial_trace_density_matrix(state, bipartition, nqubits)
     )
 
-    entropy_entanglement = entropy(
+    entropy_entanglement = von_neumann_entropy(
         reduced_density_matrix,
         base=base,
         check_hermitian=check_hermitian,
