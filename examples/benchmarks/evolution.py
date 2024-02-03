@@ -1,4 +1,5 @@
 """Adiabatic evolution for the Ising Hamiltonian using linear scaling."""
+
 import argparse
 import time
 

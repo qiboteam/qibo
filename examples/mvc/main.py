@@ -1,4 +1,5 @@
 """Minimum Vertex Cover"""
+
 import argparse
 import csv
 
