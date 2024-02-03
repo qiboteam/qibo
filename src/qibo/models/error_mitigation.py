@@ -314,7 +314,8 @@ def CDR(
 
     train_val = {"noise-free": [], "noisy": []}
     for circ in training_circuits:
-        val = circ(nshots=nshots).expectation_from_samples(observable)
+        result = backend.execute_circuit(circ, nshots=nshots)
+        val = result.expectation_from_samples(observable)
         train_val["noise-free"].append(val)
         val = get_expectation_val_with_readout_mitigation(
             circ, observable, noise_model, nshots, readout, qubit_map, backend=backend
@@ -400,7 +401,8 @@ def vnCDR(
     train_val = {"noise-free": [], "noisy": []}
 
     for circ in training_circuits:
-        val = circ(nshots=nshots).expectation_from_samples(observable)
+        result = backend.execute_circuit(circ, nshots=nshots)
+        val = result.expectation_from_samples(observable)
         train_val["noise-free"].append(val)
         for level in noise_levels:
             noisy_c = get_noisy_circuit(circ, level, insertion_gate=insertion_gate)
@@ -897,7 +899,7 @@ def ICS(
     lambda_list = []
 
     for training_circuit in training_circuits:
-        circuit_result = training_circuit(nshots=nshots)
+        circuit_result = backend.execute_circuit(training_circuit, nshots=nshots)
         expectation = observable.expectation_from_samples(circuit_result.frequencies())
 
         noisy_expectation = get_expectation_val_with_readout_mitigation(
