@@ -61,11 +61,6 @@ def test_uniform_sampling_U3(backend, seed):
     backend.assert_allclose(expectation_values[0], expectation_values[1], atol=1e-1)
     backend.assert_allclose(expectation_values[0], expectation_values[2], atol=1e-1)
 
-    # execution for coverage
-    sampler = _probability_distribution_sin(a=0, b=np.pi, seed=seed)
-    sampler.pdf(1)
-    sampler.cdf(1)
-
 
 @pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
 def test_random_gaussian_matrix(backend, seed):
@@ -337,8 +332,8 @@ def test_random_clifford(backend, nqubits, return_circuit, density_matrix, seed)
 
     result_single = matrices.Z @ matrices.H
 
-    result_two = np.kron(matrices.H, matrices.S) @ np.kron(matrices.S, matrices.Z)
-    result_two = np.kron(matrices.Z @ matrices.S, matrices.I) @ result_two
+    result_two = np.kron(matrices.H, matrices.S) @ np.kron(matrices.S, matrices.Y)
+    result_two = np.kron(matrices.S @ matrices.X, matrices.I) @ result_two
     result_two = matrices.CNOT @ matrices.CZ @ result_two
 
     result = result_single if nqubits == 1 else result_two

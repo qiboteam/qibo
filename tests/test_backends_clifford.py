@@ -10,6 +10,7 @@ from qibo.backends import (
     NumpyBackend,
     TensorflowBackend,
 )
+from qibo.noise import DepolarizingError, NoiseModel, PauliError
 from qibo.quantum_info.random_ensembles import random_clifford
 
 numpy_bkd = NumpyBackend()
@@ -250,3 +251,27 @@ def test_set_backend(backend):
         platform = str(backend)
     set_backend("clifford", platform=platform)
     assert isinstance(GlobalBackend(), type(clifford_bkd))
+
+
+def test_noise_channels(backend):
+    clifford_bkd = construct_clifford_backend(backend)
+    if not clifford_bkd:
+        return
+    c = random_clifford(5, backend=backend)
+    c.density_matrix = True
+    c_copy = c.copy()
+    c.add(gates.M(*range(5)))
+    c_copy.add(gates.M(*range(5)))
+    noise = NoiseModel()
+    noise.add(PauliError([("X", 0.5)]), gates.X)
+    noise.add(DepolarizingError(0.1), gates.CZ)
+    c = noise.apply(c)
+    c_copy = noise.apply(c_copy)
+    numpy_result = numpy_bkd.execute_circuit(c)
+    clifford_result = clifford_bkd.execute_circuit(c_copy)
+
+    backend.assert_allclose(
+        backend.cast(numpy_result.probabilities()),
+        clifford_result.probabilities(),
+        atol=1e-1,
+    )
