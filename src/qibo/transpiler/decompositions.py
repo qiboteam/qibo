@@ -116,7 +116,7 @@ gpi2_dec.add(
 
 # Decompose single qubit gates using U3
 u3_dec = GateDecompositions()
-u3_dec.add(gates.H, [gates.U3(0, 7 * np.pi / 2, np.pi, 0)])
+u3_dec.add(gates.H, [gates.U3(0, -np.pi / 2, np.pi, 0)])
 u3_dec.add(gates.X, [gates.U3(0, np.pi, 0, np.pi)])
 u3_dec.add(gates.Y, [gates.U3(0, np.pi, 0, 0)])
 u3_dec.add(gates.Z, [gates.Z(0)])
@@ -159,28 +159,28 @@ iswap_dec.add(
     gates.CNOT,
     [
         gates.U3(0, 3 * np.pi / 2, np.pi, 0),
-        gates.U3(1, np.pi / 2, -np.pi, -np.pi),
+        gates.U3(1, np.pi / 2, np.pi, np.pi),
         gates.iSWAP(0, 1),
         gates.U3(0, np.pi, 0, np.pi),
-        gates.U3(1, np.pi / 2, -np.pi, -np.pi),
+        gates.U3(1, np.pi / 2, np.pi, np.pi),
         gates.iSWAP(0, 1),
-        gates.U3(0, np.pi / 2, np.pi / 2, -np.pi),
-        gates.U3(1, np.pi / 2, -np.pi, -np.pi / 2),
+        gates.U3(0, np.pi / 2, np.pi / 2, np.pi),
+        gates.U3(1, np.pi / 2, np.pi, -np.pi / 2),
     ],
 )
 iswap_dec.add(
     gates.CZ,
     [
-        gates.U3(0, 7 * np.pi / 2, np.pi, 0),
-        gates.U3(1, 7 * np.pi / 2, np.pi, 0),
-        gates.U3(1, np.pi / 2, -np.pi, -np.pi),
+        gates.U3(0, -np.pi / 2, np.pi, 0),
+        gates.U3(1, -np.pi / 2, np.pi, 0),
+        gates.U3(1, np.pi / 2, np.pi, np.pi),
         gates.iSWAP(0, 1),
         gates.U3(0, np.pi, 0, np.pi),
-        gates.U3(1, np.pi / 2, -np.pi, -np.pi),
+        gates.U3(1, np.pi / 2, np.pi, np.pi),
         gates.iSWAP(0, 1),
-        gates.U3(0, np.pi / 2, np.pi / 2, -np.pi),
-        gates.U3(1, np.pi / 2, -np.pi, -np.pi / 2),
-        gates.U3(1, 7 * np.pi / 2, np.pi, 0),
+        gates.U3(0, np.pi / 2, np.pi / 2, np.pi),
+        gates.U3(1, np.pi / 2, np.pi, -np.pi / 2),
+        gates.U3(1, -np.pi / 2, np.pi, 0),
     ],
 )
 iswap_dec.add(
@@ -304,14 +304,14 @@ cz_dec.add(
 cz_dec.add(
     gates.FSWAP,
     [
-        gates.U3(0, np.pi / 2, -np.pi / 2, -np.pi),
+        gates.U3(0, np.pi / 2, -np.pi / 2, np.pi),
         gates.U3(1, np.pi / 2, np.pi / 2, np.pi / 2),
         gates.CZ(0, 1),
         gates.U3(0, np.pi / 2, 0, -np.pi / 2),
         gates.U3(1, np.pi / 2, 0, np.pi / 2),
         gates.CZ(0, 1),
-        gates.U3(0, np.pi / 2, np.pi / 2, -np.pi),
-        gates.U3(1, np.pi / 2, 0, -np.pi),
+        gates.U3(0, np.pi / 2, np.pi / 2, np.pi),
+        gates.U3(1, np.pi / 2, 0, np.pi),
     ],
 )
 cz_dec.add(
@@ -328,7 +328,7 @@ cz_dec.add(
     gates.RYY,
     lambda gate: [
         gates.RX(0, np.pi / 2),
-        gates.U3(1, np.pi / 2, np.pi / 2, -np.pi),
+        gates.U3(1, np.pi / 2, np.pi / 2, np.pi),
         gates.CZ(0, 1),
         gates.RX(1, gate.parameters[0]),
         gates.CZ(0, 1),
@@ -392,3 +392,21 @@ opt_dec.add(
         gates.H(1),
     ],
 )
+
+
+# standard gate decompositions used by :meth:`qibo.gates.gates.Gate.decompose`
+standard = GateDecompositions()
+standard.add(gates.SX, [gates.RX(0, np.pi / 2, trainable=False)])
+standard.add(gates.SXDG, [gates.RX(0, -np.pi / 2, trainable=False)])
+standard.add(gates.U3, [gates.RZ, gates.SX, gates.RZ, gates.SX, gates.RZ])
+standard.add(gates.CY, [gates.SDG, gates.CNOT, gates.S])
+standard.add(gates.CZ, [gates.H, gates.CNOT, gates.H])
+standard.add(gates.CSX, [])
+standard.add(gates.CSXDG, [])
+standard.add(gates.FSWAP, [])
+standard.add(gates.RZX, [])
+standard.add(gates.RXXYY, [])
+standard.add(gates.GIVENS, [])
+standard.add(gates.RBS, [])
+standard.add(gates.ECR, [])
+standard.add(gates.TOFFOLI, [])
