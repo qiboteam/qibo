@@ -1623,7 +1623,7 @@ Rényi entropy
 Relative Rényi entropy
 """"""""""""""""""""""
 
-.. autofunction:: qibo.quantum_info.renyi_relative_entropy
+.. autofunction:: qibo.quantum_info.relative_renyi_entropy
 
 
 Tsallis entropy
