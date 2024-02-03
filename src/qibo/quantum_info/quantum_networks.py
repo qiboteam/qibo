@@ -637,8 +637,6 @@ class QuantumNetwork:
         braket = "[a-z]"
         pattern_two = re.compile(braket * 2 + "," + braket * 2 + "->" + braket * 2)
         pattern_four = re.compile(braket * 4 + "," + braket * 4 + "->" + braket * 4)
-        # pattern_two = re.compile("[a-z][a-z],[a-z][a-z]->[a-z][a-z]")
-        # pattern_four = re.compile("[a-z][a-z][a-z][a-z],[a-z][a-z]->[a-z][a-z]")
 
         return bool(re.match(pattern_two, subscripts)), bool(
             re.match(pattern_four, subscripts)
