@@ -426,7 +426,7 @@ def random_statevector(dims: int, seed=None, backend=None):
     state /= np.linalg.norm(state)
     state =  backend.cast(state, dtype=state.dtype)
 
-    return backend.cast(state, dtype=state.dtype)
+    return state
 
 
 def random_density_matrix(
