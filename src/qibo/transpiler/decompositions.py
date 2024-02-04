@@ -1,4 +1,3 @@
-# %%
 import numpy as np
 
 from qibo import gates
@@ -409,14 +408,60 @@ standard_decompositions.add(
         gates.RZ(0, gate.parameters[1] + np.pi),
     ],
 )
-standard_decompositions.add(gates.CY, [gates.SDG, gates.CNOT, gates.S])
-standard_decompositions.add(gates.CZ, [gates.H, gates.CNOT, gates.H])
-standard_decompositions.add(gates.CSX, [])
-standard_decompositions.add(gates.CSXDG, [])
-standard_decompositions.add(gates.FSWAP, [])
-standard_decompositions.add(gates.RZX, [])
-standard_decompositions.add(gates.RXXYY, [])
-standard_decompositions.add(gates.GIVENS, [])
-standard_decompositions.add(gates.RBS, [])
-standard_decompositions.add(gates.ECR, [])
-standard_decompositions.add(gates.TOFFOLI, [])
+standard_decompositions.add(gates.CY, [gates.SDG(1), gates.CNOT(0, 1), gates.S(1)])
+standard_decompositions.add(gates.CZ, [gates.H(1), gates.CNOT(0, 1), gates.H(1)])
+standard_decompositions.add(
+    gates.CSX, [gates.H(1), gates.CU1(0, 1, np.pi / 2), gates.H(1)]
+)
+standard_decompositions.add(
+    gates.CSXDG, [gates.H(1), gates.CU1(0, 1, -np.pi / 2), gates.H(1)]
+)
+standard_decompositions.add(
+    gates.FSWAP, [gates.X(1)] + gates.GIVENS(0, 1, np.pi / 2).decompose() + [gates.X(0)]
+)
+standard_decompositions.add(
+    gates.RZX,
+    lambda gate: [
+        gates.H(1),
+        gates.CNOT(0, 1),
+        gates.RZ(1, gate.parameters[0]),
+        gates.CNOT(0, 1),
+        gates.H(1),
+    ],
+)
+standard_decompositions.add(
+    gates.RXXYY,
+    lambda gate: [
+        gates.RZ(1, -np.pi / 2),
+        gates.S(0),
+        gates.SX(1),
+        gates.RZ(1, np.pi / 2),
+        gates.CNOT(1, 0),
+        gates.RY(0, -gate.parameters[0] / 2),
+        gates.RY(1, -gate.parameters[0] / 2),
+        gates.CNOT(1, 0),
+        gates.SDG(0),
+        gates.RZ(1, -np.pi / 2),
+        gates.SX(1).dagger(),
+        gates.RZ(1, np.pi / 2),
+    ],
+)
+standard_decompositions.add(
+    gates.GIVENS, lambda gate: gates.RBS(0, 1, -gate.parameters[1]).decompose()
+)
+standard_decompositions.add(
+    gates.RBS,
+    lambda gate: [
+        gates.H(0),
+        gates.CNOT(0, 1),
+        gates.H(1),
+        gates.RY(0, gate.parameters[0]),
+        gates.RY(1, -gate.parameters[0]),
+        gates.H(1),
+        gates.CNOT(0, 1),
+        gates.H(0),
+    ],
+)
+standard_decompositions.add(
+    gates.ECR, [gates.S(0), gates.SX(1), gates.CNOT(0, 1), gates.X(0)]
+)
