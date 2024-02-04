@@ -1,4 +1,4 @@
-#%%
+# %%
 import numpy as np
 
 from qibo import gates
@@ -400,8 +400,14 @@ standard_decompositions = GateDecompositions()
 standard_decompositions.add(gates.SX, [gates.RX(0, np.pi / 2, trainable=False)])
 standard_decompositions.add(gates.SXDG, [gates.RX(0, -np.pi / 2, trainable=False)])
 standard_decompositions.add(
-    gates.U3, 
-    lambda gate: [gates.RZ(0, gate.parameters[2]), gates.SX(0), gates.RZ(0, gate.parameters[0] + np.pi), gates.SX(0), gates.RZ(0, gate.parameters[1] + np.pi)],
+    gates.U3,
+    lambda gate: [
+        gates.RZ(0, gate.parameters[2]),
+        gates.SX(0),
+        gates.RZ(0, gate.parameters[0] + np.pi),
+        gates.SX(0),
+        gates.RZ(0, gate.parameters[1] + np.pi),
+    ],
 )
 standard_decompositions.add(gates.CY, [gates.SDG, gates.CNOT, gates.S])
 standard_decompositions.add(gates.CZ, [gates.H, gates.CNOT, gates.H])
