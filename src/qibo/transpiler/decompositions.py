@@ -1,3 +1,4 @@
+#%%
 import numpy as np
 
 from qibo import gates
@@ -395,18 +396,21 @@ opt_dec.add(
 
 
 # standard gate decompositions used by :meth:`qibo.gates.gates.Gate.decompose`
-standard = GateDecompositions()
-standard.add(gates.SX, [gates.RX(0, np.pi / 2, trainable=False)])
-standard.add(gates.SXDG, [gates.RX(0, -np.pi / 2, trainable=False)])
-standard.add(gates.U3, [gates.RZ, gates.SX, gates.RZ, gates.SX, gates.RZ])
-standard.add(gates.CY, [gates.SDG, gates.CNOT, gates.S])
-standard.add(gates.CZ, [gates.H, gates.CNOT, gates.H])
-standard.add(gates.CSX, [])
-standard.add(gates.CSXDG, [])
-standard.add(gates.FSWAP, [])
-standard.add(gates.RZX, [])
-standard.add(gates.RXXYY, [])
-standard.add(gates.GIVENS, [])
-standard.add(gates.RBS, [])
-standard.add(gates.ECR, [])
-standard.add(gates.TOFFOLI, [])
+standard_decompositions = GateDecompositions()
+standard_decompositions.add(gates.SX, [gates.RX(0, np.pi / 2, trainable=False)])
+standard_decompositions.add(gates.SXDG, [gates.RX(0, -np.pi / 2, trainable=False)])
+standard_decompositions.add(
+    gates.U3, 
+    lambda gate: [gates.RZ(0, gate.parameters[2]), gates.SX(0), gates.RZ(0, gate.parameters[0] + np.pi), gates.SX(0), gates.RZ(0, gate.parameters[1] + np.pi)],
+)
+standard_decompositions.add(gates.CY, [gates.SDG, gates.CNOT, gates.S])
+standard_decompositions.add(gates.CZ, [gates.H, gates.CNOT, gates.H])
+standard_decompositions.add(gates.CSX, [])
+standard_decompositions.add(gates.CSXDG, [])
+standard_decompositions.add(gates.FSWAP, [])
+standard_decompositions.add(gates.RZX, [])
+standard_decompositions.add(gates.RXXYY, [])
+standard_decompositions.add(gates.GIVENS, [])
+standard_decompositions.add(gates.RBS, [])
+standard_decompositions.add(gates.ECR, [])
+standard_decompositions.add(gates.TOFFOLI, [])
