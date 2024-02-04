@@ -457,7 +457,7 @@ standard_decompositions.add(
     ],
 )
 standard_decompositions.add(
-    gates.GIVENS, lambda gate: gates.RBS(0, 1, -gate.parameters[1]).decompose()
+    gates.GIVENS, lambda gate: gates.RBS(0, 1, -gate.parameters[0]).decompose()
 )
 standard_decompositions.add(
     gates.FSWAP, [gates.X(1)] + gates.GIVENS(0, 1, np.pi / 2).decompose() + [gates.X(0)]
