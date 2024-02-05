@@ -14,44 +14,7 @@ import numpy as np
 from qibo.config import raise_error
 from qibo.hamiltonians import Hamiltonian
 
-class DoubleBracketGeneratorType(Enum):
-    """Define the evolution generator of a variant of the double-bracket iterations."""
-    
-    canonical = auto()
-    """Use canonical commutator."""
-    
-    custom = auto()
-    """Use some input diagonal matrix"""
-    
-class DoubleBracketRotationType(Enum):    
-    #The dbr types below need a diagonal input matrix $\hat D_k$   :
-    
-    single_commutator = auto()
-    """Use single commutator."""
-    
-    group_commutator = auto()
-    """Use group commutator approximation"""
-    
-    group_commutator_reduced = auto()
-    """Use group commutator approximation with a reduction using symmetry
-    
-    """  
-    
-    group_commutator_imperfect = auto()
-    """Use group commutator approximation"""
-        
-    group_commutator_reduced_imperfect = auto()
-    """Use group commutator approximation: 
-    symmetry of the Hamiltonian implies that with perfect reversion of the input evolution the first order needs less queries.
-    We extrapolate that symmetry to the imperfect inversion.
-    Note that while may not be performing a similarity operation on the generator of the double bracket iteration, 
-    the unfolded operation applied to a state vector will still be unitary:
-    
-    """
 
- class EvolutionOracleType(Enum):   
-     numpy = auto()
-     TrotterSuzuki = auto()
 
     
 class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
@@ -62,14 +25,15 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
     def __init__(
         self,
         hamiltonian: Hamiltonian,
-        mode: DoubleBracketGeneratorType = DoubleBracketGeneratorType.canonical,
+        mode_DA: DoubleBracketDiagonalAssociationType = DoubleBracketDiagonalAssociationType.canonical,
         mode_DBR: DoubleBracketRotationType = DoubleBracketRotationType.single_commutator,
         mode_GCI_inversion: EvolutionOracleInputHamiltonianReversalType = None,
     ):
-        super().__init__( hamiltonian, mode )
-        
+        super().__init__( hamiltonian, mode_DBR )
+        self.mode_DA = mode_DA
         self.mode_GCI_inversion = mode_GCI_inversion
         self.mode_DBR = mode_DBR  
+
     def __call__(
         self, step: float, mode_DBR: DoubleBracketRotationType = None, d: np.array = None
     ):
@@ -104,36 +68,8 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
                 @ self.backend.calculate_matrix_exp(step, d)
         )
 
-    class DBI_step:
-        def __init__(
-        self,
-        s_step: double,
-        d: Hamiltonian,
-        mode: DoubleBracketGeneratorType = DoubleBracketGeneratorType.canonical,
-        mode_DBR: DoubleBracketRotationType = DoubleBracketRotationType.single_commutator,
-        mode_GCI_inversion: EvolutionOracleInputHamiltonianReversalType = None,
-    ):      
-            self.s_step = s_step
-            self.d = d
-            self.mode = mode #@TODO: this should allow to request gradient search or other operator optimization
-            self.mode_GCI_inversion = mode_GCI_inversion
-            self.mode_DBR = mode_DBR 
-        @property
-        def circuit_sequence(self):
-            if mode_DBR = DoubleBracketRotationType.group_commutator_reduced
-                return [EvolutionOracleDiagonalInput(s_step, d), EvolutionOracleInputHamiltonian(s_step), EvolutionOracleDiagonalInput(s_step,d) ]
-    class EvolutionOracle:
-        def __init__(h: TrotterHamiltonian = None):
-           self.h = h
-           def get_circuit(self, t_duration)
-             freturn self.h.circuit(t_duration)
-    class EvolutionOracleDiagonalInput(EvolutionOracle):
-       def __init__():
-           self.name = 'DiagonalInput'
 
-    class EvolutionOracleInputHamiltonian(EvolutionOracle):
-       def __init__():
-           self.name = 'Input Hamiltonian'
+
 
     def unfold_DBI_circuit_symbolic(self, nmb_DBI_steps = 1, s_list, d_list = None):
         if d is None:

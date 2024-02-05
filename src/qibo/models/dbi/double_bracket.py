@@ -8,108 +8,256 @@ import numpy as np
 from qibo.config import raise_error
 from qibo.hamiltonians import Hamiltonian
 
-
-class DoubleBracketGeneratorType(Enum):
-    """Define DBF evolution."""
-
+class DoubleBracketDiagonalAssociationType(Enum):
+    """Define the evolution generator of a variant of the double-bracket iterations."""
+    
     canonical = auto()
     """Use canonical commutator."""
+    
+    custom = auto()
+    """Use some input diagonal matrix for each step: general diagonalization DBI"""
+
+    custom_constant = auto()
+    """Use same input diagonal matrix in each step: BHMM DBI""" 
+
+class DiagonalAssociation:
+
+        def __init__(
+        self,
+        k_step_number: list = None,
+        s_step_duration: double = None,
+        d: EvolutionHamiltonian,
+        mode: DoubleBracketDiagonalAssociationType = DoubleBracketDiagonalAssociationType.canonical,
+        mode_EvolutionOracle: EvolutionOracleType = EvolutionOracleType.nameString
+    ):
+            z=1
+class EvolutionHamiltonian:
+    def __init__(mode_EvolutionOracle: EvolutionOracleType
+    def queryEvolution(self, t_duration):
+        return 0
+
+class DiagonalAssociationDephasing(DiagonalAssociation):
+
+        def __init__(
+        self,
+        H: AbstractHamiltonian,
+        mode: DoubleBracketDiagonalAssociationType = DoubleBracketDiagonalAssociationType.canonical,
+        mode_EvolutionOracle: EvolutionOracleType = EvolutionOracleType.nameString
+    ):
+        def __call__(self, J_input: EvolutionHamiltonian, k_step_number: list = None, t_duration = None ):
+        if mode_EvolutionOracle is EvolutionOracleType.nameString:
+            if t_duration is None:
+                #iterate over all Z ops
+                return '\Delta(' + J_input.name + ')'
+            else:
+                return 'exp( i'+ str(t_duration) +'\Delta(' + J_input.name + ')'
+        elif mode_EvolutionOracle is EvolutionOracleType.numerical:
+            if t_duration is None:
+                #iterate over all Z ops
+                return sum Z @ J_input @ Z
+            else:
+                return sum Z @ J_input.exp(t_duration) @Z
+        if mode_EvolutionOracle is EvolutionOracleType.TrotterSuzuki:
+            if t_duration is None:
+                #iterate over all Z ops
+                return sum Z @ J_input @ Z
+            else:
+                return sum Z @ J_input.circuit(t_duration) @Z
+
+class DiagonalAssociationFromList(DiagonalAssociation):
+
+    def __init__(
+    self,
+    d_k_list: list = None,
+    mode: DoubleBracketDiagonalAssociationType = DoubleBracketDiagonalAssociationType.canonical,
+    mode_EvolutionOracle: EvolutionOracleType = EvolutionOracleType.nameString
+):
+        self.d_k_list = d_k_list
+
+    def __call__(self, k_step_number: list = None, t_duration = None ):
+        if mode_EvolutionOracle is EvolutionOracleType.nameString:
+            if t_duration is None:
+                return 'D_' + str(k_step_number)
+            else:
+                return 'exp( i'+ str(t_duration) +'D_k'
+        elif mode_EvolutionOracle is EvolutionOracleType.numerical:
+            if t_duration is None:
+                return 
+            else:
+                return sum Z @ J_input.exp(t_duration) @Z
+        if mode_EvolutionOracle is EvolutionOracleType.TrotterSuzuki:
+            if t_duration is None:
+                raise_error(ValueError, f"In the TrotterSuzuki mode you need to work with evolution operators so please specify a time.")
+            else:
+                return sum Z @ J_input.circuit(t_duration) @Z
+
+class DiagonalAssociationFromOptimization(DiagonalAssociation):
+
+    def __init__(
+    self,
+    d_k_list: list = None,
+    mode: DoubleBracketDiagonalAssociationType = DoubleBracketDiagonalAssociationType.canonical,
+    mode_EvolutionOracle: EvolutionOracleType = EvolutionOracleType.nameString
+):
+        self.d_k_list = d_k_list
+
+    def __call__(self, h: AbstractHamiltonian, k_step_number: list = None, t_duration = None ):
+        if mode_EvolutionOracle is EvolutionOracleType.nameString:
+            if t_duration is None:
+                return 'Optimize $\mu$ D_' + str(k_step_number)
+            else:
+                return 'Optimize  $\mu$ exp( i'+ str(t_duration) +'D_k'
+        elif mode_EvolutionOracle is EvolutionOracleType.numerical:
+            if t_duration is None:
+                return 
+            else:
+                return sum Z @ J_input.exp(t_duration) @Z
+        if mode_EvolutionOracle is EvolutionOracleType.TrotterSuzuki:
+            if t_duration is None:
+                raise_error(ValueError, f"In the TrotterSuzuki mode you need to work with evolution operators so please specify a time.")
+            else:
+                return sum Z @ J_input.circuit(t_duration) @Z
+
+
+
+class DoubleBracketRotationType(Enum):    
+    #The dbr types below need a diagonal input matrix $\hat D_k$   :
+    
     single_commutator = auto()
     """Use single commutator."""
+    
     group_commutator = auto()
     """Use group commutator approximation"""
-    # TODO: add double commutator (does it converge?)
+    
+    group_commutator_reduced = auto()
+    """Use group commutator approximation with a reduction using symmetry
+    
+    """  
+   
+   ## Reserving for later development
+    group_commutator_imperfect = auto()
+    """Use group commutator approximation"""
+        
+    group_commutator_reduced_imperfect = auto()
+    """Use group commutator approximation: 
+    symmetry of the Hamiltonian implies that with perfect reversion of the input evolution the first order needs less queries.
+    We extrapolate that symmetry to the imperfect reversal.
+    Note that while may not be performing a similarity operation on the generator of the double bracket iteration, 
+    the unfolded operation applied to a state vector will still be unitary:
+    
+    """
+
+class EvolutionOracleType(Enum):  
+    nameString = auto()
+    """If you only want to get a sequence of names of the oracle"""
+
+    numerical = auto()
+    """If you will work with exp(is_k J_k) as a numerical matrix"""
+
+    TrotterSuzuki = auto()
+    """If you will use SymbolicHamiltonian"""
+
+class EvolutionOracle:
+    def __init__( J: AbstractHamiltonian = None, 
+            name = None,
+            mode_EvolutionOracle: EvolutionOracleType = EvolutionOracleType.nameString ):
+       self.h = h
+       self.mode_EvolutionOracle = mode_EvolutionOracle
+       self.name = name
+    def __call__(self, t_duration: double = None, d: np.array = None):
+        """ Returns either the name or the circuit """
+        if t is None:
+            return self.name
+        else:
+            return self.get_circuit( t_duration = t_duration, d = d )
+        
+    def get_circuit(self, t_duration: double = None):
+
+        if self.mode_EvolutionOracle is EvolutionOracleType.nameString:
+            return self(t_duration)
+        elif self.mode_EvolutionOracle is EvolutionOracleType.SymbolicHamiltonian:
+            return self.h.circuit(t_duration)
+        else:
+            raise_error(ValueError,
+                    f"You are using an EvolutionOracle type which is not yet supported.")
+    @property
+    def name(self, ):
+        return None
+
+    def circuit_sequence(self, k_step_number: int = None):
+       EvolutionOracleDiagonalInput =  EvolutionOracle( 
+               name = "DiagonalInput",
+               mode_EvolutionOracle = self.mode_EvolutionOracle)
+       EvolutionOracleInputHamiltonian = EvolutionOracle( name = "InputHamiltonian" )
+
+        if mode_DBR = DoubleBracketRotationType.group_commutator_reduced
+            return [
+                    EvolutionOracleDiagonalInput(s_step, d),
+                    EvolutionOracleInputHamiltonian(s_step),
+                    EvolutionOracleDiagonalInput(s_step,d) ]
 
 
 class DoubleBracketIteration:
-    """
-    Class implementing the Double Bracket iteration algorithm.
-    For more details, see https://arxiv.org/pdf/2206.11772.pdf
-
-    Args:
-        hamiltonian (Hamiltonian): Starting Hamiltonian;
-        mode (DoubleBracketGeneratorType): type of generator of the evolution.
-
-    Example:
-        .. testcode::
-
-            import numpy as np
-            from qibo.models.dbi.double_bracket import DoubleBracketIteration, DoubleBracketGeneratorType
-            from qibo.hamiltonians import Hamiltonian
-            from qibo.quantum_info import random_hermitian
-
-            nqubits = 4
-            h0 = random_hermitian(2**nqubits)
-            dbf = DoubleBracketIteration(Hamiltonian(nqubits=nqubits, matrix=h0))
-
-            # diagonalized matrix
-            dbf.h
-    """
-
     def __init__(
         self,
-        hamiltonian: Hamiltonian,
-        mode: DoubleBracketGeneratorType = DoubleBracketGeneratorType.canonical,
+        hamiltonian: AbstractHamiltonian,
+        mode: DoubleBracketDiagonalAssociationType = DoubleBracketDiagonalAssociationType.canonical,
     ):
         self.h = hamiltonian
         self.h0 = deepcopy(self.h)
         self.mode = mode
 
-    def __call__(
-        self, step: float, mode: DoubleBracketGeneratorType = None, d: np.array = None
-    ):
-        if mode is None:
-            mode = self.mode
+class doubleBracketStep:
+    def __init__(
+    self,
+    s_step: double = None,
+    d_Z: DiagonalAssociation = None,
+    mode_DBR: DoubleBracketRotationType = DoubleBracketRotationType.single_commutator,
+    mode_evolutiom_reversal: EvolutionOracleInputHamiltonianReversalType = None,
+    mode_EvolutionOracle: EvolutionOracleType = EvolutionOracleType.nameString
+):      
+        self.s_step = s_step
+        self.diagonalAssociation = d_Z
+        self.mode_DBR = mode_DBR #@TODO: this should allow to request gradient search or other operator optimization
+        self.mode_GCI_reversal = mode_GCI_reversal
+        self.mode_DBR = mode_DBR 
+        self.mode_EvolutionOracle = mode_EvolutionOracle
 
-        if mode is DoubleBracketGeneratorType.canonical:
-            operator = self.backend.calculate_matrix_exp(
-                1.0j * step,
-                self.commutator(self.diagonal_h_matrix, self.h.matrix),
-            )
-        elif mode is DoubleBracketGeneratorType.single_commutator:
-            if d is None:
-                raise_error(ValueError, f"Cannot use group_commutator with matrix {d}")
-            operator = self.backend.calculate_matrix_exp(
-                1.0j * step,
-                self.commutator(d, self.h.matrix),
-            )
-        elif mode is DoubleBracketGeneratorType.group_commutator:
-            if d is None:
-                raise_error(ValueError, f"Cannot use group_commutator with matrix {d}")
-            operator = (
-                self.h.exp(-step)
-                @ self.backend.calculate_matrix_exp(-step, d)
-                @ self.h.exp(step)
-                @ self.backend.calculate_matrix_exp(step, d)
-            )
-        operator_dagger = self.backend.cast(
-            np.matrix(self.backend.to_numpy(operator)).getH()
-        )
-        self.h.matrix = operator @ self.h.matrix @ operator_dagger
+    def loss(self, step: float, look_ahead: int = 1):
+        """
+        Compute loss function distance between `look_ahead` steps.
 
-    @staticmethod
-    def commutator(a, b):
-        """Compute commutator between two arrays."""
-        return a @ b - b @ a
+        Args:
+            step: iteration step.
+            look_ahead: number of iteration steps to compute the loss function;
+        """
+        # copy initial hamiltonian
+        h_copy = deepcopy(self.h)
 
-    @property
-    def diagonal_h_matrix(self):
-        """Diagonal H matrix."""
-        return self.backend.cast(np.diag(np.diag(self.backend.to_numpy(self.h.matrix))))
+        for _ in range(look_ahead):
+            self.__call__(mode=self.mode, step=step)
 
-    @property
-    def off_diag_h(self):
-        return self.h.matrix - self.diagonal_h_matrix
+        # off_diagonal_norm's value after the steps
+        loss = self.off_diagonal_norm
 
-    @property
-    def off_diagonal_norm(self):
-        """Norm of off-diagonal part of H matrix."""
-        off_diag_h_dag = self.backend.cast(
-            np.matrix(self.backend.to_numpy(self.off_diag_h)).getH()
-        )
-        return np.real(
-            np.trace(self.backend.to_numpy(off_diag_h_dag @ self.off_diag_h))
-        )
+        # set back the initial configuration
+        self.h = h_copy
+
+        return loss
+
+    def energy_fluctuation(self, state):
+        """
+        Evaluate energy fluctuation
+
+        .. math::
+            \\Xi_{k}(\\mu) = \\sqrt{\\langle\\mu|\\hat{H}^2|\\mu\\rangle - \\langle\\mu|\\hat{H}|\\mu\\rangle^2} \\,
+
+        for a given state :math:`|\\mu\\rangle`.
+
+        Args:
+            state (np.ndarray): quantum state to be used to compute the energy fluctuation with H.
+        """
+        return self.h.energy_fluctuation(state)
 
     @property
     def backend(self):
@@ -157,38 +305,95 @@ class DoubleBracketIteration:
 
         return best["step"]
 
-    def loss(self, step: float, look_ahead: int = 1):
-        """
-        Compute loss function distance between `look_ahead` steps.
 
-        Args:
-            step: iteration step.
-            look_ahead: number of iteration steps to compute the loss function;
-        """
-        # copy initial hamiltonian
-        h_copy = deepcopy(self.h)
+class DoubleBracketIterationNumpy(DoubleBracketIteration):
+    """
+    Class implementing the Double Bracket iteration algorithm.
+    For more details, see https://arxiv.org/pdf/2206.11772.pdf
 
-        for _ in range(look_ahead):
-            self.__call__(mode=self.mode, step=step)
+    Args:
+        hamiltonian (Hamiltonian): Starting Hamiltonian;
+        mode (DoubleBracketDiagonalAssociationType): type of generator of the evolution.
 
-        # off_diagonal_norm's value after the steps
-        loss = self.off_diagonal_norm
+    Example:
+        .. testcode::
 
-        # set back the initial configuration
-        self.h = h_copy
+            import numpy as np
+            from qibo.models.dbi.double_bracket import DoubleBracketIteration, DoubleBracketDiagonalAssociationType
+            from qibo.hamiltonians import Hamiltonian
+            from qibo.quantum_info import random_hermitian
 
-        return loss
+            nqubits = 4
+            h0 = random_hermitian(2**nqubits)
+            dbf = DoubleBracketIteration(Hamiltonian(nqubits=nqubits, matrix=h0))
 
-    def energy_fluctuation(self, state):
-        """
-        Evaluate energy fluctuation
+            # diagonalized matrix
+            dbf.h
+    """
 
-        .. math::
-            \\Xi_{k}(\\mu) = \\sqrt{\\langle\\mu|\\hat{H}^2|\\mu\\rangle - \\langle\\mu|\\hat{H}|\\mu\\rangle^2} \\,
+    def __init__(
+        self,
+        hamiltonian: Hamiltonian,
+        mode: DoubleBracketDiagonalAssociationType = DoubleBracketDiagonalAssociationType.canonical,
+    ):
+        self.h = hamiltonian
+        self.h0 = deepcopy(self.h)
+        self.mode = mode
 
-        for a given state :math:`|\\mu\\rangle`.
+    def __call__(
+        self, step: float, mode: DoubleBracketDiagonalAssociationType = None, d: np.array = None
+    ):
+        if mode is None:
+            mode = self.mode
 
-        Args:
-            state (np.ndarray): quantum state to be used to compute the energy fluctuation with H.
-        """
-        return self.h.energy_fluctuation(state)
+        if mode is DoubleBracketDiagonalAssociationType.canonical:
+            operator = self.backend.calculate_matrix_exp(
+                1.0j * step,
+                self.commutator(self.diagonal_h_matrix, self.h.matrix),
+            )
+        elif mode is DoubleBracketDiagonalAssociationType.single_commutator:
+            if d is None:
+                raise_error(ValueError, f"Cannot use group_commutator with matrix {d}")
+            operator = self.backend.calculate_matrix_exp(
+                1.0j * step,
+                self.commutator(d, self.h.matrix),
+            )
+        elif mode is DoubleBracketDiagonalAssociationType.group_commutator:
+            if d is None:
+                raise_error(ValueError, f"Cannot use group_commutator with matrix {d}")
+            operator = (
+                self.h.exp(-step)
+                @ self.backend.calculate_matrix_exp(-step, d)
+                @ self.h.exp(step)
+                @ self.backend.calculate_matrix_exp(step, d)
+            )
+        operator_dagger = self.backend.cast(
+            np.matrix(self.backend.to_numpy(operator)).getH()
+        )
+        self.h.matrix = operator @ self.h.matrix @ operator_dagger
+
+    @staticmethod
+    def commutator(a, b):
+        """Compute commutator between two arrays."""
+        return a @ b - b @ a
+
+    @property
+    def diagonal_h_matrix(self):
+        """Diagonal H matrix."""
+        return self.backend.cast(np.diag(np.diag(self.backend.to_numpy(self.h.matrix))))
+
+    @property
+    def off_diag_h(self):
+        return self.h.matrix - self.diagonal_h_matrix
+
+    @property
+    def off_diagonal_norm(self):
+        """Norm of off-diagonal part of H matrix."""
+        off_diag_h_dag = self.backend.cast(
+            np.matrix(self.backend.to_numpy(self.off_diag_h)).getH()
+        )
+        return np.real(
+            np.trace(self.backend.to_numpy(off_diag_h_dag @ self.off_diag_h))
+        )
+
+
