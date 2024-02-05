@@ -12,7 +12,7 @@ from qibo.config import raise_error
 
 
 class QuantumNetwork:
-    """ Quantum network that unifies the representation of quantum states, channels,
+    """Quantum network that unifies the representation of quantum states, channels,
     observables, and higher-order quantum operators [1]_. The class stores the Choi operator of
     the quantum network as a tensor, which is an unique representation of the quantum network.
 
