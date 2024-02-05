@@ -443,7 +443,11 @@ class NumpyBackend(Backend):
             else:
                 if circuit.measurements:
                     circuit._final_state = CircuitResult(
-                        state, circuit.measurements, backend=self, nshots=nshots
+                        state,
+                        circuit.measurements,
+                        backend=self,
+                        nshots=nshots,
+                        batch=is_batched,
                     )
                     return circuit._final_state
                 else:
@@ -599,7 +603,7 @@ class NumpyBackend(Backend):
                 return terms
         return terms
 
-    def _order_probabilities(self, probs, qubits, nqubits):
+    def _order_probabilities(self, probs, qubits, nqubits, batch=False):
         """Arrange probabilities according to the given ``qubits`` ordering."""
         unmeasured, reduced = [], {}
         for i in range(nqubits):
@@ -607,14 +611,28 @@ class NumpyBackend(Backend):
                 reduced[i] = i - len(unmeasured)
             else:
                 unmeasured.append(i)
-        return self.np.transpose(probs, [reduced.get(i) for i in qubits])
+        shape = (
+            [
+                0,
+            ]
+            if batch
+            else []
+        )
+        return self.np.transpose(
+            probs, shape + [int(batch) + reduced.get(i) for i in qubits]
+        )
 
-    def calculate_probabilities(self, state, qubits, nqubits):
+    def calculate_probabilities(self, state, qubits, nqubits, batch=False):
         rtype = self.np.real(state).dtype
+        shape = (state.shape[0],) if batch else ()
         unmeasured_qubits = tuple(i for i in range(nqubits) if i not in qubits)
-        state = self.np.reshape(self.np.abs(state) ** 2, nqubits * (2,))
+        state = self.np.reshape(self.np.abs(state) ** 2, shape + nqubits * (2,))
         probs = self.np.sum(state.astype(rtype), axis=unmeasured_qubits)
-        return self._order_probabilities(probs, qubits, nqubits).ravel()
+        probs = self._order_probabilities(probs, qubits, nqubits, batch)
+        if batch:
+            return probs.reshape(state.shape[0], -1)
+        else:
+            return probs.ravel()
 
     def calculate_probabilities_density_matrix(self, state, qubits, nqubits):
         order = tuple(sorted(qubits))

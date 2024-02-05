@@ -30,15 +30,16 @@ class QuantumState:
         backend (qibo.backends.AbstractBackend): Backend used for the calculations. If not provided the :class:`qibo.backends.GlobalBackend` is going to be used.
     """
 
-    def __init__(self, state, backend=None):
+    def __init__(self, state, backend=None, batch=False):
         if backend is None:  # pragma: no cover
             from qibo.backends import GlobalBackend
 
             backend = GlobalBackend()
         self.backend = backend
         self.density_matrix = len(state.shape) == 2
-        self.nqubits = int(np.log2(state.shape[0]))
+        self.nqubits = int(np.log2(state.shape[0 + 2 * int(batch)]))
         self._state = state
+        self.is_batched = batch
 
     def symbolic(self, decimals: int = 5, cutoff: float = 1e-10, max_terms: int = 20):
         """Dirac notation representation of the state in the computational basis.
@@ -104,7 +105,9 @@ class QuantumState:
                 self._state, qubits, self.nqubits
             )
 
-        return self.backend.calculate_probabilities(self._state, qubits, self.nqubits)
+        return self.backend.calculate_probabilities(
+            self._state, qubits, self.nqubits, self.is_batched
+        )
 
     def __str__(self):
         return self.symbolic()
@@ -488,9 +491,15 @@ class CircuitResult(QuantumState, MeasurementOutcomes):
     """
 
     def __init__(
-        self, final_state, measurements, backend=None, samples=None, nshots=1000
+        self,
+        final_state,
+        measurements,
+        backend=None,
+        samples=None,
+        nshots=1000,
+        batch=False,
     ):
-        QuantumState.__init__(self, final_state, backend)
+        QuantumState.__init__(self, final_state, backend, batch)
         qubits = [q for m in measurements for q in m.target_qubits]
         if len(qubits) == 0:
             raise ValueError(
