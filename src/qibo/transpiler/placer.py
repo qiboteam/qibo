@@ -4,7 +4,7 @@ from typing import Optional, Union
 import networkx as nx
 
 from qibo import gates
-from qibo.config import raise_error
+from qibo.config import log, raise_error
 from qibo.models import Circuit
 from qibo.transpiler._exceptions import PlacementError
 from qibo.transpiler.abstract import Placer, Router
@@ -101,14 +101,18 @@ class StarConnectivityPlacer(Placer):
 
     def __init__(self, connectivity=None, middle_qubit: int = 2):
         self.middle_qubit = middle_qubit
-        self.connectivity = connectivity
+        if connectivity is not None:  # pragma: no cover
+            log.warning(
+                "StarConnectivityRouter does not use the connectivity graph."
+                "The connectivity graph will be ignored."
+            )
 
     def __call__(self, circuit: Circuit):
         """Apply the transpiler transformation on a given circuit.
 
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): The original Qibo circuit to transform.
-                This circuit must contain up to two-qubit gates.
+                Only single qubit gates and two qubits gates are supported by the router.
 
         Returns:
             (dict): physical to logical qubit mapping.
