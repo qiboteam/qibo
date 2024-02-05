@@ -14,39 +14,72 @@ import numpy as np
 from qibo.config import raise_error
 from qibo.hamiltonians import Hamiltonian
 
-
+class DoubleBracketRotationType(Enum):    
+    #The dbr types below need a diagonal input matrix $\hat D_k$   :
+    
+    single_commutator = auto()
+    """Use single commutator."""
+    
+    group_commutator = auto()
+    """Use group commutator approximation"""
+    
+    group_commutator_reduced = auto()
+    """Use group commutator approximation with a reduction using symmetry
+    
+    """  
+   
+   ## Reserving for later development
+    group_commutator_imperfect = auto()
+    """Use group commutator approximation"""
+        
+    group_commutator_reduced_imperfect = auto()
+    """Use group commutator approximation: 
+    symmetry of the Hamiltonian implies that with perfect reversion of the input evolution the first order needs less queries.
+    We extrapolate that symmetry to the imperfect reversal.
+    Note that while may not be performing a similarity operation on the generator of the double bracket iteration, 
+    the unfolded operation applied to a state vector will still be unitary:
+    
+    """
 
     
 class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
     """
-    Class which will be later merged into the @super but for now develops new tricks in a private repository.
-    """
+    Class which will be later merged into the @super somehow    """
 
     def __init__(
         self,
-        hamiltonian: Hamiltonian,
-        mode_DA: DoubleBracketDiagonalAssociationType = DoubleBracketDiagonalAssociationType.canonical,
-        mode_DBR: DoubleBracketRotationType = DoubleBracketRotationType.single_commutator,
-        mode_GCI_inversion: EvolutionOracleInputHamiltonianReversalType = None,
+        input_hamiltonian_evolution_oracle: EvolutionOracle,
+        mode_double_bracket_rotation: DoubleBracketRotationType = DoubleBracketRotationType.group_commutator,
+        mode_evolution_oracle: EvolutionOracleType = EvolutionOracleType.numerical,
+        mode_diagonal_association: DoubleBracketDiagonalAssociationType = DoubleBracketDiagonalAssociationType.dephasing
     ):
-        super().__init__( hamiltonian, mode_DBR )
-        self.mode_DA = mode_DA
-        self.mode_GCI_inversion = mode_GCI_inversion
-        self.mode_DBR = mode_DBR  
+        if mode_double_bracket_rotation is DoubleBracketRotationType.single_commutator
+            mode_double_bracket_rotation_old = DoubleBracketGeneratorType.single_commutator
+
+        super().__init__( input_hamiltonian_evolution_oracle.h, mode_double_bracket_rotation_old )
+        
+        self.input_hamiltonian_evolution_oracle = input_hamiltonian_evolution_oracle 
+
+        self.mode_diagonal_association = mode_diagonal_association
+        self.mode_gci_inversion = mode_gci_inversion
+        self.mode_double_bracket_rotation = mode_double_bracket_rotation  
 
     def __call__(
-        self, step: float, mode_DBR: DoubleBracketRotationType = None, d: np.array = None
-    ):
+        self, 
+        step: float, 
+        mode_double_bracket_rotation: DoubleBracketRotationType = None,
+        d: np.array = None
+    )
         
-        if mode_DBR is None:
-            mode_DBR= self.mode_DBR
+        if mode_double_bracket_rotation is None:
+            mode_double_bracket_rotation= self.mode_double_bracket_rotation
         if d is None:
             if self.mode is DoubleBracketGeneratorType.canonical:
                 d = self.diagonal_h_matrix
             else:
                 raise_error(ValueError, f"Cannot use group_commutator without specifying matrix {d}")
                 
-        if mode_DBR is DoubleBracketRotationType.group_commutator_reduced:          
+        if mode_double_bracket_rotation is DoubleBracketRotationType.group_commutator_reduced:          
   
             double_bracket_rotation = self.group_commutator_reduced(step, d)
             double_bracket_rotation_dagger = double_bracket_rotation.T.conj()
@@ -55,7 +88,18 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
             
         self.h.matrix = double_bracket_rotation_dagger @ self.h.matrix @ double_bracket_rotation
 
-        
+ 
+    def circuit_sequence(self, k_step_number: int = None):
+       EvolutionOracleDiagonalInput =  EvolutionOracle( 
+               name = "DiagonalInput",
+               mode_evolution_oracle = self.mode_evolution_oracle)
+       EvolutionOracleInputHamiltonian = EvolutionOracle( name = "InputHamiltonian" )
+
+        if mode_dbr = DoubleBracketRotationType.group_commutator_reduced
+            return [
+                    EvolutionOracleDiagonalInput(s_step, d),
+                    EvolutionOracleInputHamiltonian(s_step),
+                    EvolutionOracleDiagonalInput(s_step,d) ]       
     def group_commutator_reduced(self, step, d = None):
         if d is None:
             if mode is DoubleBracketRotationType.canonical:
@@ -79,7 +123,7 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
                 print( DoubleBracketRotationType.canonical)
                 raise_error(ValueError, f"Cannot use group_commutator without specifying matrix {d}")
         if nmb_DBI_steps == 1:
-            return [ DBI_step( s_list[0], d_list[0], mode_DBR= DoubleBracketRotationType.group_commutator_reduced).circuit_sequence ]
+            return [ DBI_step( s_list[0], d_list[0], mode_double_bracket_rotation= DoubleBracketRotationType.group_commutator_reduced).circuit_sequence ]
         else:
             circuit_sequence_so_far = self.unfold_DBI_circuit_symbolic( nmb_DBI_steps = nmb_DBI_steps - 1, s_list,d_list )
             shift_frame_Hk_H0 = reverse(circuit_sequence_so_far) + [EvolutionOracleInputHamiltonian(s_step[nmb_DBI_steps]) ]  + circuit_sequence_so_far 
@@ -104,14 +148,14 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
         )
 
     def evolution_oracle_reverse_h(self, step, h):
-        if self.mode_GCI_inversion is None:
-            raise_error(ValueError, f"You need to specify what is {self.mode_GCI_inversion} when running a GCI step with the imperfect group commutator")
+        if self.mode_gci_inversion is None:
+            raise_error(ValueError, f"You need to specify what is {self.mode_gci_inversion} when running a gci step with the imperfect group commutator")
 
-        if self.mode_GCI_inversion is EvolutionOracleInputHamiltonianReversalType.flip_odd_sites:
+        if self.mode_gci_inversion is EvolutionOracleInputHamiltonianReversalType.flip_odd_sites:
             R = self.evolution_oracle_reversal_conjugation_by_flips(step)
-        elif self.mode_GCI_inversion is EvolutionOracleInputHamiltonianReversalType.product_Hadamards:
+        elif self.mode_gci_inversion is EvolutionOracleInputHamiltonianReversalType.product_Hadamards:
             R = self.evolution_oracle_reversal_conjugation_by_hadamards(step)
-        elif self.mode_GCI_inversion is EvolutionOracleInputHamiltonianReversalType.flip_odd_sites_and_NN_Ising_correction:
+        elif self.mode_gci_inversion is EvolutionOracleInputHamiltonianReversalType.flip_odd_sites_and_NN_Ising_correction:
             R = self.evolution_oracle_reversal_conjugation_by_flips(step)
             Z = self.evolution_oracle_reversal_conjugation_by_unitary_diagonal_correction(R, step, h)
             return R.matrix @ h.exp(step) @ R.matrix @ Z.matrix

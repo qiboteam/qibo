@@ -8,6 +8,8 @@ import numpy as np
 from qibo.config import raise_error
 from qibo.hamiltonians import Hamiltonian
 
+
+
 class DoubleBracketDiagonalAssociationType(Enum):
     """Define the evolution generator of a variant of the double-bracket iterations."""
     
@@ -23,29 +25,67 @@ class DoubleBracketDiagonalAssociationType(Enum):
     optimization = auto()
     """Perform optimization to find best diagonal operator""" 
 
-class DiagonalAssociation:
 
-        def __init__( name = None,
-        mode_diagonal_association: DoubleBracketDiagonalAssociationType = DoubleBracketDiagonalAssociationType.dephasing,
-        mode_evolution_oracle: EvolutionOracleType = EvolutionOracleType.text_strings
-    ):
-        self.name = Name
-        self.mode_diagonal_association = mode_diagonal_association  
-        self.mode_evolution_oracle = mode_evolution_oracle
+class EvolutionOracleType(Enum):  
+    text_strings = auto()
+    """If you only want to get a sequence of names of the oracle"""
+
+    numerical = auto()
+    """If you will work with exp(is_k J_k) as a numerical matrix"""
+
+    hamiltonian_simulation = auto()
+    """If you will use SymbolicHamiltonian"""
+
+
+class EvolutionOracle:
+    def __init__( h_generator: AbstractHamiltonian = None, 
+            name = None,
+            mode_evolution_oracle: EvolutionOracleType = EvolutionOracleType.text_strings ):
+       if mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation and if type(h_generator) is not SymbolicHamiltonian:
+            raise_error(TypeError, "If the evolution oracle mode will be to make Trotter-Suzuki decompositions then you must use the SymbolicHamiltonian generator")
+
+       self.h = h_generator
+       self.mode_evolution_oracle = mode_evolution_oracle
+       self.name = name
+
+    def __call__(self, t_duration: double = None):
+        """ Returns either the name or the circuit """
+        if t_duration is None:
+            return self.name
+        else:
+            return self.circuit( t_duration = t_duration )
+        
+    def circuit(self, t_duration: double = None):
+
+        if self.mode_evolution_oracle is EvolutionOracleType.text_strings:
+            return self.name + str(t_duration)
+        elif self.mode_evolution_oracle is EvolutionOracleType.numerical:
+            raise_error(NotImplementedError, "The following should add a big single gate and return a circuit")
+            return qibo.Circuit.add_custom_gate(self.h.exp(t_duration))
+        elif self.mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation:
+            return self.h.circuit(t_duration)
+        else:
+            raise_error(ValueError,
+                    f"You are using an EvolutionOracle type which is not yet supported.")
     @property
     def name(self):
         return self.name
 
-class EvolutionHamiltonian:
-    def __init__(name: String = None, mode_evolution_oracle: EvolutionOracleType):
-        self.name = name
-    def queryEvolution(self, t_duration):
-        return 0
-    @property
-    def name(self):
-        return self.name
-
-class DiagonalAssociationDephasing(DiagonalAssociation):
+#class DiagonalAssociation(EvolutionOracle):
+#
+#    def __init__( h_generator: AbstractHamiltonian = None, 
+#            name = None,
+#            mode_diagonal_association: DoubleBracketDiagonalAssociationType = DoubleBracketDiagonalAssociationType.dephasing,
+#            mode_evolution_oracle: EvolutionOracleType = EvolutionOracleType.text_strings
+#    ):        
+#        self.name = name
+#        self.mode_diagonal_association = mode_diagonal_association  
+#        self.mode_evolution_oracle = mode_evolution_oracle
+#    @property
+#    def name(self):
+#        return self.name
+#
+class DiagonalAssociationDephasing(EvolutionOracle):
 
         def __init__(
         self,
@@ -65,14 +105,14 @@ class DiagonalAssociationDephasing(DiagonalAssociation):
                 return J_input.h.diag()
             else:
                 return J_input.diag().exp(t_duration) 
-        if mode_evolution_oracle is EvolutionOracleType.TrotterSuzuki:
+        if mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation:
             if t_duration is None:
                 #iterate over all Z ops
                 return sum Z @ J_input @ Z
             else:
                 return sum Z @ J_input.circuit(t_duration) @Z
 
-class DiagonalAssociationFromList(DiagonalAssociation):
+class DiagonalAssociationFromList(EvolutionOracle):
 
     def __init__(
             self,
@@ -94,13 +134,13 @@ class DiagonalAssociationFromList(DiagonalAssociation):
                 return d_k_list[k_step_number]
             else:
                 return  d_k_list[k_step_number].exp(t_duration)
-        if mode_evolution_oracle is EvolutionOracleType.TrotterSuzuki:
+        if mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation:
             if t_duration is None:
-                raise_error(ValueError, f"In the TrotterSuzuki mode you need to work with evolution operators so please specify a time.")
+                raise_error(ValueError, f"In the hamiltonian_simulation mode you need to work with evolution operators so please specify a time.")
             else:
                 return d_k_list[k_step_number.circuit(t_duration)
 
-class DiagonalAssociationFromOptimization(DiagonalAssociation):
+class DiagonalAssociationFromOptimization(EvolutionOracle):
 
     def __init__(
     self,
@@ -123,91 +163,18 @@ class DiagonalAssociationFromOptimization(DiagonalAssociation):
             else:
                 raise_error(TypeError, "Not implemented")
                 return 0
-        if self.mode_evolution_oracle is EvolutionOracleType.TrotterSuzuki:
+        if self.mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation:
             if t_duration is None:
-                raise_error(ValueError, f"In the TrotterSuzuki mode you need to work with evolution operators so please specify a time.")
+                raise_error(ValueError, f"In the hamiltonian_simulation mode you need to work with evolution operators so please specify a time.")
             else:
                 raise_error(TypeError, "Not implemented")
                 return sum Z @ J_input.circuit(t_duration) @Z
 
 
 
-class DoubleBracketRotationType(Enum):    
-    #The dbr types below need a diagonal input matrix $\hat D_k$   :
-    
-    single_commutator = auto()
-    """Use single commutator."""
-    
-    group_commutator = auto()
-    """Use group commutator approximation"""
-    
-    group_commutator_reduced = auto()
-    """Use group commutator approximation with a reduction using symmetry
-    
-    """  
-   
-   ## Reserving for later development
-    group_commutator_imperfect = auto()
-    """Use group commutator approximation"""
-        
-    group_commutator_reduced_imperfect = auto()
-    """Use group commutator approximation: 
-    symmetry of the Hamiltonian implies that with perfect reversion of the input evolution the first order needs less queries.
-    We extrapolate that symmetry to the imperfect reversal.
-    Note that while may not be performing a similarity operation on the generator of the double bracket iteration, 
-    the unfolded operation applied to a state vector will still be unitary:
-    
-    """
 
-class EvolutionOracleType(Enum):  
-    text_strings = auto()
-    """If you only want to get a sequence of names of the oracle"""
+### @TODO discuss with others if its not better to formulate it like this
 
-    numerical = auto()
-    """If you will work with exp(is_k J_k) as a numerical matrix"""
-
-    TrotterSuzuki = auto()
-    """If you will use SymbolicHamiltonian"""
-
-class EvolutionOracle:
-    def __init__( J: AbstractHamiltonian = None, 
-            name = None,
-            mode_evolution_oracle: EvolutionOracleType = EvolutionOracleType.text_strings ):
-       self.h = h
-       self.mode_evolution_oracle = mode_evolution_oracle
-       self.name = name
-
-    def __call__(self, t_duration: double = None, d: np.array = None):
-        """ Returns either the name or the circuit """
-        if t is None:
-            return self.name
-        else:
-            return self.circuit( t_duration = t_duration )
-        
-    def circuit(self, t_duration: double = None):
-
-        if self.mode_evolution_oracle is EvolutionOracleType.text_strings:
-            return self.name + str(t_duration)
-        elif self.mode_evolution_oracle is EvolutionOracleType.SymbolicHamiltonian:
-            return self.h.circuit(t_duration)
-        else:
-            raise_error(ValueError,
-                    f"You are using an EvolutionOracle type which is not yet supported.")
-    @property
-    def name(self, ):
-        return None
-
-    def circuit_sequence(self, k_step_number: int = None):
-       EvolutionOracleDiagonalInput =  EvolutionOracle( 
-               name = "DiagonalInput",
-               mode_evolution_oracle = self.mode_evolution_oracle)
-       EvolutionOracleInputHamiltonian = EvolutionOracle( name = "InputHamiltonian" )
-
-        if mode_dbr = DoubleBracketRotationType.group_commutator_reduced
-            return [
-                    EvolutionOracleDiagonalInput(s_step, d),
-                    EvolutionOracleInputHamiltonian(s_step),
-                    EvolutionOracleDiagonalInput(s_step,d) ]
 
 
 
