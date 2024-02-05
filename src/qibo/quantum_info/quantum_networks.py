@@ -1,4 +1,4 @@
-"""Module defining the QuantumNetwork class and adjacent functions."""
+"""Module defining the `QuantumNetwork` class and adjacent functions."""
 
 import re
 from functools import reduce
@@ -12,7 +12,19 @@ from qibo.config import raise_error
 
 
 class QuantumNetwork:
-    """Quantum network object that holds a Choi operator as a tensor.
+    """ Quantum network that unifies the representation of quantum states, channels,
+    observables, and higher-order quantum operators [1]_. The class stores the Choi operator of
+    the quantum network as a tensor, which is an unique representation of the quantum network.
+
+    A minimum quantum network is a quantum channel, which is a quantum network of the form
+    `J[n -> m]`, where `n` is the dimension of the input system and `m` is the dimension of the
+    output system. A quantum state is a quantum network of the form `J[1 -> n]`, such that the
+    input system is trivial. An observable is a quantum network of the form `J[n -> 1]`, such that
+    the output system is trivial.
+
+    A quantum network may contain multipy input systems and output systems. For example, a
+    "quantum comb" is a quantum network of the form `J[n', n -> m, m']`, which convert a quantum
+    channel of the form `J[n -> m]` to a quantum channel of the form `J[n' -> m']`.
 
     Args:
         matrix (ndarray): input Choi operator.
@@ -21,11 +33,15 @@ class QuantumNetwork:
             Choi operator. If ``None``, defaults to
             ``(False,True,False,True,...)``, where ``len(system_output)=len(partition)``.
             Defaults to ``None``.
-        pure (bool, optional): ``True`` when ``matrix`` is a rank-:math:`1` operator,
-            ``False`` otherwise. Defaults to ``False``.
+        pure (bool, optional): ``True`` when ``matrix`` is a "pure" representation (e.g. a pure
+            state, a unitary operator, etc.), ``False`` otherwise. Defaults to ``False``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used in
             calculations. If ``None``, defaults to :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
+
+    References:
+        1. G. Chiribella *et al.*, *Theoretical framework for quantum networks.*
+        `Physical Review A 80.2 (2009): 022339 <https://journals.aps.org/pra/abstract/10.1103/PhysRevA.80.022339>`.
     """
 
     def __init__(
@@ -426,6 +442,11 @@ class QuantumNetwork:
     def __mul__(self, number: Union[float, int]):
         """Returns quantum network with its Choi operator multiplied by a scalar.
 
+        If the quantum network is pure and ``number > 0.0``, the method returns a pure quantum
+        network with its Choi operator multiplied by the square root of ``number``.
+        This is equivelant to multiplying `self.to_full()` by the ``number``.
+        Otherwise, this method will return a full quantum network.
+
         Args:
             number (float or int): scalar to multiply the Choi operator of the network with.
 
@@ -464,6 +485,11 @@ class QuantumNetwork:
 
     def __truediv__(self, number: Union[float, int]):
         """Returns quantum network with its Choi operator divided by a scalar.
+
+        If the quantum network is pure and ``number > 0.0``, the method returns a pure quantum
+        network with its Choi operator divided by the square root of ``number``.
+        This is equivelant to dividing `self.to_full()` by the ``number``.
+        Otherwise, this method will return a full quantum network.
 
         Args:
             number (float or int): scalar to divide the Choi operator of the network with.
