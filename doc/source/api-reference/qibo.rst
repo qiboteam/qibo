@@ -300,8 +300,8 @@ For instance, the following two circuit generations are equivalent:
 
 
 .. image:: ../_static/phase_encoder.png
-   :width: 1164px
-   :height: 670px
+   :width: 2000px
+   :height: 2329px
    :scale: 30 %
    :align: center
 
