@@ -385,8 +385,8 @@ class Gate:
             f"Basis rotation is not implemented for {self.__class__.__name__}",
         )
 
-    def apply(self, backend, state, nqubits):
-        return backend.apply_gate(self, state, nqubits)
+    def apply(self, backend, state, nqubits, batch=False):
+        return backend.apply_gate(self, state, nqubits, batch)
 
     def apply_density_matrix(self, backend, state, nqubits):
         return backend.apply_gate_density_matrix(self, state, nqubits)

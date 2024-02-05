@@ -160,32 +160,38 @@ class NumpyBackend(Backend):
         part2 = self.np.concatenate([zeros, matrix], axis=0)
         return self.np.concatenate([part1, part2], axis=1)
 
-    def apply_gate(self, gate, state, nqubits):
+    def apply_gate(self, gate, state, nqubits, batch=False):
         state = self.cast(state)
-        state = self.np.reshape(state, nqubits * (2,))
+        shape = (state.shape[0],) if batch else ()
+        state = self.np.reshape(state, shape + nqubits * (2,))
         matrix = gate.matrix(self)
         if gate.is_controlled_by:
             matrix = self.np.reshape(matrix, 2 * len(gate.target_qubits) * (2,))
             ncontrol = len(gate.control_qubits)
             nactive = nqubits - ncontrol
-            order, targets = einsum_utils.control_order(gate, nqubits)
+            order, targets = einsum_utils.control_order(gate, nqubits, batch)
             state = self.np.transpose(state, order)
             # Apply `einsum` only to the part of the state where all controls
             # are active. This should be `state[-1]`
-            state = self.np.reshape(state, (2**ncontrol,) + nactive * (2,))
-            opstring = einsum_utils.apply_gate_string(targets, nactive)
-            updates = self.np.einsum(opstring, state[-1], matrix)
+            state = self.np.reshape(state, shape + (2**ncontrol,) + nactive * (2,))
+            opstring = einsum_utils.apply_gate_string(targets, nactive, batch)
+            tmp_state = state[:, -1] if batch else state[-1]
+            updates = self.np.einsum(opstring, tmp_state, matrix)
             # Concatenate the updated part of the state `updates` with the
             # part of of the state that remained unaffected `state[:-1]`.
-            state = self.np.concatenate([state[:-1], updates[self.np.newaxis]], axis=0)
-            state = self.np.reshape(state, nqubits * (2,))
+            tmp_state = state[:, :-1] if batch else state[:-1]
+            state = self.np.concatenate(
+                [tmp_state, updates[self.np.newaxis]], axis=0 + int(batch)
+            )
+            state = self.np.reshape(state, shape + nqubits * (2,))
             # Put qubit indices back to their proper places
             state = self.np.transpose(state, einsum_utils.reverse_order(order))
         else:
             matrix = self.np.reshape(matrix, 2 * len(gate.qubits) * (2,))
-            opstring = einsum_utils.apply_gate_string(gate.qubits, nqubits)
+            opstring = einsum_utils.apply_gate_string(gate.qubits, nqubits, batch)
             state = self.np.einsum(opstring, state, matrix)
-        return self.np.reshape(state, (2**nqubits,))
+        shape = (state.shape[0], 1) if batch else ()
+        return self.np.reshape(state, shape + (2**nqubits,))
 
     def apply_gate_density_matrix(self, gate, state, nqubits):
         state = self.cast(state)
@@ -417,9 +423,10 @@ class NumpyBackend(Backend):
                 else:
                     # cast to proper complex type
                     state = self.cast(initial_state)
+                    is_batched = len(state.shape) == 3
 
                 for gate in circuit.queue:
-                    state = gate.apply(self, state, nqubits)
+                    state = gate.apply(self, state, nqubits, is_batched)
 
             if circuit.has_unitary_channel:
                 # here we necessarily have `density_matrix=True`, otherwise
