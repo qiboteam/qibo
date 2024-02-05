@@ -42,7 +42,7 @@ class QuantumNetwork:
         self.partition = partition
         self.system_output = system_output
         self._pure = pure
-        self._backend = backend
+        self._backend = backend if backend is not None else GlobalBackend()
         self.dims = reduce(mul, self.partition)
 
         self._set_tensor_and_parameters()
@@ -211,7 +211,7 @@ class QuantumNetwork:
         return float(norm) <= precision_tol
 
     def positive_semidefinite(self, precision_tol: float = 1e-8):
-        """Returns bool indicating if Choi operator :math:`\\mathcal{E}` of the networn is positive-semidefinite.
+        """Returns bool indicating if Choi operator :math:`\\mathcal{E}` of the network is positive-semidefinite.
 
         Args:
             precision_tol (float, optional): threshold value used to check if eigenvalues of
@@ -478,20 +478,12 @@ class QuantumNetwork:
                 "It is not possible to divide a ``QuantumNetwork`` by a non-scalar.",
             )
 
-        if self.pure() and number > 0.0:
-            return QuantumNetwork(
-                self.matrix(backend=self._backend) / np.sqrt(number),
-                partition=self.partition,
-                system_output=self.system_output,
-                pure=True,
-                backend=self._backend,
-            )
-
+        number = np.sqrt(number) if self.pure() and number > 0.0 else number
         return QuantumNetwork(
             self.matrix(backend=self._backend) / number,
             partition=self.partition,
             system_output=self.system_output,
-            pure=False,
+            pure=self.pure(),
             backend=self._backend,
         )
 
