@@ -11,41 +11,50 @@ from qibo.hamiltonians import Hamiltonian
 class DoubleBracketDiagonalAssociationType(Enum):
     """Define the evolution generator of a variant of the double-bracket iterations."""
     
-    canonical = auto()
-    """Use canonical commutator."""
+    dephasing = auto()
+    """Use dephasing for a canonical bracket."""
     
-    custom = auto()
+    prescribed = auto()
     """Use some input diagonal matrix for each step: general diagonalization DBI"""
 
-    custom_constant = auto()
+    fixed = auto()
     """Use same input diagonal matrix in each step: BHMM DBI""" 
+
+    optimization = auto()
+    """Perform optimization to find best diagonal operator""" 
 
 class DiagonalAssociation:
 
-        def __init__(
-        self,
-        k_step_number: list = None,
-        s_step_duration: double = None,
-        d: EvolutionHamiltonian,
-        mode: DoubleBracketDiagonalAssociationType = DoubleBracketDiagonalAssociationType.canonical,
-        mode_evolution_oracle: EvolutionOracleType = EvolutionOracleType.nameString
+        def __init__( name = None,
+        mode_diagonal_association: DoubleBracketDiagonalAssociationType = DoubleBracketDiagonalAssociationType.dephasing,
+        mode_evolution_oracle: EvolutionOracleType = EvolutionOracleType.text_strings
     ):
-            z=1
+        self.name = Name
+        self.mode_diagonal_association = mode_diagonal_association  
+        self.mode_evolution_oracle = mode_evolution_oracle
+    @property
+    def name(self):
+        return self.name
+
 class EvolutionHamiltonian:
-    def __init__(mode_evolution_oracle: EvolutionOracleType
+    def __init__(name: String = None, mode_evolution_oracle: EvolutionOracleType):
+        self.name = name
     def queryEvolution(self, t_duration):
         return 0
+    @property
+    def name(self):
+        return self.name
 
 class DiagonalAssociationDephasing(DiagonalAssociation):
 
         def __init__(
         self,
-        H: AbstractHamiltonian,
-        mode: DoubleBracketDiagonalAssociationType = DoubleBracketDiagonalAssociationType.canonical,
-        mode_evolution_oracle: EvolutionOracleType = EvolutionOracleType.nameString
+        mode_evolution_oracle: EvolutionOracleType = EvolutionOracleType.text_strings
     ):
+            super().__init__(mode_diagonal_association = DoubleBracketDiagonalAssociationType.dephasing, mode_evolution_oracle = mode_evolution_oracle)
+
         def __call__(self, J_input: EvolutionHamiltonian, k_step_number: list = None, t_duration = None ):
-        if mode_evolution_oracle is EvolutionOracleType.nameString:
+        if mode_evolution_oracle is EvolutionOracleType.text_strings:
             if t_duration is None:
                 #iterate over all Z ops
                 return '\Delta(' + J_input.name + ')'
@@ -68,17 +77,14 @@ class DiagonalAssociationFromList(DiagonalAssociation):
     def __init__(
             self,
             d_k_list: list = None,
-            mode_diagonal_association: DoubleBracketDiagonalAssociationType = None,
-            mode_evolution_oracle: EvolutionOracleType = EvolutionOracleType.nameString
+            mode_evolution_oracle: EvolutionOracleType = EvolutionOracleType.text_strings
         ):
-        if mode_diagonal_association is not None:
-            self.mode_diagonal_association = mode_diagonal_association
-        
+        super().__init__(mode_diagonal_association = DoubleBracketDiagonalAssociationType.prescribed, mode_evolution_oracle = mode_evolution_oracle)
         self.d_k_list = d_k_list
 
     def __call__(self, k_step_number: list = None, t_duration = None ):
         
-        if mode_evolution_oracle is EvolutionOracleType.nameString:
+        if mode_evolution_oracle is EvolutionOracleType.text_strings:
             if t_duration is None:
                 return 'D_' + str(k_step_number)
             else:
@@ -100,12 +106,12 @@ class DiagonalAssociationFromOptimization(DiagonalAssociation):
     self,
     loss_function: None,
     mode: DoubleBracketDiagonalAssociationType = DoubleBracketDiagonalAssociationType.canonical,
-    mode_evolution_oracle: EvolutionOracleType = EvolutionOracleType.nameString
+    mode_evolution_oracle: EvolutionOracleType = EvolutionOracleType.text_strings
 ):
         self.loss = loss_function
 
     def __call__(self, h: AbstractHamiltonian, k_step_number: list = None, t_duration = None ):
-        if self.mode_evolution_oracle is EvolutionOracleType.nameString:
+        if self.mode_evolution_oracle is EvolutionOracleType.text_strings:
             if t_duration is None:
                 return 'Optimize $\mu$ D_' + str(k_step_number)
             else:
@@ -154,7 +160,7 @@ class DoubleBracketRotationType(Enum):
     """
 
 class EvolutionOracleType(Enum):  
-    nameString = auto()
+    text_strings = auto()
     """If you only want to get a sequence of names of the oracle"""
 
     numerical = auto()
@@ -166,21 +172,22 @@ class EvolutionOracleType(Enum):
 class EvolutionOracle:
     def __init__( J: AbstractHamiltonian = None, 
             name = None,
-            mode_evolution_oracle: EvolutionOracleType = EvolutionOracleType.nameString ):
+            mode_evolution_oracle: EvolutionOracleType = EvolutionOracleType.text_strings ):
        self.h = h
        self.mode_evolution_oracle = mode_evolution_oracle
        self.name = name
+
     def __call__(self, t_duration: double = None, d: np.array = None):
         """ Returns either the name or the circuit """
         if t is None:
             return self.name
         else:
-            return self.get_circuit( t_duration = t_duration, d = d )
+            return self.circuit( t_duration = t_duration )
         
-    def get_circuit(self, t_duration: double = None):
+    def circuit(self, t_duration: double = None):
 
-        if self.mode_evolution_oracle is EvolutionOracleType.nameString:
-            return self(t_duration)
+        if self.mode_evolution_oracle is EvolutionOracleType.text_strings:
+            return self.name + str(t_duration)
         elif self.mode_evolution_oracle is EvolutionOracleType.SymbolicHamiltonian:
             return self.h.circuit(t_duration)
         else:
@@ -196,37 +203,28 @@ class EvolutionOracle:
                mode_evolution_oracle = self.mode_evolution_oracle)
        EvolutionOracleInputHamiltonian = EvolutionOracle( name = "InputHamiltonian" )
 
-        if mode_DBR = DoubleBracketRotationType.group_commutator_reduced
+        if mode_dbr = DoubleBracketRotationType.group_commutator_reduced
             return [
                     EvolutionOracleDiagonalInput(s_step, d),
                     EvolutionOracleInputHamiltonian(s_step),
                     EvolutionOracleDiagonalInput(s_step,d) ]
 
 
-class DoubleBracketIteration:
-    def __init__(
-        self,
-        hamiltonian: AbstractHamiltonian,
-        mode: DoubleBracketDiagonalAssociationType = DoubleBracketDiagonalAssociationType.canonical,
-    ):
-        self.h = hamiltonian
-        self.h0 = deepcopy(self.h)
-        self.mode = mode
 
 class doubleBracketStep:
     def __init__(
     self,
     s_step: double = None,
     d_Z: DiagonalAssociation = None,
-    mode_DBR: DoubleBracketRotationType = DoubleBracketRotationType.single_commutator,
+    mode_dbr: DoubleBracketRotationType = DoubleBracketRotationType.single_commutator,
     mode_evolutiom_reversal: EvolutionOracleInputHamiltonianReversalType = None,
-    mode_evolution_oracle: EvolutionOracleType = EvolutionOracleType.nameString
+    mode_evolution_oracle: EvolutionOracleType = EvolutionOracleType.text_strings
 ):      
         self.s_step = s_step
         self.diagonal_association = d_Z
-        self.mode_dbr = mode_DBR #@TODO: this should allow to request gradient search or other operator optimization
+        self.mode_dbr = mode_dbr #@TODO: this should allow to request gradient search or other operator optimization
         self.mode_gci_reversal = mode_GCI_reversal
-        self.mode_dbr = mode_DBR 
+        self.mode_dbr = mode_dbr 
         self.mode_evolution_oracle = mode_evolution_oracle
 
     def loss(self, step: float, look_ahead: int = 1):
