@@ -273,6 +273,42 @@ For instance, the following two circuit generations are equivalent:
 .. autofunction:: qibo.models.encodings.comp_basis_encoder
 
 
+Phase Encoder
+"""""""""""""
+
+Encodes data of length :math:`n` into the phases of :math:`n` qubits.
+
+
+For instance, the following two circuit generations are equivalent:
+
+.. testsetup::
+
+    import numpy as np
+
+    from qibo import Circuit, gates
+    from qibo.models.encodings import phase_encoder
+
+.. testcode::
+
+    nqubits = 3
+    phases = np.random.rand(nqubits)
+
+    circuit_1 = phase_encoder(phases, rotation="RX")
+
+    circuit_2 = Circuit(3)
+    circuit_2.add(gates.RX(qubit, phases[qubit]) for qubit in range(nqubits))
+
+
+.. image:: ../_static/phase_encoder.png
+   :width: 1164px
+   :height: 670px
+   :scale: 30 %
+   :align: center
+
+
+.. autofunction:: qibo.models.encodings.phase_encoder
+
+
 Unary Encoder
 """""""""""""
 
