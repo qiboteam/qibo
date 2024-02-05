@@ -152,7 +152,7 @@ def select_best_dbr_generator(
     return dbi_eval, idx_max_loss, step_optimal, flip
 
 
-def CS_angle_sgn(dbi_object, d):
+def cs_angle_sgn(dbi_object, d):
     """Calculates the sign of Cauchy-Schwarz Angle $$<W(Z), W(canonical)>_{HS}$$"""
     norm = np.trace(
         np.dot(
