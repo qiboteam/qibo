@@ -667,9 +667,8 @@ class NumpyBackend(Backend):
         return self.np.array(shots, dtype=shots[0].dtype)
 
     def samples_to_binary(self, samples, nqubits, batch=False):
-        qrange = self.np.arange(nqubits - 1, -1, -1, dtype="int32") + int(batch)
+        qrange = self.np.arange(nqubits - 1, -1, -1, dtype="int32")  # + int(batch)
         if batch:
-            qrange = self.np.concatenate(([0], qrange))
             tmp_samples = samples[:, :, self.np.newaxis]
         else:
             tmp_samples = samples[:, self.np.newaxis]
