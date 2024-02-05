@@ -451,7 +451,9 @@ class NumpyBackend(Backend):
                     )
                     return circuit._final_state
                 else:
-                    circuit._final_state = QuantumState(state, backend=self)
+                    circuit._final_state = QuantumState(
+                        state, backend=self, batch=is_batched
+                    )
                     return circuit._final_state
 
         except self.oom_error:
@@ -650,13 +652,8 @@ class NumpyBackend(Backend):
 
     def sample_shots(self, probabilities, nshots, batch=False):
         if batch:
-            return self.np.vstack(
-                [
-                    self.np.random.choice(
-                        range(probabilities.shape[1]), size=nshots, p=probabilities[i]
-                    )
-                    for i in range(probabilities.shape[0])
-                ]
+            return self.np.random.randint(
+                0, probabilities.shape[1], size=(probabilities.shape[0], nshots)
             )
         else:
             return self.np.random.choice(

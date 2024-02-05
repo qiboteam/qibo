@@ -199,22 +199,6 @@ class TensorflowBackend(NumpyBackend):
 
         self.tensor_types = (np.ndarray, tf.Tensor, tf.Variable)
 
-    # TO TEST
-    def VQC_forward(self, vqc, inputs):
-        u = vqc.unitary()
-        u = tf.vstack(repeat(u, inputs.shape[0]))
-        return tf.einsum("ijl,ilk->ijk", u, inputs)
-
-    # TO TEST
-    def VQC_backward(self, vqc, loss, tape):
-        return tape.gradient(loss, vqc.get_parameters())
-
-    # TO DO
-    def VQC_training():
-        VQC_forward()
-        with tf.GradientTape as tape:
-            grad = VQC_backward(..., tape)
-
     def set_device(self, device):  # pragma: no cover
         self.device = device
 

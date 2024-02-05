@@ -146,3 +146,31 @@ def test_initial_state_error(backend):
 
     with pytest.raises(ValueError):
         backend.execute_circuit(c, c1)
+
+
+@pytest.mark.parametrize("measurements", [True, False])
+def test_batch_execution(backend, measurements):
+    from qibo.quantum_info import random_clifford
+
+    nqubits = 3
+    batchsize = 5
+    initial_states = backend.np.random.rand(batchsize, 2**nqubits)
+    initial_states /= backend.np.sqrt((initial_states**2).sum(-1)).reshape(
+        batchsize, -1
+    )
+    initial_states = initial_states[:, backend.np.newaxis, :]
+    c = random_clifford(nqubits, backend=backend)
+    if measurements:
+        c.add(gates.M(0, 2))
+    batched_res = c(initial_states)
+    final_states, probs = [], []
+    for state in initial_states:
+        r = c(state.ravel())
+        final_states.append(r.state())
+        probs.append(r.probabilities())
+
+    final_states = backend.np.vstack(final_states).reshape(batchsize, 1, -1)
+    probs = backend.np.vstack(probs)
+
+    backend.assert_allclose(final_states, batched_res.state())
+    backend.assert_allclose(probs, batched_res.probabilities())
