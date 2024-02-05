@@ -270,6 +270,13 @@ For instance, the following two circuit generations are equivalent:
     circuit_2.add(gates.X(2))
 
 
+.. image:: ../_static/comp_basis_encoder.png
+   :width: 3400px
+   :height: 2000px
+   :scale: 25 %
+   :align: center
+
+
 .. autofunction:: qibo.models.encodings.comp_basis_encoder
 
 
