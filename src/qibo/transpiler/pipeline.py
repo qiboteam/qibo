@@ -206,9 +206,9 @@ class Passes:
         # preprocessing
         default_passes.append(Preprocessing(connectivity=self.connectivity))
         # default placer pass
-        default_passes.append(StarConnectivityPlacer(connectivity=self.connectivity))
+        default_passes.append(StarConnectivityPlacer())
         # default router pass
-        default_passes.append(StarConnectivityRouter(connectivity=self.connectivity))
+        default_passes.append(StarConnectivityRouter())
         # default unroller pass
         default_passes.append(Unroller(native_gates=self.native_gates))
 
