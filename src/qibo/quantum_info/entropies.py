@@ -172,7 +172,7 @@ def classical_renyi_entropy(
     Another special case is the limit :math:`\\alpha \\to 0`, where the function is
     reduced to :math:`\\log\\left(|\\mathbf{p}|\\right)`, with :math:`|\\mathbf{p}|`
     being the support of :math:`\\mathbf{p}`.
-    This is knows as the `Hartley entropy <https://en.wikipedia.org/wiki/Hartley_function>`_
+    This is known as the `Hartley entropy <https://en.wikipedia.org/wiki/Hartley_function>`_
     (also known as *Hartley function* or *max-entropy*).
 
     In the limit :math:`\\alpha \\to \\infty`, the function reduces to
@@ -610,7 +610,7 @@ def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None
     Another special case is the limit :math:`\\alpha \\to 0`, where the function is
     reduced to :math:`\\log\\left(d\\right)`, with :math:`d = 2^{n}`
     being the dimension of the Hilbert space in which ``state`` :math:`\\rho` lives in.
-    This is knows as the `Hartley entropy <https://en.wikipedia.org/wiki/Hartley_function>`_
+    This is known as the `Hartley entropy <https://en.wikipedia.org/wiki/Hartley_function>`_
     (also known as *Hartley function* or *max-entropy*).
 
     In the limit :math:`\\alpha \\to \\infty`, the function reduces to
