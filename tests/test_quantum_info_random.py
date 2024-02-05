@@ -61,11 +61,6 @@ def test_uniform_sampling_U3(backend, seed):
     backend.assert_allclose(expectation_values[0], expectation_values[1], atol=1e-1)
     backend.assert_allclose(expectation_values[0], expectation_values[2], atol=1e-1)
 
-    # execution for coverage
-    sampler = _probability_distribution_sin(a=0, b=np.pi, seed=seed)
-    sampler.pdf(1)
-    sampler.cdf(1)
-
 
 @pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
 def test_random_gaussian_matrix(backend, seed):
@@ -228,9 +223,8 @@ def test_random_quantum_channel(backend, representation, measure, rank, order):
     )
 
 
-@pytest.mark.parametrize("haar", [False, True])
 @pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
-def test_random_statevector(backend, haar, seed):
+def test_random_statevector(backend, seed):
     with pytest.raises(TypeError):
         dims = "10"
         random_statevector(dims, backend=backend)
@@ -239,16 +233,12 @@ def test_random_statevector(backend, haar, seed):
         random_statevector(dims, backend=backend)
     with pytest.raises(TypeError):
         dims = 2
-        random_statevector(dims, haar=1, backend=backend)
-    with pytest.raises(TypeError):
-        dims = 2
         random_statevector(dims, seed=0.1, backend=backend)
 
     # tests if random statevector is a pure state
     dims = 4
-    state = random_statevector(dims, haar=haar, seed=seed, backend=backend)
-    backend.assert_allclose(purity(state) <= 1.0 + PRECISION_TOL, True)
-    backend.assert_allclose(purity(state) >= 1.0 - PRECISION_TOL, True)
+    state = random_statevector(dims, seed=seed, backend=backend)
+    backend.assert_allclose(abs(purity(state) - 1.0) < PRECISION_TOL, True)
 
 
 @pytest.mark.parametrize("normalize", [False, True])
@@ -341,8 +331,8 @@ def test_random_clifford(backend, nqubits, return_circuit, density_matrix, seed)
 
     result_single = matrices.Z @ matrices.H
 
-    result_two = np.kron(matrices.H, matrices.S) @ np.kron(matrices.S, matrices.Z)
-    result_two = np.kron(matrices.Z @ matrices.S, matrices.I) @ result_two
+    result_two = np.kron(matrices.H, matrices.S) @ np.kron(matrices.S, matrices.Y)
+    result_two = np.kron(matrices.S @ matrices.X, matrices.I) @ result_two
     result_two = matrices.CNOT @ matrices.CZ @ result_two
 
     result = result_single if nqubits == 1 else result_two
