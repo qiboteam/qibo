@@ -648,17 +648,32 @@ class NumpyBackend(Backend):
     def set_seed(self, seed):
         self.np.random.seed(seed)
 
-    def sample_shots(self, probabilities, nshots):
-        return self.np.random.choice(
-            range(len(probabilities)), size=nshots, p=probabilities
-        )
+    def sample_shots(self, probabilities, nshots, batch=False):
+        if batch:
+            return self.np.vstack(
+                [
+                    self.np.random.choice(
+                        range(probabilities.shape[1]), size=nshots, p=probabilities[i]
+                    )
+                    for i in range(probabilities.shape[0])
+                ]
+            )
+        else:
+            return self.np.random.choice(
+                range(len(probabilities)), size=nshots, p=probabilities
+            )
 
     def aggregate_shots(self, shots):
         return self.np.array(shots, dtype=shots[0].dtype)
 
-    def samples_to_binary(self, samples, nqubits):
-        qrange = self.np.arange(nqubits - 1, -1, -1, dtype="int32")
-        return self.np.mod(self.np.right_shift(samples[:, self.np.newaxis], qrange), 2)
+    def samples_to_binary(self, samples, nqubits, batch=False):
+        qrange = self.np.arange(nqubits - 1, -1, -1, dtype="int32") + int(batch)
+        if batch:
+            qrange = self.np.concatenate(([0], qrange))
+            tmp_samples = samples[:, :, self.np.newaxis]
+        else:
+            tmp_samples = samples[:, self.np.newaxis]
+        return self.np.mod(self.np.right_shift(tmp_samples, qrange), 2)
 
     def samples_to_decimal(self, samples, nqubits):
         qrange = self.np.arange(nqubits - 1, -1, -1, dtype="int32")

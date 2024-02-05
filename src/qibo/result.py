@@ -176,6 +176,7 @@ class MeasurementOutcomes:
         probabilities=None,
         samples: Optional[int] = None,
         nshots: int = 1000,
+        batch=False,
     ):
         self.backend = backend
         self.measurements = measurements
@@ -186,6 +187,7 @@ class MeasurementOutcomes:
         self._samples = samples
         self._frequencies = None
         self._repeated_execution_frequencies = None
+        self.is_batched = batch
 
         if samples is not None:
             for m in measurements:
@@ -343,8 +345,12 @@ class MeasurementOutcomes:
                     np.random.shuffle(samples)
                 else:
                     # generate new samples
-                    samples = self.backend.sample_shots(self._probs, self.nshots)
-                samples = self.backend.samples_to_binary(samples, len(qubits))
+                    samples = self.backend.sample_shots(
+                        self._probs, self.nshots, self.is_batched
+                    )
+                samples = self.backend.samples_to_binary(
+                    samples, len(qubits), self.is_batched
+                )
                 if self.measurement_gate.has_bitflip_noise():
                     p0, p1 = self.measurement_gate.bitflip_map
                     bitflip_probabilities = [
@@ -513,6 +519,7 @@ class CircuitResult(QuantumState, MeasurementOutcomes):
             probabilities=probs,
             samples=samples,
             nshots=nshots,
+            batch=batch,
         )
 
     def probabilities(self, qubits: Optional[Union[list, set]] = None):
