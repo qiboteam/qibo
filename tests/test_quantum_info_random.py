@@ -238,8 +238,7 @@ def test_random_statevector(backend, seed):
     # tests if random statevector is a pure state
     dims = 4
     state = random_statevector(dims, seed=seed, backend=backend)
-    backend.assert_allclose(purity(state) <= 1.0 + PRECISION_TOL, True)
-    backend.assert_allclose(purity(state) >= 1.0 - PRECISION_TOL, True)
+    backend.assert_allclose(abs(purity(state) - 1.0) < PRECISION_TOL, True)
 
 
 @pytest.mark.parametrize("normalize", [False, True])
