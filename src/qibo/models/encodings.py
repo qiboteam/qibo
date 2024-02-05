@@ -70,6 +70,47 @@ def comp_basis_encoder(
     return circuit
 
 
+def phase_encoder(data, rotation: str = "RY"):
+    """Creates circuit that performs the phase encoding of ``data``.
+
+    Args:
+        data (ndarray or list): :math:`1`-dimensional array of phases to be loaded.
+        rotation (str, optional): If ``"RX"``, uses :class:`qibo.gates.gates.RX` as rotation.
+            If ``"RY"``, uses :class:`qibo.gates.gates.RY` as rotation.
+            If ``"RZ"``, uses :class:`qibo.gates.gates.RZ` as rotation.
+            Defaults to ``"RY"``.
+
+    Returns:
+        :class:`qibo.models.circuit.Circuit`: circuit that loads ``data`` in phase encoding.
+    """
+    if isinstance(data, list):
+        data = np.array(data)
+
+    if len(data.shape) != 1:
+        raise_error(
+            TypeError,
+            f"``data`` must be a 1-dimensional array, but it has dimensions {data.shape}.",
+        )
+
+    if not isinstance(rotation, str):
+        raise_error(
+            TypeError,
+            f"``rotation`` must be type str, but it is type {type(rotation)}.",
+        )
+
+    if rotation not in ["RX", "RY", "RZ"]:
+        raise_error(ValueError, f"``rotation`` {rotation} not found.")
+
+    nqubits = len(data)
+    gate = getattr(gates, rotation.upper())
+
+    circuit = Circuit(nqubits)
+    circuit.add(gate(qubit, 0.0) for qubit in range(nqubits))
+    circuit.set_parameters(data)
+
+    return circuit
+
+
 def unary_encoder(data, architecture: str = "tree"):
     """Creates circuit that performs the unary encoding of ``data``.
 
@@ -91,7 +132,7 @@ def unary_encoder(data, architecture: str = "tree"):
     :math:`d`.
 
     Args:
-        data (ndarray, optional): :math:`1`-dimensional array of data to be loaded.
+        data (ndarray): :math:`1`-dimensional array of data to be loaded.
         architecture(str, optional): circuit architecture used for the unary loader.
             If ``diagonal``, uses a ladder-like structure.
             If ``tree``, uses a binary-tree-based structure.
@@ -104,6 +145,9 @@ def unary_encoder(data, architecture: str = "tree"):
         1. S. Johri *et al.*, *Nearest Centroid Classiﬁcation on a Trapped Ion Quantum Computer*.
         `arXiv:2012.04145v2 [quant-ph] <https://arxiv.org/abs/2012.04145>`_.
     """
+    if isinstance(data, list):
+        data = np.array(data)
+
     if len(data.shape) != 1:
         raise_error(
             TypeError,
