@@ -169,7 +169,7 @@ def set_threads(nthreads):
     GlobalBackend().set_threads(nthreads)
 
 
-def _check_backend(backend):  # pragma: no cover
+def _check_backend(backend):
     if backend is None:
         return GlobalBackend()
 
