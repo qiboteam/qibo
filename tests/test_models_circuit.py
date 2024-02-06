@@ -93,6 +93,7 @@ def test_circuit_add():
     assert c.ngates == 3
     assert list(c.queue) == [g1, g2, g3]
 
+
 def test_circuit_matmul():
     c = Circuit(2)
     g1, g2, g3 = gates.H(0), gates.H(1), gates.CNOT(0, 1)
@@ -102,7 +103,9 @@ def test_circuit_matmul():
     c1 = c + c
     c2 = c @ c
     import numpy as np
-    assert np.linalg.norm( c1.unitary() - c2.unitary() ) < 1e-10
+
+    assert np.linalg.norm(c1.unitary() - c2.unitary()) < 1e-10
+
 
 def test_circuit_add_errors():
     c = Circuit(2)
