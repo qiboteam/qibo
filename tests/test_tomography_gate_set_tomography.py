@@ -301,7 +301,7 @@ def test_GST_execute_circuit_wrong_qb(nqubits):
 # #################################################################################
 
 
-def test_GST_one_qubit_empty_circuit():
+def test_GST_one_qubit_empty_circuit(backend):
     np.random.seed(42)
     nqubits = 1
     result = execute_GST(
@@ -483,7 +483,7 @@ def test_GST_two_qubit_with_gate_with_invalid_reset_register_string():
         )
 
 
-def test_GST_empty_circuit_with_invalid_qb():
+def test_GST_empty_circuit_with_invalid_qb(backend):
     nqubits = 3
     # Check if ValueError is raised
     with pytest.raises(ValueError, match="nqubits needs to be either 1 or 2"):
@@ -492,7 +492,7 @@ def test_GST_empty_circuit_with_invalid_qb():
         )
 
 
-def test_GST_with_gate_with_invalid_qb():
+def test_GST_with_gate_with_invalid_qb(backend):
     nqubits = 3
     test_gate = gates.CNOT(0, 1)
 
@@ -507,7 +507,7 @@ def test_GST_with_gate_with_invalid_qb():
         )
 
 
-def test_GST_with_gate_with_invalid_qb():
+def test_GST_with_gate_with_invalid_qb(backend):
     nqubits = 2
     test_gate = gates.H(0)
 
@@ -522,7 +522,7 @@ def test_GST_with_gate_with_invalid_qb():
         )
 
 
-def test_GST_one_qubit_empty_circuit_with_noise():
+def test_GST_one_qubit_empty_circuit_with_noise(backend):
     np.random.seed(42)
     lam = 0.5
     depol = NoiseModel()
