@@ -274,6 +274,18 @@ class Circuit:
 
         return newcircuit
 
+    def __matmul__(self, circuit):
+        """Compose circuits.
+        In qibo this is the same as add circuits
+
+        Args:
+            circuit: Circuit to be composed with the current one.
+
+        Returns:
+            The circuit resulting from the composition.
+        """
+        return self + circuit
+
     @property
     def wire_names(self):
         return self._wire_names
