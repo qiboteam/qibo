@@ -112,24 +112,7 @@ def phase_encoder(data, rotation: str = "RY"):
 
 
 def unary_encoder(data, architecture: str = "tree"):
-    """Creates circuit that performs the unary encoding of ``data``.
-
-    Given a classical ``data`` array :math:`\\mathbf{x} \\in \\mathbb{R}^{d}` such that
-
-    .. math::
-        \\mathbf{x} = (x_{1}, x_{2}, \\dots, x_{d}) \\, ,
-
-    this function generate the circuit that prepares the following quantum state
-    :math:`\\ket{\\psi} \\in \\mathcal{H}`:
-
-    .. math::
-        \\ket{\\psi} = \\frac{1}{\\|\\mathbf{x}\\|_{\\textup{HS}}} \\,
-            \\sum_{k=1}^{d} \\, x_{k} \\, \\ket{k} \\, ,
-
-    with :math:`\\mathcal{H} \\cong \\mathbb{C}^{d}` being a :math:`d`-qubit Hilbert space,
-    and :math:`\\|\\cdot\\|_{\\textup{HS}}` being the Hilbert-Schmidt norm.
-    Here, :math:`\\ket{k}` is a unary representation of the number :math:`1` through
-    :math:`d`.
+    """Creates circuit that performs the (deterministic) unary encoding of ``data``.
 
     Args:
         data (ndarray): :math:`1`-dimensional array of data to be loaded.
@@ -140,10 +123,6 @@ def unary_encoder(data, architecture: str = "tree"):
 
     Returns:
         :class:`qibo.models.circuit.Circuit`: circuit that loads ``data`` in unary representation.
-
-    References:
-        1. S. Johri *et al.*, *Nearest Centroid Classiﬁcation on a Trapped Ion Quantum Computer*.
-        `arXiv:2012.04145v2 [quant-ph] <https://arxiv.org/abs/2012.04145>`_.
     """
     if isinstance(data, list):
         data = np.array(data)
@@ -187,26 +166,12 @@ def unary_encoder(data, architecture: str = "tree"):
 def unary_encoder_random_gaussian(nqubits: int, architecture: str = "tree", seed=None):
     """Creates a circuit that performs the unary encoding of a random Gaussian state.
 
-    Given :math:`d` qubits, encodes the quantum state
-    :math:`\\ket{\\psi} \\in \\mathcal{H}` such that
-
-
-    .. math::
-        \\ket{\\psi} = \\frac{1}{\\|\\mathbf{x}\\|_{\\textup{HS}}} \\,
-            \\sum_{k=1}^{d} \\, x_{k} \\, \\ket{k}
-
-    where :math:`x_{k}` are independent Gaussian random variables,
-    :math:`\\mathcal{H} \\cong \\mathbb{C}^{d}` is a :math:`d`-qubit Hilbert space,
-    and :math:`\\|\\cdot\\|_{\\textup{HS}}` being the Hilbert-Schmidt norm.
-    Here, :math:`\\ket{k}` is a unary representation of the number :math:`1` through
-    :math:`d`.
-
-    At depth :math:`h`, the angles :math:`\\theta_{k} \\in [0, 2\\pi]` of the the
+    At depth :math:`h` of the tree architecture, the angles :math:`\\theta_{k} \\in [0, 2\\pi]` of the the
     gates :math:`RBS(\\theta_{k})` are sampled from the following probability density function:
 
     .. math::
-        p_{h}(\\theta) = \\frac{1}{2} \\, \\frac{\\Gamma(2^{h-1})}{\\Gamma^{2}(2^{h-2})}
-            \\abs{\\sin(\\theta) \\, \\cos(\\theta)}^{2^{h-1} - 1} \\, ,
+        p_{h}(\\theta) = \\frac{1}{2} \\, \\frac{\\Gamma(2^{h-1})}{\\Gamma^{2}(2^{h-2})} \\,
+            \\left|\\sin(\\theta) \\, \\cos(\\theta)\\right|^{2^{h-1} - 1} \\, ,
 
     where :math:`\\Gamma(\\cdot)` is the
     `Gamma function <https://en.wikipedia.org/wiki/Gamma_function>`_.
