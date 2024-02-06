@@ -183,7 +183,7 @@ class QuantumCNN:
             Circuit containing the unitaries added to the specified qubits.
         """
 
-        if self.twoqubitansatz == None:
+        if self.twoqubitansatz is None:
             c = Circuit(self.nqubits)
             c += self.one_qubit_unitary(bits[0], symbols[0:3])
             c += self.one_qubit_unitary(bits[1], symbols[3:6])
