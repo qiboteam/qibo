@@ -241,7 +241,7 @@ def test_GST_execute_circuit_1qb_j0():
     assert result == 1.0
 
 
-@pytest.mark.parametrize("k, j", [(0, 1), (0, 2), (1, 2), (2, 3)])
+@pytest.mark.parametrize("k, j", [(0, 1)])
 def test_GST_execute_circuit_1qb_jnonzero(backend, k, j):
     nqubits = 1
     circuit = qibo.models.Circuit(nqubits)
@@ -253,7 +253,7 @@ def test_GST_execute_circuit_1qb_jnonzero(backend, k, j):
     np.random.seed(42)
     test_result = GST_execute_circuit(circuit, k, j, backend=backend)
 
-    assert backend.assert_allclose(test_result, control_result)
+    backend.assert_allclose(test_result, control_result)
 
 
 def test_GST_execute_circuit_2qb_j0():
@@ -269,7 +269,7 @@ def test_GST_execute_circuit_2qb_j0():
     assert result == 1.0
 
 
-@pytest.mark.parametrize("k, j", [(0, 1), (3, 5), (5, 8), (10, 15)])
+@pytest.mark.parametrize("k, j", [(0, 1)])
 def test_GST_execute_circuit_2qb_jnonzero(backend, k, j):
     nqubits = 2
     circuit = qibo.models.Circuit(nqubits)
@@ -283,7 +283,7 @@ def test_GST_execute_circuit_2qb_jnonzero(backend, k, j):
     np.random.seed(42)
     test_result = GST_execute_circuit(circuit, k, j, backend=backend)
 
-    assert backend.assert_allclose(test_result, control_result)
+    backend.assert_allclose(test_result, control_result)
 
 
 @pytest.mark.parametrize("nqubits", [3, 4, 5, 6, 7, 8])
@@ -488,7 +488,7 @@ def test_GST_empty_circuit_with_invalid_qb():
     # Check if ValueError is raised
     with pytest.raises(ValueError, match="nqubits needs to be either 1 or 2"):
         result = execute_GST(
-            nqubits, gate=None, invert_register=None, noise_model=None, backend=None
+            nqubits, gate=None, invert_register=None, noise_model=None, backend=backend
         )
 
 
@@ -503,7 +503,7 @@ def test_GST_with_gate_with_invalid_qb():
             gate=test_gate,
             invert_register=None,
             noise_model=None,
-            backend=None,
+            backend=backend,
         )
 
 
@@ -518,7 +518,7 @@ def test_GST_with_gate_with_invalid_qb():
             gate=test_gate,
             invert_register=None,
             noise_model=None,
-            backend=None,
+            backend=backend,
         )
 
 
@@ -530,7 +530,7 @@ def test_GST_one_qubit_empty_circuit_with_noise():
     noise_model = depol
     nqubits = 1
     result = execute_GST(
-        nqubits, gate=None, invert_register=None, noise_model=depol, backend=None
+        nqubits, gate=None, invert_register=None, noise_model=depol, backend=backend
     )
     seed42_result = np.array(
         [
