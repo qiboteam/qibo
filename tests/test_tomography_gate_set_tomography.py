@@ -337,7 +337,7 @@ def test_GST_two_qubit_empty_circuit(backend):
     np.random.seed(42)
     test_result = execute_GST(nqubits)
 
-    backend.assert_allclose(test_result, control_result, rtol=5e-2, atol=5e-2))
+    backend.assert_allclose(test_result, control_result, rtol=5e-2, atol=5e-2)
 
 
 # def test_GST_one_qubit_with_Hgate():
@@ -362,7 +362,7 @@ def test_GST_one_qubit_with_Hgate(backend):
     test_gate = gates.H(0)
     control_result = execute_GST(nqubits, gate=test_gate)
     test_result = execute_GST(nqubits, gate=test_gate)
-    backend.assert_allclose(control_result, test_result, rtol=5e-2, atol=5e-2))
+    backend.assert_allclose(control_result, test_result, rtol=5e-2, atol=5e-2)
 
 
 # def test_GST_one_qubit_with_RXgate():
@@ -387,7 +387,7 @@ def test_GST_one_qubit_with_RXgate():
     test_gate = gates.RX(0, np.pi / 7)
     control_result = execute_GST(nqubits, gate=test_gate)
     test_result = execute_GST(nqubits, gate=test_gate)
-    backend.assert_allclose(control_result, test_result, rtol=5e-2, atol=5e-2))
+    backend.assert_allclose(control_result, test_result, rtol=5e-2, atol=5e-2)
 
 
 def test_GST_two_qubit_with_CNOTgate(backend):
