@@ -5,7 +5,7 @@ from typing import Optional, Union
 import numpy as np
 from scipy import sparse
 
-from qibo.backends import GlobalBackend
+from qibo.backends import _check_backend
 from qibo.config import PRECISION_TOL, raise_error
 
 
@@ -79,8 +79,7 @@ def concurrence(state, bipartition, check_purity: bool = True, backend=None):
     Returns:
         float: Concurrence of :math:`\\rho`.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if (
         (len(state.shape) not in [1, 2])
@@ -157,8 +156,7 @@ def entanglement_of_formation(
     Returns:
         float: entanglement of formation of state :math:`\\rho`.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     from qibo.quantum_info.utils import shannon_entropy  # pylint: disable=C0415
 
@@ -202,8 +200,7 @@ def entropy(
     Returns:
         float: The von-Neumann entropy :math:`S` of ``state`` :math:`\\rho`.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if (
         (len(state.shape) >= 3)
@@ -289,8 +286,7 @@ def entanglement_entropy(
     Returns:
         float: Entanglement entropy :math:`S` of ``state`` :math:`\\rho`.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if base <= 0.0:
         raise_error(ValueError, "log base must be non-negative.")
@@ -348,8 +344,7 @@ def trace_distance(state, target, check_hermitian: bool = False, backend=None):
     Returns:
         float: Trace distance between ``state`` :math:`\\rho` and ``target`` :math:`\\sigma`.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if state.shape != target.shape:
         raise_error(
@@ -470,8 +465,7 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
     Returns:
         float: Fidelity between ``state`` :math:`\\rho` and ``target`` :math:`\\sigma`.
     """
-    if backend is None:
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if state.shape != target.shape:
         raise_error(
@@ -666,8 +660,7 @@ def entanglement_fidelity(
     Returns:
         float: Entanglement fidelity :math:`F_{\\mathcal{E}}`.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if isinstance(nqubits, int) is False:
         raise_error(
@@ -733,8 +726,7 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
     Returns:
         float: Process fidelity between ``channel`` and ``target``.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if target is not None:
         if channel.shape != target.shape:
@@ -938,8 +930,8 @@ def diamond_norm(channel, target=None, backend=None, **kwargs):
 
     # `CVXPY` only works with `numpy`, so this function has to
     # convert any channel to the `numpy` backend by default
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
+
     channel = backend.to_numpy(channel)
 
     channel = np.transpose(channel)
@@ -1025,8 +1017,7 @@ def meyer_wallach_entanglement(circuit, backend=None):
         float: Meyer-Wallach entanglement.
     """
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     circuit.density_matrix = True
     nqubits = circuit.nqubits
@@ -1086,8 +1077,7 @@ def entangling_capability(circuit, samples: int, seed=None, backend=None):
             TypeError, "seed must be either type int or numpy.random.Generator."
         )
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     local_state = (
         np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
@@ -1151,8 +1141,7 @@ def expressibility(
         pqc_integral,
     )
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     deviation = haar_integral(
         circuit.nqubits, power_t, samples=None, backend=backend
@@ -1214,8 +1203,7 @@ def frame_potential(
             TypeError, f"samples must be type int, but it is type {type(samples)}."
         )
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     nqubits = circuit.nqubits
     dim = 2**nqubits
@@ -1259,8 +1247,7 @@ def _check_hermitian_or_not_gpu(matrix, backend=None):
         `backend` is not :class:`qibojit.backends.CupyBackend`
 
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     norm = backend.calculate_norm_density_matrix(
         np.transpose(np.conj(matrix)) - matrix, order=2
