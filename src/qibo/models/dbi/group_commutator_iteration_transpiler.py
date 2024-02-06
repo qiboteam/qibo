@@ -106,17 +106,21 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
                 double_bracket_rotation_dagger_matrix = double_bracket_rotation_dagger_matrix * m
             self.h.matrix = double_bracket_rotation_dagger_matrix @ self.h.matrix @ double_bracket_rotation_matrix
 
-        elif (self.mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation
-                or self.mode_evolution_oracle is EvolutionOracleType.text_strings):   
+        elif self.mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation:
             #then dbr step output is a query list
             self.gci_unitary.append(double_bracket_rotation_step[forwards])
             self.gci_unitary_dagger.append(double_bracket_rotation_step[backwards]) 
 
-            self.iterated_hamiltonian_evolution_oracle.append(
-                    double_bracket_rotation_step[backwards]
-                    +  self.iterated_hamiltonian_query_list[-1 ] 
-                    + double_bracket_rotation_step[forwards])
+            self.iterated_hamiltonian_evolution_oracle =
+                                        FrameShiftedEvolutionOracle(
+                                                self.iterated_hamiltonian_evolution_oracle,
+                                                name = str(step_duration),
+                                                double_bracket_rotation_step[backwards],
+                                                double_bracket_rotation_step[forwards])
+                    
 
+        elif self.mode_evolution_oracle is EvolutionOracleType.text_strings):  
+            raise_error(NotImplementedError)
         else:
             super().__call__(step, d )      
             
@@ -126,7 +130,7 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
             iterated_hamiltonian_evolution_oracle: EvolutionOracle = None):
         
         if iterated_hamiltonian_evolution_oracle is None:
-            iterated_hamiltonian_evolution_oracle = self.iterated_hamiltonian_query_list[-1]
+            iterated_hamiltonian_evolution_oracle = self.iterated_hamiltonian_evolution_oracle
 
         if self.mode_double_bracket_rotation is DoubleBracketRotationType.group_commutator:
             return {'forwards': [
