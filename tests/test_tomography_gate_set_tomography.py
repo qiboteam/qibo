@@ -457,11 +457,17 @@ def test_GST_two_qubit_with_gate_with_valid_reset_register_string(backend):
     invert_register = "sp_t"
     np.random.seed(42)
     control_result = execute_GST(
-        nqubits=nqubits, gate=test_gate, invert_register=invert_register, backend=backend
+        nqubits=nqubits,
+        gate=test_gate,
+        invert_register=invert_register,
+        backend=backend,
     )
     np.random.seed(42)
     test_result = execute_GST(
-        nqubits=nqubits, gate=test_gate, invert_register=invert_register, backend=backend
+        nqubits=nqubits,
+        gate=test_gate,
+        invert_register=invert_register,
+        backend=backend,
     )
 
     backend.assert_allclose(test_result, control_result)
