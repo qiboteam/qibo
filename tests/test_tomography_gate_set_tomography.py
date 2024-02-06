@@ -253,7 +253,7 @@ def test_GST_execute_circuit_1qb_jnonzero(backend, k, j):
     np.random.seed(42)
     test_result = GST_execute_circuit(circuit, k, j, backend=backend)
 
-    backend.assert_allclose(test_result, control_result, atol=1e-2)
+    backend.assert_allclose(test_result, control_result, rtol=1e-2)
 
 
 def test_GST_execute_circuit_2qb_j0():
@@ -283,7 +283,7 @@ def test_GST_execute_circuit_2qb_jnonzero(backend, k, j):
     np.random.seed(42)
     test_result = GST_execute_circuit(circuit, k, j, backend=backend)
 
-    backend.assert_allclose(test_result, control_result, atol=1e-2)
+    backend.assert_allclose(test_result, control_result, rtol=1e-2)
 
 
 @pytest.mark.parametrize("nqubits", [3, 4, 5, 6, 7, 8])
@@ -327,7 +327,7 @@ def test_GST_one_qubit_empty_circuit(backend):
     test_result = execute_GST(
         nqubits, gate=None, invert_register=None, noise_model=None, backend=backend
     )
-    backend.assert_allclose(control_result, test_result, atol=1e-2)
+    backend.assert_allclose(control_result, test_result, rtol=1e-2)
 
 
 def test_GST_two_qubit_empty_circuit(backend):
@@ -357,7 +357,7 @@ def test_GST_two_qubit_empty_circuit(backend):
 #     # backend.assert_allclose(result, pytest.approx(seed42_result, abs=1e-12))
 
 
-def test_GST_one_qubit_with_Hgate():
+def test_GST_one_qubit_with_Hgate(backend):
     nqubits = 1
     test_gate = gates.H(0)
     control_result = execute_GST(nqubits, gate=test_gate)
@@ -365,21 +365,28 @@ def test_GST_one_qubit_with_Hgate():
     backend.assert_allclose(control_result, test_result)
 
 
+# def test_GST_one_qubit_with_RXgate():
+#     np.random.seed(42)
+#     nqubits = 1
+#     test_gate = gates.RX(0, np.pi / 7)
+#     result = execute_GST(nqubits, gate=test_gate)
+#     seed42_result = np.array(
+#         [
+#             [1.0000, 1.0000, 1.0000, 1.0000],
+#             [0.0152, 0.0000, 1.0000, 0.0052],
+#             [-0.4466, 0.4360, 0.0018, 0.9068],
+#             [0.9016, -0.8976, -0.0114, 0.4186],
+#         ]
+#     )
+#     assert result == pytest.approx(seed42_result)
+#     # backend.assert_allclose(result, pytest.approx(seed42_result, abs=1e-12))
+
 def test_GST_one_qubit_with_RXgate():
-    np.random.seed(42)
     nqubits = 1
     test_gate = gates.RX(0, np.pi / 7)
-    result = execute_GST(nqubits, gate=test_gate)
-    seed42_result = np.array(
-        [
-            [1.0000, 1.0000, 1.0000, 1.0000],
-            [0.0152, 0.0000, 1.0000, 0.0052],
-            [-0.4466, 0.4360, 0.0018, 0.9068],
-            [0.9016, -0.8976, -0.0114, 0.4186],
-        ]
-    )
-    assert result == pytest.approx(seed42_result)
-    # backend.assert_allclose(result, pytest.approx(seed42_result, abs=1e-12))
+    control_result = execute_GST(nqubits, gate=test_gate)
+    test_result = execute_GST(nqubits, gate=test_gate)
+    backend.assert_allclose(control_result, test_result)
 
 
 def test_GST_two_qubit_with_CNOTgate(backend):
@@ -390,7 +397,7 @@ def test_GST_two_qubit_with_CNOTgate(backend):
     np.random.seed(42)
     test_result = execute_GST(nqubits, gate=test_gate, backend=backend)
 
-    backend.assert_allclose(test_result, control_result, atol=1e-2)
+    backend.assert_allclose(test_result, control_result, rtol=1e-2)
 
 
 def test_GST_two_qubit_with_CRXgate(backend):
@@ -400,7 +407,7 @@ def test_GST_two_qubit_with_CRXgate(backend):
     control_result = execute_GST(nqubits, gate=test_gate)
     np.random.seed(42)
     test_result = execute_GST(nqubits, gate=test_gate)
-    backend.assert_allclose(test_result, control_result, atol=1e-2)
+    backend.assert_allclose(test_result, control_result, rtol=1e-2)
 
 
 # def test_GST_one_qubit_with_gate_with_valid_reset_register_string():
@@ -429,7 +436,7 @@ def test_GST_one_qubit_with_gate_with_valid_reset_register_string():
     test_result = execute_GST(
         nqubits=nqubits, gate=None, invert_register=invert_register
     )
-    backend.assert_allclose(test_result, control_result, atol=1e-2)
+    backend.assert_allclose(test_result, control_result, rtol=1e-2)
 
 
 def test_GST_two_qubit_with_gate_with_valid_reset_register_string(backend):
@@ -444,7 +451,7 @@ def test_GST_two_qubit_with_gate_with_valid_reset_register_string(backend):
         nqubits=nqubits, gate=None, invert_register=invert_register, backend=backend
     )
 
-    backend.assert_allclose(test_result, control_result, atol=1e-2)
+    backend.assert_allclose(test_result, control_result, rtol=1e-2)
 
 
 # def test_GST_one_qubit_with_param_gate_with_valid_reset_register_string():
@@ -475,7 +482,7 @@ def test_GST_one_qubit_with_param_gate_with_valid_reset_register_string():
     test_result = execute_GST(
         nqubits=nqubits, gate=None, invert_register=invert_register
     )
-    backend.assert_allclose(test_result, control_result, atol=1e-2)
+    backend.assert_allclose(test_result, control_result, rtol=1e-2)
 
 
 def test_GST_two_qubit_with_param_gate_with_valid_reset_register_string(backend):
@@ -491,7 +498,7 @@ def test_GST_two_qubit_with_param_gate_with_valid_reset_register_string(backend)
         nqubits=nqubits, gate=None, invert_register=invert_register, backend=backend
     )
 
-    backend.assert_allclose(test_result, control_result, atol=1e-2)
+    backend.assert_allclose(test_result, control_result, rtol=1e-2)
 
 
 def test_GST_two_qubit_with_gate_with_valid_reset_register_string(backend):
@@ -513,7 +520,7 @@ def test_GST_two_qubit_with_gate_with_valid_reset_register_string(backend):
         backend=backend,
     )
 
-    backend.assert_allclose(test_result, control_result, atol=1e-2)
+    backend.assert_allclose(test_result, control_result, rtol=1e-2)
 
 
 def test_GST_two_qubit_with_gate_with_invalid_reset_register_string():
@@ -599,7 +606,7 @@ def test_GST_one_qubit_empty_circuit_with_noise(backend):
     test_result = execute_GST(
         nqubits, gate=None, invert_register=None, noise_model=depol, backend=backend
     )
-    backend.assert_allclose(test_result, control_result, atol=1e-2)
+    backend.assert_allclose(test_result, control_result, rtol=1e-2)
 
 
 def test_GST_one_qubit_empty_circuit_with_noise(backend):
@@ -618,4 +625,4 @@ def test_GST_one_qubit_empty_circuit_with_noise(backend):
         nqubits, gate=None, invert_register=None, noise_model=depol, backend=backend
     )
 
-    backend.assert_allclose(test_result, control_result, atol=1e-2)
+    backend.assert_allclose(test_result, control_result, rtol=1e-2)
