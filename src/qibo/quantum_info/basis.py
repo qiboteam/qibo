@@ -5,7 +5,7 @@ from typing import Optional
 import numpy as np
 
 from qibo import matrices
-from qibo.backends import GlobalBackend
+from qibo.backends import _check_backend
 from qibo.config import raise_error
 from qibo.quantum_info.superoperator_transformations import vectorization
 
@@ -89,8 +89,7 @@ def pauli_basis(
             "sparse representation is not implemented for unvectorized Pauli basis.",
         )
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     pauli_labels = {"I": matrices.I, "X": matrices.X, "Y": matrices.Y, "Z": matrices.Z}
     basis_single = [pauli_labels[label] for label in pauli_order]
@@ -187,8 +186,7 @@ def comp_basis_to_pauli(
             array with their row-wise indexes.
 
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if sparse:
         elements, indexes = pauli_basis(
@@ -258,8 +256,7 @@ def pauli_to_comp_basis(
             tuple is composed of array of non-zero elements and an
             array with their row-wise indexes.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     unitary = pauli_basis(
         nqubits,

@@ -1000,14 +1000,13 @@ class Circuit:
     def unitary(self, backend=None):
         """Creates the unitary matrix corresponding to all circuit gates.
 
-        This is a ``(2 ** nqubits, 2 ** nqubits)`` matrix obtained by
-        multiplying all circuit gates.
+        This is a :math:`2^{n} \\times 2^{n}`` matrix obtained by
+        multiplying all circuit gates, where :math:`n` is ``nqubits``.
         """
 
-        if backend is None:
-            from qibo.backends import GlobalBackend
+        from qibo.backends import _check_backend
 
-            backend = GlobalBackend()
+        backend = _check_backend(backend)
 
         fgate = gates.FusedGate(*range(self.nqubits))
         for gate in self.queue:
@@ -1050,10 +1049,10 @@ class Circuit:
                     NotImplementedError,
                     "Circuit compilation is not available with callbacks.",
                 )
-        if backend is None:
-            from qibo.backends import GlobalBackend
 
-            backend = GlobalBackend()
+        from qibo.backends import _check_backend
+
+        backend = _check_backend(backend)
 
         from qibo.result import CircuitResult, QuantumState
 
