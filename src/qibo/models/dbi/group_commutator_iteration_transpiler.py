@@ -54,15 +54,15 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
         mode_evolution_oracle: EvolutionOracleType = EvolutionOracleType.numerical,
         mode_diagonal_association: DoubleBracketDiagonalAssociationType = DoubleBracketDiagonalAssociationType.dephasing
     ):
-        if mode_double_bracket_rotation is DoubleBracketRotationType.single_commutator
+        if mode_double_bracket_rotation is DoubleBracketRotationType.single_commutator:
             mode_double_bracket_rotation_old = DoubleBracketGeneratorType.single_commutator
-
+        else:
+            mode_double_bracket_rotation_old = DoubleBracketGeneratorType.group_commutator
         super().__init__( input_hamiltonian_evolution_oracle.h, mode_double_bracket_rotation_old )
         
         self.input_hamiltonian_evolution_oracle = input_hamiltonian_evolution_oracle 
 
         self.mode_diagonal_association = mode_diagonal_association
-        self.mode_gci_inversion = mode_gci_inversion
         self.mode_double_bracket_rotation = mode_double_bracket_rotation  
 
         self.gci_unitary = []
@@ -74,29 +74,31 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
         step_duration: float = None, 
         diagonal_association: EvolutionOracle = None,
         mode_double_bracket_rotation: DoubleBracketRotationType = None,
-    )
+        ):
         
         if mode_double_bracket_rotation is None:
             mode_double_bracket_rotation = self.mode_double_bracket_rotation
 
         if diagonal_association is None:
-            if self.mode_double_bracket_rotation is DoubleBracketRotationType.canonical:
-                diagonal_association = EvolutionOracle( self.diagonal_h_matrix )
+            if self.mode_diagonal_association is DoubleBracketDiagonalAssociationType.dephasing:
+                raise_error(NotImplementedError, "diagonal_h_matrix is np.array but need to cast to SymbolicHamiltonian")
+                diagonal_association = EvolutionOracle( self.diagonal_h_matrix, 'Dephasing',
+                        mode_evolution_oracle = self.input_hamiltonian_evolution_oracle.mode_evolution_oracle)
             else:
                 raise_error(ValueError, f"Cannot use group_commutator without specifying matrix {d}. Did you want to set to canonical mode?")
         else:
             self.mode_diagonal_association = DoubleBracketDiagonalAssociationType.prescribed
 
-        if self.mode_dbr is DoubleBracketRotationType.single_commutator:
+        if self.mode_double_bracket_rotation is DoubleBracketRotationType.single_commutator:
             raise_error(NotImplementedError, "Keeping track of single commutator DBRs not implemented")
             double_bracket_rotation_step = self.single_commutator_query_list(step, diagonal_association)
         else:
         #This will run the appropriate group commutator step
-            double_bracket_rotation_step = self.group_commutator_query_list(step, diagonal_association)        
+            double_bracket_rotation_step = self.group_commutator_query_list(step_duration, diagonal_association)        
 
         if self.mode_evolution_oracle is EvolutionOracleType.numerical:  
             #then dbr step output  is a matrix
-            ddouble_bracket_rotation_matrix = 0 * self.h.matrix
+            double_bracket_rotation_matrix = 0 * self.h.matrix
             double_bracket_rotation_dagger_matrix = 0 * self.h.matrix
             for m in double_bracket_rotation_matrix:
                 double_bracket_rotation_matrix = double_bracket_rotation_matrix * m
@@ -104,54 +106,54 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
                 double_bracket_rotation_dagger_matrix = double_bracket_rotation_dagger_matrix * m
             self.h.matrix = double_bracket_rotation_dagger_matrix @ self.h.matrix @ double_bracket_rotation_matrix
 
-        elif self.mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation 
-                or self.mode_evolution_oracle is EvolutionOracleType.text_strings:   
+        elif (self.mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation
+                or self.mode_evolution_oracle is EvolutionOracleType.text_strings):   
             #then dbr step output is a query list
             self.gci_unitary.append(double_bracket_rotation_step[forwards])
             self.gci_unitary_dagger.append(double_bracket_rotation_step[backwards]) 
 
             self.iterated_hamiltonian_evolution_oracle.append(
                     double_bracket_rotation_step[backwards]
-                    +  self.iterated_hamiltonian_evolution_oracle[-1 ] 
+                    +  self.iterated_hamiltonian_query_list[-1 ] 
                     + double_bracket_rotation_step[forwards])
 
         else:
             super().__call__(step, d )      
             
     def group_commutator_query_list(self,
-            s_step: double,
+            s_step: float,
             diagonal_association_evolution_oracle: EvolutionOracle = None,
             iterated_hamiltonian_evolution_oracle: EvolutionOracle = None):
         
         if iterated_hamiltonian_evolution_oracle is None:
-            iterated_hamiltonian_evolution_oracle = self.iterated_hamiltonian_evolution_oracle[-1]
+            iterated_hamiltonian_evolution_oracle = self.iterated_hamiltonian_query_list[-1]
 
-        if self.mode_dbr is DoubleBracketRotationType.group_commutator
-            return {forwards: [
+        if self.mode_double_bracket_rotation is DoubleBracketRotationType.group_commutator:
+            return {'forwards': [
                     iterated_hamiltonian_evolution_oracle.circuit(-s_step),
                     diagonal_association_evolution_oracle.circuit(s_step),
                     iterated_hamiltonian_evolution_oracle.circuit(s_step),
                     diagonal_association_evolution_oracle.circuit(-s_step) 
                     ]   ,
-                    backwards: [ #in general an evolution oracle might have imperfect time reversal    
+                    'backwards': [ #in general an evolution oracle might have imperfect time reversal    
                     diagonal_association_evolution_oracle.circuit(s_step),
                     iterated_hamiltonian_evolution_oracle.circuit(-s_step),
                     diagonal_association_evolution_oracle.circuit(-s_step),
                     iterated_hamiltonian_evolution_oracle.circuit(s_step)
                     ] }
-        elif self.mode_dbr is DoubleBracketRotationType.group_commutator_reduced
-            return {forwards: [
+        elif self.mode_double_bracket_rotation is DoubleBracketRotationType.group_commutator_reduced:
+            return {'forwards': [
                     diagonal_association_evolution_oracle.circuit(s_step),
                     iterated_hamiltonian_evolution_oracle.circuit(s_step),
                     diagonal_association_evolution_oracle.circuit(-s_step) 
                     ]   ,
-                    backwards: [
+                    'backwards': [
                     diagonal_association_evolution_oracle.circuit(s_step),
                     iterated_hamiltonian_evolution_oracle.circuit(-s_step),
                     diagonal_association_evolution_oracle.circuit(-s_step) 
                     ] }
         else:
-            if self.mode_dbr is DoubleBracketRotationType.single_commutator:
+            if self.mode_double_bracket_rotation is DoubleBracketRotationType.single_commutator:
                 raise_error(ValueError, "You are in the group commutator query list but your dbr mode is a perfect bracket and not an approximation by means of a group commutator!")
             else:
                 raise_error(ValueError, "You are in the group commutator query list but your dbr mode is not recognized")

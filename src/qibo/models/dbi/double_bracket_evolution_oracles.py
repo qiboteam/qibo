@@ -6,7 +6,7 @@ import hyperopt
 import numpy as np
 
 from qibo.config import raise_error
-from qibo.hamiltonians import Hamiltonian
+from qibo.hamiltonians import AbstractHamiltonian, SymbolicHamiltonian
 
 
 
@@ -23,26 +23,27 @@ class EvolutionOracleType(Enum):
 
 
 class EvolutionOracle:
-    def __init__( h_generator: AbstractHamiltonian = None, 
-            name = None,
+    def __init__( self, 
+            h_generator: AbstractHamiltonian, 
+            name,
             mode_evolution_oracle: EvolutionOracleType = EvolutionOracleType.text_strings ):
-       if mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation and if type(h_generator) is not SymbolicHamiltonian:
+       if mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation and type(h_generator) is not SymbolicHamiltonian:
             raise_error(TypeError, "If the evolution oracle mode will be to make Trotter-Suzuki decompositions then you must use the SymbolicHamiltonian generator")
        if h_generator is None and name is None:
            raise_error(NotImplementedError, "You have to specify either a matrix and then work in the numerical mode, or SymbolicHamiltonian and work in hamiltonian_simulation mode or at least a name and work with text_strings to list DBI query lists")
 
        self.h = h_generator
-       self.mode_evolution_oracle = mode_evolution_oracle
        self.name = name
+       self.mode_evolution_oracle = mode_evolution_oracle
 
-    def __call__(self, t_duration: double = None):
+    def __call__(self, t_duration: float = None):
         """ Returns either the name or the circuit """
         if t_duration is None:
             return self.name
         else:
             return self.circuit( t_duration = t_duration )
         
-    def circuit(self, t_duration: double = None):
+    def circuit(self, t_duration: float = None):
 
         if self.mode_evolution_oracle is EvolutionOracleType.text_strings:
             return self.name + str(t_duration)
@@ -54,7 +55,7 @@ class EvolutionOracle:
             raise_error(ValueError,
                     f"You are using an EvolutionOracle type which is not yet supported.")
     @property
-    def name(self):
+    def print(self):
         return self.name
 
 class DoubleBracketDiagonalAssociationType(Enum):
@@ -75,13 +76,17 @@ class DoubleBracketDiagonalAssociationType(Enum):
 
 class DiagonalAssociationDephasing(EvolutionOracle):
 
-        def __init__(
-        self,
-        mode_evolution_oracle: EvolutionOracleType = EvolutionOracleType.text_strings
-    ):
-            super().__init__(mode_diagonal_association = DoubleBracketDiagonalAssociationType.dephasing, mode_evolution_oracle = mode_evolution_oracle)
+    def __init__(
+    self,
+    mode_evolution_oracle: EvolutionOracleType = EvolutionOracleType.text_strings
+):
+        super().__init__(mode_diagonal_association = DoubleBracketDiagonalAssociationType.dephasing, mode_evolution_oracle = mode_evolution_oracle)
 
-        def __call__(self, J_input: EvolutionHamiltonian, k_step_number: list = None, t_duration = None ):
+
+
+
+
+    def __call__(self, J_input: EvolutionOracle, k_step_number: list = None, t_duration = None ):
         if mode_evolution_oracle is EvolutionOracleType.text_strings:
             if t_duration is None:
                 #iterate over all Z ops
@@ -96,9 +101,9 @@ class DiagonalAssociationDephasing(EvolutionOracle):
         if mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation:
             if t_duration is None:
                 #iterate over all Z ops
-                return sum Z @ J_input @ Z
+                return sum(Z @ J_input @ Z)
             else:
-                return sum Z @ J_input.circuit(t_duration) @Z
+                return sum( Z @ J_input.circuit(t_duration) @Z)
 
 class DiagonalAssociationFromList(EvolutionOracle):
 
@@ -126,14 +131,14 @@ class DiagonalAssociationFromList(EvolutionOracle):
             if t_duration is None:
                 raise_error(ValueError, f"In the hamiltonian_simulation mode you need to work with evolution operators so please specify a time.")
             else:
-                return d_k_list[k_step_number.circuit(t_duration)
+                return d_k_list[k_step_number.circuit(t_duration)]
 
 class DiagonalAssociationFromOptimization(EvolutionOracle):
 
     def __init__(
     self,
     loss_function: None,
-    mode: DoubleBracketDiagonalAssociationType = DoubleBracketDiagonalAssociationType.canonical,
+    mode: DoubleBracketDiagonalAssociationType = DoubleBracketDiagonalAssociationType.dephasing,
     mode_evolution_oracle: EvolutionOracleType = EvolutionOracleType.text_strings
 ):
         self.loss = loss_function
@@ -156,7 +161,7 @@ class DiagonalAssociationFromOptimization(EvolutionOracle):
                 raise_error(ValueError, f"In the hamiltonian_simulation mode you need to work with evolution operators so please specify a time.")
             else:
                 raise_error(TypeError, "Not implemented")
-                return sum Z @ J_input.circuit(t_duration) @Z
+                return None
 
 
 
