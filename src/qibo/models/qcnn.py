@@ -279,7 +279,7 @@ class QuantumCNN:
             numpy.array() with predictions for each qubit, for the initial state.
         """
         bias = np.array(theta[0 : self.measured_qubits])
-        if self.copy_init_state is True:
+        if self.copy_init_state:
             init_state_copy = init_state.copy()
         else:
             init_state_copy = init_state
