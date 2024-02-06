@@ -5,7 +5,7 @@ from typing import Optional, Union
 import numpy as np
 from scipy import sparse
 
-from qibo.backends import GlobalBackend
+from qibo.backends import _check_backend
 from qibo.config import PRECISION_TOL, raise_error
 
 
@@ -81,8 +81,7 @@ def trace_distance(state, target, check_hermitian: bool = False, backend=None):
     Returns:
         float: Trace distance between ``state`` :math:`\\rho` and ``target`` :math:`\\sigma`.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if state.shape != target.shape:
         raise_error(
@@ -203,8 +202,7 @@ def fidelity(state, target, check_hermitian: bool = False, backend=None):
     Returns:
         float: Fidelity between ``state`` :math:`\\rho` and ``target`` :math:`\\sigma`.
     """
-    if backend is None:
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if state.shape != target.shape:
         raise_error(
@@ -388,8 +386,7 @@ def process_fidelity(channel, target=None, check_unitary: bool = False, backend=
     Returns:
         float: Process fidelity between ``channel`` and ``target``.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if target is not None:
         if channel.shape != target.shape:
@@ -593,8 +590,8 @@ def diamond_norm(channel, target=None, backend=None, **kwargs):
 
     # `CVXPY` only works with `numpy`, so this function has to
     # convert any channel to the `numpy` backend by default
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
+
     channel = backend.to_numpy(channel)
 
     channel = np.transpose(channel)
@@ -709,8 +706,7 @@ def expressibility(
         pqc_integral,
     )
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     deviation = haar_integral(
         circuit.nqubits, power_t, samples=None, backend=backend
@@ -772,8 +768,7 @@ def frame_potential(
             TypeError, f"samples must be type int, but it is type {type(samples)}."
         )
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     nqubits = circuit.nqubits
     dim = 2**nqubits
@@ -817,8 +812,7 @@ def _check_hermitian_or_not_gpu(matrix, backend=None):
         `backend` is not :class:`qibojit.backends.CupyBackend`
 
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     norm = backend.calculate_norm_density_matrix(
         np.transpose(np.conj(matrix)) - matrix, order=2

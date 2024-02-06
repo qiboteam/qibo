@@ -9,7 +9,7 @@ from typing import Optional, Union
 import numpy as np
 
 from qibo import matrices
-from qibo.backends import GlobalBackend
+from qibo.backends import _check_backend
 from qibo.config import PRECISION_TOL, raise_error
 
 
@@ -134,8 +134,7 @@ def hadamard_transform(array, implementation: str = "fast", backend=None):
     Returns:
         ndarray: (Fast) Hadamard Transform of ``array``.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if (
         len(array.shape) not in [1, 2]
@@ -213,8 +212,7 @@ def hellinger_distance(prob_dist_p, prob_dist_q, validate: bool = False, backend
     Returns:
         (float): Hellinger distance :math:`H(p, q)`.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if isinstance(prob_dist_p, list):
         prob_dist_p = backend.cast(prob_dist_p, dtype=np.float64)
@@ -326,8 +324,7 @@ def haar_integral(
             TypeError, f"samples must be type int, but it is type {type(samples)}."
         )
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     dim = 2**nqubits
 
@@ -401,8 +398,7 @@ def pqc_integral(circuit, power_t: int, samples: int, backend=None):
             TypeError, f"samples must be type int, but it is type {type(samples)}."
         )
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     circuit.density_matrix = True
     dim = 2**circuit.nqubits

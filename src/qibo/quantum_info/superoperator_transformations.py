@@ -6,7 +6,7 @@ from typing import Optional
 import numpy as np
 from scipy.optimize import minimize
 
-from qibo.backends import GlobalBackend
+from qibo.backends import _check_backend
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.gates.abstract import Gate
 from qibo.gates.gates import Unitary
@@ -61,8 +61,7 @@ def vectorization(state, order: str = "row", backend=None):
                 f"order must be either 'row' or 'column' or 'system', but it is {order}.",
             )
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if len(state.shape) == 1:
         state = np.outer(state, np.conj(state))
@@ -130,8 +129,7 @@ def unvectorization(state, order: str = "row", backend=None):
                 f"order must be either 'row' or 'column' or 'system', but it is {order}.",
             )
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     dim = int(np.sqrt(len(state)))
 
@@ -449,8 +447,7 @@ def choi_to_kraus(
             f"validate_cp must be type bool, but it is type {type(validate_cp)}.",
         )
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if validate_cp:
         norm = float(
@@ -652,8 +649,7 @@ def kraus_to_choi(kraus_ops, order: str = "row", backend=None):
     Returns:
         ndarray: Choi representation of the Kraus channel.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     gates, target_qubits = _set_gate_and_target_qubits(kraus_ops)
     nqubits = 1 + max(target_qubits)
@@ -782,8 +778,7 @@ def kraus_to_chi(
     """
     from qibo.quantum_info.basis import comp_basis_to_pauli
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     gates, target_qubits = _set_gate_and_target_qubits(kraus_ops)
     nqubits = 1 + max(target_qubits)
@@ -845,8 +840,7 @@ def kraus_to_stinespring(
     Returns:
         ndarray: Stinespring representation (restricted unitary) of the Kraus channel.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if initial_state_env is not None:
         if len(initial_state_env) != len(kraus_ops):
@@ -963,8 +957,7 @@ def liouville_to_pauli(
     """
     from qibo.quantum_info.basis import comp_basis_to_pauli
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     dim = int(np.sqrt(len(super_op)))
     nqubits = int(np.log2(dim))
@@ -1165,8 +1158,7 @@ def pauli_to_liouville(
     """
     from qibo.quantum_info.basis import pauli_to_comp_basis
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     dim = int(np.sqrt(len(pauli_op)))
     nqubits = int(np.log2(dim))
@@ -1873,8 +1865,7 @@ def stinespring_to_kraus(
     Returns:
         ndarray: Kraus operators.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if isinstance(dim_env, int) is False:
         raise_error(
@@ -2038,8 +2029,7 @@ def kraus_to_unitaries(
         if precision_tol < 0.0:
             raise_error(ValueError, "precision_tol must be non-negative.")
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     target_qubits = [q for q, _ in kraus_ops]
     nqubits = 1 + np.max(target_qubits)
@@ -2148,8 +2138,7 @@ def _reshuffling(super_op, order: str = "row", backend=None):
             NotImplementedError, "reshuffling not implemented for system vectorization."
         )
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     dim = np.sqrt(super_op.shape[0])
 
@@ -2215,8 +2204,7 @@ def _individual_kraus_to_liouville(
     to be used in :func:`qibo.quantum_info.kraus_to_unitaries`. In principle,
     this should be not be accessible to users.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     gates, target_qubits = _set_gate_and_target_qubits(kraus_ops)
     nqubits = 1 + max(target_qubits)
