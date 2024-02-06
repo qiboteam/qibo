@@ -382,7 +382,7 @@ def test_GST_one_qubit_with_Hgate(backend):
 #     # backend.assert_allclose(result, pytest.approx(seed42_result, abs=1e-12))
 
 
-def test_GST_one_qubit_with_RXgate():
+def test_GST_one_qubit_with_RXgate(backend):
     nqubits = 1
     test_gate = gates.RX(0, np.pi / 7)
     control_result = execute_GST(nqubits, gate=test_gate)
@@ -428,7 +428,7 @@ def test_GST_two_qubit_with_CRXgate(backend):
 #     # backend.assert_allclose(result, pytest.approx(seed42_result, abs=1e-12))
 
 
-def test_GST_one_qubit_with_gate_with_valid_reset_register_string():
+def test_GST_one_qubit_with_gate_with_valid_reset_register_string(backend):
     nqubits = 1
     invert_register = "sp_0"
     control_result = execute_GST(
@@ -473,7 +473,7 @@ def test_GST_two_qubit_with_gate_with_valid_reset_register_string(backend):
 #     # backend.assert_allclose(result, pytest.approx(seed42_result, abs=1e-12))
 
 
-def test_GST_one_qubit_with_param_gate_with_valid_reset_register_string():
+def test_GST_one_qubit_with_param_gate_with_valid_reset_register_string(backend):
     nqubits = 1
     test_gate = gates.RX(0, np.pi / 7)
     invert_register = "sp_0"
