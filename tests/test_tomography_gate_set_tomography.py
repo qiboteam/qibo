@@ -237,7 +237,7 @@ def test_GST_execute_circuit_1qb_j0():
     assert result == 1.0
 
 
-@pytest.mark.parametrize("k, j", [(0, 1), (0,2), (1,2), (2,3)])
+@pytest.mark.parametrize("k, j", [(0, 1), (0, 2), (1, 2), (2, 3)])
 def test_GST_execute_circuit_1qb_jnonzero(backend, k, j):
     nqubits = 1
     circuit = qibo.models.Circuit(nqubits)
