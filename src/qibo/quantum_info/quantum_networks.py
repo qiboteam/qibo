@@ -12,19 +12,24 @@ from qibo.config import raise_error
 
 
 class QuantumNetwork:
-    """Quantum network that unifies the representation of quantum states, channels,
-    observables, and higher-order quantum operators [1]_. The class stores the Choi operator of
-    the quantum network as a tensor, which is an unique representation of the quantum network.
+    """Quantum network is an object that unifies the representation of quantum states, channels,
+    observables, and higher-order quantum operators [1].
+
+    This class stores the Choi operator of the quantum network as a tensor,
+    which is an unique representation of the quantum network.
 
     A minimum quantum network is a quantum channel, which is a quantum network of the form
-    `J[n -> m]`, where `n` is the dimension of the input system and `m` is the dimension of the
-    output system. A quantum state is a quantum network of the form `J[1 -> n]`, such that the
-    input system is trivial. An observable is a quantum network of the form `J[n -> 1]`, such that
-    the output system is trivial.
+    :math:`J[n \\to m]`, where :math:`n` is the dimension of the input system ,
+    and :math:`m` is the dimension of the output system.
+    A quantum state is a quantum network of the form :math:`J[1 \\to n]`,
+    such that the input system is trivial.
+    An observable is a quantum network of the form :math:`J[n \\to 1]`,
+    such that the output system is trivial.
 
-    A quantum network may contain multipy input systems and output systems. For example, a
-    "quantum comb" is a quantum network of the form `J[n', n -> m, m']`, which convert a quantum
-    channel of the form `J[n -> m]` to a quantum channel of the form `J[n' -> m']`.
+    A quantum network may contain multiple input and output systems.
+    For example, a "quantum comb" is a quantum network of the form :math:`J[n', n \\to m, m']`,
+    which convert a quantum channel of the form :math:`J[n \\to m]`
+    to a quantum channel of the form :math:`J[n' \\to m']`.
 
     Args:
         matrix (ndarray): input Choi operator.
@@ -41,7 +46,7 @@ class QuantumNetwork:
 
     References:
         1. G. Chiribella *et al.*, *Theoretical framework for quantum networks.*
-        `Physical Review A 80.2 (2009): 022339 <https://journals.aps.org/pra/abstract/10.1103/PhysRevA.80.022339>`.
+        `Physical Review A 80.2 (2009): 022339 <https://journals.aps.org/pra/abstract/10.1103/PhysRevA.80.022339>`_.
     """
 
     def __init__(
@@ -58,7 +63,7 @@ class QuantumNetwork:
         self.partition = partition
         self.system_output = system_output
         self._pure = pure
-        self._backend = backend if backend is not None else GlobalBackend()
+        self._backend = backend
         self.dims = reduce(mul, self.partition)
 
         self._set_tensor_and_parameters()
@@ -80,11 +85,11 @@ class QuantumNetwork:
 
         return backend.cast(self._matrix, dtype=self._matrix.dtype)
 
-    def pure(self):
+    def is_pure(self):
         """Returns bool indicading if the Choi operator of the network is pure."""
         return self._pure
 
-    def hermitian(
+    def is_hermitian(
         self, order: Optional[Union[int, str]] = None, precision_tol: float = 1e-8
     ):
         """Returns bool indicating if the Choi operator :math:`\\mathcal{E}` of the network is Hermitian.
@@ -130,7 +135,7 @@ class QuantumNetwork:
 
         return float(norm) <= precision_tol
 
-    def unital(
+    def is_unital(
         self, order: Optional[Union[int, str]] = None, precision_tol: float = 1e-8
     ):
         """Returns bool indicating if the Choi operator :math:`\\mathcal{E}` of the network is unital.
@@ -178,7 +183,7 @@ class QuantumNetwork:
 
         return float(norm) <= precision_tol
 
-    def causal(
+    def is_causal(
         self, order: Optional[Union[int, str]] = None, precision_tol: float = 1e-8
     ):
         """Returns bool indicating if the Choi operator :math:`\\mathcal{E}` of the network satisfies the causal order condition.
@@ -226,7 +231,7 @@ class QuantumNetwork:
 
         return float(norm) <= precision_tol
 
-    def positive_semidefinite(self, precision_tol: float = 1e-8):
+    def is_positive_semidefinite(self, precision_tol: float = 1e-8):
         """Returns bool indicating if Choi operator :math:`\\mathcal{E}` of the network is positive-semidefinite.
 
         Args:
@@ -244,7 +249,7 @@ class QuantumNetwork:
 
         reshaped = np.reshape(self._matrix, (self.dims, self.dims))
 
-        if self.hermitian():
+        if self.is_hermitian():
             eigenvalues = np.linalg.eigvalsh(reshaped)
         else:
             if self._backend.__class__.__name__ in [
@@ -256,7 +261,7 @@ class QuantumNetwork:
 
         return all(eigenvalue >= -precision_tol for eigenvalue in eigenvalues)
 
-    def channel(
+    def is_channel(
         self,
         order: Optional[Union[int, str]] = None,
         precision_tol_causal: float = 1e-8,
@@ -279,9 +284,9 @@ class QuantumNetwork:
         Returns:
             bool: Channel condition.
         """
-        return self.causal(order, precision_tol_causal) and self.positive_semidefinite(
-            precision_tol_psd
-        )
+        return self.is_causal(
+            order, precision_tol_causal
+        ) and self.is_positive_semidefinite(precision_tol_psd)
 
     def apply(self, state):
         """Apply the Choi operator :math:`\\mathcal{E}` to ``state`` :math:`\\varrho`.
@@ -296,7 +301,7 @@ class QuantumNetwork:
         """
         matrix = np.copy(self._matrix)
 
-        if self.pure():
+        if self.is_pure():
             return np.einsum("kj,ml,jl -> km", matrix, np.conj(matrix), state)
 
         return np.einsum("jklm,km -> jl", matrix, state)
@@ -392,7 +397,7 @@ class QuantumNetwork:
         if backend is None:  # pragma: no cover
             backend = self._backend
 
-        if self.pure():
+        if self.is_pure():
             self._matrix = self._full()
             self._pure = False
 
@@ -460,7 +465,7 @@ class QuantumNetwork:
                 "It is not possible to multiply a ``QuantumNetwork`` by a non-scalar.",
             )
 
-        if self.pure() and number > 0.0:
+        if self.is_pure() and number > 0.0:
             return QuantumNetwork(
                 np.sqrt(number) * self.matrix(backend=self._backend),
                 partition=self.partition,
@@ -504,12 +509,13 @@ class QuantumNetwork:
                 "It is not possible to divide a ``QuantumNetwork`` by a non-scalar.",
             )
 
-        number = np.sqrt(number) if self.pure() and number > 0.0 else number
+        number = np.sqrt(number) if self.is_pure() and number > 0.0 else number
+
         return QuantumNetwork(
             self.matrix(backend=self._backend) / number,
             partition=self.partition,
             system_output=self.system_output,
-            pure=self.pure(),
+            pure=self.is_pure(),
             backend=self._backend,
         )
 
@@ -643,7 +649,7 @@ class QuantumNetwork:
     def _full(self):
         """Reshapes input matrix based on purity."""
         matrix = np.copy(self._matrix)
-        if self.pure():
+        if self.is_pure():
             matrix = np.einsum("jk,lm -> kjml", matrix, np.conj(matrix))
 
             return matrix

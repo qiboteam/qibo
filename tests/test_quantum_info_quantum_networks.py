@@ -46,13 +46,13 @@ def test_errors(backend):
         QuantumNetwork(channel.to_choi(backend=backend), partition=(1, 2), pure="True")
 
     with pytest.raises(ValueError):
-        network.hermitian(precision_tol=-1e-8)
+        network.is_hermitian(precision_tol=-1e-8)
 
     with pytest.raises(ValueError):
-        network.unital(precision_tol=-1e-8)
+        network.is_unital(precision_tol=-1e-8)
 
     with pytest.raises(ValueError):
-        network.causal(precision_tol=-1e-8)
+        network.is_causal(precision_tol=-1e-8)
 
     with pytest.raises(TypeError):
         network + 1
@@ -155,11 +155,11 @@ def test_parameters(backend):
     backend.assert_allclose(network.partition, partition)
     backend.assert_allclose(network.system_output, (False, True))
 
-    assert network.causal()
-    assert network.unital()
-    assert network.hermitian()
-    assert network.positive_semidefinite()
-    assert network.channel()
+    assert network.is_causal()
+    assert network.is_unital()
+    assert network.is_hermitian()
+    assert network.is_positive_semidefinite()
+    assert network.is_channel()
 
 
 def test_with_states(backend):
@@ -186,8 +186,8 @@ def test_with_states(backend):
         state_output_link.matrix(backend=backend).reshape((dims, dims)), state_output
     )
 
-    assert network_state.hermitian()
-    assert network_state.positive_semidefinite()
+    assert network_state.is_hermitian()
+    assert network_state.is_positive_semidefinite()
 
 
 @pytest.mark.parametrize("subscript", ["jk,kl->jl", "jk,lj->lk"])
@@ -265,9 +265,9 @@ def test_non_hermitian_and_prints(backend):
     matrix = random_gaussian_matrix(dims**2, backend=backend)
     network = QuantumNetwork(matrix, (dims, dims), pure=False, backend=backend)
 
-    assert not network.hermitian()
-    assert not network.causal()
-    assert not network.positive_semidefinite()
-    assert not network.channel()
+    assert not network.is_hermitian()
+    assert not network.is_causal()
+    assert not network.is_positive_semidefinite()
+    assert not network.is_channel()
 
     assert network.__str__() == "J[4 -> 4]"
