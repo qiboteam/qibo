@@ -135,12 +135,10 @@ class TSP:
     """
 
     def __init__(self, distance_matrix, backend=None):
-        if backend is None:  # pragma: no cover
-            from qibo.backends import GlobalBackend
+        from qibo.backends import _check_backend
 
-            self.backend = GlobalBackend()
-        else:
-            self.backend = backend
+        self.backend = _check_backend(backend)
+
         self.distance_matrix = distance_matrix
         self.num_cities = distance_matrix.shape[0]
         self.two_to_one = calculate_two_to_one(self.num_cities)
