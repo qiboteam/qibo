@@ -276,16 +276,7 @@ def test_1_qubit_classifier_circuit_error():
         pass
 
 
-def test_two_qubit_ansatz(backend):
-    c = Circuit(2)
-    c.add(gates.H(0))
-    c.add(gates.RX(0, 0))
-    c.add(gates.CNOT(1, 0))
-    test_qcnn = QuantumCNN(4, 2, 2, twoqubitansatz=c)
-
-@pytest.mark.parametrize("backend", [("numpy"), ("qibojit")])
-
-def test_qcnn_training(backend):
+def test_qcnn_training():
     import random
 
     # generate 2 random states and labels for pytest
@@ -324,9 +315,10 @@ def test_two_qubit_ansatz():
     test_qcnn = QuantumCNN(4, 2, 2, twoqubitansatz=c)
 
 
-@pytest.mark.parametrize("backend", [("numpy"), ("qibojit")])
+def test_two_qubit_ansatz_training():
+    # test qibojit case (copy initial state as quick-fix for in-place update)
+    qibo.set_backend("qibojit")
 
-def test_two_qubit_ansatz_training(backend):
     c = Circuit(2)
     c.add(gates.H(0))
     c.add(gates.RX(0, 0))
