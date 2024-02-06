@@ -1508,7 +1508,7 @@ class iSWAP(Gate):
 
 
 class SiSWAP(Gate):
-    """The :math:`\\sqrt{\\text{iSWAP}}}` gate.
+    """The :math:`\\sqrt{\\text{iSWAP}}` gate.
 
     Corresponds to the following unitary matrix
 
@@ -1538,7 +1538,7 @@ class SiSWAP(Gate):
 
 
 class SiSWAPDG(Gate):
-    """The :math:`\\sqrt{\\text{iSWAP}}}^{\\dagger}` gate.
+    """The :math:`\\left(\\sqrt{\\text{iSWAP}}\\right)^{\\dagger}` gate.
 
     Corresponds to the following unitary matrix
 
