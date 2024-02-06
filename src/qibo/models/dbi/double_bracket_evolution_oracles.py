@@ -7,7 +7,7 @@ import numpy as np
 
 from qibo.config import raise_error
 from qibo.hamiltonians import AbstractHamiltonian, SymbolicHamiltonian
-
+from qibo import Circuit
 
 
 
@@ -55,32 +55,17 @@ class EvolutionOracle:
             raise_error(ValueError,
                     f"You are using an EvolutionOracle type which is not yet supported.")
 
-    def add_static_dynamic(self, other_oracle: EvolutionOracle):
-        raise_error(NotImplementedError, "Stopped because maybe overengineering plus not sure which composition is really needed")
-        assert self.mode_evolution_oracle is other_oracle.mode_evolution_oracle
-        added_oracles = EvolutionOracle(h_generator = {self.name: self.h, other_oracle.name: other_oracle.h}, name = self.name + '*' +other_oracle.name, mode_evolution_oracle = self.mode_evolution_oracle)
-        def new_cicuit( self, t_duration ):
-            if self.mode_evolution_oracle is EvolutionOracleType.text_strings:
-                return self.name + str(t_duration)
-            elif self.mode_evolution_oracle is EvolutionOracleType.numerical:
-                return self.h.exp(t_duration)
-            elif self.mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation:
-                return self.h.circuit(t_duration)
-            else:
-                raise_error(ValueError,
-                        f"You are using an EvolutionOracle type which is not yet supported.")
-        import types
-        added_oracles.circuit = types.MethodType( new_cicuit, added_oracles )
-
 class FrameShiftedEvolutionOracle(EvolutionOracle):
     def __init__( self, 
             base_evolution_oracle: EvolutionOracle, 
             name,
-            before_circuit, after_circuit ):
+            before_circuit, 
+            after_circuit ):
+
        assert isinstance(before_circuit, type(after_circuit) )
 
-       if base_evolution_oracle.mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation :
-            assert type(before_circuit) is qibo.Circuit:
+#       if base_evolution_oracle.mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation :
+#            assert type(before_circuit) is Circuit, str(type(before_circuit)) 
 
        self.h = base_evolution_oracle.h
        self.name = name + '(' + base_evolution_oracle.name + ')'
@@ -95,7 +80,7 @@ class FrameShiftedEvolutionOracle(EvolutionOracle):
         elif self.mode_evolution_oracle is EvolutionOracleType.numerical:
             return self.before_circuit @ self.h.exp(t_duration) @ self.after_circuit
         elif self.mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation:
-            return self.before_circuit @ self.h.circuit(t_duration) @ self.after_circuit
+            return self.before_circuit +  self.h.circuit(t_duration) + self.after_circuit
         else:
             raise_error(ValueError,
                     f"You are using an EvolutionOracle type which is not yet supported.")

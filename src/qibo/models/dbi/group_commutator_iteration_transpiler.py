@@ -67,7 +67,7 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
 
         self.gci_unitary = []
         self.gci_unitary_dagger = []
-        self.iterated_hamiltonian_query_list = [ [ self.input_hamiltonian_evolution_oracle] ] 
+        self.iterated_hamiltonian_evolution_oracle = self.input_hamiltonian_evolution_oracle
 
     def __call__(
         self, 
@@ -96,30 +96,34 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
         #This will run the appropriate group commutator step
             double_bracket_rotation_step = self.group_commutator_query_list(step_duration, diagonal_association)        
 
-        if self.mode_evolution_oracle is EvolutionOracleType.numerical:  
+        if self.input_hamiltonian_evolution_oracle.mode_evolution_oracle is EvolutionOracleType.numerical:  
             #then dbr step output  is a matrix
             double_bracket_rotation_matrix = 0 * self.h.matrix
             double_bracket_rotation_dagger_matrix = 0 * self.h.matrix
             for m in double_bracket_rotation_matrix:
-                double_bracket_rotation_matrix = double_bracket_rotation_matrix * m
+                double_bracket_rotation_matrix = double_bracket_rotation_matrix @ m
             for m in double_bracket_rotation_dagger_matrix:
-                double_bracket_rotation_dagger_matrix = double_bracket_rotation_dagger_matrix * m
+                double_bracket_rotation_dagger_matrix = double_bracket_rotation_dagger_matrix @ m
             self.h.matrix = double_bracket_rotation_dagger_matrix @ self.h.matrix @ double_bracket_rotation_matrix
 
-        elif self.mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation:
+        elif self.input_hamiltonian_evolution_oracle.mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation:
             #then dbr step output is a query list
-            self.gci_unitary.append(double_bracket_rotation_step[forwards])
-            self.gci_unitary_dagger.append(double_bracket_rotation_step[backwards]) 
-
-            self.iterated_hamiltonian_evolution_oracle =
-                                        FrameShiftedEvolutionOracle(
+            #self.gci_unitary.append(double_bracket_rotation_step[forwards])
+            #self.gci_unitary_dagger.append(double_bracket_rotation_step[backwards]) 
+            print (double_bracket_rotation_step)
+            from functools import reduce
+            #composition of circuits should be __matmul__ not __add__ in qibo.Circuit....
+            before_circuit =  reduce(Circuit.__add__, double_bracket_rotation_step['backwards'])
+            after_circuit = reduce( Circuit.__add__, double_bracket_rotation_step['forwards'])
+            self.iterated_hamiltonian_evolution_oracle = FrameShiftedEvolutionOracle(
                                                 self.iterated_hamiltonian_evolution_oracle,
-                                                name = str(step_duration),
-                                                double_bracket_rotation_step[backwards],
-                                                double_bracket_rotation_step[forwards])
+                                                str(step_duration),
+                                                before_circuit,
+                                                after_circuit 
+                                                )
                     
 
-        elif self.mode_evolution_oracle is EvolutionOracleType.text_strings):  
+        elif self.mode_evolution_oracle is EvolutionOracleType.text_strings:  
             raise_error(NotImplementedError)
         else:
             super().__call__(step, d )      

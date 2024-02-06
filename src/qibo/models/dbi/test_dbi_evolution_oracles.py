@@ -28,3 +28,16 @@ d_0 = SymbolicHamiltonian(symbols.Z(0) * symbols.Z(1) + symbols.Z(2), nqubits = 
 gci = GroupCommutatorIterationWithEvolutionOracles( input_hamiltonian_evolution_oracle )
 #By default this will test the dephasing oracle
 gci(0.2, d_0)
+
+query_list = gci.group_commutator_query_list( 0.2, d_0, input_hamiltonian_evolution_oracle )
+
+from functools import reduce
+before_circuit =reduce(Circuit.__add__,  query_list['backwards'])
+after_circuit = reduce(Circuit.__add__,  query_list['forwards'])
+frame_shifted_input_hamiltonian_evolution_oracle = FrameShiftedEvolutionOracle( 
+        input_hamiltonian_evolution_oracle, 'Step 1', before_circuit, after_circuit)
+
+print(gci.h.exp(0.3))
+print(frame_shifted_input_hamiltonian_evolution_oracle.circuit(0.3))
+
+
