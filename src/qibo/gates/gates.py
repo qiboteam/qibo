@@ -1525,7 +1525,7 @@ class iSWAP(Gate):
 
 
 class SiSWAP(Gate):
-    """The :math:`\\sqrt{\\text{iSWAP}}}` gate.
+    """The :math:`\\sqrt{\\text{iSWAP}}` gate.
 
     Corresponds to the following unitary matrix
 
@@ -1549,6 +1549,39 @@ class SiSWAP(Gate):
         self.target_qubits = (q0, q1)
         self.init_args = [q0, q1]
         self.unitary = True
+
+    def _dagger(self) -> "Gate":
+        return SiSWAPDG(*self.qubits)
+
+
+class SiSWAPDG(Gate):
+    """The :math:`\\left(\\sqrt{\\text{iSWAP}}\\right)^{\\dagger}` gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 & 0 & 0 \\\\
+        0 & 1/\\sqrt{2} & -i/\\sqrt{2} & 0 \\\\
+        0 & -i/\\sqrt{2} & 1/\\sqrt{2} & 0 \\\\
+        0 & 0 & 0 & 1 \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the first qubit to be swapped id number.
+        q1 (int): the second qubit to be swapped id number.
+    """
+
+    def __init__(self, q0, q1):
+        super().__init__()
+        self.name = "siswapdg"
+        self.draw_label = "sidg"
+        self.target_qubits = (q0, q1)
+        self.init_args = [q0, q1]
+        self.unitary = True
+
+    def _dagger(self) -> "Gate":
+        return SiSWAP(*self.qubits)
 
 
 class FSWAP(Gate):
