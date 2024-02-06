@@ -167,3 +167,10 @@ def set_threads(nthreads):
     if nthreads < 1:
         raise_error(ValueError, "Number of threads must be positive.")
     GlobalBackend().set_threads(nthreads)
+
+
+def _check_backend(backend):
+    if backend is None:
+        return GlobalBackend()
+
+    return backend
