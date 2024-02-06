@@ -442,7 +442,7 @@ class QuantumNetwork:
 
         If the quantum network is pure and ``number > 0.0``, the method returns a pure quantum
         network with its Choi operator multiplied by the square root of ``number``.
-        This is equivelant to multiplying `self.to_full()` by the ``number``.
+        This is equivalent to multiplying `self.to_full()` by the ``number``.
         Otherwise, this method will return a full quantum network.
 
         Args:
