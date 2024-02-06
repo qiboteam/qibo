@@ -400,6 +400,7 @@ class NumpyBackend(Backend):
                 raise RuntimeError(
                     "Attempting to perform noisy simulation with `density_matrix=False` and no Measurement gate in the Circuit. If you wish to retrieve the statistics of the outcomes please include measurements in the circuit, otherwise set `density_matrix=True` to recover the final state."
                 )
+        is_batched = False
 
         if circuit.accelerators:  # pragma: no cover
             return self.execute_distributed_circuit(circuit, initial_state, nshots)

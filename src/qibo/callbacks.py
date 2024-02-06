@@ -48,7 +48,7 @@ class Callback:
 
         return self._results[k]
 
-    def apply(self, backend, state):  # pragma: no cover
+    def apply(self, backend, state, batch=False):  # pragma: no cover
         pass
 
     def apply_density_matrix(self, backend, state):  # pragma: no cover
@@ -124,7 +124,7 @@ class EntanglementEntropy(Callback):
                 i for i in range(self._nqubits) if i not in set(self.partition)
             ]
 
-    def apply(self, backend, state):
+    def apply(self, backend, state, batch=False):
         from qibo.quantum_info.metrics import entanglement_entropy
 
         entropy, spectrum = entanglement_entropy(
@@ -164,7 +164,7 @@ class State(Callback):
         super().__init__()
         self.copy = copy
 
-    def apply(self, backend, state):
+    def apply(self, backend, state, batch=False):
         self.append(backend.cast(state, copy=self.copy))
         return state
 
@@ -181,7 +181,7 @@ class Norm(Callback):
         = \\mathrm{Tr} (\\rho )
     """
 
-    def apply(self, backend, state):
+    def apply(self, backend, state, batch=False):
         norm = backend.calculate_norm(state)
         self.append(norm)
         return norm
@@ -210,7 +210,7 @@ class Overlap(Callback):
         super().__init__()
         self.state = state
 
-    def apply(self, backend, state):
+    def apply(self, backend, state, batch=False):
         overlap = backend.calculate_overlap(self.state, state)
         self.append(overlap)
         return overlap
@@ -242,7 +242,7 @@ class Energy(Callback):
         super().__init__()
         self.hamiltonian = hamiltonian
 
-    def apply(self, backend, state):
+    def apply(self, backend, state, batch=False):
         assert type(self.hamiltonian.backend) == type(backend)
         expectation = self.hamiltonian.expectation(state)
         self.append(expectation)
@@ -319,7 +319,7 @@ class Gap(Callback):
         self.check_degenerate = check_degenerate
         self.evolution = None
 
-    def apply(self, backend, state):
+    def apply(self, backend, state, batch=False):
         from qibo.config import EIGVAL_CUTOFF, log
 
         if self.evolution is None:

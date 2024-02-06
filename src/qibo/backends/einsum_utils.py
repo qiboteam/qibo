@@ -70,7 +70,7 @@ def control_order(gate, nqubits, batch=False):
     if batch:
         for i in range(len(order)):
             order[i] += 1
-            target[i] += 1
+            targets[i] += 1
     return order, targets
 
 

@@ -19,9 +19,9 @@ class CallbackGate(SpecialGate):
         self.callback = callback
         self.init_args = [callback]
 
-    def apply(self, backend, state, nqubits):
+    def apply(self, backend, state, nqubits, batch=False):
         self.callback.nqubits = nqubits
-        self.callback.apply(backend, state)
+        self.callback.apply(backend, state, batch=False)
         return state
 
     def apply_density_matrix(self, backend, state, nqubits):
