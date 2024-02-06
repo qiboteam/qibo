@@ -12,10 +12,7 @@ from qibo.config import raise_error
 
 
 class QuantumNetwork:
-    """Quantum network is an object that unifies the representation of quantum states, channels,
-    observables, and higher-order quantum operators [1].
-
-    This class stores the Choi operator of the quantum network as a tensor,
+    """This class stores the Choi operator of the quantum network as a tensor,
     which is an unique representation of the quantum network.
 
     A minimum quantum network is a quantum channel, which is a quantum network of the form
@@ -43,10 +40,6 @@ class QuantumNetwork:
         backend (:class:`qibo.backends.abstract.Backend`, optional): Backend to be used in
             calculations. If ``None``, defaults to :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
-
-    References:
-        1. G. Chiribella *et al.*, *Theoretical framework for quantum networks.*
-        `Physical Review A 80.2 (2009): 022339 <https://journals.aps.org/pra/abstract/10.1103/PhysRevA.80.022339>`_.
     """
 
     def __init__(
