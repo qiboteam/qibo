@@ -532,7 +532,7 @@ class QuantumNetwork:
                 + "``QuantumNetwork`` by a non-``QuantumNetwork``.",
             )
 
-        if len(self.partition) == 2:    # `self` is a channel
+        if len(self.partition) == 2:  # `self` is a channel
             if len(second_network.partition) != 2:
                 raise_error(
                     ValueError,
@@ -548,8 +548,7 @@ class QuantumNetwork:
 
             subscripts = "jk,kl -> jl"
 
-            
-        elif len(self.partition) == 4:     # `self` is a super-channel
+        elif len(self.partition) == 4:  # `self` is a super-channel
             if len(second_network.partition) != 2:
                 raise_error(
                     ValueError,

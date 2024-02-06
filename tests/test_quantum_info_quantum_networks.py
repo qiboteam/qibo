@@ -232,8 +232,12 @@ def test_with_comb(backend):
     comb = random_density_matrix(2**4, backend=backend)
     channel = random_density_matrix(2**2, backend=backend)
 
-    comb_choi = QuantumNetwork(comb, comb_partition, system_output=comb_sys_out, backend=backend)
-    channel_choi = QuantumNetwork(channel, channel_partition, system_output=channel_sys_out, backend=backend)
+    comb_choi = QuantumNetwork(
+        comb, comb_partition, system_output=comb_sys_out, backend=backend
+    )
+    channel_choi = QuantumNetwork(
+        channel, channel_partition, system_output=channel_sys_out, backend=backend
+    )
     # channel_choi_2 = QuantumNetwork(
     #     comb @ channel, comb_partition, system_output=comb_sys_out, backend=backend
     # ).to_full(backend)
