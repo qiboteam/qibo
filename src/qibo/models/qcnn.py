@@ -60,12 +60,7 @@ class QuantumCNN:
         self.twoqubitansatz = twoqubitansatz
 
         if copy_init_state is None:
-            if (
-                ("qibojit" in get_backend())
-                or ("qibojit-numba" in get_backend())
-                or ("qibojit-cuquantum" in get_backend())
-                or ("qibojit-cupy" in get_backend())
-            ):
+            if "qibojit" in get_backend():
                 self.copy_init_state = True
             else:
                 self.copy_init_state = False
