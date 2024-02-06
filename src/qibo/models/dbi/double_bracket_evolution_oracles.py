@@ -54,9 +54,51 @@ class EvolutionOracle:
         else:
             raise_error(ValueError,
                     f"You are using an EvolutionOracle type which is not yet supported.")
-    @property
-    def print(self):
-        return self.name
+
+    def add_static_dynamic(self, other_oracle: EvolutionOracle):
+        raise_error(NotImplementedError, "Stopped because maybe overengineering plus not sure which composition is really needed")
+        assert self.mode_evolution_oracle is other_oracle.mode_evolution_oracle
+        added_oracles = EvolutionOracle(h_generator = {self.name: self.h, other_oracle.name: other_oracle.h}, name = self.name + '*' +other_oracle.name, mode_evolution_oracle = self.mode_evolution_oracle)
+        def new_cicuit( self, t_duration ):
+            if self.mode_evolution_oracle is EvolutionOracleType.text_strings:
+                return self.name + str(t_duration)
+            elif self.mode_evolution_oracle is EvolutionOracleType.numerical:
+                return self.h.exp(t_duration)
+            elif self.mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation:
+                return self.h.circuit(t_duration)
+            else:
+                raise_error(ValueError,
+                        f"You are using an EvolutionOracle type which is not yet supported.")
+        import types
+        added_oracles.circuit = types.MethodType( new_cicuit, added_oracles )
+
+class FrameShiftedEvolutionOracle(EvolutionOracle):
+    def __init__( self, 
+            base_evolution_oracle: EvolutionOracle, 
+            name,
+            before_circuit, after_circuit ):
+       assert isinstance(before_circuit, type(after_circuit) )
+
+       if base_evolution_oracle.mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation :
+            assert type(before_circuit) is qibo.Circuit:
+
+       self.h = base_evolution_oracle.h
+       self.name = name + '(' + base_evolution_oracle.name + ')'
+       self.mode_evolution_oracle = base_evolution_oracle.mode_evolution_oracle
+       self.before_circuit = before_circuit
+       self.after_circuit = after_circuit
+        
+    def circuit(self, t_duration: float = None):
+
+        if self.mode_evolution_oracle is EvolutionOracleType.text_strings:
+            return self.name + '(' + str(t_duration) + ')'
+        elif self.mode_evolution_oracle is EvolutionOracleType.numerical:
+            return self.before_circuit @ self.h.exp(t_duration) @ self.after_circuit
+        elif self.mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation:
+            return self.before_circuit @ self.h.circuit(t_duration) @ self.after_circuit
+        else:
+            raise_error(ValueError,
+                    f"You are using an EvolutionOracle type which is not yet supported.")
 
 class DoubleBracketDiagonalAssociationType(Enum):
     """Define the evolution generator of a variant of the double-bracket iterations."""
