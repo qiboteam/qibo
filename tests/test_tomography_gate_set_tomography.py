@@ -13,7 +13,7 @@ from qibo.tomography.gate_set_tomography import (
 )
 
 
-@pytest.mark.parametrize("k", np.arange(0,4,1))
+@pytest.mark.parametrize("k", np.arange(0, 4, 1))
 def test_prepare_states_valid_k_single_qubit(k):
     correct_gates = [[gates.I(0)], [gates.X(0)], [gates.H(0)], [gates.H(0), gates.S(0)]]
     nqubits = 1
@@ -23,12 +23,26 @@ def test_prepare_states_valid_k_single_qubit(k):
         assert isinstance(gate, type(groundtruth))
 
 
-@pytest.mark.parametrize("k", np.arange(0,16,1))
+@pytest.mark.parametrize("k", np.arange(0, 16, 1))
 def test_prepare_states_valid_k_two_qubits(k):
-    correct_gates = [[gates.I(0), gates.I(1)], [gates.I(0), gates.X(1)], [gates.I(0), gates.H(1)], [gates.I(0), gates.H(1), gates.S(1)],
-                    [gates.X(0), gates.I(1)], [gates.X(0), gates.X(1)], [gates.X(0), gates.H(1)], [gates.X(0), gates.H(1), gates.S(1)],
-                    [gates.H(0), gates.I(1)], [gates.H(0), gates.X(1)], [gates.H(0), gates.H(1)], [gates.H(0), gates.H(1), gates.S(1)],
-                    [gates.H(0), gates.S(0), gates.I(1)], [gates.H(0), gates.S(0), gates.X(1)], [gates.H(0), gates.S(0), gates.H(1)], [gates.H(0), gates.S(0), gates.H(1), gates.S(1)]]
+    correct_gates = [
+        [gates.I(0), gates.I(1)],
+        [gates.I(0), gates.X(1)],
+        [gates.I(0), gates.H(1)],
+        [gates.I(0), gates.H(1), gates.S(1)],
+        [gates.X(0), gates.I(1)],
+        [gates.X(0), gates.X(1)],
+        [gates.X(0), gates.H(1)],
+        [gates.X(0), gates.H(1), gates.S(1)],
+        [gates.H(0), gates.I(1)],
+        [gates.H(0), gates.X(1)],
+        [gates.H(0), gates.H(1)],
+        [gates.H(0), gates.H(1), gates.S(1)],
+        [gates.H(0), gates.S(0), gates.I(1)],
+        [gates.H(0), gates.S(0), gates.X(1)],
+        [gates.H(0), gates.S(0), gates.H(1)],
+        [gates.H(0), gates.S(0), gates.H(1), gates.S(1)],
+    ]
     nqubits = 2
     circuit = prepare_states(k, nqubits)
 
@@ -36,7 +50,7 @@ def test_prepare_states_valid_k_two_qubits(k):
         assert isinstance(gate, type(groundtruth))
 
 
-@pytest.mark.parametrize("k, nqubits", [(0,3),(1,4),(2,5),(3,6)])
+@pytest.mark.parametrize("k, nqubits", [(0, 3), (1, 4), (2, 5), (3, 6)])
 def test_prepare_states_valid_k_invalid_nqubits(k, nqubits):
     # Test for value input with invalid nqubits
 
@@ -45,7 +59,7 @@ def test_prepare_states_valid_k_invalid_nqubits(k, nqubits):
         circuit = prepare_states(k, nqubits)
 
 
-@pytest.mark.parametrize("k, nqubits", [(17,1), (18,1), (21,2), (56,2)])
+@pytest.mark.parametrize("k, nqubits", [(17, 1), (18, 1), (21, 2), (56, 2)])
 def test_prepare_states_invalid_k_valid_nqubits(k, nqubits):
     # Check if IndexError is raised
     with pytest.raises(IndexError):
@@ -55,7 +69,7 @@ def test_prepare_states_invalid_k_valid_nqubits(k, nqubits):
 # ##################################################################################
 
 
-@pytest.mark.parametrize("j", np.arange(0,4,1))
+@pytest.mark.parametrize("j", np.arange(0, 4, 1))
 def test_measurement_basis_value_j_single_qubit(j):
     # Test for valid input with a single qubit
     nqubits = 1
@@ -67,7 +81,7 @@ def test_measurement_basis_value_j_single_qubit(j):
     assert new_circuit.nqubits == nqubits
 
 
-@pytest.mark.parametrize("j", np.arange(0,16,1))
+@pytest.mark.parametrize("j", np.arange(0, 16, 1))
 def test_measurement_basis_value_j_two_qubits(j):
     # Test for valid input with two qubits
     nqubits = 2
@@ -79,7 +93,27 @@ def test_measurement_basis_value_j_two_qubits(j):
     assert new_circuit.nqubits == nqubits
 
 
-@pytest.mark.parametrize("j, nqubits", [(0,3),(1,4),(2,5),(3,3),(4,6),(5,8),(6,7),(7,9),(8,5),(9,6),(10,4),(11,3),(12,17),(13,12),(14,4),(15,5)])
+@pytest.mark.parametrize(
+    "j, nqubits",
+    [
+        (0, 3),
+        (1, 4),
+        (2, 5),
+        (3, 3),
+        (4, 6),
+        (5, 8),
+        (6, 7),
+        (7, 9),
+        (8, 5),
+        (9, 6),
+        (10, 4),
+        (11, 3),
+        (12, 17),
+        (13, 12),
+        (14, 4),
+        (15, 5),
+    ],
+)
 def test_measurement_basis_valid_j_invalid_nqubits(j, nqubits):
     # Test for valid input with invalid qubits
     test_circuit = qibo.models.Circuit(nqubits)
@@ -89,7 +123,7 @@ def test_measurement_basis_valid_j_invalid_nqubits(j, nqubits):
         new_circuit = measurement_basis(j, test_circuit)
 
 
-@pytest.mark.parametrize("j, nqubits", [(4,1),(8,1),(17,2),(21,2)])
+@pytest.mark.parametrize("j, nqubits", [(4, 1), (8, 1), (17, 2), (21, 2)])
 def test_measurement_basis_invalid_j_valid_nqubits(j, nqubits):
     # Test for invalid input with valid nqubits
     test_circuit = qibo.models.Circuit(nqubits)
@@ -207,7 +241,7 @@ def test_GST_execute_circuit_1qb_j0():
     assert result == 1.0
 
 
-@pytest.mark.parametrize("k, j", [(0,1),(0,2),(1,2),(2,3)])
+@pytest.mark.parametrize("k, j", [(0, 1), (0, 2), (1, 2), (2, 3)])
 def test_GST_execute_circuit_1qb_jnonzero(backend, k, j):
     nqubits = 1
     circuit = qibo.models.Circuit(nqubits)
@@ -233,7 +267,7 @@ def test_GST_execute_circuit_2qb_j0():
     assert result == 1.0
 
 
-@pytest.mark.parametrize("k, j", [(0,1),(3,5),(5,8),(10,15)])
+@pytest.mark.parametrize("k, j", [(0, 1), (3, 5), (5, 8), (10, 15)])
 def test_GST_execute_circuit_2qb_jnonzero(backend, k, j):
     nqubits = 2
     circuit = qibo.models.Circuit(nqubits)
@@ -248,8 +282,7 @@ def test_GST_execute_circuit_2qb_jnonzero(backend, k, j):
     assert backend.assert_allclose(test_result, control_result)
 
 
-
-@pytest.mark.parametrize("nqubits", [3,4,5,6,7,8])
+@pytest.mark.parametrize("nqubits", [3, 4, 5, 6, 7, 8])
 def test_GST_execute_circuit_wrong_qb(nqubits):
     circuit = qibo.models.Circuit(nqubits)
     circuit.add(gates.M(0))
@@ -282,14 +315,12 @@ def test_GST_one_qubit_empty_circuit():
     # backend.assert_allclose(result, pytest.approx(seed42_result, abs=1e-12))
 
 
-
 def test_GST_two_qubit_empty_circuit(backend):
     nqubits = 2
     control_result = execute_GST(nqubits)
     test_result = execute_GST(nqubits)
 
     backend.assert_allclose(test_result, control_result)
-
 
 
 def test_GST_one_qubit_with_Hgate():
@@ -331,9 +362,8 @@ def test_GST_two_qubit_with_CNOTgate(backend):
     test_gate = gates.CNOT(0, 1)
     control_result = execute_GST(nqubits, gate=test_gate)
     test_result = execute_GST(nqubits, gate=test_gate)
-    
-    backend.assert_allclose(test_result, control_result)
 
+    backend.assert_allclose(test_result, control_result)
 
 
 def test_GST_two_qubit_with_CRXgate(backend):
@@ -365,9 +395,13 @@ def test_GST_one_qubit_with_gate_with_valid_reset_register_string():
 def test_GST_two_qubit_with_gate_with_valid_reset_register_string(backend):
     nqubits = 2
     invert_register = "sp_1"
-    control_result = execute_GST(nqubits=nqubits, gate=None, invert_register=invert_register)
-    test_result = execute_GST(nqubits=nqubits, gate=None, invert_register=invert_register)
-    
+    control_result = execute_GST(
+        nqubits=nqubits, gate=None, invert_register=invert_register
+    )
+    test_result = execute_GST(
+        nqubits=nqubits, gate=None, invert_register=invert_register
+    )
+
     backend.assert_allclose(test_result, control_result)
 
 
@@ -393,9 +427,13 @@ def test_GST_two_qubit_with_param_gate_with_valid_reset_register_string(backend)
     nqubits = 2
     test_gate = gates.CNOT(0, 1)
     invert_register = "sp_1"
-    control_result = execute_GST(nqubits=nqubits, gate=None, invert_register=invert_register)
-    test_result = execute_GST(nqubits=nqubits, gate=None, invert_register=invert_register)
-    
+    control_result = execute_GST(
+        nqubits=nqubits, gate=None, invert_register=invert_register
+    )
+    test_result = execute_GST(
+        nqubits=nqubits, gate=None, invert_register=invert_register
+    )
+
     backend.assert_allclose(test_result, control_result)
 
 
@@ -403,8 +441,12 @@ def test_GST_two_qubit_with_gate_with_valid_reset_register_string(backend):
     nqubits = 2
     test_gate = gates.CZ(0, 1)
     invert_register = "sp_t"
-    control_result = execute_GST(nqubits=nqubits, gate=test_gate, invert_register=invert_register)
-    test_result = execute_GST(nqubits=nqubits, gate=test_gate, invert_register=invert_register)
+    control_result = execute_GST(
+        nqubits=nqubits, gate=test_gate, invert_register=invert_register
+    )
+    test_result = execute_GST(
+        nqubits=nqubits, gate=test_gate, invert_register=invert_register
+    )
 
     backend.assert_allclose(test_result, control_result)
 
@@ -414,14 +456,18 @@ def test_GST_two_qubit_with_gate_with_invalid_reset_register_string():
     test_gate = gates.CZ(0, 1)
     invert_register = "sp_3"
     with pytest.raises(NameError):
-        result = execute_GST(nqubits=nqubits, gate=test_gate, invert_register=invert_register)
+        result = execute_GST(
+            nqubits=nqubits, gate=test_gate, invert_register=invert_register
+        )
 
 
 def test_GST_empty_circuit_with_invalid_qb():
     nqubits = 3
     # Check if ValueError is raised
     with pytest.raises(ValueError, match="nqubits needs to be either 1 or 2"):
-        result = execute_GST(nqubits, gate=None, invert_register=None, noise_model=None, backend=None)
+        result = execute_GST(
+            nqubits, gate=None, invert_register=None, noise_model=None, backend=None
+        )
 
 
 def test_GST_with_gate_with_invalid_qb():
@@ -430,7 +476,13 @@ def test_GST_with_gate_with_invalid_qb():
 
     # Check if ValueError is raised
     with pytest.raises(ValueError):
-        result = execute_GST(nqubits, gate=test_gate, invert_register=None, noise_model=None, backend=None)
+        result = execute_GST(
+            nqubits,
+            gate=test_gate,
+            invert_register=None,
+            noise_model=None,
+            backend=None,
+        )
 
 
 def test_GST_with_gate_with_invalid_qb():
@@ -439,7 +491,13 @@ def test_GST_with_gate_with_invalid_qb():
 
     # Check if ValueError is raised
     with pytest.raises(ValueError):
-        result = execute_GST(nqubits, gate=test_gate, invert_register=None, noise_model=None, backend=None)
+        result = execute_GST(
+            nqubits,
+            gate=test_gate,
+            invert_register=None,
+            noise_model=None,
+            backend=None,
+        )
 
 
 def test_GST_one_qubit_empty_circuit_with_noise():
@@ -471,8 +529,11 @@ def test_GST_one_qubit_empty_circuit_with_noise(backend):
     depol.add(DepolarizingError(lam))
     noise_model = depol
     nqubits = 2
-    control_result = execute_GST(nqubits, gate=None, invert_register=None, noise_model=depol, backend=None)
-    test_result = execute_GST(nqubits, gate=None, invert_register=None, noise_model=depol, backend=None)
+    control_result = execute_GST(
+        nqubits, gate=None, invert_register=None, noise_model=depol, backend=None
+    )
+    test_result = execute_GST(
+        nqubits, gate=None, invert_register=None, noise_model=depol, backend=None
+    )
 
     backend.assert_allclose(test_result, control_result)
-
