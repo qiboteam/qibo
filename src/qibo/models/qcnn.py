@@ -51,7 +51,7 @@ class QuantumCNN:
         nlayers,
         nclasses=2,
         params=None,
-        twoqubitansatz = None,
+        twoqubitansatz=None,
         copy_init_state=None,
     ):
         self.nclasses = nclasses
