@@ -7,7 +7,7 @@ import numpy as np
 from scipy.stats import rv_continuous
 
 from qibo import Circuit, gates
-from qibo.backends import GlobalBackend, NumpyBackend
+from qibo.backends import NumpyBackend, _check_backend
 from qibo.config import MAX_ITERATIONS, PRECISION_TOL, raise_error
 from qibo.quantum_info.basis import comp_basis_to_pauli
 from qibo.quantum_info.superoperator_transformations import (
@@ -1201,8 +1201,7 @@ def _set_backend_and_local_state(seed, backend):
             TypeError, "seed must be either type int or numpy.random.Generator."
         )
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if seed is None or isinstance(seed, int):
         if backend.__class__.__name__ in [

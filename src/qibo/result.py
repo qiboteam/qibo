@@ -31,11 +31,9 @@ class QuantumState:
     """
 
     def __init__(self, state, backend=None):
-        if backend is None:  # pragma: no cover
-            from qibo.backends import GlobalBackend
+        from qibo.backends import _check_backend
 
-            backend = GlobalBackend()
-        self.backend = backend
+        self.backend = _check_backend(backend)
         self.density_matrix = len(state.shape) == 2
         self.nqubits = int(np.log2(state.shape[0]))
         self._state = state
