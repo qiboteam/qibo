@@ -98,9 +98,10 @@ def test_phase_encoder(backend, rotation, kind):
     backend.assert_allclose(state, target)
 
 
+@pytest.mark.parametrize("kind", [None, list])
 @pytest.mark.parametrize("architecture", ["tree", "diagonal"])
 @pytest.mark.parametrize("nqubits", [8])
-def test_unary_encoder(backend, nqubits, architecture):
+def test_unary_encoder(backend, nqubits, architecture, kind):
     sampler = np.random.default_rng(1)
 
     with pytest.raises(TypeError):
@@ -125,6 +126,9 @@ def test_unary_encoder(backend, nqubits, architecture):
     sampler = np.random.default_rng(1)
     data = 2 * sampler.random(nqubits) - 1
     data = backend.cast(data, dtype=data.dtype)
+
+    if kind is not None:
+        data = kind(data)
 
     circuit = unary_encoder(data, architecture=architecture)
     state = backend.execute_circuit(circuit).state()
