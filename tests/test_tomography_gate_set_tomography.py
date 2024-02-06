@@ -381,6 +381,7 @@ def test_GST_one_qubit_with_Hgate(backend):
 #     assert result == pytest.approx(seed42_result)
 #     # backend.assert_allclose(result, pytest.approx(seed42_result, abs=1e-12))
 
+
 def test_GST_one_qubit_with_RXgate():
     nqubits = 1
     test_gate = gates.RX(0, np.pi / 7)
