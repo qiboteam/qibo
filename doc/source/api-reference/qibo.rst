@@ -1616,6 +1616,138 @@ The destabilizers can be extracted analogously with :meth:`qibo.quantum_info.cli
     :member-order: bysource
 
 
+Entanglement measures
+^^^^^^^^^^^^^^^^^^^^^
+
+Set of functions to calculate entanglement measures.
+
+
+Concurrence
+"""""""""""
+
+.. autofunction:: qibo.quantum_info.concurrence
+
+
+Entanglement of formation
+"""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.entanglement_of_formation
+
+
+Entanglement fidelity
+"""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.entanglement_fidelity
+
+
+Meyer-Wallach entanglement
+""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.meyer_wallach_entanglement
+
+
+Entanglement capability
+"""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.entangling_capability
+
+
+Entropy measures
+^^^^^^^^^^^^^^^^
+
+Set of functions to calculate entropy measures.
+
+
+Shannon entropy
+"""""""""""""""
+
+.. autofunction:: qibo.quantum_info.shannon_entropy
+
+
+Classical relative entropy
+""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.classical_relative_entropy
+
+
+Classical Rényi entropy
+"""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.classical_renyi_entropy
+
+
+Classical Rényi relative entropy
+""""""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.classical_relative_renyi_entropy
+
+
+Classical Tsallis entropy
+"""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.classical_tsallis_entropy
+
+
+von Neumann entropy
+"""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.von_neumann_entropy
+
+.. note::
+    ``check_hermitian`` flag allows the user to choose if the function will check if input
+    ``state`` is Hermitian or not. Default option is ``check_hermitian=False``, i.e. the
+    assumption of Hermiticity. This is faster and, more importantly,
+    this function are intended to be used on Hermitian inputs. When ``check_hermitian=True``
+    and ``state`` is non-Hermitian, an error will be raised when using `cupy` backend.
+
+
+Relative von Neumann entropy
+""""""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.relative_von_neumann_entropy
+
+.. note::
+    ``check_hermitian`` flag allows the user to choose if the function will check if input
+    ``state`` is Hermitian or not. Default option is ``check_hermitian=False``, i.e. the
+    assumption of Hermiticity. This is faster and, more importantly,
+    this function are intended to be used on Hermitian inputs. When ``check_hermitian=True``
+    and either ``state`` or ``target`` is non-Hermitian,
+    an error will be raised when using `cupy` backend.
+
+
+Rényi entropy
+"""""""""""""
+
+.. autofunction:: qibo.quantum_info.renyi_entropy
+
+
+Relative Rényi entropy
+""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.relative_renyi_entropy
+
+
+Tsallis entropy
+"""""""""""""""
+
+.. autofunction:: qibo.quantum_info.tsallis_entropy
+
+
+Entanglement entropy
+""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.entanglement_entropy
+
+.. note::
+    ``check_hermitian`` flag allows the user to choose if the function will check if
+    the reduced density matrix resulting from tracing out ``bipartition`` from input
+    ``state`` is Hermitian or not. Default option is ``check_hermitian=False``, i.e. the
+    assumption of Hermiticity. This is faster and, more importantly,
+    this function are intended to be used on Hermitian inputs. When ``check_hermitian=True``
+    and the reduced density matrix is non-Hermitian, an error will be raised
+    when using `cupy` backend.
+
+
 Metrics
 ^^^^^^^
 
@@ -1634,57 +1766,17 @@ Impurity
 .. autofunction:: qibo.quantum_info.impurity
 
 
-Concurrence
-"""""""""""
-
-.. autofunction:: qibo.quantum_info.concurrence
-
-
-Entanglement of formation
-"""""""""""""""""""""""""
-
-.. autofunction:: qibo.quantum_info.entanglement_of_formation
-
-
-Entropy
-"""""""
-
-.. autofunction:: qibo.quantum_info.entropy
-
-.. note::
-    ``validate`` flag allows the user to choose if the function will check if input
-    ``state`` is Hermitian or not. Default option is ``validate=False``, i.e. the
-    assumption of Hermiticity, because it is faster and, more importantly,
-    the functions are intended to be used on Hermitian inputs. When ``validate=True``
-    and ``state`` is non-Hermitian, an error will be raised when using `cupy` backend.
-
-
-Entanglement entropy
-""""""""""""""""""""
-
-.. autofunction:: qibo.quantum_info.entanglement_entropy
-
-.. note::
-    ``validate`` flag allows the user to choose if the function will check if
-    the reduced density matrix resulting from tracing out ``bipartition`` from input
-    ``state`` is Hermitian or not. Default option is ``validate=False``, i.e. the
-    assumption of Hermiticity, because it is faster and, more importantly,
-    the functions are intended to be used on Hermitian inputs. When ``validate=True``
-    and the reduced density matrix is non-Hermitian, an error will be raised
-    when using `cupy` backend.
-
-
 Trace distance
 """"""""""""""
 
 .. autofunction:: qibo.quantum_info.trace_distance
 
 .. note::
-    ``validate`` flag allows the user to choose if the function will check if difference
+    ``check_hermitian`` flag allows the user to choose if the function will check if difference
     between inputs, ``state - target``, is Hermitian or not. Default option is
-    ``validate=False``, i.e. the assumption of Hermiticity, because it is faster and,
+    ``check_hermitian=False``, i.e. the assumption of Hermiticity, because it is faster and,
     more importantly, the functions are intended to be used on Hermitian inputs.
-    When ``validate=True`` and ``state - target`` is non-Hermitian, an error will be
+    When ``check_hermitian=True`` and ``state - target`` is non-Hermitian, an error will be
     raised when using `cupy` backend.
 
 
@@ -1718,12 +1810,6 @@ Bures distance
 .. autofunction:: qibo.quantum_info.bures_distance
 
 
-Entanglement fidelity
-"""""""""""""""""""""
-
-.. autofunction:: qibo.quantum_info.entanglement_fidelity
-
-
 Process fidelity
 """"""""""""""""
 
@@ -1752,18 +1838,6 @@ Diamond Norm
 """"""""""""
 
 .. autofunction:: qibo.quantum_info.diamond_norm
-
-
-Meyer-Wallach entanglement
-""""""""""""""""""""""""""
-
-.. autofunction:: qibo.quantum_info.meyer_wallach_entanglement
-
-
-Entanglement capability
-"""""""""""""""""""""""
-
-.. autofunction:: qibo.quantum_info.entangling_capability
 
 
 Expressibility of parameterized quantum circuits
@@ -2181,18 +2255,6 @@ Hadamard Transform
 """"""""""""""""""
 
 .. autofunction:: qibo.quantum_info.hadamard_transform
-
-
-Shannon entropy
-"""""""""""""""
-
-.. autofunction:: qibo.quantum_info.shannon_entropy
-
-
-Total Variation distance
-""""""""""""""""""""""""
-
-.. autofunction:: qibo.quantum_info.total_variation_distance
 
 
 Hellinger distance
