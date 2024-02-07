@@ -1,47 +1,43 @@
 """Meta-heuristic optimization algorithms."""
 
-import inspect
+from dataclasses import dataclass, field
+from typing import List, Optional, Tuple, Union
 
 import cma
+from numpy import ndarray
 from scipy.optimize import basinhopping
 
 from qibo.config import log
-from qibo.optimizers.abstract import Optimizer, check_fit_arguments, check_options
+from qibo.optimizers.abstract import Optimizer
 
 
+@dataclass
 class CMAES(Optimizer):
     """
     Covariance Matrix Adaptation Evolution Strategy based on
     `pycma <https://github.com/CMA-ES/pycma>`_.
 
     Args:
-        options (dict): optimizer's options. These correspond the the arguments
-            which can be set into the `cma.fmin2` method. Please look at the
-            official documentation https://cma-es.github.io/apidocs-pycma/cma.evolution_strategy.html#fmin2
-            to see all the available options. The only default set parameter
-            is `sigma0`, which we have set to 0.5, as it is a reasonable value
-            when considering variational parameters as rotation angles in a circuit.
+        verbosity (Optional[bool]): verbosity level of the optimization. If `True`, logging messages are displayed.
+        sigma0 (Optional[float]): scalar, initial standard deviation in each coordinate.
+            sigma0 should be about 1/4th of the search domain width (where the
+            optimum is to be expected).
+        restarts (Optional[int]): number of restarts with increasing population size.
+        restart_from_best (Optional[bool]): which point to restart from.
+        iconpopsize (Optional[int]): multiplier for increasing the population size popsize before each restart.
+        callback (Optional[callable]): a callable called after each optimization iteration.
     """
 
-    def __init__(self, options={"sigma0": 0.5}):
-        self.options = {}
-        self.name = "cmaes"
-        self._fit_function = cma.fmin2
+    sigma0: Optional[float] = field(default=0.5)
+    restarts: Optional[int] = field(default=0)
+    restarts_from_best: Optional[bool] = field(default=False)
+    iconpopsize: Optional[int] = field(default=2)
+    callback: Optional[callable] = field(default=None)
 
-        # check if options are compatible with the function and update class options
-        check_options(function=self._fit_function, options=options)
-        self.set_options(options)
+    def __str__(self):
+        return "cmaes"
 
-    def get_options_list(self):
-        """Return all available optimizer's options."""
-        default_arguments = ["objective_function", "x0", "args", "options"]
-        customizable_arguments = ()
-        for arg in list(inspect.signature(self._fit_function).parameters):
-            if arg not in default_arguments:
-                customizable_arguments += (arg,)
-        return customizable_arguments
-
-    def get_fit_options_list(self, keyword=None):
+    def show_fit_options(self, keyword: str = None):
         """
         Return all the available fit options for the optimizer.
 
@@ -51,7 +47,13 @@ class CMAES(Optimizer):
         """
         return cma.CMAOptions(keyword)
 
-    def fit(self, initial_parameters, loss, args=(), fit_options={}):
+    def fit(
+        self,
+        initial_parameters: Union[List, ndarray],
+        loss: callable,
+        args: Tuple,
+        fit_options: Optional[dict] = None,
+    ):
         """Perform the optimizations via CMA-ES.
 
         Args:
@@ -60,26 +62,24 @@ class CMAES(Optimizer):
             loss (callable): loss function to train on.
             args (tuple): tuple containing loss function arguments.
             fit_options (dict): fit extra options. To have a look to all
-                possible options please import the `cma` package and type `cma.CMAOptions()`.
+                possible options please use `CMAES.show_fit_options()`.
 
         Returns:
             tuple: best loss value (float), best parameter values (np.ndarray), full cma result object.
         """
 
-        check_fit_arguments(args=args, initial_parameters=initial_parameters)
+        log.info(f"Optimization is performed using the optimizer: {self.__str__()}")
 
-        log.info(
-            f"Optimization is performed using the optimizer: {type(self).__name__}"
-        )
-
-        # update options dictionary with extra `cma.fmin` options.
-        self.set_options({"options": fit_options})
-
-        r = self._fit_function(
+        r = cma.fmin2(
             objective_function=loss,
             x0=initial_parameters,
             args=args,
-            **self.options,
+            sigma0=self.sigma0,
+            restarts=self.restarts,
+            restart_from_best=self.restarts_from_best,
+            incpopsize=self.iconpopsize,
+            callback=self.callback,
+            options=fit_options,
         )
 
         return r[1].result.fbest, r[1].result.xbest, r
@@ -88,23 +88,46 @@ class CMAES(Optimizer):
 class BasinHopping(Optimizer):
     """
     Global optimizer based on: https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.basinhopping.html.
+    Note that the Basin-Hopping optimizer combines a global stepping algorithm
+    together with a local minimization (which is implemented using an extra scipy minimizer).
+    It is designed to mimic the natural process of energy minimization of clusters
+    of atoms and it works well for similar problems with “funnel-like, but rugged” energy landscapes.
 
     Args:
-        options (dict): additional information compatible with the
-            `scipy.optimize.basinhopping` optimizer. The only default set parameter is `niter=10`.
-        minimizer_kwargs (dict): the Basin-Hopping optimizer makes use of an
-            extra Scipy's minimizer to compute the optimizaton. This argument
-            can be used to setup the extra minimization routine. For example,
-            one can set:
-
-            .. code-block:: python
-
-                minimizer_kwargs = {
-                    method = "BFGS",
-                    jac = None
-                }
-
+        verbosity (Optional[bool]): verbosity level of the optimization. If `True`, logging messages are displayed.
+        niter (Optional[int]): The number of basin-hopping iterations. There will
+            be a total of `niter+1` runs of the local minimizer.
+        T (Optional[float]): the “temperature” parameter for the acceptance or
+            rejection criterion. Higher “temperatures” mean that larger jumps in
+            function value will be accepted. For best results T should be comparable
+            to the separation (in function value) between local minima.
+        stepsize (Optional[float]): maximum step size for use in the random displacement.
+        take_step (Optional[callable]): replace the default step-taking routine with this routine.
+        accept_test (Optional[callable]): accept test function. It must be of shape
+            `accept_test(f_new=f_new, x_new=x_new, f_old=f_old, x_old=x_old)` and
+            return a boolean variable. If `True`, the new point is accepted, if
+            `False`, the step is rejected. It can also return `force accept`, which
+            will override any other tests in order to accept the step.
+        callback (Optional[callable]): a callable called after each optimization iteration.
+        target_accept_rate (Optional[float]): the target acceptance rate that is
+            used to adjust the stepsize. If the current acceptance rate is greater
+            than the target, then the stepsize is increased. Otherwise, it is decreased.
+        niter_success (Optional[int]): stop the run if the global minimum
+            candidate remains the same for this number of iterations.
+        minimizer_kwargs
     """
+
+    niter: Optional[int] = field(default=10)
+    T: Optional[float] = field(default=1.0)
+    stepsize: Optional[float] = field(default=0.5)
+    take_step: Optional[callable] = field(default=None)
+    accept_test: Optional[callable] = field(default=None)
+    callback: Optional[callable] = field(default=None)
+    target_accept_rate: Optional[float] = field(default=0.5)
+    niter_success: Optional[int] = field(default=None)
+
+    def __str__(self):
+        return "basinhopping"
 
     def __init__(
         self,

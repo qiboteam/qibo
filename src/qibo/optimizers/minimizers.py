@@ -17,6 +17,7 @@ class ScipyMinimizer(Optimizer):
     Optimization approaches based on `scipy.optimize.minimize`.
 
     Attributes:
+        verbosity (bool): verbosity level of the optimization. If `True`, logging messages are displayed.
         method (Optional[str]): optimization method among the minimizers provided by scipy, defaults to "Powell".
         jac (Optional[dict]): method for computing the gradient vector.
         hess (Optional[dict]): method for computing the hessian matrix.
@@ -25,10 +26,9 @@ class ScipyMinimizer(Optimizer):
         constraints (Optional[dict]): constraints definition.
         tol (Optional[float]): tolerance for termination.
         callback (Optional[callable]): a callable called after each optimization iteration.
-        verbosity (bool): verbosity level of the optimization. If `True`, logging messages are displayed.
     """
 
-    method: Optional[str] = "Powell"
+    method: str = "Powell"
     jac: Optional[dict] = None
     hess: Optional[dict] = None
     hessp: Optional[callable] = None
@@ -87,15 +87,15 @@ class ParallelBFGS(ScipyMinimizer):
     This implementation here is based on https://doi.org/10.32614/RJ-2019-030.
 
     Attributes:
+        verbosity (bool): verbosity level of the optimization. If `True`, logging messages are displayed.
         jac (Optional[dict]): Method for computing the gradient vector.
         hess (Optional[dict]): Method for computing the hessian matrix.
         hessp (Optional[callable]): Hessian of objective function times an arbitrary vector.
         bounds (Union[None, List[Tuple], Bounds]): Bounds on variables.
         constraints (Optional[dict]): Constraints definition.
         tol (Optional[float]): Tolerance for termination.
-        callback (Optional[callable]): A callable called after each optimization iteration.
+        callback (Optional[callable]): a callable called after each optimization iteration.
         processes (int): number of processes to be computed in parallel.
-        verbosity (bool): verbosity level of the optimization. If `True`, logging messages are displayed.
     """
 
     processes: int = field(default=1)
