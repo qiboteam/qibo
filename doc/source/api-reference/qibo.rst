@@ -307,8 +307,8 @@ For instance, the following two circuit generations are equivalent:
 
 
 .. image:: ../_static/phase_encoder.png
-   :width: 2000px
-   :height: 2329px
+   :width: 1333px
+   :height: 1552px
    :scale: 30 %
    :align: center
 
@@ -346,8 +346,8 @@ For example, to encode a :math:`8`-dimensional data, one could use the so-called
 *tree* architechture below:
 
 .. image:: ../_static/unary_encoder_tree.png
-   :width: 2000px
-   :height: 2329px
+   :width: 1333px
+   :height: 1552px
    :scale: 30 %
    :align: center
 
@@ -361,8 +361,8 @@ On the other hand, the same encoding could be performed using the so-called
 *diagonal* (also known as *ladder*) architecture below:
 
 .. image:: ../_static/unary_encoder_ladder.png
-   :width: 2800px
-   :height: 2329px
+   :width: 1867px
+   :height: 1552px
    :scale: 30 %
    :align: center
 
