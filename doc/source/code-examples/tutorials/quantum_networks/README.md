@@ -123,4 +123,3 @@ Therefore, this mixed channel is not a mixed unitary channel.
 Choi = Choi1/3 + Choi2/3 + Choi3/3
 print(f"The mixed channel is unital: {Choi.unital()}")
 ```
-
