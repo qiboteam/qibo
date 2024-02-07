@@ -34,10 +34,9 @@ class CliffordBackend(NumpyBackend):
     def __init__(self, engine=None):
         super().__init__()
 
-        if engine is None:
-            from qibo.backends import GlobalBackend
+        from qibo.backends import _check_backend
 
-            engine = GlobalBackend()
+        engine = _check_backend(engine)
 
         if isinstance(engine, TensorflowBackend):
             raise_error(

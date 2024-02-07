@@ -7,7 +7,7 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 
-from qibo.backends import GlobalBackend
+from qibo.backends import _check_backend
 from qibo.config import raise_error
 
 
@@ -593,8 +593,7 @@ class QuantumNetwork:
 
     def _set_tensor_and_parameters(self):
         """Sets tensor based on inputs."""
-        if self._backend is None:
-            self._backend = GlobalBackend()
+        self._backend = _check_backend(self._backend)
 
         if isinstance(self.partition, list):
             self.partition = tuple(self.partition)
