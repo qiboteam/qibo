@@ -57,14 +57,7 @@ def shannon_entropy(prob_dist, base: float = 2, backend=None):
     if np.abs(np.sum(prob_dist) - 1.0) > PRECISION_TOL:
         raise_error(ValueError, "Probability array must sum to 1.")
 
-    if base == 2:
-        log_prob = np.where(prob_dist != 0.0, np.log2(prob_dist), 0.0)
-    elif base == 10:
-        log_prob = np.where(prob_dist != 0, np.log10(prob_dist), 0.0)
-    elif base == np.e:
-        log_prob = np.where(prob_dist != 0, np.log(prob_dist), 0.0)
-    else:
-        log_prob = np.where(prob_dist != 0, np.log(prob_dist) / np.log(base), 0.0)
+    log_prob = np.where(prob_dist != 0, np.log2(prob_dist) / np.log2(base), 0.0)
 
     shan_entropy = -np.sum(prob_dist * log_prob)
 
@@ -134,16 +127,9 @@ def classical_relative_entropy(prob_dist_p, prob_dist_q, base: float = 2, backen
 
     entropy_p = -1 * shannon_entropy(prob_dist_p, base=base, backend=backend)
 
-    if base == 2:
-        log_prob_q = np.where(prob_dist_q != 0.0, np.log2(prob_dist_q), -np.inf)
-    elif base == 10:
-        log_prob_q = np.where(prob_dist_q != 0.0, np.log10(prob_dist_q), -np.inf)
-    elif base == np.e:
-        log_prob_q = np.where(prob_dist_q != 0.0, np.log(prob_dist_q), -np.inf)
-    else:
-        log_prob_q = np.where(
-            prob_dist_q != 0.0, np.log(prob_dist_q) / np.log(base), -np.inf
-        )
+    log_prob_q = np.where(
+        prob_dist_q != 0.0, np.log2(prob_dist_q) / np.log2(base), -np.inf
+    )
 
     log_prob = np.where(prob_dist_p != 0.0, log_prob_q, 0.0)
 
@@ -460,14 +446,7 @@ def von_neumann_entropy(
     else:
         eigenvalues = np.linalg.eigvals(state)
 
-    if base == 2:
-        log_prob = np.where(eigenvalues > 0, np.log2(eigenvalues), 0.0)
-    elif base == 10:
-        log_prob = np.where(eigenvalues > 0, np.log10(eigenvalues), 0.0)
-    elif base == np.e:
-        log_prob = np.where(eigenvalues > 0, np.log(eigenvalues), 0.0)
-    else:
-        log_prob = np.where(eigenvalues > 0, np.log(eigenvalues) / np.log(base), 0.0)
+    log_prob = np.where(eigenvalues > 0, np.log2(eigenvalues) / np.log2(base), 0.0)
 
     ent = -np.sum(eigenvalues * log_prob)
     # absolute value if entropy == 0.0 to avoid returning -0.0
@@ -557,28 +536,12 @@ def relative_von_neumann_entropy(
     else:
         eigenvalues_target = np.linalg.eigvals(target)
 
-    if base == 2:
-        log_state = np.where(eigenvalues_state > 0, np.log2(eigenvalues_state), 0.0)
-        log_target = np.where(
-            eigenvalues_target > 0, np.log2(eigenvalues_target), -np.inf
-        )
-    elif base == 10:
-        log_state = np.where(eigenvalues_state > 0, np.log10(eigenvalues_state), 0.0)
-        log_target = np.where(
-            eigenvalues_target > 0, np.log10(eigenvalues_target), -np.inf
-        )
-    elif base == np.e:
-        log_state = np.where(eigenvalues_state > 0, np.log(eigenvalues_state), 0.0)
-        log_target = np.where(
-            eigenvalues_target > 0, np.log(eigenvalues_target), -np.inf
-        )
-    else:
-        log_state = np.where(
-            eigenvalues_state > 0, np.log(eigenvalues_state) / np.log(base), 0.0
-        )
-        log_target = np.where(
-            eigenvalues_target > 0, np.log(eigenvalues_target) / np.log(base), -np.inf
-        )
+    log_state = np.where(
+        eigenvalues_state > 0, np.log2(eigenvalues_state) / np.log2(base), 0.0
+    )
+    log_target = np.where(
+        eigenvalues_target > 0, np.log2(eigenvalues_target) / np.log2(base), -np.inf
+    )
 
     log_target = np.where(eigenvalues_state != 0.0, log_target, 0.0)
 
