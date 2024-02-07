@@ -3,27 +3,27 @@
 ## The Quantum Network Model
 
 The quantum network model is a mathematical framework that allows us to uniquely describe quantum information processing that involves multiple points in time and space.
-Each distinguished point in time and space is treated as a linear system \(\mathcal{H}_ i\).
-A quantum network involving $n$ points in time and space is a Hermitian operator \(\mathcal{N}\) that acts on the tensor product of the linear systems \(\mathcal{H}_ 0 \otimes \mathcal{H}_ 1 \otimes \cdots \otimes \mathcal{H}_ {n-1}\).
-Each system \(\mathcal{H}_ {i}\) is either an input or an output of the network.
+Each distinguished point in time and space is treated as a linear system $\mathcal{H}_ i$.
+A quantum network involving $n$ points in time and space is a Hermitian operator $\mathcal{N}$ that acts on the tensor product of the linear systems $\mathcal{H}_ 0 \otimes \mathcal{H}_ 1 \otimes \cdots \otimes \mathcal{H}_ {n-1}$.
+Each system $\mathcal{H}_ {i}$ is either an input or an output of the network.
 
-A physically implementable quantum network is described by a semi-positive definite operator \(\mathcal{N}\) that satisfies the causal constraints.
+A physically implementable quantum network is described by a semi-positive definite operator $\mathcal{N}$ that satisfies the causal constraints.
 
-A simple example is a quantum channel \(\Gamma: \mathcal{H}_ 0 \to \mathcal{H}_ 1\), where \(\mathcal{H}_ 0\) is the input system and \(\mathcal{H}_ 1\) is the output system.
+A simple example is a quantum channel $\Gamma: \mathcal{H}_ 0 \to \mathcal{H}_ 1$, where $\mathcal{H}_ 0$ is the input system and $\mathcal{H}_ 1$ is the output system.
 The quantum channel is a linear map, such that it maps any input quantum state to an output quantum state, which is a sufficient and necessary condition for the map to be physical.
-A Hermitian operator \(J^\Gamma\) acting on \(\mathcal{H}_ 0\otimes \mathcal{H}_ 1\) is associated with a quantum channel \(\Gamma\), if \(J^\Gamma\) satisfies the following conditions:
-\[
+A Hermitian operator $J^\Gamma$ acting on $\mathcal{H}_ 0\otimes \mathcal{H}_ 1$ is associated with a quantum channel $\Gamma$, if $J^\Gamma$ satisfies the following conditions:
+$$
 J^\Gamma \geq 0, \quad \text{and} \quad \text{Tr}_ {\mathcal{H}_ 1} J^\Gamma = \mathbb{I}_ {\mathcal{H} _0} \ .
-\]
+$$
 
 The first condition is called *complete positivity*, and the second condition is called *trace-preserving*.
 In particular, the second condition ensures that the information of the input system is only accessible through the output system.
 
-In particular, a quantum state \(\rho\) may be also considered as a quantum network, where the input system is the trivial system \(\mathbb{C}\), and the output system is the quantum system \(\mathcal{H}\).
+In particular, a quantum state $\rho$ may be also considered as a quantum network, where the input system is the trivial system $\mathbb{C}$, and the output system is the quantum system $\mathcal{H}$.
 The constraints on the quantum channels are then equivalent to the constraints on the quantum states:
-\[
+$$
 \rho \geq 0, \quad \text{and} \quad \text{Tr} \rho = \mathbb{I}_ \mathbb{C} = 1\ .
-\]
+$$
 
 > For more details, see G. Chiribella *et al.*, *Theoretical framework for quantum networks*,
 > [Physical Review A 80.2 (2009): 022339](https://journals.aps.org/pra/abstract/10.1103/PhysRevA.80.022339).
