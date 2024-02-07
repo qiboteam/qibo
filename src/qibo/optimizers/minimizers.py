@@ -110,6 +110,10 @@ class Parallel_BFGS(ScipyMinimizer):
     def __str__(self):
         return f"scipy_minimizer_ParallelBFGS"
 
+    def show_fit_options(self):
+        """Return available extra options for chosen minimizer."""
+        return show_options(solver="minimize", method="L-BFGS-B")
+
     def fit(
         self,
         initial_parameters: Union[List, ndarray],
@@ -125,7 +129,8 @@ class Parallel_BFGS(ScipyMinimizer):
             loss (callable): loss function to train on.
             args (tuple): tuple containing loss function arguments.
             fit_options (dict): specific options accepted by the L-BFGS-B minimizer.
-                This argument corresponds to Scipy's `"options"`.
+                Use the method `ParallelBFGS.show_fit_options()` to visualize all
+                the available options.
 
         Returns:
             tuple: best loss value (float), best parameter values (np.ndarray), full scipy OptimizeResult object.
