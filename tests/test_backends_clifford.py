@@ -256,7 +256,7 @@ def test_set_backend(backend):
         global_platform = str(GlobalBackend().engine)
     assert global_platform == platform
 
-    
+
 def test_noise_channels(backend):
     clifford_bkd = construct_clifford_backend(backend)
     if not clifford_bkd:
@@ -279,4 +279,3 @@ def test_noise_channels(backend):
         clifford_result.probabilities(),
         atol=1e-1,
     )
-
