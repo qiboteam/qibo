@@ -1,47 +1,55 @@
 """Optimization algorithms inherited from Scipy's minimization module."""
 
-import inspect
+from dataclasses import dataclass, field
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
-from scipy.optimize import minimize
+from numpy import ndarray
+from scipy.optimize import Bounds, minimize, show_options
 
 from qibo.config import log
-from qibo.optimizers.abstract import Optimizer, check_fit_arguments, check_options
+from qibo.optimizers.abstract import Optimizer
 
 
+@dataclass
 class ScipyMinimizer(Optimizer):
     """
-    Optimization approaches based on ``scipy.optimize.minimize``.
+    Optimization approaches based on `scipy.optimize.minimize`.
 
-    Args:
-        options (dict): options which can be provided to the general
-            Scipy's minimizer. See `scipy.optimize.minimize` documentation.
-            By default, the `"method"` option is set to `"Powell"`.
-
+    Attributes:
+        jac (Optional[dict]): Method for computing the gradient vector.
+        hess (Optional[dict]): Method for computing the hessian matrix.
+        hessp (Optional[callable]): Hessian of objective function times an arbitrary vector.
+        bounds (Union[None, List[Tuple], Bounds]): Bounds on variables.
+        constraints (Optional[dict]): Constraints definition.
+        tol (Optional[float]): Tolerance for termination.
+        callback (Optional[callable]): A callable called after each optimization iteration.
+        method (Optional[str]): Optimization method among the minimizers provided by scipy, defaults to "Powell".
     """
 
-    def __init__(self, options={}):
-        self.options = {"method": "Powell"}
-        self.name = "scipy_minimizer"
-        self._fit_function = minimize
-        check_options(function=self._fit_function, options=options)
-        self.set_options(options)
+    method: Optional[str] = "Powell"
+    jac: Optional[dict] = None
+    hess: Optional[dict] = None
+    hessp: Optional[callable] = None
+    bounds: Union[None, List[Tuple], Bounds] = None
+    constraints: Optional[dict] = None
+    tol: Optional[float] = None
+    callback: Optional[callable] = None
 
-    def get_options_list(self):
-        """Return all available optimizer's options."""
-        default_arguments = ["fun", "x0", "args", "options"]
-        customizable_arguments = []
-        for arg in list(inspect.signature(self._fit_function).parameters):
-            if arg not in default_arguments:
-                customizable_arguments.append(arg)
-        return customizable_arguments
+    def __str__(self):
+        return f"scipy_minimizer_{self.method}"
 
-    def get_fit_options_list(self):
-        log.info(
-            f"Please have a look to the `options` argument of `scipy.optimize.minimize(method='{self.options['method']}')`"
-        )
+    def show_fit_options(self):
+        """Return available extra options for chosen minimizer."""
+        return show_options(solver="minimize", method=self.method)
 
-    def fit(self, initial_parameters, loss=None, args=(), fit_options={}):
+    def fit(
+        self,
+        initial_parameters: Union[List, ndarray],
+        loss: callable,
+        args: Tuple,
+        fit_options: Optional[dict] = None,
+    ):
         """Perform the optimizations via ScipyMinimizer.
 
         Args:
@@ -58,68 +66,57 @@ class ScipyMinimizer(Optimizer):
             tuple: best loss value (float), best parameter values (np.ndarray), full scipy OptimizeResult object.
         """
 
-        check_fit_arguments(args=args, initial_parameters=initial_parameters)
+        if fit_options is None:
+            options = {}
+        else:
+            options = fit_options
 
-        log.info(
-            f"Optimization is performed using the optimizer: {type(self).__name__}.{self.options['method']}"
-        )
+        log.info(f"Optimization is performed using the optimizer: {self.__str__()}")
 
-        # update options with minimizer extra options
-        self.set_options({"options": fit_options})
-
-        r = self._fit_function(
-            loss,
-            initial_parameters,
-            args=args,
-            **self.options,
-        )
+        r = minimize(loss, initial_parameters, args=args, **options)
 
         return r.fun, r.x, r
 
 
-class ParallelBFGS(Optimizer):  # pragma: no cover
+@dataclass
+class Parallel_BFGS(ScipyMinimizer):
     """
     Computes the L-BFGS-B with parallel evaluation using multiprocessing.
     This implementation here is based on https://doi.org/10.32614/RJ-2019-030.
 
-    Args:
-        processes (int): number of parallel processes used to evaluate functions.
-        options (dict): possible arguments accepted by
-            `scipy.optimize.minimize` class.
+    Attributes:
+        jac (Optional[dict]): Method for computing the gradient vector.
+        hess (Optional[dict]): Method for computing the hessian matrix.
+        hessp (Optional[callable]): Hessian of objective function times an arbitrary vector.
+        bounds (Union[None, List[Tuple], Bounds]): Bounds on variables.
+        constraints (Optional[dict]): Constraints definition.
+        tol (Optional[float]): Tolerance for termination.
+        callback (Optional[callable]): A callable called after each optimization iteration.
+        processes (int): number of processes to be computed in parallel.
     """
 
-    def __init__(
-        self,
-        processes=1,
-        options={},
-    ):
-        self.options = {}
-        self.name = "parallel_bfgs"
+    processes: int = field(default=1)
+    xval: float = field(init=False, default=None)
+    function_value: float = field(init=False, default=None)
+    jacobian_value: float = field(init=False, default=None)
+    precision: float = field(init=False, default=np.finfo("float64").eps)
+
+    def __post_init__(self):
         self.xval = None
         self.function_value = None
         self.jacobian_value = None
-        self.processes = processes
         self.precision = np.finfo("float64").eps
-        self._fit_function = minimize
 
-        # check if options are compatible with the function and update class options
-        check_options(function=self._fit_function, options=options)
+    def __str__(self):
+        return f"scipy_minimizer_ParallelBFGS"
 
-    def get_options_list(self):
-        """Return all available optimizer's options."""
-        default_arguments = ["fun", "x0", "args", "options", "method"]
-        customizable_arguments = []
-        for arg in list(inspect.signature(self._fit_function).parameters):
-            if arg not in default_arguments:
-                customizable_arguments.append(arg)
-        return customizable_arguments
-
-    def get_fit_options_list(self):
-        log.info(
-            f"Please have a look to the `options` argument of `scipy.optimize.minimize(method='L-BFGS-B')`"
-        )
-
-    def fit(self, initial_parameters, loss=None, args=(), fit_options={}):
+    def fit(
+        self,
+        initial_parameters: Union[List, ndarray],
+        loss: callable,
+        args: Tuple,
+        fit_options: Optional[dict] = None,
+    ):
         """Performs the optimizations via ParallelBFGS.
 
         Args:
@@ -134,24 +131,23 @@ class ParallelBFGS(Optimizer):  # pragma: no cover
             tuple: best loss value (float), best parameter values (np.ndarray), full scipy OptimizeResult object.
         """
 
-        check_fit_arguments(args=args, initial_parameters=initial_parameters)
+        log.info(f"Optimization is performed using the optimizer: {self.__str__()}")
 
-        log.info(
-            f"Optimization is performed using the optimizer: {type(self).__name__}"
-        )
-
-        # update options with L-BFGS-B extra options
-        self.set_options({"options": fit_options})
         self.loss = loss
         self.args = args
         self.params = initial_parameters
 
-        out = self._fit_function(
+        if fit_options is None:
+            self.fit_options = {}
+        else:
+            self.fit_options = fit_options
+
+        out = minimize(
             fun=self.fun,
             x0=initial_parameters,
             jac=self.jac,
             method="L-BFGS-B",
-            **self.options,
+            **self.fit_options,
         )
 
         out.hess_inv = out.hess_inv * np.identity(len(self.params))
