@@ -1,4 +1,5 @@
 """Optimization algorithms inherited from Scipy's minimization module."""
+
 import inspect
 
 import numpy as np

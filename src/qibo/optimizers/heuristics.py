@@ -1,4 +1,5 @@
 """Meta-heuristic optimization algorithms."""
+
 import inspect
 
 import cma
