@@ -337,8 +337,8 @@ class QuantumNetwork:
         inv_subscripts = pattern_two and subscripts[0] == subscripts[4]
         super_subscripts = (
             pattern_four
-            and subscripts[2] == subscripts[5]
-            and subscripts[3] == subscripts[6]
+            and subscripts[1] == subscripts[5]
+            and subscripts[2] == subscripts[6]
         )
 
         if not channel_subscripts and not inv_subscripts and not super_subscripts:
@@ -351,10 +351,10 @@ class QuantumNetwork:
         second_matrix = second_network._full()  # pylint: disable=W0212
 
         if super_subscripts:
-            cexpr = "jklmnopq,nopqrstu->jklmrstu"
+            cexpr = "jklmnopq,klop->jmnq"
             return QuantumNetwork(
                 np.einsum(cexpr, first_matrix, second_matrix),
-                self.partition[:2] + second_network.partition[2:],
+                [self.partition[0] + self.partition[-1]],
             )
 
         cexpr = "jkab,klbc->jlac"
@@ -532,17 +532,38 @@ class QuantumNetwork:
                 + "``QuantumNetwork`` by a non-``QuantumNetwork``.",
             )
 
-        if self.partition != second_network.partition:
-            raise_error(
-                ValueError,
-                "partitions of the networks do not match: "
-                + f"{self.partition} != {second_network.partition}.",
-            )
+        if len(self.partition) == 2:  # `self` is a channel
+            if len(second_network.partition) != 2:
+                raise_error(
+                    ValueError,
+                    f"`QuantumNetwork {second_network} is assumed to be a channel, but it is not. "
+                    + "Use `link_product` method to specify the subscript.",
+                )
+            if self.partition[1] != second_network.partition[0]:
+                raise_error(
+                    ValueError,
+                    "partitions of the networks do not match: "
+                    + f"{self.partition[1]} != {second_network.partition[0]}.",
+                )
 
-        if len(self.partition) == 2:
             subscripts = "jk,kl -> jl"
-        elif len(self.partition) == 4:
-            subscripts = "jklm,lmno -> jkno"
+
+        elif len(self.partition) == 4:  # `self` is a super-channel
+            if len(second_network.partition) != 2:
+                raise_error(
+                    ValueError,
+                    f"`QuantumNetwork {second_network} is assumed to be a channel, but it is not. "
+                    + "Use `link_product` method to specify the subscript.",
+                )
+            if self.partition[1] != second_network.partition[0]:
+                raise_error(
+                    ValueError,
+                    "Systems of the channel do not match the super-channel: "
+                    + f"{self.partition[1], self.partition[2]} != "
+                    + f"{second_network.partition[0],second_network.partition[1]}.",
+                )
+
+            subscripts = "jklm,kl -> jm"
         else:
             raise_error(
                 NotImplementedError,
@@ -652,7 +673,7 @@ class QuantumNetwork:
         """Checks if input subscript match any implemented pattern."""
         braket = "[a-z]"
         pattern_two = re.compile(braket * 2 + "," + braket * 2 + "->" + braket * 2)
-        pattern_four = re.compile(braket * 4 + "," + braket * 4 + "->" + braket * 4)
+        pattern_four = re.compile(braket * 4 + "," + braket * 2 + "->" + braket * 2)
 
         return bool(re.match(pattern_two, subscripts)), bool(
             re.match(pattern_four, subscripts)
