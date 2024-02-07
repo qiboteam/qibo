@@ -88,7 +88,7 @@ def test_errors(backend):
     with pytest.raises(NotImplementedError):
         net @ net
 
-    with pytest.raises(ValueError):
+    with pytest.raises(NotImplementedError):
         net @ network
 
     with pytest.raises(ValueError):
@@ -227,7 +227,7 @@ def test_with_comb(backend):
     comb_partition = (2,) * 4
     channel_partition = (2,) * 2
     comb_sys_out = (False, True) * 2
-    channel_sys_out = (False, True) * 2
+    channel_sys_out = (False, True)
 
     comb = random_density_matrix(2**4, backend=backend)
     channel = random_density_matrix(2**2, backend=backend)
@@ -238,14 +238,11 @@ def test_with_comb(backend):
     channel_choi = QuantumNetwork(
         channel, channel_partition, system_output=channel_sys_out, backend=backend
     )
-    # channel_choi_2 = QuantumNetwork(
-    #     comb @ channel, comb_partition, system_output=comb_sys_out, backend=backend
-    # ).to_full(backend)
 
     test = comb_choi.link_product(channel_choi, subscript).to_full(backend)
+    channel_choi2 = comb_choi @ channel_choi
 
-    # backend.assert_allclose(test, comb_choi_3, atol=1e-5)
-    # backend.assert_allclose(test, (comb_choi @ comb_choi_2).to_full(backend), atol=1e-5)
+    backend.assert_allclose(test, channel_choi2.to_full(backend), atol=1e-5)
 
 
 def test_apply(backend):
