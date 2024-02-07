@@ -1,6 +1,7 @@
 """
 Define the default circuit, constants and types.
 """
+
 import logging
 import os
 

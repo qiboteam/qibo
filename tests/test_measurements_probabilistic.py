@@ -1,4 +1,5 @@
 """Test circuit measurements when outcome is probabilistic."""
+
 import numpy as np
 import pytest
 

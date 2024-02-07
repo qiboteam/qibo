@@ -1,6 +1,7 @@
 """
 Testing Variational Quantum Circuits.
 """
+
 import pathlib
 
 import numpy as np

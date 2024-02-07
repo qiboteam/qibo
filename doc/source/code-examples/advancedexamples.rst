@@ -1213,23 +1213,23 @@ Let's see how to use them. For starters, let's define a dummy circuit with some 
    hz = 0.5
    hx = 0.5
    dt = 0.25
-   c = Circuit(nqubits, density_matrix=True)
-   c.add(gates.RZ(q, theta=-2 * hz * dt - np.pi / 2) for q in range(nqubits))
-   c.add(gates.RX(q, theta=np.pi / 2) for q in range(nqubits))
-   c.add(gates.RZ(q, theta=-2 * hx * dt + np.pi) for q in range(nqubits))
-   c.add(gates.RX(q, theta=np.pi / 2) for q in range(nqubits))
-   c.add(gates.RZ(q, theta=-np.pi / 2) for q in range(nqubits))
-   c.add(gates.CNOT(q, q + 1) for q in range(0, nqubits - 1, 2))
-   c.add(gates.RZ(q + 1, theta=-2 * dt) for q in range(0, nqubits - 1, 2))
-   c.add(gates.CNOT(q, q + 1) for q in range(0, nqubits - 1, 2))
-   c.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
-   c.add(gates.RZ(q + 1, theta=-2 * dt) for q in range(1, nqubits, 2))
-   c.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
+   circ = Circuit(nqubits, density_matrix=True)
+   circ.add(gates.RZ(q, theta=-2 * hz * dt - np.pi / 2) for q in range(nqubits))
+   circ.add(gates.RX(q, theta=np.pi / 2) for q in range(nqubits))
+   circ.add(gates.RZ(q, theta=-2 * hx * dt + np.pi) for q in range(nqubits))
+   circ.add(gates.RX(q, theta=np.pi / 2) for q in range(nqubits))
+   circ.add(gates.RZ(q, theta=-np.pi / 2) for q in range(nqubits))
+   circ.add(gates.CNOT(q, q + 1) for q in range(0, nqubits - 1, 2))
+   circ.add(gates.RZ(q + 1, theta=-2 * dt) for q in range(0, nqubits - 1, 2))
+   circ.add(gates.CNOT(q, q + 1) for q in range(0, nqubits - 1, 2))
+   circ.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
+   circ.add(gates.RZ(q + 1, theta=-2 * dt) for q in range(1, nqubits, 2))
+   circ.add(gates.CNOT(q, q + 1) for q in range(1, nqubits, 2))
    # Include the measurements
-   c.add(gates.M(*range(nqubits)))
+   circ.add(gates.M(*range(nqubits)))
 
    # visualize the circuit
-   print(c.draw())
+   print(circ.draw())
 
    #  q0: ─RZ─RX─RZ─RX─RZ─o────o────────M─
    #  q1: ─RZ─RX─RZ─RX─RZ─X─RZ─X─o────o─M─
@@ -1262,7 +1262,7 @@ the real quantum hardware, instead, we can use a noise model:
 .. testcode::
 
    # Noise-free expected value
-   exact = obs.expectation(backend.execute_circuit(c).state())
+   exact = obs.expectation(backend.execute_circuit(circ).state())
    print(exact)
    # 0.9096065335014379
 
@@ -1280,7 +1280,7 @@ the real quantum hardware, instead, we can use a noise model:
    )
    noise.add(ReadoutError(probabilities=prob), gate=gates.M)
    # Noisy expected value without mitigation
-   noisy = obs.expectation(backend.execute_circuit(noise.apply(c)).state())
+   noisy = obs.expectation(backend.execute_circuit(noise.apply(circ)).state())
    print(noisy)
    # 0.5647937721701448
 
@@ -1297,22 +1297,21 @@ Now let's check that error mitigation produces better estimates of the exact exp
 Readout Mitigation
 ^^^^^^^^^^^^^^^^^^
 Firstly, let's try to mitigate the readout errors. To do this, we can either compute the
-calibration matrix and use it modify the final state after the circuit execution:
+response matrix and use it modify the final state after the circuit execution:
 
 .. testcode::
 
-   from qibo.models.error_mitigation import apply_readout_mitigation, calibration_matrix
+   from qibo.models.error_mitigation import get_expectation_val_with_readout_mitigation, get_response_matrix
 
    nshots = 10000
-   # compute the calibration matrix
-   calibration = calibration_matrix(
+   # compute the response matrix
+   response_matrix = get_response_matrix(
        nqubits, backend=backend, noise_model=noise, nshots=nshots
    )
-   # execute the circuit
-   state = backend.execute_circuit(noise.apply(c), nshots=nshots)
+   # define mitigation options
+   readout = {"response_matrix": response_matrix}
    # mitigate the readout errors
-   mit_state = apply_readout_mitigation(state, calibration)
-   mit_val = mit_state.expectation_from_samples(obs)
+   mit_val = get_expectation_val_with_readout_mitigation(circ, obs, noise, readout=readout)
    print(mit_val)
    # 0.5945794816381054
 
@@ -1327,13 +1326,10 @@ Or use the randomized readout mitigation:
 
    from qibo.models.error_mitigation import apply_randomized_readout_mitigation
 
-   ncircuits = 10
-   result, result_cal = apply_randomized_readout_mitigation(
-       c, backend=backend, noise_model=noise, nshots=nshots, ncircuits=ncircuits
-   )
-   mit_val = result.expectation_from_samples(
-       obs
-   ) / result_cal.expectation_from_samples(obs)
+   # define mitigation options
+   readout = {"ncircuits": 10}
+   # mitigate the readout errors
+   mit_val = get_expectation_val_with_readout_mitigation(circ, obs, noise, readout=readout)
    print(mit_val)
    # 0.5860884499785314
 
@@ -1373,7 +1369,7 @@ For example if we use the five levels ``[0,1,2,3,4]`` :
 
    # Mitigated expected value
    estimate = ZNE(
-       circuit=c,
+       circuit=circ,
        observable=obs,
        noise_levels=np.arange(5),
        noise_model=noise,
@@ -1395,14 +1391,14 @@ combined with the readout mitigation:
 .. testcode::
 
    # we can either use
-   # the calibration matrix computed earlier
-   readout = {'calibration_matrix': calibration}
+   # the response matrix computed earlier
+   readout = {'response_matrix': response_matrix}
    # or the randomized readout
    readout = {'ncircuits': 10}
 
    # Mitigated expected value
    estimate = ZNE(
-       circuit=c,
+       circuit=circ,
        observable=obs,
        backend=backend,
        noise_levels=np.arange(5),
@@ -1432,15 +1428,16 @@ circuit is expected to be decomposed in the set of primitive gates :math:`RX(\fr
 
    # Mitigated expected value
    estimate = CDR(
-       circuit=c,
+       circuit=circ,
        observable=obs,
+       n_training_samples=10,
        backend=backend,
        noise_model=noise,
        nshots=10000,
        readout=readout,
    )
    print(estimate)
-   # 0.9090604794014961
+   # 0.8983676333969615
 
 .. testoutput::
    :hide:
@@ -1448,6 +1445,7 @@ circuit is expected to be decomposed in the set of primitive gates :math:`RX(\fr
    ...
 
 Again, the mitigated expected value improves over the noisy one and is also slightly better compared to ZNE.
+
 
 Variable Noise CDR (vnCDR)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1461,8 +1459,9 @@ caveat about the input circuit for CDR is valid here as well.
 
    # Mitigated expected value
    estimate = vnCDR(
-       circuit=c,
+       circuit=circ,
        observable=obs,
+       n_training_samples=10,
        backend=backend,
        noise_levels=np.arange(3),
        noise_model=noise,
@@ -1471,7 +1470,7 @@ caveat about the input circuit for CDR is valid here as well.
        readout=readout,
    )
    print(estimate)
-   # 0.9085991439303123
+   # 0.8998376314644383
 
 .. testoutput::
    :hide:
@@ -1482,6 +1481,35 @@ The result is similar to the one obtained by CDR. Usually, one would expect slig
 however, this can substantially vary depending on the circuit and the observable considered and, therefore, it is hard to tell
 a priori.
 
+
+Importance Clifford Sampling (ICS)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The use of iCS is straightforward, analogous to CDR and vnCDR.
+
+.. testcode::
+
+   from qibo.models.error_mitigation import ICS
+
+   # Mitigated expected value
+   estimate = ICS(
+       circuit=circ,
+       observable=obs,
+       n_training_samples=10,
+       backend=backend,
+       noise_model=noise,
+       nshots=10000,
+       readout=readout,
+   )
+   print(estimate)
+   # 0.9183495097398502
+
+.. testoutput::
+   :hide:
+
+   ...
+
+Again, the mitigated expected value improves over the noisy one and is also slightly better compared to ZNE.
 This was just a basic example usage of the three methods, for all the details about them you should check the API-reference page :ref:`Error Mitigation <error-mitigation>`.
 
 .. _timeevol-example:

@@ -195,6 +195,30 @@ class NumpyMatrices:
         )
 
     @cached_property
+    def SiSWAP(self):
+        return self.np.array(
+            [
+                [1, 0, 0, 0],
+                [0, 1 / self.np.sqrt(2), 1j / self.np.sqrt(2), 0],
+                [0, 1j / self.np.sqrt(2), 1 / self.np.sqrt(2), 0],
+                [0, 0, 0, 1],
+            ],
+            dtype=self.dtype,
+        )
+
+    @cached_property
+    def SiSWAPDG(self):
+        return self.np.array(
+            [
+                [1, 0, 0, 0],
+                [0, 1 / self.np.sqrt(2), -1j / self.np.sqrt(2), 0],
+                [0, -1j / self.np.sqrt(2), 1 / self.np.sqrt(2), 0],
+                [0, 0, 0, 1],
+            ],
+            dtype=self.dtype,
+        )
+
+    @cached_property
     def FSWAP(self):
         return self.np.array(
             [[1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, -1]], dtype=self.dtype

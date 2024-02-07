@@ -1,4 +1,5 @@
 """Module defining the Clifford backend."""
+
 import collections
 from functools import reduce
 from typing import Union
@@ -537,10 +538,9 @@ class CliffordBackend(NumpyBackend):
     def __init__(self, engine=None):
         super().__init__()
 
-        if engine is None:
-            from qibo.backends import GlobalBackend
+        from qibo.backends import _check_backend
 
-            engine = GlobalBackend()
+        engine = _check_backend(engine)
 
         if isinstance(engine, TensorflowBackend):
             raise_error(
@@ -597,6 +597,14 @@ class CliffordBackend(NumpyBackend):
 
         return operation(symplectic_matrix, *gate.init_args, nqubits, **kwargs)
 
+    def apply_channel(self, channel, state, nqubits):
+        probabilities = channel.coefficients + (1 - np.sum(channel.coefficients),)
+        index = np.random.choice(range(len(probabilities)), size=1, p=probabilities)[0]
+        if index != len(channel.gates):
+            gate = channel.gates[index]
+            state = gate.apply_clifford(self, state, nqubits)
+        return state
+
     def execute_circuit(self, circuit, initial_state=None, nshots: int = 1000):
         """Execute a Clifford circuits.
 
@@ -611,7 +619,11 @@ class CliffordBackend(NumpyBackend):
             (:class:`qibo.quantum_info.clifford.Clifford`): Object giving access to the final results.
         """
         for gate in circuit.queue:
-            if not gate.clifford and not gate.__class__.__name__ == "M":
+            if (
+                not gate.clifford
+                and not gate.__class__.__name__ == "M"
+                and not isinstance(gate, gates.PauliNoiseChannel)
+            ):
                 raise_error(RuntimeError, "Circuit contains non-Clifford gates.")
 
         if circuit.repeated_execution and not nshots == 1:

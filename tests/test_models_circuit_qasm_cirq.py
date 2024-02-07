@@ -1,4 +1,5 @@
 """Tests executing Qibo circuits created from OpenQASM code."""
+
 import cirq
 import numpy as np
 import pytest

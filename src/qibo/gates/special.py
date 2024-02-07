@@ -1,4 +1,4 @@
-from qibo.backends import GlobalBackend
+from qibo.backends import _check_backend
 from qibo.gates.abstract import SpecialGate
 from qibo.gates.measurements import M
 
@@ -104,8 +104,7 @@ class FusedGate(SpecialGate):
         Returns:
             ndarray: Matrix representation of special gate.
         """
-        if backend is None:  # pragma: no cover
-            backend = GlobalBackend()
+        backend = _check_backend(backend)
 
         return backend.matrix_fused(self)
 
@@ -157,3 +156,8 @@ class FusedGate(SpecialGate):
                 if neighbor is not None:
                     parent.left_neighbors[q] = neighbor
                     neighbor.right_neighbors[q] = parent
+
+    def apply_clifford(self, backend, state, nqubits):
+        for gate in self.gates:
+            state = gate.apply_clifford(backend, state, nqubits)
+        return state

@@ -4,7 +4,7 @@ from typing import List, Sequence, Tuple
 
 import sympy
 
-from qibo.backends import CliffordBackend, GlobalBackend
+from qibo.backends import _check_backend
 from qibo.config import raise_error
 
 REQUIRED_FIELDS = [
@@ -358,11 +358,10 @@ class Gate:
             ndarray: Matrix representation of gate.
 
         .. note::
-            ``Gate.matrix`` was an defined as an atribute in ``qibo`` versions prior to  ``0.2.0``.
+            ``Gate.matrix`` was defined as an atribute in ``qibo`` versions prior to  ``0.2.0``.
             From ``0.2.0`` on, it has been converted into a method and has replaced the ``asmatrix`` method.
         """
-        if backend is None:  # pragma: no cover
-            backend = GlobalBackend()
+        backend = _check_backend(backend)
 
         return backend.matrix(self)
 
@@ -481,7 +480,6 @@ class ParametrizedGate(Gate):
         self.parameters = tuple(params)
 
     def matrix(self, backend=None):
-        if backend is None:  # pragma: no cover
-            backend = GlobalBackend()
+        backend = _check_backend(backend)
 
         return backend.matrix_parametrized(self)

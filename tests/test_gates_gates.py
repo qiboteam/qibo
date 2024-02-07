@@ -1,4 +1,5 @@
 """Test gates defined in `qibo/gates/gates.py`."""
+
 import numpy as np
 import pytest
 
@@ -709,6 +710,17 @@ def test_iswap(backend):
     assert gates.iSWAP(0, 1).qasm_label == "iswap"
     assert gates.iSWAP(0, 1).clifford
     assert gates.iSWAP(0, 1).unitary
+
+
+def test_siswap(backend):
+    final_state = apply_gates(backend, [gates.X(1), gates.SiSWAP(0, 1)], nqubits=2)
+    target_state = np.zeros_like(final_state)
+    target_state[1] = 1.0 / np.sqrt(2)
+    target_state[2] = 1.0j / np.sqrt(2)
+    backend.assert_allclose(final_state, target_state)
+
+    assert not gates.SiSWAP(0, 1).clifford
+    assert gates.SiSWAP(0, 1).unitary
 
 
 def test_fswap(backend):
@@ -1534,6 +1546,8 @@ GATES = [
     ("GIVENS", (0, 1, 0.1)),
     ("RBS", (0, 1, 0.2)),
     ("ECR", (0, 1)),
+    ("SiSWAP", (0, 1)),
+    ("SiSWAPDG", (0, 1)),
 ]
 
 
