@@ -128,6 +128,7 @@ class QiboMatrices:
         self.SWAP = self.matrices.SWAP
         self.iSWAP = self.matrices.iSWAP
         self.SiSWAP = self.matrices.SiSWAP
+        self.SiSWAPDG = self.matrices.SiSWAPDG
         self.FSWAP = self.matrices.FSWAP
         self.ECR = self.matrices.ECR
         self.SYC = self.matrices.SYC
@@ -180,3 +181,10 @@ def set_threads(nthreads):
     if nthreads < 1:
         raise_error(ValueError, "Number of threads must be positive.")
     GlobalBackend().set_threads(nthreads)
+
+
+def _check_backend(backend):
+    if backend is None:
+        return GlobalBackend()
+
+    return backend
