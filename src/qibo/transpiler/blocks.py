@@ -65,8 +65,8 @@ class Block:
             (:class:`qibo.transpiler.blocks.Block`): fusion of the two input blocks.
         """
         if not self.qubits == block.qubits:
-            raise_error(
-                BlockingError, "In order to fuse two blocks their qubits must coincide."
+            raise BlockingError(
+                "In order to fuse two blocks their qubits must coincide."
             )
         return Block(qubits=self.qubits, gates=self.gates + block.gates, name=name)
 
