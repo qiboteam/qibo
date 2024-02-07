@@ -46,13 +46,13 @@ def test_errors(backend):
         QuantumNetwork(channel.to_choi(backend=backend), partition=(1, 2), pure="True")
 
     with pytest.raises(ValueError):
-        network.hermitian(precision_tol=-1e-8)
+        network.is_hermitian(precision_tol=-1e-8)
 
     with pytest.raises(ValueError):
-        network.unital(precision_tol=-1e-8)
+        network.is_unital(precision_tol=-1e-8)
 
     with pytest.raises(ValueError):
-        network.causal(precision_tol=-1e-8)
+        network.is_causal(precision_tol=-1e-8)
 
     with pytest.raises(TypeError):
         network + 1
@@ -88,7 +88,7 @@ def test_errors(backend):
     with pytest.raises(NotImplementedError):
         net @ net
 
-    with pytest.raises(ValueError):
+    with pytest.raises(NotImplementedError):
         net @ network
 
     with pytest.raises(ValueError):
@@ -155,11 +155,11 @@ def test_parameters(backend):
     backend.assert_allclose(network.partition, partition)
     backend.assert_allclose(network.system_output, (False, True))
 
-    assert network.causal()
-    assert network.unital()
-    assert network.hermitian()
-    assert network.positive_semidefinite()
-    assert network.channel()
+    assert network.is_causal()
+    assert network.is_unital()
+    assert network.is_hermitian()
+    assert network.is_positive_semidefinite()
+    assert network.is_channel()
 
 
 def test_with_states(backend):
@@ -186,8 +186,8 @@ def test_with_states(backend):
         state_output_link.matrix(backend=backend).reshape((dims, dims)), state_output
     )
 
-    assert network_state.hermitian()
-    assert network_state.positive_semidefinite()
+    assert network_state.is_hermitian()
+    assert network_state.is_positive_semidefinite()
 
 
 @pytest.mark.parametrize("subscript", ["jk,kl->jl", "jk,lj->lk"])
@@ -223,25 +223,26 @@ def test_with_unitaries(backend, subscript):
 
 
 def test_with_comb(backend):
-    subscript = "jklm,lmno->jkno"
-    partition = (2,) * 4
-    sys_out = (False, True) * 2
+    subscript = "jklm,kl->jm"
+    comb_partition = (2,) * 4
+    channel_partition = (2,) * 2
+    comb_sys_out = (False, True) * 2
+    channel_sys_out = (False, True)
 
     comb = random_density_matrix(2**4, backend=backend)
-    comb_2 = random_density_matrix(2**4, backend=backend)
+    channel = random_density_matrix(2**2, backend=backend)
 
-    comb_choi = QuantumNetwork(comb, partition, system_output=sys_out, backend=backend)
-    comb_choi_2 = QuantumNetwork(
-        comb_2, partition, system_output=sys_out, backend=backend
+    comb_choi = QuantumNetwork(
+        comb, comb_partition, system_output=comb_sys_out, backend=backend
     )
-    comb_choi_3 = QuantumNetwork(
-        comb @ comb_2, partition, system_output=sys_out, backend=backend
-    ).to_full(backend)
+    channel_choi = QuantumNetwork(
+        channel, channel_partition, system_output=channel_sys_out, backend=backend
+    )
 
-    test = comb_choi.link_product(comb_choi_2, subscript).to_full(backend)
+    test = comb_choi.link_product(channel_choi, subscript).to_full(backend)
+    channel_choi2 = comb_choi @ channel_choi
 
-    backend.assert_allclose(test, comb_choi_3, atol=1e-5)
-    backend.assert_allclose(test, (comb_choi @ comb_choi_2).to_full(backend), atol=1e-5)
+    backend.assert_allclose(test, channel_choi2.to_full(backend), atol=1e-5)
 
 
 def test_apply(backend):
@@ -265,9 +266,9 @@ def test_non_hermitian_and_prints(backend):
     matrix = random_gaussian_matrix(dims**2, backend=backend)
     network = QuantumNetwork(matrix, (dims, dims), pure=False, backend=backend)
 
-    assert not network.hermitian()
-    assert not network.causal()
-    assert not network.positive_semidefinite()
-    assert not network.channel()
+    assert not network.is_hermitian()
+    assert not network.is_causal()
+    assert not network.is_positive_semidefinite()
+    assert not network.is_channel()
 
     assert network.__str__() == "J[4 -> 4]"
