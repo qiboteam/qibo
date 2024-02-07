@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from qibo.backends import GlobalBackend
+from qibo.backends import _check_backend
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.quantum_info.metrics import fidelity, purity
 
@@ -29,8 +29,7 @@ def concurrence(state, bipartition, check_purity: bool = True, backend=None):
     Returns:
         float: Concurrence of :math:`\\rho`.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if (
         (len(state.shape) not in [1, 2])
@@ -107,10 +106,9 @@ def entanglement_of_formation(
     Returns:
         float: entanglement of formation of state :math:`\\rho`.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
-
     from qibo.quantum_info.entropies import shannon_entropy  # pylint: disable=C0415
+
+    backend = _check_backend(backend)
 
     concur = concurrence(
         state, bipartition=bipartition, check_purity=check_purity, backend=backend
@@ -155,9 +153,6 @@ def entanglement_fidelity(
     Returns:
         float: Entanglement fidelity :math:`F_{\\mathcal{E}}`.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
-
     if not isinstance(nqubits, int):
         raise_error(
             TypeError, f"nqubits must be type int, but it is type {type(nqubits)}."
@@ -183,6 +178,8 @@ def entanglement_fidelity(
             TypeError,
             f"check_hermitian must be type bool, but it is type {type(check_hermitian)}.",
         )
+
+    backend = _check_backend(backend)
 
     if state is None:
         state = backend.plus_density_matrix(nqubits)
@@ -218,8 +215,7 @@ def meyer_wallach_entanglement(circuit, backend=None):
         float: Meyer-Wallach entanglement.
     """
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     circuit.density_matrix = True
     nqubits = circuit.nqubits
@@ -279,8 +275,7 @@ def entangling_capability(circuit, samples: int, seed=None, backend=None):
             TypeError, "seed must be either type int or numpy.random.Generator."
         )
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     local_state = (
         np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed

@@ -5,7 +5,7 @@ from typing import Union
 import numpy as np
 from scipy.linalg import fractional_matrix_power
 
-from qibo.backends import GlobalBackend
+from qibo.backends import _check_backend
 from qibo.config import PRECISION_TOL, raise_error
 from qibo.quantum_info.metrics import _check_hermitian_or_not_gpu, purity
 
@@ -30,8 +30,7 @@ def shannon_entropy(prob_dist, base: float = 2, backend=None):
     Returns:
         (float): Shannon entropy :math:`H(\\mathcal{p})`.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if isinstance(prob_dist, list):
         # np.float64 is necessary instead of native float because of tensorflow
@@ -98,8 +97,7 @@ def classical_relative_entropy(prob_dist_p, prob_dist_q, base: float = 2, backen
     Returns:
         float: Classical relative entropy between :math:`\\mathbf{p}` and :math:`\\mathbf{q}`.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if isinstance(prob_dist_p, list):
         # np.float64 is necessary instead of native float because of tensorflow
@@ -190,8 +188,7 @@ def classical_renyi_entropy(
     Returns:
         float: Classical Rényi entropy :math:`H_{\\alpha}`.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if isinstance(prob_dist, list):
         # np.float64 is necessary instead of native float because of tensorflow
@@ -279,8 +276,7 @@ def classical_relative_renyi_entropy(
     Returns:
         float: Classical relative Rényi entropy :math:`H_{\\alpha}(\\mathbf{p} \\, \\| \\, \\mathbf{q})`.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if isinstance(prob_dist_p, list):
         # np.float64 is necessary instead of native float because of tensorflow
@@ -361,8 +357,7 @@ def classical_tsallis_entropy(prob_dist, alpha: float, base: float = 2, backend=
     Returns:
         float: Classical Tsallis entropy :math:`S_{\\alpha}(\\mathbf{p})`.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if isinstance(prob_dist, list):
         # np.float64 is necessary instead of native float because of tensorflow
@@ -433,8 +428,7 @@ def von_neumann_entropy(
     Returns:
         float: The von-Neumann entropy :math:`S` of ``state`` :math:`\\rho`.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if (
         (len(state.shape) >= 3)
@@ -513,8 +507,7 @@ def relative_von_neumann_entropy(
     Returns:
         float: Relative (von-Neumann) entropy :math:`S(\\rho \\, \\| \\, \\sigma)`.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if (
         (len(state.shape) >= 3)
@@ -629,8 +622,7 @@ def renyi_entropy(state, alpha: Union[float, int], base: float = 2, backend=None
     Returns:
         float: Rényi entropy :math:`H_{\\alpha}`.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if (
         (len(state.shape) >= 3)
@@ -714,8 +706,7 @@ def relative_renyi_entropy(
     Returns:
         float: Relative Rényi entropy :math:`H_{\\alpha}(\\rho \\, \\| \\, \\sigma)`.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if (
         (len(state.shape) >= 3)
@@ -806,8 +797,7 @@ def tsallis_entropy(state, alpha: float, base: float = 2, backend=None):
     Returns:
         float: Tsallis entropy :math:`S_{\\alpha}(\\rho)`.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if (
         (len(state.shape) >= 3)
@@ -871,8 +861,7 @@ def entanglement_entropy(
     Returns:
         float: Entanglement entropy :math:`S` of ``state`` :math:`\\rho`.
     """
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend = _check_backend(backend)
 
     if base <= 0.0:
         raise_error(ValueError, "log base must be non-negative.")
