@@ -85,6 +85,7 @@ class CMAES(Optimizer):
         return r[1].result.fbest, r[1].result.xbest, r
 
 
+@dataclass
 class BasinHopping(Optimizer):
     """
     Global optimizer based on: https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.basinhopping.html.
@@ -114,7 +115,11 @@ class BasinHopping(Optimizer):
             than the target, then the stepsize is increased. Otherwise, it is decreased.
         niter_success (Optional[int]): stop the run if the global minimum
             candidate remains the same for this number of iterations.
-        minimizer_kwargs
+        minimizer_kwargs (Optional[dict]): extra keyword arguments to be passed
+            to the local minimizer. To visualize all the possible options available
+            for a fixed scipy `minimizer` please use the method
+            `BasinHopping.show_fit_options(method="method")`, where `"method"` is
+            selected among the ones provided by `scipy.optimize.minimize`.
     """
 
     niter: Optional[int] = field(default=10)
@@ -125,36 +130,22 @@ class BasinHopping(Optimizer):
     callback: Optional[callable] = field(default=None)
     target_accept_rate: Optional[float] = field(default=0.5)
     niter_success: Optional[int] = field(default=None)
+    minimizer_kwargs: Optional[dict] = field(default=None)
+    disp: bool = field(init=False, default=False)
+
+    def __post_init__(self):
+        if self.verbosity:
+            self.disp = True
 
     def __str__(self):
         return "basinhopping"
 
-    def __init__(
-        self,
-        options={},
-        minimizer_kwargs={},
-    ):
-        self.options = {"niter": 10}
-        self.name = "basinhopping"
-        self._fit_function = basinhopping
-        # check if options are compatible with the function and update class options
-        check_options(function=self._fit_function, options=options)
-        self.options = options
-        self.minimizer_kwargs = minimizer_kwargs
-
-    def get_options_list(self):
-        """Return all available optimizer's options."""
-        default_arguments = ["func", "x0", "options", "minimizer_kwargs"]
-        customizable_arguments = []
-        for arg in list(inspect.signature(self._fit_function).parameters):
-            if arg not in default_arguments:
-                customizable_arguments.append(arg)
-        return customizable_arguments
-
-    def get_fit_options_list(self):
+    def show_fit_options_list(self):
         log.info(f"No `fit_options` are required for the Basin-Hopping optimizer.")
 
-    def fit(self, initial_parameters, loss, args=()):
+    def fit(
+        self, initial_parameters: Union[List, ndarray], loss: callable, args: Tuple
+    ):
         """Perform the optimizations via Basin-Hopping strategy.
 
         Args:
@@ -167,19 +158,30 @@ class BasinHopping(Optimizer):
             tuple: best loss value (float), best parameter values (np.ndarray), full scipy OptimizeResult object.
         """
 
-        check_fit_arguments(args=args, initial_parameters=initial_parameters)
-
         log.info(
             f"Optimization is performed using the optimizer: {type(self).__name__}"
         )
 
-        self.minimizer_kwargs.update({"args": args})
-        self.set_options({"minimizer_kwargs": self.minimizer_kwargs})
+        if self.minimizer_kwargs is None:
+            options = {}
+        else:
+            options = self.minimizer_kwargs
 
-        r = self._fit_function(
-            loss,
-            initial_parameters,
-            **self.options,
+        options.update({"args": args})
+
+        r = basinhopping(
+            func=loss,
+            x0=initial_parameters,
+            niter=self.niter,
+            T=self.T,
+            stepsize=self.stepsize,
+            take_step=self.take_step,
+            accept_test=self.accept_test,
+            callback=self.callback,
+            niter_success=self.niter_success,
+            target_accept_rate=self.target_accept_rate,
+            minimizer_kwargs=options,
+            disp=self.disp,
         )
 
         return r.fun, r.x, r
