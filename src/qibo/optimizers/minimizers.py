@@ -17,14 +17,15 @@ class ScipyMinimizer(Optimizer):
     Optimization approaches based on `scipy.optimize.minimize`.
 
     Attributes:
-        jac (Optional[dict]): Method for computing the gradient vector.
-        hess (Optional[dict]): Method for computing the hessian matrix.
-        hessp (Optional[callable]): Hessian of objective function times an arbitrary vector.
-        bounds (Union[None, List[Tuple], Bounds]): Bounds on variables.
-        constraints (Optional[dict]): Constraints definition.
-        tol (Optional[float]): Tolerance for termination.
-        callback (Optional[callable]): A callable called after each optimization iteration.
-        method (Optional[str]): Optimization method among the minimizers provided by scipy, defaults to "Powell".
+        method (Optional[str]): optimization method among the minimizers provided by scipy, defaults to "Powell".
+        jac (Optional[dict]): method for computing the gradient vector.
+        hess (Optional[dict]): method for computing the hessian matrix.
+        hessp (Optional[callable]): hessian of objective function times an arbitrary vector.
+        bounds (Union[None, List[Tuple], Bounds]): bounds on variables.
+        constraints (Optional[dict]): constraints definition.
+        tol (Optional[float]): tolerance for termination.
+        callback (Optional[callable]): a callable called after each optimization iteration.
+        verbosity (bool): verbosity level of the optimization. If `True`, logging messages are displayed.
     """
 
     method: Optional[str] = "Powell"
@@ -71,7 +72,8 @@ class ScipyMinimizer(Optimizer):
         else:
             options = fit_options
 
-        log.info(f"Optimization is performed using the optimizer: {self.__str__()}")
+        if self.verbosity:
+            log.info(f"Optimization is performed using the optimizer: {self.__str__()}")
 
         r = minimize(loss, initial_parameters, args=args, **options)
 
@@ -79,7 +81,7 @@ class ScipyMinimizer(Optimizer):
 
 
 @dataclass
-class Parallel_BFGS(ScipyMinimizer):
+class ParallelBFGS(ScipyMinimizer):
     """
     Computes the L-BFGS-B with parallel evaluation using multiprocessing.
     This implementation here is based on https://doi.org/10.32614/RJ-2019-030.
@@ -93,6 +95,7 @@ class Parallel_BFGS(ScipyMinimizer):
         tol (Optional[float]): Tolerance for termination.
         callback (Optional[callable]): A callable called after each optimization iteration.
         processes (int): number of processes to be computed in parallel.
+        verbosity (bool): verbosity level of the optimization. If `True`, logging messages are displayed.
     """
 
     processes: int = field(default=1)
@@ -136,7 +139,8 @@ class Parallel_BFGS(ScipyMinimizer):
             tuple: best loss value (float), best parameter values (np.ndarray), full scipy OptimizeResult object.
         """
 
-        log.info(f"Optimization is performed using the optimizer: {self.__str__()}")
+        if self.verbosity:
+            log.info(f"Optimization is performed using the optimizer: {self.__str__()}")
 
         self.loss = loss
         self.args = args
