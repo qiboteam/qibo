@@ -12,18 +12,14 @@ A physically implementable quantum network is described by a semi-positive defin
 A simple example is a quantum channel $\Gamma: \mathcal{H}_ 0 \to \mathcal{H}_ 1$, where $\mathcal{H}_ 0$ is the input system and $\mathcal{H}_ 1$ is the output system.
 The quantum channel is a linear map, such that it maps any input quantum state to an output quantum state, which is a sufficient and necessary condition for the map to be physical.
 A Hermitian operator $J^\Gamma$ acting on $\mathcal{H}_ 0\otimes \mathcal{H}_ 1$ is associated with a quantum channel $\Gamma$, if $J^\Gamma$ satisfies the following conditions:
-$$
-J^\Gamma \geq 0, \quad \text{and} \quad \text{Tr}_ {\mathcal{H}_ 1} J^\Gamma = \mathbb{I}_ {\mathcal{H} _0} \ .
-$$
+$$J^\Gamma \geq 0, \quad \text{and} \quad \text{Tr}_ {\mathcal{H}_ 1} J^\Gamma = \mathbb{I}_ {\mathcal{H} _0} .$$
 
 The first condition is called *complete positivity*, and the second condition is called *trace-preserving*.
 In particular, the second condition ensures that the information of the input system is only accessible through the output system.
 
 In particular, a quantum state $\rho$ may be also considered as a quantum network, where the input system is the trivial system $\mathbb{C}$, and the output system is the quantum system $\mathcal{H}$.
 The constraints on the quantum channels are then equivalent to the constraints on the quantum states:
-$$
-\rho \geq 0, \quad \text{and} \quad \text{Tr} \rho = \mathbb{I}_ \mathbb{C} = 1\ .
-$$
+$$\rho \geq 0, \quad \text{and} \quad \text{Tr} \rho = \mathbb{I}_ \mathbb{C} = 1\ .$$
 
 > For more details, see G. Chiribella *et al.*, *Theoretical framework for quantum networks*,
 > [Physical Review A 80.2 (2009): 022339](https://journals.aps.org/pra/abstract/10.1103/PhysRevA.80.022339).
@@ -116,7 +112,7 @@ Choi2 is unital: False
 Choi3 is unital: False
 ```
 
-However, the mixture of the three operators are unital.
+However, the mixture of the three operators is unital.
 As the matrices are orthogonal, they are the extreme points of the convex set of the unital channels.
 Therefore, this mixed channel is not a mixed unitary channel.
 
