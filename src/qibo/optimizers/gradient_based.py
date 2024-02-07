@@ -1,4 +1,5 @@
 """Gradient descent strategies to optimize quantum models."""
+
 import inspect
 
 from qibo.backends import TensorflowBackend
