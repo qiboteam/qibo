@@ -342,17 +342,17 @@ def _exponent(x1, z1, x2, z2):
     Returns:
         (np.array): The calculated exponents.
     """
-    exp = np.zeros(x1.shape, dtype=int)
-    x1_eq_z1 = (x1 ^ z1) == False
-    x1_neq_z1 = ~x1_eq_z1
-    x1_eq_0 = x1 == False
-    x1_eq_1 = ~x1_eq_0
-    ind2 = x1_eq_z1 & x1_eq_1
-    ind3 = x1_eq_1 & x1_neq_z1
-    ind4 = x1_eq_0 & x1_neq_z1
-    exp[ind2] = z2[ind2].astype(int) - x2[ind2].astype(int)
-    exp[ind3] = z2[ind3].astype(int) * (2 * x2[ind3].astype(int) - 1)
-    exp[ind4] = x2[ind4].astype(int) * (1 - 2 * z2[ind4].astype(int))
+    x1_x2 = x1 & x2
+    x1_z2 = x1 & z2
+    x2_z1 = x2 & z1
+    exp = (
+        -2 * (x1_x2 & z1).astype(int)
+        + 2 * (x1_x2 & z2).astype(int)
+        + 2 * (x1_z2 & z1).astype(int)
+        - x1_z2.astype(int)
+        - 2 * (x2_z1 & z2).astype(int)
+        + x2_z1.astype(int)
+    )
     return exp
 
 

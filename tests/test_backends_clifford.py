@@ -243,7 +243,6 @@ def test_bitflip_noise(backend):
 
 
 def test_set_backend(backend):
-    set_backend(backend.name)
     clifford_bkd = construct_clifford_backend(backend)
     if not clifford_bkd:
         return
@@ -251,9 +250,13 @@ def test_set_backend(backend):
     if platform is None:
         platform = str(backend)
     set_backend("clifford", platform=platform)
-    assert isinstance(GlobalBackend(), type(clifford_bkd))
+    assert isinstance(GlobalBackend(), CliffordBackend)
+    global_platform = GlobalBackend().engine.platform
+    if global_platform is None:
+        global_platform = str(GlobalBackend().engine)
+    assert global_platform == platform
 
-
+    
 def test_noise_channels(backend):
     clifford_bkd = construct_clifford_backend(backend)
     if not clifford_bkd:
@@ -276,3 +279,4 @@ def test_noise_channels(backend):
         clifford_result.probabilities(),
         atol=1e-1,
     )
+

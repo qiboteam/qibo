@@ -86,7 +86,7 @@ class CliffordBackend(NumpyBackend):
         symplectic_matrix[nqubits:-1, nqubits : 2 * nqubits] = self.np.copy(I)
         return symplectic_matrix
 
-    def clifford_pre_execution_reshape(self, state):
+    def _clifford_pre_execution_reshape(self, state):
         """Reshape the symplectic matrix to the shape needed by the engine before circuit execution.
 
         Args:
@@ -95,9 +95,9 @@ class CliffordBackend(NumpyBackend):
         Returns:
             (ndarray): The reshaped state.
         """
-        return self.engine.clifford_pre_execution_reshape(state)
+        return self.engine._clifford_pre_execution_reshape(state)
 
-    def clifford_post_execution_reshape(self, state, nqubits):
+    def _clifford_post_execution_reshape(self, state, nqubits):
         """Reshape the symplectic matrix to the shape needed by the engine after circuit execution.
 
         Args:
@@ -107,7 +107,7 @@ class CliffordBackend(NumpyBackend):
         Returns:
             (ndarray): The reshaped state.
         """
-        return self.engine.clifford_post_execution_reshape(state, nqubits)
+        return self.engine._clifford_post_execution_reshape(state, nqubits)
 
     def apply_gate_clifford(self, gate, symplectic_matrix, nqubits):
         operation = getattr(self.clifford_operations, gate.__class__.__name__)
@@ -156,12 +156,12 @@ class CliffordBackend(NumpyBackend):
 
             state = self.zero_state(nqubits) if initial_state is None else initial_state
 
-            state = self.clifford_pre_execution_reshape(state)
+            state = self._clifford_pre_execution_reshape(state)
 
             for gate in circuit.queue:
                 state = gate.apply_clifford(self, state, nqubits)
 
-            state = self.clifford_post_execution_reshape(state, nqubits)
+            state = self._clifford_post_execution_reshape(state, nqubits)
 
             clifford = Clifford(
                 state,
@@ -244,7 +244,7 @@ class CliffordBackend(NumpyBackend):
         if isinstance(qubits, list):
             qubits = tuple(qubits)
 
-        state = self.clifford_pre_execution_reshape(state)
+        state = self._clifford_pre_execution_reshape(state)
 
         if collapse:
             samples = [

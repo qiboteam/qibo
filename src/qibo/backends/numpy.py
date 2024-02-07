@@ -3,7 +3,7 @@ import collections
 import numpy as np
 
 from qibo import __version__
-from qibo.backends import clifford_operations, einsum_utils
+from qibo.backends import _clifford_operations, einsum_utils
 from qibo.backends.abstract import Backend
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.config import log, raise_error
@@ -30,7 +30,7 @@ class NumpyBackend(Backend):
             np.complex128,
         )
 
-        self.clifford_operations = clifford_operations
+        self.clifford_operations = _clifford_operations
 
     def set_precision(self, precision):
         if precision != self.precision:
@@ -77,10 +77,10 @@ class NumpyBackend(Backend):
     def compile(self, func):
         return func
 
-    def clifford_pre_execution_reshape(self, state):
+    def _clifford_pre_execution_reshape(self, state):
         return state
 
-    def clifford_post_execution_reshape(self, state, nqubits):
+    def _clifford_post_execution_reshape(self, state, nqubits):
         return state
 
     def zero_state(self, nqubits):
