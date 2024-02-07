@@ -270,17 +270,118 @@ For instance, the following two circuit generations are equivalent:
     circuit_2.add(gates.X(2))
 
 
+.. image:: ../_static/comp_basis_encoder.png
+   :width: 3400px
+   :height: 2000px
+   :scale: 25 %
+   :align: center
+
+
 .. autofunction:: qibo.models.encodings.comp_basis_encoder
+
+
+Phase Encoder
+"""""""""""""
+
+Encodes data of length :math:`n` into the phases of :math:`n` qubits.
+
+
+For instance, the following two circuit generations are equivalent:
+
+.. testsetup::
+
+    import numpy as np
+
+    from qibo import Circuit, gates
+    from qibo.models.encodings import phase_encoder
+
+.. testcode::
+
+    nqubits = 3
+    phases = np.random.rand(nqubits)
+
+    circuit_1 = phase_encoder(phases, rotation="RX")
+
+    circuit_2 = Circuit(3)
+    circuit_2.add(gates.RX(qubit, phases[qubit]) for qubit in range(nqubits))
+
+
+.. image:: ../_static/phase_encoder.png
+   :width: 1333px
+   :height: 1552px
+   :scale: 30 %
+   :align: center
+
+
+.. autofunction:: qibo.models.encodings.phase_encoder
 
 
 Unary Encoder
 """""""""""""
+
+Given a classical ``data`` array :math:`\mathbf{x} \in \mathbb{R}^{d}` such that
+
+.. math::
+    \mathbf{x} = (x_{1}, x_{2}, \dots, x_{d}) \, ,
+
+this function generate the circuit that prepares the following quantum state
+:math:`\ket{\psi} \in \mathcal{H}`:
+
+.. math::
+    \ket{\psi} = \frac{1}{\|\mathbf{x}\|_{\textup{HS}}} \,
+        \sum_{k=1}^{d} \, x_{k} \, \ket{k} \, ,
+
+with :math:`\mathcal{H} \cong \mathbb{C}^{d}` being a :math:`d`-qubit Hilbert space,
+and :math:`\|\cdot\|_{\textup{HS}}` being the Hilbert-Schmidt norm.
+
+Here, :math:`\ket{k}` is a unary representation of the number :math:`k`.
+For instance, for :math:`d = 3`, the final state would be
+
+.. math::
+    \ket{\psi} = \frac{1}{\|\mathbf{x}\|_{\textup{HS}}} \,
+        \left( x_{1} \ket{001} + x_{2} \ket{010} + x_{3} \ket{100} \right) \, .
+
+There are multiple circuit architechtures that lead to unary encoding of classical data.
+For example, to encode a :math:`8`-dimensional data, one could use the so-called
+*tree* architechture below:
+
+.. image:: ../_static/unary_encoder_tree.png
+   :width: 1333px
+   :height: 1552px
+   :scale: 30 %
+   :align: center
+
+where the first gate is the :class:`qibo.gates.X`
+and the parametrized gates are the :class:`qibo.gates.RBS`.
+To know how the angles :math:`\{\theta_{k}\}_{[k]}` are calculated for this architecture,
+please refer to S. Johri *et al.*, *Nearest Centroid Classiﬁcation on a Trapped Ion Quantum Computer*,
+`arXiv:2012.04145v2 [quant-ph] <https://arxiv.org/abs/2012.04145>`_.
+
+On the other hand, the same encoding could be performed using the so-called
+*diagonal* (also known as *ladder*) architecture below:
+
+.. image:: ../_static/unary_encoder_ladder.png
+   :width: 1867px
+   :height: 1552px
+   :scale: 30 %
+   :align: center
+
+This architecture leads to a choice of angles based on
+`spherical coordinates in a d-dimensional hypersphere
+<https://en.wikipedia.org/wiki/N-sphere#Spherical_coordinates>`_.
+
 
 .. autofunction:: qibo.models.encodings.unary_encoder
 
 
 Unary Encoder for Random Gaussian States
 """"""""""""""""""""""""""""""""""""""""
+
+Performs the same unary encoder as :class:`qibo.models.encodings.unary_encoder`
+using the *tree* architecture , with the difference being that now each entry
+of the :math:`d`-dimensional array is sampled from a Gaussian distribution
+:math:`\mathcal{N}(0, 1)`.
+
 
 .. autofunction:: qibo.models.encodings.unary_encoder_random_gaussian
 
