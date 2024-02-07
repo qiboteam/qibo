@@ -1,6 +1,7 @@
 import numpy as np
 
-from qibo import Circuit, gates
+from qibo import gates, get_backend
+from qibo.models import Circuit
 
 
 class QuantumCNN:
@@ -16,14 +17,16 @@ class QuantumCNN:
         nclasses (int): number of classes to be classified. Default setting of 2 (phases).
         params: initial list of variational parameters. If not provided, all parameters
             will be initialized to zero.
+        twoqubitansatz (:class:`qibo.models.Circuit`): a two qubit ansatz that can be input by the user to form the two qubit ansatz used in the convolutional circuit.
     Example:
         .. testcode::
-            import qibo
-            from qibo.models.qcnn import QuantumCNN
+
             import math
-            import qibo
             import numpy as np
             import random
+            import qibo
+            from qibo.models.qcnn import QuantumCNN
+
 
             qibo.set_backend("numpy")
             data = np.random.rand(16)
@@ -42,12 +45,31 @@ class QuantumCNN:
 
     """
 
-    def __init__(self, nqubits, nlayers, nclasses=2, params=None):
+    def __init__(
+        self,
+        nqubits,
+        nlayers,
+        nclasses=2,
+        params=None,
+        twoqubitansatz=None,
+        copy_init_state=None,
+    ):
         self.nclasses = nclasses
         self.nqubits = nqubits
         self.nlayers = nlayers
+        self.twoqubitansatz = twoqubitansatz
 
-        self.nparams_conv = 15
+        if copy_init_state is None:
+            if "qibojit" in get_backend():
+                self.copy_init_state = True
+            else:
+                self.copy_init_state = False
+
+        if self.twoqubitansatz == None:
+            self.nparams_conv = 15
+        else:
+            self.nparams_conv = len(self.twoqubitansatz.get_parameters())
+
         self.nparams_pool = 6
         self.nparams_layer = self.nparams_conv + self.nparams_pool
         self.measured_qubits = int(np.ceil(np.log2(self.nclasses)))
@@ -161,15 +183,21 @@ class QuantumCNN:
             Circuit containing the unitaries added to the specified qubits.
         """
 
-        c = Circuit(self.nqubits)
-        c += self.one_qubit_unitary(bits[0], symbols[0:3])
-        c += self.one_qubit_unitary(bits[1], symbols[3:6])
-        c.add(gates.RZZ(bits[0], bits[1], symbols[6]))
-        c.add(gates.RYY(bits[0], bits[1], symbols[7]))
-        c.add(gates.RXX(bits[0], bits[1], symbols[8]))
+        if self.twoqubitansatz is None:
+            c = Circuit(self.nqubits)
+            c += self.one_qubit_unitary(bits[0], symbols[0:3])
+            c += self.one_qubit_unitary(bits[1], symbols[3:6])
+            c.add(gates.RZZ(bits[0], bits[1], symbols[6]))
+            c.add(gates.RYY(bits[0], bits[1], symbols[7]))
+            c.add(gates.RXX(bits[0], bits[1], symbols[8]))
 
-        c += self.one_qubit_unitary(bits[0], symbols[9:12])
-        c += self.one_qubit_unitary(bits[1], symbols[12:])
+            c += self.one_qubit_unitary(bits[0], symbols[9:12])
+            c += self.one_qubit_unitary(bits[1], symbols[12:])
+
+        else:
+            c = Circuit(self.nqubits)
+            c.add(self.twoqubitansatz.on_qubits(bits[0], bits[1]))
+            c.set_parameters(symbols[0 : self.nparams_conv])
 
         return c
 
@@ -251,7 +279,11 @@ class QuantumCNN:
             numpy.array() with predictions for each qubit, for the initial state.
         """
         bias = np.array(theta[0 : self.measured_qubits])
-        circuit_exec = circuit(init_state, nshots)
+        if self.copy_init_state:
+            init_state_copy = init_state.copy()
+        else:
+            init_state_copy = init_state
+        circuit_exec = circuit(init_state_copy, nshots)
         result = circuit_exec.frequencies(binary=False)
         prediction = np.zeros(self.measured_qubits)
 
@@ -309,17 +341,15 @@ class QuantumCNN:
             data: the training data to be used in the minimization.
             labels: the corresponding ground truth for the training data.
             nshots: int number of runs of the circuit during the sampling process (default=10000).
-            method: str 'classical optimizer for the minimization'. All methods from scipy.optimize.minmize are suported (default='Powell').
+            method: str 'classical optimizer for the minimization'. All methods from qibo.optimizers.optimize are suported (default='Powell').
         Returns:
             numpy.float64 with value of the minimum found, numpy.ndarray with the optimal angles.
         """
-        from scipy.optimize import minimize
+        from qibo.optimizers import optimize
 
-        result = minimize(
+        loss, optimal_angles, result = optimize(
             self.Cost_function, init_theta, args=(data, labels, nshots), method=method
         )
-        loss = result.fun
-        optimal_angles = result.x
 
         self._optimal_angles = optimal_angles
 
