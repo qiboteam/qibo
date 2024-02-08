@@ -263,9 +263,9 @@ class PyTorchBackend(NumpyBackend):
 
     def calculate_matrix_exp(self, a, matrix, eigenvectors=None, eigenvalues=None):
         if eigenvectors is None or self.issparse(matrix):
-            return torch.linalg.matrix_exp(
+            return torch.linalg.matrix_exp(  # pylint: disable=not-callable
                 -1j * a * matrix
-            )  # pylint: disable=not-callable
+            )
         else:
             return super().calculate_matrix_exp(a, matrix, eigenvectors, eigenvalues)
 
