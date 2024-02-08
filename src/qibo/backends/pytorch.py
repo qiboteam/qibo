@@ -157,10 +157,10 @@ class TorchMatrices(NumpyMatrices):
         return torch.tensor(u, dtype=self.dtype)
 
 
-class TorchBackend(NumpyBackend):
+class PyTorchBackend(NumpyBackend):
     def __init__(self):
         super().__init__()
-        self.name = "torch"
+        self.name = "pytorch"
 
         self.versions = {
             "qibo": __version__,
