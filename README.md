@@ -1,9 +1,8 @@
 ![Logo](https://github.com/qiboteam/qibo/blob/master/doc/source/_static/qibo_logo_dark.svg)
 
-![Tests](https://github.com/qiboteam/qibo/workflows/Tests/badge.svg)
 [![codecov](https://codecov.io/gh/qiboteam/qibo/branch/master/graph/badge.svg?token=1EKZKVEVX0)](https://codecov.io/gh/qiboteam/qibo)
-[![DOI](https://zenodo.org/badge/241307936.svg)](https://zenodo.org/badge/latestdoi/241307936)
-[![Matrix](https://img.shields.io/matrix/qibo%3Amatrix.org?logo=matrix)](https://matrix.to/#/#qibo:matrix.org)
+![PyPI - Version](https://img.shields.io/pypi/v/qibo)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/qibo)
 
 Qibo is an open-source full stack API for quantum simulation and quantum hardware control.
 
@@ -14,6 +13,8 @@ Some of the key features of Qibo are:
 - Simple mechanism for the implementation of new simulation and hardware backend drivers.
 
 ## Documentation
+
+[![docs](https://github.com/qiboteam/qibo/actions/workflows/publish.yml/badge.svg)](https://qibo.science/qibo/stable/)
 
 Qibo documentation is available [here](https://qibo.science).
 
@@ -49,14 +50,15 @@ result = c(nshots=100)
 In both cases, the simulation will run in a single device CPU or GPU in double precision `complex128`.
 
 ## Citation policy
-
+[![arXiv](https://img.shields.io/badge/arXiv-2009.01845-b31b1b.svg)](https://arxiv.org/abs/2009.01845)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3997195.svg)](https://doi.org/10.5281/zenodo.3997195)
 If you use the package please refer to [the documentation](https://qibo.science/qibo/stable/appendix/citing-qibo.html#publications) for citation instructions.
 
 ## Contacts
 
 To get in touch with the community and the developers, consider joining the Qibo workspace on Matrix:
 
-https://matrix.to/#/#qibo:matrix.org
+[![Matrix](https://img.shields.io/matrix/qibo%3Amatrix.org?logo=matrix)](https://matrix.to/#/#qibo:matrix.org)
 
 ## Supporters and collaborators
 
