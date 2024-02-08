@@ -6,7 +6,7 @@ import torch
 from qibo import __version__
 from qibo.backends.npmatrices import NumpyMatrices
 from qibo.backends.numpy import NumpyBackend
-from qibo.config import TF_LOG_LEVEL, log, raise_error
+from qibo.config import raise_error
 
 
 class TorchMatrices(NumpyMatrices):
@@ -256,20 +256,22 @@ class PyTorchBackend(NumpyBackend):
         return torch.norm(state, p=order)
 
     def calculate_eigenvalues(self, matrix):
-        return torch.linalg.eigvalsh(matrix)
+        return torch.linalg.eigvalsh(matrix)  # pylint: disable=not-callable
 
     def calculate_eigenvectors(self, matrix):
-        return torch.linalg.eigh(matrix)
+        return torch.linalg.eigh(matrix)  # pylint: disable=not-callable
 
     def calculate_matrix_exp(self, a, matrix, eigenvectors=None, eigenvalues=None):
         if eigenvectors is None or self.issparse(matrix):
-            return torch.linalg.matrix_exp(-1j * a * matrix)
+            return torch.linalg.matrix_exp(
+                -1j * a * matrix
+            )  # pylint: disable=not-callable
         else:
             return super().calculate_matrix_exp(a, matrix, eigenvectors, eigenvalues)
 
     def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
         if self.issparse(matrix1) or self.issparse(matrix2):
-            return torch.sparse.mm(matrix1, matrix2)
+            return torch.sparse.mm(matrix1, matrix2)  # pylint: disable=not-callable
         return super().calculate_hamiltonian_matrix_product(matrix1, matrix2)
 
     def calculate_hamiltonian_state_product(self, matrix, state):
