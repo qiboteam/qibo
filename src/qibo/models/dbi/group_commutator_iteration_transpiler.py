@@ -98,8 +98,9 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
 
         if self.input_hamiltonian_evolution_oracle.mode_evolution_oracle is EvolutionOracleType.numerical:  
             #then dbr step output  is a matrix
-            double_bracket_rotation_matrix = 0 * self.h.matrix
-            double_bracket_rotation_dagger_matrix = 0 * self.h.matrix
+            double_bracket_rotation_matrix = np.eye( 2**self.h.nqubits )
+            double_bracket_rotation_dagger_matrix = np.eye( 2**self.h.nqubits )
+            
             for m in double_bracket_rotation_matrix:
                 double_bracket_rotation_matrix = double_bracket_rotation_matrix @ m
             for m in double_bracket_rotation_dagger_matrix:
@@ -107,10 +108,6 @@ class GroupCommutatorIterationWithEvolutionOracles(DoubleBracketIteration):
             self.h.matrix = double_bracket_rotation_dagger_matrix @ self.h.matrix @ double_bracket_rotation_matrix
 
         elif self.input_hamiltonian_evolution_oracle.mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation:
-            #then dbr step output is a query list
-            #self.gci_unitary.append(double_bracket_rotation_step[forwards])
-            #self.gci_unitary_dagger.append(double_bracket_rotation_step[backwards]) 
-            print (double_bracket_rotation_step)
             from functools import reduce
             #composition of circuits should be __matmul__ not __add__ in qibo.Circuit....
             before_circuit =  reduce(Circuit.__add__, double_bracket_rotation_step['backwards'])
