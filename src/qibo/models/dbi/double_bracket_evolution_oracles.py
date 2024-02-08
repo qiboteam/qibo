@@ -59,18 +59,18 @@ class EvolutionOracle:
     def discretized_evolution_circuit( self, t_duration, eps = 0.05 ):
         nmb_trottersuzuki_steps = 3
         target_unitary = self.h.exp(t_duration)
-        proposed_circuit_unitary = np.linalg.matrix_power(self.h.circuit(t_duration/nmb_trottersuzuki_steps).unitary(), nmb_trottersuzuki_steps)
+        proposed_circuit_unitary = np.linalg.matrix_power(deepcopy(self.h).circuit(t_duration/nmb_trottersuzuki_steps).unitary(), nmb_trottersuzuki_steps)
         norm_difference = np.linalg.norm( target_unitary - proposed_circuit_unitary)
         if self.please_be_verbose:
             print(nmb_trottersuzuki_steps, norm_difference)
         while norm_difference > eps:
             nmb_trottersuzuki_steps = nmb_trottersuzuki_steps * 2
-            proposed_circuit_unitary = np.linalg.matrix_power(self.h.circuit(t_duration/nmb_trottersuzuki_steps).unitary(), nmb_trottersuzuki_steps)
+            proposed_circuit_unitary = np.linalg.matrix_power(deepcopy(self.h).circuit(t_duration/nmb_trottersuzuki_steps).unitary(), nmb_trottersuzuki_steps)
             norm_difference = np.linalg.norm( target_unitary - proposed_circuit_unitary)
             if self.please_be_verbose:
                 print(nmb_trottersuzuki_steps, norm_difference )
         from functools import reduce
-        combined_circuit = reduce(Circuit.__add__, [self.h.circuit(t_duration/nmb_trottersuzuki_steps)]*nmb_trottersuzuki_steps)
+        combined_circuit = reduce(Circuit.__add__, [deepcopy(self.h).circuit(t_duration/nmb_trottersuzuki_steps)]*nmb_trottersuzuki_steps)
         assert np.linalg.norm( combined_circuit.unitary() - target_unitary ) < eps
         return combined_circuit
 
