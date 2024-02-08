@@ -158,7 +158,7 @@ class CliffordBackend(NumpyBackend):
             state = self._clifford_pre_execution_reshape(state)
 
             for gate in circuit.queue:
-                state = gate.apply_clifford(self, state, nqubits)
+                gate.apply_clifford(self, state, nqubits)
 
             state = self._clifford_post_execution_reshape(state, nqubits)
 

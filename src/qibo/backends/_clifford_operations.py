@@ -5,9 +5,9 @@ import numpy as np
 
 def _get_rxz(symplectic_matrix, nqubits):
     return (
-        symplectic_matrix[:-1, -1],
-        symplectic_matrix[:-1, :nqubits],
-        symplectic_matrix[:-1, nqubits:-1],
+        symplectic_matrix[:, -1],
+        symplectic_matrix[:, :nqubits],
+        symplectic_matrix[:, nqubits:-1],
     )
 
 
@@ -17,7 +17,7 @@ def I(symplectic_matrix, q, nqubits):
 
 def H(symplectic_matrix, q, nqubits):
     r, x, z = _get_rxz(symplectic_matrix, nqubits)
-    symplectic_matrix[:-1, -1] = r ^ (x[:, q] & z[:, q])
+    symplectic_matrix[:, -1] = r ^ (x[:, q] & z[:, q])
     symplectic_matrix[:, [q, nqubits + q]] = symplectic_matrix[:, [nqubits + q, q]]
     return symplectic_matrix
 
@@ -25,14 +25,14 @@ def H(symplectic_matrix, q, nqubits):
 def CNOT(symplectic_matrix, control_q, target_q, nqubits):
     ind_zt = nqubits + target_q
     ind_zc = nqubits + control_q
-    r = symplectic_matrix[:-1, -1]
-    xcq = symplectic_matrix[:-1, control_q]
-    xtq = symplectic_matrix[:-1, target_q]
-    ztq = symplectic_matrix[:-1, ind_zt]
-    zcq = symplectic_matrix[:-1, ind_zc]
-    symplectic_matrix[:-1, -1] = r ^ (xcq & ztq) & (xtq ^ ~zcq)
-    symplectic_matrix[:-1, target_q] = xtq ^ xcq
-    symplectic_matrix[:-1, ind_zc] = zcq ^ ztq
+    r = symplectic_matrix[:, -1]
+    xcq = symplectic_matrix[:, control_q]
+    xtq = symplectic_matrix[:, target_q]
+    ztq = symplectic_matrix[:, ind_zt]
+    zcq = symplectic_matrix[:, ind_zc]
+    symplectic_matrix[:, -1] = r ^ (xcq & ztq) & (xtq ^ ~zcq)
+    symplectic_matrix[:, target_q] = xtq ^ xcq
+    symplectic_matrix[:, ind_zc] = zcq ^ ztq
     return symplectic_matrix
 
 
@@ -40,51 +40,47 @@ def CZ(symplectic_matrix, control_q, target_q, nqubits):
     """Decomposition --> H-CNOT-H"""
     ind_zt = nqubits + target_q
     ind_zc = nqubits + control_q
-    r = symplectic_matrix[:-1, -1]
-    xcq = symplectic_matrix[:-1, control_q]
-    xtq = symplectic_matrix[:-1, target_q]
-    ztq = symplectic_matrix[:-1, ind_zt]
-    zcq = symplectic_matrix[:-1, ind_zc]
+    r = symplectic_matrix[:, -1]
+    xcq = symplectic_matrix[:, control_q]
+    xtq = symplectic_matrix[:, target_q]
+    ztq = symplectic_matrix[:, ind_zt]
+    zcq = symplectic_matrix[:, ind_zc]
     ztq_xor_xcq = ztq ^ xcq
-    symplectic_matrix[:-1, -1] = (
+    symplectic_matrix[:, -1] = (
         r ^ (xtq & ztq) ^ (xcq & xtq & (ztq ^ ~zcq)) ^ (xtq & ztq_xor_xcq)
     )
     z_control_q = xtq ^ zcq
     z_target_q = ztq_xor_xcq
-    symplectic_matrix[:-1, ind_zc] = z_control_q
-    symplectic_matrix[:-1, ind_zt] = z_target_q
+    symplectic_matrix[:, ind_zc] = z_control_q
+    symplectic_matrix[:, ind_zt] = z_target_q
     return symplectic_matrix
 
 
 def S(symplectic_matrix, q, nqubits):
     r, x, z = _get_rxz(symplectic_matrix, nqubits)
-    symplectic_matrix[:-1, -1] = r ^ (x[:, q] & z[:, q])
-    symplectic_matrix[:-1, nqubits + q] = z[:, q] ^ x[:, q]
+    symplectic_matrix[:, -1] = r ^ (x[:, q] & z[:, q])
+    symplectic_matrix[:, nqubits + q] = z[:, q] ^ x[:, q]
     return symplectic_matrix
 
 
 def Z(symplectic_matrix, q, nqubits):
     """Decomposition --> S-S"""
     r, x, z = _get_rxz(symplectic_matrix, nqubits)
-    symplectic_matrix[:-1, -1] = r ^ (
-        (x[:, q] & z[:, q]) ^ x[:, q] & (z[:, q] ^ x[:, q])
-    )
+    symplectic_matrix[:, -1] = r ^ ((x[:, q] & z[:, q]) ^ x[:, q] & (z[:, q] ^ x[:, q]))
     return symplectic_matrix
 
 
 def X(symplectic_matrix, q, nqubits):
     """Decomposition --> H-S-S-H"""
     r, x, z = _get_rxz(symplectic_matrix, nqubits)
-    symplectic_matrix[:-1, -1] = (
-        r ^ (z[:, q] & (z[:, q] ^ x[:, q])) ^ (z[:, q] & x[:, q])
-    )
+    symplectic_matrix[:, -1] = r ^ (z[:, q] & (z[:, q] ^ x[:, q])) ^ (z[:, q] & x[:, q])
     return symplectic_matrix
 
 
 def Y(symplectic_matrix, q, nqubits):
     """Decomposition --> S-S-H-S-S-H"""
     r, x, z = _get_rxz(symplectic_matrix, nqubits)
-    symplectic_matrix[:-1, -1] = (
+    symplectic_matrix[:, -1] = (
         r ^ (z[:, q] & (z[:, q] ^ x[:, q])) ^ (x[:, q] & (z[:, q] ^ x[:, q]))
     )
     return symplectic_matrix
@@ -93,24 +89,24 @@ def Y(symplectic_matrix, q, nqubits):
 def SX(symplectic_matrix, q, nqubits):
     """Decomposition --> H-S-H"""
     r, x, z = _get_rxz(symplectic_matrix, nqubits)
-    symplectic_matrix[:-1, -1] = r ^ (z[:, q] & (z[:, q] ^ x[:, q]))
-    symplectic_matrix[:-1, q] = z[:, q] ^ x[:, q]
+    symplectic_matrix[:, -1] = r ^ (z[:, q] & (z[:, q] ^ x[:, q]))
+    symplectic_matrix[:, q] = z[:, q] ^ x[:, q]
     return symplectic_matrix
 
 
 def SDG(symplectic_matrix, q, nqubits):
     """Decomposition --> S-S-S"""
     r, x, z = _get_rxz(symplectic_matrix, nqubits)
-    symplectic_matrix[:-1, -1] = r ^ (x[:, q] & (z[:, q] ^ x[:, q]))
-    symplectic_matrix[:-1, nqubits + q] = z[:, q] ^ x[:, q]
+    symplectic_matrix[:, -1] = r ^ (x[:, q] & (z[:, q] ^ x[:, q]))
+    symplectic_matrix[:, nqubits + q] = z[:, q] ^ x[:, q]
     return symplectic_matrix
 
 
 def SXDG(symplectic_matrix, q, nqubits):
     """Decomposition --> H-S-S-S-H"""
     r, x, z = _get_rxz(symplectic_matrix, nqubits)
-    symplectic_matrix[:-1, -1] = r ^ (z[:, q] & x[:, q])
-    symplectic_matrix[:-1, q] = z[:, q] ^ x[:, q]
+    symplectic_matrix[:, -1] = r ^ (z[:, q] & x[:, q])
+    symplectic_matrix[:, q] = z[:, q] ^ x[:, q]
     return symplectic_matrix
 
 
@@ -139,16 +135,16 @@ def RZ(symplectic_matrix, q, nqubits, theta):
 def RY_pi(symplectic_matrix, q, nqubits):
     """Decomposition --> H-S-S"""
     r, x, z = _get_rxz(symplectic_matrix, nqubits)
-    symplectic_matrix[:-1, -1] = r ^ (x[:, q] & (z[:, q] ^ x[:, q]))
-    symplectic_matrix[:-1, [nqubits + q, q]] = symplectic_matrix[:-1, [q, nqubits + q]]
+    symplectic_matrix[:, -1] = r ^ (x[:, q] & (z[:, q] ^ x[:, q]))
+    symplectic_matrix[:, [nqubits + q, q]] = symplectic_matrix[:, [q, nqubits + q]]
     return symplectic_matrix
 
 
 def RY_3pi_2(symplectic_matrix, q, nqubits):
     """Decomposition --> H-S-S-H-S-S-H-S-S"""
     r, x, z = _get_rxz(symplectic_matrix, nqubits)
-    symplectic_matrix[:-1, -1] = r ^ (z[:, q] & (z[:, q] ^ x[:, q]))
-    symplectic_matrix[:-1, [nqubits + q, q]] = symplectic_matrix[:-1, [q, nqubits + q]]
+    symplectic_matrix[:, -1] = r ^ (z[:, q] & (z[:, q] ^ x[:, q]))
+    symplectic_matrix[:, [nqubits + q, q]] = symplectic_matrix[:, [q, nqubits + q]]
     return symplectic_matrix
 
 
@@ -168,7 +164,7 @@ def RY(symplectic_matrix, q, nqubits, theta):
 def SWAP(symplectic_matrix, control_q, target_q, nqubits):
     """Decomposition --> CNOT-CNOT-CNOT"""
     r, x, z = _get_rxz(symplectic_matrix, nqubits)
-    symplectic_matrix[:-1, -1] = (
+    symplectic_matrix[:, -1] = (
         r
         ^ (x[:, control_q] & z[:, target_q] & (x[:, target_q] ^ ~z[:, control_q]))
         ^ (
@@ -183,9 +179,9 @@ def SWAP(symplectic_matrix, control_q, target_q, nqubits):
         )
     )
     symplectic_matrix[
-        :-1, [control_q, target_q, nqubits + control_q, nqubits + target_q]
+        :, [control_q, target_q, nqubits + control_q, nqubits + target_q]
     ] = symplectic_matrix[
-        :-1, [target_q, control_q, nqubits + target_q, nqubits + control_q]
+        :, [target_q, control_q, nqubits + target_q, nqubits + control_q]
     ]
     return symplectic_matrix
 
@@ -193,7 +189,7 @@ def SWAP(symplectic_matrix, control_q, target_q, nqubits):
 def iSWAP(symplectic_matrix, control_q, target_q, nqubits):
     """Decomposition --> H-CNOT-CNOT-H-S-S"""
     r, x, z = _get_rxz(symplectic_matrix, nqubits)
-    symplectic_matrix[:-1, -1] = (
+    symplectic_matrix[:, -1] = (
         r
         ^ (x[:, target_q] & z[:, target_q])
         ^ (x[:, control_q] & z[:, control_q])
@@ -212,10 +208,10 @@ def iSWAP(symplectic_matrix, control_q, target_q, nqubits):
     )
     z_control_q = x[:, target_q] ^ z[:, target_q] ^ x[:, control_q]
     z_target_q = x[:, target_q] ^ z[:, control_q] ^ x[:, control_q]
-    symplectic_matrix[:-1, nqubits + control_q] = z_control_q
-    symplectic_matrix[:-1, nqubits + target_q] = z_target_q
-    symplectic_matrix[:-1, [control_q, target_q]] = symplectic_matrix[
-        :-1, [target_q, control_q]
+    symplectic_matrix[:, nqubits + control_q] = z_control_q
+    symplectic_matrix[:, nqubits + target_q] = z_target_q
+    symplectic_matrix[:, [control_q, target_q]] = symplectic_matrix[
+        :, [target_q, control_q]
     ]
     return symplectic_matrix
 
@@ -235,7 +231,7 @@ def FSWAP(symplectic_matrix, control_q, target_q, nqubits):
 def CY(symplectic_matrix, control_q, target_q, nqubits):
     """Decomposition --> S-CNOT-SDG"""
     r, x, z = _get_rxz(symplectic_matrix, nqubits)
-    symplectic_matrix[:-1, -1] = (
+    symplectic_matrix[:, -1] = (
         r
         ^ (x[:, target_q] & (z[:, target_q] ^ x[:, target_q]))
         ^ (
@@ -248,9 +244,9 @@ def CY(symplectic_matrix, control_q, target_q, nqubits):
     x_target_q = x[:, control_q] ^ x[:, target_q]
     z_control_q = z[:, control_q] ^ z[:, target_q] ^ x[:, target_q]
     z_target_q = z[:, target_q] ^ x[:, control_q]
-    symplectic_matrix[:-1, target_q] = x_target_q
-    symplectic_matrix[:-1, nqubits + control_q] = z_control_q
-    symplectic_matrix[:-1, nqubits + target_q] = z_target_q
+    symplectic_matrix[:, target_q] = x_target_q
+    symplectic_matrix[:, nqubits + control_q] = z_control_q
+    symplectic_matrix[:, nqubits + target_q] = z_target_q
     return symplectic_matrix
 
 
