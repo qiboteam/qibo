@@ -345,7 +345,7 @@ def _exponent(x1, z1, x2, z2):
     x1_x2 = x1 & x2
     x1_z2 = x1 & z2
     x2_z1 = x2 & z1
-    exp = (
+    return (
         -2 * (x1_x2 & z1).astype(int)
         + 2 * (x1_x2 & z2).astype(int)
         + 2 * (x1_z2 & z1).astype(int)
@@ -353,7 +353,6 @@ def _exponent(x1, z1, x2, z2):
         - 2 * (x2_z1 & z2).astype(int)
         + x2_z1.astype(int)
     )
-    return exp
 
 
 def _rowsum(symplectic_matrix, h, i, nqubits, determined=False):
