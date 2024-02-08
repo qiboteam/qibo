@@ -51,7 +51,7 @@ In both cases, the simulation will run in a single device CPU or GPU in double p
 
 ## Citation policy
 [![arXiv](https://img.shields.io/badge/arXiv-2009.01845-b31b1b.svg)](https://arxiv.org/abs/2009.01845)
-[![DOI](https://zenodo.org/badge/3997195.svg)](https://zenodo.org/badge/latestdoi/3997195)
+[![DOI](https://zenodo.org/badge/241307936.svg)](https://zenodo.org/badge/latestdoi/241307936)
 
 If you use the package please refer to [the documentation](https://qibo.science/qibo/stable/appendix/citing-qibo.html#publications) for citation instructions.
 
