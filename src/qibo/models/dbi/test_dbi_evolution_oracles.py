@@ -1,8 +1,8 @@
-from qibo.hamiltonians import SymbolicHamiltonian
-from qibo import symbols
 from double_bracket_evolution_oracles import *
 from group_commutator_iteration_transpiler import *
 
+from qibo import symbols
+from qibo.hamiltonians import SymbolicHamiltonian
 
 
 def test_evolution_oracle_gci_classes():
