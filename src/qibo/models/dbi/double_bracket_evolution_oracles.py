@@ -46,6 +46,7 @@ class EvolutionOracle:
         self.mode_find_number_of_trottersuzuki_steps = True
         self.eps_trottersuzuki = 0.1
         self.please_be_verbose = False
+
     def __call__(self, t_duration: float = None):
         """Returns either the name or the circuit"""
         if t_duration is None:
@@ -60,26 +61,44 @@ class EvolutionOracle:
         elif self.mode_evolution_oracle is EvolutionOracleType.numerical:
             return self.h.exp(t_duration)
         elif self.mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation:
-            return self.discretized_evolution_circuit( t_duration, eps = self.eps_trottersuzuki )
+            return self.discretized_evolution_circuit(
+                t_duration, eps=self.eps_trottersuzuki
+            )
         else:
-            raise_error(ValueError,
-                    f"You are using an EvolutionOracle type which is not yet supported.")
-    def discretized_evolution_circuit( self, t_duration, eps = 0.05 ):
+            raise_error(
+                ValueError,
+                f"You are using an EvolutionOracle type which is not yet supported.",
+            )
+
+    def discretized_evolution_circuit(self, t_duration, eps=0.05):
         nmb_trottersuzuki_steps = 3
         target_unitary = self.h.exp(t_duration)
-        proposed_circuit_unitary = np.linalg.matrix_power(deepcopy(self.h).circuit(t_duration/nmb_trottersuzuki_steps).unitary(), nmb_trottersuzuki_steps)
-        norm_difference = np.linalg.norm( target_unitary - proposed_circuit_unitary)
+        proposed_circuit_unitary = np.linalg.matrix_power(
+            deepcopy(self.h).circuit(t_duration / nmb_trottersuzuki_steps).unitary(),
+            nmb_trottersuzuki_steps,
+        )
+        norm_difference = np.linalg.norm(target_unitary - proposed_circuit_unitary)
         if self.please_be_verbose:
             print(nmb_trottersuzuki_steps, norm_difference)
         while norm_difference > eps:
             nmb_trottersuzuki_steps = nmb_trottersuzuki_steps * 2
-            proposed_circuit_unitary = np.linalg.matrix_power(deepcopy(self.h).circuit(t_duration/nmb_trottersuzuki_steps).unitary(), nmb_trottersuzuki_steps)
-            norm_difference = np.linalg.norm( target_unitary - proposed_circuit_unitary)
+            proposed_circuit_unitary = np.linalg.matrix_power(
+                deepcopy(self.h)
+                .circuit(t_duration / nmb_trottersuzuki_steps)
+                .unitary(),
+                nmb_trottersuzuki_steps,
+            )
+            norm_difference = np.linalg.norm(target_unitary - proposed_circuit_unitary)
             if self.please_be_verbose:
-                print(nmb_trottersuzuki_steps, norm_difference )
+                print(nmb_trottersuzuki_steps, norm_difference)
         from functools import reduce
-        combined_circuit = reduce(Circuit.__add__, [deepcopy(self.h).circuit(t_duration/nmb_trottersuzuki_steps)]*nmb_trottersuzuki_steps)
-        assert np.linalg.norm( combined_circuit.unitary() - target_unitary ) < eps
+
+        combined_circuit = reduce(
+            Circuit.__add__,
+            [deepcopy(self.h).circuit(t_duration / nmb_trottersuzuki_steps)]
+            * nmb_trottersuzuki_steps,
+        )
+        assert np.linalg.norm(combined_circuit.unitary() - target_unitary) < eps
         return combined_circuit
 
 
@@ -103,7 +122,6 @@ class FrameShiftedEvolutionOracle(EvolutionOracle):
         self.before_circuit = before_circuit
         self.after_circuit = after_circuit
 
-
     def circuit(self, t_duration: float = None):
 
         if self.mode_evolution_oracle is EvolutionOracleType.text_strings:
@@ -111,7 +129,11 @@ class FrameShiftedEvolutionOracle(EvolutionOracle):
         elif self.mode_evolution_oracle is EvolutionOracleType.numerical:
             return self.before_circuit @ self.h.exp(t_duration) @ self.after_circuit
         elif self.mode_evolution_oracle is EvolutionOracleType.hamiltonian_simulation:
-            return self.before_circuit +  self.base_evolution_oracle.circuit(t_duration) + self.after_circuit
+            return (
+                self.before_circuit
+                + self.base_evolution_oracle.circuit(t_duration)
+                + self.after_circuit
+            )
         else:
             raise_error(
                 ValueError,
