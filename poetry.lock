@@ -3772,7 +3772,7 @@ scipy = "^1.10.1"
 type = "git"
 url = "https://github.com/qiboteam/qibojit.git"
 reference = "batch_execution"
-resolved_reference = "246f01c81ea120f15dbc181f59632c2ff0275c87"
+resolved_reference = "4b963b31fbc3b9cc2ec3ee0b3aa5baa8996466f8"
 
 [[package]]
 name = "recommonmark"
