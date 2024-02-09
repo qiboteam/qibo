@@ -26,7 +26,6 @@ class TorchMatrices(NumpyMatrices):
 
     def __init__(self, dtype):
         super().__init__(dtype)
-        self.np = np
         self.torch_dtype = torch_dtype_dict[dtype]
 
     def RX(self, theta):
@@ -92,8 +91,8 @@ class TorchMatrices(NumpyMatrices):
 class PyTorchBackend(NumpyBackend):
     def __init__(self):
         super().__init__()
-        self.name = "pytorch"
 
+        self.name = "pytorch"
         self.versions = {
             "qibo": __version__,
             "numpy": np.__version__,
@@ -103,7 +102,6 @@ class PyTorchBackend(NumpyBackend):
         self.matrices = TorchMatrices(self.dtype)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.nthreads = 0
-        self.tensor_types = (np.ndarray, torch.Tensor)
         self.torch_dtype = torch_dtype_dict[self.dtype]
 
     def set_device(self, device):  # pragma: no cover
@@ -121,7 +119,15 @@ class PyTorchBackend(NumpyBackend):
         return x.is_sparse
 
     def to_numpy(self, x):
-        return x.detach().cpu().numpy()
+        if type(x) is torch.Tensor:
+            return x.detach().cpu().numpy()
+        elif type(x) is np.ndarray:
+            return x
+        else:
+            raise_error(
+                ValueError,
+                "Input must be a torch.Tensor or np.ndarray, not {}.".format(type(x)),
+            )
 
     def compile(self, func):
         return torch.jit.script(func)
