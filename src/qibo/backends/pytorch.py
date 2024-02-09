@@ -1,3 +1,4 @@
+import collections
 from typing import Union
 
 import numpy as np
@@ -103,6 +104,7 @@ class PyTorchBackend(NumpyBackend):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.nthreads = 0
         self.torch_dtype = torch_dtype_dict[self.dtype]
+        self.tensor_types = (torch.Tensor, np.ndarray)
 
     def set_device(self, device):  # pragma: no cover
         self.device = device
@@ -110,7 +112,7 @@ class PyTorchBackend(NumpyBackend):
     def cast(
         self,
         x: Union[torch.Tensor, list[torch.Tensor], np.ndarray, list[np.ndarray]],
-        dtype=None,
+        dtype: Union[str, torch.dtype, np.dtype, type] = None,
         copy=False,
     ):
         """Casts input as a Torch tensor of the specified dtype.
@@ -118,11 +120,15 @@ class PyTorchBackend(NumpyBackend):
 
         Args:
             x (Union[torch.Tensor, list[torch.Tensor], np.ndarray, list[np.ndarray], int, float, complex]): Input to be casted.
-            dtype (Optional[str]): Target data type. If None, the default dtype of the backend is used.
+            dtype (Union[str, torch.dtype, np.dtype, type]): Target data type. If None, the default dtype of the backend is used.
             copy (bool): If True, the input tensor is copied before casting.
         """
         if dtype is None:
             dtype = self.torch_dtype
+        elif isinstance(dtype, torch.dtype):
+            dtype = dtype
+        elif isinstance(dtype, type):
+            dtype = torch_dtype_dict[dtype.__name__]
         else:
             dtype = torch_dtype_dict[str(dtype)]
         if isinstance(x, torch.Tensor):
@@ -144,13 +150,7 @@ class PyTorchBackend(NumpyBackend):
     def to_numpy(self, x):
         if type(x) is torch.Tensor:
             return x.detach().cpu().numpy()
-        elif type(x) is np.ndarray:
-            return x
-        else:
-            raise_error(
-                ValueError,
-                "Input must be a torch.Tensor or np.ndarray, not {}.".format(type(x)),
-            )
+        return x
 
     def compile(self, func):
         return torch.jit.script(func)
@@ -179,12 +179,12 @@ class PyTorchBackend(NumpyBackend):
 
     def execute_circuit(self, circuit, initial_state=None, nshots=1000):
         if initial_state is not None:
-            initial_state = initial_state.to(self.device)
+            initial_state = self.cast(initial_state)
         return super().execute_circuit(circuit, initial_state, nshots)
 
     def execute_circuit_repeated(self, circuit, nshots, initial_state=None):
         if initial_state is not None:
-            initial_state = initial_state.to(self.device)
+            initial_state = self.cast(initial_state)
         return super().execute_circuit_repeated(circuit, nshots, initial_state)
 
     def sample_shots(self, probabilities, nshots):
@@ -217,10 +217,10 @@ class PyTorchBackend(NumpyBackend):
             return np.trace(state)
         return torch.norm(state, p=order)
 
-    def calculate_eigenvalues(self, matrix):
+    def calculate_eigenvalues(self, matrix, k=6):
         return torch.linalg.eigvalsh(matrix)  # pylint: disable=not-callable
 
-    def calculate_eigenvectors(self, matrix):
+    def calculate_eigenvectors(self, matrix, k=6):
         return torch.linalg.eigh(matrix)  # pylint: disable=not-callable
 
     def calculate_matrix_exp(self, a, matrix, eigenvectors=None, eigenvalues=None):
