@@ -8,153 +8,85 @@ from qibo.backends.npmatrices import NumpyMatrices
 from qibo.backends.numpy import NumpyBackend
 from qibo.config import raise_error
 
+torch_dtype_dict = {
+    "int": torch.int32,
+    "float": torch.float32,
+    "complex": torch.complex64,
+    "int32": torch.int32,
+    "int64": torch.int64,
+    "float32": torch.float32,
+    "float64": torch.float64,
+    "complex64": torch.complex64,
+    "complex128": torch.complex128,
+}
+
 
 class TorchMatrices(NumpyMatrices):
     # Redefine parametrized gate matrices for backpropagation to work
 
     def __init__(self, dtype):
-        self.np = np
         super().__init__(dtype)
+        self.np = np
+        self.torch_dtype = torch_dtype_dict[dtype]
 
     def RX(self, theta):
-        cos = self.np.cos(theta / 2.0) + 0j
-        isin = -1j * self.np.sin(theta / 2.0)
-        return torch.tensor([[cos, isin], [isin, cos]], dtype=self.dtype)
+        matrix = getattr(NumpyMatrices(self.dtype), "RX")(theta)
+        return torch.tensor(matrix, dtype=self.torch_dtype)
 
     def RY(self, theta):
-        cos = self.np.cos(theta / 2.0) + 0j
-        sin = self.np.sin(theta / 2.0) + 0j
-        return torch.tensor([[cos, -sin], [sin, cos]], dtype=self.dtype)
+        matrix = getattr(NumpyMatrices(self.dtype), "RY")(theta)
+        return torch.tensor(matrix, dtype=self.torch_dtype)
 
     def RZ(self, theta):
-        phase = self.np.exp(0.5j * theta)
-        return torch.tensor([[self.np.conj(phase), 0], [0, phase]], dtype=self.dtype)
+        matrix = getattr(NumpyMatrices(self.dtype), "RZ")(theta)
+        return torch.tensor(matrix, dtype=self.torch_dtype)
 
     def U1(self, theta):
-        phase = self.np.exp(1j * theta)
-        return torch.tensor([[1, 0], [0, phase]], dtype=self.dtype)
+        matrix = getattr(NumpyMatrices(self.dtype), "U1")(theta)
+        return torch.tensor(matrix, dtype=self.torch_dtype)
 
     def U2(self, phi, lam):
-        eplus = self.np.exp(1j * (phi + lam) / 2.0)
-        eminus = self.np.exp(1j * (phi - lam) / 2.0)
-        return torch.tensor(
-            [[self.np.conj(eplus), -self.np.conj(eminus)], [eminus, eplus]],
-            dtype=self.dtype,
-        ) / self.np.sqrt(2)
+        matrix = getattr(NumpyMatrices(self.dtype), "U2")(phi, lam)
+        return torch.tensor(matrix, dtype=self.torch_dtype)
 
     def U3(self, theta, phi, lam):
-        cost = self.np.cos(theta / 2)
-        sint = self.np.sin(theta / 2)
-        eplus = self.np.exp(1j * (phi + lam) / 2.0)
-        eminus = self.np.exp(1j * (phi - lam) / 2.0)
-        return torch.tensor(
-            [
-                [self.np.conj(eplus) * cost, -self.np.conj(eminus) * sint],
-                [eminus * sint, eplus * cost],
-            ],
-            dtype=self.dtype,
-        )
+        matrix = getattr(NumpyMatrices(self.dtype), "U3")(theta, phi, lam)
+        return torch.tensor(matrix, dtype=self.torch_dtype)
 
     def CRX(self, theta):
-        r = self.RX(theta)
-        return torch.tensor(
-            [
-                [1, 0, 0, 0],
-                [0, 1, 0, 0],
-                [0, 0, r[0, 0], r[0, 1]],
-                [0, 0, r[1, 0], r[1, 1]],
-            ],
-            dtype=self.dtype,
-        )
+        matrix = getattr(NumpyMatrices(self.dtype), "CRX")(theta)
+        return torch.tensor(matrix, dtype=self.torch_dtype)
 
     def CRY(self, theta):
-        r = self.RY(theta)
-        return torch.tensor(
-            [
-                [1, 0, 0, 0],
-                [0, 1, 0, 0],
-                [0, 0, r[0, 0], r[0, 1]],
-                [0, 0, r[1, 0], r[1, 1]],
-            ],
-            dtype=self.dtype,
-        )
+        matrix = getattr(NumpyMatrices(self.dtype), "CRY")(theta)
+        return torch.tensor(matrix, dtype=self.torch_dtype)
 
     def CRZ(self, theta):
-        r = self.RZ(theta)
-        return torch.tensor(
-            [
-                [1, 0, 0, 0],
-                [0, 1, 0, 0],
-                [0, 0, r[0, 0], r[0, 1]],
-                [0, 0, r[1, 0], r[1, 1]],
-            ],
-            dtype=self.dtype,
-        )
+        matrix = getattr(NumpyMatrices(self.dtype), "CRZ")(theta)
+        return torch.tensor(matrix, dtype=self.torch_dtype)
 
     def CU1(self, theta):
-        r = self.U1(theta)
-        return torch.tensor(
-            [
-                [1, 0, 0, 0],
-                [0, 1, 0, 0],
-                [0, 0, r[0, 0], r[0, 1]],
-                [0, 0, r[1, 0], r[1, 1]],
-            ],
-            dtype=self.dtype,
-        )
+        matrix = getattr(NumpyMatrices(self.dtype), "CU1")(theta)
+        return torch.tensor(matrix, dtype=self.torch_dtype)
 
     def CU2(self, phi, lam):
-        r = self.U2(phi, lam)
-        return torch.tensor(
-            [
-                [1, 0, 0, 0],
-                [0, 1, 0, 0],
-                [0, 0, r[0, 0], r[0, 1]],
-                [0, 0, r[1, 0], r[1, 1]],
-            ],
-            dtype=self.dtype,
-        )
+        matrix = getattr(NumpyMatrices(self.dtype), "CU2")(phi, lam)
+        return torch.tensor(matrix, dtype=self.torch_dtype)
 
     def CU3(self, theta, phi, lam):
-        r = self.U3(theta, phi, lam)
-        return torch.tensor(
-            [
-                [1, 0, 0, 0],
-                [0, 1, 0, 0],
-                [0, 0, r[0, 0], r[0, 1]],
-                [0, 0, r[1, 0], r[1, 1]],
-            ],
-            dtype=self.dtype,
-        )
+        matrix = getattr(NumpyMatrices(self.dtype), "CU3")(theta, phi, lam)
+        return torch.tensor(matrix, dtype=self.torch_dtype)
 
     def fSim(self, theta, phi):
-        cost = self.np.cos(theta) + 0j
-        isint = -1j * self.np.sin(theta)
-        phase = self.np.exp(-1j * phi)
-        return torch.tensor(
-            [
-                [1, 0, 0, 0],
-                [0, cost, isint, 0],
-                [0, isint, cost, 0],
-                [0, 0, 0, phase],
-            ],
-            dtype=self.dtype,
-        )
+        matrix = getattr(NumpyMatrices(self.dtype), "fSim")(theta, phi)
+        return torch.tensor(matrix, dtype=self.torch_dtype)
 
     def GeneralizedfSim(self, u, phi):
-        phase = self.np.exp(-1j * phi)
-        return torch.tensor(
-            [
-                [1, 0, 0, 0],
-                [0, u[0, 0], u[0, 1], 0],
-                [0, u[1, 0], u[1, 1], 0],
-                [0, 0, 0, phase],
-            ],
-            dtype=self.dtype,
-        )
+        matrix = getattr(NumpyMatrices(self.dtype), "GeneralizedfSim")(u, phi)
+        return torch.tensor(matrix, dtype=self.torch_dtype)
 
     def Unitary(self, u):
-        return torch.tensor(u, dtype=self.dtype)
+        return torch.tensor(u, dtype=self.torch_dtype)
 
 
 class PyTorchBackend(NumpyBackend):
@@ -172,6 +104,7 @@ class PyTorchBackend(NumpyBackend):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.nthreads = 0
         self.tensor_types = (np.ndarray, torch.Tensor)
+        self.torch_dtype = torch_dtype_dict[self.dtype]
 
     def set_device(self, device):  # pragma: no cover
         self.device = device
@@ -179,7 +112,7 @@ class PyTorchBackend(NumpyBackend):
     def cast(self, x, dtype=None, copy=False):
         if dtype is None:
             dtype = self.dtype
-        x = torch.tensor(x, dtype=dtype)
+        x = torch.tensor(x, dtype=self.torch_dtype)
         if copy:
             return x.clone()
         return x
@@ -194,26 +127,26 @@ class PyTorchBackend(NumpyBackend):
         return torch.jit.script(func)
 
     def zero_state(self, nqubits):
-        state = torch.zeros(2**nqubits, dtype=self.dtype)
+        state = torch.zeros(2**nqubits, dtype=self.torch_dtype)
         state[0] = 1
         return state
 
     def zero_density_matrix(self, nqubits):
-        state = torch.zeros(2 * (2**nqubits,), dtype=self.dtype)
+        state = torch.zeros(2 * (2**nqubits,), dtype=self.torch_dtype)
         state[0, 0] = 1
         return state
 
     def matrix(self, gate):
         npmatrix = super().matrix(gate)
-        return torch.tensor(npmatrix, dtype=self.dtype)
+        return torch.tensor(npmatrix, dtype=self.torch_dtype)
 
     def matrix_parametrized(self, gate):
         npmatrix = super().matrix_parametrized(gate)
-        return torch.tensor(npmatrix, dtype=self.dtype)
+        return torch.tensor(npmatrix, dtype=self.torch_dtype)
 
     def matrix_fused(self, gate):
         npmatrix = super().matrix_fused(gate)
-        return torch.tensor(npmatrix, dtype=self.dtype)
+        return torch.tensor(npmatrix, dtype=self.torch_dtype)
 
     def execute_circuit(self, circuit, initial_state=None, nshots=1000):
         if initial_state is not None:
