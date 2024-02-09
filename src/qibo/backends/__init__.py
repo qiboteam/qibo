@@ -78,7 +78,7 @@ class GlobalBackend(NumpyBackend):
         if backend:  # pragma: no cover
             # Create backend specified by user
             platform = os.environ.get("QIBO_PLATFORM")
-            cls._instance = construct_backend(backend, platform)
+            cls._instance = construct_backend(backend, platform=platform)
         else:
             # Create backend according to default order
             for kwargs in cls._default_order:
