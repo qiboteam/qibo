@@ -12,6 +12,7 @@ def construct_backend(backend, **kwargs):
     if backend == "qibojit":
         from qibojit.backends import CupyBackend, CuQuantumBackend, NumbaBackend
 
+        platform = kwargs.get("platform")
         if platform == "cupy":  # pragma: no cover
             return CupyBackend()
         elif platform == "cuquantum":  # pragma: no cover
@@ -98,7 +99,7 @@ class GlobalBackend(NumpyBackend):
         if (
             cls._instance is None
             or cls._instance.name != backend
-            or cls._instance.platform != platform
+            or cls._instance.platform != kwargs.get("platform")
         ):
             cls._instance = construct_backend(backend, **kwargs)
         log.info(f"Using {cls._instance} backend on {cls._instance.device}")
