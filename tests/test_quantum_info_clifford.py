@@ -136,9 +136,10 @@ def test_clifford_initialization(backend, nqubits):
     )
 
 
+@pytest.mark.parametrize("cores", [1, 5])
 @pytest.mark.parametrize("return_array", [True, False])
 @pytest.mark.parametrize("symplectic", [True, False])
-def test_clifford_stabilizers(backend, symplectic, return_array):
+def test_clifford_stabilizers(backend, symplectic, return_array, cores):
     clifford_backend = construct_clifford_backend(backend)
     if not clifford_backend:
         return
@@ -197,16 +198,17 @@ def test_clifford_stabilizers(backend, symplectic, return_array):
             "III",
         ]
 
-    stabilizers = obj.stabilizers(symplectic, return_array)
+    stabilizers = obj.stabilizers(symplectic, return_array, cores=cores)
     if symplectic or (not symplectic and return_array):
         backend.assert_allclose(stabilizers, true_stabilizers)
     else:
         assert stabilizers, true_stabilizers
 
 
+@pytest.mark.parametrize("cores", [1, 5])
 @pytest.mark.parametrize("return_array", [True, False])
 @pytest.mark.parametrize("symplectic", [True, False])
-def test_clifford_destabilizers(backend, symplectic, return_array):
+def test_clifford_destabilizers(backend, symplectic, return_array, cores):
     clifford_backend = construct_clifford_backend(backend)
     if not clifford_backend:
         return
@@ -266,7 +268,7 @@ def test_clifford_destabilizers(backend, symplectic, return_array):
             "IIX",
             "III",
         ]
-    destabilizers = obj.destabilizers(symplectic, return_array)
+    destabilizers = obj.destabilizers(symplectic, return_array, cores)
     if symplectic or (not symplectic and return_array):
         backend.assert_allclose(destabilizers, true_destabilizers)
     else:
