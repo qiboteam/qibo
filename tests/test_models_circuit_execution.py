@@ -167,8 +167,13 @@ def test_batch_execution(backend, measurements):
     c.add(gates.CRY(2, 1, theta=np.pi / 2))
     if measurements:
         c.add(gates.M(0, 2))
-    # batched execution
-    batched_res = backend.execute_circuit(c, initial_state=initial_states)
+    if backend.name not in ("numpy", "tensorflow"):
+        with pytest.raises(NotImplementedError):
+            # batched execution
+            batched_res = backend.execute_circuit(c, initial_state=initial_states)
+        return
+    else:
+        batched_res = backend.execute_circuit(c, initial_state=initial_states)
     # separate execution
     final_states, probs = [], []
     for state in initial_states:
