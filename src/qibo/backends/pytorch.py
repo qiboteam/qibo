@@ -231,22 +231,29 @@ class PyTorchBackend(NumpyBackend):
         else:
             return super().calculate_matrix_exp(a, matrix, eigenvectors, eigenvalues)
 
+    def calculate_expectation_state(self, hamiltonian, state, normalize):
+        statec = torch.conj(state)
+        hstate = hamiltonian @ state
+        ev = torch.real(torch.sum(statec * hstate))
+        if normalize:
+            ev = ev / torch.sum(torch.square(torch.abs(state)))
+        return ev
+
     def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
         if self.issparse(matrix1) or self.issparse(matrix2):
             return torch.sparse.mm(matrix1, matrix2)  # pylint: disable=not-callable
-        return super().calculate_hamiltonian_matrix_product(matrix1, matrix2)
+        return torch.matmul(matrix1, matrix2)
 
     def calculate_hamiltonian_state_product(self, matrix, state):
-        rank = len(tuple(state.shape))
-        if rank == 1:  # vector
-            return np.matmul(matrix, state[:, np.newaxis])[:, 0]
-        elif rank == 2:  # matrix
-            return np.matmul(matrix, state)
-        else:
-            raise_error(
-                ValueError,
-                "Cannot multiply Hamiltonian with " "rank-{} tensor.".format(rank),
-            )
+        return torch.matmul(matrix, state)
+
+    def calculate_overlap(self, state1, state2):
+        return torch.abs(torch.sum(torch.conj(self.cast(state1)) * self.cast(state2)))
+
+    def calculate_overlap_density_matrix(self, state1, state2):
+        return torch.trace(
+            torch.matmul(torch.conj(self.cast(state1)).T, self.cast(state2))
+        )
 
     def test_regressions(self, name):
         if name == "test_measurementresult_apply_bitflips":
