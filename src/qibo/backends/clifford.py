@@ -8,6 +8,7 @@ import numpy as np
 
 from qibo import gates
 from qibo.backends.numpy import NumpyBackend
+from qibo.backends.pytorch import PyTorchBackend
 from qibo.backends.tensorflow import TensorflowBackend
 from qibo.config import raise_error
 
@@ -546,6 +547,12 @@ class CliffordBackend(NumpyBackend):
             raise_error(
                 NotImplementedError,
                 "TensorflowBackend for Clifford Simulation is not supported.",
+            )
+
+        if isinstance(engine, PyTorchBackend):
+            raise_error(
+                NotImplementedError,
+                "PyTorchBackend for Clifford Simulation is not supported.",
             )
 
         self.engine = engine

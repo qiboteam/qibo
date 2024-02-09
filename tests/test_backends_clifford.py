@@ -8,6 +8,7 @@ from qibo.backends import (
     CliffordBackend,
     GlobalBackend,
     NumpyBackend,
+    PyTorchBackend,
     TensorflowBackend,
 )
 from qibo.noise import DepolarizingError, NoiseModel, PauliError
@@ -23,6 +24,13 @@ def construct_clifford_backend(backend):
             assert (
                 str(excinfo.value)
                 == "TensorflowBackend for Clifford Simulation is not supported yet."
+            )
+    if isinstance(backend, PyTorchBackend):
+        with pytest.raises(NotImplementedError) as excinfo:
+            clifford_backend = CliffordBackend(backend)
+            assert (
+                str(excinfo.value)
+                == "PyTorchBackend for Clifford Simulation is not supported yet."
             )
     else:
         return CliffordBackend(backend)
