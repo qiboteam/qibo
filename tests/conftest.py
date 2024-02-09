@@ -11,7 +11,14 @@ import pytest
 from qibo.backends import construct_backend
 
 # backends to be tested
-BACKENDS = ["numpy", "tensorflow", "qibojit-numba", "qibojit-cupy", "qibojit-cuquantum"]
+BACKENDS = [
+    "numpy",
+    "pytorch",
+    "tensorflow",
+    "qibojit-numba",
+    "qibojit-cupy",
+    "qibojit-cuquantum",
+]
 # multigpu configurations to be tested (only with qibojit-cupy)
 ACCELERATORS = [
     {"/GPU:0": 1, "/GPU:1": 1},
