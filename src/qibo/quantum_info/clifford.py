@@ -433,7 +433,7 @@ class Clifford:
 
         identity = "I" * self.nqubits
 
-        operators = [(g, identity) for g in operators]
+        operators = [(identity, g) for g in operators]
 
         if cores > 1:
             from multiprocessing import Pool  # pylint: disable=E0401
