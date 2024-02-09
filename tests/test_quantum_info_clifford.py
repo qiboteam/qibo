@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 from qibo import Circuit, gates
-from qibo.backends import CliffordBackend, TensorflowBackend
+from qibo.backends import CliffordBackend, PyTorchBackend, TensorflowBackend
 from qibo.quantum_info._clifford_utils import (
     _cnot_cost,
     _one_qubit_paulis_string_product,
@@ -23,6 +23,13 @@ def construct_clifford_backend(backend):
                 str(excinfo.value)
                 == "TensorflowBackend for Clifford Simulation is not supported yet."
             )
+    elif isinstance(backend, PyTorchBackend):
+        with pytest.raises(NotImplementedError) as excinfo:
+            clifford_backend = CliffordBackend(backend)
+            assert (
+                str(excinfo.value)
+                == "PyTorchBackend for Clifford Simulation is not supported."
+            )
     else:
         return CliffordBackend(backend)
 
@@ -30,6 +37,9 @@ def construct_clifford_backend(backend):
 @pytest.mark.parametrize("nqubits", [2, 10, 50, 100])
 def test_clifford_from_symplectic_matrix(backend, nqubits):
     if isinstance(backend, TensorflowBackend):
+        with pytest.raises(NotImplementedError):
+            clifford_backend = CliffordBackend(backend)
+    elif isinstance(backend, PyTorchBackend):
         with pytest.raises(NotImplementedError):
             clifford_backend = CliffordBackend(backend)
     else:
@@ -67,6 +77,8 @@ def test_clifford_from_circuit(backend, measurement):
 def test_clifford_to_circuit(backend, nqubits, algorithm):
     if backend.__class__.__name__ == "TensorflowBackend":
         pytest.skip("CliffordBackend not defined for Tensorflow engine.")
+    elif backend.__class__.__name__ == "PyTorchBackend":
+        pytest.skip("CliffordBackend not defined for PyTorch engine.")
 
     clifford = random_clifford(nqubits, backend=backend)
 
@@ -117,6 +129,8 @@ def test_clifford_to_circuit(backend, nqubits, algorithm):
 def test_clifford_initialization(backend, nqubits):
     if backend.__class__.__name__ == "TensorflowBackend":
         pytest.skip("CliffordBackend not defined for Tensorflow engine.")
+    elif backend.__class__.__name__ == "PyTorchBackend":
+        pytest.skip("CliffordBackend not defined for PyTorch engine.")
 
     clifford_backend = construct_clifford_backend(backend)
 
@@ -315,6 +329,9 @@ def test_clifford_samples_error(backend):
     if isinstance(backend, TensorflowBackend):
         with pytest.raises(NotImplementedError):
             clifford_backend = CliffordBackend(backend)
+    elif isinstance(backend, PyTorchBackend):
+        with pytest.raises(NotImplementedError):
+            clifford_backend = CliffordBackend(backend)
     else:
         obj = Clifford.from_circuit(c, engine=backend)
         with pytest.raises(RuntimeError) as excinfo:
@@ -327,6 +344,8 @@ def test_clifford_samples_error(backend):
 def test_clifford_copy(backend, nqubits, deep):
     if backend.__class__.__name__ == "TensorflowBackend":
         pytest.skip("CliffordBackend not defined for Tensorflow engine.")
+    elif backend.__class__.__name__ == "PyTorchBackend":
+        pytest.skip("CliffordBackend not defined for PyTorch engine.")
 
     circuit = random_clifford(nqubits, backend=backend)
     clifford = Clifford.from_circuit(circuit, engine=backend)

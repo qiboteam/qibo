@@ -188,7 +188,9 @@ class PyTorchBackend(NumpyBackend):
         return super().execute_circuit_repeated(circuit, nshots, initial_state)
 
     def sample_shots(self, probabilities, nshots):
-        return torch.multinomial(probabilities, nshots)
+        return torch.multinomial(
+            self.cast(probabilities, dtype="float"), nshots, replacement=True
+        )
 
     def samples_to_binary(self, samples, nqubits):
         qrange = torch.arange(nqubits - 1, -1, -1, dtype=torch.int32)
@@ -202,9 +204,12 @@ class PyTorchBackend(NumpyBackend):
         return collections.Counter({k: v for k, v in zip(res, counts)})
 
     def update_frequencies(self, frequencies, probabilities, nsamples):
+        frequencies = self.cast(frequencies, dtype="int")
         samples = self.sample_shots(probabilities, nsamples)
         unique_samples, counts = torch.unique(samples, return_counts=True)
-        frequencies.index_add_(0, unique_samples, counts)
+        frequencies.index_add_(
+            0, self.cast(unique_samples, dtype="int"), self.cast(counts, dtype="int")
+        )
         return frequencies
 
     def calculate_norm(self, state, order=2):
@@ -232,8 +237,9 @@ class PyTorchBackend(NumpyBackend):
             return super().calculate_matrix_exp(a, matrix, eigenvectors, eigenvalues)
 
     def calculate_expectation_state(self, hamiltonian, state, normalize):
+        state = self.cast(state)
         statec = torch.conj(state)
-        hstate = hamiltonian @ state
+        hstate = self.cast(hamiltonian @ state)
         ev = torch.real(torch.sum(statec * hstate))
         if normalize:
             ev = ev / torch.sum(torch.square(torch.abs(state)))
