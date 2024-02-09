@@ -68,6 +68,12 @@ def test_z(backend):
     assert gates.Z(0).unitary
 
 
+def to_numpy(array):
+    if isinstance(array, np.ndarray):
+        return array
+    return array.detach().cpu().numpy()
+
+
 def test_sx(backend):
     nqubits = 1
     initial_state = random_statevector(2**nqubits, backend=backend)
@@ -94,10 +100,12 @@ def test_sx(backend):
     # testing random expectation value due to global phase difference
     observable = random_hermitian(2**nqubits, backend=backend)
     backend.assert_allclose(
-        np.transpose(np.conj(final_state_decompose))
-        @ observable
-        @ final_state_decompose,
-        np.transpose(np.conj(target_state)) @ observable @ target_state,
+        np.transpose(np.conj(to_numpy(final_state_decompose)))
+        @ to_numpy(observable)
+        @ to_numpy(final_state_decompose),
+        np.transpose(np.conj(to_numpy(target_state)))
+        @ to_numpy(observable)
+        @ to_numpy(target_state),
     )
 
     assert gates.SX(0).qasm_label == "sx"
@@ -131,10 +139,12 @@ def test_sxdg(backend):
     # testing random expectation value due to global phase difference
     observable = random_hermitian(2**nqubits, backend=backend)
     backend.assert_allclose(
-        np.transpose(np.conj(final_state_decompose))
-        @ observable
-        @ final_state_decompose,
-        np.transpose(np.conj(target_state)) @ observable @ target_state,
+        np.transpose(np.conj(to_numpy(final_state_decompose)))
+        @ to_numpy(observable)
+        @ to_numpy(final_state_decompose),
+        np.transpose(np.conj(to_numpy(target_state)))
+        @ to_numpy(observable)
+        @ to_numpy(target_state),
     )
 
     assert gates.SXDG(0).qasm_label == "sxdg"
@@ -280,8 +290,8 @@ def test_ry(backend, theta):
 
     phase = np.exp(1j * theta / 2.0)
     gate = np.array([[phase.real, -phase.imag], [phase.imag, phase.real]])
-    gate = backend.cast(gate, dtype=gate.dtype)
-    target_state = gate @ initial_state
+    gate = backend.cast(gate, dtype="complex128")
+    target_state = gate @ backend.cast(initial_state, dtype="complex128")
 
     backend.assert_allclose(final_state, target_state)
 

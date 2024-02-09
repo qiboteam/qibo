@@ -2329,7 +2329,12 @@ class Unitary(ParametrizedGate):
         }
 
         # checking unitarity without invoking any backend
+        # maybe here having the backend would be useful?
         if check_unitary:
+            import torch
+
+            if isinstance(unitary, torch.Tensor):
+                unitary = unitary.detach().cpu().numpy()
             product = np.transpose(np.conj(unitary)) @ unitary
             sums = all(np.abs(1 - np.sum(product, axis=1)) < PRECISION_TOL)
             diagonal = all(np.abs(1 - np.diag(product)) < PRECISION_TOL)
