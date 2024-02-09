@@ -431,7 +431,7 @@ class Clifford:
             i = int(i)
             operators[i] = f"-{operators[i]}"
 
-        identity = "".join(["I" for _ in range(self.nqubits)])
+        identity = "I" * self.nqubits
 
         operators = [(g, identity) for g in operators]
 
