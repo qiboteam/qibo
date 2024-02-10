@@ -20,142 +20,87 @@ class TensorflowMatrices(NumpyMatrices):
         self.tf = tf
         self.np = tnp
 
+    def _get_numpy_gate(self, name, params):
+        matrix = getattr(NumpyMatrices(self.dtype), name)(*params)
+        return self.tf.cast(matrix, dtype=self.dtype)
+
     def RX(self, theta):
-        cos = self.np.cos(theta / 2.0) + 0j
-        isin = -1j * self.np.sin(theta / 2.0)
-        return self.tf.cast([[cos, isin], [isin, cos]], dtype=self.dtype)
+        return self._get_numpy_gate("RX", [theta])
 
     def RY(self, theta):
-        cos = self.np.cos(theta / 2.0) + 0j
-        sin = self.np.sin(theta / 2.0) + 0j
-        return self.tf.cast([[cos, -sin], [sin, cos]], dtype=self.dtype)
+        return self._get_numpy_gate("RY", [theta])
 
     def RZ(self, theta):
-        phase = self.np.exp(0.5j * theta)
-        return self.tf.cast([[self.np.conj(phase), 0], [0, phase]], dtype=self.dtype)
+        return self._get_numpy_gate("RZ", [theta])
+
+    def GPI(self, phi):
+        return self._get_numpy_gate("GPI", [phi])
+
+    def GPI2(self, phi):
+        return self._get_numpy_gate("GPI2", [phi])
 
     def U1(self, theta):
-        phase = self.np.exp(1j * theta)
-        return self.tf.cast([[1, 0], [0, phase]], dtype=self.dtype)
+        return self._get_numpy_gate("U1", [theta])
 
     def U2(self, phi, lam):
-        eplus = self.np.exp(1j * (phi + lam) / 2.0)
-        eminus = self.np.exp(1j * (phi - lam) / 2.0)
-        return self.tf.cast(
-            [[self.np.conj(eplus), -self.np.conj(eminus)], [eminus, eplus]],
-            dtype=self.dtype,
-        ) / self.np.sqrt(2)
+        return self._get_numpy_gate("U2", [phi, lam])
 
     def U3(self, theta, phi, lam):
-        cost = self.np.cos(theta / 2)
-        sint = self.np.sin(theta / 2)
-        eplus = self.np.exp(1j * (phi + lam) / 2.0)
-        eminus = self.np.exp(1j * (phi - lam) / 2.0)
-        return self.tf.cast(
-            [
-                [self.np.conj(eplus) * cost, -self.np.conj(eminus) * sint],
-                [eminus * sint, eplus * cost],
-            ],
-            dtype=self.dtype,
-        )
+        return self._get_numpy_gate("U3", [theta, phi, lam])
+
+    def U1q(self, theta, phi):
+        return self._get_numpy_gate("U1q", [theta, phi])
 
     def CRX(self, theta):
-        r = self.RX(theta)
-        return self.tf.cast(
-            [
-                [1, 0, 0, 0],
-                [0, 1, 0, 0],
-                [0, 0, r[0, 0], r[0, 1]],
-                [0, 0, r[1, 0], r[1, 1]],
-            ],
-            dtype=self.dtype,
-        )
+        return self._get_numpy_gate("CRX", [theta])
 
     def CRY(self, theta):
-        r = self.RY(theta)
-        return self.tf.cast(
-            [
-                [1, 0, 0, 0],
-                [0, 1, 0, 0],
-                [0, 0, r[0, 0], r[0, 1]],
-                [0, 0, r[1, 0], r[1, 1]],
-            ],
-            dtype=self.dtype,
-        )
+        return self._get_numpy_gate("CRY", [theta])
 
     def CRZ(self, theta):
-        r = self.RZ(theta)
-        return self.tf.cast(
-            [
-                [1, 0, 0, 0],
-                [0, 1, 0, 0],
-                [0, 0, r[0, 0], r[0, 1]],
-                [0, 0, r[1, 0], r[1, 1]],
-            ],
-            dtype=self.dtype,
-        )
+        return self._get_numpy_gate("CRZ", [theta])
 
     def CU1(self, theta):
-        r = self.U1(theta)
-        return self.tf.cast(
-            [
-                [1, 0, 0, 0],
-                [0, 1, 0, 0],
-                [0, 0, r[0, 0], r[0, 1]],
-                [0, 0, r[1, 0], r[1, 1]],
-            ],
-            dtype=self.dtype,
-        )
+        return self._get_numpy_gate("CU1", [theta])
 
     def CU2(self, phi, lam):
-        r = self.U2(phi, lam)
-        return self.tf.cast(
-            [
-                [1, 0, 0, 0],
-                [0, 1, 0, 0],
-                [0, 0, r[0, 0], r[0, 1]],
-                [0, 0, r[1, 0], r[1, 1]],
-            ],
-            dtype=self.dtype,
-        )
+        return self._get_numpy_gate("CU2", [phi, lam])
 
     def CU3(self, theta, phi, lam):
-        r = self.U3(theta, phi, lam)
-        return self.tf.cast(
-            [
-                [1, 0, 0, 0],
-                [0, 1, 0, 0],
-                [0, 0, r[0, 0], r[0, 1]],
-                [0, 0, r[1, 0], r[1, 1]],
-            ],
-            dtype=self.dtype,
-        )
+        return self._get_numpy_gate("CU3", [theta, phi, lam])
 
     def fSim(self, theta, phi):
-        cost = self.np.cos(theta) + 0j
-        isint = -1j * self.np.sin(theta)
-        phase = self.np.exp(-1j * phi)
-        return self.tf.cast(
-            [
-                [1, 0, 0, 0],
-                [0, cost, isint, 0],
-                [0, isint, cost, 0],
-                [0, 0, 0, phase],
-            ],
-            dtype=self.dtype,
-        )
+        return self._get_numpy_gate("fSim", [theta, phi])
 
     def GeneralizedfSim(self, u, phi):
-        phase = self.np.exp(-1j * phi)
-        return self.tf.cast(
-            [
-                [1, 0, 0, 0],
-                [0, u[0, 0], u[0, 1], 0],
-                [0, u[1, 0], u[1, 1], 0],
-                [0, 0, 0, phase],
-            ],
-            dtype=self.dtype,
-        )
+        return self._get_numpy_gate("GeneralizedfSim", [u, phi])
+
+    def RXX(self, theta):
+        return self._get_numpy_gate("RXX", [theta])
+
+    def RYY(self, theta):
+        return self._get_numpy_gate("RYY", [theta])
+
+    def RZZ(self, theta):
+        return self._get_numpy_gate("RZZ", [theta])
+
+    def RZX(self, theta):
+        return self._get_numpy_gate("RZX", [theta])
+
+    def RXXYY(self, theta):
+        return self._get_numpy_gate("RXXYY", [theta])
+
+    def MS(self, phi0, phi1, theta):
+        return self._get_numpy_gate("MS", [phi0, phi1, theta])
+
+    def GIVENS(self, theta):
+        return self._get_numpy_gate("GIVENS", [theta])
+
+    def RBS(self, theta):
+        return self._get_numpy_gate("RBS", [theta])
+
+    def DEUTSCH(self, theta):
+        return self._get_numpy_gate("DEUTSCH", [theta])
 
     def Unitary(self, u):
         return self.tf.cast(u, dtype=self.dtype)
