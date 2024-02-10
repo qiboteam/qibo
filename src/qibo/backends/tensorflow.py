@@ -287,7 +287,6 @@ class TensorflowMatrices(NumpyMatrices):
             dtype=self.dtype,
         )
 
-
     def Unitary(self, u):
         return self.tf.cast(u, dtype=self.dtype)
 
