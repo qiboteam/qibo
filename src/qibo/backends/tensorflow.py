@@ -209,7 +209,7 @@ class TensorflowMatrices(NumpyMatrices):
         )
 
     def RZX(self, theta):
-        cos, sin = self.np.cos(theta / 2), self.np.sin(theta / 2)
+        cos, sin = self.np.cos(theta / 2) + 0j, self.np.sin(theta / 2) + 0j
         return self.tf.cast(
             [
                 [cos, -1j * sin, 0, 0],
@@ -221,7 +221,7 @@ class TensorflowMatrices(NumpyMatrices):
         )
 
     def RXXYY(self, theta):
-        cos, sin = self.np.cos(theta / 2), self.np.sin(theta / 2)
+        cos, sin = self.np.cos(theta / 2) + 0j, self.np.sin(theta / 2) + 0j
         return self.tf.cast(
             [
                 [1, 0, 0, 0],
@@ -272,7 +272,7 @@ class TensorflowMatrices(NumpyMatrices):
 
     def DEUTSCH(self, theta):
         sin = self.np.sin(theta) + 0j  # 0j necessary for right tensorflow dtype
-        cos = self.np.cos(theta)
+        cos = self.np.cos(theta) + 0j
         return self.tf.cast(
             [
                 [1, 0, 0, 0, 0, 0, 0, 0],
