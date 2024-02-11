@@ -238,18 +238,8 @@ class TensorflowMatrices(NumpyMatrices):
         cos, sin = self.np.cos(theta / 2) + 0j, self.np.sin(theta / 2) + 0j
         return self.tf.cast(
             [
-                [
-                    cos,
-                    0,
-                    0,
-                    -1.0j * self.np.conj(plus) * sin,
-                ],
-                [
-                    0,
-                    cos,
-                    -1.0j * self.np.conj(minus) * sin,
-                    0,
-                ],
+                [cos, 0, 0, -1.0j * self.np.conj(plus) * sin],
+                [0, cos, -1.0j * self.np.conj(minus) * sin, 0],
                 [0, -1.0j * minus * sin, cos, 0],
                 [-1.0j * plus * sin, 0, 0, cos],
             ],
