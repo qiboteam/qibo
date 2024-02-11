@@ -235,23 +235,23 @@ class TensorflowMatrices(NumpyMatrices):
     def MS(self, phi0, phi1, theta):
         plus = self.np.exp(1.0j * (phi0 + phi1))
         minus = self.np.exp(1.0j * (phi0 - phi1))
-
+        cos, sin = self.np.cos(theta / 2) + 0j, self.np.sin(theta / 2) + 0j
         return self.tf.cast(
             [
                 [
-                    self.np.cos(theta / 2),
+                    cos,
                     0,
                     0,
-                    -1.0j * self.np.conj(plus) * self.np.sin(theta / 2),
+                    -1.0j * self.np.conj(plus) * sin,
                 ],
                 [
                     0,
-                    self.np.cos(theta / 2),
-                    -1.0j * self.np.conj(minus) * self.np.sin(theta / 2),
+                    cos,
+                    -1.0j * self.np.conj(minus) * sin,
                     0,
                 ],
-                [0, -1.0j * minus * self.np.sin(theta / 2), self.np.cos(theta / 2), 0],
-                [-1.0j * plus * self.np.sin(theta / 2), 0, 0, self.np.cos(theta / 2)],
+                [0, -1.0j * minus * sin, cos, 0],
+                [-1.0j * plus * sin, 0, 0, cos],
             ],
             dtype=self.dtype,
         )
