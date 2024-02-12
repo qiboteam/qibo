@@ -338,16 +338,12 @@ def _exponent(x1, z1, x2, z2):
     Returns:
         (np.array): The calculated exponents.
     """
-    x1_x2 = x1 & x2
-    x1_z2 = x1 & z2
-    x2_z1 = x2 & z1
+    x1_ = x1.astype(np.int8)
+    x2_ = x2.astype(np.int8)
+    z1_ = z1.astype(np.int8)
+    z2_ = z2.astype(np.int8)
     return (
-        -2 * (x1_x2 & z1).astype(int)
-        + 2 * (x1_x2 & z2).astype(int)
-        + 2 * (x1_z2 & z1).astype(int)
-        - x1_z2.astype(int)
-        - 2 * (x2_z1 & z2).astype(int)
-        + x2_z1.astype(int)
+        2 * (x1_ * x2_ * (z2_ - z1_) + z1_ * z2_ * (x1_ - x2_)) - x1_ * z2_ + x2_ * z1_
     )
 
 
