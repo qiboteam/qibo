@@ -35,13 +35,33 @@ class QASMParser:
         return {qubit.name: qubit.size.value}
 
     def _get_gate(self, gate):
-        init_args = {"q": gate.qubits.name}
+        qubits = [q.name for q in gate.qubits]
+        init_args = []
         for arg in gate.arguments:
-            init_args.update({arg.lhs.name: arg.rhs.value})
+            init_args.append(eval(self._unroll_expression(arg).replace("pi", "np.pi")))
         try:
-            return getattr(gates, gate.name.name.upper())(**init_args)
+            gate = getattr(gates, gate.name.name.upper())
         except:
-            return getattr(self.defined_gates, gate.name.name)(**init_args)
+            gates = getattr(self.defined_gates, gate.name.name)
+            for gate in gates:
+                self._get_gate(gate)
+        return gate(*qubits, *init_args)
+
+    def _unroll_expression(self, expr):
+        try:
+            return expr.name
+        except:
+            try:
+                return expr.value
+            except:
+                expr_dict = {}
+                for attr in ("lhs", "op", "expression", "rhs"):
+                    expr_dict[attr] = ""
+                    try:
+                        expr_dict[attr] += self._unroll_expression(getattr(expr, attr))
+                    except:
+                        continue
+                return "".join(list(expr_dict.values()))
 
     def _def_gate(definition):
         name = definition.name.name
