@@ -58,7 +58,7 @@ def CZ(symplectic_matrix, control_q, target_q, nqubits):
 
 def S(symplectic_matrix, q, nqubits):
     r, x, z = _get_rxz(symplectic_matrix, nqubits)
-    symplectic_matrix[:, -1] = r ^ (x[:, q] & z[:, q])
+    r[:] = r ^ (x[:, q] & z[:, q])
     symplectic_matrix[:, nqubits + q] = z[:, q] ^ x[:, q]
     return symplectic_matrix
 
