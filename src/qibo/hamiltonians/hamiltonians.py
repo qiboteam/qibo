@@ -6,6 +6,7 @@ from typing import Optional
 import numpy as np
 import sympy
 
+from qibo.backends import PyTorchBackend
 from qibo.config import EINSUM_CHARS, log, raise_error
 from qibo.hamiltonians.abstract import AbstractHamiltonian
 from qibo.symbols import Z

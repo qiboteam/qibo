@@ -245,7 +245,7 @@ def test_symbolic_hamiltonian_matmul(backend, nqubits, density_matrix, calcterms
     if calcterms:
         _ = local_ham.terms
     local_matmul = local_ham @ state
-    target_matmul = dense_ham @ state
+    target_matmul = dense_ham @ backend.cast(state)
     backend.assert_allclose(local_matmul, target_matmul)
 
 

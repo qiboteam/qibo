@@ -93,8 +93,8 @@ def test_trotter_hamiltonian_matmul(backend, nqubits, normalize):
     target_ev = dense_ham.expectation(state, normalize)
     backend.assert_allclose(trotter_ev, target_ev)
 
-    trotter_matmul = local_ham @ state
-    target_matmul = dense_ham @ state
+    trotter_matmul = local_ham @ backend.cast(state)
+    target_matmul = dense_ham @ backend.cast(state)
     backend.assert_allclose(trotter_matmul, target_matmul)
 
 

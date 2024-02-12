@@ -64,7 +64,7 @@ pylint = "^3.0.3"
 matplotlib = "^3.7.0"
 qibojit = { git = "https://github.com/qiboteam/qibojit.git" }
 tensorflow = { version = "^2.14.1", markers = "sys_platform == 'linux'" }
-torch = "^2.1.1"
+torch = "^2.2.0"
 
 [tool.poe.tasks]
 test = "pytest"

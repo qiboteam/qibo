@@ -3,6 +3,7 @@ from typing import Union
 
 import numpy as np
 import torch
+from scipy.sparse import spmatrix
 
 from qibo import __version__
 from qibo.backends import einsum_utils
@@ -140,6 +141,8 @@ class PyTorchBackend(NumpyBackend):
                 x = [i.to(dtype) for i in x]
             else:
                 x = [torch.tensor(i, dtype=dtype) for i in x]
+        elif isinstance(x, spmatrix):
+            x = torch.tensor(x.toarray(), dtype=dtype)
         else:
             x = torch.tensor(x, dtype=dtype)
         if copy:
@@ -169,7 +172,10 @@ class PyTorchBackend(NumpyBackend):
         return torch.reshape(state, (2**nqubits,))
 
     def issparse(self, x):
-        return x.is_sparse
+        if isinstance(x, torch.Tensor):
+            return x.is_sparse
+        else:
+            return super().issparse(x)
 
     def to_numpy(self, x):
         if type(x) is torch.Tensor:
@@ -431,7 +437,7 @@ class PyTorchBackend(NumpyBackend):
             n = 2**ncontrol
 
             order, targets = einsum_utils.control_order_density_matrix(gate, nqubits)
-            state = torch.transpose(state, order)
+            state = state.permute(*order)
             state = torch.reshape(state, 2 * (n,) + 2 * nactive * (2,))
 
             leftc, rightc = einsum_utils.apply_gate_density_matrix_controlled_string(
@@ -455,7 +461,7 @@ class PyTorchBackend(NumpyBackend):
             state10 = torch.cat([state10, state11[None]], dim=0)
             state = torch.cat([state01, state10[None]], dim=0)
             state = torch.reshape(state, 2 * nqubits * (2,))
-            state = torch.transpose(state, einsum_utils.reverse_order(order))
+            state = state.permute(*einsum_utils.reverse_order(order))
         else:
             matrix = torch.reshape(matrix, 2 * len(gate.qubits) * (2,))
             matrixc = torch.conj(matrix)

@@ -209,7 +209,7 @@ def test_pauli_noise_channel(backend, pauli_order):
     )
     gate = gates.X(1)
     target_state = backend.apply_gate_density_matrix(gate, np.copy(initial_state), 2)
-    target_state = 0.3 * target_state + 0.7 * backend.cast(initial_state)
+    target_state = 0.3 * target_state + 0.7 * initial_state
     backend.assert_allclose(final_state, target_state)
 
     basis = ["X", "Y", "Z"]
