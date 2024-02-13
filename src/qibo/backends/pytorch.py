@@ -120,8 +120,7 @@ class PyTorchBackend(NumpyBackend):
     def issparse(self, x):
         if isinstance(x, self.torch.Tensor):
             return x.is_sparse
-        else:
-            return super().issparse(x)
+        return super().issparse(x)
 
     def to_numpy(self, x):
         if type(x) is self.torch.Tensor:
@@ -343,8 +342,7 @@ class PyTorchBackend(NumpyBackend):
             return self.torch.linalg.matrix_exp(  # pylint: disable=not-callable
                 -1j * a * matrix
             )
-        else:
-            return super().calculate_matrix_exp(a, matrix, eigenvectors, eigenvalues)
+        return super().calculate_matrix_exp(a, matrix, eigenvectors, eigenvalues)
 
     def calculate_expectation_state(self, hamiltonian, state, normalize):
         state = self.cast(state)
