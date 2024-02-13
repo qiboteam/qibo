@@ -3,7 +3,6 @@ from typing import Union
 
 import numpy as np
 import torch
-from scipy.sparse import spmatrix
 
 from qibo import __version__
 from qibo.backends import einsum_utils
@@ -30,66 +29,14 @@ class TorchMatrices(NumpyMatrices):
 
     def __init__(self, dtype):
         super().__init__(dtype)
+        self.torch = torch
         self.torch_dtype = torch_dtype_dict[dtype]
 
-    def RX(self, theta):
-        matrix = getattr(NumpyMatrices(self.dtype), "RX")(theta)
-        return torch.tensor(matrix, dtype=self.torch_dtype)
-
-    def RY(self, theta):
-        matrix = getattr(NumpyMatrices(self.dtype), "RY")(theta)
-        return torch.tensor(matrix, dtype=self.torch_dtype)
-
-    def RZ(self, theta):
-        matrix = getattr(NumpyMatrices(self.dtype), "RZ")(theta)
-        return torch.tensor(matrix, dtype=self.torch_dtype)
-
-    def U1(self, theta):
-        matrix = getattr(NumpyMatrices(self.dtype), "U1")(theta)
-        return torch.tensor(matrix, dtype=self.torch_dtype)
-
-    def U2(self, phi, lam):
-        matrix = getattr(NumpyMatrices(self.dtype), "U2")(phi, lam)
-        return torch.tensor(matrix, dtype=self.torch_dtype)
-
-    def U3(self, theta, phi, lam):
-        matrix = getattr(NumpyMatrices(self.dtype), "U3")(theta, phi, lam)
-        return torch.tensor(matrix, dtype=self.torch_dtype)
-
-    def CRX(self, theta):
-        matrix = getattr(NumpyMatrices(self.dtype), "CRX")(theta)
-        return torch.tensor(matrix, dtype=self.torch_dtype)
-
-    def CRY(self, theta):
-        matrix = getattr(NumpyMatrices(self.dtype), "CRY")(theta)
-        return torch.tensor(matrix, dtype=self.torch_dtype)
-
-    def CRZ(self, theta):
-        matrix = getattr(NumpyMatrices(self.dtype), "CRZ")(theta)
-        return torch.tensor(matrix, dtype=self.torch_dtype)
-
-    def CU1(self, theta):
-        matrix = getattr(NumpyMatrices(self.dtype), "CU1")(theta)
-        return torch.tensor(matrix, dtype=self.torch_dtype)
-
-    def CU2(self, phi, lam):
-        matrix = getattr(NumpyMatrices(self.dtype), "CU2")(phi, lam)
-        return torch.tensor(matrix, dtype=self.torch_dtype)
-
-    def CU3(self, theta, phi, lam):
-        matrix = getattr(NumpyMatrices(self.dtype), "CU3")(theta, phi, lam)
-        return torch.tensor(matrix, dtype=self.torch_dtype)
-
-    def fSim(self, theta, phi):
-        matrix = getattr(NumpyMatrices(self.dtype), "fSim")(theta, phi)
-        return torch.tensor(matrix, dtype=self.torch_dtype)
-
-    def GeneralizedfSim(self, u, phi):
-        matrix = getattr(NumpyMatrices(self.dtype), "GeneralizedfSim")(u, phi)
-        return torch.tensor(matrix, dtype=self.torch_dtype)
+    def _cast(self, x, dtype):
+        return self.torch.tensor(x, dtype=dtype)
 
     def Unitary(self, u):
-        return torch.tensor(u, dtype=self.torch_dtype)
+        return self._cast(u, dtype=self.torch_dtype)
 
 
 class PyTorchBackend(NumpyBackend):
@@ -106,8 +53,9 @@ class PyTorchBackend(NumpyBackend):
         self.matrices = TorchMatrices(self.dtype)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.nthreads = 0
+        self.torch = torch
         self.torch_dtype = torch_dtype_dict[self.dtype]
-        self.tensor_types = (torch.Tensor, np.ndarray)
+        self.tensor_types = (self.torch.Tensor, np.ndarray)
 
     def set_device(self, device):  # pragma: no cover
         self.device = device
@@ -128,84 +76,82 @@ class PyTorchBackend(NumpyBackend):
         """
         if dtype is None:
             dtype = self.torch_dtype
-        elif isinstance(dtype, torch.dtype):
+        elif isinstance(dtype, self.torch.dtype):
             dtype = dtype
         elif isinstance(dtype, type):
             dtype = torch_dtype_dict[dtype.__name__]
         else:
             dtype = torch_dtype_dict[str(dtype)]
-        if isinstance(x, torch.Tensor):
+        if isinstance(x, self.torch.Tensor):
             x = x.to(dtype)
         elif isinstance(x, list):
-            if all(isinstance(i, torch.Tensor) for i in x):
+            if all(isinstance(i, self.torch.Tensor) for i in x):
                 x = [i.to(dtype) for i in x]
             else:
-                x = [torch.tensor(i, dtype=dtype) for i in x]
-        elif isinstance(x, spmatrix):
-            x = torch.tensor(x.toarray(), dtype=dtype)
+                x = [self.torch.tensor(i, dtype=dtype) for i in x]
         else:
-            x = torch.tensor(x, dtype=dtype)
+            x = self.torch.tensor(x, dtype=dtype)
         if copy:
             return x.clone()
         return x
 
     def apply_gate(self, gate, state, nqubits):
         state = self.cast(state)
-        state = torch.reshape(state, nqubits * (2,))
+        state = self.torch.reshape(state, nqubits * (2,))
         matrix = gate.matrix(self)
         if gate.is_controlled_by:
-            matrix = torch.reshape(matrix, 2 * len(gate.target_qubits) * (2,))
+            matrix = self.torch.reshape(matrix, 2 * len(gate.target_qubits) * (2,))
             ncontrol = len(gate.control_qubits)
             nactive = nqubits - ncontrol
             order, targets = einsum_utils.control_order(gate, nqubits)
             state = state.permute(*order)
-            state = torch.reshape(state, (2**ncontrol,) + nactive * (2,))
+            state = self.torch.reshape(state, (2**ncontrol,) + nactive * (2,))
             opstring = einsum_utils.apply_gate_string(targets, nactive)
-            updates = torch.einsum(opstring, state[-1], matrix)
-            state = torch.cat([state[:-1], updates[None]], axis=0)
-            state = torch.reshape(state, nqubits * (2,))
+            updates = self.torch.einsum(opstring, state[-1], matrix)
+            state = self.torch.cat([state[:-1], updates[None]], axis=0)
+            state = self.torch.reshape(state, nqubits * (2,))
             state = state.permute(*einsum_utils.reverse_order(order))
         else:
-            matrix = torch.reshape(matrix, 2 * len(gate.qubits) * (2,))
+            matrix = self.torch.reshape(matrix, 2 * len(gate.qubits) * (2,))
             opstring = einsum_utils.apply_gate_string(gate.qubits, nqubits)
-            state = torch.einsum(opstring, state, matrix)
-        return torch.reshape(state, (2**nqubits,))
+            state = self.torch.einsum(opstring, state, matrix)
+        return self.torch.reshape(state, (2**nqubits,))
 
     def issparse(self, x):
-        if isinstance(x, torch.Tensor):
+        if isinstance(x, self.torch.Tensor):
             return x.is_sparse
         else:
             return super().issparse(x)
 
     def to_numpy(self, x):
-        if type(x) is torch.Tensor:
+        if type(x) is self.torch.Tensor:
             return x.detach().cpu().numpy()
         return x
 
     def compile(self, func):
-        return torch.jit.script(func)
+        return self.torch.jit.script(func)
 
     def zero_state(self, nqubits):
-        state = torch.zeros(2**nqubits, dtype=self.torch_dtype)
+        state = self.torch.zeros(2**nqubits, dtype=self.torch_dtype)
         state[0] = 1
         return state
 
     def zero_density_matrix(self, nqubits):
-        state = torch.zeros(2 * (2**nqubits,), dtype=self.torch_dtype)
+        state = self.torch.zeros(2 * (2**nqubits,), dtype=self.torch_dtype)
         state[0, 0] = 1
         return state
 
     def matrix(self, gate):
         npmatrix = super().matrix(gate)
-        return torch.tensor(npmatrix, dtype=self.torch_dtype)
+        return self.torch.tensor(npmatrix, dtype=self.torch_dtype)
 
     def matrix_parametrized(self, gate):
         npmatrix = super().matrix_parametrized(gate)
-        return torch.tensor(npmatrix, dtype=self.torch_dtype)
+        return self.torch.tensor(npmatrix, dtype=self.torch_dtype)
 
     def matrix_fused(self, gate):
         npmatrix = super().matrix_fused(gate)
-        return torch.tensor(npmatrix, dtype=self.torch_dtype)
+        return self.torch.tensor(npmatrix, dtype=self.torch_dtype)
 
     def execute_circuit(self, circuit, initial_state=None, nshots=1000):
         if initial_state is not None:
@@ -280,7 +226,7 @@ class PyTorchBackend(NumpyBackend):
 
         if circuit.density_matrix:  # this implies also it has_collapse
             assert circuit.has_collapse
-            final_state = torch.mean(torch.stack(final_states), 0)
+            final_state = self.torch.mean(self.torch.stack(final_states), 0)
             if circuit.measurements:
                 qubits = [q for m in circuit.measurements for q in m.target_qubits]
                 final_result = CircuitResult(
@@ -308,12 +254,12 @@ class PyTorchBackend(NumpyBackend):
             return final_result
 
     def sample_shots(self, probabilities, nshots):
-        return torch.multinomial(
+        return self.torch.multinomial(
             self.cast(probabilities, dtype="float"), nshots, replacement=True
         )
 
     def samples_to_binary(self, samples, nqubits):
-        qrange = torch.arange(nqubits - 1, -1, -1, dtype=torch.int32)
+        qrange = self.torch.arange(nqubits - 1, -1, -1, dtype=self.torch.int32)
         samples = samples.int()
         samples = samples[:, None] >> qrange
         return samples % 2
@@ -333,8 +279,8 @@ class PyTorchBackend(NumpyBackend):
     def calculate_probabilities(self, state, qubits, nqubits):
         rtype = state.real.dtype
         unmeasured_qubits = tuple(i for i in range(nqubits) if i not in qubits)
-        state = torch.reshape(torch.abs(state) ** 2, nqubits * (2,))
-        probs = torch.sum(state.type(rtype), dim=unmeasured_qubits)
+        state = self.torch.reshape(self.torch.abs(state) ** 2, nqubits * (2,))
+        probs = self.torch.sum(state.type(rtype), dim=unmeasured_qubits)
         return self._order_probabilities(probs, qubits, nqubits).view(-1)
 
     def calculate_probabilities_density_matrix(self, state, qubits, nqubits):
@@ -342,17 +288,17 @@ class PyTorchBackend(NumpyBackend):
         order += tuple(i for i in range(nqubits) if i not in qubits)
         order = order + tuple(i + nqubits for i in order)
         shape = 2 * (2 ** len(qubits), 2 ** (nqubits - len(qubits)))
-        state = torch.reshape(state, 2 * nqubits * (2,))
-        state = torch.reshape(state.permute(*order), shape)
-        probs = torch.abs(torch.einsum("abab->a", state))
-        probs = torch.reshape(probs, len(qubits) * (2,))
+        state = self.torch.reshape(state, 2 * nqubits * (2,))
+        state = self.torch.reshape(state.permute(*order), shape)
+        probs = self.torch.abs(self.torch.einsum("abab->a", state))
+        probs = self.torch.reshape(probs, len(qubits) * (2,))
         return self._order_probabilities(probs, qubits, nqubits).view(-1)
 
     def sample_frequencies(self, probabilities, nshots):
         from qibo.config import SHOT_BATCH_SIZE
 
-        nprobs = probabilities / torch.sum(probabilities)
-        frequencies = torch.zeros(len(nprobs), dtype=torch.int64)
+        nprobs = probabilities / self.torch.sum(probabilities)
+        frequencies = self.torch.zeros(len(nprobs), dtype=self.torch.int64)
         for _ in range(nshots // SHOT_BATCH_SIZE):
             frequencies = self.update_frequencies(frequencies, nprobs, SHOT_BATCH_SIZE)
         frequencies = self.update_frequencies(
@@ -363,14 +309,14 @@ class PyTorchBackend(NumpyBackend):
         )
 
     def calculate_frequencies(self, samples):
-        res, counts = torch.unique(samples, return_counts=True)
+        res, counts = self.torch.unique(samples, return_counts=True)
         res, counts = res.tolist(), counts.tolist()
         return collections.Counter({k: v for k, v in zip(res, counts)})
 
     def update_frequencies(self, frequencies, probabilities, nsamples):
         frequencies = self.cast(frequencies, dtype="int")
         samples = self.sample_shots(probabilities, nsamples)
-        unique_samples, counts = torch.unique(samples, return_counts=True)
+        unique_samples, counts = self.torch.unique(samples, return_counts=True)
         frequencies.index_add_(
             0, self.cast(unique_samples, dtype="int"), self.cast(counts, dtype="int")
         )
@@ -378,23 +324,23 @@ class PyTorchBackend(NumpyBackend):
 
     def calculate_norm(self, state, order=2):
         state = self.cast(state)
-        return torch.norm(state, p=order)
+        return self.torch.norm(state, p=order)
 
     def calculate_norm_density_matrix(self, state, order="nuc"):
         state = self.cast(state)
         if order == "nuc":
             return np.trace(state)
-        return torch.norm(state, p=order)
+        return self.torch.norm(state, p=order)
 
     def calculate_eigenvalues(self, matrix, k=6):
-        return torch.linalg.eigvalsh(matrix)  # pylint: disable=not-callable
+        return self.torch.linalg.eigvalsh(matrix)  # pylint: disable=not-callable
 
     def calculate_eigenvectors(self, matrix, k=6):
-        return torch.linalg.eigh(matrix)  # pylint: disable=not-callable
+        return self.torch.linalg.eigh(matrix)  # pylint: disable=not-callable
 
     def calculate_matrix_exp(self, a, matrix, eigenvectors=None, eigenvalues=None):
         if eigenvectors is None or self.issparse(matrix):
-            return torch.linalg.matrix_exp(  # pylint: disable=not-callable
+            return self.torch.linalg.matrix_exp(  # pylint: disable=not-callable
                 -1j * a * matrix
             )
         else:
@@ -402,119 +348,123 @@ class PyTorchBackend(NumpyBackend):
 
     def calculate_expectation_state(self, hamiltonian, state, normalize):
         state = self.cast(state)
-        statec = torch.conj(state)
+        statec = self.torch.conj(state)
         hstate = self.cast(hamiltonian @ state)
-        ev = torch.real(torch.sum(statec * hstate))
+        ev = self.torch.real(self.torch.sum(statec * hstate))
         if normalize:
-            ev = ev / torch.sum(torch.square(torch.abs(state)))
+            ev = ev / self.torch.sum(self.torch.square(self.torch.abs(state)))
         return ev
 
     def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
         if self.issparse(matrix1) or self.issparse(matrix2):
-            return torch.sparse.mm(matrix1, matrix2)  # pylint: disable=not-callable
-        return torch.matmul(matrix1, matrix2)
+            return self.torch.sparse.mm(
+                matrix1, matrix2
+            )  # pylint: disable=not-callable
+        return self.torch.matmul(matrix1, matrix2)
 
     def calculate_hamiltonian_state_product(self, matrix, state):
-        return torch.matmul(matrix, state)
+        return self.torch.matmul(matrix, state)
 
     def calculate_overlap(self, state1, state2):
-        return torch.abs(torch.sum(torch.conj(self.cast(state1)) * self.cast(state2)))
+        return self.torch.abs(
+            self.torch.sum(self.torch.conj(self.cast(state1)) * self.cast(state2))
+        )
 
     def calculate_overlap_density_matrix(self, state1, state2):
-        return torch.trace(
-            torch.matmul(torch.conj(self.cast(state1)).T, self.cast(state2))
+        return self.torch.trace(
+            self.torch.matmul(self.torch.conj(self.cast(state1)).T, self.cast(state2))
         )
 
     def apply_gate_density_matrix(self, gate, state, nqubits):
         state = self.cast(state)
-        state = torch.reshape(state, 2 * nqubits * (2,))
+        state = self.torch.reshape(state, 2 * nqubits * (2,))
         matrix = gate.matrix(self)
         if gate.is_controlled_by:
-            matrix = torch.reshape(matrix, 2 * len(gate.target_qubits) * (2,))
-            matrixc = torch.conj(matrix)
+            matrix = self.torch.reshape(matrix, 2 * len(gate.target_qubits) * (2,))
+            matrixc = self.torch.conj(matrix)
             ncontrol = len(gate.control_qubits)
             nactive = nqubits - ncontrol
             n = 2**ncontrol
 
             order, targets = einsum_utils.control_order_density_matrix(gate, nqubits)
             state = state.permute(*order)
-            state = torch.reshape(state, 2 * (n,) + 2 * nactive * (2,))
+            state = self.torch.reshape(state, 2 * (n,) + 2 * nactive * (2,))
 
             leftc, rightc = einsum_utils.apply_gate_density_matrix_controlled_string(
                 targets, nactive
             )
             state01 = state[: n - 1, n - 1]
-            state01 = torch.einsum(rightc, state01, matrixc)
+            state01 = self.torch.einsum(rightc, state01, matrixc)
             state10 = state[n - 1, : n - 1]
-            state10 = torch.einsum(leftc, state10, matrix)
+            state10 = self.torch.einsum(leftc, state10, matrix)
 
             left, right = einsum_utils.apply_gate_density_matrix_string(
                 targets, nactive
             )
             state11 = state[n - 1, n - 1]
-            state11 = torch.einsum(right, state11, matrixc)
-            state11 = torch.einsum(left, state11, matrix)
+            state11 = self.torch.einsum(right, state11, matrixc)
+            state11 = self.torch.einsum(left, state11, matrix)
 
             state00 = state[range(n - 1)]
             state00 = state00[:, range(n - 1)]
-            state01 = torch.cat([state00, state01[:, None]], dim=1)
-            state10 = torch.cat([state10, state11[None]], dim=0)
-            state = torch.cat([state01, state10[None]], dim=0)
-            state = torch.reshape(state, 2 * nqubits * (2,))
+            state01 = self.torch.cat([state00, state01[:, None]], dim=1)
+            state10 = self.torch.cat([state10, state11[None]], dim=0)
+            state = self.torch.cat([state01, state10[None]], dim=0)
+            state = self.torch.reshape(state, 2 * nqubits * (2,))
             state = state.permute(*einsum_utils.reverse_order(order))
         else:
-            matrix = torch.reshape(matrix, 2 * len(gate.qubits) * (2,))
-            matrixc = torch.conj(matrix)
+            matrix = self.torch.reshape(matrix, 2 * len(gate.qubits) * (2,))
+            matrixc = self.torch.conj(matrix)
             left, right = einsum_utils.apply_gate_density_matrix_string(
                 gate.qubits, nqubits
             )
-            state = torch.einsum(right, state, matrixc)
-            state = torch.einsum(left, state, matrix)
-        return torch.reshape(state, 2 * (2**nqubits,))
+            state = self.torch.einsum(right, state, matrixc)
+            state = self.torch.einsum(left, state, matrix)
+        return self.torch.reshape(state, 2 * (2**nqubits,))
 
     def partial_trace(self, state, qubits, nqubits):
         state = self.cast(state)
-        state = torch.reshape(state, nqubits * (2,))
+        state = self.torch.reshape(state, nqubits * (2,))
         axes = 2 * [list(qubits)]
-        rho = torch.tensordot(state, torch.conj(state), dims=axes)
+        rho = self.torch.tensordot(state, self.torch.conj(state), dims=axes)
         shape = 2 * (2 ** (nqubits - len(qubits)),)
-        return torch.reshape(rho, shape)
+        return self.torch.reshape(rho, shape)
 
     def partial_trace_density_matrix(self, state, qubits, nqubits):
         state = self.cast(state)
-        state = torch.reshape(state, 2 * nqubits * (2,))
+        state = self.torch.reshape(state, 2 * nqubits * (2,))
         order = list(sorted(qubits))
         order += [i for i in range(nqubits) if i not in qubits]
         order += [i + nqubits for i in order]
         state = state.permute(*order)
         shape = 2 * (2 ** len(qubits), 2 ** (nqubits - len(qubits)))
-        state = torch.reshape(state, shape)
-        return torch.einsum("abac->bc", state)
+        state = self.torch.reshape(state, shape)
+        return self.torch.einsum("abac->bc", state)
 
     def _append_zeros(self, state, qubits, results):
         """Helper method for collapse."""
         for q, r in zip(qubits, results):
-            state = torch.unsqueeze(state, dim=q)
+            state = self.torch.unsqueeze(state, dim=q)
             if r:
-                state = torch.cat([torch.zeros_like(state), state], dim=q)
+                state = self.torch.cat([self.torch.zeros_like(state), state], dim=q)
             else:
-                state = torch.cat([state, torch.zeros_like(state)], dim=q)
+                state = self.torch.cat([state, self.torch.zeros_like(state)], dim=q)
         return state
 
     def collapse_state(self, state, qubits, shot, nqubits, normalize=True):
         state = self.cast(state)
         shape = state.shape
         binshot = self.samples_to_binary(shot, len(qubits))[0]
-        state = torch.reshape(state, nqubits * (2,))
+        state = self.torch.reshape(state, nqubits * (2,))
         order = list(qubits) + [q for q in range(nqubits) if q not in qubits]
         state = state.permute(*order)
         subshape = (2 ** len(qubits),) + (nqubits - len(qubits)) * (2,)
-        state = torch.reshape(state, subshape)[int(shot)]
+        state = self.torch.reshape(state, subshape)[int(shot)]
         if normalize:
-            norm = torch.sqrt(torch.sum(torch.abs(state) ** 2))
+            norm = self.torch.sqrt(self.torch.sum(self.torch.abs(state) ** 2))
             state = state / norm
         state = self._append_zeros(state, qubits, binshot)
-        return torch.reshape(state, shape)
+        return self.torch.reshape(state, shape)
 
     def collapse_density_matrix(self, state, qubits, shot, nqubits, normalize=True):
         state = self.cast(state)
@@ -523,17 +473,17 @@ class PyTorchBackend(NumpyBackend):
         order = list(qubits) + [q + nqubits for q in qubits]
         order.extend(q for q in range(nqubits) if q not in qubits)
         order.extend(q + nqubits for q in range(nqubits) if q not in qubits)
-        state = torch.reshape(state, 2 * nqubits * (2,))
+        state = self.torch.reshape(state, 2 * nqubits * (2,))
         state = state.permute(*order)
         subshape = 2 * (2 ** len(qubits),) + 2 * (nqubits - len(qubits)) * (2,)
-        state = torch.reshape(state, subshape)[int(shot), int(shot)]
+        state = self.torch.reshape(state, subshape)[int(shot), int(shot)]
         n = 2 ** (len(state.shape) // 2)
         if normalize:
-            norm = torch.trace(torch.reshape(state, (n, n)))
+            norm = self.torch.trace(self.torch.reshape(state, (n, n)))
             state = state / norm
         qubits = qubits + [q + nqubits for q in qubits]
         state = self._append_zeros(state, qubits, 2 * binshot)
-        return torch.reshape(state, shape)
+        return self.torch.reshape(state, shape)
 
     def reset_error_density_matrix(self, gate, state, nqubits):
         from qibo.gates import X
@@ -543,13 +493,13 @@ class PyTorchBackend(NumpyBackend):
         q = gate.target_qubits[0]
         p_0, p_1 = gate.init_kwargs["p_0"], gate.init_kwargs["p_1"]
         trace = self.partial_trace_density_matrix(state, (q,), nqubits)
-        trace = torch.reshape(trace, 2 * (nqubits - 1) * (2,))
+        trace = self.torch.reshape(trace, 2 * (nqubits - 1) * (2,))
         zero = self.zero_density_matrix(1)
-        zero = torch.tensordot(trace, zero, dims=0)
+        zero = self.torch.tensordot(trace, zero, dims=0)
         order = list(range(2 * nqubits - 2))
         order.insert(q, 2 * nqubits - 2)
         order.insert(q + nqubits, 2 * nqubits - 1)
-        zero = torch.reshape(zero.permute(*order), shape)
+        zero = self.torch.reshape(zero.permute(*order), shape)
         state = (1 - p_0 - p_1) * state + p_0 * zero
         return state + p_1 * self.apply_gate_density_matrix(X(q), zero, nqubits)
 
@@ -557,10 +507,10 @@ class PyTorchBackend(NumpyBackend):
         state = self.cast(state)
         shape = state.shape
         state = self.apply_gate(gate, state.view(-1), 2 * nqubits)
-        return torch.reshape(state, shape)
+        return self.torch.reshape(state, shape)
 
     def identity_density_matrix(self, nqubits, normalize: bool = True):
-        state = torch.eye(2**nqubits, dtype=torch.complex128)
+        state = self.torch.eye(2**nqubits, dtype=self.torch.complex128)
         if normalize is True:
             state /= 2**nqubits
         return state
@@ -571,10 +521,10 @@ class PyTorchBackend(NumpyBackend):
         q = gate.target_qubits
         lam = gate.init_kwargs["lam"]
         trace = self.partial_trace_density_matrix(state, q, nqubits)
-        trace = torch.reshape(trace, 2 * (nqubits - len(q)) * (2,))
+        trace = self.torch.reshape(trace, 2 * (nqubits - len(q)) * (2,))
         identity = self.identity_density_matrix(len(q))
-        identity = torch.reshape(identity, 2 * len(q) * (2,))
-        identity = torch.tensordot(trace, identity, dims=0)
+        identity = self.torch.reshape(identity, 2 * len(q) * (2,))
+        identity = self.torch.tensordot(trace, identity, dims=0)
         qubits = list(range(nqubits))
         for j in q:
             qubits.pop(qubits.index(j))
@@ -592,7 +542,7 @@ class PyTorchBackend(NumpyBackend):
             qj = [qj[qubits.index(i)] for i in range(len(qubits))]
             order += qj
         identity = identity.permute(*order)
-        identity = torch.reshape(identity, shape)
+        identity = self.torch.reshape(identity, shape)
         state = (1 - lam) * state + lam * identity
         return state
 
