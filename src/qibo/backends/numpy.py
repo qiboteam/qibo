@@ -160,32 +160,38 @@ class NumpyBackend(Backend):
         part2 = self.np.concatenate([zeros, matrix], axis=0)
         return self.np.concatenate([part1, part2], axis=1)
 
-    def apply_gate(self, gate, state, nqubits):
+    def apply_gate(self, gate, state, nqubits, batch=False):
         state = self.cast(state)
-        state = self.np.reshape(state, nqubits * (2,))
+        shape = (state.shape[0],) if batch else ()
+        state = self.np.reshape(state, shape + nqubits * (2,))
         matrix = gate.matrix(self)
         if gate.is_controlled_by:
             matrix = self.np.reshape(matrix, 2 * len(gate.target_qubits) * (2,))
             ncontrol = len(gate.control_qubits)
             nactive = nqubits - ncontrol
-            order, targets = einsum_utils.control_order(gate, nqubits)
+            order, targets = einsum_utils.control_order(gate, nqubits, batch)
             state = self.np.transpose(state, order)
             # Apply `einsum` only to the part of the state where all controls
             # are active. This should be `state[-1]`
-            state = self.np.reshape(state, (2**ncontrol,) + nactive * (2,))
-            opstring = einsum_utils.apply_gate_string(targets, nactive)
-            updates = self.np.einsum(opstring, state[-1], matrix)
+            state = self.np.reshape(state, shape + (2**ncontrol,) + nactive * (2,))
+            opstring = einsum_utils.apply_gate_string(targets, nactive, batch)
+            tmp_state = state[:, -1] if batch else state[-1]
+            updates = self.np.einsum(opstring, tmp_state, matrix)
             # Concatenate the updated part of the state `updates` with the
             # part of of the state that remained unaffected `state[:-1]`.
-            state = self.np.concatenate([state[:-1], updates[self.np.newaxis]], axis=0)
-            state = self.np.reshape(state, nqubits * (2,))
+            tmp_state = state[:, :-1] if batch else state[:-1]
+            state = self.np.concatenate(
+                [tmp_state, updates[self.np.newaxis]], axis=0 + int(batch)
+            )
+            state = self.np.reshape(state, shape + nqubits * (2,))
             # Put qubit indices back to their proper places
             state = self.np.transpose(state, einsum_utils.reverse_order(order))
         else:
             matrix = self.np.reshape(matrix, 2 * len(gate.qubits) * (2,))
-            opstring = einsum_utils.apply_gate_string(gate.qubits, nqubits)
+            opstring = einsum_utils.apply_gate_string(gate.qubits, nqubits, batch)
             state = self.np.einsum(opstring, state, matrix)
-        return self.np.reshape(state, (2**nqubits,))
+        shape = (state.shape[0], 1) if batch else ()
+        return self.np.reshape(state, shape + (2**nqubits,))
 
     def apply_gate_density_matrix(self, gate, state, nqubits):
         state = self.cast(state)
@@ -394,6 +400,7 @@ class NumpyBackend(Backend):
                 raise RuntimeError(
                     "Attempting to perform noisy simulation with `density_matrix=False` and no Measurement gate in the Circuit. If you wish to retrieve the statistics of the outcomes please include measurements in the circuit, otherwise set `density_matrix=True` to recover the final state."
                 )
+        is_batched = False
 
         if circuit.accelerators:  # pragma: no cover
             return self.execute_distributed_circuit(circuit, initial_state, nshots)
@@ -417,9 +424,10 @@ class NumpyBackend(Backend):
                 else:
                     # cast to proper complex type
                     state = self.cast(initial_state)
+                    is_batched = len(state.shape) == 3
 
                 for gate in circuit.queue:
-                    state = gate.apply(self, state, nqubits)
+                    state = gate.apply(self, state, nqubits, is_batched)
 
             if circuit.has_unitary_channel:
                 # here we necessarily have `density_matrix=True`, otherwise
@@ -436,11 +444,17 @@ class NumpyBackend(Backend):
             else:
                 if circuit.measurements:
                     circuit._final_state = CircuitResult(
-                        state, circuit.measurements, backend=self, nshots=nshots
+                        state,
+                        circuit.measurements,
+                        backend=self,
+                        nshots=nshots,
+                        batch=is_batched,
                     )
                     return circuit._final_state
                 else:
-                    circuit._final_state = QuantumState(state, backend=self)
+                    circuit._final_state = QuantumState(
+                        state, backend=self, batch=is_batched
+                    )
                     return circuit._final_state
 
         except self.oom_error:
@@ -592,7 +606,7 @@ class NumpyBackend(Backend):
                 return terms
         return terms
 
-    def _order_probabilities(self, probs, qubits, nqubits):
+    def _order_probabilities(self, probs, qubits, nqubits, batch=False):
         """Arrange probabilities according to the given ``qubits`` ordering."""
         unmeasured, reduced = [], {}
         for i in range(nqubits):
@@ -600,14 +614,28 @@ class NumpyBackend(Backend):
                 reduced[i] = i - len(unmeasured)
             else:
                 unmeasured.append(i)
-        return self.np.transpose(probs, [reduced.get(i) for i in qubits])
+        shape = (
+            [
+                0,
+            ]
+            if batch
+            else []
+        )
+        return self.np.transpose(
+            probs, shape + [int(batch) + reduced.get(i) for i in qubits]
+        )
 
-    def calculate_probabilities(self, state, qubits, nqubits):
+    def calculate_probabilities(self, state, qubits, nqubits, batch=False):
         rtype = self.np.real(state).dtype
+        shape = (state.shape[0],) if batch else ()
         unmeasured_qubits = tuple(i for i in range(nqubits) if i not in qubits)
-        state = self.np.reshape(self.np.abs(state) ** 2, nqubits * (2,))
+        state = self.np.reshape(self.np.abs(state) ** 2, shape + nqubits * (2,))
         probs = self.np.sum(state.astype(rtype), axis=unmeasured_qubits)
-        return self._order_probabilities(probs, qubits, nqubits).ravel()
+        probs = self._order_probabilities(probs, qubits, nqubits, batch)
+        if batch:
+            return probs.reshape(state.shape[0], -1)
+        else:
+            return probs.ravel()
 
     def calculate_probabilities_density_matrix(self, state, qubits, nqubits):
         order = tuple(sorted(qubits))
@@ -623,17 +651,26 @@ class NumpyBackend(Backend):
     def set_seed(self, seed):
         self.np.random.seed(seed)
 
-    def sample_shots(self, probabilities, nshots):
-        return self.np.random.choice(
-            range(len(probabilities)), size=nshots, p=probabilities
-        )
+    def sample_shots(self, probabilities, nshots, batch=False):
+        if batch:
+            return self.np.random.randint(
+                0, probabilities.shape[1], size=(probabilities.shape[0], nshots)
+            )
+        else:
+            return self.np.random.choice(
+                range(len(probabilities)), size=nshots, p=probabilities
+            )
 
     def aggregate_shots(self, shots):
         return self.np.array(shots, dtype=shots[0].dtype)
 
-    def samples_to_binary(self, samples, nqubits):
-        qrange = self.np.arange(nqubits - 1, -1, -1, dtype="int32")
-        return self.np.mod(self.np.right_shift(samples[:, self.np.newaxis], qrange), 2)
+    def samples_to_binary(self, samples, nqubits, batch=False):
+        qrange = self.np.arange(nqubits - 1, -1, -1, dtype="int32")  # + int(batch)
+        if batch:
+            tmp_samples = samples[:, :, self.np.newaxis]
+        else:
+            tmp_samples = samples[:, self.np.newaxis]
+        return self.np.mod(self.np.right_shift(tmp_samples, qrange), 2)
 
     def samples_to_decimal(self, samples, nqubits):
         qrange = self.np.arange(nqubits - 1, -1, -1, dtype="int32")

@@ -168,7 +168,7 @@ class M(Gate):
             NotImplementedError, "Measurement gates do not have matrix representation."
         )
 
-    def apply(self, backend, state, nqubits):
+    def apply(self, backend, state, nqubits, batch=False):
         self.result.backend = backend
         if not self.collapse:
             return state
@@ -197,7 +197,7 @@ class M(Gate):
         if not self.collapse:
             return state
 
-        qubits = sorted(self.target_qubits)
+        qubits = self.target_qubits
         sample = backend.sample_shots(state, qubits, nqubits, 1, self.collapse)
         self.result.add_shot_from_sample(sample[0])
         return state

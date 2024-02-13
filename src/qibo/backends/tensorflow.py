@@ -382,13 +382,13 @@ class TensorflowBackend(NumpyBackend):
         with self.tf.device(self.device):
             return super().execute_circuit_repeated(circuit, nshots, initial_state)
 
-    def sample_shots(self, probabilities, nshots):
+    def sample_shots(self, probabilities, nshots, batch=False):
         # redefining this because ``tnp.random.choice`` is not available
         logits = self.tf.math.log(probabilities)[self.tf.newaxis]
         samples = self.tf.random.categorical(logits, nshots)[0]
         return samples
 
-    def samples_to_binary(self, samples, nqubits):
+    def samples_to_binary(self, samples, nqubits, batch=False):
         # redefining this because ``tnp.right_shift`` is not available
         qrange = self.np.arange(nqubits - 1, -1, -1, dtype="int32")
         samples = self.tf.cast(samples, dtype="int32")

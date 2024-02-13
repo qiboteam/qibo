@@ -30,13 +30,14 @@ class QuantumState:
         backend (qibo.backends.AbstractBackend): Backend used for the calculations. If not provided the :class:`qibo.backends.GlobalBackend` is going to be used.
     """
 
-    def __init__(self, state, backend=None):
+    def __init__(self, state, backend=None, batch=False):
         from qibo.backends import _check_backend
 
         self.backend = _check_backend(backend)
         self.density_matrix = len(state.shape) == 2
-        self.nqubits = int(np.log2(state.shape[0]))
+        self.nqubits = int(np.log2(state.shape[0 + 2 * int(batch)]))
         self._state = state
+        self.is_batched = batch
 
     def symbolic(self, decimals: int = 5, cutoff: float = 1e-10, max_terms: int = 20):
         """Dirac notation representation of the state in the computational basis.
@@ -102,7 +103,9 @@ class QuantumState:
                 self._state, qubits, self.nqubits
             )
 
-        return self.backend.calculate_probabilities(self._state, qubits, self.nqubits)
+        return self.backend.calculate_probabilities(
+            self._state, qubits, self.nqubits, self.is_batched
+        )
 
     def __str__(self):
         return self.symbolic()
@@ -171,6 +174,7 @@ class MeasurementOutcomes:
         probabilities=None,
         samples: Optional[int] = None,
         nshots: int = 1000,
+        batch=False,
     ):
         self.backend = backend
         self.measurements = measurements
@@ -181,6 +185,7 @@ class MeasurementOutcomes:
         self._samples = samples
         self._frequencies = None
         self._repeated_execution_frequencies = None
+        self.is_batched = batch
 
         if samples is not None:
             for m in measurements:
@@ -338,8 +343,12 @@ class MeasurementOutcomes:
                     np.random.shuffle(samples)
                 else:
                     # generate new samples
-                    samples = self.backend.sample_shots(self._probs, self.nshots)
-                samples = self.backend.samples_to_binary(samples, len(qubits))
+                    samples = self.backend.sample_shots(
+                        self._probs, self.nshots, self.is_batched
+                    )
+                samples = self.backend.samples_to_binary(
+                    samples, len(qubits), self.is_batched
+                )
                 if self.measurement_gate.has_bitflip_noise():
                     p0, p1 = self.measurement_gate.bitflip_map
                     bitflip_probabilities = [
@@ -486,9 +495,15 @@ class CircuitResult(QuantumState, MeasurementOutcomes):
     """
 
     def __init__(
-        self, final_state, measurements, backend=None, samples=None, nshots=1000
+        self,
+        final_state,
+        measurements,
+        backend=None,
+        samples=None,
+        nshots=1000,
+        batch=False,
     ):
-        QuantumState.__init__(self, final_state, backend)
+        QuantumState.__init__(self, final_state, backend, batch)
         qubits = [q for m in measurements for q in m.target_qubits]
         if len(qubits) == 0:
             raise ValueError(
@@ -502,6 +517,7 @@ class CircuitResult(QuantumState, MeasurementOutcomes):
             probabilities=probs,
             samples=samples,
             nshots=nshots,
+            batch=batch,
         )
 
     def probabilities(self, qubits: Optional[Union[list, set]] = None):

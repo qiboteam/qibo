@@ -146,3 +146,43 @@ def test_initial_state_error(backend):
 
     with pytest.raises(ValueError):
         backend.execute_circuit(c, c1)
+
+
+@pytest.mark.parametrize("measurements", [True, False])
+def test_batch_execution(backend, measurements):
+    nqubits = 3
+    batchsize = 5
+    # random initial states
+    initial_states = backend.np.random.rand(batchsize, 2**nqubits)
+    initial_states /= backend.np.sqrt(
+        backend.np.sum((initial_states**2), axis=-1)
+    ).reshape(batchsize, -1)
+    initial_states = initial_states[:, backend.np.newaxis, :]
+    # circuit
+    c = Circuit(3)
+    c.add([gates.H(i) for i in range(3)])
+    c.add([gates.RZ(i, theta=np.pi / 2) for i in (0, 1)])
+    c.add(gates.CNOT(0, 1))
+    c.add(gates.CNOT(0, 2))
+    c.add(gates.CRY(2, 1, theta=np.pi / 2))
+    if measurements:
+        c.add(gates.M(0, 2))
+    if backend.name not in ("numpy", "tensorflow"):
+        with pytest.raises(NotImplementedError):
+            # batched execution
+            batched_res = backend.execute_circuit(c, initial_state=initial_states)
+        return
+    else:
+        batched_res = backend.execute_circuit(c, initial_state=initial_states)
+    # separate execution
+    final_states, probs = [], []
+    for state in initial_states:
+        r = backend.execute_circuit(c, initial_state=state.ravel())
+        final_states.append(r.state())
+        probs.append(r.probabilities())
+
+    final_states = backend.np.vstack(final_states).reshape(batchsize, 1, -1)
+    probs = backend.np.vstack(probs)
+
+    backend.assert_allclose(final_states, batched_res.state())
+    backend.assert_allclose(probs, batched_res.probabilities())
