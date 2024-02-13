@@ -65,7 +65,7 @@ def test_clifford_from_circuit(backend, measurement):
 @pytest.mark.parametrize("seed", [None, 10])
 @pytest.mark.parametrize("algorithm", ["AG04", "BM20"])
 @pytest.mark.parametrize("nqubits", [1, 2, 3, 10, 50])
-def test_clifford_to_circuit(backend, nqubits, algorithm):
+def test_clifford_to_circuit(backend, nqubits, algorithm, seed):
     if backend.__class__.__name__ == "TensorflowBackend":
         pytest.skip("CliffordBackend not defined for Tensorflow engine.")
 
