@@ -33,7 +33,7 @@ class TorchMatrices(NumpyMatrices):
         self.torch_dtype = torch_dtype_dict[dtype]
 
     def _cast(self, x, dtype):
-        return self.torch.tensor(x, dtype=dtype)
+        return self.torch.tensor(x, dtype=self.torch_dtype)
 
     def Unitary(self, u):
         return self._cast(u, dtype=self.torch_dtype)
