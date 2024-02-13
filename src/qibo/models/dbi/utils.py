@@ -37,7 +37,7 @@ def generate_Z_operators(nqubits: int):
             dephasing_channel = (sum([Z_op @ h0 @ Z_op for Z_op in Z_ops])+h0)/2**nqubits
             norm_diff = np.linalg.norm(delta_h0 - dephasing_channel)
     """
-    # list of tupples, e.g. ('Z','I','Z')
+    # list of tuples, e.g. ('Z','I','Z')
     combination_strings = product("ZI", repeat=nqubits)
     output_dict = {}
 
@@ -52,7 +52,7 @@ def generate_Z_operators(nqubits: int):
 
 
 def str_to_symbolic(name: str):
-    """Converts string into symbolic hamiltonian
+    """Convert string into symbolic hamiltonian.
     Example:
         .. testcode::
 
@@ -80,15 +80,15 @@ def select_best_dbr_generator(
     """Selects the best double bracket rotation generator from a list and runs the
 
     Args:
-        dbi_object (_DoubleBracketIteration): The target DoubleBracketIteration object.
-        d_list (list): List of diagonal operators (np.array) to run from.
-        step (float): Fixed iteration duration.
+        dbi_object (`DoubleBracketIteration`): the target DoubleBracketIteration object.
+        d_list (list): list of diagonal operators (np.array) to run from.
+        step (float): fixed iteration duration.
             Defaults to ``None``, uses hyperopt.
-        step_min (float): Minimally allowed iteration duration.
-        step_max (float): Maximally allowed iteration duration.
-        max_evals (int): Maximally allowed number of evaluation in hyperopt.
-        compare_canonical (bool): If `True`, the optimal diagonal operator chosen from "d_list" is compared with the canonical bracket.
-        mode (_DoubleBracketGeneratorType): DBI generator type used for the selection.
+        step_min (float): minimally allowed iteration duration.
+        step_max (float): maximally allowed iteration duration.
+        max_evals (int): maximally allowed number of evaluation in hyperopt.
+        compare_canonical (bool): if `True`, the optimal diagonal operator chosen from "d_list" is compared with the canonical bracket.
+        mode (`DoubleBracketGeneratorType`): DBI generator type used for the selection.
 
     Returns:
         The updated dbi_object, index of the optimal diagonal operator, respective step duration, and evolution direction.
@@ -153,7 +153,7 @@ def select_best_dbr_generator(
 
 
 def cs_angle_sgn(dbi_object, d):
-    """Calculates the sign of Cauchy-Schwarz Angle $$<W(Z), W(canonical)>_{HS}$$"""
+    """Calculates the sign of Cauchy-Schwarz Angle :math:`\\langle W(Z), W({\\rm canonical}) \\rangle_{\\rm HS}`."""
     norm = np.trace(
         np.dot(
             np.conjugate(
