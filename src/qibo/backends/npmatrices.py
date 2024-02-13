@@ -1,7 +1,5 @@
 from functools import cached_property
 
-from scipy.linalg import block_diag
-
 from qibo.config import raise_error
 
 
@@ -158,28 +156,65 @@ class NumpyMatrices:
         return self.np.transpose(self.np.conj(self.CSX))
 
     def CRX(self, theta):
-        identity = [[1.0, 0.0], [0.0, 1.0]]
-        return block_diag(identity, self.RX(theta))
+        cos = self.np.cos(theta / 2.0) + 0j
+        isin = -1j * self.np.sin(theta / 2.0)
+        matrix = [
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, cos, isin],
+            [0, 0, isin, cos],
+        ]
+        return self._cast(matrix, dtype=self.dtype)
 
     def CRY(self, theta):
-        identity = [[1.0, 0.0], [0.0, 1.0]]
-        return block_diag(identity, self.RY(theta))
+        cos = self.np.cos(theta / 2.0) + 0j
+        sin = self.np.sin(theta / 2.0) + 0j
+        matrix = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, cos, -sin], [0, 0, sin, cos]]
+        return self._cast(matrix, dtype=self.dtype)
 
     def CRZ(self, theta):
-        identity = [[1.0, 0.0], [0.0, 1.0]]
-        return block_diag(identity, self.RZ(theta))
+        phase = self.np.exp(0.5j * theta)
+        matrix = [
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, self.np.conj(phase), 0],
+            [0, 0, 0, phase],
+        ]
+        return self._cast(matrix, dtype=self.dtype)
 
     def CU1(self, theta):
-        identity = [[1.0, 0.0], [0.0, 1.0]]
-        return block_diag(identity, self.U1(theta))
+        phase = self.np.exp(1j * theta)
+        matrix = [
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 1, 0],
+            [0, 0, 0, phase],
+        ]
+        return self._cast(matrix, dtype=self.dtype)
 
     def CU2(self, phi, lam):
-        identity = [[1.0, 0.0], [0.0, 1.0]]
-        return block_diag(identity, self.U2(phi, lam))
+        eplus = self.np.exp(1j * (phi + lam) / 2.0) / self.np.sqrt(2)
+        eminus = self.np.exp(1j * (phi - lam) / 2.0) / self.np.sqrt(2)
+        matrix = [
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, self.np.conj(eplus), -self.np.conj(eminus)],
+            [0, 0, eminus, eplus],
+        ]
+        return self._cast(matrix, dtype=self.dtype)
 
     def CU3(self, theta, phi, lam):
-        identity = [[1.0, 0.0], [0.0, 1.0]]
-        return block_diag(identity, self.U3(theta, phi, lam))
+        cost = self.np.cos(theta / 2)
+        sint = self.np.sin(theta / 2)
+        eplus = self.np.exp(1j * (phi + lam) / 2.0)
+        eminus = self.np.exp(1j * (phi - lam) / 2.0)
+        matrix = [
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, self.np.conj(eplus) * cost, -self.np.conj(eminus) * sint],
+            [0, 0, eminus * sint, eplus * cost],
+        ]
+        return self._cast(matrix, dtype=self.dtype)
 
     @cached_property
     def SWAP(self):
