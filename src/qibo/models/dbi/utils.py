@@ -101,7 +101,7 @@ def select_best_dbr_generator(
     for i, d in enumerate(d_list):
         # prescribed step durations
         dbi_eval = deepcopy(dbi_object)
-        flip_list[i] = CS_angle_sgn(dbi_eval, d)
+        flip_list[i] = cs_angle_sgn(dbi_eval, d)
         if flip_list[i] != 0:
             if step is None:
                 step_best = dbi_eval.hyperopt_step(
