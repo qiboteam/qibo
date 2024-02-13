@@ -42,12 +42,13 @@ class QASMParser:
     ):
         self.parser = openqasm3.parser
         self.defined_gates = {}
-        self.registers = {}
+        self.q_registers, self.c_registers = {}, set()
 
     def to_circuit(self, qasm_string: str, accelerators=None, density_matrix=False):
         parsed = self.parser.parse(qasm_string)
         gates = []
-        self.defined_gates, self.registers = {}, {}
+        self.defined_gates, self.q_registers, self.c_registers = {}, {}, {}
+
         nqubits = 0
         for statement in parsed.statements:
             if isinstance(statement, openqasm3.ast.QuantumGate):
@@ -56,14 +57,18 @@ class QASMParser:
                 gates.append(self._get_measurement(statement))
             elif isinstance(statement, openqasm3.ast.QubitDeclaration):
                 q_name, q_size = self._get_qubit(statement)
-                self.registers.update({q_name: list(range(nqubits, nqubits + q_size))})
+                self.q_registers.update(
+                    {q_name: list(range(nqubits, nqubits + q_size))}
+                )
                 nqubits += q_size
             elif isinstance(statement, openqasm3.ast.QuantumGateDefinition):
                 self._def_gate(statement)
             elif isinstance(statement, openqasm3.ast.Include):
                 continue
             elif isinstance(statement, openqasm3.ast.ClassicalDeclaration):
-                continue
+                name = statement.identifier.name
+                size = statement.type.size.value
+                self.c_registers.update({name: size})
             else:
                 raise_error(RuntimeError, f"Unsupported {type(statement)} statement.")
         c = qibo.Circuit(nqubits, accelerators, density_matrix)
@@ -74,13 +79,20 @@ class QASMParser:
     def _get_measurement(self, measurement):
         qubit = self._get_qubit(measurement.measure.qubit)
         register = measurement.target.name.name
+        if register not in self.c_registers:
+            raise_error(ValueError, f"Undefined measurement register `{register}`.")
+        ind = measurement.target.indices[0][0].value
+        if ind >= self.c_registers[register]:
+            raise_error(
+                IndexError, f"Index `{ind}` is out of bounds of register `{register}`."
+            )
         return getattr(qibo.gates, "M")(qubit, register_name=register)
 
     def _get_qubit(self, qubit):
         if isinstance(qubit, openqasm3.ast.QubitDeclaration):
             return qubit.qubit.name, qubit.size.value
         if not isinstance(qubit, openqasm3.ast.Identifier):
-            return self.registers[qubit.name.name][qubit.indices[0][0].value]
+            return self.q_registers[qubit.name.name][qubit.indices[0][0].value]
         else:
             return qubit.name
 

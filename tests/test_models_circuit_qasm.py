@@ -455,7 +455,7 @@ def test_from_qasm_invalid_measurements():
 qreg q[2];
 creg a[2];
 measure q[2] -> a[0];"""
-    with pytest.raises(ValueError):
+    with pytest.raises(IndexError):
         c = Circuit.from_qasm(target)
 
     # Undefined register
@@ -471,7 +471,7 @@ measure q[0] -> b[0];"""
 qreg q[2];
 creg a[2];
 measure q[0] -> a[2];"""
-    with pytest.raises(ValueError):
+    with pytest.raises(IndexError):
         c = Circuit.from_qasm(target)
 
     # Reuse classical register
