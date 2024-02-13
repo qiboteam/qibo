@@ -68,7 +68,7 @@ def test_clifford_to_circuit(backend, nqubits, algorithm):
     if backend.__class__.__name__ == "TensorflowBackend":
         pytest.skip("CliffordBackend not defined for Tensorflow engine.")
 
-    clifford = random_clifford(nqubits, backend=backend)
+    clifford = random_clifford(nqubits, seed=10, backend=backend)
 
     symplectic_matrix_original = Clifford.from_circuit(
         clifford, engine=backend
