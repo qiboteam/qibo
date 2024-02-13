@@ -1,3 +1,4 @@
+import numpy as np
 import openqasm3
 
 import qibo
@@ -14,14 +15,11 @@ class DefinedGate:
     def get_gates(self, qubits, args):
         qubit_map = dict(zip(self.qubits, qubits))
         args_map = dict(zip(self.args, args))
-        # print(qubit_map)
-        # print(args_map)
         gates = []
         for gate in self.gates:
             new_qubits = [qubit_map[q] for q in gate.qubits]
             kwargs = gate.init_kwargs
-            kwargs.pop("trainable", None)
-            new_args = [args_map[arg] for arg in kwargs.values()]
+            new_args = [args_map.get(arg, arg) for arg in kwargs.values()]
             gates.append(gate.__class__(*new_qubits, *new_args))
         return gates
 
@@ -29,6 +27,10 @@ class DefinedGate:
 def _qibo_gate_name(gate):
     if gate == "cx":
         return "CNOT"
+    elif gate == "id":
+        return "I"
+    elif gate == "ccx":
+        return "TOFFOLI"
     else:
         return gate.upper()
 
@@ -42,16 +44,16 @@ class QASMParser:
         self.defined_gates = {}
         self.registers = {}
 
-    def to_circuit(self, qasm_string: str):
+    def to_circuit(self, qasm_string: str, accelerators=None, density_matrix=False):
         parsed = self.parser.parse(qasm_string)
-        gates, measurements = [], []
-        self.defined_gates, self.registers, nqubits = {}, {}, 0
+        gates = []
+        self.defined_gates, self.registers = {}, {}
+        nqubits = 0
         for statement in parsed.statements:
-            # print(f"--------------- Statement -------------\n{statement}\n----------------------------------------------------")
             if isinstance(statement, openqasm3.ast.QuantumGate):
                 [gates.append(gate) for gate in self._get_gate(statement)]
             elif isinstance(statement, openqasm3.ast.QuantumMeasurementStatement):
-                measurements.append(self._get_measurement(statement))
+                gates.append(self._get_measurement(statement))
             elif isinstance(statement, openqasm3.ast.QubitDeclaration):
                 q_name, q_size = self._get_qubit(statement)
                 self.registers.update({q_name: list(range(nqubits, nqubits + q_size))})
@@ -60,15 +62,19 @@ class QASMParser:
                 self._def_gate(statement)
             elif isinstance(statement, openqasm3.ast.Include):
                 continue
+            elif isinstance(statement, openqasm3.ast.ClassicalDeclaration):
+                continue
             else:
                 raise_error(RuntimeError, f"Unsupported {type(statement)} statement.")
-        c = qibo.Circuit(nqubits)
+        c = qibo.Circuit(nqubits, accelerators, density_matrix)
         for gate in gates:
             c.add(gate)
-        print(c.draw())
+        return c
 
-    def _get_measurement(measurement):
-        return getattr(qibo.gates, "M")(measurement.measure.qubit)
+    def _get_measurement(self, measurement):
+        qubit = self._get_qubit(measurement.measure.qubit)
+        register = measurement.target.name.name
+        return getattr(qibo.gates, "M")(qubit, register_name=register)
 
     def _get_qubit(self, qubit):
         if isinstance(qubit, openqasm3.ast.QubitDeclaration):
@@ -79,9 +85,7 @@ class QASMParser:
             return qubit.name
 
     def _get_gate(self, gate):
-        print(gate.name.name)
         qubits = [self._get_qubit(q) for q in gate.qubits]
-        # print(qubits)
         init_args = []
         for arg in gate.arguments:
             arg = self._unroll_expression(arg)
@@ -97,7 +101,14 @@ class QASMParser:
                 )
             ]
         except:
-            gates = self.defined_gates.get(gate.name.name).get_gates(qubits, init_args)
+            try:
+                gates = self.defined_gates.get(gate.name.name).get_gates(
+                    qubits, init_args
+                )
+            except:
+                raise_error(
+                    ValueError, f"Invalid gate declaration at span: {gate.span}"
+                )
         return gates
 
     def _unroll_expression(self, expr):
@@ -119,8 +130,7 @@ class QASMParser:
 
     def _def_gate(self, definition):
         name = definition.name.name
-        print(f"> Def gate {name}")
         qubits = [self._get_qubit(q) for q in definition.qubits]
         args = [self._unroll_expression(expr) for expr in definition.arguments]
-        gates = [self._get_gate(g)[0] for g in definition.body]
+        gates = [g for gate in definition.body for g in self._get_gate(gate)]
         self.defined_gates.update({name: DefinedGate(gates, qubits, args)})
