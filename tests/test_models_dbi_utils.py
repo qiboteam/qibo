@@ -17,7 +17,7 @@ NSTEPS = 5
 
 
 @pytest.mark.parametrize("nqubits", [3, 4, 5])
-def test_generate_Z_operators(nqubits):
+def test_generate_Z_operators(backend, nqubits):
     h0 = random_hermitian(2**nqubits)
     dbi = DoubleBracketIteration(Hamiltonian(nqubits=nqubits, matrix=h0))
     generate_Z = generate_Z_operators(nqubits)
