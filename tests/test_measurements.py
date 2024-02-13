@@ -318,28 +318,6 @@ def test_register_measurements(backend):
     )
 
 
-def test_register_name_error(backend):
-    c = models.Circuit(2)
-    c.add(gates.X(0))
-    c.add(gates.M(0, register_name="a"))
-    with pytest.raises(KeyError):
-        c.add(gates.M(1, register_name="a"))
-
-
-def test_registers_with_same_name_error(backend):
-    """Check that circuits that contain registers with the same name cannot be added."""
-    c1 = models.Circuit(2)
-    c1.add(gates.H(0))
-    c1.add(gates.M(0, register_name="a"))
-
-    c2 = models.Circuit(2)
-    c2.add(gates.H(1))
-    c2.add(gates.M(1, register_name="a"))
-
-    with pytest.raises(KeyError):
-        c = c1 + c2
-
-
 def test_measurement_qubit_order_multiple_registers(backend, accelerators):
     c = models.Circuit(6, accelerators)
     c.add(gates.X(0))

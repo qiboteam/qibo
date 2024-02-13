@@ -23,6 +23,17 @@ files = [
 ]
 
 [[package]]
+name = "antlr4-python3-runtime"
+version = "4.13.1"
+description = "ANTLR 4.13.1 runtime for Python 3"
+optional = false
+python-versions = "*"
+files = [
+    {file = "antlr4-python3-runtime-4.13.1.tar.gz", hash = "sha256:3cd282f5ea7cfb841537fe01f143350fdb1c0b1ce7981443a2fa8513fddb6d1a"},
+    {file = "antlr4_python3_runtime-4.13.1-py3-none-any.whl", hash = "sha256:78ec57aad12c97ac039ca27403ad61cb98aaec8a3f9bb8144f889aa0fa28b943"},
+]
+
+[[package]]
 name = "anyio"
 version = "4.2.0"
 description = "High level compatibility layer for multiple asynchronous event loop implementations"
@@ -2644,6 +2655,10 @@ files = [
     {file = "openqasm3-0.5.0.tar.gz", hash = "sha256:bf8bf4ed098393447e552eaea18b0a34a2429d228477683d6b579348bc17bfc8"},
 ]
 
+[package.dependencies]
+antlr4-python3-runtime = {version = ">=4.7,<4.14", optional = true, markers = "extra == \"parser\""}
+importlib-metadata = {version = "*", optional = true, markers = "python_version < \"3.10\" and extra == \"parser\""}
+
 [package.extras]
 all = ["antlr4-python3-runtime (>=4.7,<4.14)", "importlib-metadata", "pytest (>=6.0)", "pyyaml"]
 parser = ["antlr4-python3-runtime (>=4.7,<4.14)", "importlib-metadata"]
@@ -4970,4 +4985,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "ad3913eac21eb2ce34f0e8851fd9d477ff80bc591edd0a28b8617374296ae390"
+content-hash = "dd520248a66339d30a05d4178c17639c2be02f8d30041d8fe82c29ff59088b32"
