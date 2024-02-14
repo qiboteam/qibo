@@ -25,7 +25,7 @@ class NumpyMatrices:
 
     @cached_property
     def Y(self):
-        return self._cast([[0, -1j], [1j, 0]], dtype=self.dtype)
+        return self._cast([[0j, -1j], [1j, 0j]], dtype=self.dtype)
 
     @cached_property
     def Z(self):
@@ -41,11 +41,11 @@ class NumpyMatrices:
 
     @cached_property
     def S(self):
-        return self._cast([[1, 0], [0, 1j]], dtype=self.dtype)
+        return self._cast([[1 + 0j, 0j], [0j, 1j]], dtype=self.dtype)
 
     @cached_property
     def SDG(self):
-        return self._cast([[1, 0], [0, -1j]], dtype=self.dtype)
+        return self._cast([[1 + 0j, 0j], [0j, -1j]], dtype=self.dtype)
 
     @cached_property
     def T(self):
@@ -132,7 +132,12 @@ class NumpyMatrices:
     @cached_property
     def CY(self):
         return self._cast(
-            [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, -1j], [0, 0, 1j, 0]],
+            [
+                [1 + 0j, 0j, 0j, 0j],
+                [0j, 1 + 0j, 0j, 0j],
+                [0j, 0j, 0j, -1j],
+                [0j, 0j, 1j, 0j],
+            ],
             dtype=self.dtype,
         )
 
@@ -247,10 +252,10 @@ class NumpyMatrices:
     def SiSWAP(self):
         return self._cast(
             [
-                [1, 0, 0, 0],
-                [0, 1 / self.np.sqrt(2), 1j / self.np.sqrt(2), 0],
-                [0, 1j / self.np.sqrt(2), 1 / self.np.sqrt(2), 0],
-                [0, 0, 0, 1],
+                [1 + 0j, 0j, 0j, 0j],
+                [0j, 1 / self.np.sqrt(2) + 0j, 1j / self.np.sqrt(2), 0j],
+                [0j, 1j / self.np.sqrt(2), 1 / self.np.sqrt(2) + 0j, 0j],
+                [0j, 0j, 0j, 1 + 0j],
             ],
             dtype=self.dtype,
         )
@@ -259,10 +264,10 @@ class NumpyMatrices:
     def SiSWAPDG(self):
         return self._cast(
             [
-                [1, 0, 0, 0],
-                [0, 1 / self.np.sqrt(2), -1j / self.np.sqrt(2), 0],
-                [0, -1j / self.np.sqrt(2), 1 / self.np.sqrt(2), 0],
-                [0, 0, 0, 1],
+                [1 + 0j, 0j, 0j, 0j],
+                [0j, 1 / self.np.sqrt(2) + 0j, -1j / self.np.sqrt(2), 0j],
+                [0j, -1j / self.np.sqrt(2), 1 / self.np.sqrt(2) + 0j, 0j],
+                [0j, 0j, 0j, 1 + 0j],
             ],
             dtype=self.dtype,
         )
@@ -408,7 +413,12 @@ class NumpyMatrices:
     @cached_property
     def ECR(self):
         return self._cast(
-            [[0, 0, 1, 1j], [0, 0, 1j, 1], [1, -1j, 0, 0], [-1j, 1, 0, 0]],
+            [
+                [0j, 0j, 1 + 0j, 1j],
+                [0j, 0j, 1j, 1 + 0j],
+                [1 + 0j, -1j, 0j, 0j],
+                [-1j, 1 + 0j, 0j, 0j],
+            ],
             dtype=self.dtype,
         ) / self.np.sqrt(2)
 
