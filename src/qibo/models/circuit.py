@@ -701,7 +701,7 @@ class Circuit:
                 registers[m.register_name] = m.target_qubits
             else:
                 registers[m.register_name] += m.target_qubits
-        return {name: tuple(set(qubits)) for name, qubits in registers.items()}
+        return {name: qubits for name, qubits in registers.items()}
 
     @property
     def ngates(self) -> int:

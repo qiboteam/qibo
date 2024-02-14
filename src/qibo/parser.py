@@ -68,12 +68,13 @@ class QASMParser:
             elif isinstance(statement, openqasm3.ast.ClassicalDeclaration):
                 name = statement.identifier.name
                 size = statement.type.size.value
-                self.c_registers.update({name: size})
+                self.c_registers.update({name: list(range(size))})
             else:
                 raise_error(RuntimeError, f"Unsupported {type(statement)} statement.")
         c = qibo.Circuit(nqubits, accelerators, density_matrix)
         for gate in gates:
             c.add(gate)
+        self._reorder_registers(c.measurements)
         return c
 
     def _get_measurement(self, measurement):
@@ -82,10 +83,11 @@ class QASMParser:
         if register not in self.c_registers:
             raise_error(ValueError, f"Undefined measurement register `{register}`.")
         ind = measurement.target.indices[0][0].value
-        if ind >= self.c_registers[register]:
+        if ind >= len(self.c_registers[register]):
             raise_error(
                 IndexError, f"Index `{ind}` is out of bounds of register `{register}`."
             )
+        self.c_registers[register][ind] = qubit
         return getattr(qibo.gates, "M")(qubit, register_name=register)
 
     def _get_qubit(self, qubit):
@@ -146,3 +148,7 @@ class QASMParser:
         args = [self._unroll_expression(expr) for expr in definition.arguments]
         gates = [g for gate in definition.body for g in self._get_gate(gate)]
         self.defined_gates.update({name: DefinedGate(gates, qubits, args)})
+
+    def _reorder_registers(self, measurements):
+        for m in measurements:
+            m.target_qubits = [self.c_registers[m.register_name].pop(0)]
