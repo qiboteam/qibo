@@ -450,3 +450,10 @@ def test_measurement_basis_list_error(backend):
     c = models.Circuit(4)
     with pytest.raises(ValueError):
         c.add(gates.M(0, 1, 2, 3, basis=[gates.X, gates.Z, gates.X]))
+
+
+def test_measurement_same_qubit_different_registers_error(backend):
+    c = models.Circuit(4)
+    c.add(gates.M(0, 1, 3, register_name="a"))
+    with pytest.raises(KeyError):
+        c.add(gates.M(1, 2, 3, register_name="a"))
