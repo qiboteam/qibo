@@ -348,6 +348,7 @@ def test_restrict_qubits(router_algorithm):
     )
     assert_connectivity(restricted_connectivity, routed_circ)
     assert_placement(routed_circ, final_layout, connectivity=restricted_connectivity)
+    assert routed_circ.wire_names == ["q0", "q2", "q3"]
 
 
 def test_star_error_multi_qubit():
