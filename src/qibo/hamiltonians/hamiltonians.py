@@ -136,22 +136,13 @@ class Hamiltonian(AbstractHamiltonian):
             + f"value for state of type {type(state)}",
         )
 
-    def expectation_from_samples(self, freq, qubit_map=None):
-        obs = self.matrix
-        if np.count_nonzero(obs - np.diag(np.diagonal(obs))) != 0:
-            raise_error(NotImplementedError, "Observable is not diagonal.")
-        keys = list(freq.keys())
-        if qubit_map is None:
-            qubit_map = list(range(int(np.log2(len(obs)))))
-        counts = np.array(list(freq.values())) / sum(freq.values())
-        expval = 0
-        size = len(qubit_map)
-        for j, k in enumerate(keys):
-            index = 0
-            for i in qubit_map:
-                index += int(k[qubit_map.index(i)]) * 2 ** (size - 1 - i)
-            expval += obs[index, index] * counts[j]
-        return np.real(expval)
+    def expectation_from_samples(
+        self, circuit, initial_state=None, nshots=1000, qubit_map=None
+    ):
+        """Compute expectation value using a collected sample of frequencies."""
+        return self.backend.calculate_expectation_from_samples(
+            self.matrix, circuit, initial_state, nshots, qubit_map
+        )
 
     def eye(self, dim: Optional[int] = None):
         """Generate Identity matrix with dimension ``dim``"""

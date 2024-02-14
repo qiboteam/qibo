@@ -14,6 +14,7 @@ class TensorflowMatrices(NumpyMatrices):
 
     def __init__(self, dtype):
         super().__init__(dtype)
+
         import tensorflow as tf  # pylint: disable=import-error
         import tensorflow.experimental.numpy as tnp  # pylint: disable=import-error
 
@@ -93,6 +94,9 @@ class TensorflowBackend(NumpyBackend):
 
     def compile(self, func):
         return self.tf.function(func)
+
+    def customize_gradient(self, func):
+        return self.tf.custom_gradient(func)
 
     def zero_state(self, nqubits):
         idx = self.tf.constant([[0]], dtype="int32")
@@ -201,6 +205,48 @@ class TensorflowBackend(NumpyBackend):
                 ValueError,
                 "Cannot multiply Hamiltonian with " "rank-{} tensor.".format(rank),
             )
+
+    def _calculate_expectation_from_samples(
+        self, obs, circuit, initial_state, nshots, qubit_map
+    ):
+        if self.np.count_nonzero(obs - self.np.diag(self.np.diagonal(obs))) != 0:
+            raise_error(NotImplementedError, "Observable is not diagonal.")
+        frequencies = self.execute_circuit(circuit, initial_state, nshots).frequencies()
+        keys = list(frequencies.keys())
+        if qubit_map is None:
+            qubit_map = list(range(int(self.np.log2(len(obs)))))
+        counts = self.np.array(list(frequencies.values())) / sum(frequencies.values())
+        expval = 0
+        size = len(qubit_map)
+        for j, k in enumerate(keys):
+            index = 0
+            for i in qubit_map:
+                index += int(k[qubit_map.index(i)]) * 2 ** (size - 1 - i)
+
+            expval += obs[index, index] * counts[j]
+        self.tf.print(expval)
+        return self.np.real(expval)
+
+    def calculate_expectation_from_samples(
+        self, obs, circuit, initial_state, nshots, qubit_map
+    ):
+        params = self.tf.Variable(circuit.get_parameters())
+
+        @self.tf.custom_gradient
+        def expectation_with_custom_gradient(params):
+            # dummy gradient for checking
+            def grad(upstream):
+                grads_p = self.tf.zeros_like(params)
+                return grads_p * upstream
+
+            return (
+                self._calculate_expectation_from_samples(
+                    obs, circuit, initial_state, nshots, qubit_map
+                ),
+                grad,
+            )
+
+        return expectation_with_custom_gradient(params)
 
     def test_regressions(self, name):
         if name == "test_measurementresult_apply_bitflips":

@@ -758,6 +758,25 @@ class NumpyBackend(Backend):
             ev = ev / norm
         return ev
 
+    def calculate_expectation_from_samples(
+        self, obs, circuit, initial_state, nshots, qubit_map
+    ):
+        if self.np.count_nonzero(obs - self.np.diag(self.np.diagonal(obs))) != 0:
+            raise_error(NotImplementedError, "Observable is not diagonal.")
+        frequencies = self.execute_circuit(circuit, initial_state, nshots).frequencies()
+        keys = list(frequencies.keys())
+        if qubit_map is None:
+            qubit_map = list(range(int(self.np.log2(len(obs)))))
+        counts = self.np.array(list(frequencies.values())) / sum(frequencies.values())
+        expval = 0
+        size = len(qubit_map)
+        for j, k in enumerate(keys):
+            index = 0
+            for i in qubit_map:
+                index += int(k[qubit_map.index(i)]) * 2 ** (size - 1 - i)
+            expval += obs[index, index] * counts[j]
+        return self.np.real(expval)
+
     def calculate_hamiltonian_matrix_product(self, matrix1, matrix2):
         return self.np.dot(matrix1, matrix2)
 
