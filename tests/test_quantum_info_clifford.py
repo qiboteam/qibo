@@ -72,15 +72,16 @@ def test_clifford_from_circuit(backend, measurement):
         backend.assert_allclose(obj.probabilities(), result.probabilities())
 
 
+@pytest.mark.parametrize("seed", [1, 10])
 @pytest.mark.parametrize("algorithm", ["AG04", "BM20"])
 @pytest.mark.parametrize("nqubits", [1, 2, 3, 10, 50])
-def test_clifford_to_circuit(backend, nqubits, algorithm):
+def test_clifford_to_circuit(backend, nqubits, algorithm, seed):
     if backend.__class__.__name__ == "TensorflowBackend":
         pytest.skip("CliffordBackend not defined for Tensorflow engine.")
     elif backend.__class__.__name__ == "PyTorchBackend":
         pytest.skip("CliffordBackend not defined for PyTorch engine.")
 
-    clifford = random_clifford(nqubits, backend=backend)
+    clifford = random_clifford(nqubits, seed=seed, backend=backend)
 
     symplectic_matrix_original = Clifford.from_circuit(
         clifford, engine=backend
