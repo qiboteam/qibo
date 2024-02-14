@@ -77,6 +77,7 @@ class TensorflowSGD(Optimizer):
         vparams = self.backend.tf.Variable(
             initial_parameters, dtype=self.backend.tf.float64
         )
+        print(vparams)
         loss_history = []
 
         def sgd_step():
