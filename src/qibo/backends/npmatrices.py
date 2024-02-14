@@ -163,6 +163,7 @@ class NumpyMatrices:
 
     @cached_property
     def CSXDG(self):
+        # return self.np.conj(self.CSX)
         a = (1 - 1j) / 2
         b = self.np.conj(a)
         return self._cast(
