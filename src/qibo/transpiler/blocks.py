@@ -65,8 +65,8 @@ class Block:
             (:class:`qibo.transpiler.blocks.Block`): fusion of the two input blocks.
         """
         if not self.qubits == block.qubits:
-            raise BlockingError(
-                "In order to fuse two blocks their qubits must coincide."
+            raise_error(
+                BlockingError, "In order to fuse two blocks their qubits must coincide."
             )
         return Block(qubits=self.qubits, gates=self.gates + block.gates, name=name)
 
@@ -200,12 +200,11 @@ def block_decomposition(circuit: Circuit, fuse: bool = True):
         remove_list = [first_block]
         if len(initial_blocks[1:]) > 0:
             for second_block in initial_blocks[1:]:
-                try:
+                if second_block.qubits == first_block.qubits:
                     first_block = first_block.fuse(second_block)
                     remove_list.append(second_block)
-                except BlockingError:
-                    if not first_block.commute(second_block):
-                        break
+                elif not first_block.commute(second_block):
+                    break
         blocks.append(first_block)
         _remove_gates(initial_blocks, remove_list)
 
