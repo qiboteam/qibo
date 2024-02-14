@@ -246,12 +246,12 @@ class NumpyMatrices:
     def iSWAP(self):
         return self._cast(
             [
-                [1+0j, 0j, 0j, 0j], 
-                [0j, 0j, 1j, 0j], 
-                [0j, 1j, 0j, 0j], 
-                [0j, 0j, 0j, 1+0j],
-            ], 
-            dtype=self.dtype
+                [1 + 0j, 0j, 0j, 0j],
+                [0j, 0j, 1j, 0j],
+                [0j, 1j, 0j, 0j],
+                [0j, 0j, 0j, 1 + 0j],
+            ],
+            dtype=self.dtype,
         )
 
     @cached_property
