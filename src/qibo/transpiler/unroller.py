@@ -85,7 +85,7 @@ class Unroller:
         Returns:
             (:class:`qibo.models.circuit.Circuit`): equivalent circuit with native gates.
         """
-        translated_circuit = circuit.__class__(circuit.nqubits)
+        translated_circuit = Circuit(**circuit.init_kwargs)
         for gate in circuit.queue:
             translated_circuit.add(
                 translate_gate(

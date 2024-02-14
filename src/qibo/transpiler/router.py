@@ -379,7 +379,9 @@ class ShortestPaths(Router):
             else:
                 self._find_new_mapping()
 
-        routed_circuit = self.circuit.routed_circuit(circuit_kwargs=circuit.init_kwargs)
+        circuit_kwargs = circuit.init_kwargs
+        circuit_kwargs["wire_names"] = list(initial_layout.keys())
+        routed_circuit = self.circuit.routed_circuit(circuit_kwargs=circuit_kwargs)
         if self._final_measurements is not None:
             routed_circuit = self._append_final_measurements(
                 routed_circuit=routed_circuit
@@ -658,7 +660,9 @@ class Sabre(Router):
             else:
                 self._find_new_mapping()
 
-        routed_circuit = self.circuit.routed_circuit(circuit_kwargs=circuit.init_kwargs)
+        circuit_kwargs = circuit.init_kwargs
+        circuit_kwargs["wire_names"] = list(initial_layout.keys())
+        routed_circuit = self.circuit.routed_circuit(circuit_kwargs=circuit_kwargs)
         if self._final_measurements is not None:
             routed_circuit = self._append_final_measurements(
                 routed_circuit=routed_circuit
