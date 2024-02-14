@@ -271,7 +271,11 @@ class SX(Gate):
         being the :class:`qibo.gates.RX` gate. More precisely,
         :math:`\\sqrt{X} = e^{i \\pi / 4} \\, \\text{RX}(\\pi / 2)`.
         """
-        return [RX(self.init_args[0], np.pi / 2, trainable=False)]
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
 
     def _dagger(self):
         """"""
@@ -314,7 +318,11 @@ class SXDG(Gate):
         being the :class:`qibo.gates.RX` gate. More precisely,
         :math:`(\\sqrt{X})^{\\dagger} = e^{-i \\pi / 4} \\, \\text{RX}(-\\pi / 2)`.
         """
-        return [RX(self.init_args[0], -np.pi / 2, trainable=False)]
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
 
     def _dagger(self):
         """"""
@@ -892,14 +900,11 @@ class U3(_Un_):
         where :math:`\\text{RZ}` and :math:`\\sqrt{X}` are, respectively,
         :class:`qibo.gates.RZ` and :class`qibo.gates.SX`.
         """
-        q = self.init_args[0]
-        return [
-            RZ(q, self.init_kwargs["lam"]),
-            SX(q),
-            RZ(q, self.init_kwargs["theta"] + math.pi),
-            SX(q),
-            RZ(q, self.init_kwargs["phi"] + math.pi),
-        ]
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
 
 
 class U1q(_Un_):
@@ -1020,8 +1025,11 @@ class CY(Gate):
         the target qubit, followed by :class:`qibo.gates.CNOT`, followed
         by a :class:`qibo.gates.S` in the target qubit.
         """
-        q0, q1 = self.init_args
-        return [SDG(q1), CNOT(q0, q1), S(q1)]
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
 
 
 class CZ(Gate):
@@ -1063,8 +1071,11 @@ class CZ(Gate):
         the target qubit, followed by :class:`qibo.gates.CNOT`, followed
         by another :class:`qibo.gates.H` in the target qubit
         """
-        q0, q1 = self.init_args
-        return [H(q1), CNOT(q0, q1), H(q1)]
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
 
 
 class CSX(Gate):
@@ -1100,8 +1111,11 @@ class CSX(Gate):
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
         """"""
-        q0, q1 = self.init_args
-        return [H(q1), CU1(q0, q1, np.pi / 2), H(q1)]
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
 
     def _dagger(self):
         """"""
@@ -1141,8 +1155,11 @@ class CSXDG(Gate):
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
         """"""
-        q0, q1 = self.init_args
-        return [H(q1), CU1(q0, q1, -np.pi / 2), H(q1)]
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
 
     def _dagger(self):
         """"""
@@ -1901,9 +1918,11 @@ class RZX(_Rnn_):
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
         """"""
-        q0, q1 = self.target_qubits
-        theta = self.init_kwargs["theta"]
-        return [H(q1), CNOT(q0, q1), RZ(q1, theta), CNOT(q0, q1), H(q1)]
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
 
 
 class RXXYY(_Rnn_):
@@ -1942,22 +1961,11 @@ class RXXYY(_Rnn_):
         the original gate due to a phase difference in
         :math:`\\left(\\sqrt{X}\\right)^{\\dagger}`.
         """
-        q0, q1 = self.target_qubits
-        theta = self.init_kwargs["theta"]
-        return [
-            RZ(q1, -np.pi / 2),
-            S(q0),
-            SX(q1),
-            RZ(q1, np.pi / 2),
-            CNOT(q1, q0),
-            RY(q0, -theta / 2),
-            RY(q1, -theta / 2),
-            CNOT(q1, q0),
-            SDG(q0),
-            RZ(q1, -np.pi / 2),
-            SX(q1).dagger(),
-            RZ(q1, np.pi / 2),
-        ]
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
 
 
 class MS(ParametrizedGate):
@@ -2062,18 +2070,13 @@ class GIVENS(ParametrizedGate):
         return self.__class__(*self.target_qubits, -self.parameters[0])
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
-        """Decomposition of Givens gate according to `ArXiv:2106.13839
-        <https://arxiv.org/abs/2106.13839>`_."""
-        q0, q1 = self.target_qubits
-        theta = self.init_kwargs["theta"]
-        return [
-            CNOT(q0, q1),
-            RY(q0, theta),
-            CNOT(q1, q0),
-            RY(q0, -theta),
-            CNOT(q1, q0),
-            CNOT(q0, q1),
-        ]
+        """Decomposition of RBS gate according to `ArXiv:2109.09685
+        <https://arxiv.org/abs/2109.09685>`_."""
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
 
 
 class RBS(ParametrizedGate):
@@ -2123,18 +2126,11 @@ class RBS(ParametrizedGate):
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
         """Decomposition of RBS gate according to `ArXiv:2109.09685
         <https://arxiv.org/abs/2109.09685>`_."""
-        q0, q1 = self.target_qubits
-        theta = self.init_kwargs["theta"]
-        return [
-            H(q0),
-            CNOT(q0, q1),
-            H(q1),
-            RY(q0, theta),
-            RY(q1, -theta),
-            H(q1),
-            CNOT(q0, q1),
-            H(q0),
-        ]
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
+
+        return standard_decompositions(self)
 
 
 class ECR(Gate):
@@ -2175,9 +2171,11 @@ class ECR(Gate):
             \\textup{ECR} = e^{i 7 \\pi / 4} \\, S(q_{0}) \\, \\sqrt{X}(q_{1}) \\,
                 \\textup{CNOT}(q_{0}, q_{1}) \\, X(q_{0})
         """
+        from qibo.transpiler.decompositions import (  # pylint: disable=C0415
+            standard_decompositions,
+        )
 
-        q0, q1 = self.target_qubits
-        return [S(q0), SX(q1), CNOT(q0, q1), X(q0)]
+        return standard_decompositions(self)
 
 
 class TOFFOLI(Gate):
