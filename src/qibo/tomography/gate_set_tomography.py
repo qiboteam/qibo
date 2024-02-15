@@ -3,24 +3,31 @@ from itertools import product
 import numpy as np
 
 from qibo import Circuit, gates, symbols
+from qibo.config import raise_error
 from qibo.backends import GlobalBackend
 from qibo.hamiltonians import SymbolicHamiltonian
 
 
 def prepare_states(k, nqubits):
-    """Prepares a quantum circuit in a particular state indexed by k.
+    """Prepares a quantum circuit in a specific state indexed by `k`.
 
         Args:
         k (int): The index of the state to be prepared.
-        nqubits (int): Number of qubits in the circuit
+            For a single qubit, \(k \in \{0, 1, 2, 3\} \equiv 
+                \{| 0 \rangle \langle 0 |,
+                  | 1 \rangle \langle 1 |,
+                  | + \rangle \langle + |,
+                  | y+ \rangle \langle y+ | \).
+            For two qubits, \(k \in \{0, 1, 2, 3\}^{\otimes 2}\).
+        nqubits (int): Number of qubits in the circuit. 
 
     Returns:
-        circuit (:class:`qibo.models.Circuit`): Qibo circuit.
+        circuit (:class:`qibo.models.Circuit`): Circuit prepared in the specified state.
     """
 
-    if nqubits != 1 and nqubits != 2:
-        raise ValueError(
-            f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2."
+    if not nqubits in (1, 2):
+        raise_error(
+            ValueError, f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2."
         )
 
     gates_list = [(gates.I,), (gates.X,), (gates.H,), (gates.H, gates.S)]
@@ -33,20 +40,22 @@ def prepare_states(k, nqubits):
 
 
 def measurement_basis(j, circ):
-    """Implements a measurement basis for circuit.
+    """Implements a measurement basis for circuit indexed by `j`.
 
         Args:
-        circuit (:class:`qibo.models.Circuit`): Qibo circuit.
         j (int): The index of the measurement basis.
+            For a single qubit, \(j \in \{0, 1, 2, 3\} \equiv \{I, X, Y, Z\}\).
+            For two qubits, \(j \in \{0, 1, 2, 3\}^{\otimes 2}\).
+        circuit (:class:`qibo.models.Circuit`): Circuit without measurement basis.
 
     Returns:
-        circuit (:class:`qibo.models.Circuit`): Qibo circuit.
+        circuit (:class:`qibo.models.Circuit`): Circuit with measurement basis.
     """
 
     nqubits = circ.nqubits
-    if nqubits != 1 and nqubits != 2:
-        raise ValueError(
-            f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2."
+    if not nqubits in (1, 2):
+        raise_error(
+            ValueError, f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2."
         )
 
     meas_list = [gates.Z, gates.X, gates.Y, gates.Z]
@@ -60,7 +69,7 @@ def measurement_basis(j, circ):
 
 
 def reset_register(circuit, invert_register):
-    """Returns an inverse circuit of the selected register.
+    """Returns an inverse circuit of the selected register to prepare the zero state \(|0\rangle\).
         One can then add inverse_circuit to the original circuit by addition:
             circ_with_inverse = circ.copy()
             circ_with_inverse.add(inverse_circuit.on_qubits(invert_register))
@@ -72,6 +81,7 @@ def reset_register(circuit, invert_register):
             'sp_0' (qubit 0);
             'sp_1' (qubit 1); or
             'sp_t' (both qubits)
+            where 'sp' is an abbreviation for state_preparation.
     Returns:
         inverse_circuit (:class:`qibo.models.Circuit`): Inverse of the input circuit's register.
     """
@@ -84,20 +94,16 @@ def reset_register(circuit, invert_register):
 
         new_circ = Circuit(1)
         for data in circuit.raw["queue"]:
-            theta = data.get("init_kwargs", {}).get("theta", None)
+            init_kwargs = data.get("init_kwargs", {})
             if data["_target_qubits"][0] == register_to_reset:
-                if theta is None:
-                    new_circ.add(getattr(gates, data["_class"])(0))
-                else:
-                    new_circ.add(
-                        getattr(gates, data["_class"])(0, theta)
-                    )  # <-- Not covered in tests. Thinking about future proofing when we need to invert a random gate that has theta parameter.
+                new_circ.add(getattr(gates, data["_class"])(0, **init_kwargs))
 
     elif invert_register == "sp_t":
         new_circ = circuit.copy()
 
     else:
-        raise NameError(
+        raise_error(
+            NameError,
             f"{invert_register} not recognized. Input "
             "sp_0"
             " to reset qubit 0, "
@@ -107,9 +113,7 @@ def reset_register(circuit, invert_register):
             " to reset both qubits."
         )
 
-    inverse_circuit = new_circ.invert()
-
-    return inverse_circuit
+    return new_circ.invert()
 
 
 def GST_execute_circuit(circuit, k, j, nshots=int(1e4), backend=None):
@@ -124,13 +128,14 @@ def GST_execute_circuit(circuit, k, j, nshots=int(1e4), backend=None):
         j (int): The index of the measurement basis.
         nshots (int, optional): Number of shots to execute circuit with.
     Returns:
-        numpy.float: Expectation value given by either Tr(Q_j rho_k) or Tr(Q_j O_l rho_k).
+        numpy.float: Expectation value given by either :math:`\\text{tr}(Q_j rho_k) \\` or
+            :math:`\\Tr(Q_j O_l rho_k) \\`.
     """
 
     nqubits = circuit.nqubits
-    if nqubits != 1 and nqubits != 2:
-        raise ValueError(
-            f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2."
+    if not nqubits in (1, 2):
+        raise_error(
+            ValueError, f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2."
         )
 
     else:
@@ -160,7 +165,7 @@ def execute_GST(
     noise_model=None,
     backend=None,
 ):
-    """Runs gate set tomography for a 1 or 2 qubit gate/circuit.
+    """Runs gate set tomography for a 1 or 2 qubit gate.
 
         Args:
         nshots (int, optional): Number of shots used in Gate Set Tomography.
@@ -176,9 +181,9 @@ def execute_GST(
     """
 
     # Check if gate is 1 or 2 qubit gate.
-    if nqubits != 1 and nqubits != 2:
-        raise ValueError(
-            f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2."
+    if not nqubits in (1, 2):
+        raise_error(
+            ValueError, f"nqubits given as {nqubits}. nqubits needs to be either 1 or 2."
         )
 
     # Check if invert_register has the correct string.
@@ -188,7 +193,7 @@ def execute_GST(
             and invert_register != "sp_1"
             and invert_register != "sp_t"
         ):
-            raise NameError(
+            raise_error(NameError,
                 f"{invert_register} not recognized. Input "
                 "sp_0"
                 " to reset qubit 0, "
@@ -202,12 +207,17 @@ def execute_GST(
         backend = GlobalBackend()
 
     if gate is not None:
-        qb_gate = len(gate.qubits)
-        if nqubits != qb_gate:
-            raise ValueError(
+        # qb_gate = len(gate.qubits)
+        # if nqubits != qb_gate:
+        #     raise_error(ValueError, f"Mismatched inputs: nqubits given as {nqubits}. {gate} is a {qb_gate}-qubit gate."
+        #     )
+        # gate = gate.__class__(*list(range(qb_gate)), **gate.init_kwargs)
+        if nqubits != len(gate.qubits):
+            raise_error(
+                ValueError,
                 f"Mismatched inputs: nqubits given as {nqubits}. {gate} is a {qb_gate}-qubit gate."
             )
-        gate = gate.__class__(*list(range(qb_gate)), **gate.init_kwargs)
+        gate = gate.__class__(*gate.qubits, **gate.init_kwargs)
 
     # GST for empty circuit or with gates
     matrix_jk = np.zeros((4**nqubits, 4**nqubits))
