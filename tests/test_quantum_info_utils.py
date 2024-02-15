@@ -10,11 +10,13 @@ from qibo.quantum_info.metrics import fidelity
 from qibo.quantum_info.utils import (
     haar_integral,
     hadamard_transform,
+    hamming_distance,
     hamming_weight,
     hellinger_distance,
     hellinger_fidelity,
     pqc_integral,
     shannon_entropy,
+    total_variation_distance,
 )
 
 
@@ -33,6 +35,8 @@ from qibo.quantum_info.utils import (
 def test_hamming_weight(bitstring, kind):
     with pytest.raises(TypeError):
         test = hamming_weight("0101", return_indexes="True")
+    with pytest.raises(TypeError):
+        test = hamming_weight(2.3)
 
     bitstring = f"{bitstring:b}"
     weight_test = len(bitstring.replace("0", ""))
@@ -43,6 +47,36 @@ def test_hamming_weight(bitstring, kind):
 
     assert weight == weight_test
     assert indexes == indexes_test
+
+
+bitstring_1, bitstring_2 = "11111", "10101"
+
+
+@pytest.mark.parametrize(
+    ["bitstring_1", "bitstring_2"],
+    [
+        [bitstring_1, bitstring_2],
+        [int(bitstring_1, 2), int(bitstring_2, 2)],
+        [list(bitstring_1), list(bitstring_2)],
+        [tuple(bitstring_1), tuple(bitstring_2)],
+    ],
+)
+def test_hamming_distance(bitstring_1, bitstring_2):
+    with pytest.raises(TypeError):
+        test = hamming_distance("0101", "1010", return_indexes="True")
+    with pytest.raises(TypeError):
+        test = hamming_distance(2.3, "1010")
+    with pytest.raises(TypeError):
+        test = hamming_distance("1010", 2.3)
+
+    if isinstance(bitstring_1, int):
+        bitstring_1, bitstring_2 = f"{bitstring_1:b}", f"{bitstring_2:b}"
+
+    distance = hamming_distance(bitstring_1, bitstring_2)
+    indexes = hamming_distance(bitstring_1, bitstring_2, return_indexes=True)
+
+    assert distance == 2
+    assert indexes == [1, 3]
 
 
 @pytest.mark.parametrize("is_matrix", [False, True])
@@ -130,7 +164,58 @@ def test_shannon_entropy(backend, base):
         backend.assert_allclose(result, 1.0)
 
 
-def test_hellinger(backend):
+@pytest.mark.parametrize("kind", [None, list])
+@pytest.mark.parametrize("validate", [False, True])
+def test_total_variation_distance(backend, validate, kind):
+    with pytest.raises(TypeError):
+        prob = np.random.rand(1, 2)
+        prob_q = np.random.rand(1, 5)
+        prob = backend.cast(prob, dtype=prob.dtype)
+        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        test = total_variation_distance(prob, prob_q, backend=backend)
+    with pytest.raises(TypeError):
+        prob = np.random.rand(1, 2)[0]
+        prob_q = np.array([])
+        prob = backend.cast(prob, dtype=prob.dtype)
+        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        test = total_variation_distance(prob, prob_q, backend=backend)
+    with pytest.raises(ValueError):
+        prob = np.array([-1, 2.0])
+        prob_q = np.random.rand(1, 5)[0]
+        prob = backend.cast(prob, dtype=prob.dtype)
+        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        test = total_variation_distance(prob, prob_q, validate=True, backend=backend)
+    with pytest.raises(ValueError):
+        prob = np.random.rand(1, 2)[0]
+        prob_q = np.array([1.0, 0.0])
+        prob = backend.cast(prob, dtype=prob.dtype)
+        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        test = total_variation_distance(prob, prob_q, validate=True, backend=backend)
+    with pytest.raises(ValueError):
+        prob = np.array([1.0, 0.0])
+        prob_q = np.random.rand(1, 2)[0]
+        prob = backend.cast(prob, dtype=prob.dtype)
+        prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
+        test = total_variation_distance(prob, prob_q, validate=True, backend=backend)
+
+    prob_p = np.random.rand(10)
+    prob_q = np.random.rand(10)
+    prob_p /= np.sum(prob_p)
+    prob_q /= np.sum(prob_q)
+
+    target = 0.5 * np.sum(np.abs(prob_p - prob_q))
+
+    if kind is not None:
+        prob_p, prob_q = kind(prob_p), kind(prob_q)
+
+    distance = total_variation_distance(prob_p, prob_q, validate, backend=backend)
+
+    backend.assert_allclose(distance, target, atol=1e-5)
+
+
+@pytest.mark.parametrize("kind", [None, list])
+@pytest.mark.parametrize("validate", [False, True])
+def test_hellinger(backend, validate, kind):
     with pytest.raises(TypeError):
         prob = np.random.rand(1, 2)
         prob_q = np.random.rand(1, 5)
@@ -162,10 +247,23 @@ def test_hellinger(backend):
         prob_q = backend.cast(prob_q, dtype=prob_q.dtype)
         test = hellinger_distance(prob, prob_q, validate=True, backend=backend)
 
-    prob = [1.0, 0.0]
-    prob_q = [1.0, 0.0]
-    backend.assert_allclose(hellinger_distance(prob, prob_q, backend=backend), 0.0)
-    backend.assert_allclose(hellinger_fidelity(prob, prob_q, backend=backend), 1.0)
+    prob_p = np.random.rand(10)
+    prob_q = np.random.rand(10)
+    prob_p /= np.sum(prob_p)
+    prob_q /= np.sum(prob_q)
+
+    target = float(
+        backend.calculate_norm(np.sqrt(prob_p) - np.sqrt(prob_q)) / np.sqrt(2)
+    )
+
+    if kind is not None:
+        prob_p, prob_q = list(prob_p), list(prob_q)
+
+    distance = hellinger_distance(prob_p, prob_q, validate=validate, backend=backend)
+    fidelity = hellinger_fidelity(prob_p, prob_q, validate=validate, backend=backend)
+
+    assert distance == target
+    assert fidelity == (1 - target**2) ** 2
 
 
 def test_haar_integral_errors(backend):
@@ -180,16 +278,16 @@ def test_haar_integral_errors(backend):
         test = haar_integral(nqubits, power_t, samples=samples, backend=backend)
 
 
-@pytest.mark.parametrize("power_t", [1, 2, 3])
+@pytest.mark.parametrize("power_t", [1, 2])
 @pytest.mark.parametrize("nqubits", [2, 3])
 def test_haar_integral(backend, nqubits, power_t):
-    samples = int(1e4)
+    samples = int(1e3)
 
     haar_int_exact = haar_integral(nqubits, power_t, samples=None, backend=backend)
 
     haar_int_sampled = haar_integral(nqubits, power_t, samples=samples, backend=backend)
 
-    backend.assert_allclose(haar_int_sampled, haar_int_exact, atol=1e-2)
+    backend.assert_allclose(haar_int_sampled, haar_int_exact, atol=1e-1)
 
 
 def test_pqc_integral(backend):

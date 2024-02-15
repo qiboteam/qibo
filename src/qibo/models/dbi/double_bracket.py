@@ -7,7 +7,6 @@ from typing import Optional
 import hyperopt
 import numpy as np
 
-from qibo.config import raise_error
 from qibo.hamiltonians import Hamiltonian
 
 
@@ -89,7 +88,7 @@ class DoubleBracketIteration:
             )
         elif mode is DoubleBracketGeneratorType.group_commutator:
             if d is None:
-                raise_error(ValueError, f"Cannot use group_commutator with matrix {d}")
+                d = self.diagonal_h_matrix
             operator = (
                 self.h.exp(-step)
                 @ self.backend.calculate_matrix_exp(-step, d)

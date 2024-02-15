@@ -878,7 +878,7 @@ def gate_error(channel, target=None, check_unitary: bool = False, backend=None):
     return error
 
 
-def diamond_norm(channel, target=None, **kwargs):
+def diamond_norm(channel, target=None, backend=None, **kwargs):
     """Calculates the diamond norm :math:`\\|\\mathcal{E}\\|_{\\diamond}` of
     ``channel`` :math:`\\mathcal{E}`, which is given by
 
@@ -938,7 +938,8 @@ def diamond_norm(channel, target=None, **kwargs):
 
     # `CVXPY` only works with `numpy`, so this function has to
     # convert any channel to the `numpy` backend by default
-    backend = GlobalBackend()
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
     channel = backend.to_numpy(channel)
 
     channel = np.transpose(channel)
@@ -1048,7 +1049,7 @@ def meyer_wallach_entanglement(circuit, backend=None):
     return entanglement
 
 
-def entangling_capability(circuit, samples: int, backend=None):
+def entangling_capability(circuit, samples: int, seed=None, backend=None):
     """Returns the entangling capability :math:`\\text{Ent}` of a parametrized
     circuit, which is average Meyer-Wallach entanglement Q of the circuit, i.e.
 
@@ -1060,6 +1061,9 @@ def entangling_capability(circuit, samples: int, backend=None):
     Args:
         circuit (:class:`qibo.models.Circuit`): Parametrized circuit.
         samples (int): number of samples to estimate the integral.
+        seed (int or :class:`numpy.random.Generator`, optional): Either a generator of random
+            numbers or a fixed seed to initialize a generator. If ``None``, initializes
+            a generator with a random seed. Default: ``None``.
         backend (:class:`qibo.backends.abstract.Backend`, optional): backend to be used
             in the execution. If ``None``, it uses :class:`qibo.backends.GlobalBackend`.
             Defaults to ``None``.
@@ -1073,12 +1077,25 @@ def entangling_capability(circuit, samples: int, backend=None):
             TypeError, f"samples must be type int, but it is type {type(samples)}."
         )
 
+    if (
+        seed is not None
+        and not isinstance(seed, int)
+        and not isinstance(seed, np.random.Generator)
+    ):
+        raise_error(
+            TypeError, "seed must be either type int or numpy.random.Generator."
+        )
+
     if backend is None:  # pragma: no cover
         backend = GlobalBackend()
 
+    local_state = (
+        np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
+    )
+
     res = []
     for _ in range(samples):
-        params = np.random.uniform(-np.pi, np.pi, circuit.trainable_gates.nparams)
+        params = local_state.uniform(-np.pi, np.pi, circuit.trainable_gates.nparams)
         circuit.set_parameters(params)
         entanglement = meyer_wallach_entanglement(circuit, backend=backend)
         res.append(entanglement)
@@ -1159,14 +1176,15 @@ def frame_potential(
 
     .. math::
         \\mathcal{F}_{\\mathcal{U}}^{(t)} = \\int_{U,V \\in \\mathcal{U}} \\,
-            \\text{d}U \\, \\text{d}V \\, \\text{abs}\\bigl[\\text{tr}(U^{\\dagger} \\, V)\\bigr]^{2t} \\, ,
+            \\text{d}U \\, \\text{d}V \\, \\bigl| \\, \\text{tr}(U^{\\dagger} \\, V)
+            \\, \\bigr|^{2t} \\, ,
 
     where :math:`\\mathcal{U}` is the group of unitaries defined by the parametrized circuit.
     The frame potential is approximated by the average
 
     .. math::
         \\mathcal{F}_{\\mathcal{U}}^{(t)} \\approx \\frac{1}{N} \\,
-            \\sum_{k=1}^{N} \\, \\text{abs}\\bigl[ \\text{tr}(U_{k}^{\\dagger} \\, V_{k})\\bigr]^{2t} \\, ,
+            \\sum_{k=1}^{N} \\, \\bigl| \\, \\text{tr}(U_{k}^{\\dagger} \\, V_{k}) \\, \\bigr|^{2t} \\, ,
 
     where :math:`N` is the number of ``samples``.
 

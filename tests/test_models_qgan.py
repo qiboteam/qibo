@@ -1,4 +1,5 @@
 """Test style-qGAN model defined in `qibo/models/qgan.py`."""
+
 import sys
 
 import numpy as np

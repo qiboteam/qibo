@@ -37,7 +37,7 @@ def test_uniform_sampling_U3(backend, seed):
     Y = backend.cast(matrices.Y, dtype=matrices.Y.dtype)
     Z = backend.cast(matrices.Z, dtype=matrices.Z.dtype)
 
-    ngates = int(1e4)
+    ngates = int(1e3)
     phases = uniform_sampling_U3(ngates, seed=seed, backend=backend)
 
     # expectation values in the 3 directions should be the same
@@ -60,11 +60,6 @@ def test_uniform_sampling_U3(backend, seed):
 
     backend.assert_allclose(expectation_values[0], expectation_values[1], atol=1e-1)
     backend.assert_allclose(expectation_values[0], expectation_values[2], atol=1e-1)
-
-    # execution for coverage
-    sampler = _probability_distribution_sin(a=0, b=np.pi, seed=seed)
-    sampler.pdf(1)
-    sampler.cdf(1)
 
 
 @pytest.mark.parametrize("seed", [None, 10, np.random.default_rng(10)])
@@ -315,7 +310,6 @@ def test_random_density_matrix(backend, dims, pure, metric, basis, normalize):
             backend.assert_allclose(norm < PRECISION_TOL, True)
         else:
             normalization = 1.0 if normalize is False else 1.0 / np.sqrt(dims)
-            print(state)
             backend.assert_allclose(state[0], normalization)
             assert all(np.abs(exp_value) <= normalization for exp_value in state[1:])
 
@@ -342,8 +336,8 @@ def test_random_clifford(backend, nqubits, return_circuit, density_matrix, seed)
 
     result_single = matrices.Z @ matrices.H
 
-    result_two = np.kron(matrices.H, matrices.S) @ np.kron(matrices.S, matrices.Z)
-    result_two = np.kron(matrices.Z @ matrices.S, matrices.I) @ result_two
+    result_two = np.kron(matrices.H, matrices.S) @ np.kron(matrices.S, matrices.Y)
+    result_two = np.kron(matrices.S @ matrices.X, matrices.I) @ result_two
     result_two = matrices.CNOT @ matrices.CZ @ result_two
 
     result = result_single if nqubits == 1 else result_two

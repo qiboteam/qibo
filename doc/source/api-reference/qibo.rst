@@ -247,6 +247,32 @@ Data Encoders
 
 We provide a family of algorithms that encode classical data into quantum circuits.
 
+Computational Basis Encoder
+"""""""""""""""""""""""""""
+
+Given a bitstring :math:`b` of length :math:`n`, this encoder generates a layer of Pauli-:math:`X`
+gates that creates the quantum state :math:`|\,b\,\rangle`.
+
+For instance, the following two circuit generations are equivalent:
+
+.. testsetup::
+
+    from qibo import Circuit, gates
+    from qibo.models.encodings import comp_basis_encoder
+
+.. testcode::
+
+    b = "101"
+    circuit_1 = comp_basis_encoder(b)
+
+    circuit_2 = Circuit(3)
+    circuit_2.add(gates.X(0))
+    circuit_2.add(gates.X(2))
+
+
+.. autofunction:: qibo.models.encodings.comp_basis_encoder
+
+
 Unary Encoder
 """""""""""""
 
@@ -279,7 +305,7 @@ and both can be used as standalone functions or in combination with the other
 general mitigation methods by setting the paramter `readout`.
 
 
-Calibration Matrix
+Response Matrix
 """"""""""""""""""
 Given :math:`n` qubits, all the possible :math:`2^n` states are constructed via the
 application of the corresponding sequence of :math:`X` gates
@@ -288,7 +314,7 @@ In the presence of readout errors, we will measure for each state :math:`i` some
 frequencies :math:`F_i^{noisy}` different from the ideal ones
 :math:`F_i^{ideal}=\delta_{i,j}`.
 
-The effect of the error is modeled by the matrix composed of the noisy frequencies as
+The effect of the error is modeled by the response matrix composed of the noisy frequencies as
 columns :math:`M=\big(F_0^{noisy},...,F_{n-1}^{noisy}\big)`. We have indeed that:
 
 .. math::
@@ -297,14 +323,31 @@ columns :math:`M=\big(F_0^{noisy},...,F_{n-1}^{noisy}\big)`. We have indeed that
 and, therefore, the calibration matrix obtained as :math:`M_{\text{cal}}=M^{-1}`
 can be used to recover the noise-free frequencies.
 
-.. autofunction:: qibo.models.error_mitigation.calibration_matrix
+The calibration matrix :math:`M_{\text{cal}}` lacks stochasticity, resulting in a 'negative probability' issue.
+The distributions that arise after applying :math:`M_{\text{cal}}` are quasiprobabilities;
+the individual elements can be negative surpass 1, provided they sum to 1.
+It is posible to use Iterative Bayesian Unfolding (IBU) to preserve non-negativity.
+See `Nachman et al <https://arxiv.org/abs/1910.01969>`_ for more details.
 
 
-.. autofunction:: qibo.models.error_mitigation.apply_readout_mitigation
+
+.. autofunction:: qibo.models.error_mitigation.get_response_matrix
 
 
-Randomized
-""""""""""
+.. autofunction:: qibo.models.error_mitigation.iterative_bayesian_unfolding
+
+
+.. autofunction:: qibo.models.error_mitigation.apply_resp_mat_readout_mitigation
+
+
+.. autofunction:: qibo.models.error_mitigation.apply_randomized_readout_mitigation
+
+
+.. autofunction:: qibo.models.error_mitigation.get_expectation_val_with_readout_mitigation
+
+
+Randomized readout mitigation
+""""""""""""""""""""""""""""""
 This approach converts the effect of any noise map :math:`A` into a single multiplication
 factor for each Pauli observable, that is, diagonalizes the measurement channel.
 The multiplication factor :math:`\lambda` can be directly measured even without
@@ -320,7 +363,7 @@ factor results in the mitigated Pauli expectation value :math:`\langle O\rangle_
 Zero Noise Extrapolation (ZNE)
 """"""""""""""""""""""""""""""
 
-Given a noisy circuit :math:`C` and an observable :math:`A`,  Zero Noise Extrapolation (ZNE)
+Given a noisy circuit :math:`C` and an observable :math:`A`, Zero Noise Extrapolation (ZNE)
 consists in running :math:`n+1` versions of the circuit with different noise levels
 :math:`\{c_j\}_{j=0..n}` and, for each of them, measuring the expected value of the observable
 :math:`E_j=\langle A\rangle_j`.
@@ -381,7 +424,7 @@ See `Sopena et al <https://arxiv.org/abs/2103.12680>`_ for more details.
 .. autofunction:: qibo.models.error_mitigation.CDR
 
 
-.. autofunction:: qibo.models.error_mitigation.sample_training_circuit
+.. autofunction:: qibo.models.error_mitigation.sample_training_circuit_cdr
 
 
 Variable Noise CDR (vnCDR)
@@ -415,6 +458,34 @@ See `Sopena et al <https://arxiv.org/abs/2103.12680>`_ for all the details.
 
 .. autofunction:: qibo.models.error_mitigation.vnCDR
 
+
+Importance Clifford Sampling (ICS)
+""""""""""""""""""""""""""""""""""
+
+In the Importance Clifford Sampling (ICS) method, a set of :math:`n` circuits
+:math:`S_n=\{C_i\}_{i=1,..,n}` that stabilizes a given Pauli observable is generated starting from the original circuit
+:math:`C_0` by replacing all the non-Clifford gates with Clifford ones.
+Given an observable :math:`A`, all the circuits of :math:`S_n` are both simulated
+to obtain the correspondent expected values of :math:`A` in noise-free condition
+:math:`\{a_i^{exact}\}_{i=1,..,n}`, and run in noisy conditions to obtain the noisy
+expected values :math:`\{a_i^{noisy}\}_{i=1,..,n}`.
+
+Finally, a theoretically inspired model :math:`f` is learned using the training data.
+
+The mitigated expected value of :math:`A` at the end of :math:`C_0` is then
+obtained simply with :math:`f(a_0^{noisy})`.
+
+In this implementation the initial circuit is expected to be decomposed in the three
+Clifford gates :math:`RX(\frac{\pi}{2})`, :math:`CNOT`, :math:`X` and in :math:`RZ(\theta)`
+(which is Clifford only for :math:`\theta=\frac{n\pi}{2}`).
+By default the set of Clifford gates used for substitution is
+:math:`\{RZ(0),RZ(\frac{\pi}{2}),RZ(\pi),RZ(\frac{3}{2}\pi)\}`.
+See `Sopena et al <https://arxiv.org/abs/2103.12680>`_ for more details.
+
+.. autofunction:: qibo.models.error_mitigation.ICS
+
+
+.. autofunction:: qibo.models.error_mitigation.sample_clifford_training_circuit
 
 _______________________
 
@@ -642,6 +713,13 @@ iSwap (iSWAP)
     :members:
     :member-order: bysource
 
+Square root of iSwap (SiSWAP)
+"""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.gates.SiSWAP
+    :members:
+    :member-order: bysource
+
 f-Swap (FSWAP)
 """"""""""""""
 
@@ -804,7 +882,7 @@ U1q
 
     - Pauli-:math:`Z` rotation: :class:`qibo.gates.RZ`
     - Arbitrary :math:`ZZ` rotation: :class:`qibo.gates.RZZ`
-    - Fully-entangling :math:`ZZ`-interaction: :math:`R_{ZZ}(\\pi/2)`
+    - Fully-entangling :math:`ZZ`-interaction: :math:`R_{ZZ}(\pi/2)`
 
 
 _______________________
@@ -1599,6 +1677,14 @@ Frame Potential
 .. autofunction:: qibo.quantum_info.frame_potential
 
 
+Quantum Networks
+^^^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.quantum_info.quantum_networks.QuantumNetwork
+    :members:
+    :member-order: bysource
+
+
 Random Ensembles
 ^^^^^^^^^^^^^^^^
 
@@ -1977,6 +2063,12 @@ Hamming weight
 .. autofunction:: qibo.quantum_info.hamming_weight
 
 
+Hamming distance
+""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.hamming_distance
+
+
 Hadamard Transform
 """"""""""""""""""
 
@@ -1987,6 +2079,12 @@ Shannon entropy
 """""""""""""""
 
 .. autofunction:: qibo.quantum_info.shannon_entropy
+
+
+Total Variation distance
+""""""""""""""""""""""""
+
+.. autofunction:: qibo.quantum_info.total_variation_distance
 
 
 Hellinger distance

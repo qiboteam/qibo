@@ -1,4 +1,5 @@
 """Testing DoubleBracketIteration model"""
+
 import numpy as np
 import pytest
 
@@ -39,9 +40,8 @@ def test_double_bracket_iteration_group_commutator(backend, nqubits):
     )
     initial_off_diagonal_norm = dbi.off_diagonal_norm
 
-    with pytest.raises(ValueError):
-        dbi(mode=DoubleBracketGeneratorType.group_commutator, step=0.01)
-
+    # test first iteration with default d
+    dbi(mode=DoubleBracketGeneratorType.group_commutator, step=0.01)
     for _ in range(NSTEPS):
         dbi(step=0.01, d=d)
 
@@ -58,9 +58,11 @@ def test_double_bracket_iteration_single_commutator(backend, nqubits):
     )
     initial_off_diagonal_norm = dbi.off_diagonal_norm
 
+    # test first iteration with default d
+    dbi(mode=DoubleBracketGeneratorType.single_commutator, step=0.01)
+
     for _ in range(NSTEPS):
         dbi(step=0.01, d=d)
-    dbi(step=0.01)
 
     assert initial_off_diagonal_norm > dbi.off_diagonal_norm
 

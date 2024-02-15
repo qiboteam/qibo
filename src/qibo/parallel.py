@@ -1,6 +1,7 @@
 """
 Resources for parallel circuit evaluation.
 """
+
 from typing import Iterable
 
 from joblib import Parallel, delayed

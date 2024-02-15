@@ -20,7 +20,7 @@ from qibo.quantum_info.superoperator_transformations import (
 )
 
 
-class _probability_distribution_sin(rv_continuous):
+class _probability_distribution_sin(rv_continuous):  # pragma: no cover
     def _pdf(self, theta: float):
         return 0.5 * np.sin(theta)
 
@@ -53,21 +53,7 @@ def uniform_sampling_U3(ngates: int, seed=None, backend=None):
     elif ngates <= 0:
         raise_error(ValueError, f"ngates must be non-negative, but it is {ngates}.")
 
-    if (
-        seed is not None
-        and not isinstance(seed, int)
-        and not isinstance(seed, np.random.Generator)
-    ):
-        raise_error(
-            TypeError, "seed must be either type int or numpy.random.Generator."
-        )
-
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
-
-    local_state = (
-        np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
-    )
+    backend, local_state = _set_backend_and_local_state(seed, backend)
 
     sampler = _probability_distribution_sin(a=0, b=np.pi, seed=local_state)
     phases = local_state.random((ngates, 3))
@@ -133,21 +119,7 @@ def random_gaussian_matrix(
     if stddev is not None and stddev <= 0.0:
         raise_error(ValueError, "stddev must be a positive float.")
 
-    if (
-        seed is not None
-        and not isinstance(seed, int)
-        and not isinstance(seed, np.random.Generator)
-    ):
-        raise_error(
-            TypeError, "seed must be either type int or numpy.random.Generator."
-        )
-
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
-
-    local_state = (
-        np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
-    )
+    backend, local_state = _set_backend_and_local_state(seed, backend)
 
     dims = (dims, rank)
 
@@ -193,10 +165,9 @@ def random_hermitian(
     if not isinstance(semidefinite, bool) or not isinstance(normalize, bool):
         raise_error(TypeError, "semidefinite and normalize must be type bool.")
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend, local_state = _set_backend_and_local_state(seed, backend)
 
-    matrix = random_gaussian_matrix(dims, dims, seed=seed, backend=backend)
+    matrix = random_gaussian_matrix(dims, dims, seed=local_state, backend=backend)
 
     if semidefinite:
         matrix = np.dot(np.transpose(np.conj(matrix)), matrix)
@@ -241,11 +212,10 @@ def random_unitary(dims: int, measure: Optional[str] = None, seed=None, backend=
         if measure != "haar":
             raise_error(ValueError, f"measure {measure} not implemented.")
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend, local_state = _set_backend_and_local_state(seed, backend)
 
     if measure == "haar":
-        unitary = random_gaussian_matrix(dims, dims, seed=seed, backend=backend)
+        unitary = random_gaussian_matrix(dims, dims, seed=local_state, backend=backend)
         Q, R = np.linalg.qr(unitary)
         D = np.diag(R)
         D = D / np.abs(D)
@@ -357,15 +327,14 @@ def random_quantum_channel(
             NotImplementedError, f"order {order} not implemented for measure {measure}."
         )
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend, local_state = _set_backend_and_local_state(seed, backend)
 
     if measure == "bcsz":
         super_op = _super_op_from_bcsz_measure(
-            dims=dims, rank=rank, order=order, seed=seed, backend=backend
+            dims=dims, rank=rank, order=order, seed=local_state, backend=backend
         )
     else:
-        super_op = random_unitary(dims, measure, seed, backend)
+        super_op = random_unitary(dims, measure, local_state, backend)
         super_op = vectorization(super_op, order=order, backend=backend)
         super_op = np.outer(super_op, np.conj(super_op))
 
@@ -573,28 +542,28 @@ def random_density_matrix(
     elif normalize is True and basis is None:
         raise_error(ValueError, "normalize cannot be True when basis=None.")
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend, local_state = _set_backend_and_local_state(seed, backend)
 
     if metric == "hilbert-schmidt":
         rank = None
 
     if pure:
-        state = random_statevector(dims, seed=seed, backend=backend)
+        state = random_statevector(dims, seed=local_state, backend=backend)
         state = np.outer(state, np.transpose(np.conj(state)))
     else:
         if metric in ["hilbert-schmidt", "ginibre"]:
             state = random_gaussian_matrix(
-                dims, rank, mean=0, stddev=1, seed=seed, backend=backend
+                dims, rank, mean=0, stddev=1, seed=local_state, backend=backend
             )
             state = np.dot(state, np.transpose(np.conj(state)))
             state = state / np.trace(state)
         else:
             nqubits = int(np.log2(dims))
             state = backend.identity_density_matrix(nqubits, normalize=False)
-            state += random_unitary(dims, seed=seed, backend=backend)
+            state += random_unitary(dims, seed=local_state, backend=backend)
             state = np.dot(
-                state, random_gaussian_matrix(dims, rank, seed=seed, backend=backend)
+                state,
+                random_gaussian_matrix(dims, rank, seed=local_state, backend=backend),
             )
             state = np.dot(state, np.transpose(np.conj(state)))
             state = state / np.trace(state)
@@ -662,21 +631,7 @@ def random_clifford(
             f"return_circuit must be type bool, but it is type {type(return_circuit)}.",
         )
 
-    if (
-        seed is not None
-        and not isinstance(seed, int)
-        and not isinstance(seed, np.random.Generator)
-    ):
-        raise_error(
-            TypeError, "seed must be either type int or numpy.random.Generator."
-        )
-
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
-
-    local_state = (
-        np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
-    )
+    backend, local_state = _set_backend_and_local_state(seed, backend)
 
     hadamards, permutations = _sample_from_quantum_mallows_distribution(
         nqubits, local_state=local_state
@@ -755,7 +710,7 @@ def random_clifford(
             depth=1,
             return_circuit=True,
             density_matrix=density_matrix,
-            seed=seed,
+            seed=local_state,
             backend=backend,
         ),
     )
@@ -857,21 +812,7 @@ def random_pauli(
             "subset argument must be a subset of strings in the set ['I', 'X', 'Y', 'Z'].",
         )
 
-    if (
-        seed is not None
-        and not isinstance(seed, int)
-        and not isinstance(seed, np.random.Generator)
-    ):
-        raise_error(
-            TypeError, "seed must be either type int or numpy.random.Generator."
-        )
-
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
-
-    local_state = (
-        np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
-    )
+    backend, local_state = _set_backend_and_local_state(seed, backend)
 
     complete_set = {"I": gates.I, "X": gates.X, "Y": gates.Y, "Z": gates.Z}
 
@@ -974,12 +915,11 @@ def random_pauli_hamiltonian(
             "when normalize=True, gap is = 1, thus max_eigenvalue must be > 1.",
         )
 
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
+    backend, local_state = _set_backend_and_local_state(seed, backend)
 
     d = 2**nqubits
 
-    hamiltonian = random_hermitian(d, normalize=True, seed=seed, backend=backend)
+    hamiltonian = random_hermitian(d, normalize=True, seed=local_state, backend=backend)
 
     eigenvalues, eigenvectors = np.linalg.eigh(hamiltonian)
 
@@ -1079,21 +1019,7 @@ def random_stochastic_matrix(
         if max_iterations <= 0.0:
             raise_error(ValueError, "max_iterations must be a positive int.")
 
-    if (
-        seed is not None
-        and not isinstance(seed, int)
-        and not isinstance(seed, np.random.Generator)
-    ):
-        raise_error(
-            TypeError, "seed must be either type int or numpy.random.Generator."
-        )
-
-    if backend is None:  # pragma: no cover
-        backend = GlobalBackend()
-
-    local_state = (
-        np.random.default_rng(seed) if seed is None or isinstance(seed, int) else seed
-    )
+    backend, local_state = _set_backend_and_local_state(seed, backend)
 
     if precision_tol is None:
         precision_tol = PRECISION_TOL
@@ -1281,3 +1207,30 @@ def _super_op_from_bcsz_measure(dims: int, rank: int, order: str, seed, backend)
     super_op = operator @ super_op @ operator
 
     return super_op
+
+
+def _set_backend_and_local_state(seed, backend):
+    if (
+        seed is not None
+        and not isinstance(seed, int)
+        and not isinstance(seed, np.random.Generator)
+    ):
+        raise_error(
+            TypeError, "seed must be either type int or numpy.random.Generator."
+        )
+
+    if backend is None:  # pragma: no cover
+        backend = GlobalBackend()
+
+    if seed is None or isinstance(seed, int):
+        if backend.__class__.__name__ in [
+            "CupyBackend",
+            "CuQuantumBackend",
+        ]:  # pragma: no cover
+            local_state = backend.np.random.default_rng(seed)
+        else:
+            local_state = np.random.default_rng(seed)
+    else:
+        local_state = seed
+
+    return backend, local_state
