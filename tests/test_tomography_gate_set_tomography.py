@@ -66,31 +66,50 @@ def test_prepare_states_invalid_k_valid_nqubits(k, nqubits):
         circuit = prepare_states(k, nqubits)
 
 
-# ##################################################################################
-
-
 @pytest.mark.parametrize("j", np.arange(0, 4, 1))
-def test_measurement_basis_value_j_single_qubit(j):
+def test_meaasurement_basis_value_j_single_qubit(j):
     # Test for valid input with a single qubit
     nqubits = 1
-
-    test_circuit = qibo.models.Circuit(nqubits)
-    new_circuit = measurement_basis(j, test_circuit)
-
-    assert isinstance(new_circuit, qibo.models.circuit.Circuit)
-    assert new_circuit.nqubits == nqubits
+    U = 1/np.sqrt(2) * np.array([[1, -1j],[1j, -1]])
+    correct_gates = [
+        [gates.M(0)],
+        [gates.H(0), gates.M(0)],
+        [gates.Unitary(U, 0), gates.M(0)],
+        [gates.M(0)],
+    ]
+    circuit = qibo.models.Circuit(nqubits)
+    circuit = measurement_basis(j, circuit)
+    for groundtruth, gate in zip(correct_gates[j], circuit.queue):
+        assert isinstance(gate, type(groundtruth))
 
 
 @pytest.mark.parametrize("j", np.arange(0, 16, 1))
 def test_measurement_basis_value_j_two_qubits(j):
     # Test for valid input with two qubits
     nqubits = 2
-
-    test_circuit = qibo.models.Circuit(nqubits)
-    new_circuit = measurement_basis(j, test_circuit)
-
-    assert isinstance(new_circuit, qibo.models.circuit.Circuit)
-    assert new_circuit.nqubits == nqubits
+    U = 1/np.sqrt(2) * np.array([[1, -1j],[1j, -1]])
+    correct_gates = [
+        [gates.M(0), gates.M(1)],
+        [gates.M(0), gates.H(1), gates.M(1)],
+        [gates.M(0), gates.Unitary(U, 1), gates.M(1)],
+        [gates.M(0), gates.M(1)],
+        [gates.H(0), gates.M(0), gates.M(1)],
+        [gates.H(0), gates.M(0), gates.H(1), gates.M(1)],
+        [gates.H(0), gates.M(0), gates.Unitary(U, 1), gates.M(1)],
+        [gates.H(0), gates.M(0), gates.M(1)],
+        [gates.Unitary(U, 1), gates.M(0), gates.M(1)],
+        [gates.Unitary(U, 1), gates.M(0), gates.H(1), gates.M(1)],
+        [gates.Unitary(U, 1), gates.M(0), gates.Unitary(U, 1), gates.M(1)],
+        [gates.Unitary(U, 1), gates.M(0), gates.M(1)],
+        [gates.M(0), gates.M(1)],
+        [gates.M(0), gates.H(1), gates.M(1)],
+        [gates.M(0), gates.Unitary(U, 1), gates.M(1)],
+        [gates.M(0), gates.M(1)],
+    ]
+    circuit = qibo.models.Circuit(nqubits)
+    circuit = measurement_basis(j, circuit)
+    for groundtruth, gate in zip(correct_gates[j], circuit.queue):
+        assert isinstance(gate, type(groundtruth))
 
 
 @pytest.mark.parametrize(
@@ -133,9 +152,6 @@ def test_measurement_basis_invalid_j_valid_nqubits(j, nqubits):
         new_circuit = measurement_basis(j, test_circuit)
 
 
-# ##################################################################################
-
-
 def test_reset_register_valid_string_1qb():
     # Test for valid string
     nqubits = 1
@@ -143,12 +159,16 @@ def test_reset_register_valid_string_1qb():
     test_circuit.add(gates.H(0))
 
     invert_register = "sp_0"
-    inverted_circuit = reset_register(test_circuit, invert_register)
+    inverse_circuit = reset_register(test_circuit, invert_register)
 
-    assert isinstance(inverted_circuit, qibo.models.circuit.Circuit)
+    correct_gates = [
+        [gates.H(0)],
+    ]
+    for groundtruth, gate in zip(correct_gates, inverse_circuit.queue):
+        assert isinstance(gate, type(groundtruth[0]))
 
 
-def test_reset_register_sp_0():
+def test_reset_register_sp_0_twoqubitcircuit():
     # Test resetting qubit 0
     nqubits = 2
     test_circuit = qibo.models.Circuit(nqubits)
@@ -157,23 +177,34 @@ def test_reset_register_sp_0():
 
     inverse_circuit = reset_register(test_circuit, "sp_0")
 
-    assert isinstance(inverse_circuit, qibo.models.circuit.Circuit)
+    correct_gates = [
+        [gates.H(0)],
+    ]
+
+    for groundtruth, gate in zip(correct_gates, inverse_circuit.queue):
+        assert isinstance(gate, type(groundtruth[0]))
 
 
-def test_reset_register_sp_0():
+def test_reset_register_sp_0_singlequbitcircuit():
     # Test resetting qubit 0
 
     nqubits = 1
     test_circuit = qibo.models.Circuit(nqubits)
     test_circuit.add(gates.H(0))
-    test_circuit.add(gates.RX(0, np.pi / 3))
+    test_circuit.add(gates.RX(0, np.pi/3))
 
     inverse_circuit = reset_register(test_circuit, "sp_0")
 
-    assert isinstance(inverse_circuit, qibo.models.circuit.Circuit)
+    correct_gates = [
+        [gates.RX(0, np.pi/3).dagger()],
+        [gates.H(0)],
+    ]
+
+    for groundtruth, gate in zip(correct_gates, inverse_circuit.queue):
+        assert isinstance(gate, type(groundtruth[0]))
 
 
-def test_reset_register_sp_1():
+def test_reset_register_sp_1_twoqubitcircuit():
     # Test resetting qubit 1
     nqubits = 2
     test_circuit = qibo.models.Circuit(nqubits)
@@ -182,20 +213,30 @@ def test_reset_register_sp_1():
 
     inverse_circuit = reset_register(test_circuit, "sp_1")
 
-    assert isinstance(inverse_circuit, qibo.models.circuit.Circuit)
+    correct_gates = [
+        [gates.S(0).dagger()]
+    ]
+
+    for groundtruth, gate in zip(correct_gates, inverse_circuit.queue):
+        assert isinstance(gate, type(groundtruth[0]))
 
 
-def test_reset_register_sp_1():
+def test_reset_register_sp_1_singlequbitcircuit():
     # Test resetting qubit 1
     nqubits = 2
     test_circuit = qibo.models.Circuit(nqubits)
     test_circuit.add(gates.H(0))
-    test_circuit.add(gates.S(1))
-    test_circuit.add(gates.RX(0, np.pi / 3))
+    test_circuit.add(gates.S(0))
+    test_circuit.add(gates.RX(1, np.pi/3))
 
     inverse_circuit = reset_register(test_circuit, "sp_1")
 
-    assert isinstance(inverse_circuit, qibo.models.circuit.Circuit)
+    correct_gates = [
+        [gates.RX(1, np.pi/3).dagger()]
+    ]
+
+    for groundtruth, gate in zip(correct_gates, inverse_circuit.queue):
+        assert isinstance(gate, type(groundtruth[0]))
 
 
 def test_reset_register_sp_t():
@@ -207,7 +248,12 @@ def test_reset_register_sp_t():
 
     inverse_circuit = reset_register(test_circuit, "sp_t")
 
-    assert isinstance(inverse_circuit, qibo.models.circuit.Circuit)
+    correct_gates = [
+        [gates.CNOT(0,1)],
+        [gates.H(0)],
+    ]
+    for groundtruth, gate in zip(correct_gates, inverse_circuit.queue):
+        assert isinstance(gate, type(groundtruth[0]))
 
 
 def test_reset_register_invalid_string():
@@ -221,9 +267,6 @@ def test_reset_register_invalid_string():
     # Check if NameError is raised
     with pytest.raises(NameError):
         inverse_circuit = reset_register(test_circuit, "sp_2")
-
-
-# #################################################################################
 
 
 def test_GST_execute_circuit_1qb_j0():
@@ -292,9 +335,6 @@ def test_GST_execute_circuit_wrong_qb(nqubits):
     # Check if ValueError is raised
     with pytest.raises(ValueError, match="nqubits needs to be either 1 or 2"):
         result = GST_execute_circuit(circuit, k, j)
-
-
-# #################################################################################
 
 
 def test_GST_one_qubit_empty_circuit(backend):
