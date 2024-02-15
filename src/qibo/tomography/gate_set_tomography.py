@@ -215,7 +215,7 @@ def execute_GST(
         if nqubits != len(gate.qubits):
             raise_error(
                 ValueError,
-                f"Mismatched inputs: nqubits given as {nqubits}. {gate} is a {qb_gate}-qubit gate.",
+                f"Mismatched inputs: nqubits given as {nqubits}. {gate} is a {len(gate.qubits)}-qubit gate.",
             )
         gate = gate.__class__(*gate.qubits, **gate.init_kwargs)
 
