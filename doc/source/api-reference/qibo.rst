@@ -2260,9 +2260,6 @@ First, import the necessary modules. As an example, we import depolarizing noise
     from qibo.tomography.gate_set_tomography import *
     import numpy as np
 
-    seed_value = 42  # You can use any integer value as the seed
-    np.random.seed(seed_value)
-
 Single qubit example
 ^^^^^^^^^^^^^^^^^^^^
 
@@ -2318,7 +2315,7 @@ As another example, suppose we have a two qubit quantum circuit that generates a
 .. testcode:: python
 
     # Create the single qubit quantum circuit
-    circuit = Circuit(1)
+    circuit = Circuit(2)
     circuit.add(gates.H(0))
     circuit.add(gates.CNOT(0,1))
     circuit.add(gates.M(0))
